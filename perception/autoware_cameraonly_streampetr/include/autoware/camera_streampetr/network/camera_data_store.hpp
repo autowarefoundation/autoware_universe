@@ -1,0 +1,76 @@
+// Copyright 2025 TIER IV
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef AUTOWARE__CAMERA_STREAMPETR_CAMERA_DATA_STORE_HPP__
+#define AUTOWARE__CAMERA_STREAMPETR_CAMERA_DATA_STORE_HPP__
+
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/image.hpp>
+#include <sensor_msgs/msg/compressed_image.hpp>
+#include <sensor_msgs/msg/camera_info.hpp>
+
+#include <vector>
+#include <memory>
+#include <string>
+
+#include "autoware/camera_streampetr/cuda_utils.hpp"
+namespace autoware::camera_streampetr
+{
+class CameraDataStore
+{
+  using Image = sensor_msgs::msg::Image;
+  using CompressedImage = sensor_msgs::msg::CompressedImage;
+  using CameraInfo = sensor_msgs::msg::CameraInfo;
+  using Tensor = cuda::Tensor;
+
+public:
+  CameraDataStore(rclcpp::Node * node, const int rois_number, const int image_height, const int image_width, const int anchor_camera_id, const bool is_compressed_image, const int decompression_downsample);
+  void update_camera_image(const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg);
+  void update_camera_image_compressed(const int camera_id, const CompressedImage::ConstSharedPtr & input_camera_image_msg);
+  void preprocess_image(const int camera_id, const std::uint8_t * input_image_data, const int original_height, const int original_width);
+  void update_camera_info(const int camera_id, const CameraInfo::ConstSharedPtr & input_camera_info_msg);
+  bool check_if_all_camera_image_received() const;
+  bool check_if_all_camera_info_received() const;
+  float check_if_all_images_synced() const;
+  float get_preprocess_time_ms() const;
+  std::vector<float> get_camera_info_vector() const;
+  std::vector<float> get_image_shape() const;
+  std::shared_ptr<Tensor> get_image_input() const;
+  float get_timestamp() const;
+  std::vector<std::string> get_camera_link_names() const;
+  void step();
+  void save_processed_image(const int camera_id, const std::string& filename) const;
+private:
+  const size_t rois_number_;
+  const int image_height_;
+  const int image_width_;
+  const int anchor_camera_id_;
+  const bool is_compressed_image_;
+  const int decompression_downsample_;
+  double previous_timestamp_;
+  float preprocess_time_ms_;
+
+  rclcpp::Logger logger_;
+  std::vector<CameraInfo::ConstSharedPtr> camera_info_list_;
+  std::shared_ptr<Tensor> image_input_;
+  std::shared_ptr<Tensor> image_input_mean_;
+  std::shared_ptr<Tensor> image_input_std_;
+  std::vector<double> camera_info_timestamp_;
+  std::vector<std::string> camera_link_names_;
+  cudaStream_t stream_;
+};
+
+}  // namespace autoware::camera_streampetr
+
+#endif  // AUTOWARE__CAMERA_STREAMPETR_CAMERA_DATA_STORE_HPP__
