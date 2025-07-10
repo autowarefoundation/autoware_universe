@@ -37,6 +37,7 @@ struct RoadUserStopParameters
 
     double search_length;
     bool adjacent_lane_check;
+    double adjacent_lane_margin;  // maximum lateral distance from trajectory for adjacent lanes
     bool exclude_crosswalk_users;
     double crosswalk_margin;
     bool exclude_sidewalk_users;
@@ -55,6 +56,7 @@ struct RoadUserStopParameters
   {
     bool enable;
     double wrong_way_angle_threshold;
+    double min_speed_threshold;  // minimum speed to consider object as moving
     double deceleration;
   } in_place_stop;
 
@@ -87,6 +89,8 @@ struct RoadUserStopParameters
       node.declare_parameter<double>(module_name + ".detection.search_length", 50.0);
     detection.adjacent_lane_check =
       node.declare_parameter<bool>(module_name + ".detection.adjacent_lane_check", true);
+    detection.adjacent_lane_margin =
+      node.declare_parameter<double>(module_name + ".detection.adjacent_lane_margin", 10.0);
     detection.exclude_crosswalk_users =
       node.declare_parameter<bool>(module_name + ".detection.exclude_crosswalk_users", true);
     detection.crosswalk_margin =
@@ -107,6 +111,8 @@ struct RoadUserStopParameters
       node.declare_parameter<bool>(module_name + ".in_place_stop.enable", true);
     in_place_stop.wrong_way_angle_threshold = node.declare_parameter<double>(
       module_name + ".in_place_stop.wrong_way_angle_threshold", 150.0);
+    in_place_stop.min_speed_threshold = node.declare_parameter<double>(
+      module_name + ".in_place_stop.min_speed_threshold", 0.5);  // 0.5 m/s
     in_place_stop.deceleration =
       node.declare_parameter<double>(module_name + ".in_place_stop.deceleration", 1.0);
 
