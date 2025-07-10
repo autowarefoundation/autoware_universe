@@ -16,6 +16,8 @@
 #define COMMAND__COMPATIBILITY_HPP_
 
 #include "compatibility/adapi_pause_interface.hpp"
+#include "compatibility/emergency_interface.hpp"
+#include "compatibility/moderate_stop_interface.hpp"
 #include "interface.hpp"
 
 #include <rclcpp/rclcpp.hpp>
@@ -38,7 +40,11 @@ private:
   rclcpp::Node & node_;
   std::shared_ptr<Control> prev_control_;
   std::unique_ptr<AdapiPauseInterface> adapi_pause_;
+  std::unique_ptr<EmergencyInterface> emergency_;
+  std::unique_ptr<ModerateStopInterface> moderate_stop_;
   float stop_hold_acceleration_;
+  float emergency_acceleration_;
+  float moderate_stop_acceleration_;
 };
 
 }  // namespace autoware::control_command_gate

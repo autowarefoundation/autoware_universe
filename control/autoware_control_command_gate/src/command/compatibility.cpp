@@ -25,23 +25,42 @@ Compatibility::Compatibility(std::unique_ptr<CommandOutput> && output, rclcpp::N
 : CommandBridge(std::move(output)), node_(node)
 {
   stop_hold_acceleration_ = node.declare_parameter<float>("stop_hold_acceleration");
+  emergency_acceleration_ = node.declare_parameter<float>("emergency_acceleration");
+  moderate_stop_acceleration_ = node.declare_parameter<float>("moderate_stop_acceleration");
+
   adapi_pause_ = std::make_unique<AdapiPauseInterface>(&node_);
+  emergency_ = std::make_unique<EmergencyInterface>(&node_);
+  moderate_stop_ = std::make_unique<ModerateStopInterface>(&node_);
 }
 
 void Compatibility::publish()
 {
   adapi_pause_->publish();
+  emergency_->publish();
+  moderate_stop_->publish();
 }
 
 void Compatibility::on_control(const Control & msg)
 {
+  const auto set_stop_command = [](auto & longitudinal, const auto & acceleration) {
+    longitudinal.velocity = std::min(0.0f, longitudinal.velocity);
+    longitudinal.acceleration = std::min(acceleration, longitudinal.acceleration);
+  };
+
   Control out = msg;
+
+  if (moderate_stop_->is_stop_requested()) {  // if stop requested, stop the vehicle
+    set_stop_command(out.longitudinal, moderate_stop_acceleration_);
+  }
+
+  if (emergency_->is_emergency()) {
+    set_stop_command(out.longitudinal, emergency_acceleration_);
+  }
+
   adapi_pause_->update(out);
 
   if (adapi_pause_->is_paused()) {
-    out.longitudinal.velocity = std::min(0.0f, out.longitudinal.velocity);
-    out.longitudinal.acceleration =
-      std::min(stop_hold_acceleration_, out.longitudinal.acceleration);
+    set_stop_command(out.longitudinal, stop_hold_acceleration_);
   }
 
   CommandBridge::on_control(out);
