@@ -1,0 +1,96 @@
+<launch>
+  <arg name="build_only" default="false" description="shutdown node after TensorRT engine file is built"/>
+  <arg name="debug_mode" default="true" description="debug mode"/>
+  <arg name="param_path" default="$(find-pkg-share autoware_camera_streampetr)/config/tensorrt_stream_petr.param.yaml" />
+  <arg name="model_path" default="/home/autoware/workspace/StreamPETR_TensorRT_ROS2/data"/>
+  <arg name="rviz" default="true" description="launch rviz"/>
+  <arg name="rviz_respawn" default="true" description="respawn rviz"/>
+  <arg name="param_file" default="$(find-pkg-share autoware_image_transport_decompressor)/config/image_transport_decompressor.param.yaml"/>
+
+  <!-- START: Image Transport Decompressor for independent nodetesting-->
+
+  <node pkg="autoware_image_transport_decompressor" exec="image_transport_decompressor_node" name="image_transport_decompressor_node_0">
+    <remap from="~/input/compressed_image" to="/sensing/camera/camera0/image_rect_color/compressed"/>
+    <remap from="~/output/raw_image" to="/sensing/camera/camera0/image_rect_color"/>
+    <param from="$(var param_file)" allow_substs="true"/>
+  </node>
+
+  <node pkg="autoware_image_transport_decompressor" exec="image_transport_decompressor_node" name="image_transport_decompressor_node_1">
+    <remap from="~/input/compressed_image" to="/sensing/camera/camera1/image_rect_color/compressed"/>
+    <remap from="~/output/raw_image" to="/sensing/camera/camera1/image_rect_color"/>
+    <param from="$(var param_file)" allow_substs="true"/>
+  </node>
+
+  <node pkg="autoware_image_transport_decompressor" exec="image_transport_decompressor_node" name="image_transport_decompressor_node_2">
+    <remap from="~/input/compressed_image" to="/sensing/camera/camera2/image_rect_color/compressed"/>
+    <remap from="~/output/raw_image" to="/sensing/camera/camera2/image_rect_color"/>
+    <param from="$(var param_file)" allow_substs="true"/>
+  </node>
+
+  <node pkg="autoware_image_transport_decompressor" exec="image_transport_decompressor_node" name="image_transport_decompressor_node_3">
+    <remap from="~/input/compressed_image" to="/sensing/camera/camera3/image_rect_color/compressed"/>
+    <remap from="~/output/raw_image" to="/sensing/camera/camera3/image_rect_color"/>
+    <param from="$(var param_file)" allow_substs="true"/>
+  </node>
+
+  <node pkg="autoware_image_transport_decompressor" exec="image_transport_decompressor_node" name="image_transport_decompressor_node_4">
+    <remap from="~/input/compressed_image" to="/sensing/camera/camera4/image_rect_color/compressed"/>
+    <remap from="~/output/raw_image" to="/sensing/camera/camera4/image_rect_color"/>
+    <param from="$(var param_file)" allow_substs="true"/>
+  </node>
+
+  <node pkg="autoware_image_transport_decompressor" exec="image_transport_decompressor_node" name="image_transport_decompressor_node_5">
+    <remap from="~/input/compressed_image" to="/sensing/camera/camera5/image_rect_color/compressed"/>
+    <remap from="~/output/raw_image" to="/sensing/camera/camera5/image_rect_color"/>
+    <param from="$(var param_file)" allow_substs="true"/>
+  </node>
+  <!-- END: Image Transport Decompressor -->
+
+  <node pkg="autoware_camera_streampetr" exec="autoware_camera_streampetr_node" name="stream_petr" output="screen">
+    <param from="$(var param_path)" allow_substs="true" />
+    <param name="build_only" value="$(var build_only)"/>
+    <param name="debug_mode" value="$(var debug_mode)"/>
+    <remap from="~/input/kinematic_state" to="/localization/kinematic_state"/>
+
+    <!-- Image of ~/input/camerai will be the ith image in the model input -->
+    <remap from="~/input/camera0/camera_info" to="/sensing/camera/camera0/camera_info"/>
+    <remap from="~/input/camera1/camera_info" to="/sensing/camera/camera1/camera_info"/>
+    <remap from="~/input/camera2/camera_info" to="/sensing/camera/camera2/camera_info"/>
+    <remap from="~/input/camera3/camera_info" to="/sensing/camera/camera3/camera_info"/>
+    <remap from="~/input/camera4/camera_info" to="/sensing/camera/camera4/camera_info"/>
+    <remap from="~/input/camera5/camera_info" to="/sensing/camera/camera5/camera_info"/>
+
+    <!-- <remap from="~/input/camera0/image" to="/sensing/camera/camera0/image_rect_color"/>
+    <remap from="~/input/camera1/image" to="/sensing/camera/camera1/image_rect_color"/>
+    <remap from="~/input/camera2/image" to="/sensing/camera/camera2/image_rect_color"/>
+    <remap from="~/input/camera3/image" to="/sensing/camera/camera3/image_rect_color"/>
+    <remap from="~/input/camera4/image" to="/sensing/camera/camera4/image_rect_color"/>
+    <remap from="~/input/camera5/image" to="/sensing/camera/camera5/image_rect_color"/> -->
+    <remap from="~/input/camera0/image" to="/sensing/camera/camera0/image_rect_color/compressed"/>
+    <remap from="~/input/camera1/image" to="/sensing/camera/camera1/image_rect_color/compressed"/>
+    <remap from="~/input/camera2/image" to="/sensing/camera/camera2/image_rect_color/compressed"/>
+    <remap from="~/input/camera3/image" to="/sensing/camera/camera3/image_rect_color/compressed"/>
+    <remap from="~/input/camera4/image" to="/sensing/camera/camera4/image_rect_color/compressed"/>
+    <remap from="~/input/camera5/image" to="/sensing/camera/camera5/image_rect_color/compressed"/>
+
+    <param name="anchor_camera_id" value="0" />   <!-- The forward pass begins once every anchor camera topic reaches. Choose this as the camera that causes the shortest differnce in min and max timestamp between cameras-->
+    <param name="is_compressed_image" value="true" />   <!-- Whether the input image is compressed. -->
+    <param name="decompression_downsample" value="2" />  <!-- Downsampling during decompression makes decompression faster. {2,4,8} -->
+    <param name="undistort_image" value="false" />  <!-- Undistort the image before preprocessing. -->
+
+  </node>
+    <!-- Tools -->
+  <arg name="rviz_config_name" default="perception.rviz" description="rviz config name"/>
+  <arg name="rviz_config" default="$(find-pkg-share autoware_launch)/rviz/$(var rviz_config_name)" description="rviz config path"/>
+  <group>
+    <node
+      pkg="rviz2"
+      exec="rviz2"
+      name="rviz2"
+      output="screen"
+      if="$(var rviz)"
+      args="-d $(var rviz_config) -s $(find-pkg-share autoware_launch)/rviz/image/autoware.png"
+      respawn="$(var rviz_respawn)"
+    />
+  </group>
+</launch>
