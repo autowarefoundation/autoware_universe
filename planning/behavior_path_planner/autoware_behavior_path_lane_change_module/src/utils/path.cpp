@@ -204,14 +204,15 @@ std::optional<SamplingParameters> init_sampling_parameters(
   const auto initial_velocity = prepare_metrics.velocity;
   const auto lon_accel = prepare_metrics.sampled_lon_accel;
 
-  auto duration = autoware::motion_utils::calc_shift_time_from_jerk(
-    std::abs(initial_state.position.d), trajectory.lateral_jerk, max_lateral_acc);
-  auto final_velocity = std::max(min_lc_vel, initial_velocity + lon_accel * duration);
-  const bool use_remaining_distance =
+  const auto use_remaining_distance =
     common_data_ptr->lc_param_ptr->frenet.use_entire_remaining_distance;
-  const auto lc_length = std::invoke([&]() {
+
+  const auto [lc_length, duration, final_velocity] = std::invoke([&]() {
+    auto duration = autoware::motion_utils::calc_shift_time_from_jerk(
+      std::abs(initial_state.position.d), trajectory.lateral_jerk, max_lateral_acc);
+    auto final_velocity = std::max(min_lc_vel, initial_velocity + lon_accel * duration);
     auto length = duration * (initial_velocity + final_velocity) * 0.5;
-    if (!use_remaining_distance) return length;
+    if (!use_remaining_distance) return std::make_tuple(length, duration, final_velocity);
     const auto dist_lc_start_to_terminal_end =
       common_data_ptr->transient_data.dist_to_terminal_end - prepare_metrics.length -
       common_data_ptr->lc_param_ptr->lane_change_finish_judge_buffer;
@@ -219,7 +220,7 @@ std::optional<SamplingParameters> init_sampling_parameters(
     final_velocity = std::max(
       min_lc_vel, std::sqrt((initial_velocity * initial_velocity) + (2.0 * lon_accel * length)));
     duration = 2.0 * length / (initial_velocity + final_velocity);
-    return length;
+    return std::make_tuple(length, duration, final_velocity);
   });
 
   const auto target_s = std::min(ref_spline.lastS(), initial_state.position.s + lc_length);
