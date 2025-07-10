@@ -26,17 +26,16 @@ void ComfortableStopSwitcher::initialize()
   params_.max_jerk = node_->declare_parameter<float>(expand_param("max_jerk"));
   params_.min_jerk = node_->declare_parameter<float>(expand_param("min_jerk"));
 
-  pub_velocity_limit_ = node_->create_publisher<tier4_planning_msgs::msg::VelocityLimit>(
+  pub_velocity_limit_ = node_->create_publisher<VelocityLimit>(
     "/planning/scenario_planning/max_velocity_candidates", rclcpp::QoS{1}.transient_local());
-  pub_velocity_limit_clear_command_ =
-    node_->create_publisher<tier4_planning_msgs::msg::VelocityLimitClearCommand>(
-      "/planning/scenario_planning/clear_velocity_limit", rclcpp::QoS{1}.transient_local());
+  pub_velocity_limit_clear_command_ = node_->create_publisher<VelocityLimitClearCommand>(
+    "/planning/scenario_planning/clear_velocity_limit", rclcpp::QoS{1}.transient_local());
   pub_hazard_lights_command_ =
-    node_->create_publisher<autoware_vehicle_msgs::msg::HazardLightsCommand>(
-      "/system/hazard_lights_cmd", rclcpp::QoS{1});
+    node_->create_publisher<HazardLightsCommand>("/system/hazard_lights_cmd", rclcpp::QoS{1});
   sub_odom_ =
     std::make_unique<autoware_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry>>(
       node_, "/localization/kinematic_state");
+
   rclcpp::Rate rate(hazard_lights_hz);
   pub_hazard_lights_timer_ = rclcpp::create_timer(
     node_, node_->get_clock(), rate.period(),
@@ -77,7 +76,7 @@ MrmState ComfortableStopSwitcher::update_mrm_state()
 
 void ComfortableStopSwitcher::publish_velocity_limit()
 {
-  auto velocity_limit = tier4_planning_msgs::msg::VelocityLimit();
+  auto velocity_limit = VelocityLimit();
   velocity_limit.stamp = node_->now();
   velocity_limit.max_velocity = 0;
   velocity_limit.use_constraints = true;
@@ -92,7 +91,7 @@ void ComfortableStopSwitcher::publish_velocity_limit()
 
 void ComfortableStopSwitcher::publish_velocity_limit_clear_command()
 {
-  auto velocity_limit_clear_command = tier4_planning_msgs::msg::VelocityLimitClearCommand();
+  auto velocity_limit_clear_command = VelocityLimitClearCommand();
   velocity_limit_clear_command.stamp = node_->now();
   velocity_limit_clear_command.command = true;
   velocity_limit_clear_command.sender = "comfortable_stop_switcher";
@@ -103,7 +102,6 @@ void ComfortableStopSwitcher::publish_velocity_limit_clear_command()
 
 void ComfortableStopSwitcher::publish_hazard_lights_command()
 {
-  using autoware_vehicle_msgs::msg::HazardLightsCommand;
   auto hazard_lights_command = HazardLightsCommand();
   hazard_lights_command.stamp = node_->now();
   hazard_lights_command.command =

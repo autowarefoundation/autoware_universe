@@ -21,10 +21,10 @@
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_planning_msgs/msg/velocity_limit.hpp>
+#include <autoware_internal_planning_msgs/msg/velocity_limit_clear_command.hpp>
 #include <autoware_vehicle_msgs/msg/hazard_lights_command.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <tier4_planning_msgs/msg/velocity_limit.hpp>
-#include <tier4_planning_msgs/msg/velocity_limit_clear_command.hpp>
 
 #include <memory>
 
@@ -52,16 +52,18 @@ public:
   MrmState update_mrm_state() override;
 
 private:
+  using VelocityLimit = autoware_internal_planning_msgs::msg::VelocityLimit;
+  using VelocityLimitClearCommand = autoware_internal_planning_msgs::msg::VelocityLimitClearCommand;
+  using HazardLightsCommand = autoware_vehicle_msgs::msg::HazardLightsCommand;
+
   void publish_velocity_limit();
   void publish_velocity_limit_clear_command();
   void publish_hazard_lights_command();
   bool is_stopped();
 
-  rclcpp::Publisher<tier4_planning_msgs::msg::VelocityLimit>::SharedPtr pub_velocity_limit_;
-  rclcpp::Publisher<tier4_planning_msgs::msg::VelocityLimitClearCommand>::SharedPtr
-    pub_velocity_limit_clear_command_;
-  rclcpp::Publisher<autoware_vehicle_msgs::msg::HazardLightsCommand>::SharedPtr
-    pub_hazard_lights_command_;
+  rclcpp::Publisher<VelocityLimit>::SharedPtr pub_velocity_limit_;
+  rclcpp::Publisher<VelocityLimitClearCommand>::SharedPtr pub_velocity_limit_clear_command_;
+  rclcpp::Publisher<HazardLightsCommand>::SharedPtr pub_hazard_lights_command_;
   rclcpp::TimerBase::SharedPtr pub_hazard_lights_timer_;
   std::unique_ptr<autoware_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry>> sub_odom_;
 
