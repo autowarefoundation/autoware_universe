@@ -5,39 +5,6 @@
 
 namespace autoware::camera_streampetr {
 
-// void undistort_image_cv(
-//   const std::uint8_t * input_image_data,
-//   const int height,
-//   const int width,
-//   const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info_msg,
-//   std::vector<std::uint8_t> & output_image_data)
-// {
-//   if (!camera_info_msg) {
-//     throw std::runtime_error("CameraInfo is null");
-//   }
-
-//   // Wrap input image
-//   cv::Mat input_image(height, width, CV_8UC3, const_cast<std::uint8_t*>(input_image_data));
-
-//   // Extract camera matrix K
-//   cv::Mat K = (cv::Mat_<double>(3, 3) <<
-//     camera_info_msg->k[0], camera_info_msg->k[1], camera_info_msg->k[2],
-//     camera_info_msg->k[3], camera_info_msg->k[4], camera_info_msg->k[5],
-//     camera_info_msg->k[6], camera_info_msg->k[7], camera_info_msg->k[8]);
-
-//   // Extract distortion coefficients D
-//   cv::Mat D = (cv::Mat_<double>(1, 5) <<
-//     camera_info_msg->d[0], camera_info_msg->d[1], camera_info_msg->d[2],
-//     camera_info_msg->d[3], camera_info_msg->d[4]);
-
-//   // Undistort the image
-//   cv::Mat undistorted_image;
-//   cv::undistort(input_image, undistorted_image, K, D);
-
-//   // Resize output buffer to match undistorted image
-//   output_image_data.resize(undistorted_image.total() * undistorted_image.elemSize());
-//   std::memcpy(output_image_data.data(), undistorted_image.data, output_image_data.size());
-// }
 
 void decompress_image(
   const sensor_msgs::msg::CompressedImage::ConstSharedPtr & input_compressed_image_msg, 

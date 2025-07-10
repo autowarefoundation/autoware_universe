@@ -137,7 +137,6 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
                                                 confidence_threshold, class_names, 
                                                 num_proposals, yaw_norm_thresholds,
                                                 detection_range);
-  std::cout << "debug_mode_: " << debug_mode_ << std::endl;
   if(debug_mode_) {
     using autoware_utils::DebugPublisher;
     using autoware_utils::StopWatch;
@@ -166,9 +165,14 @@ void StreamPetrNode::camera_info_callback(
 void StreamPetrNode::camera_image_callback(
   Image::ConstSharedPtr input_camera_image_msg,
   const int camera_id)
-{ 
+{
+  const auto objects_sub_count =
+    pub_objects_->get_subscription_count() + pub_objects_->get_intra_process_subscription_count();
+  if (objects_sub_count < 1) {
+    return;
+  }
+
   if (!data_store_->check_if_all_camera_info_received()) {
-    RCLCPP_WARN(get_logger(), "Camera info not received for all cameras");
     return;
   }
 
@@ -179,7 +183,6 @@ void StreamPetrNode::camera_image_callback(
   }
 
   data_store_->update_camera_image(camera_id, input_camera_image_msg);
-  RCLCPP_INFO(get_logger(), "received camera %d", camera_id);
 
   if (camera_id == anchor_camera_id_)
     step();
@@ -191,8 +194,13 @@ void StreamPetrNode::camera_image_callback(
   CompressedImage::ConstSharedPtr input_camera_image_msg,
   const int camera_id)
 { 
+  const auto objects_sub_count =
+    pub_objects_->get_subscription_count() + pub_objects_->get_intra_process_subscription_count();
+  if (objects_sub_count < 1) {
+    return;
+  }
+
   if (!data_store_->check_if_all_camera_info_received()) {
-    RCLCPP_WARN(get_logger(), "Camera info not received for all cameras");
     return;
   }
 
@@ -203,7 +211,6 @@ void StreamPetrNode::camera_image_callback(
   }
 
   data_store_->update_camera_image_compressed(camera_id, input_camera_image_msg);
-  RCLCPP_INFO(get_logger(), "received camera %d", camera_id);
 
   if (camera_id == anchor_camera_id_)
     step();
@@ -212,7 +219,6 @@ void StreamPetrNode::camera_image_callback(
 
 void StreamPetrNode::step() {
   
-  double processing_time_ms = -1.0;
   double inference_time_ms = -1.0;
 
   if (stop_watch_ptr_) {
@@ -232,12 +238,17 @@ void StreamPetrNode::step() {
   }
 
   std::vector<autoware_perception_msgs::msg::DetectedObject> output_objects;
-  RCLCPP_INFO(get_logger(), "All images are synchronized and all camera info received. Predicting after %.2f seconds", static_cast<double>(data_store_->get_timestamp()));
   const auto [ego_pose, ego_pose_inv] = get_ego_pose_vector();
 
   if(stop_watch_ptr_)
     stop_watch_ptr_->tic("latency/inference");
+  
   std::vector<float> forward_time_ms;
+  
+  if(data_store_->get_timestamp()>max_camera_time_diff_) {
+    RCLCPP_WARN(get_logger(), "Predicting after %.2f seconds which is longer than %.2f, so memory will be refreshed", static_cast<double>(data_store_->get_timestamp()),max_camera_time_diff_);
+    network_->wipe_memory();
+  }
   network_->inference_detector(
     data_store_->get_image_input(),
     ego_pose, ego_pose_inv,
@@ -259,17 +270,15 @@ void StreamPetrNode::step() {
   output_msg.header.frame_id = "base_link";
   pub_objects_->publish(output_msg);
 
-  if (stop_watch_ptr_) {
-    processing_time_ms = stop_watch_ptr_->toc("latency/total", true);
-  }
 
   if (debug_publisher_ptr_ && stop_watch_ptr_) {
+
+    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "latency/total", stop_watch_ptr_->toc("latency/total", true));
     debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "latency/preprocess", data_store_->get_preprocess_time_ms());
     debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "latency/inference", inference_time_ms);
-    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "latency/total", processing_time_ms);
     debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "latency/inference/backbone", forward_time_ms[0]);
     debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(

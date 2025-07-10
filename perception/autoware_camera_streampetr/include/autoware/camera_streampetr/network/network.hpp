@@ -179,7 +179,7 @@ public:
     std::vector<float> & forward_time_ms);
   
   void printBindingInfo();
-
+  void wipe_memory();
 private:
   autoware_perception_msgs::msg::DetectedObject bbox_to_ros_msg(const Box3D & bbox);
 
