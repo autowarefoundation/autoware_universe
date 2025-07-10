@@ -26,6 +26,7 @@
   <arg name="diagnostic_graph_aggregator_graph_path"/>
   <arg name="diag_struct_topic" default="/diagnostics_graph/struct"/>
   <arg name="diag_status_topic" default="/diagnostics_graph/status"/>
+  <arg name="diag_reset_srv" default="/diagnostics_graph/reset"/>
   <arg name="availability_converter_param_path" default="$(find-pkg-share autoware_diagnostic_graph_aggregator)/config/converter.param.yaml"/>
   <arg name="command_mode_switcher_param_path" default="$(find-pkg-share autoware_command_mode_switcher)/config/default.param.yaml"/>
   <arg name="command_mode_decider_param_path" default="$(find-pkg-share autoware_command_mode_decider)/config/default.param.yaml"/>
@@ -122,6 +123,7 @@
         <arg name="graph_file" value="$(var diagnostic_graph_aggregator_graph_path)"/>
         <arg name="~/struct" value="$(var diag_struct_topic)"/>
         <arg name="~/status" value="$(var diag_status_topic)"/>
+        <arg name="~/reset" value="$(var diag_reset_srv)"/>
         <arg name="converter_param_file" value="$(var availability_converter_param_path)"/>
       </include>
     </group>
