@@ -151,6 +151,18 @@ bool Tracker::updateWithMeasurement(
     updateClassification(object.classification);
   }
 
+  // Update orientation availability
+  if (object.kinematics.orientation_availability == types::OrientationAvailability::AVAILABLE) {
+    // if the incoming object is AVAILABLE, set the orientation availability to AVAILABLE
+    object_.kinematics.orientation_availability = types::OrientationAvailability::AVAILABLE;
+  } else if (
+    object.kinematics.orientation_availability == types::OrientationAvailability::SIGN_UNKNOWN &&
+    object_.kinematics.orientation_availability == types::OrientationAvailability::UNAVAILABLE) {
+    // if the incoming object is SIGN_UNKNOWN and the tracker is UNAVAILABLE, set the orientation
+    // availability to SIGN_UNKNOWN
+    object_.kinematics.orientation_availability = types::OrientationAvailability::SIGN_UNKNOWN;
+  }
+
   // Update object
   measure(object, measurement_time, channel_info);
 

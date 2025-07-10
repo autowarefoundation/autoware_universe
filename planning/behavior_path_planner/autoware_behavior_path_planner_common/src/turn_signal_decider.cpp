@@ -16,6 +16,7 @@
 
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
+#include <autoware/lanelet2_utils/hatched_road_markings.hpp>
 #include <autoware/motion_utils/constants.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
@@ -783,15 +784,24 @@ std::pair<TurnSignalInfo, bool> TurnSignalDecider::getBehaviorTurnSignalInfo(
   const auto left_opposite_lanes = rh->getLeftOppositeLanelets(lanelet);
   const auto right_same_direction_lane = rh->getRightLanelet(lanelet, true, true);
   const auto right_opposite_lanes = rh->getRightOppositeLanelets(lanelet);
-  const auto has_left_lane = left_same_direction_lane.has_value() || !left_opposite_lanes.empty();
-  const auto has_right_lane =
+  const bool has_left_lane = left_same_direction_lane.has_value() || !left_opposite_lanes.empty();
+  const bool has_right_lane =
     right_same_direction_lane.has_value() || !right_opposite_lanes.empty();
+
+  const auto adjacent_hatched_road_markings =
+    autoware::experimental::lanelet2_utils::get_adjacent_hatched_road_markings(
+      {lanelet}, rh->getLaneletMapPtr());
+
+  const bool left_hatched_road_marking_only =
+    !adjacent_hatched_road_markings.left.empty() && !has_left_lane;
+  const bool right_hatched_road_marking_only =
+    !adjacent_hatched_road_markings.right.empty() && !has_right_lane;
 
   if (
     (!is_pull_out && !is_lane_change && !is_pull_over) &&
-    !existShiftSideLane(
-      start_shift_length, end_shift_length, !has_left_lane, !has_right_lane,
-      p.turn_signal_shift_length_threshold)) {
+    !isAdjacentToHatchedRoadMarking(
+      start_shift_length, end_shift_length, left_hatched_road_marking_only,
+      right_hatched_road_marking_only, p.turn_signal_shift_length_threshold)) {
     return std::make_pair(TurnSignalInfo(p_path_start, p_path_end), true);
   }
 

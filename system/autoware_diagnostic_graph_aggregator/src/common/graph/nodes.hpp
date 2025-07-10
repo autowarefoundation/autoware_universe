@@ -44,6 +44,7 @@ public:
   std::string path() const;
   std::string type() const;
   bool dependency() const;
+  void set_initializing(bool initializing);
   void reset();
   void update(const rclcpp::Time & stamp);
 

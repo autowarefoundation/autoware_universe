@@ -30,6 +30,10 @@ using autoware_adapi_v1_msgs::msg::MrmState;
 using autoware_adapi_v1_msgs::msg::OperationModeState;
 using autoware_system_msgs::srv::ChangeOperationMode;
 
+void CommandModeDecider::initialize()
+{
+}
+
 uint16_t CommandModeDecider::from_operation_mode(uint16_t operation_mode)
 {
   // clang-format off

@@ -66,7 +66,8 @@ The image below shows the target lanelets at a left turn intersection. (`left.ch
 | `ttc_threshold`    | [s]    | double | Threshold value for the difference between ego and object reach times to trigger and a stop | 1.0           |
 | `ego_deceleration` | [m/ss] | double | Ego deceleration relate used to estimate ego stopping time                                  | 1.0           |
 | `min_time_horizon` | [s]    | double | Minimum time horizon to check ahead along ego trajectory                                    | 10.0          |
-| `timeout`          | [s]    | double | Duration to keep stop decision after collision is no longer detected                        | 1.0           |
+| `on_time_buffer`   | [s]    | double | Continuous collision detection time required to judge as unsafe                             | 0.5           |
+| `off_time_buffer`  | [s]    | double | Continuous no collision detection time required to clear unsafe decision                    | 1.0           |
 
 ### Lanelet Selection Flags
 

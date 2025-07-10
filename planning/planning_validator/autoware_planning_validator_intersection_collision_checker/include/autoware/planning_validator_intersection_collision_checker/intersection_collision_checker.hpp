@@ -46,7 +46,7 @@ public:
   std::string get_module_name() const override { return module_name_; };
 
 private:
-  [[nodiscard]] bool is_safe(const TargetLanelets & target_lanelets);
+  [[nodiscard]] bool is_safe();
 
   [[nodiscard]] EgoTrajectory get_ego_trajectory() const;
 
@@ -54,7 +54,7 @@ private:
     const lanelet::ConstLanelets & trajectory_lanelets) const;
 
   [[nodiscard]] Direction get_lanelets(
-    CollisionCheckerLanelets & lanelets, const EgoTrajectory & ego_trajectory) const;
+    EgoLanelets & lanelets, const EgoTrajectory & ego_trajectory) const;
 
   void filter_pointcloud(
     PointCloud2::ConstSharedPtr & input, PointCloud::Ptr & filtered_point_cloud) const;
@@ -65,11 +65,10 @@ private:
 
   void cluster_pointcloud(const PointCloud::Ptr & input, PointCloud::Ptr & output) const;
 
-  void set_lanelets_debug_marker(const CollisionCheckerLanelets & lanelets) const;
+  void set_lanelets_debug_marker(const EgoLanelets & lanelets) const;
 
   bool check_collision(
-    const TargetLanelets & target_lanelets, const PointCloud::Ptr & filtered_point_cloud,
-    const rclcpp::Time & time_stamp);
+    const PointCloud::Ptr & filtered_point_cloud, const rclcpp::Time & time_stamp);
 
   std::optional<PCDObject> get_pcd_object(
     const rclcpp::Time & time_stamp, const PointCloud::Ptr & filtered_point_cloud,
@@ -77,10 +76,18 @@ private:
 
   void add_safety_factor(geometry_msgs::msg::Point & obs_point, const double ttc);
 
+  void reset_data()
+  {
+    history_.clear();
+    target_lanelets_map_.clear();
+    last_valid_time_ = clock_->now();
+  }
+
   std::unique_ptr<intersection_collision_checker_node::ParamListener> param_listener_;
   intersection_collision_checker_node::Params params_;
 
   PCDObjectsMap history_;
+  mutable TargetLaneletsMap target_lanelets_map_;
   rclcpp::Time last_invalid_time_;
   rclcpp::Time last_valid_time_;
   SafetyFactorArray safety_factor_array_;

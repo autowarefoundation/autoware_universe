@@ -26,6 +26,7 @@
 #include <autoware_utils/system/stop_watch.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
 #include <autoware_control_msgs/msg/control.hpp>
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
@@ -35,12 +36,14 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
 
 namespace autoware::control_validator
 {
+using autoware_adapi_v1_msgs::msg::OperationModeState;
 using autoware_control_msgs::msg::Control;
 using autoware_control_validator::msg::ControlValidatorStatus;
 using autoware_planning_msgs::msg::Trajectory;
@@ -83,10 +86,11 @@ public:
 
   void validate(
     ControlValidatorStatus & res, const Trajectory & predicted_trajectory,
-    const Trajectory & reference_trajectory) const;
+    const Trajectory & reference_trajectory);
 
 private:
   const double max_distance_deviation_threshold;
+  std::optional<Trajectory> prev_reference_trajectory_;
 };
 
 /**
@@ -275,8 +279,20 @@ private:
   void set_status(
     DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg) const;
 
+  /**
+   * @brief Infer autonomous control state
+   */
+  bool infer_autonomous_control_state(const OperationModeState::ConstSharedPtr);
+
+  /**
+   * @brief Postprocessing while keeping debug values
+   */
+  void validation_filtering(ControlValidatorStatus & res);
+
   // Subscribers and publishers
   rclcpp::Subscription<Control>::SharedPtr sub_control_cmd_;
+  autoware_utils::InterProcessPollingSubscriber<OperationModeState>::SharedPtr
+    sub_operational_state_;
   autoware_utils::InterProcessPollingSubscriber<Odometry>::SharedPtr sub_kinematics_;
   autoware_utils::InterProcessPollingSubscriber<Trajectory>::SharedPtr sub_reference_traj_;
   autoware_utils::InterProcessPollingSubscriber<Trajectory>::SharedPtr sub_predicted_traj_;
@@ -293,6 +309,7 @@ private:
   Updater diag_updater_{this};
   ControlValidatorStatus validation_status_;
   vehicle_info_utils::VehicleInfo vehicle_info_;
+  bool flag_autonomous_control_enabled_ = false;
   /**
    * @brief Check if all validation criteria are met
    * @param status Validation status

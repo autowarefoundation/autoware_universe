@@ -416,7 +416,8 @@ private:
     const std::optional<geometry_msgs::msg::Pose> & default_stop_pose);
 
   std::optional<StopPoseWithObjectUuids> checkStopForObstructionPrevention(
-    const PathWithLaneId & ego_path, const std::vector<PredictedObject> & objects,
+    const PathWithLaneId & ego_path, const PathWithLaneId & sparse_resample_path,
+    const std::vector<PredictedObject> & objects,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const std::optional<geometry_msgs::msg::Pose> & stop_pose);

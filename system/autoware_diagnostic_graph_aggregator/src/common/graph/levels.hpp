@@ -30,6 +30,7 @@ class LatchLevel
 {
 public:
   explicit LatchLevel(ConfigYaml yaml);
+  void set_initializing(bool initializing);
   void reset();
   void update(const rclcpp::Time & stamp, DiagnosticLevel level);
   DiagnosticLevel level() const;
@@ -47,6 +48,8 @@ private:
   bool error_latched_;
   std::optional<rclcpp::Time> warn_stamp_;
   std::optional<rclcpp::Time> error_stamp_;
+
+  bool initializing_;
 };
 
 class TimeoutLevel
