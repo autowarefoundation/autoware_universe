@@ -14,6 +14,7 @@
       # <plugin name>:  e.g. autoware::command_mode_switcher::StopSwitcher:
       #   <parameter name>: <value>
       autoware::command_mode_switcher::ComfortableStopSwitcher:
+        hazard_lights_hz: 20
         min_acceleration: -1.0
         max_jerk: 0.6
         min_jerk: -0.6

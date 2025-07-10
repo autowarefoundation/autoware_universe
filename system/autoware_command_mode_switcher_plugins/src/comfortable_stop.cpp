@@ -21,19 +21,29 @@ namespace autoware::command_mode_switcher
 
 void ComfortableStopSwitcher::initialize()
 {
+  int hazard_lights_hz = node_->declare_parameter<int>(expand_param("hazard_lights_hz"));
+  params_.min_acceleration = node_->declare_parameter<float>(expand_param("min_acceleration"));
+  params_.max_jerk = node_->declare_parameter<float>(expand_param("max_jerk"));
+  params_.min_jerk = node_->declare_parameter<float>(expand_param("min_jerk"));
+
   pub_velocity_limit_ = node_->create_publisher<tier4_planning_msgs::msg::VelocityLimit>(
     "/planning/scenario_planning/max_velocity_candidates", rclcpp::QoS{1}.transient_local());
   pub_velocity_limit_clear_command_ =
     node_->create_publisher<tier4_planning_msgs::msg::VelocityLimitClearCommand>(
       "/planning/scenario_planning/clear_velocity_limit", rclcpp::QoS{1}.transient_local());
+  pub_hazard_lights_command_ =
+    node_->create_publisher<autoware_vehicle_msgs::msg::HazardLightsCommand>(
+      "/system/hazard_lights_cmd", rclcpp::QoS{1});
   sub_odom_ =
     std::make_unique<autoware_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry>>(
       node_, "/localization/kinematic_state");
+  rclcpp::Rate rate(hazard_lights_hz);
+  pub_hazard_lights_timer_ = rclcpp::create_timer(
+    node_, node_->get_clock(), rate.period(),
+    std::bind(&ComfortableStopSwitcher::publish_hazard_lights_command, this));
 
-  params_.min_acceleration = node_->declare_parameter<float>(expand_param("min_acceleration"));
-  params_.max_jerk = node_->declare_parameter<float>(expand_param("max_jerk"));
-  params_.min_jerk = node_->declare_parameter<float>(expand_param("min_jerk"));
   mrm_state_ = MrmState::Normal;
+  enable_hazard_lights_ = false;
 }
 
 SourceState ComfortableStopSwitcher::update_source_state(bool request)
@@ -44,10 +54,12 @@ SourceState ComfortableStopSwitcher::update_source_state(bool request)
 
   if (request) {
     publish_velocity_limit();
+    enable_hazard_lights_ = true;
     mrm_state_ = MrmState::Operating;
     return SourceState{true, false};
   } else {
     publish_velocity_limit_clear_command();
+    enable_hazard_lights_ = false;
     mrm_state_ = MrmState::Normal;
     return SourceState{false, true};
   }
@@ -87,6 +99,16 @@ void ComfortableStopSwitcher::publish_velocity_limit_clear_command()
 
   pub_velocity_limit_clear_command_->publish(velocity_limit_clear_command);
   RCLCPP_INFO_STREAM(node_->get_logger(), "Comfortable stop is canceled.");
+}
+
+void ComfortableStopSwitcher::publish_hazard_lights_command()
+{
+  using autoware_vehicle_msgs::msg::HazardLightsCommand;
+  auto hazard_lights_command = HazardLightsCommand();
+  hazard_lights_command.stamp = node_->now();
+  hazard_lights_command.command =
+    enable_hazard_lights_ ? HazardLightsCommand::ENABLE : HazardLightsCommand::DISABLE;
+  pub_hazard_lights_command_->publish(hazard_lights_command);
 }
 
 bool ComfortableStopSwitcher::is_stopped()

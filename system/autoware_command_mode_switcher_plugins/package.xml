@@ -13,6 +13,7 @@
   <depend>autoware_command_mode_switcher</depend>
   <depend>autoware_command_mode_types</depend>
   <depend>autoware_utils</depend>
+  <depend>autoware_vehicle_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>pluginlib</depend>
   <depend>rclcpp</depend>
