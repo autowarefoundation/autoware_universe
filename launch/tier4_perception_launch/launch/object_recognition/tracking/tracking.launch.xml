@@ -31,8 +31,8 @@
   <arg name="input/lidar_dnn/channel" default="lidar_$(var lidar_detection_model_type)"/>
   <arg name="input/lidar_dnn/objects" default="/perception/object_recognition/detection/$(var lidar_detection_model_type)/objects"/>
   <arg name="input/lidar_dnn_validated/objects" default="/perception/object_recognition/detection/$(var lidar_detection_model_type)/validation/objects"/>
-  <arg name="input/lidar_dnn_shortrange/channel" default="lidar_$(var lidar_short_range_detection_model_type)"/>
-  <arg name="input/lidar_dnn_shortrange/objects" default="/perception/object_recognition/detection/$(var lidar_short_range_detection_model_type)/objects"/>
+  <arg name="input/lidar_dnn_short_range/channel" default="lidar_$(var lidar_short_range_detection_model_type)"/>
+  <arg name="input/lidar_dnn_short_range/objects" default="/perception/object_recognition/detection/$(var lidar_short_range_detection_model_type)/objects"/>
   <arg name="input/camera_lidar_rule_detector/channel" default="camera_lidar_fusion"/>
   <arg name="input/camera_lidar_rule_detector/objects" default="/perception/object_recognition/detection/clustering/camera_lidar_fusion/objects"/>
   <arg name="input/tracker_based_detector/channel" default="detection_by_tracker"/>
@@ -102,9 +102,9 @@
     <let name="input/detection01/objects" value="$(var input/lidar_dnn_validated/objects)" if="$(var use_validator)"/>
     <let name="input/detection01/objects" value="$(var input/lidar_dnn/objects)" unless="$(var use_validator)"/>
 
-    <let name="input/detection02/channel" value="$(var input/lidar_dnn_shortrange/channel)" if="$(var use_short_range_detection)"/>
+    <let name="input/detection02/channel" value="$(var input/lidar_dnn_short_range/channel)" if="$(var use_short_range_detection)"/>
     <let name="input/detection02/channel" value="none" unless="$(var use_short_range_detection)"/>
-    <let name="input/detection02/objects" value="$(var input/lidar_dnn_shortrange/objects)"/>
+    <let name="input/detection02/objects" value="$(var input/lidar_dnn_short_range/objects)"/>
 
     <let name="input/detection03/channel" value="$(var input/camera_lidar_rule_detector/channel)"/>
     <let name="input/detection03/objects" value="$(var input/camera_lidar_rule_detector/objects)"/>

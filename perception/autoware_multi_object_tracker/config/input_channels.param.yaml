@@ -36,7 +36,7 @@
           can_trust_classification: true
           can_trust_orientation: true
         optional:
-          name: "centerpoint_shortrange"
+          name: "centerpoint_short_range"
           short_name: "LcpS"
       lidar_apollo:
         flags:
