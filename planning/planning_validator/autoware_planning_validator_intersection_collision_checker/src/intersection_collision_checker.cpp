@@ -557,9 +557,10 @@ void IntersectionCollisionChecker::publish_markers(const DebugData & debug_data)
     pub_string_->publish(string_stamp);
   }
 
+  set_lanelets_debug_marker(debug_data);
+
   if (!debug_data.is_active) return;
 
-  set_lanelets_debug_marker(debug_data);
   set_pcd_objects_debug_marker(debug_data);
 
   if (debug_data.voxel_points) {
