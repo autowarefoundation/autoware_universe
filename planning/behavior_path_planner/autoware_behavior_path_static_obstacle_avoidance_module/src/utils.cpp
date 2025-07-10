@@ -23,6 +23,7 @@
 
 #include <Eigen/Dense>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware_utils_geometry/boost_geometry.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
 
 #include <boost/geometry/algorithms/buffer.hpp>
@@ -1265,9 +1266,14 @@ bool isWithinLanes(
 {
   const auto & rh = planner_data->route_handler;
   const auto & ego_pose = planner_data->self_odometry->pose.pose;
+  const double vehicle_width = planner_data->parameters.vehicle_info.vehicle_width_m;
+  autoware_utils_geometry::Point2d p1(0.0, -vehicle_width / 2.0);
+  autoware_utils_geometry::Point2d p2(0.0, vehicle_width / 2.0);
+  autoware_utils_geometry::LineString2d line;
+  line.push_back(p1);
+  line.push_back(p2);
   const auto transform = autoware_utils::pose2transform(ego_pose);
-  const auto footprint = autoware_utils::transform_vector(
-    planner_data->parameters.vehicle_info.createFootprint(), transform);
+  const auto vehicle_baselink_line = autoware_utils::transform_vector(line, transform);
 
   if (!closest_lanelet.has_value()) {
     return true;
@@ -1294,7 +1300,7 @@ bool isWithinLanes(
 
   const auto combine_lanelet = lanelet::utils::combineLaneletsShape(concat_lanelets);
 
-  return boost::geometry::within(footprint, combine_lanelet.polygon2d().basicPolygon());
+  return boost::geometry::within(vehicle_baselink_line, combine_lanelet.polygon2d().basicPolygon());
 }
 
 bool isShiftNecessary(const bool & is_object_on_right, const double & shift_length)
