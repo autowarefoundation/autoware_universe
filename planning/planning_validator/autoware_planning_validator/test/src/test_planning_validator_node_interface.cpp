@@ -65,6 +65,16 @@ void publishMandatoryTopics(
   test_manager->publishInput(
     test_target_node, "planning_validator_node/input/acceleration",
     geometry_msgs::msg::AccelWithCovarianceStamped{});
+  test_manager->publishInput(
+    test_target_node, "planning_validator_node/input/pointcloud",
+    sensor_msgs::msg::PointCloud2{}.set__header(
+      std_msgs::msg::Header{}.set__frame_id("base_link")));
+  test_manager->publishInput(
+    test_target_node, "planning_validator_node/input/lanelet_map_bin",
+    autoware::test_utils::makeMapBinMsg());
+  test_manager->publishInput(
+    test_target_node, "planning_validator_node/input/route",
+    autoware::test_utils::makeBehaviorNormalRoute());
 }
 
 TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectory)

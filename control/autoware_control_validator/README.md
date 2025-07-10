@@ -17,6 +17,8 @@ The listed features below does not always correspond to the latest implementatio
 
 - **Lateral jerk** : invalid when the lateral jerk exceeds the configured threshold. The validation uses the vehicle's velocity and steering angle rate to calculate the resulting lateral jerk. The calculation assumes constant velocity (acceleration is zero).
 - **Deviation check between reference trajectory and predicted trajectory** : invalid when the largest deviation between the predicted trajectory and reference trajectory is greater than the given threshold.
+- **Yaw deviation**: invalid when the difference between the yaw of the ego vehicle and the nearest (interpolated) trajectory yaw is greater than the given threshold.
+  - 2 thresholds are implemented, one to trigger a warning diagnostic, and one to trigger an error diagnostic.
 
 ![trajectory_deviation](./image/trajectory_deviation.drawio.svg)
 
@@ -63,12 +65,14 @@ The input trajectory is detected as invalid if the index exceeds the following t
 | :---------------------------------------- | :----- | :---------------------------------------------------------------------------------------------------------- | :------------ |
 | `thresholds.max_distance_deviation`       | double | invalid threshold of the max distance deviation between the predicted path and the reference trajectory [m] | 1.0           |
 | `thresholds.lateral_jerk`                 | double | invalid threshold of the lateral jerk for steering rate validation [m/s^3]                                  | 10.0          |
-| `thresholds.rolling_back_velocity`        | double | threshold velocity to valid the vehicle velocity [m/s]                                                      | 0.5           |
-| `thresholds.over_velocity_offset`         | double | threshold velocity offset to valid the vehicle velocity [m/s]                                               | 2.0           |
-| `thresholds.over_velocity_ratio`          | double | threshold ratio to valid the vehicle velocity [*]                                                           | 0.2           |
+| `thresholds.rolling_back_velocity`        | double | threshold velocity to validate the vehicle velocity [m/s]                                                   | 0.5           |
+| `thresholds.over_velocity_offset`         | double | threshold velocity offset to validate the vehicle velocity [m/s]                                            | 2.0           |
+| `thresholds.over_velocity_ratio`          | double | threshold ratio to validate the vehicle velocity [*]                                                        | 0.2           |
 | `thresholds.overrun_stop_point_dist`      | double | threshold distance to overrun stop point [m]                                                                | 0.8           |
-| `thresholds.acc_error_offset`             | double | threshold ratio to valid the vehicle acceleration [*]                                                       | 0.8           |
-| `thresholds.acc_error_scale`              | double | threshold acceleration to valid the vehicle acceleration [m]                                                | 0.2           |
+| `thresholds.acc_error_offset`             | double | threshold ratio to validate the vehicle acceleration [*]                                                    | 0.8           |
+| `thresholds.acc_error_scale`              | double | threshold acceleration to validate the vehicle acceleration [m]                                             | 0.2           |
 | `thresholds.will_overrun_stop_point_dist` | double | threshold distance to overrun stop point [m]                                                                | 1.0           |
 | `thresholds.assumed_limit_acc`            | double | assumed acceleration for over run estimation [m]                                                            | 5.0           |
 | `thresholds.assumed_delay_time`           | double | assumed delay for over run estimation [m]                                                                   | 0.2           |
+| `thresholds.yaw_deviation_error`          | double | threshold angle to validate the vehicle yaw related to the nearest trajectory yaw [rad]                     | 1.0           |
+| `thresholds.yaw_deviation_warn`           | double | threshold angle to trigger a WARN diagnostic [rad]                                                          | 0.5           |

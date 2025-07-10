@@ -2,6 +2,9 @@
 Changelog for package autoware_collision_detector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -9,6 +12,9 @@ Changelog for package autoware_collision_detector
   rename params
 * feat(collision_detector): time buffer and ignore behind rear axle (`#10638 <https://github.com/autowarefoundation/autoware_universe/issues/10638>`_)
 * Contributors: Maxime CLEMENT, TaikiYamada4
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

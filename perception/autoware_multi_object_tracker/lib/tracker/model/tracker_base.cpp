@@ -151,6 +151,18 @@ bool Tracker::updateWithMeasurement(
     updateClassification(object.classification);
   }
 
+  // Update orientation availability
+  if (object.kinematics.orientation_availability == types::OrientationAvailability::AVAILABLE) {
+    // if the incoming object is AVAILABLE, set the orientation availability to AVAILABLE
+    object_.kinematics.orientation_availability = types::OrientationAvailability::AVAILABLE;
+  } else if (
+    object.kinematics.orientation_availability == types::OrientationAvailability::SIGN_UNKNOWN &&
+    object_.kinematics.orientation_availability == types::OrientationAvailability::UNAVAILABLE) {
+    // if the incoming object is SIGN_UNKNOWN and the tracker is UNAVAILABLE, set the orientation
+    // availability to SIGN_UNKNOWN
+    object_.kinematics.orientation_availability = types::OrientationAvailability::SIGN_UNKNOWN;
+  }
+
   // Update object
   measure(object, measurement_time, channel_info);
 
@@ -279,13 +291,55 @@ void Tracker::getPositionCovarianceEigenSq(
     minor_axis_sq = 0.0;
     return;
   }
-  // calculate the eigenvalues of the covariance matrix
-  Eigen::EigenSolver<Eigen::Matrix2d> es(covariance);
-  major_axis_sq = es.eigenvalues().real().maxCoeff();
-  minor_axis_sq = es.eigenvalues().real().minCoeff();
+  // Direct eigenvalue calculation for 2x2 symmetric matrix
+  const double a = covariance(0, 0);
+  const double b = covariance(0, 1);
+  const double c = covariance(1, 1);
+  const double trace = a + c;
+  const double det = a * c - b * b;
+  const double sqrt_term = std::sqrt(trace * trace / 4.0 - det);
+
+  major_axis_sq = trace / 2.0 + sqrt_term;
+  minor_axis_sq = trace / 2.0 - sqrt_term;
 }
 
-bool Tracker::isConfident(const rclcpp::Time & time) const
+double Tracker::getBEVArea() const
+{
+  const auto & dims = object_.shape.dimensions;
+  return dims.x * dims.y;
+}
+
+double Tracker::getDistanceSqToEgo(const std::optional<geometry_msgs::msg::Pose> & ego_pose) const
+{
+  constexpr double INVALID_DISTANCE_SQ = -1.0;
+  if (!ego_pose) {
+    return INVALID_DISTANCE_SQ;
+  }
+  const auto & p = object_.pose.position;
+  const auto & e = ego_pose->position;
+  const double dx = p.x - e.x;
+  const double dy = p.y - e.y;
+  return dx * dx + dy * dy;
+}
+
+double Tracker::computeAdaptiveThreshold(
+  double base_threshold, double fallback_threshold, const AdaptiveThresholdCache & cache,
+  const std::optional<geometry_msgs::msg::Pose> & ego_pose) const
+{
+  const double distance_sq = getDistanceSqToEgo(ego_pose);
+  if (distance_sq < 0.0) return fallback_threshold;
+
+  const double bev_area = getBEVArea();
+
+  const double bev_area_influence = cache.getBEVAreaInfluence(bev_area);
+  const double distance_influence = cache.getDistanceInfluence(distance_sq);
+
+  return base_threshold + bev_area_influence + distance_influence;
+}
+
+bool Tracker::isConfident(
+  const rclcpp::Time & time, const AdaptiveThresholdCache & cache,
+  const std::optional<geometry_msgs::msg::Pose> & ego_pose) const
 {
   // check the number of measurements. if the measurement is too small, definitely not confident
   const int count = getTotalMeasurementCount();
@@ -303,17 +357,21 @@ bool Tracker::isConfident(const rclcpp::Time & time) const
     return true;
   }
 
-  // if the existence probability is high and the covariance is small enough, the tracker is
-  // confident
-  constexpr double WEAK_COV_THRESHOLD = 2.6;
-  if (getTotalExistenceProbability() > 0.50 && major_axis_sq < WEAK_COV_THRESHOLD) {
+  // if the existence probability is high and the covariance is small enough with respect to its
+  // distance to ego and its bev area, the tracker is confident
+  // base threshold is 1.6, fallback threshold is 2.6;
+  const double adaptive_threshold = computeAdaptiveThreshold(1.6, 2.6, cache, ego_pose);
+
+  if (getTotalExistenceProbability() > 0.50 && major_axis_sq < adaptive_threshold) {
     return true;
   }
 
   return false;
 }
 
-bool Tracker::isExpired(const rclcpp::Time & now) const
+bool Tracker::isExpired(
+  const rclcpp::Time & now, const AdaptiveThresholdCache & cache,
+  const std::optional<geometry_msgs::msg::Pose> & ego_pose) const
 {
   // check the number of no measurements
   const double elapsed_time = getElapsedTimeFromLastUpdate(now);
@@ -341,9 +399,11 @@ bool Tracker::isExpired(const rclcpp::Time & now) const
     double major_axis_sq = 0.0;
     double minor_axis_sq = 0.0;
     getPositionCovarianceEigenSq(now, major_axis_sq, minor_axis_sq);
-    constexpr double MAJOR_COV_THRESHOLD = 3.8;
-    constexpr double MINOR_COV_THRESHOLD = 2.7;
-    if (major_axis_sq > MAJOR_COV_THRESHOLD || minor_axis_sq > MINOR_COV_THRESHOLD) {
+    // major_cov: base_threshold is 2.8, fallback threshold is 3.8;
+    // minor_cov: base_threshold is 2.7, fallback threshold is 3.7;
+    const double major_cov_threshold = computeAdaptiveThreshold(2.8, 3.8, cache, ego_pose);
+    const double minor_cov_threshold = computeAdaptiveThreshold(2.7, 3.7, cache, ego_pose);
+    if (major_axis_sq > major_cov_threshold || minor_axis_sq > minor_cov_threshold) {
       return true;
     }
   }

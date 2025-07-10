@@ -14,6 +14,7 @@
       - /planning/mission_planning/route_selector/debug/processing_time_ms
       - /planning/planning_evaluator/debug/processing_time_ms
       - /planning/planning_validator/debug/processing_time_ms
+      - /planning/scenario_planning/lane_driving/behavior_planning/path_generator/debug/processing_time_ms
       - /planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner/debug/avoidance_by_lane_change/processing_time_ms
       - /planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner/debug/dynamic_obstacle_avoidance/processing_time_ms
       - /planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner/debug/goal_planner/processing_time_ms

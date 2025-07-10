@@ -1,3 +1,4 @@
 /**:
   ros__parameters:
     track_buffer_length: 30
+    classification_decay_constant: 0.95

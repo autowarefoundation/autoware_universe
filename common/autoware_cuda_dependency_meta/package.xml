@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_cuda_dependency_meta</name>
-  <version>0.45.0</version>
+  <version>0.46.0</version>
   <description>Virtual package that provides an empty cuda stub package</description>
 
   <author email="esteve.fernandez@tier4.jp">Esteve Fernandez</author>

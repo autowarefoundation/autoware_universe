@@ -18,6 +18,7 @@
 #include "autoware/planning_validator/types.hpp"
 #include "autoware_planning_validator/msg/planning_validator_status.hpp"
 
+#include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <memory>
@@ -44,6 +45,9 @@ protected:
   std::string module_name_;
   std::shared_ptr<PlanningValidatorContext> context_;
   rclcpp::Clock::SharedPtr clock_{};
+
+  std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
+    planning_factor_interface_;
 };
 
 }  // namespace autoware::planning_validator

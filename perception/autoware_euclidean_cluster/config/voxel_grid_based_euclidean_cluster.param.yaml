@@ -16,3 +16,4 @@
     max_z: 2.0
     min_z: -10.0
     negative: false
+    processing_time_threshold_sec: 0.01

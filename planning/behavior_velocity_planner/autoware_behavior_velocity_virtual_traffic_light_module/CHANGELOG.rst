@@ -2,6 +2,23 @@
 Changelog for package autoware_behavior_velocity_virtual_traffic_light_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(virtual_traffic_light): improve log message (`#10814 <https://github.com/autowarefoundation/autoware_universe/issues/10814>`_)
+  * feat(virtual_traffic_light): improve log message
+  update
+  udpate
+  * Update planning/behavior_velocity_planner/autoware_behavior_velocity_virtual_traffic_light_module/src/scene.cpp
+  Co-authored-by: Taiki Yamada <129915538+TaikiYamada4@users.noreply.github.com>
+  * delete getState
+  * Update planning/behavior_velocity_planner/autoware_behavior_velocity_virtual_traffic_light_module/src/scene.cpp
+  Co-authored-by: Taiki Yamada <129915538+TaikiYamada4@users.noreply.github.com>
+  * delete comments
+  ---------
+  Co-authored-by: Taiki Yamada <129915538+TaikiYamada4@users.noreply.github.com>
+* Contributors: Kosuke Takeuchi, TaikiYamada4
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -11,6 +28,9 @@ Changelog for package autoware_behavior_velocity_virtual_traffic_light_module
 * feat(behavior_velocity_planner): only wait for the required subscriptions (`#10546 <https://github.com/autowarefoundation/autoware_universe/issues/10546>`_)
 * refactor(virtual_traffic_light, QC): replace checkCollision with autoware_utils_geometry (`#10524 <https://github.com/autowarefoundation/autoware_universe/issues/10524>`_)
 * Contributors: Mamoru Sobue, Masaki Baba, TaikiYamada4, Takayuki Murooka, Yukinari Hisaki
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

@@ -15,6 +15,7 @@
 #include <autoware/planning_validator/node.hpp>
 #include <autoware/planning_validator_test_utils/planning_validator_test_utils.hpp>
 #include <autoware/planning_validator_test_utils/test_parameters.hpp>
+#include <autoware_test_utils/autoware_test_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -32,11 +33,14 @@
 namespace autoware::planning_validator
 {
 using autoware::planning_validator::PlanningValidatorNode;
+using autoware_map_msgs::msg::LaneletMapBin;
+using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::Trajectory;
 using diagnostic_msgs::msg::DiagnosticArray;
 using diagnostic_msgs::msg::DiagnosticStatus;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
+using sensor_msgs::msg::PointCloud2;
 
 using test_utils::generateDefaultAcceleration;
 using test_utils::generateDefaultOdometry;
@@ -56,14 +60,25 @@ public:
     kinematics_pub_ = create_publisher<Odometry>("/planning_validator_node/input/kinematics", 1);
     acceleration_pub_ = create_publisher<AccelWithCovarianceStamped>(
       "/planning_validator_node/input/acceleration", 1);
+    pointcloud_pub_ = create_publisher<PointCloud2>("/planning_validator_node/input/pointcloud", 1);
     diag_sub_ = create_subscription<DiagnosticArray>(
       "/diagnostics", 1,
       [this](const DiagnosticArray::ConstSharedPtr msg) { received_diags_.push_back(msg); });
+
+    rclcpp::QoS qos(rclcpp::KeepLast(1));
+    qos.reliable();
+    qos.transient_local();
+    map_pub_ =
+      create_publisher<LaneletMapBin>("/planning_validator_node/input/lanelet_map_bin", qos);
+    route_pub_ = create_publisher<LaneletRoute>("/planning_validator_node/input/route", qos);
   }
 
   rclcpp::Publisher<Trajectory>::SharedPtr trajectory_pub_;
   rclcpp::Publisher<Odometry>::SharedPtr kinematics_pub_;
   rclcpp::Publisher<AccelWithCovarianceStamped>::SharedPtr acceleration_pub_;
+  rclcpp::Publisher<PointCloud2>::SharedPtr pointcloud_pub_;
+  rclcpp::Publisher<LaneletMapBin>::SharedPtr map_pub_;
+  rclcpp::Publisher<LaneletRoute>::SharedPtr route_pub_;
   rclcpp::Subscription<DiagnosticArray>::SharedPtr diag_sub_;
 
   std::vector<DiagnosticArray::ConstSharedPtr> received_diags_;
@@ -127,6 +142,10 @@ std::pair<std::shared_ptr<PlanningValidatorNode>, std::shared_ptr<PubSubManager>
   manager->trajectory_pub_->publish(trajectory);
   manager->kinematics_pub_->publish(ego_odom);
   manager->acceleration_pub_->publish(acceleration);
+  manager->pointcloud_pub_->publish(sensor_msgs::msg::PointCloud2{}.set__header(
+    std_msgs::msg::Header{}.set__frame_id("base_link")));
+  manager->map_pub_->publish(autoware::test_utils::makeMapBinMsg());
+  manager->route_pub_->publish(autoware::test_utils::makeBehaviorNormalRoute());
   spinSome(validator);
   spinSome(manager);
 
@@ -470,7 +489,6 @@ TEST(TrajectoryCheckerModule, DiagCheckDistanceDeviation)
 
   // Larger distance deviation than threshold -> must be NG
   const auto error_distance = test_utils::THRESHOLD_DISTANCE_DEVIATION * scale_margin;
-  test(error_distance, 0.0, false);
   test(0.0, error_distance, false);
   test(0.0, -error_distance, false);
   test(error_distance, error_distance, false);
@@ -478,6 +496,10 @@ TEST(TrajectoryCheckerModule, DiagCheckDistanceDeviation)
 
   // Smaller distance deviation than threshold -> must be OK
   const auto ok_distance = test_utils::THRESHOLD_DISTANCE_DEVIATION / scale_margin;
+  // Longitudinal error does not cause failure
+  test(error_distance, 0.0, true);
+  test(error_distance, ok_distance, true);
+  test(error_distance, -ok_distance, true);
   test(ok_distance, 0.0, true);
   test(0.0, ok_distance, true);
   test(0.0, -ok_distance, true);

@@ -42,7 +42,7 @@ namespace autoware::multi_object_tracker
 namespace types
 {
 // constants
-constexpr size_t max_channel_size = 16;
+constexpr size_t max_channel_size = 12;
 constexpr float default_existence_probability = 0.75;
 
 // channel configuration
@@ -100,6 +100,7 @@ struct DynamicObject
   // object extension (size and shape)
   autoware_perception_msgs::msg::Shape shape;
   geometry_msgs::msg::Point anchor_point;
+  double area;
 };
 
 struct DynamicObjectList
@@ -116,6 +117,8 @@ DynamicObjectList toDynamicObjectList(
   const autoware_perception_msgs::msg::DetectedObjects & det_objects, const uint channel_index = 0);
 
 autoware_perception_msgs::msg::TrackedObject toTrackedObjectMsg(const DynamicObject & dyn_object);
+
+double getArea(const autoware_perception_msgs::msg::Shape & shape);
 
 }  // namespace types
 }  // namespace autoware::multi_object_tracker

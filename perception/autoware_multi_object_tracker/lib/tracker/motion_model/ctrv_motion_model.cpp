@@ -19,8 +19,6 @@
 
 #include "autoware/multi_object_tracker/tracker/motion_model/ctrv_motion_model.hpp"
 
-#include "autoware/multi_object_tracker/tracker/motion_model/motion_model_base.hpp"
-
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware_utils/math/normalization.hpp>
@@ -67,11 +65,11 @@ bool CTRVMotionModel::initialize(
   const double & wz, const double & wz_cov)
 {
   // initialize state vector X
-  Eigen::MatrixXd X(DIM, 1);
+  StateVec X;
   X << x, y, yaw, vel, wz;
 
   // initialize covariance matrix P
-  Eigen::MatrixXd P = Eigen::MatrixXd::Zero(DIM, DIM);
+  StateMat P = StateMat::Zero();
   P(IDX::X, IDX::X) = pose_cov[XYZRPY_COV_IDX::X_X];
   P(IDX::Y, IDX::Y) = pose_cov[XYZRPY_COV_IDX::Y_Y];
   P(IDX::YAW, IDX::YAW) = pose_cov[XYZRPY_COV_IDX::YAW_YAW];
@@ -91,14 +89,14 @@ bool CTRVMotionModel::updateStatePose(
   constexpr int DIM_Y = 2;
 
   // update state
-  Eigen::MatrixXd Y(DIM_Y, 1);
+  Eigen::Matrix<double, DIM_Y, 1> Y;
   Y << x, y;
 
-  Eigen::MatrixXd C = Eigen::MatrixXd::Zero(DIM_Y, DIM);
+  Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
   C(0, IDX::X) = 1.0;
   C(1, IDX::Y) = 1.0;
 
-  Eigen::MatrixXd R = Eigen::MatrixXd::Zero(DIM_Y, DIM_Y);
+  Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
   R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
   R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
   R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X];
@@ -129,15 +127,15 @@ bool CTRVMotionModel::updateStatePoseHead(
   }
 
   // update state
-  Eigen::MatrixXd Y(DIM_Y, 1);
+  Eigen::Matrix<double, DIM_Y, 1> Y;
   Y << x, y, fixed_yaw;
 
-  Eigen::MatrixXd C = Eigen::MatrixXd::Zero(DIM_Y, DIM);
+  Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
   C(0, IDX::X) = 1.0;
   C(1, IDX::Y) = 1.0;
   C(2, IDX::YAW) = 1.0;
 
-  Eigen::MatrixXd R = Eigen::MatrixXd::Zero(DIM_Y, DIM_Y);
+  Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
   R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
   R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
   R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X];
@@ -174,16 +172,16 @@ bool CTRVMotionModel::updateStatePoseHeadVel(
   }
 
   // update state
-  Eigen::MatrixXd Y(DIM_Y, 1);
+  Eigen::Matrix<double, DIM_Y, 1> Y;
   Y << x, y, fixed_yaw, vel;
 
-  Eigen::MatrixXd C = Eigen::MatrixXd::Zero(DIM_Y, DIM);
+  Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
   C(0, IDX::X) = 1.0;
   C(1, IDX::Y) = 1.0;
   C(2, IDX::YAW) = 1.0;
   C(3, IDX::VEL) = 1.0;
 
-  Eigen::MatrixXd R = Eigen::MatrixXd::Zero(DIM_Y, DIM_Y);
+  Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
   R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
   R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
   R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X];
@@ -200,8 +198,8 @@ bool CTRVMotionModel::updateStatePoseHeadVel(
 
 bool CTRVMotionModel::limitStates()
 {
-  Eigen::MatrixXd X_t(DIM, 1);
-  Eigen::MatrixXd P_t(DIM, DIM);
+  StateVec X_t;
+  StateMat P_t;
   ekf_.getX(X_t);
   ekf_.getP(P_t);
 
@@ -233,8 +231,8 @@ bool CTRVMotionModel::adjustPosition(const double & x, const double & y)
   if (!checkInitialized()) return false;
 
   // adjust position
-  Eigen::MatrixXd X_t(DIM, 1);
-  Eigen::MatrixXd P_t(DIM, DIM);
+  StateVec X_t;
+  StateMat P_t;
   ekf_.getX(X_t);
   ekf_.getP(P_t);
   X_t(IDX::X) += x;
@@ -266,7 +264,7 @@ bool CTRVMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) cons
    */
 
   // Current state vector X t
-  Eigen::MatrixXd X_t(DIM, 1);
+  StateVec X_t;
   ekf.getX(X_t);
 
   const double cos_yaw = std::cos(X_t(IDX::YAW));
@@ -274,7 +272,7 @@ bool CTRVMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) cons
   const double sin_2yaw = std::sin(2.0f * X_t(IDX::YAW));
 
   // Predict state vector X t+1
-  Eigen::MatrixXd X_next_t(DIM, 1);                               // predicted state
+  StateVec X_next_t;                                              // predicted state
   X_next_t(IDX::X) = X_t(IDX::X) + X_t(IDX::VEL) * cos_yaw * dt;  // dx = v * cos(yaw)
   X_next_t(IDX::Y) = X_t(IDX::Y) + X_t(IDX::VEL) * sin_yaw * dt;  // dy = v * sin(yaw)
   X_next_t(IDX::YAW) = X_t(IDX::YAW) + (X_t(IDX::WZ))*dt;         // dyaw = omega
@@ -282,7 +280,7 @@ bool CTRVMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) cons
   X_next_t(IDX::WZ) = X_t(IDX::WZ);
 
   // State transition matrix A
-  Eigen::MatrixXd A = Eigen::MatrixXd::Identity(DIM, DIM);
+  StateMat A = StateMat::Identity();
   A(IDX::X, IDX::YAW) = -X_t(IDX::VEL) * sin_yaw * dt;
   A(IDX::X, IDX::VEL) = cos_yaw * dt;
   A(IDX::Y, IDX::YAW) = X_t(IDX::VEL) * cos_yaw * dt;
@@ -296,7 +294,7 @@ bool CTRVMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) cons
   const double q_cov_yaw = motion_params_.q_cov_yaw * dt2;
   const double q_cov_vel = motion_params_.q_cov_vel * dt2;
   const double q_cov_wz = motion_params_.q_cov_wz * dt2;
-  Eigen::MatrixXd Q = Eigen::MatrixXd::Zero(DIM, DIM);
+  StateMat Q = StateMat::Zero();
   // Rotate the covariance matrix according to the vehicle yaw
   // because q_cov_x and y are in the vehicle coordinate system.
   Q(IDX::X, IDX::X) = (q_cov_x * cos_yaw * cos_yaw + q_cov_y * sin_yaw * sin_yaw);
@@ -320,8 +318,8 @@ bool CTRVMotionModel::getPredictedState(
   geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const
 {
   // get predicted state
-  Eigen::MatrixXd X(DIM, 1);
-  Eigen::MatrixXd P(DIM, DIM);
+  StateVec X;
+  StateMat P;
   if (!MotionModel::getPredictedState(time, X, P)) {
     return false;
   }

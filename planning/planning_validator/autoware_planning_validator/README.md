@@ -35,7 +35,8 @@ The following features are supported for trajectory validation and can have thre
 - **Distance deviation** : invalid if the ego is too far from the trajectory
 - **Longitudinal distance deviation** : invalid if the trajectory is too far from ego in longitudinal direction
 - **Forward trajectory length** : invalid if the trajectory length is not enough to stop within a given deceleration
-- **Yaw difference** : invalid if the difference between the ego yaw and closest trajectory yaw is too large
+- **Yaw deviation** : invalid if the difference between the ego yaw and closest trajectory yaw is too large.
+  - in general planning is not responsible for keeping a low yaw deviation, so this metric is checked only when the closest trajectory yaw changes by more than `nearest_yaw_trajectory_shift_required_for_checking` between successive trajectories.
 - **Trajectory Shift** : invalid if the lat./long. distance between two consecutive trajectories near the Ego exceed the thresholds.
 
 The following features are to be implemented.
@@ -151,14 +152,14 @@ The following parameters can be set for the `autoware_planning_validator`:
 
 #### Deviation Check
 
-| Name                                        | Type   | Description                                                                  | Default value |
-| :------------------------------------------ | :----- | :--------------------------------------------------------------------------- | :------------ |
-| `validity_checks.deviation.enable`          | bool   | flag to enable/disable deviation validation check                            | true          |
-| `validity_checks.deviation.velocity_th`     | double | max valid velocity deviation between ego and nearest trajectory point [m/s]  | 100.0         |
-| `validity_checks.deviation.distance_th`     | double | max valid euclidean distance between ego and nearest trajectory point [m]    | 100.0         |
-| `validity_checks.deviation.lon_distance_th` | double | max valid longitudinal distance between ego and nearest trajectory point [m] | 2.0           |
-| `validity_checks.deviation.yaw_th`          | double | max valid yaw deviation between ego and nearest trajectory point [rad]       | 1.5708        |
-| `validity_checks.deviation.is_critical`     | bool   | if true, will use handling type specified for critical checks                | false         |
+| Name                                        | Type   | Description                                                                   | Default value |
+| :------------------------------------------ | :----- | :---------------------------------------------------------------------------- | :------------ |
+| `validity_checks.deviation.enable`          | bool   | flag to enable/disable deviation validation check                             | true          |
+| `validity_checks.deviation.velocity_th`     | double | max valid velocity deviation between ego and nearest trajectory point [m/s]   | 100.0         |
+| `validity_checks.deviation.distance_th`     | double | max valid lateral distance between ego and the nearest trajectory segment [m] | 100.0         |
+| `validity_checks.deviation.lon_distance_th` | double | max valid longitudinal distance between ego and nearest trajectory point [m]  | 2.0           |
+| `validity_checks.deviation.yaw_th`          | double | max valid yaw deviation between ego and nearest trajectory point [rad]        | 1.5708        |
+| `validity_checks.deviation.is_critical`     | bool   | if true, will use handling type specified for critical checks                 | false         |
 
 #### Forward Trajectory Length Check
 
@@ -178,3 +179,7 @@ The following parameters can be set for the `autoware_planning_validator`:
 | `validity_checks.trajectory_shift.forward_shift_th`  | double | max valid Longitudinal distance between two consecutive trajectories (measured at nearest point to ego) [m] | 1.0           |
 | `validity_checks.trajectory_shift.backward_shift_th` | double | min valid longitudinal distance between two consecutive trajectories (measured at nearest point to ego) [m] | 0.1           |
 | `validity_checks.trajectory_shift.is_critical`       | bool   | if true, will use handling type specified for critical checks                                               | true          |
+
+!!! warning
+
+    When a validity check with `is_critical = true` is triggered, AND `handling_type.critical` is set to apply soft stop on last valid trajectory, THEN any other validity check triggered simultaneously will publish a WARN level diagnostic instead of ERROR level. This is to avoid contradictory behavior for different types of checks.

@@ -1,4 +1,4 @@
-// Copyright 2020 Autoware Foundation
+// Copyright 2020,2025 Autoware Foundation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,16 +33,28 @@ CPUMonitor::CPUMonitor(const rclcpp::NodeOptions & options) : CPUMonitorBase("cp
 {
 }
 
-void CPUMonitor::checkThrottling(diagnostic_updater::DiagnosticStatusWrapper & stat)
+CPUMonitor::CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
+: CPUMonitorBase(node_name, options)
 {
+}
+
+void CPUMonitor::checkThermalThrottling()
+{
+  // Remember start time to measure elapsed time
+  const auto t_start = std::chrono::high_resolution_clock::now();
+
   int level = DiagStatus::OK;
   std::vector<std::string> status;
 
   const fs::path path("/sys/devices/platform/soc/soc:firmware/get_throttled");
   fs::ifstream ifs(path, std::ios::in);
   if (!ifs) {
-    stat.summary(DiagStatus::ERROR, "file open error");
-    stat.add("get_throttled", "file open error");
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
+    thermal_throttling_data_.clear();
+    thermal_throttling_data_.summary_status = DiagStatus::ERROR;
+    thermal_throttling_data_.summary_message = "file open error";
+    thermal_throttling_data_.error_key = "get_throttled";
+    thermal_throttling_data_.error_value = "file open error";
     return;
   }
 
@@ -64,19 +76,44 @@ void CPUMonitor::checkThrottling(diagnostic_updater::DiagnosticStatusWrapper & s
     status.emplace_back("All clear");
   }
 
-  stat.add("status", boost::algorithm::join(status, ", "));
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
+  thermal_throttling_data_.clear();
 
-  stat.summary(level, thermal_dict_.at(level));
+  thermal_throttling_data_.status = boost::algorithm::join(status, ", ");
+
+  thermal_throttling_data_.summary_status = level;
+  thermal_throttling_data_.summary_message = thermal_dictionary_.at(level);
+
+  // Measure elapsed time since start time.
+  const auto t_end = std::chrono::high_resolution_clock::now();
+  const float elapsed_ms = std::chrono::duration<float, std::milli>(t_end - t_start).count();
+  thermal_throttling_data_.elapsed_ms = elapsed_ms;
 }
 
-void CPUMonitor::getTempNames()
+void CPUMonitor::updateThermalThrottlingImpl(diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
+
+  if (!thermal_throttling_data_.error_key.empty()) {
+    stat.summary(thermal_throttling_data_.summary_status, thermal_throttling_data_.summary_message);
+    stat.add(thermal_throttling_data_.error_key, thermal_throttling_data_.error_value);
+    return;
+  }
+
+  stat.add("status", thermal_throttling_data_.status);
+  stat.summary(thermal_throttling_data_.summary_status, thermal_throttling_data_.summary_message);
+  stat.addf("execution time", "%f ms", thermal_throttling_data_.elapsed_ms);
+}
+
+// This function is called from a locked context in the timer callback.
+void CPUMonitor::getTemperatureFileNames()
 {
   // thermal_zone0
-  std::vector<thermal_zone> therms;
-  SystemMonitorUtility::getThermalZone("cpu-thermal", &therms);
+  std::vector<thermal_zone> thermal_zones;
+  SystemMonitorUtility::getThermalZone("cpu-thermal", &thermal_zones);
 
-  for (auto itr = therms.begin(); itr != therms.end(); ++itr) {
-    temps_.emplace_back(itr->label_, itr->path_);
+  for (const auto & zone : thermal_zones) {
+    temperatures_.emplace_back(zone.label_, zone.path_);
   }
 }
 
