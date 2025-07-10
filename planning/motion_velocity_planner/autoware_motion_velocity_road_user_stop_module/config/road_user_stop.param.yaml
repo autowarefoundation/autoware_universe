@@ -16,12 +16,13 @@
 
       stop_decision:
         stop_margin: 10.0  # [m]
-        max_deceleration: 2.0  # [m/s^2]
+        max_deceleration: 3.0  # [m/s^2]
 
       in_place_stop:
         enable: true
         wrong_way_angle_threshold: 150.0  # [deg]
-        deceleration: 1.0  # [m/s^2]
+        min_speed_threshold: 0.5  # [m/s]
+        deceleration: 1.5  # [m/s^2]
 
       debug:
         publish_debug_markers: true

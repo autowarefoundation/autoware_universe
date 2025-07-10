@@ -16,18 +16,17 @@
 #define ROAD_USER_STOP_MODULE_HPP_
 
 #include "parameters.hpp"
+#include "type_alias.hpp"
+#include "types.hpp"
 
 #include <autoware/motion_velocity_planner_common/planner_data.hpp>
 #include <autoware/motion_velocity_planner_common/plugin_module_interface.hpp>
+#include <autoware/motion_velocity_planner_common/polygon_utils.hpp>
 #include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
-#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
-#include <autoware_perception_msgs/msg/predicted_objects.hpp>
-#include <autoware_planning_msgs/msg/trajectory.hpp>
-#include <geometry_msgs/msg/point.hpp>
-#include <visualization_msgs/msg/marker_array.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_routing/RoutingGraph.h>
@@ -60,17 +59,8 @@ public:
   }
 
 private:
-  struct TrackedObject
-  {
-    unique_identifier_msgs::msg::UUID object_id;
-    rclcpp::Time first_detection_time;
-    rclcpp::Time last_detection_time;
-    geometry_msgs::msg::Point last_position;
-  };
-
   RoadUserStopParameters params_;
   std::string module_name_;
-  double vehicle_front_offset_;  // Distance from base_link to front bumper
 
   std::unordered_map<std::string, TrackedObject> tracked_objects_;
 
@@ -78,37 +68,45 @@ private:
     const autoware_internal_planning_msgs::msg::PathWithLaneId::ConstSharedPtr msg);
 
   // helper functions
-  bool isTargetObject(const autoware_perception_msgs::msg::PredictedObject & object) const;
+  bool isTargetObject(const PredictedObject & object) const;
   bool isObjectOnRoad(
-    const autoware_perception_msgs::msg::PredictedObject & object,
-    const lanelet::LaneletMapPtr & lanelet_map,
+    const PredictedObject & object, const lanelet::LaneletMapPtr & lanelet_map,
     const lanelet::ConstLanelets & relevant_lanelets) const;
   bool isNearCrosswalk(
     const geometry_msgs::msg::Point & position, const lanelet::LaneletMapPtr & lanelet_map) const;
   bool isOnSidewalk(
     const geometry_msgs::msg::Point & position, const lanelet::LaneletMapPtr & lanelet_map) const;
-  bool isWrongWayUser(
-    const autoware_perception_msgs::msg::PredictedObject & object,
-    const lanelet::ConstLanelet & lanelet) const;
+  bool isWrongWayUser(const PredictedObject & object, const lanelet::ConstLanelet & lanelet) const;
 
   lanelet::ConstLanelets getRelevantLanelets(
-    const std::shared_ptr<const PlannerData> planner_data) const;
+    const std::shared_ptr<const PlannerData> planner_data,
+    const std::vector<TrajectoryPoint> & trajectory_points) const;
 
   std::optional<size_t> calculateStopPointWithMargin(
-    const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory_points,
-    const autoware_perception_msgs::msg::PredictedObject & object) const;
+    const std::vector<TrajectoryPoint> & trajectory_points, const PredictedObject & object,
+    const VehicleInfo & vehicle_info) const;
+
+  std::optional<size_t> calculateGradualStopPoint(
+    const std::vector<TrajectoryPoint> & trajectory_points, const double current_velocity,
+    const geometry_msgs::msg::Point & current_position) const;
+
+  std::optional<StopPointCandidate> createStopPointCandidate(
+    const std::vector<TrajectoryPoint> & trajectory_points, const PredictedObject & object,
+    const bool is_wrong_way, const std::shared_ptr<const PlannerData> planner_data) const;
 
   double calculateRequiredDeceleration(
     const double current_velocity, const double stop_distance) const;
 
-  void updateTrackedObjects(
-    const autoware_perception_msgs::msg::PredictedObjects & objects,
-    const rclcpp::Time & current_time);
+  void updateTrackedObjects(const PredictedObjects & objects, const rclcpp::Time & current_time);
 
   bool hasMinimumDetectionDuration(
     const std::string & object_id, const rclcpp::Time & current_time) const;
 
   void publishProcessingTime(const double processing_time_ms) const;
+
+  void addPlanningFactor(
+    const std::vector<TrajectoryPoint> & trajectory_points, const StopPointCandidate & candidate,
+    const std::shared_ptr<const PlannerData> planner_data) const;
 
   // debug
   struct DebugData
@@ -116,16 +114,23 @@ private:
     lanelet::ConstLanelets relevant_lanelets;
     lanelet::ConstLanelets ego_lanelets;       // lanelets on ego lane
     lanelet::ConstLanelets adjacent_lanelets;  // adjacent lanelets (left/right)
-    std::vector<autoware_perception_msgs::msg::PredictedObject> filtered_objects;
+    lanelet::ConstLanelets
+      masked_adjacent_lanelets;  // adjacent lanelets masked by trajectory margin
+    std::vector<autoware_utils_geometry::Polygon2d>
+      trajectory_polygons;  // trajectory polygons with lateral margin
+    std::vector<autoware_utils_geometry::Polygon2d>
+      masked_adjacent_polygons;  // polygons clipped by trajectory margin
+    std::vector<PredictedObject> filtered_objects;
     std::optional<size_t> stop_index;
     std::optional<geometry_msgs::msg::Point> stop_point;  // for planning factor
-    std::optional<autoware_perception_msgs::msg::PredictedObject>
-      stop_target_object;  // object causing stop
+    std::optional<PredictedObject> stop_target_object;    // object causing stop
+    std::vector<geometry_msgs::msg::Point>
+      gradual_stop_positions;  // calculated gradual stop positions
   };
 
-  visualization_msgs::msg::MarkerArray createDebugMarkerArray() const;
+  MarkerArray createDebugMarkerArray() const;
 
-  visualization_msgs::msg::MarkerArray createLaneletPolygonsMarkerArray(
+  MarkerArray createLaneletPolygonsMarkerArray(
     const lanelet::ConstLanelets & lanelets, const std::string & ns,
     const std::array<double, 3> & color) const;
 
