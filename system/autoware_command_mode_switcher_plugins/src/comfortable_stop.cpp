@@ -21,11 +21,10 @@ namespace autoware::command_mode_switcher
 
 void ComfortableStopSwitcher::initialize()
 {
-  pub_velocity_limit_ = node_->create_publisher<tier4_planning_msgs::msg::VelocityLimit>(
+  pub_velocity_limit_ = node_->create_publisher<VelocityLimit>(
     "/planning/scenario_planning/max_velocity_candidates", rclcpp::QoS{1}.transient_local());
-  pub_velocity_limit_clear_command_ =
-    node_->create_publisher<tier4_planning_msgs::msg::VelocityLimitClearCommand>(
-      "/planning/scenario_planning/clear_velocity_limit", rclcpp::QoS{1}.transient_local());
+  pub_velocity_limit_clear_command_ = node_->create_publisher<VelocityLimitClearCommand>(
+    "/planning/scenario_planning/clear_velocity_limit", rclcpp::QoS{1}.transient_local());
   sub_odom_ =
     std::make_unique<autoware_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry>>(
       node_, "/localization/kinematic_state");
@@ -65,7 +64,7 @@ MrmState ComfortableStopSwitcher::update_mrm_state()
 
 void ComfortableStopSwitcher::publish_velocity_limit()
 {
-  auto velocity_limit = tier4_planning_msgs::msg::VelocityLimit();
+  auto velocity_limit = VelocityLimit();
   velocity_limit.stamp = node_->now();
   velocity_limit.max_velocity = 0;
   velocity_limit.use_constraints = true;
@@ -80,7 +79,7 @@ void ComfortableStopSwitcher::publish_velocity_limit()
 
 void ComfortableStopSwitcher::publish_velocity_limit_clear_command()
 {
-  auto velocity_limit_clear_command = tier4_planning_msgs::msg::VelocityLimitClearCommand();
+  auto velocity_limit_clear_command = VelocityLimitClearCommand();
   velocity_limit_clear_command.stamp = node_->now();
   velocity_limit_clear_command.command = true;
   velocity_limit_clear_command.sender = "comfortable_stop_switcher";

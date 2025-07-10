@@ -21,9 +21,9 @@
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_planning_msgs/msg/velocity_limit.hpp>
+#include <autoware_internal_planning_msgs/msg/velocity_limit_clear_command.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <tier4_planning_msgs/msg/velocity_limit.hpp>
-#include <tier4_planning_msgs/msg/velocity_limit_clear_command.hpp>
 
 #include <memory>
 
@@ -51,13 +51,15 @@ public:
   MrmState update_mrm_state() override;
 
 private:
+  using VelocityLimit = autoware_internal_planning_msgs::msg::VelocityLimit;
+  using VelocityLimitClearCommand = autoware_internal_planning_msgs::msg::VelocityLimitClearCommand;
+
   void publish_velocity_limit();
   void publish_velocity_limit_clear_command();
   bool is_stopped();
 
-  rclcpp::Publisher<tier4_planning_msgs::msg::VelocityLimit>::SharedPtr pub_velocity_limit_;
-  rclcpp::Publisher<tier4_planning_msgs::msg::VelocityLimitClearCommand>::SharedPtr
-    pub_velocity_limit_clear_command_;
+  rclcpp::Publisher<VelocityLimit>::SharedPtr pub_velocity_limit_;
+  rclcpp::Publisher<VelocityLimitClearCommand>::SharedPtr pub_velocity_limit_clear_command_;
   std::unique_ptr<autoware_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry>> sub_odom_;
 
   MrmState mrm_state_;
