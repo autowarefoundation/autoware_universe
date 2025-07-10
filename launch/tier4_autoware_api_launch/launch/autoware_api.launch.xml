@@ -9,6 +9,9 @@
   <arg name="rosbridge_respawn" default="true"/>
   <arg name="rosbridge_max_message_size" default="10000000"/>
 
+  <!-- Parameter files -->
+  <arg name="default_adapi_param_path" default="$(find-pkg-share autoware_default_adapi_universe)/config/default_adapi.param.yaml"/>
+
   <!-- Deprecated API -->
   <group if="$(var launch_deprecated_api)">
     <include file="$(find-pkg-share tier4_autoware_api_launch)/launch/deprecated_api.launch.xml"/>
@@ -16,7 +19,9 @@
 
   <!-- AD API -->
   <group>
-    <include file="$(find-pkg-share autoware_default_adapi_universe)/launch/default_adapi.launch.py" if="$(var launch_default_adapi)"/>
+    <include file="$(find-pkg-share autoware_default_adapi_universe)/launch/default_adapi.launch.py" if="$(var launch_default_adapi)">
+      <arg name="config" value="$(var default_adapi_param_path)"/>
+    </include>
     <include file="$(find-pkg-share autoware_adapi_adaptors)/launch/rviz_adaptors.launch.xml" if="$(var launch_rviz_adaptors)"/>
   </group>
 
