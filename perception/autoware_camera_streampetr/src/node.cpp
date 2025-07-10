@@ -171,6 +171,10 @@ void StreamPetrNode::camera_image_callback(
   if (objects_sub_count < 1) {
     return;
   }
+  
+  if (stop_watch_ptr_) {
+    stop_watch_ptr_->tic("latency/total");
+  }
 
   if (!data_store_->check_if_all_camera_info_received()) {
     return;
@@ -200,6 +204,10 @@ void StreamPetrNode::camera_image_callback(
     return;
   }
 
+  if (stop_watch_ptr_) {
+    stop_watch_ptr_->tic("latency/total");
+  }
+
   if (!data_store_->check_if_all_camera_info_received()) {
     return;
   }
@@ -220,10 +228,6 @@ void StreamPetrNode::camera_image_callback(
 void StreamPetrNode::step() {
   
   double inference_time_ms = -1.0;
-
-  if (stop_watch_ptr_) {
-    stop_watch_ptr_->tic("latency/total");
-  }
 
   const float tdiff = data_store_->check_if_all_images_synced();
 

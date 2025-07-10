@@ -8,6 +8,8 @@ The `autoware_camera_streampetr` package is used for 3D object detection based o
 
 This package implements a TensorRT powered inference node for StreamPETR [1]. This is the first camera-only 3D object detection node in autoware.
 
+This node has been optimized for multi-camera systems where the camera topics are published in a sequential manner, not all at once. The node takes
+advantage of this by preprocessing (resize, crop, normalize) the images and storing them appropriately on GPU, so that preprocessing costs can be minimized.
 
 ## Inputs / Outputs
 
@@ -21,17 +23,17 @@ This package implements a TensorRT powered inference node for StreamPETR [1]. Th
 
 ### Output
 
-| Name                              | Type                                                          | Description                                                                 |
-|-----------------------------------|---------------------------------------------------------------|-----------------------------------------------------------------------------|
-| `~/output/objects`                | `autoware_perception_msgs::msg::DetectedObjects`              | Detected objects.                                                           |
-| `latency/preprocess`              | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Preprocessing time (ms).                                                    |
-| `latency/total`                   | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Total processing time (ms): preprocessing + inference + postprocessing.     |
-| `latency/inference`               | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Total inference time (ms).                                                  |
-| `latency/inference/backbone`      | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Backbone inference time (ms).                                               |
-| `latency/inference/ptshead`       | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Points head inference time (ms).                                            |
-| `latency/inference/pos_embed`     | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Position embedding inference time (ms).                                     |
-| `latency/inference/postprocess`   | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Postprocessing time (ms): network predictions → Autoware topics.            |
-| `latency/cycle_time_ms`           | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Cycle time (ms): from receiving first camera topic to publishing results.   |
+| Name                              | Type                                                          | Description                                                                                      | RTX 3090 Latency (ms) |
+|-----------------------------------|---------------------------------------------------------------|--------------------------------------------------------------------------------------------------|------------------------|
+| `~/output/objects`                | `autoware_perception_msgs::msg::DetectedObjects`              | Detected objects.                                                                                | —                      |
+| `latency/preprocess`              | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Preprocessing time per image(ms).                                                                | 3.25                   |
+| `latency/total`                   | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Total processing time (ms): preprocessing + inference + postprocessing.                          | 26.04                  |
+| `latency/inference`               | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Total inference time (ms).                                                                       | 22.13                  |
+| `latency/inference/backbone`      | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Backbone inference time (ms).                                                                    | 16.21                  |
+| `latency/inference/ptshead`       | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Points head inference time (ms).                                                                 | 5.45                   |
+| `latency/inference/pos_embed`     | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Position embedding inference time (ms).                                                          | 0.40                   |
+| `latency/inference/postprocess`   | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Postprocessing time (ms): converting network predictions to Autoware format.                     | 0.40                   |
+| `latency/cycle_time_ms`           | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Cycle time (ms): from receiving the first camera topic to publishing results.                    | 110.65                 |
 
 
 ## Parameters
@@ -92,17 +94,20 @@ This node is camera-only and does not require pointcloud input. It assumes:
 - The anchor camera (specified by `anchor_camera_id`) triggers the inference cycle
 - Vehicle odometry is available for ego motion compensation
 - Transform information between camera frames and base_link is available
+- The input images are undistorted
 
 ## Trained Models
 
 You can download the ONNX model files for StreamPETR. The files should be placed in the appropriate model directory as specified in the launch configuration.
 
 Required model files:
-- Backbone ONNX model
-- Head ONNX model  
-- Position embedding ONNX model
+- Backbone ONNX model: TODO
+- Head ONNX model: TODO
+- Position embedding ONNX model: TODO
 
-### Changelog
+If you want to train and deploy your own model, you can find the source code for that in [AWML](https://github.com/tier4/AWML/tree/main/projects/StreamPETR).
+
+## Changelog
 
 ## References/External links
 
@@ -111,6 +116,4 @@ Required model files:
 ## (Optional) Future extensions / Unimplemented parts
 
 - Implement int8 quantization for the backbone to further reduce inference latency
-- Support for dynamic number of cameras
-- Enhanced temporal modeling capabilities
-- Integration with additional sensor modalities
+- Execute the image backbone for each image as they arrive, to reduce latency further.
