@@ -10,7 +10,7 @@
   <arg name="rosbridge_max_message_size" default="10000000"/>
 
   <!-- Parameter files -->
-  <arg name="default_adapi_param_path" default="$(find-pkg-share autoware_default_adapi)/config/default_adapi.param.yaml"/>
+  <arg name="default_adapi_param_path" default="$(find-pkg-share autoware_default_adapi_universe)/config/default_adapi.param.yaml"/>
 
   <!-- Deprecated API -->
   <group if="$(var launch_deprecated_api)">
