@@ -207,7 +207,7 @@ std::optional<SamplingParameters> init_sampling_parameters(
   const auto use_remaining_distance =
     common_data_ptr->lc_param_ptr->frenet.use_entire_remaining_distance;
 
-  const auto [lc_length, duration, final_velocity] = std::invoke([&]() {
+  const auto [lc_length, duration, final_velocity] = std::invoke([&, max_lateral_acc]() {
     auto duration = autoware::motion_utils::calc_shift_time_from_jerk(
       std::abs(initial_state.position.d), trajectory.lateral_jerk, max_lateral_acc);
     auto final_velocity = std::max(min_lc_vel, initial_velocity + lon_accel * duration);
