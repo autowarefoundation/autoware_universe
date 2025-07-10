@@ -33,7 +33,6 @@ namespace autoware::command_mode_switcher
 
 struct Params
 {
-  int hazard_lights_hz;
   float min_acceleration;
   float max_jerk;
   float min_jerk;

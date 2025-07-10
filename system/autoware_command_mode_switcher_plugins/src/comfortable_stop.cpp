@@ -21,7 +21,7 @@ namespace autoware::command_mode_switcher
 
 void ComfortableStopSwitcher::initialize()
 {
-  params_.hazard_lights_hz = node_->declare_parameter<int>(expand_param("hazard_lights_hz"));
+  int hazard_lights_hz = node_->declare_parameter<int>(expand_param("hazard_lights_hz"));
   params_.min_acceleration = node_->declare_parameter<float>(expand_param("min_acceleration"));
   params_.max_jerk = node_->declare_parameter<float>(expand_param("max_jerk"));
   params_.min_jerk = node_->declare_parameter<float>(expand_param("min_jerk"));
@@ -37,7 +37,7 @@ void ComfortableStopSwitcher::initialize()
   sub_odom_ =
     std::make_unique<autoware_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry>>(
       node_, "/localization/kinematic_state");
-  rclcpp::Rate rate(params_.hazard_lights_hz);
+  rclcpp::Rate rate(hazard_lights_hz);
   pub_hazard_lights_timer_ = rclcpp::create_timer(
     node_, node_->get_clock(), rate.period(),
     std::bind(&ComfortableStopSwitcher::publish_hazard_lights_command, this));
