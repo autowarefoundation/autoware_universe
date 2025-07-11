@@ -20,14 +20,13 @@
 
 #include <autoware/control_evaluator/control_evaluator_node.hpp>
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
+#include <tf2/LinearMath/Quaternion.hpp>
 
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include <tier4_metric_msgs/msg/metric_array.hpp>
 
 #include "boost/lexical_cast.hpp"
-
-#include <tf2/LinearMath/Quaternion.h>
 
 #include <iostream>
 #include <memory>

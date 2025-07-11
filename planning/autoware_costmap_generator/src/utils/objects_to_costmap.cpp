@@ -46,9 +46,9 @@
 
 #include <autoware/grid_map_utils/polygon_iterator.hpp>
 #include <grid_map_core/TypeDefs.hpp>
+#include <tf2/utils.hpp>
 
 #include <Eigen/src/Core/util/Constants.h>
-#include <tf2/utils.h>
 
 #include <algorithm>
 #include <cmath>

@@ -23,6 +23,7 @@
 #include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware/universe_utils/math/normalization.hpp>
 #include <rclcpp/logger.hpp>
+#include <tf2/utils.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
@@ -32,8 +33,6 @@
 #include <boost/geometry/algorithms/length.hpp>
 #include <boost/geometry/algorithms/within.hpp>
 #include <boost/geometry/index/predicates.hpp>
-
-#include <tf2/utils.h>
 
 #include <algorithm>
 #include <iomanip>
