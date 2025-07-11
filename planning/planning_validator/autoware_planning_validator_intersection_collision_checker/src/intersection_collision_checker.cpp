@@ -411,7 +411,7 @@ bool IntersectionCollisionChecker::check_collision(
       auto & existing_object = history_[pcd_object->overlap_lanelet_id];
       update_object(existing_object, pcd_object.value());
       existing_object.is_safe = !is_colliding(existing_object, target_ll.ego_overlap_time);
-      is_safe &= existing_object.is_safe;
+      is_safe = is_safe && existing_object.is_safe;
       debug_data.pcd_objects.push_back(existing_object);
     }
   }
