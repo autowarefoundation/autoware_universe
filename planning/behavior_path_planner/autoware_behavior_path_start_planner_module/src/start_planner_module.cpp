@@ -305,9 +305,10 @@ bool StartPlannerModule::requiresDynamicObjectsCollisionDetection() const
     return false;
   }
 
-  // Return true and always perform collision detection if the following condition is true:
+  // Return true and always perform collision detection if any of the following conditions are true:
   // - Rear vehicle check is set to be skipped.
-  if (skip_rear_vehicle_check) {
+  // - The vehicle is on a bus stop
+  if (skip_rear_vehicle_check || isCurrentPoseOnBusStop()) {
     return true;
   }
 
@@ -1662,13 +1663,20 @@ bool StartPlannerModule::isSafePath() const
   }
   std::vector<ExtendedPredictedObject> merged_target_object;
   merged_target_object.reserve(
-    target_objects_on_lane.on_current_lane.size() + target_objects_on_lane.on_shoulder_lane.size());
+    target_objects_on_lane.on_current_lane.size() + target_objects_on_lane.on_shoulder_lane.size() +
+    target_objects_on_lane.on_right_lane.size() + target_objects_on_lane.on_left_lane.size());
   merged_target_object.insert(
     merged_target_object.end(), target_objects_on_lane.on_current_lane.begin(),
     target_objects_on_lane.on_current_lane.end());
   merged_target_object.insert(
     merged_target_object.end(), target_objects_on_lane.on_shoulder_lane.begin(),
     target_objects_on_lane.on_shoulder_lane.end());
+  merged_target_object.insert(
+    merged_target_object.end(), target_objects_on_lane.on_right_lane.begin(),
+    target_objects_on_lane.on_right_lane.end());
+  merged_target_object.insert(
+    merged_target_object.end(), target_objects_on_lane.on_left_lane.begin(),
+    target_objects_on_lane.on_left_lane.end());
 
   return autoware::behavior_path_planner::utils::path_safety_checker::checkSafetyWithRSS(
     pull_out_path, ego_predicted_path, merged_target_object, debug_data_.collision_check,
