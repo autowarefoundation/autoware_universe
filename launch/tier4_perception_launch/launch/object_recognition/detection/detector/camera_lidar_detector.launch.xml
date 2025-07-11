@@ -50,6 +50,9 @@
   <arg name="input/camera7/image"/>
   <arg name="input/camera7/info"/>
   <arg name="input/camera7/rois"/>
+  <arg name="input/camera8/image"/>
+  <arg name="input/camera8/info"/>
+  <arg name="input/camera8/rois"/>
 
   <arg name="segmentation_pointcloud_fusion_camera_ids"/>
   <arg name="image_topic_name"/>
@@ -114,6 +117,7 @@
       <arg name="input/rois5" value="$(var input/camera5/rois)"/>
       <arg name="input/rois6" value="$(var input/camera6/rois)"/>
       <arg name="input/rois7" value="$(var input/camera7/rois)"/>
+      <arg name="input/rois8" value="$(var input/camera8/rois)"/>
       <arg name="input/camera_info0" value="$(var input/camera0/info)"/>
       <arg name="input/camera_info1" value="$(var input/camera1/info)"/>
       <arg name="input/camera_info2" value="$(var input/camera2/info)"/>
@@ -122,6 +126,7 @@
       <arg name="input/camera_info5" value="$(var input/camera5/info)"/>
       <arg name="input/camera_info6" value="$(var input/camera6/info)"/>
       <arg name="input/camera_info7" value="$(var input/camera7/info)"/>
+      <arg name="input/camera_info8" value="$(var input/camera8/info)"/>
       <arg name="input/image0" value="$(var input/camera0/image)"/>
       <arg name="input/image1" value="$(var input/camera1/image)"/>
       <arg name="input/image2" value="$(var input/camera2/image)"/>
@@ -130,6 +135,7 @@
       <arg name="input/image5" value="$(var input/camera5/image)"/>
       <arg name="input/image6" value="$(var input/camera6/image)"/>
       <arg name="input/image7" value="$(var input/camera7/image)"/>
+      <arg name="input/image8" value="$(var input/camera8/image)"/>
       <arg name="input/pointcloud" value="$(var pointpainting/input/pointcloud)"/>
       <arg name="output/objects" value="$(var pointpainting/output/objects)"/>
 
@@ -190,6 +196,7 @@
           <arg name="input/rois5" value="$(var input/camera5/rois)"/>
           <arg name="input/rois6" value="$(var input/camera6/rois)"/>
           <arg name="input/rois7" value="$(var input/camera7/rois)"/>
+          <arg name="input/rois8" value="$(var input/camera8/rois)"/>
           <arg name="input/camera_info0" value="$(var input/camera0/info)"/>
           <arg name="input/camera_info1" value="$(var input/camera1/info)"/>
           <arg name="input/camera_info2" value="$(var input/camera2/info)"/>
@@ -198,6 +205,7 @@
           <arg name="input/camera_info5" value="$(var input/camera5/info)"/>
           <arg name="input/camera_info6" value="$(var input/camera6/info)"/>
           <arg name="input/camera_info7" value="$(var input/camera7/info)"/>
+          <arg name="input/camera_info8" value="$(var input/camera8/info)"/>
           <arg name="input/image0" value="$(var input/camera0/image)"/>
           <arg name="input/image1" value="$(var input/camera1/image)"/>
           <arg name="input/image2" value="$(var input/camera2/image)"/>
@@ -206,6 +214,7 @@
           <arg name="input/image5" value="$(var input/camera5/image)"/>
           <arg name="input/image6" value="$(var input/camera6/image)"/>
           <arg name="input/image7" value="$(var input/camera7/image)"/>
+          <arg name="input/image8" value="$(var input/camera8/image)"/>
           <arg name="input/clusters" value="$(var roi_cluster_fusion/input/clusters)"/>
           <arg name="output/clusters" value="$(var roi_cluster_fusion/output/clusters)"/>
           <arg name="param_path" value="$(var roi_cluster_fusion_param_path)"/>

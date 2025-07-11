@@ -113,6 +113,9 @@
   <arg name="image_raw7" default="/sensing/camera/camera7/image_rect_color"/>
   <arg name="camera_info7" default="/sensing/camera/camera7/camera_info"/>
   <arg name="detection_rois7" default="/perception/object_recognition/detection/rois7"/>
+  <arg name="image_raw8" default="/sensing/camera/camera8/image_rect_color"/>
+  <arg name="camera_info8" default="/sensing/camera/camera8/camera_info"/>
+  <arg name="detection_rois8" default="/perception/object_recognition/detection/rois8"/>
   <arg name="image_number" default="6" description="choose image raw number(1-8)"/>
   <arg name="image_topic_name" default="image_rect_color" description="image topic name options `image_rect_color`, `image_raw"/>
   <arg name="segmentation_pointcloud_fusion_camera_ids" default="[0,1,5]" description="list of camera ids used for segmentation_pointcloud_fusion node"/>
@@ -276,6 +279,9 @@
           <arg name="input/camera7/image" value="$(var image_raw7)"/>
           <arg name="input/camera7/info" value="$(var camera_info7)"/>
           <arg name="input/camera7/rois" value="$(var detection_rois7)"/>
+          <arg name="input/camera8/image" value="$(var image_raw8)"/>
+          <arg name="input/camera8/info" value="$(var camera_info8)"/>
+          <arg name="input/camera8/rois" value="$(var detection_rois8)"/>
           <arg name="input/pointcloud" value="$(var perception_pointcloud)"/>
           <arg name="node/pointcloud_container" value="$(var pointcloud_container_name)"/>
           <arg name="input/radar" value="$(var input/radar)"/>
