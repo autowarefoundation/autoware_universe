@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights
+ * reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,26 +15,25 @@
  * limitations under the License.
  */
 
+#include <NvInferRuntime.h>
 #include <cuda_fp16.h>
 #include <cuda_runtime_api.h>
-#include <NvInferRuntime.h>
- 
-struct Memory {
+
+struct Memory
+{
   int mem_len = 1280;
   int pre_len = 1024;
-  void* mem_buf; // 1024
-  float* pre_buf;  // 1, 1024, 1
-  float* post_buf; // 1, 1280, 1
+  void * mem_buf;    // 1024
+  float * pre_buf;   // 1, 1024, 1
+  float * post_buf;  // 1, 1280, 1
 
   cudaStream_t mem_stream;
 
-  Memory() {
-    cudaMalloc(&mem_buf, sizeof(float) * mem_len);
-  }
+  Memory() { cudaMalloc(&mem_buf, sizeof(float) * mem_len); }
 
   void StepReset();
   void StepPre(float ts);
   void StepPost(float ts);
 
   void DebugPrint();
-}; // struct Memory
+};  // struct Memory

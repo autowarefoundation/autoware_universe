@@ -1,60 +1,65 @@
-#ifndef AUTOWARE__CAMERA_STREAMPETR_NETWORK_HPP__
-#define AUTOWARE__CAMERA_STREAMPETR_NETWORK_HPP__
-
+#ifndef AUTOWARE__CAMERA_STREAMPETR__NETWORK__NETWORK_HPP_
+#define AUTOWARE__CAMERA_STREAMPETR__NETWORK__NETWORK_HPP_
 
 #include <image_transport/image_transport.hpp>
-#include <memory>
 #include <rclcpp/rclcpp.hpp>
-#include <string>
-#include <map>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
-#include <nav_msgs/msg/odometry.hpp>
 #include <geometry_msgs/msg/pose.hpp>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#include <sensor_msgs/msg/image.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
-#include <tf2_ros/static_transform_broadcaster.h>
+#include <sensor_msgs/msg/image.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_msgs/msg/tf_message.hpp>
 
-// From NVIDIA/DL4AGX
-#include <iostream>
-#include <fstream>
-#include <filesystem>
-#include <string>
-#include <vector>
-#include <memory>
-#include <chrono>
-#include <unordered_map>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/static_transform_broadcaster.h>
+#include <tf2_ros/transform_listener.h>
 
+#include <map>
+#include <memory>
+#include <string>
+
+// From NVIDIA/DL4AGX
+#include "autoware/camera_streampetr/network/memory.cuh"
+
+#include <NvInferRuntime.h>
 #include <cuda_fp16.h>
 #include <cuda_runtime_api.h>
-#include <NvInferRuntime.h>
-#include "autoware/camera_streampetr/network/memory.cuh"
+
+#include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 // From NVIDIA/DL4AGX
 
+#include "autoware/camera_streampetr/cuda_utils.hpp"
 #include "autoware/camera_streampetr/postprocess/non_maximum_supression.hpp"
 #include "autoware/camera_streampetr/postprocess/postprocess_kernel.hpp"
 #include "autoware/camera_streampetr/utils.hpp"
-#include "autoware/camera_streampetr/cuda_utils.hpp"
 
 namespace autoware::camera_streampetr
 {
 using namespace nvinfer1;
 using namespace cuda;
 
-class SubNetwork {
-  ICudaEngine* engine;
-  IExecutionContext* context; 
+class SubNetwork
+{
+  ICudaEngine * engine;
+  IExecutionContext * context;
+
 public:
   std::unordered_map<std::string, std::shared_ptr<Tensor>> bindings;
   bool use_cuda_graph = false;
   cudaGraph_t graph;
   cudaGraphExec_t graph_exec;
 
-  SubNetwork(std::string engine_path, IRuntime* runtime) {
+  SubNetwork(std::string engine_path, IRuntime * runtime)
+  {
     std::ifstream engine_file(engine_path, std::ios::binary);
     if (!engine_file) {
       throw std::runtime_error("Error opening engine file: " + engine_path);
@@ -68,13 +73,13 @@ public:
 
     engine_file.read(engineData.data(), fsize);
     engine = runtime->deserializeCudaEngine(engineData.data(), fsize);
-    context = engine->createExecutionContext(); 
+    context = engine->createExecutionContext();
 
-    int nb = engine->getNbIOTensors();  
+    int nb = engine->getNbIOTensors();
 
-    for( int n=0; n<nb; n++ ) {
+    for (int n = 0; n < nb; n++) {
       std::string name = engine->getIOTensorName(n);
-      Dims d = engine->getTensorShape(name.c_str());            
+      Dims d = engine->getTensorShape(name.c_str());
       DataType dtype = engine->getTensorDataType(name.c_str());
       bindings[name] = std::make_shared<Tensor>(name, d, dtype);
       bindings[name]->iomode = engine->getTensorIOMode(name.c_str());
@@ -83,18 +88,19 @@ public:
     }
   }
 
-  void Enqueue(cudaStream_t stream) {
-    if( this->use_cuda_graph ) {
+  void Enqueue(cudaStream_t stream)
+  {
+    if (this->use_cuda_graph) {
       cudaGraphLaunch(graph_exec, stream);
     } else {
       context->enqueueV3(stream);
-    }  
+    }
   }
 
-  ~SubNetwork() {
-  }
+  ~SubNetwork() {}
 
-  void EnableCudaGraph(cudaStream_t stream) {        
+  void EnableCudaGraph(cudaStream_t stream)
+  {
     // run first time to avoid allocation
     this->Enqueue(stream);
     cudaStreamSynchronize(stream);
@@ -109,77 +115,71 @@ public:
     cudaGraphInstantiate(&graph_exec, graph, 0);
 #endif
   }
-}; // class SubNetwork
+};  // class SubNetwork
 
-
-class Duration {
+class Duration
+{
   // stat
   std::vector<float> stats;
   cudaEvent_t b, e;
   std::string m_name;
+
 public:
-  Duration(std::string name): m_name(name) {
+  Duration(std::string name) : m_name(name)
+  {
     cudaEventCreate(&b);
     cudaEventCreate(&e);
   }
 
-  void MarkBegin(cudaStream_t s) {
-    cudaEventRecord(b, s);
-  }
+  void MarkBegin(cudaStream_t s) { cudaEventRecord(b, s); }
 
-  void MarkEnd(cudaStream_t s) {
-    cudaEventRecord(e, s);
-  }
+  void MarkEnd(cudaStream_t s) { cudaEventRecord(e, s); }
 
-  float Elapsed() {
+  float Elapsed()
+  {
     float val;
     cudaEventElapsedTime(&val, b, e);
     stats.push_back(val);
     return val;
   }
-}; // class Duration
+};  // class Duration
 
-class Logger : public ILogger {
+class Logger : public ILogger
+{
 public:
-void log(Severity severity, const char* msg) noexcept override {
-  // Only print error messages
-  if (severity == Severity::kERROR) {
-    std::cerr << msg << std::endl;
+  void log(Severity severity, const char * msg) noexcept override
+  {
+    // Only print error messages
+    if (severity == Severity::kERROR) {
+      std::cerr << msg << std::endl;
+    }
   }
-}
 };
 
 Logger gLogger;
 
-class StreamPetrNetwork {
+class StreamPetrNetwork
+{
 public:
-  StreamPetrNetwork(const std::string & engine_backbone_path, 
-  const std::string & engine_head_path, 
-  const std::string & engine_position_embedding_path, 
-  const bool use_temporal, 
-  const double search_distance_2d, 
-  const double circle_nms_dist_threshold,
-  const double iou_threshold, 
-  const double confidence_threshold,
-  const std::vector<std::string> class_names,
-  const int32_t num_proposals,
-  const std::vector<double> yaw_norm_thresholds,
-  const std::vector<float> detection_range);
+  StreamPetrNetwork(
+    const std::string & engine_backbone_path, const std::string & engine_head_path,
+    const std::string & engine_position_embedding_path, const bool use_temporal,
+    const double search_distance_2d, const double circle_nms_dist_threshold,
+    const double iou_threshold, const double confidence_threshold,
+    const std::vector<std::string> class_names, const int32_t num_proposals,
+    const std::vector<double> yaw_norm_thresholds, const std::vector<float> detection_range);
 
   ~StreamPetrNetwork();
   void inference_detector(
-    const std::shared_ptr<Tensor> imgs,
-    const std::vector<float> & ego_pose,
-    const std::vector<float> & ego_pose_inv,
-    const std::vector<float> & img_metas_pad,
-    const std::vector<float> & intrinsics,
-    const std::vector<float> & img2lidar,
-    const float stamp,
+    const std::shared_ptr<Tensor> imgs, const std::vector<float> & ego_pose,
+    const std::vector<float> & ego_pose_inv, const std::vector<float> & img_metas_pad,
+    const std::vector<float> & intrinsics, const std::vector<float> & img2lidar, const float stamp,
     std::vector<autoware_perception_msgs::msg::DetectedObject> & output_objects,
     std::vector<float> & forward_time_ms);
-  
+
   void printBindingInfo();
   void wipe_memory();
+
 private:
   autoware_perception_msgs::msg::DetectedObject bbox_to_ros_msg(const Box3D & bbox);
 
@@ -191,7 +191,6 @@ private:
   std::unique_ptr<Duration> dur_ptshead_;
   std::unique_ptr<Duration> dur_pos_embed_;
   std::unique_ptr<Duration> dur_postprocess_;
-
 
   std::unique_ptr<PostprocessCuda> postprocess_cuda_;
   NonMaximumSuppression iou_bev_nms_;
@@ -207,4 +206,4 @@ private:
 
 }  // namespace autoware::camera_streampetr
 
-#endif  // AUTOWARE__CAMERA_STREAMPETR_NETWORK_HPP__
+#endif  // AUTOWARE__CAMERA_STREAMPETR__NETWORK__NETWORK_HPP_

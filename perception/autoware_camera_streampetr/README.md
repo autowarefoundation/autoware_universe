@@ -15,26 +15,25 @@ advantage of this by preprocessing (resize, crop, normalize) the images and stor
 
 ### Input
 
-| Name                           | Type                                                             | Description                                                     |
-|--------------------------------|------------------------------------------------------------------|-----------------------------------------------------------------|
-| `~/input/kinematic_state`      | `nav_msgs::msg::Odometry`                                        | Vehicle kinematic state for ego motion tracking.                |
-| `~/input/camera*/image`        | `sensor_msgs::msg::Image` or `sensor_msgs::msg::CompressedImage` | Input image topics (supports both compressed and uncompressed). |
-| `~/input/camera*/camera_info`  | `sensor_msgs::msg::CameraInfo`                                   | Input camera info topics, for camera parameters.                |
+| Name                          | Type                                                             | Description                                                     |
+| ----------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------- |
+| `~/input/kinematic_state`     | `nav_msgs::msg::Odometry`                                        | Vehicle kinematic state for ego motion tracking.                |
+| `~/input/camera*/image`       | `sensor_msgs::msg::Image` or `sensor_msgs::msg::CompressedImage` | Input image topics (supports both compressed and uncompressed). |
+| `~/input/camera*/camera_info` | `sensor_msgs::msg::CameraInfo`                                   | Input camera info topics, for camera parameters.                |
 
 ### Output
 
-| Name                              | Type                                                          | Description                                                                                      | RTX 3090 Latency (ms) |
-|-----------------------------------|---------------------------------------------------------------|--------------------------------------------------------------------------------------------------|------------------------|
-| `~/output/objects`                | `autoware_perception_msgs::msg::DetectedObjects`              | Detected objects.                                                                                | —                      |
-| `latency/preprocess`              | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Preprocessing time per image(ms).                                                                | 3.25                   |
-| `latency/total`                   | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Total processing time (ms): preprocessing + inference + postprocessing.                          | 26.04                  |
-| `latency/inference`               | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Total inference time (ms).                                                                       | 22.13                  |
-| `latency/inference/backbone`      | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Backbone inference time (ms).                                                                    | 16.21                  |
-| `latency/inference/ptshead`       | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Points head inference time (ms).                                                                 | 5.45                   |
-| `latency/inference/pos_embed`     | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Position embedding inference time (ms).                                                          | 0.40                   |
-| `latency/inference/postprocess`   | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Postprocessing time (ms): converting network predictions to Autoware format.                     | 0.40                   |
-| `latency/cycle_time_ms`           | `autoware_internal_debug_msgs::msg::Float64Stamped`           | Cycle time (ms): from receiving the first camera topic to publishing results.                    | 110.65                 |
-
+| Name                            | Type                                                | Description                                                                   | RTX 3090 Latency (ms) |
+| ------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------- | --------------------- |
+| `~/output/objects`              | `autoware_perception_msgs::msg::DetectedObjects`    | Detected objects.                                                             | —                     |
+| `latency/preprocess`            | `autoware_internal_debug_msgs::msg::Float64Stamped` | Preprocessing time per image(ms).                                             | 3.25                  |
+| `latency/total`                 | `autoware_internal_debug_msgs::msg::Float64Stamped` | Total processing time (ms): preprocessing + inference + postprocessing.       | 26.04                 |
+| `latency/inference`             | `autoware_internal_debug_msgs::msg::Float64Stamped` | Total inference time (ms).                                                    | 22.13                 |
+| `latency/inference/backbone`    | `autoware_internal_debug_msgs::msg::Float64Stamped` | Backbone inference time (ms).                                                 | 16.21                 |
+| `latency/inference/ptshead`     | `autoware_internal_debug_msgs::msg::Float64Stamped` | Points head inference time (ms).                                              | 5.45                  |
+| `latency/inference/pos_embed`   | `autoware_internal_debug_msgs::msg::Float64Stamped` | Position embedding inference time (ms).                                       | 0.40                  |
+| `latency/inference/postprocess` | `autoware_internal_debug_msgs::msg::Float64Stamped` | Postprocessing time (ms): converting network predictions to Autoware format.  | 0.40                  |
+| `latency/cycle_time_ms`         | `autoware_internal_debug_msgs::msg::Float64Stamped` | Cycle time (ms): from receiving the first camera topic to publishing results. | 110.65                |
 
 ## Parameters
 
@@ -43,8 +42,9 @@ advantage of this by preprocessing (resize, crop, normalize) the images and stor
 The `autoware_camera_streampetr` node has various parameters for configuration:
 
 #### Model Parameters
+
 - `model_params.backbone_path`: Path to the backbone ONNX model
-- `model_params.head_path`: Path to the head ONNX model  
+- `model_params.head_path`: Path to the head ONNX model
 - `model_params.position_embedding_path`: Path to the position embedding ONNX model
 - `model_params.fp16_mode`: Enable FP16 inference mode
 - `model_params.use_temporal`: Enable temporal modeling
@@ -56,13 +56,15 @@ The `autoware_camera_streampetr` node has various parameters for configuration:
 - `model_params.detection_range`: Detection range for filtering objects
 
 #### Post-processing Parameters
+
 - `post_process_params.iou_nms_search_distance_2d`: 2D search distance for IoU NMS
 - `post_process_params.circle_nms_dist_threshold`: Distance threshold for circle NMS
 - `post_process_params.iou_nms_threshold`: IoU threshold for NMS
 - `post_process_params.confidence_threshold`: Confidence threshold for detections
 - `post_process_params.yaw_norm_thresholds`: Yaw normalization thresholds
 
-#### Node Parameters  
+#### Node Parameters
+
 - `rois_number`: Number of camera ROIs/cameras (default: 6)
 - `is_compressed_image`: Whether input images are compressed
 - `anchor_camera_id`: ID of the anchor camera for synchronization (default: 0)
@@ -89,6 +91,7 @@ ros2 launch autoware_camera_streampetr tensorrt_stream_petr.launch.xml log_level
 ## Assumptions / Known limits
 
 This node is camera-only and does not require pointcloud input. It assumes:
+
 - All cameras are synchronized within the specified `max_camera_time_diff`
 - Camera calibration information is available and accurate
 - The anchor camera (specified by `anchor_camera_id`) triggers the inference cycle
@@ -101,6 +104,7 @@ This node is camera-only and does not require pointcloud input. It assumes:
 You can download the ONNX model files for StreamPETR. The files should be placed in the appropriate model directory as specified in the launch configuration.
 
 Required model files:
+
 - Backbone ONNX model: TODO
 - Head ONNX model: TODO
 - Position embedding ONNX model: TODO

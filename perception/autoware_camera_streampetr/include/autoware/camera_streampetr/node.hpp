@@ -12,46 +12,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__CAMERA_STREAMPETR_NODE_HPP__
-#define AUTOWARE__CAMERA_STREAMPETR_NODE_HPP__
-
-
-#include <image_transport/image_transport.hpp>
-#include <memory>
-#include <rclcpp/rclcpp.hpp>
-#include <string>
-#include <map>
+#ifndef AUTOWARE__CAMERA_STREAMPETR__NODE_HPP_
+#define AUTOWARE__CAMERA_STREAMPETR__NODE_HPP_
 
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <image_transport/image_transport.hpp>
+#include <rclcpp/rclcpp.hpp>
+
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
-
-
-#include <nav_msgs/msg/odometry.hpp>
 #include <geometry_msgs/msg/pose.hpp>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#include <sensor_msgs/msg/image.hpp>
-#include <sensor_msgs/msg/compressed_image.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
-#include <tf2_ros/static_transform_broadcaster.h>
+#include <sensor_msgs/msg/compressed_image.hpp>
+#include <sensor_msgs/msg/image.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_msgs/msg/tf_message.hpp>
 
-// From NVIDIA/DL4AGX
-#include <iostream>
-#include <fstream>
-#include <filesystem>
-#include <string>
-#include <vector>
-#include <memory>
-#include <chrono>
-#include <unordered_map>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/static_transform_broadcaster.h>
+#include <tf2_ros/transform_listener.h>
 
+#include <map>
+#include <memory>
+#include <string>
+
+// From NVIDIA/DL4AGX
+#include <NvInferRuntime.h>
 #include <cuda_fp16.h>
 #include <cuda_runtime_api.h>
-#include <NvInferRuntime.h>
+
+#include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 // From NVIDIA/DL4AGX
 
 #include "autoware/camera_streampetr/network/camera_data_store.hpp"
@@ -59,7 +58,6 @@
 
 namespace autoware::camera_streampetr
 {
-
 
 class StreamPetrNode : public rclcpp::Node
 {
@@ -75,19 +73,13 @@ public:
 
 private:
   void odometry_callback(Odometry::ConstSharedPtr input_msg);
-  void camera_info_callback(
-    CameraInfo::ConstSharedPtr input_camera_info_msg,
-    const int camera_id);
+  void camera_info_callback(CameraInfo::ConstSharedPtr input_camera_info_msg, const int camera_id);
+  void camera_image_callback(Image::ConstSharedPtr input_camera_image_msg, const int camera_id);
   void camera_image_callback(
-    Image::ConstSharedPtr input_camera_image_msg,
-    const int camera_id);
-  void camera_image_callback(
-    CompressedImage::ConstSharedPtr input_camera_image_msg,
-    const int camera_id);
+    CompressedImage::ConstSharedPtr input_camera_image_msg, const int camera_id);
   void step();
   std::pair<std::vector<float>, std::vector<float>> get_ego_pose_vector() const;
-  std::vector<float> get_camera_extrinsics_vector(
-    const std::vector<std::string> & camera_links);
+  std::vector<float> get_camera_extrinsics_vector(const std::vector<std::string> & camera_links);
   rclcpp::Subscription<Odometry>::SharedPtr localization_sub_;
   std::vector<rclcpp::Subscription<CameraInfo>::SharedPtr> camera_info_subs_;
   std::vector<rclcpp::Subscription<Image>::SharedPtr> camera_image_subs_;
@@ -109,10 +101,10 @@ private:
 
   // debugger
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
-  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{nullptr};  
+  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{nullptr};
   const bool debug_mode_;
 };
 
 }  // namespace autoware::camera_streampetr
 
-#endif  // AUTOWARE__CAMERA_STREAMPETR_NODE_HPP__
+#endif  // AUTOWARE__CAMERA_STREAMPETR__NODE_HPP_

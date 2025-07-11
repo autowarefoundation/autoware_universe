@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__CAMERA_STREAMPETR_POSTPROCESS_CIRCLE_NMS_KERNEL_HPP_
-#define AUTOWARE__CAMERA_STREAMPETR_POSTPROCESS_CIRCLE_NMS_KERNEL_HPP_
+#ifndef AUTOWARE__CAMERA_STREAMPETR__POSTPROCESS__CIRCLE_NMS_KERNEL_HPP_
+#define AUTOWARE__CAMERA_STREAMPETR__POSTPROCESS__CIRCLE_NMS_KERNEL_HPP_
 
 #include "autoware/camera_streampetr/utils.hpp"
 
@@ -29,4 +29,4 @@ std::size_t circleNMS(
 
 }  // namespace autoware::camera_streampetr
 
-#endif  // AUTOWARE__CAMERA_STREAMPETR_POSTPROCESS_CIRCLE_NMS_KERNEL_HPP_
+#endif  // AUTOWARE__CAMERA_STREAMPETR__POSTPROCESS__CIRCLE_NMS_KERNEL_HPP_
