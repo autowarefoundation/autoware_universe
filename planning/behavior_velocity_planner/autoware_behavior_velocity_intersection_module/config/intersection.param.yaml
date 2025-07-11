@@ -91,6 +91,7 @@
 
       occlusion:
         enable: true
+        request_approval_wo_traffic_light: false # if true, request approval when occlusion is not cleared enough without traffic light
         occlusion_attention_area_length: 70.0
         free_space_max: 43
         occupied_min: 58

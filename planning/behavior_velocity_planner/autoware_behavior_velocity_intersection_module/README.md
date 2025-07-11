@@ -252,6 +252,8 @@ At intersection without traffic light, if occlusion is detected, ego makes a bri
 
 ![occlusion_detection](./docs/occlusion-without-tl.drawio.svg)
 
+If the flag `occlusion.request_approval_wo_traffic_light` is `true`, `intersection_occlusion` requests approval from RTC operator. If it is `false`, it does not request approval after tbe brief stop even if occlusion is not sufficiently cleared.
+
 While ego is creeping, yellow intersection_wall appears in front ego.
 
 ![occlusion-wo-tl-creeping](./docs/occlusion-wo-tl-creeping.png)
@@ -456,6 +458,7 @@ entity TargetObject {
 | Parameter                                      | Type     | Description                                                                                 |
 | ---------------------------------------------- | -------- | ------------------------------------------------------------------------------------------- |
 | `.enable`                                      | bool     | [-] flag to calculate occlusion detection                                                   |
+| `.request_approval_wo_traffic_light`           | bool     | [-] flag to request RTC approval when occluded without traffic light                        |
 | `.occlusion_attention_area_length`             | double   | [m] the length of attention are for occlusion detection                                     |
 | `.free_space_max`                              | int      | [-] maximum value of occupancy grid cell to treat at occluded                               |
 | `.occupied_min`                                | int      | [-] minimum value of occupancy grid cell to treat at occluded                               |
