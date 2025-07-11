@@ -49,7 +49,7 @@ bool NonMaximumSuppression::isTargetPairObject(
   // const auto sqr_dist_2d = autoware_utils::calc_squared_distance2d(
   //   autoware::object_recognition_utils::getPose(object1),
   //   autoware::object_recognition_utils::getPose(object2));
-  const auto sqr_dist_2d = 0.0;    // remove this line and uncomment the line above
+  const auto sqr_dist_2d = 0.0;  // remove this line and uncomment the line above
   return sqr_dist_2d <= search_distance_2d_sq_;
 }
 
@@ -93,6 +93,5 @@ void NonMaximumSuppression::apply(
       output_objects.emplace_back(input_objects.at(i));
     }
   }
-
 }
 }  // namespace autoware::camera_streampetr

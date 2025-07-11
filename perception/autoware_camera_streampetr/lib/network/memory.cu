@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights
+ * reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,46 +15,56 @@
  * limitations under the License.
  */
 
-#include <stdio.h>
 #include "autoware/camera_streampetr/network/memory.cuh"
- 
-__global__ void ApplyDeltaFromMem(float delta, float* mem, float* buf, int n_elem) {
+
+#include <stdio.h>
+
+__global__ void ApplyDeltaFromMem(float delta, float * mem, float * buf, int n_elem)
+{
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if( idx < n_elem ) {
+  if (idx < n_elem) {
     float v = mem[idx] + delta;
     buf[idx] = v;
   }
 }
 
-__global__ void ApplyDeltaToMem(float delta, float* mem, float* buf, int n_elem) {
+__global__ void ApplyDeltaToMem(float delta, float * mem, float * buf, int n_elem)
+{
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if( idx < n_elem ) {
+  if (idx < n_elem) {
     float v = buf[idx];
     mem[idx] = v - delta;
   }
 }
 
-void Memory::StepReset() {
+void Memory::StepReset()
+{
   // reset pre_buf to zero
   cudaMemsetAsync(pre_buf, 0, sizeof(float) * mem_len, mem_stream);
 }
 
-void Memory::StepPre(float ts) {
+void Memory::StepPre(float ts)
+{
   // update timestamp in pre_update_memory
   // NOTE: 512 is harded coded number
-  ApplyDeltaFromMem<<<1024, 1, 0, mem_stream>>>(ts, reinterpret_cast<float*>(mem_buf), pre_buf, 1024);
+  ApplyDeltaFromMem<<<1024, 1, 0, mem_stream>>>(
+    ts, reinterpret_cast<float *>(mem_buf), pre_buf, 1024);
 }
 
-void Memory::StepPost(float ts) {
+void Memory::StepPost(float ts)
+{
   // update timestamp in post_update_memory
   // NOTE: 1280 is harded coded number
-  ApplyDeltaToMem<<<1280, 1, 0, mem_stream>>>(ts, reinterpret_cast<float*>(mem_buf), post_buf, 1280);
+  ApplyDeltaToMem<<<1280, 1, 0, mem_stream>>>(
+    ts, reinterpret_cast<float *>(mem_buf), post_buf, 1280);
 }
 
-void Memory::DebugPrint() {
+void Memory::DebugPrint()
+{
   float temp_buf[16];
-  cudaMemcpy(reinterpret_cast<void*>(temp_buf), mem_buf, sizeof(float) * 16, cudaMemcpyDeviceToHost);
-  for( int i=0; i<16; i++ ) {
+  cudaMemcpy(
+    reinterpret_cast<void *>(temp_buf), mem_buf, sizeof(float) * 16, cudaMemcpyDeviceToHost);
+  for (int i = 0; i < 16; i++) {
     printf("%f ", temp_buf[i]);
   }
 }

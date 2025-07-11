@@ -45,9 +45,9 @@ struct score_greater
 
 __device__ inline float sigmoid(float x)
 {
-  if(x>8)
+  if (x > 8)
     return 1.0f;
-  else if(x<-8)
+  else if (x < -8)
     return 0.0f;
   else
     return 1.0f / (1.0f + expf(-x));
@@ -55,10 +55,8 @@ __device__ inline float sigmoid(float x)
 
 __global__ void generateBoxes3D_kernel(
   const float * __restrict__ cls_output, const float * __restrict__ box_output,
-  const int num_proposals, const int num_classes,
-  const float * __restrict__ yaw_norm_thresholds,
-  const float * __restrict__ detection_range,
-  Box3D * __restrict__ det_boxes3d)
+  const int num_proposals, const int num_classes, const float * __restrict__ yaw_norm_thresholds,
+  const float * __restrict__ detection_range, Box3D * __restrict__ det_boxes3d)
 {
   int point_idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (point_idx >= num_proposals) {
@@ -87,13 +85,15 @@ __global__ void generateBoxes3D_kernel(
   det_boxes3d[point_idx].x = box_output[point_idx];
   det_boxes3d[point_idx].y = box_output[point_idx + 1 * num_proposals];
   det_boxes3d[point_idx].z = box_output[point_idx + 2 * num_proposals];
-  
 
-  if (det_boxes3d[point_idx].x > detection_range[3] || det_boxes3d[point_idx].x < detection_range[0])
+  if (
+    det_boxes3d[point_idx].x > detection_range[3] || det_boxes3d[point_idx].x < detection_range[0])
     det_boxes3d[point_idx].score = 0.f;
-  if (det_boxes3d[point_idx].y > detection_range[4] || det_boxes3d[point_idx].y < detection_range[1])
+  if (
+    det_boxes3d[point_idx].y > detection_range[4] || det_boxes3d[point_idx].y < detection_range[1])
     det_boxes3d[point_idx].score = 0.f;
-  if (det_boxes3d[point_idx].z > detection_range[5] || det_boxes3d[point_idx].z < detection_range[2])
+  if (
+    det_boxes3d[point_idx].z > detection_range[5] || det_boxes3d[point_idx].z < detection_range[2])
     det_boxes3d[point_idx].score = 0.f;
 
   det_boxes3d[point_idx].width = expf(box_output[point_idx + 3 * num_proposals]);
@@ -109,20 +109,22 @@ PostprocessCuda::PostprocessCuda(const PostProcessingConfig & config, cudaStream
 
 // cspell: ignore divup
 cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
-  const float * cls_output, const float * box_output, std::vector<Box3D> & det_boxes3d, cudaStream_t stream)
+  const float * cls_output, const float * box_output, std::vector<Box3D> & det_boxes3d,
+  cudaStream_t stream)
 {
   dim3 threads = {THREADS_PER_BLOCK};
   dim3 blocks = {divup(config_.num_proposals_, threads.x)};
-  
+
   auto boxes3d_d = thrust::device_vector<Box3D>(config_.num_proposals_);
   auto yaw_norm_thresholds_d = thrust::device_vector<float>(
     config_.yaw_norm_thresholds_.begin(), config_.yaw_norm_thresholds_.end());
-  auto detection_range_d = thrust::device_vector<float>(
-    config_.detection_range_.begin(), config_.detection_range_.end());
-  
+  auto detection_range_d =
+    thrust::device_vector<float>(config_.detection_range_.begin(), config_.detection_range_.end());
+
   generateBoxes3D_kernel<<<blocks, threads, 0, stream>>>(
-    cls_output, box_output, config_.num_proposals_, config_.num_classes_, thrust::raw_pointer_cast(yaw_norm_thresholds_d.data()), thrust::raw_pointer_cast(detection_range_d.data()),
-    thrust::raw_pointer_cast(boxes3d_d.data()));
+    cls_output, box_output, config_.num_proposals_, config_.num_classes_,
+    thrust::raw_pointer_cast(yaw_norm_thresholds_d.data()),
+    thrust::raw_pointer_cast(detection_range_d.data()), thrust::raw_pointer_cast(boxes3d_d.data()));
 
   // suppress by score
   const auto num_det_boxes3d = thrust::count_if(
@@ -151,14 +153,13 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
     // memcpy device to host
     det_boxes3d.resize(num_final_det_boxes3d);
     thrust::copy(final_det_boxes3d_d.begin(), final_det_boxes3d_d.end(), det_boxes3d.begin());
-  }
-  else {
+  } else {
     // memcpy device to host
     det_boxes3d.resize(num_det_boxes3d);
     thrust::copy(det_boxes3d_d.begin(), det_boxes3d_d.end(), det_boxes3d.begin());
   }
 
-  return cudaGetLastError();  
+  return cudaGetLastError();
 }
 
 }  // namespace autoware::camera_streampetr

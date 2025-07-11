@@ -13,26 +13,28 @@
 // limitations under the License.
 
 #include "autoware/camera_streampetr/node.hpp"
-#include "autoware/camera_streampetr/postprocess/non_maximum_supression.hpp"
+
 #include "autoware/camera_streampetr/network/build_trt.hpp"
+#include "autoware/camera_streampetr/postprocess/non_maximum_supression.hpp"
 
 #include <Eigen/Dense>
 
+#include <algorithm>
 #include <cmath>
 #include <memory>
 #include <string>
-#include <vector>
 #include <thread>
-#include <algorithm>
+#include <vector>
 
 namespace autoware::camera_streampetr
 {
 
-
-std::vector<float> cast_to_float(const std::vector<double>& double_vector) {
+std::vector<float> cast_to_float(const std::vector<double> & double_vector)
+{
   std::vector<float> float_vector(double_vector.size());
-  std::transform(double_vector.begin(), double_vector.end(), float_vector.begin(),
-                [](double value) { return static_cast<float>(value); });
+  std::transform(
+    double_vector.begin(), double_vector.end(), float_vector.begin(),
+    [](double value) { return static_cast<float>(value); });
   return float_vector;
 }
 
@@ -47,7 +49,8 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   cycle_started_(false),
   debug_mode_(declare_parameter<bool>("debug_mode"))
 {
-  RCLCPP_INFO(get_logger(), "nvinfer: %d.%d.%d\n", NV_TENSORRT_MAJOR, NV_TENSORRT_MINOR, NV_TENSORRT_PATCH);
+  RCLCPP_INFO(
+    get_logger(), "nvinfer: %d.%d.%d\n", NV_TENSORRT_MAJOR, NV_TENSORRT_MINOR, NV_TENSORRT_PATCH);
   cudaSetDevice(0);
 
   using std::placeholders::_1;
@@ -55,13 +58,16 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   // Initialize parameters
   const std::string backbone_path = declare_parameter<std::string>("model_params.backbone_path");
   const std::string head_path = declare_parameter<std::string>("model_params.head_path");
-  const std::string position_embedding_path = declare_parameter<std::string>("model_params.position_embedding_path");
+  const std::string position_embedding_path =
+    declare_parameter<std::string>("model_params.position_embedding_path");
   const bool fp16_mode = declare_parameter<bool>("model_params.fp16_mode");
   const bool build_only = declare_parameter<bool>("build_only");
 
-  const std::string engine_backbone_path = initEngine(backbone_path, fp16_mode, false, get_logger());
+  const std::string engine_backbone_path =
+    initEngine(backbone_path, fp16_mode, false, get_logger());
   const std::string engine_head_path = initEngine(head_path, fp16_mode, true, get_logger());
-  const std::string engine_position_embedding_path = initEngine(position_embedding_path, fp16_mode, false, get_logger());
+  const std::string engine_position_embedding_path =
+    initEngine(position_embedding_path, fp16_mode, false, get_logger());
 
   if (build_only) {
     RCLCPP_INFO(get_logger(), "TensorRT engine files built successfully. Shutting Down...");
@@ -69,75 +75,66 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   }
 
   localization_sub_ = this->create_subscription<Odometry>(
-      "~/input/kinematic_state", rclcpp::QoS{1},
-      [this](const Odometry::ConstSharedPtr msg) {
-        this->odometry_callback(msg);
-      }
-    );
+    "~/input/kinematic_state", rclcpp::QoS{1},
+    [this](const Odometry::ConstSharedPtr msg) { this->odometry_callback(msg); });
 
   camera_info_subs_.resize(rois_number_);
 
-  if (is_compressed_image_) 
+  if (is_compressed_image_)
     compressed_camera_image_subs_.resize(rois_number_);
   else
     camera_image_subs_.resize(rois_number_);
 
   for (size_t roi_i = 0; roi_i < rois_number_; ++roi_i) {
     camera_info_subs_.at(roi_i) = this->create_subscription<CameraInfo>(
-      "~/input/camera" + std::to_string(roi_i) + "/camera_info", rclcpp::SensorDataQoS{}.keep_last(1),
-      [this, roi_i](const CameraInfo::ConstSharedPtr msg) {
+      "~/input/camera" + std::to_string(roi_i) + "/camera_info",
+      rclcpp::SensorDataQoS{}.keep_last(1), [this, roi_i](const CameraInfo::ConstSharedPtr msg) {
         this->camera_info_callback(msg, static_cast<int>(roi_i));
-      }
-    );
+      });
 
     if (is_compressed_image_) {
       compressed_camera_image_subs_.at(roi_i) = this->create_subscription<CompressedImage>(
         "~/input/camera" + std::to_string(roi_i) + "/image", rclcpp::SensorDataQoS{}.keep_last(1),
         [this, roi_i](const CompressedImage::ConstSharedPtr msg) {
           this->camera_image_callback(msg, static_cast<int>(roi_i));
-        }
-      );
+        });
     } else {
       camera_image_subs_.at(roi_i) = this->create_subscription<Image>(
         "~/input/camera" + std::to_string(roi_i) + "/image", rclcpp::SensorDataQoS{}.keep_last(1),
         [this, roi_i](const Image::ConstSharedPtr msg) {
           this->camera_image_callback(msg, static_cast<int>(roi_i));
-        }
-      );
+        });
     }
-
   }
-  
+
   // Publishers
   pub_objects_ = this->create_publisher<DetectedObjects>("~/output/objects", rclcpp::QoS{1});
 
   // Data store
   data_store_ = std::make_unique<CameraDataStore>(
-    this, rois_number_,
-    declare_parameter<int>("model_params.input_image_height"),
-    declare_parameter<int>("model_params.input_image_width"),
-    anchor_camera_id_,
-    is_compressed_image_,
-    declare_parameter<int>("decompression_downsample")
-  );
-  const bool use_temporal = declare_parameter<bool>("model_params.use_temporal"); 
-  const double search_distance_2d = declare_parameter<double>("post_process_params.iou_nms_search_distance_2d");
-  const double circle_nms_dist_threshold = declare_parameter<double>("post_process_params.circle_nms_dist_threshold");
+    this, rois_number_, declare_parameter<int>("model_params.input_image_height"),
+    declare_parameter<int>("model_params.input_image_width"), anchor_camera_id_,
+    is_compressed_image_, declare_parameter<int>("decompression_downsample"));
+  const bool use_temporal = declare_parameter<bool>("model_params.use_temporal");
+  const double search_distance_2d =
+    declare_parameter<double>("post_process_params.iou_nms_search_distance_2d");
+  const double circle_nms_dist_threshold =
+    declare_parameter<double>("post_process_params.circle_nms_dist_threshold");
   const double iou_threshold = declare_parameter<double>("post_process_params.iou_nms_threshold");
-  const double confidence_threshold = declare_parameter<double>("post_process_params.confidence_threshold");
-  const std::vector<std::string> class_names =  declare_parameter<std::vector<std::string>>("model_params.class_names");
+  const double confidence_threshold =
+    declare_parameter<double>("post_process_params.confidence_threshold");
+  const std::vector<std::string> class_names =
+    declare_parameter<std::vector<std::string>>("model_params.class_names");
   const int32_t num_proposals = declare_parameter<int32_t>("model_params.num_proposals");
-  const std::vector<double> yaw_norm_thresholds = declare_parameter<std::vector<double>>("post_process_params.yaw_norm_thresholds");
-  const std::vector<float> detection_range = cast_to_float(declare_parameter<std::vector<double>>("model_params.detection_range"));
-  network_ = std::make_unique<StreamPetrNetwork>(engine_backbone_path, 
-                                                engine_head_path, 
-                                                engine_position_embedding_path, 
-                                                use_temporal, search_distance_2d,
-                                                circle_nms_dist_threshold, iou_threshold, 
-                                                confidence_threshold, class_names, 
-                                                num_proposals, yaw_norm_thresholds,
-                                                detection_range);
-  if(debug_mode_) {
+  const std::vector<double> yaw_norm_thresholds =
+    declare_parameter<std::vector<double>>("post_process_params.yaw_norm_thresholds");
+  const std::vector<float> detection_range =
+    cast_to_float(declare_parameter<std::vector<double>>("model_params.detection_range"));
+  network_ = std::make_unique<StreamPetrNetwork>(
+    engine_backbone_path, engine_head_path, engine_position_embedding_path, use_temporal,
+    search_distance_2d, circle_nms_dist_threshold, iou_threshold, confidence_threshold, class_names,
+    num_proposals, yaw_norm_thresholds, detection_range);
+  if (debug_mode_) {
     using autoware_utils::DebugPublisher;
     using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
@@ -145,8 +142,7 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   }
 }
 
-void StreamPetrNode::odometry_callback(
-  Odometry::ConstSharedPtr input_msg)
+void StreamPetrNode::odometry_callback(Odometry::ConstSharedPtr input_msg)
 {
   if (!initial_kinematic_state_) {
     initial_kinematic_state_ = input_msg;
@@ -156,22 +152,20 @@ void StreamPetrNode::odometry_callback(
 }
 
 void StreamPetrNode::camera_info_callback(
-  CameraInfo::ConstSharedPtr input_camera_info_msg,
-  const int camera_id)
+  CameraInfo::ConstSharedPtr input_camera_info_msg, const int camera_id)
 {
   data_store_->update_camera_info(camera_id, input_camera_info_msg);
 }
 
 void StreamPetrNode::camera_image_callback(
-  Image::ConstSharedPtr input_camera_image_msg,
-  const int camera_id)
+  Image::ConstSharedPtr input_camera_image_msg, const int camera_id)
 {
   const auto objects_sub_count =
     pub_objects_->get_subscription_count() + pub_objects_->get_intra_process_subscription_count();
   if (objects_sub_count < 1) {
     return;
   }
-  
+
   if (stop_watch_ptr_) {
     stop_watch_ptr_->tic("latency/total");
   }
@@ -182,22 +176,17 @@ void StreamPetrNode::camera_image_callback(
 
   if (!cycle_started_) {
     cycle_started_ = true;
-    if(stop_watch_ptr_)
-      stop_watch_ptr_->tic("latency/cycle_time_ms");
+    if (stop_watch_ptr_) stop_watch_ptr_->tic("latency/cycle_time_ms");
   }
 
   data_store_->update_camera_image(camera_id, input_camera_image_msg);
 
-  if (camera_id == anchor_camera_id_)
-    step();
-
+  if (camera_id == anchor_camera_id_) step();
 }
 
-
 void StreamPetrNode::camera_image_callback(
-  CompressedImage::ConstSharedPtr input_camera_image_msg,
-  const int camera_id)
-{ 
+  CompressedImage::ConstSharedPtr input_camera_image_msg, const int camera_id)
+{
   const auto objects_sub_count =
     pub_objects_->get_subscription_count() + pub_objects_->get_intra_process_subscription_count();
   if (objects_sub_count < 1) {
@@ -214,19 +203,16 @@ void StreamPetrNode::camera_image_callback(
 
   if (!cycle_started_) {
     cycle_started_ = true;
-    if(stop_watch_ptr_)
-      stop_watch_ptr_->tic("latency/cycle_time_ms");
+    if (stop_watch_ptr_) stop_watch_ptr_->tic("latency/cycle_time_ms");
   }
 
   data_store_->update_camera_image_compressed(camera_id, input_camera_image_msg);
 
-  if (camera_id == anchor_camera_id_)
-    step();
-
+  if (camera_id == anchor_camera_id_) step();
 }
 
-void StreamPetrNode::step() {
-  
+void StreamPetrNode::step()
+{
   double inference_time_ms = -1.0;
 
   const float tdiff = data_store_->check_if_all_images_synced();
@@ -236,7 +222,7 @@ void StreamPetrNode::step() {
     return;
   }
 
-  if(tdiff>max_camera_time_diff_){
+  if (tdiff > max_camera_time_diff_) {
     RCLCPP_WARN(get_logger(), "Cameras are not synced, difference is %.2f seconds", tdiff);
     return;
   }
@@ -244,39 +230,33 @@ void StreamPetrNode::step() {
   std::vector<autoware_perception_msgs::msg::DetectedObject> output_objects;
   const auto [ego_pose, ego_pose_inv] = get_ego_pose_vector();
 
-  if(stop_watch_ptr_)
-    stop_watch_ptr_->tic("latency/inference");
-  
+  if (stop_watch_ptr_) stop_watch_ptr_->tic("latency/inference");
+
   std::vector<float> forward_time_ms;
-  
-  if(data_store_->get_timestamp()>max_camera_time_diff_) {
-    RCLCPP_WARN(get_logger(), "Predicting after %.2f seconds which is longer than %.2f, so memory will be refreshed", static_cast<double>(data_store_->get_timestamp()),max_camera_time_diff_);
+
+  if (data_store_->get_timestamp() > max_camera_time_diff_) {
+    RCLCPP_WARN(
+      get_logger(),
+      "Predicting after %.2f seconds which is longer than %.2f, so memory will be refreshed",
+      static_cast<double>(data_store_->get_timestamp()), max_camera_time_diff_);
     network_->wipe_memory();
   }
   network_->inference_detector(
-    data_store_->get_image_input(),
-    ego_pose, ego_pose_inv,
-    data_store_->get_image_shape(),
+    data_store_->get_image_input(), ego_pose, ego_pose_inv, data_store_->get_image_shape(),
     data_store_->get_camera_info_vector(),
     get_camera_extrinsics_vector(data_store_->get_camera_link_names()),
-    data_store_->get_timestamp(),
-    output_objects,
-    forward_time_ms
-  );
+    data_store_->get_timestamp(), output_objects, forward_time_ms);
   data_store_->step();
-  
-  if(stop_watch_ptr_)
-    inference_time_ms = stop_watch_ptr_->toc("latency/inference", true);
-  
+
+  if (stop_watch_ptr_) inference_time_ms = stop_watch_ptr_->toc("latency/inference", true);
+
   // data_store_->reset_camera_images();
   DetectedObjects output_msg;
   output_msg.objects = output_objects;
   output_msg.header.frame_id = "base_link";
   pub_objects_->publish(output_msg);
 
-
   if (debug_publisher_ptr_ && stop_watch_ptr_) {
-
     debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "latency/total", stop_watch_ptr_->toc("latency/total", true));
     debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
@@ -311,7 +291,7 @@ std::vector<float> StreamPetrNode::get_camera_extrinsics_vector(
       size_t offset = i * 16;
       for (int row = 0; row < 4; ++row) {
         for (int col = 0; col < 4; ++col) {
-          K_4x4(row, col) = intrinsics_all[offset + row*4 + col];
+          K_4x4(row, col) = intrinsics_all[offset + row * 4 + col];
         }
       }
     }
@@ -319,20 +299,16 @@ std::vector<float> StreamPetrNode::get_camera_extrinsics_vector(
     try {
       transform_stamped =
         tf_buffer_.lookupTransform(camera_links[i], "base_link", tf2::TimePointZero);
-    } catch (const tf2::TransformException &ex) {
+    } catch (const tf2::TransformException & ex) {
       throw std::runtime_error(
-        "Could not transform from base_link to " + camera_links[i] + 
-        ": " + std::string(ex.what()));
+        "Could not transform from base_link to " + camera_links[i] + ": " + std::string(ex.what()));
     }
 
     Eigen::Matrix4f T_lidar2cam = Eigen::Matrix4f::Identity();
     {
       tf2::Quaternion tf2_q(
-        transform_stamped.transform.rotation.x,
-        transform_stamped.transform.rotation.y,
-        transform_stamped.transform.rotation.z,
-        transform_stamped.transform.rotation.w
-      );
+        transform_stamped.transform.rotation.x, transform_stamped.transform.rotation.y,
+        transform_stamped.transform.rotation.z, transform_stamped.transform.rotation.w);
       tf2::Matrix3x3 tf2_R(tf2_q);
 
       Eigen::Matrix3f R;
@@ -344,8 +320,8 @@ std::vector<float> StreamPetrNode::get_camera_extrinsics_vector(
 
       Eigen::Vector3f t;
       t << static_cast<float>(transform_stamped.transform.translation.x),
-           static_cast<float>(transform_stamped.transform.translation.y),
-           static_cast<float>(transform_stamped.transform.translation.z);
+        static_cast<float>(transform_stamped.transform.translation.y),
+        static_cast<float>(transform_stamped.transform.translation.z);
 
       for (int r = 0; r < 3; ++r) {
         for (int c = 0; c < 3; ++c) {
@@ -358,7 +334,7 @@ std::vector<float> StreamPetrNode::get_camera_extrinsics_vector(
     Eigen::Matrix4f T_lidar2img = K_4x4 * T_lidar2cam;
     Eigen::Matrix4f T_img2lidar = T_lidar2img.inverse();
 
-  // std::cout << "Final res vector:\n";
+    // std::cout << "Final res vector:\n";
     for (int row = 0; row < 4; ++row) {
       for (int col = 0; col < 4; ++col) {
         // std::cout << T_img2lidar(row, col) << " ";
@@ -377,39 +353,63 @@ std::pair<std::vector<float>, std::vector<float>> StreamPetrNode::get_ego_pose_v
     throw std::runtime_error("Kinematic states have not been received.");
   }
 
-  const auto& latest_pose = latest_kinematic_state_->pose.pose;
-  const auto& initial_pose = initial_kinematic_state_->pose.pose;
-  tf2::Quaternion latest_quat(latest_pose.orientation.x, latest_pose.orientation.y, latest_pose.orientation.z, latest_pose.orientation.w);
+  const auto & latest_pose = latest_kinematic_state_->pose.pose;
+  const auto & initial_pose = initial_kinematic_state_->pose.pose;
+  tf2::Quaternion latest_quat(
+    latest_pose.orientation.x, latest_pose.orientation.y, latest_pose.orientation.z,
+    latest_pose.orientation.w);
   tf2::Matrix3x3 latest_rot;
   latest_rot.setRotation(latest_quat);
   tf2::Matrix3x3 relative_rot = latest_rot;
-  tf2::Vector3 latest_translation(latest_pose.position.x-initial_pose.position.x, latest_pose.position.y-initial_pose.position.y, latest_pose.position.z-initial_pose.position.z);
+  tf2::Vector3 latest_translation(
+    latest_pose.position.x - initial_pose.position.x,
+    latest_pose.position.y - initial_pose.position.y,
+    latest_pose.position.z - initial_pose.position.z);
   tf2::Vector3 relative_translation = latest_translation;
 
   std::vector<float> egopose = {
-    static_cast<float>(relative_rot[0][0]), static_cast<float>(relative_rot[0][1]), static_cast<float>(relative_rot[0][2]), static_cast<float>(relative_translation.x()),
-    static_cast<float>(relative_rot[1][0]), static_cast<float>(relative_rot[1][1]), static_cast<float>(relative_rot[1][2]), static_cast<float>(relative_translation.y()),
-    static_cast<float>(relative_rot[2][0]), static_cast<float>(relative_rot[2][1]), static_cast<float>(relative_rot[2][2]), static_cast<float>(relative_translation.z()),
-    0.0f, 0.0f, 0.0f, 1.0f
-  };
+    static_cast<float>(relative_rot[0][0]),
+    static_cast<float>(relative_rot[0][1]),
+    static_cast<float>(relative_rot[0][2]),
+    static_cast<float>(relative_translation.x()),
+    static_cast<float>(relative_rot[1][0]),
+    static_cast<float>(relative_rot[1][1]),
+    static_cast<float>(relative_rot[1][2]),
+    static_cast<float>(relative_translation.y()),
+    static_cast<float>(relative_rot[2][0]),
+    static_cast<float>(relative_rot[2][1]),
+    static_cast<float>(relative_rot[2][2]),
+    static_cast<float>(relative_translation.z()),
+    0.0f,
+    0.0f,
+    0.0f,
+    1.0f};
 
   tf2::Matrix3x3 inverse_rot = relative_rot.transpose();
   tf2::Vector3 inverse_translation = -(inverse_rot * relative_translation);
 
   std::vector<float> inverse_egopose = {
-    static_cast<float>(inverse_rot[0][0]), static_cast<float>(inverse_rot[0][1]), static_cast<float>(inverse_rot[0][2]), static_cast<float>(inverse_translation.x()),
-    static_cast<float>(inverse_rot[1][0]), static_cast<float>(inverse_rot[1][1]), static_cast<float>(inverse_rot[1][2]), static_cast<float>(inverse_translation.y()),
-    static_cast<float>(inverse_rot[2][0]), static_cast<float>(inverse_rot[2][1]), static_cast<float>(inverse_rot[2][2]), static_cast<float>(inverse_translation.z()),
-    0.0f, 0.0f, 0.0f, 1.0f
-  };
+    static_cast<float>(inverse_rot[0][0]),
+    static_cast<float>(inverse_rot[0][1]),
+    static_cast<float>(inverse_rot[0][2]),
+    static_cast<float>(inverse_translation.x()),
+    static_cast<float>(inverse_rot[1][0]),
+    static_cast<float>(inverse_rot[1][1]),
+    static_cast<float>(inverse_rot[1][2]),
+    static_cast<float>(inverse_translation.y()),
+    static_cast<float>(inverse_rot[2][0]),
+    static_cast<float>(inverse_rot[2][1]),
+    static_cast<float>(inverse_rot[2][2]),
+    static_cast<float>(inverse_translation.z()),
+    0.0f,
+    0.0f,
+    0.0f,
+    1.0f};
 
   return std::make_pair(egopose, inverse_egopose);
 }
 
-
-
 }  // namespace autoware::camera_streampetr
-
 
 #include "rclcpp_components/register_node_macro.hpp"
 RCLCPP_COMPONENTS_REGISTER_NODE(autoware::camera_streampetr::StreamPetrNode)

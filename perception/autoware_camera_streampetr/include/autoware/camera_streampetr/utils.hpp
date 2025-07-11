@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__CAMERA_STREAMPETR_UTILS_HPP_
-#define AUTOWARE__CAMERA_STREAMPETR_UTILS_HPP_
+#ifndef AUTOWARE__CAMERA_STREAMPETR__UTILS_HPP_
+#define AUTOWARE__CAMERA_STREAMPETR__UTILS_HPP_
 
 #include <cstddef>
 #include <iostream>
@@ -52,4 +52,4 @@ unsigned int divup(const T1 a, const T2 b)
 
 }  // namespace autoware::camera_streampetr
 
-#endif  // AUTOWARE__CAMERA_STREAMPETR_UTILS_HPP_
+#endif  // AUTOWARE__CAMERA_STREAMPETR__UTILS_HPP_

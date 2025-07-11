@@ -30,6 +30,7 @@
 
 #include <autoware/camera_streampetr/network/preprocess.hpp>
 #include <autoware/camera_streampetr/utils.hpp>
+
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -38,15 +39,15 @@ namespace autoware::camera_streampetr
 {
 
 __global__ void resizeAndExtractRoi_kernel(
-  const std::uint8_t * __restrict__ input_img, float * __restrict__ output_img, 
-  int camera_offset,         // Camera offset in the input image
-  int H,int W,               // Original image dimensions (Height, Width)
-  int H2, int W2,            // Resized image dimensions (Height, Width)
-  int H3, int W3,            // ROI dimensions (Height, Width)
-  int y_start, int x_start,  // ROI top-left coordinates in resized image
-  const float * channel_wise_mean, // Channel-wise mean values
-  const float * channel_wise_std  // Channel-wise standard deviation values
-  ) 
+  const std::uint8_t * __restrict__ input_img, float * __restrict__ output_img,
+  int camera_offset,                // Camera offset in the input image
+  int H, int W,                     // Original image dimensions (Height, Width)
+  int H2, int W2,                   // Resized image dimensions (Height, Width)
+  int H3, int W3,                   // ROI dimensions (Height, Width)
+  int y_start, int x_start,         // ROI top-left coordinates in resized image
+  const float * channel_wise_mean,  // Channel-wise mean values
+  const float * channel_wise_std    // Channel-wise standard deviation values
+)
 {
   // Calculate the global thread indices
   int i = blockIdx.x * blockDim.x + threadIdx.x;  // Width index in output (ROI) image
@@ -100,21 +101,19 @@ __global__ void resizeAndExtractRoi_kernel(
     float value = w00 * v00 + w01 * v01 + w10 * v10 + w11 * v11;
 
     // Store the result in the output ROI image
-    output_img[camera_offset + (c * H3 * W3 + j * W3 + i)] = (value - channel_wise_mean[c]) / channel_wise_std[c];
+    output_img[camera_offset + (c * H3 * W3 + j * W3 + i)] =
+      (value - channel_wise_mean[c]) / channel_wise_std[c];
   }
 }
 
 cudaError_t resizeAndExtractRoi_launch(
-  const std::uint8_t * input_img, float * output_img, 
+  const std::uint8_t * input_img, float * output_img,
   int camera_offset,         // Camera offset in the input image
   int H, int W,              // Original image dimensions
   int H2, int W2,            // Resized image dimensions
   int H3, int W3,            // ROI dimensions
   int y_start, int x_start,  // ROI top-left coordinates in resized image
-  const float * channel_wise_mean,
-  const float * channel_wise_std,
-  cudaStream_t stream
-)
+  const float * channel_wise_mean, const float * channel_wise_std, cudaStream_t stream)
 {
   // Define the block and grid dimensions
   dim3 threads(16, 16);
@@ -122,7 +121,8 @@ cudaError_t resizeAndExtractRoi_launch(
 
   // Launch the kernel
   resizeAndExtractRoi_kernel<<<blocks, threads, 0, stream>>>(
-    input_img, output_img, camera_offset, H, W, H2, W2, H3, W3, y_start, x_start, channel_wise_mean, channel_wise_std);
+    input_img, output_img, camera_offset, H, W, H2, W2, H3, W3, y_start, x_start, channel_wise_mean,
+    channel_wise_std);
 
   // Check for errors
   return cudaGetLastError();

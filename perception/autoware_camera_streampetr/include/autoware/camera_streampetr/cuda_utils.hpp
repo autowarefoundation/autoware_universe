@@ -39,12 +39,13 @@
  * https://creativecommons.org/publicdomain/zero/1.0/deed.en
  */
 
-#ifndef AUTOWARE__CAMERA_STREAMPETR_CUDA_UTILS_HPP_
-#define AUTOWARE__CAMERA_STREAMPETR_CUDA_UTILS_HPP_
+#ifndef AUTOWARE__CAMERA_STREAMPETR__CUDA_UTILS_HPP_
+#define AUTOWARE__CAMERA_STREAMPETR__CUDA_UTILS_HPP_
 
-#include <cuda_runtime_api.h>
 #include <NvInferRuntime.h>
+#include <cuda_runtime_api.h>
 
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -52,7 +53,6 @@
 #include <stdexcept>
 #include <type_traits>
 #include <vector>
-#include <filesystem>
 
 #define CHECK_CUDA_ERROR(e) (cuda::check_error(e, __FILE__, __LINE__))
 
@@ -61,68 +61,69 @@ namespace cuda
 
 using namespace nvinfer1;
 
-inline unsigned int getElementSize(DataType t) {
+inline unsigned int getElementSize(DataType t)
+{
   switch (t) {
-    case DataType::kINT32: return 4;
-    case DataType::kFLOAT: return 4;
-    case DataType::kHALF: return 2;
-    case DataType::kINT8: return 1;
-    case DataType::kUINT8: return 1;
+    case DataType::kINT32:
+      return 4;
+    case DataType::kFLOAT:
+      return 4;
+    case DataType::kHALF:
+      return 2;
+    case DataType::kINT8:
+      return 1;
+    case DataType::kUINT8:
+      return 1;
     default:
       throw std::runtime_error("Invalid DataType.");
   }
   return 0;
 }
 
-struct Tensor {
+struct Tensor
+{
   std::string name;
-  void* ptr;
+  void * ptr;
   Dims dim;
   int32_t volume = 1;
   DataType dtype;
   TensorIOMode iomode;
 
-  Tensor(std::string name, Dims dim, DataType dtype): 
-    name(name), dim(dim), dtype(dtype) 
+  Tensor(std::string name, Dims dim, DataType dtype) : name(name), dim(dim), dtype(dtype)
   {
-    if( dim.nbDims == 0 ) {
+    if (dim.nbDims == 0) {
       volume = 0;
     } else {
       volume = 1;
-      for(int i=0; i<dim.nbDims; i++) {
+      for (int i = 0; i < dim.nbDims; i++) {
         volume *= dim.d[i];
       }
     }
     cudaMalloc(&ptr, volume * getElementSize(dtype));
   }
 
-  int32_t nbytes() const {
-    return volume * getElementSize(dtype);
-  }
+  int32_t nbytes() const { return volume * getElementSize(dtype); }
 
-  ~Tensor() {
+  ~Tensor()
+  {
     if (ptr) {
       cudaFree(ptr);
       ptr = nullptr;
     }
   }
 
-  void mov(std::shared_ptr<Tensor> other, cudaStream_t stream) {
+  void mov(std::shared_ptr<Tensor> other, cudaStream_t stream)
+  {
     // copy from 'other'
-    cudaMemcpyAsync(
-      ptr, other->ptr, 
-      nbytes(), 
-      cudaMemcpyDeviceToDevice,
-      stream);
+    cudaMemcpyAsync(ptr, other->ptr, nbytes(), cudaMemcpyDeviceToDevice, stream);
   }
 
-  void initialize_to_zeros(cudaStream_t stream) {
-    cudaMemsetAsync(ptr, 0, nbytes(), stream);
-  }
+  void initialize_to_zeros(cudaStream_t stream) { cudaMemsetAsync(ptr, 0, nbytes(), stream); }
 
   // template<class Htype=float, class Dtype=float>
-  template<class Htype=float>
-  void load_from_vector(const std::vector<Htype> &data) {
+  template <class Htype = float>
+  void load_from_vector(const std::vector<Htype> & data)
+  {
     if (data.size() != static_cast<size_t>(volume)) {
       std::cerr << "Data size mismatch! Expected " << volume << " elements." << std::endl;
       return;
@@ -132,13 +133,15 @@ struct Tensor {
     cudaMemcpy(ptr, data.data(), dsize, cudaMemcpyHostToDevice);
   }
 
-  std::vector<float> cpu() const {
+  std::vector<float> cpu() const
+  {
     std::vector<float> buffer(volume);
     cudaMemcpy(buffer.data(), ptr, volume * sizeof(float), cudaMemcpyDeviceToHost);
     return buffer;
   }
 
-  std::vector<char> load_ref(std::string fname) {
+  std::vector<char> load_ref(std::string fname)
+  {
     size_t bsize = volume * sizeof(float);
     std::vector<char> buffer(bsize);
     std::ifstream file_(fname, std::ios::binary);
@@ -151,7 +154,8 @@ struct Tensor {
    * @param filepath Path where to save the numpy file
    * @return true if successful, false otherwise
    */
-  bool save_as_numpy(const std::string& filepath) const {
+  bool save_as_numpy(const std::string & filepath) const
+  {
     // Check if file already exists
     if (std::filesystem::exists(filepath)) {
       std::cerr << "File already exists: " << filepath << std::endl;
@@ -164,7 +168,7 @@ struct Tensor {
     if (!dir.empty() && !std::filesystem::exists(dir)) {
       try {
         std::filesystem::create_directories(dir);
-      } catch (const std::exception& e) {
+      } catch (const std::exception & e) {
         std::cerr << "Failed to create directory: " << e.what() << std::endl;
         return false;
       }
@@ -172,7 +176,7 @@ struct Tensor {
 
     // Copy data from GPU to CPU
     std::vector<float> cpu_data = cpu();
-    
+
     // Open file for writing
     std::ofstream f(filepath, std::ios::out | std::ios::binary);
     if (!f) {
@@ -189,15 +193,27 @@ struct Tensor {
     // Determine numpy dtype string based on TensorRT DataType
     std::string dtype_str;
     switch (dtype) {
-      case DataType::kFLOAT: dtype_str = "<f4"; break;
-      case DataType::kHALF: dtype_str = "<f2"; break;
-      case DataType::kINT32: dtype_str = "<i4"; break;
-      case DataType::kINT8: dtype_str = "<i1"; break;
-      case DataType::kUINT8: dtype_str = "|u1"; break;
-      case DataType::kBOOL: dtype_str = "|b1"; break;
-      case DataType::kFP8: 
+      case DataType::kFLOAT:
+        dtype_str = "<f4";
+        break;
+      case DataType::kHALF:
+        dtype_str = "<f2";
+        break;
+      case DataType::kINT32:
+        dtype_str = "<i4";
+        break;
+      case DataType::kINT8:
+        dtype_str = "<i1";
+        break;
+      case DataType::kUINT8:
+        dtype_str = "|u1";
+        break;
+      case DataType::kBOOL:
+        dtype_str = "|b1";
+        break;
+      case DataType::kFP8:
         std::cerr << "FP8 not directly supported, converting to float" << std::endl;
-        dtype_str = "<f4"; 
+        dtype_str = "<f4";
         break;
       default:
         std::cerr << "Unsupported data type for numpy save" << std::endl;
@@ -207,7 +223,7 @@ struct Tensor {
     // Construct header
     std::stringstream header;
     header << "{'descr': '" << dtype_str << "', 'fortran_order': False, 'shape': (";
-    
+
     for (int i = 0; i < dim.nbDims; i++) {
       if (i > 0) header << ", ";
       header << dim.d[i];
@@ -223,43 +239,59 @@ struct Tensor {
 
     // Write header length and header
     uint16_t headerSize = headerStr.length();
-    f.write(reinterpret_cast<char*>(&headerSize), sizeof(uint16_t));
+    f.write(reinterpret_cast<char *>(&headerSize), sizeof(uint16_t));
     f.write(headerStr.c_str(), headerSize);
 
     // Write data
-    f.write(reinterpret_cast<const char*>(cpu_data.data()), cpu_data.size() * sizeof(float));
+    f.write(reinterpret_cast<const char *>(cpu_data.data()), cpu_data.size() * sizeof(float));
     f.close();
 
     std::cout << "Tensor '" << name << "' saved as numpy array to: " << filepath << std::endl;
     return true;
   }
-}; // struct Tensor
+};  // struct Tensor
 
-
-inline std::ostream& operator<<(std::ostream& os, Tensor& t) {
+inline std::ostream & operator<<(std::ostream & os, Tensor & t)
+{
   os << "[" << (int)(t.iomode) << "] ";
   os << t.name << ", [";
-  
-  for( int nd=0; nd<t.dim.nbDims; nd++ ) {
-    if( nd == 0 ) {
+
+  for (int nd = 0; nd < t.dim.nbDims; nd++) {
+    if (nd == 0) {
       os << t.dim.d[nd];
     } else {
       os << ", " << t.dim.d[nd];
     }
   }
   os << "]";
-  
+
   // Convert DataType to string
   std::string dtype_str;
   switch (t.dtype) {
-    case DataType::kFLOAT: dtype_str = "FLOAT32"; break;
-    case DataType::kHALF: dtype_str = "FLOAT16"; break;
-    case DataType::kINT32: dtype_str = "INT32"; break;
-    case DataType::kINT8: dtype_str = "INT8"; break;
-    case DataType::kBOOL: dtype_str = "BOOL"; break;
-    case DataType::kUINT8: dtype_str = "UINT8"; break;
-    case DataType::kFP8: dtype_str = "FP8"; break;
-    default: dtype_str = "UNKNOWN"; break;
+    case DataType::kFLOAT:
+      dtype_str = "FLOAT32";
+      break;
+    case DataType::kHALF:
+      dtype_str = "FLOAT16";
+      break;
+    case DataType::kINT32:
+      dtype_str = "INT32";
+      break;
+    case DataType::kINT8:
+      dtype_str = "INT8";
+      break;
+    case DataType::kBOOL:
+      dtype_str = "BOOL";
+      break;
+    case DataType::kUINT8:
+      dtype_str = "UINT8";
+      break;
+    case DataType::kFP8:
+      dtype_str = "FP8";
+      break;
+    default:
+      dtype_str = "UNKNOWN";
+      break;
   }
   os << ", type = " << dtype_str;
   return os;
@@ -335,4 +367,4 @@ void clear_async(T * ptr, std::size_t num_elem, cudaStream_t stream)
 
 }  // namespace cuda
 
-#endif  // AUTOWARE__CAMERA_STREAMPETR_CUDA_UTILS_HPP_
+#endif  // AUTOWARE__CAMERA_STREAMPETR__CUDA_UTILS_HPP_

@@ -1,15 +1,16 @@
 #include "autoware/camera_streampetr/image_utils.hpp"
+
 #include <opencv2/opencv.hpp>
-#include <iostream>
+
 #include <cstring>
+#include <iostream>
 
-namespace autoware::camera_streampetr {
-
+namespace autoware::camera_streampetr
+{
 
 void decompress_image(
-  const sensor_msgs::msg::CompressedImage::ConstSharedPtr & input_compressed_image_msg, 
-  cv_bridge::CvImagePtr & cv_ptr, 
-  const int decompression_downsample)
+  const sensor_msgs::msg::CompressedImage::ConstSharedPtr & input_compressed_image_msg,
+  cv_bridge::CvImagePtr & cv_ptr, const int decompression_downsample)
 {
   cv_ptr->header = input_compressed_image_msg->header;
 
@@ -28,7 +29,8 @@ void decompress_image(
       mode = cv::IMREAD_COLOR | cv::IMREAD_REDUCED_COLOR_8;
       break;
     default:
-      std::cout << "Invalid decompression downsample: " << decompression_downsample << " . Should be 1, 2, 4, or 8." << std::endl;
+      std::cout << "Invalid decompression downsample: " << decompression_downsample
+                << " . Should be 1, 2, 4, or 8." << std::endl;
       break;
   }
 
@@ -56,8 +58,7 @@ void decompress_image(
     // Convert compressed image to OpenCV format
     if (sensor_msgs::image_encodings::isColor(image_encoding)) {
       std::string compressed_encoding = input_compressed_image_msg->format.substr(split_pos);
-      bool compressed_bgr_image =
-        (compressed_encoding.find("compressed bgr") != std::string::npos);
+      bool compressed_bgr_image = (compressed_encoding.find("compressed bgr") != std::string::npos);
 
       // Revert color transformation
       if (compressed_bgr_image) {
@@ -103,4 +104,4 @@ void decompress_image(
   }
 }
 
-} 
+}  // namespace autoware::camera_streampetr
