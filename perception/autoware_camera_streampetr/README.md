@@ -9,17 +9,17 @@ The `autoware_camera_streampetr` package is used for 3D object detection based o
 This package implements a TensorRT powered inference node for StreamPETR [1]. This is the first camera-only 3D object detection node in autoware.
 
 This node has been optimized for multi-camera systems where the camera topics are published in a sequential manner, not all at once. The node takes
-advantage of this by preprocessing (resize, crop, normalize) the images and storing them appropriately on GPU, so that preprocessing costs can be minimized.
+advantage of this by preprocessing (resize, crop, normalize) the images and storing them appropriately on GPU, so that delay due to preprocessing can be minimized.
 
 ## Inputs / Outputs
 
 ### Input
 
-| Name                           | Type                                                             | Description                                                |
-|--------------------------------|------------------------------------------------------------------|------------------------------------------------------------|
-| `~/input/kinematic_state`      | `nav_msgs::msg::Odometry`                                        | Vehicle kinematic state for ego motion tracking.           |
+| Name                           | Type                                                             | Description                                                     |
+|--------------------------------|------------------------------------------------------------------|-----------------------------------------------------------------|
+| `~/input/kinematic_state`      | `nav_msgs::msg::Odometry`                                        | Vehicle kinematic state for ego motion tracking.                |
 | `~/input/camera*/image`        | `sensor_msgs::msg::Image` or `sensor_msgs::msg::CompressedImage` | Input image topics (supports both compressed and uncompressed). |
-| `~/input/camera*/camera_info`  | `sensor_msgs::msg::CameraInfo`                                   | Input camera info topics.                                  |
+| `~/input/camera*/camera_info`  | `sensor_msgs::msg::CameraInfo`                                   | Input camera info topics, for camera parameters.                |
 
 ### Output
 
@@ -116,4 +116,4 @@ If you want to train and deploy your own model, you can find the source code for
 ## (Optional) Future extensions / Unimplemented parts
 
 - Implement int8 quantization for the backbone to further reduce inference latency
-- Execute the image backbone for each image as they arrive, to reduce latency further.
+- Execute the image backbone for each image as they arrive, to further reduce latency.
