@@ -399,6 +399,9 @@
       <arg name="input/camera7/image" value="$(var input/camera7/image)"/>
       <arg name="input/camera7/info" value="$(var input/camera7/info)"/>
       <arg name="input/camera7/rois" value="$(var input/camera7/rois)"/>
+      <arg name="input/camera8/image" value="$(var input/camera8/image)"/>
+      <arg name="input/camera8/info" value="$(var input/camera8/info)"/>
+      <arg name="input/camera8/rois" value="$(var input/camera8/rois)"/>
       <arg name="input/lidar_ml/objects" value="$(var object_merger/input/ml_detected_objects)"/>
       <arg name="input/lidar_rule/objects" value="$(var camera_lidar_rule_detector/output/objects)"/>
       <arg name="input/detection_by_tracker/objects" value="$(var tracker_based_detector/output/objects)"/>
