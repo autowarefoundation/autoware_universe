@@ -144,6 +144,8 @@
         safety_check_params:
           # safety check configuration
           enable_safety_check: true
+          prev_light_check_distance: 0.0 # [m] Prevent departure if the previous traffic light (v2i) is green in high speed roads. Set to 0 to disable this feature
+          threshold_speed_for_prev_light_check: 50.0 # [kph] Threshold to determine if the ego vehicle is about to pull out onto a high-speed road
           # collision check parameters
           publish_debug_marker: false
           rss_params:
