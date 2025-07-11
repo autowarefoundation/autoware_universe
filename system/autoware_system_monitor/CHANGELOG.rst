@@ -38,6 +38,9 @@ Changelog for package autoware_system_monitor
 
 0.44.0 (2025-04-18)
 -------------------
+* fix(process_monitor): get process statistics directly from /proc files to avoid process spawning of Linux commands (`#10379 <https://github.com/autowarefoundation/autoware_universe/issues/10379>`_)
+  ---------
+* Contributors: nishikawa-masaki
 
 0.43.0 (2025-03-21)
 -------------------
