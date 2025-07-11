@@ -266,7 +266,7 @@ bool CrosswalkModule::modifyPathVelocity(PathWithLaneId * path)
     default_stop_pose);
   // Decide to stop for obstruction prevention
   const auto stop_factor_for_obstruction_preventions = checkStopForObstructionPrevention(
-    sparse_resample_path, objects_ptr->objects, first_path_point_on_crosswalk,
+    *path, sparse_resample_path, objects_ptr->objects, first_path_point_on_crosswalk,
     last_path_point_on_crosswalk, default_stop_pose);
   // Decide to stop for parked vehicles (only if no other stop is planned)
   const auto stop_factor_for_parked_vehicles =
@@ -1047,7 +1047,8 @@ Polygon2d CrosswalkModule::getAttentionArea(
 }
 
 std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForObstructionPrevention(
-  const PathWithLaneId & ego_path, const std::vector<PredictedObject> & objects,
+  const PathWithLaneId & ego_path, const PathWithLaneId & sparse_resample_path,
+  const std::vector<PredictedObject> & objects,
   const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
   const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
   const std::optional<geometry_msgs::msg::Pose> & stop_pose)
@@ -1079,17 +1080,19 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForObstructionP
     }
 
     const auto & obj_pose = object.kinematics.initial_pose_with_covariance.pose;
-    const auto lateral_offset = calcLateralOffset(ego_path.points, obj_pose.position);
+    const auto lateral_offset = calcLateralOffset(sparse_resample_path.points, obj_pose.position);
     if (p.max_target_vehicle_lateral_offset < std::abs(lateral_offset)) {
       continue;
     }
 
     // check if STOP is required
     const double crosswalk_front_to_obj_rear =
-      calcSignedArcLength(ego_path.points, first_path_point_on_crosswalk, obj_pose.position) -
+      calcSignedArcLength(
+        sparse_resample_path.points, first_path_point_on_crosswalk, obj_pose.position) -
       object.shape.dimensions.x / 2.0;
     const double crosswalk_back_to_obj_rear =
-      calcSignedArcLength(ego_path.points, last_path_point_on_crosswalk, obj_pose.position) -
+      calcSignedArcLength(
+        sparse_resample_path.points, last_path_point_on_crosswalk, obj_pose.position) -
       object.shape.dimensions.x / 2.0;
     const double required_space_length =
       planner_data_->vehicle_info_.vehicle_length_m + planner_param_.required_clearance;

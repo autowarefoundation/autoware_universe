@@ -217,7 +217,7 @@ struct PlanningValidatorContext
   {
     if (diag_updater) {
       // Do not do implicit capture, need to capture msg by copy
-      diag_updater->add(name, [this, &status, &is_critical, msg = msg](auto & stat) {
+      diag_updater->add(name, [this, &status, is_critical = is_critical, msg = msg](auto & stat) {
         set_diag_status(stat, status, msg, is_critical);
       });
     }

@@ -46,7 +46,8 @@ bool PedestrianAndBicycleTracker::measure(
 }
 
 bool PedestrianAndBicycleTracker::getTrackedObject(
-  const rclcpp::Time & time, types::DynamicObject & object) const
+  const rclcpp::Time & time, types::DynamicObject & object,
+  [[maybe_unused]] const bool to_publish) const
 {
   using Label = autoware_perception_msgs::msg::ObjectClassification;
   const uint8_t label = getHighestProbLabel();

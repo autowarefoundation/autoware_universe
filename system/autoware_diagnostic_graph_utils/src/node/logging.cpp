@@ -29,27 +29,27 @@ LoggingNode::LoggingNode(const rclcpp::NodeOptions & options) : Node("logging", 
 {
   root_path_ = declare_parameter<std::string>("root_path");
   max_depth_ = declare_parameter<int>("max_depth");
+  enable_terminal_log_ = declare_parameter<bool>("enable_terminal_log");
+  ignore_dependent_error_ = declare_parameter<bool>("ignore_dependent_error");
 
   using std::placeholders::_1;
   sub_graph_.register_create_callback(std::bind(&LoggingNode::on_create, this, _1));
   sub_graph_.subscribe(*this, 1);
 
-  pub_error_graph_text_ = create_publisher<autoware_internal_debug_msgs::msg::StringStamped>(
-    "~/debug/error_graph_text", rclcpp::QoS(1));
+  pub_error_graph_text_ =
+    create_publisher<StringStamped>("~/debug/error_graph_text", rclcpp::QoS(1));
 
   const auto period = rclcpp::Rate(declare_parameter<double>("show_rate")).period();
   timer_ = rclcpp::create_timer(this, get_clock(), period, [this]() { on_timer(); });
-
-  enable_terminal_log_ = declare_parameter<bool>("enable_terminal_log");
 }
 
 void LoggingNode::on_create(DiagGraph::ConstSharedPtr graph)
 {
   // Search root node.
-  root_unit_ = nullptr;
+  root_node_ = nullptr;
   for (const auto & node : graph->nodes()) {
     if (node->path() == root_path_) {
-      root_unit_ = node;
+      root_node_ = node;
       return;
     }
   }
@@ -59,10 +59,10 @@ void LoggingNode::on_create(DiagGraph::ConstSharedPtr graph)
 void LoggingNode::on_timer()
 {
   static const auto prefix_message = "The target mode is not available for the following reasons:";
-  if (root_unit_ && root_unit_->level() != DiagUnit::DiagnosticStatus::OK) {
+  if (root_node_ && root_node_->level() != DiagUnit::DiagnosticStatus::OK) {
     dump_text_.str("");
     dump_text_.clear(std::stringstream::goodbit);
-    dump_unit(root_unit_, 0, "");
+    dump_unit(root_node_, 0, "");
     const auto error_graph_text = dump_text_.str();
 
     // show on terminal
@@ -74,7 +74,7 @@ void LoggingNode::on_timer()
     }
 
     // publish debug topic
-    autoware_internal_debug_msgs::msg::StringStamped error_graph_message;
+    StringStamped error_graph_message;
     error_graph_message.stamp = now();
     error_graph_message.data = error_graph_text;
     pub_error_graph_text_->publish(error_graph_message);
@@ -85,7 +85,7 @@ void LoggingNode::on_timer()
     const std::string error_graph_text{""};
 
     // publish debug topic
-    autoware_internal_debug_msgs::msg::StringStamped error_graph_message;
+    StringStamped error_graph_message;
     error_graph_message.stamp = now();
     pub_error_graph_text_->publish(error_graph_message);
 
@@ -99,7 +99,7 @@ void LoggingNode::on_timer()
   }
 }
 
-void LoggingNode::dump_unit(DiagUnit * unit, int depth, const std::string & indent)
+void LoggingNode::dump_unit(DiagNode * node, int depth, const std::string & indent)
 {
   const auto text_level = [](DiagUnit::DiagnosticLevel level) {
     if (level == DiagUnit::DiagnosticStatus::OK) return "OK   ";
@@ -112,17 +112,20 @@ void LoggingNode::dump_unit(DiagUnit * unit, int depth, const std::string & inde
   if (max_depth_ < depth) {
     return;
   }
-  if (unit->level() == DiagUnit::DiagnosticStatus::OK) {
+  if (node->level() == DiagUnit::DiagnosticStatus::OK) {
+    return;
+  }
+  if (node->is_dependent() && ignore_dependent_error_) {
     return;
   }
 
-  std::string path = unit->path_or_name();
+  std::string path = node->path();
   if (path.empty()) {
     path = "[anonymous group]";
   }
 
-  dump_text_ << indent << "- " + path << " " << text_level(unit->level()) << std::endl;
-  for (const auto & child : unit->child_units()) {
+  dump_text_ << indent << "- " + path << " " << text_level(node->level()) << std::endl;
+  for (const auto & child : node->child_nodes()) {
     dump_unit(child, depth + 1, indent + "    ");
   }
 }

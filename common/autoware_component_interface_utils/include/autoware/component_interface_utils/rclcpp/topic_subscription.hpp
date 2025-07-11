@@ -17,6 +17,8 @@
 
 #include <rclcpp/subscription.hpp>
 
+#include <memory>
+
 namespace autoware::component_interface_utils
 {
 
@@ -33,6 +35,40 @@ public:
   explicit Subscription(typename WrapType::SharedPtr subscription)
   {
     subscription_ = subscription;  // to keep the reference count
+  }
+
+  typename SpecType::Message::ConstSharedPtr take()
+  {
+    rclcpp::MessageInfo info;
+    auto data = std::make_shared<typename SpecType::Message>();
+    bool flag = false;
+    for (size_t i = 0; i < subscription_->get_actual_qos().depth(); ++i) {
+      if (!subscription_->take(*data, info)) {
+        break;
+      }
+      flag = true;  // Whether there is at least one data.
+    }
+    return flag ? data : nullptr;
+  }
+
+  bool take_and_update(typename SpecType::Message::ConstSharedPtr & ptr)
+  {
+    const auto msg = take();
+    if (!msg) {
+      return false;
+    }
+    ptr = msg;
+    return true;
+  }
+
+  bool take_and_update(typename SpecType::Message & ref)
+  {
+    const auto msg = take();
+    if (!msg) {
+      return false;
+    }
+    ref = *msg;
+    return true;
   }
 
 private:
