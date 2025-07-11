@@ -57,9 +57,11 @@ void BoundaryDeparturePreventionModule::init(
       if (output_.diagnostic_output[DepartureType::CRITICAL_DEPARTURE]) {
         lvl = node_param_.diagnostic_level[DepartureType::CRITICAL_DEPARTURE];
         msg = "vehicle is leaving boundary";
+        RCLCPP_ERROR_THROTTLE(logger_, *clock_ptr_, 500, "%s", msg.c_str());
       } else if (output_.diagnostic_output[DepartureType::APPROACHING_DEPARTURE]) {
         lvl = node_param_.diagnostic_level[DepartureType::APPROACHING_DEPARTURE];
         msg = "vehicle is moving towards the boundary";
+        RCLCPP_ERROR_THROTTLE(logger_, *clock_ptr_, 1000, "%s", msg.c_str());
       } else if (output_.diagnostic_output[DepartureType::NEAR_BOUNDARY]) {
         lvl = node_param_.diagnostic_level[DepartureType::NEAR_BOUNDARY];
         msg = "vehicle is near boundary";
