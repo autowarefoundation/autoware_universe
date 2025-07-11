@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/camera_streampetr/postprocess/non_maximum_supression.hpp"
+#include "autoware/camera_streampetr/postprocess/non_maximum_suppression.hpp"
 
 #include <autoware/object_recognition_utils/geometry.hpp>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
@@ -46,10 +46,9 @@ bool NonMaximumSuppression::isTargetPairObject(
     return false;
   }
 
-  // const auto sqr_dist_2d = autoware_utils::calc_squared_distance2d(
-  //   autoware::object_recognition_utils::getPose(object1),
-  //   autoware::object_recognition_utils::getPose(object2));
-  const auto sqr_dist_2d = 0.0;  // remove this line and uncomment the line above
+  const auto sqr_dist_2d = autoware_utils::calc_squared_distance2d(
+    autoware::object_recognition_utils::getPose(object1),
+    autoware::object_recognition_utils::getPose(object2));
   return sqr_dist_2d <= search_distance_2d_sq_;
 }
 
