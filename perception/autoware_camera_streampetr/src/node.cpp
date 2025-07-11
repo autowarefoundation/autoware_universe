@@ -15,7 +15,7 @@
 #include "autoware/camera_streampetr/node.hpp"
 
 #include "autoware/camera_streampetr/network/build_trt.hpp"
-#include "autoware/camera_streampetr/postprocess/non_maximum_supression.hpp"
+#include "autoware/camera_streampetr/postprocess/non_maximum_suppression.hpp"
 
 #include <Eigen/Dense>
 

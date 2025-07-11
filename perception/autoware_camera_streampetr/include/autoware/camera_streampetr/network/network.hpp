@@ -37,6 +37,7 @@
 #include <vector>
 // From NVIDIA/DL4AGX
 
+#include "autoware/camera_streampetr/cuda_utils.hpp"
 #include "autoware/camera_streampetr/postprocess/non_maximum_suppression.hpp"
 #include "autoware/camera_streampetr/postprocess/postprocess_kernel.hpp"
 #include "autoware/camera_streampetr/utils.hpp"
