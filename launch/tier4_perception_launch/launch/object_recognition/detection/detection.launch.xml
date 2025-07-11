@@ -79,6 +79,9 @@
   <arg name="input/camera7/image"/>
   <arg name="input/camera7/info"/>
   <arg name="input/camera7/rois"/>
+  <arg name="input/camera8/image"/>
+  <arg name="input/camera8/info"/>
+  <arg name="input/camera8/rois"/>
   <arg name="image_topic_name"/>
   <arg name="segmentation_pointcloud_fusion_camera_ids"/>
   <arg name="input/radar"/>
