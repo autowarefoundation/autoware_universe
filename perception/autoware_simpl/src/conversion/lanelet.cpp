@@ -193,7 +193,7 @@ archetype::Polyline interpolate_waypoints(
     waypoints.emplace_back(input[segment_idx].lerp(input[segment_idx + 1], t));
   }
 
-  return archetype::Polyline(waypoints);
+  return archetype::Polyline(input.id(), waypoints);
 }
 }  // namespace
 
@@ -229,7 +229,7 @@ void LaneletConverter::convert(const lanelet::LaneletMapConstPtr lanelet_map_ptr
         taken_boundary_ids.emplace_back(right_bound.id());
       }
     } else if (is_crosswalk_like(lanelet_subtype)) {
-      const auto points = from_polygon(lanelet.polygon3d(), label);
+      const auto points = from_polygon(lanelet.id(), lanelet.polygon3d(), label);
       container_.emplace_back(interpolate_waypoints(points));
     }
   }
@@ -257,16 +257,17 @@ archetype::Polyline LaneletConverter::from_linestring(
   for (auto itr = linestring.begin(); itr != linestring.end(); ++itr) {
     waypoints.emplace_back(itr->x(), itr->y(), itr->z(), label);
   }
-  return archetype::Polyline(waypoints);
+  return archetype::Polyline(linestring.id(), waypoints);
 }
 
 archetype::Polyline LaneletConverter::from_polygon(
-  const lanelet::CompoundPolygon3d & polygon, const archetype::MapLabel & label) const noexcept
+  lanelet::Id id, const lanelet::CompoundPolygon3d & polygon,
+  const archetype::MapLabel & label) const noexcept
 {
   std::vector<archetype::MapPoint> waypoints;
   for (auto itr = polygon.begin(); itr != polygon.end(); ++itr) {
     waypoints.emplace_back(itr->x(), itr->y(), itr->z(), label);
   }
-  return archetype::Polyline(waypoints);
+  return archetype::Polyline(id, waypoints);
 }
 }  // namespace autoware::simpl::conversion

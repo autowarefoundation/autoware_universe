@@ -27,33 +27,6 @@ namespace autoware::simpl::conversion
 namespace
 {
 /**
- * @brief Return `archetype::AgentLabel` from `TrackedObject` message.
- *
- * @param object Tracked object.
- */
-archetype::AgentLabel to_agent_label(const autoware_perception_msgs::msg::TrackedObject & object)
-{
-  using ObjectClassification = autoware_perception_msgs::msg::ObjectClassification;
-
-  const auto label = object_recognition_utils::getHighestProbLabel(object.classification);
-  if (
-    object_recognition_utils::isCarLikeVehicle(label) &&
-    !object_recognition_utils::isLargeVehicle(label)) {
-    return archetype::AgentLabel::VEHICLE;
-  } else if (object_recognition_utils::isLargeVehicle(label)) {
-    return archetype::AgentLabel::LARGE_VEHICLE;
-  } else if (label == ObjectClassification::PEDESTRIAN) {
-    return archetype::AgentLabel::PEDESTRIAN;
-  } else if (label == ObjectClassification::MOTORCYCLE) {
-    return archetype::AgentLabel::MOTORCYCLIST;
-  } else if (label == ObjectClassification::BICYCLE) {
-    return archetype::AgentLabel::CYCLIST;
-  } else {
-    return archetype::AgentLabel::UNKNOWN;
-  }
-}
-
-/**
  * @brief Transform velocity coordinate frame from local to global coordinate frame.
  *
  * @param velocity Linear velocity vector.
@@ -92,14 +65,35 @@ double to_yaw(const autoware_perception_msgs::msg::TrackedObjectKinematics & kin
 }
 }  // namespace
 
+archetype::AgentLabel to_agent_label(const autoware_perception_msgs::msg::TrackedObject & object)
+{
+  using ObjectClassification = autoware_perception_msgs::msg::ObjectClassification;
+
+  const auto label = object_recognition_utils::getHighestProbLabel(object.classification);
+  if (
+    object_recognition_utils::isCarLikeVehicle(label) &&
+    !object_recognition_utils::isLargeVehicle(label)) {
+    return archetype::AgentLabel::VEHICLE;
+  } else if (object_recognition_utils::isLargeVehicle(label)) {
+    return archetype::AgentLabel::LARGE_VEHICLE;
+  } else if (label == ObjectClassification::PEDESTRIAN) {
+    return archetype::AgentLabel::PEDESTRIAN;
+  } else if (label == ObjectClassification::MOTORCYCLE) {
+    return archetype::AgentLabel::MOTORCYCLIST;
+  } else if (label == ObjectClassification::BICYCLE) {
+    return archetype::AgentLabel::CYCLIST;
+  } else {
+    return archetype::AgentLabel::UNKNOWN;
+  }
+}
+
 archetype::AgentState to_agent_state(const autoware_perception_msgs::msg::TrackedObject & object)
 {
   const auto & pose = object.kinematics.pose_with_covariance.pose;
   const double yaw = to_yaw(object.kinematics);
   const auto [vx, vy] = local_to_global(object.kinematics.twist_with_covariance.twist.linear, yaw);
-  const auto label = to_agent_label(object);
 
-  return {pose.position.x, pose.position.y, pose.position.z, yaw, vx, vy, label, true};
+  return {pose.position.x, pose.position.y, pose.position.z, yaw, vx, vy, true};
 }
 
 archetype::AgentState to_agent_state(const nav_msgs::msg::Odometry & odometry)
@@ -108,14 +102,6 @@ archetype::AgentState to_agent_state(const nav_msgs::msg::Odometry & odometry)
   const double yaw = autoware_utils_geometry::get_rpy(pose.orientation).z;
   const auto [vx, vy] = local_to_global(odometry.twist.twist.linear, yaw);
 
-  return {
-    pose.position.x,
-    pose.position.y,
-    pose.position.z,
-    yaw,
-    vx,
-    vy,
-    archetype::AgentLabel::VEHICLE,
-    true};
+  return {pose.position.x, pose.position.y, pose.position.z, yaw, vx, vy, true};
 }
 }  // namespace autoware::simpl::conversion

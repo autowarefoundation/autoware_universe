@@ -22,9 +22,7 @@
 namespace autoware::simpl::test
 {
 using autoware::simpl::archetype::AgentTensor;
-using autoware::simpl::archetype::MapLabel;
 using autoware::simpl::archetype::MapTensor;
-using autoware::simpl::archetype::Polyline;
 using autoware::simpl::archetype::SimplException;
 
 TEST(TestAgentTensor, ConstructValid)
@@ -63,19 +61,13 @@ TEST(TestMapTensor, ConstructValid)
   size_t K = 2, P = 3, Dm = 2;
   std::vector<float> tensor(K * P * Dm, 0.5f);
 
-  // Dummy polylines
-  std::vector<Polyline> polylines = {
-    Polyline({{0.0, 0.0, 0.0, MapLabel::ROADWAY}, {1.0, 0.0, 0.0, MapLabel::ROADWAY}}),
-    Polyline({{2.0, 0.0, 0.0, MapLabel::ROADWAY}, {3.0, 0.0, 0.0, MapLabel::ROADWAY}})};
-
-  MapTensor map_tensor(tensor, K, P, Dm, polylines);
+  MapTensor map_tensor(tensor, K, P, Dm);
 
   EXPECT_EQ(map_tensor.size(), K * P * Dm);
   EXPECT_EQ(map_tensor.num_polyline, K);
   EXPECT_EQ(map_tensor.num_point, P);
   EXPECT_EQ(map_tensor.num_attribute, Dm);
   EXPECT_EQ(map_tensor.data()[0], 0.5f);
-  EXPECT_EQ(map_tensor.polylines.size(), 2u);
 }
 
 TEST(TestMapTensor, ConstructInvalidThrows)
@@ -83,13 +75,10 @@ TEST(TestMapTensor, ConstructInvalidThrows)
   size_t K = 2, P = 3, Dm = 2;
   std::vector<float> tensor(K * P * Dm - 1, 0.5f);
 
-  std::vector<Polyline> polylines = {
-    Polyline({{0.0, 0.0, 0.0, MapLabel::ROADWAY}, {1.0, 0.0, 0.0, MapLabel::ROADWAY}})};
-
   EXPECT_THROW(
     {
       try {
-        MapTensor map_tensor(tensor, K, P, Dm, polylines);
+        MapTensor map_tensor(tensor, K, P, Dm);
       } catch (const SimplException & e) {
         EXPECT_STREQ(e.what(), "[InvalidValue]: Invalid size of map tensor: 11 != 12");
         throw;

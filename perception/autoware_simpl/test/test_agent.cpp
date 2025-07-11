@@ -36,8 +36,8 @@ using autoware::simpl::archetype::AgentState;
 
 TEST(TestAgentState, TransformToAnotherFrame)
 {
-  AgentState original(10.0, 0.0, 0.0, M_PI / 2, 1.0, 0.0, AgentLabel::VEHICLE, true);
-  AgentState frame(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, AgentLabel::VEHICLE, true);
+  AgentState original(10.0, 0.0, 0.0, M_PI / 2, 1.0, 0.0, true);
+  AgentState frame(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true);
 
   AgentState transformed = original.transform(frame);
 
@@ -50,8 +50,8 @@ TEST(TestAgentState, TransformToAnotherFrame)
 
 TEST(TestAgentState, TransformToRotatedFrame)
 {
-  AgentState original{1.0, 0.0, 0.0, 0.0, 1.0, 0.0, AgentLabel::VEHICLE, true};
-  AgentState frame{0.0, 0.0, 0.0, M_PI / 2, 0.0, 0.0, AgentLabel::VEHICLE, true};
+  AgentState original{1.0, 0.0, 0.0, 0.0, 1.0, 0.0, true};
+  AgentState frame{0.0, 0.0, 0.0, M_PI / 2, 0.0, 0.0, true};
 
   AgentState transformed = original.transform(frame);
 
@@ -64,21 +64,21 @@ TEST(TestAgentState, TransformToRotatedFrame)
 
 TEST(TestAgentHistory, DistanceFromReference)
 {
-  AgentState ref{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, AgentLabel::VEHICLE, true};
-  AgentState state{3.0, 4.0, 0.0, 0.0, 0.0, 0.0, AgentLabel::VEHICLE, true};
-  AgentHistory history("agent0", 1, state);
+  AgentState ref{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true};
+  AgentState state{3.0, 4.0, 0.0, 0.0, 0.0, 0.0, true};
+  AgentHistory history("agent0", AgentLabel::UNKNOWN, 1, state);
 
   EXPECT_DOUBLE_EQ(history.distance_from(ref), 5.0);
 }
 
 TEST(TestAgentHistory, TransformToCurrentFrame)
 {
-  AgentHistory history("agentX", 3);
+  AgentHistory history("agentX", AgentLabel::UNKNOWN, 3);
 
   // 3 time steps: t0 = (2, 0), t1 = (1, 0), t2 = (0, 0) ← current
-  history.update(AgentState{2.0, 0.0, 0.0, 0.0, 0.0, 0.0, AgentLabel::VEHICLE, true});
-  history.update(AgentState{1.0, 0.0, 0.0, 0.0, 0.0, 0.0, AgentLabel::VEHICLE, true});
-  history.update(AgentState{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, AgentLabel::VEHICLE, true});
+  history.update(AgentState{2.0, 0.0, 0.0, 0.0, 0.0, 0.0, true});
+  history.update(AgentState{1.0, 0.0, 0.0, 0.0, 0.0, 0.0, true});
+  history.update(AgentState{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true});
 
   AgentHistory transformed = history.transform_to_current();
 
@@ -90,15 +90,17 @@ TEST(TestAgentHistory, TransformToCurrentFrame)
 
 TEST(TestTrimNeighbors, ReturnsNearestAgents)
 {
-  AgentState reference(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, AgentLabel::VEHICLE, true);
+  AgentState reference(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true);
 
   std::vector<AgentHistory> histories;
   for (int i = 0; i < 5; ++i) {
-    AgentState state(static_cast<double>(i), 0.0, 0.0, 0.0, 0.0, 0.0, AgentLabel::VEHICLE, true);
-    histories.emplace_back("agent" + std::to_string(i), 1, state);
+    AgentState state(static_cast<double>(i), 0.0, 0.0, 0.0, 0.0, 0.0, true);
+    histories.emplace_back("agent" + std::to_string(i), AgentLabel::UNKNOWN, 1, state);
   }
 
-  auto result = trim_neighbors(histories, reference, 3);
+  const auto label_ids = archetype::to_label_ids({"VEHICLE", "UNKNOWN"});
+
+  auto result = trim_neighbors(histories, label_ids, reference, 3);
 
   ASSERT_EQ(result.size(), 3u);
   EXPECT_EQ(result[0].agent_id, "agent0");
@@ -106,17 +108,36 @@ TEST(TestTrimNeighbors, ReturnsNearestAgents)
   EXPECT_EQ(result[2].agent_id, "agent2");
 }
 
+TEST(TestTrimNeighbors, FilterNonTargetAgents)
+{
+  AgentState reference(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true);
+
+  std::vector<AgentHistory> histories;
+  for (int i = 0; i < 5; ++i) {
+    AgentState state(static_cast<double>(i), 0.0, 0.0, 0.0, 0.0, 0.0, true);
+    histories.emplace_back("agent" + std::to_string(i), AgentLabel::UNKNOWN, 1, state);
+  }
+
+  const auto label_ids = archetype::to_label_ids({"VEHICLE"});
+
+  auto result = trim_neighbors(histories, label_ids, reference, 3);
+
+  EXPECT_TRUE(result.empty());
+}
+
 TEST(TestTrimNeighbors, HandlesTopKLargerThanInput)
 {
-  AgentState reference(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, AgentLabel::VEHICLE, true);
+  AgentState reference(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true);
 
   std::vector<AgentHistory> histories;
   for (int i = 0; i < 2; ++i) {
-    AgentState state(static_cast<double>(i), 0.0, 0.0, 0.0, 0.0, 0.0, AgentLabel::VEHICLE, true);
-    histories.emplace_back("agent" + std::to_string(i), 1, state);
+    AgentState state(static_cast<double>(i), 0.0, 0.0, 0.0, 0.0, 0.0, true);
+    histories.emplace_back("agent" + std::to_string(i), AgentLabel::UNKNOWN, 1, state);
   }
 
-  auto result = trim_neighbors(histories, reference, 10);
+  const auto label_ids = archetype::to_label_ids({"VEHICLE", "UNKNOWN"});
+
+  auto result = trim_neighbors(histories, label_ids, reference, 10);
 
   ASSERT_EQ(result.size(), 2u);
   EXPECT_EQ(result[0].agent_id, "agent0");
@@ -125,11 +146,13 @@ TEST(TestTrimNeighbors, HandlesTopKLargerThanInput)
 
 TEST(TestTrimNeighbors, ReturnEmptyWhenNoInput)
 {
-  AgentState reference(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, AgentLabel::VEHICLE, true);
+  AgentState reference(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true);
 
   std::vector<AgentHistory> histories;
 
-  auto result = trim_neighbors(histories, reference, 3);
+  const auto label_ids = archetype::to_label_ids({"VEHICLE", "UNKNOWN"});
+
+  auto result = trim_neighbors(histories, label_ids, reference, 3);
 
   EXPECT_TRUE(result.empty());
 }

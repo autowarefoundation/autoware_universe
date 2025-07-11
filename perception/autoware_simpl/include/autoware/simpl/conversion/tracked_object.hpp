@@ -17,11 +17,17 @@
 
 #include "autoware/simpl/archetype/agent.hpp"
 
+#include <autoware_perception_msgs/msg/detail/tracked_object__struct.hpp>
 #include <autoware_perception_msgs/msg/tracked_object.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
 namespace autoware::simpl::conversion
 {
+/**
+ *
+ */
+archetype::AgentLabel to_agent_label(const autoware_perception_msgs::msg::TrackedObject & object);
+
 /**
  * @brief Convert Autoware `TrackedObject` message to internal `AgentState`.
  *

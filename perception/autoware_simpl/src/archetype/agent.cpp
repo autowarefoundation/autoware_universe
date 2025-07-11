@@ -60,13 +60,13 @@ AgentState AgentState::transform(const AgentState & to_state) const
   const auto t_vx = vx * to_cos + vy * to_sin;
   const auto t_vy = -vx * to_sin + vy * to_cos;
 
-  return {tx, ty, z, t_yaw, t_vx, t_vy, label, is_valid};
+  return {tx, ty, z, t_yaw, t_vx, t_vy, is_valid};
 }
 
 AgentHistory AgentHistory::transform_to_current() const
 {
   const auto & current_state = current();
-  AgentHistory output(agent_id, queue_.size());
+  AgentHistory output(agent_id, label, queue_.size());
   for (const auto & state_t : *this) {
     if (state_t.is_valid) {
       output.update(state_t.transform(current_state));
@@ -78,9 +78,17 @@ AgentHistory AgentHistory::transform_to_current() const
 }
 
 std::vector<AgentHistory> trim_neighbors(
-  const std::vector<AgentHistory> & histories, const AgentState & state_from, size_t top_k)
+  const std::vector<AgentHistory> & histories, const std::vector<size_t> & label_ids,
+  const AgentState & state_from, size_t top_k)
 {
-  auto output = histories;
+  std::vector<AgentHistory> output;
+  for (const auto & h : histories) {
+    if (
+      std::find(label_ids.begin(), label_ids.end(), static_cast<size_t>(h.label)) !=
+      label_ids.end()) {
+      output.emplace_back(h);
+    }
+  }
 
   std::sort(
     output.begin(), output.end(), [&state_from](const AgentHistory & a, const AgentHistory & b) {

@@ -16,8 +16,8 @@
 
 #include "autoware/simpl/archetype/agent.hpp"
 #include "autoware/simpl/archetype/map.hpp"
+#include "autoware/simpl/archetype/polyline.hpp"
 #include "autoware/simpl/conversion/tracked_object.hpp"
-#include "autoware/simpl/debug/marker.hpp"
 #include "autoware/simpl/processing/preprocessor.hpp"
 
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
@@ -30,7 +30,6 @@
 #include <memory>
 #include <string>
 #include <unordered_set>
-#include <utility>
 #include <vector>
 
 namespace autoware::simpl
@@ -95,11 +94,6 @@ SimplNode::SimplNode(const rclcpp::NodeOptions & options) : rclcpp::Node("simpl"
     detector_ = std::make_unique<TrtSimpl>(config);
   }
 
-  if (declare_parameter<bool>("build_only")) {
-    RCLCPP_INFO(get_logger(), "TensorRT engine file is built and exit.");
-    rclcpp::shutdown();
-  }
-
   {
     // Debug processing time
     stopwatch_ptr_ =
@@ -110,14 +104,9 @@ SimplNode::SimplNode(const rclcpp::NodeOptions & options) : rclcpp::Node("simpl"
       std::make_unique<autoware_utils_debug::DebugPublisher>(this, get_name());
   }
 
-  {
-    // Debug marker publisher
-    history_marker_publisher_ =
-      this->create_publisher<MarkerArray>("~/debug/histories", rclcpp::QoS{1});
-    polyline_marker_publisher_ =
-      this->create_publisher<MarkerArray>("~/debug/map_points", rclcpp::QoS{1});
-    processed_map_marker_publisher_ =
-      this->create_publisher<MarkerArray>("~/debug/processed_map", rclcpp::QoS{1});
+  if (declare_parameter<bool>("build_only")) {
+    RCLCPP_INFO(get_logger(), "TensorRT engine file is built and exit.");
+    rclcpp::shutdown();
   }
 }
 
@@ -166,28 +155,14 @@ void SimplNode::callback(const TrackedObjects::ConstSharedPtr objects_msg)
     processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time_ms", processing_time_ms);
   }
-
-  {
-    // debug marker
-    const auto history_marker_array =
-      debug::create_history_marker_array(history_map_, objects_msg->header);
-    const auto polyline_marker_array =
-      debug::create_polyline_marker_array(polylines, objects_msg->header);
-    const auto processed_map_marker_array = debug::create_processed_map_marker_array(
-      map_metadata.tensor.polylines, map_metadata.centers, map_metadata.vectors,
-      objects_msg->header);
-    history_marker_publisher_->publish(history_marker_array);
-    polyline_marker_publisher_->publish(polyline_marker_array);
-    processed_map_marker_publisher_->publish(processed_map_marker_array);
-  }
 }
 
 void SimplNode::on_map(const LaneletMapBin::ConstSharedPtr map_msg)
 {
-  lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
-  lanelet::utils::conversion::fromBinMsg(*map_msg, lanelet_map_ptr_);
+  auto lanelet_map_ptr = std::make_shared<lanelet::LaneletMap>();
+  lanelet::utils::conversion::fromBinMsg(*map_msg, lanelet_map_ptr);
 
-  lanelet_converter_ptr_->convert(lanelet_map_ptr_);
+  lanelet_converter_ptr_->convert(lanelet_map_ptr);
 }
 
 std::optional<archetype::AgentState> SimplNode::subscribe_ego()
@@ -215,8 +190,9 @@ std::vector<archetype::AgentHistory> SimplNode::update_history(
     observed_ids.insert(agent_id);
 
     // update history with the current state
+    const auto label = conversion::to_agent_label(object);
     const auto state = conversion::to_agent_state(object);
-    auto [it, init] = history_map_.try_emplace(agent_id, agent_id, num_past_, state);
+    auto [it, init] = history_map_.try_emplace(agent_id, agent_id, label, num_past_, state);
     if (!init) {
       it->second.update(state);
     }
@@ -233,6 +209,54 @@ std::vector<archetype::AgentHistory> SimplNode::update_history(
     if (std::find(observed_ids.begin(), observed_ids.end(), agent_id) == observed_ids.end()) {
       tracked_object_map_.erase(agent_id);
       itr = history_map_.erase(itr);
+    } else {
+      ++itr;
+    }
+  }
+  return histories;
+}
+
+std::vector<archetype::AgentHistory> SimplNode::update_history_with_ego(
+  const TrackedObjects::ConstSharedPtr objects_msg, const archetype::AgentState & current_ego)
+{
+  std::vector<archetype::AgentHistory> histories;
+  if (!objects_msg) {
+    return histories;
+  }
+
+  std::unordered_set<std::string> observed_ids;
+
+  // update agent histories
+  for (const auto & object : objects_msg->objects) {
+    const auto agent_id = autoware_utils::to_hex_string(object.object_id);
+    observed_ids.insert(agent_id);
+
+    // update history with the current state
+    const auto label = conversion::to_agent_label(object);
+    const auto state = conversion::to_agent_state(object);
+    auto [it, init] =
+      history_map_with_ego_.try_emplace(agent_id, agent_id, label, num_past_, state);
+    if (!init) {
+      it->second.update(state);
+    }
+    histories.emplace_back(it->second);
+  }
+
+  static const std::string ego_id = "EGO";
+  auto [it, init] = history_map_with_ego_.try_emplace(
+    ego_id, ego_id, archetype::AgentLabel::VEHICLE, num_past_, current_ego);
+  if (!init) {
+    it->second.update(current_ego);
+  }
+  histories.emplace_back(it->second);
+  observed_ids.insert(ego_id);
+
+  // remove histories that are not observed at the current
+  for (auto itr = history_map_with_ego_.begin(); itr != history_map_with_ego_.end();) {
+    const auto & agent_id = itr->first;
+    // update unobserved history with empty
+    if (std::find(observed_ids.begin(), observed_ids.end(), agent_id) == observed_ids.end()) {
+      itr = history_map_with_ego_.erase(itr);
     } else {
       ++itr;
     }

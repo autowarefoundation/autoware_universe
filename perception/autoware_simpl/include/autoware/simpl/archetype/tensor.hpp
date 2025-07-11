@@ -84,13 +84,8 @@ public:
    * @param num_attribute Number of attributes (Dm).
    */
   MapTensor(
-    const std::vector<float> & tensor, size_t num_polyline, size_t num_point, size_t num_attribute,
-    const std::vector<Polyline> & polylines)
-  : num_polyline(num_polyline),
-    num_point(num_point),
-    num_attribute(num_attribute),
-    polylines(polylines),  // TODO(ktro2828): polylines are just used for debug, remove later
-    tensor_(tensor)
+    const std::vector<float> & tensor, size_t num_polyline, size_t num_point, size_t num_attribute)
+  : num_polyline(num_polyline), num_point(num_point), num_attribute(num_attribute), tensor_(tensor)
   {
     if (tensor_.size() != num_polyline * num_point * num_attribute) {
       std::ostringstream msg;
@@ -113,7 +108,6 @@ public:
   const size_t num_polyline;   //!< Number of polylines (K).
   const size_t num_point;      //!< Number of points contained in a single polyline (P).
   const size_t num_attribute;  //!< Number of attributes (Dm).
-  const std::vector<Polyline> polylines;
 
 private:
   std::vector<float> tensor_;  //!< Map tensor data.
