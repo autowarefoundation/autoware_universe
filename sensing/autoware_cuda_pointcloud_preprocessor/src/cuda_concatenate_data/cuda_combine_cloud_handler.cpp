@@ -17,6 +17,7 @@
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_combine_cloud_handler_kernel.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_traits.hpp"
 
+#include <autoware/pointcloud_preprocessor/concatenate_data/utils.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 
 #include <cuda_runtime.h>
@@ -110,6 +111,8 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
   // Before combining the pointclouds, initialize and reserve space for the concatenated pointcloud
   concatenate_cloud_result.concatenate_cloud_ptr =
     std::make_unique<cuda_blackboard::CudaPointCloud2>();
+  concatenate_cloud_result.concatenate_cloud_info_ptr =
+    std::make_unique<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>();
 
   // Reserve space based on the total size of the pointcloud data to speed up the concatenation
   // process
@@ -177,6 +180,8 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
       reinterpret_cast<PointTypeStruct *>(cloud->data.get()), num_points, transform_struct,
       output_points + concatenated_start_index, stream);
     concatenated_start_index += num_points;
+    utils::append_source_point_cloud_info(
+      *cloud, topic, *concatenate_cloud_result.concatenate_cloud_info_ptr);
   }
 
   concatenate_cloud_result.concatenate_cloud_ptr->header.frame_id = output_frame_;
@@ -273,6 +278,10 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
   }
 
   concatenate_cloud_result.concatenate_cloud_ptr->header.stamp = oldest_stamp;
+
+  utils::set_concatenated_point_cloud_info(
+    *concatenate_cloud_result.concatenate_cloud_ptr,
+    *concatenate_cloud_result.concatenate_cloud_info_ptr);
 
   return concatenate_cloud_result;
 }
