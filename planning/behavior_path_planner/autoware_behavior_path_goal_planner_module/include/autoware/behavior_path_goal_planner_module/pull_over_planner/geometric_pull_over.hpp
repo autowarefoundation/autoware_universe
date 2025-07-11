@@ -32,11 +32,15 @@ class GeometricPullOver : public PullOverPlannerBase
 {
 public:
   GeometricPullOver(
-    rclcpp::Node & node, const GoalPlannerParameters & parameters, const bool is_forward);
+    rclcpp::Node & node, const GoalPlannerParameters & parameters, const bool is_forward,
+    const bool use_clothoid);
 
   PullOverPlannerType getPlannerType() const override
   {
-    return is_forward_ ? PullOverPlannerType::ARC_FORWARD : PullOverPlannerType::ARC_BACKWARD;
+    return use_clothoid_ ? is_forward_ ? PullOverPlannerType::CLOTHOID_FORWARD
+                                       : PullOverPlannerType::CLOTHOID_BACKWARD
+           : is_forward_ ? PullOverPlannerType::ARC_FORWARD
+                         : PullOverPlannerType::ARC_BACKWARD;
   }
   Pose getCr() const { return planner_.getCr(); }
   Pose getCl() const { return planner_.getCl(); }
@@ -61,6 +65,7 @@ protected:
   const ParallelParkingParameters parallel_parking_parameters_;
   const BoundaryDepartureChecker boundary_departure_checker_;
   const bool is_forward_;
+  const bool use_clothoid_;
   const bool left_side_parking_;
 
   GeometricParallelParking planner_;
