@@ -42,6 +42,7 @@
       # trajectory generation near terminal using frenet planner
       frenet:
         enable: true
+        use_entire_remaining_distance: false
         th_yaw_diff: 10.0  # [deg]
         th_curvature_smoothing: 0.1 # [/]
         th_average_curvature: 0.015 # [/]

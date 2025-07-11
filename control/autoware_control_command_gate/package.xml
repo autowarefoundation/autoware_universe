@@ -21,6 +21,7 @@
   <depend>diagnostic_updater</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
+  <depend>tier4_external_api_msgs</depend>
   <depend>tier4_system_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>
