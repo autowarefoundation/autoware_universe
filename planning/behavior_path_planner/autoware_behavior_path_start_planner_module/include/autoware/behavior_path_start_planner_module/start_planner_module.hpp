@@ -315,6 +315,7 @@ ego pose.
 
   // turn signal
   TurnSignalInfo calcTurnSignalInfo();
+  TurnSignalInfo calcBusStopTurnSignalInfo();
 
   void incrementPathIndex();
   PathWithLaneId getCurrentPath() const;

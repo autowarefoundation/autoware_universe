@@ -51,8 +51,9 @@
       backward_search_resolution: 2.0
       backward_path_update_duration: 3.0
       ignore_distance_from_lane_end: 0.0
-      # turns signal
-      prepare_time_before_start: 0.0
+      # turn signal
+      prepare_time_before_start: 0.0 # [s] Time to wait before starting the pull out maneuver 
+      min_bus_stop_pull_out_turn_signal_distance: 3.0 # [m] Minimum distance from the starting position to activate the turn signal when pulling out from a bus stop
       # freespace planner
       freespace_planner:
         enable_freespace_planner: true
