@@ -36,6 +36,17 @@
 namespace autoware::motion_velocity_planner::out_of_lane
 {
 
+lanelet::BasicPolygon2d project_to_pose(
+  const autoware_utils::Polygon2d & base_footprint, const geometry_msgs::msg::Pose & pose)
+{
+  const auto angle = tf2::getYaw(pose.orientation);
+  const auto rotated_footprint = autoware_utils::rotate_polygon(base_footprint, angle);
+  lanelet::BasicPolygon2d footprint;
+  for (const auto & p : rotated_footprint.outer())
+    footprint.emplace_back(p.x() + pose.position.x, p.y() + pose.position.y);
+  return footprint;
+}
+
 std::optional<geometry_msgs::msg::Pose> calculate_last_avoiding_pose(
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
   const autoware_utils::Polygon2d & footprint, const lanelet::BasicPolygons2d & polygons_to_avoid,
