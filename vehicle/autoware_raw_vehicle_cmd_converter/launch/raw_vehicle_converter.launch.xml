@@ -9,6 +9,7 @@
   <arg name="input_control_horizon" default="/control/trajectory_follower/controller_node_exe/debug/control_cmd_horizon"/>
   <arg name="output_actuation_cmd" default="/control/command/actuation_cmd"/>
   <arg name="output_steering_status" default="/vehicle/status/steering_status"/>
+  <arg name="output_control_system_latency" default="/control/control_system_latency"/>
   <!-- Parameter -->
   <arg name="config_file" default="$(find-pkg-share autoware_raw_vehicle_cmd_converter)/config/raw_vehicle_cmd_converter.param.yaml"/>
 
@@ -23,5 +24,6 @@
     <remap from="~/input/control_horizon" to="$(var input_control_horizon)"/>
     <remap from="~/output/actuation_cmd" to="$(var output_actuation_cmd)"/>
     <remap from="~/output/steering_status" to="$(var output_steering_status)"/>
+    <remap from="~/output/control_system_latency" to="$(var output_control_system_latency)"/>
   </node>
 </launch>
