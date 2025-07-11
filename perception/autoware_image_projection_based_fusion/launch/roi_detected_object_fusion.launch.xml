@@ -35,6 +35,7 @@
   <arg name="input/image5" default="/image_raw5"/>
   <arg name="input/image6" default="/image_raw6"/>
   <arg name="input/image7" default="/image_raw7"/>
+  <arg name="input/image8" default="/image_raw8"/>
 
   <group>
     <node pkg="autoware_image_projection_based_fusion" exec="roi_detected_object_fusion_node" name="roi_detected_object_fusion" output="screen">
