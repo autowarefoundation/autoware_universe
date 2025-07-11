@@ -232,6 +232,7 @@ void TrafficLightDisplay::setupRosSubscriptions()
 
 void TrafficLightDisplay::onEnable()
 {
+  std::lock_guard<std::mutex> lock_property(property_mutex_);
   setupRosSubscriptions();
   root_node_->setVisible(true);
   for (const auto & [id, text_node] : traffic_light_text_nodes_) {
@@ -244,6 +245,7 @@ void TrafficLightDisplay::onEnable()
 
 void TrafficLightDisplay::onDisable()
 {
+  std::lock_guard<std::mutex> lock_property(property_mutex_);
   lanelet_map_sub_.reset();
   traffic_light_group_array_sub_.reset();
   root_node_->setVisible(false);
@@ -284,6 +286,7 @@ void TrafficLightDisplay::reset()
 
 void TrafficLightDisplay::hideAllDisplays()
 {
+  std::lock_guard<std::mutex> lock_property(property_mutex_);
   for (const auto & [id, text_node] : traffic_light_text_nodes_) {
     text_node->setVisible(false);
   }
@@ -307,6 +310,7 @@ bool TrafficLightDisplay::checkTimeout() const
 void TrafficLightDisplay::updateTrafficLightText(
   const TrafficLightInfo & info, const std::string & state_text)
 {
+  // Note: This method is called from update() which already holds property_mutex_
   if (traffic_light_text_displays_.find(info.id) == traffic_light_text_displays_.end()) {
     auto text_display = std::make_unique<rviz_rendering::MovableText>(
       state_text, "Liberation Sans", font_size_property_->getFloat());
@@ -341,6 +345,7 @@ void TrafficLightDisplay::updateTrafficLightBulbs(
   const TrafficLightInfo & info,
   const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & elements)
 {
+  // Note: This method is called from update() which already holds property_mutex_
   auto current_bulbs = getBlightBulbs(elements, info.bulbs);
   for (const auto & bulb : current_bulbs) {
     if (traffic_light_bulb_displays_.find(bulb.id) == traffic_light_bulb_displays_.end()) {
@@ -373,6 +378,9 @@ void TrafficLightDisplay::update(float wall_dt, float ros_dt)
   (void)wall_dt;
   (void)ros_dt;
 
+  std::lock_guard<std::mutex> lock_lanelet(lanelet_map_mutex_);
+  std::lock_guard<std::mutex> lock_traffic(traffic_light_mutex_);
+
   if (!lanelet_map_ || !traffic_light_groups_) {
     return;
   }
@@ -392,6 +400,7 @@ void TrafficLightDisplay::update(float wall_dt, float ros_dt)
       ss << elementToString(elem) << " ";
     }
 
+    std::lock_guard<std::mutex> lock_property(property_mutex_);
     for (const auto & info : tl_infos) {
       updateTrafficLightText(info, ss.str());
       updateTrafficLightBulbs(info, traffic_light_group.elements);
