@@ -24,3 +24,9 @@
     enable_cog_on_centerline: false
     input_path_interval: 2.0
     output_path_interval: 2.0
+
+    # parameters for roundabout
+    turn_signal_roundabout:
+      on_entry: "None" # "None", "Left", "Right"
+      entry_indicator_persistence: true # whether to keep the indicator on after entering the roundabout
+      on_exit: "Left" # "None", "Left", "Right",
