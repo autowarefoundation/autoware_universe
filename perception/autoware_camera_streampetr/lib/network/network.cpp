@@ -71,15 +71,11 @@ StreamPetrNetwork::StreamPetrNetwork(
   confidence_threshold_(confidence_threshold),
   class_names_(class_names)
 {
-  // Initialize TensorRT runtime
-  auto runtime_deleter = [](IRuntime * runtime) {
-    (void)runtime; /* runtime->destroy(); */
-  };
-  std::unique_ptr<IRuntime, decltype(runtime_deleter)> runtime{
-    createInferRuntime(gLogger), runtime_deleter};
-  backbone_ = std::make_unique<SubNetwork>(engine_backbone_path, runtime.get());
-  pts_head_ = std::make_unique<SubNetwork>(engine_head_path, runtime.get());
-  pos_embed_ = std::make_unique<SubNetwork>(engine_position_embedding_path, runtime.get());
+    // Initialize TensorRT runtime
+    runtime_ = std::unique_ptr<IRuntime>{createInferRuntime(gLogger)};
+    backbone_ = std::make_unique<SubNetwork>(engine_backbone_path, runtime_.get());
+    pts_head_ = std::make_unique<SubNetwork>(engine_head_path, runtime_.get());
+    pos_embed_ = std::make_unique<SubNetwork>(engine_position_embedding_path, runtime_.get());
 
   cudaStreamCreate(&stream_);
   backbone_->EnableCudaGraph(stream_);

@@ -46,17 +46,13 @@ void Memory::StepReset()
 void Memory::StepPre(float ts)
 {
   // update timestamp in pre_update_memory
-  // NOTE: 512 is harded coded number
-  ApplyDeltaFromMem<<<1024, 1, 0, mem_stream>>>(
-    ts, reinterpret_cast<float *>(mem_buf), pre_buf, 1024);
+  ApplyDeltaFromMem<<<pre_len, 1, 0, mem_stream>>>(ts, reinterpret_cast<float*>(mem_buf), pre_buf, pre_len);
 }
 
 void Memory::StepPost(float ts)
 {
   // update timestamp in post_update_memory
-  // NOTE: 1280 is harded coded number
-  ApplyDeltaToMem<<<1280, 1, 0, mem_stream>>>(
-    ts, reinterpret_cast<float *>(mem_buf), post_buf, 1280);
+  ApplyDeltaToMem<<<mem_len, 1, 0, mem_stream>>>(ts, reinterpret_cast<float*>(mem_buf), post_buf, mem_len);
 }
 
 void Memory::DebugPrint()

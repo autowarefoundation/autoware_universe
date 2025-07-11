@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "autoware/camera_streampetr/node.hpp"
-
 #include "autoware/camera_streampetr/network/build_trt.hpp"
 #include "autoware/camera_streampetr/postprocess/non_maximum_supression.hpp"
 
@@ -49,9 +48,7 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   cycle_started_(false),
   debug_mode_(declare_parameter<bool>("debug_mode"))
 {
-  RCLCPP_INFO(
-    get_logger(), "nvinfer: %d.%d.%d\n", NV_TENSORRT_MAJOR, NV_TENSORRT_MINOR, NV_TENSORRT_PATCH);
-  cudaSetDevice(0);
+  RCLCPP_INFO(get_logger(), "nvinfer: %d.%d.%d\n", NV_TENSORRT_MAJOR, NV_TENSORRT_MINOR, NV_TENSORRT_PATCH);
 
   using std::placeholders::_1;
 

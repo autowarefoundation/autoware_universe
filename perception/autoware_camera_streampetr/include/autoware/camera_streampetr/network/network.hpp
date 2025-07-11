@@ -37,8 +37,7 @@
 #include <vector>
 // From NVIDIA/DL4AGX
 
-#include "autoware/camera_streampetr/cuda_utils.hpp"
-#include "autoware/camera_streampetr/postprocess/non_maximum_supression.hpp"
+#include "autoware/camera_streampetr/postprocess/non_maximum_suppression.hpp"
 #include "autoware/camera_streampetr/postprocess/postprocess_kernel.hpp"
 #include "autoware/camera_streampetr/utils.hpp"
 
@@ -183,6 +182,7 @@ public:
 private:
   autoware_perception_msgs::msg::DetectedObject bbox_to_ros_msg(const Box3D & bbox);
 
+  std::unique_ptr<IRuntime> runtime_;
   std::unique_ptr<SubNetwork> backbone_;
   std::unique_ptr<SubNetwork> pts_head_;
   std::unique_ptr<SubNetwork> pos_embed_;
