@@ -215,6 +215,13 @@ void TrafficLightDisplay::onInitialize()
 
   text_prefix_property_ = std::make_unique<rviz_common::properties::StringProperty>(
     "Text Prefix", "", "Prefix string to add before traffic light state text", this);
+
+  font_size_property_ = std::make_unique<rviz_common::properties::FloatProperty>(
+    "Font Size", 0.5, "Font size for traffic light state text", this);
+  font_size_property_->setMin(0.1);
+
+  text_color_property_ = std::make_unique<rviz_common::properties::ColorProperty>(
+    "Text Color", QColor(255, 255, 255), "Color for traffic light state text", this);
 }
 
 void TrafficLightDisplay::setupRosSubscriptions()
@@ -301,11 +308,13 @@ void TrafficLightDisplay::updateTrafficLightText(
   const TrafficLightInfo & info, const std::string & state_text)
 {
   if (traffic_light_text_displays_.find(info.id) == traffic_light_text_displays_.end()) {
-    auto text_display =
-      std::make_unique<rviz_rendering::MovableText>(state_text, "Liberation Sans", 0.5);
+    auto text_display = std::make_unique<rviz_rendering::MovableText>(
+      state_text, "Liberation Sans", font_size_property_->getFloat());
     text_display->setTextAlignment(
       rviz_rendering::MovableText::H_CENTER, rviz_rendering::MovableText::V_CENTER);
-    text_display->setColor(Ogre::ColourValue(1.0, 1.0, 1.0, 1.0));
+    const QColor & color = text_color_property_->getColor();
+    text_display->setColor(
+      Ogre::ColourValue(color.redF(), color.greenF(), color.blueF(), color.alphaF()));
     traffic_light_text_displays_[info.id] = std::move(text_display);
   }
 
@@ -321,6 +330,10 @@ void TrafficLightDisplay::updateTrafficLightText(
     static_cast<float>(info.linestring_center.z) + text_z_offset_property_->getFloat());
   traffic_light_text_nodes_[info.id]->setPosition(position);
   traffic_light_text_displays_[info.id]->setCaption(display_text);
+  traffic_light_text_displays_[info.id]->setCharacterHeight(font_size_property_->getFloat());
+  const QColor & color = text_color_property_->getColor();
+  traffic_light_text_displays_[info.id]->setColor(
+    Ogre::ColourValue(color.redF(), color.greenF(), color.blueF(), color.alphaF()));
   traffic_light_text_nodes_[info.id]->setVisible(show_text_property_->getBool());
 }
 

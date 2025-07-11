@@ -81,6 +81,8 @@ private:  // NOLINT
   std::unique_ptr<rviz_common::properties::BoolProperty> show_text_property_;
   std::unique_ptr<rviz_common::properties::BoolProperty> show_bulb_property_;
   std::unique_ptr<rviz_common::properties::StringProperty> text_prefix_property_;
+  std::unique_ptr<rviz_common::properties::FloatProperty> font_size_property_;
+  std::unique_ptr<rviz_common::properties::ColorProperty> text_color_property_;
 
   // Subscribers
   rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr lanelet_map_sub_;

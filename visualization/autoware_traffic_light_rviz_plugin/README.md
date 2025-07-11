@@ -19,6 +19,8 @@ This package provides a RViz2 plugin for visualizing traffic light recognition r
 - **Show Text**: Toggle text display of traffic light states
 - **Show Bulb**: Toggle visual representation of traffic lights
 - **Text Prefix**: Prefix for traffic light state text
+- **Font Size**: Size of the traffic light state text
+- **Text Color**: Color of the traffic light state text
 
 ### Text Position Adjustment
 
