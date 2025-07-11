@@ -235,6 +235,11 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
     return {};
   }
 
+  if (!is_autonomous_mode()) {
+    RCLCPP_WARN_THROTTLE(logger_, *clock_ptr_, throttle_duration_ms, "Not in autonomous mode.");
+    return {};
+  }
+
   const auto & vehicle_info = planner_data->vehicle_info_;
   const auto & ll_map_ptr = planner_data->route_handler->getLaneletMapPtr();
 
@@ -340,6 +345,12 @@ std::optional<std::string> BoundaryDeparturePreventionModule::is_data_timeout(
   }
 
   return std::nullopt;
+}
+
+bool BoundaryDeparturePreventionModule::is_autonomous_mode() const
+{
+  return (op_mode_state_ptr_->mode == OperationModeState::AUTONOMOUS) &&
+         op_mode_state_ptr_->is_autoware_control_enabled;
 }
 
 bool BoundaryDeparturePreventionModule::is_goal_changed(
