@@ -52,6 +52,7 @@ private:
   void take_data();
   std::optional<std::string> is_data_invalid(const TrajectoryPoints & raw_trajectory_points) const;
   std::optional<std::string> is_data_timeout(const Odometry & odom) const;
+  bool is_autonomous_mode() const;
   [[nodiscard]] bool is_goal_changed(
     const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const Pose & new_goal);
 
