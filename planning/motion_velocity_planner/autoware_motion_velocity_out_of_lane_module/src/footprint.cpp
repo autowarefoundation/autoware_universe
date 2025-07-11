@@ -28,7 +28,6 @@
 
 #include <lanelet2_core/geometry/Polygon.h>
 
-#include <algorithm>
 #include <vector>
 
 namespace autoware::motion_velocity_planner::out_of_lane
@@ -66,49 +65,31 @@ lanelet::BasicPolygon2d project_to_trajectory_point(
 std::vector<lanelet::BasicPolygon2d> calculate_trajectory_footprints(
   const EgoData & ego_data, const PlannerParam & params)
 {
-  const auto base_footprint = make_base_footprint(params);
-  const auto current_ego_position =
-    autoware_utils::Point2d(ego_data.pose.position.x, ego_data.pose.position.y);
-  const auto current_ego_yaw = tf2::getYaw(ego_data.pose.orientation);
   std::vector<lanelet::BasicPolygon2d> trajectory_footprints;
   trajectory_footprints.reserve(ego_data.trajectory_points.size());
-  // cut the first footprints to (roughly) start after the current ego front
-  const auto last_cut_index = [&]() {
-    auto s = 0.0;
-    for (auto i = 0UL; i + 1 < ego_data.trajectory_points.size(); ++i) {
-      s += autoware_utils::calc_distance2d(
-        ego_data.trajectory_points[i], ego_data.trajectory_points[i + 1]);
-      if (s >= params.front_offset) {
-        return i + 1;
-      }
-    }
-    return ego_data.trajectory_points.size() - 1UL;
-  }();
-  for (auto i = 0UL; i <= last_cut_index; ++i) {
+  const auto base_footprint = make_base_footprint(params);
+  // create a polygon to cut the trajectory footprints behind the current front of the ego vehicle
+  constexpr auto cut_multiplier = 10.0;
+  const auto cut_polygon = autoware_utils_geometry::to_footprint(
+    ego_data.pose, params.front_offset, -params.rear_offset * cut_multiplier,
+    params.left_offset * cut_multiplier);
+  auto arc_length = 0.0;
+  for (auto i = 0UL; i < ego_data.trajectory_points.size(); ++i) {
     const auto & trajectory_point = ego_data.trajectory_points[i];
-    // cut the footprint beyond the current ego front
-    const autoware_utils::Point2d ego_pos_in_fp_frame(
-      trajectory_point.pose.position.x - current_ego_position.x(),
-      trajectory_point.pose.position.y - current_ego_position.y());
-    const auto angle_diff = autoware_utils_math::normalize_radian(
-      tf2::getYaw(trajectory_point.pose.orientation) - current_ego_yaw);
-    const auto ego_front_x_in_trajectory_point_frame =
-      ego_pos_in_fp_frame.x() + std::cos(angle_diff) * params.front_offset;
-    // empty footprint if the current ego front is ahead
-    if (ego_front_x_in_trajectory_point_frame >= base_footprint.outer()[0].x()) {
-      trajectory_footprints.emplace_back();
-    } else {
-      auto base_footprint_beyond_current_ego_front = base_footprint;
-      for (auto & p : base_footprint_beyond_current_ego_front.outer()) {
-        p.x() = std::max(ego_front_x_in_trajectory_point_frame, p.x());
-      }
-      trajectory_footprints.push_back(
-        project_to_trajectory_point(base_footprint_beyond_current_ego_front, trajectory_point));
+    const auto trajectory_footprint = project_to_trajectory_point(base_footprint, trajectory_point);
+    // we only apply the cut to the beginning of the trajectory
+    if (arc_length > params.front_offset) {
+      trajectory_footprints.push_back(trajectory_footprint);
+      continue;
     }
-  }
-  for (auto i = last_cut_index + 1; i < ego_data.trajectory_points.size(); ++i) {
-    const auto & trajectory_point = ego_data.trajectory_points[i];
-    trajectory_footprints.push_back(project_to_trajectory_point(base_footprint, trajectory_point));
+    if (i + 1 < ego_data.trajectory_points.size()) {
+      arc_length +=
+        autoware_utils::calc_distance2d(trajectory_point, ego_data.trajectory_points[i + 1]);
+    }
+    lanelet::BasicPolygons2d cut_result;
+    boost::geometry::difference(trajectory_footprint, cut_polygon, cut_result);
+    trajectory_footprints.push_back(
+      cut_result.empty() ? lanelet::BasicPolygon2d() : cut_result.front());
   }
   return trajectory_footprints;
 }
