@@ -231,6 +231,7 @@ private:
 
   bool isModuleRunning() const;
   bool isCurrentPoseOnEgoCenterline() const;
+  bool isCurrentPoseOnBusStop() const;
 
   /**
    * @brief Check if the ego vehicle is preventing the rear vehicle from passing through.
@@ -256,7 +257,7 @@ ego pose.
     */
   bool isPreventingRearVehicleFromPassingThrough(const Pose & ego_pose) const;
 
-  bool isCloseToOriginalStartPose() const;
+  bool isFarFromOriginalStartPose() const;
   bool hasArrivedAtGoal() const;
   bool isMoving() const;
 
