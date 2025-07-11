@@ -16,9 +16,9 @@
   <depend>eigen</depend>
   <depend>geometry_msgs</depend>
   <depend>image_transport</depend>
+  <depend>libopencv-dev</depend>
   <depend>nav_msgs</depend>
   <depend>rclcpp</depend>
-  <depend>libopencv-dev</depend>
   <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>
   <depend>tf2_geometry_msgs</depend>
