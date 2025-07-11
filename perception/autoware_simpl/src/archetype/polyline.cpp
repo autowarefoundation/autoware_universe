@@ -50,7 +50,7 @@ Polyline Polyline::transform(double to_x, double to_y, double to_yaw) const
   for (const auto & point : waypoints_) {
     transformed.emplace_back(transform_point(point, to_x, to_y, to_yaw));
   }
-  return Polyline(transformed);
+  return Polyline(id_, transformed);
 }
 
 Polyline Polyline::transform(const AgentState & to_state) const
@@ -59,7 +59,7 @@ Polyline Polyline::transform(const AgentState & to_state) const
   for (const auto & point : waypoints_) {
     transformed.emplace_back(transform_point(point, to_state.x, to_state.y, to_state.yaw));
   }
-  return Polyline(transformed);
+  return Polyline(id_, transformed);
 }
 
 Polyline::value_type Polyline::find_center() const

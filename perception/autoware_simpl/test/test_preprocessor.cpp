@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/simpl/archetype/agent.hpp"
 #include "autoware/simpl/processing/preprocessor.hpp"
 
 #include <gtest/gtest.h>
@@ -56,14 +57,14 @@ TEST(TestPreProcessor, ProcessMinimalInput)
   PreProcessor processor({static_cast<size_t>(AgentLabel::VEHICLE)}, 1, 1, 1, 2, 100.0, 10.0);
 
   // Create a single-agent history
-  AgentState ego{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, AgentLabel::UNKNOWN, true};
-  AgentHistory history("A", 1);
-  history.update(AgentState{1.0, 1.0, 0.0, 0.0, 0.5, 0.5, AgentLabel::VEHICLE, true});
+  AgentState ego{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true};
+  AgentHistory history("A", AgentLabel::VEHICLE, 1);
+  history.update(AgentState{1.0, 1.0, 0.0, 0.0, 0.5, 0.5, true});
   std::vector<AgentHistory> histories = {history};
 
   // Create a polyline with 2 points
   std::vector<Polyline> polylines = {
-    Polyline({{2.0, 0.0, 0.0, MapLabel::ROADWAY}, {3.0, 0.0, 0.0, MapLabel::ROADWAY}})};
+    Polyline(0, {{2.0, 0.0, 0.0, MapLabel::ROADWAY}, {3.0, 0.0, 0.0, MapLabel::ROADWAY}})};
 
   // Run preprocessing
   auto [agent_meta, map_meta, rpe] = processor.process(histories, polylines, ego);
@@ -125,46 +126,52 @@ private:
     };
 
     for (const auto & [agent_id, label] : agent_id_and_label) {
-      archetype::AgentHistory history(agent_id, num_past);
+      archetype::AgentHistory history(agent_id, label, num_past);
       for (size_t t = 0; t < num_past; ++t) {
-        history.update(archetype::AgentState(1, 1, 1, 1, 1, 1, label, true));
+        history.update(archetype::AgentState(1, 1, 1, 1, 1, 1, true));
       }
       histories.emplace_back(history);
     }
 
-    current_ego = archetype::AgentState(1, 1, 1, 1, 1, 1, AgentLabel::VEHICLE, true);
+    current_ego = archetype::AgentState(1, 1, 1, 1, 1, 1, true);
   }
 
   void setup_map()
   {
     // lane
-    archetype::Polyline lane{{
-      {1.0, 1.0, 1.0, archetype::MapLabel::ROADWAY},
-      {1.0, 1.0, 1.0, archetype::MapLabel::ROADWAY},
-      {1.0, 1.0, 1.0, archetype::MapLabel::ROADWAY},
-    }};
+    archetype::Polyline lane{
+      0,
+      {
+        {1.0, 1.0, 1.0, archetype::MapLabel::ROADWAY},
+        {1.0, 1.0, 1.0, archetype::MapLabel::ROADWAY},
+        {1.0, 1.0, 1.0, archetype::MapLabel::ROADWAY},
+      }};
     polylines.emplace_back(lane);
 
     // left boundary
 
-    archetype::Polyline left_boundary{{
-      {1.0, 1.0, 1.0, archetype::MapLabel::SOLID},
-      {1.0, 1.0, 1.0, archetype::MapLabel::SOLID},
-    }};
+    archetype::Polyline left_boundary{
+      1,
+      {
+        {1.0, 1.0, 1.0, archetype::MapLabel::SOLID},
+        {1.0, 1.0, 1.0, archetype::MapLabel::SOLID},
+      }};
     polylines.emplace_back(left_boundary);
 
     // right boundary
-    archetype::Polyline right_boundary{{{1.0, 1.0, 1.0, archetype::MapLabel::DASHED}}};
+    archetype::Polyline right_boundary{2, {{1.0, 1.0, 1.0, archetype::MapLabel::DASHED}}};
     polylines.emplace_back(right_boundary);
 
     // crosswalk
-    archetype::Polyline crosswalk{{
-      {1.0, 1.0, 1.0, archetype::MapLabel::CROSSWALK},
-      {1.0, 1.0, 1.0, archetype::MapLabel::CROSSWALK},
-      {1.0, 1.0, 1.0, archetype::MapLabel::CROSSWALK},
-      {1.0, 1.0, 1.0, archetype::MapLabel::CROSSWALK},
-      {1.0, 1.0, 1.0, archetype::MapLabel::CROSSWALK},
-    }};
+    archetype::Polyline crosswalk{
+      3,
+      {
+        {1.0, 1.0, 1.0, archetype::MapLabel::CROSSWALK},
+        {1.0, 1.0, 1.0, archetype::MapLabel::CROSSWALK},
+        {1.0, 1.0, 1.0, archetype::MapLabel::CROSSWALK},
+        {1.0, 1.0, 1.0, archetype::MapLabel::CROSSWALK},
+        {1.0, 1.0, 1.0, archetype::MapLabel::CROSSWALK},
+      }};
     polylines.emplace_back(crosswalk);
   }
 };

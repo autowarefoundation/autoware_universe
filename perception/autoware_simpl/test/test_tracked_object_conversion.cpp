@@ -14,6 +14,8 @@
 
 #include "autoware/simpl/conversion/tracked_object.hpp"
 
+#include <autoware_perception_msgs/msg/detail/object_classification__struct.hpp>
+#include <autoware_perception_msgs/msg/detail/tracked_object__struct.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
 #include <gtest/gtest.h>
@@ -32,10 +34,33 @@ bool is_close(double a, double b, double tol = 1e-6)
 
 using autoware::simpl::archetype::AgentLabel;
 using autoware::simpl::archetype::AgentState;
+using autoware::simpl::conversion::to_agent_label;
 using autoware::simpl::conversion::to_agent_state;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::TrackedObject;
 using nav_msgs::msg::Odometry;
+
+TEST(TestTrackedObjectConversion, LabelConversionCar)
+{
+  TrackedObject obj;
+  ObjectClassification classification;
+  classification.label = ObjectClassification::CAR;
+  classification.probability = 1.0;
+  obj.classification.push_back(classification);
+
+  EXPECT_EQ(to_agent_label(obj), AgentLabel::VEHICLE);
+}
+
+TEST(TestTracedObjectConversion, LabelConversionTruck)
+{
+  TrackedObject obj;
+  ObjectClassification classification;
+  classification.label = ObjectClassification::TRUCK;
+  classification.probability = 1.0;
+  obj.classification.push_back(classification);
+
+  EXPECT_EQ(to_agent_label(obj), AgentLabel::LARGE_VEHICLE);
+}
 
 TEST(TestTrackedObjectConversion, BasicConversion)
 {
@@ -61,7 +86,6 @@ TEST(TestTrackedObjectConversion, BasicConversion)
   EXPECT_TRUE(is_close(state.vx, 4.0));  // no rotation
   EXPECT_TRUE(is_close(state.vy, 0.0));
   EXPECT_TRUE(is_close(state.yaw, 0.0));
-  EXPECT_EQ(state.label, AgentLabel::VEHICLE);
   EXPECT_TRUE(state.is_valid);
 }
 
@@ -84,7 +108,6 @@ TEST(TestOdometryConversion, BasicConversion)
   EXPECT_TRUE(is_close(state.vx, 2.0));  // no rotation
   EXPECT_TRUE(is_close(state.vy, 0.0));
   EXPECT_TRUE(is_close(state.yaw, 0.0));
-  EXPECT_EQ(state.label, AgentLabel::VEHICLE);  // hardcoded for ego
   EXPECT_TRUE(state.is_valid);
 }
 }  // namespace autoware::simpl::test

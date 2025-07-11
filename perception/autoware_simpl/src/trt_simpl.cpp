@@ -14,6 +14,8 @@
 
 #include "autoware/simpl/trt_simpl.hpp"
 
+#include <autoware/cuda_utils/cuda_check_error.hpp>
+
 #include <NvInferRuntimeBase.h>
 
 #include <functional>
@@ -24,6 +26,15 @@
 
 namespace autoware::simpl
 {
+namespace
+{
+template <typename T>
+void clear_async(T * ptr, std::size_t num_elem, cudaStream_t stream)
+{
+  CHECK_CUDA_ERROR(::cudaMemsetAsync(ptr, 0, sizeof(T) * num_elem, stream));
+}
+}  // namespace
+
 TrtSimpl::TrtSimpl(const tensorrt_common::TrtCommonConfig & config)
 {
   trt_common_ = std::make_unique<tensorrt_common::TrtCommon>(config);
@@ -77,8 +88,17 @@ archetype::Result<TrtSimpl::output_type> TrtSimpl::do_inference(
 
   const auto score_size = compute_dim_size(trt_common_->getOutputDims(0));
   const auto trajectory_size = compute_dim_size(trt_common_->getOutputDims(1));
-  out_score_d_ = cuda_utils::make_unique<float[]>(score_size);
-  out_trajectory_d_ = cuda_utils::make_unique<float[]>(trajectory_size);
+  if (!out_score_d_) {
+    out_score_d_ = cuda_utils::make_unique<float[]>(score_size);
+  } else {
+    clear_async(out_score_d_.get(), score_size, stream_);
+  }
+  if (!out_trajectory_d_) {
+    out_trajectory_d_ = cuda_utils::make_unique<float[]>(trajectory_size);
+  } else {
+    clear_async(out_trajectory_d_.get(), trajectory_size, stream_);
+  }
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   // Set tensors addresses
   std::vector<void *> tensors{
@@ -93,6 +113,8 @@ archetype::Result<TrtSimpl::output_type> TrtSimpl::do_inference(
   if (!trt_common_->enqueueV3(stream_)) {
     return archetype::Err<output_type>(archetype::SimplError_t::TensorRT, "Failed to enqueue.");
   }
+
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   // Copy outputs from device to host
   score_type score_h(score_size);
@@ -115,9 +137,22 @@ void TrtSimpl::init_cuda_ptr(
   const archetype::AgentTensor & agent_tensor, const archetype::MapTensor & map_tensor,
   const std::vector<float> & rpe_tensor)
 {
-  in_agent_d_ = cuda_utils::make_unique<float[]>(agent_tensor.size());
-  in_map_d_ = cuda_utils::make_unique<float[]>(map_tensor.size());
-  in_rpe_d_ = cuda_utils::make_unique<float[]>(rpe_tensor.size());
+  if (!in_agent_d_) {
+    in_agent_d_ = cuda_utils::make_unique<float[]>(agent_tensor.size());
+  } else {
+    clear_async(in_agent_d_.get(), agent_tensor.size(), stream_);
+  }
+  if (!in_map_d_) {
+    in_map_d_ = cuda_utils::make_unique<float[]>(map_tensor.size());
+  } else {
+    clear_async(in_map_d_.get(), map_tensor.size(), stream_);
+  }
+  if (!in_rpe_d_) {
+    in_rpe_d_ = cuda_utils::make_unique<float[]>(rpe_tensor.size());
+  } else {
+    clear_async(in_rpe_d_.get(), rpe_tensor.size(), stream_);
+  }
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     in_agent_d_.get(), agent_tensor.data(), sizeof(float) * agent_tensor.size(),
@@ -128,5 +163,6 @@ void TrtSimpl::init_cuda_ptr(
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     in_rpe_d_.get(), rpe_tensor.data(), sizeof(float) * rpe_tensor.size(), cudaMemcpyHostToDevice,
     stream_));
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 }  // namespace autoware::simpl

@@ -63,13 +63,10 @@ struct AgentState
    * @param yaw Yaw angle [rad].
    * @param vx X-direction velocity [m/s]
    * @param vy Y-direction velocity [m/s].
-   * @param label Label.
    * @param is_valid Indicates whther the state is valid.
    */
-  AgentState(
-    double x, double y, double z, double yaw, double vx, double vy, const AgentLabel & label,
-    bool is_valid)
-  : x(x), y(y), z(z), yaw(yaw), vx(vx), vy(vy), label(label), is_valid(is_valid)
+  AgentState(double x, double y, double z, double yaw, double vx, double vy, bool is_valid)
+  : x(x), y(y), z(z), yaw(yaw), vx(vx), vy(vy), is_valid(is_valid)
   {
   }
 
@@ -95,14 +92,13 @@ struct AgentState
    */
   AgentState transform(const AgentState & to_state) const;
 
-  double x{0.0};                          //!< Center x.
-  double y{0.0};                          //!< Center y.
-  double z{0.0};                          //!< Center z.
-  double yaw{0.0};                        //!< Yaw angle [rad].
-  double vx{0.0};                         //!< X-direction velocity [m/s].
-  double vy{0.0};                         //!< Y-direction velocity [m/s].
-  AgentLabel label{AgentLabel::UNKNOWN};  //!< Label.
-  bool is_valid{false};                   //!< Indicates whether the state is valid.
+  double x{0.0};         //!< Center x.
+  double y{0.0};         //!< Center y.
+  double z{0.0};         //!< Center z.
+  double yaw{0.0};       //!< Yaw angle [rad].
+  double vx{0.0};        //!< X-direction velocity [m/s].
+  double vy{0.0};        //!< Y-direction velocity [m/s].
+  bool is_valid{false};  //!< Indicates whether the state is valid.
 };
 
 /**
@@ -122,9 +118,11 @@ public:
    * @brief Construct a new AgentHistory object with a single state.
    *
    * @param agent_id Agent ID.
+   * @param label Agent label.
    * @param num_past Number of past timestamps.
    */
-  AgentHistory(const std::string & agent_id, size_t num_past) : agent_id(agent_id), queue_(num_past)
+  AgentHistory(const std::string & agent_id, const AgentLabel & label, size_t num_past)
+  : agent_id(agent_id), label(label), queue_(num_past)
   {
   }
 
@@ -132,11 +130,14 @@ public:
    * @brief Construct a new AgentHistory object with a single state.
    *
    * @param agent_id Agent ID.
+   * @param label Agent label.
    * @param num_past Number of past timestamps.
    * @param state Current agent state.
    */
-  AgentHistory(const std::string & agent_id, size_t num_past, const value_type & state)
-  : agent_id(agent_id), queue_(num_past)
+  AgentHistory(
+    const std::string & agent_id, const AgentLabel & label, size_t num_past,
+    const value_type & state)
+  : agent_id(agent_id), label(label), queue_(num_past)
   {
     update(state);
   }
@@ -210,6 +211,7 @@ public:
   const_iterator end() const noexcept { return queue_.end(); }
 
   std::string agent_id;  //!< Agent ID.
+  AgentLabel label;      //!< Agent label.
 
 private:
   FixedQueue<value_type> queue_;  //!< Agent state container.
@@ -219,11 +221,18 @@ private:
  * @brief Trim top-k nearest neighbor agent histories by comparing the distance from the current
  * states.
  *
+ * The pipeline is as follows:
+ * 1. Filter histories by label IDs.
+ * 2. Sort the histories by distance.
+ * 3. Trim the top-k nearest neighbors.
+ *
  * @param histories Source histories.
+ * @param label_ids Label IDs of the agents to be considered.
  * @param state_from Agent state.
  * @param top_k Maximum number of agents to be trimmed.
  */
 std::vector<AgentHistory> trim_neighbors(
-  const std::vector<AgentHistory> & histories, const AgentState & state_from, size_t top_k);
+  const std::vector<AgentHistory> & histories, const std::vector<size_t> & label_ids,
+  const AgentState & state_from, size_t top_k);
 }  // namespace autoware::simpl::archetype
 #endif  // AUTOWARE__SIMPL__ARCHETYPE__AGENT_HPP_

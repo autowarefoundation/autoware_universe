@@ -59,8 +59,6 @@ public:
   using Odometry = nav_msgs::msg::Odometry;
   using ObjectClassification = autoware_perception_msgs::msg::ObjectClassification;
   using Shape = autoware_perception_msgs::msg::Shape;
-  using MarkerArray = visualization_msgs::msg::MarkerArray;
-  using Marker = visualization_msgs::msg::Marker;
 
   template <typename T>
   using InterProcessPollingSubscriber = autoware_utils::InterProcessPollingSubscriber<T>;
@@ -81,7 +79,7 @@ private:
   void callback(const TrackedObjects::ConstSharedPtr objects_msg);
 
   /**
-   * @brief Subscribe lanelet map.
+   * @brief Subscribe lanelet map and convert to set of polylines.
    *
    * @param map_msg Lanelet map binary message.
    */
@@ -90,7 +88,8 @@ private:
   /**
    * @brief Subscribe the latest ego vehicle state as a `AgentState`.
    *
-   * Note that if it fails to subscribe the ego odometry, returns `std::nullopt`.
+   * @return std::optional<archetype::AgentState> Return current ego state or `std::nullopt` if
+   * failed to subscribe.
    */
   std::optional<archetype::AgentState> subscribe_ego();
 
@@ -98,9 +97,16 @@ private:
    * @brief Update history container.
    *
    * @param objects_msg Tracked objects.
+   * @return std::vector<archetype::AgentHistory> Return updated history container.
    */
   std::vector<archetype::AgentHistory> update_history(
     const TrackedObjects::ConstSharedPtr objects_msg);
+
+  std::vector<archetype::AgentHistory> update_history_with_ego(
+    const TrackedObjects::ConstSharedPtr objects_msg, const archetype::AgentState & current_ego);
+
+  //!< DEBUG: this hashmap includes ego history
+  std::unordered_map<std::string, archetype::AgentHistory> history_map_with_ego_;
 
   //////////////////////// member variables ////////////////////////
   //!< Tracked objects subscription.
@@ -115,9 +121,6 @@ private:
 
   //!< Predicted objects publisher.
   rclcpp::Publisher<PredictedObjects>::SharedPtr objects_publisher_;
-
-  //!< Pointer to lanelet map.
-  lanelet::LaneletMapPtr lanelet_map_ptr_;
 
   //!< Pointer to lanelet converter.
   std::unique_ptr<conversion::LaneletConverter> lanelet_converter_ptr_;
@@ -140,11 +143,6 @@ private:
   //!< Debugger for processing time.
   std::unique_ptr<autoware_utils_system::StopWatch<std::chrono::milliseconds>> stopwatch_ptr_;
   std::unique_ptr<autoware_utils_debug::DebugPublisher> processing_time_publisher_;
-
-  //!< Debugger for marker.
-  rclcpp::Publisher<MarkerArray>::SharedPtr history_marker_publisher_;
-  rclcpp::Publisher<MarkerArray>::SharedPtr polyline_marker_publisher_;
-  rclcpp::Publisher<MarkerArray>::SharedPtr processed_map_marker_publisher_;
 
   //!< Number of past timestamps.
   int num_past_;

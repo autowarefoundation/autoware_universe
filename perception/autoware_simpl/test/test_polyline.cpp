@@ -38,7 +38,7 @@ TEST(TestPolyline, ConstructAndAccess)
 {
   std::vector<MapPoint> pts = {
     {0.0, 0.0, 0.0, MapLabel::ROADWAY}, {1.0, 0.0, 0.0, MapLabel::ROADWAY}};
-  Polyline polyline(pts);
+  Polyline polyline(0, pts);
 
   EXPECT_EQ(polyline.size(), 2u);
   EXPECT_EQ(polyline.front().x, 0.0);
@@ -58,7 +58,7 @@ TEST(TestPolyline, CenterCalculation)
     {0.0, 0.0, 0.0, MapLabel::SOLID},
     {1.0, 0.0, 0.0, MapLabel::SOLID},
     {2.0, 0.0, 0.0, MapLabel::SOLID}};
-  Polyline polyline(pts);
+  Polyline polyline(0, pts);
   auto center = polyline.center();
 
   EXPECT_TRUE(is_close(center.x, 1.0));
@@ -69,9 +69,9 @@ TEST(TestPolyline, DistanceFromAgentState)
 {
   std::vector<MapPoint> pts = {
     {1.0, 1.0, 0.0, MapLabel::UNKNOWN}, {2.0, 2.0, 0.0, MapLabel::UNKNOWN}};
-  Polyline polyline(pts);
+  Polyline polyline(0, pts);
 
-  AgentState agent(0.0, 0.0, 0.0, 0.0, 0, 0, {}, true);
+  AgentState agent(0.0, 0.0, 0.0, 0.0, 0, 0, true);
   EXPECT_TRUE(polyline.distance_from(agent) > 0.0);
 }
 
@@ -79,9 +79,9 @@ TEST(TestPolyline, TransformToAgentFrame)
 {
   std::vector<MapPoint> pts = {
     {1.0, 0.0, 0.0, MapLabel::ROADWAY}, {2.0, 0.0, 0.0, MapLabel::ROADWAY}};
-  Polyline polyline(pts);
+  Polyline polyline(0, pts);
 
-  AgentState state(1.0, 0.0, 0.0, M_PI / 2, 0, 0, {}, true);
+  AgentState state(1.0, 0.0, 0.0, M_PI / 2, 0, 0, true);
   auto transformed = polyline.transform(state);
 
   EXPECT_EQ(transformed.size(), 2u);
@@ -93,10 +93,10 @@ TEST(TestPolyline, TransformToAgentFrame)
 
 TEST(TestPolyline, TrimNeighborsWithinRange)
 {
-  AgentState ref_state(0.0, 0.0, 0.0, 0.0, 0, 0, {}, true);
+  AgentState ref_state(0.0, 0.0, 0.0, 0.0, 0, 0, true);
 
-  Polyline p1({{1.0, 0.0, 0.0, MapLabel::ROADWAY}});
-  Polyline p2({{10.0, 0.0, 0.0, MapLabel::ROADWAY}});
+  Polyline p1(0, {{1.0, 0.0, 0.0, MapLabel::ROADWAY}});
+  Polyline p2(1, {{10.0, 0.0, 0.0, MapLabel::ROADWAY}});
 
   std::vector<Polyline> input = {p1, p2};
   auto result = trim_neighbors(input, ref_state, 5.0);

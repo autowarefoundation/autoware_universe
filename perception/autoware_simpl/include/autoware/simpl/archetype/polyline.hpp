@@ -18,6 +18,8 @@
 #include "autoware/simpl/archetype/agent.hpp"
 #include "autoware/simpl/archetype/map.hpp"
 
+#include <lanelet2_core/Forward.h>
+
 #include <algorithm>
 #include <utility>
 #include <vector>
@@ -44,10 +46,13 @@ public:
    *
    * @param waypoints Vector of waypoints.
    */
-  explicit Polyline(const std::vector<value_type> & waypoints) : waypoints_(waypoints)
+  explicit Polyline(lanelet::Id id, const std::vector<value_type> & waypoints)
+  : id_(id), waypoints_(waypoints)
   {
     center_ = find_center();
   }
+
+  lanelet::Id id() const { return id_; }
 
   /**
    * @brief Return the center of the polyline.
@@ -175,6 +180,7 @@ private:
    */
   value_type find_center() const;
 
+  lanelet::Id id_;                     //! Polyline ID.
   std::vector<value_type> waypoints_;  //!< Points container.
   value_type center_;                  //!< Center of polyline.
 };

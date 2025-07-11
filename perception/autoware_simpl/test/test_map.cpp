@@ -67,7 +67,7 @@ TEST(TestMapPoint, DistanceFromMapPoint)
 TEST(TestMapPoint, DistanceFromAgentState)
 {
   MapPoint p(1.0, 2.0, 0.0, MapLabel::ROADWAY);
-  AgentState s(4.0, 6.0, 0.0, 0.0, 0.0, 0.0, autoware::simpl::archetype::AgentLabel::VEHICLE, true);
+  AgentState s(4.0, 6.0, 0.0, 0.0, 0.0, 0.0, true);
   EXPECT_DOUBLE_EQ(p.distance_from(s), 5.0);
 }
 

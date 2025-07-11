@@ -66,7 +66,8 @@ private:
    * @param label Label.
    */
   archetype::Polyline from_polygon(
-    const lanelet::CompoundPolygon3d & polygon, const archetype::MapLabel & label) const noexcept;
+    lanelet::Id id, const lanelet::CompoundPolygon3d & polygon,
+    const archetype::MapLabel & label) const noexcept;
 
   std::vector<archetype::Polyline> container_;  //!< Vector of converted polylines.
   std::mutex container_mtx_;                    //!< Mutex guard for map points container.

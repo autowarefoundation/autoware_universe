@@ -35,11 +35,12 @@ namespace autoware::simpl::processing
 struct NodePoint
 {
   NodePoint() = default;
-  NodePoint(double _x, double _y) : x(_x), y(_y), norm(std::hypot(_x, _y)) {}
+  NodePoint(double _x, double _y) : x(_x), y(_y), norm(std::hypot(_x, _y)), is_valid(true) {}
 
   double x{0.0};
   double y{0.0};
   double norm{0.0};
+  bool is_valid{false};
 };
 
 using NodePoints = std::vector<NodePoint>;
