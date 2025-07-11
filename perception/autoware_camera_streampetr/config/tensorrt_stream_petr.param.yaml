@@ -1,0 +1,19 @@
+/**:
+  ros__parameters:
+    # see https://github.com/open-mmlab/mmdetection3d/blob/fe25f7a51d36e3702f961e198894580d83c4387b/mmdet3d/evaluation/metrics/nuscenes_metric.py#L386-L393
+    rois_number: 6
+    model_params:
+      class_names: ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"]
+      fp16_mode: true
+      use_temporal: true
+      detection_range: [-61.2, -61.2, -10.0, 61.2, 61.2, 10.0]
+      input_image_height: 480
+      input_image_width: 640
+      num_proposals: 5400
+      max_camera_time_diff: 0.15                   # Maximum permitted time difference between camera images
+    post_process_params:
+      confidence_threshold: 0.35
+      circle_nms_dist_threshold: 0.5   # turn off circle NMS by setting 0.0, otherwise set to around 0.5
+      iou_nms_search_distance_2d: 10.0
+      iou_nms_threshold: 0.1           # set to 0 to turn off iou NMS
+      yaw_norm_thresholds: [0.3, 0.3, 0.3, 0.3, 0.0]
