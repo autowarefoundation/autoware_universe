@@ -300,7 +300,7 @@ void set_left_turn_target_lanelets(
 }
 
 Marker create_polygon_marker(
-  const lanelet::BasicPolygon3d & polygon, const std::string ns, const size_t id,
+  const lanelet::BasicPolygon3d & polygon, const std::string & ns, const size_t id,
   const std_msgs::msg::ColorRGBA & color)
 {
   visualization_msgs::msg::Marker marker = autoware_utils::create_default_marker(
@@ -319,7 +319,7 @@ Marker create_polygon_marker(
 }
 
 Marker create_point_marker(
-  const geometry_msgs::msg::Point & position, const std::string ns, const size_t id,
+  const geometry_msgs::msg::Point & position, const std::string & ns, const size_t id,
   const std_msgs::msg::ColorRGBA & color, const double scale = 0.3, const bool is_cube = false)
 {
   const auto marker_type = is_cube ? Marker::CUBE : Marker::SPHERE;
@@ -333,7 +333,7 @@ Marker create_point_marker(
 }
 
 Marker create_text_marker(
-  const std::string & text, const geometry_msgs::msg::Pose & pose, const std::string ns,
+  const std::string & text, const geometry_msgs::msg::Pose & pose, const std::string & ns,
   const size_t id, const std_msgs::msg::ColorRGBA & color)
 {
   Marker marker = autoware_utils::create_default_marker(
