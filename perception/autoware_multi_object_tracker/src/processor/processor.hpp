@@ -94,8 +94,7 @@ private:
   void removeOldTracker(const rclcpp::Time & time);
   void mergeOverlappedTracker(const rclcpp::Time & time);
   bool canMergeOverlappedTarget(
-    const Tracker & target, const Tracker & other, const rclcpp::Time & time,
-    const double iou) const;
+    const Tracker & target, const Tracker & other, const rclcpp::Time & time) const;
   std::shared_ptr<Tracker> createNewTracker(
     const types::DynamicObject & object, const rclcpp::Time & time) const;
 

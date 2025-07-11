@@ -46,35 +46,43 @@ public:
   std::string get_module_name() const override { return module_name_; };
 
 private:
-  [[nodiscard]] bool is_safe();
+  bool is_data_ready(std::string & msg);
+
+  [[nodiscard]] bool is_safe(DebugData & debug_data);
 
   [[nodiscard]] EgoTrajectory get_ego_trajectory() const;
+
+  void get_lanelets(DebugData & debug_data, const EgoTrajectory & ego_trajectory) const;
 
   [[nodiscard]] Direction get_turn_direction(
     const lanelet::ConstLanelets & trajectory_lanelets) const;
 
-  [[nodiscard]] Direction get_lanelets(
-    EgoLanelets & lanelets, const EgoTrajectory & ego_trajectory) const;
-
   void filter_pointcloud(
-    PointCloud2::ConstSharedPtr & input, PointCloud::Ptr & filtered_point_cloud) const;
+    PointCloud2::ConstSharedPtr & input, PointCloud::Ptr & filtered_point_cloud,
+    DebugData & debug_data) const;
 
   void get_points_within(
     const PointCloud::Ptr & input, const BasicPolygon2d & polygon,
     const PointCloud::Ptr & output) const;
 
-  void cluster_pointcloud(const PointCloud::Ptr & input, PointCloud::Ptr & output) const;
-
-  void set_lanelets_debug_marker(const EgoLanelets & lanelets) const;
+  void cluster_pointcloud(
+    const PointCloud::Ptr & input, PointCloud::Ptr & output, DebugData & debug_data) const;
 
   bool check_collision(
-    const PointCloud::Ptr & filtered_point_cloud, const rclcpp::Time & time_stamp);
+    DebugData & debug_data, const PointCloud::Ptr & filtered_point_cloud,
+    const rclcpp::Time & time_stamp);
 
   std::optional<PCDObject> get_pcd_object(
-    const rclcpp::Time & time_stamp, const PointCloud::Ptr & filtered_point_cloud,
-    const TargetLanelet & target_lanelet) const;
+    DebugData & debug_data, const rclcpp::Time & time_stamp,
+    const PointCloud::Ptr & filtered_point_cloud, const TargetLanelet & target_lanelet) const;
 
-  void add_safety_factor(geometry_msgs::msg::Point & obs_point, const double ttc);
+  void publish_markers(const DebugData & debug_data) const;
+
+  void set_lanelets_debug_marker(const DebugData & debug_data) const;
+
+  void set_pcd_objects_debug_marker(const DebugData & debug_data) const;
+
+  void publish_planning_factor(const DebugData & debug_data) const;
 
   void reset_data()
   {
@@ -84,13 +92,17 @@ private:
   }
 
   std::unique_ptr<intersection_collision_checker_node::ParamListener> param_listener_;
+
+  rclcpp::Publisher<PointCloud2>::SharedPtr pub_voxel_pointcloud_;
+  rclcpp::Publisher<PointCloud2>::SharedPtr pub_cluster_pointcloud_;
+  rclcpp::Publisher<StringStamped>::SharedPtr pub_string_;
+
   intersection_collision_checker_node::Params params_;
 
   PCDObjectsMap history_;
   mutable TargetLaneletsMap target_lanelets_map_;
   rclcpp::Time last_invalid_time_;
   rclcpp::Time last_valid_time_;
-  SafetyFactorArray safety_factor_array_;
 };
 
 }  // namespace autoware::planning_validator

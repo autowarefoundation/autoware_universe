@@ -27,6 +27,10 @@ namespace autoware::multi_object_tracker
 {
 namespace shapes
 {
+
+double get1dIoU(
+  const types::DynamicObject & source_object, const types::DynamicObject & target_object);
+
 double get2dIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object,
   const double min_union_area = 0.01);
