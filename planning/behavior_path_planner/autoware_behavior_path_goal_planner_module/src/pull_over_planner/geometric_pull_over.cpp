@@ -27,7 +27,8 @@
 namespace autoware::behavior_path_planner
 {
 GeometricPullOver::GeometricPullOver(
-  rclcpp::Node & node, const GoalPlannerParameters & parameters, const bool is_forward)
+  rclcpp::Node & node, const GoalPlannerParameters & parameters, const bool is_forward,
+  const bool use_clothoid)
 : PullOverPlannerBase{node, parameters},
   parallel_parking_parameters_{parameters.parallel_parking_parameters},
   boundary_departure_checker_{[&]() {
@@ -37,6 +38,7 @@ GeometricPullOver::GeometricPullOver(
     return BoundaryDepartureChecker{boundary_departure_checker_params, vehicle_info_};
   }()},
   is_forward_{is_forward},
+  use_clothoid_{use_clothoid},
   left_side_parking_{parameters.parking_policy == ParkingPolicy::LEFT_SIDE}
 {
   planner_.setParameters(parallel_parking_parameters_);
@@ -51,9 +53,9 @@ std::optional<PullOverPath> GeometricPullOver::plan(
 
   const auto & goal_pose = modified_goal_pose.goal_pose;
   // prepare road nad shoulder lanes
-  const auto road_lanes = goal_planner_utils::get_reference_lanelets_for_pullover(
-    upstream_module_output.path, planner_data, parameters_.backward_goal_search_length,
-    parameters_.forward_goal_search_length);
+  const auto road_lanes = utils::getExtendedCurrentLanes(
+    planner_data, parameters_.backward_goal_search_length, parameters_.forward_goal_search_length,
+    /*forward_only_in_route*/ false);
   const auto pull_over_lanes = goal_planner_utils::getPullOverLanes(
     *route_handler, left_side_parking_, parameters_.backward_goal_search_length,
     parameters_.forward_goal_search_length);
@@ -67,7 +69,8 @@ std::optional<PullOverPath> GeometricPullOver::plan(
   planner_.setPlannerData(planner_data);
 
   const bool found_valid_path = planner_.planPullOver(
-    goal_pose, road_lanes, pull_over_lanes, max_steer_angle, is_forward_, left_side_parking_);
+    goal_pose, road_lanes, pull_over_lanes, max_steer_angle, is_forward_, left_side_parking_,
+    use_clothoid_);
   if (!found_valid_path) {
     return {};
   }
