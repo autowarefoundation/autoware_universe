@@ -46,13 +46,15 @@ void Memory::StepReset()
 void Memory::StepPre(float ts)
 {
   // update timestamp in pre_update_memory
-  ApplyDeltaFromMem<<<pre_len, 1, 0, mem_stream>>>(ts, reinterpret_cast<float*>(mem_buf), pre_buf, pre_len);
+  ApplyDeltaFromMem<<<pre_len, 1, 0, mem_stream>>>(
+    ts, reinterpret_cast<float *>(mem_buf), pre_buf, pre_len);
 }
 
 void Memory::StepPost(float ts)
 {
   // update timestamp in post_update_memory
-  ApplyDeltaToMem<<<mem_len, 1, 0, mem_stream>>>(ts, reinterpret_cast<float*>(mem_buf), post_buf, mem_len);
+  ApplyDeltaToMem<<<mem_len, 1, 0, mem_stream>>>(
+    ts, reinterpret_cast<float *>(mem_buf), post_buf, mem_len);
 }
 
 void Memory::DebugPrint()
