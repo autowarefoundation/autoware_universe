@@ -120,9 +120,13 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
     return;
   }
 
+  const auto start_time = clock_->now();
+
   DebugData debug_data;
   context_->validation_status->is_valid_intersection_collision_check = is_safe(debug_data);
   if (!debug_data.is_active) reset_data();
+
+  debug_data.processing_time_detail_ms = (clock_->now() - start_time).nanoseconds() * 1e-6;
 
   publish_markers(debug_data);
   publish_planning_factor(debug_data);
@@ -153,6 +157,7 @@ bool IntersectionCollisionChecker::is_safe(DebugData & debug_data)
   }
 
   debug_data.is_active = true;
+  debug_data.is_safe = true;
 
   const bool is_safe = check_collision(
     debug_data, filtered_pointcloud, context_->data->obstacle_pointcloud->header.stamp);
@@ -165,15 +170,19 @@ bool IntersectionCollisionChecker::is_safe(DebugData & debug_data)
       last_valid_time_ = now;
       return true;
     }
+    debug_data.is_safe = false;
     return false;
   }
 
   if ((now - last_valid_time_).seconds() < p.on_time_buffer) {
     RCLCPP_WARN(logger_, "[ICC] Momentary collision risk detected.");
+    debug_data.text = "detected momentary collision";
     return true;
   }
 
   last_invalid_time_ = now;
+  debug_data.is_safe = false;
+  debug_data.text = "detected continuous collision";
   return false;
 }
 
@@ -457,6 +466,7 @@ std::optional<PCDObject> IntersectionCollisionChecker::get_pcd_object(
     PCDObject object;
     object.last_update_time = time_stamp;
     object.pose = p_geom;
+    object.overlap_point = target_lanelet.overlap_point.position;
     object.overlap_lanelet_id = target_lanelet.id;
     object.track_duration = 0.0;
     object.distance_to_overlap = arc_length_to_overlap;
@@ -544,12 +554,12 @@ void IntersectionCollisionChecker::publish_markers(const DebugData & debug_data)
   {
     std::ostringstream ss;
     ss << std::fixed << std::setprecision(2) << std::boolalpha;
-    ss << "ACTIVE:" << debug_data.is_active << "\n";
-    ss << "SAFE:" << debug_data.is_safe << "\n";
-    ss << "TURN:" << magic_enum::enum_name(debug_data.turn_direction) << "\n";
-    ss << "INFO:" << debug_data.text << "\n";
-    ss << "TRACKING OBJECTS:" << debug_data.pcd_objects.size() << "\n";
-    ss << "PROCESSING TIME:" << debug_data.processing_time_detail_ms << "[ms]\n";
+    ss << "ACTIVE: " << debug_data.is_active << "\n";
+    ss << "SAFE: " << debug_data.is_safe << "\n";
+    ss << "TURN: " << magic_enum::enum_name(debug_data.turn_direction) << "\n";
+    ss << "INFO: " << debug_data.text << "\n";
+    ss << "TRACKING OBJECTS: " << debug_data.pcd_objects.size() << "\n";
+    ss << "PROCESSING TIME: " << debug_data.processing_time_detail_ms << "[ms]\n";
 
     StringStamped string_stamp;
     string_stamp.stamp = clock_->now();
@@ -557,11 +567,13 @@ void IntersectionCollisionChecker::publish_markers(const DebugData & debug_data)
     pub_string_->publish(string_stamp);
   }
 
-  set_lanelets_debug_marker(debug_data);
+  context_->debug_pose_publisher->pushMarkers(
+    collision_checker_utils::get_lanelets_marker_array(debug_data));
 
   if (!debug_data.is_active) return;
 
-  set_pcd_objects_debug_marker(debug_data);
+  context_->debug_pose_publisher->pushMarkers(
+    collision_checker_utils::get_objects_marker_array(debug_data));
 
   if (debug_data.voxel_points) {
     pub_voxel_pointcloud_->publish(*debug_data.voxel_points);
@@ -569,96 +581,6 @@ void IntersectionCollisionChecker::publish_markers(const DebugData & debug_data)
 
   if (debug_data.cluster_points) {
     pub_cluster_pointcloud_->publish(*debug_data.cluster_points);
-  }
-}
-
-void IntersectionCollisionChecker::set_lanelets_debug_marker(const DebugData & debug_data) const
-{
-  {  // trajectory lanelets
-    lanelet::BasicPolygons2d ll_polygons;
-    lanelet::BasicPolygons2d turn_ll_polygons;
-    for (const auto & ll : debug_data.ego_lanelets.trajectory_lanelets) {
-      ll_polygons.push_back(ll.polygon2d().basicPolygon());
-      if (ll.hasAttribute("turn_direction") && ll.attribute("turn_direction") != "straight") {
-        turn_ll_polygons.push_back(ll.polygon2d().basicPolygon());
-      }
-    }
-    if (!ll_polygons.empty()) {
-      context_->debug_pose_publisher->pushLaneletPolygonsMarker(
-        ll_polygons, "ICC_trajectory_lanelets", 1);
-    }
-    if (!turn_ll_polygons.empty()) {
-      context_->debug_pose_publisher->pushLaneletPolygonsMarker(
-        turn_ll_polygons, "ICC_turn_direction_lanelets", 0);
-    }
-  }
-
-  auto add_text_marker = [&](const TargetLanelet & target_ll, const std::string & ns = "") {
-    std::ostringstream ss;
-    ss << std::fixed << std::setprecision(2);
-    ss << "Lane ID:" << target_ll.id;
-    ss << "\nTimeToReach:" << target_ll.ego_overlap_time.first << "[s]";
-    ss << "\nTimeToLeave:" << target_ll.ego_overlap_time.second << "[s]";
-    auto pose = target_ll.overlap_point;
-    pose.position.z += 1.0;
-    context_->debug_pose_publisher->pushTextMarker(pose, ss.str(), ns + "_text");
-  };
-
-  {  // target lanelets
-    lanelet::BasicPolygons2d ll_polygons;
-    for (const auto & target_ll : debug_data.target_lanelets) {
-      for (const auto & ll : target_ll.lanelets) {
-        ll_polygons.push_back(ll.polygon2d().basicPolygon());
-      }
-      context_->debug_pose_publisher->pushPointMarker(
-        target_ll.overlap_point.position, "ICC_target_lanelets", 2);
-      add_text_marker(target_ll, "ICC_target_lanelets");
-    }
-    if (!ll_polygons.empty()) {
-      context_->debug_pose_publisher->pushLaneletPolygonsMarker(
-        ll_polygons, "ICC_target_lanelets", 2);
-    }
-  }
-}
-
-void IntersectionCollisionChecker::set_pcd_objects_debug_marker(const DebugData & debug_data) const
-{
-  auto get_debug_string = [&](const PCDObject & object) {
-    std::ostringstream ss;
-    ss << std::fixed << std::setprecision(2);
-    ss << "TrackDuration:" << object.track_duration << "[s]\n";
-    ss << "MovingTime:" << object.moving_time << "[s]\n";
-    ss << "DistToOverlap(RAW):" << object.distance_to_overlap << "[m]\n";
-    ss << "DistToOverlap(w/DC):" << object.delay_compensated_distance_to_overlap << "[m]\n";
-    ss << "Velocity:" << object.velocity << "[m/s]\n";
-    ss << "TTC:" << object.ttc << "[s]";
-    return ss.str();
-  };
-
-  auto add_marker = [&](const PCDObject & object) {
-    auto pose = object.pose;
-    pose.position.z += 1.0;
-    context_->debug_pose_publisher->pushTextMarker(
-      pose, get_debug_string(object), "ICC_pcd_objects_text");
-    if (object.is_safe) {
-      context_->debug_pose_publisher->pushPointMarker(object.pose.position, "ICC_pcd_objects", 1);
-      return;
-    }
-
-    context_->debug_pose_publisher->pushPointMarker(
-      object.pose.position, "ICC_pcd_objects", 0, 0.5, true);
-
-    if (target_lanelets_map_.count(object.overlap_lanelet_id) == 0) return;
-
-    const auto overlap_point =
-      target_lanelets_map_[object.overlap_lanelet_id].overlap_point.position;
-    context_->debug_pose_publisher->pushLineSegmentMarker(
-      object.pose.position, overlap_point, "ICC_pcd_objects", 0);
-  };
-
-  for (const auto & object : debug_data.pcd_objects) {
-    if (!object.is_reliable) continue;
-    add_marker(object);
   }
 }
 

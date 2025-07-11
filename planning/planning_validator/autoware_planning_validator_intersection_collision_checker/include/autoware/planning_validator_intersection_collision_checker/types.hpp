@@ -24,6 +24,7 @@
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_core/primitives/LineString.h>
@@ -48,6 +49,8 @@ using lanelet::ConstLanelets;
 using route_handler::Direction;
 using route_handler::RouteHandler;
 using sensor_msgs::msg::PointCloud2;
+using visualization_msgs::msg::Marker;
+using visualization_msgs::msg::MarkerArray;
 
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
@@ -92,6 +95,7 @@ struct PCDObject
 {
   rclcpp::Time last_update_time;
   geometry_msgs::msg::Pose pose;
+  geometry_msgs::msg::Point overlap_point;
   lanelet::Id overlap_lanelet_id;
   double track_duration{};
   double distance_to_overlap{};
