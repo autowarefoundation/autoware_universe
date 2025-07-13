@@ -7,10 +7,10 @@
       pointcloud:
         range:
           dead_zone: 0.3                            # [m]
-          buffer: 3.0                               # [m]
+          buffer: 1.0                               # [m]
         crop_box_filter:
           x:
-            max: 10.0                               # [m]
+            max: 30.0                               # [m]
             min: -100.0                             # [m]
           z:
             max: -1.0                               # [m]
@@ -58,6 +58,7 @@
       blind_spot:
         lookahead_time: 4.0                         # [s]
         check:
+          front: false
           left: true
           right: false
         offset:
@@ -66,6 +67,8 @@
 
       adjacent_lane:
         lookahead_time: 4.0                         # [s]
+        check:
+          front: true
         offset:
           left: -0.5                                # [m]
           right: -0.5                               # [m]

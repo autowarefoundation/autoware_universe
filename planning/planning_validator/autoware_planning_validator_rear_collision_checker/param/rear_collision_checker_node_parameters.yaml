@@ -144,6 +144,8 @@ rear_collision_checker_node:
         validation:
           gt<>: [0.0]
       check:
+        front:
+          type: bool
         left:
           type: bool
         right:
@@ -159,6 +161,9 @@ rear_collision_checker_node:
         type: double
         validation:
           gt<>: [0.0]
+      check:
+        front:
+          type: bool
       offset:
         left:
           type: double
