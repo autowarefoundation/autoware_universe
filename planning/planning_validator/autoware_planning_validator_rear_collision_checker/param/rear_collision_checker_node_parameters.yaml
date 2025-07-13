@@ -139,6 +139,10 @@ rear_collision_checker_node:
         type: double
 
     blind_spot:
+      lookahead_time:
+        type: double
+        validation:
+          gt<>: [0.0]
       check:
         left:
           type: bool
@@ -151,6 +155,10 @@ rear_collision_checker_node:
           type: double
 
     adjacent_lane:
+      lookahead_time:
+        type: double
+        validation:
+          gt<>: [0.0]
       offset:
         left:
           type: double
