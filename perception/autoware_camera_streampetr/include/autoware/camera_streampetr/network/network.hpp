@@ -56,13 +56,13 @@
 
 namespace autoware::camera_streampetr
 {
+using cuda::Tensor;
 using nvinfer1::DataType;
 using nvinfer1::Dims;
 using nvinfer1::ICudaEngine;
 using nvinfer1::IExecutionContext;
 using nvinfer1::ILogger;
 using nvinfer1::IRuntime;
-using cuda::Tensor;
 
 class SubNetwork
 {

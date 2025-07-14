@@ -12,16 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include <NvInfer.h>
 #include <NvOnnxParser.h>
 
-#include <fstream>
-#include <stdexcept>
 #include <algorithm>
+#include <fstream>
+#include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include <memory>
 
 namespace autoware::camera_streampetr
 {
