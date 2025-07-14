@@ -34,7 +34,7 @@ TRTBEVDetNode::TRTBEVDetNode(const rclcpp::NodeOptions & node_options)
   debug_mode_ = this->declare_parameter<bool>("debug_mode");
 
   // Only start camera info subscription and tf listener at the beginning
-  img_n_ = this->declare_parameter<int>("data_params.CAM_NUM", 6);  // camera num 6
+  img_n_ = this->declare_parameter<int>("data_params.camera_count");
 
   caminfo_received_ = std::vector<bool>(img_n_, false);
   cams_intrin_ = std::vector<Eigen::Matrix3f>(img_n_);

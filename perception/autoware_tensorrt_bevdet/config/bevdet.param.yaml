@@ -7,7 +7,7 @@
       debug_mode: false
       precision: "fp16" # "fp16" or "fp32"
       data_params:
-        CAM_NUM: 6
+        camera_count: 6
         cams: ["CAM_FRONT_LEFT", "CAM_FRONT", "CAM_FRONT_RIGHT", "CAM_BACK_LEFT", "CAM_BACK", "CAM_BACK_RIGHT"]
       post_process_params:
         # post-process params
