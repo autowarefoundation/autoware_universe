@@ -228,7 +228,8 @@ std::vector<CruiseObstacle> ObstacleCruiseModule::filter_cruise_obstacle_for_pre
 
     // 1.2. Check if the obstacle is out of a filtering distance determined by ego velocity,
     // obstacle velocity, ego acceleration and ego_jerk.
-    // TODO(xiaoyu-wang): introduce current ego acceleration to this function.
+    // TODO(xiaoyu-wang): Introduce current ego acceleration to this function.
+    //                    So far, the hard code below is enough.
     const double obstacle_filter_ego_current_acc = 0.0;
     const double obstacle_filter_ego_planning_dec = 0.0;
     auto obstacle_filter_dist = autoware::motion_utils::calcDecelDistWithJerkAndAccConstraints(
