@@ -38,6 +38,8 @@
 
       # params for the pass judge logic against the crosswalk users such as pedestrians or bicycles
       pass_judge:
+        on_time_buffer: 0.1 # [s] The time from when a collision point is detected to when the actual stop decision is made. A smaller value makes the system more responsive to perception results, while a larger value can reduce the frequency of false positives.
+        off_time_buffer: 1.0 # [s] The time from when the collision point disappears to when the stop decision is actually released. A smaller value makes the system more responsive to perception results, while a larger value can reduce the frequency of false negatives.
         ego_pass_first_margin_x: [0.0] # [[s]] time to collision margin vector for ego pass first situation (the module judges that ego don't have to stop at TTC + MARGIN < TTV condition)
         ego_pass_first_margin_y: [4.0] # [[s]] time to vehicle margin vector for ego pass first situation (the module judges that ego don't have to stop at TTC + MARGIN < TTV condition)
         ego_pass_first_additional_margin: 0.5 # [s] additional time margin for ego pass first situation to suppress chattering

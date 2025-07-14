@@ -165,6 +165,8 @@ public:
     std::vector<double> distance_set_for_no_intention_to_walk;
     std::vector<double> timeout_set_for_no_intention_to_walk;
     double timeout_ego_stop_for_yield;
+    double collision_point_on_time_buffer;
+    double collision_point_off_time_buffer;
     // param for input data
     double traffic_light_state_timeout;
     // param for target area & object
@@ -199,6 +201,8 @@ public:
   {
     CollisionState collision_state{};
     std::optional<rclcpp::Time> time_to_start_stopped{std::nullopt};
+    std::optional<rclcpp::Time> latest_time_with_collision_point{std::nullopt};
+    std::optional<rclcpp::Time> latest_time_without_collision_point{std::nullopt};
     uint8_t classification{ObjectClassification::UNKNOWN};
 
     geometry_msgs::msg::Point position{};
@@ -322,11 +326,48 @@ public:
         }
       }
 
+      const auto collision_point_with_history = [&]() -> std::optional<CollisionPoint> {
+        auto & object = objects.at(uuid);
+
+        if (collision_point.has_value()) {
+          if (!object.latest_time_without_collision_point.has_value()) {
+            object.latest_time_without_collision_point = now;
+          }
+
+          const auto is_larger_than_on_timer_buffer =
+            (now - object.latest_time_without_collision_point.value()).seconds() >
+            planner_param.collision_point_on_time_buffer;
+          if (is_larger_than_on_timer_buffer) {
+            object.latest_time_with_collision_point = now;
+            return collision_point.value();
+          }
+
+          return std::nullopt;
+        } else {
+          if (!object.latest_time_with_collision_point.has_value()) {
+            object.latest_time_without_collision_point = now;
+            return std::nullopt;
+          }
+
+          const auto is_larger_than_off_timer_buffer =
+            (now - object.latest_time_with_collision_point.value()).seconds() >
+            planner_param.collision_point_off_time_buffer;
+          if (is_larger_than_off_timer_buffer) {
+            object.latest_time_without_collision_point = now;
+            return std::nullopt;
+          }
+
+          return object.collision_point;
+        }
+
+        return std::nullopt;
+      }();
+
       // update object state
       objects.at(uuid).transitState(
-        now, position, vel, is_ego_yielding, collision_point, planner_param, crosswalk_polygon,
-        is_object_away_from_path, ego_crosswalk_passage_direction);
-      objects.at(uuid).collision_point = collision_point;
+        now, position, vel, is_ego_yielding, collision_point_with_history, planner_param,
+        crosswalk_polygon, is_object_away_from_path, ego_crosswalk_passage_direction);
+      objects.at(uuid).collision_point = collision_point_with_history;
       objects.at(uuid).position = position;
       objects.at(uuid).classification = classification;
     }
