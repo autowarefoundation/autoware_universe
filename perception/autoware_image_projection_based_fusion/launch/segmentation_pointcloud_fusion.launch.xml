@@ -16,6 +16,8 @@
   <arg name="input/camera_info6" default="/sensing/camera/camera6/camera_info"/>
   <arg name="input/mask7" default="/perception/object_recognition/detection/mask7"/>
   <arg name="input/camera_info7" default="/sensing/camera/camera7/camera_info"/>
+  <arg name="input/mask8" default="/perception/object_recognition/detection/mask8"/>
+  <arg name="input/camera_info8" default="/sensing/camera/camera8/camera_info"/>
   <arg name="input/pointcloud" default="/sensing/lidar/top/outlier_filtered/pointcloud"/>
   <arg name="output/pointcloud" default="output/pointcloud"/>
   <arg name="sync_param_path" default="$(find-pkg-share autoware_image_projection_based_fusion)/config/fusion_common.param.yaml"/>
@@ -28,6 +30,7 @@
   <arg name="input/image5" default="/image_raw5"/>
   <arg name="input/image6" default="/image_raw6"/>
   <arg name="input/image7" default="/image_raw7"/>
+  <arg name="input/image8" default="/image_raw8"/>
   <group>
     <node pkg="autoware_image_projection_based_fusion" exec="segmentation_pointcloud_fusion_node" name="segmentation_pointcloud_fusion" output="screen">
       <param name="rois_number" value="$(var input/camera_number)"/>
@@ -61,6 +64,9 @@
       <param name="input/rois7" value="$(var input/mask7)"/>
       <param name="input/camera_info7" value="$(var input/camera_info7)"/>
       <param name="input/image7" value="$(var input/image7)"/>
+      <param name="input/rois8" value="$(var input/mask8)"/>
+      <param name="input/camera_info8" value="$(var input/camera_info8)"/>
+      <param name="input/image8" value="$(var input/image8)"/>
     </node>
   </group>
 </launch>

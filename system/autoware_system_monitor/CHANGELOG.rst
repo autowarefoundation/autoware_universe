@@ -30,7 +30,7 @@ Changelog for package autoware_system_monitor
 
 0.44.1 (2025-05-01)
 -------------------
-* fix(autoware_system_monitor): quick fix for autoware_system_monitor (`#10506 <https://github.com/youtalk/autoware_universe/issues/10506>`_)
+* fix(autoware_system_monitor): quick fix for autoware_system_monitor (`#10506 <https://github.com/autowarefoundation/autoware_universe/issues/10506>`_)
   * feat(autoware_system_monitor): quick fix, autoware_system_monitor, fix sompile issue : v0.0
   * feat(autoware_system_monitor): quick fix, autoware_system_monitor, add comment by sasaki san: v0.1
   ---------
@@ -38,6 +38,9 @@ Changelog for package autoware_system_monitor
 
 0.44.0 (2025-04-18)
 -------------------
+* fix(process_monitor): get process statistics directly from /proc files to avoid process spawning of Linux commands (`#10379 <https://github.com/autowarefoundation/autoware_universe/issues/10379>`_)
+  ---------
+* Contributors: nishikawa-masaki
 
 0.43.0 (2025-03-21)
 -------------------

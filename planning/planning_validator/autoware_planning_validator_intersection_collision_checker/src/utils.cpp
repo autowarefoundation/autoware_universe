@@ -17,6 +17,9 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
+
+#include <std_msgs/msg/color_rgba.hpp>
 
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
@@ -294,6 +297,145 @@ void set_left_turn_target_lanelets(
         TargetLanelet(id, extend(ll, overlap_point), overlap_point, overlap_time);
     }
   }
+}
+
+Marker create_polygon_marker(
+  const lanelet::BasicPolygon3d & polygon, const std::string & ns, const size_t id,
+  const std_msgs::msg::ColorRGBA & color)
+{
+  visualization_msgs::msg::Marker marker = autoware_utils::create_default_marker(
+    "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, id, Marker::LINE_STRIP,
+    autoware_utils::create_marker_scale(0.1, 0.1, 0.1), color);
+  marker.lifetime = rclcpp::Duration::from_seconds(0.2);
+
+  for (const auto & p : polygon) {
+    marker.points.push_back(autoware_utils::create_point(p.x(), p.y(), p.z()));
+  }
+  if (!marker.points.empty()) {
+    marker.points.push_back(marker.points.front());
+  }
+
+  return marker;
+}
+
+Marker create_point_marker(
+  const geometry_msgs::msg::Point & position, const std::string & ns, const size_t id,
+  const std_msgs::msg::ColorRGBA & color, const double scale = 0.3, const bool is_cube = false)
+{
+  const auto marker_type = is_cube ? Marker::CUBE : Marker::SPHERE;
+  Marker marker = autoware_utils::create_default_marker(
+    "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, id, marker_type,
+    autoware_utils::create_marker_scale(scale, scale, scale), color);
+  marker.lifetime = rclcpp::Duration::from_seconds(0.2);
+  marker.pose.position = position;
+
+  return marker;
+}
+
+Marker create_text_marker(
+  const std::string & text, const geometry_msgs::msg::Pose & pose, const std::string & ns,
+  const size_t id, const std_msgs::msg::ColorRGBA & color)
+{
+  Marker marker = autoware_utils::create_default_marker(
+    "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, id, Marker::TEXT_VIEW_FACING,
+    autoware_utils::create_marker_scale(0.5, 0.5, 0.5), color);
+  marker.lifetime = rclcpp::Duration::from_seconds(0.2);
+  marker.pose = pose;
+  marker.text = text;
+  return marker;
+}
+
+MarkerArray get_lanelets_marker_array(const DebugData & debug_data)
+{
+  MarkerArray marker_array;
+
+  const auto red = autoware_utils::create_marker_color(1.0, 0.0, 0.0, 0.9);
+  const auto green = autoware_utils::create_marker_color(0.0, 1.0, 0.0, 0.9);
+  const auto blue = autoware_utils::create_marker_color(0.0, 0.0, 1.0, 0.9);
+  const auto white = autoware_utils::create_marker_color(1.0, 1.0, 1.0, 0.7);
+
+  {  // trajectory lanelets
+    for (const auto & ll : debug_data.ego_lanelets.trajectory_lanelets) {
+      marker_array.markers.push_back(create_polygon_marker(
+        ll.polygon3d().basicPolygon(), "ICC_trajectory_lanelets", ll.id(), green));
+      if (ll.hasAttribute("turn_direction") && ll.attribute("turn_direction") != "straight") {
+        marker_array.markers.push_back(create_polygon_marker(
+          ll.polygon3d().basicPolygon(), "ICC_turn_direction_lanelets", ll.id(), red));
+      }
+    }
+  }
+
+  auto add_text_marker = [&](const TargetLanelet & target_ll, const std::string & ns) {
+    std::ostringstream ss;
+    ss << std::fixed << std::setprecision(2);
+    ss << "Lane ID:" << target_ll.id;
+    ss << "\nTimeToReach:" << target_ll.ego_overlap_time.first << "[s]";
+    ss << "\nTimeToLeave:" << target_ll.ego_overlap_time.second << "[s]";
+    auto pose = target_ll.overlap_point;
+    pose.position.z += 1.0;
+    marker_array.markers.push_back(create_text_marker(ss.str(), pose, ns, target_ll.id, white));
+  };
+
+  {  // target lanelets
+    lanelet::BasicPolygons2d ll_polygons;
+    for (const auto & target_ll : debug_data.target_lanelets) {
+      const auto combine_ll = lanelet::utils::combineLaneletsShape(target_ll.lanelets);
+      marker_array.markers.push_back(create_polygon_marker(
+        combine_ll.polygon3d().basicPolygon(), "ICC_target_lanelets", target_ll.id, blue));
+      marker_array.markers.push_back(create_point_marker(
+        target_ll.overlap_point.position, "ICC_target_lanelets_op", target_ll.id, blue));
+      add_text_marker(target_ll, "ICC_target_lanelets_text");
+    }
+  }
+
+  return marker_array;
+}
+
+MarkerArray get_objects_marker_array(const DebugData & debug_data)
+{
+  MarkerArray marker_array;
+
+  const auto red = autoware_utils::create_marker_color(1.0, 0.0, 0.0, 0.9);
+  const auto green = autoware_utils::create_marker_color(0.0, 1.0, 0.0, 0.9);
+  const auto white = autoware_utils::create_marker_color(1.0, 1.0, 1.0, 0.7);
+
+  auto add_text_marker = [&](const PCDObject & object) {
+    std::ostringstream ss;
+    ss << std::fixed << std::setprecision(2);
+    ss << "TrackDuration:" << object.track_duration << "[s]\n";
+    ss << "MovingTime:" << object.moving_time << "[s]\n";
+    ss << "DistToOverlap(RAW):" << object.distance_to_overlap << "[m]\n";
+    ss << "DistToOverlap(w/DC):" << object.delay_compensated_distance_to_overlap << "[m]\n";
+    ss << "Velocity:" << object.velocity << "[m/s]\n";
+    ss << "TTC:" << object.ttc << "[s]";
+    marker_array.markers.push_back(create_text_marker(
+      ss.str(), object.pose, "ICC_pcd_objects_text", object.overlap_lanelet_id, white));
+  };
+
+  auto add_line_segment_marker = [&](const PCDObject & object) {
+    Marker marker = autoware_utils::create_default_marker(
+      "map", rclcpp::Clock{RCL_ROS_TIME}.now(), "ICC_pcd_objects_cp", object.overlap_lanelet_id,
+      Marker::LINE_LIST, autoware_utils::create_marker_scale(0.1, 0.1, 0.1), red);
+    marker.lifetime = rclcpp::Duration::from_seconds(0.2);
+    marker.points.push_back(object.pose.position);
+    marker.points.push_back(object.overlap_point);
+    marker_array.markers.push_back(marker);
+  };
+
+  for (const auto & pcd_obj : debug_data.pcd_objects) {
+    if (!pcd_obj.is_reliable) continue;
+    if (pcd_obj.is_safe) {
+      marker_array.markers.push_back(create_point_marker(
+        pcd_obj.pose.position, "ICC_pcd_objects", pcd_obj.overlap_lanelet_id, green));
+    } else {
+      marker_array.markers.push_back(create_point_marker(
+        pcd_obj.pose.position, "ICC_pcd_objects", pcd_obj.overlap_lanelet_id, red, 0.5, true));
+      add_line_segment_marker(pcd_obj);
+    }
+    add_text_marker(pcd_obj);
+  }
+
+  return marker_array;
 }
 
 }  // namespace autoware::planning_validator::collision_checker_utils

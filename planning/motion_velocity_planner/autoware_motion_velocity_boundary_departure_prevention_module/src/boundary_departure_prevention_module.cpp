@@ -57,9 +57,11 @@ void BoundaryDeparturePreventionModule::init(
       if (output_.diagnostic_output[DepartureType::CRITICAL_DEPARTURE]) {
         lvl = node_param_.diagnostic_level[DepartureType::CRITICAL_DEPARTURE];
         msg = "vehicle is leaving boundary";
+        RCLCPP_ERROR_THROTTLE(logger_, *clock_ptr_, 500, "%s", msg.c_str());
       } else if (output_.diagnostic_output[DepartureType::APPROACHING_DEPARTURE]) {
         lvl = node_param_.diagnostic_level[DepartureType::APPROACHING_DEPARTURE];
         msg = "vehicle is moving towards the boundary";
+        RCLCPP_ERROR_THROTTLE(logger_, *clock_ptr_, 1000, "%s", msg.c_str());
       } else if (output_.diagnostic_output[DepartureType::NEAR_BOUNDARY]) {
         lvl = node_param_.diagnostic_level[DepartureType::NEAR_BOUNDARY];
         msg = "vehicle is near boundary";
@@ -235,6 +237,11 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
     return {};
   }
 
+  if (!is_autonomous_mode()) {
+    RCLCPP_WARN_THROTTLE(logger_, *clock_ptr_, throttle_duration_ms, "Not in autonomous mode.");
+    return {};
+  }
+
   const auto & vehicle_info = planner_data->vehicle_info_;
   const auto & ll_map_ptr = planner_data->route_handler->getLaneletMapPtr();
 
@@ -340,6 +347,12 @@ std::optional<std::string> BoundaryDeparturePreventionModule::is_data_timeout(
   }
 
   return std::nullopt;
+}
+
+bool BoundaryDeparturePreventionModule::is_autonomous_mode() const
+{
+  return (op_mode_state_ptr_->mode == OperationModeState::AUTONOMOUS) &&
+         op_mode_state_ptr_->is_autoware_control_enabled;
 }
 
 bool BoundaryDeparturePreventionModule::is_goal_changed(

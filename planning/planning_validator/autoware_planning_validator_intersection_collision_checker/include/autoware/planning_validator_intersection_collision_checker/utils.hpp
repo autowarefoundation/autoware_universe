@@ -54,6 +54,9 @@ void set_left_turn_target_lanelets(
   TargetLaneletsMap & target_lanelets,
   const double time_horizon = std::numeric_limits<double>::max());
 
+MarkerArray get_lanelets_marker_array(const DebugData & debug_data);
+MarkerArray get_objects_marker_array(const DebugData & debug_data);
+
 }  // namespace autoware::planning_validator::collision_checker_utils
 
 #endif  // AUTOWARE__PLANNING_VALIDATOR_INTERSECTION_COLLISION_CHECKER__UTILS_HPP_
