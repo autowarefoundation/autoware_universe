@@ -10,7 +10,7 @@
   <arg name="input/img_back" default="/nuscenes/CAM_BACK/image"/>
   <arg name="input/img_back_right" default="/nuscenes/CAM_BACK_RIGHT/image"/>
   <arg name="output/boxes" default="/bboxes"/>
-  <arg name="output/bboxes" default="/nuscenes/bboxes"/>
+  <arg name="output/bboxes" default="/debug/markers_boxes"/>
 
   <arg name="input/img_front_left/camera_info" default="/nuscenes/CAM_FRONT_LEFT/camera_info"/>
   <arg name="input/img_front/camera_info" default="/nuscenes/CAM_FRONT/camera_info"/>
