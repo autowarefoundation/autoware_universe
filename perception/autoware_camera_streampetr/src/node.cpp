@@ -25,6 +25,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <utility>
 
 namespace autoware::camera_streampetr
 {

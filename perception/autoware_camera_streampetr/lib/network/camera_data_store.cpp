@@ -35,6 +35,11 @@ algebra operations. */
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
+#include <limits>
+#include <memory>
+#include <string>
+#include <vector>
+
 namespace autoware::camera_streampetr
 {
 static void updateIntrinsics(float * K_4x4, const Eigen::Matrix3f & ida_mat)
@@ -258,10 +263,10 @@ std::vector<float> CameraDataStore::get_camera_info_vector() const
       0.f,
       1.f};
 
-    float resize = std::max(float(fH) / float(rawH), float(fW) / float(rawW));
-    int newW = int(rawW * resize);
-    int newH = int(rawH * resize);
-    int crop_h = int(newH) - fH;
+    float resize = std::max(static_cast<float>(fH) / static_cast<float>(rawH), static_cast<float>(fW) / static_cast<float>(rawW));
+    int newW = static_cast<int>(rawW * resize);
+    int newH = static_cast<int>(rawH * resize);
+    int crop_h = static_cast<int>(newH) - fH;
     int crop_w = std::max(0, newW - fW) / 2;
 
     Eigen::Matrix3f S = Eigen::Matrix3f::Identity();
@@ -269,8 +274,8 @@ std::vector<float> CameraDataStore::get_camera_info_vector() const
     S(1, 1) = resize;
 
     Eigen::Matrix3f T = Eigen::Matrix3f::Identity();
-    T(0, 2) = -float(crop_w);
-    T(1, 2) = -float(crop_h);
+    T(0, 2) = -static_cast<float>(crop_w);
+    T(1, 2) = -static_cast<float>(crop_h);
 
     Eigen::Matrix3f transform_mat = T * S;
 

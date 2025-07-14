@@ -1,3 +1,17 @@
+// Copyright 2025 TIER IV
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "autoware/camera_streampetr/network/network.hpp"
 
 #include <NvInfer.h>
@@ -5,6 +19,9 @@
 
 #include <fstream>
 #include <memory>
+#include <string>
+#include <vector>
+#include <utility>
 
 namespace autoware::camera_streampetr
 {
@@ -72,7 +89,7 @@ StreamPetrNetwork::StreamPetrNetwork(
   class_names_(class_names)
 {
   // Initialize TensorRT runtime
-  runtime_ = std::unique_ptr<IRuntime>{createInferRuntime(gLogger)};
+  runtime_ = std::unique_ptr<IRuntime>{nvinfer1::createInferRuntime(gLogger)};
   backbone_ = std::make_unique<SubNetwork>(engine_backbone_path, runtime_.get());
   pts_head_ = std::make_unique<SubNetwork>(engine_head_path, runtime_.get());
   pos_embed_ = std::make_unique<SubNetwork>(engine_position_embedding_path, runtime_.get());
@@ -89,8 +106,8 @@ StreamPetrNetwork::StreamPetrNetwork(
   pts_head_->bindings["pre_memory_timestamp"]->initialize_to_zeros(stream_);
 
   mem_.mem_stream = stream_;
-  mem_.pre_buf = (float *)pts_head_->bindings["pre_memory_timestamp"]->ptr;
-  mem_.post_buf = (float *)pts_head_->bindings["post_memory_timestamp"]->ptr;
+  mem_.pre_buf = static_cast<float *>(pts_head_->bindings["pre_memory_timestamp"]->ptr);
+  mem_.post_buf = static_cast<float *>(pts_head_->bindings["post_memory_timestamp"]->ptr);
 
   // events for measurement
   dur_backbone_ = std::make_unique<Duration>("backbone");
@@ -175,7 +192,6 @@ void StreamPetrNetwork::inference_detector(
     mem_.StepPost(stamp);
 
     if (use_temporal_) {
-      // TODO: CHECK IF TEMPORAL INFERENCE WORKS
       pts_head_->bindings["pre_memory_embedding"]->mov(
         pts_head_->bindings["post_memory_embedding"], stream_);
       pts_head_->bindings["pre_memory_reference_point"]->mov(
