@@ -56,7 +56,7 @@ if(BUILD_TESTING)
   target_include_directories(goal_planner_test_helper PUBLIC
     test/include
   )
-  
+
   file(GLOB_RECURSE TEST_SOURCES test/*.cpp)
   ament_add_ros_isolated_gtest(test_${PROJECT_NAME}
     ${TEST_SOURCES}

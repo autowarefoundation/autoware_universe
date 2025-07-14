@@ -63,7 +63,8 @@ protected:
 private:
   void initialize_geometric_pull_over_planner(const bool & is_forward, const bool & use_clothoid)
   {
-    auto parameters = GoalPlannerModuleManager::initGoalPlannerParameters(node_.get(), "goal_planner.");
+    auto parameters =
+      GoalPlannerModuleManager::initGoalPlannerParameters(node_.get(), "goal_planner.");
     // parameters.lane_departure_check_expansion_margin = 0.0;
 
     geometric_pull_over_ =
