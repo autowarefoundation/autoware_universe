@@ -24,8 +24,7 @@ endif()
 if(TENSORRT_VERSION VERSION_LESS 8.5)
     message(FATAL_ERROR
     "Unsupported version TensorRT ${TENSORRT_VERSION} detected. "
-    "This package requires TensorRT 8.5 or later."
-  )
+    "This package requires TensorRT 8.5 or later.")
 endif()
 
 # --- link targets ---
