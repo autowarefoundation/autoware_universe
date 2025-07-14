@@ -20,8 +20,8 @@
 #include <fstream>
 #include <memory>
 #include <string>
-#include <vector>
 #include <utility>
+#include <vector>
 
 namespace autoware::camera_streampetr
 {
