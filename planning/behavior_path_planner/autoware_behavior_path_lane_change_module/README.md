@@ -1097,7 +1097,6 @@ The footprints checked against the lane boundary include:
 
 1. Current Footprint: Based on the ego vehicle's current position.
 2. Future Footprint: Based on the ego vehicle's estimated position after traveling a distance, calculated as $𝑑_{est}=𝑣_{ego} \cdot \Delta_{𝑡}$, where
-
    - $v_{ego}$ is ego vehicle's current velocity
    - $\Delta_{t}$ is parameterized time constant value, `cancel.delta_time`.
 
