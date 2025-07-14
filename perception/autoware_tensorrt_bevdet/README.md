@@ -127,17 +127,14 @@ The `BEVDet` model was trained in `NuScenes` dataset for 20 epochs.
 6. Launch `tensorrt_bevdet_node`
 
    ```bash
-
    ros2 launch autoware_tensorrt_bevdet tensorrt_bevdet.launch.xml
-
-   # To launch 'tensorrt_bevdet_node' supporting nuScenes visualization
-
-   ros2 launch autoware_tensorrt_bevdet tensorrt_bevdet.launch.xml debug:=true
-
-   # By default precision mode is fp16, to launch with precision mode fp32
-
-   ros2 launch autoware_tensorrt_bevdet tensorrt_bevdet.launch.xml precision:=fp32
    ```
+   
+### Configuration
+
+The configuration file in `config/bevdet.param.yaml` can be modified to suit your needs:
+- Modify `precision` to `fp16` or `fp32`
+- Set `debug_mode` to `true` to enable publishing bounding box markers.
 
 ## Limitation
 
