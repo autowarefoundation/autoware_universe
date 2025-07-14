@@ -8,7 +8,7 @@ The core algorithm, named `BEVDet`, it unifies multi-view images into the perspe
 
 ### Cite
 
-<!-- cspell: ignore Junjie Huang, Guan Huang -->
+<!-- cspell: ignore Junjie Huang, Guan Huang, BEVPoolv2 -->
 
 - Junjie Huang, Guan Huang, "BEVPoolv2: A Cutting-edge Implementation of BEVDet Toward Deployment", [[ref](https://arxiv.org/pdf/2211.17111)]
 - [bevdet_vendor](https://github.com/autowarefoundation/bevdet_vendor) package are copied from the [original codes](https://github.com/LCH1238/bevdet-tensorrt-cpp/tree/one) (The TensorRT, C++ implementation by LCH1238) and modified.
@@ -61,7 +61,7 @@ The `BEVDet` model was trained in `NuScenes` dataset for 20 epochs.
 2. Include this [bevdet_vendor pr](https://github.com/autowarefoundation/bevdet_vendor/pull/1) in **src/universe/external/bevdet_vendor** as this supports fp16 precision and api support for Tensorrt 10.x.x
 
 3. To play ros2 bag of nuScenes data
-
+<!-- cspell: ignore trainval -->
    ```bash
 
    cd autoware/src
