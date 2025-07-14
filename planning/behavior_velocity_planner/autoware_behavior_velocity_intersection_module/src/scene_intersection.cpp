@@ -1097,7 +1097,9 @@ void reactRTCApprovalByDecisionResult(
         true /*is_driving_forward*/, 0.0, 0.0 /*shift distance*/, "collision");
     }
   }
-  if (!rtc_occlusion_approved && decision_result.temporal_stop_before_attention_required) {
+  if (
+    !rtc_occlusion_approved && (decision_result.temporal_stop_before_attention_required ||
+                                planner_param.occlusion.request_approval_wo_traffic_light)) {
     const auto stopline_idx = decision_result.occlusion_stopline_idx;
     planning_utils::setVelocityFromIndex(stopline_idx, 0.0, path);
     debug_data->occlusion_stop_wall_pose =
