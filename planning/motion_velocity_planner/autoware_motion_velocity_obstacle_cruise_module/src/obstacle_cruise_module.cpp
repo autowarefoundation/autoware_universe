@@ -204,6 +204,7 @@ std::vector<CruiseObstacle> ObstacleCruiseModule::filter_cruise_obstacle_for_pre
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   const auto & current_pose = odometry.pose.pose;
+  const auto & current_vel = odometry.twist.twist;
 
   const auto & p = trajectory_polygon_collision_check;
   const auto decimated_traj_points = utils::decimate_trajectory_points_from_ego(
@@ -225,7 +226,26 @@ std::vector<CruiseObstacle> ObstacleCruiseModule::filter_cruise_obstacle_for_pre
       continue;
     }
 
-    // 1.2. Check if the rough lateral distance is smaller than the threshold.
+    // 1.2. Check if the obstacle is out of a filtering distance determined by ego velocity,
+    // obstacle velocity, ego acceleration and ego_jerk.
+    // TODO(xiaoyu-wang): introduce current ego acceleration to this function.
+    const double obstacle_filter_ego_current_acc = 0.0;
+    const double obstacle_filter_ego_planning_dec = 0.0;
+    auto obstacle_filter_dist = autoware::motion_utils::calcDecelDistWithJerkAndAccConstraints(
+      current_vel.linear.x, object->get_lon_vel_relative_to_traj(traj_points),
+      obstacle_filter_ego_current_acc, obstacle_filter_ego_planning_dec,
+      obstacle_filtering_param_.obstacle_filter_ego_jerk,
+      -obstacle_filtering_param_.obstacle_filter_ego_jerk);
+    if (obstacle_filter_dist > obstacle_filtering_param_.obstacle_filter_dist_max_range) {
+      obstacle_filter_dist = obstacle_filtering_param_.obstacle_filter_dist_max_range;
+    } else if (obstacle_filter_dist < obstacle_filtering_param_.obstacle_filter_dist_min_range) {
+      obstacle_filter_dist = obstacle_filtering_param_.obstacle_filter_dist_min_range;
+    }
+    if (lon_dist_from_ego_to_obj > obstacle_filter_dist) {
+      continue;
+    }
+
+    // 1.3. Check if the rough lateral distance is smaller than the threshold.
     const double min_lat_dist_to_traj_poly =
       utils::calc_possible_min_dist_from_obj_to_traj_poly(object, traj_points, vehicle_info);
     if (obstacle_filtering_param_.max_lat_margin < min_lat_dist_to_traj_poly) {
