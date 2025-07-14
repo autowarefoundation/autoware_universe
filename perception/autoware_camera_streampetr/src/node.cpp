@@ -157,9 +157,10 @@ void StreamPetrNode::camera_info_callback(
   data_store_->update_camera_info(camera_id, input_camera_info_msg);
 }
 
-bool StreamPetrNode::prestep(){
+bool StreamPetrNode::prestep()
+{
   const auto objects_sub_count =
-  pub_objects_->get_subscription_count() + pub_objects_->get_intra_process_subscription_count();
+    pub_objects_->get_subscription_count() + pub_objects_->get_intra_process_subscription_count();
   if (objects_sub_count < 1) {
     return false;  // No subscribers, skip processing
   }
@@ -182,19 +183,17 @@ bool StreamPetrNode::prestep(){
 void StreamPetrNode::camera_image_callback(
   const Image::ConstSharedPtr & input_camera_image_msg, const int camera_id)
 {
-  if(!prestep())
-    return;
+  if (!prestep()) return;
 
   data_store_->update_camera_image(camera_id, input_camera_image_msg);
-  
+
   if (camera_id == anchor_camera_id_) step();
 }
 
 void StreamPetrNode::camera_image_callback(
   const CompressedImage::ConstSharedPtr & input_camera_image_msg, const int camera_id)
 {
-  if(!prestep())
-    return;
+  if (!prestep()) return;
 
   data_store_->update_camera_image_compressed(camera_id, input_camera_image_msg);
 
