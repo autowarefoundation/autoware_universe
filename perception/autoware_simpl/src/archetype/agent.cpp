@@ -43,7 +43,7 @@ std::vector<size_t> to_label_ids(const std::vector<std::string> & label_names)
     } else {
       std::ostringstream msg;
       msg << "Unexpected agent label name: " << name;
-      throw SimplException(SimplError_t::InvalidValue, msg.str());
+      throw SimplException(SimplError_t::INVALID_VALUE, msg.str());
     }
   }
   return output;

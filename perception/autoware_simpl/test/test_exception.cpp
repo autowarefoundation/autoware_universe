@@ -24,7 +24,7 @@ using autoware::simpl::archetype::SimplException;
 
 TEST(TestSimplException, MessageFromErrorObject)
 {
-  SimplError error(SimplError_t::TensorRT, "Failed to initialize engine");
+  SimplError error(SimplError_t::TENSORRT, "Failed to initialize engine");
   try {
     throw SimplException(error);
   } catch (const SimplException & e) {
@@ -35,7 +35,7 @@ TEST(TestSimplException, MessageFromErrorObject)
 TEST(TestSimplException, MessageFromKindAndText)
 {
   try {
-    throw SimplException(SimplError_t::Cuda, "CUDA device unavailable");
+    throw SimplException(SimplError_t::CUDA, "CUDA device unavailable");
   } catch (const SimplException & e) {
     EXPECT_STREQ(e.what(), "[CUDA]: CUDA device unavailable");
   }
@@ -44,7 +44,7 @@ TEST(TestSimplException, MessageFromKindAndText)
 TEST(TestSimplException, InvalidValueMessage)
 {
   try {
-    throw SimplException(SimplError_t::InvalidValue, "Unsupported type");
+    throw SimplException(SimplError_t::INVALID_VALUE, "Unsupported type");
   } catch (const SimplException & e) {
     EXPECT_STREQ(e.what(), "[InvalidValue]: Unsupported type");
   }
@@ -53,7 +53,7 @@ TEST(TestSimplException, InvalidValueMessage)
 TEST(TestSimplException, UnknownErrorKind)
 {
   try {
-    throw SimplException(SimplError_t::Unknown, "Something went wrong");
+    throw SimplException(SimplError_t::UNKNOWN, "Something went wrong");
   } catch (const SimplException & e) {
     EXPECT_STREQ(e.what(), "[UNKNOWN]: Something went wrong");
   }
@@ -61,8 +61,8 @@ TEST(TestSimplException, UnknownErrorKind)
 
 TEST(SimplErrorTest, DefaultConstructor)
 {
-  SimplError error(SimplError_t::InvalidValue);
-  EXPECT_EQ(error.kind, SimplError_t::InvalidValue);
+  SimplError error(SimplError_t::INVALID_VALUE);
+  EXPECT_EQ(error.kind, SimplError_t::INVALID_VALUE);
   EXPECT_EQ(error.msg, "");
 }
 }  // namespace autoware::simpl::test

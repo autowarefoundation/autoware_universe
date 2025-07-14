@@ -45,7 +45,7 @@ public:
       std::ostringstream msg;
       msg << "Invalid size of agent tensor: " << tensor_.size()
           << " != " << num_agent * num_past * num_attribute;
-      throw SimplException(SimplError_t::InvalidValue, msg.str());
+      throw SimplException(SimplError_t::INVALID_VALUE, msg.str());
     }
   }
 
@@ -91,7 +91,7 @@ public:
       std::ostringstream msg;
       msg << "Invalid size of map tensor: " << tensor_.size()
           << " != " << num_polyline * num_point * num_attribute;
-      throw SimplException(SimplError_t::InvalidValue, msg.str());
+      throw SimplException(SimplError_t::INVALID_VALUE, msg.str());
     }
   }
 

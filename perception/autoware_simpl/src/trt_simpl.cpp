@@ -64,7 +64,7 @@ TrtSimpl::TrtSimpl(const tensorrt_common::TrtCommonConfig & config)
 
   if (!trt_common_->setup(std::move(profile_dims), std::move(network_io))) {
     throw archetype::SimplException(
-      archetype::SimplError_t::TensorRT, "Failed to setup TensorRT engine.");
+      archetype::SimplError_t::TENSORRT, "Failed to setup TensorRT engine.");
   }
 
   CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
@@ -78,7 +78,7 @@ archetype::Result<TrtSimpl::output_type> TrtSimpl::do_inference(
   try {
     init_cuda_ptr(agent_tensor, map_tensor, rpe_tensor);
   } catch (const std::runtime_error & e) {
-    return archetype::Err<output_type>(archetype::SimplError_t::Cuda, e.what());
+    return archetype::Err<output_type>(archetype::SimplError_t::CUDA, e.what());
   }
 
   // function to compute the size of elements
@@ -106,12 +106,12 @@ archetype::Result<TrtSimpl::output_type> TrtSimpl::do_inference(
     out_trajectory_d_.get()};
   if (!trt_common_->setTensorsAddresses(tensors)) {
     return archetype::Err<output_type>(
-      archetype::SimplError_t::TensorRT, "Failed to set tensor addresses");
+      archetype::SimplError_t::TENSORRT, "Failed to set tensor addresses");
   }
 
   // Execute inference
   if (!trt_common_->enqueueV3(stream_)) {
-    return archetype::Err<output_type>(archetype::SimplError_t::TensorRT, "Failed to enqueue.");
+    return archetype::Err<output_type>(archetype::SimplError_t::TENSORRT, "Failed to enqueue.");
   }
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
@@ -127,7 +127,7 @@ archetype::Result<TrtSimpl::output_type> TrtSimpl::do_inference(
       trajectory_h.data(), out_trajectory_d_.get(), sizeof(float) * trajectory_size,
       cudaMemcpyDeviceToHost));
   } catch (const std::runtime_error & e) {
-    return archetype::Err<output_type>(archetype::SimplError_t::Cuda, e.what());
+    return archetype::Err<output_type>(archetype::SimplError_t::CUDA, e.what());
   }
 
   return archetype::Ok<output_type>({score_h, trajectory_h});

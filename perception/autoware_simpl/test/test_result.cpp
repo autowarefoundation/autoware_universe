@@ -36,7 +36,7 @@ TEST(TestResult, OkValueHoldsCorrectly)
 
 TEST(TestResult, ErrWithSimplErrorThrowsException)
 {
-  SimplError error(SimplError_t::InvalidValue, "Invalid config");
+  SimplError error(SimplError_t::INVALID_VALUE, "Invalid config");
   auto result = Err<std::string>(error);
 
   EXPECT_FALSE(result.is_ok());
@@ -54,7 +54,7 @@ TEST(TestResult, ErrWithSimplErrorThrowsException)
 
 TEST(TestResult, ErrWithErrorKindOnly)
 {
-  auto result = Err<int>(SimplError_t::Cuda);
+  auto result = Err<int>(SimplError_t::CUDA);
 
   EXPECT_FALSE(result.is_ok());
   EXPECT_THROW(
@@ -71,7 +71,7 @@ TEST(TestResult, ErrWithErrorKindOnly)
 
 TEST(TestResult, ErrWithKindAndMessage)
 {
-  auto result = Err<float>(SimplError_t::TensorRT, "engine build failed");
+  auto result = Err<float>(SimplError_t::TENSORRT, "engine build failed");
 
   EXPECT_FALSE(result.is_ok());
   EXPECT_THROW(

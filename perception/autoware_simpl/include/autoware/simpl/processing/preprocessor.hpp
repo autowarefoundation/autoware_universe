@@ -57,7 +57,7 @@ struct AbstractMetadata
   {
     if (centers.size() != vectors.size()) {
       throw archetype::SimplException(
-        archetype::SimplError_t::InvalidValue, "Size of node centers and vectors must be same.");
+        archetype::SimplError_t::INVALID_VALUE, "Size of node centers and vectors must be same.");
     }
   }
 

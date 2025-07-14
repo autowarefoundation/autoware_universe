@@ -24,10 +24,10 @@ namespace autoware::simpl::archetype
  * @brief An enumerate to represent error kind.
  */
 enum class SimplError_t {
-  TensorRT = 0,      //!< TensorRT related error.
-  Cuda = 1,          //!< CUDA related error.
-  InvalidValue = 2,  //!< Invalid value error.
-  Unknown = 3,       //!< Unknown error.
+  TENSORRT = 0,       //!< TensorRT related error.
+  CUDA = 1,           //!< CUDA related error.
+  INVALID_VALUE = 2,  //!< Invalid value error.
+  UNKNOWN = 3,        //!< Unknown error.
 };
 
 /**
@@ -89,11 +89,11 @@ private:
    */
   void append_message_header() noexcept
   {
-    if (error_.kind == SimplError_t::TensorRT) {
+    if (error_.kind == SimplError_t::TENSORRT) {
       msg_ = "[TensorRT]: " + error_.msg;
-    } else if (error_.kind == SimplError_t::Cuda) {
+    } else if (error_.kind == SimplError_t::CUDA) {
       msg_ = "[CUDA]: " + error_.msg;
-    } else if (error_.kind == SimplError_t::InvalidValue) {
+    } else if (error_.kind == SimplError_t::INVALID_VALUE) {
       msg_ = "[InvalidValue]: " + error_.msg;
     } else {
       msg_ = "[UNKNOWN]: " + error_.msg;
