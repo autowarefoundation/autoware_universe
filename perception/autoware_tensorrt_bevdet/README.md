@@ -50,11 +50,7 @@ The core algorithm, named `BEVDet`, it unifies multi-view images into the perspe
 
 ### Trained Models
 
-Download the [bevdet_one_lt_d.onnx](https://drive.google.com/file/d/1eMGJfdCVlDPBphBTjMcnIh3wdW7Q7WZB/view?usp=sharing) of trained models in the below path:
-
-```bash
-$HOME/autoware_data/tensorrt_bevdet
-```
+Download the trained models with the instructions in [Autoware artifacts](https://github.com/autowarefoundation/autoware/tree/main/ansible/roles/artifacts#readme).
 
 The `BEVDet` model was trained in `NuScenes` dataset for 20 epochs.
 
