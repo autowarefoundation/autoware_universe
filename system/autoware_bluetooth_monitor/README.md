@@ -49,7 +49,6 @@ L2ping is only allowed for root by default, so this package provides the followi
 {{ json_to_markdown("system/autoware_bluetooth_monitor/schema/bluetooth_monitor.schema.json") }}
 
 - `rtt_warn`
-
   - **0.00(zero)**: Disable checking RTT
   - **otherwise**: Check RTT with specified seconds
 

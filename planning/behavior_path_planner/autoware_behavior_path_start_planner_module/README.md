@@ -165,7 +165,6 @@ The approach to collision safety is divided into two main components: generating
 - **Static obstacle clearance from the path**: This involves verifying that a sufficient margin around static obstacles is maintained. The process includes creating a vehicle-sized footprint from the current position to the pull-out endpoint, which can be adjusted via parameters. The distance to static obstacle polygons is then calculated. If this distance is below a specified threshold, the path is deemed unsafe. Threshold levels (e.g., [2.0, 1.0, 0.5, 0.1]) can be configured, and the system searches for paths that meet the highest possible threshold based on a set search priority explained in following section, ensuring the selection of the safe path based on the policy. If no path meets the minimum threshold, it's determined that no safe path is available.
 
 - **Clearance from stationary objects**: Maintaining an adequate distance from stationary objects positioned in front of and behind the vehicle is imperative for safety. Despite the path and stationary objects having a confirmed margin, the path is deemed unsafe if the distance from the shift start position to a front stationary object falls below `collision_check_margin_from_front_object` meters, or if the distance to a rear stationary object is shorter than `back_objects_collision_check_margin` meters.
-
   - Why is a margin from the front object necessary?
     Consider a scenario in a "geometric pull out path" where the clearance from the path to a static obstacle is minimal, and there is a stopped vehicle ahead. In this case, although the path may meet safety standards and thus be generated, a concurrently operating avoidance module might deem it impossible to avoid the obstacle, potentially leading to vehicle deadlock. To ensure there is enough distance for avoidance maneuvers, the distance to the front obstacle is assessed. Increasing this parameter can prevent immobilization within the avoidance module but may also lead to the frequent generation of backward paths or geometric pull out path, resulting in paths that may seem unnatural to humans.
 
@@ -175,7 +174,6 @@ The approach to collision safety is divided into two main components: generating
 Here's the expression of the steps start pose searching steps, considering the `collision_check_margins` is set at [2.0, 1.0, 0.5, 0.1] as example. The process is as follows:
 
 1. **Generating start pose candidates**
-
    - Set the current position of the vehicle as the base point.
    - Determine the area of consideration behind the vehicle up to the `max_back_distance`.
    - Generate candidate points for the start pose in the backward direction at intervals defined by `backward_search_resolution`.
@@ -184,18 +182,15 @@ Here's the expression of the steps start pose searching steps, considering the `
    ![start pose candidate](images/start_pose_candidate.drawio.svg){width=1100}
 
 2. **Starting search at maximum margin**
-
    - Begin the search with the largest threshold (e.g., 2.0 meters).
    - Evaluate each start pose candidate to see if it maintains a margin of more than 2.0 meters.
    - Simultaneously, verify that the path generated from that start pose meets other necessary criteria (e.g., path deviation check).
    - Following the search priority described later, evaluate each in turn and adopt the start pose if it meets the conditions.
 
 3. **Repeating search according to threshold levels**
-
    - If no start pose meeting the conditions is found, lower the threshold to the next level (e.g., 1.0 meter) and repeat the search.
 
 4. **Continuing the search**
-
    - Continue the search until a start pose that meets the conditions is found, or the threshold level reaches the minimum value (e.g., 0.1 meter).
    - The aim of this process is to find a start pose that not only secures as large a margin as possible but also satisfies the conditions required for the path.
 

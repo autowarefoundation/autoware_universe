@@ -18,23 +18,19 @@ This module is activated when there is traffic light in ego lane.
 #### Algorithm
 
 1. Obtains a traffic light mapped to the route and a stop line correspond to the traffic light from a map information.
-
    - If a corresponding traffic light signal have never been found, it treats as a signal to pass.
 
    - If a corresponding traffic light signal is found but timed out, it treats as a signal to stop.
 
 2. Uses the highest reliability one of the traffic light recognition result and if the color of that was not green or corresponding arrow signal, generates a stop point.
-
    - If an elapsed time to receive stop signal is less than `stop_time_hysteresis`, it treats as a signal to pass. This feature is to prevent chattering.
 
 3. When vehicle current velocity is
-
    - higher than `yellow_light_stop_velocity` m/s ⇒ pass judge(using next slide formula)
 
    - lower than `yellow_light_stop_velocity` m/s ⇒ stop
 
 4. When it to be judged that vehicle can’t stop before stop line, autoware chooses one of the following behaviors
-
    - "can pass through" stop line during yellow lamp => pass
 
    - "can’t pass through" stop line during yellow lamp => emergency stop
@@ -50,7 +46,6 @@ This module is activated when there is traffic light in ego lane.
 - dilemma zone
 
   It’s called “dilemma zone” which satisfies following conditions:
-
   - vehicle can’t pass through stop line during yellow lamp.(right side of the yellow lamp line)
 
   - vehicle can’t stop under deceleration and jerk limit.(left side of the pass judge curve)
@@ -60,7 +55,6 @@ This module is activated when there is traffic light in ego lane.
 - optional zone
 
   It’s called “optional zone” which satisfies following conditions:
-
   - vehicle can pass through stop line during yellow lamp.(left side of the yellow lamp line)
 
   - vehicle can stop under deceleration and jerk limit.(right side of the pass judge curve)
