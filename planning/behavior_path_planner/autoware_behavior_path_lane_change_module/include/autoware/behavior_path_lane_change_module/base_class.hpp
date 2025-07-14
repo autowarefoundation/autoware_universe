@@ -100,7 +100,7 @@ public:
 
   virtual bool isAbleToReturnCurrentLane() const = 0;
 
-  virtual bool is_near_terminal() const = 0;
+  virtual bool is_near_terminal_end() const = 0;
 
   virtual LaneChangePath getLaneChangePath() const = 0;
 

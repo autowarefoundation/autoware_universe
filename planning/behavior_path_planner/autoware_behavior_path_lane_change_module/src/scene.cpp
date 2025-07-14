@@ -847,7 +847,7 @@ bool NormalLaneChange::isAbleToReturnCurrentLane() const
   return true;
 }
 
-bool NormalLaneChange::is_near_terminal() const
+bool NormalLaneChange::is_near_terminal_end() const
 {
   if (!common_data_ptr_ || !common_data_ptr_->is_data_available()) {
     return true;
