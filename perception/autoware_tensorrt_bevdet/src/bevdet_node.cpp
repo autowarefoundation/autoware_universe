@@ -44,7 +44,8 @@ TRTBEVDetNode::TRTBEVDetNode(const rclcpp::NodeOptions & node_options)
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-  score_threshold_ = static_cast<float>(this->declare_parameter<double>("post_process_params.score_threshold"));
+  score_threshold_ =
+    static_cast<float>(this->declare_parameter<double>("post_process_params.score_threshold"));
 
   model_config_ = this->declare_parameter<std::string>("model_config");
 
