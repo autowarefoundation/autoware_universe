@@ -26,27 +26,22 @@ explicit TimeKeeper(Reporters... reporters);
 ##### Methods
 
 - `void add_reporter(std::ostream * os);`
-
   - Adds a reporter to output processing times to an `ostream`.
   - `os`: Pointer to the `ostream` object.
 
 - `void add_reporter(rclcpp::Publisher<ProcessingTimeDetail>::SharedPtr publisher);`
-
   - Adds a reporter to publish processing times to an `rclcpp` publisher.
   - `publisher`: Shared pointer to the `rclcpp` publisher.
 
 - `void add_reporter(rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher);`
-
   - Adds a reporter to publish processing times to an `rclcpp` publisher with `std_msgs::msg::String`.
   - `publisher`: Shared pointer to the `rclcpp` publisher.
 
 - `void start_track(const std::string & func_name);`
-
   - Starts tracking the processing time of a function.
   - `func_name`: Name of the function to be tracked.
 
 - `void end_track(const std::string & func_name);`
-
   - Ends tracking the processing time of a function.
   - `func_name`: Name of the function to end tracking.
 
