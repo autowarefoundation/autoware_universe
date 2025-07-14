@@ -1,3 +1,17 @@
+// Copyright 2025 TIER IV
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #ifndef AUTOWARE__CAMERA_STREAMPETR__NETWORK__NETWORK_HPP_
 #define AUTOWARE__CAMERA_STREAMPETR__NETWORK__NETWORK_HPP_
 
@@ -17,8 +31,6 @@
 #include <tf2_ros/transform_listener.h>
 
 #include <map>
-#include <memory>
-#include <string>
 
 // From NVIDIA/DL4AGX
 #include "autoware/camera_streampetr/network/memory.cuh"
@@ -44,8 +56,13 @@
 
 namespace autoware::camera_streampetr
 {
-using namespace nvinfer1;
-using namespace cuda;
+using nvinfer1::DataType;
+using nvinfer1::Dims;
+using nvinfer1::ICudaEngine;
+using nvinfer1::IExecutionContext;
+using nvinfer1::ILogger;
+using nvinfer1::IRuntime;
+using cuda::Tensor;
 
 class SubNetwork
 {
@@ -65,7 +82,7 @@ public:
       throw std::runtime_error("Error opening engine file: " + engine_path);
     }
     engine_file.seekg(0, engine_file.end);
-    long int fsize = engine_file.tellg();
+    int64_t fsize = engine_file.tellg();
     engine_file.seekg(0, engine_file.beg);
 
     // Read the engine file into a buffer
@@ -147,10 +164,10 @@ public:
 class Logger : public ILogger
 {
 public:
-  void log(Severity severity, const char * msg) noexcept override
+  void log(ILogger::Severity severity, const char * msg) noexcept override
   {
     // Only print error messages
-    if (severity == Severity::kERROR) {
+    if (severity == ILogger::Severity::kERROR) {
       std::cerr << msg << std::endl;
     }
   }

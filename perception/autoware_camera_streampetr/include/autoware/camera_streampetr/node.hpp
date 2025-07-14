@@ -35,10 +35,7 @@
 #include <tf2_ros/transform_listener.h>
 
 #include <map>
-#include <memory>
-#include <string>
 
-// From NVIDIA/DL4AGX
 #include <NvInferRuntime.h>
 #include <cuda_fp16.h>
 #include <cuda_runtime_api.h>
@@ -51,7 +48,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-// From NVIDIA/DL4AGX
+#include <utility>
 
 #include "autoware/camera_streampetr/network/camera_data_store.hpp"
 #include "autoware/camera_streampetr/network/network.hpp"
