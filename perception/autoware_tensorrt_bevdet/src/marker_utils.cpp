@@ -30,7 +30,6 @@ visualization_msgs::msg::MarkerArray createMarkerArray(
   const autoware_perception_msgs::msg::DetectedObjects & detected_objects)
 {
   visualization_msgs::msg::MarkerArray marker_array;
-  int id = 0;
 
   // Define NuScenes-like color mapping
   std::map<uint8_t, std::array<float, 4>> class_colors;
@@ -56,12 +55,13 @@ visualization_msgs::msg::MarkerArray createMarkerArray(
   std::array<float, 4> default_color = {1.0f, 0.0f, 1.0f, 1.0f};
 
   // First, add a deletion marker to clear all previous markers
+  int id = 0;
   visualization_msgs::msg::Marker deletion_marker;
   deletion_marker.header = detected_objects.header;
 
   deletion_marker.header.frame_id = "baselink";
   deletion_marker.ns = "bevdet_boxes";
-  deletion_marker.id = 0;
+  deletion_marker.id = id++;
   deletion_marker.action = visualization_msgs::msg::Marker::DELETEALL;
   marker_array.markers.push_back(deletion_marker);
 
