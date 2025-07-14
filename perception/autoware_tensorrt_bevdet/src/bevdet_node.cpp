@@ -28,10 +28,10 @@ TRTBEVDetNode::TRTBEVDetNode(const rclcpp::NodeOptions & node_options)
 : rclcpp::Node("tensorrt_bevdet_node", node_options)
 {
   // Get precision parameter
-  precision_ = this->declare_parameter<std::string>("precision", "fp16");
+  precision_ = this->declare_parameter<std::string>("precision");
   RCLCPP_INFO(this->get_logger(), "Using precision mode: %s", precision_.c_str());
 
-  debug_mode_ = this->declare_parameter<bool>("debug");
+  debug_mode_ = this->declare_parameter<bool>("debug_mode");
 
   // Only start camera info subscription and tf listener at the beginning
   img_n_ = this->declare_parameter<int>("data_params.CAM_NUM", 6);  // camera num 6
@@ -44,11 +44,11 @@ TRTBEVDetNode::TRTBEVDetNode(const rclcpp::NodeOptions & node_options)
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-  score_threshold_ = this->declare_parameter<float>("post_process_params.score_threshold", 0.2);
+  score_threshold_ = static_cast<float>(this->declare_parameter<double>("post_process_params.score_threshold"));
 
-  model_config_ = this->declare_parameter("model_config", "bevdet_r50_4dlongterm_depth.yaml");
+  model_config_ = this->declare_parameter<std::string>("model_config");
 
-  onnx_file_ = this->declare_parameter<std::string>("onnx_path", "bevdet_one_lt_d.onnx");
+  onnx_file_ = this->declare_parameter<std::string>("onnx_path");
 
   // Generate engine file name based on precision
   std::string engine_file_base =
