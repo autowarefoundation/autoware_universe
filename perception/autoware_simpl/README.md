@@ -61,7 +61,26 @@ colcon test --event-handlers console_cohesion+ --packages-select autoware_simpl
 
 ## Assumptions / Known limits
 
-### Number of predicted agents
+### Agent to be Published
+
+Note that only agents whose label is contained in `preprocess.labels` will be published.
+
+For example, if `preprocess.labels` is set to `["VEHICLE", "PEDESTRIAN"]`, only agents with labels "ObjectClassification.CAR" and "ObjectClassification.PEDESTRIAN" will be published.
+
+Here is the table of Autoware labels and their corresponding labels:
+
+| Autoware Label                     | Correspondence  |
+| ---------------------------------- | --------------- |
+| `ObjectClassification::CAR`        | `VEHICLE`       |
+| `ObjectClassification::PEDESTRIAN` | `PEDESTRIAN`    |
+| `ObjectClassification::BICYCLE`    | `CYCLIST`       |
+| `ObjectClassification::MOTORCYCLE` | `MOTORCYCLIST`  |
+| `ObjectClassification::TRUCK`      | `LARGE_VEHICLE` |
+| `ObjectClassification::TRAILER`    | `LARGE_VEHICLE` |
+| `ObjectClassification::BUS`        | `LARGE_VEHICLE` |
+| `ObjectClassification::UNKNOWN`    | `UNKNOWN`       |
+
+### Maximum Number of Predictable Agents
 
 We have not supported the dynamic shape inference yet. Therefore, the number of predicted agents must be fixed as `preprocess.max_num_agent` ($N$).
 This value is determined when exporting ONNX.
