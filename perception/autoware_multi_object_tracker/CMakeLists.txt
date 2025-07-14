@@ -76,16 +76,10 @@ rclcpp_components_register_node(${PROJECT_NAME}
 if(BUILD_TESTING)
   find_package(ament_cmake_ros REQUIRED)
   find_package(autoware_perception_msgs REQUIRED)
- find_package(tf2 REQUIRED)
-find_package(tf2_ros REQUIRED)
-  find_package(tf2_geometry_msgs REQUIRED)
   list(APPEND AMENT_LINT_AUTO_EXCLUDE ament_cmake_uncrustify)
 
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
-
-  find_package(rosbag2_cpp REQUIRED)
-  find_package(rosbag2_storage REQUIRED)
 
   file(GLOB_RECURSE test_files test/test_multi_object_tracker.cpp
     test/test_bench.cpp
@@ -96,11 +90,6 @@ find_package(tf2_ros REQUIRED)
   target_link_libraries(test_multi_object_tracker
   ${PROJECT_NAME}
   ${autoware_perception_msgs_LIBRARIES}
-  rosbag2_cpp::rosbag2_cpp
-  rosbag2_storage::rosbag2_storage
-  tf2::tf2
-  tf2_ros::tf2_ros
-  tf2_geometry_msgs::tf2_geometry_msgs
   )
 endif()
 

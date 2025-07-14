@@ -16,16 +16,18 @@
 #ifndef TEST_UTILS_HPP_
 #define TEST_UTILS_HPP_
 
-#include "autoware/multi_object_tracker/object_model/types.hpp"
-
+#include <autoware/multi_object_tracker/object_model/types.hpp>
 #include <rosbag2_cpp/reader.hpp>
 #include <rosbag2_cpp/writer.hpp>
 #include <rosbag2_cpp/writers/sequential_writer.hpp>
 #include <rosbag2_storage/serialized_bag_message.hpp>
 
+#include <autoware_perception_msgs/msg/detected_objects.hpp>
+
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <iostream>
 #include <memory>
 #include <numeric>
 #include <string>

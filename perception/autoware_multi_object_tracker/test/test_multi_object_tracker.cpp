@@ -21,7 +21,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include <autoware_perception_msgs/msg/detail/detected_objects__struct.hpp>
+#include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <autoware_perception_msgs/msg/shape.hpp>
 #include <autoware_perception_msgs/msg/tracked_object.hpp>
@@ -47,19 +47,25 @@ using std::chrono::microseconds;
 using std::chrono::milliseconds;
 using Clock = std::chrono::high_resolution_clock;
 
+template <typename Func>
+double measureTimeMs(Func && func)
+{
+  const auto start = Clock::now();
+  func();
+  const auto end = Clock::now();
+  return std::chrono::duration<double, std::milli>(end - start).count();
+}
+
 FunctionTimings runIterations(
   int num_iterations, const TrackingScenarioConfig & config, bool print_frame_stats = false,
   bool write_bag = false)
 {
   RosbagWriterHelper writer(write_bag);  // Initialize rosbag writer if enabled
 
-  using Clock = std::chrono::high_resolution_clock;
-
-  autoware::multi_object_tracker::TrackerProcessorConfig processor_config = createProcessorConfig();
-  autoware::multi_object_tracker::AssociatorConfig associator_config = createAssociatorConfig();
+  auto processor_config = createProcessorConfig();
+  const auto associator_config = createAssociatorConfig();
   processor_config.max_dist_matrix = associator_config.max_dist_matrix;
-  std::vector<autoware::multi_object_tracker::types::InputChannel> input_channels_config =
-    createInputChannelsConfig();
+  const auto input_channels_config = createInputChannelsConfig();
 
   auto processor = std::make_unique<autoware::multi_object_tracker::TrackerProcessor>(
     processor_config, associator_config, input_channels_config);
@@ -69,66 +75,31 @@ FunctionTimings runIterations(
 
   rclcpp::Clock clock;
   rclcpp::Time current_time = rclcpp::Time(clock.now(), RCL_ROS_TIME);
+  std::unordered_map<int, int> direct_assignment;
+  std::unordered_map<int, int> reverse_assignment;
 
   for (int i = 0; i < num_iterations; ++i) {
+    direct_assignment.clear();
+    reverse_assignment.clear();
     // Advance simulation time (10Hz)
     current_time += 100ms;
     auto detections = simulator.generateDetections(current_time);
     detections = autoware::multi_object_tracker::uncertainty::modelUncertainty(detections);
 
-    auto total_start = Clock::now();
+    const auto total_start = Clock::now();
 
     // Individual function timing
-    auto predict_start = Clock::now();
-    processor->predict(current_time, std::nullopt);
-    auto predict_end = Clock::now();
-    auto predict_duration =
-      std::chrono::duration_cast<std::chrono::microseconds>(predict_end - predict_start).count() /
-      1000.0;
-    timings.predict.times.push_back(predict_duration);
+    timings.predict.times.push_back(
+      measureTimeMs([&]() { processor->predict(current_time, std::nullopt); }));
+    timings.associate.times.push_back(measureTimeMs(
+      [&]() { processor->associate(detections, direct_assignment, reverse_assignment); }));
+    timings.update.times.push_back(
+      measureTimeMs([&]() { processor->update(detections, direct_assignment); }));
+    timings.prune.times.push_back(measureTimeMs([&]() { processor->prune(current_time); }));
+    timings.spawn.times.push_back(
+      measureTimeMs([&]() { processor->spawn(detections, reverse_assignment); }));
 
-    std::unordered_map<int, int> direct_assignment, reverse_assignment;
-
-    auto associate_start = Clock::now();
-    processor->associate(detections, direct_assignment, reverse_assignment);
-    auto associate_end = Clock::now();
-    auto associate_duration =
-      std::chrono::duration_cast<std::chrono::microseconds>(associate_end - associate_start)
-        .count() /
-      1000.0;
-    timings.associate.times.push_back(associate_duration);
-
-    // std::cout << "DEBUG: Starting update step..." << std::endl;
-    auto update_start = Clock::now();
-    processor->update(detections, direct_assignment);
-    auto update_end = Clock::now();
-    auto update_duration =
-      std::chrono::duration_cast<std::chrono::microseconds>(update_end - update_start).count() /
-      1000.0;
-    timings.update.times.push_back(update_duration);
-    // std::cout << "DEBUG: Update step completed successfully" << std::endl;
-
-    // std::cout << "DEBUG: Starting prune step..." << std::endl;
-    auto prune_start = Clock::now();
-    processor->prune(current_time);
-    auto prune_end = Clock::now();
-    auto prune_duration =
-      std::chrono::duration_cast<std::chrono::microseconds>(prune_end - prune_start).count() /
-      1000.0;
-    timings.prune.times.push_back(prune_duration);
-    // std::cout << "DEBUG: Prune step completed successfully" << std::endl;
-
-    // std::cout << "DEBUG: Starting spawn step..." << std::endl;
-    auto spawn_start = Clock::now();
-    processor->spawn(detections, reverse_assignment);
-    auto spawn_end = Clock::now();
-    auto spawn_duration =
-      std::chrono::duration_cast<std::chrono::microseconds>(spawn_end - spawn_start).count() /
-      1000.0;
-    timings.spawn.times.push_back(spawn_duration);
-    // std::cout << "DEBUG: Spawn step completed successfully" << std::endl;
-
-    auto total_end = Clock::now();
+    const auto total_end = Clock::now();
     auto total_duration =
       std::chrono::duration_cast<std::chrono::microseconds>(total_end - total_start).count() /
       1000.0;
@@ -149,27 +120,19 @@ FunctionTimings runIterations(
     writer.write(
       latest_tracked_objects, "/perception/object_recognition/tracking/objects", current_time);
   }
+  std::cout << "=== Performance Summary ===" << std::endl;
   return timings;
 }
 
 void runPerformanceTest()
 {
-  TrackingScenarioConfig params;
-  FunctionTimings timings = runIterations(500, params, true, false);
-
-  // Calculate all statistics
-  timings.predict.calculate();
-  timings.associate.calculate();
-  timings.update.calculate();
-  timings.prune.calculate();
-  timings.spawn.calculate();
-  timings.total.calculate();
-
-  // Print summary statistics
-  std::cout << "\n=== Overall Performance Statistics ===" << std::endl;
+  const TrackingScenarioConfig params;
+  FunctionTimings timings = runIterations(50, params, false, false);
+  timings.calculate();
+  std::cout << "Total time for all iterations: "
+            << std::accumulate(timings.total.times.begin(), timings.total.times.end(), 0.0)
+            << " ms\n\n=== Performance Statistics ===" << std::endl;
   printPerformanceStats("Total", timings.total);
-
-  std::cout << "\n=== Individual Function Performance ===" << std::endl;
   printPerformanceStats("Predict", timings.predict);
   printPerformanceStats("Associate", timings.associate);
   printPerformanceStats("Update", timings.update);
@@ -181,18 +144,18 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path)
 {
   // === Setup ===
   rclcpp::init(0, nullptr);
-  auto node = std::make_shared<rclcpp::Node>("multi_object_tracker_test_node");
-  auto tf_buffer = std::make_shared<tf2_ros::Buffer>(node->get_clock());
-  auto tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer, node);
+  const auto node = std::make_shared<rclcpp::Node>("multi_object_tracker_test_node");
+  const auto tf_buffer = std::make_shared<tf2_ros::Buffer>(node->get_clock());
+  const auto tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer, node);
   RosbagWriterHelper writer(true);
 
-  std::string world_frame_id = "map";      // Assuming map is the world frame ID
-  std::string ego_frame_id = "base_link";  // Assuming base_link is the ego vehicle frame ID
-  auto odometry = std::make_shared<autoware::multi_object_tracker::Odometry>(
+  const std::string world_frame_id = "map";      // Assuming map is the world frame ID
+  const std::string ego_frame_id = "base_link";  // Assuming base_link is the ego vehicle frame ID
+  const auto odometry = std::make_shared<autoware::multi_object_tracker::Odometry>(
     *node, world_frame_id, ego_frame_id, true);
 
   auto processor_config = createProcessorConfig();
-  auto associator_config = createAssociatorConfig();
+  const auto associator_config = createAssociatorConfig();
   processor_config.max_dist_matrix = associator_config.max_dist_matrix;
   auto input_channels_config = createInputChannelsConfig();
 
@@ -226,7 +189,9 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path)
       writer.write(tf_msg, "/tf", rclcpp::Time(tf_msg.transforms.front().header.stamp));
     } else if (bag_message->topic_name == "/perception/object_recognition/detection/objects") {
       auto tf_transform = tf_buffer->lookupTransform(world_frame_id, ego_frame_id, rclcpp::Time(0));
-
+      tf2::Transform tf_target2objects;
+      tf2::Transform tf_objects_world2objects;
+      tf2::fromMsg(tf_transform.transform, tf_target2objects);
       // Deserialize message
       rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
       autoware_perception_msgs::msg::DetectedObjects::SharedPtr msg =
@@ -241,9 +206,6 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path)
       for (auto & object : dynamic_objects.objects) {
         auto & pose = object.pose;
         auto & pose_cov = object.pose_covariance;
-        tf2::Transform tf_target2objects;
-        tf2::Transform tf_objects_world2objects;
-        tf2::fromMsg(tf_transform.transform, tf_target2objects);
         tf2::fromMsg(pose, tf_objects_world2objects);
         tf_target2objects = tf_target2objects * tf_objects_world2objects;
         // transform pose, frame difference and object pose
@@ -288,11 +250,11 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path)
 void profilePerformanceVsCarCount()
 {
   // Test configuration
-  const int min_cars = 1;
-  const int max_cars = 1000;
-  const int step = 5;
-  const int iterations_per_count = 5;      // Number of runs per car count
-  const float simulation_duration = 5.0f;  // Seconds per test
+  constexpr int min_cars = 1;
+  constexpr int max_cars = 1000;
+  constexpr int step = 5;
+  constexpr int iterations_per_count = 5;      // Number of runs per car count
+  constexpr float simulation_duration = 5.0f;  // Seconds per test
   std::cout << "\n=== Performance vs Car Count (1-" << max_cars << " cars) ===" << std::endl;
   std::cout << std::left << std::setw(10) << "CarCount" << "," << std::setw(12) << "TotalTime"
             << "," << std::setw(12) << "PredictTime" << "," << std::setw(14) << "AssociateTime"
@@ -315,8 +277,8 @@ void profilePerformanceVsCarCount()
 
     FunctionTimings total_timings;
     for (int i = 0; i < iterations_per_count; ++i) {
-      int num_iterations = static_cast<int>(simulation_duration * 10.0f);
-      FunctionTimings iteration_timings = runIterations(num_iterations, params);
+      const int num_iterations = static_cast<int>(simulation_duration * 10.0f);
+      const FunctionTimings iteration_timings = runIterations(num_iterations, params);
       total_timings.accumulate(iteration_timings);
     }
     // Calculate statistics for this car count
@@ -333,11 +295,11 @@ void profilePerformanceVsCarCount()
 void profilePerformanceVsPedestrianCount()
 {
   // Test configuration
-  const int min_peds = 1;
-  const int max_peds = 1000;
-  const int step = 5;
-  const int iterations_per_count = 5;      // Number of runs per pedestrian count
-  const float simulation_duration = 5.0f;  // Seconds per test
+  constexpr int min_peds = 1;
+  constexpr int max_peds = 1000;
+  constexpr int step = 5;
+  constexpr int iterations_per_count = 5;      // Number of runs per pedestrian count
+  constexpr float simulation_duration = 5.0f;  // Seconds per test
 
   std::cout << "\n=== Performance vs Pedestrian Count (1-" << max_peds
             << " pedestrians) ===" << std::endl;
@@ -362,8 +324,8 @@ void profilePerformanceVsPedestrianCount()
 
     FunctionTimings total_timings;
     for (int i = 0; i < iterations_per_count; ++i) {
-      int num_iterations = static_cast<int>(simulation_duration * 10.0f);
-      FunctionTimings iteration_timings = runIterations(num_iterations, config);
+      const int num_iterations = static_cast<int>(simulation_duration * 10.0f);
+      const FunctionTimings iteration_timings = runIterations(num_iterations, config);
       total_timings.accumulate(iteration_timings);
     }
 

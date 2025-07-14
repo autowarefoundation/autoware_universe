@@ -13,6 +13,9 @@
 // limitations under the License.
 #include "test_utils.hpp"
 
+#include <autoware_perception_msgs/msg/detected_object.hpp>
+#include <autoware_perception_msgs/msg/detected_objects.hpp>
+
 #include <array>
 #include <cstring>
 #include <filesystem>
