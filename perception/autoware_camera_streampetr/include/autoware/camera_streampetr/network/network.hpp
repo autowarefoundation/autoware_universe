@@ -142,7 +142,7 @@ class Duration
   std::string m_name;
 
 public:
-  Duration(std::string name) : m_name(name)
+  explicit Duration(std::string name) : m_name(name)
   {
     cudaEventCreate(&b);
     cudaEventCreate(&e);

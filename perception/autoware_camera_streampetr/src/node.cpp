@@ -152,18 +152,16 @@ void StreamPetrNode::odometry_callback(Odometry::ConstSharedPtr input_msg)
 }
 
 void StreamPetrNode::camera_info_callback(
-  CameraInfo::ConstSharedPtr input_camera_info_msg, const int camera_id)
+  const CameraInfo::ConstSharedPtr & input_camera_info_msg, const int camera_id)
 {
   data_store_->update_camera_info(camera_id, input_camera_info_msg);
 }
 
-void StreamPetrNode::camera_image_callback(
-  Image::ConstSharedPtr input_camera_image_msg, const int camera_id)
-{
+bool StreamPetrNode::prestep(){
   const auto objects_sub_count =
-    pub_objects_->get_subscription_count() + pub_objects_->get_intra_process_subscription_count();
+  pub_objects_->get_subscription_count() + pub_objects_->get_intra_process_subscription_count();
   if (objects_sub_count < 1) {
-    return;
+    return false;  // No subscribers, skip processing
   }
 
   if (stop_watch_ptr_) {
@@ -171,40 +169,32 @@ void StreamPetrNode::camera_image_callback(
   }
 
   if (!data_store_->check_if_all_camera_info_received()) {
-    return;
+    return false;  // Not all camera info received, skip processing
   }
 
   if (!cycle_started_) {
     cycle_started_ = true;
     if (stop_watch_ptr_) stop_watch_ptr_->tic("latency/cycle_time_ms");
   }
+  return true;
+}
+
+void StreamPetrNode::camera_image_callback(
+  const Image::ConstSharedPtr & input_camera_image_msg, const int camera_id)
+{
+  if(!prestep())
+    return;
 
   data_store_->update_camera_image(camera_id, input_camera_image_msg);
-
+  
   if (camera_id == anchor_camera_id_) step();
 }
 
 void StreamPetrNode::camera_image_callback(
-  CompressedImage::ConstSharedPtr input_camera_image_msg, const int camera_id)
+  const CompressedImage::ConstSharedPtr & input_camera_image_msg, const int camera_id)
 {
-  const auto objects_sub_count =
-    pub_objects_->get_subscription_count() + pub_objects_->get_intra_process_subscription_count();
-  if (objects_sub_count < 1) {
+  if(!prestep())
     return;
-  }
-
-  if (stop_watch_ptr_) {
-    stop_watch_ptr_->tic("latency/total");
-  }
-
-  if (!data_store_->check_if_all_camera_info_received()) {
-    return;
-  }
-
-  if (!cycle_started_) {
-    cycle_started_ = true;
-    if (stop_watch_ptr_) stop_watch_ptr_->tic("latency/cycle_time_ms");
-  }
 
   data_store_->update_camera_image_compressed(camera_id, input_camera_image_msg);
 
