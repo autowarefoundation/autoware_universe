@@ -61,7 +61,8 @@ The `BEVDet` model was trained in `NuScenes` dataset for 20 epochs.
 2. Include this [bevdet_vendor pr](https://github.com/autowarefoundation/bevdet_vendor/pull/1) in **src/universe/external/bevdet_vendor** as this supports fp16 precision and api support for Tensorrt 10.x.x
 
 3. To play ros2 bag of nuScenes data
-<!-- cspell: ignore trainval -->
+   <!-- cspell: ignore trainval -->
+
    ```bash
 
    cd autoware/src
@@ -125,10 +126,11 @@ The `BEVDet` model was trained in `NuScenes` dataset for 20 epochs.
    ```bash
    ros2 launch autoware_tensorrt_bevdet tensorrt_bevdet.launch.xml
    ```
-   
+
 ### Configuration
 
 The configuration file in `config/bevdet.param.yaml` can be modified to suit your needs:
+
 - Modify `precision` to `fp16` or `fp32`
 - Set `debug_mode` to `true` to enable publishing bounding box markers.
 
