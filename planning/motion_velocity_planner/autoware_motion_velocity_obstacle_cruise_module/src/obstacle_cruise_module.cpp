@@ -231,16 +231,15 @@ std::vector<CruiseObstacle> ObstacleCruiseModule::filter_cruise_obstacle_for_pre
     // TODO(xiaoyu-wang): introduce current ego acceleration to this function.
     const double obstacle_filter_ego_current_acc = 0.0;
     const double obstacle_filter_ego_planning_dec = 0.0;
-    const double obstacle_filter_dist_max_range = 120.0;
-    const double obstacle_filter_dist_min_range = 70.0;
     auto obstacle_filter_dist = autoware::motion_utils::calcDecelDistWithJerkAndAccConstraints(
       current_vel.linear.x, object->get_lon_vel_relative_to_traj(traj_points),
-      obstacle_filter_ego_current_acc, obstacle_filter_ego_planning_dec, obstacle_filter_ego_jerk,
-      -obstacle_filter_ego_jerk);
-    if (obstacle_filter_dist > obstacle_filter_dist_max_range) {
-      obstacle_filter_dist = obstacle_filter_dist_max_range;
-    } else if (obstacle_filter_dist < obstacle_filter_dist_min_range) {
-      obstacle_filter_dist = obstacle_filter_dist_min_range;
+      obstacle_filter_ego_current_acc, obstacle_filter_ego_planning_dec,
+      obstacle_filtering_param_.obstacle_filter_ego_jerk,
+      -obstacle_filtering_param_.obstacle_filter_ego_jerk);
+    if (obstacle_filter_dist > obstacle_filtering_param_.obstacle_filter_dist_max_range) {
+      obstacle_filter_dist = obstacle_filtering_param_.obstacle_filter_dist_max_range;
+    } else if (obstacle_filter_dist < obstacle_filtering_param_.obstacle_filter_dist_min_range) {
+      obstacle_filter_dist = obstacle_filtering_param_.obstacle_filter_dist_min_range;
     }
     if (lon_dist_from_ego_to_obj > obstacle_filter_dist) {
       continue;
