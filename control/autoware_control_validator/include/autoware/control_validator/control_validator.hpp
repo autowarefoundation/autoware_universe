@@ -36,6 +36,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -85,10 +86,11 @@ public:
 
   void validate(
     ControlValidatorStatus & res, const Trajectory & predicted_trajectory,
-    const Trajectory & reference_trajectory) const;
+    const Trajectory & reference_trajectory);
 
 private:
   const double max_distance_deviation_threshold;
+  std::optional<Trajectory> prev_reference_trajectory_;
 };
 
 /**

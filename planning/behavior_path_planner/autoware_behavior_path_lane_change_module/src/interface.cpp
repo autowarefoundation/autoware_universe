@@ -168,6 +168,10 @@ BehaviorModuleOutput LaneChangeInterface::planWaitingApproval()
 
   if (!module_type_->isValidPath()) {
     path_candidate_ = std::make_shared<PathWithLaneId>();
+    updateRTCStatus(
+      std::numeric_limits<double>::lowest(), std::numeric_limits<double>::lowest(), false,
+      State::WAITING_FOR_EXECUTION);
+    module_type_->resetParameters();
     return out;
   }
 

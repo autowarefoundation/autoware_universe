@@ -807,6 +807,7 @@ bool RearCollisionChecker::is_safe(DebugData & debug)
     }
   }
 
+  debug.is_safe = false;
   return false;
 }
 

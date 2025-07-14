@@ -60,6 +60,7 @@ double getFormedYawAngle(
 namespace autoware::multi_object_tracker
 {
 using autoware_utils::ScopedTimeTrack;
+using Label = autoware_perception_msgs::msg::ObjectClassification;
 
 DataAssociation::DataAssociation(const AssociatorConfig & config)
 : config_(config), score_threshold_(0.01)
@@ -250,19 +251,25 @@ double DataAssociation::calculateScore(
     return 0.0;
   }
 
-  const double max_dist_sq = config_.max_dist_matrix(tracker_label, measurement_label);
-  const double dx = measurement_object.pose.position.x - tracked_object.pose.position.x;
-  const double dy = measurement_object.pose.position.y - tracked_object.pose.position.y;
-  const double dist_sq = dx * dx + dy * dy;
-
-  // dist gate
-  if (dist_sq > max_dist_sq) return 0.0;
-
   // area gate
   const double max_area = config_.max_area_matrix(tracker_label, measurement_label);
   const double min_area = config_.min_area_matrix(tracker_label, measurement_label);
   const double & area = measurement_object.area;
   if (area < min_area || area > max_area) return 0.0;
+
+  // dist gate
+  const double max_dist_sq = config_.max_dist_matrix(tracker_label, measurement_label);
+  const double dx = measurement_object.pose.position.x - tracked_object.pose.position.x;
+  const double dy = measurement_object.pose.position.y - tracked_object.pose.position.y;
+  const double dist_sq = dx * dx + dy * dy;
+  if (dist_sq > max_dist_sq) return 0.0;
+
+  // mahalanobis dist gate
+  const double mahalanobis_dist = getMahalanobisDistanceFast(dx, dy, inv_cov);
+  constexpr double mahalanobis_dist_threshold =
+    11.62;  // This is an empirical value corresponding to the 99.6% confidence level
+            // for a chi-square distribution with 2 degrees of freedom (critical value).
+  if (mahalanobis_dist >= mahalanobis_dist_threshold) return 0.0;
 
   // angle gate, only if the threshold is set less than pi
   const double max_rad = config_.max_rad_matrix(tracker_label, measurement_label);
@@ -274,25 +281,19 @@ double DataAssociation::calculateScore(
     }
   }
 
-  // mahalanobis dist gate
-  const double mahalanobis_dist = getMahalanobisDistanceFast(dx, dy, inv_cov);
-
-  constexpr double mahalanobis_dist_threshold =
-    11.62;  // This is an empirical value corresponding to the 99.6% confidence level
-            // for a chi-square distribution with 2 degrees of freedom (critical value).
-
-  if (mahalanobis_dist >= mahalanobis_dist_threshold) return 0.0;
+  const double ratio_sq = dist_sq / max_dist_sq;
+  const double score = 1.0 - std::sqrt(ratio_sq);
+  if (score < score_threshold_) return 0.0;
 
   // 2d iou gate
   const double min_iou = config_.min_iou_matrix(tracker_label, measurement_label);
-  const double min_union_iou_area = 1e-2;
-  const double iou = shapes::get2dIoU(measurement_object, tracked_object, min_union_iou_area);
+  constexpr double min_union_iou_area = 1e-2;
+  const double iou = measurement_label == Label::PEDESTRIAN
+                       ? shapes::get1dIoU(measurement_object, tracked_object)
+                       : shapes::get2dIoU(measurement_object, tracked_object, min_union_iou_area);
   if (iou < min_iou) return 0.0;
 
-  // all gate is passed
-  const double ratio_sq = (dist_sq < max_dist_sq) ? dist_sq / max_dist_sq : 1.0;
-  const double score = 1.0 - std::sqrt(ratio_sq);
-  return (score >= score_threshold_) * score;
+  return score;
 }
 
 }  // namespace autoware::multi_object_tracker

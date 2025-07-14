@@ -16,6 +16,8 @@
   <arg name="input/camera_info6" default="/camera_info6"/>
   <arg name="input/rois7" default="rois7"/>
   <arg name="input/camera_info7" default="/camera_info7"/>
+  <arg name="input/rois8" default="rois8"/>
+  <arg name="input/camera_info8" default="/camera_info8"/>
   <arg name="input/objects" default="objects"/>
   <arg name="output/objects" default="fused_objects"/>
   <arg name="param_path" default="$(find-pkg-share autoware_image_projection_based_fusion)/config/roi_detected_object_fusion.param.yaml"/>
@@ -33,6 +35,7 @@
   <arg name="input/image5" default="/image_raw5"/>
   <arg name="input/image6" default="/image_raw6"/>
   <arg name="input/image7" default="/image_raw7"/>
+  <arg name="input/image8" default="/image_raw8"/>
 
   <group>
     <node pkg="autoware_image_projection_based_fusion" exec="roi_detected_object_fusion_node" name="roi_detected_object_fusion" output="screen">
@@ -67,6 +70,9 @@
       <param name="input/rois7" value="$(var input/rois7)"/>
       <param name="input/camera_info7" value="$(var input/camera_info7)"/>
       <param name="input/image7" value="$(var input/image7)"/>
+      <param name="input/rois8" value="$(var input/rois8)"/>
+      <param name="input/camera_info8" value="$(var input/camera_info8)"/>
+      <param name="input/image8" value="$(var input/image8)"/>
     </node>
   </group>
 </launch>

@@ -229,6 +229,8 @@ LCParamPtr LaneChangeModuleManager::set_params(rclcpp::Node * node, const std::s
 
   // trajectory generation near terminal using frenet planner
   p.frenet.enable = get_or_declare_parameter<bool>(*node, parameter("frenet.enable"));
+  p.frenet.use_entire_remaining_distance =
+    get_or_declare_parameter<bool>(*node, parameter("frenet.use_entire_remaining_distance"));
   p.frenet.th_yaw_diff_deg =
     get_or_declare_parameter<double>(*node, parameter("frenet.th_yaw_diff"));
   p.frenet.th_curvature_smoothing =
@@ -407,6 +409,8 @@ void LaneChangeModuleManager::updateModuleParams(const std::vector<rclcpp::Param
   {
     const std::string ns = "lane_change.frenet.";
     update_param<bool>(parameters, ns + "enable", p->frenet.enable);
+    update_param<bool>(
+      parameters, ns + "use_entire_remaining_distance", p->frenet.use_entire_remaining_distance);
     update_param<double>(parameters, ns + "th_yaw_diff", p->frenet.th_yaw_diff_deg);
     update_param<double>(
       parameters, ns + "th_curvature_smoothing", p->frenet.th_curvature_smoothing);

@@ -19,6 +19,7 @@
 
 #include <autoware_adapi_v1_msgs/msg/diag_graph_status.hpp>
 #include <autoware_adapi_v1_msgs/msg/diag_graph_struct.hpp>
+#include <autoware_adapi_v1_msgs/msg/mrm_state.hpp>
 #include <autoware_adapi_v1_msgs/srv/reset_diag_graph.hpp>
 #include <tier4_system_msgs/msg/diag_graph_status.hpp>
 #include <tier4_system_msgs/msg/diag_graph_struct.hpp>
@@ -50,6 +51,7 @@ private:
   using ExternalLinkStruct = autoware_adapi_v1_msgs::msg::DiagLinkStruct;
   using ExternalKeyValue = autoware_adapi_v1_msgs::msg::KvString;
   using ExternalReset = autoware_adapi_v1_msgs::srv::ResetDiagGraph;
+  using ExternalMrmState = autoware_adapi_v1_msgs::msg::MrmState;
 
   void on_struct(const InternalGraphStruct & internal);
   void on_status(const InternalGraphStatus & internal);
@@ -63,6 +65,9 @@ private:
   rclcpp::Subscription<InternalGraphStatus>::SharedPtr sub_status_;
   rclcpp::Service<ExternalReset>::SharedPtr srv_reset_;
   rclcpp::Client<InternalReset>::SharedPtr cli_reset_;
+  rclcpp::Subscription<ExternalMrmState>::SharedPtr sub_mrm_state_;
+
+  ExternalMrmState mrm_state_;
 };
 
 }  // namespace autoware::default_adapi

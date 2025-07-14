@@ -254,6 +254,8 @@ IntersectionModuleManager::IntersectionModuleManager(rclcpp::Node & node)
   // occlusion
   {
     ip.occlusion.enable = get_or_declare_parameter<bool>(node, ns + ".occlusion.enable");
+    ip.occlusion.request_approval_wo_traffic_light =
+      get_or_declare_parameter<bool>(node, ns + ".occlusion.request_approval_wo_traffic_light");
     ip.occlusion.occlusion_attention_area_length =
       get_or_declare_parameter<double>(node, ns + ".occlusion.occlusion_attention_area_length");
     ip.occlusion.free_space_max =
