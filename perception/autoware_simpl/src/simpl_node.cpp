@@ -215,54 +215,6 @@ std::vector<archetype::AgentHistory> SimplNode::update_history(
   }
   return histories;
 }
-
-std::vector<archetype::AgentHistory> SimplNode::update_history_with_ego(
-  const TrackedObjects::ConstSharedPtr objects_msg, const archetype::AgentState & current_ego)
-{
-  std::vector<archetype::AgentHistory> histories;
-  if (!objects_msg) {
-    return histories;
-  }
-
-  std::unordered_set<std::string> observed_ids;
-
-  // update agent histories
-  for (const auto & object : objects_msg->objects) {
-    const auto agent_id = autoware_utils::to_hex_string(object.object_id);
-    observed_ids.insert(agent_id);
-
-    // update history with the current state
-    const auto label = conversion::to_agent_label(object);
-    const auto state = conversion::to_agent_state(object);
-    auto [it, init] =
-      history_map_with_ego_.try_emplace(agent_id, agent_id, label, num_past_, state);
-    if (!init) {
-      it->second.update(state);
-    }
-    histories.emplace_back(it->second);
-  }
-
-  static const std::string ego_id = "EGO";
-  auto [it, init] = history_map_with_ego_.try_emplace(
-    ego_id, ego_id, archetype::AgentLabel::VEHICLE, num_past_, current_ego);
-  if (!init) {
-    it->second.update(current_ego);
-  }
-  histories.emplace_back(it->second);
-  observed_ids.insert(ego_id);
-
-  // remove histories that are not observed at the current
-  for (auto itr = history_map_with_ego_.begin(); itr != history_map_with_ego_.end();) {
-    const auto & agent_id = itr->first;
-    // update unobserved history with empty
-    if (std::find(observed_ids.begin(), observed_ids.end(), agent_id) == observed_ids.end()) {
-      itr = history_map_with_ego_.erase(itr);
-    } else {
-      ++itr;
-    }
-  }
-  return histories;
-}
 }  // namespace autoware::simpl
 
 #include <rclcpp_components/register_node_macro.hpp>

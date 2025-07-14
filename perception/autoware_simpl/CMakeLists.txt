@@ -65,4 +65,4 @@ if(BUILD_TESTING)
     target_link_libraries(test_simpl ${PROJECT_NAME})
 endif()
 
-ament_auto_package(INSTALL_TO_SHARE launch config data)
+ament_auto_package(INSTALL_TO_SHARE launch config)

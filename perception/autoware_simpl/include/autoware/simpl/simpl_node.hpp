@@ -102,12 +102,6 @@ private:
   std::vector<archetype::AgentHistory> update_history(
     const TrackedObjects::ConstSharedPtr objects_msg);
 
-  std::vector<archetype::AgentHistory> update_history_with_ego(
-    const TrackedObjects::ConstSharedPtr objects_msg, const archetype::AgentState & current_ego);
-
-  //!< DEBUG: this hashmap includes ego history
-  std::unordered_map<std::string, archetype::AgentHistory> history_map_with_ego_;
-
   //////////////////////// member variables ////////////////////////
   //!< Tracked objects subscription.
   rclcpp::Subscription<TrackedObjects>::SharedPtr objects_subscription_;
