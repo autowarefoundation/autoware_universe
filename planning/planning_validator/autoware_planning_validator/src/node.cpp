@@ -30,6 +30,12 @@ using diagnostic_msgs::msg::DiagnosticStatus;
 PlanningValidatorNode::PlanningValidatorNode(const rclcpp::NodeOptions & options)
 : Node("planning_validator_node", options)
 {
+  // trajectory subscriber
+  sub_trajectory_ = create_subscription<Trajectory>(
+    "~/input/trajectory", rclcpp::QoS{1},
+    std::bind(&PlanningValidatorNode::onTrajectory, this, std::placeholders::_1));
+
+  // publishers
   pub_traj_ = create_publisher<Trajectory>("~/output/trajectory", 1);
   pub_status_ = create_publisher<PlanningValidatorStatus>("~/output/validation_status", 1);
   pub_markers_ = create_publisher<visualization_msgs::msg::MarkerArray>("~/output/markers", 1);
@@ -39,14 +45,6 @@ PlanningValidatorNode::PlanningValidatorNode(const rclcpp::NodeOptions & options
   context_->set_diag_id("planning_validator");
 
   setupParameters();
-
-  // Start timer
-  {
-    const auto planning_hz = declare_parameter<double>("planning_hz");
-    const auto period_ns = rclcpp::Rate(planning_hz).period();
-    timer_ = rclcpp::create_timer(
-      this, get_clock(), period_ns, std::bind(&PlanningValidatorNode::onTimer, this));
-  }
 
   // Initialize Manager
   for (const auto & name : declare_parameter<std::vector<std::string>>("launch_modules")) {
@@ -104,22 +102,22 @@ bool PlanningValidatorNode::isDataReady()
   return true;
 }
 
-void PlanningValidatorNode::setData()
+void PlanningValidatorNode::setData(const Trajectory::ConstSharedPtr & traj_msg)
 {
   auto & data = context_->data;
   data->current_kinematics = sub_kinematics_.take_data();
   data->current_acceleration = sub_acceleration_.take_data();
   data->obstacle_pointcloud = sub_pointcloud_.take_data();
-  data->set_current_trajectory(sub_trajectory_.take_data());
+  data->set_current_trajectory(traj_msg);
   data->set_route(sub_route_.take_data());
   data->set_map(sub_lanelet_map_bin_.take_data());
 }
 
-void PlanningValidatorNode::onTimer()
+void PlanningValidatorNode::onTrajectory(const Trajectory::ConstSharedPtr & traj_msg)
 {
   stop_watch_.tic(__func__);
 
-  setData();
+  setData(traj_msg);
 
   if (!isDataReady()) return;
 
