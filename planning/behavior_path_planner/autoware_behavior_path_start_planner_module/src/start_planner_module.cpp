@@ -383,6 +383,21 @@ bool StartPlannerModule::isInsideLanelets() const
     }
   }
 
+  // Remove micro holes (micro inner rings) caused by boost::geometry::union_
+  {
+    constexpr double area_threshold = 1e-5;  // [m^2]
+    for (auto & combined_lanelet : combined_lanelets) {
+      auto & inners = combined_lanelet.inners();
+      inners.erase(
+        std::remove_if(
+          inners.begin(), inners.end(),
+          [&](const auto & inner_ring) {
+            return std::abs(boost::geometry::area(inner_ring)) < area_threshold;
+          }),
+        inners.end());
+    }
+  }
+
   // Check if the vehicle footprint is completely within the combined lanelets
   return boost::geometry::within(footprint_polygon, combined_lanelets);
 }
