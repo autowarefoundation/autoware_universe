@@ -68,10 +68,11 @@ public:
 
 private:
   void odometry_callback(Odometry::ConstSharedPtr input_msg);
-  void camera_info_callback(CameraInfo::ConstSharedPtr input_camera_info_msg, const int camera_id);
-  void camera_image_callback(Image::ConstSharedPtr input_camera_image_msg, const int camera_id);
+  void camera_info_callback(const CameraInfo::ConstSharedPtr & input_camera_info_msg, const int camera_id);
+  void camera_image_callback(const Image::ConstSharedPtr & input_camera_image_msg, const int camera_id);
   void camera_image_callback(
-    CompressedImage::ConstSharedPtr input_camera_image_msg, const int camera_id);
+    const CompressedImage::ConstSharedPtr & input_camera_image_msg, const int camera_id);
+  bool prestep();
   void step();
   std::pair<std::vector<float>, std::vector<float>> get_ego_pose_vector() const;
   std::vector<float> get_camera_extrinsics_vector(const std::vector<std::string> & camera_links);
