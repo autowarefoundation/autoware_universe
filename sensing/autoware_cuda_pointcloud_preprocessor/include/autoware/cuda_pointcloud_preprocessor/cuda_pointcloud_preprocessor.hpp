@@ -50,7 +50,6 @@ public:
   enum class UndistortionType { Invalid, Undistortion2D, Undistortion3D };
 
   CudaPointcloudPreprocessor();
-  ~CudaPointcloudPreprocessor() = default;
 
   void setCropBoxParameters(const std::vector<CropBoxParameters> & crop_box_parameters);
   void setRingOutlierFilterParameters(const RingOutlierFilterParameters & ring_outlier_parameters);
