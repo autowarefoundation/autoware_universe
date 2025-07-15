@@ -18,8 +18,15 @@
 
 #include <agnocast/agnocast.hpp>
 
-#define AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) agnocast::ipc_shared_ptr<MessageT>
-#define AUTOWARE_MESSAGE_SHARED_PTR(MessageT) agnocast::ipc_shared_ptr<MessageT>
+#include <memory>
+#include <type_traits>
+
+#define AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) \
+  autoware::agnocast_wrapper::message_ptr< \
+    MessageT, autoware::agnocast_wrapper::OwnershipType::Unique>
+#define AUTOWARE_MESSAGE_SHARED_PTR(MessageT) \
+  autoware::agnocast_wrapper::message_ptr< \
+    MessageT, autoware::agnocast_wrapper::OwnershipType::Shared>
 #define AUTOWARE_SUBSCRIPTION_PTR(MessageT) typename agnocast::Subscription<MessageT>::SharedPtr
 #define AUTOWARE_PUBLISHER_PTR(MessageT) typename agnocast::Publisher<MessageT>::SharedPtr
 
@@ -37,6 +44,160 @@
 
 #define ALLOCATE_OUTPUT_MESSAGE_UNIQUE(publisher) publisher->borrow_loaned_message()
 #define ALLOCATE_OUTPUT_MESSAGE_SHARED(publisher) publisher->borrow_loaned_message()
+
+namespace autoware::agnocast_wrapper
+{
+
+enum class OwnershipType {
+  Unique,
+  Shared
+};
+
+
+template <typename MessageT, OwnershipType Ownership>
+class message_interface;
+
+// Has a unique pointer to a `message_interface` object.
+template <typename MessageT, OwnershipType Ownership>
+class message_ptr;
+
+// Implements `message_interface`.
+template <typename MessageT, OwnershipType Ownership>
+class agnocast_message;
+
+// Implements `message_interface`.
+template <typename MessageT, OwnershipType Ownership>
+class ros2_message;
+
+template <typename MessageT>
+class message_interface<MessageT, OwnershipType::Unique>
+{
+public:
+  message_interface() = default;
+
+  virtual ~message_interface() = default;
+
+  message_interface(const message_interface & r) = delete;
+  message_interface & operator=(const message_interface & r) = delete;
+
+  message_interface(message_interface && r) = default;
+  message_interface & operator=(message_interface && r) = default;
+
+  virtual MessageT & as_ref() const noexcept = 0;
+  virtual MessageT * as_ptr() const noexcept = 0;
+
+  virtual agnocast::ipc_shared_ptr<MessageT> move_agnocast_ptr() && noexcept = 0;
+  virtual std::unique_ptr<MessageT> move_ros2_ptr() && noexcept = 0;
+};
+
+template <typename MessageT>
+class message_interface<MessageT, OwnershipType::Shared>
+{
+public:
+  virtual ~message_interface() = default;
+
+  virtual MessageT & as_ref() const noexcept = 0;
+  virtual MessageT * as_ptr() const noexcept = 0;
+
+  virtual agnocast::ipc_shared_ptr<MessageT> move_agnocast_ptr() && noexcept = 0;
+  virtual std::shared_ptr<MessageT> move_ros2_ptr() && noexcept = 0;
+};
+
+template <typename MessageT, OwnershipType Ownership>
+class agnocast_message : public message_interface<MessageT, Ownership>
+{
+  using ros2_ptr_t = std::conditional_t<
+    Ownership == OwnershipType::Unique,
+    std::unique_ptr<MessageT>,
+    std::shared_ptr<MessageT>>;
+
+  agnocast::ipc_shared_ptr<MessageT> ptr_;
+
+public:
+  explicit agnocast_message(agnocast::ipc_shared_ptr<MessageT> && ptr) : ptr_(std::move(ptr))
+  {}
+
+  MessageT & as_ref() const noexcept override { return *ptr_; }
+  MessageT * as_ptr() const noexcept override { return ptr_.get(); }
+
+  agnocast::ipc_shared_ptr<MessageT> move_agnocast_ptr() && noexcept override
+  {
+    return std::move(ptr_);
+  }
+
+  // The following member function should never be called at runtime. They are implemented just for
+  // inheriting `message_interface`.
+  ros2_ptr_t move_ros2_ptr() && noexcept override { return ros2_ptr_t{}; }
+};
+
+template <typename MessageT, OwnershipType Ownership>
+class ros2_message : public message_interface<MessageT, Ownership>
+{
+  using ros2_ptr_t = std::conditional_t<
+    Ownership == OwnershipType::Unique,
+    std::unique_ptr<MessageT>,
+    std::shared_ptr<MessageT>>;
+
+  ros2_ptr_t ptr_;
+
+public:
+  explicit ros2_message(ros2_ptr_t && ptr) : ptr_(std::move(ptr))
+  {}
+
+  MessageT & as_ref() const noexcept override { return *ptr_; }
+  MessageT * as_ptr() const noexcept override { return ptr_.get(); }
+
+  ros2_ptr_t move_ros2_ptr() && noexcept override { return std::move(ptr_); }
+
+  // The following member function should never be called at runtime. They are implemented just for
+  // inheriting `message_interface`.
+  agnocast::ipc_shared_ptr<MessageT> move_agnocast_ptr() && noexcept override
+  {
+    return agnocast::ipc_shared_ptr<MessageT>{};
+  }
+};
+
+template <typename MessageT, OwnershipType Ownership>
+class message_ptr
+{
+  using ros2_ptr_t = std::conditional_t<
+    Ownership == OwnershipType::Unique,
+    std::unique_ptr<MessageT>,
+    std::shared_ptr<MessageT>>;
+
+  std::unique_ptr<message_interface<MessageT, Ownership>> ptr_;
+
+public:
+  explicit message_ptr(agnocast::ipc_shared_ptr<MessageT> && ptr)
+  : ptr_(std::make_unique<agnocast_message<MessageT, Ownership>>(std::move(ptr)))
+  {}
+
+  explicit message_ptr(ros2_ptr_t && ptr)
+  : ptr_(std::make_unique<ros2_message<MessageT, Ownership>>(std::move(ptr)))
+  {}
+
+  MessageT & operator*() const noexcept
+  {
+    return ptr_->as_ref();
+  }
+
+  MessageT * operator->() const noexcept
+  {
+    return ptr_->as_ptr();
+  }
+
+  explicit operator bool() const noexcept
+  {
+    return static_cast<bool>(ptr_->as_ptr());
+  }
+
+  MessageT * get() const noexcept
+  {
+    return ptr_->as_ptr();
+  }
+};
+
+}  // namespace autoware::agnocast_wrapper
 
 #else
 
