@@ -26,6 +26,8 @@
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <cub/cub.cuh>
 
+#include <sensor_msgs/msg/point_field.hpp>
+
 #include <cuda_runtime.h>
 #include <tf2/utils.h>
 #include <thrust/count.h>
@@ -38,6 +40,29 @@ namespace autoware::cuda_pointcloud_preprocessor
 
 CudaPointcloudPreprocessor::CudaPointcloudPreprocessor()
 {
+  using sensor_msgs::msg::PointField;
+
+  auto make_point_field = [](
+                            const std::string & name, std::size_t offset,
+                            sensor_msgs::msg::PointField::_datatype_type datatype,
+                            std::size_t count) {
+    PointField field;
+    field.name = name;
+    field.offset = offset;
+    field.datatype = datatype;
+    field.count = count;
+    return field;
+  };
+
+  point_fields_ = {
+    make_point_field("x", 0, PointField::FLOAT32, 1),
+    make_point_field("y", 4, PointField::FLOAT32, 1),
+    make_point_field("z", 8, PointField::FLOAT32, 1),
+    make_point_field("intensity", 12, PointField::UINT8, 1),
+    make_point_field("return_type", 13, PointField::UINT8, 1),
+    make_point_field("channel", 14, PointField::UINT16, 1),
+  };
+
   CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
 
   int num_sm{};
