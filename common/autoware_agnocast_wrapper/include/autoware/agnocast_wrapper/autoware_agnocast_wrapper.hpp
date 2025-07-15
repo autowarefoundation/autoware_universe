@@ -20,6 +20,7 @@
 
 #include <memory>
 #include <type_traits>
+#include <cstdlib>
 
 #define AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) \
   autoware::agnocast_wrapper::message_ptr< \
@@ -196,6 +197,23 @@ public:
     return ptr_->as_ptr();
   }
 };
+
+
+// Defaults to zero if the environment variable is missing or invalid.
+inline int get_ENABLE_AGNOCAST()
+{
+  const char * env = std::getenv("ENABLE_AGNOCAST");
+  if (env) {
+    return std::atoi(env);
+  }
+  return 0;
+}
+
+inline bool use_agnocast()
+{
+  static const int sv = get_ENABLE_AGNOCAST();
+  return sv == 1;
+}
 
 }  // namespace autoware::agnocast_wrapper
 
