@@ -12,13 +12,13 @@
             "onnx_path": {
               "type": "string",
               "description": "Filepath to ONNX.",
-              "default": "$(var data_path)/simpl_a50x12x8_m300x10x4.onnx",
+              "default": "$(var data_path)/simpl.onnx",
               "pattern": "\\.onnx$"
             },
             "engine_path": {
               "type": "string",
               "description": "Filepath to TensorRT engine.",
-              "default": "$(var data_path)/simpl_a50x12x8_m300x10x4.engine",
+              "default": "$(var data_path)/simpl.engine",
               "pattern": "\\.engine$"
             },
             "precision": {

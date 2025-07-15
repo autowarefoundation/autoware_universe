@@ -11,24 +11,35 @@ find_package(glog REQUIRED)
 autoware_package()
 
 # --- find CUDA/CUDNN/TensorRT dependencies ---
-find_package(CUDA REQUIRED)
-find_package(CUDAToolkit REQUIRED)
-find_package(CUDNN REQUIRED)
-find_package(TENSORRT REQUIRED)
+find_package(CUDA)
+find_package(CUDAToolkit)
+find_package(CUDNN)
+find_package(TENSORRT)
 
 # --- check CUDA tools and TensorRT version ---
-if(NOT (CUDAToolkit_FOUND AND CUDNN_FOUND AND TENSORRT_FOUND))
-    message(FATAL_ERROR "cuda, cudnn, tensorrt libraries are not found")
-endif()
-
-if(TENSORRT_VERSION VERSION_LESS 8.5)
-    message(FATAL_ERROR
-    "Unsupported version TensorRT ${TENSORRT_VERSION} detected. "
-    "This package requires TensorRT 8.5 or later.")
+if(CUDAToolkit_FOUND AND CUDNN_FOUND AND TENSORRT_FOUND)
+    set(CUDA_AVAILABLE TRUE)
+    if(TENSORRT_VERSION VERSION_LESS 8.5)
+        set(TENSORRT_AVAILABLE FALSE)
+        message(WARNING
+        "Unsupported version TensorRT ${TENSORRT_VERSION} detected. "
+        "This package requires TensorRT 8.5 or later.")
+    else()
+        set(TENSORRT_AVAILABLE TRUE)
+    endif()
+else()
+    set(CUDA_AVAILABLE FALSE)
+    set(TENSORRT_AVAILABLE FALSE)
+    message(WARNING "CUDA, CUDNN and TensorRT libraries are not found.")
 endif()
 
 # --- link targets ---
 file(GLOB_RECURSE SIMPL_SOURCES src/*.cpp)
+if(NOT (CUDA_AVAILABLE AND TENSORRT_AVAILABLE))
+    list(FILTER SIMPL_SOURCES EXCLUDE REGEX "src/trt_simpl.cpp")
+    list(FILTER SIMPL_SOURCES EXCLUDE REGEX "src/simpl_node.cpp")
+endif()
+
 ament_auto_add_library(${PROJECT_NAME} SHARED ${SIMPL_SOURCES})
 target_link_libraries(${PROJECT_NAME} glog::glog)
 
@@ -36,13 +47,18 @@ target_include_directories(
   ${PROJECT_NAME}
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
-    ${TENSORRT_INCLUDE_DIRS}
-    ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+    $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
 
-rclcpp_components_register_node(
-  ${PROJECT_NAME} PLUGIN "autoware::simpl::SimplNode" EXECUTABLE
-  ${PROJECT_NAME}_exe)
+if(CUDA_AVAILABLE AND TENSORRT_AVAILABLE)
+    target_include_directories(
+        ${PROJECT_NAME}
+        PUBLIC
+        ${TENSORRT_INCLUDE_DIRS}
+        ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+    rclcpp_components_register_node(
+      ${PROJECT_NAME} PLUGIN "autoware::simpl::SimplNode" EXECUTABLE
+      ${PROJECT_NAME}_exe)
+endif()
 
 if(BUILD_TESTING)
     ament_add_ros_isolated_gtest(test_simpl
