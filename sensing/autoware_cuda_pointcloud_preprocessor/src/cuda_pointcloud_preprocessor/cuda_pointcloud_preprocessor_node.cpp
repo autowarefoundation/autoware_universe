@@ -22,6 +22,7 @@
 #include "autoware/pointcloud_preprocessor/diagnostics/pass_rate_diagnostics.hpp"
 
 #include <agnocast/agnocast_subscription.hpp>
+#include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <autoware/point_types/types.hpp>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
@@ -54,7 +55,7 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
 
   // Set CUDA device flags
   // note: Device flags are process-wide
-  cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+  CHECK_CUDA_ERROR(cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync));
 
   // Parameters
   base_frame_ = declare_parameter<std::string>("base_frame");

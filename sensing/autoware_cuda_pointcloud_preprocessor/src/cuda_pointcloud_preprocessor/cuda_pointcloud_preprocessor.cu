@@ -23,6 +23,7 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
+#include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <cub/cub.cuh>
 
 #include <cuda_runtime.h>
@@ -37,68 +38,21 @@ namespace autoware::cuda_pointcloud_preprocessor
 
 CudaPointcloudPreprocessor::CudaPointcloudPreprocessor()
 {
-  sensor_msgs::msg::PointField x_field, y_field, z_field, intensity_field, return_type_field,
-    channel_field, azimuth_field, elevation_field, distance_field, time_stamp_field;
-  x_field.name = "x";
-  x_field.offset = 0;
-  x_field.datatype = sensor_msgs::msg::PointField::FLOAT32;
-  x_field.count = 1;
+  CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
 
-  y_field.name = "y";
-  y_field.offset = 4;
-  y_field.datatype = sensor_msgs::msg::PointField::FLOAT32;
-  y_field.count = 1;
-
-  z_field.name = "z";
-  z_field.offset = 8;
-  z_field.datatype = sensor_msgs::msg::PointField::FLOAT32;
-  z_field.count = 1;
-
-  intensity_field.name = "intensity";
-  intensity_field.offset = 12;
-  intensity_field.datatype = sensor_msgs::msg::PointField::UINT8;
-  intensity_field.count = 1;
-
-  return_type_field.name = "return_type";
-  return_type_field.offset = 13;
-  return_type_field.datatype = sensor_msgs::msg::PointField::UINT8;
-  return_type_field.count = 1;
-
-  channel_field.name = "channel";
-  channel_field.offset = 14;
-  channel_field.datatype = sensor_msgs::msg::PointField::UINT16;
-  channel_field.count = 1;
-
-  static_assert(sizeof(OutputPointType) == 16, "OutputPointType size is not 16 bytes");
-  static_assert(offsetof(OutputPointType, x) == 0);
-  static_assert(offsetof(OutputPointType, y) == 4);
-  static_assert(offsetof(OutputPointType, z) == 8);
-  static_assert(offsetof(OutputPointType, intensity) == 12);
-  static_assert(offsetof(OutputPointType, return_type) == 13);
-  static_assert(offsetof(OutputPointType, channel) == 14);
-
-  point_fields_.push_back(x_field);
-  point_fields_.push_back(y_field);
-  point_fields_.push_back(z_field);
-  point_fields_.push_back(intensity_field);
-  point_fields_.push_back(return_type_field);
-  point_fields_.push_back(channel_field);
-
-  cudaStreamCreate(&stream_);
-
-  int num_sm;
-  cudaDeviceGetAttribute(&num_sm, cudaDevAttrMultiProcessorCount, 0);
+  int num_sm{};
+  CHECK_CUDA_ERROR(cudaDeviceGetAttribute(&num_sm, cudaDevAttrMultiProcessorCount, 0));
   max_blocks_per_grid_ = 4 * num_sm;  // used for strided loops
 
-  cudaMemPoolProps pool_props;
+  cudaMemPoolProps pool_props{};
   memset(&pool_props, 0, sizeof(cudaMemPoolProps));
   pool_props.allocType = cudaMemAllocationTypePinned;
   pool_props.handleTypes = cudaMemHandleTypePosixFileDescriptor;
 
   pool_props.location.type = cudaMemLocationTypeDevice;
-  cudaGetDevice(&(pool_props.location.id));
+  CHECK_CUDA_ERROR(cudaGetDevice(&(pool_props.location.id)));
 
-  cudaMemPoolCreate(&device_memory_pool_, &pool_props);
+  CHECK_CUDA_ERROR(cudaMemPoolCreate(&device_memory_pool_, &pool_props));
   MemoryPoolAllocator<TwistStruct2D> allocator_2d(device_memory_pool_);
   MemoryPoolAllocator<TwistStruct3D> allocator_3d(device_memory_pool_);
   MemoryPoolAllocator<std::int32_t> allocator_int32(device_memory_pool_);
@@ -146,12 +100,14 @@ CudaPointcloudPreprocessor::CudaPointcloudPreprocessor()
     thrust::device_vector<InputPointType, MemoryPoolAllocator<InputPointType>>(allocator_points);
   device_organized_points_.resize(num_organized_points_);
 
-  cudaMemsetAsync(
-    thrust::raw_pointer_cast(device_max_ring_.data()), 0, sizeof(std::int32_t), stream_);
-  cudaMemsetAsync(
-    thrust::raw_pointer_cast(device_max_points_per_ring_.data()), 0, sizeof(std::int32_t), stream_);
-  cudaMemsetAsync(
-    thrust::raw_pointer_cast(device_indexes_tensor_.data()), 0x255, sizeof(std::uint32_t), stream_);
+  CHECK_CUDA_ERROR(cudaMemsetAsync(
+    thrust::raw_pointer_cast(device_max_ring_.data()), 0, sizeof(std::int32_t), stream_));
+  CHECK_CUDA_ERROR(cudaMemsetAsync(
+    thrust::raw_pointer_cast(device_max_points_per_ring_.data()), 0, sizeof(std::int32_t),
+    stream_));
+  CHECK_CUDA_ERROR(cudaMemsetAsync(
+    thrust::raw_pointer_cast(device_indexes_tensor_.data()), 0x255, sizeof(std::uint32_t),
+    stream_));
 
   sort_workspace_bytes_ = querySortWorkspace(
     num_rings_ * max_points_per_ring_, num_rings_,
@@ -201,12 +157,12 @@ void CudaPointcloudPreprocessor::preallocateOutput()
 
 void CudaPointcloudPreprocessor::organizePointcloud()
 {
-  cudaMemsetAsync(
+  CHECK_CUDA_ERROR(cudaMemsetAsync(
     thrust::raw_pointer_cast(device_ring_index_.data()), 0, num_rings_ * sizeof(std::int32_t),
-    stream_);
-  cudaMemsetAsync(
+    stream_));
+  CHECK_CUDA_ERROR(cudaMemsetAsync(
     thrust::raw_pointer_cast(device_indexes_tensor_.data()), num_raw_points_,
-    num_organized_points_ * sizeof(std::uint32_t), stream_);
+    num_organized_points_ * sizeof(std::uint32_t), stream_));
 
   if (num_raw_points_ == 0) {
     output_pointcloud_ptr_->data.reset();
@@ -224,16 +180,16 @@ void CudaPointcloudPreprocessor::organizePointcloud()
     thrust::raw_pointer_cast(device_max_points_per_ring_.data()), num_raw_points_,
     threads_per_block_, raw_points_blocks_per_grid, stream_);
 
-  std::int32_t max_ring_value;
-  std::int32_t max_points_per_ring;
+  std::int32_t max_ring_value{};
+  std::int32_t max_points_per_ring{};
 
-  cudaMemcpyAsync(
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
     &max_ring_value, thrust::raw_pointer_cast(device_max_ring_.data()), sizeof(std::int32_t),
-    cudaMemcpyDeviceToHost, stream_);
-  cudaMemcpyAsync(
+    cudaMemcpyDeviceToHost, stream_));
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
     &max_points_per_ring, thrust::raw_pointer_cast(device_max_points_per_ring_.data()),
-    sizeof(std::int32_t), cudaMemcpyDeviceToHost, stream_);
-  cudaStreamSynchronize(stream_);
+    sizeof(std::int32_t), cudaMemcpyDeviceToHost, stream_));
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   if (max_ring_value >= num_rings_ || max_points_per_ring > max_points_per_ring_) {
     num_rings_ = max_ring_value + 1;
@@ -273,16 +229,16 @@ void CudaPointcloudPreprocessor::organizePointcloud()
       segment_offsets_host[i] = i * max_points_per_ring_;
     }
 
-    cudaMemcpyAsync(
+    CHECK_CUDA_ERROR(cudaMemcpyAsync(
       thrust::raw_pointer_cast(device_segment_offsets_.data()), segment_offsets_host.data(),
-      (num_rings_ + 1) * sizeof(std::int32_t), cudaMemcpyHostToDevice, stream_);
+      (num_rings_ + 1) * sizeof(std::int32_t), cudaMemcpyHostToDevice, stream_));
 
-    cudaMemsetAsync(
+    CHECK_CUDA_ERROR(cudaMemsetAsync(
       thrust::raw_pointer_cast(device_ring_index_.data()), 0, num_rings_ * sizeof(std::int32_t),
-      stream_);
-    cudaMemsetAsync(
+      stream_));
+    CHECK_CUDA_ERROR(cudaMemsetAsync(
       thrust::raw_pointer_cast(device_indexes_tensor_.data()), 0xFF,
-      num_organized_points_ * sizeof(std::int32_t), stream_);
+      num_organized_points_ * sizeof(std::int32_t), stream_));
 
     sort_workspace_bytes_ = querySortWorkspace(
       num_organized_points_, num_rings_, thrust::raw_pointer_cast(device_segment_offsets_.data()),
@@ -300,10 +256,10 @@ void CudaPointcloudPreprocessor::organizePointcloud()
   }
 
   if (num_organized_points_ == num_rings_) {
-    cudaMemcpyAsync(
+    CHECK_CUDA_ERROR(cudaMemcpyAsync(
       thrust::raw_pointer_cast(device_sorted_indexes_tensor_.data()),
       thrust::raw_pointer_cast(device_indexes_tensor_.data()),
-      num_organized_points_ * sizeof(std::uint32_t), cudaMemcpyDeviceToDevice, stream_);
+      num_organized_points_ * sizeof(std::uint32_t), cudaMemcpyDeviceToDevice, stream_));
   } else {
     cub::DeviceSegmentedRadixSort::SortKeys(
       reinterpret_cast<void *>(thrust::raw_pointer_cast(device_sort_workspace_.data())),
@@ -362,11 +318,11 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   thrust::fill(device_input_points_.begin(), device_input_points_.end(), InputPointType{});
   thrust::fill(device_organized_points_.begin(), device_organized_points_.end(), InputPointType{});
 
-  cudaMemcpyAsync(
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
     thrust::raw_pointer_cast(device_input_points_.data()), input_pointcloud_msg.data.data(),
-    num_raw_points_ * sizeof(InputPointType), cudaMemcpyHostToDevice, stream_);
+    num_raw_points_ * sizeof(InputPointType), cudaMemcpyHostToDevice, stream_));
 
-  cudaStreamSynchronize(stream_);
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   organizePointcloud();
 
@@ -482,12 +438,12 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
     thrust::device, device_ring_outlier_mask, device_ring_outlier_mask + num_organized_points_,
     device_indices);
 
-  std::uint32_t num_output_points;
-  cudaMemcpyAsync(
-    &num_output_points, device_indices + num_organized_points_ - 1, sizeof(std::uint32_t),
-    cudaMemcpyDeviceToHost, stream_);
+  int num_output_points{};
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    &num_output_points, device_indices + num_organized_points_ - 1, sizeof(int),
+    cudaMemcpyDeviceToHost, stream_));
 
-  cudaStreamSynchronize(stream_);
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   // Get information and extract points after filters
   std::uint32_t num_crop_box_passed_points =
@@ -510,7 +466,7 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
       blocks_per_grid, stream_);
   }
 
-  cudaStreamSynchronize(stream_);
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   // Copy the transformed points back
   output_pointcloud_ptr_->row_step = num_output_points * sizeof(OutputPointType);
