@@ -53,6 +53,7 @@ using autoware_planning_msgs::msg::TrajectoryPoint;
 using geometry_msgs::msg::Twist;
 using nav_msgs::msg::Odometry;
 using sensor_msgs::msg::PointCloud2;
+using unique_identifier_msgs::msg::UUID;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 namespace bg = boost::geometry;
