@@ -288,7 +288,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
   for (size_t i = 0; i < label_size; ++i) {
     for (size_t j = 0; j < label_size; ++j) {
       search_distance_sq_per_label[i] =
-        std::max(search_distance_sq_per_label[i], config_.max_dist_matrix(j, i));
+        std::max(search_distance_sq_per_label[i], config_.max_dist_matrix(i, j));
     }
   }
 
