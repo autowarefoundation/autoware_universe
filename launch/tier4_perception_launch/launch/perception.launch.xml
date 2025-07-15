@@ -327,6 +327,7 @@
           <arg name="use_radar_tracking_fusion" value="$(var use_radar_tracking_fusion)"/>
           <arg name="use_detection_by_tracker" value="$(var use_detection_by_tracker)"/>
           <arg name="use_validator" value="$(var use_object_validator)"/>
+          <arg name="use_short_range_detection" value="$(var use_short_range_detection)"/>
         </include>
       </group>
 
