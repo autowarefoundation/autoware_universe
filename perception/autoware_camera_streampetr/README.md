@@ -34,6 +34,7 @@ advantage of this by preprocessing (resize, crop, normalize) the images and stor
 | `latency/inference/pos_embed`   | `autoware_internal_debug_msgs::msg::Float64Stamped` | Position embedding inference time (ms).                                       | 0.40                  |
 | `latency/inference/postprocess` | `autoware_internal_debug_msgs::msg::Float64Stamped` | Postprocessing time (ms): converting network predictions to Autoware format.  | 0.40                  |
 | `latency/cycle_time_ms`         | `autoware_internal_debug_msgs::msg::Float64Stamped` | Cycle time (ms): from receiving the first camera topic to publishing results. | 110.65                |
+ 
 
 ## Parameters
 
@@ -119,5 +120,6 @@ If you want to train and deploy your own model, you can find the source code for
 
 ## (Optional) Future extensions / Unimplemented parts
 
+- Enable 2d object detection. Because 2d object detection is used as an auxiliary loss during training, the same node can easily support 2d object detection with minor updates.
 - Implement int8 quantization for the backbone to further reduce inference latency
 - Execute the image backbone for each image as they arrive, to further reduce latency.

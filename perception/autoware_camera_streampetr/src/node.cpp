@@ -152,7 +152,7 @@ void StreamPetrNode::odometry_callback(Odometry::ConstSharedPtr input_msg)
 }
 
 void StreamPetrNode::camera_info_callback(
-  const CameraInfo::ConstSharedPtr & input_camera_info_msg, const int camera_id)
+  CameraInfo::ConstSharedPtr input_camera_info_msg, const int camera_id)
 {
   data_store_->update_camera_info(camera_id, input_camera_info_msg);
 }
@@ -169,7 +169,7 @@ bool StreamPetrNode::prestep()
     stop_watch_ptr_->tic("latency/total");
   }
 
-  if (!data_store_->check_if_all_camera_info_received()) {
+  if (!data_store_->check_if_all_camera_info_received() || ! latest_kinematic_state_) {
     return false;  // Not all camera info received, skip processing
   }
 
@@ -181,7 +181,7 @@ bool StreamPetrNode::prestep()
 }
 
 void StreamPetrNode::camera_image_callback(
-  const Image::ConstSharedPtr & input_camera_image_msg, const int camera_id)
+  Image::ConstSharedPtr input_camera_image_msg, const int camera_id)
 {
   if (!prestep()) return;
 
@@ -191,7 +191,7 @@ void StreamPetrNode::camera_image_callback(
 }
 
 void StreamPetrNode::camera_image_callback(
-  const CompressedImage::ConstSharedPtr & input_camera_image_msg, const int camera_id)
+  CompressedImage::ConstSharedPtr input_camera_image_msg, const int camera_id)
 {
   if (!prestep()) return;
 
@@ -229,6 +229,7 @@ void StreamPetrNode::step()
       "Predicting after %.2f seconds which is longer than %.2f, so memory will be refreshed",
       static_cast<double>(data_store_->get_timestamp()), max_camera_time_diff_);
     network_->wipe_memory();
+    initial_kinematic_state_ = latest_kinematic_state_;
   }
   network_->inference_detector(
     data_store_->get_image_input(), ego_pose, ego_pose_inv, data_store_->get_image_shape(),
@@ -239,7 +240,6 @@ void StreamPetrNode::step()
 
   if (stop_watch_ptr_) inference_time_ms = stop_watch_ptr_->toc("latency/inference", true);
 
-  // data_store_->reset_camera_images();
   DetectedObjects output_msg;
   output_msg.objects = output_objects;
   output_msg.header.frame_id = "base_link";
