@@ -11,13 +11,13 @@ This package implements a TensorRT powered inference node for StreamPETR [1]. Th
 This node has been optimized for multi-camera systems where the camera topics are published in a sequential manner, not all at once. The node takes
 advantage of this by preprocessing (resize, crop, normalize) the images and storing them appropriately on GPU, so that delay due to preprocessing can be minimized.
 
-``` pgsql
+```pgsql
 
 Topic for image_i arrived
-  |                  
-  |                  
-  |                  
-  v                  
+  |
+  |
+  |
+  v
 Is image compressed?
   |              \
   |               \
