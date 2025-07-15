@@ -225,7 +225,7 @@ void CudaPointcloudPreprocessor::organizePointcloud()
     preallocateOutput();
 
     std::vector<std::int32_t> segment_offsets_host(num_rings_ + 1);
-    for (std::size_t i = 0; i < num_rings_ + 1; i++) {
+    for (int i = 0; i < num_rings_ + 1; i++) {
       segment_offsets_host[i] = i * max_points_per_ring_;
     }
 
@@ -292,7 +292,7 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   const std::uint32_t first_point_rel_stamp_nsec)
 {
   auto frame_id = input_pointcloud_msg.header.frame_id;
-  num_raw_points_ = input_pointcloud_msg.width * input_pointcloud_msg.height;
+  num_raw_points_ = static_cast<int>(input_pointcloud_msg.width * input_pointcloud_msg.height);
   num_organized_points_ = num_rings_ * max_points_per_ring_;
 
   if (num_raw_points_ == 0) {
@@ -340,19 +340,19 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   tf2::Matrix3x3 rotation_matrix;
   rotation_matrix.setRotation(rotation_quaternion);
 
-  TransformStruct transform_struct;
+  TransformStruct transform_struct{};
   transform_struct.x = static_cast<float>(transform_msg.transform.translation.x);
   transform_struct.y = static_cast<float>(transform_msg.transform.translation.y);
   transform_struct.z = static_cast<float>(transform_msg.transform.translation.z);
-  transform_struct.m11 = static_cast<float>(rotation_matrix[0][0]);
-  transform_struct.m12 = static_cast<float>(rotation_matrix[0][1]);
-  transform_struct.m13 = static_cast<float>(rotation_matrix[0][2]);
-  transform_struct.m21 = static_cast<float>(rotation_matrix[1][0]);
-  transform_struct.m22 = static_cast<float>(rotation_matrix[1][1]);
-  transform_struct.m23 = static_cast<float>(rotation_matrix[1][2]);
-  transform_struct.m31 = static_cast<float>(rotation_matrix[2][0]);
-  transform_struct.m32 = static_cast<float>(rotation_matrix[2][1]);
-  transform_struct.m33 = static_cast<float>(rotation_matrix[2][2]);
+  transform_struct.m11 = static_cast<float>(rotation_matrix.getRow(0).getX());
+  transform_struct.m12 = static_cast<float>(rotation_matrix.getRow(0).getY());
+  transform_struct.m13 = static_cast<float>(rotation_matrix.getRow(0).getZ());
+  transform_struct.m21 = static_cast<float>(rotation_matrix.getRow(1).getX());
+  transform_struct.m22 = static_cast<float>(rotation_matrix.getRow(1).getY());
+  transform_struct.m23 = static_cast<float>(rotation_matrix.getRow(1).getZ());
+  transform_struct.m31 = static_cast<float>(rotation_matrix.getRow(2).getX());
+  transform_struct.m32 = static_cast<float>(rotation_matrix.getRow(2).getY());
+  transform_struct.m33 = static_cast<float>(rotation_matrix.getRow(2).getZ());
 
   // Twist preprocessing
   std::uint64_t pointcloud_stamp_nsec = 1'000'000'000 * input_pointcloud_msg.header.stamp.sec +
@@ -396,10 +396,11 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   if (host_crop_box_structs_.size() > 0) {
     cropBoxLaunch(
       device_transformed_points, device_crop_mask, device_nan_mask, num_organized_points_,
-      thrust::raw_pointer_cast(device_crop_box_structs_.data()), host_crop_box_structs_.size(),
-      crop_box_blocks_per_grid, threads_per_block_, stream_);
+      thrust::raw_pointer_cast(device_crop_box_structs_.data()),
+      static_cast<int>(host_crop_box_structs_.size()), crop_box_blocks_per_grid, threads_per_block_,
+      stream_);
   } else {
-    thrust::fill(thrust::device, device_crop_mask, device_crop_mask + num_organized_points_, 1);
+    thrust::fill_n(thrust::device, device_crop_mask, num_organized_points_, 1);
   }
 
   // Undistortion
@@ -407,14 +408,14 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
     undistortion_type_ == UndistortionType::Undistortion3D && device_twist_3d_structs_.size() > 0) {
     undistort3DLaunch(
       device_transformed_points, num_organized_points_, device_twist_3d_structs,
-      device_twist_3d_structs_.size(), device_mismatch_mask, threads_per_block_, blocks_per_grid,
-      stream_);
+      static_cast<int>(device_twist_3d_structs_.size()), device_mismatch_mask, threads_per_block_,
+      blocks_per_grid, stream_);
   } else if (
     undistortion_type_ == UndistortionType::Undistortion2D && device_twist_2d_structs_.size() > 0) {
     undistort2DLaunch(
       device_transformed_points, num_organized_points_, device_twist_2d_structs,
-      device_twist_2d_structs_.size(), device_mismatch_mask, threads_per_block_, blocks_per_grid,
-      stream_);
+      static_cast<int>(device_twist_2d_structs_.size()), device_mismatch_mask, threads_per_block_,
+      blocks_per_grid, stream_);
   }
 
   // Ring outlier
@@ -446,13 +447,13 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   // Get information and extract points after filters
-  std::uint32_t num_crop_box_passed_points =
+  long num_crop_box_passed_points =
     thrust::count(thrust::device, device_crop_mask_.begin(), device_crop_mask_.end(), 1);
 
-  std::uint32_t num_nan_points =
+  long num_nan_points =
     thrust::count(thrust::device, device_nan_mask_.begin(), device_nan_mask_.end(), 1);
 
-  std::uint32_t mismatch_count =
+  long mismatch_count =
     thrust::count(thrust::device, device_mismatch_mask_.begin(), device_mismatch_mask_.end(), 1);
 
   stats_.num_nan_points = static_cast<int>(num_nan_points);

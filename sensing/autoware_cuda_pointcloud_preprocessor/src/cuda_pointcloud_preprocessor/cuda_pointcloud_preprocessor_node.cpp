@@ -63,9 +63,10 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
   use_imu_ = declare_parameter<bool>("use_imu");
 
   RingOutlierFilterParameters ring_outlier_filter_parameters;
-  ring_outlier_filter_parameters.distance_ratio = declare_parameter<float>("distance_ratio");
+  ring_outlier_filter_parameters.distance_ratio =
+    static_cast<float>(declare_parameter<double>("distance_ratio"));
   ring_outlier_filter_parameters.object_length_threshold =
-    declare_parameter<float>("object_length_threshold");
+    static_cast<float>(declare_parameter<double>("object_length_threshold"));
 
   processing_time_threshold_sec_ = declare_parameter<double>("processing_time_threshold_sec");
   timestamp_mismatch_fraction_threshold_ =
@@ -91,13 +92,13 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
   std::vector<CropBoxParameters> crop_box_parameters;
 
   for (std::size_t i = 0; i < crop_box_min_x_vector.size(); i++) {
-    CropBoxParameters parameters;
-    parameters.min_x = crop_box_min_x_vector[i];
-    parameters.min_y = crop_box_min_y_vector[i];
-    parameters.min_z = crop_box_min_z_vector[i];
-    parameters.max_x = crop_box_max_x_vector[i];
-    parameters.max_y = crop_box_max_y_vector[i];
-    parameters.max_z = crop_box_max_z_vector[i];
+    CropBoxParameters parameters{};
+    parameters.min_x = static_cast<float>(crop_box_min_x_vector.at(i));
+    parameters.min_y = static_cast<float>(crop_box_min_y_vector.at(i));
+    parameters.min_z = static_cast<float>(crop_box_min_z_vector.at(i));
+    parameters.max_x = static_cast<float>(crop_box_max_x_vector.at(i));
+    parameters.max_y = static_cast<float>(crop_box_max_y_vector.at(i));
+    parameters.max_z = static_cast<float>(crop_box_max_z_vector.at(i));
     crop_box_parameters.push_back(parameters);
   }
 
