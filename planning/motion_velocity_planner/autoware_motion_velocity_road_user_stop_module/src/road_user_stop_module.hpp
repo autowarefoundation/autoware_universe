@@ -16,12 +16,14 @@
 #define ROAD_USER_STOP_MODULE_HPP_
 
 #include "parameters.hpp"
+#include "path_length_buffer.hpp"
 #include "type_alias.hpp"
 #include "types.hpp"
 
 #include <autoware/motion_velocity_planner_common/planner_data.hpp>
 #include <autoware/motion_velocity_planner_common/plugin_module_interface.hpp>
 #include <autoware/motion_velocity_planner_common/polygon_utils.hpp>
+#include <autoware/motion_velocity_planner_common/utils.hpp>
 #include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -34,6 +36,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace autoware::motion_velocity_planner
@@ -61,6 +64,9 @@ public:
 private:
   RoadUserStopParameters params_;
   std::string module_name_;
+  rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
+    processing_time_detail_pub_{};
+  mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{};
 
   std::unordered_map<std::string, TrackedObject> tracked_objects_;
 
@@ -78,54 +84,42 @@ private:
     const geometry_msgs::msg::Point & position, const lanelet::LaneletMapPtr & lanelet_map) const;
   bool isWrongWayUser(const PredictedObject & object, const lanelet::ConstLanelet & lanelet) const;
 
-  lanelet::ConstLanelets getRelevantLanelets(
+  std::pair<lanelet::ConstLanelets, lanelet::ConstLanelets> getRelevantLanelets(
+    const std::shared_ptr<const PlannerData> planner_data) const;
+
+  std::vector<autoware_utils_geometry::Polygon2d> getTrajectoryPolygons(
+    const std::vector<TrajectoryPoint> & decimated_traj_points,
+    const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
+    const geometry_msgs::msg::Pose & current_ego_pose, const double lat_margin,
+    const bool enable_to_consider_current_pose, const double time_to_convergence,
+    const double decimate_trajectory_step_length) const;
+
+  std::optional<geometry_msgs::msg::Point> planStop(
     const std::shared_ptr<const PlannerData> planner_data,
-    const std::vector<TrajectoryPoint> & trajectory_points) const;
-
-  std::optional<size_t> calculateStopPointWithMargin(
-    const std::vector<TrajectoryPoint> & trajectory_points, const PredictedObject & object,
-    const VehicleInfo & vehicle_info) const;
-
-  std::optional<size_t> calculateGradualStopPoint(
-    const std::vector<TrajectoryPoint> & trajectory_points, const double current_velocity,
-    const geometry_msgs::msg::Point & current_position) const;
-
-  std::optional<StopPointCandidate> createStopPointCandidate(
-    const std::vector<TrajectoryPoint> & trajectory_points, const PredictedObject & object,
-    const bool is_wrong_way, const std::shared_ptr<const PlannerData> planner_data) const;
-
-  double calculateRequiredDeceleration(
-    const double current_velocity, const double stop_distance) const;
+    const std::vector<TrajectoryPoint> & trajectory_points,
+    const std::vector<StopObstacle> & stop_obstacles, const double dist_to_bumper);
 
   void updateTrackedObjects(const PredictedObjects & objects, const rclcpp::Time & current_time);
 
   bool hasMinimumDetectionDuration(
     const std::string & object_id, const rclcpp::Time & current_time) const;
 
-  void publishProcessingTime(const double processing_time_ms) const;
-
-  void addPlanningFactor(
-    const std::vector<TrajectoryPoint> & trajectory_points, const StopPointCandidate & candidate,
-    const std::shared_ptr<const PlannerData> planner_data) const;
-
   // debug
   struct DebugData
   {
     lanelet::ConstLanelets relevant_lanelets;
     lanelet::ConstLanelets ego_lanelets;       // lanelets on ego lane
-    lanelet::ConstLanelets adjacent_lanelets;  // adjacent lanelets (left/right)
-    lanelet::ConstLanelets
-      masked_adjacent_lanelets;  // adjacent lanelets masked by trajectory margin
+    lanelet::ConstLanelets adjacent_lanelets;  // adjacent lanelets
     std::vector<autoware_utils_geometry::Polygon2d>
       trajectory_polygons;  // trajectory polygons with lateral margin
-    std::vector<autoware_utils_geometry::Polygon2d>
-      masked_adjacent_polygons;  // polygons clipped by trajectory margin
     std::vector<PredictedObject> filtered_objects;
     std::optional<size_t> stop_index;
     std::optional<geometry_msgs::msg::Point> stop_point;  // for planning factor
     std::optional<PredictedObject> stop_target_object;    // object causing stop
-    std::vector<geometry_msgs::msg::Point>
-      gradual_stop_positions;  // calculated gradual stop positions
+    lanelet::ConstLanelets
+      lanelets_for_vru;  // lanelets for VRU detection (ego + adjacent + opposite)
+    lanelet::ConstLanelets
+      lanelets_for_wrongway_user;  // lanelets for wrongway detection (ego + adjacent)
   };
 
   MarkerArray createDebugMarkerArray() const;
@@ -142,6 +136,53 @@ private:
   rclcpp::Subscription<autoware_internal_planning_msgs::msg::PathWithLaneId>::SharedPtr
     sub_path_with_lane_id_;
   autoware_internal_planning_msgs::msg::PathWithLaneId::ConstSharedPtr path_with_lane_id_;
+
+  mutable std::unordered_map<double, std::vector<Polygon2d>> trajectory_polygon_for_inside_map_{};
+
+  std::optional<StopObstacle> pickStopObstacleFromPredictedObject(
+    const std::shared_ptr<const PlannerData> planner_data,
+    const std::shared_ptr<PlannerData::Object> object,
+    const std::vector<TrajectoryPoint> & traj_points,
+    const std::vector<TrajectoryPoint> & decimated_traj_points,
+    const std::vector<autoware_utils_geometry::Polygon2d> & decimated_traj_polygons,
+    const lanelet::ConstLanelets & lanelets_for_vru,
+    const lanelet::ConstLanelets & lanelets_for_wrongway_user, const rclcpp::Time & current_time,
+    const double dist_to_bumper);
+
+  // Stop planning
+  void holdPreviousStopIfNecessary(
+    const std::shared_ptr<const PlannerData> planner_data,
+    const std::vector<TrajectoryPoint> & traj_points,
+    std::optional<double> & determined_zero_vel_dist);
+
+  std::optional<geometry_msgs::msg::Point> calcStopPoint(
+    const std::shared_ptr<const PlannerData> planner_data,
+    const std::vector<TrajectoryPoint> & traj_points, const double dist_to_bumper,
+    const std::optional<StopObstacle> & determined_stop_obstacle,
+    const std::optional<double> & determined_zero_vel_dist);
+
+  std::vector<StopObstacle> getClosestStopObstacles(
+    const std::vector<StopObstacle> & stop_obstacles) const;
+
+  // Previous stop distance info for holding stop position
+  std::optional<std::pair<std::vector<TrajectoryPoint>, double>> prev_stop_distance_info_{
+    std::nullopt};
+
+  // Path length buffer for negative velocity obstacles
+  PathLengthBuffer path_length_buffer_;
+
+  // Stop margin calculation
+  double calcDesiredStopMargin(
+    const std::shared_ptr<const PlannerData> planner_data,
+    const std::vector<TrajectoryPoint> & traj_points, const StopObstacle & stop_obstacle,
+    const double dist_to_bumper, const size_t ego_segment_idx,
+    const double dist_to_collide_on_ref_traj) const;
+
+  std::optional<double> calcCandidateZeroVelDist(
+    const std::shared_ptr<const PlannerData> planner_data,
+    const std::vector<TrajectoryPoint> & traj_points, const StopObstacle & stop_obstacle,
+    const double dist_to_collide_on_ref_traj, const double desired_stop_margin,
+    const double dist_to_bumper) const;
 };
 
 }  // namespace autoware::motion_velocity_planner
