@@ -68,10 +68,8 @@ public:
 
 private:
   void odometry_callback(Odometry::ConstSharedPtr input_msg);
-  void camera_info_callback(
-    CameraInfo::ConstSharedPtr input_camera_info_msg, const int camera_id);
-  void camera_image_callback(
-    Image::ConstSharedPtr input_camera_image_msg, const int camera_id);
+  void camera_info_callback(CameraInfo::ConstSharedPtr input_camera_info_msg, const int camera_id);
+  void camera_image_callback(Image::ConstSharedPtr input_camera_image_msg, const int camera_id);
   void camera_image_callback(
     CompressedImage::ConstSharedPtr input_camera_image_msg, const int camera_id);
   bool prestep();
