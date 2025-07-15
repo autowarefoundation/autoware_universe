@@ -481,7 +481,7 @@ ObstacleSlowDownModule::create_slow_down_obstacle_for_predicted_object(
   const auto & p = obstacle_filtering_param_;
 
   const auto & obj_uuid = object->predicted_object.object_id;
-  const auto obj_uuid_str = autoware_utils_uuid::to_hex_string(obj_uuid);
+  const auto & obj_uuid_str = autoware_utils::to_hex_string(obj_uuid);
   const auto & obj_label = object->predicted_object.classification.at(0).label;
   slow_down_condition_counter_.add_current_uuid(obj_uuid);
 
@@ -620,7 +620,7 @@ SlowDownObstacle ObstacleSlowDownModule::create_slow_down_obstacle_for_point_clo
   const double unconfigured_lat_velocity = 0.;
 
   return SlowDownObstacle{
-    UUID(),
+    UUID{},
     stamp,
     unknown_object_classification,
     unconfigured_pose,
