@@ -99,7 +99,7 @@ public:
 
   bool isAbleToReturnCurrentLane() const override;
 
-  bool is_near_terminal() const final;
+  bool is_near_terminal_end() const final;
 
   bool isEgoOnPreparePhase() const override;
 
