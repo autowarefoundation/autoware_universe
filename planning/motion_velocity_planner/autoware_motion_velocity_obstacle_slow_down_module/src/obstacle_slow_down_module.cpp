@@ -751,11 +751,22 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
       autoware_utils::append_marker_array(markers, &debug_data_ptr_->slow_down_wall_marker);
 
       // update planning factor
+      autoware_internal_planning_msgs::msg::SafetyFactor safety_factor;
+      // TODO(Yuki TAKAGI): set correct type after pcl stop feature is improved.
+      safety_factor.type = autoware_internal_planning_msgs::msg::SafetyFactor::UNKNOWN;
+      safety_factor.object_id = obstacle.uuid;
+      safety_factor.points = {obstacle.pose.position};
+      safety_factor.is_safe = false;
+
+      autoware_internal_planning_msgs::msg::SafetyFactorArray safety_factor_array;
+      safety_factor_array.factors.push_back(safety_factor);
+      safety_factor_array.is_safe = false;
+
       planning_factor_interface_->add(
         slow_down_traj_points, planner_data->current_odometry.pose.pose,
         slow_down_traj_points.at(*slow_down_start_idx).pose,
         slow_down_traj_points.at(*slow_down_end_idx).pose, PlanningFactor::SLOW_DOWN,
-        SafetyFactorArray{}, planner_data->is_driving_forward, stable_slow_down_vel);
+        safety_factor_array, planner_data->is_driving_forward, stable_slow_down_vel);
     }
 
     // add debug virtual wall
