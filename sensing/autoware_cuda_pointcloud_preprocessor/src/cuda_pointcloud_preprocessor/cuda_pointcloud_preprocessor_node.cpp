@@ -259,10 +259,14 @@ void CudaPointcloudPreprocessorNode::pointcloudCallback(
   // cppcheck-suppress unknownMacro
   AUTOWARE_MESSAGE_UNIQUE_PTR(sensor_msgs::msg::PointCloud2) input_pointcloud_msg_ptr)
 {
-  stop_watch_ptr_->toc("processing_time", true);
   const auto & input_pointcloud_msg = *input_pointcloud_msg_ptr;
 
-  validatePointcloudLayout(input_pointcloud_msg);
+  if (!validatePointcloudLayout(input_pointcloud_msg)) {
+    return;
+  }
+
+  stop_watch_ptr_->toc("processing_time", true);
+
   const auto [first_point_stamp, first_point_rel_stamp] =
     getFirstPointTimeInfo(input_pointcloud_msg);
   updateTwistQueue(first_point_stamp);
@@ -283,16 +287,19 @@ void CudaPointcloudPreprocessorNode::pointcloudCallback(
   cuda_pointcloud_preprocessor_->preallocateOutput();
 }
 
-void CudaPointcloudPreprocessorNode::validatePointcloudLayout(
-  const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg)
+[[nodiscard]] bool CudaPointcloudPreprocessorNode::validatePointcloudLayout(
+  const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg) const
 {
-  if (!is_data_layout_compatible_with_point_xyzircaedt(input_pointcloud_msg.fields)) {
-    RCLCPP_ERROR(
-      get_logger(), "Input pointcloud data layout is not compatible with PointXYZIRCAEDT");
-  }
   static_assert(
     sizeof(InputPointType) == sizeof(autoware::point_types::PointXYZIRCAEDT),
     "PointStruct and PointXYZIRCAEDT must have the same size");
+
+  if (is_data_layout_compatible_with_point_xyzircaedt(input_pointcloud_msg.fields)) {
+    return true;
+  }
+
+  RCLCPP_ERROR(get_logger(), "Input pointcloud data layout is not compatible with PointXYZIRCAEDT");
+  return false;
 }
 
 /**
