@@ -71,6 +71,7 @@ The naive strategy is designed for scenarios where LiDAR sensors are **not synch
 - **Faster processing**: Reduced computational overhead due to simplified logic
 
 **When to use naive strategy:**
+
 - LiDAR sensors are not hardware-synchronized
 - Timestamp differences between sensors are negligible for your application
 - You prioritize processing speed over precise temporal alignment
@@ -90,12 +91,14 @@ The advanced strategy is designed for scenarios where LiDAR sensors are **synchr
 - **Robust collection**: Handles temporal variations and ensures proper point cloud grouping
 
 **When to use advanced strategy:**
+
 - LiDAR sensors are hardware-synchronized
 - Precise temporal alignment is critical for your application
 - You have measured timestamp offsets between your LiDAR sensors
 - You want to handle timestamp noise and jitter effectively
 
 **Required parameters for advanced strategy:**
+
 - `lidar_timestamp_offsets`: Array of time offsets for each LiDAR sensor
 - `lidar_timestamp_noise_window`: Time window to handle timestamp jitter
 - `timeout_sec`: Maximum wait time for point cloud collection
