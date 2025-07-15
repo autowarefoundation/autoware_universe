@@ -30,11 +30,11 @@ target_link_libraries(autoware_traffic_light_rviz_plugin
 )
 
 # Suppress specific warnings if desired
-target_compile_options(autoware_traffic_light_rviz_plugin PUBLIC
-  -Wno-error=deprecated-copy
-  -Wno-error=pedantic
-  -Wno-error=unused-parameter
-)
+# Treat OGRE headers as system headers to suppress warnings
+if(TARGET rviz_ogre_vendor::OgreMain)
+get_target_property(OGRE_INCLUDE_DIRS rviz_ogre_vendor::OgreMain INTERFACE_INCLUDE_DIRECTORIES)
+target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE ${OGRE_INCLUDE_DIRS})
+endif()
 
 # Export plugin description for RViz
 pluginlib_export_plugin_description_file(
