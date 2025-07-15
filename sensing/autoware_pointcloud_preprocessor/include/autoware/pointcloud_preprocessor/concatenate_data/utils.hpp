@@ -100,8 +100,6 @@ inline void append_source_point_cloud_info(
                          : 0;
   autoware_sensing_msgs::msg::SourcePointCloudInfo source_cloud_info;
   source_cloud_info.header = cloud.header;
-  source_cloud_info.height = cloud.height;
-  source_cloud_info.width = cloud.width;
   source_cloud_info.topic = topic;
   source_cloud_info.idx_begin = idx_begin;
   source_cloud_info.idx_end = idx_begin + cloud.width * cloud.height;
@@ -113,13 +111,6 @@ inline void set_concatenated_point_cloud_info(
   autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo & out_concatenated_cloud_info)
 {
   out_concatenated_cloud_info.header = cloud.header;
-  out_concatenated_cloud_info.height = cloud.height;
-  out_concatenated_cloud_info.width = cloud.width;
-  out_concatenated_cloud_info.fields = cloud.fields;
-  out_concatenated_cloud_info.is_bigendian = cloud.is_bigendian;
-  out_concatenated_cloud_info.point_step = cloud.point_step;
-  out_concatenated_cloud_info.row_step = cloud.row_step;
-  out_concatenated_cloud_info.is_dense = cloud.is_dense;
 }
 
 inline void set_concatenated_point_cloud_status(
