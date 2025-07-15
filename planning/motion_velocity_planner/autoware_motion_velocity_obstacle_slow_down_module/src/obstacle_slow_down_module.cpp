@@ -691,7 +691,7 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
     if (!dist_vec_to_slow_down) {
       RCLCPP_DEBUG(
         logger_, "[SlowDown] Ignore obstacle (%s) since distance to slow down is not valid",
-        autoware_utils::to_hex_string(obstacle.uuid).c_str());
+        autoware_utils_uuid::to_hex_string(obstacle.uuid).c_str());
       continue;
     }
     const auto dist_to_slow_down_start = std::get<0>(*dist_vec_to_slow_down);

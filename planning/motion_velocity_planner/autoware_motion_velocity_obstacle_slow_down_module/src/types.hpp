@@ -17,14 +17,10 @@
 
 #include "type_alias.hpp"
 
-#include <autoware_utils_uuid/uuid_helper.hpp>
-
-#include <unique_identifier_msgs/msg/uuid.hpp>
-
 #include <algorithm>
+#include <map>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 // for SlowDownConditionCounter struct

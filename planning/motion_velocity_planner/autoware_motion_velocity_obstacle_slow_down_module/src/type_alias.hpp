@@ -28,6 +28,7 @@
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
+#include "unique_identifier_msgs/msg/uuid.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include <autoware_internal_planning_msgs/msg/planning_factor.hpp>
 #include <autoware_internal_planning_msgs/msg/safety_factor_array.hpp>
