@@ -60,7 +60,7 @@ FunctionTimings runIterations(
   int num_iterations, const TrackingScenarioConfig & config, bool print_frame_stats = false,
   bool write_bag = false)
 {
-  RosbagWriterHelper writer(write_bag);  // Initialize rosbag writer if enabled
+  RosbagWriterHelper writer(write_bag);
 
   auto processor_config = createProcessorConfig();
   const auto associator_config = createAssociatorConfig();
@@ -104,7 +104,6 @@ FunctionTimings runIterations(
       std::chrono::duration_cast<std::chrono::microseconds>(total_end - total_start).count() /
       1000.0;
     timings.total.times.push_back(total_duration);
-    // std::cout << "DEBUG: All processing steps completed successfully" << std::endl;
 
     if (i % 10 == 0 && print_frame_stats) {
       printFrameStats(i, detections, timings);

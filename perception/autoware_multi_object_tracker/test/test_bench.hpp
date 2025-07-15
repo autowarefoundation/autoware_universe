@@ -163,7 +163,7 @@ private:
   std::bernoulli_distribution dir_change_dist_{0.1};
   std::uniform_real_distribution<float> cos_dist_{-1.0, 1.0};
   std::uniform_real_distribution<float> sin_dist_{-1.0, 1.0};
-  std::bernoulli_distribution new_obj_dist_{0.1};
+  std::bernoulli_distribution new_obj_dist_{0.0};
 
   // Object states
   std::unordered_map<std::string, ObjectState> car_states_;

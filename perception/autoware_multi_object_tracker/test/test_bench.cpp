@@ -336,13 +336,13 @@ autoware::multi_object_tracker::types::DynamicObjectList TrackingTestBench::gene
     obj.area = state.shape.x * state.shape.y;
     detections.objects.push_back(obj);
   }
-  // // Add new objects occasionally
-  // if (new_obj_dist_(rng_)) {
-  //   addNewCar("car_" + std::to_string(object_counter_++), 0, 0);
-  // }
-  // if (new_obj_dist_(rng_)) {
-  //   addNewPedestrian("ped_" + std::to_string(object_counter_++), 0, 0);
-  // }
+  // Add new objects occasionally
+  if (new_obj_dist_(rng_)) {
+    addNewCar("car_" + std::to_string(object_counter_++), 0, 0);
+  }
+  if (new_obj_dist_(rng_)) {
+    addNewPedestrian("ped_" + std::to_string(object_counter_++), 0, 0);
+  }
   return detections;
 }
 
