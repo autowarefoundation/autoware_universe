@@ -7,7 +7,6 @@ endif()
 
 # --- find dependencies ---
 find_package(autoware_cmake REQUIRED)
-find_package(glog REQUIRED)
 autoware_package()
 
 # --- find CUDA/CUDNN/TensorRT dependencies ---
@@ -41,7 +40,6 @@ if(NOT (CUDA_AVAILABLE AND TENSORRT_AVAILABLE))
 endif()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED ${SIMPL_SOURCES})
-target_link_libraries(${PROJECT_NAME} glog::glog)
 
 target_include_directories(
   ${PROJECT_NAME}

@@ -23,7 +23,6 @@
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
 
-#include <glog/logging.h>
 #include <lanelet2_core/LaneletMap.h>
 
 #include <functional>
@@ -36,9 +35,6 @@ namespace autoware::simpl
 {
 SimplNode::SimplNode(const rclcpp::NodeOptions & options) : rclcpp::Node("simpl", options)
 {
-  google::InitGoogleLogging(get_name());
-  google::InstallFailureSignalHandler();
-
   {
     // Subscriptions and publisher
     using std::placeholders::_1;
