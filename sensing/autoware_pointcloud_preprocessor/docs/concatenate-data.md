@@ -57,19 +57,63 @@ By setting the `input_twist_topic_type` parameter to `twist` or `odom`, the subs
 
 {{ json_to_markdown("sensing/autoware_pointcloud_preprocessor/schema/concatenate_and_time_sync_node.schema.json") }}
 
-### Parameter Settings
+## Concatenation Strategies
 
-If you didn't synchronize your LiDAR sensors, set the `type` parameter of `matching_strategy` to `naive` to concatenate the point clouds directly. However, if your LiDAR sensors are synchronized, set type to `advanced` and adjust the `lidar_timestamp_offsets` and `lidar_timestamp_noise_window` parameters accordingly.
+The `concatenate_and_time_synchronize_node` supports different concatenation strategies through the `matching_strategy.type` parameter, designed to handle different LiDAR synchronization scenarios:
 
-The three parameters, `timeout_sec`, `lidar_timestamp_offsets`, and `lidar_timestamp_noise_window`, are essential for efficiently collecting point clouds in the same collector and managing edge cases (point cloud drops or delays) effectively.
+### Naive Strategy (`matching_strategy.type: "naive"`)
 
-#### timeout_sec
+The naive strategy is designed for scenarios where LiDAR sensors are **not synchronized** or when precise timestamp alignment is not critical. This strategy:
+
+- **Direct concatenation**: Point clouds are concatenated directly without complex timestamp matching
+- **Simple collection**: Point clouds are collected and merged as they arrive within the timeout window
+- **No offset compensation**: Does not use `lidar_timestamp_offsets` or `lidar_timestamp_noise_window` parameters
+- **Faster processing**: Reduced computational overhead due to simplified logic
+
+**When to use naive strategy:**
+
+- LiDAR sensors are not hardware-synchronized
+- Timestamp differences between sensors are negligible for your application
+- You prioritize processing speed over precise temporal alignment
+- Simple concatenation without complex matching logic is sufficient
+
+#### Parameter Settings
+
+Set the `type` parameter of `matching_strategy` to `"naive"` to concatenate the point clouds directly.
+
+### Advanced Strategy (`matching_strategy.type: "advanced"`)
+
+The advanced strategy is designed for scenarios where LiDAR sensors are **synchronized** and precise timestamp alignment is crucial. This strategy:
+
+- **Precise timestamp matching**: Uses reference timestamps with offset compensation
+- **Noise tolerance**: Accounts for timestamp jitter using `lidar_timestamp_noise_window`
+- **Offset correction**: Applies `lidar_timestamp_offsets` to align different LiDAR timing
+- **Robust collection**: Handles temporal variations and ensures proper point cloud grouping
+
+**When to use advanced strategy:**
+
+- LiDAR sensors are hardware-synchronized
+- Precise temporal alignment is critical for your application
+- You have measured timestamp offsets between your LiDAR sensors
+- You want to handle timestamp noise and jitter effectively
+
+**Required parameters for advanced strategy:**
+
+- `lidar_timestamp_offsets`: Array of time offsets for each LiDAR sensor
+- `lidar_timestamp_noise_window`: Time window to handle timestamp jitter
+- `timeout_sec`: Maximum wait time for point cloud collection
+
+#### Parameter Settings
+
+Set the `type` parameter of `matching_strategy` to `"advanced"` and configure the `timeout_sec`, `lidar_timestamp_offsets` and `lidar_timestamp_noise_window` parameters accordingly.
+
+##### timeout_sec
 
 When network issues occur or when point clouds experience delays in the previous processing pipeline, some point clouds may be delayed or dropped. To address this, the `timeout_sec` parameter is used. Once the timer is created, it will start counting down from `timeout_sec`. If the timer reaches zero, the collector will not wait for delayed or dropped point clouds but will concatenate the remaining point clouds in the collector directly. The figure below demonstrates how `timeout_sec` works with `concatenate_and_time_sync_node` when `timeout_sec` is set to `0.12` (120 ms).
 
 ![concatenate_edge_case](./image/concatenate_edge_case.drawio.svg)
 
-#### lidar_timestamp_offsets
+##### lidar_timestamp_offsets
 
 Since different vehicles have varied designs for LiDAR scanning, the timestamps of each LiDAR may differ. Users need to know the offsets between each LiDAR and set the values in `lidar_timestamp_offsets`.
 
@@ -95,7 +139,7 @@ The figure below demonstrates how `lidar_timestamp_offsets` works with `concaten
 
 ![ideal_timestamp_offset](./image/ideal_timestamp_offset.drawio.svg)
 
-#### lidar_timestamp_noise_window
+##### lidar_timestamp_noise_window
 
 Additionally, due to the mechanical design of LiDARs, there may be some jitter in the timestamps of each scan, as shown in the image below. For example, if the scan frequency is set to 10 Hz (scanning every 100 ms), the timestamps between each scan might not be exactly 100 ms apart. To handle this noise, the `lidar_timestamp_noise_window` parameter is provided.
 
