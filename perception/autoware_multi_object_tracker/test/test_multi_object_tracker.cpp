@@ -119,7 +119,6 @@ FunctionTimings runIterations(
     writer.write(
       latest_tracked_objects, "/perception/object_recognition/tracking/objects", current_time);
   }
-  std::cout << "=== Performance Summary ===" << std::endl;
   return timings;
 }
 
