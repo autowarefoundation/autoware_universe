@@ -190,16 +190,25 @@ uint64_t TrackingTestBench::getGridKey(float x, float y) const
 
 void TrackingTestBench::updateGrid(const std::string & id, bool remove_first)
 {
+  // Map to store the previous cell key for each object ID
+  static std::unordered_map<std::string, uint64_t> previous_cell_keys;
+  // Retrieve the current car state associated with the given ID.
   auto & car = car_states_[id];
+  // Compute the grid key based on the car's (x, y) position.
   auto key = getGridKey(car.pose.position.x, car.pose.position.y);
 
   if (remove_first) {
-    for (auto & [cell, ids] : spatial_grid_) {
+    // Remove the ID from the previous cell directly
+    if (previous_cell_keys.count(id)) {
+      auto prev_key = previous_cell_keys[id];
+      auto & ids = spatial_grid_[prev_key];
       ids.erase(std::remove(ids.begin(), ids.end(), id), ids.end());
     }
   }
-
+  // Add the ID to the list of objects in the computed grid cell.
   spatial_grid_[key].push_back(id);
+  // Update the previous cell key
+  previous_cell_keys[id] = key;
 }
 
 bool TrackingTestBench::checkCollisions(const std::string & id)
