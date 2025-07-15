@@ -11,6 +11,53 @@ This package implements a TensorRT powered inference node for StreamPETR [1]. Th
 This node has been optimized for multi-camera systems where the camera topics are published in a sequential manner, not all at once. The node takes
 advantage of this by preprocessing (resize, crop, normalize) the images and storing them appropriately on GPU, so that delay due to preprocessing can be minimized.
 
+``` pgsql
+
+Topic for image_i arrived
+  |                  
+  |                  
+  |                  
+  v                  
+Is image compressed?
+  |              \
+  |               \
+Yes               No
+  |                |
+  v                |
+Decompress         |
+  |                |
+  v                v
+Load image into GPU memory
+  |
+  v
+Preprocess image (scale & crop ROI & normalize)
+  |
+  v
+Store in GPU memory binding location for model input
+  |
+  v
+Is image the `anchor_image`?
+  |                \
+  |                 \
+No                  Yes
+  |                  |
+  v                  v
+(Wait)     Are all images synced within `max_time_difference`?
+                      |                           \
+                      |                            \
+                    Yes                             No
+                      |                             |
+                      v                             v
+         Perform model forward pass            (Sync failed! Skip prediction)
+                      |
+                      v
+         Postprocess (NMS + ROS2 format)
+                      |
+                      v
+             Publish predictions
+
+```
+
 ## Inputs / Outputs
 
 ### Input
@@ -97,7 +144,7 @@ This node is camera-only and does not require pointcloud input. It assumes:
 - The anchor camera (specified by `anchor_camera_id`) triggers the inference cycle
 - Vehicle odometry is available for ego motion compensation
 - Transform information between camera frames and base_link is available
-- The input images are undistorted
+- **The input images are undistorted**
 
 ## Trained Models
 
