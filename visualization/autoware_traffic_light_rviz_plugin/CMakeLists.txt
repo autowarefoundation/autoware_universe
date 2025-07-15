@@ -20,20 +20,20 @@ file(GLOB_RECURSE HDR_FILES
 )
 
 # Create plugin library from all sources
-ament_auto_add_library(autoware_traffic_light_rviz_plugin SHARED
+ament_auto_add_library(${PROJECT_NAME} SHARED
   ${SRC_FILES}
   ${HDR_FILES}
 )
 
-target_link_libraries(autoware_traffic_light_rviz_plugin
+target_link_libraries(${PROJECT_NAME}
   ${QT_LIBRARIES}
 )
 
 # Suppress specific warnings if desired
 # Treat OGRE headers as system headers to suppress warnings
 if(TARGET rviz_ogre_vendor::OgreMain)
-get_target_property(OGRE_INCLUDE_DIRS rviz_ogre_vendor::OgreMain INTERFACE_INCLUDE_DIRECTORIES)
-target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE ${OGRE_INCLUDE_DIRS})
+  get_target_property(OGRE_INCLUDE_DIRS rviz_ogre_vendor::OgreMain INTERFACE_INCLUDE_DIRECTORIES)
+  target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE ${OGRE_INCLUDE_DIRS})
 endif()
 
 # Export plugin description for RViz
