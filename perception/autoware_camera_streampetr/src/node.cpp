@@ -169,7 +169,7 @@ bool StreamPetrNode::prestep()
     stop_watch_ptr_->tic("latency/total");
   }
 
-  if (!data_store_->check_if_all_camera_info_received() || ! latest_kinematic_state_) {
+  if (!data_store_->check_if_all_camera_info_received() || !latest_kinematic_state_) {
     return false;  // Not all camera info received, skip processing
   }
 

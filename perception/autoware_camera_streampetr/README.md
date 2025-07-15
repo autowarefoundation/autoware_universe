@@ -34,7 +34,6 @@ advantage of this by preprocessing (resize, crop, normalize) the images and stor
 | `latency/inference/pos_embed`   | `autoware_internal_debug_msgs::msg::Float64Stamped` | Position embedding inference time (ms).                                       | 0.40                  |
 | `latency/inference/postprocess` | `autoware_internal_debug_msgs::msg::Float64Stamped` | Postprocessing time (ms): converting network predictions to Autoware format.  | 0.40                  |
 | `latency/cycle_time_ms`         | `autoware_internal_debug_msgs::msg::Float64Stamped` | Cycle time (ms): from receiving the first camera topic to publishing results. | 110.65                |
- 
 
 ## Parameters
 
