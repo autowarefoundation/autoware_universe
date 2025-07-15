@@ -2,6 +2,35 @@
 Changelog for package autoware_detected_object_validation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(obstacle_pointcloud_validator): add processing time ms for track… (`#10738 <https://github.com/autowarefoundation/autoware_universe/issues/10738>`_)
+  feat(obstacle_pointcloud_validator): add processing time ms for tracking perception performance
+  Co-authored-by: Jian Kang <jian.kang@tier4.jp>
+* feat(autoware_detected_object_validation): add lanelet object elevation filter (`#10649 <https://github.com/autowarefoundation/autoware_universe/issues/10649>`_)
+  * add 3d lanelet filter
+  * style(pre-commit): autofix
+  * add missing include
+  * refactor
+  * style(pre-commit): autofix
+  * remove unused
+  * fix and update
+  * fix typo
+  * update content
+  * make it const
+  * remove old comment
+  * fix and change the var of args to match
+  * remove height filter test and add elevation filter test
+  * apply some of clang-tidy suggestions
+  * apply of clang-tidy suggestion
+  * fix log message
+  * fix typo
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* Contributors: Kang, Masaki Baba, TaikiYamada4
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -13,6 +42,9 @@ Changelog for package autoware_detected_object_validation
   * chore: add Kok Seang Tan as maintainer in multiple perception packages
   ---------
 * Contributors: Taekjin LEE, TaikiYamada4
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

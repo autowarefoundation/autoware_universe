@@ -2,6 +2,29 @@
 Changelog for package autoware_behavior_path_goal_planner_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(goal_planner): check previous module's stopline when regenerate candidates (`#10776 <https://github.com/autowarefoundation/autoware_universe/issues/10776>`_)
+* feat(goal_planner): add param of path_decision_state_controller.check_collision_duration (`#10767 <https://github.com/autowarefoundation/autoware_universe/issues/10767>`_)
+  * feat(goal_planner): add param of path_decision_state_controller.check_collision_duration
+  * update readme
+  ---------
+* fix(goal_planner): publish debug_objects_extraction_polygon (`#10766 <https://github.com/autowarefoundation/autoware_universe/issues/10766>`_)
+* feat: goal planner checking border; clean up `#10725 <https://github.com/autowarefoundation/autoware_universe/issues/10725>`_ (`#10755 <https://github.com/autowarefoundation/autoware_universe/issues/10755>`_)
+  * merging updates  in `#10725 <https://github.com/autowarefoundation/autoware_universe/issues/10725>`_
+  * fix hash and typo, precommit
+  ---------
+* feat(behavior_path_planner): organize a part of behavior path info/debug markers (`#10729 <https://github.com/autowarefoundation/autoware_universe/issues/10729>`_)
+  * feat(behavior_path_planner): organize a part of behavior path info/debug markers
+  * Update planning/behavior_path_planner/autoware_behavior_path_goal_planner_module/src/goal_planner_module.cpp
+  Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
+  * Update planning/behavior_path_planner/autoware_behavior_path_goal_planner_module/src/util.cpp
+  Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
+  ---------
+  Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
+* Contributors: Kosuke Takeuchi, Mamoru Sobue, TaikiYamada4, Takayuki Murooka, Yuxuan Liu
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -19,6 +42,9 @@ Changelog for package autoware_behavior_path_goal_planner_module
 * refactor(goal_planner): do not use only_route_lanes = false (`#10525 <https://github.com/autowarefoundation/autoware_universe/issues/10525>`_)
   feat(route_handler): remove only_route_lanes argument because it is not used
 * Contributors: Mamoru Sobue, TaikiYamada4, Zulfaqar Azmi
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

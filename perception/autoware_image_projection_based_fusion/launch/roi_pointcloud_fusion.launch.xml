@@ -17,6 +17,8 @@
   <arg name="input/camera_info6" default="/camera_info6"/>
   <arg name="input/rois7" default="rois7"/>
   <arg name="input/camera_info7" default="/camera_info7"/>
+  <arg name="input/rois8" default="rois8"/>
+  <arg name="input/camera_info8" default="/camera_info8"/>
   <arg name="input/pointcloud" default="/perception/object_recognition/detection/pointcloud_map_filtered/pointcloud"/>
   <arg name="output/clusters" default="output/clusters"/>
   <arg name="debug/clusters" default="roi_pointcloud_fusion/debug/clusters"/>
@@ -33,6 +35,7 @@
   <arg name="input/image5" default="/image_raw5"/>
   <arg name="input/image6" default="/image_raw6"/>
   <arg name="input/image7" default="/image_raw7"/>
+  <arg name="input/image8" default="/image_raw8"/>
   <group>
     <load_composable_node target="$(var pointcloud_container_name)">
       <composable_node pkg="autoware_image_projection_based_fusion" plugin="autoware::image_projection_based_fusion::RoiPointCloudFusionNode" name="roi_pointcloud_fusion">
@@ -68,6 +71,9 @@
         <param name="input/rois7" value="$(var input/rois7)"/>
         <param name="input/camera_info7" value="$(var input/camera_info7)"/>
         <param name="input/image7" value="$(var input/image7)"/>
+        <param name="input/rois8" value="$(var input/rois8)"/>
+        <param name="input/camera_info8" value="$(var input/camera_info8)"/>
+        <param name="input/image8" value="$(var input/image8)"/>
       </composable_node>
     </load_composable_node>
   </group>

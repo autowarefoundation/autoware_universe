@@ -46,6 +46,17 @@ static constexpr const char * logger_namespace =
 bool isOnRight(const ObjectData & obj);
 
 /**
+ * @brief Calculate lateral distances between the vehicle's front corner and the path centerline
+ *        for each point along the given path.
+ * @param path The reference path with lane IDs.
+ * @param planner_data Shared data containing vehicle parameters and current state.
+ * @return A vector of lateral offsets for the front corner at each path point.
+ */
+auto calc_front_corner_offsets(
+  const PathWithLaneId & path, const std::shared_ptr<const PlannerData> & planner_data)
+  -> std::vector<double>;
+
+/**
  * @brief calculate shift length from centerline of current lane.
  * @param object offset direction.
  * @param distance between object polygon and centerline of current lane. (signed)
@@ -108,6 +119,21 @@ void fillLongitudinalAndLengthByClosestEnvelopeFootprint(
  */
 std::vector<std::pair<double, Point>> calcEnvelopeOverhangDistance(
   const ObjectData & object_data, const PathWithLaneId & path);
+
+/**
+ * @brief Calculate additional safety margin based on the curvature of the path
+ *        near the object's position to avoid close proximity of the vehicle's front.
+ * @param object_data Detected object information.
+ * @param front_corner_offsets Lateral distances from the vehicle's front corner to the path
+ * centerline at each path point.
+ * @param path The planned path with lane IDs.
+ * @param ego_pos Current position of the ego vehicle.
+ * @param base_link2front Distance from base_link to the front edge of the vehicle.
+ * @return Extra margin value to apply near the object based on curvature.
+ */
+double calc_curvature_based_margin(
+  const ObjectData & object_data, const std::vector<double> & front_corner_offsets,
+  const PathWithLaneId & path, const Point & ego_pos, const double base_link2front);
 
 void setEndData(
   AvoidLine & al, const double length, const geometry_msgs::msg::Pose & end, const size_t end_idx,

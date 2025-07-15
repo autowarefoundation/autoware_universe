@@ -46,6 +46,7 @@
   <arg name="use_low_intensity_cluster_filter"/>
   <arg name="use_image_segmentation_based_filter"/>
   <arg name="use_multi_channel_tracker_merger"/>
+  <arg name="use_radar_tracking_fusion"/>
   <arg name="use_irregular_object_detector"/>
   <arg name="irregular_object_detector_fusion_camera_ids" default="[0]"/>
 
@@ -78,6 +79,9 @@
   <arg name="input/camera7/image"/>
   <arg name="input/camera7/info"/>
   <arg name="input/camera7/rois"/>
+  <arg name="input/camera8/image"/>
+  <arg name="input/camera8/info"/>
+  <arg name="input/camera8/rois"/>
   <arg name="image_topic_name"/>
   <arg name="segmentation_pointcloud_fusion_camera_ids"/>
   <arg name="input/radar"/>
@@ -131,10 +135,12 @@
     <let name="switch/filter/pointcloud" value="true"/>
     <let name="switch/detector/camera_lidar" value="true"/>
     <let name="switch/detector/lidar_dnn" value="true"/>
-    <let name="switch/detector/radar" value="true"/>
+    <let name="switch/detector/radar" value="true" unless="$(var use_radar_tracking_fusion)"/>
     <let name="switch/merger/camera_lidar_radar" value="true" unless="$(var use_multi_channel_tracker_merger)"/>
     <group scoped="false" if="$(var use_multi_channel_tracker_merger)">
       <let name="switch/filter/camera_lidar_object" value="true"/>
+      <let name="switch/detector/radar" value="true"/>
+      <!-- multi-channel only supports radar detected objects -->
       <let name="camera_lidar_rule_detector/output/objects" value="$(var ns)/clustering/camera_lidar_fusion/unfiltered/objects"/>
       <let name="camera_lidar_object_filter/output/objects" value="$(var ns)/clustering/camera_lidar_fusion/objects"/>
     </group>
@@ -155,6 +161,7 @@
     <let name="switch/detector/lidar_dnn" value="true"/>
     <let name="switch/detector/lidar_rule" value="true"/>
     <let name="switch/detector/radar" value="true"/>
+    <!-- radar_object_fusion_to_detected_object only supports radar detected objects -->
     <let name="switch/merger/lidar_radar" value="true" unless="$(var use_multi_channel_tracker_merger)"/>
     <let name="switch/detector/irregular_object" value="false"/>
   </group>
@@ -202,6 +209,9 @@
       <arg name="input/camera7/image" value="$(var input/camera7/image)"/>
       <arg name="input/camera7/info" value="$(var input/camera7/info)"/>
       <arg name="input/camera7/rois" value="$(var input/camera7/rois)"/>
+      <arg name="input/camera8/image" value="$(var input/camera8/image)"/>
+      <arg name="input/camera8/info" value="$(var input/camera8/info)"/>
+      <arg name="input/camera8/rois" value="$(var input/camera8/rois)"/>
       <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
       <arg name="input/pointcloud_map/pointcloud" value="$(var pointcloud_filter/output/pointcloud)"/>
       <arg name="input/obstacle_segmentation/pointcloud" value="$(var input/obstacle_segmentation/pointcloud)"/>
@@ -346,6 +356,9 @@
       <arg name="input/camera7/image" value="$(var input/camera7/image)"/>
       <arg name="input/camera7/info" value="$(var input/camera7/info)"/>
       <arg name="input/camera7/rois" value="$(var input/camera7/rois)"/>
+      <arg name="input/camera8/image" value="$(var input/camera8/image)"/>
+      <arg name="input/camera8/info" value="$(var input/camera8/info)"/>
+      <arg name="input/camera8/rois" value="$(var input/camera8/rois)"/>
       <arg name="input/lidar_ml/objects" value="$(var object_merger/input/ml_detected_objects)"/>
       <arg name="input/lidar_rule/objects" value="$(var camera_lidar_rule_detector/output/objects)"/>
       <arg name="input/detection_by_tracker/objects" value="$(var tracker_based_detector/output/objects)"/>
@@ -392,6 +405,9 @@
       <arg name="input/camera7/image" value="$(var input/camera7/image)"/>
       <arg name="input/camera7/info" value="$(var input/camera7/info)"/>
       <arg name="input/camera7/rois" value="$(var input/camera7/rois)"/>
+      <arg name="input/camera8/image" value="$(var input/camera8/image)"/>
+      <arg name="input/camera8/info" value="$(var input/camera8/info)"/>
+      <arg name="input/camera8/rois" value="$(var input/camera8/rois)"/>
       <arg name="input/lidar_ml/objects" value="$(var object_merger/input/ml_detected_objects)"/>
       <arg name="input/lidar_rule/objects" value="$(var camera_lidar_rule_detector/output/objects)"/>
       <arg name="input/detection_by_tracker/objects" value="$(var tracker_based_detector/output/objects)"/>

@@ -41,6 +41,8 @@ we prepare the following sets of geometries based on the parameters defined for 
 - polygons to ignore collisions (`ignore_collisions.polygon_types` and `ignore_collisions.lanelet_subtypes`);
 - segments to cut predicted paths (`cut_predicted_paths.polygon_types`, `cut_predicted_paths.linestring_types`, and `cut_predicted_paths.lanelet_subtypes`).
   - the rear segment of the current ego footprint is also added if `cut_predicted_paths.if_crossing_ego_from_behind` is set to `true`.
+- segments to strictly cut predicted paths (`cut_predicted_paths.strict_polygon_types`, `cut_predicted_paths.strict_linestring_types`, and `cut_predicted_paths.strict_lanelet_subtypes`).
+  - strict cutting means that the cut is always applied, regardless of any preserved distance or duration.
 
 The following figure shows an example where the polygons to ignore objects are shown in blue, to ignore collisions in green, and to cut predicted paths in red.
 
@@ -69,6 +71,7 @@ Next, the remaining predicted paths are cut according to the segments prepared i
 
 To guarantee that parts of the predicted paths are never ignored,
 parameters `preserved_duration` and `preserved_distance` can be used to set a minimum duration and/or distance that cannot be cut or ignored.
+This is not applied in the case of the strict cutting.
 
 The following figures shows an example where crosswalks are used to ignore pedestrians and to cut their predicted paths.
 

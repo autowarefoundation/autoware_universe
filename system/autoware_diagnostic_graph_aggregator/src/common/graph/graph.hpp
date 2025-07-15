@@ -41,6 +41,7 @@ public:
   DiagGraphStatus create_status_msg(const rclcpp::Time & stamp) const;
   DiagnosticArray create_unknown_msg(const rclcpp::Time & stamp) const;
 
+  void set_initializing(bool initializing);
   void reset();
   std::vector<NodeUnit *> nodes() const { return nodes_; }
   std::vector<DiagUnit *> diags() const { return diags_; }

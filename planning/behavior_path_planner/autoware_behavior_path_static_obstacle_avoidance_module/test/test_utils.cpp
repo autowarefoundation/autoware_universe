@@ -95,7 +95,8 @@ auto get_parameters() -> std::shared_ptr<AvoidanceParameters>
   parameters.max_prepare_time = 3.0;
   parameters.nominal_avoidance_speed = 8.0;
   parameters.velocity_map = {1.0, 3.0, 10.0};
-  parameters.lateral_min_jerk_map = {0.1, 1.0, 10.0};
+  parameters.avoid_lateral_min_jerk_map = {0.1, 1.0, 10.0};
+  parameters.return_lateral_min_jerk_map = {0.1, 1.0, 10.0};
   parameters.lateral_max_jerk_map = {0.4, 1.5, 15.0};
   parameters.lateral_max_accel_map = {0.7, 0.8, 0.9};
 
@@ -989,12 +990,13 @@ TEST(TestUtils, calcEnvelopeOverhangDistance)
 
     const auto output = calcEnvelopeOverhangDistance(object_data, path);
 
-    ASSERT_EQ(output.size(), 5);
+    ASSERT_EQ(output.size(), 6);
     EXPECT_NEAR(output.at(0).first, -0.5, epsilon);
     EXPECT_NEAR(output.at(1).first, -0.5, epsilon);
     EXPECT_NEAR(output.at(2).first, -0.5, epsilon);
-    EXPECT_NEAR(output.at(3).first, 2.5, epsilon);
+    EXPECT_NEAR(output.at(3).first, -0.5, epsilon);
     EXPECT_NEAR(output.at(4).first, 2.5, epsilon);
+    EXPECT_NEAR(output.at(5).first, 2.5, epsilon);
   }
 
   {
@@ -1007,12 +1009,13 @@ TEST(TestUtils, calcEnvelopeOverhangDistance)
 
     const auto output = calcEnvelopeOverhangDistance(object_data, path);
 
-    ASSERT_EQ(output.size(), 5);
+    ASSERT_EQ(output.size(), 6);
     EXPECT_NEAR(output.at(0).first, 0.5, epsilon);
     EXPECT_NEAR(output.at(1).first, 0.5, epsilon);
-    EXPECT_NEAR(output.at(2).first, -2.5, epsilon);
+    EXPECT_NEAR(output.at(2).first, 0.5, epsilon);
     EXPECT_NEAR(output.at(3).first, -2.5, epsilon);
     EXPECT_NEAR(output.at(4).first, -2.5, epsilon);
+    EXPECT_NEAR(output.at(5).first, -2.5, epsilon);
   }
 }
 
