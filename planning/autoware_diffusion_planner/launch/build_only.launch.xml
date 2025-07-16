@@ -7,8 +7,8 @@
 
   <node pkg="autoware_diffusion_planner" exec="autoware_diffusion_planner_node" name="diffusion_planner_node" output="screen">
     <param from="$(var diffusion_planner_param_path)" allow_substs="true"/>
-    <remap from="~/output/trajectory" to="/planning/scenario_planning/lane_driving/unused/trajectory"/>
-    <remap from="~/output/trajectories" to="/diffusion_planner/trajectories"/>
+    <remap from="~/output/trajectory" to="/planning/trajectory"/>
+    <remap from="~/output/trajectories" to="/planning/generator/diffusion_planner/candidate_trajectories"/>
     <remap from="~/output/predicted_objects" to="~/diffusion_planner/predicted_objects"/>
     <remap from="~/input/odometry" to="/localization/kinematic_state"/>
     <remap from="~/input/acceleration" to="/localization/acceleration"/>
