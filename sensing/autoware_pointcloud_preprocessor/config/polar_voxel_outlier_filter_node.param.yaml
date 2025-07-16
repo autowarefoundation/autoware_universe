@@ -7,5 +7,11 @@
     min_radius: 0.5               # Minimum radius to consider (meters)
     max_radius: 100.0             # Maximum radius to consider (meters)
     use_return_type_classification: true  # Whether to use return type classification
+    filter_secondary_returns: false      # Whether to filter secondary returns (keep only primary when true)
+    secondary_noise_threshold: 0.5       # Threshold for classifying primary vs secondary returns
     primary_return_types: [1]     # Return types considered as primary returns
     secondary_return_types: [2, 3, 4, 5]  # Return types considered as secondary returns 
+    filter_ratio_error_threshold: 0.5     # Error threshold for filter ratio diagnostics
+    filter_ratio_warn_threshold: 0.7      # Warning threshold for filter ratio diagnostics
+    visibility_error_threshold: 0.5       # Error threshold for visibility diagnostics
+    visibility_warn_threshold: 0.7        # Warning threshold for visibility diagnostics 
