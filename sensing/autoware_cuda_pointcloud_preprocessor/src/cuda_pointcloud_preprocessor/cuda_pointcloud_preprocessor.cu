@@ -472,13 +472,13 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   // Get information and extract points after filters
-  long num_crop_box_passed_points =
+  size_t num_crop_box_passed_points =
     thrust::count(thrust::device, device_crop_mask_.begin(), device_crop_mask_.end(), 1);
 
-  long num_nan_points =
+  size_t num_nan_points =
     thrust::count(thrust::device, device_nan_mask_.begin(), device_nan_mask_.end(), 1);
 
-  long mismatch_count =
+  size_t mismatch_count =
     thrust::count(thrust::device, device_mismatch_mask_.begin(), device_mismatch_mask_.end(), 1);
 
   stats_.num_nan_points = static_cast<int>(num_nan_points);
