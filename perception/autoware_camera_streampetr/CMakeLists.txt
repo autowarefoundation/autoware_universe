@@ -75,6 +75,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   include_directories(
     include
     ${CUDA_INCLUDE_DIRS}
+    ${OpenCV_INCLUDE_DIRS}
   )
 
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -104,6 +105,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     ${CUDA_curand_LIBRARY}
     ${CUDNN_LIBRARY}
     ${PROJECT_NAME}_cuda_lib
+    ${OpenCV_LIBRARIES}
   )
 
   target_include_directories(${PROJECT_NAME}_lib

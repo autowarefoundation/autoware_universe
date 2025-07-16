@@ -61,12 +61,13 @@ static void updateIntrinsics(float * K_4x4, const Eigen::Matrix3f & ida_mat)
 
 CameraDataStore::CameraDataStore(
   rclcpp::Node * node, const int rois_number, const int image_height, const int image_width,
-  const int anchor_camera_id)
+  const int anchor_camera_id, const bool is_distorted_image)
 : rois_number_(rois_number),
   image_height_(image_height),
   image_width_(image_width),
   anchor_camera_id_(anchor_camera_id),
   preprocess_time_ms_(0.0f),
+  is_distorted_image_(is_distorted_image),
   logger_(node->get_logger())
 {
   image_input_ = std::make_shared<Tensor>(
@@ -94,23 +95,9 @@ void CameraDataStore::update_camera_image(
   const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg)
 {
   auto start_time = std::chrono::high_resolution_clock::now();
-  preprocess_image(
-    camera_id, input_camera_image_msg->data.data(), input_camera_image_msg->height,
-    input_camera_image_msg->width);
+  const int original_height = input_camera_image_msg->height;
+  const int original_width = input_camera_image_msg->width;
 
-  camera_info_timestamp_[camera_id] =
-    input_camera_image_msg->header.stamp.sec + input_camera_image_msg->header.stamp.nanosec * 1e-9;
-  camera_link_names_[camera_id] = input_camera_image_msg->header.frame_id;
-
-  auto end_time = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-  preprocess_time_ms_ = duration.count();
-}
-
-void CameraDataStore::preprocess_image(
-  const int camera_id, const std::uint8_t * input_image_data, const int original_height,
-  const int original_width)
-{
   const float scaleH = static_cast<float>(image_height_) / static_cast<float>(original_height);
   const float scaleW = static_cast<float>(image_width_) / static_cast<float>(original_width);
   const float resize = std::max(scaleH, scaleW);
@@ -131,19 +118,68 @@ void CameraDataStore::preprocess_image(
   std::unique_ptr<Tensor> image_input_tensor = std::make_unique<Tensor>(
     "camera_img", nvinfer1::Dims{3, original_height, original_width, 3},
     nvinfer1::DataType::kUINT8);
-  cudaMemcpyAsync(
-    image_input_tensor->ptr, input_image_data, image_input_tensor->nbytes(), cudaMemcpyHostToDevice,
-    stream_);
+    
+  if (is_distorted_image_ && camera_info_list_[camera_id]) {
+    auto camera_info = camera_info_list_[camera_id];
+
+    // Create camera matrix K from camera_info
+    cv::Mat K = (cv::Mat_<double>(3, 3) <<
+      camera_info->k[0], camera_info->k[1], camera_info->k[2],
+      camera_info->k[3], camera_info->k[4], camera_info->k[5],
+      camera_info->k[6], camera_info->k[7], camera_info->k[8]);
+
+    // Create distortion coefficients matrix D from camera_info
+    const auto & d_vec = camera_info->d;
+    cv::Mat D(1, static_cast<int>(d_vec.size()), CV_64F);
+    for (size_t i = 0; i < d_vec.size(); ++i) {
+      D.at<double>(0, static_cast<int>(i)) = d_vec[i];
+    }
+
+    // Create projection matrix P from camera_info (first 3x3 part)
+    cv::Mat P = (cv::Mat_<double>(3, 3) <<
+      camera_info->p[0], camera_info->p[1], camera_info->p[2],
+      camera_info->p[4], camera_info->p[5], camera_info->p[6],
+      camera_info->p[8], camera_info->p[9], camera_info->p[10]);
+
+    cv::Mat undistort_map_x, undistort_map_y;
+    cv::initUndistortRectifyMap(
+      K, D, cv::Mat(), P,
+      cv::Size(camera_info->width, camera_info->height),
+      CV_32FC1, undistort_map_x, undistort_map_y);
+
+    cv::Mat undistorted_image;
+    // Create cv::Mat from image data - assuming RGB8 encoding
+    cv::Mat input_image(original_height, original_width, CV_8UC3, 
+                       const_cast<uint8_t*>(input_camera_image_msg->data.data()));
+    cv::remap(input_image, undistorted_image, undistort_map_x, undistort_map_y, cv::INTER_LINEAR);
+    cudaMemcpyAsync(
+      image_input_tensor->ptr, undistorted_image.data, image_input_tensor->nbytes(), cudaMemcpyHostToDevice,
+      stream_);
+  }
+  else{
+    cudaMemcpyAsync(
+      image_input_tensor->ptr, input_camera_image_msg->data.data(), image_input_tensor->nbytes(), cudaMemcpyHostToDevice,
+      stream_);
+  }
 
   auto err = resizeAndExtractRoi_launch(
     static_cast<std::uint8_t *>(image_input_tensor->ptr), static_cast<float *>(image_input_->ptr),
     camera_offset, original_height, original_width, newH, newW, image_height_, image_width_,
     start_y, start_x, static_cast<const float *>(image_input_mean_->ptr),
     static_cast<const float *>(image_input_std_->ptr), stream_);
+
   if (err != cudaSuccess) {
     RCLCPP_ERROR(
       logger_, "resizeAndExtractRoi_launch failed with error: %s", cudaGetErrorString(err));
   }
+
+  camera_info_timestamp_[camera_id] =
+  input_camera_image_msg->header.stamp.sec + input_camera_image_msg->header.stamp.nanosec * 1e-9;
+  camera_link_names_[camera_id] = input_camera_image_msg->header.frame_id;
+
+  auto end_time = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+  preprocess_time_ms_ = duration.count();
 
   // // Save the processed image for debugging during development
   // std::string filename = "/home/autoware/workspace/StreamPETR_TensorRT_ROS2/data/camera_" +

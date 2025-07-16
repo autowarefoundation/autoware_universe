@@ -100,7 +100,7 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   // Data store
   data_store_ = std::make_unique<CameraDataStore>(
     this, rois_number_, declare_parameter<int>("model_params.input_image_height"),
-    declare_parameter<int>("model_params.input_image_width"), anchor_camera_id_);
+    declare_parameter<int>("model_params.input_image_width"), anchor_camera_id_, declare_parameter<bool>("is_distorted_image"));
   const bool use_temporal = declare_parameter<bool>("model_params.use_temporal");
   const double search_distance_2d =
     declare_parameter<double>("post_process_params.iou_nms_search_distance_2d");
