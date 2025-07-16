@@ -39,9 +39,9 @@ public:
   using reference = typename std::deque<T>::reference;
   using const_reference = typename std::deque<T>::const_reference;
   using iterator = typename std::deque<T>::iterator;
-  using riterator = typename std::reverse_iterator<iterator>;
+  using reverse_iterator = typename std::reverse_iterator<iterator>;
   using const_iterator = typename std::deque<T>::const_iterator;
-  using rconst_iterator = typename std::reverse_iterator<const_iterator>;
+  using const_reverse_iterator = typename std::reverse_iterator<const_iterator>;
 
   /**
    * @brief Construct a FixedQueue with a maximum size.
@@ -120,14 +120,14 @@ public:
   /**
    * @brief Reverse iterator to the beginning.
    */
-  riterator rbegin() noexcept { return queue_.rbegin(); }
-  rconst_iterator rbegin() const noexcept { return queue_.rbegin(); }
+  reverse_iterator rbegin() noexcept { return queue_.rbegin(); }
+  const_reverse_iterator rbegin() const noexcept { return queue_.rbegin(); }
 
   /**
    * @brief Reverse iterator to the end.
    */
-  riterator rend() noexcept { return queue_.rend(); }
-  rconst_iterator rend() const noexcept { return queue_.rend(); }
+  reverse_iterator rend() noexcept { return queue_.rend(); }
+  const_reverse_iterator rend() const noexcept { return queue_.rend(); }
 
   /**
    * @brief Returns the number of elements in the queue.

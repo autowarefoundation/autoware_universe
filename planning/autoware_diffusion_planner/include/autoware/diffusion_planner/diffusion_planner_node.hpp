@@ -123,7 +123,7 @@ struct DiffusionPlannerDebugParams
  * Handles parameter setup, map and route processing, ONNX model inference, and publishing of
  * planned trajectories and debug information.
  *
- * @note This class integrates with ROS2, ONNX Runtime, and Autoware-specific utilities for
+ * @note This class integrates with ROS 2, ONNX Runtime, and Autoware-specific utilities for
  * autonomous vehicle trajectory planning.
  *
  * @section Responsibilities
@@ -159,7 +159,7 @@ struct DiffusionPlannerDebugParams
  * - Lanelet map and routing members: route_ptr_, lanelet_map_ptr_, routing_graph_ptr_,
  * traffic_rules_ptr_, lanelet_converter_ptr_, lane_segments_, map_lane_segments_matrix_,
  * col_id_mapping_, is_map_loaded_.
- * - ROS2 node elements: timer_, publishers, subscriptions, and time_keeper_.
+ * - ROS 2 node elements: timer_, publishers, subscriptions, and time_keeper_.
  * - generator_uuid_: Unique identifier for the planner instance.
  * - vehicle_info_: Vehicle-specific parameters.
  */
