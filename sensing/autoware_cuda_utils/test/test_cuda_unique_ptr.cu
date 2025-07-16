@@ -75,5 +75,8 @@ TEST_F(CudaUniquePtrTest, DeleterFunctionality)
   }
 
   // If we reach here without crashes, deleters worked correctly
+  // TODO: Ideally, we would confirm that the memory was freed, but CUDA provides no API for that.
+  // Instead, calling any CUDA API on a freed pointer is undefined behavior and usually results in a
+  // SEGFAULT.
   SUCCEED();
 }

@@ -57,6 +57,12 @@ TEST_F(StreamUniquePtrTest, StreamDeleterFunctionality)
     auto stream = autoware::cuda_utils::makeCudaStream();
     // Deleter will be called automatically on scope exit
   }
+
+  // If we reach here without crashes, deleters worked correctly
+  // TODO: Ideally, we would confirm that the stream handle is now invalid, but CUDA provides no API
+  // for that. Instead, calling any CUDA API on a destroyed stream is undefined behavior and usually
+  // results in a SEGFAULT.
+  SUCCEED();
 }
 
 TEST_F(StreamUniquePtrTest, StreamReset)
