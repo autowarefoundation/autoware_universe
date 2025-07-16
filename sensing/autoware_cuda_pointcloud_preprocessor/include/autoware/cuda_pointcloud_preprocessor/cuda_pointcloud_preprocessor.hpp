@@ -20,6 +20,7 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <autoware/cuda_utils/thrust_utils.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
