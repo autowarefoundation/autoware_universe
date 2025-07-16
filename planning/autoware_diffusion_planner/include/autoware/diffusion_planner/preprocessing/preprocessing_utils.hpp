@@ -18,6 +18,7 @@
 #include <cassert>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace autoware::diffusion_planner::preprocess

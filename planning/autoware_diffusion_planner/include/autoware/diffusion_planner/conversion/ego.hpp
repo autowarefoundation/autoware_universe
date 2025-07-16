@@ -29,6 +29,7 @@
 #include <array>
 #include <cmath>
 #include <string>
+#include <vector>
 
 namespace autoware::diffusion_planner
 {

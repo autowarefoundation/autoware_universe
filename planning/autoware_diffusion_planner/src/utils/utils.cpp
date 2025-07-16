@@ -17,6 +17,11 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <limits>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace autoware::diffusion_planner::utils
 {

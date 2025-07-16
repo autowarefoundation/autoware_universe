@@ -22,7 +22,10 @@
 #include <geometry_msgs/msg/detail/point__struct.hpp>
 #include <geometry_msgs/msg/point.hpp>  // Include the header for Point
 
+#include <cstdint>
 #include <iostream>
+#include <string>
+#include <vector>
 
 namespace autoware::diffusion_planner::utils
 {
@@ -59,7 +62,7 @@ struct LanePointData
 };
 
 LanePointData extract_lane_point(
-  const std::vector<float> & lane_vector, long l, long p, long P, long D)
+  const std::vector<float> & lane_vector, int64_t l, int64_t p, int64_t P, int64_t D)
 {
   LanePointData data;
   data.x = lane_vector[P * D * l + p * D + X];
@@ -138,15 +141,15 @@ ColorRGBA get_traffic_light_color(float g, float y, float r, const ColorRGBA & o
 
 MarkerArray create_lane_marker(
   const Eigen::Matrix4f & transform_ego_to_map, const std::vector<float> & lane_vector,
-  const std::vector<long> & shape, const Time & stamp, const rclcpp::Duration & lifetime,
+  const std::vector<int64_t> & shape, const Time & stamp, const rclcpp::Duration & lifetime,
   const std::array<float, 4> colors, const std::string & frame_id,
   const bool set_traffic_light_color)
 {
   MarkerArray marker_array;
-  const long P = shape[2];
-  const long D = shape[3];
+  const int64_t P = shape[2];
+  const int64_t D = shape[3];
   const size_t num_segments = lane_vector.size() / (P * D);
-  long segment_count = 0;
+  int64_t segment_count = 0;
   constexpr float near_zero_threshold = 1e-2f;
   // Setup colors
   ColorRGBA lane_color;
@@ -197,7 +200,7 @@ MarkerArray create_lane_marker(
 
     // Process points for this segment
     float total_norm = 0.0f;
-    for (long p = 0; p < P; ++p) {
+    for (int64_t p = 0; p < P; ++p) {
       // Extract point data
       LanePointData point_data = extract_lane_point(lane_vector, l, p, P, D);
       total_norm += point_data.norm;

@@ -31,6 +31,8 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
+#include <string>
 #include <vector>
 
 namespace autoware::diffusion_planner::postprocess
@@ -39,8 +41,8 @@ using autoware_perception_msgs::msg::PredictedObject;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 
 void transform_output_matrix(
-  const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, long column_idx,
-  long row_idx, bool do_translation)
+  const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, int64_t column_idx,
+  int64_t row_idx, bool do_translation)
 {
   Eigen::Matrix<float, 4, OUTPUT_T> xy_block = Eigen::Matrix<float, 4, OUTPUT_T>::Zero();
   xy_block.block<2, OUTPUT_T>(0, 0) =
@@ -80,15 +82,15 @@ PredictedObjects create_predicted_objects(
   constexpr auto agent_size = prediction_shape[1];
 
   // get agent trajectories excluding ego (start from batch 0, and agent 1)
-  constexpr long start_batch = 0;
-  constexpr long start_agent = 1;
+  constexpr int64_t start_batch = 0;
+  constexpr int64_t start_agent = 1;
 
   auto agent_trajectories =
     create_multiple_trajectories(prediction, stamp, transform_ego_to_map, start_batch, start_agent);
 
   // First prediction is of ego (agent 0). Predictions from index 1 to last are of the closest
   // neighbors. ego_centric_agent_data contains neighbor history information ordered by distance.
-  for (long agent = 1; agent < agent_size; ++agent) {
+  for (int64_t agent = 1; agent < agent_size; ++agent) {
     if (static_cast<size_t>(agent) - 1 >= objects_history.size()) {
       break;
     }
@@ -152,7 +154,7 @@ Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tensor
 
 Eigen::MatrixXf get_prediction_matrix(
   const std::vector<float> & prediction, const Eigen::Matrix4f & transform_ego_to_map,
-  const long batch, const long agent)
+  const int64_t batch, const int64_t agent)
 {
   // TODO(Daniel): add batch support
   const auto prediction_shape = OUTPUT_SHAPE;
@@ -165,7 +167,7 @@ Eigen::MatrixXf get_prediction_matrix(
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
     get_tensor_data(prediction);
   // Validate indices before accessing block
-  const long start_row = batch * agent_size * rows + agent * rows;
+  const int64_t start_row = batch * agent_size * rows + agent * rows;
   if (start_row < 0 || start_row + rows > tensor_data.rows()) {
     throw std::out_of_range(
       "Invalid block access: start_row=" + std::to_string(start_row) +
@@ -194,7 +196,7 @@ Trajectory get_trajectory_from_prediction_matrix(
   Eigen::Vector4f ego_position = transform_ego_to_map * Eigen::Vector4f(0.0, 0.0, 0.0, 1.0);
   double prev_x = ego_position(0);
   double prev_y = ego_position(1);
-  for (long row = 0; row < prediction_matrix.rows(); ++row) {
+  for (int64_t row = 0; row < prediction_matrix.rows(); ++row) {
     TrajectoryPoint p;
     p.time_from_start.sec = static_cast<int>(dt * static_cast<double>(row));
     p.time_from_start.nanosec =
@@ -217,7 +219,7 @@ Trajectory get_trajectory_from_prediction_matrix(
 
 Trajectory create_trajectory(
   const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4f & transform_ego_to_map, long batch, long agent)
+  const Eigen::Matrix4f & transform_ego_to_map, int64_t batch, int64_t agent)
 {
   // one batch of prediction
   Eigen::MatrixXf prediction_matrix =
@@ -227,7 +229,7 @@ Trajectory create_trajectory(
 
 std::vector<Trajectory> create_multiple_trajectories(
   const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4f & transform_ego_to_map, long start_batch, long start_agent)
+  const Eigen::Matrix4f & transform_ego_to_map, int64_t start_batch, int64_t start_agent)
 {
   constexpr auto prediction_shape = OUTPUT_SHAPE;
   constexpr auto batch_size = prediction_shape[0];
@@ -239,8 +241,8 @@ std::vector<Trajectory> create_multiple_trajectories(
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
     get_tensor_data(prediction);
 
-  for (long batch = start_batch; batch < batch_size; ++batch) {
-    for (long agent = start_agent; agent < agent_size; ++agent) {
+  for (int64_t batch = start_batch; batch < batch_size; ++batch) {
+    for (int64_t agent = start_agent; agent < agent_size; ++agent) {
       // Copy only the relevant part
       Eigen::MatrixXf prediction_matrix =
         tensor_data.block(batch * agent_size * rows + agent * rows, 0, rows, cols);
