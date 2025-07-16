@@ -106,21 +106,21 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
 
   if(BUILD_TESTING)
     ament_add_ros_isolated_gtest(test_diffusion_planner
-      tests/agent_test.cpp
-      tests/lanelet_test.cpp
-      tests/ego_test.cpp
-      tests/lane_segments_test.cpp
-      tests/pre_processing_utils_test.cpp
-      tests/fixed_queue_test.cpp
-      tests/postprocessing_utils_test.cpp
-      tests/utils_test.cpp
-      tests/marker_utils_test.cpp
-      tests/lanelet_integration_test.cpp
-      tests/postprocessing_utils_edge_case_test.cpp
-      tests/preprocessing_utils_edge_case_test.cpp
-      tests/agent_edge_case_test.cpp
-      tests/lanelet_edge_case_test.cpp
-      tests/diffusion_planner_integration_test.cpp)
+      test/agent_test.cpp
+      test/lanelet_test.cpp
+      test/ego_test.cpp
+      test/lane_segments_test.cpp
+      test/pre_processing_utils_test.cpp
+      test/fixed_queue_test.cpp
+      test/postprocessing_utils_test.cpp
+      test/utils_test.cpp
+      test/marker_utils_test.cpp
+      test/lanelet_integration_test.cpp
+      test/postprocessing_utils_edge_case_test.cpp
+      test/preprocessing_utils_edge_case_test.cpp
+      test/agent_edge_case_test.cpp
+      test/lanelet_edge_case_test.cpp
+      test/diffusion_planner_integration_test.cpp)
 
     target_link_libraries(test_diffusion_planner autoware_diffusion_planner_component)
     ament_target_dependencies(test_diffusion_planner
