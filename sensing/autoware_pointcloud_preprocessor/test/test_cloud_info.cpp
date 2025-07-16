@@ -22,7 +22,11 @@
 
 #include <gtest/gtest.h>
 
-using namespace autoware::pointcloud_preprocessor;
+#include <string>
+#include <vector>
+
+using autoware::pointcloud_preprocessor::CloudInfo;
+using autoware::pointcloud_preprocessor::StrategyAdvancedConfig;
 
 class CloudInfoTest : public ::testing::Test
 {
