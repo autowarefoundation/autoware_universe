@@ -34,12 +34,15 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <iostream>
 #include <limits>
 #include <memory>
 #include <numeric>
 #include <optional>
 #include <string>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 namespace autoware::diffusion_planner
@@ -302,7 +305,7 @@ InputDataMap DiffusionPlanner::create_input_data()
 
   if (params_.ignore_neighbors) {
     objects = std::make_shared<TrackedObjects>(empty_object_list);
-  };
+  }
 
   if (!objects || !ego_kinematic_state || !ego_acceleration || !route_ptr_) {
     RCLCPP_WARN_THROTTLE(
@@ -391,8 +394,8 @@ void DiffusionPlanner::publish_debug_markers(InputDataMap & input_data_map) cons
     auto lifetime = rclcpp::Duration::from_seconds(0.2);
     auto route_markers = utils::create_lane_marker(
       transforms_.first, input_data_map["route_lanes"],
-      std::vector<long>(ROUTE_LANES_SHAPE.begin(), ROUTE_LANES_SHAPE.end()), this->now(), lifetime,
-      {0.8, 0.8, 0.8, 0.8}, "map", true);
+      std::vector<int64_t>(ROUTE_LANES_SHAPE.begin(), ROUTE_LANES_SHAPE.end()), this->now(),
+      lifetime, {0.8, 0.8, 0.8, 0.8}, "map", true);
     pub_route_marker_->publish(route_markers);
   }
 
@@ -400,7 +403,7 @@ void DiffusionPlanner::publish_debug_markers(InputDataMap & input_data_map) cons
     auto lifetime = rclcpp::Duration::from_seconds(0.2);
     auto lane_markers = utils::create_lane_marker(
       transforms_.first, input_data_map["lanes"],
-      std::vector<long>(LANES_SHAPE.begin(), LANES_SHAPE.end()), this->now(), lifetime,
+      std::vector<int64_t>(LANES_SHAPE.begin(), LANES_SHAPE.end()), this->now(), lifetime,
       {0.1, 0.1, 0.7, 0.8}, "map", true);
     pub_lane_marker_->publish(lane_markers);
   }
@@ -408,8 +411,8 @@ void DiffusionPlanner::publish_debug_markers(InputDataMap & input_data_map) cons
 
 void DiffusionPlanner::publish_predictions(const std::vector<float> & predictions) const
 {
-  constexpr long batch_idx = 0;
-  constexpr long ego_agent_idx = 0;
+  constexpr int64_t batch_idx = 0;
+  constexpr int64_t ego_agent_idx = 0;
   auto output_trajectory = postprocess::create_trajectory(
     predictions, this->now(), transforms_.first, batch_idx, ego_agent_idx);
   pub_trajectory_->publish(output_trajectory);

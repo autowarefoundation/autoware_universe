@@ -23,8 +23,10 @@
 
 #include <lanelet2_core/Forward.h>
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <optional>
 #include <vector>
 namespace autoware::diffusion_planner
@@ -136,7 +138,7 @@ std::vector<LanePoint> interpolate_points(const std::vector<LanePoint> & input, 
 }
 
 std::vector<LaneSegment> LaneletConverter::convert_to_lane_segments(
-  const long num_lane_points) const
+  const int64_t num_lane_points) const
 {
   std::vector<LaneSegment> lane_segments;
   lane_segments.reserve(lanelet_map_ptr_->laneletLayer.size());
@@ -150,7 +152,7 @@ std::vector<LaneSegment> LaneletConverter::convert_to_lane_segments(
     Polyline lane_polyline(MapType::Unused);
     std::vector<BoundarySegment> left_boundary_segments;
     std::vector<BoundarySegment> right_boundary_segments;
-    // TODO (Daniel avoid unnecessary copy and creation)
+    // TODO(Daniel): avoid unnecessary copy and creation
     auto points = from_linestring(lanelet.centerline3d());
     lane_polyline.assign_waypoints(interpolate_points(points, num_lane_points));
     const auto left_bound = lanelet.leftBound3d();

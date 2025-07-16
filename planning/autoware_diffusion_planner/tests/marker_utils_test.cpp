@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 
 #include <array>
+#include <cstdint>
 #include <limits>
 #include <string>
 #include <vector>
@@ -93,7 +94,7 @@ TEST(MarkerUtilsTest, CreateLaneMarkerBasic)
   // Lane vector: 1 segment, 2 points, 8 dims (X, Y, LB_X, LB_Y, RB_X, RB_Y, ...), minimal
   std::vector<float> lane_vector = {1.0f, 2.0f, 0.5f, 0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
                                     2.0f, 3.0f, 0.5f, 0.5f, -0.5f, -0.5f, 0.0f, 0.0f};
-  std::vector<long> shape = {1, 1, 2, 8};  // batch, ?, points, dims
+  std::vector<int64_t> shape = {1, 1, 2, 8};  // batch, ?, points, dims
   rclcpp::Time stamp(123456, 789, RCL_ROS_TIME);
   rclcpp::Duration lifetime(1, 0);
   Eigen::Matrix4f identity = Eigen::Matrix4f::Identity();
@@ -115,7 +116,7 @@ TEST(MarkerUtilsTest, CreateLaneMarkerTrafficLightColor)
   // Lane vector with green light for first point
   std::vector<float> lane_vector = {1.0f, 2.0f, 0.5f, 0.5f, -0.5f, -0.5f, 1.0f, 0.0f,  // green
                                     2.0f, 3.0f, 0.5f, 0.5f, -0.5f, -0.5f, 0.0f, 0.0f};
-  std::vector<long> shape = {1, 1, 2, 8};
+  std::vector<int64_t> shape = {1, 1, 2, 8};
   rclcpp::Time stamp(0, 0, RCL_ROS_TIME);
   rclcpp::Duration lifetime(1, 0);
   Eigen::Matrix4f identity = Eigen::Matrix4f::Identity();

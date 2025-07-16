@@ -28,8 +28,10 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <map>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -238,7 +240,8 @@ public:
    * @brief Convert a lanelet map to line segment data
    * @return std::vector<LaneSegment>
    */
-  [[nodiscard]] std::vector<LaneSegment> convert_to_lane_segments(const long num_lane_points) const;
+  [[nodiscard]] std::vector<LaneSegment> convert_to_lane_segments(
+    const int64_t num_lane_points) const;
 
   /**
    * @brief Convert lane segment data to matrix form
@@ -251,8 +254,9 @@ public:
     const LaneSegment & segment, float center_x, float center_y, float mask_range) const;
 
   [[nodiscard]] Eigen::MatrixXf process_segments_to_matrix(
-    const std::vector<LaneSegment> & lane_segments, std::map<int64_t, long> & segment_row_indices,
-    float center_x, float center_y, float mask_range) const;
+    const std::vector<LaneSegment> & lane_segments,
+    std::map<int64_t, int64_t> & segment_row_indices, float center_x, float center_y,
+    float mask_range) const;
 
   /**
    * @brief Convert a linestring to the set of polylines.

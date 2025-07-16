@@ -14,6 +14,8 @@
 
 #include "ego_test.hpp"
 
+#include <string>
+
 namespace autoware::diffusion_planner::test
 {
 

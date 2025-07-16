@@ -32,7 +32,7 @@
 
 namespace autoware::diffusion_planner::test
 {
-using namespace std::chrono_literals;
+using namespace std::chrono_literals;  // NOLINT
 
 class DiffusionPlannerIntegrationTest : public ::testing::Test
 {

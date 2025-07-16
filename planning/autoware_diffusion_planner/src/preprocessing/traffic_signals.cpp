@@ -14,6 +14,9 @@
 
 #include "autoware/diffusion_planner/preprocessing/traffic_signals.hpp"
 
+#include <iostream>
+#include <map>
+
 namespace autoware::diffusion_planner::preprocess
 {
 void process_traffic_signals(

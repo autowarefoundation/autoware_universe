@@ -16,6 +16,8 @@
 
 #include "autoware/diffusion_planner/constants.hpp"
 
+#include <string>
+
 namespace autoware::diffusion_planner
 {
 EgoState::EgoState(

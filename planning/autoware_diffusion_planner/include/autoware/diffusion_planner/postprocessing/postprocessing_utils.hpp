@@ -51,8 +51,8 @@ using unique_identifier_msgs::msg::UUID;
  * @param do_translation Whether to apply translation (true) or not (false).
  */
 void transform_output_matrix(
-  const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, long column_idx,
-  long row_idx, bool do_translation = true);
+  const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, int64_t column_idx,
+  int64_t row_idx, bool do_translation = true);
 
 /**
  * @brief Extracts tensor data from tensor prediction into an Eigen matrix.
@@ -74,7 +74,7 @@ Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tensor
  */
 Eigen::MatrixXf get_prediction_matrix(
   const std::vector<float> & prediction, const Eigen::Matrix4f & transform_ego_to_map,
-  const long batch = 0, const long agent = 0);
+  const int64_t batch = 0, const int64_t agent = 0);
 
 /**
  * @brief Creates PredictedObjects message from tensor prediction and agent data.
@@ -112,7 +112,7 @@ Trajectory get_trajectory_from_prediction_matrix(
  */
 Trajectory create_trajectory(
   const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4f & transform_ego_to_map, long batch, long agent);
+  const Eigen::Matrix4f & transform_ego_to_map, int64_t batch, int64_t agent);
 
 /**
  * @brief Creates multiple Trajectory messages from tensor prediction for a range of batches and
@@ -127,7 +127,7 @@ Trajectory create_trajectory(
  */
 std::vector<Trajectory> create_multiple_trajectories(
   const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4f & transform_ego_to_map, long start_batch, long start_agent);
+  const Eigen::Matrix4f & transform_ego_to_map, int64_t start_batch, int64_t start_agent);
 
 /**
  * @brief Converts a Trajectory message to a CandidateTrajectories message with generator info.

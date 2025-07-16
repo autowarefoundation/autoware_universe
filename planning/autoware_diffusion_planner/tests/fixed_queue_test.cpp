@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <numeric>
+#include <string>
 #include <vector>
 
 namespace autoware::diffusion_planner::test

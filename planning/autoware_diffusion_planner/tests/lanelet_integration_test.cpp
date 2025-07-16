@@ -26,6 +26,7 @@
 #include <lanelet2_routing/RoutingGraph.h>
 #include <lanelet2_traffic_rules/TrafficRulesFactory.h>
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <memory>
@@ -81,7 +82,7 @@ protected:
 TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsBasic)
 {
   // Test basic functionality of convert_to_lane_segments
-  const long num_lane_points = 10;
+  const int64_t num_lane_points = 10;
 
   auto lane_segments = lanelet_converter_->convert_to_lane_segments(num_lane_points);
 
@@ -113,7 +114,7 @@ TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsBasic)
 TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsWithDifferentPointCounts)
 {
   // Test with different numbers of lane points
-  const std::vector<long> point_counts = {5, 20, 50};
+  const std::vector<int64_t> point_counts = {5, 20, 50};
 
   for (const auto num_points : point_counts) {
     auto lane_segments = lanelet_converter_->convert_to_lane_segments(num_points);
@@ -131,7 +132,7 @@ TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsWithDifferentPointCounts)
 TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsInterpolation)
 {
   // Test that interpolation preserves start and end points
-  const long num_lane_points = 15;
+  const int64_t num_lane_points = 15;
 
   auto lane_segments = lanelet_converter_->convert_to_lane_segments(num_lane_points);
 
@@ -157,7 +158,7 @@ TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsInterpolation)
 TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsAttributes)
 {
   // Test that lane attributes are properly extracted
-  const long num_lane_points = 10;
+  const int64_t num_lane_points = 10;
 
   auto lane_segments = lanelet_converter_->convert_to_lane_segments(num_lane_points);
 
@@ -177,7 +178,7 @@ TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsAttributes)
 TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsConsistency)
 {
   // Test that multiple calls with same parameters produce consistent results
-  const long num_lane_points = 10;
+  const int64_t num_lane_points = 10;
 
   auto lane_segments_1 = lanelet_converter_->convert_to_lane_segments(num_lane_points);
   auto lane_segments_2 = lanelet_converter_->convert_to_lane_segments(num_lane_points);
@@ -198,7 +199,7 @@ TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsConsistency)
 TEST_F(LaneletIntegrationTest, CheckPointSpacingConsistency)
 {
   // Test that interpolated points have consistent spacing
-  const long num_lane_points = 20;
+  const int64_t num_lane_points = 20;
 
   auto lane_segments = lanelet_converter_->convert_to_lane_segments(num_lane_points);
 
@@ -246,7 +247,7 @@ TEST_F(LaneletIntegrationTest, CheckPointSpacingConsistency)
 TEST_F(LaneletIntegrationTest, CheckForNaNAndInfiniteValues)
 {
   // Test that no NaN or infinite values exist in the processed data
-  const long num_lane_points = 10;
+  const int64_t num_lane_points = 10;
 
   auto lane_segments = lanelet_converter_->convert_to_lane_segments(num_lane_points);
 
@@ -310,7 +311,7 @@ TEST_F(LaneletIntegrationTest, CheckForNaNAndInfiniteValues)
 TEST_F(LaneletIntegrationTest, CheckReasonableCoordinateRanges)
 {
   // Test that interpolated coordinates are within the original map bounds
-  const long num_lane_points = 10;
+  const int64_t num_lane_points = 10;
 
   // First, get the bounds from the original lanelet map
   float min_x = std::numeric_limits<float>::max();
@@ -429,7 +430,7 @@ TEST_F(LaneletIntegrationTest, CheckReasonableCoordinateRanges)
 TEST_F(LaneletIntegrationTest, CheckPointOrdering)
 {
   // Test that points maintain proper ordering (no sudden jumps)
-  const long num_lane_points = 15;
+  const int64_t num_lane_points = 15;
 
   auto lane_segments = lanelet_converter_->convert_to_lane_segments(num_lane_points);
 

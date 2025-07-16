@@ -14,6 +14,10 @@
 
 #include "autoware/diffusion_planner/conversion/agent.hpp"
 
+#include <algorithm>
+#include <string>
+#include <vector>
+
 namespace autoware::diffusion_planner
 {
 AgentLabel get_model_label(const autoware_perception_msgs::msg::TrackedObject & object)

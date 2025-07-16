@@ -26,8 +26,10 @@
 #include <gtest/gtest.h>
 #include <tf2/utils.h>
 
+#include <algorithm>
 #include <limits>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace autoware::diffusion_planner::test

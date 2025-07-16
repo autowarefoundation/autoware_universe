@@ -16,6 +16,8 @@
 
 #include <autoware_utils/ros/uuid_helper.hpp>
 
+#include <algorithm>
+
 namespace autoware::diffusion_planner::test
 {
 

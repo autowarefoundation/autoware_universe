@@ -14,6 +14,8 @@
 
 #include "lanelet_test.hpp"
 
+#include <vector>
+
 namespace autoware::diffusion_planner::test
 {
 

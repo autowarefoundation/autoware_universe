@@ -17,6 +17,8 @@
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace autoware::diffusion_planner::preprocess
 {

@@ -19,6 +19,7 @@
 #include <cmath>
 #include <limits>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::diffusion_planner::test

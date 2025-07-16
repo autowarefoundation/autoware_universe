@@ -35,8 +35,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <map>
+#include <memory>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -49,7 +52,7 @@ using autoware_planning_msgs::msg::LaneletRoute;
  */
 struct ColWithDistance
 {
-  long index;              //!< Column index in the input matrix.
+  int64_t index;           //!< Column index in the input matrix.
   float distance_squared;  //!< Squared distance from the center.
   bool inside;             //!< Whether the column is within the mask range.
 };
@@ -59,8 +62,8 @@ struct ColWithDistance
  */
 struct ColLaneIDMaps
 {
-  std::map<lanelet::Id, long> lane_id_to_matrix_col;  //!< Lanelet ID to matrix column index.
-  std::map<long, lanelet::Id> matrix_col_to_lane_id;  //!< Matrix column index to lanelet ID.
+  std::map<lanelet::Id, int64_t> lane_id_to_matrix_col;  //!< Lanelet ID to matrix column index.
+  std::map<int64_t, lanelet::Id> matrix_col_to_lane_id;  //!< Matrix column index to lanelet ID.
 };
 
 /**
@@ -160,8 +163,8 @@ inline void sort_indices_by_distance(std::vector<ColWithDistance> & distances)
 void add_traffic_light_one_hot_encoding_to_segment(
   [[maybe_unused]] Eigen::MatrixXf & segment_matrix, const ColLaneIDMaps & col_id_mapping,
   const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
-  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr, const long row_idx,
-  [[maybe_unused]] const long col_counter);
+  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr, const int64_t row_idx,
+  [[maybe_unused]] const int64_t col_counter);
 
 /**
  * @brief Returns a one-hot encoded row vector for the traffic signal state.
@@ -180,7 +183,7 @@ Eigen::RowVector4f get_traffic_signal_row_vector(
  * @param num_segments Number of segments to transform.
  */
 void apply_transforms(
-  const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, long num_segments);
+  const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, int64_t num_segments);
 
 /**
  * @brief Transforms selected rows of the output matrix using a transformation matrix.
@@ -192,8 +195,8 @@ void apply_transforms(
  * @param do_translation Whether to apply translation during the transformation.
  */
 void transform_selected_rows(
-  const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, long num_segments,
-  long row_idx, bool do_translation = true);
+  const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, int64_t num_segments,
+  int64_t row_idx, bool do_translation = true);
 
 /**
  * @brief Transforms and selects columns from the input matrix based on distances, and adds traffic
@@ -210,7 +213,7 @@ std::tuple<Eigen::MatrixXf, ColLaneIDMaps> transform_points_and_add_traffic_info
   const Eigen::MatrixXf & input_matrix, const Eigen::Matrix4f & transform_matrix,
   const std::vector<ColWithDistance> & distances, const ColLaneIDMaps & col_id_mapping,
   const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
-  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr, long m);
+  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr, int64_t m);
 
 /**
  * @brief Transforms and selects columns from the input matrix based on proximity to a center point.
@@ -231,7 +234,7 @@ std::tuple<Eigen::MatrixXf, ColLaneIDMaps> transform_and_select_rows(
   const ColLaneIDMaps & col_id_mapping,
   const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
   const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr, const float center_x,
-  const float center_y, const long m);
+  const float center_y, const int64_t m);
 
 }  // namespace autoware::diffusion_planner::preprocess
 

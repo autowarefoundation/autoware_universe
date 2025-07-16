@@ -21,6 +21,9 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
+#include <map>
+#include <memory>
 #include <stdexcept>
 #include <vector>
 
@@ -32,17 +35,17 @@ TEST_F(LaneSegmentsTest, ProcessSegmentToMatrixThrowsOnInvalidInput)
   // Empty polyline
   LaneSegment invalid_segment = lane_segments_.front();
   invalid_segment.polyline = Polyline();
-  EXPECT_TRUE(preprocess::process_segment_to_matrix(invalid_segment).size() == 0);
+  EXPECT_EQ(preprocess::process_segment_to_matrix(invalid_segment).size(), 0);
 
   // Empty left boundary
   invalid_segment = lane_segments_.front();
   invalid_segment.left_boundaries.clear();
-  EXPECT_TRUE(preprocess::process_segment_to_matrix(invalid_segment).size() == 0);
+  EXPECT_EQ(preprocess::process_segment_to_matrix(invalid_segment).size(), 0);
 
   // Empty right boundary
   invalid_segment = lane_segments_.front();
   invalid_segment.right_boundaries.clear();
-  EXPECT_TRUE(preprocess::process_segment_to_matrix(invalid_segment).size() == 0);
+  EXPECT_EQ(preprocess::process_segment_to_matrix(invalid_segment).size(), 0);
 
   // Wrong number of points
   invalid_segment = lane_segments_.front();
