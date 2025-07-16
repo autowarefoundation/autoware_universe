@@ -86,7 +86,6 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     lib/postprocess/non_maximum_suppression.cpp
     lib/network/camera_data_store.cpp
     lib/network/network.cpp
-    lib/image_utils.cpp
   )
 
   cuda_add_library(${PROJECT_NAME}_cuda_lib SHARED

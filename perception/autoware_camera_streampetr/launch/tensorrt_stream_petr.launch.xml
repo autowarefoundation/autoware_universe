@@ -33,19 +33,18 @@
     <remap from="~/input/camera5/image" to="/sensing/camera/camera5/image_rect_color"/>  -->
 
     <!--  Uncomment if you want to use compressed images, and set is_compressed_image to true -->
-    <remap from="~/input/camera0/image" to="/sensing/camera/camera0/image_rect_color/compressed"/>
-    <remap from="~/input/camera1/image" to="/sensing/camera/camera1/image_rect_color/compressed"/>
-    <remap from="~/input/camera2/image" to="/sensing/camera/camera2/image_rect_color/compressed"/>
-    <remap from="~/input/camera3/image" to="/sensing/camera/camera3/image_rect_color/compressed"/>
-    <remap from="~/input/camera4/image" to="/sensing/camera/camera4/image_rect_color/compressed"/>
-    <remap from="~/input/camera5/image" to="/sensing/camera/camera5/image_rect_color/compressed"/>
+    <remap from="~/input/camera0/image/compressed" to="/sensing/camera/camera0/image_rect_color/compressed"/>
+    <remap from="~/input/camera1/image/compressed" to="/sensing/camera/camera1/image_rect_color/compressed"/>
+    <remap from="~/input/camera2/image/compressed" to="/sensing/camera/camera2/image_rect_color/compressed"/>
+    <remap from="~/input/camera3/image/compressed" to="/sensing/camera/camera3/image_rect_color/compressed"/>
+    <remap from="~/input/camera4/image/compressed" to="/sensing/camera/camera4/image_rect_color/compressed"/>
+    <remap from="~/input/camera5/image/compressed" to="/sensing/camera/camera5/image_rect_color/compressed"/>
 
-    <param name="anchor_camera_id" value="0"/>
     <!-- The forward pass begins once every anchor camera topic reaches. Choose this as the camera that causes the shortest differnce in min and max timestamp between cameras-->
-    <param name="is_compressed_image" value="true"/>
-    <!-- Whether the input image is compressed. -->
-    <param name="decompression_downsample" value="2"/>
-    <!-- Downsampling during decompression makes decompression faster. Values:{2,4,8} -->
+    <param name="anchor_camera_id" value="0"/>
+    <param name="is_compressed_image" value="true"/> <!-- Whether the input image is compressed. -->
+    <param name="is_distorted_image" value="false"/> <!-- Whether the input image is distorted. -->
+
   </node>
 
   <!-- Rviz for individual node testing-->
