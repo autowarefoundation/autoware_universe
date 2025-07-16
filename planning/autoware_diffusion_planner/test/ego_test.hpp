@@ -12,14 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__EGO_TEST_HPP_
-#define PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__EGO_TEST_HPP_
+#ifndef EGO_TEST_HPP_
+#define EGO_TEST_HPP_
 
 #include "autoware/diffusion_planner/conversion/ego.hpp"
-#include <gtest/gtest.h>
 
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+
+#include <gtest/gtest.h>
 
 namespace autoware::diffusion_planner::test
 {
@@ -50,4 +51,4 @@ protected:
 
 }  // namespace autoware::diffusion_planner::test
 
-#endif  // PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__EGO_TEST_HPP_
+#endif  // EGO_TEST_HPP_

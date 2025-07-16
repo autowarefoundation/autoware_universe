@@ -12,16 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__AGENT_TEST_HPP_
-#define PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__AGENT_TEST_HPP_
+#ifndef AGENT_TEST_HPP_
+#define AGENT_TEST_HPP_
 
 #include "autoware/diffusion_planner/conversion/agent.hpp"
-#include <gtest/gtest.h>
 
 #include <autoware_perception_msgs/msg/tracked_object.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
+
+#include <gtest/gtest.h>
 
 #include <memory>
 #include <vector>
@@ -59,4 +60,4 @@ protected:
 
 }  // namespace autoware::diffusion_planner::test
 
-#endif  // PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__AGENT_TEST_HPP_
+#endif  // AGENT_TEST_HPP_
