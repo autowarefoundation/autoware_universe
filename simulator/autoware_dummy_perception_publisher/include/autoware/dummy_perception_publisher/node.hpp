@@ -18,10 +18,12 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
+#include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
 #include <tier4_simulation_msgs/msg/dummy_object.hpp>
+#include <unique_identifier_msgs/msg/uuid.hpp>
 
 #include <pcl/common/distances.h>
 #include <pcl/point_types.h>
@@ -37,6 +39,8 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
+#include <deque>
+#include <map>
 #include <memory>
 #include <random>
 #include <vector>
@@ -47,6 +51,11 @@ struct ObjectInfo
 {
   ObjectInfo(
     const tier4_simulation_msgs::msg::DummyObject & object, const rclcpp::Time & current_time);
+  ObjectInfo(
+    const tier4_simulation_msgs::msg::DummyObject & object,
+    const autoware_perception_msgs::msg::PredictedObject & predicted_object,
+    const rclcpp::Time & predicted_time, const rclcpp::Time & current_time,
+    const rclcpp::Time & mapping_time);
   double length;
   double width;
   double height;
@@ -118,10 +127,16 @@ private:
   rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr
     ground_truth_objects_pub_;
   rclcpp::Subscription<tier4_simulation_msgs::msg::DummyObject>::SharedPtr object_sub_;
+  rclcpp::Subscription<autoware_perception_msgs::msg::PredictedObjects>::SharedPtr
+    predicted_objects_sub_;
   rclcpp::TimerBase::SharedPtr timer_;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
   std::vector<tier4_simulation_msgs::msg::DummyObject> objects_;
+  std::deque<autoware_perception_msgs::msg::PredictedObjects> predicted_objects_buffer_;
+  static constexpr size_t MAX_BUFFER_SIZE = 50;  // Store last 1 seconds at 10Hz
+  std::map<std::string, std::string> dummy_to_predicted_uuid_map_;
+  std::map<std::string, rclcpp::Time> dummy_mapping_timestamps_;
   double visible_range_;
   double detection_successful_rate_;
   bool enable_ray_tracing_;
@@ -135,6 +150,16 @@ private:
   std::mt19937 random_generator_;
   void timerCallback();
   void objectCallback(const tier4_simulation_msgs::msg::DummyObject::ConstSharedPtr msg);
+  void predictedObjectsCallback(
+    const autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr msg);
+  std::pair<autoware_perception_msgs::msg::PredictedObject, rclcpp::Time>
+  findMatchingPredictedObject(
+    const unique_identifier_msgs::msg::UUID & object_id, const rclcpp::Time & current_time);
+  void updateDummyToPredictedMapping(
+    const std::vector<tier4_simulation_msgs::msg::DummyObject> & dummy_objects,
+    const autoware_perception_msgs::msg::PredictedObjects & predicted_objects);
+  double calculateEuclideanDistance(
+    const geometry_msgs::msg::Point & pos1, const geometry_msgs::msg::Point & pos2);
 
 public:
   DummyPerceptionPublisherNode();
