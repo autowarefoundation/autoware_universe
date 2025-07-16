@@ -715,7 +715,7 @@ PathWithLaneId::SharedPtr BehaviorPathPlannerNode::getPath(
   auto path = !output.path.points.empty() ? std::make_shared<PathWithLaneId>(output.path)
                                           : planner_data->prev_output_path;
   path->header = planner_data->route_handler->getRouteHeader();
-  return std::make_shared<PathWithLaneId>(*path);
+  return path;
 }
 
 void BehaviorPathPlannerNode::onTrafficSignals(const TrafficLightGroupArray::ConstSharedPtr msg)

@@ -170,7 +170,7 @@ private:
   /**
    * @brief extract path from behavior tree output
    */
-  PathWithLaneId::SharedPtr getPath(
+  static PathWithLaneId::SharedPtr getPath(
     const BehaviorModuleOutput & output, const std::shared_ptr<PlannerData> & planner_data);
 
   /**
