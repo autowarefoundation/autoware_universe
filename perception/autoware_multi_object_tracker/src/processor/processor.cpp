@@ -99,10 +99,11 @@ void TrackerProcessor::update(
       const auto & associated_object = detected_objects.objects.at(measurement_idx);
       const types::InputChannel channel_info = channels_config_[associated_object.channel_index];
 
-      // do weak update if this tracker measurement pair has significant shape change
-      bool weak_update = association_->hasSignificantShapeChange(tracker_idx, measurement_idx);
-      (*(tracker_itr))->updateWithMeasurement(associated_object, time, channel_info, weak_update);
-
+      // do conditioned update based on significant shape change info
+      bool significant_shape_change =
+        association_->hasSignificantShapeChange(tracker_idx, measurement_idx);
+      (*(tracker_itr))
+        ->updateWithMeasurement(associated_object, time, channel_info, significant_shape_change);
     } else {
       // not found
       (*(tracker_itr))->updateWithoutMeasurement(time);

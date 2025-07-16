@@ -268,47 +268,53 @@ double DataAssociation::calculateScore(
   const double & area = measurement_object.area;
   if (area < min_area || area > max_area) return INVALID_SCORE;
 
-<<<<<<< HEAD
   // dist gate
   const double max_dist_sq = config_.max_dist_matrix(tracker_label, measurement_label);
   const double dx = measurement_object.pose.position.x - tracked_object.pose.position.x;
   const double dy = measurement_object.pose.position.y - tracked_object.pose.position.y;
   const double dist_sq = dx * dx + dy * dy;
+
+  // dist gate
   if (dist_sq > max_dist_sq) return INVALID_SCORE;
 
-=======
->>>>>>> 036777107 (chore: remove unused angle gate logic and related config)
-  // mahalanobis dist gate
-  const double mahalanobis_dist = getMahalanobisDistanceFast(dx, dy, inv_cov);
-  constexpr double mahalanobis_dist_threshold =
-    11.62;  // This is an empirical value corresponding to the 99.6% confidence level
-            // for a chi-square distribution with 2 degrees of freedom (critical value).
-<<<<<<< HEAD
-=======
+  constexpr uint8_t VehicleLabelMin = 1;  // CAR
+  constexpr uint8_t VehicleLabelMax = 4;  // TRAILER
 
->>>>>>> 7a560a436 (fix: rebase error)
-  if (mahalanobis_dist >= mahalanobis_dist_threshold) return INVALID_SCORE;
+  // gates for non-vehicle objects
+  const double area_meas = measurement_object.area;
+  const bool is_vehicle_tracker =
+    tracker_label >= VehicleLabelMin && tracker_label <= VehicleLabelMax;
+  if (!is_vehicle_tracker) {
+    // area gate
+    const double max_area = config_.max_area_matrix(tracker_label, measurement_label);
+    const double min_area = config_.min_area_matrix(tracker_label, measurement_label);
+    if (area_meas < min_area || area_meas > max_area) return INVALID_SCORE;
+
+    // mahalanobis dist gate
+    const double mahalanobis_dist = getMahalanobisDistanceFast(dx, dy, inv_cov);
+
+    constexpr double mahalanobis_dist_threshold =
+      11.62;  // This is an empirical value corresponding to the 99.6% confidence level
+              // for a chi-square distribution with 2 degrees of freedom (critical value).
+
+    if (mahalanobis_dist >= mahalanobis_dist_threshold) return INVALID_SCORE;
+  }
 
   const double min_giou = config_.min_giou_matrix(tracker_label, measurement_label);
-  double giou = measurement_label == Label::PEDESTRIAN
-                  ? shapes::get1dIoU(measurement_object, tracked_object)
-                  : shapes::get3dGeneralizedIoU(measurement_object, tracked_object);
+  const bool use_1d_iou = (tracker_label == Label::PEDESTRIAN) || (tracker_label == Label::UNKNOWN);
+  double giou = use_1d_iou ? shapes::get1dIoU(measurement_object, tracked_object)
+                           : shapes::get3dGeneralizedIoU(measurement_object, tracked_object);
   // return giou value over threshold as similarity score
   // for pedestrian use simplified 1d iou
   if (giou < min_giou) return INVALID_SCORE;
 
   // check if shape changes too much for vehicle labels
-  constexpr double CheckGiouThreshold = 0.3;
-  constexpr double AreaRatioThreshold = 1.5;
-  constexpr uint8_t VehicleLabelMin = 1;  // CAR
-  constexpr uint8_t VehicleLabelMax = 4;  // TRAILER
+  constexpr double CheckGiouThreshold = 0.7;
+  constexpr double AreaRatioThreshold = 1.3;
 
-  if (
-    giou < CheckGiouThreshold && tracker_label >= VehicleLabelMin &&
-    tracker_label <= VehicleLabelMax) {
+  if (giou < CheckGiouThreshold && is_vehicle_tracker) {
     // BEV‑area ratio
     const double area_trk = tracked_object.area;
-    const double area_meas = measurement_object.area;
     const double area_ratio = std::max(area_trk, area_meas) / std::min(area_trk, area_meas);
 
     if (area_ratio > AreaRatioThreshold) {
@@ -321,13 +327,8 @@ double DataAssociation::calculateScore(
 
 bool DataAssociation::hasSignificantShapeChange(size_t tracker_idx, size_t measurement_idx) const
 {
-<<<<<<< HEAD
-  uint64_t key = (uint64_t(tracker_idx) << 32) | measurement_idx;
-  return significant_shape_change_set_.count(key);object_tracker association)
-=======
   uint64_t key = (static_cast<uint64_t>(tracker_idx) << 32) | measurement_idx;
   return significant_shape_change_set_.count(key);
->>>>>>> ede95465f (fix: cppcheck error)
 }
 
 }  // namespace autoware::multi_object_tracker
