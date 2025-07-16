@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/cuda_utils/cuda_gtest_utils.hpp"
 #include "autoware/cuda_utils/stream_unique_ptr.hpp"
 
 #include <autoware/cuda_utils/thrust_utils.hpp>
@@ -19,7 +20,11 @@
 #include <gtest/gtest.h>
 #include <thrust/logical.h>
 
-TEST(ThrustUtilsTest, ThrustOnStreamFunction)
+class ThrustUtilsTest : public autoware::cuda_utils::CudaTest
+{
+};
+
+TEST_F(ThrustUtilsTest, ThrustOnStreamFunction)
 {
   // Test that thrust_on_stream returns a valid execution policy
   cudaStream_t stream{};
@@ -33,7 +38,7 @@ TEST(ThrustUtilsTest, ThrustOnStreamFunction)
   cudaStreamDestroy(stream);
 }
 
-TEST(ThrustUtilsTest, FillFunctionality)
+TEST_F(ThrustUtilsTest, FillFunctionality)
 {
   auto stream = autoware::cuda_utils::makeCudaStream();
 
@@ -46,7 +51,7 @@ TEST(ThrustUtilsTest, FillFunctionality)
   // Check if all elements are filled with 42
   EXPECT_EQ(thrust::count(vec.begin(), vec.end(), 42), 100);
 }
-TEST(ThrustUtilsTest, FillNFunctionality)
+TEST_F(ThrustUtilsTest, FillNFunctionality)
 {
   auto stream = autoware::cuda_utils::makeCudaStream();
 
@@ -64,7 +69,7 @@ TEST(ThrustUtilsTest, FillNFunctionality)
   EXPECT_EQ(thrust::count(vec.begin() + 50, vec.end(), 0), 50);
 }
 
-TEST(ThrustUtilsTest, CountFunctionality)
+TEST_F(ThrustUtilsTest, CountFunctionality)
 {
   auto stream = autoware::cuda_utils::makeCudaStream();
 
