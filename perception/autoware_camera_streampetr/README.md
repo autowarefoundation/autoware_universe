@@ -169,3 +169,4 @@ If you want to train and deploy your own model, you can find the source code for
 - Enable 2d object detection. Because 2d object detection is used as an auxiliary loss during training, the same node can easily support 2d object detection with minor updates.
 - Implement int8 quantization for the backbone to further reduce inference latency
 - Execute the image backbone for each image as they arrive, to further reduce latency.
+- Add velocity to predictions.
