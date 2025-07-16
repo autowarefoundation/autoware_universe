@@ -21,6 +21,7 @@
 #include "autoware_utils/system/stop_watch.hpp"
 
 #include <autoware_lanelet2_extension/utility/query.hpp>
+#include <autoware_utils_geometry/boost_geometry.hpp>
 #include <magic_enum.hpp>
 
 #include <boost/scope_exit.hpp>
@@ -98,6 +99,25 @@ void PlannerManager::configureModuleSlot(
                 << std::endl;
     }
   }
+}
+
+// This is a temporary process until motion planning can take the terminal pose into account
+bool keep_input_points(const std::vector<std::shared_ptr<SceneModuleStatus>> & statuses)
+{
+  const std::vector<std::string> target_modules = {"goal_planner", "avoidance"};
+
+  const auto target_status = ModuleStatus::RUNNING;
+
+  for (auto & status : statuses) {
+    if (status->is_waiting_approval || status->status == target_status) {
+      if (
+        std::find(target_modules.begin(), target_modules.end(), status->module_name) !=
+        target_modules.end()) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 BehaviorModuleOutput PlannerManager::run(const std::shared_ptr<PlannerData> & data)
@@ -185,7 +205,10 @@ BehaviorModuleOutput PlannerManager::run(const std::shared_ptr<PlannerData> & da
     m->publishRTCStatus();
     m->publish_planning_factors();
   });
-
+  // resample the path prior to generating the drivable area
+  result_output.valid_output.path = utils::resamplePathWithSpline(
+    result_output.valid_output.path, data->parameters.output_path_interval,
+    keep_input_points(getSceneModuleStatus()));
   generateCombinedDrivableArea(result_output.valid_output, data);
   return result_output.valid_output;
 }

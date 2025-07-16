@@ -14,7 +14,6 @@
 
 #include "autoware/behavior_path_goal_planner_module/default_fixed_goal_planner.hpp"
 
-#include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
 #include <autoware_lanelet2_extension/utility/query.hpp>
@@ -101,8 +100,6 @@ PathWithLaneId DefaultFixedGoalPlanner::modifyPathForSmoothGoalConnection(
     }
     goal_search_radius -= range_reduce_by;
   }
-  refined_path =
-    utils::resamplePathWithSpline(refined_path, planner_data->parameters.input_path_interval, true);
   return refined_path;
 }
 

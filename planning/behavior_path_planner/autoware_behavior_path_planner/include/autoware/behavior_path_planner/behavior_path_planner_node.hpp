@@ -172,10 +172,7 @@ private:
    * @brief extract path from behavior tree output
    */
   PathWithLaneId::SharedPtr getPath(
-    const BehaviorModuleOutput & output, const std::shared_ptr<PlannerData> & planner_data,
-    const std::shared_ptr<PlannerManager> & planner_manager);
-
-  bool keepInputPoints(const std::vector<std::shared_ptr<SceneModuleStatus>> & statuses) const;
+    const BehaviorModuleOutput & output, const std::shared_ptr<PlannerData> & planner_data);
 
   /**
    * @brief skip smooth goal connection
