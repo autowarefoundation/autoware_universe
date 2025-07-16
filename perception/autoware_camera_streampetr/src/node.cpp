@@ -176,6 +176,9 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
     return;
   }else if (tdiff > max_camera_time_diff_) {
     RCLCPP_WARN(get_logger(), "Cameras are not synced, difference is %.2f seconds", tdiff);
+    network_->wipe_memory();
+    initial_kinematic_state_ = latest_kinematic_state_;
+    data_store_->restart();
     return;
   }
 
@@ -186,20 +189,11 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
   if (stop_watch_ptr_) stop_watch_ptr_->tic("latency/inference");
   std::vector<float> forward_time_ms;
 
-  if (data_store_->get_timestamp() > max_camera_time_diff_) {
-    RCLCPP_WARN(
-      get_logger(),
-      "Predicting after %.2f seconds which is longer than %.2f, so memory will be refreshed",
-      static_cast<double>(data_store_->get_timestamp()), max_camera_time_diff_);
-    network_->wipe_memory();
-    initial_kinematic_state_ = latest_kinematic_state_;
-  }
   network_->inference_detector(
     data_store_->get_image_input(), ego_pose, ego_pose_inv, data_store_->get_image_shape(),
     data_store_->get_camera_info_vector(),
     get_camera_extrinsics_vector(data_store_->get_camera_link_names()),
     data_store_->get_timestamp(), output_objects, forward_time_ms);
-  data_store_->step();
 
   double inference_time_ms = -1.0;
   if (stop_watch_ptr_) inference_time_ms = stop_watch_ptr_->toc("latency/inference", true);

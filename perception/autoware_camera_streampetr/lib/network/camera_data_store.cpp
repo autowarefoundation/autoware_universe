@@ -84,7 +84,7 @@ CameraDataStore::CameraDataStore(
 
   camera_info_timestamp_ = std::vector<double>(rois_number, -1.0);
   camera_link_names_ = std::vector<std::string>(rois_number, "");
-  previous_timestamp_ = -1.0;
+  start_timestamp_ = -1.0;
 
   camera_info_list_ = std::vector<CameraInfo::ConstSharedPtr>(rois_number, nullptr);
   cudaStreamCreate(&stream_);
@@ -304,14 +304,17 @@ std::shared_ptr<cuda::Tensor> CameraDataStore::get_image_input() const
   return image_input_;
 }
 
-float CameraDataStore::get_timestamp() const
+float CameraDataStore::get_timestamp()
 {
-  if (previous_timestamp_ < 0) return 0.0;
-  if (camera_info_timestamp_[anchor_camera_id_] < previous_timestamp_) {
+  if(start_timestamp_ < 0.0) {
+    start_timestamp_ = camera_info_timestamp_[anchor_camera_id_];
+    return 0.0;
+  }
+  else if (camera_info_timestamp_[anchor_camera_id_] < start_timestamp_) {
     RCLCPP_ERROR(logger_, "Current camera timestamp is behind the previous timestamp!!!");
     return 0.0;
   }
-  return camera_info_timestamp_[anchor_camera_id_] - previous_timestamp_;
+  return camera_info_timestamp_[anchor_camera_id_] - start_timestamp_;
 }
 
 std::vector<std::string> CameraDataStore::get_camera_link_names() const
@@ -319,9 +322,11 @@ std::vector<std::string> CameraDataStore::get_camera_link_names() const
   return camera_link_names_;
 }
 
-void CameraDataStore::step()
+void CameraDataStore::restart()
 {
-  previous_timestamp_ = camera_info_timestamp_[anchor_camera_id_];
+  start_timestamp_ = -1.0;
+  camera_info_timestamp_.assign(rois_number_, -1.0);
+  camera_link_names_.assign(rois_number_, "");
 }
 
 void CameraDataStore::save_processed_image(const int camera_id, const std::string & filename) const

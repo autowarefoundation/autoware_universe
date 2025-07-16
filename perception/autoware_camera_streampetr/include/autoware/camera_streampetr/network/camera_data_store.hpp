@@ -48,9 +48,9 @@ public:
   std::vector<float> get_camera_info_vector() const;
   std::vector<float> get_image_shape() const;
   std::shared_ptr<Tensor> get_image_input() const;
-  float get_timestamp() const;
+  float get_timestamp() ;
   std::vector<std::string> get_camera_link_names() const;
-  void step();
+  void restart();
   void save_processed_image(const int camera_id, const std::string & filename) const;
 
 private:
@@ -58,7 +58,7 @@ private:
   const int image_height_;
   const int image_width_;
   const int anchor_camera_id_;
-  double previous_timestamp_;
+  double start_timestamp_;
   float preprocess_time_ms_;
   const bool is_distorted_image_;
   
