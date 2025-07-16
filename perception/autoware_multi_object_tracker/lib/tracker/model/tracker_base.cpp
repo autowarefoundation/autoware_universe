@@ -109,7 +109,7 @@ void Tracker::mergeExistenceProbabilities(std::vector<float> existence_probabili
 
 bool Tracker::updateWithMeasurement(
   const types::DynamicObject & object, const rclcpp::Time & measurement_time,
-  const types::InputChannel & channel_info, bool weak_update)
+  const types::InputChannel & channel_info, bool significant_shape_change)
 {
   // Update existence probability
   {
@@ -163,8 +163,21 @@ bool Tracker::updateWithMeasurement(
     object_.kinematics.orientation_availability = types::OrientationAvailability::SIGN_UNKNOWN;
   }
 
-  if (weak_update) {
+  if (!significant_shape_change) {
+    // Update object normally
+    measure(object, measurement_time, channel_info);
+
+    // Update object status
+    getTrackedObject(measurement_time, object_);
+
+    // Reset weak update count
+    weak_update_count_ = 0;
+  } else {
+    // Store measurement area info
+    area_history_.push_back(object.area);
+
     // Weak update based on prediction
+    ++weak_update_count_;
     types::DynamicObject pred;
     getTrackedObject(measurement_time, pred);
 
@@ -172,8 +185,8 @@ bool Tracker::updateWithMeasurement(
     const double dx = object.pose.position.x - pred.pose.position.x;
     const double dy = object.pose.position.y - pred.pose.position.y;
     const double dist2 = dx * dx + dy * dy;
-    constexpr double d_max_square_inv = 1 / (2.0 * 2.0);
-    constexpr double min_w = 0.1;
+    constexpr double d_max_square_inv = 1 / 2.0;
+    constexpr double min_w = 0.05;
     const double w_pose = std::clamp(1.0 - dist2 * d_max_square_inv, min_w, 1.0);
 
     // Blend position
@@ -189,26 +202,22 @@ bool Tracker::updateWithMeasurement(
     q.setRPY(0, 0, yaw_fused);
     object_.pose.orientation = tf2::toMsg(q);
 
-    // Slow shape smoothing
-    auto & dims = object_.shape.dimensions;            // current
-    const auto & dims_meas = object.shape.dimensions;  // measured
-    constexpr double w_shape = 0.2;
-    dims.x = dims.x * (1 - w_shape) + dims_meas.x * w_shape;
-    dims.y = dims.y * (1 - w_shape) + dims_meas.y * w_shape;
-    dims.z = dims.z * (1 - w_shape) + dims_meas.z * w_shape;
-    object_.shape.type = object.shape.type;
-    object_.area = types::getArea(object_.shape);
+    // Update shape if weak update continues and area of recent measurements tend to be stable
+    if (weak_update_count_ >= AREA_HISTORY_SIZE) {
+      auto [min_it, max_it] = std::minmax_element(area_history_.begin(), area_history_.end());
+      double min_area = *min_it;
+      double max_area = *max_it;
+      if ((max_area - min_area) / max_area < AREA_VARIATION_THRESHOLD) {
+        object_.shape.dimensions = object.shape.dimensions;
+        object_.shape.type = object.shape.type;
+        object_.area = types::getArea(object_.shape);
+        weak_update_count_ = 0;
+      }
+    }
 
     // Cache fused state
     object_.time = measurement_time;
     updateCache(object_, measurement_time);
-
-  } else {
-    // Update object normally
-    measure(object, measurement_time, channel_info);
-
-    // Update object status
-    getTrackedObject(measurement_time, object_);
   }
 
   return true;
