@@ -14,7 +14,6 @@
 
 #include "autoware/camera_streampetr/network/camera_data_store.hpp"
 
-#include "autoware/camera_streampetr/image_utils.hpp"
 #include "autoware/camera_streampetr/network/preprocess.hpp"
 
 #if __has_include(<cv_bridge/cv_bridge.hpp>)
@@ -62,24 +61,14 @@ static void updateIntrinsics(float * K_4x4, const Eigen::Matrix3f & ida_mat)
 
 CameraDataStore::CameraDataStore(
   rclcpp::Node * node, const int rois_number, const int image_height, const int image_width,
-  const int anchor_camera_id, const bool is_compressed_image, const int decompression_downsample)
+  const int anchor_camera_id)
 : rois_number_(rois_number),
   image_height_(image_height),
   image_width_(image_width),
   anchor_camera_id_(anchor_camera_id),
-  is_compressed_image_(is_compressed_image),
-  decompression_downsample_(decompression_downsample),
   preprocess_time_ms_(0.0f),
   logger_(node->get_logger())
 {
-  if (
-    decompression_downsample_ != 1 && decompression_downsample_ != 2 &&
-    decompression_downsample_ != 4 && decompression_downsample_ != 8) {
-    throw std::runtime_error(
-      "Invalid decompression downsample: " + std::to_string(decompression_downsample_) +
-      " . Should be 2, 4, or 8.");
-  }
-
   image_input_ = std::make_shared<Tensor>(
     "image_input", nvinfer1::Dims{5, 1, rois_number, 3, image_height, image_width},
     nvinfer1::DataType::kFLOAT);  // {num_dims, batch_size, rois_number, num_channels, height,
@@ -100,32 +89,6 @@ CameraDataStore::CameraDataStore(
   cudaStreamCreate(&stream_);
 }
 
-void CameraDataStore::update_camera_image_compressed(
-  const int camera_id, const CompressedImage::ConstSharedPtr & input_compressed_image_msg)
-{
-  auto start_time = std::chrono::high_resolution_clock::now();
-  cv_bridge::CvImagePtr cv_ptr(new cv_bridge::CvImage);
-  decompress_image(input_compressed_image_msg, cv_ptr, decompression_downsample_);
-
-  const int H = static_cast<int>(cv_ptr->image.rows);
-  const int W = static_cast<int>(cv_ptr->image.cols);
-
-  if (H < image_height_ || W < image_width_) {
-    throw std::runtime_error(
-      "Decoded image size is smaller than the model input size: H: " + std::to_string(H) +
-      ", W: " + std::to_string(W));
-  }
-
-  preprocess_image(camera_id, cv_ptr->image.data, H, W);
-
-  camera_info_timestamp_[camera_id] = input_compressed_image_msg->header.stamp.sec +
-                                      input_compressed_image_msg->header.stamp.nanosec * 1e-9;
-  camera_link_names_[camera_id] = input_compressed_image_msg->header.frame_id;
-
-  auto end_time = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-  preprocess_time_ms_ = duration.count();
-}
 
 void CameraDataStore::update_camera_image(
   const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg)

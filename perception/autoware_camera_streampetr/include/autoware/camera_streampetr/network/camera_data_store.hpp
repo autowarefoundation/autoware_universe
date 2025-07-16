@@ -20,7 +20,6 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <sensor_msgs/msg/camera_info.hpp>
-#include <sensor_msgs/msg/compressed_image.hpp>
 #include <sensor_msgs/msg/image.hpp>
 
 #include <memory>
@@ -31,18 +30,15 @@ namespace autoware::camera_streampetr
 class CameraDataStore
 {
   using Image = sensor_msgs::msg::Image;
-  using CompressedImage = sensor_msgs::msg::CompressedImage;
   using CameraInfo = sensor_msgs::msg::CameraInfo;
   using Tensor = cuda::Tensor;
 
 public:
   CameraDataStore(
     rclcpp::Node * node, const int rois_number, const int image_height, const int image_width,
-    const int anchor_camera_id, const bool is_compressed_image, const int decompression_downsample);
+    const int anchor_camera_id);
   void update_camera_image(
     const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg);
-  void update_camera_image_compressed(
-    const int camera_id, const CompressedImage::ConstSharedPtr & input_camera_image_msg);
   void preprocess_image(
     const int camera_id, const std::uint8_t * input_image_data, const int original_height,
     const int original_width);
@@ -65,8 +61,6 @@ private:
   const int image_height_;
   const int image_width_;
   const int anchor_camera_id_;
-  const bool is_compressed_image_;
-  const int decompression_downsample_;
   double previous_timestamp_;
   float preprocess_time_ms_;
 

@@ -28,7 +28,6 @@
 #include <geometry_msgs/msg/pose.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
-#include <sensor_msgs/msg/compressed_image.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_msgs/msg/tf_message.hpp>
@@ -58,7 +57,6 @@ class StreamPetrNode : public rclcpp::Node
 {
   using Odometry = nav_msgs::msg::Odometry;
   using Image = sensor_msgs::msg::Image;
-  using CompressedImage = sensor_msgs::msg::CompressedImage;
   using CameraInfo = sensor_msgs::msg::CameraInfo;
   using DetectedObjects = autoware_perception_msgs::msg::DetectedObjects;
   using DetectedObject = autoware_perception_msgs::msg::DetectedObject;
@@ -70,16 +68,14 @@ private:
   void odometry_callback(Odometry::ConstSharedPtr input_msg);
   void camera_info_callback(CameraInfo::ConstSharedPtr input_camera_info_msg, const int camera_id);
   void camera_image_callback(Image::ConstSharedPtr input_camera_image_msg, const int camera_id);
-  void camera_image_callback(
-    CompressedImage::ConstSharedPtr input_camera_image_msg, const int camera_id);
-  bool prestep();
-  void step();
+
+  void step(const rclcpp::Time & stamp);
   std::pair<std::vector<float>, std::vector<float>> get_ego_pose_vector() const;
   std::vector<float> get_camera_extrinsics_vector(const std::vector<std::string> & camera_links);
+  
   rclcpp::Subscription<Odometry>::SharedPtr localization_sub_;
   std::vector<rclcpp::Subscription<CameraInfo>::SharedPtr> camera_info_subs_;
-  std::vector<rclcpp::Subscription<Image>::SharedPtr> camera_image_subs_;
-  std::vector<rclcpp::Subscription<CompressedImage>::SharedPtr> compressed_camera_image_subs_;
+  std::vector<image_transport::Subscriber> camera_image_subs_;
   rclcpp::Publisher<DetectedObjects>::SharedPtr pub_objects_;
 
   tf2_ros::Buffer tf_buffer_;
@@ -89,11 +85,9 @@ private:
   Odometry::ConstSharedPtr initial_kinematic_state_ = nullptr;
   Odometry::ConstSharedPtr latest_kinematic_state_ = nullptr;
   std::unique_ptr<CameraDataStore> data_store_;
-  const bool is_compressed_image_;
   const float max_camera_time_diff_;
   const int anchor_camera_id_;
   std::unique_ptr<StreamPetrNetwork> network_;
-  bool cycle_started_;
 
   // debugger
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};

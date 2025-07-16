@@ -16,9 +16,9 @@
 
 #include "autoware/camera_streampetr/network/build_trt.hpp"
 #include "autoware/camera_streampetr/postprocess/non_maximum_suppression.hpp"
+#include <image_transport/image_transport.hpp>
 
 #include <Eigen/Dense>
-
 #include <algorithm>
 #include <cmath>
 #include <memory>
@@ -44,10 +44,8 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   tf_buffer_(this->get_clock()),
   tf_listener_(tf_buffer_),
   rois_number_(static_cast<size_t>(declare_parameter<int>("rois_number", 6))),
-  is_compressed_image_(declare_parameter<bool>("is_compressed_image")),
   max_camera_time_diff_(declare_parameter<float>("model_params.max_camera_time_diff", 0.2f)),
   anchor_camera_id_(declare_parameter<int>("anchor_camera_id", 0)),
-  cycle_started_(false),
   debug_mode_(declare_parameter<bool>("debug_mode"))
 {
   RCLCPP_INFO(
@@ -79,32 +77,21 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
     [this](const Odometry::ConstSharedPtr msg) { this->odometry_callback(msg); });
 
   camera_info_subs_.resize(rois_number_);
-
-  if (is_compressed_image_)
-    compressed_camera_image_subs_.resize(rois_number_);
-  else
-    camera_image_subs_.resize(rois_number_);
-
+  
+  const bool is_compressed_image = declare_parameter<bool>("is_compressed_image");
+  camera_image_subs_.resize(rois_number_);
   for (size_t roi_i = 0; roi_i < rois_number_; ++roi_i) {
     camera_info_subs_.at(roi_i) = this->create_subscription<CameraInfo>(
       "~/input/camera" + std::to_string(roi_i) + "/camera_info",
       rclcpp::SensorDataQoS{}.keep_last(1), [this, roi_i](const CameraInfo::ConstSharedPtr msg) {
         this->camera_info_callback(msg, static_cast<int>(roi_i));
       });
+      camera_image_subs_.at(roi_i) = image_transport::create_subscription(
+        this,"~/input/camera" + std::to_string(roi_i) + "/image",
+        std::bind(&StreamPetrNode::camera_image_callback, this, std::placeholders::_1, static_cast<int>(roi_i)),
+         is_compressed_image? "compressed" : "raw" , rmw_qos_profile_sensor_data
+      );
 
-    if (is_compressed_image_) {
-      compressed_camera_image_subs_.at(roi_i) = this->create_subscription<CompressedImage>(
-        "~/input/camera" + std::to_string(roi_i) + "/image", rclcpp::SensorDataQoS{}.keep_last(1),
-        [this, roi_i](const CompressedImage::ConstSharedPtr msg) {
-          this->camera_image_callback(msg, static_cast<int>(roi_i));
-        });
-    } else {
-      camera_image_subs_.at(roi_i) = this->create_subscription<Image>(
-        "~/input/camera" + std::to_string(roi_i) + "/image", rclcpp::SensorDataQoS{}.keep_last(1),
-        [this, roi_i](const Image::ConstSharedPtr msg) {
-          this->camera_image_callback(msg, static_cast<int>(roi_i));
-        });
-    }
   }
 
   // Publishers
@@ -113,8 +100,7 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   // Data store
   data_store_ = std::make_unique<CameraDataStore>(
     this, rois_number_, declare_parameter<int>("model_params.input_image_height"),
-    declare_parameter<int>("model_params.input_image_width"), anchor_camera_id_,
-    is_compressed_image_, declare_parameter<int>("decompression_downsample"));
+    declare_parameter<int>("model_params.input_image_width"), anchor_camera_id_);
   const bool use_temporal = declare_parameter<bool>("model_params.use_temporal");
   const double search_distance_2d =
     declare_parameter<double>("post_process_params.iou_nms_search_distance_2d");
@@ -139,6 +125,7 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
     using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ptr_ = std::make_unique<DebugPublisher>(this, this->get_name());
+    stop_watch_ptr_->tic("latency/cycle_time_ms");
   }
 }
 
@@ -157,12 +144,13 @@ void StreamPetrNode::camera_info_callback(
   data_store_->update_camera_info(camera_id, input_camera_info_msg);
 }
 
-bool StreamPetrNode::prestep()
+void StreamPetrNode::camera_image_callback(
+  Image::ConstSharedPtr input_camera_image_msg, const int camera_id)
 {
   const auto objects_sub_count =
     pub_objects_->get_subscription_count() + pub_objects_->get_intra_process_subscription_count();
   if (objects_sub_count < 1) {
-    return false;  // No subscribers, skip processing
+    return;  // No subscribers, skip processing
   }
 
   if (stop_watch_ptr_) {
@@ -170,48 +158,23 @@ bool StreamPetrNode::prestep()
   }
 
   if (!data_store_->check_if_all_camera_info_received() || !latest_kinematic_state_) {
-    return false;  // Not all camera info received, skip processing
+    return;  // Not all camera info received, skip processing
   }
-
-  if (!cycle_started_) {
-    cycle_started_ = true;
-    if (stop_watch_ptr_) stop_watch_ptr_->tic("latency/cycle_time_ms");
-  }
-  return true;
-}
-
-void StreamPetrNode::camera_image_callback(
-  Image::ConstSharedPtr input_camera_image_msg, const int camera_id)
-{
-  if (!prestep()) return;
 
   data_store_->update_camera_image(camera_id, input_camera_image_msg);
 
-  if (camera_id == anchor_camera_id_) step();
+  if (camera_id == anchor_camera_id_) step(input_camera_image_msg->header.stamp);
 }
 
-void StreamPetrNode::camera_image_callback(
-  CompressedImage::ConstSharedPtr input_camera_image_msg, const int camera_id)
+
+void StreamPetrNode::step(const rclcpp::Time & stamp)
 {
-  if (!prestep()) return;
-
-  data_store_->update_camera_image_compressed(camera_id, input_camera_image_msg);
-
-  if (camera_id == anchor_camera_id_) step();
-}
-
-void StreamPetrNode::step()
-{
-  double inference_time_ms = -1.0;
-
   const float tdiff = data_store_->check_if_all_images_synced();
 
   if (tdiff < 0) {
     RCLCPP_WARN(get_logger(), "Not all camera info or image received");
     return;
-  }
-
-  if (tdiff > max_camera_time_diff_) {
+  }else if (tdiff > max_camera_time_diff_) {
     RCLCPP_WARN(get_logger(), "Cameras are not synced, difference is %.2f seconds", tdiff);
     return;
   }
@@ -219,8 +182,8 @@ void StreamPetrNode::step()
   std::vector<autoware_perception_msgs::msg::DetectedObject> output_objects;
   const auto [ego_pose, ego_pose_inv] = get_ego_pose_vector();
 
+  
   if (stop_watch_ptr_) stop_watch_ptr_->tic("latency/inference");
-
   std::vector<float> forward_time_ms;
 
   if (data_store_->get_timestamp() > max_camera_time_diff_) {
@@ -238,11 +201,13 @@ void StreamPetrNode::step()
     data_store_->get_timestamp(), output_objects, forward_time_ms);
   data_store_->step();
 
+  double inference_time_ms = -1.0;
   if (stop_watch_ptr_) inference_time_ms = stop_watch_ptr_->toc("latency/inference", true);
 
   DetectedObjects output_msg;
   output_msg.objects = output_objects;
   output_msg.header.frame_id = "base_link";
+  output_msg.header.stamp = stamp;
   pub_objects_->publish(output_msg);
 
   if (debug_publisher_ptr_ && stop_watch_ptr_) {
@@ -262,8 +227,8 @@ void StreamPetrNode::step()
       "latency/inference/postprocess", forward_time_ms[3]);
     debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "latency/cycle_time_ms", stop_watch_ptr_->toc("latency/cycle_time_ms", true));
+    stop_watch_ptr_->tic("latency/cycle_time_ms");
   }
-  cycle_started_ = false;
 }
 
 std::vector<float> StreamPetrNode::get_camera_extrinsics_vector(

@@ -18,13 +18,13 @@ Topic for image_i arrived
   |
   |
   v
-Is image compressed?
+Is image distorted?
   |              \
   |               \
 Yes               No
   |                |
   v                |
-Decompress         |
+Undistort          |
   |                |
   v                v
 Load image into GPU memory
@@ -79,8 +79,8 @@ No                  Yes
 | `latency/inference/backbone`    | `autoware_internal_debug_msgs::msg::Float64Stamped` | Backbone inference time (ms).                                                 | 16.21                 |
 | `latency/inference/ptshead`     | `autoware_internal_debug_msgs::msg::Float64Stamped` | Points head inference time (ms).                                              | 5.45                  |
 | `latency/inference/pos_embed`   | `autoware_internal_debug_msgs::msg::Float64Stamped` | Position embedding inference time (ms).                                       | 0.40                  |
-| `latency/inference/postprocess` | `autoware_internal_debug_msgs::msg::Float64Stamped` | Postprocessing time (ms): converting network predictions to Autoware format.  | 0.40                  |
-| `latency/cycle_time_ms`         | `autoware_internal_debug_msgs::msg::Float64Stamped` | Cycle time (ms): from receiving the first camera topic to publishing results. | 110.65                |
+| `latency/inference/postprocess` | `autoware_internal_debug_msgs::msg::Float64Stamped` | nms + filtering + converting network predictions to autoware format (ms).     | 0.40                  |
+| `latency/cycle_time_ms`         | `autoware_internal_debug_msgs::msg::Float64Stamped` | Time between two consecutive predictions (ms).                                | 110.65                |
 
 ## Parameters
 
@@ -114,9 +114,9 @@ The `autoware_camera_streampetr` node has various parameters for configuration:
 
 - `rois_number`: Number of camera ROIs/cameras (default: 6)
 - `is_compressed_image`: Whether input images are compressed
+- `is_distorted_image`: Whether input images are distorted
 - `anchor_camera_id`: ID of the anchor camera for synchronization (default: 0)
 - `debug_mode`: Enable debug mode for timing measurements
-- `decompression_downsample`: Downsampling factor for image decompression
 - `build_only`: Build TensorRT engines and exit without running inference
 
 ### The `build_only` option
