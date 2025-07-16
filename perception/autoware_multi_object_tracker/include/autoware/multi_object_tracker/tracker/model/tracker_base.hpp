@@ -33,6 +33,8 @@
 #include <geometry_msgs/msg/point.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
 
+#include <boost/circular_buffer.hpp>
+
 #include <optional>
 #include <string>
 #include <vector>
@@ -64,6 +66,12 @@ private:
   float total_existence_probability_;
   std::vector<autoware_perception_msgs::msg::ObjectClassification> classification_;
 
+  // conditioned update config and states
+  static constexpr size_t AREA_HISTORY_SIZE = 3;
+  static constexpr double AREA_VARIATION_THRESHOLD = 0.15;
+  boost::circular_buffer<double> area_history_{AREA_HISTORY_SIZE};
+  size_t weak_update_count_{0};
+
   // cache
   mutable rclcpp::Time cached_time_;
   mutable types::DynamicObject cached_object_;
@@ -88,7 +96,7 @@ public:
   // object update
   bool updateWithMeasurement(
     const types::DynamicObject & object, const rclcpp::Time & measurement_time,
-    const types::InputChannel & channel_info, bool weak_update = false);
+    const types::InputChannel & channel_info, bool significant_shape_change = false);
   bool updateWithoutMeasurement(const rclcpp::Time & now);
   void updateClassification(
     const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification);
