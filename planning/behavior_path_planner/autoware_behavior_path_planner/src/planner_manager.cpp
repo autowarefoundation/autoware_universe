@@ -17,11 +17,8 @@
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/static_drivable_area.hpp"
 #include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
-#include "autoware_utils/ros/debug_publisher.hpp"
-#include "autoware_utils/system/stop_watch.hpp"
 
 #include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_utils_geometry/boost_geometry.hpp>
 #include <magic_enum.hpp>
 
 #include <boost/scope_exit.hpp>
