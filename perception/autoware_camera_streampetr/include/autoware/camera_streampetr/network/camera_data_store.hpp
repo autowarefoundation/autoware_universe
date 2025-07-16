@@ -36,12 +36,9 @@ class CameraDataStore
 public:
   CameraDataStore(
     rclcpp::Node * node, const int rois_number, const int image_height, const int image_width,
-    const int anchor_camera_id);
+    const int anchor_camera_id, const bool is_distorted_image);
   void update_camera_image(
     const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg);
-  void preprocess_image(
-    const int camera_id, const std::uint8_t * input_image_data, const int original_height,
-    const int original_width);
   void update_camera_info(
     const int camera_id, const CameraInfo::ConstSharedPtr & input_camera_info_msg);
   bool check_if_all_camera_image_received() const;
@@ -63,7 +60,8 @@ private:
   const int anchor_camera_id_;
   double previous_timestamp_;
   float preprocess_time_ms_;
-
+  const bool is_distorted_image_;
+  
   rclcpp::Logger logger_;
   std::vector<CameraInfo::ConstSharedPtr> camera_info_list_;
   std::shared_ptr<Tensor> image_input_;
