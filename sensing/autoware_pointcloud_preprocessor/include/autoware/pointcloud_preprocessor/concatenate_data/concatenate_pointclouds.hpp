@@ -52,6 +52,8 @@
 #ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__CONCATENATE_POINTCLOUDS_HPP_
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__CONCATENATE_POINTCLOUDS_HPP_
 
+#include "cloud_info.hpp"
+
 #include <deque>
 #include <map>
 #include <memory>
@@ -142,6 +144,7 @@ private:
   std::vector<std::string> input_topics_;
 
   std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
+  std::unique_ptr<CloudInfo> cloud_info_{nullptr};
 
   std::deque<geometry_msgs::msg::TwistStamped::ConstSharedPtr> twist_ptr_queue_;
 

@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include "cloud_info.hpp"
 #include "traits.hpp"
 
 #include <deque>
@@ -57,7 +58,8 @@ public:
     is_motion_compensated_(is_motion_compensated),
     publish_synchronized_pointcloud_(publish_synchronized_pointcloud),
     keep_input_frame_in_synchronized_pointcloud_(keep_input_frame_in_synchronized_pointcloud),
-    managed_tf_buffer_(std::make_unique<managed_transform_buffer::ManagedTransformBuffer>())
+    managed_tf_buffer_(std::make_unique<managed_transform_buffer::ManagedTransformBuffer>()),
+    cloud_info_(node.get_parameter("matching_strategy.type").as_string(), input_topics)
   {
   }
 
@@ -81,6 +83,7 @@ protected:
   bool publish_synchronized_pointcloud_;
   bool keep_input_frame_in_synchronized_pointcloud_;
   std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
+  CloudInfo cloud_info_;
 
   std::deque<geometry_msgs::msg::TwistStamped> twist_queue_;
 };

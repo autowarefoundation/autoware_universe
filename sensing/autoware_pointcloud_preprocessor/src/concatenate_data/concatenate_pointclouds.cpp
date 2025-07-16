@@ -14,7 +14,6 @@
 
 #include "autoware/pointcloud_preprocessor/concatenate_data/concatenate_pointclouds.hpp"
 
-#include "autoware/pointcloud_preprocessor/concatenate_data/utils.hpp"
 #include "autoware/pointcloud_preprocessor/utility/memory.hpp"
 
 #include <pcl_ros/transforms.hpp>
@@ -95,6 +94,11 @@ PointCloudConcatenationComponent::PointCloudConcatenationComponent(
   // tf2 listener
   {
     managed_tf_buffer_ = std::make_unique<managed_transform_buffer::ManagedTransformBuffer>();
+  }
+
+  // Cloud info
+  {
+    cloud_info_ = std::make_unique<CloudInfo>("naive", input_topics_);
   }
 
   // Output Publishers
@@ -254,16 +258,19 @@ void PointCloudConcatenationComponent::combineClouds(
       }
       if (concat_cloud_info_ptr == nullptr) {
         concat_cloud_info_ptr =
-          std::make_shared<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>();
+          std::make_shared<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
+            cloud_info_->get_concat_info_base());
       }
-      utils::append_source_point_cloud_info(
-        *transformed_cloud_ptr, e.first, *concat_cloud_info_ptr);
+      CloudInfo::apply_source_with_point_cloud(
+        *transformed_cloud_ptr, e.first,
+        autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK, *concat_cloud_info_ptr);
     } else {
       not_subscribed_topic_names_.insert(e.first);
     }
   }
   if (concat_cloud_info_ptr != nullptr && concat_cloud_ptr != nullptr) {
-    utils::set_concatenated_point_cloud_info(*concat_cloud_ptr, *concat_cloud_info_ptr);
+    CloudInfo::update_concatenated_point_cloud_header(*concat_cloud_ptr, *concat_cloud_info_ptr);
+    CloudInfo::update_concatenated_point_cloud_success(true, *concat_cloud_info_ptr);
   }
 }
 
