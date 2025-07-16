@@ -81,7 +81,7 @@ std::vector<float> get_route_segments(
   const ColLaneIDMaps & col_id_mapping,
   const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
   const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
-  lanelet::ConstLanelets & current_lanes);
+  const lanelet::ConstLanelets & current_lanes);
 
 /**
  * @brief Extracts lane tensor data from ego-centric lane segments.

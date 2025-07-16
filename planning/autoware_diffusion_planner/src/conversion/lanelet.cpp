@@ -59,7 +59,6 @@ std::vector<LanePoint> interpolate_points(const std::vector<LanePoint> & input, 
   float total_length = arc_lengths.back();
 
   // Step 2: Generate target arc lengths
-  std::vector<float> target_lengths(num_points);
   std::vector<LanePoint> result;
   result.reserve(num_points);
 

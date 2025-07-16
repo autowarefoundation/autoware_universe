@@ -97,7 +97,6 @@ void add_traffic_light_one_hot_encoding_to_segment(
   const auto lane_id_itr = col_id_mapping.matrix_col_to_lane_id.find(row_idx);
   if (lane_id_itr == col_id_mapping.matrix_col_to_lane_id.end()) {
     throw std::invalid_argument("Invalid lane row to lane id mapping");
-    return;
   }
   const auto assigned_lanelet = lanelet_map_ptr->laneletLayer.get(lane_id_itr->second);
   auto tl_reg_elems = assigned_lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
@@ -136,7 +135,6 @@ Eigen::RowVector4f get_traffic_signal_row_vector(
     static_cast<float>(is_green) + static_cast<float>(is_amber) + static_cast<float>(is_red) >
     1.f) {
     throw std::invalid_argument("more than one traffic light");
-    return {0.f, 0.f, 0.f, 1.f};
   }
   return {
     static_cast<float>(is_green), static_cast<float>(is_amber), static_cast<float>(is_red),
@@ -218,7 +216,6 @@ std::tuple<Eigen::MatrixXf, ColLaneIDMaps> transform_and_select_rows(
   if (input_matrix.rows() != FULL_MATRIX_ROWS || m <= 0) {
     throw std::invalid_argument(
       "Input matrix must have at least FULL_MATRIX_ROWS columns and m must be greater than 0.");
-    return {};
   }
   std::vector<ColWithDistance> distances;
   // Step 1: Compute distances
@@ -280,7 +277,6 @@ Eigen::MatrixXf process_segment_to_matrix(const LaneSegment & segment)
     throw std::runtime_error(
       "Segment data size mismatch: centerlines, left boundaries, and right boundaries must have "
       "POINTS_PER_SEGMENT points");
-    return {};
   }
 
   Eigen::MatrixXf segment_data(POINTS_PER_SEGMENT, FULL_MATRIX_ROWS);
@@ -345,7 +341,7 @@ std::vector<float> get_route_segments(
   const ColLaneIDMaps & col_id_mapping,
   const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
   const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
-  lanelet::ConstLanelets & current_lanes)
+  const lanelet::ConstLanelets & current_lanes)
 {
   const auto total_route_points = ROUTE_LANES_SHAPE[1] * POINTS_PER_SEGMENT;
   Eigen::MatrixXf full_route_segment_matrix(SEGMENT_POINT_DIM, total_route_points);
