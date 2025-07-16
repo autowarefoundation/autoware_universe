@@ -41,41 +41,6 @@ It is implemented as a ROS 2 component node, making it easy to integrate into Au
 
 ---
 
-## Installation
-
-### Dependencies
-
-- Autoware Universe packages
-- Eigen3
-- Lanelet2
-- C++17
-
-### Build
-
-Clone this package into your Autoware workspace and build with colcon:
-
-```bash
-cd ~/autoware/src
-git clone <this-repo-url>
-cd ~/autoware
-rosdep install --from-paths src --ignore-src -r -y
-colcon build --packages-select autoware_diffusion_planner
-```
-
----
-
-## Usage
-
-Launch the planner as a component node:
-
-```bash
-ros2 launch autoware_diffusion_planner diffusion_planner.launch.xml
-```
-
-Or include it in your Autoware launch setup.
-
----
-
 ## Parameters
 
 Parameters can be set via YAML (see `config/diffusion_planner.param.yaml`) or via the ROS 2 parameter server.
