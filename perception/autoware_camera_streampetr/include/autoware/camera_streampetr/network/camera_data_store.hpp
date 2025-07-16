@@ -27,6 +27,9 @@
 #include <vector>
 namespace autoware::camera_streampetr
 {
+
+constexpr float MAX_PERMISSIONED_CAMERA_TIME_DIFF = 600;  // 10 minuts. Used to keep the timestamp within limit to prevent overflow in fp16 mode.
+
 class CameraDataStore
 {
   using Image = sensor_msgs::msg::Image;
@@ -67,7 +70,7 @@ private:
   std::shared_ptr<Tensor> image_input_;
   std::shared_ptr<Tensor> image_input_mean_;
   std::shared_ptr<Tensor> image_input_std_;
-  std::vector<double> camera_info_timestamp_;
+  std::vector<double> camera_image_timestamp_;
   std::vector<std::string> camera_link_names_;
   cudaStream_t stream_;
 };
