@@ -14,14 +14,15 @@
 
 #include "autoware/diffusion_planner/diffusion_planner_node.hpp"
 
-#include <rclcpp/rclcpp.hpp>
-#include <rclcpp/node_options.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
-#include <autoware_perception_msgs/msg/tracked_objects.hpp>
-#include <nav_msgs/msg/odometry.hpp>
-#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
-#include <autoware_planning_msgs/msg/lanelet_route.hpp>
+#include <rclcpp/node_options.hpp>
+#include <rclcpp/rclcpp.hpp>
+
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
+#include <autoware_perception_msgs/msg/tracked_objects.hpp>
+#include <autoware_planning_msgs/msg/lanelet_route.hpp>
+#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 
 #include <gtest/gtest.h>
 
@@ -44,23 +45,19 @@ protected:
 
     // Create node with test parameters
     rclcpp::NodeOptions options;
-    options.parameter_overrides({
-      {"model_path", "/tmp/test_model.onnx"},  // Non-existent model for testing
-      {"args_path", "/tmp/test_args.json"},
-      {"timer_period", 0.1},
-      {"ignore_unknown_neighbors", true},
-      {"predict_neighbor_trajectory", false},
-      {"publish_debug_markers", false}
-    });
+    options.parameter_overrides(
+      {{"model_path", "/tmp/test_model.onnx"},  // Non-existent model for testing
+       {"args_path", "/tmp/test_args.json"},
+       {"timer_period", 0.1},
+       {"ignore_unknown_neighbors", true},
+       {"predict_neighbor_trajectory", false},
+       {"publish_debug_markers", false}});
 
     // Note: This will fail to initialize ONNX Runtime without a valid model
     // For integration testing, we would need to mock or provide a test model
   }
 
-  void TearDown() override
-  {
-    rclcpp::shutdown();
-  }
+  void TearDown() override { rclcpp::shutdown(); }
 
   TrackedObject createTestObject(double x, double y, double vx, double vy)
   {
@@ -93,10 +90,11 @@ TEST_F(DiffusionPlannerIntegrationTest, MultipleSubscribersDataFlow)
   auto test_node = std::make_shared<rclcpp::Node>("test_publisher");
 
   // Create publishers for all input topics
-  auto odometry_pub = test_node->create_publisher<nav_msgs::msg::Odometry>(
-    "/diffusion_planner/input/odometry", 10);
-  auto acceleration_pub = test_node->create_publisher<geometry_msgs::msg::AccelWithCovarianceStamped>(
-    "/diffusion_planner/input/acceleration", 10);
+  auto odometry_pub =
+    test_node->create_publisher<nav_msgs::msg::Odometry>("/diffusion_planner/input/odometry", 10);
+  auto acceleration_pub =
+    test_node->create_publisher<geometry_msgs::msg::AccelWithCovarianceStamped>(
+      "/diffusion_planner/input/acceleration", 10);
   auto objects_pub = test_node->create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
     "/diffusion_planner/input/tracked_objects", 10);
 
@@ -146,8 +144,9 @@ TEST_F(DiffusionPlannerIntegrationTest, MissingDataHandling)
   auto test_node = std::make_shared<rclcpp::Node>("test_publisher");
 
   // Only publish partial data (missing odometry)
-  auto acceleration_pub = test_node->create_publisher<geometry_msgs::msg::AccelWithCovarianceStamped>(
-    "/diffusion_planner/input/acceleration", 10);
+  auto acceleration_pub =
+    test_node->create_publisher<geometry_msgs::msg::AccelWithCovarianceStamped>(
+      "/diffusion_planner/input/acceleration", 10);
   auto objects_pub = test_node->create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
     "/diffusion_planner/input/tracked_objects", 10);
 
@@ -176,8 +175,8 @@ TEST_F(DiffusionPlannerIntegrationTest, RapidDataUpdates)
 {
   auto test_node = std::make_shared<rclcpp::Node>("test_publisher");
 
-  auto odometry_pub = test_node->create_publisher<nav_msgs::msg::Odometry>(
-    "/diffusion_planner/input/odometry", 10);
+  auto odometry_pub =
+    test_node->create_publisher<nav_msgs::msg::Odometry>("/diffusion_planner/input/odometry", 10);
 
   // Publish data at high frequency
   for (int i = 0; i < 100; ++i) {
@@ -217,11 +216,8 @@ TEST_F(DiffusionPlannerIntegrationTest, ManyTrackedObjects)
     double angle = i * 2 * M_PI / 50;
     double radius = 20.0 + (i % 5) * 5.0;
     objects.objects.push_back(createTestObject(
-      100.0 + radius * cos(angle),
-      200.0 + radius * sin(angle),
-      5.0 * cos(angle + M_PI_2),
-      5.0 * sin(angle + M_PI_2)
-    ));
+      100.0 + radius * cos(angle), 200.0 + radius * sin(angle), 5.0 * cos(angle + M_PI_2),
+      5.0 * sin(angle + M_PI_2)));
   }
 
   objects_pub->publish(objects);
@@ -235,8 +231,8 @@ TEST_F(DiffusionPlannerIntegrationTest, TimeSynchronization)
 {
   auto test_node = std::make_shared<rclcpp::Node>("test_publisher");
 
-  auto odometry_pub = test_node->create_publisher<nav_msgs::msg::Odometry>(
-    "/diffusion_planner/input/odometry", 10);
+  auto odometry_pub =
+    test_node->create_publisher<nav_msgs::msg::Odometry>("/diffusion_planner/input/odometry", 10);
   auto objects_pub = test_node->create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
     "/diffusion_planner/input/tracked_objects", 10);
 
@@ -268,8 +264,8 @@ TEST_F(DiffusionPlannerIntegrationTest, FrameTransformationErrors)
 {
   auto test_node = std::make_shared<rclcpp::Node>("test_publisher");
 
-  auto odometry_pub = test_node->create_publisher<nav_msgs::msg::Odometry>(
-    "/diffusion_planner/input/odometry", 10);
+  auto odometry_pub =
+    test_node->create_publisher<nav_msgs::msg::Odometry>("/diffusion_planner/input/odometry", 10);
   auto objects_pub = test_node->create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
     "/diffusion_planner/input/tracked_objects", 10);
 

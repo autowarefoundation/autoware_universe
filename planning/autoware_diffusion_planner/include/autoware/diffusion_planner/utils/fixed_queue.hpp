@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__DIFFUSION_PLANNER__FIXED_QUEUE_HPP_
-#define AUTOWARE__DIFFUSION_PLANNER__FIXED_QUEUE_HPP_
+#ifndef AUTOWARE__DIFFUSION_PLANNER__UTILS__FIXED_QUEUE_HPP_
+#define AUTOWARE__DIFFUSION_PLANNER__UTILS__FIXED_QUEUE_HPP_
 
 #include <cstddef>
 #include <deque>
@@ -139,4 +139,4 @@ private:
   size_t max_size_{0};   ///< Maximum allowed size.
 };
 }  // namespace autoware::diffusion_planner
-#endif  // AUTOWARE__DIFFUSION_PLANNER__FIXED_QUEUE_HPP_
+#endif  // AUTOWARE__DIFFUSION_PLANNER__UTILS__FIXED_QUEUE_HPP_

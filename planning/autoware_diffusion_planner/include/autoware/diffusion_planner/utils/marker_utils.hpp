@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__DIFFUSION_PLANNER__MARKER_UTILS_HPP_
-#define AUTOWARE__DIFFUSION_PLANNER__MARKER_UTILS_HPP_
+#ifndef AUTOWARE__DIFFUSION_PLANNER__UTILS__MARKER_UTILS_HPP_
+#define AUTOWARE__DIFFUSION_PLANNER__UTILS__MARKER_UTILS_HPP_
 
 #include <Eigen/Dense>
 #include <rclcpp/rclcpp.hpp>
@@ -75,4 +75,4 @@ MarkerArray create_lane_marker(
   const std::array<float, 4> colors = {0.0f, 1.0f, 0.0f, 0.8f},
   const std::string & frame_id = "base_link", const bool set_traffic_light_color = false);
 }  // namespace autoware::diffusion_planner::utils
-#endif  // AUTOWARE__DIFFUSION_PLANNER__MARKER_UTILS_HPP_
+#endif  // AUTOWARE__DIFFUSION_PLANNER__UTILS__MARKER_UTILS_HPP_

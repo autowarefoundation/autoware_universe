@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef EGO_TEST_HPP_
-#define EGO_TEST_HPP_
+#ifndef PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__EGO_TEST_HPP_
+#define PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__EGO_TEST_HPP_
 
 #include "autoware/diffusion_planner/conversion/ego.hpp"
 #include "gtest/gtest.h"
@@ -50,4 +50,4 @@ protected:
 
 }  // namespace autoware::diffusion_planner::test
 
-#endif  // EGO_TEST_HPP_
+#endif  // PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__EGO_TEST_HPP_

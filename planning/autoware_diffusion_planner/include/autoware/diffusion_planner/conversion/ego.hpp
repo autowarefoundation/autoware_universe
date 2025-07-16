@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__DIFFUSION_PLANNER__EGO_HPP_
-#define AUTOWARE__DIFFUSION_PLANNER__EGO_HPP_
+#ifndef AUTOWARE__DIFFUSION_PLANNER__CONVERSION__EGO_HPP_
+#define AUTOWARE__DIFFUSION_PLANNER__CONVERSION__EGO_HPP_
 
 #include "Eigen/Dense"
 
@@ -73,4 +73,4 @@ struct EgoState
 };
 
 }  // namespace autoware::diffusion_planner
-#endif  // AUTOWARE__DIFFUSION_PLANNER__EGO_HPP_
+#endif  // AUTOWARE__DIFFUSION_PLANNER__CONVERSION__EGO_HPP_

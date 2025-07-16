@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__DIFFUSION_PLANNER__AGENT_HPP_
-#define AUTOWARE__DIFFUSION_PLANNER__AGENT_HPP_
+#ifndef AUTOWARE__DIFFUSION_PLANNER__CONVERSION__AGENT_HPP_
+#define AUTOWARE__DIFFUSION_PLANNER__CONVERSION__AGENT_HPP_
 
 #include "Eigen/Dense"
 #include "autoware/diffusion_planner/utils/fixed_queue.hpp"
@@ -341,4 +341,4 @@ private:
 };
 
 }  // namespace autoware::diffusion_planner
-#endif  // AUTOWARE__DIFFUSION_PLANNER__AGENT_HPP_
+#endif  // AUTOWARE__DIFFUSION_PLANNER__CONVERSION__AGENT_HPP_

@@ -414,8 +414,8 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
     predictions, this->now(), transforms_.first, batch_idx, ego_agent_idx);
   pub_trajectory_->publish(output_trajectory);
 
-  auto ego_trajectory_as_candidate_msg =
-    postprocess::to_candidate_trajectories_msg(output_trajectory, generator_uuid_, "DiffusionPlanner");
+  auto ego_trajectory_as_candidate_msg = postprocess::to_candidate_trajectories_msg(
+    output_trajectory, generator_uuid_, "DiffusionPlanner");
   pub_trajectories_->publish(ego_trajectory_as_candidate_msg);
 
   // Other agents prediction

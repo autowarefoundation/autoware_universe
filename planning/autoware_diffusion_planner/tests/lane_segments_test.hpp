@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LANE_SEGMENTS_TEST_HPP_
-#define LANE_SEGMENTS_TEST_HPP_
+#ifndef PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__LANE_SEGMENTS_TEST_HPP_
+#define PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__LANE_SEGMENTS_TEST_HPP_
 
 #include "autoware/diffusion_planner/conversion/lanelet.hpp"
 #include "autoware/diffusion_planner/polyline.hpp"
@@ -73,4 +73,4 @@ protected:
 
 }  // namespace autoware::diffusion_planner::test
 
-#endif  // LANE_SEGMENTS_TEST_HPP_
+#endif  // PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__LANE_SEGMENTS_TEST_HPP_

@@ -106,18 +106,18 @@ std::vector<LanePoint> interpolate_points(const std::vector<LanePoint> & input, 
 
   // Recalculate direction vectors based on actual interpolated positions
   // Helper lambda to update a point's direction vector
-  auto update_point_direction = [](std::vector<LanePoint> & points, size_t point_idx,
-                                   size_t from_idx, size_t to_idx) {
-    float dx = points[to_idx].x() - points[from_idx].x();
-    float dy = points[to_idx].y() - points[from_idx].y();
-    float dz = points[to_idx].z() - points[from_idx].z();
+  auto update_point_direction =
+    [](std::vector<LanePoint> & points, size_t point_idx, size_t from_idx, size_t to_idx) {
+      float dx = points[to_idx].x() - points[from_idx].x();
+      float dy = points[to_idx].y() - points[from_idx].y();
+      float dz = points[to_idx].z() - points[from_idx].z();
 
-    normalize_direction(dx, dy, dz);
+      normalize_direction(dx, dy, dz);
 
-    points[point_idx] = LanePoint(
-      points[point_idx].x(), points[point_idx].y(), points[point_idx].z(),
-      dx, dy, dz, points[point_idx].label());
-  };
+      points[point_idx] = LanePoint(
+        points[point_idx].x(), points[point_idx].y(), points[point_idx].z(), dx, dy, dz,
+        points[point_idx].label());
+    };
 
   if (result.size() > 1) {
     // Handle first point direction (points to next)

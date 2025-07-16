@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LANELET_TEST_HPP_
-#define LANELET_TEST_HPP_
+#ifndef PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__LANELET_TEST_HPP_
+#define PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__LANELET_TEST_HPP_
 
 #include "autoware/diffusion_planner/conversion/lanelet.hpp"
 #include "gtest/gtest.h"
@@ -57,4 +57,4 @@ protected:
 
 }  // namespace autoware::diffusion_planner::test
 
-#endif  // LANELET_TEST_HPP_
+#endif  // PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__LANELET_TEST_HPP_

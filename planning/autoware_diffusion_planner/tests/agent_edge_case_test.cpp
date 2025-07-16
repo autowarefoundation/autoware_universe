@@ -14,11 +14,12 @@
 
 #include "autoware/diffusion_planner/conversion/agent.hpp"
 
-#include <autoware_perception_msgs/msg/tracked_objects.hpp>
-#include <autoware_utils_uuid/uuid_helper.hpp>
-#include <autoware_utils/geometry/geometry.hpp>
-
 #include <Eigen/Dense>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils_uuid/uuid_helper.hpp>
+
+#include <autoware_perception_msgs/msg/tracked_objects.hpp>
+
 #include <gtest/gtest.h>
 
 #include <cmath>
@@ -67,9 +68,12 @@ protected:
 // Test edge case: NaN/Inf values in tracked object
 TEST_F(AgentEdgeCaseTest, AgentStateNaNInfValues)
 {
-  tracked_object_.kinematics.pose_with_covariance.pose.position.x = std::numeric_limits<double>::quiet_NaN();
-  tracked_object_.kinematics.pose_with_covariance.pose.position.y = std::numeric_limits<double>::infinity();
-  tracked_object_.kinematics.twist_with_covariance.twist.linear.x = -std::numeric_limits<double>::infinity();
+  tracked_object_.kinematics.pose_with_covariance.pose.position.x =
+    std::numeric_limits<double>::quiet_NaN();
+  tracked_object_.kinematics.pose_with_covariance.pose.position.y =
+    std::numeric_limits<double>::infinity();
+  tracked_object_.kinematics.twist_with_covariance.twist.linear.x =
+    -std::numeric_limits<double>::infinity();
 
   AgentState agent_state(tracked_object_);
 
@@ -132,7 +136,7 @@ TEST_F(AgentEdgeCaseTest, AgentHistoryOperations)
   history.update(current_time + 1.0, tracked_object_);
 
   // Check latest state
-  const auto& latest = history.get_latest_state();
+  const auto & latest = history.get_latest_state();
   EXPECT_FLOAT_EQ(latest.x(), 2.0);
   EXPECT_FLOAT_EQ(latest.y(), 3.0);
 }
@@ -156,7 +160,7 @@ TEST_F(AgentEdgeCaseTest, AgentStateExtremeTransform)
   AgentState agent_state(tracked_object_);
 
   Eigen::Matrix4f extreme_transform = Eigen::Matrix4f::Identity();
-  extreme_transform(0, 3) = 1e10f;   // Very large translation
+  extreme_transform(0, 3) = 1e10f;  // Very large translation
   extreme_transform(1, 3) = -1e10f;
   extreme_transform(0, 0) = 1e-10f;  // Very small scale
   extreme_transform(1, 1) = 1e-10f;
@@ -236,10 +240,8 @@ TEST_F(AgentEdgeCaseTest, AgentDataTrimExtremePositions)
   for (int i = 0; i < 10; ++i) {
     TrackedObject obj = tracked_object_;
     obj.object_id = autoware_utils_uuid::generate_uuid();
-    obj.kinematics.pose_with_covariance.pose.position.x =
-      (i % 2 == 0) ? 1e10 : -1e10;
-    obj.kinematics.pose_with_covariance.pose.position.y =
-      (i % 2 == 0) ? -1e10 : 1e10;
+    obj.kinematics.pose_with_covariance.pose.position.x = (i % 2 == 0) ? 1e10 : -1e10;
+    obj.kinematics.pose_with_covariance.pose.position.y = (i % 2 == 0) ? -1e10 : 1e10;
     objects.objects.push_back(obj);
   }
 
@@ -259,10 +261,8 @@ TEST_F(AgentEdgeCaseTest, AgentHistoryGetObjectMatrixEdgeCases)
 
   // Add states with extreme values
   for (int i = 1; i <= 5; ++i) {
-    tracked_object_.kinematics.pose_with_covariance.pose.position.x =
-      std::pow(10.0, i);
-    tracked_object_.kinematics.twist_with_covariance.twist.linear.x =
-      std::pow(10.0, -i);
+    tracked_object_.kinematics.pose_with_covariance.pose.position.x = std::pow(10.0, i);
+    tracked_object_.kinematics.twist_with_covariance.twist.linear.x = std::pow(10.0, -i);
     history.update(100.0 + i, tracked_object_);
   }
 
@@ -283,8 +283,7 @@ TEST_F(AgentEdgeCaseTest, AgentStateMultipleClassifications)
   std::vector<uint8_t> labels = {
     autoware_perception_msgs::msg::ObjectClassification::CAR,
     autoware_perception_msgs::msg::ObjectClassification::TRUCK,
-    autoware_perception_msgs::msg::ObjectClassification::BUS
-  };
+    autoware_perception_msgs::msg::ObjectClassification::BUS};
 
   for (auto label : labels) {
     autoware_perception_msgs::msg::ObjectClassification classification;

@@ -20,11 +20,11 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
+
+#include <gtest/gtest.h>
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_routing/RoutingGraph.h>
 #include <lanelet2_traffic_rules/TrafficRulesFactory.h>
-
-#include <gtest/gtest.h>
 
 #include <cmath>
 #include <limits>
@@ -44,8 +44,8 @@ protected:
     // Get the path to the lanelet2_map.osm file in the tests folder
     const std::string package_name = "autoware_diffusion_planner";
     const std::string map_filename = "lanelet2_map.osm";
-    const std::string test_map_path = autoware::test_utils::get_absolute_path_to_lanelet_map(
-      package_name, map_filename);
+    const std::string test_map_path =
+      autoware::test_utils::get_absolute_path_to_lanelet_map(package_name, map_filename);
 
     // Create HADMapBin message from the OSM file
     map_bin_msg_ = autoware::test_utils::make_map_bin_msg(test_map_path, 1.0);
@@ -94,10 +94,8 @@ TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsBasic)
       << "Lane polyline should have " << num_lane_points << " points";
 
     // Check boundaries
-    EXPECT_FALSE(segment.left_boundaries.empty())
-      << "Left boundaries should not be empty";
-    EXPECT_FALSE(segment.right_boundaries.empty())
-      << "Right boundaries should not be empty";
+    EXPECT_FALSE(segment.left_boundaries.empty()) << "Left boundaries should not be empty";
+    EXPECT_FALSE(segment.right_boundaries.empty()) << "Right boundaries should not be empty";
 
     // Each boundary should have the expected number of points
     for (const auto & left_boundary : segment.left_boundaries) {
@@ -146,7 +144,7 @@ TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsInterpolation)
     // Check that points are properly spaced (not all at the same location)
     bool has_spacing = false;
     for (size_t i = 1; i < waypoints.size(); ++i) {
-      float dist = waypoints[i-1].distance(waypoints[i]);
+      float dist = waypoints[i - 1].distance(waypoints[i]);
       if (dist > 0.001f) {  // Small threshold to account for floating point precision
         has_spacing = true;
         break;
@@ -192,8 +190,7 @@ TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsConsistency)
     EXPECT_EQ(lane_segments_1[i].id, lane_segments_2[i].id)
       << "Segment IDs should be consistent across calls";
 
-    EXPECT_EQ(lane_segments_1[i].polyline.size(),
-              lane_segments_2[i].polyline.size())
+    EXPECT_EQ(lane_segments_1[i].polyline.size(), lane_segments_2[i].polyline.size())
       << "Polyline sizes should be consistent";
   }
 }
@@ -220,7 +217,7 @@ TEST_F(LaneletIntegrationTest, CheckPointSpacingConsistency)
     float total_distance = 0.0f;
 
     for (size_t i = 1; i < waypoints.size(); ++i) {
-      float dist = waypoints[i-1].distance(waypoints[i]);
+      float dist = waypoints[i - 1].distance(waypoints[i]);
       distances.push_back(dist);
       total_distance += dist;
     }
@@ -239,7 +236,7 @@ TEST_F(LaneletIntegrationTest, CheckPointSpacingConsistency)
       }
 
       EXPECT_NEAR(distances[i], average_distance, tolerance)
-        << "Point " << i+1 << " in segment " << segment.id
+        << "Point " << i + 1 << " in segment " << segment.id
         << " has inconsistent spacing. Distance: " << distances[i]
         << ", Expected: " << average_distance << " +/- " << tolerance;
     }
@@ -303,7 +300,8 @@ TEST_F(LaneletIntegrationTest, CheckForNaNAndInfiniteValues)
         EXPECT_FALSE(std::isnan(point.x()) || std::isnan(point.y()) || std::isnan(point.z()))
           << "NaN found in right boundary at point " << i << " of segment " << segment.id;
         EXPECT_FALSE(std::isinf(point.x()) || std::isinf(point.y()) || std::isinf(point.z()))
-          << "Infinite value found in right boundary at point " << i << " of segment " << segment.id;
+          << "Infinite value found in right boundary at point " << i << " of segment "
+          << segment.id;
       }
     }
   }
@@ -378,29 +376,23 @@ TEST_F(LaneletIntegrationTest, CheckReasonableCoordinateRanges)
 
       // Check coordinate ranges
       EXPECT_GE(point.x(), min_x_allowed)
-        << "Interpolated X coordinate below original map bounds at point " << i
-        << " of segment " << segment.id << ". Value: " << point.x()
-        << ", Min allowed: " << min_x_allowed;
+        << "Interpolated X coordinate below original map bounds at point " << i << " of segment "
+        << segment.id << ". Value: " << point.x() << ", Min allowed: " << min_x_allowed;
       EXPECT_LE(point.x(), max_x_allowed)
-        << "Interpolated X coordinate above original map bounds at point " << i
-        << " of segment " << segment.id << ". Value: " << point.x()
-        << ", Max allowed: " << max_x_allowed;
+        << "Interpolated X coordinate above original map bounds at point " << i << " of segment "
+        << segment.id << ". Value: " << point.x() << ", Max allowed: " << max_x_allowed;
       EXPECT_GE(point.y(), min_y_allowed)
-        << "Interpolated Y coordinate below original map bounds at point " << i
-        << " of segment " << segment.id << ". Value: " << point.y()
-        << ", Min allowed: " << min_y_allowed;
+        << "Interpolated Y coordinate below original map bounds at point " << i << " of segment "
+        << segment.id << ". Value: " << point.y() << ", Min allowed: " << min_y_allowed;
       EXPECT_LE(point.y(), max_y_allowed)
-        << "Interpolated Y coordinate above original map bounds at point " << i
-        << " of segment " << segment.id << ". Value: " << point.y()
-        << ", Max allowed: " << max_y_allowed;
+        << "Interpolated Y coordinate above original map bounds at point " << i << " of segment "
+        << segment.id << ". Value: " << point.y() << ", Max allowed: " << max_y_allowed;
       EXPECT_GE(point.z(), min_z_allowed)
-        << "Interpolated Z coordinate below original map bounds at point " << i
-        << " of segment " << segment.id << ". Value: " << point.z()
-        << ", Min allowed: " << min_z_allowed;
+        << "Interpolated Z coordinate below original map bounds at point " << i << " of segment "
+        << segment.id << ". Value: " << point.z() << ", Min allowed: " << min_z_allowed;
       EXPECT_LE(point.z(), max_z_allowed)
-        << "Interpolated Z coordinate above original map bounds at point " << i
-        << " of segment " << segment.id << ". Value: " << point.z()
-        << ", Max allowed: " << max_z_allowed;
+        << "Interpolated Z coordinate above original map bounds at point " << i << " of segment "
+        << segment.id << ". Value: " << point.z() << ", Max allowed: " << max_z_allowed;
     }
 
     // Also check boundaries
@@ -450,11 +442,11 @@ TEST_F(LaneletIntegrationTest, CheckPointOrdering)
     const auto & waypoints = segment.polyline.waypoints();
 
     for (size_t i = 1; i < waypoints.size(); ++i) {
-      float dist = waypoints[i-1].distance(waypoints[i]);
+      float dist = waypoints[i - 1].distance(waypoints[i]);
 
       EXPECT_LT(dist, max_point_jump)
-        << "Unexpected jump between points " << i-1 << " and " << i
-        << " in segment " << segment.id << ". Distance: " << dist << " meters";
+        << "Unexpected jump between points " << i - 1 << " and " << i << " in segment "
+        << segment.id << ". Distance: " << dist << " meters";
     }
   }
 }

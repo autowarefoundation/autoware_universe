@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__DIFFUSION_PLANNER__UTILS_HPP_
-#define AUTOWARE__DIFFUSION_PLANNER__UTILS_HPP_
+#ifndef AUTOWARE__DIFFUSION_PLANNER__UTILS__UTILS_HPP_
+#define AUTOWARE__DIFFUSION_PLANNER__UTILS__UTILS_HPP_
 
 #include <Eigen/Dense>
 
@@ -54,4 +54,4 @@ std::vector<float> create_float_data(const std::vector<int64_t> & shape, float f
 bool check_input_map(const std::unordered_map<std::string, std::vector<float>> & input_map);
 
 }  // namespace autoware::diffusion_planner::utils
-#endif  // AUTOWARE__DIFFUSION_PLANNER__UTILS_HPP_
+#endif  // AUTOWARE__DIFFUSION_PLANNER__UTILS__UTILS_HPP_

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AGENT_TEST_HPP_
-#define AGENT_TEST_HPP_
+#ifndef PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__AGENT_TEST_HPP_
+#define PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__AGENT_TEST_HPP_
 
 #include "autoware/diffusion_planner/conversion/agent.hpp"
 #include "gtest/gtest.h"
@@ -59,4 +59,4 @@ protected:
 
 }  // namespace autoware::diffusion_planner::test
 
-#endif  // AGENT_TEST_HPP_
+#endif  // PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__AGENT_TEST_HPP_

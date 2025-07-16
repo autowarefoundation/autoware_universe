@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__DIFFUSION_PLANNER__PREPROCESSING__TRAFFIC_SIGNALS_HPP
-#define AUTOWARE__DIFFUSION_PLANNER__PREPROCESSING__TRAFFIC_SIGNALS_HPP
+#ifndef AUTOWARE__DIFFUSION_PLANNER__PREPROCESSING__TRAFFIC_SIGNALS_HPP_
+#define AUTOWARE__DIFFUSION_PLANNER__PREPROCESSING__TRAFFIC_SIGNALS_HPP_
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -60,4 +60,4 @@ void process_traffic_signals(
   const bool keep_last_observation);
 
 }  // namespace autoware::diffusion_planner::preprocess
-#endif  // AUTOWARE__DIFFUSION_PLANNER__PREPROCESSING__TRAFFIC_SIGNALS_HPP
+#endif  // AUTOWARE__DIFFUSION_PLANNER__PREPROCESSING__TRAFFIC_SIGNALS_HPP_
