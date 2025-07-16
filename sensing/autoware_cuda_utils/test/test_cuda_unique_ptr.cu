@@ -13,19 +13,24 @@
 // limitations under the License.
 
 #include "autoware/cuda_utils/cuda_check_error.hpp"
+#include "autoware/cuda_utils/cuda_gtest_utils.hpp"
 #include "autoware/cuda_utils/cuda_unique_ptr.hpp"
 
 #include <cuda_runtime_api.h>
 #include <gtest/gtest.h>
 
-TEST(CudaUniquePtrTest, MakeUniqueDeviceMemory)
+class CudaUniquePtrTest : public autoware::cuda_utils::CudaTest
+{
+};
+
+TEST_F(CudaUniquePtrTest, MakeUniqueDeviceMemory)
 {
   // Test creating a single object on device
   auto ptr = autoware::cuda_utils::make_unique<float>();
   EXPECT_NE(ptr.get(), nullptr);
 }
 
-TEST(CudaUniquePtrTest, MakeUniqueDeviceArray)
+TEST_F(CudaUniquePtrTest, MakeUniqueDeviceArray)
 {
   // Test creating an array on device
   auto ptr = autoware::cuda_utils::make_unique<float[]>(100);
@@ -37,7 +42,7 @@ TEST(CudaUniquePtrTest, MakeUniqueDeviceArray)
   EXPECT_EQ(attributes.devicePointer, ptr.get());
 }
 
-TEST(CudaUniquePtrTest, MakeUniqueHostMemory)
+TEST_F(CudaUniquePtrTest, MakeUniqueHostMemory)
 {
   // Test creating a single object on host
   auto ptr = autoware::cuda_utils::make_unique_host<float>();
@@ -49,14 +54,14 @@ TEST(CudaUniquePtrTest, MakeUniqueHostMemory)
   EXPECT_EQ(attributes.hostPointer, ptr.get());
 }
 
-TEST(CudaUniquePtrTest, MakeUniqueHostArray)
+TEST_F(CudaUniquePtrTest, MakeUniqueHostArray)
 {
   // Test creating an array on host
   auto ptr = autoware::cuda_utils::make_unique_host<float[]>(100, cudaHostAllocDefault);
   EXPECT_NE(ptr.get(), nullptr);
 }
 
-TEST(CudaUniquePtrTest, DeleterFunctionality)
+TEST_F(CudaUniquePtrTest, DeleterFunctionality)
 {
   // Test that CudaDeleter and CudaDeleterHost types exist and are usable
   {

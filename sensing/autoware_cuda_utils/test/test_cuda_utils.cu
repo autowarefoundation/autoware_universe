@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/cuda_utils/cuda_check_error.hpp"
+#include "autoware/cuda_utils/cuda_gtest_utils.hpp"
 #include "autoware/cuda_utils/cuda_utils.hpp"
 
 #include <cuda_runtime_api.h>
@@ -20,6 +21,8 @@
 
 TEST(CudaUtilsTest, ClearAsyncFunction)
 {
+  SKIP_TEST_IF_CUDA_UNAVAILABLE();
+
   // Create a CUDA stream for testing
   cudaStream_t stream{};
   CHECK_CUDA_ERROR(cudaStreamCreate(&stream));

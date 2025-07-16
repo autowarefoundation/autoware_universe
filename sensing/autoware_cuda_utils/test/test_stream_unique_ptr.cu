@@ -13,12 +13,17 @@
 // limitations under the License.
 
 #include "autoware/cuda_utils/cuda_check_error.hpp"
+#include "autoware/cuda_utils/cuda_gtest_utils.hpp"
 
 #include <autoware/cuda_utils/stream_unique_ptr.hpp>
 
 #include <gtest/gtest.h>
 
-TEST(StreamUniquePtrTest, MakeCudaStreamDefault)
+class StreamUniquePtrTest : public autoware::cuda_utils::CudaTest
+{
+};
+
+TEST_F(StreamUniquePtrTest, MakeCudaStreamDefault)
 {
   // Test creating a CUDA stream with default flags
   auto stream = autoware::cuda_utils::makeCudaStream();
@@ -29,7 +34,7 @@ TEST(StreamUniquePtrTest, MakeCudaStreamDefault)
   EXPECT_EQ(cudaStreamQuery(raw_stream), cudaSuccess);
 }
 
-TEST(StreamUniquePtrTest, MakeCudaStreamWithFlags)
+TEST_F(StreamUniquePtrTest, MakeCudaStreamWithFlags)
 {
   // Test creating a CUDA stream with custom flags
   auto stream = autoware::cuda_utils::makeCudaStream(cudaStreamNonBlocking);
@@ -45,7 +50,7 @@ TEST(StreamUniquePtrTest, MakeCudaStreamWithFlags)
   EXPECT_EQ(flags, cudaStreamNonBlocking);
 }
 
-TEST(StreamUniquePtrTest, StreamDeleterFunctionality)
+TEST_F(StreamUniquePtrTest, StreamDeleterFunctionality)
 {
   // Test that StreamDeleter properly handles cleanup
   {
@@ -54,7 +59,7 @@ TEST(StreamUniquePtrTest, StreamDeleterFunctionality)
   }
 }
 
-TEST(StreamUniquePtrTest, StreamReset)
+TEST_F(StreamUniquePtrTest, StreamReset)
 {
   // Test that we can reset a stream
   auto stream = autoware::cuda_utils::makeCudaStream();
@@ -63,7 +68,7 @@ TEST(StreamUniquePtrTest, StreamReset)
   EXPECT_EQ(stream.get(), nullptr);
 }
 
-TEST(StreamUniquePtrTest, StreamMove)
+TEST_F(StreamUniquePtrTest, StreamMove)
 {
   // Test moving a stream unique pointer
   auto stream1 = autoware::cuda_utils::makeCudaStream();
