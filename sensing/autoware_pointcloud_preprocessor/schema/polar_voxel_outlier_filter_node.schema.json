@@ -48,7 +48,7 @@
           "default": "true"
         },
         "filter_secondary_returns": {
-          "type": "boolean", 
+          "type": "boolean",
           "description": "whether to filter secondary returns (if true, only primary returns are kept)",
           "default": "false"
         },
@@ -107,7 +107,23 @@
           "maximum": 1
         }
       },
-      "required": ["radius_resolution", "azimuth_resolution", "elevation_resolution", "voxel_points_threshold", "min_radius", "max_radius", "use_return_type_classification", "filter_secondary_returns", "secondary_noise_threshold", "primary_return_types", "secondary_return_types", "filter_ratio_error_threshold", "filter_ratio_warn_threshold", "visibility_error_threshold", "visibility_warn_threshold"],
+      "required": [
+        "radius_resolution",
+        "azimuth_resolution",
+        "elevation_resolution",
+        "voxel_points_threshold",
+        "min_radius",
+        "max_radius",
+        "use_return_type_classification",
+        "filter_secondary_returns",
+        "secondary_noise_threshold",
+        "primary_return_types",
+        "secondary_return_types",
+        "filter_ratio_error_threshold",
+        "filter_ratio_warn_threshold",
+        "visibility_error_threshold",
+        "visibility_warn_threshold"
+      ],
       "additionalProperties": false
     }
   },
@@ -125,4 +141,4 @@
   },
   "required": ["/**"],
   "additionalProperties": false
-} 
+}
