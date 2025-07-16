@@ -5,6 +5,7 @@
 
   <!-- Pipeline junctions -->
   <arg name="mode">
+    <choice value="camera"/>
     <choice value="camera_lidar_radar_fusion"/>
     <choice value="camera_lidar_fusion"/>
     <choice value="lidar_radar_fusion"/>
@@ -288,6 +289,29 @@
       <arg name="radar_lanelet_filtering_range_param_path" value="$(var radar_lanelet_filtering_range_param_path)"/>
       <arg name="object_velocity_splitter_param_path" value="$(var object_recognition_detection_object_velocity_splitter_radar_param_path)"/>
       <arg name="object_range_splitter_param_path" value="$(var object_recognition_detection_object_range_splitter_radar_param_path)"/>
+    </include>
+  </group>
+  <group scoped="false" if="$(eval '&quot;$(var mode)&quot;==&quot;camera&quot;')">
+    <!-- Camera-based bev detectors-->
+    <include file="$(find-pkg-share tier4_perception_launch)/launch/object_recognition/detection/detector/camera_bev_detector.launch.xml">
+      <arg name="input/camera0/image" value="$(var input/camera0/image)"/>
+      <arg name="input/camera0/info" value="$(var input/camera0/info)"/>
+      <arg name="input/camera1/image" value="$(var input/camera1/image)"/>
+      <arg name="input/camera1/info" value="$(var input/camera1/info)"/>
+      <arg name="input/camera2/image" value="$(var input/camera2/image)"/>
+      <arg name="input/camera2/info" value="$(var input/camera2/info)"/>
+      <arg name="input/camera3/image" value="$(var input/camera3/image)"/>
+      <arg name="input/camera3/info" value="$(var input/camera3/info)"/>
+      <arg name="input/camera4/image" value="$(var input/camera4/image)"/>
+      <arg name="input/camera4/info" value="$(var input/camera4/info)"/>
+      <arg name="input/camera5/image" value="$(var input/camera5/image)"/>
+      <arg name="input/camera5/info" value="$(var input/camera5/info)"/>
+      <arg name="input/camera6/image" value="$(var input/camera6/image)"/>
+      <arg name="input/camera6/info" value="$(var input/camera6/info)"/>
+      <arg name="input/camera7/image" value="$(var input/camera7/image)"/>
+      <arg name="input/camera7/info" value="$(var input/camera7/info)"/>
+      <arg name="number_of_cameras" value="$(var number_of_cameras)"/>
+      <arg name="output/objects" value="$(var output/objects)"/>
     </include>
   </group>
   <!-- DetectionByTracker -->

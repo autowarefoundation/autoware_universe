@@ -30,12 +30,10 @@ Check that `collision_detector` receives no ground pointcloud, dynamic objects.
 #### Filtering Process
 
 1. Initial Recognition and Exclusion:
-
    - The system checks if a newly recognized object's classification is listed in `nearby_object_type_filters`.
    - If so, and the object is within the `nearby_filter_radius`, it is marked for exclusion.
 
 2. New Object Determination:
-
    - An object is considered "new" based on its UUID.
    - If the UUID is not found in recent frame data, the object is treated as new.
 

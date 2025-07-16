@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>autoware_traffic_light_rviz_plugin</name>
+  <version>0.0.1</version>
+  <description>RViz2 overlay plugin to visualize traffic light groups.</description>
+  <author email="yukinari.hisaki.2@tier4.jp">Yukinari Hisaki</author>
+
+  <maintainer email="yukinari.hisaki.2@tier4.jp">Yukinari Hisaki</maintainer>
+  <maintainer email="takumi.odashima@tier4.jp">Takumi Odashima</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+  <buildtool_depend>pluginlib</buildtool_depend>
+
+  <depend>ament_index_cpp</depend>
+  <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_perception_msgs</depend>
+  <depend>libqt5-core</depend>
+  <depend>libqt5-gui</depend>
+  <depend>libqt5-widgets</depend>
+  <depend>qtbase5-dev</depend>
+  <depend>rclcpp</depend>
+  <depend>rviz_common</depend>
+  <depend>tf2_ros</depend>
+
+  <exec_depend>pluginlib</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <rviz plugin="plugins/plugin_description.xml"/>
+  </export>
+</package>
