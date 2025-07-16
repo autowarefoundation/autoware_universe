@@ -62,6 +62,7 @@ else()
 endif()
 
 if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
+  find_package(ament_cmake_auto REQUIRED)
   ament_auto_find_build_dependencies()
   # Add compile option to suppress deprecation warnings (optional)
   add_compile_options(-Wno-deprecated-declarations)
@@ -127,14 +128,10 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
       autoware_test_utils
     )
   endif()
-
-else()
-  find_package(ament_cmake_auto REQUIRED)
-  ament_auto_find_build_dependencies()
-  ament_auto_package(
-    INSTALL_TO_SHARE
-    config
-    launch
-    test_map
-  )
 endif()
+ament_auto_package(
+  INSTALL_TO_SHARE
+  config
+  launch
+  test_map
+)
