@@ -440,9 +440,10 @@ void LaneParkingPlanner::normal_pullover_planning_helper(
     const auto original_pose = planner_data->route_handler->getOriginalGoalPose();
     if (
       use_bus_stop_area &&
-      std::fabs(autoware_utils::normalize_radian(
-        autoware_utils::get_rpy(original_pose).z -
-        autoware_utils::get_rpy(closest_start_pose.value()).z)) > pull_over_angle_threshold) {
+      std::fabs(
+        autoware_utils::normalize_radian(
+          autoware_utils::get_rpy(original_pose).z -
+          autoware_utils::get_rpy(closest_start_pose.value()).z)) > pull_over_angle_threshold) {
       // reset and try bezier next time
       switch_bezier_ = true;
       path_candidates.clear();
@@ -2106,8 +2107,8 @@ TurnSignalInfo GoalPlannerModule::calcTurnSignalInfo(const PullOverContextData &
     }
     constexpr double distance_threshold = 1.0;
     const auto stop_point = pull_over_path.partial_paths().front().points.back();
-    const double distance_from_ego_to_stop_point =
-      std::abs(autoware::motion_utils::calcSignedArcLength(
+    const double distance_from_ego_to_stop_point = std::abs(
+      autoware::motion_utils::calcSignedArcLength(
         path.points, stop_point.point.pose.position, current_pose.position));
     return distance_from_ego_to_stop_point < distance_threshold;
   });
@@ -2408,8 +2409,9 @@ static std::vector<utils::path_safety_checker::ExtendedPredictedObject> filterOb
 
   std::vector<utils::path_safety_checker::ExtendedPredictedObject> refined_filtered_objects;
   for (const auto & within_filtered_object : within_filtered_objects) {
-    refined_filtered_objects.push_back(utils::path_safety_checker::transform(
-      within_filtered_object, safety_check_time_horizon, safety_check_time_resolution));
+    refined_filtered_objects.push_back(
+      utils::path_safety_checker::transform(
+        within_filtered_object, safety_check_time_horizon, safety_check_time_resolution));
   }
   return refined_filtered_objects;
 }
@@ -2586,8 +2588,9 @@ void GoalPlannerModule::setDebugData(const PullOverContextData & context_data)
                          ? create_marker_color(1.0, 1.0, 0.0, 0.999)   // yellow
                          : create_marker_color(0.0, 1.0, 0.0, 0.999);  // green
     const double z = planner_data_->route_handler->getGoalPose().position.z;
-    add_info_marker(goal_planner_utils::createPullOverAreaMarkerArray(
-      goal_searcher_->getAreaPolygons(), header, color, z));
+    add_info_marker(
+      goal_planner_utils::createPullOverAreaMarkerArray(
+        goal_searcher_->getAreaPolygons(), header, color, z));
 
     // Visualize goal candidates
     const auto goal_candidates_markers =

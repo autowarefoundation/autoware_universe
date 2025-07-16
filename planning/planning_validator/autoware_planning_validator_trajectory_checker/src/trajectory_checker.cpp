@@ -524,9 +524,10 @@ double nearest_trajectory_yaw_shift(
 {
   const auto interpolated_previous_trajectory_point =
     motion_utils::calcInterpolatedPoint(last_valid_trajectory, trajectory_point.pose);
-  const auto yaw_shift_with_previous_trajectory = std::abs(angles::shortest_angular_distance(
-    tf2::getYaw(trajectory_point.pose.orientation),
-    tf2::getYaw(interpolated_previous_trajectory_point.pose.orientation)));
+  const auto yaw_shift_with_previous_trajectory = std::abs(
+    angles::shortest_angular_distance(
+      tf2::getYaw(trajectory_point.pose.orientation),
+      tf2::getYaw(interpolated_previous_trajectory_point.pose.orientation)));
   return yaw_shift_with_previous_trajectory;
 }
 
@@ -543,9 +544,10 @@ bool TrajectoryChecker::check_valid_yaw_deviation(
 
   const auto interpolated_trajectory_point =
     motion_utils::calcInterpolatedPoint(trajectory, ego_pose);
-  status->yaw_deviation = std::abs(angles::shortest_angular_distance(
-    tf2::getYaw(interpolated_trajectory_point.pose.orientation),
-    tf2::getYaw(ego_pose.orientation)));
+  status->yaw_deviation = std::abs(
+    angles::shortest_angular_distance(
+      tf2::getYaw(interpolated_trajectory_point.pose.orientation),
+      tf2::getYaw(ego_pose.orientation)));
 
   const auto check_condition =
     !data->last_valid_trajectory ||

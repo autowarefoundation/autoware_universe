@@ -64,8 +64,8 @@ protected:
   void set_route_handler(YAML::Node config)
   {
     const auto route = autoware::test_utils::parse<LaneletRoute>(config["route"]);
-    const auto intersection_map =
-      autoware::test_utils::make_map_bin_msg(autoware::test_utils::get_absolute_path_to_lanelet_map(
+    const auto intersection_map = autoware::test_utils::make_map_bin_msg(
+      autoware::test_utils::get_absolute_path_to_lanelet_map(
         "autoware_test_utils", "intersection/lanelet2_map.osm"));
     planner_data_->route_handler->setMap(intersection_map);
     planner_data_->route_handler->setRoute(route);
@@ -460,12 +460,14 @@ TEST_F(BehaviorPathPlanningUtilTest, getHighestProbLabel)
   EXPECT_EQ(getHighestProbLabel(obj.classification), ObjectClassification::Type::UNKNOWN);
 
   // Condition: with 2 label
-  obj.classification.emplace_back(autoware_perception_msgs::build<ObjectClassification>()
-                                    .label(ObjectClassification::CAR)
-                                    .probability(0.4));
-  obj.classification.emplace_back(autoware_perception_msgs::build<ObjectClassification>()
-                                    .label(ObjectClassification::TRUCK)
-                                    .probability(0.6));
+  obj.classification.emplace_back(
+    autoware_perception_msgs::build<ObjectClassification>()
+      .label(ObjectClassification::CAR)
+      .probability(0.4));
+  obj.classification.emplace_back(
+    autoware_perception_msgs::build<ObjectClassification>()
+      .label(ObjectClassification::TRUCK)
+      .probability(0.6));
   EXPECT_EQ(getHighestProbLabel(obj.classification), ObjectClassification::Type::TRUCK);
 }
 

@@ -86,14 +86,15 @@ void ControlModeDisplay::processMessage(
       break;
   }
 
-  mode_label_->setStyleSheet(QString("QLabel {"
-                                     "  padding: 10px;"
-                                     "  border-radius: 5px;"
-                                     "  background-color: %1;"
-                                     "  color: white;"
-                                     "  font-size: 14px;"
-                                     "  font-weight: bold;"
-                                     "}")
+  mode_label_->setStyleSheet(QString(
+                               "QLabel {"
+                               "  padding: 10px;"
+                               "  border-radius: 5px;"
+                               "  background-color: %1;"
+                               "  color: white;"
+                               "  font-size: 14px;"
+                               "  font-weight: bold;"
+                               "}")
                                .arg(bg_color));
 }
 

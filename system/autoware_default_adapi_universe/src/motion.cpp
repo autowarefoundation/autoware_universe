@@ -142,8 +142,9 @@ void MotionNode::on_is_paused(
   update_state();
 }
 
-void MotionNode::on_is_start_requested(const autoware::component_interface_specs_universe::control::
-                                         IsStartRequested::Message::ConstSharedPtr msg)
+void MotionNode::on_is_start_requested(
+  const autoware::component_interface_specs_universe::control::IsStartRequested::Message::
+    ConstSharedPtr msg)
 {
   is_start_requested_ = msg->data;
   update_state();

@@ -422,10 +422,11 @@ const char NUM_OF_PROCS_DESCRIPTION[] =
 ProcessMonitor::ProcessMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
 : Node(node_name, options),
   updater_(this),
-  num_of_procs_(declare_parameter<int>(
-    "num_of_procs", kDefaultNumProcs,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
-      NUM_OF_PROCS_DESCRIPTION)))
+  num_of_procs_(
+    declare_parameter<int>(
+      "num_of_procs", kDefaultNumProcs,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        NUM_OF_PROCS_DESCRIPTION)))
 {
   initialize();
 }
@@ -433,10 +434,11 @@ ProcessMonitor::ProcessMonitor(const std::string & node_name, const rclcpp::Node
 ProcessMonitor::ProcessMonitor(const rclcpp::NodeOptions & options)
 : Node("process_monitor", options),
   updater_(this),
-  num_of_procs_(declare_parameter<int>(
-    "num_of_procs", kDefaultNumProcs,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
-      NUM_OF_PROCS_DESCRIPTION)))
+  num_of_procs_(
+    declare_parameter<int>(
+      "num_of_procs", kDefaultNumProcs,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        NUM_OF_PROCS_DESCRIPTION)))
 {
   initialize();
 }
