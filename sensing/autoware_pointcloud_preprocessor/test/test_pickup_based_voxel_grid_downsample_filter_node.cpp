@@ -1,4 +1,4 @@
-// Copyright 2024 TIER IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -140,5 +140,56 @@ TEST_F(PickupBasedVoxelGridDownsampleFilterTest, TestPointCloudPublishing)
 
     // Since the voxel grid filter downsamples, output should have fewer or equal points
     EXPECT_LE(output_msg_.width, input_cloud.width);
+  }
+}
+
+TEST_F(PickupBasedVoxelGridDownsampleFilterTest, TestEmptyPointCloudPublishing)
+{
+  // Create empty point cloud
+  sensor_msgs::msg::PointCloud2 empty_cloud;
+  empty_cloud.header.frame_id = "base_link";
+  empty_cloud.header.stamp = rclcpp::Clock().now();
+  empty_cloud.height = 1;
+  empty_cloud.width = 0;
+  empty_cloud.is_dense = true;
+  empty_cloud.is_bigendian = false;
+
+  // Create point cloud with x, y, z fields but no data
+  sensor_msgs::PointCloud2Modifier modifier(empty_cloud);
+  modifier.setPointCloud2Fields(
+    3, "x", 1, sensor_msgs::msg::PointField::FLOAT32,
+    "y", 1, sensor_msgs::msg::PointField::FLOAT32,
+    "z", 1, sensor_msgs::msg::PointField::FLOAT32);
+
+  // Don't add any points - keep it empty
+  modifier.resize(0);
+
+  // Reset the received flag
+  received_output_ = false;
+
+  // Publish empty point cloud
+  input_publisher_->publish(empty_cloud);
+
+  // Spin nodes to process messages
+  auto start_time = std::chrono::steady_clock::now();
+  auto timeout = std::chrono::seconds(5);
+
+  while (!received_output_ &&
+         (std::chrono::steady_clock::now() - start_time) < timeout) {
+    rclcpp::spin_some(filter_node_);
+    rclcpp::spin_some(test_node_);
+    rclcpp::sleep_for(std::chrono::milliseconds(10));
+  }
+
+  // Check that output was received
+  EXPECT_TRUE(received_output_) << "Expected to receive empty output point cloud";
+
+  if (received_output_) {
+    // Verify that output point cloud is also empty
+    EXPECT_EQ(output_msg_.header.frame_id, empty_cloud.header.frame_id);
+    EXPECT_EQ(output_msg_.width, 0u) << "Output point cloud should be empty";
+    EXPECT_EQ(output_msg_.height, 1u);
+    EXPECT_EQ(output_msg_.fields.size(), empty_cloud.fields.size());
+    EXPECT_EQ(output_msg_.data.size(), 0u) << "Output point cloud data should be empty";
   }
 }
