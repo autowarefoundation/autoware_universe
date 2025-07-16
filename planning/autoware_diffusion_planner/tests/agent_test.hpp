@@ -16,7 +16,7 @@
 #define PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__AGENT_TEST_HPP_
 
 #include "autoware/diffusion_planner/conversion/agent.hpp"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 #include <autoware_perception_msgs/msg/tracked_object.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>

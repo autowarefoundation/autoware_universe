@@ -18,7 +18,7 @@
 #include "autoware/diffusion_planner/conversion/lanelet.hpp"
 #include "autoware/diffusion_planner/polyline.hpp"
 #include "autoware/diffusion_planner/preprocessing/lane_segments.hpp"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 #include <Eigen/Dense>
 

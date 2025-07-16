@@ -16,7 +16,7 @@
 #define PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__LANELET_TEST_HPP_
 
 #include "autoware/diffusion_planner/conversion/lanelet.hpp"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 #include <geometry_msgs/msg/point.hpp>
 

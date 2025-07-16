@@ -16,7 +16,7 @@
 #define PLANNING__AUTOWARE_DIFFUSION_PLANNER__TESTS__EGO_TEST_HPP_
 
 #include "autoware/diffusion_planner/conversion/ego.hpp"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
