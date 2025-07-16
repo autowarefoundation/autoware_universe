@@ -82,7 +82,7 @@ CameraDataStore::CameraDataStore(
     std::make_shared<Tensor>("image_input_std", nvinfer1::Dims{1, 3}, nvinfer1::DataType::kFLOAT);
   image_input_std_->load_from_vector({57.375, 57.120, 58.395});
 
-  camera_info_timestamp_ = std::vector<double>(rois_number, -1.0);
+  camera_image_timestamp_ = std::vector<double>(rois_number, -1.0);
   camera_link_names_ = std::vector<std::string>(rois_number, "");
   start_timestamp_ = -1.0;
 
@@ -173,7 +173,7 @@ void CameraDataStore::update_camera_image(
       logger_, "resizeAndExtractRoi_launch failed with error: %s", cudaGetErrorString(err));
   }
 
-  camera_info_timestamp_[camera_id] =
+  camera_image_timestamp_[camera_id] =
   input_camera_image_msg->header.stamp.sec + input_camera_image_msg->header.stamp.nanosec * 1e-9;
   camera_link_names_[camera_id] = input_camera_image_msg->header.frame_id;
 
@@ -203,7 +203,7 @@ bool CameraDataStore::check_if_all_camera_info_received() const
 
 bool CameraDataStore::check_if_all_camera_image_received() const
 {
-  for (const auto & camera_info_timestamp : camera_info_timestamp_) {
+  for (const auto & camera_info_timestamp : camera_image_timestamp_) {
     if (camera_info_timestamp < 0) return false;
   }
   return true;
@@ -216,12 +216,12 @@ float CameraDataStore::check_if_all_images_synced() const
   double min_time = std::numeric_limits<double>::max();
   double max_time = std::numeric_limits<double>::min();
 
-  for (size_t camera_id = 0; camera_id < camera_info_timestamp_.size(); ++camera_id) {
-    if (camera_info_timestamp_[camera_id] < min_time) {
-      min_time = camera_info_timestamp_[camera_id];
+  for (size_t camera_id = 0; camera_id < camera_image_timestamp_.size(); ++camera_id) {
+    if (camera_image_timestamp_[camera_id] < min_time) {
+      min_time = camera_image_timestamp_[camera_id];
     }
-    if (camera_info_timestamp_[camera_id] > max_time) {
-      max_time = camera_info_timestamp_[camera_id];
+    if (camera_image_timestamp_[camera_id] > max_time) {
+      max_time = camera_image_timestamp_[camera_id];
     }
   }
   return max_time - min_time;
@@ -306,15 +306,14 @@ std::shared_ptr<cuda::Tensor> CameraDataStore::get_image_input() const
 
 float CameraDataStore::get_timestamp()
 {
-  if(start_timestamp_ < 0.0) {
-    start_timestamp_ = camera_info_timestamp_[anchor_camera_id_];
+  const float time_difference = camera_image_timestamp_[anchor_camera_id_] - start_timestamp_;
+
+  if(start_timestamp_ < 0.0 || time_difference > MAX_PERMISSIONED_CAMERA_TIME_DIFF) {
+    start_timestamp_ = camera_image_timestamp_[anchor_camera_id_];
     return 0.0;
   }
-  else if (camera_info_timestamp_[anchor_camera_id_] < start_timestamp_) {
-    RCLCPP_ERROR(logger_, "Current camera timestamp is behind the previous timestamp!!!");
-    return 0.0;
-  }
-  return camera_info_timestamp_[anchor_camera_id_] - start_timestamp_;
+
+  return time_difference;
 }
 
 std::vector<std::string> CameraDataStore::get_camera_link_names() const
@@ -325,7 +324,7 @@ std::vector<std::string> CameraDataStore::get_camera_link_names() const
 void CameraDataStore::restart()
 {
   start_timestamp_ = -1.0;
-  camera_info_timestamp_.assign(rois_number_, -1.0);
+  camera_image_timestamp_.assign(rois_number_, -1.0);
   camera_link_names_.assign(rois_number_, "");
 }
 

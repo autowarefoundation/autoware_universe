@@ -170,12 +170,13 @@ void StreamPetrNode::camera_image_callback(
 void StreamPetrNode::step(const rclcpp::Time & stamp)
 {
   const float tdiff = data_store_->check_if_all_images_synced();
+  const float prediction_timestamp = data_store_->get_timestamp();
 
   if (tdiff < 0) {
     RCLCPP_WARN(get_logger(), "Not all camera info or image received");
     return;
-  }else if (tdiff > max_camera_time_diff_) {
-    RCLCPP_WARN(get_logger(), "Cameras are not synced, difference is %.2f seconds", tdiff);
+  }else if (tdiff > max_camera_time_diff_ || prediction_timestamp < 0.0) {
+    RCLCPP_WARN(get_logger(), "Couldn't sync cameras. Sync difference: %.2f, difference from start: %.2f", tdiff, prediction_timestamp);
     network_->wipe_memory();
     initial_kinematic_state_ = latest_kinematic_state_;
     data_store_->restart();
@@ -193,7 +194,7 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
     data_store_->get_image_input(), ego_pose, ego_pose_inv, data_store_->get_image_shape(),
     data_store_->get_camera_info_vector(),
     get_camera_extrinsics_vector(data_store_->get_camera_link_names()),
-    data_store_->get_timestamp(), output_objects, forward_time_ms);
+    prediction_timestamp, output_objects, forward_time_ms);
 
   double inference_time_ms = -1.0;
   if (stop_watch_ptr_) inference_time_ms = stop_watch_ptr_->toc("latency/inference", true);
