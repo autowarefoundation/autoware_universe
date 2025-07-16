@@ -81,6 +81,11 @@ TEST_F(CloudInfoTest, ConstructorAndGetConcatInfoBase)
     autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::STRATEGY_ADVANCED);
 }
 
+TEST_F(CloudInfoTest, InvalidMatchingStrategy)
+{
+  EXPECT_THROW(CloudInfo cloud_info("invalid_strategy", input_topics_), std::invalid_argument);
+}
+
 TEST_F(CloudInfoTest, ApplySourceWithPointCloud)
 {
   CloudInfo cloud_info(strategy_name_, input_topics_);

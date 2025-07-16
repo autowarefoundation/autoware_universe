@@ -207,7 +207,11 @@ private:
     const std::string & matching_strategy_name, const std::vector<std::string> & input_topics)
   {
     autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo concat_info_base;
-    concat_info_base.matching_strategy = matching_strategy_name_map.at(matching_strategy_name);
+    auto strategy_it = matching_strategy_name_map.find(matching_strategy_name);
+    if (strategy_it == matching_strategy_name_map.end()) {
+      throw std::invalid_argument("Unknown matching strategy: '" + matching_strategy_name + "'");
+    }
+    concat_info_base.matching_strategy = strategy_it->second;
     concat_info_base.source_info.reserve(input_topics.size());
     for (const auto & topic : input_topics) {
       autoware_sensing_msgs::msg::SourcePointCloudInfo info;
