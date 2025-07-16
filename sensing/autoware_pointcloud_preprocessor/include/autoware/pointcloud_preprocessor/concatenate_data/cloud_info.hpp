@@ -18,11 +18,8 @@
 #include <builtin_interfaces/msg/time.hpp>
 
 #include <autoware_sensing_msgs/msg/concatenated_point_cloud_info.hpp>
-#include <autoware_sensing_msgs/msg/detail/concatenated_point_cloud_info__struct.hpp>
-#include <autoware_sensing_msgs/msg/detail/source_point_cloud_info__struct.hpp>
 #include <autoware_sensing_msgs/msg/source_point_cloud_info.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <std_msgs/msg/detail/header__struct.hpp>
 
 #include <cstdint>
 #include <cstring>
