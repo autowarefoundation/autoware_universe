@@ -75,8 +75,8 @@ private:
 
   int num_rings_{};
   int max_points_per_ring_{};
-  int num_raw_points_{};
-  int num_organized_points_{};
+  size_t num_raw_points_{};
+  size_t num_organized_points_{};
 
   std::vector<sensor_msgs::msg::PointField> point_fields_;
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> output_pointcloud_ptr_;
