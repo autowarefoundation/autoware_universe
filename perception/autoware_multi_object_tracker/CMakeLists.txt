@@ -85,6 +85,7 @@ if(BUILD_TESTING)
     test/test_bench.cpp
     test/test_utils.cpp
   )
+  add_definitions(-D_SRC_RESOURCES_DIR_PATH="${PROJECT_SOURCE_DIR}/test/data/")
   ament_add_ros_isolated_gtest(test_multi_object_tracker ${test_files})
 
   target_link_libraries(test_multi_object_tracker

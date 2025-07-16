@@ -138,14 +138,14 @@ void runPerformanceTest()
   printPerformanceStats("Spawn", timings.spawn);
 }
 
-void runPerformanceTestWithRosbag(const std::string & rosbag_path)
+void runPerformanceTestWithRosbag(const std::string & rosbag_path, bool write_bag = false)
 {
   // === Setup ===
   rclcpp::init(0, nullptr);
   const auto node = std::make_shared<rclcpp::Node>("multi_object_tracker_test_node");
   const auto tf_buffer = std::make_shared<tf2_ros::Buffer>(node->get_clock());
   const auto tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer, node);
-  RosbagWriterHelper writer(true);
+  RosbagWriterHelper writer(write_bag);
 
   const std::string world_frame_id = "map";      // Assuming map is the world frame ID
   const std::string ego_frame_id = "base_link";  // Assuming base_link is the ego vehicle frame ID
@@ -187,9 +187,7 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path)
       writer.write(tf_msg, "/tf", rclcpp::Time(tf_msg.transforms.front().header.stamp));
     } else if (bag_message->topic_name == "/perception/object_recognition/detection/objects") {
       auto tf_transform = tf_buffer->lookupTransform(world_frame_id, ego_frame_id, rclcpp::Time(0));
-      tf2::Transform tf_target2objects;
-      tf2::Transform tf_objects_world2objects;
-      tf2::fromMsg(tf_transform.transform, tf_target2objects);
+
       // Deserialize message
       rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
       autoware_perception_msgs::msg::DetectedObjects::SharedPtr msg =
@@ -202,6 +200,10 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path)
       dynamic_objects =
         autoware::multi_object_tracker::uncertainty::modelUncertainty(dynamic_objects);
       for (auto & object : dynamic_objects.objects) {
+        tf2::Transform tf_target2objects;
+        tf2::fromMsg(tf_transform.transform, tf_target2objects);
+
+        tf2::Transform tf_objects_world2objects;
         auto & pose = object.pose;
         auto & pose_cov = object.pose_covariance;
         tf2::fromMsg(pose, tf_objects_world2objects);
@@ -231,8 +233,12 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path)
       std::time_t time_sec = static_cast<std::time_t>(stamp.seconds());
       char time_str[32];
       std::strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", std::localtime(&time_sec));
-      std::cout << "Processed frame at " << time_str << " with "
-                << latest_tracked_objects.objects.size() << " tracked objects" << std::endl;
+      // Print every 10 frames to reduce output frequency
+      static int frame_count = 0;
+      if (frame_count++ % 10 == 1) {
+        std::cout << "Processed frame at " << time_str << " with "
+                  << latest_tracked_objects.objects.size() << " tracked objects" << std::endl;
+      }
       latest_tracked_objects.header.frame_id = "map";
       latest_detected_objects.header.frame_id = "map";
 
@@ -345,7 +351,27 @@ public:
   ~MultiObjectTrackerTest() override = default;
 };
 
-TEST_F(MultiObjectTrackerTest, test_multi_object_tracker)
+TEST_F(MultiObjectTrackerTest, SimulatedDataPerformanceTest)
 {
+  // This test runs performance analysis using simulated tracking data
   runPerformanceTest();
+}
+
+TEST_F(MultiObjectTrackerTest, RealDataRosbagPerformanceTest)
+{
+  // This test runs the tracker using a real rosbag for evaluation
+  std::filesystem::path bag_root_dir = _SRC_RESOURCES_DIR_PATH;  // defined in CMakeLists.txt
+  std::filesystem::path bag_dir = bag_root_dir / "test_data1";
+  std::filesystem::path db3_file;
+
+  for (const auto & entry : std::filesystem::directory_iterator(bag_dir)) {
+    if (entry.path().extension() == ".db3") {
+      db3_file = entry.path();
+      break;
+    }
+  }
+
+  ASSERT_FALSE(db3_file.empty()) << "No .db3 file found in " << bag_dir;
+
+  runPerformanceTestWithRosbag(db3_file.string());
 }
