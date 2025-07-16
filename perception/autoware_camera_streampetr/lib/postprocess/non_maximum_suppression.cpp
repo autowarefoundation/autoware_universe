@@ -46,7 +46,7 @@ bool NonMaximumSuppression::isTargetPairObject(
     return false;
   }
 
-  const auto sqr_dist_2d = autoware_utils::calc_squared_distance2d(
+  const auto sqr_dist_2d = autoware_utils_geometry::calc_squared_distance2d(
     autoware::object_recognition_utils::getPose(object1),
     autoware::object_recognition_utils::getPose(object2));
   return sqr_dist_2d <= search_distance_2d_sq_;
