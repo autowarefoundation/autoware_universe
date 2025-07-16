@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **Autoware Diffusion Planner** is a trajectory generation module for autonomous vehicles, designed to work within the [Autoware](https://www.autoware.org/) ecosystem. It leverages the [Diffusion Planner](https://github.com/ZhengYinan-AIR/Diffusion-Planner) model, as described in the paper ["Diffusion-Based Planning for Autonomous Driving with Flexible Guidance"](https://arxiv.org/abs/2501.15564) by Zheng et al.
+The **Autoware Diffusion Planner** is a trajectory generation module for autonomous vehicles, designed to work within the [Autoware](https://autoware.org/) ecosystem. It leverages the [Diffusion Planner](https://github.com/ZhengYinan-AIR/Diffusion-Planner) model, as described in the paper ["Diffusion-Based Planning for Autonomous Driving with Flexible Guidance"](https://arxiv.org/abs/2501.15564) by Zheng et al.
 
 This planner generates smooth, feasible, and safe trajectories by considering:
 
@@ -82,21 +82,21 @@ Parameters can be set via YAML (see `config/diffusion_planner.param.yaml`) or vi
 
 ### Main Parameters
 
-| Name                                   | Type    | Default         | Description                                                      |
-|---------------------------------------- |---------|-----------------|------------------------------------------------------------------|
-| `onnx_model_path`                      | string  | ""              | Path to the ONNX model file for the diffusion planner            |
-| `args_path`                            | string  | ""              | Path to model argument/configuration file                        |
-| `planning_frequency_hz`                | double  | 10.0            | Planning frequency in Hz                                         |
-| `predict_neighbor_trajectory`           | bool    | false           | Predict trajectories for neighbor agents                         |
-| `update_traffic_light_group_info`       | bool    | false           | Enable updating of traffic light group info                      |
-| `traffic_light_group_msg_timeout_seconds`| double | 0.2             | Timeout for traffic light group messages (seconds)               |
+| Name                                      | Type   | Default | Description                                           |
+| ----------------------------------------- | ------ | ------- | ----------------------------------------------------- |
+| `onnx_model_path`                         | string | ""      | Path to the ONNX model file for the diffusion planner |
+| `args_path`                               | string | ""      | Path to model argument/configuration file             |
+| `planning_frequency_hz`                   | double | 10.0    | Planning frequency in Hz                              |
+| `predict_neighbor_trajectory`             | bool   | false   | Predict trajectories for neighbor agents              |
+| `update_traffic_light_group_info`         | bool   | false   | Enable updating of traffic light group info           |
+| `traffic_light_group_msg_timeout_seconds` | double | 0.2     | Timeout for traffic light group messages (seconds)    |
 
 ### Debug Parameters
 
-| Name                        | Type  | Default | Description                       |
-|-----------------------------|-------|---------|-----------------------------------|
-| `debug_params.publish_debug_map`   | bool  | false   | Publish debug map markers         |
-| `debug_params.publish_debug_route` | bool  | false   | Publish debug route markers       |
+| Name                               | Type | Default | Description                 |
+| ---------------------------------- | ---- | ------- | --------------------------- |
+| `debug_params.publish_debug_map`   | bool | false   | Publish debug map markers   |
+| `debug_params.publish_debug_route` | bool | false   | Publish debug route markers |
 
 ---
 
