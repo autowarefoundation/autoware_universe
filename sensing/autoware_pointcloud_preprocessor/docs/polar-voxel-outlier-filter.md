@@ -4,7 +4,8 @@
 
 The Polar Voxel Outlier Filter is an advanced point cloud outlier filtering algorithm that operates in polar coordinate space instead of Cartesian coordinate space. This filter is particularly effective for LiDAR data processing, offering two-criteria filtering with return type classification for more tunable noise removal when compared to simple occupancy-based methods.
 
-**Key Features**: 
+**Key Features**:
+
 - **Automatic format detection** and optimal handling of both `PointXYZ` and `PointXYZIRCAEDT` point cloud formats
 - **Advanced two-criteria filtering** for PointXYZIRCAEDT with return type classification
 - **Comprehensive diagnostics** with filter ratio and visibility metrics
@@ -53,7 +54,7 @@ The purpose is to remove point cloud noise such as insects and rain using a pola
 ```yaml
 # Example fields that enable optimized processing and advanced filtering:
 # - distance      (float32): Pre-computed radius
-# - azimuth       (float32): Pre-computed azimuth angle  
+# - azimuth       (float32): Pre-computed azimuth angle
 # - elevation     (float32): Pre-computed elevation angle
 # - return_type   (uint8):   Return type classification (1=primary, 2-5=secondary, etc.)
 ```
@@ -90,14 +91,16 @@ Each point is assigned to a voxel based on:
 
 The filter uses different algorithms depending on the input point cloud format:
 
-#### For PointXYZ Format:
+#### For PointXYZ Format
+
 1. **Format Detection**: Automatically detects standard PointXYZ format
 2. **Coordinate Conversion**: Computes polar coordinates from Cartesian coordinates
 3. **Binning**: Points are grouped into polar voxels
 4. **Simple Thresholding**: Voxels with ≥ `voxel_points_threshold` points are kept
 5. **Output**: Filtered point cloud with noise points removed
 
-#### For PointXYZIRCAEDT Format:
+#### For PointXYZIRCAEDT Format
+
 1. **Format Detection**: Automatically detects enhanced format with return type fields
 2. **Return Type Classification**: Points are classified as primary or secondary returns
 3. **Advanced Two-Criteria Filtering** (when `use_return_type_classification=true`):
@@ -131,11 +134,11 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 
 ### Additional Debug Topics
 
-| Name                                                          | Type                            | Description                               |
-| ------------------------------------------------------------- | ------------------------------- | ----------------------------------------- |
-| `~/polar_voxel_outlier_filter/debug/filter_ratio`           | `autoware_internal_debug_msgs::msg::Float32Stamped` | Ratio of output to input points |
-| `~/polar_voxel_outlier_filter/debug/visibility`             | `autoware_internal_debug_msgs::msg::Float32Stamped` | Ratio of voxels passing secondary return threshold test (PointXYZIRCAEDT only) |
-| `~/polar_voxel_outlier_filter/debug/pointcloud_noise`       | `sensor_msgs::msg::PointCloud2` | Filtered-out points for debugging       |
+| Name                                                  | Type                                                | Description                                                                    |
+| ----------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `~/polar_voxel_outlier_filter/debug/filter_ratio`     | `autoware_internal_debug_msgs::msg::Float32Stamped` | Ratio of output to input points                                                |
+| `~/polar_voxel_outlier_filter/debug/visibility`       | `autoware_internal_debug_msgs::msg::Float32Stamped` | Ratio of voxels passing secondary return threshold test (PointXYZIRCAEDT only) |
+| `~/polar_voxel_outlier_filter/debug/pointcloud_noise` | `sensor_msgs::msg::PointCloud2`                     | Filtered-out points for debugging                                              |
 
 ## Parameters
 
@@ -156,22 +159,22 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 
 ### Advanced Filtering Parameters
 
-| Parameter                     | Type        | Description                                      | Default        |
-| ----------------------------- | ----------- | ------------------------------------------------ | -------------- |
-| `use_return_type_classification` | bool     | Enable advanced two-criteria filtering           | true           |
-| `filter_secondary_returns`    | bool        | Keep only primary returns in output              | false          |
-| `secondary_noise_threshold`   | int         | Maximum secondary returns allowed per voxel     | 1              |
-| `primary_return_types`        | int[]       | Return types considered as primary returns       | [1]            |
-| `secondary_return_types`      | int[]       | Return types considered as secondary returns     | [2, 3, 4, 5]   |
+| Parameter                        | Type  | Description                                  | Default      |
+| -------------------------------- | ----- | -------------------------------------------- | ------------ |
+| `use_return_type_classification` | bool  | Enable advanced two-criteria filtering       | true         |
+| `filter_secondary_returns`       | bool  | Keep only primary returns in output          | false        |
+| `secondary_noise_threshold`      | int   | Maximum secondary returns allowed per voxel  | 1            |
+| `primary_return_types`           | int[] | Return types considered as primary returns   | [1]          |
+| `secondary_return_types`         | int[] | Return types considered as secondary returns | [2, 3, 4, 5] |
 
 ### Diagnostics Parameters
 
-| Parameter                      | Type   | Description                                | Default |
-| ------------------------------ | ------ | ------------------------------------------ | ------- |
-| `filter_ratio_error_threshold` | double | Error threshold for filter ratio          | 0.5     |
-| `filter_ratio_warn_threshold`  | double | Warning threshold for filter ratio        | 0.7     |
-| `visibility_error_threshold`   | double | Error threshold for visibility metric     | 0.5     |
-| `visibility_warn_threshold`    | double | Warning threshold for visibility metric   | 0.7     |
+| Parameter                      | Type   | Description                             | Default |
+| ------------------------------ | ------ | --------------------------------------- | ------- |
+| `filter_ratio_error_threshold` | double | Error threshold for filter ratio        | 0.5     |
+| `filter_ratio_warn_threshold`  | double | Warning threshold for filter ratio      | 0.7     |
+| `visibility_error_threshold`   | double | Error threshold for visibility metric   | 0.5     |
+| `visibility_warn_threshold`    | double | Warning threshold for visibility metric | 0.7     |
 
 ### Core Parameters (Schema-based)
 
@@ -196,6 +199,7 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 ## (Optional) Error detection and handling
 
 The filter includes robust error handling:
+
 - Input validation for null point clouds
 - Automatic filtering of invalid points (NaN, Inf values)
 - Graceful handling of points outside configured radius ranges
@@ -208,27 +212,30 @@ The filter includes robust error handling:
 ### Launch the Filter
 
 ```bash
-# Basic launch
-ros2 launch autoware_pointcloud_preprocessor filter_test.launch.xml
+# Basic launch using the filter directly in a launch file
+# (Note: This filter is typically used as part of a larger pointcloud preprocessing pipeline)
 
-# With custom parameters
-ros2 launch autoware_pointcloud_preprocessor filter_test.launch.xml \
-  radius_resolution:=1.0 \
-  azimuth_resolution:=0.0349 \
-  voxel_points_threshold:=3 \
-  use_return_type_classification:=true \
-  secondary_noise_threshold:=2
+# Example launch file integration:
+# <node pkg="autoware_pointcloud_preprocessor" exec="polar_voxel_outlier_filter_node" name="polar_voxel_filter">
+#   <param name="radius_resolution" value="1.0"/>
+#   <param name="azimuth_resolution" value="0.0349"/>
+#   <param name="voxel_points_threshold" value="3"/>
+#   <param name="use_return_type_classification" value="true"/>
+#   <param name="secondary_noise_threshold" value="2"/>
+# </node>
 ```
 
 ### ROS 2 Topics
 
 #### Input/Output
+
 - **Input**: `/input` (sensor_msgs/PointCloud2)
 - **Output**: `/output` (sensor_msgs/PointCloud2)
 
 #### Debug Topics
+
 - **Filter Ratio**: `~/polar_voxel_outlier_filter/debug/filter_ratio` (autoware_internal_debug_msgs/Float32Stamped)
-- **Visibility**: `~/polar_voxel_outlier_filter/debug/visibility` (autoware_internal_debug_msgs/Float32Stamped) 
+- **Visibility**: `~/polar_voxel_outlier_filter/debug/visibility` (autoware_internal_debug_msgs/Float32Stamped)
 - **Noise Cloud**: `~/polar_voxel_outlier_filter/debug/pointcloud_noise` (sensor_msgs/PointCloud2)
 
 ### Programmatic Usage
@@ -286,11 +293,13 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 ## Diagnostics and Monitoring
 
 ### Filter Ratio Diagnostics
+
 - **Always published** for both input formats
 - Represents overall filtering effectiveness (output/input ratio)
 - Configurable error/warning thresholds
 
-### Visibility Diagnostics  
+### Visibility Diagnostics
+
 - **Only published for PointXYZIRCAEDT** with return type classification enabled
 - Represents the percentage of voxels that pass the primary-to-secondary threshold test
 - **Efficiently computed**: Statistics collected during main filtering loop, no separate traversal
@@ -298,6 +307,7 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 - **Real-time tracking**: Counts both passing and failing voxels for comprehensive analysis
 
 ### Debug Features
+
 - **Noise point cloud**: Contains all filtered-out points for analysis
 - **Runtime parameter updates**: All thresholds can be adjusted dynamically
 - **Detailed logging**: Debug messages show voxel statistics and filtering results
@@ -314,7 +324,6 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 ### Configuration
 
 - `config/polar_voxel_outlier_filter_node.param.yaml`
-- `launch/filter_test.launch.xml` (comprehensive test configuration)
 - `schema/polar_voxel_outlier_filter_node.schema.json`
 
 ### Documentation
@@ -339,12 +348,14 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 ### Parameter Tuning Guidelines
 
 #### Basic Configuration
+
 - **For dense urban environments**: Use smaller `radius_resolution` (0.2-0.5m) and `azimuth_resolution` (0.5-1°)
 - **For highway scenarios**: Use larger `radius_resolution` (0.5-1.0m) and moderate `azimuth_resolution` (1-2°)
 - **For noisy sensors**: Increase `voxel_points_threshold` (3-5 points)
 - **For sparse data**: Decrease `voxel_points_threshold` (1-2 points)
 
 #### Advanced Configuration
+
 - **For aggressive noise removal**: Lower `secondary_noise_threshold` (0-1)
 - **For conservative filtering**: Higher `secondary_noise_threshold` (2-4)
 - **For primary-only output**: Enable `filter_secondary_returns`
@@ -352,19 +363,19 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 
 ## Comparison with Cartesian Voxel Filter
 
-| Aspect                    | Cartesian Voxel | Polar Voxel (PointXYZ) | Polar Voxel (PointXYZIRCAEDT) |
-| ------------------------- | --------------- | ---------------------- | ----------------------------- |
-| **Coordinate System**     | (x, y, z)       | (r, θ, φ) computed     | (r, θ, φ) pre-computed        |
-| **Voxel Shape**           | Cubic           | Wedge-shaped           | Wedge-shaped                  |
-| **Resolution**            | Uniform         | Adaptive               | Adaptive                      |
-| **LiDAR Alignment**       | Poor            | Excellent              | Excellent                     |
-| **Filtering Method**      | Simple threshold| Simple threshold       | **Advanced two-criteria**     |
-| **Return Type Support**   | None            | None                   | **Full classification**       |
-| **Range Handling**        | Equal treatment | Range-aware            | Range-aware                   |
-| **Computational Cost**    | Low             | Moderate               | **Low** (optimal)             |
-| **Coordinate Conversion** | None            | Required               | **Not Required**              |
-| **Diagnostics**           | Basic           | Basic                  | **Comprehensive**             |
-| **Debug Support**         | Limited         | Limited                | **Full noise analysis**       |
+| Aspect                    | Cartesian Voxel  | Polar Voxel (PointXYZ) | Polar Voxel (PointXYZIRCAEDT) |
+| ------------------------- | ---------------- | ---------------------- | ----------------------------- |
+| **Coordinate System**     | (x, y, z)        | (r, θ, φ) computed     | (r, θ, φ) pre-computed        |
+| **Voxel Shape**           | Cubic            | Wedge-shaped           | Wedge-shaped                  |
+| **Resolution**            | Uniform          | Adaptive               | Adaptive                      |
+| **LiDAR Alignment**       | Poor             | Excellent              | Excellent                     |
+| **Filtering Method**      | Simple threshold | Simple threshold       | **Advanced two-criteria**     |
+| **Return Type Support**   | None             | None                   | **Full classification**       |
+| **Range Handling**        | Equal treatment  | Range-aware            | Range-aware                   |
+| **Computational Cost**    | Low              | Moderate               | **Low** (optimal)             |
+| **Coordinate Conversion** | None             | Required               | **Not Required**              |
+| **Diagnostics**           | Basic            | Basic                  | **Comprehensive**             |
+| **Debug Support**         | Limited          | Limited                | **Full noise analysis**       |
 
 ## (Optional) Future extensions / Unimplemented parts
 

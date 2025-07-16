@@ -30,6 +30,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <map>
 #include <set>
 #include <string>
@@ -271,7 +272,7 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
   // Collect valid point indices and visibility statistics
   std::vector<bool> valid_points(input->width * input->height, false);
   valid_points.reserve(input->width * input->height);
-  
+
   // Track visibility statistics during filtering
   size_t voxels_passed_secondary_test = 0;
   size_t voxels_failed_secondary_test = 0;
@@ -286,21 +287,22 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
     // 2. Has fewer points in the secondary returns than the secondary noise threshold
 
     // Check criterion 1: Primary returns meet the threshold
-    bool primary_meets_threshold = static_cast<int>(primary_returns.size()) >= voxel_points_threshold_;
+    bool primary_meets_threshold =
+      static_cast<int>(primary_returns.size()) >= voxel_points_threshold_;
 
     // Check criterion 2: Number of secondary returns is less than the threshold
     bool secondary_meets_threshold = false;
     if (static_cast<int>(secondary_returns.size()) <= secondary_noise_threshold_) {
       secondary_meets_threshold = true;
     }
-    
+
     // Update visibility statistics
     if (secondary_meets_threshold) {
       voxels_passed_secondary_test++;
     } else {
       voxels_failed_secondary_test++;
     }
-    
+
     // Voxel is kept if BOTH criteria are met
     if (primary_meets_threshold && secondary_meets_threshold) {
       populated_voxels++;
@@ -395,11 +397,11 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
   if (use_return_type_classification_) {
     // Use the statistics collected during filtering
     size_t total_voxels_with_points = voxel_point_map.size();
-    
+
     // Visibility is the percentage of voxels that passed the primary-to-secondary ratio test
-    visibility_ = total_voxels_with_points > 0
-                    ? static_cast<double>(voxels_passed_secondary_test) / static_cast<double>(total_voxels_with_points)
-                    : 0.0;
+    visibility_ = total_voxels_with_points > 0 ? static_cast<double>(voxels_passed_secondary_test) /
+                                                   static_cast<double>(total_voxels_with_points)
+                                               : 0.0;
 
     // Publish visibility
     autoware_internal_debug_msgs::msg::Float32Stamped visibility_msg;
@@ -408,8 +410,9 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
     visibility_pub_->publish(visibility_msg);
 
     RCLCPP_DEBUG(
-      get_logger(), "Visibility: %.3f (%zu/%zu voxels passed secondary test, %zu failed)", 
-      visibility_, voxels_passed_secondary_test, total_voxels_with_points, voxels_failed_secondary_test);
+      get_logger(), "Visibility: %.3f (%zu/%zu voxels passed secondary test, %zu failed)",
+      visibility_, voxels_passed_secondary_test, total_voxels_with_points,
+      voxels_failed_secondary_test);
   }
 
   // Debug output for voxel statistics - using collected data
