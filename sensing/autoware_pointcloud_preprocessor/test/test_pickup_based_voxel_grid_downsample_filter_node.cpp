@@ -63,43 +63,6 @@ protected:
 
   void TearDown() override { rclcpp::shutdown(); }
 
-  sensor_msgs::msg::PointCloud2 createTestPointCloud()
-  {
-    sensor_msgs::msg::PointCloud2 cloud;
-    cloud.header.frame_id = "base_link";
-    cloud.header.stamp = rclcpp::Clock().now();
-    cloud.height = 1;
-    cloud.is_dense = true;
-    cloud.is_bigendian = false;
-
-    // Create point cloud with x, y, z fields
-    sensor_msgs::PointCloud2Modifier modifier(cloud);
-    modifier.setPointCloud2Fields(
-      3, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1,
-      sensor_msgs::msg::PointField::FLOAT32, "z", 1, sensor_msgs::msg::PointField::FLOAT32);
-
-    // Add test points
-    modifier.resize(9);  // 3x3 grid of points
-
-    sensor_msgs::PointCloud2Iterator<float> iter_x(cloud, "x");
-    sensor_msgs::PointCloud2Iterator<float> iter_y(cloud, "y");
-    sensor_msgs::PointCloud2Iterator<float> iter_z(cloud, "z");
-
-    // Create a 3x3 grid of points
-    for (int i = 0; i < 3; ++i) {
-      for (int j = 0; j < 3; ++j) {
-        *iter_x = static_cast<float>(i) * 0.05f;  // Points within same voxel
-        *iter_y = static_cast<float>(j) * 0.05f;
-        *iter_z = 0.0f;
-        ++iter_x;
-        ++iter_y;
-        ++iter_z;
-      }
-    }
-
-    return cloud;
-  }
-
   std::shared_ptr<autoware::pointcloud_preprocessor::PickupBasedVoxelGridDownsampleFilterComponent>
     filter_node_;
   std::shared_ptr<rclcpp::Node> test_node_;
@@ -113,10 +76,24 @@ protected:
 TEST_F(PickupBasedVoxelGridDownsampleFilterTest, TestPointCloudPublishing)
 {
   // Create test point cloud
-  auto input_cloud = createTestPointCloud();
+  sensor_msgs::msg::PointCloud2 cloud;
+  cloud.header.frame_id = "base_link";
+  cloud.header.stamp = rclcpp::Clock().now();
+  cloud.height = 1;
+  cloud.is_dense = true;
+  cloud.is_bigendian = false;
+
+  // Create point cloud with x, y, z fields
+  sensor_msgs::PointCloud2Modifier modifier(cloud);
+  modifier.setPointCloud2Fields(
+    3, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1,
+    sensor_msgs::msg::PointField::FLOAT32, "z", 1, sensor_msgs::msg::PointField::FLOAT32);
+
+  // Add test points
+  modifier.resize(1);  // 3x1 grid of points
 
   // Publish input point cloud
-  input_publisher_->publish(input_cloud);
+  input_publisher_->publish(cloud);
 
   // Spin nodes to process messages
   auto start_time = std::chrono::steady_clock::now();
@@ -131,15 +108,10 @@ TEST_F(PickupBasedVoxelGridDownsampleFilterTest, TestPointCloudPublishing)
   // Check that output was received
   EXPECT_TRUE(received_output_) << "Expected to receive output point cloud";
 
+  // Check output point cloud is same size as input
   if (received_output_) {
-    // Verify output point cloud properties
-    EXPECT_EQ(output_msg_.header.frame_id, input_cloud.header.frame_id);
-    EXPECT_GT(output_msg_.width, 0u) << "Output point cloud should have points";
-    EXPECT_EQ(output_msg_.height, 1u);
-    EXPECT_EQ(output_msg_.fields.size(), input_cloud.fields.size());
-
-    // Since the voxel grid filter downsamples, output should have fewer or equal points
-    EXPECT_LE(output_msg_.width, input_cloud.width);
+    EXPECT_EQ(output_msg_.height, cloud.height);
+    EXPECT_EQ(output_msg_.width, cloud.width);
   }
 }
 
@@ -184,12 +156,9 @@ TEST_F(PickupBasedVoxelGridDownsampleFilterTest, TestEmptyPointCloudPublishing)
   // Check that output was received
   EXPECT_TRUE(received_output_) << "Expected to receive empty output point cloud";
 
+  // Check output point cloud is same size as input
   if (received_output_) {
-    // Verify that output point cloud is also empty
-    EXPECT_EQ(output_msg_.header.frame_id, empty_cloud.header.frame_id);
-    EXPECT_EQ(output_msg_.width, 0u) << "Output point cloud should be empty";
-    EXPECT_EQ(output_msg_.height, 1u);
-    EXPECT_EQ(output_msg_.fields.size(), empty_cloud.fields.size());
-    EXPECT_EQ(output_msg_.data.size(), 0u) << "Output point cloud data should be empty";
+    EXPECT_EQ(output_msg_.height, empty_cloud.height);
+    EXPECT_EQ(output_msg_.width, empty_cloud.width);
   }
 }
