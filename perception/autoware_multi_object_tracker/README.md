@@ -174,7 +174,7 @@ Example:
 
 ### Evaluation of muSSP
 
-According to our evaluation, muSSP is faster than normal [SSP](src/data_association/successive_shortest_path) when the matrix size is more than 100.
+According to our evaluation, muSSP is faster than normal [SSP](lib/association/successive_shortest_path) when the matrix size is more than 100.
 
 Execution time for varying matrix size at 95% sparsity. In real data, the sparsity was often around 95%.
 ![mussp_evaluation1](image/mussp_evaluation1.png)
@@ -186,9 +186,9 @@ Execution time for varying the sparsity with matrix size 100.
 
 This package makes use of external code.
 
-| Name                                                      | License                                                   | Original Repository                  |
-| --------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------ |
-| [muSSP](src/data_association/mu_successive_shortest_path) | [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) | <https://github.com/yu-lab-vt/muSSP> |
+| Name                                                 | License                                                   | Original Repository                  |
+| ---------------------------------------------------- | --------------------------------------------------------- | ------------------------------------ |
+| [muSSP](lib/association/mu_successive_shortest_path) | [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) | <https://github.com/yu-lab-vt/muSSP> |
 
 [1] C. Wang, Y. Wang, Y. Wang, C.-t. Wu, and G. Yu, "muSSP: Efficient
 Min-cost Flow Algorithm for Multi-object Tracking," NeurIPS, 2019
