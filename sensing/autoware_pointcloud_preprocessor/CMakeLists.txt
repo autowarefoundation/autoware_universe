@@ -296,9 +296,14 @@ if(BUILD_TESTING)
     test/test_concatenate_node_unit.cpp
   )
 
+  ament_add_gtest(test_pickup_based_voxel_grid_downsample_filter_node
+    test/test_pickup_based_voxel_grid_downsample_filter_node.cpp
+  )
+
   target_link_libraries(test_utilities pointcloud_preprocessor_filter)
   target_link_libraries(test_distortion_corrector_node pointcloud_preprocessor_filter)
   target_link_libraries(test_concatenate_node_unit pointcloud_preprocessor_filter)
+  target_link_libraries(test_pickup_based_voxel_grid_downsample_filter_node pointcloud_preprocessor_filter)
 
   add_ros_test(
     test/test_concatenate_node_component.py
