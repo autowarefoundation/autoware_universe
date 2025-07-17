@@ -288,6 +288,31 @@ public:
   [[nodiscard]] static std::vector<LanePoint> from_polygon(
     const lanelet::CompoundPolygon3d & polygon) noexcept;
 
+private:
+  /**
+   * @brief Convert any geometry type to the set of lane points.
+   *
+   * @tparam GeometryType The type of the geometry (e.g., LineString3d, CompoundPolygon3d).
+   * @param geometry Geometry instance.
+   * @param position Origin to check the distance from this.
+   * @param distance_threshold Distance threshold from the specified position.
+   * @return std::vector<LanePoint>
+   */
+  template <typename GeometryType>
+  [[nodiscard]] static std::vector<LanePoint> from_geometry(
+    const GeometryType & geometry, const geometry_msgs::msg::Point & position,
+    double distance_threshold) noexcept;
+
+  /**
+   * @brief Convert any geometry type to the set of lane points.
+   *
+   * @tparam GeometryType The type of the geometry (e.g., LineString3d, CompoundPolygon3d).
+   * @param geometry Geometry instance.
+   * @return std::vector<LanePoint>
+   */
+  template <typename GeometryType>
+  [[nodiscard]] static std::vector<LanePoint> from_geometry(const GeometryType & geometry) noexcept;
+
   lanelet::LaneletMapConstPtr lanelet_map_ptr_;  //!< Pointer of lanelet map.
   size_t max_num_polyline_;                      //!< The max number of polylines.
   size_t max_num_point_;                         //!< The max number of points.

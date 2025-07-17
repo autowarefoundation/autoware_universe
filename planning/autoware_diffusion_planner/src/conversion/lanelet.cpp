@@ -226,91 +226,75 @@ std::optional<PolylineData> LaneletConverter::convert(
                container, max_num_polyline_, max_num_point_, point_break_distance_);
 }
 
-std::vector<LanePoint> LaneletConverter::from_linestring(
-  const lanelet::ConstLineString3d & linestring) noexcept
+// Template function for converting any geometry type to lane points
+template <typename GeometryType>
+std::vector<LanePoint> LaneletConverter::from_geometry(
+  const GeometryType & geometry, const geometry_msgs::msg::Point & position,
+  double distance_threshold) noexcept
+{
+  if (geometry.size() == 0) {
+    return {};
+  }
+
+  std::vector<LanePoint> output;
+  for (auto itr = geometry.begin(); itr != geometry.end(); ++itr) {
+    if (auto distance =
+          std::hypot(itr->x() - position.x, itr->y() - position.y, itr->z() - position.z);
+        distance > distance_threshold) {
+      continue;
+    }
+    float dx{0.0f};
+    float dy{0.0f};
+    float dz{0.0f};
+    if (itr == geometry.begin()) {
+      dx = 0.0f;
+      dy = 0.0f;
+      dz = 0.0f;
+    } else {
+      dx = static_cast<float>(itr->x() - (itr - 1)->x());
+      dy = static_cast<float>(itr->y() - (itr - 1)->y());
+      dz = static_cast<float>(itr->z() - (itr - 1)->z());
+      normalize_direction(dx, dy, dz);
+    }
+    output.emplace_back(
+      itr->x(), itr->y(), itr->z(), dx, dy, dz, 0.0);  // TODO(danielsanchezaran): Label ID
+  }
+  return output;
+}
+
+template <typename GeometryType>
+std::vector<LanePoint> LaneletConverter::from_geometry(const GeometryType & geometry) noexcept
 {
   geometry_msgs::msg::Point position;
   position.x = 0.0;
   position.y = 0.0;
   position.z = 0.0;
-  return from_linestring(linestring, position, std::numeric_limits<double>::max());
+  return from_geometry(geometry, position, std::numeric_limits<double>::max());
+}
+
+std::vector<LanePoint> LaneletConverter::from_linestring(
+  const lanelet::ConstLineString3d & linestring) noexcept
+{
+  return from_geometry(linestring);
 }
 
 std::vector<LanePoint> LaneletConverter::from_linestring(
   const lanelet::ConstLineString3d & linestring, const geometry_msgs::msg::Point & position,
   double distance_threshold) noexcept
 {
-  if (linestring.size() == 0) {
-    return {};
-  }
-
-  std::vector<LanePoint> output;
-  for (auto itr = linestring.begin(); itr != linestring.end(); ++itr) {
-    if (auto distance =
-          std::hypot(itr->x() - position.x, itr->y() - position.y, itr->z() - position.z);
-        distance > distance_threshold) {
-      continue;
-    }
-    float dx{0.0f};
-    float dy{0.0f};
-    float dz{0.0f};
-    if (itr == linestring.begin()) {
-      dx = 0.0f;
-      dy = 0.0f;
-      dz = 0.0f;
-    } else {
-      dx = static_cast<float>(itr->x() - (itr - 1)->x());
-      dy = static_cast<float>(itr->y() - (itr - 1)->y());
-      dz = static_cast<float>(itr->z() - (itr - 1)->z());
-      normalize_direction(dx, dy, dz);
-    }
-    output.emplace_back(
-      itr->x(), itr->y(), itr->z(), dx, dy, dz, 0.0);  // TODO(danielsanchezaran): Label ID
-  }
-  return output;
+  return from_geometry(linestring, position, distance_threshold);
 }
 
 std::vector<LanePoint> LaneletConverter::from_polygon(
   const lanelet::CompoundPolygon3d & polygon) noexcept
 {
-  geometry_msgs::msg::Point position;
-  position.x = 0.0;
-  position.y = 0.0;
-  position.z = 0.0;
-  return from_polygon(polygon, position, std::numeric_limits<double>::max());
+  return from_geometry(polygon);
 }
 
 std::vector<LanePoint> LaneletConverter::from_polygon(
   const lanelet::CompoundPolygon3d & polygon, const geometry_msgs::msg::Point & position,
   double distance_threshold) noexcept
 {
-  if (polygon.size() == 0) {
-    return {};
-  }
-
-  std::vector<LanePoint> output;
-  for (auto itr = polygon.begin(); itr != polygon.end(); ++itr) {
-    if (auto distance =
-          std::hypot(itr->x() - position.x, itr->y() - position.y, itr->z() - position.z);
-        distance > distance_threshold) {
-      continue;
-    }
-    float dx{0.0f};
-    float dy{0.0f};
-    float dz{0.0f};
-    if (itr == polygon.begin()) {
-      dx = 0.0f;
-      dy = 0.0f;
-      dz = 0.0f;
-    } else {
-      dx = static_cast<float>(itr->x() - (itr - 1)->x());
-      dy = static_cast<float>(itr->y() - (itr - 1)->y());
-      dz = static_cast<float>(itr->z() - (itr - 1)->z());
-      normalize_direction(dx, dy, dz);
-    }
-    output.emplace_back(
-      itr->x(), itr->y(), itr->z(), dx, dy, dz, 0.0);  // TODO(danielsanchezaran): Label ID
-  }
-  return output;
+  return from_geometry(polygon, position, distance_threshold);
 }
 }  // namespace autoware::diffusion_planner
