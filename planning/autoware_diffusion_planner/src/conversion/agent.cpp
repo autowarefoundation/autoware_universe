@@ -39,7 +39,6 @@ AgentLabel get_model_label(const autoware_perception_msgs::msg::TrackedObject & 
     default:
       return AgentLabel::VEHICLE;
   }
-  return AgentLabel::VEHICLE;
 }
 
 AgentState::AgentState(TrackedObject & object)
@@ -188,8 +187,11 @@ void AgentHistory::pad_history(bool pad_front)
 [[nodiscard]] std::string AgentHistory::to_string() const
 {
   std::ostringstream oss;
-  oss << "AgentHistory(" << "object_id: " << object_id_ << ", " << "label_id: " << label_id_ << ", "
-      << "latest_time: " << latest_time_ << ", " << "max_size: " << max_size_ << ")";
+  oss << "AgentHistory("
+      << "object_id: " << object_id_ << ", "
+      << "label_id: " << label_id_ << ", "
+      << "latest_time: " << latest_time_ << ", "
+      << "max_size: " << max_size_ << ")";
   for (const auto & state : queue_) {
     oss << "\n  " << state.to_string();
   }
@@ -302,8 +304,11 @@ void AgentData::trim_to_k_closest_agents(const geometry_msgs::msg::Point & posit
 [[nodiscard]] std::string AgentData::to_string() const
 {
   std::ostringstream oss;
-  oss << "AgentData(" << "num_agent: " << num_agent_ << ", " << "time_length: " << time_length_
-      << ", " << "state_dim: " << state_dim() << ", " << "data_size: " << data_.size() << ")";
+  oss << "AgentData("
+      << "num_agent: " << num_agent_ << ", "
+      << "time_length: " << time_length_ << ", "
+      << "state_dim: " << state_dim() << ", "
+      << "data_size: " << data_.size() << ")";
   for (const auto & history : histories_) {
     oss << "\n  " << history.to_string();
   }
