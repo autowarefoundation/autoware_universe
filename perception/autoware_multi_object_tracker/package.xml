@@ -24,6 +24,7 @@
   <depend>nav_msgs</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
+  <depend>rosbag2_cpp</depend>
   <depend>tf2</depend>
   <depend>tf2_ros</depend>
   <depend>unique_identifier_msgs</depend>
