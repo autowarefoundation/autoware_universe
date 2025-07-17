@@ -107,6 +107,61 @@ Up to 12 detection inputs can be configured (detection01 through detection12). E
 
 See the [model explanations](models.md).
 
+## Performance Benchmark & Unit Testing
+
+### Overview
+
+Unit tests and benchmarks are included to evaluate tracker performance under varying detection loads and object types.
+
+### How to Run Locally
+
+#### 1. Build with Tests
+
+```bash
+colcon build --packages-select autoware_multi_object_tracker \
+  --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo
+```
+
+#### 2. Run the Performance Benchmark
+
+```bash
+source install/setup.bash
+./build/autoware_multi_object_tracker/test_multi_object_tracker
+```
+
+This runs the default test (`runPerformanceTest`) and outputs timing data.
+
+#### 3. Enable Optional Profiling Modes (Manual)
+
+To evaluate scalability with object count:
+
+- Manually enable the following functions in the test source:
+  - `profilePerformanceVsCarCount()`
+  - `profilePerformanceVsPedestrianCount()`
+
+These run additional profiling scenarios.
+
+### Rosbag Replay & Visualization
+
+#### Simulated Rosbag Output
+
+To record benchmark results for visualization in RViz:
+
+1. Enable `write_bag = true` in `runIterations()`
+2. Run the test; the output `.db3` path is printed
+3. Visualize:
+
+```bash
+ros2 bag play <output_file>.db3
+rviz2 -d <your_rviz_config>.rviz
+```
+
+#### Real Rosbag Input
+
+1. Set the path in `runPerformanceTestWithRosbag()` to a real `.db3` file
+2. Run the test
+3. Visualize the tracking result in RViz
+
 ## (Optional) Error detection and handling
 
 <!-- Write how to detect errors and how to recover from them.
@@ -119,7 +174,7 @@ Example:
 
 ### Evaluation of muSSP
 
-According to our evaluation, muSSP is faster than normal [SSP](src/data_association/successive_shortest_path) when the matrix size is more than 100.
+According to our evaluation, muSSP is faster than normal [SSP](lib/association/successive_shortest_path) when the matrix size is more than 100.
 
 Execution time for varying matrix size at 95% sparsity. In real data, the sparsity was often around 95%.
 ![mussp_evaluation1](image/mussp_evaluation1.png)
@@ -131,9 +186,9 @@ Execution time for varying the sparsity with matrix size 100.
 
 This package makes use of external code.
 
-| Name                                                      | License                                                   | Original Repository                  |
-| --------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------ |
-| [muSSP](src/data_association/mu_successive_shortest_path) | [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) | <https://github.com/yu-lab-vt/muSSP> |
+| Name                                                 | License                                                   | Original Repository                  |
+| ---------------------------------------------------- | --------------------------------------------------------- | ------------------------------------ |
+| [muSSP](lib/association/mu_successive_shortest_path) | [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) | <https://github.com/yu-lab-vt/muSSP> |
 
 [1] C. Wang, Y. Wang, Y. Wang, C.-t. Wu, and G. Yu, "muSSP: Efficient
 Min-cost Flow Algorithm for Multi-object Tracking," NeurIPS, 2019
