@@ -8,6 +8,40 @@ The `autoware_simpl` is used for 3D object motion prediction based on ML-based m
 
 The implementation bases on SIMPL [1] [2] work. It uses TensorRT library for data process and network interface.
 
+Workflow overview of this node is as follows:
+
+```mermaid
+flowchart TD
+    In1@{ shape: card, label: "~/input/objects" } -- autoware_perception_msgs::msg::TrackedObjects --> Callback1@{ shape: rect, label: "SimplNode::callback(...)" }
+    Callback1 --> B@{ shape: stadium, label: "Start measuring Processing Time" }
+
+    In2@{ shape: card, label: "/localization/kinematic_state" } -- nav_msgs::msg::Odometry --> C
+    B --> C@{ shape: subproc, label: "SimplNode::subscribe_ego(...)" }
+
+    In3@{ shape: card, label: "~/input/vector_map" } -- "autoware_map_msgs::msg::LaneletMapBin" --> Callback2@{ shape: rect, label: "SimplNode::on_map(...)" }
+    Callback2 --> X@{ shape: subproc, label: "LaneletConverter::convert(...)" }
+
+    C -->|✅| D@{ shape: subproc, label: "LaneletConverter::polylines()" }
+    C -->|❌| Z1@{ shape: curv-trap, label: "⚠️WARNING: Failed to subscribe ego" } --> END@{ shape: stadium }
+
+    D -->|✅| E@{ shape: subproc, label: "SimplNode::update_history(...)" }
+    D -->|❌| Z2@{ shape: curv-trap, label: "⚠️WARNING: No map points" } --> END
+
+    E --> F@{ shape: subproc, label: "PreProcessor::process(...)" }
+    F --> G@{ shape: subproc, label: "TrtSimpl::do_inference(...)" }
+
+    G -->|✅| I@{ shape: subproc, label: "PostProcessor::process(...)" } --> J@{ shape: stadium, label: "Publish Predicted Objects" }
+    G -->|❌| Z3@{ shape: curv-trap, label: "⚠️ERROR: Inference failed" } --> H
+
+    J -- autoware_perception_msgs::msg::PredictedObjects --> Out1@{ shape: card, label: "~/output/objects" }
+    J --> H@{ shape: stadium, label: "Publish Processing & Cyclic Time" }
+
+    H -- autoware_internal_debug_msgs::msg::Float64Stamped --> Out3@{ shape: card, label: "~/debug/cyclic_time_ms" }
+    H -- autoware_internal_debug_msgs::msg::Float64Stamped --> Out2@{ shape: card, label: "~/debug/processing_time_ms" }
+
+    H --> END
+```
+
 ### Inputs Representation
 
 - $X_A\in R^{N\times D_{agent}\times T_{past}}$: Agent histories input.
@@ -35,6 +69,13 @@ The implementation bases on SIMPL [1] [2] work. It uses TensorRT library for dat
 | Name               | Type                                              | Description               |
 | ------------------ | ------------------------------------------------- | ------------------------- |
 | `~/output/objects` | `autoware_perception_msgs::msg::PredictedObjects` | Predicted agents' motion. |
+
+### Debug Outputs
+
+| Name                         | Type                                                | Description           |
+| ---------------------------- | --------------------------------------------------- | --------------------- |
+| `~/debug/cyclic_time_ms`     | `autoware_internal_debug_msgs::msg::Float64Stamped` | Cyclic time [ms].     |
+| `~/debug/processing_time_ms` | `autoware_internal_debug_msgs::msg::Float64Stamped` | Processing time [ms]. |
 
 ## Parameters
 
@@ -96,6 +137,13 @@ Note that the following parameters are also determined when exporting ONNX:
 ### Agent History Lifetime
 
 Under the hood, `SimplNode` stores and accumulates agent history in every callback, but removes the history that is not observed in callbacks.
+
+### Reliability of Predicted Paths
+
+Predicted paths with a confidence score lower than `postprocess.score_threshold` are filtered out and not published.
+**If all predicted modes for an object are filtered out, the published object will contain no path**.
+
+Note that the total confidence of the remaining predicted paths is **not guaranteed to sum to 100%** after this filtering process.
 
 ## References / External Links
 

@@ -102,7 +102,7 @@ struct MapMetadata : public AbstractMetadata
 class PreProcessor
 {
 public:
-  using RpeTensor = std::vector<float>;
+  using RpeTensor = std::vector<float>;  //!< Relative pose encoding tensor
   using output_type = std::tuple<AgentMetadata, MapMetadata, RpeTensor>;
 
   /**
@@ -156,7 +156,7 @@ private:
     const archetype::AgentState & current_ego) const;
 
   /**
-   * @brief Execute preprocessing for RPE tensor (N+K*N+K*D).
+   * @brief Execute preprocessing for RPE (Relative Pose Encoding) tensor (N+K*N+K*D).
    *
    * @param agent_metadata Processed agent data containing metadata.
    * @param current_ego Processed map data containing its metadata.

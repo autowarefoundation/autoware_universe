@@ -50,7 +50,7 @@ public:
    *
    * @param agent_tensor Agent tensor.
    * @param map_tensor Map tensor.
-   * @param rpe_tensor RPE tensor.
+   * @param rpe_tensor RPE (Relative Pose Encoding) tensor.
    * @return archetype::Result<output_type>
    */
   archetype::Result<output_type> do_inference(

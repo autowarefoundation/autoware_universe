@@ -118,6 +118,8 @@ PostProcessor::output_type PostProcessor::process(
 {
   constexpr size_t num_attribute = 4;
 
+  // NOTE: Predicted paths with confidence lower than threshold are filtered out.
+  // If all modes are filtered out, the object containing no path is published.
   std::vector<PredictedObject> predicted_objects;
   for (size_t n = 0; n < agent_ids.size(); ++n) {
     const auto & tracked_object = tracked_object_map.at(agent_ids.at(n));
