@@ -86,8 +86,8 @@ TEST_F(PickupBasedVoxelGridDownsampleFilterTest, TestPointCloudPublishing)
   // Create point cloud with x, y, z fields
   sensor_msgs::PointCloud2Modifier modifier(cloud);
   modifier.setPointCloud2Fields(
-    3, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1,
-    sensor_msgs::msg::PointField::FLOAT32, "z", 1, sensor_msgs::msg::PointField::FLOAT32);
+    3, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1, sensor_msgs::msg::PointField::FLOAT32,
+    "z", 1, sensor_msgs::msg::PointField::FLOAT32);
 
   // Add test points
   modifier.resize(1);  // 3x1 grid of points
@@ -130,8 +130,7 @@ TEST_F(PickupBasedVoxelGridDownsampleFilterTest, TestEmptyPointCloudPublishing)
   // Create point cloud with x, y, z fields but no data
   sensor_msgs::PointCloud2Modifier modifier(empty_cloud);
   modifier.setPointCloud2Fields(
-    3, "x", 1, sensor_msgs::msg::PointField::FLOAT32,
-    "y", 1, sensor_msgs::msg::PointField::FLOAT32,
+    3, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1, sensor_msgs::msg::PointField::FLOAT32,
     "z", 1, sensor_msgs::msg::PointField::FLOAT32);
 
   // Don't add any points - keep it empty
@@ -147,8 +146,7 @@ TEST_F(PickupBasedVoxelGridDownsampleFilterTest, TestEmptyPointCloudPublishing)
   auto start_time = std::chrono::steady_clock::now();
   auto timeout = std::chrono::seconds(5);
 
-  while (!received_output_ &&
-         (std::chrono::steady_clock::now() - start_time) < timeout) {
+  while (!received_output_ && (std::chrono::steady_clock::now() - start_time) < timeout) {
     rclcpp::spin_some(filter_node_);
     rclcpp::spin_some(test_node_);
     rclcpp::sleep_for(std::chrono::milliseconds(10));
