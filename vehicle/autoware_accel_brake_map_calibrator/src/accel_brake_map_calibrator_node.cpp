@@ -47,10 +47,10 @@ AccelBrakeMapCalibrator::AccelBrakeMapCalibrator(const rclcpp::NodeOptions & nod
   max_accel_ = declare_parameter<double>("max_accel");
   min_accel_ = declare_parameter<double>("min_accel");
   pedal_to_accel_delay_ = declare_parameter<double>("pedal_to_accel_delay");
-  max_data_count_ = static_cast<int>(declare_parameter("max_data_count"));
+  max_data_count_ = declare_parameter<int>("max_data_count");
   pedal_accel_graph_output_ = declare_parameter<bool>("pedal_accel_graph_output", false);
   progress_file_output_ = declare_parameter<bool>("progress_file_output", false);
-  precision_ = static_cast<int>(declare_parameter("precision"));
+  precision_ = declare_parameter<int>("precision");
   const auto get_pitch_method_str = declare_parameter("get_pitch_method", std::string("tf"));
   if (get_pitch_method_str == std::string("tf")) {
     get_pitch_method_ = GET_PITCH_METHOD::TF;
