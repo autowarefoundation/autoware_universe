@@ -238,7 +238,7 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
   }
 
   if (!is_autonomous_mode()) {
-    RCLCPP_WARN_THROTTLE(logger_, *clock_ptr_, throttle_duration_ms, "Not in autonomous mode.");
+    RCLCPP_DEBUG_THROTTLE(logger_, *clock_ptr_, throttle_duration_ms, "Not in autonomous mode.");
     return {};
   }
 
