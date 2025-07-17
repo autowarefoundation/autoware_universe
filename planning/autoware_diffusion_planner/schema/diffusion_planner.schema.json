@@ -1,0 +1,106 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Diffusion Planner Node",
+  "type": "object",
+  "definitions": {
+    "diffusion_planner_node": {
+      "type": "object",
+      "properties": {
+        "plugins_path": {
+          "type": "string",
+          "default": "$(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so",
+          "description": "Path to libautoware_tensorrt_plugins.so file for the diffusion planner"
+        },
+        "artifact_dir": {
+          "type": "string",
+          "default": "$(env HOME)/autoware_data/diffusion_planner",
+          "description": "Path to the Artifact(onnx model, etc.) directory"
+        },
+        "onnx_model_path": {
+          "type": "string",
+          "default": "$(var artifact_dir)/diffusion_planner.onnx",
+          "description": "Path to the ONNX model file for the diffusion planner"
+        },
+        "args_path": {
+          "type": "string",
+          "default": "$(var artifact_dir)/diffusion_planner.param.json",
+          "description": "Path to model argument/configuration file"
+        },
+        "planning_frequency_hz": {
+          "type": "number",
+          "default": 10.0,
+          "exclusiveMinimum": 0,
+          "description": "Planning frequency in Hz"
+        },
+        "ignore_neighbors": {
+          "type": "boolean",
+          "default": false,
+          "description": "Ignore neighbor agents"
+        },
+        "ignore_unknown_neighbors": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ignore neighbor agents with unknown class"
+        },
+        "predict_neighbor_trajectory": {
+          "type": "boolean",
+          "default": true,
+          "description": "Predict trajectories for neighbor agents"
+        },
+        "update_traffic_light_group_info": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable updating of traffic light group info"
+        },
+        "traffic_light_group_msg_timeout_seconds": {
+          "type": "number",
+          "default": 0.2,
+          "exclusiveMinimum": 0,
+          "description": "Timeout for traffic light group messages (seconds)"
+        },
+        "build_only": {
+          "type": "boolean",
+          "default": false,
+          "description": "On build only, do not run the planner"
+        },
+        "debug_params": {
+          "type": "object",
+          "properties": {
+            "publish_debug_map": {
+              "type": "boolean",
+              "default": false,
+              "description": "Publish debug map markers"
+            },
+            "publish_debug_route": {
+              "type": "boolean",
+              "default": false,
+              "description": "Publish debug route markers"
+            }
+          },
+          "required": ["publish_debug_map", "publish_debug_route"]
+        }
+      },
+      "required": [
+        "onnx_model_path",
+        "args_path",
+        "planning_frequency_hz",
+        "predict_neighbor_trajectory",
+        "update_traffic_light_group_info",
+        "traffic_light_group_msg_timeout_seconds",
+        "debug_params"
+      ]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/diffusion_planner_node"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}
