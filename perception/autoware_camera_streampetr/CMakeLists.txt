@@ -121,6 +121,11 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     ${CUDA_INCLUDE_DIRS}
   )
 
+  target_include_directories(${PROJECT_NAME}_cuda_lib
+    SYSTEM PUBLIC
+    ${autoware_cuda_utils_INCLUDE_DIRS}
+  )
+  
   ament_auto_add_library(${PROJECT_NAME}_component SHARED
     src/node.cpp
   )
