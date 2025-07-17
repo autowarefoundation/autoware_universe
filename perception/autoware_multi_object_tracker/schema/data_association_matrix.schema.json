@@ -59,9 +59,9 @@
             0.0, 0.0, 0.0, 0.0, 0.1, 0.1, 0.1, 0.001, 0.0, 0.0, 0.0, 0.0, 0.1, 0.1, 0.1
           ]
         },
-        "min_giou_matrix": {
+        "min_iou_matrix": {
           "type": "array",
-          "description": "A matrix that represents the minimum Generalized Intersection over Union (GIoU) limit allowed for assignment.",
+          "description": "A matrix that represents the minimum Intersection over Union (IoU) limit allowed for assignment.",
           "items": {
             "type": "number"
           },
@@ -85,7 +85,7 @@
         "max_dist_matrix",
         "max_area_matrix",
         "min_area_matrix",
-        "min_giou_matrix"
+        "min_iou_matrix"
       ]
     }
   },

@@ -39,7 +39,7 @@ using autoware_utils_debug::ScopedTimeTrack;
 using Label = autoware_perception_msgs::msg::ObjectClassification;
 
 DataAssociation::DataAssociation(const AssociatorConfig & config)
-: config_(config), score_threshold_(0.0)
+: config_(config), score_threshold_(-0.5)
 {
   // Initialize the GNN solver
   gnn_solver_ptr_ = std::make_unique<gnn_solver::MuSSP>();
@@ -300,19 +300,19 @@ double DataAssociation::calculateScore(
     if (mahalanobis_dist >= mahalanobis_dist_threshold) return INVALID_SCORE;
   }
 
-  const double min_giou = config_.min_giou_matrix(tracker_label, measurement_label);
+  const double min_iou = config_.min_iou_matrix(tracker_label, measurement_label);
+
+  // use 1d iou for pedestrain and unknown objects, 3d giou for other objects
   const bool use_1d_iou = (tracker_label == Label::PEDESTRIAN) || (tracker_label == Label::UNKNOWN);
-  double giou = use_1d_iou ? shapes::get1dIoU(measurement_object, tracked_object)
-                           : shapes::get3dGeneralizedIoU(measurement_object, tracked_object);
-  // return giou value over threshold as similarity score
-  // for pedestrian use simplified 1d iou
-  if (giou < min_giou) return INVALID_SCORE;
+  double use_1d_iou ? shapes::get1dIoU(measurement_object, tracked_object)
+                    : shapes::get3dGeneralizedIoU(measurement_object, tracked_object);
+  if (iou_score < min_iou) return INVALID_SCORE;
 
   // check if shape changes too much for vehicle labels
   constexpr double CheckGiouThreshold = 0.7;
   constexpr double AreaRatioThreshold = 1.3;
 
-  if (giou < CheckGiouThreshold && is_vehicle_tracker) {
+  if (iou_score < CheckGiouThreshold && is_vehicle_tracker) {
     // BEV‑area ratio
     const double area_trk = tracked_object.area;
     const double area_ratio = std::max(area_trk, area_meas) / std::min(area_trk, area_meas);
@@ -322,7 +322,7 @@ double DataAssociation::calculateScore(
     }
   }
 
-  return giou;
+  return iou_score;
 }
 
 bool DataAssociation::hasSignificantShapeChange(size_t tracker_idx, size_t measurement_idx) const
