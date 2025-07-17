@@ -23,6 +23,7 @@ if(BUILD_TESTING)
     test/test_cuda_unique_ptr.cu
     test/test_cuda_utils.cu
     test/test_stream_unique_ptr.cu
+    test/test_thrust_utils.cu
     test/test_main.cpp
   )
 
