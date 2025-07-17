@@ -9,8 +9,11 @@
 
   <license>Apache License 2.0</license>
 
+  <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
+  <buildtool_depend>generate_parameter_library</buildtool_depend>
+
   <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_motion_velocity_planner_common</depend>
@@ -19,6 +22,7 @@
   <depend>autoware_route_handler</depend>
   <depend>autoware_universe_utils</depend>
   <depend>autoware_vehicle_info_utils</depend>
+  <depend>generate_parameter_library</depend>
   <depend>geometry_msgs</depend>
   <depend>libboost-dev</depend>
   <depend>pluginlib</depend>

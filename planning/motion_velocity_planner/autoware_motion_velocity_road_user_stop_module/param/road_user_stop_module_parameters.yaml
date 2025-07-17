@@ -1,0 +1,246 @@
+road_user_stop:
+  # Option parameters
+  option:
+    suppress_sudden_stop:
+      type: bool
+      default_value: true
+      description: Enable to suppress sudden stop
+
+  # Stop planning parameters
+  stop_planning:
+    stop_margin:
+      type: double
+      default_value: 6.0
+      description: Stop margin distance from obstacle [m]
+      validation:
+        gt_eq<>: [0.0]
+
+    terminal_stop_margin:
+      type: double
+      default_value: 3.0
+      description: Stop margin at goal position [m]
+      validation:
+        gt_eq<>: [0.0]
+
+    min_behavior_stop_margin:
+      type: double
+      default_value: 3.0
+      description: Minimum stop margin for behavior decision [m]
+      validation:
+        gt_eq<>: [0.0]
+
+    max_negative_velocity:
+      type: double
+      default_value: -0.5
+      description: Maximum negative velocity for objects moving away [m/s]
+      validation:
+        lt_eq<>: [0.0]
+
+    stop_margin_opposing_traffic:
+      type: double
+      default_value: 3.0
+      description: Stop margin for opposing traffic [m]
+      validation:
+        gt_eq<>: [0.0]
+
+    effective_deceleration_opposing_traffic:
+      type: double
+      default_value: 4.0
+      description: Effective deceleration for opposing traffic calculation [m/s^2]
+      validation:
+        gt<>: [0.0]
+
+    min_on_duration:
+      type: double
+      default_value: 0.3
+      description: Minimum duration to keep stop decision active [s]
+      validation:
+        gt_eq<>: [0.0]
+
+    min_off_duration:
+      type: double
+      default_value: 1.0
+      description: Minimum duration to keep stop decision inactive [s]
+      validation:
+        gt_eq<>: [0.0]
+
+    update_distance_th:
+      type: double
+      default_value: 0.5
+      description: Distance threshold to update stop position [m]
+      validation:
+        gt<>: [0.0]
+
+    hold_stop_velocity_threshold:
+      type: double
+      default_value: 0.01
+      description: Velocity threshold to hold stop position [m/s]
+      validation:
+        gt_eq<>: [0.0]
+
+    hold_stop_distance_threshold:
+      type: double
+      default_value: 0.3
+      description: Distance threshold to hold stop position [m]
+      validation:
+        gt_eq<>: [0.0]
+
+    # Stop on curve parameters
+    stop_on_curve:
+      enable_approaching:
+        type: bool
+        default_value: false
+        description: Enable approaching behavior on curved paths
+
+      additional_stop_margin:
+        type: double
+        default_value: 0.5
+        description: Additional stop margin for obstacles on curves [m]
+        validation:
+          gt_eq<>: [0.0]
+
+      min_stop_margin:
+        type: double
+        default_value: 1.0
+        description: Minimum stop margin on curves [m]
+        validation:
+          gt<>: [0.0]
+
+    # Common parameters for all object types
+    limit_min_acc:
+      type: double
+      default_value: -2.5
+      description: Minimum acceleration limit [m/s^2]
+      validation:
+        lt<>: [0.0]
+
+    sudden_object_acc_threshold:
+      type: double
+      default_value: -1.0
+      description: Acceleration threshold to detect sudden appearing objects [m/s^2]
+      validation:
+        lt<>: [0.0]
+
+    sudden_object_dist_threshold:
+      type: double
+      default_value: 1000.0
+      description: Distance threshold for sudden object detection [m]
+      validation:
+        gt<>: [0.0]
+
+    abandon_to_stop:
+      type: bool
+      default_value: false
+      description: Enable to abandon stopping when cannot achieve required deceleration
+
+    obstacle_velocity_threshold_enter_fixed_stop:
+      type: double
+      default_value: 3.0
+      description: Obstacle velocity threshold to use current position for stop point decision [m/s]
+      validation:
+        gt_eq<>: [0.0]
+
+    obstacle_velocity_threshold_exit_fixed_stop:
+      type: double
+      default_value: 3.5
+      description: Obstacle velocity threshold to use braking distance for stop point decision [m/s]
+      validation:
+        gt_eq<>: [0.0]
+
+  # Obstacle filtering parameters
+  obstacle_filtering:
+    object_type:
+      target_types:
+        pedestrian:
+          type: bool
+          default_value: true
+          description: Enable detection of pedestrians
+
+        bicycle:
+          type: bool
+          default_value: true
+          description: Enable detection of bicycles
+
+        motorcycle:
+          type: bool
+          default_value: true
+          description: Enable detection of motorcycles
+
+        unknown:
+          type: bool
+          default_value: true
+          description: Enable detection of unknown objects
+
+    adjacent_lane_margin:
+      type: double
+      default_value: 3.0
+      description: Margin to check adjacent lanes [m]
+      validation:
+        gt_eq<>: [0.0]
+
+    exclude_crosswalk_users:
+      type: bool
+      default_value: true
+      description: Exclude objects near crosswalks
+
+    crosswalk_margin:
+      type: double
+      default_value: 1.0
+      description: Margin distance from crosswalk [m]
+      validation:
+        gt_eq<>: [0.0]
+
+    exclude_sidewalk_users:
+      type: bool
+      default_value: true
+      description: Exclude objects on sidewalks
+
+    wrong_way_detection:
+      enable:
+        type: bool
+        default_value: true
+        description: Enable wrong-way object detection
+
+      angle_threshold:
+        type: double
+        default_value: 150.0
+        description: Angle threshold for wrong-way detection [deg]
+        validation:
+          bounds<>: [0.0, 180.0]
+
+      min_speed_threshold:
+        type: double
+        default_value: 0.5
+        description: Minimum speed for wrong-way detection [m/s]
+        validation:
+          gt_eq<>: [0.0]
+
+    min_detection_duration:
+      type: double
+      default_value: 0.1
+      description: Minimum duration for object detection [s]
+      validation:
+        gt_eq<>: [0.0]
+
+    tracked_object_cleanup_threshold:
+      type: double
+      default_value: 2.0
+      description: Time threshold to remove tracked objects that haven't been detected [s]
+      validation:
+        gt<>: [0.0]
+
+  # Common parameters (from common_param.yaml)
+  common_param:
+    limit_max_accel:
+      type: double
+      default_value: 1.0
+      description: Maximum acceleration limit [m/s^2]
+      validation:
+        gt<>: [0.0]
+
+    limit_min_accel:
+      type: double
+      default_value: -2.5
+      description: Minimum acceleration limit [m/s^2]
+      validation:
+        lt<>: [0.0]

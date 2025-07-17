@@ -81,7 +81,9 @@ void RoadUserStopModule::init(rclcpp::Node & node, const std::string & module_na
   logger_ = node.get_logger().get_child(module_name);
   clock_ = node.get_clock();
 
-  params_ = RoadUserStopParameters(node, "road_user_stop");
+  // Initialize parameter listener
+  param_listener_ =
+    std::make_shared<road_user_stop::ParamListener>(node.get_node_parameters_interface());
 
   sub_path_with_lane_id_ =
     node.create_subscription<autoware_internal_planning_msgs::msg::PathWithLaneId>(
@@ -109,11 +111,13 @@ void RoadUserStopModule::updateTrackedObjects(
   const std::vector<std::shared_ptr<PlannerData::Object>> & objects,
   const rclcpp::Time & current_time)
 {
+  const auto param = param_listener_->get_params();
+
   // Clean up old tracked objects that haven't been seen for a while
-  // TODO(odashima): parametrize the cleanup threshold
-  const double cleanup_threshold = 2.0;  // seconds
   for (auto it = tracked_objects_.begin(); it != tracked_objects_.end();) {
-    if ((current_time - it->second.last_detected_time).seconds() > cleanup_threshold) {
+    if (
+      (current_time - it->second.last_detected_time).seconds() >
+      param.obstacle_filtering.tracked_object_cleanup_threshold) {
       it = tracked_objects_.erase(it);
     } else {
       ++it;
@@ -147,13 +151,14 @@ void RoadUserStopModule::updateTrackedObjects(
 bool RoadUserStopModule::hasMinimumDetectionDuration(
   const std::string & object_id, const rclcpp::Time & current_time) const
 {
+  const auto param = param_listener_->get_params();
   auto it = tracked_objects_.find(object_id);
   if (it == tracked_objects_.end()) {
     return false;
   }
 
   const double detection_duration = (current_time - it->second.first_detected_time).seconds();
-  return detection_duration >= params_.obstacle_filtering.min_detection_duration;
+  return detection_duration >= param.obstacle_filtering.min_detection_duration;
 }
 
 std::vector<StopObstacle> RoadUserStopModule::filterStopObstacles(
@@ -177,62 +182,17 @@ std::vector<StopObstacle> RoadUserStopModule::filterStopObstacles(
     }
   }
 
+  prev_stop_obstacles_ = stop_obstacles;
+
   return stop_obstacles;
 }
 
-void RoadUserStopModule::update_parameters(const std::vector<rclcpp::Parameter> & parameters)
+void RoadUserStopModule::update_parameters(const std::vector<rclcpp::Parameter> & /*parameters*/)
 {
-  using autoware_utils_rclcpp::update_param;
-
-  // Option parameters
-  update_param(
-    parameters, "road_user_stop.option.suppress_sudden_stop", params_.option.suppress_sudden_stop);
-
-  // Stop planning parameters
-  update_param(
-    parameters, "road_user_stop.stop_planning.stop_margin", params_.stop_planning.stop_margin);
-  update_param(
-    parameters, "road_user_stop.stop_planning.terminal_stop_margin",
-    params_.stop_planning.terminal_stop_margin);
-  update_param(
-    parameters, "road_user_stop.stop_planning.min_behavior_stop_margin",
-    params_.stop_planning.min_behavior_stop_margin);
-
-  update_param(
-    parameters, "road_user_stop.stop_planning.hold_stop_velocity_threshold",
-    params_.stop_planning.hold_stop_velocity_threshold);
-  update_param(
-    parameters, "road_user_stop.stop_planning.hold_stop_distance_threshold",
-    params_.stop_planning.hold_stop_distance_threshold);
-
-  // Stop on curve parameters
-  update_param(
-    parameters, "road_user_stop.stop_planning.stop_on_curve.enable_approaching",
-    params_.stop_planning.stop_on_curve.enable_approaching);
-  update_param(
-    parameters, "road_user_stop.stop_planning.stop_on_curve.additional_stop_margin",
-    params_.stop_planning.stop_on_curve.additional_stop_margin);
-  update_param(
-    parameters, "road_user_stop.stop_planning.stop_on_curve.min_stop_margin",
-    params_.stop_planning.stop_on_curve.min_stop_margin);
-
-  // Common parameters for all object types
-  update_param(
-    parameters, "road_user_stop.stop_planning.limit_min_acc", params_.stop_planning.limit_min_acc);
-  update_param(
-    parameters, "road_user_stop.stop_planning.sudden_object_acc_threshold",
-    params_.stop_planning.sudden_object_acc_threshold);
-  update_param(
-    parameters, "road_user_stop.stop_planning.sudden_object_dist_threshold",
-    params_.stop_planning.sudden_object_dist_threshold);
-  update_param(
-    parameters, "road_user_stop.stop_planning.abandon_to_stop",
-    params_.stop_planning.abandon_to_stop);
-
-  // Obstacle filtering parameters
-  update_param(
-    parameters, "road_user_stop.obstacle_filtering.adjacent_lane_margin",
-    params_.obstacle_filtering.adjacent_lane_margin);
+  // Parameter updates are handled automatically by the parameter listener
+  if (param_listener_) {
+    param_listener_->refresh_dynamic_parameters();
+  }
 }
 
 void RoadUserStopModule::publish_planning_factor()
@@ -272,17 +232,18 @@ VelocityPlanningResult RoadUserStopModule::plan(
 
   // 1. Prepare trajectory data for collision checking
   // 1.1 Decimate trajectory points to reduce computational cost
+  const auto param = param_listener_->get_params();
   const auto decimated_traj_points = utils::decimate_trajectory_points_from_ego(
     trajectory_points, planner_data->current_odometry.pose.pose,
     planner_data->ego_nearest_dist_threshold, planner_data->ego_nearest_yaw_threshold,
     planner_data->trajectory_polygon_collision_check.decimate_trajectory_step_length,
-    params_.stop_planning.stop_margin);
+    param.stop_planning.stop_margin);
 
   // 1.2 Create trajectory polygons for collision detection
   const auto & p = planner_data->trajectory_polygon_collision_check;
   const auto decimated_traj_polygons = getTrajectoryPolygons(
     decimated_traj_points, planner_data->vehicle_info_, planner_data->current_odometry.pose.pose,
-    params_.obstacle_filtering.adjacent_lane_margin, p.enable_to_consider_current_pose,
+    param.obstacle_filtering.adjacent_lane_margin, p.enable_to_consider_current_pose,
     p.time_to_convergence, p.decimate_trajectory_step_length);
   debug_data_.trajectory_polygons = decimated_traj_polygons;
 
@@ -313,15 +274,16 @@ VelocityPlanningResult RoadUserStopModule::plan(
 
 bool RoadUserStopModule::isTargetObject(const uint8_t label) const
 {
+  const auto param = param_listener_->get_params();
   switch (label) {
     case ObjectClassification::PEDESTRIAN:
-      return params_.obstacle_filtering.object_type.target_types.pedestrian;
+      return param.obstacle_filtering.object_type.target_types.pedestrian;
     case ObjectClassification::BICYCLE:
-      return params_.obstacle_filtering.object_type.target_types.bicycle;
+      return param.obstacle_filtering.object_type.target_types.bicycle;
     case ObjectClassification::MOTORCYCLE:
-      return params_.obstacle_filtering.object_type.target_types.motorcycle;
+      return param.obstacle_filtering.object_type.target_types.motorcycle;
     case ObjectClassification::UNKNOWN:
-      return params_.obstacle_filtering.object_type.target_types.unknown;
+      return param.obstacle_filtering.object_type.target_types.unknown;
     default:
       return false;
   }
@@ -351,16 +313,17 @@ bool RoadUserStopModule::isObjectOnRoad(
 bool RoadUserStopModule::isNearCrosswalk(
   const geometry_msgs::msg::Point & position, const lanelet::LaneletMapPtr & lanelet_map) const
 {
+  const auto param = param_listener_->get_params();
   const lanelet::Point3d search_point(position.x, position.y, position.z);
 
   // search for crosswalk lanelets
   const auto crosswalk_lanelets = lanelet_map->laneletLayer.search(lanelet::BoundingBox2d(
     lanelet::Point2d(
-      position.x - params_.obstacle_filtering.crosswalk_margin,
-      position.y - params_.obstacle_filtering.crosswalk_margin),
+      position.x - param.obstacle_filtering.crosswalk_margin,
+      position.y - param.obstacle_filtering.crosswalk_margin),
     lanelet::Point2d(
-      position.x + params_.obstacle_filtering.crosswalk_margin,
-      position.y + params_.obstacle_filtering.crosswalk_margin)));
+      position.x + param.obstacle_filtering.crosswalk_margin,
+      position.y + param.obstacle_filtering.crosswalk_margin)));
 
   for (const auto & lanelet : crosswalk_lanelets) {
     if (
@@ -402,7 +365,8 @@ bool RoadUserStopModule::isWrongWayUser(
   const double object_speed = std::hypot(twist.linear.x, twist.linear.y);
 
   // skip if object is stopped or moving too slowly
-  if (object_speed < params_.obstacle_filtering.wrong_way_detection.min_speed_threshold) {
+  const auto param = param_listener_->get_params();
+  if (object_speed < param.obstacle_filtering.wrong_way_detection.min_speed_threshold) {
     return false;
   }
 
@@ -440,7 +404,7 @@ bool RoadUserStopModule::isWrongWayUser(
     std::abs(autoware::universe_utils::normalizeRadian(object_yaw - lanelet_yaw)) * 180.0 / M_PI;
 
   const bool is_wrong_way_user =
-    angle_diff > params_.obstacle_filtering.wrong_way_detection.angle_threshold;
+    angle_diff > param.obstacle_filtering.wrong_way_detection.angle_threshold;
 
   return is_wrong_way_user;
 }
@@ -728,8 +692,9 @@ std::optional<StopObstacle> RoadUserStopModule::pickStopObstacleFromPredictedObj
   }
 
   // check if wrong-way user
+  const auto param = param_listener_->get_params();
   const bool is_wrong_way = [&]() {
-    if (params_.obstacle_filtering.wrong_way_detection.enable) {
+    if (param.obstacle_filtering.wrong_way_detection.enable) {
       for (const auto & lanelet : lanelets_for_wrongway_user) {
         if (isWrongWayUser(predicted_object, lanelet)) {
           return true;
@@ -747,7 +712,7 @@ std::optional<StopObstacle> RoadUserStopModule::pickStopObstacleFromPredictedObj
 
   // check if near crosswalk (exclude if configured)
   if (
-    params_.obstacle_filtering.exclude_crosswalk_users &&
+    param.obstacle_filtering.exclude_crosswalk_users &&
     isNearCrosswalk(
       predicted_object.kinematics.initial_pose_with_covariance.pose.position, lanelet_map_ptr)) {
     // skip crosswalk users
@@ -756,7 +721,7 @@ std::optional<StopObstacle> RoadUserStopModule::pickStopObstacleFromPredictedObj
 
   // check if on sidewalk (exclude if configured)
   if (
-    params_.obstacle_filtering.exclude_sidewalk_users &&
+    param.obstacle_filtering.exclude_sidewalk_users &&
     isOnSidewalk(
       predicted_object.kinematics.initial_pose_with_covariance.pose.position, lanelet_map_ptr)) {
     return std::nullopt;
@@ -797,9 +762,10 @@ void RoadUserStopModule::holdPreviousStopIfNecessary(
   const std::vector<TrajectoryPoint> & traj_points,
   std::optional<double> & determined_zero_vel_dist)
 {
+  const auto param = param_listener_->get_params();
   if (
     std::abs(planner_data->current_odometry.twist.twist.linear.x) <
-      params_.stop_planning.hold_stop_velocity_threshold &&
+      param.stop_planning.hold_stop_velocity_threshold &&
     prev_stop_distance_info_) {
     // NOTE: We assume that the current trajectory's front point is ahead of the previous
     // trajectory's front point.
@@ -813,7 +779,7 @@ void RoadUserStopModule::holdPreviousStopIfNecessary(
     const double prev_zero_vel_dist = prev_stop_distance_info_->second - diff_dist_front_points;
     if (
       std::abs(prev_zero_vel_dist - determined_zero_vel_dist.value()) <
-      params_.stop_planning.hold_stop_distance_threshold) {
+      param.stop_planning.hold_stop_distance_threshold) {
       determined_zero_vel_dist.value() = prev_zero_vel_dist;
     }
   }
@@ -856,6 +822,7 @@ double RoadUserStopModule::calcDesiredStopMargin(
   [[maybe_unused]] const double dist_to_bumper, [[maybe_unused]] const size_t ego_segment_idx,
   const double dist_to_collide_on_ref_traj) const
 {
+  const auto param = param_listener_->get_params();
   // calculate default stop margin
   const double default_stop_margin = [&]() {
     const double v_ego = planner_data->current_odometry.twist.twist.linear.x;
@@ -865,15 +832,15 @@ double RoadUserStopModule::calcDesiredStopMargin(
       autoware::motion_utils::calcSignedArcLength(traj_points, 0, traj_points.size() - 1);
 
     // For negative velocity obstacles (approaching)
-    if (v_obs < params_.stop_planning.max_negative_velocity) {
-      const double a_ego = params_.stop_planning.effective_deceleration_opposing_traffic;
+    if (v_obs < param.stop_planning.max_negative_velocity) {
+      const double a_ego = param.stop_planning.effective_deceleration_opposing_traffic;
       const double & bumper_to_bumper_distance = stop_obstacle.dist_to_collide_on_decimated_traj;
 
       const double braking_distance = v_ego * v_ego / (2 * a_ego);
       const double stopping_time = v_ego / a_ego;
       const double distance_obs_ego_braking = std::abs(v_obs * stopping_time);
 
-      const double ego_stop_margin = params_.stop_planning.stop_margin_opposing_traffic;
+      const double ego_stop_margin = param.stop_planning.stop_margin_opposing_traffic;
 
       const double rel_vel = v_ego - v_obs;
       constexpr double epsilon = 1e-6;  // Small threshold for numerical stability
@@ -883,7 +850,7 @@ double RoadUserStopModule::calcDesiredStopMargin(
           "Relative velocity (%.3f) is too close to zero. Using minimum safe value for "
           "calculation.",
           rel_vel);
-        return params_.stop_planning.stop_margin;  // Return default stop margin as fallback
+        return param.stop_planning.stop_margin;  // Return default stop margin as fallback
       }
 
       const double T_coast = std::max(
@@ -900,10 +867,10 @@ double RoadUserStopModule::calcDesiredStopMargin(
     }
 
     if (dist_to_collide_on_ref_traj > ref_traj_length) {
-      return params_.stop_planning.terminal_stop_margin;
+      return param.stop_planning.terminal_stop_margin;
     }
 
-    return params_.stop_planning.stop_margin;
+    return param.stop_planning.stop_margin;
   }();
 
   // calculate stop margin on curve
@@ -921,7 +888,7 @@ double RoadUserStopModule::calcDesiredStopMargin(
     const double stop_dist_diff =
       closest_behavior_stop_dist_on_ref_traj - (dist_to_collide_on_ref_traj - stop_margin_on_curve);
     if (0.0 < stop_dist_diff && stop_dist_diff < stop_margin_on_curve) {
-      return params_.stop_planning.min_behavior_stop_margin;
+      return param.stop_planning.min_behavior_stop_margin;
     }
   }
   return stop_margin_on_curve;
@@ -933,25 +900,26 @@ std::optional<double> RoadUserStopModule::calcCandidateZeroVelDist(
   [[maybe_unused]] const StopObstacle & stop_obstacle, const double dist_to_collide_on_ref_traj,
   const double desired_stop_margin, [[maybe_unused]] const double dist_to_bumper) const
 {
+  const auto param = param_listener_->get_params();
   double candidate_zero_vel_dist = std::max(0.0, dist_to_collide_on_ref_traj - desired_stop_margin);
 
-  if (params_.option.suppress_sudden_stop) {
+  if (param.option.suppress_sudden_stop) {
     const auto acceptable_stop_acc = [&]() -> std::optional<double> {
       const double distance_to_judge_suddenness = std::min(
         calcMinimumDistanceToStop(
-          planner_data->current_odometry.twist.twist.linear.x, params_.common_param.limit_max_accel,
-          params_.stop_planning.sudden_object_acc_threshold),
-        params_.stop_planning.sudden_object_dist_threshold);
+          planner_data->current_odometry.twist.twist.linear.x, param.common_param.limit_max_accel,
+          param.stop_planning.sudden_object_acc_threshold),
+        param.stop_planning.sudden_object_dist_threshold);
 
       if (candidate_zero_vel_dist > distance_to_judge_suddenness) {
-        return params_.common_param.limit_min_accel;
+        return param.common_param.limit_min_accel;
       }
 
-      if (params_.stop_planning.abandon_to_stop) {
+      if (param.stop_planning.abandon_to_stop) {
         RCLCPP_WARN(logger_, "[RoadUserStop] abandon to stop against object");
         return std::nullopt;
       } else {
-        return params_.stop_planning.limit_min_acc;
+        return param.stop_planning.limit_min_acc;
       }
     }();
 
@@ -963,7 +931,7 @@ std::optional<double> RoadUserStopModule::calcCandidateZeroVelDist(
       autoware::motion_utils::calcSignedArcLength(
         traj_points, 0, planner_data->current_odometry.pose.pose.position) +
       calcMinimumDistanceToStop(
-        planner_data->current_odometry.twist.twist.linear.x, params_.common_param.limit_max_accel,
+        planner_data->current_odometry.twist.twist.linear.x, param.common_param.limit_max_accel,
         acceptable_stop_acc.value());
 
     if (acceptable_stop_pos > candidate_zero_vel_dist) {
@@ -995,7 +963,8 @@ double RoadUserStopModule::calcMarginFromObstacleOnCurve(
   const std::vector<TrajectoryPoint> & traj_points, const StopObstacle & stop_obstacle,
   const double dist_to_bumper, const double default_stop_margin) const
 {
-  const bool enable_approaching_on_curve = params_.stop_planning.stop_on_curve.enable_approaching;
+  const auto param = param_listener_->get_params();
+  const bool enable_approaching_on_curve = param.stop_planning.stop_on_curve.enable_approaching;
   const bool use_pointcloud = false;  // road_user_stop doesn't use pointcloud
 
   if (!enable_approaching_on_curve || use_pointcloud) {
@@ -1012,7 +981,7 @@ double RoadUserStopModule::calcMarginFromObstacleOnCurve(
 
     if (
       1 < short_traj_points.size() &&
-      params_.stop_planning.stop_margin + dist_to_bumper < sum_short_traj_length) {
+      param.stop_planning.stop_margin + dist_to_bumper < sum_short_traj_length) {
       break;
     }
     sum_short_traj_length +=
@@ -1027,7 +996,7 @@ double RoadUserStopModule::calcMarginFromObstacleOnCurve(
   const auto calculate_distance_from_straight_ego_path =
     [&](const auto & ego_pose, const auto & object_polygon) {
       const auto forward_ego_pose = autoware_utils_geometry::calc_offset_pose(
-        ego_pose, params_.stop_planning.stop_margin + 3.0, 0.0, 0.0);
+        ego_pose, param.stop_planning.stop_margin + 3.0, 0.0, 0.0);
       const auto ego_straight_segment = autoware_utils_geometry::Segment2d{
         convertPoint(ego_pose.position), convertPoint(forward_ego_pose.position)};
       return boost::geometry::distance(ego_straight_segment, object_polygon);
@@ -1046,7 +1015,7 @@ double RoadUserStopModule::calcMarginFromObstacleOnCurve(
     return std::nullopt;
   }();
   if (!collision_idx) {
-    return params_.stop_planning.stop_on_curve.min_stop_margin;
+    return param.stop_planning.stop_on_curve.min_stop_margin;
   }
   if (*collision_idx == 0) {
     return default_stop_margin;
@@ -1069,11 +1038,11 @@ double RoadUserStopModule::calcMarginFromObstacleOnCurve(
     partial_segment_length +
     autoware::motion_utils::calcSignedArcLength(
       resampled_short_traj_points, *collision_idx, stop_obstacle.collision_point) -
-    dist_to_bumper + params_.stop_planning.stop_on_curve.additional_stop_margin;
+    dist_to_bumper + param.stop_planning.stop_on_curve.additional_stop_margin;
 
   return std::min(
     default_stop_margin,
-    std::max(params_.stop_planning.stop_on_curve.min_stop_margin, short_margin_from_obstacle));
+    std::max(param.stop_planning.stop_on_curve.min_stop_margin, short_margin_from_obstacle));
 }
 
 }  // namespace autoware::motion_velocity_planner

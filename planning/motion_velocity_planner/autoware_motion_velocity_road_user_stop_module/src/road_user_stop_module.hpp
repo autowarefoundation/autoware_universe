@@ -15,7 +15,6 @@
 #ifndef ROAD_USER_STOP_MODULE_HPP_
 #define ROAD_USER_STOP_MODULE_HPP_
 
-#include "parameters.hpp"
 #include "path_length_buffer.hpp"
 #include "type_alias.hpp"
 #include "types.hpp"
@@ -25,6 +24,7 @@
 #include <autoware/motion_velocity_planner_common/polygon_utils.hpp>
 #include <autoware/motion_velocity_planner_common/utils.hpp>
 #include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
+#include <autoware_motion_velocity_road_user_stop_module/road_user_stop_module_parameters.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -62,7 +62,9 @@ public:
   }
 
 private:
-  RoadUserStopParameters params_;
+  // parameter listener
+  std::shared_ptr<road_user_stop::ParamListener> param_listener_;
+
   std::string module_name_;
   rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
     processing_time_detail_pub_{};

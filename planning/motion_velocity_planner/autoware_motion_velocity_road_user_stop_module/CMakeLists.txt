@@ -3,10 +3,26 @@ project(autoware_motion_velocity_road_user_stop_module)
 
 find_package(autoware_cmake REQUIRED)
 autoware_package()
+
+# Generate parameter library
+generate_parameter_library(road_user_stop_module_parameters
+  param/road_user_stop_module_parameters.yaml
+)
+
 pluginlib_export_plugin_description_file(autoware_motion_velocity_planner plugins.xml)
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   DIRECTORY src
+)
+
+# Link parameter library
+target_link_libraries(${PROJECT_NAME}
+  road_user_stop_module_parameters
+)
+
+# Suppress deprecated warnings only for the generated parameter library
+target_compile_options(road_user_stop_module_parameters INTERFACE
+  -Wno-error=deprecated-declarations
 )
 
 if(BUILD_TESTING)
