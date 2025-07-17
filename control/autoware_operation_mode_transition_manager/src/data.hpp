@@ -19,9 +19,9 @@
 
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
 #include <autoware_adapi_v1_msgs/srv/change_operation_mode.hpp>
+#include <autoware_system_msgs/srv/change_operation_mode.hpp>
 #include <autoware_vehicle_msgs/msg/control_mode_report.hpp>
 #include <autoware_vehicle_msgs/srv/control_mode_command.hpp>
-#include <tier4_system_msgs/srv/change_operation_mode.hpp>
 
 #include <cmath>
 #include <optional>
@@ -33,7 +33,7 @@ namespace autoware::operation_mode_transition_manager
 using ServiceResponse = autoware_adapi_v1_msgs::srv::ChangeOperationMode::Response;
 using OperationModeState = autoware_adapi_v1_msgs::msg::OperationModeState;
 using OperationModeValue = OperationModeState::_mode_type;
-using ChangeOperationMode = tier4_system_msgs::srv::ChangeOperationMode;
+using ChangeOperationMode = autoware_system_msgs::srv::ChangeOperationMode;
 using ControlModeCommand = autoware_vehicle_msgs::srv::ControlModeCommand;
 using ControlModeReport = autoware_vehicle_msgs::msg::ControlModeReport;
 

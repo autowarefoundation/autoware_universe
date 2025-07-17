@@ -165,9 +165,9 @@ void IntersectionModule::updateObjectInfoManagerCollision(
   }
 
   const double passing_time = time_distance_array.back().first;
-  const auto & concat_lanelets = path_lanelets.all;
+  const auto & concat_lanelets = lanelet::utils::combineLaneletsShape(path_lanelets.all);
   const auto closest_arc_coords =
-    lanelet::utils::getArcCoordinates(concat_lanelets, planner_data_->current_odometry->pose);
+    lanelet::utils::getArcCoordinates({concat_lanelets}, planner_data_->current_odometry->pose);
   const auto & ego_lane = path_lanelets.ego_or_entry2exit;
   debug_data_.ego_lane = ego_lane.polygon3d();
   const auto ego_poly = ego_lane.polygon2d().basicPolygon();
@@ -265,11 +265,17 @@ void IntersectionModule::updateObjectInfoManagerCollision(
       }
       cutPredictPathWithinDuration(
         planner_data_->predicted_objects->header.stamp, passing_time, &predicted_path);
+      if (predicted_path.path.size() < 2) {
+        continue;
+      }
       const double time_step =
         predicted_path.time_step.sec + predicted_path.time_step.nanosec * 1e-9;
       const double horizon = time_step * static_cast<double>(predicted_path.path.size());
       predicted_path =
         autoware::object_recognition_utils::resamplePredictedPath(predicted_path, 0.1, horizon);
+      if (predicted_path.path.size() < 2) {
+        continue;
+      }
       const auto object_passage_interval_opt = findPassageInterval(
         predicted_path, predicted_object.shape, ego_poly,
         intersection_lanelets.first_attention_lane(),
@@ -310,7 +316,7 @@ void IntersectionModule::updateObjectInfoManagerCollision(
           planner_data_->vehicle_info_.max_longitudinal_offset_m,
         lanelet::utils::getLaneletLength2d(concat_lanelets));
       const auto trimmed_ego_polygon = lanelet::utils::getPolygonFromArcLength(
-        concat_lanelets, ego_start_arc_length, ego_end_arc_length);
+        {concat_lanelets}, ego_start_arc_length, ego_end_arc_length);
       if (trimmed_ego_polygon.empty()) {
         continue;
       }

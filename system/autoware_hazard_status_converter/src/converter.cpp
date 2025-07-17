@@ -33,10 +33,10 @@ Converter::Converter(const rclcpp::NodeOptions & options) : Node("converter", op
 void Converter::on_create(DiagGraph::ConstSharedPtr graph)
 {
   const auto find_auto_mode_root = [](const DiagGraph & graph) {
-    for (const auto & unit : graph.units()) {
-      if (unit->path() == "/autoware/modes/autonomous") return unit;
+    for (const auto & node : graph.nodes()) {
+      if (node->path() == "/autoware/modes/autonomous") return node;
     }
-    return static_cast<DiagUnit *>(nullptr);
+    return static_cast<DiagNode *>(nullptr);
   };
 
   const auto make_auto_mode_tree = [](DiagUnit * root) {
@@ -49,7 +49,7 @@ void Converter::on_create(DiagGraph::ConstSharedPtr graph)
       const auto unit = *buffer.begin();
       buffer.erase(buffer.begin());
       result.insert(unit);
-      for (const auto & child : unit->children()) buffer.insert(child.unit);
+      for (const auto & child : unit->child_units()) buffer.insert(child);
     }
     return result;
   };
@@ -107,7 +107,7 @@ void Converter::on_update(DiagGraph::ConstSharedPtr graph)
   // Calculate hazard level from unit level and root level.
   HazardStatusStamped hazard;
   for (const auto & unit : graph->units()) {
-    if (unit->path().empty()) continue;
+    if (unit->path_or_name().empty()) continue;
     const bool is_auto_tree = auto_mode_tree_.count(unit);
     const auto root_level = is_auto_tree ? auto_mode_root_->level() : DiagnosticStatus::OK;
     const auto unit_level = unit->level();

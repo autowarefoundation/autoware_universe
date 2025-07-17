@@ -49,13 +49,14 @@ public:
    * @brief update current state and save old current state to prev state
    */
   void transit_state(
-    const std::optional<PullOverPath> & pull_over_path_opt, const rclcpp::Time & now,
+    const std::optional<PullOverPath> & pull_over_path_opt, const bool upstream_module_has_stopline,
+    const rclcpp::Time & now,
     const autoware_perception_msgs::msg::PredictedObjects & static_target_objects,
     const autoware_perception_msgs::msg::PredictedObjects & dynamic_target_objects,
     const std::shared_ptr<const PlannerData> planner_data,
     const std::shared_ptr<OccupancyGridBasedCollisionDetector> occupancy_grid_map,
-    const bool is_current_safe, const GoalPlannerParameters & parameters,
-    const GoalSearcher & goal_searcher,
+    const bool is_current_safe, const bool lane_change_status_changed,
+    const GoalPlannerParameters & parameters, const GoalSearcher & goal_searcher,
     std::vector<autoware_utils::Polygon2d> & ego_polygons_expanded);
 
   PathDecisionState get_current_state() const { return current_state_; }
@@ -69,12 +70,13 @@ private:
    * @brief update current state and save old current state to prev state
    */
   PathDecisionState get_next_state(
-    const std::optional<PullOverPath> & pull_over_path_opt, const rclcpp::Time & now,
-    const PredictedObjects & static_target_objects, const PredictedObjects & dynamic_target_objects,
+    const std::optional<PullOverPath> & pull_over_path_opt, const bool upstream_module_has_stopline,
+    const rclcpp::Time & now, const PredictedObjects & static_target_objects,
+    const PredictedObjects & dynamic_target_objects,
     const std::shared_ptr<const PlannerData> planner_data,
     const std::shared_ptr<OccupancyGridBasedCollisionDetector> occupancy_grid_map,
-    const bool is_current_safe, const GoalPlannerParameters & parameters,
-    const GoalSearcher & goal_searcher,
+    const bool is_current_safe, const bool lane_change_status_changed,
+    const GoalPlannerParameters & parameters, const GoalSearcher & goal_searcher,
     std::vector<autoware_utils::Polygon2d> & ego_polygons_expanded) const;
 };
 

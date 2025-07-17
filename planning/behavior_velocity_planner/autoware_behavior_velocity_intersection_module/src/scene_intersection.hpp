@@ -156,6 +156,7 @@ public:
     struct Occlusion
     {
       bool enable;
+      bool request_approval_wo_traffic_light;
       double occlusion_attention_area_length;
       int free_space_max;
       int occupied_min;
@@ -177,6 +178,13 @@ public:
       double creep_velocity_without_traffic_light;
       double static_occlusion_with_traffic_light_timeout;
     } occlusion;
+
+    struct ConservativeMerging
+    {
+      bool enable_yield;
+      double minimum_lateral_distance_threshold;
+      double merging_judge_angle_threshold;
+    } conservative_merging;
 
     struct Debug
     {
@@ -309,7 +317,9 @@ public:
     const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
     const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
-      planning_factor_interface);
+      planning_factor_interface,
+    const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+      planning_factor_interface_for_occlusion);
 
   /**
    ***********************************************************
@@ -340,6 +350,22 @@ public:
   void setOcclusionActivation(const bool activation) { occlusion_activated_ = activation; }
   bool isOcclusionFirstStopRequired() const { return occlusion_first_stop_required_; }
   InternalDebugData & getInternalDebugData() const { return internal_debug_data_; }
+
+private:
+  /**
+   ***********************************************************
+   ***********************************************************
+   ***********************************************************
+   * @defgroup planning-factor-variables [var] planning factor variables
+   * following variables are used to publish planning factors
+   * @{
+   */
+
+  autoware_internal_planning_msgs::msg::SafetyFactorArray safety_factor_array_;
+
+  const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+    planning_factor_interface_for_occlusion_;
+  /** @}*/
 
 private:
   /**
@@ -448,6 +474,18 @@ private:
 
   //! save previous priority level to detect change from NotPrioritized to Prioritized
   TrafficPrioritizedLevel previous_prioritized_level_{TrafficPrioritizedLevel::NOT_PRIORITIZED};
+  /** @} */
+
+private:
+  /**
+   ***********************************************************
+   ***********************************************************
+   ***********************************************************
+   * @defgroup stuck-variables [var] stuck detection
+   * @{
+   */
+  //! indicate whether ego was trying to stop for stuck vehicle(for debouncing)
+  bool was_stopping_for_stuck_{false};
   /** @} */
 
 private:

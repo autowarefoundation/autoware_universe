@@ -48,6 +48,9 @@
         outer_road_detection_offset: 1.0
         inner_road_detection_offset: 0.0
 
+      # path decision state controller
+      path_decision_state_controller:
+        check_collision_duration: 1.0  # Duration to check collision before transition from DECIDING to DECIDED
 
       # pull over
       pull_over:

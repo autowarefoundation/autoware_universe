@@ -268,15 +268,45 @@
                       "linestring_types": {
                         "type": "array",
                         "description": "types of linestrings in the vector map used to cut predicted paths",
-                        "default": "['guard_rail']"
+                        "default": "['NONE']"
                       },
                       "lanelet_subtypes": {
                         "type": "array",
                         "description": "subtypes of lanelets in the vector map used to cut predicted paths",
                         "default": "['NONE']"
+                      },
+                      "strict_polygon_types": {
+                        "type": "array",
+                        "description": "types of polygons in the vector map used to strictly cut predicted paths",
+                        "default": "['NONE']"
+                      },
+                      "strict_linestring_types": {
+                        "type": "array",
+                        "description": "types of linestrings in the vector map used to strictly cut predicted paths",
+                        "default": "['guard_rail']"
+                      },
+                      "strict_lanelet_subtypes": {
+                        "type": "array",
+                        "description": "subtypes of lanelets in the vector map used to strictly cut predicted paths",
+                        "default": "['NONE']"
                       }
                     }
                   }
+                },
+                "preserved_duration": {
+                  "type": "number",
+                  "description": "[s] when cutting a predicted path or ignoring an object, at least this much duration is preserved from the predicted paths",
+                  "default": 0.0
+                },
+                "preserved_distance": {
+                  "type": "number",
+                  "description": "[m] when cutting a predicted path or ignoring an object, at least this much distance is preserved from the predicted paths",
+                  "default": 0.0
+                },
+                "standstill_duration_after_cut": {
+                  "type": "number",
+                  "description": "[s] after cutting a predicted path, assume the object stands still at the last point for this duration",
+                  "default": 2.0
                 }
               }
             }
