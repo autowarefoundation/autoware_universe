@@ -137,6 +137,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   rclcpp_components_register_node(${PROJECT_NAME}_component
     PLUGIN "autoware::camera_streampetr::StreamPetrNode"
     EXECUTABLE ${PROJECT_NAME}_node
+    EXECUTOR MultiThreadedExecutor
   )
 
   install(

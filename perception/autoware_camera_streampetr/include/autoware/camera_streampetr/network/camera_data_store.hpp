@@ -22,7 +22,9 @@
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 
+#include <condition_variable>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 namespace autoware::camera_streampetr
@@ -40,7 +42,7 @@ class CameraDataStore
 public:
   CameraDataStore(
     rclcpp::Node * node, const int rois_number, const int image_height, const int image_width,
-    const int anchor_camera_id, const bool is_distorted_image);
+    const int anchor_camera_id, const bool is_distorted_image, const double downsample_factor);
   void update_camera_image(
     const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg);
   void update_camera_info(
@@ -50,13 +52,15 @@ public:
   float check_if_all_images_synced() const;
   float get_preprocess_time_ms() const;
   std::vector<float> get_camera_info_vector() const;
+  std::shared_ptr<cuda::Tensor> get_image_input() const;
+
   std::vector<float> get_image_shape() const;
-  std::shared_ptr<Tensor> get_image_input() const;
   float get_timestamp();
   std::vector<std::string> get_camera_link_names() const;
   void restart();
   void save_processed_image(const int camera_id, const std::string & filename) const;
-
+  void freeze_updates();
+  void unfreeze_updates();
 private:
   const size_t rois_number_;
   const int image_height_;
@@ -65,6 +69,7 @@ private:
   double start_timestamp_;
   float preprocess_time_ms_;
   const bool is_distorted_image_;
+  const double downsample_factor_;
 
   rclcpp::Logger logger_;
   std::vector<CameraInfo::ConstSharedPtr> camera_info_list_;
@@ -73,7 +78,13 @@ private:
   std::shared_ptr<Tensor> image_input_std_;
   std::vector<double> camera_image_timestamp_;
   std::vector<std::string> camera_link_names_;
-  cudaStream_t stream_;
+  std::vector<cudaStream_t> streams_;
+  
+  // multithreading variables
+  mutable std::mutex freeze_mutex_;
+  mutable std::condition_variable freeze_cv_;
+  bool is_frozen_;
+  int active_updates_; 
 };
 
 }  // namespace autoware::camera_streampetr

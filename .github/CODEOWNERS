@@ -69,6 +69,7 @@ localization/yabloc/yabloc_particle_filter/** anh.nguyen.2@tier4.jp kento.yabuuc
 localization/yabloc/yabloc_pose_initializer/** anh.nguyen.2@tier4.jp kento.yabuuchi.2@tier4.jp masahiro.sakamoto@tier4.jp ryu.yamamoto@tier4.jp shintaro.sakoda@tier4.jp taiki.yamada@tier4.jp yamato.ando@tier4.jp
 map/autoware_map_tf_generator/** anh.nguyen.2@tier4.jp kento.yabuuchi.2@tier4.jp masahiro.sakamoto@tier4.jp ryu.yamamoto@tier4.jp shintaro.sakoda@tier4.jp taiki.yamada@tier4.jp yamato.ando@tier4.jp
 perception/autoware_bevfusion/** amadeusz.szymko.2@tier4.jp kenzo.lobos@tier4.jp kokseang.tan@tier4.jp kotaro.uetake@tier4.jp masato.saeki@tier4.jp
+perception/autoware_camera_streampetr/** samrat.thapa@tier4.jp kokseang.tan@tier4.jp isamu.yamashita@tier4.jp yoshi.ri@tier4.jp
 perception/autoware_bytetrack/** lei.gu@tier4.jp manato.hirabayashi@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp
 perception/autoware_cluster_merger/** dai.nguyen@tier4.jp lei.gu@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 perception/autoware_compare_map_segmentation/** abrahammonrroy@yahoo.com akihisa.nagata@tier4.jp dai.nguyen@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
