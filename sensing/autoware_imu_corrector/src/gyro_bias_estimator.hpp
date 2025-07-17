@@ -111,8 +111,6 @@ private:
   const double warning_covariance_;
   const double min_covariance_;
   const double alpha_gyro_;
-  const double compensate_offset_;
-  const double compensate_offset_angle_;
   const double ekf_process_noise_q_angle_;
   const double ekf_variance_p_angle_;
   const double ekf_measurement_noise_r_angle_;
@@ -169,6 +167,7 @@ private:
   diagnostic_updater::Updater updater_;
 
   std::optional<Vector3> gyro_bias_;
+  std::optional<Vector3> gyro_bias_not_rotated_;
 
   std::shared_ptr<autoware_utils::TransformListener> transform_listener_;
 

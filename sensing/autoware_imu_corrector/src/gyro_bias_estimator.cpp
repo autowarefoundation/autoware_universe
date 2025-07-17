@@ -58,8 +58,6 @@ GyroBiasEstimator::GyroBiasEstimator(const rclcpp::NodeOptions & options)
   warning_covariance_(declare_parameter<double>("warning_covariance")),
   min_covariance_(declare_parameter<double>("min_covariance")),
   alpha_gyro_(declare_parameter<double>("alpha_gyro")),
-  compensate_offset_(declare_parameter<double>("compensate_offset")),
-  compensate_offset_angle_(declare_parameter<double>("compensate_offset_angle")),
   ekf_process_noise_q_angle_(declare_parameter<double>("ekf_process_noise_q_angle")),
   ekf_variance_p_angle_(declare_parameter<double>("ekf_variance_p_angle")),
   ekf_measurement_noise_r_angle_(declare_parameter<double>("ekf_measurement_noise_r_angle")),
@@ -265,13 +263,13 @@ void GyroBiasEstimator::callback_imu(const Imu::ConstSharedPtr imu_msg_ptr)
     if (dt_imu2 != 0) {
       // Angle is updated here but restarted when angle from pose is received
       gyro_yaw_angle_ +=
-        (x_state_(1) * (gyro.vector.z - gyro_bias_.value().z - compensate_offset_angle_)) * dt_imu2;
+        (x_state_(1) * (gyro.vector.z) - gyro_bias_not_rotated_.value().z) * dt_imu2;
       x_state_(1) = (x_state_(1) * decay_coefficient_);
 
       // EKF update
       x_state_(0) = gyro_yaw_angle_;
       Eigen::Matrix2d f_matrix;
-      f_matrix << 1, dt_imu2 * (gyro.vector.z - gyro_bias_.value().z - compensate_offset_angle_), 0,
+      f_matrix << 1, dt_imu2 * (gyro.vector.z - gyro_bias_not_rotated_.value().z), 0,
         decay_coefficient_;
       p_angle_ = f_matrix * p_angle_ * f_matrix.transpose() + q_angle_;
     }
@@ -468,7 +466,8 @@ void GyroBiasEstimator::estimate_scale_gyro(
       rate_pose_buff_.erase(rate_pose_buff_.begin());
 
       h_ = avg_rate_pose_;
-      y_ = (avg_rate_gyro_ - gyro_bias_.value().z - compensate_offset_) -
+      y_ = (avg_rate_gyro_ - gyro_bias_.value().z 
+      ) -
            (estimated_scale_ * avg_rate_pose_);
       s_ = h_ * p_ * h_ + r_;
       k_ = p_ * h_ / s_;
@@ -622,7 +621,7 @@ void GyroBiasEstimator::timer_callback()
     diagnostics_info_.summary_message = "Skipped update (tf between base and imu is not available)";
     return;
   }
-
+  gyro_bias_not_rotated_ = gyro_bias_estimation_module_->get_bias_base_link();
   gyro_bias_ =
     transform_vector3(gyro_bias_estimation_module_->get_bias_base_link(), *tf_base2imu_ptr);
 

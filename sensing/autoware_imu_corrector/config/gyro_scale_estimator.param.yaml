@@ -5,8 +5,8 @@
     ekf_variance_p_after: 5e-9
     ekf_process_noise_q: 1e-14 #1e-10 # 1e-12 # 3e-12 # 3e-11 # estimated process noise
     ekf_process_noise_q_after: 1e-15
-    ekf_measurement_noise_r: 0.00009 #0.005 # 0.0002 # 0.00002 # 0.00000002 # 0.000005 # device measurement noise
-    ekf_measurement_noise_r_after: 0.00005 #0.005
+    ekf_measurement_noise_r: 0.00007 #0.005 # 0.0002 # 0.00002 # 0.00000002 # 0.000005 # device measurement noise
+    ekf_measurement_noise_r_after: 0.00002 #0.005
     min_allowed_scale: 0.9 # minimum allowed scale
     max_allowed_scale: 1.9 # maximum allowed scale
     scale_on_purpose: 1.00 # scale to apply on purpose
@@ -14,7 +14,7 @@
     drift_scale: 0.0000000 # 0.0001 # scale to apply on purpose for drift
     drift_bias: 0.000000 # 0.000001 # bias to apply on purpose for drift
     alpha: 0.9 # 0.99 # 0.98
-    alpha_ndt_rate: 0.55 #0.55 # 0.65 # 0.45 # 0.65
+    alpha_ndt_rate: 0.6 #0.55 # 0.65 # 0.45 # 0.65
     threshold_to_estimate_scale: 0.1 # angular speed radians
     percentage_scale_rate_allow_correct: 0.07 # ignore scale changes above this value
     warning_covariance: 3e-9
@@ -25,8 +25,6 @@
     samples_to_average_delta: 3
     samples_filter_pose_rate: 2
     samples_filter_gyro_rate: 6
-    compensate_offset: 0.000 # for testing
-    compensate_offset_angle: 0.00 # for testing
     buffer_size_gyro: 200 # size of the buffer to store gyro data
     ekf_process_noise_q_angle: 1e-12
     ekf_variance_p_angle: 1e-6
