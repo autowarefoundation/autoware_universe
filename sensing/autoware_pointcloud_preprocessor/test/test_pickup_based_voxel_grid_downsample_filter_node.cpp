@@ -112,6 +112,7 @@ TEST_F(PickupBasedVoxelGridDownsampleFilterTest, TestPointCloudPublishing)
   if (received_output_) {
     EXPECT_EQ(output_msg_.height, cloud.height);
     EXPECT_EQ(output_msg_.width, cloud.width);
+    EXPECT_EQ(output_msg_.data.size(), cloud.data.size());
   }
 }
 
@@ -160,5 +161,6 @@ TEST_F(PickupBasedVoxelGridDownsampleFilterTest, TestEmptyPointCloudPublishing)
   if (received_output_) {
     EXPECT_EQ(output_msg_.height, empty_cloud.height);
     EXPECT_EQ(output_msg_.width, empty_cloud.width);
+    EXPECT_EQ(output_msg_.data.size(), empty_cloud.data.size());
   }
 }
