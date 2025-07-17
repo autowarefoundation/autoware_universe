@@ -43,7 +43,7 @@ It is implemented as a ROS 2 component node, making it easy to integrate into Au
 
 ## Parameters
 
-{{ json_to_markdown("localization/autoware_diffusion_planner/schema/diffusion_planner.schema.json") }}
+{{ json_to_markdown("planning/autoware_diffusion_planner/schema/diffusion_planner.schema.json") }}
 
 Parameters can be set via YAML (see `config/diffusion_planner.param.yaml`).
 
