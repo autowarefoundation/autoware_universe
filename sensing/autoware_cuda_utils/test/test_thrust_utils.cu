@@ -73,14 +73,15 @@ TEST_F(ThrustUtilsTest, CountFunctionality)
 {
   auto stream = autoware::cuda_utils::makeCudaStream();
 
-  thrust::device_vector<int> vec(6);
-  thrust::fill(vec.begin(), vec.end(), 1);
-  thrust::fill(vec.begin() + 2, vec.end() - 1, 0);  // Set last 3 elements to 0
+  thrust::device_vector<int> vec(20);
+  thrust::fill(vec.begin(), vec.end(), 0);
+  thrust::fill(vec.begin(), vec.begin() + 3, 1);  // Three '1's at the beginning
+  thrust::fill(vec.end() - 3, vec.end(), 1);      // Three '1's at the end
 
   long count = autoware::cuda_utils::thrust_stream::count(vec, 1, *stream);
 
   // Synchronize to ensure the operation completed
   cudaStreamSynchronize(*stream);
 
-  EXPECT_EQ(count, 3);  // There are three '1's in the vector
+  EXPECT_EQ(count, 6);  // There are six '1's in the vector
 }
