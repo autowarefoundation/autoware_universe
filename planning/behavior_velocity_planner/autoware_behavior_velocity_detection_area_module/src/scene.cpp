@@ -111,7 +111,8 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
   // Get stop point
   const auto stop_point = arc_lane_utils::createTargetPoint(
     original_path, stop_line, planner_param_.stop_margin,
-    planner_data_->vehicle_info_.max_longitudinal_offset_m, connected_lane_ids);
+    planner_data_->vehicle_info_.max_longitudinal_offset_m - forward_offset_to_stop_line_,
+    connected_lane_ids);
   if (!stop_point) {
     return true;
   }
@@ -216,6 +217,20 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
   // Insert stop point
   state_ = State::STOP;
   if (prev_state != State::STOP) {
+    if (planner_param_.use_max_acceleration) {
+      forward_offset_to_stop_line_ = std::max(
+        detection_area::feasible_stop_distance_by_max_acceleration(
+          planner_data_->current_velocity->twist.linear.x, planner_param_.max_acceleration) -
+          stop_dist,
+        0.0);
+
+      const auto offset_segment = arc_lane_utils::findOffsetSegment(
+        original_path, modified_stop_line_seg_idx, forward_offset_to_stop_line_);
+      if (offset_segment) {
+        modified_stop_pose = arc_lane_utils::calcTargetPose(original_path, *offset_segment);
+        modified_stop_line_seg_idx = offset_segment->first;
+      }
+    }
     logInfo("state changed: GO -> STOP");
   }
 

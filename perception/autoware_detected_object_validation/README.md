@@ -15,7 +15,13 @@ The purpose of this package is to eliminate obvious false positives of DetectedO
 
 #### object_lanelet_filter
 
-{{ json_to_markdown("perception/autoware_detected_object_validation/schema/object_lanelet_filter.schema.json") }}
+##### Detected Objects
+
+{{ json_to_markdown("perception/autoware_detected_object_validation/schema/detected_object_lanelet_filter.schema.json") }}
+
+##### Tracked Objects
+
+{{ json_to_markdown("perception/autoware_detected_object_validation/schema/tracked_object_lanelet_filter.schema.json") }}
 
 #### object_position_filter
 

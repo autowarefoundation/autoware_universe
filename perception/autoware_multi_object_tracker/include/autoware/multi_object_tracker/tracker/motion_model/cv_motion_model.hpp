@@ -19,7 +19,6 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MOTION_MODEL__CV_MOTION_MODEL_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MOTION_MODEL__CV_MOTION_MODEL_HPP_
 
-#include "autoware/kalman_filter/kalman_filter.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/motion_model_base.hpp"
 
 #include <Eigen/Core>
@@ -35,7 +34,7 @@
 namespace autoware::multi_object_tracker
 {
 
-class CVMotionModel : public MotionModel
+class CVMotionModel : public MotionModel<4>
 {
 private:
   // attributes
@@ -56,7 +55,6 @@ public:
   CVMotionModel();
 
   enum IDX { X = 0, Y = 1, VX = 2, VY = 3 };
-  const char DIM = 4;
 
   bool initialize(
     const rclcpp::Time & time, const double & x, const double & y,

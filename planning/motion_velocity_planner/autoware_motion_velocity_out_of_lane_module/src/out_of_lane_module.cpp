@@ -97,6 +97,9 @@ void OutOfLaneModule::init_parameters(rclcpp::Node & node)
     get_or_declare_parameter<bool>(node, ns_ + ".objects.cut_predicted_paths_beyond_red_lights");
   pp.objects_ignore_behind_ego =
     get_or_declare_parameter<bool>(node, ns_ + ".objects.ignore_behind_ego");
+  pp.validate_predicted_paths_on_lanelets =
+    get_or_declare_parameter<bool>(node, ns_ + ".objects.validate_predicted_paths_on_lanelets");
+  pp.objects_extra_width = get_or_declare_parameter<double>(node, ns_ + ".objects.extra_width");
 
   pp.precision = get_or_declare_parameter<double>(node, ns_ + ".action.precision");
   pp.use_map_stop_lines = get_or_declare_parameter<bool>(node, ns_ + ".action.use_map_stop_lines");
@@ -142,6 +145,10 @@ void OutOfLaneModule::update_parameters(const std::vector<rclcpp::Parameter> & p
     parameters, ns_ + ".objects.cut_predicted_paths_beyond_red_lights",
     pp.objects_cut_predicted_paths_beyond_red_lights);
   update_param(parameters, ns_ + ".objects.ignore_behind_ego", pp.objects_ignore_behind_ego);
+  update_param(
+    parameters, ns_ + ".objects.validate_predicted_paths_on_lanelets",
+    pp.validate_predicted_paths_on_lanelets);
+  update_param(parameters, ns_ + ".objects.extra_width", pp.objects_extra_width);
 
   update_param(parameters, ns_ + ".action.precision", pp.precision);
   update_param(parameters, ns_ + ".action.use_map_stop_lines", pp.use_map_stop_lines);
@@ -392,11 +399,12 @@ VelocityPlanningResult OutOfLaneModule::plan(
   const auto filter_predicted_objects_us = stopwatch.toc("filter_predicted_objects");
 
   stopwatch.tic("calculate_time_collisions");
-  out_of_lane::calculate_objects_time_collisions(out_of_lane_data, objects.objects);
+  out_of_lane::calculate_objects_time_collisions(
+    out_of_lane_data, objects.objects, *planner_data->route_handler, params_);
   const auto calculate_time_collisions_us = stopwatch.toc("calculate_time_collisions");
 
   stopwatch.tic("calculate_times");
-  const auto is_stopping = previous_slowdown_pose_ ? true : false;
+  const auto is_stopping = previous_slowdown_pose_.has_value();
   out_of_lane::calculate_collisions_to_avoid(
     out_of_lane_data, ego_data.trajectory_points, params_, is_stopping);
   const auto calculate_times_us = stopwatch.toc("calculate_times");

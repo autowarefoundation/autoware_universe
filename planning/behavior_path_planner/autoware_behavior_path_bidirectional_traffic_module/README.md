@@ -18,10 +18,6 @@ The main roles of this module are as follows:
 
   This module provides the function for the ego vehicle to stop on the left side of the road and give way to oncoming vehicles in all situations where vehicles must pass each other on bidirectional roads. Bidirectional traffic roads are often narrow, and it is dangerous for both the ego vehicle and the oncoming vehicle to pass while moving simultaneously. To avoid such dangerous situations, this module enables the ego vehicle to stop on the left side of the road until the oncoming vehicle has completely passed.
 
-The following video shows a demonstration of this module.
-
-![type:video](https://www.youtube.com/embed/uXpqj2i4mgs)
-
 ## The representation of bidirectional traffic on a Lanelet map
 
 Bidirectional lanelets are represented on a Lanelet map as two lanes with opposite directions that share the same LineString as their boundary. There is no need to assign any special tags to the lanelets.

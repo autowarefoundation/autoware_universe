@@ -25,6 +25,7 @@ namespace autoware::command_mode_decider
 class CommandModeDecider : public DeciderPlugin
 {
 public:
+  void initialize() override;
   uint16_t from_operation_mode(uint16_t operation_mode) override;
   uint16_t to_operation_mode(uint16_t command_mode) override;
   uint16_t to_mrm_behavior(uint16_t command_mode) override;

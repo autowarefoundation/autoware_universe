@@ -83,6 +83,7 @@ public:
   void AddGoalDeviationMetricMsg(const Odometry & odom);
   void AddObjectMetricMsg(const Odometry & odom, const PredictedObjects & objects);
   void AddBoundaryDistanceMetricMsg(const PathWithLaneId & behavior_path, const Pose & ego_pose);
+  void AddUncrossableBoundaryDistanceMetricMsg(const Pose & ego_pose);
 
   void AddLaneletInfoMsg(const Pose & ego_pose);
   void AddKinematicStateMetricMsg(
@@ -144,6 +145,7 @@ private:
                                         Metric::left_boundary_distance,
                                         Metric::right_boundary_distance,
                                         Metric::steering_angle,
+                                        Metric::steering_angle_abs,
                                         Metric::steering_rate,
                                         Metric::steering_acceleration,
                                         Metric::stop_deviation,

@@ -2,12 +2,23 @@
 Changelog for package tier4_simulator_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* feat(tier4_simulator_launch): add use_pointcloud_container argument (`#10770 <https://github.com/autowarefoundation/autoware_universe/issues/10770>`_)
+* Contributors: Ryohsuke Mitsudome
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * chore(simulator.launch): remove params of traffic_light_selector (`#10536 <https://github.com/autowarefoundation/autoware_universe/issues/10536>`_)
   remove params
 * Contributors: Masato Saeki, TaikiYamada4
+
+0.44.2 (2025-06-10)
+-------------------
+* feat(tier4_simulator_launch): add use_pointcloud_container argument (`#10770 <https://github.com/autowarefoundation/autoware_universe/issues/10770>`_) (`#10786 <https://github.com/autowarefoundation/autoware_universe/issues/10786>`_)
+* feat(tier4_simulator_launch): add use_pointcloud_container argument (`#10770 <https://github.com/autowarefoundation/autoware_universe/issues/10770>`_)
+* Contributors: Ryohsuke Mitsudome
 
 0.44.1 (2025-05-01)
 -------------------

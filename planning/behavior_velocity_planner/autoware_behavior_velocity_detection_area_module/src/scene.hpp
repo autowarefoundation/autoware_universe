@@ -57,6 +57,8 @@ public:
     double stop_margin;
     bool use_dead_line;
     double dead_line_margin;
+    bool use_max_acceleration;
+    double max_acceleration;
     bool use_pass_judge_line;
     double state_clear_time;
     double hold_stop_margin_distance;
@@ -99,6 +101,7 @@ private:
   // State
   State state_;
   std::shared_ptr<const rclcpp::Time> last_obstacle_found_time_;
+  double forward_offset_to_stop_line_{0.0};
 
   // Parameter
   PlannerParam planner_param_;

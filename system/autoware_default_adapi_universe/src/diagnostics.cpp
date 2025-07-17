@@ -40,6 +40,12 @@ DiagnosticsNode::DiagnosticsNode(const rclcpp::NodeOptions & options) : Node("di
     "/diagnostics_graph/reset", rmw_qos_profile_services_default, group_cli_);
   srv_reset_ = create_service<ExternalReset>(
     "/api/system/diagnostics/reset", std::bind(&DiagnosticsNode::on_reset, this, _1, _2));
+
+  sub_mrm_state_ = create_subscription<ExternalMrmState>(
+    "/api/fail_safe/mrm_state", rclcpp::QoS(1).transient_local(),
+    [this](const ExternalMrmState & state) { mrm_state_.state = state.state; });
+
+  mrm_state_.state = ExternalMrmState::UNKNOWN;
 }
 
 void DiagnosticsNode::on_struct(const InternalGraphStruct & internal)
@@ -113,6 +119,15 @@ void DiagnosticsNode::on_reset(
   const ExternalReset::Request::SharedPtr, const ExternalReset::Response::SharedPtr res)
 {
   using autoware_adapi_v1_msgs::msg::ResponseStatus;
+
+  bool valid_state = false;
+  valid_state |= mrm_state_.state == ExternalMrmState::NORMAL;
+  valid_state |= mrm_state_.state == ExternalMrmState::MRM_SUCCEEDED;
+  if (!valid_state) {
+    res->status.success = false;
+    res->status.message = "MRM state is not in normal or succeeded";
+    return;
+  }
 
   if (!cli_reset_->service_is_ready()) {
     res->status.success = false;

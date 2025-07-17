@@ -62,9 +62,6 @@ private:
   uint8_t prev_state_;
 
   void on_timer();
-  void on_localization(const LocalizationState::ConstSharedPtr msg);
-  void on_routing(const RoutingState::ConstSharedPtr msg);
-  void on_operation_mode(const OperationModeState::ConstSharedPtr msg);
   void on_shutdown(const Trigger::Request::SharedPtr, const Trigger::Response::SharedPtr);
 };
 

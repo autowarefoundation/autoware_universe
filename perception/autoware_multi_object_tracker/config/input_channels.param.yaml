@@ -28,6 +28,16 @@
         optional:
           name: "centerpoint"
           short_name: "Lcp"
+      lidar_centerpoint_short_range:
+        flags:
+          can_spawn_new_tracker: true
+          can_trust_existence_probability: true
+          can_trust_extension: true
+          can_trust_classification: true
+          can_trust_orientation: true
+        optional:
+          name: "centerpoint_short_range"
+          short_name: "LcpS"
       lidar_apollo:
         flags:
           can_spawn_new_tracker: true

@@ -38,6 +38,11 @@ struct IntersectionStopLines
   std::optional<size_t> default_stopline{std::nullopt};
 
   /**
+   * collision_stopline is ahead of closest_idx by the braking distance
+   */
+  size_t collision_stopline{0};
+
+  /**
    * first_attention_stopline is null if ego footprint along the path does not intersect with
    * attention area. if path[0] satisfies the condition, it is 0
    */

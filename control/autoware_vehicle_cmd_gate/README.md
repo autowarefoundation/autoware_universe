@@ -2,7 +2,11 @@
 
 ## Purpose
 
-`vehicle_cmd_gate` is the package to get information from emergency handler, planning module, external controller, and send a msg to vehicle.
+`vehicle_cmd_gate` is the package to get information from emergency handler, planning module, and external controller, and send a message to the vehicle.
+
+## Role
+
+Receive multiple control commands and select one to forward to the vehicle.
 
 ## Inputs / Outputs
 
@@ -69,7 +73,21 @@
 | `on_transition.lat_acc_lim`                 | <double> | array of limits of lateral acceleration (activated in TRANSITION operation mode)                                                                                                            |
 | `on_transition.lat_jerk_lim`                | <double> | array of limits of lateral jerk (activated in TRANSITION operation mode)                                                                                                                    |
 
-## Filter function
+## Functionality
+
+### Main Functionality
+
+- Receive multiple control commands (from Autoware planning, emergency handler, remote control, etc.) and select one to forward to the vehicle.
+- Apply a final guard on the selected command to enforce absolute safety limits (e.g., maximum steering rate). This is not a comfort filter.
+- Enforce transition guards during mode changes into autonomous driving (e.g., remote→autonomous, manual→autonomous) to limit sudden changes. Integration with the Operation Transition Manager is recommended, though code boundaries should be maintained due to its complexity.
+
+### Sub-Functionality
+
+- Check heartbeat signals to verify connectivity for each input (e.g., emergency external heartbeat).
+- Publish status indicating whether the final guard is active. Active guard in autonomous mode implies an unexpected constraint in command generation and requires attention.
+- Leverage guard status during mode transitions to notify operators/drivers that a strong constraint is active (focus on "transition in progress" rather than simple filter activation).
+
+### Filter function
 
 This module incorporates a limitation filter to the control command right before its published. Primarily for safety, this filter restricts the output range of all control commands published through Autoware.
 
@@ -95,3 +113,8 @@ The `check_external_emergency_heartbeat` parameter must be false when the "exter
 
 Output commands' topics: `turn_indicators_cmd`, `hazard_light` and `gear_cmd` are selected based on `gate_mode`.
 However, to ensure the continuity of commands, these commands will not change until the topics of new input commands arrive, even if a mode change occurs.
+
+## Caution
+
+- This node depends on the Operation Mode Transition Manager for Engage state transitions at the design level.
+- Tests are essential and must be retained.

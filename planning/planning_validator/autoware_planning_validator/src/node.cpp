@@ -30,6 +30,12 @@ using diagnostic_msgs::msg::DiagnosticStatus;
 PlanningValidatorNode::PlanningValidatorNode(const rclcpp::NodeOptions & options)
 : Node("planning_validator_node", options)
 {
+  // trajectory subscriber
+  sub_trajectory_ = create_subscription<Trajectory>(
+    "~/input/trajectory", rclcpp::QoS{1},
+    std::bind(&PlanningValidatorNode::onTrajectory, this, std::placeholders::_1));
+
+  // publishers
   pub_traj_ = create_publisher<Trajectory>("~/output/trajectory", 1);
   pub_status_ = create_publisher<PlanningValidatorStatus>("~/output/validation_status", 1);
   pub_markers_ = create_publisher<visualization_msgs::msg::MarkerArray>("~/output/markers", 1);
@@ -39,14 +45,6 @@ PlanningValidatorNode::PlanningValidatorNode(const rclcpp::NodeOptions & options
   context_->set_diag_id("planning_validator");
 
   setupParameters();
-
-  // Start timer
-  {
-    const auto planning_hz = declare_parameter<double>("planning_hz");
-    const auto period_ns = rclcpp::Rate(planning_hz).period();
-    timer_ = rclcpp::create_timer(
-      this, get_clock(), period_ns, std::bind(&PlanningValidatorNode::onTimer, this));
-  }
 
   // Initialize Manager
   for (const auto & name : declare_parameter<std::vector<std::string>>("launch_modules")) {
@@ -104,22 +102,22 @@ bool PlanningValidatorNode::isDataReady()
   return true;
 }
 
-void PlanningValidatorNode::setData()
+void PlanningValidatorNode::setData(const Trajectory::ConstSharedPtr & traj_msg)
 {
   auto & data = context_->data;
   data->current_kinematics = sub_kinematics_.take_data();
   data->current_acceleration = sub_acceleration_.take_data();
   data->obstacle_pointcloud = sub_pointcloud_.take_data();
-  data->set_current_trajectory(sub_trajectory_.take_data());
+  data->set_current_trajectory(traj_msg);
   data->set_route(sub_route_.take_data());
   data->set_map(sub_lanelet_map_bin_.take_data());
 }
 
-void PlanningValidatorNode::onTimer()
+void PlanningValidatorNode::onTrajectory(const Trajectory::ConstSharedPtr & traj_msg)
 {
   stop_watch_.tic(__func__);
 
-  setData();
+  setData(traj_msg);
 
   if (!isDataReady()) return;
 
@@ -152,7 +150,7 @@ bool PlanningValidatorNode::isAllValid(const PlanningValidatorStatus & s) const
          s.is_valid_velocity_deviation && s.is_valid_distance_deviation &&
          s.is_valid_longitudinal_distance_deviation && s.is_valid_forward_trajectory_length &&
          s.is_valid_latency && s.is_valid_yaw_deviation && s.is_valid_trajectory_shift &&
-         s.is_valid_collision_check && s.is_valid_rear_collision_check;
+         s.is_valid_intersection_collision_check && s.is_valid_rear_collision_check;
 }
 
 void PlanningValidatorNode::publishTrajectory()
@@ -238,7 +236,7 @@ void PlanningValidatorNode::publishDebugInfo()
     shiftPose(
       front_pose, context_->vehicle_info.front_overhang_m + context_->vehicle_info.wheel_base_m);
     auto offset_pose = front_pose;
-    shiftPose(offset_pose, 0.25);
+    shiftPose(offset_pose, 0.5);
     context_->debug_pose_publisher->pushVirtualWall(front_pose);
     const auto status_debug_str = context_->debug_pose_publisher->getStatusDebugString(*status);
     context_->debug_pose_publisher->pushWarningMsg(
@@ -279,7 +277,9 @@ void PlanningValidatorNode::displayStatus()
   warn(s->is_valid_latency, "planning component latency is larger than threshold!!");
   warn(s->is_valid_yaw_deviation, "planning trajectory yaw difference from ego yaw is too large!!");
   warn(s->is_valid_trajectory_shift, "planning trajectory had sudden shift!!");
-  warn(s->is_valid_collision_check, "planning trajectory leads to collision!!");
+  warn(
+    s->is_valid_intersection_collision_check,
+    "planning trajectory leads to collision!! (intersection objects)");
   warn(s->is_valid_rear_collision_check, "planning trajectory leads to collision!! (rear objects)");
 }
 

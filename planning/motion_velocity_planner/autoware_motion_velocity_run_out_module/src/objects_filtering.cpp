@@ -195,11 +195,11 @@ void cut_predicted_path_footprint(
 
 std::optional<size_t> get_cut_predicted_path_index(
   const autoware::motion_velocity_planner::run_out::ObjectPredictedPathFootprint & path,
-  const FilteringData & map_data)
+  const SegmentRtree & cut_segments_rtree)
 {
   const auto crosses_cut_line_in_map = [&](const auto & segment) {
     std::vector<SegmentNode> query_results;
-    map_data.cut_predicted_paths_rtree.query(
+    cut_segments_rtree.query(
       boost::geometry::index::intersects(segment), std::back_inserter(query_results));
     for (const auto & candidate : query_results) {
       if (universe_utils::intersect(
@@ -248,18 +248,23 @@ void filter_predicted_paths(
   Object & object, const FilteringData & map_data, const ObjectParameters & params)
 {
   for (auto & predicted_path_footprint : object.predicted_path_footprints) {
+    const auto strict_cut_index = get_cut_predicted_path_index(
+      predicted_path_footprint, map_data.strict_cut_predicted_paths_rtree);
+    // the preserved index is a lower bound that can only be reduced by the strict cut index
+    const auto preserved_index = get_preserved_cut_index(
+      predicted_path_footprint, params.preserved_duration, params.preserved_distance);
+    const auto normal_cut_index =
+      get_cut_predicted_path_index(predicted_path_footprint, map_data.cut_predicted_paths_rtree);
     std::optional<size_t> cut_index;
     if (object.ignore_but_preserve_predicted_paths) {
-      cut_index = get_preserved_cut_index(
-        predicted_path_footprint, params.preserved_duration, params.preserved_distance);
-    } else {
-      cut_index = get_cut_predicted_path_index(predicted_path_footprint, map_data);
-      if (cut_index) {
-        cut_index = std::max(
-          *cut_index,
-          get_preserved_cut_index(
-            predicted_path_footprint, params.preserved_duration, params.preserved_distance));
-      }
+      // the normal cut is ignored but the strict cut will still be applied
+      cut_index = preserved_index;
+    } else if (normal_cut_index) {
+      // apply the preserved index
+      cut_index = std::max(*normal_cut_index, preserved_index);
+    }
+    if (strict_cut_index) {  // apply the strict cut index
+      cut_index = std::min(*strict_cut_index, cut_index.value_or(*strict_cut_index));
     }
     if (cut_index) {
       cut_predicted_path_footprint(

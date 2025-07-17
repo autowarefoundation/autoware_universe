@@ -2,6 +2,19 @@
 Changelog for package autoware_map_based_prediction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* fix(autoware_map_based_prediction): reverse vru object if it has negative vx (`#10731 <https://github.com/autowarefoundation/autoware_universe/issues/10731>`_)
+  * fix: reverse vru object if the orientation is SIGN_UNKNOWN and it has negative vx
+  * style(pre-commit): autofix
+  * fix(predictor_vru): clarify comment on flipping object orientation and velocity for SIGN_UNKNOWN case
+  * fix(predictor_vru): enhance yaw calculation for object orientation based on velocity
+  Updated the logic to calculate the yaw from the object's velocity only if it exceeds a defined threshold. If the velocity is too low, the object's velocity is set to zero to prevent incorrect orientation updates.
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Taekjin LEE, TaikiYamada4
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -10,6 +23,9 @@ Changelog for package autoware_map_based_prediction
   * fix the required keys
   ---------
 * Contributors: TaikiYamada4, Yuxuan Liu
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

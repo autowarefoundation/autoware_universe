@@ -28,7 +28,7 @@ namespace autoware::control_command_gate
 class BuiltinEmergency : public CommandSource
 {
 public:
-  explicit BuiltinEmergency(uint16_t id, const std::string & name, rclcpp::Node & node);
+  BuiltinEmergency(uint16_t id, const std::string & name, rclcpp::Node & node);
   void resend_last_command() override;
   void set_prev_control(std::shared_ptr<Control> control) { prev_control_ = control; }
 

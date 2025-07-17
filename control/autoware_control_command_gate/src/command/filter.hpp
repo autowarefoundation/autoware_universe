@@ -27,7 +27,7 @@ namespace autoware::control_command_gate
 class CommandFilter : public CommandBridge
 {
 public:
-  explicit CommandFilter(std::unique_ptr<CommandOutput> && output, rclcpp::Node & node);
+  CommandFilter(std::unique_ptr<CommandOutput> && output, rclcpp::Node & node);
   void set_nominal_filter_params(const VehicleCmdFilterParam & p);
   void set_transition_filter_params(const VehicleCmdFilterParam & p);
   void set_transition_flag(bool flag);
