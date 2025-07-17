@@ -302,7 +302,7 @@ double DataAssociation::calculateScore(
 
   const double min_iou = config_.min_iou_matrix(tracker_label, measurement_label);
 
-  // use 1d iou for pedestrain and unknown objects, 3d giou for other objects
+  // use 1d iou for pedestrian and unknown objects, 3d giou for other objects
   const bool use_1d_iou = (tracker_label == Label::PEDESTRIAN) || (tracker_label == Label::UNKNOWN);
   double iou_score = use_1d_iou ? shapes::get1dIoU(measurement_object, tracked_object)
                                 : shapes::get3dGeneralizedIoU(measurement_object, tracked_object);
