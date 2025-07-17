@@ -68,11 +68,17 @@ private:
   rclcpp::Publisher<Vector3Stamped>::SharedPtr gyro_bias_pub_;
   rclcpp::Publisher<Vector3Stamped>::SharedPtr gyro_scale_pub_;
   rclcpp::Publisher<Vector3Stamped>::SharedPtr gyro_debug_pub_;
+  rclcpp::Publisher<Vector3Stamped>::SharedPtr scale_debug_pub_;
+  // rclcpp::Publisher<Vector3Stamped>::SharedPtr delta_debug_pub_;
+  rclcpp::Publisher<Vector3Stamped>::SharedPtr new_scale_debug_pub_;
   rclcpp::Publisher<Imu>::SharedPtr imu_scaled_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Time start_time_check_scale_;
   rclcpp::Time last_time_rx_pose_;
   rclcpp::Time last_time_rx_imu_;
+
+  tf2::Quaternion previous_quat_ndt_;
+  tf2::Quaternion rel_quat_ndt_;
 
   std::unique_ptr<GyroBiasEstimationModule> gyro_bias_estimation_module_;
 
@@ -86,15 +92,11 @@ private:
 
   const double estimate_scale_init_;
   const double ekf_variance_p_;
+  const double ekf_variance_p_after_;
   const double ekf_process_noise_q_;
+  const double ekf_process_noise_q_after_;
   const double ekf_measurement_noise_r_;
-  const double ekf_variance_p_a_;
-  const double ekf_process_noise_q_a_;
-  const double ekf_measurement_noise_r_a_;
-  const double time_window_secs_;
-  const double threshold_scale_change_;
-  const double threshold_error_rate_;
-  const double num_consecutive_scale_change_;
+  const double ekf_measurement_noise_r_after_;
   const double min_allowed_scale_;
   const double max_allowed_scale_;
   const double scale_on_purpose_;
@@ -102,36 +104,43 @@ private:
   const double drift_scale_;
   const double drift_bias_;
 
-  const double alpha_;  // comp filter
+  const double alpha_;
   const double alpha_ndt_rate_;
-  const double threshlod_to_estimate_scale_;
+  const double threshold_to_estimate_scale_;
   const double percentage_scale_rate_allow_correct_;
-  const double counter_correct_big_change_;
-  const double alpha_big_change_;
+  const double warning_covariance_;
+  const double min_covariance_;
+  const double alpha_gyro_;
+  const double compensate_offset_;
+  const double compensate_offset_angle_;
+  const double ekf_process_noise_q_angle_;
+  const double ekf_variance_p_angle_;
+  const double ekf_measurement_noise_r_angle_;
+  const double decay_coefficient_;
+  const int delay_gyro_ms_;
+  const int samples_to_init_;
+  const int buffer_size_gyro_;
+  const int samples_to_average_delta_;
+  const int samples_filter_pose_rate_;
+  const int samples_filter_gyro_rate_;
 
   double filtered_scale_angle_;
   double filtered_scale_rate_;
   double big_change_scale_rate_;
 
-  int window_scale_change_;
-  double previous_yaw_angle_;
-
   double ndt_yaw_rate_;
   double gyro_yaw_rate_;
-  double previous_scale_;
-  double previous_gyro_rate_;
-  double previous_ndt_rate_;
-  double accel_yaw_gyro_;
-  double accel_yaw_ndt_;
 
   double gyro_yaw_angle_;
   double ndt_yaw_angle_;
-  double gyro_corrected_yaw_angle_;
+
+  double avg_rate_pose_;
+  double avg_rate_gyro_;
 
   double big_change_detect_;
 
   bool has_gyro_yaw_angle_init_;
-  bool gyro_angle_restarted_;
+  bool filtered_scale_initialized_;
 
   double final_bias_on_purpose_;
   double final_scale_on_purpose_;
@@ -143,6 +152,19 @@ private:
   double p_;
   double q_;
   double r_;
+  double h_;
+  double s_;
+  double k_;
+  double y_;
+  double ekf_variance_;
+  double ekf_measurement_noise_;
+
+  double estimated_scale_angle_;
+
+  Eigen::Vector2d x_state_;  // [angle, scale]
+  Eigen::Matrix2d p_angle_;
+  Eigen::Matrix2d q_angle_;
+  Eigen::Matrix<double, 1, 1> r_angle_;
 
   diagnostic_updater::Updater updater_;
 
@@ -154,8 +176,14 @@ private:
 
   std::vector<geometry_msgs::msg::Vector3Stamped> gyro_all_;
   std::vector<geometry_msgs::msg::PoseStamped> pose_buf_;
+  std::vector<geometry_msgs::msg::Vector3Stamped> gyro_buf_;
   std::vector<double> scale_list_all_;
   std::vector<double> scale_out_range_;
+  std::vector<double> estimated_scale_buff_;
+  std::vector<double> delta_gyro_buff_;
+  std::vector<double> delta_lidar_buff_;
+  std::vector<double> rate_pose_buff_;
+  std::vector<double> rate_gyro_buff_;
 
   struct DiagnosticsInfo
   {

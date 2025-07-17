@@ -85,12 +85,22 @@ ImuCorrector::ImuCorrector(const rclcpp::NodeOptions & options)
     std::bind(&ImuCorrector::callback_scale, this, std::placeholders::_1));
   RCLCPP_INFO(this->get_logger(), "Created subscriptions");
   imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("output", rclcpp::QoS{10});
+  gyro_scale_.vector.x = 1.0;
+  gyro_scale_.vector.y = 1.0;
+  gyro_scale_.vector.z = 1.0;
 }
 
 void ImuCorrector::callback_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg_ptr)
 {
   sensor_msgs::msg::Imu imu_msg;
   imu_msg = *imu_msg_ptr;
+
+  if (gyro_scale_.vector.x == 0.0 || gyro_scale_.vector.y == 0.0 || gyro_scale_.vector.z == 0.0) {
+    RCLCPP_ERROR(this->get_logger(), "Gyro scale is zero, not correcting imu.");
+    gyro_scale_.vector.x = 1.0;
+    gyro_scale_.vector.y = 1.0;
+    gyro_scale_.vector.z = 1.0;
+  }
 
   imu_msg.angular_velocity.x =
     (imu_msg.angular_velocity.x - gyro_bias_.vector.x - angular_velocity_offset_x_imu_link_) /
