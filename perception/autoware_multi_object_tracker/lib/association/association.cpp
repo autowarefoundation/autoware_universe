@@ -304,8 +304,8 @@ double DataAssociation::calculateScore(
 
   // use 1d iou for pedestrain and unknown objects, 3d giou for other objects
   const bool use_1d_iou = (tracker_label == Label::PEDESTRIAN) || (tracker_label == Label::UNKNOWN);
-  double use_1d_iou ? shapes::get1dIoU(measurement_object, tracked_object)
-                    : shapes::get3dGeneralizedIoU(measurement_object, tracked_object);
+  double iou_score = use_1d_iou ? shapes::get1dIoU(measurement_object, tracked_object)
+                                : shapes::get3dGeneralizedIoU(measurement_object, tracked_object);
   if (iou_score < min_iou) return INVALID_SCORE;
 
   // check if shape changes too much for vehicle labels
