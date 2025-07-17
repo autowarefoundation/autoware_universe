@@ -196,9 +196,6 @@ void GyroBiasEstimator::callback_imu(const Imu::ConstSharedPtr imu_msg_ptr)
     return;
   }
 
-  // double dt_imu2 = (this->now() - last_time_rx_imu_).seconds();
-  // last_time_rx_imu_ = this->now();
-
   imu_frame_ = imu_msg_ptr->header.frame_id;
   geometry_msgs::msg::TransformStamped::ConstSharedPtr tf_imu2base_ptr =
     transform_listener_->get_latest_transform(imu_frame_, output_frame_);
@@ -246,7 +243,7 @@ void GyroBiasEstimator::callback_imu(const Imu::ConstSharedPtr imu_msg_ptr)
     if (p_ > ekf_variance_) {
       p_ = ekf_variance_;
       gyro_info_.scale_summary_message =
-        "Covaraince is high, scale estimation hasnt been updated for a while";
+        "Covariance is high, scale estimation hasn't been updated for a while";
       gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::WARN;
       gyro_info_.scale_status_summary = "WARN";
     }
@@ -303,8 +300,6 @@ void GyroBiasEstimator::estimate_scale_gyro(
   const PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr)
 {
   rclcpp::Time msg_time = pose_msg_ptr->header.stamp;
-  // double dt_pose = (this->now() - last_time_rx_pose_).seconds();
-  // last_time_rx_pose_ = this->now();
   double dt_pose = (msg_time - last_time_rx_pose_).seconds();
   last_time_rx_pose_ = msg_time;
   auto pose_frame = pose_msg_ptr->header.frame_id;
@@ -505,7 +500,7 @@ void GyroBiasEstimator::estimate_scale_gyro(
         big_change_detect_ = 0;
       } else {
         big_change_detect_++;
-        int counter_correct_big_change = 50;
+        int counter_correct_big_change = 30; // 30 iterations approx 3 seconds
         if (big_change_detect_ >= counter_correct_big_change) {
           big_change_detect_ = 0;
           gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
@@ -513,12 +508,6 @@ void GyroBiasEstimator::estimate_scale_gyro(
           gyro_info_.scale_summary_message =
             "Scale estimated is over the maximum allowed, check the IMU, NDT device or TF.";
         }
-        //   big_change_scale_rate_ = alpha_big_change_ * big_change_scale_rate_ + (1 -
-        //   alpha_big_change_) * estimated_scale_; if (big_change_detect_ >=
-        //   counter_correct_big_change_){
-        //     filtered_scale_rate_ = big_change_scale_rate_;
-        //     big_change_detect_ = 0;
-        //   }
       }
 
       geometry_msgs::msg::Vector3Stamped vector_scale;
