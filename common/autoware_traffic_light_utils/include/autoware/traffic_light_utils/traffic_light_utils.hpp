@@ -32,7 +32,7 @@
 namespace autoware::traffic_light_utils
 {
 
-void setSignalUnknown(tier4_perception_msgs::msg::TrafficLight & signal, float confidence = -1);
+void setSignalUnknown(tier4_perception_msgs::msg::TrafficLight & signal, float confidence);
 
 /**
  * @brief Checks if a traffic light state includes a circle-shaped light with the specified color.
