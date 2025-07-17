@@ -88,19 +88,18 @@ CameraDataStore::CameraDataStore(
   start_timestamp_ = -1.0;
 
   camera_info_list_ = std::vector<CameraInfo::ConstSharedPtr>(rois_number, nullptr);
-  
+
   streams_.resize(rois_number);
   for (int i = 0; i < rois_number; ++i) {
     cudaStreamCreate(&streams_[i]);
   }
 
   is_frozen_ = false;
-  active_updates_ = 0;  
-  
-  if(is_distorted_image_ && (downsample_factor_ <= 0.0 || downsample_factor_ > 1.0)) 
-    throw std::runtime_error("downsample_factor must be in range (0,1] when is_distorted_image is true");
-  
+  active_updates_ = 0;
 
+  if (is_distorted_image_ && (downsample_factor_ <= 0.0 || downsample_factor_ > 1.0))
+    throw std::runtime_error(
+      "downsample_factor must be in range (0,1] when is_distorted_image is true");
 }
 
 void CameraDataStore::update_camera_image(
@@ -108,7 +107,7 @@ void CameraDataStore::update_camera_image(
 {
   {
     std::unique_lock<std::mutex> lock(freeze_mutex_);
-    freeze_cv_.wait(lock, [&]() { return !is_frozen_; }); // Wait if frozen
+    freeze_cv_.wait(lock, [&]() { return !is_frozen_; });  // Wait if frozen
     ++active_updates_;
   }
 
@@ -170,28 +169,24 @@ void CameraDataStore::update_camera_image(
 
     cv::Mat undistort_map_x, undistort_map_y;
     cv::initUndistortRectifyMap(
-      K, D, cv::Mat(), P, cv::Size(original_width, original_height), CV_32FC1,
-      undistort_map_x, undistort_map_y);
+      K, D, cv::Mat(), P, cv::Size(original_width, original_height), CV_32FC1, undistort_map_x,
+      undistort_map_y);
 
     cv::Mat undistorted_image;
 
     cv::remap(input_image, undistorted_image, undistort_map_x, undistort_map_y, cv::INTER_LANCZOS4);
-    
+
     image_input_tensor = std::make_unique<Tensor>(
-      "camera_img", 
-      nvinfer1::Dims{3, original_height, original_width, 3},
-      nvinfer1::DataType::kUINT8
-    );
+      "camera_img", nvinfer1::Dims{3, original_height, original_width, 3},
+      nvinfer1::DataType::kUINT8);
     cudaMemcpyAsync(
       image_input_tensor->ptr, undistorted_image.data, image_input_tensor->nbytes(),
       cudaMemcpyHostToDevice, streams_.at(camera_id));
 
   } else {
     image_input_tensor = std::make_unique<Tensor>(
-      "camera_img", 
-      nvinfer1::Dims{3, original_height, original_width, 3},
-      nvinfer1::DataType::kUINT8
-    );
+      "camera_img", nvinfer1::Dims{3, original_height, original_width, 3},
+      nvinfer1::DataType::kUINT8);
     cudaMemcpyAsync(
       image_input_tensor->ptr, input_camera_image_msg->data.data(), image_input_tensor->nbytes(),
       cudaMemcpyHostToDevice, streams_.at(camera_id));
@@ -221,11 +216,11 @@ void CameraDataStore::update_camera_image(
   // std::to_string(camera_id) + ".jpg"; save_processed_image(camera_id, filename);
 
   {
-      std::lock_guard<std::mutex> lock(freeze_mutex_);
-      --active_updates_;
-      if (is_frozen_ && active_updates_ == 0) freeze_cv_.notify_all(); // Notify freeze_updates() to continue
+    std::lock_guard<std::mutex> lock(freeze_mutex_);
+    --active_updates_;
+    if (is_frozen_ && active_updates_ == 0)
+      freeze_cv_.notify_all();  // Notify freeze_updates() to continue
   }
-
 }
 
 void CameraDataStore::update_camera_info(
@@ -452,7 +447,7 @@ void CameraDataStore::unfreeze_updates()
 {
   std::unique_lock<std::mutex> lock(freeze_mutex_);
   is_frozen_ = false;
-  freeze_cv_.notify_all(); // Let blocked A()s continue
+  freeze_cv_.notify_all();  // Let blocked A()s continue
 }
 
 }  // namespace autoware::camera_streampetr

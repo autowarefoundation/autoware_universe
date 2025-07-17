@@ -27,7 +27,6 @@
 #include <thread>
 #include <utility>
 #include <vector>
-#include <thread>
 
 namespace autoware::camera_streampetr
 {
@@ -79,17 +78,17 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
 
   camera_info_subs_.resize(rois_number_);
 
-  if(multithreading_){
+  if (multithreading_) {
     RCLCPP_INFO(get_logger(), "Will be using multithreading for image callbacks.");
     camera_callback_groups_.resize(rois_number_);
   }
   const bool is_compressed_image = declare_parameter<bool>("is_compressed_image");
   camera_image_subs_.resize(rois_number_);
   for (size_t roi_i = 0; roi_i < rois_number_; ++roi_i) {
-    
     auto sub_options = rclcpp::SubscriptionOptions();
-    if (multithreading_){
-      camera_callback_groups_.at(roi_i) = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    if (multithreading_) {
+      camera_callback_groups_.at(roi_i) =
+        this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
       sub_options.callback_group = camera_callback_groups_.at(roi_i);
     }
 
@@ -103,7 +102,7 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
       std::bind(
         &StreamPetrNode::camera_image_callback, this, std::placeholders::_1,
         static_cast<int>(roi_i)),
-      is_compressed_image ? "compressed" : "raw", rmw_qos_profile_sensor_data,sub_options);
+      is_compressed_image ? "compressed" : "raw", rmw_qos_profile_sensor_data, sub_options);
   }
 
   // Publishers
@@ -113,7 +112,8 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   data_store_ = std::make_unique<CameraDataStore>(
     this, rois_number_, declare_parameter<int>("model_params.input_image_height"),
     declare_parameter<int>("model_params.input_image_width"), anchor_camera_id_,
-    declare_parameter<bool>("is_distorted_image"),declare_parameter<double>("downsample_factor", 1.0));
+    declare_parameter<bool>("is_distorted_image"),
+    declare_parameter<double>("downsample_factor", 1.0));
   const bool use_temporal = declare_parameter<bool>("model_params.use_temporal");
   const double search_distance_2d =
     declare_parameter<double>("post_process_params.iou_nms_search_distance_2d");
@@ -166,7 +166,7 @@ void StreamPetrNode::camera_image_callback(
     pub_objects_->get_subscription_count() + pub_objects_->get_intra_process_subscription_count();
   if (objects_sub_count < 1) return;  // No subscribers, skip processing
 
-  if (!data_store_->check_if_all_camera_info_received() || !latest_kinematic_state_) return; // 
+  if (!data_store_->check_if_all_camera_info_received() || !latest_kinematic_state_) return;  //
 
   data_store_->update_camera_image(camera_id, input_camera_image_msg);
 
@@ -183,7 +183,8 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
     return;
   } else if (tdiff > max_camera_time_diff_ || prediction_timestamp < 0.0) {
     RCLCPP_WARN(
-      get_logger(), "Couldn't sync cameras. Sync difference: %.2f seconds, timelapsed  from start: %.2f seconds",
+      get_logger(),
+      "Couldn't sync cameras. Sync difference: %.2f seconds, timelapsed  from start: %.2f seconds",
       tdiff, prediction_timestamp);
     network_->wipe_memory();
     initial_kinematic_state_ = latest_kinematic_state_;
@@ -198,11 +199,11 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
   std::vector<float> forward_time_ms;
 
   network_->inference_detector(
-    data_store_->get_image_input(),ego_pose, ego_pose_inv, data_store_->get_image_shape(),
+    data_store_->get_image_input(), ego_pose, ego_pose_inv, data_store_->get_image_shape(),
     data_store_->get_camera_info_vector(),
     get_camera_extrinsics_vector(data_store_->get_camera_link_names()), prediction_timestamp,
     output_objects, forward_time_ms);
-  
+
   if (multithreading_) data_store_->unfreeze_updates();
 
   double inference_time_ms = -1.0;
