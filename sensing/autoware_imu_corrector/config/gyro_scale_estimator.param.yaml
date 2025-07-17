@@ -25,8 +25,8 @@
     samples_to_average_delta: 3
     samples_filter_pose_rate: 2
     samples_filter_gyro_rate: 6
-    compensate_offset: -0.0004 # for testing
-    compensate_offset_angle: -0.0086 # for testing
+    compensate_offset: 0.000 # for testing
+    compensate_offset_angle: 0.00 # for testing
     buffer_size_gyro: 200 # size of the buffer to store gyro data
     ekf_process_noise_q_angle: 1e-12
     ekf_variance_p_angle: 1e-6
