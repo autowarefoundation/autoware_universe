@@ -14,12 +14,16 @@
 
 #include "road_user_stop_module.hpp"
 
+#include <autoware/motion_utils/resample/resample.hpp>
+#include <autoware/motion_utils/trajectory/conversion.hpp>
+#include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware/universe_utils/ros/uuid_helper.hpp>
 #include <autoware/universe_utils/system/stop_watch.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils_rclcpp/parameter.hpp>
 #include <pluginlib/class_list_macros.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -42,6 +46,32 @@
 
 namespace autoware::motion_velocity_planner
 {
+
+namespace
+{
+std::vector<TrajectoryPoint> resampleTrajectoryPoints(
+  const std::vector<TrajectoryPoint> & traj_points, const double interval)
+{
+  const auto traj = autoware::motion_utils::convertToTrajectory(traj_points);
+  const auto resampled_traj = autoware::motion_utils::resampleTrajectory(traj, interval);
+  return autoware::motion_utils::convertToTrajectoryPointArray(resampled_traj);
+}
+
+autoware_utils_geometry::Point2d convertPoint(const geometry_msgs::msg::Point & p)
+{
+  return autoware_utils_geometry::Point2d{p.x, p.y};
+}
+
+double calcMinimumDistanceToStop(
+  const double initial_vel, const double max_acc, const double min_acc)
+{
+  if (initial_vel < 0.0) {
+    return -std::pow(initial_vel, 2) / 2.0 / max_acc;
+  }
+
+  return -std::pow(initial_vel, 2) / 2.0 / min_acc;
+}
+}  // namespace
 
 void RoadUserStopModule::init(rclcpp::Node & node, const std::string & module_name)
 {
@@ -75,10 +105,134 @@ void RoadUserStopModule::init(rclcpp::Node & node, const std::string & module_na
   time_keeper_ = std::make_shared<autoware_utils_debug::TimeKeeper>(processing_time_detail_pub_);
 }
 
+void RoadUserStopModule::updateTrackedObjects(
+  const std::vector<std::shared_ptr<PlannerData::Object>> & objects,
+  const rclcpp::Time & current_time)
+{
+  // Clean up old tracked objects that haven't been seen for a while
+  // TODO(odashima): parametrize the cleanup threshold
+  const double cleanup_threshold = 2.0;  // seconds
+  for (auto it = tracked_objects_.begin(); it != tracked_objects_.end();) {
+    if ((current_time - it->second.last_detected_time).seconds() > cleanup_threshold) {
+      it = tracked_objects_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+
+  // Update or add tracked objects
+  for (const auto & object_ptr : objects) {
+    if (!object_ptr) continue;
+
+    const auto & predicted_object = object_ptr->predicted_object;
+    const std::string object_id = autoware::universe_utils::toHexString(predicted_object.object_id);
+
+    auto it = tracked_objects_.find(object_id);
+    if (it != tracked_objects_.end()) {
+      // Update existing tracked object
+      it->second.last_detected_time = current_time;
+      it->second.updateClassification(predicted_object.classification.front().label);
+    } else {
+      // Add new tracked object
+      TrackedObject tracked_obj;
+      tracked_obj.object_id = object_id;
+      tracked_obj.first_detected_time = current_time;
+      tracked_obj.last_detected_time = current_time;
+      tracked_obj.updateClassification(predicted_object.classification.front().label);
+      tracked_objects_[object_id] = tracked_obj;
+    }
+  }
+}
+
+bool RoadUserStopModule::hasMinimumDetectionDuration(
+  const std::string & object_id, const rclcpp::Time & current_time) const
+{
+  auto it = tracked_objects_.find(object_id);
+  if (it == tracked_objects_.end()) {
+    return false;
+  }
+
+  const double detection_duration = (current_time - it->second.first_detected_time).seconds();
+  return detection_duration >= params_.obstacle_filtering.min_detection_duration;
+}
+
+std::vector<StopObstacle> RoadUserStopModule::filterStopObstacles(
+  const std::shared_ptr<const PlannerData> planner_data,
+  const std::vector<TrajectoryPoint> & traj_points,
+  const std::vector<TrajectoryPoint> & decimated_traj_points,
+  const std::vector<autoware_utils_geometry::Polygon2d> & decimated_traj_polygons,
+  const lanelet::ConstLanelets & lanelets_for_vru,
+  const lanelet::ConstLanelets & lanelets_for_wrongway_user, const rclcpp::Time & current_time,
+  const double dist_to_bumper)
+{
+  updateTrackedObjects(planner_data->objects, current_time);
+
+  std::vector<StopObstacle> stop_obstacles;
+  for (const auto & object : planner_data->objects) {
+    if (
+      auto stop_obstacle = pickStopObstacleFromPredictedObject(
+        planner_data, object, traj_points, decimated_traj_points, decimated_traj_polygons,
+        lanelets_for_vru, lanelets_for_wrongway_user, current_time, dist_to_bumper)) {
+      stop_obstacles.push_back(*stop_obstacle);
+    }
+  }
+
+  return stop_obstacles;
+}
+
 void RoadUserStopModule::update_parameters(const std::vector<rclcpp::Parameter> & parameters)
 {
-  // TODO(odashima): implement parameter update logic
-  (void)parameters;
+  using autoware_utils_rclcpp::update_param;
+
+  // Option parameters
+  update_param(
+    parameters, "road_user_stop.option.suppress_sudden_stop", params_.option.suppress_sudden_stop);
+
+  // Stop planning parameters
+  update_param(
+    parameters, "road_user_stop.stop_planning.stop_margin", params_.stop_planning.stop_margin);
+  update_param(
+    parameters, "road_user_stop.stop_planning.terminal_stop_margin",
+    params_.stop_planning.terminal_stop_margin);
+  update_param(
+    parameters, "road_user_stop.stop_planning.min_behavior_stop_margin",
+    params_.stop_planning.min_behavior_stop_margin);
+
+  update_param(
+    parameters, "road_user_stop.stop_planning.hold_stop_velocity_threshold",
+    params_.stop_planning.hold_stop_velocity_threshold);
+  update_param(
+    parameters, "road_user_stop.stop_planning.hold_stop_distance_threshold",
+    params_.stop_planning.hold_stop_distance_threshold);
+
+  // Stop on curve parameters
+  update_param(
+    parameters, "road_user_stop.stop_planning.stop_on_curve.enable_approaching",
+    params_.stop_planning.stop_on_curve.enable_approaching);
+  update_param(
+    parameters, "road_user_stop.stop_planning.stop_on_curve.additional_stop_margin",
+    params_.stop_planning.stop_on_curve.additional_stop_margin);
+  update_param(
+    parameters, "road_user_stop.stop_planning.stop_on_curve.min_stop_margin",
+    params_.stop_planning.stop_on_curve.min_stop_margin);
+
+  // Common parameters for all object types
+  update_param(
+    parameters, "road_user_stop.stop_planning.limit_min_acc", params_.stop_planning.limit_min_acc);
+  update_param(
+    parameters, "road_user_stop.stop_planning.sudden_object_acc_threshold",
+    params_.stop_planning.sudden_object_acc_threshold);
+  update_param(
+    parameters, "road_user_stop.stop_planning.sudden_object_dist_threshold",
+    params_.stop_planning.sudden_object_dist_threshold);
+  update_param(
+    parameters, "road_user_stop.stop_planning.abandon_to_stop",
+    params_.stop_planning.abandon_to_stop);
+
+  // Obstacle filtering parameters
+  update_param(
+    parameters, "road_user_stop.obstacle_filtering.adjacent_lane_margin",
+    params_.obstacle_filtering.adjacent_lane_margin);
 }
 
 void RoadUserStopModule::publish_planning_factor()
@@ -99,106 +253,75 @@ VelocityPlanningResult RoadUserStopModule::plan(
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  const double dist_to_bumper = planner_data->vehicle_info_.max_longitudinal_offset_m;
+  // Initialize
   VelocityPlanningResult result;
-
   debug_data_ = DebugData();
   trajectory_polygon_for_inside_map_.clear();
 
-  const auto & trajectory_points = raw_trajectory_points;
-
+  // Check prerequisites
   if (!path_with_lane_id_) {
     RCLCPP_ERROR_SKIPFIRST_THROTTLE(
       logger_, *clock_, 5000, "Path with lane ID is not set, skipping road user stop planning");
     return result;
   }
 
-  RCLCPP_DEBUG(
-    logger_, "Starting road user stop planning with %zu trajectory points",
-    trajectory_points.size());
-
+  // Extract parameters and current state
+  const auto & trajectory_points = raw_trajectory_points;
   const auto current_time = clock_->now();
+  const double dist_to_bumper = planner_data->vehicle_info_.max_longitudinal_offset_m;
 
-  // TODO(odashima): paraemterize
-  const double stop_margin = 2.0;
+  // 1. Prepare trajectory data for collision checking
+  // 1.1 Decimate trajectory points to reduce computational cost
   const auto decimated_traj_points = utils::decimate_trajectory_points_from_ego(
-    raw_trajectory_points, planner_data->current_odometry.pose.pose,
+    trajectory_points, planner_data->current_odometry.pose.pose,
     planner_data->ego_nearest_dist_threshold, planner_data->ego_nearest_yaw_threshold,
-    planner_data->trajectory_polygon_collision_check.decimate_trajectory_step_length, stop_margin);
+    planner_data->trajectory_polygon_collision_check.decimate_trajectory_step_length,
+    params_.stop_planning.stop_margin);
 
-  // calculate trajectory polygons with stop margin
+  // 1.2 Create trajectory polygons for collision detection
   const auto & p = planner_data->trajectory_polygon_collision_check;
   const auto decimated_traj_polygons = getTrajectoryPolygons(
     decimated_traj_points, planner_data->vehicle_info_, planner_data->current_odometry.pose.pose,
-    params_.detection.adjacent_lane_margin, p.enable_to_consider_current_pose,
+    params_.obstacle_filtering.adjacent_lane_margin, p.enable_to_consider_current_pose,
     p.time_to_convergence, p.decimate_trajectory_step_length);
-
-  // store for debug
   debug_data_.trajectory_polygons = decimated_traj_polygons;
 
-  // 1. get relevant lanelets
+  // 2. Get relevant lanelets for VRU and wrong-way detection
   const auto [lanelets_for_vru, lanelets_for_wrongway_user] = getRelevantLanelets(planner_data);
-  // For compatibility, use VRU lanelets as relevant_lanelets for debug
   debug_data_.relevant_lanelets = lanelets_for_vru;
   RCLCPP_DEBUG(
     logger_, "Found %zu lanelets for VRU, %zu for wrongway", lanelets_for_vru.size(),
     lanelets_for_wrongway_user.size());
 
-  // 2. update tracked objects
-  PredictedObjects predicted_objects;
-  predicted_objects.header = planner_data->predicted_objects_header;
+  // 3. Filter objects and create stop obstacles
+  const auto stop_obstacles = filterStopObstacles(
+    planner_data, trajectory_points, decimated_traj_points, decimated_traj_polygons,
+    lanelets_for_vru, lanelets_for_wrongway_user, current_time, dist_to_bumper);
 
-  for (const auto & object_ptr : planner_data->objects) {
-    if (object_ptr) {
-      predicted_objects.objects.push_back(object_ptr->predicted_object);
-    }
-  }
-
-  updateTrackedObjects(predicted_objects, current_time);
-
-  // 3. filter objects and create stop obstacles
-  std::vector<StopObstacle> stop_obstacles;
-  for (const auto & object : planner_data->objects) {
-    if (
-      auto stop_obstacle = pickStopObstacleFromPredictedObject(
-        planner_data, object, trajectory_points, decimated_traj_points, decimated_traj_polygons,
-        lanelets_for_vru, lanelets_for_wrongway_user, current_time, dist_to_bumper)) {
-      stop_obstacles.push_back(*stop_obstacle);
-    }
-  }
-
-  // 4. calculate stop point
-  const auto stop_point =
-    planStop(planner_data, raw_trajectory_points, stop_obstacles, dist_to_bumper);
-
+  // 4. Calculate stop point based on filtered obstacles
+  const auto stop_point = planStop(planner_data, trajectory_points, stop_obstacles, dist_to_bumper);
   if (stop_point) {
     result.stop_points.push_back(*stop_point);
   }
 
-  // 5. publish debug infomation
-  if (params_.debug.publish_debug_markers && debug_publisher_) {
-    const auto debug_markers = createDebugMarkerArray();
-    debug_publisher_->publish(debug_markers);
-  }
-
-  // publishProcessingTime(stop_watch.toc());
+  // 5. Publish debug information for visualization
+  const auto debug_markers = createDebugMarkerArray();
+  debug_publisher_->publish(debug_markers);
 
   return result;
 }
 
-bool RoadUserStopModule::isTargetObject(const PredictedObject & object) const
+bool RoadUserStopModule::isTargetObject(const uint8_t label) const
 {
-  const auto & classification = object.classification.front();
-
-  switch (classification.label) {
+  switch (label) {
     case ObjectClassification::PEDESTRIAN:
-      return params_.detection.target_object_types.check_pedestrian;
+      return params_.obstacle_filtering.object_type.target_types.pedestrian;
     case ObjectClassification::BICYCLE:
-      return params_.detection.target_object_types.check_bicycle;
+      return params_.obstacle_filtering.object_type.target_types.bicycle;
     case ObjectClassification::MOTORCYCLE:
-      return params_.detection.target_object_types.check_motorcycle;
+      return params_.obstacle_filtering.object_type.target_types.motorcycle;
     case ObjectClassification::UNKNOWN:
-      return params_.detection.target_object_types.check_unknown;
+      return params_.obstacle_filtering.object_type.target_types.unknown;
     default:
       return false;
   }
@@ -233,11 +356,11 @@ bool RoadUserStopModule::isNearCrosswalk(
   // search for crosswalk lanelets
   const auto crosswalk_lanelets = lanelet_map->laneletLayer.search(lanelet::BoundingBox2d(
     lanelet::Point2d(
-      position.x - params_.detection.crosswalk_margin,
-      position.y - params_.detection.crosswalk_margin),
+      position.x - params_.obstacle_filtering.crosswalk_margin,
+      position.y - params_.obstacle_filtering.crosswalk_margin),
     lanelet::Point2d(
-      position.x + params_.detection.crosswalk_margin,
-      position.y + params_.detection.crosswalk_margin)));
+      position.x + params_.obstacle_filtering.crosswalk_margin,
+      position.y + params_.obstacle_filtering.crosswalk_margin)));
 
   for (const auto & lanelet : crosswalk_lanelets) {
     if (
@@ -279,7 +402,7 @@ bool RoadUserStopModule::isWrongWayUser(
   const double object_speed = std::hypot(twist.linear.x, twist.linear.y);
 
   // skip if object is stopped or moving too slowly
-  if (object_speed < params_.in_place_stop.min_speed_threshold) {
+  if (object_speed < params_.obstacle_filtering.wrong_way_detection.min_speed_threshold) {
     return false;
   }
 
@@ -316,7 +439,8 @@ bool RoadUserStopModule::isWrongWayUser(
   const double angle_diff =
     std::abs(autoware::universe_utils::normalizeRadian(object_yaw - lanelet_yaw)) * 180.0 / M_PI;
 
-  const bool is_wrong_way_user = angle_diff > params_.in_place_stop.wrong_way_angle_threshold;
+  const bool is_wrong_way_user =
+    angle_diff > params_.obstacle_filtering.wrong_way_detection.angle_threshold;
 
   return is_wrong_way_user;
 }
@@ -365,7 +489,8 @@ std::pair<lanelet::ConstLanelets, lanelet::ConstLanelets> RoadUserStopModule::ge
   // store ego lanelets for debug visualization (before adding adjacent lanelets)
   debug_data_.ego_lanelets = relevant_lanelets;
 
-  if (params_.detection.adjacent_lane_check) {
+  // always check adjacent lanelets
+  {
     // add adjacent lanelets
     lanelet::ConstLanelets adjacent_lanelets;
     debug_data_.adjacent_lanelets.clear();
@@ -570,51 +695,6 @@ std::optional<geometry_msgs::msg::Point> RoadUserStopModule::planStop(
   return std::nullopt;
 }
 
-void RoadUserStopModule::updateTrackedObjects(
-  const PredictedObjects & objects, const rclcpp::Time & current_time)
-{
-  // remove old tracked objects
-  for (auto it = tracked_objects_.begin(); it != tracked_objects_.end();) {
-    if ((current_time - it->second.last_detection_time).seconds() > 1.0) {
-      it = tracked_objects_.erase(it);
-    } else {
-      ++it;
-    }
-  }
-
-  // update or add tracked objects
-  for (const auto & object : objects.objects) {
-    const auto object_id_str = autoware::universe_utils::toHexString(object.object_id);
-
-    if (tracked_objects_.find(object_id_str) != tracked_objects_.end()) {
-      // update existing
-      tracked_objects_[object_id_str].last_detection_time = current_time;
-      tracked_objects_[object_id_str].last_position =
-        object.kinematics.initial_pose_with_covariance.pose.position;
-    } else {
-      // add new
-      TrackedObject tracked;
-      tracked.object_id = object.object_id;
-      tracked.first_detection_time = current_time;
-      tracked.last_detection_time = current_time;
-      tracked.last_position = object.kinematics.initial_pose_with_covariance.pose.position;
-      tracked_objects_[object_id_str] = tracked;
-    }
-  }
-}
-
-bool RoadUserStopModule::hasMinimumDetectionDuration(
-  const std::string & object_id, const rclcpp::Time & current_time) const
-{
-  const auto it = tracked_objects_.find(object_id);
-  if (it == tracked_objects_.end()) {
-    return false;
-  }
-
-  const double duration = (current_time - it->second.first_detection_time).seconds();
-  return duration >= params_.detection.min_detection_duration;
-}
-
 std::optional<StopObstacle> RoadUserStopModule::pickStopObstacleFromPredictedObject(
   const std::shared_ptr<const PlannerData> planner_data,
   const std::shared_ptr<PlannerData::Object> object,
@@ -629,20 +709,27 @@ std::optional<StopObstacle> RoadUserStopModule::pickStopObstacleFromPredictedObj
   const auto & predicted_objects_stamp = planner_data->predicted_objects_header.stamp;
   const auto lanelet_map_ptr = planner_data->route_handler->getLaneletMapPtr();
 
-  // check if target object type
-  if (!isTargetObject(predicted_object)) {
-    return std::nullopt;
-  }
-
-  // check temporal filtering
+  // check temporal filtering and get robust classification
   const auto object_id_str = autoware::universe_utils::toHexString(predicted_object.object_id);
   if (!hasMinimumDetectionDuration(object_id_str, current_time)) {
     return std::nullopt;
   }
 
+  // Use most frequent classification from tracking history for robustness
+  const auto tracked_it = tracked_objects_.find(object_id_str);
+  ObjectClassification robust_classification = predicted_object.classification.front();
+  if (tracked_it != tracked_objects_.end()) {
+    robust_classification.label = tracked_it->second.getMostFrequentClassification();
+  }
+
+  // check if target object type using robust classification
+  if (!isTargetObject(robust_classification.label)) {
+    return std::nullopt;
+  }
+
   // check if wrong-way user
   const bool is_wrong_way = [&]() {
-    if (params_.in_place_stop.enable) {
+    if (params_.obstacle_filtering.wrong_way_detection.enable) {
       for (const auto & lanelet : lanelets_for_wrongway_user) {
         if (isWrongWayUser(predicted_object, lanelet)) {
           return true;
@@ -660,7 +747,7 @@ std::optional<StopObstacle> RoadUserStopModule::pickStopObstacleFromPredictedObj
 
   // check if near crosswalk (exclude if configured)
   if (
-    params_.detection.exclude_crosswalk_users &&
+    params_.obstacle_filtering.exclude_crosswalk_users &&
     isNearCrosswalk(
       predicted_object.kinematics.initial_pose_with_covariance.pose.position, lanelet_map_ptr)) {
     // skip crosswalk users
@@ -669,7 +756,7 @@ std::optional<StopObstacle> RoadUserStopModule::pickStopObstacleFromPredictedObj
 
   // check if on sidewalk (exclude if configured)
   if (
-    params_.detection.exclude_sidewalk_users &&
+    params_.obstacle_filtering.exclude_sidewalk_users &&
     isOnSidewalk(
       predicted_object.kinematics.initial_pose_with_covariance.pose.position, lanelet_map_ptr)) {
     return std::nullopt;
@@ -687,10 +774,14 @@ std::optional<StopObstacle> RoadUserStopModule::pickStopObstacleFromPredictedObj
     decimated_traj_points, decimated_traj_polygons, obj_pose.position, clock_->now(),
     autoware_utils_geometry::to_polygon2d(obj_pose, predicted_object.shape), dist_to_bumper);
 
-  // create stop obstacle
+  if (!collision_point) {
+    return std::nullopt;  // no collision point found
+  }
+
+  // create stop obstacle with robust classification
   StopObstacle stop_obstacle(
     autoware::universe_utils::toHexString(predicted_object.object_id), predicted_objects_stamp,
-    predicted_object.classification.at(0), obj_pose, predicted_object.shape,
+    robust_classification, obj_pose, predicted_object.shape,
     object->get_lon_vel_relative_to_traj(traj_points), collision_point->first,
     collision_point->second);
 
@@ -706,12 +797,9 @@ void RoadUserStopModule::holdPreviousStopIfNecessary(
   const std::vector<TrajectoryPoint> & traj_points,
   std::optional<double> & determined_zero_vel_dist)
 {
-  // TODO(odashima): parameterize these thresholds
-  const double hold_stop_velocity_threshold = 0.01;  // [m/s]
-  const double hold_stop_distance_threshold = 0.3;   // [m]
-
   if (
-    std::abs(planner_data->current_odometry.twist.twist.linear.x) < hold_stop_velocity_threshold &&
+    std::abs(planner_data->current_odometry.twist.twist.linear.x) <
+      params_.stop_planning.hold_stop_velocity_threshold &&
     prev_stop_distance_info_) {
     // NOTE: We assume that the current trajectory's front point is ahead of the previous
     // trajectory's front point.
@@ -725,7 +813,7 @@ void RoadUserStopModule::holdPreviousStopIfNecessary(
     const double prev_zero_vel_dist = prev_stop_distance_info_->second - diff_dist_front_points;
     if (
       std::abs(prev_zero_vel_dist - determined_zero_vel_dist.value()) <
-      hold_stop_distance_threshold) {
+      params_.stop_planning.hold_stop_distance_threshold) {
       determined_zero_vel_dist.value() = prev_zero_vel_dist;
     }
   }
@@ -777,15 +865,15 @@ double RoadUserStopModule::calcDesiredStopMargin(
       autoware::motion_utils::calcSignedArcLength(traj_points, 0, traj_points.size() - 1);
 
     // For negative velocity obstacles (approaching)
-    if (v_obs < -0.1) {          // max_negative_velocity
-      const double a_ego = 4.0;  // effective_deceleration_opposing_traffic
+    if (v_obs < params_.stop_planning.max_negative_velocity) {
+      const double a_ego = params_.stop_planning.effective_deceleration_opposing_traffic;
       const double & bumper_to_bumper_distance = stop_obstacle.dist_to_collide_on_decimated_traj;
 
       const double braking_distance = v_ego * v_ego / (2 * a_ego);
       const double stopping_time = v_ego / a_ego;
       const double distance_obs_ego_braking = std::abs(v_obs * stopping_time);
 
-      const double ego_stop_margin = 3.0;  // stop_margin_opposing_traffic
+      const double ego_stop_margin = params_.stop_planning.stop_margin_opposing_traffic;
 
       const double rel_vel = v_ego - v_obs;
       constexpr double epsilon = 1e-6;  // Small threshold for numerical stability
@@ -795,7 +883,7 @@ double RoadUserStopModule::calcDesiredStopMargin(
           "Relative velocity (%.3f) is too close to zero. Using minimum safe value for "
           "calculation.",
           rel_vel);
-        return params_.stop_decision.stop_margin;  // Return default stop margin as fallback
+        return params_.stop_planning.stop_margin;  // Return default stop margin as fallback
       }
 
       const double T_coast = std::max(
@@ -812,37 +900,75 @@ double RoadUserStopModule::calcDesiredStopMargin(
     }
 
     if (dist_to_collide_on_ref_traj > ref_traj_length) {
-      // Use terminal margin (terminal_stop_margin) for obstacle stop
-      return 3.0;  // terminal_stop_margin
+      return params_.stop_planning.terminal_stop_margin;
     }
 
-    return params_.stop_decision.stop_margin;
+    return params_.stop_planning.stop_margin;
   }();
 
-  // For simplicity, skip curve adjustment for now
-  return default_stop_margin;
+  // calculate stop margin on curve
+  const double stop_margin_on_curve = calcMarginFromObstacleOnCurve(
+    planner_data, traj_points, stop_obstacle, dist_to_bumper, default_stop_margin);
+
+  // calculate stop margin considering behavior's stop point
+  // NOTE: If behavior stop point is ahead of the closest_obstacle_stop point within a certain
+  //       margin we set closest_obstacle_stop_distance to closest_behavior_stop_distance
+  const auto closest_behavior_stop_idx =
+    autoware::motion_utils::searchZeroVelocityIndex(traj_points, ego_segment_idx + 1);
+  if (closest_behavior_stop_idx) {
+    const double closest_behavior_stop_dist_on_ref_traj =
+      autoware::motion_utils::calcSignedArcLength(traj_points, 0, *closest_behavior_stop_idx);
+    const double stop_dist_diff =
+      closest_behavior_stop_dist_on_ref_traj - (dist_to_collide_on_ref_traj - stop_margin_on_curve);
+    if (0.0 < stop_dist_diff && stop_dist_diff < stop_margin_on_curve) {
+      return params_.stop_planning.min_behavior_stop_margin;
+    }
+  }
+  return stop_margin_on_curve;
 }
 
 std::optional<double> RoadUserStopModule::calcCandidateZeroVelDist(
   const std::shared_ptr<const PlannerData> planner_data,
   const std::vector<TrajectoryPoint> & traj_points,
   [[maybe_unused]] const StopObstacle & stop_obstacle, const double dist_to_collide_on_ref_traj,
-  const double desired_stop_margin, const double dist_to_bumper) const
+  const double desired_stop_margin, [[maybe_unused]] const double dist_to_bumper) const
 {
-  // Todo(odashima): refer to the obstacle_stop_module algorithm
-  double candidate_zero_vel_dist =
-    std::max(0.0, dist_to_collide_on_ref_traj - desired_stop_margin - dist_to_bumper);
+  double candidate_zero_vel_dist = std::max(0.0, dist_to_collide_on_ref_traj - desired_stop_margin);
 
-  // Check deceleration feasibility
-  const auto ego_segment_idx =
-    planner_data->find_segment_index(traj_points, planner_data->current_odometry.pose.pose);
-  // const double current_velocity = planner_data->current_odometry.twist.twist.linear.x;
-  const double stop_distance =
-    candidate_zero_vel_dist -
-    autoware::motion_utils::calcSignedArcLength(traj_points, 0, ego_segment_idx);
+  if (params_.option.suppress_sudden_stop) {
+    const auto acceptable_stop_acc = [&]() -> std::optional<double> {
+      const double distance_to_judge_suddenness = std::min(
+        calcMinimumDistanceToStop(
+          planner_data->current_odometry.twist.twist.linear.x, params_.common_param.limit_max_accel,
+          params_.stop_planning.sudden_object_acc_threshold),
+        params_.stop_planning.sudden_object_dist_threshold);
 
-  if (stop_distance <= 0) {
-    return std::nullopt;
+      if (candidate_zero_vel_dist > distance_to_judge_suddenness) {
+        return params_.common_param.limit_min_accel;
+      }
+
+      if (params_.stop_planning.abandon_to_stop) {
+        RCLCPP_WARN(logger_, "[RoadUserStop] abandon to stop against object");
+        return std::nullopt;
+      } else {
+        return params_.stop_planning.limit_min_acc;
+      }
+    }();
+
+    if (!acceptable_stop_acc) {
+      return std::nullopt;
+    }
+
+    const double acceptable_stop_pos =
+      autoware::motion_utils::calcSignedArcLength(
+        traj_points, 0, planner_data->current_odometry.pose.pose.position) +
+      calcMinimumDistanceToStop(
+        planner_data->current_odometry.twist.twist.linear.x, params_.common_param.limit_max_accel,
+        acceptable_stop_acc.value());
+
+    if (acceptable_stop_pos > candidate_zero_vel_dist) {
+      candidate_zero_vel_dist = acceptable_stop_pos;
+    }
   }
 
   return candidate_zero_vel_dist;
@@ -862,6 +988,92 @@ std::vector<autoware_utils_geometry::Polygon2d> RoadUserStopModule::getTrajector
     trajectory_polygon_for_inside_map_.emplace(lat_margin, traj_polys);
   }
   return trajectory_polygon_for_inside_map_.at(lat_margin);
+}
+
+double RoadUserStopModule::calcMarginFromObstacleOnCurve(
+  const std::shared_ptr<const PlannerData> planner_data,
+  const std::vector<TrajectoryPoint> & traj_points, const StopObstacle & stop_obstacle,
+  const double dist_to_bumper, const double default_stop_margin) const
+{
+  const bool enable_approaching_on_curve = params_.stop_planning.stop_on_curve.enable_approaching;
+  const bool use_pointcloud = false;  // road_user_stop doesn't use pointcloud
+
+  if (!enable_approaching_on_curve || use_pointcloud) {
+    return default_stop_margin;
+  }
+
+  // calculate short trajectory points towards obstacle
+  const size_t obj_segment_idx =
+    autoware::motion_utils::findNearestSegmentIndex(traj_points, stop_obstacle.collision_point);
+  std::vector<TrajectoryPoint> short_traj_points{traj_points.at(obj_segment_idx + 1)};
+  double sum_short_traj_length{0.0};
+  for (int i = obj_segment_idx; 0 <= i; --i) {
+    short_traj_points.push_back(traj_points.at(i));
+
+    if (
+      1 < short_traj_points.size() &&
+      params_.stop_planning.stop_margin + dist_to_bumper < sum_short_traj_length) {
+      break;
+    }
+    sum_short_traj_length +=
+      autoware_utils_geometry::calc_distance2d(traj_points.at(i), traj_points.at(i + 1));
+  }
+  std::reverse(short_traj_points.begin(), short_traj_points.end());
+  if (short_traj_points.size() < 2) {
+    return default_stop_margin;
+  }
+
+  // calculate collision index between straight line from ego pose and object
+  const auto calculate_distance_from_straight_ego_path =
+    [&](const auto & ego_pose, const auto & object_polygon) {
+      const auto forward_ego_pose = autoware_utils_geometry::calc_offset_pose(
+        ego_pose, params_.stop_planning.stop_margin + 3.0, 0.0, 0.0);
+      const auto ego_straight_segment = autoware_utils_geometry::Segment2d{
+        convertPoint(ego_pose.position), convertPoint(forward_ego_pose.position)};
+      return boost::geometry::distance(ego_straight_segment, object_polygon);
+    };
+  const auto resampled_short_traj_points = resampleTrajectoryPoints(short_traj_points, 0.5);
+  const auto object_polygon =
+    autoware_utils_geometry::to_polygon2d(stop_obstacle.pose, stop_obstacle.shape);
+  const auto collision_idx = [&]() -> std::optional<size_t> {
+    for (size_t i = 0; i < resampled_short_traj_points.size(); ++i) {
+      const double dist_to_obj = calculate_distance_from_straight_ego_path(
+        resampled_short_traj_points.at(i).pose, object_polygon);
+      if (dist_to_obj < planner_data->vehicle_info_.vehicle_width_m / 2.0) {
+        return i;
+      }
+    }
+    return std::nullopt;
+  }();
+  if (!collision_idx) {
+    return params_.stop_planning.stop_on_curve.min_stop_margin;
+  }
+  if (*collision_idx == 0) {
+    return default_stop_margin;
+  }
+
+  // calculate margin from obstacle
+  const double partial_segment_length = [&]() {
+    const double collision_segment_length = autoware_utils_geometry::calc_distance2d(
+      resampled_short_traj_points.at(*collision_idx - 1),
+      resampled_short_traj_points.at(*collision_idx));
+    const double prev_dist = calculate_distance_from_straight_ego_path(
+      resampled_short_traj_points.at(*collision_idx - 1).pose, object_polygon);
+    const double next_dist = calculate_distance_from_straight_ego_path(
+      resampled_short_traj_points.at(*collision_idx).pose, object_polygon);
+    return (next_dist - planner_data->vehicle_info_.vehicle_width_m / 2.0) /
+           (next_dist - prev_dist) * collision_segment_length;
+  }();
+
+  const double short_margin_from_obstacle =
+    partial_segment_length +
+    autoware::motion_utils::calcSignedArcLength(
+      resampled_short_traj_points, *collision_idx, stop_obstacle.collision_point) -
+    dist_to_bumper + params_.stop_planning.stop_on_curve.additional_stop_margin;
+
+  return std::min(
+    default_stop_margin,
+    std::max(params_.stop_planning.stop_on_curve.min_stop_margin, short_margin_from_obstacle));
 }
 
 }  // namespace autoware::motion_velocity_planner

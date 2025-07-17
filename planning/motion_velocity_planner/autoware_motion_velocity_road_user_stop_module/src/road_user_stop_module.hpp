@@ -74,7 +74,7 @@ private:
     const autoware_internal_planning_msgs::msg::PathWithLaneId::ConstSharedPtr msg);
 
   // helper functions
-  bool isTargetObject(const PredictedObject & object) const;
+  bool isTargetObject(const uint8_t label) const;
   bool isObjectOnRoad(
     const PredictedObject & object, const lanelet::LaneletMapPtr & lanelet_map,
     const lanelet::ConstLanelets & relevant_lanelets) const;
@@ -99,7 +99,18 @@ private:
     const std::vector<TrajectoryPoint> & trajectory_points,
     const std::vector<StopObstacle> & stop_obstacles, const double dist_to_bumper);
 
-  void updateTrackedObjects(const PredictedObjects & objects, const rclcpp::Time & current_time);
+  std::vector<StopObstacle> filterStopObstacles(
+    const std::shared_ptr<const PlannerData> planner_data,
+    const std::vector<TrajectoryPoint> & traj_points,
+    const std::vector<TrajectoryPoint> & decimated_traj_points,
+    const std::vector<autoware_utils_geometry::Polygon2d> & decimated_traj_polygons,
+    const lanelet::ConstLanelets & lanelets_for_vru,
+    const lanelet::ConstLanelets & lanelets_for_wrongway_user, const rclcpp::Time & current_time,
+    const double dist_to_bumper);
+
+  void updateTrackedObjects(
+    const std::vector<std::shared_ptr<PlannerData::Object>> & objects,
+    const rclcpp::Time & current_time);
 
   bool hasMinimumDetectionDuration(
     const std::string & object_id, const rclcpp::Time & current_time) const;
@@ -183,6 +194,11 @@ private:
     const std::vector<TrajectoryPoint> & traj_points, const StopObstacle & stop_obstacle,
     const double dist_to_collide_on_ref_traj, const double desired_stop_margin,
     const double dist_to_bumper) const;
+
+  double calcMarginFromObstacleOnCurve(
+    const std::shared_ptr<const PlannerData> planner_data,
+    const std::vector<TrajectoryPoint> & traj_points, const StopObstacle & stop_obstacle,
+    const double dist_to_bumper, const double default_stop_margin) const;
 };
 
 }  // namespace autoware::motion_velocity_planner

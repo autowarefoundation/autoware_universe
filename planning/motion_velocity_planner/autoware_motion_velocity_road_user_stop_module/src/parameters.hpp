@@ -24,103 +24,167 @@ namespace autoware::motion_velocity_planner
 
 struct RoadUserStopParameters
 {
-  // Detection parameters
-  struct Detection
+  // Option parameters
+  struct Option
   {
-    struct TargetObjectTypes
-    {
-      bool check_pedestrian;
-      bool check_bicycle;
-      bool check_motorcycle;
-      bool check_unknown;
-    } target_object_types;
+    bool suppress_sudden_stop;
+  } option;
 
-    double search_length;
-    bool adjacent_lane_check;
-    double adjacent_lane_margin;  // maximum lateral distance from trajectory for adjacent lanes
+  // Stop planning parameters
+  struct StopPlanning
+  {
+    double stop_margin;
+    double terminal_stop_margin;
+    double min_behavior_stop_margin;
+
+    double max_negative_velocity;
+    double stop_margin_opposing_traffic;
+    double effective_deceleration_opposing_traffic;
+
+    double min_on_duration;
+    double min_off_duration;
+    double update_distance_th;
+
+    double hold_stop_velocity_threshold;
+    double hold_stop_distance_threshold;
+
+    struct StopOnCurve
+    {
+      bool enable_approaching;
+      double additional_stop_margin;
+      double min_stop_margin;
+    } stop_on_curve;
+
+    // Common parameters for all object types
+    double limit_min_acc;
+    double sudden_object_acc_threshold;
+    double sudden_object_dist_threshold;
+    bool abandon_to_stop;
+  } stop_planning;
+
+  // Obstacle filtering parameters
+  struct ObstacleFiltering
+  {
+    struct ObjectType
+    {
+      struct TargetTypes
+      {
+        bool pedestrian;
+        bool bicycle;
+        bool motorcycle;
+        bool unknown;
+      } target_types;
+    } object_type;
+
+    double adjacent_lane_margin;  // always check adjacent lanes
+
     bool exclude_crosswalk_users;
     double crosswalk_margin;
     bool exclude_sidewalk_users;
+
+    struct WrongWayDetection
+    {
+      bool enable;
+      double angle_threshold;
+      double min_speed_threshold;
+    } wrong_way_detection;
+
     double min_detection_duration;
-  } detection;
+  } obstacle_filtering;
 
-  // Stop decision parameters
-  struct StopDecision
+  // Common parameters (from common_param.yaml)
+  struct CommonParam
   {
-    double stop_margin;
-    double max_deceleration;
-  } stop_decision;
-
-  // In-place stop parameters
-  struct InPlaceStop
-  {
-    bool enable;
-    double wrong_way_angle_threshold;
-    double min_speed_threshold;  // minimum speed to consider object as moving
-    double deceleration;
-  } in_place_stop;
-
-  // Debug parameters
-  struct Debug
-  {
-    bool publish_debug_markers;
-    bool print_debug_info;
-  } debug;
+    double limit_max_accel{1.0};
+    double limit_min_accel{-2.5};
+  } common_param;
 
   RoadUserStopParameters() = default;
 
   explicit RoadUserStopParameters(rclcpp::Node & node, const std::string & module_name)
   {
-    // Note: get_or_declare_parameter uses the full path including module name
-    // For namespace "road_user_stop", parameters should be accessed as "road_user_stop.param"
+    // Option parameters
+    option.suppress_sudden_stop =
+      node.declare_parameter<bool>(module_name + ".option.suppress_sudden_stop", true);
 
-    // Detection parameters - target object types
-    detection.target_object_types.check_pedestrian = node.declare_parameter<bool>(
-      module_name + ".detection.target_object_types.check_pedestrian", true);
-    detection.target_object_types.check_bicycle = node.declare_parameter<bool>(
-      module_name + ".detection.target_object_types.check_bicycle", true);
-    detection.target_object_types.check_motorcycle = node.declare_parameter<bool>(
-      module_name + ".detection.target_object_types.check_motorcycle", false);
-    detection.target_object_types.check_unknown = node.declare_parameter<bool>(
-      module_name + ".detection.target_object_types.check_unknown", true);
+    // Stop planning parameters
+    stop_planning.stop_margin =
+      node.declare_parameter<double>(module_name + ".stop_planning.stop_margin", 2.0);
+    stop_planning.terminal_stop_margin =
+      node.declare_parameter<double>(module_name + ".stop_planning.terminal_stop_margin", 3.0);
+    stop_planning.min_behavior_stop_margin =
+      node.declare_parameter<double>(module_name + ".stop_planning.min_behavior_stop_margin", 3.0);
 
-    // Detection parameters - search settings
-    detection.search_length =
-      node.declare_parameter<double>(module_name + ".detection.search_length", 50.0);
-    detection.adjacent_lane_check =
-      node.declare_parameter<bool>(module_name + ".detection.adjacent_lane_check", true);
-    detection.adjacent_lane_margin =
-      node.declare_parameter<double>(module_name + ".detection.adjacent_lane_margin", 10.0);
-    detection.exclude_crosswalk_users =
-      node.declare_parameter<bool>(module_name + ".detection.exclude_crosswalk_users", true);
-    detection.crosswalk_margin =
-      node.declare_parameter<double>(module_name + ".detection.crosswalk_margin", 1.0);
-    detection.exclude_sidewalk_users =
-      node.declare_parameter<bool>(module_name + ".detection.exclude_sidewalk_users", true);
-    detection.min_detection_duration =
-      node.declare_parameter<double>(module_name + ".detection.min_detection_duration", 0.5);
+    stop_planning.max_negative_velocity =
+      node.declare_parameter<double>(module_name + ".stop_planning.max_negative_velocity", -0.5);
+    stop_planning.stop_margin_opposing_traffic = node.declare_parameter<double>(
+      module_name + ".stop_planning.stop_margin_opposing_traffic", 3.0);
+    stop_planning.effective_deceleration_opposing_traffic = node.declare_parameter<double>(
+      module_name + ".stop_planning.effective_deceleration_opposing_traffic", 4.0);
 
-    // Stop decision parameters
-    stop_decision.stop_margin =
-      node.declare_parameter<double>(module_name + ".stop_decision.stop_margin", 5.0);
-    stop_decision.max_deceleration =
-      node.declare_parameter<double>(module_name + ".stop_decision.max_deceleration", 2.5);
+    stop_planning.min_on_duration =
+      node.declare_parameter<double>(module_name + ".stop_planning.min_on_duration", 0.3);
+    stop_planning.min_off_duration =
+      node.declare_parameter<double>(module_name + ".stop_planning.min_off_duration", 1.0);
+    stop_planning.update_distance_th =
+      node.declare_parameter<double>(module_name + ".stop_planning.update_distance_th", 0.5);
 
-    // In-place stop parameters
-    in_place_stop.enable =
-      node.declare_parameter<bool>(module_name + ".in_place_stop.enable", true);
-    in_place_stop.wrong_way_angle_threshold = node.declare_parameter<double>(
-      module_name + ".in_place_stop.wrong_way_angle_threshold", 150.0);
-    in_place_stop.min_speed_threshold = node.declare_parameter<double>(
-      module_name + ".in_place_stop.min_speed_threshold", 0.5);  // 0.5 m/s
-    in_place_stop.deceleration =
-      node.declare_parameter<double>(module_name + ".in_place_stop.deceleration", 1.0);
+    stop_planning.hold_stop_velocity_threshold = node.declare_parameter<double>(
+      module_name + ".stop_planning.hold_stop_velocity_threshold", 0.01);
+    stop_planning.hold_stop_distance_threshold = node.declare_parameter<double>(
+      module_name + ".stop_planning.hold_stop_distance_threshold", 0.3);
 
-    // Debug parameters
-    debug.publish_debug_markers =
-      node.declare_parameter<bool>(module_name + ".debug.publish_debug_markers", false);
-    debug.print_debug_info =
-      node.declare_parameter<bool>(module_name + ".debug.print_debug_info", false);
+    // Stop on curve parameters
+    stop_planning.stop_on_curve.enable_approaching = node.declare_parameter<bool>(
+      module_name + ".stop_planning.stop_on_curve.enable_approaching", true);
+    stop_planning.stop_on_curve.additional_stop_margin = node.declare_parameter<double>(
+      module_name + ".stop_planning.stop_on_curve.additional_stop_margin", 0.5);
+    stop_planning.stop_on_curve.min_stop_margin = node.declare_parameter<double>(
+      module_name + ".stop_planning.stop_on_curve.min_stop_margin", 1.0);
+
+    // Common parameters for all object types
+    stop_planning.limit_min_acc =
+      node.declare_parameter<double>(module_name + ".stop_planning.limit_min_acc", -2.5);
+    stop_planning.sudden_object_acc_threshold = node.declare_parameter<double>(
+      module_name + ".stop_planning.sudden_object_acc_threshold", -1.0);
+    stop_planning.sudden_object_dist_threshold = node.declare_parameter<double>(
+      module_name + ".stop_planning.sudden_object_dist_threshold", 1000.0);
+    stop_planning.abandon_to_stop =
+      node.declare_parameter<bool>(module_name + ".stop_planning.abandon_to_stop", false);
+
+    // Obstacle filtering parameters
+    obstacle_filtering.object_type.target_types.pedestrian = node.declare_parameter<bool>(
+      module_name + ".obstacle_filtering.object_type.target_types.pedestrian", true);
+    obstacle_filtering.object_type.target_types.bicycle = node.declare_parameter<bool>(
+      module_name + ".obstacle_filtering.object_type.target_types.bicycle", true);
+    obstacle_filtering.object_type.target_types.motorcycle = node.declare_parameter<bool>(
+      module_name + ".obstacle_filtering.object_type.target_types.motorcycle", true);
+    obstacle_filtering.object_type.target_types.unknown = node.declare_parameter<bool>(
+      module_name + ".obstacle_filtering.object_type.target_types.unknown", true);
+
+    obstacle_filtering.adjacent_lane_margin =
+      node.declare_parameter<double>(module_name + ".obstacle_filtering.adjacent_lane_margin", 3.0);
+
+    obstacle_filtering.exclude_crosswalk_users = node.declare_parameter<bool>(
+      module_name + ".obstacle_filtering.exclude_crosswalk_users", true);
+    obstacle_filtering.crosswalk_margin =
+      node.declare_parameter<double>(module_name + ".obstacle_filtering.crosswalk_margin", 1.0);
+    obstacle_filtering.exclude_sidewalk_users = node.declare_parameter<bool>(
+      module_name + ".obstacle_filtering.exclude_sidewalk_users", true);
+
+    obstacle_filtering.wrong_way_detection.enable = node.declare_parameter<bool>(
+      module_name + ".obstacle_filtering.wrong_way_detection.enable", true);
+    obstacle_filtering.wrong_way_detection.angle_threshold = node.declare_parameter<double>(
+      module_name + ".obstacle_filtering.wrong_way_detection.angle_threshold", 150.0);
+    obstacle_filtering.wrong_way_detection.min_speed_threshold = node.declare_parameter<double>(
+      module_name + ".obstacle_filtering.wrong_way_detection.min_speed_threshold", 0.5);
+
+    obstacle_filtering.min_detection_duration = node.declare_parameter<double>(
+      module_name + ".obstacle_filtering.min_detection_duration", 0.1);
+
+    // Common parameters (these would normally come from common_param.yaml)
+    common_param.limit_max_accel = node.declare_parameter<double>("common.limit.max_acc", 1.0);
+    common_param.limit_min_accel = node.declare_parameter<double>("common.limit.min_acc", -2.5);
   }
 };
 
