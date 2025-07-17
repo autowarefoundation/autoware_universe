@@ -31,6 +31,12 @@
 #include <utility>
 #include <vector>
 
+namespace
+{
+constexpr double MIN_AREA = 1e-6;
+constexpr double INVALID_SCORE = -1.0;
+}  // namespace
+
 namespace autoware::multi_object_tracker
 {
 namespace shapes
@@ -122,10 +128,14 @@ double get2dIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object,
   const double min_union_area)
 {
+<<<<<<< HEAD
   static const double MIN_AREA = 1e-6;
 
   const auto source_polygon =
     autoware_utils_geometry::to_polygon2d(source_object.pose, source_object.shape);
+=======
+  const auto source_polygon = autoware_utils::to_polygon2d(source_object.pose, source_object.shape);
+>>>>>>> 2caeec8a7 (refactor: use shared MIN_AREA definition)
   if (boost::geometry::area(source_polygon) < MIN_AREA) return 0.0;
   const auto target_polygon =
     autoware_utils_geometry::to_polygon2d(target_object.pose, target_object.shape);
@@ -264,15 +274,13 @@ std::pair<double, double> getObjectZRange(const types::DynamicObject & object)
 double get3dGeneralizedIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object)
 {
-  static const double MIN_AREA = 1e-6;
-
   const auto source_polygon = autoware_utils::to_polygon2d(source_object.pose, source_object.shape);
-  if (boost::geometry::area(source_polygon) < MIN_AREA) return 0.0;
+  if (boost::geometry::area(source_polygon) < MIN_AREA) return INVALID_SCORE;
   const auto target_polygon = autoware_utils::to_polygon2d(target_object.pose, target_object.shape);
-  if (boost::geometry::area(target_polygon) < MIN_AREA) return 0.0;
+  if (boost::geometry::area(target_polygon) < MIN_AREA) return INVALID_SCORE;
 
   const double union_area = getUnionArea(source_polygon, target_polygon);
-  if (union_area < MIN_AREA) return 0.0;
+  if (union_area < MIN_AREA) return INVALID_SCORE;
 
   const double intersection_area = getIntersectionArea(source_polygon, target_polygon);
   const double convex_area = getConvexShapeArea(source_polygon, target_polygon);
@@ -282,7 +290,8 @@ double get3dGeneralizedIoU(
 
   const double height_overlap =
     std::max(0.0, std::min(z_max_src, z_max_tgt) - std::max(z_min_src, z_min_tgt));
-  if (height_overlap <= 0.0) return 0.0;
+
+  if (height_overlap <= 0.0) return INVALID_SCORE;
 
   const double total_height = std::max(z_max_src, z_max_tgt) - std::min(z_min_src, z_min_tgt);
 
