@@ -461,8 +461,7 @@ void GyroBiasEstimator::estimate_scale_gyro(
       rate_pose_buff_.erase(rate_pose_buff_.begin());
 
       h_ = avg_rate_pose_;
-      y_ = avg_rate_gyro_ -
-           (estimated_scale_ * avg_rate_pose_ + gyro_bias_.value().z);
+      y_ = avg_rate_gyro_ - (estimated_scale_ * avg_rate_pose_ + gyro_bias_.value().z);
       s_ = h_ * p_ * h_ + r_;
       k_ = p_ * h_ / s_;
       estimated_scale_ = estimated_scale_ + k_ * y_;
@@ -500,7 +499,7 @@ void GyroBiasEstimator::estimate_scale_gyro(
         big_change_detect_ = 0;
       } else {
         big_change_detect_++;
-        int counter_correct_big_change = 30; // 30 iterations approx 3 seconds
+        int counter_correct_big_change = 30;  // 30 iterations approx 3 seconds
         if (big_change_detect_ >= counter_correct_big_change) {
           big_change_detect_ = 0;
           gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
