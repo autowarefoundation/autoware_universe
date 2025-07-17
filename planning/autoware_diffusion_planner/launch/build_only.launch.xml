@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<launch>
-  <!-- Include the main diffusion planner launch file -->
-  <include file="$(find-pkg-share autoware_diffusion_planner)/launch/diffusion_planner.launch.xml">
-    <!-- Override the build_only parameter -->
-    <arg name="build_only" value="true"/>
-  </include>
-</launch>

@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
   <arg name="diffusion_planner_param_path" default="$(find-pkg-share autoware_diffusion_planner)/config/diffusion_planner.param.yaml"/>
-  <arg name="artifact_dir" default="$(env HOME)/autoware_data/diffusion_planner"/>
-  <arg name="onnx_model_path" default="$(var artifact_dir)/diffusion_planner.onnx"/>
-  <arg name="args_path" default="$(var artifact_dir)/diffusion_planner.param.json"/>
-  <arg name="build_only" default="false"/>
 
   <node pkg="autoware_diffusion_planner" exec="autoware_diffusion_planner_node" name="diffusion_planner_node" output="screen">
     <param from="$(var diffusion_planner_param_path)" allow_substs="true"/>
