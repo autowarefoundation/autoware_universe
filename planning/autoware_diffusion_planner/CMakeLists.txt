@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.14)
 project(autoware_diffusion_planner)
 
 find_package(autoware_cmake REQUIRED)
@@ -62,8 +62,6 @@ else()
 endif()
 
 if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
-  find_package(ament_cmake_auto REQUIRED)
-  ament_auto_find_build_dependencies()
   # Add compile option to suppress deprecation warnings (optional)
   add_compile_options(-Wno-deprecated-declarations)
 
@@ -84,19 +82,15 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     src/utils/marker_utils.cpp
   )
 
-
   target_include_directories(autoware_diffusion_planner_component PUBLIC
     ${CUDA_INCLUDE_DIRS}
     ${autoware_cuda_utils_INCLUDE_DIRS}
-
   )
   target_link_libraries(autoware_diffusion_planner_component
     ${NVINFER}
     ${NVONNXPARSER}
     ${CUDA_LIBRARIES}
     ${CUBLAS_LIBRARIES}
-  )
-  target_link_libraries(autoware_diffusion_planner_component
     ${CUDNN_LIBRARY}
   )
 
