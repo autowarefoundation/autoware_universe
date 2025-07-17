@@ -72,85 +72,89 @@ MarkerArray RoadUserStopModule::createDebugMarkerArray() const
 {
   MarkerArray debug_marker_array;
 
-  if (params_.debug.publish_debug_markers) {
-    // Visualize ego lanelets in pink
-    if (!debug_data_.ego_lanelets.empty()) {
-      const auto ego_lanelets_markers = createLaneletPolygonsMarkerArray(
-        debug_data_.ego_lanelets, "ego_lanelets", {1.0, 0.0, 1.0});  // Pink color
-      appendMarkerArray(ego_lanelets_markers, &debug_marker_array);
-    }
+  // Always publish debug markers
+  // Visualize ego lanelets in pink
+  if (!debug_data_.ego_lanelets.empty()) {
+    const auto ego_lanelets_markers = createLaneletPolygonsMarkerArray(
+      debug_data_.ego_lanelets, "ego_lanelets", {1.0, 0.0, 1.0});  // Pink color
+    appendMarkerArray(ego_lanelets_markers, &debug_marker_array);
+  }
 
-    // Visualize adjacent lanelets in orange
-    if (!debug_data_.adjacent_lanelets.empty()) {
-      const auto adjacent_lanelets_markers = createLaneletPolygonsMarkerArray(
-        debug_data_.adjacent_lanelets, "adjacent_lanelets", {1.0, 0.5, 0.0});  // Orange color
-      appendMarkerArray(adjacent_lanelets_markers, &debug_marker_array);
-    }
+  // Visualize adjacent lanelets in orange
+  if (!debug_data_.adjacent_lanelets.empty()) {
+    const auto adjacent_lanelets_markers = createLaneletPolygonsMarkerArray(
+      debug_data_.adjacent_lanelets, "adjacent_lanelets", {1.0, 0.5, 0.0});  // Orange color
+    appendMarkerArray(adjacent_lanelets_markers, &debug_marker_array);
+  }
 
-    // Visualize trajectory polygons in yellow
-    if (!debug_data_.trajectory_polygons.empty()) {
-      int traj_poly_id = 0;
-      for (const auto & polygon : debug_data_.trajectory_polygons) {
-        Marker traj_poly_marker = createDefaultMarker(
-          "map", clock_->now(), "trajectory_polygons", traj_poly_id++, Marker::LINE_STRIP,
-          autoware::universe_utils::createMarkerScale(0.1, 0, 0),
-          autoware::universe_utils::createMarkerColor(1.0, 1.0, 0.0, 0.5));  // Yellow color
+  // Visualize trajectory polygons in yellow
+  if (!debug_data_.trajectory_polygons.empty()) {
+    int traj_poly_id = 0;
+    for (const auto & polygon : debug_data_.trajectory_polygons) {
+      Marker traj_poly_marker = createDefaultMarker(
+        "map", clock_->now(), "trajectory_polygons", traj_poly_id++, Marker::LINE_STRIP,
+        autoware::universe_utils::createMarkerScale(0.1, 0, 0),
+        autoware::universe_utils::createMarkerColor(1.0, 1.0, 0.0, 0.5));  // Yellow color
 
-        traj_poly_marker.lifetime = rclcpp::Duration::from_seconds(0.3);
+      traj_poly_marker.lifetime = rclcpp::Duration::from_seconds(0.3);
 
-        // Add polygon points
-        for (const auto & point : polygon.outer()) {
-          geometry_msgs::msg::Point p;
-          p.x = point.x();
-          p.y = point.y();
-          p.z = 0.0;
-          traj_poly_marker.points.push_back(p);
-        }
-
-        debug_marker_array.markers.push_back(traj_poly_marker);
+      // Add polygon outer points
+      for (const auto & point : polygon.outer()) {
+        geometry_msgs::msg::Point p;
+        p.x = point.x();
+        p.y = point.y();
+        p.z = 0.0;
+        traj_poly_marker.points.push_back(p);
       }
+
+      // Close the polygon
+      if (!traj_poly_marker.points.empty()) {
+        traj_poly_marker.points.push_back(traj_poly_marker.points.front());
+      }
+
+      debug_marker_array.markers.push_back(traj_poly_marker);
     }
+  }
 
-    // Visualize stop point if exists
-    if (debug_data_.stop_point) {
-      Marker stop_marker = createDefaultMarker(
-        "map", clock_->now(), "stop_point", 0, Marker::SPHERE,
-        autoware::universe_utils::createMarkerScale(1.0, 1.0, 1.0),
-        autoware::universe_utils::createMarkerColor(1.0, 0.0, 0.0, 0.999));
-      stop_marker.lifetime = rclcpp::Duration::from_seconds(0.3);
-      stop_marker.pose.position = debug_data_.stop_point.value();
-      stop_marker.pose.orientation.w = 1.0;
-      debug_marker_array.markers.push_back(stop_marker);
-    }
+  // Visualize stop point
+  if (debug_data_.stop_point) {
+    Marker stop_marker = createDefaultMarker(
+      "map", clock_->now(), "stop_point", 0, Marker::SPHERE,
+      autoware::universe_utils::createMarkerScale(1.0, 1.0, 1.0),
+      autoware::universe_utils::createMarkerColor(1.0, 0.0, 0.0, 0.999));
+    stop_marker.lifetime = rclcpp::Duration::from_seconds(0.3);
+    stop_marker.pose.position = debug_data_.stop_point.value();
+    stop_marker.pose.orientation.w = 1.0;
+    debug_marker_array.markers.push_back(stop_marker);
+  }
 
-    // Visualize filtered objects
-    int obj_id = 0;
-    for (const auto & object : debug_data_.filtered_objects) {
-      Marker obj_marker = createDefaultMarker(
-        "map", clock_->now(), "filtered_objects", obj_id++, Marker::CYLINDER,
-        autoware::universe_utils::createMarkerScale(0.5, 0.5, 2.0),
-        autoware::universe_utils::createMarkerColor(0.0, 0.0, 1.0, 0.8));
+  // Visualize filtered objects
+  int obj_id = 0;
+  for (const auto & object : debug_data_.filtered_objects) {
+    Marker obj_marker = createDefaultMarker(
+      "map", clock_->now(), "filtered_objects", obj_id++, Marker::CYLINDER,
+      autoware::universe_utils::createMarkerScale(0.5, 0.5, 2.0),
+      autoware::universe_utils::createMarkerColor(0.0, 0.0, 1.0, 0.8));
 
-      obj_marker.lifetime = rclcpp::Duration::from_seconds(0.3);
-      obj_marker.pose = object.kinematics.initial_pose_with_covariance.pose;
+    obj_marker.lifetime = rclcpp::Duration::from_seconds(0.3);
+    obj_marker.pose = object.kinematics.initial_pose_with_covariance.pose;
 
-      debug_marker_array.markers.push_back(obj_marker);
-    }
+    debug_marker_array.markers.push_back(obj_marker);
+  }
 
-    // Visualize lanelets for VRU detection in light blue
-    if (!debug_data_.lanelets_for_vru.empty()) {
-      const auto vru_lanelets_markers = createLaneletPolygonsMarkerArray(
-        debug_data_.lanelets_for_vru, "lanelets_for_vru", {0.5, 0.8, 1.0});  // Light blue color
-      appendMarkerArray(vru_lanelets_markers, &debug_marker_array);
-    }
+  // Visualize lanelets for VRU detection in light blue
+  if (!debug_data_.lanelets_for_vru.empty()) {
+    const auto vru_lanelets_markers = createLaneletPolygonsMarkerArray(
+      debug_data_.lanelets_for_vru, "lanelets_for_vru", {0.5, 0.8, 1.0});  // Light blue color
+    appendMarkerArray(vru_lanelets_markers, &debug_marker_array);
+  }
 
-    // Visualize lanelets for wrongway detection in red
-    if (!debug_data_.lanelets_for_wrongway_user.empty()) {
-      const auto wrongway_lanelets_markers = createLaneletPolygonsMarkerArray(
-        debug_data_.lanelets_for_wrongway_user, "lanelets_for_wrongway",
-        {1.0, 0.2, 0.2});  // Red color
-      appendMarkerArray(wrongway_lanelets_markers, &debug_marker_array);
-    }
+  // Visualize lanelets for wrongway detection in red
+  if (!debug_data_.lanelets_for_wrongway_user.empty()) {
+    const auto wrongway_lanelets_markers = createLaneletPolygonsMarkerArray(
+      debug_data_.lanelets_for_wrongway_user, "lanelets_for_wrongway",
+      {1.0, 0.2, 0.2});  // Red color
+    appendMarkerArray(wrongway_lanelets_markers, &debug_marker_array);
   }
 
   return debug_marker_array;

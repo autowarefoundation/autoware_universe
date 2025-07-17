@@ -25,6 +25,7 @@
 #include <unique_identifier_msgs/msg/uuid.hpp>
 
 #include <algorithm>
+#include <deque>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -79,15 +80,39 @@ struct StopPointCandidate
   double required_deceleration;
 };
 
-// 使用しないようにする
 struct TrackedObject
 {
-  unique_identifier_msgs::msg::UUID object_id;
-  rclcpp::Time first_detection_time;
-  rclcpp::Time last_detection_time;
-  geometry_msgs::msg::Point last_position;
-  std::optional<StopPointCandidate>
-    wrong_way_stop_candidate;  // cached stop point for wrong-way users
+  std::string object_id;
+  rclcpp::Time first_detected_time;
+  rclcpp::Time last_detected_time;
+  std::deque<uint8_t> classification_history;  // ObjectClassification label values
+  static constexpr size_t max_classification_history = 5;
+
+  void updateClassification(const uint8_t label)
+  {
+    classification_history.push_back(label);
+    if (classification_history.size() > max_classification_history) {
+      classification_history.pop_front();
+    }
+  }
+
+  uint8_t getMostFrequentClassification() const
+  {
+    if (classification_history.empty()) {
+      return ObjectClassification::UNKNOWN;
+    }
+
+    std::unordered_map<uint8_t, int> count_map;
+    for (const auto & label : classification_history) {
+      count_map[label]++;
+    }
+
+    auto max_it = std::max_element(
+      count_map.begin(), count_map.end(),
+      [](const auto & a, const auto & b) { return a.second < b.second; });
+
+    return max_it->first;
+  }
 };
 }  // namespace autoware::motion_velocity_planner
 
