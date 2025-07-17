@@ -42,6 +42,10 @@
 #ifndef AUTOWARE__CAMERA_STREAMPETR__CUDA_UTILS_HPP_
 #define AUTOWARE__CAMERA_STREAMPETR__CUDA_UTILS_HPP_
 
+#include <autoware/cuda_utils/cuda_check_error.hpp>
+#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
+#include <autoware/cuda_utils/cuda_utils.hpp>
+
 #include <NvInferRuntime.h>
 #include <cuda_runtime_api.h>
 
@@ -53,10 +57,6 @@
 #include <stdexcept>
 #include <type_traits>
 #include <vector>
-
-#include <autoware/cuda_utils/cuda_check_error.hpp>
-#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
-#include <autoware/cuda_utils/cuda_utils.hpp>
 
 namespace cuda
 {
@@ -298,8 +298,6 @@ inline std::ostream & operator<<(std::ostream & os, Tensor & t)
   os << ", type = " << dtype_str;
   return os;
 }
-
-
 
 }  // namespace cuda
 

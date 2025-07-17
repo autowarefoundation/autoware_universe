@@ -90,7 +90,6 @@ CameraDataStore::CameraDataStore(
   cudaStreamCreate(&stream_);
 }
 
-
 void CameraDataStore::update_camera_image(
   const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg)
 {
@@ -118,15 +117,15 @@ void CameraDataStore::update_camera_image(
   std::unique_ptr<Tensor> image_input_tensor = std::make_unique<Tensor>(
     "camera_img", nvinfer1::Dims{3, original_height, original_width, 3},
     nvinfer1::DataType::kUINT8);
-    
+
   if (is_distorted_image_ && camera_info_list_[camera_id]) {
     auto camera_info = camera_info_list_[camera_id];
 
     // Create camera matrix K from camera_info
-    cv::Mat K = (cv::Mat_<double>(3, 3) <<
-      camera_info->k[0], camera_info->k[1], camera_info->k[2],
-      camera_info->k[3], camera_info->k[4], camera_info->k[5],
-      camera_info->k[6], camera_info->k[7], camera_info->k[8]);
+    cv::Mat K =
+      (cv::Mat_<double>(3, 3) << camera_info->k[0], camera_info->k[1], camera_info->k[2],
+       camera_info->k[3], camera_info->k[4], camera_info->k[5], camera_info->k[6],
+       camera_info->k[7], camera_info->k[8]);
 
     // Create distortion coefficients matrix D from camera_info
     const auto & d_vec = camera_info->d;
@@ -136,30 +135,29 @@ void CameraDataStore::update_camera_image(
     }
 
     // Create projection matrix P from camera_info (first 3x3 part)
-    cv::Mat P = (cv::Mat_<double>(3, 3) <<
-      camera_info->p[0], camera_info->p[1], camera_info->p[2],
-      camera_info->p[4], camera_info->p[5], camera_info->p[6],
-      camera_info->p[8], camera_info->p[9], camera_info->p[10]);
+    cv::Mat P =
+      (cv::Mat_<double>(3, 3) << camera_info->p[0], camera_info->p[1], camera_info->p[2],
+       camera_info->p[4], camera_info->p[5], camera_info->p[6], camera_info->p[8],
+       camera_info->p[9], camera_info->p[10]);
 
     cv::Mat undistort_map_x, undistort_map_y;
     cv::initUndistortRectifyMap(
-      K, D, cv::Mat(), P,
-      cv::Size(camera_info->width, camera_info->height),
-      CV_32FC1, undistort_map_x, undistort_map_y);
+      K, D, cv::Mat(), P, cv::Size(camera_info->width, camera_info->height), CV_32FC1,
+      undistort_map_x, undistort_map_y);
 
     cv::Mat undistorted_image;
     // Create cv::Mat from image data - assuming RGB8 encoding
-    cv::Mat input_image(original_height, original_width, CV_8UC3, 
-                       const_cast<uint8_t*>(input_camera_image_msg->data.data()));
+    cv::Mat input_image(
+      original_height, original_width, CV_8UC3,
+      const_cast<uint8_t *>(input_camera_image_msg->data.data()));
     cv::remap(input_image, undistorted_image, undistort_map_x, undistort_map_y, cv::INTER_LINEAR);
     cudaMemcpyAsync(
-      image_input_tensor->ptr, undistorted_image.data, image_input_tensor->nbytes(), cudaMemcpyHostToDevice,
-      stream_);
-  }
-  else{
+      image_input_tensor->ptr, undistorted_image.data, image_input_tensor->nbytes(),
+      cudaMemcpyHostToDevice, stream_);
+  } else {
     cudaMemcpyAsync(
-      image_input_tensor->ptr, input_camera_image_msg->data.data(), image_input_tensor->nbytes(), cudaMemcpyHostToDevice,
-      stream_);
+      image_input_tensor->ptr, input_camera_image_msg->data.data(), image_input_tensor->nbytes(),
+      cudaMemcpyHostToDevice, stream_);
   }
 
   auto err = resizeAndExtractRoi_launch(
@@ -174,7 +172,7 @@ void CameraDataStore::update_camera_image(
   }
 
   camera_image_timestamp_[camera_id] =
-  input_camera_image_msg->header.stamp.sec + input_camera_image_msg->header.stamp.nanosec * 1e-9;
+    input_camera_image_msg->header.stamp.sec + input_camera_image_msg->header.stamp.nanosec * 1e-9;
   camera_link_names_[camera_id] = input_camera_image_msg->header.frame_id;
 
   auto end_time = std::chrono::high_resolution_clock::now();
@@ -308,7 +306,7 @@ float CameraDataStore::get_timestamp()
 {
   const float time_difference = camera_image_timestamp_[anchor_camera_id_] - start_timestamp_;
 
-  if(start_timestamp_ < 0.0 || time_difference > MAX_PERMISSIONED_CAMERA_TIME_DIFF) {
+  if (start_timestamp_ < 0.0 || time_difference > MAX_PERMISSIONED_CAMERA_TIME_DIFF) {
     start_timestamp_ = camera_image_timestamp_[anchor_camera_id_];
     return 0.0;
   }

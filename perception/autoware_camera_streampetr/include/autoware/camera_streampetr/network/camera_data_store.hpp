@@ -28,7 +28,8 @@
 namespace autoware::camera_streampetr
 {
 
-constexpr float MAX_PERMISSIONED_CAMERA_TIME_DIFF = 600;  // 10 minuts. Used to keep the timestamp within limit to prevent overflow in fp16 mode.
+constexpr float MAX_PERMISSIONED_CAMERA_TIME_DIFF =
+  600;  // 10 minuts. Used to keep the timestamp within limit to prevent overflow in fp16 mode.
 
 class CameraDataStore
 {
@@ -51,7 +52,7 @@ public:
   std::vector<float> get_camera_info_vector() const;
   std::vector<float> get_image_shape() const;
   std::shared_ptr<Tensor> get_image_input() const;
-  float get_timestamp() ;
+  float get_timestamp();
   std::vector<std::string> get_camera_link_names() const;
   void restart();
   void save_processed_image(const int camera_id, const std::string & filename) const;
@@ -64,7 +65,7 @@ private:
   double start_timestamp_;
   float preprocess_time_ms_;
   const bool is_distorted_image_;
-  
+
   rclcpp::Logger logger_;
   std::vector<CameraInfo::ConstSharedPtr> camera_info_list_;
   std::shared_ptr<Tensor> image_input_;

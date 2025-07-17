@@ -42,9 +42,10 @@
 
     <!-- The forward pass begins once every anchor camera topic reaches. Choose this as the camera that causes the shortest differnce in min and max timestamp between cameras-->
     <param name="anchor_camera_id" value="0"/>
-    <param name="is_compressed_image" value="true"/> <!-- Whether the input image is compressed. -->
-    <param name="is_distorted_image" value="false"/> <!-- Whether the input image is distorted. -->
-
+    <param name="is_compressed_image" value="true"/>
+    <!-- Whether the input image is compressed. -->
+    <param name="is_distorted_image" value="false"/>
+    <!-- Whether the input image is distorted. -->
   </node>
 
   <!-- Rviz for individual node testing-->

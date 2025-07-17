@@ -72,7 +72,7 @@ private:
   void step(const rclcpp::Time & stamp);
   std::pair<std::vector<float>, std::vector<float>> get_ego_pose_vector() const;
   std::vector<float> get_camera_extrinsics_vector(const std::vector<std::string> & camera_links);
-  
+
   rclcpp::Subscription<Odometry>::SharedPtr localization_sub_;
   std::vector<rclcpp::Subscription<CameraInfo>::SharedPtr> camera_info_subs_;
   std::vector<image_transport::Subscriber> camera_image_subs_;
