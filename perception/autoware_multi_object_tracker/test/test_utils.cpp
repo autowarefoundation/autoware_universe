@@ -22,6 +22,7 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 namespace
@@ -130,7 +131,8 @@ autoware_perception_msgs::msg::DetectedObjects toDetectedObjectsMsg(
 // RosbagWriterHelper
 // ==========================
 
-RosbagWriterHelper::RosbagWriterHelper(bool enabled) : enabled_(enabled)
+RosbagWriterHelper::RosbagWriterHelper(bool enabled, const std::string & storage_format)
+: enabled_(enabled)
 {
   if (!enabled_) return;
 
@@ -142,8 +144,23 @@ RosbagWriterHelper::RosbagWriterHelper(bool enabled) : enabled_(enabled)
   std::stringstream ss;
   ss << "tracking_results_" << std::put_time(std::localtime(&in_time_t), "%Y%m%d_%H%M%S");
   bag_name_ = ss.str();
-  std::cout << "Writing results to rosbag: " << bag_name_ << std::endl;
-  writer_->open(bag_name_);
+  std::cout << "Writing results to rosbag (" << storage_format << "): " << bag_name_ << std::endl;
+  // Set up rosbag2 writer with selected format
+  rosbag2_storage::StorageOptions storage_options;
+  storage_options.uri = bag_name_;
+  const std::set<std::string> supported_formats = {"sqlite3", "mcap"};
+  if (supported_formats.count(storage_format) == 0) {
+    std::cerr << "Warning: unsupported storage format '" << storage_format
+              << "', falling back to 'sqlite3'\n";
+    storage_options.storage_id = "sqlite3";
+  } else {
+    storage_options.storage_id = storage_format;
+  }
+  rosbag2_cpp::ConverterOptions converter_options;
+  converter_options.input_serialization_format = rmw_get_serialization_format();
+  converter_options.output_serialization_format = rmw_get_serialization_format();
+
+  writer_->open(storage_options, converter_options);
 
   std::cout << "Rosbag opened successfully." << std::endl;
   // Register topics
@@ -164,4 +181,45 @@ RosbagWriterHelper::~RosbagWriterHelper()
     const auto absolute_path = std::filesystem::absolute(bag_name_);
     std::cout << "Run rosbag by:\nros2 bag play " << absolute_path << std::endl;
   }
+}
+
+RosbagReaderHelper::RosbagReaderHelper(const std::string & path)
+{
+  namespace fs = std::filesystem;
+  std::string bag_file;
+
+  if (fs::is_directory(path)) {
+    for (const auto & entry : fs::directory_iterator(path)) {
+      const auto & ext = entry.path().extension();
+      if (ext == ".db3" || ext == ".mcap") {
+        bag_file = entry.path().string();
+        break;
+      }
+    }
+    if (bag_file.empty()) {
+      throw std::runtime_error("No .db3 or .mcap file found in directory: " + path);
+    }
+  } else if (fs::is_regular_file(path)) {
+    bag_file = path;
+  } else {
+    throw std::runtime_error("Invalid bag path: " + path);
+  }
+
+  reader_.open(bag_file);
+
+  if (!reader_.has_next()) {
+    throw std::runtime_error("No messages found in the bag file: " + bag_file);
+  }
+
+  std::cout << "Opened bag file: " << bag_file << std::endl;
+}
+
+bool RosbagReaderHelper::hasNext()
+{
+  return reader_.has_next();
+}
+
+std::shared_ptr<rosbag2_storage::SerializedBagMessage> RosbagReaderHelper::readNext()
+{
+  return reader_.read_next();
 }

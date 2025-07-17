@@ -96,7 +96,7 @@ autoware_perception_msgs::msg::DetectedObjects toDetectedObjectsMsg(
 class RosbagWriterHelper
 {
 public:
-  explicit RosbagWriterHelper(bool enabled);
+  explicit RosbagWriterHelper(bool enabled, const std::string & storage_format = "sqlite3");
   ~RosbagWriterHelper();
 
   template <typename T>
@@ -116,38 +116,13 @@ private:
 class RosbagReaderHelper
 {
 public:
-  using DetectionCallback = std::function<void(
-    const autoware_perception_msgs::msg::DetectedObjects &, const rclcpp::Time &)>;
+  explicit RosbagReaderHelper(const std::string & path);
 
-  explicit RosbagReaderHelper(const std::string & bag_path)
-  : bag_path_(bag_path),
-    reader_(std::make_unique<rosbag2_cpp::Reader>()),
-    serialization_(
-      std::make_unique<rclcpp::Serialization<autoware_perception_msgs::msg::DetectedObjects>>())
-  {
-    reader_->open(bag_path_);
-  }
-
-  void processMessages(const std::string & topic_name, DetectionCallback callback)
-  {
-    while (reader_->has_next()) {
-      auto bag_message = reader_->read_next();
-
-      if (bag_message->topic_name == topic_name) {
-        rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
-        auto msg = std::make_shared<autoware_perception_msgs::msg::DetectedObjects>();
-        serialization_->deserialize_message(&serialized_msg, msg.get());
-
-        callback(*msg, rclcpp::Time(msg->header.stamp));
-      }
-    }
-  }
+  bool hasNext();
+  std::shared_ptr<rosbag2_storage::SerializedBagMessage> readNext();
 
 private:
-  std::string bag_path_;
-  std::unique_ptr<rosbag2_cpp::Reader> reader_;
-  std::unique_ptr<rclcpp::Serialization<autoware_perception_msgs::msg::DetectedObjects>>
-    serialization_;
+  rosbag2_cpp::Reader reader_;
 };
 
 #endif  // TEST_UTILS_HPP_

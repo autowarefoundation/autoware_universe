@@ -125,7 +125,7 @@ FunctionTimings runIterations(
 void runPerformanceTest()
 {
   const TrackingScenarioConfig params;
-  FunctionTimings timings = runIterations(50, params, false, false);
+  FunctionTimings timings = runIterations(50, params, true, false);
   timings.calculate();
   std::cout << "Total time for all iterations: "
             << std::accumulate(timings.total.times.begin(), timings.total.times.end(), 0.0)
@@ -146,6 +146,7 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path, bool write_ba
   const auto tf_buffer = std::make_shared<tf2_ros::Buffer>(node->get_clock());
   const auto tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer, node);
   RosbagWriterHelper writer(write_bag);
+  RosbagReaderHelper reader(rosbag_path);
 
   const std::string world_frame_id = "map";      // Assuming map is the world frame ID
   const std::string ego_frame_id = "base_link";  // Assuming base_link is the ego vehicle frame ID
@@ -160,21 +161,12 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path, bool write_ba
   auto processor = std::make_unique<autoware::multi_object_tracker::TrackerProcessor>(
     processor_config, associator_config, input_channels_config);
 
-  // === Open Rosbag ===
-  rosbag2_cpp::Reader reader;
-  reader.open(rosbag_path);
-
-  // Check if the bag is opened successfully
-  if (!reader.has_next()) {
-    std::cerr << "No messages found in the bag file." << std::endl;
-    return;
-  }
   // Create serialization objects
   rclcpp::Serialization<autoware_perception_msgs::msg::DetectedObjects> detection_serialization;
   rclcpp::Serialization<tf2_msgs::msg::TFMessage> tf_serialization;
 
-  while (reader.has_next()) {
-    auto bag_message = reader.read_next();
+  while (reader.hasNext()) {
+    auto bag_message = reader.readNext();
     if (bag_message->topic_name == "/tf" || bag_message->topic_name == "/tf_static") {
       rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);  // wrap raw buffer
 
