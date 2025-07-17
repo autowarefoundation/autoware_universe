@@ -125,7 +125,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     SYSTEM PUBLIC
     ${autoware_cuda_utils_INCLUDE_DIRS}
   )
-  
+
   ament_auto_add_library(${PROJECT_NAME}_component SHARED
     src/node.cpp
   )
