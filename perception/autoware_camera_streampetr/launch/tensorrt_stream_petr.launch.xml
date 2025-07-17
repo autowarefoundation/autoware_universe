@@ -50,7 +50,6 @@
     <param name="downsample_factor" value="0.5"/>
     <!-- Whether to use multithreading for handling image callbacks-->
     <param name="multithreading" value="true"/>
-
   </node>
 
   <!-- Rviz for individual node testing-->

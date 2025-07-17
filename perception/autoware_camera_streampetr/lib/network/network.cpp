@@ -141,7 +141,6 @@ void StreamPetrNetwork::wipe_memory()
   }
 }
 
-
 void StreamPetrNetwork::inference_detector(
   const std::shared_ptr<Tensor> imgs, const std::vector<float> & ego_pose,
   const std::vector<float> & ego_pose_inv, const std::vector<float> & img_metas_pad,

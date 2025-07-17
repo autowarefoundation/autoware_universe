@@ -61,6 +61,7 @@ public:
   void save_processed_image(const int camera_id, const std::string & filename) const;
   void freeze_updates();
   void unfreeze_updates();
+
 private:
   const size_t rois_number_;
   const int image_height_;
@@ -79,12 +80,12 @@ private:
   std::vector<double> camera_image_timestamp_;
   std::vector<std::string> camera_link_names_;
   std::vector<cudaStream_t> streams_;
-  
+
   // multithreading variables
   mutable std::mutex freeze_mutex_;
   mutable std::condition_variable freeze_cv_;
   bool is_frozen_;
-  int active_updates_; 
+  int active_updates_;
 };
 
 }  // namespace autoware::camera_streampetr
