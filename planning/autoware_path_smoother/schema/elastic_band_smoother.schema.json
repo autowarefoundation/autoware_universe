@@ -1,0 +1,235 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_path_smoother parameters",
+  "type": "object",
+  "definitions": {
+    "elastic_band_smoother": {
+      "type": "object",
+      "properties": {
+        "common": {
+          "type": "object",
+          "properties": {
+            "output_delta_arc_length": {
+              "type": "number",
+              "description": "Delta arc length for output trajectory [m].",
+              "default": 0.5
+            },
+            "output_backward_traj_length": {
+              "type": "number",
+              "description": "Backward length for backward trajectory from base_link [m].",
+              "default": 5.0
+            }
+          },
+          "required": ["output_delta_arc_length", "output_backward_traj_length"],
+          "additionalProperties": false
+        },
+        "elastic_band": {
+          "type": "object",
+          "properties": {
+            "option": {
+              "type": "object",
+              "properties": {
+                "enable_warm_start": {
+                  "type": "boolean",
+                  "description": "Enable warm start for elastic band optimization.",
+                  "default": true
+                },
+                "enable_optimization_validation": {
+                  "type": "boolean",
+                  "description": "Enable optimization validation.",
+                  "default": false
+                }
+              },
+              "required": ["enable_warm_start", "enable_optimization_validation"],
+              "additionalProperties": false
+            },
+            "common": {
+              "type": "object",
+              "properties": {
+                "num_points": {
+                  "type": "integer",
+                  "description": "Number of points for optimization.",
+                  "default": 100
+                },
+                "delta_arc_length": {
+                  "type": "number",
+                  "description": "Delta arc length for optimization [m].",
+                  "default": 1.0
+                }
+              },
+              "required": ["num_points", "delta_arc_length"],
+              "additionalProperties": false
+            },
+            "clearance": {
+              "type": "object",
+              "properties": {
+                "num_joint_points": {
+                  "type": "integer",
+                  "description": "Number of joint points (joint means connecting fixing and smoothing).",
+                  "default": 3
+                },
+                "clearance_for_fix": {
+                  "type": "number",
+                  "description": "Maximum optimizing range when applying fixing.",
+                  "default": 0.0
+                },
+                "clearance_for_joint": {
+                  "type": "number",
+                  "description": "Maximum optimizing range when applying jointing.",
+                  "default": 0.1
+                },
+                "clearance_for_smooth": {
+                  "type": "number",
+                  "description": "Maximum optimizing range when applying smoothing.",
+                  "default": 0.1
+                }
+              },
+              "required": [
+                "num_joint_points",
+                "clearance_for_fix",
+                "clearance_for_joint",
+                "clearance_for_smooth"
+              ],
+              "additionalProperties": false
+            },
+            "weight": {
+              "type": "object",
+              "properties": {
+                "smooth_weight": {
+                  "type": "number",
+                  "description": "Weight for smoothing.",
+                  "default": 1.0
+                },
+                "lat_error_weight": {
+                  "type": "number",
+                  "description": "Weight for lateral error.",
+                  "default": 0.001
+                }
+              },
+              "required": ["smooth_weight", "lat_error_weight"],
+              "additionalProperties": false
+            },
+            "qp": {
+              "type": "object",
+              "properties": {
+                "max_iteration": {
+                  "type": "integer",
+                  "description": "Maximum iteration when solving QP.",
+                  "default": 10000
+                },
+                "eps_abs": {
+                  "type": "number",
+                  "description": "Absolute epsilon when solving OSQP.",
+                  "default": 1.0e-7
+                },
+                "eps_rel": {
+                  "type": "number",
+                  "description": "Relative epsilon when solving OSQP.",
+                  "default": 1.0e-7
+                }
+              },
+              "required": ["max_iteration", "eps_abs", "eps_rel"],
+              "additionalProperties": false
+            },
+            "validation": {
+              "type": "object",
+              "properties": {
+                "max_error": {
+                  "type": "number",
+                  "description": "Maximum error for validation [m].",
+                  "default": 3.0
+                }
+              },
+              "required": ["max_error"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["option", "common", "clearance", "weight", "qp", "validation"],
+          "additionalProperties": false
+        },
+        "ego_nearest_dist_threshold": {
+          "type": "number",
+          "description": "Distance threshold for nearest ego search [m].",
+          "default": 3.0
+        },
+        "ego_nearest_yaw_threshold": {
+          "type": "number",
+          "description": "Yaw threshold for nearest ego search [rad].",
+          "default": 1.046
+        },
+        "replan": {
+          "type": "object",
+          "properties": {
+            "enable": {
+              "type": "boolean",
+              "description": "If true, only perform smoothing when the input changes significantly.",
+              "default": true
+            },
+            "max_path_shape_around_ego_lat_dist": {
+              "type": "number",
+              "description": "Threshold of path shape change around ego [m].",
+              "default": 2.0
+            },
+            "max_path_shape_forward_lon_dist": {
+              "type": "number",
+              "description": "Forward point to check lateral distance difference [m].",
+              "default": 100.0
+            },
+            "max_path_shape_forward_lat_dist": {
+              "type": "number",
+              "description": "Threshold of path shape change around forward point [m].",
+              "default": 0.2
+            },
+            "max_ego_moving_dist": {
+              "type": "number",
+              "description": "Threshold of ego's moving distance for replan [m].",
+              "default": 5.0
+            },
+            "max_goal_moving_dist": {
+              "type": "number",
+              "description": "Threshold of goal's moving distance for replan [m].",
+              "default": 15.0
+            },
+            "max_delta_time_sec": {
+              "type": "number",
+              "description": "Threshold of delta time for replan [second].",
+              "default": 0.0
+            }
+          },
+          "required": [
+            "enable",
+            "max_path_shape_around_ego_lat_dist",
+            "max_path_shape_forward_lon_dist",
+            "max_path_shape_forward_lat_dist",
+            "max_ego_moving_dist",
+            "max_goal_moving_dist",
+            "max_delta_time_sec"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "common",
+        "elastic_band",
+        "ego_nearest_dist_threshold",
+        "ego_nearest_yaw_threshold",
+        "replan"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/elastic_band_smoother"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
