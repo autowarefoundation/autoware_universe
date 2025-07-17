@@ -188,7 +188,8 @@ public:
 
   ~StreamPetrNetwork();
   void inference_detector(
-    const std::shared_ptr<Tensor> imgs, const std::vector<float> & ego_pose,
+    const std::shared_ptr<Tensor> imgs,
+    const std::vector<float> & ego_pose,
     const std::vector<float> & ego_pose_inv, const std::vector<float> & img_metas_pad,
     const std::vector<float> & intrinsics, const std::vector<float> & img2lidar, const float stamp,
     std::vector<autoware_perception_msgs::msg::DetectedObject> & output_objects,

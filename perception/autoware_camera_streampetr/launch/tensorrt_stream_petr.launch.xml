@@ -42,10 +42,15 @@
 
     <!-- The forward pass begins once every anchor camera topic reaches. Choose this as the camera that causes the shortest differnce in min and max timestamp between cameras-->
     <param name="anchor_camera_id" value="0"/>
-    <param name="is_compressed_image" value="true"/>
     <!-- Whether the input image is compressed. -->
-    <param name="is_distorted_image" value="false"/>
+    <param name="is_compressed_image" value="true"/>
     <!-- Whether the input image is distorted. -->
+    <param name="is_distorted_image" value="false"/>
+    <!-- If is_distorted_image=true,factor to downsample the image by during undistortion. Makes undistortion faster-->
+    <param name="downsample_factor" value="0.5"/>
+    <!-- Whether to use multithreading for handling image callbacks-->
+    <param name="multithreading" value="true"/>
+
   </node>
 
   <!-- Rviz for individual node testing-->

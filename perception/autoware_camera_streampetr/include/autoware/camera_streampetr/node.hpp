@@ -75,6 +75,10 @@ private:
 
   rclcpp::Subscription<Odometry>::SharedPtr localization_sub_;
   std::vector<rclcpp::Subscription<CameraInfo>::SharedPtr> camera_info_subs_;
+  
+  const bool multithreading_;
+  std::vector<rclcpp::CallbackGroup::SharedPtr> camera_callback_groups_;
+
   std::vector<image_transport::Subscriber> camera_image_subs_;
   rclcpp::Publisher<DetectedObjects>::SharedPtr pub_objects_;
 
