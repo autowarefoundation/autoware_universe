@@ -43,25 +43,9 @@ It is implemented as a ROS 2 component node, making it easy to integrate into Au
 
 ## Parameters
 
-Parameters can be set via YAML (see `config/diffusion_planner.param.yaml`) or via the ROS 2 parameter server.
+{{ json_to_markdown("localization/autoware_diffusion_planner/schema/diffusion_planner.schema.json") }}
 
-### Main Parameters
-
-| Name                                      | Type   | Default | Description                                           |
-| ----------------------------------------- | ------ | ------- | ----------------------------------------------------- |
-| `onnx_model_path`                         | string | ""      | Path to the ONNX model file for the diffusion planner |
-| `args_path`                               | string | ""      | Path to model argument/configuration file             |
-| `planning_frequency_hz`                   | double | 10.0    | Planning frequency in Hz                              |
-| `predict_neighbor_trajectory`             | bool   | false   | Predict trajectories for neighbor agents              |
-| `update_traffic_light_group_info`         | bool   | false   | Enable updating of traffic light group info           |
-| `traffic_light_group_msg_timeout_seconds` | double | 0.2     | Timeout for traffic light group messages (seconds)    |
-
-### Debug Parameters
-
-| Name                               | Type | Default | Description                 |
-| ---------------------------------- | ---- | ------- | --------------------------- |
-| `debug_params.publish_debug_map`   | bool | false   | Publish debug map markers   |
-| `debug_params.publish_debug_route` | bool | false   | Publish debug route markers |
+Parameters can be set via YAML (see `config/diffusion_planner.param.yaml`).
 
 ---
 
