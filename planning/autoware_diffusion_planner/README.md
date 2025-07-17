@@ -84,23 +84,6 @@ Parameters can be set via YAML (see `config/diffusion_planner.param.yaml`) or vi
 
 ---
 
-## Example Configuration
-
-```yaml
-onnx_model_path: "/path/to/diffusion_planner.onnx"
-args_path: "/path/to/model_args.yaml"
-planning_frequency_hz: 10.0
-predict_neighbor_trajectory: false
-update_traffic_light_group_info: true
-traffic_light_group_msg_timeout_seconds: 0.2
-
-debug_params:
-  publish_debug_map: true
-  publish_debug_route: false
-```
-
----
-
 ## Testing
 
 Unit tests are provided and can be run with:
