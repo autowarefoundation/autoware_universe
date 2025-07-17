@@ -63,6 +63,7 @@ In the debug visualization, the filtered predicted paths are shown in green and 
 ### 5. Time to collisions
 
 For each out of lane area, we calculate the times when a dynamic object will overlap the area based on its filtered predicted paths.
+To make it more likely to detect collision in the other lanes, the width of the dynamic object can be increased using the parameter `objects.extra_width`.
 
 In the case where parameter `mode` is set to `threshold` and the calculated time is less than `threshold.time_threshold` parameter, then we decide to avoid the out of lane area.
 
