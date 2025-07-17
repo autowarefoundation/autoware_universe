@@ -466,9 +466,7 @@ void GyroBiasEstimator::estimate_scale_gyro(
       rate_pose_buff_.erase(rate_pose_buff_.begin());
 
       h_ = avg_rate_pose_;
-      y_ = (avg_rate_gyro_ - gyro_bias_.value().z 
-      ) -
-           (estimated_scale_ * avg_rate_pose_);
+      y_ = (avg_rate_gyro_ - gyro_bias_.value().z) - (estimated_scale_ * avg_rate_pose_);
       s_ = h_ * p_ * h_ + r_;
       k_ = p_ * h_ / s_;
       estimated_scale_ = estimated_scale_ + k_ * y_;
