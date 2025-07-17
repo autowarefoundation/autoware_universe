@@ -22,6 +22,7 @@
 #include "autoware/pointcloud_preprocessor/diagnostics/pass_rate_diagnostics.hpp"
 
 #include <agnocast/agnocast_subscription.hpp>
+#include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <autoware/point_types/types.hpp>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
@@ -54,7 +55,7 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
 
   // Set CUDA device flags
   // note: Device flags are process-wide
-  cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+  CHECK_CUDA_ERROR(cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync));
 
   // Parameters
   base_frame_ = declare_parameter<std::string>("base_frame");
@@ -62,9 +63,10 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
   use_imu_ = declare_parameter<bool>("use_imu");
 
   RingOutlierFilterParameters ring_outlier_filter_parameters;
-  ring_outlier_filter_parameters.distance_ratio = declare_parameter<float>("distance_ratio");
+  ring_outlier_filter_parameters.distance_ratio =
+    static_cast<float>(declare_parameter<double>("distance_ratio"));
   ring_outlier_filter_parameters.object_length_threshold =
-    declare_parameter<float>("object_length_threshold");
+    static_cast<float>(declare_parameter<double>("object_length_threshold"));
 
   processing_time_threshold_sec_ = declare_parameter<double>("processing_time_threshold_sec");
   timestamp_mismatch_fraction_threshold_ =
@@ -90,13 +92,13 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
   std::vector<CropBoxParameters> crop_box_parameters;
 
   for (std::size_t i = 0; i < crop_box_min_x_vector.size(); i++) {
-    CropBoxParameters parameters;
-    parameters.min_x = crop_box_min_x_vector[i];
-    parameters.min_y = crop_box_min_y_vector[i];
-    parameters.min_z = crop_box_min_z_vector[i];
-    parameters.max_x = crop_box_max_x_vector[i];
-    parameters.max_y = crop_box_max_y_vector[i];
-    parameters.max_z = crop_box_max_z_vector[i];
+    CropBoxParameters parameters{};
+    parameters.min_x = static_cast<float>(crop_box_min_x_vector.at(i));
+    parameters.min_y = static_cast<float>(crop_box_min_y_vector.at(i));
+    parameters.min_z = static_cast<float>(crop_box_min_z_vector.at(i));
+    parameters.max_x = static_cast<float>(crop_box_max_x_vector.at(i));
+    parameters.max_y = static_cast<float>(crop_box_max_y_vector.at(i));
+    parameters.max_z = static_cast<float>(crop_box_max_z_vector.at(i));
     crop_box_parameters.push_back(parameters);
   }
 
@@ -259,10 +261,14 @@ void CudaPointcloudPreprocessorNode::pointcloudCallback(
   // cppcheck-suppress unknownMacro
   AUTOWARE_MESSAGE_UNIQUE_PTR(sensor_msgs::msg::PointCloud2) input_pointcloud_msg_ptr)
 {
-  stop_watch_ptr_->toc("processing_time", true);
   const auto & input_pointcloud_msg = *input_pointcloud_msg_ptr;
 
-  validatePointcloudLayout(input_pointcloud_msg);
+  if (!validatePointcloudLayout(input_pointcloud_msg)) {
+    return;
+  }
+
+  stop_watch_ptr_->toc("processing_time", true);
+
   const auto [first_point_stamp, first_point_rel_stamp] =
     getFirstPointTimeInfo(input_pointcloud_msg);
   updateTwistQueue(first_point_stamp);
@@ -283,16 +289,19 @@ void CudaPointcloudPreprocessorNode::pointcloudCallback(
   cuda_pointcloud_preprocessor_->preallocateOutput();
 }
 
-void CudaPointcloudPreprocessorNode::validatePointcloudLayout(
-  const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg)
+[[nodiscard]] bool CudaPointcloudPreprocessorNode::validatePointcloudLayout(
+  const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg) const
 {
-  if (!is_data_layout_compatible_with_point_xyzircaedt(input_pointcloud_msg.fields)) {
-    RCLCPP_ERROR(
-      get_logger(), "Input pointcloud data layout is not compatible with PointXYZIRCAEDT");
-  }
   static_assert(
     sizeof(InputPointType) == sizeof(autoware::point_types::PointXYZIRCAEDT),
     "PointStruct and PointXYZIRCAEDT must have the same size");
+
+  if (is_data_layout_compatible_with_point_xyzircaedt(input_pointcloud_msg.fields)) {
+    return true;
+  }
+
+  RCLCPP_ERROR(get_logger(), "Input pointcloud data layout is not compatible with PointXYZIRCAEDT");
+  return false;
 }
 
 /**

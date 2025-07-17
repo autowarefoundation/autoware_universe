@@ -19,6 +19,7 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
+#include <autoware/cuda_utils/cuda_check_error.hpp>
 
 namespace autoware::cuda_pointcloud_preprocessor
 {
@@ -151,6 +152,7 @@ void undistort2DLaunch(
 {
   undistort2DKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
     input_points, num_points, twist_structs, num_twists, output_mismatch_mask);
+  CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
 void undistort3DLaunch(
@@ -160,6 +162,7 @@ void undistort3DLaunch(
 {
   undistort3DKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
     input_points, num_points, twist_structs, num_twists, output_mismatch_mask);
+  CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
 void setupTwist2DStructs(
@@ -244,9 +247,9 @@ void setupTwist2DStructs(
 
   // Copy to device
   device_twist_2d_structs.resize(host_twist_2d_structs.size());
-  cudaMemcpyAsync(
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
     thrust::raw_pointer_cast(device_twist_2d_structs.data()), host_twist_2d_structs.data(),
-    host_twist_2d_structs.size() * sizeof(TwistStruct2D), cudaMemcpyHostToDevice, stream);
+    host_twist_2d_structs.size() * sizeof(TwistStruct2D), cudaMemcpyHostToDevice, stream));
 }
 
 void setupTwist3DStructs(
@@ -309,7 +312,7 @@ void setupTwist3DStructs(
       angular_velocity_index++;
     }
 
-    TwistStruct3D twist;
+    TwistStruct3D twist{};
 
     Eigen::Map<Eigen::Matrix4f> cum_transform_buffer_map(twist.cum_transform_buffer);
     Eigen::Map<Eigen::Vector3f> v_map(twist.v);
@@ -336,9 +339,9 @@ void setupTwist3DStructs(
 
   // Copy to device
   device_twist_3d_structs.resize(host_twist_3d_structs.size());
-  cudaMemcpyAsync(
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
     thrust::raw_pointer_cast(device_twist_3d_structs.data()), host_twist_3d_structs.data(),
-    host_twist_3d_structs.size() * sizeof(TwistStruct3D), cudaMemcpyHostToDevice, stream);
+    host_twist_3d_structs.size() * sizeof(TwistStruct3D), cudaMemcpyHostToDevice, stream));
 }
 
 }  // namespace autoware::cuda_pointcloud_preprocessor
