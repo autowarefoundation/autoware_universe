@@ -219,13 +219,15 @@ void calculate_object_path_time_collisions(
 void calculate_objects_time_collisions(
   OutOfLaneData & out_of_lane_data,
   const std::vector<autoware_perception_msgs::msg::PredictedObject> & objects,
-  const route_handler::RouteHandler & route_handler,
-  const bool validate_predicted_paths_on_lanelets)
+  const route_handler::RouteHandler & route_handler, const PlannerParam & params)
 {
   for (const auto & object : objects) {
+    auto shape = object.shape;
+    shape.dimensions.y += params.objects_extra_width * 0.5;
     for (const auto & path : object.kinematics.predicted_paths) {
       calculate_object_path_time_collisions(
-        out_of_lane_data, path, object.shape, route_handler, validate_predicted_paths_on_lanelets);
+        out_of_lane_data, path, object.shape, route_handler,
+        params.validate_predicted_paths_on_lanelets);
     }
   }
 }

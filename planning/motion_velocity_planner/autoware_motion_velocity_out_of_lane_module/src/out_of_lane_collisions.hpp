@@ -40,8 +40,7 @@ void calculate_object_path_time_collisions(
 void calculate_objects_time_collisions(
   OutOfLaneData & out_of_lane_data,
   const std::vector<autoware_perception_msgs::msg::PredictedObject> & objects,
-  const route_handler::RouteHandler & route_handler,
-  const bool validate_predicted_paths_on_lanelets);
+  const route_handler::RouteHandler & route_handler, const PlannerParam & params);
 
 /// @brief calculate the collisions to avoid
 /// @details either uses the time to collision or just the time when the object will arrive at the
