@@ -244,8 +244,8 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
     return {};
   }
 
-  if (const auto is_shifted = is_goal_changed()) {
-    RCLCPP_WARN(logger_, "%s", is_shifted->c_str());
+  if (const auto is_new_route = is_route_changed()) {
+    RCLCPP_WARN(logger_, "%s. Reset output.", is_new_route->c_str());
     output_ = Output();
   }
 
@@ -371,22 +371,31 @@ bool BoundaryDeparturePreventionModule::is_autonomous_mode() const
          op_mode_state_ptr_->is_autoware_control_enabled;
 }
 
-std::optional<std::string> BoundaryDeparturePreventionModule::is_goal_changed()
+std::optional<std::string> BoundaryDeparturePreventionModule::is_route_changed()
 {
-  const auto & new_goal = route_ptr_->goal_pose;
-  if (!prev_goal_ptr_) {
-    prev_goal_ptr_ = std::make_unique<Pose>(new_goal);
-    return std::nullopt;
+  if (!prev_route_ptr_) {
+    prev_route_ptr_ = std::make_unique<LaneletRoute>(*route_ptr_);
+    return fmt::format("Initializing previous route pointer.");
   }
 
-  const auto diff_to_new_goal = autoware_utils::calc_distance2d(*prev_goal_ptr_, new_goal);
+  const auto prev_uuid = autoware_utils::to_boost_uuid(prev_route_ptr_->uuid);
+  const auto curr_uuid = autoware_utils::to_boost_uuid(route_ptr_->uuid);
 
-  if (diff_to_new_goal <= node_param_.th_goal_shift_dist_m) {
-    return std::nullopt;
+  if (prev_uuid != curr_uuid) {
+    *prev_route_ptr_ = *route_ptr_;
+    return fmt::format("Route has changed.");
   }
 
-  *prev_goal_ptr_ = new_goal;
-  return fmt::format("Goal changed due to exceeding threshold.");
+  const auto & prev_goal = prev_route_ptr_->goal_pose;
+  const auto & curr_goal = route_ptr_->goal_pose;
+  const auto diff_to_new_goal = autoware_utils::calc_distance2d(prev_goal, curr_goal);
+
+  if (diff_to_new_goal > node_param_.th_goal_shift_dist_m) {
+    *prev_route_ptr_ = *route_ptr_;
+    return fmt::format("Goal changed due to exceeding threshold.");
+  }
+
+  return std::nullopt;
 }
 
 tl::expected<VelocityPlanningResult, std::string>

@@ -52,8 +52,8 @@ private:
   void take_data();
   std::optional<std::string> is_data_invalid(const TrajectoryPoints & raw_trajectory_points) const;
   std::optional<std::string> is_data_timeout(const Odometry & odom) const;
+  std::optional<std::string> is_route_changed();
   bool is_autonomous_mode() const;
-  std::optional<std::string> is_goal_changed();
 
   // === Internal logic
 
@@ -71,7 +71,7 @@ private:
   std::unique_ptr<utils::SlowDownInterpolator> slow_down_interpolator_ptr_;
   MarkerArray debug_marker_;
   MarkerArray slow_down_wall_marker_;
-  std::unique_ptr<Pose> prev_goal_ptr_;
+  std::unique_ptr<LaneletRoute> prev_route_ptr_;
   static constexpr auto throttle_duration_ms{5000};
 
   Trajectory::ConstSharedPtr ego_pred_traj_ptr_;
