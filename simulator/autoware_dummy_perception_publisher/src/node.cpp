@@ -374,7 +374,7 @@ void DummyPerceptionPublisherNode::timerCallback()
     // Update last known position based on calculated ObjectInfo position
     const auto & dummy_uuid_str = autoware_utils_uuid::to_hex_string(object.id);
     dummy_last_known_positions_[dummy_uuid_str] = obj_info.pose_covariance_.pose.position;
-    
+
     // Track object creation time if not already tracked
     if (dummy_creation_timestamps_.find(dummy_uuid_str) == dummy_creation_timestamps_.end()) {
       dummy_creation_timestamps_[dummy_uuid_str] = rclcpp::Time(object.header.stamp);
@@ -617,25 +617,28 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
   const std::string & mapped_predicted_uuid = mapping_it->second;
 
   // Check if we should keep using the current prediction for at least 1 second
-  const double MIN_KEEP_DURATION = 1.0;  // seconds
-  
+  const double MIN_KEEP_DURATION = 3.0;  // seconds
+
   // Check if we have a last used prediction and if we should keep using it
   auto last_used_pred_it = dummy_last_used_predictions_.find(obj_uuid_str);
   auto last_update_time_it = dummy_prediction_update_timestamps_.find(obj_uuid_str);
-  
-  if (last_used_pred_it != dummy_last_used_predictions_.end() && 
-      last_update_time_it != dummy_prediction_update_timestamps_.end()) {
+
+  if (
+    last_used_pred_it != dummy_last_used_predictions_.end() &&
+    last_update_time_it != dummy_prediction_update_timestamps_.end()) {
     const double time_since_last_update = (current_time - last_update_time_it->second).seconds();
-    
+
     // If less than 1 second has passed since last update, keep using the same prediction
     if (time_since_last_update < MIN_KEEP_DURATION) {
+      std::cerr << "Using last used prediction for dummy object with ID: " << obj_uuid_str
+                << std::endl;
       auto last_used_time_it = dummy_last_used_prediction_times_.find(obj_uuid_str);
       if (last_used_time_it != dummy_last_used_prediction_times_.end()) {
         return std::make_pair(last_used_pred_it->second, last_used_time_it->second);
       }
     }
   }
-  
+
   // Time to update: find the closest prediction in the past
   for (auto it = predicted_objects_buffer_.rbegin(); it != predicted_objects_buffer_.rend(); ++it) {
     const auto & predicted_objects_msg = *it;
@@ -657,7 +660,7 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
         dummy_last_used_predictions_[obj_uuid_str] = predicted_object;
         dummy_last_used_prediction_times_[obj_uuid_str] = msg_time;
         dummy_prediction_update_timestamps_[obj_uuid_str] = current_time;
-        
+
         return std::make_pair(predicted_object, msg_time);
       }
     }
