@@ -1161,9 +1161,6 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
   const autoware_perception_msgs::msg::PredictedObject & last_prediction,
   const autoware_perception_msgs::msg::PredictedObject & candidate_prediction)
 {
-  // Maximum acceptable average distance between corresponding path points (meters)
-  const double MAX_AVERAGE_PATH_DISTANCE = 2.0;
-  
   // Maximum acceptable endpoint distance (meters) 
   const double MAX_ENDPOINT_DISTANCE = 3.0;
   
@@ -1203,31 +1200,6 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
     return false;
   }
   
-  // Compare corresponding points in both paths
-  double total_distance = 0.0;
-  const size_t comparison_points = std::min(min_path_size, static_cast<size_t>(10)); // Compare up to 10 points
-  
-  for (size_t i = 0; i < comparison_points; ++i) {
-    // Calculate indices for both paths to compare similar relative positions
-    const size_t last_idx = (i * last_path_size) / comparison_points;
-    const size_t candidate_idx = (i * candidate_path_size) / comparison_points;
-    
-    if (last_idx >= last_path_size || candidate_idx >= candidate_path_size) {
-      continue;
-    }
-    
-    const auto & last_point = last_path.path[last_idx].position;
-    const auto & candidate_point = candidate_path.path[candidate_idx].position;
-    
-    const double point_distance = calculateEuclideanDistance(last_point, candidate_point);
-    total_distance += point_distance;
-  }
-  
-  const double average_distance = total_distance / comparison_points;
-  if (average_distance > MAX_AVERAGE_PATH_DISTANCE) {
-    std::cerr << "Average path distance too large: " << average_distance << "m" << std::endl;
-    return false;
-  }
   
   // Compare endpoints if both paths are long enough
   if (last_path_size > 2 && candidate_path_size > 2) {
