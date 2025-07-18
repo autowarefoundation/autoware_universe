@@ -126,7 +126,8 @@ protected:
 
   diagnostic_updater::Updater updater_;  //!< @brief Updater class which advertises to /diagnostics
 
-  rclcpp::Publisher<tier4_external_api_msgs::msg::GpuStatus>::SharedPtr pub_gpu_status_;  //!< @brief publisher
+  rclcpp::Publisher<tier4_external_api_msgs::msg::GpuStatus>::SharedPtr
+    pub_gpu_status_;  //!< @brief publisher
 
   rclcpp::TimerBase::SharedPtr timer_;  //!< @brief timer to collect GPU status
 

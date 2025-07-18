@@ -46,7 +46,8 @@ GPUMonitorBase::GPUMonitorBase(const std::string & node_name, const rclcpp::Node
   // Publisher
   rclcpp::QoS durable_qos{1};
   durable_qos.transient_local();
-  pub_gpu_status_ = this->create_publisher<tier4_external_api_msgs::msg::GpuStatus>("~/gpu_status", durable_qos);
+  pub_gpu_status_ =
+    this->create_publisher<tier4_external_api_msgs::msg::GpuStatus>("~/gpu_status", durable_qos);
 
   // Start timer for collecting GPU status
   using namespace std::literals::chrono_literals;
@@ -105,13 +106,15 @@ void GPUMonitorBase::publishGPUStatus()
   gpu_status.stamp = this->now();
   gpu_status.hostname = hostname_;
   auto measured_status_list = getGPUStatus();
-  for(const auto & measured_status : measured_status_list) {
+  for (const auto & measured_status : measured_status_list) {
     tier4_external_api_msgs::msg::GpuUnitStatus gpu_unit;
     gpu_unit.name = measured_status.name;
     gpu_unit.usage = measured_status.usage;
     gpu_unit.clock = measured_status.clock;
     gpu_unit.temperature = measured_status.temperature;
-    gpu_unit.thermal_throttling = measured_status.thermal_throttling == DiagStatus::OK ? GpuUnitStatus::THERMAL_THROTTLING_OFF : GpuUnitStatus::THERMAL_THROTTLING_ON;
+    gpu_unit.thermal_throttling = measured_status.thermal_throttling == DiagStatus::OK
+                                    ? GpuUnitStatus::THERMAL_THROTTLING_OFF
+                                    : GpuUnitStatus::THERMAL_THROTTLING_ON;
     gpu_status.gpus.push_back(gpu_unit);
   }
   pub_gpu_status_->publish(gpu_status);
