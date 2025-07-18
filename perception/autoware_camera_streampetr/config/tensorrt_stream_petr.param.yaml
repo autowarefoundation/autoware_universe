@@ -3,8 +3,9 @@
     model_params: # These are parameters that are dependent on the onnx file.
       class_names: ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"]
       fp16_mode: true
-      use_temporal: true
-      detection_range: [-61.2, -61.2, -10.0, 61.2, 61.2, 10.0]
+      use_temporal: true                                        # Can the model use temporal information or not.
+      detection_range: [-61.2, -61.2, -10.0, 61.2, 61.2, 10.0]  # [-x,-y,-z,x,y,z] from base_link. The model is not trained to predict objects outside this range.
+                                                                # So, anything outside this range is wrong, and this parameter is used to filter out objects that are outside this range
       input_image_height: 480
       input_image_width: 640
       num_proposals: 5400
