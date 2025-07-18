@@ -55,6 +55,14 @@ struct ObjectInfo
     const tier4_simulation_msgs::msg::DummyObject & object,
     const autoware_perception_msgs::msg::PredictedObject & predicted_object,
     const rclcpp::Time & predicted_time, const rclcpp::Time & current_time);
+
+  // Position calculation methods
+  static geometry_msgs::msg::Pose calculateStraightLinePosition(
+    const tier4_simulation_msgs::msg::DummyObject & object, const rclcpp::Time & current_time);
+  static geometry_msgs::msg::Pose calculateTrajectoryBasedPosition(
+    const tier4_simulation_msgs::msg::DummyObject & object,
+    const autoware_perception_msgs::msg::PredictedObject & predicted_object,
+    const rclcpp::Time & predicted_time, const rclcpp::Time & current_time);
   double length;
   double width;
   double height;
