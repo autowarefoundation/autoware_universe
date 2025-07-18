@@ -409,13 +409,14 @@ bool StartPlannerModule::isExecutionRequested() const
   }
 
   // Return false and do not request execution if any of the following conditions are true:
-  // - The start pose is on the centerline or on "waypoints" (custom centerline)
-  // - The vehicle has already arrived at the start position planner.
+  // - The vehicle is on the centerline or on "waypoints" (custom centerline)
+  //    [ignore this check if the vehicle is on a bus stop]
+  // - The vehicle is far enough from the original start position.
   // - The vehicle has reached the goal position.
   // - The vehicle is still moving.
   if (
-    isCurrentPoseOnEgoCenterline() || isCloseToOriginalStartPose() || hasArrivedAtGoal() ||
-    isMoving()) {
+    (!isCurrentPoseOnBusStop() && isCurrentPoseOnEgoCenterline()) || isFarFromOriginalStartPose() ||
+    hasArrivedAtGoal() || isMoving()) {
     return false;
   }
 
@@ -444,6 +445,14 @@ bool StartPlannerModule::isCurrentPoseOnEgoCenterline() const
       .distance;
 
   return std::abs(lateral_distance_to_center_lane) < parameters_->th_distance_to_middle_of_the_road;
+}
+
+bool StartPlannerModule::isCurrentPoseOnBusStop() const
+{
+  lanelet::ConstLanelet current_lanelet;
+  planner_data_->route_handler->getClosestLaneletWithinRoute(getEgoPose(), &current_lanelet);
+
+  return current_lanelet.hasAttribute("bus_stop");
 }
 
 bool StartPlannerModule::isPreventingRearVehicleFromPassingThrough() const
@@ -634,7 +643,7 @@ bool StartPlannerModule::isPreventingRearVehicleFromPassingThrough(const Pose & 
          gap_between_ego_and_lane_border;
 }
 
-bool StartPlannerModule::isCloseToOriginalStartPose() const
+bool StartPlannerModule::isFarFromOriginalStartPose() const
 {
   const Pose start_pose = planner_data_->route_handler->getOriginalStartPose();
   return autoware_utils::calc_distance2d(
@@ -743,12 +752,14 @@ bool StartPlannerModule::canTransitSuccessState()
   //   - Insufficient margin against static objects.
   //   - No path found that stays within the lane.
   //   In such cases, a stop point needs to be embedded and keep running start_planner.
-  // - Can transit to success if the end point of the pullout path is reached.
+  // - Can transit to success if both of the conditions below is satisfied:
+  //   - The end point of the pullout path is reached
+  //   - The vehicle has left the bus stop if that is the case
   if (!status_.driving_forward || !status_.found_pull_out_path) {
     return false;
   }
 
-  if (hasReachedPullOutEnd()) {
+  if (hasReachedPullOutEnd() && !isCurrentPoseOnBusStop()) {
     RCLCPP_DEBUG(getLogger(), "Transit to success: Reached the end point of the pullout path.");
     return true;
   }
@@ -1141,9 +1152,17 @@ bool StartPlannerModule::findPullOutPath(
   PlannerDebugData debug_data{
     planner->getPlannerType(), backwards_distance, collision_check_margin, {}};
 
-  const auto pull_out_path =
-    planner->plan(start_pose_candidate, goal_pose, planner_data_, debug_data);
-  debug_data_vector.push_back(debug_data);
+  const auto pull_out_path = std::invoke([&]() -> std::optional<PullOutPath> {
+    if (isCurrentPoseOnEgoCenterline()) {
+      PullOutPath path;
+      path.partial_paths.push_back(getPreviousModuleOutput().path);
+      return path;
+    }
+    auto path_opt = planner->plan(start_pose_candidate, goal_pose, planner_data_, debug_data);
+    debug_data_vector.push_back(debug_data);
+    return path_opt;
+  });
+
   // If no path is found, return false
   if (!pull_out_path) {
     return false;
