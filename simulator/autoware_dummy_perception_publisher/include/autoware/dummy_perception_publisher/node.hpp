@@ -146,7 +146,8 @@ private:
   std::map<std::string, rclcpp::Time> dummy_mapping_timestamps_;
   std::map<std::string, geometry_msgs::msg::Point> dummy_last_known_positions_;
   std::map<std::string, rclcpp::Time> dummy_creation_timestamps_;
-  std::map<std::string, autoware_perception_msgs::msg::PredictedObject> dummy_last_used_predictions_;
+  std::map<std::string, autoware_perception_msgs::msg::PredictedObject>
+    dummy_last_used_predictions_;
   std::map<std::string, rclcpp::Time> dummy_last_used_prediction_times_;
   std::map<std::string, rclcpp::Time> dummy_prediction_update_timestamps_;
   double visible_range_;
@@ -160,6 +161,7 @@ private:
   double angle_increment_;
 
   std::mt19937 random_generator_;
+  std::uniform_real_distribution<double> path_selection_dist_;
   void timerCallback();
   void objectCallback(const tier4_simulation_msgs::msg::DummyObject::ConstSharedPtr msg);
   void predictedObjectsCallback(
@@ -178,8 +180,7 @@ private:
     const std::string & dummy_uuid_str);
   bool isValidRemappingCandidate(
     const autoware_perception_msgs::msg::PredictedObject & candidate_prediction,
-    const std::string & dummy_uuid_str,
-    const geometry_msgs::msg::Point & expected_position);
+    const std::string & dummy_uuid_str, const geometry_msgs::msg::Point & expected_position);
   bool arePathsSimilar(
     const autoware_perception_msgs::msg::PredictedObject & last_prediction,
     const autoware_perception_msgs::msg::PredictedObject & candidate_prediction);
