@@ -108,11 +108,9 @@ ObjectInfo::ObjectInfo(
 {
   // Check if 2 seconds have passed since object creation
   const double time_since_creation = (current_time - rclcpp::Time(object.header.stamp)).seconds();
-  const double PREDICTED_PATH_DELAY = 2.0;  // seconds
-
   // Use straight-line movement for first 2 seconds, then switch to predicted path
   if (
-    time_since_creation < PREDICTED_PATH_DELAY ||
+    time_since_creation < 2.0 ||  // TODO: Make this configurable from node instance
     predicted_object.kinematics.predicted_paths.empty()) {
     // Reuse the logic from the other constructor
     *this = ObjectInfo(object, current_time);
@@ -360,8 +358,48 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
     random_generator_.seed(seed_gen());
   }
   
+  // Initialize pedestrian path selection
+  const unsigned int pedestrian_path_seed =
+    static_cast<unsigned int>(this->declare_parameter("pedestrian_path_seed", 42));
+  const bool use_fixed_pedestrian_seed = this->declare_parameter("use_fixed_pedestrian_seed", false);
+  
+  if (use_fixed_pedestrian_seed) {
+    pedestrian_path_generator_.seed(pedestrian_path_seed);
+  } else {
+    std::random_device seed_gen;
+    pedestrian_path_generator_.seed(seed_gen());
+  }
+  
   // Initialize path selection distribution
   path_selection_dist_ = std::uniform_real_distribution<double>(0.0, 1.0);
+  
+  // Declare prediction parameters
+  predicted_path_delay_ = this->declare_parameter("predicted_path_delay", 2.0);
+  min_keep_duration_ = this->declare_parameter("min_keep_duration", 3.0);
+  max_yaw_change_ = this->declare_parameter("max_yaw_change", M_PI / 2.0);
+  max_path_length_change_ratio_ = this->declare_parameter("max_path_length_change_ratio", 3.0);
+  
+  // Declare vehicle parameters
+  vehicle_max_remapping_distance_ = this->declare_parameter("vehicle.max_remapping_distance", 2.0);
+  vehicle_max_remapping_yaw_diff_ = this->declare_parameter("vehicle.max_remapping_yaw_diff", M_PI / 12.0);
+  vehicle_max_speed_difference_ratio_ = this->declare_parameter("vehicle.max_speed_difference_ratio", 1.05);
+  vehicle_min_speed_ratio_ = this->declare_parameter("vehicle.min_speed_ratio", 0.5);
+  vehicle_max_speed_ratio_ = this->declare_parameter("vehicle.max_speed_ratio", 1.5);
+  vehicle_speed_check_threshold_ = this->declare_parameter("vehicle.speed_check_threshold", 1.0);
+  vehicle_max_position_difference_ = this->declare_parameter("vehicle.max_position_difference", 1.5);
+  vehicle_max_path_length_ratio_ = this->declare_parameter("vehicle.max_path_length_ratio", 1.1);
+  vehicle_max_overall_direction_diff_ = this->declare_parameter("vehicle.max_overall_direction_diff", M_PI / 6.0);
+  
+  // Declare pedestrian parameters
+  pedestrian_max_remapping_distance_ = this->declare_parameter("pedestrian.max_remapping_distance", 3.0);
+  pedestrian_max_remapping_yaw_diff_ = this->declare_parameter("pedestrian.max_remapping_yaw_diff", M_PI / 4.0);
+  pedestrian_max_speed_difference_ratio_ = this->declare_parameter("pedestrian.max_speed_difference_ratio", 1.3);
+  pedestrian_min_speed_ratio_ = this->declare_parameter("pedestrian.min_speed_ratio", 0.3);
+  pedestrian_max_speed_ratio_ = this->declare_parameter("pedestrian.max_speed_ratio", 2.0);
+  pedestrian_speed_check_threshold_ = this->declare_parameter("pedestrian.speed_check_threshold", 0.5);
+  pedestrian_max_position_difference_ = this->declare_parameter("pedestrian.max_position_difference", 2.5);
+  pedestrian_max_path_length_ratio_ = this->declare_parameter("pedestrian.max_path_length_ratio", 1.5);
+  pedestrian_max_overall_direction_diff_ = this->declare_parameter("pedestrian.max_overall_direction_diff", M_PI / 3.0);
 
   // create subscriber and publisher
   rclcpp::QoS qos{1};
@@ -717,8 +755,6 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
   const std::string & mapped_predicted_uuid = mapping_it->second;
 
   // Check if we should keep using the current prediction for at least 3 seconds
-  const double MIN_KEEP_DURATION = 3.0;  // seconds
-
   // Check if we have a last used prediction and if we should keep using it
   auto last_used_pred_it = dummy_last_used_predictions_.find(obj_uuid_str);
   auto last_update_time_it = dummy_prediction_update_timestamps_.find(obj_uuid_str);
@@ -728,8 +764,8 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
     last_update_time_it != dummy_prediction_update_timestamps_.end()) {
     const double time_since_last_update = (current_time - last_update_time_it->second).seconds();
 
-    // If less than 1 second has passed since last update, keep using the same prediction
-    if (time_since_last_update < MIN_KEEP_DURATION) {
+    // If less than min_keep_duration_ has passed since last update, keep using the same prediction
+    if (time_since_last_update < min_keep_duration_) {
       auto last_used_time_it = dummy_last_used_prediction_times_.find(obj_uuid_str);
       if (last_used_time_it != dummy_last_used_prediction_times_.end()) {
         return std::make_pair(last_used_pred_it->second, last_used_time_it->second);
@@ -784,7 +820,7 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
           // Randomly select a path index
           const size_t num_paths = predicted_object.kinematics.predicted_paths.size();
           const size_t random_path_index = 
-            static_cast<size_t>(path_selection_dist_(random_generator_) * num_paths);
+            static_cast<size_t>(path_selection_dist_(pedestrian_path_generator_) * num_paths);
           
           // Reorder paths to put the randomly selected path first
           // This way the static calculateTrajectoryBasedPosition will use it
