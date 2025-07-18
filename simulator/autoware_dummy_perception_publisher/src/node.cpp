@@ -184,29 +184,29 @@ ObjectInfo::ObjectInfo(
   } else if (distance_traveled >= cumulative_distances.back()) {
     // Extrapolate beyond the path end
     const double overshoot_distance = distance_traveled - cumulative_distances.back();
-    
+
     if (best_path.path.size() >= 2) {
       // Use the last two points to determine direction and extrapolate
       const auto & second_last_pose = best_path.path[best_path.path.size() - 2];
       const auto & last_pose = best_path.path.back();
-      
+
       // Calculate direction vector from second-last to last pose
       const double dx = last_pose.position.x - second_last_pose.position.x;
       const double dy = last_pose.position.y - second_last_pose.position.y;
       const double dz = last_pose.position.z - second_last_pose.position.z;
       const double segment_length = std::sqrt(dx * dx + dy * dy + dz * dz);
-      
+
       if (segment_length > 0.0) {
         // Normalize direction vector
         const double dir_x = dx / segment_length;
         const double dir_y = dy / segment_length;
         const double dir_z = dz / segment_length;
-        
+
         // Extrapolate position
         interpolated_pose.position.x = last_pose.position.x + dir_x * overshoot_distance;
         interpolated_pose.position.y = last_pose.position.y + dir_y * overshoot_distance;
         interpolated_pose.position.z = last_pose.position.z + dir_z * overshoot_distance;
-        
+
         // Keep the last orientation
         interpolated_pose.orientation = last_pose.orientation;
       } else {
@@ -396,19 +396,23 @@ void DummyPerceptionPublisherNode::timerCallback()
       if (matched_predicted) {
         return ObjectInfo(object, predicted_object, predicted_time, current_time);
       }
-      
+
       // Check if we have a last used prediction for this object
       const auto & dummy_uuid_str = autoware_utils_uuid::to_hex_string(object.id);
       auto last_used_pred_it = dummy_last_used_predictions_.find(dummy_uuid_str);
       auto last_used_time_it = dummy_last_used_prediction_times_.find(dummy_uuid_str);
-      
-      if (last_used_pred_it != dummy_last_used_predictions_.end() && 
-          last_used_time_it != dummy_last_used_prediction_times_.end()) {
-        std::cerr << "Using last known prediction for lost object with ID: " << dummy_uuid_str << std::endl;
-        return ObjectInfo(object, last_used_pred_it->second, last_used_time_it->second, current_time);
+
+      if (
+        last_used_pred_it != dummy_last_used_predictions_.end() &&
+        last_used_time_it != dummy_last_used_prediction_times_.end()) {
+        std::cerr << "Using last known prediction for lost object with ID: " << dummy_uuid_str
+                  << std::endl;
+        return ObjectInfo(
+          object, last_used_pred_it->second, last_used_time_it->second, current_time);
       }
 
-      std::cerr << "No matching predicted object found for dummy object with ID: " << dummy_uuid_str << std::endl;
+      std::cerr << "No matching predicted object found for dummy object with ID: " << dummy_uuid_str
+                << std::endl;
       // No last known prediction, use original constructor
       return ObjectInfo(object, current_time);
     }();
@@ -703,11 +707,13 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
           // Check if the new trajectory is valid compared to current one
           if (!isTrajectoryValid(current_pred_it->second, predicted_object, obj_uuid_str)) {
             // Skip this prediction update and keep using the current one
-            std::cerr << "Skipping trajectory update for object " << obj_uuid_str << " due to validation failure" << std::endl;
-            return std::make_pair(current_pred_it->second, dummy_last_used_prediction_times_[obj_uuid_str]);
+            std::cerr << "Skipping trajectory update for object " << obj_uuid_str
+                      << " due to validation failure" << std::endl;
+            return std::make_pair(
+              current_pred_it->second, dummy_last_used_prediction_times_[obj_uuid_str]);
           }
         }
-        
+
         // Store this as the new prediction to use for the next 1 second
         dummy_last_used_predictions_[obj_uuid_str] = predicted_object;
         dummy_last_used_prediction_times_[obj_uuid_str] = msg_time;
@@ -799,32 +805,32 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
 
     for (const auto & pred_uuid : available_predicted_uuids) {
       const auto & pred_pos = predicted_positions[pred_uuid];
-      
+
       // Find the actual predicted object for validation
       autoware_perception_msgs::msg::PredictedObject candidate_pred_obj;
       bool found_candidate = false;
-      
+
       for (const auto & pred_obj : predicted_objects.objects) {
         unique_identifier_msgs::msg::UUID obj_uuid;
         obj_uuid.uuid = pred_obj.object_id.uuid;
         const auto & obj_uuid_str = autoware_utils_uuid::to_hex_string(obj_uuid);
-        
+
         if (obj_uuid_str == pred_uuid) {
           candidate_pred_obj = pred_obj;
           found_candidate = true;
           break;
         }
       }
-      
+
       if (!found_candidate) {
         continue;
       }
-      
+
       // Validate the candidate using pose and path similarity
       if (!isValidRemappingCandidate(candidate_pred_obj, dummy_uuid, remapping_position)) {
         continue;
       }
-      
+
       double distance = calculateEuclideanDistance(remapping_position, pred_pos);
 
       if (distance < min_distance) {
@@ -871,32 +877,32 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
 
     for (const auto & pred_uuid : available_predicted_uuids) {
       const auto & pred_pos = predicted_positions[pred_uuid];
-      
+
       // Find the actual predicted object for validation
       autoware_perception_msgs::msg::PredictedObject candidate_pred_obj;
       bool found_candidate = false;
-      
+
       for (const auto & pred_obj : predicted_objects.objects) {
         unique_identifier_msgs::msg::UUID obj_uuid;
         obj_uuid.uuid = pred_obj.object_id.uuid;
         const auto & obj_uuid_str = autoware_utils_uuid::to_hex_string(obj_uuid);
-        
+
         if (obj_uuid_str == pred_uuid) {
           candidate_pred_obj = pred_obj;
           found_candidate = true;
           break;
         }
       }
-      
+
       if (!found_candidate) {
         continue;
       }
-      
+
       // For unmapped objects, use basic validation (mainly distance and path existence)
       if (!isValidRemappingCandidate(candidate_pred_obj, dummy_uuid, dummy_pos)) {
         continue;
       }
-      
+
       double distance = calculateEuclideanDistance(dummy_pos, pred_pos);
 
       if (distance < min_distance) {
@@ -956,32 +962,31 @@ bool DummyPerceptionPublisherNode::isTrajectoryValid(
 {
   // Maximum acceptable yaw change in radians (90 degrees)
   const double MAX_YAW_CHANGE = M_PI / 2.0;
-  
-  
+
   // Maximum acceptable path length change ratio (300% change)
   const double MAX_PATH_LENGTH_CHANGE_RATIO = 3.0;
-  
+
   // If current prediction is empty, accept any new prediction
   if (current_prediction.kinematics.predicted_paths.empty()) {
     return true;
   }
-  
+
   // If new prediction is empty, reject it
   if (new_prediction.kinematics.predicted_paths.empty()) {
     return false;
   }
-  
+
   // Get the highest confidence paths from both predictions
   const auto & current_path = *std::max_element(
     current_prediction.kinematics.predicted_paths.begin(),
     current_prediction.kinematics.predicted_paths.end(),
     [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
-    
+
   const auto & new_path = *std::max_element(
     new_prediction.kinematics.predicted_paths.begin(),
     new_prediction.kinematics.predicted_paths.end(),
     [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
-  
+
   // Check yaw angle change
   if (!current_path.path.empty() && !new_path.path.empty()) {
     // Get yaw from quaternion
@@ -992,30 +997,31 @@ bool DummyPerceptionPublisherNode::isTrajectoryValid(
       tf2::Matrix3x3(tf_q).getRPY(roll, pitch, yaw);
       return yaw;
     };
-    
+
     const double current_yaw = extractYaw(current_path.path[0].orientation);
     const double new_yaw = extractYaw(new_path.path[0].orientation);
-    
+
     // Calculate yaw difference, handling wrap-around
     double yaw_diff = std::abs(new_yaw - current_yaw);
     if (yaw_diff > M_PI) {
       yaw_diff = 2.0 * M_PI - yaw_diff;
     }
-    
+
     if (yaw_diff > MAX_YAW_CHANGE) {
-      std::cerr << "Rejecting trajectory for object " << dummy_uuid_str 
+      std::cerr << "Rejecting trajectory for object " << dummy_uuid_str
                 << " due to large yaw change: " << yaw_diff << " rad" << std::endl;
       return false;
     }
   }
-  
+
   // Check if new prediction has insufficient path length (likely the real issue)
   if (new_path.path.size() < 2) {
-    std::cerr << "Rejecting trajectory for object " << dummy_uuid_str 
-              << " due to insufficient path length: " << new_path.path.size() << " points" << std::endl;
+    std::cerr << "Rejecting trajectory for object " << dummy_uuid_str
+              << " due to insufficient path length: " << new_path.path.size() << " points"
+              << std::endl;
     return false;
   }
-  
+
   // Check path length change
   if (!current_path.path.empty() && !new_path.path.empty()) {
     // Calculate path lengths
@@ -1024,7 +1030,7 @@ bool DummyPerceptionPublisherNode::isTrajectoryValid(
       for (size_t i = 1; i < path.path.size(); ++i) {
         const auto & prev_pose = path.path[i - 1];
         const auto & curr_pose = path.path[i];
-        
+
         const double dx = curr_pose.position.x - prev_pose.position.x;
         const double dy = curr_pose.position.y - prev_pose.position.y;
         const double dz = curr_pose.position.z - prev_pose.position.z;
@@ -1032,100 +1038,134 @@ bool DummyPerceptionPublisherNode::isTrajectoryValid(
       }
       return total_length;
     };
-    
+
     const double current_path_length = calculatePathLength(current_path);
     const double new_path_length = calculatePathLength(new_path);
-    
+
     // Only check if both paths have significant length
     if (current_path_length > 0.1 && new_path_length > 0.1) {
-      const double length_ratio = std::max(current_path_length / new_path_length, new_path_length / current_path_length);
+      const double length_ratio =
+        std::max(current_path_length / new_path_length, new_path_length / current_path_length);
       if (length_ratio > MAX_PATH_LENGTH_CHANGE_RATIO) {
-        std::cerr << "Rejecting trajectory for object " << dummy_uuid_str 
-                  << " due to large path length change: " << length_ratio << "x (current: " 
-                  << current_path_length << "m, new: " << new_path_length << "m)" << std::endl;
+        std::cerr << "Rejecting trajectory for object " << dummy_uuid_str
+                  << " due to large path length change: " << length_ratio
+                  << "x (current: " << current_path_length << "m, new: " << new_path_length << "m)"
+                  << std::endl;
         return false;
       }
     }
   }
-  
+
   return true;
 }
 
 bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
   const autoware_perception_msgs::msg::PredictedObject & candidate_prediction,
-  const std::string & dummy_uuid_str,
-  const geometry_msgs::msg::Point & expected_position)
+  const std::string & dummy_uuid_str, const geometry_msgs::msg::Point & expected_position)
 {
   // Maximum acceptable distance for remapping (meters)
   const double MAX_REMAPPING_DISTANCE = 5.0;
-  
+
   // Maximum acceptable yaw difference for remapping (45 degrees)
   const double MAX_REMAPPING_YAW_DIFF = M_PI / 4.0;
   
+  // Maximum acceptable speed difference ratio (10% tolerance)
+  const double MAX_SPEED_DIFFERENCE_RATIO = 1.1;
+
   // Check if candidate has predicted paths
   if (candidate_prediction.kinematics.predicted_paths.empty()) {
     return false;
   }
   
+  // Get dummy object speed for comparison
+  auto dummy_it = std::find_if(objects_.begin(), objects_.end(), 
+    [&dummy_uuid_str](const auto & obj) {
+      const auto uuid = autoware_utils_uuid::to_hex_string(obj.id);
+      return uuid == dummy_uuid_str;
+    });
+  
+  if (dummy_it != objects_.end()) {
+    const auto & dummy_object = *dummy_it;
+    const double dummy_speed = dummy_object.initial_state.twist_covariance.twist.linear.x;
+    
+    // Get candidate predicted object speed
+    const auto & candidate_twist = candidate_prediction.kinematics.initial_twist_with_covariance.twist;
+    const double candidate_speed = std::sqrt(
+      candidate_twist.linear.x * candidate_twist.linear.x +
+      candidate_twist.linear.y * candidate_twist.linear.y);
+    
+    // Compare speeds if both are significant
+    if (dummy_speed > 0.1 && candidate_speed > 0.1) {
+      const double speed_ratio = std::max(dummy_speed / candidate_speed, candidate_speed / dummy_speed);
+      if (speed_ratio > MAX_SPEED_DIFFERENCE_RATIO) {
+        std::cerr << "Rejecting remapping candidate for object " << dummy_uuid_str 
+                  << " due to large speed difference: " << speed_ratio << "x"
+                  << " (dummy: " << dummy_speed << "m/s, candidate: " << candidate_speed << "m/s)" << std::endl;
+        return false;
+      }
+    }
+  }
+
   // Calculate expected position based on last known trajectory if available
   geometry_msgs::msg::Point comparison_position = expected_position;
-  
+
   auto last_used_pred_it = dummy_last_used_predictions_.find(dummy_uuid_str);
   if (last_used_pred_it != dummy_last_used_predictions_.end()) {
     const auto & last_prediction = last_used_pred_it->second;
-    
+
     // Calculate where the dummy object should be based on its last known trajectory
     const auto expected_pos = calculateExpectedPosition(last_prediction, dummy_uuid_str);
     if (expected_pos.has_value()) {
       comparison_position = expected_pos.value();
     }
   }
-  
+
   // Check position similarity
-  const auto & candidate_pos = candidate_prediction.kinematics.initial_pose_with_covariance.pose.position;
+  const auto & candidate_pos =
+    candidate_prediction.kinematics.initial_pose_with_covariance.pose.position;
   const double distance = calculateEuclideanDistance(comparison_position, candidate_pos);
-  
+
   if (distance > MAX_REMAPPING_DISTANCE) {
-    std::cerr << "Rejecting remapping candidate for object " << dummy_uuid_str 
-              << " due to large distance: " << distance << "m (expected: " 
-              << comparison_position.x << ", " << comparison_position.y 
-              << ", candidate: " << candidate_pos.x << ", " << candidate_pos.y << ")" << std::endl;
+    std::cerr << "Rejecting remapping candidate for object " << dummy_uuid_str
+              << " due to large distance: " << distance << "m (expected: " << comparison_position.x
+              << ", " << comparison_position.y << ", candidate: " << candidate_pos.x << ", "
+              << candidate_pos.y << ")" << std::endl;
     return false;
   }
-  
+
   // Additional validation using the last used prediction
   if (last_used_pred_it != dummy_last_used_predictions_.end()) {
     const auto & last_prediction = last_used_pred_it->second;
-    
+
     // Check path similarity using isTrajectoryValid
     if (!isTrajectoryValid(last_prediction, candidate_prediction, dummy_uuid_str)) {
-      std::cerr << "Rejecting remapping candidate for object " << dummy_uuid_str 
+      std::cerr << "Rejecting remapping candidate for object " << dummy_uuid_str
                 << " due to path dissimilarity" << std::endl;
       return false;
     }
-    
+
     // Additional trajectory similarity check - compare path shapes
     if (!arePathsSimilar(last_prediction, candidate_prediction)) {
-      std::cerr << "Rejecting remapping candidate for object " << dummy_uuid_str 
+      std::cerr << "Rejecting remapping candidate for object " << dummy_uuid_str
                 << " due to trajectory shape dissimilarity" << std::endl;
       return false;
     }
-    
+
     // Check heading similarity
-    if (!last_prediction.kinematics.predicted_paths.empty() && 
-        !candidate_prediction.kinematics.predicted_paths.empty()) {
-      
+    if (
+      !last_prediction.kinematics.predicted_paths.empty() &&
+      !candidate_prediction.kinematics.predicted_paths.empty()) {
       // Get the highest confidence paths
       const auto & last_path = *std::max_element(
         last_prediction.kinematics.predicted_paths.begin(),
         last_prediction.kinematics.predicted_paths.end(),
         [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
-        
+
       const auto & candidate_path = *std::max_element(
         candidate_prediction.kinematics.predicted_paths.begin(),
         candidate_prediction.kinematics.predicted_paths.end(),
         [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
-      
+
       if (!last_path.path.empty() && !candidate_path.path.empty()) {
         // Extract yaw from quaternions
         auto extractYaw = [](const geometry_msgs::msg::Quaternion & q) {
@@ -1135,25 +1175,25 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
           tf2::Matrix3x3(tf_q).getRPY(roll, pitch, yaw);
           return yaw;
         };
-        
+
         const double last_yaw = extractYaw(last_path.path[0].orientation);
         const double candidate_yaw = extractYaw(candidate_path.path[0].orientation);
-        
+
         // Calculate yaw difference with wrap-around
         double yaw_diff = std::abs(candidate_yaw - last_yaw);
         if (yaw_diff > M_PI) {
           yaw_diff = 2.0 * M_PI - yaw_diff;
         }
-        
+
         if (yaw_diff > MAX_REMAPPING_YAW_DIFF) {
-          std::cerr << "Rejecting remapping candidate for object " << dummy_uuid_str 
+          std::cerr << "Rejecting remapping candidate for object " << dummy_uuid_str
                     << " due to large yaw difference: " << yaw_diff << " rad" << std::endl;
           return false;
         }
       }
     }
   }
-  
+
   return true;
 }
 
@@ -1163,31 +1203,32 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
 {
   // Maximum acceptable position difference (meters)
   const double MAX_POSITION_DIFFERENCE = 3.0;
-  
+
   if (last_prediction.kinematics.predicted_paths.empty()) {
     return false;
   }
-  
+
   // Get the highest confidence path from last prediction
   const auto & last_path = *std::max_element(
     last_prediction.kinematics.predicted_paths.begin(),
     last_prediction.kinematics.predicted_paths.end(),
     [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
-  
+
   if (last_path.path.empty()) {
     return false;
   }
-  
+
   // Get candidate's current position
-  const auto & candidate_current_pos = candidate_prediction.kinematics.initial_pose_with_covariance.pose.position;
-  
+  const auto & candidate_current_pos =
+    candidate_prediction.kinematics.initial_pose_with_covariance.pose.position;
+
   // Calculate where the object should be now based on the last prediction path
   // This requires finding the dummy object to get its UUID and then calculating expected position
   // For now, use a simpler approach: get the time difference and interpolate/extrapolate
-  
+
   // Use the existing calculateExpectedPosition logic inline
   const auto current_time = get_clock()->now();
-  
+
   // Find the dummy object UUID by searching through our mappings
   std::string dummy_uuid_str;
   for (const auto & [uuid, pred_uuid] : dummy_to_predicted_uuid_map_) {
@@ -1195,42 +1236,44 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
     unique_identifier_msgs::msg::UUID candidate_uuid;
     candidate_uuid.uuid = candidate_prediction.object_id.uuid;
     const auto candidate_uuid_str = autoware_utils_uuid::to_hex_string(candidate_uuid);
-    
+
     if (pred_uuid == candidate_uuid_str) {
       dummy_uuid_str = uuid;
       break;
     }
   }
-  
+
   if (dummy_uuid_str.empty()) {
     // If we can't find the dummy UUID, fall back to basic comparison
     return true;
   }
-  
+
   // Get the expected position using our existing method
   const auto expected_pos_opt = calculateExpectedPosition(last_prediction, dummy_uuid_str);
   if (!expected_pos_opt.has_value()) {
-    return true; // Can't calculate expected position, allow the match
+    return true;  // Can't calculate expected position, allow the match
   }
-  
+
   const auto expected_pos = expected_pos_opt.value();
-  
+
   // Compare candidate's current position with expected position
-  const double position_difference = calculateEuclideanDistance(candidate_current_pos, expected_pos);
+  const double position_difference =
+    calculateEuclideanDistance(candidate_current_pos, expected_pos);
   if (position_difference > MAX_POSITION_DIFFERENCE) {
-    std::cerr << "Position difference too large: " << position_difference << "m" 
+    std::cerr << "Position difference too large: " << position_difference << "m"
               << " (expected: " << expected_pos.x << ", " << expected_pos.y
-              << ", candidate: " << candidate_current_pos.x << ", " << candidate_current_pos.y << ")" << std::endl;
+              << ", candidate: " << candidate_current_pos.x << ", " << candidate_current_pos.y
+              << ")" << std::endl;
     return false;
   }
-  
+
   // Compare path lengths and general direction if both predictions have paths
   if (last_path.path.size() > 1 && !candidate_prediction.kinematics.predicted_paths.empty()) {
     const auto & candidate_path = *std::max_element(
       candidate_prediction.kinematics.predicted_paths.begin(),
       candidate_prediction.kinematics.predicted_paths.end(),
       [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
-    
+
     if (candidate_path.path.size() > 1) {
       // Calculate path lengths (total distance along path)
       auto calculatePathLength = [](const auto & path) {
@@ -1245,58 +1288,61 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
         }
         return total_length;
       };
-      
+
       const double last_path_length = calculatePathLength(last_path);
       const double candidate_path_length = calculatePathLength(candidate_path);
-      
+
       // Check path length similarity - allow up to 200% difference
-      const double MAX_PATH_LENGTH_RATIO = 2.0;
+      const double MAX_PATH_LENGTH_RATIO = 1.1;
       if (last_path_length > 0.1 && candidate_path_length > 0.1) {
-        const double length_ratio = std::max(last_path_length / candidate_path_length, 
-                                            candidate_path_length / last_path_length);
+        const double length_ratio = std::max(
+          last_path_length / candidate_path_length, candidate_path_length / last_path_length);
         if (length_ratio > MAX_PATH_LENGTH_RATIO) {
-          std::cerr << "Path length difference too large: " << length_ratio << "x" 
-                    << " (last: " << last_path_length << "m, candidate: " << candidate_path_length << "m)" << std::endl;
+          std::cerr << "Path length difference too large: " << length_ratio << "x"
+                    << " (last: " << last_path_length << "m, candidate: " << candidate_path_length
+                    << "m)" << std::endl;
           return false;
         }
       }
-      
+
       // Calculate direction vectors
       const auto & last_start = last_path.path[0].position;
       const auto & last_end = last_path.path.back().position;
       const auto & candidate_start = candidate_path.path[0].position;
       const auto & candidate_end = candidate_path.path.back().position;
-      
+
       // Direction vectors
       const double last_dx = last_end.x - last_start.x;
       const double last_dy = last_end.y - last_start.y;
       const double candidate_dx = candidate_end.x - candidate_start.x;
       const double candidate_dy = candidate_end.y - candidate_start.y;
-      
+
       // Calculate magnitudes
       const double last_magnitude = std::sqrt(last_dx * last_dx + last_dy * last_dy);
-      const double candidate_magnitude = std::sqrt(candidate_dx * candidate_dx + candidate_dy * candidate_dy);
-      
+      const double candidate_magnitude =
+        std::sqrt(candidate_dx * candidate_dx + candidate_dy * candidate_dy);
+
       // Check if both paths have significant movement
       if (last_magnitude > 0.5 && candidate_magnitude > 0.5) {
         // Calculate dot product for direction similarity
         const double dot_product = last_dx * candidate_dx + last_dy * candidate_dy;
         const double cos_angle = dot_product / (last_magnitude * candidate_magnitude);
-        
+
         // Clamp to avoid numerical issues
         const double clamped_cos = std::max(-1.0, std::min(1.0, cos_angle));
         const double angle_diff = std::acos(clamped_cos);
-        
+
         // Allow up to 60 degrees difference in overall direction
         const double MAX_OVERALL_DIRECTION_DIFF = M_PI / 3.0;
         if (angle_diff > MAX_OVERALL_DIRECTION_DIFF) {
-          std::cerr << "Overall direction difference too large: " << angle_diff << " rad" << std::endl;
+          std::cerr << "Overall direction difference too large: " << angle_diff << " rad"
+                    << std::endl;
           return false;
         }
       }
     }
   }
-  
+
   return true;
 }
 
@@ -1308,87 +1354,87 @@ std::optional<geometry_msgs::msg::Point> DummyPerceptionPublisherNode::calculate
   if (last_prediction.kinematics.predicted_paths.empty()) {
     return std::nullopt;
   }
-  
+
   // Find the dummy object by UUID
-  auto dummy_it = std::find_if(objects_.begin(), objects_.end(), 
-    [&dummy_uuid_str](const auto & obj) {
+  auto dummy_it =
+    std::find_if(objects_.begin(), objects_.end(), [&dummy_uuid_str](const auto & obj) {
       const auto uuid = autoware_utils_uuid::to_hex_string(obj.id);
       return uuid == dummy_uuid_str;
     });
-  
+
   if (dummy_it == objects_.end()) {
     return std::nullopt;
   }
-  
+
   const auto & dummy_object = *dummy_it;
-  
+
   // Find path with highest confidence
   auto best_path_it = std::max_element(
     last_prediction.kinematics.predicted_paths.begin(),
     last_prediction.kinematics.predicted_paths.end(),
     [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
-  
+
   const auto & best_path = *best_path_it;
-  
+
   if (best_path.path.empty()) {
     return std::nullopt;
   }
-  
+
   // Calculate elapsed time from last prediction to current time
   const auto current_time = get_clock()->now();
   const auto last_prediction_time_it = dummy_last_used_prediction_times_.find(dummy_uuid_str);
   if (last_prediction_time_it == dummy_last_used_prediction_times_.end()) {
     return std::nullopt;
   }
-  
+
   const double elapsed_time = (current_time - last_prediction_time_it->second).seconds();
-  
+
   // Calculate distance traveled based on elapsed time and dummy object speed
   const double speed = dummy_object.initial_state.twist_covariance.twist.linear.x;
   const double distance_traveled = speed * elapsed_time;
-  
+
   // Calculate cumulative distances along the path
   std::vector<double> cumulative_distances;
   cumulative_distances.push_back(0.0);
-  
+
   for (size_t i = 1; i < best_path.path.size(); ++i) {
     const auto & prev_pose = best_path.path[i - 1];
     const auto & curr_pose = best_path.path[i];
-    
+
     const double dx = curr_pose.position.x - prev_pose.position.x;
     const double dy = curr_pose.position.y - prev_pose.position.y;
     const double dz = curr_pose.position.z - prev_pose.position.z;
     const double segment_length = std::sqrt(dx * dx + dy * dy + dz * dz);
-    
+
     cumulative_distances.push_back(cumulative_distances.back() + segment_length);
   }
-  
+
   geometry_msgs::msg::Point expected_position;
-  
+
   if (distance_traveled <= 0.0) {
     // No movement, use initial position
     expected_position = last_prediction.kinematics.initial_pose_with_covariance.pose.position;
   } else if (distance_traveled >= cumulative_distances.back()) {
     // Extrapolate beyond the path end
     const double overshoot_distance = distance_traveled - cumulative_distances.back();
-    
+
     if (best_path.path.size() >= 2) {
       // Use the last two points to determine direction and extrapolate
       const auto & second_last_pose = best_path.path[best_path.path.size() - 2];
       const auto & last_pose = best_path.path.back();
-      
+
       // Calculate direction vector from second-last to last pose
       const double dx = last_pose.position.x - second_last_pose.position.x;
       const double dy = last_pose.position.y - second_last_pose.position.y;
       const double dz = last_pose.position.z - second_last_pose.position.z;
       const double segment_length = std::sqrt(dx * dx + dy * dy + dz * dz);
-      
+
       if (segment_length > 0.0) {
         // Normalize direction vector
         const double dir_x = dx / segment_length;
         const double dir_y = dy / segment_length;
         const double dir_z = dz / segment_length;
-        
+
         // Extrapolate position
         expected_position.x = last_pose.position.x + dir_x * overshoot_distance;
         expected_position.y = last_pose.position.y + dir_y * overshoot_distance;
@@ -1409,16 +1455,23 @@ std::optional<geometry_msgs::msg::Point> DummyPerceptionPublisherNode::calculate
         const double segment_start_distance = cumulative_distances[i - 1];
         const double segment_end_distance = cumulative_distances[i];
         const double segment_length = segment_end_distance - segment_start_distance;
-        
+
         if (segment_length > 0.0) {
-          const double interpolation_factor = (distance_traveled - segment_start_distance) / segment_length;
-          
+          const double interpolation_factor =
+            (distance_traveled - segment_start_distance) / segment_length;
+
           const auto & start_pose = best_path.path[i - 1];
           const auto & end_pose = best_path.path[i];
-          
-          expected_position.x = start_pose.position.x + interpolation_factor * (end_pose.position.x - start_pose.position.x);
-          expected_position.y = start_pose.position.y + interpolation_factor * (end_pose.position.y - start_pose.position.y);
-          expected_position.z = start_pose.position.z + interpolation_factor * (end_pose.position.z - start_pose.position.z);
+
+          expected_position.x =
+            start_pose.position.x +
+            interpolation_factor * (end_pose.position.x - start_pose.position.x);
+          expected_position.y =
+            start_pose.position.y +
+            interpolation_factor * (end_pose.position.y - start_pose.position.y);
+          expected_position.z =
+            start_pose.position.z +
+            interpolation_factor * (end_pose.position.z - start_pose.position.z);
         } else {
           expected_position = best_path.path[i - 1].position;
         }
@@ -1426,7 +1479,7 @@ std::optional<geometry_msgs::msg::Point> DummyPerceptionPublisherNode::calculate
       }
     }
   }
-  
+
   return expected_position;
 }
 
