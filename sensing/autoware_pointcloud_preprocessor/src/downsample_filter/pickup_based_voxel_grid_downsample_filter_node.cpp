@@ -78,14 +78,11 @@ PickupBasedVoxelGridDownsampleFilterComponent::PickupBasedVoxelGridDownsampleFil
     std::bind(&PickupBasedVoxelGridDownsampleFilterComponent::param_callback, this, _1));
 }
 
-void PickupBasedVoxelGridDownsampleFilterComponent::filter(
-  const PointCloud2ConstPtr & input, [[maybe_unused]] const IndicesPtr & indices,
-  PointCloud2 & output)
-{
-  std::scoped_lock lock(mutex_);
-
-  stop_watch_ptr_->toc("processing_time", true);
-
+void downsample_with_voxel_grid(
+  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input,
+  VoxelSize voxel_size,
+  sensor_msgs::msg::PointCloud2 & output
+){
   using VoxelKey = std::array<int, 3>;
   // std::unordered_map<VoxelKey, size_t, VoxelKeyHash, VoxelKeyEqual> voxel_map;
   robin_hood::unordered_map<VoxelKey, size_t, VoxelKeyHash, VoxelKeyEqual> voxel_map;
@@ -93,9 +90,9 @@ void PickupBasedVoxelGridDownsampleFilterComponent::filter(
   voxel_map.reserve(input->data.size() / input->point_step);
 
   constexpr float large_num_offset = 100000.0;
-  const float inverse_voxel_size_x = 1.0 / voxel_size_x_;
-  const float inverse_voxel_size_y = 1.0 / voxel_size_y_;
-  const float inverse_voxel_size_z = 1.0 / voxel_size_z_;
+  const float inverse_voxel_size_x = 1.0 / voxel_size.x;
+  const float inverse_voxel_size_y = 1.0 / voxel_size.y;
+  const float inverse_voxel_size_z = 1.0 / voxel_size.z;
 
   const int x_offset = input->fields[pcl::getFieldIndex(*input, "x")].offset;
   const int y_offset = input->fields[pcl::getFieldIndex(*input, "y")].offset;
@@ -137,6 +134,20 @@ void PickupBasedVoxelGridDownsampleFilterComponent::filter(
   output.is_dense = input->is_dense;
   output.width = static_cast<uint32_t>(output.data.size() / output.height / output.point_step);
   output.row_step = static_cast<uint32_t>(output.data.size() / output.height);
+
+}
+
+void PickupBasedVoxelGridDownsampleFilterComponent::filter(
+  const PointCloud2ConstPtr & input, [[maybe_unused]] const IndicesPtr & indices,
+  PointCloud2 & output)
+{
+  std::scoped_lock lock(mutex_);
+
+  stop_watch_ptr_->toc("processing_time", true);
+
+  // process downsample filter
+  VoxelSize voxel_size = {voxel_size_x_, voxel_size_y_, voxel_size_z_};
+  downsample_with_voxel_grid(input, voxel_size, output);
 
   // add processing time for debug
   if (debug_publisher_) {

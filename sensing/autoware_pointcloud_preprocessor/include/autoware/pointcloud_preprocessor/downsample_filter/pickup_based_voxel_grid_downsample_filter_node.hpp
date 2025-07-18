@@ -28,6 +28,20 @@
 
 namespace autoware::pointcloud_preprocessor
 {
+
+struct VoxelSize
+{
+  float x;
+  float y;
+  float z;
+};
+
+void downsample_with_voxel_grid(
+  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input,
+  VoxelSize voxel_size,
+  sensor_msgs::msg::PointCloud2 & output
+);
+
 /**
  * @class PickupBasedVoxelGridDownsampleFilterComponent
  * @brief A filter component for downsampling point clouds using a voxel grid approach.
