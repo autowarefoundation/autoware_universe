@@ -181,8 +181,41 @@ ObjectInfo::ObjectInfo(
     // Use initial pose if no distance traveled or path is empty
     interpolated_pose = predicted_object.kinematics.initial_pose_with_covariance.pose;
   } else if (distance_traveled >= cumulative_distances.back()) {
-    // Use last pose if beyond the path end
-    interpolated_pose = best_path.path.back();
+    // Extrapolate beyond the path end
+    const double overshoot_distance = distance_traveled - cumulative_distances.back();
+    
+    if (best_path.path.size() >= 2) {
+      // Use the last two points to determine direction and extrapolate
+      const auto & second_last_pose = best_path.path[best_path.path.size() - 2];
+      const auto & last_pose = best_path.path.back();
+      
+      // Calculate direction vector from second-last to last pose
+      const double dx = last_pose.position.x - second_last_pose.position.x;
+      const double dy = last_pose.position.y - second_last_pose.position.y;
+      const double dz = last_pose.position.z - second_last_pose.position.z;
+      const double segment_length = std::sqrt(dx * dx + dy * dy + dz * dz);
+      
+      if (segment_length > 0.0) {
+        // Normalize direction vector
+        const double dir_x = dx / segment_length;
+        const double dir_y = dy / segment_length;
+        const double dir_z = dz / segment_length;
+        
+        // Extrapolate position
+        interpolated_pose.position.x = last_pose.position.x + dir_x * overshoot_distance;
+        interpolated_pose.position.y = last_pose.position.y + dir_y * overshoot_distance;
+        interpolated_pose.position.z = last_pose.position.z + dir_z * overshoot_distance;
+        
+        // Keep the last orientation
+        interpolated_pose.orientation = last_pose.orientation;
+      } else {
+        // Fallback to last pose if segment length is zero
+        interpolated_pose = last_pose;
+      }
+    } else {
+      // Fallback to last pose if path has only one point
+      interpolated_pose = best_path.path.back();
+    }
   } else {
     // Find which segment the distance falls into
     size_t segment_index = 0;
@@ -362,11 +395,20 @@ void DummyPerceptionPublisherNode::timerCallback()
       if (matched_predicted) {
         return ObjectInfo(object, predicted_object, predicted_time, current_time);
       }
-      // Use last known position if available, otherwise use original constructor
+      
+      // Check if we have a last used prediction for this object
+      const auto & dummy_uuid_str = autoware_utils_uuid::to_hex_string(object.id);
+      auto last_used_pred_it = dummy_last_used_predictions_.find(dummy_uuid_str);
+      auto last_used_time_it = dummy_last_used_prediction_times_.find(dummy_uuid_str);
+      
+      if (last_used_pred_it != dummy_last_used_predictions_.end() && 
+          last_used_time_it != dummy_last_used_prediction_times_.end()) {
+        std::cerr << "Using last known prediction for lost object with ID: " << dummy_uuid_str << std::endl;
+        return ObjectInfo(object, last_used_pred_it->second, last_used_time_it->second, current_time);
+      }
 
-      std::cerr << "No matching predicted object found for dummy object with ID: "
-                << autoware_utils_uuid::to_hex_string(object.id) << std::endl;
-      // No last known position, use original constructor
+      std::cerr << "No matching predicted object found for dummy object with ID: " << dummy_uuid_str << std::endl;
+      // No last known prediction, use original constructor
       return ObjectInfo(object, current_time);
     }();
     obj_infos.push_back(obj_info);
@@ -630,8 +672,6 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
 
     // If less than 1 second has passed since last update, keep using the same prediction
     if (time_since_last_update < MIN_KEEP_DURATION) {
-      std::cerr << "Using last used prediction for dummy object with ID: " << obj_uuid_str
-                << std::endl;
       auto last_used_time_it = dummy_last_used_prediction_times_.find(obj_uuid_str);
       if (last_used_time_it != dummy_last_used_prediction_times_.end()) {
         return std::make_pair(last_used_pred_it->second, last_used_time_it->second);
