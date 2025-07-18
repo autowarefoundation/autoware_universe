@@ -73,6 +73,18 @@ inline ResponseStatus response_error(const std::string & message = "")
     .message(message);
 }
 
+template <typename T>
+inline ResponseStatus response_from(const T & status)
+{
+  const auto get_code = [](const T & status) -> uint32_t {
+    if (!status.success) return ResponseStatus::ERROR;
+    return status.code == T::NO_EFFECT ? ResponseStatus::IGNORED : ResponseStatus::SUCCESS;
+  };
+  return tier4_external_api_msgs::build<tier4_external_api_msgs::msg::ResponseStatus>()
+    .code(get_code(status))
+    .message(status.message);
+}
+
 }  // namespace tier4_api_utils
 
 #endif  // TIER4_API_UTILS__TYPES__RESPONSE_HPP_
