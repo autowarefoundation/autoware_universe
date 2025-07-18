@@ -52,9 +52,8 @@ private:
   void take_data();
   std::optional<std::string> is_data_invalid(const TrajectoryPoints & raw_trajectory_points) const;
   std::optional<std::string> is_data_timeout(const Odometry & odom) const;
+  std::optional<std::string> is_route_changed();
   bool is_autonomous_mode() const;
-  [[nodiscard]] bool is_goal_changed(
-    const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const Pose & new_goal);
 
   // === Internal logic
 
@@ -72,13 +71,14 @@ private:
   std::unique_ptr<utils::SlowDownInterpolator> slow_down_interpolator_ptr_;
   MarkerArray debug_marker_;
   MarkerArray slow_down_wall_marker_;
-  std::unique_ptr<Pose> prev_goal_ptr_;
+  std::unique_ptr<LaneletRoute> prev_route_ptr_;
   static constexpr auto throttle_duration_ms{5000};
 
   Trajectory::ConstSharedPtr ego_pred_traj_ptr_;
   Control::ConstSharedPtr control_cmd_ptr_;
   SteeringReport::ConstSharedPtr steering_angle_ptr_;
   OperationModeState::ConstSharedPtr op_mode_state_ptr_;
+  LaneletRoute::ConstSharedPtr route_ptr_;
   std::unordered_map<std::string, double> processing_times_ms_;
 
   autoware_utils::InterProcessPollingSubscriber<Trajectory>::SharedPtr ego_pred_traj_polling_sub_;
@@ -87,6 +87,8 @@ private:
     steering_angle_polling_sub_;
   autoware_utils::InterProcessPollingSubscriber<OperationModeState>::SharedPtr
     op_mode_state_polling_sub_;
+  autoware_utils::InterProcessPollingSubscriber<
+    LaneletRoute, autoware_utils::polling_policy::Newest>::SharedPtr route_polling_sub_;
 
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr processing_time_detail_pub_;
 
