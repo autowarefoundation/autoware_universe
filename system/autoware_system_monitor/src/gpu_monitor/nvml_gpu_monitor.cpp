@@ -447,6 +447,65 @@ void GPUMonitor::checkFrequency(diagnostic_updater::DiagnosticStatusWrapper & st
   SystemMonitorUtility::stopMeasurement(t_start, stat);
 }
 
+std::vector<GPUMonitorBase::GpuStatus> GPUMonitor::getGPUStatus()
+{
+  std::vector<GpuStatus> gpu_status_list;
+
+  int index = 0;
+  for (auto itr = gpus_.begin(); itr != gpus_.end(); ++itr, ++index) {
+    nvmlReturn_t ret{};
+    ret = nvmlDeviceGetUtilizationRates(itr->device, &itr->utilization);
+    if (ret != NVML_SUCCESS) {
+      continue;
+    }
+
+    unsigned int clock = 0;
+    ret = nvmlDeviceGetClockInfo(itr->device, NVML_CLOCK_GRAPHICS, &clock);
+    if (ret != NVML_SUCCESS) {
+      continue;
+    }
+
+    unsigned int temp = 0;
+    ret = nvmlDeviceGetTemperature(itr->device, NVML_TEMPERATURE_GPU, &temp);
+    if (ret != NVML_SUCCESS) {
+      continue;
+    }
+
+    unsigned long long clocksThrottleReasons = 0LL;
+    ret = nvmlDeviceGetCurrentClocksThrottleReasons(itr->device, &clocksThrottleReasons);
+    if (ret != NVML_SUCCESS) {
+      continue;
+    }
+
+    int thermal_throttling = DiagStatus::OK;
+    while (clocksThrottleReasons) {
+      unsigned long long flag = clocksThrottleReasons & ((~clocksThrottleReasons) + 1);
+      clocksThrottleReasons ^= flag;
+
+      switch (flag) {
+        case nvmlClocksThrottleReasonGpuIdle:
+        case nvmlClocksThrottleReasonApplicationsClocksSetting:
+        case nvmlClocksThrottleReasonSwPowerCap:
+          // we do not treat as error
+          break;
+        default:
+          thermal_throttling = DiagStatus::ERROR;
+          break;
+      }
+    }
+
+    GpuStatus gpu_status;
+    gpu_status.name = itr->name;
+    gpu_status.usage = itr->utilization.gpu;
+    gpu_status.clock = clock;
+    gpu_status.temperature = temp;
+    gpu_status.thermal_throttling = thermal_throttling;
+    gpu_status_list.push_back(gpu_status);
+  }
+
+  return gpu_status_list;
+}
+
 bool GPUMonitor::getSupportedGPUClocks(
   int index, nvmlDevice_t & device, std::set<unsigned int> & supported_gpu_clocks)
 {

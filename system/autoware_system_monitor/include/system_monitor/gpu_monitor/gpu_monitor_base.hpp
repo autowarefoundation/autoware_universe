@@ -22,6 +22,9 @@
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 
+#include <tier4_external_api_msgs/msg/gpu_status.hpp>
+#include <tier4_external_api_msgs/msg/gpu_unit_status.hpp>
+
 #include <climits>
 #include <map>
 #include <string>
@@ -43,6 +46,15 @@ public:
 
 protected:
   using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
+
+  struct GpuStatus
+  {
+    std::string name = "";
+    float usage = 0.0f;
+    unsigned int clock = 0;
+    unsigned int temperature = 0;
+    int thermal_throttling = DiagStatus::OK;
+  };
 
   /**
    * @brief constructor
@@ -96,7 +108,27 @@ protected:
   virtual void checkFrequency(
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 
+  /**
+   * @brief get GPU status
+   * @return GPU status list
+   */
+  virtual std::vector<GpuStatus> getGPUStatus();
+
+  /**
+   * @brief timer callback to collect GPU status
+   */
+  void onTimer();
+
+  /**
+   * @brief publish GPU status
+   */
+  void publishGPUStatus();
+
   diagnostic_updater::Updater updater_;  //!< @brief Updater class which advertises to /diagnostics
+
+  rclcpp::Publisher<tier4_external_api_msgs::msg::GpuStatus>::SharedPtr pub_gpu_status_;  //!< @brief publisher
+
+  rclcpp::TimerBase::SharedPtr timer_;  //!< @brief timer to collect GPU status
 
   char hostname_[HOST_NAME_MAX + 1];  //!< @brief host name
 
