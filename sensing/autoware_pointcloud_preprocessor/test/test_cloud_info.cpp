@@ -21,6 +21,9 @@
 #include <std_msgs/msg/header.hpp>
 
 #include <gtest/gtest.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 #include <string>
 #include <vector>
@@ -38,15 +41,24 @@ protected:
     strategy_name_ = "advanced";
 
     // Create test point cloud
+    pcl::PointCloud<pcl::PointXYZ> pcl_cloud;
+    pcl_cloud.width = 3;
+    pcl_cloud.height = 1;
+    pcl_cloud.is_dense = false;
+    pcl_cloud.points.resize(pcl_cloud.width * pcl_cloud.height);
+
+    pcl_cloud.points.emplace_back(1.0, 2.0, 0.0);
+    pcl_cloud.points.emplace_back(2.0, 3.0, 1.0);
+    pcl_cloud.points.emplace_back(3.0, 4.0, 2.0);
+
+    pcl::toROSMsg(pcl_cloud, test_cloud_);
+
     test_cloud_.header.frame_id = "base_link";
     test_cloud_.header.stamp.sec = 1234567890;
     test_cloud_.header.stamp.nanosec = 123456789;
-    test_cloud_.width = 100;
-    test_cloud_.height = 50;
-    test_cloud_.data.resize(test_cloud_.width * test_cloud_.height * 16);  // Mock data
 
     // Create test header
-    test_header_.frame_id = "sensor_frame";
+    test_header_.frame_id = "base_link";
     test_header_.stamp.sec = 1234567891;
     test_header_.stamp.nanosec = 987654321;
   }
