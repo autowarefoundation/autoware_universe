@@ -13,48 +13,48 @@ advantage of this by preprocessing (resize, crop, normalize) the images and stor
 
 ```pgsql
 
-Topic for image_i arrived
-  |
-  |
-  |
-  v
-Is image distorted?
-  |              \
-  |               \
-Yes               No
-  |                |
-  v                |
-Undistort          |
-  |                |
-  v                v
-Load image into GPU memory
-  |
-  v
-Preprocess image (scale & crop ROI & normalize)
-  |
-  v
-Store in GPU memory binding location for model input
-  |
-  v
-Is image the `anchor_image`?
-  |                \
-  |                 \
-No                  Yes
-  |                  |
-  v                  v
-(Wait)     Are all images synced within `max_time_difference`?
-                      |                           \
-                      |                            \
-                    Yes                             No
-                      |                             |
-                      v                             v
-         Perform model forward pass            (Sync failed! Skip prediction)
-                      |
-                      v
-         Postprocess (NMS + ROS2 format)
-                      |
-                      v
-             Publish predictions
+Topic for image_i arrived                                     -------------------------
+  |                                                                                   |
+  |                                                                                   |                                                                                 
+  |                                                                                   |
+  v                                                                                   |
+Is image distorted?                                                                   |
+  |              \                                                                    |
+  |               \                                                                   |        
+Yes               No                                                                  |Image Updates
+  |                |                                                                  |done in parallel, if multitheading is on
+  v                |                                                                  |otherwise done sequentially in FIFO order
+Undistort          |                                                                  |
+  |                |                                                                  |
+  v                v                                                                  |
+Load image into GPU memory                                                            |
+  |                                                                                   |
+  v                                                                                   |
+Preprocess image (scale & crop ROI & normalize)                                       |
+  |                                                                                   |
+  v                                                                                   |
+Store in GPU memory binding location for model input                                  |                   
+  |                                                          -------------------------|
+  v                                                                                   |
+Is image the `anchor_image`?                                                          |
+  |                \                                                                  |
+  |                 \                                                                 |
+No                  Yes                                                               |
+  |                  |                                                                |
+  v                  v                                                                | If multithreading is on
+(Wait)     Are all images synced within `max_time_difference`?                        | image Updates are temporarily frozen
+                      |                           \                                   | until this part completes.
+                      |                            \                                  |
+                    Yes                             No                                |
+                      |                             |                                 |
+                      v                             v                                 |
+         Perform model forward pass            (Sync failed! Skip prediction)         |
+                      |                                                               |
+                      v                                                               |
+         Postprocess (NMS + ROS2 format)                                              |
+                      |                                                               |
+                      v                                                               |
+             Publish predictions                             -------------------------|
 
 ```
 
@@ -97,7 +97,6 @@ The `autoware_camera_streampetr` node has various parameters for configuration:
 - `model_params.use_temporal`: Enable temporal modeling
 - `model_params.input_image_height`: Input image height for preprocessing
 - `model_params.input_image_width`: Input image width for preprocessing
-- `model_params.max_camera_time_diff`: Maximum allowed time difference between cameras (seconds)
 - `model_params.class_names`: List of detection class names
 - `model_params.num_proposals`: Number of object proposals
 - `model_params.detection_range`: Detection range for filtering objects
@@ -112,9 +111,12 @@ The `autoware_camera_streampetr` node has various parameters for configuration:
 
 #### Node Parameters
 
+- `max_camera_time_diff`: Maximum allowed time difference between cameras (seconds)
 - `rois_number`: Number of camera ROIs/cameras (default: 6)
 - `is_compressed_image`: Whether input images are compressed
 - `is_distorted_image`: Whether input images are distorted
+- `downsample_factor`: If is_distorted_image is `true`, factor to downsample the image by during undistortion. Makes undistortion faster than using full scale
+- `multithreading`: Whether to use multithreading for handling image callbacks
 - `anchor_camera_id`: ID of the anchor camera for synchronization (default: 0)
 - `debug_mode`: Enable debug mode for timing measurements
 - `build_only`: Build TensorRT engines and exit without running inference

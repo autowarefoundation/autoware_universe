@@ -45,8 +45,8 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   multithreading_(declare_parameter<bool>("multithreading", false)),
   tf_buffer_(this->get_clock()),
   tf_listener_(tf_buffer_),
-  rois_number_(static_cast<size_t>(declare_parameter<int>("rois_number", 6))),
-  max_camera_time_diff_(declare_parameter<float>("model_params.max_camera_time_diff", 0.2f)),
+  rois_number_(static_cast<size_t>(declare_parameter<int>("model_params.rois_number", 6))),
+  max_camera_time_diff_(declare_parameter<float>("max_camera_time_diff", 0.15f)),
   anchor_camera_id_(declare_parameter<int>("anchor_camera_id", 0)),
   debug_mode_(declare_parameter<bool>("debug_mode"))
 {
@@ -70,6 +70,7 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   if (build_only) {
     RCLCPP_INFO(get_logger(), "TensorRT engine files built successfully. Shutting Down...");
     rclcpp::shutdown();
+    return;
   }
 
   localization_sub_ = this->create_subscription<Odometry>(
