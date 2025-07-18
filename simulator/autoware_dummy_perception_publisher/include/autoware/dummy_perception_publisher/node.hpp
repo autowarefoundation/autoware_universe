@@ -164,6 +164,10 @@ private:
     const autoware_perception_msgs::msg::PredictedObjects & predicted_objects);
   double calculateEuclideanDistance(
     const geometry_msgs::msg::Point & pos1, const geometry_msgs::msg::Point & pos2);
+  bool isTrajectoryValid(
+    const autoware_perception_msgs::msg::PredictedObject & current_prediction,
+    const autoware_perception_msgs::msg::PredictedObject & new_prediction,
+    const std::string & dummy_uuid_str);
 
 public:
   DummyPerceptionPublisherNode();

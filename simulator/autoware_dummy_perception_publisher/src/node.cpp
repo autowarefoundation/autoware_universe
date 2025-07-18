@@ -696,6 +696,17 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
       const auto & pred_obj_uuid_str = autoware_utils_uuid::to_hex_string(pred_obj_uuid);
 
       if (pred_obj_uuid_str == mapped_predicted_uuid) {
+        // Validate trajectory against current prediction if available
+        auto current_pred_it = dummy_last_used_predictions_.find(obj_uuid_str);
+        if (current_pred_it != dummy_last_used_predictions_.end()) {
+          // Check if the new trajectory is valid compared to current one
+          if (!isTrajectoryValid(current_pred_it->second, predicted_object, obj_uuid_str)) {
+            // Skip this prediction update and keep using the current one
+            std::cerr << "Skipping trajectory update for object " << obj_uuid_str << " due to validation failure" << std::endl;
+            return std::make_pair(current_pred_it->second, dummy_last_used_prediction_times_[obj_uuid_str]);
+          }
+        }
+        
         // Store this as the new prediction to use for the next 1 second
         dummy_last_used_predictions_[obj_uuid_str] = predicted_object;
         dummy_last_used_prediction_times_[obj_uuid_str] = msg_time;
@@ -883,6 +894,103 @@ double DummyPerceptionPublisherNode::calculateEuclideanDistance(
   double dy = pos1.y - pos2.y;
   double dz = pos1.z - pos2.z;
   return std::sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+bool DummyPerceptionPublisherNode::isTrajectoryValid(
+  const autoware_perception_msgs::msg::PredictedObject & current_prediction,
+  const autoware_perception_msgs::msg::PredictedObject & new_prediction,
+  const std::string & dummy_uuid_str)
+{
+  // Maximum acceptable yaw change in radians (45 degrees)
+  const double MAX_YAW_CHANGE = M_PI / 4.0;
+  
+  // Maximum acceptable direction change in radians (60 degrees)
+  const double MAX_DIRECTION_CHANGE = M_PI / 3.0;
+  
+  // Maximum acceptable velocity change ratio (200% change)
+  const double MAX_VELOCITY_CHANGE_RATIO = 2.0;
+  
+  // If current prediction is empty, accept any new prediction
+  if (current_prediction.kinematics.predicted_paths.empty()) {
+    return true;
+  }
+  
+  // If new prediction is empty, reject it
+  if (new_prediction.kinematics.predicted_paths.empty()) {
+    return false;
+  }
+  
+  // Get the highest confidence paths from both predictions
+  const auto & current_path = *std::max_element(
+    current_prediction.kinematics.predicted_paths.begin(),
+    current_prediction.kinematics.predicted_paths.end(),
+    [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
+    
+  const auto & new_path = *std::max_element(
+    new_prediction.kinematics.predicted_paths.begin(),
+    new_prediction.kinematics.predicted_paths.end(),
+    [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
+  
+  // Check yaw angle change
+  if (!current_path.path.empty() && !new_path.path.empty()) {
+    // Get yaw from quaternion
+    auto extractYaw = [](const geometry_msgs::msg::Quaternion & q) {
+      tf2::Quaternion tf_q;
+      tf2::fromMsg(q, tf_q);
+      double roll, pitch, yaw;
+      tf2::Matrix3x3(tf_q).getRPY(roll, pitch, yaw);
+      return yaw;
+    };
+    
+    const double current_yaw = extractYaw(current_path.path[0].orientation);
+    const double new_yaw = extractYaw(new_path.path[0].orientation);
+    
+    // Calculate yaw difference, handling wrap-around
+    double yaw_diff = std::abs(new_yaw - current_yaw);
+    if (yaw_diff > M_PI) {
+      yaw_diff = 2.0 * M_PI - yaw_diff;
+    }
+    
+    if (yaw_diff > MAX_YAW_CHANGE) {
+      std::cerr << "Rejecting trajectory for object " << dummy_uuid_str 
+                << " due to large yaw change: " << yaw_diff << " rad" << std::endl;
+      return false;
+    }
+  }
+  
+  // Check direction change using velocity vectors
+  const auto & current_vel = current_prediction.kinematics.initial_twist_with_covariance.twist.linear;
+  const auto & new_vel = new_prediction.kinematics.initial_twist_with_covariance.twist.linear;
+  
+  // Calculate current and new velocity magnitudes
+  const double current_speed = std::sqrt(current_vel.x * current_vel.x + current_vel.y * current_vel.y);
+  const double new_speed = std::sqrt(new_vel.x * new_vel.x + new_vel.y * new_vel.y);
+  
+  // Check velocity magnitude change
+  if (current_speed > 0.1 && new_speed > 0.1) {  // Only check if both speeds are significant
+    const double speed_ratio = std::max(current_speed / new_speed, new_speed / current_speed);
+    if (speed_ratio > MAX_VELOCITY_CHANGE_RATIO) {
+      std::cerr << "Rejecting trajectory for object " << dummy_uuid_str 
+                << " due to large speed change: " << speed_ratio << "x" << std::endl;
+      return false;
+    }
+    
+    // Check direction change using dot product
+    const double dot_product = (current_vel.x * new_vel.x + current_vel.y * new_vel.y);
+    const double cos_angle = dot_product / (current_speed * new_speed);
+    
+    // Clamp to avoid numerical issues
+    const double clamped_cos = std::max(-1.0, std::min(1.0, cos_angle));
+    const double direction_change = std::acos(clamped_cos);
+    
+    if (direction_change > MAX_DIRECTION_CHANGE) {
+      std::cerr << "Rejecting trajectory for object " << dummy_uuid_str 
+                << " due to large direction change: " << direction_change << " rad" << std::endl;
+      return false;
+    }
+  }
+  
+  return true;
 }
 
 }  // namespace autoware::dummy_perception_publisher
