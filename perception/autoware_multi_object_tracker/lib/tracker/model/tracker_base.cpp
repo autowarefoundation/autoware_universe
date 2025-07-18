@@ -106,7 +106,7 @@ void Tracker::mergeExistenceProbabilities(std::vector<float> existence_probabili
 
 bool Tracker::updateWithMeasurement(
   const types::DynamicObject & object, const rclcpp::Time & measurement_time,
-  const types::InputChannel & channel_info)
+  const types::InputChannel & channel_info, bool significant_shape_change)
 {
   // Update existence probability
   {
@@ -163,11 +163,62 @@ bool Tracker::updateWithMeasurement(
     object_.kinematics.orientation_availability = types::OrientationAvailability::SIGN_UNKNOWN;
   }
 
-  // Update object
-  measure(object, measurement_time, channel_info);
+  if (!significant_shape_change) {
+    // Update object normally
+    measure(object, measurement_time, channel_info);
 
-  // Update object status
-  getTrackedObject(measurement_time, object_);
+    // Update object status
+    getTrackedObject(measurement_time, object_);
+
+    // Reset weak update count
+    weak_update_count_ = 0;
+  } else {
+    // Store measurement area info
+    area_history_.push_back(object.area);
+
+    // Weak update based on prediction
+    ++weak_update_count_;
+    types::DynamicObject pred;
+    getTrackedObject(measurement_time, pred);
+
+    // Apply linear fall‑off weight on dist square
+    const double dx = object.pose.position.x - pred.pose.position.x;
+    const double dy = object.pose.position.y - pred.pose.position.y;
+    const double dist2 = dx * dx + dy * dy;
+    constexpr double d_max_square_inv = 1 / 2.0;
+    constexpr double min_w = 0.05;
+    const double w_pose = std::clamp(1.0 - dist2 * d_max_square_inv, min_w, 1.0);
+
+    // Blend position
+    object_.pose.position.x = pred.pose.position.x * (1 - w_pose) + object.pose.position.x * w_pose;
+    object_.pose.position.y = pred.pose.position.y * (1 - w_pose) + object.pose.position.y * w_pose;
+    object_.pose.position.z = pred.pose.position.z;
+
+    // Blend yaw orientation
+    const double yaw_pred = tf2::getYaw(pred.pose.orientation);
+    const double yaw_meas = tf2::getYaw(object.pose.orientation);
+    const double yaw_fused = yaw_pred * (1 - w_pose) + yaw_meas * w_pose;
+    tf2::Quaternion q;
+    q.setRPY(0, 0, yaw_fused);
+    object_.pose.orientation = tf2::toMsg(q);
+
+    // Update shape if weak update continues and area of recent measurements tend to be stable
+    if (weak_update_count_ >= AREA_HISTORY_SIZE) {
+      auto [min_it, max_it] = std::minmax_element(area_history_.begin(), area_history_.end());
+      double min_area = *min_it;
+      double max_area = *max_it;
+      if ((max_area - min_area) / max_area < AREA_VARIATION_THRESHOLD) {
+        object_.shape.dimensions = object.shape.dimensions;
+        object_.shape.type = object.shape.type;
+        object_.area = types::getArea(object_.shape);
+        weak_update_count_ = 0;
+      }
+    }
+
+    // Cache fused state
+    object_.time = measurement_time;
+    updateCache(object_, measurement_time);
+  }
 
   return true;
 }
