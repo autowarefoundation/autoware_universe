@@ -14,6 +14,9 @@
 
 #include "obstacle_slow_down_module.hpp"
 
+#include "parameters.hpp"
+#include "types.hpp"
+
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/marker/marker_helper.hpp>
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
@@ -470,10 +473,13 @@ std::vector<SlowDownObstacle> ObstacleSlowDownModule::filter_slow_down_obstacle_
     }
     const auto & front_collision_point = *slow_down_point_data.front;
     const auto & back_collision_point = slow_down_point_data.back.value_or(front_collision_point);
+    const auto signed_lateral_distance = autoware_utils_geometry::calc_lateral_deviation(
+      traj_points[ego_idx].pose, front_collision_point);
+    const auto side = signed_lateral_distance > 0.0 ? Side::Left : Side::Right;
 
     const auto slow_down_obstacle = create_slow_down_obstacle_for_point_cloud(
       rclcpp::Time(point_cloud.pointcloud.header.stamp), front_collision_point,
-      back_collision_point, slow_down_point_data.lat_dist_to_traj);
+      back_collision_point, slow_down_point_data.lat_dist_to_traj, side);
     slow_down_obstacles.push_back(slow_down_obstacle);
   }
 
@@ -607,6 +613,11 @@ ObstacleSlowDownModule::create_slow_down_obstacle_for_predicted_object(
       }
     }
   }
+  const auto predicted_object_pose =
+    object->get_predicted_current_pose(clock_->now(), predicted_objects_stamp);
+  const auto signed_lateral_deviation = autoware_utils_geometry::calc_lateral_deviation(
+    traj_points[front_seg_idx].pose, predicted_object_pose.position);
+  const auto side = signed_lateral_deviation > 0.0 ? Side::Left : Side::Right;
 
   return SlowDownObstacle{
     obj_uuid_str,
@@ -617,12 +628,14 @@ ObstacleSlowDownModule::create_slow_down_obstacle_for_predicted_object(
     object->get_lat_vel_relative_to_traj(traj_points),
     dist_from_obj_poly_to_traj_poly,
     front_collision_point,
-    back_collision_point};
+    back_collision_point,
+    side};
 }
 
 SlowDownObstacle ObstacleSlowDownModule::create_slow_down_obstacle_for_point_cloud(
   const rclcpp::Time & stamp, const geometry_msgs::msg::Point & front_collision_point,
-  const geometry_msgs::msg::Point & back_collision_point, const double lat_dist_to_traj)
+  const geometry_msgs::msg::Point & back_collision_point, const double lat_dist_to_traj,
+  const Side side)
 {
   const unique_identifier_msgs::msg::UUID obj_uuid;
   const auto & obj_uuid_str = autoware_utils::to_hex_string(obj_uuid);
@@ -645,7 +658,8 @@ SlowDownObstacle ObstacleSlowDownModule::create_slow_down_obstacle_for_point_clo
     unconfigured_lat_velocity,
     lat_dist_to_traj,
     front_collision_point,
-    back_collision_point};
+    back_collision_point,
+    side};
 }
 
 std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
@@ -689,22 +703,26 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
     const auto & obstacle = obstacles.at(i);
     const auto prev_output = get_object_from_uuid(prev_slow_down_output_, obstacle.uuid);
 
-    const bool is_obstacle_moving = [&]() -> bool {
+    const auto obstacle_motion = [&]() -> Motion {
       const auto & p = slow_down_planning_param_;
       const auto object_vel_norm = std::hypot(obstacle.velocity, obstacle.lat_velocity);
       if (!prev_output) {
-        return object_vel_norm > p.moving_object_speed_threshold;
+        return object_vel_norm > p.moving_object_speed_threshold ? Motion::Moving : Motion::Static;
       }
-      if (prev_output->is_obstacle_moving) {
-        return object_vel_norm > p.moving_object_speed_threshold - p.moving_object_hysteresis_range;
+      if (prev_output->obstacle_motion == Motion::Moving) {
+        return object_vel_norm > p.moving_object_speed_threshold - p.moving_object_hysteresis_range
+                 ? Motion::Moving
+                 : Motion::Static;
       }
-      return object_vel_norm > p.moving_object_speed_threshold + p.moving_object_hysteresis_range;
+      return object_vel_norm > p.moving_object_speed_threshold + p.moving_object_hysteresis_range
+               ? Motion::Moving
+               : Motion::Static;
     }();
 
     // calculate slow down start distance, and insert slow down velocity
     const auto dist_vec_to_slow_down = calculate_distance_to_slow_down_with_constraints(
       planner_data, slow_down_traj_points, obstacle, prev_output, dist_to_ego, vehicle_info,
-      is_obstacle_moving);
+      obstacle_motion);
     if (!dist_vec_to_slow_down) {
       RCLCPP_DEBUG(
         logger_, "[SlowDown] Ignore obstacle (%s) since distance to slow down is not valid",
@@ -793,8 +811,7 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
     // update prev_slow_down_output_
     new_prev_slow_down_output.push_back(SlowDownOutput{
       obstacle.uuid, slow_down_traj_points, slow_down_start_idx, slow_down_end_idx,
-      stable_slow_down_vel, feasible_slow_down_vel, obstacle.dist_to_traj_poly,
-      is_obstacle_moving});
+      stable_slow_down_vel, feasible_slow_down_vel, obstacle.dist_to_traj_poly, obstacle_motion});
   }
 
   // update prev_slow_down_output_
@@ -894,7 +911,7 @@ ObstacleSlowDownModule::calculate_distance_to_slow_down_with_constraints(
   const std::shared_ptr<const PlannerData> planner_data,
   const std::vector<TrajectoryPoint> & traj_points, const SlowDownObstacle & obstacle,
   const std::optional<SlowDownOutput> & prev_output, const double dist_to_ego,
-  const VehicleInfo & vehicle_info, const bool is_obstacle_moving) const
+  const VehicleInfo & vehicle_info, const Motion obstacle_motion) const
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -903,8 +920,7 @@ ObstacleSlowDownModule::calculate_distance_to_slow_down_with_constraints(
                                   : std::abs(vehicle_info.min_longitudinal_offset_m);
   const double obstacle_vel = obstacle.velocity;
   // calculate slow down velocity
-  const double slow_down_vel =
-    calculate_slow_down_velocity(obstacle, prev_output, is_obstacle_moving);
+  const double slow_down_vel = calculate_slow_down_velocity(obstacle, prev_output, obstacle_motion);
 
   // calculate distance to collision points
   const double dist_to_front_collision =
@@ -1015,10 +1031,10 @@ ObstacleSlowDownModule::calculate_distance_to_slow_down_with_constraints(
 
 double ObstacleSlowDownModule::calculate_slow_down_velocity(
   const SlowDownObstacle & obstacle, const std::optional<SlowDownOutput> & prev_output,
-  const bool is_obstacle_moving) const
+  const Motion obstacle_motion) const
 {
-  const auto & p = slow_down_planning_param_.get_object_param_by_label(
-    obstacle.classification, is_obstacle_moving);
+  const auto & p = slow_down_planning_param_.get_object_param(
+    obstacle.classification, obstacle.side, obstacle_motion);
   const double stable_dist_from_obj_poly_to_traj_poly = [&]() {
     if (prev_output) {
       return autoware::signal_processing::lowpassFilter(

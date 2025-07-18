@@ -118,7 +118,8 @@ private:
     const double dist_from_obj_poly_to_traj_poly);
   SlowDownObstacle create_slow_down_obstacle_for_point_cloud(
     const rclcpp::Time & stamp, const geometry_msgs::msg::Point & front_collision_point,
-    const geometry_msgs::msg::Point & back_collision_point, const double lat_dist_to_traj);
+    const geometry_msgs::msg::Point & back_collision_point, const double lat_dist_to_traj,
+    const Side side);
   std::vector<SlowdownInterval> plan_slow_down(
     const std::shared_ptr<const PlannerData> planner_data,
     const std::vector<TrajectoryPoint> & traj_points,
@@ -133,10 +134,10 @@ private:
     const std::shared_ptr<const PlannerData> planner_data,
     const std::vector<TrajectoryPoint> & traj_points, const SlowDownObstacle & obstacle,
     const std::optional<SlowDownOutput> & prev_output, const double dist_to_ego,
-    const VehicleInfo & vehicle_info, const bool is_obstacle_moving) const;
+    const VehicleInfo & vehicle_info, const Motion obstacle_motion) const;
   double calculate_slow_down_velocity(
     const SlowDownObstacle & obstacle, const std::optional<SlowDownOutput> & prev_output,
-    const bool is_obstacle_moving) const;
+    const Motion obstacle_motion) const;
   std::vector<Polygon2d> get_decimated_traj_polys(
     const std::vector<TrajectoryPoint> & traj_points, const geometry_msgs::msg::Pose & current_pose,
     const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
