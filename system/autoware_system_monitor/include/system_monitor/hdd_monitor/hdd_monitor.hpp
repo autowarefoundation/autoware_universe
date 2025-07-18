@@ -122,9 +122,7 @@ struct HddUsage
   std::string filesystem;  //!< @brief Name of the filesystem device (e.g., "/dev/nvme0n1p2")
   std::string mounted_on;  //!< @brief Mount point of the filesystem (e.g., "/")
 
-  HddUsage() : size(0), used(0), avail(0), capacity(0)
-  {
-  }
+  HddUsage() : size(0), used(0), avail(0), capacity(0) {}
 };
 
 /**
@@ -366,7 +364,8 @@ protected:
 
   std::vector<HddUsage> hdd_usages_;  //!< @brief list of HDD usage
 
-  rclcpp::Publisher<tier4_external_api_msgs::msg::HddStatus>::SharedPtr pub_hdd_status_;  //!< @brief publisher
+  rclcpp::Publisher<tier4_external_api_msgs::msg::HddStatus>::SharedPtr
+    pub_hdd_status_;  //!< @brief publisher
 
   /**
    * @brief HDD SMART status messages

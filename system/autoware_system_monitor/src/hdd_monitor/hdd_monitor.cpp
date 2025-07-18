@@ -76,7 +76,8 @@ HddMonitor::HddMonitor(const rclcpp::NodeOptions & options)
   // Publisher
   rclcpp::QoS durable_qos{1};
   durable_qos.transient_local();
-  pub_hdd_status_ = this->create_publisher<tier4_external_api_msgs::msg::HddStatus>("~/hdd_status", durable_qos);
+  pub_hdd_status_ =
+    this->create_publisher<tier4_external_api_msgs::msg::HddStatus>("~/hdd_status", durable_qos);
 
   timer_ = rclcpp::create_timer(this, get_clock(), 1s, std::bind(&HddMonitor::onTimer, this));
 }
