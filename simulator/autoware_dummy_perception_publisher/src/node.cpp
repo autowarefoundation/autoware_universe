@@ -1224,7 +1224,7 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
     return false;
   }
   
-  // Compare general direction if both predictions have paths
+  // Compare path lengths and general direction if both predictions have paths
   if (last_path.path.size() > 1 && !candidate_prediction.kinematics.predicted_paths.empty()) {
     const auto & candidate_path = *std::max_element(
       candidate_prediction.kinematics.predicted_paths.begin(),
@@ -1232,6 +1232,35 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
       [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
     
     if (candidate_path.path.size() > 1) {
+      // Calculate path lengths (total distance along path)
+      auto calculatePathLength = [](const auto & path) {
+        double total_length = 0.0;
+        for (size_t i = 1; i < path.path.size(); ++i) {
+          const auto & prev_pos = path.path[i - 1].position;
+          const auto & curr_pos = path.path[i].position;
+          const double dx = curr_pos.x - prev_pos.x;
+          const double dy = curr_pos.y - prev_pos.y;
+          const double dz = curr_pos.z - prev_pos.z;
+          total_length += std::sqrt(dx * dx + dy * dy + dz * dz);
+        }
+        return total_length;
+      };
+      
+      const double last_path_length = calculatePathLength(last_path);
+      const double candidate_path_length = calculatePathLength(candidate_path);
+      
+      // Check path length similarity - allow up to 200% difference
+      const double MAX_PATH_LENGTH_RATIO = 2.0;
+      if (last_path_length > 0.1 && candidate_path_length > 0.1) {
+        const double length_ratio = std::max(last_path_length / candidate_path_length, 
+                                            candidate_path_length / last_path_length);
+        if (length_ratio > MAX_PATH_LENGTH_RATIO) {
+          std::cerr << "Path length difference too large: " << length_ratio << "x" 
+                    << " (last: " << last_path_length << "m, candidate: " << candidate_path_length << "m)" << std::endl;
+          return false;
+        }
+      }
+      
       // Calculate direction vectors
       const auto & last_start = last_path.path[0].position;
       const auto & last_end = last_path.path.back().position;
