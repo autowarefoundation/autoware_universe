@@ -161,7 +161,36 @@ private:
   double angle_increment_;
 
   std::mt19937 random_generator_;
+  std::mt19937 pedestrian_path_generator_;
   std::uniform_real_distribution<double> path_selection_dist_;
+  
+  // Configuration parameters
+  double predicted_path_delay_;
+  double min_keep_duration_;
+  double max_yaw_change_;
+  double max_path_length_change_ratio_;
+  
+  // Vehicle parameters
+  double vehicle_max_remapping_distance_;
+  double vehicle_max_remapping_yaw_diff_;
+  double vehicle_max_speed_difference_ratio_;
+  double vehicle_min_speed_ratio_;
+  double vehicle_max_speed_ratio_;
+  double vehicle_speed_check_threshold_;
+  double vehicle_max_position_difference_;
+  double vehicle_max_path_length_ratio_;
+  double vehicle_max_overall_direction_diff_;
+  
+  // Pedestrian parameters
+  double pedestrian_max_remapping_distance_;
+  double pedestrian_max_remapping_yaw_diff_;
+  double pedestrian_max_speed_difference_ratio_;
+  double pedestrian_min_speed_ratio_;
+  double pedestrian_max_speed_ratio_;
+  double pedestrian_speed_check_threshold_;
+  double pedestrian_max_position_difference_;
+  double pedestrian_max_path_length_ratio_;
+  double pedestrian_max_overall_direction_diff_;
   void timerCallback();
   void objectCallback(const tier4_simulation_msgs::msg::DummyObject::ConstSharedPtr msg);
   void predictedObjectsCallback(

@@ -108,11 +108,9 @@ ObjectInfo::ObjectInfo(
 {
   // Check if 2 seconds have passed since object creation
   const double time_since_creation = (current_time - rclcpp::Time(object.header.stamp)).seconds();
-  const double PREDICTED_PATH_DELAY = 2.0;  // seconds
-
   // Use straight-line movement for first 2 seconds, then switch to predicted path
   if (
-    time_since_creation < PREDICTED_PATH_DELAY ||
+    time_since_creation < 2.0 ||  // TODO: Make this configurable from node instance
     predicted_object.kinematics.predicted_paths.empty()) {
     // Reuse the logic from the other constructor
     *this = ObjectInfo(object, current_time);
@@ -360,8 +358,48 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
     random_generator_.seed(seed_gen());
   }
   
+  // Initialize pedestrian path selection
+  const unsigned int pedestrian_path_seed =
+    static_cast<unsigned int>(this->declare_parameter("pedestrian_path_seed", 42));
+  const bool use_fixed_pedestrian_seed = this->declare_parameter("use_fixed_pedestrian_seed", false);
+  
+  if (use_fixed_pedestrian_seed) {
+    pedestrian_path_generator_.seed(pedestrian_path_seed);
+  } else {
+    std::random_device seed_gen;
+    pedestrian_path_generator_.seed(seed_gen());
+  }
+  
   // Initialize path selection distribution
   path_selection_dist_ = std::uniform_real_distribution<double>(0.0, 1.0);
+  
+  // Declare prediction parameters
+  predicted_path_delay_ = this->declare_parameter("predicted_path_delay", 2.0);
+  min_keep_duration_ = this->declare_parameter("min_keep_duration", 3.0);
+  max_yaw_change_ = this->declare_parameter("max_yaw_change", M_PI / 2.0);
+  max_path_length_change_ratio_ = this->declare_parameter("max_path_length_change_ratio", 3.0);
+  
+  // Declare vehicle parameters
+  vehicle_max_remapping_distance_ = this->declare_parameter("vehicle.max_remapping_distance", 2.0);
+  vehicle_max_remapping_yaw_diff_ = this->declare_parameter("vehicle.max_remapping_yaw_diff", M_PI / 12.0);
+  vehicle_max_speed_difference_ratio_ = this->declare_parameter("vehicle.max_speed_difference_ratio", 1.05);
+  vehicle_min_speed_ratio_ = this->declare_parameter("vehicle.min_speed_ratio", 0.5);
+  vehicle_max_speed_ratio_ = this->declare_parameter("vehicle.max_speed_ratio", 1.5);
+  vehicle_speed_check_threshold_ = this->declare_parameter("vehicle.speed_check_threshold", 1.0);
+  vehicle_max_position_difference_ = this->declare_parameter("vehicle.max_position_difference", 1.5);
+  vehicle_max_path_length_ratio_ = this->declare_parameter("vehicle.max_path_length_ratio", 1.1);
+  vehicle_max_overall_direction_diff_ = this->declare_parameter("vehicle.max_overall_direction_diff", M_PI / 6.0);
+  
+  // Declare pedestrian parameters
+  pedestrian_max_remapping_distance_ = this->declare_parameter("pedestrian.max_remapping_distance", 3.0);
+  pedestrian_max_remapping_yaw_diff_ = this->declare_parameter("pedestrian.max_remapping_yaw_diff", M_PI / 4.0);
+  pedestrian_max_speed_difference_ratio_ = this->declare_parameter("pedestrian.max_speed_difference_ratio", 1.3);
+  pedestrian_min_speed_ratio_ = this->declare_parameter("pedestrian.min_speed_ratio", 0.3);
+  pedestrian_max_speed_ratio_ = this->declare_parameter("pedestrian.max_speed_ratio", 2.0);
+  pedestrian_speed_check_threshold_ = this->declare_parameter("pedestrian.speed_check_threshold", 0.5);
+  pedestrian_max_position_difference_ = this->declare_parameter("pedestrian.max_position_difference", 2.5);
+  pedestrian_max_path_length_ratio_ = this->declare_parameter("pedestrian.max_path_length_ratio", 1.5);
+  pedestrian_max_overall_direction_diff_ = this->declare_parameter("pedestrian.max_overall_direction_diff", M_PI / 3.0);
 
   // create subscriber and publisher
   rclcpp::QoS qos{1};
@@ -716,9 +754,7 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
 
   const std::string & mapped_predicted_uuid = mapping_it->second;
 
-  // Check if we should keep using the current prediction for at least 3 seconds
-  const double MIN_KEEP_DURATION = 3.0;  // seconds
-
+  // Check if we should keep using the current prediction for at least min_keep_duration
   // Check if we have a last used prediction and if we should keep using it
   auto last_used_pred_it = dummy_last_used_predictions_.find(obj_uuid_str);
   auto last_update_time_it = dummy_prediction_update_timestamps_.find(obj_uuid_str);
@@ -728,8 +764,8 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
     last_update_time_it != dummy_prediction_update_timestamps_.end()) {
     const double time_since_last_update = (current_time - last_update_time_it->second).seconds();
 
-    // If less than 1 second has passed since last update, keep using the same prediction
-    if (time_since_last_update < MIN_KEEP_DURATION) {
+    // If less than min_keep_duration_ has passed since last update, keep using the same prediction
+    if (time_since_last_update < min_keep_duration_) {
       auto last_used_time_it = dummy_last_used_prediction_times_.find(obj_uuid_str);
       if (last_used_time_it != dummy_last_used_prediction_times_.end()) {
         return std::make_pair(last_used_pred_it->second, last_used_time_it->second);
@@ -784,7 +820,7 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
           // Randomly select a path index
           const size_t num_paths = predicted_object.kinematics.predicted_paths.size();
           const size_t random_path_index = 
-            static_cast<size_t>(path_selection_dist_(random_generator_) * num_paths);
+            static_cast<size_t>(path_selection_dist_(pedestrian_path_generator_) * num_paths);
           
           // Reorder paths to put the randomly selected path first
           // This way the static calculateTrajectoryBasedPosition will use it
@@ -1085,11 +1121,6 @@ bool DummyPerceptionPublisherNode::isTrajectoryValid(
   const autoware_perception_msgs::msg::PredictedObject & new_prediction,
   const std::string & dummy_uuid_str)
 {
-  // Maximum acceptable yaw change in radians (90 degrees)
-  const double MAX_YAW_CHANGE = M_PI / 2.0;
-
-  // Maximum acceptable path length change ratio (300% change)
-  const double MAX_PATH_LENGTH_CHANGE_RATIO = 3.0;
 
   // If current prediction is empty, accept any new prediction
   if (current_prediction.kinematics.predicted_paths.empty()) {
@@ -1132,7 +1163,7 @@ bool DummyPerceptionPublisherNode::isTrajectoryValid(
       yaw_diff = 2.0 * M_PI - yaw_diff;
     }
 
-    if (yaw_diff > MAX_YAW_CHANGE) {
+    if (yaw_diff > max_yaw_change_) {
       RCLCPP_DEBUG(
         rclcpp::get_logger("dummy_perception_publisher"),
         "Rejecting trajectory for object %s due to large yaw change: %f rad",
@@ -1165,7 +1196,7 @@ bool DummyPerceptionPublisherNode::isTrajectoryValid(
     if (current_path_length > 0.1 && new_path_length > 0.1) {
       const double length_ratio =
         std::max(current_path_length / new_path_length, new_path_length / current_path_length);
-      if (length_ratio > MAX_PATH_LENGTH_CHANGE_RATIO) {
+      if (length_ratio > max_path_length_change_ratio_) {
         RCLCPP_DEBUG(
           rclcpp::get_logger("dummy_perception_publisher"),
           "Rejecting trajectory for object %s due to large path length change: %fx (current: %fm, "
@@ -1201,9 +1232,9 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
   // Use class-specific thresholds
   // Pedestrians: more lenient due to unpredictable movement patterns
   // Vehicles: stricter for more predictable movement
-  const double MAX_REMAPPING_DISTANCE = is_pedestrian ? 3.0 : 2.0;
-  const double MAX_REMAPPING_YAW_DIFF = is_pedestrian ? M_PI / 4.0 : M_PI / 12.0;  // 45° vs 15°
-  const double MAX_SPEED_DIFFERENCE_RATIO = is_pedestrian ? 1.3 : 1.05;  // 30% vs 5% tolerance
+  const double max_remapping_distance = is_pedestrian ? pedestrian_max_remapping_distance_ : vehicle_max_remapping_distance_;
+  const double max_remapping_yaw_diff = is_pedestrian ? pedestrian_max_remapping_yaw_diff_ : vehicle_max_remapping_yaw_diff_;
+  const double max_speed_difference_ratio = is_pedestrian ? pedestrian_max_speed_difference_ratio_ : vehicle_max_speed_difference_ratio_;
 
   // Check if candidate has predicted paths
   if (candidate_prediction.kinematics.predicted_paths.empty()) {
@@ -1223,13 +1254,13 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
       candidate_twist.linear.y * candidate_twist.linear.y);
 
     // Speed bounds check - more lenient for pedestrians
-    const double MIN_SPEED_RATIO = is_pedestrian ? 0.3 : 0.5;  // 30% vs 50% of dummy speed
-    const double MAX_SPEED_RATIO = is_pedestrian ? 2.0 : 1.5;  // 200% vs 150% of dummy speed
-    const double SPEED_CHECK_THRESHOLD =
-      is_pedestrian ? 0.5 : 1.0;  // Apply checks at lower speeds for pedestrians
+    const double min_speed_ratio = is_pedestrian ? pedestrian_min_speed_ratio_ : vehicle_min_speed_ratio_;
+    const double max_speed_ratio = is_pedestrian ? pedestrian_max_speed_ratio_ : vehicle_max_speed_ratio_;
+    const double speed_check_threshold =
+      is_pedestrian ? pedestrian_speed_check_threshold_ : vehicle_speed_check_threshold_;
 
     // Reject if candidate speed is too low
-    if (dummy_speed > SPEED_CHECK_THRESHOLD && candidate_speed < dummy_speed * MIN_SPEED_RATIO) {
+    if (dummy_speed > speed_check_threshold && candidate_speed < dummy_speed * min_speed_ratio) {
       RCLCPP_DEBUG(
         rclcpp::get_logger("dummy_perception_publisher"),
         "Rejecting remapping candidate for object %s (%s) due to low speed: dummy=%fm/s, "
@@ -1240,7 +1271,7 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
     }
 
     // Reject if candidate speed is too high
-    if (dummy_speed > SPEED_CHECK_THRESHOLD && candidate_speed > dummy_speed * MAX_SPEED_RATIO) {
+    if (dummy_speed > speed_check_threshold && candidate_speed > dummy_speed * max_speed_ratio) {
       RCLCPP_DEBUG(
         rclcpp::get_logger("dummy_perception_publisher"),
         "Rejecting remapping candidate for object %s (%s) due to high speed: dummy=%fm/s, "
@@ -1254,14 +1285,14 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
     if (dummy_speed > 0.1 && candidate_speed > 0.1) {
       const double speed_ratio =
         std::max(dummy_speed / candidate_speed, candidate_speed / dummy_speed);
-      if (speed_ratio > MAX_SPEED_DIFFERENCE_RATIO) {
+      if (speed_ratio > max_speed_difference_ratio) {
         RCLCPP_DEBUG(
           rclcpp::get_logger("dummy_perception_publisher"),
           "Rejecting remapping candidate for object %s (%s) due to speed difference: %fx (dummy: "
           "%fm/s, "
           "candidate: %fm/s, max_ratio: %f)",
           dummy_uuid_str.c_str(), is_pedestrian ? "pedestrian" : "vehicle", speed_ratio,
-          dummy_speed, candidate_speed, MAX_SPEED_DIFFERENCE_RATIO);
+          dummy_speed, candidate_speed, max_speed_difference_ratio);
         return false;
       }
     }
@@ -1286,14 +1317,14 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
     candidate_prediction.kinematics.initial_pose_with_covariance.pose.position;
   const double distance = calculateEuclideanDistance(comparison_position, candidate_pos);
 
-  if (distance > MAX_REMAPPING_DISTANCE) {
+  if (distance > max_remapping_distance) {
     RCLCPP_DEBUG(
       rclcpp::get_logger("dummy_perception_publisher"),
       "Rejecting remapping candidate for object %s (%s) due to large distance: %fm > %fm "
       "(expected: %f, %f, "
       "candidate: %f, %f)",
       dummy_uuid_str.c_str(), is_pedestrian ? "pedestrian" : "vehicle", distance,
-      MAX_REMAPPING_DISTANCE, comparison_position.x, comparison_position.y, candidate_pos.x,
+      max_remapping_distance, comparison_position.x, comparison_position.y, candidate_pos.x,
       candidate_pos.y);
     return false;
   }
@@ -1354,7 +1385,7 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
           yaw_diff = 2.0 * M_PI - yaw_diff;
         }
 
-        if (yaw_diff > MAX_REMAPPING_YAW_DIFF) {
+        if (yaw_diff > max_remapping_yaw_diff) {
           RCLCPP_DEBUG(
             rclcpp::get_logger("dummy_perception_publisher"),
             "Rejecting remapping candidate for object %s due to large yaw difference: %f rad",
@@ -1381,7 +1412,7 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
   }
 
   // Maximum acceptable position difference (meters)
-  const double MAX_POSITION_DIFFERENCE = is_pedestrian ? 2.5 : 1.5;
+  const double max_position_difference = is_pedestrian ? pedestrian_max_position_difference_ : vehicle_max_position_difference_;
 
   if (last_prediction.kinematics.predicted_paths.empty()) {
     return false;
@@ -1438,7 +1469,7 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
   // Compare candidate's current position with expected position
   const double position_difference =
     calculateEuclideanDistance(candidate_current_pos, expected_pos);
-  if (position_difference > MAX_POSITION_DIFFERENCE) {
+  if (position_difference > max_position_difference) {
     RCLCPP_DEBUG(
       rclcpp::get_logger("dummy_perception_publisher"),
       "Position difference too large: %fm (expected: %f, %f, candidate: %f, %f)",
@@ -1473,11 +1504,11 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
       const double candidate_path_length = calculatePathLength(candidate_path);
 
       // Check path length similarity - more lenient for pedestrians
-      const double MAX_PATH_LENGTH_RATIO = is_pedestrian ? 1.5 : 1.1;  // 50% vs 10% difference
+      const double max_path_length_ratio = is_pedestrian ? pedestrian_max_path_length_ratio_ : vehicle_max_path_length_ratio_;
       if (last_path_length > 0.1 && candidate_path_length > 0.1) {
         const double length_ratio = std::max(
           last_path_length / candidate_path_length, candidate_path_length / last_path_length);
-        if (length_ratio > MAX_PATH_LENGTH_RATIO) {
+        if (length_ratio > max_path_length_ratio) {
           RCLCPP_DEBUG(
             rclcpp::get_logger("dummy_perception_publisher"),
             "Path length difference too large: %fx (last: %fm, candidate: %fm)", length_ratio,
@@ -1514,9 +1545,9 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
         const double angle_diff = std::acos(clamped_cos);
 
         // Allow more direction difference for pedestrians who can change direction quickly
-        const double MAX_OVERALL_DIRECTION_DIFF =
-          is_pedestrian ? M_PI / 3.0 : M_PI / 6.0;  // 60° vs 30°
-        if (angle_diff > MAX_OVERALL_DIRECTION_DIFF) {
+        const double max_overall_direction_diff =
+          is_pedestrian ? pedestrian_max_overall_direction_diff_ : vehicle_max_overall_direction_diff_;
+        if (angle_diff > max_overall_direction_diff) {
           RCLCPP_DEBUG(
             rclcpp::get_logger("dummy_perception_publisher"),
             "Overall direction difference too large: %f rad", angle_diff);
