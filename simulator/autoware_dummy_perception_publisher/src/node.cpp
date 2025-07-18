@@ -849,25 +849,27 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
   return std::make_pair(empty_object, empty_time);
 }
 
-void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
-  const std::vector<tier4_simulation_msgs::msg::DummyObject> & dummy_objects,
-  const autoware_perception_msgs::msg::PredictedObjects & predicted_objects)
+std::set<std::string> DummyPerceptionPublisherNode::collectAvailablePredictedUUIDs(
+  const autoware_perception_msgs::msg::PredictedObjects & predicted_objects,
+  std::map<std::string, geometry_msgs::msg::Point> & predicted_positions)
 {
-  const rclcpp::Time current_time = this->now();
-
-  // Create sets of available UUIDs
   std::set<std::string> available_predicted_uuids;
-  std::map<std::string, geometry_msgs::msg::Point> predicted_positions;
-
+  
   for (const auto & pred_obj : predicted_objects.objects) {
     const auto pred_uuid_str = autoware_utils_uuid::to_hex_string(pred_obj.object_id);
     available_predicted_uuids.insert(pred_uuid_str);
     predicted_positions[pred_uuid_str] =
       pred_obj.kinematics.initial_pose_with_covariance.pose.position;
   }
+  
+  return available_predicted_uuids;
+}
 
-  // Check for disappeared predicted objects and mark dummy objects for remapping
+std::vector<std::string> DummyPerceptionPublisherNode::findDisappearedPredictedObjects(
+  std::set<std::string> & available_predicted_uuids)
+{
   std::vector<std::string> dummy_objects_to_remap;
+  
   for (const auto & mapping : dummy_to_predicted_uuid_map_) {
     const std::string & dummy_uuid = mapping.first;
     const std::string & predicted_uuid = mapping.second;
@@ -880,11 +882,18 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
       available_predicted_uuids.erase(predicted_uuid);
     }
   }
+  
+  return dummy_objects_to_remap;
+}
 
-  // Update dummy object positions and find unmapped dummy objects
-  std::vector<std::string> unmapped_dummy_uuids;
+std::map<std::string, geometry_msgs::msg::Point> 
+DummyPerceptionPublisherNode::collectDummyObjectPositions(
+  const std::vector<tier4_simulation_msgs::msg::DummyObject> & dummy_objects,
+  const rclcpp::Time & current_time,
+  std::vector<std::string> & unmapped_dummy_uuids)
+{
   std::map<std::string, geometry_msgs::msg::Point> dummy_positions;
-
+  
   for (const auto & dummy_obj : dummy_objects) {
     const auto dummy_uuid_str = autoware_utils_uuid::to_hex_string(dummy_obj.id);
 
@@ -903,6 +912,29 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
       unmapped_dummy_uuids.push_back(dummy_uuid_str);
     }
   }
+  
+  return dummy_positions;
+}
+
+void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
+  const std::vector<tier4_simulation_msgs::msg::DummyObject> & dummy_objects,
+  const autoware_perception_msgs::msg::PredictedObjects & predicted_objects)
+{
+  const rclcpp::Time current_time = this->now();
+
+  // Create sets of available UUIDs
+  std::map<std::string, geometry_msgs::msg::Point> predicted_positions;
+  std::set<std::string> available_predicted_uuids = 
+    collectAvailablePredictedUUIDs(predicted_objects, predicted_positions);
+
+  // Check for disappeared predicted objects and mark dummy objects for remapping
+  std::vector<std::string> dummy_objects_to_remap = 
+    findDisappearedPredictedObjects(available_predicted_uuids);
+
+  // Update dummy object positions and find unmapped dummy objects
+  std::vector<std::string> unmapped_dummy_uuids;
+  std::map<std::string, geometry_msgs::msg::Point> dummy_positions = 
+    collectDummyObjectPositions(dummy_objects, current_time, unmapped_dummy_uuids);
 
   // Handle remapping for dummy objects whose predicted objects disappeared
   // First, remove old mappings
