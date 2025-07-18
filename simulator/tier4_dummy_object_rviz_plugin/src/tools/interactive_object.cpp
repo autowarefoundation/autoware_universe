@@ -247,8 +247,6 @@ void InteractiveObjectTool::onInitialize()
 {
   PoseTool::onInitialize();
   setName("2D Dummy Object");
-  setDescription("Create dummy objects. Right-click to select/create/delete. "
-                 "Drag to modify position.");
   updateTopic();
 }
 
