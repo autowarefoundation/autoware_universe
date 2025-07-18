@@ -51,12 +51,16 @@
   <let name="operation_mode_transition_manager_plugin" value="AutonomousModeTransitionFlagNode" if="$(var use_control_command_gate)"/>
   <let name="operation_mode_transition_manager_plugin" value="OperationModeTransitionManager" unless="$(var use_control_command_gate)"/>
 
+  <!-- topic remap -->
+  <arg name="output_control_cmd" default="/control/command/control_cmd"/>
+
   <group>
     <push-ros-namespace namespace="control"/>
 
     <group if="$(var use_control_command_gate)">
       <include file="$(find-pkg-share autoware_control_command_gate)/launch/control_command_gate.launch.xml">
         <arg name="config" value="$(var control_command_gate_param_path)"/>
+        <arg name="~/output/control" value="$(var output_control_cmd)"/>
       </include>
     </group>
     <group if="$(var use_control_command_gate)">
