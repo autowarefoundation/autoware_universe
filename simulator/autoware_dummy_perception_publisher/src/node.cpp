@@ -59,7 +59,80 @@ ObjectInfo::ObjectInfo(
   twist_covariance_(object.initial_state.twist_covariance),
   pose_covariance_(object.initial_state.pose_covariance)
 {
-  // calculate current pose
+  const auto current_pose = calculateStraightLinePosition(object, current_time);
+
+  // calculate tf from map to moved_object
+  geometry_msgs::msg::Transform ros_map2moved_object;
+  ros_map2moved_object.translation.x = current_pose.position.x;
+  ros_map2moved_object.translation.y = current_pose.position.y;
+  ros_map2moved_object.translation.z = current_pose.position.z;
+  ros_map2moved_object.rotation = current_pose.orientation;
+  tf2::fromMsg(ros_map2moved_object, tf_map2moved_object);
+  
+  // set twist and pose information
+  const double initial_vel = std::clamp(
+    object.initial_state.twist_covariance.twist.linear.x, static_cast<double>(object.min_velocity),
+    static_cast<double>(object.max_velocity));
+  const double initial_acc = object.initial_state.accel_covariance.accel.linear.x;
+  const double elapsed_time = current_time.seconds() - rclcpp::Time(object.header.stamp).seconds();
+  double current_vel = initial_vel + initial_acc * elapsed_time;
+  if (initial_acc != 0.0) {
+    if (initial_acc < 0 && 0 < initial_vel) {
+      current_vel = std::max(current_vel, 0.0);
+    }
+    if (0 < initial_acc && initial_vel < 0) {
+      current_vel = std::min(current_vel, 0.0);
+    }
+    current_vel = std::clamp(
+      current_vel, static_cast<double>(object.min_velocity),
+      static_cast<double>(object.max_velocity));
+  }
+  
+  twist_covariance_.twist.linear.x = current_vel;
+  pose_covariance_.pose = current_pose;
+}
+
+ObjectInfo::ObjectInfo(
+  const tier4_simulation_msgs::msg::DummyObject & object,
+  const autoware_perception_msgs::msg::PredictedObject & predicted_object,
+  const rclcpp::Time & predicted_time, const rclcpp::Time & current_time)
+: length(object.shape.dimensions.x),
+  width(object.shape.dimensions.y),
+  height(object.shape.dimensions.z),
+  std_dev_x(std::sqrt(object.initial_state.pose_covariance.covariance[0])),
+  std_dev_y(std::sqrt(object.initial_state.pose_covariance.covariance[7])),
+  std_dev_z(std::sqrt(object.initial_state.pose_covariance.covariance[14])),
+  std_dev_yaw(std::sqrt(object.initial_state.pose_covariance.covariance[35])),
+  twist_covariance_(object.initial_state.twist_covariance),
+  pose_covariance_(object.initial_state.pose_covariance)
+{
+  // Check if 2 seconds have passed since object creation
+  const double time_since_creation = (current_time - rclcpp::Time(object.header.stamp)).seconds();
+  const double PREDICTED_PATH_DELAY = 2.0;  // seconds
+
+  // Use straight-line movement for first 2 seconds, then switch to predicted path
+  if (
+    time_since_creation < PREDICTED_PATH_DELAY ||
+    predicted_object.kinematics.predicted_paths.empty()) {
+    // Reuse the logic from the other constructor
+    *this = ObjectInfo(object, current_time);
+    return;
+  }
+
+  const auto interpolated_pose = calculateTrajectoryBasedPosition(
+    object, predicted_object, predicted_time, current_time);
+
+  // Update pose and transform
+  pose_covariance_.pose = interpolated_pose;
+  tf2::fromMsg(interpolated_pose, tf_map2moved_object);
+
+  // Use dummy object's velocity consistently
+  twist_covariance_.twist.linear.x = object.initial_state.twist_covariance.twist.linear.x;
+}
+
+geometry_msgs::msg::Pose ObjectInfo::calculateStraightLinePosition(
+  const tier4_simulation_msgs::msg::DummyObject & object, const rclcpp::Time & current_time)
+{
   const auto & initial_pose = object.initial_state.pose_covariance.pose;
   const double initial_vel = std::clamp(
     object.initial_state.twist_covariance.twist.linear.x, static_cast<double>(object.min_velocity),
@@ -103,48 +176,14 @@ ObjectInfo::ObjectInfo(
     }
   }
 
-  const auto current_pose =
-    autoware_utils_geometry::calc_offset_pose(initial_pose, move_distance, 0.0, 0.0);
-
-  // calculate tf from map to moved_object
-  geometry_msgs::msg::Transform ros_map2moved_object;
-  ros_map2moved_object.translation.x = current_pose.position.x;
-  ros_map2moved_object.translation.y = current_pose.position.y;
-  ros_map2moved_object.translation.z = current_pose.position.z;
-  ros_map2moved_object.rotation = current_pose.orientation;
-  tf2::fromMsg(ros_map2moved_object, tf_map2moved_object);
-  // set twist and pose information
-  twist_covariance_.twist.linear.x = current_vel;
-  pose_covariance_.pose = current_pose;
+  return autoware_utils_geometry::calc_offset_pose(initial_pose, move_distance, 0.0, 0.0);
 }
 
-ObjectInfo::ObjectInfo(
+geometry_msgs::msg::Pose ObjectInfo::calculateTrajectoryBasedPosition(
   const tier4_simulation_msgs::msg::DummyObject & object,
   const autoware_perception_msgs::msg::PredictedObject & predicted_object,
   const rclcpp::Time & predicted_time, const rclcpp::Time & current_time)
-: length(object.shape.dimensions.x),
-  width(object.shape.dimensions.y),
-  height(object.shape.dimensions.z),
-  std_dev_x(std::sqrt(object.initial_state.pose_covariance.covariance[0])),
-  std_dev_y(std::sqrt(object.initial_state.pose_covariance.covariance[7])),
-  std_dev_z(std::sqrt(object.initial_state.pose_covariance.covariance[14])),
-  std_dev_yaw(std::sqrt(object.initial_state.pose_covariance.covariance[35])),
-  twist_covariance_(object.initial_state.twist_covariance),
-  pose_covariance_(object.initial_state.pose_covariance)
 {
-  // Check if 2 seconds have passed since object creation
-  const double time_since_creation = (current_time - rclcpp::Time(object.header.stamp)).seconds();
-  const double PREDICTED_PATH_DELAY = 2.0;  // seconds
-
-  // Use straight-line movement for first 2 seconds, then switch to predicted path
-  if (
-    time_since_creation < PREDICTED_PATH_DELAY ||
-    predicted_object.kinematics.predicted_paths.empty()) {
-    // Reuse the logic from the other constructor
-    *this = ObjectInfo(object, current_time);
-    return;
-  }
-
   // Find path with highest confidence
   auto best_path_it = std::max_element(
     predicted_object.kinematics.predicted_paths.begin(),
@@ -254,12 +293,7 @@ ObjectInfo::ObjectInfo(
     interpolated_pose.orientation = tf2::toMsg(q_interpolated);
   }
 
-  // Update pose and transform
-  pose_covariance_.pose = interpolated_pose;
-  tf2::fromMsg(interpolated_pose, tf_map2moved_object);
-
-  // Use dummy object's velocity consistently
-  twist_covariance_.twist.linear.x = object.initial_state.twist_covariance.twist.linear.x;
+  return interpolated_pose;
 }
 
 TrackedObject ObjectInfo::toTrackedObject(
@@ -405,14 +439,16 @@ void DummyPerceptionPublisherNode::timerCallback()
       if (
         last_used_pred_it != dummy_last_used_predictions_.end() &&
         last_used_time_it != dummy_last_used_prediction_times_.end()) {
-        std::cerr << "Using last known prediction for lost object with ID: " << dummy_uuid_str
-                  << std::endl;
+        RCLCPP_DEBUG(
+          rclcpp::get_logger("dummy_perception_publisher"),
+          "Using last known prediction for lost object with ID: %s", dummy_uuid_str.c_str());
         return ObjectInfo(
           object, last_used_pred_it->second, last_used_time_it->second, current_time);
       }
 
-      std::cerr << "No matching predicted object found for dummy object with ID: " << dummy_uuid_str
-                << std::endl;
+      RCLCPP_DEBUG(
+        rclcpp::get_logger("dummy_perception_publisher"),
+        "No matching predicted object found for dummy object with ID: %s", dummy_uuid_str.c_str());
       // No last known prediction, use original constructor
       return ObjectInfo(object, current_time);
     }();
@@ -707,8 +743,9 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
           // Check if the new trajectory is valid compared to current one
           if (!isTrajectoryValid(current_pred_it->second, predicted_object, obj_uuid_str)) {
             // Skip this prediction update and keep using the current one
-            std::cerr << "Skipping trajectory update for object " << obj_uuid_str
-                      << " due to validation failure" << std::endl;
+            RCLCPP_DEBUG(
+              rclcpp::get_logger("dummy_perception_publisher"),
+              "Skipping trajectory update for object %s due to validation failure", obj_uuid_str.c_str());
             return std::make_pair(
               current_pred_it->second, dummy_last_used_prediction_times_[obj_uuid_str]);
           }
@@ -1008,17 +1045,20 @@ bool DummyPerceptionPublisherNode::isTrajectoryValid(
     }
 
     if (yaw_diff > MAX_YAW_CHANGE) {
-      std::cerr << "Rejecting trajectory for object " << dummy_uuid_str
-                << " due to large yaw change: " << yaw_diff << " rad" << std::endl;
+      RCLCPP_DEBUG(
+        rclcpp::get_logger("dummy_perception_publisher"),
+        "Rejecting trajectory for object %s due to large yaw change: %f rad",
+        dummy_uuid_str.c_str(), yaw_diff);
       return false;
     }
   }
 
   // Check if new prediction has insufficient path length (likely the real issue)
   if (new_path.path.size() < 2) {
-    std::cerr << "Rejecting trajectory for object " << dummy_uuid_str
-              << " due to insufficient path length: " << new_path.path.size() << " points"
-              << std::endl;
+    RCLCPP_DEBUG(
+      rclcpp::get_logger("dummy_perception_publisher"),
+      "Rejecting trajectory for object %s due to insufficient path length: %zu points",
+      dummy_uuid_str.c_str(), new_path.path.size());
     return false;
   }
 
@@ -1047,10 +1087,10 @@ bool DummyPerceptionPublisherNode::isTrajectoryValid(
       const double length_ratio =
         std::max(current_path_length / new_path_length, new_path_length / current_path_length);
       if (length_ratio > MAX_PATH_LENGTH_CHANGE_RATIO) {
-        std::cerr << "Rejecting trajectory for object " << dummy_uuid_str
-                  << " due to large path length change: " << length_ratio
-                  << "x (current: " << current_path_length << "m, new: " << new_path_length << "m)"
-                  << std::endl;
+        RCLCPP_DEBUG(
+          rclcpp::get_logger("dummy_perception_publisher"),
+          "Rejecting trajectory for object %s due to large path length change: %fx (current: %fm, new: %fm)",
+          dummy_uuid_str.c_str(), length_ratio, current_path_length, new_path_length);
         return false;
       }
     }
@@ -1064,16 +1104,30 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
   const std::string & dummy_uuid_str, const geometry_msgs::msg::Point & expected_position)
 {
   // Maximum acceptable distance for remapping (meters)
-  const double MAX_REMAPPING_DISTANCE = 5.0;
+  const double MAX_REMAPPING_DISTANCE = 2.0;
 
-  // Maximum acceptable yaw difference for remapping (45 degrees)
-  const double MAX_REMAPPING_YAW_DIFF = M_PI / 4.0;
+  // Maximum acceptable yaw difference for remapping (15 degrees)
+  const double MAX_REMAPPING_YAW_DIFF = M_PI / 12.0;
   
-  // Maximum acceptable speed difference ratio (10% tolerance)
-  const double MAX_SPEED_DIFFERENCE_RATIO = 1.1;
+  // Maximum acceptable speed difference ratio (5% tolerance)
+  const double MAX_SPEED_DIFFERENCE_RATIO = 1.05;
 
   // Check if candidate has predicted paths
   if (candidate_prediction.kinematics.predicted_paths.empty()) {
+    return false;
+  }
+  
+  // Check minimum path length
+  const auto & best_path = *std::max_element(
+    candidate_prediction.kinematics.predicted_paths.begin(),
+    candidate_prediction.kinematics.predicted_paths.end(),
+    [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
+    
+  if (best_path.path.size() < 5) {  // Require at least 5 points in the path
+    RCLCPP_DEBUG(
+      rclcpp::get_logger("dummy_perception_publisher"),
+      "Rejecting remapping candidate for object %s due to short path: %zu points",
+      dummy_uuid_str.c_str(), best_path.path.size());
     return false;
   }
   
@@ -1094,13 +1148,32 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
       candidate_twist.linear.x * candidate_twist.linear.x +
       candidate_twist.linear.y * candidate_twist.linear.y);
     
+    // Reject if candidate speed is too low (less than 50% of dummy speed)
+    if (dummy_speed > 1.0 && candidate_speed < dummy_speed * 0.5) {
+      RCLCPP_DEBUG(
+        rclcpp::get_logger("dummy_perception_publisher"),
+        "Rejecting remapping candidate for object %s due to low speed: dummy=%fm/s, candidate=%fm/s",
+        dummy_uuid_str.c_str(), dummy_speed, candidate_speed);
+      return false;
+    }
+    
+    // Reject if candidate speed is too high (more than 150% of dummy speed)
+    if (dummy_speed > 1.0 && candidate_speed > dummy_speed * 1.5) {
+      RCLCPP_DEBUG(
+        rclcpp::get_logger("dummy_perception_publisher"),
+        "Rejecting remapping candidate for object %s due to high speed: dummy=%fm/s, candidate=%fm/s",
+        dummy_uuid_str.c_str(), dummy_speed, candidate_speed);
+      return false;
+    }
+    
     // Compare speeds if both are significant
     if (dummy_speed > 0.1 && candidate_speed > 0.1) {
       const double speed_ratio = std::max(dummy_speed / candidate_speed, candidate_speed / dummy_speed);
       if (speed_ratio > MAX_SPEED_DIFFERENCE_RATIO) {
-        std::cerr << "Rejecting remapping candidate for object " << dummy_uuid_str 
-                  << " due to large speed difference: " << speed_ratio << "x"
-                  << " (dummy: " << dummy_speed << "m/s, candidate: " << candidate_speed << "m/s)" << std::endl;
+        RCLCPP_DEBUG(
+          rclcpp::get_logger("dummy_perception_publisher"),
+          "Rejecting remapping candidate for object %s due to speed difference: %fx (dummy: %fm/s, candidate: %fm/s)",
+          dummy_uuid_str.c_str(), speed_ratio, dummy_speed, candidate_speed);
         return false;
       }
     }
@@ -1126,10 +1199,11 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
   const double distance = calculateEuclideanDistance(comparison_position, candidate_pos);
 
   if (distance > MAX_REMAPPING_DISTANCE) {
-    std::cerr << "Rejecting remapping candidate for object " << dummy_uuid_str
-              << " due to large distance: " << distance << "m (expected: " << comparison_position.x
-              << ", " << comparison_position.y << ", candidate: " << candidate_pos.x << ", "
-              << candidate_pos.y << ")" << std::endl;
+    RCLCPP_DEBUG(
+      rclcpp::get_logger("dummy_perception_publisher"),
+      "Rejecting remapping candidate for object %s due to large distance: %fm (expected: %f, %f, candidate: %f, %f)",
+      dummy_uuid_str.c_str(), distance, comparison_position.x, comparison_position.y,
+      candidate_pos.x, candidate_pos.y);
     return false;
   }
 
@@ -1139,15 +1213,19 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
 
     // Check path similarity using isTrajectoryValid
     if (!isTrajectoryValid(last_prediction, candidate_prediction, dummy_uuid_str)) {
-      std::cerr << "Rejecting remapping candidate for object " << dummy_uuid_str
-                << " due to path dissimilarity" << std::endl;
+      RCLCPP_DEBUG(
+        rclcpp::get_logger("dummy_perception_publisher"),
+        "Rejecting remapping candidate for object %s due to path dissimilarity",
+        dummy_uuid_str.c_str());
       return false;
     }
 
     // Additional trajectory similarity check - compare path shapes
     if (!arePathsSimilar(last_prediction, candidate_prediction)) {
-      std::cerr << "Rejecting remapping candidate for object " << dummy_uuid_str
-                << " due to trajectory shape dissimilarity" << std::endl;
+      RCLCPP_DEBUG(
+        rclcpp::get_logger("dummy_perception_publisher"),
+        "Rejecting remapping candidate for object %s due to trajectory shape dissimilarity",
+        dummy_uuid_str.c_str());
       return false;
     }
 
@@ -1186,8 +1264,10 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
         }
 
         if (yaw_diff > MAX_REMAPPING_YAW_DIFF) {
-          std::cerr << "Rejecting remapping candidate for object " << dummy_uuid_str
-                    << " due to large yaw difference: " << yaw_diff << " rad" << std::endl;
+          RCLCPP_DEBUG(
+            rclcpp::get_logger("dummy_perception_publisher"),
+            "Rejecting remapping candidate for object %s due to large yaw difference: %f rad",
+            dummy_uuid_str.c_str(), yaw_diff);
           return false;
         }
       }
@@ -1202,7 +1282,7 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
   const autoware_perception_msgs::msg::PredictedObject & candidate_prediction)
 {
   // Maximum acceptable position difference (meters)
-  const double MAX_POSITION_DIFFERENCE = 3.0;
+  const double MAX_POSITION_DIFFERENCE = 1.5;
 
   if (last_prediction.kinematics.predicted_paths.empty()) {
     return false;
@@ -1260,10 +1340,11 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
   const double position_difference =
     calculateEuclideanDistance(candidate_current_pos, expected_pos);
   if (position_difference > MAX_POSITION_DIFFERENCE) {
-    std::cerr << "Position difference too large: " << position_difference << "m"
-              << " (expected: " << expected_pos.x << ", " << expected_pos.y
-              << ", candidate: " << candidate_current_pos.x << ", " << candidate_current_pos.y
-              << ")" << std::endl;
+    RCLCPP_DEBUG(
+      rclcpp::get_logger("dummy_perception_publisher"),
+      "Position difference too large: %fm (expected: %f, %f, candidate: %f, %f)",
+      position_difference, expected_pos.x, expected_pos.y,
+      candidate_current_pos.x, candidate_current_pos.y);
     return false;
   }
 
@@ -1292,15 +1373,16 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
       const double last_path_length = calculatePathLength(last_path);
       const double candidate_path_length = calculatePathLength(candidate_path);
 
-      // Check path length similarity - allow up to 200% difference
+      // Check path length similarity - allow up to 10% difference
       const double MAX_PATH_LENGTH_RATIO = 1.1;
       if (last_path_length > 0.1 && candidate_path_length > 0.1) {
         const double length_ratio = std::max(
           last_path_length / candidate_path_length, candidate_path_length / last_path_length);
         if (length_ratio > MAX_PATH_LENGTH_RATIO) {
-          std::cerr << "Path length difference too large: " << length_ratio << "x"
-                    << " (last: " << last_path_length << "m, candidate: " << candidate_path_length
-                    << "m)" << std::endl;
+          RCLCPP_DEBUG(
+            rclcpp::get_logger("dummy_perception_publisher"),
+            "Path length difference too large: %fx (last: %fm, candidate: %fm)",
+            length_ratio, last_path_length, candidate_path_length);
           return false;
         }
       }
@@ -1332,11 +1414,12 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
         const double clamped_cos = std::max(-1.0, std::min(1.0, cos_angle));
         const double angle_diff = std::acos(clamped_cos);
 
-        // Allow up to 60 degrees difference in overall direction
-        const double MAX_OVERALL_DIRECTION_DIFF = M_PI / 3.0;
+        // Allow up to 30 degrees difference in overall direction
+        const double MAX_OVERALL_DIRECTION_DIFF = M_PI / 6.0;
         if (angle_diff > MAX_OVERALL_DIRECTION_DIFF) {
-          std::cerr << "Overall direction difference too large: " << angle_diff << " rad"
-                    << std::endl;
+          RCLCPP_DEBUG(
+            rclcpp::get_logger("dummy_perception_publisher"),
+            "Overall direction difference too large: %f rad", angle_diff);
           return false;
         }
       }
