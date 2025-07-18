@@ -20,6 +20,7 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <autoware/cuda_utils/thrust_utils.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
@@ -66,6 +67,8 @@ public:
     const std::uint32_t first_point_rel_stamp_nsec);
 
 private:
+  static cudaStream_t initialize_stream();
+
   void organizePointcloud();
 
   CropBoxParameters self_crop_box_parameters_{};
@@ -111,7 +114,6 @@ private:
   thrust::device_vector<std::uint32_t> device_indices_;
   thrust::device_vector<TwistStruct2D> device_twist_2d_structs_;
   thrust::device_vector<TwistStruct3D> device_twist_3d_structs_;
-  thrust::device_vector<CropBoxParameters> host_crop_box_structs_;
   thrust::device_vector<CropBoxParameters> device_crop_box_structs_;
 };
 

@@ -75,14 +75,20 @@ __global__ void gatherKernel(
 
 std::size_t querySortWorkspace(
   int num_items, int num_segments, int * offsets_device, std::uint32_t * keys_in_device,
-  std::uint32_t * keys_out_device)
+  std::uint32_t * keys_out_device, cudaStream_t & stream)
 {
   // Determine temporary device storage requirements
   void * temp_storage = nullptr;
   size_t temp_storage_bytes = 0;
+
+  // Same as the default SortKeys arguments. Needed because the `stream` argument comes after them,
+  // so they have to be handed to the function as well.
+  int begin_bit = 0;
+  int end_bit = sizeof(std::uint32_t) * 8;
+
   CHECK_CUDA_ERROR(cub::DeviceSegmentedRadixSort::SortKeys(
     temp_storage, temp_storage_bytes, keys_in_device, keys_out_device, num_items, num_segments,
-    offsets_device, offsets_device + 1));
+    offsets_device, offsets_device + 1, begin_bit, end_bit, stream));
 
   return temp_storage_bytes;
 }
