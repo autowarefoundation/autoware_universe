@@ -48,8 +48,8 @@ MemMonitor::MemMonitor(const rclcpp::NodeOptions & options)
   // Publisher
   rclcpp::QoS durable_qos{1};
   durable_qos.transient_local();
-  pub_memory_status_ =
-    this->create_publisher<tier4_external_api_msgs::msg::MemoryStatus>("~/memory_status", durable_qos);
+  pub_memory_status_ = this->create_publisher<tier4_external_api_msgs::msg::MemoryStatus>(
+    "~/memory_status", durable_qos);
 }
 
 void MemMonitor::update()

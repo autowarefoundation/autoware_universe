@@ -79,7 +79,8 @@ protected:
 
   size_t available_size_;  //!< @brief Memory available size to generate error
 
-  rclcpp::Publisher<tier4_external_api_msgs::msg::MemoryStatus>::SharedPtr pub_memory_status_;  //!< @brief publisher
+  rclcpp::Publisher<tier4_external_api_msgs::msg::MemoryStatus>::SharedPtr
+    pub_memory_status_;  //!< @brief publisher
 
   /**
    * @brief Memory usage status messages
