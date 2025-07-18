@@ -68,7 +68,7 @@ ObjectInfo::ObjectInfo(
   ros_map2moved_object.translation.z = current_pose.position.z;
   ros_map2moved_object.rotation = current_pose.orientation;
   tf2::fromMsg(ros_map2moved_object, tf_map2moved_object);
-  
+
   // set twist and pose information
   const double initial_vel = std::clamp(
     object.initial_state.twist_covariance.twist.linear.x, static_cast<double>(object.min_velocity),
@@ -87,7 +87,7 @@ ObjectInfo::ObjectInfo(
       current_vel, static_cast<double>(object.min_velocity),
       static_cast<double>(object.max_velocity));
   }
-  
+
   twist_covariance_.twist.linear.x = current_vel;
   pose_covariance_.pose = current_pose;
 }
@@ -119,8 +119,8 @@ ObjectInfo::ObjectInfo(
     return;
   }
 
-  const auto interpolated_pose = calculateTrajectoryBasedPosition(
-    object, predicted_object, predicted_time, current_time);
+  const auto interpolated_pose =
+    calculateTrajectoryBasedPosition(object, predicted_object, predicted_time, current_time);
 
   // Update pose and transform
   pose_covariance_.pose = interpolated_pose;
@@ -699,7 +699,7 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
 
   const std::string & mapped_predicted_uuid = mapping_it->second;
 
-  // Check if we should keep using the current prediction for at least 1 second
+  // Check if we should keep using the current prediction for at least 3 seconds
   const double MIN_KEEP_DURATION = 3.0;  // seconds
 
   // Check if we have a last used prediction and if we should keep using it
@@ -745,7 +745,8 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
             // Skip this prediction update and keep using the current one
             RCLCPP_DEBUG(
               rclcpp::get_logger("dummy_perception_publisher"),
-              "Skipping trajectory update for object %s due to validation failure", obj_uuid_str.c_str());
+              "Skipping trajectory update for object %s due to validation failure",
+              obj_uuid_str.c_str());
             return std::make_pair(
               current_pred_it->second, dummy_last_used_prediction_times_[obj_uuid_str]);
           }
@@ -802,7 +803,7 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
 
   for (const auto & dummy_obj : dummy_objects) {
     const auto dummy_uuid_str = autoware_utils_uuid::to_hex_string(dummy_obj.id);
-    
+
     // Use last known position if available (which includes straight-line calculated position)
     // Otherwise calculate current position using straight-line model
     auto last_pos_it = dummy_last_known_positions_.find(dummy_uuid_str);
@@ -1099,7 +1100,8 @@ bool DummyPerceptionPublisherNode::isTrajectoryValid(
       if (length_ratio > MAX_PATH_LENGTH_CHANGE_RATIO) {
         RCLCPP_DEBUG(
           rclcpp::get_logger("dummy_perception_publisher"),
-          "Rejecting trajectory for object %s due to large path length change: %fx (current: %fm, new: %fm)",
+          "Rejecting trajectory for object %s due to large path length change: %fx (current: %fm, "
+          "new: %fm)",
           dummy_uuid_str.c_str(), length_ratio, current_path_length, new_path_length);
         return false;
       }
@@ -1118,7 +1120,7 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
 
   // Maximum acceptable yaw difference for remapping (15 degrees)
   const double MAX_REMAPPING_YAW_DIFF = M_PI / 12.0;
-  
+
   // Maximum acceptable speed difference ratio (5% tolerance)
   const double MAX_SPEED_DIFFERENCE_RATIO = 1.05;
 
@@ -1126,13 +1128,13 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
   if (candidate_prediction.kinematics.predicted_paths.empty()) {
     return false;
   }
-  
+
   // Check minimum path length
   const auto & best_path = *std::max_element(
     candidate_prediction.kinematics.predicted_paths.begin(),
     candidate_prediction.kinematics.predicted_paths.end(),
     [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
-    
+
   if (best_path.path.size() < 5) {  // Require at least 5 points in the path
     RCLCPP_DEBUG(
       rclcpp::get_logger("dummy_perception_publisher"),
@@ -1140,49 +1142,54 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
       dummy_uuid_str.c_str(), best_path.path.size());
     return false;
   }
-  
+
   // Get dummy object speed for comparison
-  auto dummy_it = std::find_if(objects_.begin(), objects_.end(), 
-    [&dummy_uuid_str](const auto & obj) {
+  auto dummy_it =
+    std::find_if(objects_.begin(), objects_.end(), [&dummy_uuid_str](const auto & obj) {
       const auto uuid = autoware_utils_uuid::to_hex_string(obj.id);
       return uuid == dummy_uuid_str;
     });
-  
+
   if (dummy_it != objects_.end()) {
     const auto & dummy_object = *dummy_it;
     const double dummy_speed = dummy_object.initial_state.twist_covariance.twist.linear.x;
-    
+
     // Get candidate predicted object speed
-    const auto & candidate_twist = candidate_prediction.kinematics.initial_twist_with_covariance.twist;
+    const auto & candidate_twist =
+      candidate_prediction.kinematics.initial_twist_with_covariance.twist;
     const double candidate_speed = std::sqrt(
       candidate_twist.linear.x * candidate_twist.linear.x +
       candidate_twist.linear.y * candidate_twist.linear.y);
-    
+
     // Reject if candidate speed is too low (less than 50% of dummy speed)
     if (dummy_speed > 1.0 && candidate_speed < dummy_speed * 0.5) {
       RCLCPP_DEBUG(
         rclcpp::get_logger("dummy_perception_publisher"),
-        "Rejecting remapping candidate for object %s due to low speed: dummy=%fm/s, candidate=%fm/s",
+        "Rejecting remapping candidate for object %s due to low speed: dummy=%fm/s, "
+        "candidate=%fm/s",
         dummy_uuid_str.c_str(), dummy_speed, candidate_speed);
       return false;
     }
-    
+
     // Reject if candidate speed is too high (more than 150% of dummy speed)
     if (dummy_speed > 1.0 && candidate_speed > dummy_speed * 1.5) {
       RCLCPP_DEBUG(
         rclcpp::get_logger("dummy_perception_publisher"),
-        "Rejecting remapping candidate for object %s due to high speed: dummy=%fm/s, candidate=%fm/s",
+        "Rejecting remapping candidate for object %s due to high speed: dummy=%fm/s, "
+        "candidate=%fm/s",
         dummy_uuid_str.c_str(), dummy_speed, candidate_speed);
       return false;
     }
-    
+
     // Compare speeds if both are significant
     if (dummy_speed > 0.1 && candidate_speed > 0.1) {
-      const double speed_ratio = std::max(dummy_speed / candidate_speed, candidate_speed / dummy_speed);
+      const double speed_ratio =
+        std::max(dummy_speed / candidate_speed, candidate_speed / dummy_speed);
       if (speed_ratio > MAX_SPEED_DIFFERENCE_RATIO) {
         RCLCPP_DEBUG(
           rclcpp::get_logger("dummy_perception_publisher"),
-          "Rejecting remapping candidate for object %s due to speed difference: %fx (dummy: %fm/s, candidate: %fm/s)",
+          "Rejecting remapping candidate for object %s due to speed difference: %fx (dummy: %fm/s, "
+          "candidate: %fm/s)",
           dummy_uuid_str.c_str(), speed_ratio, dummy_speed, candidate_speed);
         return false;
       }
@@ -1211,7 +1218,8 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
   if (distance > MAX_REMAPPING_DISTANCE) {
     RCLCPP_DEBUG(
       rclcpp::get_logger("dummy_perception_publisher"),
-      "Rejecting remapping candidate for object %s due to large distance: %fm (expected: %f, %f, candidate: %f, %f)",
+      "Rejecting remapping candidate for object %s due to large distance: %fm (expected: %f, %f, "
+      "candidate: %f, %f)",
       dummy_uuid_str.c_str(), distance, comparison_position.x, comparison_position.y,
       candidate_pos.x, candidate_pos.y);
     return false;
@@ -1353,8 +1361,8 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
     RCLCPP_DEBUG(
       rclcpp::get_logger("dummy_perception_publisher"),
       "Position difference too large: %fm (expected: %f, %f, candidate: %f, %f)",
-      position_difference, expected_pos.x, expected_pos.y,
-      candidate_current_pos.x, candidate_current_pos.y);
+      position_difference, expected_pos.x, expected_pos.y, candidate_current_pos.x,
+      candidate_current_pos.y);
     return false;
   }
 
@@ -1391,8 +1399,8 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
         if (length_ratio > MAX_PATH_LENGTH_RATIO) {
           RCLCPP_DEBUG(
             rclcpp::get_logger("dummy_perception_publisher"),
-            "Path length difference too large: %fx (last: %fm, candidate: %fm)",
-            length_ratio, last_path_length, candidate_path_length);
+            "Path length difference too large: %fx (last: %fm, candidate: %fm)", length_ratio,
+            last_path_length, candidate_path_length);
           return false;
         }
       }
