@@ -37,6 +37,7 @@
 namespace autoware::behavior_path_planner::start_planner_utils
 {
 using autoware::behavior_path_planner::utils::path_safety_checker::EgoPredictedPathParams;
+using autoware::route_handler::Direction;
 using autoware::route_handler::RouteHandler;
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using autoware_perception_msgs::msg::PredictedObjects;
@@ -51,6 +52,12 @@ lanelet::ConstLanelets getPullOutLanes(
   const std::shared_ptr<const PlannerData> & planner_data, const double backward_length);
 std::optional<PathWithLaneId> extractCollisionCheckSection(
   const PullOutPath & path, const double collision_check_distance_from_end);
+double getClosestIntersectionSignalStartArcLength(
+  const std::shared_ptr<const PlannerData> & planner_data,
+  const lanelet::ConstLanelet & search_start_lanelet, const double search_distance,
+  const Direction & pull_out_direction);
+lanelet::LineString3d combineEgoCenterline(
+  const lanelet::LaneletMapConstPtr & lanelet_map_ptr, const lanelet::ConstLanelets & lanelets);
 }  // namespace autoware::behavior_path_planner::start_planner_utils
 
 #endif  // AUTOWARE__BEHAVIOR_PATH_START_PLANNER_MODULE__UTIL_HPP_

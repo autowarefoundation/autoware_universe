@@ -365,6 +365,13 @@ PullOutPath --o PullOutPlannerBase
 | object_types_to_check_for_path_generation.check_unknown    | -     | bool   | flag to check unknown for path generation                                                                                                                                             | true                 |
 | center_line_path_interval                                  | [m]   | double | reference center line path point interval                                                                                                                                             | 1.0                  |
 
+## Parameters for turn signal
+
+| Name                                       | Unit | Type   | Description                                                                                              | Default value |
+| :----------------------------------------- | :--- | :----- | :------------------------------------------------------------------------------------------------------- | :------------ |
+| prepare_time_before_start                  | [s]  | double | Time to wait before starting the pull out maneuver                                                       | 0.0           |
+| min_bus_stop_pull_out_turn_signal_distance | [m]  | double | Minimum distance from the starting position to activate the turn signal when pulling out from a bus stop | 3.0           |
+
 ### **Ego vehicle's velocity planning**
 
 WIP
