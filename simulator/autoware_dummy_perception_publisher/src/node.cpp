@@ -820,7 +820,7 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
       }
       
       // Validate the candidate using pose and path similarity
-      if (!isValidRemappingCandidate(candidate_pred_obj, dummy_uuid, remapping_position, current_time)) {
+      if (!isValidRemappingCandidate(candidate_pred_obj, dummy_uuid, remapping_position)) {
         continue;
       }
       
@@ -892,7 +892,7 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
       }
       
       // For unmapped objects, use basic validation (mainly distance and path existence)
-      if (!isValidRemappingCandidate(candidate_pred_obj, dummy_uuid, dummy_pos, current_time)) {
+      if (!isValidRemappingCandidate(candidate_pred_obj, dummy_uuid, dummy_pos)) {
         continue;
       }
       
@@ -1053,8 +1053,7 @@ bool DummyPerceptionPublisherNode::isTrajectoryValid(
 bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
   const autoware_perception_msgs::msg::PredictedObject & candidate_prediction,
   const std::string & dummy_uuid_str,
-  const geometry_msgs::msg::Point & expected_position,
-  const rclcpp::Time & /* current_time */)
+  const geometry_msgs::msg::Point & expected_position)
 {
   // Maximum acceptable distance for remapping (meters)
   const double MAX_REMAPPING_DISTANCE = 5.0;
@@ -1090,7 +1089,7 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
     }
     
     // Additional trajectory similarity check - compare path shapes
-    if (!arePathsSimilar(last_prediction, candidate_prediction, dummy_uuid_str)) {
+    if (!arePathsSimilar(last_prediction, candidate_prediction)) {
       std::cerr << "Rejecting remapping candidate for object " << dummy_uuid_str 
                 << " due to trajectory shape dissimilarity" << std::endl;
       return false;
@@ -1144,8 +1143,7 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
 
 bool DummyPerceptionPublisherNode::arePathsSimilar(
   const autoware_perception_msgs::msg::PredictedObject & last_prediction,
-  const autoware_perception_msgs::msg::PredictedObject & candidate_prediction,
-  const std::string & /* dummy_uuid_str */)
+  const autoware_perception_msgs::msg::PredictedObject & candidate_prediction)
 {
   // Maximum acceptable average distance between corresponding path points (meters)
   const double MAX_AVERAGE_PATH_DISTANCE = 2.0;
