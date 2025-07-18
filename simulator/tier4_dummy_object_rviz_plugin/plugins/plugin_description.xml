@@ -23,4 +23,20 @@
          type="rviz_plugins::DeleteAllObjectsTool"
          base_class_type="rviz_common::Tool">
   </class>
+  <class name="rviz_plugins/PredictedCarPoseTool"
+         type="rviz_plugins::PredictedCarPoseTool"
+         base_class_type="rviz_common::Tool">
+  </class>
+  <class name="rviz_plugins/PredictedPedestrianPoseTool"
+         type="rviz_plugins::PredictedPedestrianPoseTool"
+         base_class_type="rviz_common::Tool">
+  </class>
+  <class name="rviz_plugins/PredictedBusPoseTool"
+         type="rviz_plugins::PredictedBusPoseTool"
+         base_class_type="rviz_common::Tool">
+  </class>
+  <class name="rviz_plugins/PredictedBikePoseTool"
+         type="rviz_plugins::PredictedBikePoseTool"
+         base_class_type="rviz_common::Tool">
+  </class>
 </library>
