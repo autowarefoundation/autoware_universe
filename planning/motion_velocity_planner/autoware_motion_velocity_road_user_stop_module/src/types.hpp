@@ -37,37 +37,42 @@ namespace autoware::motion_velocity_planner
 struct StopObstacle
 {
   StopObstacle(
-    const std::string & arg_uuid, const rclcpp::Time & arg_stamp,
+    const UUID & arg_uuid, const rclcpp::Time & arg_stamp, const bool arg_is_wrong_way,
+    const autoware_perception_msgs::msg::PredictedObject & arg_predicted_object,
     const ObjectClassification & object_classification, const geometry_msgs::msg::Pose & arg_pose,
     const Shape & arg_shape, const double arg_lon_velocity,
     const geometry_msgs::msg::Point & arg_collision_point,
-    const double arg_dist_to_collide_on_decimated_traj,
-    const std::optional<double> arg_braking_dist = std::nullopt)
+    const double arg_dist_to_collide_on_decimated_traj)
   : uuid(arg_uuid),
     stamp(arg_stamp),
+    is_wrong_way(arg_is_wrong_way),
+    original_object(arg_predicted_object),
     pose(arg_pose),
     velocity(arg_lon_velocity),
     shape(arg_shape),
     collision_point(arg_collision_point),
     dist_to_collide_on_decimated_traj(arg_dist_to_collide_on_decimated_traj),
-    classification(object_classification),
-    braking_dist(arg_braking_dist)
+    classification(object_classification)
   {
   }
-  std::string uuid;
+  UUID uuid;
   rclcpp::Time stamp;
-  geometry_msgs::msg::Pose pose;  // interpolated with the current stamp
-  double velocity;                // longitudinal velocity against ego's trajectory
+  bool is_wrong_way;
+  PredictedObject original_object;  // keep original object for reference
+  geometry_msgs::msg::Pose pose;    // interpolated with the current stamp
+  double velocity;                  // longitudinal velocity against ego's trajectory
 
   Shape shape;
   geometry_msgs::msg::Point collision_point;
   double dist_to_collide_on_decimated_traj;
   ObjectClassification classification;
-  std::optional<double> braking_dist;
+  // std::optional<double> braking_dist;
 
   // additional fields for road user stop module
-  bool is_wrong_way = false;
-  PredictedObject original_object;  // keep original object for reference
+
+  // for lost object tracking
+  rclcpp::Time lost_time;  // time when object was lost
+  bool is_lost = false;    // flag to indicate this is a lost object placeholder
 };
 
 struct StopPointCandidate
@@ -85,8 +90,14 @@ struct TrackedObject
   std::string object_id;
   rclcpp::Time first_detected_time;
   rclcpp::Time last_detected_time;
+  rclcpp::Time last_stop_obstacle_time;        // time when last detected as a stop obstacle
   std::deque<uint8_t> classification_history;  // ObjectClassification label values
   static constexpr size_t max_classification_history = 5;
+
+  // for polygon expansion to reduce chattering
+  bool was_inside_detection_area =
+    false;  // flag to track if object was previously inside detection area
+  double polygon_expansion_length = 0.0;  // expansion factor for object polygon when checking again
 
   void updateClassification(const uint8_t label)
   {

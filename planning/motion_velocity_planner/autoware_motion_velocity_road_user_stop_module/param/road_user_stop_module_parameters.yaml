@@ -10,7 +10,7 @@ road_user_stop:
   stop_planning:
     stop_margin:
       type: double
-      default_value: 6.0
+      default_value: 5.0
       description: Stop margin distance from obstacle [m]
       validation:
         gt_eq<>: [0.0]
@@ -38,7 +38,7 @@ road_user_stop:
 
     stop_margin_opposing_traffic:
       type: double
-      default_value: 3.0
+      default_value: 10.0
       description: Stop margin for opposing traffic [m]
       validation:
         gt_eq<>: [0.0]
@@ -173,7 +173,7 @@ road_user_stop:
 
     adjacent_lane_margin:
       type: double
-      default_value: 3.0
+      default_value: 1.0
       description: Margin to check adjacent lanes [m]
       validation:
         gt_eq<>: [0.0]
@@ -189,11 +189,6 @@ road_user_stop:
       description: Margin distance from crosswalk [m]
       validation:
         gt_eq<>: [0.0]
-
-    exclude_sidewalk_users:
-      type: bool
-      default_value: true
-      description: Exclude objects on sidewalks
 
     wrong_way_detection:
       enable:
@@ -229,7 +224,19 @@ road_user_stop:
       validation:
         gt<>: [0.0]
 
-  # Common parameters (from common_param.yaml)
+    exclude_intersection:
+      type: bool
+      default_value: true
+      description: If true, exclude objects inside intersection lanelets from detection
+
+    polygon_expansion_length:
+      type: double
+      default_value: 0.5
+      description: Distance to expand object polygon outward from centroid when object was previously inside detection area [m]
+      validation:
+        gt_eq<>: [0.0]
+
+  # Common parameters
   common_param:
     limit_max_accel:
       type: double
