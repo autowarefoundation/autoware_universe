@@ -482,29 +482,33 @@ void DummyPerceptionPublisherNode::timerCallback()
        !predicted_object.kinematics.predicted_paths.empty() && predicted_time.nanoseconds() > 0);
 
     ObjectInfo obj_info = [&]() {
-      if (matched_predicted) {
+      // Only use predicted motion if the action is PREDICT
+      if (object.action == tier4_simulation_msgs::msg::DummyObject::PREDICT && matched_predicted) {
         return ObjectInfo(object, predicted_object, predicted_time, current_time);
       }
 
-      // Check if we have a last used prediction for this object
-      const auto & dummy_uuid_str = autoware_utils_uuid::to_hex_string(object.id);
-      auto last_used_pred_it = dummy_last_used_predictions_.find(dummy_uuid_str);
-      auto last_used_time_it = dummy_last_used_prediction_times_.find(dummy_uuid_str);
+      // Check if we have a last used prediction for this object (only if action is PREDICT)
+      if (object.action == tier4_simulation_msgs::msg::DummyObject::PREDICT) {
+        const auto & dummy_uuid_str = autoware_utils_uuid::to_hex_string(object.id);
+        auto last_used_pred_it = dummy_last_used_predictions_.find(dummy_uuid_str);
+        auto last_used_time_it = dummy_last_used_prediction_times_.find(dummy_uuid_str);
 
-      if (
-        last_used_pred_it != dummy_last_used_predictions_.end() &&
-        last_used_time_it != dummy_last_used_prediction_times_.end()) {
+        if (
+          last_used_pred_it != dummy_last_used_predictions_.end() &&
+          last_used_time_it != dummy_last_used_prediction_times_.end()) {
+          RCLCPP_DEBUG(
+            rclcpp::get_logger("dummy_perception_publisher"),
+            "Using last known prediction for lost object with ID: %s", dummy_uuid_str.c_str());
+          return ObjectInfo(
+            object, last_used_pred_it->second, last_used_time_it->second, current_time);
+        }
+
         RCLCPP_DEBUG(
           rclcpp::get_logger("dummy_perception_publisher"),
-          "Using last known prediction for lost object with ID: %s", dummy_uuid_str.c_str());
-        return ObjectInfo(
-          object, last_used_pred_it->second, last_used_time_it->second, current_time);
+          "No matching predicted object found for dummy object with ID: %s", dummy_uuid_str.c_str());
       }
 
-      RCLCPP_DEBUG(
-        rclcpp::get_logger("dummy_perception_publisher"),
-        "No matching predicted object found for dummy object with ID: %s", dummy_uuid_str.c_str());
-      // No last known prediction, use original constructor
+      // Use straight-line motion (original constructor) for all other actions
       return ObjectInfo(object, current_time);
     }();
     obj_infos.push_back(obj_info);
@@ -719,6 +723,47 @@ void DummyPerceptionPublisherNode::objectCallback(
     }
     case tier4_simulation_msgs::msg::DummyObject::DELETEALL: {
       objects_.clear();
+      break;
+    }
+    case tier4_simulation_msgs::msg::DummyObject::PREDICT: {
+      // Handle PREDICT action the same way as MODIFY
+      for (size_t i = 0; i < objects_.size(); ++i) {
+        if (objects_.at(i).id.uuid == msg->id.uuid) {
+          tf2::Transform tf_input2map;
+          tf2::Transform tf_input2object_origin;
+          tf2::Transform tf_map2object_origin;
+          try {
+            geometry_msgs::msg::TransformStamped ros_input2map;
+            ros_input2map = tf_buffer_.lookupTransform(
+              /*target*/ msg->header.frame_id, /*src*/ "map", msg->header.stamp,
+              rclcpp::Duration::from_seconds(0.5));
+            tf2::fromMsg(ros_input2map.transform, tf_input2map);
+          } catch (tf2::TransformException & ex) {
+            RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());
+            return;
+          }
+          tf2::fromMsg(msg->initial_state.pose_covariance.pose, tf_input2object_origin);
+          tf_map2object_origin = tf_input2map.inverse() * tf_input2object_origin;
+          tier4_simulation_msgs::msg::DummyObject object;
+          objects_.at(i) = *msg;
+          tf2::toMsg(tf_map2object_origin, objects_.at(i).initial_state.pose_covariance.pose);
+          if (use_base_link_z_) {
+            // Use base_link Z
+            geometry_msgs::msg::TransformStamped ros_map2base_link;
+            try {
+              ros_map2base_link = tf_buffer_.lookupTransform(
+                "map", "base_link", rclcpp::Time(0), rclcpp::Duration::from_seconds(0.5));
+              objects_.at(i).initial_state.pose_covariance.pose.position.z =
+                ros_map2base_link.transform.translation.z + 0.5 * objects_.at(i).shape.dimensions.z;
+            } catch (tf2::TransformException & ex) {
+              RCLCPP_WARN_SKIPFIRST_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());
+              return;
+            }
+          }
+
+          break;
+        }
+      }
       break;
     }
   }
