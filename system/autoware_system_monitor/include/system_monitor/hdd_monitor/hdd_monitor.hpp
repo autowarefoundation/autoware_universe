@@ -24,6 +24,10 @@
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 
+#include <tier4_external_api_msgs/msg/hdd_device_status.hpp>
+#include <tier4_external_api_msgs/msg/hdd_partition_status.hpp>
+#include <tier4_external_api_msgs/msg/hdd_status.hpp>
+
 #include <climits>
 #include <map>
 #include <string>
@@ -89,7 +93,7 @@ struct SysfsDevStat
 };
 
 /**
- * @brief statistics of HDD
+ * @brief statistics of HDD for each physical disk
  */
 struct HddStat
 {
@@ -102,6 +106,23 @@ struct HddStat
   SysfsDevStat last_sysfs_dev_stat_;  //!< @brief last statistics of sysfs device
 
   HddStat() : read_data_rate_MBs_(0.0), write_data_rate_MBs_(0.0), read_iops_(0.0), write_iops_(0.0)
+  {
+  }
+};
+
+/**
+ * @brief usage of HDD for each partition
+ */
+struct HddUsage
+{
+  int size;                //!< @brief Total size of the filesystem in megabytes (MB)
+  int used;                //!< @brief Used space in the filesystem in megabytes (MB)
+  int avail;               //!< @brief Available (free) space in the filesystem in megabytes (MB)
+  int capacity;            //!< @brief Percentage of used space in the filesystem (0–100)
+  std::string filesystem;  //!< @brief Name of the filesystem device (e.g., "/dev/nvme0n1p2")
+  std::string mounted_on;  //!< @brief Mount point of the filesystem (e.g., "/")
+
+  HddUsage() : size(0), used(0), avail(0), capacity(0)
   {
   }
 };
@@ -321,6 +342,11 @@ protected:
    */
   int unmountDevice(std::string & device);
 
+  /**
+   * @brief publish HDD status
+   */
+  void publishHddStatus();
+
   diagnostic_updater::Updater updater_;  //!< @brief Updater class which advertises to /diagnostics
   rclcpp::TimerBase::SharedPtr timer_;   //!< @brief timer to get HDD information from HddReader
 
@@ -337,6 +363,10 @@ protected:
   diagnostic_updater::DiagnosticStatusWrapper connect_diag_;
   HddInfoList hdd_info_list_;               //!< @brief list of HDD information
   rclcpp::Time last_hdd_stat_update_time_;  //!< @brief last HDD statistics update time
+
+  std::vector<HddUsage> hdd_usages_;  //!< @brief list of HDD usage
+
+  rclcpp::Publisher<tier4_external_api_msgs::msg::HddStatus>::SharedPtr pub_hdd_status_;  //!< @brief publisher
 
   /**
    * @brief HDD SMART status messages
