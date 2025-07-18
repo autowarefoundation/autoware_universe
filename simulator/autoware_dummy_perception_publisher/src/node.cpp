@@ -910,6 +910,9 @@ bool DummyPerceptionPublisherNode::isTrajectoryValid(
   // Maximum acceptable velocity change ratio (500% change)
   const double MAX_VELOCITY_CHANGE_RATIO = 5.0;
   
+  // Maximum acceptable path length change ratio (300% change)
+  const double MAX_PATH_LENGTH_CHANGE_RATIO = 3.0;
+  
   // If current prediction is empty, accept any new prediction
   if (current_prediction.kinematics.predicted_paths.empty()) {
     return true;
@@ -987,6 +990,38 @@ bool DummyPerceptionPublisherNode::isTrajectoryValid(
       std::cerr << "Rejecting trajectory for object " << dummy_uuid_str 
                 << " due to large direction change: " << direction_change << " rad" << std::endl;
       return false;
+    }
+  }
+  
+  // Check path length change
+  if (!current_path.path.empty() && !new_path.path.empty()) {
+    // Calculate path lengths
+    auto calculatePathLength = [](const auto & path) {
+      double total_length = 0.0;
+      for (size_t i = 1; i < path.path.size(); ++i) {
+        const auto & prev_pose = path.path[i - 1];
+        const auto & curr_pose = path.path[i];
+        
+        const double dx = curr_pose.position.x - prev_pose.position.x;
+        const double dy = curr_pose.position.y - prev_pose.position.y;
+        const double dz = curr_pose.position.z - prev_pose.position.z;
+        total_length += std::sqrt(dx * dx + dy * dy + dz * dz);
+      }
+      return total_length;
+    };
+    
+    const double current_path_length = calculatePathLength(current_path);
+    const double new_path_length = calculatePathLength(new_path);
+    
+    // Only check if both paths have significant length
+    if (current_path_length > 0.1 && new_path_length > 0.1) {
+      const double length_ratio = std::max(current_path_length / new_path_length, new_path_length / current_path_length);
+      if (length_ratio > MAX_PATH_LENGTH_CHANGE_RATIO) {
+        std::cerr << "Rejecting trajectory for object " << dummy_uuid_str 
+                  << " due to large path length change: " << length_ratio << "x (current: " 
+                  << current_path_length << "m, new: " << new_path_length << "m)" << std::endl;
+        return false;
+      }
     }
   }
   
