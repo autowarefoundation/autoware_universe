@@ -27,8 +27,8 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <tier4_external_api_msgs/msg/cpu_status.hpp>
-#include <tier4_external_api_msgs/msg/cpu_usage.hpp>
 #include <tier4_external_api_msgs/msg/cpu_temperature.hpp>
+#include <tier4_external_api_msgs/msg/cpu_usage.hpp>
 
 #include <atomic>
 #include <climits>

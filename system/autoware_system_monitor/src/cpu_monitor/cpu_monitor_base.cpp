@@ -110,8 +110,8 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
   pub_cpu_usage_ =
     this->create_publisher<tier4_external_api_msgs::msg::CpuUsage>("~/cpu_usage", durable_qos);
 
-  pub_cpu_temperature_ =
-    this->create_publisher<tier4_external_api_msgs::msg::CpuTemperature>("~/cpu_temperature", durable_qos);
+  pub_cpu_temperature_ = this->create_publisher<tier4_external_api_msgs::msg::CpuTemperature>(
+    "~/cpu_temperature", durable_qos);
 
   using namespace std::literals::chrono_literals;
   // Start timer for collecting cpu statistics
@@ -477,7 +477,8 @@ void CPUMonitorBase::updateThermalThrottlingImpl(
 
 int CPUMonitorBase::getThermalThrottlingStatus()
 {
-  RCLCPP_INFO_ONCE(this->get_logger(), "CPUMonitorBase::getThermalThrottlingStatus not implemented.");
+  RCLCPP_INFO_ONCE(
+    this->get_logger(), "CPUMonitorBase::getThermalThrottlingStatus not implemented.");
   return DiagStatus::OK;
 }
 
@@ -617,7 +618,9 @@ void CPUMonitorBase::publishCpuTemperature()
     }
   }
   int thermal_throttling = getThermalThrottlingStatus();
-  cpu_temperature.thermal_throttling = thermal_throttling == DiagStatus::OK ? CpuTemperature::THERMAL_THROTTLING_OFF : CpuTemperature::THERMAL_THROTTLING_ON;
+  cpu_temperature.thermal_throttling = thermal_throttling == DiagStatus::OK
+                                         ? CpuTemperature::THERMAL_THROTTLING_OFF
+                                         : CpuTemperature::THERMAL_THROTTLING_ON;
   pub_cpu_temperature_->publish(cpu_temperature);
 }
 
