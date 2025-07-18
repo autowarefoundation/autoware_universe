@@ -15,12 +15,12 @@ advantage of this by preprocessing (resize, crop, normalize) the images and stor
 
 Topic for image_i arrived                                     -------------------------
   |                                                                                   |
-  |                                                                                   |                                                                                 
+  |                                                                                   |
   |                                                                                   |
   v                                                                                   |
 Is image distorted?                                                                   |
   |              \                                                                    |
-  |               \                                                                   |        
+  |               \                                                                   |
 Yes               No                                                                  |Image Updates
   |                |                                                                  |done in parallel, if multitheading is on
   v                |                                                                  |otherwise done sequentially in FIFO order
@@ -33,7 +33,7 @@ Load image into GPU memory                                                      
 Preprocess image (scale & crop ROI & normalize)                                       |
   |                                                                                   |
   v                                                                                   |
-Store in GPU memory binding location for model input                                  |                   
+Store in GPU memory binding location for model input                                  |
   |                                                          -------------------------|
   v                                                                                   |
 Is image the `anchor_image`?                                                          |

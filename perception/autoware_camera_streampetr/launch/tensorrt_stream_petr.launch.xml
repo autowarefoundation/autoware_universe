@@ -51,5 +51,4 @@
     <!-- Whether to use multithreading for handling image callbacks-->
     <param name="multithreading" value="true"/>
   </node>
-
 </launch>
