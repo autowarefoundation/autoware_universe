@@ -182,14 +182,16 @@ If the red signal is indicating to the corresponding crosswalk, the ego do not y
 
 In the `pass_judge` namespace, the following parameters are defined.
 
-| Parameter                          |       | Type   | Description                                                                                                                                     |
-| ---------------------------------- | ----- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ego_pass_first_margin_x`          | [[s]] | double | time to collision margin vector for ego pass first situation (the module judges that ego don't have to stop at TTC + MARGIN < TTV condition)    |
-| `ego_pass_first_margin_y`          | [[s]] | double | time to vehicle margin vector for ego pass first situation (the module judges that ego don't have to stop at TTC + MARGIN < TTV condition)      |
-| `ego_pass_first_additional_margin` | [s]   | double | additional time margin for ego pass first situation to suppress chattering                                                                      |
-| `ego_pass_later_margin_x`          | [[s]] | double | time to vehicle margin vector for object pass first situation (the module judges that ego don't have to stop at TTV + MARGIN < TTC condition)   |
-| `ego_pass_later_margin_y`          | [[s]] | double | time to collision margin vector for object pass first situation (the module judges that ego don't have to stop at TTV + MARGIN < TTC condition) |
-| `ego_pass_later_additional_margin` | [s]   | double | additional time margin for object pass first situation to suppress chattering                                                                   |
+| Parameter                          |       | Type   | Description                                                                                                                                                       |
+| ---------------------------------- | ----- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `on_time_buffer`                   | [s]   | double | Time from when a collision point is detected to when the actual stop decision is made. Smaller values increase sensitivity; larger values reduce false positives. |
+| `off_time_buffer`                  | [s]   | double | Time from when the collision point disappears to when the stop decision is released. Smaller values increase sensitivity; larger values reduce false negatives.   |
+| `ego_pass_first_margin_x`          | [[s]] | double | time to collision margin vector for ego pass first situation (the module judges that ego don't have to stop at TTC + MARGIN < TTV condition)                      |
+| `ego_pass_first_margin_y`          | [[s]] | double | time to vehicle margin vector for ego pass first situation (the module judges that ego don't have to stop at TTC + MARGIN < TTV condition)                        |
+| `ego_pass_first_additional_margin` | [s]   | double | additional time margin for ego pass first situation to suppress chattering                                                                                        |
+| `ego_pass_later_margin_x`          | [[s]] | double | time to vehicle margin vector for object pass first situation (the module judges that ego don't have to stop at TTV + MARGIN < TTC condition)                     |
+| `ego_pass_later_margin_y`          | [[s]] | double | time to collision margin vector for object pass first situation (the module judges that ego don't have to stop at TTV + MARGIN < TTC condition)                   |
+| `ego_pass_later_additional_margin` | [s]   | double | additional time margin for object pass first situation to suppress chattering                                                                                     |
 
 #### Smooth Yield Decision
 
