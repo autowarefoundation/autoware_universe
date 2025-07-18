@@ -135,6 +135,12 @@ protected:
     diagnostic_updater::DiagnosticStatusWrapper & stat) override;  // NOLINT(runtime/references)
 
   /**
+   * @brief get GPU status
+   * @return GPU status list
+   */
+  std::vector<GpuStatus> getGPUStatus() override;
+
+  /**
    * @brief get supported GPU clocks
    * @param [in] index GPU index
    * @param [in] device GPU device
