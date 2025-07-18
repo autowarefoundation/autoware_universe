@@ -120,8 +120,7 @@ ObjectInfo::ObjectInfo(
 ObjectInfo::ObjectInfo(
   const tier4_simulation_msgs::msg::DummyObject & object,
   const autoware_perception_msgs::msg::PredictedObject & predicted_object,
-  const rclcpp::Time & predicted_time, const rclcpp::Time & current_time,
-  const rclcpp::Time & mapping_time)
+  const rclcpp::Time & predicted_time, const rclcpp::Time & current_time)
 : length(object.shape.dimensions.x),
   width(object.shape.dimensions.y),
   height(object.shape.dimensions.z),
@@ -132,13 +131,13 @@ ObjectInfo::ObjectInfo(
   twist_covariance_(object.initial_state.twist_covariance),
   pose_covariance_(object.initial_state.pose_covariance)
 {
-  // Check if 2 seconds have passed since mapping was created
-  const double time_since_mapping = (current_time - mapping_time).seconds();
+  // Check if 2 seconds have passed since object creation
+  const double time_since_creation = (current_time - rclcpp::Time(object.header.stamp)).seconds();
   const double PREDICTED_PATH_DELAY = 2.0;  // seconds
 
   // Use straight-line movement for first 2 seconds, then switch to predicted path
   if (
-    time_since_mapping < PREDICTED_PATH_DELAY ||
+    time_since_creation < PREDICTED_PATH_DELAY ||
     predicted_object.kinematics.predicted_paths.empty()) {
     // Reuse the logic from the other constructor
     *this = ObjectInfo(object, current_time);
@@ -186,12 +185,6 @@ ObjectInfo::ObjectInfo(
     interpolated_pose = best_path.path.back();
   } else {
     // Find which segment the distance falls into
-    std::cerr << "Distance traveled: " << distance_traveled << std::endl;
-    std::cerr << "Cumulative distances: ";
-    for (const auto & dist : cumulative_distances) {
-      std::cerr << dist << " ";
-    }
-    std::cerr << std::endl;
     size_t segment_index = 0;
     for (size_t i = 1; i < cumulative_distances.size(); ++i) {
       if (distance_traveled <= cumulative_distances[i]) {
@@ -199,7 +192,6 @@ ObjectInfo::ObjectInfo(
         break;
       }
     }
-    std::cerr << "Segment index: " << segment_index << std::endl;
     // Calculate interpolation ratio within the segment
     const double segment_start_distance = cumulative_distances[segment_index];
     const double segment_end_distance = cumulative_distances[segment_index + 1];
@@ -368,16 +360,25 @@ void DummyPerceptionPublisherNode::timerCallback()
 
     ObjectInfo obj_info = [&]() {
       if (matched_predicted) {
-        const auto & dummy_uuid_str = autoware_utils_uuid::to_hex_string(object.id);
-        auto timestamp_it = dummy_mapping_timestamps_.find(dummy_uuid_str);
-        rclcpp::Time mapping_time =
-          (timestamp_it != dummy_mapping_timestamps_.end()) ? timestamp_it->second : current_time;
-        return ObjectInfo(object, predicted_object, predicted_time, current_time, mapping_time);
-      } else {
-        return ObjectInfo(object, current_time);
+        return ObjectInfo(object, predicted_object, predicted_time, current_time);
       }
+      // Use last known position if available, otherwise use original constructor
+
+      std::cerr << "No matching predicted object found for dummy object with ID: "
+                << autoware_utils_uuid::to_hex_string(object.id) << std::endl;
+      // No last known position, use original constructor
+      return ObjectInfo(object, current_time);
     }();
     obj_infos.push_back(obj_info);
+
+    // Update last known position based on calculated ObjectInfo position
+    const auto & dummy_uuid_str = autoware_utils_uuid::to_hex_string(object.id);
+    dummy_last_known_positions_[dummy_uuid_str] = obj_info.pose_covariance_.pose.position;
+    
+    // Track object creation time if not already tracked
+    if (dummy_creation_timestamps_.find(dummy_uuid_str) == dummy_creation_timestamps_.end()) {
+      dummy_creation_timestamps_[dummy_uuid_str] = rclcpp::Time(object.header.stamp);
+    }
   }
 
   // publish ground truth
@@ -615,21 +616,33 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
 
   const std::string & mapped_predicted_uuid = mapping_it->second;
 
-  // Search through buffer from newest to oldest for a prediction at least 1 second old
-  const double MIN_PREDICTION_AGE = 1.0; // seconds
+  // Check if we should keep using the current prediction for at least 1 second
+  const double MIN_KEEP_DURATION = 1.0;  // seconds
   
+  // Check if we have a last used prediction and if we should keep using it
+  auto last_used_pred_it = dummy_last_used_predictions_.find(obj_uuid_str);
+  auto last_update_time_it = dummy_prediction_update_timestamps_.find(obj_uuid_str);
+  
+  if (last_used_pred_it != dummy_last_used_predictions_.end() && 
+      last_update_time_it != dummy_prediction_update_timestamps_.end()) {
+    const double time_since_last_update = (current_time - last_update_time_it->second).seconds();
+    
+    // If less than 1 second has passed since last update, keep using the same prediction
+    if (time_since_last_update < MIN_KEEP_DURATION) {
+      auto last_used_time_it = dummy_last_used_prediction_times_.find(obj_uuid_str);
+      if (last_used_time_it != dummy_last_used_prediction_times_.end()) {
+        return std::make_pair(last_used_pred_it->second, last_used_time_it->second);
+      }
+    }
+  }
+  
+  // Time to update: find the closest prediction in the past
   for (auto it = predicted_objects_buffer_.rbegin(); it != predicted_objects_buffer_.rend(); ++it) {
     const auto & predicted_objects_msg = *it;
     const rclcpp::Time msg_time(predicted_objects_msg.header.stamp);
 
     // Skip future messages
     if (msg_time > current_time) {
-      continue;
-    }
-    
-    // Check if this prediction is at least 1 second old
-    const double prediction_age = (current_time - msg_time).seconds();
-    if (prediction_age < MIN_PREDICTION_AGE) {
       continue;
     }
 
@@ -640,6 +653,11 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
       const auto & pred_obj_uuid_str = autoware_utils_uuid::to_hex_string(pred_obj_uuid);
 
       if (pred_obj_uuid_str == mapped_predicted_uuid) {
+        // Store this as the new prediction to use for the next 1 second
+        dummy_last_used_predictions_[obj_uuid_str] = predicted_object;
+        dummy_last_used_prediction_times_[obj_uuid_str] = msg_time;
+        dummy_prediction_update_timestamps_[obj_uuid_str] = current_time;
+        
         return std::make_pair(predicted_object, msg_time);
       }
     }
@@ -653,6 +671,7 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
   const autoware_perception_msgs::msg::PredictedObjects & predicted_objects)
 {
   const rclcpp::Time current_time = this->now();
+
   // Create sets of available UUIDs
   std::set<std::string> available_predicted_uuids;
   std::map<std::string, geometry_msgs::msg::Point> predicted_positions;
@@ -664,12 +683,22 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
       pred_obj.kinematics.initial_pose_with_covariance.pose.position;
   }
 
-  // Remove already assigned predicted objects from available set
+  // Check for disappeared predicted objects and mark dummy objects for remapping
+  std::vector<std::string> dummy_objects_to_remap;
   for (const auto & mapping : dummy_to_predicted_uuid_map_) {
-    available_predicted_uuids.erase(mapping.second);
+    const std::string & dummy_uuid = mapping.first;
+    const std::string & predicted_uuid = mapping.second;
+
+    // If the predicted object ID no longer exists, mark dummy for remapping
+    if (available_predicted_uuids.find(predicted_uuid) == available_predicted_uuids.end()) {
+      dummy_objects_to_remap.push_back(dummy_uuid);
+    } else {
+      // Remove already assigned predicted objects from available set
+      available_predicted_uuids.erase(predicted_uuid);
+    }
   }
 
-  // Find unmapped dummy objects
+  // Update dummy object positions and find unmapped dummy objects
   std::vector<std::string> unmapped_dummy_uuids;
   std::map<std::string, geometry_msgs::msg::Point> dummy_positions;
 
@@ -679,6 +708,73 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
 
     if (dummy_to_predicted_uuid_map_.find(dummy_uuid_str) == dummy_to_predicted_uuid_map_.end()) {
       unmapped_dummy_uuids.push_back(dummy_uuid_str);
+    }
+  }
+
+  // Handle remapping for dummy objects whose predicted objects disappeared
+  // First, remove old mappings
+  for (const auto & dummy_uuid : dummy_objects_to_remap) {
+    dummy_to_predicted_uuid_map_.erase(dummy_uuid);
+  }
+
+  // Then, find best matches for all objects that need remapping
+  std::vector<std::pair<std::string, std::string>> new_mappings;   // dummy_uuid -> predicted_uuid
+  std::vector<std::pair<std::string, double>> mapping_candidates;  // dummy_uuid -> distance
+
+  for (const auto & dummy_uuid : dummy_objects_to_remap) {
+    // Use last known position if available, otherwise use current position
+    geometry_msgs::msg::Point remapping_position;
+    auto last_pos_it = dummy_last_known_positions_.find(dummy_uuid);
+    if (last_pos_it != dummy_last_known_positions_.end()) {
+      remapping_position = last_pos_it->second;
+    } else {
+      // Fallback to current position if last known position is not available
+      auto current_pos_it = dummy_positions.find(dummy_uuid);
+      if (current_pos_it != dummy_positions.end()) {
+        remapping_position = current_pos_it->second;
+      } else {
+        // Skip if we can't find any position for this dummy object
+        continue;
+      }
+    }
+
+    // Find closest available predicted object for remapping
+    std::string closest_pred_uuid;
+    double min_distance = std::numeric_limits<double>::max();
+
+    for (const auto & pred_uuid : available_predicted_uuids) {
+      const auto & pred_pos = predicted_positions[pred_uuid];
+      double distance = calculateEuclideanDistance(remapping_position, pred_pos);
+
+      if (distance < min_distance) {
+        min_distance = distance;
+        closest_pred_uuid = pred_uuid;
+      }
+    }
+
+    // Store candidate mapping with distance for prioritization
+    if (!closest_pred_uuid.empty()) {
+      mapping_candidates.emplace_back(dummy_uuid + ":" + closest_pred_uuid, min_distance);
+    }
+  }
+
+  // Sort candidates by distance to ensure closest matches get priority
+  std::sort(
+    mapping_candidates.begin(), mapping_candidates.end(),
+    [](const auto & a, const auto & b) { return a.second < b.second; });
+
+  // Create mappings in order of proximity, ensuring one-to-one mapping
+  for (const auto & candidate : mapping_candidates) {
+    const std::string & combined = candidate.first;
+    const size_t colon_pos = combined.find(':');
+    const std::string dummy_uuid = combined.substr(0, colon_pos);
+    const std::string predicted_uuid = combined.substr(colon_pos + 1);
+
+    // Only create mapping if predicted object is still available
+    if (available_predicted_uuids.find(predicted_uuid) != available_predicted_uuids.end()) {
+      dummy_to_predicted_uuid_map_[dummy_uuid] = predicted_uuid;
+      dummy_mapping_timestamps_[dummy_uuid] = current_time;
+      available_predicted_uuids.erase(predicted_uuid);
     }
   }
 
@@ -718,10 +814,22 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
   for (auto it = dummy_to_predicted_uuid_map_.begin(); it != dummy_to_predicted_uuid_map_.end();) {
     if (current_dummy_uuids.find(it->first) == current_dummy_uuids.end()) {
       dummy_mapping_timestamps_.erase(it->first);
+      dummy_last_known_positions_.erase(it->first);
+      dummy_creation_timestamps_.erase(it->first);
+      dummy_last_used_predictions_.erase(it->first);
+      dummy_last_used_prediction_times_.erase(it->first);
+      dummy_prediction_update_timestamps_.erase(it->first);
       it = dummy_to_predicted_uuid_map_.erase(it);
     } else {
       ++it;
     }
+  }
+
+  // Update last known positions for all dummy objects
+  for (const auto & dummy_obj : dummy_objects) {
+    const auto dummy_uuid_str = autoware_utils_uuid::to_hex_string(dummy_obj.id);
+    dummy_last_known_positions_[dummy_uuid_str] =
+      dummy_obj.initial_state.pose_covariance.pose.position;
   }
 }
 
