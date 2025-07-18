@@ -60,7 +60,7 @@ static std::optional<lanelet::ConstLanelet> getFirstConflictingLanelet(
   const autoware_utils::LinearRing2d & footprint, const double vehicle_length)
 {
   const auto & path_ip = interpolated_path_info.path;
-  const auto [lane_start, end] = interpolated_path_info.lane_id_interval.value();
+  const auto [lane_start, end] = interpolated_path_info.lane_id_interval;
   const size_t vehicle_length_idx = static_cast<size_t>(vehicle_length / interpolated_path_info.ds);
   const size_t start =
     static_cast<size_t>(std::max<int>(0, static_cast<int>(lane_start) - vehicle_length_idx));
@@ -101,16 +101,13 @@ bool MergeFromPrivateRoadModule::modifyPathVelocity(PathWithLaneId * path)
   const auto interpolated_path_info_opt = util::generateInterpolatedPath(
     lane_id_, associative_ids_, *path, planner_param_.path_interpolation_ds, logger_);
   if (!interpolated_path_info_opt) {
-    RCLCPP_DEBUG_SKIPFIRST_THROTTLE(logger_, *clock_, 1000 /* ms */, "splineInterpolate failed");
+    RCLCPP_DEBUG_SKIPFIRST_THROTTLE(
+      logger_, *clock_, 1000 /* ms */,
+      "splineInterpolate failed or Path has no interval on intersection lane");
     RCLCPP_DEBUG(logger_, "===== plan end =====");
     return false;
   }
   const auto & interpolated_path_info = interpolated_path_info_opt.value();
-  if (!interpolated_path_info.lane_id_interval) {
-    RCLCPP_WARN(logger_, "Path has no interval on intersection lane %ld", lane_id_);
-    RCLCPP_DEBUG(logger_, "===== plan end =====");
-    return false;
-  }
 
   const double baselink2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
   const auto local_footprint = planner_data_->vehicle_info_.createFootprint(0.0, 0.0);

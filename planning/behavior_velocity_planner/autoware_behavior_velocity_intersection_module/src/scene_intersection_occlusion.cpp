@@ -117,7 +117,7 @@ IntersectionModule::OcclusionType IntersectionModule::detectOcclusion(
   const double occlusion_dist_thr = planner_param_.occlusion.occlusion_required_clearance_distance;
 
   const auto & path_ip = interpolated_path_info.path;
-  const auto & lane_interval_ip = interpolated_path_info.lane_id_interval.value();
+  const auto & lane_interval_ip = interpolated_path_info.lane_id_interval;
 
   const auto first_attention_area_idx =
     util::getFirstPointInsidePolygon(path_ip, lane_interval_ip, first_attention_area);

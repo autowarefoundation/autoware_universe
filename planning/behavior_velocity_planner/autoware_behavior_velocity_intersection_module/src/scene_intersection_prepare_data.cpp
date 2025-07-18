@@ -196,17 +196,13 @@ Result<IntersectionModule::BasicData, InternalError> IntersectionModule::prepare
   const auto interpolated_path_info_opt = util::generateInterpolatedPath(
     lane_id_, associative_ids_, *path, planner_param_.common.path_interpolation_ds, logger_);
   if (!interpolated_path_info_opt) {
-    return make_err<IntersectionModule::BasicData, InternalError>("splineInterpolate failed");
+    return make_err<IntersectionModule::BasicData, InternalError>(
+      "splineInterpolate failed or Path has no interval on intersection lane");
   }
 
   const auto & interpolated_path_info = interpolated_path_info_opt.value();
-  if (!interpolated_path_info.lane_id_interval) {
-    return make_err<IntersectionModule::BasicData, InternalError>(
-      "Path has no interval on intersection lane " + std::to_string(lane_id_));
-  }
-
   const auto & path_ip = interpolated_path_info.path;
-  const auto & path_ip_intersection_end = interpolated_path_info.lane_id_interval.value().second;
+  const auto & path_ip_intersection_end = interpolated_path_info.lane_id_interval.second;
   internal_debug_data_.distance = autoware::motion_utils::calcSignedArcLength(
     path->points, current_pose.position,
     path_ip.points.at(path_ip_intersection_end).point.pose.position);
@@ -308,7 +304,7 @@ std::optional<size_t> IntersectionModule::getStopLineIndexFromMap(
   const InterpolatedPathInfo & interpolated_path_info, lanelet::ConstLanelet assigned_lanelet) const
 {
   const auto & path = interpolated_path_info.path;
-  const auto & lane_interval = interpolated_path_info.lane_id_interval.value();
+  const auto & lane_interval = interpolated_path_info.lane_id_interval;
 
   const auto road_markings =
     assigned_lanelet.regulatoryElementsAs<lanelet::autoware::RoadMarking>();
@@ -373,7 +369,7 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
   const auto first_attention_lane_centerline = first_attention_lane.centerline2d();
   const auto & path_ip = interpolated_path_info.path;
   const double ds = interpolated_path_info.ds;
-  const auto & lane_interval_ip = interpolated_path_info.lane_id_interval.value();
+  const auto & lane_interval_ip = interpolated_path_info.lane_id_interval;
   const double baselink2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
 
   const int stopline_margin_idx_dist = std::ceil(stopline_margin / ds);
@@ -894,11 +890,7 @@ std::optional<PathLanelets> IntersectionModule::generatePathLanelets(
   const double width = planner_data_->vehicle_info_.vehicle_width_m;
   static constexpr double path_lanelet_interval = 1.5;
 
-  const auto & assigned_lane_interval_opt = interpolated_path_info.lane_id_interval;
-  if (!assigned_lane_interval_opt) {
-    return std::nullopt;
-  }
-  const auto assigned_lane_interval = assigned_lane_interval_opt.value();
+  const auto assigned_lane_interval = interpolated_path_info.lane_id_interval;
   const auto & path = interpolated_path_info.path;
 
   PathLanelets path_lanelets;

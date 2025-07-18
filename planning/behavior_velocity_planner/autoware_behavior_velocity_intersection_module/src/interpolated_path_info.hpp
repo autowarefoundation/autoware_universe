@@ -40,7 +40,7 @@ struct InterpolatedPathInfo
   /** the associative lane ids of lane_id */
   std::set<lanelet::Id> associative_lane_ids{};
   /** the range of indices for the path points with associative lane id */
-  std::optional<std::pair<size_t, size_t>> lane_id_interval{std::nullopt};
+  std::pair<size_t, size_t> lane_id_interval;
 };
 
 }  // namespace autoware::behavior_velocity_planner

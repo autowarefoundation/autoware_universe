@@ -369,7 +369,7 @@ bool IntersectionModule::checkYieldStuckVehicleInIntersection(
   const double yield_stuck_distance_thr = planner_param_.yield_stuck.distance_threshold;
 
   LineString2d sparse_intersection_path;
-  const auto [start, end] = interpolated_path_info.lane_id_interval.value();
+  const auto [start, end] = interpolated_path_info.lane_id_interval;
   for (unsigned i = start; i < end; ++i) {
     const auto & point = interpolated_path_info.path.points.at(i).point.pose.position;
     const auto yaw = tf2::getYaw(interpolated_path_info.path.points.at(i).point.pose.orientation);

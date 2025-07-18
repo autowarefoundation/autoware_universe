@@ -141,7 +141,7 @@ std::optional<size_t> getFirstPointInsidePolygonByFootprint(
   const autoware_utils::LinearRing2d & footprint, const double vehicle_length)
 {
   const auto & path_ip = interpolated_path_info.path;
-  const auto [lane_start, lane_end] = interpolated_path_info.lane_id_interval.value();
+  const auto [lane_start, lane_end] = interpolated_path_info.lane_id_interval;
   const size_t vehicle_length_idx = static_cast<size_t>(vehicle_length / interpolated_path_info.ds);
   // NOTE(soblin): subtract vehicle_length_idx for the case where ego's footprint overlaps with
   // attention lane at lane_start already. In such case, the intersection stopline needs to be
@@ -172,7 +172,7 @@ getFirstPointInsidePolygonsByFootprint(
   const autoware_utils::LinearRing2d & footprint, const double vehicle_length)
 {
   const auto & path_ip = interpolated_path_info.path;
-  const auto [lane_start, lane_end] = interpolated_path_info.lane_id_interval.value();
+  const auto [lane_start, lane_end] = interpolated_path_info.lane_id_interval;
   const size_t vehicle_length_idx = static_cast<size_t>(vehicle_length / interpolated_path_info.ds);
   const size_t start =
     static_cast<size_t>(std::max<int>(0, static_cast<int>(lane_start) - vehicle_length_idx));
@@ -380,8 +380,12 @@ std::optional<InterpolatedPathInfo> generateInterpolatedPath(
   interpolated_path_info.ds = ds;
   interpolated_path_info.lane_id = lane_id;
   interpolated_path_info.associative_lane_ids = associative_lane_ids;
-  interpolated_path_info.lane_id_interval =
+  const auto lane_id_interval =
     findLaneIdsInterval(interpolated_path_info.path, associative_lane_ids);
+  if (!lane_id_interval) {
+    return std::nullopt;
+  }
+  interpolated_path_info.lane_id_interval = lane_id_interval.value();
   return interpolated_path_info;
 }
 
@@ -483,9 +487,8 @@ std::optional<size_t> find_maximum_footprint_overshoot_position(
   if (turn_direction != "left" && turn_direction != "right") {
     return std::nullopt;
   }
-
   const auto & path = interpolated_path_info.path;
-  const auto & [_, intersection_end] = interpolated_path_info.lane_id_interval.value();
+  const auto & [_, intersection_end] = interpolated_path_info.lane_id_interval;
   return find_maximum_footprint_overshoot_position_impl(
     path, local_footprint, merging_lanelet, min_distance_threshold, search_start_idx,
     intersection_end);
