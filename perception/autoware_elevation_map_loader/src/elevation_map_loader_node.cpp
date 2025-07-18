@@ -105,8 +105,6 @@ ElevationMapLoaderNode::ElevationMapLoaderNode(const rclcpp::NodeOptions & optio
         this->create_subscription<autoware_map_msgs::msg::PointCloudMapMetaData>(
           "input/pointcloud_map_metadata", durable_qos,
           std::bind(&ElevationMapLoaderNode::onPointCloudMapMetaData, this, _1));
-      constexpr auto period_ns =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::duration<double>(1.0));
       group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
       pcd_loader_client_ = create_client<autoware_map_msgs::srv::GetSelectedPointCloudMap>(
         "service/get_selected_pointcloud_map", rmw_qos_profile_services_default, group_);
