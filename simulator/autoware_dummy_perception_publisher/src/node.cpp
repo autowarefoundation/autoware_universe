@@ -916,35 +916,75 @@ DummyPerceptionPublisherNode::collectDummyObjectPositions(
   return dummy_positions;
 }
 
-void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
-  const std::vector<tier4_simulation_msgs::msg::DummyObject> & dummy_objects,
+std::optional<std::string> DummyPerceptionPublisherNode::findBestPredictedObjectMatch(
+  const std::string & dummy_uuid,
+  const geometry_msgs::msg::Point & dummy_position,
+  const std::set<std::string> & available_predicted_uuids,
+  const std::map<std::string, geometry_msgs::msg::Point> & predicted_positions,
+  const autoware_perception_msgs::msg::PredictedObjects & predicted_objects)
+{
+  std::string closest_pred_uuid;
+  double min_distance = std::numeric_limits<double>::max();
+
+  for (const auto & pred_uuid : available_predicted_uuids) {
+    const auto & pred_pos = predicted_positions.at(pred_uuid);
+
+    // Find the actual predicted object for validation
+    autoware_perception_msgs::msg::PredictedObject candidate_pred_obj;
+    bool found_candidate = false;
+
+    for (const auto & pred_obj : predicted_objects.objects) {
+      unique_identifier_msgs::msg::UUID obj_uuid;
+      obj_uuid.uuid = pred_obj.object_id.uuid;
+      const auto & obj_uuid_str = autoware_utils_uuid::to_hex_string(obj_uuid);
+
+      if (obj_uuid_str == pred_uuid) {
+        candidate_pred_obj = pred_obj;
+        found_candidate = true;
+        break;
+      }
+    }
+
+    if (!found_candidate) {
+      continue;
+    }
+
+    // Validate the candidate using pose and path similarity
+    if (!isValidRemappingCandidate(candidate_pred_obj, dummy_uuid, dummy_position)) {
+      continue;
+    }
+
+    double distance = calculateEuclideanDistance(dummy_position, pred_pos);
+
+    if (distance < min_distance) {
+      min_distance = distance;
+      closest_pred_uuid = pred_uuid;
+    }
+  }
+
+  if (closest_pred_uuid.empty()) {
+    return std::nullopt;
+  }
+  
+  return closest_pred_uuid;
+}
+
+void DummyPerceptionPublisherNode::createRemappingsForDisappearedObjects(
+  const std::vector<std::string> & dummy_objects_to_remap,
+  std::set<std::string> & available_predicted_uuids,
+  const std::map<std::string, geometry_msgs::msg::Point> & predicted_positions,
+  const std::map<std::string, geometry_msgs::msg::Point> & dummy_positions,
   const autoware_perception_msgs::msg::PredictedObjects & predicted_objects)
 {
   const rclcpp::Time current_time = this->now();
-
-  // Create sets of available UUIDs
-  std::map<std::string, geometry_msgs::msg::Point> predicted_positions;
-  std::set<std::string> available_predicted_uuids = 
-    collectAvailablePredictedUUIDs(predicted_objects, predicted_positions);
-
-  // Check for disappeared predicted objects and mark dummy objects for remapping
-  std::vector<std::string> dummy_objects_to_remap = 
-    findDisappearedPredictedObjects(available_predicted_uuids);
-
-  // Update dummy object positions and find unmapped dummy objects
-  std::vector<std::string> unmapped_dummy_uuids;
-  std::map<std::string, geometry_msgs::msg::Point> dummy_positions = 
-    collectDummyObjectPositions(dummy_objects, current_time, unmapped_dummy_uuids);
-
-  // Handle remapping for dummy objects whose predicted objects disappeared
+  
   // First, remove old mappings
   for (const auto & dummy_uuid : dummy_objects_to_remap) {
     dummy_to_predicted_uuid_map_.erase(dummy_uuid);
   }
 
-  // Then, find best matches for all objects that need remapping
-  std::vector<std::pair<std::string, std::string>> new_mappings;   // dummy_uuid -> predicted_uuid
-  std::vector<std::pair<std::string, double>> mapping_candidates;  // dummy_uuid -> distance
+  // Find best matches for all objects that need remapping
+  std::vector<std::pair<std::string, double>> mapping_candidates;  // dummy_uuid:predicted_uuid -> distance
 
   for (const auto & dummy_uuid : dummy_objects_to_remap) {
     // Use last known position if available, otherwise use current position
@@ -964,48 +1004,14 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
     }
 
     // Find closest available predicted object for remapping
-    std::string closest_pred_uuid;
-    double min_distance = std::numeric_limits<double>::max();
-
-    for (const auto & pred_uuid : available_predicted_uuids) {
-      const auto & pred_pos = predicted_positions[pred_uuid];
-
-      // Find the actual predicted object for validation
-      autoware_perception_msgs::msg::PredictedObject candidate_pred_obj;
-      bool found_candidate = false;
-
-      for (const auto & pred_obj : predicted_objects.objects) {
-        unique_identifier_msgs::msg::UUID obj_uuid;
-        obj_uuid.uuid = pred_obj.object_id.uuid;
-        const auto & obj_uuid_str = autoware_utils_uuid::to_hex_string(obj_uuid);
-
-        if (obj_uuid_str == pred_uuid) {
-          candidate_pred_obj = pred_obj;
-          found_candidate = true;
-          break;
-        }
-      }
-
-      if (!found_candidate) {
-        continue;
-      }
-
-      // Validate the candidate using pose and path similarity
-      if (!isValidRemappingCandidate(candidate_pred_obj, dummy_uuid, remapping_position)) {
-        continue;
-      }
-
-      double distance = calculateEuclideanDistance(remapping_position, pred_pos);
-
-      if (distance < min_distance) {
-        min_distance = distance;
-        closest_pred_uuid = pred_uuid;
-      }
-    }
-
-    // Store candidate mapping with distance for prioritization
-    if (!closest_pred_uuid.empty()) {
-      mapping_candidates.emplace_back(dummy_uuid + ":" + closest_pred_uuid, min_distance);
+    auto best_match = findBestPredictedObjectMatch(
+      dummy_uuid, remapping_position, available_predicted_uuids, 
+      predicted_positions, predicted_objects);
+    
+    if (best_match) {
+      const double distance = calculateEuclideanDistance(
+        remapping_position, predicted_positions.at(*best_match));
+      mapping_candidates.emplace_back(dummy_uuid + ":" + *best_match, distance);
     }
   }
 
@@ -1028,6 +1034,32 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
       available_predicted_uuids.erase(predicted_uuid);
     }
   }
+}
+
+void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
+  const std::vector<tier4_simulation_msgs::msg::DummyObject> & dummy_objects,
+  const autoware_perception_msgs::msg::PredictedObjects & predicted_objects)
+{
+  const rclcpp::Time current_time = this->now();
+
+  // Create sets of available UUIDs
+  std::map<std::string, geometry_msgs::msg::Point> predicted_positions;
+  std::set<std::string> available_predicted_uuids = 
+    collectAvailablePredictedUUIDs(predicted_objects, predicted_positions);
+
+  // Check for disappeared predicted objects and mark dummy objects for remapping
+  std::vector<std::string> dummy_objects_to_remap = 
+    findDisappearedPredictedObjects(available_predicted_uuids);
+
+  // Update dummy object positions and find unmapped dummy objects
+  std::vector<std::string> unmapped_dummy_uuids;
+  std::map<std::string, geometry_msgs::msg::Point> dummy_positions = 
+    collectDummyObjectPositions(dummy_objects, current_time, unmapped_dummy_uuids);
+
+  // Handle remapping for dummy objects whose predicted objects disappeared
+  createRemappingsForDisappearedObjects(
+    dummy_objects_to_remap, available_predicted_uuids, predicted_positions, 
+    dummy_positions, predicted_objects);
 
   // Map unmapped dummy objects to closest available predicted objects
   for (const auto & dummy_uuid : unmapped_dummy_uuids) {
@@ -1036,49 +1068,14 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
     }
 
     const auto & dummy_pos = dummy_positions[dummy_uuid];
-    std::string closest_pred_uuid;
-    double min_distance = std::numeric_limits<double>::max();
+    auto best_match = findBestPredictedObjectMatch(
+      dummy_uuid, dummy_pos, available_predicted_uuids, 
+      predicted_positions, predicted_objects);
 
-    for (const auto & pred_uuid : available_predicted_uuids) {
-      const auto & pred_pos = predicted_positions[pred_uuid];
-
-      // Find the actual predicted object for validation
-      autoware_perception_msgs::msg::PredictedObject candidate_pred_obj;
-      bool found_candidate = false;
-
-      for (const auto & pred_obj : predicted_objects.objects) {
-        unique_identifier_msgs::msg::UUID obj_uuid;
-        obj_uuid.uuid = pred_obj.object_id.uuid;
-        const auto & obj_uuid_str = autoware_utils_uuid::to_hex_string(obj_uuid);
-
-        if (obj_uuid_str == pred_uuid) {
-          candidate_pred_obj = pred_obj;
-          found_candidate = true;
-          break;
-        }
-      }
-
-      if (!found_candidate) {
-        continue;
-      }
-
-      // For unmapped objects, use basic validation (mainly distance and path existence)
-      if (!isValidRemappingCandidate(candidate_pred_obj, dummy_uuid, dummy_pos)) {
-        continue;
-      }
-
-      double distance = calculateEuclideanDistance(dummy_pos, pred_pos);
-
-      if (distance < min_distance) {
-        min_distance = distance;
-        closest_pred_uuid = pred_uuid;
-      }
-    }
-
-    if (!closest_pred_uuid.empty()) {
-      dummy_to_predicted_uuid_map_[dummy_uuid] = closest_pred_uuid;
+    if (best_match) {
+      dummy_to_predicted_uuid_map_[dummy_uuid] = *best_match;
       dummy_mapping_timestamps_[dummy_uuid] = current_time;
-      available_predicted_uuids.erase(closest_pred_uuid);
+      available_predicted_uuids.erase(*best_match);
     }
   }
 
