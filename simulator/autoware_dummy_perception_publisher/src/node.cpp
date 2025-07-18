@@ -956,8 +956,6 @@ bool DummyPerceptionPublisherNode::isTrajectoryValid(
   // Maximum acceptable yaw change in radians (90 degrees)
   const double MAX_YAW_CHANGE = M_PI / 2.0;
   
-  // Maximum acceptable direction change in radians (120 degrees)
-  const double MAX_DIRECTION_CHANGE = 2.0 * M_PI / 3.0;
   
   // Maximum acceptable path length change ratio (300% change)
   const double MAX_PATH_LENGTH_CHANGE_RATIO = 3.0;
@@ -1056,7 +1054,7 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
   const autoware_perception_msgs::msg::PredictedObject & candidate_prediction,
   const std::string & dummy_uuid_str,
   const geometry_msgs::msg::Point & expected_position,
-  const rclcpp::Time & current_time)
+  const rclcpp::Time & /* current_time */)
 {
   // Maximum acceptable distance for remapping (meters)
   const double MAX_REMAPPING_DISTANCE = 5.0;
@@ -1147,7 +1145,7 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
 bool DummyPerceptionPublisherNode::arePathsSimilar(
   const autoware_perception_msgs::msg::PredictedObject & last_prediction,
   const autoware_perception_msgs::msg::PredictedObject & candidate_prediction,
-  const std::string & dummy_uuid_str)
+  const std::string & /* dummy_uuid_str */)
 {
   // Maximum acceptable average distance between corresponding path points (meters)
   const double MAX_AVERAGE_PATH_DISTANCE = 2.0;
