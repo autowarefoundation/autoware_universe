@@ -171,12 +171,10 @@ private:
   bool isValidRemappingCandidate(
     const autoware_perception_msgs::msg::PredictedObject & candidate_prediction,
     const std::string & dummy_uuid_str,
-    const geometry_msgs::msg::Point & expected_position,
-    const rclcpp::Time & current_time);
+    const geometry_msgs::msg::Point & expected_position);
   bool arePathsSimilar(
     const autoware_perception_msgs::msg::PredictedObject & last_prediction,
-    const autoware_perception_msgs::msg::PredictedObject & candidate_prediction,
-    const std::string & dummy_uuid_str);
+    const autoware_perception_msgs::msg::PredictedObject & candidate_prediction);
 
 public:
   DummyPerceptionPublisherNode();
