@@ -175,6 +175,9 @@ private:
   bool arePathsSimilar(
     const autoware_perception_msgs::msg::PredictedObject & last_prediction,
     const autoware_perception_msgs::msg::PredictedObject & candidate_prediction);
+  std::optional<geometry_msgs::msg::Point> calculateExpectedPosition(
+    const autoware_perception_msgs::msg::PredictedObject & last_prediction,
+    const std::string & dummy_uuid_str);
 
 public:
   DummyPerceptionPublisherNode();
