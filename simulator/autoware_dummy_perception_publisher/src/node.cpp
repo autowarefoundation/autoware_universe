@@ -1161,91 +1161,109 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
   const autoware_perception_msgs::msg::PredictedObject & last_prediction,
   const autoware_perception_msgs::msg::PredictedObject & candidate_prediction)
 {
-  // Maximum acceptable endpoint distance (meters) 
-  const double MAX_ENDPOINT_DISTANCE = 3.0;
+  // Maximum acceptable position difference (meters)
+  const double MAX_POSITION_DIFFERENCE = 3.0;
   
-  // Minimum path overlap ratio for comparison
-  const double MIN_OVERLAP_RATIO = 0.3;
-  
-  if (last_prediction.kinematics.predicted_paths.empty() || 
-      candidate_prediction.kinematics.predicted_paths.empty()) {
+  if (last_prediction.kinematics.predicted_paths.empty()) {
     return false;
   }
   
-  // Get the highest confidence paths
+  // Get the highest confidence path from last prediction
   const auto & last_path = *std::max_element(
     last_prediction.kinematics.predicted_paths.begin(),
     last_prediction.kinematics.predicted_paths.end(),
     [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
-    
-  const auto & candidate_path = *std::max_element(
-    candidate_prediction.kinematics.predicted_paths.begin(),
-    candidate_prediction.kinematics.predicted_paths.end(),
-    [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
   
-  if (last_path.path.empty() || candidate_path.path.empty()) {
+  if (last_path.path.empty()) {
     return false;
   }
   
-  // Compare path lengths - they should be reasonably similar
-  const size_t last_path_size = last_path.path.size();
-  const size_t candidate_path_size = candidate_path.path.size();
-  const size_t min_path_size = std::min(last_path_size, candidate_path_size);
-  const size_t max_path_size = std::max(last_path_size, candidate_path_size);
+  // Get candidate's current position
+  const auto & candidate_current_pos = candidate_prediction.kinematics.initial_pose_with_covariance.pose.position;
   
-  // Check if paths have sufficient overlap
-  const double overlap_ratio = static_cast<double>(min_path_size) / static_cast<double>(max_path_size);
-  if (overlap_ratio < MIN_OVERLAP_RATIO) {
-    std::cerr << "Paths have insufficient overlap ratio: " << overlap_ratio << std::endl;
-    return false;
-  }
+  // Calculate where the object should be now based on the last prediction path
+  // This requires finding the dummy object to get its UUID and then calculating expected position
+  // For now, use a simpler approach: get the time difference and interpolate/extrapolate
   
+  // Use the existing calculateExpectedPosition logic inline
+  const auto current_time = get_clock()->now();
   
-  // Compare endpoints if both paths are long enough
-  if (last_path_size > 2 && candidate_path_size > 2) {
-    const auto & last_endpoint = last_path.path.back().position;
-    const auto & candidate_endpoint = candidate_path.path.back().position;
+  // Find the dummy object UUID by searching through our mappings
+  std::string dummy_uuid_str;
+  for (const auto & [uuid, pred_uuid] : dummy_to_predicted_uuid_map_) {
+    // Check if this candidate matches any of our tracked predictions
+    unique_identifier_msgs::msg::UUID candidate_uuid;
+    candidate_uuid.uuid = candidate_prediction.object_id.uuid;
+    const auto candidate_uuid_str = autoware_utils_uuid::to_hex_string(candidate_uuid);
     
-    const double endpoint_distance = calculateEuclideanDistance(last_endpoint, candidate_endpoint);
-    if (endpoint_distance > MAX_ENDPOINT_DISTANCE) {
-      std::cerr << "Endpoint distance too large: " << endpoint_distance << "m" << std::endl;
-      return false;
+    if (pred_uuid == candidate_uuid_str) {
+      dummy_uuid_str = uuid;
+      break;
     }
   }
   
-  // Compare general direction of movement using first and last points
-  if (last_path_size > 1 && candidate_path_size > 1) {
-    // Calculate direction vectors
-    const auto & last_start = last_path.path[0].position;
-    const auto & last_end = last_path.path.back().position;
-    const auto & candidate_start = candidate_path.path[0].position;
-    const auto & candidate_end = candidate_path.path.back().position;
+  if (dummy_uuid_str.empty()) {
+    // If we can't find the dummy UUID, fall back to basic comparison
+    return true;
+  }
+  
+  // Get the expected position using our existing method
+  const auto expected_pos_opt = calculateExpectedPosition(last_prediction, dummy_uuid_str);
+  if (!expected_pos_opt.has_value()) {
+    return true; // Can't calculate expected position, allow the match
+  }
+  
+  const auto expected_pos = expected_pos_opt.value();
+  
+  // Compare candidate's current position with expected position
+  const double position_difference = calculateEuclideanDistance(candidate_current_pos, expected_pos);
+  if (position_difference > MAX_POSITION_DIFFERENCE) {
+    std::cerr << "Position difference too large: " << position_difference << "m" 
+              << " (expected: " << expected_pos.x << ", " << expected_pos.y
+              << ", candidate: " << candidate_current_pos.x << ", " << candidate_current_pos.y << ")" << std::endl;
+    return false;
+  }
+  
+  // Compare general direction if both predictions have paths
+  if (last_path.path.size() > 1 && !candidate_prediction.kinematics.predicted_paths.empty()) {
+    const auto & candidate_path = *std::max_element(
+      candidate_prediction.kinematics.predicted_paths.begin(),
+      candidate_prediction.kinematics.predicted_paths.end(),
+      [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
     
-    // Direction vectors
-    const double last_dx = last_end.x - last_start.x;
-    const double last_dy = last_end.y - last_start.y;
-    const double candidate_dx = candidate_end.x - candidate_start.x;
-    const double candidate_dy = candidate_end.y - candidate_start.y;
-    
-    // Calculate magnitudes
-    const double last_magnitude = std::sqrt(last_dx * last_dx + last_dy * last_dy);
-    const double candidate_magnitude = std::sqrt(candidate_dx * candidate_dx + candidate_dy * candidate_dy);
-    
-    // Check if both paths have significant movement
-    if (last_magnitude > 0.5 && candidate_magnitude > 0.5) {
-      // Calculate dot product for direction similarity
-      const double dot_product = last_dx * candidate_dx + last_dy * candidate_dy;
-      const double cos_angle = dot_product / (last_magnitude * candidate_magnitude);
+    if (candidate_path.path.size() > 1) {
+      // Calculate direction vectors
+      const auto & last_start = last_path.path[0].position;
+      const auto & last_end = last_path.path.back().position;
+      const auto & candidate_start = candidate_path.path[0].position;
+      const auto & candidate_end = candidate_path.path.back().position;
       
-      // Clamp to avoid numerical issues
-      const double clamped_cos = std::max(-1.0, std::min(1.0, cos_angle));
-      const double angle_diff = std::acos(clamped_cos);
+      // Direction vectors
+      const double last_dx = last_end.x - last_start.x;
+      const double last_dy = last_end.y - last_start.y;
+      const double candidate_dx = candidate_end.x - candidate_start.x;
+      const double candidate_dy = candidate_end.y - candidate_start.y;
       
-      // Allow up to 60 degrees difference in overall direction
-      const double MAX_OVERALL_DIRECTION_DIFF = M_PI / 3.0;
-      if (angle_diff > MAX_OVERALL_DIRECTION_DIFF) {
-        std::cerr << "Overall direction difference too large: " << angle_diff << " rad" << std::endl;
-        return false;
+      // Calculate magnitudes
+      const double last_magnitude = std::sqrt(last_dx * last_dx + last_dy * last_dy);
+      const double candidate_magnitude = std::sqrt(candidate_dx * candidate_dx + candidate_dy * candidate_dy);
+      
+      // Check if both paths have significant movement
+      if (last_magnitude > 0.5 && candidate_magnitude > 0.5) {
+        // Calculate dot product for direction similarity
+        const double dot_product = last_dx * candidate_dx + last_dy * candidate_dy;
+        const double cos_angle = dot_product / (last_magnitude * candidate_magnitude);
+        
+        // Clamp to avoid numerical issues
+        const double clamped_cos = std::max(-1.0, std::min(1.0, cos_angle));
+        const double angle_diff = std::acos(clamped_cos);
+        
+        // Allow up to 60 degrees difference in overall direction
+        const double MAX_OVERALL_DIRECTION_DIFF = M_PI / 3.0;
+        if (angle_diff > MAX_OVERALL_DIRECTION_DIFF) {
+          std::cerr << "Overall direction difference too large: " << angle_diff << " rad" << std::endl;
+          return false;
+        }
       }
     }
   }
