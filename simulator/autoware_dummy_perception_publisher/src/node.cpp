@@ -802,7 +802,17 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
 
   for (const auto & dummy_obj : dummy_objects) {
     const auto dummy_uuid_str = autoware_utils_uuid::to_hex_string(dummy_obj.id);
-    dummy_positions[dummy_uuid_str] = dummy_obj.initial_state.pose_covariance.pose.position;
+    
+    // Use last known position if available (which includes straight-line calculated position)
+    // Otherwise calculate current position using straight-line model
+    auto last_pos_it = dummy_last_known_positions_.find(dummy_uuid_str);
+    if (last_pos_it != dummy_last_known_positions_.end()) {
+      dummy_positions[dummy_uuid_str] = last_pos_it->second;
+    } else {
+      // Calculate current position using straight-line movement model
+      const auto current_pose = ObjectInfo::calculateStraightLinePosition(dummy_obj, current_time);
+      dummy_positions[dummy_uuid_str] = current_pose.position;
+    }
 
     if (dummy_to_predicted_uuid_map_.find(dummy_uuid_str) == dummy_to_predicted_uuid_map_.end()) {
       unmapped_dummy_uuids.push_back(dummy_uuid_str);
