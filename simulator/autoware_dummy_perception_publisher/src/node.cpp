@@ -357,49 +357,61 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
     std::random_device seed_gen;
     random_generator_.seed(seed_gen());
   }
-  
+
   // Initialize pedestrian path selection
   const unsigned int pedestrian_path_seed =
     static_cast<unsigned int>(this->declare_parameter("pedestrian_path_seed", 42));
-  const bool use_fixed_pedestrian_seed = this->declare_parameter("use_fixed_pedestrian_seed", false);
-  
+  const bool use_fixed_pedestrian_seed =
+    this->declare_parameter("use_fixed_pedestrian_seed", false);
+
   if (use_fixed_pedestrian_seed) {
     pedestrian_path_generator_.seed(pedestrian_path_seed);
   } else {
     std::random_device seed_gen;
     pedestrian_path_generator_.seed(seed_gen());
   }
-  
+
   // Initialize path selection distribution
   path_selection_dist_ = std::uniform_real_distribution<double>(0.0, 1.0);
-  
+
   // Declare prediction parameters
   predicted_path_delay_ = this->declare_parameter("predicted_path_delay", 2.0);
   min_keep_duration_ = this->declare_parameter("min_keep_duration", 3.0);
   max_yaw_change_ = this->declare_parameter("max_yaw_change", M_PI / 2.0);
   max_path_length_change_ratio_ = this->declare_parameter("max_path_length_change_ratio", 3.0);
-  
+
   // Declare vehicle parameters
   vehicle_max_remapping_distance_ = this->declare_parameter("vehicle.max_remapping_distance", 2.0);
-  vehicle_max_remapping_yaw_diff_ = this->declare_parameter("vehicle.max_remapping_yaw_diff", M_PI / 12.0);
-  vehicle_max_speed_difference_ratio_ = this->declare_parameter("vehicle.max_speed_difference_ratio", 1.05);
+  vehicle_max_remapping_yaw_diff_ =
+    this->declare_parameter("vehicle.max_remapping_yaw_diff", M_PI / 12.0);
+  vehicle_max_speed_difference_ratio_ =
+    this->declare_parameter("vehicle.max_speed_difference_ratio", 1.05);
   vehicle_min_speed_ratio_ = this->declare_parameter("vehicle.min_speed_ratio", 0.5);
   vehicle_max_speed_ratio_ = this->declare_parameter("vehicle.max_speed_ratio", 1.5);
   vehicle_speed_check_threshold_ = this->declare_parameter("vehicle.speed_check_threshold", 1.0);
-  vehicle_max_position_difference_ = this->declare_parameter("vehicle.max_position_difference", 1.5);
+  vehicle_max_position_difference_ =
+    this->declare_parameter("vehicle.max_position_difference", 1.5);
   vehicle_max_path_length_ratio_ = this->declare_parameter("vehicle.max_path_length_ratio", 1.1);
-  vehicle_max_overall_direction_diff_ = this->declare_parameter("vehicle.max_overall_direction_diff", M_PI / 6.0);
-  
+  vehicle_max_overall_direction_diff_ =
+    this->declare_parameter("vehicle.max_overall_direction_diff", M_PI / 6.0);
+
   // Declare pedestrian parameters
-  pedestrian_max_remapping_distance_ = this->declare_parameter("pedestrian.max_remapping_distance", 3.0);
-  pedestrian_max_remapping_yaw_diff_ = this->declare_parameter("pedestrian.max_remapping_yaw_diff", M_PI / 4.0);
-  pedestrian_max_speed_difference_ratio_ = this->declare_parameter("pedestrian.max_speed_difference_ratio", 1.3);
+  pedestrian_max_remapping_distance_ =
+    this->declare_parameter("pedestrian.max_remapping_distance", 3.0);
+  pedestrian_max_remapping_yaw_diff_ =
+    this->declare_parameter("pedestrian.max_remapping_yaw_diff", M_PI / 4.0);
+  pedestrian_max_speed_difference_ratio_ =
+    this->declare_parameter("pedestrian.max_speed_difference_ratio", 1.3);
   pedestrian_min_speed_ratio_ = this->declare_parameter("pedestrian.min_speed_ratio", 0.3);
   pedestrian_max_speed_ratio_ = this->declare_parameter("pedestrian.max_speed_ratio", 2.0);
-  pedestrian_speed_check_threshold_ = this->declare_parameter("pedestrian.speed_check_threshold", 0.5);
-  pedestrian_max_position_difference_ = this->declare_parameter("pedestrian.max_position_difference", 2.5);
-  pedestrian_max_path_length_ratio_ = this->declare_parameter("pedestrian.max_path_length_ratio", 1.5);
-  pedestrian_max_overall_direction_diff_ = this->declare_parameter("pedestrian.max_overall_direction_diff", M_PI / 3.0);
+  pedestrian_speed_check_threshold_ =
+    this->declare_parameter("pedestrian.speed_check_threshold", 0.5);
+  pedestrian_max_position_difference_ =
+    this->declare_parameter("pedestrian.max_position_difference", 2.5);
+  pedestrian_max_path_length_ratio_ =
+    this->declare_parameter("pedestrian.max_path_length_ratio", 1.5);
+  pedestrian_max_overall_direction_diff_ =
+    this->declare_parameter("pedestrian.max_overall_direction_diff", M_PI / 3.0);
 
   // create subscriber and publisher
   rclcpp::QoS qos{1};
@@ -505,7 +517,8 @@ void DummyPerceptionPublisherNode::timerCallback()
 
         RCLCPP_DEBUG(
           rclcpp::get_logger("dummy_perception_publisher"),
-          "No matching predicted object found for dummy object with ID: %s", dummy_uuid_str.c_str());
+          "No matching predicted object found for dummy object with ID: %s",
+          dummy_uuid_str.c_str());
       }
 
       // Use straight-line motion (original constructor) for all other actions
@@ -635,6 +648,7 @@ void DummyPerceptionPublisherNode::objectCallback(
   const tier4_simulation_msgs::msg::DummyObject::ConstSharedPtr msg)
 {
   switch (msg->action) {
+    case tier4_simulation_msgs::msg::DummyObject::PREDICT:
     case tier4_simulation_msgs::msg::DummyObject::ADD: {
       tf2::Transform tf_input2map;
       tf2::Transform tf_input2object_origin;
@@ -725,47 +739,6 @@ void DummyPerceptionPublisherNode::objectCallback(
       objects_.clear();
       break;
     }
-    case tier4_simulation_msgs::msg::DummyObject::PREDICT: {
-      // Handle PREDICT action the same way as MODIFY
-      for (size_t i = 0; i < objects_.size(); ++i) {
-        if (objects_.at(i).id.uuid == msg->id.uuid) {
-          tf2::Transform tf_input2map;
-          tf2::Transform tf_input2object_origin;
-          tf2::Transform tf_map2object_origin;
-          try {
-            geometry_msgs::msg::TransformStamped ros_input2map;
-            ros_input2map = tf_buffer_.lookupTransform(
-              /*target*/ msg->header.frame_id, /*src*/ "map", msg->header.stamp,
-              rclcpp::Duration::from_seconds(0.5));
-            tf2::fromMsg(ros_input2map.transform, tf_input2map);
-          } catch (tf2::TransformException & ex) {
-            RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());
-            return;
-          }
-          tf2::fromMsg(msg->initial_state.pose_covariance.pose, tf_input2object_origin);
-          tf_map2object_origin = tf_input2map.inverse() * tf_input2object_origin;
-          tier4_simulation_msgs::msg::DummyObject object;
-          objects_.at(i) = *msg;
-          tf2::toMsg(tf_map2object_origin, objects_.at(i).initial_state.pose_covariance.pose);
-          if (use_base_link_z_) {
-            // Use base_link Z
-            geometry_msgs::msg::TransformStamped ros_map2base_link;
-            try {
-              ros_map2base_link = tf_buffer_.lookupTransform(
-                "map", "base_link", rclcpp::Time(0), rclcpp::Duration::from_seconds(0.5));
-              objects_.at(i).initial_state.pose_covariance.pose.position.z =
-                ros_map2base_link.transform.translation.z + 0.5 * objects_.at(i).shape.dimensions.z;
-            } catch (tf2::TransformException & ex) {
-              RCLCPP_WARN_SKIPFIRST_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());
-              return;
-            }
-          }
-
-          break;
-        }
-      }
-      break;
-    }
   }
 }
 
@@ -852,21 +825,21 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
 
         // For pedestrians, randomly select a path when updating
         autoware_perception_msgs::msg::PredictedObject modified_predicted_object = predicted_object;
-        
+
         // Check if this is a pedestrian object
         const bool is_pedestrian = std::any_of(
           predicted_object.classification.begin(), predicted_object.classification.end(),
           [](const auto & classification) {
-            return classification.label == 
+            return classification.label ==
                    autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN;
           });
-        
+
         if (is_pedestrian && predicted_object.kinematics.predicted_paths.size() > 1) {
           // Randomly select a path index
           const size_t num_paths = predicted_object.kinematics.predicted_paths.size();
-          const size_t random_path_index = 
+          const size_t random_path_index =
             static_cast<size_t>(path_selection_dist_(pedestrian_path_generator_) * num_paths);
-          
+
           // Reorder paths to put the randomly selected path first
           // This way the static calculateTrajectoryBasedPosition will use it
           auto & paths = modified_predicted_object.kinematics.predicted_paths;
@@ -874,13 +847,13 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
             // Swap the randomly selected path with the first path
             std::swap(paths[0], paths[random_path_index]);
           }
-          
+
           RCLCPP_DEBUG(
             rclcpp::get_logger("dummy_perception_publisher"),
-            "Randomly selected path %zu out of %zu for pedestrian %s",
-            random_path_index, num_paths, obj_uuid_str.c_str());
+            "Randomly selected path %zu out of %zu for pedestrian %s", random_path_index, num_paths,
+            obj_uuid_str.c_str());
         }
-        
+
         // Store this as the new prediction to use for some seconds
         dummy_last_used_predictions_[obj_uuid_str] = modified_predicted_object;
         dummy_last_used_prediction_times_[obj_uuid_str] = msg_time;
@@ -899,14 +872,14 @@ std::set<std::string> DummyPerceptionPublisherNode::collectAvailablePredictedUUI
   std::map<std::string, geometry_msgs::msg::Point> & predicted_positions)
 {
   std::set<std::string> available_predicted_uuids;
-  
+
   for (const auto & pred_obj : predicted_objects.objects) {
     const auto pred_uuid_str = autoware_utils_uuid::to_hex_string(pred_obj.object_id);
     available_predicted_uuids.insert(pred_uuid_str);
     predicted_positions[pred_uuid_str] =
       pred_obj.kinematics.initial_pose_with_covariance.pose.position;
   }
-  
+
   return available_predicted_uuids;
 }
 
@@ -914,7 +887,7 @@ std::vector<std::string> DummyPerceptionPublisherNode::findDisappearedPredictedO
   std::set<std::string> & available_predicted_uuids)
 {
   std::vector<std::string> dummy_objects_to_remap;
-  
+
   for (const auto & mapping : dummy_to_predicted_uuid_map_) {
     const std::string & dummy_uuid = mapping.first;
     const std::string & predicted_uuid = mapping.second;
@@ -927,18 +900,17 @@ std::vector<std::string> DummyPerceptionPublisherNode::findDisappearedPredictedO
       available_predicted_uuids.erase(predicted_uuid);
     }
   }
-  
+
   return dummy_objects_to_remap;
 }
 
-std::map<std::string, geometry_msgs::msg::Point> 
+std::map<std::string, geometry_msgs::msg::Point>
 DummyPerceptionPublisherNode::collectDummyObjectPositions(
   const std::vector<tier4_simulation_msgs::msg::DummyObject> & dummy_objects,
-  const rclcpp::Time & current_time,
-  std::vector<std::string> & unmapped_dummy_uuids)
+  const rclcpp::Time & current_time, std::vector<std::string> & unmapped_dummy_uuids)
 {
   std::map<std::string, geometry_msgs::msg::Point> dummy_positions;
-  
+
   for (const auto & dummy_obj : dummy_objects) {
     const auto dummy_uuid_str = autoware_utils_uuid::to_hex_string(dummy_obj.id);
 
@@ -957,13 +929,12 @@ DummyPerceptionPublisherNode::collectDummyObjectPositions(
       unmapped_dummy_uuids.push_back(dummy_uuid_str);
     }
   }
-  
+
   return dummy_positions;
 }
 
 std::optional<std::string> DummyPerceptionPublisherNode::findBestPredictedObjectMatch(
-  const std::string & dummy_uuid,
-  const geometry_msgs::msg::Point & dummy_position,
+  const std::string & dummy_uuid, const geometry_msgs::msg::Point & dummy_position,
   const std::set<std::string> & available_predicted_uuids,
   const std::map<std::string, geometry_msgs::msg::Point> & predicted_positions,
   const autoware_perception_msgs::msg::PredictedObjects & predicted_objects)
@@ -1010,7 +981,7 @@ std::optional<std::string> DummyPerceptionPublisherNode::findBestPredictedObject
   if (closest_pred_uuid.empty()) {
     return std::nullopt;
   }
-  
+
   return closest_pred_uuid;
 }
 
@@ -1022,14 +993,15 @@ void DummyPerceptionPublisherNode::createRemappingsForDisappearedObjects(
   const autoware_perception_msgs::msg::PredictedObjects & predicted_objects)
 {
   const rclcpp::Time current_time = this->now();
-  
+
   // First, remove old mappings
   for (const auto & dummy_uuid : dummy_objects_to_remap) {
     dummy_to_predicted_uuid_map_.erase(dummy_uuid);
   }
 
   // Find best matches for all objects that need remapping
-  std::vector<std::pair<std::string, double>> mapping_candidates;  // dummy_uuid:predicted_uuid -> distance
+  std::vector<std::pair<std::string, double>>
+    mapping_candidates;  // dummy_uuid:predicted_uuid -> distance
 
   for (const auto & dummy_uuid : dummy_objects_to_remap) {
     // Use last known position if available, otherwise use current position
@@ -1050,12 +1022,12 @@ void DummyPerceptionPublisherNode::createRemappingsForDisappearedObjects(
 
     // Find closest available predicted object for remapping
     auto best_match = findBestPredictedObjectMatch(
-      dummy_uuid, remapping_position, available_predicted_uuids, 
-      predicted_positions, predicted_objects);
-    
+      dummy_uuid, remapping_position, available_predicted_uuids, predicted_positions,
+      predicted_objects);
+
     if (best_match) {
-      const double distance = calculateEuclideanDistance(
-        remapping_position, predicted_positions.at(*best_match));
+      const double distance =
+        calculateEuclideanDistance(remapping_position, predicted_positions.at(*best_match));
       mapping_candidates.emplace_back(dummy_uuid + ":" + *best_match, distance);
     }
   }
@@ -1089,22 +1061,22 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
 
   // Create sets of available UUIDs
   std::map<std::string, geometry_msgs::msg::Point> predicted_positions;
-  std::set<std::string> available_predicted_uuids = 
+  std::set<std::string> available_predicted_uuids =
     collectAvailablePredictedUUIDs(predicted_objects, predicted_positions);
 
   // Check for disappeared predicted objects and mark dummy objects for remapping
-  std::vector<std::string> dummy_objects_to_remap = 
+  std::vector<std::string> dummy_objects_to_remap =
     findDisappearedPredictedObjects(available_predicted_uuids);
 
   // Update dummy object positions and find unmapped dummy objects
   std::vector<std::string> unmapped_dummy_uuids;
-  std::map<std::string, geometry_msgs::msg::Point> dummy_positions = 
+  std::map<std::string, geometry_msgs::msg::Point> dummy_positions =
     collectDummyObjectPositions(dummy_objects, current_time, unmapped_dummy_uuids);
 
   // Handle remapping for dummy objects whose predicted objects disappeared
   createRemappingsForDisappearedObjects(
-    dummy_objects_to_remap, available_predicted_uuids, predicted_positions, 
-    dummy_positions, predicted_objects);
+    dummy_objects_to_remap, available_predicted_uuids, predicted_positions, dummy_positions,
+    predicted_objects);
 
   // Map unmapped dummy objects to closest available predicted objects
   for (const auto & dummy_uuid : unmapped_dummy_uuids) {
@@ -1114,8 +1086,7 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
 
     const auto & dummy_pos = dummy_positions[dummy_uuid];
     auto best_match = findBestPredictedObjectMatch(
-      dummy_uuid, dummy_pos, available_predicted_uuids, 
-      predicted_positions, predicted_objects);
+      dummy_uuid, dummy_pos, available_predicted_uuids, predicted_positions, predicted_objects);
 
     if (best_match) {
       dummy_to_predicted_uuid_map_[dummy_uuid] = *best_match;
@@ -1166,7 +1137,6 @@ bool DummyPerceptionPublisherNode::isTrajectoryValid(
   const autoware_perception_msgs::msg::PredictedObject & new_prediction,
   const std::string & dummy_uuid_str)
 {
-
   // If current prediction is empty, accept any new prediction
   if (current_prediction.kinematics.predicted_paths.empty()) {
     return true;
@@ -1277,9 +1247,12 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
   // Use class-specific thresholds
   // Pedestrians: more lenient due to unpredictable movement patterns
   // Vehicles: stricter for more predictable movement
-  const double max_remapping_distance = is_pedestrian ? pedestrian_max_remapping_distance_ : vehicle_max_remapping_distance_;
-  const double max_remapping_yaw_diff = is_pedestrian ? pedestrian_max_remapping_yaw_diff_ : vehicle_max_remapping_yaw_diff_;
-  const double max_speed_difference_ratio = is_pedestrian ? pedestrian_max_speed_difference_ratio_ : vehicle_max_speed_difference_ratio_;
+  const double max_remapping_distance =
+    is_pedestrian ? pedestrian_max_remapping_distance_ : vehicle_max_remapping_distance_;
+  const double max_remapping_yaw_diff =
+    is_pedestrian ? pedestrian_max_remapping_yaw_diff_ : vehicle_max_remapping_yaw_diff_;
+  const double max_speed_difference_ratio =
+    is_pedestrian ? pedestrian_max_speed_difference_ratio_ : vehicle_max_speed_difference_ratio_;
 
   // Check if candidate has predicted paths
   if (candidate_prediction.kinematics.predicted_paths.empty()) {
@@ -1299,8 +1272,10 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
       candidate_twist.linear.y * candidate_twist.linear.y);
 
     // Speed bounds check - more lenient for pedestrians
-    const double min_speed_ratio = is_pedestrian ? pedestrian_min_speed_ratio_ : vehicle_min_speed_ratio_;
-    const double max_speed_ratio = is_pedestrian ? pedestrian_max_speed_ratio_ : vehicle_max_speed_ratio_;
+    const double min_speed_ratio =
+      is_pedestrian ? pedestrian_min_speed_ratio_ : vehicle_min_speed_ratio_;
+    const double max_speed_ratio =
+      is_pedestrian ? pedestrian_max_speed_ratio_ : vehicle_max_speed_ratio_;
     const double speed_check_threshold =
       is_pedestrian ? pedestrian_speed_check_threshold_ : vehicle_speed_check_threshold_;
 
@@ -1457,7 +1432,8 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
   }
 
   // Maximum acceptable position difference (meters)
-  const double max_position_difference = is_pedestrian ? pedestrian_max_position_difference_ : vehicle_max_position_difference_;
+  const double max_position_difference =
+    is_pedestrian ? pedestrian_max_position_difference_ : vehicle_max_position_difference_;
 
   if (last_prediction.kinematics.predicted_paths.empty()) {
     return false;
@@ -1549,7 +1525,8 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
       const double candidate_path_length = calculatePathLength(candidate_path);
 
       // Check path length similarity - more lenient for pedestrians
-      const double max_path_length_ratio = is_pedestrian ? pedestrian_max_path_length_ratio_ : vehicle_max_path_length_ratio_;
+      const double max_path_length_ratio =
+        is_pedestrian ? pedestrian_max_path_length_ratio_ : vehicle_max_path_length_ratio_;
       if (last_path_length > 0.1 && candidate_path_length > 0.1) {
         const double length_ratio = std::max(
           last_path_length / candidate_path_length, candidate_path_length / last_path_length);
@@ -1590,8 +1567,9 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
         const double angle_diff = std::acos(clamped_cos);
 
         // Allow more direction difference for pedestrians who can change direction quickly
-        const double max_overall_direction_diff =
-          is_pedestrian ? pedestrian_max_overall_direction_diff_ : vehicle_max_overall_direction_diff_;
+        const double max_overall_direction_diff = is_pedestrian
+                                                    ? pedestrian_max_overall_direction_diff_
+                                                    : vehicle_max_overall_direction_diff_;
         if (angle_diff > max_overall_direction_diff) {
           RCLCPP_DEBUG(
             rclcpp::get_logger("dummy_perception_publisher"),
