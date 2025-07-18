@@ -168,6 +168,15 @@ private:
     const autoware_perception_msgs::msg::PredictedObject & current_prediction,
     const autoware_perception_msgs::msg::PredictedObject & new_prediction,
     const std::string & dummy_uuid_str);
+  bool isValidRemappingCandidate(
+    const autoware_perception_msgs::msg::PredictedObject & candidate_prediction,
+    const std::string & dummy_uuid_str,
+    const geometry_msgs::msg::Point & expected_position,
+    const rclcpp::Time & current_time);
+  bool arePathsSimilar(
+    const autoware_perception_msgs::msg::PredictedObject & last_prediction,
+    const autoware_perception_msgs::msg::PredictedObject & candidate_prediction,
+    const std::string & dummy_uuid_str);
 
 public:
   DummyPerceptionPublisherNode();
