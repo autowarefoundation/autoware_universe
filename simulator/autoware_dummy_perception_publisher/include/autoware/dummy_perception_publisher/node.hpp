@@ -216,6 +216,29 @@ private:
   std::optional<geometry_msgs::msg::Point> calculateExpectedPosition(
     const autoware_perception_msgs::msg::PredictedObject & last_prediction,
     const std::string & dummy_uuid_str);
+  
+  // Helper methods for updateDummyToPredictedMapping
+  std::set<std::string> collectAvailablePredictedUUIDs(
+    const autoware_perception_msgs::msg::PredictedObjects & predicted_objects,
+    std::map<std::string, geometry_msgs::msg::Point> & predicted_positions);
+  std::vector<std::string> findDisappearedPredictedObjects(
+    std::set<std::string> & available_predicted_uuids);
+  std::map<std::string, geometry_msgs::msg::Point> collectDummyObjectPositions(
+    const std::vector<tier4_simulation_msgs::msg::DummyObject> & dummy_objects,
+    const rclcpp::Time & current_time,
+    std::vector<std::string> & unmapped_dummy_uuids);
+  std::optional<std::string> findBestPredictedObjectMatch(
+    const std::string & dummy_uuid,
+    const geometry_msgs::msg::Point & dummy_position,
+    const std::set<std::string> & available_predicted_uuids,
+    const std::map<std::string, geometry_msgs::msg::Point> & predicted_positions,
+    const autoware_perception_msgs::msg::PredictedObjects & predicted_objects);
+  void createRemappingsForDisappearedObjects(
+    const std::vector<std::string> & dummy_objects_to_remap,
+    std::set<std::string> & available_predicted_uuids,
+    const std::map<std::string, geometry_msgs::msg::Point> & predicted_positions,
+    const std::map<std::string, geometry_msgs::msg::Point> & dummy_positions,
+    const autoware_perception_msgs::msg::PredictedObjects & predicted_objects);
 
 public:
   DummyPerceptionPublisherNode();
