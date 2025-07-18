@@ -43,7 +43,7 @@ namespace autoware::cuda_pointcloud_preprocessor
 
 namespace thrust_stream = cuda_utils::thrust_stream;
 
-CudaPointcloudPreprocessor::CudaPointcloudPreprocessor()
+CudaPointcloudPreprocessor::CudaPointcloudPreprocessor() : stream_(initialize_stream())
 {
   using sensor_msgs::msg::PointField;
 
@@ -68,66 +68,25 @@ CudaPointcloudPreprocessor::CudaPointcloudPreprocessor()
     make_point_field("channel", 14, PointField::UINT16, 1),
   };
 
-  CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
-
   int num_sm{};
   CHECK_CUDA_ERROR(cudaDeviceGetAttribute(&num_sm, cudaDevAttrMultiProcessorCount, 0));
   max_blocks_per_grid_ = 4 * num_sm;  // used for strided loops
 
-  cudaMemPoolProps pool_props{};
-  memset(&pool_props, 0, sizeof(cudaMemPoolProps));
-  pool_props.allocType = cudaMemAllocationTypePinned;
-  pool_props.handleTypes = cudaMemHandleTypePosixFileDescriptor;
-
-  pool_props.location.type = cudaMemLocationTypeDevice;
-  CHECK_CUDA_ERROR(cudaGetDevice(&(pool_props.location.id)));
-
-  CHECK_CUDA_ERROR(cudaMemPoolCreate(&device_memory_pool_, &pool_props));
-  MemoryPoolAllocator<TwistStruct2D> allocator_2d(device_memory_pool_);
-  MemoryPoolAllocator<TwistStruct3D> allocator_3d(device_memory_pool_);
-  MemoryPoolAllocator<std::int32_t> allocator_int32(device_memory_pool_);
-  MemoryPoolAllocator<std::uint32_t> allocator_uint32(device_memory_pool_);
-  MemoryPoolAllocator<std::uint8_t> allocator_uint8(device_memory_pool_);
-  MemoryPoolAllocator<InputPointType> allocator_points(device_memory_pool_);
-
-  device_twist_2d_structs_ =
-    thrust::device_vector<TwistStruct2D, MemoryPoolAllocator<TwistStruct2D>>(allocator_2d);
-  device_twist_3d_structs_ =
-    thrust::device_vector<TwistStruct3D, MemoryPoolAllocator<TwistStruct3D>>(allocator_3d);
-
   num_rings_ = 1;
   max_points_per_ring_ = 1;
   num_organized_points_ = num_rings_ * max_points_per_ring_;
-  device_ring_index_ =
-    thrust::device_vector<std::int32_t, MemoryPoolAllocator<std::int32_t>>(allocator_int32);
   device_ring_index_.resize(num_rings_);
-
-  device_indexes_tensor_ =
-    thrust::device_vector<std::uint32_t, MemoryPoolAllocator<std::uint32_t>>(allocator_uint32);
-  device_sorted_indexes_tensor_ =
-    thrust::device_vector<std::uint32_t, MemoryPoolAllocator<std::uint32_t>>(allocator_uint32);
 
   device_indexes_tensor_.resize(num_organized_points_);
   device_sorted_indexes_tensor_.resize(num_organized_points_);
 
-  device_segment_offsets_ =
-    thrust::device_vector<std::int32_t, MemoryPoolAllocator<std::int32_t>>(allocator_int32);
   device_segment_offsets_.resize(num_rings_ + 1);
   device_segment_offsets_[0] = 0;
   device_segment_offsets_[1] = 1;
 
-  device_max_ring_ =
-    thrust::device_vector<std::int32_t, MemoryPoolAllocator<std::int32_t>>(allocator_int32);
   device_max_ring_.resize(1);
-
-  device_max_points_per_ring_ =
-    thrust::device_vector<std::int32_t, MemoryPoolAllocator<std::int32_t>>(allocator_int32);
   device_max_points_per_ring_.resize(1);
 
-  device_input_points_ =
-    thrust::device_vector<InputPointType, MemoryPoolAllocator<InputPointType>>(allocator_points);
-  device_organized_points_ =
-    thrust::device_vector<InputPointType, MemoryPoolAllocator<InputPointType>>(allocator_points);
   device_organized_points_.resize(num_organized_points_);
 
   thrust_stream::fill(device_max_ring_, 0, stream_);
@@ -140,9 +99,6 @@ CudaPointcloudPreprocessor::CudaPointcloudPreprocessor()
     thrust::raw_pointer_cast(device_indexes_tensor_.data()),
     thrust::raw_pointer_cast(device_sorted_indexes_tensor_.data()), stream_);
 
-  device_sort_workspace_ =
-    thrust::device_vector<std::uint8_t, MemoryPoolAllocator<std::uint8_t>>(allocator_uint8);
-
   device_transformed_points_.resize(num_organized_points_);
   device_crop_mask_.resize(num_organized_points_);
   device_ring_outlier_mask_.resize(num_organized_points_);
@@ -151,11 +107,17 @@ CudaPointcloudPreprocessor::CudaPointcloudPreprocessor()
   preallocateOutput();
 }
 
+cudaStream_t CudaPointcloudPreprocessor::initialize_stream()
+{
+  cudaStream_t stream{};
+  CHECK_CUDA_ERROR(cudaStreamCreate(&stream));
+  return stream;
+}
+
 void CudaPointcloudPreprocessor::setCropBoxParameters(
   const std::vector<CropBoxParameters> & crop_box_parameters)
 {
-  host_crop_box_structs_ = crop_box_parameters;
-  device_crop_box_structs_ = host_crop_box_structs_;
+  device_crop_box_structs_ = crop_box_parameters;
 }
 
 void CudaPointcloudPreprocessor::setRingOutlierFilterParameters(
@@ -412,12 +374,12 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
 
   // Crop box filter
   int crop_box_blocks_per_grid = std::min(blocks_per_grid, max_blocks_per_grid_);
-  if (host_crop_box_structs_.size() > 0) {
+  if (device_crop_box_structs_.size() > 0) {
     cropBoxLaunch(
       device_transformed_points, device_crop_mask, device_nan_mask, num_organized_points_,
       thrust::raw_pointer_cast(device_crop_box_structs_.data()),
-      static_cast<int>(host_crop_box_structs_.size()), crop_box_blocks_per_grid, threads_per_block_,
-      stream_);
+      static_cast<int>(device_crop_box_structs_.size()), crop_box_blocks_per_grid,
+      threads_per_block_, stream_);
   } else {
     thrust_stream::fill_n(device_crop_mask_, num_organized_points_, 1U, stream_);
   }
