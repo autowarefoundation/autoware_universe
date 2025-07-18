@@ -54,8 +54,7 @@ struct ObjectInfo
   ObjectInfo(
     const tier4_simulation_msgs::msg::DummyObject & object,
     const autoware_perception_msgs::msg::PredictedObject & predicted_object,
-    const rclcpp::Time & predicted_time, const rclcpp::Time & current_time,
-    const rclcpp::Time & mapping_time);
+    const rclcpp::Time & predicted_time, const rclcpp::Time & current_time);
   double length;
   double width;
   double height;
@@ -134,9 +133,14 @@ private:
   tf2_ros::TransformListener tf_listener_;
   std::vector<tier4_simulation_msgs::msg::DummyObject> objects_;
   std::deque<autoware_perception_msgs::msg::PredictedObjects> predicted_objects_buffer_;
-  static constexpr size_t MAX_BUFFER_SIZE = 50;  // Store last 1 seconds at 10Hz
+  static constexpr size_t MAX_BUFFER_SIZE = 50;  // Store last 5 seconds at 10Hz
   std::map<std::string, std::string> dummy_to_predicted_uuid_map_;
   std::map<std::string, rclcpp::Time> dummy_mapping_timestamps_;
+  std::map<std::string, geometry_msgs::msg::Point> dummy_last_known_positions_;
+  std::map<std::string, rclcpp::Time> dummy_creation_timestamps_;
+  std::map<std::string, autoware_perception_msgs::msg::PredictedObject> dummy_last_used_predictions_;
+  std::map<std::string, rclcpp::Time> dummy_last_used_prediction_times_;
+  std::map<std::string, rclcpp::Time> dummy_prediction_update_timestamps_;
   double visible_range_;
   double detection_successful_rate_;
   bool enable_ray_tracing_;
