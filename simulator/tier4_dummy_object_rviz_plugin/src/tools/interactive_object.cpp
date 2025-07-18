@@ -299,7 +299,7 @@ void InteractiveObjectTool::onPoseSet(double x, double y, double theta)
   output_msg.initial_state.accel_covariance.accel.linear.z = 0.0;
   output_msg.max_velocity = max_velocity_->getFloat();
   output_msg.min_velocity = min_velocity_->getFloat();
-  output_msg.action = DummyObject::ADD;
+  output_msg.action = predicted_property_->getBool() ? DummyObject::PREDICT : DummyObject::ADD;
 
   dummy_object_info_pub_->publish(output_msg);
 }
