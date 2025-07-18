@@ -151,6 +151,7 @@ protected:  // NOLINT for Qt
   rviz_default_plugins::tools::MoveTool move_tool_;
 
   rviz_common::properties::BoolProperty * enable_interactive_property_;
+  rviz_common::properties::BoolProperty * predicted_property_;
   rviz_common::properties::StringProperty * topic_property_;
   rviz_common::properties::FloatProperty * std_dev_x_;
   rviz_common::properties::FloatProperty * std_dev_y_;
