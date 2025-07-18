@@ -121,6 +121,8 @@ public:
     const std::array<uint8_t, 16> & uuid) const;
   [[nodiscard]] boost::optional<tf2::Transform> transform(
     const std::array<uint8_t, 16> & uuid) const;
+  [[nodiscard]] InteractiveObject * getTargetObject() const;
+  [[nodiscard]] boost::optional<std::array<uint8_t, 16>> getTargetUuid() const;
 
 private:
   size_t nearest(const Ogre::Vector3 & point) const;
