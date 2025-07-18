@@ -70,7 +70,7 @@ private:
     processing_time_detail_pub_{};
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{};
 
-  std::unordered_map<std::string, TrackedObject> tracked_objects_;
+  mutable std::unordered_map<std::string, TrackedObject> tracked_objects_;
 
   void onPathWithLaneIdSubscription(
     const autoware_internal_planning_msgs::msg::PathWithLaneId::ConstSharedPtr msg);
@@ -81,8 +81,6 @@ private:
     const PredictedObject & object, const lanelet::LaneletMapPtr & lanelet_map,
     const lanelet::ConstLanelets & relevant_lanelets) const;
   bool isNearCrosswalk(
-    const geometry_msgs::msg::Point & position, const lanelet::LaneletMapPtr & lanelet_map) const;
-  bool isOnSidewalk(
     const geometry_msgs::msg::Point & position, const lanelet::LaneletMapPtr & lanelet_map) const;
   bool isWrongWayUser(const PredictedObject & object, const lanelet::ConstLanelet & lanelet) const;
 
@@ -117,6 +115,10 @@ private:
   bool hasMinimumDetectionDuration(
     const std::string & object_id, const rclcpp::Time & current_time) const;
 
+  lanelet::ConstLanelets getIntersectionLanelets(
+    const lanelet::ConstLanelet & intersection_lanelet,
+    const lanelet::LaneletMapPtr & lanelet_map) const;
+
   // debug
   struct DebugData
   {
@@ -126,6 +128,7 @@ private:
     std::vector<autoware_utils_geometry::Polygon2d>
       trajectory_polygons;  // trajectory polygons with lateral margin
     std::vector<PredictedObject> filtered_objects;
+    std::vector<autoware_utils_geometry::Polygon2d> object_polygons;  // object polygons for debug
     std::optional<size_t> stop_index;
     std::optional<geometry_msgs::msg::Point> stop_point;  // for planning factor
     std::optional<PredictedObject> stop_target_object;    // object causing stop
@@ -133,6 +136,8 @@ private:
       lanelets_for_vru;  // lanelets for VRU detection (ego + adjacent + opposite)
     lanelet::ConstLanelets
       lanelets_for_wrongway_user;  // lanelets for wrongway detection (ego + adjacent)
+    lanelet::ConstLanelets
+      intersection_lanelets;  // lanelets for wrongway detection (ego + adjacent)
   };
 
   MarkerArray createDebugMarkerArray() const;
@@ -143,7 +148,6 @@ private:
 
   mutable DebugData debug_data_;
 
-  rclcpp::Logger logger_{rclcpp::get_logger("road_user_stop_module")};
   rclcpp::Clock::SharedPtr clock_{std::make_shared<rclcpp::Clock>(RCL_ROS_TIME)};
 
   rclcpp::Subscription<autoware_internal_planning_msgs::msg::PathWithLaneId>::SharedPtr
@@ -151,6 +155,7 @@ private:
   autoware_internal_planning_msgs::msg::PathWithLaneId::ConstSharedPtr path_with_lane_id_;
 
   mutable std::unordered_map<double, std::vector<Polygon2d>> trajectory_polygon_for_inside_map_{};
+  std::vector<StopObstacle> prev_stop_obstacles_{};
 
   std::optional<StopObstacle> pickStopObstacleFromPredictedObject(
     const std::shared_ptr<const PlannerData> planner_data,
@@ -161,6 +166,9 @@ private:
     const lanelet::ConstLanelets & lanelets_for_vru,
     const lanelet::ConstLanelets & lanelets_for_wrongway_user, const rclcpp::Time & current_time,
     const double dist_to_bumper);
+  // bool isObstacleVelocityRequiringFixedStop(
+  //   const std::shared_ptr<PlannerData::Object> object,
+  //   const std::vector<TrajectoryPoint> & traj_points) const;
 
   // Stop planning
   void holdPreviousStopIfNecessary(

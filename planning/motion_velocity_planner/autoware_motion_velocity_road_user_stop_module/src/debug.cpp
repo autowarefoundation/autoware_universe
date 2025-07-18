@@ -142,6 +142,35 @@ MarkerArray RoadUserStopModule::createDebugMarkerArray() const
     debug_marker_array.markers.push_back(obj_marker);
   }
 
+  // Visualize object polygons in purple
+  if (!debug_data_.object_polygons.empty()) {
+    int obj_poly_id = 0;
+    for (const auto & polygon : debug_data_.object_polygons) {
+      Marker obj_poly_marker = createDefaultMarker(
+        "map", clock_->now(), "object_polygons", obj_poly_id++, Marker::LINE_STRIP,
+        autoware::universe_utils::createMarkerScale(0.15, 0, 0),
+        autoware::universe_utils::createMarkerColor(0.8, 0.0, 0.8, 0.9));  // Purple color
+
+      obj_poly_marker.lifetime = rclcpp::Duration::from_seconds(0.3);
+
+      // Add polygon outer points
+      for (const auto & point : polygon.outer()) {
+        geometry_msgs::msg::Point p;
+        p.x = point.x();
+        p.y = point.y();
+        p.z = 0.1;  // slightly above ground for visibility
+        obj_poly_marker.points.push_back(p);
+      }
+
+      // Close the polygon
+      if (!obj_poly_marker.points.empty()) {
+        obj_poly_marker.points.push_back(obj_poly_marker.points.front());
+      }
+
+      debug_marker_array.markers.push_back(obj_poly_marker);
+    }
+  }
+
   // Visualize lanelets for VRU detection in light blue
   if (!debug_data_.lanelets_for_vru.empty()) {
     const auto vru_lanelets_markers = createLaneletPolygonsMarkerArray(
@@ -154,6 +183,12 @@ MarkerArray RoadUserStopModule::createDebugMarkerArray() const
     const auto wrongway_lanelets_markers = createLaneletPolygonsMarkerArray(
       debug_data_.lanelets_for_wrongway_user, "lanelets_for_wrongway",
       {1.0, 0.2, 0.2});  // Red color
+    appendMarkerArray(wrongway_lanelets_markers, &debug_marker_array);
+  }
+
+  if (!debug_data_.intersection_lanelets.empty()) {
+    const auto wrongway_lanelets_markers = createLaneletPolygonsMarkerArray(
+      debug_data_.intersection_lanelets, "intersection_lanelets", {0.2, 0.9, 0.2});  // Green color
     appendMarkerArray(wrongway_lanelets_markers, &debug_marker_array);
   }
 

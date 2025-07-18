@@ -14,6 +14,7 @@
 
 #include "road_user_stop_module.hpp"
 
+#include <autoware/lanelet2_utils/intersection.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/conversion.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
@@ -22,6 +23,7 @@
 #include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware/universe_utils/ros/uuid_helper.hpp>
 #include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils_rclcpp/parameter.hpp>
 #include <pluginlib/class_list_macros.hpp>
@@ -29,7 +31,10 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <boost/geometry/algorithms/correct.hpp>
+#include <boost/geometry/algorithms/disjoint.hpp>
+#include <boost/geometry/algorithms/distance.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
+#include <boost/geometry/algorithms/intersects.hpp>
 #include <boost/geometry/algorithms/union.hpp>
 
 #include <tf2/utils.h>
@@ -81,9 +86,9 @@ void RoadUserStopModule::init(rclcpp::Node & node, const std::string & module_na
   logger_ = node.get_logger().get_child(module_name);
   clock_ = node.get_clock();
 
-  // Initialize parameter listener
-  param_listener_ =
-    std::make_shared<road_user_stop::ParamListener>(node.get_node_parameters_interface());
+  // Initialize parameter listener with module name as prefix
+  param_listener_ = std::make_shared<road_user_stop::ParamListener>(
+    node.get_node_parameters_interface(), logger_, "road_user_stop");
 
   sub_path_with_lane_id_ =
     node.create_subscription<autoware_internal_planning_msgs::msg::PathWithLaneId>(
@@ -96,10 +101,6 @@ void RoadUserStopModule::init(rclcpp::Node & node, const std::string & module_na
 
   debug_publisher_ = node.create_publisher<visualization_msgs::msg::MarkerArray>(
     "~/road_user_stop/debug_markers", 1);
-
-  // processing_time_publisher_ =
-  //   node.create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
-  //     "~/debug/road_user_stop/processing_time_ms", 1);
 
   processing_time_detail_pub_ = node.create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms/road_user_stop", 1);
@@ -142,6 +143,9 @@ void RoadUserStopModule::updateTrackedObjects(
       tracked_obj.object_id = object_id;
       tracked_obj.first_detected_time = current_time;
       tracked_obj.last_detected_time = current_time;
+      tracked_obj.last_stop_obstacle_time = current_time;
+      tracked_obj.was_inside_detection_area = false;
+      tracked_obj.polygon_expansion_length = 0.0;
       tracked_obj.updateClassification(predicted_object.classification.front().label);
       tracked_objects_[object_id] = tracked_obj;
     }
@@ -172,6 +176,8 @@ std::vector<StopObstacle> RoadUserStopModule::filterStopObstacles(
 {
   updateTrackedObjects(planner_data->objects, current_time);
 
+  std::set<std::string> current_object_ids;
+
   std::vector<StopObstacle> stop_obstacles;
   for (const auto & object : planner_data->objects) {
     if (
@@ -179,6 +185,57 @@ std::vector<StopObstacle> RoadUserStopModule::filterStopObstacles(
         planner_data, object, traj_points, decimated_traj_points, decimated_traj_polygons,
         lanelets_for_vru, lanelets_for_wrongway_user, current_time, dist_to_bumper)) {
       stop_obstacles.push_back(*stop_obstacle);
+      const std::string object_id =
+        autoware::universe_utils::toHexString(object->predicted_object.object_id);
+      current_object_ids.insert(object_id);
+
+      // Update last_stop_obstacle_time for this object
+      auto tracked_it = tracked_objects_.find(object_id);
+      if (tracked_it != tracked_objects_.end()) {
+        tracked_it->second.last_stop_obstacle_time = current_time;
+      }
+    }
+  }
+
+  for (const auto & prev_obstacle : prev_stop_obstacles_) {
+    const std::string object_id = autoware::universe_utils::toHexString(prev_obstacle.uuid);
+
+    // Check if object is still being tracked
+    auto tracked_it = tracked_objects_.find(object_id);
+    if (tracked_it == tracked_objects_.end()) {
+      continue;  // Not tracked, skip
+    }
+
+    // Check if object is lost (not in current objects)
+    if (current_object_ids.find(object_id) != current_object_ids.end()) {
+      continue;  // Object is still present, skip
+    }
+
+    // Check if object was lost recently (within threshold)
+    const auto param = param_listener_->get_params();
+    // Use last_stop_obstacle_time to check how long it's been since this object was a stop obstacle
+    const double lost_duration =
+      (current_time - tracked_it->second.last_stop_obstacle_time).seconds();
+    if (lost_duration > param.obstacle_filtering.tracked_object_cleanup_threshold) {
+      continue;  // Object was lost too long ago, skip
+    }
+
+    // Check if this object ID is not already in current stop_obstacles
+    bool already_exists = false;
+    for (const auto & current_obstacle : stop_obstacles) {
+      if (object_id == autoware::universe_utils::toHexString(current_obstacle.uuid)) {
+        already_exists = true;
+        break;
+      }
+    }
+
+    if (!already_exists) {
+      // Create a lost object placeholder with fixed position
+      StopObstacle lost_obstacle = prev_obstacle;
+      lost_obstacle.is_lost = true;
+      lost_obstacle.lost_time = tracked_it->second.last_detected_time;
+
+      stop_obstacles.push_back(lost_obstacle);
     }
   }
 
@@ -217,12 +274,13 @@ VelocityPlanningResult RoadUserStopModule::plan(
   VelocityPlanningResult result;
   debug_data_ = DebugData();
   trajectory_polygon_for_inside_map_.clear();
+  debug_data_.object_polygons.clear();
 
   // Check prerequisites
   if (!path_with_lane_id_) {
     RCLCPP_ERROR_SKIPFIRST_THROTTLE(
       logger_, *clock_, 5000, "Path with lane ID is not set, skipping road user stop planning");
-    return result;
+    return VelocityPlanningResult{};
   }
 
   // Extract parameters and current state
@@ -293,17 +351,81 @@ bool RoadUserStopModule::isObjectOnRoad(
   const PredictedObject & object, const lanelet::LaneletMapPtr & /* lanelet_map */,
   const lanelet::ConstLanelets & relevant_lanelets) const
 {
-  const auto & position = object.kinematics.initial_pose_with_covariance.pose.position;
+  const auto param = param_listener_->get_params();
+  const auto & obj_pose = object.kinematics.initial_pose_with_covariance.pose;
 
-  // check if object is within any relevant lanelet
+  // get object polygon
+  auto object_polygon = autoware_utils_geometry::to_polygon2d(obj_pose, object.shape);
+
+  // check if object was previously inside detection area for polygon expansion
+  const std::string object_id = autoware::universe_utils::toHexString(object.object_id);
+  auto tracked_it = tracked_objects_.find(object_id);
+  double expansion_length = 0.0;
+
+  if (tracked_it != tracked_objects_.end() && tracked_it->second.was_inside_detection_area) {
+    expansion_length = param.obstacle_filtering.polygon_expansion_length;
+
+    // expand object polygon to reduce chattering
+    // expansion_length is in meters - absolute distance to expand outward from centroid
+    if (expansion_length > 0.0) {
+      // expand polygon by moving each point outward from centroid by expansion_length meters
+      autoware_utils_geometry::Point2d centroid;
+      boost::geometry::centroid(object_polygon, centroid);
+
+      for (auto & pt : object_polygon.outer()) {
+        const double dx = pt.x() - centroid.x();
+        const double dy = pt.y() - centroid.y();
+        const double current_distance = std::sqrt(dx * dx + dy * dy);
+
+        if (current_distance > 1e-6) {  // avoid division by zero
+          // normalize direction vector and extend by expansion_length meters
+          const double unit_dx = dx / current_distance;
+          const double unit_dy = dy / current_distance;
+          const double new_distance = current_distance + expansion_length;
+
+          pt.x() = centroid.x() + unit_dx * new_distance;
+          pt.y() = centroid.y() + unit_dy * new_distance;
+        } else {
+          // if point is at centroid, expand in arbitrary direction
+          pt.x() = centroid.x() + expansion_length;
+        }
+      }
+      boost::geometry::correct(object_polygon);
+    }
+  }
+
+  // add object polygon to debug data
+  debug_data_.object_polygons.push_back(object_polygon);
+
+  // check if object polygon intersects with any relevant lanelet
   for (const auto & lanelet : relevant_lanelets) {
-    // create a pose for the lanelet check
-    geometry_msgs::msg::Pose pose;
-    pose.position = position;
-    pose.orientation.w = 1.0;  // default orientation
+    // create lanelet polygon
+    autoware_utils_geometry::Polygon2d lanelet_polygon;
+    for (const auto & pt : lanelet.polygon2d().basicPolygon()) {
+      lanelet_polygon.outer().emplace_back(pt.x(), pt.y());
+    }
+    if (!lanelet_polygon.outer().empty()) {
+      lanelet_polygon.outer().push_back(lanelet_polygon.outer().front());  // close polygon
+    }
+    boost::geometry::correct(lanelet_polygon);
 
-    if (lanelet::utils::isInLanelet(pose, lanelet, 0.0)) {
+    // check intersection using boost::geometry
+    if (!boost::geometry::disjoint(object_polygon, lanelet_polygon)) {
+      // update tracking information
+      if (tracked_it != tracked_objects_.end()) {
+        tracked_it->second.was_inside_detection_area = true;
+        tracked_it->second.polygon_expansion_length = expansion_length;
+      }
       return true;
+    }
+  }
+
+  // object is not on road - update tracking information
+  if (tracked_it != tracked_objects_.end()) {
+    // only reset if object was previously inside and now clearly outside
+    if (expansion_length == 0.0) {  // no expansion was used, so this is a clear "outside" result
+      tracked_it->second.was_inside_detection_area = false;
+      tracked_it->second.polygon_expansion_length = 0.0;
     }
   }
 
@@ -314,43 +436,61 @@ bool RoadUserStopModule::isNearCrosswalk(
   const geometry_msgs::msg::Point & position, const lanelet::LaneletMapPtr & lanelet_map) const
 {
   const auto param = param_listener_->get_params();
-  const lanelet::Point3d search_point(position.x, position.y, position.z);
 
-  // search for crosswalk lanelets
-  const auto crosswalk_lanelets = lanelet_map->laneletLayer.search(lanelet::BoundingBox2d(
-    lanelet::Point2d(
-      position.x - param.obstacle_filtering.crosswalk_margin,
-      position.y - param.obstacle_filtering.crosswalk_margin),
-    lanelet::Point2d(
-      position.x + param.obstacle_filtering.crosswalk_margin,
-      position.y + param.obstacle_filtering.crosswalk_margin)));
+  // first, get all crosswalk lanelets from the entire map
+  const auto & all_lanelets = lanelet_map->laneletLayer;
+  lanelet::ConstLanelets all_lanelets_vec;
 
-  for (const auto & lanelet : crosswalk_lanelets) {
-    if (
-      lanelet.hasAttribute(lanelet::AttributeName::Subtype) &&
-      lanelet.attribute(lanelet::AttributeName::Subtype) ==
-        lanelet::AttributeValueString::Crosswalk) {
-      return true;
-    }
+  // convert to vector for query function
+  for (const auto & ll : all_lanelets) {
+    all_lanelets_vec.push_back(ll);
   }
 
-  return false;
-}
+  // extract crosswalk lanelets using utility function
+  const auto crosswalk_lanelets = lanelet::utils::query::crosswalkLanelets(all_lanelets_vec);
 
-bool RoadUserStopModule::isOnSidewalk(
-  const geometry_msgs::msg::Point & position, const lanelet::LaneletMapPtr & lanelet_map) const
-{
-  const lanelet::Point3d search_point(position.x, position.y, position.z);
+  RCLCPP_DEBUG(logger_, "Found %zu crosswalk lanelets in map", crosswalk_lanelets.size());
 
-  // search for sidewalk lanelets
-  const auto nearby_lanelets = lanelet_map->laneletLayer.nearest(search_point, 1);
+  if (crosswalk_lanelets.empty()) {
+    return false;
+  }
 
-  if (!nearby_lanelets.empty()) {
-    const auto & nearest_lanelet = nearby_lanelets.front();
-    if (
-      nearest_lanelet.hasAttribute(lanelet::AttributeName::Subtype) &&
-      nearest_lanelet.attribute(lanelet::AttributeName::Subtype) == "walkway") {
+  // check if position is near any crosswalk
+  for (const auto & crosswalk : crosswalk_lanelets) {
+    // create a simple polygon check using lanelet utilities
+    geometry_msgs::msg::Pose pose;
+    pose.position = position;
+    pose.orientation.w = 1.0;
+
+    // check if within crosswalk lanelet with margin
+    if (lanelet::utils::isInLanelet(pose, crosswalk, param.obstacle_filtering.crosswalk_margin)) {
+      RCLCPP_DEBUG(logger_, "Object is within crosswalk margin");
       return true;
+    }
+
+    // additional check using geometry distance calculation
+    try {
+      autoware_utils_geometry::Polygon2d crosswalk_polygon;
+      for (const auto & pt : crosswalk.polygon2d().basicPolygon()) {
+        crosswalk_polygon.outer().emplace_back(pt.x(), pt.y());
+      }
+      if (!crosswalk_polygon.outer().empty()) {
+        crosswalk_polygon.outer().push_back(crosswalk_polygon.outer().front());  // close polygon
+        boost::geometry::correct(crosswalk_polygon);
+
+        const autoware_utils_geometry::Point2d object_point_2d{position.x, position.y};
+        const double distance = boost::geometry::distance(object_point_2d, crosswalk_polygon);
+
+        if (distance < param.obstacle_filtering.crosswalk_margin) {
+          RCLCPP_DEBUG(
+            logger_, "Object is near crosswalk (distance: %.2f < margin: %.2f)", distance,
+            param.obstacle_filtering.crosswalk_margin);
+          return true;
+        }
+      }
+    } catch (const std::exception & e) {
+      RCLCPP_WARN(logger_, "Error calculating crosswalk distance: %s", e.what());
+      continue;
     }
   }
 
@@ -412,22 +552,11 @@ bool RoadUserStopModule::isWrongWayUser(
 std::pair<lanelet::ConstLanelets, lanelet::ConstLanelets> RoadUserStopModule::getRelevantLanelets(
   const std::shared_ptr<const PlannerData> planner_data) const
 {
+  const auto param = param_listener_->get_params();
   lanelet::ConstLanelets relevant_lanelets;
-
-  if (!planner_data->route_handler) {
-    RCLCPP_WARN(logger_, "Route handler is null, cannot get relevant lanelets");
-    return std::make_pair(lanelet::ConstLanelets(), lanelet::ConstLanelets());
-  }
-
   const auto & route_handler = planner_data->route_handler;
   const auto lanelet_map = route_handler->getLaneletMapPtr();
 
-  if (!lanelet_map) {
-    RCLCPP_WARN(logger_, "Lanelet map is null");
-    return std::make_pair(lanelet::ConstLanelets(), lanelet::ConstLanelets());
-  }
-
-  // extract lane IDs from path_with_lane_id_
   std::set<lanelet::Id> unique_lane_ids;
   if (path_with_lane_id_ && !path_with_lane_id_->points.empty()) {
     for (size_t i = 0; i < path_with_lane_id_->points.size(); ++i) {
@@ -436,59 +565,96 @@ std::pair<lanelet::ConstLanelets, lanelet::ConstLanelets> RoadUserStopModule::ge
       }
     }
 
-    // convert lane IDs to lanelets
     for (const auto lane_id : unique_lane_ids) {
       try {
         const auto lanelet = lanelet_map->laneletLayer.get(lane_id);
         relevant_lanelets.push_back(lanelet);
       } catch (const lanelet::NoSuchPrimitiveError & e) {
-        RCLCPP_WARN(logger_, "Could not find lanelet with ID %ld: %s", lane_id, e.what());
+        RCLCPP_ERROR_THROTTLE(
+          logger_, *clock_, 5000, "Could not find lanelet with ID %ld: %s", lane_id, e.what());
       }
     }
   } else {
-    RCLCPP_WARN(logger_, "path_with_lane_id_ is not available or empty");
+    RCLCPP_ERROR_THROTTLE(logger_, *clock_, 5000, "path_with_lane_id_ is not available or empty");
     return std::make_pair(lanelet::ConstLanelets(), lanelet::ConstLanelets());
   }
-
-  // store ego lanelets for debug visualization (before adding adjacent lanelets)
   debug_data_.ego_lanelets = relevant_lanelets;
+
+  // get intersection lanelets on route
+  lanelet::ConstLanelets intersection_lanelets;
+  for (const auto & ego_lanelet : relevant_lanelets) {
+    const std::string area_id_str = ego_lanelet.attributeOr("intersection_area", "else");
+    if (area_id_str != "else" && std::atoi(area_id_str.c_str())) {
+      for (const auto & ll : lanelet_map->laneletLayer) {
+        const std::string ll_area_id_str = ll.attributeOr("intersection_area", "else");
+        // RCLCPP_INFO(logger_, "- Lanelet area ID: %s", ll_area_id_str.c_str());
+        if (ll_area_id_str == area_id_str) {
+          // add to intersection lanelets if not already present
+          if (
+            std::find(intersection_lanelets.begin(), intersection_lanelets.end(), ll) ==
+            intersection_lanelets.end()) {
+            intersection_lanelets.push_back(ll);
+          }
+        }
+      }
+    }
+  }
+  debug_data_.intersection_lanelets = intersection_lanelets;
+
+  lanelet::ConstLanelets ego_lanelets_considered_intersection;
+  if (param.obstacle_filtering.exclude_intersection) {
+    // exclude intersection_lanelets from relevant_lanelets
+    lanelet::ConstLanelets filtered_lanelets;
+    for (const auto & lanelet : relevant_lanelets) {
+      if (
+        std::find(intersection_lanelets.begin(), intersection_lanelets.end(), lanelet) ==
+        intersection_lanelets.end()) {
+        filtered_lanelets.push_back(lanelet);
+      }
+    }
+    relevant_lanelets = filtered_lanelets;
+    ego_lanelets_considered_intersection = relevant_lanelets;  // exclude intersection_lanelets
+  } else {
+    ego_lanelets_considered_intersection = relevant_lanelets;
+    for (const auto & intersection_lanelet : intersection_lanelets) {
+      if (
+        std::find(relevant_lanelets.begin(), relevant_lanelets.end(), intersection_lanelet) ==
+        relevant_lanelets.end()) {
+        relevant_lanelets.push_back(intersection_lanelet);
+      }
+    }
+  }
 
   // always check adjacent lanelets
   {
-    // add adjacent lanelets
     lanelet::ConstLanelets adjacent_lanelets;
-    debug_data_.adjacent_lanelets.clear();
 
-    // create a copy to iterate over, as we'll be modifying relevant_lanelets
-    const auto & current_lanelets = relevant_lanelets;
+    const auto is_in_adjacent_lanelet = [&](const lanelet::ConstLanelet & lanelet) {
+      return std::find(adjacent_lanelets.begin(), adjacent_lanelets.end(), lanelet) !=
+             adjacent_lanelets.end();
+    };
 
-    for (const auto & lanelet : current_lanelets) {
-      // get lanelet (including shoulder)
-      const auto left_lanelet = route_handler->getLeftLanelet(
-        lanelet, false /*enable_same_root*/, false /*get_shoulder_lane*/);
-      if (left_lanelet) {
+    for (const auto & lanelet : relevant_lanelets) {
+      const auto left_lanelet = route_handler->getLeftLanelet(lanelet);
+      if (left_lanelet && !is_in_adjacent_lanelet(*left_lanelet)) {
         adjacent_lanelets.push_back(*left_lanelet);
       }
 
-      const auto right_lanelet = route_handler->getRightLanelet(
-        lanelet, false /*enable_same_root*/, false /*get_shoulder_lane*/);
-      if (right_lanelet) {
+      const auto right_lanelet = route_handler->getRightLanelet(lanelet);
+      if (right_lanelet && !is_in_adjacent_lanelet(*right_lanelet)) {
         adjacent_lanelets.push_back(*right_lanelet);
       }
 
-      // also check for shoulder lanes specifically
       const auto left_shoulder = route_handler->getLeftShoulderLanelet(lanelet);
-      if (left_shoulder) {
+      if (left_shoulder && !is_in_adjacent_lanelet(*left_lanelet)) {
         adjacent_lanelets.push_back(*left_shoulder);
       }
 
       const auto right_shoulder = route_handler->getRightShoulderLanelet(lanelet);
-      if (right_shoulder) {
+      if (right_shoulder && !is_in_adjacent_lanelet(*right_shoulder)) {
         adjacent_lanelets.push_back(*right_shoulder);
       }
     }
-
-    // store adjacent lanelets for debug
     debug_data_.adjacent_lanelets = adjacent_lanelets;
 
     // Add adjacent lanelets to relevant_lanelets
@@ -499,46 +665,14 @@ std::pair<lanelet::ConstLanelets, lanelet::ConstLanelets> RoadUserStopModule::ge
         relevant_lanelets.push_back(adj_lanelet);
       }
     }
-
-    // first, merge all ego lanelets
-    std::vector<autoware_utils_geometry::Polygon2d> all_ego_polygons;
-    std::vector<autoware_utils_geometry::Polygon2d> all_adjacent_polygons;
-    std::vector<autoware_utils_geometry::Polygon2d> polygons_with_margin;
-    for (const auto & ego_llt : debug_data_.ego_lanelets) {
-      autoware_utils_geometry::Polygon2d ego_poly;
-      for (const auto & pt : ego_llt.polygon3d()) {
-        ego_poly.outer().emplace_back(pt.x(), pt.y());
-      }
-      if (!ego_poly.outer().empty()) {
-        ego_poly.outer().push_back(ego_poly.outer().front());  // close polygon
-      }
-      boost::geometry::correct(ego_poly);
-      all_ego_polygons.push_back(ego_poly);
-    }
-
-    for (const auto & adj_llt : debug_data_.adjacent_lanelets) {
-      autoware_utils_geometry::Polygon2d adj_poly;
-      for (const auto & pt : adj_llt.polygon3d()) {
-        adj_poly.outer().emplace_back(pt.x(), pt.y());
-      }
-      if (!adj_poly.outer().empty()) {
-        adj_poly.outer().push_back(adj_poly.outer().front());  // close polygon
-      }
-      boost::geometry::correct(adj_poly);
-      all_adjacent_polygons.push_back(adj_poly);
-    }
   }
 
-  // Store lanelets for VRU detection (ego + adjacent)
+  // Store lanelets for wrongway detection (ego + adjacent lanes)
   const auto & lanelets_for_wrongway_user = relevant_lanelets;
-  debug_data_.lanelets_for_wrongway_user = lanelets_for_wrongway_user;
 
-  // For wrongway detection, also include opposite lanes
+  // Store lanelets for VRU detection (ego + adjacent + opposite lanes)
   lanelet::ConstLanelets lanelets_for_vru = relevant_lanelets;
-
-  // Add opposite lanes for wrongway detection
   for (const auto & ego_lanelet : debug_data_.ego_lanelets) {
-    // Get left opposite lanes
     const auto left_opposite_lanelets = route_handler->getLeftOppositeLanelets(ego_lanelet);
     for (const auto & opposite : left_opposite_lanelets) {
       if (
@@ -548,7 +682,6 @@ std::pair<lanelet::ConstLanelets, lanelet::ConstLanelets> RoadUserStopModule::ge
       }
     }
 
-    // Get right opposite lanes
     const auto right_opposite_lanelets = route_handler->getRightOppositeLanelets(ego_lanelet);
     for (const auto & opposite : right_opposite_lanelets) {
       if (
@@ -559,9 +692,8 @@ std::pair<lanelet::ConstLanelets, lanelet::ConstLanelets> RoadUserStopModule::ge
     }
   }
 
+  debug_data_.lanelets_for_wrongway_user = lanelets_for_wrongway_user;
   debug_data_.lanelets_for_vru = lanelets_for_vru;
-
-  RCLCPP_DEBUG(logger_, "Found %zu relevant lanelets from path lane IDs", relevant_lanelets.size());
 
   return std::make_pair(lanelets_for_vru, lanelets_for_wrongway_user);
 }
@@ -580,25 +712,25 @@ std::optional<geometry_msgs::msg::Point> RoadUserStopModule::planStop(
   std::optional<double> determined_zero_vel_dist{};
   std::optional<double> determined_desired_stop_margin{};
 
-  // Get closest stop obstacles
   const auto ego_segment_idx =
     planner_data->find_segment_index(trajectory_points, planner_data->current_odometry.pose.pose);
 
   for (const auto & stop_obstacle : stop_obstacles) {
-    // calculate dist to collide
+    double dist_to_collide_on_ref_traj;
 
-    // TODO(odashima): consider braking distance
-    const double dist_to_collide_on_ref_traj =
-      autoware::motion_utils::calcSignedArcLength(trajectory_points, 0, ego_segment_idx) +
-      stop_obstacle
-        .dist_to_collide_on_decimated_traj;  //  + stop_obstacle.braking_dist.value_or(0.0);
+    if (stop_obstacle.is_lost) {
+      dist_to_collide_on_ref_traj = autoware::motion_utils::calcSignedArcLength(
+        trajectory_points, ego_segment_idx, stop_obstacle.collision_point);
+    } else {
+      dist_to_collide_on_ref_traj =
+        autoware::motion_utils::calcSignedArcLength(trajectory_points, 0, ego_segment_idx) +
+        stop_obstacle.dist_to_collide_on_decimated_traj;
+    }
 
-    // calculate desired stop margin
     const double desired_stop_margin = calcDesiredStopMargin(
       planner_data, trajectory_points, stop_obstacle, dist_to_bumper, ego_segment_idx,
       dist_to_collide_on_ref_traj);
 
-    // calculate stop point against the obstacle
     const auto candidate_zero_vel_dist = calcCandidateZeroVelDist(
       planner_data, trajectory_points, stop_obstacle, dist_to_collide_on_ref_traj,
       desired_stop_margin, dist_to_bumper);
@@ -626,19 +758,16 @@ std::optional<geometry_msgs::msg::Point> RoadUserStopModule::planStop(
     return std::nullopt;
   }
 
-  // Hold previous stop distance if necessary
   holdPreviousStopIfNecessary(planner_data, trajectory_points, determined_zero_vel_dist);
 
-  // Insert stop point
   const auto stop_point = calcStopPoint(
     planner_data, trajectory_points, dist_to_bumper, determined_stop_obstacle,
     determined_zero_vel_dist);
 
-  if (determined_stop_obstacle->velocity >= -0.5) {  // max_negative_velocity
+  if (determined_stop_obstacle->velocity >= -0.5) {
     return stop_point;
   }
 
-  // Update path length buffer with current stop point
   path_length_buffer_.update_buffer(
     stop_point,
     [trajectory_points](const geometry_msgs::msg::Point & point) {
@@ -646,11 +775,9 @@ std::optional<geometry_msgs::msg::Point> RoadUserStopModule::planStop(
     },
     clock_->now(), *determined_stop_obstacle, *determined_desired_stop_margin);
 
-  // Get nearest active stop point from buffer
   const auto buffered_stop = path_length_buffer_.get_nearest_active_item();
   if (buffered_stop) {
-    // Override with buffered stop point if available
-    debug_data_.stop_index = std::nullopt;  // Update debug data if needed
+    debug_data_.stop_index = std::nullopt;
     debug_data_.stop_point = buffered_stop->stop_point;
 
     return std::make_optional(buffered_stop->stop_point);
@@ -719,14 +846,6 @@ std::optional<StopObstacle> RoadUserStopModule::pickStopObstacleFromPredictedObj
     return std::nullopt;
   }
 
-  // check if on sidewalk (exclude if configured)
-  if (
-    param.obstacle_filtering.exclude_sidewalk_users &&
-    isOnSidewalk(
-      predicted_object.kinematics.initial_pose_with_covariance.pose.position, lanelet_map_ptr)) {
-    return std::nullopt;
-  }
-
   // add to filtered objects for debug visualization
   debug_data_.filtered_objects.push_back(predicted_object);
 
@@ -743,18 +862,17 @@ std::optional<StopObstacle> RoadUserStopModule::pickStopObstacleFromPredictedObj
     return std::nullopt;  // no collision point found
   }
 
-  // create stop obstacle with robust classification
-  StopObstacle stop_obstacle(
-    autoware::universe_utils::toHexString(predicted_object.object_id), predicted_objects_stamp,
-    robust_classification, obj_pose, predicted_object.shape,
-    object->get_lon_vel_relative_to_traj(traj_points), collision_point->first,
-    collision_point->second);
-
-  // set additional fields
-  stop_obstacle.is_wrong_way = is_wrong_way;
-  stop_obstacle.original_object = predicted_object;
-
-  return stop_obstacle;
+  return StopObstacle{
+    predicted_object.object_id,
+    predicted_objects_stamp,
+    is_wrong_way,
+    predicted_object,
+    predicted_object.classification.at(0),
+    obj_pose,
+    predicted_object.shape,
+    object->get_lon_vel_relative_to_traj(traj_points),
+    collision_point->first,
+    collision_point->second};
 };
 
 void RoadUserStopModule::holdPreviousStopIfNecessary(
@@ -800,18 +918,41 @@ std::optional<geometry_msgs::msg::Point> RoadUserStopModule::calcStopPoint(
   if (!zero_vel_idx) {
     return std::nullopt;
   }
+  const auto stop_point = output_traj_points.at(*zero_vel_idx).pose.position;
 
   // update debug data
   debug_data_.stop_index = *zero_vel_idx;
-  debug_data_.stop_point = output_traj_points.at(*zero_vel_idx).pose.position;
+  debug_data_.stop_point = stop_point;
 
   // update planning factor
   const auto stop_pose = output_traj_points.at(*zero_vel_idx).pose;
+  SafetyFactorArray safety_factors;
+  if (determined_stop_obstacle) {
+    SafetyFactor safety_factor;
+    safety_factor.type = SafetyFactor::OBJECT;
+    safety_factor.object_id = determined_stop_obstacle->uuid;
+    safety_factor.points = {determined_stop_obstacle->pose.position};
+    safety_factor.is_safe = false;
+    safety_factors.factors.push_back(safety_factor);
+    safety_factors.is_safe = false;
+    safety_factors.header.stamp = clock_->now();
+    safety_factors.header.frame_id = "map";
+  }
+
   planning_factor_interface_->add(
     output_traj_points, planner_data->current_odometry.pose.pose, stop_pose,
-    autoware::planning_factor_interface::PlanningFactor::STOP, SafetyFactorArray{});
+    autoware::planning_factor_interface::PlanningFactor::STOP, safety_factors);
 
   prev_stop_distance_info_ = std::make_pair(output_traj_points, determined_zero_vel_dist.value());
+
+  // verify stop point is on trajectory
+  const auto dist_to_traj =
+    autoware::motion_utils::calcLateralOffset(traj_points, stop_pose.position);
+  if (std::abs(dist_to_traj) > 0.5) {
+    RCLCPP_WARN(
+      logger_, "Stop point lateral offset from trajectory: %.3f m at index %zu", dist_to_traj,
+      *zero_vel_idx);
+  }
 
   return stop_pose.position;
 }
@@ -891,6 +1032,7 @@ double RoadUserStopModule::calcDesiredStopMargin(
       return param.stop_planning.min_behavior_stop_margin;
     }
   }
+
   return stop_margin_on_curve;
 }
 
