@@ -377,7 +377,8 @@ protected:
   diagnostic_updater::Updater updater_;  //!< @brief Updater class which advertises to /diagnostics
   rclcpp::TimerBase::SharedPtr timer_;   //!< @brief timer to get Network information
 
-  rclcpp::Publisher<tier4_external_api_msgs::msg::NetworkStatus>::SharedPtr pub_network_status_;  //!< @brief publisher
+  rclcpp::Publisher<tier4_external_api_msgs::msg::NetworkStatus>::SharedPtr
+    pub_network_status_;  //!< @brief publisher
 
   char hostname_[HOST_NAME_MAX + 1];             //!< @brief host name
   std::map<std::string, Bytes> bytes_;           //!< @brief list of bytes

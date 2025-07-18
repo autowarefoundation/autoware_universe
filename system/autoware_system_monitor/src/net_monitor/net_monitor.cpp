@@ -72,7 +72,8 @@ NetMonitor::NetMonitor(const rclcpp::NodeOptions & options)
   // Publisher
   rclcpp::QoS durable_qos{1};
   durable_qos.transient_local();
-  pub_network_status_ = this->create_publisher<tier4_external_api_msgs::msg::NetworkStatus>("~/network_status", durable_qos);
+  pub_network_status_ = this->create_publisher<tier4_external_api_msgs::msg::NetworkStatus>(
+    "~/network_status", durable_qos);
 
   nl80211_.init();
 
