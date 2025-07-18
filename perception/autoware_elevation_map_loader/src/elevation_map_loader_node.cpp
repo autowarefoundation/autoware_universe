@@ -118,7 +118,7 @@ ElevationMapLoaderNode::ElevationMapLoaderNode(const rclcpp::NodeOptions & optio
           "pointcloud_map_loader is set `true`.");
       }
       timer_ =
-        this->create_wall_timer(period_ns, std::bind(&ElevationMapLoaderNode::timerCallback, this));
+        this->create_timer(period_ns, std::bind(&ElevationMapLoaderNode::timerCallback, this));
     }
 
     if (data_manager_.isInitialized()) {

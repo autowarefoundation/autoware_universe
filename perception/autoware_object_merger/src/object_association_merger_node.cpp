@@ -135,7 +135,7 @@ ObjectAssociationMergerNode::ObjectAssociationMergerNode(const rclcpp::NodeOptio
   initialization_timeout_sec_ = this->declare_parameter<double>("initialization_timeout_sec");
   last_sync_time_ = std::nullopt;
   message_interval_ = std::nullopt;
-  timeout_timer_ = this->create_wall_timer(
+  timeout_timer_ = this->create_timer(
     std::chrono::duration<double>(message_timeout_sec_ / 2),
     std::bind(&ObjectAssociationMergerNode::diagCallback, this));
   diagnostics_interface_ptr_ =
