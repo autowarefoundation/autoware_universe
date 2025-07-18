@@ -28,6 +28,7 @@
 
 #include <tier4_external_api_msgs/msg/cpu_status.hpp>
 #include <tier4_external_api_msgs/msg/cpu_usage.hpp>
+#include <tier4_external_api_msgs/msg/cpu_temperature.hpp>
 
 #include <atomic>
 #include <climits>
@@ -148,6 +149,13 @@ protected:
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 
   /**
+   * @brief Get CPU thermal throttling status
+   * @return DiagStatus::OK or WARN or ERROR
+   * @note ERROR indicates that thermal throttling is active or status retrieval failed
+   */
+  virtual int getThermalThrottlingStatus();
+
+  /**
    * @brief timer callback to collect cpu statistics
    */
   void onTimer();
@@ -157,6 +165,11 @@ protected:
    * @param [in] usage CPU usage
    */
   virtual void publishCpuUsage(tier4_external_api_msgs::msg::CpuUsage usage);
+
+  /**
+   * @brief publish CPU temperature as an independent topic
+   */
+  void publishCpuTemperature();
 
   // Updater won't be changed after initialization. No need to protect it with mutex.
   diagnostic_updater::Updater updater_;  //!< @brief Updater class which advertises to /diagnostics
@@ -213,6 +226,7 @@ protected:
 
   // Publisher
   rclcpp::Publisher<tier4_external_api_msgs::msg::CpuUsage>::SharedPtr pub_cpu_usage_;
+  rclcpp::Publisher<tier4_external_api_msgs::msg::CpuTemperature>::SharedPtr pub_cpu_temperature_;
 
   rclcpp::TimerBase::SharedPtr timer_;  //!< @brief timer to collect cpu statistics
   rclcpp::CallbackGroup::SharedPtr timer_callback_group_;  //!< @brief Callback Group
