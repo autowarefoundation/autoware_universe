@@ -470,7 +470,10 @@ auto RearCollisionChecker::get_pointcloud_objects(
     const auto stop_distance_ego =
       0.5 * std::pow(current_velocity, 2.0) / std::abs(max_deceleration_ego);
 
-    const auto forward_distance = context_->vehicle_info.max_longitudinal_offset_m;
+    const auto forward_distance = p.common.pointcloud.range.buffer +
+                                  std::max(
+                                    context_->vehicle_info.max_longitudinal_offset_m,
+                                    (p.common.blind_spot.check.front ? stop_distance_ego : 0.0));
     const auto backward_distance = p.common.pointcloud.range.buffer -
                                    context_->vehicle_info.min_longitudinal_offset_m +
                                    std::max(0.0, stop_distance_object - stop_distance_ego);
@@ -491,7 +494,10 @@ auto RearCollisionChecker::get_pointcloud_objects(
     const auto stop_distance_ego =
       0.5 * std::pow(current_velocity, 2.0) / std::abs(max_deceleration_ego);
 
-    const auto forward_distance = context_->vehicle_info.max_longitudinal_offset_m;
+    const auto forward_distance = p.common.pointcloud.range.buffer +
+                                  std::max(
+                                    context_->vehicle_info.max_longitudinal_offset_m,
+                                    (p.common.adjacent_lane.check.front ? stop_distance_ego : 0.0));
     const auto backward_distance = p.common.pointcloud.range.buffer -
                                    context_->vehicle_info.min_longitudinal_offset_m +
                                    std::max(0.0, stop_distance_object - stop_distance_ego);
@@ -575,7 +581,7 @@ auto RearCollisionChecker::get_pointcloud_objects_on_adjacent_lane(
 
       if (
         opt_pointcloud_object.value().relative_distance <
-        p.common.pointcloud.range.dead_zone - context_->vehicle_info.max_longitudinal_offset_m) {
+        p.common.pointcloud.range.dead_zone - forward_distance) {
         return objects;
       }
 
@@ -620,7 +626,7 @@ auto RearCollisionChecker::get_pointcloud_objects_on_adjacent_lane(
 
       if (
         opt_pointcloud_object.value().relative_distance <
-        p.common.pointcloud.range.dead_zone - context_->vehicle_info.max_longitudinal_offset_m) {
+        p.common.pointcloud.range.dead_zone - forward_distance) {
         return objects;
       }
 
@@ -693,7 +699,7 @@ auto RearCollisionChecker::get_pointcloud_objects_at_blind_spot(
 
   if (
     opt_pointcloud_object.value().relative_distance <
-    p.common.pointcloud.range.dead_zone - context_->vehicle_info.max_longitudinal_offset_m) {
+    p.common.pointcloud.range.dead_zone - forward_distance) {
     return objects;
   }
 
