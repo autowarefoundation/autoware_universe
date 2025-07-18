@@ -901,14 +901,14 @@ bool DummyPerceptionPublisherNode::isTrajectoryValid(
   const autoware_perception_msgs::msg::PredictedObject & new_prediction,
   const std::string & dummy_uuid_str)
 {
-  // Maximum acceptable yaw change in radians (45 degrees)
-  const double MAX_YAW_CHANGE = M_PI / 4.0;
+  // Maximum acceptable yaw change in radians (90 degrees)
+  const double MAX_YAW_CHANGE = M_PI / 2.0;
   
-  // Maximum acceptable direction change in radians (60 degrees)
-  const double MAX_DIRECTION_CHANGE = M_PI / 3.0;
+  // Maximum acceptable direction change in radians (120 degrees)
+  const double MAX_DIRECTION_CHANGE = 2.0 * M_PI / 3.0;
   
-  // Maximum acceptable velocity change ratio (200% change)
-  const double MAX_VELOCITY_CHANGE_RATIO = 2.0;
+  // Maximum acceptable velocity change ratio (500% change)
+  const double MAX_VELOCITY_CHANGE_RATIO = 5.0;
   
   // If current prediction is empty, accept any new prediction
   if (current_prediction.kinematics.predicted_paths.empty()) {
