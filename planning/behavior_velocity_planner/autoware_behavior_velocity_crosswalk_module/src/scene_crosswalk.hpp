@@ -124,6 +124,8 @@ public:
   struct PlannerParam
   {
     bool show_processing_time;
+    // Time to keep an object after its detection is lost.
+    double lost_detection_timeout;
     // param for stop position
     double stop_distance_from_object_preferred;
     double stop_distance_from_crosswalk_limit;
@@ -203,6 +205,8 @@ public:
 
     geometry_msgs::msg::Point position{};
     std::optional<CollisionPoint> collision_point{};
+
+    rclcpp::Time last_detection_time{rclcpp::Time(0, 0, RCL_ROS_TIME)};
 
     void transitState(
       const rclcpp::Time & now, const geometry_msgs::msg::Point & position, const double vel,
@@ -329,8 +333,9 @@ public:
       objects.at(uuid).collision_point = collision_point;
       objects.at(uuid).position = position;
       objects.at(uuid).classification = classification;
+      objects.at(uuid).last_detection_time = now;
     }
-    void finalize()
+    void finalize(const rclcpp::Time & now, const PlannerParam & planner_param)
     {
       // remove objects not set in current_uuids_
       std::vector<unique_identifier_msgs::msg::UUID> obsolete_uuids;
@@ -338,7 +343,11 @@ public:
         if (
           std::find(current_uuids_.begin(), current_uuids_.end(), object.first) ==
           current_uuids_.end()) {
-          obsolete_uuids.push_back(object.first);
+          if (
+            (now - object.second.last_detection_time).seconds() >
+            planner_param.lost_detection_timeout) {
+            obsolete_uuids.push_back(object.first);
+          }
         }
       }
       for (const auto & obsolete_uuid : obsolete_uuids) {
