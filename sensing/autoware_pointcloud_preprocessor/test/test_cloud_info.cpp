@@ -276,7 +276,7 @@ TEST_F(CloudInfoTest, MultiplePointCloudIndexing)
     test_cloud_2_, input_topics_[1], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
     concat_info);
 
-  // Cloud 1 inde
+  // Cloud 1
   EXPECT_EQ(concat_info.source_info[0].idx_begin, 0u);
   EXPECT_EQ(concat_info.source_info[0].length, test_cloud_1_.width * test_cloud_1_.height);
 
