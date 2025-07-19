@@ -153,19 +153,19 @@ public:
     valid_cloud_count_++;
   }
 
-  void update_concatenated_point_cloud_config(
-    const std::vector<uint8_t> & matching_strategy_config,
-    autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo & out_concatenated_cloud_info) const
-  {
-    out_concatenated_cloud_info.matching_strategy_config = matching_strategy_config;
-  }
-
   void update_concatenated_point_cloud_result(
     const sensor_msgs::msg::PointCloud2 & concatenated_cloud,
     autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo & out_concatenated_cloud_info) const
   {
     out_concatenated_cloud_info.header = concatenated_cloud.header;
     out_concatenated_cloud_info.concatenation_success = valid_cloud_count_ == num_expected_sources_;
+  }
+
+  static void update_concatenated_point_cloud_config(
+    const std::vector<uint8_t> & matching_strategy_config,
+    autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo & out_concatenated_cloud_info)
+  {
+    out_concatenated_cloud_info.matching_strategy_config = matching_strategy_config;
   }
 
 private:

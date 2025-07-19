@@ -213,7 +213,7 @@ TEST_F(CloudInfoTest, UpdateConcatenatedPointCloudConfig)
   reference_timestamp_max.nanosec = 900000000;
 
   auto cfg = StrategyAdvancedConfig(reference_timestamp_min, reference_timestamp_max);
-  cloud_info.update_concatenated_point_cloud_config(cfg.serialize(), concat_info);
+  CloudInfo::update_concatenated_point_cloud_config(cfg.serialize(), concat_info);
 
   // Verify that the config was serialized and stored
   EXPECT_FALSE(concat_info.matching_strategy_config.empty());
