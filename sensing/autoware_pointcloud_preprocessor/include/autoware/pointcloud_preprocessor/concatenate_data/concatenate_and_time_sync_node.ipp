@@ -311,6 +311,7 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::publish
   if (publish_pointcloud) {
     latest_concatenate_cloud_timestamp_ = current_concatenate_cloud_timestamp_;
     concatenated_cloud_publisher_->publish(std::move(concatenated_cloud_result.concatenate_cloud_ptr));
+    // If publish_pointcloud is true, we want to publish info just after the pointcloud
     concatenated_cloud_info_publisher_->publish(std::move(concatenated_cloud_result.concatenate_cloud_info_ptr));
     // publish transformed raw pointclouds
     if (
@@ -330,6 +331,8 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::publish
         }
       }
     }
+  } else {
+    concatenated_cloud_info_publisher_->publish(std::move(concatenated_cloud_result.concatenate_cloud_info_ptr));
   }
 
 

@@ -103,68 +103,69 @@ class CloudInfo
 public:
   CloudInfo(
     const std::string & matching_strategy_name, const std::vector<std::string> & input_topics)
-  : concat_info_base_(create_concat_info_base(matching_strategy_name, input_topics))
+  : concat_info_base_(create_concat_info_base(matching_strategy_name, input_topics)),
+    num_expected_sources_(concat_info_base_.source_info.size())
   {
   }
   ~CloudInfo() = default;
 
-  [[nodiscard]] autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo get_concat_info_base() const
+  [[nodiscard]] autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo reset_and_get_base_info()
   {
+    valid_cloud_count_ = 0;
     return concat_info_base_;
   }
 
-  static void apply_source_with_point_cloud(
-    const sensor_msgs::msg::PointCloud2 & cloud, const std::string & topic, uint8_t status,
+  void apply_source_with_point_cloud(
+    const sensor_msgs::msg::PointCloud2 & source_cloud, const std::string & topic, uint8_t status,
     autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo & out_concatenated_cloud_info)
   {
     auto [target_info, idx_begin] =
       find_source_info_and_next_idx(topic, out_concatenated_cloud_info);
 
-    target_info->header = cloud.header;
+    target_info->header = source_cloud.header;
     target_info->status = status;
     if (status != autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK) return;
     target_info->idx_begin = idx_begin;
-    target_info->length = cloud.width * cloud.height;
+    target_info->length = source_cloud.width * source_cloud.height;
+    valid_cloud_count_++;
   }
 
-  static void apply_source_with_header(
+  void apply_source_with_header(
     const std_msgs::msg::Header & header, const std::string & topic, uint8_t status,
     autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo & out_concatenated_cloud_info)
   {
     auto [target_info, idx_begin] =
       find_source_info_and_next_idx(topic, out_concatenated_cloud_info);
-    target_info->status = status;
     target_info->header = header;
+    target_info->status = status;
+    if (status != autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK) return;
+    valid_cloud_count_++;
   }
 
-  static void apply_source_with_status(
+  void apply_source_with_status(
     const std::string & topic, uint8_t status,
     autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo & out_concatenated_cloud_info)
   {
     auto [target_info, idx_begin] =
       find_source_info_and_next_idx(topic, out_concatenated_cloud_info);
     target_info->status = status;
+    if (status != autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK) return;
+    valid_cloud_count_++;
   }
 
-  static void update_concatenated_point_cloud_header(
-    const sensor_msgs::msg::PointCloud2 & cloud,
-    autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo & out_concatenated_cloud_info)
-  {
-    out_concatenated_cloud_info.header = cloud.header;
-  }
-
-  static void update_concatenated_point_cloud_config(
+  void update_concatenated_point_cloud_config(
     const std::vector<uint8_t> & matching_strategy_config,
-    autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo & out_concatenated_cloud_info)
+    autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo & out_concatenated_cloud_info) const
   {
     out_concatenated_cloud_info.matching_strategy_config = matching_strategy_config;
   }
 
-  static void update_concatenated_point_cloud_success(
-    bool concatenation_success,
-    autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo & out_concatenated_cloud_info)
+  void update_concatenated_point_cloud_result(
+    const sensor_msgs::msg::PointCloud2 & concatenated_cloud,
+    autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo & out_concatenated_cloud_info) const
   {
-    out_concatenated_cloud_info.concatenation_success = concatenation_success;
+    out_concatenated_cloud_info.header = concatenated_cloud.header;
+    out_concatenated_cloud_info.concatenation_success = valid_cloud_count_ == num_expected_sources_;
   }
 
 private:
@@ -174,9 +175,9 @@ private:
     uint32_t idx_begin;
   };
 
-  static SourceInfoResult find_source_info_and_next_idx(
+  [[nodiscard]] SourceInfoResult find_source_info_and_next_idx(
     const std::string & topic,
-    autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo & out_concatenated_cloud_info)
+    autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo & out_concatenated_cloud_info) const
   {
     autoware_sensing_msgs::msg::SourcePointCloudInfo * target_info = nullptr;
     uint32_t idx_begin = 0;
@@ -203,8 +204,8 @@ private:
     return {target_info, idx_begin};
   }
 
-  static autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo create_concat_info_base(
-    const std::string & matching_strategy_name, const std::vector<std::string> & input_topics)
+  [[nodiscard]] autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo create_concat_info_base(
+    const std::string & matching_strategy_name, const std::vector<std::string> & input_topics) const
   {
     autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo concat_info_base;
     auto strategy_it = matching_strategy_name_map.find(matching_strategy_name);
@@ -223,6 +224,8 @@ private:
   }
 
   const autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo concat_info_base_;
+  const size_t num_expected_sources_{0};
+  std::size_t valid_cloud_count_{0};
 };
 
 }  // namespace autoware::pointcloud_preprocessor
