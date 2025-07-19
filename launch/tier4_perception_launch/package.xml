@@ -33,6 +33,7 @@
   <exec_depend>autoware_multi_object_tracker</exec_depend>
   <exec_depend>autoware_object_merger</exec_depend>
   <exec_depend>autoware_object_range_splitter</exec_depend>
+  <exec_depend>autoware_object_sorter</exec_depend>
   <exec_depend>autoware_object_velocity_splitter</exec_depend>
   <exec_depend>autoware_occupancy_grid_map_outlier_filter</exec_depend>
   <exec_depend>autoware_perception_online_evaluator</exec_depend>
@@ -43,6 +44,7 @@
   <exec_depend>autoware_raindrop_cluster_filter</exec_depend>
   <exec_depend>autoware_shape_estimation</exec_depend>
   <exec_depend>autoware_simple_object_merger</exec_depend>
+  <exec_depend>autoware_tensorrt_bevdet</exec_depend>
   <exec_depend>autoware_tensorrt_yolox</exec_depend>
   <exec_depend>autoware_tracking_object_merger</exec_depend>
   <exec_depend>autoware_traffic_light_arbiter</exec_depend>
