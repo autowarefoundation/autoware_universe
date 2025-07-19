@@ -300,12 +300,16 @@ void PointCloudConcatenationComponent::publish()
   // publish concatenated pointcloud
   if (concat_cloud_ptr) {
     auto output = std::make_unique<sensor_msgs::msg::PointCloud2>(*concat_cloud_ptr);
-    auto output_info = std::make_unique<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
-      *concat_cloud_info_ptr);
     pub_output_->publish(std::move(output));
-    pub_output_info_->publish(std::move(output_info));
   } else {
     RCLCPP_WARN(this->get_logger(), "concat_cloud_ptr is nullptr, skipping pointcloud publish.");
+  }
+
+  // publish concatenated pointcloud info
+  if (concat_cloud_info_ptr) {
+    auto output_info = std::make_unique<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
+      *concat_cloud_info_ptr);
+    pub_output_info_->publish(std::move(output_info));
   }
 
   updater_.force_update();
