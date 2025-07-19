@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
+  <arg name="artifact_dir" default="$(env HOME)/autoware_data/diffusion_planner" description="Path to diffusion planner artifacts directory"/>
   <arg name="diffusion_planner_param_path" default="$(find-pkg-share autoware_diffusion_planner)/config/diffusion_planner.param.yaml"/>
 
   <node pkg="autoware_diffusion_planner" exec="autoware_diffusion_planner_node" name="diffusion_planner_node" output="screen">
@@ -13,8 +14,5 @@
     <remap from="~/input/traffic_signals" to="/perception/traffic_light_recognition/traffic_signals"/>
     <remap from="~/input/tracked_objects" to="/perception/object_recognition/tracking/objects"/>
     <remap from="~/input/vector_map" to="/map/vector_map"/>
-    <param name="onnx_model_path" value="$(var onnx_model_path)"/>
-    <param name="args_path" value="$(var args_path)"/>
-    <param name="build_only" value="$(var build_only)"/>
   </node>
 </launch>
