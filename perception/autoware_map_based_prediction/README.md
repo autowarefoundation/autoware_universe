@@ -243,6 +243,8 @@ If the target object is inside the road or crosswalk, this module outputs one or
 | `object_buffer_time_length`                                      | [s]   | double | Time span of object history to store the information                                                                                  |
 | `history_time_length`                                            | [s]   | double | Time span of object information used for prediction                                                                                   |
 | `prediction_time_horizon_rate_for_validate_shoulder_lane_length` | [-]   | double | prediction path will disabled when the estimated path length exceeds lanelet length. This parameter control the estimated path length |
+| `crossing_intention_duration`                                    | [s]   | double | Minimum duration that crossing intention must continuously persist to be judged as true                                               |
+| `no_crossing_intention_duration`                                 | [s]   | double | Minimum duration that lack of crossing intention must continuously persist to be judged as false                                      |
 
 ## Assumptions / Known limits
 
