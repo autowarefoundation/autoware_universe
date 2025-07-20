@@ -58,7 +58,6 @@ class Tracker
 {
 private:
   // existence states
-  int label_;
   int no_measurement_count_;
   int total_no_measurement_count_;
   int total_measurement_count_;
