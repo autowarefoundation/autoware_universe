@@ -18,14 +18,8 @@
 
 #include <autoware_utils/geometry/geometry.hpp>
 
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-
-#include <tf2/LinearMath/Quaternion.h>
-
 #include <algorithm>
 #include <cmath>
-#include <iomanip>
-#include <iostream>
 #include <limits>
 #include <random>
 #include <vector>
@@ -76,9 +70,6 @@ Tracker::Tracker(const rclcpp::Time & time, const types::DynamicObject & detecte
   // Initialize existence probabilities
   existence_probabilities_.resize(types::max_channel_size, 0.001);
   total_existence_probability_ = 0.001;
-
-  // Debug info
-  label_ = static_cast<int>(detected_object.classification[0].label);
 }
 
 void Tracker::initializeExistenceProbabilities(
@@ -250,10 +241,6 @@ bool Tracker::updateWithMeasurement(
 
   // update time
   object_.time = measurement_time;
-
-  // update label info
-  label_ = static_cast<int>(object_.classification[0].label);
-  // std::cout << "uuid : " << getUuidString() << " weak updated." << std::endl;
 
   return true;
 }
@@ -433,30 +420,6 @@ bool Tracker::isConfident(
   const rclcpp::Time & time, const AdaptiveThresholdCache & cache,
   const std::optional<geometry_msgs::msg::Pose> & ego_pose) const
 {
-  // // print debug info
-  // float shape_x = object_.shape.dimensions.x;
-  // float shape_y = object_.shape.dimensions.y;
-
-  // const float dx = object_.pose.position.x - ego_pose->position.x;
-  // const float dy = object_.pose.position.y - ego_pose->position.y;
-
-  // tf2::Quaternion q;
-  // tf2::fromMsg(ego_pose->orientation, q);
-  // const double yaw = tf2::getYaw(q);
-
-  // // rotate into ego-local frame: [x_local; y_local] = R^T * [dx; dy]
-  // const float local_x = std::cos(yaw) * dx + std::sin(yaw) * dy;
-  // const float local_y = -std::sin(yaw) * dx + std::cos(yaw) * dy;
-
-  // if (label_ > 0 && label_ < 5) {
-  //   std::cout << std::fixed << std::setprecision(1) << "uuid: " << getUuidString() << ", "
-  //             << "label: " << label_ << ", "
-  //             << "x: " << local_x << ", "
-  //             << "y: " << local_y << ", "
-  //             << "shape_x: " << shape_x << ", "
-  //             << "shape_y: " << shape_y << std::endl;
-  // }
-
   // check the number of measurements. if the measurement is too small, definitely not confident
   const int count = getTotalMeasurementCount();
   if (count < 2) {
@@ -467,18 +430,9 @@ bool Tracker::isConfident(
   double minor_axis_sq = 0.0;
   getPositionCovarianceEigenSq(time, major_axis_sq, minor_axis_sq);
 
-  // if (label_ > 0 && label_ < 5) {
-  //   std::cout << std::fixed << std::setprecision(1) << "uuid: " << getUuidString() << ", "
-  //             << "major_axis_sq: " << major_axis_sq << ", "
-  //             << "existence_prob: " << getTotalExistenceProbability() << std::endl;
-  // }
-
   // if the covariance is very small, the tracker is confident
   constexpr double STRONG_COV_THRESHOLD = 0.28;
   if (major_axis_sq < STRONG_COV_THRESHOLD) {
-    // if (label_ > 0 && label_ < 5) {
-    //   std::cout << "uuid : " << getUuidString() << " confident " << std::endl;
-    // }
     return true;
   }
 
@@ -488,16 +442,8 @@ bool Tracker::isConfident(
   const double adaptive_threshold = computeAdaptiveThreshold(1.6, 2.6, cache, ego_pose);
 
   if (getTotalExistenceProbability() > 0.50 && major_axis_sq < adaptive_threshold) {
-    // if (label_ > 0 && label_ < 5) {
-    //   std::cout << "uuid : " << getUuidString() << " confident " << std::endl;
-    // }
     return true;
   }
-
-  // if (label_ > 0 && label_ < 5) {
-  //   std::cout << "uuid : " << getUuidString() << " not confident, "
-  //             << "adaptive_thres: " << adaptive_threshold << std::endl;
-  // }
 
   return false;
 }
