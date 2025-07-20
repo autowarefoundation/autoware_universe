@@ -229,6 +229,31 @@ struct PlanningValidatorContext
       diag_updater->force_update();
     }
   }
+
+  void init_validation_status()
+  {
+    auto & s = validation_status;
+    s->is_valid_size = true;
+    s->is_valid_finite_value = true;
+    s->is_valid_interval = true;
+    s->is_valid_relative_angle = true;
+    s->is_valid_curvature = true;
+    s->is_valid_lateral_acc = true;
+    s->is_valid_lateral_jerk = true;
+    s->is_valid_longitudinal_max_acc = true;
+    s->is_valid_longitudinal_min_acc = true;
+    s->is_valid_steering = true;
+    s->is_valid_steering_rate = true;
+    s->is_valid_velocity_deviation = true;
+    s->is_valid_distance_deviation = true;
+    s->is_valid_longitudinal_distance_deviation = true;
+    s->is_valid_forward_trajectory_length = true;
+    s->is_valid_latency = true;
+    s->is_valid_yaw_deviation = true;
+    s->is_valid_trajectory_shift = true;
+    s->is_valid_intersection_collision_check = true;
+    s->is_valid_rear_collision_check = true;
+  }
 };
 
 }  // namespace autoware::planning_validator
