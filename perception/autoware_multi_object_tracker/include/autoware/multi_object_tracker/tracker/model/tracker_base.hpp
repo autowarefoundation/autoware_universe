@@ -58,6 +58,7 @@ class Tracker
 {
 private:
   // existence states
+  int label_;
   int no_measurement_count_;
   int total_no_measurement_count_;
   int total_measurement_count_;
@@ -66,11 +67,15 @@ private:
   float total_existence_probability_;
   std::vector<autoware_perception_msgs::msg::ObjectClassification> classification_;
 
-  // conditioned update config and states
-  static constexpr size_t AREA_HISTORY_SIZE = 3;
-  static constexpr double AREA_VARIATION_THRESHOLD = 0.15;
-  boost::circular_buffer<double> area_history_{AREA_HISTORY_SIZE};
+  // exponential moving average configs for conditioned update
+  static constexpr double EMA_ALPHA = 0.2;
+  static constexpr double SHAPE_VARIATION_THRESHOLD = 0.1;
+  static constexpr size_t WEAK_UPDATE_MAX_COUNT = 6;
+  static constexpr size_t STABLE_STREAK_THRESHOLD = 2;
   size_t weak_update_count_{0};
+  size_t shape_stable_streak_{0};
+  bool ema_shape_initialized_{false};
+  Eigen::Vector3d ema_shape_;
 
   // cache
   mutable rclcpp::Time cached_time_;
@@ -97,6 +102,7 @@ public:
   bool updateWithMeasurement(
     const types::DynamicObject & object, const rclcpp::Time & measurement_time,
     const types::InputChannel & channel_info, bool significant_shape_change = false);
+  void resetShapeUpdateCount();
   bool updateWithoutMeasurement(const rclcpp::Time & now);
   void updateClassification(
     const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification);

@@ -20,7 +20,14 @@
 
 #include <autoware_utils_geometry/geometry.hpp>
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
+#include <tf2/LinearMath/Quaternion.h>
+
 #include <algorithm>
+#include <cmath>
+#include <iomanip>
+#include <iostream>
 #include <limits>
 #include <random>
 #include <vector>
@@ -72,6 +79,9 @@ Tracker::Tracker(const rclcpp::Time & time, const types::DynamicObject & detecte
   existence_probabilities_.resize(types::max_channel_size, 0.001);
   total_existence_probability_ = 0.001;
   classification_ = detected_object.classification;
+
+  // Debug info
+  label_ = static_cast<int>(detected_object.classification[0].label);
 }
 
 void Tracker::initializeExistenceProbabilities(
@@ -170,11 +180,25 @@ bool Tracker::updateWithMeasurement(
     // Update object status
     getTrackedObject(measurement_time, object_);
 
-    // Reset weak update count
-    weak_update_count_ = 0;
+    // Reset ema_shape_
+    ema_shape_initialized_ = false;
   } else {
-    // Store measurement area info
-    area_history_.push_back(object.area);
+    Eigen::Vector3d meas_shape{
+      object.shape.dimensions.x, object.shape.dimensions.y, object.shape.dimensions.z};
+    if (!ema_shape_initialized_) {
+      ema_shape_ = meas_shape;
+      ema_shape_initialized_ = true;
+      resetShapeUpdateCount();
+    } else {
+      // Compute relative shape change and update ema_shape_
+      Eigen::Vector3d rel_shape = (meas_shape - ema_shape_).cwiseAbs().cwiseQuotient(ema_shape_);
+      ema_shape_ = EMA_ALPHA * meas_shape + (1 - EMA_ALPHA) * ema_shape_;
+      if (rel_shape.maxCoeff() < SHAPE_VARIATION_THRESHOLD) {
+        ++shape_stable_streak_;
+      } else {
+        shape_stable_streak_ = 0;
+      }
+    }
 
     // Weak update based on prediction
     ++weak_update_count_;
@@ -190,37 +214,54 @@ bool Tracker::updateWithMeasurement(
     const double w_pose = std::clamp(1.0 - dist2 * d_max_square_inv, min_w, 1.0);
 
     // Blend position
-    object_.pose.position.x = pred.pose.position.x * (1 - w_pose) + object.pose.position.x * w_pose;
-    object_.pose.position.y = pred.pose.position.y * (1 - w_pose) + object.pose.position.y * w_pose;
-    object_.pose.position.z = pred.pose.position.z;
+    pred.pose.position.x = pred.pose.position.x * (1 - w_pose) + object.pose.position.x * w_pose;
+    pred.pose.position.y = pred.pose.position.y * (1 - w_pose) + object.pose.position.y * w_pose;
 
     // Blend yaw orientation
-    const double yaw_pred = tf2::getYaw(pred.pose.orientation);
-    const double yaw_meas = tf2::getYaw(object.pose.orientation);
-    const double yaw_fused = yaw_pred * (1 - w_pose) + yaw_meas * w_pose;
+    double yaw_pred = tf2::getYaw(pred.pose.orientation);
+    double yaw_meas = tf2::getYaw(object.pose.orientation);
+    double yaw_fused = yaw_pred * (1 - w_pose) + yaw_meas * w_pose;
     tf2::Quaternion q;
     q.setRPY(0, 0, yaw_fused);
-    object_.pose.orientation = tf2::toMsg(q);
+    pred.pose.orientation = tf2::toMsg(q);
 
-    // Update shape if weak update continues and area of recent measurements tend to be stable
-    if (weak_update_count_ >= AREA_HISTORY_SIZE) {
-      auto [min_it, max_it] = std::minmax_element(area_history_.begin(), area_history_.end());
-      double min_area = *min_it;
-      double max_area = *max_it;
-      if ((max_area - min_area) / max_area < AREA_VARIATION_THRESHOLD) {
-        object_.shape.dimensions = object.shape.dimensions;
-        object_.shape.type = object.shape.type;
-        object_.area = types::getArea(object_.shape);
-        weak_update_count_ = 0;
+    // Update blended pose
+    object_.pose = pred.pose;
+
+    // Update shape if shape stable streak over threshold or weak update continues too long
+    if (
+      weak_update_count_ >= WEAK_UPDATE_MAX_COUNT ||
+      shape_stable_streak_ >= STABLE_STREAK_THRESHOLD) {
+      object_.shape = object.shape;
+      // Use ema_shape_ for long weak update case
+      if (weak_update_count_ >= WEAK_UPDATE_MAX_COUNT) {
+        object_.shape.dimensions.x = ema_shape_[0];
+        object_.shape.dimensions.y = ema_shape_[1];
+        object_.shape.dimensions.z = ema_shape_[2];
       }
-    }
 
-    // Cache fused state
-    object_.time = measurement_time;
-    updateCache(object_, measurement_time);
+      // measure to update Kalman filter internal states
+      measure(object, measurement_time, channel_info);
+
+      resetShapeUpdateCount();
+      ema_shape_initialized_ = false;
+    }
   }
 
+  // update time
+  object_.time = measurement_time;
+
+  // update label info
+  label_ = static_cast<int>(object_.classification[0].label);
+  // std::cout << "uuid : " << getUuidString() << " weak updated." << std::endl;
+
   return true;
+}
+
+void Tracker::resetShapeUpdateCount()
+{
+  weak_update_count_ = 0;
+  shape_stable_streak_ = 0;
 }
 
 bool Tracker::updateWithoutMeasurement(const rclcpp::Time & timestamp)
@@ -418,6 +459,30 @@ bool Tracker::isConfident(
   const AdaptiveThresholdCache & cache, const std::optional<geometry_msgs::msg::Pose> & ego_pose,
   const std::optional<rclcpp::Time> & time = std::nullopt) const
 {
+  // // print debug info
+  // float shape_x = object_.shape.dimensions.x;
+  // float shape_y = object_.shape.dimensions.y;
+
+  // const float dx = object_.pose.position.x - ego_pose->position.x;
+  // const float dy = object_.pose.position.y - ego_pose->position.y;
+
+  // tf2::Quaternion q;
+  // tf2::fromMsg(ego_pose->orientation, q);
+  // const double yaw = tf2::getYaw(q);
+
+  // // rotate into ego-local frame: [x_local; y_local] = R^T * [dx; dy]
+  // const float local_x = std::cos(yaw) * dx + std::sin(yaw) * dy;
+  // const float local_y = -std::sin(yaw) * dx + std::cos(yaw) * dy;
+
+  // if (label_ > 0 && label_ < 5) {
+  //   std::cout << std::fixed << std::setprecision(1) << "uuid: " << getUuidString() << ", "
+  //             << "label: " << label_ << ", "
+  //             << "x: " << local_x << ", "
+  //             << "y: " << local_y << ", "
+  //             << "shape_x: " << shape_x << ", "
+  //             << "shape_y: " << shape_y << std::endl;
+  // }
+
   // check the number of measurements. if the measurement is too small, definitely not confident
   const int count = getTotalMeasurementCount();
   if (count < 2) {
@@ -438,9 +503,18 @@ bool Tracker::isConfident(
   double minor_axis_sq = 0.0;
   getPositionCovarianceEigenSq(time_to_check, major_axis_sq, minor_axis_sq);
 
+  // if (label_ > 0 && label_ < 5) {
+  //   std::cout << std::fixed << std::setprecision(1) << "uuid: " << getUuidString() << ", "
+  //             << "major_axis_sq: " << major_axis_sq << ", "
+  //             << "existence_prob: " << getTotalExistenceProbability() << std::endl;
+  // }
+
   // if the covariance is very small, the tracker is confident
   constexpr double STRONG_COV_THRESHOLD = 0.28;
   if (major_axis_sq < STRONG_COV_THRESHOLD) {
+    // if (label_ > 0 && label_ < 5) {
+    //   std::cout << "uuid : " << getUuidString() << " confident " << std::endl;
+    // }
     return true;
   }
 
@@ -450,8 +524,16 @@ bool Tracker::isConfident(
   const double adaptive_threshold = computeAdaptiveThreshold(1.6, 2.6, cache, ego_pose);
 
   if (getTotalExistenceProbability() > 0.50 && major_axis_sq < adaptive_threshold) {
+    // if (label_ > 0 && label_ < 5) {
+    //   std::cout << "uuid : " << getUuidString() << " confident " << std::endl;
+    // }
     return true;
   }
+
+  // if (label_ > 0 && label_ < 5) {
+  //   std::cout << "uuid : " << getUuidString() << " not confident, "
+  //             << "adaptive_thres: " << adaptive_threshold << std::endl;
+  // }
 
   return false;
 }
