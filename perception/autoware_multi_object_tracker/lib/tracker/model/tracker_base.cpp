@@ -183,11 +183,18 @@ bool Tracker::updateWithMeasurement(
     } else {
       // Compute relative shape change and update ema_shape_
       Eigen::Vector3d rel_shape = (meas_shape - ema_shape_).cwiseAbs().cwiseQuotient(ema_shape_);
-      ema_shape_ = EMA_ALPHA * meas_shape + (1 - EMA_ALPHA) * ema_shape_;
       if (rel_shape.maxCoeff() < SHAPE_VARIATION_THRESHOLD) {
+        ema_shape_ = EMA_ALPHA * meas_shape + (1 - EMA_ALPHA) * ema_shape_;
         ++shape_stable_streak_;
+        shape_unstable_streak_ = 0;
       } else {
+        ++shape_unstable_streak_;
+      }
+      // If shape unstable streak over threshold, init new ema_shape_
+      if (shape_unstable_streak_ >= UNSTABLE_STREAK_THRESHOLD) {
+        ema_shape_ = meas_shape;
         shape_stable_streak_ = 0;
+        shape_unstable_streak_ = 0;
       }
     }
 
@@ -235,7 +242,6 @@ bool Tracker::updateWithMeasurement(
       measure(object, measurement_time, channel_info);
 
       resetShapeUpdateCount();
-      ema_shape_initialized_ = false;
     }
   }
 
@@ -249,6 +255,7 @@ void Tracker::resetShapeUpdateCount()
 {
   weak_update_count_ = 0;
   shape_stable_streak_ = 0;
+  shape_unstable_streak_ = 0;
 }
 
 bool Tracker::updateWithoutMeasurement(const rclcpp::Time & timestamp)
