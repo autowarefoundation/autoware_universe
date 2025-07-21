@@ -53,6 +53,9 @@
 
   <!-- topic remap -->
   <arg name="output_control_cmd" default="/control/command/control_cmd"/>
+  <arg name="output_gear_cmd" default="/control/command/gear_cmd"/>
+  <arg name="output_turn_indicators_cmd" default="/control/command/turn_indicators_cmd"/>
+  <arg name="output_hazard_lights_cmd" default="/control/command/hazard_lights_cmd"/>
 
   <group>
     <push-ros-namespace namespace="control"/>
@@ -61,6 +64,9 @@
       <include file="$(find-pkg-share autoware_control_command_gate)/launch/control_command_gate.launch.xml">
         <arg name="config" value="$(var control_command_gate_param_path)"/>
         <arg name="~/output/control" value="$(var output_control_cmd)"/>
+        <arg name="~/output/gear" default="$(var output_gear_cmd)"/>
+        <arg name="~/output/turn_indicators" default="$(var output_turn_indicators_cmd)"/>
+        <arg name="~/output/hazard_lights" default="$(var output_hazard_lights_cmd)"/>
       </include>
     </group>
     <group if="$(var use_control_command_gate)">
