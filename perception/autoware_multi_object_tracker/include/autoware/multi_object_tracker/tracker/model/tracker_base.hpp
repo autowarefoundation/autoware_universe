@@ -68,11 +68,14 @@ private:
 
   // exponential moving average configs for conditioned update
   static constexpr double EMA_ALPHA = 0.2;
-  static constexpr double SHAPE_VARIATION_THRESHOLD = 0.1;
-  static constexpr size_t WEAK_UPDATE_MAX_COUNT = 6;
-  static constexpr size_t STABLE_STREAK_THRESHOLD = 2;
+  static constexpr double SHAPE_VARIATION_THRESHOLD = 0.2;
+  static constexpr size_t WEAK_UPDATE_MAX_COUNT = 10;
+  static constexpr size_t STABLE_STREAK_THRESHOLD = 4;
+  static constexpr size_t UNSTABLE_STREAK_THRESHOLD = 2;
+
   size_t weak_update_count_{0};
   size_t shape_stable_streak_{0};
+  size_t shape_unstable_streak_{0};
   bool ema_shape_initialized_{false};
   Eigen::Vector3d ema_shape_;
 
