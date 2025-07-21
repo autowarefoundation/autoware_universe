@@ -1305,9 +1305,20 @@ void StartPlannerModule::updatePullOutStatus()
   // search pull out start candidates backward
   const std::vector<Pose> start_pose_candidates = std::invoke([&]() -> std::vector<Pose> {
     if (parameters_->enable_back) {
-      return searchPullOutStartPoseCandidates(start_pose_candidates_path);
+      auto candidates = searchPullOutStartPoseCandidates(start_pose_candidates_path);
+      // Remove the first candidate from searchPullOutStartPoseCandidates
+      // (back_distance=0.0, equivalent to current position)
+      // Note: The remaining candidates yaw are assumed to be aligned along the lane yaw after
+      // backward driving
+      if (!candidates.empty()) {
+        candidates.erase(candidates.begin());
+      }
+      // Insert current_pose at the beginning to always include departure from current position as a
+      // candidate
+      candidates.insert(candidates.begin(), current_pose);
+      return candidates;
     }
-    return {*refined_start_pose};
+    return {current_pose};
   });
 
   if (!status_.backward_driving_complete) {
