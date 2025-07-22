@@ -17,7 +17,6 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/tools/pedestrian_pose.cpp
   src/tools/car_pose.cpp
   src/tools/unknown_pose.cpp
-  src/tools/predicted_object.cpp
   src/tools/delete_all_objects.cpp
 )
 
