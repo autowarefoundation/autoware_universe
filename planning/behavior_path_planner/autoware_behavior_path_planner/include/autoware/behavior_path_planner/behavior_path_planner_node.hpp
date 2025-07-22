@@ -17,7 +17,6 @@
 
 #include "autoware/behavior_path_planner_common/data_manager.hpp"
 #include "autoware/behavior_path_planner_common/interface/scene_module_interface.hpp"
-#include "autoware_utils/ros/debug_publisher.hpp"
 #include "autoware_utils/ros/logger_level_configure.hpp"
 #include "planner_manager.hpp"
 
@@ -171,11 +170,8 @@ private:
   /**
    * @brief extract path from behavior tree output
    */
-  PathWithLaneId::SharedPtr getPath(
-    const BehaviorModuleOutput & output, const std::shared_ptr<PlannerData> & planner_data,
-    const std::shared_ptr<PlannerManager> & planner_manager);
-
-  bool keepInputPoints(const std::vector<std::shared_ptr<SceneModuleStatus>> & statuses) const;
+  static PathWithLaneId::SharedPtr getPath(
+    const BehaviorModuleOutput & output, const std::shared_ptr<PlannerData> & planner_data);
 
   /**
    * @brief skip smooth goal connection
