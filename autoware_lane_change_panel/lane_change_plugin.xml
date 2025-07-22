@@ -1,0 +1,7 @@
+<library path="lane_change_panel">
+  <class name="LaneChangePanel"
+         type="LaneChangePanel"
+         base_class_type="rviz_common::Panel">
+    <description>Forced Lane Change Panel</description>
+  </class>
+</library>

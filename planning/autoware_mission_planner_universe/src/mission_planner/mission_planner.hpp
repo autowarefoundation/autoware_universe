@@ -32,6 +32,7 @@
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/route_state.hpp>
 #include <autoware_planning_msgs/srv/clear_route.hpp>
+#include <autoware_planning_msgs/srv/set_lane_change_override.hpp>
 #include <autoware_planning_msgs/srv/set_lanelet_route.hpp>
 #include <autoware_planning_msgs/srv/set_waypoint_route.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
@@ -56,6 +57,7 @@ using autoware_planning_msgs::msg::LaneletSegment;
 using autoware_planning_msgs::msg::PoseWithUuidStamped;
 using autoware_planning_msgs::msg::RouteState;
 using autoware_planning_msgs::srv::ClearRoute;
+using autoware_planning_msgs::srv::SetLaneChangeOverride;
 using autoware_planning_msgs::srv::SetLaneletRoute;
 using autoware_planning_msgs::srv::SetWaypointRoute;
 using geometry_msgs::msg::Pose;
@@ -65,6 +67,12 @@ using std_msgs::msg::Header;
 using tier4_planning_msgs::msg::RerouteAvailability;
 using unique_identifier_msgs::msg::UUID;
 using visualization_msgs::msg::MarkerArray;
+
+enum class DIRECTION
+{
+  LEFT,
+  RIGHT,
+};
 
 class MissionPlanner : public rclcpp::Node
 {
@@ -111,6 +119,8 @@ private:
 
   void on_clear_route(
     const ClearRoute::Request::SharedPtr req, const ClearRoute::Response::SharedPtr res);
+  void on_set_lane_change_override(
+    const SetLaneChangeOverride::Request::SharedPtr req, const SetLaneChangeOverride::Response::SharedPtr res);
   void on_set_lanelet_route(
     const SetLaneletRoute::Request::SharedPtr req, const SetLaneletRoute::Response::SharedPtr res);
   void on_set_waypoint_route(

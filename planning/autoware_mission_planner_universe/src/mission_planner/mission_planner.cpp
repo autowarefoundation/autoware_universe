@@ -263,6 +263,102 @@ void MissionPlanner::on_clear_route(
   res->status.success = true;
 }
 
+void MissionPlanner::on_set_lane_change_override(
+    const SetLaneChangeOverride::Request::SharedPtr req, const SetLaneChangeOverride::Response::SharedPtr res)
+{
+  using ResponseCode = autoware_adapi_v1_msgs::srv::SetRoute::Response;
+  const auto is_reroute = state_.state == RouteState::SET;
+
+  if (state_.state != RouteState::UNSET && state_.state != RouteState::SET) {
+    throw service_utils::ServiceException(
+      ResponseCode::ERROR_INVALID_STATE,
+      fmt::format(
+        "The lanelet route cannot be set in the current state: {}",
+        route_state_to_string(state_.state)));
+  }
+  if (!is_mission_planner_ready_) {
+    throw service_utils::ServiceException(
+      ResponseCode::ERROR_PLANNER_UNREADY, "The mission planner is not ready.");
+  }
+  if (is_reroute && !operation_mode_state_) {
+    throw service_utils::ServiceException(
+      ResponseCode::ERROR_PLANNER_UNREADY, "Operation mode state is not received.");
+  }
+
+  const bool is_autonomous_driving =
+    operation_mode_state_ ? operation_mode_state_->mode == OperationModeState::AUTONOMOUS &&
+                              operation_mode_state_->is_autoware_control_enabled
+                          : false;
+
+  if (is_reroute && !allow_reroute_in_autonomous_mode_ && is_autonomous_driving) {
+    throw service_utils::ServiceException(
+      ResponseCode::ERROR_INVALID_STATE, "Reroute is not allowed in autonomous mode.");
+  }
+
+  if (is_reroute && is_autonomous_driving) {
+    const auto reroute_availability = sub_reroute_availability_.take_data();
+    if (!reroute_availability || !reroute_availability->availability) {
+      throw service_utils::ServiceException(
+        ResponseCode::ERROR_INVALID_STATE,
+        "Cannot reroute as the planner is not in lane following.");
+    }
+  }
+
+  change_state(is_reroute ? RouteState::REROUTING : RouteState::ROUTING);
+  auto route = *current_route_;
+  
+  // modify the preferred lanelet to change the lane
+  DIRECTION override_direction = req->lane_change_direction == 0
+    ? DIRECTION::LEFT : DIRECTION::RIGHT;
+    
+  for (auto & segment : route.segments) {
+    // Find the index of the current preferred primitive
+    auto it = std::find_if(
+      segment.primitives.begin(), segment.primitives.end(),
+      [&segment](const LaneletPrimitive & p) {
+        return p.id == segment.preferred_primitive.id;
+    });
+
+    if (it == segment.primitives.end()) continue;
+
+    std::size_t index = std::distance(segment.primitives.begin(), it);
+
+    if (override_direction == DIRECTION::LEFT && index > 0) {
+      // shift to the primitive on the left
+      segment.preferred_primitive = segment.primitives.at(index - 1);
+    } else if (
+      override_direction == DIRECTION::RIGHT &&
+      index + 1 < segment.primitives.size()
+    ) {
+      // shift to the primitive on the right
+      segment.preferred_primitive = segment.primitives.at(index + 1);
+    } else {
+      // no shift possible (e.g., already leftmost or rightmost)
+      RCLCPP_WARN_STREAM(get_logger(), "Cannot shift " <<
+        (override_direction == DIRECTION::LEFT ? "left" : "right") <<
+        " from primitive ID: " << segment.preferred_primitive.id);
+    }
+  }
+
+  if (route.segments.empty()) {
+    cancel_route();
+    change_state(is_reroute ? RouteState::SET : RouteState::UNSET);
+    throw service_utils::ServiceException(
+      ResponseCode::ERROR_PLANNER_FAILED, "The planned route is empty.");
+  }
+
+  if (is_reroute && is_autonomous_driving && !check_reroute_safety(*current_route_, route)) {
+    cancel_route();
+    change_state(RouteState::SET);
+    throw service_utils::ServiceException(
+      ResponseCode::ERROR_REROUTE_FAILED, "New route is not safe. Reroute failed.");
+  }
+
+  change_route(route);
+  change_state(RouteState::SET);
+  res->status.success = true;
+}
+
 void MissionPlanner::on_set_lanelet_route(
   const SetLaneletRoute::Request::SharedPtr req, const SetLaneletRoute::Response::SharedPtr res)
 {
@@ -379,6 +475,31 @@ void MissionPlanner::on_set_waypoint_route(
     change_state(RouteState::SET);
     throw service_utils::ServiceException(
       ResponseCode::ERROR_REROUTE_FAILED, "New route is not safe. Reroute failed.");
+  }
+
+  SetLaneletRoute::Request::SharedPtr req_ptr =
+    std::make_shared<SetLaneletRoute::Request>();
+  
+  req_ptr->header = req->header;
+  req_ptr->goal_pose = req->goal_pose;
+  req_ptr->uuid = req->uuid;
+  req_ptr->allow_modification = req->allow_modification;
+
+  RCLCPP_INFO(this->get_logger(), "header: %s", req_ptr->header.frame_id.c_str());
+  RCLCPP_INFO(this->get_logger(), "goal_pose: %f, %f", 
+              req_ptr->goal_pose.position.x, req_ptr->goal_pose.position.y);
+  RCLCPP_INFO(this->get_logger(), "allow_modification: %s", 
+              req_ptr->allow_modification ? "true" : "false");
+
+  for (const auto & route_segment : route.segments) {
+    req_ptr->segments.push_back(route_segment);
+    RCLCPP_INFO(this->get_logger(), "PreferredSegment ID: %ld", route_segment.preferred_primitive.id);
+    RCLCPP_INFO(this->get_logger(), "PreferredSegment Type: %s", route_segment.preferred_primitive.primitive_type.c_str());
+
+    for (const auto & primitive : route_segment.primitives) {
+      RCLCPP_INFO(this->get_logger(), "Primitive ID: %ld", primitive.id);
+      RCLCPP_INFO(this->get_logger(), "Primitive Type: %s", primitive.primitive_type.c_str());
+    }
   }
 
   change_route(route);
