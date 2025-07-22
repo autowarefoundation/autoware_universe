@@ -6,5 +6,16 @@
     remove_overlapped_unknown_objects: true
     base_link_frame_id: base_link
     priority_mode: 2  # PriorityMode::Confidence
+    # class based  priority for each object class for priority_mode: 3
+    class_based_priority_matrix:
+    #UNKNOWN, CAR, TRUCK, BUS,  TRAILER, MOTORBIKE, BICYCLE,PEDESTRIAN -> Object0
+      [0,       0,   0,     0,    0,       0,         0,      0,         #UNKNOWN
+       0,       0,   0,     0,    0,       0,         0,      0,         #CAR
+       0,       0,   0,     0,    0,       0,         0,      0,         #TRUCK
+       0,       0,   0,     0,    0,       0,         0,      0,         #BUS
+       0,       0,   0,     0,    0,       0,         0,      0,         #TRAILER
+       0,       0,   0,     0,    0,       0,         1,      1,         #MOTORBIKE
+       0,       0,   0,     0,    0,       0,         0,      1,         #BICYCLE
+       0,       0,   0,     0,    0,       0,         0,      0]         #PEDESTRIAN -> object1
     message_timeout_sec: 1.0
     initialization_timeout_sec: 10.0
