@@ -54,7 +54,8 @@ struct ObjectInfo
   ObjectInfo(
     const tier4_simulation_msgs::msg::DummyObject & object,
     const autoware_perception_msgs::msg::PredictedObject & predicted_object,
-    const rclcpp::Time & predicted_time, const rclcpp::Time & current_time);
+    const rclcpp::Time & predicted_time, const rclcpp::Time & current_time,
+    double predicted_path_delay = 2.0);
 
   // Position calculation methods
   static geometry_msgs::msg::Pose calculateStraightLinePosition(

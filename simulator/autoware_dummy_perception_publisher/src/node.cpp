@@ -95,7 +95,8 @@ ObjectInfo::ObjectInfo(
 ObjectInfo::ObjectInfo(
   const tier4_simulation_msgs::msg::DummyObject & object,
   const autoware_perception_msgs::msg::PredictedObject & predicted_object,
-  const rclcpp::Time & predicted_time, const rclcpp::Time & current_time)
+  const rclcpp::Time & predicted_time, const rclcpp::Time & current_time,
+  double predicted_path_delay)
 : length(object.shape.dimensions.x),
   width(object.shape.dimensions.y),
   height(object.shape.dimensions.z),
@@ -106,11 +107,11 @@ ObjectInfo::ObjectInfo(
   twist_covariance_(object.initial_state.twist_covariance),
   pose_covariance_(object.initial_state.pose_covariance)
 {
-  // Check if 2 seconds have passed since object creation
+  // Check if predicted_path_delay seconds have passed since object creation
   const double time_since_creation = (current_time - rclcpp::Time(object.header.stamp)).seconds();
-  // Use straight-line movement for first 2 seconds, then switch to predicted path
+  // Use straight-line movement for first predicted_path_delay seconds, then switch to predicted path
   if (
-    time_since_creation < 2.0 ||  // TODO: Make this configurable from node instance
+    time_since_creation < predicted_path_delay ||
     predicted_object.kinematics.predicted_paths.empty()) {
     // Reuse the logic from the other constructor
     *this = ObjectInfo(object, current_time);
@@ -493,7 +494,7 @@ void DummyPerceptionPublisherNode::timerCallback()
     ObjectInfo obj_info = [&]() {
       // Only use predicted motion if the action is PREDICT
       if (object.action == tier4_simulation_msgs::msg::DummyObject::PREDICT && matched_predicted) {
-        return ObjectInfo(object, predicted_object, predicted_time, current_time);
+        return ObjectInfo(object, predicted_object, predicted_time, current_time, predicted_path_delay_);
       }
 
       // Check if we have a last used prediction for this object (only if action is PREDICT)
@@ -509,7 +510,7 @@ void DummyPerceptionPublisherNode::timerCallback()
             rclcpp::get_logger("dummy_perception_publisher"),
             "Using last known prediction for lost object with ID: %s", dummy_uuid_str.c_str());
           return ObjectInfo(
-            object, last_used_pred_it->second, last_used_time_it->second, current_time);
+            object, last_used_pred_it->second, last_used_time_it->second, current_time, predicted_path_delay_);
         }
 
         RCLCPP_DEBUG(
