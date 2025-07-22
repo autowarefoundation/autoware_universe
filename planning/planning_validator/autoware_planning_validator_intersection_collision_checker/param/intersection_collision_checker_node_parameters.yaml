@@ -26,6 +26,14 @@ intersection_collision_checker_node:
       type: double
       validation:
         gt_eq<>: [0.0]
+    close_distance_th:
+      type: double
+      validation:
+        gt_eq<>: [0.0]
+    close_time_th:
+      type: double
+      validation:
+        gt_eq<>: [0.0]
 
     right_turn:
       enable:

@@ -130,7 +130,6 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
 
   publish_markers(debug_data);
   publish_planning_factor(debug_data);
-  prev_collision_lanes_ = debug_data.collision_lanes;
 }
 
 bool IntersectionCollisionChecker::is_safe(DebugData & debug_data)
@@ -160,6 +159,9 @@ bool IntersectionCollisionChecker::is_safe(DebugData & debug_data)
   debug_data.is_active = true;
   debug_data.is_safe = true;
 
+  const auto prev_collision_lanes = collision_lanes_;
+  collision_lanes_.clear();
+
   const bool is_safe = check_collision(
     debug_data, filtered_pointcloud, context_->data->obstacle_pointcloud->header.stamp);
 
@@ -167,12 +169,10 @@ bool IntersectionCollisionChecker::is_safe(DebugData & debug_data)
   const auto now = clock_->now();
 
   auto consistent_collision_lane = [&]() {
-    return std::find_if(
-             debug_data.collision_lanes.begin(), debug_data.collision_lanes.end(),
-             [&](const auto & id) {
-               return std::find(prev_collision_lanes_.begin(), prev_collision_lanes_.end(), id) !=
-                      prev_collision_lanes_.end();
-             }) != debug_data.collision_lanes.end();
+    return std::find_if(collision_lanes_.begin(), collision_lanes_.end(), [&](const auto & id) {
+             return std::find(prev_collision_lanes.begin(), prev_collision_lanes.end(), id) !=
+                    prev_collision_lanes.end();
+           }) != collision_lanes_.end();
   };
 
   if (is_safe) {
@@ -358,14 +358,12 @@ bool IntersectionCollisionChecker::check_collision(
       return 0.0;
     };
 
-  static constexpr double close_distance_threshold_m = 3.0;
-  static constexpr double close_time_threshold_s = 3.0;
   const auto ego_vel = context_->data->current_kinematics->twist.twist.linear.x;
   const auto close_time_th =
-    ego_vel < p.filter.min_velocity ? close_time_threshold_s : abs(ego_vel / p.ego_deceleration);
+    ego_vel < p.filter.min_velocity ? p.close_time_th : abs(ego_vel / p.ego_deceleration);
   auto is_colliding = [&](const PCDObject & object, const std::pair<double, double> & ego_time) {
     if (!object.is_reliable) return false;
-    if (object.distance_to_overlap < close_distance_threshold_m && ego_time.first < close_time_th)
+    if (object.distance_to_overlap < p.close_distance_th && ego_time.first < close_time_th)
       return true;
     if (object.is_moving && ego_object_overlap_time(object.ttc, ego_time) < p.ttc_threshold) {
       return true;
@@ -388,7 +386,7 @@ bool IntersectionCollisionChecker::check_collision(
       existing_object.is_safe = !is_colliding(existing_object, target_ll.ego_overlap_time);
       if (!existing_object.is_safe) {
         is_safe = false;
-        debug_data.collision_lanes.push_back(target_ll.id);
+        collision_lanes_.push_back(target_ll.id);
       }
       debug_data.pcd_objects.push_back(existing_object);
     }

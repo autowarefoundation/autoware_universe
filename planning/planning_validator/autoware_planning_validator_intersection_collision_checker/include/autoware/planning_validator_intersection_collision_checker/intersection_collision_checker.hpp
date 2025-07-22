@@ -104,7 +104,7 @@ private:
 
   PCDObjectsMap history_;
   mutable TargetLaneletsMap target_lanelets_map_;
-  std::vector<lanelet::Id> prev_collision_lanes_;
+  std::vector<lanelet::Id> collision_lanes_;
   rclcpp::Time last_invalid_time_;
   rclcpp::Time last_valid_time_;
 };

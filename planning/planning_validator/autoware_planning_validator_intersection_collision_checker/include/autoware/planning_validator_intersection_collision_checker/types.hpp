@@ -222,7 +222,6 @@ struct DebugData
   PointCloud2::SharedPtr cluster_points;
   PointCloud2::SharedPtr voxel_points;
   Direction turn_direction{Direction::NONE};
-  std::vector<lanelet::Id> collision_lanes;
   double processing_time_detail_ms{0.0};
   bool is_active{false};
   bool is_safe{true};
