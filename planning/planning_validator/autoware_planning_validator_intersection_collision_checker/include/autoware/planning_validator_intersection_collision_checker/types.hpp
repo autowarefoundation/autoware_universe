@@ -135,15 +135,13 @@ public:
 
   void update_history(const double dist, const double dt)
   {
-    static constexpr size_t max_size = 10;
-
     const auto last_timestamp = timestamp_history.empty() ? 0.0 : timestamp_history.back();
 
     distance_history.push_back(dist);
     timestamp_history.push_back(last_timestamp + dt);
 
-    if (distance_history.size() > max_size) distance_history.pop_front();
-    if (timestamp_history.size() > max_size) timestamp_history.pop_front();
+    if (distance_history.size() > buffer_size) distance_history.pop_front();
+    if (timestamp_history.size() > buffer_size) timestamp_history.pop_front();
   }
 
   bool update_velocity()
