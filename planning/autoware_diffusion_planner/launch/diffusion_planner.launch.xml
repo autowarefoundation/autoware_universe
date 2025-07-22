@@ -13,8 +13,5 @@
     <remap from="~/input/traffic_signals" to="/perception/traffic_light_recognition/traffic_signals"/>
     <remap from="~/input/tracked_objects" to="/perception/object_recognition/tracking/objects"/>
     <remap from="~/input/vector_map" to="/map/vector_map"/>
-    <param name="onnx_model_path" value="$(var onnx_model_path)"/>
-    <param name="args_path" value="$(var args_path)"/>
-    <param name="build_only" value="$(var build_only)"/>
   </node>
 </launch>
