@@ -10,7 +10,6 @@
     random_seed: 0
     use_fixed_random_seed: false
     object_centric_pointcloud: false
-    angle_increment: 0.004363323  # 0.25 * PI / 180.0
     
     # Pedestrian path selection
     pedestrian_path_seed: 42

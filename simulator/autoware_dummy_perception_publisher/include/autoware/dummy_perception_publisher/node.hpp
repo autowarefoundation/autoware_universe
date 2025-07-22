@@ -158,8 +158,6 @@ private:
   bool publish_ground_truth_objects_;
   std::unique_ptr<PointCloudCreator> pointcloud_creator_;
 
-  double angle_increment_;
-
   std::mt19937 random_generator_;
   std::mt19937 pedestrian_path_generator_;
   std::uniform_real_distribution<double> path_selection_dist_;

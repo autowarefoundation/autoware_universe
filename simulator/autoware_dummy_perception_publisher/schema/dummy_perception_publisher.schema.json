@@ -53,11 +53,6 @@
           "default": false,
           "description": "Generate point clouds centered on objects"
         },
-        "angle_increment": {
-          "type": "number",
-          "default": 0.004363323,
-          "description": "Angle increment for ray casting (0.25 degrees in radians)"
-        },
         "pedestrian_path_seed": {
           "type": "integer",
           "default": 42,

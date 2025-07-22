@@ -348,9 +348,6 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
       std::unique_ptr<PointCloudCreator>(new EgoCentricPointCloudCreator(visible_range_));
   }
 
-  // parameters for vehicle centric point cloud generation
-  angle_increment_ = this->declare_parameter("angle_increment", 0.25 * M_PI / 180.0);
-
   if (use_fixed_random_seed) {
     random_generator_.seed(random_seed);
   } else {
