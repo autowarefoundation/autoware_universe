@@ -31,6 +31,9 @@
       MOTORBIKE: 3
       BICYCLE: 3
       PEDESTRIAN: 3
+    # list of generalized IoU thresholds for each class
+    # UNKNOWN, CAR, TRUCK, BUS, TRAILER, MOTORBIKE, BICYCLE, PEDESTRIAN
+    generalized_iou_threshold: [-0.3, -0.4, -0.6, -0.6,  -0.6, -0.1, -0.1, -0.1]
 
     # debug parameters
     publish_processing_time: false

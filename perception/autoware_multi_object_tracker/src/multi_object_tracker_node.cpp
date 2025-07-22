@@ -194,6 +194,16 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         config.confident_count_threshold[class_label] = static_cast<int>(value);
       }
 
+      // Declare parameters for generalized IoU threshold
+      std::map<LabelType, double> generalized_iou_threshold;
+      std::vector<double> generalized_iou_threshold_list =
+        declare_parameter<std::vector<double>>("generalized_iou_threshold");
+      for (size_t i = 0; i < generalized_iou_threshold_list.size(); ++i) {
+        const auto label = static_cast<LabelType>(i);
+        generalized_iou_threshold[label] = generalized_iou_threshold_list.at(i);
+      }
+      config.generalized_iou_threshold = generalized_iou_threshold;
+
       config.enable_unknown_object_velocity_estimation =
         declare_parameter<bool>("enable_unknown_object_velocity_estimation");
       config.enable_unknown_object_motion_output =

@@ -233,20 +233,52 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
   };
 
   auto isIoUOverThreshold = [this](
-                              const TrackerData & source_data, const TrackerData & target_data) {
+                              const TrackerData & target_data, const TrackerData & source_data) {
     constexpr double min_union_iou_area = 1e-2;
     constexpr float min_known_prob = 0.2;
     constexpr double min_valid_iou = 1e-6;
-    bool is_pedestrian =
-      (source_data.label == Label::PEDESTRIAN && target_data.label == Label::PEDESTRIAN);
-    bool is_target_known = target_data.tracker->getKnownObjectProbability() >= min_known_prob;
-    const auto iou =
-      is_pedestrian ? shapes::get1dIoU(source_data.object, target_data.object)
-                    : shapes::get2dIoU(source_data.object, target_data.object, min_union_iou_area);
-    if (iou < min_valid_iou) return false;
 
-    return is_target_known ? iou > config_.min_known_object_removal_iou
-                           : iou > config_.min_unknown_object_removal_iou;
+    constexpr double precision_threshold = 0.;
+    constexpr double recall_threshold = 0.5;
+    const double generalized_iou_threshold =
+      config_.generalized_iou_threshold.at(source_data.label);
+
+    const bool is_pedestrian =
+      (source_data.label == Label::PEDESTRIAN && target_data.label == Label::PEDESTRIAN);
+    const bool is_target_known = target_data.tracker->getKnownObjectProbability() >= min_known_prob;
+    const bool is_source_known = source_data.tracker->getKnownObjectProbability() >= min_known_prob;
+
+    double iou = 0.0;
+    if (is_pedestrian) {
+      iou = shapes::get1dIoU(source_data.object, target_data.object);
+      if (iou < min_valid_iou) return false;
+      return iou > config_.min_known_object_removal_iou;
+    } else if (is_target_known && is_source_known) {
+      iou = shapes::get2dIoU(source_data.object, target_data.object, min_union_iou_area);
+      if (iou < min_valid_iou) return false;
+      return iou > config_.min_known_object_removal_iou;
+    } else if (is_target_known || is_source_known) {
+      // one of the object is unknown (probably the target is unknown)
+      double precision = 0.0;
+      double recall = 0.0;
+      double generalized_iou = 0.0;
+      if (!shapes::get2dPrecisionRecallGIoU(
+            source_data.object, target_data.object, precision, recall, generalized_iou)) {
+        return false;
+      }
+      return (
+        precision > precision_threshold || recall > recall_threshold ||
+        generalized_iou > generalized_iou_threshold);
+    } else {
+      // both are unknown, use generalized IoU
+      const double generalized_iou_threshold =
+        config_.generalized_iou_threshold.at(source_data.label);
+
+      iou = shapes::get2dGeneralizedIoU(source_data.object, target_data.object);
+      return iou > generalized_iou_threshold;
+    }
+
+    return false;
   };
 
   std::vector<TrackerData> valid_trackers;
@@ -406,7 +438,7 @@ bool TrackerProcessor::canMergeOverlappedTarget(
     // if there is no big difference in the probability per channel, compare the covariance size
     return target.getPositionCovarianceDeterminant() > other.getPositionCovarianceDeterminant();
   }
-  // 2. the target class is unknown, check the IoU
+  // 2. the target class is unknown
   if (other_known_prob < min_known_prob) {
     // both are unknown, remove the larger uncertainty one
     return target.getPositionCovarianceDeterminant() > other.getPositionCovarianceDeterminant();
