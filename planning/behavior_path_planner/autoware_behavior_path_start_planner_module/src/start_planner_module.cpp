@@ -1168,7 +1168,7 @@ bool StartPlannerModule::findPullOutPath(
   if (!pull_out_path) {
     return false;
   }
-  
+
   if (backward_is_unnecessary) {
     updateStatusWithCurrentPath(*pull_out_path, start_pose_candidate, planner->getPlannerType());
     return true;
