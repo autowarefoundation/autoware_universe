@@ -29,6 +29,7 @@ ArrivalChecker::ArrivalChecker(rclcpp::Node * node) : vehicle_stop_checker_(node
   angle_ = autoware_utils::deg2rad(angle_deg);
   distance_ = node->declare_parameter<double>("arrival_check_distance");
   duration_ = node->declare_parameter<double>("arrival_check_duration");
+  distance_past_goal_ = node->declare_parameter<double>("arrival_check_past_goal_distance");
 }
 
 void ArrivalChecker::set_goal()
@@ -55,15 +56,29 @@ bool ArrivalChecker::is_arrived(const PoseStamped & pose) const
     return false;
   }
 
-  // Check distance.
-  if (distance_ < autoware_utils::calc_distance2d(pose.pose, goal.pose)) {
+  // Compute position difference in goal frame
+  const double dx = pose.pose.position.x - goal.pose.position.x;
+  const double dy = pose.pose.position.y - goal.pose.position.y;
+
+  const double yaw_goal = tf2::getYaw(goal.pose.orientation);
+  const double x_in_goal = std::cos(yaw_goal) * dx + std::sin(yaw_goal) * dy;
+
+  const double yaw_pose = tf2::getYaw(pose.pose.orientation);
+  const double yaw_diff = autoware_utils::normalize_radian(yaw_pose - yaw_goal);
+
+  // Adjust distance threshold if vehicle is past the goal
+  double distance_threshold = distance_; // Always initialize to normal value
+  if (x_in_goal > 0.0) {
+    // Vehicle is past the goal in the goal's heading direction
+    distance_threshold = distance_past_goal_;
+  }
+
+  // Use the adjusted threshold for distance check
+  if (distance_threshold < autoware_utils::calc_distance2d(pose.pose, goal.pose)) {
     return false;
   }
 
   // Check angle.
-  const double yaw_pose = tf2::getYaw(pose.pose.orientation);
-  const double yaw_goal = tf2::getYaw(goal.pose.orientation);
-  const double yaw_diff = autoware_utils::normalize_radian(yaw_pose - yaw_goal);
   if (angle_ < std::fabs(yaw_diff)) {
     return false;
   }
