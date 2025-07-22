@@ -28,6 +28,18 @@ target_compile_options(road_user_stop_module_parameters INTERFACE
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
+
+  # Add utils test
+  # ament_add_gtest(test_utils
+  #   test/test_utils.cpp
+  #   src/utils.cpp
+  # )
+  # target_link_libraries(test_utils
+  #   ${${PROJECT_NAME}_LIBRARIES}
+  # )
+  # target_include_directories(test_utils PRIVATE
+  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+  # )
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE config)

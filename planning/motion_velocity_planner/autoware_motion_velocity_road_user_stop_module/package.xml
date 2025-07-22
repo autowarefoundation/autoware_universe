@@ -6,6 +6,8 @@
   <description>road_user_stop module to stop ego vehicle when road users (pedestrians, cyclists) are on the road</description>
 
   <maintainer email="takumi.odashima@tier4.jp">Takumi Odashima</maintainer>
+  <maintainer email="yuki.takagi@tier4.jp">Yuki Takagi</maintainer>
+  <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
 
   <license>Apache License 2.0</license>
 

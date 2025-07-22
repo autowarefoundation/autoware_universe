@@ -29,6 +29,23 @@ namespace
 using autoware::universe_utils::appendMarkerArray;
 using autoware::universe_utils::createDefaultMarker;
 
+void addPolygonToMarker(
+  Marker & marker, const autoware_utils_geometry::Polygon2d & polygon, const double z = 0.0)
+{
+  for (const auto & point : polygon.outer()) {
+    geometry_msgs::msg::Point p;
+    p.x = point.x();
+    p.y = point.y();
+    p.z = z;
+    marker.points.push_back(p);
+  }
+
+  // Close the polygon
+  if (!marker.points.empty()) {
+    marker.points.push_back(marker.points.front());
+  }
+}
+
 MarkerArray createLaneletPolygonsMarkerArray(
   const lanelet::ConstLanelets & lanelets, const std::string & ns,
   const std::array<double, 3> & color, const rclcpp::Clock::SharedPtr clock)
@@ -98,19 +115,7 @@ MarkerArray RoadUserStopModule::createDebugMarkerArray() const
 
       traj_poly_marker.lifetime = rclcpp::Duration::from_seconds(0.3);
 
-      // Add polygon outer points
-      for (const auto & point : polygon.outer()) {
-        geometry_msgs::msg::Point p;
-        p.x = point.x();
-        p.y = point.y();
-        p.z = 0.0;
-        traj_poly_marker.points.push_back(p);
-      }
-
-      // Close the polygon
-      if (!traj_poly_marker.points.empty()) {
-        traj_poly_marker.points.push_back(traj_poly_marker.points.front());
-      }
+      addPolygonToMarker(traj_poly_marker, polygon);
 
       debug_marker_array.markers.push_back(traj_poly_marker);
     }
@@ -153,43 +158,61 @@ MarkerArray RoadUserStopModule::createDebugMarkerArray() const
 
       obj_poly_marker.lifetime = rclcpp::Duration::from_seconds(0.3);
 
-      // Add polygon outer points
-      for (const auto & point : polygon.outer()) {
-        geometry_msgs::msg::Point p;
-        p.x = point.x();
-        p.y = point.y();
-        p.z = 0.1;  // slightly above ground for visibility
-        obj_poly_marker.points.push_back(p);
-      }
-
-      // Close the polygon
-      if (!obj_poly_marker.points.empty()) {
-        obj_poly_marker.points.push_back(obj_poly_marker.points.front());
-      }
+      addPolygonToMarker(obj_poly_marker, polygon);
 
       debug_marker_array.markers.push_back(obj_poly_marker);
     }
   }
 
-  // Visualize lanelets for VRU detection in light blue
-  if (!debug_data_.lanelets_for_vru.empty()) {
-    const auto vru_lanelets_markers = createLaneletPolygonsMarkerArray(
-      debug_data_.lanelets_for_vru, "lanelets_for_vru", {0.5, 0.8, 1.0});  // Light blue color
-    appendMarkerArray(vru_lanelets_markers, &debug_marker_array);
+  // Visualize intersection polygons in cyan
+  if (!debug_data_.intersection_polygons.empty()) {
+    int intersection_poly_id = 0;
+    for (const auto & polygon : debug_data_.intersection_polygons) {
+      Marker intersection_poly_marker = createDefaultMarker(
+        "map", clock_->now(), "intersection_polygons", intersection_poly_id++, Marker::LINE_STRIP,
+        autoware::universe_utils::createMarkerScale(0.2, 0, 0),
+        autoware::universe_utils::createMarkerColor(0.0, 1.0, 1.0, 0.8));  // Cyan color
+
+      intersection_poly_marker.lifetime = rclcpp::Duration::from_seconds(0.3);
+
+      addPolygonToMarker(intersection_poly_marker, polygon);
+
+      debug_marker_array.markers.push_back(intersection_poly_marker);
+    }
   }
 
-  // Visualize lanelets for wrongway detection in red
-  if (!debug_data_.lanelets_for_wrongway_user.empty()) {
-    const auto wrongway_lanelets_markers = createLaneletPolygonsMarkerArray(
-      debug_data_.lanelets_for_wrongway_user, "lanelets_for_wrongway",
-      {1.0, 0.2, 0.2});  // Red color
-    appendMarkerArray(wrongway_lanelets_markers, &debug_marker_array);
+  // Visualize polygons for VRU detection in light green
+  if (!debug_data_.polygons_for_vru.empty()) {
+    int vru_poly_id = 0;
+    for (const auto & polygon : debug_data_.polygons_for_vru) {
+      Marker vru_poly_marker = createDefaultMarker(
+        "map", clock_->now(), "polygons_for_vru", vru_poly_id++, Marker::LINE_STRIP,
+        autoware::universe_utils::createMarkerScale(0.15, 0, 0),
+        autoware::universe_utils::createMarkerColor(0.5, 1.0, 0.5, 0.6));  // Light green color
+
+      vru_poly_marker.lifetime = rclcpp::Duration::from_seconds(0.3);
+
+      addPolygonToMarker(vru_poly_marker, polygon);
+
+      debug_marker_array.markers.push_back(vru_poly_marker);
+    }
   }
 
-  if (!debug_data_.intersection_lanelets.empty()) {
-    const auto wrongway_lanelets_markers = createLaneletPolygonsMarkerArray(
-      debug_data_.intersection_lanelets, "intersection_lanelets", {0.2, 0.9, 0.2});  // Green color
-    appendMarkerArray(wrongway_lanelets_markers, &debug_marker_array);
+  // Visualize polygons for opposing traffic detection in light red
+  if (!debug_data_.polygons_for_opposing_traffic.empty()) {
+    int opposing_poly_id = 0;
+    for (const auto & polygon : debug_data_.polygons_for_opposing_traffic) {
+      Marker opposing_poly_marker = createDefaultMarker(
+        "map", clock_->now(), "polygons_for_opposing_traffic", opposing_poly_id++,
+        Marker::LINE_STRIP, autoware::universe_utils::createMarkerScale(0.15, 0, 0),
+        autoware::universe_utils::createMarkerColor(1.0, 0.5, 0.5, 0.6));  // Light red color
+
+      opposing_poly_marker.lifetime = rclcpp::Duration::from_seconds(0.3);
+
+      addPolygonToMarker(opposing_poly_marker, polygon);
+
+      debug_marker_array.markers.push_back(opposing_poly_marker);
+    }
   }
 
   return debug_marker_array;

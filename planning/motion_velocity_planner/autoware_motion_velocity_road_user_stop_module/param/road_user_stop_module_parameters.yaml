@@ -10,7 +10,7 @@ road_user_stop:
   stop_planning:
     stop_margin:
       type: double
-      default_value: 5.0
+      default_value: 6.0
       description: Stop margin distance from obstacle [m]
       validation:
         gt_eq<>: [0.0]
@@ -50,27 +50,6 @@ road_user_stop:
       validation:
         gt<>: [0.0]
 
-    min_on_duration:
-      type: double
-      default_value: 0.3
-      description: Minimum duration to keep stop decision active [s]
-      validation:
-        gt_eq<>: [0.0]
-
-    min_off_duration:
-      type: double
-      default_value: 1.0
-      description: Minimum duration to keep stop decision inactive [s]
-      validation:
-        gt_eq<>: [0.0]
-
-    update_distance_th:
-      type: double
-      default_value: 0.5
-      description: Distance threshold to update stop position [m]
-      validation:
-        gt<>: [0.0]
-
     hold_stop_velocity_threshold:
       type: double
       default_value: 0.01
@@ -89,19 +68,19 @@ road_user_stop:
     stop_on_curve:
       enable_approaching:
         type: bool
-        default_value: false
+        default_value: true
         description: Enable approaching behavior on curved paths
 
       additional_stop_margin:
         type: double
-        default_value: 0.5
+        default_value: 3.0
         description: Additional stop margin for obstacles on curves [m]
         validation:
           gt_eq<>: [0.0]
 
       min_stop_margin:
         type: double
-        default_value: 1.0
+        default_value: 6.0
         description: Minimum stop margin on curves [m]
         validation:
           gt<>: [0.0]
@@ -133,20 +112,6 @@ road_user_stop:
       default_value: false
       description: Enable to abandon stopping when cannot achieve required deceleration
 
-    obstacle_velocity_threshold_enter_fixed_stop:
-      type: double
-      default_value: 3.0
-      description: Obstacle velocity threshold to use current position for stop point decision [m/s]
-      validation:
-        gt_eq<>: [0.0]
-
-    obstacle_velocity_threshold_exit_fixed_stop:
-      type: double
-      default_value: 3.5
-      description: Obstacle velocity threshold to use braking distance for stop point decision [m/s]
-      validation:
-        gt_eq<>: [0.0]
-
   # Obstacle filtering parameters
   obstacle_filtering:
     object_type:
@@ -163,34 +128,22 @@ road_user_stop:
 
         motorcycle:
           type: bool
-          default_value: true
+          default_value: false
           description: Enable detection of motorcycles
 
         unknown:
           type: bool
-          default_value: true
+          default_value: false
           description: Enable detection of unknown objects
 
-    adjacent_lane_margin:
+    trajectory_lateral_margin:
       type: double
       default_value: 1.0
-      description: Margin to check adjacent lanes [m]
+      description: Lateral margin from ego trajectory to detect objects [m]
       validation:
         gt_eq<>: [0.0]
 
-    exclude_crosswalk_users:
-      type: bool
-      default_value: true
-      description: Exclude objects near crosswalks
-
-    crosswalk_margin:
-      type: double
-      default_value: 1.0
-      description: Margin distance from crosswalk [m]
-      validation:
-        gt_eq<>: [0.0]
-
-    wrong_way_detection:
+    opposing_traffic_detection:
       enable:
         type: bool
         default_value: true
@@ -210,6 +163,23 @@ road_user_stop:
         validation:
           gt_eq<>: [0.0]
 
+    exclude_intersection:
+      type: bool
+      default_value: false
+      description: If true, exclude objects inside intersection lanelets from detection
+
+    exclude_crosswalk_users:
+      type: bool
+      default_value: false
+      description: Exclude objects near crosswalks
+
+    crosswalk_margin:
+      type: double
+      default_value: 1.0
+      description: Margin distance from crosswalk [m]
+      validation:
+        gt_eq<>: [0.0]
+
     min_detection_duration:
       type: double
       default_value: 0.1
@@ -217,17 +187,12 @@ road_user_stop:
       validation:
         gt_eq<>: [0.0]
 
-    tracked_object_cleanup_threshold:
+    lost_object_retention_duration:
       type: double
       default_value: 2.0
-      description: Time threshold to remove tracked objects that haven't been detected [s]
+      description: Duration to keep tracking objects after they are lost or exit the detection area [s]
       validation:
         gt<>: [0.0]
-
-    exclude_intersection:
-      type: bool
-      default_value: true
-      description: If true, exclude objects inside intersection lanelets from detection
 
     polygon_expansion_length:
       type: double
@@ -235,19 +200,3 @@ road_user_stop:
       description: Distance to expand object polygon outward from centroid when object was previously inside detection area [m]
       validation:
         gt_eq<>: [0.0]
-
-  # Common parameters
-  common_param:
-    limit_max_accel:
-      type: double
-      default_value: 1.0
-      description: Maximum acceleration limit [m/s^2]
-      validation:
-        gt<>: [0.0]
-
-    limit_min_accel:
-      type: double
-      default_value: -2.5
-      description: Minimum acceleration limit [m/s^2]
-      validation:
-        lt<>: [0.0]
