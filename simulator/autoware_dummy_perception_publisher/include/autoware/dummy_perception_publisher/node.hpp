@@ -43,8 +43,10 @@
 #include <map>
 #include <memory>
 #include <random>
+#include <set>
+#include <string>
+#include <utility>
 #include <vector>
-
 namespace autoware::dummy_perception_publisher
 {
 struct ObjectInfo
@@ -162,13 +164,13 @@ private:
   std::mt19937 random_generator_;
   std::mt19937 pedestrian_path_generator_;
   std::uniform_real_distribution<double> path_selection_dist_;
-  
+
   // Configuration parameters
   double predicted_path_delay_;
   double min_keep_duration_;
   double max_yaw_change_;
   double max_path_length_change_ratio_;
-  
+
   // Vehicle parameters
   double vehicle_max_remapping_distance_;
   double vehicle_max_remapping_yaw_diff_;
@@ -179,7 +181,7 @@ private:
   double vehicle_max_position_difference_;
   double vehicle_max_path_length_ratio_;
   double vehicle_max_overall_direction_diff_;
-  
+
   // Pedestrian parameters
   double pedestrian_max_remapping_distance_;
   double pedestrian_max_remapping_yaw_diff_;
@@ -215,7 +217,7 @@ private:
   std::optional<geometry_msgs::msg::Point> calculateExpectedPosition(
     const autoware_perception_msgs::msg::PredictedObject & last_prediction,
     const std::string & dummy_uuid_str);
-  
+
   // Helper methods for updateDummyToPredictedMapping
   std::set<std::string> collectAvailablePredictedUUIDs(
     const autoware_perception_msgs::msg::PredictedObjects & predicted_objects,
@@ -224,11 +226,9 @@ private:
     std::set<std::string> & available_predicted_uuids);
   std::map<std::string, geometry_msgs::msg::Point> collectDummyObjectPositions(
     const std::vector<tier4_simulation_msgs::msg::DummyObject> & dummy_objects,
-    const rclcpp::Time & current_time,
-    std::vector<std::string> & unmapped_dummy_uuids);
+    const rclcpp::Time & current_time, std::vector<std::string> & unmapped_dummy_uuids);
   std::optional<std::string> findBestPredictedObjectMatch(
-    const std::string & dummy_uuid,
-    const geometry_msgs::msg::Point & dummy_position,
+    const std::string & dummy_uuid, const geometry_msgs::msg::Point & dummy_position,
     const std::set<std::string> & available_predicted_uuids,
     const std::map<std::string, geometry_msgs::msg::Point> & predicted_positions,
     const autoware_perception_msgs::msg::PredictedObjects & predicted_objects);
