@@ -52,7 +52,7 @@ By setting the `input_twist_topic_type` parameter to `twist` or `odom`, the subs
 | Name              | Type                                                     | Description                                                                                      |
 | ----------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `~/output/points` | `sensor_msgs::msg::Pointcloud2`                          | Concatenated point clouds                                                                        |
-| `~/output/info`   | `autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo` | Information about the concatenated point cloud, including source point clouds and their statuses |
+| `~/output/info`   | `autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo` | Information about the concatenated point cloud, including extents of source point clouds and their statuses |
 
 ### Core Parameters
 
