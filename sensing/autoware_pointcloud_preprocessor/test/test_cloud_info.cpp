@@ -100,12 +100,12 @@ TEST_F(CloudInfoTest, ConstructorAndGetConcatInfoBase)
   ASSERT_EQ(concat_info.source_info.size(), input_topics_.size());
 
   for (size_t i = 0; i < input_topics_.size(); ++i) {
-    EXPECT_EQ(concat_info.source_info[i].topic, input_topics_[i]);
+    EXPECT_EQ(concat_info.source_info.at(i).topic, input_topics_.at(i));
     EXPECT_EQ(
-      concat_info.source_info[i].status,
+      concat_info.source_info.at(i).status,
       autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_TIMEOUT);
-    EXPECT_EQ(concat_info.source_info[i].idx_begin, 0u);
-    EXPECT_EQ(concat_info.source_info[i].length, 0u);
+    EXPECT_EQ(concat_info.source_info.at(i).idx_begin, 0u);
+    EXPECT_EQ(concat_info.source_info.at(i).length, 0u);
   }
 
   // Check strategy is set correctly
