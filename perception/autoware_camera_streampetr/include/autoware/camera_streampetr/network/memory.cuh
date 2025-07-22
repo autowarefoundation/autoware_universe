@@ -43,9 +43,10 @@ struct Memory
 
   cudaStream_t mem_stream;
 
-  void Init(cudaStream_t stream) {
-     mem_stream = stream;
-     cudaMallocAsync(&mem_buf, sizeof(float) * mem_len, mem_stream);
+  void Init(cudaStream_t stream)
+  {
+    mem_stream = stream;
+    cudaMallocAsync(&mem_buf, sizeof(float) * mem_len, mem_stream);
   }
 
   void StepReset();

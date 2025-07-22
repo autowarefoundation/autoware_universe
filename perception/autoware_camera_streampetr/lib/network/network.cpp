@@ -94,7 +94,8 @@ StreamPetrNetwork::StreamPetrNetwork(
   runtime_ = std::unique_ptr<IRuntime>{nvinfer1::createInferRuntime(gLogger)};
   backbone_ = std::make_unique<SubNetwork>(engine_backbone_path, runtime_.get(), stream_);
   pts_head_ = std::make_unique<SubNetwork>(engine_head_path, runtime_.get(), stream_);
-  pos_embed_ = std::make_unique<SubNetwork>(engine_position_embedding_path, runtime_.get(), stream_);
+  pos_embed_ =
+    std::make_unique<SubNetwork>(engine_position_embedding_path, runtime_.get(), stream_);
 
   backbone_->EnableCudaGraph();
   pts_head_->EnableCudaGraph();
@@ -199,7 +200,8 @@ void StreamPetrNetwork::inference_detector(
         pts_head_->bindings["post_memory_reference_point"], stream_);
       pts_head_->bindings["pre_memory_egopose"]->copy(
         pts_head_->bindings["post_memory_egopose"], stream_);
-      pts_head_->bindings["pre_memory_velo"]->copy(pts_head_->bindings["post_memory_velo"], stream_);
+      pts_head_->bindings["pre_memory_velo"]->copy(
+        pts_head_->bindings["post_memory_velo"], stream_);
     } else {
       wipe_memory();
     }

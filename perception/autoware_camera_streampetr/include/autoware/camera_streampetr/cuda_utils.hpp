@@ -245,7 +245,8 @@ struct Tensor
     writer_stream.write(headerStr.c_str(), headerSize);
 
     // Write data
-    writer_stream.write(reinterpret_cast<const char *>(cpu_data.data()), cpu_data.size() * sizeof(float));
+    writer_stream.write(
+      reinterpret_cast<const char *>(cpu_data.data()), cpu_data.size() * sizeof(float));
     writer_stream.close();
 
     std::cout << "Tensor '" << name << "' saved as numpy array to: " << filepath << std::endl;
