@@ -25,7 +25,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <iostream>
 #include <optional>
 #include <set>
 #ifdef ROS_DISTRO_GALACTIC
