@@ -53,7 +53,7 @@ __global__ void ApplyDeltaToMem(float delta, float * mem, float * buf, int n_ele
 
 void Memory::StepReset()
 {
-  if(mem_stream == nullptr) {
+  if (mem_stream == nullptr) {
     fprintf(stderr, "Memory stream is not initialized.\n");
     return;
   }
@@ -63,7 +63,7 @@ void Memory::StepReset()
 
 void Memory::StepPre(float ts)
 {
-  if(mem_stream == nullptr) {
+  if (mem_stream == nullptr) {
     fprintf(stderr, "Memory stream is not initialized.\n");
     return;
   }
@@ -74,7 +74,7 @@ void Memory::StepPre(float ts)
 
 void Memory::StepPost(float ts)
 {
-  if(mem_stream == nullptr) {
+  if (mem_stream == nullptr) {
     fprintf(stderr, "Memory stream is not initialized.\n");
     return;
   }
@@ -85,13 +85,14 @@ void Memory::StepPost(float ts)
 
 void Memory::DebugPrint()
 {
-  if(mem_stream == nullptr) {
+  if (mem_stream == nullptr) {
     fprintf(stderr, "Memory stream is not initialized.\n");
     return;
   }
   float temp_buf[16];
   cudaMemcpyAsync(
-    reinterpret_cast<void *>(temp_buf), mem_buf, sizeof(float) * 16, cudaMemcpyDeviceToHost, mem_stream);
+    reinterpret_cast<void *>(temp_buf), mem_buf, sizeof(float) * 16, cudaMemcpyDeviceToHost,
+    mem_stream);
   for (int i = 0; i < 16; i++) {
     printf("%f ", temp_buf[i]);
   }
