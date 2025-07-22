@@ -297,7 +297,9 @@ class GroundSegmentationPipeline:
         )
         return components
 
-    def create_single_frame_obstacle_segmentation_components(self, input_topic, output_topic, output_info_topic):
+    def create_single_frame_obstacle_segmentation_components(
+        self, input_topic, output_topic, output_info_topic
+    ):
         additional_lidars = self.ground_segmentation_param["additional_lidars"]
         use_ransac = bool(self.ground_segmentation_param["ransac_input_topics"])
         use_additional = bool(additional_lidars)
@@ -506,7 +508,9 @@ class GroundSegmentationPipeline:
         )
 
     @staticmethod
-    def get_single_frame_obstacle_segmentation_concatenated_component(input_topics, output_topic, output_info_topic):
+    def get_single_frame_obstacle_segmentation_concatenated_component(
+        input_topics, output_topic, output_info_topic
+    ):
         return ComposableNode(
             package="autoware_pointcloud_preprocessor",
             plugin="autoware::pointcloud_preprocessor::PointCloudConcatenateDataSynchronizerComponent",
