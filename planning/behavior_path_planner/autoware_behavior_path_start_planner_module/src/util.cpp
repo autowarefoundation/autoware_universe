@@ -41,10 +41,10 @@ PathWithLaneId getBackwardPath(
   const RouteHandler & route_handler, const lanelet::ConstLanelets & shoulder_lanes,
   const Pose & current_pose, const Pose & backed_pose, const double velocity)
 {
-  const auto current_pose_arc_coords =
-    lanelet::utils::getArcCoordinates(shoulder_lanes, current_pose);
-  const auto backed_pose_arc_coords =
-    lanelet::utils::getArcCoordinates(shoulder_lanes, backed_pose);
+  const auto current_pose_arc_coords = lanelet::utils::getArcCoordinatesOnEgoCenterline(
+    shoulder_lanes, current_pose, route_handler.getLaneletMapPtr());
+  const auto backed_pose_arc_coords = lanelet::utils::getArcCoordinatesOnEgoCenterline(
+    shoulder_lanes, backed_pose, route_handler.getLaneletMapPtr());
 
   const double s_start = backed_pose_arc_coords.length;
   const double s_end = current_pose_arc_coords.length;
