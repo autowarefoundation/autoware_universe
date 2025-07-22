@@ -261,7 +261,7 @@ void PointCloudConcatenationComponent::combineClouds(
           std::make_shared<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
             concatenation_info_->reset_and_get_base_info());
       }
-      concatenation_info_->apply_source_with_point_cloud(
+      concatenation_info_->update_source_from_point_cloud(
         *transformed_cloud_ptr, e.first,
         autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK, *concatenation_info_ptr);
     } else {
@@ -269,8 +269,7 @@ void PointCloudConcatenationComponent::combineClouds(
     }
   }
   if (concatenation_info_ptr != nullptr && concat_cloud_ptr != nullptr) {
-    concatenation_info_->update_concatenated_point_cloud_result(
-      *concat_cloud_ptr, *concatenation_info_ptr);
+    concatenation_info_->set_result(*concat_cloud_ptr, *concatenation_info_ptr);
   }
 }
 

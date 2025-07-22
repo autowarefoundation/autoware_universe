@@ -181,7 +181,7 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
       reinterpret_cast<PointTypeStruct *>(cloud->data.get()), num_points, transform_struct,
       output_points + concatenated_start_index, stream);
     concatenated_start_index += num_points;
-    concatenation_info_.apply_source_with_point_cloud(
+    concatenation_info_.update_source_from_point_cloud(
       *cloud, topic, autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
       *concatenate_cloud_result.concatenation_info_ptr);
   }
@@ -281,7 +281,7 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
 
   concatenate_cloud_result.concatenate_cloud_ptr->header.stamp = oldest_stamp;
 
-  concatenation_info_.update_concatenated_point_cloud_result(
+  concatenation_info_.set_result(
     *concatenate_cloud_result.concatenate_cloud_ptr,
     *concatenate_cloud_result.concatenation_info_ptr);
 

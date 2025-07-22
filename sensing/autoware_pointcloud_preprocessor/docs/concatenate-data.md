@@ -169,7 +169,7 @@ Here's how to work with serialized configuration for the Advanced strategy:
 
 ```cpp
 auto cfg = StrategyAdvancedConfig(reference_timestamp_min, reference_timestamp_max);
-ConcatenationInfo::update_concatenated_point_cloud_config(cfg.serialize(), concatenation_info_msg);
+ConcatenationInfo::set_config(cfg.serialize(), concatenation_info_msg);
 ```
 
 #### Deserialization Example

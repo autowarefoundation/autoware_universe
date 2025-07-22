@@ -103,7 +103,8 @@ class ConcatenationInfo
 public:
   ConcatenationInfo(
     const std::string & matching_strategy_name, const std::vector<std::string> & input_topics)
-  : concatenated_point_cloud_info_base_msg_(create_concatenation_info_base(matching_strategy_name, input_topics)),
+  : concatenated_point_cloud_info_base_msg_(
+      create_concatenation_info_base(matching_strategy_name, input_topics)),
     num_expected_sources_(concatenated_point_cloud_info_base_msg_.source_info.size())
   {
   }
@@ -115,7 +116,7 @@ public:
     return concatenated_point_cloud_info_base_msg_;
   }
 
-  void apply_source_with_point_cloud(
+  void update_source_from_point_cloud(
     const sensor_msgs::msg::PointCloud2 & source_cloud, const std::string & topic, uint8_t status,
     autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo & out_concatenated_point_cloud_info_msg)
   {
@@ -130,7 +131,7 @@ public:
     valid_cloud_count_++;
   }
 
-  void apply_source_with_header(
+  void update_source_from_header(
     const std_msgs::msg::Header & header, const std::string & topic, uint8_t status,
     autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo & out_concatenated_point_cloud_info_msg)
   {
@@ -142,7 +143,7 @@ public:
     valid_cloud_count_++;
   }
 
-  void apply_source_with_status(
+  void update_source_from_status(
     const std::string & topic, uint8_t status,
     autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo & out_concatenated_point_cloud_info_msg)
   {
@@ -153,7 +154,7 @@ public:
     valid_cloud_count_++;
   }
 
-  void update_concatenated_point_cloud_result(
+  void set_result(
     const sensor_msgs::msg::PointCloud2 & concatenated_cloud,
     autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo & out_concatenated_point_cloud_info_msg)
     const
@@ -163,7 +164,7 @@ public:
       valid_cloud_count_ == num_expected_sources_;
   }
 
-  static void update_concatenated_point_cloud_config(
+  static void set_config(
     const std::vector<uint8_t> & matching_strategy_config,
     autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo & out_concatenated_point_cloud_info_msg)
   {
@@ -207,7 +208,8 @@ private:
     return {target_info, idx_begin};
   }
 
-  [[nodiscard]] autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo create_concatenation_info_base(
+  [[nodiscard]] autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo
+  create_concatenation_info_base(
     const std::string & matching_strategy_name, const std::vector<std::string> & input_topics) const
   {
     autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo concatenated_point_cloud_info_base;
@@ -226,7 +228,8 @@ private:
     return concatenated_point_cloud_info_base;
   }
 
-  const autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo concatenated_point_cloud_info_base_msg_;
+  const autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo
+    concatenated_point_cloud_info_base_msg_;
   const size_t num_expected_sources_{0};
   std::size_t valid_cloud_count_{0};
 };

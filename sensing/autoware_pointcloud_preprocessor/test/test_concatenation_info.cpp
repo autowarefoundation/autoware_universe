@@ -126,7 +126,7 @@ TEST_F(ConcatenationInfoTest, ApplySourceWithPointCloud)
   auto concatenated_point_cloud_info_msg = concatenation_info.reset_and_get_base_info();
 
   // Apply point cloud to first topic
-  concatenation_info.apply_source_with_point_cloud(
+  concatenation_info.update_source_from_point_cloud(
     test_cloud_1_, input_topics_[0], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
     concatenated_point_cloud_info_msg);
 
@@ -141,7 +141,7 @@ TEST_F(ConcatenationInfoTest, ApplySourceWithPointCloud)
   EXPECT_EQ(first_source.length, test_cloud_1_.width * test_cloud_1_.height);
 
   // Apply second point cloud
-  concatenation_info.apply_source_with_point_cloud(
+  concatenation_info.update_source_from_point_cloud(
     test_cloud_2_, input_topics_[1], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
     concatenated_point_cloud_info_msg);
 
@@ -157,7 +157,7 @@ TEST_F(ConcatenationInfoTest, ApplySourceWithPointCloudNonOkStatus)
   auto concatenated_point_cloud_info_msg = concatenation_info.reset_and_get_base_info();
 
   // Apply point cloud with ERROR status
-  concatenation_info.apply_source_with_point_cloud(
+  concatenation_info.update_source_from_point_cloud(
     test_cloud_1_, input_topics_[0],
     autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_INVALID,
     concatenated_point_cloud_info_msg);
@@ -175,7 +175,7 @@ TEST_F(ConcatenationInfoTest, ApplySourceWithHeader)
   ConcatenationInfo concatenation_info(strategy_name_, input_topics_);
   auto concatenated_point_cloud_info_msg = concatenation_info.reset_and_get_base_info();
 
-  concatenation_info.apply_source_with_header(
+  concatenation_info.update_source_from_header(
     test_header_, input_topics_[0],
     autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_INVALID,
     concatenated_point_cloud_info_msg);
@@ -192,7 +192,7 @@ TEST_F(ConcatenationInfoTest, ApplySourceWithStatus)
   ConcatenationInfo concatenation_info(strategy_name_, input_topics_);
   auto concatenated_point_cloud_info_msg = concatenation_info.reset_and_get_base_info();
 
-  concatenation_info.apply_source_with_status(
+  concatenation_info.update_source_from_status(
     input_topics_[0], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_TIMEOUT,
     concatenated_point_cloud_info_msg);
 
@@ -216,8 +216,7 @@ TEST_F(ConcatenationInfoTest, UpdateConcatenatedPointCloudConfig)
   reference_timestamp_max.nanosec = 900000000;
 
   auto cfg = StrategyAdvancedConfig(reference_timestamp_min, reference_timestamp_max);
-  ConcatenationInfo::update_concatenated_point_cloud_config(
-    cfg.serialize(), concatenated_point_cloud_info_msg);
+  ConcatenationInfo::set_config(cfg.serialize(), concatenated_point_cloud_info_msg);
 
   // Verify that the config was serialized and stored
   EXPECT_FALSE(concatenated_point_cloud_info_msg.matching_strategy_config.empty());
@@ -245,7 +244,7 @@ TEST_F(ConcatenationInfoTest, ApplySourceWithNonExistentTopic)
   auto concatenated_point_cloud_info_msg = concatenation_info.reset_and_get_base_info();
 
   EXPECT_THROW(
-    concatenation_info.apply_source_with_point_cloud(
+    concatenation_info.update_source_from_point_cloud(
       test_cloud_1_, "/non_existent_topic",
       autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
       concatenated_point_cloud_info_msg),
@@ -268,17 +267,17 @@ TEST_F(ConcatenationInfoTest, MultiplePointCloudIndexing)
   auto concatenated_point_cloud_info_msg = concatenation_info.reset_and_get_base_info();
 
   // Apply cloud 1
-  concatenation_info.apply_source_with_point_cloud(
+  concatenation_info.update_source_from_point_cloud(
     test_cloud_1_, input_topics_[0], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
     concatenated_point_cloud_info_msg);
 
   // Apply cloud 3 (out of order)
-  concatenation_info.apply_source_with_point_cloud(
+  concatenation_info.update_source_from_point_cloud(
     test_cloud_3_, input_topics_[2], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
     concatenated_point_cloud_info_msg);
 
   // Apply cloud 2
-  concatenation_info.apply_source_with_point_cloud(
+  concatenation_info.update_source_from_point_cloud(
     test_cloud_2_, input_topics_[1], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
     concatenated_point_cloud_info_msg);
 
@@ -326,17 +325,16 @@ TEST_F(ConcatenationInfoTest, UpdateConcatenatedPointCloudResultCheckSuccess)
   concatenated_cloud.header.stamp.nanosec = 555666777;
 
   // Add only 2 out of 3 clouds with STATUS_OK
-  concatenation_info.apply_source_with_point_cloud(
+  concatenation_info.update_source_from_point_cloud(
     test_cloud_1_, input_topics_[0], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
     concatenated_point_cloud_info_msg);
 
-  concatenation_info.apply_source_with_point_cloud(
+  concatenation_info.update_source_from_point_cloud(
     test_cloud_2_, input_topics_[1], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
     concatenated_point_cloud_info_msg);
 
   // Update result - should not be successful since we only have 2/3 clouds
-  concatenation_info.update_concatenated_point_cloud_result(
-    concatenated_cloud, concatenated_point_cloud_info_msg);
+  concatenation_info.set_result(concatenated_cloud, concatenated_point_cloud_info_msg);
 
   // Check header is updated
   EXPECT_EQ(concatenated_point_cloud_info_msg.header.frame_id, concatenated_cloud.header.frame_id);
@@ -350,13 +348,12 @@ TEST_F(ConcatenationInfoTest, UpdateConcatenatedPointCloudResultCheckSuccess)
   EXPECT_FALSE(concatenated_point_cloud_info_msg.concatenation_success);
 
   // Now add the third cloud
-  concatenation_info.apply_source_with_point_cloud(
+  concatenation_info.update_source_from_point_cloud(
     test_cloud_3_, input_topics_[2], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
     concatenated_point_cloud_info_msg);
 
   // Update result again - should be successful since we now have all 3/3 clouds
-  concatenation_info.update_concatenated_point_cloud_result(
-    concatenated_cloud, concatenated_point_cloud_info_msg);
+  concatenation_info.set_result(concatenated_cloud, concatenated_point_cloud_info_msg);
 
   // Check concatenation is now successful (3/3 clouds)
   EXPECT_TRUE(concatenated_point_cloud_info_msg.concatenation_success);
@@ -368,18 +365,18 @@ TEST_F(ConcatenationInfoTest, UpdateConcatenatedPointCloudResultWithMixedStatus)
   auto concatenated_point_cloud_info_msg = concatenation_info.reset_and_get_base_info();
 
   // Add one cloud with STATUS_OK
-  concatenation_info.apply_source_with_point_cloud(
+  concatenation_info.update_source_from_point_cloud(
     test_cloud_1_, input_topics_[0], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
     concatenated_point_cloud_info_msg);
 
   // Add one cloud with STATUS_INVALID (should not count towards valid_cloud_count_)
-  concatenation_info.apply_source_with_point_cloud(
+  concatenation_info.update_source_from_point_cloud(
     test_cloud_2_, input_topics_[1],
     autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_INVALID,
     concatenated_point_cloud_info_msg);
 
   // Add one cloud with STATUS_TIMEOUT (should not count towards valid_cloud_count_)
-  concatenation_info.apply_source_with_status(
+  concatenation_info.update_source_from_status(
     input_topics_[2], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_TIMEOUT,
     concatenated_point_cloud_info_msg);
 
@@ -390,8 +387,7 @@ TEST_F(ConcatenationInfoTest, UpdateConcatenatedPointCloudResultWithMixedStatus)
   concatenated_cloud.header.stamp.nanosec = 555666777;
 
   // Update result - should not be successful since we only have 1/3 valid clouds
-  concatenation_info.update_concatenated_point_cloud_result(
-    concatenated_cloud, concatenated_point_cloud_info_msg);
+  concatenation_info.set_result(concatenated_cloud, concatenated_point_cloud_info_msg);
 
   // Check concatenation is not successful (1/3 valid clouds)
   EXPECT_FALSE(concatenated_point_cloud_info_msg.concatenation_success);
@@ -403,13 +399,13 @@ TEST_F(ConcatenationInfoTest, ApplySourceTwiceThrows)
   auto concatenated_point_cloud_info_msg = concatenation_info.reset_and_get_base_info();
 
   // Apply first cloud successfully
-  concatenation_info.apply_source_with_point_cloud(
+  concatenation_info.update_source_from_point_cloud(
     test_cloud_1_, input_topics_[0], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
     concatenated_point_cloud_info_msg);
 
   // Try to apply second cloud to same topic - should throw
   EXPECT_THROW(
-    concatenation_info.apply_source_with_point_cloud(
+    concatenation_info.update_source_from_point_cloud(
       test_cloud_1_, input_topics_[0], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
       concatenated_point_cloud_info_msg),
     std::runtime_error);
@@ -422,16 +418,16 @@ TEST_F(ConcatenationInfoTest, TwoIterationsOfSettingCloudInfo)
   // First iteration - apply only partial clouds (invalid result)
   auto concatenated_point_cloud_info_msg_1 = concatenation_info.reset_and_get_base_info();
 
-  concatenation_info.apply_source_with_point_cloud(
+  concatenation_info.update_source_from_point_cloud(
     test_cloud_1_, input_topics_[0], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
     concatenated_point_cloud_info_msg_1);
 
-  concatenation_info.apply_source_with_point_cloud(
+  concatenation_info.update_source_from_point_cloud(
     test_cloud_2_, input_topics_[1],
     autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_INVALID,
     concatenated_point_cloud_info_msg_1);
 
-  concatenation_info.apply_source_with_status(
+  concatenation_info.update_source_from_status(
     input_topics_[2], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_TIMEOUT,
     concatenated_point_cloud_info_msg_1);
 
@@ -441,8 +437,7 @@ TEST_F(ConcatenationInfoTest, TwoIterationsOfSettingCloudInfo)
   concatenated_cloud_1.header.stamp.sec = 1234567892;
   concatenated_cloud_1.header.stamp.nanosec = 111222333;
 
-  concatenation_info.update_concatenated_point_cloud_result(
-    concatenated_cloud_1, concatenated_point_cloud_info_msg_1);
+  concatenation_info.set_result(concatenated_cloud_1, concatenated_point_cloud_info_msg_1);
 
   // Check first iteration results - should be invalid (only 1/3 valid clouds)
   EXPECT_EQ(
@@ -469,15 +464,15 @@ TEST_F(ConcatenationInfoTest, TwoIterationsOfSettingCloudInfo)
   // Second iteration - fresh start with new concatenated_point_cloud_info_msg (valid result)
   auto concatenated_point_cloud_info_msg_2 = concatenation_info.reset_and_get_base_info();
 
-  concatenation_info.apply_source_with_point_cloud(
+  concatenation_info.update_source_from_point_cloud(
     test_cloud_1_, input_topics_[0], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
     concatenated_point_cloud_info_msg_2);
 
-  concatenation_info.apply_source_with_point_cloud(
+  concatenation_info.update_source_from_point_cloud(
     test_cloud_2_, input_topics_[1], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
     concatenated_point_cloud_info_msg_2);
 
-  concatenation_info.apply_source_with_point_cloud(
+  concatenation_info.update_source_from_point_cloud(
     test_cloud_3_, input_topics_[2], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
     concatenated_point_cloud_info_msg_2);
 
@@ -487,8 +482,7 @@ TEST_F(ConcatenationInfoTest, TwoIterationsOfSettingCloudInfo)
   concatenated_cloud_2.header.stamp.sec = 1234567893;
   concatenated_cloud_2.header.stamp.nanosec = 444555666;
 
-  concatenation_info.update_concatenated_point_cloud_result(
-    concatenated_cloud_2, concatenated_point_cloud_info_msg_2);
+  concatenation_info.set_result(concatenated_cloud_2, concatenated_point_cloud_info_msg_2);
 
   // Check second iteration results - should be valid (all 3/3 clouds)
   EXPECT_EQ(
