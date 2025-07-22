@@ -15,9 +15,8 @@
 #include "autoware/cuda_pointcloud_preprocessor/organize_kernels.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/point_types.hpp"
 
+#include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <cub/cub.cuh>
-
-#include <limits>
 
 namespace autoware::cuda_pointcloud_preprocessor
 {
@@ -81,9 +80,9 @@ std::size_t querySortWorkspace(
   // Determine temporary device storage requirements
   void * temp_storage = nullptr;
   size_t temp_storage_bytes = 0;
-  cub::DeviceSegmentedRadixSort::SortKeys(
+  CHECK_CUDA_ERROR(cub::DeviceSegmentedRadixSort::SortKeys(
     temp_storage, temp_storage_bytes, keys_in_device, keys_out_device, num_items, num_segments,
-    offsets_device, offsets_device + 1);
+    offsets_device, offsets_device + 1));
 
   return temp_storage_bytes;
 }
@@ -97,6 +96,7 @@ void organizeLaunch(
   organizeKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
     input_points, index_tensor, ring_indexes, initial_max_rings, output_max_rings,
     initial_max_points_per_ring, output_max_points_per_ring, num_points);
+  CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
 void gatherLaunch(
@@ -108,6 +108,7 @@ void gatherLaunch(
   gatherKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
     input_points, index_tensor, output_points, num_rings, max_points_per_ring, is_valid_point,
     num_raw_points);
+  CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
 }  // namespace autoware::cuda_pointcloud_preprocessor

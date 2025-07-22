@@ -15,6 +15,8 @@
 #include "autoware/cuda_pointcloud_preprocessor/outlier_kernels.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/point_types.hpp"
 
+#include <autoware/cuda_utils/cuda_check_error.hpp>
+
 namespace autoware::cuda_pointcloud_preprocessor
 {
 
@@ -77,6 +79,7 @@ void ringOutlierFilterLaunch(
   ringOutlierFilterKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
     points, output_mask, num_rings, max_points_per_ring, distance_ratio,
     object_length_threshold_squared);
+  CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
 }  // namespace autoware::cuda_pointcloud_preprocessor
