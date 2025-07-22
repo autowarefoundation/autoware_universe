@@ -5,11 +5,13 @@ This feature enables dummy objects in the simulation to follow predicted traject
 ## What's New
 
 ### RViz Tools
+
 - Added "Predicted" checkbox to all dummy object placement tools (car, pedestrian, unknown)
 - Press 'P' to toggle prediction mode for objects
 - Objects created with prediction enabled use `action: PREDICT`
 
 ### Core Functionality
+
 - **Euclidean Distance Mapping**: Automatically assigns nearest predicted objects to dummy objects
 - **Trajectory Interpolation**: Objects follow curved predicted paths instead of straight lines
 - **Smart Remapping**: Handles disappeared predictions by finding new best matches
@@ -26,12 +28,15 @@ Located in `src/node.cpp:1056`, this function:
 5. Updates the mapping maintained in `dummy_to_predicted_uuid_map_`
 
 ### Distance-Based Matching
+
 - Vehicles: Max 10m initial matching distance
 - Pedestrians: Max 5m initial matching distance
 - Considers speed compatibility and trajectory similarity
 
 ### Position Calculation
+
 When a dummy object has `action: PREDICT`:
+
 - Uses `calculateTrajectoryBasedPosition` to interpolate along predicted path
 - Falls back to extrapolation if beyond predicted trajectory
 - Maintains smooth motion even during remapping
@@ -39,7 +44,8 @@ When a dummy object has `action: PREDICT`:
 ## Configuration
 
 Key parameters in `config/dummy_perception_publisher.param.yaml`:
-- `predicted_path_delay`: 2.0 (seconds before using predictions - currently not active)
+
+- `predicted_path_delay`: 2.0 (seconds before using predictions)
 - `min_keep_duration`: 3.0 (minimum seconds to keep same prediction)
 - Vehicle thresholds: 2.0m distance, 15° yaw, 5% speed tolerance
 - Pedestrian thresholds: 3.0m distance, 45° yaw, 30% speed tolerance

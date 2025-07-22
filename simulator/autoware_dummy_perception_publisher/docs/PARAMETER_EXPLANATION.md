@@ -1,4 +1,4 @@
-# Predicted Path Configuration Parameters Explained
+# Predicted Path Configuration Parameters
 
 This document provides detailed explanations of all configuration parameters used in the dummy object predicted path feature.
 
@@ -8,132 +8,170 @@ The parameters control how dummy objects are matched to predicted objects and ho
 
 ## General Prediction Parameters
 
-### `predicted_path_delay` (2.0 seconds)
-**Status**: Declared but not actively used (TODO in code)
-**Purpose**: Intended to add a delay before using predicted paths for newly created dummy objects
-**Rationale**: Allows the perception system to stabilize before relying on predictions
+### predicted_path_delay
 
-### `min_keep_duration` (3.0 seconds)
-**Used in**: `findMatchingPredictedObject()` at line 786
-**Purpose**: Minimum time to keep using the same predicted object before allowing remapping
-**How it works**:
-- Once a dummy object is mapped to a predicted object, it must use that prediction for at least 3 seconds
-- Prevents frequent switching between predictions which could cause erratic movement
-**Rationale**: Provides stability in object tracking and prevents jittery behavior
+- **Type**: `double`
+- **Unit**: seconds
+- **Default**: `2.0`
+- **Description**: Delay before using predicted paths for newly created dummy objects. During this initial period, objects use straight-line motion to allow the perception system to stabilize before relying on predictions.
 
-### `max_yaw_change` (1.57 radians = 90°)
-**Used in**: `isTrajectoryValid()` at line 1181
-**Purpose**: Maximum acceptable yaw angle change between consecutive predictions
-**How it works**:
-- Compares the yaw angle at the end of the current prediction with the start of the new prediction
-- Rejects updates where the angle change exceeds 90°
-**Rationale**: Prevents unrealistic sudden turns (e.g., a car instantly reversing direction)
+### min_keep_duration
 
-### `max_path_length_change_ratio` (3.0)
-**Used in**: `isTrajectoryValid()` at line 1214
-**Purpose**: Maximum acceptable ratio between old and new path lengths
-**How it works**:
-- Calculates the ratio of new path length to old path length
-- Rejects if ratio > 3.0 or < 1/3.0
-**Rationale**: Prevents drastic changes in predicted trajectory length which could indicate tracking errors
+- **Type**: `double`
+- **Unit**: seconds
+- **Default**: `3.0`
+- **Description**: Minimum time to keep using the same predicted object before allowing remapping. Once a dummy object is mapped to a predicted object, it must maintain that association for at least this duration. This prevents frequent switching between predictions which could cause erratic movement and provides stability in object tracking.
+
+### max_yaw_change
+
+- **Type**: `double`
+- **Unit**: radians
+- **Default**: `1.57` (90 degrees)
+- **Description**: Maximum acceptable yaw angle change between consecutive predictions. When validating trajectory updates, the system compares the yaw angle at the end of the current prediction with the start of the new prediction. Updates where the angle change exceeds this threshold are rejected to prevent unrealistic sudden turns.
+
+### max_path_length_change_ratio
+
+- **Type**: `double`
+- **Unit**: dimensionless ratio
+- **Default**: `3.0`
+- **Description**: Maximum acceptable ratio between old and new path lengths. When validating trajectory updates, the system calculates the ratio of new path length to old path length. Ratios greater than 3.0 or less than 1/3.0 are rejected to prevent drastic changes in predicted trajectory length which could indicate tracking errors.
 
 ## Vehicle-Specific Parameters
 
-### `vehicle.max_remapping_distance` (2.0 meters)
-**Used in**: `isValidRemappingCandidate()` at line 1251
-**Purpose**: Maximum distance for initial mapping or remapping a vehicle dummy to a predicted object
-**How it works**:
-- When searching for a predicted object to map to, only considers those within 2 meters
-- Applied during initial mapping and when the previous predicted object disappears
-**Rationale**: Vehicles are more predictable and should be matched to nearby predictions only
+### vehicle.max_remapping_distance
 
-### `vehicle.max_remapping_yaw_diff` (0.26 radians = 15°)
-**Used in**: `isValidRemappingCandidate()` at line 1253
-**Purpose**: Maximum yaw difference allowed when remapping vehicles
-**How it works**:
-- Compares the dummy object's current yaw with the candidate predicted object's yaw
-- Rejects candidates with > 15° difference
-**Rationale**: Vehicles typically maintain consistent heading; large yaw differences indicate different objects
+- **Type**: `double`
+- **Unit**: meters
+- **Default**: `2.0`
+- **Description**: Maximum distance for initial mapping or remapping a vehicle dummy object to a predicted object. When searching for a predicted object to map to, only candidates within this distance are considered. This applies during initial mapping and when the previous predicted object disappears.
 
-### `vehicle.max_speed_difference_ratio` (1.05 = 5% tolerance)
-**Used in**: `isValidRemappingCandidate()` at line 1255
-**Purpose**: Maximum speed difference ratio when comparing dummy and predicted speeds
-**How it works**:
-- Calculates abs(dummy_speed - predicted_speed) / dummy_speed
-- Rejects if ratio > 0.05 (5%)
-**Rationale**: Ensures speed compatibility for smooth transitions
+### vehicle.max_remapping_yaw_diff
 
-### `vehicle.min_speed_ratio` / `vehicle.max_speed_ratio` (0.5 - 1.5)
-**Used in**: `isValidRemappingCandidate()` at lines 1276-1278
-**Purpose**: Acceptable range for predicted_speed / dummy_speed ratio
-**How it works**:
-- Predicted speed must be between 50% and 150% of dummy speed
-- Only checked when dummy speed > `speed_check_threshold`
-**Rationale**: Allows some speed variation while preventing unrealistic matches
+- **Type**: `double`
+- **Unit**: radians
+- **Default**: `0.26` (15 degrees)
+- **Description**: Maximum yaw difference allowed when remapping vehicles. The system compares the dummy object's current yaw with the candidate predicted object's yaw and rejects candidates with differences exceeding this threshold. Vehicles typically maintain consistent heading, so large yaw differences indicate different objects.
 
-### `vehicle.speed_check_threshold` (1.0 m/s)
-**Used in**: `isValidRemappingCandidate()` at line 1280
-**Purpose**: Minimum speed for applying speed ratio checks
-**How it works**:
-- Speed validation is only performed when dummy speed > 1.0 m/s
-- Prevents issues with near-zero speeds
-**Rationale**: Speed ratios become unreliable at very low speeds
+### vehicle.max_speed_difference_ratio
 
-### `vehicle.max_position_difference` (1.5 meters)
-**Used in**: `arePathsSimilar()` at line 1436
-**Purpose**: Maximum position difference for path similarity validation
-**How it works**:
-- When checking if two predicted paths are similar, compares positions at same time points
-- Rejects if any position difference > 1.5m
-**Rationale**: Ensures spatial consistency between consecutive predictions
+- **Type**: `double`
+- **Unit**: dimensionless ratio
+- **Default**: `1.05` (5% tolerance)
+- **Description**: Maximum speed difference ratio when comparing dummy and predicted speeds. Calculated as abs(dummy_speed - predicted_speed) / dummy_speed. Candidates with ratios exceeding this threshold are rejected to ensure speed compatibility for smooth transitions.
 
-### `vehicle.max_path_length_ratio` (1.1 = 10% difference)
-**Used in**: `arePathsSimilar()` at line 1529
-**Purpose**: Maximum path length ratio for similarity checks
-**How it works**:
-- Compares total path lengths of two predictions
-- Rejects if ratio > 1.1 or < 0.9
-**Rationale**: Similar paths should have similar lengths
+### vehicle.min_speed_ratio / vehicle.max_speed_ratio
 
-### `vehicle.max_overall_direction_diff` (0.52 radians = 30°)
-**Used in**: `arePathsSimilar()` at line 1572
-**Purpose**: Maximum overall direction difference between paths
-**How it works**:
-- Calculates angle between vectors from path start to end
-- Rejects if angle > 30°
-**Rationale**: Ensures paths have similar overall direction
+- **Type**: `double`
+- **Unit**: dimensionless ratio
+- **Default**: `0.5` / `1.5`
+- **Description**: Acceptable range for predicted_speed / dummy_speed ratio. The predicted object's speed must be between 50% and 150% of the dummy object's speed. This check is only performed when the dummy speed exceeds the speed_check_threshold to allow some speed variation while preventing unrealistic matches.
+
+### vehicle.speed_check_threshold
+
+- **Type**: `double`
+- **Unit**: m/s
+- **Default**: `1.0`
+- **Description**: Minimum speed for applying speed ratio checks. Speed validation is only performed when the dummy object's speed exceeds this threshold. This prevents issues with near-zero speeds where speed ratios become unreliable.
+
+### vehicle.max_position_difference
+
+- **Type**: `double`
+- **Unit**: meters
+- **Default**: `1.5`
+- **Description**: Maximum position difference for path similarity validation. When checking if two predicted paths are similar, the system compares positions at the same time points along the paths. If any position difference exceeds this threshold, the paths are considered dissimilar.
+
+### vehicle.max_path_length_ratio
+
+- **Type**: `double`
+- **Unit**: dimensionless ratio
+- **Default**: `1.1` (10% difference)
+- **Description**: Maximum path length ratio for similarity checks. When comparing total path lengths of two predictions, the ratio must be between 0.9 and 1.1. This ensures that similar paths have comparable lengths.
+
+### vehicle.max_overall_direction_diff
+
+- **Type**: `double`
+- **Unit**: radians
+- **Default**: `0.52` (30 degrees)
+- **Description**: Maximum overall direction difference between paths. The system calculates the angle between vectors from path start to end points. Paths with angular differences exceeding this threshold are considered dissimilar.
 
 ## Pedestrian-Specific Parameters
 
-All pedestrian parameters follow the same patterns as vehicle parameters but with more lenient thresholds:
+All pedestrian parameters follow the same patterns as vehicle parameters but with more lenient thresholds to account for the unpredictable nature of pedestrian movement:
 
-### Key Differences:
-- **max_remapping_distance**: 3.0m (vs 2.0m) - Pedestrians can appear/disappear more suddenly
-- **max_remapping_yaw_diff**: 45° (vs 15°) - Pedestrians can change direction quickly
-- **max_speed_difference_ratio**: 1.3 (vs 1.05) - More speed variation allowed
-- **speed_ratio range**: 0.3-2.0 (vs 0.5-1.5) - Pedestrians have more variable speeds
-- **speed_check_threshold**: 0.5 m/s (vs 1.0 m/s) - Lower threshold for walking speeds
-- **max_position_difference**: 2.5m (vs 1.5m) - Less predictable paths
-- **max_path_length_ratio**: 1.5 (vs 1.1) - More variation in path lengths
-- **max_overall_direction_diff**: 60° (vs 30°) - Pedestrians can change direction more
+### pedestrian.max_remapping_distance
+
+- **Type**: `double`
+- **Unit**: meters
+- **Default**: `3.0`
+- **Description**: Same as vehicle parameter but with a larger threshold since pedestrians can appear/disappear more suddenly.
+
+### pedestrian.max_remapping_yaw_diff
+
+- **Type**: `double`
+- **Unit**: radians
+- **Default**: `0.78` (45 degrees)
+- **Description**: Same as vehicle parameter but with a larger threshold since pedestrians can change direction quickly.
+
+### pedestrian.max_speed_difference_ratio
+
+- **Type**: `double`
+- **Unit**: dimensionless ratio
+- **Default**: `1.3` (30% tolerance)
+- **Description**: Same as vehicle parameter but with more tolerance for speed variation.
+
+### pedestrian.min_speed_ratio / pedestrian.max_speed_ratio
+
+- **Type**: `double`
+- **Unit**: dimensionless ratio
+- **Default**: `0.3` / `2.0`
+- **Description**: Same as vehicle parameters but with a wider acceptable range to accommodate variable pedestrian speeds.
+
+### pedestrian.speed_check_threshold
+
+- **Type**: `double`
+- **Unit**: m/s
+- **Default**: `0.5`
+- **Description**: Same as vehicle parameter but with a lower threshold suitable for walking speeds.
+
+### pedestrian.max_position_difference
+
+- **Type**: `double`
+- **Unit**: meters
+- **Default**: `2.5`
+- **Description**: Same as vehicle parameter but allowing more variation for less predictable pedestrian paths.
+
+### pedestrian.max_path_length_ratio
+
+- **Type**: `double`
+- **Unit**: dimensionless ratio
+- **Default**: `1.5` (50% difference)
+- **Description**: Same as vehicle parameter but allowing more variation in path lengths.
+
+### pedestrian.max_overall_direction_diff
+
+- **Type**: `double`
+- **Unit**: radians
+- **Default**: `1.04` (60 degrees)
+- **Description**: Same as vehicle parameter but allowing more direction change for pedestrian movement.
 
 ## Usage Flow
 
-1. **Initial Mapping**: When a dummy object with `action: PREDICT` is created, the system finds the nearest predicted object within `max_remapping_distance`
+1. **Initial Mapping**: When a dummy object with `action: PREDICT` is created, the system finds the nearest predicted object within `max_remapping_distance`.
 
-2. **Validation**: The candidate must pass all checks:
+2. **Validation**: The candidate must pass all applicable checks:
+
    - Distance threshold
    - Yaw difference
-   - Speed compatibility
-   - Path similarity (if remapping)
+   - Speed compatibility (if speed exceeds threshold)
+   - Path similarity (if remapping from an existing prediction)
 
-3. **Stability**: Once mapped, the relationship is maintained for at least `min_keep_duration`
+3. **Stability**: Once mapped, the relationship is maintained for at least `min_keep_duration` seconds.
 
-4. **Remapping**: If the predicted object disappears, the system searches for a new match using the same validation criteria
+4. **Remapping**: If the predicted object disappears, the system searches for a new match using the same validation criteria.
 
-5. **Continuous Validation**: During updates, trajectory changes are validated using `max_yaw_change` and `max_path_length_change_ratio`
+5. **Continuous Validation**: During prediction updates, trajectory changes are validated using `max_yaw_change` and `max_path_length_change_ratio`.
 
-## Tuning Guidelines
+## Parameter Tuning Guidelines
 
 - **Increase thresholds** if objects are failing to find matches or losing tracking too often
 - **Decrease thresholds** if incorrect matches are occurring or movement appears unrealistic

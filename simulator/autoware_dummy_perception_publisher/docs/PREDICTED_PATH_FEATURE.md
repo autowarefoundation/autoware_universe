@@ -9,6 +9,7 @@ This feature branch (`feat/dummy-object-predicted-path-awf`) adds the capability
 ### 1. RViz Integration
 
 All RViz dummy object tools (`car_pose`, `pedestrian_pose`, `unknown_pose`) now include:
+
 - A "Predicted" checkbox property that can be toggled
 - Support for the 'P' key to toggle objects to use predicted paths
 - When enabled, objects are created with `action: PREDICT` instead of `action: ADD`
@@ -30,22 +31,26 @@ The dummy perception publisher node subscribes to predicted objects and maintain
 
 This function is called whenever new predicted objects are received. It manages the assignment of predicted objects to dummy objects.
 
-#### Algorithm Steps:
+#### Algorithm Steps
 
 1. **Collect Available Predicted Objects**
+
    - Creates a set of all currently available predicted object UUIDs
    - Stores their current positions for distance calculations
 
 2. **Find Disappeared Predicted Objects**
+
    - Identifies predicted objects that were previously mapped but are no longer available
    - Marks corresponding dummy objects for remapping to new predictions
 
 3. **Update Dummy Object Positions**
+
    - Calculates current positions for all dummy objects
    - For objects with `action: PREDICT`, uses the mapped predicted trajectory
    - For others, uses straight-line motion
 
 4. **Handle Remapping**
+
    - For dummy objects that lost their predicted object, finds new best matches
    - For unmapped dummy objects with `action: PREDICT`, finds initial matches
 
@@ -57,15 +62,19 @@ This function is called whenever new predicted objects are received. It manages 
 ### Key Functions
 
 #### `calculateEuclideanDistance`
+
 ```cpp
 double calculateEuclideanDistance(
-  const geometry_msgs::msg::Point & pos1, 
+  const geometry_msgs::msg::Point & pos1,
   const geometry_msgs::msg::Point & pos2)
 ```
+
 Simple 3D Euclidean distance calculation between two points.
 
 #### `isValidRemappingCandidate`
+
 Validates if a predicted object is suitable for remapping by checking:
+
 - Distance threshold (vehicle: 10m, pedestrian: 5m)
 - Yaw difference (max 30°)
 - Speed compatibility
@@ -74,13 +83,17 @@ Validates if a predicted object is suitable for remapping by checking:
 - Overall direction consistency
 
 #### `isTrajectoryValid`
+
 Ensures smooth trajectory transitions by validating:
+
 - Yaw change between predictions (max 30°)
 - Path length consistency (±50% change)
 - Prevention of unrealistic direction changes
 
 #### `calculateTrajectoryBasedPosition`
+
 Interpolates object position along the predicted trajectory:
+
 1. Calculates elapsed time since prediction
 2. Finds the appropriate path point based on time
 3. Interpolates between path points for smooth motion
@@ -91,10 +104,12 @@ Interpolates object position along the predicted trajectory:
 The feature uses ROS2 parameters with JSON schema validation:
 
 ### Timing Parameters
-- `predicted_path_delay`: 2 seconds - Wait time before using predictions
+
+- `predicted_path_delay`: 2 seconds - Delay before using predicted paths for new objects
 - `min_keep_duration`: 3 seconds - Minimum time to maintain same prediction
 
 ### Vehicle-Specific Parameters
+
 - `vehicle_max_remapping_distance`: 2.0m - Maximum distance for initial mapping
 - `vehicle_max_remapping_yaw_diff`: 15° - Maximum yaw difference allowed
 - `vehicle_max_speed_difference_ratio`: 1.05 - Maximum 5% speed difference
@@ -106,6 +121,7 @@ The feature uses ROS2 parameters with JSON schema validation:
 - `vehicle_max_overall_direction_diff`: 30° - Maximum direction difference
 
 ### Pedestrian-Specific Parameters
+
 - `pedestrian_max_remapping_distance`: 3.0m - More lenient for unpredictable movement
 - `pedestrian_max_remapping_yaw_diff`: 45° - Pedestrians can turn quickly
 - `pedestrian_max_speed_difference_ratio`: 1.3 - Maximum 30% speed difference
@@ -121,20 +137,24 @@ For detailed explanations of how each parameter is used, see [PARAMETER_EXPLANAT
 ## Validation Mechanisms
 
 ### 1. Speed Validation
+
 - Compares dummy object speed with predicted object speed
 - Ensures speed ratios are within acceptable ranges
 - Different thresholds for vehicles vs pedestrians
 
 ### 2. Position Validation
+
 - Checks if the current position matches expected position from trajectory
 - Maximum allowed deviation varies by object type
 
 ### 3. Path Similarity
+
 - Validates that predicted paths have similar lengths
 - Ensures overall direction consistency
 - Prevents sudden trajectory changes
 
 ### 4. Trajectory Continuity
+
 - Maintains prediction stability for minimum duration
 - Smooth transitions when remapping to new predictions
 - Handles lost objects gracefully
@@ -146,13 +166,16 @@ When multiple predicted paths are available for a pedestrian, the system randoml
 ## Usage
 
 1. **Enable Predicted Paths in RViz**:
+
    - Check the "Predicted" checkbox when placing objects
    - Or press 'P' after placing to toggle prediction mode
 
 2. **Launch with Predicted Objects**:
+
    ```bash
    ros2 launch autoware_dummy_perception_publisher dummy_perception_publisher.launch.xml
    ```
+
    Ensure a predicted objects topic is being published (e.g., from perception pipeline)
 
 3. **Monitor Mapping**:
@@ -170,11 +193,13 @@ When multiple predicted paths are available for a pedestrian, the system randoml
 ## Technical Details
 
 ### Message Types
+
 - Input: `autoware_perception_msgs/PredictedObjects`
 - Dummy Objects: `tier4_simulation_msgs/DummyObject` with `action: PREDICT`
 - Output: Standard Autoware perception messages with trajectory-based positions
 
 ### Performance Considerations
+
 - Maintains a buffer of last 50 predicted object messages
 - Efficient Euclidean distance calculations for mapping
 - Lazy evaluation of trajectory positions
