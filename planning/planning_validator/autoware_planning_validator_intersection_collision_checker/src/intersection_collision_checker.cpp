@@ -130,6 +130,7 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
 
   publish_markers(debug_data);
   publish_planning_factor(debug_data);
+  prev_collision_lanes_ = debug_data.collision_lanes;
 }
 
 bool IntersectionCollisionChecker::is_safe(DebugData & debug_data)
@@ -165,6 +166,15 @@ bool IntersectionCollisionChecker::is_safe(DebugData & debug_data)
   const auto & p = params_.icc_parameters;
   const auto now = clock_->now();
 
+  auto consistent_collision_lane = [&]() {
+    return std::find_if(
+             debug_data.collision_lanes.begin(), debug_data.collision_lanes.end(),
+             [&](const auto & id) {
+               return std::find(prev_collision_lanes_.begin(), prev_collision_lanes_.end(), id) !=
+                      prev_collision_lanes_.end();
+             }) != debug_data.collision_lanes.end();
+  };
+
   if (is_safe) {
     if ((now - last_invalid_time_).seconds() > p.off_time_buffer) {
       last_valid_time_ = now;
@@ -174,7 +184,7 @@ bool IntersectionCollisionChecker::is_safe(DebugData & debug_data)
     return false;
   }
 
-  if ((now - last_valid_time_).seconds() < p.on_time_buffer) {
+  if ((now - last_valid_time_).seconds() < p.on_time_buffer || !consistent_collision_lane()) {
     RCLCPP_WARN(logger_, "[ICC] Momentary collision risk detected.");
     debug_data.text = "detected momentary collision";
     return true;
