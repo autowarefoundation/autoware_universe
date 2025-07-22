@@ -125,7 +125,7 @@ private:
   // publishers
   std::shared_ptr<PublisherType> concatenated_cloud_publisher_;
   rclcpp::Publisher<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>::SharedPtr
-    concatenated_cloud_info_publisher_;
+    concatenation_info_publisher_;
   std::unordered_map<std::string, std::shared_ptr<PublisherType>>
     topic_to_transformed_cloud_publisher_map_;
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;

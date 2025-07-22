@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include "cloud_info.hpp"
+#include "concatenation_info.hpp"
 #include "traits.hpp"
 
 #include <deque>
@@ -39,7 +39,7 @@ template <typename MsgTraits>
 struct ConcatenatedCloudResult
 {
   typename MsgTraits::PointCloudMessage::UniquePtr concatenate_cloud_ptr{nullptr};
-  autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::UniquePtr concatenate_cloud_info_ptr;
+  autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::UniquePtr concatenation_info_ptr;
   std::optional<std::unordered_map<std::string, typename MsgTraits::PointCloudMessage::UniquePtr>>
     topic_to_transformed_cloud_map;
   std::unordered_map<std::string, double> topic_to_original_stamp_map;
@@ -59,7 +59,7 @@ public:
     publish_synchronized_pointcloud_(publish_synchronized_pointcloud),
     keep_input_frame_in_synchronized_pointcloud_(keep_input_frame_in_synchronized_pointcloud),
     managed_tf_buffer_(std::make_unique<managed_transform_buffer::ManagedTransformBuffer>()),
-    cloud_info_(node.get_parameter("matching_strategy.type").as_string(), input_topics)
+    concatenation_info_(node.get_parameter("matching_strategy.type").as_string(), input_topics)
   {
   }
 
@@ -83,7 +83,7 @@ protected:
   bool publish_synchronized_pointcloud_;
   bool keep_input_frame_in_synchronized_pointcloud_;
   std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
-  CloudInfo cloud_info_;
+  ConcatenationInfo concatenation_info_;
 
   std::deque<geometry_msgs::msg::TwistStamped> twist_queue_;
 };

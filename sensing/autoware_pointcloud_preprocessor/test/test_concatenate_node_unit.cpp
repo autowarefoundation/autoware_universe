@@ -351,7 +351,7 @@ TEST_F(ConcatenateCloudTest, TestConcatenateClouds)
   topic_to_cloud_map["lidar_right"] = right_pointcloud_ptr;
 
   auto
-    [concatenate_cloud_ptr, concatenate_cloud_info_ptr, topic_to_transformed_cloud_map,
+    [concatenate_cloud_ptr, concatenation_info_ptr, topic_to_transformed_cloud_map,
      topic_to_original_stamp_map] = collector_->concatenate_pointclouds(topic_to_cloud_map);
 
   // test output concatenate cloud

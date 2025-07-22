@@ -52,7 +52,7 @@
 #ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__CONCATENATE_POINTCLOUDS_HPP_
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__CONCATENATE_POINTCLOUDS_HPP_
 
-#include "cloud_info.hpp"
+#include "concatenation_info.hpp"
 
 #include <deque>
 #include <map>
@@ -144,7 +144,7 @@ private:
   std::vector<std::string> input_topics_;
 
   std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
-  std::unique_ptr<CloudInfo> cloud_info_{nullptr};
+  std::unique_ptr<ConcatenationInfo> concatenation_info_{nullptr};
 
   std::deque<geometry_msgs::msg::TwistStamped::ConstSharedPtr> twist_ptr_queue_;
 
@@ -158,7 +158,7 @@ private:
   void checkSyncStatus();
   void combineClouds(
     sensor_msgs::msg::PointCloud2::SharedPtr & concat_cloud_ptr,
-    autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr & concat_cloud_info_ptr);
+    autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr & concatenation_info_ptr);
   void publish();
 
   void convertToXYZIRCCloud(

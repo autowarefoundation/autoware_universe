@@ -40,7 +40,7 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<
   // Publishers
   concatenated_cloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
     "output", rclcpp::SensorDataQoS().keep_last(params_.maximum_queue_size));
-  concatenated_cloud_info_publisher_ =
+  concatenation_info_publisher_ =
     this->create_publisher<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
       "output_info", rclcpp::SensorDataQoS().keep_last(params_.maximum_queue_size));
 

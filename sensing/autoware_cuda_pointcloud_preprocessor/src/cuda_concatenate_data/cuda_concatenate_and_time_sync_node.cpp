@@ -35,7 +35,7 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<
   concatenated_cloud_publisher_ =
     std::make_shared<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>(
       *this, "output");
-  concatenated_cloud_info_publisher_ =
+  concatenation_info_publisher_ =
     this->create_publisher<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
       "output_info", rclcpp::SensorDataQoS().keep_last(params_.maximum_queue_size));
 

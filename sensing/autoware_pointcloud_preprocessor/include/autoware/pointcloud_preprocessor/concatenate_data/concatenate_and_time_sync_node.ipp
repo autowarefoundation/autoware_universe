@@ -330,7 +330,7 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::publish
       }
     }
   }
-  concatenated_cloud_info_publisher_->publish(std::move(concatenated_cloud_result.concatenate_cloud_info_ptr));
+  concatenation_info_publisher_->publish(std::move(concatenated_cloud_result.concatenation_info_ptr));
 
   const double processing_time = stop_watch_ptr_->toc("processing_time", true);
   std::unordered_map<std::string, double> topic_to_pipeline_latency_map;

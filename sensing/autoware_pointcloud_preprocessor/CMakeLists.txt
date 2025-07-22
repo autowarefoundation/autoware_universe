@@ -301,15 +301,15 @@ if(BUILD_TESTING)
     test/test_pickup_based_voxel_grid_downsample_filter_node.cpp
   )
 
-  ament_add_gtest(test_cloud_info
-    test/test_cloud_info.cpp
+  ament_add_gtest(test_concatenation_info
+    test/test_concatenation_info.cpp
   )
 
   target_link_libraries(test_utilities pointcloud_preprocessor_filter)
   target_link_libraries(test_distortion_corrector_node pointcloud_preprocessor_filter)
   target_link_libraries(test_concatenate_node_unit pointcloud_preprocessor_filter)
   target_link_libraries(test_pickup_based_voxel_grid_downsample_filter_node pointcloud_preprocessor_filter)
-  target_link_libraries(test_cloud_info concatenate_data)
+  target_link_libraries(test_concatenation_info concatenate_data)
 
   add_ros_test(
     test/test_concatenate_node_component.py

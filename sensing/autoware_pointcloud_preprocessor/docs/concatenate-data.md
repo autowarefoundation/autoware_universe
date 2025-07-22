@@ -49,9 +49,9 @@ By setting the `input_twist_topic_type` parameter to `twist` or `odom`, the subs
 
 ### Output
 
-| Name              | Type                                                     | Description                                                                                      |
-| ----------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `~/output/points` | `sensor_msgs::msg::Pointcloud2`                          | Concatenated point clouds                                                                        |
+| Name              | Type                                                     | Description                                                                                                 |
+| ----------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `~/output/points` | `sensor_msgs::msg::Pointcloud2`                          | Concatenated point clouds                                                                                   |
 | `~/output/info`   | `autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo` | Information about the concatenated point cloud, including extents of source point clouds and their statuses |
 
 ### Core Parameters
@@ -161,7 +161,7 @@ The concatenation node publishes detailed meta information about the concatenati
 ### Handling Serialized Configuration
 
 The `matching_strategy_config` field contains serialized configuration data for the matching strategy.
-If a strategy has its own configuration, it requires serialization and deserialization implementation based on the `StrategyConfig` class defined in [cloud_info.hpp](../include/autoware/pointcloud_preprocessor/concatenate_data/cloud_info.hpp).
+If a strategy has its own configuration, it requires serialization and deserialization implementation based on the `StrategyConfig` class defined in [cloud_info.hpp](../include/autoware/pointcloud_preprocessor/concatenate_data/concatenation_info.hpp).
 
 Here's how to work with serialized configuration for the Advanced strategy:
 
@@ -169,7 +169,7 @@ Here's how to work with serialized configuration for the Advanced strategy:
 
 ```cpp
 auto cfg = StrategyAdvancedConfig(reference_timestamp_min, reference_timestamp_max);
-CloudInfo::update_concatenated_point_cloud_config(cfg.serialize(), concat_cloud_info_msg);
+ConcatenationInfo::update_concatenated_point_cloud_config(cfg.serialize(), concatenation_info_msg);
 ```
 
 #### Deserialization Example

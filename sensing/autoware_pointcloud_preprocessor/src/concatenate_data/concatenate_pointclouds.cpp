@@ -98,7 +98,7 @@ PointCloudConcatenationComponent::PointCloudConcatenationComponent(
 
   // Cloud info
   {
-    cloud_info_ = std::make_unique<CloudInfo>("naive", input_topics_);
+    concatenation_info_ = std::make_unique<ConcatenationInfo>("naive", input_topics_);
   }
 
   // Output Publishers
@@ -239,7 +239,7 @@ void PointCloudConcatenationComponent::checkSyncStatus()
 
 void PointCloudConcatenationComponent::combineClouds(
   sensor_msgs::msg::PointCloud2::SharedPtr & concat_cloud_ptr,
-  autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr & concat_cloud_info_ptr)
+  autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr & concatenation_info_ptr)
 {
   for (const auto & e : cloud_stdmap_) {
     if (e.second != nullptr) {
@@ -256,20 +256,21 @@ void PointCloudConcatenationComponent::combineClouds(
       } else {
         pcl::concatenatePointCloud(*concat_cloud_ptr, *transformed_cloud_ptr, *concat_cloud_ptr);
       }
-      if (concat_cloud_info_ptr == nullptr) {
-        concat_cloud_info_ptr =
+      if (concatenation_info_ptr == nullptr) {
+        concatenation_info_ptr =
           std::make_shared<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
-            cloud_info_->reset_and_get_base_info());
+            concatenation_info_->reset_and_get_base_info());
       }
-      cloud_info_->apply_source_with_point_cloud(
+      concatenation_info_->apply_source_with_point_cloud(
         *transformed_cloud_ptr, e.first,
-        autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK, *concat_cloud_info_ptr);
+        autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK, *concatenation_info_ptr);
     } else {
       not_subscribed_topic_names_.insert(e.first);
     }
   }
-  if (concat_cloud_info_ptr != nullptr && concat_cloud_ptr != nullptr) {
-    cloud_info_->update_concatenated_point_cloud_result(*concat_cloud_ptr, *concat_cloud_info_ptr);
+  if (concatenation_info_ptr != nullptr && concat_cloud_ptr != nullptr) {
+    concatenation_info_->update_concatenated_point_cloud_result(
+      *concat_cloud_ptr, *concatenation_info_ptr);
   }
 }
 
@@ -277,11 +278,12 @@ void PointCloudConcatenationComponent::publish()
 {
   stop_watch_ptr_->toc("processing_time", true);
   sensor_msgs::msg::PointCloud2::SharedPtr concat_cloud_ptr = nullptr;
-  autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr concat_cloud_info_ptr = nullptr;
+  autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr concatenation_info_ptr =
+    nullptr;
   not_subscribed_topic_names_.clear();
 
   checkSyncStatus();
-  combineClouds(concat_cloud_ptr, concat_cloud_info_ptr);
+  combineClouds(concat_cloud_ptr, concatenation_info_ptr);
 
   for (const auto & e : cloud_stdmap_) {
     if (e.second != nullptr) {
@@ -306,9 +308,9 @@ void PointCloudConcatenationComponent::publish()
   }
 
   // publish concatenated pointcloud info
-  if (concat_cloud_info_ptr) {
+  if (concatenation_info_ptr) {
     auto output_info = std::make_unique<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
-      *concat_cloud_info_ptr);
+      *concatenation_info_ptr);
     pub_output_info_->publish(std::move(output_info));
   }
 
