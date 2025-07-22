@@ -17,12 +17,16 @@
 
 #include "type_alias.hpp"
 
+#include <autoware_utils_rclcpp/parameter.hpp>
 #include <rclcpp/time.hpp>
 
 #include <autoware_perception_msgs/msg/shape.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
+
+#include <lanelet2_core/LaneletMap.h>
+#include <lanelet2_routing/RoutingGraph.h>
 
 #include <algorithm>
 #include <deque>
@@ -34,10 +38,36 @@
 namespace autoware::motion_velocity_planner
 {
 
+using autoware_utils_rclcpp::get_or_declare_parameter;
+struct CommonParam
+{
+  double max_accel{};
+  double min_accel{};
+  double max_jerk{};
+  double min_jerk{};
+  double limit_max_accel{};
+  double limit_min_accel{};
+  double limit_max_jerk{};
+  double limit_min_jerk{};
+
+  CommonParam() = default;
+  explicit CommonParam(rclcpp::Node & node)
+  {
+    max_accel = get_or_declare_parameter<double>(node, "normal.max_acc");
+    min_accel = get_or_declare_parameter<double>(node, "normal.min_acc");
+    max_jerk = get_or_declare_parameter<double>(node, "normal.max_jerk");
+    min_jerk = get_or_declare_parameter<double>(node, "normal.min_jerk");
+    limit_max_accel = get_or_declare_parameter<double>(node, "limit.max_acc");
+    limit_min_accel = get_or_declare_parameter<double>(node, "limit.min_acc");
+    limit_max_jerk = get_or_declare_parameter<double>(node, "limit.max_jerk");
+    limit_min_jerk = get_or_declare_parameter<double>(node, "limit.min_jerk");
+  }
+};
+
 struct StopObstacle
 {
   StopObstacle(
-    const UUID & arg_uuid, const rclcpp::Time & arg_stamp, const bool arg_is_wrong_way,
+    const UUID & arg_uuid, const rclcpp::Time & arg_stamp, const bool arg_is_opposite_traffic,
     const autoware_perception_msgs::msg::PredictedObject & arg_predicted_object,
     const ObjectClassification & object_classification, const geometry_msgs::msg::Pose & arg_pose,
     const Shape & arg_shape, const double arg_lon_velocity,
@@ -45,7 +75,7 @@ struct StopObstacle
     const double arg_dist_to_collide_on_decimated_traj)
   : uuid(arg_uuid),
     stamp(arg_stamp),
-    is_wrong_way(arg_is_wrong_way),
+    is_opposite_traffic(arg_is_opposite_traffic),
     original_object(arg_predicted_object),
     pose(arg_pose),
     velocity(arg_lon_velocity),
@@ -57,7 +87,7 @@ struct StopObstacle
   }
   UUID uuid;
   rclcpp::Time stamp;
-  bool is_wrong_way;
+  bool is_opposite_traffic;
   PredictedObject original_object;  // keep original object for reference
   geometry_msgs::msg::Pose pose;    // interpolated with the current stamp
   double velocity;                  // longitudinal velocity against ego's trajectory
@@ -81,7 +111,7 @@ struct StopPointCandidate
   geometry_msgs::msg::Point stop_position;
   double stop_distance;  // distance from ego vehicle
   autoware_perception_msgs::msg::PredictedObject target_object;
-  bool is_wrong_way;
+  bool is_opposite_traffic;
   double required_deceleration;
 };
 
@@ -124,6 +154,27 @@ struct TrackedObject
 
     return max_it->first;
   }
+};
+
+struct DebugData
+{
+  // Lanelet
+  lanelet::ConstLanelets ego_lanelets;
+  lanelet::ConstLanelets adjacent_lanelets;
+  lanelet::ConstLanelets opposite_lanelets;
+
+  // Lanelet polygons
+  std::vector<autoware_utils_geometry::Polygon2d> intersection_polygons;
+  std::vector<autoware_utils_geometry::Polygon2d> polygons_for_vru;
+  std::vector<autoware_utils_geometry::Polygon2d> polygons_for_opposing_traffic;
+
+  // Trajectory polygon with margins
+  std::vector<autoware_utils_geometry::Polygon2d> trajectory_polygons;
+  std::vector<PredictedObject> filtered_objects;
+  std::vector<autoware_utils_geometry::Polygon2d> object_polygons;  // object polygons for debug
+  std::optional<size_t> stop_index;
+  std::optional<geometry_msgs::msg::Point> stop_point;  // for planning factor
+  std::optional<PredictedObject> stop_target_object;    // object causing stop
 };
 }  // namespace autoware::motion_velocity_planner
 

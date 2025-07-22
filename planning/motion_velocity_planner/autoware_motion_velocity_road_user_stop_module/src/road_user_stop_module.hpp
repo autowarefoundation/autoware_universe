@@ -64,6 +64,7 @@ public:
 private:
   // parameter listener
   std::shared_ptr<road_user_stop::ParamListener> param_listener_;
+  CommonParam common_param_{};
 
   std::string module_name_;
   rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
@@ -79,13 +80,16 @@ private:
   bool isTargetObject(const uint8_t label) const;
   bool isObjectOnRoad(
     const PredictedObject & object, const lanelet::LaneletMapPtr & lanelet_map,
-    const lanelet::ConstLanelets & relevant_lanelets) const;
+    const std::vector<autoware_utils_geometry::Polygon2d> & relevant_polygons) const;
   bool isNearCrosswalk(
     const geometry_msgs::msg::Point & position, const lanelet::LaneletMapPtr & lanelet_map) const;
-  bool isWrongWayUser(const PredictedObject & object, const lanelet::ConstLanelet & lanelet) const;
+  bool isOppositeTrafficUser(
+    const PredictedObject & object, const lanelet::ConstLanelet & lanelet) const;
 
-  std::pair<lanelet::ConstLanelets, lanelet::ConstLanelets> getRelevantLanelets(
-    const std::shared_ptr<const PlannerData> planner_data) const;
+  std::pair<
+    std::vector<autoware_utils_geometry::Polygon2d>,
+    std::vector<autoware_utils_geometry::Polygon2d>>
+  getRelevantLanelets(const std::shared_ptr<const PlannerData> planner_data) const;
 
   std::vector<autoware_utils_geometry::Polygon2d> getTrajectoryPolygons(
     const std::vector<TrajectoryPoint> & decimated_traj_points,
@@ -104,9 +108,9 @@ private:
     const std::vector<TrajectoryPoint> & traj_points,
     const std::vector<TrajectoryPoint> & decimated_traj_points,
     const std::vector<autoware_utils_geometry::Polygon2d> & decimated_traj_polygons,
-    const lanelet::ConstLanelets & lanelets_for_vru,
-    const lanelet::ConstLanelets & lanelets_for_wrongway_user, const rclcpp::Time & current_time,
-    const double dist_to_bumper);
+    const std::vector<autoware_utils_geometry::Polygon2d> & polygons_for_vru,
+    const std::vector<autoware_utils_geometry::Polygon2d> & polygons_for_opposing_traffic,
+    const rclcpp::Time & current_time, const double dist_to_bumper);
 
   void updateTrackedObjects(
     const std::vector<std::shared_ptr<PlannerData::Object>> & objects,
@@ -118,27 +122,6 @@ private:
   lanelet::ConstLanelets getIntersectionLanelets(
     const lanelet::ConstLanelet & intersection_lanelet,
     const lanelet::LaneletMapPtr & lanelet_map) const;
-
-  // debug
-  struct DebugData
-  {
-    lanelet::ConstLanelets relevant_lanelets;
-    lanelet::ConstLanelets ego_lanelets;       // lanelets on ego lane
-    lanelet::ConstLanelets adjacent_lanelets;  // adjacent lanelets
-    std::vector<autoware_utils_geometry::Polygon2d>
-      trajectory_polygons;  // trajectory polygons with lateral margin
-    std::vector<PredictedObject> filtered_objects;
-    std::vector<autoware_utils_geometry::Polygon2d> object_polygons;  // object polygons for debug
-    std::optional<size_t> stop_index;
-    std::optional<geometry_msgs::msg::Point> stop_point;  // for planning factor
-    std::optional<PredictedObject> stop_target_object;    // object causing stop
-    lanelet::ConstLanelets
-      lanelets_for_vru;  // lanelets for VRU detection (ego + adjacent + opposite)
-    lanelet::ConstLanelets
-      lanelets_for_wrongway_user;  // lanelets for wrongway detection (ego + adjacent)
-    lanelet::ConstLanelets
-      intersection_lanelets;  // lanelets for wrongway detection (ego + adjacent)
-  };
 
   MarkerArray createDebugMarkerArray() const;
 
@@ -163,8 +146,9 @@ private:
     const std::vector<TrajectoryPoint> & traj_points,
     const std::vector<TrajectoryPoint> & decimated_traj_points,
     const std::vector<autoware_utils_geometry::Polygon2d> & decimated_traj_polygons,
-    const lanelet::ConstLanelets & lanelets_for_vru,
-    const lanelet::ConstLanelets & lanelets_for_wrongway_user, const rclcpp::Time & current_time,
+    const std::vector<autoware_utils_geometry::Polygon2d> & polygons_for_vru,
+    const std::vector<autoware_utils_geometry::Polygon2d> & polygons_for_opposing_traffic,
+    const lanelet::ConstLanelets & lanelets_for_opposing_traffic, const rclcpp::Time & current_time,
     const double dist_to_bumper);
   // bool isObstacleVelocityRequiringFixedStop(
   //   const std::shared_ptr<PlannerData::Object> object,
