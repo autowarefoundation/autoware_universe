@@ -66,8 +66,10 @@ using nvinfer1::IRuntime;
 
 class SubNetwork
 {
-  ICudaEngine * engine;
-  IExecutionContext * context;
+private:
+  ICudaEngine * engine_;
+  IExecutionContext * context_;
+  cudaStream_t stream_;
 
 public:
   std::unordered_map<std::string, std::shared_ptr<Tensor>> bindings;
@@ -75,8 +77,9 @@ public:
   cudaGraph_t graph;
   cudaGraphExec_t graph_exec;
 
-  SubNetwork(std::string engine_path, IRuntime * runtime)
+  SubNetwork(std::string engine_path, IRuntime * runtime, cudaStream_t stream)
   {
+    stream_ = stream;
     std::ifstream engine_file(engine_path, std::ios::binary);
     if (!engine_file) {
       throw std::runtime_error("Error opening engine file: " + engine_path);
@@ -89,42 +92,42 @@ public:
     std::vector<char> engineData(fsize);
 
     engine_file.read(engineData.data(), fsize);
-    engine = runtime->deserializeCudaEngine(engineData.data(), fsize);
-    context = engine->createExecutionContext();
+    engine_ = runtime->deserializeCudaEngine(engineData.data(), fsize);
+    context_ = engine_->createExecutionContext();
 
-    int nb = engine->getNbIOTensors();
+    int nb = engine_->getNbIOTensors();
 
     for (int n = 0; n < nb; n++) {
-      std::string name = engine->getIOTensorName(n);
-      Dims d = engine->getTensorShape(name.c_str());
-      DataType dtype = engine->getTensorDataType(name.c_str());
+      std::string name = engine_->getIOTensorName(n);
+      Dims d = engine_->getTensorShape(name.c_str());
+      DataType dtype = engine_->getTensorDataType(name.c_str());
       bindings[name] = std::make_shared<Tensor>(name, d, dtype);
-      bindings[name]->iomode = engine->getTensorIOMode(name.c_str());
+      bindings[name]->iomode = engine_->getTensorIOMode(name.c_str());
       std::cout << *(bindings[name]) << std::endl;
-      context->setTensorAddress(name.c_str(), bindings[name]->ptr);
+      context_->setTensorAddress(name.c_str(), bindings[name]->ptr);
     }
   }
 
-  void Enqueue(cudaStream_t stream)
+  void Enqueue()
   {
     if (this->use_cuda_graph) {
-      cudaGraphLaunch(graph_exec, stream);
+      cudaGraphLaunch(graph_exec, stream_);
     } else {
-      context->enqueueV3(stream);
+      context_->enqueueV3(stream_);
     }
   }
 
   ~SubNetwork() {}
 
-  void EnableCudaGraph(cudaStream_t stream)
+  void EnableCudaGraph()
   {
     // run first time to avoid allocation
-    this->Enqueue(stream);
-    cudaStreamSynchronize(stream);
+    this->Enqueue();
+    cudaStreamSynchronize(stream_);
 
-    cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
-    this->Enqueue(stream);
-    cudaStreamEndCapture(stream, &graph);
+    cudaStreamBeginCapture(stream_, cudaStreamCaptureModeGlobal);
+    this->Enqueue();
+    cudaStreamEndCapture(stream_, &graph);
     this->use_cuda_graph = true;
 #if CUDART_VERSION < 12000
     cudaGraphInstantiate(&graph_exec, graph, NULL, NULL, 0);

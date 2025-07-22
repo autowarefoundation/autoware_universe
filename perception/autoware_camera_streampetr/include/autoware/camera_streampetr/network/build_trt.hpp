@@ -120,8 +120,8 @@ std::string initEngine(
     throw std::runtime_error("Failed to create builder config");
   }
 
-  // Set workspace size (8 GiB)
-  config->setMemoryPoolLimit(nvinfer1::MemoryPoolType::kWORKSPACE, 1ULL << 33);
+  // Set workspace size (4 GiB)
+  config->setMemoryPoolLimit(nvinfer1::MemoryPoolType::kWORKSPACE, 1ULL << 32);
 
   // Enable FP16 if requested
   if (fp16_mode && builder->platformHasFastFp16()) {

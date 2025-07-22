@@ -294,13 +294,10 @@ std::vector<float> StreamPetrNode::get_camera_extrinsics_vector(
     Eigen::Matrix4f T_lidar2img = K_4x4 * T_lidar2cam;
     Eigen::Matrix4f T_img2lidar = T_lidar2img.inverse();
 
-    // std::cout << "Final res vector:\n";
     for (int row = 0; row < 4; ++row) {
       for (int col = 0; col < 4; ++col) {
-        // std::cout << T_img2lidar(row, col) << " ";
         res.push_back(T_img2lidar(row, col));
       }
-      // std::cout <<  "\n";
     }
   }
 
