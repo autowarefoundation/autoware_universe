@@ -1088,6 +1088,14 @@ void StartPlannerModule::planWithPriority(
 
   if (start_pose_candidates.empty()) return;
 
+  if (isCurrentPoseOnEgoCenterline()) {
+    PullOutPath path;
+    path.partial_paths.push_back(getPreviousModuleOutput().path);
+    const auto & start_pose = planner_data_->route_handler->getOriginalStartPose();
+    updateStatusWithCurrentPath(path, start_pose, PlannerType::NONE);
+    return;
+  }
+
   const PriorityOrder order_priority =
     determinePriorityOrder(search_priority, start_pose_candidates.size());
 
@@ -1152,21 +1160,15 @@ bool StartPlannerModule::findPullOutPath(
   PlannerDebugData debug_data{
     planner->getPlannerType(), backwards_distance, collision_check_margin, {}};
 
-  const auto pull_out_path = std::invoke([&]() -> std::optional<PullOutPath> {
-    if (isCurrentPoseOnEgoCenterline()) {
-      PullOutPath path;
-      path.partial_paths.push_back(getPreviousModuleOutput().path);
-      return path;
-    }
-    auto path_opt = planner->plan(start_pose_candidate, goal_pose, planner_data_, debug_data);
-    debug_data_vector.push_back(debug_data);
-    return path_opt;
-  });
+  const auto pull_out_path =
+    planner->plan(start_pose_candidate, goal_pose, planner_data_, debug_data);
+  debug_data_vector.push_back(debug_data);
 
   // If no path is found, return false
   if (!pull_out_path) {
     return false;
   }
+  
   if (backward_is_unnecessary) {
     updateStatusWithCurrentPath(*pull_out_path, start_pose_candidate, planner->getPlannerType());
     return true;

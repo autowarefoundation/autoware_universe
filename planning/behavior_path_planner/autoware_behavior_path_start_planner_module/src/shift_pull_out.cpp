@@ -291,9 +291,9 @@ std::vector<PullOutPath> ShiftPullOut::calcPullOutPaths(
   bool has_non_shifted_path = false;
 
   // if shift length is too short, add non shifted path
+  constexpr double MINIMUM_SHIFT_LENGTH = 0.01;
   const double shift_length = arc_position_start.distance;
-  const bool is_smaller_than_minimum =
-    std::abs(shift_length) < parameters_.th_distance_to_middle_of_the_road;
+  const bool is_smaller_than_minimum = std::abs(shift_length) < MINIMUM_SHIFT_LENGTH;
 
   if (is_smaller_than_minimum) {
     candidate_paths.push_back(non_shifted_path);
