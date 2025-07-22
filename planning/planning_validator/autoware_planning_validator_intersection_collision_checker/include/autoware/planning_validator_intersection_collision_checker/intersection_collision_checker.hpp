@@ -27,6 +27,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace autoware::planning_validator
 {
@@ -75,6 +76,8 @@ private:
   std::optional<PCDObject> get_pcd_object(
     DebugData & debug_data, const rclcpp::Time & time_stamp,
     const PointCloud::Ptr & filtered_point_cloud, const TargetLanelet & target_lanelet) const;
+
+  void update_tracked_object(PCDObject & object, const PCDObject & new_data) const;
 
   void publish_markers(const DebugData & debug_data) const;
 

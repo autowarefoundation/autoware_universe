@@ -306,7 +306,7 @@ Marker create_polygon_marker(
   visualization_msgs::msg::Marker marker = autoware_utils::create_default_marker(
     "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, id, Marker::LINE_STRIP,
     autoware_utils::create_marker_scale(0.1, 0.1, 0.1), color);
-  marker.lifetime = rclcpp::Duration::from_seconds(0.2);
+  marker.lifetime = rclcpp::Duration::from_seconds(0.5);
 
   for (const auto & p : polygon) {
     marker.points.push_back(autoware_utils::create_point(p.x(), p.y(), p.z()));
@@ -326,7 +326,7 @@ Marker create_point_marker(
   Marker marker = autoware_utils::create_default_marker(
     "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, id, marker_type,
     autoware_utils::create_marker_scale(scale, scale, scale), color);
-  marker.lifetime = rclcpp::Duration::from_seconds(0.2);
+  marker.lifetime = rclcpp::Duration::from_seconds(0.5);
   marker.pose.position = position;
 
   return marker;
@@ -334,12 +334,12 @@ Marker create_point_marker(
 
 Marker create_text_marker(
   const std::string & text, const geometry_msgs::msg::Pose & pose, const std::string & ns,
-  const size_t id, const std_msgs::msg::ColorRGBA & color)
+  const size_t id, const std_msgs::msg::ColorRGBA & color, const double scale = 0.5)
 {
   Marker marker = autoware_utils::create_default_marker(
     "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, id, Marker::TEXT_VIEW_FACING,
-    autoware_utils::create_marker_scale(0.5, 0.5, 0.5), color);
-  marker.lifetime = rclcpp::Duration::from_seconds(0.2);
+    autoware_utils::create_marker_scale(scale, scale, scale), color);
+  marker.lifetime = rclcpp::Duration::from_seconds(0.5);
   marker.pose = pose;
   marker.text = text;
   return marker;
@@ -373,7 +373,8 @@ MarkerArray get_lanelets_marker_array(const DebugData & debug_data)
     ss << "\nTimeToLeave:" << target_ll.ego_overlap_time.second << "[s]";
     auto pose = target_ll.overlap_point;
     pose.position.z += 1.0;
-    marker_array.markers.push_back(create_text_marker(ss.str(), pose, ns, target_ll.id, white));
+    marker_array.markers.push_back(
+      create_text_marker(ss.str(), pose, ns, target_ll.id, white, 1.0));
   };
 
   {  // target lanelets
@@ -397,6 +398,7 @@ MarkerArray get_objects_marker_array(const DebugData & debug_data)
 
   const auto red = autoware_utils::create_marker_color(1.0, 0.0, 0.0, 0.9);
   const auto green = autoware_utils::create_marker_color(0.0, 1.0, 0.0, 0.9);
+  const auto yellow = autoware_utils::create_marker_color(1.0, 1.0, 0.0, 0.9);
   const auto white = autoware_utils::create_marker_color(1.0, 1.0, 1.0, 0.7);
 
   auto add_text_marker = [&](const PCDObject & object) {
@@ -409,24 +411,26 @@ MarkerArray get_objects_marker_array(const DebugData & debug_data)
     ss << "Velocity:" << object.velocity << "[m/s]\n";
     ss << "TTC:" << object.ttc << "[s]";
     marker_array.markers.push_back(create_text_marker(
-      ss.str(), object.pose, "ICC_pcd_objects_text", object.overlap_lanelet_id, white));
+      ss.str(), object.pose, "ICC_pcd_objects_text", object.overlap_lanelet_id, white, 1.0));
   };
 
   auto add_line_segment_marker = [&](const PCDObject & object) {
     Marker marker = autoware_utils::create_default_marker(
       "map", rclcpp::Clock{RCL_ROS_TIME}.now(), "ICC_pcd_objects_cp", object.overlap_lanelet_id,
       Marker::LINE_LIST, autoware_utils::create_marker_scale(0.1, 0.1, 0.1), red);
-    marker.lifetime = rclcpp::Duration::from_seconds(0.2);
+    marker.lifetime = rclcpp::Duration::from_seconds(0.5);
     marker.points.push_back(object.pose.position);
     marker.points.push_back(object.overlap_point);
     marker_array.markers.push_back(marker);
   };
 
   for (const auto & pcd_obj : debug_data.pcd_objects) {
-    if (!pcd_obj.is_reliable) continue;
-    if (pcd_obj.is_safe) {
+    if (!pcd_obj.is_reliable) {
       marker_array.markers.push_back(create_point_marker(
-        pcd_obj.pose.position, "ICC_pcd_objects", pcd_obj.overlap_lanelet_id, green));
+        pcd_obj.pose.position, "ICC_pcd_objects", pcd_obj.overlap_lanelet_id, yellow, 0.5));
+    } else if (pcd_obj.is_safe) {
+      marker_array.markers.push_back(create_point_marker(
+        pcd_obj.pose.position, "ICC_pcd_objects", pcd_obj.overlap_lanelet_id, green, 0.5));
     } else {
       marker_array.markers.push_back(create_point_marker(
         pcd_obj.pose.position, "ICC_pcd_objects", pcd_obj.overlap_lanelet_id, red, 0.5, true));
