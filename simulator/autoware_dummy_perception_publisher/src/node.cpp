@@ -109,7 +109,8 @@ ObjectInfo::ObjectInfo(
 {
   // Check if predicted_path_delay seconds have passed since object creation
   const double time_since_creation = (current_time - rclcpp::Time(object.header.stamp)).seconds();
-  // Use straight-line movement for first predicted_path_delay seconds, then switch to predicted path
+  // Use straight-line movement for first predicted_path_delay seconds, then switch to predicted
+  // path
   if (
     time_since_creation < predicted_path_delay ||
     predicted_object.kinematics.predicted_paths.empty()) {
@@ -494,7 +495,8 @@ void DummyPerceptionPublisherNode::timerCallback()
     ObjectInfo obj_info = [&]() {
       // Only use predicted motion if the action is PREDICT
       if (object.action == tier4_simulation_msgs::msg::DummyObject::PREDICT && matched_predicted) {
-        return ObjectInfo(object, predicted_object, predicted_time, current_time, predicted_path_delay_);
+        return ObjectInfo(
+          object, predicted_object, predicted_time, current_time, predicted_path_delay_);
       }
 
       // Check if we have a last used prediction for this object (only if action is PREDICT)
@@ -510,7 +512,8 @@ void DummyPerceptionPublisherNode::timerCallback()
             rclcpp::get_logger("dummy_perception_publisher"),
             "Using last known prediction for lost object with ID: %s", dummy_uuid_str.c_str());
           return ObjectInfo(
-            object, last_used_pred_it->second, last_used_time_it->second, current_time, predicted_path_delay_);
+            object, last_used_pred_it->second, last_used_time_it->second, current_time,
+            predicted_path_delay_);
         }
 
         RCLCPP_DEBUG(
@@ -806,21 +809,6 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
       const auto & pred_obj_uuid_str = autoware_utils_uuid::to_hex_string(pred_obj_uuid);
 
       if (pred_obj_uuid_str == mapped_predicted_uuid) {
-        // Validate trajectory against current prediction if available
-        // auto current_pred_it = dummy_last_used_predictions_.find(obj_uuid_str);
-        // if (current_pred_it != dummy_last_used_predictions_.end()) {
-        //   // Check if the new trajectory is valid compared to current one
-        //   if (!isTrajectoryValid(current_pred_it->second, predicted_object, obj_uuid_str)) {
-        //     // Skip this prediction update and keep using the current one
-        //     RCLCPP_DEBUG(
-        //       rclcpp::get_logger("dummy_perception_publisher"),
-        //       "Skipping trajectory update for object %s due to validation failure",
-        //       obj_uuid_str.c_str());
-        //     return std::make_pair(
-        //       current_pred_it->second, dummy_last_used_prediction_times_[obj_uuid_str]);
-        //   }
-        // }
-
         // For pedestrians, randomly select a path when updating
         autoware_perception_msgs::msg::PredictedObject modified_predicted_object = predicted_object;
 
