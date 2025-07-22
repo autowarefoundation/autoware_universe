@@ -113,8 +113,14 @@ ObjectInfo::ObjectInfo(
   if (
     time_since_creation < predicted_path_delay ||
     predicted_object.kinematics.predicted_paths.empty()) {
-    // Reuse the logic from the other constructor
-    *this = ObjectInfo(object, current_time);
+    // Calculate straight-line position instead of using assignment operator
+    const auto current_pose = calculateStraightLinePosition(object, current_time);
+    pose_covariance_.pose = current_pose;
+    tf2::fromMsg(current_pose, tf_map2moved_object);
+
+    // Set velocity from initial state
+    const double current_vel = object.initial_state.twist_covariance.twist.linear.x;
+    twist_covariance_.twist.linear.x = current_vel;
     return;
   }
 

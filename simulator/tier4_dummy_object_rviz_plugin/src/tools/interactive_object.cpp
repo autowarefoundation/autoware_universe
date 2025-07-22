@@ -368,17 +368,6 @@ int InteractiveObjectTool::processMouseEvent(rviz_common::ViewportMouseEvent & e
 
 int InteractiveObjectTool::processKeyEvent(QKeyEvent * event, rviz_common::RenderPanel * panel)
 {
-  // Handle 'P' key for PREDICT action
-  if (event->key() == Qt::Key_P && event->type() == QKeyEvent::KeyPress) {
-    if (objects_.getTargetObject()) {
-      const auto uuid = objects_.getTargetUuid();
-      if (uuid.has_value()) {
-        publishObjectMsg(uuid.value(), DummyObject::PREDICT);
-      }
-    }
-    return 0;
-  }
-
   PoseTool::processKeyEvent(event, panel);
   return move_tool_.processKeyEvent(event, panel);
 }

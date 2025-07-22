@@ -9,7 +9,6 @@ This feature enables dummy objects created in RViz to follow predicted trajector
 ### What's New
 
 - **RViz Tools**: Added "Predicted" checkbox to all dummy object placement tools (car, pedestrian, unknown)
-- **Keyboard Shortcut**: Press 'P' to toggle prediction mode for objects
 - **Action Type**: Objects created with prediction enabled use `action: PREDICT`
 
 ### Usage Example
@@ -31,7 +30,6 @@ ros2 topic echo /perception/object_recognition/objects
 All RViz dummy object tools (`car_pose`, `pedestrian_pose`, `unknown_pose`) now include:
 
 - A "Predicted" checkbox property that can be toggled
-- Support for the 'P' key to toggle objects to use predicted paths
 - When enabled, objects are created with `action: PREDICT` instead of `action: ADD`
 
 ### 2. Dummy Perception Publisher Enhancements
