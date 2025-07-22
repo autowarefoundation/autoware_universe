@@ -88,16 +88,17 @@ StreamPetrNetwork::StreamPetrNetwork(
   confidence_threshold_(confidence_threshold),
   class_names_(class_names)
 {
+  cudaStreamCreate(&stream_);
+
   // Initialize TensorRT runtime
   runtime_ = std::unique_ptr<IRuntime>{nvinfer1::createInferRuntime(gLogger)};
-  backbone_ = std::make_unique<SubNetwork>(engine_backbone_path, runtime_.get());
-  pts_head_ = std::make_unique<SubNetwork>(engine_head_path, runtime_.get());
-  pos_embed_ = std::make_unique<SubNetwork>(engine_position_embedding_path, runtime_.get());
+  backbone_ = std::make_unique<SubNetwork>(engine_backbone_path, runtime_.get(), stream_);
+  pts_head_ = std::make_unique<SubNetwork>(engine_head_path, runtime_.get(), stream_);
+  pos_embed_ = std::make_unique<SubNetwork>(engine_position_embedding_path, runtime_.get(), stream_);
 
-  cudaStreamCreate(&stream_);
-  backbone_->EnableCudaGraph(stream_);
-  pts_head_->EnableCudaGraph(stream_);
-  pos_embed_->EnableCudaGraph(stream_);
+  backbone_->EnableCudaGraph();
+  pts_head_->EnableCudaGraph();
+  pos_embed_->EnableCudaGraph();
 
   pts_head_->bindings["pre_memory_embedding"]->initialize_to_zeros(stream_);
   pts_head_->bindings["pre_memory_reference_point"]->initialize_to_zeros(stream_);
@@ -105,7 +106,7 @@ StreamPetrNetwork::StreamPetrNetwork(
   pts_head_->bindings["pre_memory_velo"]->initialize_to_zeros(stream_);
   pts_head_->bindings["pre_memory_timestamp"]->initialize_to_zeros(stream_);
 
-  mem_.mem_stream = stream_;
+  mem_.Init(stream_);
   mem_.pre_buf = static_cast<float *>(pts_head_->bindings["pre_memory_timestamp"]->ptr);
   mem_.post_buf = static_cast<float *>(pts_head_->bindings["post_memory_timestamp"]->ptr);
 
@@ -154,7 +155,7 @@ void StreamPetrNetwork::inference_detector(
     pos_embed_->bindings["img2lidar"]->load_from_vector(img2lidar);
 
     dur_pos_embed_->MarkBegin(stream_);
-    pos_embed_->Enqueue(stream_);
+    pos_embed_->Enqueue();
     dur_pos_embed_->MarkEnd(stream_);
 
     cudaMemcpyAsync(
@@ -172,7 +173,7 @@ void StreamPetrNetwork::inference_detector(
   {  // feature extraction execution
     dur_backbone_->MarkBegin(stream_);
     // inference
-    backbone_->Enqueue(stream_);
+    backbone_->Enqueue();
 
     cudaMemcpyAsync(
       pts_head_->bindings["x"]->ptr, backbone_->bindings["img_feats"]->ptr,
@@ -188,17 +189,17 @@ void StreamPetrNetwork::inference_detector(
 
     mem_.StepPre(stamp);
     // inference
-    pts_head_->Enqueue(stream_);
+    pts_head_->Enqueue();
     mem_.StepPost(stamp);
 
     if (use_temporal_) {
-      pts_head_->bindings["pre_memory_embedding"]->mov(
+      pts_head_->bindings["pre_memory_embedding"]->copy(
         pts_head_->bindings["post_memory_embedding"], stream_);
-      pts_head_->bindings["pre_memory_reference_point"]->mov(
+      pts_head_->bindings["pre_memory_reference_point"]->copy(
         pts_head_->bindings["post_memory_reference_point"], stream_);
-      pts_head_->bindings["pre_memory_egopose"]->mov(
+      pts_head_->bindings["pre_memory_egopose"]->copy(
         pts_head_->bindings["post_memory_egopose"], stream_);
-      pts_head_->bindings["pre_memory_velo"]->mov(pts_head_->bindings["post_memory_velo"], stream_);
+      pts_head_->bindings["pre_memory_velo"]->copy(pts_head_->bindings["post_memory_velo"], stream_);
     } else {
       wipe_memory();
     }

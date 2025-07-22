@@ -114,7 +114,7 @@ struct Tensor
     }
   }
 
-  void mov(std::shared_ptr<Tensor> other, cudaStream_t stream)
+  void copy(std::shared_ptr<Tensor> other, cudaStream_t stream)
   {
     // copy from 'other'
     cudaMemcpyAsync(ptr, other->ptr, nbytes(), cudaMemcpyDeviceToDevice, stream);
@@ -126,16 +126,16 @@ struct Tensor
   template <class Htype = float>
   void load_from_vector(const std::vector<Htype> & data)
   {
-    if (data.size() != static_cast<size_t>(volume)) {
+    if (data.size() != static_cast<std::size_t>(volume)) {
       std::cerr << "Data size mismatch! Expected " << volume << " elements." << std::endl;
       return;
     }
 
-    size_t dsize = volume * getElementSize(dtype);
+    std::size_t dsize = volume * getElementSize(dtype);
     cudaMemcpy(ptr, data.data(), dsize, cudaMemcpyHostToDevice);
   }
 
-  std::vector<float> cpu() const
+  std::vector<float> copy_tensor_to_host_buffer() const
   {
     std::vector<float> buffer(volume);
     cudaMemcpy(buffer.data(), ptr, volume * sizeof(float), cudaMemcpyDeviceToHost);
@@ -144,7 +144,7 @@ struct Tensor
 
   std::vector<char> load_ref(std::string fname)
   {
-    size_t bsize = volume * sizeof(float);
+    std::size_t bsize = volume * sizeof(float);
     std::vector<char> buffer(bsize);
     std::ifstream file_(fname, std::ios::binary);
     file_.read(buffer.data(), bsize);
@@ -160,7 +160,7 @@ struct Tensor
   {
     // Check if file already exists
     if (std::filesystem::exists(filepath)) {
-      std::cerr << "File already exists: " << filepath << std::endl;
+      std::cout << "File already exists: " << filepath << std::endl;
       return false;
     }
 
@@ -177,11 +177,11 @@ struct Tensor
     }
 
     // Copy data from GPU to CPU
-    std::vector<float> cpu_data = cpu();
+    std::vector<float> cpu_data = copy_tensor_to_host_buffer();
 
     // Open file for writing
-    std::ofstream f(filepath, std::ios::out | std::ios::binary);
-    if (!f) {
+    std::ofstream writer_stream(filepath, std::ios::out | std::ios::binary);
+    if (!writer_stream) {
       std::cerr << "Cannot open file for write: " << filepath << std::endl;
       return false;
     }
@@ -189,8 +189,8 @@ struct Tensor
     // Write numpy magic string and version
     char magic[] = {'\x93', 'N', 'U', 'M', 'P', 'Y'};
     char version[] = {'\x01', '\x00'};
-    f.write(magic, sizeof(magic));
-    f.write(version, sizeof(version));
+    writer_stream.write(magic, sizeof(magic));
+    writer_stream.write(version, sizeof(version));
 
     // Determine numpy dtype string based on TensorRT DataType
     std::string dtype_str;
@@ -241,12 +241,12 @@ struct Tensor
 
     // Write header length and header
     uint16_t headerSize = headerStr.length();
-    f.write(reinterpret_cast<char *>(&headerSize), sizeof(uint16_t));
-    f.write(headerStr.c_str(), headerSize);
+    writer_stream.write(reinterpret_cast<char *>(&headerSize), sizeof(uint16_t));
+    writer_stream.write(headerStr.c_str(), headerSize);
 
     // Write data
-    f.write(reinterpret_cast<const char *>(cpu_data.data()), cpu_data.size() * sizeof(float));
-    f.close();
+    writer_stream.write(reinterpret_cast<const char *>(cpu_data.data()), cpu_data.size() * sizeof(float));
+    writer_stream.close();
 
     std::cout << "Tensor '" << name << "' saved as numpy array to: " << filepath << std::endl;
     return true;
