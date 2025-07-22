@@ -6,12 +6,6 @@
     "scenario_simulator_v2_adapter": {
       "type": "object",
       "properties": {
-        "update_rate": {
-          "type": "number",
-          "default": 10.0,
-          "minimum": 2,
-          "description": "The scanning and update frequency of the checker."
-        },
         "metric_topic_list": {
           "type": "array",
           "items": {
@@ -21,7 +15,7 @@
           "description": "The topic name list of the processing time."
         }
       },
-      "required": ["update_rate", "metric_topic_list"],
+      "required": ["metric_topic_list"],
       "additionalProperties": false
     }
   },

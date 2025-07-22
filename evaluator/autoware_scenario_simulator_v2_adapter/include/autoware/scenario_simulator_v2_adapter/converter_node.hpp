@@ -19,6 +19,8 @@
 
 #include "tier4_simulation_msgs/msg/user_defined_value.hpp"
 #include "tier4_simulation_msgs/msg/user_defined_value_type.hpp"
+#include <diagnostic_msgs/msg/diagnostic_array.hpp>
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <tier4_metric_msgs/msg/metric.hpp>
 #include <tier4_metric_msgs/msg/metric_array.hpp>
 
@@ -29,6 +31,8 @@
 
 namespace autoware::scenario_simulator_v2_adapter
 {
+using diagnostic_msgs::msg::DiagnosticArray;
+using diagnostic_msgs::msg::DiagnosticStatus;
 using tier4_metric_msgs::msg::Metric;
 using tier4_metric_msgs::msg::MetricArray;
 using tier4_simulation_msgs::msg::UserDefinedValue;
@@ -46,20 +50,25 @@ public:
    * @brief callback for MetricArray msgs that publishes equivalent UserDefinedValue msgs
    * @param [in] metrics_msg received metrics message
    */
-  void onMetrics(
-    const MetricArray::ConstSharedPtr metrics_msg, const size_t topic_idx,
-    const std::string & topic);
+  void onMetrics(const MetricArray::ConstSharedPtr metrics_msg, const std::string & topic);
+
+  /**
+   * @brief callback for DiagnosticArray msgs that can be used to handle diagnostics if needed
+   * @param [in] diagnostics_msg received diagnostics message
+   */
+  void onDiagnostics(const DiagnosticArray::ConstSharedPtr diagnostics_msg);
 
   UserDefinedValue createUserDefinedValue(const Metric & metric) const;
+  UserDefinedValue createUserDefinedValue(const DiagnosticStatus & status) const;
 
-  rclcpp::Publisher<UserDefinedValue>::SharedPtr getPublisher(
-    const std::string & topic, const size_t topic_idx);
+  rclcpp::Publisher<UserDefinedValue>::SharedPtr getPublisher(const std::string & topic);
 
 private:
   // ROS
   std::vector<rclcpp::Subscription<MetricArray>::SharedPtr> metrics_sub_;
-  std::vector<std::unordered_map<std::string, rclcpp::Publisher<UserDefinedValue>::SharedPtr>>
-    params_pub_;
+  rclcpp::Subscription<DiagnosticArray>::SharedPtr diagnostics_sub_;
+
+  std::unordered_map<std::string, rclcpp::Publisher<UserDefinedValue>::SharedPtr> params_pub_;
 };
 }  // namespace autoware::scenario_simulator_v2_adapter
 
