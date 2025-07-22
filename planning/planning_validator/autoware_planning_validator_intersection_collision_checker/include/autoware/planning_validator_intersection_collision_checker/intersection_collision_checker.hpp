@@ -27,6 +27,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace autoware::planning_validator
 {
@@ -76,6 +77,8 @@ private:
     DebugData & debug_data, const rclcpp::Time & time_stamp,
     const PointCloud::Ptr & filtered_point_cloud, const TargetLanelet & target_lanelet) const;
 
+  void update_tracked_object(PCDObject & object, const PCDObject & new_data) const;
+
   void publish_markers(const DebugData & debug_data) const;
 
   void set_lanelets_debug_marker(const DebugData & debug_data) const;
@@ -101,6 +104,7 @@ private:
 
   PCDObjectsMap history_;
   mutable TargetLaneletsMap target_lanelets_map_;
+  std::vector<lanelet::Id> collision_lanes_;
   rclcpp::Time last_invalid_time_;
   rclcpp::Time last_valid_time_;
 };
