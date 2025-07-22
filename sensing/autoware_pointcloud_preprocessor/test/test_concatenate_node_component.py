@@ -83,6 +83,7 @@ def generate_test_description():
             remappings=[
                 ("~/input/twist", "/test/sensing/vehicle_velocity_converter/twist_with_covariance"),
                 ("output", "/test/sensing/lidar/concatenated/pointcloud"),
+                ("output_info", "/test/sensing/lidar/concatenated/pointcloud_info"),
             ],
             parameters=[
                 {
