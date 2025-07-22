@@ -48,7 +48,8 @@ struct TrackerProcessorConfig
   Eigen::MatrixXd max_dist_matrix;
   bool enable_unknown_object_velocity_estimation;
   bool enable_unknown_object_motion_output;
-  std::map<LabelType, double> generalized_iou_threshold;
+  std::map<LabelType, double> generalized_iou_thresholds;
+  std::map<LabelType, double> overlap_distance_thresholds;  // [m]
 };
 
 class TrackerProcessor

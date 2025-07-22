@@ -195,14 +195,20 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       }
 
       // Declare parameters for generalized IoU threshold
-      std::map<LabelType, double> generalized_iou_threshold;
       std::vector<double> generalized_iou_threshold_list =
-        declare_parameter<std::vector<double>>("generalized_iou_threshold");
+        declare_parameter<std::vector<double>>("generalized_iou_thresholds");
       for (size_t i = 0; i < generalized_iou_threshold_list.size(); ++i) {
         const auto label = static_cast<LabelType>(i);
-        generalized_iou_threshold[label] = generalized_iou_threshold_list.at(i);
+        config.generalized_iou_thresholds[label] = generalized_iou_threshold_list.at(i);
       }
-      config.generalized_iou_threshold = generalized_iou_threshold;
+
+      // Declare parameters for overlap distance threshold
+      std::vector<double> overlap_distance_threshold_list =
+        declare_parameter<std::vector<double>>("overlap_distance_thresholds");
+      for (size_t i = 0; i < overlap_distance_threshold_list.size(); ++i) {
+        const auto label = static_cast<LabelType>(i);
+        config.overlap_distance_thresholds[label] = overlap_distance_threshold_list.at(i);
+      }
 
       config.enable_unknown_object_velocity_estimation =
         declare_parameter<bool>("enable_unknown_object_velocity_estimation");
