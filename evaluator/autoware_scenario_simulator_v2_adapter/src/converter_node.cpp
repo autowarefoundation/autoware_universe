@@ -30,8 +30,7 @@ std::string removeInvalidTopicString(const std::string & input_string)
     result += itr->str();
   }
 
-  result = std::regex_replace(result, std::regex(R"(/+)"), "/");
-  return result;
+  return std::regex_replace(result, std::regex(R"(/+)"), "/");
 }
 
 MetricConverter::MetricConverter(const rclcpp::NodeOptions & node_options)
