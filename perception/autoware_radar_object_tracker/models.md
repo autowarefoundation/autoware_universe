@@ -40,6 +40,7 @@ a_{y_k}
 $$
 
 - noise model
+
   - random walk in acc: 2 parameters(currently disabled)
   - random state noise: 6 parameters
     $$

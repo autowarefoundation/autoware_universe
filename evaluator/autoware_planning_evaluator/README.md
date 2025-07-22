@@ -7,6 +7,7 @@ This package provides nodes that generate various metrics to evaluate the qualit
 Metrics can be published in real time and saved to a JSON file when the node is shut down:
 
 - `metrics_for_publish`:
+
   - Metrics listed in `metrics_for_publish` are calculated and published to the topic.
 
 - `metrics_for_output`:
@@ -27,10 +28,12 @@ These files also provide string conversions and human-readable descriptions for 
 #### By Data Type
 
 1. **Statistics-based Metrics**:
+
    - Calculated using `autoware_utils::Accumulator`, which tracks minimum, maximum, mean, and count values.
    - Sub-metrics: `/mean`, `/min`, `/max`, and `/count`.
 
 2. **Value-based Metrics**:
+
    - Metrics with a single value.
    - Sub-metrics: `/value`.
    - Some metrics with older implementations use the statistics-based format of `/mean`, `/min`, `/max`, but all values are the same.
@@ -61,14 +64,17 @@ Metrics are calculated and published when a trajectory is received.
 #### Implemented metrics
 
 - **`curvature`**: Statistics of curvature at each trajectory point.
+
   - Sub-metrics to publish: `/mean`, `/min`, `/max`.
   - Sub-metrics to output: The same as above but take the published data as data point instead of each trajectory point.
 
 - **`point_interval`**: Statistics of distances between consecutive trajectory points.
+
   - Sub-metrics to publish: `/mean`, `/min`, `/max`.
   - Sub-metrics to output: The same as above but take the published data as data point instead of each trajectory point.
 
 - **`relative_angle`**: Statistics of angles between consecutive trajectory points.
+
   - Parameters: `trajectory.min_point_dist_m` (minimum distance between points).
   - Sub-metrics to publish: `/mean`, `/min`, `/max`.
   - Sub-metrics to output: The same as above but take the published data as data point instead of each trajectory point.
@@ -76,18 +82,22 @@ Metrics are calculated and published when a trajectory is received.
 - **`resampled_relative_angle`**: Similar to `relative_angle`, but considers a point at a fixed distance (e.g., half the vehicle length) for angle calculation from the current point as the next point to calculate the relative angle, instead of using the immediately adjacent point.
 
 - **`length`**: Total trajectory length.
+
   - Sub-metrics: Value-based metric, but using the statistics-based format of `/mean`, `/min`, `/max` with the same value.
   - Sub-metrics to output: `/mean`, `/min`, `/max` for the published data.
 
 - **`duration`**: Expected driving time to travel the trajectory.
+
   - Sub-metrics: Value-based metric, but using the statistics-based format of `/mean`, `/min`, `/max` with the same value.
   - Sub-metrics to output: `/mean`, `/min`, `/max` for the published data.
 
 - **`velocity`**: Statistics of velocity at each trajectory point.
+
   - Sub-metrics to publish: `/mean`, `/min`, `/max`.
   - Sub-metrics to output: The same as above but take the published data as data point instead of each trajectory point.
 
 - **`acceleration`**: Statistics of acceleration at each trajectory point.
+
   - Sub-metrics to publish: `/mean`, `/min`, `/max`.
   - Sub-metrics to output: The same as above but take the published data as data point instead of each trajectory point.
 
@@ -109,10 +119,12 @@ The following information are used to calculate metrics:
 #### Implemented metrics
 
 - **`lateral_deviation`**: Statistics of the lateral deviation between trajectory points and the closest reference trajectory points.
+
   - Sub-metrics to publish: `/mean`, `/min`, `/max`.
   - Sub-metrics to output: The same as above but take the published data as data point instead of each trajectory point.
 
 - **`yaw_deviation`**: Statistics of the yaw deviation between trajectory points and the closest reference trajectory points.
+
   - Sub-metrics to publish: `/mean`, `/min`, `/max`.
   - Sub-metrics to output: The same as above but take the published data as data point instead of each trajectory point.
 
@@ -141,11 +153,13 @@ The following information are used to calculate metrics:
 - Sub-metrics to output: The same as above but take the published data as data point instead of each trajectory point.
 
 - **`stability_frechet`**: Frechet distance between `T(0)` and `T(-1)` within a lookahead duration and distance.
+
   - Parameters: Same as `stability`.
   - Sub-metrics to publish: `/mean`, `/min`, `/max`.
   - Sub-metrics to output: The same as above but take the published data as data point instead of each trajectory point.
 
 - **`lateral_trajectory_displacement_local`**: Absolute lateral displacement between `T(0)` and `T(-1)` at the ego position.
+
   - Sub-metrics to publish: Value-based metric, but using the statistics-based format.
   - Sub-metrics to output: `/mean`, `/min`, `/max` for the published data.
 
@@ -168,6 +182,7 @@ The following information are used to calculate metrics:
 #### Implemented metrics
 
 - **`obstacle_distance`**: Statistics of the distance between the centroid of each object and the closest trajectory point.
+
   - Sub-metrics to publish: `/mean`, `/min`, `/max`.
   - Sub-metrics to output: The same as above but take the published data as data point instead of each trajectory point.
 
@@ -185,10 +200,12 @@ Metrics are calculated and publish only when the node receives a modified goal m
 #### Implemented metrics
 
 - **`modified_goal_longitudinal_deviation`**: Statistics of the longitudinal deviation between the modified goal and the current ego position.
+
   - Sub-metrics to publish: Value-based metric, but using the statics-based format.
   - Sub-metrics to output: `/mean`, `/min`, `/max` for the published data.
 
 - **`modified_goal_lateral_deviation`**: Statistics of the lateral deviation between the modified goal and the current ego position.
+
   - Sub-metrics to publish: Value-based metric, but using the statics-based format.
   - Sub-metrics to output: `/mean`, `/min`, `/max` for the published data.
 
@@ -207,6 +224,7 @@ The modules listed in the `module_list` in the parameter file are evaluated.
 #### Implemented metrics
 
 - **`stop_decision`**: Evaluate stop decisions for each module.
+
   - Parameters:
     - `stop_decision.time_count_threshold_s`: time threshold to count a stop decision as a new one.
     - `stop_decision.dist_count_threshold_m`: distance threshold to count a stop decision as a new one.
@@ -270,6 +288,7 @@ Additional useful information related to planning:
 #### Implemented metrics
 
 - **`kinematic_state`**: Current kinematic state of the vehicle
+
   - Sub-metrics to publish:
     - `/velocity`: current ego velocity.
     - `/acceleration`: current ego acceleration.

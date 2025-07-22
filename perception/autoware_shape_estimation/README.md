@@ -9,6 +9,7 @@ This node calculates a refined object shape (bounding box, cylinder, convex hull
 ### Fitting algorithms
 
 - bounding box
+
   - L-shape fitting: See reference below for details
   - ML based shape fitting: See ML Based Shape Fitting Implementation section below for details
 
