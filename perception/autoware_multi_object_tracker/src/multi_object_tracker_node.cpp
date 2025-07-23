@@ -207,7 +207,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         declare_parameter<std::vector<double>>("pruning_distance_thresholds");
       for (size_t i = 0; i < pruning_distance_threshold_list.size(); ++i) {
         const auto label = static_cast<LabelType>(i);
-        config.pruning_distance_thresholds[label] = pruning_distance_threshold_list.at(i);
+        config.pruning_distance_thresholds[label] = pruning_distance_threshold_list[i];
       }
 
       config.enable_unknown_object_velocity_estimation =
