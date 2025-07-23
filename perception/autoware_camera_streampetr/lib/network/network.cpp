@@ -77,8 +77,7 @@ autoware_perception_msgs::msg::DetectedObject StreamPetrNetwork::bbox_to_ros_msg
   return object;
 }
 
-StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config)
-: config_(config)
+StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config) : config_(config)
 {
   cudaStreamCreate(&stream_);
 
@@ -118,7 +117,7 @@ StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config)
 
   postprocess_cuda_ = std::make_unique<PostprocessCuda>(
     PostProcessingConfig(
-      config_.class_names.size(), config_.circle_nms_dist_threshold, config_.confidence_threshold, 
+      config_.class_names.size(), config_.circle_nms_dist_threshold, config_.confidence_threshold,
       config_.yaw_norm_thresholds, config_.num_proposals, config_.detection_range),
     stream_);
 }
