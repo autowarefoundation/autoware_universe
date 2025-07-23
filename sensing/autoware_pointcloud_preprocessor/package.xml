@@ -31,6 +31,7 @@
   <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_pcl_extensions</depend>
   <depend>autoware_point_types</depend>
+  <depend>autoware_sensing_msgs</depend>
   <depend>autoware_utils</depend>
   <depend>autoware_vehicle_msgs</depend>
   <depend>cgal</depend>
