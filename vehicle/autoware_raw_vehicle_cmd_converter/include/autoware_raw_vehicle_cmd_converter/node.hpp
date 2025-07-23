@@ -86,7 +86,7 @@ public:
   rclcpp::Publisher<ActuationCommandStamped>::SharedPtr pub_actuation_cmd_;
   rclcpp::Publisher<Steering>::SharedPtr pub_steering_status_;
   rclcpp::Publisher<Control>::SharedPtr pub_compensated_control_cmd_;
-  rclcpp::Publisher<Float64Stamped>::SharedPtr pub_control_system_latency_;
+  rclcpp::Publisher<Float64Stamped>::SharedPtr pub_control_component_latency_;
   //!< @brief subscriber for vehicle command
   rclcpp::Subscription<Control>::SharedPtr sub_control_cmd_;
   rclcpp::Subscription<ActuationStatusStamped>::SharedPtr sub_actuation_status_;

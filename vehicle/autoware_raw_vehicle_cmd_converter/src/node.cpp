@@ -117,8 +117,8 @@ RawVehicleCommandConverterNode::RawVehicleCommandConverterNode(
   pub_actuation_cmd_ = create_publisher<ActuationCommandStamped>("~/output/actuation_cmd", 1);
   debug_pub_steer_pid_ = create_publisher<Float32MultiArrayStamped>(
     "/vehicle/raw_vehicle_cmd_converter/debug/steer_pid", 1);
-  pub_control_system_latency_ =
-    create_publisher<Float64Stamped>("~/output/control_system_latency", 1);
+  pub_control_component_latency_ =
+    create_publisher<Float64Stamped>("~/output/control_component_latency", 1);
 
   if (use_vehicle_adaptor_) {
     pub_compensated_control_cmd_ = create_publisher<Control>(
@@ -214,7 +214,7 @@ void RawVehicleCommandConverterNode::publishActuationCmd()
   auto timestamp_diff = std::make_unique<Float64Stamped>();
   timestamp_diff->stamp = current_time;
   timestamp_diff->data = (current_time - control_cmd_stamp_).seconds();
-  pub_control_system_latency_->publish(*timestamp_diff);
+  pub_control_component_latency_->publish(*timestamp_diff);
 }
 
 double RawVehicleCommandConverterNode::calculateSteerFromMap(
