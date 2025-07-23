@@ -150,18 +150,19 @@ bool get2dPrecisionRecallGIoU(
   static const double MIN_AREA = 1e-6;
 
   const auto source_polygon = autoware_utils::to_polygon2d(source_object.pose, source_object.shape);
-  if (boost::geometry::area(source_polygon) < MIN_AREA) return false;
-  const auto target_polygon = autoware_utils::to_polygon2d(target_object.pose, target_object.shape);
-  if (boost::geometry::area(target_polygon) < MIN_AREA) return false;
-
   const double source_area = boost::geometry::area(source_polygon);
+  if (source_area < MIN_AREA) return false;
+  const auto target_polygon = autoware_utils::to_polygon2d(target_object.pose, target_object.shape);
+  const double target_area = boost::geometry::area(target_polygon);
+  if (target_area < MIN_AREA) return false;
+
   const double intersection_area = getIntersectionArea(source_polygon, target_polygon);
   const double union_area = getUnionArea(source_polygon, target_polygon);
   const double convex_shape_area = getConvexShapeArea(source_polygon, target_polygon);
   const double iou = union_area < 0.01 ? 0.0 : std::min(1.0, intersection_area / union_area);
 
   precision = source_area < MIN_AREA ? 0.0 : std::min(1.0, intersection_area / source_area);
-  recall = source_area < MIN_AREA ? 0.0 : std::min(1.0, intersection_area / source_area);
+  recall = source_area < MIN_AREA ? 0.0 : std::min(1.0, intersection_area / target_area);
   generalized_iou = iou - (convex_shape_area - union_area) / convex_shape_area;
 
   return true;
