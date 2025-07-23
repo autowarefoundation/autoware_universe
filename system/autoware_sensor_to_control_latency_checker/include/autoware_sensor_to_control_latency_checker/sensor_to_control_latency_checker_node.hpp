@@ -59,8 +59,8 @@ private:
   // History of received values (with timestamps)
   std::deque<TimestampedValue> meas_to_tracked_object_history_{};
   std::deque<TimestampedValue> map_based_prediction_processing_time_history_{};
-  std::deque<TimestampedValue> planning_system_latency_history_{};
-  std::deque<TimestampedValue> control_system_latency_history_{};
+  std::deque<TimestampedValue> planning_component_latency_history_{};
+  std::deque<TimestampedValue> control_component_latency_history_{};
 
   // Current total latency
   double total_latency_ms_{};
@@ -73,7 +73,7 @@ private:
   rclcpp::Subscription<autoware_planning_validator::msg::PlanningValidatorStatus>::SharedPtr
     validation_status_sub_;
   rclcpp::Subscription<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
-    control_system_latency_sub_;
+    control_component_latency_sub_;
 
   // Publishers
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
@@ -95,7 +95,7 @@ private:
     const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg);
   void onValidationStatus(
     const autoware_planning_validator::msg::PlanningValidatorStatus::ConstSharedPtr msg);
-  void onControlSystemLatency(
+  void onControlComponentLatency(
     const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg);
   void onTimer();
   void calculateTotalLatency();
