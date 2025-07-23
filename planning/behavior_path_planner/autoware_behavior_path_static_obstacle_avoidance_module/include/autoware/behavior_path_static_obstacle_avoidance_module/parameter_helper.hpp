@@ -122,6 +122,8 @@ AvoidanceParameters getParameter(rclcpp::Node * node)
       get_or_declare_parameter<double>(*node, ns + "intersection.yaw_deviation");
     p.object_last_seen_threshold =
       get_or_declare_parameter<double>(*node, ns + "max_compensation_time");
+    p.unstable_classification_time =
+      get_or_declare_parameter<double>(*node, ns + "unstable_classification_time");
   }
 
   {
