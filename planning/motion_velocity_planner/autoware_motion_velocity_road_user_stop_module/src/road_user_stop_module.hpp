@@ -79,7 +79,7 @@ private:
   // helper functions
   bool isTargetObject(const uint8_t label) const;
   bool isObjectOnRoad(
-    const PredictedObject & object, const lanelet::LaneletMapPtr & lanelet_map,
+    const PredictedObject & object,
     const std::vector<autoware_utils_geometry::Polygon2d> & relevant_polygons) const;
   bool isNearCrosswalk(
     const geometry_msgs::msg::Point & position, const lanelet::LaneletMapPtr & lanelet_map) const;
@@ -150,9 +150,6 @@ private:
     const std::vector<autoware_utils_geometry::Polygon2d> & polygons_for_opposing_traffic,
     const lanelet::ConstLanelets & lanelets_for_opposing_traffic, const rclcpp::Time & current_time,
     const double dist_to_bumper);
-  // bool isObstacleVelocityRequiringFixedStop(
-  //   const std::shared_ptr<PlannerData::Object> object,
-  //   const std::vector<TrajectoryPoint> & traj_points) const;
 
   // Stop planning
   void holdPreviousStopIfNecessary(
@@ -162,7 +159,7 @@ private:
 
   std::optional<geometry_msgs::msg::Point> calcStopPoint(
     const std::shared_ptr<const PlannerData> planner_data,
-    const std::vector<TrajectoryPoint> & traj_points, const double dist_to_bumper,
+    const std::vector<TrajectoryPoint> & traj_points,
     const std::optional<StopObstacle> & determined_stop_obstacle,
     const std::optional<double> & determined_zero_vel_dist);
 
@@ -185,9 +182,8 @@ private:
 
   std::optional<double> calcCandidateZeroVelDist(
     const std::shared_ptr<const PlannerData> planner_data,
-    const std::vector<TrajectoryPoint> & traj_points, const StopObstacle & stop_obstacle,
-    const double dist_to_collide_on_ref_traj, const double desired_stop_margin,
-    const double dist_to_bumper) const;
+    const std::vector<TrajectoryPoint> & traj_points, const double dist_to_collide_on_ref_traj,
+    const double desired_stop_margin, const double dist_to_bumper) const;
 
   double calcMarginFromObstacleOnCurve(
     const std::shared_ptr<const PlannerData> planner_data,

@@ -109,7 +109,7 @@ void RoadUserStopModule::init(rclcpp::Node & node, const std::string & module_na
 
   processing_time_detail_pub_ = node.create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms/road_user_stop", 1);
-  // time keeper
+
   time_keeper_ = std::make_shared<autoware_utils_debug::TimeKeeper>(processing_time_detail_pub_);
 }
 
@@ -355,7 +355,7 @@ bool RoadUserStopModule::isTargetObject(const uint8_t label) const
 }
 
 bool RoadUserStopModule::isObjectOnRoad(
-  const PredictedObject & object, const lanelet::LaneletMapPtr & /* lanelet_map */,
+  const PredictedObject & object,
   const std::vector<autoware_utils_geometry::Polygon2d> & relevant_polygons) const
 {
   const auto param = param_listener_->get_params();
@@ -714,8 +714,8 @@ std::optional<geometry_msgs::msg::Point> RoadUserStopModule::planStop(
       dist_to_collide_on_ref_traj);
 
     const auto candidate_zero_vel_dist = calcCandidateZeroVelDist(
-      planner_data, trajectory_points, stop_obstacle, dist_to_collide_on_ref_traj,
-      desired_stop_margin, dist_to_bumper);
+      planner_data, trajectory_points, dist_to_collide_on_ref_traj, desired_stop_margin,
+      dist_to_bumper);
     if (!candidate_zero_vel_dist) {
       continue;
     }
@@ -743,8 +743,7 @@ std::optional<geometry_msgs::msg::Point> RoadUserStopModule::planStop(
   holdPreviousStopIfNecessary(planner_data, trajectory_points, determined_zero_vel_dist);
 
   const auto stop_point = calcStopPoint(
-    planner_data, trajectory_points, dist_to_bumper, determined_stop_obstacle,
-    determined_zero_vel_dist);
+    planner_data, trajectory_points, determined_stop_obstacle, determined_zero_vel_dist);
 
   if (determined_stop_obstacle->velocity >= -0.5) {
     return stop_point;
@@ -817,7 +816,7 @@ std::optional<StopObstacle> RoadUserStopModule::pickStopObstacleFromPredictedObj
   // check if object is on road
   const auto & relevant_polygons =
     is_opposing_traffic ? polygons_for_opposing_traffic : polygons_for_vru;
-  if (!isObjectOnRoad(predicted_object, lanelet_map_ptr, relevant_polygons)) {
+  if (!isObjectOnRoad(predicted_object, relevant_polygons)) {
     return std::nullopt;
   }
 
@@ -843,7 +842,7 @@ std::optional<StopObstacle> RoadUserStopModule::pickStopObstacleFromPredictedObj
     autoware_utils_geometry::to_polygon2d(obj_pose, predicted_object.shape), dist_to_bumper);
 
   if (!collision_point) {
-    return std::nullopt;  // no collision point found
+    return std::nullopt;
   }
 
   return StopObstacle{
@@ -889,8 +888,8 @@ void RoadUserStopModule::holdPreviousStopIfNecessary(
 
 std::optional<geometry_msgs::msg::Point> RoadUserStopModule::calcStopPoint(
   const std::shared_ptr<const PlannerData> planner_data,
-  const std::vector<TrajectoryPoint> & traj_points, [[maybe_unused]] const double dist_to_bumper,
-  [[maybe_unused]] const std::optional<StopObstacle> & determined_stop_obstacle,
+  const std::vector<TrajectoryPoint> & traj_points,
+  const std::optional<StopObstacle> & determined_stop_obstacle,
   const std::optional<double> & determined_zero_vel_dist)
 {
   auto output_traj_points = traj_points;
@@ -944,7 +943,7 @@ std::optional<geometry_msgs::msg::Point> RoadUserStopModule::calcStopPoint(
 double RoadUserStopModule::calcDesiredStopMargin(
   const std::shared_ptr<const PlannerData> planner_data,
   const std::vector<TrajectoryPoint> & traj_points, const StopObstacle & stop_obstacle,
-  [[maybe_unused]] const double dist_to_bumper, [[maybe_unused]] const size_t ego_segment_idx,
+  const double dist_to_bumper, const size_t ego_segment_idx,
   const double dist_to_collide_on_ref_traj) const
 {
   const auto param = param_listener_->get_params();
@@ -975,7 +974,7 @@ double RoadUserStopModule::calcDesiredStopMargin(
           "Relative velocity (%.3f) is too close to zero. Using minimum safe value for "
           "calculation.",
           rel_vel);
-        return param.stop_planning.stop_margin;  // Return default stop margin as fallback
+        return param.stop_planning.stop_margin;
       }
 
       const double T_coast = std::max(
@@ -1022,8 +1021,7 @@ double RoadUserStopModule::calcDesiredStopMargin(
 
 std::optional<double> RoadUserStopModule::calcCandidateZeroVelDist(
   const std::shared_ptr<const PlannerData> planner_data,
-  const std::vector<TrajectoryPoint> & traj_points,
-  [[maybe_unused]] const StopObstacle & stop_obstacle, const double dist_to_collide_on_ref_traj,
+  const std::vector<TrajectoryPoint> & traj_points, const double dist_to_collide_on_ref_traj,
   const double desired_stop_margin, [[maybe_unused]] const double dist_to_bumper) const
 {
   const auto param = param_listener_->get_params();
@@ -1091,9 +1089,8 @@ double RoadUserStopModule::calcMarginFromObstacleOnCurve(
 {
   const auto param = param_listener_->get_params();
   const bool enable_approaching_on_curve = param.stop_planning.stop_on_curve.enable_approaching;
-  const bool use_pointcloud = false;  // road_user_stop doesn't use pointcloud
 
-  if (!enable_approaching_on_curve || use_pointcloud) {
+  if (!enable_approaching_on_curve) {
     return default_stop_margin;
   }
 
