@@ -16,6 +16,8 @@
 
 #ifdef USE_AGNOCAST_ENABLED
 
+#include "autoware_utils/ros/polling_subscriber.hpp"
+
 #include <agnocast/agnocast.hpp>
 
 #include <memory>
@@ -34,8 +36,8 @@
   typename autoware::agnocast_wrapper::Subscription<MessageT>::SharedPtr
 #define AUTOWARE_PUBLISHER_PTR(MessageT) \
   typename autoware::agnocast_wrapper::Publisher<MessageT>::SharedPtr
-
-#define AUTOWARE_POLLING_SUBSCRIBER(MessageT) typename agnocast::PollingSubscriber<MessageT>
+#define AUTOWARE_POLLING_SUBSCRIBER_PTR(MessageT) \
+  typename autoware::agnocast_wrapper::PollingSubscriber<MessageT>::SharedPtr
 
 #define AUTOWARE_CREATE_SUBSCRIPTION(message_type, topic, qos, callback, options) \
   autoware::agnocast_wrapper::create_subscription<message_type>(this, topic, qos, callback, options)
@@ -43,6 +45,8 @@
   autoware::agnocast_wrapper::create_publisher<message_type>(this, arg1, arg2)
 #define AUTOWARE_CREATE_PUBLISHER3(message_type, arg1, arg2, arg3) \
   autoware::agnocast_wrapper::create_publisher<message_type>(this, arg1, arg2, arg3)
+#define AUTOWARE_CREATE_POLLING_SUBSCRIBER(message_type, topic, qos) \
+  autoware::agnocast_wrapper::create_polling_subscriber<message_type>(this, topic, qos)
 
 #define AUTOWARE_SUBSCRIPTION_OPTIONS agnocast::SubscriptionOptions
 #define AUTOWARE_PUBLISHER_OPTIONS agnocast::PublisherOptions
@@ -286,6 +290,88 @@ typename Subscription<MessageT>::SharedPtr create_subscription(
 
 
 template <typename MessageT>
+class PollingSubscriber
+{
+public:
+  using SharedPtr = std::shared_ptr<PollingSubscriber<MessageT>>;
+
+  virtual ~PollingSubscriber() = default;
+
+  virtual message_ptr<const MessageT, OwnershipType::Shared> takeData() = 0;
+  virtual message_ptr<const MessageT, OwnershipType::Shared> take_data() = 0;
+};
+
+template <typename MessageT>
+class AgnocastPollingSubscriber : public PollingSubscriber<MessageT>
+{
+  typename agnocast::PollingSubscriber<MessageT>::SharedPtr subscriber_;
+
+public:
+  explicit AgnocastPollingSubscriber(
+    rclcpp::Node * node, const std::string & topic_name, const rclcpp::QoS & qos)
+  : subscriber_(agnocast::create_subscription<MessageT>(node, topic_name, qos))
+  {}
+
+  message_ptr<const MessageT, OwnershipType::Shared> takeData() override
+  {
+    return message_ptr<const MessageT, OwnershipType::Shared>{subscriber_->take_data()};
+  }
+
+  message_ptr<const MessageT, OwnershipType::Shared> take_data() override
+  {
+    return message_ptr<const MessageT, OwnershipType::Shared>{subscriber_->take_data()};
+  }
+};
+
+template <typename MessageT>
+class ROS2PollingSubscriber : public PollingSubscriber<MessageT>
+{
+  typename autoware_utils::InterProcessPollingSubscriber<MessageT>::SharedPtr subscriber_;
+
+public:
+  explicit ROS2PollingSubscriber(
+    rclcpp::Node * node, const std::string & topic_name, const rclcpp::QoS & qos)
+  : subscriber_(autoware_utils::InterProcessPollingSubscriber<MessageT>::create_subscription(
+      node, topic_name, qos))
+  {}
+
+  message_ptr<const MessageT, OwnershipType::Shared> takeData() override
+  {
+    return message_ptr<const MessageT, OwnershipType::Shared>{subscriber_->takeData()};
+  }
+
+  message_ptr<const MessageT, OwnershipType::Shared> take_data() override
+  {
+    return message_ptr<const MessageT, OwnershipType::Shared>{subscriber_->takeData()};
+  }
+};
+
+template <typename MessageT>
+typename PollingSubscriber<MessageT>::SharedPtr create_polling_subscriber(
+  rclcpp::Node * node, const std::string & topic_name, const size_t qos_history_depth)
+{
+  if (use_agnocast()) {
+    return std::make_shared<AgnocastPollingSubscriber<MessageT>>(
+      node, topic_name, rclcpp::QoS(rclcpp::KeepLast(qos_history_depth)));
+  } else {
+    return std::make_shared<ROS2PollingSubscriber<MessageT>>(
+      node, topic_name, rclcpp::QoS(rclcpp::KeepLast(qos_history_depth)));
+  }
+}
+
+template <typename MessageT>
+typename PollingSubscriber<MessageT>::SharedPtr create_polling_subscriber(
+  rclcpp::Node * node, const std::string & topic_name, const rclcpp::QoS & qos)
+{
+  if (use_agnocast()) {
+    return std::make_shared<AgnocastPollingSubscriber<MessageT>>(node, topic_name, qos);
+  } else {
+    return std::make_shared<ROS2PollingSubscriber<MessageT>>(node, topic_name, qos);
+  }
+}
+
+
+template <typename MessageT>
 class Publisher
 {
 public:
@@ -447,9 +533,8 @@ typename Publisher<MessageT>::SharedPtr create_publisher(
 #define AUTOWARE_MESSAGE_SHARED_PTR(MessageT) std::shared_ptr<MessageT>
 #define AUTOWARE_SUBSCRIPTION_PTR(MessageT) typename rclcpp::Subscription<MessageT>::SharedPtr
 #define AUTOWARE_PUBLISHER_PTR(MessageT) typename rclcpp::Publisher<MessageT>::SharedPtr
-
-#define AUTOWARE_POLLING_SUBSCRIBER(MessageT) \
-  typename autoware_utils::InterProcessPollingSubscriber<MessageT>
+#define AUTOWARE_POLLING_SUBSCRIBER_PTR(MessageT) \
+  typename autoware_utils::InterProcessPollingSubscriber<MessageT>::SharedPtr
 
 #define AUTOWARE_CREATE_SUBSCRIPTION(message_type, topic, qos, callback, options) \
   this->create_subscription<message_type>(topic, qos, callback, options)
@@ -457,6 +542,8 @@ typename Publisher<MessageT>::SharedPtr create_publisher(
   this->create_publisher<message_type>(arg1, arg2)
 #define AUTOWARE_CREATE_PUBLISHER3(message_type, arg1, arg2, arg3) \
   this->create_publisher<message_type>(arg1, arg2, arg3)
+#define AUTOWARE_CREATE_POLLING_SUBSCRIBER(message_type, topic, qos) \
+  autoware_utils::InterProcessPollingSubscriber<message_type>::create_subscription(this, topic, qos)
 
 #define AUTOWARE_SUBSCRIPTION_OPTIONS rclcpp::SubscriptionOptions
 #define AUTOWARE_PUBLISHER_OPTIONS rclcpp::PublisherOptions
