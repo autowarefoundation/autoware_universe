@@ -247,7 +247,6 @@
         "random_seed",
         "use_fixed_random_seed",
         "object_centric_pointcloud",
-        "angle_increment",
         "pedestrian_path_seed",
         "use_fixed_pedestrian_seed",
         "predicted_path_delay",
