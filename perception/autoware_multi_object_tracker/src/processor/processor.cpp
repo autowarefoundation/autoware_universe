@@ -240,8 +240,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
 
     constexpr double precision_threshold = 0.;
     constexpr double recall_threshold = 0.5;
-    const double generalized_iou_threshold =
-      config_.generalized_iou_thresholds.at(source_data.label);
+    const double generalized_iou_threshold = config_.pruning_giou_thresholds.at(source_data.label);
 
     const bool is_pedestrian =
       (source_data.label == Label::PEDESTRIAN && target_data.label == Label::PEDESTRIAN);
@@ -312,12 +311,12 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     });
 
   // Create a map for search distance squared per label
-  const size_t label_size = config_.overlap_distance_thresholds.size();
+  const size_t label_size = config_.pruning_distance_thresholds.size();
   std::vector<double> search_distance_sq_per_label(label_size, 0.0);
   for (size_t i = 0; i < label_size; ++i) {
     search_distance_sq_per_label[i] =
-      config_.overlap_distance_thresholds.at(static_cast<LabelType>(i)) *
-      config_.overlap_distance_thresholds.at(static_cast<LabelType>(i));
+      config_.pruning_distance_thresholds.at(static_cast<LabelType>(i)) *
+      config_.pruning_distance_thresholds.at(static_cast<LabelType>(i));
   }
 
   // Build spatial index for quick neighbor lookup

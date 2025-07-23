@@ -47,8 +47,8 @@ struct TrackerProcessorConfig
   std::map<LabelType, int> confident_count_threshold;  // [count]
   bool enable_unknown_object_velocity_estimation;
   bool enable_unknown_object_motion_output;
-  std::map<LabelType, double> generalized_iou_thresholds;
-  std::map<LabelType, double> overlap_distance_thresholds;  // [m]
+  std::map<LabelType, double> pruning_giou_thresholds;
+  std::map<LabelType, double> pruning_distance_thresholds;  // [m]
 };
 
 class TrackerProcessor

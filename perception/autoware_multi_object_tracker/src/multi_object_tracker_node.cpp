@@ -195,19 +195,19 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       }
 
       // Declare parameters for generalized IoU threshold
-      std::vector<double> generalized_iou_threshold_list =
-        declare_parameter<std::vector<double>>("generalized_iou_thresholds");
-      for (size_t i = 0; i < generalized_iou_threshold_list.size(); ++i) {
+      std::vector<double> pruning_giou_thresholds =
+        declare_parameter<std::vector<double>>("pruning_generalized_iou_thresholds");
+      for (size_t i = 0; i < pruning_giou_thresholds.size(); ++i) {
         const auto label = static_cast<LabelType>(i);
-        config.generalized_iou_thresholds[label] = generalized_iou_threshold_list.at(i);
+        config.pruning_giou_thresholds[label] = pruning_giou_thresholds.at(i);
       }
 
       // Declare parameters for overlap distance threshold
-      std::vector<double> overlap_distance_threshold_list =
-        declare_parameter<std::vector<double>>("overlap_distance_thresholds");
-      for (size_t i = 0; i < overlap_distance_threshold_list.size(); ++i) {
+      std::vector<double> pruning_distance_threshold_list =
+        declare_parameter<std::vector<double>>("pruning_distance_thresholds");
+      for (size_t i = 0; i < pruning_distance_threshold_list.size(); ++i) {
         const auto label = static_cast<LabelType>(i);
-        config.overlap_distance_thresholds[label] = overlap_distance_threshold_list.at(i);
+        config.pruning_distance_thresholds[label] = pruning_distance_threshold_list.at(i);
       }
 
       config.enable_unknown_object_velocity_estimation =

@@ -62,7 +62,7 @@ autoware::multi_object_tracker::TrackerProcessorConfig createProcessorConfig()
   }
 
   // Generalized IoU threshold for each class
-  config.generalized_iou_thresholds = {
+  config.pruning_giou_thresholds = {
     {autoware_perception_msgs::msg::ObjectClassification::UNKNOWN, -0.3},
     {autoware_perception_msgs::msg::ObjectClassification::CAR, -0.4},
     {autoware_perception_msgs::msg::ObjectClassification::TRUCK, -0.6},
@@ -73,7 +73,7 @@ autoware::multi_object_tracker::TrackerProcessorConfig createProcessorConfig()
     {autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN, -0.1}};
 
   // overlap distance threshold for each class
-  config.overlap_distance_thresholds = {
+  config.pruning_distance_thresholds = {
     {autoware_perception_msgs::msg::ObjectClassification::UNKNOWN, 9.0},
     {autoware_perception_msgs::msg::ObjectClassification::CAR, 5.0},
     {autoware_perception_msgs::msg::ObjectClassification::TRUCK, 9.0},
