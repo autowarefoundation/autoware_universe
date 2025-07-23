@@ -60,7 +60,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   double publish_rate = declare_parameter<double>("publish_rate");  // [hz]
   world_frame_id_ = declare_parameter<std::string>("world_frame_id");
   std::string ego_frame_id = declare_parameter<std::string>("ego_frame_id");
-  bool enable_delay_compensation{declare_parameter<bool>("enable_delay_compensation")};
+  enable_delay_compensation_ = declare_parameter<bool>("enable_delay_compensation");
   bool enable_odometry_uncertainty = declare_parameter<bool>("consider_odometry_uncertainty");
   bool use_time_keeper = declare_parameter<bool>("publish_processing_time_detail");
 
@@ -146,7 +146,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   // Create ROS time based timer.
   // If the delay compensation is enabled, the timer is used to publish the output at the correct
   // time.
-  if (enable_delay_compensation) {
+  if (enable_delay_compensation_) {
     publisher_period_ = 1.0 / publish_rate;    // [s]
     constexpr double timer_multiplier = 10.0;  // 10 times frequent for publish timing check
     const auto timer_period = rclcpp::Rate(publish_rate * timer_multiplier).period();
@@ -331,7 +331,7 @@ void MultiObjectTracker::onTimer()
   should_publish = should_publish || elapsed_time > maximum_publish_interval;
 
   // Publish with delay compensation to the current time
-  if (should_publish) checkAndPublish(current_time);
+  if (should_publish) checkAndPublish(last_published_time_);
 }
 
 void MultiObjectTracker::runProcess(const types::DynamicObjectList & detected_objects)
@@ -405,7 +405,8 @@ void MultiObjectTracker::publish(const rclcpp::Time & time) const
   // Create output msg
   autoware_perception_msgs::msg::TrackedObjects output_msg;
   output_msg.header.frame_id = world_frame_id_;
-  processor_->getTrackedObjects(time, output_msg);
+  const rclcpp::Time object_time = enable_delay_compensation_ ? this->now() : time;
+  processor_->getTrackedObjects(object_time, output_msg);
 
   // Publish
   {
