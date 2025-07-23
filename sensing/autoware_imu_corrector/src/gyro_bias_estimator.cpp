@@ -362,8 +362,8 @@ void GyroBiasEstimator::estimate_scale_gyro(
   geometry_msgs::msg::Vector3Stamped new_vector_scale;
   new_vector_scale.header.stamp = this->now();
   new_vector_scale.vector.x = final_scale_on_purpose_;
-  new_vector_scale.vector.y = filtered_scale_rate_; // estimated_scale_;
-  new_vector_scale.vector.z = 1 / filtered_scale_angle_; // 1 / estimated_scale_angle_;
+  new_vector_scale.vector.y = filtered_scale_rate_;       // estimated_scale_;
+  new_vector_scale.vector.z = 1 / filtered_scale_angle_;  // 1 / estimated_scale_angle_;
   new_scale_debug_pub_->publish(new_vector_scale);
 
   geometry_msgs::msg::Vector3Stamped scale_debug;
@@ -391,8 +391,7 @@ void GyroBiasEstimator::estimate_scale_gyro(
     estimated_scale_angle_ = x_state_(1);
     p_angle_ = (Eigen::Matrix2d::Identity() - k_matrix * h_matrix) * p_angle_;
 
-    filtered_scale_angle_ = (alpha_) * filtered_scale_angle_ + (1 - alpha_) * estimated_scale_angle_;
-    
+    filtered_scale_angle_ = (alpha_)*filtered_scale_angle_ + (1 - alpha_) * estimated_scale_angle_;
   }
   gyro_yaw_angle_ = ndt_yaw_angle_;  // reset the gyro yaw angle to the NDT yaw angle
 
@@ -457,14 +456,15 @@ void GyroBiasEstimator::estimate_scale_gyro(
 
     // Calculate the EKF if enough samples are available
     if (rate_pose_buff_.size() > static_cast<size_t>(samples_filter_pose_rate_)) {
-      avg_rate_pose_ = std::accumulate(rate_pose_buff_.begin(), 
-                    rate_pose_buff_.end(), 0.0) / rate_pose_buff_.size();
+      avg_rate_pose_ = std::accumulate(rate_pose_buff_.begin(), rate_pose_buff_.end(), 0.0) /
+                       rate_pose_buff_.size();
       // Keep the buffer size fixed
       rate_pose_buff_.erase(rate_pose_buff_.begin());
 
       h_ = avg_rate_pose_;
-      // To avoid confusion with the bias sign we remove the bias from the gyro rate directly 
-      y_ = (avg_rate_gyro_ - gyro_bias_not_rotated_.value().z) - (estimated_scale_ * avg_rate_pose_);
+      // To avoid confusion with the bias sign we remove the bias from the gyro rate directly
+      y_ =
+        (avg_rate_gyro_ - gyro_bias_not_rotated_.value().z) - (estimated_scale_ * avg_rate_pose_);
       s_ = h_ * p_ * h_ + r_;
       k_ = p_ * h_ / s_;
       estimated_scale_ = estimated_scale_ + k_ * y_;
