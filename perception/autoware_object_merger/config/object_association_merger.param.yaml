@@ -5,7 +5,6 @@
     recall_threshold_to_judge_overlapped: 0.5
     remove_overlapped_unknown_objects: true
     base_link_frame_id: base_link
-    priority_mode: 2  # PriorityMode::Confidence
     # class based priority mode for PriorityMode::ClassBased,
     # The value should be one of 0: Object0, 1: Object1, 2: Confidence
     class_based_priority_matrix:
