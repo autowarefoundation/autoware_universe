@@ -35,8 +35,8 @@
 
 struct Memory
 {
-  int mem_len ;
-  int pre_len ;
+  int mem_len;
+  int pre_len;
   void * mem_buf;    // pre_len
   float * pre_buf;   // 1, pre_len, 1
   float * post_buf;  // 1, mem_len, 1

@@ -184,7 +184,7 @@ struct NetworkConfig
   std::string engine_backbone_path;
   std::string engine_head_path;
   std::string engine_position_embedding_path;
-  
+
   // Model parameters
   bool use_temporal;
   double search_distance_2d;
@@ -200,20 +200,13 @@ struct NetworkConfig
 
   // Constructor with default initialization
   NetworkConfig(
-    const std::string & engine_backbone_path_,
-    const std::string & engine_head_path_,
-    const std::string & engine_position_embedding_path_,
-    const bool use_temporal_,
-    const double search_distance_2d_,
-    const double circle_nms_dist_threshold_,
-    const double iou_threshold_,
-    const double confidence_threshold_,
-    const std::vector<std::string> & class_names_,
-    const int32_t num_proposals_,
-    const std::vector<double> & yaw_norm_thresholds_,
-    const std::vector<float> & detection_range_,
-    const int pre_memory_length_,
-    const int post_memory_length_)
+    const std::string & engine_backbone_path_, const std::string & engine_head_path_,
+    const std::string & engine_position_embedding_path_, const bool use_temporal_,
+    const double search_distance_2d_, const double circle_nms_dist_threshold_,
+    const double iou_threshold_, const double confidence_threshold_,
+    const std::vector<std::string> & class_names_, const int32_t num_proposals_,
+    const std::vector<double> & yaw_norm_thresholds_, const std::vector<float> & detection_range_,
+    const int pre_memory_length_, const int post_memory_length_)
   : engine_backbone_path(engine_backbone_path_),
     engine_head_path(engine_head_path_),
     engine_position_embedding_path(engine_position_embedding_path_),
