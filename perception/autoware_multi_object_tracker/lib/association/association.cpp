@@ -253,7 +253,7 @@ double DataAssociation::calculateScore(
 
   // when the tracker and measurements are unknown, use generalized IoU
   if (tracker_label == Label::UNKNOWN && measurement_label == Label::UNKNOWN) {
-    constexpr double generalized_iou_threshold = -0.8;  // Default threshold for unknown-unknown
+    const double & generalized_iou_threshold = config_.unknown_association_giou_threshold;
     const double generalized_iou = shapes::get2dGeneralizedIoU(tracked_object, measurement_object);
     if (generalized_iou < generalized_iou_threshold) {
       return 0.0;

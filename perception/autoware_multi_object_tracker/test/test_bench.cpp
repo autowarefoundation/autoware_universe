@@ -163,6 +163,9 @@ autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig()
   config.max_rad_matrix = config.max_rad_matrix.cwiseAbs();
   config.max_dist_matrix = config.max_dist_matrix.array().square();
 
+  config.unknown_association_giou_threshold =
+    -0.8;  // Default GIoU threshold for unknown-unknown association
+
   return config;
 }
 

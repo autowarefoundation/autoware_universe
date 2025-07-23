@@ -253,8 +253,9 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
             associator_config.max_dist_matrix(i, j) * associator_config.max_dist_matrix(i, j);
         }
       }
-
-      config.max_dist_matrix = associator_config.max_dist_matrix;
+      // Set the unknown-unknown association GIoU threshold
+      associator_config.unknown_association_giou_threshold =
+        declare_parameter<double>("unknown_association_giou_threshold");
     }
 
     // Initialize processor with parameters
