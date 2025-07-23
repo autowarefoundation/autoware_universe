@@ -215,7 +215,7 @@ void DecorativeTrackerMergerNode::mainObjectsCallback(
   stop_watch_ptr_->toc("delay_main_objects", true);
   diagnostics_interface_ptr_->clear();
 
-  // check if main objects is empty and duration
+  // diag: check if main objects is empty, measure duration if empty
   if (main_objects->objects.empty() && is_empty_previous_main_objects_) {
     is_empty_previous_main_objects_ = true;
   } else if (main_objects->objects.empty() && !is_empty_previous_main_objects_) {
@@ -225,19 +225,25 @@ void DecorativeTrackerMergerNode::mainObjectsCallback(
     is_empty_previous_main_objects_ = false;
   }
 
-  /* transform to target merge coordinate */
+  // 0. transform to target merge coordinate
   TrackedObjects transformed_objects;
   if (!autoware::object_recognition_utils::transformObjects(
         *main_objects, merge_frame_id_, tf_buffer_, transformed_objects)) {
+    RCLCPP_WARN(this->get_logger(), "Failed to transform main objects");
     return;
   }
   TrackedObjects::ConstSharedPtr transformed_main_objects =
     std::make_shared<TrackedObjects>(transformed_objects);
 
-  // try to merge sub object
+  // 1. clear tracks and copy main object to tracks
+  inner_tracker_objects_.clear();
+  const auto current_time = rclcpp::Time(transformed_main_objects->header.stamp);
+  for (const auto & object : transformed_main_objects->objects) {
+    inner_tracker_objects_.push_back(createNewTracker(main_sensor_type_, current_time, object));
+  }
+
   if (!sub_objects_buffer_.empty()) {
-    // get interpolated sub objects
-    // get newest sub objects which timestamp is earlier to main objects
+    // 2. interpolate sub objects to sync main objects
     TrackedObjects::ConstSharedPtr closest_time_sub_objects;
     TrackedObjects::ConstSharedPtr closest_time_sub_objects_later;
     for (const auto & sub_object : sub_objects_buffer_) {
@@ -251,19 +257,22 @@ void DecorativeTrackerMergerNode::mainObjectsCallback(
     // get delay compensated sub objects
     const auto interpolated_sub_objects = interpolateObjectState(
       closest_time_sub_objects, closest_time_sub_objects_later, transformed_main_objects->header);
+
+    // merge sub objects only if interpolated_sub_objects is not null
     if (interpolated_sub_objects.has_value()) {
-      // Merge sub objects
-      const auto interp_sub_objs = interpolated_sub_objects.value();
-      debug_object_pub_->publish(interp_sub_objs);
+      // 3. associate sub objects to the main tracks
+      // 4. add unassociated sub objects to tracks
       this->decorativeMerger(
         sub_sensor_type_, std::make_shared<TrackedObjects>(interpolated_sub_objects.value()));
+
+      // debug
+      debug_object_pub_->publish(interpolated_sub_objects.value());
     } else {
       RCLCPP_DEBUG(this->get_logger(), "interpolated_sub_objects is null");
     }
   }
 
-  // try to merge main object
-  this->decorativeMerger(main_sensor_type_, transformed_main_objects);
+  // 5. publish tracks
   const auto & tracked_objects = getTrackedObjects(transformed_main_objects->header);
   merged_object_pub_->publish(tracked_objects);
 
@@ -290,10 +299,11 @@ void DecorativeTrackerMergerNode::subObjectsCallback(const TrackedObjects::Const
   stop_watch_ptr_->toc("delay_sub_objects", true);
   diagnostics_interface_ptr_->clear();
 
-  /* transform to target merge coordinate */
+  // transform to target merge coordinate
   TrackedObjects transformed_objects;
   if (!autoware::object_recognition_utils::transformObjects(
         *msg, merge_frame_id_, tf_buffer_, transformed_objects)) {
+    RCLCPP_WARN(this->get_logger(), "Failed to transform sub objects");
     return;
   }
   TrackedObjects::ConstSharedPtr transformed_sub_objects =
@@ -301,7 +311,6 @@ void DecorativeTrackerMergerNode::subObjectsCallback(const TrackedObjects::Const
 
   sub_objects_buffer_.push_back(transformed_sub_objects);
   // remove old sub objects
-  // const auto now = get_clock()->now();
   const auto now = rclcpp::Time(transformed_sub_objects->header.stamp);
   const auto remove_itr = std::remove_if(
     sub_objects_buffer_.begin(), sub_objects_buffer_.end(), [now, this](const auto & sub_object) {
@@ -340,8 +349,6 @@ bool DecorativeTrackerMergerNode::decorativeMerger(
   for (auto & object : inner_tracker_objects_) {
     object.predict(current_time);
   }
-
-  // TODO(yoshiri): pre-association
 
   // associate inner objects and input objects
   /* global nearest neighbor */
