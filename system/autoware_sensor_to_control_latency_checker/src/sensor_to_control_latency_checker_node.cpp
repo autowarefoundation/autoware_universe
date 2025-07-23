@@ -305,24 +305,26 @@ void SensorToControlLatencyCheckerNode::check_total_latency(
                               has_valid_data(planning_component_latency_history_) &&
                               has_valid_data(control_component_latency_history_);
 
+  const auto append = [&](auto & base, const auto & str) {
+    if (!base.empty()) {
+      base += ", ";
+    }
+    base += str;
+  };
   if (!all_data_initialized) {
     // Add detailed information about which data is not initialized
     std::string uninitialized_data;
     if (!has_valid_data(meas_to_tracked_object_history_)) {
-      if (!uninitialized_data.empty()) uninitialized_data += ", ";
-      uninitialized_data += "meas_to_tracked_object";
+      append(uninitialized_data, "meas_to_tracked_object");
     }
     if (!has_valid_data(map_based_prediction_processing_time_history_)) {
-      if (!uninitialized_data.empty()) uninitialized_data += ", ";
-      uninitialized_data += "map_based_prediction_processing_time";
+      append(uninitialized_data, "map_based_prediction_processing_time");
     }
     if (!has_valid_data(planning_component_latency_history_)) {
-      if (!uninitialized_data.empty()) uninitialized_data += ", ";
-      uninitialized_data += "planning_component_latency";
+      append(uninitialized_data, "planning_component_latency");
     }
     if (!has_valid_data(control_component_latency_history_)) {
-      if (!uninitialized_data.empty()) uninitialized_data += ", ";
-      uninitialized_data += "control_component_latency";
+      append(uninitialized_data, "control_component_latency");
     }
 
     stat.add("uninitialized_data", uninitialized_data);
