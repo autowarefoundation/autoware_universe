@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_SENSOR_TO_CONTROL_LATENCY_CHECKER__SENSOR_TO_CONTROL_LATENCY_CHECKER_NODE_HPP_
-#define AUTOWARE_SENSOR_TO_CONTROL_LATENCY_CHECKER__SENSOR_TO_CONTROL_LATENCY_CHECKER_NODE_HPP_
+#ifndef SENSOR_TO_CONTROL_LATENCY_CHECKER_NODE_HPP_
+#define SENSOR_TO_CONTROL_LATENCY_CHECKER_NODE_HPP_
 
 #include <autoware/universe_utils/ros/debug_publisher.hpp>
 #include <autoware_planning_validator/msg/planning_validator_status.hpp>
@@ -109,4 +109,4 @@ private:
 
 }  // namespace autoware::system::sensor_to_control_latency_checker
 
-#endif  // AUTOWARE_SENSOR_TO_CONTROL_LATENCY_CHECKER__SENSOR_TO_CONTROL_LATENCY_CHECKER_NODE_HPP_
+#endif  // SENSOR_TO_CONTROL_LATENCY_CHECKER_NODE_HPP_

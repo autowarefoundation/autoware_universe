@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware_sensor_to_control_latency_checker/sensor_to_control_latency_checker_node.hpp"
+#include "sensor_to_control_latency_checker_node.hpp"
 
 #include <rclcpp_components/register_node_macro.hpp>
 
