@@ -37,6 +37,18 @@
           "default": 3,
           "enum": [0, 1, 2, 3]
         },
+        "class_based_priority_matrix": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Class based priority matrix for each object class.",
+          "default": [
+            2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+            0, 0, 0, 0, 0, 0
+          ]
+        },
         "message_timeout_sec": {
           "type": "number",
           "description": "The warning timeout threshold for no synchronized messages received.",
@@ -53,8 +65,7 @@
         "precision_threshold_to_judge_overlapped",
         "recall_threshold_to_judge_overlapped",
         "remove_overlapped_unknown_objects",
-        "base_link_frame_id",
-        "priority_mode"
+        "base_link_frame_id"
       ],
       "additionalProperties": false
     }
