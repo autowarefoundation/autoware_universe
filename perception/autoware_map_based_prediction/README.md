@@ -191,6 +191,13 @@ This module treats **Pedestrians** and **Bicycles** as objects using the crosswa
 
 If there are a reachable crosswalk entry points within the `prediction_time_horizon` and the objects satisfies above condition, this module outputs additional predicted path to cross the opposite side via the crosswalk entry point.
 
+To prevent the predicted crossing path from chattering due to noise in the estimated pose or velocity of a pedestrian who is judged to have crossing intention, the module holds the crossing intention state for a certain duration based on the following parameters:
+
+| Parameter                        | Unit | Type   | Description                                                                                      |
+| -------------------------------- | ---- | ------ | ------------------------------------------------------------------------------------------------ |
+| `crossing_intention_duration`    | [s]  | double | Minimum duration that crossing intention must continuously persist to be judged as true          |
+| `no_crossing_intention_duration` | [s]  | double | Minimum duration that lack of crossing intention must continuously persist to be judged as false |
+
 This module takes into account the corresponding traffic light information.
 When RED signal is indicated, we assume the target object will not walk across.
 In addition, if the target object is stopping (not moving) against GREEN signal, we assume the target object will not walk across either.
@@ -243,8 +250,6 @@ If the target object is inside the road or crosswalk, this module outputs one or
 | `object_buffer_time_length`                                      | [s]   | double | Time span of object history to store the information                                                                                  |
 | `history_time_length`                                            | [s]   | double | Time span of object information used for prediction                                                                                   |
 | `prediction_time_horizon_rate_for_validate_shoulder_lane_length` | [-]   | double | prediction path will disabled when the estimated path length exceeds lanelet length. This parameter control the estimated path length |
-| `crossing_intention_duration`                                    | [s]   | double | Minimum duration that crossing intention must continuously persist to be judged as true                                               |
-| `no_crossing_intention_duration`                                 | [s]   | double | Minimum duration that lack of crossing intention must continuously persist to be judged as false                                      |
 
 ## Assumptions / Known limits
 
