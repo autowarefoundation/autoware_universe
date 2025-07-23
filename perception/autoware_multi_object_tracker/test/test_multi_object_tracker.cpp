@@ -64,7 +64,6 @@ FunctionTimings runIterations(
 
   auto processor_config = createProcessorConfig();
   const auto associator_config = createAssociatorConfig();
-  processor_config.max_dist_matrix = associator_config.max_dist_matrix;
   const auto input_channels_config = createInputChannelsConfig();
 
   auto processor = std::make_unique<autoware::multi_object_tracker::TrackerProcessor>(
@@ -155,7 +154,6 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path, bool write_ba
 
   auto processor_config = createProcessorConfig();
   const auto associator_config = createAssociatorConfig();
-  processor_config.max_dist_matrix = associator_config.max_dist_matrix;
   auto input_channels_config = createInputChannelsConfig();
 
   auto processor = std::make_unique<autoware::multi_object_tracker::TrackerProcessor>(
