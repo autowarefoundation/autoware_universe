@@ -20,7 +20,9 @@
 
 #include <memory>
 #include <type_traits>
+#include <utility>
 #include <cstdlib>
+#include <string>
 
 #define AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) \
   autoware::agnocast_wrapper::message_ptr< \
@@ -28,13 +30,14 @@
 #define AUTOWARE_MESSAGE_SHARED_PTR(MessageT) \
   autoware::agnocast_wrapper::message_ptr< \
     MessageT, autoware::agnocast_wrapper::OwnershipType::Shared>
-#define AUTOWARE_SUBSCRIPTION_PTR(MessageT) typename agnocast::Subscription<MessageT>::SharedPtr
+#define AUTOWARE_SUBSCRIPTION_PTR(MessageT) \
+  typename autoware::agnocast_wrapper::Subscription<MessageT>::SharedPtr
 #define AUTOWARE_PUBLISHER_PTR(MessageT) typename agnocast::Publisher<MessageT>::SharedPtr
 
 #define AUTOWARE_POLLING_SUBSCRIBER(MessageT) typename agnocast::PollingSubscriber<MessageT>
 
 #define AUTOWARE_CREATE_SUBSCRIPTION(message_type, topic, qos, callback, options) \
-  agnocast::create_subscription<message_type>(this, topic, qos, callback, options)
+  autoware::agnocast_wrapper::create_subscription<message_type>(this, topic, qos, callback, options)
 #define AUTOWARE_CREATE_PUBLISHER2(message_type, arg1, arg2) \
   agnocast::create_publisher<message_type>(this, arg1, arg2)
 #define AUTOWARE_CREATE_PUBLISHER3(message_type, arg1, arg2, arg3) \
@@ -213,6 +216,71 @@ inline bool use_agnocast()
 {
   static const int sv = get_ENABLE_AGNOCAST();
   return sv == 1;
+}
+
+
+template <typename MessageT>
+class Subscription
+{
+  // We are not storing the subscription objects for now, but this may chage once
+  // agnnocast::Subscription supports some functionality.
+
+public:
+  using SharedPtr = std::shared_ptr<Subscription<MessageT>>;
+
+  template <typename Func>
+  explicit Subscription(
+    rclcpp::Node * node, const std::string & topic_name, const rclcpp::QoS & qos, Func && callback,
+    const agnocast::SubscriptionOptions & options)
+  {
+    static_assert(
+      std::is_invocable_v<std::decay_t<Func>, message_ptr<MessageT, OwnershipType::Unique> &&> ||
+      std::is_invocable_v<std::decay_t<Func>, message_ptr<MessageT, OwnershipType::Shared> &&>,
+      "callback should be invocable with an rvalue reference to either AUTOWARE_MESSAGE_UNIQUE_PTR "
+      "or AUTOWARE_MESSAGE_SHARED_PTR");
+
+    constexpr auto ownership =
+      std::is_invocable_v<std::decay_t<Func>, message_ptr<MessageT, OwnershipType::Unique> &&>
+      ? OwnershipType::Unique
+      : OwnershipType::Shared;
+
+    if (use_agnocast()) {
+      agnocast::create_subscription<MessageT>(
+        node, topic_name, qos,
+        [callback = std::forward<Func>(callback)](agnocast::ipc_shared_ptr<MessageT> && msg) {
+          callback(message_ptr<MessageT, ownership>(std::move(msg)));
+        },
+        options);
+    } else {
+      rclcpp::SubscriptionOptions ros2_options;
+      ros2_options.callback_group = options.callback_group;
+      node->create_subscription<MessageT>(
+        topic_name, qos,
+        [callback = std::forward<Func>(callback)](std::unique_ptr<MessageT> msg) {
+          callback(message_ptr<MessageT, ownership>(std::move(msg)));
+        },
+        ros2_options);
+    }
+  }
+};
+
+template <typename MessageT, typename Func>
+typename Subscription<MessageT>::SharedPtr create_subscription(
+  rclcpp::Node * node, const std::string & topic_name, const rclcpp::QoS & qos, Func && callback,
+  const agnocast::SubscriptionOptions & options)
+{
+  return std::make_shared<Subscription<MessageT>>(
+    node, topic_name, qos, std::forward<Func>(callback), options);
+}
+
+template <typename MessageT, typename Func>
+typename Subscription<MessageT>::SharedPtr create_subscription(
+  rclcpp::Node * node, const std::string & topic_name, const size_t qos_history_depth,
+  Func && callback, const agnocast::SubscriptionOptions & options)
+{
+  return std::make_shared<Subscription<MessageT>>(
+    node, topic_name, rclcpp::QoS(rclcpp::KeepLast(qos_history_depth)),
+    std::forward<Func>(callback), options);
 }
 
 }  // namespace autoware::agnocast_wrapper
