@@ -16,15 +16,38 @@
 
 #include <rclcpp_components/register_node_macro.hpp>
 
-#include <algorithm>
 #include <deque>
 #include <memory>
 #include <string>
 #include <utility>
-#include <vector>
 
 namespace autoware::system::sensor_to_control_latency_checker
 {
+
+namespace
+{
+double get_latest_value(const std::deque<TimestampedValue> & history)
+{
+  if (history.empty()) {
+    return 0.0;
+  }
+  return history.back().value;
+}
+
+rclcpp::Time get_latest_timestamp(const std::deque<TimestampedValue> & history)
+{
+  if (history.empty()) {
+    return rclcpp::Time(0);
+  }
+  return history.back().timestamp;
+}
+
+bool has_valid_data(const std::deque<TimestampedValue> & history)
+{
+  return !history.empty();
+}
+
+};  // namespace
 
 SensorToControlLatencyCheckerNode::SensorToControlLatencyCheckerNode(
   const rclcpp::NodeOptions & options)
@@ -45,26 +68,27 @@ SensorToControlLatencyCheckerNode::SensorToControlLatencyCheckerNode(
     create_subscription<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "~/input/processing_time_tracking", 10,
       std::bind(
-        &SensorToControlLatencyCheckerNode::onMeasToTrackedObject, this, std::placeholders::_1));
+        &SensorToControlLatencyCheckerNode::on_meas_to_tracked_object, this,
+        std::placeholders::_1));
 
   processing_time_prediction_sub_ =
     create_subscription<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "~/input/processing_time_prediction", 10,
       std::bind(
-        &SensorToControlLatencyCheckerNode::onProcessingTimePrediction, this,
+        &SensorToControlLatencyCheckerNode::on_processing_time_prediction, this,
         std::placeholders::_1));
 
   validation_status_sub_ =
     create_subscription<autoware_planning_validator::msg::PlanningValidatorStatus>(
       "~/input/validation_status", 10,
       std::bind(
-        &SensorToControlLatencyCheckerNode::onValidationStatus, this, std::placeholders::_1));
+        &SensorToControlLatencyCheckerNode::on_validation_status, this, std::placeholders::_1));
 
   control_component_latency_sub_ =
     create_subscription<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "~/input/processing_time_control", 10,
       std::bind(
-        &SensorToControlLatencyCheckerNode::onControlComponentLatency, this,
+        &SensorToControlLatencyCheckerNode::on_control_component_latency, this,
         std::placeholders::_1));
 
   // Create publishers
@@ -78,77 +102,77 @@ SensorToControlLatencyCheckerNode::SensorToControlLatencyCheckerNode(
   // Setup diagnostic updater
   diagnostic_updater_.setHardwareID("sensor_to_control_latency_checker");
   diagnostic_updater_.add(
-    "Total Latency", this, &SensorToControlLatencyCheckerNode::checkTotalLatency);
+    "Total Latency", this, &SensorToControlLatencyCheckerNode::check_total_latency);
 
   // Create timer
   timer_ = create_wall_timer(
     std::chrono::milliseconds(static_cast<int>(1000.0 / update_rate_)),
-    std::bind(&SensorToControlLatencyCheckerNode::onTimer, this));
+    std::bind(&SensorToControlLatencyCheckerNode::on_timer, this));
 
   RCLCPP_INFO(get_logger(), "SensorToControlLatencyCheckerNode initialized");
 }
 
-void SensorToControlLatencyCheckerNode::onMeasToTrackedObject(
+void SensorToControlLatencyCheckerNode::on_meas_to_tracked_object(
   const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg)
 {
-  updateHistory(meas_to_tracked_object_history_, msg->stamp, msg->data);
+  update_history(meas_to_tracked_object_history_, msg->stamp, msg->data);
   RCLCPP_DEBUG(get_logger(), "Received meas_to_tracked_object_ms: %.2f", msg->data);
 }
 
-void SensorToControlLatencyCheckerNode::onProcessingTimePrediction(
+void SensorToControlLatencyCheckerNode::on_processing_time_prediction(
   const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg)
 {
-  updateHistory(map_based_prediction_processing_time_history_, msg->stamp, msg->data);
+  update_history(map_based_prediction_processing_time_history_, msg->stamp, msg->data);
   RCLCPP_DEBUG(get_logger(), "Received map_based_prediction processing_time_ms: %.2f", msg->data);
 }
 
-void SensorToControlLatencyCheckerNode::onValidationStatus(
+void SensorToControlLatencyCheckerNode::on_validation_status(
   const autoware_planning_validator::msg::PlanningValidatorStatus::ConstSharedPtr msg)
 {
   // latency published by the planning validator is in seconds
-  updateHistory(planning_component_latency_history_, msg->stamp, msg->latency * 1e3);
+  update_history(planning_component_latency_history_, msg->stamp, msg->latency * 1e3);
   RCLCPP_DEBUG(get_logger(), "Received planning_component_latency_ms: %.2f", msg->latency * 1e3);
 }
 
-void SensorToControlLatencyCheckerNode::onControlComponentLatency(
+void SensorToControlLatencyCheckerNode::on_control_component_latency(
   const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg)
 {
   // latency published by the raw_vehicle_cmd_converter is in seconds
-  updateHistory(control_component_latency_history_, msg->stamp, msg->data * 1e3);
+  update_history(control_component_latency_history_, msg->stamp, msg->data * 1e3);
   RCLCPP_DEBUG(get_logger(), "Received control_component_latency_ms: %.2f", msg->data * 1e3);
 }
 
-void SensorToControlLatencyCheckerNode::onTimer()
+void SensorToControlLatencyCheckerNode::on_timer()
 {
-  calculateTotalLatency();
+  calculate_total_latency();
 
-  publishTotalLatency();
+  publish_total_latency();
 
   // Update diagnostics
   diagnostic_updater_.force_update();
 }
 
-void SensorToControlLatencyCheckerNode::calculateTotalLatency()
+void SensorToControlLatencyCheckerNode::calculate_total_latency()
 {
   total_latency_ms_ = 0.0;
 
   // Get control_component_latency data (most recent)
   double control_component_latency_ms = 0.0;
   rclcpp::Time control_component_latency_timestamp = rclcpp::Time(0);
-  if (hasValidData(control_component_latency_history_)) {
-    control_component_latency_ms = getLatestValue(control_component_latency_history_);
-    control_component_latency_timestamp = getLatestTimestamp(control_component_latency_history_);
+  if (has_valid_data(control_component_latency_history_)) {
+    control_component_latency_ms = get_latest_value(control_component_latency_history_);
+    control_component_latency_timestamp = get_latest_timestamp(control_component_latency_history_);
     total_latency_ms_ += control_component_latency_ms;
   }
 
   // Get processing_time_latency data (older than control_component_latency_timestamp)
   double planning_component_latency_ms = 0.0;
   rclcpp::Time planning_component_latency_timestamp = rclcpp::Time(0);
-  if (hasValidData(planning_component_latency_history_)) {
+  if (has_valid_data(planning_component_latency_history_)) {
     // Find the most recent value that is older than control_component_latency_timestamp
     for (auto it = planning_component_latency_history_.rbegin();
          it != planning_component_latency_history_.rend(); ++it) {
-      if (isTimestampOlder(it->timestamp, control_component_latency_timestamp)) {
+      if (is_timestamp_older(it->timestamp, control_component_latency_timestamp)) {
         planning_component_latency_ms = it->value;
         planning_component_latency_timestamp = it->timestamp;
         total_latency_ms_ += planning_component_latency_ms;
@@ -160,11 +184,11 @@ void SensorToControlLatencyCheckerNode::calculateTotalLatency()
   // Get processing_time data (older than planning_component_latency_timestamp)
   double map_based_prediction_processing_time_ms = 0.0;
   rclcpp::Time map_based_prediction_processing_time_timestamp = rclcpp::Time(0);
-  if (hasValidData(map_based_prediction_processing_time_history_)) {
+  if (has_valid_data(map_based_prediction_processing_time_history_)) {
     // Find the most recent value that is older than planning_component_latency_timestamp
     for (auto it = map_based_prediction_processing_time_history_.rbegin();
          it != map_based_prediction_processing_time_history_.rend(); ++it) {
-      if (isTimestampOlder(it->timestamp, planning_component_latency_timestamp)) {
+      if (is_timestamp_older(it->timestamp, planning_component_latency_timestamp)) {
         map_based_prediction_processing_time_ms = it->value;
         map_based_prediction_processing_time_timestamp = it->timestamp;
         total_latency_ms_ += map_based_prediction_processing_time_ms;
@@ -175,11 +199,11 @@ void SensorToControlLatencyCheckerNode::calculateTotalLatency()
 
   // Get meas_to_tracked_object data (older than map_based_prediction_processing_time_timestamp)
   double meas_to_tracked_object_ms = 0.0;
-  if (hasValidData(meas_to_tracked_object_history_)) {
+  if (has_valid_data(meas_to_tracked_object_history_)) {
     // Find the most recent value that is older than map_based_prediction_processing_time_timestamp
     for (auto it = meas_to_tracked_object_history_.rbegin();
          it != meas_to_tracked_object_history_.rend(); ++it) {
-      if (isTimestampOlder(it->timestamp, map_based_prediction_processing_time_timestamp)) {
+      if (is_timestamp_older(it->timestamp, map_based_prediction_processing_time_timestamp)) {
         meas_to_tracked_object_ms = it->value;
         total_latency_ms_ += meas_to_tracked_object_ms;
         break;
@@ -210,7 +234,7 @@ void SensorToControlLatencyCheckerNode::calculateTotalLatency()
     control_offset_ms_, vehicle_offset_ms_);
 }
 
-void SensorToControlLatencyCheckerNode::publishTotalLatency()
+void SensorToControlLatencyCheckerNode::publish_total_latency()
 {
   // Publish total latency
   auto total_latency_msg = std::make_unique<autoware_internal_debug_msgs::msg::Float64Stamped>();
@@ -219,18 +243,18 @@ void SensorToControlLatencyCheckerNode::publishTotalLatency()
   total_latency_pub_->publish(std::move(total_latency_msg));
 
   // Publish debug information (using latest values and timestamps with initialization check)
-  double meas_to_tracked_object_ms = hasValidData(meas_to_tracked_object_history_)
-                                       ? getLatestValue(meas_to_tracked_object_history_)
+  double meas_to_tracked_object_ms = has_valid_data(meas_to_tracked_object_history_)
+                                       ? get_latest_value(meas_to_tracked_object_history_)
                                        : 0.0;
   double map_based_prediction_processing_time_ms =
-    hasValidData(map_based_prediction_processing_time_history_)
-      ? getLatestValue(map_based_prediction_processing_time_history_)
+    has_valid_data(map_based_prediction_processing_time_history_)
+      ? get_latest_value(map_based_prediction_processing_time_history_)
       : 0.0;
-  double planning_component_latency_ms = hasValidData(planning_component_latency_history_)
-                                           ? getLatestValue(planning_component_latency_history_)
+  double planning_component_latency_ms = has_valid_data(planning_component_latency_history_)
+                                           ? get_latest_value(planning_component_latency_history_)
                                            : 0.0;
-  double control_component_latency_ms = hasValidData(control_component_latency_history_)
-                                          ? getLatestValue(control_component_latency_history_)
+  double control_component_latency_ms = has_valid_data(control_component_latency_history_)
+                                          ? get_latest_value(control_component_latency_history_)
                                           : 0.0;
 
   debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
@@ -250,22 +274,22 @@ void SensorToControlLatencyCheckerNode::publishTotalLatency()
     latency_threshold_ms_);
 }
 
-void SensorToControlLatencyCheckerNode::checkTotalLatency(
+void SensorToControlLatencyCheckerNode::check_total_latency(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
   // Get latest values
-  double meas_to_tracked_object_ms = hasValidData(meas_to_tracked_object_history_)
-                                       ? getLatestValue(meas_to_tracked_object_history_)
+  double meas_to_tracked_object_ms = has_valid_data(meas_to_tracked_object_history_)
+                                       ? get_latest_value(meas_to_tracked_object_history_)
                                        : 0.0;
   double map_based_prediction_processing_time_ms =
-    hasValidData(map_based_prediction_processing_time_history_)
-      ? getLatestValue(map_based_prediction_processing_time_history_)
+    has_valid_data(map_based_prediction_processing_time_history_)
+      ? get_latest_value(map_based_prediction_processing_time_history_)
       : 0.0;
-  double planning_component_latency_ms = hasValidData(planning_component_latency_history_)
-                                           ? getLatestValue(planning_component_latency_history_)
+  double planning_component_latency_ms = has_valid_data(planning_component_latency_history_)
+                                           ? get_latest_value(planning_component_latency_history_)
                                            : 0.0;
-  double control_component_latency_ms = hasValidData(control_component_latency_history_)
-                                          ? getLatestValue(control_component_latency_history_)
+  double control_component_latency_ms = has_valid_data(control_component_latency_history_)
+                                          ? get_latest_value(control_component_latency_history_)
                                           : 0.0;
 
   stat.add("Total Latency (ms)", total_latency_ms_);
@@ -276,27 +300,27 @@ void SensorToControlLatencyCheckerNode::checkTotalLatency(
   stat.add("control_component_latency_ms", control_component_latency_ms);
 
   // Check if all data is initialized
-  bool all_data_initialized = hasValidData(meas_to_tracked_object_history_) &&
-                              hasValidData(map_based_prediction_processing_time_history_) &&
-                              hasValidData(planning_component_latency_history_) &&
-                              hasValidData(control_component_latency_history_);
+  bool all_data_initialized = has_valid_data(meas_to_tracked_object_history_) &&
+                              has_valid_data(map_based_prediction_processing_time_history_) &&
+                              has_valid_data(planning_component_latency_history_) &&
+                              has_valid_data(control_component_latency_history_);
 
   if (!all_data_initialized) {
     // Add detailed information about which data is not initialized
-    std::string uninitialized_data = "";
-    if (!hasValidData(meas_to_tracked_object_history_)) {
+    std::string uninitialized_data;
+    if (!has_valid_data(meas_to_tracked_object_history_)) {
       if (!uninitialized_data.empty()) uninitialized_data += ", ";
       uninitialized_data += "meas_to_tracked_object";
     }
-    if (!hasValidData(map_based_prediction_processing_time_history_)) {
+    if (!has_valid_data(map_based_prediction_processing_time_history_)) {
       if (!uninitialized_data.empty()) uninitialized_data += ", ";
       uninitialized_data += "map_based_prediction_processing_time";
     }
-    if (!hasValidData(planning_component_latency_history_)) {
+    if (!has_valid_data(planning_component_latency_history_)) {
       if (!uninitialized_data.empty()) uninitialized_data += ", ";
       uninitialized_data += "planning_component_latency";
     }
-    if (!hasValidData(control_component_latency_history_)) {
+    if (!has_valid_data(control_component_latency_history_)) {
       if (!uninitialized_data.empty()) uninitialized_data += ", ";
       uninitialized_data += "control_component_latency";
     }
@@ -313,43 +337,19 @@ void SensorToControlLatencyCheckerNode::checkTotalLatency(
   }
 }
 
-void SensorToControlLatencyCheckerNode::updateHistory(
-  std::deque<TimestampedValue> & history, const rclcpp::Time & timestamp, double value)
+void SensorToControlLatencyCheckerNode::update_history(
+  std::deque<TimestampedValue> & history, const rclcpp::Time & timestamp, double value) const
 {
   // Add new value to history
   history.emplace_back(timestamp, value);
 
   // Remove old data if window size is exceeded
-  while (static_cast<int>(history.size()) > window_size_) {
+  while (history.size() > window_size_) {
     history.pop_front();
   }
 }
 
-double SensorToControlLatencyCheckerNode::getLatestValue(
-  const std::deque<TimestampedValue> & history) const
-{
-  if (history.empty()) {
-    return 0.0;
-  }
-  return history.back().value;
-}
-
-rclcpp::Time SensorToControlLatencyCheckerNode::getLatestTimestamp(
-  const std::deque<TimestampedValue> & history) const
-{
-  if (history.empty()) {
-    return rclcpp::Time(0);
-  }
-  return history.back().timestamp;
-}
-
-bool SensorToControlLatencyCheckerNode::hasValidData(
-  const std::deque<TimestampedValue> & history) const
-{
-  return !history.empty();
-}
-
-bool SensorToControlLatencyCheckerNode::isTimestampOlder(
+bool SensorToControlLatencyCheckerNode::is_timestamp_older(
   const rclcpp::Time & timestamp1, const rclcpp::Time & timestamp2) const
 {
   try {

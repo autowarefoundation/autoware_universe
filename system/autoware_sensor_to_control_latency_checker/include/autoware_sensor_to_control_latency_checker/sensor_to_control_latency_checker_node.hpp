@@ -25,7 +25,6 @@
 
 #include <deque>
 #include <memory>
-#include <string>
 
 namespace autoware::system::sensor_to_control_latency_checker
 {
@@ -47,7 +46,7 @@ private:
   // Parameters
   double update_rate_{};
   double latency_threshold_ms_{};
-  int window_size_{};
+  size_t window_size_{};
 
   // Offset processing times for each layer (ms)
   double sensor_offset_ms_{};
@@ -57,10 +56,10 @@ private:
   double vehicle_offset_ms_{};
 
   // History of received values (with timestamps)
-  std::deque<TimestampedValue> meas_to_tracked_object_history_{};
-  std::deque<TimestampedValue> map_based_prediction_processing_time_history_{};
-  std::deque<TimestampedValue> planning_component_latency_history_{};
-  std::deque<TimestampedValue> control_component_latency_history_{};
+  std::deque<TimestampedValue> meas_to_tracked_object_history_;
+  std::deque<TimestampedValue> map_based_prediction_processing_time_history_;
+  std::deque<TimestampedValue> planning_component_latency_history_;
+  std::deque<TimestampedValue> control_component_latency_history_;
 
   // Current total latency
   double total_latency_ms_{};
@@ -89,26 +88,23 @@ private:
   rclcpp::TimerBase::SharedPtr timer_;
 
   // Callback functions
-  void onMeasToTrackedObject(
+  void on_meas_to_tracked_object(
     const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg);
-  void onProcessingTimePrediction(
+  void on_processing_time_prediction(
     const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg);
-  void onValidationStatus(
+  void on_validation_status(
     const autoware_planning_validator::msg::PlanningValidatorStatus::ConstSharedPtr msg);
-  void onControlComponentLatency(
+  void on_control_component_latency(
     const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg);
-  void onTimer();
-  void calculateTotalLatency();
-  void publishTotalLatency();
-  void checkTotalLatency(diagnostic_updater::DiagnosticStatusWrapper & stat);
+  void on_timer();
+  void calculate_total_latency();
+  void publish_total_latency();
+  void check_total_latency(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
   // Helper functions
-  void updateHistory(
-    std::deque<TimestampedValue> & history, const rclcpp::Time & timestamp, double value);
-  double getLatestValue(const std::deque<TimestampedValue> & history) const;
-  rclcpp::Time getLatestTimestamp(const std::deque<TimestampedValue> & history) const;
-  bool hasValidData(const std::deque<TimestampedValue> & history) const;
-  bool isTimestampOlder(const rclcpp::Time & timestamp1, const rclcpp::Time & timestamp2) const;
+  void update_history(
+    std::deque<TimestampedValue> & history, const rclcpp::Time & timestamp, double value) const;
+  bool is_timestamp_older(const rclcpp::Time & timestamp1, const rclcpp::Time & timestamp2) const;
 };
 
 }  // namespace autoware::system::sensor_to_control_latency_checker
