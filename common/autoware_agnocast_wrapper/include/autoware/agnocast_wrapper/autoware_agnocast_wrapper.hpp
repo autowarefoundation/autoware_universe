@@ -32,22 +32,23 @@
     MessageT, autoware::agnocast_wrapper::OwnershipType::Shared>
 #define AUTOWARE_SUBSCRIPTION_PTR(MessageT) \
   typename autoware::agnocast_wrapper::Subscription<MessageT>::SharedPtr
-#define AUTOWARE_PUBLISHER_PTR(MessageT) typename agnocast::Publisher<MessageT>::SharedPtr
+#define AUTOWARE_PUBLISHER_PTR(MessageT) \
+  typename autoware::agnocast_wrapper::Publisher<MessageT>::SharedPtr
 
 #define AUTOWARE_POLLING_SUBSCRIBER(MessageT) typename agnocast::PollingSubscriber<MessageT>
 
 #define AUTOWARE_CREATE_SUBSCRIPTION(message_type, topic, qos, callback, options) \
   autoware::agnocast_wrapper::create_subscription<message_type>(this, topic, qos, callback, options)
 #define AUTOWARE_CREATE_PUBLISHER2(message_type, arg1, arg2) \
-  agnocast::create_publisher<message_type>(this, arg1, arg2)
+  autoware::agnocast_wrapper::create_publisher<message_type>(this, arg1, arg2)
 #define AUTOWARE_CREATE_PUBLISHER3(message_type, arg1, arg2, arg3) \
-  agnocast::create_publisher<message_type>(this, arg1, arg2, arg3)
+  autoware::agnocast_wrapper::create_publisher<message_type>(this, arg1, arg2, arg3)
 
 #define AUTOWARE_SUBSCRIPTION_OPTIONS agnocast::SubscriptionOptions
 #define AUTOWARE_PUBLISHER_OPTIONS agnocast::PublisherOptions
 
-#define ALLOCATE_OUTPUT_MESSAGE_UNIQUE(publisher) publisher->borrow_loaned_message()
-#define ALLOCATE_OUTPUT_MESSAGE_SHARED(publisher) publisher->borrow_loaned_message()
+#define ALLOCATE_OUTPUT_MESSAGE_UNIQUE(publisher) publisher->allocate_output_message_unique()
+#define ALLOCATE_OUTPUT_MESSAGE_SHARED(publisher) publisher->allocate_output_message_shared()
 
 namespace autoware::agnocast_wrapper
 {
@@ -281,6 +282,155 @@ typename Subscription<MessageT>::SharedPtr create_subscription(
   return std::make_shared<Subscription<MessageT>>(
     node, topic_name, rclcpp::QoS(rclcpp::KeepLast(qos_history_depth)),
     std::forward<Func>(callback), options);
+}
+
+
+template <typename MessageT>
+class Publisher
+{
+public:
+  using SharedPtr = std::shared_ptr<Publisher<MessageT>>;
+
+  virtual ~Publisher() = default;
+
+  virtual message_ptr<MessageT, OwnershipType::Unique> allocate_output_message_unique() = 0;
+  virtual message_ptr<MessageT, OwnershipType::Shared> allocate_output_message_shared() = 0;
+
+  virtual void publish(message_ptr<MessageT, OwnershipType::Unique> && message) = 0;
+  virtual void publish(message_ptr<MessageT, OwnershipType::Shared> && message) = 0;
+
+  virtual uint32_t get_subscription_count() const = 0;
+};
+
+template <typename MessageT>
+class AgnocastPublisher : public Publisher<MessageT>
+{
+  typename agnocast::Publisher<MessageT>::SharedPtr publisher_;
+
+public:
+  explicit AgnocastPublisher(
+    rclcpp::Node * node, const std::string & topic_name, const rclcpp::QoS & qos,
+    const agnocast::PublisherOptions & options)
+  : publisher_(agnocast::create_publisher<MessageT>(node, topic_name, qos, options))
+  {}
+
+  message_ptr<MessageT, OwnershipType::Unique> allocate_output_message_unique() override
+  {
+    return message_ptr<MessageT, OwnershipType::Unique>{publisher_->borrow_loaned_message()};
+  }
+
+  message_ptr<MessageT, OwnershipType::Shared> allocate_output_message_shared() override
+  {
+    return message_ptr<MessageT, OwnershipType::Shared>{publisher_->borrow_loaned_message()};
+  }
+
+  void publish(message_ptr<MessageT, OwnershipType::Unique> && message)
+  {
+    publisher_->publish(std::move(message)->move_agnocast_ptr());
+  }
+
+  void publish(message_ptr<MessageT, OwnershipType::Shared> && message)
+  {
+    publisher_->publish(std::move(message)->move_agnocast_ptr());
+  }
+
+  uint32_t get_subscription_count() const override
+  {
+    return publisher_->get_subscription_count();
+  }
+};
+
+template <typename MessageT>
+class ROS2Publisher : public Publisher<MessageT>
+{
+  typename rclcpp::Publisher<MessageT>::SharedPtr publisher_{nullptr};
+
+public:
+  explicit ROS2Publisher(
+    rclcpp::Node * node, const std::string & topic_name, const rclcpp::QoS & qos,
+    const agnocast::PublisherOptions & options)
+  {
+    rclcpp::PublisherOptions ros2_options;
+    ros2_options.qos_overriding_options = options.qos_overriding_options;
+    publisher_ = node->create_publisher<MessageT>(topic_name, qos, ros2_options);
+  }
+
+  message_ptr<MessageT, OwnershipType::Unique> allocate_output_message_unique() override
+  {
+    return message_ptr<MessageT, OwnershipType::Unique>{std::make_unique<MessageT>()};
+  }
+
+  message_ptr<MessageT, OwnershipType::Shared> allocate_output_message_shared() override
+  {
+    return message_ptr<MessageT, OwnershipType::Shared>{std::make_unique<MessageT>()};
+  }
+
+  void publish(message_ptr<MessageT, OwnershipType::Unique> && message) override
+  {
+    publisher_->publish(std::move(message)->move_ros2_ptr());
+  }
+
+  void publish(message_ptr<MessageT, OwnershipType::Shared> && message) override
+  {
+    publisher_->publish(std::move(message)->move_ros2_ptr());
+  }
+
+  uint32_t get_subscription_count() const override
+  {
+    return publisher_->get_subscription_count();
+  }
+};
+
+template <typename MessageT>
+typename Publisher<MessageT>::SharedPtr create_publisher(
+  rclcpp::Node * node, const std::string & topic_name, const rclcpp::QoS & qos)
+{
+  agnocast::PublisherOptions options;
+  if (use_agnocast()) {
+    return std::make_shared<AgnocastPublisher<MessageT>>(node, topic_name, qos, options);
+  } else {
+    return std::make_shared<ROS2Publisher<MessageT>>(node, topic_name, qos, options);
+  }
+}
+
+template <typename MessageT>
+typename Publisher<MessageT>::SharedPtr create_publisher(
+  rclcpp::Node * node, const std::string & topic_name, const size_t qos_history_depth)
+{
+  agnocast::PublisherOptions options;
+  if (use_agnocast()) {
+    return std::make_shared<AgnocastPublisher<MessageT>>(
+      node, topic_name, rclcpp::QoS(rclcpp::KeepLast(qos_history_depth)), options);
+  } else {
+    return std::make_shared<ROS2Publisher<MessageT>>(
+      node, topic_name, rclcpp::QoS(rclcpp::KeepLast(qos_history_depth)), options);
+  }
+}
+
+template <typename MessageT>
+typename Publisher<MessageT>::SharedPtr create_publisher(
+  rclcpp::Node * node, const std::string & topic_name, const rclcpp::QoS & qos,
+  const agnocast::PublisherOptions & options)
+{
+  if (use_agnocast()) {
+    return std::make_shared<AgnocastPublisher<MessageT>>(node, topic_name, qos, options);
+  } else {
+    return std::make_shared<ROS2Publisher<MessageT>>(node, topic_name, qos, options);
+  }
+}
+
+template <typename MessageT>
+typename Publisher<MessageT>::SharedPtr create_publisher(
+  rclcpp::Node * node, const std::string & topic_name, const size_t qos_history_depth,
+  const agnocast::PublisherOptions & options)
+{
+  if (use_agnocast()) {
+    return std::make_shared<AgnocastPublisher<MessageT>>(
+      node, topic_name, rclcpp::QoS(rclcpp::KeepLast(qos_history_depth)), options);
+  } else {
+    return std::make_shared<ROS2Publisher<MessageT>>(
+      node, topic_name, rclcpp::QoS(rclcpp::KeepLast(qos_history_depth)), options);
+  }
 }
 
 }  // namespace autoware::agnocast_wrapper
