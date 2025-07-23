@@ -178,16 +178,64 @@ public:
 
 Logger gLogger;
 
+struct NetworkConfig
+{
+  // Engine paths
+  std::string engine_backbone_path;
+  std::string engine_head_path;
+  std::string engine_position_embedding_path;
+  
+  // Model parameters
+  bool use_temporal;
+  double search_distance_2d;
+  double circle_nms_dist_threshold;
+  double iou_threshold;
+  double confidence_threshold;
+  std::vector<std::string> class_names;
+  int32_t num_proposals;
+  std::vector<double> yaw_norm_thresholds;
+  std::vector<float> detection_range;
+  int pre_memory_length;
+  int post_memory_length;
+
+  // Constructor with default initialization
+  NetworkConfig(
+    const std::string & engine_backbone_path_,
+    const std::string & engine_head_path_,
+    const std::string & engine_position_embedding_path_,
+    const bool use_temporal_,
+    const double search_distance_2d_,
+    const double circle_nms_dist_threshold_,
+    const double iou_threshold_,
+    const double confidence_threshold_,
+    const std::vector<std::string> & class_names_,
+    const int32_t num_proposals_,
+    const std::vector<double> & yaw_norm_thresholds_,
+    const std::vector<float> & detection_range_,
+    const int pre_memory_length_,
+    const int post_memory_length_)
+  : engine_backbone_path(engine_backbone_path_),
+    engine_head_path(engine_head_path_),
+    engine_position_embedding_path(engine_position_embedding_path_),
+    use_temporal(use_temporal_),
+    search_distance_2d(search_distance_2d_),
+    circle_nms_dist_threshold(circle_nms_dist_threshold_),
+    iou_threshold(iou_threshold_),
+    confidence_threshold(confidence_threshold_),
+    class_names(class_names_),
+    num_proposals(num_proposals_),
+    yaw_norm_thresholds(yaw_norm_thresholds_),
+    detection_range(detection_range_),
+    pre_memory_length(pre_memory_length_),
+    post_memory_length(post_memory_length_)
+  {
+  }
+};
+
 class StreamPetrNetwork
 {
 public:
-  StreamPetrNetwork(
-    const std::string & engine_backbone_path, const std::string & engine_head_path,
-    const std::string & engine_position_embedding_path, const bool use_temporal,
-    const double search_distance_2d, const double circle_nms_dist_threshold,
-    const double iou_threshold, const double confidence_threshold,
-    const std::vector<std::string> class_names, const int32_t num_proposals,
-    const std::vector<double> yaw_norm_thresholds, const std::vector<float> detection_range);
+  StreamPetrNetwork(const NetworkConfig & config);
 
   ~StreamPetrNetwork();
   void inference_detector(
@@ -203,6 +251,7 @@ public:
 private:
   autoware_perception_msgs::msg::DetectedObject bbox_to_ros_msg(const Box3D & bbox);
 
+  NetworkConfig config_;
   std::unique_ptr<IRuntime> runtime_;
   std::unique_ptr<SubNetwork> backbone_;
   std::unique_ptr<SubNetwork> pts_head_;
@@ -215,14 +264,10 @@ private:
 
   std::unique_ptr<PostprocessCuda> postprocess_cuda_;
   NonMaximumSuppression iou_bev_nms_;
-  bool use_iou_bev_nms_ = false;
 
   bool is_inference_initialized_ = false;
-  const bool use_temporal_;
   Memory mem_;
   cudaStream_t stream_;
-  const double confidence_threshold_;
-  const std::vector<std::string> class_names_;
 };
 
 }  // namespace autoware::camera_streampetr

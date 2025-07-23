@@ -72,30 +72,22 @@ autoware_perception_msgs::msg::DetectedObject StreamPetrNetwork::bbox_to_ros_msg
 
   autoware_perception_msgs::msg::ObjectClassification classification;
   classification.probability = 1.0f;
-  classification.label = getSemanticType(class_names_[bbox.label]);
+  classification.label = getSemanticType(config_.class_names[bbox.label]);
   object.classification.push_back(classification);
   return object;
 }
 
-StreamPetrNetwork::StreamPetrNetwork(
-  const std::string & engine_backbone_path, const std::string & engine_head_path,
-  const std::string & engine_position_embedding_path, const bool use_temporal,
-  const double search_distance_2d, const double circle_nms_dist_threshold,
-  const double iou_threshold, const double confidence_threshold,
-  const std::vector<std::string> class_names, const int32_t num_proposals,
-  const std::vector<double> yaw_norm_thresholds, const std::vector<float> detection_range)
-: use_temporal_(use_temporal),
-  confidence_threshold_(confidence_threshold),
-  class_names_(class_names)
+StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config)
+: config_(config)
 {
   cudaStreamCreate(&stream_);
 
   // Initialize TensorRT runtime
   runtime_ = std::unique_ptr<IRuntime>{nvinfer1::createInferRuntime(gLogger)};
-  backbone_ = std::make_unique<SubNetwork>(engine_backbone_path, runtime_.get(), stream_);
-  pts_head_ = std::make_unique<SubNetwork>(engine_head_path, runtime_.get(), stream_);
+  backbone_ = std::make_unique<SubNetwork>(config_.engine_backbone_path, runtime_.get(), stream_);
+  pts_head_ = std::make_unique<SubNetwork>(config_.engine_head_path, runtime_.get(), stream_);
   pos_embed_ =
-    std::make_unique<SubNetwork>(engine_position_embedding_path, runtime_.get(), stream_);
+    std::make_unique<SubNetwork>(config_.engine_position_embedding_path, runtime_.get(), stream_);
 
   backbone_->EnableCudaGraph();
   pts_head_->EnableCudaGraph();
@@ -107,7 +99,7 @@ StreamPetrNetwork::StreamPetrNetwork(
   pts_head_->bindings["pre_memory_velo"]->initialize_to_zeros(stream_);
   pts_head_->bindings["pre_memory_timestamp"]->initialize_to_zeros(stream_);
 
-  mem_.Init(stream_);
+  mem_.Init(stream_, config_.pre_memory_length, config_.post_memory_length);
   mem_.pre_buf = static_cast<float *>(pts_head_->bindings["pre_memory_timestamp"]->ptr);
   mem_.post_buf = static_cast<float *>(pts_head_->bindings["post_memory_timestamp"]->ptr);
 
@@ -117,18 +109,17 @@ StreamPetrNetwork::StreamPetrNetwork(
   dur_pos_embed_ = std::make_unique<Duration>("pos_embed");
   dur_postprocess_ = std::make_unique<Duration>("postprocess");
 
-  if (iou_threshold > 0.0) {
+  if (config_.iou_threshold > 0.0) {
     NMSParams p;
-    p.search_distance_2d_ = search_distance_2d;
-    p.iou_threshold_ = iou_threshold;
+    p.search_distance_2d_ = config_.search_distance_2d;
+    p.iou_threshold_ = config_.iou_threshold;
     iou_bev_nms_.setParameters(p);
-    use_iou_bev_nms_ = true;
   }
 
   postprocess_cuda_ = std::make_unique<PostprocessCuda>(
     PostProcessingConfig(
-      class_names.size(), circle_nms_dist_threshold, confidence_threshold, yaw_norm_thresholds,
-      num_proposals, detection_range),
+      config_.class_names.size(), config_.circle_nms_dist_threshold, config_.confidence_threshold, 
+      config_.yaw_norm_thresholds, config_.num_proposals, config_.detection_range),
     stream_);
 }
 
@@ -193,7 +184,7 @@ void StreamPetrNetwork::inference_detector(
     pts_head_->Enqueue();
     mem_.StepPost(stamp);
 
-    if (use_temporal_) {
+    if (config_.use_temporal) {
       pts_head_->bindings["pre_memory_embedding"]->copy(
         pts_head_->bindings["post_memory_embedding"], stream_);
       pts_head_->bindings["pre_memory_reference_point"]->copy(
@@ -222,7 +213,7 @@ void StreamPetrNetwork::inference_detector(
     raw_objects.push_back(this->bbox_to_ros_msg(det_boxes3d[i]));
   }
 
-  if (use_iou_bev_nms_)
+  if (config_.iou_threshold > 0.0)
     iou_bev_nms_.apply(raw_objects, output_objects);
   else
     output_objects = std::move(raw_objects);

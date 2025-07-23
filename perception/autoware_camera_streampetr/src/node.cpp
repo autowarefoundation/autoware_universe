@@ -60,12 +60,14 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
     declare_parameter<std::string>("model_params.position_embedding_path");
   const bool fp16_mode = declare_parameter<bool>("model_params.fp16_mode");
   const bool build_only = declare_parameter<bool>("build_only");
+  const uint64_t workspace_size = 1ULL << declare_parameter<int>("model_params.workspace_size",32);  // Default 4GB
+
 
   const std::string engine_backbone_path =
-    initEngine(backbone_path, fp16_mode, false, get_logger());
-  const std::string engine_head_path = initEngine(head_path, fp16_mode, true, get_logger());
+    initEngine(backbone_path, fp16_mode, false, workspace_size, get_logger());
+  const std::string engine_head_path = initEngine(head_path, fp16_mode, true, workspace_size,get_logger());
   const std::string engine_position_embedding_path =
-    initEngine(position_embedding_path, fp16_mode, false, get_logger());
+    initEngine(position_embedding_path, fp16_mode, false, workspace_size,get_logger());
 
   if (build_only) {
     RCLCPP_INFO(get_logger(), "TensorRT engine files built successfully. Shutting Down...");
@@ -115,6 +117,8 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
     declare_parameter<int>("model_params.input_image_width"), anchor_camera_id_,
     declare_parameter<bool>("is_distorted_image"),
     declare_parameter<double>("downsample_factor", 1.0));
+
+  // Initialize network
   const bool use_temporal = declare_parameter<bool>("model_params.use_temporal");
   const double search_distance_2d =
     declare_parameter<double>("post_process_params.iou_nms_search_distance_2d");
@@ -130,10 +134,15 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
     declare_parameter<std::vector<double>>("post_process_params.yaw_norm_thresholds");
   const std::vector<float> detection_range =
     cast_to_float(declare_parameter<std::vector<double>>("model_params.detection_range"));
-  network_ = std::make_unique<StreamPetrNetwork>(
+  const int pre_memory_length = declare_parameter<int>("model_params.pre_memory_length",1024);  
+  const int post_memory_length = declare_parameter<int>("model_params.post_memory_length",1280); 
+  
+  NetworkConfig network_config(
     engine_backbone_path, engine_head_path, engine_position_embedding_path, use_temporal,
     search_distance_2d, circle_nms_dist_threshold, iou_threshold, confidence_threshold, class_names,
-    num_proposals, yaw_norm_thresholds, detection_range);
+    num_proposals, yaw_norm_thresholds, detection_range, pre_memory_length, post_memory_length);
+  
+  network_ = std::make_unique<StreamPetrNetwork>(network_config);
   if (debug_mode_) {
     using autoware_utils::DebugPublisher;
     using autoware_utils::StopWatch;
