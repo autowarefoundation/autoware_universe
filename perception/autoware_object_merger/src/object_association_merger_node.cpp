@@ -36,7 +36,7 @@ using autoware_perception_msgs::msg::DetectedObject;
 
 namespace
 {
-bool get_class_based_priority(
+int get_class_based_priority_mode(
   const DetectedObject & object0, const DetectedObject & object1,
   const std::vector<int64_t> & class_based_priority_matrix, const int NUMBER_OF_CLASSES)
 {
@@ -45,8 +45,7 @@ bool get_class_based_priority(
   const std::uint8_t highest_label1 =
     autoware::object_recognition_utils::getHighestProbLabel(object1.classification);
   const int index = highest_label1 * NUMBER_OF_CLASSES + highest_label0;
-  // Check if the label of object1 has higher priority than that of object0
-  return class_based_priority_matrix[index] > 0;
+  return static_cast<int>(class_based_priority_matrix[index]);
 }
 
 bool isUnknownObjectOverlapped(
@@ -212,15 +211,24 @@ void ObjectAssociationMergerNode::objectsCallback(
             output_msg.objects.push_back(object1);
           break;
         case PriorityMode::ClassBased: {
-          // object1 classes based priority
-          // get the higher priority label from class_based_priority_matrix_ based on class of
-          // object 0 and object 1
-          auto is_object1_high_priority = get_class_based_priority(
-            object0, object1, class_based_priority_matrix_, NUMBER_OF_CLASSES_);
-          if (is_object1_high_priority) {
-            output_msg.objects.push_back(object1);
-          } else {
-            output_msg.objects.push_back(object0);
+          PriorityMode class_based_priority_mode =
+            static_cast<PriorityMode>(get_class_based_priority_mode(
+              object0, object1, class_based_priority_matrix_, NUMBER_OF_CLASSES_));
+          switch (class_based_priority_mode) {
+            case PriorityMode::Object0:
+              output_msg.objects.push_back(object0);
+              break;
+            case PriorityMode::Object1:
+              output_msg.objects.push_back(object1);
+              break;
+            case PriorityMode::Confidence:
+              if (object1.existence_probability <= object0.existence_probability)
+                output_msg.objects.push_back(object0);
+              else
+                output_msg.objects.push_back(object1);
+              break;
+            case PriorityMode::ClassBased:
+              break;  // This case should not happen
           }
         }
       }

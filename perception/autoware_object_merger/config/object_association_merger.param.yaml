@@ -6,10 +6,11 @@
     remove_overlapped_unknown_objects: true
     base_link_frame_id: base_link
     priority_mode: 2  # PriorityMode::Confidence
-    # class based  priority for each object class for priority_mode: 3
+    # class based priority mode for PriorityMode::ClassBased,
+    # The value should be one of 0: Object0, 1: Object1, 2: Confidence
     class_based_priority_matrix:
     #UNKNOWN, CAR, TRUCK, BUS,  TRAILER, MOTORBIKE, BICYCLE,PEDESTRIAN -> Object0
-      [0,       0,   0,     0,    0,       0,         0,      0,         #UNKNOWN
+      [2,       0,   0,     0,    0,       0,         0,      0,         #UNKNOWN
        0,       0,   0,     0,    0,       0,         0,      0,         #CAR
        0,       0,   0,     0,    0,       0,         0,      0,         #TRUCK
        0,       0,   0,     0,    0,       0,         0,      0,         #BUS
