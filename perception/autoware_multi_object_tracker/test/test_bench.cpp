@@ -61,6 +61,28 @@ autoware::multi_object_tracker::TrackerProcessorConfig createProcessorConfig()
     config.confident_count_threshold[class_label] = 3;  // All classes have threshold 3
   }
 
+  // Generalized IoU threshold for each class
+  config.generalized_iou_thresholds = {
+    {autoware_perception_msgs::msg::ObjectClassification::UNKNOWN, -0.3},
+    {autoware_perception_msgs::msg::ObjectClassification::CAR, -0.4},
+    {autoware_perception_msgs::msg::ObjectClassification::TRUCK, -0.6},
+    {autoware_perception_msgs::msg::ObjectClassification::BUS, -0.6},
+    {autoware_perception_msgs::msg::ObjectClassification::TRAILER, -0.6},
+    {autoware_perception_msgs::msg::ObjectClassification::MOTORCYCLE, -0.1},
+    {autoware_perception_msgs::msg::ObjectClassification::BICYCLE, -0.1},
+    {autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN, -0.1}};
+
+  // overlap distance threshold for each class
+  config.overlap_distance_thresholds = {
+    {autoware_perception_msgs::msg::ObjectClassification::UNKNOWN, 9.0},
+    {autoware_perception_msgs::msg::ObjectClassification::CAR, 5.0},
+    {autoware_perception_msgs::msg::ObjectClassification::TRUCK, 9.0},
+    {autoware_perception_msgs::msg::ObjectClassification::BUS, 9.0},
+    {autoware_perception_msgs::msg::ObjectClassification::TRAILER, 9.0},
+    {autoware_perception_msgs::msg::ObjectClassification::MOTORCYCLE, 4.0},
+    {autoware_perception_msgs::msg::ObjectClassification::BICYCLE, 3.0},
+    {autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN, 2.0}};
+
   return config;
 }
 
