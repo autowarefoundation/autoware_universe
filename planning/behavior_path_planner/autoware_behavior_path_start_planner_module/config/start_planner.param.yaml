@@ -44,6 +44,15 @@
       lane_departure_check_expansion_margin: 0.0
       backward_velocity: -1.0
       geometric_pull_out_max_steer_angle_margin_scale: 0.72
+      enable_clothoid_fallback: true  # Enable clothoid path search when no path is found with collision margins
+
+      # clothoid pull out
+      clothoid_initial_velocity: 1.0  # [m/s] initial velocity for clothoid path
+      clothoid_acceleration: 1.0      # [m/s^2] acceleration for clothoid path
+      clothoid_max_steer_angle_degs: [5.0, 10.0, 20.0]  # [deg] maximum steer angles to try
+      clothoid_max_steer_angle_rate_deg_per_sec: 10.0   # [deg/s] maximum steer angle rate
+      check_clothoid_path_lane_departure: true  # enable lane departure check for clothoid path
+
       # search start pose backward
       enable_back: true
       search_priority: "efficient_path"  # "efficient_path" or "short_back_distance"
