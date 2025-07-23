@@ -35,16 +35,18 @@
 
 struct Memory
 {
-  int mem_len = 1280;
-  int pre_len = 1024;
-  void * mem_buf;    // 1024
-  float * pre_buf;   // 1, 1024, 1
-  float * post_buf;  // 1, 1280, 1
+  int mem_len ;
+  int pre_len ;
+  void * mem_buf;    // pre_len
+  float * pre_buf;   // 1, pre_len, 1
+  float * post_buf;  // 1, mem_len, 1
 
   cudaStream_t mem_stream;
 
-  void Init(cudaStream_t stream)
+  void Init(cudaStream_t stream, const int pre_length, const int post_length)
   {
+    mem_len = post_length;
+    pre_len = pre_length;
     mem_stream = stream;
     cudaMallocAsync(&mem_buf, sizeof(float) * mem_len, mem_stream);
   }

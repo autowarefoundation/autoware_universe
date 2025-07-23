@@ -69,8 +69,8 @@ void setSigmoidAndSoftmaxLayersToFP32(
 }
 
 std::string initEngine(
-  const std::string & onnx_file_path, bool fp16_mode, bool set_precision_constraints,
-  const rclcpp::Logger & logger)
+  const std::string & onnx_file_path, const bool fp16_mode, const bool set_precision_constraints,
+  const uint64_t workspace_size, const rclcpp::Logger & logger)
 {
   const std::string engine_file_path =
     std::filesystem::path(onnx_file_path).replace_extension(".engine").string();
@@ -120,8 +120,8 @@ std::string initEngine(
     throw std::runtime_error("Failed to create builder config");
   }
 
-  // Set workspace size (4 GiB)
-  config->setMemoryPoolLimit(nvinfer1::MemoryPoolType::kWORKSPACE, 1ULL << 32);
+  // Set workspace size 
+  config->setMemoryPoolLimit(nvinfer1::MemoryPoolType::kWORKSPACE, workspace_size);
 
   // Enable FP16 if requested
   if (fp16_mode && builder->platformHasFastFp16()) {
