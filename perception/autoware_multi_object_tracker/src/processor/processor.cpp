@@ -271,9 +271,6 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
         generalized_iou > generalized_iou_threshold);
     } else {
       // both are unknown, use generalized IoU
-      const double generalized_iou_threshold =
-        config_.generalized_iou_thresholds.at(source_data.label);
-
       iou = shapes::get2dGeneralizedIoU(source_data.object, target_data.object);
       return iou > generalized_iou_threshold;
     }
