@@ -44,6 +44,8 @@ CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
   // param for input data
   cp.traffic_light_state_timeout =
     get_or_declare_parameter<double>(node, ns + ".common.traffic_light_state_timeout");
+  cp.lost_detection_timeout =
+    get_or_declare_parameter<double>(node, ns + ".common.lost_detection_timeout");
 
   // param for stop position
   cp.stop_distance_from_crosswalk =
