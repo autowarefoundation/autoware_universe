@@ -166,14 +166,24 @@ void SensorToControlLatencyCheckerNode::calculate_total_latency()
     total_latency_ms_ += control_component_latency_ms;
   }
 
-  // Get processing_time_latency data (older than control_component_latency_timestamp)
+  // Get planning_component_latency data
+  // Condition: planning_timestamp + planning_latency < control_timestamp + control_latency
   double planning_component_latency_ms = 0.0;
   rclcpp::Time planning_component_latency_timestamp = rclcpp::Time(0);
   if (has_valid_data(planning_component_latency_history_)) {
-    // Find the most recent value that is older than control_component_latency_timestamp
+    // Calculate target time: control_timestamp + control_latency
+    rclcpp::Time control_end_time =
+      control_component_latency_timestamp +
+      rclcpp::Duration::from_nanoseconds(static_cast<int64_t>(control_component_latency_ms * 1e6));
+
+    // Find the most recent planning data where planning_timestamp + planning_latency <
+    // control_end_time
     for (auto it = planning_component_latency_history_.rbegin();
          it != planning_component_latency_history_.rend(); ++it) {
-      if (is_timestamp_older(it->timestamp, control_component_latency_timestamp)) {
+      rclcpp::Time planning_end_time =
+        it->timestamp + rclcpp::Duration::from_nanoseconds(static_cast<int64_t>(it->value * 1e6));
+
+      if (is_timestamp_older(planning_end_time, control_end_time)) {
         planning_component_latency_ms = it->value;
         planning_component_latency_timestamp = it->timestamp;
         total_latency_ms_ += planning_component_latency_ms;
@@ -182,14 +192,26 @@ void SensorToControlLatencyCheckerNode::calculate_total_latency()
     }
   }
 
-  // Get processing_time data (older than planning_component_latency_timestamp)
+  // Get prediction processing_time data
+  // Condition: prediction_timestamp + prediction_latency < planning_timestamp + planning_latency
   double map_based_prediction_processing_time_ms = 0.0;
   rclcpp::Time map_based_prediction_processing_time_timestamp = rclcpp::Time(0);
-  if (has_valid_data(map_based_prediction_processing_time_history_)) {
-    // Find the most recent value that is older than planning_component_latency_timestamp
+  if (
+    has_valid_data(map_based_prediction_processing_time_history_) &&
+    planning_component_latency_ms > 0.0) {
+    // Calculate target time: planning_timestamp + planning_latency
+    rclcpp::Time planning_end_time =
+      planning_component_latency_timestamp +
+      rclcpp::Duration::from_nanoseconds(static_cast<int64_t>(planning_component_latency_ms * 1e6));
+
+    // Find the most recent prediction data where prediction_timestamp + prediction_latency <
+    // planning_end_time
     for (auto it = map_based_prediction_processing_time_history_.rbegin();
          it != map_based_prediction_processing_time_history_.rend(); ++it) {
-      if (is_timestamp_older(it->timestamp, planning_component_latency_timestamp)) {
+      rclcpp::Time prediction_end_time =
+        it->timestamp + rclcpp::Duration::from_nanoseconds(static_cast<int64_t>(it->value * 1e6));
+
+      if (is_timestamp_older(prediction_end_time, planning_end_time)) {
         map_based_prediction_processing_time_ms = it->value;
         map_based_prediction_processing_time_timestamp = it->timestamp;
         total_latency_ms_ += map_based_prediction_processing_time_ms;
@@ -198,13 +220,25 @@ void SensorToControlLatencyCheckerNode::calculate_total_latency()
     }
   }
 
-  // Get meas_to_tracked_object data (older than map_based_prediction_processing_time_timestamp)
+  // Get meas_to_tracked_object data
+  // Condition: tracking_timestamp + tracking_latency < prediction_timestamp + prediction_latency
   double meas_to_tracked_object_ms = 0.0;
-  if (has_valid_data(meas_to_tracked_object_history_)) {
-    // Find the most recent value that is older than map_based_prediction_processing_time_timestamp
+  if (
+    has_valid_data(meas_to_tracked_object_history_) &&
+    map_based_prediction_processing_time_ms > 0.0) {
+    // Calculate target time: prediction_timestamp + prediction_latency
+    rclcpp::Time prediction_end_time = map_based_prediction_processing_time_timestamp +
+                                       rclcpp::Duration::from_nanoseconds(static_cast<int64_t>(
+                                         map_based_prediction_processing_time_ms * 1e6));
+
+    // Find the most recent tracking data where tracking_timestamp + tracking_latency <
+    // prediction_end_time
     for (auto it = meas_to_tracked_object_history_.rbegin();
          it != meas_to_tracked_object_history_.rend(); ++it) {
-      if (is_timestamp_older(it->timestamp, map_based_prediction_processing_time_timestamp)) {
+      rclcpp::Time tracking_end_time =
+        it->timestamp + rclcpp::Duration::from_nanoseconds(static_cast<int64_t>(it->value * 1e6));
+
+      if (is_timestamp_older(tracking_end_time, prediction_end_time)) {
         meas_to_tracked_object_ms = it->value;
         total_latency_ms_ += meas_to_tracked_object_ms;
         break;
@@ -214,7 +248,7 @@ void SensorToControlLatencyCheckerNode::calculate_total_latency()
 
   RCLCPP_DEBUG(
     get_logger(),
-    "Total latency calculation (timestamp-ordered): control_component_latency=%.2f + "
+    "Total latency calculation (cumulative time-ordered): control_component_latency=%.2f + "
     "planning_component_latency=%.2f + map_based_prediction_processing_time=%.2f + "
     "meas_to_tracked_object=%.2f = %.2f ms",
     control_component_latency_ms, planning_component_latency_ms,
