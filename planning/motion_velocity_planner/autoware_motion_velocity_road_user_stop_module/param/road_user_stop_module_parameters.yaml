@@ -31,7 +31,7 @@ road_user_stop:
 
     max_negative_velocity:
       type: double
-      default_value: -0.5
+      default_value: -0.1
       description: Maximum negative velocity for objects moving away [m/s]
       validation:
         lt_eq<>: [0.0]

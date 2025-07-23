@@ -31,7 +31,7 @@ This module is activated if the launch parameter `launch_road_user_stop_module` 
 | stop_margin                             | [m]     | double | Stop margin distance from obstacle                                   | 6.0           |
 | terminal_stop_margin                    | [m]     | double | Stop margin at goal position                                         | 3.0           |
 | min_behavior_stop_margin                | [m]     | double | Minimum stop margin for behavior decision                            | 3.0           |
-| max_negative_velocity                   | [m/s]   | double | Maximum negative velocity for objects moving away                    | -0.5          |
+| max_negative_velocity                   | [m/s]   | double | Maximum negative velocity for objects moving away                    | -0.1          |
 | stop_margin_opposing_traffic            | [m]     | double | Stop margin for opposing traffic                                     | 10.0          |
 | effective_deceleration_opposing_traffic | [m/s^2] | double | Effective deceleration for opposing traffic calculation              | 4.0           |
 | hold_stop_velocity_threshold            | [m/s]   | double | Velocity threshold to hold stop position                             | 0.01          |
