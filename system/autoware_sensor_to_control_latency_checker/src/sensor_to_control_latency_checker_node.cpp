@@ -98,7 +98,7 @@ void SensorToControlLatencyCheckerNode::onProcessingTimePrediction(
   const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg)
 {
   updateHistory(map_based_prediction_processing_time_history_, msg->stamp, msg->data);
-  RCLCPP_DEBUG(get_logger(), "Received processing_time_ms: %.2f", msg->data);
+  RCLCPP_DEBUG(get_logger(), "Received map_based_prediction processing_time_ms: %.2f", msg->data);
 }
 
 void SensorToControlLatencyCheckerNode::onValidationStatus(
@@ -157,16 +157,16 @@ void SensorToControlLatencyCheckerNode::calculateTotalLatency()
   }
 
   // Get processing_time data (older than planning_system_latency_timestamp)
-  double processing_time_ms = 0.0;
+  double map_based_prediction_processing_time_ms = 0.0;
   rclcpp::Time map_based_prediction_processing_time_timestamp = rclcpp::Time(0);
   if (hasValidData(map_based_prediction_processing_time_history_)) {
     // Find the most recent value that is older than planning_system_latency_timestamp
     for (auto it = map_based_prediction_processing_time_history_.rbegin();
          it != map_based_prediction_processing_time_history_.rend(); ++it) {
       if (isTimestampOlder(it->timestamp, planning_system_latency_timestamp)) {
-        processing_time_ms = it->value;
+        map_based_prediction_processing_time_ms = it->value;
         map_based_prediction_processing_time_timestamp = it->timestamp;
-        total_latency_ms_ += processing_time_ms;
+        total_latency_ms_ += map_based_prediction_processing_time_ms;
         break;
       }
     }
@@ -189,8 +189,9 @@ void SensorToControlLatencyCheckerNode::calculateTotalLatency()
   RCLCPP_DEBUG(
     get_logger(),
     "Total latency calculation (timestamp-ordered): control_system_latency=%.2f + "
-    "processing_time_latency=%.2f + processing_time=%.2f + meas_to_tracked_object=%.2f = %.2f ms",
-    control_system_latency_ms, planning_system_latency_ms, processing_time_ms,
+    "planning_system_latency=%.2f + map_based_prediction_processing_time=%.2f + "
+    "meas_to_tracked_object=%.2f = %.2f ms",
+    control_system_latency_ms, planning_system_latency_ms, map_based_prediction_processing_time_ms,
     meas_to_tracked_object_ms, total_latency_ms_);
 
   // Add offset processing times for each layer
@@ -288,11 +289,11 @@ void SensorToControlLatencyCheckerNode::checkTotalLatency(
     }
     if (!hasValidData(map_based_prediction_processing_time_history_)) {
       if (!uninitialized_data.empty()) uninitialized_data += ", ";
-      uninitialized_data += "processing_time";
+      uninitialized_data += "map_based_prediction_processing_time";
     }
     if (!hasValidData(planning_system_latency_history_)) {
       if (!uninitialized_data.empty()) uninitialized_data += ", ";
-      uninitialized_data += "processing_time_latency";
+      uninitialized_data += "planning_system_latency";
     }
     if (!hasValidData(control_system_latency_history_)) {
       if (!uninitialized_data.empty()) uninitialized_data += ", ";
