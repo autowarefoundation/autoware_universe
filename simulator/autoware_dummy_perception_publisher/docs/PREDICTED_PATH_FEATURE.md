@@ -140,7 +140,7 @@ Interpolates object position along the predicted trajectory:
 
 ## Configuration Parameters
 
-The feature uses ROS2 parameters with JSON schema validation. Key parameters in `config/dummy_perception_publisher.param.yaml`:
+The feature uses ros2 parameters with JSON schema validation. Key parameters in `config/dummy_perception_publisher.param.yaml`:
 
 ### Timing Parameters
 
