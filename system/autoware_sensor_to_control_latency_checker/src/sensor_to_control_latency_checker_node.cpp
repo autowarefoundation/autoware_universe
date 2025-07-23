@@ -104,15 +104,17 @@ void SensorToControlLatencyCheckerNode::onProcessingTimePrediction(
 void SensorToControlLatencyCheckerNode::onValidationStatus(
   const autoware_planning_validator::msg::PlanningValidatorStatus::ConstSharedPtr msg)
 {
-  updateHistory(planning_system_latency_history_, msg->stamp, msg->latency);
-  RCLCPP_DEBUG(get_logger(), "Received planning_system_latency_ms: %.2f", msg->latency);
+  // latency published by the planning validator is in seconds
+  updateHistory(planning_system_latency_history_, msg->stamp, msg->latency * 1e3);
+  RCLCPP_DEBUG(get_logger(), "Received planning_system_latency_ms: %.2f", msg->latency * 1e3);
 }
 
 void SensorToControlLatencyCheckerNode::onControlSystemLatency(
   const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg)
 {
-  updateHistory(control_system_latency_history_, msg->stamp, msg->data);
-  RCLCPP_DEBUG(get_logger(), "Received control_system_latency_ms: %.2f", msg->data);
+  // latency published by the raw_vehicle_cmd_converter is in seconds
+  updateHistory(control_system_latency_history_, msg->stamp, msg->data * 1e3);
+  RCLCPP_DEBUG(get_logger(), "Received control_system_latency_ms: %.2f", msg->data * 1e3);
 }
 
 void SensorToControlLatencyCheckerNode::onTimer()
@@ -218,9 +220,10 @@ void SensorToControlLatencyCheckerNode::publishTotalLatency()
   double meas_to_tracked_object_ms = hasValidData(meas_to_tracked_object_history_)
                                        ? getLatestValue(meas_to_tracked_object_history_)
                                        : 0.0;
-  double processing_time_ms = hasValidData(map_based_prediction_processing_time_history_)
-                                ? getLatestValue(map_based_prediction_processing_time_history_)
-                                : 0.0;
+  double map_based_prediction_processing_time_ms =
+    hasValidData(map_based_prediction_processing_time_history_)
+      ? getLatestValue(map_based_prediction_processing_time_history_)
+      : 0.0;
   double planning_system_latency_ms = hasValidData(planning_system_latency_history_)
                                         ? getLatestValue(planning_system_latency_history_)
                                         : 0.0;
@@ -231,7 +234,7 @@ void SensorToControlLatencyCheckerNode::publishTotalLatency()
   debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/meas_to_tracked_object_ms", meas_to_tracked_object_ms);
   debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-    "debug/processing_time_ms", processing_time_ms);
+    "debug/map_based_prediction_processing_time_ms", map_based_prediction_processing_time_ms);
   debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/planning_system_latency_ms", planning_system_latency_ms);
   debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
@@ -252,9 +255,10 @@ void SensorToControlLatencyCheckerNode::checkTotalLatency(
   double meas_to_tracked_object_ms = hasValidData(meas_to_tracked_object_history_)
                                        ? getLatestValue(meas_to_tracked_object_history_)
                                        : 0.0;
-  double processing_time_ms = hasValidData(map_based_prediction_processing_time_history_)
-                                ? getLatestValue(map_based_prediction_processing_time_history_)
-                                : 0.0;
+  double map_based_prediction_processing_time_ms =
+    hasValidData(map_based_prediction_processing_time_history_)
+      ? getLatestValue(map_based_prediction_processing_time_history_)
+      : 0.0;
   double planning_system_latency_ms = hasValidData(planning_system_latency_history_)
                                         ? getLatestValue(planning_system_latency_history_)
                                         : 0.0;
@@ -265,7 +269,7 @@ void SensorToControlLatencyCheckerNode::checkTotalLatency(
   stat.add("Total Latency (ms)", total_latency_ms_);
   stat.add("Threshold (ms)", latency_threshold_ms_);
   stat.add("meas_to_tracked_object_ms", meas_to_tracked_object_ms);
-  stat.add("processing_time_ms", processing_time_ms);
+  stat.add("map_based_prediction_processing_time_ms", map_based_prediction_processing_time_ms);
   stat.add("planning_system_latency_ms", planning_system_latency_ms);
   stat.add("control_system_latency_ms", control_system_latency_ms);
 
