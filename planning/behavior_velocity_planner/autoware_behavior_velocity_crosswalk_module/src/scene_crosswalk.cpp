@@ -1278,7 +1278,6 @@ void CrosswalkModule::updateObjectState(
   const double dist_ego_to_stop, const PathWithLaneId & sparse_resample_path,
   const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area)
 {
-  const auto now = clock_->now();
   const auto & p = planner_param_;
   const auto & objects_ptr = planner_data_->predicted_objects;
 
@@ -1328,8 +1327,8 @@ void CrosswalkModule::updateObjectState(
     const std::optional<double> ego_crosswalk_passage_direction =
       findEgoPassageDirectionAlongPath(sparse_resample_path);
     object_info_manager_.update(
-      obj_uuid, obj_pos, std::hypot(obj_vel.x, obj_vel.y), now, is_ego_yielding, has_traffic_light,
-      collision_point, object.classification.front().label, p,
+      obj_uuid, obj_pos, std::hypot(obj_vel.x, obj_vel.y), objects_ptr->header.stamp,
+      is_ego_yielding, has_traffic_light, collision_point, object.classification.front().label, p,
       crosswalk_.polygon2d().basicPolygon(), attention_area, ego_crosswalk_passage_direction);
 
     const auto collision_state = object_info_manager_.getCollisionState(obj_uuid);
@@ -1358,7 +1357,7 @@ void CrosswalkModule::updateObjectState(
   }
 
   debug_data_.ignore_crosswalk = ignore_crosswalk;
-  object_info_manager_.finalize(now, p);
+  object_info_manager_.finalize(objects_ptr->header.stamp, p);
 }
 
 bool CrosswalkModule::isRedSignalForLanelet(const lanelet::ConstLanelet & lanelet) const

@@ -341,13 +341,9 @@ public:
       std::vector<unique_identifier_msgs::msg::UUID> obsolete_uuids;
       for (const auto & object : objects) {
         if (
-          std::find(current_uuids_.begin(), current_uuids_.end(), object.first) ==
-          current_uuids_.end()) {
-          if (
-            (now - object.second.last_detection_time).seconds() >
-            planner_param.lost_detection_timeout) {
-            obsolete_uuids.push_back(object.first);
-          }
+          (now - object.second.last_detection_time).seconds() >
+          planner_param.lost_detection_timeout) {
+          obsolete_uuids.push_back(object.first);
         }
       }
       for (const auto & obsolete_uuid : obsolete_uuids) {
