@@ -19,6 +19,7 @@
 #include <autoware_test_utils/mock_data_parser.hpp>
 
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace autoware::behavior_path_planner::testing
@@ -37,8 +38,8 @@ template <class T>
 T loadMessageInYaml(
   const std::string & yaml_file, std::vector<std::string> corrupted_check_list = {})
 {
-  const auto yaml_path = get_absolute_path_to_test_data(
-    "autoware_behavior_path_start_planner_module", yaml_file);
+  const auto yaml_path =
+    get_absolute_path_to_test_data("autoware_behavior_path_start_planner_module", yaml_file);
 
   YAML::Node node = YAML::LoadFile(yaml_path);
   for (auto & word : corrupted_check_list) {

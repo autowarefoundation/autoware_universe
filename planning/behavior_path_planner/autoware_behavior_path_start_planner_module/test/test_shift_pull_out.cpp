@@ -78,7 +78,6 @@ private:
 
 TEST_F(TestShiftPullOut, GenerateValidShiftPullOutPath)
 {
-
   auto planner_data = std::make_shared<PlannerData>();
   planner_data->init_parameters(*node_);
   const auto route = StartPlannerTestHelper::set_route_from_yaml(planner_data, "route_data2.yaml");
