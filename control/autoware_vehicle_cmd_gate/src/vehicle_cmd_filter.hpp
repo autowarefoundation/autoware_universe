@@ -33,13 +33,13 @@ struct VehicleCmdFilterParam
   double wheel_base;
   double vel_lim;
   LimitArray reference_speed_points;
-  LimitArray vel_diff_lim_from_lon_acc;
-  LimitArray acc_diff_lim_from_lon_jerk;
-  LimitArray steer_lim_from_lat_acc;
-  LimitArray steer_lim_from_lat_jerk;
+  LimitArray lon_acc_lim_for_lon_vel;
+  LimitArray lon_jerk_lim_for_lon_acc;
+  LimitArray lat_acc_lim_for_steer;
+  LimitArray lat_jerk_lim_for_steer;
   LimitArray steer_lim;
-  LimitArray cmd_steer_rate_lim;
-  LimitArray actual_steer_diff_lim;
+  LimitArray steer_rate_lim_for_cmd_steer;
+  LimitArray steer_diff_lim_for_actual_steer;
 };
 class VehicleCmdFilter
 {
@@ -80,13 +80,13 @@ private:
   static double limitDiff(const double curr, const double prev, const double diff_lim);
 
   double interpolateFromSpeed(const LimitArray & limits) const;
-  double getVelDiffLimFromLonAcc() const;
-  double getAccDiffLimFromLonJerk() const;
-  double getSteerLimFromLatAcc() const;
-  double getSteerLimFromLatJerk() const;
+  double getLonAccLimForLonVel() const;
+  double getLonJerkLimForLonAcc() const;
+  double getLatAccLimForSteer() const;
+  double getLatJerkLimForSteer() const;
   double getSteerLim() const;
-  double getCmdSteerRateLim() const;
-  double getActualSteerDiffLim() const;
+  double getSteerRateLimForCmdSteer() const;
+  double getSteerDiffLimForActualSteer() const;
 };
 }  // namespace autoware::vehicle_cmd_gate
 
