@@ -26,9 +26,15 @@ namespace autoware::system::sensor_to_control_latency_checker
 
 namespace
 {
+
+bool has_valid_data(const std::deque<TimestampedValue> & history)
+{
+  return !history.empty();
+}
+
 double get_latest_value(const std::deque<TimestampedValue> & history)
 {
-  if (history.empty()) {
+  if (!has_valid_data(history)) {
     return 0.0;
   }
   return history.back().value;
@@ -40,11 +46,6 @@ rclcpp::Time get_latest_timestamp(const std::deque<TimestampedValue> & history)
     return rclcpp::Time(0);
   }
   return history.back().timestamp;
-}
-
-bool has_valid_data(const std::deque<TimestampedValue> & history)
-{
-  return !history.empty();
 }
 
 };  // namespace
@@ -243,19 +244,11 @@ void SensorToControlLatencyCheckerNode::publish_total_latency()
   total_latency_pub_->publish(std::move(total_latency_msg));
 
   // Publish debug information (using latest values and timestamps with initialization check)
-  double meas_to_tracked_object_ms = has_valid_data(meas_to_tracked_object_history_)
-                                       ? get_latest_value(meas_to_tracked_object_history_)
-                                       : 0.0;
+  double meas_to_tracked_object_ms = get_latest_value(meas_to_tracked_object_history_);
   double map_based_prediction_processing_time_ms =
-    has_valid_data(map_based_prediction_processing_time_history_)
-      ? get_latest_value(map_based_prediction_processing_time_history_)
-      : 0.0;
-  double planning_component_latency_ms = has_valid_data(planning_component_latency_history_)
-                                           ? get_latest_value(planning_component_latency_history_)
-                                           : 0.0;
-  double control_component_latency_ms = has_valid_data(control_component_latency_history_)
-                                          ? get_latest_value(control_component_latency_history_)
-                                          : 0.0;
+    get_latest_value(map_based_prediction_processing_time_history_);
+  double planning_component_latency_ms = get_latest_value(planning_component_latency_history_);
+  double control_component_latency_ms = get_latest_value(control_component_latency_history_);
 
   debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/meas_to_tracked_object_ms", meas_to_tracked_object_ms);
@@ -278,19 +271,11 @@ void SensorToControlLatencyCheckerNode::check_total_latency(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
   // Get latest values
-  double meas_to_tracked_object_ms = has_valid_data(meas_to_tracked_object_history_)
-                                       ? get_latest_value(meas_to_tracked_object_history_)
-                                       : 0.0;
+  double meas_to_tracked_object_ms = get_latest_value(meas_to_tracked_object_history_);
   double map_based_prediction_processing_time_ms =
-    has_valid_data(map_based_prediction_processing_time_history_)
-      ? get_latest_value(map_based_prediction_processing_time_history_)
-      : 0.0;
-  double planning_component_latency_ms = has_valid_data(planning_component_latency_history_)
-                                           ? get_latest_value(planning_component_latency_history_)
-                                           : 0.0;
-  double control_component_latency_ms = has_valid_data(control_component_latency_history_)
-                                          ? get_latest_value(control_component_latency_history_)
-                                          : 0.0;
+    get_latest_value(map_based_prediction_processing_time_history_);
+  double planning_component_latency_ms = get_latest_value(planning_component_latency_history_);
+  double control_component_latency_ms = get_latest_value(control_component_latency_history_);
 
   stat.add("Total Latency (ms)", total_latency_ms_);
   stat.add("Threshold (ms)", latency_threshold_ms_);
