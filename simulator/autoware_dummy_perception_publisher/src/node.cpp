@@ -35,6 +35,7 @@
 
 #include <functional>
 #include <limits>
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>

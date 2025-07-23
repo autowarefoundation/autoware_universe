@@ -156,7 +156,7 @@ All pedestrian parameters follow the same patterns as vehicle parameters but wit
 
 ## Usage Flow
 
-1. **Initial Mapping**: When a dummy object with `action: PREDICT` is created, the system finds the nearest predicted object within `max_remapping_distance`.
+1. **Initial Mapping**: When a dummy object with `action: PREDICT` is created, the system finds the nearest predicted object within `max_remapping_distance` these two objects are then mapped to keep track of the predicted path of the dummy object.
 
 2. **Validation**: The candidate must pass all applicable checks:
 

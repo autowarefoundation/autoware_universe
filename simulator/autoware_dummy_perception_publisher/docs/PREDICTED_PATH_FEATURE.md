@@ -29,7 +29,7 @@ ros2 topic echo /perception/object_recognition/objects
 
 All RViz dummy object tools (`car_pose`, `pedestrian_pose`, `unknown_pose`) now include:
 
-- A "Predicted" checkbox property that can be toggled
+- A "Predicted" checkbox property that can be toggled on and off
 - When enabled, objects are created with `action: PREDICT` instead of `action: ADD`
 
 ### 2. Dummy Perception Publisher Enhancements
