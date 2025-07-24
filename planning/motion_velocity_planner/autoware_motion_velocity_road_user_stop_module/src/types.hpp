@@ -96,23 +96,18 @@ struct StopObstacle
   geometry_msgs::msg::Point collision_point;
   double dist_to_collide_on_decimated_traj;
   ObjectClassification classification;
-  // std::optional<double> braking_dist;
-
-  // additional fields for road user stop module
 
   // for lost object tracking
   rclcpp::Time lost_time;  // time when object was lost
   bool is_lost = false;    // flag to indicate this is a lost object placeholder
 };
 
-struct StopPointCandidate
+struct RelevantLaneletData
 {
-  size_t stop_index;
-  geometry_msgs::msg::Point stop_position;
-  double stop_distance;  // distance from ego vehicle
-  autoware_perception_msgs::msg::PredictedObject target_object;
-  bool is_opposite_traffic;
-  double required_deceleration;
+  std::vector<autoware_utils_geometry::Polygon2d> polygons_for_vru;
+  std::vector<autoware_utils_geometry::Polygon2d> polygons_for_opposing_traffic;
+  lanelet::ConstLanelets ego_lanelets;
+  lanelet::ConstLanelets opposite_lanelets;
 };
 
 struct TrackedObject
@@ -176,6 +171,7 @@ struct DebugData
   std::optional<geometry_msgs::msg::Point> stop_point;  // for planning factor
   std::optional<PredictedObject> stop_target_object;    // object causing stop
 };
+
 }  // namespace autoware::motion_velocity_planner
 
 #endif  // TYPES_HPP_

@@ -5,9 +5,10 @@
         suppress_sudden_stop: true
 
       stop_planning:
-        stop_margin: 6.0 # longitudinal margin to obstacle [m]
-        terminal_stop_margin: 3.0 # Stop margin at the goal. This value cannot exceed stop margin. [m]
-        min_behavior_stop_margin: 3.0 # [m]
+        longitudinal_margin:
+          default_margin: 6.0 # longitudinal margin to obstacle [m]
+          terminal_margin: 3.0 # Stop margin at the goal. This value cannot exceed stop margin. [m]
+          minimum_margin: 3.0 # [m]
 
         max_negative_velocity: -0.1 # [m/s] maximum velocity of opposing traffic to consider stop planning
         stop_margin_opposing_traffic: 10.0 # Ideal stop-margin from moving opposing obstacle when ego comes to a stop
@@ -29,11 +30,10 @@
 
       obstacle_filtering:
         object_type:
-          target_types:
-            pedestrian: true
-            bicycle: true
-            motorcycle: false
-            unknown: false
+          pedestrian: true
+          bicycle: true
+          motorcycle: false
+          unknown: false
 
         # Trajectory-based filtering
         trajectory_lateral_margin: 1.0 # lateral margin from ego trajectory to detect objects [m]
@@ -45,11 +45,12 @@
           min_speed_threshold: 0.5 # [m/s]
 
         # Intersection filtering
-        exclude_intersection: false # If true, exclude objects inside intersection lanelets
+        intersection:
+          exclude: false # If true, exclude objects inside intersection lanelets
         # Special area filtering
-        exclude_crosswalk_users: true
-        crosswalk_margin: 1.0 # [m]
-
+        crosswalk:
+          exclude: true
+          margin: 1.0 # [m]
 
         # Temporal filtering
         min_detection_duration: 0.1 # [s]

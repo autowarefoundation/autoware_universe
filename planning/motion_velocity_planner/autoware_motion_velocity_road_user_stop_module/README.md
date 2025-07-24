@@ -18,11 +18,18 @@ This module is activated if the launch parameter `launch_road_user_stop_module` 
 
 ### Stop Planning Parameters
 
+#### Longitudinal Margin Parameters
+
+| Name            | Unit | Type   | Description                               | Default value |
+| :-------------- | :--- | :----- | :---------------------------------------- | :------------ |
+| default_margin  | [m]  | double | Default longitudinal margin to obstacle   | 6.0           |
+| terminal_margin | [m]  | double | Stop margin at the goal position          | 3.0           |
+| minimum_margin  | [m]  | double | Minimum stop margin for behavior decision | 3.0           |
+
+#### General Stop Planning Parameters
+
 | Name                                    | Unit    | Type   | Description                                                          | Default value |
 | :-------------------------------------- | :------ | :----- | :------------------------------------------------------------------- | :------------ |
-| stop_margin                             | [m]     | double | Stop margin distance from obstacle                                   | 6.0           |
-| terminal_stop_margin                    | [m]     | double | Stop margin at goal position                                         | 3.0           |
-| min_behavior_stop_margin                | [m]     | double | Minimum stop margin for behavior decision                            | 3.0           |
 | max_negative_velocity                   | [m/s]   | double | Maximum negative velocity for objects moving away                    | -0.1          |
 | stop_margin_opposing_traffic            | [m]     | double | Stop margin for opposing traffic                                     | 10.0          |
 | effective_deceleration_opposing_traffic | [m/s^2] | double | Effective deceleration for opposing traffic calculation              | 4.0           |
@@ -43,23 +50,33 @@ This module is activated if the launch parameter `launch_road_user_stop_module` 
 
 ### Obstacle Filtering Parameters
 
-#### Target Object Types
+#### Object Type Parameters
 
-| Name                    | Unit | Type | Description                         | Default value |
-| :---------------------- | :--- | :--- | :---------------------------------- | :------------ |
-| target_types.pedestrian | [-]  | bool | Enable detection of pedestrians     | true          |
-| target_types.bicycle    | [-]  | bool | Enable detection of bicycles        | true          |
-| target_types.motorcycle | [-]  | bool | Enable detection of motorcycles     | false         |
-| target_types.unknown    | [-]  | bool | Enable detection of unknown objects | false         |
+| Name       | Unit | Type | Description                         | Default value |
+| :--------- | :--- | :--- | :---------------------------------- | :------------ |
+| pedestrian | [-]  | bool | Enable detection of pedestrians     | true          |
+| bicycle    | [-]  | bool | Enable detection of bicycles        | true          |
+| motorcycle | [-]  | bool | Enable detection of motorcycles     | false         |
+| unknown    | [-]  | bool | Enable detection of unknown objects | false         |
 
-#### Detection Area Parameters
+#### General Filtering Parameters
 
-| Name                      | Unit | Type   | Description                                                          | Default value |
-| :------------------------ | :--- | :----- | :------------------------------------------------------------------- | :------------ |
-| trajectory_lateral_margin | [m]  | double | Lateral margin from ego trajectory to detect objects                 | 1.0           |
-| exclude_intersection      | [-]  | bool   | If true, exclude objects inside intersection lanelets from detection | false         |
-| exclude_crosswalk_users   | [-]  | bool   | Exclude objects near crosswalks                                      | false         |
-| crosswalk_margin          | [m]  | double | Margin distance from crosswalk                                       | 1.0           |
+| Name                      | Unit | Type   | Description                                          | Default value |
+| :------------------------ | :--- | :----- | :--------------------------------------------------- | :------------ |
+| trajectory_lateral_margin | [m]  | double | Lateral margin from ego trajectory to detect objects | 1.0           |
+
+#### Intersection Parameters
+
+| Name    | Unit | Type | Description                                                          | Default value |
+| :------ | :--- | :--- | :------------------------------------------------------------------- | :------------ |
+| exclude | [-]  | bool | If true, exclude objects inside intersection lanelets from detection | false         |
+
+#### Crosswalk Parameters
+
+| Name    | Unit | Type   | Description                     | Default value |
+| :------ | :--- | :----- | :------------------------------ | :------------ |
+| exclude | [-]  | bool   | Exclude objects near crosswalks | true          |
+| margin  | [m]  | double | Margin distance from crosswalk  | 1.0           |
 
 #### Opposing Traffic Detection Parameters
 
@@ -69,7 +86,7 @@ This module is activated if the launch parameter `launch_road_user_stop_module` 
 | angle_threshold     | [deg] | double | Angle threshold for wrong-way detection | 150.0         |
 | min_speed_threshold | [m/s] | double | Minimum speed for wrong-way detection   | 0.5           |
 
-#### Object Tracking Parameters
+#### Temporal Filtering Parameters
 
 | Name                           | Unit | Type   | Description                                                                                              | Default value |
 | :----------------------------- | :--- | :----- | :------------------------------------------------------------------------------------------------------- | :------------ |

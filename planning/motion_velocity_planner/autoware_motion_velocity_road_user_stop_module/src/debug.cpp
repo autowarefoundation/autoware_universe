@@ -17,6 +17,8 @@
 #include <autoware/universe_utils/ros/marker_helper.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
 
+#include <std_msgs/msg/color_rgba.hpp>
+
 #include <lanelet2_core/geometry/Polygon.h>
 
 #include <string>
@@ -29,11 +31,10 @@ namespace
 using autoware::universe_utils::appendMarkerArray;
 using autoware::universe_utils::createDefaultMarker;
 
-void addPolygonToMarker(
-  Marker & marker, const autoware_utils_geometry::Polygon2d & polygon, const double z = 0.0)
+void add_polygon_to_marker(Marker & marker, const Polygon2d & polygon, const double z = 0.0)
 {
   for (const auto & point : polygon.outer()) {
-    geometry_msgs::msg::Point p;
+    Point p;
     p.x = point.x();
     p.y = point.y();
     p.z = z;
@@ -46,61 +47,34 @@ void addPolygonToMarker(
   }
 }
 
-MarkerArray createLaneletPolygonsMarkerArray(
-  const lanelet::ConstLanelets & lanelets, const std::string & ns,
-  const std::array<double, 3> & color, const rclcpp::Clock::SharedPtr clock)
-{
-  MarkerArray msg;
-
-  for (const auto & lanelet : lanelets) {
-    // Use lanelet ID directly to ensure uniqueness
-    const int32_t marker_id = static_cast<int32_t>(lanelet.id());
-    Marker marker = createDefaultMarker(
-      "map", clock->now(), ns, marker_id, Marker::LINE_STRIP,
-      autoware::universe_utils::createMarkerScale(0.1, 0, 0),
-      autoware::universe_utils::createMarkerColor(color[0], color[1], color[2], 0.999));
-
-    marker.lifetime = rclcpp::Duration::from_seconds(0.3);
-
-    // Add lanelet polygon points
-    const auto & polygon = lanelet.polygon3d();
-    for (const auto & point : polygon) {
-      geometry_msgs::msg::Point p;
-      p.x = point.x();
-      p.y = point.y();
-      p.z = point.z();
-      marker.points.push_back(p);
-    }
-
-    // Close the polygon
-    if (!marker.points.empty()) {
-      marker.points.push_back(marker.points.front());
-    }
-
-    msg.markers.push_back(marker);
-  }
-
-  return msg;
-}
-
 }  // namespace
 
-MarkerArray RoadUserStopModule::createDebugMarkerArray() const
+MarkerArray RoadUserStopModule::create_debug_marker_array() const
 {
   MarkerArray debug_marker_array;
 
   // Always publish debug markers
   // Visualize ego lanelets in pink
   if (!debug_data_.ego_lanelets.empty()) {
-    const auto ego_lanelets_markers = createLaneletPolygonsMarkerArray(
-      debug_data_.ego_lanelets, "ego_lanelets", {1.0, 0.0, 1.0});  // Pink color
+    std_msgs::msg::ColorRGBA pink_color;
+    pink_color.r = 1.0;
+    pink_color.g = 0.0;
+    pink_color.b = 1.0;
+    pink_color.a = 0.999;
+    const auto ego_lanelets_markers = lanelet::visualization::laneletsBoundaryAsMarkerArray(
+      debug_data_.ego_lanelets, pink_color, false, "ego_lanelets_");
     appendMarkerArray(ego_lanelets_markers, &debug_marker_array);
   }
 
   // Visualize adjacent lanelets in orange
   if (!debug_data_.adjacent_lanelets.empty()) {
-    const auto adjacent_lanelets_markers = createLaneletPolygonsMarkerArray(
-      debug_data_.adjacent_lanelets, "adjacent_lanelets", {1.0, 0.5, 0.0});  // Orange color
+    std_msgs::msg::ColorRGBA orange_color;
+    orange_color.r = 1.0;
+    orange_color.g = 0.5;
+    orange_color.b = 0.0;
+    orange_color.a = 0.999;
+    const auto adjacent_lanelets_markers = lanelet::visualization::laneletsBoundaryAsMarkerArray(
+      debug_data_.adjacent_lanelets, orange_color, false, "adjacent_lanelets_");
     appendMarkerArray(adjacent_lanelets_markers, &debug_marker_array);
   }
 
@@ -115,7 +89,7 @@ MarkerArray RoadUserStopModule::createDebugMarkerArray() const
 
       traj_poly_marker.lifetime = rclcpp::Duration::from_seconds(0.3);
 
-      addPolygonToMarker(traj_poly_marker, polygon);
+      add_polygon_to_marker(traj_poly_marker, polygon);
 
       debug_marker_array.markers.push_back(traj_poly_marker);
     }
@@ -158,7 +132,7 @@ MarkerArray RoadUserStopModule::createDebugMarkerArray() const
 
       obj_poly_marker.lifetime = rclcpp::Duration::from_seconds(0.3);
 
-      addPolygonToMarker(obj_poly_marker, polygon);
+      add_polygon_to_marker(obj_poly_marker, polygon);
 
       debug_marker_array.markers.push_back(obj_poly_marker);
     }
@@ -175,7 +149,7 @@ MarkerArray RoadUserStopModule::createDebugMarkerArray() const
 
       intersection_poly_marker.lifetime = rclcpp::Duration::from_seconds(0.3);
 
-      addPolygonToMarker(intersection_poly_marker, polygon);
+      add_polygon_to_marker(intersection_poly_marker, polygon);
 
       debug_marker_array.markers.push_back(intersection_poly_marker);
     }
@@ -192,7 +166,7 @@ MarkerArray RoadUserStopModule::createDebugMarkerArray() const
 
       vru_poly_marker.lifetime = rclcpp::Duration::from_seconds(0.3);
 
-      addPolygonToMarker(vru_poly_marker, polygon);
+      add_polygon_to_marker(vru_poly_marker, polygon);
 
       debug_marker_array.markers.push_back(vru_poly_marker);
     }
@@ -209,21 +183,13 @@ MarkerArray RoadUserStopModule::createDebugMarkerArray() const
 
       opposing_poly_marker.lifetime = rclcpp::Duration::from_seconds(0.3);
 
-      addPolygonToMarker(opposing_poly_marker, polygon);
+      add_polygon_to_marker(opposing_poly_marker, polygon);
 
       debug_marker_array.markers.push_back(opposing_poly_marker);
     }
   }
 
   return debug_marker_array;
-}
-
-MarkerArray RoadUserStopModule::createLaneletPolygonsMarkerArray(
-  const lanelet::ConstLanelets & lanelets, const std::string & ns,
-  const std::array<double, 3> & color) const
-{
-  return ::autoware::motion_velocity_planner::createLaneletPolygonsMarkerArray(
-    lanelets, ns, color, clock_);
 }
 
 }  // namespace autoware::motion_velocity_planner

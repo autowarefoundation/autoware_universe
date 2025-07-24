@@ -8,26 +8,27 @@ road_user_stop:
 
   # Stop planning parameters
   stop_planning:
-    stop_margin:
-      type: double
-      default_value: 6.0
-      description: Stop margin distance from obstacle [m]
-      validation:
-        gt_eq<>: [0.0]
+    longitudinal_margin:
+      default_margin:
+        type: double
+        default_value: 6.0
+        description: Default longitudinal margin to obstacle [m]
+        validation:
+          gt_eq<>: [0.0]
 
-    terminal_stop_margin:
-      type: double
-      default_value: 3.0
-      description: Stop margin at goal position [m]
-      validation:
-        gt_eq<>: [0.0]
+      terminal_margin:
+        type: double
+        default_value: 3.0
+        description: Stop margin at the goal position [m]
+        validation:
+          gt_eq<>: [0.0]
 
-    min_behavior_stop_margin:
-      type: double
-      default_value: 3.0
-      description: Minimum stop margin for behavior decision [m]
-      validation:
-        gt_eq<>: [0.0]
+      minimum_margin:
+        type: double
+        default_value: 3.0
+        description: Minimum stop margin for behavior decision [m]
+        validation:
+          gt_eq<>: [0.0]
 
     max_negative_velocity:
       type: double
@@ -115,26 +116,25 @@ road_user_stop:
   # Obstacle filtering parameters
   obstacle_filtering:
     object_type:
-      target_types:
-        pedestrian:
-          type: bool
-          default_value: true
-          description: Enable detection of pedestrians
+      pedestrian:
+        type: bool
+        default_value: true
+        description: Enable detection of pedestrians
 
-        bicycle:
-          type: bool
-          default_value: true
-          description: Enable detection of bicycles
+      bicycle:
+        type: bool
+        default_value: true
+        description: Enable detection of bicycles
 
-        motorcycle:
-          type: bool
-          default_value: false
-          description: Enable detection of motorcycles
+      motorcycle:
+        type: bool
+        default_value: false
+        description: Enable detection of motorcycles
 
-        unknown:
-          type: bool
-          default_value: false
-          description: Enable detection of unknown objects
+      unknown:
+        type: bool
+        default_value: false
+        description: Enable detection of unknown objects
 
     trajectory_lateral_margin:
       type: double
@@ -163,22 +163,24 @@ road_user_stop:
         validation:
           gt_eq<>: [0.0]
 
-    exclude_intersection:
-      type: bool
-      default_value: false
-      description: If true, exclude objects inside intersection lanelets from detection
+    intersection:
+      exclude:
+        type: bool
+        default_value: false
+        description: If true, exclude objects inside intersection lanelets from detection
 
-    exclude_crosswalk_users:
-      type: bool
-      default_value: false
-      description: Exclude objects near crosswalks
+    crosswalk:
+      exclude:
+        type: bool
+        default_value: true
+        description: Exclude objects near crosswalks
 
-    crosswalk_margin:
-      type: double
-      default_value: 1.0
-      description: Margin distance from crosswalk [m]
-      validation:
-        gt_eq<>: [0.0]
+      margin:
+        type: double
+        default_value: 1.0
+        description: Margin distance from crosswalk [m]
+        validation:
+          gt_eq<>: [0.0]
 
     min_detection_duration:
       type: double
