@@ -708,7 +708,8 @@ double calc_necessary_longitudinal_distance(
   const double max_steer_angle_rate, const PathWithLaneId & centerline_path,
   const geometry_msgs::msg::Pose & start_pose)
 {
-  // Trial distances based on minimum radius
+  // TODO(Sugahara): This list of trial_distances is a temporary implementation. Define appropriate
+  // candidate distances based on proper criteria.
   const std::vector<double> trial_distances = {
     0.5 * minimum_radius, 0.75 * minimum_radius, 1.0 * minimum_radius, 1.5 * minimum_radius,
     2.0 * minimum_radius, 3.0 * minimum_radius,  4.0 * minimum_radius, 5.0 * minimum_radius,
@@ -906,6 +907,8 @@ double calc_necessary_longitudinal_distance(
     best_distance = clothoid_based_distance;
   }
 
+  // TODO(Sugahara): The search logic for best_distance has not been sufficiently considered. Should
+  // be improved.
   return best_distance;
 }
 
@@ -1144,8 +1147,12 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
   const double max_steer_angle_rate_deg_per_sec =
     parameters_.clothoid_max_steer_angle_rate_deg_per_sec;
   const double max_steer_angle_rate = deg2rad(max_steer_angle_rate_deg_per_sec);
-  constexpr double initial_forward_straight_distance = 3.0;  // [m] straight section length (temp)
+  // TODO(Sugahara): The forward straight section and backward path may not be necessary. If they
+  // are not required, consider removing these variables after verification. If a backward path is
+  // needed, avoid hardcoding and use the corresponding parameters from lane_following module
+  // instead.
   const double backward_distance = 3.0;                      // backward distance [m]
+  constexpr double initial_forward_straight_distance = 3.0;  // [m] straight section length (temp)
 
   const auto & route_handler = planner_data->route_handler;
   const auto & common_parameters = planner_data->parameters;
@@ -1156,6 +1163,7 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
   // =====================================================================
   // STEP 2: Get lane information
   // =====================================================================
+  // TODO(Sugahara): check if crossing lanes are not included
   const auto road_lanes = utils::getExtendedCurrentLanes(
     planner_data, backward_path_length, std::numeric_limits<double>::max(),
     /*forward_only_in_route*/ true);
@@ -1378,35 +1386,7 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
     }
 
     // Recalculate yaw angles based on coordinate information in final_path
-    for (size_t i = 0; i < final_path.points.size(); ++i) {
-      if (i < final_path.points.size() - 1) {
-        // Calculate direction to next point
-        const double dx = final_path.points[i + 1].point.pose.position.x -
-                          final_path.points[i].point.pose.position.x;
-        const double dy = final_path.points[i + 1].point.pose.position.y -
-                          final_path.points[i].point.pose.position.y;
-        const double yaw = std::atan2(dy, dx);
-        final_path.points[i].point.pose.orientation =
-          autoware::universe_utils::createQuaternionFromYaw(yaw);
-      } else {
-        // Last point calculated from direction with previous point
-        if (final_path.points.size() >= 2) {
-          const double dx = final_path.points[i].point.pose.position.x -
-                            final_path.points[i - 1].point.pose.position.x;
-          const double dy = final_path.points[i].point.pose.position.y -
-                            final_path.points[i - 1].point.pose.position.y;
-          const double yaw = std::atan2(dy, dx);
-          final_path.points[i].point.pose.orientation =
-            autoware::universe_utils::createQuaternionFromYaw(yaw);
-        } else {
-          // Unit quaternion if only one point
-          final_path.points[i].point.pose.orientation.x = 0.0;
-          final_path.points[i].point.pose.orientation.y = 0.0;
-          final_path.points[i].point.pose.orientation.z = 0.0;
-          final_path.points[i].point.pose.orientation.w = 1.0;
-        }
-      }
-    }
+    autoware::motion_utils::insertOrientation(final_path.points, true);
 
     // ===================================================================
     // STEP 5-6: Lane departure check and path validation
@@ -1543,10 +1523,10 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
       clothoid_path.points.empty() ? start_pose : clothoid_path.points.front().point.pose;
     pull_out_path.end_pose = target_pose;
 
-    RCLCPP_ERROR(
+    RCLCPP_WARN(
       rclcpp::get_logger("clothoid_pull_out"),
       "\n===========================================\n"
-      "Successfully generated clothoid pull-out path with steer angle %.2f deg.\n"
+      "Successfully generated clothoid pull-out path with max steer angle %.2f deg.\n"
       "===========================================",
       rad2deg(steer_angle));
 
