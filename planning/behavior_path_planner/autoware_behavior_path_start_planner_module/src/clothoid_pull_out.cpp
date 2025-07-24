@@ -69,28 +69,28 @@ std::vector<geometry_msgs::msg::Point> correct_clothoid_by_rigid_transform(
     return clothoid_points;
   }
 
-  auto clothoid_start = clothoid_points.front();
-  auto clothoid_end = clothoid_points.back();
+  const auto clothoid_start = clothoid_points.front();
+  const auto clothoid_end = clothoid_points.back();
 
   // Get target start and end positions
-  auto target_start = start_pose.position;
-  auto target_end = original_segment.getPointAtAngle(original_segment.getEndAngle());
+  const auto target_start = start_pose.position;
+  const auto target_end = original_segment.getPointAtAngle(original_segment.calculateEndAngle());
 
   // Calculate direction vectors
-  double clothoid_dx = clothoid_end.x - clothoid_start.x;
-  double clothoid_dy = clothoid_end.y - clothoid_start.y;
-  double clothoid_length = std::sqrt(clothoid_dx * clothoid_dx + clothoid_dy * clothoid_dy);
+  const double clothoid_dx = clothoid_end.x - clothoid_start.x;
+  const double clothoid_dy = clothoid_end.y - clothoid_start.y;
+  const double clothoid_length = std::sqrt(clothoid_dx * clothoid_dx + clothoid_dy * clothoid_dy);
 
-  double target_dx = target_end.x - target_start.x;
-  double target_dy = target_end.y - target_start.y;
-  double target_length = std::sqrt(target_dx * target_dx + target_dy * target_dy);
+  const double target_dx = target_end.x - target_start.x;
+  const double target_dy = target_end.y - target_start.y;
+  const double target_length = std::sqrt(target_dx * target_dx + target_dy * target_dy);
 
   // Calculate scaling factor
-  double scale_factor = (clothoid_length > 1e-10) ? target_length / clothoid_length : 1.0;
+  const double scale_factor = (clothoid_length > 1e-10) ? target_length / clothoid_length : 1.0;
 
   // Calculate rotation angle
-  double clothoid_angle = std::atan2(clothoid_dy, clothoid_dx);
-  double target_angle = std::atan2(target_dy, target_dx);
+  const double clothoid_angle = std::atan2(clothoid_dy, clothoid_dx);
+  const double target_angle = std::atan2(target_dy, target_dx);
   double rotation_angle = target_angle - clothoid_angle;
 
   // Normalize angle to [-π, π] range
@@ -103,8 +103,8 @@ std::vector<geometry_msgs::msg::Point> correct_clothoid_by_rigid_transform(
   }
 
   // Calculate transformation matrix elements
-  double cos_theta = std::cos(rotation_angle);
-  double sin_theta = std::sin(rotation_angle);
+  const double cos_theta = std::cos(rotation_angle);
+  const double sin_theta = std::sin(rotation_angle);
 
   // Apply rigid transformation
   std::vector<geometry_msgs::msg::Point> corrected_points;
@@ -140,16 +140,16 @@ std::pair<std::vector<geometry_msgs::msg::Pose>, geometry_msgs::msg::Pose>
 generate_clothoid_entry_with_yaw(
   const ClothoidSegment & segment, const geometry_msgs::msg::Pose & start_pose, int num_points)
 {
-  double A = segment.A;
-  double L = segment.L;
-  double direction_factor = segment.is_clockwise ? -1.0 : 1.0;
-  double start_yaw = tf2::getYaw(start_pose.orientation);
+  const double A = segment.A;
+  const double L = segment.L;
+  const double direction_factor = segment.is_clockwise ? -1.0 : 1.0;
+  const double start_yaw = tf2::getYaw(start_pose.orientation);
 
   std::vector<geometry_msgs::msg::Pose> poses;
 
   // Entry Clothoid: linearly increase curvature from 0 to target curvature
-  double target_curvature = (L / (A * A)) * direction_factor;
-  double start_curvature = 0.0;
+  const double target_curvature = (L / (A * A)) * direction_factor;
+  const double start_curvature = 0.0;
 
   // Accurate calculation using numerical integration
   double current_x = start_pose.position.x;
@@ -161,7 +161,8 @@ generate_clothoid_entry_with_yaw(
     geometry_msgs::msg::Pose pose;
     pose.position.x = current_x;
     pose.position.y = current_y;
-    pose.position.z = 0.0;
+    pose.position.z = 0.0;  // This is temporarily set to 0.0. The z value will be overwritten from
+                            // the lanelet when generating the final path.
     pose.orientation = autoware::universe_utils::createQuaternionFromYaw(current_psi);
     poses.push_back(pose);
 
@@ -185,7 +186,8 @@ generate_clothoid_entry_with_yaw(
   geometry_msgs::msg::Pose end_pose;
   end_pose.position.x = current_x;
   end_pose.position.y = current_y;
-  end_pose.position.z = 0.0;
+  end_pose.position.z = 0.0;  // This is temporarily set to 0.0. The z value will be overwritten
+                              // from the lanelet when generating the final path.
   end_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(current_psi);
 
   return {poses, end_pose};
@@ -281,7 +283,8 @@ generate_clothoid_exit_with_yaw(
   geometry_msgs::msg::Pose end_pose;
   end_pose.position.x = current_x;
   end_pose.position.y = current_y;
-  end_pose.position.z = start_pose.position.z;
+  end_pose.position.z = 0.0;  // This is temporarily set to 0.0. The z value will be overwritten
+                              // from the lanelet when generating the final path.
   end_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(current_psi);
 
   return {poses, end_pose};
@@ -360,8 +363,8 @@ std::optional<std::vector<geometry_msgs::msg::Point>> convert_arc_to_clothoid(
   double L_min, double point_interval)
 {
   // Extract arc information
-  double start_angle = arc_segment.getStartAngle();
-  double end_angle = arc_segment.getEndAngle();
+  double start_angle = arc_segment.calculateStartAngle();
+  double end_angle = arc_segment.calculateEndAngle();
 
   double total_angle = std::abs(end_angle - start_angle);
 
@@ -491,12 +494,10 @@ std::optional<std::vector<geometry_msgs::msg::Point>> convert_arc_to_clothoid_wi
 
 // std::optional<PathWithLaneId> might be better
 PathWithLaneId create_path_with_lane_id_from_clothoid_paths(
-  const std::vector<std::vector<geometry_msgs::msg::Point>> & clothoid_paths,
-  const geometry_msgs::msg::Pose & target_pose, double velocity, double target_velocity,
-  double acceleration, const lanelet::ConstLanelets & road_lanes,
+  const std::vector<std::vector<geometry_msgs::msg::Point>> & clothoid_paths, double velocity,
+  double target_velocity, double acceleration, const lanelet::ConstLanelets & road_lanes,
   const std::shared_ptr<autoware::route_handler::RouteHandler> & route_handler)
 {
-  (void)target_pose;  // Suppress unused parameter warning
   // Return empty PathWithLaneId if clothoid paths are empty
   if (clothoid_paths.empty()) {
     PathWithLaneId empty_path;
@@ -761,11 +762,11 @@ double calc_necessary_longitudinal_distance(
     const double arc1_length = arc1.calculateArcLength();
     const double arc2_length = arc2.calculateArcLength();
 
-    // Calculate angle differences using getStartAngle and getEndAngle
-    const double start_angle1 = arc1.getStartAngle();
-    const double end_angle1 = arc1.getEndAngle();
-    const double start_angle2 = arc2.getStartAngle();
-    const double end_angle2 = arc2.getEndAngle();
+    // Calculate angle differences using calculateStartAngle and calculateEndAngle
+    const double start_angle1 = arc1.calculateStartAngle();
+    const double end_angle1 = arc1.calculateEndAngle();
+    const double start_angle2 = arc2.calculateStartAngle();
+    const double end_angle2 = arc2.calculateEndAngle();
 
     // Calculate angle differences with proper direction adjustment
     double angle_diff1 = end_angle1 - start_angle1;
@@ -1143,8 +1144,8 @@ autoware_planning_msgs::msg::Trajectory convert_circular_path_to_trajectory(
       double progress = static_cast<double>(i) / (points_per_segment - 1);
 
       // Calculate start and end angles
-      double start_angle = segment.getStartAngle();
-      double end_angle = segment.getEndAngle();
+      double start_angle = segment.calculateStartAngle();
+      double end_angle = segment.calculateEndAngle();
       double current_angle;
 
       if (segment.is_clockwise) {
@@ -1467,8 +1468,7 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
 
     // Combine clothoid path with centerline
     PathWithLaneId path_with_lane_id = create_path_with_lane_id_from_clothoid_paths(
-      clothoid_paths, target_pose, initial_velocity, target_velocity, acceleration, all_lanes,
-      route_handler);
+      clothoid_paths, initial_velocity, target_velocity, acceleration, all_lanes, route_handler);
 
     // Combine with centerline path
     auto combined_path =

@@ -112,7 +112,7 @@ struct ArcSegment
    * @brief Calculate start angle
    * @return Start angle [rad]
    */
-  double getStartAngle() const
+  double calculateStartAngle() const
   {
     return std::atan2(start_pose.position.y - center.y, start_pose.position.x - center.x);
   }
@@ -121,7 +121,7 @@ struct ArcSegment
    * @brief Calculate end angle
    * @return End angle [rad]
    */
-  double getEndAngle() const
+  double calculateEndAngle() const
   {
     return std::atan2(end_pose.position.y - center.y, end_pose.position.x - center.x);
   }
@@ -132,8 +132,8 @@ struct ArcSegment
    */
   double calculateArcLength() const
   {
-    double start_angle = getStartAngle();
-    double end_angle = getEndAngle();
+    double start_angle = calculateStartAngle();
+    double end_angle = calculateEndAngle();
     double angle_diff = std::abs(end_angle - start_angle);
 
     // Adjust angle difference if it exceeds 2π

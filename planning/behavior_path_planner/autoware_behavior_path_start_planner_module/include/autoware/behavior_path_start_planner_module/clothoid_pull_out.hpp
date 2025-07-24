@@ -192,9 +192,8 @@ autoware_planning_msgs::msg::Trajectory convert_circular_path_to_trajectory(
  * @return PathWithLaneId
  */
 PathWithLaneId create_path_with_lane_id_from_clothoid_paths(
-  const std::vector<std::vector<geometry_msgs::msg::Point>> & clothoid_paths,
-  const geometry_msgs::msg::Pose & target_pose, double velocity, double target_velocity,
-  double acceleration, const lanelet::ConstLanelets & road_lanes,
+  const std::vector<std::vector<geometry_msgs::msg::Point>> & clothoid_paths, double velocity,
+  double target_velocity, double acceleration, const lanelet::ConstLanelets & road_lanes,
   const std::shared_ptr<autoware::route_handler::RouteHandler> & route_handler);
 
 /**
