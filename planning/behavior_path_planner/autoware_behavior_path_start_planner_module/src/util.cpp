@@ -17,11 +17,13 @@
 #include "autoware/behavior_path_planner_common/utils/path_shifter/path_shifter.hpp"
 #include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
+#include "autoware/universe_utils/math/normalization.hpp"
 
 #include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <boost/geometry/algorithms/dispatch/distance.hpp>
@@ -37,6 +39,9 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+using autoware::universe_utils::normalizeRadian;
+using autoware_utils::deg2rad;
 
 namespace autoware::behavior_path_planner::start_planner_utils
 {

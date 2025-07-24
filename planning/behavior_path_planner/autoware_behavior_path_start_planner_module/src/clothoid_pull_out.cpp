@@ -22,6 +22,7 @@
 #include "autoware/behavior_path_start_planner_module/util.hpp"
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
 #include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware/universe_utils/math/normalization.hpp"
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
 #include <autoware/interpolation/linear_interpolation.hpp>
@@ -29,6 +30,7 @@
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
@@ -56,6 +58,9 @@ using autoware_utils::calc_offset_pose;
 using lanelet::utils::getArcCoordinates;
 namespace autoware::behavior_path_planner
 {
+using autoware::universe_utils::normalizeRadian;
+using autoware_utils::deg2rad;
+using autoware_utils::rad2deg;
 using start_planner_utils::get_lane_ids_from_pose;
 using start_planner_utils::getPullOutLanes;
 using start_planner_utils::print_path_with_lane_id_details;
@@ -93,9 +98,7 @@ std::vector<geometry_msgs::msg::Point> correct_clothoid_by_rigid_transform(
   const double target_angle = std::atan2(target_dy, target_dx);
   double rotation_angle = target_angle - clothoid_angle;
 
-  // Normalize angle to [-π, π] range
-  while (rotation_angle > M_PI) rotation_angle -= 2 * M_PI;
-  while (rotation_angle < -M_PI) rotation_angle += 2 * M_PI;
+  rotation_angle = normalizeRadian(rotation_angle);
 
   // Choose shorter rotation if over 180 degrees
   if (std::abs(rotation_angle) > M_PI) {
@@ -1260,12 +1263,12 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
   // Convert degrees to radians from parameters
   std::vector<double> max_steer_angle;
   for (const auto & deg : max_steer_angle_degs) {
-    max_steer_angle.push_back(deg * M_PI / 180.0);
+    max_steer_angle.push_back(deg2rad(deg));
   }
 
   const double max_steer_angle_rate_deg_per_sec =
     parameters_.clothoid_max_steer_angle_rate_deg_per_sec;
-  const double max_steer_angle_rate = max_steer_angle_rate_deg_per_sec * M_PI / 180.0;
+  const double max_steer_angle_rate = deg2rad(max_steer_angle_rate_deg_per_sec);
   constexpr double initial_forward_straight_distance = 3.0;  // [m] straight section length (temp)
   const double backward_distance = 3.0;                      // backward distance [m]
 
@@ -1362,7 +1365,7 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
         rclcpp::get_logger("ClothoidPullOut"),
         "Circular path generation failed for steer angle %f deg. Relative pose info: %f, %f, %f. "
         "Continuing to next candidate.",
-        steer_angle * 180.0 / M_PI, relative_pose_info.longitudinal_distance_vehicle,
+        rad2deg(steer_angle), relative_pose_info.longitudinal_distance_vehicle,
         relative_pose_info.lateral_distance_vehicle, relative_pose_info.angle_diff);
       planner_debug_data.conditions_evaluation.emplace_back("circular path generation failed");
       continue;
@@ -1469,7 +1472,7 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
         rclcpp::get_logger("ClothoidPullOut"),
         "Failed to create clothoid path with lane ID for steer angle %.2f deg. Continuing to next "
         "candidate.",
-        steer_angle * 180.0 / M_PI);
+        rad2deg(steer_angle));
       planner_debug_data.conditions_evaluation.emplace_back("clothoid path creation failed");
       continue;
     }
@@ -1567,7 +1570,7 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
       RCLCPP_WARN(
         rclcpp::get_logger("ClothoidPullOut"),
         "Lane departure detected for steer angle %.2f deg. Continuing to next candidate.",
-        steer_angle * 180.0 / M_PI);
+        rad2deg(steer_angle));
       planner_debug_data.conditions_evaluation.emplace_back("lane departure");
       continue;
     }
@@ -1588,7 +1591,7 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
         RCLCPP_WARN(
           rclcpp::get_logger("ClothoidPullOut"),
           "Cropped path is empty for steer angle %.2f deg. Continuing to next candidate.",
-          steer_angle * 180.0 / M_PI);
+          rad2deg(steer_angle));
         planner_debug_data.conditions_evaluation.emplace_back("cropped path is empty");
         continue;
       }
@@ -1622,7 +1625,7 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
       RCLCPP_WARN(
         rclcpp::get_logger("ClothoidPullOut"),
         "Cropped path is invalid for steer angle %.2f deg. Continuing to next candidate.",
-        steer_angle * 180.0 / M_PI);
+        rad2deg(steer_angle));
       planner_debug_data.conditions_evaluation.emplace_back("cropped path is invalid");
       continue;
     }
@@ -1647,7 +1650,7 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
         rclcpp::get_logger("ClothoidPullOut"),
         "Collision detected for steer angle %.2f deg with margin %.2f m. Continuing to next "
         "candidate.",
-        steer_angle * 180.0 / M_PI, parameters_.shift_collision_check_distance_from_end);
+        rad2deg(steer_angle), parameters_.shift_collision_check_distance_from_end);
       planner_debug_data.conditions_evaluation.emplace_back("collision");
       continue;
     }
@@ -1670,7 +1673,7 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
       "\n===========================================\n"
       "Successfully generated clothoid pull-out path with steer angle %.2f deg.\n"
       "===========================================",
-      steer_angle * 180.0 / M_PI);
+      rad2deg(steer_angle));
 
     planner_debug_data.conditions_evaluation.emplace_back("success");
     return pull_out_path;
