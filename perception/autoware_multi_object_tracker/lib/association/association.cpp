@@ -30,7 +30,7 @@
 
 namespace
 {
-constexpr double INVALID_SCORE = -1.0;
+constexpr double INVALID_SCORE = 0.0;
 }  // namespace
 
 namespace autoware::multi_object_tracker
@@ -39,7 +39,7 @@ using autoware_utils_debug::ScopedTimeTrack;
 using Label = autoware_perception_msgs::msg::ObjectClassification;
 
 DataAssociation::DataAssociation(const AssociatorConfig & config)
-: config_(config), score_threshold_(-0.5)
+: config_(config), score_threshold_(0.01)
 {
   // Initialize the GNN solver
   gnn_solver_ptr_ = std::make_unique<gnn_solver::MuSSP>();
@@ -256,19 +256,12 @@ double DataAssociation::calculateScore(
     const double & generalized_iou_threshold = config_.unknown_association_giou_threshold;
     const double generalized_iou = shapes::get2dGeneralizedIoU(tracked_object, measurement_object);
     if (generalized_iou < generalized_iou_threshold) {
-      return 0.0;
+      return INVALID_SCORE;
     }
     // rescale score to [0, 1]
     return (generalized_iou - generalized_iou_threshold) / (1.0 - generalized_iou_threshold);
   }
 
-  // area gate
-  const double max_area = config_.max_area_matrix(tracker_label, measurement_label);
-  const double min_area = config_.min_area_matrix(tracker_label, measurement_label);
-  const double & area = measurement_object.area;
-  if (area < min_area || area > max_area) return INVALID_SCORE;
-
-  // dist gate
   const double max_dist_sq = config_.max_dist_matrix(tracker_label, measurement_label);
   const double dx = measurement_object.pose.position.x - tracked_object.pose.position.x;
   const double dy = measurement_object.pose.position.y - tracked_object.pose.position.y;
@@ -322,7 +315,8 @@ double DataAssociation::calculateScore(
     }
   }
 
-  return iou_score;
+  // rescale score to [0, 1]
+  return (iou_score - min_iou) / (1.0 - min_iou);
 }
 
 bool DataAssociation::hasSignificantShapeChange(size_t tracker_idx, size_t measurement_idx) const
