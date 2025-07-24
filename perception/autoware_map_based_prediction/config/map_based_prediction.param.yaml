@@ -32,6 +32,8 @@
     use_crosswalk_user_history:
       match_lost_and_appeared_users: false
       remember_lost_users: false
+    crossing_intention_duration: 0.3    # [s] Minimum duration that crossing intention must continuously persist to be judged as true
+    no_crossing_intention_duration: 1.0 # [s] Minimum duration that lack of crossing intention must continuously persist to be judged as false
 
     # parameters for lc prediction
     lane_change_detection:
