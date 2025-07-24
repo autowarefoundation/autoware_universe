@@ -81,17 +81,22 @@ Receive multiple control commands and select one to forward to the vehicle.
 
 ### Parameter Naming Convention
 
-The parameters follow specific naming patterns to clearly distinguish between different types of constraints:
+The parameters follow specific naming patterns to clearly distinguish between different types of constraints and their relationships:
 
 #### Pattern 1: `[constraint]_lim_for_[target]`
 
 - **Format**: `[physical_constraint]_lim_for_[controlled_variable]`
+- **Description**: Defines limits based on physical constraints (acceleration, jerk, etc.) applied to control variables
 
 #### Pattern 2: `[target]_[constraint]_lim_from_[reference]`
 
 - **Format**: `[controlled_variable]_[constraint_type]_lim_from_[reference_variable]`
-- **Examples**:
-  - `steer_cmd_diff_lim_from_current_steer` - Command steering difference limit from current steering angle
+- **Description**: Defines limits on the difference or deviation of a control variable from a reference value
+
+#### Pattern 3: `[target]_lim`
+
+- **Format**: `[controlled_variable]_lim`
+- **Description**: Defines absolute limits for control variables
 
 ## Functionality
 
