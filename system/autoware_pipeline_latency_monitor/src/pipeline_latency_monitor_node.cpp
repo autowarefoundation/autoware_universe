@@ -172,20 +172,21 @@ void PipelineLatencyMonitorNode::calculate_total_latency()
   // we go through the rest of the sequence in reverse order with the following constraint:
   // end of current step < start of next step
   for (step_it++; step_it != input_sequence_.rend(); ++step_it) {
-    const auto & input = *step_it;
-    if (!has_valid_data(input.latency_history)) {
+    const auto & step_input = *step_it;
+    if (!has_valid_data(step_input.latency_history)) {
       continue;
     }
-    for (auto it = input.latency_history.rbegin(); it != input.latency_history.rend(); ++it) {
+    for (auto it = step_input.latency_history.rbegin(); it != step_input.latency_history.rend();
+         ++it) {
       const rclcpp::Time end_of_current_step =
-        it->timestamp + (input.timestamp_meaning == TimestampMeaning::start
+        it->timestamp + (step_input.timestamp_meaning == TimestampMeaning::start
                            ? to_duration(it->latency_ms)
                            : to_duration(0.0));
       if (is_timestamp_older(end_of_current_step, start_of_next_step)) {
         total_latency_ms_ += it->latency_ms;
         start_of_next_step = it->timestamp;
         debug_ss << " + " << step_it->name << "=" << it->latency_ms;
-        if (input.timestamp_meaning == TimestampMeaning::end) {
+        if (step_input.timestamp_meaning == TimestampMeaning::end) {
           start_of_next_step -= to_duration(it->latency_ms);
         }
         break;
