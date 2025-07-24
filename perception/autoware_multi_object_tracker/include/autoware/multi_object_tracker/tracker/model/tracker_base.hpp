@@ -66,7 +66,8 @@ private:
   float total_existence_probability_;
   std::vector<autoware_perception_msgs::msg::ObjectClassification> classification_;
 
-  // exponential moving average configs for conditioned update
+  // conditioned update configs
+  // EMA/ema below are abbreviation for exponential moving average
   static constexpr double EMA_ALPHA = 0.2;
   static constexpr double SHAPE_VARIATION_THRESHOLD = 0.2;
   static constexpr size_t WEAK_UPDATE_MAX_COUNT = 10;
