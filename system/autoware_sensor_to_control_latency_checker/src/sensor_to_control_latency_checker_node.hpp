@@ -30,24 +30,27 @@
 namespace autoware::system::sensor_to_control_latency_checker
 {
 
-struct TimestampedValue
+/// @brief a timestamp and measured latency associated with a processing step
+struct ProcessData
 {
-  rclcpp::Time timestamp;
-  double value;
+  rclcpp::Time timestamp;  // either the start or end of the process
+  double latency_ms;       // measured duration of the process
 
-  TimestampedValue(const rclcpp::Time & ts, double val) : timestamp(ts), value(val) {}
+  ProcessData(const rclcpp::Time & ts, double val) : timestamp(ts), latency_ms(val) {}
 };
 
+/// @brief meaning of a timestamp (either start or end of a process)
 enum class TimestampMeaning { start, end };
 
-struct InputLatency
+/// @brief input for a process
+struct ProcessInput
 {
   std::string name;
   std::string topic;
   std::string topic_type;
   TimestampMeaning timestamp_meaning;
-  double latency_multiplier;
-  std::deque<TimestampedValue> history;
+  double latency_multiplier;  // used when the received value is not in millisecond
+  std::deque<ProcessData> latency_history;
 };
 
 class SensorToControlLatencyCheckerNode : public rclcpp::Node
@@ -62,7 +65,7 @@ private:
   size_t window_size_{};
 
   // Sequence of latency inputs
-  std::vector<InputLatency> input_sequence_;
+  std::vector<ProcessInput> input_sequence_;
   // Offsets to add to the total latency (ms)
   std::vector<double> latency_offsets_;
   // Current total latency
@@ -92,7 +95,7 @@ private:
 
   // Helper functions
   void update_history(
-    std::deque<TimestampedValue> & history, const rclcpp::Time & timestamp, double value) const;
+    std::deque<ProcessData> & history, const rclcpp::Time & timestamp, double value) const;
   bool is_timestamp_older(const rclcpp::Time & timestamp1, const rclcpp::Time & timestamp2) const;
 };
 

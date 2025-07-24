@@ -33,20 +33,20 @@ namespace autoware::system::sensor_to_control_latency_checker
 namespace
 {
 
-bool has_valid_data(const std::deque<TimestampedValue> & history)
+bool has_valid_data(const std::deque<ProcessData> & history)
 {
   return !history.empty();
 }
 
-double get_latest_value(const std::deque<TimestampedValue> & history)
+double get_latest_value(const std::deque<ProcessData> & history)
 {
   if (!has_valid_data(history)) {
     return 0.0;
   }
-  return history.back().value;
+  return history.back().latency_ms;
 }
 
-rclcpp::Time get_latest_timestamp(const std::deque<TimestampedValue> & history)
+rclcpp::Time get_latest_timestamp(const std::deque<ProcessData> & history)
 {
   if (history.empty()) {
     return rclcpp::Time(0);
@@ -75,7 +75,7 @@ SensorToControlLatencyCheckerNode::SensorToControlLatencyCheckerNode(
     const auto latency_multiplier =
       declare_parameter<double>("processing_steps." + step + ".latency_multiplier");
     const auto index = input_sequence_.size();
-    InputLatency & input = input_sequence_.emplace_back();
+    ProcessInput & input = input_sequence_.emplace_back();
     input.name = step;
     input.topic = topic;
     input.topic_type = topic_type;
@@ -84,32 +84,33 @@ SensorToControlLatencyCheckerNode::SensorToControlLatencyCheckerNode(
     input.latency_multiplier = latency_multiplier;
 
     // generic callback
-    const auto callback =
-      [this, index](const std::shared_ptr<rclcpp::SerializedMessage> & serialized_msg) {
-        auto & input = this->input_sequence_[index];
-        if (input.topic_type == "autoware_internal_debug_msgs/msg/Float64Stamped") {
-          static const rclcpp::Serialization<autoware_internal_debug_msgs::msg::Float64Stamped>
-            serialization;
-          autoware_internal_debug_msgs::msg::Float64Stamped msg;
-          serialization.deserialize_message(serialized_msg.get(), &msg);
-          this->update_history(input.history, msg.stamp, msg.data * input.latency_multiplier);
-          RCLCPP_DEBUG(
-            get_logger(), "Received %s: %.2f", input.name.c_str(),
-            msg.data * input.latency_multiplier);
-        } else if (input.topic_type == "autoware_planning_validator/msg/PlanningValidatorStatus") {
-          static const rclcpp::Serialization<
-            autoware_planning_validator::msg::PlanningValidatorStatus>
-            serialization;
-          autoware_planning_validator::msg::PlanningValidatorStatus msg;
-          serialization.deserialize_message(serialized_msg.get(), &msg);
-          this->update_history(input.history, msg.stamp, msg.latency * input.latency_multiplier);
-          RCLCPP_DEBUG(
-            get_logger(), "Received %s: %.2f", input.name.c_str(),
-            msg.latency * input.latency_multiplier);
-        } else {
-          throw std::runtime_error("unsupported message type " + input.topic_type);
-        }
-      };
+    const auto callback = [this, index](
+                            const std::shared_ptr<rclcpp::SerializedMessage> & serialized_msg) {
+      auto & input = this->input_sequence_[index];
+      if (input.topic_type == "autoware_internal_debug_msgs/msg/Float64Stamped") {
+        static const rclcpp::Serialization<autoware_internal_debug_msgs::msg::Float64Stamped>
+          serialization;
+        autoware_internal_debug_msgs::msg::Float64Stamped msg;
+        serialization.deserialize_message(serialized_msg.get(), &msg);
+        this->update_history(input.latency_history, msg.stamp, msg.data * input.latency_multiplier);
+        RCLCPP_DEBUG(
+          get_logger(), "Received %s: %.2f", input.name.c_str(),
+          msg.data * input.latency_multiplier);
+      } else if (input.topic_type == "autoware_planning_validator/msg/PlanningValidatorStatus") {
+        static const rclcpp::Serialization<
+          autoware_planning_validator::msg::PlanningValidatorStatus>
+          serialization;
+        autoware_planning_validator::msg::PlanningValidatorStatus msg;
+        serialization.deserialize_message(serialized_msg.get(), &msg);
+        this->update_history(
+          input.latency_history, msg.stamp, msg.latency * input.latency_multiplier);
+        RCLCPP_DEBUG(
+          get_logger(), "Received %s: %.2f", input.name.c_str(),
+          msg.latency * input.latency_multiplier);
+      } else {
+        throw std::runtime_error("unsupported message type " + input.topic_type);
+      }
+    };
     generic_subscribers_.push_back(
       create_generic_subscription(topic, topic_type, rclcpp::QoS(1), callback));
   }
@@ -161,11 +162,11 @@ void SensorToControlLatencyCheckerNode::calculate_total_latency()
   auto step_it = input_sequence_.rbegin();
   // use the latest latency of the last step in the sequence without any constraint
   const auto & input = *step_it;
-  if (has_valid_data(input.history)) {
-    const auto latency = get_latest_value(input.history);
+  if (has_valid_data(input.latency_history)) {
+    const auto latency = get_latest_value(input.latency_history);
     total_latency_ms_ += latency;
     debug_ss << step_it->name << "=" << latency;
-    start_of_next_step = get_latest_timestamp(input.history);
+    start_of_next_step = get_latest_timestamp(input.latency_history);
     if (input.timestamp_meaning == TimestampMeaning::end) {
       start_of_next_step -= to_duration(latency);
     }
@@ -174,19 +175,20 @@ void SensorToControlLatencyCheckerNode::calculate_total_latency()
   // end of current step < start of next step
   for (step_it++; step_it != input_sequence_.rend(); ++step_it) {
     const auto & input = *step_it;
-    if (!has_valid_data(input.history)) {
+    if (!has_valid_data(input.latency_history)) {
       continue;
     }
-    for (auto it = input.history.rbegin(); it != input.history.rend(); ++it) {
+    for (auto it = input.latency_history.rbegin(); it != input.latency_history.rend(); ++it) {
       const rclcpp::Time end_of_current_step =
-        it->timestamp + (input.timestamp_meaning == TimestampMeaning::start ? to_duration(it->value)
-                                                                            : to_duration(0.0));
+        it->timestamp + (input.timestamp_meaning == TimestampMeaning::start
+                           ? to_duration(it->latency_ms)
+                           : to_duration(0.0));
       if (is_timestamp_older(end_of_current_step, start_of_next_step)) {
-        total_latency_ms_ += it->value;
+        total_latency_ms_ += it->latency_ms;
         start_of_next_step = it->timestamp;
-        debug_ss << " + " << step_it->name << "=" << it->value;
+        debug_ss << " + " << step_it->name << "=" << it->latency_ms;
         if (input.timestamp_meaning == TimestampMeaning::end) {
-          start_of_next_step -= to_duration(it->value);
+          start_of_next_step -= to_duration(it->latency_ms);
         }
         break;
       }
@@ -218,7 +220,7 @@ void SensorToControlLatencyCheckerNode::publish_total_latency()
 
   // Publish latest latency values from each topic as debug information
   for (const auto & input : input_sequence_) {
-    const auto latest_latency = get_latest_value(input.history);
+    const auto latest_latency = get_latest_value(input.latency_history);
     debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       input.name, latest_latency);
   }
@@ -239,13 +241,13 @@ void SensorToControlLatencyCheckerNode::check_total_latency(
 
   std::string uninitialized_inputs;
   for (const auto & input : input_sequence_) {
-    if (has_valid_data(input.history)) {
+    if (!has_valid_data(input.latency_history)) {
       if (!uninitialized_inputs.empty()) {
         uninitialized_inputs += ", ";
       }
       uninitialized_inputs += input.name;
     } else {
-      const auto latest_latency = get_latest_value(input.history);
+      const auto latest_latency = get_latest_value(input.latency_history);
       stat.add(input.name, latest_latency);
     }
   }
@@ -263,7 +265,7 @@ void SensorToControlLatencyCheckerNode::check_total_latency(
 }
 
 void SensorToControlLatencyCheckerNode::update_history(
-  std::deque<TimestampedValue> & history, const rclcpp::Time & timestamp, double value) const
+  std::deque<ProcessData> & history, const rclcpp::Time & timestamp, double value) const
 {
   // Add new value to history
   history.emplace_back(timestamp, value);
