@@ -27,6 +27,7 @@
     samples_filter_gyro_rate: 6
     buffer_size_gyro: 200 # size of the buffer to store gyro data
     ekf_process_noise_q_angle: 1e-12
-    ekf_variance_p_angle: 1e-6
+    ekf_variance_p_angle: 1e-8
     ekf_measurement_noise_r_angle: 0.00005
+    min_covariance_angle: 1e-10 # minimum covariance for angle estimation
     decay_coefficient: 0.99999998 # decay coefficient for EKF

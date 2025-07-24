@@ -110,6 +110,7 @@ private:
   const double percentage_scale_rate_allow_correct_;
   const double warning_covariance_;
   const double min_covariance_;
+  const double min_covariance_angle_;
   const double alpha_gyro_;
   const double ekf_process_noise_q_angle_;
   const double ekf_variance_p_angle_;
