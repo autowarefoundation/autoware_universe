@@ -61,7 +61,7 @@ using road_user_stop::utils::to_polygon_2d;
 
 namespace
 {
-std::vector<TrajectoryPoint> resampleTrajectoryPoints(
+std::vector<TrajectoryPoint> resample_trajectory_points(
   const std::vector<TrajectoryPoint> & traj_points, const double interval)
 {
   const auto traj = autoware::motion_utils::convertToTrajectory(traj_points);
@@ -69,12 +69,12 @@ std::vector<TrajectoryPoint> resampleTrajectoryPoints(
   return autoware::motion_utils::convertToTrajectoryPointArray(resampled_traj);
 }
 
-autoware_utils_geometry::Point2d convertPoint(const Point & p)
+autoware_utils_geometry::Point2d convert_point(const Point & p)
 {
   return autoware_utils_geometry::Point2d{p.x, p.y};
 }
 
-double calcMinimumDistanceToStop(
+double calc_minimum_distance_to_stop(
   const double initial_vel, const double max_acc, const double min_acc)
 {
   if (initial_vel < 0.0) {
@@ -957,7 +957,7 @@ std::optional<double> RoadUserStopModule::calc_candidate_zero_vel_dist(
   if (param.option.suppress_sudden_stop) {
     const auto acceptable_stop_acc = [&]() -> std::optional<double> {
       const double distance_to_judge_suddenness = std::min(
-        calcMinimumDistanceToStop(
+        calc_minimum_distance_to_stop(
           planner_data->current_odometry.twist.twist.linear.x, common_param_.limit_max_accel,
           param.stop_planning.sudden_object_acc_threshold),
         param.stop_planning.sudden_object_dist_threshold);
@@ -981,7 +981,7 @@ std::optional<double> RoadUserStopModule::calc_candidate_zero_vel_dist(
     const double acceptable_stop_pos =
       autoware::motion_utils::calcSignedArcLength(
         traj_points, 0, planner_data->current_odometry.pose.pose.position) +
-      calcMinimumDistanceToStop(
+      calc_minimum_distance_to_stop(
         planner_data->current_odometry.twist.twist.linear.x, common_param_.limit_max_accel,
         acceptable_stop_acc.value());
 
@@ -1048,10 +1048,10 @@ double RoadUserStopModule::calc_margin_from_obstacle_on_curve(
       const auto forward_ego_pose = autoware_utils_geometry::calc_offset_pose(
         ego_pose, param.stop_planning.longitudinal_margin.default_margin + 3.0, 0.0, 0.0);
       const auto ego_straight_segment = autoware_utils_geometry::Segment2d{
-        convertPoint(ego_pose.position), convertPoint(forward_ego_pose.position)};
+        convert_point(ego_pose.position), convert_point(forward_ego_pose.position)};
       return boost::geometry::distance(ego_straight_segment, object_polygon);
     };
-  const auto resampled_short_traj_points = resampleTrajectoryPoints(short_traj_points, 0.5);
+  const auto resampled_short_traj_points = resample_trajectory_points(short_traj_points, 0.5);
   const auto object_polygon =
     autoware_utils_geometry::to_polygon2d(stop_obstacle.pose, stop_obstacle.shape);
   const auto collision_idx = [&]() -> std::optional<size_t> {
