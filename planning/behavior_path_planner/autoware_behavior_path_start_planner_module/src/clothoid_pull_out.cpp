@@ -19,6 +19,7 @@
 #include "autoware/behavior_path_planner_common/utils/path_safety_checker/objects_filtering.hpp"
 #include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
+#include "autoware/behavior_path_start_planner_module/data_structs.hpp"
 #include "autoware/behavior_path_start_planner_module/pull_out_path.hpp"
 #include "autoware/behavior_path_start_planner_module/util.hpp"
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
@@ -767,19 +768,9 @@ double calc_necessary_longitudinal_distance(
     const double end_angle2 = arc2.calculateEndAngle();
 
     // Calculate angle differences with proper direction adjustment
-    double angle_diff1 = end_angle1 - start_angle1;
-    if (arc1.is_clockwise && angle_diff1 > 0) {
-      angle_diff1 -= 2 * M_PI;
-    } else if (!arc1.is_clockwise && angle_diff1 < 0) {
-      angle_diff1 += 2 * M_PI;
-    }
+    const double total_angle1 = std::abs(end_angle1 - start_angle1);
 
-    double angle_diff2 = end_angle2 - start_angle2;
-    if (arc2.is_clockwise && angle_diff2 > 0) {
-      angle_diff2 -= 2 * M_PI;
-    } else if (!arc2.is_clockwise && angle_diff2 < 0) {
-      angle_diff2 += 2 * M_PI;
-    }
+    const double total_angle2 = std::abs(end_angle2 - start_angle2);
 
     // Calculate clothoid parameters for each arc based on their respective radii
     // Arc1 clothoid parameters (based on arc1.radius)
@@ -797,8 +788,6 @@ double calc_necessary_longitudinal_distance(
     const double alpha_clothoid2 = (L_min2 * L_min2) / (2.0 * A_min2 * A_min2);
 
     // Check if arc lengths are sufficient for clothoid conversion
-    const double total_angle1 = std::abs(angle_diff1);
-    const double total_angle2 = std::abs(angle_diff2);
     const bool sufficient_for_clothoid1 = (total_angle1 >= 2.0 * alpha_clothoid1);
     const bool sufficient_for_clothoid2 = (total_angle2 >= 2.0 * alpha_clothoid2);
 
@@ -996,18 +985,9 @@ std::optional<CompositeArcPath> calc_circular_path(
   double distance_centers = std::sqrt(dx_centers * dx_centers + dy_centers * dy_centers);
 
   double tangent_x_rel, tangent_y_rel;
-
-  // Calculate tangent point for external tangent case
-  double external_tangent_distance = minimum_radius + R_goal;
-  double tolerance = 0.01;
-
   if (distance_centers < 1e-6) {
     tangent_x_rel = (C_rx_rel + C_lx_rel) / 2.0;
     tangent_y_rel = (C_ry_rel + C_ly_rel) / 2.0;
-  } else if (std::abs(distance_centers - external_tangent_distance) <= tolerance) {
-    double ratio = minimum_radius / distance_centers;
-    tangent_x_rel = C_rx_rel + ratio * dx_centers;
-    tangent_y_rel = C_ry_rel + ratio * dy_centers;
   } else {
     double ratio = minimum_radius / distance_centers;
     tangent_x_rel = C_rx_rel + ratio * dx_centers;
@@ -1017,21 +997,21 @@ std::optional<CompositeArcPath> calc_circular_path(
   // First arc (from start point to tangent point, clockwise)
   double start_angle1 = std::atan2(y_start_rel - C_ry_rel, x_start_rel - C_rx_rel);
   double end_angle1 = std::atan2(tangent_y_rel - C_ry_rel, tangent_x_rel - C_rx_rel);
-  double angle_diff1 = end_angle1 - start_angle1;
+  const double total_angle1 = std::abs(end_angle1 - start_angle1);
 
   // Adjust for clockwise direction
-  if (angle_diff1 > 0) {
-    angle_diff1 -= 2 * PI;
+  if (total_angle1 > 0) {
+    end_angle1 -= 2 * PI;
   }
 
   // Second arc (from tangent point to goal point, counter-clockwise)
   double start_angle2 = std::atan2(tangent_y_rel - C_ly_rel, tangent_x_rel - C_lx_rel);
   double end_angle2 = std::atan2(y_goal_rel - C_ly_rel, x_goal_rel - C_lx_rel);
-  double angle_diff2 = end_angle2 - start_angle2;
+  const double total_angle2 = std::abs(end_angle2 - start_angle2);
 
   // Adjust for counter-clockwise direction
-  if (angle_diff2 < 0) {
-    angle_diff2 += 2 * PI;
+  if (total_angle2 < 0) {
+    end_angle2 += 2 * PI;
   }
 
   // Prepare for transformation to global coordinate system
@@ -1439,6 +1419,7 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
 
     PathWithLaneId cropped_path;
     if (parameters_.check_clothoid_path_lane_departure) {
+      std::vector<lanelet::Id> fused_id_crop_points{};
       // I don't understand the meaning of cropping points outside lanes
       cropped_path = boundary_departure_checker_->cropPointsOutsideOfLanes(
         lanelet_map_ptr, clothoid_path, start_segment_idx, fused_id_crop_points,
