@@ -200,7 +200,7 @@ To prevent the predicted crossing path from chattering due to noise in the estim
 
 !!! note
 
-    Increasing `no_crossing_intention_duration` can reduce the frequency of false positives caused by noise that mistakenly indicates crossing intention. However, it also delays the system’s response to pedestrians who actually intend to cross. Therefore, setting this parameter to a large value is **not recommended**.
+    Increasing `crossing_intention_duration` can reduce the frequency of false positives caused by noise that mistakenly indicates crossing intention. However, it also delays the system’s response to pedestrians who actually intend to cross. Therefore, setting this parameter to a large value is **not recommended**.
 
 This module takes into account the corresponding traffic light information.
 When RED signal is indicated, we assume the target object will not walk across.
