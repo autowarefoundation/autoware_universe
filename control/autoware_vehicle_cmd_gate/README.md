@@ -48,36 +48,50 @@ Receive multiple control commands and select one to forward to the vehicle.
 
 ## Parameters
 
-| Parameter                                       | Type     | Description                                                                                                                                                                                 |
-| ----------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `update_period`                                 | double   | update period                                                                                                                                                                               |
-| `use_emergency_handling`                        | bool     | true when emergency handler is used                                                                                                                                                         |
-| `check_external_emergency_heartbeat`            | bool     | true when checking heartbeat for emergency stop                                                                                                                                             |
-| `system_emergency_heartbeat_timeout`            | double   | timeout for system emergency                                                                                                                                                                |
-| `external_emergency_stop_heartbeat_timeout`     | double   | timeout for external emergency                                                                                                                                                              |
-| `filter_activated_count_threshold`              | int      | threshold for filter activation                                                                                                                                                             |
-| `filter_activated_velocity_threshold`           | double   | velocity threshold for filter activation                                                                                                                                                    |
-| `stop_hold_acceleration`                        | double   | longitudinal acceleration cmd when vehicle should stop                                                                                                                                      |
-| `emergency_acceleration`                        | double   | longitudinal acceleration cmd when vehicle stop with emergency                                                                                                                              |
-| `moderate_stop_service_acceleration`            | double   | longitudinal acceleration cmd when vehicle stop with moderate stop service                                                                                                                  |
-| `nominal.vel_lim`                               | double   | limit of longitudinal velocity (activated in AUTONOMOUS operation mode)                                                                                                                     |
-| `nominal.reference_speed_points`                | <double> | velocity point used as a reference when calculate control command limit (activated in AUTONOMOUS operation mode). The size of this array must be equivalent to the size of the limit array. |
-| `nominal.lon_acc_lim_for_lon_vel`               | <double> | array of limits for longitudinal acceleration (activated in AUTONOMOUS operation mode)                                                                                                      |
-| `nominal.lon_jerk_lim_for_lon_acc`              | <double> | array of limits for longitudinal jerk (activated in AUTONOMOUS operation mode)                                                                                                              |
-| `nominal.lat_acc_lim_for_steer`                 | <double> | array of limits for lateral acceleration (activated in AUTONOMOUS operation mode)                                                                                                           |
-| `nominal.lat_jerk_lim_for_steer`                | <double> | array of limits for lateral jerk (activated in AUTONOMOUS operation mode)                                                                                                                   |
-| `nominal.steer_lim`                             | <double> | array of limits for steering angle (activated in AUTONOMOUS operation mode)                                                                                                                 |
-| `nominal.steer_rate_lim_for_cmd_steer`          | <double> | array of limits for command steering rate (activated in AUTONOMOUS operation mode)                                                                                                          |
-| `nominal.steer_diff_lim_for_actual_steer`       | <double> | array of limits for difference between actual and command steering angle (activated in AUTONOMOUS operation mode)                                                                           |
-| `on_transition.vel_lim`                         | double   | limit of longitudinal velocity (activated in TRANSITION operation mode)                                                                                                                     |
-| `on_transition.reference_speed_points`          | <double> | velocity point used as a reference when calculate control command limit (activated in TRANSITION operation mode). The size of this array must be equivalent to the size of the limit array. |
-| `on_transition.lon_acc_lim_for_lon_vel`         | <double> | array of limits for longitudinal acceleration (activated in TRANSITION operation mode)                                                                                                      |
-| `on_transition.lon_jerk_lim_for_lon_acc`        | <double> | array of limits for longitudinal jerk (activated in TRANSITION operation mode)                                                                                                              |
-| `on_transition.lat_acc_lim_for_steer`           | <double> | array of limits for lateral acceleration (activated in TRANSITION operation mode)                                                                                                           |
-| `on_transition.lat_jerk_lim_for_steer`          | <double> | array of limits for lateral jerk (activated in TRANSITION operation mode)                                                                                                                   |
-| `on_transition.steer_lim`                       | <double> | array of limits for steering angle (activated in TRANSITION operation mode)                                                                                                                 |
-| `on_transition.steer_rate_lim_for_cmd_steer`    | <double> | array of limits for command steering rate (activated in TRANSITION operation mode)                                                                                                          |
-| `on_transition.steer_diff_lim_for_actual_steer` | <double> | array of limits for difference between actual and command steering angle (activated in TRANSITION operation mode)                                                                           |
+| Parameter                                             | Type     | Description                                                                                                                                                                                 |
+| ----------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `update_period`                                       | double   | update period                                                                                                                                                                               |
+| `use_emergency_handling`                              | bool     | true when emergency handler is used                                                                                                                                                         |
+| `check_external_emergency_heartbeat`                  | bool     | true when checking heartbeat for emergency stop                                                                                                                                             |
+| `system_emergency_heartbeat_timeout`                  | double   | timeout for system emergency                                                                                                                                                                |
+| `external_emergency_stop_heartbeat_timeout`           | double   | timeout for external emergency                                                                                                                                                              |
+| `filter_activated_count_threshold`                    | int      | threshold for filter activation                                                                                                                                                             |
+| `filter_activated_velocity_threshold`                 | double   | velocity threshold for filter activation                                                                                                                                                    |
+| `stop_hold_acceleration`                              | double   | longitudinal acceleration cmd when vehicle should stop                                                                                                                                      |
+| `emergency_acceleration`                              | double   | longitudinal acceleration cmd when vehicle stop with emergency                                                                                                                              |
+| `moderate_stop_service_acceleration`                  | double   | longitudinal acceleration cmd when vehicle stop with moderate stop service                                                                                                                  |
+| `nominal.vel_lim`                                     | double   | limit of longitudinal velocity (activated in AUTONOMOUS operation mode)                                                                                                                     |
+| `nominal.reference_speed_points`                      | <double> | velocity point used as a reference when calculate control command limit (activated in AUTONOMOUS operation mode). The size of this array must be equivalent to the size of the limit array. |
+| `nominal.lon_acc_lim_for_lon_vel`                     | <double> | array of limits for longitudinal acceleration (activated in AUTONOMOUS operation mode)                                                                                                      |
+| `nominal.lon_jerk_lim_for_lon_acc`                    | <double> | array of limits for longitudinal jerk (activated in AUTONOMOUS operation mode)                                                                                                              |
+| `nominal.lat_acc_lim_for_steer_cmd`                   | <double> | array of limits for lateral acceleration (activated in AUTONOMOUS operation mode)                                                                                                           |
+| `nominal.lat_jerk_lim_for_steer_cmd`                  | <double> | array of limits for lateral jerk (activated in AUTONOMOUS operation mode)                                                                                                                   |
+| `nominal.steer_cmd_lim`                               | <double> | array of limits for steering angle (activated in AUTONOMOUS operation mode)                                                                                                                 |
+| `nominal.steer_rate_lim_for_steer_cmd`                | <double> | array of limits for command steering rate (activated in AUTONOMOUS operation mode)                                                                                                          |
+| `nominal.steer_cmd_diff_lim_from_current_steer`       | <double> | array of limits for difference between current and command steering angle (activated in AUTONOMOUS operation mode)                                                                          |
+| `on_transition.vel_lim`                               | double   | limit of longitudinal velocity (activated in TRANSITION operation mode)                                                                                                                     |
+| `on_transition.reference_speed_points`                | <double> | velocity point used as a reference when calculate control command limit (activated in TRANSITION operation mode). The size of this array must be equivalent to the size of the limit array. |
+| `on_transition.lon_acc_lim_for_lon_vel`               | <double> | array of limits for longitudinal acceleration (activated in TRANSITION operation mode)                                                                                                      |
+| `on_transition.lon_jerk_lim_for_lon_acc`              | <double> | array of limits for longitudinal jerk (activated in TRANSITION operation mode)                                                                                                              |
+| `on_transition.lat_acc_lim_for_steer_cmd`             | <double> | array of limits for lateral acceleration (activated in TRANSITION operation mode)                                                                                                           |
+| `on_transition.lat_jerk_lim_for_steer_cmd`            | <double> | array of limits for lateral jerk (activated in TRANSITION operation mode)                                                                                                                   |
+| `on_transition.steer_cmd_lim`                         | <double> | array of limits for steering angle (activated in TRANSITION operation mode)                                                                                                                 |
+| `on_transition.steer_rate_lim_for_steer_cmd`          | <double> | array of limits for command steering rate (activated in TRANSITION operation mode)                                                                                                          |
+| `on_transition.steer_cmd_diff_lim_from_current_steer` | <double> | array of limits for difference between current and command steering angle (activated in TRANSITION operation mode)                                                                          |
+
+### Parameter Naming Convention
+
+The parameters follow specific naming patterns to clearly distinguish between different types of constraints:
+
+#### Pattern 1: `[constraint]_lim_for_[target]`
+
+- **Format**: `[physical_constraint]_lim_for_[controlled_variable]`
+
+#### Pattern 2: `[target]_[constraint]_lim_from_[reference]`
+
+- **Format**: `[controlled_variable]_[constraint_type]_lim_from_[reference_variable]`
+- **Examples**:
+  - `steer_cmd_diff_lim_from_current_steer` - Command steering difference limit from current steering angle
 
 ## Functionality
 
