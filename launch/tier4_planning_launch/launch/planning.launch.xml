@@ -13,6 +13,7 @@
   <!-- Auto mode setting-->
   <arg name="enable_all_modules_auto_mode"/>
   <arg name="is_simulation"/>
+  <arg name="launch_remaining_distance_time_calculator" default="false"/>
 
   <group>
     <push-ros-namespace namespace="planning"/>
@@ -52,7 +53,7 @@
     </group>
 
     <!-- mission remaining distance and time calculator -->
-    <group>
+    <group if="$(var launch_remaining_distance_time_calculator)">
       <include file="$(find-pkg-share autoware_remaining_distance_time_calculator)/launch/remaining_distance_time_calculator.launch.xml"/>
     </group>
   </group>
