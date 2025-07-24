@@ -1,4 +1,4 @@
-// Copyright 2024 The Autoware Contributors
+// Copyright 2025 The Autoware Contributors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 #define SENSOR_TO_CONTROL_LATENCY_CHECKER_NODE_HPP_
 
 #include <autoware/universe_utils/ros/debug_publisher.hpp>
-#include <autoware_planning_validator/msg/planning_validator_status.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -25,6 +24,8 @@
 
 #include <deque>
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace autoware::system::sensor_to_control_latency_checker
 {
@@ -35,6 +36,18 @@ struct TimestampedValue
   double value;
 
   TimestampedValue(const rclcpp::Time & ts, double val) : timestamp(ts), value(val) {}
+};
+
+enum class TimestampMeaning { start, end };
+
+struct InputLatency
+{
+  std::string name;
+  std::string topic;
+  std::string topic_type;
+  TimestampMeaning timestamp_meaning;
+  double latency_multiplier;
+  std::deque<TimestampedValue> history;
 };
 
 class SensorToControlLatencyCheckerNode : public rclcpp::Node
@@ -48,31 +61,15 @@ private:
   double latency_threshold_ms_{};
   size_t window_size_{};
 
-  // Offset processing times for each layer (ms)
-  double sensor_offset_ms_{};
-  double perception_offset_ms_{};
-  double planning_offset_ms_{};
-  double control_offset_ms_{};
-  double vehicle_offset_ms_{};
-
-  // History of received values (with timestamps)
-  std::deque<TimestampedValue> meas_to_tracked_object_history_;
-  std::deque<TimestampedValue> map_based_prediction_processing_time_history_;
-  std::deque<TimestampedValue> planning_component_latency_history_;
-  std::deque<TimestampedValue> control_component_latency_history_;
-
+  // Sequence of latency inputs
+  std::vector<InputLatency> input_sequence_;
+  // Offsets to add to the total latency (ms)
+  std::vector<double> latency_offsets_;
   // Current total latency
   double total_latency_ms_{};
 
-  // Subscribers
-  rclcpp::Subscription<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
-    meas_to_tracked_object_sub_;
-  rclcpp::Subscription<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
-    processing_time_prediction_sub_;
-  rclcpp::Subscription<autoware_planning_validator::msg::PlanningValidatorStatus>::SharedPtr
-    validation_status_sub_;
-  rclcpp::Subscription<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
-    control_component_latency_sub_;
+  // Subscribers to the input topics
+  std::vector<rclcpp::GenericSubscription::SharedPtr> generic_subscribers_;
 
   // Publishers
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
@@ -88,14 +85,6 @@ private:
   rclcpp::TimerBase::SharedPtr timer_;
 
   // Callback functions
-  void on_meas_to_tracked_object(
-    const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg);
-  void on_processing_time_prediction(
-    const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg);
-  void on_validation_status(
-    const autoware_planning_validator::msg::PlanningValidatorStatus::ConstSharedPtr msg);
-  void on_control_component_latency(
-    const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg);
   void on_timer();
   void calculate_total_latency();
   void publish_total_latency();

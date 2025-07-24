@@ -1,4 +1,4 @@
-// Copyright 2024 The Autoware Contributors
+// Copyright 2025 The Autoware Contributors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,10 +14,16 @@
 
 #include "sensor_to_control_latency_checker_node.hpp"
 
+#include <autoware_planning_validator/msg/planning_validator_status.hpp>
+#include <rclcpp/serialization.hpp>
 #include <rclcpp_components/register_node_macro.hpp>
+
+#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 
 #include <deque>
 #include <memory>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -58,39 +64,56 @@ SensorToControlLatencyCheckerNode::SensorToControlLatencyCheckerNode(
   latency_threshold_ms_ = declare_parameter<double>("latency_threshold_ms");
   window_size_ = declare_parameter<int>("window_size");
 
-  // Initialize offset parameters
-  sensor_offset_ms_ = declare_parameter<double>("sensor_offset_ms");
-  perception_offset_ms_ = declare_parameter<double>("perception_offset_ms");
-  planning_offset_ms_ = declare_parameter<double>("planning_offset_ms");
-  control_offset_ms_ = declare_parameter<double>("control_offset_ms");
-  vehicle_offset_ms_ = declare_parameter<double>("vehicle_offset_ms");
+  const auto processing_steps =
+    declare_parameter<std::vector<std::string>>("processing_steps.sequence");
+  for (const auto & step : processing_steps) {
+    const auto topic = declare_parameter<std::string>("processing_steps." + step + ".topic");
+    const auto topic_type =
+      declare_parameter<std::string>("processing_steps." + step + ".topic_type");
+    const auto timestamp_meaning =
+      declare_parameter<std::string>("processing_steps." + step + ".timestamp_meaning");
+    const auto latency_multiplier =
+      declare_parameter<double>("processing_steps." + step + ".latency_multiplier");
+    const auto index = input_sequence_.size();
+    InputLatency & input = input_sequence_.emplace_back();
+    input.name = step;
+    input.topic = topic;
+    input.topic_type = topic_type;
+    input.timestamp_meaning =
+      timestamp_meaning == "start" ? TimestampMeaning::start : TimestampMeaning::end;
+    input.latency_multiplier = latency_multiplier;
 
-  meas_to_tracked_object_sub_ =
-    create_subscription<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "~/input/processing_time_tracking", 10,
-      std::bind(
-        &SensorToControlLatencyCheckerNode::on_meas_to_tracked_object, this,
-        std::placeholders::_1));
-
-  processing_time_prediction_sub_ =
-    create_subscription<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "~/input/processing_time_prediction", 10,
-      std::bind(
-        &SensorToControlLatencyCheckerNode::on_processing_time_prediction, this,
-        std::placeholders::_1));
-
-  validation_status_sub_ =
-    create_subscription<autoware_planning_validator::msg::PlanningValidatorStatus>(
-      "~/input/validation_status", 10,
-      std::bind(
-        &SensorToControlLatencyCheckerNode::on_validation_status, this, std::placeholders::_1));
-
-  control_component_latency_sub_ =
-    create_subscription<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "~/input/processing_time_control", 10,
-      std::bind(
-        &SensorToControlLatencyCheckerNode::on_control_component_latency, this,
-        std::placeholders::_1));
+    // generic callback
+    const auto callback =
+      [this, index](const std::shared_ptr<rclcpp::SerializedMessage> & serialized_msg) {
+        auto & input = this->input_sequence_[index];
+        if (input.topic_type == "autoware_internal_debug_msgs/msg/Float64Stamped") {
+          static const rclcpp::Serialization<autoware_internal_debug_msgs::msg::Float64Stamped>
+            serialization;
+          autoware_internal_debug_msgs::msg::Float64Stamped msg;
+          serialization.deserialize_message(serialized_msg.get(), &msg);
+          this->update_history(input.history, msg.stamp, msg.data * input.latency_multiplier);
+          RCLCPP_DEBUG(
+            get_logger(), "Received %s: %.2f", input.name.c_str(),
+            msg.data * input.latency_multiplier);
+        } else if (input.topic_type == "autoware_planning_validator/msg/PlanningValidatorStatus") {
+          static const rclcpp::Serialization<
+            autoware_planning_validator::msg::PlanningValidatorStatus>
+            serialization;
+          autoware_planning_validator::msg::PlanningValidatorStatus msg;
+          serialization.deserialize_message(serialized_msg.get(), &msg);
+          this->update_history(input.history, msg.stamp, msg.latency * input.latency_multiplier);
+          RCLCPP_DEBUG(
+            get_logger(), "Received %s: %.2f", input.name.c_str(),
+            msg.latency * input.latency_multiplier);
+        } else {
+          throw std::runtime_error("unsupported message type " + input.topic_type);
+        }
+      };
+    generic_subscribers_.push_back(
+      create_generic_subscription(topic, topic_type, rclcpp::QoS(1), callback));
+  }
+  latency_offsets_ = declare_parameter<std::vector<double>>("latency_offsets_ms");
 
   // Create publishers
   total_latency_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
@@ -113,36 +136,6 @@ SensorToControlLatencyCheckerNode::SensorToControlLatencyCheckerNode(
   RCLCPP_INFO(get_logger(), "SensorToControlLatencyCheckerNode initialized");
 }
 
-void SensorToControlLatencyCheckerNode::on_meas_to_tracked_object(
-  const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg)
-{
-  update_history(meas_to_tracked_object_history_, msg->stamp, msg->data);
-  RCLCPP_DEBUG(get_logger(), "Received meas_to_tracked_object_ms: %.2f", msg->data);
-}
-
-void SensorToControlLatencyCheckerNode::on_processing_time_prediction(
-  const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg)
-{
-  update_history(map_based_prediction_processing_time_history_, msg->stamp, msg->data);
-  RCLCPP_DEBUG(get_logger(), "Received map_based_prediction processing_time_ms: %.2f", msg->data);
-}
-
-void SensorToControlLatencyCheckerNode::on_validation_status(
-  const autoware_planning_validator::msg::PlanningValidatorStatus::ConstSharedPtr msg)
-{
-  // latency published by the planning validator is in seconds
-  update_history(planning_component_latency_history_, msg->stamp, msg->latency * 1e3);
-  RCLCPP_DEBUG(get_logger(), "Received planning_component_latency_ms: %.2f", msg->latency * 1e3);
-}
-
-void SensorToControlLatencyCheckerNode::on_control_component_latency(
-  const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg)
-{
-  // latency published by the raw_vehicle_cmd_converter is in seconds
-  update_history(control_component_latency_history_, msg->stamp, msg->data * 1e3);
-  RCLCPP_DEBUG(get_logger(), "Received control_component_latency_ms: %.2f", msg->data * 1e3);
-}
-
 void SensorToControlLatencyCheckerNode::on_timer()
 {
   calculate_total_latency();
@@ -155,118 +148,64 @@ void SensorToControlLatencyCheckerNode::on_timer()
 
 void SensorToControlLatencyCheckerNode::calculate_total_latency()
 {
+  if (input_sequence_.empty()) {
+    return;
+  }
+  const auto to_duration = [](const double latency_ms) {
+    return rclcpp::Duration::from_nanoseconds(static_cast<int64_t>(latency_ms * 1e6));
+  };
+  std::stringstream debug_ss;
   total_latency_ms_ = 0.0;
-
-  // Get control_component_latency data (most recent)
-  double control_component_latency_ms = 0.0;
-  rclcpp::Time control_component_latency_timestamp = rclcpp::Time(0);
-  if (has_valid_data(control_component_latency_history_)) {
-    control_component_latency_ms = get_latest_value(control_component_latency_history_);
-    control_component_latency_timestamp = get_latest_timestamp(control_component_latency_history_);
-    total_latency_ms_ += control_component_latency_ms;
+  rclcpp::Time start_of_next_step;
+  // we go through the steps in reverse
+  auto step_it = input_sequence_.rbegin();
+  // use the latest latency of the last step in the sequence without any constraint
+  const auto & input = *step_it;
+  if (has_valid_data(input.history)) {
+    const auto latency = get_latest_value(input.history);
+    total_latency_ms_ += latency;
+    debug_ss << step_it->name << "=" << latency;
+    start_of_next_step = get_latest_timestamp(input.history);
+    if (input.timestamp_meaning == TimestampMeaning::end) {
+      start_of_next_step -= to_duration(latency);
+    }
   }
-
-  // Get planning_component_latency data
-  // Condition: planning_timestamp + planning_latency < control_timestamp + control_latency
-  double planning_component_latency_ms = 0.0;
-  rclcpp::Time planning_component_latency_timestamp = rclcpp::Time(0);
-  if (has_valid_data(planning_component_latency_history_)) {
-    // Calculate target time: control_timestamp + control_latency
-    rclcpp::Time control_end_time =
-      control_component_latency_timestamp +
-      rclcpp::Duration::from_nanoseconds(static_cast<int64_t>(control_component_latency_ms * 1e6));
-
-    // Find the most recent planning data where planning_timestamp + planning_latency <
-    // control_end_time
-    for (auto it = planning_component_latency_history_.rbegin();
-         it != planning_component_latency_history_.rend(); ++it) {
-      rclcpp::Time planning_end_time =
-        it->timestamp + rclcpp::Duration::from_nanoseconds(static_cast<int64_t>(it->value * 1e6));
-
-      if (is_timestamp_older(planning_end_time, control_end_time)) {
-        planning_component_latency_ms = it->value;
-        planning_component_latency_timestamp = it->timestamp;
-        total_latency_ms_ += planning_component_latency_ms;
+  // we go through the rest of the sequence in reverse order with the following constraint:
+  // end of current step < start of next step
+  for (step_it++; step_it != input_sequence_.rend(); ++step_it) {
+    const auto & input = *step_it;
+    if (!has_valid_data(input.history)) {
+      continue;
+    }
+    for (auto it = input.history.rbegin(); it != input.history.rend(); ++it) {
+      const rclcpp::Time end_of_current_step =
+        it->timestamp + (input.timestamp_meaning == TimestampMeaning::start ? to_duration(it->value)
+                                                                            : to_duration(0.0));
+      if (is_timestamp_older(end_of_current_step, start_of_next_step)) {
+        total_latency_ms_ += it->value;
+        start_of_next_step = it->timestamp;
+        debug_ss << " + " << step_it->name << "=" << it->value;
+        if (input.timestamp_meaning == TimestampMeaning::end) {
+          start_of_next_step -= to_duration(it->value);
+        }
         break;
       }
     }
   }
+  RCLCPP_DEBUG(
+    get_logger(), "Total latency calculation (cumulative time-ordered): %s = %2.2fms",
+    debug_ss.str().c_str(), total_latency_ms_);
 
-  // Get prediction processing_time data
-  // Condition: prediction_timestamp + prediction_latency < planning_timestamp + planning_latency
-  double map_based_prediction_processing_time_ms = 0.0;
-  rclcpp::Time map_based_prediction_processing_time_timestamp = rclcpp::Time(0);
-  if (
-    has_valid_data(map_based_prediction_processing_time_history_) &&
-    planning_component_latency_ms > 0.0) {
-    // Calculate target time: planning_timestamp + planning_latency
-    rclcpp::Time planning_end_time =
-      planning_component_latency_timestamp +
-      rclcpp::Duration::from_nanoseconds(static_cast<int64_t>(planning_component_latency_ms * 1e6));
-
-    // Find the most recent prediction data where prediction_timestamp + prediction_latency <
-    // planning_end_time
-    for (auto it = map_based_prediction_processing_time_history_.rbegin();
-         it != map_based_prediction_processing_time_history_.rend(); ++it) {
-      rclcpp::Time prediction_end_time =
-        it->timestamp + rclcpp::Duration::from_nanoseconds(static_cast<int64_t>(it->value * 1e6));
-
-      if (is_timestamp_older(prediction_end_time, planning_end_time)) {
-        map_based_prediction_processing_time_ms = it->value;
-        map_based_prediction_processing_time_timestamp = it->timestamp;
-        total_latency_ms_ += map_based_prediction_processing_time_ms;
-        break;
-      }
-    }
+  std::stringstream ss;
+  ss << "offsets added to the total: [ ";
+  for (const auto offset : latency_offsets_) {
+    ss << offset << " ";
+    total_latency_ms_ += offset;
   }
-
-  // Get meas_to_tracked_object data
-  // Condition: tracking_timestamp + tracking_latency < prediction_timestamp + prediction_latency
-  double meas_to_tracked_object_ms = 0.0;
-  if (
-    has_valid_data(meas_to_tracked_object_history_) &&
-    map_based_prediction_processing_time_ms > 0.0) {
-    // Calculate target time: prediction_timestamp + prediction_latency
-    rclcpp::Time prediction_end_time = map_based_prediction_processing_time_timestamp +
-                                       rclcpp::Duration::from_nanoseconds(static_cast<int64_t>(
-                                         map_based_prediction_processing_time_ms * 1e6));
-
-    // Find the most recent tracking data where tracking_timestamp + tracking_latency <
-    // prediction_end_time
-    for (auto it = meas_to_tracked_object_history_.rbegin();
-         it != meas_to_tracked_object_history_.rend(); ++it) {
-      rclcpp::Time tracking_end_time =
-        it->timestamp + rclcpp::Duration::from_nanoseconds(static_cast<int64_t>(it->value * 1e6));
-
-      if (is_timestamp_older(tracking_end_time, prediction_end_time)) {
-        meas_to_tracked_object_ms = it->value;
-        total_latency_ms_ += meas_to_tracked_object_ms;
-        break;
-      }
-    }
-  }
+  ss << "]";
 
   RCLCPP_DEBUG(
-    get_logger(),
-    "Total latency calculation (cumulative time-ordered): control_component_latency=%.2f + "
-    "planning_component_latency=%.2f + map_based_prediction_processing_time=%.2f + "
-    "meas_to_tracked_object=%.2f = %.2f ms",
-    control_component_latency_ms, planning_component_latency_ms,
-    map_based_prediction_processing_time_ms, meas_to_tracked_object_ms, total_latency_ms_);
-
-  // Add offset processing times for each layer
-  total_latency_ms_ += sensor_offset_ms_;
-  total_latency_ms_ += perception_offset_ms_;
-  total_latency_ms_ += planning_offset_ms_;
-  total_latency_ms_ += control_offset_ms_;
-  total_latency_ms_ += vehicle_offset_ms_;
-
-  RCLCPP_DEBUG(
-    get_logger(),
-    "Total latency with offsets: %.2f ms (sensor_offset=%.2f + perception_offset=%.2f + "
-    "planning_offset=%.2f + control_offset=%.2f + vehicle_offset=%.2f)",
-    total_latency_ms_, sensor_offset_ms_, perception_offset_ms_, planning_offset_ms_,
-    control_offset_ms_, vehicle_offset_ms_);
+    get_logger(), "Total latency with offsets: %.2f ms (%s)", total_latency_ms_, ss.str().c_str());
 }
 
 void SensorToControlLatencyCheckerNode::publish_total_latency()
@@ -277,21 +216,12 @@ void SensorToControlLatencyCheckerNode::publish_total_latency()
   total_latency_msg->data = total_latency_ms_;
   total_latency_pub_->publish(std::move(total_latency_msg));
 
-  // Publish debug information (using latest values and timestamps with initialization check)
-  double meas_to_tracked_object_ms = get_latest_value(meas_to_tracked_object_history_);
-  double map_based_prediction_processing_time_ms =
-    get_latest_value(map_based_prediction_processing_time_history_);
-  double planning_component_latency_ms = get_latest_value(planning_component_latency_history_);
-  double control_component_latency_ms = get_latest_value(control_component_latency_history_);
-
-  debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-    "debug/meas_to_tracked_object_ms", meas_to_tracked_object_ms);
-  debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-    "debug/map_based_prediction_processing_time_ms", map_based_prediction_processing_time_ms);
-  debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-    "debug/planning_component_latency_ms", planning_component_latency_ms);
-  debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-    "debug/control_component_latency_ms", control_component_latency_ms);
+  // Publish latest latency values from each topic as debug information
+  for (const auto & input : input_sequence_) {
+    const auto latest_latency = get_latest_value(input.history);
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      input.name, latest_latency);
+  }
   debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/total_latency_ms", total_latency_ms_);
 
@@ -304,52 +234,26 @@ void SensorToControlLatencyCheckerNode::publish_total_latency()
 void SensorToControlLatencyCheckerNode::check_total_latency(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  // Get latest values
-  double meas_to_tracked_object_ms = get_latest_value(meas_to_tracked_object_history_);
-  double map_based_prediction_processing_time_ms =
-    get_latest_value(map_based_prediction_processing_time_history_);
-  double planning_component_latency_ms = get_latest_value(planning_component_latency_history_);
-  double control_component_latency_ms = get_latest_value(control_component_latency_history_);
-
   stat.add("Total Latency (ms)", total_latency_ms_);
   stat.add("Threshold (ms)", latency_threshold_ms_);
-  stat.add("meas_to_tracked_object_ms", meas_to_tracked_object_ms);
-  stat.add("map_based_prediction_processing_time_ms", map_based_prediction_processing_time_ms);
-  stat.add("planning_component_latency_ms", planning_component_latency_ms);
-  stat.add("control_component_latency_ms", control_component_latency_ms);
 
-  // Check if all data is initialized
-  bool all_data_initialized = has_valid_data(meas_to_tracked_object_history_) &&
-                              has_valid_data(map_based_prediction_processing_time_history_) &&
-                              has_valid_data(planning_component_latency_history_) &&
-                              has_valid_data(control_component_latency_history_);
-
-  const auto append = [&](auto & base, const auto & str) {
-    if (!base.empty()) {
-      base += ", ";
+  std::string uninitialized_inputs;
+  for (const auto & input : input_sequence_) {
+    if (has_valid_data(input.history)) {
+      if (!uninitialized_inputs.empty()) {
+        uninitialized_inputs += ", ";
+      }
+      uninitialized_inputs += input.name;
+    } else {
+      const auto latest_latency = get_latest_value(input.history);
+      stat.add(input.name, latest_latency);
     }
-    base += str;
-  };
-  if (!all_data_initialized) {
-    // Add detailed information about which data is not initialized
-    std::string uninitialized_data;
-    if (!has_valid_data(meas_to_tracked_object_history_)) {
-      append(uninitialized_data, "meas_to_tracked_object");
-    }
-    if (!has_valid_data(map_based_prediction_processing_time_history_)) {
-      append(uninitialized_data, "map_based_prediction_processing_time");
-    }
-    if (!has_valid_data(planning_component_latency_history_)) {
-      append(uninitialized_data, "planning_component_latency");
-    }
-    if (!has_valid_data(control_component_latency_history_)) {
-      append(uninitialized_data, "control_component_latency");
-    }
-
-    stat.add("uninitialized_data", uninitialized_data);
+  }
+  if (!uninitialized_inputs.empty()) {
+    stat.add("uninitialized_inputs", uninitialized_inputs);
     stat.summary(
       diagnostic_msgs::msg::DiagnosticStatus::OK,
-      "Some latency data not yet initialized: " + uninitialized_data);
+      "Some latency inputs not yet received: " + uninitialized_inputs);
   } else if (total_latency_ms_ > latency_threshold_ms_) {
     stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "Total latency exceeds threshold");
   } else {
