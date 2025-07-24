@@ -1,4 +1,5 @@
 <launch>
+  <arg name="input_route_topic_name" default="/planning/mission_planning/route"/>
   <arg name="interface_input_topic" default="/planning/scenario_planning/lane_driving/behavior_planning/path"/>
   <arg name="interface_output_topic" default="/planning/scenario_planning/lane_driving/trajectory"/>
 
@@ -169,7 +170,7 @@
     <load_composable_node target="/planning/scenario_planning/lane_driving/motion_planning/motion_planning_container">
       <composable_node pkg="autoware_motion_velocity_planner" plugin="autoware::motion_velocity_planner::MotionVelocityPlannerNode" name="motion_velocity_planner" namespace="">
         <!-- topic remap -->
-        <remap from="~/input/path_with_lane_id" to="/planning/scenario_planning/lane_driving/behavior_planning/path_with_lane_id"/>
+        <remap from="~/input/route" to="$(var input_route_topic_name)"/>
         <remap from="~/input/trajectory" to="path_optimizer/trajectory"/>
         <remap from="~/input/vector_map" to="/map/vector_map"/>
         <remap from="~/input/vehicle_odometry" to="/localization/kinematic_state"/>
