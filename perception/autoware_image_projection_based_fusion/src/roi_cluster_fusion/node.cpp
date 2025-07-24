@@ -103,6 +103,7 @@ void RoiClusterFusionNode::fuse_on_single_image(
   std::vector<sensor_msgs::msg::RegionOfInterest> debug_image_rois;
   std::vector<Eigen::Vector2d> debug_obstacle_points;
   std::vector<sensor_msgs::msg::RegionOfInterest> debug_obstacle_rois;
+  std::vector<double> debug_max_iou_for_image_rois;
 
   for (std::size_t i = 0; i < input_cluster_msg.feature_objects.size(); ++i) {
     if (input_cluster_msg.feature_objects.at(i).feature.cluster.data.empty()) {
@@ -210,7 +211,7 @@ void RoiClusterFusionNode::fuse_on_single_image(
       }
     }
     if (debugger_) debug_image_rois.push_back(feature_obj.feature.roi);
-    if (debugger_) debugger_->max_iou_for_image_rois_.push_back(max_iou);
+    if (debugger_) debug_max_iou_for_image_rois.push_back(max_iou);
   }
 
   // note: debug objects are safely cleared in fusion_node.cpp
@@ -219,6 +220,7 @@ void RoiClusterFusionNode::fuse_on_single_image(
     debugger_->image_rois_ = debug_image_rois;
     debugger_->obstacle_rois_ = debug_obstacle_rois;
     debugger_->obstacle_points_ = debug_obstacle_points;
+    debugger_->max_iou_for_image_rois_ = debug_max_iou_for_image_rois;
     debugger_->publishImage(det2d_status.id, input_rois_msg.header.stamp);
   }
 }
