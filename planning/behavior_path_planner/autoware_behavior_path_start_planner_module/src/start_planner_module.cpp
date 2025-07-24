@@ -77,6 +77,9 @@ StartPlannerModule::StartPlannerModule(
   if (parameters_->enable_geometric_pull_out) {
     start_planners_.push_back(std::make_shared<GeometricPullOut>(node, *parameters, time_keeper_));
   }
+  if (parameters_->enable_clothoid_fallback) {
+    start_planners_.push_back(std::make_shared<ClothoidPullOut>(node, *parameters, time_keeper_));
+  }
   if (start_planners_.empty()) {
     RCLCPP_ERROR(getLogger(), "Not found enabled planner");
   }
@@ -1091,6 +1094,39 @@ void StartPlannerModule::planWithPriority(
               collision_check_margin, debug_data_vector)) {
           debug_data_.selected_start_pose_candidate_index = index;
           debug_data_.margin_for_start_pose_candidate = collision_check_margin;
+          set_planner_evaluation_table(debug_data_vector);
+          return;
+        }
+      }
+    }
+
+    // If no path found with collision margins and clothoid fallback is enabled, try clothoid
+    // planner
+    // NOTE: Clothoid fallback is only enabled when enable_back is false because safety validation
+    // for backward paths in clothoid planner is not yet implemented
+    if (parameters_->enable_clothoid_fallback && !parameters_->enable_back) {
+      RCLCPP_INFO(
+        getLogger(), "No path found with collision margins. Trying clothoid fallback search.");
+
+      // Find clothoid planner from available planners
+      std::shared_ptr<PullOutPlannerBase> clothoid_planner = nullptr;
+      for (const auto & planner : start_planners_) {
+        if (planner->getPlannerType() == PlannerType::CLOTHOID) {
+          clothoid_planner = planner;
+          break;
+        }
+      }
+
+      // Try clothoid planner with minimum collision margin
+      const double min_margin = *std::min_element(
+        parameters_->collision_check_margins.begin(), parameters_->collision_check_margins.end());
+
+      for (size_t index = 0; index < start_pose_candidates.size(); ++index) {
+        if (findPullOutPath(
+              start_pose_candidates[index], clothoid_planner, refined_start_pose, goal_pose,
+              min_margin, debug_data_vector)) {
+          debug_data_.selected_start_pose_candidate_index = index;
+          debug_data_.margin_for_start_pose_candidate = min_margin;
           set_planner_evaluation_table(debug_data_vector);
           return;
         }
