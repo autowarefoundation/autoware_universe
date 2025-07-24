@@ -1004,16 +1004,6 @@ std::optional<CompositeArcPath> calc_circular_path(
     end_angle1 -= 2 * PI;
   }
 
-  // Second arc (from tangent point to goal point, counter-clockwise)
-  double start_angle2 = std::atan2(tangent_y_rel - C_ly_rel, tangent_x_rel - C_lx_rel);
-  double end_angle2 = std::atan2(y_goal_rel - C_ly_rel, x_goal_rel - C_lx_rel);
-  const double total_angle2 = std::abs(end_angle2 - start_angle2);
-
-  // Adjust for counter-clockwise direction
-  if (total_angle2 < 0) {
-    end_angle2 += 2 * PI;
-  }
-
   // Prepare for transformation to global coordinate system
   const double start_yaw = tf2::getYaw(start_pose.orientation);
   const double cos_yaw = std::cos(start_yaw);
