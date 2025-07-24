@@ -492,17 +492,14 @@ std::optional<std::vector<geometry_msgs::msg::Point>> convert_arc_to_clothoid_wi
   return corrected_points;
 }
 
-// std::optional<PathWithLaneId> might be better
-PathWithLaneId create_path_with_lane_id_from_clothoid_paths(
+std::optional<PathWithLaneId> create_path_with_lane_id_from_clothoid_paths(
   const std::vector<std::vector<geometry_msgs::msg::Point>> & clothoid_paths, double velocity,
   double target_velocity, double acceleration, const lanelet::ConstLanelets & road_lanes,
   const std::shared_ptr<autoware::route_handler::RouteHandler> & route_handler)
 {
-  // Return empty PathWithLaneId if clothoid paths are empty
+  // Return nullopt if clothoid paths are empty
   if (clothoid_paths.empty()) {
-    PathWithLaneId empty_path;
-    empty_path.header = route_handler->getRouteHeader();
-    return empty_path;
+    return std::nullopt;
   }
 
   // Combine all clothoid paths
@@ -521,11 +518,9 @@ PathWithLaneId create_path_with_lane_id_from_clothoid_paths(
     }
   }
 
-  // Return empty PathWithLaneId if still empty after combination
+  // Return nullopt if still empty after combination
   if (all_clothoid_points.empty()) {
-    PathWithLaneId empty_path;
-    empty_path.header = route_handler->getRouteHeader();
-    return empty_path;
+    return std::nullopt;
   }
 
   // Create PathWithLaneId
@@ -602,8 +597,6 @@ PathWithLaneId create_path_with_lane_id_from_clothoid_paths(
   }
 
   return path_with_lane_id;
-  // return
-  // autoware::behavior_path_planner::utils::resamplePathWithSpline(path_with_lane_id, 1.0);
 }
 
 PathWithLaneId combine_path_with_centerline(
@@ -1467,8 +1460,21 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
     }
 
     // Combine clothoid path with centerline
-    PathWithLaneId path_with_lane_id = create_path_with_lane_id_from_clothoid_paths(
-      clothoid_paths, initial_velocity, target_velocity, acceleration, all_lanes, route_handler);
+    std::optional<PathWithLaneId> path_with_lane_id_opt =
+      create_path_with_lane_id_from_clothoid_paths(
+        clothoid_paths, initial_velocity, target_velocity, acceleration, all_lanes, route_handler);
+
+    if (!path_with_lane_id_opt) {
+      RCLCPP_WARN(
+        rclcpp::get_logger("ClothoidPullOut"),
+        "Failed to create clothoid path with lane ID for steer angle %.2f deg. Continuing to next "
+        "candidate.",
+        steer_angle * 180.0 / M_PI);
+      planner_debug_data.conditions_evaluation.emplace_back("clothoid path creation failed");
+      continue;
+    }
+
+    const auto & path_with_lane_id = *path_with_lane_id_opt;
 
     // Combine with centerline path
     auto combined_path =
