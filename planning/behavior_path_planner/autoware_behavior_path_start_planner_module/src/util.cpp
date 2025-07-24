@@ -403,7 +403,7 @@ void print_path_with_lane_id_details(const PathWithLaneId & path, const std::str
               << ", " << std::setw(7) << orientation.z << ", " << std::setw(7) << orientation.w
               << "] "
               << "dist_prev=" << std::setw(8) << distance_from_prev << " "
-              << "cumul=" << std::setw(8) << cumulative_distance << " "
+              << "cumulative=" << std::setw(8) << cumulative_distance << " "
               << "lane_ids=" << lane_ids_str << std::endl;
   }
 

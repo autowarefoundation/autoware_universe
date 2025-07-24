@@ -96,8 +96,8 @@ StartPlannerParameters StartPlannerParameters::init(rclcpp::Node & node)
     p.clothoid_initial_velocity =
       get_or_declare_parameter<double>(node, ns + "clothoid_initial_velocity");
     p.clothoid_acceleration = get_or_declare_parameter<double>(node, ns + "clothoid_acceleration");
-    p.clothoid_max_steer_angle_degs =
-      get_or_declare_parameter<std::vector<double>>(node, ns + "clothoid_max_steer_angle_degs");
+    p.clothoid_max_steer_angles_deg =
+      get_or_declare_parameter<std::vector<double>>(node, ns + "clothoid_max_steer_angles_deg");
     p.clothoid_max_steer_angle_rate_deg_per_sec =
       get_or_declare_parameter<double>(node, ns + "clothoid_max_steer_angle_rate_deg_per_sec");
     p.check_clothoid_path_lane_departure =

@@ -136,7 +136,7 @@ void StartPlannerModuleManager::updateModuleParams(
       parameters, ns + "clothoid_initial_velocity", p->clothoid_initial_velocity);
     update_param<double>(parameters, ns + "clothoid_acceleration", p->clothoid_acceleration);
     update_param<std::vector<double>>(
-      parameters, ns + "clothoid_max_steer_angle_degs", p->clothoid_max_steer_angle_degs);
+      parameters, ns + "clothoid_max_steer_angles_deg", p->clothoid_max_steer_angles_deg);
     update_param<double>(
       parameters, ns + "clothoid_max_steer_angle_rate_deg_per_sec",
       p->clothoid_max_steer_angle_rate_deg_per_sec);

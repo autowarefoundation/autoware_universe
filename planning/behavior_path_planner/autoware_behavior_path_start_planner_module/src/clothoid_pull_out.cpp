@@ -1136,11 +1136,11 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
   // =====================================================================
   const double initial_velocity = parameters_.clothoid_initial_velocity;
   const double acceleration = parameters_.clothoid_acceleration;
-  const std::vector<double> max_steer_angle_degs = parameters_.clothoid_max_steer_angle_degs;
+  const std::vector<double> max_steer_angles_deg = parameters_.clothoid_max_steer_angles_deg;
 
   // Convert degrees to radians from parameters
   std::vector<double> max_steer_angle;
-  for (const auto & deg : max_steer_angle_degs) {
+  for (const auto & deg : max_steer_angles_deg) {
     max_steer_angle.push_back(deg2rad(deg));
   }
 
