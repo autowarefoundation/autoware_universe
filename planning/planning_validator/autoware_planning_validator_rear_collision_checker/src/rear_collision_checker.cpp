@@ -749,9 +749,9 @@ bool RearCollisionChecker::is_safe(DebugData & debug)
   }
 
   const auto is_unsafe_holding = (now - last_unsafe_time_).seconds() < p.common.off_time_buffer;
-  const auto turn_behavior =
+  const auto [turn_behavior, distance_to_turn] =
     utils::check_turn_behavior(current_lanes, is_unsafe_holding, context_, p, debug);
-  const auto shift_behavior =
+  const auto [shift_behavior, distance_to_shift] =
     utils::check_shift_behavior(current_lanes, is_unsafe_holding, context_, p, debug);
 
   {

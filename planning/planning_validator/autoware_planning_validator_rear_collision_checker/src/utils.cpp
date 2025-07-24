@@ -209,7 +209,8 @@ auto calc_predicted_stop_line(
 auto check_shift_behavior(
   const lanelet::ConstLanelets & lanelets, const bool is_unsafe_holding,
   const std::shared_ptr<PlanningValidatorContext> & context,
-  const rear_collision_checker_node::Params & parameters, DebugData & debug) -> Behavior
+  const rear_collision_checker_node::Params & parameters, DebugData & debug)
+  -> std::pair<Behavior, double>
 {
   const auto & points = context->data->current_trajectory->points;
   const auto & ego_pose = context->data->current_kinematics->pose.pose;
@@ -228,13 +229,13 @@ auto check_shift_behavior(
     const auto is_left_shift = boost::geometry::intersects(
       axle, lanelet::utils::to2D(combine_lanelet.leftBound()).basicLineString());
     if (is_left_shift) {
-      return Behavior::NONE;
+      return std::make_pair(Behavior::NONE, 0.0);
     }
 
     const auto is_right_shift = boost::geometry::intersects(
       axle, lanelet::utils::to2D(combine_lanelet.rightBound()).basicLineString());
     if (is_right_shift) {
-      return Behavior::NONE;
+      return std::make_pair(Behavior::NONE, 0.0);
     }
   }
 
@@ -245,7 +246,7 @@ auto check_shift_behavior(
     context, constraints.max_deceleration, constraints.max_positive_jerk,
     constraints.max_negative_jerk);
   if (!reachable_point.has_value() || !stoppable_point.has_value()) {
-    return Behavior::NONE;
+    return std::make_pair(Behavior::NONE, 0.0);
   }
 
   {
@@ -286,23 +287,24 @@ auto check_shift_behavior(
     const auto is_left_shift = boost::geometry::intersects(
       axle, lanelet::utils::to2D(combine_lanelet.leftBound()).basicLineString());
     if (is_left_shift && std::abs(points.at(i).longitudinal_velocity_mps) > 1e-3) {
-      return i < nearest_idx ? Behavior::NONE : Behavior::SHIFT_LEFT;
+      return std::make_pair((i < nearest_idx ? Behavior::NONE : Behavior::SHIFT_LEFT), distance);
     }
 
     const auto is_right_shift = boost::geometry::intersects(
       axle, lanelet::utils::to2D(combine_lanelet.rightBound()).basicLineString());
     if (is_right_shift && std::abs(points.at(i).longitudinal_velocity_mps) > 1e-3) {
-      return i < nearest_idx ? Behavior::NONE : Behavior::SHIFT_RIGHT;
+      return std::make_pair((i < nearest_idx ? Behavior::NONE : Behavior::SHIFT_RIGHT), distance);
     }
   }
 
-  return Behavior::NONE;
+  return std::make_pair(Behavior::NONE, 0.0);
 }
 
 auto check_turn_behavior(
   const lanelet::ConstLanelets & lanelets, const bool is_unsafe_holding,
   const std::shared_ptr<PlanningValidatorContext> & context,
-  const rear_collision_checker_node::Params & parameters, DebugData & debug) -> Behavior
+  const rear_collision_checker_node::Params & parameters, DebugData & debug)
+  -> std::pair<Behavior, double>
 {
   const auto & points = context->data->current_trajectory->points;
   const auto & ego_pose = context->data->current_kinematics->pose.pose;
@@ -348,7 +350,7 @@ auto check_turn_behavior(
     context, constraints.max_deceleration, constraints.max_positive_jerk,
     constraints.max_negative_jerk);
   if (!reachable_point.has_value() || !stoppable_point.has_value()) {
-    return Behavior::NONE;
+    return std::make_pair(Behavior::NONE, 0.0);
   }
 
   {
@@ -393,12 +395,12 @@ auto check_turn_behavior(
       }
 
       if (!distance_to_stop_point.has_value()) {
-        return is_reachable ? Behavior::TURN_LEFT : Behavior::NONE;
+        return std::make_pair((is_reachable ? Behavior::TURN_LEFT : Behavior::NONE), distance);
       }
       if (distance_to_stop_point.value() < distance + buffer) {
-        return Behavior::NONE;
+        return std::make_pair(Behavior::NONE, distance);
       }
-      return is_reachable ? Behavior::TURN_LEFT : Behavior::NONE;
+      return std::make_pair((is_reachable ? Behavior::TURN_LEFT : Behavior::NONE), distance);
     }
 
     if (turn_direction == "right" && p.check.right) {
@@ -410,16 +412,16 @@ auto check_turn_behavior(
       }
 
       if (!distance_to_stop_point.has_value()) {
-        return is_reachable ? Behavior::TURN_RIGHT : Behavior::NONE;
+        return std::make_pair((is_reachable ? Behavior::TURN_RIGHT : Behavior::NONE), distance);
       }
       if (distance_to_stop_point.value() < distance + buffer) {
-        return Behavior::NONE;
+        return std::make_pair(Behavior::NONE, distance);
       }
-      return is_reachable ? Behavior::TURN_RIGHT : Behavior::NONE;
+      return std::make_pair((is_reachable ? Behavior::TURN_RIGHT : Behavior::NONE), distance);
     }
   }
 
-  return Behavior::NONE;
+  return std::make_pair(Behavior::NONE, 0.0);
 }
 
 void cut_by_lanelets(const lanelet::ConstLanelets & lanelets, DetectionAreas & detection_areas)
