@@ -176,13 +176,13 @@ std::optional<CompositeArcPath> calc_circular_path(
  * @param velocity Initial velocity
  * @param target_velocity Target velocity
  * @param acceleration Acceleration
- * @param road_lanes Road lane information
+ * @param search_lanes Search lanes for lane_ids and z coordinate
  * @param route_handler Route handler
  * @return PathWithLaneId
  */
 std::optional<PathWithLaneId> create_path_with_lane_id_from_clothoid_paths(
   const std::vector<std::vector<geometry_msgs::msg::Point>> & clothoid_paths, double velocity,
-  double target_velocity, double acceleration, const lanelet::ConstLanelets & road_lanes,
+  double target_velocity, double acceleration, const lanelet::ConstLanelets & search_lanes,
   const std::shared_ptr<autoware::route_handler::RouteHandler> & route_handler);
 
 /**

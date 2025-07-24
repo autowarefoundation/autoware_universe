@@ -497,7 +497,7 @@ std::optional<std::vector<geometry_msgs::msg::Point>> convert_arc_to_clothoid_wi
 
 std::optional<PathWithLaneId> create_path_with_lane_id_from_clothoid_paths(
   const std::vector<std::vector<geometry_msgs::msg::Point>> & clothoid_paths, double velocity,
-  double target_velocity, double acceleration, const lanelet::ConstLanelets & road_lanes,
+  double target_velocity, double acceleration, const lanelet::ConstLanelets & search_lanes,
   const std::shared_ptr<autoware::route_handler::RouteHandler> & route_handler)
 {
   // Return nullopt if clothoid paths are empty
@@ -538,11 +538,11 @@ std::optional<PathWithLaneId> create_path_with_lane_id_from_clothoid_paths(
     path_point.point.pose.position = all_clothoid_points[i];
 
     // Set z coordinate: get z value of closest point from lanelet information
-    if (!road_lanes.empty()) {
+    if (!search_lanes.empty()) {
       // Find closest lanelet
       lanelet::Lanelet closest_lanelet;
       if (lanelet::utils::query::getClosestLanelet(
-            road_lanes, path_point.point.pose, &closest_lanelet)) {
+            search_lanes, path_point.point.pose, &closest_lanelet)) {
         // Get z value of closest point from lanelet centerline
         const auto centerline = closest_lanelet.centerline();
         if (!centerline.empty()) {
@@ -594,7 +594,7 @@ std::optional<PathWithLaneId> create_path_with_lane_id_from_clothoid_paths(
     if (i > 0) {
       previous_lane_ids = path_with_lane_id.points[i - 1].lane_ids;
     }
-    set_lane_ids_to_path_point(path_point, road_lanes, previous_lane_ids);
+    set_lane_ids_to_path_point(path_point, search_lanes, previous_lane_ids);
 
     path_with_lane_id.points.push_back(path_point);
   }
@@ -623,7 +623,7 @@ PathWithLaneId combine_path_with_centerline(
       rclcpp::get_logger("ClothoidPullOut"), "target_pose: %.3f, %.3f", target_pose.position.x,
       target_pose.position.y);
     // Add points from target_pose onwards to centerline_extension
-    // How far to add????
+    // TODO(Sugahara): Check extension length
     for (size_t i = target_idx; i < centerline_path.points.size(); ++i) {
       centerline_extension.points.push_back(centerline_path.points[i]);
     }

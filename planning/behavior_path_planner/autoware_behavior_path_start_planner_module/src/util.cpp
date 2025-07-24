@@ -303,19 +303,19 @@ RelativePoseInfo calculate_relative_pose_in_vehicle_coordinate(
  * Generic function to get lane_ids for a pose, based on implementations from other
  * behavior_path_planner modules
  * @param pose Target pose
- * @param road_lanes Target lane group for search
+ * @param candidate_lanes Target lane group for search
  * @param previous_lane_ids Previous point's lane_ids (for inheritance, optional)
  * @return Retrieved lane_ids
  */
 std::vector<int64_t> get_lane_ids_from_pose(
-  const geometry_msgs::msg::Pose & pose, const lanelet::ConstLanelets & road_lanes,
+  const geometry_msgs::msg::Pose & pose, const lanelet::ConstLanelets & candidate_lanes,
   const std::vector<int64_t> & previous_lane_ids)
 {
   std::vector<int64_t> lane_ids;
 
   // 1. First, find all lanes containing the pose
   bool found_containing_lane = false;
-  for (const auto & lane : road_lanes) {
+  for (const auto & lane : candidate_lanes) {
     if (lanelet::utils::isInLanelet(pose, lane)) {
       lane_ids.push_back(lane.id());
       found_containing_lane = true;
@@ -326,14 +326,14 @@ std::vector<int64_t> get_lane_ids_from_pose(
   if (!found_containing_lane) {
     // 2.1 Find the closest lane
     lanelet::Lanelet closest_lanelet{};
-    if (lanelet::utils::query::getClosestLanelet(road_lanes, pose, &closest_lanelet)) {
+    if (lanelet::utils::query::getClosestLanelet(candidate_lanes, pose, &closest_lanelet)) {
       lane_ids = {closest_lanelet.id()};
     } else if (!previous_lane_ids.empty()) {
       // 2.2 If closest lane is not found, inherit lane_ids from previous point
       lane_ids = previous_lane_ids;
-    } else if (!road_lanes.empty()) {
+    } else if (!candidate_lanes.empty()) {
       // 2.3 Final fallback: use the first lane
-      lane_ids.push_back(road_lanes.front().id());
+      lane_ids.push_back(candidate_lanes.front().id());
     }
   }
 
