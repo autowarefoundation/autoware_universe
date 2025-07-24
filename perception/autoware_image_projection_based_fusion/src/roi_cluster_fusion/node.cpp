@@ -101,7 +101,7 @@ void RoiClusterFusionNode::fuse_on_single_image(
   std::map<std::size_t, RegionOfInterest> m_cluster_roi;
 
   std::vector<sensor_msgs::msg::RegionOfInterest> debug_image_rois;
-  std::vector<Eigen::Vector2d> debug_image_points;
+  std::vector<Eigen::Vector2d> debug_obstacle_points;
   std::vector<sensor_msgs::msg::RegionOfInterest> debug_obstacle_rois;
 
   for (std::size_t i = 0; i < input_cluster_msg.feature_objects.size(); ++i) {
@@ -145,7 +145,7 @@ void RoiClusterFusionNode::fuse_on_single_image(
         max_y = std::max(py, max_y);
 
         projected_points.push_back(projected_point);
-        if (debugger_) debug_image_points.push_back(projected_point);
+        if (debugger_) debug_obstacle_points.push_back(projected_point);
       }
     }
     if (projected_points.empty()) {
@@ -217,7 +217,7 @@ void RoiClusterFusionNode::fuse_on_single_image(
   if (debugger_) {
     debugger_->image_rois_ = debug_image_rois;
     debugger_->obstacle_rois_ = debug_obstacle_rois;
-    debugger_->obstacle_points_ = debug_image_points;
+    debugger_->obstacle_points_ = debug_obstacle_points;
     debugger_->publishImage(det2d_status.id, input_rois_msg.header.stamp);
   }
 }
