@@ -1367,9 +1367,6 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
     std::vector<lanelet::Id> fused_id_start_to_end{};
     std::optional<autoware_utils::Polygon2d> fused_polygon_start_to_end = std::nullopt;
 
-    std::vector<lanelet::Id> fused_id_crop_points{};
-    std::optional<autoware_utils::Polygon2d> fused_polygon_crop_points = std::nullopt;
-
     // clothoid path is not separate but only one.
     auto & clothoid_path = final_path;
 
@@ -1410,7 +1407,7 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
     PathWithLaneId cropped_path;
     if (parameters_.check_clothoid_path_lane_departure) {
       std::vector<lanelet::Id> fused_id_crop_points{};
-      // I don't understand the meaning of cropping points outside lanes
+      std::optional<autoware_utils::Polygon2d> fused_polygon_crop_points = std::nullopt;
       cropped_path = boundary_departure_checker_->cropPointsOutsideOfLanes(
         lanelet_map_ptr, clothoid_path, start_segment_idx, fused_id_crop_points,
         fused_polygon_crop_points);
