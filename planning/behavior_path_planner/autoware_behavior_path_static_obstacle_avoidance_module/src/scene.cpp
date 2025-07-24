@@ -872,10 +872,21 @@ bool StaticObstacleAvoidanceModule::isSafePath(
   };
 
   if (parameters_->policy_detection_reliability == "not_enough") {
+    lanelet::ConstLanelets check_lanes{};
+    for (const auto & lane : avoid_data_.current_lanelets) {
+      if (avoid_data_.target_objects.empty()) {
+        break;
+      }
+
+      check_lanes.push_back(lane);
+
+      if (lane.id() == avoid_data_.target_objects.back().overhang_lanelet.id()) {
+        break;
+      }
+    }
     if (has_left_shift) {
-      const auto exist_adjacent_lane = std::all_of(
-        avoid_data_.current_lanelets.begin(), avoid_data_.current_lanelets.end(),
-        [this](const auto & lane) {
+      const auto exist_adjacent_lane =
+        std::all_of(check_lanes.begin(), check_lanes.end(), [this](const auto & lane) {
           return planner_data_->route_handler->getLeftLanelet(lane, true, false);
         });
       if (!exist_adjacent_lane && !is_within_current_lane(false)) {
@@ -883,9 +894,8 @@ bool StaticObstacleAvoidanceModule::isSafePath(
       }
     }
     if (has_right_shift) {
-      const auto exist_adjacent_lane = std::all_of(
-        avoid_data_.current_lanelets.begin(), avoid_data_.current_lanelets.end(),
-        [this](const auto & lane) {
+      const auto exist_adjacent_lane =
+        std::all_of(check_lanes.begin(), check_lanes.end(), [this](const auto & lane) {
           return planner_data_->route_handler->getRightLanelet(lane, true, false);
         });
       if (!exist_adjacent_lane && !is_within_current_lane(true)) {
