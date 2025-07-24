@@ -336,6 +336,84 @@ autoware::multi_object_tracker::types::DynamicObjectList TrackingTestBench::gene
     obj.area = state.shape.x * state.shape.y;
     detections.objects.push_back(obj);
   }
+
+  // Update and generate unknown object detections
+  for (auto & [id, state] : unknown_states_) {
+    // if (dropout_dist_(rng_)) continue;
+
+    // Move if it's a moving unknown object
+    if (state.is_moving) {
+      state.pose.position.x += state.twist.linear.x * dt;
+      state.pose.position.y += state.twist.linear.y * dt;
+    }
+
+    // Random shape evolution (30% chance of significant change)
+    if (shape_change_dist_(rng_)) {
+      updateUnknownShape(state);
+    } else {
+      // Minor shape variations
+      for (auto & point : state.current_footprint) {
+        point.x += cluster_evolution_noise_(rng_);
+        point.y += cluster_evolution_noise_(rng_);
+      }
+    }
+
+    // Create detection
+    autoware::multi_object_tracker::types::DynamicObject obj;
+    obj.uuid.uuid = stringToUUID(id);
+    obj.time = stamp;
+
+    // Classification
+    obj.classification.resize(1);
+    obj.classification[0].label = autoware_perception_msgs::msg::ObjectClassification::UNKNOWN;
+    obj.classification[0].probability = 1.0;
+
+    // Shape configuration
+    obj.shape.type = state.shape_type;
+    if (obj.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
+      // Calculate bounding box dimensions from footprint
+      double min_x = 0, max_x = 0, min_y = 0, max_y = 0;
+      for (const auto & p : state.current_footprint) {
+        min_x = std::min(min_x, p.x);
+        max_x = std::max(max_x, p.x);
+        min_y = std::min(min_y, p.y);
+        max_y = std::max(max_y, p.y);
+      }
+      obj.shape.dimensions.x = max_x - min_x;
+      obj.shape.dimensions.y = max_y - min_y;
+      obj.shape.dimensions.z = state.z_dimension;
+    } else {
+      obj.shape.footprint.points.clear();
+      for (const auto & p : state.current_footprint) {
+        geometry_msgs::msg::Point32 point;
+        point.x = p.x;
+        point.y = p.y;
+        point.z = 0.0;  // Z is not used for 2D footprint
+        obj.shape.footprint.points.push_back(point);
+      }
+      obj.shape.dimensions.x = 0.0;
+      obj.shape.dimensions.y = 0.0;
+      obj.shape.dimensions.z = state.z_dimension;
+    }
+
+    // Kinematics
+    obj.kinematics.has_position_covariance = false;
+    obj.kinematics.has_twist = false;
+    obj.kinematics.has_twist_covariance = false;
+    obj.pose_covariance = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    obj.twist_covariance = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    obj.pose = state.pose;
+
+    // Existence probability
+    obj.existence_probability = 0.0;
+
+    obj.channel_index = 0;
+    obj.area = obj.shape.dimensions.x * obj.shape.dimensions.y;
+    detections.objects.push_back(obj);
+  }
+
   // Add new objects occasionally
   if (new_obj_dist_(rng_)) {
     addNewCar("car_" + std::to_string(object_counter_++), 0, 0);
@@ -384,6 +462,18 @@ void TrackingTestBench::initializeObjects(const TrackingScenarioConfig & params)
       addNewPedestrian(id, center_x + pos_noise_(rng_), center_y + pedestrian_y_dist_(rng_));
     }
   }
+  // Initialize unknown objects
+  for (int i = 0; i < params.unknown_objects; ++i) {
+    std::string id = "unk_" + std::to_string(i);
+    // Wide scatter: uniform distribution in ±50m
+    float x = unknown_pos_dist_(rng_);
+    float y = unknown_pos_dist_(rng_);
+
+    // Small per-object offset to reduce direct overlap
+    x += i * 2.0f;  // 2m offset per object
+    y += i * 1.5f;
+    addNewUnknown(id, x, y);
+  }
 }
 void TrackingTestBench::setOrientationFromVelocity(
   const geometry_msgs::msg::Twist & twist, geometry_msgs::msg::Pose & pose)
@@ -428,4 +518,64 @@ void TrackingTestBench::addNewPedestrian(const std::string & id, float x, float 
   state.shape.x = 0.4;
   state.shape.y = 0.4;
   pedestrian_states_[id] = state;
+}
+
+void TrackingTestBench::addNewUnknown(const std::string & id, float x, float y)
+{
+  UnknownObjectState state;
+  state.pose.position.x = x;
+  state.pose.position.y = y;
+  state.pose.position.z =
+    std::uniform_real_distribution<float>(unknown_params_.min_z, unknown_params_.max_z)(rng_);
+  state.pose.orientation.w = 1.0;
+
+  // Movement properties
+  state.is_moving =
+    std::bernoulli_distribution(1.0f - unknown_params_.stationary_probability)(rng_);
+
+  if (state.is_moving) {
+    float speed = std::uniform_real_distribution<float>(
+      unknown_params_.min_speed, unknown_params_.max_speed)(rng_);
+    float angle = 0;  // angle_dist_(rng_);
+    state.twist.linear.x = speed * cos(angle);
+    state.twist.linear.y = speed * sin(angle);
+  }
+  state.z_dimension =
+    std::uniform_real_distribution<float>(unknown_params_.min_z, unknown_params_.max_z)(rng_);
+
+  // Initial shape
+  updateUnknownShape(state);
+  unknown_states_[id] = state;
+}
+
+void TrackingTestBench::generateClusterFootprint(std::vector<geometry_msgs::msg::Point> & footprint)
+{
+  const int num_points = std::uniform_int_distribution<int>(
+    unknown_params_.min_points, unknown_params_.max_points)(rng_);
+  footprint.resize(num_points);
+
+  float base_size =
+    std::uniform_real_distribution<float>(unknown_params_.min_size, unknown_params_.max_size)(rng_);
+
+  for (int i = 0; i < num_points; ++i) {
+    float angle = 2.0f * M_PI * i / num_points;
+    float radius = base_size * (0.7f);  //+ size_variation_dist_(rng_)
+    footprint[i].x = radius * cos(angle);
+    footprint[i].y = radius * sin(angle);
+    footprint[i].z = 0.0f;
+  }
+}
+
+void TrackingTestBench::updateUnknownShape(UnknownObjectState & state)
+{
+  state.previous_footprint = state.current_footprint;
+
+  // Randomly decide shape type (70% polygon, 30% bounding box)
+  if (shape_type_dist_(rng_)) {
+    state.shape_type = autoware_perception_msgs::msg::Shape::POLYGON;
+    generateClusterFootprint(state.current_footprint);
+  } else {
+    state.shape_type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+    state.current_footprint.clear();
+  }
 }
