@@ -214,6 +214,7 @@ void RoiClusterFusionNode::fuse_on_single_image(
   }
 
   // note: debug objects are safely cleared in fusion_node.cpp
+  // TODO(badai-nguyen): revise the shared debugger_ usage
   if (debugger_) {
     debugger_->image_rois_ = debug_image_rois;
     debugger_->obstacle_rois_ = debug_obstacle_rois;
