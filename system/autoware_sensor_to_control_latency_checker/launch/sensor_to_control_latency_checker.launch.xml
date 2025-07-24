@@ -3,7 +3,7 @@
   <!-- Parameters -->
   <arg name="config_file" default="$(find-pkg-share autoware_sensor_to_control_latency_checker)/config/sensor_to_control_latency_checker.param.yaml"/>
 
-  <node pkg="autoware_sensor_to_control_latency_checker" exec="autoware_sensor_to_control_latency_checker_node" name="sensor_to_control_latency_checker" output="screen" ros_args="--log-level DEBUG">
+  <node pkg="autoware_sensor_to_control_latency_checker" exec="autoware_sensor_to_control_latency_checker_node" name="sensor_to_control_latency_checker" output="screen">
     <!-- Parameters -->
     <param from="$(var config_file)"/>
   </node>
