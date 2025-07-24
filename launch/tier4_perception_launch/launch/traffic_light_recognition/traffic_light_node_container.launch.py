@@ -97,10 +97,6 @@ def create_traffic_light_node_container(namespace, context, *args, **kwargs):
         param_file=LaunchConfiguration("traffic_light_roi_visualizer_param_path").perform(context),
         allow_substs=True,
     )
-    traffic_light_selector_param = ParameterFile(
-        param_file=LaunchConfiguration("traffic_light_selector_param_path").perform(context),
-        allow_substs=True,
-    )
 
     container = ComposableNodeContainer(
         name="traffic_light_node_container",
@@ -287,7 +283,7 @@ def create_traffic_light_node_container(namespace, context, *args, **kwargs):
                 plugin="autoware::traffic_light::TrafficLightSelectorNode",
                 name="traffic_light_selector",
                 namespace=f"{namespace}/detection",
-                parameters=[traffic_light_selector_param],
+                parameters=[],
                 remappings=[
                     ("input/detected_rois", internal_node_name + "/rois"),
                     ("input/rough_rois", "rough/rois"),
@@ -363,9 +359,6 @@ def generate_launch_description():
 
     # traffic_light_roi_visualizer
     add_launch_arg("traffic_light_roi_visualizer_param_path")
-
-    # traffic_light_selector
-    add_launch_arg("traffic_light_selector_param_path")
 
     add_launch_arg("use_intra_process", "False")
     add_launch_arg("use_multithread", "False")

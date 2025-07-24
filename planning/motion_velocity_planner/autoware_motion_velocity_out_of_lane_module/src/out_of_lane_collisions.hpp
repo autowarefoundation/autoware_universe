@@ -18,6 +18,7 @@
 #include "types.hpp"
 
 #include <autoware/motion_velocity_planner_common/collision_checker.hpp>
+#include <autoware/route_handler/route_handler.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
@@ -32,12 +33,14 @@ namespace autoware::motion_velocity_planner::out_of_lane
 void calculate_object_path_time_collisions(
   OutOfLaneData & out_of_lane_data,
   const autoware_perception_msgs::msg::PredictedPath & object_path,
-  const autoware_perception_msgs::msg::Shape & object_shape);
+  const autoware_perception_msgs::msg::Shape & object_shape,
+  const bool validate_predicted_paths_on_lanelets);
 
 /// @brief calculate the times and points where ego collides with an object outside of its lane
 void calculate_objects_time_collisions(
   OutOfLaneData & out_of_lane_data,
-  const std::vector<autoware_perception_msgs::msg::PredictedObject> & objects);
+  const std::vector<autoware_perception_msgs::msg::PredictedObject> & objects,
+  const route_handler::RouteHandler & route_handler, const PlannerParam & params);
 
 /// @brief calculate the collisions to avoid
 /// @details either uses the time to collision or just the time when the object will arrive at the
@@ -45,7 +48,7 @@ void calculate_objects_time_collisions(
 void calculate_collisions_to_avoid(
   OutOfLaneData & out_of_lane_data,
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
-  const PlannerParam & params);
+  const PlannerParam & params, const bool is_stopping = false);
 
 /// @brief calculate the out of lane points
 std::vector<OutOfLanePoint> calculate_out_of_lane_points(const EgoData & ego_data);

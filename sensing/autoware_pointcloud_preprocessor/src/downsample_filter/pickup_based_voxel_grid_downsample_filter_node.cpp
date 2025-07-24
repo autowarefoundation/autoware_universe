@@ -1,4 +1,4 @@
-// Copyright 2024 TIER IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -75,7 +75,7 @@ PickupBasedVoxelGridDownsampleFilterComponent::PickupBasedVoxelGridDownsampleFil
 
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
-    std::bind(&PickupBasedVoxelGridDownsampleFilterComponent::paramCallback, this, _1));
+    std::bind(&PickupBasedVoxelGridDownsampleFilterComponent::param_callback, this, _1));
 }
 
 void PickupBasedVoxelGridDownsampleFilterComponent::filter(
@@ -90,7 +90,6 @@ void PickupBasedVoxelGridDownsampleFilterComponent::filter(
   // std::unordered_map<VoxelKey, size_t, VoxelKeyHash, VoxelKeyEqual> voxel_map;
   robin_hood::unordered_map<VoxelKey, size_t, VoxelKeyHash, VoxelKeyEqual> voxel_map;
 
-  if (input->data.empty()) return;
   voxel_map.reserve(input->data.size() / input->point_step);
 
   constexpr float large_num_offset = 100000.0;
@@ -159,7 +158,7 @@ void PickupBasedVoxelGridDownsampleFilterComponent::filter(
 }
 
 rcl_interfaces::msg::SetParametersResult
-PickupBasedVoxelGridDownsampleFilterComponent::paramCallback(
+PickupBasedVoxelGridDownsampleFilterComponent::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);

@@ -2,6 +2,99 @@
 Changelog for package autoware_compare_map_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(autoware_pointcloud_preprocessor): add diagnostic message (`#10579 <https://github.com/autowarefoundation/autoware_universe/issues/10579>`_)
+  * feat: add diag msg
+  * chore: fix code
+  * chore: remove outlier count in ring
+  * chore: move format timestamp to utility
+  * chore: add paramter to schema
+  * chore: add parameter for cluster
+  * chore: clean code
+  * chore: fix schema
+  * chore: move diagnostic updater to filter base class
+  * chore: fix schema
+  * chore: fix spell error
+  * chore: set up diagnostic updater
+  * refactor: utilize autoware_utils diagnostic message
+  * chore: add publish
+  * chore: add detail message
+  * chore: const for time difference
+  * refactor: structure diagnostics to class
+  * chore: const reference
+  * chore: clean logic
+  * chore: modify function name
+  * chore: update parameter
+  * chore: move evaluate status into diagnostic
+  * chore: fix description for concatenated pointcloud
+  * chore: timestamp mismatch threshold
+  * chore: fix diagnostic key
+  * chore: change function naming
+  ---------
+* Contributors: TaikiYamada4, Yi-Hsiang Fang (Vivid)
+
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* chore: perception code owner update (`#10645 <https://github.com/autowarefoundation/autoware_universe/issues/10645>`_)
+  * chore: update maintainers in multiple perception packages
+  * Revert "chore: update maintainers in multiple perception packages"
+  This reverts commit f2838c33d6cd82bd032039e2a12b9cb8ba6eb584.
+  * chore: update maintainers in multiple perception packages
+  * chore: add Kok Seang Tan as maintainer in multiple perception packages
+  ---------
+* chore(elevation_map): add @asa-naki to maitainer (`#10621 <https://github.com/autowarefoundation/autoware_universe/issues/10621>`_)
+* fix(autoware_compare_map_segmentation): handle empty output point cloud  (`#10572 <https://github.com/autowarefoundation/autoware_universe/issues/10572>`_)
+  * fix(voxel_based_compare_map_filter): handle empty output point cloud and set appropriate frame_id
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Kosuke Takeuchi, Taekjin LEE, TaikiYamada4
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(compare_map_segmentation): publish warning when pcl::voxelgrid failed to filter with large leaf size (`#10381 <https://github.com/autowarefoundation/autoware_universe/issues/10381>`_)
+  * feat: add warn in pcl overflow with compare_map
+  chore: fix message length
+  feat: add sanity check into voxel based compare map
+  feat: add feasibility check function
+  * fix: update include paths for voxel_grid_map_loader in segmentation filters
+  * feat: add diagnostic status handling in VoxelGridMapLoader and related components
+  * feat: add diagnostic updater for voxel-based compare map filter and improve status reporting
+  * refactor: move isFeasibleWithPCLVoxelGrid function to VoxelGridMapLoader and streamline diagnostics handling
+  * feat: update diagnostic status handling in VoxelGridMapLoader and related components
+  * feat: enhance diagnostic status handling in voxel-based compare map filters
+  * style(pre-commit): autofix
+  * refactor: add comments for clarity on voxel number calculations and overflow checks
+  * Update perception/autoware_compare_map_segmentation/lib/voxel_grid_map_loader.cpp
+  Co-authored-by: badai nguyen  <94814556+badai-nguyen@users.noreply.github.com>
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: yoshiri <yoshiyoshidetteiu@gmail.com>
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: badai nguyen <94814556+badai-nguyen@users.noreply.github.com>
+* fix(autoware_compare_map_segmentation): missing includes (`#10413 <https://github.com/autowarefoundation/autoware_universe/issues/10413>`_)
+  fix: missing include
+* fix(compare_map_segmentation): last map update logic (`#10351 <https://github.com/autowarefoundation/autoware_universe/issues/10351>`_)
+  fix(compare_map): logic
+* fix(voxel_based_compare_map): temporary fix pointcloud transform lookup  (`#10299 <https://github.com/autowarefoundation/autoware_universe/issues/10299>`_)
+  * fix(voxel_based_compare_map): temporary fix pointcloud transform lookup_time
+  * pre-commit
+  * chore: reduce timeout
+  * fix: misalignment when tranform back output
+  * fix: typo
+  ---------
+* Contributors: Kenzo Lobos Tsunekawa, Ryohsuke Mitsudome, Shumpei Wakabayashi, Taekjin LEE, badai nguyen
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

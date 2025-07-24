@@ -65,12 +65,35 @@ ament_target_dependencies(faster_voxel_grid_downsample_filter
   sensor_msgs
 )
 
-ament_auto_add_library(pointcloud_preprocessor_filter SHARED
-  src/concatenate_data/concatenate_and_time_sync_node.cpp
+add_library(concatenate_data SHARED
+  src/concatenate_data/combine_cloud_handler_base.cpp
   src/concatenate_data/combine_cloud_handler.cpp
   src/concatenate_data/cloud_collector.cpp
   src/concatenate_data/collector_matching_strategy.cpp
   src/concatenate_data/concatenate_pointclouds.cpp
+)
+
+target_include_directories(concatenate_data PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
+)
+
+ament_target_dependencies(concatenate_data
+  SYSTEM
+  autoware_point_types
+  autoware_sensing_msgs
+  autoware_utils
+  autoware_vehicle_msgs
+  managed_transform_buffer
+  pcl_conversions
+  pcl_ros
+  rclcpp
+  sensor_msgs
+  tf2_ros
+)
+
+ament_auto_add_library(pointcloud_preprocessor_filter SHARED
+  src/concatenate_data/concatenate_and_time_sync_node.cpp
   src/crop_box_filter/crop_box_filter_node.cpp
   src/time_synchronizer/time_synchronizer_node.cpp
   src/downsample_filter/voxel_grid_downsample_filter_node.cpp
@@ -99,6 +122,7 @@ ament_auto_add_library(pointcloud_preprocessor_filter SHARED
 target_link_libraries(pointcloud_preprocessor_filter
   pointcloud_preprocessor_filter_base
   faster_voxel_grid_downsample_filter
+  concatenate_data
   ${Boost_LIBRARIES}
   ${OpenCV_LIBRARIES}
   ${Sophus_LIBRARIES}
@@ -237,6 +261,13 @@ install(
 )
 
 install(
+  TARGETS concatenate_data EXPORT export_${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
+install(
   DIRECTORY include/
   DESTINATION include/${PROJECT_NAME}
 )
@@ -266,9 +297,19 @@ if(BUILD_TESTING)
     test/test_concatenate_node_unit.cpp
   )
 
+  ament_add_gtest(test_pickup_based_voxel_grid_downsample_filter_node
+    test/test_pickup_based_voxel_grid_downsample_filter_node.cpp
+  )
+
+  ament_add_gtest(test_concatenation_info
+    test/test_concatenation_info.cpp
+  )
+
   target_link_libraries(test_utilities pointcloud_preprocessor_filter)
   target_link_libraries(test_distortion_corrector_node pointcloud_preprocessor_filter)
   target_link_libraries(test_concatenate_node_unit pointcloud_preprocessor_filter)
+  target_link_libraries(test_pickup_based_voxel_grid_downsample_filter_node pointcloud_preprocessor_filter)
+  target_link_libraries(test_concatenation_info concatenate_data)
 
   add_ros_test(
     test/test_concatenate_node_component.py

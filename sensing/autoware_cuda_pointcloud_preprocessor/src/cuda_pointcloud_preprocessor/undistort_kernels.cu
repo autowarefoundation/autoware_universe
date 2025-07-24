@@ -19,9 +19,12 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
+#include <autoware/cuda_utils/cuda_check_error.hpp>
 
 namespace autoware::cuda_pointcloud_preprocessor
 {
+
+__device__ __constant__ double time_diff_threshold = 0.1;
 
 __host__ __device__ Eigen::Matrix3f skewSymmetric(const Eigen::Vector3f & v)
 {
@@ -65,7 +68,8 @@ __host__ __device__ Eigen::Matrix4f transformationMatrixFromVelocity(
 }
 
 __global__ void undistort2DKernel(
-  InputPointType * input_points, int num_points, TwistStruct2D * twist_structs, int num_twists)
+  InputPointType * input_points, int num_points, TwistStruct2D * twist_structs, int num_twists,
+  std::uint8_t * __restrict__ output_mismatch_mask)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx < num_points) {
@@ -88,6 +92,8 @@ __global__ void undistort2DKernel(
       point.time_stamp > twist.last_stamp_nsec ? point.time_stamp - twist.last_stamp_nsec : 0;
     double dt = 1e-9 * (dt_nsec);
 
+    output_mismatch_mask[idx] = static_cast<std::uint8_t>(dt > time_diff_threshold);
+
     theta += twist.v_theta * dt;
     float d = twist.v_x * dt;
     x += d * cos(theta);
@@ -102,7 +108,8 @@ __global__ void undistort2DKernel(
 }
 
 __global__ void undistort3DKernel(
-  InputPointType * input_points, int num_points, TwistStruct3D * twist_structs, int num_twists)
+  InputPointType * input_points, int num_points, TwistStruct3D * twist_structs, int num_twists,
+  std::uint8_t * __restrict__ output_mismatch_mask)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx < num_points) {
@@ -125,6 +132,8 @@ __global__ void undistort3DKernel(
       point.time_stamp > twist.last_stamp_nsec ? point.time_stamp - twist.last_stamp_nsec : 0;
     double dt = 1e-9 * (dt_nsec);
 
+    output_mismatch_mask[idx] = static_cast<std::uint8_t>(dt > time_diff_threshold);
+
     Eigen::Matrix4f transform =
       cum_transform_buffer_map * transformationMatrixFromVelocity(v_map, w_map, dt);
     Eigen::Vector3f p(point.x, point.y, point.z);
@@ -138,18 +147,22 @@ __global__ void undistort3DKernel(
 
 void undistort2DLaunch(
   InputPointType * input_points, int num_points, TwistStruct2D * twist_structs, int num_twists,
-  int threads_per_block, int blocks_per_grid, cudaStream_t & stream)
+  std::uint8_t * output_mismatch_mask, int threads_per_block, int blocks_per_grid,
+  cudaStream_t & stream)
 {
   undistort2DKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
-    input_points, num_points, twist_structs, num_twists);
+    input_points, num_points, twist_structs, num_twists, output_mismatch_mask);
+  CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
 void undistort3DLaunch(
   InputPointType * input_points, int num_points, TwistStruct3D * twist_structs, int num_twists,
-  int threads_per_block, int blocks_per_grid, cudaStream_t & stream)
+  std::uint8_t * output_mismatch_mask, int threads_per_block, int blocks_per_grid,
+  cudaStream_t & stream)
 {
   undistort3DKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
-    input_points, num_points, twist_structs, num_twists);
+    input_points, num_points, twist_structs, num_twists, output_mismatch_mask);
+  CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
 void setupTwist2DStructs(
@@ -234,9 +247,9 @@ void setupTwist2DStructs(
 
   // Copy to device
   device_twist_2d_structs.resize(host_twist_2d_structs.size());
-  cudaMemcpyAsync(
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
     thrust::raw_pointer_cast(device_twist_2d_structs.data()), host_twist_2d_structs.data(),
-    host_twist_2d_structs.size() * sizeof(TwistStruct2D), cudaMemcpyHostToDevice, stream);
+    host_twist_2d_structs.size() * sizeof(TwistStruct2D), cudaMemcpyHostToDevice, stream));
 }
 
 void setupTwist3DStructs(
@@ -299,7 +312,7 @@ void setupTwist3DStructs(
       angular_velocity_index++;
     }
 
-    TwistStruct3D twist;
+    TwistStruct3D twist{};
 
     Eigen::Map<Eigen::Matrix4f> cum_transform_buffer_map(twist.cum_transform_buffer);
     Eigen::Map<Eigen::Vector3f> v_map(twist.v);
@@ -326,9 +339,9 @@ void setupTwist3DStructs(
 
   // Copy to device
   device_twist_3d_structs.resize(host_twist_3d_structs.size());
-  cudaMemcpyAsync(
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
     thrust::raw_pointer_cast(device_twist_3d_structs.data()), host_twist_3d_structs.data(),
-    host_twist_3d_structs.size() * sizeof(TwistStruct3D), cudaMemcpyHostToDevice, stream);
+    host_twist_3d_structs.size() * sizeof(TwistStruct3D), cudaMemcpyHostToDevice, stream));
 }
 
 }  // namespace autoware::cuda_pointcloud_preprocessor

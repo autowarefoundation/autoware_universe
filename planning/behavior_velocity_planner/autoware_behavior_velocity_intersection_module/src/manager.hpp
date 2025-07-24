@@ -41,6 +41,15 @@ public:
 
   const char * getModuleName() override { return "intersection"; }
 
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    RequiredSubscriptionInfo required_subscription_info;
+    required_subscription_info.traffic_signals = true;
+    required_subscription_info.predicted_objects = true;
+    required_subscription_info.occupancy_grid_map = true;
+    return required_subscription_info;
+  }
+
 private:
   IntersectionModule::PlannerParam intersection_param_;
   // additional for INTERSECTION_OCCLUSION
@@ -57,6 +66,7 @@ private:
   /* called from SceneModuleInterfaceWithRTC::plan */
   void sendRTC(const Time & stamp) override;
   void setActivation() override;
+  void modifyPathVelocity(autoware_internal_planning_msgs::msg::PathWithLaneId * path) override;
   /* called from SceneModuleInterface::updateSceneModuleInstances */
   void deleteExpiredModules(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
@@ -64,6 +74,9 @@ private:
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr decision_state_pub_;
   rclcpp::Publisher<autoware_perception_msgs::msg::TrafficLightGroup>::SharedPtr
     tl_observation_pub_;
+
+  std::shared_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
+    planning_factor_interface_for_occlusion_;
 };
 
 class MergeFromPrivateModuleManager : public SceneModuleManagerInterface<>
@@ -72,6 +85,11 @@ public:
   explicit MergeFromPrivateModuleManager(rclcpp::Node & node);
 
   const char * getModuleName() override { return "merge_from_private"; }
+
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    return RequiredSubscriptionInfo{};
+  }
 
 private:
   MergeFromPrivateRoadModule::PlannerParam merge_from_private_area_param_;

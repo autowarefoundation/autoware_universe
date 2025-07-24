@@ -1,0 +1,25 @@
+/**:
+  ros__parameters:
+    debug: false
+    image_resize_height: 480
+    consecutive_error_frame_threshold: 3
+    num_blocks_horizontal: 5
+    num_blocks_vertical: 5
+
+    ## === Blockage thresholds ===
+    blockage_region_error_threshold: 5
+    blockage_ratio_threshold: 0.9
+    blockage_intensity_threshold: 10
+    blockage_frequency_ratio_threshold: 0.3
+
+    ## === Shadow clipping thresholds ===
+    shadow_region_error_threshold: 20
+    shadow_intensity_threshold: 10
+
+    ## === Highlight clipping thresholds ===
+    highlight_region_error_threshold: 3
+    highlight_intensity_threshold: 230
+
+    ## === Low visibility thresholds ===
+    low_visibility_region_error_threshold: 4
+    low_visibility_frequency_threshold: 4.5

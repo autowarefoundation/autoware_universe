@@ -32,11 +32,11 @@ namespace autoware::behavior_path_planner
 {
 ShiftPullOver::ShiftPullOver(rclcpp::Node & node, const GoalPlannerParameters & parameters)
 : PullOverPlannerBase{node, parameters},
-  lane_departure_checker_{[&]() {
-    auto lane_departure_checker_params = lane_departure_checker::Param{};
-    lane_departure_checker_params.footprint_extra_margin =
+  boundary_departure_checker_{[&]() {
+    auto boundary_departure_checker_params = boundary_departure_checker::Param{};
+    boundary_departure_checker_params.footprint_extra_margin =
       parameters.lane_departure_check_expansion_margin;
-    return LaneDepartureChecker{lane_departure_checker_params, vehicle_info_};
+    return BoundaryDepartureChecker{boundary_departure_checker_params, vehicle_info_};
   }()},
   left_side_parking_{parameters.parking_policy == ParkingPolicy::LEFT_SIDE}
 {
@@ -54,9 +54,8 @@ std::optional<PullOverPath> ShiftPullOver::plan(
   const int shift_sampling_num = parameters_.shift_sampling_num;
   const double jerk_resolution = std::abs(max_jerk - min_jerk) / shift_sampling_num;
 
-  const auto road_lanes = utils::getExtendedCurrentLanesFromPath(
-    upstream_module_output.path, planner_data, backward_search_length, forward_search_length,
-    /*forward_only_in_route*/ false);
+  const auto road_lanes = goal_planner_utils::get_reference_lanelets_for_pullover(
+    upstream_module_output.path, planner_data, backward_search_length, forward_search_length);
 
   const auto pull_over_lanes = goal_planner_utils::getPullOverLanes(
     *route_handler, left_side_parking_, backward_search_length, forward_search_length);
@@ -279,13 +278,14 @@ std::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
   // todo: Implement lane departure detection that does not depend on the footprint
   const auto resampled_parking_path = utils::resamplePathWithSpline(
     pull_over_path.parking_path(), parameters_.center_line_path_interval / 2);
-  const bool is_in_lanes =
-    !lane_departure_checker_.checkPathWillLeaveLane({departure_check_lane}, resampled_parking_path);
+  const bool is_in_lanes = !boundary_departure_checker_.checkPathWillLeaveLane(
+    {departure_check_lane}, resampled_parking_path);
 
   if (!is_in_parking_lots && !is_in_lanes) {
     return {};
   }
 
+  pull_over_path.debug_processed_prev_module_path = processed_prev_module_path;
   return pull_over_path;
 }
 

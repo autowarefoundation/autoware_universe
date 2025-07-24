@@ -19,111 +19,86 @@
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 
 #include <algorithm>
+#include <array>
 #include <list>
 #include <memory>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace
 {
-double getMahalanobisDistance(
-  const geometry_msgs::msg::Point & measurement, const geometry_msgs::msg::Point & tracker,
-  const Eigen::Matrix2d & covariance)
-{
-  Eigen::Vector2d measurement_point;
-  measurement_point << measurement.x, measurement.y;
-  Eigen::Vector2d tracker_point;
-  tracker_point << tracker.x, tracker.y;
-  Eigen::MatrixXd mahalanobis_squared = (measurement_point - tracker_point).transpose() *
-                                        covariance.inverse() * (measurement_point - tracker_point);
-  return std::sqrt(mahalanobis_squared(0));
-}
-
-Eigen::Matrix2d getXYCovariance(const std::array<double, 36> & pose_covariance)
-{
-  Eigen::Matrix2d covariance;
-  covariance << pose_covariance[0], pose_covariance[1], pose_covariance[6], pose_covariance[7];
-  return covariance;
-}
 
 double getFormedYawAngle(
   const geometry_msgs::msg::Quaternion & measurement_quat,
   const geometry_msgs::msg::Quaternion & tracker_quat, const bool distinguish_front_or_back = true)
 {
-  const double measurement_yaw = autoware_utils::normalize_radian(tf2::getYaw(measurement_quat));
-  const double tracker_yaw = autoware_utils::normalize_radian(tf2::getYaw(tracker_quat));
-  const double angle_range = distinguish_front_or_back ? M_PI : M_PI_2;
-  const double angle_step = distinguish_front_or_back ? 2.0 * M_PI : M_PI;
-  // Fixed measurement_yaw to be in the range of +-90 or 180 degrees of X_t(IDX::YAW)
-  double measurement_fixed_yaw = measurement_yaw;
-  while (angle_range <= tracker_yaw - measurement_fixed_yaw) {
-    measurement_fixed_yaw = measurement_fixed_yaw + angle_step;
+  // Calculate raw difference
+  double diff = tf2::getYaw(measurement_quat) - tf2::getYaw(tracker_quat);
+
+  // Fast modulo to bring diff into [-2π, 2π] range
+  diff += (diff > M_PI) ? -2.0 * M_PI : (diff < -M_PI) ? 2.0 * M_PI : 0.0;
+
+  // For front/back distinction, use [-π, π] range
+  // For side distinction only, use [-π/2, π/2] range by folding at ±π/2
+  if (!distinguish_front_or_back) {
+    if (diff > M_PI_2) {
+      diff = M_PI - diff;
+    } else if (diff < -M_PI_2) {
+      diff = -M_PI - diff;
+    }
   }
-  while (angle_range <= measurement_fixed_yaw - tracker_yaw) {
-    measurement_fixed_yaw = measurement_fixed_yaw - angle_step;
-  }
-  return std::fabs(measurement_fixed_yaw - tracker_yaw);
+
+  return std::abs(diff);
 }
 }  // namespace
 
 namespace autoware::multi_object_tracker
 {
+using autoware_utils::ScopedTimeTrack;
+using Label = autoware_perception_msgs::msg::ObjectClassification;
 
-DataAssociation::DataAssociation(const AssociatorConfig & config) : score_threshold_(0.01)
+DataAssociation::DataAssociation(const AssociatorConfig & config)
+: config_(config), score_threshold_(0.01)
 {
-  std::vector<int> can_assign_vector = config.can_assign_matrix;
-  std::vector<double> max_dist_vector = config.max_dist_matrix;
-  std::vector<double> max_area_vector = config.max_area_matrix;
-  std::vector<double> min_area_vector = config.min_area_matrix;
-  std::vector<double> max_rad_vector = config.max_rad_matrix;
-  std::vector<double> min_iou_vector = config.min_iou_matrix;
-
-  {
-    const int assign_label_num = static_cast<int>(std::sqrt(can_assign_vector.size()));
-    Eigen::Map<Eigen::MatrixXi> can_assign_matrix_tmp(
-      can_assign_vector.data(), assign_label_num, assign_label_num);
-    can_assign_matrix_ = can_assign_matrix_tmp.transpose();
-  }
-  {
-    const int max_dist_label_num = static_cast<int>(std::sqrt(max_dist_vector.size()));
-    Eigen::Map<Eigen::MatrixXd> max_dist_matrix_tmp(
-      max_dist_vector.data(), max_dist_label_num, max_dist_label_num);
-    max_dist_matrix_ = max_dist_matrix_tmp.transpose();
-  }
-  {
-    const int max_area_label_num = static_cast<int>(std::sqrt(max_area_vector.size()));
-    Eigen::Map<Eigen::MatrixXd> max_area_matrix_tmp(
-      max_area_vector.data(), max_area_label_num, max_area_label_num);
-    max_area_matrix_ = max_area_matrix_tmp.transpose();
-  }
-  {
-    const int min_area_label_num = static_cast<int>(std::sqrt(min_area_vector.size()));
-    Eigen::Map<Eigen::MatrixXd> min_area_matrix_tmp(
-      min_area_vector.data(), min_area_label_num, min_area_label_num);
-    min_area_matrix_ = min_area_matrix_tmp.transpose();
-  }
-  {
-    const int max_rad_label_num = static_cast<int>(std::sqrt(max_rad_vector.size()));
-    Eigen::Map<Eigen::MatrixXd> max_rad_matrix_tmp(
-      max_rad_vector.data(), max_rad_label_num, max_rad_label_num);
-    max_rad_matrix_ = max_rad_matrix_tmp.transpose();
-  }
-  {
-    const int min_iou_label_num = static_cast<int>(std::sqrt(min_iou_vector.size()));
-    Eigen::Map<Eigen::MatrixXd> min_iou_matrix_tmp(
-      min_iou_vector.data(), min_iou_label_num, min_iou_label_num);
-    min_iou_matrix_ = min_iou_matrix_tmp.transpose();
-  }
-
+  // Initialize the GNN solver
   gnn_solver_ptr_ = std::make_unique<gnn_solver::MuSSP>();
+  updateMaxSearchDistances();
+}
+
+void DataAssociation::setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr)
+{
+  time_keeper_ = std::move(time_keeper_ptr);
+}
+
+void DataAssociation::updateMaxSearchDistances()
+{
+  const int num_classes = config_.max_dist_matrix.cols();
+  max_squared_dist_per_class_.resize(num_classes);
+  squared_distance_matrix_ = config_.max_dist_matrix;  // These are already squared distances
+
+  // For each measurement class (column), find maximum squared distance with any tracker class
+  for (int measurement_class = 0; measurement_class < num_classes; ++measurement_class) {
+    double max_squared_dist = 0.0;
+    for (int tracker_class = 0; tracker_class < config_.max_dist_matrix.rows(); ++tracker_class) {
+      max_squared_dist =
+        std::max(max_squared_dist, config_.max_dist_matrix(tracker_class, measurement_class));
+    }
+    max_squared_dist_per_class_[measurement_class] = max_squared_dist;
+  }
 }
 
 void DataAssociation::assign(
   const Eigen::MatrixXd & src, std::unordered_map<int, int> & direct_assignment,
   std::unordered_map<int, int> & reverse_assignment)
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   std::vector<std::vector<double>> score(src.rows());
   for (int row = 0; row < src.rows(); ++row) {
     score.at(row).resize(src.cols());
@@ -152,34 +127,114 @@ void DataAssociation::assign(
   }
 }
 
+inline double getMahalanobisDistanceFast(double dx, double dy, const InverseCovariance2D & inv_cov)
+{
+  return dx * dx * inv_cov.inv00 + 2.0 * dx * dy * inv_cov.inv01 + dy * dy * inv_cov.inv11;
+}
+
+// Directly computes inverse covariance from pose_covariance array
+inline InverseCovariance2D precomputeInverseCovarianceFromPose(
+  const std::array<double, 36> & pose_covariance)
+{
+  // Step 1: Extract a, b, d directly from pose_covariance (no temporary Matrix2d)
+  const double a = pose_covariance[0];  // cov(0,0)
+  const double b = pose_covariance[1];  // cov(0,1) == pose_covariance[6] (symmetry)
+  const double d = pose_covariance[7];  // cov(1,1)
+
+  // Step 2: Compute determinant and inverse components in one pass
+  const double det = a * d - b * b;
+  const double inv_det = 1.0 / det;
+
+  InverseCovariance2D result;
+  result.inv00 = d * inv_det;   // d / det
+  result.inv01 = -b * inv_det;  // -b / det
+  result.inv11 = a * inv_det;   // a / det
+  return result;
+}
+
 Eigen::MatrixXd DataAssociation::calcScoreMatrix(
   const types::DynamicObjectList & measurements,
   const std::list<std::shared_ptr<Tracker>> & trackers)
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   // Ensure that the detected_objects and list_tracker are not empty
   if (measurements.objects.empty() || trackers.empty()) {
     return Eigen::MatrixXd();
   }
+
   // Initialize the score matrix
   Eigen::MatrixXd score_matrix =
     Eigen::MatrixXd::Zero(trackers.size(), measurements.objects.size());
 
-  size_t tracker_idx = 0;
-  for (auto tracker_itr = trackers.begin(); tracker_itr != trackers.end();
-       ++tracker_itr, ++tracker_idx) {
-    types::DynamicObject tracked_object;
-    (*tracker_itr)->getTrackedObject(measurements.header.stamp, tracked_object);
-    const std::uint8_t tracker_label = (*tracker_itr)->getHighestProbLabel();
+  // Pre-allocate vectors to avoid reallocations
+  std::vector<types::DynamicObject> tracked_objects;
+  std::vector<std::uint8_t> tracker_labels;
+  tracked_objects.reserve(trackers.size());
+  tracker_labels.reserve(trackers.size());
+  // Build R-tree and store tracker data
+  {
+    size_t tracker_idx = 0;
+    std::vector<ValueType> rtree_points;
+    rtree_.clear();
+    rtree_points.reserve(trackers.size());
+    for (const auto & tracker : trackers) {
+      types::DynamicObject tracked_object;
+      tracker->getTrackedObject(measurements.header.stamp, tracked_object);
+      tracked_objects.push_back(tracked_object);
+      tracker_labels.push_back(tracker->getHighestProbLabel());
 
-    for (size_t measurement_idx = 0; measurement_idx < measurements.objects.size();
-         ++measurement_idx) {
-      const types::DynamicObject & measurement_object = measurements.objects.at(measurement_idx);
-      const std::uint8_t measurement_label =
-        autoware::object_recognition_utils::getHighestProbLabel(measurement_object.classification);
+      Point p(tracked_object.pose.position.x, tracked_object.pose.position.y);
+      rtree_points.push_back(std::make_pair(p, tracker_idx));
+      ++tracker_idx;
+    }
+    rtree_.insert(rtree_points.begin(), rtree_points.end());
+  }
 
-      double score =
-        calculateScore(tracked_object, tracker_label, measurement_object, measurement_label);
+  // Pre-compute inverse covariance for each tracker
+  std::vector<InverseCovariance2D> tracker_inverse_covariances;
+  tracker_inverse_covariances.reserve(tracked_objects.size());
+  for (const auto & tracked_object : tracked_objects) {
+    tracker_inverse_covariances.push_back(
+      precomputeInverseCovarianceFromPose(tracked_object.pose_covariance));
+  }
 
+  // For each measurement, find nearby trackers using R-tree
+
+  for (size_t measurement_idx = 0; measurement_idx < measurements.objects.size();
+       ++measurement_idx) {
+    const auto & measurement_object = measurements.objects[measurement_idx];
+    const auto measurement_label =
+      autoware::object_recognition_utils::getHighestProbLabel(measurement_object.classification);
+
+    // Get pre-computed maximum squared distance for this measurement class
+    const double max_squared_dist = max_squared_dist_per_class_[measurement_label];
+
+    // Use circle query instead of box for more precise filtering
+    Point measurement_point(measurement_object.pose.position.x, measurement_object.pose.position.y);
+
+    std::vector<ValueType> nearby_trackers;
+    nearby_trackers.reserve(std::min(size_t{100}, trackers.size()));  // Reasonable initial capacity
+
+    // Compute search bounding box (square that contains the circle)
+    const double max_dist = std::sqrt(max_squared_dist);
+    const Box query_box(
+      Point(measurement_point.get<0>() - max_dist, measurement_point.get<1>() - max_dist),
+      Point(measurement_point.get<0>() + max_dist, measurement_point.get<1>() + max_dist));
+    // Initial R-tree box query
+    rtree_.query(bgi::within(query_box), std::back_inserter(nearby_trackers));
+
+    // Process nearby trackers
+    for (const auto & tracker_value : nearby_trackers) {
+      const size_t tracker_idx = tracker_value.second;
+      const auto & tracked_object = tracked_objects[tracker_idx];
+      const auto tracker_label = tracker_labels[tracker_idx];
+
+      // The actual distance check was already done in the R-tree query
+      double score = calculateScore(
+        tracked_object, tracker_label, measurement_object, measurement_label,
+        tracker_inverse_covariances[tracker_idx]);
       score_matrix(tracker_idx, measurement_idx) = score;
     }
   }
@@ -189,48 +244,66 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
 
 double DataAssociation::calculateScore(
   const types::DynamicObject & tracked_object, const std::uint8_t tracker_label,
-  const types::DynamicObject & measurement_object, const std::uint8_t measurement_label) const
+  const types::DynamicObject & measurement_object, const std::uint8_t measurement_label,
+  const InverseCovariance2D & inv_cov) const
 {
-  if (!can_assign_matrix_(tracker_label, measurement_label)) {
+  if (!config_.can_assign_matrix(tracker_label, measurement_label)) {
     return 0.0;
   }
 
-  const double max_dist = max_dist_matrix_(tracker_label, measurement_label);
-  const double dist =
-    autoware_utils::calc_distance2d(measurement_object.pose.position, tracked_object.pose.position);
-
-  // dist gate
-  if (max_dist < dist) return 0.0;
+  // when the tracker and measurements are unknown, use generalized IoU
+  if (tracker_label == Label::UNKNOWN && measurement_label == Label::UNKNOWN) {
+    const double & generalized_iou_threshold = config_.unknown_association_giou_threshold;
+    const double generalized_iou = shapes::get2dGeneralizedIoU(tracked_object, measurement_object);
+    if (generalized_iou < generalized_iou_threshold) {
+      return 0.0;
+    }
+    // rescale score to [0, 1]
+    return (generalized_iou - generalized_iou_threshold) / (1.0 - generalized_iou_threshold);
+  }
 
   // area gate
-  const double max_area = max_area_matrix_(tracker_label, measurement_label);
-  const double min_area = min_area_matrix_(tracker_label, measurement_label);
-  const double area = autoware_utils::get_area(measurement_object.shape);
-  if (area < min_area || max_area < area) return 0.0;
+  const double max_area = config_.max_area_matrix(tracker_label, measurement_label);
+  const double min_area = config_.min_area_matrix(tracker_label, measurement_label);
+  const double & area = measurement_object.area;
+  if (area < min_area || area > max_area) return 0.0;
 
-  // angle gate
-  const double max_rad = max_rad_matrix_(tracker_label, measurement_label);
-  const double angle =
-    getFormedYawAngle(measurement_object.pose.orientation, tracked_object.pose.orientation, false);
-  if (std::fabs(max_rad) < M_PI && std::fabs(max_rad) < std::fabs(angle)) {
-    return 0.0;
-  }
+  // dist gate
+  const double max_dist_sq = config_.max_dist_matrix(tracker_label, measurement_label);
+  const double dx = measurement_object.pose.position.x - tracked_object.pose.position.x;
+  const double dy = measurement_object.pose.position.y - tracked_object.pose.position.y;
+  const double dist_sq = dx * dx + dy * dy;
+  if (dist_sq > max_dist_sq) return 0.0;
 
   // mahalanobis dist gate
-  const double mahalanobis_dist = getMahalanobisDistance(
-    measurement_object.pose.position, tracked_object.pose.position,
-    getXYCovariance(tracked_object.pose_covariance));
-  if (3.035 /*99%*/ <= mahalanobis_dist) return 0.0;
+  const double mahalanobis_dist = getMahalanobisDistanceFast(dx, dy, inv_cov);
+  constexpr double mahalanobis_dist_threshold =
+    11.62;  // This is an empirical value corresponding to the 99.6% confidence level
+            // for a chi-square distribution with 2 degrees of freedom (critical value).
+  if (mahalanobis_dist >= mahalanobis_dist_threshold) return 0.0;
+
+  // angle gate, only if the threshold is set less than pi
+  const double max_rad = config_.max_rad_matrix(tracker_label, measurement_label);
+  if (max_rad < M_PI) {
+    const double angle = getFormedYawAngle(
+      measurement_object.pose.orientation, tracked_object.pose.orientation, false);
+    if (max_rad < std::fabs(angle)) {
+      return 0.0;
+    }
+  }
+
+  const double ratio_sq = dist_sq / max_dist_sq;
+  const double score = 1.0 - std::sqrt(ratio_sq);
+  if (score < score_threshold_) return 0.0;
 
   // 2d iou gate
-  const double min_iou = min_iou_matrix_(tracker_label, measurement_label);
-  const double min_union_iou_area = 1e-2;
-  const double iou = shapes::get2dIoU(measurement_object, tracked_object, min_union_iou_area);
+  const double min_iou = config_.min_iou_matrix(tracker_label, measurement_label);
+  constexpr double min_union_iou_area = 1e-2;
+  const double iou = measurement_label == Label::PEDESTRIAN
+                       ? shapes::get1dIoU(measurement_object, tracked_object)
+                       : shapes::get2dIoU(measurement_object, tracked_object, min_union_iou_area);
   if (iou < min_iou) return 0.0;
 
-  // all gate is passed
-  double score = (max_dist - std::min(dist, max_dist)) / max_dist;
-  if (score < score_threshold_) score = 0.0;
   return score;
 }
 

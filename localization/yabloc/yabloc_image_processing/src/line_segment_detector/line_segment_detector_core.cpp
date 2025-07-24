@@ -14,7 +14,7 @@
 
 #include "yabloc_image_processing/line_segment_detector/line_segment_detector.hpp"
 
-#include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_utils_system/stop_watch.hpp>
 #include <opencv4/opencv2/imgproc.hpp>
 #include <yabloc_common/cv_decompress.hpp>
 #include <yabloc_common/pub_sub.hpp>
@@ -55,7 +55,7 @@ void LineSegmentDetector::execute(const cv::Mat & image, const rclcpp::Time & st
 
   cv::Mat lines;
   {
-    autoware_utils::StopWatch stop_watch;
+    autoware_utils_system::StopWatch stop_watch;
     line_segment_detector_->detect(gray_image, lines);
     if (lines.size().width != 0) {
       line_segment_detector_->drawSegments(gray_image, lines);

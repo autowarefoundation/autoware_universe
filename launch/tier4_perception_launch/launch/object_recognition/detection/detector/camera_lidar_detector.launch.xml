@@ -4,8 +4,23 @@
   <arg name="ns" description="current namespace"/>
 
   <!-- Lidar + Camera detector parameters -->
-  <arg name="lidar_detection_model_type" description="options: `transfusion`, `centerpoint`, `pointpainting`, `apollo`, `clustering`"/>
-  <arg name="lidar_detection_model_name" description="options: `transfusion`, `centerpoint`, `centerpoint_tiny`, `centerpoint_sigma`, `pointpainting`"/>
+  <arg name="lidar_detection_model_type">
+    <choice value="bevfusion"/>
+    <choice value="centerpoint"/>
+    <choice value="pointpainting"/>
+    <choice value="transfusion"/>
+    <choice value="apollo"/>
+    <choice value="clustering"/>
+  </arg>
+  <arg name="lidar_detection_model_name">
+    <choice value="bevfusion_lidar"/>
+    <choice value="centerpoint"/>
+    <choice value="centerpoint_tiny"/>
+    <choice value="centerpoint_sigma"/>
+    <choice value="pointpainting"/>
+    <choice value="transfusion"/>
+    <choice value=""/>
+  </arg>
   <arg name="use_low_intensity_cluster_filter"/>
   <arg name="use_image_segmentation_based_filter"/>
 
@@ -35,6 +50,12 @@
   <arg name="input/camera7/image"/>
   <arg name="input/camera7/info"/>
   <arg name="input/camera7/rois"/>
+  <arg name="input/camera8/image"/>
+  <arg name="input/camera8/info"/>
+  <arg name="input/camera8/rois"/>
+
+  <arg name="segmentation_pointcloud_fusion_camera_ids"/>
+  <arg name="image_topic_name"/>
 
   <arg name="node/pointcloud_container"/>
   <arg name="input/pointcloud"/>
@@ -96,6 +117,7 @@
       <arg name="input/rois5" value="$(var input/camera5/rois)"/>
       <arg name="input/rois6" value="$(var input/camera6/rois)"/>
       <arg name="input/rois7" value="$(var input/camera7/rois)"/>
+      <arg name="input/rois8" value="$(var input/camera8/rois)"/>
       <arg name="input/camera_info0" value="$(var input/camera0/info)"/>
       <arg name="input/camera_info1" value="$(var input/camera1/info)"/>
       <arg name="input/camera_info2" value="$(var input/camera2/info)"/>
@@ -104,6 +126,7 @@
       <arg name="input/camera_info5" value="$(var input/camera5/info)"/>
       <arg name="input/camera_info6" value="$(var input/camera6/info)"/>
       <arg name="input/camera_info7" value="$(var input/camera7/info)"/>
+      <arg name="input/camera_info8" value="$(var input/camera8/info)"/>
       <arg name="input/image0" value="$(var input/camera0/image)"/>
       <arg name="input/image1" value="$(var input/camera1/image)"/>
       <arg name="input/image2" value="$(var input/camera2/image)"/>
@@ -112,6 +135,7 @@
       <arg name="input/image5" value="$(var input/camera5/image)"/>
       <arg name="input/image6" value="$(var input/camera6/image)"/>
       <arg name="input/image7" value="$(var input/camera7/image)"/>
+      <arg name="input/image8" value="$(var input/camera8/image)"/>
       <arg name="input/pointcloud" value="$(var pointpainting/input/pointcloud)"/>
       <arg name="output/objects" value="$(var pointpainting/output/objects)"/>
 
@@ -120,6 +144,7 @@
       <arg name="model_param_path" value="$(var lidar_model_param_path)/$(var lidar_detection_model_name).param.yaml"/>
       <arg name="ml_package_param_path" value="$(var model_path)/$(var lidar_detection_model_name)_ml_package.param.yaml"/>
       <arg name="class_remapper_param_path" value="$(var model_path)/detection_class_remapper.param.yaml"/>
+      <arg name="common_param_path" value="$(var pointpainting_fusion_common_param_path)"/>
       <arg name="use_pointcloud_container" value="true"/>
       <arg name="pointcloud_container_name" value="$(var node/pointcloud_container)"/>
     </include>
@@ -127,9 +152,11 @@
 
   <!-- Image_segmentation based filter, apply for camera0 only-->
   <group>
-    <include file="$(find-pkg-share autoware_image_projection_based_fusion)/launch/segmentation_pointcloud_fusion.launch.xml" if="$(var use_image_segmentation_based_filter)">
+    <include file="$(find-pkg-share autoware_image_projection_based_fusion)/launch/segmentation_pointcloud_fusion.launch.py" if="$(var use_image_segmentation_based_filter)">
       <arg name="input/pointcloud" value="$(var segmentation_based_filtered/input/pointcloud)"/>
       <arg name="output/pointcloud" value="$(var segmentation_based_filtered/output/pointcloud)"/>
+      <arg name="image_topic_name" value="$(var image_topic_name)"/>
+      <arg name="fusion_camera_ids" value="$(var segmentation_pointcloud_fusion_camera_ids)"/>
     </include>
   </group>
 
@@ -169,6 +196,7 @@
           <arg name="input/rois5" value="$(var input/camera5/rois)"/>
           <arg name="input/rois6" value="$(var input/camera6/rois)"/>
           <arg name="input/rois7" value="$(var input/camera7/rois)"/>
+          <arg name="input/rois8" value="$(var input/camera8/rois)"/>
           <arg name="input/camera_info0" value="$(var input/camera0/info)"/>
           <arg name="input/camera_info1" value="$(var input/camera1/info)"/>
           <arg name="input/camera_info2" value="$(var input/camera2/info)"/>
@@ -177,6 +205,7 @@
           <arg name="input/camera_info5" value="$(var input/camera5/info)"/>
           <arg name="input/camera_info6" value="$(var input/camera6/info)"/>
           <arg name="input/camera_info7" value="$(var input/camera7/info)"/>
+          <arg name="input/camera_info8" value="$(var input/camera8/info)"/>
           <arg name="input/image0" value="$(var input/camera0/image)"/>
           <arg name="input/image1" value="$(var input/camera1/image)"/>
           <arg name="input/image2" value="$(var input/camera2/image)"/>
@@ -185,6 +214,7 @@
           <arg name="input/image5" value="$(var input/camera5/image)"/>
           <arg name="input/image6" value="$(var input/camera6/image)"/>
           <arg name="input/image7" value="$(var input/camera7/image)"/>
+          <arg name="input/image8" value="$(var input/camera8/image)"/>
           <arg name="input/clusters" value="$(var roi_cluster_fusion/input/clusters)"/>
           <arg name="output/clusters" value="$(var roi_cluster_fusion/output/clusters)"/>
           <arg name="param_path" value="$(var roi_cluster_fusion_param_path)"/>

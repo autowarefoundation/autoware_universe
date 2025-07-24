@@ -64,6 +64,7 @@ def launch_setup(context, *args, **kwargs):
             remappings=[
                 ("~/input/twist", "/sensing/vehicle_velocity_converter/twist_with_covariance"),
                 ("output", "points_raw/concatenated"),
+                ("output_info", "points_raw/concatenated_info"),
             ],
             parameters=[
                 concatenate_and_time_sync_node_param,
@@ -96,7 +97,10 @@ def launch_setup(context, *args, **kwargs):
             package=pkg,
             plugin="autoware::pointcloud_preprocessor::PointCloudConcatenationComponent",
             name="concatenate_filter",
-            remappings=[("output", "points_raw/concatenated")],
+            remappings=[
+                ("output", "points_raw/concatenated"),
+                ("output_info", "points_raw/concatenated_info"),
+            ],
             parameters=[
                 concatenate_pointclouds_node_param,
                 {

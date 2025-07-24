@@ -34,7 +34,7 @@
 using autoware::motion_utils::findNearestIndex;
 using autoware_utils::calc_distance2d;
 using autoware_utils::calc_offset_pose;
-using lanelet::utils::getArcCoordinates;
+using lanelet::utils::getArcCoordinatesOnEgoCenterline;
 namespace autoware::behavior_path_planner
 {
 using start_planner_utils::getPullOutLanes;
@@ -44,12 +44,12 @@ ShiftPullOut::ShiftPullOut(
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper)
 : PullOutPlannerBase{node, parameters, time_keeper}
 {
-  autoware::lane_departure_checker::Param lane_departure_checker_params;
-  lane_departure_checker_params.footprint_extra_margin =
+  autoware::boundary_departure_checker::Param boundary_departure_checker_params;
+  boundary_departure_checker_params.footprint_extra_margin =
     parameters.lane_departure_check_expansion_margin;
-  lane_departure_checker_ =
-    std::make_shared<autoware::lane_departure_checker::LaneDepartureChecker>(
-      lane_departure_checker_params, vehicle_info_, time_keeper_);
+  boundary_departure_checker_ =
+    std::make_shared<autoware::boundary_departure_checker::BoundaryDepartureChecker>(
+      boundary_departure_checker_params, vehicle_info_, time_keeper_);
 }
 
 std::optional<PullOutPath> ShiftPullOut::plan(
@@ -105,7 +105,7 @@ std::optional<PullOutPath> ShiftPullOut::plan(
 
       PathWithLaneId path_with_only_first_pose{};
       path_with_only_first_pose.points.push_back(path_shift_start_to_end.points.front());
-      return !lane_departure_checker_->checkPathWillLeaveLane(
+      return !boundary_departure_checker_->checkPathWillLeaveLane(
         lanelet_map_ptr, path_with_only_first_pose);
     });
 
@@ -115,7 +115,7 @@ std::optional<PullOutPath> ShiftPullOut::plan(
     // computational cost.
 
     if (
-      is_lane_departure_check_required && lane_departure_checker_->checkPathWillLeaveLane(
+      is_lane_departure_check_required && boundary_departure_checker_->checkPathWillLeaveLane(
                                             lanelet_map_ptr, path_shift_start_to_end,
                                             fused_id_start_to_end, fused_polygon_start_to_end)) {
       planner_debug_data.conditions_evaluation.emplace_back("lane departure");
@@ -132,7 +132,7 @@ std::optional<PullOutPath> ShiftPullOut::plan(
         shift_path.points, start_pose, common_parameters.ego_nearest_dist_threshold,
         common_parameters.ego_nearest_yaw_threshold);
 
-    const auto cropped_path = lane_departure_checker_->cropPointsOutsideOfLanes(
+    const auto cropped_path = boundary_departure_checker_->cropPointsOutsideOfLanes(
       lanelet_map_ptr, shift_path, start_segment_idx, fused_id_crop_points,
       fused_polygon_crop_points);
     if (cropped_path.points.empty()) {
@@ -263,7 +263,8 @@ std::vector<PullOutPath> ShiftPullOut::calcPullOutPaths(
     std::numeric_limits<double>::epsilon());
 
   // generate road lane reference path
-  const auto arc_position_start = getArcCoordinates(road_lanes, start_pose);
+  const auto arc_position_start =
+    getArcCoordinatesOnEgoCenterline(road_lanes, start_pose, route_handler.getLaneletMapPtr());
   const double s_start = std::max(arc_position_start.length - backward_path_length, 0.0);
   const auto path_end_info =
     autoware::behavior_path_planner::utils::parking_departure::calcEndArcLength(

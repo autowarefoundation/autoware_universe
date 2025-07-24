@@ -2,6 +2,54 @@
 Changelog for package autoware_operation_mode_transition_manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat!: replace tier4_system_msgs with autoware_system_msgs for services (`#10842 <https://github.com/autowarefoundation/autoware_universe/issues/10842>`_)
+  * feat!: replace tier4_system_msgs with autoware_system_msgs for services
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(operaton_mode_transition_manager): add flag node (`#10828 <https://github.com/autowarefoundation/autoware_universe/issues/10828>`_)
+  * feat(operaton_mode_transition_manager): add flag node
+  * rename node
+  ---------
+* fix(operation_mode_transition_manager): fix mode change without route (`#10749 <https://github.com/autowarefoundation/autoware_universe/issues/10749>`_)
+* Contributors: Ryohsuke Mitsudome, TaikiYamada4, Takagi, Isamu
+
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(operation_mode_transition_manager): add timeout of the input (`#10457 <https://github.com/autowarefoundation/autoware_universe/issues/10457>`_)
+  fix(operation_mode_transition_manager): add timeout for the input
+* refactor(operation_mode_transition_manager): less member variable (`#10453 <https://github.com/autowarefoundation/autoware_universe/issues/10453>`_)
+  * refactor(operatoin_mode_transition_manager): remove unnecessary member variable
+  * implement InputData
+  * fix
+  * fix
+  * resolve the reviews
+  * add maintainer
+  ---------
+* Contributors: TaikiYamada4, Takayuki Murooka
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(control): apply THROTTLE to frequent log (`#10418 <https://github.com/autowarefoundation/autoware_universe/issues/10418>`_)
+  * fix(control): apply THROTTLE to frequent log
+  * fix
+  * fix
+  * fix
+  * fix
+  ---------
+* Contributors: Ryohsuke Mitsudome, Takayuki Murooka
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

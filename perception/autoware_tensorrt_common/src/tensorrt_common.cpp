@@ -44,6 +44,11 @@ TrtCommon::TrtCommon(
   model_profiler_(profiler)
 {
   logger_ = std::make_shared<Logger>();
+
+  // Set CUDA device flags
+  // note: Device flags are process-wide
+  cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+
   for (const auto & plugin_path : plugin_paths) {
     int32_t flags{RTLD_LAZY};
 // cspell: ignore asan
@@ -56,7 +61,9 @@ TrtCommon::TrtCommon(
 #endif  // ENABLE_ASAN
     void * handle = dlopen(plugin_path.c_str(), flags);
     if (!handle) {
-      logger_->log(nvinfer1::ILogger::Severity::kERROR, "Could not load plugin library");
+      logger_->log(
+        nvinfer1::ILogger::Severity::kERROR, "Could not load plugin library %s. error %s",
+        plugin_path.c_str(), dlerror());
     } else {
       logger_->log(
         nvinfer1::ILogger::Severity::kINFO, "Loaded plugin library: %s", plugin_path.c_str());

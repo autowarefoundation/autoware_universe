@@ -47,43 +47,6 @@ bool is_road_lanelet(const lanelet::ConstLanelet & lanelet)
 }
 }  // namespace
 
-lanelet::ConstLanelets consecutive_lanelets(
-  const route_handler::RouteHandler & route_handler, const lanelet::ConstLanelet & lanelet)
-{
-  lanelet::ConstLanelets consecutives = route_handler.getRoutingGraphPtr()->following(lanelet);
-  const auto previous = route_handler.getRoutingGraphPtr()->previous(lanelet);
-  consecutives.insert(consecutives.end(), previous.begin(), previous.end());
-  return consecutives;
-}
-
-lanelet::ConstLanelets get_missing_lane_change_lanelets(
-  const lanelet::ConstLanelets & trajectory_lanelets,
-  const route_handler::RouteHandler & route_handler)
-{
-  lanelet::ConstLanelets missing_lane_change_lanelets;
-  const auto & routing_graph = *route_handler.getRoutingGraphPtr();
-  lanelet::ConstLanelets adjacents;
-  lanelet::ConstLanelets consecutives;
-  for (const auto & ll : trajectory_lanelets) {
-    const auto consecutives_of_ll = consecutive_lanelets(route_handler, ll);
-    std::copy_if(
-      consecutives_of_ll.begin(), consecutives_of_ll.end(), std::back_inserter(consecutives),
-      [&](const auto & l) { return !contains_lanelet(consecutives, l.id()); });
-    const auto adjacents_of_ll = routing_graph.besides(ll);
-    std::copy_if(
-      adjacents_of_ll.begin(), adjacents_of_ll.end(), std::back_inserter(adjacents),
-      [&](const auto & l) { return !contains_lanelet(adjacents, l.id()); });
-  }
-  std::copy_if(
-    adjacents.begin(), adjacents.end(), std::back_inserter(missing_lane_change_lanelets),
-    [&](const auto & l) {
-      return !contains_lanelet(missing_lane_change_lanelets, l.id()) &&
-             !contains_lanelet(trajectory_lanelets, l.id()) &&
-             contains_lanelet(consecutives, l.id());
-    });
-  return missing_lane_change_lanelets;
-}
-
 lanelet::ConstLanelets calculate_trajectory_lanelets(
   const autoware_utils::LineString2d & trajectory_ls,
   const route_handler::RouteHandler & route_handler)
@@ -99,10 +62,6 @@ lanelet::ConstLanelets calculate_trajectory_lanelets(
       trajectory_lanelets.push_back(ll);
     }
   }
-  const auto missing_lanelets =
-    get_missing_lane_change_lanelets(trajectory_lanelets, route_handler);
-  trajectory_lanelets.insert(
-    trajectory_lanelets.end(), missing_lanelets.begin(), missing_lanelets.end());
   return trajectory_lanelets;
 }
 

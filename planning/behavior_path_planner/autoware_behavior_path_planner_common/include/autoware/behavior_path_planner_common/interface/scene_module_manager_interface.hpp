@@ -130,7 +130,7 @@ public:
       for (const auto & [opt_pose, create_virtual_wall] : pose_and_func_vec) {
         if (!!opt_pose) {
           const auto detail = opt_pose.value().detail;
-          const auto text = m.lock()->name() + (detail.empty() ? "" : " (" + detail + ")");
+          const auto text = m.lock()->name() + (detail.empty() ? "" : " \n(" + detail + ")");
           const auto virtual_wall = create_virtual_wall(
             opt_pose.value().pose, text, rclcpp::Clock().now(), marker_id, 0.0, "", true);
           append_marker_array(virtual_wall, &markers);
