@@ -237,6 +237,7 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
       score_matrix(tracker_idx, measurement_idx) = score;
 
       if (significant_shape_change) {
+        // hash the indeces
         significant_shape_change_set_.insert(
           (static_cast<uint64_t>(tracker_idx) << 32) | measurement_idx);
       }
@@ -270,13 +271,10 @@ double DataAssociation::calculateScore(
   // dist gate
   if (dist_sq > max_dist_sq) return INVALID_SCORE;
 
-  constexpr uint8_t VehicleLabelMin = 1;  // CAR
-  constexpr uint8_t VehicleLabelMax = 4;  // TRAILER
-
   // gates for non-vehicle objects
   const double area_meas = measurement_object.area;
-  const bool is_vehicle_tracker =
-    tracker_label >= VehicleLabelMin && tracker_label <= VehicleLabelMax;
+  const bool is_vehicle_tracker = tracker_label == Label::CAR || tracker_label == Label::BUS ||
+                                  tracker_label == Label::TRUCK || tracker_label == Label::TRAILER;
   if (!is_vehicle_tracker) {
     // area gate
     const double max_area = config_.max_area_matrix(tracker_label, measurement_label);
