@@ -272,8 +272,10 @@ void GyroBiasEstimator::callback_imu(const Imu::ConstSharedPtr imu_msg_ptr)
       p_angle_ = f_matrix * p_angle_ * f_matrix.transpose() + q_angle_;
 
       // Limit covariance
-      p_angle_(0,0) = std::min(std::max(p_angle_(0,0), min_covariance_angle_), ekf_variance_p_angle_);
-      p_angle_(1,1) = std::min(std::max(p_angle_(1,1), min_covariance_angle_), ekf_variance_p_angle_);
+      p_angle_(0, 0) =
+        std::min(std::max(p_angle_(0, 0), min_covariance_angle_), ekf_variance_p_angle_);
+      p_angle_(1, 1) =
+        std::min(std::max(p_angle_(1, 1), min_covariance_angle_), ekf_variance_p_angle_);
     }
     if (gyro_yaw_angle_ < -M_PI) {
       gyro_yaw_angle_ += 2.0 * M_PI;
@@ -719,8 +721,8 @@ void GyroBiasEstimator::update_diagnostics(diagnostic_updater::DiagnosticStatusW
   stat.add("gyro_bias_threshold", f(gyro_bias_threshold_));
   stat.add("p_", f(p_ * 1e10));
   stat.add("q_", f(q_ * 1e10));
-  stat.add("p_angle0_", f(p_angle_(0,0) * 1e10));
-  stat.add("p_angle1_", f(p_angle_(1,1) * 1e10));
+  stat.add("p_angle0_", f(p_angle_(0, 0) * 1e10));
+  stat.add("p_angle1_", f(p_angle_(1, 1) * 1e10));
 }
 
 }  // namespace autoware::imu_corrector
