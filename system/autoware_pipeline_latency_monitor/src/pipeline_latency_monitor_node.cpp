@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sensor_to_control_latency_checker_node.hpp"
+#include "pipeline_latency_monitor_node.hpp"
 
 #include <autoware_planning_validator/msg/planning_validator_status.hpp>
 #include <rclcpp/serialization.hpp>
@@ -27,7 +27,7 @@
 #include <string>
 #include <utility>
 
-namespace autoware::system::sensor_to_control_latency_checker
+namespace autoware::system::pipeline_latency_monitor
 {
 
 namespace
@@ -56,9 +56,8 @@ rclcpp::Time get_latest_timestamp(const std::deque<ProcessData> & history)
 
 };  // namespace
 
-SensorToControlLatencyCheckerNode::SensorToControlLatencyCheckerNode(
-  const rclcpp::NodeOptions & options)
-: Node("sensor_to_control_latency_checker", options), diagnostic_updater_(this)
+PipelineLatencyMonitorNode::PipelineLatencyMonitorNode(const rclcpp::NodeOptions & options)
+: Node("pipeline_latency_monitor", options), diagnostic_updater_(this)
 {
   update_rate_ = declare_parameter<double>("update_rate");
   latency_threshold_ms_ = declare_parameter<double>("latency_threshold_ms");
@@ -121,23 +120,22 @@ SensorToControlLatencyCheckerNode::SensorToControlLatencyCheckerNode(
     "~/output/total_latency_ms", 10);
 
   // Create debug publisher
-  debug_publisher_ = std::make_unique<autoware::universe_utils::DebugPublisher>(
-    this, "sensor_to_control_latency_checker");
+  debug_publisher_ =
+    std::make_unique<autoware::universe_utils::DebugPublisher>(this, "pipeline_latency_monitor");
 
   // Setup diagnostic updater
-  diagnostic_updater_.setHardwareID("sensor_to_control_latency_checker");
-  diagnostic_updater_.add(
-    "Total Latency", this, &SensorToControlLatencyCheckerNode::check_total_latency);
+  diagnostic_updater_.setHardwareID("pipeline_latency_monitor");
+  diagnostic_updater_.add("Total Latency", this, &PipelineLatencyMonitorNode::check_total_latency);
 
   // Create timer
   timer_ = create_wall_timer(
     std::chrono::milliseconds(static_cast<int>(1000.0 / update_rate_)),
-    std::bind(&SensorToControlLatencyCheckerNode::on_timer, this));
+    std::bind(&PipelineLatencyMonitorNode::on_timer, this));
 
-  RCLCPP_INFO(get_logger(), "SensorToControlLatencyCheckerNode initialized");
+  RCLCPP_INFO(get_logger(), "PipelineLatencyMonitorNode initialized");
 }
 
-void SensorToControlLatencyCheckerNode::on_timer()
+void PipelineLatencyMonitorNode::on_timer()
 {
   calculate_total_latency();
 
@@ -147,7 +145,7 @@ void SensorToControlLatencyCheckerNode::on_timer()
   diagnostic_updater_.force_update();
 }
 
-void SensorToControlLatencyCheckerNode::calculate_total_latency()
+void PipelineLatencyMonitorNode::calculate_total_latency()
 {
   if (input_sequence_.empty()) {
     return;
@@ -210,7 +208,7 @@ void SensorToControlLatencyCheckerNode::calculate_total_latency()
     get_logger(), "Total latency with offsets: %.2f ms (%s)", total_latency_ms_, ss.str().c_str());
 }
 
-void SensorToControlLatencyCheckerNode::publish_total_latency()
+void PipelineLatencyMonitorNode::publish_total_latency()
 {
   // Publish total latency
   auto total_latency_msg = std::make_unique<autoware_internal_debug_msgs::msg::Float64Stamped>();
@@ -228,12 +226,11 @@ void SensorToControlLatencyCheckerNode::publish_total_latency()
     "debug/total_latency_ms", total_latency_ms_);
 
   RCLCPP_INFO_THROTTLE(
-    get_logger(), *get_clock(), 1000,
-    "Total sensor-to-control latency: %.2f ms (threshold: %.2f ms)", total_latency_ms_,
-    latency_threshold_ms_);
+    get_logger(), *get_clock(), 1000, "Total latency: %.2f ms (threshold: %.2f ms)",
+    total_latency_ms_, latency_threshold_ms_);
 }
 
-void SensorToControlLatencyCheckerNode::check_total_latency(
+void PipelineLatencyMonitorNode::check_total_latency(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
   stat.add("Total Latency (ms)", total_latency_ms_);
@@ -264,7 +261,7 @@ void SensorToControlLatencyCheckerNode::check_total_latency(
   }
 }
 
-void SensorToControlLatencyCheckerNode::update_history(
+void PipelineLatencyMonitorNode::update_history(
   std::deque<ProcessData> & history, const rclcpp::Time & timestamp, double value) const
 {
   // Add new value to history
@@ -276,7 +273,7 @@ void SensorToControlLatencyCheckerNode::update_history(
   }
 }
 
-bool SensorToControlLatencyCheckerNode::is_timestamp_older(
+bool PipelineLatencyMonitorNode::is_timestamp_older(
   const rclcpp::Time & timestamp1, const rclcpp::Time & timestamp2) const
 {
   try {
@@ -288,7 +285,7 @@ bool SensorToControlLatencyCheckerNode::is_timestamp_older(
   }
 }
 
-}  // namespace autoware::system::sensor_to_control_latency_checker
+}  // namespace autoware::system::pipeline_latency_monitor
 
 RCLCPP_COMPONENTS_REGISTER_NODE(
-  autoware::system::sensor_to_control_latency_checker::SensorToControlLatencyCheckerNode)
+  autoware::system::pipeline_latency_monitor::PipelineLatencyMonitorNode)

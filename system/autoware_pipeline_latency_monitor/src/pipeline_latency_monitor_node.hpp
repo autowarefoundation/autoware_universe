@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SENSOR_TO_CONTROL_LATENCY_CHECKER_NODE_HPP_
-#define SENSOR_TO_CONTROL_LATENCY_CHECKER_NODE_HPP_
+#ifndef PIPELINE_LATENCY_MONITOR_NODE_HPP_
+#define PIPELINE_LATENCY_MONITOR_NODE_HPP_
 
 #include <autoware/universe_utils/ros/debug_publisher.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
@@ -27,7 +27,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::system::sensor_to_control_latency_checker
+namespace autoware::system::pipeline_latency_monitor
 {
 
 /// @brief a timestamp and measured latency associated with a processing step
@@ -53,10 +53,10 @@ struct ProcessInput
   std::deque<ProcessData> latency_history;
 };
 
-class SensorToControlLatencyCheckerNode : public rclcpp::Node
+class PipelineLatencyMonitorNode : public rclcpp::Node
 {
 public:
-  explicit SensorToControlLatencyCheckerNode(const rclcpp::NodeOptions & options);
+  explicit PipelineLatencyMonitorNode(const rclcpp::NodeOptions & options);
 
 private:
   // Parameters
@@ -99,6 +99,6 @@ private:
   bool is_timestamp_older(const rclcpp::Time & timestamp1, const rclcpp::Time & timestamp2) const;
 };
 
-}  // namespace autoware::system::sensor_to_control_latency_checker
+}  // namespace autoware::system::pipeline_latency_monitor
 
-#endif  // SENSOR_TO_CONTROL_LATENCY_CHECKER_NODE_HPP_
+#endif  // PIPELINE_LATENCY_MONITOR_NODE_HPP_

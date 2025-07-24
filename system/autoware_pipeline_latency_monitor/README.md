@@ -1,4 +1,4 @@
-# sensor_to_control_latency_checker
+# pipeline_latency_monitor
 
 ## Purpose
 
