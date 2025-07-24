@@ -36,6 +36,8 @@ StartPlannerParameters StartPlannerParameters::init(rclcpp::Node & node)
     p.th_stopped_time = get_or_declare_parameter<double>(node, ns + "th_stopped_time");
     p.prepare_time_before_start =
       get_or_declare_parameter<double>(node, ns + "prepare_time_before_start");
+    p.min_bus_stop_pull_out_turn_signal_distance =
+      get_or_declare_parameter<double>(node, ns + "min_bus_stop_pull_out_turn_signal_distance");
     p.th_distance_to_middle_of_the_road =
       get_or_declare_parameter<double>(node, ns + "th_distance_to_middle_of_the_road");
     p.skip_rear_vehicle_check =

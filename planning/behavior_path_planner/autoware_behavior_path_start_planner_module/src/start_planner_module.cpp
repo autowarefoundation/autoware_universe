@@ -50,6 +50,7 @@ using autoware::behavior_path_planner::utils::path_safety_checker::ExtendedPredi
 using autoware::motion_utils::calcLateralOffset;
 using autoware::motion_utils::calcLongitudinalOffsetPose;
 using autoware_utils::calc_offset_pose;
+using lanelet::utils::conversion::toGeomMsgPt;
 
 // set as macro so that calling function name will be printed.
 // debug print is heavy. turn on only when debugging.
@@ -1595,10 +1596,16 @@ TurnSignalInfo StartPlannerModule::calcTurnSignalInfo()
   const bool override_ego_stopped_check =
     !status_.has_departed || geometric_planner_has_not_finished_first_path;
 
-  const auto [new_signal, is_ignore] = planner_data_->getBehaviorTurnSignalInfo(
-    path, shift_start_idx, shift_end_idx, current_lanes, current_shift_length,
-    status_.driving_forward, egos_lane_is_shifted, override_ego_stopped_check, is_pull_out);
-  ignore_signal_ = update_ignore_signal(closest_lanelet.id(), is_ignore);
+  TurnSignalInfo new_signal{};
+  if (!isCurrentPoseOnBusStop()) {
+    const auto [tmp_signal, is_ignore] = planner_data_->getBehaviorTurnSignalInfo(
+      path, shift_start_idx, shift_end_idx, current_lanes, current_shift_length,
+      status_.driving_forward, egos_lane_is_shifted, override_ego_stopped_check, is_pull_out);
+    new_signal = tmp_signal;
+    ignore_signal_ = update_ignore_signal(closest_lanelet.id(), is_ignore);
+  } else {
+    new_signal = calcBusStopTurnSignalInfo();
+  }
 
   const auto original_signal = getPreviousModuleOutput().turn_signal_info;
   const auto current_seg_idx = planner_data_->findEgoSegmentIndex(path.points);
@@ -1608,6 +1615,85 @@ TurnSignalInfo StartPlannerModule::calcTurnSignalInfo()
     planner_data_->parameters.ego_nearest_yaw_threshold);
 
   return output_turn_signal_info;
+}
+
+// Currently supports only left-hand traffic
+TurnSignalInfo StartPlannerModule::calcBusStopTurnSignalInfo()
+{
+  const auto & rh = planner_data_->route_handler;
+  lanelet::ConstLanelet start_lanelet;
+  if (!rh->getClosestLaneletWithinRoute(rh->getOriginalStartPose(), &start_lanelet))
+    return TurnSignalInfo{};
+
+  // get bus stop lanelets
+  lanelet::ConstLanelets bus_stop_lanelets{};
+  {
+    if (!start_lanelet.hasAttribute("bus_stop")) return TurnSignalInfo{};
+    bus_stop_lanelets.push_back(start_lanelet);
+
+    auto current_lanelet = start_lanelet;
+    lanelet::ConstLanelet next_lanelet;
+    while (rh->getNextLaneletWithinRoute(current_lanelet, &next_lanelet) &&
+           next_lanelet.hasAttribute("bus_stop")) {
+      bus_stop_lanelets.push_back(next_lanelet);
+      current_lanelet = next_lanelet;
+    }
+  }
+
+  const auto bus_stop_blinker_start_pose = rh->getOriginalStartPose();
+
+  Pose bus_stop_blinker_end_pose;
+  bus_stop_blinker_end_pose.position = toGeomMsgPt(bus_stop_lanelets.back().centerline3d().back());
+
+  // Check if exists any intersection lanelet after bus stop so that pull out turn signal needs to
+  // be shortened;
+  //   - requires same turn signal command as pull out turn signal command and is not on route
+  //     or requires opposite turn signal command from pull out turn signal command and is on route
+  //     (Currently supports only left-hand traffic)
+  //   - is close enough
+  {
+    const double intersection_search_distance =
+      planner_data_->parameters.turn_signal_intersection_search_distance +
+      planner_data_->parameters.base_link2front;
+
+    const double closest_intersection_signal_arc_length =
+      start_planner_utils::getClosestIntersectionSignalStartArcLength(
+        planner_data_, bus_stop_lanelets.back(), intersection_search_distance,
+        autoware::route_handler::Direction::RIGHT /*pull out direction*/);
+
+    // Intersection lanelet found after bus stop
+    if (closest_intersection_signal_arc_length != 0.0) {
+      const auto bus_stop_blinker_start_arc_length =
+        lanelet::utils::getArcCoordinatesOnEgoCenterline(
+          bus_stop_lanelets, bus_stop_blinker_start_pose, rh->getLaneletMapPtr())
+          .length;
+
+      const auto shortest_bus_stop_blinker_end_arc_length =
+        bus_stop_blinker_start_arc_length + parameters_->min_bus_stop_pull_out_turn_signal_distance;
+
+      const double bus_stop_ego_centerline_length =
+        lanelet::utils::getLaneletLength2d(bus_stop_lanelets);
+
+      const double intersection_blinker_start_arc_length = std::max(
+        bus_stop_ego_centerline_length - closest_intersection_signal_arc_length,
+        shortest_bus_stop_blinker_end_arc_length);
+
+      const auto bus_stop_ego_centerline =
+        start_planner_utils::combineEgoCenterline(rh->getLaneletMapPtr(), bus_stop_lanelets);
+
+      // Overwrite bus stop blinker end point
+      const auto updated_bus_stop_blinker_end_position_2d = lanelet::geometry::fromArcCoordinates(
+        bus_stop_ego_centerline, {intersection_blinker_start_arc_length, 0.0});
+
+      bus_stop_blinker_end_pose.position.x = updated_bus_stop_blinker_end_position_2d.x();
+      bus_stop_blinker_end_pose.position.y = updated_bus_stop_blinker_end_position_2d.y();
+    }
+  }
+
+  TurnSignalInfo bus_stop_turn_signal_info(bus_stop_blinker_start_pose, bus_stop_blinker_end_pose);
+  bus_stop_turn_signal_info.turn_signal.command = TurnIndicatorsCommand::ENABLE_RIGHT;
+
+  return bus_stop_turn_signal_info;
 }
 
 bool StartPlannerModule::isSafePath() const

@@ -58,6 +58,9 @@ void StartPlannerModuleManager::updateModuleParams(
     update_param<double>(
       parameters, ns + "prepare_time_before_start", p->prepare_time_before_start);
     update_param<double>(
+      parameters, ns + "min_bus_stop_pull_out_turn_signal_distance",
+      p->min_bus_stop_pull_out_turn_signal_distance);
+    update_param<double>(
       parameters, ns + "th_distance_to_middle_of_the_road", p->th_distance_to_middle_of_the_road);
     update_param<bool>(parameters, ns + "skip_rear_vehicle_check", p->skip_rear_vehicle_check);
     update_param<double>(
