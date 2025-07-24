@@ -99,10 +99,6 @@ void RoadUserStopModule::init(rclcpp::Node & node, const std::string & module_na
 
   common_param_ = CommonParam(node);
 
-  // sub_lanelet_route_ = node.create_subscription<LaneletRoute>(
-  //   "~/input/route", rclcpp::QoS{1},
-  //   std::bind(&RoadUserStopModule::on_lanelet_route_subscribe, this, _1));
-
   planning_factor_interface_ =
     std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
       &node, "road_user_stop");
@@ -262,11 +258,6 @@ void RoadUserStopModule::publish_planning_factor()
   planning_factor_interface_->publish();
 }
 
-// void RoadUserStopModule::on_lanelet_route_subscribe(const LaneletRoute::ConstSharedPtr msg)
-// {
-//   lanelet_route_ = msg;
-// }
-
 VelocityPlanningResult RoadUserStopModule::plan(
   const std::vector<TrajectoryPoint> & raw_trajectory_points,
   [[maybe_unused]] const std::vector<TrajectoryPoint> & smoothed_trajectory_points,
@@ -279,13 +270,6 @@ VelocityPlanningResult RoadUserStopModule::plan(
   debug_data_ = DebugData();
   trajectory_polygon_for_inside_map_.clear();
   debug_data_.object_polygons.clear();
-
-  // Check prerequisites
-  // if (!lanelet_route_) {
-  //   RCLCPP_ERROR_SKIPFIRST_THROTTLE(
-  //     logger_, *clock_, 5000, "Path with lane ID is not set, skipping road user stop planning");
-  //   return VelocityPlanningResult{};
-  // }
 
   // Extract parameters and current state
   const auto & trajectory_points = raw_trajectory_points;
