@@ -171,16 +171,6 @@ std::optional<CompositeArcPath> calc_circular_path(
   const double lateral_distance, const double angle_diff, const double minimum_radius);
 
 /**
- * @brief Convert circular path to trajectory
- * @param composite_arc_path Composite arc path
- * @param velocity Velocity for trajectory
- * @param z Z coordinate for trajectory points
- * @return Trajectory message
- */
-autoware_planning_msgs::msg::Trajectory convert_circular_path_to_trajectory(
-  const CompositeArcPath & composite_arc_path, const double velocity, const double z);
-
-/**
  * @brief Create PathWithLaneId from clothoid paths
  * @param clothoid_paths Array of clothoid paths
  * @param velocity Initial velocity
