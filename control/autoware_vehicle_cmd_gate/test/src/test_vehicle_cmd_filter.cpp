@@ -32,19 +32,19 @@ constexpr double NOMINAL_INTERVAL = 1.0;
 void setFilterParams(
   autoware::vehicle_cmd_gate::VehicleCmdFilter & f, double v, LimitArray speed_points, LimitArray a,
   LimitArray j, LimitArray lat_a, LimitArray lat_j, LimitArray steer_diff, LimitArray steer_lim,
-  LimitArray steer_rate_lim, const double wheelbase)
+  LimitArray steer_cmd_rate_lim, const double wheelbase)
 {
   autoware::vehicle_cmd_gate::VehicleCmdFilterParam p;
   p.vel_lim = v;
   p.wheel_base = wheelbase;
   p.reference_speed_points = speed_points;
-  p.steer_lim = steer_lim;
-  p.steer_rate_lim = steer_rate_lim;
-  p.lat_acc_lim = lat_a;
-  p.lat_jerk_lim = lat_j;
-  p.lon_acc_lim = a;
-  p.lon_jerk_lim = j;
-  p.actual_steer_diff_lim = steer_diff;
+  p.steer_cmd_lim = steer_lim;
+  p.steer_rate_lim_for_steer_cmd = steer_cmd_rate_lim;
+  p.lat_acc_lim_for_steer_cmd = lat_a;
+  p.lat_jerk_lim_for_steer_cmd = lat_j;
+  p.lon_acc_lim_for_lon_vel = a;
+  p.lon_jerk_lim_for_lon_acc = j;
+  p.steer_cmd_diff_lim_from_current_steer = steer_diff;
 
   f.setParam(p);
 }
@@ -281,13 +281,13 @@ TEST(VehicleCmdFilter, VehicleCmdFilterInterpolate)
   p.wheel_base = WHEELBASE;
   p.vel_lim = 20.0;
   p.reference_speed_points = std::vector<double>{2.0, 4.0, 10.0};
-  p.steer_lim = std::vector<double>{0.1, 0.2, 0.3};
-  p.steer_rate_lim = std::vector<double>{0.2, 0.1, 0.05};
-  p.lon_acc_lim = std::vector<double>{0.3, 0.4, 0.5};
-  p.lon_jerk_lim = std::vector<double>{0.4, 0.4, 0.7};
-  p.lat_acc_lim = std::vector<double>{0.1, 0.2, 0.3};
-  p.lat_jerk_lim = std::vector<double>{0.9, 0.7, 0.1};
-  p.actual_steer_diff_lim = std::vector<double>{0.1, 0.3, 0.2};
+  p.steer_cmd_lim = std::vector<double>{0.1, 0.2, 0.3};
+  p.steer_rate_lim_for_steer_cmd = std::vector<double>{0.2, 0.1, 0.05};
+  p.lon_acc_lim_for_lon_vel = std::vector<double>{0.3, 0.4, 0.5};
+  p.lon_jerk_lim_for_lon_acc = std::vector<double>{0.4, 0.4, 0.7};
+  p.lat_acc_lim_for_steer_cmd = std::vector<double>{0.1, 0.2, 0.3};
+  p.lat_jerk_lim_for_steer_cmd = std::vector<double>{0.9, 0.7, 0.1};
+  p.steer_cmd_diff_lim_from_current_steer = std::vector<double>{0.1, 0.3, 0.2};
   filter.setParam(p);
 
   const auto DT = 0.033;
@@ -383,7 +383,7 @@ TEST(VehicleCmdFilter, VehicleCmdFilterInterpolate)
 
   // steer angle rate lim
   // p.reference_speed_points = std::vector<double>{2.0, 4.0, 10.0};
-  // p.steer_rate_lim = std::vector<double>{0.2, 0.1, 0.05};
+  // p.cmd_steer_rate_lim = std::vector<double>{0.2, 0.1, 0.05};
   {
     const auto calcSteerRateFromAngle = [&](const auto & cmd) {
       return (cmd.steering_tire_angle - 0.0) / DT;
