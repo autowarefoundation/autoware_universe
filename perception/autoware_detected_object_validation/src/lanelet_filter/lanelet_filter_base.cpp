@@ -182,8 +182,8 @@ TriangleMesh createTriangleMeshFromLanelet(const lanelet::ConstLanelet & lanelet
     //     .--.
     // a_l      a_r
     //
-    mesh.push_back({a_l, b_l, a_r});
-    mesh.push_back({b_l, b_r, a_r});
+    mesh.push_back({a_l, a_r, b_l});
+    mesh.push_back({b_r, b_l, a_r});
   }
 
   // triangulation of the remaining unmatched parts from the tail
@@ -256,15 +256,13 @@ bool isPointAboveLaneletMesh(
 
   if (mesh.empty()) return true;
 
-  // for the query point
-  double query_point_min_abs_dist = std::numeric_limits<double>::infinity();
-  // for top and bottom point
-  double top_min_dist = std::numeric_limits<double>::infinity();
-  double top_min_abs_dist = std::numeric_limits<double>::infinity();
-  double bottom_min_dist = std::numeric_limits<double>::infinity();
-  double bottom_min_abs_dist = std::numeric_limits<double>::infinity();
+  // Find the triangle that is closest in X-Y plane to avoid issues with vertical curves
+  double closest_xy_distance = std::numeric_limits<double>::infinity();
+  Eigen::Vector3d closest_normal;
+  double distance_to_closest_surface = 0.0;
+  bool found_valid_triangle = false;
 
-  // search the most nearest surface from the query point
+  // First pass: find the triangle closest in X-Y plane
   for (const auto & tri : mesh) {
     const Eigen::Vector3d plane_normal_vec = computeFaceNormal(tri);
 
@@ -278,42 +276,79 @@ bool isPointAboveLaneletMesh(
       return true;
     }
 
-    Eigen::Vector3d vec_to_point = point - tri[0];
-    double signed_dist = plane_normal_vec.dot(vec_to_point);
+    // For connected meshes, first check if point is inside the triangle
+    const Eigen::Vector2d point_xy = point.head<2>();
 
-    double abs_dist = std::abs(signed_dist);
-    if (abs_dist < query_point_min_abs_dist) {
-      query_point_min_abs_dist = abs_dist;
+    // Check if point is inside triangle using barycentric coordinates
+    const Eigen::Vector2d v0 = tri[2].head<2>() - tri[0].head<2>();
+    const Eigen::Vector2d v1 = tri[1].head<2>() - tri[0].head<2>();
+    const Eigen::Vector2d v2 = point_xy - tri[0].head<2>();
 
-      // check top side
-      vec_to_point = (point + offset * plane_normal_vec) - tri[0];
-      signed_dist = plane_normal_vec.dot(vec_to_point);
+    const double dot00 = v0.dot(v0);
+    const double dot01 = v0.dot(v1);
+    const double dot02 = v0.dot(v2);
+    const double dot11 = v1.dot(v1);
+    const double dot12 = v1.dot(v2);
 
-      abs_dist = std::abs(signed_dist);
-      if (abs_dist < top_min_abs_dist) {
-        top_min_dist = signed_dist;
-        top_min_abs_dist = abs_dist;
-      }
+    const double inv_denom = 1.0 / (dot00 * dot11 - dot01 * dot01);
+    const double u = (dot11 * dot02 - dot01 * dot12) * inv_denom;
+    const double v = (dot00 * dot12 - dot01 * dot02) * inv_denom;
 
-      // check bottom side
-      vec_to_point = (point - offset * plane_normal_vec) - tri[0];
-      signed_dist = plane_normal_vec.dot(vec_to_point);
+    // If point is inside triangle, this is the best match - early exit
+    // u and v are barycentric coordinates, if both are >= 0 and u + v <= 1,
+    // the point is inside the triangle
+    if ((u >= 0) && (v >= 0) && (u + v <= 1)) {
+      // Point is inside the triangle, can't get better than this
+      closest_xy_distance = 0.0;
+      closest_normal = plane_normal_vec;
 
-      abs_dist = std::abs(signed_dist);
-      if (abs_dist < bottom_min_abs_dist) {
-        bottom_min_dist = signed_dist;
-        bottom_min_abs_dist = abs_dist;
-      }
+      // Calculate signed distance to this triangle's plane
+      const Eigen::Vector3d vec_to_point = point - tri[0];
+      distance_to_closest_surface = plane_normal_vec.dot(vec_to_point);
+      found_valid_triangle = true;
+
+      // Early exit: no need to check other triangles
+      break;
+    }
+
+    // Point is outside, calculate minimum distance to triangle vertices
+    double xy_dist = std::numeric_limits<double>::infinity();
+    for (int i = 0; i < 3; ++i) {
+      const Eigen::Vector2d vertex_xy = tri[i].head<2>();
+      const double dist_to_vertex = (point_xy - vertex_xy).norm();
+      xy_dist = std::min(xy_dist, dist_to_vertex);
+    }
+
+    if (xy_dist < closest_xy_distance) {
+      closest_xy_distance = xy_dist;
+      closest_normal = plane_normal_vec;
+
+      // Calculate signed distance to this triangle's plane
+      const Eigen::Vector3d vec_to_point = point - tri[0];
+      distance_to_closest_surface = plane_normal_vec.dot(vec_to_point);
+      found_valid_triangle = true;
     }
   }
 
-  // if at least one point is within the range, we consider it to be in the range
+  // Handle case where no valid triangle was found
+  if (!found_valid_triangle) {
+    return true;  // Conservative: allow object if no valid surface found
+  }
+
+  // Calculate object bounds relative to the closest surface
+  // The object extends +/- offset from its centroid along the surface normal
+  const double top_distance = distance_to_closest_surface + offset;
+  const double bottom_distance = distance_to_closest_surface - offset;
+
+  // Original intention: accept if either the object's top OR bottom is within the acceptable range
+  // This allows objects that are partially within the range to pass through
   if (
-    (min_distance <= top_min_dist && top_min_dist <= max_distance) ||
-    (min_distance <= bottom_min_dist && bottom_min_dist <= max_distance))
+    (min_distance <= top_distance && top_distance <= max_distance) ||
+    (min_distance <= bottom_distance && bottom_distance <= max_distance)) {
     return true;
-  else
-    return false;
+  }
+
+  return false;
 }
 
 template <typename ObjsMsgType, typename ObjMsgType>
