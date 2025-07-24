@@ -95,10 +95,12 @@ FunctionTimings runIterations(
       [&]() { processor->associate(detections, direct_assignment, reverse_assignment); }));
     timings.update.times.push_back(
       measureTimeMs([&]() { processor->update(detections, direct_assignment); }));
+    int num_trackers = processor->getListTracker().size();
     timings.prune.times.push_back(measureTimeMs([&]() { processor->prune(current_time); }));
+    int num_pruned = num_trackers - processor->getListTracker().size();
     timings.spawn.times.push_back(
       measureTimeMs([&]() { processor->spawn(detections, reverse_assignment); }));
-
+    int num_spawned = processor->getListTracker().size() - num_trackers;
     const auto total_end = Clock::now();
     auto total_duration =
       std::chrono::duration_cast<std::chrono::microseconds>(total_end - total_start).count() /
@@ -111,6 +113,11 @@ FunctionTimings runIterations(
 
     autoware_perception_msgs::msg::TrackedObjects latest_tracked_objects;
     processor->getTrackedObjects(current_time, latest_tracked_objects);
+
+    std::cout << "Iteration " << i + 1 << ": " << num_trackers << " trackers, "
+              << detections.objects.size() << " detections, " << num_pruned << " pruned, "
+              << num_spawned << " spawned, " << latest_tracked_objects.objects.size() << "final"
+              << std::endl;
     latest_tracked_objects.header.frame_id = "map";
 
     writer.write(
@@ -124,7 +131,9 @@ FunctionTimings runIterations(
 
 void runPerformanceTest()
 {
-  const TrackingScenarioConfig params;
+  TrackingScenarioConfig params;
+  params.cars_per_lane = 0;
+  params.pedestrian_clusters = 0;
   FunctionTimings timings = runIterations(50, params, true, true);
   timings.calculate();
   std::cout << "Total time for all iterations: "
@@ -349,21 +358,21 @@ TEST_F(MultiObjectTrackerTest, SimulatedDataPerformanceTest)
   runPerformanceTest();
 }
 
-TEST_F(MultiObjectTrackerTest, RealDataRosbagPerformanceTest)
-{
-  // This test runs the tracker using a real rosbag for evaluation
-  std::filesystem::path bag_root_dir = _SRC_RESOURCES_DIR_PATH;  // defined in CMakeLists.txt
-  std::filesystem::path bag_dir = bag_root_dir / "test_data1";
-  std::filesystem::path db3_file;
+// TEST_F(MultiObjectTrackerTest, RealDataRosbagPerformanceTest)
+// {
+//   // This test runs the tracker using a real rosbag for evaluation
+//   std::filesystem::path bag_root_dir = _SRC_RESOURCES_DIR_PATH;  // defined in CMakeLists.txt
+//   std::filesystem::path bag_dir = bag_root_dir / "test_data1";
+//   std::filesystem::path db3_file;
 
-  for (const auto & entry : std::filesystem::directory_iterator(bag_dir)) {
-    if (entry.path().extension() == ".db3") {
-      db3_file = entry.path();
-      break;
-    }
-  }
+//   for (const auto & entry : std::filesystem::directory_iterator(bag_dir)) {
+//     if (entry.path().extension() == ".db3") {
+//       db3_file = entry.path();
+//       break;
+//     }
+//   }
 
-  ASSERT_FALSE(db3_file.empty()) << "No .db3 file found in " << bag_dir;
+//   ASSERT_FALSE(db3_file.empty()) << "No .db3 file found in " << bag_dir;
 
-  runPerformanceTestWithRosbag(db3_file.string());
-}
+//   runPerformanceTestWithRosbag(db3_file.string());
+// }

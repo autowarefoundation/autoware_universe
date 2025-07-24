@@ -61,6 +61,7 @@ struct UnknownObjectState
   std::vector<geometry_msgs::msg::Point> current_footprint;
   std::vector<geometry_msgs::msg::Point> previous_footprint;
   float z_dimension;
+  float base_size;
   rclcpp::Time last_update;
   uint8_t shape_type;
   bool is_moving;
@@ -69,7 +70,7 @@ struct UnknownObjectParams
 {
   // Size parameters
   float min_size = 0.5f;
-  float max_size = 3.0f;
+  float max_size = 6.0f;
   float min_z = 0.2f;
   float max_z = 1.5f;
 
@@ -84,7 +85,7 @@ struct UnknownObjectParams
   int max_points = 8;
 
   // Evolution parameters
-  float shape_change_prob = 0.3f;
+  float shape_change_prob = 0.4f;
   float max_evolution_noise = 0.2f;
 };
 struct TrackingScenarioConfig
@@ -192,7 +193,8 @@ private:
   void addNewPedestrian(const std::string & id, float x, float y);
   void addNewUnknown(const std::string & id, float x, float y);
   // Functions to generate random shapes for unknown objects
-  void generateClusterFootprint(std::vector<geometry_msgs::msg::Point> & footprint);
+  void generateClusterFootprint(
+    float base_size, std::vector<geometry_msgs::msg::Point> & footprint);
   void updateUnknownShape(UnknownObjectState & state);
   struct Shape
   {
