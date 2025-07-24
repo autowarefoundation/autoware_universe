@@ -1,7 +1,7 @@
 /**:
   ros__parameters:
     update_rate: 10.0
-    latency_threshold_ms: 100.0
+    latency_threshold_ms: 1000.0
     window_size: 10
 
     processing_steps:  # processing steps used to calculate the latency.
