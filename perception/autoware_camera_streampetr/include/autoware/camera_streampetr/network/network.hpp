@@ -228,7 +228,7 @@ struct NetworkConfig
 class StreamPetrNetwork
 {
 public:
-  StreamPetrNetwork(const NetworkConfig & config);
+  explicit StreamPetrNetwork(const NetworkConfig & config);
 
   ~StreamPetrNetwork();
   void inference_detector(

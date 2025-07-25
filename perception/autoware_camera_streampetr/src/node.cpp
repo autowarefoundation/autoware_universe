@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <optional>
 #include <string>
 #include <thread>
 #include <utility>
@@ -204,15 +205,24 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
   }
 
   if (multithreading_) data_store_->freeze_updates();
-  std::vector<autoware_perception_msgs::msg::DetectedObject> output_objects;
-  const auto [ego_pose, ego_pose_inv] = get_ego_pose_vector();
+  
+  const auto ego_pose_result = get_ego_pose_vector();
+  if (!ego_pose_result.has_value()) {
+    return;
+  }
+  const auto [ego_pose, ego_pose_inv] = ego_pose_result.value();
+  
+  const auto extrinsic_vectors = get_camera_extrinsics_vector(data_store_->get_camera_link_names());
+  if (!extrinsic_vectors.has_value()) return;
+
   if (stop_watch_ptr_) stop_watch_ptr_->tic("latency/inference");
   std::vector<float> forward_time_ms;
+  std::vector<autoware_perception_msgs::msg::DetectedObject> output_objects;
 
   network_->inference_detector(
     data_store_->get_image_input(), ego_pose, ego_pose_inv, data_store_->get_image_shape(),
     data_store_->get_camera_info_vector(),
-    get_camera_extrinsics_vector(data_store_->get_camera_link_names()), prediction_timestamp,
+    extrinsic_vectors.value(), prediction_timestamp,
     output_objects, forward_time_ms);
 
   if (multithreading_) data_store_->unfreeze_updates();
@@ -247,21 +257,24 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
   }
 }
 
-std::vector<float> StreamPetrNode::get_camera_extrinsics_vector(
+std::optional<std::vector<float>> StreamPetrNode::get_camera_extrinsics_vector(
   const std::vector<std::string> & camera_links)
 {
+  constexpr size_t num_row = 4;
+  constexpr size_t num_col = 4;
+
   std::vector<float> intrinsics_all = data_store_->get_camera_info_vector();
 
   std::vector<float> res;
-  res.reserve(camera_links.size() * 16);
+  res.reserve(camera_links.size() * num_row * num_col);
 
   for (size_t i = 0; i < camera_links.size(); ++i) {
     Eigen::Matrix4f K_4x4 = Eigen::Matrix4f::Identity();
     {
-      size_t offset = i * 16;
-      for (int row = 0; row < 4; ++row) {
-        for (int col = 0; col < 4; ++col) {
-          K_4x4(row, col) = intrinsics_all[offset + row * 4 + col];
+      size_t offset = i * num_row * num_col;
+      for (size_t row = 0; row < num_row; ++row) {
+        for (size_t col = 0; col < num_col; ++col) {
+          K_4x4(row, col) = intrinsics_all[offset + row * num_col + col];
         }
       }
     }
@@ -270,8 +283,8 @@ std::vector<float> StreamPetrNode::get_camera_extrinsics_vector(
       transform_stamped =
         tf_buffer_.lookupTransform(camera_links[i], "base_link", tf2::TimePointZero);
     } catch (const tf2::TransformException & ex) {
-      throw std::runtime_error(
-        "Could not transform from base_link to " + camera_links[i] + ": " + std::string(ex.what()));
+      RCLCPP_ERROR( get_logger(), "Could not transform from base_link to %s: %s", camera_links[i].c_str(), ex.what());
+      return std::nullopt;
     }
 
     Eigen::Matrix4f T_lidar2cam = Eigen::Matrix4f::Identity();
@@ -280,7 +293,7 @@ std::vector<float> StreamPetrNode::get_camera_extrinsics_vector(
         transform_stamped.transform.rotation.x, transform_stamped.transform.rotation.y,
         transform_stamped.transform.rotation.z, transform_stamped.transform.rotation.w);
       tf2::Matrix3x3 tf2_R(tf2_q);
-
+      
       Eigen::Matrix3f R;
       for (int r = 0; r < 3; ++r) {
         for (int c = 0; c < 3; ++c) {
@@ -304,8 +317,8 @@ std::vector<float> StreamPetrNode::get_camera_extrinsics_vector(
     Eigen::Matrix4f T_lidar2img = K_4x4 * T_lidar2cam;
     Eigen::Matrix4f T_img2lidar = T_lidar2img.inverse();
 
-    for (int row = 0; row < 4; ++row) {
-      for (int col = 0; col < 4; ++col) {
+    for (size_t row = 0; row < num_row; ++row) {
+      for (size_t col = 0; col < num_col; ++col) {
         res.push_back(T_img2lidar(row, col));
       }
     }
@@ -314,10 +327,11 @@ std::vector<float> StreamPetrNode::get_camera_extrinsics_vector(
   return res;
 }
 
-std::pair<std::vector<float>, std::vector<float>> StreamPetrNode::get_ego_pose_vector() const
+std::optional<std::pair<std::vector<float>, std::vector<float>>> StreamPetrNode::get_ego_pose_vector() const
 {
   if (!latest_kinematic_state_ || !initial_kinematic_state_) {
-    throw std::runtime_error("Kinematic states have not been received.");
+    RCLCPP_ERROR(get_logger(), "Kinematic states have not been received.");
+    return std::nullopt;
   }
 
   const auto & latest_pose = latest_kinematic_state_->pose.pose;
