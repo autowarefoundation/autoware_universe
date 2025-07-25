@@ -255,6 +255,31 @@ bool TrackingTestBench::checkCollisions(const std::string & id)
   return false;
 }
 
+bool isConvex(const std::vector<geometry_msgs::msg::Point> & polygon)
+{
+  // A polygon must have at least 3 vertices to be convex
+  constexpr size_t min_polygon_vertices = 3;
+  if (polygon.size() < min_polygon_vertices) return false;
+
+  bool sign = false;
+  size_t n = polygon.size();
+
+  for (size_t i = 0; i < n; ++i) {
+    const auto & p0 = polygon[i];
+    const auto & p1 = polygon[(i + 1) % n];
+    const auto & p2 = polygon[(i + 2) % n];
+    // Calculate the cross product to determine the orientation
+    double cross = (p1.x - p0.x) * (p2.y - p1.y) - (p1.y - p0.y) * (p2.x - p1.x);
+
+    if (i == 0) {
+      sign = cross > 0;
+    } else if ((cross > 0) != sign) {
+      return false;
+    }
+  }
+  return true;
+}
+
 autoware::multi_object_tracker::types::DynamicObjectList TrackingTestBench::generateDetections(
   const rclcpp::Time & stamp)
 {
@@ -361,6 +386,85 @@ autoware::multi_object_tracker::types::DynamicObjectList TrackingTestBench::gene
     obj.area = state.shape.x * state.shape.y;
     detections.objects.push_back(obj);
   }
+
+  // Update and generate unknown object detections
+  for (auto & [id, state] : unknown_states_) {
+    if (dropout_dist_(rng_)) continue;
+
+    // Move if it's a moving unknown object
+    if (state.is_moving) {
+      state.pose.position.x += state.twist.linear.x * dt;
+      state.pose.position.y += state.twist.linear.y * dt;
+    }
+
+    // Random shape evolution (30% chance of significant change)
+    if (shape_change_dist_(rng_)) {
+      updateUnknownShape(state);
+    } else {
+      auto new_footprint = state.current_footprint;
+      // Minor shape variations
+      for (auto & point : new_footprint) {
+        point.x += shape_evolution_noise_(rng_);
+        point.y += shape_evolution_noise_(rng_);
+      }
+      if (isConvex(new_footprint)) {
+        state.current_footprint = new_footprint;
+      }
+    }
+
+    // Create detection
+    autoware::multi_object_tracker::types::DynamicObject obj;
+    obj.uuid.uuid = stringToUUID(id);
+    obj.time = stamp;
+
+    // Classification
+    obj.classification.resize(1);
+    obj.classification[0].label = autoware_perception_msgs::msg::ObjectClassification::UNKNOWN;
+    obj.classification[0].probability = 1.0;
+
+    // Shape configuration
+    obj.shape.type = state.shape_type;
+    if (obj.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
+      obj.shape.dimensions.x = state.base_size;
+      obj.shape.dimensions.y = state.base_size / 2.0;
+      obj.shape.dimensions.z = state.z_dimension;
+    } else {
+      obj.shape.footprint.points.clear();
+      for (const auto & p : state.current_footprint) {
+        geometry_msgs::msg::Point32 point;
+        point.x = p.x;
+        point.y = p.y;
+        point.z = 0.0;  // Z is not used for 2D footprint
+        obj.shape.footprint.points.push_back(point);
+      }
+      obj.shape.dimensions.x = 0.0;
+      obj.shape.dimensions.y = 0.0;
+      obj.shape.dimensions.z = state.z_dimension;
+    }
+
+    // Kinematics
+    obj.kinematics.has_position_covariance = false;
+    obj.kinematics.has_twist = false;
+    obj.kinematics.has_twist_covariance = false;
+    obj.pose_covariance = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    obj.twist_covariance = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    obj.pose = state.pose;
+
+    // Existence probability
+    // For unknown objects, use a default value to match the input stream.
+    // In detection, unknown objects start with a probability of 0,
+    // but multi_object_tracker assigns a default value from the input.
+    // This ensures consistent output between detection and tracking.
+    obj.existence_probability =
+      autoware::multi_object_tracker::types::default_existence_probability;
+
+    obj.channel_index = 0;
+    obj.area = obj.shape.dimensions.x * obj.shape.dimensions.y;
+    detections.objects.push_back(obj);
+  }
+
   // Add new objects occasionally
   if (new_obj_dist_(rng_)) {
     addNewCar("car_" + std::to_string(object_counter_++), 0, 0);
@@ -409,6 +513,18 @@ void TrackingTestBench::initializeObjects(const TrackingScenarioConfig & params)
       addNewPedestrian(id, center_x + pos_noise_(rng_), center_y + pedestrian_y_dist_(rng_));
     }
   }
+  // Initialize unknown objects
+  // Start unknown objects after the last car's x position
+  float unknown_start_x = -params.unknown_objects * 6.0f / 2.0f;
+  float unknown_start_y =
+    (params.num_lanes + 1) * params.lane_width + 25.0f;  // Start above the road
+  for (int i = 0; i < params.unknown_objects; ++i) {
+    std::string id = "unk_" + std::to_string(i);
+    // Wide scatter: uniform distribution in ±50m
+    float x = unknown_start_x + unknown_pos_dist_(rng_) + i * 6.0f;
+    float y = unknown_start_y + unknown_pos_dist_(rng_);
+    addNewUnknown(id, x, y);
+  }
 }
 void TrackingTestBench::setOrientationFromVelocity(
   const geometry_msgs::msg::Twist & twist, geometry_msgs::msg::Pose & pose)
@@ -453,4 +569,57 @@ void TrackingTestBench::addNewPedestrian(const std::string & id, float x, float 
   state.shape.x = 0.4;
   state.shape.y = 0.4;
   pedestrian_states_[id] = state;
+}
+
+void TrackingTestBench::addNewUnknown(const std::string & id, float x, float y)
+{
+  UnknownObjectState state;
+  state.pose.position.x = x;
+  state.pose.position.y = y;
+  state.pose.position.z = z_pos_noise_(rng_);
+  state.pose.orientation.w = 1.0;
+
+  // Movement properties
+  state.is_moving = movement_chance_dist_(rng_);
+
+  if (state.is_moving) {
+    float speed = moving_unknown_speed_dist_(rng_);
+    state.twist.linear.x = speed * cos_dist_(rng_);
+    state.twist.linear.y = speed * sin_dist_(rng_);
+  }
+  state.z_dimension = z_size_noise_(rng_);
+
+  state.base_size = base_size_dist_(rng_);
+  // Initial shape
+  updateUnknownShape(state);
+  unknown_states_[id] = state;
+}
+
+void TrackingTestBench::generateClusterFootprint(
+  float base_size, std::vector<geometry_msgs::msg::Point> & footprint)
+{
+  const int num_points = point_count_dist_(rng_);
+  footprint.resize(num_points);
+
+  float radius = base_size * footprint_radius_scale_dist_(rng_);
+  for (int i = 0; i < num_points; ++i) {
+    float angle = 2.0f * M_PI * i / num_points;
+    footprint[i].x = radius * cos(angle);
+    footprint[i].y = radius * sin(angle);
+    footprint[i].z = 0.0f;
+  }
+}
+
+void TrackingTestBench::updateUnknownShape(UnknownObjectState & state)
+{
+  state.previous_footprint = state.current_footprint;
+
+  // Randomly decide shape type (70% polygon, 30% bounding box)
+  if (shape_type_dist_(rng_)) {
+    state.shape_type = autoware_perception_msgs::msg::Shape::POLYGON;
+    generateClusterFootprint(state.base_size, state.current_footprint);
+  } else {
+    state.shape_type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+    state.current_footprint.clear();
+  }
 }
