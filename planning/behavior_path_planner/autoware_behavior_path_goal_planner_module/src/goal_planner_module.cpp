@@ -690,6 +690,9 @@ std::pair<LaneParkingResponse, FreespaceParkingResponse> GoalPlannerModule::sync
 
 void GoalPlannerModule::updateData()
 {
+  if (!utils::isAllowedGoalModification(planner_data_->route_handler)) {
+    return;
+  }
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   if (!goal_searcher_) {
@@ -1726,6 +1729,10 @@ BehaviorModuleOutput GoalPlannerModule::planPullOverAsOutput(PullOverContextData
 
 void GoalPlannerModule::postProcess()
 {
+  if (!utils::isAllowedGoalModification(planner_data_->route_handler)) {
+    return;
+  }
+  
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   if (!context_data_) {

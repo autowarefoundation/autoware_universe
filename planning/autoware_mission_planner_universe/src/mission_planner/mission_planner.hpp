@@ -91,6 +91,7 @@ private:
   Pose transform_pose(const Pose & pose, const Header & header);
 
   rclcpp::Service<ClearRoute>::SharedPtr srv_clear_route;
+  rclcpp::Service<SetLaneChangeOverride>::SharedPtr srv_set_lane_change_override;
   rclcpp::Service<SetLaneletRoute>::SharedPtr srv_set_lanelet_route;
   rclcpp::Service<SetWaypointRoute>::SharedPtr srv_set_waypoint_route;
   rclcpp::Publisher<RouteState>::SharedPtr pub_state_;

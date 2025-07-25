@@ -93,6 +93,9 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
     "~/input/modified_goal", durable_qos, std::bind(&MissionPlanner::on_modified_goal, this, _1));
   srv_clear_route = create_service<ClearRoute>(
     "~/clear_route", service_utils::handle_exception(&MissionPlanner::on_clear_route, this));
+  srv_set_lane_change_override = create_service<SetLaneChangeOverride>(
+    "~/set_lane_change_override",
+    service_utils::handle_exception(&MissionPlanner::on_set_lane_change_override, this));
   srv_set_lanelet_route = create_service<SetLaneletRoute>(
     "~/set_lanelet_route",
     service_utils::handle_exception(&MissionPlanner::on_set_lanelet_route, this));
@@ -310,7 +313,9 @@ void MissionPlanner::on_set_lane_change_override(
   // modify the preferred lanelet to change the lane
   DIRECTION override_direction = req->lane_change_direction == 0
     ? DIRECTION::LEFT : DIRECTION::RIGHT;
-    
+
+  RCLCPP_INFO_STREAM(get_logger(), "Changing lane " << (override_direction == DIRECTION::LEFT ? "left" : "right"));
+
   for (auto & segment : route.segments) {
     // Find the index of the current preferred primitive
     auto it = std::find_if(
@@ -323,15 +328,28 @@ void MissionPlanner::on_set_lane_change_override(
 
     std::size_t index = std::distance(segment.primitives.begin(), it);
 
+    RCLCPP_INFO_STREAM(
+      get_logger(), "Current preferred primitive ID: " << segment.preferred_primitive.id <<
+      ", index: " << index);
+
+    for (const auto & primitive : segment.primitives) {
+      RCLCPP_INFO_STREAM(
+        get_logger(), "Available primitive ID: " << primitive.id);
+    }
+
     if (override_direction == DIRECTION::LEFT && index > 0) {
       // shift to the primitive on the left
       segment.preferred_primitive = segment.primitives.at(index - 1);
+      RCLCPP_INFO_STREAM(
+        get_logger(), "Shifted left to primitive ID: " << segment.preferred_primitive.id);
     } else if (
       override_direction == DIRECTION::RIGHT &&
       index + 1 < segment.primitives.size()
     ) {
       // shift to the primitive on the right
       segment.preferred_primitive = segment.primitives.at(index + 1);
+      RCLCPP_INFO_STREAM(
+        get_logger(), "Shifted right to primitive ID: " << segment.preferred_primitive.id);
     } else {
       // no shift possible (e.g., already leftmost or rightmost)
       RCLCPP_WARN_STREAM(get_logger(), "Cannot shift " <<
