@@ -70,7 +70,7 @@ struct UnknownObjectParams
 {
   // Size parameters
   float min_size = 0.5f;
-  float max_size = 6.0f;
+  float max_size = 5.0f;
   float min_z = 0.2f;
   float max_z = 1.5f;
 
@@ -165,18 +165,16 @@ public:
     pos_noise_(params.pos_noise_min, params.pos_noise_max),
     vel_noise_(params.vel_noise_min, params.vel_noise_max),
     // Unknown object distributions
-    z_pos_noise_(-0.1f, 0.3f),
-    size_noise_(-0.5f, 1.0f),
-    z_size_noise_(-0.1f, 0.3f),
-    shape_type_dist_(0.0f, 1.0f),
-    point_count_dist_(0, 2),
-    radius_variation_dist_(-0.2f, 0.2f),
-    asymmetry_dist_(-0.3f, 0.3f),
-    cluster_evolution_noise_(0.0f, params.unknown_params.max_evolution_noise),
+    base_size_dist_(params.unknown_params.min_size, params.unknown_params.max_size),
+    z_size_noise_(params.unknown_params.min_z, params.unknown_params.max_z),
+    z_pos_noise_(params.unknown_params.min_z, params.unknown_params.max_z),
+    shape_type_dist_(0.7f),
+    point_count_dist_(params.unknown_params.min_points, params.unknown_params.max_points),
+    shape_evolution_noise_(0.0f, params.unknown_params.max_evolution_noise),
     movement_chance_dist_(1.0f - params.unknown_params.stationary_probability),
     moving_unknown_speed_dist_(params.unknown_params.min_speed, params.unknown_params.max_speed),
-    shape_change_dist_(params.unknown_params.shape_change_prob)
-
+    shape_change_dist_(params.unknown_params.shape_change_prob),
+    footprint_radius_scale_dist_(0.7f, 1.2f)
   {
     initializeObjects(params);
   }
@@ -225,19 +223,16 @@ private:
   std::bernoulli_distribution new_obj_dist_{0.0};
 
   // Distributions for unknown objects
-  std::uniform_real_distribution<float> z_pos_noise_;
-  std::uniform_real_distribution<float> size_noise_;
+  std::uniform_real_distribution<float> base_size_dist_;
   std::uniform_real_distribution<float> z_size_noise_;
-  std::uniform_real_distribution<float> shape_type_dist_;
+  std::uniform_real_distribution<float> z_pos_noise_;
+  std::bernoulli_distribution shape_type_dist_;
   std::uniform_int_distribution<int> point_count_dist_;
-  std::uniform_real_distribution<float> radius_variation_dist_;
-  std::uniform_real_distribution<float> asymmetry_dist_;
-  std::normal_distribution<float> cluster_evolution_noise_;
+  std::normal_distribution<float> shape_evolution_noise_;  // renamed from cluster_evolution_noise_
   std::bernoulli_distribution movement_chance_dist_;
   std::uniform_real_distribution<float> moving_unknown_speed_dist_;
   std::bernoulli_distribution shape_change_dist_;
-  std::uniform_real_distribution<float> unknown_speed_dist_{0.5f, 2.0f};
-  std::uniform_real_distribution<float> unknown_size_dist_{0.5f, 3.0f};
+  std::uniform_real_distribution<float> footprint_radius_scale_dist_;
   std::uniform_real_distribution<float> unknown_pos_dist_{-20.0f, 20.0f};
 
   // Object states

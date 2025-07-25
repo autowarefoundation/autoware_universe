@@ -134,7 +134,7 @@ FunctionTimings runIterations(
 
 void runPerformanceTest()
 {
-  TrackingScenarioConfig params;
+  const TrackingScenarioConfig params;
   FunctionTimings timings = runIterations(50, params, true, false);
   std::cout << "Total time for all iterations: "
             << std::accumulate(timings.total.times.begin(), timings.total.times.end(), 0.0) << " ms"

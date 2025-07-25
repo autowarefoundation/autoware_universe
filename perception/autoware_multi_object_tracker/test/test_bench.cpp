@@ -232,7 +232,9 @@ bool TrackingTestBench::checkCollisions(const std::string & id)
 
 bool isConvex(const std::vector<geometry_msgs::msg::Point> & polygon)
 {
-  if (polygon.size() < 3) return false;
+  // A polygon must have at least 3 vertices to be convex
+  constexpr size_t MIN_POLYGON_VERTICES = 3;
+  if (polygon.size() < MIN_POLYGON_VERTICES) return false;
 
   bool sign = false;
   size_t n = polygon.size();
@@ -377,8 +379,8 @@ autoware::multi_object_tracker::types::DynamicObjectList TrackingTestBench::gene
       auto new_footprint = state.current_footprint;
       // Minor shape variations
       for (auto & point : new_footprint) {
-        point.x += cluster_evolution_noise_(rng_);
-        point.y += cluster_evolution_noise_(rng_);
+        point.x += shape_evolution_noise_(rng_);
+        point.y += shape_evolution_noise_(rng_);
       }
       if (isConvex(new_footprint)) {
         state.current_footprint = new_footprint;
@@ -399,15 +401,15 @@ autoware::multi_object_tracker::types::DynamicObjectList TrackingTestBench::gene
     obj.shape.type = state.shape_type;
     if (obj.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
       // Calculate bounding box dimensions from footprint
-      double min_x = 0, max_x = 0, min_y = 0, max_y = 0;
-      for (const auto & p : state.current_footprint) {
-        min_x = std::min(min_x, p.x);
-        max_x = std::max(max_x, p.x);
-        min_y = std::min(min_y, p.y);
-        max_y = std::max(max_y, p.y);
-      }
-      obj.shape.dimensions.x = max_x - min_x;
-      obj.shape.dimensions.y = max_y - min_y;
+      // double min_x = 0, max_x = 0, min_y = 0, max_y = 0;
+      // for (const auto & p : state.current_footprint) {
+      //   min_x = std::min(min_x, p.x);
+      //   max_x = std::max(max_x, p.x);
+      //   min_y = std::min(min_y, p.y);
+      //   max_y = std::max(max_y, p.y);
+      // }
+      obj.shape.dimensions.x = state.base_size;
+      obj.shape.dimensions.y = state.base_size;
       obj.shape.dimensions.z = state.z_dimension;
     } else {
       obj.shape.footprint.points.clear();
@@ -496,13 +498,13 @@ void TrackingTestBench::initializeObjects(const TrackingScenarioConfig & params)
   }
   // Initialize unknown objects
   // Start unknown objects after the last car's x position
-  float unknown_start_x = -params.unknown_objects * 2.0f;
+  float unknown_start_x = -params.unknown_objects * 6.0f / 2.0f;
   float unknown_start_y =
     (params.num_lanes + 1) * params.lane_width + 25.0f;  // Start above the road
   for (int i = 0; i < params.unknown_objects; ++i) {
     std::string id = "unk_" + std::to_string(i);
     // Wide scatter: uniform distribution in ±50m
-    float x = unknown_start_x + unknown_pos_dist_(rng_) + i * 2.0f;
+    float x = unknown_start_x + unknown_pos_dist_(rng_) + i * 6.0f;
     float y = unknown_start_y + unknown_pos_dist_(rng_);
     addNewUnknown(id, x, y);
   }
@@ -557,26 +559,20 @@ void TrackingTestBench::addNewUnknown(const std::string & id, float x, float y)
   UnknownObjectState state;
   state.pose.position.x = x;
   state.pose.position.y = y;
-  state.pose.position.z =
-    std::uniform_real_distribution<float>(unknown_params_.min_z, unknown_params_.max_z)(rng_);
+  state.pose.position.z = z_pos_noise_(rng_);
   state.pose.orientation.w = 1.0;
 
   // Movement properties
-  state.is_moving =
-    std::bernoulli_distribution(1.0f - unknown_params_.stationary_probability)(rng_);
+  state.is_moving = movement_chance_dist_(rng_);
 
   if (state.is_moving) {
-    float speed = std::uniform_real_distribution<float>(
-      unknown_params_.min_speed, unknown_params_.max_speed)(rng_);
-    float angle = 0;  // angle_dist_(rng_);
-    state.twist.linear.x = speed * cos(angle);
-    state.twist.linear.y = speed * sin(angle);
+    float speed = moving_unknown_speed_dist_(rng_);
+    state.twist.linear.x = speed * cos_dist_(rng_);
+    state.twist.linear.y = speed * sin_dist_(rng_);
   }
-  state.z_dimension =
-    std::uniform_real_distribution<float>(unknown_params_.min_z, unknown_params_.max_z)(rng_);
+  state.z_dimension = z_size_noise_(rng_);
 
-  state.base_size =
-    std::uniform_real_distribution<float>(unknown_params_.min_size, unknown_params_.max_size)(rng_);
+  state.base_size = base_size_dist_(rng_);
   // Initial shape
   updateUnknownShape(state);
   unknown_states_[id] = state;
@@ -585,13 +581,12 @@ void TrackingTestBench::addNewUnknown(const std::string & id, float x, float y)
 void TrackingTestBench::generateClusterFootprint(
   float base_size, std::vector<geometry_msgs::msg::Point> & footprint)
 {
-  const int num_points = std::uniform_int_distribution<int>(
-    unknown_params_.min_points, unknown_params_.max_points)(rng_);
+  const int num_points = point_count_dist_(rng_);
   footprint.resize(num_points);
 
+  float radius = base_size * footprint_radius_scale_dist_(rng_);
   for (int i = 0; i < num_points; ++i) {
     float angle = 2.0f * M_PI * i / num_points;
-    float radius = base_size * (0.7f);  //+ size_variation_dist_(rng_)
     footprint[i].x = radius * cos(angle);
     footprint[i].y = radius * sin(angle);
     footprint[i].z = 0.0f;
