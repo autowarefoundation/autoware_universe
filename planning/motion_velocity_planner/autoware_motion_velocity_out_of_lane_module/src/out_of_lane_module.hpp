@@ -77,7 +77,7 @@ private:
   std::string module_name_{"uninitialized"};
   rclcpp::Clock::SharedPtr clock_{nullptr};
   std::optional<geometry_msgs::msg::Pose> previous_slowdown_pose_{std::nullopt};
-  std::vector<out_of_lane::SlowdownPose> slowdown_pose_buffer_{};
+  std::vector<out_of_lane::SlowdownPose> slowdown_pose_buffer_;
 
 protected:
   // Debug

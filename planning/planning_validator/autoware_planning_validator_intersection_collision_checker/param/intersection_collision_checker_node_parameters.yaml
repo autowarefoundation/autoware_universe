@@ -109,6 +109,10 @@ intersection_collision_checker_node:
           type: double
           validation:
             gt_eq<>: [0.0]
+        max_history_time:
+          type: double
+          validation:
+            gt_eq<>: [0.0]
         buffer_size:
           type: int
           validation:

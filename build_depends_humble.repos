@@ -12,7 +12,7 @@ repositories:
   core/autoware_internal_msgs:
     type: git
     url: https://github.com/autowarefoundation/autoware_internal_msgs.git
-    version: 1.10.0
+    version: 1.11.0
   core/autoware_cmake:
     type: git
     url: https://github.com/autowarefoundation/autoware_cmake.git
@@ -67,7 +67,7 @@ repositories:
   middleware/external/agnocast:
     type: git
     url: https://github.com/tier4/agnocast.git
-    version: 2.1.0
+    version: 2.1.1
   universe/external/bevdet_vendor:
     type: git
     url: https://github.com/autowarefoundation/bevdet_vendor.git

@@ -59,7 +59,8 @@ public:
     double threshold_velocity_assumed_as_stopping,
     const std::vector<double> & distance_set_for_no_intention_to_walk,
     const std::vector<double> & timeout_set_for_no_intention_to_walk,
-    double prediction_sampling_time_interval, double prediction_time_horizon)
+    double prediction_sampling_time_interval, double prediction_time_horizon,
+    double crossing_intention_duration, double no_crossing_intention_duration)
   {
     match_lost_and_appeared_crosswalk_users_ = match_lost_and_appeared_crosswalk_users;
     min_crosswalk_user_velocity_ = min_crosswalk_user_velocity;
@@ -70,6 +71,8 @@ public:
     distance_set_for_no_intention_to_walk_ = distance_set_for_no_intention_to_walk;
     timeout_set_for_no_intention_to_walk_ = timeout_set_for_no_intention_to_walk;
     prediction_time_horizon_ = prediction_time_horizon;
+    crossing_intention_duration_ = crossing_intention_duration;
+    no_crossing_intention_duration_ = no_crossing_intention_duration;
 
     path_generator_ = std::make_shared<PathGenerator>(
       prediction_sampling_time_interval, min_crosswalk_user_velocity);
@@ -117,11 +120,18 @@ private:
   double max_crosswalk_user_delta_yaw_threshold_for_lanelet_;
   bool use_crosswalk_signal_;
   double threshold_velocity_assumed_as_stopping_;
+  double crossing_intention_duration_{0.0};
+  double no_crossing_intention_duration_{0.0};
   std::vector<double> distance_set_for_no_intention_to_walk_;
   std::vector<double> timeout_set_for_no_intention_to_walk_;
 
   //// process
   std::optional<lanelet::Id> getTrafficSignalId(const lanelet::ConstLanelet & way_lanelet);
+  bool hasPotentialToReachWithHistory(
+    const TrackedObject & object, const Eigen::Vector2d & center_point,
+    const Eigen::Vector2d & right_point, const Eigen::Vector2d & left_point,
+    const double time_horizon, const double min_object_vel,
+    const double max_crosswalk_user_delta_yaw_threshold_for_lanelet);
   PredictedObject getPredictedObjectAsCrosswalkUser(const TrackedObject & object);
   void updateCrosswalkUserHistory(
     const std_msgs::msg::Header & header, const TrackedObject & object,

@@ -410,6 +410,7 @@ void StaticObstacleAvoidanceModule::fillAvoidanceTargetData(ObjectDataArray & ob
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   using utils::static_obstacle_avoidance::fillAvoidanceNecessity;
+  using utils::static_obstacle_avoidance::fillObjectAvoidableByDesiredShiftLength;
   using utils::static_obstacle_avoidance::fillObjectStoppableJudge;
 
   // Calculate the distance needed to safely decelerate the ego vehicle to a stop line.
@@ -419,6 +420,7 @@ void StaticObstacleAvoidanceModule::fillAvoidanceTargetData(ObjectDataArray & ob
     fillAvoidanceNecessity(o, stored_objects_, vehicle_width, parameters_);
     o.to_stop_line = calcDistanceToStopLine(o);
     fillObjectStoppableJudge(o, stored_objects_, feasible_stop_distance, parameters_);
+    fillObjectAvoidableByDesiredShiftLength(o, avoid_data_.previous_target_objects);
   });
 }
 
@@ -872,10 +874,21 @@ bool StaticObstacleAvoidanceModule::isSafePath(
   };
 
   if (parameters_->policy_detection_reliability == "not_enough") {
+    lanelet::ConstLanelets check_lanes{};
+    for (const auto & lane : avoid_data_.current_lanelets) {
+      if (avoid_data_.target_objects.empty()) {
+        break;
+      }
+
+      check_lanes.push_back(lane);
+
+      if (lane.id() == avoid_data_.target_objects.back().overhang_lanelet.id()) {
+        break;
+      }
+    }
     if (has_left_shift) {
-      const auto exist_adjacent_lane = std::all_of(
-        avoid_data_.current_lanelets.begin(), avoid_data_.current_lanelets.end(),
-        [this](const auto & lane) {
+      const auto exist_adjacent_lane =
+        std::all_of(check_lanes.begin(), check_lanes.end(), [this](const auto & lane) {
           return planner_data_->route_handler->getLeftLanelet(lane, true, false);
         });
       if (!exist_adjacent_lane && !is_within_current_lane(false)) {
@@ -883,9 +896,8 @@ bool StaticObstacleAvoidanceModule::isSafePath(
       }
     }
     if (has_right_shift) {
-      const auto exist_adjacent_lane = std::all_of(
-        avoid_data_.current_lanelets.begin(), avoid_data_.current_lanelets.end(),
-        [this](const auto & lane) {
+      const auto exist_adjacent_lane =
+        std::all_of(check_lanes.begin(), check_lanes.end(), [this](const auto & lane) {
           return planner_data_->route_handler->getRightLanelet(lane, true, false);
         });
       if (!exist_adjacent_lane && !is_within_current_lane(true)) {
@@ -1519,7 +1531,7 @@ void StaticObstacleAvoidanceModule::updateData()
   }
 
   debug_data_ = DebugData();
-  avoid_data_ = AvoidancePlanningData();
+  avoid_data_.update();
 
   // update base path and target objects.
   fillFundamentalData(avoid_data_, debug_data_);
