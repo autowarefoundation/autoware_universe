@@ -23,6 +23,7 @@
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
+#include <unique_identifier_msgs/msg/uuid.hpp>
 
 #include <boost/geometry/geometries/multi_polygon.hpp>
 #include <boost/geometry/index/rtree.hpp>
@@ -127,12 +128,26 @@ struct EgoData
     map_stop_points;  // ego stop points (and their corresponding stop lines) taken from the map
 };
 
+/// @brief a collision time along with the object and path id that cause the collision
+struct CollisionTime
+{
+  double collision_time{};
+  unique_identifier_msgs::msg::UUID object_uuid;
+  size_t object_path_id{};
+
+  // Overload needed to store the struct in std::set
+  bool operator<(const CollisionTime & other) const
+  {
+    return collision_time < other.collision_time;
+  }
+};
+
 /// @brief data related to an out of lane trajectory point
 struct OutOfLanePoint
 {
   size_t trajectory_index;
   autoware_utils::MultiPolygon2d out_overlaps;
-  std::set<double> collision_times;
+  std::set<CollisionTime> collision_times;
   std::optional<double> min_object_arrival_time;
   std::optional<double> max_object_arrival_time;
   std::optional<double> ttc;

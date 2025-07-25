@@ -136,16 +136,9 @@ std::optional<geometry_msgs::msg::Pose> calculate_last_in_lane_pose(
 }
 
 std::optional<geometry_msgs::msg::Pose> calculate_slowdown_pose(
-  const EgoData & ego_data, const OutOfLaneData & out_of_lane_data, const PlannerParam & params)
+  const EgoData & ego_data, const OutOfLanePoint & out_of_lane_point, const PlannerParam & params)
 {
-  // points are ordered by trajectory index so the first one has the smallest index and arc length
-  const auto point_to_avoid_it = std::find_if(
-    out_of_lane_data.outside_points.cbegin(), out_of_lane_data.outside_points.cend(),
-    [&](const auto & p) { return p.to_avoid; });
-  if (point_to_avoid_it == out_of_lane_data.outside_points.cend()) {
-    return std::nullopt;
-  }
-  auto slowdown_pose = calculate_last_in_lane_pose(ego_data, *point_to_avoid_it, params);
+  auto slowdown_pose = calculate_last_in_lane_pose(ego_data, out_of_lane_point, params);
   if (slowdown_pose && params.use_map_stop_lines) {
     // try to use a map stop line ahead of the stop pose
     auto stop_arc_length =
