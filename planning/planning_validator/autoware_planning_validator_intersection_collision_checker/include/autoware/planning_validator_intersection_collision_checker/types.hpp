@@ -176,8 +176,17 @@ public:
     return true;
   }
 
-  void update(const double dist, const double dt, const double raw_vel_th, const double accel_th)
+  void update(
+    const double dist, const double dt, const double raw_vel_th, const double accel_th,
+    const double min_dist_th)
   {
+    // distance measurement is not reliable near the overlap point, skip velocity update
+    if (is_reliable && delay_compensated_distance_to_overlap < min_dist_th) {
+      update_history(dist, dt);
+      track_duration += dt;
+      return;
+    }
+
     const auto raw_velocity = (distance_to_overlap - dist) / dt;
     if (abs(raw_velocity) > raw_vel_th) {
       reset();
