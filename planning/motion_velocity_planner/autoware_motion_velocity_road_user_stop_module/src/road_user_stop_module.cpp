@@ -487,7 +487,7 @@ lanelet::ConstLanelets RoadUserStopModule::get_ego_lanelets(
 {
   const auto & route_handler = planner_data->route_handler;
   const auto & vehicle_info = planner_data->vehicle_info_;
-  // from trajectory poionts
+  // from trajectory points
   autoware_utils::LineString2d trajectory_ls;
   for (const auto & p : smoothed_trajectory_points) {
     trajectory_ls.emplace_back(p.pose.position.x, p.pose.position.y);
