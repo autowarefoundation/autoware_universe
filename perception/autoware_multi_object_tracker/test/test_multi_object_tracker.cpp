@@ -134,7 +134,7 @@ FunctionTimings runIterations(
 void runPerformanceTest()
 {
   TrackingScenarioConfig params;
-  FunctionTimings timings = runIterations(50, params, true, true);
+  FunctionTimings timings = runIterations(50, params, true, false);
   timings.calculate();
   std::cout << "Total time for all iterations: "
             << std::accumulate(timings.total.times.begin(), timings.total.times.end(), 0.0)
@@ -252,146 +252,112 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path, bool write_ba
   rclcpp::shutdown();
 }
 
-void profilePerformanceVsCarCount()
+// Configuration structure for profiling parameters
+struct ProfileConfig
 {
-  // Test configuration
-  constexpr int min_cars = 1;
-  constexpr int max_cars = 1000;
-  constexpr int step = 5;
-  constexpr int iterations_per_count = 5;      // Number of runs per car count
-  constexpr float simulation_duration = 5.0f;  // Seconds per test
-  std::cout << "\n=== Performance (ms) vs Car Count (1-" << max_cars << " cars) ===" << std::endl;
-  std::cout << std::left << std::setw(10) << "CarCount" << "," << std::setw(12) << "TotalTime"
-            << "," << std::setw(12) << "PredictTime" << "," << std::setw(14) << "AssociateTime"
-            << "," << std::setw(12) << "UpdateTime" << "," << std::setw(12) << "PruneTime" << ","
-            << std::setw(12) << "SpawnTime" << std::endl;
+  std::string profile_name;
+  int min_count;
+  int max_count;
+  int step;
+  int iterations_per_count;
+  float simulation_duration;
+  std::function<void(TrackingScenarioConfig &, int)> config_updater;
+};
 
-  // Test different car counts
-  for (int target_cars = min_cars; target_cars <= max_cars; target_cars += step) {
+// Common profiling function template
+void profilePerformance(const ProfileConfig & config)
+{
+  const std::vector<std::string> performance_columns = {
+    "TotalTime", "PredictTime", "AssociateTime", "UpdateTime", "PruneTime", "SpawnTime"};
+
+  std::cout << "\n=== Performance (ms) vs " << config.profile_name << " Count (" << config.min_count
+            << "-" << config.max_count << ") ===\n";
+
+  // Print header
+  std::cout << std::left << std::setw(15) << config.profile_name;
+  for (const auto & name : performance_columns) {
+    std::cout << "," << std::setw(12) << name;
+  }
+  std::cout << "\n";
+
+  for (int target_count = config.min_count; target_count <= config.max_count;
+       target_count += config.step) {
     TrackingScenarioConfig params;
-    // Disable pedestrians
-    params.pedestrian_clusters = 0;
-    params.pedestrians_per_cluster = 0;
-
-    // Configure lanes and cars per lane
-    params.num_lanes = std::max(1, target_cars / 20);  // At least 1 lane
-    params.cars_per_lane = std::max(1, target_cars / params.num_lanes);
-
-    // Adjust car spacing based on density
-    params.car_spacing_mean = 10.0f * (1.0f + target_cars / 500.0f);
+    config.config_updater(params, target_count);
 
     FunctionTimings total_timings;
-    for (int i = 0; i < iterations_per_count; ++i) {
-      const int num_iterations = static_cast<int>(simulation_duration * 10.0f);
-      const FunctionTimings iteration_timings = runIterations(num_iterations, params);
-      total_timings.accumulate(iteration_timings);
+    total_timings.reserve(
+      config.iterations_per_count * static_cast<int>(config.simulation_duration * 10.0f));
+
+    for (int i = 0; i < config.iterations_per_count; ++i) {
+      const int num_iterations = static_cast<int>(config.simulation_duration * 10.0f);
+      total_timings.accumulate(runIterations(num_iterations, params));
     }
-    // Calculate statistics for this car count
+
     total_timings.calculate();
-    std::cout << std::left << std::fixed << std::setprecision(3) << std::setw(10) << target_cars
-              << "," << std::setw(12) << total_timings.total.avg << "," << std::setw(12)
+
+    std::cout << std::left << std::fixed << std::setprecision(3) << std::setw(15) << target_count;
+    std::cout << "," << std::setw(12) << total_timings.total.avg << "," << std::setw(12)
               << total_timings.predict.avg << "," << std::setw(14) << total_timings.associate.avg
               << "," << std::setw(12) << total_timings.update.avg << "," << std::setw(12)
-              << total_timings.prune.avg << "," << std::setw(12) << total_timings.spawn.avg
-              << std::endl;
+              << total_timings.prune.avg << "," << std::setw(12) << total_timings.spawn.avg << "\n";
   }
+}
+
+void profilePerformanceVsCarCount()
+{
+  profilePerformance(ProfileConfig{
+    "Car",
+    1,     // min_count
+    1000,  // max_count
+    5,     // step
+    5,     // iterations_per_count
+    5.0f,  // simulation_duration
+    [](TrackingScenarioConfig & params, int target_count) {
+      params.pedestrian_clusters = 0;  // No pedestrians in this profile
+      params.pedestrians_per_cluster = 0;
+      params.num_lanes = std::max(1, target_count / 20);
+      params.cars_per_lane = std::max(1, target_count / params.num_lanes);
+      params.car_spacing_mean = 10.0f * (1.0f + target_count / 500.0f);
+      params.unknown_objects = 0;  // No unknown objects in this profile
+    }});
 }
 
 void profilePerformanceVsPedestrianCount()
 {
-  // Test configuration
-  constexpr int min_peds = 1;
-  constexpr int max_peds = 1000;
-  constexpr int step = 5;
-  constexpr int iterations_per_count = 5;      // Number of runs per pedestrian count
-  constexpr float simulation_duration = 5.0f;  // Seconds per test
-
-  std::cout << "\n=== Performance (ms) vs Pedestrian Count (1-" << max_peds
-            << " pedestrians) ===" << std::endl;
-  std::cout << std::left << std::setw(10) << "PedCount" << "," << std::setw(12) << "TotalTime"
-            << "," << std::setw(12) << "PredictTime" << "," << std::setw(14) << "AssociateTime"
-            << "," << std::setw(12) << "UpdateTime" << "," << std::setw(12) << "PruneTime" << ","
-            << std::setw(12) << "SpawnTime" << std::endl;
-
-  // Test different pedestrian counts
-  for (int target_peds = min_peds; target_peds <= max_peds; target_peds += step) {
-    TrackingScenarioConfig config;
-    // Disable cars
-    config.num_lanes = 0;
-    config.cars_per_lane = 0;
-
-    // Configure pedestrian clusters and pedestrians per cluster
-    config.pedestrian_clusters = std::max(1, target_peds / 5);  // At least 1 cluster
-    config.pedestrians_per_cluster = std::max(1, target_peds / config.pedestrian_clusters);
-
-    // Adjust cluster spacing based on density
-    config.pedestrian_cluster_spacing = 30.0f * (1.0f + target_peds / 200.0f);
-
-    FunctionTimings total_timings;
-    for (int i = 0; i < iterations_per_count; ++i) {
-      const int num_iterations = static_cast<int>(simulation_duration * 10.0f);
-      const FunctionTimings iteration_timings = runIterations(num_iterations, config);
-      total_timings.accumulate(iteration_timings);
-    }
-
-    // Calculate statistics for this pedestrian count
-    total_timings.calculate();
-
-    std::cout << std::left << std::fixed << std::setprecision(3) << std::setw(10) << target_peds
-              << "," << std::setw(12) << total_timings.total.avg << "," << std::setw(12)
-              << total_timings.predict.avg << "," << std::setw(14) << total_timings.associate.avg
-              << "," << std::setw(12) << total_timings.update.avg << "," << std::setw(12)
-              << total_timings.prune.avg << "," << std::setw(12) << total_timings.spawn.avg
-              << std::endl;
-  }
+  profilePerformance(ProfileConfig{
+    "Pedestrian",
+    1,     // min_count
+    1000,  // max_count
+    5,     // step
+    5,     // iterations_per_count
+    5.0f,  // simulation_duration
+    [](TrackingScenarioConfig & params, int target_count) {
+      params.num_lanes = 0;  // No cars in this profile
+      params.cars_per_lane = 0;
+      params.pedestrian_clusters = std::max(1, target_count / 5);
+      params.pedestrians_per_cluster = std::max(1, target_count / params.pedestrian_clusters);
+      params.pedestrian_cluster_spacing = 30.0f * (1.0f + target_count / 200.0f);
+      params.unknown_objects = 0;  // No unknown objects in this profile
+    }});
 }
 
 void profilePerformanceVsUnknownObjectCount()
 {
-  // Test configuration
-  constexpr int min_unknowns = 1;
-  constexpr int max_unknowns = 1000;
-  constexpr int step = 5;
-  constexpr int iterations_per_count = 5;      // Number of runs per unknown object count
-  constexpr float simulation_duration = 5.0f;  // Seconds per test
-
-  std::cout << "\n=== Performance (ms) vs Unknown Object Count (1-" << max_unknowns
-            << " unknown objects) ===" << std::endl;
-  std::cout << std::left << std::setw(10) << "UnknownCount" << "," << std::setw(12) << "TotalTime"
-            << "," << std::setw(12) << "PredictTime" << "," << std::setw(14) << "AssociateTime"
-            << "," << std::setw(12) << "UpdateTime" << "," << std::setw(12) << "PruneTime" << ","
-            << std::setw(12) << "SpawnTime" << std::endl;
-
-  // Test different unknown object counts
-  for (int target_unknowns = min_unknowns; target_unknowns <= max_unknowns;
-       target_unknowns += step) {
-    TrackingScenarioConfig config;
-    // Disable cars and pedestrians
-    config.num_lanes = 0;
-    config.cars_per_lane = 0;
-    config.pedestrian_clusters = 0;
-    config.pedestrians_per_cluster = 0;
-
-    // Configure unknown objects
-    config.unknown_objects = target_unknowns;
-
-    FunctionTimings total_timings;
-    for (int i = 0; i < iterations_per_count; ++i) {
-      const int num_iterations = static_cast<int>(simulation_duration * 10.0f);
-      const FunctionTimings iteration_timings = runIterations(num_iterations, config);
-      total_timings.accumulate(iteration_timings);
-    }
-
-    // Calculate statistics for this unknown object count
-    total_timings.calculate();
-
-    std::cout << std::left << std::fixed << std::setprecision(3) << std::setw(10) << target_unknowns
-              << "," << std::setw(12) << total_timings.total.avg << "," << std::setw(12)
-              << total_timings.predict.avg << "," << std::setw(14) << total_timings.associate.avg
-              << "," << std::setw(12) << total_timings.update.avg << "," << std::setw(12)
-              << total_timings.prune.avg << "," << std::setw(12) << total_timings.spawn.avg
-              << std::endl;
-  }
+  profilePerformance(ProfileConfig{
+    "Unknown",
+    1,     // min_count
+    1000,  // max_count
+    5,     // step
+    5,     // iterations_per_count
+    5.0f,  // simulation_duration
+    [](TrackingScenarioConfig & params, int target_count) {
+      params.num_lanes = 0;  // No cars in this profile
+      params.cars_per_lane = 0;
+      params.pedestrian_clusters = 0;  // No pedestrians in this profile
+      params.pedestrians_per_cluster = 0;
+      params.unknown_objects = target_count;
+    }});
 }
 
 class MultiObjectTrackerTest : public ::testing::Test
@@ -403,7 +369,6 @@ public:
 
 TEST_F(MultiObjectTrackerTest, SimulatedDataPerformanceTest)
 {
-  profilePerformanceVsUnknownObjectCount();
   // This test runs performance analysis using simulated tracking data
   runPerformanceTest();
 }

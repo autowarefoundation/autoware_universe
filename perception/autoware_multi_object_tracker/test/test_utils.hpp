@@ -82,6 +82,15 @@ struct FunctionTimings
     spawn.calculate();
     total.calculate();
   }
+  void reserve(size_t size)
+  {
+    predict.times.reserve(size);
+    associate.times.reserve(size);
+    update.times.reserve(size);
+    prune.times.reserve(size);
+    spawn.times.reserve(size);
+    total.times.reserve(size);
+  }
 };
 
 void printPerformanceStats(const std::string & name, const PerformanceStats & stats);

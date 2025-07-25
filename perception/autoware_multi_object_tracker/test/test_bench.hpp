@@ -245,4 +245,5 @@ private:
   std::unordered_map<std::string, ObjectState> pedestrian_states_;
   std::unordered_map<std::string, UnknownObjectState> unknown_states_;
 };
+
 #endif  // TEST_BENCH_HPP_
