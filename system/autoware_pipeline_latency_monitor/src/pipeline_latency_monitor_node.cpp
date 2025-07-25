@@ -226,7 +226,7 @@ void PipelineLatencyMonitorNode::publish_total_latency()
   debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/total_latency_ms", total_latency_ms_);
 
-  RCLCPP_INFO_THROTTLE(
+  RCLCPP_DEBUG_THROTTLE(
     get_logger(), *get_clock(), 1000, "Total latency: %.2f ms (threshold: %.2f ms)",
     total_latency_ms_, latency_threshold_ms_);
 }
