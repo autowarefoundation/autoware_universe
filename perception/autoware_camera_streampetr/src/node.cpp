@@ -205,13 +205,13 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
   }
 
   if (multithreading_) data_store_->freeze_updates();
-  
+
   const auto ego_pose_result = get_ego_pose_vector();
   if (!ego_pose_result.has_value()) {
     return;
   }
   const auto [ego_pose, ego_pose_inv] = ego_pose_result.value();
-  
+
   const auto extrinsic_vectors = get_camera_extrinsics_vector(data_store_->get_camera_link_names());
   if (!extrinsic_vectors.has_value()) return;
 
@@ -221,8 +221,7 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
 
   network_->inference_detector(
     data_store_->get_image_input(), ego_pose, ego_pose_inv, data_store_->get_image_shape(),
-    data_store_->get_camera_info_vector(),
-    extrinsic_vectors.value(), prediction_timestamp,
+    data_store_->get_camera_info_vector(), extrinsic_vectors.value(), prediction_timestamp,
     output_objects, forward_time_ms);
 
   if (multithreading_) data_store_->unfreeze_updates();
@@ -283,7 +282,9 @@ std::optional<std::vector<float>> StreamPetrNode::get_camera_extrinsics_vector(
       transform_stamped =
         tf_buffer_.lookupTransform(camera_links[i], "base_link", tf2::TimePointZero);
     } catch (const tf2::TransformException & ex) {
-      RCLCPP_ERROR( get_logger(), "Could not transform from base_link to %s: %s", camera_links[i].c_str(), ex.what());
+      RCLCPP_ERROR(
+        get_logger(), "Could not transform from base_link to %s: %s", camera_links[i].c_str(),
+        ex.what());
       return std::nullopt;
     }
 
@@ -293,7 +294,7 @@ std::optional<std::vector<float>> StreamPetrNode::get_camera_extrinsics_vector(
         transform_stamped.transform.rotation.x, transform_stamped.transform.rotation.y,
         transform_stamped.transform.rotation.z, transform_stamped.transform.rotation.w);
       tf2::Matrix3x3 tf2_R(tf2_q);
-      
+
       Eigen::Matrix3f R;
       for (int r = 0; r < 3; ++r) {
         for (int c = 0; c < 3; ++c) {
@@ -327,7 +328,8 @@ std::optional<std::vector<float>> StreamPetrNode::get_camera_extrinsics_vector(
   return res;
 }
 
-std::optional<std::pair<std::vector<float>, std::vector<float>>> StreamPetrNode::get_ego_pose_vector() const
+std::optional<std::pair<std::vector<float>, std::vector<float>>>
+StreamPetrNode::get_ego_pose_vector() const
 {
   if (!latest_kinematic_state_ || !initial_kinematic_state_) {
     RCLCPP_ERROR(get_logger(), "Kinematic states have not been received.");
