@@ -85,6 +85,11 @@
             0.3, 0.3, 0.3, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
             0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.0001
           ]
+        },
+        "unknown_association_giou_threshold": {
+          "type": "number",
+          "description": "GIoU threshold for unknown-unknown association.",
+          "default": -0.8
         }
       },
       "required": [

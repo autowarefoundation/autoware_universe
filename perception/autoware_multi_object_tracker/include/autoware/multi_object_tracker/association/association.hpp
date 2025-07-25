@@ -60,6 +60,7 @@ struct AssociatorConfig
   Eigen::MatrixXd min_area_matrix;
   Eigen::MatrixXd max_rad_matrix;
   Eigen::MatrixXd min_iou_matrix;
+  double unknown_association_giou_threshold;
 };
 
 struct InverseCovariance2D

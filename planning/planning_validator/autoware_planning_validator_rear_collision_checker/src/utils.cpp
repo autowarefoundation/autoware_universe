@@ -134,6 +134,34 @@ std::pair<lanelet::BasicPoint2d, double> get_smallest_enclosing_circle(
   return std::make_pair(center, radius_squared);
 }
 
+auto calc_lookahead_line(
+  const std::shared_ptr<PlanningValidatorContext> & context, const double lookahead_time)
+  -> std::optional<std::pair<autoware_utils::LineString3d, double>>
+{
+  const auto & points = context->data->current_trajectory->points;
+  const auto & ego_pose = context->data->current_kinematics->pose.pose;
+  const auto & current_velocity = context->data->current_kinematics->twist.twist.linear.x;
+  const auto & vehicle_info = context->vehicle_info;
+
+  const auto lookahead_distance = current_velocity * lookahead_time;
+  const auto p_future = autoware::motion_utils::calcLongitudinalOffsetPose(
+    points, ego_pose.position, vehicle_info.max_longitudinal_offset_m + lookahead_distance);
+
+  if (!p_future.has_value()) {
+    return std::nullopt;
+  }
+
+  autoware_utils::LineString3d lookahead_line;
+
+  const auto p1 = autoware_utils::calc_offset_pose(
+    p_future.value(), 0.0, 0.5 * vehicle_info.vehicle_width_m, 0.0);
+  const auto p2 = autoware_utils::calc_offset_pose(
+    p_future.value(), 0.0, -0.5 * vehicle_info.vehicle_width_m, 0.0);
+  lookahead_line.emplace_back(p1.position.x, p1.position.y, ego_pose.position.z);
+  lookahead_line.emplace_back(p2.position.x, p2.position.y, ego_pose.position.z);
+  return std::make_pair(lookahead_line, lookahead_distance);
+}
+
 auto calc_predicted_stop_line(
   const std::shared_ptr<PlanningValidatorContext> & context, const double max_deceleration,
   const double max_positive_jerk, const double max_negative_jerk)
@@ -211,9 +239,8 @@ auto check_shift_behavior(
   }
 
   const auto constraints = parameters.common.ego;
-  const auto reachable_point = calc_predicted_stop_line(
-    context, constraints.nominal_deceleration, constraints.nominal_positive_jerk,
-    constraints.nominal_negative_jerk);
+  const auto reachable_point =
+    calc_lookahead_line(context, parameters.common.adjacent_lane.lookahead_time);
   const auto stoppable_point = calc_predicted_stop_line(
     context, constraints.max_deceleration, constraints.max_positive_jerk,
     constraints.max_negative_jerk);
@@ -315,9 +342,8 @@ auto check_turn_behavior(
 
   const auto & p = parameters.common.blind_spot;
   const auto constraints = parameters.common.ego;
-  const auto reachable_point = calc_predicted_stop_line(
-    context, constraints.nominal_deceleration, constraints.nominal_positive_jerk,
-    constraints.nominal_negative_jerk);
+  const auto reachable_point =
+    calc_lookahead_line(context, parameters.common.blind_spot.lookahead_time);
   const auto stoppable_point = calc_predicted_stop_line(
     context, constraints.max_deceleration, constraints.max_positive_jerk,
     constraints.max_negative_jerk);

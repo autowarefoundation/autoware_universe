@@ -159,11 +159,21 @@ bool IntersectionCollisionChecker::is_safe(DebugData & debug_data)
   debug_data.is_active = true;
   debug_data.is_safe = true;
 
+  const auto prev_collision_lanes = collision_lanes_;
+  collision_lanes_.clear();
+
   const bool is_safe = check_collision(
     debug_data, filtered_pointcloud, context_->data->obstacle_pointcloud->header.stamp);
 
   const auto & p = params_.icc_parameters;
   const auto now = clock_->now();
+
+  auto consistent_collision_lane = [&]() {
+    return std::find_if(collision_lanes_.begin(), collision_lanes_.end(), [&](const auto & id) {
+             return std::find(prev_collision_lanes.begin(), prev_collision_lanes.end(), id) !=
+                    prev_collision_lanes.end();
+           }) != collision_lanes_.end();
+  };
 
   if (is_safe) {
     if ((now - last_invalid_time_).seconds() > p.off_time_buffer) {
@@ -174,7 +184,7 @@ bool IntersectionCollisionChecker::is_safe(DebugData & debug_data)
     return false;
   }
 
-  if ((now - last_valid_time_).seconds() < p.on_time_buffer) {
+  if ((now - last_valid_time_).seconds() < p.on_time_buffer || !consistent_collision_lane()) {
     RCLCPP_WARN(logger_, "[ICC] Momentary collision risk detected.");
     debug_data.text = "detected momentary collision";
     return true;
@@ -320,6 +330,7 @@ void IntersectionCollisionChecker::filter_pointcloud(
     filter.setLeafSize(
       p.pointcloud.voxel_grid_filter.x, p.pointcloud.voxel_grid_filter.y,
       p.pointcloud.voxel_grid_filter.z);
+    filter.setMinimumPointsNumberPerVoxel(p.pointcloud.voxel_grid_filter.min_size);
     filter.filter(*filtered_pointcloud);
   }
 
@@ -339,7 +350,6 @@ bool IntersectionCollisionChecker::check_collision(
   bool is_safe = true;
 
   const auto & p = params_.icc_parameters;
-  const auto & vel_params = p.pointcloud.velocity_estimation;
 
   auto ego_object_overlap_time =
     [](const double object_ttc, const std::pair<double, double> & ego_time) {
@@ -350,11 +360,10 @@ bool IntersectionCollisionChecker::check_collision(
 
   const auto ego_vel = context_->data->current_kinematics->twist.twist.linear.x;
   const auto close_time_th =
-    ego_vel < p.filter.min_velocity ? p.min_time_horizon : abs(ego_vel / p.ego_deceleration);
-  static constexpr double close_distance_threshold = 3.0;
+    ego_vel < p.filter.min_velocity ? p.close_time_th : abs(ego_vel / p.ego_deceleration);
   auto is_colliding = [&](const PCDObject & object, const std::pair<double, double> & ego_time) {
     if (!object.is_reliable) return false;
-    if (object.distance_to_overlap < close_distance_threshold && ego_time.first < close_time_th)
+    if (object.ttc < std::numeric_limits<double>::epsilon() && ego_time.first < close_time_th)
       return true;
     if (object.is_moving && ego_object_overlap_time(object.ttc, ego_time) < p.ttc_threshold) {
       return true;
@@ -369,54 +378,21 @@ bool IntersectionCollisionChecker::check_collision(
     const auto pcd_object = get_pcd_object(debug_data, time_stamp, filtered_point_cloud, target_ll);
     if (!pcd_object.has_value()) continue;
 
-    auto update_object = [&](PCDObject & object, const PCDObject & new_data) {
-      const auto dt = (new_data.last_update_time - object.last_update_time).seconds();
-      const auto dl = object.distance_to_overlap - new_data.distance_to_overlap;
-      if (dt < 1e-6) return;  // too small time difference, skip update
-
-      const auto raw_velocity = dl / dt;
-      const auto raw_accel = std::abs(raw_velocity - object.velocity) / dt;
-      object.is_reliable = object.track_duration > vel_params.observation_time;
-      static constexpr double eps = 0.01;  // small epsilon to avoid division by zero
-      // update velocity only if the object is not yet reliable or velocity change is within limit
-      if (
-        object.is_reliable && object.distance_to_overlap < close_distance_threshold &&
-        new_data.distance_to_overlap < close_distance_threshold) {
-        object.track_duration += dt;
-      } else if (raw_accel > vel_params.reset_accel_th) {
-        object.velocity = 0.0;        // reset velocity if acceleration is too high
-        object.track_duration = 0.0;  // reset track duration
-        object.is_reliable = false;   // reset reliability
-      } else if (!object.is_reliable || raw_accel < vel_params.max_acceleration) {
-        object.velocity = autoware::signal_processing::lowpassFilter(
-          raw_velocity, object.velocity, 0.5);  // apply low-pass filter to velocity
-        object.velocity = std::clamp(object.velocity, eps, vel_params.max_velocity);
-        object.track_duration += dt;
-      }
-
-      object.last_update_time = new_data.last_update_time;
-      object.pose = new_data.pose;
-      object.distance_to_overlap = new_data.distance_to_overlap;
-      object.delay_compensated_distance_to_overlap =
-        std::max(0.0, object.distance_to_overlap - object.velocity * p.pointcloud.latency);
-      object.moving_time =
-        (object.velocity < p.filter.min_velocity) ? 0.0 : object.moving_time + dt;
-      object.is_moving = object.moving_time > p.filter.moving_time;
-      object.ttc = object.delay_compensated_distance_to_overlap / object.velocity;
-    };
-
     if (history_.find(pcd_object->overlap_lanelet_id) == history_.end()) {
       history_[pcd_object->overlap_lanelet_id] = pcd_object.value();
     } else {
       auto & existing_object = history_[pcd_object->overlap_lanelet_id];
-      update_object(existing_object, pcd_object.value());
+      update_tracked_object(existing_object, pcd_object.value());
       existing_object.is_safe = !is_colliding(existing_object, target_ll.ego_overlap_time);
-      is_safe = is_safe && existing_object.is_safe;
+      if (!existing_object.is_safe) {
+        is_safe = false;
+        collision_lanes_.push_back(target_ll.id);
+      }
       debug_data.pcd_objects.push_back(existing_object);
     }
   }
 
-  static constexpr double max_history_time = 1.0;
+  const auto max_history_time = p.pointcloud.velocity_estimation.max_history_time;
   auto itr = history_.begin();
   while (itr != history_.end()) {
     if ((clock_->now() - itr->second.last_update_time).seconds() > max_history_time) {
@@ -427,6 +403,40 @@ bool IntersectionCollisionChecker::check_collision(
   }
 
   return is_safe;
+}
+
+void IntersectionCollisionChecker::update_tracked_object(
+  PCDObject & object, const PCDObject & new_data) const
+{
+  const auto dt = (new_data.last_update_time - object.last_update_time).seconds();
+  if (dt < 1e-6) return;  // too small time difference, skip update
+
+  const auto & p = params_.icc_parameters;
+  const auto & vel_params = p.pointcloud.velocity_estimation;
+
+  object.update(
+    new_data.distance_to_overlap, dt, vel_params.max_velocity, vel_params.max_acceleration,
+    p.close_distance_th);
+
+  object.is_reliable = object.track_duration > vel_params.observation_time;
+
+  static constexpr double zero_vel_th = 0.1;
+  object.last_update_time = new_data.last_update_time;
+  object.pose = new_data.pose;
+  object.distance_to_overlap = new_data.distance_to_overlap;
+  object.delay_compensated_distance_to_overlap =
+    std::max(0.0, object.distance_to_overlap - object.velocity * p.pointcloud.latency);
+  object.moving_time = (object.velocity < p.filter.min_velocity) ? 0.0 : object.moving_time + dt;
+  object.is_moving = object.moving_time > p.filter.moving_time;
+  object.ttc = std::invoke([&]() {
+    if (object.velocity < -zero_vel_th) {
+      return std::numeric_limits<double>::infinity();  // if object is moving away, set ttc to inf
+    }
+    if (object.delay_compensated_distance_to_overlap < p.close_distance_th) {
+      return 0.0;  // if the object is close and moving forward, set ttc to 0
+    }
+    return object.delay_compensated_distance_to_overlap / std::max(object.velocity, zero_vel_th);
+  });
 }
 
 std::optional<PCDObject> IntersectionCollisionChecker::get_pcd_object(
@@ -447,6 +457,8 @@ std::optional<PCDObject> IntersectionCollisionChecker::get_pcd_object(
 
   if (clustered_points->empty()) return pcd_object;
 
+  const auto & vel_params = params_.icc_parameters.pointcloud.velocity_estimation;
+
   const auto overlap_arc_coord =
     lanelet::utils::getArcCoordinates(target_lanelet.lanelets, target_lanelet.overlap_point);
   auto min_arc_length = std::numeric_limits<double>::max();
@@ -463,17 +475,10 @@ std::optional<PCDObject> IntersectionCollisionChecker::get_pcd_object(
 
     min_arc_length = arc_length_to_overlap;
 
-    PCDObject object;
-    object.last_update_time = time_stamp;
-    object.pose = p_geom;
-    object.overlap_point = target_lanelet.overlap_point.position;
-    object.overlap_lanelet_id = target_lanelet.id;
-    object.track_duration = 0.0;
-    object.distance_to_overlap = arc_length_to_overlap;
-    object.delay_compensated_distance_to_overlap = arc_length_to_overlap;
-    object.velocity = 0.0;
-    object.moving_time = 0.0;
-    object.ttc = std::numeric_limits<double>::max();
+    PCDObject object(
+      p_geom, target_lanelet.overlap_point.position, time_stamp, target_lanelet.id,
+      arc_length_to_overlap);
+    object.set_buffer_size(vel_params.buffer_size);
     pcd_object = object;
   }
   return pcd_object;
@@ -539,6 +544,8 @@ void IntersectionCollisionChecker::cluster_pointcloud(
       output->push_back(point);
     }
   }
+
+  if (output->empty()) return;
 
   {
     const auto clustered_pointcloud = std::make_shared<sensor_msgs::msg::PointCloud2>();

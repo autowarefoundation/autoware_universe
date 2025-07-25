@@ -1314,11 +1314,19 @@ void IntersectionModule::updateTrafficSignalObservation()
   if (!tl_id_and_point_) {
     for (auto && tl_reg_elem :
          lane.regulatoryElementsAs<lanelet::autoware::AutowareTrafficLight>()) {
-      for (const auto & ls : tl_reg_elem->lightBulbs()) {
-        if (ls.hasAttribute("traffic_light_id")) {
-          tl_id_and_point_ = std::make_pair(tl_reg_elem->id(), ls.front());
-          break;
+      for (const auto & light : tl_reg_elem->trafficLights()) {
+        if (!light.isLineString()) {
+          RCLCPP_WARN_ONCE(
+            logger_,
+            "traffic light(%ld) of AutowareTrafficLight regulatory-element(%ld) is not LineString",
+            light.id(), tl_reg_elem->id());
         }
+        const auto & tl_linestring = static_cast<lanelet::ConstLineString3d>(light);
+        tl_id_and_point_ = std::make_pair(tl_reg_elem->id(), tl_linestring.front());
+        break;
+      }
+      if (tl_id_and_point_) {
+        break;
       }
     }
   }
