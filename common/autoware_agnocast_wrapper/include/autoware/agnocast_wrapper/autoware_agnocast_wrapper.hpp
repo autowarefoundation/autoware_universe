@@ -66,18 +66,6 @@ enum class OwnershipType {
 template <typename MessageT, OwnershipType Ownership>
 class message_interface;
 
-// Has a unique pointer to a `message_interface` object.
-template <typename MessageT, OwnershipType Ownership>
-class message_ptr;
-
-// Implements `message_interface`.
-template <typename MessageT, OwnershipType Ownership>
-class agnocast_message;
-
-// Implements `message_interface`.
-template <typename MessageT, OwnershipType Ownership>
-class ros2_message;
-
 template <typename MessageT>
 class message_interface<MessageT, OwnershipType::Unique>
 {
@@ -123,7 +111,8 @@ class agnocast_message : public message_interface<MessageT, Ownership>
   agnocast::ipc_shared_ptr<MessageT> ptr_;
 
 public:
-  explicit agnocast_message(agnocast::ipc_shared_ptr<MessageT> && ptr) : ptr_(std::move(ptr))
+  explicit agnocast_message(agnocast::ipc_shared_ptr<MessageT> && ptr)
+  : ptr_(std::move(ptr))
   {}
 
   MessageT & as_ref() const noexcept override { return *ptr_; }
@@ -174,7 +163,7 @@ class message_ptr
     std::unique_ptr<MessageT>,
     std::shared_ptr<MessageT>>;
 
-  std::unique_ptr<message_interface<MessageT, Ownership>> ptr_;
+  std::shared_ptr<message_interface<MessageT, Ownership>> ptr_;
 
 public:
   explicit message_ptr(agnocast::ipc_shared_ptr<MessageT> && ptr)
@@ -239,13 +228,13 @@ public:
     const agnocast::SubscriptionOptions & options)
   {
     static_assert(
-      std::is_invocable_v<std::decay_t<Func>, message_ptr<MessageT, OwnershipType::Unique> &&> ||
-      std::is_invocable_v<std::decay_t<Func>, message_ptr<MessageT, OwnershipType::Shared> &&>,
+      std::is_invocable_v<std::decay_t<Func>, AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) &&> ||
+      std::is_invocable_v<std::decay_t<Func>, AUTOWARE_MESSAGE_SHARED_PTR(MessageT) &&>,
       "callback should be invocable with an rvalue reference to either AUTOWARE_MESSAGE_UNIQUE_PTR "
       "or AUTOWARE_MESSAGE_SHARED_PTR");
 
     constexpr auto ownership =
-      std::is_invocable_v<std::decay_t<Func>, message_ptr<MessageT, OwnershipType::Unique> &&>
+      std::is_invocable_v<std::decay_t<Func>, AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) &&>
       ? OwnershipType::Unique
       : OwnershipType::Shared;
 
@@ -297,8 +286,8 @@ public:
 
   virtual ~PollingSubscriber() = default;
 
-  virtual message_ptr<const MessageT, OwnershipType::Shared> takeData() = 0;
-  virtual message_ptr<const MessageT, OwnershipType::Shared> take_data() = 0;
+  virtual AUTOWARE_MESSAGE_SHARED_PTR(MessageT) takeData() = 0;
+  virtual AUTOWARE_MESSAGE_SHARED_PTR(MessageT) take_data() = 0;
 };
 
 template <typename MessageT>
@@ -312,14 +301,14 @@ public:
   : subscriber_(agnocast::create_subscription<MessageT>(node, topic_name, qos))
   {}
 
-  message_ptr<const MessageT, OwnershipType::Shared> takeData() override
+  AUTOWARE_MESSAGE_SHARED_PTR(MessageT) takeData() override
   {
-    return message_ptr<const MessageT, OwnershipType::Shared>{subscriber_->take_data()};
+    return AUTOWARE_MESSAGE_SHARED_PTR(MessageT){subscriber_->take_data()};
   }
 
-  message_ptr<const MessageT, OwnershipType::Shared> take_data() override
+  AUTOWARE_MESSAGE_SHARED_PTR(MessageT) take_data() override
   {
-    return message_ptr<const MessageT, OwnershipType::Shared>{subscriber_->take_data()};
+    return AUTOWARE_MESSAGE_SHARED_PTR(MessageT){subscriber_->take_data()};
   }
 };
 
@@ -335,14 +324,14 @@ public:
       node, topic_name, qos))
   {}
 
-  message_ptr<const MessageT, OwnershipType::Shared> takeData() override
+  AUTOWARE_MESSAGE_SHARED_PTR(MessageT) takeData() override
   {
-    return message_ptr<const MessageT, OwnershipType::Shared>{subscriber_->takeData()};
+    return AUTOWARE_MESSAGE_SHARED_PTR(MessageT){subscriber_->takeData()};
   }
 
-  message_ptr<const MessageT, OwnershipType::Shared> take_data() override
+  AUTOWARE_MESSAGE_SHARED_PTR(MessageT) take_data() override
   {
-    return message_ptr<const MessageT, OwnershipType::Shared>{subscriber_->takeData()};
+    return AUTOWARE_MESSAGE_SHARED_PTR(MessageT){subscriber_->takeData()};
   }
 };
 
@@ -379,11 +368,11 @@ public:
 
   virtual ~Publisher() = default;
 
-  virtual message_ptr<MessageT, OwnershipType::Unique> allocate_output_message_unique() = 0;
-  virtual message_ptr<MessageT, OwnershipType::Shared> allocate_output_message_shared() = 0;
+  virtual AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) allocate_output_message_unique() = 0;
+  virtual AUTOWARE_MESSAGE_SHARED_PTR(MessageT) allocate_output_message_shared() = 0;
 
-  virtual void publish(message_ptr<MessageT, OwnershipType::Unique> && message) = 0;
-  virtual void publish(message_ptr<MessageT, OwnershipType::Shared> && message) = 0;
+  virtual void publish(AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) && message) = 0;
+  virtual void publish(AUTOWARE_MESSAGE_SHARED_PTR(MessageT) && message) = 0;
 
   virtual uint32_t get_subscription_count() const = 0;
 };
@@ -400,22 +389,22 @@ public:
   : publisher_(agnocast::create_publisher<MessageT>(node, topic_name, qos, options))
   {}
 
-  message_ptr<MessageT, OwnershipType::Unique> allocate_output_message_unique() override
+  AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) allocate_output_message_unique() override
   {
-    return message_ptr<MessageT, OwnershipType::Unique>{publisher_->borrow_loaned_message()};
+    return AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT){publisher_->borrow_loaned_message()};
   }
 
-  message_ptr<MessageT, OwnershipType::Shared> allocate_output_message_shared() override
+  AUTOWARE_MESSAGE_SHARED_PTR(MessageT) allocate_output_message_shared() override
   {
-    return message_ptr<MessageT, OwnershipType::Shared>{publisher_->borrow_loaned_message()};
+    return AUTOWARE_MESSAGE_SHARED_PTR(MessageT){publisher_->borrow_loaned_message()};
   }
 
-  void publish(message_ptr<MessageT, OwnershipType::Unique> && message)
+  void publish(AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) && message)
   {
     publisher_->publish(std::move(message)->move_agnocast_ptr());
   }
 
-  void publish(message_ptr<MessageT, OwnershipType::Shared> && message)
+  void publish(AUTOWARE_MESSAGE_SHARED_PTR(MessageT) && message)
   {
     publisher_->publish(std::move(message)->move_agnocast_ptr());
   }
@@ -441,22 +430,22 @@ public:
     publisher_ = node->create_publisher<MessageT>(topic_name, qos, ros2_options);
   }
 
-  message_ptr<MessageT, OwnershipType::Unique> allocate_output_message_unique() override
+  AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) allocate_output_message_unique() override
   {
-    return message_ptr<MessageT, OwnershipType::Unique>{std::make_unique<MessageT>()};
+    return AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT){std::make_unique<MessageT>()};
   }
 
-  message_ptr<MessageT, OwnershipType::Shared> allocate_output_message_shared() override
+  AUTOWARE_MESSAGE_SHARED_PTR(MessageT) allocate_output_message_shared() override
   {
-    return message_ptr<MessageT, OwnershipType::Shared>{std::make_unique<MessageT>()};
+    return AUTOWARE_MESSAGE_SHARED_PTR(MessageT){std::make_unique<MessageT>()};
   }
 
-  void publish(message_ptr<MessageT, OwnershipType::Unique> && message) override
+  void publish(AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) && message) override
   {
     publisher_->publish(std::move(message)->move_ros2_ptr());
   }
 
-  void publish(message_ptr<MessageT, OwnershipType::Shared> && message) override
+  void publish(AUTOWARE_MESSAGE_SHARED_PTR(MessageT) && message) override
   {
     publisher_->publish(std::move(message)->move_ros2_ptr());
   }
