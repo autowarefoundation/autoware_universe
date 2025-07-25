@@ -24,6 +24,9 @@
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+
 #include <fmt/format.h>
 #include <lanelet2_core/geometry/LineString.h>
 
@@ -93,6 +96,9 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
     "~/input/modified_goal", durable_qos, std::bind(&MissionPlanner::on_modified_goal, this, _1));
   srv_clear_route = create_service<ClearRoute>(
     "~/clear_route", service_utils::handle_exception(&MissionPlanner::on_clear_route, this));
+  srv_set_lane_change_override = create_service<SetLaneChangeOverride>(
+    "~/set_lane_change_override",
+    service_utils::handle_exception(&MissionPlanner::on_set_lane_change_override, this));
   srv_set_lanelet_route = create_service<SetLaneletRoute>(
     "~/set_lanelet_route",
     service_utils::handle_exception(&MissionPlanner::on_set_lanelet_route, this));
@@ -260,6 +266,140 @@ void MissionPlanner::on_clear_route(
 
   change_route();
   change_state(RouteState::UNSET);
+  res->status.success = true;
+}
+
+void MissionPlanner::on_set_lane_change_override(
+  const SetLaneChangeOverride::Request::SharedPtr req,
+  const SetLaneChangeOverride::Response::SharedPtr res)
+{
+  using ResponseCode = autoware_adapi_v1_msgs::srv::SetRoute::Response;
+  const auto is_reroute = state_.state == RouteState::SET;
+
+  if (state_.state != RouteState::UNSET && state_.state != RouteState::SET) {
+    throw service_utils::ServiceException(
+      ResponseCode::ERROR_INVALID_STATE,
+      fmt::format(
+        "The lanelet route cannot be set in the current state: {}",
+        route_state_to_string(state_.state)));
+  }
+  if (!is_mission_planner_ready_) {
+    throw service_utils::ServiceException(
+      ResponseCode::ERROR_PLANNER_UNREADY, "The mission planner is not ready.");
+  }
+  if (is_reroute && !operation_mode_state_) {
+    throw service_utils::ServiceException(
+      ResponseCode::ERROR_PLANNER_UNREADY, "Operation mode state is not received.");
+  }
+
+  const bool is_autonomous_driving =
+    operation_mode_state_ ? operation_mode_state_->mode == OperationModeState::AUTONOMOUS &&
+                              operation_mode_state_->is_autoware_control_enabled
+                          : false;
+
+  if (is_reroute && !allow_reroute_in_autonomous_mode_ && is_autonomous_driving) {
+    throw service_utils::ServiceException(
+      ResponseCode::ERROR_INVALID_STATE, "Reroute is not allowed in autonomous mode.");
+  }
+
+  if (is_reroute && is_autonomous_driving) {
+    const auto reroute_availability = sub_reroute_availability_.take_data();
+    if (!reroute_availability || !reroute_availability->availability) {
+      throw service_utils::ServiceException(
+        ResponseCode::ERROR_INVALID_STATE,
+        "Cannot reroute as the planner is not in lane following.");
+    }
+  }
+
+  change_state(is_reroute ? RouteState::REROUTING : RouteState::ROUTING);
+  auto route = *current_route_;
+
+  boost::uuids::random_generator gen;
+  boost::uuids::uuid uuid = gen();
+  std::copy(uuid.begin(), uuid.end(), route.uuid.uuid.begin());
+
+  // modify the preferred lanelet to change the lane
+  DIRECTION override_direction = req->lane_change_direction == 0   ? DIRECTION::LEFT
+                                 : req->lane_change_direction == 1 ? DIRECTION::RIGHT
+                                                                   : DIRECTION::AUTO;
+
+  RCLCPP_INFO_STREAM(
+    get_logger(), "Changing lane "
+                    << (override_direction == DIRECTION::LEFT    ? "left"
+                        : override_direction == DIRECTION::RIGHT ? "right"
+                                                                 : "auto"));
+  RCLCPP_INFO_STREAM(get_logger(), "Current route segments: " << route.segments.size());
+
+  auto final_iter = route.segments.end();
+
+  if (override_direction != DIRECTION::AUTO) {
+    for (auto iter = route.segments.begin(); iter != final_iter; ++iter) {
+      if (std::next(iter)->primitives.size() == 1) {
+        RCLCPP_INFO_STREAM(
+          get_logger(), "No lane change available for segment with index: " << std::distance(
+                          route.segments.begin(), iter));
+        break;
+      }
+      RCLCPP_INFO_STREAM(get_logger(), "idx: " << std::distance(route.segments.begin(), iter));
+      auto & segment = *iter;
+      // Find the index of the current preferred primitive
+      auto it = std::find_if(
+        segment.primitives.begin(), segment.primitives.end(),
+        [&segment](const LaneletPrimitive & p) { return p.id == segment.preferred_primitive.id; });
+
+      if (it == segment.primitives.end()) continue;
+
+      std::size_t index = std::distance(segment.primitives.begin(), it);
+
+      RCLCPP_INFO_STREAM(
+        get_logger(), "Current preferred primitive ID: " << segment.preferred_primitive.id
+                                                         << ", index: " << index);
+
+      for (const auto & primitive : segment.primitives) {
+        RCLCPP_INFO_STREAM(get_logger(), "Available primitive ID: " << primitive.id);
+      }
+
+      if (override_direction == DIRECTION::LEFT && index > 0) {
+        // shift to the primitive on the left
+        segment.preferred_primitive = segment.primitives.at(index - 1);
+        RCLCPP_INFO_STREAM(
+          get_logger(), "Shifted left to primitive ID: " << segment.preferred_primitive.id);
+      } else if (override_direction == DIRECTION::RIGHT && index + 1 < segment.primitives.size()) {
+        // shift to the primitive on the right
+        segment.preferred_primitive = segment.primitives.at(index + 1);
+        RCLCPP_INFO_STREAM(
+          get_logger(), "Shifted right to primitive ID: " << segment.preferred_primitive.id);
+      } else {
+        // no shift possible (e.g., already leftmost or rightmost)
+        RCLCPP_WARN_STREAM(
+          get_logger(), "Cannot shift "
+                          << (override_direction == DIRECTION::LEFT ? "left" : "right")
+                          << " from primitive ID: " << segment.preferred_primitive.id);
+      }
+    }
+  } else {
+    PlannerPlugin::RoutePoints points;
+    points.push_back(route.goal_pose);
+
+    route = planner_->plan(points);
+  }
+
+  if (route.segments.empty()) {
+    cancel_route();
+    change_state(is_reroute ? RouteState::SET : RouteState::UNSET);
+    throw service_utils::ServiceException(
+      ResponseCode::ERROR_PLANNER_FAILED, "The planned route is empty.");
+  }
+
+  if (is_reroute && is_autonomous_driving && !check_reroute_safety(*current_route_, route)) {
+    cancel_route();
+    change_state(RouteState::SET);
+    throw service_utils::ServiceException(
+      ResponseCode::ERROR_REROUTE_FAILED, "New route is not safe. Reroute failed.");
+  }
+
+  change_route(route);
+  change_state(RouteState::SET);
   res->status.success = true;
 }
 
