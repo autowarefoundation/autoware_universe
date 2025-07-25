@@ -95,7 +95,7 @@ private:
 
   // Helper functions
   void update_history(
-    std::deque<ProcessData> & history, const rclcpp::Time & timestamp, double value) const;
+    std::deque<ProcessData> & history, const rclcpp::Time & timestamp, double value);
   bool is_timestamp_older(const rclcpp::Time & timestamp1, const rclcpp::Time & timestamp2) const;
 };
 

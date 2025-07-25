@@ -44,7 +44,9 @@ double get_latest_value(const std::deque<ProcessData> & history)
   if (!has_valid_data(history)) {
     return 0.0;
   }
-  return history.back().latency_ms;
+  const double value = history.back().latency_ms;
+  // Return 0.0 for negative values
+  return value < 0.0 ? 0.0 : value;
 }
 
 rclcpp::Time get_latest_timestamp(const std::deque<ProcessData> & history)
@@ -264,8 +266,15 @@ void PipelineLatencyMonitorNode::check_total_latency(
 }
 
 void PipelineLatencyMonitorNode::update_history(
-  std::deque<ProcessData> & history, const rclcpp::Time & timestamp, double value) const
+  std::deque<ProcessData> & history, const rclcpp::Time & timestamp, double value)
 {
+  if (value < 0.0) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *this->get_clock(), 30000,
+      "Negative latency value detected: %.6f, treating as 0.0", value);
+    value = 0.0;
+  }
+
   // Add new value to history
   history.emplace_back(timestamp, value);
 
