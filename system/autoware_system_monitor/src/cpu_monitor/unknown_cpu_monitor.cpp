@@ -17,7 +17,7 @@
  * @brief Unknown CPU monitor class
  */
 
-#include "system_monitor/cpu_monitor/unknown_cpu_monitor.hpp"
+#include "unknown_cpu_monitor.hpp"
 
 #include <string>
 
