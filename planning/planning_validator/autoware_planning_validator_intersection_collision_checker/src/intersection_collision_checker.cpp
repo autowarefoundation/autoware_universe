@@ -392,10 +392,9 @@ bool IntersectionCollisionChecker::check_collision(
     }
   }
 
-  static constexpr double max_history_time = 1.0;
   auto itr = history_.begin();
   while (itr != history_.end()) {
-    if ((clock_->now() - itr->second.last_update_time).seconds() > max_history_time) {
+    if ((clock_->now() - itr->second.last_update_time).seconds() > p.pointcloud.velocity_estimation.max_history_time) {
       itr = history_.erase(itr);
     } else {
       itr++;
