@@ -16,9 +16,6 @@
 
 #include "service_utils.hpp"
 
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_generators.hpp>
-
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/route_checker.hpp>
@@ -26,6 +23,9 @@
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
 
 #include <fmt/format.h>
 #include <lanelet2_core/geometry/LineString.h>
@@ -270,7 +270,8 @@ void MissionPlanner::on_clear_route(
 }
 
 void MissionPlanner::on_set_lane_change_override(
-    const SetLaneChangeOverride::Request::SharedPtr req, const SetLaneChangeOverride::Response::SharedPtr res)
+  const SetLaneChangeOverride::Request::SharedPtr req,
+  const SetLaneChangeOverride::Response::SharedPtr res)
 {
   using ResponseCode = autoware_adapi_v1_msgs::srv::SetRoute::Response;
   const auto is_reroute = state_.state == RouteState::SET;
@@ -318,10 +319,15 @@ void MissionPlanner::on_set_lane_change_override(
   std::copy(uuid.begin(), uuid.end(), route.uuid.uuid.begin());
 
   // modify the preferred lanelet to change the lane
-  DIRECTION override_direction = req->lane_change_direction == 0
-    ? DIRECTION::LEFT : req->lane_change_direction == 1 ? DIRECTION::RIGHT : DIRECTION::AUTO;
+  DIRECTION override_direction = req->lane_change_direction == 0   ? DIRECTION::LEFT
+                                 : req->lane_change_direction == 1 ? DIRECTION::RIGHT
+                                                                   : DIRECTION::AUTO;
 
-  RCLCPP_INFO_STREAM(get_logger(), "Changing lane " << (override_direction == DIRECTION::LEFT ? "left" : override_direction == DIRECTION::RIGHT ? "right" : "auto"));
+  RCLCPP_INFO_STREAM(
+    get_logger(), "Changing lane "
+                    << (override_direction == DIRECTION::LEFT    ? "left"
+                        : override_direction == DIRECTION::RIGHT ? "right"
+                                                                 : "auto"));
   RCLCPP_INFO_STREAM(get_logger(), "Current route segments: " << route.segments.size());
 
   auto final_iter = route.segments.end();
@@ -330,30 +336,27 @@ void MissionPlanner::on_set_lane_change_override(
     for (auto iter = route.segments.begin(); iter != final_iter; ++iter) {
       if (std::next(iter)->primitives.size() == 1) {
         RCLCPP_INFO_STREAM(
-          get_logger(), "No lane change available for segment with index: " << std::distance(route.segments.begin(), iter));
+          get_logger(), "No lane change available for segment with index: " << std::distance(
+                          route.segments.begin(), iter));
         break;
       }
-      RCLCPP_INFO_STREAM(
-        get_logger(), "idx: " << std::distance(route.segments.begin(), iter));
+      RCLCPP_INFO_STREAM(get_logger(), "idx: " << std::distance(route.segments.begin(), iter));
       auto & segment = *iter;
       // Find the index of the current preferred primitive
       auto it = std::find_if(
         segment.primitives.begin(), segment.primitives.end(),
-        [&segment](const LaneletPrimitive & p) {
-          return p.id == segment.preferred_primitive.id;
-      });
+        [&segment](const LaneletPrimitive & p) { return p.id == segment.preferred_primitive.id; });
 
       if (it == segment.primitives.end()) continue;
 
       std::size_t index = std::distance(segment.primitives.begin(), it);
 
       RCLCPP_INFO_STREAM(
-        get_logger(), "Current preferred primitive ID: " << segment.preferred_primitive.id <<
-        ", index: " << index);
+        get_logger(), "Current preferred primitive ID: " << segment.preferred_primitive.id
+                                                         << ", index: " << index);
 
       for (const auto & primitive : segment.primitives) {
-        RCLCPP_INFO_STREAM(
-          get_logger(), "Available primitive ID: " << primitive.id);
+        RCLCPP_INFO_STREAM(get_logger(), "Available primitive ID: " << primitive.id);
       }
 
       if (override_direction == DIRECTION::LEFT && index > 0) {
@@ -361,26 +364,24 @@ void MissionPlanner::on_set_lane_change_override(
         segment.preferred_primitive = segment.primitives.at(index - 1);
         RCLCPP_INFO_STREAM(
           get_logger(), "Shifted left to primitive ID: " << segment.preferred_primitive.id);
-      } else if (
-        override_direction == DIRECTION::RIGHT &&
-        index + 1 < segment.primitives.size()
-      ) {
+      } else if (override_direction == DIRECTION::RIGHT && index + 1 < segment.primitives.size()) {
         // shift to the primitive on the right
         segment.preferred_primitive = segment.primitives.at(index + 1);
         RCLCPP_INFO_STREAM(
           get_logger(), "Shifted right to primitive ID: " << segment.preferred_primitive.id);
       } else {
         // no shift possible (e.g., already leftmost or rightmost)
-        RCLCPP_WARN_STREAM(get_logger(), "Cannot shift " <<
-          (override_direction == DIRECTION::LEFT ? "left" : "right") <<
-          " from primitive ID: " << segment.preferred_primitive.id);
+        RCLCPP_WARN_STREAM(
+          get_logger(), "Cannot shift "
+                          << (override_direction == DIRECTION::LEFT ? "left" : "right")
+                          << " from primitive ID: " << segment.preferred_primitive.id);
       }
     }
   } else {
     PlannerPlugin::RoutePoints points;
     points.push_back(route.goal_pose);
-    
-    route =  planner_->plan(points);
+
+    route = planner_->plan(points);
   }
 
   if (route.segments.empty()) {

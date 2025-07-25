@@ -68,8 +68,7 @@ using tier4_planning_msgs::msg::RerouteAvailability;
 using unique_identifier_msgs::msg::UUID;
 using visualization_msgs::msg::MarkerArray;
 
-enum class DIRECTION
-{
+enum class DIRECTION {
   LEFT,
   RIGHT,
   AUTO,
@@ -122,7 +121,8 @@ private:
   void on_clear_route(
     const ClearRoute::Request::SharedPtr req, const ClearRoute::Response::SharedPtr res);
   void on_set_lane_change_override(
-    const SetLaneChangeOverride::Request::SharedPtr req, const SetLaneChangeOverride::Response::SharedPtr res);
+    const SetLaneChangeOverride::Request::SharedPtr req,
+    const SetLaneChangeOverride::Response::SharedPtr res);
   void on_set_lanelet_route(
     const SetLaneletRoute::Request::SharedPtr req, const SetLaneletRoute::Response::SharedPtr res);
   void on_set_waypoint_route(

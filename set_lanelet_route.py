@@ -1,33 +1,36 @@
 #!/usr/bin/env python3
 
+import uuid
+
+from autoware_planning_msgs.msg import LaneletPrimitive
+from autoware_planning_msgs.msg import LaneletSegment
+from autoware_planning_msgs.srv import SetLaneletRoute
+from geometry_msgs.msg import Pose
 import rclpy
 from rclpy.node import Node
-
-from autoware_planning_msgs.srv import SetLaneletRoute
-from autoware_planning_msgs.msg import LaneletSegment, LaneletPrimitive
-from geometry_msgs.msg import Pose
 from std_msgs.msg import Header
 from unique_identifier_msgs.msg import UUID
-import uuid
+
 
 def make_uuid():
     u = uuid.uuid4()
     return UUID(uuid=list(u.bytes))
 
+
 def main():
     rclpy.init()
-    node = rclpy.create_node('set_lanelet_route_manual')
+    node = rclpy.create_node("set_lanelet_route_manual")
 
-    cli = node.create_client(SetLaneletRoute, '/planning/set_lanelet_route')
+    cli = node.create_client(SetLaneletRoute, "/planning/set_lanelet_route")
     if not cli.wait_for_service(timeout_sec=5.0):
-        node.get_logger().error('Service not available.')
+        node.get_logger().error("Service not available.")
         return
 
     req = SetLaneletRoute.Request()
 
     # Fill header (optional)
     req.header = Header()
-    req.header.frame_id = 'map'
+    req.header.frame_id = "map"
 
     # Fill goal_pose
     req.goal_pose = Pose()
@@ -48,31 +51,31 @@ def main():
     # Manually define a few dummy segments (lanelet IDs must be valid!)
     lanelet_primitive1 = LaneletPrimitive()
     lanelet_primitive1.id = 177179
-    lanelet_primitive1.primitive_type = 'lane'  # or 'crosswalk' etc.
+    lanelet_primitive1.primitive_type = "lane"  # or 'crosswalk' etc.
 
     lanelet_primitive2 = LaneletPrimitive()
     lanelet_primitive2.id = 178745
-    lanelet_primitive2.primitive_type = 'lane'  # or 'crosswalk' etc.
+    lanelet_primitive2.primitive_type = "lane"  # or 'crosswalk' etc.
 
     lanelet_primitive3 = LaneletPrimitive()
     lanelet_primitive3.id = 178750
-    lanelet_primitive3.primitive_type = 'lane'  # or 'crosswalk' etc.
-    
+    lanelet_primitive3.primitive_type = "lane"  # or 'crosswalk' etc.
+
     segment1 = LaneletSegment()
     segment1.preferred_primitive = lanelet_primitive2
     segment1.primitives = [lanelet_primitive1, lanelet_primitive2, lanelet_primitive3]
 
     lanelet_primitive4 = LaneletPrimitive()
     lanelet_primitive4.id = 177510
-    lanelet_primitive4.primitive_type = 'lane'  # or 'crosswalk' etc.
+    lanelet_primitive4.primitive_type = "lane"  # or 'crosswalk' etc.
 
     lanelet_primitive5 = LaneletPrimitive()
     lanelet_primitive5.id = 177879
-    lanelet_primitive5.primitive_type = 'lane'  # or 'crosswalk' etc.
+    lanelet_primitive5.primitive_type = "lane"  # or 'crosswalk' etc.
 
     lanelet_primitive6 = LaneletPrimitive()
     lanelet_primitive6.id = 178755
-    lanelet_primitive6.primitive_type = 'lane'  # or 'crosswalk' etc.
+    lanelet_primitive6.primitive_type = "lane"  # or 'crosswalk' etc.
 
     segment2 = LaneletSegment()
     segment2.preferred_primitive = lanelet_primitive5
@@ -80,16 +83,16 @@ def main():
 
     lanelet_primitive7 = LaneletPrimitive()
     lanelet_primitive7.id = 123
-    lanelet_primitive7.primitive_type = 'lane'  # or 'crosswalk' etc.
+    lanelet_primitive7.primitive_type = "lane"  # or 'crosswalk' etc.
 
     lanelet_primitive8 = LaneletPrimitive()
     lanelet_primitive8.id = 124
-    lanelet_primitive8.primitive_type = 'lane'  # or 'crosswalk' etc.
+    lanelet_primitive8.primitive_type = "lane"  # or 'crosswalk' etc.
 
     lanelet_primitive9 = LaneletPrimitive()
     lanelet_primitive9.id = 125
-    lanelet_primitive9.primitive_type = 'lane'  # or 'crosswalk' etc.
-    
+    lanelet_primitive9.primitive_type = "lane"  # or 'crosswalk' etc.
+
     segment3 = LaneletSegment()
     segment3.preferred_primitive = lanelet_primitive8
     segment3.primitives = [lanelet_primitive7, lanelet_primitive8, lanelet_primitive9]
@@ -107,5 +110,6 @@ def main():
     node.destroy_node()
     rclpy.shutdown()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

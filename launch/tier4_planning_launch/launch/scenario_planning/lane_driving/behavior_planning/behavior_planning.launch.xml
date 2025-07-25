@@ -227,7 +227,7 @@
 
   <!-- <group if="$(eval &quot;'$(var behavior_path_planner_type)' == 'behavior_path_planner'&quot;)">
     <load_composable_node target="/planning/scenario_planning/lane_driving/behavior_planning/behavior_planning_container">
-      
+
     </load_composable_node>
   </group> -->
 

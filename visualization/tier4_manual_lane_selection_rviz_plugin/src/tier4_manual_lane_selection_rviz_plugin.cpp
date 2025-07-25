@@ -5,10 +5,9 @@ PLUGINLIB_EXPORT_CLASS(ManualLaneSelection, rviz_common::Panel)
 
 using autoware_planning_msgs::srv::SetLaneChangeOverride;
 
-ManualLaneSelection::ManualLaneSelection(QWidget *parent)
-  : rviz_common::Panel(parent)
+ManualLaneSelection::ManualLaneSelection(QWidget * parent) : rviz_common::Panel(parent)
 {
-  auto *layout = new QHBoxLayout;
+  auto * layout = new QHBoxLayout;
 
   left_button_ = new QPushButton("← Left");
   auto_button_ = new QPushButton(" Auto ");
@@ -26,9 +25,9 @@ ManualLaneSelection::ManualLaneSelection(QWidget *parent)
     "/planning/mission_planning/mission_planner/set_lane_change_override");
 
   // Connect button signals
-  connect(left_button_, &QPushButton::clicked, this, [this]() {send_lane_change_request(0);});
-  connect(auto_button_, &QPushButton::clicked, this, [this]() {send_lane_change_request(2);});
-  connect(right_button_, &QPushButton::clicked, this, [this]() {send_lane_change_request(1);});
+  connect(left_button_, &QPushButton::clicked, this, [this]() { send_lane_change_request(0); });
+  connect(auto_button_, &QPushButton::clicked, this, [this]() { send_lane_change_request(2); });
+  connect(right_button_, &QPushButton::clicked, this, [this]() { send_lane_change_request(1); });
 
   // Optional: Timer to spin the node (needed for service responses)
   timer_ = new QTimer(this);
@@ -47,12 +46,14 @@ void ManualLaneSelection::send_lane_change_request(uint8_t direction)
   request->lane_change_direction = direction;
 
   // Async call
-  auto future = client_->async_send_request(request,
-    [direction](rclcpp::Client<SetLaneChangeOverride>::SharedFuture response) {
+  auto future = client_->async_send_request(
+    request, [direction](rclcpp::Client<SetLaneChangeOverride>::SharedFuture response) {
       const auto & res = response.get()->status;
-      qInfo("ManualLaneSelection: Sent %s lane change -> Success: %d, Message: %s",
-            direction == 0 ? "LEFT" : direction == 1 ? "RIGHT" : "AUTO",
-            res.success,
-            res.message.c_str());
+      qInfo(
+        "ManualLaneSelection: Sent %s lane change -> Success: %d, Message: %s",
+        direction == 0   ? "LEFT"
+        : direction == 1 ? "RIGHT"
+                         : "AUTO",
+        res.success, res.message.c_str());
     });
 }
