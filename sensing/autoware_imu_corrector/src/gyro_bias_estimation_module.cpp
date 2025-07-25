@@ -117,27 +117,4 @@ geometry_msgs::msg::Vector3 GyroBiasEstimationModule::get_bias_base_link() const
   return gyro_bias_base;
 }
 
-double GyroBiasEstimationModule::wrap_angle(double delta_angle, double unwrapped_angle)
-{
-  // Wrapping angle in case of big jumps
-  if (delta_angle > 180.0) {
-    unwrapped_angle -= 360.0;
-  } else if (delta_angle < -180.0) {
-    unwrapped_angle += 360.0;
-  }
-  return unwrapped_angle;
-}
-
-double GyroBiasEstimationModule::wrap_angle_rad(double delta_angle, double unwrapped_angle)
-{
-  const double pi = 3.14159;
-  // Wrapping angle in case of big jumps
-  if (delta_angle > pi) {
-    unwrapped_angle -= 2 * pi;
-  } else if (delta_angle < -pi) {
-    unwrapped_angle += 2 * pi;
-  }
-  return unwrapped_angle;
-}
-
 }  // namespace autoware::imu_corrector

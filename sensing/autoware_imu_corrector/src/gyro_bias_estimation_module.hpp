@@ -31,8 +31,6 @@ public:
   void update_bias(
     const std::vector<geometry_msgs::msg::PoseStamped> & pose_list,
     const std::vector<geometry_msgs::msg::Vector3Stamped> & gyro_list);
-  static double wrap_angle(double delta_angle, double unwrapped_angle);
-  static double wrap_angle_rad(double delta_angle, double unwrapped_angle);
   [[nodiscard]] geometry_msgs::msg::Vector3 get_bias_base_link() const;
 
 private:
