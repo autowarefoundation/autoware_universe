@@ -95,12 +95,15 @@ FunctionTimings runIterations(
       [&]() { processor->associate(detections, direct_assignment, reverse_assignment); }));
     timings.update.times.push_back(
       measureTimeMs([&]() { processor->update(detections, direct_assignment); }));
-    int num_trackers = processor->getListTracker().size();
+    int num_trackers0 = processor->getListTracker().size();
     timings.prune.times.push_back(measureTimeMs([&]() { processor->prune(current_time); }));
-    int num_pruned = num_trackers - processor->getListTracker().size();
+    int num_trackers1 = processor->getListTracker().size();
     timings.spawn.times.push_back(
       measureTimeMs([&]() { processor->spawn(detections, reverse_assignment); }));
-    int num_spawned = processor->getListTracker().size() - num_trackers;
+    int num_trackers2 = processor->getListTracker().size();
+
+    int num_pruned = num_trackers0 - num_trackers1;
+    int num_spawned = num_trackers2 - num_trackers1;
     const auto total_end = Clock::now();
     auto total_duration =
       std::chrono::duration_cast<std::chrono::microseconds>(total_end - total_start).count() /
@@ -108,16 +111,15 @@ FunctionTimings runIterations(
     timings.total.times.push_back(total_duration);
 
     if (i % 10 == 0 && print_frame_stats) {
+      std::cout << "Iteration " << i + 1 << ": " << num_trackers0 << " trackers, "
+                << detections.objects.size() << " detections, " << num_pruned << " pruned, "
+                << num_spawned << " spawned, " << num_trackers2 << "final" << std::endl;
       printFrameStats(i, detections, timings);
     }
 
     autoware_perception_msgs::msg::TrackedObjects latest_tracked_objects;
     processor->getTrackedObjects(current_time, latest_tracked_objects);
 
-    std::cout << "Iteration " << i + 1 << ": " << num_trackers << " trackers, "
-              << detections.objects.size() << " detections, " << num_pruned << " pruned, "
-              << num_spawned << " spawned, " << latest_tracked_objects.objects.size() << "final"
-              << std::endl;
     latest_tracked_objects.header.frame_id = "map";
 
     writer.write(
@@ -132,8 +134,6 @@ FunctionTimings runIterations(
 void runPerformanceTest()
 {
   TrackingScenarioConfig params;
-  params.cars_per_lane = 0;
-  params.pedestrian_clusters = 0;
   FunctionTimings timings = runIterations(50, params, true, true);
   timings.calculate();
   std::cout << "Total time for all iterations: "
@@ -260,7 +260,7 @@ void profilePerformanceVsCarCount()
   constexpr int step = 5;
   constexpr int iterations_per_count = 5;      // Number of runs per car count
   constexpr float simulation_duration = 5.0f;  // Seconds per test
-  std::cout << "\n=== Performance vs Car Count (1-" << max_cars << " cars) ===" << std::endl;
+  std::cout << "\n=== Performance (ms) vs Car Count (1-" << max_cars << " cars) ===" << std::endl;
   std::cout << std::left << std::setw(10) << "CarCount" << "," << std::setw(12) << "TotalTime"
             << "," << std::setw(12) << "PredictTime" << "," << std::setw(14) << "AssociateTime"
             << "," << std::setw(12) << "UpdateTime" << "," << std::setw(12) << "PruneTime" << ","
@@ -306,7 +306,7 @@ void profilePerformanceVsPedestrianCount()
   constexpr int iterations_per_count = 5;      // Number of runs per pedestrian count
   constexpr float simulation_duration = 5.0f;  // Seconds per test
 
-  std::cout << "\n=== Performance vs Pedestrian Count (1-" << max_peds
+  std::cout << "\n=== Performance (ms) vs Pedestrian Count (1-" << max_peds
             << " pedestrians) ===" << std::endl;
   std::cout << std::left << std::setw(10) << "PedCount" << "," << std::setw(12) << "TotalTime"
             << "," << std::setw(12) << "PredictTime" << "," << std::setw(14) << "AssociateTime"
@@ -345,6 +345,55 @@ void profilePerformanceVsPedestrianCount()
               << std::endl;
   }
 }
+
+void profilePerformanceVsUnknownObjectCount()
+{
+  // Test configuration
+  constexpr int min_unknowns = 1;
+  constexpr int max_unknowns = 1000;
+  constexpr int step = 5;
+  constexpr int iterations_per_count = 5;      // Number of runs per unknown object count
+  constexpr float simulation_duration = 5.0f;  // Seconds per test
+
+  std::cout << "\n=== Performance (ms) vs Unknown Object Count (1-" << max_unknowns
+            << " unknown objects) ===" << std::endl;
+  std::cout << std::left << std::setw(10) << "UnknownCount" << "," << std::setw(12) << "TotalTime"
+            << "," << std::setw(12) << "PredictTime" << "," << std::setw(14) << "AssociateTime"
+            << "," << std::setw(12) << "UpdateTime" << "," << std::setw(12) << "PruneTime" << ","
+            << std::setw(12) << "SpawnTime" << std::endl;
+
+  // Test different unknown object counts
+  for (int target_unknowns = min_unknowns; target_unknowns <= max_unknowns;
+       target_unknowns += step) {
+    TrackingScenarioConfig config;
+    // Disable cars and pedestrians
+    config.num_lanes = 0;
+    config.cars_per_lane = 0;
+    config.pedestrian_clusters = 0;
+    config.pedestrians_per_cluster = 0;
+
+    // Configure unknown objects
+    config.unknown_objects = target_unknowns;
+
+    FunctionTimings total_timings;
+    for (int i = 0; i < iterations_per_count; ++i) {
+      const int num_iterations = static_cast<int>(simulation_duration * 10.0f);
+      const FunctionTimings iteration_timings = runIterations(num_iterations, config);
+      total_timings.accumulate(iteration_timings);
+    }
+
+    // Calculate statistics for this unknown object count
+    total_timings.calculate();
+
+    std::cout << std::left << std::fixed << std::setprecision(3) << std::setw(10) << target_unknowns
+              << "," << std::setw(12) << total_timings.total.avg << "," << std::setw(12)
+              << total_timings.predict.avg << "," << std::setw(14) << total_timings.associate.avg
+              << "," << std::setw(12) << total_timings.update.avg << "," << std::setw(12)
+              << total_timings.prune.avg << "," << std::setw(12) << total_timings.spawn.avg
+              << std::endl;
+  }
+}
+
 class MultiObjectTrackerTest : public ::testing::Test
 {
 public:
@@ -354,6 +403,7 @@ public:
 
 TEST_F(MultiObjectTrackerTest, SimulatedDataPerformanceTest)
 {
+  profilePerformanceVsUnknownObjectCount();
   // This test runs performance analysis using simulated tracking data
   runPerformanceTest();
 }

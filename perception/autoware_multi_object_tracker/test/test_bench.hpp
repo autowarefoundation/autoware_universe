@@ -77,7 +77,7 @@ struct UnknownObjectParams
   // Movement parameters
   float stationary_probability = 0.7f;  // 70% chance of being stationary
   float min_speed = 0.0f;
-  float max_speed = 2.0f;
+  float max_speed = 15.0f;
 
   // Shape parameters
   float polygon_probability = 0.7f;  // 70% chance of polygon shape
@@ -116,7 +116,7 @@ struct TrackingScenarioConfig
   double pedestrian_y_max = -2.5;
 
   // Unknown objects configuration
-  int unknown_objects = 5;             // Number of unknown objects
+  int unknown_objects = 20;            // Number of unknown objects
   UnknownObjectParams unknown_params;  // Parameters for unknown objects
 
   double dropout_rate = 0.05;

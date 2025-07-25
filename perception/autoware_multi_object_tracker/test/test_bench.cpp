@@ -434,7 +434,12 @@ autoware::multi_object_tracker::types::DynamicObjectList TrackingTestBench::gene
     obj.pose = state.pose;
 
     // Existence probability
-    obj.existence_probability = 0.9;
+    // For unknown objects, use a default value to match the input stream.
+    // In detection, unknown objects start with a probability of 0,
+    // but multi_object_tracker assigns a default value from the input.
+    // This ensures consistent output between detection and tracking.
+    obj.existence_probability =
+      autoware::multi_object_tracker::types::default_existence_probability;
 
     obj.channel_index = 0;
     obj.area = obj.shape.dimensions.x * obj.shape.dimensions.y;
@@ -490,15 +495,15 @@ void TrackingTestBench::initializeObjects(const TrackingScenarioConfig & params)
     }
   }
   // Initialize unknown objects
+  // Start unknown objects after the last car's x position
+  float unknown_start_x = -params.unknown_objects * 2.0f;
+  float unknown_start_y =
+    (params.num_lanes + 1) * params.lane_width + 25.0f;  // Start above the road
   for (int i = 0; i < params.unknown_objects; ++i) {
     std::string id = "unk_" + std::to_string(i);
     // Wide scatter: uniform distribution in ±50m
-    float x = unknown_pos_dist_(rng_);
-    float y = unknown_pos_dist_(rng_);
-
-    // Small per-object offset to reduce direct overlap
-    x += i * 2.0f;  // 2m offset per object
-    y += i * 1.5f;
+    float x = unknown_start_x + unknown_pos_dist_(rng_) + i * 2.0f;
+    float y = unknown_start_y + unknown_pos_dist_(rng_);
     addNewUnknown(id, x, y);
   }
 }
