@@ -15,6 +15,7 @@
 #include "pipeline_latency_monitor_node.hpp"
 
 #include <autoware_planning_validator/msg/planning_validator_status.hpp>
+#include <rclcpp/create_timer.hpp>
 #include <rclcpp/serialization.hpp>
 #include <rclcpp_components/register_node_macro.hpp>
 
@@ -128,8 +129,8 @@ PipelineLatencyMonitorNode::PipelineLatencyMonitorNode(const rclcpp::NodeOptions
   diagnostic_updater_.add("Total Latency", this, &PipelineLatencyMonitorNode::check_total_latency);
 
   // Create timer
-  timer_ = create_wall_timer(
-    std::chrono::milliseconds(static_cast<int>(1000.0 / update_rate_)),
+  timer_ = rclcpp::create_timer(
+    this, this->get_clock(), std::chrono::milliseconds(static_cast<int>(1000.0 / update_rate_)),
     std::bind(&PipelineLatencyMonitorNode::on_timer, this));
 
   RCLCPP_INFO(get_logger(), "PipelineLatencyMonitorNode initialized");
