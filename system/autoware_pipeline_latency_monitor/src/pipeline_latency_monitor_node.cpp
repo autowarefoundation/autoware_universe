@@ -233,10 +233,10 @@ void PipelineLatencyMonitorNode::publish_total_latency()
   for (const auto & input : input_sequence_) {
     const auto latest_latency = get_latest_value(input.latency_history);
     debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      input.name, latest_latency);
+      "debug/" + input.name + "_latency_ms", latest_latency);
   }
   debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-    "debug/total_latency_ms", total_latency_ms_);
+    "debug/pipeline_total_latency_ms", total_latency_ms_);
 
   RCLCPP_DEBUG_THROTTLE(
     get_logger(), *get_clock(), 1000, "Total latency: %.2f ms (threshold: %.2f ms)",
