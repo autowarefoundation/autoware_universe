@@ -64,7 +64,6 @@ No                  Yes                                                         
 
 | Name                          | Type                                                             | Description                                                     |
 | ----------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------- |
-| `~/input/kinematic_state`     | `nav_msgs::msg::Odometry`                                        | Vehicle kinematic state for ego motion tracking.                |
 | `~/input/camera*/image`       | `sensor_msgs::msg::Image` or `sensor_msgs::msg::CompressedImage` | Input image topics (supports both compressed and uncompressed). |
 | `~/input/camera*/camera_info` | `sensor_msgs::msg::CameraInfo`                                   | Input camera info topics, for camera parameters.                |
 
@@ -144,8 +143,8 @@ This node is camera-only and does not require pointcloud input. It assumes:
 - All cameras are synchronized within the specified `max_camera_time_diff`
 - Camera calibration information is available and accurate
 - The anchor camera (specified by `anchor_camera_id`) triggers the inference cycle
-- Vehicle odometry is available for ego motion compensation
-- Transform information between camera frames and base_link is available
+- Transform information between camera frames and base_link is available via tf
+- Transform information between map and base_link is available via tf for ego motion compensation
 - **The input images are undistorted**
 
 ## Trained Models
