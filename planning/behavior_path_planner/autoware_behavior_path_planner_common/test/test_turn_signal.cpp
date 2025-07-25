@@ -91,6 +91,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition1)
   intersection_signal_info.required_end_point.position = create_point(48.0, 0.0, 0.0);
   intersection_signal_info.required_end_point.orientation = create_quaternion_from_yaw(0.0);
 
+  TurnSignalInfo roundabout_signal_info = {};
+
   TurnSignalInfo behavior_signal_info;
   behavior_signal_info.turn_signal.command = TurnIndicatorsCommand::ENABLE_RIGHT;
   behavior_signal_info.desired_start_point.position = create_point(5.0, 0.0, 0.0);
@@ -102,6 +104,18 @@ TEST(BehaviorPathPlanningTurnSignal, Condition1)
   behavior_signal_info.required_end_point.position = create_point(50.0, 0.0, 0.0);
   behavior_signal_info.required_end_point.orientation = create_quaternion_from_yaw(0.0);
 
+  // current pose is right before the intersection desired start
+  {
+    Pose current_pose = generateEgoSamplePose(4.9f, 0.0f, 0.0);
+    const size_t current_seg_idx =
+      autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
+        path.points, current_pose, 3.0, 1.0);
+    const auto result_signal = turn_signal_decider.resolve_turn_signal(
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
+    EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_LEFT);
+  }
+
   // current pose on the behavior desired start
   {
     Pose current_pose = generateEgoSamplePose(5.0f, 0.0f, 0.0);
@@ -109,8 +123,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition1)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_LEFT);
   }
 
@@ -121,8 +135,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition1)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_LEFT);
   }
 
@@ -133,8 +147,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition1)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_LEFT);
   }
 
@@ -145,8 +159,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition1)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_LEFT);
   }
 
@@ -157,8 +171,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition1)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_LEFT);
   }
 
@@ -169,8 +183,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition1)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_RIGHT);
   }
 
@@ -181,8 +195,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition1)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_RIGHT);
   }
 
@@ -193,8 +207,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition1)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_RIGHT);
   }
 
@@ -205,8 +219,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition1)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_RIGHT);
   }
 
@@ -217,9 +231,21 @@ TEST(BehaviorPathPlanningTurnSignal, Condition1)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_RIGHT);
+  }
+
+  // current pose is right after the behavior desired end
+  {
+    Pose current_pose = generateEgoSamplePose(70.1f, 0.0f, 0.0);
+    const size_t current_seg_idx =
+      autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
+        path.points, current_pose, 3.0, 1.0);
+    const auto result_signal = turn_signal_decider.resolve_turn_signal(
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
+    EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::DISABLE);
   }
 }
 
@@ -240,6 +266,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition2)
   intersection_signal_info.required_end_point.position = create_point(50.0, 0.0, 0.0);
   intersection_signal_info.required_end_point.orientation = create_quaternion_from_yaw(0.0);
 
+  TurnSignalInfo roundabout_signal_info = {};
+
   TurnSignalInfo behavior_signal_info;
   behavior_signal_info.turn_signal.command = TurnIndicatorsCommand::ENABLE_RIGHT;
   behavior_signal_info.desired_start_point.position = create_point(5.0, 0.0, 0.0);
@@ -251,6 +279,18 @@ TEST(BehaviorPathPlanningTurnSignal, Condition2)
   behavior_signal_info.required_end_point.position = create_point(45.0, 0.0, 0.0);
   behavior_signal_info.required_end_point.orientation = create_quaternion_from_yaw(0.0);
 
+  // current pose is before the intersection desired start
+  {
+    Pose current_pose = generateEgoSamplePose(4.9f, 0.0f, 0.0);
+    const size_t current_seg_idx =
+      autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
+        path.points, current_pose, 3.0, 1.0);
+    const auto result_signal = turn_signal_decider.resolve_turn_signal(
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
+    EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_LEFT);
+  }
+
   // current pose on the behavior desired start
   {
     Pose current_pose = generateEgoSamplePose(5.0f, 0.0f, 0.0);
@@ -258,8 +298,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition2)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_LEFT);
   }
 
@@ -270,8 +310,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition2)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_LEFT);
   }
 
@@ -282,8 +322,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition2)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_LEFT);
   }
 
@@ -294,8 +334,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition2)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_LEFT);
   }
 
@@ -306,8 +346,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition2)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_LEFT);
   }
 
@@ -318,21 +358,45 @@ TEST(BehaviorPathPlanningTurnSignal, Condition2)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_LEFT);
   }
 
-  // current pose is on the intersection desired end
+  // current pose is right on the intersection desired end
   {
     Pose current_pose = generateEgoSamplePose(65.0f, 0.0f, 0.0);
     const size_t current_seg_idx =
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_LEFT);
+  }
+
+  // current pose is right after the behavior desired end
+  {
+    Pose current_pose = generateEgoSamplePose(65.1f, 0.0f, 0.0);
+    const size_t current_seg_idx =
+      autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
+        path.points, current_pose, 3.0, 1.0);
+    const auto result_signal = turn_signal_decider.resolve_turn_signal(
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
+    EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_RIGHT);
+  }
+
+  // current pose is right after the behavior desired end
+  {
+    Pose current_pose = generateEgoSamplePose(70.1f, 0.0f, 0.0);
+    const size_t current_seg_idx =
+      autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
+        path.points, current_pose, 3.0, 1.0);
+    const auto result_signal = turn_signal_decider.resolve_turn_signal(
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
+    EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::DISABLE);
   }
 }
 
@@ -353,6 +417,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition3)
   intersection_signal_info.required_end_point.position = create_point(50.0, 0.0, 0.0);
   intersection_signal_info.required_end_point.orientation = create_quaternion_from_yaw(0.0);
 
+  TurnSignalInfo roundabout_signal_info = {};
+
   TurnSignalInfo behavior_signal_info;
   behavior_signal_info.turn_signal.command = TurnIndicatorsCommand::ENABLE_RIGHT;
   behavior_signal_info.desired_start_point.position = create_point(5.0, 0.0, 0.0);
@@ -364,6 +430,18 @@ TEST(BehaviorPathPlanningTurnSignal, Condition3)
   behavior_signal_info.required_end_point.position = create_point(45.0, 0.0, 0.0);
   behavior_signal_info.required_end_point.orientation = create_quaternion_from_yaw(0.0);
 
+  // current pose is right before the behavior desired start
+  {
+    Pose current_pose = generateEgoSamplePose(4.9f, 0.0f, 0.0);
+    const size_t current_seg_idx =
+      autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
+        path.points, current_pose, 3.0, 1.0);
+    const auto result_signal = turn_signal_decider.resolve_turn_signal(
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
+    EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_RIGHT);
+  }
+
   // current pose on the behavior desired start
   {
     Pose current_pose = generateEgoSamplePose(5.0f, 0.0f, 0.0);
@@ -371,8 +449,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition3)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_RIGHT);
   }
 
@@ -383,8 +461,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition3)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_RIGHT);
   }
 
@@ -395,8 +473,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition3)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_RIGHT);
   }
 
@@ -407,8 +485,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition3)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_RIGHT);
   }
 
@@ -419,8 +497,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition3)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_LEFT);
   }
 
@@ -431,8 +509,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition3)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_LEFT);
   }
 
@@ -443,8 +521,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition3)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_LEFT);
   }
 
@@ -455,8 +533,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition3)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_LEFT);
   }
 
@@ -467,8 +545,8 @@ TEST(BehaviorPathPlanningTurnSignal, Condition3)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_LEFT);
   }
 
@@ -479,8 +557,31 @@ TEST(BehaviorPathPlanningTurnSignal, Condition3)
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         path.points, current_pose, 3.0, 1.0);
     const auto result_signal = turn_signal_decider.resolve_turn_signal(
-      path, current_pose, current_seg_idx, intersection_signal_info, behavior_signal_info,
-      nearest_dist_threshold, nearest_yaw_threshold);
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
     EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_LEFT);
+  }
+  // current pose is right after the intersection desired end
+  {
+    Pose current_pose = generateEgoSamplePose(65.1f, 0.0f, 0.0);
+    const size_t current_seg_idx =
+      autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
+        path.points, current_pose, 3.0, 1.0);
+    const auto result_signal = turn_signal_decider.resolve_turn_signal(
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
+    EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::ENABLE_RIGHT);
+  }
+
+  // current pose is right after the behavior desired end
+  {
+    Pose current_pose = generateEgoSamplePose(70.1f, 0.0f, 0.0);
+    const size_t current_seg_idx =
+      autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
+        path.points, current_pose, 3.0, 1.0);
+    const auto result_signal = turn_signal_decider.resolve_turn_signal(
+      path, current_pose, current_seg_idx, intersection_signal_info, roundabout_signal_info,
+      behavior_signal_info, nearest_dist_threshold, nearest_yaw_threshold);
+    EXPECT_EQ(result_signal.command, TurnIndicatorsCommand::DISABLE);
   }
 }
