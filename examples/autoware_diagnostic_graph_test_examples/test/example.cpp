@@ -20,11 +20,11 @@
 #include <string>
 #include <unordered_map>
 
+using autoware::diagnostic_graph_aggregator::test::DiagnosticArray;
 using autoware::diagnostic_graph_aggregator::test::DiagnosticLevel;
 using autoware::diagnostic_graph_aggregator::test::DiagnosticStatus;
-using autoware::diagnostic_graph_aggregator::test::test;
-using autoware::diagnostic_graph_aggregator::test::TestInput;
-using autoware::diagnostic_graph_aggregator::test::TestOutput;
+using autoware::diagnostic_graph_aggregator::test::TestGraph;
+using autoware::diagnostic_graph_aggregator::test::TestNodeStatus;
 
 DiagnosticStatus create_status(const std::string & name, const DiagnosticLevel level)
 {
@@ -34,25 +34,37 @@ DiagnosticStatus create_status(const std::string & name, const DiagnosticLevel l
   return status;
 }
 
+std::unordered_map<std::string, DiagnosticLevel> test(
+  TestGraph & graph, const std::unordered_map<std::string, DiagnosticLevel> & input)
+{
+  DiagnosticArray diags;
+  for (const auto & name : graph.list_diag_names()) {
+    DiagnosticStatus status;
+    status.name = name;
+    status.level = input.count(name) ? input.at(name) : DiagnosticStatus::OK;
+    diags.status.push_back(status);
+  }
+
+  const auto result = graph.test(diags);
+  std::unordered_map<std::string, DiagnosticLevel> output;
+  for (const auto & status : result) {
+    output[status.path] = status.level;
+  }
+  return output;
+}
+
 TEST(TestDiagGraph, TestLocalGraph)
 {
   const auto test_data_path = std::string(TEST_DATA_PATH) + "/";
+  TestGraph graph(test_data_path + "graph.yaml");
 
-  TestInput input;
-  input.graph_path = test_data_path + "graph.yaml";
-  input.diags.status.push_back(create_status("test_node: input_1", DiagnosticStatus::OK));
-  input.diags.status.push_back(create_status("test_node: input_2", DiagnosticStatus::ERROR));
-  input.diags.status.push_back(create_status("test_node: input_3", DiagnosticStatus::OK));
-  input.diags.status.push_back(create_status("test_node: input_4", DiagnosticStatus::ERROR));
+  std::unordered_map<std::string, DiagnosticLevel> input;
+  input["test_node: input_2"] = DiagnosticStatus::ERROR;
+  input["test_node: input_4"] = DiagnosticStatus::ERROR;
 
-  TestOutput output = test(input);
-  std::unordered_map<std::string, DiagnosticLevel> units;
-  for (const auto & unit : output.units) {
-    units[unit.path] = unit.level;
-  }
-
-  EXPECT_EQ(units.at("/unit/1"), DiagnosticStatus::ERROR);
-  EXPECT_EQ(units.at("/unit/2"), DiagnosticStatus::OK);
+  const auto output = test(graph, input);
+  EXPECT_EQ(output.at("/unit/1"), DiagnosticStatus::ERROR);
+  EXPECT_EQ(output.at("/unit/2"), DiagnosticStatus::OK);
 }
 
 TEST(TestDiagGraph, TestSharedGraph)
@@ -60,20 +72,13 @@ TEST(TestDiagGraph, TestSharedGraph)
   const auto package_name = "autoware_diagnostic_graph_test_examples";
   const auto package_path = ament_index_cpp::get_package_share_directory(package_name);
   const auto test_data_path = package_path + "/data/";
+  TestGraph graph(test_data_path + "graph.yaml");
 
-  TestInput input;
-  input.graph_path = test_data_path + "graph.yaml";
-  input.diags.status.push_back(create_status("test_node: input_1", DiagnosticStatus::OK));
-  input.diags.status.push_back(create_status("test_node: input_2", DiagnosticStatus::ERROR));
-  input.diags.status.push_back(create_status("test_node: input_3", DiagnosticStatus::OK));
-  input.diags.status.push_back(create_status("test_node: input_4", DiagnosticStatus::ERROR));
+  std::unordered_map<std::string, DiagnosticLevel> input;
+  input["test_node: input_2"] = DiagnosticStatus::ERROR;
+  input["test_node: input_4"] = DiagnosticStatus::ERROR;
 
-  TestOutput output = test(input);
-  std::unordered_map<std::string, DiagnosticLevel> units;
-  for (const auto & unit : output.units) {
-    units[unit.path] = unit.level;
-  }
-
-  EXPECT_EQ(units.at("/unit/1"), DiagnosticStatus::ERROR);
-  EXPECT_EQ(units.at("/unit/2"), DiagnosticStatus::OK);
+  const auto output = test(graph, input);
+  EXPECT_EQ(output.at("/unit/1"), DiagnosticStatus::ERROR);
+  EXPECT_EQ(output.at("/unit/2"), DiagnosticStatus::OK);
 }

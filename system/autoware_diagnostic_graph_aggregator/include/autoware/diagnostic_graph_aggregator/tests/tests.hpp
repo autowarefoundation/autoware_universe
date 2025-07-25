@@ -15,12 +15,37 @@
 #ifndef AUTOWARE__DIAGNOSTIC_GRAPH_AGGREGATOR__TESTS__TESTS_HPP_
 #define AUTOWARE__DIAGNOSTIC_GRAPH_AGGREGATOR__TESTS__TESTS_HPP_
 
-#include "autoware/diagnostic_graph_aggregator/tests/types.hpp"
+#include <diagnostic_msgs/msg/diagnostic_array.hpp>
+
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace autoware::diagnostic_graph_aggregator::test
 {
 
-TestOutput test(const TestInput & input);
+using DiagnosticArray = diagnostic_msgs::msg::DiagnosticArray;
+using DiagnosticLevel = diagnostic_msgs::msg::DiagnosticStatus::_level_type;
+using DiagnosticStatus = diagnostic_msgs::msg::DiagnosticStatus;
+
+struct TestNodeStatus
+{
+  std::string path;
+  DiagnosticLevel level;
+};
+
+class TestGraph
+{
+public:
+  explicit TestGraph(const std::string & path);
+  ~TestGraph();
+  std::vector<TestNodeStatus> test(const DiagnosticArray & diags);
+  std::vector<std::string> list_diag_names() const;
+
+private:
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
+};
 
 }  // namespace autoware::diagnostic_graph_aggregator::test
 

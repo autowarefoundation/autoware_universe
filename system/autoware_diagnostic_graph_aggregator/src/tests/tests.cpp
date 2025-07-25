@@ -14,29 +14,57 @@
 
 #include "autoware/diagnostic_graph_aggregator/tests/tests.hpp"
 
+#include "graph/diags.hpp"
 #include "graph/graph.hpp"
-#include "graph/units.hpp"
+#include "graph/nodes.hpp"
+
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace autoware::diagnostic_graph_aggregator::test
 {
 
-TestOutput test(const TestInput & input)
+struct TestGraph::Impl
 {
+  explicit Impl(const std::string & path) : graph(path) {}
   autoware::diagnostic_graph_aggregator::Graph graph;
-  graph.create(input.graph_path);
+};
 
-  for (const auto & diag : input.diags.status) {
-    graph.update(input.diags.header.stamp, diag);
-  }
+TestGraph::TestGraph(const std::string & path)
+{
+  impl_ = std::make_unique<Impl>(path);
+}
 
-  TestOutput output;
-  for (const auto & unit : graph.units()) {
-    TestUnitStatus status;
-    status.path = unit->path();
-    status.level = unit->level();
-    output.units.push_back(status);
+TestGraph::~TestGraph()
+{
+  impl_.reset();
+}
+
+std::vector<TestNodeStatus> TestGraph::test(const DiagnosticArray & diags)
+{
+  auto & graph = impl_->graph;
+  graph.update(diags.header.stamp, diags);
+  graph.update(diags.header.stamp);
+
+  std::vector<TestNodeStatus> result;
+  for (const auto & node : graph.nodes()) {
+    TestNodeStatus status;
+    status.path = node->path();
+    status.level = node->level();
+    result.push_back(status);
   }
-  return output;
+  return result;
+}
+
+std::vector<std::string> TestGraph::list_diag_names() const
+{
+  const auto & graph = impl_->graph;
+  std::vector<std::string> result;
+  for (const auto & diag : graph.diags()) {
+    result.push_back(diag->name());
+  }
+  return result;
 }
 
 }  // namespace autoware::diagnostic_graph_aggregator::test
