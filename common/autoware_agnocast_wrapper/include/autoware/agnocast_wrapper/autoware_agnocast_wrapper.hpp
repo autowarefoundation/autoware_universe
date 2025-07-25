@@ -20,17 +20,17 @@
 
 #include <agnocast/agnocast.hpp>
 
+#include <cstdlib>
 #include <memory>
+#include <string>
 #include <type_traits>
 #include <utility>
-#include <cstdlib>
-#include <string>
 
 #define AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) \
-  autoware::agnocast_wrapper::message_ptr< \
+  autoware::agnocast_wrapper::message_ptr<    \
     MessageT, autoware::agnocast_wrapper::OwnershipType::Unique>
 #define AUTOWARE_MESSAGE_SHARED_PTR(MessageT) \
-  autoware::agnocast_wrapper::message_ptr< \
+  autoware::agnocast_wrapper::message_ptr<    \
     MessageT, autoware::agnocast_wrapper::OwnershipType::Shared>
 #define AUTOWARE_SUBSCRIPTION_PTR(MessageT) \
   typename autoware::agnocast_wrapper::Subscription<MessageT>::SharedPtr
@@ -57,11 +57,7 @@
 namespace autoware::agnocast_wrapper
 {
 
-enum class OwnershipType {
-  Unique,
-  Shared
-};
-
+enum class OwnershipType { Unique, Shared };
 
 template <typename MessageT, OwnershipType Ownership>
 class message_interface;
@@ -104,16 +100,12 @@ template <typename MessageT, OwnershipType Ownership>
 class agnocast_message : public message_interface<MessageT, Ownership>
 {
   using ros2_ptr_t = std::conditional_t<
-    Ownership == OwnershipType::Unique,
-    std::unique_ptr<MessageT>,
-    std::shared_ptr<MessageT>>;
+    Ownership == OwnershipType::Unique, std::unique_ptr<MessageT>, std::shared_ptr<MessageT>>;
 
   agnocast::ipc_shared_ptr<MessageT> ptr_;
 
 public:
-  explicit agnocast_message(agnocast::ipc_shared_ptr<MessageT> && ptr)
-  : ptr_(std::move(ptr))
-  {}
+  explicit agnocast_message(agnocast::ipc_shared_ptr<MessageT> && ptr) : ptr_(std::move(ptr)) {}
 
   MessageT & as_ref() const noexcept override { return *ptr_; }
   MessageT * as_ptr() const noexcept override { return ptr_.get(); }
@@ -132,15 +124,12 @@ template <typename MessageT, OwnershipType Ownership>
 class ros2_message : public message_interface<MessageT, Ownership>
 {
   using ros2_ptr_t = std::conditional_t<
-    Ownership == OwnershipType::Unique,
-    std::unique_ptr<MessageT>,
-    std::shared_ptr<MessageT>>;
+    Ownership == OwnershipType::Unique, std::unique_ptr<MessageT>, std::shared_ptr<MessageT>>;
 
   ros2_ptr_t ptr_;
 
 public:
-  explicit ros2_message(ros2_ptr_t && ptr) : ptr_(std::move(ptr))
-  {}
+  explicit ros2_message(ros2_ptr_t && ptr) : ptr_(std::move(ptr)) {}
 
   MessageT & as_ref() const noexcept override { return *ptr_; }
   MessageT * as_ptr() const noexcept override { return ptr_.get(); }
@@ -159,42 +148,29 @@ template <typename MessageT, OwnershipType Ownership>
 class message_ptr
 {
   using ros2_ptr_t = std::conditional_t<
-    Ownership == OwnershipType::Unique,
-    std::unique_ptr<MessageT>,
-    std::shared_ptr<MessageT>>;
+    Ownership == OwnershipType::Unique, std::unique_ptr<MessageT>, std::shared_ptr<MessageT>>;
 
   std::shared_ptr<message_interface<MessageT, Ownership>> ptr_;
 
 public:
   explicit message_ptr(agnocast::ipc_shared_ptr<MessageT> && ptr)
   : ptr_(std::make_unique<agnocast_message<MessageT, Ownership>>(std::move(ptr)))
-  {}
+  {
+  }
 
   explicit message_ptr(ros2_ptr_t && ptr)
   : ptr_(std::make_unique<ros2_message<MessageT, Ownership>>(std::move(ptr)))
-  {}
-
-  MessageT & operator*() const noexcept
   {
-    return ptr_->as_ref();
   }
 
-  MessageT * operator->() const noexcept
-  {
-    return ptr_->as_ptr();
-  }
+  MessageT & operator*() const noexcept { return ptr_->as_ref(); }
 
-  explicit operator bool() const noexcept
-  {
-    return static_cast<bool>(ptr_->as_ptr());
-  }
+  MessageT * operator->() const noexcept { return ptr_->as_ptr(); }
 
-  MessageT * get() const noexcept
-  {
-    return ptr_->as_ptr();
-  }
+  explicit operator bool() const noexcept { return static_cast<bool>(ptr_->as_ptr()); }
+
+  MessageT * get() const noexcept { return ptr_->as_ptr(); }
 };
-
 
 // Defaults to zero if the environment variable is missing or invalid.
 inline int get_ENABLE_AGNOCAST()
@@ -212,7 +188,6 @@ inline bool use_agnocast()
   return sv == 1;
 }
 
-
 template <typename MessageT>
 class Subscription
 {
@@ -229,14 +204,14 @@ public:
   {
     static_assert(
       std::is_invocable_v<std::decay_t<Func>, AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) &&> ||
-      std::is_invocable_v<std::decay_t<Func>, AUTOWARE_MESSAGE_SHARED_PTR(MessageT) &&>,
+        std::is_invocable_v<std::decay_t<Func>, AUTOWARE_MESSAGE_SHARED_PTR(MessageT) &&>,
       "callback should be invocable with an rvalue reference to either AUTOWARE_MESSAGE_UNIQUE_PTR "
       "or AUTOWARE_MESSAGE_SHARED_PTR");
 
     constexpr auto ownership =
       std::is_invocable_v<std::decay_t<Func>, AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) &&>
-      ? OwnershipType::Unique
-      : OwnershipType::Shared;
+        ? OwnershipType::Unique
+        : OwnershipType::Shared;
 
     if (use_agnocast()) {
       agnocast::create_subscription<MessageT>(
@@ -277,7 +252,6 @@ typename Subscription<MessageT>::SharedPtr create_subscription(
     std::forward<Func>(callback), options);
 }
 
-
 template <typename MessageT>
 class PollingSubscriber
 {
@@ -299,7 +273,8 @@ public:
   explicit AgnocastPollingSubscriber(
     rclcpp::Node * node, const std::string & topic_name, const rclcpp::QoS & qos)
   : subscriber_(agnocast::create_subscription<MessageT>(node, topic_name, qos))
-  {}
+  {
+  }
 
   AUTOWARE_MESSAGE_SHARED_PTR(MessageT) takeData() override
   {
@@ -322,7 +297,8 @@ public:
     rclcpp::Node * node, const std::string & topic_name, const rclcpp::QoS & qos)
   : subscriber_(autoware_utils::InterProcessPollingSubscriber<MessageT>::create_subscription(
       node, topic_name, qos))
-  {}
+  {
+  }
 
   AUTOWARE_MESSAGE_SHARED_PTR(MessageT) takeData() override
   {
@@ -359,7 +335,6 @@ typename PollingSubscriber<MessageT>::SharedPtr create_polling_subscriber(
   }
 }
 
-
 template <typename MessageT>
 class Publisher
 {
@@ -387,7 +362,8 @@ public:
     rclcpp::Node * node, const std::string & topic_name, const rclcpp::QoS & qos,
     const agnocast::PublisherOptions & options)
   : publisher_(agnocast::create_publisher<MessageT>(node, topic_name, qos, options))
-  {}
+  {
+  }
 
   AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) allocate_output_message_unique() override
   {
@@ -409,10 +385,7 @@ public:
     publisher_->publish(std::move(message)->move_agnocast_ptr());
   }
 
-  uint32_t get_subscription_count() const override
-  {
-    return publisher_->get_subscription_count();
-  }
+  uint32_t get_subscription_count() const override { return publisher_->get_subscription_count(); }
 };
 
 template <typename MessageT>
@@ -450,10 +423,7 @@ public:
     publisher_->publish(std::move(message)->move_ros2_ptr());
   }
 
-  uint32_t get_subscription_count() const override
-  {
-    return publisher_->get_subscription_count();
-  }
+  uint32_t get_subscription_count() const override { return publisher_->get_subscription_count(); }
 };
 
 template <typename MessageT>
