@@ -47,42 +47,6 @@ void add_polygon_to_marker(Marker & marker, const Polygon2d & polygon, const dou
   }
 }
 
-// MarkerArray create_lanelet_polygons_marker_array(
-//   const std::string & ns, const lanelet::ConstLanelets & lanelets,
-//   const std_msgs::msg::ColorRGBA & color)
-// {
-//   MarkerArray msg;
-
-//   for (const auto & lanelet : lanelets) {
-//     // Use lanelet ID directly to ensure uniqueness
-//     const int32_t marker_id = static_cast<int32_t>(lanelet.id());
-//     Marker marker = createDefaultMarker(
-//       "map", rclcpp::Time(), ns, marker_id, Marker::LINE_STRIP,
-//       autoware::universe_utils::createMarkerScale(0.1, 0, 0), color);
-
-//     marker.lifetime = rclcpp::Duration::from_seconds(0.3);
-
-//     // Add lanelet polygon points
-//     const auto & polygon = lanelet.polygon3d();
-//     for (const auto & point : polygon) {
-//       geometry_msgs::msg::Point p;
-//       p.x = point.x();
-//       p.y = point.y();
-//       p.z = point.z();
-//       marker.points.push_back(p);
-//     }
-
-//     // Close the polygon
-//     if (!marker.points.empty()) {
-//       marker.points.push_back(marker.points.front());
-//     }
-
-//     msg.markers.push_back(marker);
-//   }
-
-//   return msg;
-// }
-
 }  // namespace
 
 MarkerArray RoadUserStopModule::create_debug_marker_array() const
@@ -97,8 +61,6 @@ MarkerArray RoadUserStopModule::create_debug_marker_array() const
     pink_color.g = 0.0;
     pink_color.b = 1.0;
     pink_color.a = 0.999;
-    // const auto ego_lanelets_markers = lanelet::visualization::laneletsBoundaryAsMarkerArray(
-    //   debug_data_.ego_lanelets, pink_color, false, "ego_lanelets_");
     const auto ego_lanelets_markers = lanelet::visualization::laneletsAsTriangleMarkerArray(
       "ego_lanelets", debug_data_.ego_lanelets, pink_color);
 
