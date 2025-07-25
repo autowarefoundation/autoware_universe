@@ -171,29 +171,38 @@ void PipelineLatencyMonitorNode::calculate_total_latency()
     if (input.timestamp_meaning == TimestampMeaning::end) {
       start_of_next_step -= to_duration(latency);
     }
+  } else {
+    // skip step if no data available
+    debug_ss << step_it->name << "=skipped";
+    start_of_next_step = now();
   }
   // we go through the rest of the sequence in reverse order with the following constraint:
   // end of current step < start of next step
   for (step_it++; step_it != input_sequence_.rend(); ++step_it) {
     const auto & step_input = *step_it;
-    if (!has_valid_data(step_input.latency_history)) {
-      continue;
-    }
-    for (auto it = step_input.latency_history.rbegin(); it != step_input.latency_history.rend();
-         ++it) {
-      const rclcpp::Time end_of_current_step =
-        it->timestamp + (step_input.timestamp_meaning == TimestampMeaning::start
-                           ? to_duration(it->latency_ms)
-                           : to_duration(0.0));
-      if (is_timestamp_older(end_of_current_step, start_of_next_step)) {
-        total_latency_ms_ += it->latency_ms;
-        start_of_next_step = it->timestamp;
-        debug_ss << " + " << step_it->name << "=" << it->latency_ms;
-        if (step_input.timestamp_meaning == TimestampMeaning::end) {
-          start_of_next_step -= to_duration(it->latency_ms);
+    bool found_valid_data = false;
+    if (has_valid_data(step_input.latency_history)) {
+      for (auto it = step_input.latency_history.rbegin(); it != step_input.latency_history.rend();
+           ++it) {
+        const rclcpp::Time end_of_current_step =
+          it->timestamp + (step_input.timestamp_meaning == TimestampMeaning::start
+                             ? to_duration(it->latency_ms)
+                             : to_duration(0.0));
+        if (is_timestamp_older(end_of_current_step, start_of_next_step)) {
+          total_latency_ms_ += it->latency_ms;
+          start_of_next_step = it->timestamp;
+          debug_ss << " + " << step_it->name << "=" << it->latency_ms;
+          if (step_input.timestamp_meaning == TimestampMeaning::end) {
+            start_of_next_step -= to_duration(it->latency_ms);
+          }
+          found_valid_data = true;
+          break;
         }
-        break;
       }
+    }
+    // skip step if no valid data found
+    if (!found_valid_data) {
+      debug_ss << " + " << step_it->name << "=skipped";
     }
   }
   RCLCPP_DEBUG(
