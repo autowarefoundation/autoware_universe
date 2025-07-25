@@ -18,7 +18,7 @@
         hold_stop_distance_threshold: 0.3 # The ego keeps stopping if the distance to stop changes within the threshold [m]
 
         stop_on_curve:
-          enable_approaching: true
+          enable_approaching: false
           additional_stop_margin: 3.0 # [m]
           min_stop_margin: 6.0 # [m]
 
