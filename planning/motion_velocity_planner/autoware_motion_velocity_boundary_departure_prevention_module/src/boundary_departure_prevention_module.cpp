@@ -176,6 +176,9 @@ void BoundaryDeparturePreventionModule::subscribe_topics(rclcpp::Node & node)
   op_mode_state_polling_sub_ =
     autoware_utils::InterProcessPollingSubscriber<OperationModeState>::create_subscription(
       &node, "/api/operation_mode/state", 1);
+  route_polling_sub_ = autoware_utils::InterProcessPollingSubscriber<
+    LaneletRoute, autoware_utils::polling_policy::Newest>::
+    create_subscription(&node, "/planning/mission_planning/route");
 }
 
 void BoundaryDeparturePreventionModule::publish_topics(rclcpp::Node & node)
@@ -213,6 +216,10 @@ void BoundaryDeparturePreventionModule::take_data()
   if (const auto op_mode_state_msg = op_mode_state_polling_sub_->take_data()) {
     op_mode_state_ptr_ = op_mode_state_msg;
   }
+
+  if (const auto route_msg = route_polling_sub_->take_data()) {
+    route_ptr_ = route_msg;
+  }
 }
 
 VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
@@ -235,6 +242,11 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
   if (const auto is_timeout_opt = is_data_timeout(planner_data->current_odometry)) {
     RCLCPP_WARN_THROTTLE(logger_, *clock_ptr_, throttle_duration_ms, "%s", is_timeout_opt->c_str());
     return {};
+  }
+
+  if (const auto is_new_route = is_route_changed()) {
+    RCLCPP_WARN(logger_, "%s. Reset output.", is_new_route->c_str());
+    output_ = Output();
   }
 
   if (!is_autonomous_mode()) {
@@ -305,6 +317,10 @@ std::optional<std::string> BoundaryDeparturePreventionModule::is_data_invalid(
     return {"waiting for steering angle..."};
   }
 
+  if (!route_ptr_) {
+    return {"waiting for route..."};
+  }
+
   constexpr size_t min_pts_size = 4;
   if (raw_trajectory_points.size() < min_pts_size) {
     return {"Insufficient reference trajectory points."};
@@ -355,29 +371,31 @@ bool BoundaryDeparturePreventionModule::is_autonomous_mode() const
          op_mode_state_ptr_->is_autoware_control_enabled;
 }
 
-bool BoundaryDeparturePreventionModule::is_goal_changed(
-  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const Pose & new_goal)
+std::optional<std::string> BoundaryDeparturePreventionModule::is_route_changed()
 {
-  if (!prev_goal_ptr_) {
-    prev_goal_ptr_ = std::make_unique<Pose>(new_goal);
-    return false;
+  if (!prev_route_ptr_) {
+    prev_route_ptr_ = std::make_unique<LaneletRoute>(*route_ptr_);
+    return fmt::format("Initializing previous route pointer.");
   }
 
-  const auto diff_to_new_goal = autoware_utils::calc_distance2d(*prev_goal_ptr_, new_goal);
+  const auto prev_uuid = autoware_utils::to_boost_uuid(prev_route_ptr_->uuid);
+  const auto curr_uuid = autoware_utils::to_boost_uuid(route_ptr_->uuid);
 
-  if (diff_to_new_goal < node_param_.th_goal_shift_dist_m) {
-    *prev_goal_ptr_ = new_goal;
-    return false;
+  if (prev_uuid != curr_uuid) {
+    *prev_route_ptr_ = *route_ptr_;
+    return fmt::format("Route has changed.");
   }
 
-  const auto dist_on_curr_traj = trajectory::closest(aw_ref_traj, *prev_goal_ptr_);
-  const auto goal_on_curr_traj = aw_ref_traj.compute(dist_on_curr_traj);
+  const auto & prev_goal = prev_route_ptr_->goal_pose;
+  const auto & curr_goal = route_ptr_->goal_pose;
+  const auto diff_to_new_goal = autoware_utils::calc_distance2d(prev_goal, curr_goal);
 
-  const auto diff_on_curr_traj =
-    autoware_utils::calc_distance2d(*prev_goal_ptr_, goal_on_curr_traj.pose);
-  *prev_goal_ptr_ = new_goal;
+  if (diff_to_new_goal > node_param_.th_goal_shift_dist_m) {
+    *prev_route_ptr_ = *route_ptr_;
+    return fmt::format("Goal changed due to exceeding threshold.");
+  }
 
-  return diff_on_curr_traj >= node_param_.th_goal_shift_dist_m;
+  return std::nullopt;
 }
 
 tl::expected<VelocityPlanningResult, std::string>
@@ -410,12 +428,6 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
   if (!ref_traj_pts_opt) {
     return tl::make_unexpected(ref_traj_pts_opt.error().what);
-  }
-  toc_curr_watch("get_ref_traj");
-
-  if (is_goal_changed(*ref_traj_pts_opt, raw_trajectory_points.back().pose)) {
-    RCLCPP_WARN(logger_, "Goal changed.");
-    output_ = Output();
   }
 
   const auto abnormality_data_opt = boundary_departure_checker_ptr_->get_abnormalities_data(
