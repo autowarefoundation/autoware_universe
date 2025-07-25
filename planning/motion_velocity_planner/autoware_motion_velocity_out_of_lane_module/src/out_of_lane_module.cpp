@@ -359,7 +359,6 @@ void OutOfLaneModule::update_result(
   if (!slowdown_pose) {
     return;
   }
-  auto planning_factor = PlanningFactor::SLOW_DOWN;
   const auto arc_length =
     motion_utils::calcSignedArcLength(ego_data.trajectory_points, 0UL, slowdown_pose->position) -
     ego_data.longitudinal_offset_to_first_trajectory_index;
@@ -367,7 +366,6 @@ void OutOfLaneModule::update_result(
     arc_length <= params_.stop_dist_threshold ? 0.0 : params_.slow_velocity;
   previous_slowdown_pose_ = slowdown_pose;
   if (slowdown_velocity == 0.0) {
-    planning_factor = PlanningFactor::STOP;
     result.stop_points.push_back(slowdown_pose->position);
   } else {
     result.slowdown_intervals.emplace_back(
@@ -412,6 +410,9 @@ void OutOfLaneModule::update_result(
   for (const auto & [_, safety_factor] : factor_per_object) {
     safety_factors.factors.push_back(safety_factor);
   }
+
+  const auto planning_factor =
+    slowdown_velocity == 0.0 ? PlanningFactor::STOP : PlanningFactor::SLOW_DOWN;
   planning_factor_interface_->add(
     ego_data.trajectory_points, ego_data.pose, *slowdown_pose, planning_factor, safety_factors);
 }
