@@ -44,7 +44,7 @@ This module is activated if the launch parameter `launch_road_user_stop_module` 
 
 | Name                   | Unit | Type   | Description                                    | Default value |
 | :--------------------- | :--- | :----- | :--------------------------------------------- | :------------ |
-| enable_approaching     | [-]  | bool   | Enable approaching behavior on curved paths    | true          |
+| enable_approaching     | [-]  | bool   | Enable approaching behavior on curved paths    | false         |
 | additional_stop_margin | [m]  | double | Additional stop margin for obstacles on curves | 3.0           |
 | min_stop_margin        | [m]  | double | Minimum stop margin on curves                  | 6.0           |
 

@@ -155,6 +155,7 @@ struct DebugData
 {
   // Lanelet
   lanelet::ConstLanelets ego_lanelets;
+  lanelet::ConstLanelets ego_lanelets_without_intersection;
   lanelet::ConstLanelets adjacent_lanelets;
   lanelet::ConstLanelets opposite_lanelets;
 

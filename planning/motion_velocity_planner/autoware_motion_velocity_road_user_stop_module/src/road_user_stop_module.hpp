@@ -96,7 +96,11 @@ private:
   bool is_opposite_traffic_user(
     const PredictedObject & object, const lanelet::ConstLanelet & lanelet) const;
 
+  lanelet::ConstLanelets get_ego_lanelets(
+    const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
+    const std::shared_ptr<const PlannerData> & planner_data) const;
   RelevantLaneletData get_relevant_lanelet_data(
+    const lanelet::ConstLanelets & ego_lanelets,
     const std::shared_ptr<const PlannerData> planner_data) const;
 
   std::vector<Polygon2d> get_trajectory_polygons(

@@ -35,12 +35,14 @@
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
+#include <boost/geometry/algorithms/buffer.hpp>
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
 #include <boost/geometry/algorithms/distance.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
 #include <boost/geometry/algorithms/intersects.hpp>
 #include <boost/geometry/algorithms/union.hpp>
+#include <boost/geometry/strategies/buffer.hpp>
 
 #include <lanelet2_routing/RoutingGraphContainer.h>
 #include <tf2/utils.h>
@@ -285,7 +287,10 @@ VelocityPlanningResult RoadUserStopModule::plan(
     planner_data->trajectory_polygon_collision_check.decimate_trajectory_step_length,
     param.stop_planning.longitudinal_margin.default_margin);
 
-  // 1.2 Create trajectory polygons for collision detection
+  // 1.2 Calculate trajectory lanelets
+  const auto ego_lanelets = get_ego_lanelets(decimated_traj_points, planner_data);
+
+  // 1.3 Create trajectory polygons for collision detection
   const auto & p = planner_data->trajectory_polygon_collision_check;
   const auto decimated_traj_polygons = get_trajectory_polygons(
     decimated_traj_points, planner_data->vehicle_info_, planner_data->current_odometry.pose.pose,
@@ -294,7 +299,7 @@ VelocityPlanningResult RoadUserStopModule::plan(
   debug_data_.trajectory_polygons = decimated_traj_polygons;
 
   // 2. Get relevant lanelets for VRU and opposite traffic detection
-  const auto lanelet_data = get_relevant_lanelet_data(planner_data);
+  const auto lanelet_data = get_relevant_lanelet_data(ego_lanelets, planner_data);
   debug_data_.polygons_for_vru = lanelet_data.polygons_for_vru;
   debug_data_.polygons_for_opposing_traffic = lanelet_data.polygons_for_opposing_traffic;
   debug_data_.ego_lanelets = lanelet_data.ego_lanelets;
@@ -476,33 +481,56 @@ bool RoadUserStopModule::is_opposite_traffic_user(
   return is_opposing_traffic_user;
 }
 
+lanelet::ConstLanelets RoadUserStopModule::get_ego_lanelets(
+  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
+  const std::shared_ptr<const PlannerData> & planner_data) const
+{
+  const auto & route_handler = planner_data->route_handler;
+  const auto & vehicle_info = planner_data->vehicle_info_;
+  // from trajectory poionts
+  autoware_utils::LineString2d trajectory_ls;
+  for (const auto & p : smoothed_trajectory_points) {
+    trajectory_ls.emplace_back(p.pose.position.x, p.pose.position.y);
+  }
+  // add a point beyond the last trajectory point to account for the ego front offset
+  const auto pose_beyond = autoware_utils::calc_offset_pose(
+    smoothed_trajectory_points.back().pose, vehicle_info.max_longitudinal_offset_m, 0.0, 0.0, 0.0);
+  trajectory_ls.emplace_back(pose_beyond.position.x, pose_beyond.position.y);
+  // calculate the lanelets overlapped by the trajectory
+  auto calc_trajectory_lanelets =
+    [&](
+      const autoware_utils::LineString2d & trajectory_ls,
+      const std::shared_ptr<const route_handler::RouteHandler> route_handler) {
+      auto is_road_lanelet = [](const lanelet::ConstLanelet & lanelet) -> bool {
+        return lanelet.hasAttribute(lanelet::AttributeName::Subtype) &&
+               lanelet.attribute(lanelet::AttributeName::Subtype) ==
+                 lanelet::AttributeValueString::Road;
+      };
+      const auto lanelet_map_ptr = route_handler->getLaneletMapPtr();
+      lanelet::ConstLanelets trajectory_lanelets;
+      const auto candidates = lanelet_map_ptr->laneletLayer.search(
+        boost::geometry::return_envelope<lanelet::BoundingBox2d>(trajectory_ls));
+      for (const auto & ll : candidates) {
+        if (
+          is_road_lanelet(ll) &&
+          !boost::geometry::disjoint(trajectory_ls, ll.polygon2d().basicPolygon())) {
+          trajectory_lanelets.push_back(ll);
+        }
+      }
+      return trajectory_lanelets;
+    };
+  return calc_trajectory_lanelets(trajectory_ls, route_handler);
+}
+
 RelevantLaneletData RoadUserStopModule::get_relevant_lanelet_data(
+  const lanelet::ConstLanelets & ego_lanelets,
   const std::shared_ptr<const PlannerData> planner_data) const
 {
   const auto param = param_listener_->get_params();
   const auto & route_handler = planner_data->route_handler;
   const auto lanelet_map = route_handler->getLaneletMapPtr();
 
-  const auto ego_lanelets = [&]() {
-    lanelet::ConstLanelets ego_lanelets;
-    for (const auto & segment : planner_data->current_route.segments) {
-      try {
-        const auto lanelet = lanelet_map->laneletLayer.get(segment.preferred_primitive.id);
-        ego_lanelets.push_back(lanelet);
-      } catch (const lanelet::NoSuchPrimitiveError & e) {
-        RCLCPP_ERROR_THROTTLE(
-          logger_, *clock_, 5000, "Could not find lanelet with ID %ld: %s",
-          segment.preferred_primitive.id, e.what());
-      }
-    }
-    debug_data_.ego_lanelets = ego_lanelets;
-
-    return ego_lanelets;
-  }();
-
-  // get intersection lanelets on route
-  const auto [ego_lanelets_without_intersection, intersection_polygons] = [&]() {
-    lanelet::ConstLanelets lanelets;
+  const auto intersection_polygons = [&]() {
     std::vector<Polygon2d> polygons;
     for (const auto & ego_lanelet : ego_lanelets) {
       const std::string area_id_str = ego_lanelet.attributeOr("intersection_area", "else");
@@ -515,13 +543,54 @@ RelevantLaneletData RoadUserStopModule::get_relevant_lanelet_data(
         const auto & polygon = *polygon_opt;
         const auto polygon_2d = to_polygon_2d(polygon.basicPolygon());
         polygons.push_back(polygon_2d);
-      } else {
-        lanelets.push_back(ego_lanelet);
       }
     }
     debug_data_.intersection_polygons = polygons;
 
-    return std::make_pair(lanelets, polygons);
+    return polygons;
+  }();
+
+  // get intersection lanelets on route
+  const auto ego_lanelets_without_intersection = [&]() {
+    lanelet::ConstLanelets lanelets;
+
+    std::vector<Polygon2d> intersection_polygons_within;
+    intersection_polygons_within.reserve(intersection_polygons.size());
+    const double expansion_for_stability = 1e-2;  // small expansion for stability
+
+    // boost::geometry::buffer strategies for polygon expansion
+    const boost::geometry::strategy::buffer::distance_symmetric<double> distance_strategy(
+      expansion_for_stability);
+    const boost::geometry::strategy::buffer::join_miter join_strategy;
+    const boost::geometry::strategy::buffer::end_flat end_strategy;
+    const boost::geometry::strategy::buffer::point_square circle_strategy;
+    const boost::geometry::strategy::buffer::side_straight side_strategy;
+
+    for (const auto & polygon : intersection_polygons) {
+      boost::geometry::model::multi_polygon<Polygon2d> result;
+      boost::geometry::buffer(
+        polygon, result, distance_strategy, side_strategy, join_strategy, end_strategy,
+        circle_strategy);
+
+      // buffer creates a multi_polygon, but we expect a single polygon
+      if (!result.empty()) {
+        intersection_polygons_within.push_back(result.front());
+      }
+    }
+
+    for (const auto & ego_lanelet : ego_lanelets) {
+      if (std::none_of(
+            intersection_polygons_within.begin(), intersection_polygons_within.end(),
+            [&](const Polygon2d & polygon) {
+              return boost::geometry::within(
+                to_polygon_2d(ego_lanelet.polygon2d().basicPolygon()), polygon);
+            })) {
+        lanelets.push_back(ego_lanelet);
+      }
+    }
+    debug_data_.ego_lanelets_without_intersection = lanelets;
+
+    return lanelets;
   }();
 
   const auto adjacent_lanelets = [&]() {
@@ -876,6 +945,7 @@ double RoadUserStopModule::calc_desired_stop_margin(
   // calculate default stop margin
   const double default_stop_margin = [&]() {
     const double v_ego = planner_data->current_odometry.twist.twist.linear.x;
+    // const double current_acc = planner_data->current_acceleration.accel.accel.linear.x;
     const double v_obs = stop_obstacle.velocity;
 
     const auto ref_traj_length =
@@ -884,36 +954,17 @@ double RoadUserStopModule::calc_desired_stop_margin(
     // For negative velocity obstacles (approaching)
     if (v_obs < param.stop_planning.max_negative_velocity) {
       const double a_ego = param.stop_planning.effective_deceleration_opposing_traffic;
-      const double & bumper_to_bumper_distance = stop_obstacle.dist_to_collide_on_decimated_traj;
 
-      const double braking_distance = v_ego * v_ego / (2 * a_ego);
-      const double stopping_time = v_ego / a_ego;
-      const double distance_obs_ego_braking = std::abs(v_obs * stopping_time);
+      // TODO(odashima): This is an approximation and should be replaced with a more accurate
+      // calculation.
+      const double approximate_stopping_time = v_ego / a_ego;
+      const double approximate_distance_obs_ego_braking =
+        std::abs(v_obs * approximate_stopping_time);
 
       const double ego_stop_margin = param.stop_planning.stop_margin_opposing_traffic;
+      const double stop_margin = ego_stop_margin + approximate_distance_obs_ego_braking;
 
-      const double rel_vel = v_ego - v_obs;
-      constexpr double epsilon = 1e-6;  // Small threshold for numerical stability
-      if (std::abs(rel_vel) <= epsilon) {
-        RCLCPP_WARN(
-          logger_,
-          "Relative velocity (%.3f) is too close to zero. Using minimum safe value for "
-          "calculation.",
-          rel_vel);
-        return param.stop_planning.longitudinal_margin.default_margin;
-      }
-
-      const double T_coast = std::max(
-        (bumper_to_bumper_distance - ego_stop_margin - braking_distance +
-         distance_obs_ego_braking) /
-          rel_vel,
-        0.0);
-
-      const double stopping_distance = v_ego * T_coast + braking_distance;
-
-      const double stop_margin = bumper_to_bumper_distance - stopping_distance;
-
-      return stop_margin;
+      return std::min(stop_margin, dist_to_collide_on_ref_traj);
     }
 
     if (dist_to_collide_on_ref_traj > ref_traj_length) {
