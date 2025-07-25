@@ -38,6 +38,7 @@
           max_acceleration: 20.0  # [m/s^2]
           max_velocity: 25.0  # [m/s]
           observation_time: 0.3  # [s]
+          max_history_time: 0.5  # [s]
           buffer_size: 10
         latency: 0.3
 
