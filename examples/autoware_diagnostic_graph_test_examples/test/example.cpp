@@ -26,14 +26,6 @@ using autoware::diagnostic_graph_aggregator::test::DiagnosticStatus;
 using autoware::diagnostic_graph_aggregator::test::TestGraph;
 using autoware::diagnostic_graph_aggregator::test::TestNodeStatus;
 
-DiagnosticStatus create_status(const std::string & name, const DiagnosticLevel level)
-{
-  DiagnosticStatus status;
-  status.name = name;
-  status.level = level;
-  return status;
-}
-
 std::unordered_map<std::string, DiagnosticLevel> test(
   TestGraph & graph, const std::unordered_map<std::string, DiagnosticLevel> & input)
 {
