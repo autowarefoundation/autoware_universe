@@ -72,6 +72,7 @@ enum class DIRECTION
 {
   LEFT,
   RIGHT,
+  AUTO,
 };
 
 class MissionPlanner : public rclcpp::Node

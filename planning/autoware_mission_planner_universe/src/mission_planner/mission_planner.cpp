@@ -16,6 +16,9 @@
 
 #include "service_utils.hpp"
 
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/route_checker.hpp>
@@ -309,53 +312,75 @@ void MissionPlanner::on_set_lane_change_override(
 
   change_state(is_reroute ? RouteState::REROUTING : RouteState::ROUTING);
   auto route = *current_route_;
-  
+
+  boost::uuids::random_generator gen;
+  boost::uuids::uuid uuid = gen();
+  std::copy(uuid.begin(), uuid.end(), route.uuid.uuid.begin());
+
   // modify the preferred lanelet to change the lane
   DIRECTION override_direction = req->lane_change_direction == 0
-    ? DIRECTION::LEFT : DIRECTION::RIGHT;
+    ? DIRECTION::LEFT : req->lane_change_direction == 1 ? DIRECTION::RIGHT : DIRECTION::AUTO;
 
-  RCLCPP_INFO_STREAM(get_logger(), "Changing lane " << (override_direction == DIRECTION::LEFT ? "left" : "right"));
+  RCLCPP_INFO_STREAM(get_logger(), "Changing lane " << (override_direction == DIRECTION::LEFT ? "left" : override_direction == DIRECTION::RIGHT ? "right" : "auto"));
+  RCLCPP_INFO_STREAM(get_logger(), "Current route segments: " << route.segments.size());
 
-  for (auto & segment : route.segments) {
-    // Find the index of the current preferred primitive
-    auto it = std::find_if(
-      segment.primitives.begin(), segment.primitives.end(),
-      [&segment](const LaneletPrimitive & p) {
-        return p.id == segment.preferred_primitive.id;
-    });
+  auto final_iter = route.segments.end();
 
-    if (it == segment.primitives.end()) continue;
-
-    std::size_t index = std::distance(segment.primitives.begin(), it);
-
-    RCLCPP_INFO_STREAM(
-      get_logger(), "Current preferred primitive ID: " << segment.preferred_primitive.id <<
-      ", index: " << index);
-
-    for (const auto & primitive : segment.primitives) {
+  if (override_direction != DIRECTION::AUTO) {
+    for (auto iter = route.segments.begin(); iter != final_iter; ++iter) {
+      if (std::next(iter)->primitives.size() == 1) {
+        RCLCPP_INFO_STREAM(
+          get_logger(), "No lane change available for segment with index: " << std::distance(route.segments.begin(), iter));
+        break;
+      }
       RCLCPP_INFO_STREAM(
-        get_logger(), "Available primitive ID: " << primitive.id);
+        get_logger(), "idx: " << std::distance(route.segments.begin(), iter));
+      auto & segment = *iter;
+      // Find the index of the current preferred primitive
+      auto it = std::find_if(
+        segment.primitives.begin(), segment.primitives.end(),
+        [&segment](const LaneletPrimitive & p) {
+          return p.id == segment.preferred_primitive.id;
+      });
+
+      if (it == segment.primitives.end()) continue;
+
+      std::size_t index = std::distance(segment.primitives.begin(), it);
+
+      RCLCPP_INFO_STREAM(
+        get_logger(), "Current preferred primitive ID: " << segment.preferred_primitive.id <<
+        ", index: " << index);
+
+      for (const auto & primitive : segment.primitives) {
+        RCLCPP_INFO_STREAM(
+          get_logger(), "Available primitive ID: " << primitive.id);
+      }
+
+      if (override_direction == DIRECTION::LEFT && index > 0) {
+        // shift to the primitive on the left
+        segment.preferred_primitive = segment.primitives.at(index - 1);
+        RCLCPP_INFO_STREAM(
+          get_logger(), "Shifted left to primitive ID: " << segment.preferred_primitive.id);
+      } else if (
+        override_direction == DIRECTION::RIGHT &&
+        index + 1 < segment.primitives.size()
+      ) {
+        // shift to the primitive on the right
+        segment.preferred_primitive = segment.primitives.at(index + 1);
+        RCLCPP_INFO_STREAM(
+          get_logger(), "Shifted right to primitive ID: " << segment.preferred_primitive.id);
+      } else {
+        // no shift possible (e.g., already leftmost or rightmost)
+        RCLCPP_WARN_STREAM(get_logger(), "Cannot shift " <<
+          (override_direction == DIRECTION::LEFT ? "left" : "right") <<
+          " from primitive ID: " << segment.preferred_primitive.id);
+      }
     }
-
-    if (override_direction == DIRECTION::LEFT && index > 0) {
-      // shift to the primitive on the left
-      segment.preferred_primitive = segment.primitives.at(index - 1);
-      RCLCPP_INFO_STREAM(
-        get_logger(), "Shifted left to primitive ID: " << segment.preferred_primitive.id);
-    } else if (
-      override_direction == DIRECTION::RIGHT &&
-      index + 1 < segment.primitives.size()
-    ) {
-      // shift to the primitive on the right
-      segment.preferred_primitive = segment.primitives.at(index + 1);
-      RCLCPP_INFO_STREAM(
-        get_logger(), "Shifted right to primitive ID: " << segment.preferred_primitive.id);
-    } else {
-      // no shift possible (e.g., already leftmost or rightmost)
-      RCLCPP_WARN_STREAM(get_logger(), "Cannot shift " <<
-        (override_direction == DIRECTION::LEFT ? "left" : "right") <<
-        " from primitive ID: " << segment.preferred_primitive.id);
-    }
+  } else {
+    PlannerPlugin::RoutePoints points;
+    points.push_back(route.goal_pose);
+    
+    route =  planner_->plan(points);
   }
 
   if (route.segments.empty()) {
@@ -493,31 +518,6 @@ void MissionPlanner::on_set_waypoint_route(
     change_state(RouteState::SET);
     throw service_utils::ServiceException(
       ResponseCode::ERROR_REROUTE_FAILED, "New route is not safe. Reroute failed.");
-  }
-
-  SetLaneletRoute::Request::SharedPtr req_ptr =
-    std::make_shared<SetLaneletRoute::Request>();
-  
-  req_ptr->header = req->header;
-  req_ptr->goal_pose = req->goal_pose;
-  req_ptr->uuid = req->uuid;
-  req_ptr->allow_modification = req->allow_modification;
-
-  RCLCPP_INFO(this->get_logger(), "header: %s", req_ptr->header.frame_id.c_str());
-  RCLCPP_INFO(this->get_logger(), "goal_pose: %f, %f", 
-              req_ptr->goal_pose.position.x, req_ptr->goal_pose.position.y);
-  RCLCPP_INFO(this->get_logger(), "allow_modification: %s", 
-              req_ptr->allow_modification ? "true" : "false");
-
-  for (const auto & route_segment : route.segments) {
-    req_ptr->segments.push_back(route_segment);
-    RCLCPP_INFO(this->get_logger(), "PreferredSegment ID: %ld", route_segment.preferred_primitive.id);
-    RCLCPP_INFO(this->get_logger(), "PreferredSegment Type: %s", route_segment.preferred_primitive.primitive_type.c_str());
-
-    for (const auto & primitive : route_segment.primitives) {
-      RCLCPP_INFO(this->get_logger(), "Primitive ID: %ld", primitive.id);
-      RCLCPP_INFO(this->get_logger(), "Primitive Type: %s", primitive.primitive_type.c_str());
-    }
   }
 
   change_route(route);

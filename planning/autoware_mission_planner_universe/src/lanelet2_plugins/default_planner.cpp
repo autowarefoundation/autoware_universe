@@ -340,14 +340,6 @@ PlannerPlugin::LaneletRoute DefaultPlanner::plan(const RoutePoints & points)
     const auto start_check_point = points.at(i - 1);
     const auto goal_check_point = points.at(i);
 
-    std::cerr << "goal_check_point: " << goal_check_point.position.x << ", "
-              << goal_check_point.position.y << ", "
-              << goal_check_point.position.z << ", "
-              << goal_check_point.orientation.x << ", "
-              << goal_check_point.orientation.y << ", "
-              << goal_check_point.orientation.z << ", "
-              << goal_check_point.orientation.w << std::endl;
-
     lanelet::ConstLanelets path_lanelets;
     if (!route_handler_.planPathLaneletsBetweenCheckpoints(
           start_check_point, goal_check_point, &path_lanelets, param_.consider_no_drivable_lanes)) {
@@ -358,8 +350,6 @@ PlannerPlugin::LaneletRoute DefaultPlanner::plan(const RoutePoints & points)
     for (const auto & lane : path_lanelets) {
       if (!all_route_lanelets.empty() && lane.id() == all_route_lanelets.back().id()) continue;
       all_route_lanelets.push_back(lane);
-
-      std::cerr << "Lane ID: " << lane.id() << std::endl;
     }
   }
   route_handler_.setRouteLanelets(all_route_lanelets);
