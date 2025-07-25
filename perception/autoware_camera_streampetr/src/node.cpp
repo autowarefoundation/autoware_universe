@@ -19,6 +19,8 @@
 
 #include <Eigen/Dense>
 #include <image_transport/image_transport.hpp>
+#include <tf2/convert.h>
+#include <tf2/LinearMath/Transform.h>
 
 #include <algorithm>
 #include <cmath>
@@ -76,10 +78,6 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
     rclcpp::shutdown();
     return;
   }
-
-  localization_sub_ = this->create_subscription<Odometry>(
-    "~/input/kinematic_state", rclcpp::QoS{1},
-    [this](const Odometry::ConstSharedPtr msg) { this->odometry_callback(msg); });
 
   camera_info_subs_.resize(rois_number_);
 
@@ -154,15 +152,6 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   }
 }
 
-void StreamPetrNode::odometry_callback(Odometry::ConstSharedPtr input_msg)
-{
-  if (!initial_kinematic_state_) {
-    initial_kinematic_state_ = input_msg;
-  }
-  latest_kinematic_state_ = input_msg;
-  return;
-}
-
 void StreamPetrNode::camera_info_callback(
   CameraInfo::ConstSharedPtr input_camera_info_msg, const int camera_id)
 {
@@ -178,7 +167,7 @@ void StreamPetrNode::camera_image_callback(
     pub_objects_->get_subscription_count() + pub_objects_->get_intra_process_subscription_count();
   if (objects_sub_count < 1) return;  // No subscribers, skip processing
 
-  if (!data_store_->check_if_all_camera_info_received() || !latest_kinematic_state_) return;  //
+  if (!data_store_->check_if_all_camera_info_received()) return;
 
   data_store_->update_camera_image(camera_id, input_camera_image_msg);
 
@@ -199,14 +188,14 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
       "Couldn't sync cameras. Sync difference: %.2f seconds, timelapsed  from start: %.2f seconds",
       tdiff, prediction_timestamp);
     network_->wipe_memory();
-    initial_kinematic_state_ = latest_kinematic_state_;
+    initial_transform_set_ = false;  // Reset initial transform
     data_store_->restart();
     return;
   }
 
   if (multithreading_) data_store_->freeze_updates();
 
-  const auto ego_pose_result = get_ego_pose_vector();
+  const auto ego_pose_result = get_ego_pose_vector(stamp);
   if (!ego_pose_result.has_value()) {
     return;
   }
@@ -329,26 +318,53 @@ std::optional<std::vector<float>> StreamPetrNode::get_camera_extrinsics_vector(
 }
 
 std::optional<std::pair<std::vector<float>, std::vector<float>>>
-StreamPetrNode::get_ego_pose_vector() const
+StreamPetrNode::get_ego_pose_vector(const rclcpp::Time & stamp)
 {
-  if (!latest_kinematic_state_ || !initial_kinematic_state_) {
-    RCLCPP_ERROR(get_logger(), "Kinematic states have not been received.");
+  geometry_msgs::msg::TransformStamped current_transform;
+  try {
+    // Get the current transform from map to base_link at the specific timestamp
+    current_transform = tf_buffer_.lookupTransform("map", "base_link", stamp);
+  } catch (const tf2::TransformException & ex) {
+    RCLCPP_ERROR(
+      get_logger(), "Could not get transform from map to base_link at timestamp: %s", ex.what());
     return std::nullopt;
   }
 
-  const auto & latest_pose = latest_kinematic_state_->pose.pose;
-  const auto & initial_pose = initial_kinematic_state_->pose.pose;
-  tf2::Quaternion latest_quat(
-    latest_pose.orientation.x, latest_pose.orientation.y, latest_pose.orientation.z,
-    latest_pose.orientation.w);
-  tf2::Matrix3x3 latest_rot;
-  latest_rot.setRotation(latest_quat);
-  tf2::Matrix3x3 relative_rot = latest_rot;
-  tf2::Vector3 latest_translation(
-    latest_pose.position.x - initial_pose.position.x,
-    latest_pose.position.y - initial_pose.position.y,
-    latest_pose.position.z - initial_pose.position.z);
-  tf2::Vector3 relative_translation = latest_translation;
+  // Set initial transform if not set yet
+  if (!initial_transform_set_) {
+    initial_transform_ = current_transform;
+    initial_transform_set_ = true;
+  }
+
+  // Calculate relative transform from initial to current
+  tf2::Transform initial_tf, current_tf, relative_tf;
+  
+  // Convert initial transform
+  tf2::Quaternion initial_quat(
+    initial_transform_.transform.rotation.x, initial_transform_.transform.rotation.y,
+    initial_transform_.transform.rotation.z, initial_transform_.transform.rotation.w);
+  tf2::Vector3 initial_translation(
+    initial_transform_.transform.translation.x, initial_transform_.transform.translation.y,
+    initial_transform_.transform.translation.z);
+  initial_tf.setRotation(initial_quat);
+  initial_tf.setOrigin(initial_translation);
+  
+  // Convert current transform
+  tf2::Quaternion current_quat(
+    current_transform.transform.rotation.x, current_transform.transform.rotation.y,
+    current_transform.transform.rotation.z, current_transform.transform.rotation.w);
+  tf2::Vector3 current_translation(
+    current_transform.transform.translation.x, current_transform.transform.translation.y,
+    current_transform.transform.translation.z);
+  current_tf.setRotation(current_quat);
+  current_tf.setOrigin(current_translation);
+  
+  // Calculate relative transform: relative = initial^-1 * current
+  relative_tf = initial_tf.inverse() * current_tf;
+  
+  // Extract rotation matrix and translation vector
+  tf2::Matrix3x3 relative_rot(relative_tf.getRotation());
+  tf2::Vector3 relative_translation = relative_tf.getOrigin();
 
   std::vector<float> egopose = {
     static_cast<float>(relative_rot[0][0]),
@@ -368,6 +384,7 @@ StreamPetrNode::get_ego_pose_vector() const
     0.0f,
     1.0f};
 
+  // Compute inverse transform
   tf2::Matrix3x3 inverse_rot = relative_rot.transpose();
   tf2::Vector3 inverse_translation = -(inverse_rot * relative_translation);
 
