@@ -290,7 +290,7 @@ std::vector<PullOutPath> ShiftPullOut::calcPullOutPaths(
 
   bool has_non_shifted_path = false;
 
-  // if shift length is too short, add non sifted path
+  // if shift length is too short, add non shifted path
   constexpr double MINIMUM_SHIFT_LENGTH = 0.01;
   const double shift_length = arc_position_start.distance;
   const bool is_smaller_than_minimum = std::abs(shift_length) < MINIMUM_SHIFT_LENGTH;
