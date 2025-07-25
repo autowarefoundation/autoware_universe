@@ -57,6 +57,11 @@ protected:
     diagnostic_updater::DiagnosticStatusWrapper & stat) override;  // NOLINT(runtime/references)
 
   /**
+   * @brief Get CPU thermal throttling status
+   */
+  int getThermalThrottlingStatus() override;
+
+  /**
    * @brief get names for core temperature files
    */
   void getTemperatureFileNames() override;
