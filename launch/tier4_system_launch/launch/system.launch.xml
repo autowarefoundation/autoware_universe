@@ -94,7 +94,7 @@
 
     <!-- Sensor to Control Latency Checker -->
     <group>
-      <include file="$(find-pkg-share autoware_sensor_to_control_latency_checker)/launch/sensor_to_control_latency_checker.launch.xml"/>
+      <include file="$(find-pkg-share autoware_pipeline_latency_monitor)/launch/pipeline_latency_monitor.launch.xml"/>
     </group>
 
     <!-- Service Log Checker -->
