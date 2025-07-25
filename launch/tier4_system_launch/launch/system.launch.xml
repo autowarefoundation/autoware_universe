@@ -92,7 +92,7 @@
       </include>
     </group>
 
-    <!-- Sensor to Control Latency Checker -->
+    <!-- Pipeline Latency Monitor -->
     <group>
       <include file="$(find-pkg-share autoware_pipeline_latency_monitor)/launch/pipeline_latency_monitor.launch.xml"/>
     </group>
