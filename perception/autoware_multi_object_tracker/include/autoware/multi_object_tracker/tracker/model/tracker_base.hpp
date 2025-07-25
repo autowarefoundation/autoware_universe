@@ -33,6 +33,8 @@
 #include <geometry_msgs/msg/point.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
 
+#include <boost/circular_buffer.hpp>
+
 #include <optional>
 #include <string>
 #include <vector>
@@ -50,6 +52,20 @@ private:
   rclcpp::Time last_update_with_measurement_time_;
   std::vector<float> existence_probabilities_;
   float total_existence_probability_;
+
+  // conditioned update configs
+  // EMA/ema below are abbreviation for exponential moving average
+  static constexpr double EMA_ALPHA = 0.2;
+  static constexpr double SHAPE_VARIATION_THRESHOLD = 0.2;
+  static constexpr size_t WEAK_UPDATE_MAX_COUNT = 10;
+  static constexpr size_t STABLE_STREAK_THRESHOLD = 4;
+  static constexpr size_t UNSTABLE_STREAK_THRESHOLD = 2;
+
+  size_t weak_update_count_{0};
+  size_t shape_stable_streak_{0};
+  size_t shape_unstable_streak_{0};
+  bool ema_shape_initialized_{false};
+  Eigen::Vector3d ema_shape_;
 
   // cache
   mutable rclcpp::Time cached_time_;
@@ -70,7 +86,8 @@ public:
   // object update
   bool updateWithMeasurement(
     const types::DynamicObject & object, const rclcpp::Time & measurement_time,
-    const types::InputChannel & channel_info);
+    const types::InputChannel & channel_info, bool significant_shape_change = false);
+  void resetShapeUpdateCount();
   bool updateWithoutMeasurement(const rclcpp::Time & now);
 
   // object life management
