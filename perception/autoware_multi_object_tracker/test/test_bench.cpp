@@ -233,8 +233,8 @@ bool TrackingTestBench::checkCollisions(const std::string & id)
 bool isConvex(const std::vector<geometry_msgs::msg::Point> & polygon)
 {
   // A polygon must have at least 3 vertices to be convex
-  constexpr size_t MIN_POLYGON_VERTICES = 3;
-  if (polygon.size() < MIN_POLYGON_VERTICES) return false;
+  constexpr size_t min_polygon_vertices = 3;
+  if (polygon.size() < min_polygon_vertices) return false;
 
   bool sign = false;
   size_t n = polygon.size();
@@ -364,7 +364,7 @@ autoware::multi_object_tracker::types::DynamicObjectList TrackingTestBench::gene
 
   // Update and generate unknown object detections
   for (auto & [id, state] : unknown_states_) {
-    // if (dropout_dist_(rng_)) continue;
+    if (dropout_dist_(rng_)) continue;
 
     // Move if it's a moving unknown object
     if (state.is_moving) {
@@ -400,16 +400,8 @@ autoware::multi_object_tracker::types::DynamicObjectList TrackingTestBench::gene
     // Shape configuration
     obj.shape.type = state.shape_type;
     if (obj.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
-      // Calculate bounding box dimensions from footprint
-      // double min_x = 0, max_x = 0, min_y = 0, max_y = 0;
-      // for (const auto & p : state.current_footprint) {
-      //   min_x = std::min(min_x, p.x);
-      //   max_x = std::max(max_x, p.x);
-      //   min_y = std::min(min_y, p.y);
-      //   max_y = std::max(max_y, p.y);
-      // }
       obj.shape.dimensions.x = state.base_size;
-      obj.shape.dimensions.y = state.base_size;
+      obj.shape.dimensions.y = state.base_size / 2.0;
       obj.shape.dimensions.z = state.z_dimension;
     } else {
       obj.shape.footprint.points.clear();
