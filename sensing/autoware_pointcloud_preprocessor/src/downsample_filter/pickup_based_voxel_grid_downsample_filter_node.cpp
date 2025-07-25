@@ -16,6 +16,8 @@
 
 #include "robin_hood.h"
 
+#include <sensor_msgs/point_cloud2_iterator.hpp>
+
 #include <memory>
 #include <vector>
 
@@ -84,7 +86,6 @@ void downsample_with_voxel_grid(
   sensor_msgs::msg::PointCloud2 & output
 ){
   using VoxelKey = std::array<int, 3>;
-  // std::unordered_map<VoxelKey, size_t, VoxelKeyHash, VoxelKeyEqual> voxel_map;
   robin_hood::unordered_map<VoxelKey, size_t, VoxelKeyHash, VoxelKeyEqual> voxel_map;
 
   voxel_map.reserve(input->data.size() / input->point_step);
@@ -94,16 +95,16 @@ void downsample_with_voxel_grid(
   const float inverse_voxel_size_y = 1.0 / voxel_size.y;
   const float inverse_voxel_size_z = 1.0 / voxel_size.z;
 
-  const int x_offset = input->fields[pcl::getFieldIndex(*input, "x")].offset;
-  const int y_offset = input->fields[pcl::getFieldIndex(*input, "y")].offset;
-  const int z_offset = input->fields[pcl::getFieldIndex(*input, "z")].offset;
+  sensor_msgs::PointCloud2ConstIterator<float> iter_x(*input, "x");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_y(*input, "y");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_z(*input, "z");
 
   // Process each point in the point cloud
-  for (size_t global_offset = 0; global_offset + input->point_step <= input->data.size();
-       global_offset += input->point_step) {
-    const float & x = *reinterpret_cast<const float *>(&input->data[global_offset + x_offset]);
-    const float & y = *reinterpret_cast<const float *>(&input->data[global_offset + y_offset]);
-    const float & z = *reinterpret_cast<const float *>(&input->data[global_offset + z_offset]);
+  size_t point_index = 0;
+  for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z, ++point_index) {
+    const float x = *iter_x;
+    const float y = *iter_y;
+    const float z = *iter_z;
 
     // The reason for adding a large value is that when converting from float to int, values around
     // -1 to 1 are all rounded down to 0. Therefore, to prevent the numbers from becoming negative,
@@ -114,6 +115,7 @@ void downsample_with_voxel_grid(
       static_cast<int>((y + large_num_offset) * inverse_voxel_size_y),
       static_cast<int>((z + large_num_offset) * inverse_voxel_size_z)};
 
+    const size_t global_offset = point_index * input->point_step;
     voxel_map.emplace(key, global_offset);
   }
 
