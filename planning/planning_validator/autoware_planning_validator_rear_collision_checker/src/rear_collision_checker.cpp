@@ -767,7 +767,6 @@ bool RearCollisionChecker::is_safe(DebugData & debug)
     debug.is_active = true;
   }
 
-  PredictedObjects objects_on_target_lane;
   PointCloudObjects pointcloud_objects{};
 
   {
