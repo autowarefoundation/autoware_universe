@@ -474,6 +474,28 @@ void fill_rss_distance(
   }
 }
 
+void fill_time_to_collision(
+  PointCloudObjects & objects, const std::shared_ptr<PlanningValidatorContext> & context,
+  const double distance_to_action, [[maybe_unused]] const double reaction_time,
+  [[maybe_unused]] const double max_deceleration, const double max_velocity,
+  const rear_collision_checker_node::Params & parameters)
+{
+  const auto & p = parameters;
+  const auto & current_velocity = context->data->current_kinematics->twist.twist.linear.x;
+
+  for (auto & object : objects) {
+    const auto time_to_reach_ego =
+      distance_to_action / std::max(current_velocity, p.common.ego.min_velocity);
+    const auto time_to_reach_obj =
+      (distance_to_action + object.relative_distance_with_delay_compensation) /
+      std::max(object.velocity, p.common.filter.min_velocity);
+    object.time_to_collision = std::abs(time_to_reach_ego - time_to_reach_obj);
+    object.safe = object.time_to_collision > p.common.time_to_collision.margin;
+    object.ignore =
+      object.moving_time < p.common.filter.moving_time || object.velocity > max_velocity;
+  }
+}
+
 auto get_current_lanes(
   const std::shared_ptr<PlanningValidatorContext> & context, const double forward_distance,
   const double backward_distance) -> lanelet::ConstLanelets
@@ -637,6 +659,27 @@ auto get_range_for_rss(
   return std::make_pair(forward_distance, backward_distance);
 }
 
+auto get_range_for_ttc(
+  const std::shared_ptr<PlanningValidatorContext> & context, const double distance_to_action,
+  [[maybe_unused]] const double reaction_time, [[maybe_unused]] const double max_deceleration,
+  const double max_velocity, const rear_collision_checker_node::Params & parameters)
+  -> std::pair<double, double>
+{
+  const auto & p = parameters;
+  const auto & current_velocity = context->data->current_kinematics->twist.twist.linear.x;
+
+  const auto time_to_reach_ego =
+    distance_to_action / std::max(current_velocity, p.common.ego.min_velocity);
+
+  const auto forward_distance =
+    p.common.pointcloud.range.buffer + context->vehicle_info.max_longitudinal_offset_m;
+  const auto backward_distance =
+    p.common.pointcloud.range.buffer +
+    (time_to_reach_ego + p.common.time_to_collision.margin) * max_velocity - distance_to_action;
+
+  return std::make_pair(forward_distance, backward_distance);
+}
+
 auto create_polygon_marker_array(
   const std::vector<autoware_utils::Polygon3d> & polygons, const std::string & ns,
   const std_msgs::msg::ColorRGBA & color) -> MarkerArray
@@ -741,7 +784,8 @@ auto create_pointcloud_object_marker_array(
          << "[s]\nRelativeDistance(RAW):" << object.relative_distance
          << "[m]\nRelativeDistance(w/DC):" << object.relative_distance_with_delay_compensation
          << "[m]\nVelocity:" << object.velocity << "[m/s]\nRSSDistance" << object.rss_distance
-         << "[m]\nFurthestLaneID:" << object.furthest_lane.id() << "\nDetail:" << object.detail;
+         << "[m]\nTimeToCollision:" << object.time_to_collision
+         << "[s]\nFurthestLaneID:" << object.furthest_lane.id() << "\nDetail:" << object.detail;
 
       marker.text = ss.str();
       marker.pose = object.pose;
