@@ -450,6 +450,30 @@ void cut_by_lanelets(const lanelet::ConstLanelets & lanelets, DetectionAreas & d
   }
 }
 
+void fill_rss_distance(
+  PointCloudObjects & objects, const std::shared_ptr<PlanningValidatorContext> & context,
+  [[maybe_unused]] const double distance_to_action, const double reaction_time,
+  const double max_deceleration, const double max_velocity,
+  const rear_collision_checker_node::Params & parameters)
+{
+  const auto & p = parameters;
+  const auto & max_deceleration_ego = p.common.ego.max_deceleration;
+  const auto & current_velocity = context->data->current_kinematics->twist.twist.linear.x;
+
+  for (auto & object : objects) {
+    const auto stop_distance_object =
+      reaction_time * object.velocity +
+      0.5 * std::pow(object.velocity, 2.0) / std::abs(max_deceleration);
+    const auto stop_distance_ego =
+      0.5 * std::pow(current_velocity, 2.0) / std::abs(max_deceleration_ego);
+
+    object.rss_distance = stop_distance_object - stop_distance_ego;
+    object.safe = object.rss_distance < object.relative_distance_with_delay_compensation;
+    object.ignore =
+      object.moving_time < p.common.filter.moving_time || object.velocity > max_velocity;
+  }
+}
+
 auto get_current_lanes(
   const std::shared_ptr<PlanningValidatorContext> & context, const double forward_distance,
   const double backward_distance) -> lanelet::ConstLanelets

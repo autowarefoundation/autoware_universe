@@ -41,6 +41,11 @@ auto check_turn_behavior(
 
 void cut_by_lanelets(const lanelet::ConstLanelets & lanelets, DetectionAreas & detection_areas);
 
+void fill_rss_distance(
+  PointCloudObjects & objects, const std::shared_ptr<PlanningValidatorContext> & context,
+  const double distance_to_action, const double reaction_time, const double max_deceleration,
+  const double max_velocity, const rear_collision_checker_node::Params & parameters);
+
 auto generate_half_lanelet(
   const lanelet::ConstLanelet lanelet, const bool is_right,
   const double ignore_width_from_centerline, const double expand_width_from_bound)

@@ -118,28 +118,6 @@ void RearCollisionChecker::setup_diag()
     "obstacle detected behind the vehicle");
 }
 
-void RearCollisionChecker::fill_rss_distance(
-  PointCloudObjects & objects, const double reaction_time, const double max_deceleration,
-  const double max_velocity) const
-{
-  const auto p = param_listener_->get_params();
-  const auto & max_deceleration_ego = p.common.ego.max_deceleration;
-  const auto & current_velocity = context_->data->current_kinematics->twist.twist.linear.x;
-
-  for (auto & object : objects) {
-    const auto stop_distance_object =
-      reaction_time * object.velocity +
-      0.5 * std::pow(object.velocity, 2.0) / std::abs(max_deceleration);
-    const auto stop_distance_ego =
-      0.5 * std::pow(current_velocity, 2.0) / std::abs(max_deceleration_ego);
-
-    object.rss_distance = stop_distance_object - stop_distance_ego;
-    object.safe = object.rss_distance < object.relative_distance_with_delay_compensation;
-    object.ignore =
-      object.moving_time < p.common.filter.moving_time || object.velocity > max_velocity;
-  }
-}
-
 void RearCollisionChecker::fill_velocity(PointCloudObject & pointcloud_object)
 {
   const auto p = param_listener_->get_params();
@@ -466,8 +444,9 @@ auto RearCollisionChecker::get_pointcloud_objects(
     auto objects_at_blind_spot = get_pointcloud_objects_at_blind_spot(
       current_lanes, turn_behavior, forward_distance, backward_distance, obstacle_pointcloud,
       debug);
-    fill_rss_distance(
-      objects_at_blind_spot, delay_object, max_deceleration_object, max_velocity_object);
+    utils::fill_rss_distance(
+      objects_at_blind_spot, context_, 0.0, delay_object, max_deceleration_object,
+      max_velocity_object, p);
     objects.insert(objects.end(), objects_at_blind_spot.begin(), objects_at_blind_spot.end());
   }
 
@@ -493,8 +472,9 @@ auto RearCollisionChecker::get_pointcloud_objects(
     auto objects_on_adjacent_lane = get_pointcloud_objects_on_adjacent_lane(
       current_lanes, shift_behavior, forward_distance, backward_distance, obstacle_pointcloud,
       debug);
-    fill_rss_distance(
-      objects_on_adjacent_lane, delay_object, max_deceleration_object, max_velocity_object);
+    utils::fill_rss_distance(
+      objects_on_adjacent_lane, context_, 0.0, delay_object, max_deceleration_object,
+      max_velocity_object, p);
     objects.insert(objects.end(), objects_on_adjacent_lane.begin(), objects_on_adjacent_lane.end());
   }
 
