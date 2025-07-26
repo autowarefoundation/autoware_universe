@@ -80,30 +80,6 @@ rear_collision_checker_node:
       moving_time:
         type: double
 
-    vehicle:
-      reaction_time:
-        type: double
-        validation:
-          gt<>: [0.0]
-      max_velocity:
-        type: double
-        validation:
-          gt<>: [0.0]
-      max_deceleration:
-        type: double
-
-    vulnerable_road_user:
-      reaction_time:
-        type: double
-        validation:
-          gt<>: [0.0]
-      max_velocity:
-        type: double
-        validation:
-          gt<>: [0.0]
-      max_deceleration:
-        type: double
-
     ego:
       reaction_time:
         type: double
@@ -155,6 +131,17 @@ rear_collision_checker_node:
           type: double
         outer:
           type: double
+      participants:
+        reaction_time:
+          type: double
+          validation:
+            gt<>: [0.0]
+        max_velocity:
+          type: double
+          validation:
+            gt<>: [0.0]
+        max_deceleration:
+          type: double
 
     adjacent_lane:
       lookahead_time:
@@ -168,4 +155,15 @@ rear_collision_checker_node:
         left:
           type: double
         right:
+          type: double
+      participants:
+        reaction_time:
+          type: double
+          validation:
+            gt<>: [0.0]
+        max_velocity:
+          type: double
+          validation:
+            gt<>: [0.0]
+        max_deceleration:
           type: double
