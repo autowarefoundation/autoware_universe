@@ -611,6 +611,32 @@ auto generate_half_lanelet(
   return half_lanelet;
 }
 
+auto get_range_for_rss(
+  const std::shared_ptr<PlanningValidatorContext> & context,
+  [[maybe_unused]] const double distance_to_action, const double reaction_time,
+  const double max_deceleration, const double max_velocity,
+  const rear_collision_checker_node::Params & parameters) -> std::pair<double, double>
+{
+  const auto & p = parameters;
+  const auto & max_deceleration_ego = p.common.ego.max_deceleration;
+  const auto & current_velocity = context->data->current_kinematics->twist.twist.linear.x;
+
+  const auto stop_distance_object =
+    reaction_time * max_velocity + 0.5 * std::pow(max_velocity, 2.0) / std::abs(max_deceleration);
+  const auto stop_distance_ego =
+    0.5 * std::pow(current_velocity, 2.0) / std::abs(max_deceleration_ego);
+
+  const auto forward_distance = p.common.pointcloud.range.buffer +
+                                std::max(
+                                  context->vehicle_info.max_longitudinal_offset_m,
+                                  (p.common.blind_spot.check.front ? stop_distance_ego : 0.0));
+  const auto backward_distance = p.common.pointcloud.range.buffer -
+                                 context->vehicle_info.min_longitudinal_offset_m +
+                                 std::max(0.0, stop_distance_object - stop_distance_ego);
+
+  return std::make_pair(forward_distance, backward_distance);
+}
+
 auto create_polygon_marker_array(
   const std::vector<autoware_utils::Polygon3d> & polygons, const std::string & ns,
   const std_msgs::msg::ColorRGBA & color) -> MarkerArray

@@ -68,6 +68,11 @@ auto generate_detection_polygon(
   const lanelet::ConstLanelets & lanelets, const geometry_msgs::msg::Pose & ego_pose,
   const double forward_distance, const double backward_distance) -> lanelet::BasicPolygon3d;
 
+auto get_range_for_rss(
+  const std::shared_ptr<PlanningValidatorContext> & context, const double distance_to_action,
+  const double reaction_time, const double max_deceleration, const double max_velocity,
+  const rear_collision_checker_node::Params & parameters) -> std::pair<double, double>;
+
 auto create_polygon_marker_array(
   const std::vector<autoware_utils::Polygon3d> & polygons, const std::string & ns,
   const std_msgs::msg::ColorRGBA & color) -> MarkerArray;

@@ -420,27 +420,14 @@ auto RearCollisionChecker::get_pointcloud_objects(
   const auto obstacle_pointcloud = filter_pointcloud(debug);
 
   const auto max_deceleration_ego = p.common.ego.max_deceleration;
-  const auto current_velocity = context_->data->current_kinematics->twist.twist.linear.x;
 
   {
     const auto delay_object = p.common.blind_spot.participants.reaction_time;
     const auto max_deceleration_object = p.common.blind_spot.participants.max_deceleration;
     const auto max_velocity_object = p.common.blind_spot.participants.max_velocity;
 
-    const auto stop_distance_object =
-      delay_object * max_velocity_object +
-      0.5 * std::pow(max_velocity_object, 2.0) / std::abs(max_deceleration_object);
-    const auto stop_distance_ego =
-      0.5 * std::pow(current_velocity, 2.0) / std::abs(max_deceleration_ego);
-
-    const auto forward_distance = p.common.pointcloud.range.buffer +
-                                  std::max(
-                                    context_->vehicle_info.max_longitudinal_offset_m,
-                                    (p.common.blind_spot.check.front ? stop_distance_ego : 0.0));
-    const auto backward_distance = p.common.pointcloud.range.buffer -
-                                   context_->vehicle_info.min_longitudinal_offset_m +
-                                   std::max(0.0, stop_distance_object - stop_distance_ego);
-
+    const auto [forward_distance, backward_distance] = utils::get_range_for_rss(
+      context_, 0.0, delay_object, max_deceleration_ego, max_velocity_object, p);
     auto objects_at_blind_spot = get_pointcloud_objects_at_blind_spot(
       current_lanes, turn_behavior, forward_distance, backward_distance, obstacle_pointcloud,
       debug);
@@ -455,20 +442,8 @@ auto RearCollisionChecker::get_pointcloud_objects(
     const auto max_deceleration_object = p.common.adjacent_lane.participants.max_deceleration;
     const auto max_velocity_object = p.common.adjacent_lane.participants.max_velocity;
 
-    const auto stop_distance_object =
-      delay_object * max_velocity_object +
-      0.5 * std::pow(max_velocity_object, 2.0) / std::abs(max_deceleration_object);
-    const auto stop_distance_ego =
-      0.5 * std::pow(current_velocity, 2.0) / std::abs(max_deceleration_ego);
-
-    const auto forward_distance = p.common.pointcloud.range.buffer +
-                                  std::max(
-                                    context_->vehicle_info.max_longitudinal_offset_m,
-                                    (p.common.adjacent_lane.check.front ? stop_distance_ego : 0.0));
-    const auto backward_distance = p.common.pointcloud.range.buffer -
-                                   context_->vehicle_info.min_longitudinal_offset_m +
-                                   std::max(0.0, stop_distance_object - stop_distance_ego);
-
+    const auto [forward_distance, backward_distance] = utils::get_range_for_rss(
+      context_, 0.0, delay_object, max_deceleration_ego, max_velocity_object, p);
     auto objects_on_adjacent_lane = get_pointcloud_objects_on_adjacent_lane(
       current_lanes, shift_behavior, forward_distance, backward_distance, obstacle_pointcloud,
       debug);
