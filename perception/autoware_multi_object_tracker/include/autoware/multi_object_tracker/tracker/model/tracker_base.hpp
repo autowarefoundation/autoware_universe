@@ -23,6 +23,7 @@
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/util/adaptive_threshold_cache.hpp"
+#include "autoware/multi_object_tracker/tracker/util/exponential_moving_average_shape.hpp"
 
 #include <Eigen/Core>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
@@ -75,10 +76,8 @@ private:
   static constexpr size_t UNSTABLE_STREAK_THRESHOLD = 2;
 
   size_t weak_update_count_{0};
-  size_t shape_stable_streak_{0};
-  size_t shape_unstable_streak_{0};
-  bool ema_shape_initialized_{false};
-  Eigen::Vector3d ema_shape_;
+  ExponentialMovingAverageShape ema_shape_{
+    EMA_ALPHA, SHAPE_VARIATION_THRESHOLD, STABLE_STREAK_THRESHOLD, UNSTABLE_STREAK_THRESHOLD};
 
   // cache
   mutable rclcpp::Time cached_time_;
@@ -105,7 +104,6 @@ public:
   bool updateWithMeasurement(
     const types::DynamicObject & object, const rclcpp::Time & measurement_time,
     const types::InputChannel & channel_info, bool significant_shape_change = false);
-  void resetShapeUpdateCount();
   bool updateWithoutMeasurement(const rclcpp::Time & now);
   void updateClassification(
     const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification);
@@ -157,6 +155,13 @@ public:
     return ss.str();
   }
 
+  double getBEVArea() const;
+  double getDistanceSqToEgo(const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
+  double computeAdaptiveThreshold(
+    double base_threshold, double fallback_threshold, const AdaptiveThresholdCache & cache,
+    const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
+  bool createPseudoMeasurement(const types::DynamicObject & meas, types::DynamicObject & pred);
+
 protected:
   types::DynamicObject object_;
   TrackerType tracker_type_{TrackerType::UNKNOWN};
@@ -198,11 +203,6 @@ public:
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const = 0;
   virtual bool predict(const rclcpp::Time & time) = 0;
-  double getBEVArea() const;
-  double getDistanceSqToEgo(const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
-  double computeAdaptiveThreshold(
-    double base_threshold, double fallback_threshold, const AdaptiveThresholdCache & cache,
-    const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
 };
 
 }  // namespace autoware::multi_object_tracker
