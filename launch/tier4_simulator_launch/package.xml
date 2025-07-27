@@ -17,6 +17,7 @@
   <exec_depend>autoware_dummy_perception_publisher</exec_depend>
   <exec_depend>autoware_elevation_map_loader</exec_depend>
   <exec_depend>autoware_fault_injection</exec_depend>
+  <exec_depend>autoware_multi_object_tracker</exec_depend>
   <exec_depend>autoware_perception_online_evaluator</exec_depend>
   <exec_depend>autoware_pose_initializer</exec_depend>
   <exec_depend>autoware_simple_planning_simulator</exec_depend>
