@@ -28,12 +28,12 @@ Only 2 message types are currently supported.
 
 ### Output
 
-| Name                        | Type                                              | Description                                                                                                         |
-| --------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `~/output/total_latency_ms` | `autoware_internal_debug_msgs/msg/Float64Stamped` | The calculated total pipeline latency in milliseconds.                                                              |
-| `/diagnostics`              | `diagnostic_msgs/DiagnosticArray`                 | Publishes the diagnostic status. Reports `OK` if the latency is within the threshold, and `WARN` if it is exceeded. |
-| `~/debug/<step_name>`       | `autoware_internal_debug_msgs/msg/Float64Stamped` | For each processing step, publishes the latest latency value received from its input topic.                         |
-| `~/debug/total_latency_ms`  | `autoware_internal_debug_msgs/msg/Float64Stamped` | A debug topic that also publishes the calculated total latency.                                                     |
+| Name                                | Type                                              | Description                                                                                                         |
+| ----------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `~/output/total_latency_ms`         | `autoware_internal_debug_msgs/msg/Float64Stamped` | The calculated total pipeline latency in milliseconds.                                                              |
+| `/diagnostics`                      | `diagnostic_msgs/DiagnosticArray`                 | Publishes the diagnostic status. Reports `OK` if the latency is within the threshold, and `WARN` if it is exceeded. |
+| `~/debug/<step_name>_latency_ms`    | `autoware_internal_debug_msgs/msg/Float64Stamped` | For each processing step, publishes the latest latency value received from its input topic.                         |
+| `~/debug/pipeline_total_latency_ms` | `autoware_internal_debug_msgs/msg/Float64Stamped` | A debug topic that also publishes the calculated total latency.                                                     |
 
 ## Parameters
 
