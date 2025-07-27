@@ -52,7 +52,9 @@ void ExponentialMovingAverageShape::update(const Eigen::Vector3d & meas, bool is
     value_ = alpha_ * meas + (1.0 - alpha_) * value_;
     ++stable_streak_;
     unstable_streak_ = 0;
-    stable_ = true;
+    if (stable_streak_ >= stable_streak_threshold_) {
+      stable_ = true;
+    }
   } else {
     ++unstable_streak_;
     if (unstable_streak_ >= unstable_streak_threshold_) {

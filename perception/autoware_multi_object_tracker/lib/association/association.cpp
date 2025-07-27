@@ -237,7 +237,7 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
       score_matrix(tracker_idx, measurement_idx) = score;
 
       if (significant_shape_change) {
-        // hash the indeces
+        // hash the tracker and measurement index pair
         significant_shape_change_set_.insert(
           (static_cast<uint64_t>(tracker_idx) << 32) | measurement_idx);
       }
