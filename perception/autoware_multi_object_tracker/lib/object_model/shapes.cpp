@@ -112,18 +112,6 @@ double get1dIoU(
   return iou;
 }
 
-inline double getConvexShapeArea(
-  const autoware_utils::Polygon2d & source_polygon,
-  const autoware_utils::Polygon2d & target_polygon)
-{
-  boost::geometry::model::multi_polygon<autoware_utils::Polygon2d> union_polygons;
-  boost::geometry::union_(source_polygon, target_polygon, union_polygons);
-
-  autoware_utils::Polygon2d hull;
-  boost::geometry::convex_hull(union_polygons, hull);
-  return boost::geometry::area(hull);
-}
-
 double get2dIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object,
   const double min_union_area)
