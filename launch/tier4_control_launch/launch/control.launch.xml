@@ -109,10 +109,10 @@
           <remap from="input/kinematics" to="/localization/kinematic_state"/>
           <remap from="input/acceleration" to="/localization/acceleration"/>
           <remap from="output/vehicle_cmd_emergency" to="/control/command/emergency_cmd"/>
-          <remap from="output/control_cmd" to="/control/command/control_cmd"/>
-          <remap from="output/gear_cmd" to="/control/command/gear_cmd"/>
-          <remap from="output/turn_indicators_cmd" to="/control/command/turn_indicators_cmd"/>
-          <remap from="output/hazard_lights_cmd" to="/control/command/hazard_lights_cmd"/>
+          <remap from="output/control_cmd" to="$(var output_control_cmd)"/>
+          <remap from="output/gear_cmd" to="$(var output_gear_cmd)"/>
+          <remap from="output/turn_indicators_cmd" to="$(var output_turn_indicators_cmd)"/>
+          <remap from="output/hazard_lights_cmd" to="$(var output_hazard_lights_cmd)"/>
           <remap from="output/gate_mode" to="/control/current_gate_mode"/>
           <remap from="output/engage" to="/api/autoware/get/engage"/>
           <remap from="output/external_emergency" to="/api/autoware/get/emergency"/>
