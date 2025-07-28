@@ -103,6 +103,7 @@ struct ProjectionToBound
   Segment2d nearest_bound_seg;
   double lat_dist{std::numeric_limits<double>::max()};
   size_t ego_sides_idx{0};
+  double time_from_start{std::numeric_limits<double>::max()};
   ProjectionToBound() = default;
   explicit ProjectionToBound(size_t idx) : ego_sides_idx(idx) {}
   ProjectionToBound(

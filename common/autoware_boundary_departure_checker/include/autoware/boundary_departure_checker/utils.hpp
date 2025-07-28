@@ -357,12 +357,14 @@ ProjectionToBound find_closest_segment(
  *
  * The result is organized per side, and each footprint index corresponds to a projection result.
  *
+ * @param ego_pred_traj           Predicted trajectory of the ego vehicle.
  * @param boundaries                 Preprocessed R-tree indexed boundary segments.
  * @param ego_sides_from_footprints List of left/right segments derived from ego footprint polygons.
  * @return Closest projections to boundaries, separated by side.
  */
 ProjectionsToBound get_closest_boundary_segments_from_side(
-  const BoundarySideWithIdx & boundaries, const EgoSides & ego_sides_from_footprints);
+  const TrajectoryPoints & ego_pred_traj, const BoundarySideWithIdx & boundaries,
+  const EgoSides & ego_sides_from_footprints);
 
 /**
  * @brief Estimate braking distance using jerk, acceleration, and braking delay constraints.
@@ -427,6 +429,8 @@ tl::expected<std::vector<lanelet::LineString3d>, std::string> get_uncrossable_li
   const lanelet::LaneletMapPtr & lanelet_map_ptr, const Pose & ego_pose,
   const double search_distance,
   const std::vector<std::string> & uncrossable_boundary_types = {"road_border"});
+
+TrajectoryPoints trim_pred_path(const TrajectoryPoints & ego_pred_traj, const double cutoff_time_s);
 }  // namespace autoware::boundary_departure_checker::utils
 
 #endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UTILS_HPP_
