@@ -14,11 +14,14 @@
 
 #include "utils.hpp"
 
+#include <autoware/boundary_departure_checker/conversion.hpp>
 #include <autoware/trajectory/utils/closest.hpp>
 #include <magic_enum.hpp>
 #include <range/v3/algorithm/sort.hpp>
 #include <range/v3/view.hpp>
 #include <tf2/convert.hpp>
+
+#include <fmt/format.h>
 
 #include <algorithm>
 #include <unordered_set>
@@ -90,8 +93,16 @@ DepartureIntervals init_departure_intervals(
       continue;
     }
 
-    interval.end = aw_ref_traj.compute(interval.candidates.back().dist_on_traj);
+    std::sort(
+      interval.candidates.begin(), interval.candidates.end(),
+      [](const DeparturePoint & a, const DeparturePoint & b) {
+        return a.dist_on_traj < b.dist_on_traj;
+      });
+
+    interval.start_dist_on_traj = interval.candidates.front().dist_on_traj - vehicle_length_m;
+    interval.start = aw_ref_traj.compute(interval.start_dist_on_traj);
     interval.end_dist_on_traj = interval.candidates.back().dist_on_traj;
+    interval.end = aw_ref_traj.compute(interval.end_dist_on_traj);
     departure_intervals.push_back(interval);
     idx = idx_end + 1;
   }
@@ -135,7 +146,7 @@ void update_departure_intervals_poses(
   }
 
   // remove if ego already pass the end pose.
-  utils::remove_if(departure_intervals, [&](const DepartureInterval & interval) {
+  utils::remove_if(departure_intervals, [&](DepartureInterval & interval) {
     if (interval.end_dist_on_traj < ego_dist_from_traj_front) {
       return true;
     }
@@ -147,6 +158,7 @@ void update_departure_intervals_poses(
         utils::is_point_shifted(prev_pose, curr_pose, th_pt_shift_dist_m, th_pt_shift_angle_rad)) {
       return true;
     }
+    interval.end = point_of_curr_traj;
     return false;
   });
 }
@@ -220,11 +232,11 @@ void update_departure_intervals(
       }
 
       const auto is_end_in_between =
-        curr_interval_mut.start_dist_on_traj < next_interval_mut.end_dist_on_traj &&
-        next_interval_mut.end_dist_on_traj < curr_interval_mut.end_dist_on_traj;
+        curr_interval_mut.start_dist_on_traj <= next_interval_mut.end_dist_on_traj &&
+        next_interval_mut.end_dist_on_traj <= curr_interval_mut.end_dist_on_traj;
       const auto is_start_in_between =
-        curr_interval_mut.start_dist_on_traj < next_interval_mut.start_dist_on_traj &&
-        next_interval_mut.start_dist_on_traj < curr_interval_mut.end_dist_on_traj;
+        curr_interval_mut.start_dist_on_traj <= next_interval_mut.start_dist_on_traj &&
+        next_interval_mut.start_dist_on_traj <= curr_interval_mut.end_dist_on_traj;
 
       if (is_start_in_between && !is_end_in_between) {
         curr_interval_mut.end = next_interval_mut.end;
@@ -248,8 +260,9 @@ void update_departure_intervals(
 void update_critical_departure_points(
   const Side<DeparturePoints> & new_departure_points,
   CriticalDeparturePoints & critical_departure_points,
-  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const double th_dist_hysteresis_m,
-  const double offset_from_ego, const double th_pt_shift_dist_m, const double th_pt_shift_angle_rad)
+  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
+  const double th_point_merge_distance_m, const double offset_from_ego,
+  const double th_pt_shift_dist_m, const double th_pt_shift_angle_rad)
 {
   for (auto & crit_dpt_pt_mut : critical_departure_points) {
     crit_dpt_pt_mut.dist_on_traj =
@@ -283,7 +296,7 @@ void update_critical_departure_points(
       const auto is_near_curr_pts = std::any_of(
         critical_departure_points.begin(), critical_departure_points.end(),
         [&](const CriticalDeparturePoint & crit_pt) {
-          return std::abs(dpt_pt.dist_on_traj - crit_pt.dist_on_traj) < th_dist_hysteresis_m;
+          return std::abs(dpt_pt.dist_on_traj - crit_pt.dist_on_traj) < th_point_merge_distance_m;
         });
 
       if (is_near_curr_pts) {
