@@ -945,26 +945,58 @@ double RoadUserStopModule::calc_desired_stop_margin(
   // calculate default stop margin
   const double default_stop_margin = [&]() {
     const double v_ego = planner_data->current_odometry.twist.twist.linear.x;
-    // const double current_acc = planner_data->current_acceleration.accel.accel.linear.x;
+    const double current_acc = planner_data->current_acceleration.accel.accel.linear.x;
     const double v_obs = stop_obstacle.velocity;
 
     const auto ref_traj_length =
       autoware::motion_utils::calcSignedArcLength(traj_points, 0, traj_points.size() - 1);
 
     // For negative velocity obstacles (approaching)
-    if (v_obs < param.stop_planning.max_negative_velocity) {
-      const double a_ego = param.stop_planning.effective_deceleration_opposing_traffic;
+    if (v_obs < param.stop_planning.opposing_traffic.max_negative_velocity) {
+      const double a_ego = param.stop_planning.opposing_traffic.effective_deceleration;
+      const double & bumper_to_bumper_distance = stop_obstacle.dist_to_collide_on_decimated_traj;
 
-      // TODO(odashima): This is an approximation and should be replaced with a more accurate
-      // calculation.
-      const double approximate_stopping_time = v_ego / a_ego;
-      const double approximate_distance_obs_ego_braking =
-        std::abs(v_obs * approximate_stopping_time);
+      const double braking_distance =
+        autoware::motion_utils::calcDecelDistWithJerkAndAccConstraints(
+          v_ego, 0.0, current_acc, -a_ego, common_param_.limit_min_jerk,
+          common_param_.limit_max_accel)
+          .value_or(0.0);
 
-      const double ego_stop_margin = param.stop_planning.stop_margin_opposing_traffic;
-      const double stop_margin = ego_stop_margin + approximate_distance_obs_ego_braking;
+      const double stopping_time = v_ego / a_ego;
+      const double distance_obs_ego_braking = std::abs(v_obs * stopping_time);
 
-      return std::min(stop_margin, dist_to_collide_on_ref_traj);
+      const double ego_stop_margin = param.stop_planning.opposing_traffic.stop_margin;
+
+      // NOTE: To avoid planning a sto position immediately in front of ego for an object that is
+      //       still distant we enforce a lower speed limit in the coasting time caluclation.
+      const double v_ego_limitted =
+        std::max(v_ego, param.stop_planning.opposing_traffic.min_velocity_for_stop_planning);
+      const double rel_vel = v_ego_limitted - v_obs;
+
+      constexpr double epsilon = 1e-6;  // Small threshold for numerical stability
+      if (std::abs(rel_vel) <= epsilon) {
+        RCLCPP_WARN(
+          logger_,
+          "Relative velocity (%.3f) is too close to zero. Using minimum safe value for "
+          "calculation.",
+          rel_vel);
+
+        // Return default stop margin as fallback
+        return param.stop_planning.longitudinal_margin.default_margin;
+      }
+
+      const double T_coast = std::max(
+        (bumper_to_bumper_distance - ego_stop_margin - braking_distance -
+         distance_obs_ego_braking) /
+          rel_vel,
+        0.0);
+
+      const double distance_obs_ego_coasting = std::abs(v_obs * T_coast);
+
+      const double stop_margin =
+        ego_stop_margin + distance_obs_ego_braking + distance_obs_ego_coasting;
+
+      return stop_margin;
     }
 
     if (dist_to_collide_on_ref_traj > ref_traj_length) {

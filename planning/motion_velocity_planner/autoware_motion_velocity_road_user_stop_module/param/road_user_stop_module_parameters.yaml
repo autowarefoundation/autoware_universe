@@ -11,7 +11,7 @@ road_user_stop:
     longitudinal_margin:
       default_margin:
         type: double
-        default_value: 6.0
+        default_value: 5.0
         description: Default longitudinal margin to obstacle [m]
         validation:
           gt_eq<>: [0.0]
@@ -30,26 +30,34 @@ road_user_stop:
         validation:
           gt_eq<>: [0.0]
 
-    max_negative_velocity:
-      type: double
-      default_value: -0.1
-      description: Maximum negative velocity for objects moving away [m/s]
-      validation:
-        lt_eq<>: [0.0]
+    opposing_traffic:
+      stop_margin:
+        type: double
+        default_value: 6.0
+        description: Ideal stop-margin from moving opposing obstacle when ego comes to a stop [m]
+        validation:
+          gt_eq<>: [0.0]
 
-    stop_margin_opposing_traffic:
-      type: double
-      default_value: 10.0
-      description: Stop margin for opposing traffic [m]
-      validation:
-        gt_eq<>: [0.0]
+      max_negative_velocity:
+        type: double
+        default_value: -0.1
+        description: Maximum velocity of opposing traffic to consider stop planning [m/s]
+        validation:
+          lt_eq<>: [0.0]
 
-    effective_deceleration_opposing_traffic:
-      type: double
-      default_value: 4.0
-      description: Effective deceleration for opposing traffic calculation [m/s^2]
-      validation:
-        gt<>: [0.0]
+      min_velocity_for_stop_planning:
+        type: double
+        default_value: 2.77
+        description: Minimum velocity of ego to consider stop planning [m/s]
+        validation:
+          gt_eq<>: [0.0]
+
+      effective_deceleration:
+        type: double
+        default_value: 4.0
+        description: Setting a higher value brings the final stop-margin closer to the ideal value above [m/s^2]
+        validation:
+          gt<>: [0.0]
 
     hold_stop_velocity_threshold:
       type: double
@@ -69,7 +77,7 @@ road_user_stop:
     stop_on_curve:
       enable_approaching:
         type: bool
-        default_value: true
+        default_value: false
         description: Enable approaching behavior on curved paths
 
       additional_stop_margin:
