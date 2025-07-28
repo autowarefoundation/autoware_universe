@@ -766,8 +766,7 @@ void NetMonitor::publishNetworkStatus()
 
   uint64_t total_errors = 0;
   uint64_t unit_errors = 0;
-  NetSnmp::Result ret = NetSnmp::Result::OK;
-  ret = reassembles_failed_info_.check_metrics(total_errors, unit_errors);
+  NetSnmp::Result ret = reassembles_failed_info_.check_metrics(total_errors, unit_errors);
   if (ret != NetSnmp::Result::READ_ERROR) {
     network_status.error_ip_packet_reassembles_failed = unit_errors;
   }
