@@ -452,7 +452,7 @@ void cut_by_lanelets(const lanelet::ConstLanelets & lanelets, DetectionAreas & d
 
 void fill_rss_distance(
   PointCloudObjects & objects, const std::shared_ptr<PlanningValidatorContext> & context,
-  [[maybe_unused]] const double distance_to_action, const double reaction_time,
+  [[maybe_unused]] const double distance_to_conflict_point, const double reaction_time,
   const double max_deceleration, const double max_velocity,
   const rear_collision_checker_node::Params & parameters)
 {
@@ -476,7 +476,7 @@ void fill_rss_distance(
 
 void fill_time_to_collision(
   PointCloudObjects & objects, const std::shared_ptr<PlanningValidatorContext> & context,
-  const double distance_to_action, [[maybe_unused]] const double reaction_time,
+  const double distance_to_conflict_point, [[maybe_unused]] const double reaction_time,
   [[maybe_unused]] const double max_deceleration, const double max_velocity,
   const rear_collision_checker_node::Params & parameters)
 {
@@ -485,9 +485,9 @@ void fill_time_to_collision(
 
   for (auto & object : objects) {
     const auto time_to_reach_ego =
-      distance_to_action / std::max(current_velocity, p.common.ego.min_velocity);
+      distance_to_conflict_point / std::max(current_velocity, p.common.ego.min_velocity);
     const auto time_to_reach_obj =
-      (distance_to_action + object.relative_distance_with_delay_compensation) /
+      (distance_to_conflict_point + object.relative_distance_with_delay_compensation) /
       std::max(object.velocity, p.common.filter.min_velocity);
     object.time_to_collision = std::abs(time_to_reach_ego - time_to_reach_obj);
     object.safe = object.time_to_collision > p.common.time_to_collision.margin;
@@ -635,7 +635,7 @@ auto generate_half_lanelet(
 
 auto get_range_for_rss(
   const std::shared_ptr<PlanningValidatorContext> & context,
-  [[maybe_unused]] const double distance_to_action, const double reaction_time,
+  [[maybe_unused]] const double distance_to_conflict_point, const double reaction_time,
   const double max_deceleration, const double max_velocity,
   const rear_collision_checker_node::Params & parameters) -> std::pair<double, double>
 {
@@ -660,22 +660,23 @@ auto get_range_for_rss(
 }
 
 auto get_range_for_ttc(
-  const std::shared_ptr<PlanningValidatorContext> & context, const double distance_to_action,
-  [[maybe_unused]] const double reaction_time, [[maybe_unused]] const double max_deceleration,
-  const double max_velocity, const rear_collision_checker_node::Params & parameters)
-  -> std::pair<double, double>
+  const std::shared_ptr<PlanningValidatorContext> & context,
+  const double distance_to_conflict_point, [[maybe_unused]] const double reaction_time,
+  [[maybe_unused]] const double max_deceleration, const double max_velocity,
+  const rear_collision_checker_node::Params & parameters) -> std::pair<double, double>
 {
   const auto & p = parameters;
   const auto & current_velocity = context->data->current_kinematics->twist.twist.linear.x;
 
   const auto time_to_reach_ego =
-    distance_to_action / std::max(current_velocity, p.common.ego.min_velocity);
+    distance_to_conflict_point / std::max(current_velocity, p.common.ego.min_velocity);
 
   const auto forward_distance =
     p.common.pointcloud.range.buffer + context->vehicle_info.max_longitudinal_offset_m;
   const auto backward_distance =
     p.common.pointcloud.range.buffer +
-    (time_to_reach_ego + p.common.time_to_collision.margin) * max_velocity - distance_to_action;
+    (time_to_reach_ego + p.common.time_to_collision.margin) * max_velocity -
+    distance_to_conflict_point;
 
   return std::make_pair(forward_distance, backward_distance);
 }
