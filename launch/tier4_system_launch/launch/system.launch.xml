@@ -94,7 +94,9 @@
 
     <!-- Pipeline Latency Monitor -->
     <group>
-      <include file="$(find-pkg-share autoware_pipeline_latency_monitor)/launch/pipeline_latency_monitor.launch.xml"/>
+      <include file="$(find-pkg-share autoware_pipeline_latency_monitor)/launch/pipeline_latency_monitor.launch.xml">
+        <arg name="config_file" value="$(var pipeline_latency_monitor_param_path)"/>
+      </include>
     </group>
 
     <!-- Service Log Checker -->
