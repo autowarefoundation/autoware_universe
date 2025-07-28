@@ -471,7 +471,7 @@ std::vector<GPUMonitorBase::GpuStatus> GPUMonitor::getGPUStatus()
       continue;
     }
 
-    unsigned long long clocksThrottleReasons = 0LL;
+    unsigned long long clocksThrottleReasons = 0LL;  // NOLINT
     ret = nvmlDeviceGetCurrentClocksThrottleReasons(itr->device, &clocksThrottleReasons);
     if (ret != NVML_SUCCESS) {
       continue;
@@ -479,7 +479,7 @@ std::vector<GPUMonitorBase::GpuStatus> GPUMonitor::getGPUStatus()
 
     int thermal_throttling = DiagStatus::OK;
     while (clocksThrottleReasons) {
-      unsigned long long flag = clocksThrottleReasons & ((~clocksThrottleReasons) + 1);
+      unsigned long long flag = clocksThrottleReasons & ((~clocksThrottleReasons) + 1);  // NOLINT
       clocksThrottleReasons ^= flag;
 
       switch (flag) {
