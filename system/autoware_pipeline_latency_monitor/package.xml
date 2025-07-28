@@ -11,11 +11,11 @@
   <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
   <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
 
+  <license>Apache License 2.0</license>
+
   <author email="maxime.clement@tier4.jp">Maxime CLEMENT</author>
   <author email="kyoichi.sugahara@tier4.jp">Kyoichi Sugahara</author>
   <author email="takeshi.iwanari@tier4.jp">Takeshi Iwanari</author>
-
-  <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
 
