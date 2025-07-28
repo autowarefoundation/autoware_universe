@@ -590,14 +590,15 @@ ProjectionToBound find_closest_segment(
 }
 
 ProjectionsToBound get_closest_boundary_segments_from_side(
-  const BoundarySideWithIdx & boundaries, const EgoSides & ego_sides_from_footprints)
+  const TrajectoryPoints & ego_pred_traj, const BoundarySideWithIdx & boundaries,
+  const EgoSides & ego_sides_from_footprints)
 {
   ProjectionsToBound side;
   for (const auto & side_key : g_side_keys) {
     side[side_key].reserve(ego_sides_from_footprints.size());
   }
 
-  for (size_t i = 0; i < ego_sides_from_footprints.size(); ++i) {
+  for (size_t i = 0; i < ego_pred_traj.size(); ++i) {
     const auto & fp = ego_sides_from_footprints[i];
 
     const auto & ego_lb = fp.left.second;
@@ -606,8 +607,8 @@ ProjectionsToBound get_closest_boundary_segments_from_side(
     const auto rear_seg = Segment2d(ego_lb, ego_rb);
 
     for (const auto & side_key : g_side_keys) {
-      const auto closest_bound =
-        find_closest_segment(fp[side_key], rear_seg, i, boundaries[side_key]);
+      auto closest_bound = find_closest_segment(fp[side_key], rear_seg, i, boundaries[side_key]);
+      closest_bound.time_from_start = rclcpp::Duration(ego_pred_traj[i].time_from_start).seconds();
       side[side_key].push_back(closest_bound);
     }
   }
@@ -722,5 +723,18 @@ tl::expected<std::vector<lanelet::LineString3d>, std::string> get_uncrossable_li
   }
 
   return nearby_linestrings;
+}
+
+TrajectoryPoints trim_pred_path(const TrajectoryPoints & ego_pred_traj, const double cutoff_time_s)
+{
+  TrajectoryPoints trimmed_traj;
+  trimmed_traj.reserve(ego_pred_traj.size());
+  for (const auto & p : ego_pred_traj) {
+    trimmed_traj.push_back(p);
+    if (rclcpp::Duration(p.time_from_start).seconds() > cutoff_time_s) {
+      break;
+    }
+  }
+  return trimmed_traj;
 }
 }  // namespace autoware::boundary_departure_checker::utils

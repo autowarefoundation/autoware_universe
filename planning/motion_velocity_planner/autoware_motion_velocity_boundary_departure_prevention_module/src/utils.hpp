@@ -114,12 +114,13 @@ inline Point2d to_pt2d(const geometry_msgs::msg::Point & point)
  * @param departure_points Departure points for left and right sides of the ego vehicle.
  * @param vehicle_length   Length of the ego vehicle, used to determine grouping distance.
  * @param enable_type      Set of departure types to include in the interval grouping.
+ * @param is_departure_persist Checks to insert departure point to departure intervals.
  * @return A list of departure intervals representing potential boundary departure risks.
  */
 DepartureIntervals init_departure_intervals(
   const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
   const Side<DeparturePoints> & departure_points, const double vehicle_length,
-  const std::unordered_set<DepartureType> & enable_type);
+  const std::unordered_set<DepartureType> & enable_type, const bool is_departure_persist);
 
 /**
  * @brief Update and merge departure intervals based on current trajectory and ego state.
@@ -138,14 +139,18 @@ DepartureIntervals init_departure_intervals(
  * @param[in] ego_dist_from_traj_front Ego’s current distance along the trajectory.
  * @param[in] th_pt_shift_dist_m Threshold distance for detecting shifted points.
  * @param[in] th_pt_shift_angle_rad Threshold angle for detecting shifted points.
+ * @param[in] enable_type Set of enabled departure types to consider for intervals.
  * @param[in] enable_type Enabled departure types.
+ * @param[in] is_reset_interval Flags to reset departure intervals is no departure point found.
+ * @param[in] is_departure_persist Checks to insert departure point to departure intervals.
  */
 void update_departure_intervals(
   DepartureIntervals & departure_intervals, Side<DeparturePoints> & departure_points,
   const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const double vehicle_length_m,
   const TrajectoryPoint & ref_traj_fr_pt, const double ego_dist_from_traj_front,
   const double th_pt_shift_dist_m, const double th_pt_shift_angle_rad,
-  const std::unordered_set<DepartureType> & enable_type);
+  const std::unordered_set<DepartureType> & enable_type, const bool is_reset_interval,
+  const bool is_departure_persist);
 
 /**
  * @brief Refresh and add critical departure points based on updated trajectory.
