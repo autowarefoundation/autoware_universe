@@ -56,7 +56,6 @@ stop
 @enduml
 ```
 
-
 ### Ego Trajectory
 
 The intersection_collision_checker module utilizes the ego trajectory subscribed to by planning_validator node, it uses the resampled trajectory to avoid clustered trajectory points in low velocity areas.
@@ -156,22 +155,25 @@ stop
 
 For each tracked object, the velocity estimation is done with linear regression, using the last N samples of distance measurements and time stamps.
 If any of the following conditions are met the tracking information is reset and the object is handled as a new object:
+
 - Computed raw velocity exceeds threshold (parameterized) -> Indicates a large jump in pcd object position.
 - Computed acceleration exceeds threshold (parameterized) -> Indicates a large change in estimated velocity.
 
 ## Parameters
 
-| Name               | Unit   | Type   | Description                                                                                 | Default value |
-| :----------------- | ------ | ------ | ------------------------------------------------------------------------------------------- | ------------- |
-| `enable`           | [-]    | bool   | Flag to enable/disable the check globally                                                   | true          |
-| `detection_range`  | [m]    | double | Range of detection from ego position, pointcloud points beyond this range are filtered out  | 50.0          |
-| `ttc_threshold`    | [s]    | double | Threshold value for the difference between ego and object reach times to trigger and a stop | 1.0           |
-| `ego_deceleration` | [m/ss] | double | Ego deceleration relate used to estimate ego stopping time                                  | 1.0           |
-| `min_time_horizon` | [s]    | double | Minimum time horizon to check ahead along ego trajectory                                    | 10.0          |
-| `on_time_buffer`   | [s]    | double | Continuous collision detection time required to judge as unsafe                             | 0.5           |
-| `off_time_buffer`  | [s]    | double | Continuous no collision detection time required to clear unsafe decision                    | 1.0           |
+| Name                  | Unit   | Type   | Description                                                                                 | Default value |
+| :-------------------- | ------ | ------ | ------------------------------------------------------------------------------------------- | ------------- |
+| `enable`              | [-]    | bool   | Flag to enable/disable the check globally                                                   | true          |
+| `detection_range`     | [m]    | double | Range of detection from ego position, pointcloud points beyond this range are filtered out  | 50.0          |
+| `ttc_threshold`       | [s]    | double | Threshold value for the difference between ego and object reach times to trigger and a stop | 1.0           |
+| `ego_deceleration`    | [m/ss] | double | Ego deceleration relate used to estimate ego stopping time                                  | 1.0           |
+| `min_time_horizon`    | [s]    | double | Minimum time horizon to check ahead along ego trajectory                                    | 10.0          |
+| `on_time_buffer`      | [s]    | double | Continuous collision detection time required to judge as unsafe                             | 0.5           |
+| `off_time_buffer`     | [s]    | double | Continuous no collision detection time required to clear unsafe decision                    | 1.0           |
+| `filter.min_velocity` | [m/s]  | double | Minimum velocity threshold to determing moving object                                       | 1.0           |
+| `filter.moving_time`  | [s]    | double | Minimum duration object needs to statisfy min velocity condition to classify as moving      | 1.0           |
 
-### Lanelet Selection Flags
+### Target Lanes Parameters
 
 | Name                                | Unit  | Type   | Description                                     | Default value |
 | :---------------------------------- | ----- | ------ | ----------------------------------------------- | ------------- |
@@ -184,16 +186,21 @@ If any of the following conditions are met the tracking information is reset and
 
 ### Pointcloud Parameters
 
-| Name                               | Unit | Type   | Description                                                                    | Default value |
-| :--------------------------------- | ---- | ------ | ------------------------------------------------------------------------------ | ------------- |
-| `pointcloud.height_buffer`         | [m]  | double | Height offset to add above ego vehicle height when filtering pointcloud points | true          |
-| `pointcloud.min_height`            | [m]  | double | Minimum height threshold for filtering pointcloud points                       | 50.0          |
-| `pointcloud.voxel_grid_filter.x`   | [m]  | double | x value for voxel leaf size                                                    | 1.0           |
-| `pointcloud.voxel_grid_filter.y`   | [m]  | double | y value for voxel leaf size                                                    | 1.0           |
-| `pointcloud.voxel_grid_filter.z`   | [m]  | double | z value for voxel leaf size                                                    | 10.0          |
-| `pointcloud.clustering.tolerance`  | [m]  | double | Distance tolerance between two points in a cluster                             | 1.0           |
-| `pointcloud.clustering.min_height` | [m]  | double | Minimum height of a cluster to be considered as a target                       | 1.0           |
-| `pointcloud.clustering.min_size`   | [-]  | double | Minimum number of points in a cluster to be considered as a target             | 1.0           |
-| `pointcloud.clustering.max_size`   | [-]  | double | Maximum number of points in a cluster to be considered as a target             | 1.0           |
-| `pointcloud.observation_time`      | [s]  | double | Minimum detection time for a pointcloud object to be considered reliable       | 1.0           |
-| `pointcloud.latency`               | [s]  | double | Time delay used to compensate for latency in pointcloud data                   | 1.0           |
+| Name                                              | Unit | Type   | Description                                                                    | Default value |
+| :------------------------------------------------ | ---- | ------ | ------------------------------------------------------------------------------ | ------------- |
+| `pointcloud.height_buffer`                        | [m]  | double | Height offset to add above ego vehicle height when filtering pointcloud points | 0.5           |
+| `pointcloud.min_height`                           | [m]  | double | Minimum height threshold for filtering pointcloud points                       | 0.5           |
+| `pointcloud.voxel_grid_filter.x`                  | [m]  | double | x value for voxel leaf size                                                    | 0.2           |
+| `pointcloud.voxel_grid_filter.y`                  | [m]  | double | y value for voxel leaf size                                                    | 0.2           |
+| `pointcloud.voxel_grid_filter.z`                  | [m]  | double | z value for voxel leaf size                                                    | 0.2           |
+| `pointcloud.voxel_grid_filter.min_size`           | [-]  | int    | min number of points per voxel leaf                                            | 3             |
+| `pointcloud.clustering.tolerance`                 | [m]  | double | Distance tolerance between two points in a cluster                             | 0.5           |
+| `pointcloud.clustering.min_height`                | [m]  | double | Minimum height of a cluster to be considered as a target                       | 0.5           |
+| `pointcloud.clustering.min_size`                  | [-]  | int    | Minimum number of points in a cluster to be considered as a target             | 10            |
+| `pointcloud.clustering.max_size`                  | [-]  | int    | Maximum number of points in a cluster to be considered as a target             | 10000         |
+| `pointcloud.velocity_estimation.max_acceleration` | [s]  | double | Max acceleration threshold above which object tracking is reset                | 20.0          |
+| `pointcloud.velocity_estimation.max_velocity`     | [s]  | double | Max velocity threshold above which object tracking is reset                    | 25.0          |
+| `pointcloud.velocity_estimation.observation_time` | [s]  | double | Minimum tracking time for a pointcloud object to be considered reliable        | 0.3           |
+| `pointcloud.velocity_estimation.max_history_time` | [s]  | double | Maximum duration since last object update above which object will be discarded | 0.5           |
+| `pointcloud.velocity_estimation.buffer_size`      | [-]  | int    | Number of data samples to keep for object velocity estimation                  | 10            |
+| `pointcloud.latency`                              | [s]  | double | Time delay used to compensate for latency in pointcloud data                   | 0.3           |
