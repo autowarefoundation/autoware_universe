@@ -202,8 +202,8 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
   const auto [ego_pose, ego_pose_inv] = ego_pose_result.value();
   const auto extrinsic_vectors = get_camera_extrinsics_vector();
   if (!extrinsic_vectors.has_value()) {
-    return;
     data_store_->unfreeze_updates();
+    return;
   }
 
   if (stop_watch_ptr_) stop_watch_ptr_->tic("latency/inference");
