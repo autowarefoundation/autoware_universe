@@ -19,8 +19,9 @@
 
 #include <Eigen/Dense>
 #include <image_transport/image_transport.hpp>
-#include <tf2/convert.h>
+
 #include <tf2/LinearMath/Transform.h>
+#include <tf2/convert.h>
 
 #include <algorithm>
 #include <cmath>
@@ -338,12 +339,11 @@ StreamPetrNode::get_ego_pose_vector(const rclcpp::Time & stamp)
     initial_transform_set_ = true;
   }
 
-  
   // Get initial position
   tf2::Vector3 initial_translation(
     initial_transform_.transform.translation.x, initial_transform_.transform.translation.y,
     initial_transform_.transform.translation.z);
-  
+
   // Get current transform
   tf2::Quaternion current_quat(
     current_transform.transform.rotation.x, current_transform.transform.rotation.y,
@@ -351,10 +351,10 @@ StreamPetrNode::get_ego_pose_vector(const rclcpp::Time & stamp)
   tf2::Vector3 current_translation(
     current_transform.transform.translation.x, current_transform.transform.translation.y,
     current_transform.transform.translation.z);
-  
+
   // Calculate relative position (current - initial)
   tf2::Vector3 relative_translation = current_translation - initial_translation;
-  
+
   // Use absolute rotation (not relative to initial rotation)
   tf2::Matrix3x3 relative_rot(current_quat);
 
