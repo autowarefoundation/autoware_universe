@@ -21,7 +21,6 @@
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
-#include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
@@ -48,10 +47,6 @@ namespace autoware::planning_validator
 using autoware::vehicle_info_utils::VehicleInfo;
 using autoware_internal_debug_msgs::msg::StringStamped;
 using autoware_map_msgs::msg::LaneletMapBin;
-using autoware_perception_msgs::msg::ObjectClassification;
-using autoware_perception_msgs::msg::PredictedObject;
-using autoware_perception_msgs::msg::PredictedObjects;
-using autoware_perception_msgs::msg::Shape;
 using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
