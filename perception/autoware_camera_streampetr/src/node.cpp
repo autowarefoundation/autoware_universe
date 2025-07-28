@@ -192,17 +192,19 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
     data_store_->restart();
     return;
   }
-
   if (multithreading_) data_store_->freeze_updates();
 
   const auto ego_pose_result = get_ego_pose_vector(stamp);
   if (!ego_pose_result.has_value()) {
+    data_store_->unfreeze_updates();
     return;
   }
   const auto [ego_pose, ego_pose_inv] = ego_pose_result.value();
-
-  const auto extrinsic_vectors = get_camera_extrinsics_vector(data_store_->get_camera_link_names());
-  if (!extrinsic_vectors.has_value()) return;
+  const auto extrinsic_vectors = get_camera_extrinsics_vector();
+  if (!extrinsic_vectors.has_value()) {
+    return;
+    data_store_->unfreeze_updates();
+  }
 
   if (stop_watch_ptr_) stop_watch_ptr_->tic("latency/inference");
   std::vector<float> forward_time_ms;
@@ -245,12 +247,12 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
   }
 }
 
-std::optional<std::vector<float>> StreamPetrNode::get_camera_extrinsics_vector(
-  const std::vector<std::string> & camera_links)
+std::optional<std::vector<float>> StreamPetrNode::get_camera_extrinsics_vector()
 {
   constexpr size_t num_row = 4;
   constexpr size_t num_col = 4;
 
+  std::vector<std::string> camera_links = data_store_->get_camera_link_names();
   std::vector<float> intrinsics_all = data_store_->get_camera_info_vector();
 
   std::vector<float> res;
