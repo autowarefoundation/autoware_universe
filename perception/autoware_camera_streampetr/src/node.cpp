@@ -338,35 +338,25 @@ StreamPetrNode::get_ego_pose_vector(const rclcpp::Time & stamp)
     initial_transform_set_ = true;
   }
 
-  // Calculate relative transform from initial to current
-  tf2::Transform initial_tf, current_tf, relative_tf;
   
-  // Convert initial transform
-  tf2::Quaternion initial_quat(
-    initial_transform_.transform.rotation.x, initial_transform_.transform.rotation.y,
-    initial_transform_.transform.rotation.z, initial_transform_.transform.rotation.w);
+  // Get initial position
   tf2::Vector3 initial_translation(
     initial_transform_.transform.translation.x, initial_transform_.transform.translation.y,
     initial_transform_.transform.translation.z);
-  initial_tf.setRotation(initial_quat);
-  initial_tf.setOrigin(initial_translation);
   
-  // Convert current transform
+  // Get current transform
   tf2::Quaternion current_quat(
     current_transform.transform.rotation.x, current_transform.transform.rotation.y,
     current_transform.transform.rotation.z, current_transform.transform.rotation.w);
   tf2::Vector3 current_translation(
     current_transform.transform.translation.x, current_transform.transform.translation.y,
     current_transform.transform.translation.z);
-  current_tf.setRotation(current_quat);
-  current_tf.setOrigin(current_translation);
   
-  // Calculate relative transform: relative = initial^-1 * current
-  relative_tf = initial_tf.inverse() * current_tf;
+  // Calculate relative position (current - initial)
+  tf2::Vector3 relative_translation = current_translation - initial_translation;
   
-  // Extract rotation matrix and translation vector
-  tf2::Matrix3x3 relative_rot(relative_tf.getRotation());
-  tf2::Vector3 relative_translation = relative_tf.getOrigin();
+  // Use absolute rotation (not relative to initial rotation)
+  tf2::Matrix3x3 relative_rot(current_quat);
 
   std::vector<float> egopose = {
     static_cast<float>(relative_rot[0][0]),
@@ -407,7 +397,6 @@ StreamPetrNode::get_ego_pose_vector(const rclcpp::Time & stamp)
     0.0f,
     0.0f,
     1.0f};
-
   return std::make_pair(egopose, inverse_egopose);
 }
 
