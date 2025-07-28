@@ -32,6 +32,19 @@
 #include <unordered_map>
 #include <vector>
 
+namespace
+{
+using autoware::motion_velocity_planner::experimental::DepartureType;
+std::string to_string(DepartureType type)
+{
+  auto str = std::string(magic_enum::enum_name(type));
+  std::transform(
+    str.begin(), str.end(), str.begin(), [](unsigned char c) { return std::tolower(c); });
+  std::replace(str.begin(), str.end(), '_', ' ');
+  return str;
+}
+}  // namespace
+
 namespace autoware::motion_velocity_planner::experimental
 {
 
@@ -51,20 +64,24 @@ void BoundaryDeparturePreventionModule::init(
   updater_ptr_->setHardwareID("motion_velocity_boundary_departure_prevention");
   updater_ptr_->add(
     "boundary_departure", [this](diagnostic_updater::DiagnosticStatusWrapper & stat) {
-      int8_t lvl{DiagStatus::OK};
-      std::string msg{"OK"};
+      const auto type = std::invoke([&]() {
+        if (output_.diagnostic_output[DepartureType::CRITICAL_DEPARTURE]) {
+          return DepartureType::CRITICAL_DEPARTURE;
+        }
+        if (output_.diagnostic_output[DepartureType::APPROACHING_DEPARTURE]) {
+          return DepartureType::APPROACHING_DEPARTURE;
+        }
+        if (output_.diagnostic_output[DepartureType::NEAR_BOUNDARY]) {
+          return DepartureType::NEAR_BOUNDARY;
+        }
+        return DepartureType::NONE;
+      });
 
-      if (output_.diagnostic_output[DepartureType::CRITICAL_DEPARTURE]) {
-        lvl = node_param_.diagnostic_level[DepartureType::CRITICAL_DEPARTURE];
-        msg = "vehicle is leaving boundary";
-        RCLCPP_ERROR_THROTTLE(logger_, *clock_ptr_, 500, "%s", msg.c_str());
-      } else if (output_.diagnostic_output[DepartureType::APPROACHING_DEPARTURE]) {
-        lvl = node_param_.diagnostic_level[DepartureType::APPROACHING_DEPARTURE];
-        msg = "vehicle is moving towards the boundary";
+      auto lvl = node_param_.diagnostic_level[type];
+      auto msg = to_string(type);
+
+      if (lvl != DiagStatus::OK && type != DepartureType::NONE) {
         RCLCPP_ERROR_THROTTLE(logger_, *clock_ptr_, 1000, "%s", msg.c_str());
-      } else if (output_.diagnostic_output[DepartureType::NEAR_BOUNDARY]) {
-        lvl = node_param_.diagnostic_level[DepartureType::NEAR_BOUNDARY];
-        msg = "vehicle is near boundary";
       }
 
       stat.summary(lvl, msg);
@@ -251,6 +268,7 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
 
   if (!is_autonomous_mode()) {
     RCLCPP_DEBUG_THROTTLE(logger_, *clock_ptr_, throttle_duration_ms, "Not in autonomous mode.");
+    updater_ptr_->force_update();
     return {};
   }
 
@@ -277,12 +295,12 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
       return msg;
     }));
 
+    updater_ptr_->force_update();
     if (!result_opt) {
       RCLCPP_DEBUG(logger_, "Planning skipped: %s", result_opt.error().c_str());
       return {};
     }
 
-    updater_ptr_->force_update();
     return *result_opt;
   } catch (const std::exception & e) {
     RCLCPP_WARN(logger_, "Exception is caught: %s", e.what());

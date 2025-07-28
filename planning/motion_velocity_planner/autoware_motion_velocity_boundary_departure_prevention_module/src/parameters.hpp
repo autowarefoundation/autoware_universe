@@ -143,7 +143,7 @@ struct NodeParam
     });
 
     const auto select_diag_lvl = [](const int level) {
-      if (DiagStatus::OK) {
+      if (level == 0) {
         return DiagStatus::OK;
       }
 
@@ -169,6 +169,7 @@ struct NodeParam
       const auto critical_departure_diag_lvl =
         select_diag_lvl(get_or_declare_parameter<int>(node, ns_diag + "critical_departure"));
 
+      diag.insert({DepartureType::NONE, DiagStatus::OK});
       diag.insert({DepartureType::NEAR_BOUNDARY, near_boundary_diag_lvl});
       diag.insert({DepartureType::APPROACHING_DEPARTURE, approaching_departure_diag_lvl});
       diag.insert({DepartureType::CRITICAL_DEPARTURE, critical_departure_diag_lvl});

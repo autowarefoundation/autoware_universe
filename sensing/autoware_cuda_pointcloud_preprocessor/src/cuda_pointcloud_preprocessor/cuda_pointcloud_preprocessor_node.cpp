@@ -336,10 +336,16 @@ void CudaPointcloudPreprocessorNode::updateTwistQueue(double first_point_stamp)
   for (const auto & msg : twist_msgs) {
     twistCallback(*msg);
   }
-  while (twist_queue_.size() > 1 &&
-         rclcpp::Time(twist_queue_.front().header.stamp).seconds() < first_point_stamp) {
-    twist_queue_.pop_front();
-  }
+
+  // Find the last twist message that is before the first point's timestamp
+  // and remove all older messages.
+  auto it = std::lower_bound(
+    twist_queue_.begin(), twist_queue_.end(), first_point_stamp,
+    [](const auto & twist, const double stamp) {
+      return rclcpp::Time(twist.header.stamp).seconds() < stamp;
+    });
+
+  twist_queue_.erase(twist_queue_.begin(), it);
 }
 
 void CudaPointcloudPreprocessorNode::updateImuQueue(double first_point_stamp)
@@ -350,10 +356,16 @@ void CudaPointcloudPreprocessorNode::updateImuQueue(double first_point_stamp)
   for (const auto & msg : imu_msgs) {
     imuCallback(*msg);
   }
-  while (angular_velocity_queue_.size() > 1 &&
-         rclcpp::Time(angular_velocity_queue_.front().header.stamp).seconds() < first_point_stamp) {
-    angular_velocity_queue_.pop_front();
-  }
+
+  // Find the last angular velocity message that is before the first point's timestamp
+  // and remove all older messages.
+  auto it = std::lower_bound(
+    angular_velocity_queue_.begin(), angular_velocity_queue_.end(), first_point_stamp,
+    [](const auto & angular_velocity, const double stamp) {
+      return rclcpp::Time(angular_velocity.header.stamp).seconds() < stamp;
+    });
+
+  angular_velocity_queue_.erase(angular_velocity_queue_.begin(), it);
 }
 
 std::optional<geometry_msgs::msg::TransformStamped>
