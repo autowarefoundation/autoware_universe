@@ -238,7 +238,7 @@ bool LaneChangeInterface::canTransitSuccessState()
 
 bool LaneChangeInterface::canTransitFailureState()
 {
-  const auto force_activated = [&]() {
+  const auto force_activated = std::invoke([&]() {
     const bool is_force_activated = std::any_of(
       rtc_interface_ptr_map_.begin(), rtc_interface_ptr_map_.end(),
       [&](const auto & rtc) { return rtc.second->isForceActivated(uuid_map_.at(rtc.first)); });
@@ -249,9 +249,9 @@ bool LaneChangeInterface::canTransitFailureState()
       return false;
     }
     return is_force_activated;
-  };
+  });
 
-  if (force_activated()) {
+  if (force_activated) {
     RCLCPP_WARN_THROTTLE(getLogger(), *clock_, 5000, "unsafe but force executed");
     return false;
   }
