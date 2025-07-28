@@ -16,14 +16,41 @@
 
 #include <autoware/planning_test_manager/autoware_planning_test_manager_utils.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
+#include <autoware_test_utils/mock_data_parser.hpp>
 
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace autoware::behavior_path_planner::testing
 {
 using autoware::test_utils::get_absolute_path_to_config;
 using autoware_planning_test_manager::utils::makeBehaviorRouteFromLaneId;
+
+std::string get_absolute_path_to_test_data(
+  const std::string & package_name, const std::string & route_filename)
+{
+  const auto dir = ament_index_cpp::get_package_share_directory(package_name);
+  return dir + "/test_data/" + route_filename;
+}
+
+template <class T>
+T loadMessageInYaml(
+  const std::string & yaml_file, std::vector<std::string> corrupted_check_list = {})
+{
+  const auto yaml_path =
+    get_absolute_path_to_test_data("autoware_behavior_path_start_planner_module", yaml_file);
+
+  YAML::Node node = YAML::LoadFile(yaml_path);
+  for (auto & word : corrupted_check_list) {
+    if (node[word].IsNull()) {
+      throw std::runtime_error(
+        "Failed to parse YAML file: " + yaml_path + ". The file might be corrupted.");
+    }
+  }
+
+  return autoware::test_utils::parse<T>(node);
+}
 
 rclcpp::NodeOptions StartPlannerTestHelper::make_node_options()
 {
@@ -93,6 +120,22 @@ void StartPlannerTestHelper::set_costmap(
   costmap.data = std::vector<int8_t>(costmap.info.width * costmap.info.height, 0);
 
   planner_data->costmap = std::make_shared<nav_msgs::msg::OccupancyGrid>(costmap);
+}
+
+autoware_planning_msgs::msg::LaneletRoute StartPlannerTestHelper::set_route_from_yaml(
+  std::shared_ptr<PlannerData> & planner_data, const std::string & yaml_file)
+{
+  const auto shoulder_map_path = autoware::test_utils::get_absolute_path_to_lanelet_map(
+    "autoware_test_utils", "road_shoulder/lanelet2_map.osm");
+  const auto map_bin_msg = autoware::test_utils::make_map_bin_msg(shoulder_map_path, 0.5);
+  auto route_handler = std::make_shared<autoware::route_handler::RouteHandler>(map_bin_msg);
+
+  const auto route = loadMessageInYaml<autoware_planning_msgs::msg::LaneletRoute>(
+    yaml_file, {"start_pose", "goal_pose"});
+  route_handler->setRoute(route);
+  planner_data->route_handler = route_handler;
+
+  return route;
 }
 
 }  // namespace autoware::behavior_path_planner::testing
