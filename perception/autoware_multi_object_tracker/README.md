@@ -138,6 +138,7 @@ To evaluate scalability with object count:
 - Manually enable the following functions in the test source:
   - `profilePerformanceVsCarCount()`
   - `profilePerformanceVsPedestrianCount()`
+  - `profilePerformanceVsUnknownObjectCount()`
 
 These run additional profiling scenarios.
 

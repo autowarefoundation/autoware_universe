@@ -479,8 +479,8 @@ void TrackingTestBench::initializeObjects(const TrackingScenarioConfig & params)
 {
   // Initialize cars
   for (int lane = 0; lane < params.num_lanes; ++lane) {
-    auto y = lane * params.lane_width;
-    auto x = static_cast<float>(-params.cars_per_lane * params.car_spacing_mean);
+    const float y = lane * params.lane_width;
+    float x = static_cast<float>(-params.cars_per_lane * params.car_spacing_mean);
 
     for (int i = 0; i < params.cars_per_lane; ++i) {
       std::string id = "car_l" + std::to_string(lane) + "_" + std::to_string(i);
@@ -493,6 +493,8 @@ void TrackingTestBench::initializeObjects(const TrackingScenarioConfig & params)
   const float y_spacing =
     params.pedestrian_cluster_spacing;  // Use 80% of road width for pedestrian areas
   const int y_clusters = std::max(1, static_cast<int>(std::sqrt(params.pedestrian_clusters)));
+  const float cluster_x_offset = (y_clusters - 1) * params.pedestrian_cluster_spacing / 2.0f;
+  const float cluster_y_offset = (y_clusters - 1) * y_spacing + params.lane_width * 0.5f;
 
   // Initialize pedestrians
   for (int cluster = 0; cluster < params.pedestrian_clusters; ++cluster) {
@@ -500,13 +502,8 @@ void TrackingTestBench::initializeObjects(const TrackingScenarioConfig & params)
     const int x_idx = cluster % y_clusters;
     const int y_idx = cluster / y_clusters;
 
-    auto center_x = static_cast<float>(
-      x_idx * params.pedestrian_cluster_spacing -
-      (y_clusters - 1) * params.pedestrian_cluster_spacing / 2.0f);
-
-    auto center_y = static_cast<float>(
-      (y_idx)*y_spacing - (y_clusters - 1) * y_spacing -
-      params.lane_width * 0.5f);  // Offset from road center
+    const float center_x = x_idx * params.pedestrian_cluster_spacing - cluster_x_offset;
+    const float center_y = y_idx * y_spacing - cluster_y_offset;
 
     for (int j = 0; j < params.pedestrians_per_cluster; ++j) {
       std::string id = "ped_c" + std::to_string(cluster) + "_" + std::to_string(j);
@@ -515,9 +512,10 @@ void TrackingTestBench::initializeObjects(const TrackingScenarioConfig & params)
   }
   // Initialize unknown objects
   // Start unknown objects after the last car's x position
-  float unknown_start_x = -params.unknown_objects * 6.0f / 2.0f;
+  float unknown_start_x = -params.unknown_objects * 3.0f;  // 6.0f/2.0f
   float unknown_start_y =
     (params.num_lanes + 1) * params.lane_width + 25.0f;  // Start above the road
+
   for (int i = 0; i < params.unknown_objects; ++i) {
     std::string id = "unk_" + std::to_string(i);
     // Wide scatter: uniform distribution in ±50m
@@ -587,9 +585,10 @@ void TrackingTestBench::addNewUnknown(const std::string & id, float x, float y)
     state.twist.linear.x = speed * cos_dist_(rng_);
     state.twist.linear.y = speed * sin_dist_(rng_);
   }
+  // Shape properties
   state.z_dimension = z_size_noise_(rng_);
-
   state.base_size = base_size_dist_(rng_);
+
   // Initial shape
   updateUnknownShape(state);
   unknown_states_[id] = state;

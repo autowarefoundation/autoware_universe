@@ -275,18 +275,22 @@ void profilePerformance(const ProfileConfig & config)
   }
   std::cout << "\n";
 
+  // Pre-calculate constants
+  const int total_iterations = static_cast<int>(config.simulation_duration * 10.0f);
+  const int expected_timings_size = config.iterations_per_count * total_iterations;
+
+  // Main profiling loop
   for (int target_count = config.min_count; target_count <= config.max_count;
        target_count += config.step) {
     TrackingScenarioConfig params;
     config.config_updater(params, target_count);
 
     FunctionTimings total_timings;
-    total_timings.reserve(
-      config.iterations_per_count * static_cast<int>(config.simulation_duration * 10.0f));
+    total_timings.reserve(expected_timings_size);
 
+    // Timing accumulation
     for (int i = 0; i < config.iterations_per_count; ++i) {
-      const int num_iterations = static_cast<int>(config.simulation_duration * 10.0f);
-      total_timings.accumulate(runIterations(num_iterations, params));
+      total_timings.accumulate(runIterations(total_iterations, params));
     }
 
     total_timings.calculate();
