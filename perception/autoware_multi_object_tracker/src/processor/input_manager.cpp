@@ -109,7 +109,7 @@ void InputStream::onMessage(
   uncertainty::normalizeUncertainty(dynamic_objects);
 
   // If the channel does not trust existence probability, set it to default
-  if (!channel_.trust_existence_probability){
+  if (!channel_.trust_existence_probability) {
     for (auto & object : dynamic_objects.objects) {
       object.existence_probability = types::default_existence_probability;
     }
