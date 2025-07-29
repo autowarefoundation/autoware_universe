@@ -67,6 +67,7 @@
   <arg name="input/pointcloud" default="/sensing/lidar/concatenated/pointcloud" description="The topic will be used in the detection module"/>
   <arg name="mode" default="camera_lidar_fusion">
     <choice value="camera"/>
+    <choice value="camera_lidar"/>
     <choice value="camera_lidar_radar_fusion"/>
     <choice value="camera_lidar_fusion"/>
     <choice value="lidar_radar_fusion"/>
@@ -118,6 +119,8 @@
   <arg name="image_raw8" default="/sensing/camera/camera8/image_rect_color"/>
   <arg name="camera_info8" default="/sensing/camera/camera8/camera_info"/>
   <arg name="detection_rois8" default="/perception/object_recognition/detection/rois8"/>
+  <arg name="can_bus" default="/sensing/can_bus"/>
+  <arg name="scene_token" default="/sensing/scene_token"/>
   <arg name="image_number" default="6" description="choose image raw number(1-8)"/>
   <arg name="image_topic_name" default="image_rect_color" description="image topic name options `image_rect_color`, `image_raw"/>
   <arg name="segmentation_pointcloud_fusion_camera_ids" default="[0,1,5]" description="list of camera ids used for segmentation_pointcloud_fusion node"/>

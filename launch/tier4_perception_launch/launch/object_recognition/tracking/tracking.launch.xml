@@ -12,6 +12,7 @@
   <!-- Pipeline junctions -->
   <arg name="mode" default="lidar">
     <choice value="camera"/>
+    <choice value="camera_lidar"/>
     <choice value="camera_lidar_radar_fusion"/>
     <choice value="camera_lidar_fusion"/>
     <choice value="lidar_radar_fusion"/>
