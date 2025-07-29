@@ -398,7 +398,7 @@ void GyroBiasEstimator::estimate_scale_gyro(
     estimated_scale_angle_ = x_state_(1);
     p_angle_ = (Eigen::Matrix2d::Identity() - k_matrix * h_matrix) * p_angle_;
 
-    filtered_scale_angle_ = (alpha_) * filtered_scale_angle_ + (1 - alpha_) * estimated_scale_angle_;
+    filtered_scale_angle_ = (alpha_)*filtered_scale_angle_ + (1 - alpha_) * estimated_scale_angle_;
   }
   gyro_yaw_angle_ = ndt_yaw_angle_;  // reset the gyro yaw angle to the NDT yaw angle
 
@@ -528,7 +528,8 @@ void GyroBiasEstimator::estimate_scale_gyro(
           gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
           gyro_info_.scale_status_summary = "ERR";
           gyro_info_.scale_summary_message =
-            "Large gyro scale change detected in short period of time, check the IMU, NDT device or TF.";
+            "Large gyro scale change detected in short period of time, check the IMU, NDT device "
+            "or TF.";
         }
       }
 
