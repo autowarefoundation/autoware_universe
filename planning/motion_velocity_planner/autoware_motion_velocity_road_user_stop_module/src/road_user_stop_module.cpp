@@ -968,7 +968,7 @@ double RoadUserStopModule::calc_desired_stop_margin(
       const double ego_stop_margin = param.stop_planning.opposing_traffic.stop_margin;
 
       // NOTE: To avoid planning a sto position immediately in front of ego for an object that is
-      //       still distant we enforce a lower speed limit in the coasting time caluclation.
+      //       still distant we enforce a lower speed limit in the coasting time calculation.
       const double v_ego_limitted =
         std::max(v_ego, param.stop_planning.opposing_traffic.min_velocity_for_stop_planning);
       const double rel_vel = v_ego_limitted - v_obs;
