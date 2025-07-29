@@ -753,7 +753,7 @@ void NetMonitor::publishNetworkStatus()
     // Skip if network is not supported
     if (network.is_invalid) continue;
 
-    tier4_external_api_msgs::msg::NetworkInterfaceStatus interface_status;
+    auto & interface_status = network_status.interfaces.emplace_back();
     interface_status.name = network.interface_name;
     interface_status.rx_traffic = network.rx_traffic;
     interface_status.tx_traffic = network.tx_traffic;
@@ -761,7 +761,6 @@ void NetMonitor::publishNetworkStatus()
     interface_status.rx_errors = network.rx_errors;
     interface_status.tx_errors = network.tx_errors;
     interface_status.collisions = network.collisions;
-    network_status.interfaces.push_back(interface_status);
   }
 
   uint64_t total_errors = 0;
