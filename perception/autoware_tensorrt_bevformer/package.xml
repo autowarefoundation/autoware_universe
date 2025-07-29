@@ -22,7 +22,7 @@
   <depend>eigen</depend>
   <depend>geometry_msgs</depend>
   <depend>message_filters</depend>
-  <depend>opencv</depend>
+  <depend>libopencv-dev</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>
