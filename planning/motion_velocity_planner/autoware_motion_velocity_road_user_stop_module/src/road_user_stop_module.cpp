@@ -949,7 +949,6 @@ double RoadUserStopModule::calc_desired_stop_margin(
   // calculate default stop margin
   const double default_stop_margin = [&]() {
     const double v_ego = planner_data->current_odometry.twist.twist.linear.x;
-    const double current_acc = planner_data->current_acceleration.accel.accel.linear.x;
     const double v_obs = stop_obstacle.velocity;
 
     const auto ref_traj_length =
@@ -960,12 +959,7 @@ double RoadUserStopModule::calc_desired_stop_margin(
       const double a_ego = param.stop_planning.opposing_traffic.effective_deceleration;
       const double & bumper_to_bumper_distance = stop_obstacle.dist_to_collide_on_decimated_traj;
 
-      const double braking_distance =
-        autoware::motion_utils::calcDecelDistWithJerkAndAccConstraints(
-          v_ego, 0.0, current_acc, -a_ego, common_param_.limit_min_jerk,
-          common_param_.limit_max_accel)
-          .value_or(0.0);
-
+      const double braking_distance = v_ego * v_ego / (2 * a_ego);
       const double stopping_time = v_ego / a_ego;
       const double distance_obs_ego_braking = std::abs(v_obs * stopping_time);
 
