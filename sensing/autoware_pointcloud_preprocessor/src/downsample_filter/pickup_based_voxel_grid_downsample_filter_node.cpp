@@ -82,7 +82,7 @@ PickupBasedVoxelGridDownsampleFilterComponent::PickupBasedVoxelGridDownsampleFil
 
 void downsample_with_voxel_grid(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input,
-  VoxelSize voxel_size,
+  const VoxelSize & voxel_size,
   sensor_msgs::msg::PointCloud2 & output
 ){
   using VoxelKey = std::array<int, 3>;
