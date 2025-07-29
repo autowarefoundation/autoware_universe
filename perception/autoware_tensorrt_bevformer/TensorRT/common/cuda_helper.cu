@@ -1,4 +1,4 @@
-// Copyright 2025 AutoCore, Inc.
+// Copyright 2025 The Autoware Contributors
 //
 // Portions of this code are derived from the BEVFormer TensorRT implementation by Derry Lin:
 // https://github.com/DerryHub/BEVFormer_tensorrt
@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modified by AutoCore, Inc. in 2025.
+// Modified by The Autoware Contributors in 2025.
 // Original creation by Derry Lin on 2022/10/22.
 
 #include "cuda_helper.h"
