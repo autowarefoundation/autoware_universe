@@ -143,11 +143,23 @@ void SurroundObstacleCheckerDebugNode::publish()
   const auto visualization_msg = makeVisualizationMarker();
   debug_viz_pub_->publish(visualization_msg);
 
+  autoware_internal_planning_msgs::msg::SafetyFactorArray safety_factors;
+  safety_factors.header.stamp = clock_->now();
+  safety_factors.header.frame_id = "map";
+
+  if (stop_obstacle_point_ptr_ != nullptr) {
+    autoware_internal_planning_msgs::msg::SafetyFactor safety_factor;
+    safety_factor.is_safe = false;
+    safety_factor.type = autoware_internal_planning_msgs::msg::SafetyFactor::POINTCLOUD;
+    safety_factor.points.push_back(*stop_obstacle_point_ptr_);
+    safety_factors.factors.push_back(safety_factor);
+  }
+
   /* publish stop reason for autoware api */
   if (stop_pose_ptr_ != nullptr) {
     planning_factor_interface_->add(
       0.0, *stop_pose_ptr_, autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
-      autoware_internal_planning_msgs::msg::SafetyFactorArray{});
+      safety_factors);
   }
   planning_factor_interface_->publish();
 
