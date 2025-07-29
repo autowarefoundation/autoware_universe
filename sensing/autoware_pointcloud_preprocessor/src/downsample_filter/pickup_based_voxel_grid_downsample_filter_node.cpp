@@ -112,9 +112,7 @@ void extract_unique_voxel_point_indices(
       static_cast<int>((x + large_num_offset) * inverse_voxel_size_x),
       static_cast<int>((y + large_num_offset) * inverse_voxel_size_y),
       static_cast<int>((z + large_num_offset) * inverse_voxel_size_z)};
-
-    const size_t global_offset = point_index * input->point_step;
-    voxel_map.emplace(key, global_offset);
+    voxel_map.emplace(key, point_index);
   }
 }
 
@@ -126,7 +124,8 @@ void copy_filtered_point(
   size_t output_global_offset = 0;
   output.data.resize(voxel_map.size() * input->point_step);
   for (const auto & kv : voxel_map) {
-    std::memcpy(&output.data[output_global_offset], &input->data[kv.second], input->point_step);
+    const size_t byte_offset = kv.second * input->point_step;
+    std::memcpy(&output.data[output_global_offset], &input->data[byte_offset], input->point_step);
     output_global_offset += input->point_step;
   }
 
