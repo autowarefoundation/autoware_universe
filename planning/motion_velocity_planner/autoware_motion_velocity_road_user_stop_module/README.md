@@ -22,23 +22,29 @@ This module is activated if the launch parameter `launch_road_user_stop_module` 
 
 | Name            | Unit | Type   | Description                               | Default value |
 | :-------------- | :--- | :----- | :---------------------------------------- | :------------ |
-| default_margin  | [m]  | double | Default longitudinal margin to obstacle   | 6.0           |
+| default_margin  | [m]  | double | Default longitudinal margin to obstacle   | 5.0           |
 | terminal_margin | [m]  | double | Stop margin at the goal position          | 3.0           |
 | minimum_margin  | [m]  | double | Minimum stop margin for behavior decision | 3.0           |
 
+#### Opposing Traffic Parameters
+
+| Name                           | Unit    | Type   | Description                                                    | Default value |
+| :----------------------------- | :------ | :----- | :------------------------------------------------------------- | :------------ |
+| stop_margin                    | [m]     | double | Ideal stop-margin from moving opposing obstacle when ego stops | 10.0          |
+| max_negative_velocity          | [m/s]   | double | Maximum velocity of opposing traffic to consider stop planning | -0.1          |
+| min_velocity_for_stop_planning | [m/s]   | double | Minimum velocity of ego to consider stop planning              | 2.77          |
+| effective_deceleration         | [m/s^2] | double | Higher value brings final stop-margin closer to ideal value    | 4.0           |
+
 #### General Stop Planning Parameters
 
-| Name                                    | Unit    | Type   | Description                                                          | Default value |
-| :-------------------------------------- | :------ | :----- | :------------------------------------------------------------------- | :------------ |
-| max_negative_velocity                   | [m/s]   | double | Maximum negative velocity for objects moving away                    | -0.1          |
-| stop_margin_opposing_traffic            | [m]     | double | Stop margin for opposing traffic                                     | 10.0          |
-| effective_deceleration_opposing_traffic | [m/s^2] | double | Effective deceleration for opposing traffic calculation              | 4.0           |
-| hold_stop_velocity_threshold            | [m/s]   | double | Velocity threshold to hold stop position                             | 0.01          |
-| hold_stop_distance_threshold            | [m]     | double | Distance threshold to hold stop position                             | 0.3           |
-| limit_min_acc                           | [m/s^2] | double | Minimum acceleration limit                                           | -2.5          |
-| sudden_object_acc_threshold             | [m/s^2] | double | Acceleration threshold to detect sudden appearing objects            | -1.0          |
-| sudden_object_dist_threshold            | [m]     | double | Distance threshold for sudden object detection                       | 1000.0        |
-| abandon_to_stop                         | [-]     | bool   | Enable to abandon stopping when cannot achieve required deceleration | false         |
+| Name                         | Unit    | Type   | Description                                                         | Default value |
+| :--------------------------- | :------ | :----- | :------------------------------------------------------------------ | :------------ |
+| hold_stop_velocity_threshold | [m/s]   | double | The maximum ego velocity to hold stopping                           | 0.01          |
+| hold_stop_distance_threshold | [m]     | double | The ego keeps stopping if distance to stop changes within threshold | 0.3           |
+| limit_min_acc                | [m/s^2] | double | Overwrite the deceleration limit (usually from common_param.yaml)   | -2.5          |
+| sudden_object_acc_threshold  | [m/s^2] | double | If stop achievable by smaller deceleration, not "sudden stop"       | -1.0          |
+| sudden_object_dist_threshold | [m]     | double | If stop distance is longer than this, not considered "sudden stop"  | 1000.0        |
+| abandon_to_stop              | [-]     | bool   | Give up stopping when cannot avoid run over within decel limit      | false         |
 
 #### Stop on Curve Parameters
 
