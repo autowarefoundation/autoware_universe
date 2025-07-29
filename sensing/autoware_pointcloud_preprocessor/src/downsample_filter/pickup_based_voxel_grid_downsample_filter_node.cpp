@@ -86,7 +86,7 @@ using PointIndexHashMap =
 
 void extract_unique_voxel_point_indices(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input, const VoxelSize & voxel_size,
-  PointIndexHashMap & voxel_map
+  PointIndexHashMap & index_map
 ){
   constexpr float large_num_offset = 100000.0;
   const float inverse_voxel_size_x = 1.0 / voxel_size.x;
@@ -112,18 +112,18 @@ void extract_unique_voxel_point_indices(
       static_cast<int>((x + large_num_offset) * inverse_voxel_size_x),
       static_cast<int>((y + large_num_offset) * inverse_voxel_size_y),
       static_cast<int>((z + large_num_offset) * inverse_voxel_size_z)};
-    voxel_map.emplace(key, point_index);
+    index_map.emplace(key, point_index);
   }
 }
 
 void copy_filtered_point(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input,
-  const PointIndexHashMap & voxel_map,
+  const PointIndexHashMap & index_map,
   sensor_msgs::msg::PointCloud2 & output)
 {
   size_t output_global_offset = 0;
-  output.data.resize(voxel_map.size() * input->point_step);
-  for (const auto & kv : voxel_map) {
+  output.data.resize(index_map.size() * input->point_step);
+  for (const auto & kv : index_map) {
     const size_t byte_offset = kv.second * input->point_step;
     std::memcpy(&output.data[output_global_offset], &input->data[byte_offset], input->point_step);
     output_global_offset += input->point_step;
@@ -145,12 +145,12 @@ void downsample_with_voxel_grid(
   sensor_msgs::msg::PointCloud2 & output
 ){
   // Extract unique voxel point indices
-  PointIndexHashMap voxel_map;
-  voxel_map.reserve(input->data.size() / input->point_step);
-  extract_unique_voxel_point_indices(input, voxel_size, voxel_map);
+  PointIndexHashMap index_map;
+  index_map.reserve(input->data.size() / input->point_step);
+  extract_unique_voxel_point_indices(input, voxel_size, index_map);
 
   // Copy the filtered points to the output
-  copy_filtered_point(input, voxel_map, output);
+  copy_filtered_point(input, index_map, output);
 }
 
 void PickupBasedVoxelGridDownsampleFilterComponent::filter(
