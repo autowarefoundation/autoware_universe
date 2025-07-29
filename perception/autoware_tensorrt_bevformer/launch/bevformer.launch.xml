@@ -60,7 +60,7 @@
 
     <remap from="~/input/can_bus" to="$(var input/can_bus)"/>
     <remap from="~/input/scene_token" to="$(var input/scene_token)"/>
- 
+
     <remap from="~/input/topic_img_fl/camera_info" to="$(var input/img_front_left/camera_info)"/>
     <remap from="~/input/topic_img_f/camera_info" to="$(var input/img_front/camera_info)"/>
     <remap from="~/input/topic_img_fr/camera_info" to="$(var input/img_front_right/camera_info)"/>

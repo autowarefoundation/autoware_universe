@@ -69,7 +69,7 @@ $HOME/autoware_data/tensorrt_bevformer
    cd ..
    ```
 
-   > **Note:**  The `feature/bevformer-integration` branch provides required data for the BEVFormer.
+   > **Note:** The `feature/bevformer-integration` branch provides required data for the BEVFormer.
 
    Download nuScenes dataset and canbus data [here](https://www.nuscenes.org/nuscenes#).
 
@@ -92,13 +92,13 @@ $HOME/autoware_data/tensorrt_bevformer
 
    ```bash
    # Build ros2_dataset_bridge
-   
+
    colcon build --packages-up-to ros2_dataset_bridge
-   
+
    # Build autoware_tensorrt_bevformer
 
    colcon build --packages-up-to autoware_tensorrt_bevformer
-  
+
    ```
 
    Source environments:
@@ -121,13 +121,13 @@ $HOME/autoware_data/tensorrt_bevformer
    ```bash
    # Default mode (FP16)
    ros2 launch autoware_tensorrt_bevformer bevformer.launch.xml
-   
+
    # FP32 precision
    ros2 launch autoware_tensorrt_bevformer bevformer.launch.xml precision:=fp32
-   
+
    # With visualization
    ros2 launch autoware_tensorrt_bevformer bevformer.launch.xml debug_mode:=true
-   
+
    # FP32 + visualization
    ros2 launch autoware_tensorrt_bevformer bevformer.launch.xml precision:=fp32 debug_mode:=true
    ```

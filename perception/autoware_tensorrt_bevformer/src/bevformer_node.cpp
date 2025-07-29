@@ -470,7 +470,6 @@ void TRTBEVFormerNode::callback(
   const autoware_custom_msgs::msg::CanBusData::ConstSharedPtr & can_bus_msg,
   const autoware_custom_msgs::msg::SceneInfo::ConstSharedPtr & scene_info)
 {
-  
   auto t_preprocess_start = std::chrono::steady_clock::now();
 
   // Get CAN bus data directly from the synchronized message
@@ -557,8 +556,10 @@ void TRTBEVFormerNode::callback(
     raw_images, sensor2lidar_rotation_, sensor2lidar_translation_, cams_intrin_);
 
   auto t_preprocess_end = std::chrono::steady_clock::now();
-  RCLCPP_INFO(this->get_logger(), "Pre-processing : %ld ms",
-              std::chrono::duration_cast<std::chrono::milliseconds>(t_preprocess_end - t_preprocess_start).count());
+  RCLCPP_INFO(
+    this->get_logger(), "Pre-processing : %ld ms",
+    std::chrono::duration_cast<std::chrono::milliseconds>(t_preprocess_end - t_preprocess_start)
+      .count());
 
   auto t_inference_start = t_preprocess_end;
 
@@ -583,8 +584,10 @@ void TRTBEVFormerNode::callback(
     structured_input.lidar2img_flat);
 
   auto t_inference_end = std::chrono::steady_clock::now();
-  RCLCPP_INFO(this->get_logger(), "Inference : %ld ms",
-              std::chrono::duration_cast<std::chrono::milliseconds>(t_inference_end - t_inference_start).count());
+  RCLCPP_INFO(
+    this->get_logger(), "Inference : %ld ms",
+    std::chrono::duration_cast<std::chrono::milliseconds>(t_inference_end - t_inference_start)
+      .count());
 
   auto t_postprocess_start = t_inference_end;
 
@@ -618,8 +621,10 @@ void TRTBEVFormerNode::callback(
     pc_range_, post_center_range_);
 
   auto t_postprocess_end = std::chrono::steady_clock::now();
-  RCLCPP_INFO(this->get_logger(), "Post-processing : %ld ms",
-              std::chrono::duration_cast<std::chrono::milliseconds>(t_postprocess_end - t_postprocess_start).count());
+  RCLCPP_INFO(
+    this->get_logger(), "Post-processing : %ld ms",
+    std::chrono::duration_cast<std::chrono::milliseconds>(t_postprocess_end - t_postprocess_start)
+      .count());
 
   std::vector<Box3D> batch_results;
   try {
