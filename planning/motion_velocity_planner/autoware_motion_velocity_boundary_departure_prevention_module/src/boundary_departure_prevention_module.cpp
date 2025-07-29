@@ -562,6 +562,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
   output_.slowdown_intervals = utils::get_slow_down_intervals(
     *ref_traj_pts_opt, output_.departure_intervals, *slow_down_interpolator_ptr_, vehicle_info,
     output_.abnormalities_data.boundary_segments, curr_odom.twist.twist.linear.x,
+    planner_data->current_acceleration.accel.accel.linear.x,
     ego_dist_on_traj_with_offset_m(planner_data->is_driving_forward));
   toc_curr_watch("get_slow_down_interval");
 

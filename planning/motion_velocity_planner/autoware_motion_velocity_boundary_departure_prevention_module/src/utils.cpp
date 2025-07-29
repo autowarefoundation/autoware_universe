@@ -334,22 +334,14 @@ std::vector<std::tuple<Pose, Pose, double>> get_slow_down_intervals(
   const DepartureIntervals & departure_intervals,
   const SlowDownInterpolator & slow_down_interpolator, const VehicleInfo & vehicle_info,
   [[maybe_unused]] const BoundarySideWithIdx & boundary_segments, const double curr_vel,
-  const double ego_dist_on_traj_m)
+  const double curr_acc, const double ego_dist_on_traj_m)
 {
   std::vector<std::tuple<Pose, Pose, double>> slowdown_intervals;
 
   for (auto && pair : departure_intervals | ranges::views::enumerate) {
     const auto & [idx, departure_interval] = pair;
 
-    const auto [slow_down_pt_on_traj, slow_down_dist_on_traj_m] =
-      (ego_dist_on_traj_m < departure_interval.start_dist_on_traj)
-        ? std::make_pair(
-            utils::to_pt2d(departure_interval.start.pose.position),
-            departure_interval.start_dist_on_traj)
-        : std::make_pair(
-            utils::to_pt2d(departure_interval.end.pose.position),
-            departure_interval.end_dist_on_traj);
-
+    const auto slow_down_dist_on_traj_m = departure_interval.end_dist_on_traj;
     const auto lon_dist_to_bound_m = slow_down_dist_on_traj_m - ego_dist_on_traj_m;
 
     const auto & candidates = departure_interval.candidates;
@@ -366,7 +358,7 @@ std::vector<std::tuple<Pose, Pose, double>> get_slow_down_intervals(
     const auto lat_dist_to_bound_m = lat_dist_to_bound_itr->lat_dist_to_bound;
 
     const auto vel_opt = slow_down_interpolator.get_interp_to_point(
-      curr_vel, lon_dist_to_bound_m, lat_dist_to_bound_m, departure_interval.side_key);
+      curr_vel, curr_acc, lon_dist_to_bound_m, lat_dist_to_bound_m, departure_interval.side_key);
 
     if (!vel_opt) {
       continue;
@@ -384,15 +376,12 @@ std::vector<std::tuple<Pose, Pose, double>> get_slow_down_intervals(
 
     const auto [rel_dist_m, vel, accel_mps2] = *vel_opt;
 
-    auto end_pose = (departure_interval.start_dist_on_traj >
-                     (ego_dist_on_traj_m + vehicle_info.max_longitudinal_offset_m))
-                      ? departure_interval.start.pose
-                      : departure_interval.end.pose;
     if (ego_dist_on_traj_m + rel_dist_m > ref_traj_pts.length()) {
       continue;
     }
 
     auto start_pose = ref_traj_pts.compute(ego_dist_on_traj_m + rel_dist_m);
+    auto end_pose = departure_interval.end.pose;
 
     slowdown_intervals.emplace_back(start_pose.pose, end_pose, vel);
   }
