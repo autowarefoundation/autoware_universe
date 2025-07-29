@@ -177,6 +177,7 @@ std::vector<StopObstacle> RoadUserStopModule::filter_stop_obstacles(
   const std::vector<Polygon2d> & decimated_traj_polygons, const RelevantLaneletData & lanelet_data,
   const rclcpp::Time & current_time, const double dist_to_bumper)
 {
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   update_tracked_objects(planner_data->objects, current_time);
 
   std::set<std::string> current_object_ids;
@@ -485,6 +486,7 @@ lanelet::ConstLanelets RoadUserStopModule::get_ego_lanelets(
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
   const std::shared_ptr<const PlannerData> & planner_data) const
 {
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   const auto & route_handler = planner_data->route_handler;
   const auto & vehicle_info = planner_data->vehicle_info_;
   // from trajectory points
@@ -526,6 +528,7 @@ RelevantLaneletData RoadUserStopModule::get_relevant_lanelet_data(
   const lanelet::ConstLanelets & ego_lanelets,
   const std::shared_ptr<const PlannerData> planner_data) const
 {
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   const auto param = param_listener_->get_params();
   const auto & route_handler = planner_data->route_handler;
   const auto lanelet_map = route_handler->getLaneletMapPtr();
@@ -682,6 +685,7 @@ std::optional<Point> RoadUserStopModule::plan_stop(
   const std::vector<TrajectoryPoint> & trajectory_points,
   const std::vector<StopObstacle> & stop_obstacles, const double dist_to_bumper)
 {
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   if (stop_obstacles.empty()) {
     prev_stop_distance_info_ = std::nullopt;
     return std::nullopt;
@@ -1082,6 +1086,7 @@ std::vector<Polygon2d> RoadUserStopModule::get_trajectory_polygons(
   const bool enable_to_consider_current_pose, const double time_to_convergence,
   const double decimate_trajectory_step_length) const
 {
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   if (trajectory_polygon_for_inside_map_.count(lat_margin) == 0) {
     const auto traj_polys = polygon_utils::create_one_step_polygons(
       decimated_traj_points, vehicle_info, current_ego_pose, lat_margin,
