@@ -398,17 +398,17 @@ void GyroBiasEstimator::estimate_scale_gyro(
     estimated_scale_angle_ = x_state_(1);
     p_angle_ = (Eigen::Matrix2d::Identity() - k_matrix * h_matrix) * p_angle_;
 
-    filtered_scale_angle_ = (alpha_)*filtered_scale_angle_ + (1 - alpha_) * estimated_scale_angle_;
+    filtered_scale_angle_ = (alpha_) * filtered_scale_angle_ + (1 - alpha_) * estimated_scale_angle_;
   }
   gyro_yaw_angle_ = ndt_yaw_angle_;  // reset the gyro yaw angle to the NDT yaw angle
 
   if (std::abs(gyro_yaw_rate_) < threshold_to_estimate_scale_) {
-    gyro_info_.scale_summary_message = "Skipped scale update (yaw rate is too small)";
     if (
       gyro_info_.scale_status != diagnostic_msgs::msg::DiagnosticStatus::ERROR &&
       gyro_info_.scale_status != diagnostic_msgs::msg::DiagnosticStatus::WARN) {
       gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::OK;
       gyro_info_.scale_status_summary = "OK";
+      gyro_info_.scale_summary_message = "Skipped scale update (yaw rate is too small)";
     }
     geometry_msgs::msg::Vector3Stamped vector_scale_skipped;
     vector_scale_skipped.header.stamp = this->now();
@@ -501,26 +501,6 @@ void GyroBiasEstimator::estimate_scale_gyro(
         }
       }
 
-      // Check if the estimated scale is within the allowed range or if a big change is detected
-      if (
-        estimated_scale_ >= filtered_scale_rate_ * (1 - percentage_scale_rate_allow_correct_) &&
-        estimated_scale_ <= filtered_scale_rate_ * (1 + percentage_scale_rate_allow_correct_)) {
-        filtered_scale_rate_ = (alpha_)*filtered_scale_rate_ + (1 - alpha_) * estimated_scale_;
-        big_change_detect_ = 0;
-      } else {
-        big_change_detect_++;
-        int counter_correct_big_change = 30;  // 30 iterations approx 3 seconds
-        if (big_change_detect_ >= counter_correct_big_change) {
-          big_change_detect_ = 0;
-          gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
-          gyro_info_.scale_status_summary = "ERR";
-          gyro_info_.scale_summary_message =
-            "Scale estimated is over the maximum allowed, check the IMU, NDT device or TF.";
-        }
-      }
-
-      geometry_msgs::msg::Vector3Stamped vector_scale;
-
       if (estimated_scale_ < min_allowed_scale_) {
         gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
         gyro_info_.scale_status_summary = "ERR";
@@ -531,9 +511,28 @@ void GyroBiasEstimator::estimate_scale_gyro(
         gyro_info_.scale_status_summary = "ERR";
         gyro_info_.scale_summary_message =
           "Scale is over the maximum, check the IMU, NDT device or TF.";
-      } else {
+      } else if (big_change_detect_ == 0) {
         gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::OK;
       }
+
+      // Check if the estimated scale is within the allowed range or if a big change is detected
+      if (
+        estimated_scale_ >= filtered_scale_rate_ * (1 - percentage_scale_rate_allow_correct_) &&
+        estimated_scale_ <= filtered_scale_rate_ * (1 + percentage_scale_rate_allow_correct_)) {
+        filtered_scale_rate_ = alpha_ * filtered_scale_rate_ + (1 - alpha_) * estimated_scale_;
+        big_change_detect_ = 0;
+      } else {
+        big_change_detect_++;
+        int counter_correct_big_change = 10;  // 10 iterations approx 1 seconds
+        if (big_change_detect_ >= counter_correct_big_change) {
+          gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+          gyro_info_.scale_status_summary = "ERR";
+          gyro_info_.scale_summary_message =
+            "Large gyro scale change detected in short period of time, check the IMU, NDT device or TF.";
+        }
+      }
+
+      geometry_msgs::msg::Vector3Stamped vector_scale;
 
       vector_scale.header.stamp = this->now();
 

@@ -8,7 +8,7 @@
     ekf_measurement_noise_r: 0.00007 #0.005 # 0.0002 # 0.00002 # 0.00000002 # 0.000005 # device measurement noise
     ekf_measurement_noise_r_after: 0.00002 #0.005
     min_allowed_scale: 0.9 # minimum allowed scale
-    max_allowed_scale: 1.9 # maximum allowed scale
+    max_allowed_scale: 1.1 # maximum allowed scale
     scale_on_purpose: 1.00 # scale to apply on purpose
     bias_on_purpose: 0.00 # bias to apply on purpose
     drift_scale: 0.0000000 # 0.0001 # scale to apply on purpose for drift
@@ -16,7 +16,7 @@
     alpha: 0.99 # 0.99 # 0.98
     alpha_ndt_rate: 0.6 #0.55 # 0.65 # 0.45 # 0.65
     threshold_to_estimate_scale: 0.1 # angular speed radians
-    percentage_scale_rate_allow_correct: 0.07 # ignore scale changes above this value
+    percentage_scale_rate_allow_correct: 0.04 # scale changes above this value will trigger error
     warning_covariance: 3e-9
     min_covariance: 1e-11
     alpha_gyro: 0.0
