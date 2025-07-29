@@ -188,7 +188,7 @@ std::vector<StopObstacle> RoadUserStopModule::filter_stop_obstacles(
       auto stop_obstacle = pick_stop_obstacle_from_predicted_object(
         planner_data, object, traj_points, decimated_traj_points, decimated_traj_polygons,
         lanelet_data, current_time, dist_to_bumper)) {
-      stop_obstacles.push_back(*stop_obstacle);
+      stop_obstacles.push_back(stop_obstacle.value());
       const std::string object_id =
         autoware::universe_utils::toHexString(object->predicted_object.object_id);
       current_object_ids.insert(object_id);
@@ -483,14 +483,14 @@ bool RoadUserStopModule::is_opposite_traffic_user(
 }
 
 lanelet::ConstLanelets RoadUserStopModule::get_ego_lanelets(
-  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
+  const std::vector<TrajectoryPoint> & smoothed_trajectory_points,
   const std::shared_ptr<const PlannerData> & planner_data) const
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   const auto & route_handler = planner_data->route_handler;
   const auto & vehicle_info = planner_data->vehicle_info_;
   // from trajectory points
-  autoware_utils::LineString2d trajectory_ls;
+  LineString2d trajectory_ls;
   for (const auto & p : smoothed_trajectory_points) {
     trajectory_ls.emplace_back(p.pose.position.x, p.pose.position.y);
   }
@@ -501,7 +501,7 @@ lanelet::ConstLanelets RoadUserStopModule::get_ego_lanelets(
   // calculate the lanelets overlapped by the trajectory
   auto calc_trajectory_lanelets =
     [&](
-      const autoware_utils::LineString2d & trajectory_ls,
+      const LineString2d & trajectory_ls,
       const std::shared_ptr<const route_handler::RouteHandler> route_handler) {
       auto is_road_lanelet = [](const lanelet::ConstLanelet & lanelet) -> bool {
         return lanelet.hasAttribute(lanelet::AttributeName::Subtype) &&
@@ -578,23 +578,23 @@ RelevantLaneletData RoadUserStopModule::get_relevant_lanelet_data(
 
     for (const auto & lanelet : ego_lanelets_without_intersection) {
       const auto left_lanelet = route_handler->getLeftLanelet(lanelet);
-      if (left_lanelet && !is_in_adjacent_lanelet(*left_lanelet)) {
-        adjacent_lanelets.push_back(*left_lanelet);
+      if (left_lanelet.has_value() && !is_in_adjacent_lanelet(left_lanelet.value())) {
+        adjacent_lanelets.push_back(left_lanelet.value());
       }
 
       const auto right_lanelet = route_handler->getRightLanelet(lanelet);
-      if (right_lanelet && !is_in_adjacent_lanelet(*right_lanelet)) {
-        adjacent_lanelets.push_back(*right_lanelet);
+      if (right_lanelet.has_value() && !is_in_adjacent_lanelet(right_lanelet.value())) {
+        adjacent_lanelets.push_back(right_lanelet.value());
       }
 
       const auto left_shoulder = route_handler->getLeftShoulderLanelet(lanelet);
-      if (left_shoulder && !is_in_adjacent_lanelet(*left_lanelet)) {
-        adjacent_lanelets.push_back(*left_shoulder);
+      if (left_shoulder.has_value() && !is_in_adjacent_lanelet(left_shoulder.value())) {
+        adjacent_lanelets.push_back(left_shoulder.value());
       }
 
       const auto right_shoulder = route_handler->getRightShoulderLanelet(lanelet);
-      if (right_shoulder && !is_in_adjacent_lanelet(*right_shoulder)) {
-        adjacent_lanelets.push_back(*right_shoulder);
+      if (right_shoulder.has_value() && !is_in_adjacent_lanelet(right_shoulder.value())) {
+        adjacent_lanelets.push_back(right_shoulder.value());
       }
     }
     debug_data_.adjacent_lanelets = adjacent_lanelets;
@@ -690,7 +690,7 @@ std::optional<Point> RoadUserStopModule::plan_stop(
     const auto candidate_zero_vel_dist = calc_candidate_zero_vel_dist(
       planner_data, trajectory_points, dist_to_collide_on_ref_traj, desired_stop_margin,
       dist_to_bumper);
-    if (!candidate_zero_vel_dist) {
+    if (!candidate_zero_vel_dist.has_value()) {
       continue;
     }
 
@@ -702,16 +702,18 @@ std::optional<Point> RoadUserStopModule::plan_stop(
         (is_same_param_types &&
          stop_obstacle.dist_to_collide_on_decimated_traj >
            determined_stop_obstacle.value().dist_to_collide_on_decimated_traj) ||
-        (!is_same_param_types && *candidate_zero_vel_dist > determined_zero_vel_dist)) {
+        (!is_same_param_types && candidate_zero_vel_dist.value() > determined_zero_vel_dist)) {
         continue;
       }
     }
-    determined_zero_vel_dist = *candidate_zero_vel_dist;
+    determined_zero_vel_dist = candidate_zero_vel_dist.value();
     determined_stop_obstacle = stop_obstacle;
     determined_desired_stop_margin = desired_stop_margin;
   }
 
-  if (!(determined_zero_vel_dist && determined_stop_obstacle && determined_desired_stop_margin)) {
+  if (
+    !determined_zero_vel_dist.has_value() || !determined_stop_obstacle.has_value() ||
+    !determined_desired_stop_margin.has_value()) {
     prev_stop_distance_info_ = std::nullopt;
     return std::nullopt;
   }
@@ -721,7 +723,7 @@ std::optional<Point> RoadUserStopModule::plan_stop(
   const auto stop_point = calc_stop_point(
     planner_data, trajectory_points, determined_stop_obstacle, determined_zero_vel_dist);
 
-  if (determined_stop_obstacle->velocity >= -0.5) {
+  if (determined_stop_obstacle.has_value() && determined_stop_obstacle.value().velocity >= -0.5) {
     return stop_point;
   }
 
@@ -730,7 +732,7 @@ std::optional<Point> RoadUserStopModule::plan_stop(
     [trajectory_points](const Point & point) {
       return autoware::motion_utils::calcSignedArcLength(trajectory_points, 0, point);
     },
-    clock_->now(), *determined_stop_obstacle, *determined_desired_stop_margin);
+    clock_->now(), determined_stop_obstacle.value(), determined_desired_stop_margin.value());
 
   const auto buffered_stop = path_length_buffer_.get_nearest_active_item();
   if (buffered_stop.has_value()) {
@@ -813,7 +815,7 @@ std::optional<StopObstacle> RoadUserStopModule::pick_stop_obstacle_from_predicte
     decimated_traj_points, decimated_traj_polygons, obj_pose.position, clock_->now(),
     autoware_utils_geometry::to_polygon2d(obj_pose, predicted_object.shape), dist_to_bumper);
 
-  if (!collision_point) {
+  if (!collision_point.has_value()) {
     return std::nullopt;
   }
 
@@ -826,8 +828,8 @@ std::optional<StopObstacle> RoadUserStopModule::pick_stop_obstacle_from_predicte
     obj_pose,
     predicted_object.shape,
     object->get_lon_vel_relative_to_traj(traj_points),
-    collision_point->first,
-    collision_point->second};
+    collision_point.value().first,
+    collision_point.value().second};
 };
 
 void RoadUserStopModule::hold_previous_stop_if_necessary(
@@ -839,17 +841,18 @@ void RoadUserStopModule::hold_previous_stop_if_necessary(
   if (
     std::abs(planner_data->current_odometry.twist.twist.linear.x) <
       param.stop_planning.hold_stop_velocity_threshold &&
-    prev_stop_distance_info_) {
+    prev_stop_distance_info_.has_value()) {
     // NOTE: We assume that the current trajectory's front point is ahead of the previous
     // trajectory's front point.
     const size_t traj_front_point_prev_seg_idx =
       autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
-        prev_stop_distance_info_->first, traj_points.front().pose);
+        prev_stop_distance_info_.value().first, traj_points.front().pose);
     const double diff_dist_front_points = autoware::motion_utils::calcSignedArcLength(
-      prev_stop_distance_info_->first, 0, traj_points.front().pose.position,
+      prev_stop_distance_info_.value().first, 0, traj_points.front().pose.position,
       traj_front_point_prev_seg_idx);
 
-    const double prev_zero_vel_dist = prev_stop_distance_info_->second - diff_dist_front_points;
+    const double prev_zero_vel_dist =
+      prev_stop_distance_info_.value().second - diff_dist_front_points;
     if (
       std::abs(prev_zero_vel_dist - determined_zero_vel_dist.value()) <
       param.stop_planning.hold_stop_distance_threshold) {
@@ -868,8 +871,8 @@ std::optional<Point> RoadUserStopModule::calc_stop_point(
 
   // insert stop point - this function interpolates between trajectory points
   // to create a smooth stop position, avoiding discrete jumps
-  const auto zero_vel_idx =
-    autoware::motion_utils::insertStopPoint(0, *determined_zero_vel_dist, output_traj_points);
+  const auto zero_vel_idx = autoware::motion_utils::insertStopPoint(
+    0, determined_zero_vel_dist.value(), output_traj_points);
   if (!zero_vel_idx.has_value()) {
     return std::nullopt;
   }
@@ -895,8 +898,8 @@ std::optional<Point> RoadUserStopModule::calc_stop_point(
   }
 
   planning_factor_interface_->add(
-    output_traj_points, planner_data->current_odometry.pose.pose, stop_pose,
-    autoware::planning_factor_interface::PlanningFactor::STOP, safety_factors);
+    output_traj_points, planner_data->current_odometry.pose.pose, stop_pose, PlanningFactor::STOP,
+    safety_factors);
 
   prev_stop_distance_info_ = std::make_pair(output_traj_points, determined_zero_vel_dist.value());
 
@@ -1129,12 +1132,12 @@ double RoadUserStopModule::calc_margin_from_obstacle_on_curve(
   // calculate margin from obstacle
   const double partial_segment_length = [&]() {
     const double collision_segment_length = autoware_utils_geometry::calc_distance2d(
-      resampled_short_traj_points.at(*collision_idx - 1),
-      resampled_short_traj_points.at(*collision_idx));
+      resampled_short_traj_points.at(collision_idx.value() - 1),
+      resampled_short_traj_points.at(collision_idx.value()));
     const double prev_dist = calculate_distance_from_straight_ego_path(
-      resampled_short_traj_points.at(*collision_idx - 1).pose, object_polygon);
+      resampled_short_traj_points.at(collision_idx.value() - 1).pose, object_polygon);
     const double next_dist = calculate_distance_from_straight_ego_path(
-      resampled_short_traj_points.at(*collision_idx).pose, object_polygon);
+      resampled_short_traj_points.at(collision_idx.value()).pose, object_polygon);
     return (next_dist - planner_data->vehicle_info_.vehicle_width_m / 2.0) /
            (next_dist - prev_dist) * collision_segment_length;
   }();
@@ -1142,7 +1145,7 @@ double RoadUserStopModule::calc_margin_from_obstacle_on_curve(
   const double short_margin_from_obstacle =
     partial_segment_length +
     autoware::motion_utils::calcSignedArcLength(
-      resampled_short_traj_points, *collision_idx, stop_obstacle.collision_point) -
+      resampled_short_traj_points, collision_idx.value(), stop_obstacle.collision_point) -
     dist_to_bumper + param.stop_planning.stop_on_curve.additional_stop_margin;
 
   return std::min(

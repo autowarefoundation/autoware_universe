@@ -37,6 +37,7 @@ using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_perception_msgs::msg::Shape;
 using autoware_planning_msgs::msg::LaneletRoute;
+using autoware_utils::LineString2d;
 using autoware_utils_geometry::Polygon2d;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;

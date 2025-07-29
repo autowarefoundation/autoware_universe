@@ -49,8 +49,8 @@ public:
   void init(rclcpp::Node & node, const std::string & module_name) override;
   void update_parameters(const std::vector<rclcpp::Parameter> & parameters) override;
   VelocityPlanningResult plan(
-    const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & raw_trajectory_points,
-    const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
+    const std::vector<TrajectoryPoint> & raw_trajectory_points,
+    const std::vector<TrajectoryPoint> & smoothed_trajectory_points,
     const std::shared_ptr<const PlannerData> planner_data) override;
   std::string get_module_name() const override { return module_name_; }
   void publish_planning_factor() override;
@@ -97,7 +97,7 @@ private:
     const PredictedObject & object, const lanelet::ConstLanelet & lanelet) const;
 
   lanelet::ConstLanelets get_ego_lanelets(
-    const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
+    const std::vector<TrajectoryPoint> & smoothed_trajectory_points,
     const std::shared_ptr<const PlannerData> & planner_data) const;
   RelevantLaneletData get_relevant_lanelet_data(
     const lanelet::ConstLanelets & ego_lanelets,
