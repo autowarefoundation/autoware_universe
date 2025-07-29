@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 1993-2022 NVIDIA CORPORATION & AFFILIATES. All rights
 // reserved. SPDX-FileCopyrightText: Portions Copyright (c) 2022 Derry Lin SPDX-FileCopyrightText:
-// Portions Copyright (c) 2025 AutoCore, Inc.
+// Portions Copyright (c) 2025 The Autoware Contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -17,7 +17,7 @@
 // limitations under the License.
 //
 // Created by NVIDIA Corporation, modified by Derry Lin (2022/10/23),
-// further modified by AutoCore, Inc. in 2025.
+// further modified by The Autoware Contributors in 2025.
 
 #ifndef PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__COMMON__CHECKMACROSPLUGIN_H_  // NOLINT
 #define PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__COMMON__CHECKMACROSPLUGIN_H_  // NOLINT
