@@ -5,7 +5,7 @@
   <version>0.46.0</version>
   <description>The autoware_surround_obstacle_checker package</description>
   <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
-  <maintainer email="go.sakayori@tier4.jp">Go Sakayori</maintainer>
+  <maintainer email="takumi.odashima@tier4.jp">Takumi Odashima</maintainer>
   <license>Apache License 2.0</license>
 
   <author email="satoshi.ota@tier4.jp">Satoshi Ota</author>
