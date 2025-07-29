@@ -557,39 +557,12 @@ RelevantLaneletData RoadUserStopModule::get_relevant_lanelet_data(
   const auto ego_lanelets_without_intersection = [&]() {
     lanelet::ConstLanelets lanelets;
 
-    std::vector<Polygon2d> intersection_polygons_within;
-    intersection_polygons_within.reserve(intersection_polygons.size());
-    const double expansion_for_stability = 1e-2;  // small expansion for stability
-
-    // boost::geometry::buffer strategies for polygon expansion
-    const boost::geometry::strategy::buffer::distance_symmetric<double> distance_strategy(
-      expansion_for_stability);
-    const boost::geometry::strategy::buffer::join_miter join_strategy;
-    const boost::geometry::strategy::buffer::end_flat end_strategy;
-    const boost::geometry::strategy::buffer::point_square circle_strategy;
-    const boost::geometry::strategy::buffer::side_straight side_strategy;
-
-    for (const auto & polygon : intersection_polygons) {
-      boost::geometry::model::multi_polygon<Polygon2d> result;
-      boost::geometry::buffer(
-        polygon, result, distance_strategy, side_strategy, join_strategy, end_strategy,
-        circle_strategy);
-
-      // buffer creates a multi_polygon, but we expect a single polygon
-      if (!result.empty()) {
-        intersection_polygons_within.push_back(result.front());
-      }
-    }
-
     for (const auto & ego_lanelet : ego_lanelets) {
-      if (std::none_of(
-            intersection_polygons_within.begin(), intersection_polygons_within.end(),
-            [&](const Polygon2d & polygon) {
-              return boost::geometry::within(
-                to_polygon_2d(ego_lanelet.polygon2d().basicPolygon()), polygon);
-            })) {
-        lanelets.push_back(ego_lanelet);
+      const std::string area_id = ego_lanelet.attributeOr("intersection_area", "else");
+      if (area_id != "else" && std::atoi(area_id.c_str())) {
+        continue;
       }
+      lanelets.push_back(ego_lanelet);
     }
     debug_data_.ego_lanelets_without_intersection = lanelets;
 
