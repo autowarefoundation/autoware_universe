@@ -12,30 +12,27 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
-# Check for CUDA availability first
+# Check for required cmake modules and dependencies early
+find_package(cudnn_cmake_module QUIET)
+find_package(tensorrt_cmake_module QUIET)
 find_package(CUDA QUIET)
 find_package(CUDAToolkit QUIET)
 
-# Check for TensorRT and CUDNN
-if(CUDAToolkit_FOUND)
-  find_package(cudnn_cmake_module QUIET)
-  find_package(tensorrt_cmake_module QUIET)
-  if(cudnn_cmake_module_FOUND)
-    find_package(CUDNN QUIET)
-  endif()
-  if(tensorrt_cmake_module_FOUND)
-    find_package(TENSORRT QUIET)
-  endif()
+if(cudnn_cmake_module_FOUND)
+  find_package(CUDNN QUIET)
+endif()
+if(tensorrt_cmake_module_FOUND)
+  find_package(TENSORRT QUIET)
 endif()
 
-# If CUDA dependencies are not found, skip building this package
-if(NOT (CUDAToolkit_FOUND AND CUDNN_FOUND AND TENSORRT_FOUND))
-  message(WARNING "CUDA, CUDNN, or TensorRT libraries are not found. Skipping ${PROJECT_NAME} build.")
+# If ANY dependency is missing, skip building entirely
+if(NOT (cudnn_cmake_module_FOUND AND tensorrt_cmake_module_FOUND AND CUDAToolkit_FOUND AND CUDNN_FOUND AND TENSORRT_FOUND))
+  message(WARNING "Required dependencies not found. Skipping ${PROJECT_NAME} build.")
   ament_auto_package()
   return()
 endif()
 
-# Enable CUDA language only after confirming CUDA is available
+# Only enable CUDA language if ALL dependencies are confirmed present
 enable_language(CUDA)
 
 # Set CUDA standards
