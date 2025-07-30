@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// cspell:ignore BEVFORMER, bevformer
+
 #ifndef AUTOWARE__TENSORRT_BEVFORMER__PREPROCESSING__PREPROCESSING_PIPELINE_HPP_
 #define AUTOWARE__TENSORRT_BEVFORMER__PREPROCESSING__PREPROCESSING_PIPELINE_HPP_
 

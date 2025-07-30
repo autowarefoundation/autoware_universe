@@ -19,6 +19,8 @@
 // Created by NVIDIA Corporation, modified by Derry Lin (2022/10/23),
 // further modified by The Autoware Contributors in 2025.
 
+// cspell:ignore pointable, CUASSERT
+
 #include "checkMacrosPlugin.h"
 
 #include <cublas_v2.h>

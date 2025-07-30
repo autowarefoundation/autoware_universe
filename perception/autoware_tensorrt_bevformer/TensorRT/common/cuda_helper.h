@@ -18,6 +18,8 @@
 // Modified by The Autoware Contributors in 2025.
 // Original creation by Derry Lin on 2022/10/22.
 
+// cspell:ignore BEVFORMER, transa, transb, DFALT
+
 #ifndef PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__COMMON__CUDA_HELPER_H_
 #define PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__COMMON__CUDA_HELPER_H_
 

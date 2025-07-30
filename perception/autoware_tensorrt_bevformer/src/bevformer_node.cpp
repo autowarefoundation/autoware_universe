@@ -518,7 +518,7 @@ void TRTBEVFormerNode::callback(
   // Update sensor2lidar transforms for each camera with its own timestamp
   calculateSensor2LidarTransformsFromTF(image_msgs, ego2global_rot, ego2global_trans);
 
-  // Image convertion
+  // Image conversion
   cv::Mat img_fl, img_f, img_fr, img_bl, img_b, img_br;
   try {
     img_fl = cloneAndResize(msg_fl_img);

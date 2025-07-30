@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// cspell:ignore bevformer
+
 #include "autoware/tensorrt_bevformer/marker_util.hpp"
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
