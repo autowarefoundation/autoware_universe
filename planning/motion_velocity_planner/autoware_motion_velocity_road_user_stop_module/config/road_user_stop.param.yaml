@@ -1,0 +1,61 @@
+/**:
+  ros__parameters:
+    road_user_stop:
+      option:
+        suppress_sudden_stop: true
+
+      stop_planning:
+        longitudinal_margin:
+          default_margin: 5.0 # longitudinal margin to obstacle [m]
+          terminal_margin: 3.0 # Stop margin at the goal. This value cannot exceed stop margin. [m]
+          minimum_margin: 3.0 # [m]
+
+        opposing_traffic:
+          stop_margin: 10.0 # Ideal stop-margin from moving opposing obstacle when ego comes to a stop
+          max_negative_velocity: -0.1 # [m/s] maximum velocity of opposing traffic to consider stop planning
+          min_velocity_for_stop_planning: 2.77 # [m/s] minimum velocity of ego to consider stop planning
+          effective_deceleration: 4.0 # Setting a higher value brings the final stop-margin closer to the ideal value above
+
+        hold_stop_velocity_threshold: 0.01 # The maximum ego velocity to hold stopping [m/s]
+        hold_stop_distance_threshold: 0.3 # The ego keeps stopping if the distance to stop changes within the threshold [m]
+
+        stop_on_curve:
+          enable_approaching: false
+          additional_stop_margin: 3.0 # [m]
+          min_stop_margin: 6.0 # [m]
+
+        # Common parameters for all object types
+        limit_min_acc: -2.5 # overwrite the deceleration limit, in usually, common_param.yaml/limit.min_acc is referred.
+        sudden_object_acc_threshold: -1.0 # If a stop can be achieved by a deceleration smaller than this value, it is not considered as "sudden stop".
+        sudden_object_dist_threshold: 1000.0 # If a stop distance is longer than this value, it is not considered as "sudden stop".
+        abandon_to_stop: false # If true, the planner gives up to stop when it cannot avoid to run over while maintaining the deceleration limit.
+
+      obstacle_filtering:
+        object_type:
+          pedestrian: true
+          bicycle: true
+          motorcycle: false
+          unknown: false
+
+        # Trajectory-based filtering
+        trajectory_lateral_margin: 1.0 # lateral margin from ego trajectory to detect objects [m]
+
+        # Wrong-way detection
+        opposing_traffic_detection:
+          enable: true
+          angle_threshold: 150.0 # [deg]
+          min_speed_threshold: 0.5 # [m/s]
+
+        # Intersection filtering
+        intersection:
+          exclude: false # If true, exclude objects inside intersection lanelets
+        # Special area filtering
+        crosswalk:
+          exclude: true
+          margin: 1.0 # [m]
+
+        # Temporal filtering
+        min_detection_duration: 0.1 # [s]
+        lost_object_retention_duration: 2.0 # [s] duration to keep tracking objects after they are lost or exit the detection area
+
+        polygon_expansion_length: 0.5 # [m] Factor to expand object polygon when object was previously inside detection area
