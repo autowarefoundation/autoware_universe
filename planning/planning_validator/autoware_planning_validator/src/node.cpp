@@ -74,7 +74,6 @@ void PlanningValidatorNode::setupParameters()
   p.diag_error_count_threshold = declare_parameter<int>("diag_error_count_threshold");
   p.display_on_terminal = declare_parameter<bool>("display_on_terminal");
 
-  p.enable_soft_stop_on_prev_traj = declare_parameter<bool>("enable_soft_stop_on_prev_traj");
   p.soft_stop_deceleration = declare_parameter<double>("soft_stop_deceleration");
   p.soft_stop_jerk_lim = declare_parameter<double>("soft_stop_jerk_lim");
 }

@@ -74,7 +74,6 @@ inline InvalidTrajectoryHandlingType get_handling_type(const int value)
 
 struct PlanningValidatorParams
 {
-  bool enable_soft_stop_on_prev_traj = true;
   bool publish_diag = true;
   bool display_on_terminal = true;
   double soft_stop_deceleration{};

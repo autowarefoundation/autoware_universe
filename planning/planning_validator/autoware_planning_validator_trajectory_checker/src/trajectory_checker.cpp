@@ -51,61 +51,52 @@ void TrajectoryChecker::init(
 void TrajectoryChecker::setup_parameters(rclcpp::Node & node)
 {
   const int default_handling_value = get_or_declare_parameter<int>(node, "default_handling_type");
-  {
-    auto set_common_params = [&](auto & param, const std::string & key) {
-      param.enable = get_or_declare_parameter<bool>(node, key + ".enable");
-      auto value = default_handling_value;
-      if (node.has_parameter(key + ".handling_type")) {
-        value = get_or_declare_parameter<int>(node, key + ".handling_type");
-      }
-      param.handling_type = get_handling_type(value);
 
-      if (node.has_parameter(key + ".override_error_diag")) {
-        param.override_error_diag = get_or_declare_parameter<int>(node, key + ".override_error_diag");
-      } else {
-        param.override_error_diag = false;
-      }
-    };
+  auto set_common_params = [&](auto & param, const std::string & key) {
+    param.enable = get_or_declare_parameter<bool>(node, key + ".enable");
+    const auto value = node.declare_parameter<int>(key + ".handling_type", default_handling_value);
+    param.handling_type = get_handling_type(value);
+    param.override_error_diag = node.declare_parameter<bool>(key + ".override_error_diag", false);
+  };
 
-    auto set_validation_params = [&](auto & param, const std::string & key) {
-      param.threshold = get_or_declare_parameter<double>(node, key + ".threshold");
-      set_common_params(param, key);
-    };
+  auto set_validation_params = [&](auto & param, const std::string & key) {
+    param.threshold = get_or_declare_parameter<double>(node, key + ".threshold");
+    set_common_params(param, key);
+  };
 
-    auto & p = params_;
-    const std::string t = "trajectory_checker.";
-    set_validation_params(p.interval, t + "interval");
-    set_validation_params(p.relative_angle, t + "relative_angle");
-    set_validation_params(p.curvature, t + "curvature");
-    set_validation_params(p.steering, t + "steering");
-    set_validation_params(p.steering_rate, t + "steering_rate");
-    set_validation_params(p.lateral_jerk, t + "lateral_jerk");
-    set_validation_params(p.lateral_accel, t + "lateral_accel");
-    set_validation_params(p.max_lon_accel, t + "max_lon_accel");
-    set_validation_params(p.min_lon_accel, t + "min_lon_accel");
-    set_validation_params(p.distance_deviation, t + "distance_deviation");
-    set_validation_params(p.lon_distance_deviation, t + "lon_distance_deviation");
-    set_validation_params(p.velocity_deviation, t + "velocity_deviation");
+  auto & p = params_;
+  const std::string t = "trajectory_checker.";
+  set_validation_params(p.interval, t + "interval");
+  set_validation_params(p.relative_angle, t + "relative_angle");
+  set_validation_params(p.curvature, t + "curvature");
+  set_validation_params(p.steering, t + "steering");
+  set_validation_params(p.steering_rate, t + "steering_rate");
+  set_validation_params(p.lateral_jerk, t + "lateral_jerk");
+  set_validation_params(p.lateral_accel, t + "lateral_accel");
+  set_validation_params(p.max_lon_accel, t + "max_lon_accel");
+  set_validation_params(p.min_lon_accel, t + "min_lon_accel");
+  set_validation_params(p.distance_deviation, t + "distance_deviation");
+  set_validation_params(p.lon_distance_deviation, t + "lon_distance_deviation");
+  set_validation_params(p.velocity_deviation, t + "velocity_deviation");
 
-    set_validation_params(p.yaw_deviation, t + "yaw_deviation");
-    p.yaw_deviation.nearest_yaw_trajectory_shift_required_for_checking =
-      get_or_declare_parameter<double>(
-        node, t + "yaw_deviation.nearest_yaw_trajectory_shift_required_for_checking");
+  set_validation_params(p.yaw_deviation, t + "yaw_deviation");
+  p.yaw_deviation.nearest_yaw_trajectory_shift_required_for_checking =
+    get_or_declare_parameter<double>(
+      node, t + "yaw_deviation.nearest_yaw_trajectory_shift_required_for_checking");
 
-    set_common_params(p.trajectory_shift, t + "trajectory_shift");
-    p.trajectory_shift.lat_shift_th =
-      get_or_declare_parameter<double>(node, t + "trajectory_shift.lat_shift_th");
-    p.trajectory_shift.forward_shift_th =
-      get_or_declare_parameter<double>(node, t + "trajectory_shift.forward_shift_th");
-    p.trajectory_shift.backward_shift_th =
-      get_or_declare_parameter<double>(node, t + "trajectory_shift.backward_shift_th");
+  set_common_params(p.trajectory_shift, t + "trajectory_shift");
+  p.trajectory_shift.lat_shift_th =
+    get_or_declare_parameter<double>(node, t + "trajectory_shift.lat_shift_th");
+  p.trajectory_shift.forward_shift_th =
+    get_or_declare_parameter<double>(node, t + "trajectory_shift.forward_shift_th");
+  p.trajectory_shift.backward_shift_th =
+    get_or_declare_parameter<double>(node, t + "trajectory_shift.backward_shift_th");
 
-    set_common_params(p.forward_trajectory_length, t + "forward_trajectory_length");
-    p.forward_trajectory_length.acceleration =
-      get_or_declare_parameter<double>(node, t + "forward_trajectory_length.acceleration");
-    p.forward_trajectory_length.margin =
-      get_or_declare_parameter<double>(node, t + "forward_trajectory_length.margin");
-  }
+  set_common_params(p.forward_trajectory_length, t + "forward_trajectory_length");
+  p.forward_trajectory_length.acceleration =
+    get_or_declare_parameter<double>(node, t + "forward_trajectory_length.acceleration");
+  p.forward_trajectory_length.margin =
+    get_or_declare_parameter<double>(node, t + "forward_trajectory_length.margin");
 }
 
 void TrajectoryChecker::setup_diag()
@@ -118,7 +109,7 @@ void TrajectoryChecker::setup_diag()
   const auto add_diag = [&](
                           const std::string & name, const bool & status, const std::string & msg) {
     context_->diag_updater->add(
-      ns + name, [&](auto & stat) {set_diag_status(stat, status, msg);}
+      ns + name, [&, msg = msg](auto & stat) {set_diag_status(stat, status, msg);}
     );
   };
 
