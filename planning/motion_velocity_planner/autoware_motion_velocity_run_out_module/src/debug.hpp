@@ -84,18 +84,33 @@ inline MarkerArray make_debug_objects_footprint_markers(
   m.type = Marker::LINE_STRIP;
   m.color = universe_utils::createMarkerColor(0.0, 1.0, 0.0, 1.0);
   m.scale.x = 0.2;
+  m.type = Marker::LINE_LIST;
   m.ns = "objects_footprints";
   m.color.r = 1.0;
   for (const auto & object : objects) {
     for (const auto & footprint : object.predicted_path_footprints) {
       const auto & f = footprint.predicted_path_footprint;
-      for (const auto corner : {front_left, front_right, rear_left, rear_right}) {
-        m.points.clear();
-        for (const auto & p : f.corner_linestrings[corner]) {
-          m.points.push_back(autoware_utils::create_point(p.x(), p.y(), 0.0));
-        }
-        markers.markers.push_back(m);
-        m.id++;
+      for (auto i = 0UL; i + 1 < f.corner_linestrings[front_left].size(); ++i) {
+        m.points.push_back(universe_utils::createPoint(
+          f.corner_linestrings[front_left][i].x(), f.corner_linestrings[front_left][i].y(), 0.0));
+        m.points.push_back(universe_utils::createPoint(
+          f.corner_linestrings[front_left][i + 1].x(), f.corner_linestrings[front_left][i + 1].y(),
+          0.0));
+        m.points.push_back(universe_utils::createPoint(
+          f.corner_linestrings[front_right][i].x(), f.corner_linestrings[front_right][i].y(), 0.0));
+        m.points.push_back(universe_utils::createPoint(
+          f.corner_linestrings[front_right][i + 1].x(),
+          f.corner_linestrings[front_right][i + 1].y(), 0.0));
+        m.points.push_back(universe_utils::createPoint(
+          f.corner_linestrings[rear_left][i].x(), f.corner_linestrings[rear_left][i].y(), 0.0));
+        m.points.push_back(universe_utils::createPoint(
+          f.corner_linestrings[rear_left][i + 1].x(), f.corner_linestrings[rear_left][i + 1].y(),
+          0.0));
+        m.points.push_back(universe_utils::createPoint(
+          f.corner_linestrings[rear_right][i].x(), f.corner_linestrings[rear_right][i].y(), 0.0));
+        m.points.push_back(universe_utils::createPoint(
+          f.corner_linestrings[rear_right][i + 1].x(), f.corner_linestrings[rear_right][i + 1].y(),
+          0.0));
       }
     }
   }
