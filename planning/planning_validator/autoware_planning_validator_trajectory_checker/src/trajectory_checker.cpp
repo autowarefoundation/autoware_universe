@@ -109,8 +109,7 @@ void TrajectoryChecker::setup_diag()
   const auto add_diag = [&](
                           const std::string & name, const bool & status, const std::string & msg) {
     context_->diag_updater->add(
-      ns + name, [&, msg = msg](auto & stat) {set_diag_status(stat, status, msg);}
-    );
+      ns + name, [&, msg = msg](auto & stat) { set_diag_status(stat, status, msg); });
   };
 
   add_diag("size", status->is_valid_size, "invalid trajectory size is found");
@@ -152,9 +151,9 @@ void TrajectoryChecker::set_diag_status(
   const auto invalid_count = context_->validation_status->invalid_count;
   const auto count_threshold = context_->params.diag_error_count_threshold;
   if (invalid_count < count_threshold) {
-    const auto warn_msg = msg + " (invalid count is less than error threshold: " +
-                          std::to_string(invalid_count) + " < " +
-                          std::to_string(count_threshold) + ")";
+    const auto warn_msg =
+      msg + " (invalid count is less than error threshold: " + std::to_string(invalid_count) +
+      " < " + std::to_string(count_threshold) + ")";
     stat.summary(DiagnosticStatus::WARN, warn_msg);
     return;
   }
@@ -541,7 +540,7 @@ bool TrajectoryChecker::check_valid_longitudinal_distance_deviation()
     const auto seg_idx = 0;
     if (!has_valid_lon_deviation(seg_idx, false)) {
       context_->set_handling(params_.lon_distance_deviation.handling_type);
-    override_all_error_diag_ |= params_.lon_distance_deviation.override_error_diag;
+      override_all_error_diag_ |= params_.lon_distance_deviation.override_error_diag;
       return false;
     }
     return true;
@@ -552,7 +551,7 @@ bool TrajectoryChecker::check_valid_longitudinal_distance_deviation()
     const auto seg_idx = trajectory.points.size() - 2;
     if (!has_valid_lon_deviation(seg_idx, true)) {
       context_->set_handling(params_.lon_distance_deviation.handling_type);
-    override_all_error_diag_ |= params_.lon_distance_deviation.override_error_diag;
+      override_all_error_diag_ |= params_.lon_distance_deviation.override_error_diag;
       return false;
     }
     return true;
@@ -704,7 +703,7 @@ bool TrajectoryChecker::check_trajectory_shift()
   if (*nearest_seg_idx == 0) {
     if (lon_shift > params_.trajectory_shift.forward_shift_th) {
       context_->set_handling(params_.trajectory_shift.handling_type);
-    override_all_error_diag_ |= params_.trajectory_shift.override_error_diag;
+      override_all_error_diag_ |= params_.trajectory_shift.override_error_diag;
       context_->debug_pose_publisher->pushPoseMarker(nearest_pose, "trajectory_shift");
       is_valid = false;
     }

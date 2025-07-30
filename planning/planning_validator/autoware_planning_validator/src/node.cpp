@@ -62,7 +62,7 @@ PlanningValidatorNode::PlanningValidatorNode(const rclcpp::NodeOptions & options
 void PlanningValidatorNode::setupParameters()
 {
   auto & p = context_->params;
-  
+
   const auto value = declare_parameter<int>("default_handling_type");
   try {
     p.default_handling_type = get_handling_type(value);
@@ -184,7 +184,7 @@ void PlanningValidatorNode::publishTrajectory()
   }
 
   if (handling_type == InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT) {
-    const auto & pub_trajectory =*data->last_valid_trajectory;
+    const auto & pub_trajectory = *data->last_valid_trajectory;
     pub_traj_->publish(pub_trajectory);
     published_time_publisher_->publish_if_subscribed(pub_traj_, pub_trajectory.header.stamp);
     RCLCPP_ERROR(get_logger(), "Invalid Trajectory detected. Use previous trajectory.");

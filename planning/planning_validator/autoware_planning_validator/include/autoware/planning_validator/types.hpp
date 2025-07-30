@@ -67,8 +67,7 @@ inline InvalidTrajectoryHandlingType get_handling_type(const int value)
     case 2:
       return InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT_WITH_SOFT_STOP;
     default:
-      throw std::invalid_argument{
-        "invalid_handling_type (" + std::to_string(value) + ")"};
+      throw std::invalid_argument{"invalid_handling_type (" + std::to_string(value) + ")"};
   }
 }
 
@@ -196,8 +195,7 @@ struct PlanningValidatorContext
     }
   }
 
-  void set_diag_status(
-    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg)
+  void set_diag_status(DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg)
   {
     if (is_ok) {
       stat.summary(DiagnosticStatus::OK, "validated.");
@@ -214,14 +212,12 @@ struct PlanningValidatorContext
     }
   }
 
-  void add_diag(
-    const std::string & name, const bool & status, const std::string & msg)
+  void add_diag(const std::string & name, const bool & status, const std::string & msg)
   {
     if (diag_updater) {
       // Do not do implicit capture, need to capture msg by copy
-      diag_updater->add(name, [this, &status, msg = msg](auto & stat) {
-        set_diag_status(stat, status, msg);
-      });
+      diag_updater->add(
+        name, [this, &status, msg = msg](auto & stat) { set_diag_status(stat, status, msg); });
     }
   }
 
@@ -259,19 +255,13 @@ struct PlanningValidatorContext
 
   void set_handling(const InvalidTrajectoryHandlingType handling_type)
   {
-    if(inv_traj_handling > handling_type) return;
+    if (inv_traj_handling > handling_type) return;
     inv_traj_handling = handling_type;
   }
 
-  void reset_handling()
-  {
-    inv_traj_handling = InvalidTrajectoryHandlingType::PUBLISH_AS_IT_IS;
-  }
+  void reset_handling() { inv_traj_handling = InvalidTrajectoryHandlingType::PUBLISH_AS_IT_IS; }
 
-  InvalidTrajectoryHandlingType get_handling() const
-  {
-    return inv_traj_handling;
-  }
+  InvalidTrajectoryHandlingType get_handling() const { return inv_traj_handling; }
 
 private:
   InvalidTrajectoryHandlingType inv_traj_handling;
