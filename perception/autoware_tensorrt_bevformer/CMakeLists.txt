@@ -1,13 +1,44 @@
 cmake_minimum_required(VERSION 3.14)
-project(autoware_tensorrt_bevformer LANGUAGES CXX CUDA)
+project(autoware_tensorrt_bevformer LANGUAGES CXX)
 
 if(POLICY CMP0146)
   cmake_policy(SET CMP0146 OLD)
 endif()
 
-# Set C++ and CUDA standards
+# Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+find_package(autoware_cmake REQUIRED)
+autoware_package()
+
+# Check for CUDA availability first
+find_package(CUDA QUIET)
+find_package(CUDAToolkit QUIET)
+
+# Check for TensorRT and CUDNN
+if(CUDAToolkit_FOUND)
+  find_package(cudnn_cmake_module QUIET)
+  find_package(tensorrt_cmake_module QUIET)
+  if(cudnn_cmake_module_FOUND)
+    find_package(CUDNN QUIET)
+  endif()
+  if(tensorrt_cmake_module_FOUND)
+    find_package(TENSORRT QUIET)
+  endif()
+endif()
+
+# If CUDA dependencies are not found, skip building this package
+if(NOT (CUDAToolkit_FOUND AND CUDNN_FOUND AND TENSORRT_FOUND))
+  message(WARNING "CUDA, CUDNN, or TensorRT libraries are not found. Skipping ${PROJECT_NAME} build.")
+  ament_auto_package()
+  return()
+endif()
+
+# Enable CUDA language only after confirming CUDA is available
+enable_language(CUDA)
+
+# Set CUDA standards
 set(CMAKE_CUDA_STANDARD 14)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
@@ -15,10 +46,6 @@ set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 # Set CUDA architecture for Turing GPUs (sm_75)
 set(ARCH "75")
 
-find_package(autoware_cmake REQUIRED)
-autoware_package()
-
-find_package(CUDA REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -26,31 +53,15 @@ find_package(sensor_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(autoware_internal_perception_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
+find_package(ament_index_cpp REQUIRED)
 
 include_directories(
   include
-  ${CUDA_INCLUDE_DIRS}
+  ${CUDAToolkit_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS}
-)
-
-# TensorRT setup - adjust path to your installation
-set(TENSORRT_ROOT "/usr/local/TensorRT-10.8.0.43")
-include_directories(${TENSORRT_ROOT}/include)
-link_directories(${TENSORRT_ROOT}/lib)
-
-# Add NvOnnxParser dependency
-find_library(NVONNXPARSER_LIB nvonnxparser PATHS ${TENSORRT_PATH}/lib)
-
-find_package(ament_index_cpp REQUIRED)
-
-# Include TensorRT plugin common directory
-include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/TensorRT/common
 )
-
-# Set TensorRT libraries with the correct variable name
-set(TENSORRT_LIBS nvinfer nvinfer_plugin nvonnxparser)
 
 # Build TensorRT plugins library first
 # Get all TensorRT plugin source files
@@ -71,15 +82,15 @@ endforeach()
 set(TENSORRT_OPS_TARGET tensorrt_ops)
 add_library(${TENSORRT_OPS_TARGET} SHARED ${TENSORRT_SRCS})
 
+# Set CUDA architecture through CUDA_ARCHITECTURES property
+set_property(TARGET ${TENSORRT_OPS_TARGET} PROPERTY CUDA_ARCHITECTURES ${ARCH})
+
 # Completely override CUDA flags to avoid autoware's problematic settings
 set(CMAKE_CUDA_FLAGS "")
 set(CMAKE_CUDA_FLAGS_DEBUG "")
 set(CMAKE_CUDA_FLAGS_RELEASE "")
 set(CMAKE_CUDA_FLAGS_RELWITHDEBINFO "")
 set(CMAKE_CUDA_FLAGS_MINSIZEREL "")
-
-# Set CUDA architecture through CUDA_ARCHITECTURES property
-set_property(TARGET ${TENSORRT_OPS_TARGET} PROPERTY CUDA_ARCHITECTURES ${ARCH})
 
 # Set target properties to handle CUDA compilation properly
 set_target_properties(${TENSORRT_OPS_TARGET} PROPERTIES
@@ -104,7 +115,12 @@ target_compile_options(${TENSORRT_OPS_TARGET} PRIVATE
   >
 )
 
-target_link_libraries(${TENSORRT_OPS_TARGET} PUBLIC cudnn ${TENSORRT_LIBS} cublas)
+target_link_libraries(${TENSORRT_OPS_TARGET} PUBLIC 
+  ${CUDNN_LIBRARY} 
+  ${TENSORRT_LIBRARIES}
+  CUDA::cublas
+  CUDA::cudart
+)
 
 # Main project source files
 set(SOURCES
@@ -126,22 +142,21 @@ set(SOURCES
 # Main library
 ament_auto_add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
-ament_target_dependencies(autoware_tensorrt_bevformer
+ament_target_dependencies(${PROJECT_NAME}
   rclcpp
   std_msgs
   visualization_msgs
   tf2_geometry_msgs
+  ament_index_cpp
 )
+
 # Link main library with the TensorRT plugins and other dependencies
 target_link_libraries(${PROJECT_NAME}
-  ${CUDA_LIBRARIES}
-  cudart
+  CUDA::cudart
   ${OpenCV_LIBRARIES}
-  ${TENSORRT_LIBS}
-  ${NVONNXPARSER_LIB}
-  ${TENSORRT_OPS_TARGET}  # Link with our custom TensorRT plugins
-  dl  # Add dl library for dlopen/dlsym
-  ament_index_cpp::ament_index_cpp
+  ${TENSORRT_LIBRARIES}
+  ${TENSORRT_OPS_TARGET}
+  dl
 )
 
 # Add dependency to ensure TensorRT plugins are built first
