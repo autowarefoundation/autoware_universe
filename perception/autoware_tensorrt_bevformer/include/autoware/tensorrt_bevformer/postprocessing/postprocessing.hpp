@@ -53,7 +53,7 @@ class PostProcessor
 {
 public:
   PostProcessor(
-    int nb_dec, int num_query, int cls_out_channels, int bbox_dims, float score_thr, int max_num,
+    int nb_dec, int num_query, int cls_out_channels, int bbox_dims, int bev_h, int bev_w, float score_thr, int max_num,
     const std::vector<double> & pc_range, const std::vector<double> & post_center_range);
   PostProcessor();
   ~PostProcessor();
@@ -64,15 +64,15 @@ public:
    * @return Vector of maps containing detection results
    */
   std::vector<Box3D> post_process(
-    const std::map<std::string, std::vector<double>> & reshapedOutputs);
+    const std::map<std::string, std::vector<double>> & reshapedOutputs) const;
 
   // Making these public since they're accessed by standalone functions
   int nb_dec;
-  int bev_h;
-  int bev_w;
   int num_query;
   int cls_out_channels;
   int bbox_dims;
+  int bev_h;
+  int bev_w;
   double score_thr;
   int max_num;
   std::vector<double> pc_range_;
