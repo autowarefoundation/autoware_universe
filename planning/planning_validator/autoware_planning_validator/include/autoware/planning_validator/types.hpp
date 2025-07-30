@@ -195,32 +195,6 @@ struct PlanningValidatorContext
     }
   }
 
-  void set_diag_status(DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg)
-  {
-    if (is_ok) {
-      stat.summary(DiagnosticStatus::OK, "validated.");
-      return;
-    }
-
-    if (validation_status->invalid_count < params.diag_error_count_threshold) {
-      const auto warn_msg = msg + " (invalid count is less than error threshold: " +
-                            std::to_string(validation_status->invalid_count) + " < " +
-                            std::to_string(params.diag_error_count_threshold) + ")";
-      stat.summary(DiagnosticStatus::WARN, warn_msg);
-    } else {
-      stat.summary(DiagnosticStatus::ERROR, msg);
-    }
-  }
-
-  void add_diag(const std::string & name, const bool & status, const std::string & msg)
-  {
-    if (diag_updater) {
-      // Do not do implicit capture, need to capture msg by copy
-      diag_updater->add(
-        name, [this, &status, msg = msg](auto & stat) { set_diag_status(stat, status, msg); });
-    }
-  }
-
   void update_diag()
   {
     if (diag_updater) {

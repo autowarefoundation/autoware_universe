@@ -78,6 +78,9 @@ private:
 
   void publish_planning_factor(const DebugData & debug) const;
 
+  void set_diag_status(
+    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg) const;
+
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_voxel_pointcloud_;
 
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_cluster_pointcloud_;

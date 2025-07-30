@@ -35,6 +35,9 @@ public:
   std::string get_module_name() const override { return module_name_; };
 
 private:
+  void set_diag_status(
+    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg) const;
+
   bool enable_latency_check_;
   double latency_threshold_;
 };

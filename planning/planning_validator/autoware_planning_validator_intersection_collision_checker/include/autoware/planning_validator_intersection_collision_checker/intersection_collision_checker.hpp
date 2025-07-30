@@ -87,6 +87,9 @@ private:
 
   void publish_planning_factor(const DebugData & debug_data) const;
 
+  void set_diag_status(
+    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg) const;
+
   void reset_data()
   {
     history_.clear();

@@ -82,10 +82,34 @@ void IntersectionCollisionChecker::init(
 
 void IntersectionCollisionChecker::setup_diag()
 {
-  context_->add_diag(
-    "intersection_validation_collision_check",
-    context_->validation_status->is_valid_intersection_collision_check,
-    "risk of collision at intersection turn");
+  if (!context_->diag_updater) return;
+
+  const auto & status = context_->validation_status->is_valid_intersection_collision_check;
+  context_->diag_updater->add("intersection_validation_collision_check", [&](auto & stat) {
+    const std::string msg = "risk of collision at intersection turn";
+    set_diag_status(stat, status, msg);
+  });
+}
+
+void IntersectionCollisionChecker::set_diag_status(
+  DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg) const
+{
+  if (is_ok) {
+    stat.summary(DiagnosticStatus::OK, "validated.");
+    return;
+  }
+
+  const auto invalid_count = context_->validation_status->invalid_count;
+  const auto count_threshold = context_->params.diag_error_count_threshold;
+  if (invalid_count < count_threshold) {
+    const auto warn_msg =
+      msg + " (invalid count is less than error threshold: " + std::to_string(invalid_count) +
+      " < " + std::to_string(count_threshold) + ")";
+    stat.summary(DiagnosticStatus::WARN, warn_msg);
+    return;
+  }
+
+  stat.summary(DiagnosticStatus::ERROR, msg);
 }
 
 bool IntersectionCollisionChecker::is_data_ready(std::string & msg)
