@@ -9,7 +9,7 @@ The check is executed only when:
 
 ## Inner Workings
 
-The intersection_collision_checker checks for collisions using pointcloud data and rounte informations. It identifies target lanes at intersections and extracts pcd objects withing target lanes, and performs simplistic tracking and velocity estimation of pcd objects for each target lane. Times to arrival are computed for Ego and pcd objects, and the difference in the arrival time is used to judge if a collision is imminent.
+The intersection_collision_checker checks for collisions using pointcloud data and route information. It identifies target lanes at intersections and extracts pcd objects withing target lanes, and performs simplistic tracking and velocity estimation of pcd objects for each target lane. Times to arrival are computed for Ego and pcd objects, and the difference in the arrival time is used to judge if a collision is imminent.
 
 ### Flowchart
 
@@ -170,8 +170,8 @@ If any of the following conditions are met the tracking information is reset and
 | `min_time_horizon`    | [s]    | double | Minimum time horizon to check ahead along ego trajectory                                    | 10.0          |
 | `on_time_buffer`      | [s]    | double | Continuous collision detection time required to judge as unsafe                             | 0.5           |
 | `off_time_buffer`     | [s]    | double | Continuous no collision detection time required to clear unsafe decision                    | 1.0           |
-| `filter.min_velocity` | [m/s]  | double | Minimum velocity threshold to determing moving object                                       | 1.0           |
-| `filter.moving_time`  | [s]    | double | Minimum duration object needs to statisfy min velocity condition to classify as moving      | 1.0           |
+| `filter.min_velocity` | [m/s]  | double | Minimum velocity threshold to determine moving object                                       | 1.0           |
+| `filter.moving_time`  | [s]    | double | Minimum duration object needs to satisfy min velocity condition to classify as moving       | 1.0           |
 
 ### Target Lanes Parameters
 
