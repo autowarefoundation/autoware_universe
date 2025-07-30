@@ -188,7 +188,9 @@ GoalCandidates GoalSearcher::search(
   auto center_line_path = utils::resamplePathWithSpline(
     route_handler->getCenterLinePath(pull_over_lanes_, s_start, s_end), longitudinal_interval);
 
-  std::vector<Pose> original_search_poses{};  // for search area visualizing
+  // used in createAreaPolygon for search area visualization.
+  std::vector<Pose> min_margin_from_boundary_goal_poses{};
+
   size_t goal_id = 0;
   for (const auto & p : center_line_path.points) {
     // todo(kosuke55): fix orientation for inverseTransformPoint temporarily
@@ -212,19 +214,51 @@ GoalCandidates GoalSearcher::search(
     const double offset_from_center_line =
       use_bus_stop_area ? -distance_from_bound.value()
                         : -distance_from_bound.value() + sign * margin_from_boundary;
-    // original means non lateral offset poses
-    const Pose original_search_pose = calc_offset_pose(center_pose, 0, offset_from_center_line, 0);
+    const Pose pose_with_min_margin_from_boundary =
+      calc_offset_pose(center_pose, 0.0, offset_from_center_line, 0.0);
     const double longitudinal_distance_from_original_goal =
       std::abs(autoware::motion_utils::calcSignedArcLength(
-        center_line_path.points, reference_goal_pose.position, original_search_pose.position));
-    original_search_poses.push_back(original_search_pose);  // for createAreaPolygon
-    Pose search_pose{};
+        center_line_path.points, reference_goal_pose.position,
+        pose_with_min_margin_from_boundary.position));
+
     // search goal_pose in lateral direction
-    for (double dy = 0; dy <= max_lateral_offset; dy += lateral_offset_interval) {
-      search_pose = calc_offset_pose(original_search_pose, 0, sign * dy, 0);
+    for (double dy = 0.0; dy <= max_lateral_offset; dy += lateral_offset_interval) {
+      // unaligned means that the orientation of the center pose is used as it is
+      const Pose unaligned_goal_pose =
+        calc_offset_pose(pose_with_min_margin_from_boundary, 0.0, sign * dy, 0.0);
+
+      const auto unaligned_transformed_vehicle_footprint = autoware_utils::transform_vector(
+        vehicle_footprint_, autoware_utils::pose2transform(unaligned_goal_pose));
+
+      // modify the goal_pose orientation so that vehicle footprint front heading is parallel to the
+      // lane boundary
+      const auto vehicle_front_midpoint = (unaligned_transformed_vehicle_footprint.at(
+                                             vehicle_info_utils::VehicleInfo::FrontLeftIndex) +
+                                           unaligned_transformed_vehicle_footprint.at(
+                                             vehicle_info_utils::VehicleInfo::FrontRightIndex)) /
+                                          2.0;
+      const auto vehicle_rear_midpoint = (unaligned_transformed_vehicle_footprint.at(
+                                            vehicle_info_utils::VehicleInfo::RearLeftIndex) +
+                                          unaligned_transformed_vehicle_footprint.at(
+                                            vehicle_info_utils::VehicleInfo::RearRightIndex)) /
+                                         2.0;
+      const auto vehicle_center_point = (vehicle_front_midpoint + vehicle_rear_midpoint) / 2.0;
+      const auto pull_over_lanelet = lanelet::utils::combineLaneletsShape(pull_over_lanes_);
+      const auto vehicle_center_pose_for_bound_opt = goal_planner_utils::calcClosestPose(
+        left_side_parking_ ? pull_over_lanelet.leftBound() : pull_over_lanelet.rightBound(),
+        autoware_utils::create_point(
+          vehicle_center_point.x(), vehicle_center_point.y(), unaligned_goal_pose.position.z));
+      if (!vehicle_center_pose_for_bound_opt) {
+        continue;
+      }
+      const auto & vehicle_center_pose_for_bound = vehicle_center_pose_for_bound_opt.value();
+
+      Pose goal_pose;
+      goal_pose.position = unaligned_goal_pose.position;
+      goal_pose.orientation = vehicle_center_pose_for_bound.orientation;
 
       const auto transformed_vehicle_footprint = autoware_utils::transform_vector(
-        vehicle_footprint_, autoware_utils::pose2transform(search_pose));
+        vehicle_footprint_, autoware_utils::pose2transform(goal_pose));
 
       if (
         use_bus_stop_area && !goal_planner_utils::isWithinAreas(
@@ -249,29 +283,12 @@ GoalCandidates GoalSearcher::search(
         continue;
       }
 
-      // modify the goal_pose orientation so that vehicle footprint front heading is parallel to the
-      // lane boundary
-      const auto vehicle_front_midpoint =
-        (transformed_vehicle_footprint.at(vehicle_info_utils::VehicleInfo::FrontLeftIndex) +
-         transformed_vehicle_footprint.at(vehicle_info_utils::VehicleInfo::FrontRightIndex)) /
-        2.0;
-      const auto vehicle_rear_midpoint =
-        (transformed_vehicle_footprint.at(vehicle_info_utils::VehicleInfo::RearLeftIndex) +
-         transformed_vehicle_footprint.at(vehicle_info_utils::VehicleInfo::RearRightIndex)) /
-        2.0;
-      const auto vehicle_center_point = (vehicle_front_midpoint + vehicle_rear_midpoint) / 2.0;
-      const auto pull_over_lanelet = lanelet::utils::combineLaneletsShape(pull_over_lanes_);
-      const auto vehicle_center_pose_for_bound_opt = goal_planner_utils::calcClosestPose(
-        left_side_parking_ ? pull_over_lanelet.leftBound() : pull_over_lanelet.rightBound(),
-        autoware_utils::create_point(
-          vehicle_center_point.x(), vehicle_center_point.y(), search_pose.position.z));
-      if (!vehicle_center_pose_for_bound_opt) {
-        continue;
+      if (dy == 0.0) {
+        min_margin_from_boundary_goal_poses.push_back(goal_pose);
       }
-      const auto & vehicle_center_pose_for_bound = vehicle_center_pose_for_bound_opt.value();
+
       GoalCandidate goal_candidate{};
-      goal_candidate.goal_pose = search_pose;
-      goal_candidate.goal_pose.orientation = vehicle_center_pose_for_bound.orientation;
+      goal_candidate.goal_pose = goal_pose;
       goal_candidate.lateral_offset = dy;
       goal_candidate.id = goal_id;
       goal_id++;
@@ -280,7 +297,7 @@ GoalCandidates GoalSearcher::search(
       goal_candidates.push_back(goal_candidate);
     }
   }
-  createAreaPolygons(original_search_poses, planner_data);
+  createAreaPolygons(min_margin_from_boundary_goal_poses, planner_data);
 
   return goal_candidates;
 }
