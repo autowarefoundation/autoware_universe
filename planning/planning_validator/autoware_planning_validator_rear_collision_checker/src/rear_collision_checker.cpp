@@ -644,10 +644,11 @@ auto RearCollisionChecker::get_pointcloud_objects_at_blind_spot(
     const auto is_right = turn_behavior == Behavior::TURN_RIGHT;
     lanelet::ConstLanelets ret{};
     for (const auto & lane : current_lanes) {
-      ret.push_back(utils::generate_half_lanelet(
-        lane, is_right,
-        0.5 * context_->vehicle_info.vehicle_width_m + p.common.blind_spot.offset.inner,
-        p.common.blind_spot.offset.outer));
+      ret.push_back(
+        utils::generate_half_lanelet(
+          lane, is_right,
+          0.5 * context_->vehicle_info.vehicle_width_m + p.common.blind_spot.offset.inner,
+          p.common.blind_spot.offset.outer));
     }
     return ret;
   }();
@@ -822,26 +823,33 @@ void RearCollisionChecker::publish_marker(const DebugData & debug) const
   };
 
   {
-    add(utils::create_line_marker_array(
-      debug.reachable_line, "reachable_line",
-      autoware_utils::create_marker_color(1.0, 0.67, 0.0, 0.999)));
-    add(utils::create_line_marker_array(
-      debug.stoppable_line, "stoppable_line",
-      autoware_utils::create_marker_color(1.0, 0.0, 0.42, 0.999)));
-    add(lanelet::visualization::laneletsAsTriangleMarkerArray(
-      "detection_lanes", debug.get_detection_lanes(),
-      autoware_utils::create_marker_color(1.0, 0.0, 0.42, 0.2)));
-    add(lanelet::visualization::laneletsAsTriangleMarkerArray(
-      "current_lanes", debug.current_lanes,
-      autoware_utils::create_marker_color(0.16, 1.0, 0.69, 0.2)));
-    add(utils::create_pointcloud_object_marker_array(
-      debug.pointcloud_objects, "pointcloud_objects", param_listener_->get_params()));
-    add(utils::create_polygon_marker_array(
-      debug.get_detection_polygons(), "detection_areas",
-      autoware_utils::create_marker_color(1.0, 0.0, 0.42, 0.999)));
-    add(utils::create_polygon_marker_array(
-      debug.hull_polygons, "hull_polygons",
-      autoware_utils::create_marker_color(0.0, 0.0, 1.0, 0.999)));
+    add(
+      utils::create_line_marker_array(
+        debug.reachable_line, "reachable_line",
+        autoware_utils::create_marker_color(1.0, 0.67, 0.0, 0.999)));
+    add(
+      utils::create_line_marker_array(
+        debug.stoppable_line, "stoppable_line",
+        autoware_utils::create_marker_color(1.0, 0.0, 0.42, 0.999)));
+    add(
+      lanelet::visualization::laneletsAsTriangleMarkerArray(
+        "detection_lanes", debug.get_detection_lanes(),
+        autoware_utils::create_marker_color(1.0, 0.0, 0.42, 0.2)));
+    add(
+      lanelet::visualization::laneletsAsTriangleMarkerArray(
+        "current_lanes", debug.current_lanes,
+        autoware_utils::create_marker_color(0.16, 1.0, 0.69, 0.2)));
+    add(
+      utils::create_pointcloud_object_marker_array(
+        debug.pointcloud_objects, "pointcloud_objects", param_listener_->get_params()));
+    add(
+      utils::create_polygon_marker_array(
+        debug.get_detection_polygons(), "detection_areas",
+        autoware_utils::create_marker_color(1.0, 0.0, 0.42, 0.999)));
+    add(
+      utils::create_polygon_marker_array(
+        debug.hull_polygons, "hull_polygons",
+        autoware_utils::create_marker_color(0.0, 0.0, 1.0, 0.999)));
 
     std::for_each(msg.markers.begin(), msg.markers.end(), [](auto & marker) {
       marker.lifetime = rclcpp::Duration::from_seconds(0.5);

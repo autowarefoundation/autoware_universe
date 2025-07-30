@@ -222,9 +222,10 @@ void YawValidator::validate(
 {
   const auto interpolated_trajectory_point =
     motion_utils::calcInterpolatedPoint(reference_trajectory, kinematics.pose.pose);
-  res.yaw_deviation = std::abs(angles::shortest_angular_distance(
-    tf2::getYaw(interpolated_trajectory_point.pose.orientation),
-    tf2::getYaw(kinematics.pose.pose.orientation)));
+  res.yaw_deviation = std::abs(
+    angles::shortest_angular_distance(
+      tf2::getYaw(interpolated_trajectory_point.pose.orientation),
+      tf2::getYaw(kinematics.pose.pose.orientation)));
   res.is_valid_yaw = res.yaw_deviation <= yaw_deviation_error_th_;
   res.is_warn_yaw = res.yaw_deviation > yaw_deviation_warn_th_;
 }

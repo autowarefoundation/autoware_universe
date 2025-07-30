@@ -32,10 +32,11 @@ protected:
     rclcpp::init(0, nullptr);
     // parameters
     auto node_options = rclcpp::NodeOptions{};
-    node_options.arguments(std::vector<std::string>{
-      "--ros-args", "--params-file",
-      ament_index_cpp::get_package_share_directory("autoware_test_utils") +
-        "/config/test_vehicle_info.param.yaml"});
+    node_options.arguments(
+      std::vector<std::string>{
+        "--ros-args", "--params-file",
+        ament_index_cpp::get_package_share_directory("autoware_test_utils") +
+          "/config/test_vehicle_info.param.yaml"});
     auto node = rclcpp::Node::make_shared("test", node_options);
     vehicle_info = autoware::vehicle_info_utils::VehicleInfoUtils(*node).getVehicleInfo();
 
@@ -63,10 +64,11 @@ protected:
     rclcpp::init(0, nullptr);
     // parameters
     auto node_options = rclcpp::NodeOptions{};
-    node_options.arguments(std::vector<std::string>{
-      "--ros-args", "--params-file",
-      ament_index_cpp::get_package_share_directory("autoware_test_utils") +
-        "/config/test_vehicle_info.param.yaml"});
+    node_options.arguments(
+      std::vector<std::string>{
+        "--ros-args", "--params-file",
+        ament_index_cpp::get_package_share_directory("autoware_test_utils") +
+          "/config/test_vehicle_info.param.yaml"});
     auto node = rclcpp::Node::make_shared("test", node_options);
     vehicle_info = autoware::vehicle_info_utils::VehicleInfoUtils(*node).getVehicleInfo();
 
@@ -151,15 +153,17 @@ TEST_F(DISABLED_TestUtilWithMap, createDepartureCheckLanelet)
 
   const geometry_msgs::msg::Pose goal_pose =
     geometry_msgs::build<geometry_msgs::msg::Pose>()
-      .position(geometry_msgs::build<geometry_msgs::msg::Point>()
-                  .x(433.42254638671875)
-                  .y(465.3381652832031)
-                  .z(0.0))
-      .orientation(geometry_msgs::build<geometry_msgs::msg::Quaternion>()
-                     .x(0.0)
-                     .y(0.0)
-                     .z(0.306785474523741)
-                     .w(0.9517786888879384));
+      .position(
+        geometry_msgs::build<geometry_msgs::msg::Point>()
+          .x(433.42254638671875)
+          .y(465.3381652832031)
+          .z(0.0))
+      .orientation(
+        geometry_msgs::build<geometry_msgs::msg::Quaternion>()
+          .x(0.0)
+          .y(0.0)
+          .z(0.306785474523741)
+          .w(0.9517786888879384));
 
   // 1) get target shoulder lane and check it's lane id
   const auto target_shoulder_lane = route_handler->getPullOverTarget(goal_pose);
