@@ -191,8 +191,8 @@ inline bool use_agnocast()
 template <typename MessageT>
 class Subscription
 {
-  // We are not storing the subscription objects for now, but this may chage once
-  // agnnocast::Subscription supports some functionality.
+  // We are not storing the subscription objects for now, but this may change once
+  // agnocast::Subscription supports some functionality.
 
 public:
   using SharedPtr = std::shared_ptr<Subscription<MessageT>>;
