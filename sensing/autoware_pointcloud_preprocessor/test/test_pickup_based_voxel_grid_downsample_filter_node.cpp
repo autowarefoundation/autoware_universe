@@ -22,12 +22,12 @@
 #include <gtest/gtest.h>
 
 #include <memory>
+#include <string>
 #include <vector>
 
 // Helper function to create a test point cloud
 sensor_msgs::msg::PointCloud2::SharedPtr createTestPointCloud(
-  const std::vector<std::array<float, 3>>& points,
-  const std::string& frame_id = "base_link")
+  const std::vector<std::array<float, 3>> & points, const std::string & frame_id = "base_link")
 {
   auto cloud = std::make_shared<sensor_msgs::msg::PointCloud2>();
   cloud->header.frame_id = frame_id;
@@ -49,7 +49,7 @@ sensor_msgs::msg::PointCloud2::SharedPtr createTestPointCloud(
   sensor_msgs::PointCloud2Iterator<float> iter_y(*cloud, "y");
   sensor_msgs::PointCloud2Iterator<float> iter_z(*cloud, "z");
 
-  for (const auto& point : points) {
+  for (const auto & point : points) {
     *iter_x = point[0];
     *iter_y = point[1];
     *iter_z = point[2];
@@ -62,10 +62,10 @@ sensor_msgs::msg::PointCloud2::SharedPtr createTestPointCloud(
 }
 
 // Helper function to extract points from PointCloud2
-std::vector<std::array<float, 3>> extractPoints(const sensor_msgs::msg::PointCloud2& cloud)
+std::vector<std::array<float, 3>> extractPoints(const sensor_msgs::msg::PointCloud2 & cloud)
 {
   std::vector<std::array<float, 3>> points;
-  
+
   sensor_msgs::PointCloud2ConstIterator<float> iter_x(cloud, "x");
   sensor_msgs::PointCloud2ConstIterator<float> iter_y(cloud, "y");
   sensor_msgs::PointCloud2ConstIterator<float> iter_z(cloud, "z");
@@ -82,15 +82,15 @@ TEST(DownsampleWithVoxelGridTest, TestBasicDownsampling)
   // Create test points that should be downsampled
   // Points within the same voxel should be reduced to one point
   std::vector<std::array<float, 3>> input_points = {
-    {0.0f, 0.0f, 0.0f},    // Voxel (0,0,0)
-    {0.05f, 0.05f, 0.05f}, // Same voxel as above (within 0.1 voxel size)
-    {0.2f, 0.2f, 0.2f},    // Different voxel
-    {0.25f, 0.25f, 0.25f}, // Same voxel as above
-    {0.5f, 0.5f, 0.5f},    // Different voxel
+    {0.0f, 0.0f, 0.0f},     // Voxel (0,0,0)
+    {0.05f, 0.05f, 0.05f},  // Same voxel as above (within 0.1 voxel size)
+    {0.2f, 0.2f, 0.2f},     // Different voxel
+    {0.25f, 0.25f, 0.25f},  // Same voxel as above
+    {0.5f, 0.5f, 0.5f},     // Different voxel
   };
 
   auto input_cloud = createTestPointCloud(input_points);
-  
+
   autoware::pointcloud_preprocessor::VoxelSize voxel_size = {0.1f, 0.1f, 0.1f};
   sensor_msgs::msg::PointCloud2 output_cloud;
 
@@ -132,9 +132,7 @@ TEST(DownsampleWithVoxelGridTest, TestEmptyPointCloud)
 TEST(DownsampleWithVoxelGridTest, TestSinglePoint)
 {
   // Create point cloud with single point
-  std::vector<std::array<float, 3>> input_points = {
-    {1.0f, 2.0f, 3.0f}
-  };
+  std::vector<std::array<float, 3>> input_points = {{1.0f, 2.0f, 3.0f}};
   auto input_cloud = createTestPointCloud(input_points);
 
   autoware::pointcloud_preprocessor::VoxelSize voxel_size = {0.1f, 0.1f, 0.1f};
@@ -149,7 +147,7 @@ TEST(DownsampleWithVoxelGridTest, TestSinglePoint)
 
   // Should have 1 point
   EXPECT_EQ(output_points.size(), 1);
-  
+
   // Check that the point is preserved
   EXPECT_FLOAT_EQ(output_points[0][0], 1.0f);
   EXPECT_FLOAT_EQ(output_points[0][1], 2.0f);
@@ -173,9 +171,9 @@ TEST(DownsampleWithVoxelGridTest, TestDifferentVoxelSizes)
     sensor_msgs::msg::PointCloud2 output_cloud;
     autoware::pointcloud_preprocessor::downsample_with_voxel_grid(
       input_cloud, small_voxel, output_cloud);
-    
+
     auto output_points = extractPoints(output_cloud);
-    EXPECT_EQ(output_points.size(), 4); // All points in different voxels
+    EXPECT_EQ(output_points.size(), 4);  // All points in different voxels
   }
 
   // Test with large voxel size - should reduce to one point
@@ -184,9 +182,9 @@ TEST(DownsampleWithVoxelGridTest, TestDifferentVoxelSizes)
     sensor_msgs::msg::PointCloud2 output_cloud;
     autoware::pointcloud_preprocessor::downsample_with_voxel_grid(
       input_cloud, large_voxel, output_cloud);
-    
+
     auto output_points = extractPoints(output_cloud);
-    EXPECT_EQ(output_points.size(), 1); // All points in same voxel
+    EXPECT_EQ(output_points.size(), 1);  // All points in same voxel
   }
 }
 
@@ -195,9 +193,9 @@ TEST(DownsampleWithVoxelGridTest, TestNegativeCoordinates)
   // Create test points with negative coordinates
   std::vector<std::array<float, 3>> input_points = {
     {-0.5f, -0.5f, -0.5f},
-    {-0.45f, -0.45f, -0.45f}, // Same voxel as above
+    {-0.45f, -0.45f, -0.45f},  // Same voxel as above
     {0.5f, 0.5f, 0.5f},
-    {0.55f, 0.55f, 0.55f}, // Same voxel as above
+    {0.55f, 0.55f, 0.55f},  // Same voxel as above
   };
   auto input_cloud = createTestPointCloud(input_points);
 

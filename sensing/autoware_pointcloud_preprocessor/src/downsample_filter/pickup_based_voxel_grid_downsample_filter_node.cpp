@@ -19,6 +19,7 @@
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace
@@ -81,13 +82,12 @@ PickupBasedVoxelGridDownsampleFilterComponent::PickupBasedVoxelGridDownsampleFil
 }
 
 using VoxelKey = std::array<int, 3>;
-using PointIndexHashMap =
-  robin_hood::unordered_map<VoxelKey, size_t, VoxelKeyHash, VoxelKeyEqual>;
+using PointIndexHashMap = robin_hood::unordered_map<VoxelKey, size_t, VoxelKeyHash, VoxelKeyEqual>;
 
 void extract_unique_voxel_point_indices(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input, const VoxelSize & voxel_size,
-  PointIndexHashMap & index_map
-){
+  PointIndexHashMap & index_map)
+{
   constexpr float large_num_offset = 100000.0;
   const float inverse_voxel_size_x = 1.0 / voxel_size.x;
   const float inverse_voxel_size_y = 1.0 / voxel_size.y;
@@ -117,8 +117,7 @@ void extract_unique_voxel_point_indices(
 }
 
 void copy_filtered_point(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input,
-  const PointIndexHashMap & index_map,
+  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input, const PointIndexHashMap & index_map,
   sensor_msgs::msg::PointCloud2 & output)
 {
   size_t output_global_offset = 0;
@@ -140,10 +139,9 @@ void copy_filtered_point(
 }
 
 void downsample_with_voxel_grid(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input,
-  const VoxelSize & voxel_size,
-  sensor_msgs::msg::PointCloud2 & output
-){
+  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input, const VoxelSize & voxel_size,
+  sensor_msgs::msg::PointCloud2 & output)
+{
   // Extract unique voxel point indices
   PointIndexHashMap index_map;
   index_map.reserve(input->data.size() / input->point_step);

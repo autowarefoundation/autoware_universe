@@ -19,6 +19,8 @@
 
 #include <sensor_msgs/msg/point_cloud2.h>
 
+#include <vector>
+
 namespace autoware::pointcloud_preprocessor
 {
 
@@ -30,10 +32,8 @@ struct VoxelSize
 };
 
 void downsample_with_voxel_grid(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input,
-  const VoxelSize & voxel_size,
-  sensor_msgs::msg::PointCloud2 & output
-);
+  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input, const VoxelSize & voxel_size,
+  sensor_msgs::msg::PointCloud2 & output);
 
 /**
  * @class PickupBasedVoxelGridDownsampleFilterComponent
@@ -66,4 +66,4 @@ public:
 };
 }  // namespace autoware::pointcloud_preprocessor
 
-#endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__DOWNSAMPLE_FILTER__PICKUP_BASED_VOXEL_GRID_DOWNSAMPLE_FILTER_NODE_HPP_  // NOLINT
+#endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__DOWNSAMPLE_FILTER__PICKUP_BASED_VOXEL_GRID_DOWNSAMPLE_FILTER_NODE_HPP_
