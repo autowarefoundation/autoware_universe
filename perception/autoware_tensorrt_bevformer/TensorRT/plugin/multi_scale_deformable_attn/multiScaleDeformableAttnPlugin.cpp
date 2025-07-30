@@ -19,7 +19,6 @@
 // Original creation by Derry Lin on 2022/10/22.
 
 // cspell:ignore MSDA
-
 #include "multiScaleDeformableAttnPlugin.h"
 
 #include "checkMacrosPlugin.h"
@@ -419,10 +418,11 @@ char const * MultiScaleDeformableAttnPlugin::getPluginNamespace() const noexcept
 {
   return mPluginNamespace.c_str();
 }
-// cppcheck-suppress unknownMacro
+
 DataType MultiScaleDeformableAttnPlugin::getOutputDataType(
   int32_t index, const nvinfer1::DataType * inputTypes, int32_t nbInputs) const noexcept
 {
+  // cppcheck-suppress unknownMacro
   PLUGIN_ASSERT(inputTypes && nbInputs > 0 && index == 0)
   return inputTypes[0];
 }
@@ -435,11 +435,12 @@ void MultiScaleDeformableAttnPlugin::attachToContext(
 void MultiScaleDeformableAttnPlugin::detachFromContext() noexcept
 {
 }
-// cppcheck-suppress unknownMacro
+
 void MultiScaleDeformableAttnPlugin::configurePlugin(
   const nvinfer1::DynamicPluginTensorDesc * in, int32_t nbInputs,
   const nvinfer1::DynamicPluginTensorDesc * out, int32_t nbOutputs) noexcept
 {
+  // cppcheck-suppress unknownMacro
   PLUGIN_ASSERT(nbInputs == 5)
   const int channels = in[0].desc.dims.d[3];
   if (use_h2) {
