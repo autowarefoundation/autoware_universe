@@ -703,6 +703,7 @@ void NormalLaneChange::resetParameters()
   status_ = LaneChangeStatus();
   unsafe_hysteresis_count_ = 0;
   lane_change_debug_.reset();
+  set_signal_activation_time(true);
 
   RCLCPP_DEBUG(logger_, "reset all flags and debug information.");
 }
@@ -846,7 +847,7 @@ bool NormalLaneChange::isAbleToReturnCurrentLane() const
   return true;
 }
 
-bool NormalLaneChange::is_near_terminal() const
+bool NormalLaneChange::is_near_terminal_end() const
 {
   if (!common_data_ptr_ || !common_data_ptr_->is_data_available()) {
     return true;

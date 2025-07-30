@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>autoware_diffusion_planner</name>
+  <version>0.0.1</version>
+  <description>The autoware_diffusion_planner package</description>
+
+  <maintainer email="daniel.sanchez@tier4.jp">Daniel Sanchez</maintainer>
+  <maintainer email="yukihiro.saito@tier4.jp">Yukihiro Saito</maintainer>
+  <maintainer email="go.sakayori@tier4.jp">Go Sakayori</maintainer>
+  <maintainer email="shintaro.sakoda@tier4.jp">Shintaro Sakoda</maintainer>
+
+  <license>Apache License 2.0</license>
+
+  <author email="daniel.sanchez@tier4.jp">Daniel Sanchez</author>
+
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+
+  <depend>autoware_cuda_dependency_meta</depend>
+  <depend>autoware_cuda_utils</depend>
+  <depend>autoware_internal_planning_msgs</depend>
+  <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_map_msgs</depend>
+  <depend>autoware_motion_utils</depend>
+  <depend>autoware_object_recognition_utils</depend>
+  <depend>autoware_perception_msgs</depend>
+  <depend>autoware_planning_msgs</depend>
+  <depend>autoware_route_handler</depend>
+  <depend>autoware_tensorrt_common</depend>
+  <depend>autoware_traffic_light_utils</depend>
+  <depend>autoware_trajectory</depend>
+  <depend>autoware_utils</depend>
+  <depend>autoware_utils_geometry</depend>
+  <depend>autoware_utils_uuid</depend>
+  <depend>autoware_vehicle_info_utils</depend>
+  <depend>geometry_msgs</depend>
+  <depend>lanelet2_core</depend>
+  <depend>lanelet2_routing</depend>
+  <depend>lanelet2_traffic_rules</depend>
+  <depend>nav_msgs</depend>
+  <depend>nlohmann-json-dev</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>std_msgs</depend>
+  <depend>visualization_msgs</depend>
+
+  <exec_depend>autoware_tensorrt_plugins</exec_depend>
+
+  <test_depend>ament_cmake_ros</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>autoware_lint_common</test_depend>
+  <test_depend>autoware_test_utils</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

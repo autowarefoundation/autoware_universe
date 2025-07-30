@@ -76,6 +76,8 @@ StartPlannerParameters StartPlannerParameters::init(rclcpp::Node & node)
     p.geometric_collision_check_distance_from_end =
       get_or_declare_parameter<double>(node, ns + "geometric_collision_check_distance_from_end");
     p.divide_pull_out_path = get_or_declare_parameter<bool>(node, ns + "divide_pull_out_path");
+    p.enable_clothoid_fallback =
+      get_or_declare_parameter<bool>(node, ns + "enable_clothoid_fallback");
     p.parallel_parking_parameters.pull_out_velocity =
       get_or_declare_parameter<double>(node, ns + "geometric_pull_out_velocity");
     p.parallel_parking_parameters.pull_out_arc_path_interval =
@@ -89,6 +91,18 @@ StartPlannerParameters StartPlannerParameters::init(rclcpp::Node & node)
         node, ns + "geometric_pull_out_max_steer_angle_margin_scale");
     p.parallel_parking_parameters.center_line_path_interval =
       p.center_line_path_interval;  // for geometric parallel parking
+
+    // clothoid pull out
+    p.clothoid_initial_velocity =
+      get_or_declare_parameter<double>(node, ns + "clothoid_initial_velocity");
+    p.clothoid_acceleration = get_or_declare_parameter<double>(node, ns + "clothoid_acceleration");
+    p.clothoid_max_steer_angles_deg =
+      get_or_declare_parameter<std::vector<double>>(node, ns + "clothoid_max_steer_angles_deg");
+    p.clothoid_max_steer_angle_rate_deg_per_sec =
+      get_or_declare_parameter<double>(node, ns + "clothoid_max_steer_angle_rate_deg_per_sec");
+    p.check_clothoid_path_lane_departure =
+      get_or_declare_parameter<bool>(node, ns + "check_clothoid_path_lane_departure");
+
     // search start pose backward
     p.search_priority = get_or_declare_parameter<std::string>(
       node,

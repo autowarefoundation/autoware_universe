@@ -77,6 +77,9 @@ StartPlannerModule::StartPlannerModule(
   if (parameters_->enable_geometric_pull_out) {
     start_planners_.push_back(std::make_shared<GeometricPullOut>(node, *parameters, time_keeper_));
   }
+  if (parameters_->enable_clothoid_fallback) {
+    start_planners_.push_back(std::make_shared<ClothoidPullOut>(node, *parameters, time_keeper_));
+  }
   if (start_planners_.empty()) {
     RCLCPP_ERROR(getLogger(), "Not found enabled planner");
   }
@@ -380,6 +383,21 @@ bool StartPlannerModule::isInsideLanelets() const
       autoware_utils::MultiPolygon2d result;
       boost::geometry::union_(combined_lanelets, lanelet_polygon, result);
       combined_lanelets = result;
+    }
+  }
+
+  // Remove micro holes (micro inner rings) caused by boost::geometry::union_
+  {
+    constexpr double area_threshold = 1e-5;  // [m^2]
+    for (auto & combined_lanelet : combined_lanelets) {
+      auto & inners = combined_lanelet.inners();
+      inners.erase(
+        std::remove_if(
+          inners.begin(), inners.end(),
+          [&](const auto & inner_ring) {
+            return std::abs(boost::geometry::area(inner_ring)) < area_threshold;
+          }),
+        inners.end());
     }
   }
 
@@ -1081,6 +1099,39 @@ void StartPlannerModule::planWithPriority(
         }
       }
     }
+
+    // If no path found with collision margins and clothoid fallback is enabled, try clothoid
+    // planner
+    // NOTE: Clothoid fallback is only enabled when enable_back is false because safety validation
+    // for backward paths in clothoid planner is not yet implemented
+    if (parameters_->enable_clothoid_fallback && !parameters_->enable_back) {
+      RCLCPP_INFO(
+        getLogger(), "No path found with collision margins. Trying clothoid fallback search.");
+
+      // Find clothoid planner from available planners
+      std::shared_ptr<PullOutPlannerBase> clothoid_planner = nullptr;
+      for (const auto & planner : start_planners_) {
+        if (planner->getPlannerType() == PlannerType::CLOTHOID) {
+          clothoid_planner = planner;
+          break;
+        }
+      }
+
+      // Try clothoid planner with minimum collision margin
+      const double min_margin = *std::min_element(
+        parameters_->collision_check_margins.begin(), parameters_->collision_check_margins.end());
+
+      for (size_t index = 0; index < start_pose_candidates.size(); ++index) {
+        if (findPullOutPath(
+              start_pose_candidates[index], clothoid_planner, refined_start_pose, goal_pose,
+              min_margin, debug_data_vector)) {
+          debug_data_.selected_start_pose_candidate_index = index;
+          debug_data_.margin_for_start_pose_candidate = min_margin;
+          set_planner_evaluation_table(debug_data_vector);
+          return;
+        }
+      }
+    }
   }
   set_planner_evaluation_table(debug_data_vector);
   updateStatusIfNoSafePathFound();
@@ -1290,9 +1341,20 @@ void StartPlannerModule::updatePullOutStatus()
   // search pull out start candidates backward
   const std::vector<Pose> start_pose_candidates = std::invoke([&]() -> std::vector<Pose> {
     if (parameters_->enable_back) {
-      return searchPullOutStartPoseCandidates(start_pose_candidates_path);
+      auto candidates = searchPullOutStartPoseCandidates(start_pose_candidates_path);
+      // Remove the first candidate from searchPullOutStartPoseCandidates
+      // (back_distance=0.0, equivalent to current position)
+      // Note: The remaining candidates yaw are assumed to be aligned along the lane yaw after
+      // backward driving
+      if (!candidates.empty()) {
+        candidates.erase(candidates.begin());
+      }
+      // Insert current_pose at the beginning to always include departure from current position as a
+      // candidate
+      candidates.insert(candidates.begin(), current_pose);
+      return candidates;
     }
-    return {*refined_start_pose};
+    return {current_pose};
   });
 
   if (!status_.backward_driving_complete) {
@@ -1336,7 +1398,9 @@ PathWithLaneId StartPlannerModule::calcBackwardPathFromStartPose() const
   const auto pull_out_lanes = start_planner_utils::getPullOutLanes(
     planner_data_, planner_data_->parameters.backward_path_length + parameters_->max_back_distance);
 
-  const auto arc_position_pose = lanelet::utils::getArcCoordinates(pull_out_lanes, start_pose);
+  const auto & lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
+  const auto arc_position_pose =
+    lanelet::utils::getArcCoordinatesOnEgoCenterline(pull_out_lanes, start_pose, lanelet_map_ptr);
 
   // common buffer distance for both front and back
   static constexpr double buffer = 30.0;
@@ -1380,8 +1444,10 @@ std::vector<Pose> StartPlannerModule::searchPullOutStartPoseCandidates(
 
   // Set the maximum backward distance less than the distance from the vehicle's base_link to
   // the lane's rearmost point to prevent lane departure.
+  const auto & lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
   const double current_arc_length =
-    lanelet::utils::getArcCoordinates(pull_out_lanes, start_pose).length;
+    lanelet::utils::getArcCoordinatesOnEgoCenterline(pull_out_lanes, start_pose, lanelet_map_ptr)
+      .length;
   const double allowed_backward_distance = std::clamp(
     current_arc_length - planner_data_->parameters.base_link2rear, 0.0,
     parameters_->max_back_distance);
@@ -1397,8 +1463,9 @@ std::vector<Pose> StartPlannerModule::searchPullOutStartPoseCandidates(
           parameters_->collision_check_margin_from_front_object))
       continue;
 
-    const double backed_pose_arc_length =
-      lanelet::utils::getArcCoordinates(pull_out_lanes, *backed_pose).length;
+    const double backed_pose_arc_length = lanelet::utils::getArcCoordinatesOnEgoCenterline(
+                                            pull_out_lanes, *backed_pose, lanelet_map_ptr)
+                                            .length;
     const double length_to_lane_end = std::accumulate(
       std::begin(pull_out_lanes), std::end(pull_out_lanes), 0.0,
       [](double acc, const auto & lane) { return acc + lanelet::utils::getLaneletLength2d(lane); });
@@ -1470,9 +1537,11 @@ bool StartPlannerModule::hasReachedPullOutEnd() const
     planner_data_, backward_path_length, std::numeric_limits<double>::max(),
     /*forward_only_in_route*/ true);
 
-  const auto arclength_current = lanelet::utils::getArcCoordinates(current_lanes, current_pose);
-  const auto arclength_pull_out_end =
-    lanelet::utils::getArcCoordinates(current_lanes, status_.pull_out_path.end_pose);
+  const auto & lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
+  const auto arclength_current =
+    lanelet::utils::getArcCoordinatesOnEgoCenterline(current_lanes, current_pose, lanelet_map_ptr);
+  const auto arclength_pull_out_end = lanelet::utils::getArcCoordinatesOnEgoCenterline(
+    current_lanes, status_.pull_out_path.end_pose, lanelet_map_ptr);
 
   // offset to not finish the module before engage
   constexpr double offset = 0.1;
@@ -1533,8 +1602,10 @@ TurnSignalInfo StartPlannerModule::calcTurnSignalInfo()
     return getPreviousModuleOutput().turn_signal_info;
   }
 
+  const auto & lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
   const double current_shift_length =
-    lanelet::utils::getArcCoordinates(current_lanes, current_pose).distance;
+    lanelet::utils::getArcCoordinatesOnEgoCenterline(current_lanes, current_pose, lanelet_map_ptr)
+      .distance;
 
   constexpr bool egos_lane_is_shifted = true;
   constexpr bool is_pull_out = true;
@@ -1722,7 +1793,8 @@ std::optional<PullOutStatus> StartPlannerModule::planFreespacePath(
     planner_data, backward_path_length, std::numeric_limits<double>::max(),
     /*forward_only_in_route*/ true);
 
-  const auto current_arc_coords = lanelet::utils::getArcCoordinates(current_lanes, current_pose);
+  const auto current_arc_coords = lanelet::utils::getArcCoordinatesOnEgoCenterline(
+    current_lanes, current_pose, route_handler->getLaneletMapPtr());
 
   const double s_start = std::max(0.0, current_arc_coords.length + end_pose_search_start_distance);
   const double s_end = current_arc_coords.length + end_pose_search_end_distance;

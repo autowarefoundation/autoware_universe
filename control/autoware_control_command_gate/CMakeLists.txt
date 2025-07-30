@@ -15,6 +15,8 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   "src/command/filter.cpp"
   "src/command/compatibility.cpp"
   "src/command/compatibility/adapi_pause_interface.cpp"
+  "src/command/compatibility/emergency_interface.cpp"
+  "src/command/compatibility/moderate_stop_interface.cpp"
   "src/common/control_command_filter.cpp"
   "src/common/vehicle_status.cpp"
   "src/common/timeout_diagnostics.cpp"

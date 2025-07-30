@@ -60,6 +60,18 @@ inline double getUnionArea(
   return getSumArea(union_polygons);
 }
 
+inline double getConvexShapeArea(
+  const autoware_utils::Polygon2d & source_polygon,
+  const autoware_utils::Polygon2d & target_polygon)
+{
+  boost::geometry::model::multi_polygon<autoware_utils::Polygon2d> union_polygons;
+  boost::geometry::union_(source_polygon, target_polygon, union_polygons);
+
+  autoware_utils::Polygon2d hull;
+  boost::geometry::convex_hull(union_polygons, hull);
+  return boost::geometry::area(hull);
+}
+
 double get1dIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object)
 {
@@ -111,6 +123,50 @@ double get2dIoU(
   const double iou =
     union_area < min_union_area ? 0.0 : std::min(1.0, intersection_area / union_area);
   return iou;
+}
+
+double get2dGeneralizedIoU(
+  const types::DynamicObject & source_object, const types::DynamicObject & target_object)
+{
+  static const double MIN_AREA = 1e-6;
+
+  const auto source_polygon = autoware_utils::to_polygon2d(source_object.pose, source_object.shape);
+  const double source_area = boost::geometry::area(source_polygon);
+  const auto target_polygon = autoware_utils::to_polygon2d(target_object.pose, target_object.shape);
+  const double target_area = boost::geometry::area(target_polygon);
+  if (source_area < MIN_AREA && target_area < MIN_AREA) return -1.0;
+
+  const double intersection_area = getIntersectionArea(source_polygon, target_polygon);
+  const double union_area = getUnionArea(source_polygon, target_polygon);
+  const double iou = union_area < 0.01 ? 0.0 : std::min(1.0, intersection_area / union_area);
+  const double convex_shape_area = getConvexShapeArea(source_polygon, target_polygon);
+
+  return iou - (convex_shape_area - union_area) / convex_shape_area;
+}
+
+bool get2dPrecisionRecallGIoU(
+  const types::DynamicObject & source_object, const types::DynamicObject & target_object,
+  double & precision, double & recall, double & generalized_iou)
+{
+  static const double MIN_AREA = 1e-6;
+
+  const auto source_polygon = autoware_utils::to_polygon2d(source_object.pose, source_object.shape);
+  const double source_area = boost::geometry::area(source_polygon);
+  if (source_area < MIN_AREA) return false;
+  const auto target_polygon = autoware_utils::to_polygon2d(target_object.pose, target_object.shape);
+  const double target_area = boost::geometry::area(target_polygon);
+  if (target_area < MIN_AREA) return false;
+
+  const double intersection_area = getIntersectionArea(source_polygon, target_polygon);
+  const double union_area = getUnionArea(source_polygon, target_polygon);
+  const double convex_shape_area = getConvexShapeArea(source_polygon, target_polygon);
+  const double iou = union_area < 0.01 ? 0.0 : std::min(1.0, intersection_area / union_area);
+
+  precision = source_area < MIN_AREA ? 0.0 : std::min(1.0, intersection_area / source_area);
+  recall = source_area < MIN_AREA ? 0.0 : std::min(1.0, intersection_area / target_area);
+  generalized_iou = iou - (convex_shape_area - union_area) / convex_shape_area;
+
+  return true;
 }
 
 /**

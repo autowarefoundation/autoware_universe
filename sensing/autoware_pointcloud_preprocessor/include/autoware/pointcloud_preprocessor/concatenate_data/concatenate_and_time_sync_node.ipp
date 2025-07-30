@@ -311,7 +311,6 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::publish
   if (publish_pointcloud) {
     latest_concatenate_cloud_timestamp_ = current_concatenate_cloud_timestamp_;
     concatenated_cloud_publisher_->publish(std::move(concatenated_cloud_result.concatenate_cloud_ptr));
-
     // publish transformed raw pointclouds
     if (
       params_.publish_synchronized_pointcloud &&
@@ -331,7 +330,7 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::publish
       }
     }
   }
-
+  concatenation_info_publisher_->publish(std::move(concatenated_cloud_result.concatenation_info_ptr));
 
   const double processing_time = stop_watch_ptr_->toc("processing_time", true);
   std::unordered_map<std::string, double> topic_to_pipeline_latency_map;

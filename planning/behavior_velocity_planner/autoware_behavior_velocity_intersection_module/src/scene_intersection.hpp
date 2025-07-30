@@ -156,6 +156,7 @@ public:
     struct Occlusion
     {
       bool enable;
+      bool request_approval_wo_traffic_light;
       double occlusion_attention_area_length;
       int free_space_max;
       int occupied_min;

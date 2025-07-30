@@ -136,6 +136,25 @@
             }
           }
         },
+        "generalized_iou_thresholds": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": -1.0,
+            "maximum": 1.0
+          },
+          "description": "Generalized IoU threshold for each class.",
+          "default": [-0.3, -0.4, -0.6, -0.6, -0.6, -0.1, -0.1, -0.1]
+        },
+        "overlap_distance_thresholds": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0.0
+          },
+          "description": "Overlap distance threshold for each class.",
+          "default": [9.0, 5.0, 9.0, 9.0, 9.0, 4.0, 3.0, 2.0]
+        },
         "publish_processing_time": {
           "type": "boolean",
           "description": "Enable to publish debug message of process time information.",

@@ -1097,7 +1097,6 @@ The footprints checked against the lane boundary include:
 
 1. Current Footprint: Based on the ego vehicle's current position.
 2. Future Footprint: Based on the ego vehicle's estimated position after traveling a distance, calculated as $𝑑_{est}=𝑣_{ego} \cdot \Delta_{𝑡}$, where
-
    - $v_{ego}$ is ego vehicle's current velocity
    - $\Delta_{t}$ is parameterized time constant value, `cancel.delta_time`.
 
@@ -1271,12 +1270,13 @@ The following parameters are used to configure terminal lane change path feature
 
     Only applicable when ego is near terminal start
 
-| Name                            | Unit  | Type   | Description                                                                                                                                         | Default value |
-| :------------------------------ | ----- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| `frenet.enable`                 | [-]   | bool   | Flag to enable/disable frenet planner when ego is near terminal start.                                                                              | true          |
-| `frenet.th_yaw_diff`            | [deg] | double | If the yaw diff between of the prepare segment's end and lane changing segment's start exceed the threshold , the lane changing segment is invalid. | 10.0          |
-| `frenet.th_curvature_smoothing` | [-]   | double | Filters and appends target path points with curvature below the threshold to candidate path.                                                        | 0.1           |
-| `frenet.th_average_curvature`   | [-]   | double | Remove path with average curvature above the threshold. Path only removed if there is more than 1 candidate, and the first path is always kept.     | 0.015         |
+| Name                                   | Unit  | Type   | Description                                                                                                                                                   | Default value |
+| :------------------------------------- | ----- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| `frenet.enable`                        | [-]   | bool   | Flag to enable/disable frenet planner when ego is near terminal start.                                                                                        | true          |
+| `frenet.use_entire_remaining_distance` | [-]   | bool   | Flag to configure lc length, if true entire remaining distance to lane end is used for lc path generation, else will generate path assuming minimum lc length | false         |
+| `frenet.th_yaw_diff`                   | [deg] | double | If the yaw diff between of the prepare segment's end and lane changing segment's start exceed the threshold , the lane changing segment is invalid.           | 10.0          |
+| `frenet.th_curvature_smoothing`        | [-]   | double | Filters and appends target path points with curvature below the threshold to candidate path.                                                                  | 0.1           |
+| `frenet.th_average_curvature`          | [-]   | double | Remove path with average curvature above the threshold. Path only removed if there is more than 1 candidate, and the first path is always kept.               | 0.015         |
 
 ### Collision checks
 

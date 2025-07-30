@@ -18,6 +18,8 @@
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_traits.hpp"
 #include "autoware/pointcloud_preprocessor/utility/memory.hpp"
 
+#include <autoware_sensing_msgs/msg/concatenated_point_cloud_info.hpp>
+
 #include <memory>
 #include <sstream>
 #include <string>
@@ -33,6 +35,9 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<
   concatenated_cloud_publisher_ =
     std::make_shared<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>(
       *this, "output");
+  concatenation_info_publisher_ =
+    this->create_publisher<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
+      "output_info", rclcpp::SensorDataQoS().keep_last(params_.maximum_queue_size));
 
   for (auto & topic : params_.input_topics) {
     std::string new_topic =

@@ -6,6 +6,7 @@
         # param for input data
         traffic_light_state_timeout: 3.0 # [s] timeout threshold for traffic light signal
         enable_rtc: false # if true, the scene modules should be approved by (request to cooperate)rtc function. if false, the module can be run without approval from rtc.
+        lost_detection_timeout: 1.0 # [s] Time to keep an object after its detection is lost.
 
       # param for stop position
       stop_position:

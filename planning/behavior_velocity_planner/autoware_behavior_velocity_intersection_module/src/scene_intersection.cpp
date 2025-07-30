@@ -1097,7 +1097,9 @@ void reactRTCApprovalByDecisionResult(
         true /*is_driving_forward*/, 0.0, 0.0 /*shift distance*/, "collision");
     }
   }
-  if (!rtc_occlusion_approved && decision_result.temporal_stop_before_attention_required) {
+  if (
+    !rtc_occlusion_approved && (decision_result.temporal_stop_before_attention_required ||
+                                planner_param.occlusion.request_approval_wo_traffic_light)) {
     const auto stopline_idx = decision_result.occlusion_stopline_idx;
     planning_utils::setVelocityFromIndex(stopline_idx, 0.0, path);
     debug_data->occlusion_stop_wall_pose =
@@ -1312,11 +1314,19 @@ void IntersectionModule::updateTrafficSignalObservation()
   if (!tl_id_and_point_) {
     for (auto && tl_reg_elem :
          lane.regulatoryElementsAs<lanelet::autoware::AutowareTrafficLight>()) {
-      for (const auto & ls : tl_reg_elem->lightBulbs()) {
-        if (ls.hasAttribute("traffic_light_id")) {
-          tl_id_and_point_ = std::make_pair(tl_reg_elem->id(), ls.front());
-          break;
+      for (const auto & light : tl_reg_elem->trafficLights()) {
+        if (!light.isLineString()) {
+          RCLCPP_WARN_ONCE(
+            logger_,
+            "traffic light(%ld) of AutowareTrafficLight regulatory-element(%ld) is not LineString",
+            light.id(), tl_reg_elem->id());
         }
+        const auto & tl_linestring = static_cast<lanelet::ConstLineString3d>(light);
+        tl_id_and_point_ = std::make_pair(tl_reg_elem->id(), tl_linestring.front());
+        break;
+      }
+      if (tl_id_and_point_) {
+        break;
       }
     }
   }

@@ -64,3 +64,5 @@
           0.1,  0.1,   0.1,   0.1,    0.1,      0.1,       0.1,     0.1,       #MOTORBIKE
           0.1,  0.1,   0.1,   0.1,    0.1,      0.1,       0.1,     0.1,       #BICYCLE
           0.1,  0.1,   0.1,   0.1,    0.1,      0.1,       0.1,  0.0001]       #PEDESTRIAN
+
+    unknown_association_giou_threshold: -0.8  # GIoU threshold for unknown-unknown association
