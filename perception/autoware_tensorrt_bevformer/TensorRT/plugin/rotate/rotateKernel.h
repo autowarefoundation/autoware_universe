@@ -18,8 +18,7 @@
 // Modified by The Autoware Contributors in 2025.
 // Original creation by Derry Lin on 2022/10/22.
 
-#ifndef PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__PLUGIN__ROTATE__ROTATEKERNEL_H_  // NOLINT
-#define PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__PLUGIN__ROTATE__ROTATEKERNEL_H_  // NOLINT
+#pragma once
 
 #include "cuda_int8.h"
 
@@ -42,5 +41,3 @@ template <typename T>
 void rotate_int8(
   int8_4 * output, float scale_o, const int8_4 * input, float scale_i, const T * angle,
   const T * center, const int64_t * input_dims, RotateInterpolation interp, cudaStream_t stream);
-
-#endif  // PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__PLUGIN__ROTATE__ROTATEKERNEL_H_

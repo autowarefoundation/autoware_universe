@@ -18,8 +18,7 @@
 // Modified by The Autoware Contributors in 2025.
 // Original creation by Derry Lin on 2022/10/22.
 
-#ifndef PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__PLUGIN__MODULATED_DEFORMABLE_CONV2D__MODULATEDDEFORMABLECONV2DKERNEL_H_  // NOLINT
-#define PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__PLUGIN__MODULATED_DEFORMABLE_CONV2D__MODULATEDDEFORMABLECONV2DKERNEL_H_  // NOLINT
+#pragma once
 
 #include "cuda_int8.h"
 
@@ -41,5 +40,3 @@ void ModulatedDeformConvForwardCUDAKernel_int8(
   int channels, int height, int width, int channels_out, int kernel_w, int kernel_h, int stride_w,
   int stride_h, int pad_w, int pad_h, int dilation_w, int dilation_h, int group,
   int deformable_group, int im2col_step, cublasHandle_t cublas_handle, cudaStream_t stream);
-
-#endif  // PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__PLUGIN__MODULATED_DEFORMABLE_CONV2D__MODULATEDDEFORMABLECONV2DKERNEL_H_

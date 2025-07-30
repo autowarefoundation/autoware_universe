@@ -18,8 +18,7 @@
 // Modified by The Autoware Contributors in 2025.
 // Original creation by Derry Lin on 2022/10/22.
 
-#ifndef PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__PLUGIN__ROTATE__ROTATEPLUGIN_H_  // NOLINT
-#define PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__PLUGIN__ROTATE__ROTATEPLUGIN_H_  // NOLINT
+#pragma once
 
 #include "helper.h"
 #include "rotateKernel.h"
@@ -148,5 +147,3 @@ private:
 };
 
 }  // namespace trt_plugin
-
-#endif  // PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__PLUGIN__ROTATE__ROTATEPLUGIN_H_
