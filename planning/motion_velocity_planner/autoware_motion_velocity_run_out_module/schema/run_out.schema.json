@@ -319,6 +319,32 @@
               "type": "string",
               "description": "debug markers specific to each object classification labels will only be published for this one",
               "default": "PEDESTRIAN"
+            },
+            "enabled_markers": {
+              "type": "object",
+              "description": "if true, the corresponding debug markers are published",
+              "properties": {
+                "ego_footprint": {
+                  "type": "boolean",
+                  "default": "true"
+                },
+                "objects": {
+                  "type": "boolean",
+                  "default": "true"
+                },
+                "collisions": {
+                  "type": "boolean",
+                  "default": "true"
+                },
+                "decisions": {
+                  "type": "boolean",
+                  "default": "true"
+                },
+                "filtering_data": {
+                  "type": "boolean",
+                  "default": "false"
+                }
+              }
             }
           }
         }
