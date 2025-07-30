@@ -29,8 +29,8 @@
 #include <Eigen/Geometry>
 #include <rclcpp/logging.hpp>
 
-#include "autoware_custom_msgs/msg/can_bus_data.hpp"
-#include "autoware_custom_msgs/msg/scene_info.hpp"
+#include "autoware_internal_perception_msgs/msg/can_bus_data.hpp"
+#include "autoware_internal_perception_msgs/msg/scene_info.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include <geometry_msgs/msg/quaternion.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
@@ -138,8 +138,8 @@ private:
   bool camera_info_received_flag_ = false;
 
   // can_bus and scene_info subscriptions
-  message_filters::Subscriber<autoware_custom_msgs::msg::CanBusData> sub_can_bus_;
-  message_filters::Subscriber<autoware_custom_msgs::msg::SceneInfo> scene_info_sub_;
+  message_filters::Subscriber<autoware_internal_perception_msgs::msg::CanBusData> sub_can_bus_;
+  message_filters::Subscriber<autoware_internal_perception_msgs::msg::SceneInfo> scene_info_sub_;
 
   // tf listener
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
@@ -161,7 +161,7 @@ private:
   typedef message_filters::sync_policies::ApproximateTime<
     sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::Image,
     sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::Image,
-    autoware_custom_msgs::msg::CanBusData, autoware_custom_msgs::msg::SceneInfo>
+    autoware_internal_perception_msgs::msg::CanBusData, autoware_internal_perception_msgs::msg::SceneInfo>
     MySyncPolicy;
 
   typedef message_filters::Synchronizer<MySyncPolicy> Sync;
@@ -231,8 +231,8 @@ public:
     const sensor_msgs::msg::Image::ConstSharedPtr & msg_bl_img,
     const sensor_msgs::msg::Image::ConstSharedPtr & msg_b_img,
     const sensor_msgs::msg::Image::ConstSharedPtr & msg_br_img,
-    const autoware_custom_msgs::msg::CanBusData::ConstSharedPtr & can_bus_msg,
-    const autoware_custom_msgs::msg::SceneInfo::ConstSharedPtr & scene_info);
+    const autoware_internal_perception_msgs::msg::CanBusData::ConstSharedPtr & can_bus_msg,
+    const autoware_internal_perception_msgs::msg::SceneInfo::ConstSharedPtr & scene_info);
 
   void cameraInfoCallback(int idx, const sensor_msgs::msg::CameraInfo::SharedPtr msg);
 };

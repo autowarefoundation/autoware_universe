@@ -19,8 +19,8 @@
 #include "autoware/tensorrt_bevformer/preprocessing/preprocessing_pipeline.hpp"
 #include "autoware/tensorrt_bevformer/ros_utils.hpp"
 
-#include "autoware_custom_msgs/msg/can_bus_data.hpp"
-#include "autoware_custom_msgs/msg/scene_info.hpp"
+#include "autoware_internal_perception_msgs/msg/can_bus_data.hpp"
+#include "autoware_internal_perception_msgs/msg/scene_info.hpp"
 #include "geometry_msgs/msg/quaternion.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
@@ -116,7 +116,7 @@ TRTBEVFormerNode::TRTBEVFormerNode(const rclcpp::NodeOptions & node_options)
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-  // Create publisher for detected objects
+  // Create publisher for detected 
   pub_boxes_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
     "~/output/boxes", rclcpp::QoS{1});
 
@@ -467,8 +467,8 @@ void TRTBEVFormerNode::callback(
   const sensor_msgs::msg::Image::ConstSharedPtr & msg_bl_img,
   const sensor_msgs::msg::Image::ConstSharedPtr & msg_b_img,
   const sensor_msgs::msg::Image::ConstSharedPtr & msg_br_img,
-  const autoware_custom_msgs::msg::CanBusData::ConstSharedPtr & can_bus_msg,
-  const autoware_custom_msgs::msg::SceneInfo::ConstSharedPtr & scene_info)
+  const autoware_internal_perception_msgs::msg::CanBusData::ConstSharedPtr & can_bus_msg,
+  const autoware_internal_perception_msgs::msg::SceneInfo::ConstSharedPtr & scene_info)
 {
   auto t_preprocess_start = std::chrono::steady_clock::now();
 
