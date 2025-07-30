@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// cspell:ignore bevformer, thre, caminfo, intrin, canbus, Canbus
+
 #include "autoware/tensorrt_bevformer/bevformer_node.hpp"
 
 #include "autoware/tensorrt_bevformer/marker_util.hpp"

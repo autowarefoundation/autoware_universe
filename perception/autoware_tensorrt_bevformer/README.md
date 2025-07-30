@@ -1,4 +1,4 @@
-# tensorrt_bevformer <!-- cspell:ignore Zhicheng, canbus, trainval, bevfomer, ROS2 -->
+# tensorrt_bevformer <!-- cspell:ignore Zhicheng, canbus, trainval, bevfomer, ROS2, bevformer, Bevformer -->
 
 ## Purpose
 
