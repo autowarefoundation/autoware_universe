@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <launch>
   <!-- Camera parameters -->
+  <!-- cspell:ignore bevformer -->
   <arg name="input/camera0/image"/>
   <arg name="input/camera0/info"/>
   <arg name="input/camera1/image"/>
