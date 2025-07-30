@@ -1,4 +1,4 @@
-# TensorRT Plugins
+# TensorRT Plugins <!-- cspell:ignore DTRT, NHMA, FHMA, QKVTRT, FMHA, NMHA -->
 
 ## Plugins
 

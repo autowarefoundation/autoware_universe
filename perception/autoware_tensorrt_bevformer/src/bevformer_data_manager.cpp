@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// cspell:ignore bevformer, randn, Canbus, siny
+
 #include "autoware/tensorrt_bevformer/bevformer_data_manager.hpp"
 
 #include <rclcpp/logging.hpp>
