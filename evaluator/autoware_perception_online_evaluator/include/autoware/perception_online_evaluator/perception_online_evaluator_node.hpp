@@ -16,15 +16,19 @@
 #define AUTOWARE__PERCEPTION_ONLINE_EVALUATOR__PERCEPTION_ONLINE_EVALUATOR_NODE_HPP_
 
 #include "autoware/perception_online_evaluator/metrics_calculator.hpp"
+#include "autoware/perception_online_evaluator/mob_metrics_calculator.hpp"
 #include "autoware/perception_online_evaluator/parameters.hpp"
 #include "autoware_utils/math/accumulator.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
 
+#include "autoware_perception_msgs/msg/object_classification.hpp"
 #include "autoware_perception_msgs/msg/predicted_objects.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
+#include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
+#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <tier4_metric_msgs/msg/metric.hpp>
 #include <tier4_metric_msgs/msg/metric_array.hpp>
 
@@ -32,10 +36,13 @@
 #include <deque>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::perception_diagnostics
 {
+using autoware_internal_debug_msgs::msg::Float32Stamped;
+using autoware_internal_debug_msgs::msg::Float64Stamped;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_utils::Accumulator;
@@ -84,14 +91,45 @@ public:
     tier4_metric_msgs::msg::MetricArray & metrics_msg) const;
 
 private:
-  // Subscribers and publishers
+  // Flags to manager node outputs
+  bool enable_metrics_online_evaluation_{false};
+  bool enable_metrics_mob_{false};
+
+  // Label list
+  std::vector<uint8_t> label_list_{
+    ObjectClassification::UNKNOWN, ObjectClassification::CAR,
+    ObjectClassification::TRUCK,   ObjectClassification::BUS,
+    ObjectClassification::TRAILER, ObjectClassification::MOTORCYCLE,
+    ObjectClassification::BICYCLE, ObjectClassification::PEDESTRIAN,
+  };
+
+  // Subscribers (for both online evaluation and MOB)
   rclcpp::Subscription<PredictedObjects>::SharedPtr objects_sub_;
+
+  // Publishers (for online evaluation)
   rclcpp::Publisher<tier4_metric_msgs::msg::MetricArray>::SharedPtr metrics_pub_;
   rclcpp::Publisher<MarkerArray>::SharedPtr pub_marker_;
 
+  // Subscribers and publishers (for MOB)
+  // 1. (For planning) object counts
+  rclcpp::Publisher<Float32Stamped>::SharedPtr all_objects_count_pub_;
+  std::unordered_map<uint8_t, rclcpp::Publisher<Float32Stamped>::SharedPtr>
+    by_label_objects_count_pubs_;
+  // 2. (For planning) object max distances
+  std::unordered_map<uint8_t, rclcpp::Publisher<Float32Stamped>::SharedPtr>
+    by_label_objects_max_dist_pubs_;
+  // 3. perception processing latency
+  rclcpp::Subscription<Float64Stamped>::SharedPtr meas_to_tracked_latency_sub_;
+  rclcpp::Subscription<Float64Stamped>::SharedPtr prediction_latency_sub_;
+  rclcpp::Publisher<Float64Stamped>::SharedPtr total_latency_pub_;
+
+  // Latest processing latency cache
+  double meas_to_tracked_latency_{0.0f};
+  double prediction_latency_{0.0f};
+
   // TF
-  std::shared_ptr<tf2_ros::TransformListener> transform_listener_{nullptr};
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> transform_listener_{nullptr};
 
   // Parameters
   std::shared_ptr<Parameters> parameters_;
@@ -102,8 +140,9 @@ private:
 
   // Metrics Calculator
   MetricsCalculator metrics_calculator_;
-  std::deque<rclcpp::Time> stamps_;
   void publishMetrics();
+  MobMetricsCalculator mob_metrics_calculator_;
+  void publishMobMetrics();
 
   // Debug
   void publishDebugMarker();

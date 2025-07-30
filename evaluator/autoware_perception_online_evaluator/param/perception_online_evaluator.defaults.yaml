@@ -1,5 +1,10 @@
 /**:
   ros__parameters:
+    #######################################################
+    # 1) ONLINE EVALUATION PARAMETERS                     #
+    #######################################################
+    enable_metrics_online_evaluation: false
+
     selected_metrics:
       - lateral_deviation
       - yaw_deviation
@@ -92,3 +97,11 @@
       predicted_path_gt: true
       deviation_lines: true
       object_polygon: true
+
+    #######################################################
+    # 2) MOB PARAMETERS                                   #
+    #######################################################
+    enable_metrics_mob: true
+
+    meas_to_tracked_latency_topic_name: /perception/object_recognition/tracking/multi_object_tracker/debug/meas_to_tracked_object_ms
+    prediction_latency_topic_name: /perception/object_recognition/prediction/map_based_prediction/debug/processing_time_ms
