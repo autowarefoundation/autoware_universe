@@ -138,6 +138,7 @@ struct Parameters
     {
       bool ego_footprint = false;
       bool objects = false;
+      bool collisions = false;
       bool decisions = false;
       bool filtering_data = false;
     } enabled_markers;
@@ -270,6 +271,8 @@ struct Parameters
       getOrDeclareParameter<bool>(node, ns + ".debug.enabled_markers.ego_footprint");
     debug.enabled_markers.objects =
       getOrDeclareParameter<bool>(node, ns + ".debug.enabled_markers.objects");
+    debug.enabled_markers.collisions =
+      getOrDeclareParameter<bool>(node, ns + ".debug.enabled_markers.collisions");
     debug.enabled_markers.decisions =
       getOrDeclareParameter<bool>(node, ns + ".debug.enabled_markers.decisions");
     debug.enabled_markers.filtering_data =
@@ -385,6 +388,7 @@ struct Parameters
     updateParam(
       params, ns + ".debug.enabled_markers.ego_footprint", debug.enabled_markers.ego_footprint);
     updateParam(params, ns + ".debug.enabled_markers.objects", debug.enabled_markers.objects);
+    updateParam(params, ns + ".debug.enabled_markers.collisions", debug.enabled_markers.collisions);
     updateParam(params, ns + ".debug.enabled_markers.decisions", debug.enabled_markers.decisions);
     updateParam(
       params, ns + ".debug.enabled_markers.filtering_data", debug.enabled_markers.filtering_data);

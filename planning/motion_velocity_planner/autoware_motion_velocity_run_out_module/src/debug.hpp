@@ -41,8 +41,7 @@ namespace autoware::motion_velocity_planner::run_out
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 
-inline MarkerArray make_debug_footprint_markers(
-  const run_out::TrajectoryCornerFootprint & ego, const std::vector<run_out::Object> & objects)
+inline MarkerArray make_debug_ego_footprint_markers(const run_out::TrajectoryCornerFootprint & ego)
 {
   MarkerArray markers;
   Marker m;
@@ -73,9 +72,19 @@ inline MarkerArray make_debug_footprint_markers(
     m.points.push_back(universe_utils::createPoint(p.x(), p.y(), 0.0));
   }
   markers.markers.push_back(m);
+  return markers;
+}
 
+inline MarkerArray make_debug_objects_footprint_markers(
+  const std::vector<run_out::Object> & objects)
+{
+  MarkerArray markers;
+  Marker m;
+  m.header.frame_id = "map";
+  m.type = Marker::LINE_STRIP;
+  m.color = universe_utils::createMarkerColor(0.0, 1.0, 0.0, 1.0);
+  m.scale.x = 0.2;
   m.type = Marker::LINE_LIST;
-  m.points.clear();
   m.ns = "objects_footprints";
   m.color.r = 1.0;
   for (const auto & object : objects) {
@@ -109,7 +118,7 @@ inline MarkerArray make_debug_footprint_markers(
   return markers;
 }
 
-inline MarkerArray make_debug_object_markers(const std::vector<Object> & objects)
+inline MarkerArray make_debug_collisions_markers(const std::vector<Object> & objects)
 {
   MarkerArray markers;
   Marker m;
@@ -368,10 +377,13 @@ inline MarkerArray make_debug_markers(
       std::make_move_iterator(a.markers.end()));
   };
   if (params.debug.enabled_markers.ego_footprint) {
-    concat(run_out::make_debug_footprint_markers(ego_footprint, filtered_objects));
+    concat(run_out::make_debug_ego_footprint_markers(ego_footprint));
   }
   if (params.debug.enabled_markers.objects) {
-    concat(run_out::make_debug_object_markers(filtered_objects));
+    concat(run_out::make_debug_objects_footprint_markers(filtered_objects));
+  }
+  if (params.debug.enabled_markers.collisions) {
+    concat(run_out::make_debug_collisions_markers(filtered_objects));
   }
   if (params.debug.enabled_markers.decisions) {
     concat(run_out::make_debug_decisions_markers(decisions_tracker));
