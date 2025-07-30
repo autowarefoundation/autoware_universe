@@ -334,7 +334,6 @@ char const * ModulatedDeformableConv2dPlugin::getPluginNamespace() const noexcep
   return mPluginNamespace.c_str();
 }
 
-
 DataType ModulatedDeformableConv2dPlugin::getOutputDataType(
   int32_t index, const nvinfer1::DataType * inputTypes, int32_t nbInputs) const noexcept
 {
