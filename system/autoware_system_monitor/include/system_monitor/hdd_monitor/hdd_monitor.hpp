@@ -113,16 +113,16 @@ struct HddStat
 /**
  * @brief usage of HDD for each partition
  */
-struct HddUsage
+struct HddPartitionStatus
 {
-  int size;                //!< @brief Total size of the filesystem in megabytes (MB)
-  int used;                //!< @brief Used space in the filesystem in megabytes (MB)
-  int avail;               //!< @brief Available (free) space in the filesystem in megabytes (MB)
-  int capacity;            //!< @brief Percentage of used space in the filesystem (0–100)
+  int32_t size;            //!< @brief Total size of the filesystem in megabytes (MB)
+  int32_t used;            //!< @brief Used space in the filesystem in megabytes (MB)
+  int32_t avail;           //!< @brief Available (free) space in the filesystem in megabytes (MB)
+  int32_t capacity;        //!< @brief Percentage of used space in the filesystem (0–100)
   std::string filesystem;  //!< @brief Name of the filesystem device (e.g., "/dev/nvme0n1p2")
   std::string mounted_on;  //!< @brief Mount point of the filesystem (e.g., "/")
 
-  HddUsage() : size(0), used(0), avail(0), capacity(0) {}
+  HddPartitionStatus() : size(0), used(0), avail(0), capacity(0) {}
 };
 
 /**
@@ -362,7 +362,7 @@ protected:
   HddInfoList hdd_info_list_;               //!< @brief list of HDD information
   rclcpp::Time last_hdd_stat_update_time_;  //!< @brief last HDD statistics update time
 
-  std::vector<HddUsage> hdd_usages_;  //!< @brief list of HDD usage
+  std::vector<HddPartitionStatus> hdd_partition_statuses_;  //!< @brief list of partition status
 
   rclcpp::Publisher<tier4_external_api_msgs::msg::HddStatus>::SharedPtr
     pub_hdd_status_;  //!< @brief publisher

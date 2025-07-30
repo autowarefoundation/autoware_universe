@@ -249,7 +249,7 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
     return;
   }
 
-  hdd_usages_.clear();
+  hdd_partition_statuses_.clear();
 
   int hdd_index = 0;
   int whole_level = DiagStatus::OK;
@@ -306,10 +306,12 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
     std::string line;
     int index = 0;
     std::vector<std::string> list;
+    std::string filesystem;
     int size;
     int used;
     int avail;
     int capacity;
+    std::string mounted;
 
     while (std::getline(is_out, line) && !line.empty()) {
       // Skip header
@@ -321,14 +323,22 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
       boost::split(list, line, boost::is_space(), boost::token_compress_on);
 
       try {
-        size = std::stoi(list[1]);
-        used = std::stoi(list[2]);
-        avail = std::stoi(list[3]);
-        std::string capacity_str = list[4];
+        filesystem = list.at(0);
+        size = std::stoi(list.at(1));
+        used = std::stoi(list.at(2));
+        avail = std::stoi(list.at(3));
+        std::string capacity_str = list.at(4);
         if (!capacity_str.empty() && capacity_str.back() == '%') {
           capacity_str.pop_back();
         }
         capacity = std::stoi(capacity_str);
+        mounted = list.at(5);
+        if (list.size() > 6) {
+          std::string::size_type pos = line.find("% /");
+          if (pos != std::string::npos) {
+            mounted = line.substr(pos + 2);  // 2 is "% " length
+          }
+        }
       } catch (std::exception & e) {
         size = -1;
         used = -1;
@@ -346,29 +356,25 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
         level = DiagStatus::OK;
       }
 
-      stat.add(fmt::format("HDD {}: status", hdd_index), usage_dict_.at(level));
-      stat.add(fmt::format("HDD {}: filesystem", hdd_index), list[0].c_str());
-      stat.add(fmt::format("HDD {}: size", hdd_index), (list[1] + " MiB").c_str());
-      stat.add(fmt::format("HDD {}: used", hdd_index), (list[2] + " MiB").c_str());
-      stat.add(fmt::format("HDD {}: avail", hdd_index), (list[3] + " MiB").c_str());
-      stat.add(fmt::format("HDD {}: use", hdd_index), list[4].c_str());
-      std::string mounted_ = list[5];
-      if (list.size() > 6) {
-        std::string::size_type pos = line.find("% /");
-        if (pos != std::string::npos) {
-          mounted_ = line.substr(pos + 2);  // 2 is "% " length
-        }
+      try {
+        stat.add(fmt::format("HDD {}: status", hdd_index), usage_dict_.at(level));
+        stat.add(fmt::format("HDD {}: filesystem", hdd_index), filesystem.c_str());
+        stat.add(fmt::format("HDD {}: size", hdd_index), (list.at(1) + " MiB").c_str());
+        stat.add(fmt::format("HDD {}: used", hdd_index), (list.at(2) + " MiB").c_str());
+        stat.add(fmt::format("HDD {}: avail", hdd_index), (list.at(3) + " MiB").c_str());
+        stat.add(fmt::format("HDD {}: use", hdd_index), list.at(4).c_str());
+        stat.add(fmt::format("HDD {}: mounted on", hdd_index), mounted.c_str());
+      } catch (std::exception & e) {
+        stat.add(fmt::format("HDD {}: status", hdd_index), "index error");
       }
-      stat.add(fmt::format("HDD {}: mounted on", hdd_index), mounted_.c_str());
 
-      HddUsage hdd_usage;
-      hdd_usage.size = size;
-      hdd_usage.used = used;
-      hdd_usage.avail = avail;
-      hdd_usage.capacity = capacity;
-      hdd_usage.filesystem = list[0];
-      hdd_usage.mounted_on = mounted_;
-      hdd_usages_.push_back(hdd_usage);
+      auto& hdd_partition_status = hdd_partition_statuses_.emplace_back();
+      hdd_partition_status.size = size;
+      hdd_partition_status.used = used;
+      hdd_partition_status.avail = avail;
+      hdd_partition_status.capacity = capacity;
+      hdd_partition_status.filesystem = filesystem;
+      hdd_partition_status.mounted_on = mounted;
 
       whole_level = std::max(whole_level, level);
       ++index;
@@ -963,15 +969,14 @@ void HddMonitor::publishHddStatus()
   hdd_status.stamp = this->now();
   hdd_status.hostname = hostname_;
 
-  for (const auto & hdd_usage : hdd_usages_) {
-    tier4_external_api_msgs::msg::HddPartitionStatus partition_status;
-    partition_status.size = hdd_usage.size;
-    partition_status.used = hdd_usage.used;
-    partition_status.avail = hdd_usage.avail;
-    partition_status.capacity = hdd_usage.capacity;
-    partition_status.filesystem = hdd_usage.filesystem;
-    partition_status.mounted_on = hdd_usage.mounted_on;
-    hdd_status.partitions.push_back(partition_status);
+  for (const auto & hdd_partition_status : hdd_partition_statuses_) {
+    auto& partition = hdd_status.partitions.emplace_back();
+    partition.size = hdd_partition_status.size;
+    partition.used = hdd_partition_status.used;
+    partition.avail = hdd_partition_status.avail;
+    partition.capacity = hdd_partition_status.capacity;
+    partition.filesystem = hdd_partition_status.filesystem;
+    partition.mounted_on = hdd_partition_status.mounted_on;
   }
 
   int index = 0;
@@ -985,13 +990,12 @@ void HddMonitor::publishHddStatus()
     float read_iops = hdd_stats_[itr->first].read_iops_;
     float write_iops = hdd_stats_[itr->first].write_iops_;
 
-    tier4_external_api_msgs::msg::HddDeviceStatus device_status;
-    device_status.name = itr->second.disk_device_;
-    device_status.read_data_rate = read_data_rate;
-    device_status.write_data_rate = write_data_rate;
-    device_status.read_iops = read_iops;
-    device_status.write_iops = write_iops;
-    hdd_status.devices.push_back(device_status);
+    auto& device = hdd_status.devices.emplace_back();
+    device.name = itr->second.disk_device_;
+    device.read_data_rate = read_data_rate;
+    device.write_data_rate = write_data_rate;
+    device.read_iops = read_iops;
+    device.write_iops = write_iops;
   }
   pub_hdd_status_->publish(hdd_status);
 }
