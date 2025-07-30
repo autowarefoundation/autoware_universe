@@ -18,6 +18,8 @@
 // Modified by The Autoware Contributors in 2025.
 // Original creation by Derry Lin on 2022/10/22.
 
+// cspell:ignore MSDA
+
 #include "multiScaleDeformableAttnPlugin.h"
 
 #include "checkMacrosPlugin.h"

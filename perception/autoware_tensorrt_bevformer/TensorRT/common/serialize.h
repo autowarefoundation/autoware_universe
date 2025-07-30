@@ -18,6 +18,8 @@
 // Modified by The Autoware Contributors in 2025.
 // Original creation by Derry Lin on 2022/10/22.
 
+// cspell:ignore BEVFORMER
+
 #ifndef PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__COMMON__SERIALIZE_H_  // NOLINT
 #define PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__COMMON__SERIALIZE_H_  // NOLINT
 

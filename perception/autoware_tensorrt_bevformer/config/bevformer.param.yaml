@@ -1,4 +1,6 @@
 /**:
+  # cspell:ignore bevformer, thre
+
   ros__parameters:
     data_params:
       CAM_NUM: 6

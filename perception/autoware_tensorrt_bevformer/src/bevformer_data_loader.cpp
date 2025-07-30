@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// cspell:ignore bevformer
+
 #include "autoware/tensorrt_bevformer/bevformer_data_loader.hpp"
 
 #include <opencv2/opencv.hpp>
