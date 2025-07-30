@@ -417,7 +417,7 @@ char const * MultiScaleDeformableAttnPlugin::getPluginNamespace() const noexcept
 {
   return mPluginNamespace.c_str();
 }
-
+// cppcheck-suppress unknownMacro
 DataType MultiScaleDeformableAttnPlugin::getOutputDataType(
   int32_t index, const nvinfer1::DataType * inputTypes, int32_t nbInputs) const noexcept
 {
@@ -433,7 +433,7 @@ void MultiScaleDeformableAttnPlugin::attachToContext(
 void MultiScaleDeformableAttnPlugin::detachFromContext() noexcept
 {
 }
-
+// cppcheck-suppress unknownMacro
 void MultiScaleDeformableAttnPlugin::configurePlugin(
   const nvinfer1::DynamicPluginTensorDesc * in, int32_t nbInputs,
   const nvinfer1::DynamicPluginTensorDesc * out, int32_t nbOutputs) noexcept
