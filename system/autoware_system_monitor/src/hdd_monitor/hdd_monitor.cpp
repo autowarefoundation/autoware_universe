@@ -368,7 +368,7 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
         stat.add(fmt::format("HDD {}: status", hdd_index), "index error");
       }
 
-      auto& hdd_partition_status = hdd_partition_statuses_.emplace_back();
+      auto & hdd_partition_status = hdd_partition_statuses_.emplace_back();
       hdd_partition_status.size = size;
       hdd_partition_status.used = used;
       hdd_partition_status.avail = avail;
@@ -970,7 +970,7 @@ void HddMonitor::publishHddStatus()
   hdd_status.hostname = hostname_;
 
   for (const auto & hdd_partition_status : hdd_partition_statuses_) {
-    auto& partition = hdd_status.partitions.emplace_back();
+    auto & partition = hdd_status.partitions.emplace_back();
     partition.size = hdd_partition_status.size;
     partition.used = hdd_partition_status.used;
     partition.avail = hdd_partition_status.avail;
@@ -990,7 +990,7 @@ void HddMonitor::publishHddStatus()
     float read_iops = hdd_stats_[itr->first].read_iops_;
     float write_iops = hdd_stats_[itr->first].write_iops_;
 
-    auto& device = hdd_status.devices.emplace_back();
+    auto & device = hdd_status.devices.emplace_back();
     device.name = itr->second.disk_device_;
     device.read_data_rate = read_data_rate;
     device.write_data_rate = write_data_rate;
