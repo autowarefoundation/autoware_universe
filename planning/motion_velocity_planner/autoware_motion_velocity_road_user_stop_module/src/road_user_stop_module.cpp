@@ -19,6 +19,8 @@
 
 #include <autoware/lanelet2_utils/intersection.hpp>
 #include <autoware/motion_utils/distance/distance.hpp>
+#include <autoware/motion_utils/marker/marker_helper.hpp>
+#include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/conversion.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
@@ -31,6 +33,7 @@
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils_geometry/boost_polygon_utils.hpp>
 #include <autoware_utils_rclcpp/parameter.hpp>
+#include <autoware_utils_visualization/marker_helper.hpp>
 #include <pluginlib/class_list_macros.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -101,6 +104,8 @@ void RoadUserStopModule::init(rclcpp::Node & node, const std::string & module_na
 
   common_param_ = CommonParam(node);
 
+  virtual_wall_publisher_ = node.create_publisher<visualization_msgs::msg::MarkerArray>(
+    "~/road_user_stop/virtual_walls", 1);
   planning_factor_interface_ =
     std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
       &node, "road_user_stop");
@@ -331,7 +336,10 @@ VelocityPlanningResult RoadUserStopModule::plan(
   {
     autoware_utils_debug::ScopedTimeTrack st_debug("create_debug_marker_array", *time_keeper_);
     const auto debug_markers = create_debug_marker_array();
-    // debug_publisher_->publish(debug_markers);
+    debug_publisher_->publish(debug_markers);
+
+    // virtual wall
+    virtual_wall_publisher_->publish(debug_data_.stop_wall_marker);
   }
 
   return result;
@@ -669,6 +677,11 @@ std::optional<Point> RoadUserStopModule::plan_stop(
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   if (stop_obstacles.empty()) {
+    // delete marker
+    const auto markers =
+      autoware::motion_utils::createDeletedStopVirtualWallMarker(clock_->now(), 0);
+    autoware_utils_visualization::append_marker_array(markers, &debug_data_.stop_wall_marker);
+
     prev_stop_distance_info_ = std::nullopt;
     return std::nullopt;
   }
@@ -723,6 +736,11 @@ std::optional<Point> RoadUserStopModule::plan_stop(
   if (
     !determined_zero_vel_dist.has_value() || !determined_stop_obstacle.has_value() ||
     !determined_desired_stop_margin.has_value()) {
+    // delete marker
+    const auto markers =
+      autoware::motion_utils::createDeletedStopVirtualWallMarker(clock_->now(), 0);
+    autoware_utils_visualization::append_marker_array(markers, &debug_data_.stop_wall_marker);
+
     prev_stop_distance_info_ = std::nullopt;
     return std::nullopt;
   }
@@ -877,6 +895,7 @@ std::optional<Point> RoadUserStopModule::calc_stop_point(
   const std::optional<double> & determined_zero_vel_dist)
 {
   auto output_traj_points = traj_points;
+  const double dist_to_bumper = planner_data->vehicle_info_.max_longitudinal_offset_m;
 
   // insert stop point - this function interpolates between trajectory points
   // to create a smooth stop position, avoiding discrete jumps
@@ -886,6 +905,12 @@ std::optional<Point> RoadUserStopModule::calc_stop_point(
     return std::nullopt;
   }
   const auto stop_point = output_traj_points.at(zero_vel_idx.value()).pose.position;
+
+  // virtual wall marker for stop obstacle
+  const auto markers = autoware::motion_utils::createStopVirtualWallMarker(
+    output_traj_points.at(*zero_vel_idx).pose, "road user stop", clock_->now(), 0, dist_to_bumper,
+    "", planner_data->is_driving_forward);
+  autoware_utils_visualization::append_marker_array(markers, &debug_data_.stop_wall_marker);
 
   // update debug data
   debug_data_.stop_index = zero_vel_idx.value();

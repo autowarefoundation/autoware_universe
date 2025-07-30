@@ -171,6 +171,9 @@ struct DebugData
   std::optional<size_t> stop_index;
   std::optional<geometry_msgs::msg::Point> stop_point;  // for planning factor
   std::optional<PredictedObject> stop_target_object;    // object causing stop
+
+  // Virtual wall marker
+  MarkerArray stop_wall_marker;
 };
 
 }  // namespace autoware::motion_velocity_planner
