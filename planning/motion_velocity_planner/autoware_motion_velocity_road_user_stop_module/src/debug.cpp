@@ -31,8 +31,7 @@ namespace
 using autoware::universe_utils::appendMarkerArray;
 using autoware::universe_utils::createDefaultMarker;
 
-[[maybe_unused]] void add_polygon_to_marker(
-  Marker & marker, const Polygon2d & polygon, const double z = 0.0)
+void add_polygon_to_marker(Marker & marker, const Polygon2d & polygon, const double z = 0.0)
 {
   for (const auto & point : polygon.outer()) {
     Point p;
