@@ -24,7 +24,7 @@ find_package(Eigen3 REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
-find_package(autoware_custom_msgs REQUIRED)
+find_package(autoware_internal_perception_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
 include_directories(
