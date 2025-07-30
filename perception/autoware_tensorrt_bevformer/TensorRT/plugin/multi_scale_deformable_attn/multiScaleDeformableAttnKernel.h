@@ -18,8 +18,7 @@
 // Modified by The Autoware Contributors in 2025.
 // Original creation by Derry Lin on 2022/10/22.
 
-#ifndef PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__PLUGIN__MULTI_SCALE_DEFORMABLE_ATTN__MULTISCALEDEFORMABLEATTNKERNEL_H_  // NOLINT
-#define PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__PLUGIN__MULTI_SCALE_DEFORMABLE_ATTN__MULTISCALEDEFORMABLEATTNKERNEL_H_  // NOLINT
+#pragma once
 
 #include "cuda_int8.h"
 
@@ -49,5 +48,3 @@ void ms_deformable_im2col_cuda_int8(
   const int8_4 * data_attn_weight, float scale_weight, const int batch_size, const int spatial_size,
   const int num_heads, int channels, const int num_levels, const int num_query, const int num_point,
   const int points_per_group, int8_4 * data_col, float scale_out, cudaStream_t stream);
-
-#endif  // PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__PLUGIN__MULTI_SCALE_DEFORMABLE_ATTN__MULTISCALEDEFORMABLEATTNKERNEL_H_
