@@ -143,7 +143,7 @@ The configuration file in `config/bevformer.param.yaml` can be modified to suit 
 
 [1] [BEVFormer (arXiv)](https://arxiv.org/abs/2203.17270)  
 [2] [Original Python BEVFormer TensorRT](https://github.com/DerryHub/BEVFormer_tensorrt.git)  
-[3] [Bevformer ROS2 C++](https://github.com/Selventhiran-Rengaraj-MCW/mcw-bevformer-cpp.git)
+[3] [Bevformer ROS2 C++](https://github.com/Selventhiran-Rengaraj-MCW/mcw-bevformer-cpp.git)  
 [4] [nuScenes Dataset](https://www.nuscenes.org/)
 
 ---
