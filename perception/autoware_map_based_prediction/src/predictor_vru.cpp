@@ -371,19 +371,19 @@ bool PredictorVru::hasPotentialToReachWithHistory(
     return has_crossing_intention;
   }
 
-  auto & latest_object_data = crosswalk_users_history_.at(object_id).back();
+  auto & last_object_data = crosswalk_users_history_.at(object_id).back();
   const auto now = node_.get_clock()->now();
 
   // Reset the pedestrian crossing intention estimation
   // when the pedestrian starts or finishes crossing the crosswalk.
-  if (latest_object_data.is_crossing != is_crossing) {
-    latest_object_data.intention_history.clear();
+  if (last_object_data.is_crossing != is_crossing) {
+    last_object_data.intention_history.clear();
   }
-  latest_object_data.is_crossing = is_crossing;
+  last_object_data.is_crossing = is_crossing;
 
   // Find historical record corresponding to the same crossing point (center_point)
   const auto itr = std::find_if(
-    latest_object_data.intention_history.begin(), latest_object_data.intention_history.end(),
+    last_object_data.intention_history.begin(), last_object_data.intention_history.end(),
     [&center_point](const auto & intention) {
       return std::hypot(
                intention.point.x() - center_point.x(), intention.point.y() - center_point.y()) <
@@ -391,8 +391,8 @@ bool PredictorVru::hasPotentialToReachWithHistory(
     });
 
   // If this is the first time observing this crossing point, initialize its intention state
-  if (itr == latest_object_data.intention_history.end()) {
-    latest_object_data.intention_history.push_back(
+  if (itr == last_object_data.intention_history.end()) {
+    last_object_data.intention_history.push_back(
       Intention{rclcpp::Time(0, 0, RCL_ROS_TIME), now, center_point});
     return has_crossing_intention;
   }
