@@ -24,12 +24,14 @@
 
 // Constructor for PostProcessor, initializes parameters.
 PostProcessor::PostProcessor(
-  int nb_dec, int num_query, int cls_out_channels, int bbox_dims, float score_thr, int max_num,
+  int nb_dec, int num_query, int cls_out_channels, int bbox_dims, int bev_h, int bev_w, float score_thr, int max_num,
   const std::vector<double> & pc_range, const std::vector<double> & post_center_range)
 : nb_dec(nb_dec),
   num_query(num_query),
   cls_out_channels(cls_out_channels),
   bbox_dims(bbox_dims),
+  bev_h(bev_h),
+  bev_w(bev_w),
   score_thr(score_thr),
   max_num(max_num),
   pc_range_(pc_range),
@@ -86,7 +88,6 @@ PredictionDict decode_single(
   int num_classes = processor.cls_out_channels;
   double score_thr = processor.score_thr;
   int bbox_dims = processor.bbox_dims;
-  std::vector<double> pc_range = processor.pc_range_;
   std::vector<double> post_center_range = processor.post_center_range_;
   int num_query = processor.num_query;
 
@@ -197,7 +198,7 @@ std::vector<std::vector<double>> denormalize_bbox(
     std::vector<double> denorm_bbox = {cx, cy, cz, w, l, h, rot};
 
     // Optional velocity
-    if (bbox.size() > 8) {
+    if (bbox.size() >= 10) {
       double vx = bbox[8];
       double vy = bbox[9];
       denorm_bbox.push_back(vx);
@@ -239,7 +240,7 @@ ResultList GetBboxes(
 
 // Main post-processing function to convert model outputs to 3D bounding boxes.
 std::vector<Box3D> PostProcessor::post_process(
-  const std::map<std::string, std::vector<double>> & reshapedOutputs)
+  const std::map<std::string, std::vector<double>> & reshapedOutputs) const
 {
   std::vector<Box3D> ego_boxes;
 

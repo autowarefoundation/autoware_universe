@@ -617,7 +617,7 @@ void TRTBEVFormerNode::callback(
 
   PostProcessor postProcessor(
     model_shape_params_["nb_dec"], model_shape_params_["num_query"],
-    model_shape_params_["num_classes"], model_shape_params_["code_size"], score_thre_, max_num,
+    model_shape_params_["num_classes"], model_shape_params_["code_size"], model_shape_params_["bev_h"], model_shape_params_["bev_w"], score_thre_, max_num,
     pc_range_, post_center_range_);
 
   auto t_postprocess_end = std::chrono::steady_clock::now();
