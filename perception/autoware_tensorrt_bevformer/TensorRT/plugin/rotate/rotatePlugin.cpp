@@ -260,10 +260,10 @@ char const * RotatePlugin::getPluginNamespace() const noexcept
 {
   return mPluginNamespace.c_str();
 }
-// cppcheck-suppress unknownMacro
 DataType RotatePlugin::getOutputDataType(
   int32_t index, const nvinfer1::DataType * inputTypes, int32_t nbInputs) const noexcept
 {
+  // cppcheck-suppress unknownMacro
   PLUGIN_ASSERT(inputTypes && nbInputs > 0 && index == 0)
   return inputTypes[0];
 }
@@ -276,11 +276,13 @@ void RotatePlugin::attachToContext(
 void RotatePlugin::detachFromContext() noexcept
 {
 }
-// cppcheck-suppress unknownMacro
 void RotatePlugin::configurePlugin(
   const nvinfer1::DynamicPluginTensorDesc * in, int32_t nbInputs,
   const nvinfer1::DynamicPluginTensorDesc * out,
-  int32_t nbOutputs) noexcept {PLUGIN_ASSERT(nbInputs == 3)}
+  int32_t nbOutputs) noexcept {
+    // cppcheck-suppress unknownMacro
+    PLUGIN_ASSERT(nbInputs == 3)
+  }
 
 RotatePluginCreator::RotatePluginCreator()
 {

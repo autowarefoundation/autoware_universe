@@ -334,10 +334,11 @@ char const * ModulatedDeformableConv2dPlugin::getPluginNamespace() const noexcep
   return mPluginNamespace.c_str();
 }
 
-// cppcheck-suppress unknownMacro
+
 DataType ModulatedDeformableConv2dPlugin::getOutputDataType(
   int32_t index, const nvinfer1::DataType * inputTypes, int32_t nbInputs) const noexcept
 {
+  // cppcheck-suppress unknownMacro
   PLUGIN_ASSERT(inputTypes && nbInputs > 0 && index == 0)
   return inputTypes[0];
 }
