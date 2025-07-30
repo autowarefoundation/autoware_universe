@@ -15,6 +15,7 @@
 #ifndef DEBUG_HPP_
 #define DEBUG_HPP_
 
+#include "parameters.hpp"
 #include "types.hpp"
 
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
@@ -358,7 +359,7 @@ inline MarkerArray make_debug_markers(
   const TrajectoryCornerFootprint & ego_footprint, const std::vector<Object> & filtered_objects,
   const ObjectDecisionsTracker & decisions_tracker,
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
-  const double comfortable_time_to_stop, const FilteringData & filtering_data)
+  const FilteringData & filtering_data, const Parameters & params)
 {
   MarkerArray markers;
   const auto concat = [&](MarkerArray && a) {
@@ -366,11 +367,22 @@ inline MarkerArray make_debug_markers(
       markers.markers.end(), std::make_move_iterator(a.markers.begin()),
       std::make_move_iterator(a.markers.end()));
   };
-  concat(run_out::make_debug_footprint_markers(ego_footprint, filtered_objects));
-  concat(run_out::make_debug_object_markers(filtered_objects));
-  concat(run_out::make_debug_decisions_markers(decisions_tracker));
-  concat(run_out::make_debug_min_stop_marker(smoothed_trajectory_points, comfortable_time_to_stop));
-  concat(run_out::make_debug_filtering_data_marker(filtering_data));
+  if (params.debug.enabled_markers.ego_footprint) {
+    concat(run_out::make_debug_footprint_markers(ego_footprint, filtered_objects));
+  }
+  if (params.debug.enabled_markers.objects) {
+    concat(run_out::make_debug_object_markers(filtered_objects));
+  }
+  if (params.debug.enabled_markers.decisions) {
+    concat(run_out::make_debug_decisions_markers(decisions_tracker));
+  }
+  if (params.debug.enabled_markers.filtering_data) {
+    concat(run_out::make_debug_filtering_data_marker(filtering_data));
+  }
+  concat(run_out::make_debug_min_stop_marker(
+    smoothed_trajectory_points,
+    params.ignore_collision_conditions.if_ego_arrives_first_and_cannot_stop
+      .calculated_stop_time_limit));
   return markers;
 }
 
