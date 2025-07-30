@@ -258,9 +258,7 @@ VelocityPlanningResult RunOutModule::plan(
       filtering_data[run_out::Parameters::string_to_label(params_.debug.object_label)];
     debug_publisher_->publish(run_out::make_debug_markers(
       ego_footprint, filtered_objects, decisions_tracker_, smoothed_trajectory_points,
-      params_.ignore_collision_conditions.if_ego_arrives_first_and_cannot_stop
-        .calculated_stop_time_limit,
-      filtering_data_to_publish));
+      filtering_data_to_publish, params_));
   }
   publish_debug_trajectory(smoothed_trajectory_points, result.velocity_planning_result);
   objects_of_interest_marker_interface_->publishMarkerArray();
