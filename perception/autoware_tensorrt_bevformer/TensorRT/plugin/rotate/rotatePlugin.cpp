@@ -279,10 +279,8 @@ void RotatePlugin::detachFromContext() noexcept
 void RotatePlugin::configurePlugin(
   const nvinfer1::DynamicPluginTensorDesc * in, int32_t nbInputs,
   const nvinfer1::DynamicPluginTensorDesc * out,
-  int32_t nbOutputs) noexcept {
-    // cppcheck-suppress unknownMacro
-    PLUGIN_ASSERT(nbInputs == 3)
-  }
+  int32_t nbOutputs) noexcept {// cppcheck-suppress unknownMacro
+                               PLUGIN_ASSERT(nbInputs == 3)}
 
 RotatePluginCreator::RotatePluginCreator()
 {

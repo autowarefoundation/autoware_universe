@@ -1,21 +1,21 @@
 cmake_minimum_required(VERSION 3.14)
 project(autoware_tensorrt_bevformer)
- 
+
 find_package(autoware_cmake REQUIRED)
 autoware_package()
- 
+
 if(POLICY CMP0146)
   cmake_policy(SET CMP0146 OLD)
 endif()
- 
+
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
- 
+
 add_compile_options(-Wno-deprecated-declarations)
- 
+
 option(CUDA_VERBOSE "Verbose output of CUDA modules" OFF)
- 
+
 # CUDA availability check
 option(CUDA_AVAIL "CUDA available" OFF)
 find_package(CUDA)
@@ -35,7 +35,7 @@ else()
   message("CUDA NOT FOUND")
   set(CUDA_AVAIL OFF)
 endif()
- 
+
 # TensorRT
 option(TRT_AVAIL "TensorRT available" OFF)
 find_library(NVINFER nvinfer)
@@ -51,7 +51,7 @@ else()
   message("TensorRT is NOT available")
   set(TRT_AVAIL OFF)
 endif()
- 
+
 # CUDNN
 option(CUDNN_AVAIL "CUDNN available" OFF)
 find_library(CUDNN_LIBRARY
@@ -69,11 +69,11 @@ else()
   message("CUDNN is NOT available")
   set(CUDNN_AVAIL OFF)
 endif()
- 
+
 if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   find_package(ament_cmake_auto REQUIRED)
   ament_auto_find_build_dependencies()
- 
+
   # CUDA flags
   set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} --expt-relaxed-constexpr -diag-suppress 1675 --extended-lambda")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
@@ -81,7 +81,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_87,code=sm_87")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
- 
+
   find_package(OpenCV REQUIRED)
   find_package(Eigen3 REQUIRED)
   find_package(std_msgs REQUIRED)
@@ -90,7 +90,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   find_package(autoware_internal_perception_msgs REQUIRED)
   find_package(visualization_msgs REQUIRED)
   find_package(ament_index_cpp REQUIRED)
- 
+
   include_directories(
     include
     ${CUDA_INCLUDE_DIRS}
@@ -98,7 +98,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     ${EIGEN3_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}/TensorRT/common
   )
- 
+
   # Build TensorRT plugin library
   file(GLOB_RECURSE TENSORRT_SRCS
     TensorRT/common/*.cpp
@@ -110,7 +110,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   foreach(src ${TENSORRT_SRCS})
     message(STATUS "  ${src}")
   endforeach()
- 
+
   set(TENSORRT_OPS_TARGET tensorrt_ops)
   cuda_add_library(${TENSORRT_OPS_TARGET} SHARED ${TENSORRT_SRCS})
   target_compile_options(${TENSORRT_OPS_TARGET} PRIVATE
@@ -126,7 +126,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     ${CUDA_LIBRARIES}
     ${CUBLAS_LIBRARIES}
   )
- 
+
   # Main source files
   set(SOURCES
     src/bevformer_node.cpp
@@ -143,12 +143,12 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     src/preprocessing/compose.cpp
     src/preprocessing/augmentation_transforms.cpp
   )
- 
+
   ament_auto_add_library(${PROJECT_NAME} SHARED ${SOURCES})
   ament_target_dependencies(${PROJECT_NAME}
     rclcpp std_msgs visualization_msgs tf2_geometry_msgs ament_index_cpp
   )
- 
+
   target_link_libraries(${PROJECT_NAME}
     ${CUDA_LIBRARIES}
     ${OpenCV_LIBRARIES}
@@ -158,30 +158,30 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     ${TENSORRT_OPS_TARGET}
     dl
   )
- 
+
   add_dependencies(${PROJECT_NAME} ${TENSORRT_OPS_TARGET})
- 
+
   target_compile_options(${PROJECT_NAME} PRIVATE
     -Wall -Wextra -Wpedantic -Wno-deprecated-declarations -Wno-unused-parameter
     -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable
   )
- 
+
   target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
- 
+
   target_include_directories(${PROJECT_NAME}
     SYSTEM PUBLIC ${CUDA_INCLUDE_DIRS}
   )
- 
+
   ament_export_libraries(${PROJECT_NAME})
- 
+
   rclcpp_components_register_node(${PROJECT_NAME}
     PLUGIN "autoware::tensorrt_bevformer::TRTBEVFormerNode"
     EXECUTABLE ${PROJECT_NAME}_node
   )
- 
+
   install(DIRECTORY include launch config DESTINATION share/${PROJECT_NAME})
   install(TARGETS ${TENSORRT_OPS_TARGET} LIBRARY DESTINATION lib)
- 
+
   ament_auto_package()
 else()
   # Dependencies missing
