@@ -21,6 +21,7 @@
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 #include <cmath>
+#include <numeric>
 
 namespace autoware::perception_diagnostics
 {
@@ -30,17 +31,26 @@ void MobMetricsCalculator::setPredictedObjects(const PredictedObjects & objects)
   predicted_objects_ = objects;
 }
 
+void MobMetricsCalculator::setLatencies(const std::array<double, LATENCY_TOPIC_NUM> & latencies)
+{
+  latencies_ = latencies;
+}
+
 FrameMetrics MobMetricsCalculator::computeMetrics(const tf2_ros::Buffer & tf_buffer) const
 {
   FrameMetrics metrics;
-  metrics.total_count = static_cast<uint32_t>(predicted_objects_.objects.size());
+  metrics.all_object_count = static_cast<uint32_t>(predicted_objects_.objects.size());
 
-  // Compute per‐label object counts
+  // Compute object count by label
   for (const auto & object : predicted_objects_.objects) {
     const auto label =
       autoware::object_recognition_utils::getHighestProbLabel(object.classification);
-    metrics.counts[label]++;
+    metrics.object_count_by_label[label]++;
   }
+
+  // Store latency_by_topic_id and compute total_latency
+  metrics.latency_by_topic_id = latencies_;
+  metrics.total_latency = std::accumulate(latencies_.begin(), latencies_.end(), 0.0);
 
   // Skip max distance calculation if base_link transform is unavailable
   const auto objects_frame_id = predicted_objects_.header.frame_id;
@@ -55,7 +65,7 @@ FrameMetrics MobMetricsCalculator::computeMetrics(const tf2_ros::Buffer & tf_buf
     return metrics;
   }
 
-  // Compute per‐label max distances
+  // Compute max distance by label
   for (const auto & object : predicted_objects_.objects) {
     const auto label =
       autoware::object_recognition_utils::getHighestProbLabel(object.classification);
@@ -69,7 +79,7 @@ FrameMetrics MobMetricsCalculator::computeMetrics(const tf2_ros::Buffer & tf_buf
 
     const double dist = std::hypot(pose_out.pose.position.x, pose_out.pose.position.y);
 
-    auto & max_dist = metrics.max_distances[label];
+    auto & max_dist = metrics.max_distance_by_label[label];
     if (dist > max_dist) {
       max_dist = dist;
     }

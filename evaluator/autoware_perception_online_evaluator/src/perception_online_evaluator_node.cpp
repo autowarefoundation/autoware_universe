@@ -66,26 +66,20 @@ PerceptionOnlineEvaluatorNode::PerceptionOnlineEvaluatorNode(
   }
 
   if (enable_metrics_mob_) {
-    all_objects_count_pub_ = create_publisher<Float32Stamped>("~/mob/all_objects_count", 1);
-    for (auto label : label_list_) {
-      const auto name_count = "~/mob/count_" + convertLabelToString(label);
-      by_label_objects_count_pubs_[label] = create_publisher<Float32Stamped>(name_count, 1);
-
-      const auto name_dist = "~/mob/max_dist_m_" + convertLabelToString(label);
-      by_label_objects_max_dist_pubs_[label] = create_publisher<Float32Stamped>(name_dist, 1);
-    }
+    mob_metrics_pub_ = create_publisher<tier4_metric_msgs::msg::MetricArray>("~/mob_metrics", 1);
 
     const auto latency_topic_meas_to_tracked =
       this->get_parameter("meas_to_tracked_latency_topic_name").as_string();
     const auto latency_topic_prediction =
       this->get_parameter("prediction_latency_topic_name").as_string();
     meas_to_tracked_latency_sub_ = create_subscription<Float64Stamped>(
-      latency_topic_meas_to_tracked, 1,
-      [this](const Float64Stamped::ConstSharedPtr msg) { meas_to_tracked_latency_ = msg->data; });
+      latency_topic_meas_to_tracked, 1, [this](const Float64Stamped::ConstSharedPtr msg) {
+        latencies_[LATENCY_TOPIC_ID_MEAS_TO_TRACKED] = msg->data;
+      });
     prediction_latency_sub_ = create_subscription<Float64Stamped>(
-      latency_topic_prediction, 1,
-      [this](const Float64Stamped::ConstSharedPtr msg) { prediction_latency_ = msg->data; });
-    total_latency_pub_ = create_publisher<Float64Stamped>("~/mob/total_latency_ms", 1);
+      latency_topic_prediction, 1, [this](const Float64Stamped::ConstSharedPtr msg) {
+        latencies_[LATENCY_TOPIC_ID_PREDICTION] = msg->data;
+      });
   }
 
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
@@ -131,35 +125,56 @@ void PerceptionOnlineEvaluatorNode::publishMetrics()
 void PerceptionOnlineEvaluatorNode::publishMobMetrics()
 {
   auto metrics = mob_metrics_calculator_.computeMetrics(*tf_buffer_);
-  const auto now = this->now();
 
-  // total count
-  Float32Stamped total_count_msg;
-  total_count_msg.stamp = now;
-  total_count_msg.data = static_cast<float>(metrics.total_count);
-  all_objects_count_pub_->publish(total_count_msg);
+  // DiagnosticArray metrics_msg;
+  tier4_metric_msgs::msg::MetricArray metrics_msg;
 
-  // per‑label counts
+  // all object count
+  metrics_msg.metric_array.emplace_back(tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
+                                          .name("all_object_count")
+                                          .unit("count")
+                                          .value(std::to_string(metrics.all_object_count)));
+
+  // object count per label
   for (auto & label : label_list_) {
-    Float32Stamped count_msg;
-    count_msg.stamp = now;
-    const auto it = metrics.counts.find(label);
-    count_msg.data = (it != metrics.counts.end()) ? static_cast<float>(it->second) : 0.0f;
-    by_label_objects_count_pubs_[label]->publish(count_msg);
+    metrics_msg.metric_array.emplace_back(
+      tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
+        .name("object_count_" + convertLabelToString(label))
+        .unit("count")
+        .value(std::to_string(metrics.object_count_by_label[label])));
   }
 
-  // per‑label max distances (only for labels in metrics.max_distances)
-  for (auto & [label, max_dist] : metrics.max_distances) {
-    Float32Stamped distance_msg;
-    distance_msg.stamp = now;
-    distance_msg.data = static_cast<float>(max_dist);
-    by_label_objects_max_dist_pubs_[label]->publish(distance_msg);
+  // max distance per label (value 0 for no object)
+  for (auto & label : label_list_) {
+    metrics_msg.metric_array.emplace_back(
+      tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
+        .name("max_distance_" + convertLabelToString(label))
+        .unit("m")
+        .value(std::to_string(metrics.max_distance_by_label[label])));
   }
 
-  Float64Stamped total_latency_msg;
-  total_latency_msg.stamp = now;
-  total_latency_msg.data = meas_to_tracked_latency_ + prediction_latency_;
-  total_latency_pub_->publish(total_latency_msg);
+  // latency by topic
+  metrics_msg.metric_array.emplace_back(
+    tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
+      .name("meas_to_tracked_latency")
+      .unit("ms")
+      .value(std::to_string(metrics.latency_by_topic_id[LATENCY_TOPIC_ID_MEAS_TO_TRACKED])));
+  metrics_msg.metric_array.emplace_back(
+    tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
+      .name("prediction_latency")
+      .unit("ms")
+      .value(std::to_string(metrics.latency_by_topic_id[LATENCY_TOPIC_ID_PREDICTION])));
+
+  // total latency
+  metrics_msg.metric_array.emplace_back(tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
+                                          .name("total_latency")
+                                          .unit("ms")
+                                          .value(std::to_string(metrics.total_latency)));
+
+  if (!metrics_msg.metric_array.empty()) {
+    metrics_msg.stamp = now();
+    mob_metrics_pub_->publish(metrics_msg);
+  }
 }
 
 void PerceptionOnlineEvaluatorNode::toMetricMsg(
@@ -203,6 +218,7 @@ void PerceptionOnlineEvaluatorNode::onObjects(const PredictedObjects::ConstShare
   }
   if (enable_metrics_mob_) {
     mob_metrics_calculator_.setPredictedObjects(*objects_msg);
+    mob_metrics_calculator_.setLatencies(latencies_);
     publishMobMetrics();
   }
 }

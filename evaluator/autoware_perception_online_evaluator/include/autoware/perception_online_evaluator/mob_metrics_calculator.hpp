@@ -19,26 +19,40 @@
 
 #include "autoware_perception_msgs/msg/predicted_objects.hpp"
 
-#include <unordered_map>
+#include <array>
 
 namespace autoware::perception_diagnostics
 {
 using autoware_perception_msgs::msg::PredictedObjects;
 
+// Number of labels in ObjectClassification
+static constexpr size_t LABEL_NUM = 12;
+// Number of latency topics and their ids
+static constexpr size_t LATENCY_TOPIC_NUM = 2;
+static constexpr size_t LATENCY_TOPIC_ID_MEAS_TO_TRACKED = 0;
+static constexpr size_t LATENCY_TOPIC_ID_PREDICTION = 1;
+
+/**
+ * @brief One‐shot, fixed‐size frame metrics for MOB (no allocs)
+ */
 struct FrameMetrics
 {
-  uint32_t total_count = 0;
-  std::unordered_map<uint8_t, uint32_t> counts;
-  std::unordered_map<uint8_t, double> max_distances;
+  uint32_t all_object_count = 0;
+  std::array<uint32_t, LABEL_NUM> object_count_by_label{};
+  std::array<double, LABEL_NUM> max_distance_by_label{};
+  std::array<double, LATENCY_TOPIC_NUM> latency_by_topic_id{};
+  double total_latency = 0.0;
 };
 
 /**
  * @brief One‐shot frame metrics calculator for MOB
  *
- * Calculates metrics:
+ * Store and calculate metrics:
  *  - total object count
- *  - per‐label object count
- *  - per‐label max distance (in base_link)
+ *  - object count by label
+ *  - max distance by label (in base_link)
+ *  - latency by topic (for nodes in pipeline)
+ *  - total latency
  */
 class MobMetricsCalculator
 {
@@ -52,6 +66,12 @@ public:
   void setPredictedObjects(const PredictedObjects & objects);
 
   /**
+   * @brief Store the latest node latencies for computation
+   * @param latencies     Latencies for this frame
+   */
+  void setLatencies(const std::array<double, LATENCY_TOPIC_NUM> & latencies);
+
+  /**
    * @brief Compute frame metrics
    * @param tf_buffer   TF buffer used for transforms
    * @return FrameMetrics
@@ -60,6 +80,7 @@ public:
 
 private:
   PredictedObjects predicted_objects_;
+  std::array<double, LATENCY_TOPIC_NUM> latencies_;
 };
 
 }  // namespace autoware::perception_diagnostics

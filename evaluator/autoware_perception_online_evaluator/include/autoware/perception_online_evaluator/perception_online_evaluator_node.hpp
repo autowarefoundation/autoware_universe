@@ -27,7 +27,6 @@
 #include "autoware_perception_msgs/msg/predicted_objects.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
-#include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <tier4_metric_msgs/msg/metric.hpp>
 #include <tier4_metric_msgs/msg/metric_array.hpp>
@@ -41,7 +40,6 @@
 
 namespace autoware::perception_diagnostics
 {
-using autoware_internal_debug_msgs::msg::Float32Stamped;
 using autoware_internal_debug_msgs::msg::Float64Stamped;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObjects;
@@ -111,21 +109,12 @@ private:
   rclcpp::Publisher<MarkerArray>::SharedPtr pub_marker_;
 
   // Subscribers and publishers (for MOB)
-  // 1. (For planning) object counts
-  rclcpp::Publisher<Float32Stamped>::SharedPtr all_objects_count_pub_;
-  std::unordered_map<uint8_t, rclcpp::Publisher<Float32Stamped>::SharedPtr>
-    by_label_objects_count_pubs_;
-  // 2. (For planning) object max distances
-  std::unordered_map<uint8_t, rclcpp::Publisher<Float32Stamped>::SharedPtr>
-    by_label_objects_max_dist_pubs_;
-  // 3. perception processing latency
   rclcpp::Subscription<Float64Stamped>::SharedPtr meas_to_tracked_latency_sub_;
   rclcpp::Subscription<Float64Stamped>::SharedPtr prediction_latency_sub_;
-  rclcpp::Publisher<Float64Stamped>::SharedPtr total_latency_pub_;
+  rclcpp::Publisher<tier4_metric_msgs::msg::MetricArray>::SharedPtr mob_metrics_pub_;
 
-  // Latest processing latency cache
-  double meas_to_tracked_latency_{0.0f};
-  double prediction_latency_{0.0f};
+  // Latency cache (by topic id)
+  std::array<double, autoware::perception_diagnostics::LATENCY_TOPIC_NUM> latencies_;
 
   // TF
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
