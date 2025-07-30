@@ -282,11 +282,17 @@ VelocityPlanningResult RoadUserStopModule::plan(
   // 1. Prepare trajectory data for collision checking
   // 1.1 Decimate trajectory points to reduce computational cost
   const auto param = param_listener_->get_params();
-  const auto decimated_traj_points = utils::decimate_trajectory_points_from_ego(
-    trajectory_points, planner_data->current_odometry.pose.pose,
-    planner_data->ego_nearest_dist_threshold, planner_data->ego_nearest_yaw_threshold,
-    planner_data->trajectory_polygon_collision_check.decimate_trajectory_step_length,
-    param.stop_planning.longitudinal_margin.default_margin);
+  const auto decimated_traj_points = [&]() {
+    autoware_utils_debug::ScopedTimeTrack st_debug(
+      "decimate_trajectory_points_from_ego", *time_keeper_);
+    const auto traj_point = utils::decimate_trajectory_points_from_ego(
+      trajectory_points, planner_data->current_odometry.pose.pose,
+      planner_data->ego_nearest_dist_threshold, planner_data->ego_nearest_yaw_threshold,
+      planner_data->trajectory_polygon_collision_check.decimate_trajectory_step_length,
+      param.stop_planning.longitudinal_margin.default_margin);
+
+    return traj_point;
+  }();
 
   // 1.2 Calculate trajectory lanelets
   const auto ego_lanelets = get_ego_lanelets(decimated_traj_points, planner_data);
@@ -322,8 +328,11 @@ VelocityPlanningResult RoadUserStopModule::plan(
   }
 
   // 5. Publish debug information for visualization
-  const auto debug_markers = create_debug_marker_array();
-  debug_publisher_->publish(debug_markers);
+  {
+    autoware_utils_debug::ScopedTimeTrack st_debug("create_debug_marker_array", *time_keeper_);
+    const auto debug_markers = create_debug_marker_array();
+    // debug_publisher_->publish(debug_markers);
+  }
 
   return result;
 }

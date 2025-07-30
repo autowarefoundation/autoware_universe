@@ -56,6 +56,8 @@ MarkerArray RoadUserStopModule::create_debug_marker_array() const
   // Always publish debug markers
   // Visualize ego lanelets in pink
   if (!debug_data_.ego_lanelets.empty()) {
+    autoware_utils_debug::ScopedTimeTrack st_debug(
+      "create_debug_marker_array/ego_lanelets", *time_keeper_);
     std_msgs::msg::ColorRGBA pink_color;
     pink_color.r = 1.0;
     pink_color.g = 0.0;
@@ -68,6 +70,8 @@ MarkerArray RoadUserStopModule::create_debug_marker_array() const
   }
 
   if (!debug_data_.ego_lanelets_without_intersection.empty()) {
+    autoware_utils_debug::ScopedTimeTrack st_debug(
+      "create_debug_marker_array/ego_lanelets_without_intersection", *time_keeper_);
     std_msgs::msg::ColorRGBA pink_color;
     pink_color.r = 0.0;
     pink_color.g = 1.0;
@@ -83,6 +87,8 @@ MarkerArray RoadUserStopModule::create_debug_marker_array() const
 
   // Visualize adjacent lanelets in orange
   if (!debug_data_.adjacent_lanelets.empty()) {
+    autoware_utils_debug::ScopedTimeTrack st_debug(
+      "create_debug_marker_array/adjacent_lanelets", *time_keeper_);
     std_msgs::msg::ColorRGBA orange_color;
     orange_color.r = 1.0;
     orange_color.g = 0.5;
@@ -95,6 +101,8 @@ MarkerArray RoadUserStopModule::create_debug_marker_array() const
 
   // Visualize trajectory polygons in yellow
   if (!debug_data_.trajectory_polygons.empty()) {
+    autoware_utils_debug::ScopedTimeTrack st_debug(
+      "create_debug_marker_array/trajectory_polygons", *time_keeper_);
     int traj_poly_id = 0;
     for (const auto & polygon : debug_data_.trajectory_polygons) {
       Marker traj_poly_marker = createDefaultMarker(
@@ -112,6 +120,8 @@ MarkerArray RoadUserStopModule::create_debug_marker_array() const
 
   // Visualize stop point
   if (debug_data_.stop_point) {
+    autoware_utils_debug::ScopedTimeTrack st_debug(
+      "create_debug_marker_array/stop_point", *time_keeper_);
     Marker stop_marker = createDefaultMarker(
       "map", clock_->now(), "stop_point", 0, Marker::SPHERE,
       autoware::universe_utils::createMarkerScale(1.0, 1.0, 1.0),
@@ -125,6 +135,8 @@ MarkerArray RoadUserStopModule::create_debug_marker_array() const
   // Visualize filtered objects
   int obj_id = 0;
   for (const auto & object : debug_data_.filtered_objects) {
+    autoware_utils_debug::ScopedTimeTrack st_debug(
+      "create_debug_marker_array/filtered_objects", *time_keeper_);
     Marker obj_marker = createDefaultMarker(
       "map", clock_->now(), "filtered_objects", obj_id++, Marker::CYLINDER,
       autoware::universe_utils::createMarkerScale(0.5, 0.5, 2.0),
@@ -138,6 +150,8 @@ MarkerArray RoadUserStopModule::create_debug_marker_array() const
 
   // Visualize object polygons in purple
   if (!debug_data_.object_polygons.empty()) {
+    autoware_utils_debug::ScopedTimeTrack st_debug(
+      "create_debug_marker_array/object_polygons", *time_keeper_);
     int obj_poly_id = 0;
     for (const auto & polygon : debug_data_.object_polygons) {
       Marker obj_poly_marker = createDefaultMarker(
@@ -155,6 +169,8 @@ MarkerArray RoadUserStopModule::create_debug_marker_array() const
 
   // Visualize intersection polygons in cyan
   if (!debug_data_.intersection_polygons.empty()) {
+    autoware_utils_debug::ScopedTimeTrack st_debug(
+      "create_debug_marker_array/intersection_polygons", *time_keeper_);
     int intersection_poly_id = 0;
     for (const auto & polygon : debug_data_.intersection_polygons) {
       Marker intersection_poly_marker = createDefaultMarker(
@@ -172,6 +188,8 @@ MarkerArray RoadUserStopModule::create_debug_marker_array() const
 
   // Visualize polygons for VRU detection in light green
   if (!debug_data_.polygons_for_vru.empty()) {
+    autoware_utils_debug::ScopedTimeTrack st_debug(
+      "create_debug_marker_array/polygons_for_vru", *time_keeper_);
     int vru_poly_id = 0;
     for (const auto & polygon : debug_data_.polygons_for_vru) {
       Marker vru_poly_marker = createDefaultMarker(
@@ -189,6 +207,8 @@ MarkerArray RoadUserStopModule::create_debug_marker_array() const
 
   // Visualize polygons for opposing traffic detection in light red
   if (!debug_data_.polygons_for_opposing_traffic.empty()) {
+    autoware_utils_debug::ScopedTimeTrack st_debug(
+      "create_debug_marker_array/polygons_for_opposing_traffic", *time_keeper_);
     int opposing_poly_id = 0;
     for (const auto & polygon : debug_data_.polygons_for_opposing_traffic) {
       Marker opposing_poly_marker = createDefaultMarker(
