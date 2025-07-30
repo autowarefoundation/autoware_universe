@@ -17,14 +17,7 @@
 
 #include "autoware/pointcloud_preprocessor/filter.hpp"
 
-#include <Eigen/Core>
-
-#include <pcl_conversions/pcl_conversions.h>
 #include <sensor_msgs/msg/point_cloud2.h>
-
-#include <algorithm>
-#include <cmath>
-#include <vector>
 
 namespace autoware::pointcloud_preprocessor
 {
@@ -69,11 +62,8 @@ private:
   rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> & p);
 
 public:
-  PCL_MAKE_ALIGNED_OPERATOR_NEW
   explicit PickupBasedVoxelGridDownsampleFilterComponent(const rclcpp::NodeOptions & options);
 };
 }  // namespace autoware::pointcloud_preprocessor
 
-// clang-format off
 #endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__DOWNSAMPLE_FILTER__PICKUP_BASED_VOXEL_GRID_DOWNSAMPLE_FILTER_NODE_HPP_  // NOLINT
-// clang-format on
