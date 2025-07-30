@@ -39,7 +39,7 @@ class Compose
 {
 public:
   explicit Compose(const std::vector<std::shared_ptr<Transform>> & transforms);
-  DataDict operator()(DataDict results);
+  DataDict operator()(DataDict results) const;
   std::string toString() const;
 
 private:

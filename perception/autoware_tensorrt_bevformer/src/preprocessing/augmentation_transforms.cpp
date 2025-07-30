@@ -234,7 +234,7 @@ std::string DefaultFormatBundle3DTransform::toString() const
   return "DefaultFormatBundle3D()";
 }
 
-DataDict DefaultFormatBundle3D(DataDict & results)
+DataDict DefaultFormatBundle3D(const DataDict & results)
 {
   DataDict formatted_results = results;
 

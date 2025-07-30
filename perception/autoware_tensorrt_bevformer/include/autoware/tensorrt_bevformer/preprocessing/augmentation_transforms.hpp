@@ -69,7 +69,7 @@ private:
 // Scaling operation helper
 PreprocessResult RandomScaleImageMultiViewImage(
   const std::vector<cv::Mat> & input_images, const std::vector<cv::Mat> & input_lidar2img,
-  float scale);
+  float rand_scale);
 
 /**
  * @brief Transform for padding images to specific dimensions
@@ -114,7 +114,7 @@ public:
 };
 
 // Format conversion helper
-DataDict DefaultFormatBundle3D(DataDict & results);
+DataDict DefaultFormatBundle3D(const DataDict & results);
 
 }  // namespace preprocessing
 }  // namespace bevformer
