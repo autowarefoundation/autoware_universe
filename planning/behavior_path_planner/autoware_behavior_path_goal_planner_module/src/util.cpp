@@ -612,8 +612,9 @@ double calcLateralDeviationBetweenPaths(
       reference_path.points, target_point.point.pose.position);
     lateral_deviation = std::max(
       lateral_deviation,
-      std::abs(autoware_utils::calc_lateral_deviation(
-        reference_path.points[nearest_index].point.pose, target_point.point.pose.position)));
+      std::abs(
+        autoware_utils::calc_lateral_deviation(
+          reference_path.points[nearest_index].point.pose, target_point.point.pose.position)));
   }
   return lateral_deviation;
 }
@@ -1050,8 +1051,9 @@ bool hasPreviousModulePathShapeChanged(
       // p.point.pose.position is not within the segment, skip lateral distance check
       continue;
     }
-    const double lateral_distance = std::abs(autoware::motion_utils::calcLateralOffset(
-      last_upstream_module_output.path.points, p.point.pose.position, nearest_seg_idx));
+    const double lateral_distance = std::abs(
+      autoware::motion_utils::calcLateralOffset(
+        last_upstream_module_output.path.points, p.point.pose.position, nearest_seg_idx));
     if (lateral_distance > LATERAL_DEVIATION_THRESH) {
       return true;
     }
@@ -1063,8 +1065,9 @@ bool hasDeviatedFromPath(
   const Point & ego_position, const BehaviorModuleOutput & upstream_module_output)
 {
   constexpr double LATERAL_DEVIATION_THRESH = 0.1;
-  return std::abs(autoware::motion_utils::calcLateralOffset(
-           upstream_module_output.path.points, ego_position)) > LATERAL_DEVIATION_THRESH;
+  return std::abs(
+           autoware::motion_utils::calcLateralOffset(
+             upstream_module_output.path.points, ego_position)) > LATERAL_DEVIATION_THRESH;
 }
 
 bool has_stopline_except_terminal(const PathWithLaneId & path)

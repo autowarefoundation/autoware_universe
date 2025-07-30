@@ -91,26 +91,35 @@ inline MarkerArray make_debug_objects_footprint_markers(
     for (const auto & footprint : object.predicted_path_footprints) {
       const auto & f = footprint.predicted_path_footprint;
       for (auto i = 0UL; i + 1 < f.corner_linestrings[front_left].size(); ++i) {
-        m.points.push_back(universe_utils::createPoint(
-          f.corner_linestrings[front_left][i].x(), f.corner_linestrings[front_left][i].y(), 0.0));
-        m.points.push_back(universe_utils::createPoint(
-          f.corner_linestrings[front_left][i + 1].x(), f.corner_linestrings[front_left][i + 1].y(),
-          0.0));
-        m.points.push_back(universe_utils::createPoint(
-          f.corner_linestrings[front_right][i].x(), f.corner_linestrings[front_right][i].y(), 0.0));
-        m.points.push_back(universe_utils::createPoint(
-          f.corner_linestrings[front_right][i + 1].x(),
-          f.corner_linestrings[front_right][i + 1].y(), 0.0));
-        m.points.push_back(universe_utils::createPoint(
-          f.corner_linestrings[rear_left][i].x(), f.corner_linestrings[rear_left][i].y(), 0.0));
-        m.points.push_back(universe_utils::createPoint(
-          f.corner_linestrings[rear_left][i + 1].x(), f.corner_linestrings[rear_left][i + 1].y(),
-          0.0));
-        m.points.push_back(universe_utils::createPoint(
-          f.corner_linestrings[rear_right][i].x(), f.corner_linestrings[rear_right][i].y(), 0.0));
-        m.points.push_back(universe_utils::createPoint(
-          f.corner_linestrings[rear_right][i + 1].x(), f.corner_linestrings[rear_right][i + 1].y(),
-          0.0));
+        m.points.push_back(
+          universe_utils::createPoint(
+            f.corner_linestrings[front_left][i].x(), f.corner_linestrings[front_left][i].y(), 0.0));
+        m.points.push_back(
+          universe_utils::createPoint(
+            f.corner_linestrings[front_left][i + 1].x(),
+            f.corner_linestrings[front_left][i + 1].y(), 0.0));
+        m.points.push_back(
+          universe_utils::createPoint(
+            f.corner_linestrings[front_right][i].x(), f.corner_linestrings[front_right][i].y(),
+            0.0));
+        m.points.push_back(
+          universe_utils::createPoint(
+            f.corner_linestrings[front_right][i + 1].x(),
+            f.corner_linestrings[front_right][i + 1].y(), 0.0));
+        m.points.push_back(
+          universe_utils::createPoint(
+            f.corner_linestrings[rear_left][i].x(), f.corner_linestrings[rear_left][i].y(), 0.0));
+        m.points.push_back(
+          universe_utils::createPoint(
+            f.corner_linestrings[rear_left][i + 1].x(), f.corner_linestrings[rear_left][i + 1].y(),
+            0.0));
+        m.points.push_back(
+          universe_utils::createPoint(
+            f.corner_linestrings[rear_right][i].x(), f.corner_linestrings[rear_right][i].y(), 0.0));
+        m.points.push_back(
+          universe_utils::createPoint(
+            f.corner_linestrings[rear_right][i + 1].x(),
+            f.corner_linestrings[rear_right][i + 1].y(), 0.0));
       }
     }
   }
@@ -391,10 +400,11 @@ inline MarkerArray make_debug_markers(
   if (params.debug.enabled_markers.filtering_data) {
     concat(run_out::make_debug_filtering_data_marker(filtering_data));
   }
-  concat(run_out::make_debug_min_stop_marker(
-    smoothed_trajectory_points,
-    params.ignore_collision_conditions.if_ego_arrives_first_and_cannot_stop
-      .calculated_stop_time_limit));
+  concat(
+    run_out::make_debug_min_stop_marker(
+      smoothed_trajectory_points,
+      params.ignore_collision_conditions.if_ego_arrives_first_and_cannot_stop
+        .calculated_stop_time_limit));
   return markers;
 }
 
