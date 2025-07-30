@@ -168,6 +168,7 @@ private:
     const double dist_to_bumper, const double default_stop_margin) const;
 
   MarkerArray create_debug_marker_array() const;
+  void publish_debug_info();
 };
 
 }  // namespace autoware::motion_velocity_planner

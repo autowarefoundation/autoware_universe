@@ -104,8 +104,7 @@ void RoadUserStopModule::init(rclcpp::Node & node, const std::string & module_na
 
   common_param_ = CommonParam(node);
 
-  virtual_wall_publisher_ = node.create_publisher<visualization_msgs::msg::MarkerArray>(
-    "~/road_user_stop/virtual_walls", 1);
+  virtual_wall_publisher_ = node.create_publisher<MarkerArray>("~/road_user_stop/virtual_walls", 1);
   planning_factor_interface_ =
     std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
       &node, "road_user_stop");
@@ -332,15 +331,8 @@ VelocityPlanningResult RoadUserStopModule::plan(
     result.stop_points.push_back(stop_point.value());
   }
 
-  // 5. Publish debug information for visualization
-  {
-    autoware_utils_debug::ScopedTimeTrack st_debug("create_debug_marker_array", *time_keeper_);
-    const auto debug_markers = create_debug_marker_array();
-    debug_publisher_->publish(debug_markers);
-
-    // virtual wall
-    virtual_wall_publisher_->publish(debug_data_.stop_wall_marker);
-  }
+  // 5. Publish debug information
+  publish_debug_info();
 
   return result;
 }
@@ -1185,6 +1177,15 @@ double RoadUserStopModule::calc_margin_from_obstacle_on_curve(
   return std::min(
     default_stop_margin,
     std::max(param.stop_planning.stop_on_curve.min_stop_margin, short_margin_from_obstacle));
+}
+
+void RoadUserStopModule::publish_debug_info()
+{
+  autoware_utils_debug::ScopedTimeTrack st_debug(__func__, *time_keeper_);
+  const auto debug_markers = create_debug_marker_array();
+  debug_publisher_->publish(debug_markers);
+
+  virtual_wall_publisher_->publish(debug_data_.stop_wall_marker);
 }
 
 }  // namespace autoware::motion_velocity_planner
