@@ -28,7 +28,7 @@ Compose::Compose(const std::vector<std::shared_ptr<Transform>> & transforms)
 {
 }
 
-DataDict Compose::operator()(DataDict results)
+DataDict Compose::operator()(DataDict results) const
 {
   // Apply each transform in sequence
   for (const auto & transform : transforms_) {
