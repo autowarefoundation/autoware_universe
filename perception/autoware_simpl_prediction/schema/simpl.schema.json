@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for SIMPL Node",
+  "type": "object",
+  "definitions": {
+    "simpl": {
+      "type": "object",
+      "properties": {
+        "detector": {
+          "type": "object",
+          "properties": {
+            "onnx_path": {
+              "type": "string",
+              "description": "Filepath to ONNX.",
+              "default": "$(var data_path)/simpl.onnx",
+              "pattern": "\\.onnx$"
+            },
+            "engine_path": {
+              "type": "string",
+              "description": "Filepath to TensorRT engine.",
+              "default": "$(var data_path)/simpl.engine",
+              "pattern": "\\.engine$"
+            },
+            "precision": {
+              "type": "string",
+              "description": "Precision for inference.",
+              "default": "fp16",
+              "enum": ["fp32", "fp16", "int8"]
+            }
+          }
+        },
+        "preprocess": {
+          "type": "object",
+          "properties": {
+            "labels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "An array of label names to be predicted. All of elements must be included in `archetype::AgentLabel`.",
+              "default": ["VEHICLE", "PEDESTRIAN", "MOTORCYCLIST", "CYCLIST", "LARGE_VEHICLE"],
+              "uniqueItems": true,
+              "minItems": 1
+            },
+            "max_num_agent": {
+              "type": "integer",
+              "description": "Maximum number of agents to be predicted ($N$).",
+              "default": 50,
+              "minimum": 1
+            },
+            "num_past": {
+              "type": "integer",
+              "description": "Number of past history for model input ($T_{past}$).",
+              "default": 48,
+              "minimum": 1
+            },
+            "max_num_polyline": {
+              "type": "integer",
+              "description": "Maximum number of polylines ($K$).",
+              "default": 300,
+              "minimum": 1
+            },
+            "max_num_point": {
+              "type": "integer",
+              "description": "Maximum number of points included in a single polyline ($P$).",
+              "default": 20,
+              "minimum": 1
+            },
+            "polyline_range_threshold": {
+              "type": "number",
+              "description": "Distance threshold from the ego vehicle to filter out map polylines [m].",
+              "default": 100.0,
+              "minimum": 1.0
+            },
+            "polyline_break_distance": {
+              "type": "number",
+              "description": "If the distance of two points is greater than this value they are separated into two polylines [m].",
+              "default": 5.0,
+              "minimum": 1.0
+            }
+          }
+        },
+        "postprocess": {
+          "type": "object",
+          "properties": {
+            "num_mode": {
+              "type": "integer",
+              "description": "Number of predicted modes for a single agent ($M$).",
+              "default": 6,
+              "minimum": 1
+            },
+            "num_future": {
+              "type": "integer",
+              "description": "Number of predicted future time steps ($T_{future}$).",
+              "default": 80,
+              "minimum": 1
+            },
+            "score_threshold": {
+              "type": "number",
+              "description": "Score threshold to filter predictions.",
+              "default": 0.15,
+              "minimum": 0.0,
+              "maximum": 1.0
+            }
+          }
+        }
+      },
+      "required": ["detector", "preprocess", "postprocess"]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/simpl"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}
