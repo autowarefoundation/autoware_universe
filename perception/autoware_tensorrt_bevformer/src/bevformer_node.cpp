@@ -116,7 +116,7 @@ TRTBEVFormerNode::TRTBEVFormerNode(const rclcpp::NodeOptions & node_options)
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-  // Create publisher for detected 
+  // Create publisher for detected
   pub_boxes_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
     "~/output/boxes", rclcpp::QoS{1});
 

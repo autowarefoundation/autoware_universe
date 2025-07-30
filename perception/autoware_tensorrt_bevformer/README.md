@@ -15,20 +15,20 @@ The core algorithm, named `BEVFormer`, unifies multi-view images into the BEV pe
 
 ### Inputs
 
-| Name                                        | Type                                    | Description                         |
-| ------------------------------------------- | --------------------------------------- | ----------------------------------- |
-| `~/input/topic_img_front_left`              | `sensor_msgs::msg::Image`               | input front_left camera image       |
-| `~/input/topic_img_front`                   | `sensor_msgs::msg::Image`               | input front camera image            |
-| `~/input/topic_img_front_right`             | `sensor_msgs::msg::Image`               | input front_right camera image      |
-| `~/input/topic_img_back_left`               | `sensor_msgs::msg::Image`               | input back_left camera image        |
-| `~/input/topic_img_back`                    | `sensor_msgs::msg::Image`               | input back camera image             |
-| `~/input/topic_img_back_right`              | `sensor_msgs::msg::Image`               | input back_right camera image       |
-| `~/input/topic_img_front_left/camera_info`  | `sensor_msgs::msg::CameraInfo`          | input front_left camera parameters  |
-| `~/input/topic_img_front/camera_info`       | `sensor_msgs::msg::CameraInfo`          | input front camera parameters       |
-| `~/input/topic_img_front_right/camera_info` | `sensor_msgs::msg::CameraInfo`          | input front_right camera parameters |
-| `~/input/topic_img_back_left/camera_info`   | `sensor_msgs::msg::CameraInfo`          | input back_left camera parameters   |
-| `~/input/topic_img_back/camera_info`        | `sensor_msgs::msg::CameraInfo`          | input back camera parameters        |
-| `~/input/topic_img_back_right/camera_info`  | `sensor_msgs::msg::CameraInfo`          | input back_right camera parameters  |
+| Name                                        | Type                                                 | Description                         |
+| ------------------------------------------- | ---------------------------------------------------- | ----------------------------------- |
+| `~/input/topic_img_front_left`              | `sensor_msgs::msg::Image`                            | input front_left camera image       |
+| `~/input/topic_img_front`                   | `sensor_msgs::msg::Image`                            | input front camera image            |
+| `~/input/topic_img_front_right`             | `sensor_msgs::msg::Image`                            | input front_right camera image      |
+| `~/input/topic_img_back_left`               | `sensor_msgs::msg::Image`                            | input back_left camera image        |
+| `~/input/topic_img_back`                    | `sensor_msgs::msg::Image`                            | input back camera image             |
+| `~/input/topic_img_back_right`              | `sensor_msgs::msg::Image`                            | input back_right camera image       |
+| `~/input/topic_img_front_left/camera_info`  | `sensor_msgs::msg::CameraInfo`                       | input front_left camera parameters  |
+| `~/input/topic_img_front/camera_info`       | `sensor_msgs::msg::CameraInfo`                       | input front camera parameters       |
+| `~/input/topic_img_front_right/camera_info` | `sensor_msgs::msg::CameraInfo`                       | input front_right camera parameters |
+| `~/input/topic_img_back_left/camera_info`   | `sensor_msgs::msg::CameraInfo`                       | input back_left camera parameters   |
+| `~/input/topic_img_back/camera_info`        | `sensor_msgs::msg::CameraInfo`                       | input back camera parameters        |
+| `~/input/topic_img_back_right/camera_info`  | `sensor_msgs::msg::CameraInfo`                       | input back_right camera parameters  |
 | `~/input/scene_token`                       | `autoware_internal_perception_msgs::msg::SceneInfo`  | nuScenes scene token                |
 | `~/input/can_bus`                           | `autoware_internal_perception_msgs::msg::CanBusData` | CAN bus data for ego-motion         |
 
