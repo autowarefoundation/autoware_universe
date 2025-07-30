@@ -161,7 +161,8 @@ private:
   typedef message_filters::sync_policies::ApproximateTime<
     sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::Image,
     sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::Image,
-    autoware_internal_perception_msgs::msg::CanBusData, autoware_internal_perception_msgs::msg::SceneInfo>
+    autoware_internal_perception_msgs::msg::CanBusData,
+    autoware_internal_perception_msgs::msg::SceneInfo>
     MySyncPolicy;
 
   typedef message_filters::Synchronizer<MySyncPolicy> Sync;
