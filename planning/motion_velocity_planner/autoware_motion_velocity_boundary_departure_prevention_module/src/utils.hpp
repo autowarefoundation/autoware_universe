@@ -141,7 +141,7 @@ DepartureIntervals init_departure_intervals(
  * @param[in] th_pt_shift_angle_rad Threshold angle for detecting shifted points.
  * @param[in] enable_type Set of enabled departure types to consider for intervals.
  * @param[in] enable_type Enabled departure types.
- * @param[in] is_reset_interval Flags to reset departure intervals is no departure point found.
+ * @param[in] is_reset_interval Flags to reset departure intervals if no departure point found.
  * @param[in] is_departure_persist Checks to insert departure point to departure intervals.
  */
 void update_departure_intervals(
