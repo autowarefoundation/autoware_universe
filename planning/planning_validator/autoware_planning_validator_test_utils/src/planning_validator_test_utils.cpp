@@ -292,8 +292,7 @@ rclcpp::NodeOptions getNodeOptionsWithDefaultParams()
 
   // for planning validator
   node_options.append_parameter_override("planning_hz", PLANNING_HZ);
-  node_options.append_parameter_override("handling_type.noncritical", 0);
-  node_options.append_parameter_override("handling_type.critical", 2);
+  node_options.append_parameter_override("default_handling_type", DEFAULT_HANDLING_TYPE);
   node_options.append_parameter_override("publish_diag", true);
   node_options.append_parameter_override("diag_error_count_threshold", 0);
   node_options.append_parameter_override("display_on_terminal", true);

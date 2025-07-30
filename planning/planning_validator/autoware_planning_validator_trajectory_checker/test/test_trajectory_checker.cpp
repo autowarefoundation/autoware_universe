@@ -38,6 +38,7 @@ using autoware::planning_validator::PlanningValidatorContext;
 using autoware::planning_validator::TrajectoryChecker;
 using autoware_planning_msgs::msg::Trajectory;
 
+using test_utils::DEFAULT_HANDLING_TYPE;
 using test_utils::generateTrajectory;
 using test_utils::THRESHOLD_INTERVAL;
 
@@ -56,6 +57,7 @@ protected:
        ament_index_cpp::get_package_share_directory("autoware_test_utils") +
          "/config/test_vehicle_info.param.yaml"});
     options.append_parameter_override("trajectory_checker.interval.threshold", THRESHOLD_INTERVAL);
+    options.append_parameter_override("default_handling_type", DEFAULT_HANDLING_TYPE);
     node_ = std::make_shared<rclcpp::Node>("test_node", options);
     context_ = std::make_shared<PlanningValidatorContext>(node_.get());
     trajectory_checker_ = std::make_shared<TrajectoryChecker>();

@@ -26,6 +26,8 @@ constexpr double PLANNING_HZ = 10.0;
 
 constexpr double WHEELBASE = 3.5;
 
+constexpr int DEFAULT_HANDLING_TYPE = 0;
+
 constexpr double THRESHOLD_LATENCY = 1.0;
 constexpr double THRESHOLD_INTERVAL = 1.0;
 constexpr double THRESHOLD_RELATIVE_ANGLE = 115.0 * deg2rad;
