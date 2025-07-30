@@ -103,7 +103,7 @@ bool IntersectionCollisionChecker::is_data_ready(std::string & msg)
   return true;
 }
 
-void IntersectionCollisionChecker::validate(bool & is_critical)
+void IntersectionCollisionChecker::validate()
 {
   context_->validation_status->is_valid_intersection_collision_check = true;
 
@@ -115,7 +115,6 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
   std::string data_msg;
   if (!is_data_ready(data_msg)) {
     RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "%s, skip collision check", data_msg.c_str());
-    is_critical = false;
     reset_data();
     return;
   }

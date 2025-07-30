@@ -53,9 +53,24 @@ using sensor_msgs::msg::PointCloud2;
 
 enum class InvalidTrajectoryHandlingType : uint8_t {
   PUBLISH_AS_IT_IS,
-  STOP_PUBLISHING,
   USE_PREVIOUS_RESULT,
+  USE_PREVIOUS_RESULT_WITH_SOFT_STOP,
 };
+
+inline InvalidTrajectoryHandlingType get_handling_type(const int value)
+{
+  switch (value) {
+    case 0:
+      return InvalidTrajectoryHandlingType::PUBLISH_AS_IT_IS;
+    case 1:
+      return InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT;
+    case 2:
+      return InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT_WITH_SOFT_STOP;
+    default:
+      throw std::invalid_argument{
+        "invalid_handling_type (" + std::to_string(value) + ")"};
+  }
+}
 
 struct PlanningValidatorParams
 {
@@ -65,8 +80,7 @@ struct PlanningValidatorParams
   double soft_stop_deceleration{};
   double soft_stop_jerk_lim{};
   int diag_error_count_threshold{};
-  InvalidTrajectoryHandlingType inv_traj_handling_type{};
-  InvalidTrajectoryHandlingType inv_traj_critical_handling_type{};
+  InvalidTrajectoryHandlingType default_handling_type{};
 };
 
 struct PlanningValidatorData
@@ -184,24 +198,14 @@ struct PlanningValidatorContext
   }
 
   void set_diag_status(
-    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg,
-    const bool & is_critical = false)
+    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg)
   {
     if (is_ok) {
       stat.summary(DiagnosticStatus::OK, "validated.");
       return;
     }
 
-    const bool only_warn = std::invoke([&]() {
-      const auto handling_type =
-        is_critical ? params.inv_traj_critical_handling_type : params.inv_traj_handling_type;
-      if (handling_type != InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT) {
-        return false;
-      }
-      return params.enable_soft_stop_on_prev_traj;
-    });
-
-    if (validation_status->invalid_count < params.diag_error_count_threshold || only_warn) {
+    if (validation_status->invalid_count < params.diag_error_count_threshold) {
       const auto warn_msg = msg + " (invalid count is less than error threshold: " +
                             std::to_string(validation_status->invalid_count) + " < " +
                             std::to_string(params.diag_error_count_threshold) + ")";
@@ -212,13 +216,12 @@ struct PlanningValidatorContext
   }
 
   void add_diag(
-    const std::string & name, const bool & status, const std::string & msg,
-    const bool & is_critical = false)
+    const std::string & name, const bool & status, const std::string & msg)
   {
     if (diag_updater) {
       // Do not do implicit capture, need to capture msg by copy
-      diag_updater->add(name, [this, &status, is_critical = is_critical, msg = msg](auto & stat) {
-        set_diag_status(stat, status, msg, is_critical);
+      diag_updater->add(name, [this, &status, msg = msg](auto & stat) {
+        set_diag_status(stat, status, msg);
       });
     }
   }
@@ -254,6 +257,25 @@ struct PlanningValidatorContext
     s->is_valid_intersection_collision_check = true;
     s->is_valid_rear_collision_check = true;
   }
+
+  void set_handling(const InvalidTrajectoryHandlingType handling_type)
+  {
+    if(inv_traj_handling > handling_type) return;
+    inv_traj_handling = handling_type;
+  }
+
+  void reset_handling()
+  {
+    inv_traj_handling = InvalidTrajectoryHandlingType::PUBLISH_AS_IT_IS;
+  }
+
+  InvalidTrajectoryHandlingType get_handling() const
+  {
+    return inv_traj_handling;
+  }
+
+private:
+  InvalidTrajectoryHandlingType inv_traj_handling;
 };
 
 }  // namespace autoware::planning_validator

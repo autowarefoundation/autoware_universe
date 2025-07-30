@@ -64,4 +64,6 @@
         lat_shift_th: 0.5
         forward_shift_th: 1.0
         backward_shift_th: 0.1
+        handling_type: 2  # handling types are defined in common planning validator parameters
+        override_error_diag: true
         is_critical: true

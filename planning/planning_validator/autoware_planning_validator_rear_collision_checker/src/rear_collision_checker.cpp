@@ -92,7 +92,7 @@ void RearCollisionChecker::init(
   setup_diag();
 }
 
-void RearCollisionChecker::validate(bool & is_critical)
+void RearCollisionChecker::validate()
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   const auto start_time = clock_->now();
@@ -100,8 +100,6 @@ void RearCollisionChecker::validate(bool & is_critical)
   DebugData debug_data;
 
   context_->validation_status->is_valid_rear_collision_check = is_safe(debug_data);
-
-  is_critical = false;
 
   post_process();
 

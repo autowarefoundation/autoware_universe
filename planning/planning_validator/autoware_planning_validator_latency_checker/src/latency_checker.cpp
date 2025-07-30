@@ -35,13 +35,12 @@ void LatencyChecker::init(
   context_ = context;
 
   enable_latency_check_ = get_or_declare_parameter<bool>(node, "latency_checker.enable");
-  is_critical_check_ = get_or_declare_parameter<bool>(node, "latency_checker.is_critical");
   latency_threshold_ = get_or_declare_parameter<double>(node, "latency_checker.threshold");
 
   setup_diag();
 }
 
-void LatencyChecker::validate(bool & is_critical)
+void LatencyChecker::validate()
 {
   const auto & data = context_->data;
   auto & status = context_->validation_status;
@@ -54,14 +53,13 @@ void LatencyChecker::validate(bool & is_critical)
 
   status->latency = latency;
   status->is_valid_latency = latency <= latency_threshold_;
-  is_critical = !status->is_valid_latency && is_critical_check_;
 }
 
 void LatencyChecker::setup_diag()
 {
   context_->add_diag(
     "trajectory_validation_latency", context_->validation_status->is_valid_latency,
-    "latency is larger than expected value", is_critical_check_);
+    "latency is larger than expected value");
 }
 
 }  // namespace autoware::planning_validator
