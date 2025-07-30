@@ -115,8 +115,8 @@ target_compile_options(${TENSORRT_OPS_TARGET} PRIVATE
   >
 )
 
-target_link_libraries(${TENSORRT_OPS_TARGET} PUBLIC 
-  ${CUDNN_LIBRARY} 
+target_link_libraries(${TENSORRT_OPS_TARGET} PUBLIC
+  ${CUDNN_LIBRARY}
   ${TENSORRT_LIBRARIES}
   CUDA::cublas
   CUDA::cudart
