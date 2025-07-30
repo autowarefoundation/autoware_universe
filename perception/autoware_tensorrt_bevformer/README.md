@@ -9,7 +9,7 @@ The core algorithm, named `BEVFormer`, unifies multi-view images into the BEV pe
 ### Cite
 
 - Zhicheng Wang, et al., "BEVFormer: Incorporating Transformers for Multi-Camera 3D Detection" [[ref](https://arxiv.org/abs/2203.17270)]
-- The Node is ported and adapted from the [Python implementation by DerryHub](https://github.com/DerryHub/BEVFormer_tensorrt.git), re-written for Autoware with C++/TensorRT support.
+- This node is ported and adapted for Autoware from [Multicoreware's](https://multicorewareinc.com/) BEVFormer ROS2 C++ [repository](https://github.com/Selventhiran-Rengaraj-MCW/mcw-bevformer-cpp.git).
 
 ## Inputs / Outputs
 
@@ -143,6 +143,7 @@ The configuration file in `config/bevformer.param.yaml` can be modified to suit 
 
 [1] [BEVFormer (arXiv)](https://arxiv.org/abs/2203.17270)  
 [2] [Original Python BEVFormer TensorRT](https://github.com/DerryHub/BEVFormer_tensorrt.git)  
-[3] [nuScenes Dataset](https://www.nuscenes.org/)
+[3] [Bevformer ROS2 C++](https://github.com/Selventhiran-Rengaraj-MCW/mcw-bevformer-cpp.git)
+[4] [nuScenes Dataset](https://www.nuscenes.org/)
 
 ---
