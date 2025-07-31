@@ -54,7 +54,7 @@
             "predicted_path": {
               "type": "number",
               "description": "Cutoff time to consider from predicted path [s].",
-              "default": 4.0
+              "default": 3.5
             },
             "near_boundary": {
               "type": "number",

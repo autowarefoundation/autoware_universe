@@ -737,4 +737,37 @@ TrajectoryPoints trim_pred_path(const TrajectoryPoints & ego_pred_traj, const do
   }
   return trimmed_traj;
 }
+
+// copied form core/mvp_common. will removed once this function is moved to motion_utils
+double calcJudgeLineDistWithJerkLimit(
+  const double velocity, const double acceleration, const double max_stop_acceleration,
+  const double max_stop_jerk, const double delay_response_time)
+{
+  if (velocity <= 0.0) {
+    return 0.0;
+  }
+
+  const double t1 = delay_response_time;
+  const double x1 = velocity * t1;
+
+  const double v2 = velocity + (std::pow(max_stop_acceleration, 2) - std::pow(acceleration, 2)) /
+                                 (2.0 * max_stop_jerk);
+
+  if (v2 <= 0.0) {
+    const double t2 = -1.0 *
+                      (max_stop_acceleration +
+                       std::sqrt(acceleration * acceleration - 2.0 * max_stop_jerk * velocity)) /
+                      max_stop_jerk;
+    const double x2 =
+      velocity * t2 + acceleration * std::pow(t2, 2) / 2.0 + max_stop_jerk * std::pow(t2, 3) / 6.0;
+    return std::max(0.0, x1 + x2);
+  }
+
+  const double t2 = (max_stop_acceleration - acceleration) / max_stop_jerk;
+  const double x2 =
+    velocity * t2 + acceleration * std::pow(t2, 2) / 2.0 + max_stop_jerk * std::pow(t2, 3) / 6.0;
+
+  const double x3 = -1.0 * std::pow(v2, 2) / (2.0 * max_stop_acceleration);
+  return std::max(0.0, x1 + x2 + x3);
+}
 }  // namespace autoware::boundary_departure_checker::utils

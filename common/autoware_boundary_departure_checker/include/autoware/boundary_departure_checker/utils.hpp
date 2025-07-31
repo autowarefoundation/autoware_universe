@@ -431,6 +431,10 @@ tl::expected<std::vector<lanelet::LineString3d>, std::string> get_uncrossable_li
   const std::vector<std::string> & uncrossable_boundary_types = {"road_border"});
 
 TrajectoryPoints trim_pred_path(const TrajectoryPoints & ego_pred_traj, const double cutoff_time_s);
+
+double calcJudgeLineDistWithJerkLimit(
+  const double velocity, const double acceleration, const double max_stop_acceleration,
+  const double max_stop_jerk, const double delay_response_time);
 }  // namespace autoware::boundary_departure_checker::utils
 
 #endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UTILS_HPP_
