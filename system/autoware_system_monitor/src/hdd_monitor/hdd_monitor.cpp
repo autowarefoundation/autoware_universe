@@ -356,17 +356,13 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
         level = DiagStatus::OK;
       }
 
-      try {
-        stat.add(fmt::format("HDD {}: status", hdd_index), usage_dict_.at(level));
-        stat.add(fmt::format("HDD {}: filesystem", hdd_index), filesystem.c_str());
-        stat.add(fmt::format("HDD {}: size", hdd_index), (list.at(1) + " MiB").c_str());
-        stat.add(fmt::format("HDD {}: used", hdd_index), (list.at(2) + " MiB").c_str());
-        stat.add(fmt::format("HDD {}: avail", hdd_index), (list.at(3) + " MiB").c_str());
-        stat.add(fmt::format("HDD {}: use", hdd_index), list.at(4).c_str());
-        stat.add(fmt::format("HDD {}: mounted on", hdd_index), mounted.c_str());
-      } catch (std::exception & e) {
-        stat.add(fmt::format("HDD {}: status", hdd_index), "index error");
-      }
+      stat.add(fmt::format("HDD {}: status", hdd_index), usage_dict_.at(level));
+      stat.add(fmt::format("HDD {}: filesystem", hdd_index), filesystem.c_str());
+      stat.add(fmt::format("HDD {}: size", hdd_index), fmt::format("{} MiB", size));
+      stat.add(fmt::format("HDD {}: used", hdd_index), fmt::format("{} MiB", used));
+      stat.add(fmt::format("HDD {}: avail", hdd_index), fmt::format("{} MiB", avail));
+      stat.add(fmt::format("HDD {}: use", hdd_index), fmt::format("{}", capacity));
+      stat.add(fmt::format("HDD {}: mounted on", hdd_index), mounted.c_str());
 
       auto & hdd_partition_status = hdd_partition_statuses_.emplace_back();
       hdd_partition_status.size = size;
