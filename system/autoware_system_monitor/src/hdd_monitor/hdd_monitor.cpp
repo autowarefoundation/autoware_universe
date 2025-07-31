@@ -321,7 +321,7 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
       }
 
       boost::split(list, line, boost::is_space(), boost::token_compress_on);
-
+      bool is_line_read_error = false;
       try {
         filesystem = list.at(0);
         size = std::stoi(list.at(1));
@@ -340,12 +340,12 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
           }
         }
       } catch (std::exception & e) {
+        is_line_read_error = true;
         size = -1;
         used = -1;
         avail = -1;
         capacity = -1;
         error_str = e.what();
-        stat.add(fmt::format("HDD {}: status", hdd_index), "string error");
       }
 
       if (avail <= itr->second.free_error_) {
@@ -356,21 +356,25 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
         level = DiagStatus::OK;
       }
 
-      stat.add(fmt::format("HDD {}: status", hdd_index), usage_dict_.at(level));
-      stat.add(fmt::format("HDD {}: filesystem", hdd_index), filesystem.c_str());
-      stat.add(fmt::format("HDD {}: size", hdd_index), fmt::format("{} MiB", size));
-      stat.add(fmt::format("HDD {}: used", hdd_index), fmt::format("{} MiB", used));
-      stat.add(fmt::format("HDD {}: avail", hdd_index), fmt::format("{} MiB", avail));
-      stat.add(fmt::format("HDD {}: use", hdd_index), fmt::format("{}", capacity));
-      stat.add(fmt::format("HDD {}: mounted on", hdd_index), mounted.c_str());
+      if (is_line_read_error) {
+        stat.add(fmt::format("HDD {}: status", hdd_index), "string error");
+      } else {
+        stat.add(fmt::format("HDD {}: status", hdd_index), usage_dict_.at(level));
+        stat.add(fmt::format("HDD {}: filesystem", hdd_index), filesystem.c_str());
+        stat.add(fmt::format("HDD {}: size", hdd_index), fmt::format("{} MiB", size));
+        stat.add(fmt::format("HDD {}: used", hdd_index), fmt::format("{} MiB", used));
+        stat.add(fmt::format("HDD {}: avail", hdd_index), fmt::format("{} MiB", avail));
+        stat.add(fmt::format("HDD {}: use", hdd_index), fmt::format("{}", capacity));
+        stat.add(fmt::format("HDD {}: mounted on", hdd_index), mounted.c_str());
 
-      auto & hdd_partition_status = hdd_partition_statuses_.emplace_back();
-      hdd_partition_status.size = size;
-      hdd_partition_status.used = used;
-      hdd_partition_status.avail = avail;
-      hdd_partition_status.capacity = capacity;
-      hdd_partition_status.filesystem = filesystem;
-      hdd_partition_status.mounted_on = mounted;
+        auto & hdd_partition_status = hdd_partition_statuses_.emplace_back();
+        hdd_partition_status.size = size;
+        hdd_partition_status.used = used;
+        hdd_partition_status.avail = avail;
+        hdd_partition_status.capacity = capacity;
+        hdd_partition_status.filesystem = filesystem;
+        hdd_partition_status.mounted_on = mounted;
+      }
 
       whole_level = std::max(whole_level, level);
       ++index;

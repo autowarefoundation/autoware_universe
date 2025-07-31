@@ -29,6 +29,7 @@
 #include <tier4_external_api_msgs/msg/hdd_status.hpp>
 
 #include <climits>
+#include <cstdint>
 #include <map>
 #include <string>
 #include <vector>
