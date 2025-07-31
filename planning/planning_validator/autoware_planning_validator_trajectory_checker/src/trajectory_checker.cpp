@@ -80,9 +80,8 @@ void TrajectoryChecker::setup_parameters(rclcpp::Node & node)
   set_validation_params(p.velocity_deviation, t + "velocity_deviation");
 
   set_validation_params(p.yaw_deviation, t + "yaw_deviation");
-  p.yaw_deviation.nearest_yaw_trajectory_shift_required_for_checking =
-    get_or_declare_parameter<double>(
-      node, t + "yaw_deviation.nearest_yaw_trajectory_shift_required_for_checking");
+  p.yaw_deviation.th_trajectory_yaw_shift =
+    get_or_declare_parameter<double>(node, t + "yaw_deviation.th_trajectory_yaw_shift");
 
   set_common_params(p.trajectory_shift, t + "trajectory_shift");
   p.trajectory_shift.lat_shift_th =
@@ -592,7 +591,7 @@ bool TrajectoryChecker::check_valid_yaw_deviation()
   const auto check_condition =
     !data->last_valid_trajectory ||
     nearest_trajectory_yaw_shift(*data->last_valid_trajectory, interpolated_trajectory_point) >
-      params_.yaw_deviation.nearest_yaw_trajectory_shift_required_for_checking;
+      params_.yaw_deviation.th_trajectory_yaw_shift;
   if (check_condition && status->yaw_deviation > params_.yaw_deviation.threshold) {
     context_->set_handling(params_.yaw_deviation.handling_type);
     override_all_error_diag_ |= params_.yaw_deviation.override_error_diag;
