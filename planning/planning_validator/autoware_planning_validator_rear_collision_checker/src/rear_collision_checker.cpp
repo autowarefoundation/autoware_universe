@@ -701,31 +701,19 @@ bool RearCollisionChecker::is_safe(DebugData & debug)
     const auto max_deceleration_object = p.common.adjacent_lane.participants.max_deceleration;
     const auto max_velocity_object = p.common.adjacent_lane.participants.max_velocity;
 
-    const auto func_range_calculation = [&, this]() {
-      if (p.common.adjacent_lane.metric == "ttc") {
-        return std::bind(
-          utils::get_range_for_ttc, context_, distance_to_shift, delay_object,
-          max_deceleration_object, max_velocity_object, p);
-      }
-      return std::bind(
-        utils::get_range_for_rss, context_, distance_to_shift, delay_object,
-        max_deceleration_object, max_velocity_object, p);
-    }();
+    const auto func_range_calculation = std::bind(
+      p.common.adjacent_lane.metric == "ttc" ? utils::get_range_for_ttc : utils::get_range_for_rss,
+      context_, distance_to_shift, delay_object, max_deceleration_object, max_velocity_object, p);
     const auto func_object_filtering = [&, this]() {
       return std::bind(
         &RearCollisionChecker::get_pointcloud_objects_on_adjacent_lane, this, current_lanes,
         shift_behavior, _1, _2, obstacle_pointcloud, std::ref(debug));
     }();
-    const auto func_safety_check = [&, this]() {
-      if (p.common.adjacent_lane.metric == "ttc") {
-        return std::bind(
-          utils::fill_time_to_collision, _1, context_, distance_to_shift, delay_object,
-          max_deceleration_object, max_velocity_object, p);
-      }
-      return std::bind(
-        utils::fill_rss_distance, _1, context_, distance_to_shift, delay_object,
-        max_deceleration_object, max_velocity_object, p);
-    }();
+    const auto func_safety_check = std::bind(
+      p.common.adjacent_lane.metric == "ttc" ? utils::fill_time_to_collision
+                                             : utils::fill_rss_distance,
+      _1, context_, distance_to_shift, delay_object, max_deceleration_object, max_velocity_object,
+      p);
 
     auto objects =
       get_pointcloud_objects(func_range_calculation, func_object_filtering, func_safety_check);
@@ -741,31 +729,19 @@ bool RearCollisionChecker::is_safe(DebugData & debug)
     const auto max_deceleration_object = p.common.blind_spot.participants.max_deceleration;
     const auto max_velocity_object = p.common.blind_spot.participants.max_velocity;
 
-    const auto func_range_calculation = [&, this]() {
-      if (p.common.blind_spot.metric == "ttc") {
-        return std::bind(
-          utils::get_range_for_ttc, context_, distance_to_turn, delay_object,
-          max_deceleration_object, max_velocity_object, p);
-      }
-      return std::bind(
-        utils::get_range_for_rss, context_, distance_to_turn, delay_object, max_deceleration_object,
-        max_velocity_object, p);
-    }();
+    const auto func_range_calculation = std::bind(
+      p.common.blind_spot.metric == "ttc" ? utils::get_range_for_ttc : utils::get_range_for_rss,
+      context_, distance_to_turn, delay_object, max_deceleration_object, max_velocity_object, p);
     const auto func_object_filtering = [&, this]() {
       return std::bind(
         &RearCollisionChecker::get_pointcloud_objects_at_blind_spot, this, current_lanes,
         turn_behavior, _1, _2, obstacle_pointcloud, std::ref(debug));
     }();
-    const auto func_safety_check = [&, this]() {
-      if (p.common.blind_spot.metric == "ttc") {
-        return std::bind(
-          utils::fill_time_to_collision, _1, context_, distance_to_turn, delay_object,
-          max_deceleration_object, max_velocity_object, p);
-      }
-      return std::bind(
-        utils::fill_rss_distance, _1, context_, distance_to_turn, delay_object,
-        max_deceleration_object, max_velocity_object, p);
-    }();
+    const auto func_safety_check = std::bind(
+      p.common.blind_spot.metric == "ttc" ? utils::fill_time_to_collision
+                                          : utils::fill_rss_distance,
+      _1, context_, distance_to_turn, delay_object, max_deceleration_object, max_velocity_object,
+      p);
 
     auto objects =
       get_pointcloud_objects(func_range_calculation, func_object_filtering, func_safety_check);
