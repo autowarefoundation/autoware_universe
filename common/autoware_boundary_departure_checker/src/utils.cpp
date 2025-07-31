@@ -653,25 +653,30 @@ DeparturePoints get_departure_points(
   std::sort(departure_points.begin(), departure_points.end());
   erase_after_first_match(departure_points);
 
-  DeparturePoints filtered_points;
-  size_t i = 0;
-  while (i < departure_points.size()) {
-    const auto & current = departure_points[i];
-    filtered_points.push_back(current);
+  if (departure_points.empty()) {
+    return departure_points;
+  }
 
-    size_t j = i + 1;
-    while (j < departure_points.size() &&
-           departure_points[j].departure_type != DepartureType::CRITICAL_DEPARTURE &&
-           std::abs(departure_points[j].dist_on_traj - current.dist_on_traj) <=
-             current.th_point_merge_distance_m) {
-      if (
-        current.departure_type == DepartureType::APPROACHING_DEPARTURE ||
-        departure_points[j].departure_type == DepartureType::APPROACHING_DEPARTURE) {
-        filtered_points.back().departure_type = DepartureType::APPROACHING_DEPARTURE;
-      }
-      ++j;
+  DeparturePoints filtered_points;
+  filtered_points.reserve(departure_points.size());
+  auto & ref_point_it = departure_points.begin();
+  filtered_points.push_back(*ref_point_it);
+  for (auto & it = std::next(departure_points.begin()); it < departure_points.end(); ++it) {
+    if (it->departure_type == DepartureType::CRITICAL_DEPARTURE ||
+        std::abs(ref_point_it->dist_on_traj - it->dist_on_traj) > ref_point_it->th_point_merge_distance_m) {
+      ref_point_it = it;
+      filtered_points.push_back(*ref_point_it);
     }
-    i = j;
+
+    if (ref_point_it->departure_type == DepartureType::CRITICAL_DEPARTURE) {
+      continue;
+    }
+
+    if (
+      ref_point_it->departure_type == DepartureType::APPROACHING_DEPARTURE ||
+      it->departure_type == DepartureType::APPROACHING_DEPARTURE) {
+      filtered_points.back().departure_type = DepartureType::APPROACHING_DEPARTURE;
+    }
   }
 
   return filtered_points;
