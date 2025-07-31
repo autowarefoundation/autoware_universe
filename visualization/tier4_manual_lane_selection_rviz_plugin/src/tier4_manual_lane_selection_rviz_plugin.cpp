@@ -20,7 +20,7 @@ ManualLaneSelection::ManualLaneSelection(QWidget * parent) : rviz_common::Panel(
 
   node_ = std::make_shared<rclcpp::Node>("tier4_manual_lane_selection_rviz_plugin");
 
-  // ✅ Create the service client
+  // Create the service client
   client_ = node_->create_client<SetPreferredLane>(
     "/planning/mission_planning/mission_planner/set_preferred_lane");
 
