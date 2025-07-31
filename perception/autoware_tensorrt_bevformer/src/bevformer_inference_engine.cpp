@@ -53,7 +53,8 @@ class Logger : public nvinfer1::ILogger
 };
 static Logger gLogger;
 
-BEVFormerInferenceEngine::BEVFormerInferenceEngine(const rclcpp::Logger & logger) : logger_(logger)
+BEVFormerInferenceEngine::BEVFormerInferenceEngine(const rclcpp::Logger & logger)
+: logger_(logger)
 {
 }
 
@@ -131,8 +132,8 @@ std::string BEVFormerInferenceEngine::findPluginLibrary(const std::string & plug
     package_name.c_str(), library_path.c_str());
 
   throw std::runtime_error(
-    "Could not find libtensorrt_ops.so. The 'autoware_tensorrt_bevformer' package was found, "
-    "but the library is missing from its 'lib' directory. Please rebuild the package.");
+          "Could not find libtensorrt_ops.so. The 'autoware_tensorrt_bevformer' package was found, "
+          "but the library is missing from its 'lib' directory. Please rebuild the package.");
 }
 
 bool BEVFormerInferenceEngine::loadPlugins(const std::string & plugin_path)
@@ -159,7 +160,7 @@ bool BEVFormerInferenceEngine::loadPlugins(const std::string & plugin_path)
   plugin_handle_ = handle;
 
   // Get and register plugin registry
-  auto getPluginRegistryFn = (nvinfer1::IPluginRegistry * (*)()) dlsym(handle, "getPluginRegistry");
+  auto getPluginRegistryFn = (nvinfer1::IPluginRegistry * (*)())dlsym(handle, "getPluginRegistry");
   if (!getPluginRegistryFn) {
     RCLCPP_ERROR(logger_, "Failed to find getPluginRegistry function: %s", dlerror());
     dlclose(handle);
@@ -370,11 +371,12 @@ bool BEVFormerInferenceEngine::buildEngineFromOnnx(
   RCLCPP_INFO(logger_, "Precision constraints enabled to enforce layer precision settings");
 
   // Enable tactics from CUBLAS, CUBLAS_LT, and CUDNN
-  config->setTacticSources(static_cast<nvinfer1::TacticSources>(
-    static_cast<int32_t>(config->getTacticSources()) |
-    static_cast<int32_t>(nvinfer1::TacticSource::kCUBLAS) |
-    static_cast<int32_t>(nvinfer1::TacticSource::kCUBLAS_LT) |
-    static_cast<int32_t>(nvinfer1::TacticSource::kCUDNN)));
+  config->setTacticSources(
+    static_cast<nvinfer1::TacticSources>(
+      static_cast<int32_t>(config->getTacticSources()) |
+      static_cast<int32_t>(nvinfer1::TacticSource::kCUBLAS) |
+      static_cast<int32_t>(nvinfer1::TacticSource::kCUBLAS_LT) |
+      static_cast<int32_t>(nvinfer1::TacticSource::kCUDNN)));
 
   // Enable verbose logging during build
   config->setProfilingVerbosity(nvinfer1::ProfilingVerbosity::kDETAILED);
@@ -578,18 +580,21 @@ bool BEVFormerInferenceEngine::validateInputs(
 
   // Check for NaN or inf values in inputs
   auto check_nan_inf = [this](const std::vector<float> & data, const std::string & name) -> bool {
-    for (size_t i = 0; i < std::min<size_t>(100, data.size()); ++i) {
-      if (std::isnan(data[i]) || std::isinf(data[i])) {
-        RCLCPP_ERROR(logger_, "%s contains NaN or Inf at index %zu: %f", name.c_str(), i, data[i]);
-        return false;
+      for (size_t i = 0; i < std::min<size_t>(100, data.size()); ++i) {
+        if (std::isnan(data[i]) || std::isinf(data[i])) {
+          RCLCPP_ERROR(
+            logger_, "%s contains NaN or Inf at index %zu: %f", name.c_str(), i,
+            data[i]);
+          return false;
+        }
       }
-    }
-    return true;
-  };
+      return true;
+    };
 
   if (
     !check_nan_inf(prev_bev, "prev_bev") || !check_nan_inf(can_bus, "can_bus") ||
-    !check_nan_inf(lidar2img_flat, "lidar2img_flat")) {
+    !check_nan_inf(lidar2img_flat, "lidar2img_flat"))
+  {
     return false;
   }
 
@@ -604,7 +609,8 @@ public:
   {
     void * ptr;
     size_t size;
-    explicit CudaBuffer(size_t s) : ptr(nullptr), size(s)
+    explicit CudaBuffer(size_t s)
+    : ptr(nullptr), size(s)
     {
       if (cudaMalloc(&ptr, size) != cudaSuccess) {
         throw std::runtime_error("Failed to allocate CUDA memory");
@@ -618,7 +624,8 @@ public:
     }
     CudaBuffer(const CudaBuffer &) = delete;
     CudaBuffer & operator=(const CudaBuffer &) = delete;
-    CudaBuffer(CudaBuffer && other) noexcept : ptr(other.ptr), size(other.size)
+    CudaBuffer(CudaBuffer && other) noexcept
+    : ptr(other.ptr), size(other.size)
     {
       other.ptr = nullptr;
     }
@@ -668,7 +675,7 @@ BEVFormerInferenceEngine::runInference(
 
   // Find tensor indices by name
   int img_tensor_idx = -1, prev_bev_idx = -1, use_prev_bev_idx = -1, can_bus_idx = -1,
-      lidar2img_idx = -1;
+    lidar2img_idx = -1;
   int bev_embed_idx = -1, outputs_classes_idx = -1, outputs_coords_idx = -1;
 
   for (int i = 0; i < engine_->getNbIOTensors(); i++) {
@@ -696,7 +703,8 @@ BEVFormerInferenceEngine::runInference(
   if (
     img_tensor_idx == -1 || prev_bev_idx == -1 || use_prev_bev_idx == -1 || can_bus_idx == -1 ||
     lidar2img_idx == -1 || bev_embed_idx == -1 || outputs_classes_idx == -1 ||
-    outputs_coords_idx == -1) {
+    outputs_coords_idx == -1)
+  {
     RCLCPP_ERROR(logger_, "Failed to find all required tensors in the engine");
     return std::make_tuple(std::vector<float>(), std::vector<float>(), std::vector<float>());
   }
@@ -755,19 +763,24 @@ BEVFormerInferenceEngine::runInference(
     CHECK_CUDA(cudaMemsetAsync(d_outputs_coords, 0, sizeof(float) * outputs_coords_size, stream));
 
     // Copy input data to device
-    CHECK_CUDA(cudaMemcpyAsync(
-      d_img_tensor, img_tensor.ptr<float>(), sizeof(float) * img_tensor.total(),
-      cudaMemcpyHostToDevice, stream));
-    CHECK_CUDA(cudaMemcpyAsync(
-      d_prev_bev, prev_bev.data(), sizeof(float) * prev_bev.size(), cudaMemcpyHostToDevice,
-      stream));
-    CHECK_CUDA(cudaMemcpyAsync(
-      d_use_prev_bev, &use_prev_bev, sizeof(float), cudaMemcpyHostToDevice, stream));
-    CHECK_CUDA(cudaMemcpyAsync(
-      d_can_bus, can_bus.data(), sizeof(float) * can_bus.size(), cudaMemcpyHostToDevice, stream));
-    CHECK_CUDA(cudaMemcpyAsync(
-      d_lidar2img, lidar2img_flat.data(), sizeof(float) * lidar2img_flat.size(),
-      cudaMemcpyHostToDevice, stream));
+    CHECK_CUDA(
+      cudaMemcpyAsync(
+        d_img_tensor, img_tensor.ptr<float>(), sizeof(float) * img_tensor.total(),
+        cudaMemcpyHostToDevice, stream));
+    CHECK_CUDA(
+      cudaMemcpyAsync(
+        d_prev_bev, prev_bev.data(), sizeof(float) * prev_bev.size(), cudaMemcpyHostToDevice,
+        stream));
+    CHECK_CUDA(
+      cudaMemcpyAsync(
+        d_use_prev_bev, &use_prev_bev, sizeof(float), cudaMemcpyHostToDevice, stream));
+    CHECK_CUDA(
+      cudaMemcpyAsync(
+        d_can_bus, can_bus.data(), sizeof(float) * can_bus.size(), cudaMemcpyHostToDevice, stream));
+    CHECK_CUDA(
+      cudaMemcpyAsync(
+        d_lidar2img, lidar2img_flat.data(), sizeof(float) * lidar2img_flat.size(),
+        cudaMemcpyHostToDevice, stream));
 
     CHECK_CUDA(cudaStreamSynchronize(stream));
 
@@ -799,15 +812,19 @@ BEVFormerInferenceEngine::runInference(
     RCLCPP_INFO(logger_, "TRT Engine : %.3f ms", inference_time_ms);
 
     // Copy outputs from device
-    CHECK_CUDA(cudaMemcpyAsync(
-      outputs_classes.data(), d_outputs_classes, sizeof(float) * outputs_classes_size,
-      cudaMemcpyDeviceToHost, stream));
-    CHECK_CUDA(cudaMemcpyAsync(
-      outputs_coords.data(), d_outputs_coords, sizeof(float) * outputs_coords_size,
-      cudaMemcpyDeviceToHost, stream));
-    CHECK_CUDA(cudaMemcpyAsync(
-      bev_embed_output.data(), d_bev_embed, sizeof(float) * bev_embed_size, cudaMemcpyDeviceToHost,
-      stream));
+    CHECK_CUDA(
+      cudaMemcpyAsync(
+        outputs_classes.data(), d_outputs_classes, sizeof(float) * outputs_classes_size,
+        cudaMemcpyDeviceToHost, stream));
+    CHECK_CUDA(
+      cudaMemcpyAsync(
+        outputs_coords.data(), d_outputs_coords, sizeof(float) * outputs_coords_size,
+        cudaMemcpyDeviceToHost, stream));
+    CHECK_CUDA(
+      cudaMemcpyAsync(
+        bev_embed_output.data(), d_bev_embed, sizeof(float) * bev_embed_size,
+        cudaMemcpyDeviceToHost,
+        stream));
 
     CHECK_CUDA(cudaStreamSynchronize(stream));
 

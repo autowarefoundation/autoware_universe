@@ -55,7 +55,7 @@ namespace plugin
 // initLibNvInferPlugins()
 ILogger * gLogger{};
 
-template <ILogger::Severity kSeverity>
+template<ILogger::Severity kSeverity>
 int LogStream<kSeverity>::Buf::sync()
 {
   std::string s = str();

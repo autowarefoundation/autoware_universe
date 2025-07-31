@@ -74,7 +74,7 @@ public:
    *
    * @return const std::vector<float>& Previous BEV embedding
    */
-  const std::vector<float> & getPrevBev() const { return prev_bev_; }
+  const std::vector<float> & getPrevBev() const {return prev_bev_;}
 
   /**
    * @brief Check if we should use previous BEV

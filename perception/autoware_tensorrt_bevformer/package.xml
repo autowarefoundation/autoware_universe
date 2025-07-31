@@ -8,9 +8,9 @@
 
   <maintainer email="selventhiran@multicorewareinc.com">Selventhiran Rengaraj</maintainer>
   <maintainer email="ramaseshan.subramanian@multicorewareinc.com">Ramaseshan Subramanian</maintainer>
+  <maintainer email="naveen.sathiyaseelan@multicorewareinc.com">Naveen Sathiyaseelan</maintainer>
   <maintainer email="dhinesh.panneerselvam@multicorewareinc.com">Dhinesh Panneerselvam</maintainer>
   <maintainer email="rahul.sundar@multicorewareinc.com">Rahul Gandhi Sundar</maintainer>
-  <author email="naveen.sathiyaseelan@multicorewareinc.com">Naveen Sathiyaseelan</author>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
