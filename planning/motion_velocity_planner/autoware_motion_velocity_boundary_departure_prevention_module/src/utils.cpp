@@ -198,6 +198,47 @@ void check_departure_points_between_intervals(
   }
 }
 
+DepartureIntervals merge_departure_intervals(DepartureIntervals & departure_intervals)
+{
+  if (departure_intervals.size() <= 1) {
+    return departure_intervals;
+  }
+  DepartureIntervals merged;
+  merged.push_back(departure_intervals.front());
+
+  for (size_t i = 1; i < departure_intervals.size(); ++i) {
+    auto & next_interval_mut = departure_intervals[i];
+    auto & curr_interval_mut = merged.back();
+    const auto is_same_direction = curr_interval_mut.side_key == next_interval_mut.side_key;
+    if (!is_same_direction) {
+      merged.push_back(next_interval_mut);
+    }
+
+    const auto is_end_in_between =
+      curr_interval_mut.start_dist_on_traj <= next_interval_mut.end_dist_on_traj &&
+      next_interval_mut.end_dist_on_traj <= curr_interval_mut.end_dist_on_traj;
+    const auto is_start_in_between =
+      curr_interval_mut.start_dist_on_traj <= next_interval_mut.start_dist_on_traj &&
+      next_interval_mut.start_dist_on_traj <= curr_interval_mut.end_dist_on_traj;
+
+    if (is_start_in_between && !is_end_in_between) {
+      curr_interval_mut.end = next_interval_mut.end;
+      curr_interval_mut.end_dist_on_traj = next_interval_mut.end_dist_on_traj;
+      next_interval_mut.has_merged = true;
+    } else if (!is_start_in_between && is_end_in_between) {
+      curr_interval_mut.start = next_interval_mut.start;
+      curr_interval_mut.start_dist_on_traj = next_interval_mut.start_dist_on_traj;
+      next_interval_mut.has_merged = true;
+    } else if (is_start_in_between && is_end_in_between) {
+      next_interval_mut.has_merged = true;
+    } else {
+      merged.push_back(next_interval_mut);
+    }
+  }
+
+  return merged;
+}
+
 void update_departure_intervals(
   DepartureIntervals & departure_intervals, Side<DeparturePoints> & departure_points,
   const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const double vehicle_length_m,
@@ -215,48 +256,13 @@ void update_departure_intervals(
       enable_type);
   }
 
-  auto new_departure_intervals = init_departure_intervals(
-    aw_ref_traj, departure_points, vehicle_length_m, enable_type, is_departure_persist);
+  auto new_departure_intervals =
+    init_departure_intervals(aw_ref_traj, departure_points, vehicle_length_m, enable_type);
   std::move(
     new_departure_intervals.begin(), new_departure_intervals.end(),
     std::back_inserter(departure_intervals));
 
-  if (!departure_intervals.empty()) {
-    DepartureIntervals merged;
-    merged.push_back(departure_intervals.front());
-
-    for (size_t i = 1; i < departure_intervals.size(); ++i) {
-      auto & next_interval_mut = departure_intervals[i];
-      auto & curr_interval_mut = merged.back();
-      const auto is_same_direction = curr_interval_mut.side_key == next_interval_mut.side_key;
-      if (!is_same_direction) {
-        merged.push_back(next_interval_mut);
-      }
-
-      const auto is_end_in_between =
-        curr_interval_mut.start_dist_on_traj <= next_interval_mut.end_dist_on_traj &&
-        next_interval_mut.end_dist_on_traj <= curr_interval_mut.end_dist_on_traj;
-      const auto is_start_in_between =
-        curr_interval_mut.start_dist_on_traj <= next_interval_mut.start_dist_on_traj &&
-        next_interval_mut.start_dist_on_traj <= curr_interval_mut.end_dist_on_traj;
-
-      if (is_start_in_between && !is_end_in_between) {
-        curr_interval_mut.end = next_interval_mut.end;
-        curr_interval_mut.end_dist_on_traj = next_interval_mut.end_dist_on_traj;
-        next_interval_mut.has_merged = true;
-      } else if (!is_start_in_between && is_end_in_between) {
-        curr_interval_mut.start = next_interval_mut.start;
-        curr_interval_mut.start_dist_on_traj = next_interval_mut.start_dist_on_traj;
-        next_interval_mut.has_merged = true;
-      } else if (is_start_in_between && is_end_in_between) {
-        next_interval_mut.has_merged = true;
-      } else {
-        merged.push_back(next_interval_mut);
-      }
-    }
-
-    departure_intervals = merged;
-  }
+  departure_intervals = merge_departure_intervals(departure_intervals);
 }
 
 void update_critical_departure_points(
