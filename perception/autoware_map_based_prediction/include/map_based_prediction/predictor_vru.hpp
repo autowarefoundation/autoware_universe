@@ -131,7 +131,7 @@ private:
     const TrackedObject & object, const Eigen::Vector2d & center_point,
     const Eigen::Vector2d & right_point, const Eigen::Vector2d & left_point,
     const double time_horizon, const double min_object_vel,
-    const double max_crosswalk_user_delta_yaw_threshold_for_lanelet);
+    const double max_crosswalk_user_delta_yaw_threshold_for_lanelet, const bool is_crossing);
   PredictedObject getPredictedObjectAsCrosswalkUser(const TrackedObject & object);
   void updateCrosswalkUserHistory(
     const std_msgs::msg::Header & header, const TrackedObject & object,

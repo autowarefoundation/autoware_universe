@@ -102,6 +102,7 @@ struct CrosswalkUserData
   std_msgs::msg::Header header;
   autoware_perception_msgs::msg::TrackedObject tracked_object;
   std::vector<Intention> intention_history;
+  bool is_crossing{false};
 };
 
 using LaneletsData = std::vector<LaneletData>;
