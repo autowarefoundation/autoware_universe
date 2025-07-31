@@ -214,9 +214,10 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::initialize_collector_list()
 {
   // Initialize collector list
   for (size_t i = 0; i < num_of_collectors; ++i) {
-    fusion_collectors_.emplace_back(std::make_shared<FusionCollector<Msg3D, Msg2D, ExportObj>>(
-      std::dynamic_pointer_cast<FusionNode>(shared_from_this()), rois_number_, det2d_status_list_,
-      collector_debug_mode_));
+    fusion_collectors_.emplace_back(
+      std::make_shared<FusionCollector<Msg3D, Msg2D, ExportObj>>(
+        std::dynamic_pointer_cast<FusionNode>(shared_from_this()), rois_number_, det2d_status_list_,
+        collector_debug_mode_));
   }
   init_collector_list_ = true;
 }

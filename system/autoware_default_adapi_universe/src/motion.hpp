@@ -61,8 +61,9 @@ private:
   void on_is_paused(
     const autoware::component_interface_specs_universe::control::IsPaused::Message::ConstSharedPtr
       msg);
-  void on_is_start_requested(const autoware::component_interface_specs_universe::control::
-                               IsStartRequested::Message::ConstSharedPtr msg);
+  void on_is_start_requested(
+    const autoware::component_interface_specs_universe::control::IsStartRequested::Message::
+      ConstSharedPtr msg);
   void on_accept(
     const autoware::adapi_specs::motion::AcceptStart::Service::Request::SharedPtr req,
     const autoware::adapi_specs::motion::AcceptStart::Service::Response::SharedPtr res);

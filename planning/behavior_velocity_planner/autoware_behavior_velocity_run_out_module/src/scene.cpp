@@ -179,8 +179,9 @@ bool RunOutModule::modifyPathVelocity(PathWithLaneId * path)
       insertStopPoint(last_stop_point_, *path);
       // debug
       debug_ptr_->setAccelReason(RunOutDebug::AccelReason::STOP);
-      debug_ptr_->pushStopPose(autoware_utils::calc_offset_pose(
-        *last_stop_point_, planner_param_.vehicle_param.base_to_front, 0, 0));
+      debug_ptr_->pushStopPose(
+        autoware_utils::calc_offset_pose(
+          *last_stop_point_, planner_param_.vehicle_param.base_to_front, 0, 0));
     }
   }
 
@@ -677,8 +678,9 @@ std::optional<geometry_msgs::msg::Pose> RunOutModule::calcStopPoint(
 
     // debug
     debug_ptr_->setAccelReason(RunOutDebug::AccelReason::STOP);
-    debug_ptr_->pushStopPose(autoware_utils::calc_offset_pose(
-      *stop_point, planner_param_.vehicle_param.base_to_front, 0, 0));
+    debug_ptr_->pushStopPose(
+      autoware_utils::calc_offset_pose(
+        *stop_point, planner_param_.vehicle_param.base_to_front, 0, 0));
 
     return stop_point;
   }
@@ -735,8 +737,9 @@ std::optional<geometry_msgs::msg::Pose> RunOutModule::calcStopPoint(
 
   // debug
   debug_ptr_->setAccelReason(RunOutDebug::AccelReason::STOP);
-  debug_ptr_->pushStopPose(autoware_utils::calc_offset_pose(
-    *stop_point, planner_param_.vehicle_param.base_to_front, 0, 0));
+  debug_ptr_->pushStopPose(
+    autoware_utils::calc_offset_pose(
+      *stop_point, planner_param_.vehicle_param.base_to_front, 0, 0));
 
   return stop_point;
 }
@@ -891,8 +894,9 @@ void RunOutModule::insertApproachingVelocity(
     0.0 /*velocity*/, 0.0 /*shift_distance*/, "run_out_approaching_velocity");
 
   // debug
-  debug_ptr_->pushStopPose(autoware_utils::calc_offset_pose(
-    *stop_point, planner_param_.vehicle_param.base_to_front, 0, 0));
+  debug_ptr_->pushStopPose(
+    autoware_utils::calc_offset_pose(
+      *stop_point, planner_param_.vehicle_param.base_to_front, 0, 0));
 
   const auto nearest_seg_idx_stop =
     autoware::motion_utils::findNearestSegmentIndex(output_path.points, stop_point->position);
@@ -994,9 +998,10 @@ void RunOutModule::publishDebugValue(
   const geometry_msgs::msg::Pose & current_pose) const
 {
   if (dynamic_obstacle) {
-    const auto lateral_dist = std::abs(autoware::motion_utils::calcLateralOffset(
-                                path.points, dynamic_obstacle->pose.position)) -
-                              planner_param_.vehicle_param.width / 2.0;
+    const auto lateral_dist =
+      std::abs(
+        autoware::motion_utils::calcLateralOffset(path.points, dynamic_obstacle->pose.position)) -
+      planner_param_.vehicle_param.width / 2.0;
     const auto longitudinal_dist_to_obstacle =
       autoware::motion_utils::calcSignedArcLength(
         path.points, current_pose.position, dynamic_obstacle->pose.position) -

@@ -531,8 +531,9 @@ std::pair<double, double> PredictedPathCheckerNode::calculateProjectedVelAndAcc(
   const auto velocity_obj = object.kinematics.initial_twist_with_covariance.twist.linear.x;
   const auto acceleration_obj =
     object.kinematics.initial_acceleration_with_covariance.accel.linear.x;
-  const auto k = std::cos(autoware_utils::normalize_radian(
-    tf2::getYaw(orientation_obj) - tf2::getYaw(orientation_stop_point)));
+  const auto k = std::cos(
+    autoware_utils::normalize_radian(
+      tf2::getYaw(orientation_obj) - tf2::getYaw(orientation_stop_point)));
   const auto projected_velocity = velocity_obj * k;
   const auto projected_acceleration = acceleration_obj * k;
   return std::make_pair(projected_velocity, projected_acceleration);

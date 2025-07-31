@@ -110,8 +110,9 @@ void BEVFusionTRT::initPtr()
     roi_tensor_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(
       config_.num_cameras_ * config_.roi_height_ * config_.roi_width_ * 3);
     for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
-      image_buffers_d_.emplace_back(autoware::cuda_utils::make_unique<std::uint8_t[]>(
-        config_.raw_image_height_ * config_.raw_image_width_ * 3));
+      image_buffers_d_.emplace_back(
+        autoware::cuda_utils::make_unique<std::uint8_t[]>(
+          config_.raw_image_height_ * config_.raw_image_width_ * 3));
     }
     camera_masks_d_ = autoware::cuda_utils::make_unique<float[]>(config_.num_cameras_);
   }

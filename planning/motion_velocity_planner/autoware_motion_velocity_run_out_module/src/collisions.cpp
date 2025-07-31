@@ -115,10 +115,11 @@ calculate_closest_interpolated_point_and_arc_length(
   const auto segment_length =
     universe_utils::calcDistance2d(trajectory[segment_idx], trajectory[segment_idx + 1]);
   const auto point_distance = universe_utils::calcDistance2d(trajectory[segment_idx], pose);
-  trajectory_point.time_from_start = rclcpp::Duration::from_seconds(interpolation::lerp(
-    rclcpp::Duration(trajectory[segment_idx].time_from_start).seconds(),
-    rclcpp::Duration(trajectory[segment_idx + 1].time_from_start).seconds(),
-    point_distance / segment_length));
+  trajectory_point.time_from_start = rclcpp::Duration::from_seconds(
+    interpolation::lerp(
+      rclcpp::Duration(trajectory[segment_idx].time_from_start).seconds(),
+      rclcpp::Duration(trajectory[segment_idx + 1].time_from_start).seconds(),
+      point_distance / segment_length));
   trajectory_point.longitudinal_velocity_mps = static_cast<float>(interpolation::lerp(
     trajectory[segment_idx].longitudinal_velocity_mps,
     trajectory[segment_idx + 1].longitudinal_velocity_mps, point_distance / segment_length));

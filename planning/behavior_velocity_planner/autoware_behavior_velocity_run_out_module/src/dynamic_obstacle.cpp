@@ -185,10 +185,12 @@ pcl::PointXYZ calculateLateralNearestPoint(
 {
   const auto lateral_nearest_point = std::min_element(
     input_points.points.begin(), input_points.points.end(), [&](const auto & p1, const auto & p2) {
-      const auto lateral_deviation_p1 = std::abs(autoware_utils::calc_lateral_deviation(
-        base_pose, autoware_utils::create_point(p1.x, p1.y, 0)));
-      const auto lateral_deviation_p2 = std::abs(autoware_utils::calc_lateral_deviation(
-        base_pose, autoware_utils::create_point(p2.x, p2.y, 0)));
+      const auto lateral_deviation_p1 = std::abs(
+        autoware_utils::calc_lateral_deviation(
+          base_pose, autoware_utils::create_point(p1.x, p1.y, 0)));
+      const auto lateral_deviation_p2 = std::abs(
+        autoware_utils::calc_lateral_deviation(
+          base_pose, autoware_utils::create_point(p2.x, p2.y, 0)));
 
       return lateral_deviation_p1 < lateral_deviation_p2;
     });

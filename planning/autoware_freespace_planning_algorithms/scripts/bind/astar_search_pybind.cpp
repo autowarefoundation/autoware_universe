@@ -181,10 +181,11 @@ PYBIND11_MODULE(autoware_freespace_planning_algorithms_pybind, p)
     freespace_planning_algorithms::AstarSearch,
     freespace_planning_algorithms::AbstractPlanningAlgorithm>(p, "AstarSearchCpp");
   py::class_<AstarSearchPython, freespace_planning_algorithms::AstarSearch>(p, "AstarSearch")
-    .def(py::init<
-         freespace_planning_algorithms::PlannerCommonParam &,
-         freespace_planning_algorithms::VehicleShape &,
-         freespace_planning_algorithms::AstarParam &>())
+    .def(
+      py::init<
+        freespace_planning_algorithms::PlannerCommonParam &,
+        freespace_planning_algorithms::VehicleShape &,
+        freespace_planning_algorithms::AstarParam &>())
     .def("setMap", &AstarSearchPython::setMapByte)
     .def("makePlan", &AstarSearchPython::makePlanByte)
     .def("getWaypoints", &AstarSearchPython::getWaypointsAsVector);

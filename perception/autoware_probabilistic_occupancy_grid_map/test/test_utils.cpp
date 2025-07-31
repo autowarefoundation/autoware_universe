@@ -77,14 +77,17 @@ TEST(TestUtils, TestCropPointcloudByHeight)
   sensor_msgs::msg::PointCloud2 test1_output, test2_output, test3_output;
 
   // case1: normal input, normal output
-  EXPECT_NO_THROW(autoware::occupancy_grid_map::utils::cropPointcloudByHeight(
-    ros_cloud_10, mock_buffer, "base_link", 0.0, 10.0, test1_output));
+  EXPECT_NO_THROW(
+    autoware::occupancy_grid_map::utils::cropPointcloudByHeight(
+      ros_cloud_10, mock_buffer, "base_link", 0.0, 10.0, test1_output));
 
   // case2: normal input, empty output
-  EXPECT_NO_THROW(autoware::occupancy_grid_map::utils::cropPointcloudByHeight(
-    ros_cloud_10, mock_buffer, "base_link", -2.0, -0.1, test2_output));
+  EXPECT_NO_THROW(
+    autoware::occupancy_grid_map::utils::cropPointcloudByHeight(
+      ros_cloud_10, mock_buffer, "base_link", -2.0, -0.1, test2_output));
 
   // case3: empty input, normal output
-  EXPECT_NO_THROW(autoware::occupancy_grid_map::utils::cropPointcloudByHeight(
-    ros_cloud_0, mock_buffer, "base_link", 0.0, 10.0, test3_output));
+  EXPECT_NO_THROW(
+    autoware::occupancy_grid_map::utils::cropPointcloudByHeight(
+      ros_cloud_0, mock_buffer, "base_link", 0.0, 10.0, test3_output));
 }

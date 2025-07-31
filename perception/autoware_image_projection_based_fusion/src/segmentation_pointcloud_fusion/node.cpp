@@ -53,8 +53,8 @@ SegmentPointCloudFusionNode::SegmentPointCloudFusionNode(const rclcpp::NodeOptio
   pub_ptr_ = this->create_publisher<PointCloudMsgType>("output", rclcpp::QoS{1});
 }
 
-void SegmentPointCloudFusionNode::preprocess(__attribute__((unused))
-                                             PointCloudMsgType & pointcloud_msg)
+void SegmentPointCloudFusionNode::preprocess(
+  __attribute__((unused)) PointCloudMsgType & pointcloud_msg)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);

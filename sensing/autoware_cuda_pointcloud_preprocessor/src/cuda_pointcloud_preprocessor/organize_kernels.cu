@@ -86,9 +86,10 @@ std::size_t querySortWorkspace(
   int begin_bit = 0;
   int end_bit = sizeof(std::uint32_t) * 8;
 
-  CHECK_CUDA_ERROR(cub::DeviceSegmentedRadixSort::SortKeys(
-    temp_storage, temp_storage_bytes, keys_in_device, keys_out_device, num_items, num_segments,
-    offsets_device, offsets_device + 1, begin_bit, end_bit, stream));
+  CHECK_CUDA_ERROR(
+    cub::DeviceSegmentedRadixSort::SortKeys(
+      temp_storage, temp_storage_bytes, keys_in_device, keys_out_device, num_items, num_segments,
+      offsets_device, offsets_device + 1, begin_bit, end_bit, stream));
 
   return temp_storage_bytes;
 }

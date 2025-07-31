@@ -28,10 +28,11 @@
 namespace rviz_plugins
 {
 SteeringAngleDisplay::SteeringAngleDisplay()
-: handle_image_(std::string(
-                  ament_index_cpp::get_package_share_directory("tier4_vehicle_rviz_plugin") +
-                  "/images/handle.png")
-                  .c_str())
+: handle_image_(
+    std::string(
+      ament_index_cpp::get_package_share_directory("tier4_vehicle_rviz_plugin") +
+      "/images/handle.png")
+      .c_str())
 {
   const Screen * screen_info = DefaultScreenOfDisplay(XOpenDisplay(NULL));
 

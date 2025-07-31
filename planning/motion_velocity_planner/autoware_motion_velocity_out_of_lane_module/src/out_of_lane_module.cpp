@@ -474,8 +474,9 @@ VelocityPlanningResult OutOfLaneModule::plan(
   if (is_already_overlapping) {
     RCLCPP_WARN_THROTTLE(
       logger_, *clock_, 1000, "Ego is already out of lane, skipping the module\n");
-    debug_publisher_->publish(out_of_lane::debug::create_debug_marker_array(
-      ego_data, out_of_lane_data, objects, debug_data_));
+    debug_publisher_->publish(
+      out_of_lane::debug::create_debug_marker_array(
+        ego_data, out_of_lane_data, objects, debug_data_));
     return result;
   }
 

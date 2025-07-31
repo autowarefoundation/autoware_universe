@@ -82,8 +82,9 @@ public:
     timers_interface_(std::move(timers_interface)),
     clock_(clock_interface->get_clock()),
     period_(rclcpp::Duration::from_nanoseconds(static_cast<rcl_duration_value_t>(period * 1e9))),
-    publisher_(rclcpp::create_publisher<diagnostic_msgs::msg::DiagnosticArray>(
-      topics_interface, "/diagnostics", 1)),
+    publisher_(
+      rclcpp::create_publisher<diagnostic_msgs::msg::DiagnosticArray>(
+        topics_interface, "/diagnostics", 1)),
     logger_(logging_interface->get_logger()),
     node_name_(base_interface->get_name())
   {

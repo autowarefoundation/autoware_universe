@@ -45,38 +45,46 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
   num_cores_(0),
   temperatures_(),
   frequencies_(),
-  usage_warn_(declare_parameter<float>(
-    "usage_warn", 0.96,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
-      "Threshold for CPU usage warning. Cannot be changed after initialization."))),
-  usage_error_(declare_parameter<float>(
-    "usage_error", 0.96,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
-      "Threshold for CPU usage error. Cannot be changed after initialization."))),
-  usage_warn_count_(declare_parameter<int>(
-    "usage_warn_count", 1,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
-      "Consecutive count threshold for CPU usage warning. Cannot be changed after "
-      "initialization."))),
-  usage_error_count_(declare_parameter<int>(
-    "usage_error_count", 2,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
-      "Consecutive count threshold for CPU usage error. Cannot be changed after initialization."))),
-  usage_average_(declare_parameter<bool>(
-    "usage_avg", true,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
-      "Use average CPU usage across all processors. Cannot be changed after initialization."))),
+  usage_warn_(
+    declare_parameter<float>(
+      "usage_warn", 0.96,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        "Threshold for CPU usage warning. Cannot be changed after initialization."))),
+  usage_error_(
+    declare_parameter<float>(
+      "usage_error", 0.96,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        "Threshold for CPU usage error. Cannot be changed after initialization."))),
+  usage_warn_count_(
+    declare_parameter<int>(
+      "usage_warn_count", 1,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        "Consecutive count threshold for CPU usage warning. Cannot be changed after "
+        "initialization."))),
+  usage_error_count_(
+    declare_parameter<int>(
+      "usage_error_count", 2,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        "Consecutive count threshold for CPU usage error. Cannot be changed after "
+        "initialization."))),
+  usage_average_(
+    declare_parameter<bool>(
+      "usage_avg", true,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        "Use average CPU usage across all processors. Cannot be changed after initialization."))),
 // Warning/Error about temperature used to be implemented,
 // but they were removed in favor of warning/error about thermal throttling.
 #ifdef ENABLE_TEMPERATURE_DIAGNOSTICS
-  temperature_warn_(declare_parameter<int>(
-    "temperature_warn", 90000,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
-      "Threshold for CPU temperature warning. Cannot be changed after initialization."))),
-  temperature_error_(declare_parameter<int>(
-    "temperature_error", 95000,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
-      "Threshold for CPU temperature error. Cannot be changed after initialization."))),
+  temperature_warn_(
+    declare_parameter<int>(
+      "temperature_warn", 90000,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        "Threshold for CPU temperature warning. Cannot be changed after initialization."))),
+  temperature_error_(
+    declare_parameter<int>(
+      "temperature_error", 95000,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        "Threshold for CPU temperature error. Cannot be changed after initialization."))),
 #endif  // ENABLE_TEMPERATURE_DIAGNOSTICS
   is_temperature_file_names_initialized_(false),
   is_frequency_file_names_initialized_(false)
@@ -150,8 +158,9 @@ void CPUMonitorBase::checkTemperature()
       fs::ifstream ifs(path, std::ios::in);
       if (!ifs) {
         error_str = "file open error";
-        temporary_core_data.emplace_back(TemperatureData::CoreTemperature{
-          entry.label_, DiagStatus::ERROR, DiagStatus::ERROR, 0.0f, error_str, entry.path_});
+        temporary_core_data.emplace_back(
+          TemperatureData::CoreTemperature{
+            entry.label_, DiagStatus::ERROR, DiagStatus::ERROR, 0.0f, error_str, entry.path_});
         continue;
       }
 
@@ -175,8 +184,9 @@ void CPUMonitorBase::checkTemperature()
 #endif  // ENABLE_TEMPERATURE_DIAGNOSTICS
 
       temperature /= 1000;
-      temporary_core_data.emplace_back(TemperatureData::CoreTemperature{
-        entry.label_, DiagStatus::OK, core_level, temperature, "", ""});
+      temporary_core_data.emplace_back(
+        TemperatureData::CoreTemperature{
+          entry.label_, DiagStatus::OK, core_level, temperature, "", ""});
     }
     // End of critical section
   }

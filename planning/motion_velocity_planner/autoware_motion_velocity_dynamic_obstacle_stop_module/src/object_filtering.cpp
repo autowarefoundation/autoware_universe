@@ -47,8 +47,9 @@ bool is_in_range(
   const autoware_perception_msgs::msg::PredictedObject & object,
   const TrajectoryPoints & ego_trajectory, const PlannerParam & params, const double hysteresis)
 {
-  const auto distance = std::abs(motion_utils::calcLateralOffset(
-    ego_trajectory, object.kinematics.initial_pose_with_covariance.pose.position));
+  const auto distance = std::abs(
+    motion_utils::calcLateralOffset(
+      ego_trajectory, object.kinematics.initial_pose_with_covariance.pose.position));
   return distance <= params.minimum_object_distance_from_ego_trajectory +
                        params.ego_lateral_offset + object.shape.dimensions.y / 2.0 + hysteresis;
 };

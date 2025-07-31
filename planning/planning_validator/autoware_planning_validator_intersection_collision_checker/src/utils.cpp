@@ -210,8 +210,8 @@ void set_right_turn_target_lanelets(
 
   const auto combined_turn_lls = lanelet::utils::combineLaneletsShape(lanelets.turn_lanelets);
   const auto lanelet_map_ptr = route_handler.getLaneletMapPtr();
-  const auto candidates =
-    lanelet_map_ptr->laneletLayer.search(boost::geometry::return_envelope<lanelet::BoundingBox2d>(
+  const auto candidates = lanelet_map_ptr->laneletLayer.search(
+    boost::geometry::return_envelope<lanelet::BoundingBox2d>(
       combined_turn_lls.centerline2d().basicLineString()));
   for (const auto & ll : candidates) {
     const auto id = ll.id();

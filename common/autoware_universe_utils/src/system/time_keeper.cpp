@@ -163,9 +163,10 @@ void TimeKeeper::end_track(const std::string & func_name)
     return;
   }
   if (current_time_node_->get_name() != func_name) {
-    throw std::runtime_error(fmt::format(
-      "You must call end_track({}) first, but end_track({}) is called",
-      current_time_node_->get_name(), func_name));
+    throw std::runtime_error(
+      fmt::format(
+        "You must call end_track({}) first, but end_track({}) is called",
+        current_time_node_->get_name(), func_name));
   }
   const double processing_time = stop_watch_.toc(func_name);
   current_time_node_->set_time(processing_time);
@@ -179,8 +180,10 @@ void TimeKeeper::end_track(const std::string & func_name)
 void TimeKeeper::report()
 {
   if (current_time_node_ != nullptr) {
-    throw std::runtime_error(fmt::format(
-      "You must call end_track({}) first, but report() is called", current_time_node_->get_name()));
+    throw std::runtime_error(
+      fmt::format(
+        "You must call end_track({}) first, but report() is called",
+        current_time_node_->get_name()));
   }
   for (const auto & reporter : reporters_) {
     reporter(root_node_);
