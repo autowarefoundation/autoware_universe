@@ -17,6 +17,8 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware/route_handler/route_handler.hpp>
+
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
@@ -40,9 +42,11 @@ public:
   virtual void initialize(rclcpp::Node * node, const LaneletMapBin::ConstSharedPtr msg) = 0;
   virtual bool ready() const = 0;
   virtual LaneletRoute plan(const RoutePoints & points) = 0;
-  virtual MarkerArray visualize(const LaneletRoute & route) const = 0;
+  virtual MarkerArray visualize(
+    const LaneletRoute & route, const bool emphasise_goal_lanes = false) const = 0;
   virtual void updateRoute(const LaneletRoute & route) = 0;
   virtual void clearRoute() = 0;
+  virtual const autoware::route_handler::RouteHandler& getRouteHandler() const = 0;
 };
 
 }  // namespace autoware::mission_planner_universe
