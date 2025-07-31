@@ -55,6 +55,11 @@ GPUMonitorBase::GPUMonitorBase(const std::string & node_name, const rclcpp::Node
   timer_ = rclcpp::create_timer(this, get_clock(), 1s, std::bind(&GPUMonitorBase::onTimer, this));
 }
 
+GPUMonitorBase::~GPUMonitorBase()
+{
+  shut_down();
+}
+
 void GPUMonitorBase::update()
 {
   updater_.force_update();

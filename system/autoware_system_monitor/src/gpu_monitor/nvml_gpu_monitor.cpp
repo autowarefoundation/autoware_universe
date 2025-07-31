@@ -78,6 +78,11 @@ GPUMonitor::GPUMonitor(const rclcpp::NodeOptions & options) : GPUMonitorBase("gp
   }
 }
 
+GPUMonitor::~GPUMonitor()
+{
+  shut_down();
+}
+
 void GPUMonitor::shut_down()
 {
   nvmlReturn_t ret = nvmlShutdown();

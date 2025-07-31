@@ -65,6 +65,11 @@ protected:
   GPUMonitorBase(const std::string & node_name, const rclcpp::NodeOptions & options);
 
   /**
+   * @brief destructor
+   */
+  virtual ~GPUMonitorBase();
+
+  /**
    * @brief check GPU temperature
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
    * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
