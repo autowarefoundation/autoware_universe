@@ -136,7 +136,7 @@ private:
 
   // Initialization flags
   std::vector<bool>
-  caminfo_received_;    // Flag indicating if camera info has been received for each camera
+    caminfo_received_;  // Flag indicating if camera info has been received for each camera
   bool camera_info_received_flag_ = false;
 
   // can_bus and scene_info subscriptions
@@ -161,10 +161,10 @@ private:
   message_filters::Subscriber<sensor_msgs::msg::Image> sub_br_img_;
 
   typedef message_filters::sync_policies::ApproximateTime<
-      sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::Image,
-      sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::Image,
-      autoware_internal_perception_msgs::msg::CanBusData,
-      autoware_internal_perception_msgs::msg::SceneInfo>
+    sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::Image,
+    sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::Image,
+    autoware_internal_perception_msgs::msg::CanBusData,
+    autoware_internal_perception_msgs::msg::SceneInfo>
     MySyncPolicy;
 
   typedef message_filters::Synchronizer<MySyncPolicy> Sync;

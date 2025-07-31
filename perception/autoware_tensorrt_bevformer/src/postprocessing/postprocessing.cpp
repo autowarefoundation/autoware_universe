@@ -105,7 +105,7 @@ PredictionDict decode_single(
   std::partial_sort(
     score_index_pairs.begin(),
     score_index_pairs.begin() + std::min(max_num, static_cast<int>(score_index_pairs.size())),
-    score_index_pairs.end(), [](const auto & a, const auto & b) {return a.first > b.first;});
+    score_index_pairs.end(), [](const auto & a, const auto & b) { return a.first > b.first; });
   int actual_num = std::min(max_num, static_cast<int>(score_index_pairs.size()));
   score_index_pairs.resize(actual_num);
   std::vector<double> scores(actual_num);
