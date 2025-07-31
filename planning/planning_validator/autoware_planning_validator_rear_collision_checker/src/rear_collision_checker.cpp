@@ -118,40 +118,25 @@ void RearCollisionChecker::setup_diag()
     "obstacle detected behind the vehicle");
 }
 
-void RearCollisionChecker::fill_rss_distance(PointCloudObjects & objects) const
+void RearCollisionChecker::fill_rss_distance(
+  PointCloudObjects & objects, const double reaction_time, const double max_deceleration,
+  const double max_velocity) const
 {
   const auto p = param_listener_->get_params();
   const auto & max_deceleration_ego = p.common.ego.max_deceleration;
   const auto & current_velocity = context_->data->current_kinematics->twist.twist.linear.x;
 
   for (auto & object : objects) {
-    if (object.is_vru) {
-      const auto & delay_object = p.common.vulnerable_road_user.reaction_time;
-      const auto & max_deceleration_object = p.common.vulnerable_road_user.max_deceleration;
-      const auto stop_distance_object =
-        delay_object * object.velocity +
-        0.5 * std::pow(object.velocity, 2.0) / std::abs(max_deceleration_object);
-      const auto stop_distance_ego =
-        0.5 * std::pow(current_velocity, 2.0) / std::abs(max_deceleration_ego);
+    const auto stop_distance_object =
+      reaction_time * object.velocity +
+      0.5 * std::pow(object.velocity, 2.0) / std::abs(max_deceleration);
+    const auto stop_distance_ego =
+      0.5 * std::pow(current_velocity, 2.0) / std::abs(max_deceleration_ego);
 
-      object.rss_distance = stop_distance_object - stop_distance_ego;
-      object.safe = object.rss_distance < object.relative_distance_with_delay_compensation;
-      object.ignore = object.moving_time < p.common.filter.moving_time ||
-                      object.velocity > p.common.vulnerable_road_user.max_velocity;
-    } else {
-      const auto & delay_object = p.common.vehicle.reaction_time;
-      const auto & max_deceleration_object = p.common.vehicle.max_deceleration;
-      const auto stop_distance_object =
-        delay_object * object.velocity +
-        0.5 * std::pow(object.velocity, 2.0) / std::abs(max_deceleration_object);
-      const auto stop_distance_ego =
-        0.5 * std::pow(current_velocity, 2.0) / std::abs(max_deceleration_ego);
-
-      object.rss_distance = stop_distance_object - stop_distance_ego;
-      object.safe = object.rss_distance < object.relative_distance_with_delay_compensation;
-      object.ignore = object.moving_time < p.common.filter.moving_time ||
-                      object.velocity > p.common.vehicle.max_velocity;
-    }
+    object.rss_distance = stop_distance_object - stop_distance_ego;
+    object.safe = object.rss_distance < object.relative_distance_with_delay_compensation;
+    object.ignore =
+      object.moving_time < p.common.filter.moving_time || object.velocity > max_velocity;
   }
 }
 
@@ -460,45 +445,56 @@ auto RearCollisionChecker::get_pointcloud_objects(
   const auto current_velocity = context_->data->current_kinematics->twist.twist.linear.x;
 
   {
-    const auto delay_object = p.common.vulnerable_road_user.reaction_time;
-    const auto max_deceleration_object = p.common.vulnerable_road_user.max_deceleration;
+    const auto delay_object = p.common.blind_spot.participants.reaction_time;
+    const auto max_deceleration_object = p.common.blind_spot.participants.max_deceleration;
+    const auto max_velocity_object = p.common.blind_spot.participants.max_velocity;
 
-    const auto stop_distance_object = delay_object * p.common.vulnerable_road_user.max_velocity +
-                                      0.5 *
-                                        std::pow(p.common.vulnerable_road_user.max_velocity, 2.0) /
-                                        std::abs(max_deceleration_object);
+    const auto stop_distance_object =
+      delay_object * max_velocity_object +
+      0.5 * std::pow(max_velocity_object, 2.0) / std::abs(max_deceleration_object);
     const auto stop_distance_ego =
       0.5 * std::pow(current_velocity, 2.0) / std::abs(max_deceleration_ego);
 
-    const auto forward_distance = context_->vehicle_info.max_longitudinal_offset_m;
+    const auto forward_distance = p.common.pointcloud.range.buffer +
+                                  std::max(
+                                    context_->vehicle_info.max_longitudinal_offset_m,
+                                    (p.common.blind_spot.check.front ? stop_distance_ego : 0.0));
     const auto backward_distance = p.common.pointcloud.range.buffer -
                                    context_->vehicle_info.min_longitudinal_offset_m +
                                    std::max(0.0, stop_distance_object - stop_distance_ego);
 
-    const auto objects_at_blind_spot = get_pointcloud_objects_at_blind_spot(
+    auto objects_at_blind_spot = get_pointcloud_objects_at_blind_spot(
       current_lanes, turn_behavior, forward_distance, backward_distance, obstacle_pointcloud,
       debug);
+    fill_rss_distance(
+      objects_at_blind_spot, delay_object, max_deceleration_object, max_velocity_object);
     objects.insert(objects.end(), objects_at_blind_spot.begin(), objects_at_blind_spot.end());
   }
 
   {
-    const auto delay_object = p.common.vehicle.reaction_time;
-    const auto max_deceleration_object = p.common.vehicle.max_deceleration;
+    const auto delay_object = p.common.adjacent_lane.participants.reaction_time;
+    const auto max_deceleration_object = p.common.adjacent_lane.participants.max_deceleration;
+    const auto max_velocity_object = p.common.adjacent_lane.participants.max_velocity;
 
     const auto stop_distance_object =
-      delay_object * p.common.vehicle.max_velocity +
-      0.5 * std::pow(p.common.vehicle.max_velocity, 2.0) / std::abs(max_deceleration_object);
+      delay_object * max_velocity_object +
+      0.5 * std::pow(max_velocity_object, 2.0) / std::abs(max_deceleration_object);
     const auto stop_distance_ego =
       0.5 * std::pow(current_velocity, 2.0) / std::abs(max_deceleration_ego);
 
-    const auto forward_distance = context_->vehicle_info.max_longitudinal_offset_m;
+    const auto forward_distance = p.common.pointcloud.range.buffer +
+                                  std::max(
+                                    context_->vehicle_info.max_longitudinal_offset_m,
+                                    (p.common.adjacent_lane.check.front ? stop_distance_ego : 0.0));
     const auto backward_distance = p.common.pointcloud.range.buffer -
                                    context_->vehicle_info.min_longitudinal_offset_m +
                                    std::max(0.0, stop_distance_object - stop_distance_ego);
 
-    const auto objects_on_adjacent_lane = get_pointcloud_objects_on_adjacent_lane(
+    auto objects_on_adjacent_lane = get_pointcloud_objects_on_adjacent_lane(
       current_lanes, shift_behavior, forward_distance, backward_distance, obstacle_pointcloud,
       debug);
+    fill_rss_distance(
+      objects_on_adjacent_lane, delay_object, max_deceleration_object, max_velocity_object);
     objects.insert(objects.end(), objects_on_adjacent_lane.begin(), objects_on_adjacent_lane.end());
   }
 
@@ -567,15 +563,13 @@ auto RearCollisionChecker::get_pointcloud_objects_on_adjacent_lane(
         return objects;
       }
 
-      opt_pointcloud_object.value().is_vru = false;
-
       opt_pointcloud_object.value().relative_distance =
         opt_pointcloud_object.value().absolute_distance - ego_to_furthest_point -
         std::abs(context_->vehicle_info.min_longitudinal_offset_m);
 
       if (
         opt_pointcloud_object.value().relative_distance <
-        p.common.pointcloud.range.dead_zone - context_->vehicle_info.max_longitudinal_offset_m) {
+        p.common.pointcloud.range.dead_zone - forward_distance) {
         return objects;
       }
 
@@ -612,15 +606,13 @@ auto RearCollisionChecker::get_pointcloud_objects_on_adjacent_lane(
         continue;
       }
 
-      opt_pointcloud_object.value().is_vru = false;
-
       opt_pointcloud_object.value().relative_distance =
         opt_pointcloud_object.value().absolute_distance - ego_to_furthest_point -
         std::abs(context_->vehicle_info.min_longitudinal_offset_m);
 
       if (
         opt_pointcloud_object.value().relative_distance <
-        p.common.pointcloud.range.dead_zone - context_->vehicle_info.max_longitudinal_offset_m) {
+        p.common.pointcloud.range.dead_zone - forward_distance) {
         return objects;
       }
 
@@ -652,10 +644,11 @@ auto RearCollisionChecker::get_pointcloud_objects_at_blind_spot(
     const auto is_right = turn_behavior == Behavior::TURN_RIGHT;
     lanelet::ConstLanelets ret{};
     for (const auto & lane : current_lanes) {
-      ret.push_back(utils::generate_half_lanelet(
-        lane, is_right,
-        0.5 * context_->vehicle_info.vehicle_width_m + p.common.blind_spot.offset.inner,
-        p.common.blind_spot.offset.outer));
+      ret.push_back(
+        utils::generate_half_lanelet(
+          lane, is_right,
+          0.5 * context_->vehicle_info.vehicle_width_m + p.common.blind_spot.offset.inner,
+          p.common.blind_spot.offset.outer));
     }
     return ret;
   }();
@@ -679,8 +672,6 @@ auto RearCollisionChecker::get_pointcloud_objects_at_blind_spot(
     return objects;
   }
 
-  opt_pointcloud_object.value().is_vru = true;
-
   const auto ego_coordinate_on_arc =
     lanelet::utils::getArcCoordinates(current_lanes, context_->data->current_kinematics->pose.pose);
 
@@ -693,7 +684,7 @@ auto RearCollisionChecker::get_pointcloud_objects_at_blind_spot(
 
   if (
     opt_pointcloud_object.value().relative_distance <
-    p.common.pointcloud.range.dead_zone - context_->vehicle_info.max_longitudinal_offset_m) {
+    p.common.pointcloud.range.dead_zone - forward_distance) {
     return objects;
   }
 
@@ -777,14 +768,12 @@ bool RearCollisionChecker::is_safe(DebugData & debug)
     debug.is_active = true;
   }
 
-  PredictedObjects objects_on_target_lane;
   PointCloudObjects pointcloud_objects{};
 
   {
     time_keeper_->start_track("pointcloud_base");
     pointcloud_objects =
       get_pointcloud_objects(current_lanes, shift_behavior, turn_behavior, debug);
-    fill_rss_distance(pointcloud_objects);
     time_keeper_->end_track("pointcloud_base");
   }
 
@@ -834,26 +823,33 @@ void RearCollisionChecker::publish_marker(const DebugData & debug) const
   };
 
   {
-    add(utils::create_line_marker_array(
-      debug.reachable_line, "reachable_line",
-      autoware_utils::create_marker_color(1.0, 0.67, 0.0, 0.999)));
-    add(utils::create_line_marker_array(
-      debug.stoppable_line, "stoppable_line",
-      autoware_utils::create_marker_color(1.0, 0.0, 0.42, 0.999)));
-    add(lanelet::visualization::laneletsAsTriangleMarkerArray(
-      "detection_lanes", debug.get_detection_lanes(),
-      autoware_utils::create_marker_color(1.0, 0.0, 0.42, 0.2)));
-    add(lanelet::visualization::laneletsAsTriangleMarkerArray(
-      "current_lanes", debug.current_lanes,
-      autoware_utils::create_marker_color(0.16, 1.0, 0.69, 0.2)));
-    add(utils::create_pointcloud_object_marker_array(
-      debug.pointcloud_objects, "pointcloud_objects", param_listener_->get_params()));
-    add(utils::create_polygon_marker_array(
-      debug.get_detection_polygons(), "detection_areas",
-      autoware_utils::create_marker_color(1.0, 0.0, 0.42, 0.999)));
-    add(utils::create_polygon_marker_array(
-      debug.hull_polygons, "hull_polygons",
-      autoware_utils::create_marker_color(0.0, 0.0, 1.0, 0.999)));
+    add(
+      utils::create_line_marker_array(
+        debug.reachable_line, "reachable_line",
+        autoware_utils::create_marker_color(1.0, 0.67, 0.0, 0.999)));
+    add(
+      utils::create_line_marker_array(
+        debug.stoppable_line, "stoppable_line",
+        autoware_utils::create_marker_color(1.0, 0.0, 0.42, 0.999)));
+    add(
+      lanelet::visualization::laneletsAsTriangleMarkerArray(
+        "detection_lanes", debug.get_detection_lanes(),
+        autoware_utils::create_marker_color(1.0, 0.0, 0.42, 0.2)));
+    add(
+      lanelet::visualization::laneletsAsTriangleMarkerArray(
+        "current_lanes", debug.current_lanes,
+        autoware_utils::create_marker_color(0.16, 1.0, 0.69, 0.2)));
+    add(
+      utils::create_pointcloud_object_marker_array(
+        debug.pointcloud_objects, "pointcloud_objects", param_listener_->get_params()));
+    add(
+      utils::create_polygon_marker_array(
+        debug.get_detection_polygons(), "detection_areas",
+        autoware_utils::create_marker_color(1.0, 0.0, 0.42, 0.999)));
+    add(
+      utils::create_polygon_marker_array(
+        debug.hull_polygons, "hull_polygons",
+        autoware_utils::create_marker_color(0.0, 0.0, 1.0, 0.999)));
 
     std::for_each(msg.markers.begin(), msg.markers.end(), [](auto & marker) {
       marker.lifetime = rclcpp::Duration::from_seconds(0.5);

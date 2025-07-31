@@ -78,24 +78,12 @@ private:
 
 TEST_F(TestShiftPullOut, GenerateValidShiftPullOutPath)
 {
-  const auto start_pose =
-    geometry_msgs::build<geometry_msgs::msg::Pose>()
-      .position(geometry_msgs::build<geometry_msgs::msg::Point>().x(362.181).y(362.164).z(100.000))
-      .orientation(
-        geometry_msgs::build<geometry_msgs::msg::Quaternion>().x(0.0).y(0.0).z(0.709650).w(
-          0.704554));
-
-  const auto goal_pose =
-    geometry_msgs::build<geometry_msgs::msg::Pose>()
-      .position(geometry_msgs::build<geometry_msgs::msg::Point>().x(365.658).y(507.253).z(100.000))
-      .orientation(
-        geometry_msgs::build<geometry_msgs::msg::Quaternion>().x(0.0).y(0.0).z(0.705897).w(
-          0.708314));
-
   auto planner_data = std::make_shared<PlannerData>();
   planner_data->init_parameters(*node_);
+  const auto route = StartPlannerTestHelper::set_route_from_yaml(planner_data, "route_data2.yaml");
+  const auto start_pose = route.start_pose;
+  const auto goal_pose = route.goal_pose;
   StartPlannerTestHelper::set_odometry(planner_data, start_pose);
-  StartPlannerTestHelper::set_route(planner_data, 4619, 4635);
   // Plan the pull out path
   PlannerDebugData debug_data;
   auto result = call_plan(start_pose, goal_pose, planner_data, debug_data);

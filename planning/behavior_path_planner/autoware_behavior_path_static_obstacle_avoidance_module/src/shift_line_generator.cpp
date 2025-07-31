@@ -183,12 +183,17 @@ AvoidOutlines ShiftLineGenerator::generateAvoidOutline(
       return std::nullopt;
     }
 
+    if (object.is_avoidable_by_desired_shift_length) {
+      return std::make_pair(desire_shift_length, avoidance_distance);
+    }
+
     // calculate lateral jerk.
     const auto required_jerk = autoware::motion_utils::calc_jerk_from_lat_lon_distance(
       avoiding_shift, avoidance_distance, helper_->getAvoidanceEgoSpeed());
 
     // relax lateral jerk limit. avoidable.
     if (required_jerk < helper_->getLateralMaxJerkLimit()) {
+      object.is_avoidable_by_desired_shift_length = true;
       return std::make_pair(desire_shift_length, avoidance_distance);
     }
 
