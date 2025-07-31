@@ -47,6 +47,7 @@
   <exec_depend>autoware_simpl_prediction</exec_depend>
   <exec_depend>autoware_simple_object_merger</exec_depend>
   <exec_depend>autoware_tensorrt_bevdet</exec_depend>
+  <exec_depend>autoware_tensorrt_bevformer</exec_depend>
   <exec_depend>autoware_tensorrt_yolox</exec_depend>
   <exec_depend>autoware_tracking_object_merger</exec_depend>
   <exec_depend>autoware_traffic_light_arbiter</exec_depend>
