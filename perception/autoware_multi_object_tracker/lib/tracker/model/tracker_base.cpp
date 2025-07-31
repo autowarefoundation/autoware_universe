@@ -44,7 +44,7 @@ float updateProbability(
 float decayProbability(const float & prior, const float & delta_time)
 {
   constexpr float minimum_probability = 0.001;
-  const float decay_rate = log(0.5f) / 0.3f;  // half-life (50% decay) of 0.3s
+  const float decay_rate = log(0.5f) / 0.5f;  // half-life (50% decay) of 0.5s
   return std::max(prior * std::exp(decay_rate * delta_time), minimum_probability);
 }
 }  // namespace
