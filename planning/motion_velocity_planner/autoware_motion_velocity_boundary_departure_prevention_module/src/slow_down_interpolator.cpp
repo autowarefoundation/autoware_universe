@@ -25,7 +25,7 @@ using Response = SlowDownInterpolator::Response;
 tl::expected<SlowDownInterpolator::SlowDownPlan, std::string>
 SlowDownInterpolator::get_interp_to_point(
   const double curr_vel, const double curr_acc, const double lon_dist_to_bound_m,
-  double lat_dist_to_bound_m, const SideKey side_key) const
+  const double lat_dist_to_bound_m, const SideKey side_key) const
 {
   const auto target_vel = interp_velocity(curr_vel, lat_dist_to_bound_m, side_key);
 
