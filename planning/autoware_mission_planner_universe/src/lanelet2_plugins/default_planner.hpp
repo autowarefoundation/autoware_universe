@@ -57,7 +57,7 @@ public:
   [[nodiscard]] static MarkerArray visualize_debug_footprint(
     autoware_utils::LinearRing2d goal_footprint);
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
-  const autoware::route_handler::RouteHandler& getRouteHandler() const { return route_handler_; }
+  const autoware::route_handler::RouteHandler & getRouteHandler() const { return route_handler_; }
 
 protected:
   using RouteSections = std::vector<autoware_planning_msgs::msg::LaneletSegment>;

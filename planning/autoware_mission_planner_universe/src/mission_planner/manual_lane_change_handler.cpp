@@ -9,8 +9,8 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
   const int64_t ego_lanelet_id, const SetPreferredLane::Request::SharedPtr req)
 {
   const DIRECTION override_direction = req->lane_change_direction == 0   ? DIRECTION::MANUAL_LEFT
-                                 : req->lane_change_direction == 1 ? DIRECTION::MANUAL_RIGHT
-                                                                   : DIRECTION::AUTO;
+                                       : req->lane_change_direction == 1 ? DIRECTION::MANUAL_RIGHT
+                                                                         : DIRECTION::AUTO;
 
   if (override_direction == DIRECTION::AUTO) {
     LaneletRoute route;
@@ -34,7 +34,7 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
       "Manual lane selection to " +
         (override_direction == DIRECTION::MANUAL_LEFT    ? std::string("left")
          : override_direction == DIRECTION::MANUAL_RIGHT ? std::string("right")
-                                                  : std::string("unknown")) +
+                                                         : std::string("unknown")) +
         std::string(" is commanded but canceled due to no current route available.")};
   }
 
@@ -69,7 +69,9 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
     // Find the index of the current preferred primitive
     auto current_it = std::find_if(
       current_segment.primitives.begin(), current_segment.primitives.end(),
-      [&current_segment](const LaneletPrimitive & p) { return p.id == current_segment.preferred_primitive.id; });
+      [&current_segment](const LaneletPrimitive & p) {
+        return p.id == current_segment.preferred_primitive.id;
+      });
 
     if (current_it == current_segment.primitives.end()) continue;
 
@@ -77,10 +79,13 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
 
     const bool current_segment_shift_not_available =
       (override_direction == DIRECTION::MANUAL_LEFT && current_index == 0) ||
-      (override_direction == DIRECTION::MANUAL_RIGHT && current_index + 1 == current_segment.primitives.size());
-    
+      (override_direction == DIRECTION::MANUAL_RIGHT &&
+       current_index + 1 == current_segment.primitives.size());
+
     if (current_segment_shift_not_available) {
-      RCLCPP_INFO_STREAM(logger_, "Cannot shift on the current segment (ID: " << current_segment.preferred_primitive.id << ")");
+      RCLCPP_INFO_STREAM(
+        logger_, "Cannot shift on the current segment (ID: "
+                   << current_segment.preferred_primitive.id << ")");
       break;
     }
 
@@ -89,13 +94,19 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
       route_updated = true;
       current_segment.preferred_primitive = current_segment.primitives.at(current_index - 1);
       RCLCPP_INFO_STREAM(
-          logger_, "Shifted left from " << current_segment.primitives.at(current_index).id << " to primitive ID: " << current_segment.preferred_primitive.id);
-    } else if (override_direction == DIRECTION::MANUAL_RIGHT && current_index + 1 < current_segment.primitives.size()) {
+        logger_, "Shifted left from "
+                   << current_segment.primitives.at(current_index).id
+                   << " to primitive ID: " << current_segment.preferred_primitive.id);
+    } else if (
+      override_direction == DIRECTION::MANUAL_RIGHT &&
+      current_index + 1 < current_segment.primitives.size()) {
       // shift to the primitive on the right
       route_updated = true;
       current_segment.preferred_primitive = current_segment.primitives.at(current_index + 1);
       RCLCPP_INFO_STREAM(
-          logger_, "Shifted right from " << current_segment.primitives.at(current_index).id << " to primitive ID: " << current_segment.preferred_primitive.id);
+        logger_, "Shifted right from "
+                   << current_segment.primitives.at(current_index).id
+                   << " to primitive ID: " << current_segment.preferred_primitive.id);
     }
   }
 
@@ -105,7 +116,7 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
       std::string("Manual lane selection to ") +
         (override_direction == DIRECTION::MANUAL_LEFT    ? std::string("left")
          : override_direction == DIRECTION::MANUAL_RIGHT ? std::string("right")
-                                                  : std::string("unknown")) +
+                                                         : std::string("unknown")) +
         " is not possible for the current preferred primitive configuration."};
   }
 
@@ -114,7 +125,7 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
     std::string("Manual lane selection to ") +
       (override_direction == DIRECTION::MANUAL_LEFT    ? std::string("left")
        : override_direction == DIRECTION::MANUAL_RIGHT ? std::string("right")
-                                                : std::string("unknown")) +
+                                                       : std::string("unknown")) +
       std::string(" is commanded and executed successfully.")};
 }
 

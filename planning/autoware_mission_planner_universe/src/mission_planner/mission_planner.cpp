@@ -270,17 +270,16 @@ void MissionPlanner::on_clear_route(
 }
 
 void MissionPlanner::on_set_preferred_lane(
-  const SetPreferredLane::Request::SharedPtr req,
-  const SetPreferredLane::Response::SharedPtr res)
+  const SetPreferredLane::Request::SharedPtr req, const SetPreferredLane::Response::SharedPtr res)
 {
   using ResponseCode = autoware_adapi_v1_msgs::srv::SetRoute::Response;
   const auto is_reroute = state_.state == RouteState::SET;
 
   RCLCPP_INFO_STREAM(
-    get_logger(),
-    "Received lane change override request with direction: " << 
-    (req->lane_change_direction == 0 ? "LEFT"
-      : req->lane_change_direction == 1 ? "RIGHT" : "AUTO"));
+    get_logger(), "Received lane change override request with direction: "
+                    << (req->lane_change_direction == 0   ? "LEFT"
+                        : req->lane_change_direction == 1 ? "RIGHT"
+                                                          : "AUTO"));
 
   if (state_.state != RouteState::UNSET && state_.state != RouteState::SET) {
     res->status.success = false;
@@ -325,11 +324,12 @@ void MissionPlanner::on_set_preferred_lane(
   change_state(is_reroute ? RouteState::REROUTING : RouteState::ROUTING);
 
   const DIRECTION override_direction = req->lane_change_direction == 0   ? DIRECTION::MANUAL_LEFT
-                                 : req->lane_change_direction == 1 ? DIRECTION::MANUAL_RIGHT
-                                                                   : DIRECTION::AUTO;
-  
+                                       : req->lane_change_direction == 1 ? DIRECTION::MANUAL_RIGHT
+                                                                         : DIRECTION::AUTO;
+
   lanelet::ConstLanelet closest_lanelet;
-  const bool found_closest_lane = planner_->getRouteHandler().getClosestLaneletWithinRoute(odometry_->pose.pose, &closest_lanelet);
+  const bool found_closest_lane = planner_->getRouteHandler().getClosestLaneletWithinRoute(
+    odometry_->pose.pose, &closest_lanelet);
 
   if (!found_closest_lane) {
     res->status.success = false;
