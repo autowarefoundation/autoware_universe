@@ -114,13 +114,12 @@ inline Point2d to_pt2d(const geometry_msgs::msg::Point & point)
  * @param departure_points Departure points for left and right sides of the ego vehicle.
  * @param vehicle_length   Length of the ego vehicle, used to determine grouping distance.
  * @param enable_type      Set of departure types to include in the interval grouping.
- * @param is_departure_persist Checks to insert departure point to departure intervals.
  * @return A list of departure intervals representing potential boundary departure risks.
  */
 DepartureIntervals init_departure_intervals(
   const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
   const Side<DeparturePoints> & departure_points, const double vehicle_length,
-  const std::unordered_set<DepartureType> & enable_type, const bool is_departure_persist);
+  const std::unordered_set<DepartureType> & enable_type);
 
 /**
  * @brief Update and merge departure intervals based on current trajectory and ego state.

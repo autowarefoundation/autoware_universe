@@ -509,12 +509,14 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
     return t_diff >= node_param_.on_time_buffer_s;
   });
 
-  if (output_.departure_intervals.empty()) {
+  if (output_.departure_intervals.empty() && is_departure_persist) {
     output_.departure_intervals = utils::init_departure_intervals(
       *ref_traj_pts_opt, output_.departure_points,
       ego_dist_on_traj_with_offset_m(!planner_data->is_driving_forward),
-      node_param_.slow_down_types, is_departure_persist);
-  } else {
+      node_param_.slow_down_types);
+  }
+
+  if (!output_.departure_intervals.empty()) {
     auto & departure_intervals_mut = output_.departure_intervals;
     const auto & ref_traj_front_pt = raw_trajectory_points.front();
 
