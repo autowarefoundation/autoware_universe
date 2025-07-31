@@ -39,14 +39,14 @@
 #include <vector>
 
 // Macro for error checking CUDA calls
-#define CHECK_CUDA(call) \
-  do { \
-    cudaError_t status = call; \
-    if (status != cudaSuccess) { \
-      fprintf( \
+#define CHECK_CUDA(call)                                                                       \
+  do {                                                                                         \
+    cudaError_t status = call;                                                                 \
+    if (status != cudaSuccess) {                                                               \
+      fprintf(                                                                                 \
         stderr, "CUDA Error at %s:%d - %s\n", __FILE__, __LINE__, cudaGetErrorString(status)); \
-      exit(1); \
-    } \
+      exit(1);                                                                                 \
+    }                                                                                          \
   } while (0)
 
 namespace autoware
