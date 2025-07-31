@@ -93,11 +93,7 @@ DepartureIntervals init_departure_intervals(
       continue;
     }
 
-    std::sort(
-      interval.candidates.begin(), interval.candidates.end(),
-      [](const DeparturePoint & a, const DeparturePoint & b) {
-        return a.dist_on_traj < b.dist_on_traj;
-      });
+    std::sort(interval.candidates.begin(), interval.candidates.end());
 
     interval.start_dist_on_traj = interval.candidates.front().dist_on_traj - vehicle_length_m;
     interval.start = aw_ref_traj.compute(interval.start_dist_on_traj);
@@ -218,6 +214,12 @@ void update_departure_intervals(
       departure_intervals, departure_points[side_key], aw_ref_traj, vehicle_length_m, side_key,
       enable_type);
   }
+
+  auto new_departure_intervals = init_departure_intervals(
+    aw_ref_traj, departure_points, vehicle_length_m, enable_type, is_departure_persist);
+  std::move(
+    new_departure_intervals.begin(), new_departure_intervals.end(),
+    std::back_inserter(departure_intervals));
 
   if (!departure_intervals.empty()) {
     DepartureIntervals merged;
