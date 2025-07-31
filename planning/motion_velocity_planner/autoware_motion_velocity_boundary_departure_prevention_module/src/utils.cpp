@@ -45,12 +45,8 @@ namespace autoware::motion_velocity_planner::experimental::utils
 DepartureIntervals init_departure_intervals(
   const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
   const DeparturePoints & departure_points, const double vehicle_length_m, const SideKey side_key,
-  const std::unordered_set<DepartureType> & enable_type, const bool is_departure_persist)
+  const std::unordered_set<DepartureType> & enable_type)
 {
-  if (!is_departure_persist) {
-    return {};
-  }
-
   DepartureIntervals departure_intervals;
   size_t idx = 0;
   while (idx < departure_points.size()) {
@@ -114,13 +110,12 @@ DepartureIntervals init_departure_intervals(
 DepartureIntervals init_departure_intervals(
   const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
   const Side<DeparturePoints> & departure_points, const double vehicle_length,
-  const std::unordered_set<DepartureType> & enable_type, const bool is_departure_persist)
+  const std::unordered_set<DepartureType> & enable_type)
 {
   DepartureIntervals departure_intervals;
   for (const auto side_key : g_side_keys) {
     auto dpt_pts = init_departure_intervals(
-      aw_ref_traj, departure_points[side_key], vehicle_length, side_key, enable_type,
-      is_departure_persist);
+      aw_ref_traj, departure_points[side_key], vehicle_length, side_key, enable_type);
     std::move(dpt_pts.begin(), dpt_pts.end(), std::back_inserter(departure_intervals));
   }
   return departure_intervals;
@@ -169,15 +164,8 @@ void update_departure_intervals_poses(
 void check_departure_points_between_intervals(
   DepartureIntervals & departure_intervals, DeparturePoints & departure_points,
   const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const double vehicle_length_m,
-  const SideKey side_key, const std::unordered_set<DepartureType> & enable_type,
-  const bool is_departure_persist)
+  const SideKey side_key, const std::unordered_set<DepartureType> & enable_type)
 {
-  // check if departure point is in between any intervals.
-  // if close to end pose, update end pose.
-  if (!is_departure_persist) {
-    return;
-  }
-
   for (auto & departure_interval : departure_intervals) {
     if (departure_interval.side_key != side_key) {
       continue;
@@ -265,15 +253,17 @@ void update_departure_intervals(
 
   for (const auto side_key : g_side_keys) {
     if (is_reset_interval) {
-      const auto remove_itr = std::remove_if(
-        departure_intervals.begin(), departure_intervals.end(),
-        [&](const DepartureInterval & interval) { return interval.side_key == side_key; });
-      departure_intervals.erase(remove_itr, departure_intervals.end());
+      utils::remove_if(departure_intervals, [&](const DepartureInterval & interval) {
+        return interval.side_key == side_key;
+      });
       continue;
     }
-    check_departure_points_between_intervals(
-      departure_intervals, departure_points[side_key], aw_ref_traj, vehicle_length_m, side_key,
-      enable_type, is_departure_persist);
+
+    if (is_departure_persist) {
+      check_departure_points_between_intervals(
+        departure_intervals, departure_points[side_key], aw_ref_traj, vehicle_length_m, side_key,
+        enable_type);
+    }
   }
 
   auto new_departure_intervals =
