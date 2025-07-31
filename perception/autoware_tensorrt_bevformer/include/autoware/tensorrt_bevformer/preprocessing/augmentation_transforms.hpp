@@ -59,7 +59,8 @@ struct PreprocessResult
 class RandomScaleImageMultiViewImageTransform : public Transform
 {
 public:
-  explicit RandomScaleImageMultiViewImageTransform(float scale) : scale_(scale) {}
+  explicit RandomScaleImageMultiViewImageTransform(float scale)
+  : scale_(scale) {}
 
   DataDict operator()(DataDict results) override;
   std::string toString() const override;
