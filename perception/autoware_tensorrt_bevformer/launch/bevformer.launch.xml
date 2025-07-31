@@ -32,9 +32,7 @@
   <arg name="precision" default="fp16"/>
   <arg name="debug_mode" default="false"/>
 
-  <arg name="data_path" default="$(env HOME)/autoware_data"/>
   <arg name="model_name" default="bevformer_small"/>
-  <arg name="model_config" default="$(find-pkg-share autoware_tensorrt_bevformer)/config/$(var model_name).yaml"/>
   <arg name="param_file" default="$(find-pkg-share autoware_tensorrt_bevformer)/config/bevformer.param.yaml"/>
   <arg name="plugin_path" default=""/>
 

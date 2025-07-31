@@ -40,7 +40,7 @@
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>
 
-template <typename T>
+template < typename T >
 void ms_deformable_im2col_cuda(
   const T * data_value, const int32_t * data_spatial_shapes, const T * data_reference_points,
   const T * data_sampling_offsets, const T * data_attn_weight, const int batch_size,
@@ -55,7 +55,7 @@ void ms_deformable_im2col_cuda_h2(
   const int num_heads, int channels, const int num_levels, const int num_query, const int num_point,
   const int points_per_group, __half2 * data_col, cudaStream_t stream);
 
-template <typename T>
+template < typename T >
 void ms_deformable_im2col_cuda_int8(
   const int8_4 * data_value, float scale_value, const int32_t * data_spatial_shapes,
   const T * data_reference_points, const int8_4 * data_sampling_offsets, float scale_offset,
