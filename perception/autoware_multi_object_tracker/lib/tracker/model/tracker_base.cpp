@@ -199,57 +199,101 @@ void Tracker::updateClassification(
   // 2. Remove the class with probability < remove_threshold (0.001)
   // 3. Normalize tracking classification
 
+  // Bayesian classification update
+  // P(class|measurement) ∝ P(measurement|class) * P(class)
+  
   // Parameters
-  // if the remove_threshold is too high (compare to the gain), the classification will be removed
-  // immediately
-  const float gain = 0.05;
+  constexpr float min_probability = 0.01;
+  constexpr float measurement_confidence = 0.8; // How much we trust the new measurement
   constexpr float remove_threshold = 0.001;
 
-  // Normalization function
-  auto normalizeProbabilities =
-    [](std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification) {
-      float sum = 0.0;
-      for (const auto & a_class : classification) {
-        sum += a_class.probability;
-      }
-      for (auto & a_class : classification) {
-        a_class.probability /= sum;
-      }
-    };
+  // // Normalization function
+  // auto normalizeProbabilities =
+  //   [](std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification) {
+  //     float sum = 0.0;
+  //     for (const auto & a_class : classification) {
+  //       sum += a_class.probability;
+  //     }
+  //     if (sum > 0.0) {
+  //       for (auto & a_class : classification) {
+  //         a_class.probability /= sum;
+  //       }
+  //     }
+  //   };
 
-  // Normalize the input
+  // Normalize the input (measurement probabilities)
   auto classification_input = input;
-  normalizeProbabilities(classification_input);
+  // normalizeProbabilities(classification_input);
 
   auto & classification = object_.classification;
 
-  // Update the matched classification probability with a gain
-  for (const auto & new_class : classification_input) {
-    bool found = false;
-    for (auto & old_class : classification) {
-      if (new_class.label == old_class.label) {
-        old_class.probability += new_class.probability * gain;
-        found = true;
-        break;
-      }
+  // If no existing classification, initialize with input
+  if (classification.empty()) {
+    classification = classification_input;
+    return;
+  }
+
+  // Bayesian update for each class
+  std::vector<autoware_perception_msgs::msg::ObjectClassification> updated_classification;
+  
+  // Process existing classes
+  for (const auto & old_class : classification) {
+    auto updated_class = old_class;
+    
+    // Find corresponding measurement
+    auto it = std::find_if(classification_input.begin(), classification_input.end(),
+      [&old_class](const auto & new_class) { return new_class.label == old_class.label; });
+    
+    if (it != classification_input.end()) {
+      // Bayesian update: P(class|measurement) ∝ P(measurement|class) * P(class)
+      // Likelihood of measurement given class
+      const float likelihood = it->probability;
+      // Prior probability
+      const float prior = old_class.probability;
+      
+      // Weighted update based on measurement confidence
+      const float posterior = prior * (1.0f - measurement_confidence) + likelihood * measurement_confidence;
+      updated_class.probability = std::max(posterior, min_probability);
+    } else {
+      // Class not observed in measurement - apply decay
+      const float decay_factor = 1.0f - measurement_confidence * 0.5f; // Moderate decay when not observed
+      updated_class.probability = std::max(old_class.probability * decay_factor, min_probability);
     }
-    // If the label is not found, add it to the classification list
+    
+    updated_classification.push_back(updated_class);
+  }
+
+  // Add new classes from measurement that weren't in tracker
+  for (const auto & new_class : classification_input) {
+    bool found = std::any_of(classification.begin(), classification.end(),
+      [&new_class](const auto & old_class) { return old_class.label == new_class.label; });
+    
     if (!found) {
       auto adding_class = new_class;
-      adding_class.probability *= gain;
-      classification.push_back(adding_class);
+      // New class gets probability weighted by measurement confidence
+      adding_class.probability = new_class.probability * measurement_confidence;
+      updated_classification.push_back(adding_class);
     }
   }
 
-  // If the probability is less than the threshold, remove the class
-  classification.erase(
+  // Remove classes below threshold
+  updated_classification.erase(
     std::remove_if(
-      classification.begin(), classification.end(),
+      updated_classification.begin(), updated_classification.end(),
       [remove_threshold](const auto & a_class) { return a_class.probability < remove_threshold; }),
-    classification.end());
+    updated_classification.end());
 
-  // Normalize tracking classification
-  normalizeProbabilities(classification);
+  // Final normalization
+  classification = updated_classification;
+  // normalizeProbabilities(classification);
+
+  // Debugging output
+  std::cout << "Updated Classification: ";
+  for (const auto & a_class : classification) {
+    std::cout << " | Label: " << std::to_string(a_class.label)
+              << ", Probability: " << std::to_string(a_class.probability);
+  }
+  std::cout << std::endl;
 }
 
 void Tracker::limitObjectExtension(const object_model::ObjectModel object_model)
