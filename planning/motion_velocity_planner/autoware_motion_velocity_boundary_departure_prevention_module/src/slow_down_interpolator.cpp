@@ -31,29 +31,31 @@ SlowDownInterpolator::get_interp_to_point(
 
   if (lon_dist_to_bound_m <= 0.0) return tl::make_unexpected("Point behind ego.");  // already past
 
-  const auto comfort_dist_opt =
-    get_comfort_distance(lon_dist_to_bound_m, curr_vel, target_vel, curr_acc);
-
   const auto a_comf = th_trigger_.th_acc_mps2.min;
   const auto j_comf = th_trigger_.th_jerk_mps3.min;
-
   const auto a_max = th_trigger_.th_acc_mps2.max;
   const auto j_max = th_trigger_.th_jerk_mps3.max;
 
-  const auto a_brake = comfort_dist_opt ? a_comf : a_max;
-  const auto j_brake = comfort_dist_opt ? j_comf : j_max;
+  const auto comfort_dist_opt =
+    get_comfort_distance(lon_dist_to_bound_m, curr_vel, target_vel, curr_acc);
 
-  const auto v_brake_opt = calc_velocity_with_profile(
-    curr_acc, curr_vel, target_vel, j_brake, a_brake, lon_dist_to_bound_m);
-
-  if (!v_brake_opt) {
-    return tl::make_unexpected("Failed to calculate velocity with profile: " + v_brake_opt.error());
+  if (comfort_dist_opt) {
+    const auto v_brake_opt = calc_velocity_with_profile(
+      curr_acc, curr_vel, target_vel, j_comf, a_comf, lon_dist_to_bound_m);
+    return v_brake_opt
+             ? tl::expected<SlowDownPlan, std::string>(
+                 SlowDownPlan{*comfort_dist_opt, *v_brake_opt, a_comf})
+             : tl::make_unexpected(
+                 "Failed to calculate velocity with comfort profile." + v_brake_opt.error());
   }
 
-  const auto d_brake =
-    comfort_dist_opt ? *comfort_dist_opt : d_slow(curr_vel, target_vel, curr_acc, a_brake, j_brake);
+  const auto v_brake_opt =
+    calc_velocity_with_profile(curr_acc, curr_vel, target_vel, j_max, a_max, lon_dist_to_bound_m);
 
-  return SlowDownPlan{d_brake, *v_brake_opt, a_brake};
+  return v_brake_opt ? tl::expected<SlowDownPlan, std::string>(
+                         SlowDownPlan{*comfort_dist_opt, *v_brake_opt, a_comf})
+                     : tl::make_unexpected(
+                         "Failed to calculate velocity with max profile: " + v_brake_opt.error());
 }
 
 double SlowDownInterpolator::interp_velocity(
