@@ -151,7 +151,7 @@ private:
 
   // Heartbeat
   rclcpp::Time stamp_operation_mode_availability_;
-  std::optional<rclcpp::Time> stamp_autonomous_become_unavailable_ = std::nullopt;
+  std::optional<rclcpp::Time> stamp_current_operation_mode_become_unavailable_ = std::nullopt;
   bool is_operation_mode_availability_timeout;
   void checkOperationModeAvailabilityTimeout();
 
@@ -164,13 +164,14 @@ private:
   void handleFailedRequest();
   autoware_adapi_v1_msgs::msg::MrmState::_behavior_type getCurrentMrmBehavior();
   bool isStopped();
-  bool isEmergency() const;
+  bool isEmergency();
   bool isControlModeAutonomous();
-  bool isOperationModeAutonomous();
   bool isPullOverStatusAvailable();
   bool isComfortableStopStatusAvailable();
   bool isEmergencyStopStatusAvailable();
   bool isArrivedAtGoal();
+  bool isAvailableCurrentOperationMode();
+  autoware_adapi_v1_msgs::msg::OperationModeState::_mode_type getCurrentOperationMode();
 };
 
 }  // namespace autoware::mrm_handler
