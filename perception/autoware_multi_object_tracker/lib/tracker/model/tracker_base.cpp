@@ -133,11 +133,8 @@ bool Tracker::updateWithMeasurement(
     }
 
     // update total existence probability
-    const double existence_probability = channel_info.trust_existence_probability
-                                           ? object.existence_probability
-                                           : types::default_existence_probability;
     total_existence_probability_ = updateProbability(
-      total_existence_probability_, existence_probability * probability_true_detection,
+      total_existence_probability_, object.existence_probability * probability_true_detection,
       probability_false_detection);
   }
 
