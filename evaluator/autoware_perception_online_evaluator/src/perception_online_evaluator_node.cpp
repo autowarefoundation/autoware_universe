@@ -130,10 +130,11 @@ void PerceptionOnlineEvaluatorNode::publishMobMetrics()
   tier4_metric_msgs::msg::MetricArray metrics_msg;
 
   // all object count
-  metrics_msg.metric_array.emplace_back(tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
-                                          .name("all_object_count")
-                                          .unit("count")
-                                          .value(std::to_string(metrics.all_object_count)));
+  metrics_msg.metric_array.emplace_back(
+    tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
+      .name("all_object_count")
+      .unit("count")
+      .value(std::to_string(metrics.all_object_count)));
 
   // object count per label
   for (auto & label : label_list_) {
@@ -166,10 +167,11 @@ void PerceptionOnlineEvaluatorNode::publishMobMetrics()
       .value(std::to_string(metrics.latency_by_topic_id[LATENCY_TOPIC_ID_PREDICTION])));
 
   // total latency
-  metrics_msg.metric_array.emplace_back(tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
-                                          .name("total_latency")
-                                          .unit("ms")
-                                          .value(std::to_string(metrics.total_latency)));
+  metrics_msg.metric_array.emplace_back(
+    tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
+      .name("total_latency")
+      .unit("ms")
+      .value(std::to_string(metrics.total_latency)));
 
   if (!metrics_msg.metric_array.empty()) {
     metrics_msg.stamp = now();
