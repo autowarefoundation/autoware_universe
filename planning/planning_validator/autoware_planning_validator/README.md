@@ -2,12 +2,12 @@
 
 The `autoware_planning_validator` node is the last module executed in the planning component, it responsible for checking the validity of the planning trajectory before it is published to control component. The status of the validation can be viewed in the `/diagnostics` and `/validation_status` topics. When an invalidity is detected, the `autoware_planning_validator` will process the trajectory following the selected option: "0. publish the trajectory as it is", "1. stop publishing the trajectory", "2. publish the last validated trajectory".
 
-The `autoware_planning_validator` node loads multiple plugins modules, each responsible for running specific validation checks on the planning trajectoy:
+The `autoware_planning_validator` node loads multiple plugins modules, each responsible for running specific validation checks on the planning trajectory:
 
-- **Latency Checker**: The `autoware_planning_validator_latency_checker` is responible for checking the validity of planning trajectory age
-- **Trajectory Checker**: The `autoware_planning_validator_trajectory_checker` is responible for checking the validity of planning trajectory shape
-- **Intersection Collision Checker**: The `autoware_planning_validator_intersection_collision_checker` is responible for verifying planning trajectory does not result in collision at intersections
-- **Rear Collision Checker**: The `autoware_planning_validator_rear_collision_checker` is responible for verifying planning trajectory does not result in collision with rear vehicles
+- **Latency Checker**: The `autoware_planning_validator_latency_checker` is responsible for checking the validity of planning trajectory age
+- **Trajectory Checker**: The `autoware_planning_validator_trajectory_checker` is responsible for checking the validity of planning trajectory shape
+- **Intersection Collision Checker**: The `autoware_planning_validator_intersection_collision_checker` is responsible for verifying planning trajectory does not result in collision at intersections
+- **Rear Collision Checker**: The `autoware_planning_validator_rear_collision_checker` is responsible for verifying planning trajectory does not result in collision with rear vehicles
 
 ![autoware_planning_validator](./image/planning_validator.drawio.svg)
 

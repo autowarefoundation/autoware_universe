@@ -39,7 +39,7 @@ The following features are supported for trajectory validation and can have thre
 
 ## Parameters
 
-The following parameters are used to configer the different validation checks performed by `trajectory_checker`:
+The following parameters are used to configure the different validation checks performed by `trajectory_checker`:
 
 ### Interval Check
 
@@ -126,7 +126,7 @@ The following parameters are used to configer the different validation checks pe
 
 | Name                                     | Unit | Type   | Description                                                                                                                    | Default value |
 | :--------------------------------------- | :--- | :----- | :----------------------------------------------------------------------------------------------------------------------------- | :------------ |
-| `distance_deviation.enable`              | [-]  | bool   | flag to enable/disable distance devaition validation check                                                                     | true          |
+| `distance_deviation.enable`              | [-]  | bool   | flag to enable/disable distance deviation validation check                                                                     | true          |
 | `distance_deviation.threshold`           | [m]  | double | max valid lateral distance between ego and the nearest trajectory segment                                                      | 100.0         |
 | `distance_deviation.handling_type`       | [-]  | int    | specify handling type for invalid dist deviation (optional parameter, if not specified will use default of planning validator) | unspecified   |
 | `distance_deviation.override_error_diag` | [-]  | bool   | if true, will override error diag from other checks (optional parameter, if not specified will assume FALSE)                   | unspecified   |
@@ -135,7 +135,7 @@ The following parameters are used to configer the different validation checks pe
 
 | Name                                         | Unit | Type   | Description                                                                                                                         | Default value |
 | :------------------------------------------- | :--- | :----- | :---------------------------------------------------------------------------------------------------------------------------------- | :------------ |
-| `lon_distance_deviation.enable`              | [-]  | bool   | flag to enable/disable longitudinal distance devaition validation check                                                             | true          |
+| `lon_distance_deviation.enable`              | [-]  | bool   | flag to enable/disable longitudinal distance deviation validation check                                                             | true          |
 | `lon_distance_deviation.threshold`           | [m]  | double | max valid longitudinal distance between ego and nearest trajectory point                                                            | 2.0           |
 | `lon_distance_deviation.handling_type`       | [-]  | int    | specify handling type for invalid lon. dist deviation (optional parameter, if not specified will use default of planning validator) | unspecified   |
 | `lon_distance_deviation.override_error_diag` | [-]  | bool   | if true, will override error diag from other checks (optional parameter, if not specified will assume FALSE)                        | unspecified   |
@@ -144,7 +144,7 @@ The following parameters are used to configer the different validation checks pe
 
 | Name                                     | Unit  | Type   | Description                                                                                                                        | Default value |
 | :--------------------------------------- | :---- | :----- | :--------------------------------------------------------------------------------------------------------------------------------- | :------------ |
-| `velocity_deviation.enable`              | [-]   | bool   | flag to enable/disable velocity devaition validation check                                                                         | true          |
+| `velocity_deviation.enable`              | [-]   | bool   | flag to enable/disable velocity deviation validation check                                                                         | true          |
 | `velocity_deviation.threshold`           | [m/s] | double | max valid velocity deviation between ego and nearest trajectory point                                                              | 100.0         |
 | `velocity_deviation.handling_type`       | [-]   | int    | specify handling type for invalid velocity deviation (optional parameter, if not specified will use default of planning validator) | unspecified   |
 | `velocity_deviation.override_error_diag` | [-]   | bool   | if true, will override error diag from other checks (optional parameter, if not specified will assume FALSE)                       | unspecified   |
@@ -153,7 +153,7 @@ The following parameters are used to configer the different validation checks pe
 
 | Name                                    | Unit  | Type   | Description                                                                                                                   | Default value |
 | :-------------------------------------- | :---- | :----- | :---------------------------------------------------------------------------------------------------------------------------- | :------------ |
-| `yaw_deviation.enable`                  | [-]   | bool   | flag to enable/disable yaw devaition validation check                                                                         | true          |
+| `yaw_deviation.enable`                  | [-]   | bool   | flag to enable/disable yaw deviation validation check                                                                         | true          |
 | `yaw_deviation.threshold`               | [rad] | double | max valid yaw deviation between ego and nearest trajectory point                                                              | 1.5708        |
 | `yaw_deviation.th_trajectory_yaw_shift` | [rad] | double | minimum change in nearest yaw value between the previous and current trajectory to trigger check                              | 0.1           |
 | `yaw_deviation.handling_type`           | [-]   | int    | specify handling type for invalid yaw deviation (optional parameter, if not specified will use default of planning validator) | unspecified   |
