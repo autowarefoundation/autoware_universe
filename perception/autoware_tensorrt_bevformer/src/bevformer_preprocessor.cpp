@@ -61,8 +61,7 @@ std::vector<cv::Mat> BEVFormerPreprocessor::createLidar2ImgMatrices(
   // Check input sizes
   if (
     sensor2lidar_rotation.size() != 6 || sensor2lidar_translation.size() != 6 ||
-    cam_intrinsics.size() != 6)
-  {
+    cam_intrinsics.size() != 6) {
     RCLCPP_ERROR(
       logger_, "Invalid input sizes for createLidar2ImgMatrices: %zu, %zu, %zu",
       sensor2lidar_rotation.size(), sensor2lidar_translation.size(), cam_intrinsics.size());
@@ -169,8 +168,7 @@ BEVFormerStructuredInput BEVFormerPreprocessor::preprocessImages(
   std::vector<cv::Mat> final_lidar2img_matrices;
   if (
     processed_results.count("lidar2img") &&
-    std::holds_alternative<std::vector<cv::Mat>>(processed_results["lidar2img"]))
-  {
+    std::holds_alternative<std::vector<cv::Mat>>(processed_results["lidar2img"])) {
     final_lidar2img_matrices = std::get<std::vector<cv::Mat>>(processed_results["lidar2img"]);
   } else {
     final_lidar2img_matrices = lidar2img_matrices;

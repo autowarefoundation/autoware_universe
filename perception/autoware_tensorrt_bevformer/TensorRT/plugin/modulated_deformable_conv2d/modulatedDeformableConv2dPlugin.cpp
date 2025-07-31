@@ -155,7 +155,7 @@ size_t ModulatedDeformableConv2dPlugin::getWorkspaceSize(
     col_size = (nInputPlane + 1) / 2 * 2 * kW * kH * outputHeight * outputWidth * sizeof_dtype;
   } else if (sizeof_dtype == 1) {
     col_size = (nInputPlane + 3) / 4 * 4 * kW * kH * ((outputHeight * outputWidth + 3) / 4 * 4) *
-      sizeof_dtype;
+               sizeof_dtype;
     col_size += nOutputPlane / mGroup * ((outputHeight * outputWidth + 3) / 4 * 4) * 4;
   } else {
     col_size = nInputPlane * kW * kH * outputHeight * outputWidth * sizeof_dtype;
@@ -181,8 +181,8 @@ int32_t ModulatedDeformableConv2dPlugin::enqueue(
   int kernel_w = inputDesc[3].dims.d[3];
 
   const float scale_o = outputDesc[0].scale, scale_i = inputDesc[0].scale,
-    scale_off = inputDesc[1].scale, scale_mask = inputDesc[2].scale,
-    scale_w = inputDesc[3].scale;
+              scale_off = inputDesc[1].scale, scale_mask = inputDesc[2].scale,
+              scale_w = inputDesc[3].scale;
 
   const void * x = inputs[0];
   const void * offset = inputs[1];
@@ -201,62 +201,59 @@ int32_t ModulatedDeformableConv2dPlugin::enqueue(
 
   switch (data_type) {
     case nvinfer1::DataType::kFLOAT: {
-        ModulatedDeformConvForwardCUDAKernel<float>(
-          reinterpret_cast<const float *>(x), reinterpret_cast<const float *>(weight),
-          reinterpret_cast<const float *>(bias), reinterpret_cast<const float *>(offset),
-          reinterpret_cast<const float *>(mask), reinterpret_cast<float *>(output), workSpace,
-          batch,
-          channels, height, width, channels_out, kernel_w, kernel_h, mStride.d[0], mStride.d[1],
-          mPadding.d[0], mPadding.d[1], mDilation.d[0], mDilation.d[1], mGroup, mDeformableGroup,
-          im2col_step, m_cublas_handle, stream);
-        break;
-      }
+      ModulatedDeformConvForwardCUDAKernel<float>(
+        reinterpret_cast<const float *>(x), reinterpret_cast<const float *>(weight),
+        reinterpret_cast<const float *>(bias), reinterpret_cast<const float *>(offset),
+        reinterpret_cast<const float *>(mask), reinterpret_cast<float *>(output), workSpace, batch,
+        channels, height, width, channels_out, kernel_w, kernel_h, mStride.d[0], mStride.d[1],
+        mPadding.d[0], mPadding.d[1], mDilation.d[0], mDilation.d[1], mGroup, mDeformableGroup,
+        im2col_step, m_cublas_handle, stream);
+      break;
+    }
 
     case nvinfer1::DataType::kHALF: {
-        if (use_h2) {
-          ModulatedDeformConvForwardCUDAKernel<__half2>(
-            reinterpret_cast<const __half2 *>(x), reinterpret_cast<const __half2 *>(weight),
-            reinterpret_cast<const __half2 *>(bias), reinterpret_cast<const __half2 *>(offset),
-            reinterpret_cast<const __half2 *>(mask), reinterpret_cast<__half2 *>(output), workSpace,
-            batch, channels, height, width, channels_out, kernel_w, kernel_h, mStride.d[0],
-            mStride.d[1], mPadding.d[0], mPadding.d[1], mDilation.d[0], mDilation.d[1], mGroup,
-            mDeformableGroup, im2col_step, m_cublas_handle, stream);
-        } else {
-          ModulatedDeformConvForwardCUDAKernel<__half>(
-            reinterpret_cast<const __half *>(x), reinterpret_cast<const __half *>(weight),
-            reinterpret_cast<const __half *>(bias), reinterpret_cast<const __half *>(offset),
-            reinterpret_cast<const __half *>(mask), reinterpret_cast<__half *>(output), workSpace,
-            batch, channels, height, width, channels_out, kernel_w, kernel_h, mStride.d[0],
-            mStride.d[1], mPadding.d[0], mPadding.d[1], mDilation.d[0], mDilation.d[1], mGroup,
-            mDeformableGroup, im2col_step, m_cublas_handle, stream);
-        }
-        break;
+      if (use_h2) {
+        ModulatedDeformConvForwardCUDAKernel<__half2>(
+          reinterpret_cast<const __half2 *>(x), reinterpret_cast<const __half2 *>(weight),
+          reinterpret_cast<const __half2 *>(bias), reinterpret_cast<const __half2 *>(offset),
+          reinterpret_cast<const __half2 *>(mask), reinterpret_cast<__half2 *>(output), workSpace,
+          batch, channels, height, width, channels_out, kernel_w, kernel_h, mStride.d[0],
+          mStride.d[1], mPadding.d[0], mPadding.d[1], mDilation.d[0], mDilation.d[1], mGroup,
+          mDeformableGroup, im2col_step, m_cublas_handle, stream);
+      } else {
+        ModulatedDeformConvForwardCUDAKernel<__half>(
+          reinterpret_cast<const __half *>(x), reinterpret_cast<const __half *>(weight),
+          reinterpret_cast<const __half *>(bias), reinterpret_cast<const __half *>(offset),
+          reinterpret_cast<const __half *>(mask), reinterpret_cast<__half *>(output), workSpace,
+          batch, channels, height, width, channels_out, kernel_w, kernel_h, mStride.d[0],
+          mStride.d[1], mPadding.d[0], mPadding.d[1], mDilation.d[0], mDilation.d[1], mGroup,
+          mDeformableGroup, im2col_step, m_cublas_handle, stream);
       }
+      break;
+    }
 
     case nvinfer1::DataType::kINT8: {
-        if (data_type_bias == nvinfer1::DataType::kFLOAT) {
-          ModulatedDeformConvForwardCUDAKernel_int8<float>(
-            reinterpret_cast<const int8_4 *>(x), scale_i, reinterpret_cast<const int8_4 *>(weight),
-            scale_w, reinterpret_cast<const float *>(bias),
-            reinterpret_cast<const int8_t *>(offset),
-            scale_off, reinterpret_cast<const int8_t *>(mask), scale_mask,
-            reinterpret_cast<int8_t *>(output), scale_o, workSpace, batch, channels, height, width,
-            channels_out, kernel_w, kernel_h, mStride.d[0], mStride.d[1], mPadding.d[0],
-            mPadding.d[1], mDilation.d[0], mDilation.d[1], mGroup, mDeformableGroup, im2col_step,
-            m_cublas_handle, stream);
-        } else {
-          ModulatedDeformConvForwardCUDAKernel_int8<__half>(
-            reinterpret_cast<const int8_4 *>(x), scale_i, reinterpret_cast<const int8_4 *>(weight),
-            scale_w, reinterpret_cast<const __half *>(bias),
-            reinterpret_cast<const int8_t *>(offset),
-            scale_off, reinterpret_cast<const int8_t *>(mask), scale_mask,
-            reinterpret_cast<int8_t *>(output), scale_o, workSpace, batch, channels, height, width,
-            channels_out, kernel_w, kernel_h, mStride.d[0], mStride.d[1], mPadding.d[0],
-            mPadding.d[1], mDilation.d[0], mDilation.d[1], mGroup, mDeformableGroup, im2col_step,
-            m_cublas_handle, stream);
-        }
-        break;
+      if (data_type_bias == nvinfer1::DataType::kFLOAT) {
+        ModulatedDeformConvForwardCUDAKernel_int8<float>(
+          reinterpret_cast<const int8_4 *>(x), scale_i, reinterpret_cast<const int8_4 *>(weight),
+          scale_w, reinterpret_cast<const float *>(bias), reinterpret_cast<const int8_t *>(offset),
+          scale_off, reinterpret_cast<const int8_t *>(mask), scale_mask,
+          reinterpret_cast<int8_t *>(output), scale_o, workSpace, batch, channels, height, width,
+          channels_out, kernel_w, kernel_h, mStride.d[0], mStride.d[1], mPadding.d[0],
+          mPadding.d[1], mDilation.d[0], mDilation.d[1], mGroup, mDeformableGroup, im2col_step,
+          m_cublas_handle, stream);
+      } else {
+        ModulatedDeformConvForwardCUDAKernel_int8<__half>(
+          reinterpret_cast<const int8_4 *>(x), scale_i, reinterpret_cast<const int8_4 *>(weight),
+          scale_w, reinterpret_cast<const __half *>(bias), reinterpret_cast<const int8_t *>(offset),
+          scale_off, reinterpret_cast<const int8_t *>(mask), scale_mask,
+          reinterpret_cast<int8_t *>(output), scale_o, workSpace, batch, channels, height, width,
+          channels_out, kernel_w, kernel_h, mStride.d[0], mStride.d[1], mPadding.d[0],
+          mPadding.d[1], mDilation.d[0], mDilation.d[1], mGroup, mDeformableGroup, im2col_step,
+          m_cublas_handle, stream);
       }
+      break;
+    }
 
     default:
       printf(
@@ -292,25 +289,24 @@ bool ModulatedDeformableConv2dPlugin::supportsFormatCombination(
   if (pos == 0) {
     if (use_h2) {
       return (inOut[pos].type == nvinfer1::DataType::kFLOAT &&
-             inOut[pos].format == nvinfer1::TensorFormat::kLINEAR) ||
+              inOut[pos].format == nvinfer1::TensorFormat::kLINEAR) ||
              (inOut[pos].type == nvinfer1::DataType::kHALF &&
-             inOut[pos].format == nvinfer1::TensorFormat::kCHW2) ||
+              inOut[pos].format == nvinfer1::TensorFormat::kCHW2) ||
              (inOut[pos].type == nvinfer1::DataType::kINT8 &&
-             inOut[pos].format == nvinfer1::TensorFormat::kCHW4 && use_int8);
+              inOut[pos].format == nvinfer1::TensorFormat::kCHW4 && use_int8);
     }
     return ((inOut[pos].type == nvinfer1::DataType::kFLOAT ||
-           inOut[pos].type == nvinfer1::DataType::kHALF) &&
-           inOut[pos].format == nvinfer1::TensorFormat::kLINEAR) ||
+             inOut[pos].type == nvinfer1::DataType::kHALF) &&
+            inOut[pos].format == nvinfer1::TensorFormat::kLINEAR) ||
            (inOut[pos].type == nvinfer1::DataType::kINT8 &&
-           inOut[pos].format == nvinfer1::TensorFormat::kCHW4 && use_int8);
+            inOut[pos].format == nvinfer1::TensorFormat::kCHW4 && use_int8);
   } else if (nbInputs == 5 && pos == 4 && inOut[0].type == nvinfer1::DataType::kINT8) {
     return (inOut[pos].type == nvinfer1::DataType::kFLOAT ||
-           inOut[pos].type == nvinfer1::DataType::kHALF) &&
+            inOut[pos].type == nvinfer1::DataType::kHALF) &&
            inOut[pos].format == nvinfer1::TensorFormat::kLINEAR;
   } else if (
     (nbInputs == 5 && pos == 4) || pos == nbInputs || pos == 2 ||
-    (pos == 1 && inOut[0].type == nvinfer1::DataType::kINT8))
-  {
+    (pos == 1 && inOut[0].type == nvinfer1::DataType::kINT8)) {
     return inOut[pos].type == inOut[0].type && inOut[pos].format == nvinfer1::TensorFormat::kLINEAR;
   } else {
     return inOut[pos].type == inOut[0].type && inOut[pos].format == inOut[0].format;
