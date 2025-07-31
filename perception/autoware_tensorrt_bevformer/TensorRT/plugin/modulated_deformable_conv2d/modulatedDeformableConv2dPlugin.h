@@ -31,7 +31,7 @@
  * Modified by The Autoware Contributors in 2025.
  * Original creation by Derry Lin on 2022/10/22.
  */
- 
+
 #pragma once
 
 #include "helper.h"

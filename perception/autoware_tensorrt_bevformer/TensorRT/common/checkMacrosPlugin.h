@@ -34,7 +34,7 @@
  * Created by NVIDIA Corporation, modified by Derry Lin (2022/10/23),
  * further modified by The Autoware Contributors in 2025.
  */
- 
+
 // cspell:ignore BEVFORMER, CHECKMACROSPLUGIN, CUBLASASSERT, CUDNNASSERT, CUASSERT, CUERROR
 
 #ifndef PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__COMMON__CHECKMACROSPLUGIN_H_  // NOLINT
