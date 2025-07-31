@@ -115,13 +115,15 @@ cublasStatus_t cublasGemmStridedBatchedWrap(
   cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k,
   const scalar_t * alpha, const scalar_t * A, int lda, long long int strideA, const scalar_t * B,
   int ldb, long long int strideB, const scalar_t * beta, scalar_t * C, int ldc,
-  long long int strideC, int batchCount, cublasGemmAlgo_t algo = CUBLAS_GEMM_DFALT_TENSOR_OP); // NOLINT(runtime/int)
+  long long int strideC, int batchCount,
+  cublasGemmAlgo_t algo = CUBLAS_GEMM_DFALT_TENSOR_OP);  // NOLINT(runtime/int)
 
 cublasStatus_t cublasGemmStridedBatchedWrap_int8(
   cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k,
   const int32_t * alpha, const int8_t * A, int lda, long long int strideA, const int8_t * B,
   int ldb, long long int strideB, const int32_t * beta, const int32_t * C, int ldc,
-  long long int strideC, int batchCount, cublasGemmAlgo_t algo = CUBLAS_GEMM_DFALT_TENSOR_OP); // NOLINT(runtime/int)
+  long long int strideC, int batchCount,
+  cublasGemmAlgo_t algo = CUBLAS_GEMM_DFALT_TENSOR_OP);  // NOLINT(runtime/int)
 
 template <typename scalar_t>
 __device__ __forceinline__ scalar_t bilinear_interpolate(
