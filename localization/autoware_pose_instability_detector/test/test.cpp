@@ -120,7 +120,7 @@ TEST_F(TestPoseInstabilityDetector, output_ok_when_twist_matches_odometry)  // N
   EXPECT_TRUE(diagnostic_status.level == diagnostic_msgs::msg::DiagnosticStatus::OK);
 }
 
-TEST_F(TestPoseInstabilityDetector, output_warn_when_twist_is_too_small)  // NOLINT
+TEST_F(TestPoseInstabilityDetector, output_error_when_twist_is_too_small)  // NOLINT
 {
   // send the first odometry message (start x = 10)
   builtin_interfaces::msg::Time timestamp{};
@@ -162,7 +162,7 @@ TEST_F(TestPoseInstabilityDetector, output_warn_when_twist_is_too_small)  // NOL
   // check result
   const diagnostic_msgs::msg::DiagnosticStatus & diagnostic_status =
     helper_->received_diagnostic_array.status[0];
-  EXPECT_TRUE(diagnostic_status.level == diagnostic_msgs::msg::DiagnosticStatus::WARN);
+  EXPECT_TRUE(diagnostic_status.level == diagnostic_msgs::msg::DiagnosticStatus::ERROR);
 }
 
 TEST_F(TestPoseInstabilityDetector, does_not_crash_even_if_abnormal_odometry_data_comes)  // NOLINT

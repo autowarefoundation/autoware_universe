@@ -166,11 +166,11 @@ void PoseInstabilityDetector::callback_timer()
     kv.value = std::to_string(values[i]);
     status.values.push_back(kv);
     kv.key = labels[i] + ":status";
-    kv.value = (ok ? "OK" : "WARN");
+    kv.value = (ok ? "OK" : "ERROR");
     status.values.push_back(kv);
   }
-  status.level = (all_ok ? DiagnosticStatus::OK : DiagnosticStatus::WARN);
-  status.message = (all_ok ? "OK" : "WARN");
+  status.level = (all_ok ? DiagnosticStatus::OK : DiagnosticStatus::ERROR);
+  status.message = (all_ok ? "OK" : "ERROR");
 
   DiagnosticArray diagnostics;
   diagnostics.header.stamp = latest_odometry_time;
