@@ -193,7 +193,7 @@ bool Tracker::updateWithoutMeasurement(const rclcpp::Time & timestamp)
 }
 
 void Tracker::updateClassification(
-  const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification)
+  const std::vector<autoware_perception_msgs::msg::ObjectClassification> & input)
 {
   // classification algorithm:
   // 0. Normalize the input classification
@@ -221,15 +221,15 @@ void Tracker::updateClassification(
     };
 
   // Normalize the input
-  auto classification_input = classification;
+  auto classification_input = input;
   normalizeProbabilities(classification_input);
 
-  auto & classification_ = object_.classification;
+  auto & classification = object_.classification;
 
   // Update the matched classification probability with a gain
   for (const auto & new_class : classification_input) {
     bool found = false;
-    for (auto & old_class : classification_) {
+    for (auto & old_class : classification) {
       if (new_class.label == old_class.label) {
         old_class.probability += new_class.probability * gain;
         found = true;
@@ -240,19 +240,19 @@ void Tracker::updateClassification(
     if (!found) {
       auto adding_class = new_class;
       adding_class.probability *= gain;
-      classification_.push_back(adding_class);
+      classification.push_back(adding_class);
     }
   }
 
   // If the probability is less than the threshold, remove the class
-  classification_.erase(
+  classification.erase(
     std::remove_if(
-      classification_.begin(), classification_.end(),
+      classification.begin(), classification.end(),
       [remove_threshold](const auto & a_class) { return a_class.probability < remove_threshold; }),
-    classification_.end());
+    classification.end());
 
   // Normalize tracking classification
-  normalizeProbabilities(classification_);
+  normalizeProbabilities(classification);
 }
 
 void Tracker::limitObjectExtension(const object_model::ObjectModel object_model)
