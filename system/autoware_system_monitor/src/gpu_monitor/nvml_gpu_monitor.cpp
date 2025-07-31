@@ -447,14 +447,15 @@ void GPUMonitor::checkFrequency(diagnostic_updater::DiagnosticStatusWrapper & st
   SystemMonitorUtility::stopMeasurement(t_start, stat);
 }
 
-std::vector<GPUMonitorBase::GpuStatus> GPUMonitor::getGPUStatus()
+std::vector<GPUMonitorBase::GpuStatus> GPUMonitor::getGPUStatus() const
 {
   std::vector<GpuStatus> gpu_status_list;
 
   int index = 0;
   for (auto itr = gpus_.begin(); itr != gpus_.end(); ++itr, ++index) {
     nvmlReturn_t ret{};
-    ret = nvmlDeviceGetUtilizationRates(itr->device, &itr->utilization);
+    nvmlUtilization_t utilization;
+    ret = nvmlDeviceGetUtilizationRates(itr->device, &utilization);
     if (ret != NVML_SUCCESS) {
       continue;
     }
@@ -496,7 +497,7 @@ std::vector<GPUMonitorBase::GpuStatus> GPUMonitor::getGPUStatus()
 
     GpuStatus gpu_status;
     gpu_status.name = itr->name;
-    gpu_status.usage = itr->utilization.gpu;
+    gpu_status.usage = utilization.gpu;
     gpu_status.clock = clock;
     gpu_status.temperature = temp;
     gpu_status.thermal_throttling = thermal_throttling;

@@ -89,7 +89,7 @@ void GPUMonitorBase::checkFrequency(diagnostic_updater::DiagnosticStatusWrapper 
   RCLCPP_INFO_ONCE(get_logger(), "GPUMonitorBase::checkFrequency not implemented.");
 }
 
-std::vector<GPUMonitorBase::GpuStatus> GPUMonitorBase::getGPUStatus()
+std::vector<GPUMonitorBase::GpuStatus> GPUMonitorBase::getGPUStatus() const
 {
   RCLCPP_INFO_ONCE(get_logger(), "GPUMonitorBase::getGPUStatus not implemented.");
   return std::vector<GpuStatus>{};

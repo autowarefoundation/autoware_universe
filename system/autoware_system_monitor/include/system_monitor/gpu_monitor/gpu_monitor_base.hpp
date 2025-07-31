@@ -52,8 +52,8 @@ protected:
   {
     std::string name = "";
     float usage = 0.0f;
-    unsigned int clock = 0;
-    unsigned int temperature = 0;
+    int clock = 0;
+    int temperature = 0;
     int thermal_throttling = DiagStatus::OK;
   };
 
@@ -113,7 +113,7 @@ protected:
    * @brief get GPU status
    * @return GPU status list
    */
-  virtual std::vector<GpuStatus> getGPUStatus();
+  virtual std::vector<GpuStatus> getGPUStatus() const;
 
   /**
    * @brief timer callback to collect GPU status

@@ -138,7 +138,7 @@ protected:
    * @brief get GPU status
    * @return GPU status list
    */
-  std::vector<GpuStatus> getGPUStatus() override;
+  std::vector<GpuStatus> getGPUStatus() const override;
 
   /**
    * @brief get supported GPU clocks
