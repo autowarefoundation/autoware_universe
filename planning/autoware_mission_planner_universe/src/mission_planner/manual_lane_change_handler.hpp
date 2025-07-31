@@ -15,9 +15,9 @@
 #ifndef MISSION_PLANNER__MANUAL_LANE_CHANGE_HANDLER_HPP_
 #define MISSION_PLANNER__MANUAL_LANE_CHANGE_HANDLER_HPP_
 
+#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <tier4_planning_msgs/srv/set_preferred_lane.hpp>
 
@@ -41,9 +41,11 @@ class ManualLaneChangeHandler
 {
 public:
   explicit ManualLaneChangeHandler(LaneletRoute::ConstSharedPtr * current_route)
-  : current_route_(current_route), 
-    original_route_{std::nullopt}, 
-    logger_(rclcpp::get_logger("ManualLaneChangeHandler")) {}
+  : current_route_(current_route),
+    original_route_{std::nullopt},
+    logger_(rclcpp::get_logger("ManualLaneChangeHandler"))
+  {
+  }
   LaneChangeRequestResult process_lane_change_request(
     const int64_t ego_lanelet_id, const SetPreferredLane::Request::SharedPtr req);
 
