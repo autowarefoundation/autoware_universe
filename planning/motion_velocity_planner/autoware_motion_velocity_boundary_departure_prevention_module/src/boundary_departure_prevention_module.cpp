@@ -427,6 +427,8 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
   const auto & vehicle_info = planner_data->vehicle_info_;
   const auto & curr_odom = planner_data->current_odometry;
+  const auto curr_vel = planner_data->current_odometry.twist.twist.linear.x;
+  const auto curr_acc = planner_data->current_acceleration.accel.accel.linear.x;
   const auto & curr_pose = curr_odom.pose;
   const auto & curr_position = curr_pose.pose.position;
   const auto & goal_position = raw_trajectory_points.back().pose.position;
@@ -462,7 +464,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
   const auto closest_projections_to_bound_opt =
     boundary_departure_checker_ptr_->get_closest_projections_to_boundaries(
-      *ref_traj_pts_opt, output_.abnormalities_data.projections_to_bound);
+      *ref_traj_pts_opt, output_.abnormalities_data.projections_to_bound, curr_vel, curr_acc);
   toc_curr_watch("get_ref_traj");
 
   if (!closest_projections_to_bound_opt) {
