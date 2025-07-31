@@ -64,6 +64,7 @@
   <exec_depend>autoware_external_velocity_limit_selector</exec_depend>
   <exec_depend>autoware_freespace_planner</exec_depend>
   <exec_depend>autoware_glog_component</exec_depend>
+  <exec_depend>autoware_hazard_lights_selector</exec_depend>
   <exec_depend>autoware_mission_planner_universe</exec_depend>
   <exec_depend>autoware_path_optimizer</exec_depend>
   <exec_depend>autoware_planning_evaluator</exec_depend>
