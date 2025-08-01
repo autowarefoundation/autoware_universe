@@ -41,9 +41,9 @@
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>
 
-enum class RotateInterpolation {Bilinear, Nearest};
+enum class RotateInterpolation { Bilinear, Nearest };
 
-template < typename T >
+template <typename T>
 void rotate(
   T * output, const T * input, const T * angle, const T * center, const int64_t * input_dims,
   RotateInterpolation interp, cudaStream_t stream);
@@ -52,7 +52,7 @@ void rotate_h2(
   __half2 * output, const __half2 * input, const __half * angle, const __half * center,
   const int64_t * input_dims, RotateInterpolation interp, cudaStream_t stream);
 
-template < typename T >
+template <typename T>
 void rotate_int8(
   int8_4 * output, float scale_o, const int8_4 * input, float scale_i, const T * angle,
   const T * center, const int64_t * input_dims, RotateInterpolation interp, cudaStream_t stream);

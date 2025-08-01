@@ -108,16 +108,16 @@ public:
    *
    * @return bool True if initialized
    */
-  bool isInitialized() const {return initialized_;}
+  bool isInitialized() const { return initialized_; }
 
   /**
    * @brief Get the input tensor shapes
    */
-  std::vector<int64_t> getInputImageShape() const {return input_shape_image_;}
-  std::vector<int64_t> getInputPrevBevShape() const {return input_shape_prev_bev_;}
-  std::vector<int64_t> getInputCanBusShape() const {return input_shape_can_bus_;}
-  std::vector<int64_t> getInputLidar2imgShape() const {return input_shape_lidar2img_;}
-  std::vector<int64_t> getOutputBevEmbedShape() const {return output_shape_bev_embed_;}
+  std::vector<int64_t> getInputImageShape() const { return input_shape_image_; }
+  std::vector<int64_t> getInputPrevBevShape() const { return input_shape_prev_bev_; }
+  std::vector<int64_t> getInputCanBusShape() const { return input_shape_can_bus_; }
+  std::vector<int64_t> getInputLidar2imgShape() const { return input_shape_lidar2img_; }
+  std::vector<int64_t> getOutputBevEmbedShape() const { return output_shape_bev_embed_; }
 
 private:
   // TensorRT engine components

@@ -91,7 +91,7 @@ public:
   }
 
   // Create a nested dictionary
-  void setNestedDict(const std::string & key) {(*this)[key] = std::make_shared<DataDict>();}
+  void setNestedDict(const std::string & key) { (*this)[key] = std::make_shared<DataDict>(); }
 };
 
 }  // namespace preprocessing
