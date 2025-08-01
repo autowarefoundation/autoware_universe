@@ -1,14 +1,20 @@
 <?xml version="1.0"?>
 <launch>
   <!-- cspell: ignore semseg, finetune  -->
-  <arg name="yolox_node_name" default="tensorrt_yolox"/>
-  <arg name="image_transport_decompressor_node_name" default="image_transport_decompressor_node"/>
+  <arg name="camera_id" default="0" description="camera id, used for remapping topics"/>
+  <arg name="image_topic_name" default="image_rect_color" description="options `image_raw`, `image_rect_color`"/>
+  <arg name="yolox_node_name" default="tensorrt_yolox$(var camera_id)"/>
+  <arg name="image_transport_decompressor_node_name" default="image_transport_decompressor_node$(var camera_id)"/>
 
   <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
 
-  <arg name="input/image" default="/sensing/camera/camera0/image_rect_color"/>
-  <arg name="output/objects" default="/perception/object_recognition/detection/rois0"/>
-  <arg name="output/mask" default="/perception/object_recognition/detection/mask0"/>
+  <arg name="input/image" default="/sensing/camera/camera$(var camera_id)/$(var image_topic_name)"/>
+  <arg name="output/objects" default="/perception/object_recognition/detection/rois$(var camera_id)"/>
+  <arg name="output/mask" default="/perception/object_recognition/detection/mask$(var camera_id)"/>
+  <arg name="use_bytetrack" default="false" description="use bytetrack for tracking, if false, only detection is performed"/>
+  <let name="yolox_output_objects" value="$(var output/objects)" unless="$(var use_bytetrack)"/>
+  <let name="yolox_output_objects" value="/perception/object_recognition/detection/yolox/rois$(var camera_id)" if="$(var use_bytetrack)"/>
+  <arg name="bytetrack_param_path" default="$(find-pkg-share autoware_bytetrack)/config/bytetrack.param.yaml"/>
 
   <arg name="yolox_param_path" default="$(find-pkg-share autoware_tensorrt_yolox)/config/yolox_s_plus_opt.param.yaml"/>
   <arg
@@ -29,9 +35,10 @@
     <param from="$(var decompress_param_path)"/>
   </node>
 
+  <!-- yolox -->
   <node pkg="autoware_tensorrt_yolox" exec="autoware_tensorrt_yolox_node_exe" name="$(var yolox_node_name)" output="screen">
     <remap from="~/in/image" to="$(var input/image)"/>
-    <remap from="~/out/objects" to="$(var output/objects)"/>
+    <remap from="~/out/objects" to="$(var yolox_output_objects)"/>
     <remap from="~/out/mask" to="$(var output/mask)"/>
     <param from="$(var yolox_param_path)" allow_substs="true"/>
     <param name="model_path" value="$(var model_path)"/>
@@ -39,4 +46,14 @@
     <param name="color_map_path" value="$(var color_map_path)"/>
     <param name="build_only" value="$(var build_only)"/>
   </node>
+
+  <!-- bytetrack -->
+  <group if="$(var use_bytetrack)">
+    <node pkg="autoware_bytetrack" exec="bytetrack_node_exe" name="bytetrack_node$(var camera_id)" output="screen">
+      <remap from="~/in/objects" to="$(var yolox_output_objects)"/>
+      <remap from="~/out/tracks" to="$(var output/objects)"/>
+      <param from="$(var bytetrack_param_path)"/>
+    </node>
+  </group>
+
 </launch>
