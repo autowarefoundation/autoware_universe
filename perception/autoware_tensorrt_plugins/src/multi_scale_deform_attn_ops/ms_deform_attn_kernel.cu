@@ -1,5 +1,5 @@
 // Copyright (c) OpenMMLab. All rights reserved
-#include "autoware/tensorrt_plugins/multi_scale_deform_attn_ops/ms_deform_attn_kernel.hpp"
+#include "autoware/multi_scale_deform_attn_ops/ms_deform_attn_kernel.hpp"
 #include "autoware/tensorrt_plugins/plugin_utils.hpp"
 #include "ms_deform_attn_kernel.cuh"
 

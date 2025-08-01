@@ -20,8 +20,8 @@
 #include <vector>
 
 // #include "cuda_helper.h"
+#include "autoware/rotate_ops/rotate_kernel.h"
 #include "autoware/tensorrt_plugins/plugin_utils.hpp"
-#include "autoware/tensorrt_plugins/rotate_ops/rotateKernel.h"
 
 #include <unistd.h>
 

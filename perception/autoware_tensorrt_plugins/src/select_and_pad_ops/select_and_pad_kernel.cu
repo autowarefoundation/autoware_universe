@@ -16,8 +16,8 @@
  *
  */
 
+#include "autoware/select_and_pad_ops/select_and_pad_kernel.h"
 #include "autoware/tensorrt_plugins/plugin_utils.hpp"
-#include "autoware/tensorrt_plugins/select_and_pad_ops/select_and_pad_kernel.h"
 
 #include <cub/cub.cuh>
 

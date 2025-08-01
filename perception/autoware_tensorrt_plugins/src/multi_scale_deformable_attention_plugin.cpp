@@ -14,7 +14,7 @@
 
 #include "autoware/tensorrt_plugins/multi_scale_deformable_attention_plugin.hpp"
 
-#include "autoware/tensorrt_plugins/multi_scale_deform_attn_ops/ms_deform_attn_kernel.hpp"
+#include "autoware/multi_scale_deform_attn_ops/ms_deform_attn_kernel.hpp"
 #include "autoware/tensorrt_plugins/plugin_utils.hpp"
 
 #include <NvInferRuntime.h>

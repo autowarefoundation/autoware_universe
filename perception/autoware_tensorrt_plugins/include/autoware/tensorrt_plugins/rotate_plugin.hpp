@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__TENSORRT_PLUGINS__ROTATE_PLUGIN_HPP_
 #define AUTOWARE__TENSORRT_PLUGINS__ROTATE_PLUGIN_HPP_
 
-#include "autoware/tensorrt_plugins/rotate_ops/rotateKernel.h"
+#include "autoware/rotate_ops/rotate_kernel.h"
 
 #include <NvInferRuntime.h>
 #include <NvInferRuntimePlugin.h>

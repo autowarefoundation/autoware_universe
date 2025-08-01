@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_PLUGINS__SELECT_AND_PAD_OPS__SELECT_AND_PAD_KERNEL_H_
-#define AUTOWARE__TENSORRT_PLUGINS__SELECT_AND_PAD_OPS__SELECT_AND_PAD_KERNEL_H_
+#ifndef AUTOWARE__SELECT_AND_PAD_OPS__SELECT_AND_PAD_KERNEL_H_
+#define AUTOWARE__SELECT_AND_PAD_OPS__SELECT_AND_PAD_KERNEL_H_
 
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>
@@ -26,4 +26,4 @@ void select_or_pad_launcher(
   T * feat, int * indices, T * invalid, const int B, const int Q, const int C, const int P, T * out,
   cudaStream_t stream);
 
-#endif  // AUTOWARE__TENSORRT_PLUGINS__SELECT_AND_PAD_OPS__SELECT_AND_PAD_KERNEL_H_
+#endif  // AUTOWARE__SELECT_AND_PAD_OPS__SELECT_AND_PAD_KERNEL_H_
