@@ -224,15 +224,6 @@ bool AutonomousMode::isModeChangeAvailable(const InputData & input_data)
   const auto & trajectory_follower_control_cmd = input_data.trajectory_follower_control_cmd.value();
   const auto & control_cmd = input_data.control_cmd.value();
 
-  if (!check_engage_condition_) {
-    setAllOk(debug_info_);
-    return true;
-  }
-
-  const auto current_speed = kinematics.twist.twist.linear.x;
-  const auto target_control_speed = control_cmd.longitudinal.velocity;
-  const auto & param = engage_acceptable_param_;
-
   if (!enable_engage_on_driving_ && std::fabs(current_speed) > 1.0e-2) {
     RCLCPP_INFO_THROTTLE(
       logger_, *clock_, 3000,
@@ -241,6 +232,15 @@ bool AutonomousMode::isModeChangeAvailable(const InputData & input_data)
     debug_info_ = DebugInfo{};  // all false
     return false;
   }
+
+  if (!check_engage_condition_) {
+    setAllOk(debug_info_);
+    return true;
+  }
+
+  const auto current_speed = kinematics.twist.twist.linear.x;
+  const auto target_control_speed = control_cmd.longitudinal.velocity;
+  const auto & param = engage_acceptable_param_;
 
   if (trajectory.points.size() < 2) {
     RCLCPP_WARN_SKIPFIRST_THROTTLE(
