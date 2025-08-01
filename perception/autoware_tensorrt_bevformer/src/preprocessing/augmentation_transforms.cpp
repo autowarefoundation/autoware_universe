@@ -11,6 +11,22 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+/*
+ * Copyright (c) 2025 Multicoreware, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 // cspell:ignore bevformer
 
@@ -47,7 +63,8 @@ DataDict RandomScaleImageMultiViewImageTransform::operator()(DataDict results)
   std::vector<cv::Mat> lidar2img;
   if (
     results.count("lidar2img") &&
-    std::holds_alternative<std::vector<cv::Mat>>(results["lidar2img"])) {
+    std::holds_alternative<std::vector<cv::Mat>>(results["lidar2img"]))
+  {
     lidar2img = std::get<std::vector<cv::Mat>>(results["lidar2img"]);
   } else {
     lidar2img.resize(images.size(), cv::Mat::eye(4, 4, CV_32F));
@@ -242,7 +259,8 @@ DataDict DefaultFormatBundle3D(const DataDict & results)
 
   if (
     formatted_results.count("img") &&
-    std::holds_alternative<std::vector<cv::Mat>>(formatted_results["img"])) {
+    std::holds_alternative<std::vector<cv::Mat>>(formatted_results["img"]))
+  {
     std::vector<cv::Mat> images = std::get<std::vector<cv::Mat>>(formatted_results["img"]);
 
     if (!images.empty()) {
