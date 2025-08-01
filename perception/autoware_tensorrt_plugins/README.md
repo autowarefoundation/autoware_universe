@@ -115,7 +115,7 @@ The implementation of multi-scale deformable attention is derived from [Deformab
 
 ### Rotate and Select and Pad
 
-The rotate and select_and_pad plugin implementations are derived from NVIDIA's VAD (Vehicle Anomaly Detection) reference implementations and are provided under Apache License 2.0:
+The rotate and select_and_pad plugin implementations are derived from [NVIDIA's reference implementations](https://github.com/NVIDIA/DL4AGX/tree/master/AV-Solutions/vad-trt/plugins/rotate) and are provided under Apache License 2.0:
 
 > Copyright (c) 1993-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 >

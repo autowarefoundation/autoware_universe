@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_PLUGINS__ROTATE_OPS__ROTATEKERNEL_H_
-#define AUTOWARE__TENSORRT_PLUGINS__ROTATE_OPS__ROTATEKERNEL_H_
+#ifndef AUTOWARE__ROTATE_OPS__ROTATE_KERNEL_H_
+#define AUTOWARE__ROTATE_OPS__ROTATE_KERNEL_H_
 
 // #include "cuda_int8.h"
 #include <cuda_fp16.h>
@@ -26,4 +26,4 @@ void rotate(
   T * output, T * input, T * angle, T * center, int * input_dims, RotateInterpolation interp,
   cudaStream_t stream);
 
-#endif  // AUTOWARE__TENSORRT_PLUGINS__ROTATE_OPS__ROTATEKERNEL_H_
+#endif  // AUTOWARE__ROTATE_OPS__ROTATE_KERNEL_H_

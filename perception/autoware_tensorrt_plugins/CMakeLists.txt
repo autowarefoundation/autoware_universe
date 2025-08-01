@@ -124,7 +124,7 @@ cuda_add_library(cuda_ops SHARED
   src/scatter_ops/segment_csr.cu
   src/unique_ops/unique.cu
   src/multi_scale_deform_attn_ops/ms_deform_attn_kernel.cu
-  src/rotate_ops/rotateKernel.cu
+  src/rotate_ops/rotate_kernel.cu
   src/select_and_pad_ops/select_and_pad_kernel.cu
 )
 
