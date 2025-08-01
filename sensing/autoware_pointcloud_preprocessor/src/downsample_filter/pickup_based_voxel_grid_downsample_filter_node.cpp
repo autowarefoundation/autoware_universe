@@ -116,7 +116,7 @@ void extract_unique_voxel_point_indices(
   }
 }
 
-void copy_filtered_point(
+void copy_filtered_points(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input, const PointIndexHashMap & index_map,
   sensor_msgs::msg::PointCloud2 & output)
 {
@@ -148,7 +148,7 @@ void downsample_with_voxel_grid(
   extract_unique_voxel_point_indices(input, voxel_size, index_map);
 
   // Copy the filtered points to the output
-  copy_filtered_point(input, index_map, output);
+  copy_filtered_points(input, index_map, output);
 }
 
 void PickupBasedVoxelGridDownsampleFilterComponent::filter(
