@@ -64,6 +64,11 @@ public:
   explicit GPUMonitor(const rclcpp::NodeOptions & options);
 
   /**
+   * @brief destructor
+   */
+  ~GPUMonitor() override;
+
+  /**
    * @brief Terminate the node, log final statements. An independent function is preferred to allow
    * an explicit way to operate actions that require a valid rclcpp context. By default this method
    * does nothing.
@@ -133,6 +138,12 @@ protected:
    */
   void checkFrequency(
     diagnostic_updater::DiagnosticStatusWrapper & stat) override;  // NOLINT(runtime/references)
+
+  /**
+   * @brief get GPU status
+   * @return GPU status list
+   */
+  std::vector<GpuStatus> getGPUStatus() const override;
 
   /**
    * @brief get supported GPU clocks
