@@ -51,12 +51,22 @@
   <let name="operation_mode_transition_manager_plugin" value="AutonomousModeTransitionFlagNode" if="$(var use_control_command_gate)"/>
   <let name="operation_mode_transition_manager_plugin" value="OperationModeTransitionManager" unless="$(var use_control_command_gate)"/>
 
+  <!-- topic remap -->
+  <arg name="output_control_cmd" default="/control/command/control_cmd"/>
+  <arg name="output_gear_cmd" default="/control/command/gear_cmd"/>
+  <arg name="output_turn_indicators_cmd" default="/control/command/turn_indicators_cmd"/>
+  <arg name="output_hazard_lights_cmd" default="/control/command/hazard_lights_cmd"/>
+
   <group>
     <push-ros-namespace namespace="control"/>
 
     <group if="$(var use_control_command_gate)">
       <include file="$(find-pkg-share autoware_control_command_gate)/launch/control_command_gate.launch.xml">
         <arg name="config" value="$(var control_command_gate_param_path)"/>
+        <arg name="output/control" value="$(var output_control_cmd)"/>
+        <arg name="output/gear" value="$(var output_gear_cmd)"/>
+        <arg name="output/turn_indicators" value="$(var output_turn_indicators_cmd)"/>
+        <arg name="output/hazard_lights" value="$(var output_hazard_lights_cmd)"/>
       </include>
     </group>
     <group if="$(var use_control_command_gate)">
@@ -99,10 +109,10 @@
           <remap from="input/kinematics" to="/localization/kinematic_state"/>
           <remap from="input/acceleration" to="/localization/acceleration"/>
           <remap from="output/vehicle_cmd_emergency" to="/control/command/emergency_cmd"/>
-          <remap from="output/control_cmd" to="/control/command/control_cmd"/>
-          <remap from="output/gear_cmd" to="/control/command/gear_cmd"/>
-          <remap from="output/turn_indicators_cmd" to="/control/command/turn_indicators_cmd"/>
-          <remap from="output/hazard_lights_cmd" to="/control/command/hazard_lights_cmd"/>
+          <remap from="output/control_cmd" to="$(var output_control_cmd)"/>
+          <remap from="output/gear_cmd" to="$(var output_gear_cmd)"/>
+          <remap from="output/turn_indicators_cmd" to="$(var output_turn_indicators_cmd)"/>
+          <remap from="output/hazard_lights_cmd" to="$(var output_hazard_lights_cmd)"/>
           <remap from="output/gate_mode" to="/control/current_gate_mode"/>
           <remap from="output/engage" to="/api/autoware/get/engage"/>
           <remap from="output/external_emergency" to="/api/autoware/get/emergency"/>

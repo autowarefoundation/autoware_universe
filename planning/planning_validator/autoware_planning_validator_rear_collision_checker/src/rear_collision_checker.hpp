@@ -34,12 +34,14 @@ public:
   void init(
     rclcpp::Node & node, const std::string & name,
     const std::shared_ptr<PlanningValidatorContext> & context) override;
-  void validate(bool & is_critical) override;
+  void validate() override;
   void setup_diag() override;
   std::string get_module_name() const override { return module_name_; };
 
 private:
-  void fill_rss_distance(PointCloudObjects & objects) const;
+  void fill_rss_distance(
+    PointCloudObjects & objects, const double reaction_time, const double max_deceleration,
+    const double max_velocity) const;
 
   void fill_velocity(PointCloudObject & pointcloud_object);
 
@@ -75,6 +77,9 @@ private:
   void publish_marker(const DebugData & debug) const;
 
   void publish_planning_factor(const DebugData & debug) const;
+
+  void set_diag_status(
+    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg) const;
 
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_voxel_pointcloud_;
 

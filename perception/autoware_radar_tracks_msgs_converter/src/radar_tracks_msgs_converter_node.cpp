@@ -163,10 +163,8 @@ void RadarTracksMsgsConverterNode::onTimer()
 
   TrackedObjects tracked_objects = convertRadarTrackToTrackedObjects();
   DetectedObjects detected_objects = convertTrackedObjectsToDetectedObjects(tracked_objects);
-  if (!tracked_objects.objects.empty()) {
-    pub_tracked_objects_->publish(tracked_objects);
-    pub_detected_objects_->publish(detected_objects);
-  }
+  pub_tracked_objects_->publish(tracked_objects);
+  pub_detected_objects_->publish(detected_objects);
 }
 
 DetectedObjects RadarTracksMsgsConverterNode::convertTrackedObjectsToDetectedObjects(
