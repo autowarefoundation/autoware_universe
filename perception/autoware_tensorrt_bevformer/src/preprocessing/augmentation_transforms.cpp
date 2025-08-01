@@ -63,8 +63,7 @@ DataDict RandomScaleImageMultiViewImageTransform::operator()(DataDict results)
   std::vector<cv::Mat> lidar2img;
   if (
     results.count("lidar2img") &&
-    std::holds_alternative<std::vector<cv::Mat>>(results["lidar2img"]))
-  {
+    std::holds_alternative<std::vector<cv::Mat>>(results["lidar2img"])) {
     lidar2img = std::get<std::vector<cv::Mat>>(results["lidar2img"]);
   } else {
     lidar2img.resize(images.size(), cv::Mat::eye(4, 4, CV_32F));
@@ -259,8 +258,7 @@ DataDict DefaultFormatBundle3D(const DataDict & results)
 
   if (
     formatted_results.count("img") &&
-    std::holds_alternative<std::vector<cv::Mat>>(formatted_results["img"]))
-  {
+    std::holds_alternative<std::vector<cv::Mat>>(formatted_results["img"])) {
     std::vector<cv::Mat> images = std::get<std::vector<cv::Mat>>(formatted_results["img"]);
 
     if (!images.empty()) {

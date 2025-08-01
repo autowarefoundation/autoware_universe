@@ -45,8 +45,7 @@ namespace autoware
 namespace tensorrt_bevformer
 {
 
-BEVFormerDataManager::BEVFormerDataManager(const rclcpp::Logger & logger)
-: logger_(logger)
+BEVFormerDataManager::BEVFormerDataManager(const rclcpp::Logger & logger) : logger_(logger)
 {
   // Initialize prev_frame_info
   prev_frame_info_.scene_token = "";

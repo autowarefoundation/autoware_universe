@@ -47,7 +47,6 @@
   <exec_depend>autoware_simpl_prediction</exec_depend>
   <exec_depend>autoware_simple_object_merger</exec_depend>
   <exec_depend>autoware_tensorrt_bevdet</exec_depend>
-  <!-- cspell:ignore bevformer -->
   <exec_depend>autoware_tensorrt_bevformer</exec_depend>
   <exec_depend>autoware_tensorrt_yolox</exec_depend>
   <exec_depend>autoware_tracking_object_merger</exec_depend>
@@ -60,6 +59,7 @@
   <exec_depend>autoware_traffic_light_visualization</exec_depend>
   <exec_depend>pointcloud_to_laserscan</exec_depend>
   <exec_depend>topic_tools</exec_depend>
+  <!-- cspell:ignore bevformer -->
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
