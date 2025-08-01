@@ -1912,6 +1912,23 @@ void fillObjectStoppableJudge(
   object_data.is_stoppable = same_id_obj->is_stoppable;
 }
 
+void fillObjectAvoidableByDesiredShiftLength(
+  ObjectData & object_data, const ObjectDataArray & previous_target_objects)
+{
+  const auto id = object_data.object.object_id;
+  const auto same_id_obj = std::find_if(
+    previous_target_objects.begin(), previous_target_objects.end(),
+    [&id](const auto & o) { return o.object.object_id == id; });
+
+  if (same_id_obj == previous_target_objects.end()) {
+    object_data.is_avoidable_by_desired_shift_length = false;
+    return;
+  }
+
+  object_data.is_avoidable_by_desired_shift_length =
+    same_id_obj->is_avoidable_by_desired_shift_length;
+}
+
 void compensateLostTargetObjects(
   AvoidancePlanningData & data, const ObjectDataArray & stored_objects,
   const std::shared_ptr<const PlannerData> & planner_data)
@@ -2376,8 +2393,9 @@ std::vector<ExtendedPredictedObject> getSafetyCheckTargetObjects(
 
   const auto append = [&](const auto & objects) {
     std::for_each(objects.objects.begin(), objects.objects.end(), [&](const auto & object) {
-      target_objects.push_back(utils::path_safety_checker::transform(
-        object, time_horizon, parameters->ego_predicted_path_params.time_resolution));
+      target_objects.push_back(
+        utils::path_safety_checker::transform(
+          object, time_horizon, parameters->ego_predicted_path_params.time_resolution));
     });
   };
 

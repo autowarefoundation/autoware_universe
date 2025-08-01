@@ -251,6 +251,17 @@ double DataAssociation::calculateScore(
     return 0.0;
   }
 
+  // when the tracker and measurements are unknown, use generalized IoU
+  if (tracker_label == Label::UNKNOWN && measurement_label == Label::UNKNOWN) {
+    const double & generalized_iou_threshold = config_.unknown_association_giou_threshold;
+    const double generalized_iou = shapes::get2dGeneralizedIoU(tracked_object, measurement_object);
+    if (generalized_iou < generalized_iou_threshold) {
+      return 0.0;
+    }
+    // rescale score to [0, 1]
+    return (generalized_iou - generalized_iou_threshold) / (1.0 - generalized_iou_threshold);
+  }
+
   // area gate
   const double max_area = config_.max_area_matrix(tracker_label, measurement_label);
   const double min_area = config_.min_area_matrix(tracker_label, measurement_label);

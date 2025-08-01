@@ -55,10 +55,10 @@ This includes not only cruising a front vehicle, but also reacting a cut-in and 
 The safe distance is calculated dynamically based on the Responsibility-Sensitive Safety (RSS) by the following equation.
 
 $$
-d_{rss} = v_{ego} t_{idling} + \frac{1}{2} a_{ego} t_{idling}^2 + \frac{v_{ego}^2}{2 a_{ego}} - \frac{v_{obstacle}^2}{2 a_{obstacle}},
+d_{rss} = v_{ego} t_{idling} + \frac{v_{ego}^2}{2 a_{ego}} - \frac{v_{obstacle}^2}{2 a_{obstacle}} + l_{margin},
 $$
 
-assuming that $d_{rss}$ is the calculated safe distance, $t_{idling}$ is the idling time for the ego to detect the front vehicle's deceleration, $v_{ego}$ is the ego's current velocity, $v_{obstacle}$ is the front obstacle's current velocity, $a_{ego}$ is the ego's acceleration, and $a_{obstacle}$ is the obstacle's acceleration.
+assuming that $d_{rss}$ is the calculated safe distance, $t_{idling}$ is the idling time for the ego to detect the front vehicle's deceleration, $v_{ego}$ is the ego's current velocity, $v_{obstacle}$ is the front obstacle's current velocity, $a_{ego}$ is the ego's acceleration, $a_{obstacle}$ is the obstacle's acceleration, and $l_{margin}$ is the safety margin.
 These values are parameterized as follows. Other common values such as ego's minimum acceleration is defined in `common.param.yaml`.
 
 | Parameter                                  | Type   | Description                                                                   |
@@ -66,6 +66,7 @@ These values are parameterized as follows. Other common values such as ego's min
 | `cruise_planning.idling_time`              | double | idling time for the ego to detect the front vehicle starting deceleration [s] |
 | `cruise_planning.min_ego_accel_for_rss`    | double | ego's acceleration for RSS [m/ss]                                             |
 | `cruise_planning.min_object_accel_for_rss` | double | front obstacle's acceleration for RSS [m/ss]                                  |
+| `cruise_planning.safe_distance_margin`     | double | safety margin for RSS [m]                                                     |
 
 The detailed formulation is as follows.
 

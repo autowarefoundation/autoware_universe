@@ -58,9 +58,11 @@ void NoStoppingAreaModuleManager::launchNewModules(
 
     if (!isModuleRegistered(module_id)) {
       // assign 1 no stopping area for each module
-      registerModule(std::make_shared<NoStoppingAreaModule>(
-        module_id, lane_id, *m.first, planner_param_, logger_.get_child("no_stopping_area_module"),
-        clock_, time_keeper_, planning_factor_interface_));
+      registerModule(
+        std::make_shared<NoStoppingAreaModule>(
+          module_id, lane_id, *m.first, planner_param_,
+          logger_.get_child("no_stopping_area_module"), clock_, time_keeper_,
+          planning_factor_interface_));
       generate_uuid(module_id);
       updateRTCStatus(
         getUUID(module_id), true, State::WAITING_FOR_EXECUTION,
