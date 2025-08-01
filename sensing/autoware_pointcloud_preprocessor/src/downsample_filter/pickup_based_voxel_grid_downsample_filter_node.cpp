@@ -72,9 +72,9 @@ PickupBasedVoxelGridDownsampleFilterComponent::PickupBasedVoxelGridDownsampleFil
   }
 
   // Initialization of voxel sizes from parameters
-  voxel_size_x_ = declare_parameter<float>("voxel_size_x");
-  voxel_size_y_ = declare_parameter<float>("voxel_size_y");
-  voxel_size_z_ = declare_parameter<float>("voxel_size_z");
+  voxel_size_.x = declare_parameter<float>("voxel_size_x");
+  voxel_size_.y = declare_parameter<float>("voxel_size_y");
+  voxel_size_.z = declare_parameter<float>("voxel_size_z");
 
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
@@ -160,8 +160,7 @@ void PickupBasedVoxelGridDownsampleFilterComponent::filter(
   stop_watch_ptr_->toc("processing_time", true);
 
   // process downsample filter
-  VoxelSize voxel_size = {voxel_size_x_, voxel_size_y_, voxel_size_z_};
-  downsample_with_voxel_grid(*input, voxel_size, output);
+  downsample_with_voxel_grid(*input, voxel_size_, output);
 
   // add processing time for debug
   if (debug_publisher_) {
@@ -189,14 +188,14 @@ PickupBasedVoxelGridDownsampleFilterComponent::param_callback(
   std::scoped_lock lock(mutex_);
 
   // Handling dynamic updates for the voxel sizes
-  if (get_param(p, "voxel_size_x", voxel_size_x_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new distance threshold to: %f.", voxel_size_x_);
+  if (get_param(p, "voxel_size_x", voxel_size_.x)) {
+    RCLCPP_DEBUG(get_logger(), "Setting new voxel_size_x to: %f.", voxel_size_.x);
   }
-  if (get_param(p, "voxel_size_y", voxel_size_y_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new distance threshold to: %f.", voxel_size_y_);
+  if (get_param(p, "voxel_size_y", voxel_size_.y)) {
+    RCLCPP_DEBUG(get_logger(), "Setting new voxel_size_y to: %f.", voxel_size_.y);
   }
-  if (get_param(p, "voxel_size_z", voxel_size_z_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new distance threshold to: %f.", voxel_size_z_);
+  if (get_param(p, "voxel_size_z", voxel_size_.z)) {
+    RCLCPP_DEBUG(get_logger(), "Setting new voxel_size_z to: %f.", voxel_size_.z);
   }
 
   rcl_interfaces::msg::SetParametersResult result;

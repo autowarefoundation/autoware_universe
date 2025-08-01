@@ -51,9 +51,7 @@ protected:
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
 
 private:
-  float voxel_size_x_;  ///< The size of the voxel in the x dimension.
-  float voxel_size_y_;  ///< The size of the voxel in the y dimension.
-  float voxel_size_z_;  ///< The size of the voxel in the z dimension.
+  VoxelSize voxel_size_;  ///< The size of the voxel grid.
 
   /** \brief Parameter service callback result : needed to be hold */
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
