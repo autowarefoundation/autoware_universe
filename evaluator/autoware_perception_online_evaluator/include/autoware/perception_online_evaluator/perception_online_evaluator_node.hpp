@@ -101,14 +101,14 @@ private:
     ObjectClassification::BICYCLE, ObjectClassification::PEDESTRIAN,
   };
 
-  // Subscribers (for both online evaluation and MOB)
+  // Subscribers (for both online evaluation and perception analytics)
   rclcpp::Subscription<PredictedObjects>::SharedPtr objects_sub_;
 
   // Publishers (for online evaluation)
   rclcpp::Publisher<tier4_metric_msgs::msg::MetricArray>::SharedPtr metrics_pub_;
   rclcpp::Publisher<MarkerArray>::SharedPtr pub_marker_;
 
-  // Subscribers and publishers (for MOB)
+  // Subscribers and publishers (for perception analytics)
   rclcpp::Subscription<Float64Stamped>::SharedPtr meas_to_tracked_latency_sub_;
   rclcpp::Subscription<Float64Stamped>::SharedPtr prediction_latency_sub_;
   rclcpp::Publisher<tier4_metric_msgs::msg::MetricArray>::SharedPtr perception_analytics_pub_;
