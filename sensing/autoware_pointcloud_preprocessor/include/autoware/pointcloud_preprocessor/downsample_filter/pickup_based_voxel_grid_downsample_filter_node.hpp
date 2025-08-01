@@ -66,5 +66,6 @@ public:
 };
 }  // namespace autoware::pointcloud_preprocessor
 
-#endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__DOWNSAMPLE_FILTER__PICKUP_BASED_VOXEL_GRID_DOWNSAMPLE_FILTER_NODE_HPP_
-        // // NOLINT
+// clang-format off
+#endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__DOWNSAMPLE_FILTER__PICKUP_BASED_VOXEL_GRID_DOWNSAMPLE_FILTER_NODE_HPP_  // NOLINT
+// clang-format on
