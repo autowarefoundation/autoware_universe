@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2025 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,6 +35,8 @@ BlindSpotModuleManager::BlindSpotModuleManager(rclcpp::Node & node)
 {
   const std::string ns(BlindSpotModuleManager::getModuleName());
   planner_param_ = PlannerParam::init(node, ns);
+  decision_state_pub_ =
+    node.create_publisher<std_msgs::msg::String>("~/debug/blind_spot/decision_state", 1);
 }
 
 void BlindSpotModuleManager::launchNewModules(
@@ -56,12 +58,13 @@ void BlindSpotModuleManager::launchNewModules(
       continue;
     }
     const auto turn_direction =
-      turn_direction_str == "left" ? TurnDirection::LEFT : TurnDirection::RIGHT;
+      turn_direction_str == "left" ? TurnDirection::Left : TurnDirection::Right;
 
     registerModule(
       std::make_shared<BlindSpotModule>(
         module_id, lane_id, turn_direction, planner_data_, planner_param_,
-        logger_.get_child("blind_spot_module"), clock_, time_keeper_, planning_factor_interface_));
+        logger_.get_child("blind_spot_module"), clock_, time_keeper_, planning_factor_interface_,
+        decision_state_pub_));
     generate_uuid(module_id);
     updateRTCStatus(
       getUUID(module_id), true, State::WAITING_FOR_EXECUTION, std::numeric_limits<double>::lowest(),
