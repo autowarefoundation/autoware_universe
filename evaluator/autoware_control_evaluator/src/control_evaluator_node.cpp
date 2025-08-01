@@ -545,6 +545,13 @@ void ControlEvaluatorNode::AddObjectMetricMsg(
   AddMetricMsg(Metric::closest_object_distance, minimum_distance);
 }
 
+void ControlEvaluatorNode::AddVelocityDeviationMetricMsg(const Trajectory & traj, const Pose & ego_pose, const Twist & twist)
+{
+  const double metric_value = metrics::calcLongitudinalVelocityDeviation(traj, ego_pose, twist.linear.x);
+
+  AddMetricMsg(Metric::longitudinal_velocity_deviation, metric_value);
+}
+
 void ControlEvaluatorNode::onTimer()
 {
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
@@ -573,6 +580,7 @@ void ControlEvaluatorNode::onTimer()
     if (traj && !traj->points.empty()) {
       AddLateralDeviationMetricMsg(*traj, ego_pose.position);
       AddYawDeviationMetricMsg(*traj, ego_pose);
+      AddVelocityDeviationMetricMsg(*traj, ego_pose, odom->twist.twist);
     }
 
     getRouteData();
