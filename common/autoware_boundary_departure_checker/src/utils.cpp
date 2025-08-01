@@ -50,7 +50,7 @@ using autoware::boundary_departure_checker::utils::to_segment_2d;
 namespace bg = boost::geometry;
 
 DeparturePoint create_departure_point(
-  const ClosestProjectionToBound & projection_to_bound, const double th_dist_hysteresis_m,
+  const ClosestProjectionToBound & projection_to_bound, const double th_point_merge_distance_m,
   const double lon_offset_m)
 {
   DeparturePoint point;
@@ -58,7 +58,7 @@ DeparturePoint create_departure_point(
   point.lat_dist_to_bound = projection_to_bound.lat_dist;
   point.departure_type = projection_to_bound.departure_type;
   point.point = projection_to_bound.pt_on_bound;
-  point.th_dist_hysteresis = th_dist_hysteresis_m;
+  point.th_point_merge_distance_m = th_point_merge_distance_m;
   point.dist_on_traj = projection_to_bound.lon_dist_on_ref_traj - lon_offset_m;
   point.idx_from_ego_traj = projection_to_bound.ego_sides_idx;
   point.can_be_removed = (point.departure_type == DepartureType::NONE) || point.dist_on_traj <= 0.0;
@@ -633,26 +633,58 @@ double compute_braking_distance(
   return d1 + d2 + v_init * t_braking_delay;
 }
 
+DeparturePoints cluster_by_distance(const DeparturePoints & departure_points)
+{
+  DeparturePoints filtered_points;
+  filtered_points.reserve(departure_points.size());
+  auto ref_point_it = departure_points.begin();
+  filtered_points.push_back(*ref_point_it);
+  for (auto it = std::next(departure_points.begin()); it < departure_points.end(); ++it) {
+    if (
+      it->departure_type == DepartureType::CRITICAL_DEPARTURE ||
+      std::abs(ref_point_it->dist_on_traj - it->dist_on_traj) >
+        ref_point_it->th_point_merge_distance_m) {
+      ref_point_it = it;
+      filtered_points.push_back(*ref_point_it);
+    }
+
+    if (ref_point_it->departure_type == DepartureType::CRITICAL_DEPARTURE) {
+      continue;
+    }
+
+    if (
+      ref_point_it->departure_type == DepartureType::APPROACHING_DEPARTURE ||
+      it->departure_type == DepartureType::APPROACHING_DEPARTURE) {
+      filtered_points.back().departure_type = DepartureType::APPROACHING_DEPARTURE;
+    }
+  }
+  return filtered_points;
+}
+
 DeparturePoints get_departure_points(
   const std::vector<ClosestProjectionToBound> & projections_to_bound,
-  const double th_dist_hysteresis_m, const double lon_offset_m)
+  const double th_point_merge_distance_m, const double lon_offset_m)
 {
   DeparturePoints departure_points;
   departure_points.reserve(projections_to_bound.size());
   for (const auto & projection_to_bound : projections_to_bound) {
     const auto point =
-      create_departure_point(projection_to_bound, th_dist_hysteresis_m, lon_offset_m);
+      create_departure_point(projection_to_bound, th_point_merge_distance_m, lon_offset_m);
 
     if (point.can_be_removed) {
       continue;
     }
-
     departure_points.push_back(point);
   }
 
   std::sort(departure_points.begin(), departure_points.end());
   erase_after_first_match(departure_points);
-  return departure_points;
+
+  if (departure_points.empty()) {
+    return departure_points;
+  }
+
+  return cluster_by_distance(departure_points);
 }
 
 tl::expected<std::vector<lanelet::LineString3d>, std::string> get_uncrossable_linestrings_near_pose(
