@@ -11,14 +11,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+//
 /*
- * Portions of this code are derived from the BEVFormer TensorRT implementation by Derry Lin:
- * https://github.com/DerryHub/BEVFormer_tensorrt
+ * This file includes portions of code directly from the BEVFormer TensorRT implementation
+ * by Derry Lin, available at:
+ *   https://github.com/DerryHub/BEVFormer_tensorrt
  *
- * Original code licensed under the Apache License, Version 2.0 (the "License");
+ * The included code is used under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * You may obtain a copy of the License at:
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -28,7 +29,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modified by The Autoware Contributors in 2025.
+ * The Autoware Contributors have reused this code as-is in 2025, with no modifications.
  * Original creation by Derry Lin on 2022/10/22.
  */
 
@@ -61,13 +62,13 @@
 //    return optimal_block_num;
 //}
 
-#define cudaCheckError()                                                               \
-  {                                                                                    \
-    cudaError_t e = cudaGetLastError();                                                \
-    if (e != cudaSuccess) {                                                            \
+#define cudaCheckError() \
+  { \
+    cudaError_t e = cudaGetLastError(); \
+    if (e != cudaSuccess) { \
       printf("Cuda failure %s:%d: '%s'\n", __FILE__, __LINE__, cudaGetErrorString(e)); \
-      exit(0);                                                                         \
-    }                                                                                  \
+      exit(0); \
+    } \
   }
 
 /**
@@ -80,12 +81,12 @@
  * @param[in] src_dim dim of src tensor
  * @param[in] stream cuda stream handle
  */
-template <class scalar_t>
+template < class scalar_t >
 void memcpyPermute(
   scalar_t * dst, const scalar_t * src, int * src_size, int * permute, int src_dim,
   cudaStream_t stream = 0);
 
-template <typename scalar_t>
+template < typename scalar_t >
 cublasStatus_t cublasGemmWrap(
   cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k,
   const scalar_t * alpha, const scalar_t * A, int lda, const scalar_t * B, int ldb,
@@ -97,7 +98,7 @@ cublasStatus_t cublasGemmWrap_int8(
   const int32_t * alpha, const int8_t * A, int lda, const int8_t * B, int ldb, const int32_t * beta,
   int32_t * C, int ldc, cublasGemmAlgo_t algo = CUBLAS_GEMM_DFALT_TENSOR_OP);
 
-template <typename scalar_t>
+template < typename scalar_t >
 cublasStatus_t cublasGemmBatchedWrap(
   cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k,
   const scalar_t * alpha, const scalar_t * const Aarray[], int lda, const scalar_t * const Barray[],
@@ -110,7 +111,7 @@ cublasStatus_t cublasGemmBatchedWrap_int8(
   int ldb, const int32_t * beta, const int32_t * const Carray[], int ldc, int batchCount,
   cublasGemmAlgo_t algo = CUBLAS_GEMM_DFALT_TENSOR_OP);
 
-template <typename scalar_t>
+template < typename scalar_t >
 cublasStatus_t cublasGemmStridedBatchedWrap(
   cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k,
   const scalar_t * alpha, const scalar_t * A, int lda,
@@ -126,7 +127,7 @@ cublasStatus_t cublasGemmStridedBatchedWrap_int8(
   const int32_t * beta, const int32_t * C, int ldc, long long int strideC,  // NOLINT(runtime/int)
   int batchCount, cublasGemmAlgo_t algo = CUBLAS_GEMM_DFALT_TENSOR_OP);     // NOLINT(runtime/int)
 
-template <typename scalar_t>
+template < typename scalar_t >
 __device__ __forceinline__ scalar_t bilinear_interpolate(
   const scalar_t * __restrict__ input, const int height, const int width, scalar_t y, scalar_t x)
 {

@@ -11,13 +11,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+//
 /*
- * Portions of this code are derived from the BEVFormer TensorRT implementation by Derry Lin:
- * https://github.com/DerryHub/BEVFormer_tensorrt
- * Original code licensed under the Apache License, Version 2.0 (the "License");
+ * This file includes portions of code directly from the BEVFormer TensorRT implementation
+ * by Derry Lin, available at:
+ *   https://github.com/DerryHub/BEVFormer_tensorrt
+ *
+ * The included code is used under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * You may obtain a copy of the License at:
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -26,10 +28,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * The Autoware Contributors have reused this code as-is in 2025, with no modifications.
+ * Original creation by Derry Lin on 2022/10/22.
+ */
 
-* Modified by The Autoware Contributors in 2025.
-* Original creation by Derry Lin on 2022/10/22.
-*/
 #include "cuda_helper.h"
 #include "helper.h"
 #include "modulatedDeformableConv2dKernel.h"

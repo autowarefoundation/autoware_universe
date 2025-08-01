@@ -11,29 +11,24 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+//
 /*
- * SPDX-FileCopyrightText: Copyright (c) 1993-2022 NVIDIA CORPORATION & AFFILIATES. All rights
- * reserved. SPDX-FileCopyrightText: Portions Copyright (c) 2022 Derry Lin SPDX-FileCopyrightText:
- * Portions Copyright (c) 2025 The Autoware Contributors
- *
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 1993-2022 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at:
+ * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Created by NVIDIA Corporation, modified by Derry Lin (2022/10/23),
- * further modified by The Autoware Contributors in 2025.
  */
+
 // cspell:ignore pointable, CUASSERT
 
 #include "checkMacrosPlugin.h"
@@ -55,7 +50,7 @@ namespace plugin
 // initLibNvInferPlugins()
 ILogger * gLogger{};
 
-template <ILogger::Severity kSeverity>
+template<ILogger::Severity kSeverity>
 int LogStream<kSeverity>::Buf::sync()
 {
   std::string s = str();
