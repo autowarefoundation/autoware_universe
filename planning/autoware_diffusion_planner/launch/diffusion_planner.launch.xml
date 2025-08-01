@@ -2,7 +2,7 @@
 <launch>
   <arg name="diffusion_planner_param_path" default="$(find-pkg-share autoware_diffusion_planner)/config/diffusion_planner.param.yaml"/>
 
-  <node pkg="autoware_diffusion_planner" exec="autoware_diffusion_planner_node" name="diffusion_planner_node" output="screen">
+  <node pkg="autoware_diffusion_planner" exec="autoware_diffusion_planner_node" name="diffusion_planner_node" output="both">
     <param from="$(var diffusion_planner_param_path)" allow_substs="true"/>
     <remap from="~/output/trajectory" to="/planning/diffusion_planner/trajectory"/>
     <remap from="~/output/trajectories" to="/planning/generator/diffusion_planner/candidate_trajectories"/>

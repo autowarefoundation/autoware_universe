@@ -182,20 +182,17 @@ struct LaneSegment
   std::vector<BoundarySegment> left_boundaries;
   std::vector<BoundarySegment> right_boundaries;
   std::optional<float> speed_limit_mps{std::nullopt};
-  uint8_t traffic_light;
 
   LaneSegment(
     int64_t id, Polyline polyline, bool is_intersection,
     const std::vector<BoundarySegment> & left_boundaries,
-    const std::vector<BoundarySegment> & right_boundaries, std::optional<float> speed_limit_mps,
-    const uint8_t traffic_light)
+    const std::vector<BoundarySegment> & right_boundaries, std::optional<float> speed_limit_mps)
   : id(id),
     polyline(std::move(polyline)),
     is_intersection(is_intersection),
     left_boundaries(left_boundaries),
     right_boundaries(right_boundaries),
-    speed_limit_mps(speed_limit_mps),
-    traffic_light(traffic_light)
+    speed_limit_mps(speed_limit_mps)
   {
   }
 };
