@@ -37,6 +37,13 @@ else()
   set(CUDA_AVAIL OFF)
 endif()
 
+# Tests
+if(BUILD_TESTING)
+  list(APPEND AMENT_LINT_AUTO_EXCLUDE ament_cmake_uncrustify)
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
+endif()
+
 # TensorRT
 option(TRT_AVAIL "TensorRT available" OFF)
 find_library(NVINFER nvinfer)

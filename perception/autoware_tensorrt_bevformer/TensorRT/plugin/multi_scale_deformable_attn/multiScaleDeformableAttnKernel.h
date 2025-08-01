@@ -11,14 +11,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+//
 /*
- * Portions of this code are derived from the BEVFormer TensorRT implementation by Derry Lin:
- * https://github.com/DerryHub/BEVFormer_tensorrt
+ * This file includes portions of code directly from the BEVFormer TensorRT implementation
+ * by Derry Lin, available at:
+ *   https://github.com/DerryHub/BEVFormer_tensorrt
  *
- * Original code licensed under the Apache License, Version 2.0 (the "License");
+ * The included code is used under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * You may obtain a copy of the License at:
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -28,7 +29,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modified by The Autoware Contributors in 2025.
+ * The Autoware Contributors have reused this code as-is in 2025, with no modifications.
  * Original creation by Derry Lin on 2022/10/22.
  */
 
@@ -40,7 +41,7 @@
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>
 
-template <typename T>
+template < typename T >
 void ms_deformable_im2col_cuda(
   const T * data_value, const int32_t * data_spatial_shapes, const T * data_reference_points,
   const T * data_sampling_offsets, const T * data_attn_weight, const int batch_size,
@@ -55,7 +56,7 @@ void ms_deformable_im2col_cuda_h2(
   const int num_heads, int channels, const int num_levels, const int num_query, const int num_point,
   const int points_per_group, __half2 * data_col, cudaStream_t stream);
 
-template <typename T>
+template < typename T >
 void ms_deformable_im2col_cuda_int8(
   const int8_4 * data_value, float scale_value, const int32_t * data_spatial_shapes,
   const T * data_reference_points, const int8_4 * data_sampling_offsets, float scale_offset,

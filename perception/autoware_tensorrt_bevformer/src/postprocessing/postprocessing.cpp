@@ -11,6 +11,22 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+/*
+ * Copyright (c) 2025 Multicoreware, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #include "../../include/autoware/tensorrt_bevformer/postprocessing/postprocessing.hpp"
 
@@ -105,7 +121,7 @@ PredictionDict decode_single(
   std::partial_sort(
     score_index_pairs.begin(),
     score_index_pairs.begin() + std::min(max_num, static_cast<int>(score_index_pairs.size())),
-    score_index_pairs.end(), [](const auto & a, const auto & b) { return a.first > b.first; });
+    score_index_pairs.end(), [](const auto & a, const auto & b) {return a.first > b.first;});
   int actual_num = std::min(max_num, static_cast<int>(score_index_pairs.size()));
   score_index_pairs.resize(actual_num);
   std::vector<double> scores(actual_num);

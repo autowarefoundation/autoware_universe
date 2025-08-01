@@ -11,6 +11,22 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+/*
+ * Copyright (c) 2025 Multicoreware, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 // cspell:ignore bevformer, thre, caminfo, intrin, canbus, Canbus
 
@@ -78,7 +94,7 @@ TRTBEVFormerNode::TRTBEVFormerNode(const rclcpp::NodeOptions & node_options)
   has_twist_ = this->declare_parameter<bool>("post_process_params.has_twist", true);
   class_names_ = this->declare_parameter<std::vector<std::string>>(
     "post_process_params.class_names", {"car", "truck", "bus", "bicycle", "motorcycle",
-                                        "pedestrian", "traffic_cone", "barrier", "unknown"});
+      "pedestrian", "traffic_cone", "barrier", "unknown"});
   pc_range_ = this->declare_parameter<std::vector<double>>(
     "post_process_params.pc_range", {-51.2, -51.2, -5.0, 51.2, 51.2, 3.0});
   post_center_range_ = this->declare_parameter<std::vector<double>>(
@@ -200,7 +216,8 @@ void TRTBEVFormerNode::initModel()
 
       // Build engine from ONNX (this will skip if engine already exists)
       if (!inference_engine_->buildEngineFromOnnx(
-            onnx_file_, engine_file_, plugin_path_, workspace_size_, precision_type)) {
+          onnx_file_, engine_file_, plugin_path_, workspace_size_, precision_type))
+      {
         RCLCPP_ERROR(this->get_logger(), "Failed to build engine from ONNX");
       } else {
         RCLCPP_INFO(this->get_logger(), "Successfully built/loaded engine");
@@ -233,7 +250,7 @@ void TRTBEVFormerNode::checkInitialization()
 {
   // Check camera info and static transforms
   bool all_camera_info =
-    std::all_of(caminfo_received_.begin(), caminfo_received_.end(), [](bool v) { return v; });
+    std::all_of(caminfo_received_.begin(), caminfo_received_.end(), [](bool v) {return v;});
 
   if (all_camera_info && lidar2ego_transforms_ready_) {
     RCLCPP_INFO(
@@ -301,27 +318,27 @@ void TRTBEVFormerNode::startCameraInfoSubscription()
 {
   sub_f_caminfo_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
     "~/input/topic_img_f/camera_info", rclcpp::QoS{1},
-    [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) { cameraInfoCallback(0, msg); });
+    [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) {cameraInfoCallback(0, msg);});
 
   sub_fr_caminfo_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
     "~/input/topic_img_fr/camera_info", rclcpp::QoS{1},
-    [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) { cameraInfoCallback(1, msg); });
+    [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) {cameraInfoCallback(1, msg);});
 
   sub_fl_caminfo_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
     "~/input/topic_img_fl/camera_info", rclcpp::QoS{1},
-    [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) { cameraInfoCallback(2, msg); });
+    [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) {cameraInfoCallback(2, msg);});
 
   sub_b_caminfo_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
     "~/input/topic_img_b/camera_info", rclcpp::QoS{1},
-    [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) { cameraInfoCallback(3, msg); });
+    [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) {cameraInfoCallback(3, msg);});
 
   sub_bl_caminfo_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
     "~/input/topic_img_bl/camera_info", rclcpp::QoS{1},
-    [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) { cameraInfoCallback(4, msg); });
+    [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) {cameraInfoCallback(4, msg);});
 
   sub_br_caminfo_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
     "~/input/topic_img_br/camera_info", rclcpp::QoS{1},
-    [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) { cameraInfoCallback(5, msg); });
+    [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) {cameraInfoCallback(5, msg);});
 }
 
 void TRTBEVFormerNode::cameraInfoCallback(
@@ -352,7 +369,7 @@ void TRTBEVFormerNode::cameraInfoCallback(
 
   caminfo_received_[idx] = true;
   camera_info_received_flag_ =
-    std::all_of(caminfo_received_.begin(), caminfo_received_.end(), [](bool i) { return i; });
+    std::all_of(caminfo_received_.begin(), caminfo_received_.end(), [](bool i) {return i;});
 
   // Calculate static lidar2ego transform only once when all camera info is available
   if (camera_info_received_flag_ && !lidar2ego_transforms_ready_) {
@@ -366,7 +383,8 @@ void TRTBEVFormerNode::calculateStaticLidar2EgoTransform()
 
   try {
     if (tf_buffer_->canTransform(
-          "base_link", "LIDAR_TOP", lidar_time, rclcpp::Duration::from_seconds(1.0))) {
+        "base_link", "LIDAR_TOP", lidar_time, rclcpp::Duration::from_seconds(1.0)))
+    {
       auto tf_lidar2ego = tf_buffer_->lookupTransform("base_link", "LIDAR_TOP", lidar_time);
       getTransform(tf_lidar2ego, lidar2ego_rot_static_, lidar2ego_trans_static_);
       lidar2ego_transforms_ready_ = true;
@@ -392,7 +410,7 @@ void TRTBEVFormerNode::calculateSensor2LidarTransformsFromTF(
   Eigen::RowVector3d e2g_t = ego2global_trans_ref.vector().transpose();
 
   std::vector<std::string> camera_names = {"CAM_FRONT", "CAM_FRONT_RIGHT", "CAM_FRONT_LEFT",
-                                           "CAM_BACK",  "CAM_BACK_LEFT",   "CAM_BACK_RIGHT"};
+    "CAM_BACK", "CAM_BACK_LEFT", "CAM_BACK_RIGHT"};
 
   for (size_t i = 0; i < img_N_; ++i) {
     if (i >= image_msgs.size()) {
@@ -413,7 +431,8 @@ void TRTBEVFormerNode::calculateSensor2LidarTransformsFromTF(
     bool got_camera_transform = false;
     try {
       if (tf_buffer_->canTransform(
-            "world", "base_link", camera_timestamp, rclcpp::Duration::from_seconds(0.1))) {
+          "world", "base_link", camera_timestamp, rclcpp::Duration::from_seconds(0.1)))
+      {
         auto tf_ego2global_cam = tf_buffer_->lookupTransform(
           "world", "base_link", camera_timestamp, rclcpp::Duration::from_seconds(0.1));
 
@@ -442,7 +461,7 @@ void TRTBEVFormerNode::calculateSensor2LidarTransformsFromTF(
 
     // Calculate R matrix
     Eigen::Matrix3d R = (l2e_r_s_mat.transpose() * e2g_r_s_mat.transpose()) *
-                        (e2g_r_mat_inv.transpose() * l2e_r_mat_inv.transpose());
+      (e2g_r_mat_inv.transpose() * l2e_r_mat_inv.transpose());
 
     // Calculate T vector
     Eigen::Matrix3d combined_inv = e2g_r_mat_inv.transpose() * l2e_r_mat_inv.transpose();
@@ -502,7 +521,8 @@ void TRTBEVFormerNode::callback(
 
   try {
     if (tf_buffer_->canTransform(
-          "world", "base_link", ref_time, rclcpp::Duration::from_seconds(0.5))) {
+        "world", "base_link", ref_time, rclcpp::Duration::from_seconds(0.5)))
+    {
       auto tf_ego2global = tf_buffer_->lookupTransform("world", "base_link", ref_time);
       getTransform(tf_ego2global, ego2global_rot, ego2global_trans);
       RCLCPP_DEBUG(this->get_logger(), "Got ego2global transform for CAN bus processing");
@@ -561,7 +581,7 @@ void TRTBEVFormerNode::callback(
   RCLCPP_INFO(
     this->get_logger(), "Pre-processing : %ld ms",
     std::chrono::duration_cast<std::chrono::milliseconds>(t_preprocess_end - t_preprocess_start)
-      .count());
+    .count());
 
   auto t_inference_start = t_preprocess_end;
 
@@ -589,7 +609,7 @@ void TRTBEVFormerNode::callback(
   RCLCPP_INFO(
     this->get_logger(), "Inference : %ld ms",
     std::chrono::duration_cast<std::chrono::milliseconds>(t_inference_end - t_inference_start)
-      .count());
+    .count());
 
   auto t_postprocess_start = t_inference_end;
 
@@ -627,7 +647,7 @@ void TRTBEVFormerNode::callback(
   RCLCPP_INFO(
     this->get_logger(), "Post-processing : %ld ms",
     std::chrono::duration_cast<std::chrono::milliseconds>(t_postprocess_end - t_postprocess_start)
-      .count());
+    .count());
 
   std::vector<Box3D> batch_results;
   try {

@@ -11,14 +11,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+//
 /*
- * Portions of this code are derived from the BEVFormer TensorRT implementation by Derry Lin:
- * https://github.com/DerryHub/BEVFormer_tensorrt
+ * This file includes portions of code directly from the BEVFormer TensorRT implementation
+ * by Derry Lin, available at:
+ *   https://github.com/DerryHub/BEVFormer_tensorrt
  *
- * Original code licensed under the Apache License, Version 2.0 (the "License");
+ * The included code is used under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * You may obtain a copy of the License at:
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -28,7 +29,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modified by The Autoware Contributors in 2025.
+ * The Autoware Contributors have reused this code as-is in 2025, with no modifications.
  * Original creation by Derry Lin on 2022/10/22.
  */
 
@@ -71,7 +72,8 @@ std::vector<PluginField> RotatePluginCreator::mPluginAttributes;
 PluginFieldCollection RotatePluginCreator2::mFC{};
 std::vector<PluginField> RotatePluginCreator2::mPluginAttributes;
 
-RotatePlugin::RotatePlugin(const int mode, bool use_h2) : use_h2(use_h2)
+RotatePlugin::RotatePlugin(const int mode, bool use_h2)
+: use_h2(use_h2)
 {
   switch (mode) {
     case 0:
@@ -141,44 +143,47 @@ int32_t RotatePlugin::enqueue(
 
   switch (data_type) {
     case DataType::kFLOAT: {
-      rotate<float>(
-        reinterpret_cast<float *>(outputs[0]), reinterpret_cast<const float *>(inputs[0]),
-        reinterpret_cast<const float *>(inputs[1]), reinterpret_cast<const float *>(inputs[2]),
-        &(input_dims.d[0]), mMode, stream);
-      break;
-    }
-
-    case DataType::kHALF: {
-      if (use_h2) {
-        rotate_h2(
-          reinterpret_cast<__half2 *>(outputs[0]), reinterpret_cast<const __half2 *>(inputs[0]),
-          reinterpret_cast<const __half *>(inputs[1]), reinterpret_cast<const __half *>(inputs[2]),
-          &(input_dims.d[0]), mMode, stream);
-      } else {
-        rotate<__half>(
-          reinterpret_cast<__half *>(outputs[0]), reinterpret_cast<const __half *>(inputs[0]),
-          reinterpret_cast<const __half *>(inputs[1]), reinterpret_cast<const __half *>(inputs[2]),
-          &(input_dims.d[0]), mMode, stream);
-      }
-      break;
-    }
-
-    case DataType::kINT8: {
-      if (data_type_angle == DataType::kFLOAT) {
-        rotate_int8(
-          reinterpret_cast<int8_4 *>(outputs[0]), scale_o,
-          reinterpret_cast<const int8_4 *>(inputs[0]), scale_i,
+        rotate<float>(
+          reinterpret_cast<float *>(outputs[0]), reinterpret_cast<const float *>(inputs[0]),
           reinterpret_cast<const float *>(inputs[1]), reinterpret_cast<const float *>(inputs[2]),
           &(input_dims.d[0]), mMode, stream);
-      } else {
-        rotate_int8(
-          reinterpret_cast<int8_4 *>(outputs[0]), scale_o,
-          reinterpret_cast<const int8_4 *>(inputs[0]), scale_i,
-          reinterpret_cast<const __half *>(inputs[1]), reinterpret_cast<const __half *>(inputs[2]),
-          &(input_dims.d[0]), mMode, stream);
+        break;
       }
-      break;
-    }
+
+    case DataType::kHALF: {
+        if (use_h2) {
+          rotate_h2(
+            reinterpret_cast<__half2 *>(outputs[0]), reinterpret_cast<const __half2 *>(inputs[0]),
+            reinterpret_cast<const __half *>(inputs[1]),
+            reinterpret_cast<const __half *>(inputs[2]),
+            &(input_dims.d[0]), mMode, stream);
+        } else {
+          rotate<__half>(
+            reinterpret_cast<__half *>(outputs[0]), reinterpret_cast<const __half *>(inputs[0]),
+            reinterpret_cast<const __half *>(inputs[1]),
+            reinterpret_cast<const __half *>(inputs[2]),
+            &(input_dims.d[0]), mMode, stream);
+        }
+        break;
+      }
+
+    case DataType::kINT8: {
+        if (data_type_angle == DataType::kFLOAT) {
+          rotate_int8(
+            reinterpret_cast<int8_4 *>(outputs[0]), scale_o,
+            reinterpret_cast<const int8_4 *>(inputs[0]), scale_i,
+            reinterpret_cast<const float *>(inputs[1]), reinterpret_cast<const float *>(inputs[2]),
+            &(input_dims.d[0]), mMode, stream);
+        } else {
+          rotate_int8(
+            reinterpret_cast<int8_4 *>(outputs[0]), scale_o,
+            reinterpret_cast<const int8_4 *>(inputs[0]), scale_i,
+            reinterpret_cast<const __half *>(inputs[1]),
+            reinterpret_cast<const __half *>(inputs[2]),
+            &(input_dims.d[0]), mMode, stream);
+        }
+        break;
+      }
 
     default:
       printf("[Rotate] Unsupported data type: %d\n", static_cast<int>(data_type));
@@ -204,22 +209,22 @@ bool RotatePlugin::supportsFormatCombination(
   if (pos == 0) {
     if (use_h2) {
       return (inOut[pos].type == nvinfer1::DataType::kFLOAT &&
-              inOut[pos].format == nvinfer1::TensorFormat::kLINEAR) ||
+             inOut[pos].format == nvinfer1::TensorFormat::kLINEAR) ||
              (inOut[pos].type == nvinfer1::DataType::kHALF &&
-              inOut[pos].format == nvinfer1::TensorFormat::kCHW2) ||
+             inOut[pos].format == nvinfer1::TensorFormat::kCHW2) ||
              (inOut[pos].type == nvinfer1::DataType::kINT8 &&
-              inOut[pos].format == nvinfer1::TensorFormat::kCHW4);
+             inOut[pos].format == nvinfer1::TensorFormat::kCHW4);
     }
     return ((inOut[pos].type == nvinfer1::DataType::kFLOAT ||
-             inOut[pos].type == nvinfer1::DataType::kHALF) &&
-            inOut[pos].format == nvinfer1::TensorFormat::kLINEAR) ||
+           inOut[pos].type == nvinfer1::DataType::kHALF) &&
+           inOut[pos].format == nvinfer1::TensorFormat::kLINEAR) ||
            (inOut[pos].type == nvinfer1::DataType::kINT8 &&
-            inOut[pos].format == nvinfer1::TensorFormat::kCHW4);
+           inOut[pos].format == nvinfer1::TensorFormat::kCHW4);
   } else if (pos == nbInputs) {
     return inOut[pos].type == inOut[0].type && inOut[pos].format == inOut[0].format;
   } else if (inOut[0].type == nvinfer1::DataType::kINT8) {
     return (inOut[pos].type == nvinfer1::DataType::kFLOAT ||
-            inOut[pos].type == nvinfer1::DataType::kHALF) &&
+           inOut[pos].type == nvinfer1::DataType::kHALF) &&
            inOut[pos].format == nvinfer1::TensorFormat::kLINEAR && inOut[pos].type == inOut[1].type;
   } else {
     return inOut[pos].type == inOut[0].type && inOut[pos].format == nvinfer1::TensorFormat::kLINEAR;
@@ -294,7 +299,7 @@ void RotatePlugin::configurePlugin(
   const nvinfer1::DynamicPluginTensorDesc * in, int32_t nbInputs,
   const nvinfer1::DynamicPluginTensorDesc * out,
   int32_t nbOutputs) noexcept  // cppcheck-suppress unknownMacro
-  {PLUGIN_ASSERT(nbInputs == 3)}
+{PLUGIN_ASSERT(nbInputs == 3)}
 
 RotatePluginCreator::RotatePluginCreator()
 {
