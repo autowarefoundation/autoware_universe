@@ -16,8 +16,8 @@
 #define AUTOWARE__PERCEPTION_ONLINE_EVALUATOR__PERCEPTION_ONLINE_EVALUATOR_NODE_HPP_
 
 #include "autoware/perception_online_evaluator/metrics_calculator.hpp"
-#include "autoware/perception_online_evaluator/mob_metrics_calculator.hpp"
 #include "autoware/perception_online_evaluator/parameters.hpp"
+#include "autoware/perception_online_evaluator/perception_analytics_calculator.hpp"
 #include "autoware_utils/math/accumulator.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_ros/buffer.h"
@@ -90,8 +90,8 @@ public:
 
 private:
   // Flags to manager node outputs
-  bool enable_metrics_online_evaluation_{false};
-  bool enable_metrics_mob_{false};
+  bool enable_online_evaluation_{false};
+  bool enable_perception_analytics_{false};
 
   // Label list
   std::vector<uint8_t> label_list_{
@@ -111,7 +111,7 @@ private:
   // Subscribers and publishers (for MOB)
   rclcpp::Subscription<Float64Stamped>::SharedPtr meas_to_tracked_latency_sub_;
   rclcpp::Subscription<Float64Stamped>::SharedPtr prediction_latency_sub_;
-  rclcpp::Publisher<tier4_metric_msgs::msg::MetricArray>::SharedPtr mob_metrics_pub_;
+  rclcpp::Publisher<tier4_metric_msgs::msg::MetricArray>::SharedPtr perception_analytics_pub_;
 
   // Latency cache (by topic id)
   std::array<double, autoware::perception_diagnostics::LATENCY_TOPIC_NUM> latencies_;
@@ -130,8 +130,8 @@ private:
   // Metrics Calculator
   MetricsCalculator metrics_calculator_;
   void publishMetrics();
-  MobMetricsCalculator mob_metrics_calculator_;
-  void publishMobMetrics();
+  PerceptionAnalyticsCalculator perception_analytics_calculator_;
+  void publishPerceptionAnalytics();
 
   // Debug
   void publishDebugMarker();

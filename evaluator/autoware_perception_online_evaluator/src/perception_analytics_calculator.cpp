@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/perception_online_evaluator/mob_metrics_calculator.hpp"
+#include "autoware/perception_online_evaluator/perception_analytics_calculator.hpp"
 
 #include "autoware/object_recognition_utils/object_recognition_utils.hpp"
 
@@ -26,17 +26,18 @@
 namespace autoware::perception_diagnostics
 {
 
-void MobMetricsCalculator::setPredictedObjects(const PredictedObjects & objects)
+void PerceptionAnalyticsCalculator::setPredictedObjects(const PredictedObjects & objects)
 {
   predicted_objects_ = objects;
 }
 
-void MobMetricsCalculator::setLatencies(const std::array<double, LATENCY_TOPIC_NUM> & latencies)
+void PerceptionAnalyticsCalculator::setLatencies(
+  const std::array<double, LATENCY_TOPIC_NUM> & latencies)
 {
   latencies_ = latencies;
 }
 
-FrameMetrics MobMetricsCalculator::computeMetrics(const tf2_ros::Buffer & tf_buffer) const
+FrameMetrics PerceptionAnalyticsCalculator::calculate(const tf2_ros::Buffer & tf_buffer) const
 {
   FrameMetrics metrics;
   metrics.all_object_count = static_cast<uint32_t>(predicted_objects_.objects.size());
@@ -60,7 +61,7 @@ FrameMetrics MobMetricsCalculator::computeMetrics(const tf2_ros::Buffer & tf_buf
       "base_link", objects_frame_id, tf2::TimePointZero, tf2::Duration::zero());
   } catch (const tf2::TransformException & ex) {
     RCLCPP_WARN(
-      rclcpp::get_logger("MobMetricsCalculator"),
+      rclcpp::get_logger("PerceptionAnalyticsCalculator"),
       "TF lookup failed, skipping max distance calculation.");
     return metrics;
   }

@@ -8,7 +8,7 @@ find_package(pluginlib REQUIRED)
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/metrics_calculator.cpp
-  src/mob_metrics_calculator.cpp
+  src/perception_analytics_calculator.cpp
   src/perception_online_evaluator_node.cpp
   src/metrics/deviation_metrics.cpp
   src/metrics/detection_count.cpp

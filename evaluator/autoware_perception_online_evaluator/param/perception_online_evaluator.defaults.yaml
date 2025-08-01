@@ -3,7 +3,7 @@
     #######################################################
     # 1) ONLINE EVALUATION PARAMETERS                     #
     #######################################################
-    enable_metrics_online_evaluation: false
+    enable_online_evaluation: false
 
     selected_metrics:
       - lateral_deviation
@@ -99,9 +99,9 @@
       object_polygon: true
 
     #######################################################
-    # 2) MOB PARAMETERS                                   #
+    # 2) PERCEPTION ANALYTICS PARAMETERS                  #
     #######################################################
-    enable_metrics_mob: true
+    enable_perception_analytics: true
 
     meas_to_tracked_latency_topic_name: /perception/object_recognition/tracking/multi_object_tracker/debug/meas_to_tracked_object_ms
     prediction_latency_topic_name: /perception/object_recognition/prediction/map_based_prediction/debug/processing_time_ms

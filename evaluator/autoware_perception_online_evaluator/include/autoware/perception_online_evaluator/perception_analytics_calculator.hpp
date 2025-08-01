@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__PERCEPTION_ONLINE_EVALUATOR__MOB_METRICS_CALCULATOR_HPP_
-#define AUTOWARE__PERCEPTION_ONLINE_EVALUATOR__MOB_METRICS_CALCULATOR_HPP_
+#ifndef AUTOWARE__PERCEPTION_ONLINE_EVALUATOR__PERCEPTION_ANALYTICS_CALCULATOR_HPP_
+#define AUTOWARE__PERCEPTION_ONLINE_EVALUATOR__PERCEPTION_ANALYTICS_CALCULATOR_HPP_
 
 #include "tf2_ros/buffer.h"
 
@@ -33,7 +33,7 @@ static constexpr size_t LATENCY_TOPIC_ID_MEAS_TO_TRACKED = 0;
 static constexpr size_t LATENCY_TOPIC_ID_PREDICTION = 1;
 
 /**
- * @brief One‐shot, fixed‐size frame metrics for MOB (no allocs)
+ * @brief Single-frame, fixed‐size perception metrics
  */
 struct FrameMetrics
 {
@@ -45,19 +45,19 @@ struct FrameMetrics
 };
 
 /**
- * @brief One‐shot frame metrics calculator for MOB
+ * @brief Calculate single frame metrics for perception analytics
  *
- * Store and calculate metrics:
+ * Analytics contents:
  *  - total object count
  *  - object count by label
  *  - max distance by label (in base_link)
  *  - latency by topic (for nodes in pipeline)
  *  - total latency
  */
-class MobMetricsCalculator
+class PerceptionAnalyticsCalculator
 {
 public:
-  MobMetricsCalculator() = default;
+  PerceptionAnalyticsCalculator() = default;
 
   /**
    * @brief Store the latest objects for computation
@@ -76,7 +76,7 @@ public:
    * @param tf_buffer   TF buffer used for transforms
    * @return FrameMetrics
    */
-  FrameMetrics computeMetrics(const tf2_ros::Buffer & tf_buffer) const;
+  FrameMetrics calculate(const tf2_ros::Buffer & tf_buffer) const;
 
 private:
   PredictedObjects predicted_objects_;
@@ -85,4 +85,4 @@ private:
 
 }  // namespace autoware::perception_diagnostics
 
-#endif  // AUTOWARE__PERCEPTION_ONLINE_EVALUATOR__MOB_METRICS_CALCULATOR_HPP_
+#endif  // AUTOWARE__PERCEPTION_ONLINE_EVALUATOR__PERCEPTION_ANALYTICS_CALCULATOR_HPP_

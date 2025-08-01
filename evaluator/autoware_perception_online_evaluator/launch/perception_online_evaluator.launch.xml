@@ -8,7 +8,7 @@
       <remap from="~/input/objects" to="$(var input/objects)"/>
       <remap from="~/metrics" to="/perception/perception_online_evaluator/metrics"/>
       <remap from="~/markers" to="/perception/perception_online_evaluator/markers"/>
-      <remap from="~/mob_metrics" to="/perception/perception_online_evaluator/mob_metrics"/>
+      <remap from="~/perception_analytics" to="/perception/perception_online_evaluator/perception_analytics"/>
     </node>
   </group>
 </launch>

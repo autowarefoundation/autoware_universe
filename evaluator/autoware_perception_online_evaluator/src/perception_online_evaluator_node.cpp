@@ -60,13 +60,14 @@ PerceptionOnlineEvaluatorNode::PerceptionOnlineEvaluatorNode(
   objects_sub_ = create_subscription<PredictedObjects>(
     "~/input/objects", 1, std::bind(&PerceptionOnlineEvaluatorNode::onObjects, this, _1));
 
-  if (enable_metrics_online_evaluation_) {
+  if (enable_online_evaluation_) {
     metrics_pub_ = create_publisher<tier4_metric_msgs::msg::MetricArray>("~/metrics", 1);
     pub_marker_ = create_publisher<MarkerArray>("~/markers", 10);
   }
 
-  if (enable_metrics_mob_) {
-    mob_metrics_pub_ = create_publisher<tier4_metric_msgs::msg::MetricArray>("~/mob_metrics", 1);
+  if (enable_perception_analytics_) {
+    perception_analytics_pub_ =
+      create_publisher<tier4_metric_msgs::msg::MetricArray>("~/perception_analytics", 1);
 
     const auto latency_topic_meas_to_tracked =
       this->get_parameter("meas_to_tracked_latency_topic_name").as_string();
@@ -122,9 +123,9 @@ void PerceptionOnlineEvaluatorNode::publishMetrics()
   publishDebugMarker();
 }
 
-void PerceptionOnlineEvaluatorNode::publishMobMetrics()
+void PerceptionOnlineEvaluatorNode::publishPerceptionAnalytics()
 {
-  auto metrics = mob_metrics_calculator_.computeMetrics(*tf_buffer_);
+  auto metrics = perception_analytics_calculator_.calculate(*tf_buffer_);
 
   // DiagnosticArray metrics_msg;
   tier4_metric_msgs::msg::MetricArray metrics_msg;
@@ -175,7 +176,7 @@ void PerceptionOnlineEvaluatorNode::publishMobMetrics()
 
   if (!metrics_msg.metric_array.empty()) {
     metrics_msg.stamp = now();
-    mob_metrics_pub_->publish(metrics_msg);
+    perception_analytics_pub_->publish(metrics_msg);
   }
 }
 
@@ -184,44 +185,48 @@ void PerceptionOnlineEvaluatorNode::toMetricMsg(
   tier4_metric_msgs::msg::MetricArray & metrics_msg) const
 {
   // min value
-  metrics_msg.metric_array.emplace_back(tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
-                                          .name(metric + "/min")
-                                          .unit("")
-                                          .value(std::to_string(metric_stat.min())));
+  metrics_msg.metric_array.emplace_back(
+    tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
+      .name(metric + "/min")
+      .unit("")
+      .value(std::to_string(metric_stat.min())));
 
   // max value
-  metrics_msg.metric_array.emplace_back(tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
-                                          .name(metric + "/max")
-                                          .unit("")
-                                          .value(std::to_string(metric_stat.max())));
+  metrics_msg.metric_array.emplace_back(
+    tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
+      .name(metric + "/max")
+      .unit("")
+      .value(std::to_string(metric_stat.max())));
 
   // mean value
-  metrics_msg.metric_array.emplace_back(tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
-                                          .name(metric + "/mean")
-                                          .unit("")
-                                          .value(std::to_string(metric_stat.mean())));
+  metrics_msg.metric_array.emplace_back(
+    tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
+      .name(metric + "/mean")
+      .unit("")
+      .value(std::to_string(metric_stat.mean())));
 }
 
 void PerceptionOnlineEvaluatorNode::toMetricMsg(
   const std::string & metric, const double metric_value,
   tier4_metric_msgs::msg::MetricArray & metrics_msg) const
 {
-  metrics_msg.metric_array.emplace_back(tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
-                                          .name(metric + "/metric_value")
-                                          .unit("")
-                                          .value(std::to_string(metric_value)));
+  metrics_msg.metric_array.emplace_back(
+    tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
+      .name(metric + "/metric_value")
+      .unit("")
+      .value(std::to_string(metric_value)));
 }
 
 void PerceptionOnlineEvaluatorNode::onObjects(const PredictedObjects::ConstSharedPtr objects_msg)
 {
-  if (enable_metrics_online_evaluation_) {
+  if (enable_online_evaluation_) {
     metrics_calculator_.setPredictedObjects(*objects_msg, *tf_buffer_);
     publishMetrics();
   }
-  if (enable_metrics_mob_) {
-    mob_metrics_calculator_.setPredictedObjects(*objects_msg);
-    mob_metrics_calculator_.setLatencies(latencies_);
-    publishMobMetrics();
+  if (enable_perception_analytics_) {
+    perception_analytics_calculator_.setPredictedObjects(*objects_msg);
+    perception_analytics_calculator_.setLatencies(latencies_);
+    publishPerceptionAnalytics();
   }
 }
 
@@ -323,7 +328,7 @@ rcl_interfaces::msg::SetParametersResult PerceptionOnlineEvaluatorNode::onParame
 
   auto & p = parameters_;
 
-  if (enable_metrics_online_evaluation_) {
+  if (enable_online_evaluation_) {
     update_param<size_t>(parameters, "smoothing_window_size", p->smoothing_window_size);
     update_param<double>(parameters, "stopped_velocity_threshold", p->stopped_velocity_threshold);
     update_param<double>(
@@ -385,7 +390,7 @@ rcl_interfaces::msg::SetParametersResult PerceptionOnlineEvaluatorNode::onParame
     }
   }
 
-  if (enable_metrics_mob_) {
+  if (enable_perception_analytics_) {
     update_param<std::string>(
       parameters, "meas_to_tracked_latency_topic_name", p->meas_to_tracked_latency_topic_name);
     update_param<std::string>(
@@ -403,15 +408,14 @@ void PerceptionOnlineEvaluatorNode::initParameter()
 {
   using autoware_utils::get_or_declare_parameter;
 
-  this->declare_parameter("enable_metrics_online_evaluation", false);
-  this->declare_parameter("enable_metrics_mob", true);
-  enable_metrics_online_evaluation_ =
-    this->get_parameter("enable_metrics_online_evaluation").as_bool();
-  enable_metrics_mob_ = this->get_parameter("enable_metrics_mob").as_bool();
+  this->declare_parameter("enable_online_evaluation", false);
+  this->declare_parameter("enable_perception_analytics", true);
+  enable_online_evaluation_ = this->get_parameter("enable_online_evaluation").as_bool();
+  enable_perception_analytics_ = this->get_parameter("enable_perception_analytics").as_bool();
 
   auto & p = parameters_;
 
-  if (enable_metrics_online_evaluation_) {
+  if (enable_online_evaluation_) {
     p->smoothing_window_size = get_or_declare_parameter<int>(*this, "smoothing_window_size");
     p->prediction_time_horizons =
       get_or_declare_parameter<std::vector<double>>(*this, "prediction_time_horizons");
@@ -492,7 +496,7 @@ void PerceptionOnlineEvaluatorNode::initParameter()
     }
   }
 
-  if (enable_metrics_mob_) {
+  if (enable_perception_analytics_) {
     p->meas_to_tracked_latency_topic_name =
       get_or_declare_parameter<std::string>(*this, "meas_to_tracked_latency_topic_name");
     p->prediction_latency_topic_name =

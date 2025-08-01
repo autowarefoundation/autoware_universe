@@ -52,7 +52,7 @@ struct DebugMarkerParameter
 
 struct Parameters
 {
-  bool enable_metrics_online_evaluation{false};
+  bool enable_online_evaluation{false};
   std::vector<Metric> metrics;
   size_t smoothing_window_size{0};
   std::vector<double> prediction_time_horizons;
@@ -64,7 +64,7 @@ struct Parameters
   DebugMarkerParameter debug_marker_parameters;
   // parameters depend on object class
   std::unordered_map<uint8_t, ObjectParameter> object_parameters;
-  bool enable_metrics_mob{false};
+  bool enable_perception_analytics{false};
   std::string meas_to_tracked_latency_topic_name;
   std::string prediction_latency_topic_name;
 };
