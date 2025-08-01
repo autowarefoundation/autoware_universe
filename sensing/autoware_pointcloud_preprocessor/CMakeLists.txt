@@ -103,6 +103,7 @@ ament_auto_add_library(pointcloud_preprocessor_filter SHARED
   src/outlier_filter/ring_outlier_filter_node.cpp
   src/outlier_filter/radius_search_2d_outlier_filter_node.cpp
   src/outlier_filter/voxel_grid_outlier_filter_node.cpp
+  src/outlier_filter/polar_voxel_outlier_filter_node.cpp
   src/outlier_filter/dual_return_outlier_filter_node.cpp
   src/passthrough_filter/passthrough_filter_node.cpp
   src/passthrough_filter/passthrough_filter_uint16_node.cpp
@@ -180,6 +181,11 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
 rclcpp_components_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::VoxelGridOutlierFilterComponent"
   EXECUTABLE voxel_grid_outlier_filter_node)
+
+# -- Polar Voxel Outlier Filter --
+rclcpp_components_register_node(pointcloud_preprocessor_filter
+  PLUGIN "autoware::pointcloud_preprocessor::PolarVoxelOutlierFilterComponent"
+  EXECUTABLE polar_voxel_outlier_filter_node)
 
 # -- Radius Search 2D Outlier Filter --
 rclcpp_components_register_node(pointcloud_preprocessor_filter
