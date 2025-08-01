@@ -24,6 +24,7 @@
 #include <lanelet2_core/Forward.h>
 
 #include <memory>
+#include <unordered_map>
 #include <unordered_set>
 
 namespace autoware::traffic_light
@@ -40,6 +41,12 @@ private:
   using TrafficSignalArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
   using TrafficSignal = autoware_perception_msgs::msg::TrafficLightGroup;
 
+  struct ExternalTrafficLightInfo
+  {
+    TrafficSignal signal;
+    rclcpp::Time timestamp;
+  };
+
   rclcpp::Subscription<LaneletMapBin>::SharedPtr map_sub_;
   rclcpp::Subscription<TrafficSignalArray>::SharedPtr perception_tlr_sub_;
   rclcpp::Subscription<TrafficSignalArray>::SharedPtr external_tlr_sub_;
@@ -49,6 +56,7 @@ private:
   void onPerceptionMsg(const TrafficSignalArray::ConstSharedPtr msg);
   void onExternalMsg(const TrafficSignalArray::ConstSharedPtr msg);
   void arbitrateAndPublish(const builtin_interfaces::msg::Time & stamp);
+  void cleanupExpiredExternalSignals(const rclcpp::Time & current_time, double tolerance);
 
   std::unique_ptr<std::unordered_set<lanelet::Id>> map_regulatory_elements_set_;
 
@@ -59,7 +67,7 @@ private:
   bool enable_signal_matching_;
 
   TrafficSignalArray latest_perception_msg_;
-  TrafficSignalArray latest_external_msg_;
+  std::unordered_map<lanelet::Id, ExternalTrafficLightInfo> external_traffic_lights_;
   std::unique_ptr<SignalMatchValidator> signal_match_validator_;
 };
 }  // namespace autoware::traffic_light
