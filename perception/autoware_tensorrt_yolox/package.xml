@@ -36,6 +36,7 @@
   <depend>sensor_msgs</depend>
   <depend>tier4_perception_msgs</depend>
 
+  <exec_depend>autoware_bytetrack</exec_depend>
   <exec_depend>autoware_image_transport_decompressor</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>

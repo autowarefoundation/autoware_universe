@@ -55,5 +55,4 @@
       <param from="$(var bytetrack_param_path)"/>
     </node>
   </group>
-
 </launch>
