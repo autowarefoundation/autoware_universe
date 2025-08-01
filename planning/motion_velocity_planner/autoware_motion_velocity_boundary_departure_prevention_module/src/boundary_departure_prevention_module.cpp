@@ -86,6 +86,8 @@ void BoundaryDeparturePreventionModule::init(
 
       stat.summary(lvl, msg);
     });
+  last_found_time_ptr_ = std::make_unique<double>(clock_ptr_->now().seconds());
+  last_lost_time_ptr_ = std::make_unique<double>(clock_ptr_->now().seconds());
 }
 
 void BoundaryDeparturePreventionModule::update_parameters(
@@ -425,6 +427,8 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
   const auto & vehicle_info = planner_data->vehicle_info_;
   const auto & curr_odom = planner_data->current_odometry;
+  const auto curr_vel = planner_data->current_odometry.twist.twist.linear.x;
+  const auto curr_acc = planner_data->current_acceleration.accel.accel.linear.x;
   const auto & curr_pose = curr_odom.pose;
   const auto & curr_position = curr_pose.pose.position;
   const auto & goal_position = raw_trajectory_points.back().pose.position;
@@ -460,7 +464,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
   const auto closest_projections_to_bound_opt =
     boundary_departure_checker_ptr_->get_closest_projections_to_boundaries(
-      *ref_traj_pts_opt, output_.abnormalities_data.projections_to_bound);
+      *ref_traj_pts_opt, output_.abnormalities_data.projections_to_bound, curr_vel, curr_acc);
   toc_curr_watch("get_ref_traj");
 
   if (!closest_projections_to_bound_opt) {
@@ -492,21 +496,65 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
     node_param_.th_pt_shift_dist_m, node_param_.th_pt_shift_angle_rad);
   toc_curr_watch("update_critical_departure_points");
 
-  if (output_.departure_intervals.empty()) {
+  const auto is_departure_persist = std::invoke([&]() {
+    const auto is_found =
+      std::any_of(g_side_keys.begin(), g_side_keys.end(), [&](const auto side_key) {
+        return !closest_projections_to_bound_opt.value()[side_key].empty();
+      });
+
+    if (!is_found) {
+      *last_lost_time_ptr_ = clock_ptr_->now().seconds();
+      return false;
+    }
+
+    const auto t_diff = clock_ptr_->now().seconds() - *last_lost_time_ptr_;
+    return t_diff >= node_param_.on_time_buffer_s;
+  });
+
+  if (output_.departure_intervals.empty() && is_departure_persist) {
     output_.departure_intervals = utils::init_departure_intervals(
       *ref_traj_pts_opt, output_.departure_points,
       ego_dist_on_traj_with_offset_m(!planner_data->is_driving_forward),
       node_param_.slow_down_types);
-  } else {
+  }
+
+  if (!output_.departure_intervals.empty()) {
     auto & departure_intervals_mut = output_.departure_intervals;
     const auto & ref_traj_front_pt = raw_trajectory_points.front();
+
+    const auto is_reset_interval = std::invoke([&]() {
+      const auto is_departure_found = std::any_of(
+        g_side_keys.begin(), g_side_keys.end(),
+        [&](const auto side_key) { return !output_.departure_points[side_key].empty(); });
+
+      if (is_departure_found) {
+        *last_found_time_ptr_ = clock_ptr_->now().seconds();
+        return false;
+      }
+      const auto t_diff = clock_ptr_->now().seconds() - *last_found_time_ptr_;
+      return t_diff >= node_param_.off_time_buffer_s;
+    });
+
     utils::update_departure_intervals(
       departure_intervals_mut, output_.departure_points, *ref_traj_pts_opt,
       vehicle_info.vehicle_length_m, ref_traj_front_pt,
       ego_dist_on_traj_with_offset_m(!planner_data->is_driving_forward),
       node_param_.th_pt_shift_dist_m, node_param_.th_pt_shift_angle_rad,
-      node_param_.slow_down_types);
+      node_param_.slow_down_types, is_reset_interval, is_departure_persist);
+
+    if (is_reset_interval) {
+      *last_found_time_ptr_ = clock_ptr_->now().seconds();
+    }
+    const auto reset_lost_time =
+      std::any_of(g_side_keys.begin(), g_side_keys.end(), [&](const auto side_key) {
+        return output_.departure_intervals.empty() || output_.departure_points[side_key].empty();
+      });
+
+    if (reset_lost_time) {
+      *last_lost_time_ptr_ = clock_ptr_->now().seconds();
+    }
   }
+
   toc_curr_watch("update_departure_intervals");
 
   slow_down_wall_marker_.markers.clear();

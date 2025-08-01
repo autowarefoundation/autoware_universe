@@ -138,14 +138,18 @@ DepartureIntervals init_departure_intervals(
  * @param[in] ego_dist_from_traj_front Ego’s current distance along the trajectory.
  * @param[in] th_pt_shift_dist_m Threshold distance for detecting shifted points.
  * @param[in] th_pt_shift_angle_rad Threshold angle for detecting shifted points.
+ * @param[in] enable_type Set of enabled departure types to consider for intervals.
  * @param[in] enable_type Enabled departure types.
+ * @param[in] is_reset_interval Flags to reset departure intervals if no departure point found.
+ * @param[in] is_departure_persist Checks to insert departure point to departure intervals.
  */
 void update_departure_intervals(
   DepartureIntervals & departure_intervals, Side<DeparturePoints> & departure_points,
   const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const double vehicle_length_m,
   const TrajectoryPoint & ref_traj_fr_pt, const double ego_dist_from_traj_front,
   const double th_pt_shift_dist_m, const double th_pt_shift_angle_rad,
-  const std::unordered_set<DepartureType> & enable_type);
+  const std::unordered_set<DepartureType> & enable_type, const bool is_reset_interval,
+  const bool is_departure_persist);
 
 /**
  * @brief Refresh and add critical departure points based on updated trajectory.
