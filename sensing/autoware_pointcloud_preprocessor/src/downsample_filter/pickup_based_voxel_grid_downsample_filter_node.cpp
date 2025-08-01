@@ -85,7 +85,7 @@ using VoxelKey = std::array<int, 3>;
 using PointIndexHashMap = robin_hood::unordered_map<VoxelKey, size_t, VoxelKeyHash, VoxelKeyEqual>;
 
 void extract_unique_voxel_point_indices(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input, const VoxelSize & voxel_size,
+  const sensor_msgs::msg::PointCloud2 & input, const VoxelSize & voxel_size,
   PointIndexHashMap & index_map)
 {
   constexpr float large_num_offset = 100000.0;
@@ -93,9 +93,9 @@ void extract_unique_voxel_point_indices(
   const float inverse_voxel_size_y = 1.0 / voxel_size.y;
   const float inverse_voxel_size_z = 1.0 / voxel_size.z;
 
-  sensor_msgs::PointCloud2ConstIterator<float> iter_x(*input, "x");
-  sensor_msgs::PointCloud2ConstIterator<float> iter_y(*input, "y");
-  sensor_msgs::PointCloud2ConstIterator<float> iter_z(*input, "z");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_x(input, "x");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_y(input, "y");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_z(input, "z");
 
   // Process each point in the point cloud
   size_t point_index = 0;
@@ -117,34 +117,34 @@ void extract_unique_voxel_point_indices(
 }
 
 void copy_filtered_points(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input, const PointIndexHashMap & index_map,
+  const sensor_msgs::msg::PointCloud2 & input, const PointIndexHashMap & index_map,
   sensor_msgs::msg::PointCloud2 & output)
 {
   size_t output_global_offset = 0;
-  output.data.resize(index_map.size() * input->point_step);
+  output.data.resize(index_map.size() * input.point_step);
   for (const auto & kv : index_map) {
-    const size_t byte_offset = kv.second * input->point_step;
-    std::memcpy(&output.data[output_global_offset], &input->data[byte_offset], input->point_step);
-    output_global_offset += input->point_step;
+    const size_t byte_offset = kv.second * input.point_step;
+    std::memcpy(&output.data[output_global_offset], &input.data[byte_offset], input.point_step);
+    output_global_offset += input.point_step;
   }
 
-  output.header.frame_id = input->header.frame_id;
+  output.header.frame_id = input.header.frame_id;
   output.height = 1;
-  output.fields = input->fields;
-  output.is_bigendian = input->is_bigendian;
-  output.point_step = input->point_step;
-  output.is_dense = input->is_dense;
+  output.fields = input.fields;
+  output.is_bigendian = input.is_bigendian;
+  output.point_step = input.point_step;
+  output.is_dense = input.is_dense;
   output.width = static_cast<uint32_t>(output.data.size() / output.height / output.point_step);
   output.row_step = static_cast<uint32_t>(output.data.size() / output.height);
 }
 
 void downsample_with_voxel_grid(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input, const VoxelSize & voxel_size,
+  const sensor_msgs::msg::PointCloud2 & input, const VoxelSize & voxel_size,
   sensor_msgs::msg::PointCloud2 & output)
 {
   // Extract unique voxel point indices
   PointIndexHashMap index_map;
-  index_map.reserve(input->data.size() / input->point_step);
+  index_map.reserve(input.data.size() / input.point_step);
   extract_unique_voxel_point_indices(input, voxel_size, index_map);
 
   // Copy the filtered points to the output
@@ -161,7 +161,7 @@ void PickupBasedVoxelGridDownsampleFilterComponent::filter(
 
   // process downsample filter
   VoxelSize voxel_size = {voxel_size_x_, voxel_size_y_, voxel_size_z_};
-  downsample_with_voxel_grid(input, voxel_size, output);
+  downsample_with_voxel_grid(*input, voxel_size, output);
 
   // add processing time for debug
   if (debug_publisher_) {

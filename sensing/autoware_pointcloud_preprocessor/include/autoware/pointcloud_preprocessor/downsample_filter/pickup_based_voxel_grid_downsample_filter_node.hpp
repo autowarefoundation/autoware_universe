@@ -32,7 +32,7 @@ struct VoxelSize
 };
 
 void downsample_with_voxel_grid(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input, const VoxelSize & voxel_size,
+  const sensor_msgs::msg::PointCloud2 & input, const VoxelSize & voxel_size,
   sensor_msgs::msg::PointCloud2 & output);
 
 /**

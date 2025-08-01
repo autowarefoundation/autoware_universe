@@ -26,18 +26,18 @@
 #include <vector>
 
 // Helper function to create a test point cloud
-sensor_msgs::msg::PointCloud2::SharedPtr createTestPointCloud(
+sensor_msgs::msg::PointCloud2 createTestPointCloud(
   const std::vector<std::array<float, 3>> & points, const std::string & frame_id = "base_link")
 {
-  auto cloud = std::make_shared<sensor_msgs::msg::PointCloud2>();
-  cloud->header.frame_id = frame_id;
-  cloud->header.stamp = rclcpp::Clock().now();
-  cloud->height = 1;
-  cloud->is_dense = true;
-  cloud->is_bigendian = false;
+  auto cloud = sensor_msgs::msg::PointCloud2();
+  cloud.header.frame_id = frame_id;
+  cloud.header.stamp = rclcpp::Clock().now();
+  cloud.height = 1;
+  cloud.is_dense = true;
+  cloud.is_bigendian = false;
 
   // Create point cloud with x, y, z fields
-  sensor_msgs::PointCloud2Modifier modifier(*cloud);
+  sensor_msgs::PointCloud2Modifier modifier(cloud);
   modifier.setPointCloud2Fields(
     3, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1, sensor_msgs::msg::PointField::FLOAT32,
     "z", 1, sensor_msgs::msg::PointField::FLOAT32);
@@ -45,9 +45,9 @@ sensor_msgs::msg::PointCloud2::SharedPtr createTestPointCloud(
   // Add test points
   modifier.resize(points.size());
 
-  sensor_msgs::PointCloud2Iterator<float> iter_x(*cloud, "x");
-  sensor_msgs::PointCloud2Iterator<float> iter_y(*cloud, "y");
-  sensor_msgs::PointCloud2Iterator<float> iter_z(*cloud, "z");
+  sensor_msgs::PointCloud2Iterator<float> iter_x(cloud, "x");
+  sensor_msgs::PointCloud2Iterator<float> iter_y(cloud, "y");
+  sensor_msgs::PointCloud2Iterator<float> iter_z(cloud, "z");
 
   for (const auto & point : points) {
     *iter_x = point[0];
@@ -105,10 +105,10 @@ TEST(DownsampleWithVoxelGridTest, TestBasicDownsampling)
   EXPECT_EQ(output_points.size(), 3);
 
   // Check that output cloud has correct metadata
-  EXPECT_EQ(output_cloud.header.frame_id, input_cloud->header.frame_id);
+  EXPECT_EQ(output_cloud.header.frame_id, input_cloud.header.frame_id);
   EXPECT_EQ(output_cloud.height, 1);
   EXPECT_EQ(output_cloud.width, 3);
-  EXPECT_EQ(output_cloud.fields.size(), input_cloud->fields.size());
+  EXPECT_EQ(output_cloud.fields.size(), input_cloud.fields.size());
 }
 
 TEST(DownsampleWithVoxelGridTest, TestEmptyPointCloud)
