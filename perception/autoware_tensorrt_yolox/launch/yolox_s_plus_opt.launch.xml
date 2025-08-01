@@ -2,7 +2,7 @@
 <launch>
   <!-- cspell: ignore semseg, finetune  -->
   <arg name="camera_id" default="0" description="camera id, used for remapping topics"/>
-  <arg name="image_topic_name" default="image_rect_color" description="options `image_raw`, `image_rect_color`"/>
+  <arg name="image_topic_name" default="image_raw" description="options `image_raw`, `image_rect_color`"/>
   <arg name="yolox_node_name" default="tensorrt_yolox$(var camera_id)"/>
   <arg name="image_transport_decompressor_node_name" default="image_transport_decompressor_node$(var camera_id)"/>
 
