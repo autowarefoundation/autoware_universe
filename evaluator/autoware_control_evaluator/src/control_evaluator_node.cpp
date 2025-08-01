@@ -356,9 +356,11 @@ void ControlEvaluatorNode::AddSteeringMetricMsg(const SteeringReport & steering_
 {
   // steering angle
   double cur_steering_angle = steering_status.steering_tire_angle;
+  double cur_steering_angle_abs = std::abs(cur_steering_angle);
   const double cur_t = static_cast<double>(steering_status.stamp.sec) +
                        static_cast<double>(steering_status.stamp.nanosec) * 1e-9;
   AddMetricMsg(Metric::steering_angle, cur_steering_angle);
+  AddMetricMsg(Metric::steering_angle_abs, cur_steering_angle_abs);
 
   if (!prev_steering_angle_timestamp_.has_value()) {
     prev_steering_angle_timestamp_ = cur_t;

@@ -77,6 +77,7 @@ target_link_libraries(cuda_pointcloud_preprocessor_lib
 target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
   ${autoware_pointcloud_preprocessor_INCLUDE_DIRS}
   ${autoware_point_types_INCLUDE_DIRS}
+  ${autoware_sensing_msgs_INCLUDE_DIRS}
   ${cuda_blackboard_INCLUDE_DIRS}
   ${diagnostic_msgs_INCLUDE_DIRS}
   ${geometry_msgs_INCLUDE_DIRS}

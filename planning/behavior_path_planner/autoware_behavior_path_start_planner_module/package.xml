@@ -25,6 +25,7 @@
   <depend>autoware_freespace_planning_algorithms</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_rtc_interface</depend>
+  <depend>autoware_universe_utils</depend>
   <depend>autoware_utils</depend>
   <depend>pluginlib</depend>
   <depend>rclcpp</depend>

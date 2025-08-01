@@ -100,6 +100,11 @@ void RoiClusterFusionNode::fuse_on_single_image(
 
   std::map<std::size_t, RegionOfInterest> m_cluster_roi;
 
+  std::vector<sensor_msgs::msg::RegionOfInterest> debug_image_rois;
+  std::vector<Eigen::Vector2d> debug_obstacle_points;
+  std::vector<sensor_msgs::msg::RegionOfInterest> debug_obstacle_rois;
+  std::vector<double> debug_max_iou_for_image_rois;
+
   for (std::size_t i = 0; i < input_cluster_msg.feature_objects.size(); ++i) {
     if (input_cluster_msg.feature_objects.at(i).feature.cluster.data.empty()) {
       continue;
@@ -141,7 +146,7 @@ void RoiClusterFusionNode::fuse_on_single_image(
         max_y = std::max(py, max_y);
 
         projected_points.push_back(projected_point);
-        if (debugger_) debugger_->obstacle_points_.push_back(projected_point);
+        if (debugger_) debug_obstacle_points.push_back(projected_point);
       }
     }
     if (projected_points.empty()) {
@@ -154,7 +159,7 @@ void RoiClusterFusionNode::fuse_on_single_image(
     roi.width = max_x - min_x;
     roi.height = max_y - min_y;
     m_cluster_roi.insert(std::make_pair(i, roi));
-    if (debugger_) debugger_->obstacle_rois_.push_back(roi);
+    if (debugger_) debug_obstacle_rois.push_back(roi);
   }
 
   for (const auto & feature_obj : input_rois_msg.feature_objects) {
@@ -205,12 +210,17 @@ void RoiClusterFusionNode::fuse_on_single_image(
           std::clamp(feature_obj.object.existence_probability, min_roi_existence_prob_, 1.0f);
       }
     }
-    if (debugger_) debugger_->image_rois_.push_back(feature_obj.feature.roi);
-    if (debugger_) debugger_->max_iou_for_image_rois_.push_back(max_iou);
+    if (debugger_) debug_image_rois.push_back(feature_obj.feature.roi);
+    if (debugger_) debug_max_iou_for_image_rois.push_back(max_iou);
   }
 
   // note: debug objects are safely cleared in fusion_node.cpp
+  // TODO(badai-nguyen): revise the shared debugger_ usage
   if (debugger_) {
+    debugger_->image_rois_ = debug_image_rois;
+    debugger_->obstacle_rois_ = debug_obstacle_rois;
+    debugger_->obstacle_points_ = debug_obstacle_points;
+    debugger_->max_iou_for_image_rois_ = debug_max_iou_for_image_rois;
     debugger_->publishImage(det2d_status.id, input_rois_msg.header.stamp);
   }
 }

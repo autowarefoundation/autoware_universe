@@ -435,7 +435,9 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
     velocity, acceleration, max_accel, max_jerk, delay_response_time);
 
   // collision_stopline
-  const size_t collision_stopline_ip = closest_idx_ip + std::ceil(braking_dist / ds);
+  const size_t collision_stopline_ip = std::clamp<size_t>(
+    closest_idx_ip + std::ceil(braking_dist / ds), 0,
+    static_cast<size_t>(path_ip.points.size()) - 1);
 
   // (3) occlusion peeking stop line position on interpolated path
   int occlusion_peeking_line_ip_int = static_cast<int>(default_stopline_ip);

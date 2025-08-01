@@ -3,6 +3,7 @@
   <!-- Parameters -->
   <arg name="object_recognition_detection_object_merger_data_association_matrix_param_path" default="$(find-pkg-share autoware_object_merger)/config/data_association_matrix.param.yaml"/>
   <arg name="object_recognition_detection_object_merger_distance_threshold_list_path" default="$(find-pkg-share autoware_object_merger)/config/overlapped_judge.param.yaml"/>
+  <arg name="ml_camera_lidar_object_association_merger_param_path" default="$(find-pkg-share autoware_object_merger)/config/object_association_merger.param.yaml"/>
   <arg name="far_object_merger_sync_queue_size" default="20"/>
 
   <!-- Pipeline junctions -->
@@ -50,6 +51,7 @@
   <arg name="input/radar_far/objects"/>
   <arg name="input/detection_by_tracker/objects"/>
   <arg name="output/objects" default="objects"/>
+  <arg name="alpha_merger_priority_mode" default="0"/>
 
   <!-- internal interfaces -->
   <let name="radar_objects_fusion/input/objects" value="$(var input/lidar_ml/objects)"/>
@@ -137,9 +139,10 @@
       <arg name="input/object0" value="$(var merger1/input/objects0)"/>
       <arg name="input/object1" value="$(var merger1/input/objects1)"/>
       <arg name="output/object" value="$(var merger1/output/objects)"/>
-      <arg name="priority_mode" value="0"/>
+      <arg name="priority_mode" value="$(var alpha_merger_priority_mode)"/>
       <arg name="data_association_matrix_path" value="$(var object_recognition_detection_object_merger_data_association_matrix_param_path)"/>
       <arg name="distance_threshold_list_path" value="$(var object_recognition_detection_object_merger_distance_threshold_list_path)"/>
+      <arg name="object_association_merger_param_path" value="$(var ml_camera_lidar_object_association_merger_param_path)"/>
     </include>
   </group>
 
