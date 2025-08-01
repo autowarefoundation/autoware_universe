@@ -22,6 +22,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::planning_validator::utils
@@ -29,14 +30,28 @@ namespace autoware::planning_validator::utils
 auto check_shift_behavior(
   const lanelet::ConstLanelets & lanelets, const bool is_unsafe_holding,
   const std::shared_ptr<PlanningValidatorContext> & context,
-  const rear_collision_checker_node::Params & parameters, DebugData & debug) -> Behavior;
+  const rear_collision_checker_node::Params & parameters, DebugData & debug)
+  -> std::pair<Behavior, double>;
 
 auto check_turn_behavior(
   const lanelet::ConstLanelets & lanelets, const bool is_unsafe_holding,
   const std::shared_ptr<PlanningValidatorContext> & context,
-  const rear_collision_checker_node::Params & parameters, DebugData & debug) -> Behavior;
+  const rear_collision_checker_node::Params & parameters, DebugData & debug)
+  -> std::pair<Behavior, double>;
 
 void cut_by_lanelets(const lanelet::ConstLanelets & lanelets, DetectionAreas & detection_areas);
+
+void fill_rss_distance(
+  PointCloudObjects & objects, const std::shared_ptr<PlanningValidatorContext> & context,
+  const double distance_to_conflict_point, const double reaction_time,
+  const double max_deceleration, const double max_velocity,
+  const rear_collision_checker_node::Params & parameters);
+
+void fill_time_to_collision(
+  PointCloudObjects & objects, const std::shared_ptr<PlanningValidatorContext> & context,
+  const double distance_to_conflict_point, const double reaction_time,
+  const double max_deceleration, const double max_velocity,
+  const rear_collision_checker_node::Params & parameters);
 
 auto generate_half_lanelet(
   const lanelet::ConstLanelet lanelet, const bool is_right,
@@ -59,6 +74,18 @@ auto get_previous_polygons_with_lane_recursively(
 auto generate_detection_polygon(
   const lanelet::ConstLanelets & lanelets, const geometry_msgs::msg::Pose & ego_pose,
   const double forward_distance, const double backward_distance) -> lanelet::BasicPolygon3d;
+
+auto get_range_for_rss(
+  const std::shared_ptr<PlanningValidatorContext> & context,
+  const double distance_to_conflict_point, const double reaction_time,
+  const double max_deceleration, const double max_velocity,
+  const rear_collision_checker_node::Params & parameters) -> std::pair<double, double>;
+
+auto get_range_for_ttc(
+  const std::shared_ptr<PlanningValidatorContext> & context,
+  const double distance_to_conflict_point, const double reaction_time,
+  const double max_deceleration, const double max_velocity,
+  const rear_collision_checker_node::Params & parameters) -> std::pair<double, double>;
 
 auto create_polygon_marker_array(
   const std::vector<autoware_utils::Polygon3d> & polygons, const std::string & ns,
