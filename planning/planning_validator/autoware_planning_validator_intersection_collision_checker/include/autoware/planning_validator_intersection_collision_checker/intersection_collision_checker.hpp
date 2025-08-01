@@ -42,7 +42,7 @@ public:
   void init(
     rclcpp::Node & node, const std::string & name,
     const std::shared_ptr<PlanningValidatorContext> & context) override;
-  void validate(bool & is_critical) override;
+  void validate() override;
   void setup_diag() override;
   std::string get_module_name() const override { return module_name_; };
 
@@ -86,6 +86,9 @@ private:
   void set_pcd_objects_debug_marker(const DebugData & debug_data) const;
 
   void publish_planning_factor(const DebugData & debug_data) const;
+
+  void set_diag_status(
+    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg) const;
 
   void reset_data()
   {
