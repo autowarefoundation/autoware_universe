@@ -1,0 +1,169 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_accel_brake_map_calibrator parameter",
+  "type": "object",
+  "definitions": {
+    "accel_brake_map_calibrator": {
+      "type": "object",
+      "properties": {
+        "update_hz": {
+          "type": "number",
+          "description": "Hz for update frequency.",
+          "default": 10.0,
+          "minimum": 0.1,
+          "maximum": 100.0
+        },
+        "initial_covariance": {
+          "type": "number",
+          "description": "Covariance of initial acceleration map (larger covariance speeds up updates).",
+          "default": 0.05,
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "velocity_min_threshold": {
+          "type": "number",
+          "description": "Speeds below this value are not used for updating.",
+          "default": 0.1,
+          "minimum": 0.0
+        },
+        "velocity_diff_threshold": {
+          "type": "number",
+          "description": "Velocity data further than this threshold from the grid reference speed is excluded.",
+          "default": 0.556,
+          "minimum": 0.0
+        },
+        "pedal_diff_threshold": {
+          "type": "number",
+          "description": "Current pedal values exceeding this threshold from the previous value are excluded.",
+          "default": 0.03,
+          "minimum": 0.0
+        },
+        "max_steer_threshold": {
+          "type": "number",
+          "description": "Steer angles greater than this value exclude the associated data.",
+          "default": 0.2,
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "max_pitch_threshold": {
+          "type": "number",
+          "description": "Pitch angles greater than this value exclude the associated data.",
+          "default": 0.02,
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "max_jerk_threshold": {
+          "type": "number",
+          "description": "Ego jerk values greater than this value exclude the associated data.",
+          "default": 0.7,
+          "minimum": 0.0,
+          "maximum": 10.0
+        },
+        "pedal_velocity_thresh": {
+          "type": "number",
+          "description": "Pedal movement speeds greater than this value exclude the associated data.",
+          "default": 0.15,
+          "minimum": 0.0
+        },
+        "pedal_to_accel_delay": {
+          "type": "number",
+          "description": "Delay time between actuation command and acceleration, considered in update logic.",
+          "default": 0.3,
+          "minimum": 0.0,
+          "maximum": 5.0
+        },
+        "max_accel": {
+          "type": "number",
+          "description": "Maximum value of acceleration calculated from velocity source.",
+          "default": 5.0,
+          "minimum": 0.0,
+          "maximum": 10.0
+        },
+        "min_accel": {
+          "type": "number",
+          "description": "Minimum value of acceleration calculated from velocity source.",
+          "default": -5.0,
+          "minimum": -10.0,
+          "maximum": 0.0
+        },
+        "max_data_count": {
+          "type": "integer",
+          "description": "Maximum data count for each grid (used for visualization, red if exceeded).",
+          "default": 100,
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "precision": {
+          "type": "integer",
+          "description": "Precision level for numerical outputs.",
+          "default": 3,
+          "minimum": 0,
+          "maximum": 10
+        },
+        "update_method": {
+          "type": "string",
+          "description": "Map calibration method: 'update_offset_each_cell' calculates offsets for each grid cell, 'update_offset_total' calculates a total offset.",
+          "default": "update_offset_each_cell",
+          "enum": [
+            "update_offset_four_cell_around",
+            "update_offset_each_cell",
+            "update_offset_total"
+          ]
+        },
+        "update_suggest_thresh": {
+          "type": "number",
+          "description": "Threshold of RMSE ratio for update suggestion (RMSE ratio = [RMSE of new map] / [RMSE of original map]).",
+          "default": 0.7,
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "progress_file_output": {
+          "type": "boolean",
+          "description": "If true, outputs a log and CSV file of the update process.",
+          "default": false
+        },
+        "accel_brake_value_source": {
+          "type": "string",
+          "description": "Source for acceleration and brake values: 'status' (actuation_status) or 'command' (actuation_command).",
+          "default": "status",
+          "enum": ["status", "command"]
+        }
+      },
+      "required": [
+        "update_hz",
+        "initial_covariance",
+        "velocity_min_threshold",
+        "velocity_diff_threshold",
+        "pedal_diff_threshold",
+        "max_steer_threshold",
+        "max_pitch_threshold",
+        "max_jerk_threshold",
+        "pedal_velocity_thresh",
+        "pedal_to_accel_delay",
+        "max_accel",
+        "min_accel",
+        "max_data_count",
+        "precision",
+        "update_method",
+        "update_suggest_thresh",
+        "progress_file_output",
+        "accel_brake_value_source"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/accel_brake_map_calibrator"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
