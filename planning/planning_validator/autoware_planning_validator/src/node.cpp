@@ -62,28 +62,18 @@ PlanningValidatorNode::PlanningValidatorNode(const rclcpp::NodeOptions & options
 void PlanningValidatorNode::setupParameters()
 {
   auto & p = context_->params;
-  auto set_handling_type = [&](auto & type, const std::string & key) {
-    const auto value = declare_parameter<int>(key);
-    if (value == 0) {
-      type = InvalidTrajectoryHandlingType::PUBLISH_AS_IT_IS;
-    } else if (value == 1) {
-      type = InvalidTrajectoryHandlingType::STOP_PUBLISHING;
-    } else if (value == 2) {
-      type = InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT;
-    } else {
-      throw std::invalid_argument{
-        "unsupported invalid_trajectory_handling_type (" + std::to_string(value) + ")"};
-    }
-  };
 
-  set_handling_type(p.inv_traj_handling_type, "handling_type.noncritical");
-  set_handling_type(p.inv_traj_critical_handling_type, "handling_type.critical");
+  const auto value = declare_parameter<int>("default_handling_type");
+  try {
+    p.default_handling_type = get_handling_type(value);
+  } catch (const std::exception & e) {
+    throw std::invalid_argument(e.what());
+  }
 
   p.publish_diag = declare_parameter<bool>("publish_diag");
   p.diag_error_count_threshold = declare_parameter<int>("diag_error_count_threshold");
   p.display_on_terminal = declare_parameter<bool>("display_on_terminal");
 
-  p.enable_soft_stop_on_prev_traj = declare_parameter<bool>("enable_soft_stop_on_prev_traj");
   p.soft_stop_deceleration = declare_parameter<double>("soft_stop_deceleration");
   p.soft_stop_jerk_lim = declare_parameter<double>("soft_stop_jerk_lim");
 }
@@ -122,13 +112,13 @@ void PlanningValidatorNode::onTrajectory(const Trajectory::ConstSharedPtr & traj
   if (!isDataReady()) return;
 
   context_->init_validation_status();
+  context_->reset_handling();
 
   context_->data->set_nearest_trajectory_indices();
 
   context_->debug_pose_publisher->clearMarkers();
-  is_critical_error_ = false;
 
-  manager_.validate(is_critical_error_);
+  manager_.validate();
 
   auto & s = context_->validation_status;
   s->invalid_count = isAllValid(*s) ? 0 : s->invalid_count + 1;
@@ -173,8 +163,7 @@ void PlanningValidatorNode::publishTrajectory()
 
   //  ----- invalid factor is found. Publish previous trajectory. -----
 
-  const auto handling_type =
-    is_critical_error_ ? params.inv_traj_critical_handling_type : params.inv_traj_handling_type;
+  const auto handling_type = context_->get_handling();
 
   if (handling_type == InvalidTrajectoryHandlingType::PUBLISH_AS_IT_IS) {
     pub_traj_->publish(*data->current_trajectory);
@@ -185,15 +174,25 @@ void PlanningValidatorNode::publishTrajectory()
     return;
   }
 
-  if (handling_type == InvalidTrajectoryHandlingType::STOP_PUBLISHING) {
-    RCLCPP_ERROR(get_logger(), "Invalid Trajectory detected. Trajectory is not published.");
+  if (!data->last_valid_trajectory) {
+    // trajectory is not published.
+    RCLCPP_ERROR_THROTTLE(
+      get_logger(), *get_clock(), 3000,
+      "Invalid Trajectory detected, no valid trajectory found in the past. Trajectory is not "
+      "published.");
     return;
   }
 
-  if (
-    handling_type == InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT &&
-    data->last_valid_trajectory) {
-    if (params.enable_soft_stop_on_prev_traj && !soft_stop_trajectory_) {
+  if (handling_type == InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT) {
+    const auto & pub_trajectory = *data->last_valid_trajectory;
+    pub_traj_->publish(pub_trajectory);
+    published_time_publisher_->publish_if_subscribed(pub_traj_, pub_trajectory.header.stamp);
+    RCLCPP_ERROR(get_logger(), "Invalid Trajectory detected. Use previous trajectory.");
+    return;
+  }
+
+  if (handling_type == InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT_WITH_SOFT_STOP) {
+    if (!soft_stop_trajectory_) {
       const auto nearest_idx = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
         data->last_valid_trajectory->points, data->current_kinematics->pose.pose);
       soft_stop_trajectory_ = std::make_shared<Trajectory>(planning_validator::getStopTrajectory(
@@ -201,20 +200,11 @@ void PlanningValidatorNode::publishTrajectory()
         data->current_acceleration->accel.accel.linear.x, params.soft_stop_deceleration,
         params.soft_stop_jerk_lim));
     }
-    const auto & pub_trajectory =
-      params.enable_soft_stop_on_prev_traj ? *soft_stop_trajectory_ : *data->last_valid_trajectory;
+    const auto & pub_trajectory = *soft_stop_trajectory_;
     pub_traj_->publish(pub_trajectory);
     published_time_publisher_->publish_if_subscribed(pub_traj_, pub_trajectory.header.stamp);
-    RCLCPP_ERROR(get_logger(), "Invalid Trajectory detected. Use previous trajectory.");
-    return;
+    RCLCPP_ERROR(get_logger(), "Invalid Trajectory detected. Use soft stop trajectory.");
   }
-
-  // trajectory is not published.
-  RCLCPP_ERROR_THROTTLE(
-    get_logger(), *get_clock(), 3000,
-    "Invalid Trajectory detected, no valid trajectory found in the past. Trajectory is not "
-    "published.");
-  return;
 }
 
 void PlanningValidatorNode::publishProcessingTime(const double processing_time_ms)
