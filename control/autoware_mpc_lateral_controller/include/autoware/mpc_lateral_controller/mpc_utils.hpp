@@ -83,7 +83,7 @@ MPCTrajectory convertToMPCTrajectory(const Trajectory & input);
  * @param [in] input MPCTrajectory to be converted
  * @return output converted Trajectory msg
  */
-Trajectory convertToAutowareTrajectory(const MPCTrajectory & input);
+Trajectory convertToAutowareTrajectory(const MPCTrajectory & input, const double wheelbase = 0.0);
 
 /**
  * @brief calculate the arc length at each point of the given trajectory
