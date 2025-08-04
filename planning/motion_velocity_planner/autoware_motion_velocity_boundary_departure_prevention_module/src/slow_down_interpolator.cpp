@@ -171,7 +171,7 @@ tl::expected<double, std::string> SlowDownInterpolator::calc_velocity_with_profi
 {
   const auto a_lim = std::max(a_0, a_brake);
 
-  const auto t_brake = (a_brake - a_lim) / j_brake;
+  const auto t_brake = t_j(a_lim, a_brake, j_brake);
   const auto d_brake = s_t(t_brake, j_brake, a_lim, v_0);
   const auto v_brake = v_t(t_brake, j_brake, a_lim, v_0);
 
