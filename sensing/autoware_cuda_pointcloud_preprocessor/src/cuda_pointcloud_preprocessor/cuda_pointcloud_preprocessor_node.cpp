@@ -93,6 +93,7 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
 
   bool use_3d_undistortion = declare_parameter<bool>("use_3d_distortion_correction");
   bool use_imu = declare_parameter<bool>("use_imu");
+  bool enable_ring_outlier_filter = declare_parameter<bool>("enable_ring_outlier_filter");
 
   // Publisher
   /* *INDENT-OFF* */
@@ -132,6 +133,7 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
 
   cuda_pointcloud_preprocessor_ = std::make_unique<CudaPointcloudPreprocessor>();
   cuda_pointcloud_preprocessor_->setRingOutlierFilterParameters(ring_outlier_filter_parameters);
+  cuda_pointcloud_preprocessor_->setRingOutlierFilterActive(enable_ring_outlier_filter);
   cuda_pointcloud_preprocessor_->setCropBoxParameters(crop_box_parameters);
   cuda_pointcloud_preprocessor_->setUndistortionType(undistortion_type);
 
