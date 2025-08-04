@@ -305,58 +305,61 @@ void profilePerformance(const ProfileConfig & config)
 
 void profilePerformanceVsCarCount()
 {
-  profilePerformance(ProfileConfig{
-    "Car",
-    1,     // min_count
-    1000,  // max_count
-    5,     // step
-    5,     // iterations_per_count
-    5.0f,  // simulation_duration
-    [](TrackingScenarioConfig & params, int target_count) {
-      params.pedestrian_clusters = 0;  // No pedestrians in this profile
-      params.pedestrians_per_cluster = 0;
-      params.num_lanes = std::max(1, target_count / 20);
-      params.cars_per_lane = std::max(1, target_count / params.num_lanes);
-      params.car_spacing_mean = 10.0f * (1.0f + target_count / 500.0f);
-      params.unknown_objects = 0;  // No unknown objects in this profile
-    }});
+  profilePerformance(
+    ProfileConfig{
+      "Car",
+      1,     // min_count
+      1000,  // max_count
+      5,     // step
+      5,     // iterations_per_count
+      5.0f,  // simulation_duration
+      [](TrackingScenarioConfig & params, int target_count) {
+        params.pedestrian_clusters = 0;  // No pedestrians in this profile
+        params.pedestrians_per_cluster = 0;
+        params.num_lanes = std::max(1, target_count / 20);
+        params.cars_per_lane = std::max(1, target_count / params.num_lanes);
+        params.car_spacing_mean = 10.0f * (1.0f + target_count / 500.0f);
+        params.unknown_objects = 0;  // No unknown objects in this profile
+      }});
 }
 
 void profilePerformanceVsPedestrianCount()
 {
-  profilePerformance(ProfileConfig{
-    "Pedestrian",
-    1,     // min_count
-    1000,  // max_count
-    5,     // step
-    5,     // iterations_per_count
-    5.0f,  // simulation_duration
-    [](TrackingScenarioConfig & params, int target_count) {
-      params.num_lanes = 0;  // No cars in this profile
-      params.cars_per_lane = 0;
-      params.pedestrian_clusters = std::max(1, target_count / 5);
-      params.pedestrians_per_cluster = std::max(1, target_count / params.pedestrian_clusters);
-      params.pedestrian_cluster_spacing = 30.0f * (1.0f + target_count / 200.0f);
-      params.unknown_objects = 0;  // No unknown objects in this profile
-    }});
+  profilePerformance(
+    ProfileConfig{
+      "Pedestrian",
+      1,     // min_count
+      1000,  // max_count
+      5,     // step
+      5,     // iterations_per_count
+      5.0f,  // simulation_duration
+      [](TrackingScenarioConfig & params, int target_count) {
+        params.num_lanes = 0;  // No cars in this profile
+        params.cars_per_lane = 0;
+        params.pedestrian_clusters = std::max(1, target_count / 5);
+        params.pedestrians_per_cluster = std::max(1, target_count / params.pedestrian_clusters);
+        params.pedestrian_cluster_spacing = 30.0f * (1.0f + target_count / 200.0f);
+        params.unknown_objects = 0;  // No unknown objects in this profile
+      }});
 }
 
 void profilePerformanceVsUnknownObjectCount()
 {
-  profilePerformance(ProfileConfig{
-    "Unknown",
-    1,     // min_count
-    1000,  // max_count
-    5,     // step
-    5,     // iterations_per_count
-    5.0f,  // simulation_duration
-    [](TrackingScenarioConfig & params, int target_count) {
-      params.num_lanes = 0;  // No cars in this profile
-      params.cars_per_lane = 0;
-      params.pedestrian_clusters = 0;  // No pedestrians in this profile
-      params.pedestrians_per_cluster = 0;
-      params.unknown_objects = target_count;
-    }});
+  profilePerformance(
+    ProfileConfig{
+      "Unknown",
+      1,     // min_count
+      1000,  // max_count
+      5,     // step
+      5,     // iterations_per_count
+      5.0f,  // simulation_duration
+      [](TrackingScenarioConfig & params, int target_count) {
+        params.num_lanes = 0;  // No cars in this profile
+        params.cars_per_lane = 0;
+        params.pedestrian_clusters = 0;  // No pedestrians in this profile
+        params.pedestrians_per_cluster = 0;
+        params.unknown_objects = target_count;
+      }});
 }
 
 class MultiObjectTrackerTest : public ::testing::Test
