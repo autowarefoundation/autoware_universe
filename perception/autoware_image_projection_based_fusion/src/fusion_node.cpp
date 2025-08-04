@@ -272,7 +272,7 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::camera_info_callback(
     std::thread([this, &initializing, rois_id]() {
       rclcpp::Rate rate(1.0);  // 1 Hz
       while (rclcpp::ok() && initializing.load()) {
-        RCLCPP_INFO(
+        RCLCPP_WARN(
           this->get_logger(), "Still initializing camera projector for ROI %zu... please wait...",
           rois_id);
         rate.sleep();
@@ -286,7 +286,8 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::camera_info_callback(
 
     // Mark as finished
     initializing = false;
-    RCLCPP_INFO(this->get_logger(), "Camera projector initialization finished.");
+    RCLCPP_INFO(
+      this->get_logger(), "Camera projector initialization for ROI %zu finished.", rois_id);
 
     std::unique_lock<std::mutex> fusion_collectors_lock(fusion_collectors_mutex_);
     for (auto & collector : fusion_collectors_) {
