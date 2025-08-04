@@ -41,12 +41,6 @@ private:
   using TrafficSignalArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
   using TrafficSignal = autoware_perception_msgs::msg::TrafficLightGroup;
 
-  struct ExternalTrafficLightInfo
-  {
-    TrafficSignal signal;
-    rclcpp::Time timestamp;
-  };
-
   rclcpp::Subscription<LaneletMapBin>::SharedPtr map_sub_;
   rclcpp::Subscription<TrafficSignalArray>::SharedPtr perception_tlr_sub_;
   rclcpp::Subscription<TrafficSignalArray>::SharedPtr external_tlr_sub_;
@@ -67,7 +61,7 @@ private:
   bool enable_signal_matching_;
 
   TrafficSignalArray latest_perception_msg_;
-  std::unordered_map<lanelet::Id, ExternalTrafficLightInfo> external_traffic_lights_;
+  std::unordered_map<lanelet::Id, TrafficSignalArray> external_traffic_lights_;
   std::unique_ptr<SignalMatchValidator> signal_match_validator_;
 };
 }  // namespace autoware::traffic_light

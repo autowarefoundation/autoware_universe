@@ -140,7 +140,7 @@ void TrafficLightArbiter::onExternalMsg(const TrafficSignalArray::ConstSharedPtr
 
   // Update external traffic lights map with new information
   for (const auto & signal : msg->traffic_light_groups) {
-    external_traffic_lights_[signal.traffic_light_group_id] = {signal, msg_time};
+    external_traffic_lights_[signal.traffic_light_group_id] = *msg;
   }
 
   // Clean up expired signals
@@ -161,7 +161,7 @@ void TrafficLightArbiter::cleanupExpiredExternalSignals(
 {
   auto it = external_traffic_lights_.begin();
   while (it != external_traffic_lights_.end()) {
-    const auto age = (current_time - it->second.timestamp).seconds();
+    const auto age = (current_time - rclcpp::Time(it->second.stamp)).seconds();
     if (std::abs(age) > tolerance) {
       RCLCPP_DEBUG(
         get_logger(), "Removing expired external traffic light signal (ID: %lu, age: %.2f s)",
@@ -181,7 +181,9 @@ void TrafficLightArbiter::arbitrateAndPublish(const builtin_interfaces::msg::Tim
   // Create external signals array from stored valid signals
   TrafficSignalArray valid_external_signals;
   for (const auto & [id, info] : external_traffic_lights_) {
-    valid_external_signals.traffic_light_groups.push_back(info.signal);
+    valid_external_signals.traffic_light_groups.insert(
+      valid_external_signals.traffic_light_groups.end(), info.traffic_light_groups.begin(),
+      info.traffic_light_groups.end());
   }
 
   auto append_predictions = [](auto & map, const auto & groups) {
@@ -284,8 +286,9 @@ void TrafficLightArbiter::arbitrateAndPublish(const builtin_interfaces::msg::Tim
   // Calculate latest time from available sources
   rclcpp::Time latest_time = rclcpp::Time(latest_perception_msg_.stamp);
   for (const auto & [id, info] : external_traffic_lights_) {
-    if (info.timestamp > latest_time) {
-      latest_time = info.timestamp;
+    const auto external_time = rclcpp::Time(info.stamp);
+    if (external_time > latest_time) {
+      latest_time = external_time;
     }
   }
 
