@@ -287,8 +287,16 @@ void Tracker::updateClassification(
   classification = updated_classification;
   // normalizeProbabilities(classification);
 
+  auto uuidToString = [](const unique_identifier_msgs::msg::UUID & uuid_msg) {
+    std::stringstream ss;
+    for (auto i = 0; i < 16; ++i) {
+      ss << std::hex << std::setfill('0') << std::setw(2) << +uuid_msg.uuid[i];
+    }
+    return ss.str();
+  };
+
   // Debugging output
-  std::cout << "Updated Classification: ";
+  std::cout << "Updated Classification  UUID "<< uuidToString(object_.uuid) << " : ";
   for (const auto & a_class : classification) {
     std::cout << " | Label: " << std::to_string(a_class.label)
               << ", Probability: " << std::to_string(a_class.probability);
