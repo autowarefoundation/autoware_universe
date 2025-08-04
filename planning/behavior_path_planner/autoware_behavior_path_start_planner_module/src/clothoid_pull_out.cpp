@@ -1400,7 +1400,7 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
 
     // crop backward path
     const size_t start_segment_idx =
-      autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
+      autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         clothoid_path.points, start_pose, common_parameters.ego_nearest_dist_threshold,
         common_parameters.ego_nearest_yaw_threshold);
 
