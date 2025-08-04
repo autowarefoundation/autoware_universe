@@ -94,6 +94,7 @@ void TrajectoryVelocityOptimizer::set_up_params()
 rcl_interfaces::msg::SetParametersResult TrajectoryVelocityOptimizer::on_parameter(
   [[maybe_unused]] const std::vector<rclcpp::Parameter> & parameters)
 {
+  // cspell:ignore jerkfiltered
   // TODO: Add option to update params (not included in the jerkfiltered_smoother)
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
