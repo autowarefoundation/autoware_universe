@@ -16,6 +16,8 @@
 
 #include "autoware/trajectory_optimizer/utils.hpp"
 
+#include <vector>
+
 namespace autoware::trajectory_optimizer::plugin
 {
 void TrajectoryPointFixer::optimize_trajectory(

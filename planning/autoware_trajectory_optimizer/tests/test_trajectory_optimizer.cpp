@@ -22,11 +22,13 @@
 
 #include <limits>
 
-using namespace autoware::trajectory_optimizer::utils;
-using namespace autoware::trajectory_optimizer;
-using namespace autoware_planning_msgs::msg;
-using namespace nav_msgs::msg;
-using namespace geometry_msgs::msg;
+using autoware::trajectory_optimizer::utils::apply_spline;
+using autoware::trajectory_optimizer::utils::remove_invalid_points;
+using autoware::trajectory_optimizer::TrajectoryOptimizerParams;
+using autoware::trajectory_optimizer::plugin::TrajectoryPoints;
+using autoware_planning_msgs::msg::TrajectoryPoint;
+using nav_msgs::msg::Odometry;
+using geometry_msgs::msg::AccelWithCovarianceStamped;
 
 class TrajectoryOptimizerUtilsTest : public ::testing::Test
 {

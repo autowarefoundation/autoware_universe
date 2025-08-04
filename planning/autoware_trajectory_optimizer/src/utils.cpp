@@ -28,6 +28,8 @@
 #include <autoware_planning_msgs/msg/detail/trajectory_point__struct.hpp>
 
 #include <algorithm>
+#include <memory>
+#include <vector>
 #include <cmath>
 #include <iostream>
 #include <iterator>
@@ -288,7 +290,7 @@ void apply_spline(TrajectoryPoints & traj_points, const TrajectoryOptimizerParam
     last_interpolated_point.pose.position, original_trajectory_last_point.pose.position);
   if (d > epsilon) {
     output_points.push_back(original_trajectory_last_point);
-  };
+  }
   traj_points = output_points;
 }
 
