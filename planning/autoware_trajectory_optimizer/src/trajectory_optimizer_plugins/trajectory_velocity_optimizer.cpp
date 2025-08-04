@@ -18,6 +18,10 @@
 
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
+#include <memory>
+#include <string>
+#include <vector>
+
 namespace autoware::trajectory_optimizer::plugin
 {
 
@@ -95,7 +99,7 @@ rcl_interfaces::msg::SetParametersResult TrajectoryVelocityOptimizer::on_paramet
   [[maybe_unused]] const std::vector<rclcpp::Parameter> & parameters)
 {
   // cspell:ignore jerkfiltered
-  // TODO: Add option to update params (not included in the jerkfiltered_smoother)
+  // TODO(Daniel): Add option to update params (not included in the jerkfiltered_smoother)
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
   result.reason = "success";

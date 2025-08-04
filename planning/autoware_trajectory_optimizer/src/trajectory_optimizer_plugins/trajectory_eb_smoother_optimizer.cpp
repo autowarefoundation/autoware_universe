@@ -18,6 +18,10 @@
 
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
+#include <memory>
+#include <string>
+#include <vector>
+
 namespace autoware::trajectory_optimizer::plugin
 {
 

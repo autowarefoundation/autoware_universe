@@ -22,6 +22,11 @@
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
+#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
+
 namespace autoware::trajectory_optimizer::plugin
 {
 using autoware_planning_msgs::msg::TrajectoryPoint;
