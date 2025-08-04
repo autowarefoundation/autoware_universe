@@ -23,7 +23,7 @@ namespace autoware::diffusion_planner
 {
 inline constexpr int64_t POINTS_PER_SEGMENT = 20;  //!< Number of points in each lane segment.
 // Number of columns in a segment matrix
-// (X,Y,dX,dY,LeftBoundX,LeftBoundY,RightBoundX,RightBoundX,TrafficLightEncoding(Dim4),Speed Limit)
+// (X,Y,dX,dY,LeftBoundX,LeftBoundY,RightBoundX,RightBoundY,TrafficLightEncoding(Dim5),Speed Limit)
 inline constexpr int64_t TRAFFIC_LIGHT_ONE_HOT_DIM = 5;
 inline constexpr int64_t SEGMENT_POINT_DIM = 8 + TRAFFIC_LIGHT_ONE_HOT_DIM;
 inline constexpr int64_t FULL_MATRIX_ROWS = SEGMENT_POINT_DIM + 2;
