@@ -430,9 +430,33 @@ tl::expected<std::vector<lanelet::LineString3d>, std::string> get_uncrossable_li
   const double search_distance,
   const std::vector<std::string> & uncrossable_boundary_types = {"road_border"});
 
+/**
+ * @brief Trim predicted trajectory by cutoff time.
+ *
+ * @param ego_pred_traj Predicted trajectory from the ego vehicle.
+ * @param cutoff_time_s Maximum allowed time from start (in seconds).
+ * @return Trimmed trajectory containing only early predicted points.
+ */
 TrajectoryPoints trim_pred_path(const TrajectoryPoints & ego_pred_traj, const double cutoff_time_s);
 
-double calcJudgeLineDistWithJerkLimit(
+/**
+ * @brief Compute the longitudinal distance required to stop with jerk- and
+ *        acceleration limits (“judge line”).
+ *
+ * @param velocity              Current longitudinal speed *v₀* [m/s].
+ * @param acceleration          Current longitudinal acceleration *a₀* [m/s²].
+ * @param max_stop_acceleration Maximum (most negative) braking acceleration
+ *                              *a_brake* [m/s²] (e.g. −4.0).
+ * @param max_stop_jerk         Maximum (most negative) braking jerk
+ *                              *j_brake* [m/s³] (e.g. −10.0).
+ * @param delay_response_time   Latency before any braking begins *t₁* [s].
+ *
+ * @return Minimum longitudinal distance [m] from the current pose to the
+ *         stopping line that guarantees the vehicle can reach *v = 0* under the
+ *         provided jerk and acceleration limits. Returns 0 m if the current
+ *         velocity is already non-positive.
+ */
+double calc_judge_line_dist_with_jerk_limit(
   const double velocity, const double acceleration, const double max_stop_acceleration,
   const double max_stop_jerk, const double delay_response_time);
 }  // namespace autoware::boundary_departure_checker::utils

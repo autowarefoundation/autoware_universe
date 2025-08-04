@@ -232,6 +232,7 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
         min_pt = std::make_unique<ClosestProjectionToBound>(pt);
         min_pt->departure_type = DepartureType::CRITICAL_DEPARTURE;
         min_pt->abnormality_type = abnormality_type;
+        min_pt->time_from_start = pt.time_from_start;
         break;
       }
 
@@ -243,6 +244,7 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
         min_pt = std::make_unique<ClosestProjectionToBound>(pt);
         min_pt->departure_type = DepartureType::NEAR_BOUNDARY;
         min_pt->abnormality_type = abnormality_type;
+        min_pt->time_from_start = pt.time_from_start;
       }
     }
     if (!min_pt) {
@@ -257,17 +259,21 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
     min_pt->lon_dist_on_ref_traj =
       trajectory::closest(aw_ref_traj, utils::to_geom_pt(min_pt->pt_on_ego));
 
-    if (
-      min_pt->departure_type == DepartureType::NEAR_BOUNDARY &&
-      min_pt->lon_dist_on_ref_traj > min_braking_dist &&
-      min_pt->time_from_start > param_ptr_->th_cutoff_time_near_boundary_s) {
+    const auto is_exceeding_cutoff =
+      [&min_pt](const auto type, const auto braking_dist, const auto cutoff_time) {
+        return min_pt->departure_type == type && min_pt->lon_dist_on_ref_traj > braking_dist &&
+               min_pt->time_from_start > cutoff_time;
+      };
+
+    if (is_exceeding_cutoff(
+          DepartureType::NEAR_BOUNDARY, max_braking_dist,
+          param_ptr_->th_cutoff_time_near_boundary_s)) {
       continue;
     }
 
-    if (
-      min_pt->departure_type == DepartureType::CRITICAL_DEPARTURE &&
-      min_pt->lon_dist_on_ref_traj > max_braking_dist &&
-      min_pt->time_from_start > param_ptr_->th_cutoff_time_departure_s) {
+    if (is_exceeding_cutoff(
+          DepartureType::CRITICAL_DEPARTURE, min_braking_dist,
+          param_ptr_->th_cutoff_time_departure_s)) {
       min_pt->departure_type = DepartureType::APPROACHING_DEPARTURE;
     }
 
@@ -288,10 +294,10 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries(
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   const auto & th_trigger = param_ptr_->th_trigger;
-  const auto max_braking_dist = utils::calcJudgeLineDistWithJerkLimit(
+  const auto min_braking_dist = utils::calc_judge_line_dist_with_jerk_limit(
     curr_vel, curr_acc, th_trigger.th_acc_mps2.max, th_trigger.th_jerk_mps3.max,
     th_trigger.brake_delay_s);
-  const auto min_braking_dist = utils::calcJudgeLineDistWithJerkLimit(
+  const auto max_braking_dist = utils::calc_judge_line_dist_with_jerk_limit(
     curr_vel, curr_acc, th_trigger.th_acc_mps2.min, th_trigger.th_jerk_mps3.min,
     th_trigger.brake_delay_s);
 
@@ -318,7 +324,7 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries(
          itr != min_to_bound[side_key].rend(); ++itr) {
       if (
         min_to_bound[side_key].back().lon_dist_on_ref_traj - itr->lon_dist_on_ref_traj <
-        min_braking_dist) {
+        max_braking_dist) {
         itr->departure_type = DepartureType::APPROACHING_DEPARTURE;
       }
     }

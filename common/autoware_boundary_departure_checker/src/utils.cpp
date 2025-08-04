@@ -739,7 +739,7 @@ TrajectoryPoints trim_pred_path(const TrajectoryPoints & ego_pred_traj, const do
 }
 
 // copied form core/mvp_common. will removed once this function is moved to motion_utils
-double calcJudgeLineDistWithJerkLimit(
+double calc_judge_line_dist_with_jerk_limit(
   const double velocity, const double acceleration, const double max_stop_acceleration,
   const double max_stop_jerk, const double delay_response_time)
 {

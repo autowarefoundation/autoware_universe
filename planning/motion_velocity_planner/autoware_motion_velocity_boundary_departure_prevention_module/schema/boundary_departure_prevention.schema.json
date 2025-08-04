@@ -74,13 +74,13 @@
         "on_time_buffer_s": {
           "type": "number",
           "description": "Continuous detection time threshold to insert departure point into departure interval. [s]",
-          "default": 0.08
+          "default": 0.15
         },
 
         "off_time_buffer_s": {
           "type": "number",
           "description": "Continuous detection time threshold to reset departure interval. [s]",
-          "default": 0.08
+          "default": 0.15
         },
 
         "abnormality": {
