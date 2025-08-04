@@ -203,17 +203,30 @@ void Tracker::updateClassification(
   // Bayesian classification update
   // P(class|measurement) ∝ P(measurement|class) * P(class)
 
-  // Parameters
-  constexpr float min_probability = 0.01;
-  constexpr float measurement_confidence = 0.8;  // How much we trust the new measurement
+  // Normalization function
+  auto normalizeProbabilities =
+    [](std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification) {
+      float sum = 0.0;
+      for (const auto & a_class : classification) {
+        sum += a_class.probability;
+      }
+      if (sum > 0.0) {
+        for (auto & a_class : classification) {
+          a_class.probability /= sum;
+        }
+      }
+    };
 
-  // Normalize the input (measurement probabilities)
+  // Parameters
+  constexpr float true_positive_rate = 0.8;  // How much we trust the true positive
+  constexpr float false_negative_rate = 0.2;
+  constexpr float false_positive_rate = 0.2f;  // How much we trust the false positive
+
   auto classification_input = input;
-  // normalizeProbabilities(classification_input);
 
   // If no existing classification, initialize with input
   if (classification_.empty()) {
-    classification_ = classification_input;
+    classification_ = input;
     return;
   }
 
@@ -230,23 +243,13 @@ void Tracker::updateClassification(
       [&old_class](const auto & new_class) { return new_class.label == old_class.label; });
 
     if (it != classification_input.end()) {
-      // Bayesian update: P(class|measurement) ∝ P(measurement|class) * P(class)
-      // Likelihood of measurement given class
-      const float likelihood = it->probability;
-      // Prior probability
-      const float prior = old_class.probability;
-
-      // Weighted update based on measurement confidence
-      const float posterior =
-        prior * (1.0f - measurement_confidence) + likelihood * measurement_confidence;
-      updated_class.probability = std::max(posterior, min_probability);
+      updated_class.probability = updateProbability(
+        old_class.probability, it->probability * true_positive_rate, false_positive_rate);
     } else {
-      // Class not observed in measurement - apply decay
-      const float decay_factor =
-        1.0f - measurement_confidence * 0.5f;  // Moderate decay when not observed
-      updated_class.probability = std::max(old_class.probability * decay_factor, min_probability);
+      // Class not observed in measurement
+      updated_class.probability =
+        updateProbability(updated_class.probability, false_negative_rate, false_positive_rate);
     }
-
     updated_classification.push_back(updated_class);
   }
 
@@ -259,12 +262,13 @@ void Tracker::updateClassification(
     if (!found) {
       auto adding_class = new_class;
       // New class gets probability weighted by measurement confidence
-      adding_class.probability = new_class.probability * measurement_confidence;
+      adding_class.probability = new_class.probability * true_positive_rate;
       updated_classification.push_back(adding_class);
     }
   }
 
   // Update the classification
+  normalizeProbabilities(updated_classification);
   classification_ = updated_classification;
 
   auto uuidToString = [](const unique_identifier_msgs::msg::UUID & uuid_msg) {
