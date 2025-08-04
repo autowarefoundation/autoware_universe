@@ -50,61 +50,65 @@ void TrajectoryChecker::init(
 
 void TrajectoryChecker::setup_parameters(rclcpp::Node & node)
 {
-  {
-    auto set_validation_flags = [&](auto & param, const std::string & key) {
-      param.enable = get_or_declare_parameter<bool>(node, key + ".enable");
-      param.is_critical = get_or_declare_parameter<bool>(node, key + ".is_critical");
-    };
+  const int default_handling_value = get_or_declare_parameter<int>(node, "default_handling_type");
 
-    auto set_validation_params = [&](auto & param, const std::string & key) {
-      set_validation_flags(param, key);
-      param.threshold = get_or_declare_parameter<double>(node, key + ".threshold");
-    };
+  auto set_common_params = [&](auto & param, const std::string & key) {
+    param.enable = get_or_declare_parameter<bool>(node, key + ".enable");
+    const auto value = node.declare_parameter<int>(key + ".handling_type", default_handling_value);
+    param.handling_type = get_handling_type(value);
+    param.override_error_diag = node.declare_parameter<bool>(key + ".override_error_diag", false);
+  };
 
-    auto & p = params_;
-    const std::string t = "trajectory_checker.";
-    set_validation_params(p.interval, t + "interval");
-    set_validation_params(p.relative_angle, t + "relative_angle");
-    set_validation_params(p.curvature, t + "curvature");
-    set_validation_params(p.steering, t + "steering");
-    set_validation_params(p.steering_rate, t + "steering_rate");
-    set_validation_params(p.lateral_jerk, t + "lateral_jerk");
-    set_validation_params(p.lateral_accel, t + "lateral_accel");
-    set_validation_params(p.max_lon_accel, t + "max_lon_accel");
-    set_validation_params(p.min_lon_accel, t + "min_lon_accel");
-    set_validation_params(p.distance_deviation, t + "distance_deviation");
-    set_validation_params(p.lon_distance_deviation, t + "lon_distance_deviation");
-    set_validation_params(p.velocity_deviation, t + "velocity_deviation");
+  auto set_validation_params = [&](auto & param, const std::string & key) {
+    param.threshold = get_or_declare_parameter<double>(node, key + ".threshold");
+    set_common_params(param, key);
+  };
 
-    set_validation_params(p.yaw_deviation, t + "yaw_deviation");
-    p.yaw_deviation.nearest_yaw_trajectory_shift_required_for_checking =
-      get_or_declare_parameter<double>(
-        node, t + "yaw_deviation.nearest_yaw_trajectory_shift_required_for_checking");
+  auto & p = params_;
+  const std::string t = "trajectory_checker.";
+  set_validation_params(p.interval, t + "interval");
+  set_validation_params(p.relative_angle, t + "relative_angle");
+  set_validation_params(p.curvature, t + "curvature");
+  set_validation_params(p.steering, t + "steering");
+  set_validation_params(p.steering_rate, t + "steering_rate");
+  set_validation_params(p.lateral_jerk, t + "lateral_jerk");
+  set_validation_params(p.lateral_accel, t + "lateral_accel");
+  set_validation_params(p.max_lon_accel, t + "max_lon_accel");
+  set_validation_params(p.min_lon_accel, t + "min_lon_accel");
+  set_validation_params(p.distance_deviation, t + "distance_deviation");
+  set_validation_params(p.lon_distance_deviation, t + "lon_distance_deviation");
+  set_validation_params(p.velocity_deviation, t + "velocity_deviation");
 
-    set_validation_flags(p.trajectory_shift, t + "trajectory_shift");
-    p.trajectory_shift.lat_shift_th =
-      get_or_declare_parameter<double>(node, t + "trajectory_shift.lat_shift_th");
-    p.trajectory_shift.forward_shift_th =
-      get_or_declare_parameter<double>(node, t + "trajectory_shift.forward_shift_th");
-    p.trajectory_shift.backward_shift_th =
-      get_or_declare_parameter<double>(node, t + "trajectory_shift.backward_shift_th");
+  set_validation_params(p.yaw_deviation, t + "yaw_deviation");
+  p.yaw_deviation.th_trajectory_yaw_shift =
+    get_or_declare_parameter<double>(node, t + "yaw_deviation.th_trajectory_yaw_shift");
 
-    set_validation_flags(p.forward_trajectory_length, t + "forward_trajectory_length");
-    p.forward_trajectory_length.acceleration =
-      get_or_declare_parameter<double>(node, t + "forward_trajectory_length.acceleration");
-    p.forward_trajectory_length.margin =
-      get_or_declare_parameter<double>(node, t + "forward_trajectory_length.margin");
-  }
+  set_common_params(p.trajectory_shift, t + "trajectory_shift");
+  p.trajectory_shift.lat_shift_th =
+    get_or_declare_parameter<double>(node, t + "trajectory_shift.lat_shift_th");
+  p.trajectory_shift.forward_shift_th =
+    get_or_declare_parameter<double>(node, t + "trajectory_shift.forward_shift_th");
+  p.trajectory_shift.backward_shift_th =
+    get_or_declare_parameter<double>(node, t + "trajectory_shift.backward_shift_th");
+
+  set_common_params(p.forward_trajectory_length, t + "forward_trajectory_length");
+  p.forward_trajectory_length.acceleration =
+    get_or_declare_parameter<double>(node, t + "forward_trajectory_length.acceleration");
+  p.forward_trajectory_length.margin =
+    get_or_declare_parameter<double>(node, t + "forward_trajectory_length.margin");
 }
 
 void TrajectoryChecker::setup_diag()
 {
+  if (!context_->diag_updater) return;
+
   const auto & status = context_->validation_status;
 
   std::string ns = "trajectory_validation_";
   const auto add_diag = [&](
                           const std::string & name, const bool & status, const std::string & msg) {
-    context_->add_diag(ns + name, status, msg, is_critical_error_);
+    context_->diag_updater->add(
+      ns + name, [&, msg = msg](auto & stat) { set_diag_status(stat, status, msg); });
   };
 
   add_diag("size", status->is_valid_size, "invalid trajectory size is found");
@@ -135,76 +139,97 @@ void TrajectoryChecker::setup_diag()
     "trajectory_shift", status->is_valid_trajectory_shift, "detected sudden shift in trajectory");
 }
 
-void TrajectoryChecker::validate(bool & is_critical)
+void TrajectoryChecker::set_diag_status(
+  DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg) const
 {
-  const auto & data = context_->data;
+  if (is_ok) {
+    stat.summary(DiagnosticStatus::OK, "validated.");
+    return;
+  }
+
+  const auto invalid_count = context_->validation_status->invalid_count;
+  const auto count_threshold = context_->params.diag_error_count_threshold;
+  if (invalid_count < count_threshold) {
+    const auto warn_msg =
+      msg + " (invalid count is less than error threshold: " + std::to_string(invalid_count) +
+      " < " + std::to_string(count_threshold) + ")";
+    stat.summary(DiagnosticStatus::WARN, warn_msg);
+    return;
+  }
+
+  if (override_all_error_diag_) {
+    const auto warn_msg = msg + " (error diag was overriden internally)";
+    stat.summary(DiagnosticStatus::WARN, warn_msg);
+    return;
+  }
+
+  stat.summary(DiagnosticStatus::ERROR, msg);
+}
+
+void TrajectoryChecker::validate()
+{
   auto & status = context_->validation_status;
-  const double vehicle_wheel_base_m = context_->vehicle_info.wheel_base_m;
 
   const auto terminateValidation = [&](const auto & ss) {
     RCLCPP_ERROR_STREAM_THROTTLE(logger_, *clock_, 3000, ss);
   };
 
-  status->is_valid_size = check_valid_size(data, status);
+  override_all_error_diag_ = false;
+
+  status->is_valid_size = check_valid_size();
   if (!status->is_valid_size) {
     return terminateValidation(
       "trajectory has invalid point size (" + std::to_string(status->trajectory_size) +
       "). Stop validation process, raise an error.");
   }
 
-  status->is_valid_finite_value = check_valid_finite_value(data);
+  status->is_valid_finite_value = check_valid_finite_value();
   if (!status->is_valid_finite_value) {
     return terminateValidation(
       "trajectory has invalid value (NaN, Inf, etc). Stop validation process, raise an error.");
   }
 
-  is_critical_error_ = false;
-  status->is_valid_interval = check_valid_interval(data, status);
-  status->is_valid_longitudinal_max_acc = check_valid_max_longitudinal_acceleration(data, status);
-  status->is_valid_longitudinal_min_acc = check_valid_min_longitudinal_acceleration(data, status);
-  status->is_valid_velocity_deviation = check_valid_velocity_deviation(data, status);
-  status->is_valid_distance_deviation = check_valid_distance_deviation(data, status);
-  status->is_valid_longitudinal_distance_deviation =
-    check_valid_longitudinal_distance_deviation(data, status);
-  status->is_valid_yaw_deviation = check_valid_yaw_deviation(data, status);
-  status->is_valid_forward_trajectory_length = check_valid_forward_trajectory_length(data, status);
-  status->is_valid_trajectory_shift = check_trajectory_shift(data, status);
-  status->is_valid_relative_angle = check_valid_relative_angle(data, status);
-  status->is_valid_curvature = check_valid_curvature(data, status);
-  status->is_valid_lateral_acc = check_valid_lateral_acceleration(data, status);
-  status->is_valid_lateral_jerk = check_valid_lateral_jerk(data, status);
-  status->is_valid_steering = check_valid_steering(data, status, vehicle_wheel_base_m);
-  status->is_valid_steering_rate = check_valid_steering_rate(data, status, vehicle_wheel_base_m);
-
-  is_critical = is_critical_error_;
+  status->is_valid_interval = check_valid_interval();
+  status->is_valid_longitudinal_max_acc = check_valid_max_longitudinal_acceleration();
+  status->is_valid_longitudinal_min_acc = check_valid_min_longitudinal_acceleration();
+  status->is_valid_velocity_deviation = check_valid_velocity_deviation();
+  status->is_valid_distance_deviation = check_valid_distance_deviation();
+  status->is_valid_longitudinal_distance_deviation = check_valid_longitudinal_distance_deviation();
+  status->is_valid_yaw_deviation = check_valid_yaw_deviation();
+  status->is_valid_forward_trajectory_length = check_valid_forward_trajectory_length();
+  status->is_valid_trajectory_shift = check_trajectory_shift();
+  status->is_valid_relative_angle = check_valid_relative_angle();
+  status->is_valid_curvature = check_valid_curvature();
+  status->is_valid_lateral_acc = check_valid_lateral_acceleration();
+  status->is_valid_lateral_jerk = check_valid_lateral_jerk();
+  status->is_valid_steering = check_valid_steering();
+  status->is_valid_steering_rate = check_valid_steering_rate();
 }
 
-bool TrajectoryChecker::check_valid_size(
-  const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status)
+bool TrajectoryChecker::check_valid_size()
 {
-  status->trajectory_size = data->current_trajectory->points.size();
+  auto & status = context_->validation_status;
+  status->trajectory_size = context_->data->current_trajectory->points.size();
   return status->trajectory_size >= 2;
 }
 
-bool TrajectoryChecker::check_valid_finite_value(
-  const std::shared_ptr<const PlanningValidatorData> & data)
+bool TrajectoryChecker::check_valid_finite_value()
 {
-  const auto & trajectory = *data->current_trajectory;
+  const auto & trajectory = *context_->data->current_trajectory;
   for (const auto & p : trajectory.points) {
     if (!trajectory_checker_utils::checkFinite(p)) return false;
   }
   return true;
 }
 
-bool TrajectoryChecker::check_valid_interval(
-  const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status)
+bool TrajectoryChecker::check_valid_interval()
 {
   if (!params_.interval.enable) {
     return true;
   }
 
+  const auto & data = context_->data;
+  auto & status = context_->validation_status;
   const auto & trajectory = *data->current_trajectory;
 
   const auto [max_interval_distance, i] =
@@ -217,21 +242,21 @@ bool TrajectoryChecker::check_valid_interval(
       context_->debug_pose_publisher->pushPoseMarker(p.at(i - 1), "trajectory_interval");
       context_->debug_pose_publisher->pushPoseMarker(p.at(i), "trajectory_interval");
     }
-    is_critical_error_ |= params_.interval.is_critical;
+    context_->set_handling(params_.interval.handling_type);
+    override_all_error_diag_ |= params_.interval.override_error_diag;
     return false;
   }
-
   return true;
 }
 
-bool TrajectoryChecker::check_valid_relative_angle(
-  const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status)
+bool TrajectoryChecker::check_valid_relative_angle()
 {
   if (!params_.relative_angle.enable) {
     return true;
   }
 
+  const auto & data = context_->data;
+  auto & status = context_->validation_status;
   const auto & trajectory = *data->resampled_current_trajectory;
 
   const auto [max_relative_angle, i] = trajectory_checker_utils::calcMaxRelativeAngles(trajectory);
@@ -244,20 +269,21 @@ bool TrajectoryChecker::check_valid_relative_angle(
       context_->debug_pose_publisher->pushPoseMarker(p.at(i + 1), "trajectory_relative_angle", 1);
       context_->debug_pose_publisher->pushPoseMarker(p.at(i + 2), "trajectory_relative_angle", 2);
     }
-    is_critical_error_ |= params_.relative_angle.is_critical;
+    context_->set_handling(params_.relative_angle.handling_type);
+    override_all_error_diag_ |= params_.relative_angle.override_error_diag;
     return false;
   }
   return true;
 }
 
-bool TrajectoryChecker::check_valid_curvature(
-  const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status)
+bool TrajectoryChecker::check_valid_curvature()
 {
   if (!params_.curvature.enable) {
     return true;
   }
 
+  const auto & data = context_->data;
+  auto & status = context_->validation_status;
   const auto & trajectory = *data->resampled_current_trajectory;
 
   const auto [max_curvature, i] = trajectory_checker_utils::calcMaxCurvature(trajectory);
@@ -269,20 +295,21 @@ bool TrajectoryChecker::check_valid_curvature(
       context_->debug_pose_publisher->pushPoseMarker(p.at(i), "trajectory_curvature");
       context_->debug_pose_publisher->pushPoseMarker(p.at(i + 1), "trajectory_curvature");
     }
-    is_critical_error_ |= params_.curvature.is_critical;
+    context_->set_handling(params_.curvature.handling_type);
+    override_all_error_diag_ |= params_.curvature.override_error_diag;
     return false;
   }
   return true;
 }
 
-bool TrajectoryChecker::check_valid_lateral_acceleration(
-  const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status)
+bool TrajectoryChecker::check_valid_lateral_acceleration()
 {
   if (!params_.lateral_accel.enable) {
     return true;
   }
 
+  const auto & data = context_->data;
+  auto & status = context_->validation_status;
   const auto & trajectory = *data->resampled_current_trajectory;
 
   const auto [max_lateral_acc, i] =
@@ -290,40 +317,42 @@ bool TrajectoryChecker::check_valid_lateral_acceleration(
   status->max_lateral_acc = max_lateral_acc;
   if (max_lateral_acc > params_.lateral_accel.threshold) {
     context_->debug_pose_publisher->pushPoseMarker(trajectory.points.at(i), "lateral_acceleration");
-    is_critical_error_ |= params_.lateral_accel.is_critical;
+    context_->set_handling(params_.lateral_accel.handling_type);
+    override_all_error_diag_ |= params_.lateral_accel.override_error_diag;
     return false;
   }
   return true;
 }
 
-bool TrajectoryChecker::check_valid_lateral_jerk(
-  const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status)
+bool TrajectoryChecker::check_valid_lateral_jerk()
 {
   if (!params_.lateral_jerk.enable) {
     return true;
   }
 
+  const auto & data = context_->data;
+  auto & status = context_->validation_status;
   const auto & trajectory = *data->resampled_current_trajectory;
 
   const auto [max_lateral_jerk, i] = trajectory_checker_utils::calc_max_lateral_jerk(trajectory);
   status->max_lateral_jerk = max_lateral_jerk;
   if (max_lateral_jerk > params_.lateral_jerk.threshold) {
     context_->debug_pose_publisher->pushPoseMarker(trajectory.points.at(i), "lateral_jerk");
-    is_critical_error_ |= params_.lateral_jerk.is_critical;
+    context_->set_handling(params_.lateral_jerk.handling_type);
+    override_all_error_diag_ |= params_.lateral_jerk.override_error_diag;
     return false;
   }
   return true;
 }
 
-bool TrajectoryChecker::check_valid_min_longitudinal_acceleration(
-  const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status)
+bool TrajectoryChecker::check_valid_min_longitudinal_acceleration()
 {
   if (!params_.min_lon_accel.enable) {
     return true;
   }
 
+  const auto & data = context_->data;
+  auto & status = context_->validation_status;
   const auto & trajectory = *data->current_trajectory;
 
   const auto [min_longitudinal_acc, i] =
@@ -333,20 +362,21 @@ bool TrajectoryChecker::check_valid_min_longitudinal_acceleration(
   if (min_longitudinal_acc < params_.min_lon_accel.threshold) {
     context_->debug_pose_publisher->pushPoseMarker(
       trajectory.points.at(i).pose, "min_longitudinal_acc");
-    is_critical_error_ |= params_.min_lon_accel.is_critical;
+    context_->set_handling(params_.min_lon_accel.handling_type);
+    override_all_error_diag_ |= params_.min_lon_accel.override_error_diag;
     return false;
   }
   return true;
 }
 
-bool TrajectoryChecker::check_valid_max_longitudinal_acceleration(
-  const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status)
+bool TrajectoryChecker::check_valid_max_longitudinal_acceleration()
 {
   if (!params_.max_lon_accel.enable) {
     return true;
   }
 
+  const auto & data = context_->data;
+  auto & status = context_->validation_status;
   const auto & trajectory = *data->current_trajectory;
 
   const auto [max_longitudinal_acc, i] =
@@ -356,21 +386,23 @@ bool TrajectoryChecker::check_valid_max_longitudinal_acceleration(
   if (max_longitudinal_acc > params_.max_lon_accel.threshold) {
     context_->debug_pose_publisher->pushPoseMarker(
       trajectory.points.at(i).pose, "max_longitudinal_acc");
-    is_critical_error_ |= params_.max_lon_accel.is_critical;
+    context_->set_handling(params_.max_lon_accel.handling_type);
+    override_all_error_diag_ |= params_.max_lon_accel.override_error_diag;
     return false;
   }
   return true;
 }
 
-bool TrajectoryChecker::check_valid_steering(
-  const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status, const double vehicle_wheel_base_m)
+bool TrajectoryChecker::check_valid_steering()
 {
   if (!params_.steering.enable) {
     return true;
   }
 
+  const auto & data = context_->data;
+  auto & status = context_->validation_status;
   const auto & trajectory = *data->resampled_current_trajectory;
+  const auto vehicle_wheel_base_m = context_->vehicle_info.wheel_base_m;
 
   const auto [max_steering, i] =
     trajectory_checker_utils::calcMaxSteeringAngles(trajectory, vehicle_wheel_base_m);
@@ -378,21 +410,23 @@ bool TrajectoryChecker::check_valid_steering(
 
   if (max_steering > params_.steering.threshold) {
     context_->debug_pose_publisher->pushPoseMarker(trajectory.points.at(i).pose, "max_steering");
-    is_critical_error_ |= params_.steering.is_critical;
+    context_->set_handling(params_.steering.handling_type);
+    override_all_error_diag_ |= params_.steering.override_error_diag;
     return false;
   }
   return true;
 }
 
-bool TrajectoryChecker::check_valid_steering_rate(
-  const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status, const double vehicle_wheel_base_m)
+bool TrajectoryChecker::check_valid_steering_rate()
 {
   if (!params_.steering.enable) {
     return true;
   }
 
+  const auto & data = context_->data;
+  auto & status = context_->validation_status;
   const auto & trajectory = *data->resampled_current_trajectory;
+  const auto vehicle_wheel_base_m = context_->vehicle_info.wheel_base_m;
 
   const auto [max_steering_rate, i] =
     trajectory_checker_utils::calcMaxSteeringRates(trajectory, vehicle_wheel_base_m);
@@ -401,19 +435,21 @@ bool TrajectoryChecker::check_valid_steering_rate(
   if (max_steering_rate > params_.steering_rate.threshold) {
     context_->debug_pose_publisher->pushPoseMarker(
       trajectory.points.at(i).pose, "max_steering_rate");
-    is_critical_error_ |= params_.steering.is_critical;
+    context_->set_handling(params_.steering_rate.handling_type);
+    override_all_error_diag_ |= params_.steering_rate.override_error_diag;
     return false;
   }
   return true;
 }
 
-bool TrajectoryChecker::check_valid_velocity_deviation(
-  const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status)
+bool TrajectoryChecker::check_valid_velocity_deviation()
 {
   if (!params_.velocity_deviation.enable) {
     return true;
   }
+
+  const auto & data = context_->data;
+  auto & status = context_->validation_status;
 
   if (!data->nearest_point_index) return false;
   const auto idx = *data->nearest_point_index;
@@ -425,19 +461,21 @@ bool TrajectoryChecker::check_valid_velocity_deviation(
     std::abs(trajectory.points.at(idx).longitudinal_velocity_mps - ego_speed);
 
   if (status->velocity_deviation > params_.velocity_deviation.threshold) {
-    is_critical_error_ |= params_.velocity_deviation.is_critical;
+    context_->set_handling(params_.velocity_deviation.handling_type);
+    override_all_error_diag_ |= params_.velocity_deviation.override_error_diag;
     return false;
   }
   return true;
 }
 
-bool TrajectoryChecker::check_valid_distance_deviation(
-  const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status)
+bool TrajectoryChecker::check_valid_distance_deviation()
 {
   if (!params_.distance_deviation.enable) {
     return true;
   }
+
+  const auto & data = context_->data;
+  auto & status = context_->validation_status;
 
   if (!data->nearest_point_index) return false;
   const auto idx = *data->nearest_segment_index;
@@ -447,20 +485,21 @@ bool TrajectoryChecker::check_valid_distance_deviation(
   status->distance_deviation = motion_utils::calcLateralOffset(trajectory, ego_position, idx);
 
   if (std::abs(status->distance_deviation) > params_.distance_deviation.threshold) {
-    is_critical_error_ |= params_.distance_deviation.is_critical;
+    context_->set_handling(params_.distance_deviation.handling_type);
+    override_all_error_diag_ |= params_.distance_deviation.override_error_diag;
     return false;
   }
   return true;
 }
 
-bool TrajectoryChecker::check_valid_longitudinal_distance_deviation(
-  const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status)
+bool TrajectoryChecker::check_valid_longitudinal_distance_deviation()
 {
   if (!params_.lon_distance_deviation.enable) {
     return true;
   }
 
+  const auto & data = context_->data;
+  auto & status = context_->validation_status;
   const auto & trajectory = *data->current_trajectory;
 
   if (trajectory.points.size() < 2) {
@@ -499,7 +538,8 @@ bool TrajectoryChecker::check_valid_longitudinal_distance_deviation(
   if (idx == 0) {
     const auto seg_idx = 0;
     if (!has_valid_lon_deviation(seg_idx, false)) {
-      is_critical_error_ |= params_.lon_distance_deviation.is_critical;
+      context_->set_handling(params_.lon_distance_deviation.handling_type);
+      override_all_error_diag_ |= params_.lon_distance_deviation.override_error_diag;
       return false;
     }
     return true;
@@ -509,7 +549,8 @@ bool TrajectoryChecker::check_valid_longitudinal_distance_deviation(
   if (idx == trajectory.points.size() - 1) {
     const auto seg_idx = trajectory.points.size() - 2;
     if (!has_valid_lon_deviation(seg_idx, true)) {
-      is_critical_error_ |= params_.lon_distance_deviation.is_critical;
+      context_->set_handling(params_.lon_distance_deviation.handling_type);
+      override_all_error_diag_ |= params_.lon_distance_deviation.override_error_diag;
       return false;
     }
     return true;
@@ -531,14 +572,14 @@ double nearest_trajectory_yaw_shift(
   return yaw_shift_with_previous_trajectory;
 }
 
-bool TrajectoryChecker::check_valid_yaw_deviation(
-  const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status)
+bool TrajectoryChecker::check_valid_yaw_deviation()
 {
   if (!params_.yaw_deviation.enable) {
     return true;
   }
 
+  const auto & data = context_->data;
+  auto & status = context_->validation_status;
   const auto & trajectory = *data->current_trajectory;
   const auto & ego_pose = data->current_kinematics->pose.pose;
 
@@ -552,21 +593,23 @@ bool TrajectoryChecker::check_valid_yaw_deviation(
   const auto check_condition =
     !data->last_valid_trajectory ||
     nearest_trajectory_yaw_shift(*data->last_valid_trajectory, interpolated_trajectory_point) >
-      params_.yaw_deviation.nearest_yaw_trajectory_shift_required_for_checking;
+      params_.yaw_deviation.th_trajectory_yaw_shift;
   if (check_condition && status->yaw_deviation > params_.yaw_deviation.threshold) {
-    is_critical_error_ |= params_.yaw_deviation.is_critical;
+    context_->set_handling(params_.yaw_deviation.handling_type);
+    override_all_error_diag_ |= params_.yaw_deviation.override_error_diag;
     return false;
   }
   return true;
 }
 
-bool TrajectoryChecker::check_valid_forward_trajectory_length(
-  const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status)
+bool TrajectoryChecker::check_valid_forward_trajectory_length()
 {
   if (!params_.forward_trajectory_length.enable) {
     return true;
   }
+
+  const auto & data = context_->data;
+  auto & status = context_->validation_status;
 
   const auto & trajectory = *data->current_trajectory;
   const auto & ego_pose = data->current_kinematics->pose.pose;
@@ -587,21 +630,22 @@ bool TrajectoryChecker::check_valid_forward_trajectory_length(
   status->forward_trajectory_length_measured = forward_length;
 
   if (forward_length < forward_length_required) {
-    is_critical_error_ |= params_.forward_trajectory_length.is_critical;
+    context_->set_handling(params_.forward_trajectory_length.handling_type);
+    override_all_error_diag_ |= params_.forward_trajectory_length.override_error_diag;
     return false;
   }
   return true;
 }
 
-bool TrajectoryChecker::check_trajectory_shift(
-  const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status)
+bool TrajectoryChecker::check_trajectory_shift()
 {
   bool is_valid = true;
+  const auto & data = context_->data;
   if (!params_.trajectory_shift.enable || !data->last_valid_trajectory) {
     return is_valid;
   }
 
+  auto & status = context_->validation_status;
   const auto & trajectory = *data->current_trajectory;
   const auto & prev_trajectory = *data->last_valid_trajectory;
   const auto & ego_pose = data->current_kinematics->pose.pose;
@@ -629,7 +673,8 @@ bool TrajectoryChecker::check_trajectory_shift(
   if (
     ego_lat_dist > params_.trajectory_shift.lat_shift_th &&
     lat_shift > params_.trajectory_shift.lat_shift_th) {
-    is_critical_error_ |= params_.trajectory_shift.is_critical;
+    context_->set_handling(params_.trajectory_shift.handling_type);
+    override_all_error_diag_ |= params_.trajectory_shift.override_error_diag;
     context_->debug_pose_publisher->pushPoseMarker(nearest_pose, "trajectory_shift");
     is_valid = false;
   }
@@ -658,7 +703,8 @@ bool TrajectoryChecker::check_trajectory_shift(
   // if the nearest segment is the first segment, check forward shift
   if (*nearest_seg_idx == 0) {
     if (lon_shift > params_.trajectory_shift.forward_shift_th) {
-      is_critical_error_ |= params_.trajectory_shift.is_critical;
+      context_->set_handling(params_.trajectory_shift.handling_type);
+      override_all_error_diag_ |= params_.trajectory_shift.override_error_diag;
       context_->debug_pose_publisher->pushPoseMarker(nearest_pose, "trajectory_shift");
       is_valid = false;
     }
@@ -667,7 +713,8 @@ bool TrajectoryChecker::check_trajectory_shift(
 
   // if the nearest segment is the last segment, check backward shift
   if (lon_shift < 0.0 && std::abs(lon_shift) > params_.trajectory_shift.backward_shift_th) {
-    is_critical_error_ |= params_.trajectory_shift.is_critical;
+    context_->set_handling(params_.trajectory_shift.handling_type);
+    override_all_error_diag_ |= params_.trajectory_shift.override_error_diag;
     context_->debug_pose_publisher->pushPoseMarker(nearest_pose, "trajectory_shift");
     is_valid = false;
   }
