@@ -28,6 +28,11 @@ inline constexpr int64_t TRAFFIC_LIGHT_ONE_HOT_DIM = 5;
 inline constexpr int64_t SEGMENT_POINT_DIM = 8 + TRAFFIC_LIGHT_ONE_HOT_DIM;
 inline constexpr int64_t FULL_MATRIX_ROWS = SEGMENT_POINT_DIM + 2;
 
+inline constexpr int64_t EGO_AGENT_PAST_IDX_X = 0;
+inline constexpr int64_t EGO_AGENT_PAST_IDX_Y = 1;
+inline constexpr int64_t EGO_AGENT_PAST_IDX_COS = 2;
+inline constexpr int64_t EGO_AGENT_PAST_IDX_SIN = 3;
+
 // Index for each field
 inline constexpr int64_t X = 0;
 inline constexpr int64_t Y = 1;

@@ -366,10 +366,10 @@ std::vector<float> DiffusionPlanner::create_ego_agent_past(
     // Store in flat array: [batch, timestep, features]
     const size_t timestep_idx = i - start_idx;
     const size_t base_idx = timestep_idx * features_per_timestep;
-    ego_agent_past[base_idx + 0] = x;
-    ego_agent_past[base_idx + 1] = y;
-    ego_agent_past[base_idx + 2] = cos_yaw;
-    ego_agent_past[base_idx + 3] = sin_yaw;
+    ego_agent_past[base_idx + EGO_AGENT_PAST_IDX_X] = x;
+    ego_agent_past[base_idx + EGO_AGENT_PAST_IDX_Y] = y;
+    ego_agent_past[base_idx + EGO_AGENT_PAST_IDX_COS] = cos_yaw;
+    ego_agent_past[base_idx + EGO_AGENT_PAST_IDX_SIN] = sin_yaw;
   }
 
   return ego_agent_past;
