@@ -108,7 +108,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
     // trust object existence probability
     input_channel_config.trust_existence_probability = declare_parameter<bool>(
-      "input_channels." + input_channel + ".flags.can_trust_existence_probability", true);
+      "input_channels." + input_channel + ".flags.can_trust_existence_probability", false);
 
     // trust object extension, size beyond the visible area
     input_channel_config.trust_extension = declare_parameter<bool>(

@@ -108,6 +108,13 @@ void InputStream::onMessage(
   // Normalize the object uncertainty
   uncertainty::normalizeUncertainty(dynamic_objects);
 
+  // If the channel does not trust existence probability, set it to default
+  if (!channel_.trust_existence_probability) {
+    for (auto & object : dynamic_objects.objects) {
+      object.existence_probability = types::default_existence_probability;
+    }
+  }
+
   // Move the objects_with_uncertainty to the objects queue
   objects_que_.push_back(std::move(dynamic_objects));
   while (objects_que_.size() > que_size_) {
