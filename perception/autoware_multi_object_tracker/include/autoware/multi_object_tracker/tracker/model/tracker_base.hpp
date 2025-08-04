@@ -55,6 +55,7 @@ private:
   // cache
   mutable rclcpp::Time cached_time_;
   mutable types::DynamicObject cached_object_;
+  mutable int cached_measurement_count_;
 
 public:
   Tracker(const rclcpp::Time & time, const types::DynamicObject & object);
@@ -132,11 +133,14 @@ protected:
   {
     cached_time_ = time;
     cached_object_ = object;
+    cached_measurement_count_ = total_measurement_count_ + total_no_measurement_count_;
   }
 
   bool getCachedObject(const rclcpp::Time & time, types::DynamicObject & object) const
   {
-    if (cached_time_.nanoseconds() == time.nanoseconds()) {
+    if (
+      cached_time_.nanoseconds() == time.nanoseconds() &&
+      cached_measurement_count_ == total_measurement_count_ + total_no_measurement_count_) {
       object = cached_object_;
       return true;
     }
@@ -147,6 +151,7 @@ protected:
   {
     cached_time_ = rclcpp::Time();
     cached_object_ = types::DynamicObject();
+    cached_measurement_count_ = -1;
   }
 
   void limitObjectExtension(const object_model::ObjectModel object_model);
