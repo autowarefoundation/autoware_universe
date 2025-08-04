@@ -156,7 +156,7 @@ void update_departure_intervals(
  * @param[in] new_departure_points New departure points from the current cycle.
  * @param[in,out] critical_departure_points Persistent list of critical points to update.
  * @param[in] aw_ref_traj Reference trajectory.
- * @param[in] th_dist_hysteresis_m Min distance to avoid adding duplicates.
+ * @param[in] th_point_merge_distance_m Min distance to avoid adding duplicates.
  * @param[in] offset_from_ego Ignore points before this arc-length.
  * @param[in] th_pt_shift_dist_m Threshold distance to detect point drift.
  * @param[in] th_pt_shift_angle_rad Threshold angle to detect pose change.
@@ -164,9 +164,9 @@ void update_departure_intervals(
 void update_critical_departure_points(
   const Side<DeparturePoints> & new_departure_points,
   CriticalDeparturePoints & critical_departure_points,
-  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const double th_dist_hysteresis_m,
-  const double offset_from_ego, const double th_pt_shift_dist_m,
-  const double th_pt_shift_angle_rad);
+  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
+  const double th_point_merge_distance_m, const double offset_from_ego,
+  const double th_pt_shift_dist_m, const double th_pt_shift_angle_rad);
 
 /**
  * @brief Build slow-down segments ahead of the ego vehicle.

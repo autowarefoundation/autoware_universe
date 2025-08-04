@@ -19,9 +19,9 @@
           "default": 5
         },
 
-        "th_dist_hysteresis_m": {
+        "th_point_merge_distance_m": {
           "type": "number",
-          "description": "Minimum distance between critical points to avoid duplicates [m].",
+          "description": "Distance threshold to merge nearby points [m].",
           "default": 1.0
         },
 
@@ -350,7 +350,7 @@
       "required": [
         "boundary_types_to_detect",
         "th_max_lateral_query_num",
-        "th_dist_hysteresis_m",
+        "th_point_merge_distance_m",
         "th_pt_shift",
         "abnormality",
         "diagnostic",

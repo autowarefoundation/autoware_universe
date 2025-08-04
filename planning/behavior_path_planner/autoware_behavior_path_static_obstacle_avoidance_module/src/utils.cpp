@@ -2362,7 +2362,8 @@ lanelet::ConstLanelets getAdjacentLane(
     }
   }
 
-  for (std::size_t i = 0; i < lanes.size(); ++i) {
+  const auto lanes_size = lanes.size();
+  for (std::size_t i = 0; i < lanes_size; ++i) {
     const auto & lane = lanes[i];
     for (const auto & next_lane : rh->getNextLanelets(lane)) {
       if (!exist(next_lane.id())) {
@@ -2393,8 +2394,9 @@ std::vector<ExtendedPredictedObject> getSafetyCheckTargetObjects(
 
   const auto append = [&](const auto & objects) {
     std::for_each(objects.objects.begin(), objects.objects.end(), [&](const auto & object) {
-      target_objects.push_back(utils::path_safety_checker::transform(
-        object, time_horizon, parameters->ego_predicted_path_params.time_resolution));
+      target_objects.push_back(
+        utils::path_safety_checker::transform(
+          object, time_horizon, parameters->ego_predicted_path_params.time_resolution));
     });
   };
 
