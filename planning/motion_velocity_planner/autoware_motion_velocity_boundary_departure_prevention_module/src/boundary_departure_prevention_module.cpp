@@ -203,7 +203,8 @@ void BoundaryDeparturePreventionModule::subscribe_topics(rclcpp::Node & node)
       &node, "/api/operation_mode/state", 1);
   route_polling_sub_ = autoware_utils::InterProcessPollingSubscriber<
     LaneletRoute, autoware_utils::polling_policy::Newest>::
-    create_subscription(&node, "/planning/mission_planning/route");
+    create_subscription(
+      &node, "/planning/mission_planning/route", rclcpp::QoS(1).transient_local());
 }
 
 void BoundaryDeparturePreventionModule::publish_topics(rclcpp::Node & node)
