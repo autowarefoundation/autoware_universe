@@ -102,7 +102,7 @@ private:
     sub_accel_{this, "~/input/current_accel"};
 
   autoware_utils::InterProcessPollingSubscriber<OperationModeState> sub_operation_mode_{
-    this, "~/input/current_operation_mode"};
+    this, "~/input/current_operation_mode", rclcpp::QoS{1}.transient_local()};
 
   // Publishers
   rclcpp::Publisher<autoware_control_msgs::msg::Control>::SharedPtr control_cmd_pub_;
