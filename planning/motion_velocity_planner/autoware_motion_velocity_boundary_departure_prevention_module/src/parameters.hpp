@@ -67,8 +67,8 @@ struct NodeParam
     const std::string module_name{"boundary_departure_prevention."};
     bdc_param.boundary_types_to_detect = get_or_declare_parameter<std::vector<std::string>>(
       node, module_name + "boundary_types_to_detect");
-    bdc_param.th_dist_hysteresis_m =
-      get_or_declare_parameter<double>(node, module_name + "th_dist_hysteresis_m");
+    bdc_param.th_point_merge_distance_m =
+      get_or_declare_parameter<double>(node, module_name + "th_point_merge_distance_m");
     th_pt_shift_angle_rad =
       get_or_declare_parameter<double>(node, module_name + "th_pt_shift.dist_m");
     th_pt_shift_angle_rad = autoware_utils_math::deg2rad(
