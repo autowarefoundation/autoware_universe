@@ -17,26 +17,11 @@ This package depends on the following packages:
 - `autoware_velocity_smoother`: Ensures that the velocity profile of the trajectory is smooth and feasible.
 - `autoware_path_smoother`: Smooths the path to ensure that the trajectory is continuous and drivable.
 
-## Configuration
+## Parameters
 
-The behavior of the `autoware_trajectory_optimizer` can be configured using the parameters defined in the `config` directory. Some of the key parameters include:
+{{ json_to_markdown("planning/autoware_trajectory_optimizer/schema/trajectory_optimizer.schema.json") }}
 
-- `keep_last_trajectory_s`: How long to maintain the previous chosen/best trajectory as a single output for this module. Only used if `keep_last_trajectory` is true.
-- `nearest_dist_threshold_m`: constraint used to search for the nearest trajectory pose to the ego vehicle.
-- `nearest_yaw_threshold_rad`: constraint used to search for the nearest trajectory pose to the ego vehicle.
-- `target_pull_out_speed_mps`: to assure the ego can start moving from a stopped position, this parameter sets a minimum trajectory speed value.
-- `target_pull_out_acc_mps2`:to assure the ego can start moving from a stopped position, this parameter sets a minimum trajectory acceleration value.
-- `max_speed_mps`: The maximum allowable velocity for the trajectory.
-- `spline_interpolation_resolution_m`: Interpolation resolution for Akima spline.
-- `backward_trajectory_extension_m`: How long should the ego trajectory extend backward. This backward trajectory is built using the ego's previous poses.
-- `use_akima_spline_interpolation`: To use akima spline interpolation to smooth the trajectories.
-- `smooth_trajectories`: Flag to indicate if the Elastic Band smoother should be applied on the input trajectories.
-- `limit_speed`: Flag to indicate if a `max_speed_mps` speed limit should be applied to the trajectories.
-- `fix_invalid_points`: If the module should remove repeated or invalid points, or points that go against the general trajectory direction.
-- `smooth_velocities`: Apply velocity smoothing to the input trajectories.
-- `publish_last_trajectory`: Publish the previous trajectory selected by the `autoware_trajectory_ranker` package along with the interpolated new trajectories coming from the trajectory generator.
-- `keep_last_trajectory`: with this flag on, the module will only publish the previous trajectory selected by the `autoware_trajectory_ranker` for `keep_last_trajectory_s` seconds.
-- `extend_trajectory_backward`: flag used to indicate if the ego's trajectory should be extended backward.
+Parameters can be set via YAML configuration files in the `config/` directory.
 
 ## License
 
