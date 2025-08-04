@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_OPTIMIZER_HPP_
-#define AUTOWARE__TRAJECTORY_OPTIMIZER_HPP_
+#ifndef AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_HPP_
+#define AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_HPP_
 
 #include "autoware/path_smoother/elastic_band.hpp"
 #include "autoware/path_smoother/replan_checker.hpp"
@@ -124,4 +124,4 @@ private:
 
 }  // namespace autoware::trajectory_optimizer
 
-#endif  // AUTOWARE__TRAJECTORY_OPTIMIZER_HPP_
+#endif  // AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_HPP_

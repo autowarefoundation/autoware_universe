@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_POINT_FIXER_HPP_
-#define AUTOWARE__TRAJECTORY_POINT_FIXER_HPP_
+#ifndef AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_POINT_FIXER_HPP_
+#define AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_POINT_FIXER_HPP_
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
@@ -46,4 +46,4 @@ public:
 };
 }  // namespace autoware::trajectory_optimizer::plugin
 
-#endif  // AUTOWARE__TRAJECTORY_POINT_FIXER_HPP_
+#endif  // AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_POINT_FIXER_HPP_

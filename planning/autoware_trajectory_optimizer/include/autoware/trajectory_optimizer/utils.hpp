@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_OPTIMIZER_UTILS_HPP_
-#define AUTOWARE__TRAJECTORY_OPTIMIZER_UTILS_HPP_
+#ifndef AUTOWARE__TRAJECTORY_OPTIMIZER__UTILS_HPP_
+#define AUTOWARE__TRAJECTORY_OPTIMIZER__UTILS_HPP_
 
 #include "autoware/path_smoother/elastic_band.hpp"
 #include "autoware/path_smoother/replan_checker.hpp"
@@ -169,4 +169,4 @@ void expand_trajectory_with_ego_history(
 
 };  // namespace autoware::trajectory_optimizer::utils
 
-#endif  // AUTOWARE__TRAJECTORY_OPTIMIZER_UTILS_HPP_
+#endif  // AUTOWARE__TRAJECTORY_OPTIMIZER__UTILS_HPP_

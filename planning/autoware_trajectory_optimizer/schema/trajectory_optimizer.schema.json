@@ -144,7 +144,13 @@
               "description": "Resampling ds for jerk filter [m]"
             }
           },
-          "required": ["jerk_weight", "over_v_weight", "over_a_weight", "over_j_weight", "jerk_filter_ds"]
+          "required": [
+            "jerk_weight",
+            "over_v_weight",
+            "over_a_weight",
+            "over_j_weight",
+            "jerk_filter_ds"
+          ]
         },
         "elastic_band_params": {
           "type": "object",
@@ -238,7 +244,12 @@
               "description": "Yaw threshold for ego nearest search [rad]"
             }
           },
-          "required": ["common", "elastic_band", "ego_nearest_dist_threshold", "ego_nearest_yaw_threshold"]
+          "required": [
+            "common",
+            "elastic_band",
+            "ego_nearest_dist_threshold",
+            "ego_nearest_yaw_threshold"
+          ]
         }
       },
       "required": [

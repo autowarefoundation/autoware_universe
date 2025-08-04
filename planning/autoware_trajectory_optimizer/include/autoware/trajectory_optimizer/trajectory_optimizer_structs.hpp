@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_OPTIMIZER_STRUCTS_HPP_
-#define AUTOWARE__TRAJECTORY_OPTIMIZER_STRUCTS_HPP_
+#ifndef AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_STRUCTS_HPP_
+#define AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_STRUCTS_HPP_
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/detail/odometry__struct.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -53,4 +53,4 @@ struct TrajectoryOptimizerParams
   AccelWithCovarianceStamped current_acceleration;
 };
 }  // namespace autoware::trajectory_optimizer
-#endif  // AUTOWARE__TRAJECTORY_OPTIMIZER_STRUCTS_HPP_
+#endif  // AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_STRUCTS_HPP_

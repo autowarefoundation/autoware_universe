@@ -21,12 +21,12 @@
     <param from="$(var velocity_smoother_param_path)" allow_substs="true"/>
     <param from="$(var common_smoother_param_path)" allow_substs="true"/>
     <param from="$(var elastic_band_param_path)" allow_substs="true"/>
-   <remap from="~/output/trajectory" to="$(var output_traj)"/>
-   <remap from="~/output/trajectories" to="$(var output_trajectories)"/>
-   <remap from="~/input/traj" to="$(var input_traj)"/>
-   <remap from="~/input/trajectories" to="$(var input_trajectories)"/>
-   <remap from="~/input/odometry" to="/localization/kinematic_state"/>
-   <remap from="~/input/acceleration" to="/localization/acceleration"/>
-   <remap from="~/input/previous_trajectory" to="/planning/scenario_planning/trajectory"/>
+    <remap from="~/output/trajectory" to="$(var output_traj)"/>
+    <remap from="~/output/trajectories" to="$(var output_trajectories)"/>
+    <remap from="~/input/traj" to="$(var input_traj)"/>
+    <remap from="~/input/trajectories" to="$(var input_trajectories)"/>
+    <remap from="~/input/odometry" to="/localization/kinematic_state"/>
+    <remap from="~/input/acceleration" to="/localization/acceleration"/>
+    <remap from="~/input/previous_trajectory" to="/planning/scenario_planning/trajectory"/>
   </node>
 </launch>
