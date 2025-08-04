@@ -24,6 +24,8 @@
 #include <fmt/format.h>
 
 #include <algorithm>
+#include <limits>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -164,8 +166,6 @@ void check_departure_points_between_intervals(
   const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const double vehicle_length_m,
   const SideKey side_key, const std::unordered_set<DepartureType> & enable_type)
 {
-  // check if departure point is in between any intervals.
-  // if close to end pose, update end pose.
   for (auto & departure_interval : departure_intervals) {
     if (departure_interval.side_key != side_key) {
       continue;
@@ -244,16 +244,26 @@ void update_departure_intervals(
   const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const double vehicle_length_m,
   const TrajectoryPoint & ref_traj_fr_pt, const double ego_dist_from_traj_front,
   const double th_pt_shift_dist_m, const double th_pt_shift_angle_rad,
-  const std::unordered_set<DepartureType> & enable_type)
+  const std::unordered_set<DepartureType> & enable_type, const bool is_reset_interval,
+  const bool is_departure_persist)
 {
   update_departure_intervals_poses(
     departure_intervals, aw_ref_traj, ref_traj_fr_pt, ego_dist_from_traj_front, th_pt_shift_dist_m,
     th_pt_shift_angle_rad);
 
   for (const auto side_key : g_side_keys) {
-    check_departure_points_between_intervals(
-      departure_intervals, departure_points[side_key], aw_ref_traj, vehicle_length_m, side_key,
-      enable_type);
+    if (is_reset_interval) {
+      utils::remove_if(departure_intervals, [&](const DepartureInterval & interval) {
+        return interval.side_key == side_key;
+      });
+      continue;
+    }
+
+    if (is_departure_persist) {
+      check_departure_points_between_intervals(
+        departure_intervals, departure_points[side_key], aw_ref_traj, vehicle_length_m, side_key,
+        enable_type);
+    }
   }
 
   auto new_departure_intervals =

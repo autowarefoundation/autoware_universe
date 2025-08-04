@@ -171,7 +171,8 @@ public:
   tl::expected<std::vector<ClosestProjectionToBound>, std::string>
   get_closest_projections_to_boundaries_side(
     const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
-    const Abnormalities<ProjectionsToBound> & projections_to_bound, const SideKey side_key);
+    const Abnormalities<ProjectionsToBound> & projections_to_bound, const double min_braking_dist,
+    const double max_braking_dist, const SideKey side_key);
 
   /**
    * @brief Select the closest projections to boundaries for both sides based on all abnormality
@@ -188,7 +189,8 @@ public:
    */
   tl::expected<ClosestProjectionsToBound, std::string> get_closest_projections_to_boundaries(
     const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
-    const Abnormalities<ProjectionsToBound> & projections_to_bound);
+    const Abnormalities<ProjectionsToBound> & projections_to_bound, const double curr_vel,
+    const double curr_acc);
 
   /**
    * @brief Generate filtered departure points for both left and right sides.
