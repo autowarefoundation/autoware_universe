@@ -351,28 +351,46 @@ std::vector<LinearRing2d> create_vehicle_footprints(
   const TrajectoryPoints & trajectory, const VehicleInfo & vehicle_info,
   const SteeringReport & current_steering)
 {
-  constexpr auto steering_rate_gain = 1.0;
-  constexpr auto steering_rate_rad_per_s = 0.25;
-
   std::vector<LinearRing2d> vehicle_footprints;
   vehicle_footprints.reserve(trajectory.size());
-  std::transform(
-    trajectory.begin(), trajectory.end(), std::back_inserter(vehicle_footprints),
-    [&](const TrajectoryPoint & p) -> LinearRing2d {
-      using autoware_utils::transform_vector;
-      using autoware_utils::pose2transform;
-      const double raw_angle_rad =
-        current_steering.steering_tire_angle +
-        (steering_rate_rad_per_s * rclcpp::Duration(p.time_from_start).seconds());
 
-      constexpr auto min_angle = autoware_utils::deg2rad(-89);
-      constexpr auto max_angle = autoware_utils::deg2rad(89);
-      const double clamped_angle_rad = std::clamp(raw_angle_rad, min_angle, max_angle);
-
-      const auto local_vehicle_footprint = vehicle_info.createFootprint(
-        std::max(std::tan(clamped_angle_rad) * steering_rate_gain, 0.0), 0.0, 0.0, 0.0, 0.0, true);
-      return transform_vector(local_vehicle_footprint, pose2transform(p.pose));
-    });
+  std::vector<double> original_steering_offsets;
+  original_steering_offsets.reserve(trajectory.size());
+  for (auto i = 0UL; i + 1 < trajectory.size(); ++i) {
+    original_steering_offsets.push_back(
+      trajectory[i + 1].front_wheel_angle_rad - trajectory[i].front_wheel_angle_rad);
+  }
+  constexpr auto steering_rate_factor = 0.9;
+  const auto local_vehicle_footprint = vehicle_info.createFootprint(0.0, 0.0, 0.0, 0.0, 0.0, true);
+  // start from the current pose and steering
+  auto pose = trajectory.front().pose;
+  vehicle_footprints.push_back(
+    transform_vector(local_vehicle_footprint, autoware_utils::pose2transform(pose)));
+  auto steering_angle = static_cast<double>(current_steering.steering_tire_angle);
+  // simulate the ego motion assuming issues with the steering
+  // slower/faster steering rates
+  for (auto i = 0UL; i + 1 < trajectory.size(); ++i) {
+    const auto prev_p = trajectory[i];
+    const auto curr_p = trajectory[i + 1];
+    const auto dt =
+      rclcpp::Duration(curr_p.time_from_start) - rclcpp::Duration(prev_p.time_from_start);
+    const auto v = prev_p.longitudinal_velocity_mps;
+    const auto rotation_rate = v * std::tan(steering_angle) / vehicle_info.wheel_base_m;
+    const auto length = v * dt.seconds();
+    const auto new_heading = tf2::getYaw(pose.orientation) + rotation_rate * dt.seconds();
+    pose.position.x += length * std::cos(new_heading);
+    pose.position.y += length * std::sin(new_heading);
+    pose.orientation = autoware_utils::create_quaternion_from_yaw(new_heading);
+    steering_angle += original_steering_offsets[i] * steering_rate_factor;
+    steering_angle = std::clamp(
+      steering_angle, -vehicle_info.max_steer_angle_rad, vehicle_info.max_steer_angle_rad);
+    vehicle_footprints.push_back(
+      transform_vector(local_vehicle_footprint, autoware_utils::pose2transform(pose)));
+    std::printf(
+      "x %2.2f y %2.2f yaw %2.2f steer %2.2f, dt %lu\n", pose.position.x, pose.position.y,
+      new_heading, steering_angle, dt.nanoseconds());
+  }
+  // delayed steering
 
   return vehicle_footprints;
 }
