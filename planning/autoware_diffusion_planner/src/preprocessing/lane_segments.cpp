@@ -120,7 +120,8 @@ void add_traffic_light_one_hot_encoding_to_segment(
     }
 
     const auto & signal = traffic_light_stamped_info_itr->second.signal;
-    return get_traffic_signal_row_vector(signal);
+    return Eigen::Matrix<float, TRAFFIC_LIGHT_ONE_HOT_DIM, 1>(
+      get_traffic_signal_row_vector(signal).transpose());
   }();
 
   Eigen::MatrixXf one_hot_encoding_matrix =
