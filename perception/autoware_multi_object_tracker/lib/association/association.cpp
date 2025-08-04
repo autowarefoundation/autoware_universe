@@ -137,7 +137,7 @@ inline InverseCovariance2D precomputeInverseCovarianceFromPose(
   const std::array<double, 36> & pose_covariance)
 {
   // Step 1: Extract a, b, d directly from pose_covariance (no temporary Matrix2d)
-  constexpr double minimum_cov = 0.25;  // 0.5 m to avoid too large malahanobis distance
+  constexpr double minimum_cov = 0.25;  // 0.5 m to avoid too large mahalanobis distance
   const double a = std::max(pose_covariance[0], minimum_cov);  // cov(0,0)
   const double b = pose_covariance[1];  // cov(0,1) == pose_covariance[6] (symmetry)
   const double d = std::max(pose_covariance[7], minimum_cov);  // cov(1,1)
