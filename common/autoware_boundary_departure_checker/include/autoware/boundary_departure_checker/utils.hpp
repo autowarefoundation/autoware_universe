@@ -401,7 +401,7 @@ double compute_braking_distance(
  * - Retains only points up to and including the first CRITICAL_DEPARTURE point (if any).
  *
  * @param projections_to_bound  List of lateral projections to road boundaries.
- * @param th_dist_hysteresis_m  Threshold distance used for hysteresis logic in departure
+ * @param th_point_merge_distance_m  Threshold distance used for hysteresis logic in departure
  * classification.
  * @param lon_offset_m          Longitudinal offset from ego base link to the reference
  * trajectory.
@@ -409,7 +409,7 @@ double compute_braking_distance(
  */
 DeparturePoints get_departure_points(
   const std::vector<ClosestProjectionToBound> & projections_to_bound,
-  const double th_dist_hysteresis_m, const double lon_offset_m);
+  const double th_point_merge_distance_m, const double lon_offset_m);
 
 /**
  * @brief Find nearby uncrossable linestrings around the given pose.

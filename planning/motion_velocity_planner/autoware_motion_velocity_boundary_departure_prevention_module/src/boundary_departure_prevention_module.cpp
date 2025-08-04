@@ -487,7 +487,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
   utils::update_critical_departure_points(
     output_.departure_points, output_.critical_departure_points, *ref_traj_pts_opt,
-    node_param_.bdc_param.th_dist_hysteresis_m,
+    node_param_.bdc_param.th_point_merge_distance_m,
     ego_dist_on_traj_with_offset_m(!planner_data->is_driving_forward),
     node_param_.th_pt_shift_dist_m, node_param_.th_pt_shift_angle_rad);
   toc_curr_watch("update_critical_departure_points");
