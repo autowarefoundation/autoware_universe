@@ -199,9 +199,10 @@ void Tracker::updateClassification(
   // 3. Normalize tracking classification
 
   // Parameters
-  constexpr float true_positive_rate = 0.8f;  // How much we trust the true positive
+  constexpr float true_positive_rate = 0.8f;
+  constexpr float true_negative_rate = 0.2f;
+  constexpr float false_positive_rate = 0.2f;
   constexpr float false_negative_rate = 0.2f;
-  constexpr float false_positive_rate = 0.2f;  // How much we trust the false positive
 
   // If no existing classification, initialize with input
   if (classification_.empty()) {
@@ -209,27 +210,21 @@ void Tracker::updateClassification(
     return;
   }
 
-  // Bayesian update for each class
-  std::vector<autoware_perception_msgs::msg::ObjectClassification> updated_classification;
-
   // Process existing classes
-  for (const auto & old_class : classification_) {
-    auto updated_class = old_class;
-
+  for (auto & a_class : classification_) {
     // Find corresponding measurement
-    auto it = std::find_if(input.begin(), input.end(), [&old_class](const auto & new_class) {
-      return new_class.label == old_class.label;
+    auto it = std::find_if(input.begin(), input.end(), [&a_class](const auto & new_class) {
+      return new_class.label == a_class.label;
     });
 
     if (it != input.end()) {
-      updated_class.probability = updateProbability(
-        old_class.probability, it->probability * true_positive_rate, false_positive_rate);
+      a_class.probability = updateProbability(
+        a_class.probability, it->probability * true_positive_rate, false_positive_rate);
     } else {
       // Class not observed in measurement
-      updated_class.probability =
-        updateProbability(updated_class.probability, false_negative_rate, false_positive_rate);
+      a_class.probability =
+        updateProbability(a_class.probability, true_negative_rate, false_negative_rate);
     }
-    updated_classification.push_back(updated_class);
   }
 
   // Add new classes from measurement that weren't in tracker
@@ -242,25 +237,23 @@ void Tracker::updateClassification(
       auto adding_class = new_class;
       // New class gets probability weighted by measurement confidence
       adding_class.probability = new_class.probability * true_positive_rate;
-      updated_classification.push_back(adding_class);
+      classification_.push_back(adding_class);
     }
   }
 
   // Normalization
   {
     float sum = 0.0;
-    for (const auto & a_class : updated_classification) {
+    for (const auto & a_class : classification_) {
       sum += a_class.probability;
     }
-    if (sum > 0.0) {
-      for (auto & a_class : updated_classification) {
+    // Normalize only if the toal probability is greater than 1.0
+    if (sum > 1.0) {
+      for (auto & a_class : classification_) {
         a_class.probability /= sum;
       }
     }
   }
-
-  // Update the classification
-  classification_ = updated_classification;
 }
 
 void Tracker::limitObjectExtension(const object_model::ObjectModel object_model)

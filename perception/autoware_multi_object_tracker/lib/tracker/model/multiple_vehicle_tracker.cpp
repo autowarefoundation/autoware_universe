@@ -60,7 +60,6 @@ bool MultipleVehicleTracker::getTrackedObject(
     big_vehicle_tracker_.getTrackedObject(time, object);
   }
   object.uuid = object_.uuid;
-  object.classification = object_.classification;
   return true;
 }
 
