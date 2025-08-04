@@ -198,20 +198,6 @@ void Tracker::updateClassification(
   // 2. If the label is not found, add it to the classification list
   // 3. Normalize tracking classification
 
-  // Normalization function
-  auto normalizeProbabilities =
-    [](std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification) {
-      float sum = 0.0;
-      for (const auto & a_class : classification) {
-        sum += a_class.probability;
-      }
-      if (sum > 0.0) {
-        for (auto & a_class : classification) {
-          a_class.probability /= sum;
-        }
-      }
-    };
-
   // Parameters
   constexpr float true_positive_rate = 0.8f;  // How much we trust the true positive
   constexpr float false_negative_rate = 0.2f;
@@ -260,8 +246,20 @@ void Tracker::updateClassification(
     }
   }
 
+  // Normalization
+  {
+    float sum = 0.0;
+    for (const auto & a_class : updated_classification) {
+      sum += a_class.probability;
+    }
+    if (sum > 0.0) {
+      for (auto & a_class : updated_classification) {
+        a_class.probability /= sum;
+      }
+    }
+  }
+
   // Update the classification
-  normalizeProbabilities(updated_classification);
   classification_ = updated_classification;
 }
 
