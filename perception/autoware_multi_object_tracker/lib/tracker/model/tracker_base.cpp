@@ -16,6 +16,8 @@
 
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 
+#include "autoware/multi_object_tracker/object_model/types.hpp"
+
 #include <autoware_utils/geometry/geometry.hpp>
 
 #include <algorithm>
@@ -254,6 +256,19 @@ void Tracker::updateClassification(
       }
     }
   }
+}
+
+uint Tracker::getChannelIndex() const
+{
+  // Return the index of the channel that has highest priority
+  uint index = types::max_channel_size;  // Default to lowest priority index
+  constexpr float threshold = 0.5;
+  for (uint i = 0; i < existence_probabilities_.size(); ++i) {
+    if (existence_probabilities_[i] > threshold) {
+      index = i;
+    }
+  }
+  return index;
 }
 
 void Tracker::limitObjectExtension(const object_model::ObjectModel object_model)

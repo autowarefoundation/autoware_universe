@@ -373,9 +373,22 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
         canMergeOverlappedTarget(*data2.tracker, *data1.tracker, time) &&
         isIoUOverThreshold(data2, data1)) {
         // Merge tracker2 into tracker1
+
+        // probabilities
         data1.tracker->updateTotalExistenceProbability(
           data2.tracker->getTotalExistenceProbability());
         data1.tracker->mergeExistenceProbabilities(data2.tracker->getExistenceProbabilityVector());
+
+        // classification
+        if (!data2.is_unknown) {
+          data1.tracker->updateClassification(data2.tracker->getClassification());
+        }
+
+        // shape
+        // set the shape of higher priority channel
+        if (data1.tracker->getChannelIndex() < data2.tracker->getChannelIndex()) {
+          data1.tracker->setObjectShape(data2.object.shape);
+        }
 
         // Mark tracker2 for removal
         data2.is_valid = false;
