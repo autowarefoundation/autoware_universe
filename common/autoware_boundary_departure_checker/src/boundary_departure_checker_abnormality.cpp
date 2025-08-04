@@ -228,11 +228,18 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
         continue;
       }
 
+      const auto create_min_pt =
+        [](const auto pt, const auto dpt_type, const auto abnormality_type) {
+          std::unique_ptr<ClosestProjectionToBound> min_pt =
+            std::make_unique<ClosestProjectionToBound>(pt);
+          min_pt->departure_type = dpt_type;
+          min_pt->abnormality_type = abnormality_type;
+          min_pt->time_from_start = pt.time_from_start;
+          return min_pt;
+        };
+
       if (abnormality_type == AbnormalityType::NORMAL && is_on_bound(pt.lat_dist, side_key)) {
-        min_pt = std::make_unique<ClosestProjectionToBound>(pt);
-        min_pt->departure_type = DepartureType::CRITICAL_DEPARTURE;
-        min_pt->abnormality_type = abnormality_type;
-        min_pt->time_from_start = pt.time_from_start;
+        min_pt = create_min_pt(pt, DepartureType::CRITICAL_DEPARTURE, abnormality_type);
         break;
       }
 
@@ -241,10 +248,7 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
       }
 
       if (!min_pt || pt.lat_dist < min_pt->lat_dist) {
-        min_pt = std::make_unique<ClosestProjectionToBound>(pt);
-        min_pt->departure_type = DepartureType::NEAR_BOUNDARY;
-        min_pt->abnormality_type = abnormality_type;
-        min_pt->time_from_start = pt.time_from_start;
+        min_pt = create_min_pt(pt, DepartureType::NEAR_BOUNDARY, abnormality_type);
       }
     }
     if (!min_pt) {
