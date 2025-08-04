@@ -28,11 +28,11 @@
 #include <autoware_planning_msgs/msg/detail/trajectory_point__struct.hpp>
 
 #include <algorithm>
-#include <memory>
-#include <vector>
 #include <cmath>
 #include <iostream>
 #include <iterator>
+#include <memory>
+#include <vector>
 
 namespace autoware::trajectory_optimizer::utils
 {

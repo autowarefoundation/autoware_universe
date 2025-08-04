@@ -22,13 +22,13 @@
 
 #include <limits>
 
-using autoware::trajectory_optimizer::utils::apply_spline;
-using autoware::trajectory_optimizer::utils::remove_invalid_points;
 using autoware::trajectory_optimizer::TrajectoryOptimizerParams;
 using autoware::trajectory_optimizer::plugin::TrajectoryPoints;
+using autoware::trajectory_optimizer::utils::apply_spline;
+using autoware::trajectory_optimizer::utils::remove_invalid_points;
 using autoware_planning_msgs::msg::TrajectoryPoint;
-using nav_msgs::msg::Odometry;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
+using nav_msgs::msg::Odometry;
 
 class TrajectoryOptimizerUtilsTest : public ::testing::Test
 {
