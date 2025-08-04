@@ -104,20 +104,25 @@ void add_traffic_light_one_hot_encoding_to_segment(
   const auto assigned_lanelet = lanelet_map_ptr->laneletLayer.get(lane_id_itr->second);
   auto tl_reg_elems = assigned_lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
 
-  Eigen::Matrix<float, TRAFFIC_LIGHT_ONE_HOT_DIM, 1> traffic_light_one_hot_encoding =
-    Eigen::Matrix<float, TRAFFIC_LIGHT_ONE_HOT_DIM, 1>::Zero();
-  if (tl_reg_elems.empty()) {
-    traffic_light_one_hot_encoding[TRAFFIC_LIGHT_NO_TRAFFIC_LIGHT - TRAFFIC_LIGHT] = 1.0f;
-  } else {
+  const Eigen::Matrix<float, TRAFFIC_LIGHT_ONE_HOT_DIM, 1> traffic_light_one_hot_encoding = [&]() {
+    Eigen::Matrix<float, TRAFFIC_LIGHT_ONE_HOT_DIM, 1> encoding =
+      Eigen::Matrix<float, TRAFFIC_LIGHT_ONE_HOT_DIM, 1>::Zero();
+    if (tl_reg_elems.empty()) {
+      encoding[TRAFFIC_LIGHT_NO_TRAFFIC_LIGHT - TRAFFIC_LIGHT] = 1.0f;
+      return encoding;
+    }
+
     const auto & tl_reg_elem = tl_reg_elems.front();
     const auto traffic_light_stamped_info_itr = traffic_light_id_map.find(tl_reg_elem->id());
     if (traffic_light_stamped_info_itr == traffic_light_id_map.end()) {
-      traffic_light_one_hot_encoding[TRAFFIC_LIGHT_WHITE - TRAFFIC_LIGHT] = 1.0f;
-    } else {
-      const auto & signal = traffic_light_stamped_info_itr->second.signal;
-      traffic_light_one_hot_encoding = get_traffic_signal_row_vector(signal);
+      encoding[TRAFFIC_LIGHT_WHITE - TRAFFIC_LIGHT] = 1.0f;
+      return encoding;
     }
-  }
+
+    const auto & signal = traffic_light_stamped_info_itr->second.signal;
+    return get_traffic_signal_row_vector(signal);
+  }();
+
   Eigen::MatrixXf one_hot_encoding_matrix =
     traffic_light_one_hot_encoding.replicate(1, POINTS_PER_SEGMENT);
   segment_matrix.block<TRAFFIC_LIGHT_ONE_HOT_DIM, POINTS_PER_SEGMENT>(
