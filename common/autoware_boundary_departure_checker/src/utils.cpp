@@ -349,7 +349,7 @@ std::vector<LinearRing2d> create_vehicle_footprints(
 
 std::vector<LinearRing2d> create_vehicle_footprints(
   const TrajectoryPoints & trajectory, const VehicleInfo & vehicle_info,
-  const SteeringReport & current_steering)
+  [[maybe_unused]] const SteeringReport & current_steering)
 {
   std::vector<LinearRing2d> vehicle_footprints;
   vehicle_footprints.reserve(trajectory.size());
@@ -366,7 +366,8 @@ std::vector<LinearRing2d> create_vehicle_footprints(
   auto pose = trajectory.front().pose;
   vehicle_footprints.push_back(
     transform_vector(local_vehicle_footprint, autoware_utils::pose2transform(pose)));
-  auto steering_angle = static_cast<double>(current_steering.steering_tire_angle);
+  auto steering_angle = static_cast<double>(trajectory.front().front_wheel_angle_rad);
+  // auto steering_angle = static_cast<double>(current_steering.steering_tire_angle);
   // simulate the ego motion assuming issues with the steering
   // slower/faster steering rates
   for (auto i = 0UL; i + 1 < trajectory.size(); ++i) {
@@ -374,21 +375,38 @@ std::vector<LinearRing2d> create_vehicle_footprints(
     const auto curr_p = trajectory[i + 1];
     const auto dt =
       rclcpp::Duration(curr_p.time_from_start) - rclcpp::Duration(prev_p.time_from_start);
-    const auto v = prev_p.longitudinal_velocity_mps;
-    const auto rotation_rate = v * std::tan(steering_angle) / vehicle_info.wheel_base_m;
-    const auto length = v * dt.seconds();
-    const auto new_heading = tf2::getYaw(pose.orientation) + rotation_rate * dt.seconds();
-    pose.position.x += length * std::cos(new_heading);
-    pose.position.y += length * std::sin(new_heading);
-    pose.orientation = autoware_utils::create_quaternion_from_yaw(new_heading);
+    const auto v = (prev_p.longitudinal_velocity_mps + curr_p.longitudinal_velocity_mps) * 0.5;
+
+    const auto old_heading = tf2::getYaw(pose.orientation);
+    const double time_delta_sec = dt.seconds();
+    const double wheel_base = vehicle_info.wheel_base_m;
+
+    // Calculate the rate of rotation (yaw rate) based on the kinematic model
+    const double rotation_rate = v * std::tan(steering_angle) / wheel_base;
+
+    // Handle two cases: turning (arc) and moving straight
+    constexpr double epsilon = 1e-8;  // A small threshold for floating point comparison
+    if (std::abs(rotation_rate) < epsilon) {
+      // Case 1: Motion is a straight line (or very close to it)
+      const double distance_traveled = v * time_delta_sec;
+      pose.position.x += distance_traveled * std::cos(old_heading);
+      pose.position.y += distance_traveled * std::sin(old_heading);
+      // The heading does not change in this case
+    } else {
+      // Case 2: Motion is an arc
+      const double turning_radius = v / rotation_rate;
+      const double new_heading = old_heading + rotation_rate * time_delta_sec;
+
+      // Calculate position change based on the geometry of the circular arc
+      pose.position.x += turning_radius * (std::sin(new_heading) - std::sin(old_heading));
+      pose.position.y += turning_radius * (std::cos(old_heading) - std::cos(new_heading));
+      pose.orientation = autoware_utils::create_quaternion_from_yaw(new_heading);
+    }
     steering_angle += original_steering_offsets[i] * steering_rate_factor;
     steering_angle = std::clamp(
       steering_angle, -vehicle_info.max_steer_angle_rad, vehicle_info.max_steer_angle_rad);
     vehicle_footprints.push_back(
       transform_vector(local_vehicle_footprint, autoware_utils::pose2transform(pose)));
-    std::printf(
-      "x %2.2f y %2.2f yaw %2.2f steer %2.2f, dt %lu\n", pose.position.x, pose.position.y,
-      new_heading, steering_angle, dt.nanoseconds());
   }
   // delayed steering
 
