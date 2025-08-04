@@ -273,49 +273,46 @@ void ControlEvaluatorNode::AddUncrossableBoundaryDistanceMetricMsg(const Pose & 
     std::max(vehicle_info_.max_longitudinal_offset_m, vehicle_info_.max_lateral_offset_m) +
     search_dist_offset;
 
-  const auto nearby_uncrossable_lines_opt = bdc_utils::get_uncrossable_linestrings_near_pose(
-    route_handler_.getLaneletMapPtr(), ego_pose, search_distance);
-
-  if (!nearby_uncrossable_lines_opt) {
-    return;
-  }
-
-  const auto & nearby_uncrossable_lines = *nearby_uncrossable_lines_opt;
-
-  const auto transformed_pose = autoware_utils::pose2transform(ego_pose);
-  const auto local_fp = vehicle_info_.createFootprint();
-  const auto current_fp = autoware_utils::transform_vector(local_fp, transformed_pose);
-  const auto side = bdc_utils::get_footprint_sides(current_fp, false, false);
-
   auto nearest_left = search_distance;
   auto nearest_right = search_distance;
 
-  auto is_overlapping{false};
-  for (const auto & nearby_ls : nearby_uncrossable_lines) {
-    LineString2d boundary;
-    const auto & basic_ls = nearby_ls.basicLineString();
-    boundary.reserve(basic_ls.size());
-    for (size_t idx = 0; idx + 1 < basic_ls.size(); ++idx) {
-      const auto segment = bdc_utils::to_segment_2d(basic_ls[idx], basic_ls[idx + 1]);
+  if (
+    const auto nearby_uncrossable_lines_opt = bdc_utils::get_uncrossable_linestrings_near_pose(
+      route_handler_.getLaneletMapPtr(), ego_pose, search_distance)) {
+    const auto & nearby_uncrossable_lines = *nearby_uncrossable_lines_opt;
 
-      is_overlapping = !boost::geometry::disjoint(current_fp, segment);
+    const auto transformed_pose = autoware_utils::pose2transform(ego_pose);
+    const auto local_fp = vehicle_info_.createFootprint();
+    const auto current_fp = autoware_utils::transform_vector(local_fp, transformed_pose);
+    const auto side = bdc_utils::get_footprint_sides(current_fp, false, false);
 
+    auto is_overlapping{false};
+    for (const auto & nearby_ls : nearby_uncrossable_lines) {
+      LineString2d boundary;
+      const auto & basic_ls = nearby_ls.basicLineString();
+      boundary.reserve(basic_ls.size());
+      for (size_t idx = 0; idx + 1 < basic_ls.size(); ++idx) {
+        const auto segment = bdc_utils::to_segment_2d(basic_ls[idx], basic_ls[idx + 1]);
+
+        is_overlapping = !boost::geometry::disjoint(current_fp, segment);
+
+        if (is_overlapping) {
+          nearest_left = 0.0;
+          nearest_right = 0.0;
+          break;
+        }
+
+        const auto dist_to_left = boost::geometry::distance(segment, side.left);
+        const auto dist_to_right = boost::geometry::distance(segment, side.right);
+        if (dist_to_left < dist_to_right) {
+          nearest_left = std::min(dist_to_left, nearest_left);
+        } else {
+          nearest_right = std::min(dist_to_right, nearest_right);
+        }
+      }
       if (is_overlapping) {
-        nearest_left = 0.0;
-        nearest_right = 0.0;
         break;
       }
-
-      const auto dist_to_left = boost::geometry::distance(segment, side.left);
-      const auto dist_to_right = boost::geometry::distance(segment, side.right);
-      if (dist_to_left < dist_to_right) {
-        nearest_left = std::min(dist_to_left, nearest_left);
-      } else {
-        nearest_right = std::min(dist_to_right, nearest_right);
-      }
-    }
-    if (is_overlapping) {
-      break;
     }
   }
   const Metric metric_left = Metric::left_uncrossable_boundary_distance;
