@@ -3,7 +3,6 @@ road_user_stop:
   option:
     suppress_sudden_stop:
       type: bool
-      default_value: true
       description: Enable to suppress sudden stop
 
   # Stop planning parameters
@@ -11,21 +10,18 @@ road_user_stop:
     longitudinal_margin:
       default_margin:
         type: double
-        default_value: 5.0
         description: Default longitudinal margin to obstacle [m]
         validation:
           gt_eq<>: [0.0]
 
       terminal_margin:
         type: double
-        default_value: 3.0
         description: Stop margin at the goal position [m]
         validation:
           gt_eq<>: [0.0]
 
       minimum_margin:
         type: double
-        default_value: 3.0
         description: Minimum stop margin for behavior decision [m]
         validation:
           gt_eq<>: [0.0]
@@ -33,42 +29,36 @@ road_user_stop:
     opposing_traffic:
       stop_margin:
         type: double
-        default_value: 6.0
         description: Ideal stop-margin from moving opposing obstacle when ego comes to a stop [m]
         validation:
           gt_eq<>: [0.0]
 
       max_negative_velocity:
         type: double
-        default_value: -0.1
         description: Maximum velocity of opposing traffic to consider stop planning [m/s]
         validation:
           lt_eq<>: [0.0]
 
       min_velocity_for_stop_planning:
         type: double
-        default_value: 2.77
         description: Minimum velocity of ego to consider stop planning [m/s]
         validation:
           gt_eq<>: [0.0]
 
       effective_deceleration:
         type: double
-        default_value: 4.0
         description: Setting a higher value brings the final stop-margin closer to the ideal value above [m/s^2]
         validation:
           gt<>: [0.0]
 
     hold_stop_velocity_threshold:
       type: double
-      default_value: 0.01
       description: Velocity threshold to hold stop position [m/s]
       validation:
         gt_eq<>: [0.0]
 
     hold_stop_distance_threshold:
       type: double
-      default_value: 0.3
       description: Distance threshold to hold stop position [m]
       validation:
         gt_eq<>: [0.0]
@@ -77,19 +67,16 @@ road_user_stop:
     stop_on_curve:
       enable_approaching:
         type: bool
-        default_value: false
         description: Enable approaching behavior on curved paths
 
       additional_stop_margin:
         type: double
-        default_value: 3.0
         description: Additional stop margin for obstacles on curves [m]
         validation:
           gt_eq<>: [0.0]
 
       min_stop_margin:
         type: double
-        default_value: 6.0
         description: Minimum stop margin on curves [m]
         validation:
           gt<>: [0.0]
@@ -97,28 +84,24 @@ road_user_stop:
     # Common parameters for all object types
     limit_min_acc:
       type: double
-      default_value: -2.5
       description: Minimum acceleration limit [m/s^2]
       validation:
         lt<>: [0.0]
 
     sudden_object_acc_threshold:
       type: double
-      default_value: -1.0
       description: Acceleration threshold to detect sudden appearing objects [m/s^2]
       validation:
         lt<>: [0.0]
 
     sudden_object_dist_threshold:
       type: double
-      default_value: 1000.0
       description: Distance threshold for sudden object detection [m]
       validation:
         gt<>: [0.0]
 
     abandon_to_stop:
       type: bool
-      default_value: false
       description: Enable to abandon stopping when cannot achieve required deceleration
 
   # Obstacle filtering parameters
@@ -126,27 +109,22 @@ road_user_stop:
     object_type:
       pedestrian:
         type: bool
-        default_value: true
         description: Enable detection of pedestrians
 
       bicycle:
         type: bool
-        default_value: true
         description: Enable detection of bicycles
 
       motorcycle:
         type: bool
-        default_value: false
         description: Enable detection of motorcycles
 
       unknown:
         type: bool
-        default_value: false
         description: Enable detection of unknown objects
 
     trajectory_lateral_margin:
       type: double
-      default_value: 1.0
       description: Lateral margin from ego trajectory to detect objects [m]
       validation:
         gt_eq<>: [0.0]
@@ -154,19 +132,16 @@ road_user_stop:
     opposing_traffic_detection:
       enable:
         type: bool
-        default_value: true
         description: Enable wrong-way object detection
 
       angle_threshold:
         type: double
-        default_value: 150.0
         description: Angle threshold for wrong-way detection [deg]
         validation:
           bounds<>: [0.0, 180.0]
 
       min_speed_threshold:
         type: double
-        default_value: 0.5
         description: Minimum speed for wrong-way detection [m/s]
         validation:
           gt_eq<>: [0.0]
@@ -174,39 +149,33 @@ road_user_stop:
     intersection:
       exclude:
         type: bool
-        default_value: false
         description: If true, exclude objects inside intersection lanelets from detection
 
     crosswalk:
       exclude:
         type: bool
-        default_value: true
         description: Exclude objects near crosswalks
 
       margin:
         type: double
-        default_value: 1.0
         description: Margin distance from crosswalk [m]
         validation:
           gt_eq<>: [0.0]
 
     min_detection_duration:
       type: double
-      default_value: 0.1
       description: Minimum duration for object detection [s]
       validation:
         gt_eq<>: [0.0]
 
     lost_object_retention_duration:
       type: double
-      default_value: 2.0
       description: Duration to keep tracking objects after they are lost or exit the detection area [s]
       validation:
         gt<>: [0.0]
 
     polygon_expansion_length:
       type: double
-      default_value: 0.5
       description: Distance to expand object polygon outward from centroid when object was previously inside detection area [m]
       validation:
         gt_eq<>: [0.0]
