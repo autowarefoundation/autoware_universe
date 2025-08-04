@@ -37,6 +37,7 @@ public:
   : TrajectoryOptimizerPluginBase(name, node_ptr, time_keeper, params)
   {
   }
+  ~TrajectoryPointFixer() = default;
   void optimize_trajectory(
     TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params) override;
   void set_up_params() override;

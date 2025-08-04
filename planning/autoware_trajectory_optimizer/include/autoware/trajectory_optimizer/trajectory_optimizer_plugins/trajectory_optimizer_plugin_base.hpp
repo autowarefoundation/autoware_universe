@@ -38,6 +38,7 @@ public:
   {
     std::cerr << "instantiated TrajectoryOptimizerPluginBase: " << name_ << std::endl;
   }
+  virtual ~TrajectoryOptimizerPluginBase() = default;
   virtual void optimize_trajectory(
     TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params) = 0;
   virtual void set_up_params() = 0;
