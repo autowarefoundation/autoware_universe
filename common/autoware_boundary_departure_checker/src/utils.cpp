@@ -347,6 +347,32 @@ std::vector<LinearRing2d> create_vehicle_footprints(
   return vehicle_footprints;
 }
 
+geometry_msgs::msg::Pose update_pose_with_bicycle_model(
+  const geometry_msgs::msg::Pose & pose, const double steering_angle, const double velocity,
+  const double dt, const double wheel_base)
+{
+  const auto old_heading = tf2::getYaw(pose.orientation);
+  // Calculate the rate of rotation (yaw rate) based on the kinematic model
+  const double rotation_rate = velocity * std::tan(steering_angle) / wheel_base;
+
+  constexpr double epsilon = 1e-8;
+  auto updated_pose = pose;
+  if (std::abs(rotation_rate) < epsilon) {
+    // Case 1: Motion is a straight line
+    const double distance_traveled = velocity * dt;
+    updated_pose.position.x += distance_traveled * std::cos(old_heading);
+    updated_pose.position.y += distance_traveled * std::sin(old_heading);
+  } else {
+    // Case 2: Motion is an arc
+    const double turning_radius = velocity / rotation_rate;
+    const double new_heading = old_heading + rotation_rate * dt;
+    updated_pose.position.x += turning_radius * (std::sin(new_heading) - std::sin(old_heading));
+    updated_pose.position.y += turning_radius * (std::cos(old_heading) - std::cos(new_heading));
+    updated_pose.orientation = autoware_utils::create_quaternion_from_yaw(new_heading);
+  }
+  return updated_pose;
+}
+
 std::vector<LinearRing2d> create_vehicle_footprints(
   const TrajectoryPoints & trajectory, const VehicleInfo & vehicle_info,
   [[maybe_unused]] const SteeringReport & current_steering)
@@ -376,32 +402,8 @@ std::vector<LinearRing2d> create_vehicle_footprints(
     const auto dt =
       rclcpp::Duration(curr_p.time_from_start) - rclcpp::Duration(prev_p.time_from_start);
     const auto v = (prev_p.longitudinal_velocity_mps + curr_p.longitudinal_velocity_mps) * 0.5;
-
-    const auto old_heading = tf2::getYaw(pose.orientation);
-    const double time_delta_sec = dt.seconds();
-    const double wheel_base = vehicle_info.wheel_base_m;
-
-    // Calculate the rate of rotation (yaw rate) based on the kinematic model
-    const double rotation_rate = v * std::tan(steering_angle) / wheel_base;
-
-    // Handle two cases: turning (arc) and moving straight
-    constexpr double epsilon = 1e-8;  // A small threshold for floating point comparison
-    if (std::abs(rotation_rate) < epsilon) {
-      // Case 1: Motion is a straight line (or very close to it)
-      const double distance_traveled = v * time_delta_sec;
-      pose.position.x += distance_traveled * std::cos(old_heading);
-      pose.position.y += distance_traveled * std::sin(old_heading);
-      // The heading does not change in this case
-    } else {
-      // Case 2: Motion is an arc
-      const double turning_radius = v / rotation_rate;
-      const double new_heading = old_heading + rotation_rate * time_delta_sec;
-
-      // Calculate position change based on the geometry of the circular arc
-      pose.position.x += turning_radius * (std::sin(new_heading) - std::sin(old_heading));
-      pose.position.y += turning_radius * (std::cos(old_heading) - std::cos(new_heading));
-      pose.orientation = autoware_utils::create_quaternion_from_yaw(new_heading);
-    }
+    pose = update_pose_with_bicycle_model(
+      pose, steering_angle, v, dt.seconds(), vehicle_info.wheel_base_m);
     steering_angle += original_steering_offsets[i] * steering_rate_factor;
     steering_angle = std::clamp(
       steering_angle, -vehicle_info.max_steer_angle_rad, vehicle_info.max_steer_angle_rad);
