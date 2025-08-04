@@ -194,8 +194,7 @@ void update_critical_departure_points(
 std::vector<std::tuple<Pose, Pose, double>> get_slow_down_intervals(
   const trajectory::Trajectory<TrajectoryPoint> & ref_traj_pts,
   const DepartureIntervals & departure_intervals,
-  const SlowDownInterpolator & slow_down_interpolator, const VehicleInfo & vehicle_info,
-  const BoundarySideWithIdx & boundary_segments, const double curr_vel,
+  const SlowDownInterpolator & slow_down_interpolator, const double curr_vel, const double curr_acc,
   const double ego_dist_on_traj_m);
 
 /**

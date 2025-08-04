@@ -560,8 +560,8 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
   slow_down_wall_marker_.markers.clear();
 
   output_.slowdown_intervals = utils::get_slow_down_intervals(
-    *ref_traj_pts_opt, output_.departure_intervals, *slow_down_interpolator_ptr_, vehicle_info,
-    output_.abnormalities_data.boundary_segments, curr_odom.twist.twist.linear.x,
+    *ref_traj_pts_opt, output_.departure_intervals, *slow_down_interpolator_ptr_,
+    curr_odom.twist.twist.linear.x, planner_data->current_acceleration.accel.accel.linear.x,
     ego_dist_on_traj_with_offset_m(planner_data->is_driving_forward));
   toc_curr_watch("get_slow_down_interval");
 
@@ -571,8 +571,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
     slowdown_intervals.emplace_back(start_pose.position, end_pose.position, vel);
     const auto markers_start = autoware::motion_utils::createSlowDownVirtualWallMarker(
       start_pose, "boundary_departure_prevention_start", clock_ptr_->now(),
-      static_cast<int32_t>(idx), ego_dist_on_traj_with_offset_m(planner_data->is_driving_forward),
-      "", planner_data->is_driving_forward);
+      static_cast<int32_t>(idx), 0.0, "", planner_data->is_driving_forward);
     autoware_utils::append_marker_array(markers_start, &slow_down_wall_marker_);
     const auto markers_end = autoware::motion_utils::createSlowDownVirtualWallMarker(
       end_pose, "boundary_departure_prevention_end", clock_ptr_->now(),
