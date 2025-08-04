@@ -194,14 +194,9 @@ void Tracker::updateClassification(
   const std::vector<autoware_perception_msgs::msg::ObjectClassification> & input)
 {
   // classification algorithm:
-  // 0. Normalize the input classification
-  // 1-1. Update the matched classification probability with a gain (ratio of 0.05)
-  // 1-2. If the label is not found, add it to the classification list
-  // 2. Remove the class with probability < remove_threshold (0.001)
+  // 1. Update the matched classification probability
+  // 2. If the label is not found, add it to the classification list
   // 3. Normalize tracking classification
-
-  // Bayesian classification update
-  // P(class|measurement) ∝ P(measurement|class) * P(class)
 
   // Normalization function
   auto normalizeProbabilities =
@@ -218,11 +213,9 @@ void Tracker::updateClassification(
     };
 
   // Parameters
-  constexpr float true_positive_rate = 0.8;  // How much we trust the true positive
-  constexpr float false_negative_rate = 0.2;
+  constexpr float true_positive_rate = 0.8f;  // How much we trust the true positive
+  constexpr float false_negative_rate = 0.2f;
   constexpr float false_positive_rate = 0.2f;  // How much we trust the false positive
-
-  auto classification_input = input;
 
   // If no existing classification, initialize with input
   if (classification_.empty()) {
@@ -238,11 +231,11 @@ void Tracker::updateClassification(
     auto updated_class = old_class;
 
     // Find corresponding measurement
-    auto it = std::find_if(
-      classification_input.begin(), classification_input.end(),
-      [&old_class](const auto & new_class) { return new_class.label == old_class.label; });
+    auto it = std::find_if(input.begin(), input.end(), [&old_class](const auto & new_class) {
+      return new_class.label == old_class.label;
+    });
 
-    if (it != classification_input.end()) {
+    if (it != input.end()) {
       updated_class.probability = updateProbability(
         old_class.probability, it->probability * true_positive_rate, false_positive_rate);
     } else {
@@ -254,7 +247,7 @@ void Tracker::updateClassification(
   }
 
   // Add new classes from measurement that weren't in tracker
-  for (const auto & new_class : classification_input) {
+  for (const auto & new_class : input) {
     bool found = std::any_of(
       classification_.begin(), classification_.end(),
       [&new_class](const auto & old_class) { return old_class.label == new_class.label; });
@@ -270,22 +263,6 @@ void Tracker::updateClassification(
   // Update the classification
   normalizeProbabilities(updated_classification);
   classification_ = updated_classification;
-
-  auto uuidToString = [](const unique_identifier_msgs::msg::UUID & uuid_msg) {
-    std::stringstream ss;
-    for (auto i = 0; i < 16; ++i) {
-      ss << std::hex << std::setfill('0') << std::setw(2) << +uuid_msg.uuid[i];
-    }
-    return ss.str();
-  };
-
-  // Debugging output
-  std::cout << "Updated Classification  UUID " << uuidToString(object_.uuid) << " : ";
-  for (const auto & a_class : classification_) {
-    std::cout << " | Label: " << std::to_string(a_class.label)
-              << ", Probability: " << std::to_string(a_class.probability);
-  }
-  std::cout << std::endl;
 }
 
 void Tracker::limitObjectExtension(const object_model::ObjectModel object_model)
