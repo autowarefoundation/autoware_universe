@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// NOLINTNEXTLINE
 #ifndef AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_EB_SMOOTHER_OPTIMIZER_HPP_
+// NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_EB_SMOOTHER_OPTIMIZER_HPP_
 #include "autoware/path_smoother/elastic_band.hpp"
 #include "autoware/path_smoother/replan_checker.hpp"
@@ -60,4 +62,5 @@ private:
 };
 }  // namespace autoware::trajectory_optimizer::plugin
 
+// NOLINTNEXTLINE
 #endif  // AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_EB_SMOOTHER_OPTIMIZER_HPP_
