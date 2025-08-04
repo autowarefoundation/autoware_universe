@@ -200,7 +200,7 @@ void Tracker::updateClassification(
 
   // Parameters
   constexpr float true_positive_rate = 0.8f;
-  constexpr float true_negative_rate = 0.2f;
+  constexpr float true_negative_rate = 0.4f;
   constexpr float false_positive_rate = 0.2f;
   constexpr float false_negative_rate = 0.2f;
 
@@ -247,7 +247,7 @@ void Tracker::updateClassification(
     for (const auto & a_class : classification_) {
       sum += a_class.probability;
     }
-    // Normalize only if the toal probability is greater than 1.0
+    // Normalize only if the total probability is greater than 1.0
     if (sum > 1.0) {
       for (auto & a_class : classification_) {
         a_class.probability /= sum;
