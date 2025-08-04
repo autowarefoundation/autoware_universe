@@ -34,15 +34,11 @@ public:
   void init(
     rclcpp::Node & node, const std::string & name,
     const std::shared_ptr<PlanningValidatorContext> & context) override;
-  void validate(bool & is_critical) override;
+  void validate() override;
   void setup_diag() override;
   std::string get_module_name() const override { return module_name_; };
 
 private:
-  void fill_rss_distance(
-    PointCloudObjects & objects, const double reaction_time, const double max_deceleration,
-    const double max_velocity) const;
-
   void fill_velocity(PointCloudObject & pointcloud_object);
 
   auto filter_pointcloud(DebugData & debug) const -> PointCloud::Ptr;
@@ -55,8 +51,9 @@ private:
     const DetectionAreas & detection_areas, DebugData & debug) -> std::optional<PointCloudObject>;
 
   auto get_pointcloud_objects(
-    const lanelet::ConstLanelets & current_lanes, const Behavior & shift_behavior,
-    const Behavior & turn_behavior, DebugData & debug) -> PointCloudObjects;
+    const std::function<std::pair<double, double>()> & func_range_calculation,
+    const std::function<PointCloudObjects(const double, const double)> & func_object_filtering,
+    const std::function<void(PointCloudObjects &)> & func_safety_check) -> PointCloudObjects;
 
   auto get_pointcloud_objects_on_adjacent_lane(
     const lanelet::ConstLanelets & current_lanes, const Behavior & shift_behavior,
@@ -77,6 +74,9 @@ private:
   void publish_marker(const DebugData & debug) const;
 
   void publish_planning_factor(const DebugData & debug) const;
+
+  void set_diag_status(
+    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg) const;
 
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_voxel_pointcloud_;
 
