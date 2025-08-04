@@ -22,62 +22,15 @@
 #include <gtest/gtest.h>
 
 #include <memory>
+#include <string>
 #include <vector>
 
-class PickupBasedVoxelGridDownsampleFilterTest : public ::testing::Test
+// Helper function to create a test point cloud
+sensor_msgs::msg::PointCloud2 createTestPointCloud(
+  const std::vector<std::array<float, 3>> & points, const std::string & frame_id = "base_link")
 {
-protected:
-  void SetUp() override
-  {
-    rclcpp::init(0, nullptr);
-
-    // Create node options with parameters
-    rclcpp::NodeOptions node_options;
-    node_options.append_parameter_override("voxel_size_x", 0.1);
-    node_options.append_parameter_override("voxel_size_y", 0.1);
-    node_options.append_parameter_override("voxel_size_z", 0.1);
-
-    // Create the filter node
-    filter_node_ = std::make_shared<
-      autoware::pointcloud_preprocessor::PickupBasedVoxelGridDownsampleFilterComponent>(
-      node_options);
-
-    // Create test node for publishing and subscribing
-    test_node_ = std::make_shared<rclcpp::Node>("test_node");
-
-    // Create publisher for input point cloud with appropriate QoS
-    input_publisher_ =
-      test_node_->create_publisher<sensor_msgs::msg::PointCloud2>("input", rclcpp::SensorDataQoS());
-
-    // Create subscriber for output point cloud with appropriate QoS
-    output_subscriber_ = test_node_->create_subscription<sensor_msgs::msg::PointCloud2>(
-      "output", rclcpp::SensorDataQoS(),
-      [this](const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
-        received_output_ = true;
-        output_msg_ = *msg;
-      });
-
-    // Allow time for setup
-    rclcpp::sleep_for(std::chrono::milliseconds(100));
-  }
-
-  void TearDown() override { rclcpp::shutdown(); }
-
-  std::shared_ptr<autoware::pointcloud_preprocessor::PickupBasedVoxelGridDownsampleFilterComponent>
-    filter_node_;
-  std::shared_ptr<rclcpp::Node> test_node_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr input_publisher_;
-  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr output_subscriber_;
-
-  bool received_output_ = false;
-  sensor_msgs::msg::PointCloud2 output_msg_;
-};
-
-TEST_F(PickupBasedVoxelGridDownsampleFilterTest, TestPointCloudPublishing)
-{
-  // Create test point cloud
-  sensor_msgs::msg::PointCloud2 cloud;
-  cloud.header.frame_id = "base_link";
+  auto cloud = sensor_msgs::msg::PointCloud2();
+  cloud.header.frame_id = frame_id;
   cloud.header.stamp = rclcpp::Clock().now();
   cloud.height = 1;
   cloud.is_dense = true;
@@ -90,75 +43,172 @@ TEST_F(PickupBasedVoxelGridDownsampleFilterTest, TestPointCloudPublishing)
     "z", 1, sensor_msgs::msg::PointField::FLOAT32);
 
   // Add test points
-  modifier.resize(1);  // 3x1 grid of points
+  modifier.resize(points.size());
 
-  // Publish input point cloud
-  input_publisher_->publish(cloud);
+  sensor_msgs::PointCloud2Iterator<float> iter_x(cloud, "x");
+  sensor_msgs::PointCloud2Iterator<float> iter_y(cloud, "y");
+  sensor_msgs::PointCloud2Iterator<float> iter_z(cloud, "z");
 
-  // Spin nodes to process messages
-  auto start_time = std::chrono::steady_clock::now();
-  auto timeout = std::chrono::seconds(5);
-
-  while (!received_output_ && (std::chrono::steady_clock::now() - start_time) < timeout) {
-    rclcpp::spin_some(filter_node_);
-    rclcpp::spin_some(test_node_);
-    rclcpp::sleep_for(std::chrono::milliseconds(10));
+  for (const auto & point : points) {
+    *iter_x = point[0];
+    *iter_y = point[1];
+    *iter_z = point[2];
+    ++iter_x;
+    ++iter_y;
+    ++iter_z;
   }
 
-  // Check that output was received
-  EXPECT_TRUE(received_output_) << "Expected to receive output point cloud";
+  return cloud;
+}
 
-  // Check output point cloud is same size as input
-  if (received_output_) {
-    EXPECT_EQ(output_msg_.height, cloud.height);
-    EXPECT_EQ(output_msg_.width, cloud.width);
-    EXPECT_EQ(output_msg_.data.size(), cloud.data.size());
+// Helper function to extract points from PointCloud2
+std::vector<std::array<float, 3>> extractPoints(const sensor_msgs::msg::PointCloud2 & cloud)
+{
+  std::vector<std::array<float, 3>> points;
+
+  sensor_msgs::PointCloud2ConstIterator<float> iter_x(cloud, "x");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_y(cloud, "y");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_z(cloud, "z");
+
+  for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z) {
+    points.push_back({*iter_x, *iter_y, *iter_z});
+  }
+
+  return points;
+}
+
+TEST(DownsampleWithVoxelGridTest, TestBasicDownsampling)
+{
+  // Create test points that should be downsampled
+  // Points within the same voxel should be reduced to one point
+  std::vector<std::array<float, 3>> input_points = {
+    {0.0f, 0.0f, 0.0f},     // Voxel (0,0,0)
+    {0.05f, 0.05f, 0.05f},  // Same voxel as above (within 0.1 voxel size)
+    {0.2f, 0.2f, 0.2f},     // Different voxel
+    {0.25f, 0.25f, 0.25f},  // Same voxel as above
+    {0.5f, 0.5f, 0.5f},     // Different voxel
+  };
+
+  auto input_cloud = createTestPointCloud(input_points);
+
+  autoware::pointcloud_preprocessor::VoxelSize voxel_size = {0.1f, 0.1f, 0.1f};
+  sensor_msgs::msg::PointCloud2 output_cloud;
+
+  // Call the function under test
+  autoware::pointcloud_preprocessor::downsample_with_voxel_grid(
+    input_cloud, voxel_size, output_cloud);
+
+  // Extract output points
+  auto output_points = extractPoints(output_cloud);
+
+  // Should have 3 points (3 different voxels)
+  EXPECT_EQ(output_points.size(), 3);
+
+  // Check that output cloud has correct metadata
+  EXPECT_EQ(output_cloud.header.frame_id, input_cloud.header.frame_id);
+  EXPECT_EQ(output_cloud.height, 1);
+  EXPECT_EQ(output_cloud.width, 3);
+  EXPECT_EQ(output_cloud.fields.size(), input_cloud.fields.size());
+}
+
+TEST(DownsampleWithVoxelGridTest, TestEmptyPointCloud)
+{
+  // Create empty point cloud
+  std::vector<std::array<float, 3>> input_points = {};
+  auto input_cloud = createTestPointCloud(input_points);
+
+  autoware::pointcloud_preprocessor::VoxelSize voxel_size = {0.1f, 0.1f, 0.1f};
+  sensor_msgs::msg::PointCloud2 output_cloud;
+
+  // Call the function under test
+  autoware::pointcloud_preprocessor::downsample_with_voxel_grid(
+    input_cloud, voxel_size, output_cloud);
+
+  // Should have 0 points
+  EXPECT_EQ(output_cloud.width, 0);
+  EXPECT_EQ(output_cloud.data.size(), 0);
+}
+
+TEST(DownsampleWithVoxelGridTest, TestSinglePoint)
+{
+  // Create point cloud with single point
+  std::vector<std::array<float, 3>> input_points = {{1.0f, 2.0f, 3.0f}};
+  auto input_cloud = createTestPointCloud(input_points);
+
+  autoware::pointcloud_preprocessor::VoxelSize voxel_size = {0.1f, 0.1f, 0.1f};
+  sensor_msgs::msg::PointCloud2 output_cloud;
+
+  // Call the function under test
+  autoware::pointcloud_preprocessor::downsample_with_voxel_grid(
+    input_cloud, voxel_size, output_cloud);
+
+  // Extract output points
+  auto output_points = extractPoints(output_cloud);
+
+  // Should have 1 point
+  EXPECT_EQ(output_points.size(), 1);
+
+  // Check that the point is preserved
+  EXPECT_FLOAT_EQ(output_points[0][0], 1.0f);
+  EXPECT_FLOAT_EQ(output_points[0][1], 2.0f);
+  EXPECT_FLOAT_EQ(output_points[0][2], 3.0f);
+}
+
+TEST(DownsampleWithVoxelGridTest, TestDifferentVoxelSizes)
+{
+  // Create test points
+  std::vector<std::array<float, 3>> input_points = {
+    {0.0f, 0.0f, 0.0f},
+    {0.1f, 0.1f, 0.1f},
+    {0.2f, 0.2f, 0.2f},
+    {0.3f, 0.3f, 0.3f},
+  };
+  auto input_cloud = createTestPointCloud(input_points);
+
+  // Test with small voxel size - should preserve all points
+  {
+    autoware::pointcloud_preprocessor::VoxelSize small_voxel = {0.05f, 0.05f, 0.05f};
+    sensor_msgs::msg::PointCloud2 output_cloud;
+    autoware::pointcloud_preprocessor::downsample_with_voxel_grid(
+      input_cloud, small_voxel, output_cloud);
+
+    auto output_points = extractPoints(output_cloud);
+    EXPECT_EQ(output_points.size(), 4);  // All points in different voxels
+  }
+
+  // Test with large voxel size - should reduce to one point
+  {
+    autoware::pointcloud_preprocessor::VoxelSize large_voxel = {1.0f, 1.0f, 1.0f};
+    sensor_msgs::msg::PointCloud2 output_cloud;
+    autoware::pointcloud_preprocessor::downsample_with_voxel_grid(
+      input_cloud, large_voxel, output_cloud);
+
+    auto output_points = extractPoints(output_cloud);
+    EXPECT_EQ(output_points.size(), 1);  // All points in same voxel
   }
 }
 
-TEST_F(PickupBasedVoxelGridDownsampleFilterTest, TestEmptyPointCloudPublishing)
+TEST(DownsampleWithVoxelGridTest, TestNegativeCoordinates)
 {
-  // Create empty point cloud
-  sensor_msgs::msg::PointCloud2 empty_cloud;
-  empty_cloud.header.frame_id = "base_link";
-  empty_cloud.header.stamp = rclcpp::Clock().now();
-  empty_cloud.height = 1;
-  empty_cloud.width = 0;
-  empty_cloud.is_dense = true;
-  empty_cloud.is_bigendian = false;
+  // Create test points with negative coordinates
+  std::vector<std::array<float, 3>> input_points = {
+    {-0.5f, -0.5f, -0.5f},
+    {-0.45f, -0.45f, -0.45f},  // Same voxel as above
+    {0.5f, 0.5f, 0.5f},
+    {0.55f, 0.55f, 0.55f},  // Same voxel as above
+  };
+  auto input_cloud = createTestPointCloud(input_points);
 
-  // Create point cloud with x, y, z fields but no data
-  sensor_msgs::PointCloud2Modifier modifier(empty_cloud);
-  modifier.setPointCloud2Fields(
-    3, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1, sensor_msgs::msg::PointField::FLOAT32,
-    "z", 1, sensor_msgs::msg::PointField::FLOAT32);
+  autoware::pointcloud_preprocessor::VoxelSize voxel_size = {0.1f, 0.1f, 0.1f};
+  sensor_msgs::msg::PointCloud2 output_cloud;
 
-  // Don't add any points - keep it empty
-  modifier.resize(0);
+  // Call the function under test
+  autoware::pointcloud_preprocessor::downsample_with_voxel_grid(
+    input_cloud, voxel_size, output_cloud);
 
-  // Reset the received flag
-  received_output_ = false;
+  // Extract output points
+  auto output_points = extractPoints(output_cloud);
 
-  // Publish empty point cloud
-  input_publisher_->publish(empty_cloud);
-
-  // Spin nodes to process messages
-  auto start_time = std::chrono::steady_clock::now();
-  auto timeout = std::chrono::seconds(5);
-
-  while (!received_output_ && (std::chrono::steady_clock::now() - start_time) < timeout) {
-    rclcpp::spin_some(filter_node_);
-    rclcpp::spin_some(test_node_);
-    rclcpp::sleep_for(std::chrono::milliseconds(10));
-  }
-
-  // Check that output was received
-  EXPECT_TRUE(received_output_) << "Expected to receive empty output point cloud";
-
-  // Check output point cloud is same size as input
-  if (received_output_) {
-    EXPECT_EQ(output_msg_.height, empty_cloud.height);
-    EXPECT_EQ(output_msg_.width, empty_cloud.width);
-    EXPECT_EQ(output_msg_.data.size(), empty_cloud.data.size());
-  }
+  // Should have 2 points (2 different voxels)
+  EXPECT_EQ(output_points.size(), 2);
 }
