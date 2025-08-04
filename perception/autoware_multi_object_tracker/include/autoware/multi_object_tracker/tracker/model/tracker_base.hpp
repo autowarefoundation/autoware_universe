@@ -50,6 +50,7 @@ private:
   rclcpp::Time last_update_with_measurement_time_;
   std::vector<float> existence_probabilities_;
   float total_existence_probability_;
+  std::vector<autoware_perception_msgs::msg::ObjectClassification> classification_;
 
   // cache
   mutable rclcpp::Time cached_time_;
@@ -63,6 +64,10 @@ public:
   void initializeExistenceProbabilities(
     const uint & channel_index, const float & existence_probability);
   std::vector<float> getExistenceProbabilityVector() const { return existence_probabilities_; }
+  std::vector<autoware_perception_msgs::msg::ObjectClassification> getClassification() const
+  {
+    return classification_;
+  }
   float getTotalExistenceProbability() const { return total_existence_probability_; }
   void updateTotalExistenceProbability(const float & existence_probability);
   void mergeExistenceProbabilities(std::vector<float> existence_probabilities);
