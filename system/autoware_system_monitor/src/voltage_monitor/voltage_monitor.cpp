@@ -73,7 +73,7 @@ VoltageMonitor::VoltageMonitor(const rclcpp::NodeOptions & options)
     }
     callback = &VoltageMonitor::checkVoltage;
   }
-  updater_.add("CMOS Battery Status", this, callback);
+  updater_.add(std::string(hostname_) + ": CMOS Battery Status", this, callback);
 }
 
 void VoltageMonitor::checkVoltage(diagnostic_updater::DiagnosticStatusWrapper & stat)

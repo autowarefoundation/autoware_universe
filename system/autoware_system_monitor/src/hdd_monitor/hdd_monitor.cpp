@@ -53,16 +53,22 @@ HddMonitor::HddMonitor(const rclcpp::NodeOptions & options)
   getHddParams();
 
   updater_.setHardwareID(hostname_);
-  updater_.add("HDD Temperature", this, &HddMonitor::checkSmartTemperature);
-  updater_.add("HDD PowerOnHours", this, &HddMonitor::checkSmartPowerOnHours);
-  updater_.add("HDD TotalDataWritten", this, &HddMonitor::checkSmartTotalDataWritten);
-  updater_.add("HDD RecoveredError", this, &HddMonitor::checkSmartRecoveredError);
-  updater_.add("HDD Usage", this, &HddMonitor::checkUsage);
-  updater_.add("HDD ReadDataRate", this, &HddMonitor::checkReadDataRate);
-  updater_.add("HDD WriteDataRate", this, &HddMonitor::checkWriteDataRate);
-  updater_.add("HDD ReadIOPS", this, &HddMonitor::checkReadIops);
-  updater_.add("HDD WriteIOPS", this, &HddMonitor::checkWriteIops);
-  updater_.add("HDD Connection", this, &HddMonitor::checkConnection);
+  updater_.add(
+    std::string(hostname_) + ": HDD Temperature", this, &HddMonitor::checkSmartTemperature);
+  updater_.add(
+    std::string(hostname_) + ": HDD PowerOnHours", this, &HddMonitor::checkSmartPowerOnHours);
+  updater_.add(
+    std::string(hostname_) + ": HDD TotalDataWritten", this,
+    &HddMonitor::checkSmartTotalDataWritten);
+  updater_.add(
+    std::string(hostname_) + ": HDD RecoveredError", this, &HddMonitor::checkSmartRecoveredError);
+  updater_.add(std::string(hostname_) + ": HDD Usage", this, &HddMonitor::checkUsage);
+  updater_.add(std::string(hostname_) + ": HDD ReadDataRate", this, &HddMonitor::checkReadDataRate);
+  updater_.add(
+    std::string(hostname_) + ": HDD WriteDataRate", this, &HddMonitor::checkWriteDataRate);
+  updater_.add(std::string(hostname_) + ": HDD ReadIOPS", this, &HddMonitor::checkReadIops);
+  updater_.add(std::string(hostname_) + ": HDD WriteIOPS", this, &HddMonitor::checkWriteIops);
+  updater_.add(std::string(hostname_) + ": HDD Connection", this, &HddMonitor::checkConnection);
 
   // get HDD connection status
   updateHddConnections();

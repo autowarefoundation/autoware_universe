@@ -96,13 +96,16 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
 
   updater_.setHardwareID(hostname_);
   // Update diagnostic data collected by the timer callback.
-  updater_.add("CPU Temperature", this, &CPUMonitorBase::updateTemperature);
-  updater_.add("CPU Usage", this, &CPUMonitorBase::updateUsage);
-  updater_.add("CPU Load Average", this, &CPUMonitorBase::updateLoad);
-  updater_.add("CPU Frequency", this, &CPUMonitorBase::updateFrequency);
+  updater_.add(
+    std::string(hostname_) + ": CPU Temperature", this, &CPUMonitorBase::updateTemperature);
+  updater_.add(std::string(hostname_) + ": CPU Usage", this, &CPUMonitorBase::updateUsage);
+  updater_.add(std::string(hostname_) + ": CPU Load Average", this, &CPUMonitorBase::updateLoad);
+  updater_.add(std::string(hostname_) + ": CPU Frequency", this, &CPUMonitorBase::updateFrequency);
   // Data format of ThermalThrottling differs among platforms.
   // So checking of status and updating of diagnostic are executed simultaneously.
-  updater_.add("CPU Thermal Throttling", this, &CPUMonitorBase::updateThermalThrottling);
+  updater_.add(
+    std::string(hostname_) + ": CPU Thermal Throttling", this,
+    &CPUMonitorBase::updateThermalThrottling);
 
   // Publisher
   rclcpp::QoS durable_qos{1};
