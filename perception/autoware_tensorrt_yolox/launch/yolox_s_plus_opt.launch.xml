@@ -50,8 +50,8 @@
   <!-- bytetrack -->
   <group if="$(var use_bytetrack)">
     <node pkg="autoware_bytetrack" exec="bytetrack_node_exe" name="bytetrack_node$(var camera_id)" output="screen">
-      <remap from="~/in/objects" to="$(var yolox_output_objects)"/>
-      <remap from="~/out/tracks" to="$(var output/objects)"/>
+      <remap from="~/in/rect" to="$(var yolox_output_objects)"/>
+      <remap from="~/out/objects" to="$(var output/objects)"/>
       <param from="$(var bytetrack_param_path)"/>
     </node>
   </group>
