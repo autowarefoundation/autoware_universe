@@ -111,7 +111,11 @@ void CudaPolarVoxelOutlierFilterNode::pointcloud_callback(
     visibility_ = filter_return.visibility;
   } else {
     RCLCPP_DEBUG(get_logger(), "Using PointXYZ format, computing polar coordinates");
-    // TODO: filter_point_xyz(msg);
+    // TODO(manato): filter_point_xyz(msg);
+    RCLCPP_INFO(
+      get_logger(),
+      "PointXYZ format has not been supported by "
+      "autoware_cuda_pointcloud_preprocessor::cuda_polar_voxel_outlier_filter yet.");
   }
 
   // Publish results

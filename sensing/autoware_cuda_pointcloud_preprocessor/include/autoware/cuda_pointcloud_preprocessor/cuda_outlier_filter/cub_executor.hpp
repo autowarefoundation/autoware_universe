@@ -89,19 +89,6 @@ public:
       cub_lambda(temp_storage_.get(), temp_storage_bytes, std::forward<Args>(args)...));
   }
 
-#if 0
-  // template <typename cub_api_func, typename... Args>
-  // void hoge(
-  //   cub_api_func CubApiFunc, cudaStream_t & stream, cudaMemPool_t & mem_pool, Args &&... args)
-  // {
-  //   size_t temp_storage_bytes = 0;
-  //   CHECK_CUDA_ERROR(CubApiFunc(nullptr, temp_storage_bytes, std::forward<Args>(args)...));
-
-  //   // Allocate temporary storage if needed
-  //   update_temp_storage(temp_storage_bytes, stream, mem_pool);
-  // }
-#endif
-
 private:
   size_t current_temp_storage_bytes_{0};
   CudaPooledUniquePtr<uint8_t> temp_storage_;
