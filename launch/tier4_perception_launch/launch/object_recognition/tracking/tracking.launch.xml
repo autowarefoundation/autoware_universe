@@ -125,13 +125,14 @@
     <!-- camera lidar -->
     <group scoped="false" if="$(eval '&quot;$(var mode)&quot;==&quot;camera_lidar_fusion&quot;')">
       <!-- radar far object is not used -->
-      <let name="input/detection05/channel" value="none"/>
+      <let name="input/detection06/channel" value="none"/>
     </group>
 
     <!-- lidar radar -->
     <group scoped="false" if="$(eval '&quot;$(var mode)&quot;==&quot;lidar_radar_fusion&quot;')">
       <!-- camera lidar fusion is not used -->
       <let name="input/detection03/channel" value="none"/>
+      <!-- irregular object detector is not used -->
       <let name="input/detection04/channel" value="none"/>
     </group>
 
@@ -139,9 +140,10 @@
     <group scoped="false" if="$(eval '&quot;$(var mode)&quot;==&quot;lidar&quot;')">
       <!-- camera lidar detector is not used -->
       <let name="input/detection03/channel" value="none"/>
-      <!-- radar far object is not used -->
-      <let name="input/detection05/channel" value="none"/>
+      <!-- irregular object detector is not used -->
       <let name="input/detection04/channel" value="none"/>
+      <!-- radar far object is not used -->
+      <let name="input/detection06/channel" value="none"/>
     </group>
 
     <!-- radar -->
@@ -150,12 +152,12 @@
       <let name="input/detection01/channel" value="none"/>
       <!-- camera lidar fusion is not used -->
       <let name="input/detection03/channel" value="none"/>
-      <!-- detection by tracker is not used -->
-      <let name="input/detection04/channel" value="none"/>
-      <!-- normal radar object to be used-->
-      <let name="input/detection05/objects" value="$(var input/radar/objects)"/>
       <!-- irregular object detector is not used -->
       <let name="input/detection04/channel" value="none"/>
+      <!-- detection by tracker is not used -->
+      <let name="input/detection05/channel" value="none"/>
+      <!-- normal radar object to be used-->
+      <let name="input/detection05/objects" value="$(var input/radar/objects)"/>
     </group>
 
     <!-- Multi object tracking -->
