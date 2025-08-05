@@ -19,9 +19,9 @@
           "default": 5
         },
 
-        "th_dist_hysteresis_m": {
+        "th_point_merge_distance_m": {
           "type": "number",
-          "description": "Minimum distance between critical points to avoid duplicates [m].",
+          "description": "Distance threshold to merge nearby points [m].",
           "default": 1.0
         },
 
@@ -46,6 +46,41 @@
           },
           "required": ["dist_m", "angle_deg", "goal_dist_m"],
           "additionalProperties": false
+        },
+
+        "th_cutoff_time_s": {
+          "type": "object",
+          "properties": {
+            "predicted_path": {
+              "type": "number",
+              "description": "Cutoff time to consider from predicted path [s].",
+              "default": 3.5
+            },
+            "near_boundary": {
+              "type": "number",
+              "description": "Cutoff time to consider departure point as near boundary type [s].",
+              "default": 3.5
+            },
+            "departure": {
+              "type": "number",
+              "description": "Cutoff time to consider departure point as critical departure type, anything more than is considered approaching departure [s].",
+              "default": 2.0
+            }
+          },
+          "required": ["predicted_path", "near_boundary", "departure"],
+          "additionalProperties": false
+        },
+
+        "on_time_buffer_s": {
+          "type": "number",
+          "description": "Continuous detection time threshold to insert departure point into departure interval. [s]",
+          "default": 0.15
+        },
+
+        "off_time_buffer_s": {
+          "type": "number",
+          "description": "Continuous detection time threshold to reset departure interval. [s]",
+          "default": 0.15
         },
 
         "abnormality": {
@@ -350,8 +385,11 @@
       "required": [
         "boundary_types_to_detect",
         "th_max_lateral_query_num",
-        "th_dist_hysteresis_m",
+        "th_point_merge_distance_m",
         "th_pt_shift",
+        "th_cutoff_time_s",
+        "on_time_buffer_s",
+        "off_time_buffer_s",
         "abnormality",
         "diagnostic",
         "slow_down_behavior"

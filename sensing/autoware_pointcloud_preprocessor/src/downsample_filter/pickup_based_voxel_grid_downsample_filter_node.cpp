@@ -16,7 +16,10 @@
 
 #include "robin_hood.h"
 
+#include <sensor_msgs/point_cloud2_iterator.hpp>
+
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace
@@ -69,13 +72,83 @@ PickupBasedVoxelGridDownsampleFilterComponent::PickupBasedVoxelGridDownsampleFil
   }
 
   // Initialization of voxel sizes from parameters
-  voxel_size_x_ = declare_parameter<float>("voxel_size_x");
-  voxel_size_y_ = declare_parameter<float>("voxel_size_y");
-  voxel_size_z_ = declare_parameter<float>("voxel_size_z");
+  voxel_size_.x = declare_parameter<float>("voxel_size_x");
+  voxel_size_.y = declare_parameter<float>("voxel_size_y");
+  voxel_size_.z = declare_parameter<float>("voxel_size_z");
 
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
     std::bind(&PickupBasedVoxelGridDownsampleFilterComponent::param_callback, this, _1));
+}
+
+using VoxelKey = std::array<int, 3>;
+using PointIndexHashMap = robin_hood::unordered_map<VoxelKey, size_t, VoxelKeyHash, VoxelKeyEqual>;
+
+void extract_unique_voxel_point_indices(
+  const sensor_msgs::msg::PointCloud2 & input, const VoxelSize & voxel_size,
+  PointIndexHashMap & index_map)
+{
+  constexpr float large_num_offset = 100000.0;
+  const float inverse_voxel_size_x = 1.0 / voxel_size.x;
+  const float inverse_voxel_size_y = 1.0 / voxel_size.y;
+  const float inverse_voxel_size_z = 1.0 / voxel_size.z;
+
+  sensor_msgs::PointCloud2ConstIterator<float> iter_x(input, "x");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_y(input, "y");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_z(input, "z");
+
+  // Process each point in the point cloud
+  size_t point_index = 0;
+  for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z, ++point_index) {
+    const float x = *iter_x;
+    const float y = *iter_y;
+    const float z = *iter_z;
+
+    // The reason for adding a large value is that when converting from float to int, values around
+    // -1 to 1 are all rounded down to 0. Therefore, to prevent the numbers from becoming negative,
+    // a large value is added. It has been tuned to reduce computational costs, and deliberately
+    // avoids using round or floor functions.
+    VoxelKey key = {
+      static_cast<int>((x + large_num_offset) * inverse_voxel_size_x),
+      static_cast<int>((y + large_num_offset) * inverse_voxel_size_y),
+      static_cast<int>((z + large_num_offset) * inverse_voxel_size_z)};
+    index_map.emplace(key, point_index);
+  }
+}
+
+void copy_filtered_points(
+  const sensor_msgs::msg::PointCloud2 & input, const PointIndexHashMap & index_map,
+  sensor_msgs::msg::PointCloud2 & output)
+{
+  size_t output_global_offset = 0;
+  output.data.resize(index_map.size() * input.point_step);
+  for (const auto & kv : index_map) {
+    const size_t byte_offset = kv.second * input.point_step;
+    std::memcpy(&output.data[output_global_offset], &input.data[byte_offset], input.point_step);
+    output_global_offset += input.point_step;
+  }
+
+  output.header.frame_id = input.header.frame_id;
+  output.height = 1;
+  output.fields = input.fields;
+  output.is_bigendian = input.is_bigendian;
+  output.point_step = input.point_step;
+  output.is_dense = input.is_dense;
+  output.width = static_cast<uint32_t>(output.data.size() / output.height / output.point_step);
+  output.row_step = static_cast<uint32_t>(output.data.size() / output.height);
+}
+
+void downsample_with_voxel_grid(
+  const sensor_msgs::msg::PointCloud2 & input, const VoxelSize & voxel_size,
+  sensor_msgs::msg::PointCloud2 & output)
+{
+  // Extract unique voxel point indices
+  PointIndexHashMap index_map;
+  index_map.reserve(input.data.size() / input.point_step);
+  extract_unique_voxel_point_indices(input, voxel_size, index_map);
+
+  // Copy the filtered points to the output
+  copy_filtered_points(input, index_map, output);
 }
 
 void PickupBasedVoxelGridDownsampleFilterComponent::filter(
@@ -86,57 +159,8 @@ void PickupBasedVoxelGridDownsampleFilterComponent::filter(
 
   stop_watch_ptr_->toc("processing_time", true);
 
-  using VoxelKey = std::array<int, 3>;
-  // std::unordered_map<VoxelKey, size_t, VoxelKeyHash, VoxelKeyEqual> voxel_map;
-  robin_hood::unordered_map<VoxelKey, size_t, VoxelKeyHash, VoxelKeyEqual> voxel_map;
-
-  voxel_map.reserve(input->data.size() / input->point_step);
-
-  constexpr float large_num_offset = 100000.0;
-  const float inverse_voxel_size_x = 1.0 / voxel_size_x_;
-  const float inverse_voxel_size_y = 1.0 / voxel_size_y_;
-  const float inverse_voxel_size_z = 1.0 / voxel_size_z_;
-
-  const int x_offset = input->fields[pcl::getFieldIndex(*input, "x")].offset;
-  const int y_offset = input->fields[pcl::getFieldIndex(*input, "y")].offset;
-  const int z_offset = input->fields[pcl::getFieldIndex(*input, "z")].offset;
-
-  // Process each point in the point cloud
-  for (size_t global_offset = 0; global_offset + input->point_step <= input->data.size();
-       global_offset += input->point_step) {
-    const float & x = *reinterpret_cast<const float *>(&input->data[global_offset + x_offset]);
-    const float & y = *reinterpret_cast<const float *>(&input->data[global_offset + y_offset]);
-    const float & z = *reinterpret_cast<const float *>(&input->data[global_offset + z_offset]);
-
-    // The reason for adding a large value is that when converting from float to int, values around
-    // -1 to 1 are all rounded down to 0. Therefore, to prevent the numbers from becoming negative,
-    // a large value is added. It has been tuned to reduce computational costs, and deliberately
-    // avoids using round or floor functions.
-    VoxelKey key = {
-      static_cast<int>((x + large_num_offset) * inverse_voxel_size_x),
-      static_cast<int>((y + large_num_offset) * inverse_voxel_size_y),
-      static_cast<int>((z + large_num_offset) * inverse_voxel_size_z)};
-
-    voxel_map.emplace(key, global_offset);
-  }
-
-  // Populate the output point cloud
-  size_t output_global_offset = 0;
-  output.data.resize(voxel_map.size() * input->point_step);
-  for (const auto & kv : voxel_map) {
-    std::memcpy(&output.data[output_global_offset], &input->data[kv.second], input->point_step);
-    output_global_offset += input->point_step;
-  }
-
-  // Set the output point cloud metadata
-  output.header.frame_id = input->header.frame_id;
-  output.height = 1;
-  output.fields = input->fields;
-  output.is_bigendian = input->is_bigendian;
-  output.point_step = input->point_step;
-  output.is_dense = input->is_dense;
-  output.width = static_cast<uint32_t>(output.data.size() / output.height / output.point_step);
-  output.row_step = static_cast<uint32_t>(output.data.size() / output.height);
+  // process downsample filter
+  downsample_with_voxel_grid(*input, voxel_size_, output);
 
   // add processing time for debug
   if (debug_publisher_) {
@@ -164,14 +188,14 @@ PickupBasedVoxelGridDownsampleFilterComponent::param_callback(
   std::scoped_lock lock(mutex_);
 
   // Handling dynamic updates for the voxel sizes
-  if (get_param(p, "voxel_size_x", voxel_size_x_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new distance threshold to: %f.", voxel_size_x_);
+  if (get_param(p, "voxel_size_x", voxel_size_.x)) {
+    RCLCPP_DEBUG(get_logger(), "Setting new voxel_size_x to: %f.", voxel_size_.x);
   }
-  if (get_param(p, "voxel_size_y", voxel_size_y_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new distance threshold to: %f.", voxel_size_y_);
+  if (get_param(p, "voxel_size_y", voxel_size_.y)) {
+    RCLCPP_DEBUG(get_logger(), "Setting new voxel_size_y to: %f.", voxel_size_.y);
   }
-  if (get_param(p, "voxel_size_z", voxel_size_z_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new distance threshold to: %f.", voxel_size_z_);
+  if (get_param(p, "voxel_size_z", voxel_size_.z)) {
+    RCLCPP_DEBUG(get_logger(), "Setting new voxel_size_z to: %f.", voxel_size_.z);
   }
 
   rcl_interfaces::msg::SetParametersResult result;
