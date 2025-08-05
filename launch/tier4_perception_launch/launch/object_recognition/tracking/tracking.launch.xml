@@ -141,7 +141,7 @@
       <let name="input/detection03/channel" value="none"/>
       <!-- radar far object is not used -->
       <let name="input/detection05/channel" value="none"/>
-      <let name="input/detection06/channel" value="none"/>
+      <let name="input/detection04/channel" value="none"/>
     </group>
 
     <!-- radar -->
