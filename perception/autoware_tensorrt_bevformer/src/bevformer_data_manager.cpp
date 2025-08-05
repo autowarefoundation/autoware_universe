@@ -63,7 +63,7 @@ void BEVFormerDataManager::initializePrevBev(const std::vector<int64_t> & shape)
     total_size *= dim;
   }
 
-  // Initialize with random values following normal distribution 
+  // Initialize with random values following normal distribution
   prev_bev_.resize(total_size);
 
   std::random_device rd;
@@ -81,7 +81,7 @@ std::vector<float> BEVFormerDataManager::processCanBus(
   const std::vector<float> & ego2global_translation, const std::vector<float> & ego2global_rotation,
   const std::vector<float> & raw_can_bus)
 {
-  // Start with the original CAN bus data 
+  // Start with the original CAN bus data
   std::vector<float> can_bus(18, 0.0f);
 
   // Copy existing CAN bus data if available
@@ -139,7 +139,7 @@ std::vector<float> BEVFormerDataManager::processCanbusWithTemporal(
   // Make a copy of the CAN bus data
   std::vector<float> processed_can_bus = can_bus;
 
-  // Store current position and angle BEFORE modifications 
+  // Store current position and angle BEFORE modifications
   current_tmp_pos_ = {processed_can_bus[0], processed_can_bus[1], processed_can_bus[2]};
   current_tmp_angle_ = processed_can_bus[17];
 
