@@ -59,7 +59,7 @@ bool MultipleVehicleTracker::getTrackedObject(
   } else if (label == Label::BUS || label == Label::TRUCK || label == Label::TRAILER) {
     big_vehicle_tracker_.getTrackedObject(time, object);
   } else {
-    // If the label is unknown, use the normal vehicle tracker as a fallback
+    // If the label is others, use the normal vehicle tracker as a fallback
     normal_vehicle_tracker_.getTrackedObject(time, object);
   }
   object.uuid = object_.uuid;
