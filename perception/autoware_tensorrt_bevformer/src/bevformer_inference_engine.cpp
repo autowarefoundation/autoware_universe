@@ -120,7 +120,6 @@ std::string BEVFormerInferenceEngine::findPluginLibrary(const std::string & plug
       RCLCPP_INFO(logger_, "Using user-provided plugin path: %s", plugin_path.c_str());
       return plugin_path;
     } else {
-      // If the user provided a path but it's invalid, it's a configuration error.
       throw std::runtime_error("Provided plugin path does not exist: " + plugin_path);
     }
   }
@@ -171,7 +170,6 @@ bool BEVFormerInferenceEngine::loadPlugins(const std::string & plugin_path)
     return false;
   }
 
-  // Store handle for cleanup (add this to your class members)
   plugin_handle_ = handle;
 
   // Get and register plugin registry
@@ -253,7 +251,7 @@ bool BEVFormerInferenceEngine::initialize(
     RCLCPP_INFO(logger_, "TensorRT engine initialized successfully");
     RCLCPP_INFO(logger_, "Engine has %d IO tensors", engine_->getNbIOTensors());
 
-    // Print all tensor names for debugging
+    // Print all tensor names 
     for (int i = 0; i < engine_->getNbIOTensors(); i++) {
       const char * name = engine_->getIOTensorName(i);
       bool isInput = engine_->getTensorIOMode(name) == nvinfer1::TensorIOMode::kINPUT;
@@ -283,7 +281,6 @@ bool BEVFormerInferenceEngine::buildEngineFromOnnx(
   const std::string & onnx_file, const std::string & engine_file, const std::string & plugin_path,
   int workspace_size, PrecisionType precision)
 {
-  // Generate precision-specific engine file name if needed
   std::string effective_engine_file = engine_file;
   if (precision == PrecisionType::FP32) {
     // Add _fp32 suffix before the extension
@@ -321,7 +318,6 @@ bool BEVFormerInferenceEngine::buildEngineFromOnnx(
   // Start building engine
   auto start_time = std::chrono::high_resolution_clock::now();
 
-  // In TensorRT 10.x, we need to use traditional manual resource management
   nvinfer1::IBuilder * builder = nvinfer1::createInferBuilder(gLogger);
   if (!builder) {
     RCLCPP_ERROR(logger_, "Failed to create TensorRT builder");

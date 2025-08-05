@@ -76,8 +76,6 @@ private:
   size_t img_N_;
   uint32_t src_img_w_;
   uint32_t src_img_h_;
-  int bev_h;
-  int bev_w;
   std::map<std::string, int> model_shape_params_;
   std::map<std::string, std::vector<std::string>> model_output_shapes_;
 
@@ -94,46 +92,15 @@ private:
   bool auto_convert_;
   std::string precision_;
 
-  // Camera data structures
-  struct CameraDetails
-  {
-    std::string image_path;
-    Eigen::Matrix3f camera_intrinsics;
-    Eigen::Quaternion<float> rotation;
-    Eigen::Translation3f translation;
-    int width;
-    int height;
-    std::string scene_token;
-    std::string prev;
-    std::string next;
-  };
-
-  struct TokenData
-  {
-    std::string scene_token;
-    std::string prev;
-    std::string next;
-    std::vector<CameraDetails> cameras;
-  };
-
   std::map<std::string, std::vector<double>> reshapeTensorOutputs(
     const std::map<std::string, std::vector<double>> & rawOutputs);
 
   // Static transforms (calculated once)
   Eigen::Quaterniond lidar2ego_rot_static_;
   Eigen::Translation3d lidar2ego_trans_static_;
-  Eigen::Quaterniond ego2global_rot_ref_;
-  Eigen::Translation3d ego2global_trans_ref_;
   bool lidar2ego_transforms_ready_ = false;
 
-  // Camera maps for handling sequence data
-  std::map<std::string, TokenData> token_map_;
-  std::array<std::map<std::string, TokenData>, 6> camera_maps_;
-
-  std::string current_sample_token_;  // To store the current sample token
-
   // Inference components
-  uchar * imgs_dev_ = nullptr;  // Device pointer for storing the images
   float score_thre_;            // Score threshold for object detection
   bool has_twist_ = true;       // whether set twist for objects
   bool debug_mode_ = false;     // Flag to enable debug mode for nuscenes marker visualization
@@ -181,9 +148,9 @@ private:
     sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::Image,
     autoware_internal_perception_msgs::msg::CanBusData,
     autoware_internal_perception_msgs::msg::SceneInfo>
-    MySyncPolicy;
+    MultiSensorSyncPolicy;
 
-  typedef message_filters::Synchronizer<MySyncPolicy> Sync;
+  typedef message_filters::Synchronizer<MultiSensorSyncPolicy> Sync;
   std::shared_ptr<Sync> sync_;
 
   // Timer for checking initialization
@@ -216,22 +183,6 @@ private:
   void calculateStaticLidar2EgoTransform();
 
   /**
-   * @brief Process detected objects from inference outputs
-   *
-   * @param outputs_classes Classes output tensor
-   * @param outputs_coords Coordinates output tensor
-   * @return autoware_perception_msgs::msg::DetectedObjects
-   */
-  autoware_perception_msgs::msg::DetectedObjects processDetections(
-    const std::vector<float> & outputs_classes, const std::vector<float> & outputs_coords);
-
-  // Static methods
-  static float quaternionToYaw(const Eigen::Quaternionf & q);
-  std::vector<float> processCanBusData(
-    const std::vector<float> & ego2global_translation,
-    const std::vector<float> & ego2global_rotation, const std::vector<float> & raw_can_bus);
-
-  /**
    * @brief Clones and resizes the input image message to the specified width and height.
    * @param msg The input image message.
    * @return The cloned and resized OpenCV Mat image.
@@ -240,7 +191,6 @@ private:
 
 public:
   explicit TRTBEVFormerNode(const rclcpp::NodeOptions & options);
-  ~TRTBEVFormerNode();
 
   // Callbacks
   void callback(

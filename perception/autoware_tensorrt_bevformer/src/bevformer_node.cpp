@@ -162,9 +162,9 @@ void TRTBEVFormerNode::initModel()
 {
   RCLCPP_INFO_STREAM(this->get_logger(), "Loading config...");
 
-  // Initialize modular components - handle exceptions properly
+  // Initialize modular components 
   try {
-    // Create the data manager first
+    // Create the data manager 
     RCLCPP_INFO(this->get_logger(), "Initializing data manager...");
     data_manager_ = std::make_unique<BEVFormerDataManager>(this->get_logger());
 
@@ -172,7 +172,7 @@ void TRTBEVFormerNode::initModel()
     RCLCPP_INFO(this->get_logger(), "Initializing inference engine...");
     inference_engine_ = std::make_unique<BEVFormerInferenceEngine>(this->get_logger());
 
-    // Create the preprocessor last
+    // Create the preprocessor 
     RCLCPP_INFO(this->get_logger(), "Initializing preprocessor...");
     preprocessor_ = std::make_unique<BEVFormerPreprocessor>(this->get_logger(), this);
 
@@ -300,13 +300,13 @@ void TRTBEVFormerNode::startImageSubscription()
 
   // Synchronize
   sync_ = std::make_shared<Sync>(
-    MySyncPolicy(10),
-    sub_fl_img_,  // Index 0
-    sub_f_img_,   // Index 1
-    sub_fr_img_,  // Index 2
-    sub_bl_img_,  // Index 3
-    sub_b_img_,   // Index 4
-    sub_br_img_,  // Index 5
+    MultiSensorSyncPolicy(10),
+    sub_fl_img_,  
+    sub_f_img_,   
+    sub_fr_img_,  
+    sub_bl_img_,  
+    sub_b_img_,   
+    sub_br_img_,  
     sub_can_bus_, scene_info_sub_);
 
   sync_->registerCallback(
@@ -493,18 +493,7 @@ void TRTBEVFormerNode::callback(
   // Get CAN bus data directly from the synchronized message
   std::vector<float> latest_can_bus = can_bus_msg->can_bus.data;
 
-  // Get scene info directly from the synchronized message
-  const std::string & sample_token = scene_info->sample_token;
-  const std::string & prev = scene_info->prev;
-  const std::string & next = scene_info->next;
   const std::string & scene_token = scene_info->scene_token;
-
-  // Update token
-  current_sample_token_ = sample_token;
-
-  RCLCPP_DEBUG(
-    this->get_logger(), "Scene updated: %s -> [scene: %s, prev: %s, next: %s]",
-    sample_token.c_str(), scene_token.c_str(), prev.c_str(), next.c_str());
 
   // Create vector of image messages for transform calculation
   std::vector<sensor_msgs::msg::Image::ConstSharedPtr> image_msgs = {
@@ -530,7 +519,7 @@ void TRTBEVFormerNode::callback(
   } catch (tf2::TransformException & ex) {
     RCLCPP_WARN(
       this->get_logger(), "Transform lookup failed at time %f: %s", ref_time.seconds(), ex.what());
-    return;  // skip this frame to avoid using wrong transforms
+    return; 
   }
 
   // Update sensor2lidar transforms for each camera with its own timestamp
@@ -677,14 +666,6 @@ cv::Mat TRTBEVFormerNode::cloneAndResize(const sensor_msgs::msg::Image::ConstSha
     cv::resize(img, img, cv::Size(src_img_w_, src_img_h_));
   }
   return img;
-}
-
-TRTBEVFormerNode::~TRTBEVFormerNode()
-{
-  if (imgs_dev_) {
-    cudaFree(imgs_dev_);
-    imgs_dev_ = nullptr;
-  }
 }
 
 }  // namespace tensorrt_bevformer
