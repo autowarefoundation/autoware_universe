@@ -264,6 +264,8 @@ ControlValidator::ControlValidator(const rclcpp::NodeOptions & options)
 
   setup_parameters();
 
+  validation_filtering(validation_status_);
+
   setup_diag();
 }
 
