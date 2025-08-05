@@ -56,6 +56,9 @@ bool PedestrianAndBicycleTracker::getTrackedObject(
     pedestrian_tracker_.getTrackedObject(time, object);
   } else if (label == Label::BICYCLE || label == Label::MOTORCYCLE) {
     bicycle_tracker_.getTrackedObject(time, object);
+  } else {
+    // If the label is unknown, use the bicycle tracker as a fallback
+    bicycle_tracker_.getTrackedObject(time, object);
   }
   object.uuid = object_.uuid;
   return true;
