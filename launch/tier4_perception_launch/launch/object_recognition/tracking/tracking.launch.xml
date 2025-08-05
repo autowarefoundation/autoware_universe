@@ -132,7 +132,7 @@
     <group scoped="false" if="$(eval '&quot;$(var mode)&quot;==&quot;lidar_radar_fusion&quot;')">
       <!-- camera lidar fusion is not used -->
       <let name="input/detection03/channel" value="none"/>
-      <let name="input/detection06/channel" value="none"/>
+      <let name="input/detection04/channel" value="none"/>
     </group>
 
     <!-- lidar -->
