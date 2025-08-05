@@ -407,10 +407,33 @@ std::vector<LinearRing2d> create_vehicle_footprints(
     steering_angle += original_steering_offsets[i] * steering_rate_factor;
     steering_angle = std::clamp(
       steering_angle, -vehicle_info.max_steer_angle_rad, vehicle_info.max_steer_angle_rad);
+    // vehicle_footprints.push_back(
+    //   transform_vector(local_vehicle_footprint, autoware_utils::pose2transform(pose)));
+  }
+  constexpr auto delay = 0.2;  // delay in seconds
+  auto t = 0.0;
+  pose = trajectory.front().pose;
+  steering_angle = static_cast<double>(trajectory.front().front_wheel_angle_rad);
+  auto delayed_index = 0UL;
+  // delayed steering
+  for (auto i = 0UL; i + 1 < trajectory.size(); ++i) {
+    const auto prev_p = trajectory[i];
+    const auto curr_p = trajectory[i + 1];
+    const auto dt =
+      rclcpp::Duration(curr_p.time_from_start) - rclcpp::Duration(prev_p.time_from_start);
+    const auto v = (prev_p.longitudinal_velocity_mps + curr_p.longitudinal_velocity_mps) * 0.5;
+    pose = update_pose_with_bicycle_model(
+      pose, steering_angle, v, dt.seconds(), vehicle_info.wheel_base_m);
+    if (t >= delay) {
+      steering_angle += original_steering_offsets[delayed_index];
+      steering_angle = std::clamp(
+        steering_angle, -vehicle_info.max_steer_angle_rad, vehicle_info.max_steer_angle_rad);
+      ++delayed_index;
+    }
     vehicle_footprints.push_back(
       transform_vector(local_vehicle_footprint, autoware_utils::pose2transform(pose)));
+    t += dt.seconds();
   }
-  // delayed steering
 
   return vehicle_footprints;
 }
