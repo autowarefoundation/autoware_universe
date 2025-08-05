@@ -155,7 +155,7 @@
       <!-- normal radar object to be used-->
       <let name="input/detection05/objects" value="$(var input/radar/objects)"/>
       <!-- irregular object detector is not used -->
-      <let name="input/detection06/channel" value="none"/>
+      <let name="input/detection04/channel" value="none"/>
     </group>
 
     <!-- Multi object tracking -->
