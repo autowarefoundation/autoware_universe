@@ -27,8 +27,8 @@ namespace autoware::imu_corrector
 {
 GyroBiasEstimator::GyroBiasEstimator(const rclcpp::NodeOptions & options)
 : rclcpp::Node(
-    "gyro_bias_validator_scale",
-    options),  // Todo(SergioReyesSan): Change node name to "gyro_bias_validator"
+    "gyro_bias_scale_validator",
+    options),
   gyro_bias_threshold_(declare_parameter<double>("gyro_bias_threshold")),
   angular_velocity_offset_x_(declare_parameter<double>("angular_velocity_offset_x")),
   angular_velocity_offset_y_(declare_parameter<double>("angular_velocity_offset_y")),
@@ -83,7 +83,7 @@ GyroBiasEstimator::GyroBiasEstimator(const rclcpp::NodeOptions & options)
   gyro_bias_(std::nullopt)
 {
   updater_.setHardwareID(get_name());
-  updater_.add("gyro_bias_validator", this, &GyroBiasEstimator::update_diagnostics);
+  updater_.add("gyro_bias_scale_validator", this, &GyroBiasEstimator::update_diagnostics);
   updater_.setPeriod(diagnostics_updater_interval_sec_);
 
   gyro_bias_estimation_module_ = std::make_unique<GyroBiasEstimationModule>();
@@ -719,10 +719,10 @@ void GyroBiasEstimator::update_diagnostics(diagnostic_updater::DiagnosticStatusW
   stat.add("scale_on_purpose", f(final_scale_on_purpose_));
 
   stat.add("gyro_bias_threshold", f(gyro_bias_threshold_));
-  stat.add("p_", f(p_ * 1e10));
+  stat.add("covariance_rate_estimation", f(p_ * 1e10));
   stat.add("q_", f(q_ * 1e10));
   stat.add("p_angle0_", f(p_angle_(0, 0) * 1e10));
-  stat.add("p_angle1_", f(p_angle_(1, 1) * 1e10));
+  stat.add("covariance_angle_estimation", f(p_angle_(1, 1) * 1e10));
 }
 
 }  // namespace autoware::imu_corrector
