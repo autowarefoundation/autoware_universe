@@ -101,9 +101,9 @@ private:
   bool lidar2ego_transforms_ready_ = false;
 
   // Inference components
-  float score_thre_;            // Score threshold for object detection
-  bool has_twist_ = true;       // whether set twist for objects
-  bool debug_mode_ = false;     // Flag to enable debug mode for nuscenes marker visualization
+  float score_thre_;         // Score threshold for object detection
+  bool has_twist_ = true;    // whether set twist for objects
+  bool debug_mode_ = false;  // Flag to enable debug mode for nuscenes marker visualization
 
   // Publishers and subscribers
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr pub_boxes_;

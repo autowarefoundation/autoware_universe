@@ -162,9 +162,9 @@ void TRTBEVFormerNode::initModel()
 {
   RCLCPP_INFO_STREAM(this->get_logger(), "Loading config...");
 
-  // Initialize modular components 
+  // Initialize modular components
   try {
-    // Create the data manager 
+    // Create the data manager
     RCLCPP_INFO(this->get_logger(), "Initializing data manager...");
     data_manager_ = std::make_unique<BEVFormerDataManager>(this->get_logger());
 
@@ -172,7 +172,7 @@ void TRTBEVFormerNode::initModel()
     RCLCPP_INFO(this->get_logger(), "Initializing inference engine...");
     inference_engine_ = std::make_unique<BEVFormerInferenceEngine>(this->get_logger());
 
-    // Create the preprocessor 
+    // Create the preprocessor
     RCLCPP_INFO(this->get_logger(), "Initializing preprocessor...");
     preprocessor_ = std::make_unique<BEVFormerPreprocessor>(this->get_logger(), this);
 
@@ -300,14 +300,8 @@ void TRTBEVFormerNode::startImageSubscription()
 
   // Synchronize
   sync_ = std::make_shared<Sync>(
-    MultiSensorSyncPolicy(10),
-    sub_fl_img_,  
-    sub_f_img_,   
-    sub_fr_img_,  
-    sub_bl_img_,  
-    sub_b_img_,   
-    sub_br_img_,  
-    sub_can_bus_, scene_info_sub_);
+    MultiSensorSyncPolicy(10), sub_fl_img_, sub_f_img_, sub_fr_img_, sub_bl_img_, sub_b_img_,
+    sub_br_img_, sub_can_bus_, scene_info_sub_);
 
   sync_->registerCallback(
     std::bind(&TRTBEVFormerNode::callback, this, _1, _2, _3, _4, _5, _6, _7, _8));
@@ -519,7 +513,7 @@ void TRTBEVFormerNode::callback(
   } catch (tf2::TransformException & ex) {
     RCLCPP_WARN(
       this->get_logger(), "Transform lookup failed at time %f: %s", ref_time.seconds(), ex.what());
-    return; 
+    return;
   }
 
   // Update sensor2lidar transforms for each camera with its own timestamp

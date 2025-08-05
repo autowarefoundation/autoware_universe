@@ -251,7 +251,7 @@ bool BEVFormerInferenceEngine::initialize(
     RCLCPP_INFO(logger_, "TensorRT engine initialized successfully");
     RCLCPP_INFO(logger_, "Engine has %d IO tensors", engine_->getNbIOTensors());
 
-    // Print all tensor names 
+    // Print all tensor names
     for (int i = 0; i < engine_->getNbIOTensors(); i++) {
       const char * name = engine_->getIOTensorName(i);
       bool isInput = engine_->getTensorIOMode(name) == nvinfer1::TensorIOMode::kINPUT;
