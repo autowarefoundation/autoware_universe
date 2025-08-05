@@ -58,7 +58,7 @@ input/detection02/channel: none # Disabled
 input/detection01/objects: /perception/object_recognition/detection/lidar_centerpoint/objects
 input/detection01/channel: lidar_centerpoint
 
-# lidar short_range centerpoint 
+# lidar short_range centerpoint
 input/detection02/channel: /perception/object_recognition/detection/centerpoint_short_range/objects
 input/detection02/objects: lidar_centerpoint_short_range
 
