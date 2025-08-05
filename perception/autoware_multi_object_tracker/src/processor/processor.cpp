@@ -456,6 +456,8 @@ void TrackerProcessor::getTrackedObjects(
     // Get the tracked object, extrapolated to the given time
     constexpr bool to_publish = true;
     if (tracker->getTrackedObject(time, tracked_object, to_publish)) {
+      tracked_object.existence_probability =
+        tracker->getTotalExistenceProbability();  // Ensure existence probability is set
       tracked_objects.objects.push_back(types::toTrackedObjectMsg(tracked_object));
     }
   }
