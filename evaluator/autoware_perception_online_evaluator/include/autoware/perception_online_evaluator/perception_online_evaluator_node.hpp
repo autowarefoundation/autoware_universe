@@ -17,17 +17,14 @@
 
 #include "autoware/perception_online_evaluator/metrics_calculator.hpp"
 #include "autoware/perception_online_evaluator/parameters.hpp"
-#include "autoware/perception_online_evaluator/perception_analytics_calculator.hpp"
 #include "autoware_utils/math/accumulator.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
 
-#include "autoware_perception_msgs/msg/object_classification.hpp"
 #include "autoware_perception_msgs/msg/predicted_objects.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
-#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <tier4_metric_msgs/msg/metric.hpp>
 #include <tier4_metric_msgs/msg/metric_array.hpp>
 
@@ -35,12 +32,10 @@
 #include <deque>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace autoware::perception_diagnostics
 {
-using autoware_internal_debug_msgs::msg::Float64Stamped;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_utils::Accumulator;
@@ -89,36 +84,14 @@ public:
     tier4_metric_msgs::msg::MetricArray & metrics_msg) const;
 
 private:
-  // Flags to manager node outputs
-  bool enable_online_evaluation_{false};
-  bool enable_perception_analytics_{false};
-
-  // Label list
-  std::vector<uint8_t> label_list_{
-    ObjectClassification::UNKNOWN, ObjectClassification::CAR,
-    ObjectClassification::TRUCK,   ObjectClassification::BUS,
-    ObjectClassification::TRAILER, ObjectClassification::MOTORCYCLE,
-    ObjectClassification::BICYCLE, ObjectClassification::PEDESTRIAN,
-  };
-
-  // Subscribers (for both online evaluation and perception analytics)
+  // Subscribers and publishers
   rclcpp::Subscription<PredictedObjects>::SharedPtr objects_sub_;
-
-  // Publishers (for online evaluation)
   rclcpp::Publisher<tier4_metric_msgs::msg::MetricArray>::SharedPtr metrics_pub_;
   rclcpp::Publisher<MarkerArray>::SharedPtr pub_marker_;
 
-  // Subscribers and publishers (for perception analytics)
-  rclcpp::Subscription<Float64Stamped>::SharedPtr meas_to_tracked_latency_sub_;
-  rclcpp::Subscription<Float64Stamped>::SharedPtr prediction_latency_sub_;
-  rclcpp::Publisher<tier4_metric_msgs::msg::MetricArray>::SharedPtr perception_analytics_pub_;
-
-  // Latency cache (by topic id)
-  std::array<double, autoware::perception_diagnostics::LATENCY_TOPIC_NUM> latencies_;
-
   // TF
-  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> transform_listener_{nullptr};
+  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
 
   // Parameters
   std::shared_ptr<Parameters> parameters_;
@@ -129,9 +102,8 @@ private:
 
   // Metrics Calculator
   MetricsCalculator metrics_calculator_;
+  std::deque<rclcpp::Time> stamps_;
   void publishMetrics();
-  PerceptionAnalyticsCalculator perception_analytics_calculator_;
-  void publishPerceptionAnalytics();
 
   // Debug
   void publishDebugMarker();

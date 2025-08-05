@@ -75,8 +75,6 @@ protected:
     options.append_parameter_override("target_object.unknown.check_average_objects_count", true);
     options.append_parameter_override(
       "target_object.unknown.check_interval_average_objects_count", true);
-    options.append_parameter_override("enable_online_evaluation", true);
-    options.append_parameter_override("enable_perception_analytics", false);
 
     dummy_node = std::make_shared<rclcpp::Node>("perception_online_evaluator_test", options);
     eval_node = std::make_shared<EvalNode>(options);
