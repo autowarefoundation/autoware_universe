@@ -153,7 +153,7 @@ protected:
    * @return DiagStatus::OK or WARN or ERROR
    * @note ERROR indicates that thermal throttling is active or status retrieval failed
    */
-  virtual int getThermalThrottlingStatus();
+  virtual int getThermalThrottlingStatus() const;
 
   /**
    * @brief timer callback to collect cpu statistics
@@ -231,11 +231,11 @@ protected:
   rclcpp::TimerBase::SharedPtr timer_;  //!< @brief timer to collect cpu statistics
   rclcpp::CallbackGroup::SharedPtr timer_callback_group_;  //!< @brief Callback Group
 
-  std::mutex mutex_snapshot_;         //!< @brief mutex for protecting snapshot
-  TemperatureData temperature_data_;  //!< @brief snapshot of CPU temperature
-  UsageData usage_data_;              //!< @brief snapshot of CPU usage
-  LoadData load_data_;                //!< @brief snapshot of CPU load average
-  FrequencyData frequency_data_;      //!< @brief snapshot of CPU frequency
+  mutable std::mutex mutex_snapshot_;  //!< @brief mutex for protecting snapshot
+  TemperatureData temperature_data_;   //!< @brief snapshot of CPU temperature
+  UsageData usage_data_;               //!< @brief snapshot of CPU usage
+  LoadData load_data_;                 //!< @brief snapshot of CPU load average
+  FrequencyData frequency_data_;       //!< @brief snapshot of CPU frequency
 
 private:
   /**

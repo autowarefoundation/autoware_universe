@@ -59,7 +59,7 @@ protected:
   /**
    * @brief Get CPU thermal throttling status
    */
-  int getThermalThrottlingStatus() override;
+  int getThermalThrottlingStatus() const override;
 
   /**
    * @brief get names for core temperature files

@@ -475,7 +475,7 @@ void CPUMonitorBase::updateThermalThrottlingImpl(
     this->get_logger(), "CPUMonitorBase::checkThermalThrottlingImpl not implemented.");
 }
 
-int CPUMonitorBase::getThermalThrottlingStatus()
+int CPUMonitorBase::getThermalThrottlingStatus() const
 {
   RCLCPP_INFO_ONCE(
     this->get_logger(), "CPUMonitorBase::getThermalThrottlingStatus not implemented.");
@@ -618,7 +618,7 @@ void CPUMonitorBase::publishCpuTemperature()
     }
   }
   int thermal_throttling = getThermalThrottlingStatus();
-  cpu_temperature.thermal_throttling = thermal_throttling == DiagStatus::OK
+  cpu_temperature.thermal_throttling = (thermal_throttling == DiagStatus::OK)
                                          ? CpuTemperature::THERMAL_THROTTLING_OFF
                                          : CpuTemperature::THERMAL_THROTTLING_ON;
   pub_cpu_temperature_->publish(cpu_temperature);

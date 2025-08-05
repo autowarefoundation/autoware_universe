@@ -85,7 +85,7 @@ protected:
   /**
    * @brief Get CPU thermal throttling status
    */
-  int getThermalThrottlingStatus() override;
+  int getThermalThrottlingStatus() const override;
 
   // The format of Thermal Throttling report depends on CPU model.
   // So, Thermal Throttling report is implemented in derived class.
