@@ -26,9 +26,7 @@
 namespace autoware::imu_corrector
 {
 GyroBiasEstimator::GyroBiasEstimator(const rclcpp::NodeOptions & options)
-: rclcpp::Node(
-    "gyro_bias_scale_validator",
-    options),
+: rclcpp::Node("gyro_bias_scale_validator", options),
   gyro_bias_threshold_(declare_parameter<double>("gyro_bias_threshold")),
   angular_velocity_offset_x_(declare_parameter<double>("angular_velocity_offset_x")),
   angular_velocity_offset_y_(declare_parameter<double>("angular_velocity_offset_y")),
