@@ -261,13 +261,21 @@ void Tracker::updateClassification(
 uint Tracker::getChannelIndex() const
 {
   // Return the index of the channel that has highest priority
-  uint index = types::max_channel_size;  // Default to lowest priority index
+  // lower the index, higher the priority
+
+  uint index = types::max_channel_size - 1;  // Default to lowest priority index
+  float max_probability = 0.0f;
   constexpr float threshold = 0.5;
   for (uint i = 0; i < existence_probabilities_.size(); ++i) {
     if (existence_probabilities_[i] > threshold) {
+      return i;
+    }
+    if (existence_probabilities_[i] > max_probability) {
+      max_probability = existence_probabilities_[i];
       index = i;
     }
   }
+  // If no channel has a probability above the threshold, return the highest probability index
   return index;
 }
 
