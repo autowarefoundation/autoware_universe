@@ -17,9 +17,9 @@
  * @brief Raspberry Pi CPU monitor class
  */
 
-#include "system_monitor/cpu_monitor/raspi_cpu_monitor.hpp"
+#include "raspi_cpu_monitor.hpp"
 
-#include "system_monitor/system_monitor_utility.hpp"
+#include "common/system_monitor_utility.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -31,11 +31,13 @@ namespace fs = boost::filesystem;
 
 CPUMonitor::CPUMonitor(const rclcpp::NodeOptions & options) : CPUMonitorBase("cpu_monitor", options)
 {
+  thermal_throttling_data_.clear();
 }
 
 CPUMonitor::CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
 : CPUMonitorBase(node_name, options)
 {
+  thermal_throttling_data_.clear();
 }
 
 void CPUMonitor::checkThermalThrottling()
