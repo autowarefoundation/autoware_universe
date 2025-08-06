@@ -20,6 +20,8 @@
 #include "autoware_perception_msgs/msg/predicted_objects.hpp"
 
 #include <array>
+#include <memory>
+#include <mutex>
 
 namespace autoware::perception_diagnostics
 {
@@ -63,7 +65,7 @@ public:
    * @brief Store the latest objects for computation
    * @param objects     PredictedObjects for this frame
    */
-  void setPredictedObjects(const PredictedObjects & objects);
+  void setPredictedObjects(PredictedObjects::ConstSharedPtr objects);
 
   /**
    * @brief Store the latest node latencies for computation
@@ -79,8 +81,9 @@ public:
   FrameMetrics calculate(const tf2_ros::Buffer & tf_buffer) const;
 
 private:
-  PredictedObjects predicted_objects_;
-  std::array<double, LATENCY_TOPIC_NUM> latencies_;
+  mutable std::mutex predicted_objects_mutex_;
+  PredictedObjects::ConstSharedPtr predicted_objects_ptr_;
+  std::array<double, LATENCY_TOPIC_NUM> latencies_{};
 };
 
 }  // namespace autoware::perception_diagnostics

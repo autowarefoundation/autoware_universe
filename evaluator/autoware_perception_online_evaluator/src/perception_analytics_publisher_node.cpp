@@ -131,7 +131,7 @@ void PerceptionAnalyticsPublisherNode::publishPerceptionAnalytics()
 
 void PerceptionAnalyticsPublisherNode::onObjects(const PredictedObjects::ConstSharedPtr objects_msg)
 {
-  perception_analytics_calculator_.setPredictedObjects(*objects_msg);
+  perception_analytics_calculator_.setPredictedObjects(objects_msg);
   perception_analytics_calculator_.setLatencies(latencies_);
   publishPerceptionAnalytics();
 }

@@ -21,14 +21,16 @@
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 #include <cmath>
+#include <mutex>
 #include <numeric>
 
 namespace autoware::perception_diagnostics
 {
 
-void PerceptionAnalyticsCalculator::setPredictedObjects(const PredictedObjects & objects)
+void PerceptionAnalyticsCalculator::setPredictedObjects(PredictedObjects::ConstSharedPtr objects)
 {
-  predicted_objects_ = objects;
+  std::lock_guard<std::mutex> lock(predicted_objects_mutex_);
+  predicted_objects_ptr_ = std::move(objects);
 }
 
 void PerceptionAnalyticsCalculator::setLatencies(
@@ -39,11 +41,20 @@ void PerceptionAnalyticsCalculator::setLatencies(
 
 FrameMetrics PerceptionAnalyticsCalculator::calculate(const tf2_ros::Buffer & tf_buffer) const
 {
+  PredictedObjects::ConstSharedPtr ptr;
+  {
+    std::lock_guard<std::mutex> lock(predicted_objects_mutex_);
+    ptr = predicted_objects_ptr_;
+  }
+  if (!ptr) {
+    return FrameMetrics{};
+  }
+
   FrameMetrics metrics;
-  metrics.all_object_count = static_cast<uint32_t>(predicted_objects_.objects.size());
+  metrics.all_object_count = static_cast<uint32_t>(ptr->objects.size());
 
   // Compute object count by label
-  for (const auto & object : predicted_objects_.objects) {
+  for (const auto & object : ptr->objects) {
     const auto label =
       autoware::object_recognition_utils::getHighestProbLabel(object.classification);
     metrics.object_count_by_label[label]++;
@@ -54,11 +65,12 @@ FrameMetrics PerceptionAnalyticsCalculator::calculate(const tf2_ros::Buffer & tf
   metrics.total_latency = std::accumulate(latencies_.begin(), latencies_.end(), 0.0);
 
   // Skip max distance calculation if base_link transform is unavailable
-  const auto objects_frame_id = predicted_objects_.header.frame_id;
+  const auto objects_frame_id = ptr->header.frame_id;
+  const auto objects_time = ptr->header.stamp;
   geometry_msgs::msg::TransformStamped transform_stamped;
   try {
     transform_stamped = tf_buffer.lookupTransform(
-      "base_link", objects_frame_id, tf2::TimePointZero, tf2::Duration::zero());
+      "base_link", objects_frame_id, rclcpp::Time{objects_time}, tf2::durationFromSec(0.1));
   } catch (const tf2::TransformException & ex) {
     RCLCPP_WARN(
       rclcpp::get_logger("PerceptionAnalyticsCalculator"),
@@ -67,12 +79,13 @@ FrameMetrics PerceptionAnalyticsCalculator::calculate(const tf2_ros::Buffer & tf
   }
 
   // Compute max distance by label
-  for (const auto & object : predicted_objects_.objects) {
+  for (const auto & object : ptr->objects) {
     const auto label =
       autoware::object_recognition_utils::getHighestProbLabel(object.classification);
 
     geometry_msgs::msg::PoseStamped pose_in, pose_out;
     pose_in.header.frame_id = objects_frame_id;
+    pose_in.header.stamp = objects_time;
     pose_in.pose = object.kinematics.initial_pose_with_covariance.pose;
 
     // Transform the object's pose into the 'base_link' coordinate frame
