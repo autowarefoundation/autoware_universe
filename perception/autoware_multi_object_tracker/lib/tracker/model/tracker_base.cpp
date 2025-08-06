@@ -16,6 +16,8 @@
 
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 
+#include "autoware/multi_object_tracker/object_model/types.hpp"
+
 #include <autoware_utils/geometry/geometry.hpp>
 
 #include <algorithm>
@@ -69,6 +71,7 @@ Tracker::Tracker(const rclcpp::Time & time, const types::DynamicObject & detecte
   // Initialize existence probabilities
   existence_probabilities_.resize(types::max_channel_size, 0.001);
   total_existence_probability_ = 0.001;
+  classification_ = detected_object.classification;
 }
 
 void Tracker::initializeExistenceProbabilities(
@@ -193,63 +196,89 @@ void Tracker::updateClassification(
   const std::vector<autoware_perception_msgs::msg::ObjectClassification> & input)
 {
   // classification algorithm:
-  // 0. Normalize the input classification
-  // 1-1. Update the matched classification probability with a gain (ratio of 0.05)
-  // 1-2. If the label is not found, add it to the classification list
-  // 2. Remove the class with probability < remove_threshold (0.001)
+  // 1. Update the matched classification probability
+  // 2. If the label is not found, add it to the classification list
   // 3. Normalize tracking classification
 
-  // Parameters
-  // if the remove_threshold is too high (compare to the gain), the classification will be removed
-  // immediately
-  const float gain = 0.05;
-  constexpr float remove_threshold = 0.001;
+  // If no existing classification, initialize with input
+  if (classification_.empty()) {
+    classification_ = input;
+    return;
+  }
 
-  // Normalization function
-  auto normalizeProbabilities =
-    [](std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification) {
-      float sum = 0.0;
-      for (const auto & a_class : classification) {
-        sum += a_class.probability;
-      }
-      for (auto & a_class : classification) {
-        a_class.probability /= sum;
-      }
-    };
+  // Process existing classes
+  for (auto & a_class : classification_) {
+    // Find corresponding measurement
+    auto it = std::find_if(input.begin(), input.end(), [&a_class](const auto & new_class) {
+      return new_class.label == a_class.label;
+    });
 
-  // Normalize the input
-  auto classification_input = input;
-  normalizeProbabilities(classification_input);
-
-  auto & classification = object_.classification;
-
-  // Update the matched classification probability with a gain
-  for (const auto & new_class : classification_input) {
-    bool found = false;
-    for (auto & old_class : classification) {
-      if (new_class.label == old_class.label) {
-        old_class.probability += new_class.probability * gain;
-        found = true;
-        break;
-      }
-    }
-    // If the label is not found, add it to the classification list
-    if (!found) {
-      auto adding_class = new_class;
-      adding_class.probability *= gain;
-      classification.push_back(adding_class);
+    if (it != input.end()) {
+      // Class found in measurement
+      constexpr float true_positive_rate = 0.8f;
+      constexpr float false_positive_rate = 0.2f;
+      a_class.probability = updateProbability(
+        a_class.probability, it->probability * true_positive_rate, false_positive_rate);
+    } else {
+      // Class not observed in measurement
+      constexpr float false_negative_rate = 0.6f;
+      constexpr float true_negative_rate = 0.8f;
+      constexpr float true_positive_rate = 1.0f - false_negative_rate;
+      constexpr float false_positive_rate = 1.0f - true_negative_rate;
+      a_class.probability =
+        updateProbability(a_class.probability, true_positive_rate, false_positive_rate);
     }
   }
 
-  // If the probability is less than the threshold, remove the class
-  classification.erase(
-    std::remove_if(
-      classification.begin(), classification.end(),
-      [remove_threshold](const auto & a_class) { return a_class.probability < remove_threshold; }),
-    classification.end());
+  // Add new classes from measurement that weren't in tracker
+  for (const auto & new_class : input) {
+    bool found = std::any_of(
+      classification_.begin(), classification_.end(),
+      [&new_class](const auto & old_class) { return old_class.label == new_class.label; });
 
-  // Normalize tracking classification
-  normalizeProbabilities(classification);
+    if (!found) {
+      constexpr float true_positive_rate = 0.8f;
+      auto adding_class = new_class;
+      // New class gets probability weighted by measurement confidence
+      adding_class.probability = new_class.probability * true_positive_rate;
+      classification_.push_back(adding_class);
+    }
+  }
+
+  // Normalization
+  {
+    float sum = 0.0;
+    for (const auto & a_class : classification_) {
+      sum += a_class.probability;
+    }
+    // Normalize only if the total probability is greater than 1.0
+    if (sum > 1.0) {
+      for (auto & a_class : classification_) {
+        a_class.probability /= sum;
+      }
+    }
+  }
+}
+
+uint Tracker::getChannelIndex() const
+{
+  // Return the index of the channel that has highest priority
+  // lower the index, higher the priority
+
+  uint index = types::max_channel_size - 1;  // Default to lowest priority index
+  float max_probability = 0.0f;
+  constexpr float threshold = 0.5;
+  for (uint i = 0; i < existence_probabilities_.size(); ++i) {
+    if (existence_probabilities_[i] > threshold) {
+      return i;
+    }
+    if (existence_probabilities_[i] > max_probability) {
+      max_probability = existence_probabilities_[i];
+      index = i;
+    }
+  }
+  // If no channel has a probability above the threshold, return the highest probability index
+  return index;
 }
 
 void Tracker::limitObjectExtension(const object_model::ObjectModel object_model)
