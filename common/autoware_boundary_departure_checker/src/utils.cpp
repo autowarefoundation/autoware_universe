@@ -15,7 +15,9 @@
 #include "autoware/boundary_departure_checker/utils.hpp"
 
 #include "autoware/boundary_departure_checker/conversion.hpp"
+#include "autoware/boundary_departure_checker/data_structs.hpp"
 #include "autoware/boundary_departure_checker/parameters.hpp"
+#include "autoware/boundary_departure_checker/steering_abnormality_utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
@@ -347,97 +349,6 @@ std::vector<LinearRing2d> create_vehicle_footprints(
   return vehicle_footprints;
 }
 
-geometry_msgs::msg::Pose update_pose_with_bicycle_model(
-  const geometry_msgs::msg::Pose & pose, const double steering_angle, const double velocity,
-  const double dt, const double wheel_base)
-{
-  const auto old_heading = tf2::getYaw(pose.orientation);
-  // Calculate the rate of rotation (yaw rate) based on the kinematic model
-  const double rotation_rate = velocity * std::tan(steering_angle) / wheel_base;
-
-  constexpr double epsilon = 1e-8;
-  auto updated_pose = pose;
-  if (std::abs(rotation_rate) < epsilon) {
-    // Case 1: Motion is a straight line
-    const double distance_traveled = velocity * dt;
-    updated_pose.position.x += distance_traveled * std::cos(old_heading);
-    updated_pose.position.y += distance_traveled * std::sin(old_heading);
-  } else {
-    // Case 2: Motion is an arc
-    const double turning_radius = velocity / rotation_rate;
-    const double new_heading = old_heading + rotation_rate * dt;
-    updated_pose.position.x += turning_radius * (std::sin(new_heading) - std::sin(old_heading));
-    updated_pose.position.y += turning_radius * (std::cos(old_heading) - std::cos(new_heading));
-    updated_pose.orientation = autoware_utils::create_quaternion_from_yaw(new_heading);
-  }
-  return updated_pose;
-}
-
-std::vector<LinearRing2d> create_vehicle_footprints(
-  const TrajectoryPoints & trajectory, const VehicleInfo & vehicle_info,
-  [[maybe_unused]] const SteeringReport & current_steering)
-{
-  std::vector<LinearRing2d> vehicle_footprints;
-  vehicle_footprints.reserve(trajectory.size());
-
-  std::vector<double> original_steering_offsets;
-  original_steering_offsets.reserve(trajectory.size());
-  for (auto i = 0UL; i + 1 < trajectory.size(); ++i) {
-    original_steering_offsets.push_back(
-      trajectory[i + 1].front_wheel_angle_rad - trajectory[i].front_wheel_angle_rad);
-  }
-  constexpr auto steering_rate_factor = 0.9;
-  const auto local_vehicle_footprint = vehicle_info.createFootprint(0.0, 0.0, 0.0, 0.0, 0.0, true);
-  // start from the current pose and steering
-  auto pose = trajectory.front().pose;
-  vehicle_footprints.push_back(
-    transform_vector(local_vehicle_footprint, autoware_utils::pose2transform(pose)));
-  auto steering_angle = static_cast<double>(trajectory.front().front_wheel_angle_rad);
-  // auto steering_angle = static_cast<double>(current_steering.steering_tire_angle);
-  // simulate the ego motion assuming issues with the steering
-  // slower/faster steering rates
-  for (auto i = 0UL; i + 1 < trajectory.size(); ++i) {
-    const auto prev_p = trajectory[i];
-    const auto curr_p = trajectory[i + 1];
-    const auto dt =
-      rclcpp::Duration(curr_p.time_from_start) - rclcpp::Duration(prev_p.time_from_start);
-    const auto v = (prev_p.longitudinal_velocity_mps + curr_p.longitudinal_velocity_mps) * 0.5;
-    pose = update_pose_with_bicycle_model(
-      pose, steering_angle, v, dt.seconds(), vehicle_info.wheel_base_m);
-    steering_angle += original_steering_offsets[i] * steering_rate_factor;
-    steering_angle = std::clamp(
-      steering_angle, -vehicle_info.max_steer_angle_rad, vehicle_info.max_steer_angle_rad);
-    // vehicle_footprints.push_back(
-    //   transform_vector(local_vehicle_footprint, autoware_utils::pose2transform(pose)));
-  }
-  constexpr auto delay = 0.2;  // delay in seconds
-  auto t = 0.0;
-  pose = trajectory.front().pose;
-  steering_angle = static_cast<double>(trajectory.front().front_wheel_angle_rad);
-  auto delayed_index = 0UL;
-  // delayed steering
-  for (auto i = 0UL; i + 1 < trajectory.size(); ++i) {
-    const auto prev_p = trajectory[i];
-    const auto curr_p = trajectory[i + 1];
-    const auto dt =
-      rclcpp::Duration(curr_p.time_from_start) - rclcpp::Duration(prev_p.time_from_start);
-    const auto v = (prev_p.longitudinal_velocity_mps + curr_p.longitudinal_velocity_mps) * 0.5;
-    pose = update_pose_with_bicycle_model(
-      pose, steering_angle, v, dt.seconds(), vehicle_info.wheel_base_m);
-    if (t >= delay) {
-      steering_angle += original_steering_offsets[delayed_index];
-      steering_angle = std::clamp(
-        steering_angle, -vehicle_info.max_steer_angle_rad, vehicle_info.max_steer_angle_rad);
-      ++delayed_index;
-    }
-    vehicle_footprints.push_back(
-      transform_vector(local_vehicle_footprint, autoware_utils::pose2transform(pose)));
-    t += dt.seconds();
-  }
-
-  return vehicle_footprints;
-}
-
 std::vector<LinearRing2d> create_ego_footprints(
   const AbnormalityType abnormality_type, const FootprintMargin & uncertainty_fp_margin,
   const TrajectoryPoints & ego_pred_traj, const SteeringReport & current_steering,
@@ -450,8 +361,14 @@ std::vector<LinearRing2d> create_ego_footprints(
       ego_pred_traj, vehicle_info, uncertainty_fp_margin, longitudinal_config_opt->get());
   }
 
-  if (abnormality_type == AbnormalityType::STEERING) {
-    return utils::create_vehicle_footprints(ego_pred_traj, vehicle_info, current_steering);
+  if (
+    abnormality_type == AbnormalityType::STEERING_ACCELERATED ||
+    abnormality_type == AbnormalityType::STEERING_STUCK ||
+    abnormality_type == AbnormalityType::STEERING_SUDDEN_LEFT ||
+    abnormality_type == AbnormalityType::STEERING_SUDDEN_RIGHT) {
+    const auto config = param.get_abnormality_config<SteeringConfig>(abnormality_type);
+    return utils::steering::create_vehicle_footprints(
+      ego_pred_traj, vehicle_info, current_steering, *config);
   }
 
   FootprintMargin margin = uncertainty_fp_margin;
