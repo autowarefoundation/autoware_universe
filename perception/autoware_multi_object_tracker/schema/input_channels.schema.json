@@ -113,6 +113,22 @@
                     }
                   }
                 },
+                "lidar_centerpoint_short_range": {
+                  "$ref": "#/definitions/input_channel",
+                  "default": {
+                    "flags": {
+                      "can_spawn_new_tracker": true,
+                      "can_trust_existence_probability": true,
+                      "can_trust_extension": true,
+                      "can_trust_classification": true,
+                      "can_trust_orientation": true
+                    },
+                    "optional": {
+                      "name": "centerpoint_short_range",
+                      "short_name": "LcpS"
+                    }
+                  }
+                },
                 "lidar_apollo": {
                   "$ref": "#/definitions/input_channel",
                   "default": {
@@ -215,6 +231,7 @@
                 "detected_objects",
                 "lidar_clustering",
                 "lidar_centerpoint",
+                "lidar_centerpoint_short_range",
                 "lidar_apollo",
                 "lidar_pointpainting",
                 "camera_lidar_fusion",
