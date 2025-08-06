@@ -81,7 +81,7 @@
           can_trust_orientation: false
         optional:
           name: "camera_lidar_fusion_irregular"
-          short_name: "CLIrreg"
+          short_name: "Irreg"
       # CAMERA-LIDAR+TRACKER
       detection_by_tracker:
         flags:
