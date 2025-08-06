@@ -80,12 +80,12 @@ protected:
 
 private:
   // Polar voxel parameters
-  double radius_resolution_;     // Resolution in radial direction (meters)
-  double azimuth_resolution_;    // Resolution in azimuth direction (radians)
-  double elevation_resolution_;  // Resolution in elevation direction (radians)
-  int voxel_points_threshold_;   // Minimum points required per voxel
-  double min_radius_;            // Minimum radius to consider
-  double max_radius_;            // Maximum radius to consider
+  double radial_resolution_m_;       // Resolution in radial direction (meters)
+  double azimuth_resolution_rad_;    // Resolution in azimuth direction (radians)
+  double elevation_resolution_rad_;  // Resolution in elevation direction (radians)
+  int voxel_points_threshold_;       // Minimum points required per voxel
+  double min_radius_m_;              // Minimum radius to consider
+  double max_radius_m_;              // Maximum radius to consider
 
   // Return type classification parameters
   bool use_return_type_classification_;  // Whether to use return type classification

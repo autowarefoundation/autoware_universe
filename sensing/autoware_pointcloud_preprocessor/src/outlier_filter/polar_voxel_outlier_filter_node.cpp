@@ -45,12 +45,12 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
 {
   // set initial parameters
   {
-    radius_resolution_ = declare_parameter<double>("radius_resolution");
-    azimuth_resolution_ = declare_parameter<double>("azimuth_resolution");
-    elevation_resolution_ = declare_parameter<double>("elevation_resolution");
+    radial_resolution_m_ = declare_parameter<double>("radial_resolution_m");
+    azimuth_resolution_rad_ = declare_parameter<double>("azimuth_resolution_rad");
+    elevation_resolution_rad_ = declare_parameter<double>("elevation_resolution_rad");
     voxel_points_threshold_ = declare_parameter<int>("voxel_points_threshold");
-    min_radius_ = declare_parameter<double>("min_radius");
-    max_radius_ = declare_parameter<double>("max_radius");
+    min_radius_m_ = declare_parameter<double>("min_radius_m");
+    max_radius_m_ = declare_parameter<double>("max_radius_m");
     use_return_type_classification_ = declare_parameter<bool>("use_return_type_classification");
     filter_secondary_returns_ = declare_parameter<bool>("filter_secondary_returns");
     secondary_noise_threshold_ = declare_parameter<int>("secondary_noise_threshold");
@@ -148,7 +148,7 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyz(
       radius, azimuth, elevation);  // NOLINT
 
     // Skip points outside radius range
-    if (radius < min_radius_ || radius > max_radius_) {
+    if (radius < min_radius_m_ || radius > max_radius_m_) {
       continue;
     }
 
@@ -188,7 +188,7 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyz(
       if (std::isfinite(point.x) && std::isfinite(point.y) && std::isfinite(point.z)) {
         double radius = std::sqrt(point.x * point.x + point.y * point.y + point.z * point.z);
         if (
-          radius >= min_radius_ && radius <= max_radius_ &&
+          radius >= min_radius_m_ && radius <= max_radius_m_ &&
           std::abs(radius) >= std::numeric_limits<double>::epsilon()) {
           noise_output->points.push_back(point);
         }
@@ -258,7 +258,7 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
     }
 
     // Skip points outside radius range
-    if (radius < min_radius_ || radius > max_radius_) {
+    if (radius < min_radius_m_ || radius > max_radius_m_) {
       continue;
     }
 
@@ -444,9 +444,9 @@ PolarVoxelOutlierFilterComponent::polar_to_polar_voxel(
   double radius, double azimuth, double elevation) const
 {
   PolarVoxelIndex voxel_idx{};
-  voxel_idx.radius_idx = static_cast<int>(std::floor(radius / radius_resolution_));
-  voxel_idx.azimuth_idx = static_cast<int>(std::floor(azimuth / azimuth_resolution_));
-  voxel_idx.elevation_idx = static_cast<int>(std::floor(elevation / elevation_resolution_));
+  voxel_idx.radius_idx = static_cast<int>(std::floor(radius / radial_resolution_m_));
+  voxel_idx.azimuth_idx = static_cast<int>(std::floor(azimuth / azimuth_resolution_rad_));
+  voxel_idx.elevation_idx = static_cast<int>(std::floor(elevation / elevation_resolution_rad_));
   return voxel_idx;
 }
 
@@ -460,7 +460,7 @@ bool PolarVoxelOutlierFilterComponent::validate_polar_coordinates(
   }
 
   // Skip points outside the configured radius range
-  if (radius < min_radius_ || radius > max_radius_) {
+  if (radius < min_radius_m_ || radius > max_radius_m_) {
     return false;
   }
 
@@ -494,24 +494,25 @@ rcl_interfaces::msg::SetParametersResult PolarVoxelOutlierFilterComponent::param
 {
   std::scoped_lock lock(mutex_);
 
-  if (get_param(p, "radius_resolution", radius_resolution_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new radius resolution to: %f.", radius_resolution_);
+  if (get_param(p, "radial_resolution_m", radial_resolution_m_)) {
+    RCLCPP_DEBUG(get_logger(), "Setting new radial resolution to: %f.", radial_resolution_m_);
   }
-  if (get_param(p, "azimuth_resolution", azimuth_resolution_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new azimuth resolution to: %f.", azimuth_resolution_);
+  if (get_param(p, "azimuth_resolution_rad", azimuth_resolution_rad_)) {
+    RCLCPP_DEBUG(get_logger(), "Setting new azimuth resolution to: %f.", azimuth_resolution_rad_);
   }
-  if (get_param(p, "elevation_resolution", elevation_resolution_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new elevation resolution to: %f.", elevation_resolution_);
+  if (get_param(p, "elevation_resolution_rad", elevation_resolution_rad_)) {
+    RCLCPP_DEBUG(
+      get_logger(), "Setting new elevation resolution to: %f.", elevation_resolution_rad_);
   }
   if (get_param(p, "voxel_points_threshold", voxel_points_threshold_)) {
     RCLCPP_DEBUG(
       get_logger(), "Setting new voxel points threshold to: %d.", voxel_points_threshold_);
   }
-  if (get_param(p, "min_radius", min_radius_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new min radius to: %f.", min_radius_);
+  if (get_param(p, "min_radius_m", min_radius_m_)) {
+    RCLCPP_DEBUG(get_logger(), "Setting new min radius to: %f.", min_radius_m_);
   }
-  if (get_param(p, "max_radius", max_radius_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new max radius to: %f.", max_radius_);
+  if (get_param(p, "max_radius_m", max_radius_m_)) {
+    RCLCPP_DEBUG(get_logger(), "Setting new max radius to: %f.", max_radius_m_);
   }
   if (get_param(p, "use_return_type_classification", use_return_type_classification_)) {
     RCLCPP_DEBUG(

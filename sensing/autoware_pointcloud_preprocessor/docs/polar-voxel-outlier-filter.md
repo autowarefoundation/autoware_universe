@@ -83,9 +83,9 @@ Uses pre-computed polar coordinates directly from the point fields:
 
 Each point is assigned to a voxel based on:
 
-- **Radius Index**: `floor(radius / radius_resolution)`
-- **Azimuth Index**: `floor(azimuth / azimuth_resolution)`
-- **Elevation Index**: `floor(elevation / elevation_resolution)`
+- **Radius Index**: `floor(radius / radial_resolution_m)`
+- **Azimuth Index**: `floor(azimuth / azimuth_resolution_rad)`
+- **Elevation Index**: `floor(elevation / elevation_resolution_rad)`
 
 ### Filtering Methodology
 
@@ -148,14 +148,14 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 
 ### Core Filtering Parameters
 
-| Parameter                | Type   | Description                                 | Default      |
-| ------------------------ | ------ | ------------------------------------------- | ------------ |
-| `radius_resolution`      | double | Resolution in radial direction (meters)     | 0.5          |
-| `azimuth_resolution`     | double | Resolution in azimuth direction (radians)   | 0.0174 (~1°) |
-| `elevation_resolution`   | double | Resolution in elevation direction (radians) | 0.0174 (~1°) |
-| `voxel_points_threshold` | int    | Minimum primary points required per voxel   | 2            |
-| `min_radius`             | double | Minimum radius to consider (meters)         | 0.5          |
-| `max_radius`             | double | Maximum radius to consider (meters)         | 100.0        |
+| Parameter                  | Type   | Description                                 | Default      |
+| -------------------------- | ------ | ------------------------------------------- | ------------ |
+| `radial_resolution_m`      | double | Resolution in radial direction (meters)     | 0.5          |
+| `azimuth_resolution_rad`   | double | Resolution in azimuth direction (radians)   | 0.0174 (~1°) |
+| `elevation_resolution_rad` | double | Resolution in elevation direction (radians) | 0.0174 (~1°) |
+| `voxel_points_threshold`   | int    | Minimum primary points required per voxel   | 2            |
+| `min_radius_m`             | double | Minimum radius to consider (meters)         | 0.5          |
+| `max_radius_m`             | double | Maximum radius to consider (meters)         | 100.0        |
 
 ### Advanced Filtering Parameters
 
@@ -217,8 +217,8 @@ The filter includes robust error handling:
 
 # Example launch file integration:
 # <node pkg="autoware_pointcloud_preprocessor" exec="polar_voxel_outlier_filter_node" name="polar_voxel_filter">
-#   <param name="radius_resolution" value="1.0"/>
-#   <param name="azimuth_resolution" value="0.0349"/>
+#   <param name="radial_resolution_m" value="1.0"/>
+#   <param name="azimuth_resolution_rad" value="0.0349"/>
 #   <param name="voxel_points_threshold" value="3"/>
 #   <param name="use_return_type_classification" value="true"/>
 #   <param name="secondary_noise_threshold" value="2"/>
@@ -350,8 +350,8 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 
 #### Basic Configuration
 
-- **For dense urban environments**: Use smaller `radius_resolution` (0.2-0.5m) and `azimuth_resolution` (0.5-1°)
-- **For highway scenarios**: Use larger `radius_resolution` (0.5-1.0m) and moderate `azimuth_resolution` (1-2°)
+- **For dense urban environments**: Use smaller `radial_resolution_m` (0.2-0.5m) and `azimuth_resolution_rad` (0.5-1°)
+- **For highway scenarios**: Use larger `radial_resolution_m` (0.5-1.0m) and moderate `azimuth_resolution_rad` (1-2°)
 - **For noisy sensors**: Increase `voxel_points_threshold` (3-5 points)
 - **For sparse data**: Decrease `voxel_points_threshold` (1-2 points)
 
