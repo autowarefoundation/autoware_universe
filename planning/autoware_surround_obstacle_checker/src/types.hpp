@@ -23,7 +23,7 @@ namespace autoware::surround_obstacle_checker
 struct StopObstacle
 {
   bool is_point_cloud;
-  double neareset_distance;
+  double nearest_distance;
   Point nearest_point;
   UUID uuid;
 };

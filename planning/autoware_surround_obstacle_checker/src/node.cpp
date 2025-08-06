@@ -170,7 +170,7 @@ void SurroundObstacleCheckerNode::onTimer()
     case State::PASS: {
       const auto is_obstacle_found = [&]() {
         if (!nearest_obstacle.has_value()) return false;
-        return nearest_obstacle.value().neareset_distance < epsilon;
+        return nearest_obstacle.value().nearest_distance < epsilon;
       }();
 
       bool is_stop_required = false;
@@ -200,8 +200,7 @@ void SurroundObstacleCheckerNode::onTimer()
     case State::STOP: {
       const auto is_obstacle_found = [&]() {
         if (!nearest_obstacle.has_value()) return false;
-        return nearest_obstacle.value().neareset_distance <
-               param.surround_check_hysteresis_distance;
+        return nearest_obstacle.value().nearest_distance < param.surround_check_hysteresis_distance;
       }();
 
       bool is_stop_required = false;
@@ -260,7 +259,7 @@ std::optional<StopObstacle> SurroundObstacleCheckerNode::getNearestObstacle() co
     return nearest_pointcloud;
   }
 
-  return nearest_pointcloud.value().neareset_distance < nearest_object.value().neareset_distance
+  return nearest_pointcloud.value().nearest_distance < nearest_object.value().nearest_distance
            ? nearest_pointcloud
            : nearest_object;
 }
@@ -343,7 +342,7 @@ std::optional<StopObstacle> SurroundObstacleCheckerNode::getNearestObstacleByPoi
 
     StopObstacle obstacle;
     obstacle.is_point_cloud = true;
-    obstacle.neareset_distance = minimum_distance;
+    obstacle.nearest_distance = minimum_distance;
     obstacle.nearest_point = nearest_point_map;
     obstacle.uuid = UUID();  // Default UUID
     return obstacle;
@@ -396,7 +395,7 @@ std::optional<StopObstacle> SurroundObstacleCheckerNode::getNearestObstacleByDyn
       nearest_object.kinematics.initial_pose_with_covariance.pose.position;
     StopObstacle obstacle;
     obstacle.is_point_cloud = false;
-    obstacle.neareset_distance = minimum_distance;
+    obstacle.nearest_distance = minimum_distance;
     obstacle.nearest_point = object_position;
     obstacle.uuid = nearest_object.object_id;
     return obstacle;

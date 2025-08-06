@@ -172,13 +172,13 @@ public:
     pointcloud.data.resize(pointcloud.row_step * pointcloud.height);
 
     const auto odometry = autoware::test_utils::makeInitialPose();
-    const float expexted_base_link_x =
+    const float expected_base_link_x =
       0.5f * std::cos(-tf2::getYaw(odometry.pose.pose.orientation));
     const float expected_base_link_y =
       0.5f * std::sin(-tf2::getYaw(odometry.pose.pose.orientation));
 
     std::array<float, 4> point = {
-      expexted_base_link_x, expected_base_link_y, 0.0f,
+      expected_base_link_x, expected_base_link_y, 0.0f,
       1.0f};  // x, y, z, intensity in base_link frame
     std::memcpy(pointcloud.data.data(), point.data(), point.size() * sizeof(float));
     pub_pointcloud_->publish(pointcloud);
