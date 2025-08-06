@@ -55,7 +55,6 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
     filter_secondary_returns_ = declare_parameter<bool>("filter_secondary_returns");
     secondary_noise_threshold_ = declare_parameter<int>("secondary_noise_threshold");
     primary_return_types_ = declare_parameter<std::vector<int>>("primary_return_types");
-    secondary_return_types_ = declare_parameter<std::vector<int>>("secondary_return_types");
     visibility_error_threshold_ = declare_parameter<double>("visibility_error_threshold", 0.5);
     visibility_warn_threshold_ = declare_parameter<double>("visibility_warn_threshold", 0.7);
     filter_ratio_error_threshold_ = declare_parameter<double>("filter_ratio_error_threshold", 0.5);
@@ -476,25 +475,16 @@ bool PolarVoxelOutlierFilterComponent::is_primary_return_type(uint8_t return_typ
   return it != primary_return_types_.end();
 }
 
-// Helper function to check if return type is in secondary returns list
-// If not in primary or secondary, treat as secondary
-bool PolarVoxelOutlierFilterComponent::is_secondary_return_type(uint8_t return_type) const
-{
-  auto it = std::find(
-    secondary_return_types_.begin(), secondary_return_types_.end(),
-    static_cast<int64_t>(return_type));
-  return it != secondary_return_types_.end();
-}
-
 // Extract voxel classification logic
 void PolarVoxelOutlierFilterComponent::classify_point_by_return_type(
   uint8_t return_type, size_t point_idx, PolarVoxelIndex voxel_idx,
   std::map<PolarVoxelIndex, VoxelPoints> & voxel_point_map) const
 {
-  // Use configured return type classification
+  // Classify return types: primary if in primary_return_types_, otherwise secondary
   if (is_primary_return_type(return_type)) {
     voxel_point_map[voxel_idx].primary_returns.push_back(point_idx);
-  } else if (is_secondary_return_type(return_type)) {
+  } else {
+    // All non-primary return types are considered secondary
     voxel_point_map[voxel_idx].secondary_returns.push_back(point_idx);
   }
 }
@@ -539,9 +529,6 @@ rcl_interfaces::msg::SetParametersResult PolarVoxelOutlierFilterComponent::param
   }
   if (get_param(p, "primary_return_types", primary_return_types_)) {
     RCLCPP_DEBUG(get_logger(), "Setting new primary return types");
-  }
-  if (get_param(p, "secondary_return_types", secondary_return_types_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new secondary return types");
   }
   if (get_param(p, "filter_ratio_error_threshold", filter_ratio_error_threshold_)) {
     RCLCPP_DEBUG(
