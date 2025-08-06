@@ -154,10 +154,10 @@ private:
   bool is_primary_return_type(uint8_t return_type) const;
 
   /** \brief Diagnostics callback for visibility validation */
-  void onVisibilityChecker(diagnostic_updater::DiagnosticStatusWrapper & stat);
+  void on_visibility_check(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
   /** \brief Diagnostics callback for filter ratio validation */
-  void onFilterRatioChecker(diagnostic_updater::DiagnosticStatusWrapper & stat);
+  void on_filter_ratio_check(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
   /** \brief Validate basic polar coordinate constraints */
   bool validate_point_basic(const PolarCoordinate& polar) const;
