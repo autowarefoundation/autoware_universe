@@ -380,6 +380,20 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
         isIoUOverThreshold(data2, data1)) {
         // Merge tracker2 into tracker1
 
+        // debug message
+        std::cout << "Merging tracker: "
+                  << "remover: " << data1.tracker->getUuidString().substr(0, 6)
+                  << ", tracker priority: " << data1.tracker->getTrackerPriority()
+                  << ", channel: " << data1.tracker->getChannelIndex()
+                  << ", label: " << std::to_string(data1.label)
+                  << ", shape: " << std::to_string(data1.object.shape.type)
+                  << " | remove target: " << data2.tracker->getUuidString().substr(0, 6)
+                  << ", tracker priority: " << data2.tracker->getTrackerPriority()
+                  << ", channel: " << data2.tracker->getChannelIndex()
+                  << ", label: " << std::to_string(data2.label)
+                  << ", shape: " << std::to_string(data2.object.shape.type)
+                  << ", IoU: " << shapes::get2dIoU(data1.object, data2.object) << std::endl;
+
         // probabilities
         data1.tracker->updateTotalExistenceProbability(
           data2.tracker->getTotalExistenceProbability());
@@ -388,12 +402,21 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
         // classification
         if (!data2.is_unknown) {
           data1.tracker->updateClassification(data2.tracker->getClassification());
+          std::cout << "Updating classification: "
+                    << "remover: " << data1.tracker->getUuidString().substr(0, 6)
+                    << ", label: " << std::to_string(data1.label)
+                    << " | remove target: " << data2.tracker->getUuidString().substr(0, 6)
+                    << ", label: " << std::to_string(data2.label) << std::endl;
         }
 
         // shape
-        // set the shape of higher priority channel
-        if (data1.tracker->getChannelIndex() > data2.tracker->getChannelIndex()) {
+        // set the shape of higher priority shape 
+        // bounding box: 0, cylinder: 1, convex hull: 2
+        if (data1.object.shape.type > data2.object.shape.type) {
           data1.tracker->setObjectShape(data2.object.shape);
+          std::cout << "Setting shape: " << std::to_string(data2.object.shape.type)
+                    << " to tracker: " << data1.tracker->getUuidString().substr(0, 6)
+                    << ", previous shape: " << std::to_string(data1.object.shape.type) << std::endl;
         }
 
         // Mark tracker2 for removal
@@ -421,6 +444,12 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
 bool TrackerProcessor::canMergeOverlappedTarget(
   const Tracker & target, const Tracker & other, const rclcpp::Time & time) const
 {
+  // 0. compare tracker priority
+  if (target.getTrackerPriority() < other.getTrackerPriority()) {
+    // target has higher priority, do not remove
+    return false;
+  }
+
   // if the other is not confident, do not remove the target
   if (!other.isConfident(time, adaptive_threshold_cache_, ego_pose_)) {
     return false;

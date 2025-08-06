@@ -28,6 +28,7 @@ MultipleVehicleTracker::MultipleVehicleTracker(
   normal_vehicle_tracker_(object_model::normal_vehicle, time, object),
   big_vehicle_tracker_(object_model::big_vehicle, time, object)
 {
+  Tracker::tracker_priority_ = 2; // vehicle group
 }
 
 bool MultipleVehicleTracker::predict(const rclcpp::Time & time)

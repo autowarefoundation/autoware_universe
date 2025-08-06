@@ -47,6 +47,8 @@ VehicleTracker::VehicleTracker(
   logger_(rclcpp::get_logger("VehicleTracker")),
   tracking_offset_(Eigen::Vector2d::Zero())
 {
+  Tracker::tracker_priority_ = 2; // vehicle group
+
   // velocity deviation threshold
   //   if the predicted velocity is close to the observed velocity,
   //   the observed velocity is used as the measurement.
@@ -301,7 +303,7 @@ bool VehicleTracker::getTrackedObject(
   if (getCachedObject(time, object)) {
     return true;
   }
-  object = object_;
+  object = Tracker::object_;
   object.time = time;
 
   // predict from motion model

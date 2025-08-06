@@ -98,6 +98,7 @@ public:
     const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
   float getKnownObjectProbability() const;
   double getPositionCovarianceDeterminant() const;
+  int getTrackerPriority() const { return tracker_priority_; }
 
   std::uint8_t getHighestProbLabel() const
   {
@@ -128,6 +129,7 @@ public:
 
 protected:
   types::DynamicObject object_;
+  int tracker_priority_{ 0 };  // lower the value, higher the priority
 
   void updateCache(const types::DynamicObject & object, const rclcpp::Time & time) const
   {

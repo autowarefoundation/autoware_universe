@@ -26,6 +26,7 @@ PedestrianAndBicycleTracker::PedestrianAndBicycleTracker(
   pedestrian_tracker_(time, object),
   bicycle_tracker_(object_model::bicycle, time, object)
 {
+  Tracker::tracker_priority_ = 1; // VRU group
 }
 
 bool PedestrianAndBicycleTracker::predict(const rclcpp::Time & time)
