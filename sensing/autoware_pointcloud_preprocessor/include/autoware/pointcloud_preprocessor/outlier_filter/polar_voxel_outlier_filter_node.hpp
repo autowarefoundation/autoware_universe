@@ -55,8 +55,9 @@ namespace autoware::pointcloud_preprocessor
  * - **use_return_type_classification**: Enable/disable return type-based filtering
  * - **filter_secondary_returns**: When true, only primary returns are included in output
  * - **primary_return_types**: List of return types classified as primary (typically [1])
- * - **secondary_return_types**: List of return types classified as secondary (typically [2,3,4,5])
  * - **secondary_noise_threshold**: Minimum ratio of primary to secondary returns (default: 1.0)
+ *
+ * Note: All return types not specified in primary_return_types are considered secondary returns.
  *
  * ## Diagnostics and Debug Features
  * - **Filter Ratio**: Always published - ratio of output points to input points
@@ -90,8 +91,7 @@ private:
   bool use_return_type_classification_;  // Whether to use return type classification
   bool filter_secondary_returns_;        // Whether to filter secondary returns
   int secondary_noise_threshold_;        // Threshold for primary to secondary return classification
-  std::vector<int64_t> primary_return_types_;    // Return types considered as primary returns
-  std::vector<int64_t> secondary_return_types_;  // Return types considered as secondary returns
+  std::vector<int64_t> primary_return_types_;  // Return types considered as primary returns
 
   // Diagnostics parameters
   double visibility_error_threshold_;    // Threshold for visibility diagnostics
@@ -161,12 +161,9 @@ private:
   /** \brief Check if return type is in primary returns list */
   bool is_primary_return_type(uint8_t return_type) const;
 
-  /** \brief Check if return type is in secondary returns list */
-  bool is_secondary_return_type(uint8_t return_type) const;
-
   /** \brief Classify point by return type for voxel mapping
-   * Classifies points into primary or secondary returns based on configured return type lists.
-   * Points not matching either list are ignored when return type classification is enabled.
+   * Classifies points into primary or secondary returns based on configured primary return types.
+   * Points matching primary_return_types are classified as primary, all others as secondary.
    */
   void classify_point_by_return_type(
     uint8_t return_type, size_t point_idx, PolarVoxelIndex voxel_idx,
