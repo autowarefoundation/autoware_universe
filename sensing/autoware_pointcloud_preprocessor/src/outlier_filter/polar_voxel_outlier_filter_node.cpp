@@ -74,8 +74,6 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   }
 
   // Initialize diagnostics
-  visibility_ = -1.0;
-  filter_ratio_ = -1.0;
   updater_.setHardwareID("polar_voxel_outlier_filter");
   updater_.add(
     std::string(this->get_namespace()) + ": visibility_validation", this,
@@ -165,40 +163,43 @@ bool PolarVoxelOutlierFilterComponent::validate_point_basic(const PolarCoordinat
 void PolarVoxelOutlierFilterComponent::publish_diagnostics(
   const PointProcessingResult& result, bool has_return_type_classification)
 {
-  // Calculate and publish filter ratio
+  // Calculate and store filter ratio
   filter_ratio_ = result.input_points > 0 ? 
     static_cast<double>(result.output_points) / static_cast<double>(result.input_points) : 0.0;
 
-  // Publish ratio
-  autoware_internal_debug_msgs::msg::Float32Stamped ratio_msg;
-  ratio_msg.data = static_cast<float>(filter_ratio_);
-  ratio_msg.stamp = now();
-  ratio_pub_->publish(ratio_msg);
+  if (filter_ratio_.has_value()) {
+    autoware_internal_debug_msgs::msg::Float32Stamped ratio_msg;
+    ratio_msg.data = static_cast<float>(*filter_ratio_);
+    ratio_msg.stamp = now();
+    ratio_pub_->publish(ratio_msg);
+  }
 
-  // Only publish visibility when return type classification is enabled
+  // Only calculate and publish visibility when return type classification is enabled
   if (has_return_type_classification && use_return_type_classification_) {
     size_t total_voxels_with_points = result.total_voxels;
 
-    // Visibility is the percentage of voxels that passed the primary-to-secondary ratio test
+    // Calculate and store visibility
     visibility_ = total_voxels_with_points > 0 ? 
       static_cast<double>(result.voxels_passed_secondary_test) / static_cast<double>(total_voxels_with_points) : 0.0;
 
-    // Publish visibility
-    autoware_internal_debug_msgs::msg::Float32Stamped visibility_msg;
-    visibility_msg.data = static_cast<float>(visibility_);
-    visibility_msg.stamp = now();
-    visibility_pub_->publish(visibility_msg);
+    if (visibility_.has_value()) {
+      autoware_internal_debug_msgs::msg::Float32Stamped visibility_msg;
+      visibility_msg.data = static_cast<float>(*visibility_);
+      visibility_msg.stamp = now();
+      visibility_pub_->publish(visibility_msg);
 
-    RCLCPP_DEBUG(
-      get_logger(), "Visibility: %.3f (%zu/%zu voxels passed secondary test, %zu failed)",
-      visibility_, result.voxels_passed_secondary_test, total_voxels_with_points,
-      result.voxels_failed_secondary_test);
+      RCLCPP_DEBUG(
+        get_logger(), "Visibility: %.3f (%zu/%zu voxels passed secondary test, %zu failed)",
+        *visibility_, result.voxels_passed_secondary_test, total_voxels_with_points,
+        result.voxels_failed_secondary_test);
+    }
   }
 
-  // Debug output for voxel statistics
-  RCLCPP_DEBUG(
-    get_logger(), "Filter ratio: %.3f (%zu/%zu points), Voxel stats: %zu total, %zu populated",
-    filter_ratio_, result.output_points, result.input_points, result.total_voxels, result.populated_voxels);
+  if (filter_ratio_.has_value()) {
+    RCLCPP_DEBUG(
+      get_logger(), "Filter ratio: %.3f (%zu/%zu points), Voxel stats: %zu total, %zu populated",
+      *filter_ratio_, result.output_points, result.input_points, result.total_voxels, result.populated_voxels);
+  }
 }
 
 void PolarVoxelOutlierFilterComponent::filter(
@@ -552,20 +553,22 @@ void PolarVoxelOutlierFilterComponent::on_visibility_check(
 {
   using diagnostic_msgs::msg::DiagnosticStatus;
 
-  // Add values
-  stat.add("value", std::to_string(visibility_));
+  // Add values - handle optional
+  std::string value_str = visibility_.has_value() ? std::to_string(*visibility_) : "uninitialized";
+  stat.add("value", value_str);
 
   auto level = DiagnosticStatus::OK;
   std::string msg = "OK";
-  if (visibility_ < 0) {
+  
+  if (!visibility_.has_value()) {
     level = DiagnosticStatus::STALE;
-    msg = "STALE";
-  } else if (visibility_ < visibility_error_threshold_) {
+    msg = "STALE: visibility not yet calculated";
+  } else if (*visibility_ < visibility_error_threshold_) {
     level = DiagnosticStatus::ERROR;
     msg =
       "ERROR: critically low LiDAR visibility detected while filtering outliers in polar voxel "
       "filter";
-  } else if (visibility_ < visibility_warn_threshold_) {
+  } else if (*visibility_ < visibility_warn_threshold_) {
     level = DiagnosticStatus::WARN;
     msg = "WARNING: low LiDAR visibility detected while filtering outliers in polar voxel filter";
   }
@@ -577,18 +580,20 @@ void PolarVoxelOutlierFilterComponent::on_filter_ratio_check(
 {
   using diagnostic_msgs::msg::DiagnosticStatus;
 
-  // Add values
-  stat.add("value", std::to_string(filter_ratio_));
+  // Add values - handle optional
+  std::string value_str = filter_ratio_.has_value() ? std::to_string(*filter_ratio_) : "uninitialized";
+  stat.add("value", value_str);
 
   auto level = DiagnosticStatus::OK;
   std::string msg = "OK";
-  if (filter_ratio_ < 0) {
+  
+  if (!filter_ratio_.has_value()) {
     level = DiagnosticStatus::STALE;
-    msg = "STALE";
-  } else if (filter_ratio_ < filter_ratio_error_threshold_) {
+    msg = "STALE: filter ratio not yet calculated";
+  } else if (*filter_ratio_ < filter_ratio_error_threshold_) {
     level = DiagnosticStatus::ERROR;
     msg = "ERROR: critically low filter ratio in polar voxel outlier filter";
-  } else if (filter_ratio_ < filter_ratio_warn_threshold_) {
+  } else if (*filter_ratio_ < filter_ratio_warn_threshold_) {
     level = DiagnosticStatus::WARN;
     msg = "WARNING: low filter ratio in polar voxel outlier filter";
   }
