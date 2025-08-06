@@ -85,8 +85,7 @@ private:
 
     bool operator==(const PolarVoxelIndex & other) const
     {
-      return radius_idx == other.radius_idx && 
-             azimuth_idx == other.azimuth_idx && 
+      return radius_idx == other.radius_idx && azimuth_idx == other.azimuth_idx &&
              elevation_idx == other.elevation_idx;
     }
   };
@@ -99,7 +98,7 @@ private:
       std::size_t h1 = std::hash<int32_t>{}(idx.radius_idx);
       std::size_t h2 = std::hash<int32_t>{}(idx.azimuth_idx);
       std::size_t h3 = std::hash<int32_t>{}(idx.elevation_idx);
-      
+
       return h1 ^ (h2 << 1) ^ (h3 << 2);
     }
   };
@@ -142,13 +141,13 @@ private:
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output);
 
   /** \brief Convert Cartesian coordinates to polar voxel index */
-  PolarVoxelIndex cartesian_to_polar_voxel(const CartesianCoordinate& cartesian) const;
+  PolarVoxelIndex cartesian_to_polar_voxel(const CartesianCoordinate & cartesian) const;
 
   /** \brief Convert Cartesian point to polar coordinates */
-  static PolarCoordinate cartesian_to_polar(const CartesianCoordinate& cartesian);
+  static PolarCoordinate cartesian_to_polar(const CartesianCoordinate & cartesian);
 
   /** \brief Convert pre-computed polar coordinates to voxel index */
-  PolarVoxelIndex polar_to_polar_voxel(const PolarCoordinate& polar) const;
+  PolarVoxelIndex polar_to_polar_voxel(const PolarCoordinate & polar) const;
 
   /** \brief Check if return type is in primary returns list */
   bool is_primary_return_type(uint8_t return_type) const;
@@ -160,10 +159,11 @@ private:
   void on_filter_ratio_check(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
   /** \brief Validate basic polar coordinate constraints */
-  bool validate_point_basic(const PolarCoordinate& polar) const;
+  bool validate_point_basic(const PolarCoordinate & polar) const;
 
   /** \brief Publish processing diagnostics */
-  void publish_diagnostics(const PointProcessingResult& result, bool has_return_type_classification);
+  void publish_diagnostics(
+    const PointProcessingResult & result, bool has_return_type_classification);
 
 public:
   PCL_MAKE_ALIGNED_OPERATOR_NEW
