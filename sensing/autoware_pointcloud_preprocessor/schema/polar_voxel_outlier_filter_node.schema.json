@@ -6,22 +6,22 @@
     "polar_voxel_outlier_filter": {
       "type": "object",
       "properties": {
-        "radius_resolution": {
+        "radial_resolution_m": {
           "type": "number",
           "description": "the resolution in radial direction [m]",
-          "default": "0.5",
+          "default": "0.2",
           "minimum": 0
         },
-        "azimuth_resolution": {
+        "azimuth_resolution_rad": {
           "type": "number",
           "description": "the resolution in azimuth direction [rad]",
-          "default": "0.0174",
+          "default": "0.025",
           "minimum": 0
         },
-        "elevation_resolution": {
+        "elevation_resolution_rad": {
           "type": "number",
           "description": "the resolution in elevation direction [rad]",
-          "default": "0.0174",
+          "default": "0.05",
           "minimum": 0
         },
         "voxel_points_threshold": {
@@ -30,16 +30,16 @@
           "default": "2",
           "minimum": 1
         },
-        "min_radius": {
+        "min_radius_m": {
           "type": "number",
           "description": "the minimum radius to consider [m]",
           "default": "0.5",
           "minimum": 0
         },
-        "max_radius": {
+        "max_radius_m": {
           "type": "number",
           "description": "the maximum radius to consider [m]",
-          "default": "100.0",
+          "default": "300.0",
           "minimum": 0
         },
         "use_return_type_classification": {
@@ -55,7 +55,7 @@
         "secondary_noise_threshold": {
           "type": "number",
           "description": "threshold for classifying primary vs secondary returns",
-          "default": "1.0",
+          "default": "4",
           "minimum": 0
         },
         "primary_return_types": {
@@ -66,19 +66,19 @@
             "minimum": 0,
             "maximum": 255
           },
-          "default": "[1]"
+          "default": "[1, 6, 10]"
         },
         "filter_ratio_error_threshold": {
           "type": "number",
           "description": "the filter ratio threshold for error diagnostics (ratio of output/input points)",
-          "default": "0.5",
+          "default": "0.7",
           "minimum": 0,
           "maximum": 1
         },
         "filter_ratio_warn_threshold": {
           "type": "number",
           "description": "the filter ratio threshold for warning diagnostics (ratio of output/input points)",
-          "default": "0.7",
+          "default": "0.3",
           "minimum": 0,
           "maximum": 1
         },
@@ -98,12 +98,12 @@
         }
       },
       "required": [
-        "radius_resolution",
-        "azimuth_resolution",
-        "elevation_resolution",
+        "radial_resolution_m",
+        "azimuth_resolution_rad",
+        "elevation_resolution_rad",
         "voxel_points_threshold",
-        "min_radius",
-        "max_radius",
+        "min_radius_m",
+        "max_radius_m",
         "use_return_type_classification",
         "filter_secondary_returns",
         "secondary_noise_threshold",
