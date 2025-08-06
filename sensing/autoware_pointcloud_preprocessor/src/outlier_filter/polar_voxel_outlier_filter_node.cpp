@@ -42,11 +42,10 @@ namespace autoware::pointcloud_preprocessor
 
 // Complete structure for point processing results
 struct PointProcessingResult {
-  std::vector<bool> valid_points;
+  std::vector<bool> valid_points_mask;
   size_t input_points;
   size_t output_points;
   size_t voxels_passed_secondary_test = 0;
-  size_t voxels_failed_secondary_test = 0;
   size_t populated_voxels = 0;
   size_t total_voxels = 0;
 };
@@ -191,7 +190,7 @@ void PolarVoxelOutlierFilterComponent::publish_diagnostics(
       RCLCPP_DEBUG(
         get_logger(), "Visibility: %.3f (%zu/%zu voxels passed secondary test, %zu failed)",
         *visibility_, result.voxels_passed_secondary_test, total_voxels_with_points,
-        result.voxels_failed_secondary_test);
+        total_voxels_with_points - result.voxels_passed_secondary_test);
     }
   }
 
@@ -279,11 +278,11 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyz(
   }
 
   // Phase 3: Mark valid points and create output
-  std::vector<bool> valid_points(pcl_input->points.size(), false);
+  std::vector<bool> valid_points_mask(pcl_input->points.size(), false);
   for (size_t i = 0; i < point_voxel_info.size(); ++i) {
     if (point_voxel_info[i].has_value() && 
         valid_voxels.count(point_voxel_info[i].value().voxel_idx) > 0) {
-      valid_points[i] = true;
+      valid_points_mask[i] = true;
     }
   }
 
@@ -291,19 +290,19 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyz(
   pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_output(new pcl::PointCloud<pcl::PointXYZ>);
   pcl::PointCloud<pcl::PointXYZ>::Ptr noise_output(new pcl::PointCloud<pcl::PointXYZ>);
 
-  size_t valid_count = std::count(valid_points.begin(), valid_points.end(), true);
+  size_t valid_count = std::count(valid_points_mask.begin(), valid_points_mask.end(), true);
   pcl_output->points.reserve(valid_count);
 
   // Reserve space for noise points - only processed points that were filtered out
   size_t noise_count = 0;
-  for (size_t i = 0; i < valid_points.size(); ++i) {
-    if (!valid_points[i] && point_voxel_info[i].has_value()) noise_count++;
+  for (size_t i = 0; i < valid_points_mask.size(); ++i) {
+    if (!valid_points_mask[i] && point_voxel_info[i].has_value()) noise_count++;
   }
   noise_output->points.reserve(noise_count);
 
   // Copy valid and noise points
-  for (size_t i = 0; i < valid_points.size(); ++i) {
-    if (valid_points[i]) {
+  for (size_t i = 0; i < valid_points_mask.size(); ++i) {
+    if (valid_points_mask[i]) {
       pcl_output->points.push_back(pcl_input->points[i]);
     } else if (point_voxel_info[i].has_value()) {
       noise_output->points.push_back(pcl_input->points[i]);
@@ -382,7 +381,6 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
 
   std::unordered_set<PolarVoxelIndex, PolarVoxelIndexHash> valid_voxels;
   size_t voxels_passed_secondary_test = 0;
-  size_t voxels_failed_secondary_test = 0;
   
   for (const auto& [voxel_idx, counts] : voxel_counts) {
     bool primary_meets_threshold = counts.first >= voxel_points_threshold_;
@@ -390,23 +388,20 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
 
     if (secondary_meets_threshold) {
       voxels_passed_secondary_test++;
-    } else {
-      voxels_failed_secondary_test++;
     }
-
     if (primary_meets_threshold && secondary_meets_threshold) {
       valid_voxels.insert(voxel_idx);
     }
   }
 
   // Phase 3: Mark valid points and create output
-  std::vector<bool> valid_points(input->width * input->height, false);
+  std::vector<bool> valid_points_mask(input->width * input->height, false);
   for (size_t i = 0; i < point_voxel_info.size(); ++i) {
     if (point_voxel_info[i].has_value()) {
       const auto& info = point_voxel_info[i].value();
       if (valid_voxels.count(info.voxel_idx) > 0) {
         if (info.is_primary || !filter_secondary_returns_) {
-          valid_points[i] = true;
+          valid_points_mask[i] = true;
         }
       }
     }
@@ -420,7 +415,7 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
   filtered_cloud.point_step = input->point_step;
   filtered_cloud.is_dense = input->is_dense;
 
-  size_t valid_count = std::count(valid_points.begin(), valid_points.end(), true);
+  size_t valid_count = std::count(valid_points_mask.begin(), valid_points_mask.end(), true);
   filtered_cloud.height = 1;
   filtered_cloud.width = valid_count;
   filtered_cloud.row_step = filtered_cloud.width * filtered_cloud.point_step;
@@ -428,8 +423,8 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
 
   // Copy valid points
   size_t output_idx = 0;
-  for (size_t i = 0; i < valid_points.size(); ++i) {
-    if (valid_points[i]) {
+  for (size_t i = 0; i < valid_points_mask.size(); ++i) {
+    if (valid_points_mask[i]) {
       std::memcpy(
         &filtered_cloud.data[output_idx * filtered_cloud.point_step],
         &input->data[i * input->point_step], input->point_step);
@@ -455,8 +450,8 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
 
   // Copy filtered-out points
   size_t noise_idx = 0;
-  for (size_t i = 0; i < valid_points.size(); ++i) {
-    if (!valid_points[i]) {
+  for (size_t i = 0; i < valid_points_mask.size(); ++i) {
+    if (!valid_points_mask[i]) {
       std::memcpy(
         &noise_cloud.data[noise_idx * noise_cloud.point_step], 
         &input->data[i * input->point_step],
@@ -472,7 +467,6 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
   result.input_points = input->width * input->height;
   result.output_points = valid_count;
   result.voxels_passed_secondary_test = voxels_passed_secondary_test;
-  result.voxels_failed_secondary_test = voxels_failed_secondary_test;
   result.populated_voxels = valid_voxels.size();
   result.total_voxels = voxel_counts.size();
 
