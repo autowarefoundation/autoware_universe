@@ -79,10 +79,10 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   updater_.setHardwareID("polar_voxel_outlier_filter");
   updater_.add(
     std::string(this->get_namespace()) + ": visibility_validation", this,
-    &PolarVoxelOutlierFilterComponent::onVisibilityChecker);
+    &PolarVoxelOutlierFilterComponent::on_visibility_check);
   updater_.add(
     std::string(this->get_namespace()) + ": filter_ratio_validation", this,
-    &PolarVoxelOutlierFilterComponent::onFilterRatioChecker);
+    &PolarVoxelOutlierFilterComponent::on_filter_ratio_check);
   updater_.setPeriod(0.1);
 
   // Create visibility publisher
@@ -547,7 +547,7 @@ rcl_interfaces::msg::SetParametersResult PolarVoxelOutlierFilterComponent::param
   return result;
 }
 
-void PolarVoxelOutlierFilterComponent::onVisibilityChecker(
+void PolarVoxelOutlierFilterComponent::on_visibility_check(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
   using diagnostic_msgs::msg::DiagnosticStatus;
@@ -572,7 +572,7 @@ void PolarVoxelOutlierFilterComponent::onVisibilityChecker(
   stat.summary(level, msg);
 }
 
-void PolarVoxelOutlierFilterComponent::onFilterRatioChecker(
+void PolarVoxelOutlierFilterComponent::on_filter_ratio_check(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
   using diagnostic_msgs::msg::DiagnosticStatus;
