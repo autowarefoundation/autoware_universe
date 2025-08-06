@@ -99,16 +99,10 @@ bool SurroundObstacleCheckerDebugNode::pushPose(
   }
 }
 
-bool SurroundObstacleCheckerDebugNode::pushObstaclePoint(
-  const geometry_msgs::msg::Point & obstacle_point, const PointType & type)
+void SurroundObstacleCheckerDebugNode::pushStopObstacle(
+  const std::optional<StopObstacle> & stop_obstacle)
 {
-  switch (type) {
-    case PointType::NoStart:
-      stop_obstacle_point_ptr_ = std::make_shared<geometry_msgs::msg::Point>(obstacle_point);
-      return true;
-    default:
-      return false;
-  }
+  stop_obstacle_ = stop_obstacle;
 }
 
 void SurroundObstacleCheckerDebugNode::publishFootprints()
@@ -147,11 +141,20 @@ void SurroundObstacleCheckerDebugNode::publish()
   safety_factors.header.stamp = clock_->now();
   safety_factors.header.frame_id = "map";
 
-  if (stop_obstacle_point_ptr_ != nullptr) {
+  if (stop_obstacle_.has_value()) {
+    const auto type = [&]() {
+      if (stop_obstacle_.value().is_point_cloud) {
+        return autoware_internal_planning_msgs::msg::SafetyFactor::POINTCLOUD;
+      } else {
+        return autoware_internal_planning_msgs::msg::SafetyFactor::OBJECT;
+      }
+    }();
+
     autoware_internal_planning_msgs::msg::SafetyFactor safety_factor;
     safety_factor.is_safe = false;
-    safety_factor.type = autoware_internal_planning_msgs::msg::SafetyFactor::POINTCLOUD;
-    safety_factor.points.push_back(*stop_obstacle_point_ptr_);
+    safety_factor.type = type;
+    safety_factor.object_id = stop_obstacle_.value().uuid;
+    safety_factor.points = {stop_obstacle_.value().nearest_point};
     safety_factors.factors.push_back(safety_factor);
   }
 
@@ -165,7 +168,7 @@ void SurroundObstacleCheckerDebugNode::publish()
 
   /* reset variables */
   stop_pose_ptr_ = nullptr;
-  stop_obstacle_point_ptr_ = nullptr;
+  stop_obstacle_.reset();
 }
 
 MarkerArray SurroundObstacleCheckerDebugNode::makeVisualizationMarker()
@@ -174,11 +177,11 @@ MarkerArray SurroundObstacleCheckerDebugNode::makeVisualizationMarker()
   rclcpp::Time current_time = this->clock_->now();
 
   // visualize surround object
-  if (stop_obstacle_point_ptr_ != nullptr) {
+  if (stop_obstacle_.has_value()) {
     auto marker = create_default_marker(
       "map", current_time, "no_start_obstacle_text", 0, Marker::TEXT_VIEW_FACING,
       create_marker_scale(0.0, 0.0, 1.0), create_marker_color(1.0, 1.0, 1.0, 0.999));
-    marker.pose.position = *stop_obstacle_point_ptr_;
+    marker.pose.position = stop_obstacle_.value().nearest_point;
     marker.pose.position.z += 2.0;  // add half of the heights of obj roughly
     marker.text = "!";
     msg.markers.push_back(marker);
