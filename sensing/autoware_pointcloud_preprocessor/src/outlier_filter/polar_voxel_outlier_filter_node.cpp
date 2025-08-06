@@ -35,14 +35,15 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace autoware::pointcloud_preprocessor
 {
 
 // Complete structure for point processing results
-struct PointProcessingResult {
-  std::vector<bool> valid_points_mask;
+struct PointProcessingResult
+{
   size_t input_points;
   size_t output_points;
   size_t voxels_passed_secondary_test = 0;
@@ -100,48 +101,54 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
 
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
-    [this](const std::vector<rclcpp::Parameter> & p){ return param_callback(p);});
+    [this](const std::vector<rclcpp::Parameter> & p) { return param_callback(p); });
 }
 
-PolarVoxelOutlierFilterComponent::PolarCoordinate 
-PolarVoxelOutlierFilterComponent::cartesian_to_polar(const CartesianCoordinate& cartesian)
+PolarVoxelOutlierFilterComponent::PolarCoordinate
+PolarVoxelOutlierFilterComponent::cartesian_to_polar(const CartesianCoordinate & cartesian)
 {
-  double radius = std::sqrt(cartesian.x * cartesian.x + cartesian.y * cartesian.y + cartesian.z * cartesian.z);
+  double radius =
+    std::sqrt(cartesian.x * cartesian.x + cartesian.y * cartesian.y + cartesian.z * cartesian.z);
   double azimuth = std::atan2(cartesian.y, cartesian.x);
-  double elevation = std::atan2(cartesian.z, std::sqrt(cartesian.x * cartesian.x + cartesian.y * cartesian.y));
-  
+  double elevation =
+    std::atan2(cartesian.z, std::sqrt(cartesian.x * cartesian.x + cartesian.y * cartesian.y));
+
   return PolarCoordinate(radius, azimuth, elevation);
 }
 
 PolarVoxelOutlierFilterComponent::PolarVoxelIndex
-PolarVoxelOutlierFilterComponent::cartesian_to_polar_voxel(const CartesianCoordinate& cartesian) const
+PolarVoxelOutlierFilterComponent::cartesian_to_polar_voxel(
+  const CartesianCoordinate & cartesian) const
 {
   PolarCoordinate polar = cartesian_to_polar(cartesian);
   return polar_to_polar_voxel(polar);
 }
 
 PolarVoxelOutlierFilterComponent::PolarVoxelIndex
-PolarVoxelOutlierFilterComponent::polar_to_polar_voxel(const PolarCoordinate& polar) const
+PolarVoxelOutlierFilterComponent::polar_to_polar_voxel(const PolarCoordinate & polar) const
 {
   PolarVoxelIndex voxel_idx{};
   voxel_idx.radius_idx = static_cast<int32_t>(std::floor(polar.radius / radial_resolution_m_));
   voxel_idx.azimuth_idx = static_cast<int32_t>(std::floor(polar.azimuth / azimuth_resolution_rad_));
-  voxel_idx.elevation_idx = static_cast<int32_t>(std::floor(polar.elevation / elevation_resolution_rad_));
+  voxel_idx.elevation_idx =
+    static_cast<int32_t>(std::floor(polar.elevation / elevation_resolution_rad_));
   return voxel_idx;
 }
 
 bool PolarVoxelOutlierFilterComponent::is_primary_return_type(uint8_t return_type) const
 {
-  auto it = std::find(primary_return_types_.begin(), primary_return_types_.end(), 
-                      static_cast<int64_t>(return_type));
+  auto it = std::find(
+    primary_return_types_.begin(), primary_return_types_.end(), static_cast<int64_t>(return_type));
   return it != primary_return_types_.end();
 }
 
 // Helper function for point validation
-bool PolarVoxelOutlierFilterComponent::validate_point_basic(const PolarCoordinate& polar) const
+bool PolarVoxelOutlierFilterComponent::validate_point_basic(const PolarCoordinate & polar) const
 {
   // Skip points with NaN or Inf values
-  if (!std::isfinite(polar.radius) || !std::isfinite(polar.azimuth) || !std::isfinite(polar.elevation)) {
+  if (
+    !std::isfinite(polar.radius) || !std::isfinite(polar.azimuth) ||
+    !std::isfinite(polar.elevation)) {
     return false;
   }
 
@@ -160,11 +167,12 @@ bool PolarVoxelOutlierFilterComponent::validate_point_basic(const PolarCoordinat
 
 // Helper function to publish diagnostics
 void PolarVoxelOutlierFilterComponent::publish_diagnostics(
-  const PointProcessingResult& result, bool has_return_type_classification)
+  const PointProcessingResult & result, bool has_return_type_classification)
 {
   // Calculate and store filter ratio
-  filter_ratio_ = result.input_points > 0 ? 
-    static_cast<double>(result.output_points) / static_cast<double>(result.input_points) : 0.0;
+  filter_ratio_ = result.input_points > 0 ? static_cast<double>(result.output_points) /
+                                              static_cast<double>(result.input_points)
+                                          : 0.0;
 
   if (filter_ratio_.has_value()) {
     autoware_internal_debug_msgs::msg::Float32Stamped ratio_msg;
@@ -178,8 +186,10 @@ void PolarVoxelOutlierFilterComponent::publish_diagnostics(
     size_t total_voxels_with_points = result.total_voxels;
 
     // Calculate and store visibility
-    visibility_ = total_voxels_with_points > 0 ? 
-      static_cast<double>(result.voxels_passed_secondary_test) / static_cast<double>(total_voxels_with_points) : 0.0;
+    visibility_ = total_voxels_with_points > 0
+                    ? static_cast<double>(result.voxels_passed_secondary_test) /
+                        static_cast<double>(total_voxels_with_points)
+                    : 0.0;
 
     if (visibility_.has_value()) {
       autoware_internal_debug_msgs::msg::Float32Stamped visibility_msg;
@@ -197,7 +207,8 @@ void PolarVoxelOutlierFilterComponent::publish_diagnostics(
   if (filter_ratio_.has_value()) {
     RCLCPP_DEBUG(
       get_logger(), "Filter ratio: %.3f (%zu/%zu points), Voxel stats: %zu total, %zu populated",
-      *filter_ratio_, result.output_points, result.input_points, result.total_voxels, result.populated_voxels);
+      *filter_ratio_, result.output_points, result.input_points, result.total_voxels,
+      result.populated_voxels);
   }
 }
 
@@ -217,7 +228,8 @@ void PolarVoxelOutlierFilterComponent::filter(
   // Check if the input point cloud has PointXYZIRCAEDT layout (with pre-computed polar coordinates)
   if (autoware::pointcloud_preprocessor::utils::is_data_layout_compatible_with_point_xyzircaedt(
         *input)) {
-    RCLCPP_DEBUG_ONCE(get_logger(), "Using PointXYZIRCAEDT format with pre-computed polar coordinates");
+    RCLCPP_DEBUG_ONCE(
+      get_logger(), "Using PointXYZIRCAEDT format with pre-computed polar coordinates");
     filter_point_xyzircaedt(input, indices, output);
   } else {
     RCLCPP_DEBUG_ONCE(get_logger(), "Using PointXYZ format, computing polar coordinates");
@@ -234,13 +246,14 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyz(
   pcl::fromROSMsg(*input, *pcl_input);
 
   // Structure to store voxel information for each point
-  struct VoxelInfo {
+  struct VoxelInfo
+  {
     PolarVoxelIndex voxel_idx;
   };
 
   // Phase 1: Collect valid point voxel information
   std::vector<std::optional<VoxelInfo>> point_voxel_info(pcl_input->points.size());
-  
+
   for (size_t point_idx = 0; point_idx < pcl_input->points.size(); ++point_idx) {
     const auto & point = pcl_input->points[point_idx];
 
@@ -250,9 +263,7 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyz(
     }
 
     CartesianCoordinate cartesian(
-      static_cast<double>(point.x), 
-      static_cast<double>(point.y), 
-      static_cast<double>(point.z));
+      static_cast<double>(point.x), static_cast<double>(point.y), static_cast<double>(point.z));
 
     PolarCoordinate polar = cartesian_to_polar(cartesian);
 
@@ -264,14 +275,14 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyz(
 
   // Phase 2: Count and validate voxels
   std::unordered_map<PolarVoxelIndex, int, PolarVoxelIndexHash> voxel_counts;
-  for (const auto& info_opt : point_voxel_info) {
+  for (const auto & info_opt : point_voxel_info) {
     if (info_opt.has_value()) {
       voxel_counts[info_opt.value().voxel_idx]++;
     }
   }
 
   std::unordered_set<PolarVoxelIndex, PolarVoxelIndexHash> valid_voxels;
-  for (const auto& [voxel_idx, count] : voxel_counts) {
+  for (const auto & [voxel_idx, count] : voxel_counts) {
     if (count >= voxel_points_threshold_) {
       valid_voxels.insert(voxel_idx);
     }
@@ -280,8 +291,9 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyz(
   // Phase 3: Mark valid points and create output
   std::vector<bool> valid_points_mask(pcl_input->points.size(), false);
   for (size_t i = 0; i < point_voxel_info.size(); ++i) {
-    if (point_voxel_info[i].has_value() && 
-        valid_voxels.count(point_voxel_info[i].value().voxel_idx) > 0) {
+    if (
+      point_voxel_info[i].has_value() &&
+      valid_voxels.count(point_voxel_info[i].value().voxel_idx) > 0) {
       valid_points_mask[i] = true;
     }
   }
@@ -325,7 +337,7 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyz(
   result.output_points = valid_count;
   result.total_voxels = voxel_counts.size();
   result.populated_voxels = valid_voxels.size();
-  
+
   publish_diagnostics(result, false);
 }
 
@@ -335,14 +347,15 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
   (void)indices;  // Suppress unused parameter warning
 
   // Structure to store voxel information for each point
-  struct VoxelInfo {
+  struct VoxelInfo
+  {
     PolarVoxelIndex voxel_idx;
     bool is_primary;
   };
 
   // Phase 1: Collect valid point voxel information
   std::vector<std::optional<VoxelInfo>> point_voxel_info(input->width * input->height);
-  
+
   sensor_msgs::PointCloud2ConstIterator<float> iter_distance(*input, "distance");
   sensor_msgs::PointCloud2ConstIterator<float> iter_azimuth(*input, "azimuth");
   sensor_msgs::PointCloud2ConstIterator<float> iter_elevation(*input, "elevation");
@@ -351,7 +364,6 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
   size_t point_idx = 0;
   for (; iter_distance != iter_distance.end();
        ++iter_distance, ++iter_azimuth, ++iter_elevation, ++iter_return_type, ++point_idx) {
-    
     auto radius = static_cast<double>(*iter_distance);
     auto azimuth = static_cast<double>(*iter_azimuth);
     auto elevation = static_cast<double>(*iter_elevation);
@@ -368,9 +380,9 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
 
   // Phase 2: Count and validate voxels with dual criteria
   std::unordered_map<PolarVoxelIndex, std::pair<int, int>, PolarVoxelIndexHash> voxel_counts;
-  for (const auto& info_opt : point_voxel_info) {
+  for (const auto & info_opt : point_voxel_info) {
     if (info_opt.has_value()) {
-      const auto& info = info_opt.value();
+      const auto & info = info_opt.value();
       if (info.is_primary) {
         voxel_counts[info.voxel_idx].first++;
       } else {
@@ -381,8 +393,8 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
 
   std::unordered_set<PolarVoxelIndex, PolarVoxelIndexHash> valid_voxels;
   size_t voxels_passed_secondary_test = 0;
-  
-  for (const auto& [voxel_idx, counts] : voxel_counts) {
+
+  for (const auto & [voxel_idx, counts] : voxel_counts) {
     bool primary_meets_threshold = counts.first >= voxel_points_threshold_;
     bool secondary_meets_threshold = counts.second <= secondary_noise_threshold_;
 
@@ -398,7 +410,7 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
   std::vector<bool> valid_points_mask(input->width * input->height, false);
   for (size_t i = 0; i < point_voxel_info.size(); ++i) {
     if (point_voxel_info[i].has_value()) {
-      const auto& info = point_voxel_info[i].value();
+      const auto & info = point_voxel_info[i].value();
       if (valid_voxels.count(info.voxel_idx) > 0) {
         if (info.is_primary || !filter_secondary_returns_) {
           valid_points_mask[i] = true;
@@ -453,8 +465,7 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
   for (size_t i = 0; i < valid_points_mask.size(); ++i) {
     if (!valid_points_mask[i]) {
       std::memcpy(
-        &noise_cloud.data[noise_idx * noise_cloud.point_step], 
-        &input->data[i * input->point_step],
+        &noise_cloud.data[noise_idx * noise_cloud.point_step], &input->data[i * input->point_step],
         input->point_step);
       noise_idx++;
     }
@@ -552,7 +563,7 @@ void PolarVoxelOutlierFilterComponent::on_visibility_check(
 
   auto level = DiagnosticStatus::OK;
   std::string msg = "OK";
-  
+
   if (!visibility_.has_value()) {
     level = DiagnosticStatus::STALE;
     msg = "STALE: visibility not yet calculated";
@@ -573,12 +584,13 @@ void PolarVoxelOutlierFilterComponent::on_filter_ratio_check(
 {
   using diagnostic_msgs::msg::DiagnosticStatus;
 
-  std::string value_str = filter_ratio_.has_value() ? std::to_string(*filter_ratio_) : "uninitialized";
+  std::string value_str =
+    filter_ratio_.has_value() ? std::to_string(*filter_ratio_) : "uninitialized";
   stat.add("value", value_str);
 
   auto level = DiagnosticStatus::OK;
   std::string msg = "OK";
-  
+
   if (!filter_ratio_.has_value()) {
     level = DiagnosticStatus::STALE;
     msg = "STALE: filter ratio not yet calculated";
