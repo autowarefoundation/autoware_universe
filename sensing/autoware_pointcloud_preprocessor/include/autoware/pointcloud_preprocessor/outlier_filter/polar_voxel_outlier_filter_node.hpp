@@ -56,6 +56,26 @@ protected:
   rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> & p);
 
 private:
+  /** \brief Structure to represent Cartesian coordinates */
+  struct CartesianCoordinate
+  {
+    double x;
+    double y;
+    double z;
+
+    CartesianCoordinate(double x_val, double y_val, double z_val) : x(x_val), y(y_val), z(z_val) {}
+  };
+
+  /** \brief Structure to represent polar coordinates */
+  struct PolarCoordinate
+  {
+    double radius;
+    double azimuth;
+    double elevation;
+
+    PolarCoordinate(double r, double a, double e) : radius(r), azimuth(a), elevation(e) {}
+  };
+
   /** \brief Structure to represent a polar voxel index */
   struct PolarVoxelIndex
   {
@@ -76,12 +96,10 @@ private:
   {
     std::size_t operator()(const PolarVoxelIndex & idx) const
     {
-      // Use a simple hash combination technique
       std::size_t h1 = std::hash<int32_t>{}(idx.radius_idx);
       std::size_t h2 = std::hash<int32_t>{}(idx.azimuth_idx);
       std::size_t h3 = std::hash<int32_t>{}(idx.elevation_idx);
       
-      // Combine hashes using bit shifting and XOR
       return h1 ^ (h2 << 1) ^ (h3 << 2);
     }
   };
@@ -124,14 +142,13 @@ private:
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output);
 
   /** \brief Convert Cartesian coordinates to polar voxel index */
-  PolarVoxelIndex cartesian_to_polar_voxel(double x, double y, double z) const;
+  PolarVoxelIndex cartesian_to_polar_voxel(const CartesianCoordinate& cartesian) const;
 
   /** \brief Convert Cartesian point to polar coordinates */
-  static void cartesian_to_polar(
-    double x, double y, double z, double & radius, double & azimuth, double & elevation);
+  static PolarCoordinate cartesian_to_polar(const CartesianCoordinate& cartesian);
 
   /** \brief Convert pre-computed polar coordinates to voxel index */
-  PolarVoxelIndex polar_to_polar_voxel(double radius, double azimuth, double elevation) const;
+  PolarVoxelIndex polar_to_polar_voxel(const PolarCoordinate& polar) const;
 
   /** \brief Check if return type is in primary returns list */
   bool is_primary_return_type(uint8_t return_type) const;
@@ -142,8 +159,10 @@ private:
   /** \brief Diagnostics callback for filter ratio validation */
   void onFilterRatioChecker(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
-  // Helper functions for validation and diagnostics
-  bool validate_point_basic(double radius, double azimuth, double elevation) const;
+  /** \brief Validate basic polar coordinate constraints */
+  bool validate_point_basic(const PolarCoordinate& polar) const;
+
+  /** \brief Publish processing diagnostics */
   void publish_diagnostics(const PointProcessingResult& result, bool has_return_type_classification);
 
 public:

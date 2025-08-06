@@ -106,22 +106,55 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
     std::bind(&PolarVoxelOutlierFilterComponent::param_callback, this, _1));
 }
 
+PolarVoxelOutlierFilterComponent::PolarCoordinate 
+PolarVoxelOutlierFilterComponent::cartesian_to_polar(const CartesianCoordinate& cartesian)
+{
+  double radius = std::sqrt(cartesian.x * cartesian.x + cartesian.y * cartesian.y + cartesian.z * cartesian.z);
+  double azimuth = std::atan2(cartesian.y, cartesian.x);
+  double elevation = std::atan2(cartesian.z, std::sqrt(cartesian.x * cartesian.x + cartesian.y * cartesian.y));
+  
+  return PolarCoordinate(radius, azimuth, elevation);
+}
+
+PolarVoxelOutlierFilterComponent::PolarVoxelIndex
+PolarVoxelOutlierFilterComponent::cartesian_to_polar_voxel(const CartesianCoordinate& cartesian) const
+{
+  PolarCoordinate polar = cartesian_to_polar(cartesian);
+  return polar_to_polar_voxel(polar);
+}
+
+PolarVoxelOutlierFilterComponent::PolarVoxelIndex
+PolarVoxelOutlierFilterComponent::polar_to_polar_voxel(const PolarCoordinate& polar) const
+{
+  PolarVoxelIndex voxel_idx{};
+  voxel_idx.radius_idx = static_cast<int32_t>(std::floor(polar.radius / radial_resolution_m_));
+  voxel_idx.azimuth_idx = static_cast<int32_t>(std::floor(polar.azimuth / azimuth_resolution_rad_));
+  voxel_idx.elevation_idx = static_cast<int32_t>(std::floor(polar.elevation / elevation_resolution_rad_));
+  return voxel_idx;
+}
+
+bool PolarVoxelOutlierFilterComponent::is_primary_return_type(uint8_t return_type) const
+{
+  auto it = std::find(primary_return_types_.begin(), primary_return_types_.end(), 
+                      static_cast<int64_t>(return_type));
+  return it != primary_return_types_.end();
+}
+
 // Helper function for point validation
-bool PolarVoxelOutlierFilterComponent::validate_point_basic(
-  double radius, double azimuth, double elevation) const
+bool PolarVoxelOutlierFilterComponent::validate_point_basic(const PolarCoordinate& polar) const
 {
   // Skip points with NaN or Inf values
-  if (!std::isfinite(radius) || !std::isfinite(azimuth) || !std::isfinite(elevation)) {
+  if (!std::isfinite(polar.radius) || !std::isfinite(polar.azimuth) || !std::isfinite(polar.elevation)) {
     return false;
   }
 
   // Skip points outside the configured radius range
-  if (radius < min_radius_m_ || radius > max_radius_m_) {
+  if (polar.radius < min_radius_m_ || polar.radius > max_radius_m_) {
     return false;
   }
 
   // Skip points with insufficient radius (degenerate points at origin)
-  if (std::abs(radius) < std::numeric_limits<double>::epsilon()) {
+  if (std::abs(polar.radius) < std::numeric_limits<double>::epsilon()) {
     return false;
   }
 
@@ -217,13 +250,15 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyz(
       continue;
     }
 
-    double radius, azimuth, elevation;
-    cartesian_to_polar(
-      static_cast<double>(point.x), static_cast<double>(point.y), static_cast<double>(point.z),
-      radius, azimuth, elevation);
+    CartesianCoordinate cartesian(
+      static_cast<double>(point.x), 
+      static_cast<double>(point.y), 
+      static_cast<double>(point.z));
 
-    if (validate_point_basic(radius, azimuth, elevation)) {
-      PolarVoxelIndex voxel_idx = polar_to_polar_voxel(radius, azimuth, elevation);
+    PolarCoordinate polar = cartesian_to_polar(cartesian);
+
+    if (validate_point_basic(polar)) {
+      PolarVoxelIndex voxel_idx = polar_to_polar_voxel(polar);
       point_voxel_info[point_idx] = VoxelInfo{voxel_idx};
     }
   }
@@ -323,8 +358,10 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
     auto elevation = static_cast<double>(*iter_elevation);
     uint8_t return_type = *iter_return_type;
 
-    if (validate_point_basic(radius, azimuth, elevation)) {
-      PolarVoxelIndex voxel_idx = polar_to_polar_voxel(radius, azimuth, elevation);
+    PolarCoordinate polar(radius, azimuth, elevation);
+
+    if (validate_point_basic(polar)) {
+      PolarVoxelIndex voxel_idx = polar_to_polar_voxel(polar);
       bool is_primary = is_primary_return_type(return_type);
       point_voxel_info[point_idx] = VoxelInfo{voxel_idx, is_primary};
     }
@@ -440,43 +477,6 @@ void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
   result.total_voxels = voxel_counts.size();
 
   publish_diagnostics(result, true);
-}
-
-void PolarVoxelOutlierFilterComponent::cartesian_to_polar(
-  double x, double y, double z, double & radius, double & azimuth, double & elevation)
-{
-  radius = std::sqrt(x * x + y * y + z * z);
-  azimuth = std::atan2(y, x);
-  elevation = std::atan2(z, std::sqrt(x * x + y * y));
-}
-
-PolarVoxelOutlierFilterComponent::PolarVoxelIndex
-PolarVoxelOutlierFilterComponent::cartesian_to_polar_voxel(double x, double y, double z) const
-{
-  double radius = 0.0;
-  double azimuth = 0.0;
-  double elevation = 0.0;
-  cartesian_to_polar(x, y, z, radius, azimuth, elevation);
-  return polar_to_polar_voxel(radius, azimuth, elevation);
-}
-
-PolarVoxelOutlierFilterComponent::PolarVoxelIndex
-PolarVoxelOutlierFilterComponent::polar_to_polar_voxel(
-  double radius, double azimuth, double elevation) const
-{
-  PolarVoxelIndex voxel_idx{};
-  voxel_idx.radius_idx = static_cast<int32_t>(std::floor(radius / radial_resolution_m_));
-  voxel_idx.azimuth_idx = static_cast<int32_t>(std::floor(azimuth / azimuth_resolution_rad_));
-  voxel_idx.elevation_idx = static_cast<int32_t>(std::floor(elevation / elevation_resolution_rad_));
-  return voxel_idx;
-}
-
-// Helper function to check if return type is in primary returns list
-bool PolarVoxelOutlierFilterComponent::is_primary_return_type(uint8_t return_type) const
-{
-  auto it = std::find(
-    primary_return_types_.begin(), primary_return_types_.end(), static_cast<int64_t>(return_type));
-  return it != primary_return_types_.end();
 }
 
 rcl_interfaces::msg::SetParametersResult PolarVoxelOutlierFilterComponent::param_callback(
