@@ -24,6 +24,7 @@
 
 #include <pcl/search/pcl_search.h>
 
+#include <cstdint>
 #include <map>
 #include <vector>
 
@@ -110,9 +111,9 @@ private:
   /** \brief Structure to represent a polar voxel index */
   struct PolarVoxelIndex
   {
-    int radius_idx;
-    int azimuth_idx;
-    int elevation_idx;
+    int32_t radius_idx;
+    int32_t azimuth_idx;
+    int32_t elevation_idx;
 
     bool operator<(const PolarVoxelIndex & other) const
     {
