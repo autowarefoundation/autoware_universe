@@ -123,9 +123,9 @@ private:
   double filter_ratio_error_threshold_;
   double filter_ratio_warn_threshold_;
 
-  // Metrics
-  double visibility_;
-  double filter_ratio_;
+  // Metrics - using std::optional to avoid dummy values
+  std::optional<double> visibility_;
+  std::optional<double> filter_ratio_;
 
   // Diagnostics and publishers
   diagnostic_updater::Updater updater_{this};
