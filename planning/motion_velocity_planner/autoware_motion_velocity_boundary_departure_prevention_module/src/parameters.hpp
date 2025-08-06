@@ -14,6 +14,7 @@
 
 #include "type_alias.hpp"
 
+#include <autoware/boundary_departure_checker/parameters.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
 
 #include <string>
@@ -103,14 +104,11 @@ struct NodeParam
     std::invoke([&node, &module_name, this]() {
       const std::string ns_abnormality{module_name + "abnormality."};
       const std::string ns_normal_abnormality{ns_abnormality + "normal."};
-      const std::string ns_steering_abnormality{ns_abnormality + "steering."};
       const std::string ns_localization_abnormality{ns_abnormality + "localization."};
       const std::string ns_longitudinal_abnormality{ns_abnormality + "longitudinal."};
 
       const auto compensate_normal =
         get_or_declare_parameter<bool>(node, ns_normal_abnormality + "enable");
-      const auto compensate_steering =
-        get_or_declare_parameter<bool>(node, ns_steering_abnormality + "enable");
       const auto compensate_localization =
         get_or_declare_parameter<bool>(node, ns_localization_abnormality + "enable");
       const auto compensate_longitudinal =
@@ -118,7 +116,7 @@ struct NodeParam
 
       std::vector<AbnormalityType> abnormality_types_to_compensate;
       AbnormalitiesConfigs configs;
-      abnormality_types_to_compensate.reserve(4);
+      abnormality_types_to_compensate.reserve(7);
       if (compensate_normal) {
         abnormality_types_to_compensate.emplace_back(AbnormalityType::NORMAL);
         NormalConfig normal_config;
@@ -130,13 +128,34 @@ struct NodeParam
         configs.insert({AbnormalityType::NORMAL, normal_config});
       }
 
-      if (compensate_steering) {
-        abnormality_types_to_compensate.emplace_back(AbnormalityType::STEERING);
+      const auto get_steer_params = [&](const auto steer_abnormality_type, const auto & ns) {
+        const auto compensate_steering = get_or_declare_parameter<bool>(node, ns + "enable");
         SteeringConfig steering_config;
-        steering_config.steering_rate_rps =
-          get_or_declare_parameter<double>(node, ns_steering_abnormality + "steering_rate_rps");
-        configs.insert({AbnormalityType::STEERING, steering_config});
-      }
+        if (compensate_steering) {
+          abnormality_types_to_compensate.emplace_back(steer_abnormality_type);
+          steering_config.steering_rate_velocities_mps =
+            get_or_declare_parameter<std::vector<double>>(
+              node, ns + "steering_rate_velocities_mps");
+          steering_config.steering_rate_limits_rps =
+            get_or_declare_parameter<std::vector<double>>(node, ns + "steering_rate_limits_rps");
+          steering_config.delay_s = get_or_declare_parameter<double>(node, ns + "delay_s");
+          steering_config.offset_rps = get_or_declare_parameter<double>(node, ns + "offset_rps");
+          steering_config.factor = get_or_declare_parameter<double>(node, ns + "factor");
+        }
+        configs.insert({steer_abnormality_type, steering_config});
+      };
+      const std::string ns_steering_abnormality_accelerated{
+        ns_abnormality + "steering_accelerated."};
+      get_steer_params(AbnormalityType::STEERING_ACCELERATED, ns_steering_abnormality_accelerated);
+      const std::string ns_steering_abnormality_stuck{ns_abnormality + "steering_stuck."};
+      get_steer_params(AbnormalityType::STEERING_STUCK, ns_steering_abnormality_stuck);
+      const std::string ns_steering_abnormality_sudden_left{
+        ns_abnormality + "steering_sudden_left."};
+      get_steer_params(AbnormalityType::STEERING_SUDDEN_LEFT, ns_steering_abnormality_sudden_left);
+      const std::string ns_steering_abnormality_sudden_right{
+        ns_abnormality + "steering_sudden_right."};
+      get_steer_params(
+        AbnormalityType::STEERING_SUDDEN_RIGHT, ns_steering_abnormality_sudden_right);
 
       if (compensate_localization) {
         abnormality_types_to_compensate.emplace_back(AbnormalityType::LOCALIZATION);
