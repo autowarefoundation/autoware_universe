@@ -444,9 +444,9 @@ PolarVoxelOutlierFilterComponent::polar_to_polar_voxel(
   double radius, double azimuth, double elevation) const
 {
   PolarVoxelIndex voxel_idx{};
-  voxel_idx.radius_idx = static_cast<int>(std::floor(radius / radial_resolution_m_));
-  voxel_idx.azimuth_idx = static_cast<int>(std::floor(azimuth / azimuth_resolution_rad_));
-  voxel_idx.elevation_idx = static_cast<int>(std::floor(elevation / elevation_resolution_rad_));
+  voxel_idx.radius_idx = static_cast<int32_t>(std::floor(radius / radial_resolution_m_));
+  voxel_idx.azimuth_idx = static_cast<int32_t>(std::floor(azimuth / azimuth_resolution_rad_));
+  voxel_idx.elevation_idx = static_cast<int32_t>(std::floor(elevation / elevation_resolution_rad_));
   return voxel_idx;
 }
 
