@@ -210,7 +210,6 @@ void PolarVoxelOutlierFilterComponent::filter(
     RCLCPP_WARN(get_logger(), "Indices are not supported and will be ignored");
   }
 
-  // Add input validation
   if (!input) {
     RCLCPP_ERROR(get_logger(), "Input point cloud is null");
     return;
@@ -219,10 +218,10 @@ void PolarVoxelOutlierFilterComponent::filter(
   // Check if the input point cloud has PointXYZIRCAEDT layout (with pre-computed polar coordinates)
   if (autoware::pointcloud_preprocessor::utils::is_data_layout_compatible_with_point_xyzircaedt(
         *input)) {
-    RCLCPP_DEBUG(get_logger(), "Using PointXYZIRCAEDT format with pre-computed polar coordinates");
+    RCLCPP_DEBUG_ONCE(get_logger(), "Using PointXYZIRCAEDT format with pre-computed polar coordinates");
     filter_point_xyzircaedt(input, indices, output);
   } else {
-    RCLCPP_DEBUG(get_logger(), "Using PointXYZ format, computing polar coordinates");
+    RCLCPP_DEBUG_ONCE(get_logger(), "Using PointXYZ format, computing polar coordinates");
     filter_point_xyz(input, indices, output);
   }
 }
@@ -580,7 +579,6 @@ void PolarVoxelOutlierFilterComponent::on_filter_ratio_check(
 {
   using diagnostic_msgs::msg::DiagnosticStatus;
 
-  // Add values - handle optional
   std::string value_str = filter_ratio_.has_value() ? std::to_string(*filter_ratio_) : "uninitialized";
   stat.add("value", value_str);
 
