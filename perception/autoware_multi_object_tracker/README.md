@@ -58,21 +58,29 @@ input/detection02/channel: none # Disabled
 input/detection01/objects: /perception/object_recognition/detection/lidar_centerpoint/objects
 input/detection01/channel: lidar_centerpoint
 
+# lidar short_range centerpoint
+input/detection02/channel: /perception/object_recognition/detection/centerpoint_short_range/objects
+input/detection02/objects: lidar_centerpoint_short_range
+
 # camera lidar fusion
-input/detection02/objects: /perception/object_recognition/detection/clustering/camera_lidar_fusion/objects
-input/detection02/channel: camera_lidar_fusion
+input/detection03/objects: /perception/object_recognition/detection/clustering/camera_lidar_fusion/objects
+input/detection03/channel: camera_lidar_fusion
+
+# camera lidar fusion based irregular object detection
+input/detection04/objects: /perception/object_recognition/detection/irregular_object/objects
+input/detection04/channel: camera_lidar_fusion_irregular
 
 # detection by tracker
-input/detection03/objects: /perception/object_recognition/detection/detection_by_tracker/objects
-input/detection03/channel: detection_by_tracker
+input/detection05/objects: /perception/object_recognition/detection/detection_by_tracker/objects
+input/detection05/channel: detection_by_tracker
 
 # radar
-input/detection04/objects: /perception/object_recognition/detection/radar/objects
-input/detection04/channel: radar
+input/detection06/objects: /perception/object_recognition/detection/radar/objects
+input/detection06/channel: radar
 
 # disable
-input/detection05/objects: input/objects05
-input/detection05/channel: none # Disabled
+input/detection07/objects: input/objects07
+input/detection07/channel: none # Disabled
 ```
 
 Up to 12 detection inputs can be configured (detection01 through detection12). Each input consists of an objects topic and its corresponding channel configuration.
