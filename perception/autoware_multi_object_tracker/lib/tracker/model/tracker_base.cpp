@@ -200,12 +200,6 @@ void Tracker::updateClassification(
   // 2. If the label is not found, add it to the classification list
   // 3. Normalize tracking classification
 
-  // Parameters
-  constexpr float true_positive_rate = 0.8f;
-  constexpr float true_negative_rate = 0.4f;
-  constexpr float false_positive_rate = 0.2f;
-  constexpr float false_negative_rate = 0.2f;
-
   // If no existing classification, initialize with input
   if (classification_.empty()) {
     classification_ = input;
@@ -220,10 +214,17 @@ void Tracker::updateClassification(
     });
 
     if (it != input.end()) {
+      // Class found in measurement
+      constexpr float true_positive_rate = 0.8f;
+      constexpr float true_negative_rate = 0.8f;
+      constexpr float false_positive_rate = 1.0f - true_negative_rate;
       a_class.probability = updateProbability(
         a_class.probability, it->probability * true_positive_rate, false_positive_rate);
     } else {
       // Class not observed in measurement
+      constexpr float true_positive_rate = 0.8f;
+      constexpr float true_negative_rate = 0.4f;
+      constexpr float false_negative_rate = 1.0f - true_positive_rate;
       a_class.probability =
         updateProbability(a_class.probability, true_negative_rate, false_negative_rate);
     }
@@ -236,6 +237,7 @@ void Tracker::updateClassification(
       [&new_class](const auto & old_class) { return old_class.label == new_class.label; });
 
     if (!found) {
+      constexpr float true_positive_rate = 0.8f;
       auto adding_class = new_class;
       // New class gets probability weighted by measurement confidence
       adding_class.probability = new_class.probability * true_positive_rate;
