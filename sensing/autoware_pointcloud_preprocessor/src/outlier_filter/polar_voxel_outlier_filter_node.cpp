@@ -101,7 +101,7 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
 
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
-    std::bind(&PolarVoxelOutlierFilterComponent::param_callback, this, _1));
+    [this](const std::vector<rclcpp::Parameter> & p){ return param_callback(p);});
 }
 
 PolarVoxelOutlierFilterComponent::PolarCoordinate 
