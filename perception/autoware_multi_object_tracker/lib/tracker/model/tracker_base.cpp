@@ -216,17 +216,17 @@ void Tracker::updateClassification(
     if (it != input.end()) {
       // Class found in measurement
       constexpr float true_positive_rate = 0.8f;
-      constexpr float true_negative_rate = 0.8f;
-      constexpr float false_positive_rate = 1.0f - true_negative_rate;
+      constexpr float false_positive_rate = 0.2f;
       a_class.probability = updateProbability(
         a_class.probability, it->probability * true_positive_rate, false_positive_rate);
     } else {
       // Class not observed in measurement
-      constexpr float true_positive_rate = 0.8f;
-      constexpr float true_negative_rate = 0.4f;
-      constexpr float false_negative_rate = 1.0f - true_positive_rate;
+      constexpr float false_negative_rate = 0.6f;
+      constexpr float true_negative_rate = 0.8f;
+      constexpr float true_positive_rate = 1.0f - false_negative_rate;
+      constexpr float false_positive_rate = 1.0f - true_negative_rate;
       a_class.probability =
-        updateProbability(a_class.probability, true_negative_rate, false_negative_rate);
+        updateProbability(a_class.probability, true_positive_rate, false_positive_rate);
     }
   }
 
