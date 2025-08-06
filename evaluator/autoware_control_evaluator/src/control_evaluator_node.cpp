@@ -74,13 +74,13 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
   // Parameters
   output_metrics_ = declare_parameter<bool>("output_metrics");
   distance_filter_thr_m_ = declare_parameter<double>("object_metrics.distance_filter_thr_m");
-  
+
   // Setting about Output metrics only when the vehicle is moving
   const bool output_metrics_only_moving_enabled =
     declare_parameter<bool>("output_metrics_only_moving.enabled");
   const std::vector<std::string> output_metrics_only_moving_metric_list =
     declare_parameter<std::vector<std::string>>("output_metrics_only_moving.metric_list");
-  
+
   is_output_metrics_only_moving.fill(false);
   if (output_metrics_only_moving_enabled) {
     for (const auto & metric_str : output_metrics_only_moving_metric_list) {
@@ -213,7 +213,9 @@ void ControlEvaluatorNode::AddMetricMsg(
   metric_msg.name = metric_to_str.at(metric);
   metric_msg.value = std::to_string(metric_value);
   metrics_msg_.metric_array.push_back(metric_msg);
-  if (output_metrics_ && accumulate_metric && (ego_speed_ > 0.001 || !is_output_metrics_only_moving[metric_id])) {
+  if (
+    output_metrics_ && accumulate_metric &&
+    (ego_speed_ > 0.001 || !is_output_metrics_only_moving[metric_id])) {
     metric_accumulators_[metric_id].add(metric_value);
   }
 }

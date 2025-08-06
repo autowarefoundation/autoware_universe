@@ -21,9 +21,7 @@
               "items": {
                 "type": "string"
               },
-              "default": [
-                "closest_object_distance"
-              ]
+              "default": ["closest_object_distance"]
             }
           }
         },
@@ -76,10 +74,7 @@
           }
         }
       },
-      "required": [
-        "planning_factor_metrics",
-        "object_metrics"
-      ]
+      "required": ["planning_factor_metrics", "object_metrics"]
     }
   },
   "properties": {
@@ -90,12 +85,8 @@
           "$ref": "#/definitions/autoware_control_evaluator"
         }
       },
-      "required": [
-        "ros__parameters"
-      ]
+      "required": ["ros__parameters"]
     }
   },
-  "required": [
-    "/**"
-  ]
+  "required": ["/**"]
 }
