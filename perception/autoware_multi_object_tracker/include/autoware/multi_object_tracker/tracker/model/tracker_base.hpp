@@ -50,10 +50,12 @@ private:
   rclcpp::Time last_update_with_measurement_time_;
   std::vector<float> existence_probabilities_;
   float total_existence_probability_;
+  std::vector<autoware_perception_msgs::msg::ObjectClassification> classification_;
 
   // cache
   mutable rclcpp::Time cached_time_;
   mutable types::DynamicObject cached_object_;
+  mutable int cached_measurement_count_;
 
 public:
   Tracker(const rclcpp::Time & time, const types::DynamicObject & object);
@@ -63,6 +65,10 @@ public:
   void initializeExistenceProbabilities(
     const uint & channel_index, const float & existence_probability);
   std::vector<float> getExistenceProbabilityVector() const { return existence_probabilities_; }
+  std::vector<autoware_perception_msgs::msg::ObjectClassification> getClassification() const
+  {
+    return classification_;
+  }
   float getTotalExistenceProbability() const { return total_existence_probability_; }
   void updateTotalExistenceProbability(const float & existence_probability);
   void mergeExistenceProbabilities(std::vector<float> existence_probabilities);
@@ -72,8 +78,16 @@ public:
     const types::DynamicObject & object, const rclcpp::Time & measurement_time,
     const types::InputChannel & channel_info);
   bool updateWithoutMeasurement(const rclcpp::Time & now);
+  void updateClassification(
+    const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification);
+  void setObjectShape(const autoware_perception_msgs::msg::Shape & shape)
+  {
+    object_.shape = shape;
+    object_.area = types::getArea(shape);
+  }
 
   // object life management
+  uint getChannelIndex() const;
   void getPositionCovarianceEigenSq(
     const rclcpp::Time & time, double & major_axis_sq, double & minor_axis_sq) const;
   bool isConfident(
@@ -119,11 +133,14 @@ protected:
   {
     cached_time_ = time;
     cached_object_ = object;
+    cached_measurement_count_ = total_measurement_count_ + total_no_measurement_count_;
   }
 
   bool getCachedObject(const rclcpp::Time & time, types::DynamicObject & object) const
   {
-    if (cached_time_.nanoseconds() == time.nanoseconds()) {
+    if (
+      cached_time_.nanoseconds() == time.nanoseconds() &&
+      cached_measurement_count_ == total_measurement_count_ + total_no_measurement_count_) {
       object = cached_object_;
       return true;
     }
@@ -134,10 +151,8 @@ protected:
   {
     cached_time_ = rclcpp::Time();
     cached_object_ = types::DynamicObject();
+    cached_measurement_count_ = -1;
   }
-
-  void updateClassification(
-    const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification);
 
   void limitObjectExtension(const object_model::ObjectModel object_model);
 

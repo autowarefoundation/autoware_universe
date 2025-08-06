@@ -215,18 +215,20 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     std::shared_ptr<Tracker> tracker;
     types::DynamicObject object;
     uint8_t label;
-    double measurement_count;
-    double elapsed_time;
     bool is_unknown;
+    uint channel_priority;
+    int measurement_count;
+    double elapsed_time;
     bool is_valid;
 
     explicit TrackerData(const std::shared_ptr<Tracker> & t)
     : tracker(t),
       object(),
       label(0),
-      measurement_count(0.0),
-      elapsed_time(0.0),
       is_unknown(false),
+      channel_priority(types::max_channel_size),
+      measurement_count(0),
+      elapsed_time(0.0),
       is_valid(false)
     {
     }
@@ -291,6 +293,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
 
     data.label = tracker->getHighestProbLabel();
     data.is_unknown = (data.label == Label::UNKNOWN);
+    data.channel_priority = tracker->getChannelIndex();
     data.measurement_count = tracker->getTotalMeasurementCount();
     data.elapsed_time = tracker->getElapsedTimeFromLastUpdate(time);
     data.is_valid = true;
@@ -303,6 +306,9 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     valid_trackers.begin(), valid_trackers.end(), [](const TrackerData & a, const TrackerData & b) {
       if (a.is_unknown != b.is_unknown) {
         return b.is_unknown;  // Non-unknown first
+      }
+      if (a.channel_priority != b.channel_priority) {
+        return a.channel_priority < b.channel_priority;  // Lower index first
       }
       if (a.measurement_count != b.measurement_count) {
         return a.measurement_count > b.measurement_count;
@@ -373,9 +379,22 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
         canMergeOverlappedTarget(*data2.tracker, *data1.tracker, time) &&
         isIoUOverThreshold(data2, data1)) {
         // Merge tracker2 into tracker1
+
+        // probabilities
         data1.tracker->updateTotalExistenceProbability(
           data2.tracker->getTotalExistenceProbability());
         data1.tracker->mergeExistenceProbabilities(data2.tracker->getExistenceProbabilityVector());
+
+        // classification
+        if (!data2.is_unknown) {
+          data1.tracker->updateClassification(data2.tracker->getClassification());
+        }
+
+        // shape
+        // set the shape of higher priority channel
+        if (data1.tracker->getChannelIndex() > data2.tracker->getChannelIndex()) {
+          data1.tracker->setObjectShape(data2.object.shape);
+        }
 
         // Mark tracker2 for removal
         data2.is_valid = false;
@@ -458,6 +477,7 @@ void TrackerProcessor::getTrackedObjects(
     if (tracker->getTrackedObject(time, tracked_object, to_publish)) {
       tracked_object.existence_probability =
         tracker->getTotalExistenceProbability();  // Ensure existence probability is set
+      tracked_object.classification = tracker->getClassification();
       tracked_objects.objects.push_back(types::toTrackedObjectMsg(tracked_object));
     }
   }
