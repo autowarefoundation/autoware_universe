@@ -56,7 +56,7 @@ The purpose is to remove point cloud noise such as insects and rain using a pola
 # - distance      (float32): Pre-computed radius
 # - azimuth       (float32): Pre-computed azimuth angle
 # - elevation     (float32): Pre-computed elevation angle
-# - return_type   (uint8):   Return type classification (1=primary, 2-5=secondary, etc.)
+# - return_type   (uint8):   Return type classification (primary=[1], secondary=all others)
 ```
 
 **Note**: The filter automatically detects the presence of polar coordinate fields and return type information, choosing the optimal processing path. Advanced two-criteria filtering is enabled when `use_return_type_classification=true`.
@@ -122,11 +122,11 @@ The filter uses different algorithms depending on the input point cloud format:
 ### Return Type Management
 
 - **Primary Returns**: Typically stronger, more reliable returns (default: [1])
-- **Secondary Returns**: Weaker returns, usually from partially transparent objects (default: [2,3,4,5])
+- **Secondary Returns**: All return types not specified as primary (automatically includes [2,3,4,5,etc.])
 - **Classification Control**: Can be disabled to process all returns equally
 - **Filtering Control**: Can optionally exclude secondary returns from output
 
-Note that primary and second returns vary between sensors and return modes, so parametrization should be performed after studying real sensor data.
+Note that primary and secondary returns vary between sensors and return modes, so parametrization should be performed after studying real sensor data.
 
 ## Inputs / Outputs
 
@@ -159,13 +159,12 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 
 ### Advanced Filtering Parameters
 
-| Parameter                        | Type  | Description                                  | Default      |
-| -------------------------------- | ----- | -------------------------------------------- | ------------ |
-| `use_return_type_classification` | bool  | Enable advanced two-criteria filtering       | true         |
-| `filter_secondary_returns`       | bool  | Keep only primary returns in output          | false        |
-| `secondary_noise_threshold`      | int   | Maximum secondary returns allowed per voxel  | 1            |
-| `primary_return_types`           | int[] | Return types considered as primary returns   | [1]          |
-| `secondary_return_types`         | int[] | Return types considered as secondary returns | [2, 3, 4, 5] |
+| Parameter                        | Type  | Description                                 | Default |
+| -------------------------------- | ----- | ------------------------------------------- | ------- |
+| `use_return_type_classification` | bool  | Enable advanced two-criteria filtering      | true    |
+| `filter_secondary_returns`       | bool  | Keep only primary returns in output         | false   |
+| `secondary_noise_threshold`      | int   | Maximum secondary returns allowed per voxel | 1       |
+| `primary_return_types`           | int[] | Return types considered as primary returns  | [1]     |
 
 ### Diagnostics Parameters
 
@@ -185,6 +184,7 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 - **use_return_type_classification**: Must be `true` to enable advanced two-criteria filtering
 - **filter_secondary_returns**: When `true`, only primary returns appear in output (regardless of filtering criteria)
 - **secondary_noise_threshold**: Higher values require stronger primary return dominance
+- **primary_return_types**: Only these return types are considered primary; all others are automatically secondary
 - **Diagnostics**: Visibility is only published when return type classification is enabled
 
 ## Assumptions / Known limits
@@ -222,6 +222,7 @@ The filter includes robust error handling:
 #   <param name="voxel_points_threshold" value="3"/>
 #   <param name="use_return_type_classification" value="true"/>
 #   <param name="secondary_noise_threshold" value="2"/>
+#   <param name="primary_return_types" value="[1]"/>
 # </node>
 ```
 
@@ -359,6 +360,7 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 - **For aggressive noise removal**: Lower `secondary_noise_threshold` (0-1)
 - **For conservative filtering**: Higher `secondary_noise_threshold` (2-4)
 - **For primary-only output**: Enable `filter_secondary_returns`
+- **For custom return classification**: Adjust `primary_return_types` list (all others will be considered secondary returns)
 - **For diagnostics**: Tune error/warning thresholds based on expected performance
 
 ## Comparison with Cartesian Voxel Filter
