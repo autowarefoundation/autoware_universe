@@ -55,9 +55,7 @@ typedef std::pair<Point, size_t> ValueType;  // Point and tracker index
 
 struct AssociatorConfig
 {
-  std::map<autoware_perception_msgs::msg::ObjectClassification::_label_type, TrackerType>
-    tracker_map;
-  Eigen::MatrixXi can_assign_matrix;
+  std::map<TrackerType, std::array<bool, types::NUM_LABELS>> can_assign_map;
   Eigen::MatrixXd max_dist_matrix;
   Eigen::MatrixXd max_area_matrix;
   Eigen::MatrixXd min_area_matrix;
@@ -90,9 +88,6 @@ private:
 
   // Cache of squared distances for each class pair to avoid sqrt in inner loop
   Eigen::MatrixXd squared_distance_matrix_;
-
-  // array of labels that can be assigned to each tracker type
-  std::map<TrackerType, std::array<bool, types::NUM_LABELS>> can_assign_map_;
 
   // Helper to compute max search distances from config
   void updateMaxSearchDistances();

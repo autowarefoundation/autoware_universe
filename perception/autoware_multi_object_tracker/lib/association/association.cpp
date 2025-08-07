@@ -68,23 +68,6 @@ DataAssociation::DataAssociation(const AssociatorConfig & config)
   // Initialize the GNN solver
   gnn_solver_ptr_ = std::make_unique<gnn_solver::MuSSP>();
   updateMaxSearchDistances();
-
-  // initialize can_assign_map_
-  can_assign_map_.clear();
-  for (const auto & [label, tracker_type] : config.tracker_map) {
-    can_assign_map_[tracker_type].fill(false);
-  }
-
-  // can_assign_map_ : tracker_type that can be assigned to each measurement label
-  // relationship is given by tracker_map and can_assign_matrix
-  for (int i = 0; i < config.can_assign_matrix.rows(); ++i) {
-    for (int j = 0; j < config.can_assign_matrix.cols(); ++j) {
-      if (config.can_assign_matrix(i, j) == 1) {
-        const auto tracker_type = config.tracker_map.at(i);
-        can_assign_map_[tracker_type][j] = true;
-      }
-    }
-  }
 }
 
 void DataAssociation::setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr)
@@ -259,7 +242,8 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
       const auto tracker_type = tracker_types[tracker_idx];
 
       // Check if this tracker can be assigned to the measurement
-      bool can_assign = can_assign_map_.at(tracker_type)[static_cast<int>(measurement_label)];
+      bool can_assign =
+        config_.can_assign_map.at(tracker_type)[static_cast<int>(measurement_label)];
       if (!can_assign) continue;
 
       // Calculate score for this tracker-measurement pair

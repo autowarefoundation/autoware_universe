@@ -256,7 +256,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         // Convert to column-major (Eigen's default) for consistency
         return Eigen::MatrixXd(matrix_tmp);
       };
-      associator_config.can_assign_matrix =
+      Eigen::MatrixXi can_assign_matrix =
         initializeMatrixInt(this->declare_parameter<std::vector<int64_t>>("can_assign_matrix"));
       associator_config.max_dist_matrix =
         initializeMatrixDouble(this->declare_parameter<std::vector<double>>("max_dist_matrix"));
@@ -283,7 +283,22 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         declare_parameter<double>("unknown_association_giou_threshold");
 
       // Set the tracker map for associator config
-      associator_config.tracker_map = config.tracker_map;
+      {
+        associator_config.can_assign_map.clear();
+        for (const auto & [label, tracker_type] : config.tracker_map) {
+          associator_config.can_assign_map[tracker_type].fill(false);
+        }
+        // can_assign_map : tracker_type that can be assigned to each measurement label
+        // relationship is given by tracker_map and can_assign_matrix
+        for (int i = 0; i < can_assign_matrix.rows(); ++i) {
+          for (int j = 0; j < can_assign_matrix.cols(); ++j) {
+            if (can_assign_matrix(i, j) == 1) {
+              const auto tracker_type = config.tracker_map.at(i);
+              associator_config.can_assign_map[tracker_type][j] = true;
+            }
+          }
+        }
+      }
     }
 
     // Initialize processor with parameters
