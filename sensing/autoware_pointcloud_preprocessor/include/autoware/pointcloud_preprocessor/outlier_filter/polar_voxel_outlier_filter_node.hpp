@@ -23,6 +23,7 @@
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
+#include <pcl/pcl_base.h>
 #include <pcl/point_types.h>
 
 #include <memory>
@@ -84,6 +85,8 @@ public:
 
 private:
   // Type aliases to eliminate long type name duplication
+  using PointCloud2ConstPtr = sensor_msgs::msg::PointCloud2::ConstSharedPtr;
+  using IndicesPtr = pcl::IndicesPtr;
   using VoxelCountMap = std::unordered_map<PolarVoxelIndex, VoxelCounts, PolarVoxelIndexHash>;
   using VoxelIndexSet = std::unordered_set<PolarVoxelIndex, PolarVoxelIndexHash>;
   using VoxelInfoVector = std::vector<std::optional<VoxelInfo>>;
@@ -178,6 +181,7 @@ private:
   void on_visibility_check(diagnostic_updater::DiagnosticStatusWrapper & stat);
   void on_filter_ratio_check(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
+  // Parameters
   double radial_resolution_m_;
   double azimuth_resolution_rad_;
   double elevation_resolution_rad_;
@@ -188,6 +192,7 @@ private:
   bool filter_secondary_returns_;
   int secondary_noise_threshold_;
   std::vector<int> primary_return_types_;
+  bool publish_noise_cloud_;
   double visibility_error_threshold_;
   double visibility_warn_threshold_;
   double filter_ratio_error_threshold_;

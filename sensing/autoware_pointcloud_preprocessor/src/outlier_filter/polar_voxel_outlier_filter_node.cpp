@@ -107,6 +107,9 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
     filter_secondary_returns_ = declare_parameter<bool>("filter_secondary_returns");
     secondary_noise_threshold_ = declare_parameter<int>("secondary_noise_threshold");
 
+    // Noise cloud publishing control (default: false for performance)
+    publish_noise_cloud_ = declare_parameter<bool>("publish_noise_cloud", false);
+
     auto primary_return_types_param =
       declare_parameter<std::vector<int64_t>>("primary_return_types");
     primary_return_types_.clear();
@@ -139,12 +142,16 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   ratio_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>(
     "polar_voxel_outlier_filter/debug/filter_ratio", rclcpp::SensorDataQoS());
 
-  // Create noise points publisher
-  {
+  // Only create noise cloud publisher if enabled
+  if (publish_noise_cloud_) {
     rclcpp::PublisherOptions pub_options;
     pub_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
     noise_cloud_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>(
       "polar_voxel_outlier_filter/debug/pointcloud_noise", rclcpp::SensorDataQoS(), pub_options);
+    RCLCPP_INFO(get_logger(), "Noise cloud publishing enabled");
+  } else {
+    noise_cloud_pub_ = nullptr;
+    RCLCPP_INFO(get_logger(), "Noise cloud publishing disabled for performance optimization");
   }
 
   using std::placeholders::_1;
@@ -450,6 +457,11 @@ void PolarVoxelOutlierFilterComponent::publish_noise_cloud_xyz(
   const VoxelInfoVector & point_voxel_info,
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input) const
 {
+  // Skip processing if noise cloud publishing is disabled
+  if (!publish_noise_cloud_ || !noise_cloud_pub_) {
+    return;
+  }
+
   pcl::PointCloud<pcl::PointXYZ>::Ptr noise_output(new pcl::PointCloud<pcl::PointXYZ>);
 
   size_t noise_count = 0;
@@ -477,6 +489,11 @@ void PolarVoxelOutlierFilterComponent::publish_noise_cloud_xyz(
 void PolarVoxelOutlierFilterComponent::publish_noise_cloud_xyzircaedt(
   const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask) const
 {
+  // Skip processing if noise cloud publishing is disabled
+  if (!publish_noise_cloud_ || !noise_cloud_pub_) {
+    return;
+  }
+
   auto point_counts = calculate_point_counts(valid_points_mask);
   auto noise_cloud = create_noise_cloud(input, point_counts.noise_count);
 
@@ -493,13 +510,202 @@ void PolarVoxelOutlierFilterComponent::publish_noise_cloud_xyzircaedt(
   noise_cloud_pub_->publish(noise_cloud);
 }
 
-// Phase 6: Diagnostic publishing
+// Add publish_noise_cloud parameter handling
+rcl_interfaces::msg::SetParametersResult PolarVoxelOutlierFilterComponent::param_callback(
+  const std::vector<rclcpp::Parameter> & p)
+{
+  std::scoped_lock lock(mutex_);
+
+  if (get_param(p, "radial_resolution_m", radial_resolution_m_)) {
+    RCLCPP_DEBUG(get_logger(), "Setting new radial resolution to: %f.", radial_resolution_m_);
+  }
+  if (get_param(p, "azimuth_resolution_rad", azimuth_resolution_rad_)) {
+    RCLCPP_DEBUG(get_logger(), "Setting new azimuth resolution to: %f.", azimuth_resolution_rad_);
+  }
+  if (get_param(p, "elevation_resolution_rad", elevation_resolution_rad_)) {
+    RCLCPP_DEBUG(
+      get_logger(), "Setting new elevation resolution to: %f.", elevation_resolution_rad_);
+  }
+  if (get_param(p, "voxel_points_threshold", voxel_points_threshold_)) {
+    RCLCPP_DEBUG(
+      get_logger(), "Setting new voxel points threshold to: %d.", voxel_points_threshold_);
+  }
+  if (get_param(p, "min_radius_m", min_radius_m_)) {
+    RCLCPP_DEBUG(get_logger(), "Setting new min radius to: %f.", min_radius_m_);
+  }
+  if (get_param(p, "max_radius_m", max_radius_m_)) {
+    RCLCPP_DEBUG(get_logger(), "Setting new max radius to: %f.", max_radius_m_);
+  }
+  if (get_param(p, "use_return_type_classification", use_return_type_classification_)) {
+    RCLCPP_DEBUG(
+      get_logger(), "Setting use return type classification to: %s.",
+      use_return_type_classification_ ? "true" : "false");
+  }
+  if (get_param(p, "filter_secondary_returns", filter_secondary_returns_)) {
+    RCLCPP_DEBUG(
+      get_logger(), "Setting filter secondary returns to: %s.",
+      filter_secondary_returns_ ? "true" : "false");
+  }
+  if (get_param(p, "secondary_noise_threshold", secondary_noise_threshold_)) {
+    RCLCPP_DEBUG(
+      get_logger(), "Setting secondary noise threshold to: %d.", secondary_noise_threshold_);
+  }
+
+  // Handle noise cloud publishing parameter with dynamic publisher management
+  if (get_param(p, "publish_noise_cloud", publish_noise_cloud_)) {
+    RCLCPP_DEBUG(
+      get_logger(), "Setting publish noise cloud to: %s.", publish_noise_cloud_ ? "true" : "false");
+
+    // Dynamic publisher management: Create/destroy publisher based on parameter
+    if (publish_noise_cloud_ && !noise_cloud_pub_) {
+      rclcpp::PublisherOptions pub_options;
+      pub_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
+      noise_cloud_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>(
+        "polar_voxel_outlier_filter/debug/pointcloud_noise", rclcpp::SensorDataQoS(), pub_options);
+      RCLCPP_INFO(get_logger(), "Noise cloud publisher created dynamically");
+    } else if (!publish_noise_cloud_ && noise_cloud_pub_) {
+      noise_cloud_pub_.reset();
+      RCLCPP_INFO(get_logger(), "Noise cloud publisher destroyed for performance optimization");
+    }
+  }
+
+  // Handle primary_return_types parameter conversion
+  if (auto param_it = std::find_if(
+        p.begin(), p.end(),
+        [](const rclcpp::Parameter & param) { return param.get_name() == "primary_return_types"; });
+      param_it != p.end()) {
+    auto primary_return_types_param = param_it->as_integer_array();
+    primary_return_types_.clear();
+    primary_return_types_.reserve(primary_return_types_param.size());
+    for (const auto & val : primary_return_types_param) {
+      primary_return_types_.push_back(static_cast<int>(val));
+    }
+    RCLCPP_DEBUG(get_logger(), "Setting new primary return types");
+  }
+
+  // Handle diagnostic threshold parameters
+  if (get_param(p, "filter_ratio_error_threshold", filter_ratio_error_threshold_)) {
+    RCLCPP_DEBUG(
+      get_logger(), "Setting new filter ratio error threshold to: %f.",
+      filter_ratio_error_threshold_);
+  }
+  if (get_param(p, "filter_ratio_warn_threshold", filter_ratio_warn_threshold_)) {
+    RCLCPP_DEBUG(
+      get_logger(), "Setting new filter ratio warning threshold to: %f.",
+      filter_ratio_warn_threshold_);
+  }
+  if (get_param(p, "visibility_error_threshold", visibility_error_threshold_)) {
+    RCLCPP_DEBUG(
+      get_logger(), "Setting new visibility error threshold to: %f.", visibility_error_threshold_);
+  }
+  if (get_param(p, "visibility_warn_threshold", visibility_warn_threshold_)) {
+    RCLCPP_DEBUG(
+      get_logger(), "Setting new visibility warning threshold to: %f.", visibility_warn_threshold_);
+  }
+
+  rcl_interfaces::msg::SetParametersResult result;
+  result.successful = true;
+  result.reason = "success";
+
+  return result;
+}
+
+// Main filter entry point
+void PolarVoxelOutlierFilterComponent::filter(
+  const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output)
+{
+  std::scoped_lock lock(mutex_);
+  if (indices) {
+    RCLCPP_WARN(get_logger(), "Indices are not supported and will be ignored");
+  }
+
+  if (!input) {
+    RCLCPP_ERROR(get_logger(), "Input point cloud is null");
+    return;
+  }
+
+  // Check if the input point cloud has PointXYZIRCAEDT layout (with pre-computed polar coordinates)
+  if (autoware::pointcloud_preprocessor::utils::is_data_layout_compatible_with_point_xyzircaedt(
+        *input)) {
+    RCLCPP_DEBUG_ONCE(
+      get_logger(), "Using PointXYZIRCAEDT format with pre-computed polar coordinates");
+    filter_point_xyzircaedt(input, indices, output);
+  } else {
+    RCLCPP_DEBUG_ONCE(get_logger(), "Using PointXYZ format, computing polar coordinates");
+    filter_point_xyz(input, indices, output);
+  }
+}
+
+// Main filtering functions
+void PolarVoxelOutlierFilterComponent::filter_point_xyz(
+  const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output)
+{
+  (void)indices;  // Suppress unused parameter warning
+
+  pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_input(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::fromROSMsg(*input, *pcl_input);
+
+  // Phase 1: Collect voxel information
+  auto point_voxel_info = collect_voxel_info_xyz(pcl_input);
+
+  // Phase 2: Count and validate voxels
+  auto voxel_counts = count_voxels(point_voxel_info);
+  auto valid_voxels = determine_valid_voxels_simple(voxel_counts);
+
+  // Phase 3: Create valid points mask
+  auto valid_points_mask = create_valid_points_mask(point_voxel_info, valid_voxels, false);
+
+  // Phase 4: Create filtered output
+  create_filtered_output_xyz(pcl_input, valid_points_mask, output);
+  output.header = input->header;
+
+  // Phase 5: Conditionally publish noise cloud
+  if (publish_noise_cloud_ && noise_cloud_pub_) {
+    publish_noise_cloud_xyz(pcl_input, valid_points_mask, point_voxel_info, input);
+  }
+
+  // Phase 6: Publish diagnostics using ProcessingContext
+  ProcessingContext context{input, valid_points_mask, voxel_counts, valid_voxels};
+  publish_diagnostics_simple(context);
+}
+
+void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
+  const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output)
+{
+  (void)indices;  // Suppress unused parameter warning
+
+  // Phase 1: Collect voxel information
+  auto point_voxel_info = collect_voxel_info_xyzircaedt(input);
+
+  // Phase 2: Count and validate voxels with return type logic
+  auto voxel_counts = count_voxels(point_voxel_info);
+  size_t voxels_passed_secondary_test = 0;
+  auto valid_voxels =
+    determine_valid_voxels_with_return_types(voxel_counts, voxels_passed_secondary_test);
+
+  // Phase 3: Create valid points mask
+  auto valid_points_mask =
+    create_valid_points_mask(point_voxel_info, valid_voxels, filter_secondary_returns_);
+
+  // Phase 4: Create filtered output
+  create_filtered_output_xyzircaedt(input, valid_points_mask, output);
+
+  // Phase 5: Conditionally publish noise cloud
+  if (publish_noise_cloud_ && noise_cloud_pub_) {
+    publish_noise_cloud_xyzircaedt(input, valid_points_mask);
+  }
+
+  // Phase 6: Publish diagnostics using ProcessingContext
+  ProcessingContext context{input, valid_points_mask, voxel_counts, valid_voxels};
+  publish_diagnostics_with_return_types(context, voxels_passed_secondary_test);
+}
+
+// Phase 6: Diagnostic publishing methods
 void PolarVoxelOutlierFilterComponent::publish_diagnostics_simple(
   const ProcessingContext & context) const
 {
   auto result = create_processing_result(
     context.input, context.valid_points_mask, context.voxel_counts, context.valid_voxels, 0);
-
   const_cast<PolarVoxelOutlierFilterComponent *>(this)->publish_diagnostics(result, false);
 }
 
@@ -509,11 +715,9 @@ void PolarVoxelOutlierFilterComponent::publish_diagnostics_with_return_types(
   auto result = create_processing_result(
     context.input, context.valid_points_mask, context.voxel_counts, context.valid_voxels,
     voxels_passed_secondary_test);
-
   const_cast<PolarVoxelOutlierFilterComponent *>(this)->publish_diagnostics(result, true);
 }
 
-// Helper function to publish diagnostics - **REMOVE const qualifier**
 void PolarVoxelOutlierFilterComponent::publish_diagnostics(
   const PointProcessingResult & result, bool has_return_type_classification)
 {
@@ -560,221 +764,71 @@ void PolarVoxelOutlierFilterComponent::publish_diagnostics(
   }
 }
 
-void PolarVoxelOutlierFilterComponent::filter(
-  const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output)
-{
-  std::scoped_lock lock(mutex_);
-  if (indices) {
-    RCLCPP_WARN(get_logger(), "Indices are not supported and will be ignored");
-  }
-
-  if (!input) {
-    RCLCPP_ERROR(get_logger(), "Input point cloud is null");
-    return;
-  }
-
-  // Check if the input point cloud has PointXYZIRCAEDT layout (with pre-computed polar coordinates)
-  if (autoware::pointcloud_preprocessor::utils::is_data_layout_compatible_with_point_xyzircaedt(
-        *input)) {
-    RCLCPP_DEBUG_ONCE(
-      get_logger(), "Using PointXYZIRCAEDT format with pre-computed polar coordinates");
-    filter_point_xyzircaedt(input, indices, output);
-  } else {
-    RCLCPP_DEBUG_ONCE(get_logger(), "Using PointXYZ format, computing polar coordinates");
-    filter_point_xyz(input, indices, output);
-  }
-}
-
-// Main filter functions
-void PolarVoxelOutlierFilterComponent::filter_point_xyz(
-  const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output)
-{
-  (void)indices;  // Suppress unused parameter warning
-
-  pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_input(new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::fromROSMsg(*input, *pcl_input);
-
-  // Phase 1: Collect voxel information
-  auto point_voxel_info = collect_voxel_info_xyz(pcl_input);
-
-  // Phase 2: Count and validate voxels
-  auto voxel_counts = count_voxels(point_voxel_info);
-  auto valid_voxels = determine_valid_voxels_simple(voxel_counts);
-
-  // Phase 3: Create valid points mask
-  auto valid_points_mask = create_valid_points_mask(point_voxel_info, valid_voxels, false);
-
-  // Phase 4: Create filtered output
-  create_filtered_output_xyz(pcl_input, valid_points_mask, output);
-  output.header = input->header;
-
-  // Phase 5: Publish noise cloud
-  publish_noise_cloud_xyz(pcl_input, valid_points_mask, point_voxel_info, input);
-
-  // Phase 6: Publish diagnostics using ProcessingContext
-  ProcessingContext context{input, valid_points_mask, voxel_counts, valid_voxels};
-  publish_diagnostics_simple(context);
-}
-
-void PolarVoxelOutlierFilterComponent::filter_point_xyzircaedt(
-  const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output)
-{
-  (void)indices;  // Suppress unused parameter warning
-
-  // Phase 1: Collect voxel information
-  auto point_voxel_info = collect_voxel_info_xyzircaedt(input);
-
-  // Phase 2: Count and validate voxels with return type logic
-  auto voxel_counts = count_voxels(point_voxel_info);
-  size_t voxels_passed_secondary_test = 0;
-  auto valid_voxels =
-    determine_valid_voxels_with_return_types(voxel_counts, voxels_passed_secondary_test);
-
-  // Phase 3: Create valid points mask
-  auto valid_points_mask =
-    create_valid_points_mask(point_voxel_info, valid_voxels, filter_secondary_returns_);
-
-  // Phase 4: Create filtered output
-  create_filtered_output_xyzircaedt(input, valid_points_mask, output);
-
-  // Phase 5: Publish noise cloud
-  publish_noise_cloud_xyzircaedt(input, valid_points_mask);
-
-  // Phase 6: Publish diagnostics using ProcessingContext
-  ProcessingContext context{input, valid_points_mask, voxel_counts, valid_voxels};
-  publish_diagnostics_with_return_types(context, voxels_passed_secondary_test);
-}
-
-rcl_interfaces::msg::SetParametersResult PolarVoxelOutlierFilterComponent::param_callback(
-  const std::vector<rclcpp::Parameter> & p)
-{
-  std::scoped_lock lock(mutex_);
-
-  if (get_param(p, "radial_resolution_m", radial_resolution_m_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new radial resolution to: %f.", radial_resolution_m_);
-  }
-  if (get_param(p, "azimuth_resolution_rad", azimuth_resolution_rad_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new azimuth resolution to: %f.", azimuth_resolution_rad_);
-  }
-  if (get_param(p, "elevation_resolution_rad", elevation_resolution_rad_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new elevation resolution to: %f.", elevation_resolution_rad_);
-  }
-  if (get_param(p, "voxel_points_threshold", voxel_points_threshold_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new voxel points threshold to: %d.", voxel_points_threshold_);
-  }
-  if (get_param(p, "min_radius_m", min_radius_m_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new min radius to: %f.", min_radius_m_);
-  }
-  if (get_param(p, "max_radius_m", max_radius_m_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new max radius to: %f.", max_radius_m_);
-  }
-  if (get_param(p, "use_return_type_classification", use_return_type_classification_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting use return type classification to: %s.",
-      use_return_type_classification_ ? "true" : "false");
-  }
-  if (get_param(p, "filter_secondary_returns", filter_secondary_returns_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting filter secondary returns to: %s.",
-      filter_secondary_returns_ ? "true" : "false");
-  }
-  if (get_param(p, "secondary_noise_threshold", secondary_noise_threshold_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting secondary noise threshold to: %d.", secondary_noise_threshold_);
-  }
-
-  // Handle primary_return_types parameter conversion
-  if (auto param_it = std::find_if(
-        p.begin(), p.end(),
-        [](const rclcpp::Parameter & param) { return param.get_name() == "primary_return_types"; });
-      param_it != p.end()) {
-    auto primary_return_types_param = param_it->as_integer_array();
-    primary_return_types_.clear();
-    primary_return_types_.reserve(primary_return_types_param.size());
-    for (const auto & val : primary_return_types_param) {
-      primary_return_types_.push_back(static_cast<int>(val));
-    }
-    RCLCPP_DEBUG(get_logger(), "Setting new primary return types");
-  }
-
-  if (get_param(p, "filter_ratio_error_threshold", filter_ratio_error_threshold_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new filter ratio error threshold to: %f.",
-      filter_ratio_error_threshold_);
-  }
-  if (get_param(p, "filter_ratio_warn_threshold", filter_ratio_warn_threshold_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new filter ratio warning threshold to: %f.",
-      filter_ratio_warn_threshold_);
-  }
-  if (get_param(p, "visibility_error_threshold", visibility_error_threshold_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new visibility error threshold to: %f.", visibility_error_threshold_);
-  }
-  if (get_param(p, "visibility_warn_threshold", visibility_warn_threshold_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new visibility warning threshold to: %f.", visibility_warn_threshold_);
-  }
-
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
-  result.reason = "success";
-
-  return result;
-}
-
 void PolarVoxelOutlierFilterComponent::on_visibility_check(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  using diagnostic_msgs::msg::DiagnosticStatus;
-
-  std::string value_str = visibility_.has_value() ? std::to_string(*visibility_) : "uninitialized";
-  stat.add("value", value_str);
-
-  auto level = DiagnosticStatus::OK;
-  std::string msg = "OK";
+  std::scoped_lock lock(mutex_);
 
   if (!visibility_.has_value()) {
-    level = DiagnosticStatus::STALE;
-    msg = "STALE: visibility not yet calculated";
-  } else if (*visibility_ < visibility_error_threshold_) {
-    level = DiagnosticStatus::ERROR;
-    msg =
-      "ERROR: critically low LiDAR visibility detected while filtering outliers in polar voxel "
-      "filter";
-  } else if (*visibility_ < visibility_warn_threshold_) {
-    level = DiagnosticStatus::WARN;
-    msg = "WARNING: low LiDAR visibility detected while filtering outliers in polar voxel filter";
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "No visibility data available yet");
+    stat.add("visibility", "uninitialized");
+    stat.add("error_threshold", visibility_error_threshold_);
+    stat.add("warn_threshold", visibility_warn_threshold_);
+    return;
   }
-  stat.summary(level, msg);
+
+  const double visibility_value = *visibility_;
+
+  if (visibility_value < visibility_error_threshold_) {
+    stat.summary(
+      diagnostic_msgs::msg::DiagnosticStatus::ERROR,
+      "Visibility too low - possible sensor degradation or environmental conditions");
+  } else if (visibility_value < visibility_warn_threshold_) {
+    stat.summary(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN,
+      "Visibility below warning threshold - monitor sensor performance");
+  } else {
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Visibility within normal range");
+  }
+
+  stat.add("visibility", visibility_value);
+  stat.add("error_threshold", visibility_error_threshold_);
+  stat.add("warn_threshold", visibility_warn_threshold_);
 }
 
 void PolarVoxelOutlierFilterComponent::on_filter_ratio_check(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  using diagnostic_msgs::msg::DiagnosticStatus;
-
-  std::string value_str =
-    filter_ratio_.has_value() ? std::to_string(*filter_ratio_) : "uninitialized";
-  stat.add("value", value_str);
-
-  auto level = DiagnosticStatus::OK;
-  std::string msg = "OK";
+  std::scoped_lock lock(mutex_);
 
   if (!filter_ratio_.has_value()) {
-    level = DiagnosticStatus::STALE;
-    msg = "STALE: filter ratio not yet calculated";
-  } else if (*filter_ratio_ < filter_ratio_error_threshold_) {
-    level = DiagnosticStatus::ERROR;
-    msg = "ERROR: critically low filter ratio in polar voxel outlier filter";
-  } else if (*filter_ratio_ < filter_ratio_warn_threshold_) {
-    level = DiagnosticStatus::WARN;
-    msg = "WARNING: low filter ratio in polar voxel outlier filter";
+    stat.summary(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, "No filter ratio data available yet");
+    stat.add("filter_ratio", "uninitialized");
+    stat.add("error_threshold", filter_ratio_error_threshold_);
+    stat.add("warn_threshold", filter_ratio_warn_threshold_);
+    return;
   }
-  stat.summary(level, msg);
+
+  const double filter_ratio_value = *filter_ratio_;
+
+  if (filter_ratio_value < filter_ratio_error_threshold_) {
+    stat.summary(
+      diagnostic_msgs::msg::DiagnosticStatus::ERROR,
+      "Filter ratio too low - excessive point filtering detected");
+  } else if (filter_ratio_value < filter_ratio_warn_threshold_) {
+    stat.summary(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN,
+      "Filter ratio below warning threshold - high filtering activity");
+  } else {
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Filter ratio within normal range");
+  }
+
+  stat.add("filter_ratio", filter_ratio_value);
+  stat.add("error_threshold", filter_ratio_error_threshold_);
+  stat.add("warn_threshold", filter_ratio_warn_threshold_);
 }
+
 }  // namespace autoware::pointcloud_preprocessor
 
 #include <rclcpp_components/register_node_macro.hpp>
