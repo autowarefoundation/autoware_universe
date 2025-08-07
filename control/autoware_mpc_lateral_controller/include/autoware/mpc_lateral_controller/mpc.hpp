@@ -229,16 +229,6 @@ private:
 
   rclcpp::Publisher<Trajectory>::SharedPtr m_debug_frenet_predicted_trajectory_pub;
   rclcpp::Publisher<Trajectory>::SharedPtr m_debug_resampled_reference_trajectory_pub;
-  /**
-   * @brief Get variables for MPC calculation.
-   * @param trajectory The reference trajectory.
-   * @param current_steer The current steering report.
-   * @param current_kinematics The current vehicle kinematics.
-   * @return A pair of a boolean flag indicating success and the MPC data.
-   */
-  std::pair<ResultWithReason, MPCData> getData(
-    const MPCTrajectory & trajectory, const SteeringReport & current_steer,
-    const Odometry & current_kinematics);
 
   /**
    * @brief Get the initial state for MPC.
@@ -290,14 +280,6 @@ private:
   std::pair<ResultWithReason, MPCTrajectory> resampleMPCTrajectoryByTime(
     const double start_time, const double prediction_dt, const MPCTrajectory & input) const;
 
-  /**
-   * @brief Apply the velocity dynamics filter to the trajectory using the current kinematics.
-   * @param trajectory The input trajectory.
-   * @param current_kinematics The current vehicle kinematics.
-   * @return The filtered trajectory.
-   */
-  MPCTrajectory applyVelocityDynamicsFilter(
-    const MPCTrajectory & trajectory, const Odometry & current_kinematics) const;
 
   /**
    * @brief Get the prediction time step for MPC. If the trajectory length is shorter than
@@ -429,6 +411,26 @@ public:
 
   //!< @brief steering rate limit list depending on velocity [m/s], [rad/s]
   std::vector<std::pair<double, double>> m_steer_rate_lim_map_by_velocity{};
+
+  /**
+   * @brief Get variables for MPC calculation.
+   * @param trajectory The reference trajectory.
+   * @param current_steer The current steering report.
+   * @param current_kinematics The current vehicle kinematics.
+   * @return A pair of a boolean flag indicating success and the MPC data.
+   */
+  std::pair<ResultWithReason, MPCData> getData(
+    const MPCTrajectory & trajectory, const SteeringReport & current_steer,
+    const Odometry & current_kinematics);
+
+  /**
+   * @brief Apply the velocity dynamics filter to the trajectory using the current kinematics.
+   * @param trajectory The input trajectory.
+   * @param current_kinematics The current vehicle kinematics.
+   * @return The filtered trajectory.
+   */
+  MPCTrajectory applyVelocityDynamicsFilter(
+    const MPCTrajectory & trajectory, const Odometry & current_kinematics) const;
 
   bool m_use_steer_prediction;  // Flag to use predicted steer instead of measured steer.
   double ego_nearest_dist_threshold = 3.0;  // Threshold for nearest index search based on distance.

@@ -86,11 +86,16 @@ private:
   // max mpc output change threshold for 1 sec
   double m_mpc_converged_threshold_rps;
 
+    // control period
+  double m_lat_ctrl_period;
+
   // Time duration threshold to check if the trajectory shape has changed.
   double m_new_traj_duration_time;
 
   // Distance threshold to check if the trajectory shape has changed.
   double m_new_traj_end_dist;
+
+
 
   // Flag indicating whether to keep the steering control until it converges.
   bool m_keep_steer_control_until_converged;
@@ -110,6 +115,9 @@ private:
   // Check is mpc output converged
   bool m_is_mpc_history_filled{false};
 
+  // for calculating dt
+  std::shared_ptr<rclcpp::Time> m_prev_control_time{nullptr};
+
   // store the last mpc outputs for 1 sec
   std::vector<std::pair<Lateral, rclcpp::Time>> m_mpc_steering_history{};
 
@@ -118,6 +126,11 @@ private:
 
   // check if the mpc steering output is converged
   bool isMpcConverged();
+
+  /**
+   * @brief calculate time between current and previous one
+   */
+  double getDt();
 
   // measured kinematic state
   Odometry m_current_kinematic_state;
@@ -133,6 +146,9 @@ private:
 
   // Previous control command for path following.
   Lateral m_ctrl_cmd_prev;
+  double steer_prev_error = 0;
+  double int_error = 0;
+  bool m_is_first_time = true;
 
   //  Flag indicating whether the first trajectory has been received.
   bool m_has_received_first_trajectory = false;
@@ -207,7 +223,7 @@ private:
    * @brief Check if the received data is valid.
    * @return True if the data is valid, false otherwise.
    */
-  [[nodiscard]] bool checkData() const;
+  bool checkData() const;
 
   /**
    * @brief Create the control command.
@@ -221,8 +237,7 @@ private:
    * @param ctrl_cmd_horizon Control command horizon to be created.
    * @return Created control command horizon.
    */
-  [[nodiscard]] LateralHorizon createCtrlCmdHorizonMsg(
-    const LateralHorizon & ctrl_cmd_horizon) const;
+  LateralHorizon createCtrlCmdHorizonMsg(const LateralHorizon & ctrl_cmd_horizon) const;
 
   /**
    * @brief Publish the predicted future trajectory.
@@ -240,39 +255,39 @@ private:
    * @brief Get the stop control command.
    * @return Stop control command.
    */
-  [[nodiscard]] Lateral getStopControlCommand() const;
+  Lateral getStopControlCommand() const;
 
   /**
    * @brief Get the control command applied before initialization.
    * @return Initial control command.
    */
-  [[nodiscard]] Lateral getInitialControlCommand() const;
+  Lateral getInitialControlCommand() const;
 
   /**
    * @brief Check if the ego car is in a stopped state.
    * @return True if the ego car is stopped, false otherwise.
    */
-  [[nodiscard]] bool isStoppedState() const;
+  bool isStoppedState() const;
 
   /**
    * @brief Check if the trajectory has a valid value.
    * @param traj Trajectory to be checked.
    * @return True if the trajectory is valid, false otherwise.
    */
-  [[nodiscard]] bool isValidTrajectory(const Trajectory & traj) const;
+  bool isValidTrajectory(const Trajectory & traj) const;
 
   /**
    * @brief Check if the trajectory shape has changed.
    * @return True if the trajectory shape has changed, false otherwise.
    */
-  [[nodiscard]] bool isTrajectoryShapeChanged() const;
+  bool isTrajectoryShapeChanged() const;
 
   /**
    * @brief Check if the steering control is converged and stable now.
    * @param cmd Steering control command to be checked.
    * @return True if the steering control is converged and stable, false otherwise.
    */
-  [[nodiscard]] bool isSteerConverged(const Lateral & cmd) const;
+  bool isSteerConverged(const Lateral & cmd) const;
 
   rclcpp::Node::OnSetParametersCallbackHandle::SharedPtr m_set_param_res;
 
@@ -291,19 +306,13 @@ private:
     const std::vector<rclcpp::Parameter> & parameters);
 
   template <typename... Args>
-  inline void info_throttle(Args &&... args) const
+  inline void info_throttle(Args &&... args)
   {
     RCLCPP_INFO_THROTTLE(logger_, *clock_, 5000, "%s", args...);
   }
 
   template <typename... Args>
-  inline void debug_throttle(Args &&... args) const
-  {
-    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 5000, "%s", args...);
-  }
-
-  template <typename... Args>
-  inline void warn_throttle(Args &&... args) const
+  inline void warn_throttle(Args &&... args)
   {
     RCLCPP_WARN_THROTTLE(logger_, *clock_, 5000, "%s", args...);
   }
