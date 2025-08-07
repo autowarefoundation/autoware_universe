@@ -502,9 +502,9 @@ std::vector<GPUMonitorBase::GpuStatus> GPUMonitor::getGPUStatus() const
 
     GpuStatus gpu_status;
     gpu_status.name = itr->name;
-    gpu_status.usage = utilization.gpu;
-    gpu_status.clock = clock;
-    gpu_status.temperature = temp;
+    gpu_status.usage = static_cast<float>(utilization.gpu);
+    gpu_status.clock = static_cast<int>(clock);
+    gpu_status.temperature = static_cast<int>(temp);
     gpu_status.thermal_throttling = thermal_throttling;
     gpu_status_list.push_back(gpu_status);
   }
