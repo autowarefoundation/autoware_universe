@@ -386,20 +386,6 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
         isIoUOverThreshold(data2, data1)) {
         // Merge tracker2 into tracker1
 
-        // debug message
-        std::cout << "Merging tracker: "
-                  << "remover: " << data1.tracker->getUuidString().substr(0, 6)
-                  << ", tracker priority: " << data1.tracker->getTrackerPriority()
-                  << ", channel: " << data1.tracker->getChannelIndex()
-                  << ", label: " << std::to_string(data1.label)
-                  << ", shape: " << std::to_string(data1.object.shape.type)
-                  << " | remove target: " << data2.tracker->getUuidString().substr(0, 6)
-                  << ", tracker priority: " << data2.tracker->getTrackerPriority()
-                  << ", channel: " << data2.tracker->getChannelIndex()
-                  << ", label: " << std::to_string(data2.label)
-                  << ", shape: " << std::to_string(data2.object.shape.type)
-                  << ", IoU: " << shapes::get2dIoU(data1.object, data2.object) << std::endl;
-
         // probabilities
         data1.tracker->updateTotalExistenceProbability(
           data2.tracker->getTotalExistenceProbability());
