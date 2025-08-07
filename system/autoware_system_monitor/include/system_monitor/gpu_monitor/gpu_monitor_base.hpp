@@ -38,13 +38,6 @@ public:
    */
   virtual void update();
 
-  /**
-   * @brief Terminate the node, log final statements. An independent function is preferred to allow
-   * an explicit way to operate actions that require a valid rclcpp context. By default this method
-   * does nothing.
-   */
-  virtual void shut_down();
-
 protected:
   using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
 
@@ -68,6 +61,13 @@ protected:
    * @brief destructor
    */
   virtual ~GPUMonitorBase();
+
+  /**
+   * @brief Terminate the node, log final statements. An independent function is preferred to allow
+   * an explicit way to operate actions that require a valid rclcpp context. By default this method
+   * does nothing.
+   */
+  virtual void shut_down();
 
   /**
    * @brief check GPU temperature

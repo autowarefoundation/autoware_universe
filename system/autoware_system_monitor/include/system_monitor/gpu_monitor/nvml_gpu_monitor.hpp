@@ -68,6 +68,7 @@ public:
    */
   ~GPUMonitor() override;
 
+protected:
   /**
    * @brief Terminate the node, log final statements. An independent function is preferred to allow
    * an explicit way to operate actions that require a valid rclcpp context. By default this method
@@ -75,7 +76,6 @@ public:
    */
   void shut_down() override;
 
-protected:
   /**
    * @brief check GPU temperature
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
