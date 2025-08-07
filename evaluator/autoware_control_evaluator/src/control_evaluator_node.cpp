@@ -261,7 +261,7 @@ void ControlEvaluatorNode::AddBoundaryDistanceMetricMsg(
 
   if (behavior_path.left_bound.size() >= 1) {
     LineString2d left_boundary;
-    for (const auto & p : behavior_path.left_bound) left_boundary.push_back(Point2d(p.x, p.y));
+    for (const auto & p : behavior_path.left_bound) left_boundary.emplace_back(p.x, p.y);
     double distance_to_left_boundary =
       metrics::utils::calc_distance_to_line(current_vehicle_footprint, left_boundary);
 
@@ -274,7 +274,7 @@ void ControlEvaluatorNode::AddBoundaryDistanceMetricMsg(
 
   if (behavior_path.right_bound.size() >= 1) {
     LineString2d right_boundary;
-    for (const auto & p : behavior_path.right_bound) right_boundary.push_back(Point2d(p.x, p.y));
+    for (const auto & p : behavior_path.right_bound) right_boundary.emplace_back(p.x, p.y);
     double distance_to_right_boundary =
       metrics::utils::calc_distance_to_line(current_vehicle_footprint, right_boundary);
 
