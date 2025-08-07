@@ -28,16 +28,20 @@ autoware::multi_object_tracker::TrackerProcessorConfig createProcessorConfig()
 
   // Set tracker types for different object classes
   config.tracker_map = {
-    {autoware_perception_msgs::msg::ObjectClassification::CAR, "multi_vehicle_tracker"},
-    {autoware_perception_msgs::msg::ObjectClassification::TRUCK, "multi_vehicle_tracker"},
-    {autoware_perception_msgs::msg::ObjectClassification::BUS, "multi_vehicle_tracker"},
-    {autoware_perception_msgs::msg::ObjectClassification::TRAILER, "multi_vehicle_tracker"},
+    {autoware_perception_msgs::msg::ObjectClassification::CAR,
+     autoware::multi_object_tracker::TrackerType::MULTIPLE_VEHICLE},
+    {autoware_perception_msgs::msg::ObjectClassification::TRUCK,
+     autoware::multi_object_tracker::TrackerType::MULTIPLE_VEHICLE},
+    {autoware_perception_msgs::msg::ObjectClassification::BUS,
+     autoware::multi_object_tracker::TrackerType::MULTIPLE_VEHICLE},
+    {autoware_perception_msgs::msg::ObjectClassification::TRAILER,
+     autoware::multi_object_tracker::TrackerType::MULTIPLE_VEHICLE},
     {autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN,
-     "pedestrian_and_bicycle_tracker"},
+     autoware::multi_object_tracker::TrackerType::PEDESTRIAN_AND_BICYCLE},
     {autoware_perception_msgs::msg::ObjectClassification::BICYCLE,
-     "pedestrian_and_bicycle_tracker"},
+     autoware::multi_object_tracker::TrackerType::PEDESTRIAN_AND_BICYCLE},
     {autoware_perception_msgs::msg::ObjectClassification::MOTORCYCLE,
-     "pedestrian_and_bicycle_tracker"}};
+     autoware::multi_object_tracker::TrackerType::PEDESTRIAN_AND_BICYCLE}};
 
   // Set tracker lifetime and removal thresholds (from multi_object_tracker_node.param.yaml)
   config.tracker_lifetime = 1.0;                  // [s]

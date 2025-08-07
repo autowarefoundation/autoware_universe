@@ -36,6 +36,7 @@
 #include <boost/geometry/index/rtree.hpp>
 
 #include <list>
+#include <map>
 #include <memory>
 #include <unordered_map>
 #include <utility>
@@ -54,6 +55,8 @@ typedef std::pair<Point, size_t> ValueType;  // Point and tracker index
 
 struct AssociatorConfig
 {
+  std::map<autoware_perception_msgs::msg::ObjectClassification::_label_type, TrackerType>
+    tracker_map;
   Eigen::MatrixXi can_assign_matrix;
   Eigen::MatrixXd max_dist_matrix;
   Eigen::MatrixXd max_area_matrix;

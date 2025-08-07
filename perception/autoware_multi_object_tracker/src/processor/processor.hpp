@@ -40,10 +40,10 @@ using LabelType = autoware_perception_msgs::msg::ObjectClassification::_label_ty
 
 struct TrackerProcessorConfig
 {
-  std::map<LabelType, std::string> tracker_map;
-  float tracker_lifetime;                              // [s]
-  float min_known_object_removal_iou;                  // ratio [0, 1]
-  float min_unknown_object_removal_iou;                // ratio [0, 1]
+  std::map<LabelType, TrackerType> tracker_map;
+  float tracker_lifetime;                // [s]
+  float min_known_object_removal_iou;    // ratio [0, 1]
+  float min_unknown_object_removal_iou;  // ratio [0, 1]
   bool enable_unknown_object_velocity_estimation;
   bool enable_unknown_object_motion_output;
   std::map<LabelType, double> pruning_giou_thresholds;

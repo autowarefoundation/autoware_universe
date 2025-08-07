@@ -159,22 +159,42 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     // Parameters for processor
     TrackerProcessorConfig config;
     {
-      config.tracker_map.insert(
-        std::make_pair(Label::CAR, this->declare_parameter<std::string>("car_tracker")));
-      config.tracker_map.insert(
-        std::make_pair(Label::TRUCK, this->declare_parameter<std::string>("truck_tracker")));
-      config.tracker_map.insert(
-        std::make_pair(Label::BUS, this->declare_parameter<std::string>("bus_tracker")));
-      config.tracker_map.insert(
-        std::make_pair(Label::TRAILER, this->declare_parameter<std::string>("trailer_tracker")));
+      // convert string to TrackerType
+      auto getTrackerType = [](const std::string & tracker_name) -> TrackerType {
+        if (tracker_name == "multi_vehicle_tracker") return TrackerType::MULTIPLE_VEHICLE;
+        if (tracker_name == "pedestrian_and_bicycle_tracker")
+          return TrackerType::PEDESTRIAN_AND_BICYCLE;
+        if (tracker_name == "normal_vehicle_tracker") return TrackerType::NORMAL_VEHICLE;
+        if (tracker_name == "pedestrian_tracker") return TrackerType::PEDESTRIAN;
+        if (tracker_name == "big_vehicle_tracker") return TrackerType::BIG_VEHICLE;
+        if (tracker_name == "bicycle_tracker") return TrackerType::BICYCLE;
+        if (tracker_name == "pass_through_tracker") return TrackerType::PASS_THROUGH;
+        return TrackerType::UNKNOWN;
+      };
+
       config.tracker_map.insert(
         std::make_pair(
-          Label::PEDESTRIAN, this->declare_parameter<std::string>("pedestrian_tracker")));
-      config.tracker_map.insert(
-        std::make_pair(Label::BICYCLE, this->declare_parameter<std::string>("bicycle_tracker")));
+          Label::CAR, getTrackerType(this->declare_parameter<std::string>("car_tracker"))));
       config.tracker_map.insert(
         std::make_pair(
-          Label::MOTORCYCLE, this->declare_parameter<std::string>("motorcycle_tracker")));
+          Label::TRUCK, getTrackerType(this->declare_parameter<std::string>("truck_tracker"))));
+      config.tracker_map.insert(
+        std::make_pair(
+          Label::BUS, getTrackerType(this->declare_parameter<std::string>("bus_tracker"))));
+      config.tracker_map.insert(
+        std::make_pair(
+          Label::TRAILER, getTrackerType(this->declare_parameter<std::string>("trailer_tracker"))));
+      config.tracker_map.insert(
+        std::make_pair(
+          Label::PEDESTRIAN,
+          getTrackerType(this->declare_parameter<std::string>("pedestrian_tracker"))));
+      config.tracker_map.insert(
+        std::make_pair(
+          Label::BICYCLE, getTrackerType(this->declare_parameter<std::string>("bicycle_tracker"))));
+      config.tracker_map.insert(
+        std::make_pair(
+          Label::MOTORCYCLE,
+          getTrackerType(this->declare_parameter<std::string>("motorcycle_tracker"))));
 
       // Declare parameters
       config.tracker_lifetime = declare_parameter<double>("tracker_lifetime");
@@ -182,7 +202,6 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         declare_parameter<double>("min_known_object_removal_iou");
       config.min_unknown_object_removal_iou =
         declare_parameter<double>("min_unknown_object_removal_iou");
-
 
       // Declare parameters for generalized IoU threshold
       std::vector<double> pruning_giou_thresholds =
@@ -246,6 +265,9 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       // Set the unknown-unknown association GIoU threshold
       associator_config.unknown_association_giou_threshold =
         declare_parameter<double>("unknown_association_giou_threshold");
+
+      // Set the tracker map for associator config
+      associator_config.tracker_map = config.tracker_map;
     }
 
     // Initialize processor with parameters

@@ -42,11 +42,14 @@ namespace autoware::multi_object_tracker
 
 enum class TrackerType {
   PASS_THROUGH = 0,
-  PEDESTRIAN_AND_BICYCLE = 1,
-  PEDESTRIAN = 2,
-  MULTIPLE_VEHICLE = 3,
-  VEHICLE = 4,
-  UNKNOWN = 5,
+  PEDESTRIAN_AND_BICYCLE = 10,
+  PEDESTRIAN = 11,
+  BICYCLE = 12,
+  MULTIPLE_VEHICLE = 20,
+  NORMAL_VEHICLE = 21,
+  BIG_VEHICLE = 22,
+  VEHICLE = 23,
+  UNKNOWN = 30,
 };
 
 class Tracker
