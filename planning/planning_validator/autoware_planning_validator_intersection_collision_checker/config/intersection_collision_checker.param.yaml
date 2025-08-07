@@ -1,0 +1,47 @@
+/**:
+  ros__parameters:
+    icc_parameters:
+      enable: true
+      detection_range: 50.0 # [m]
+      ttc_threshold: 1.0 # [s]
+      ego_deceleration: 1.0 # [m/s^2]
+      min_time_horizon: 10.0 # [s]
+      on_time_buffer: 0.5 # [s]
+      off_time_buffer: 1.0 # [s]
+      close_distance_th: 3.0 # [m]
+      close_time_th: 3.0 # [s]
+
+      right_turn:
+        enable: true
+        check_crossing_lanes: true
+        check_turning_lanes: true
+        crossing_lane_angle_th: 0.785398 # [rad] (45 deg)
+
+      left_turn:
+        enable: true
+        check_turning_lanes: true
+
+      pointcloud:
+        height_buffer: 0.5  # [m]
+        min_height: 0.5  # [m]
+        voxel_grid_filter:
+          x: 0.2
+          y: 0.2
+          z: 0.2
+          min_size: 3
+        clustering:
+          tolerance: 0.5  #[m]
+          min_height: 0.5
+          min_size: 10
+          max_size: 10000
+        velocity_estimation:
+          max_acceleration: 20.0  # [m/s^2]
+          max_velocity: 25.0  # [m/s]
+          observation_time: 0.3  # [s]
+          max_history_time: 0.5  # [s]
+          buffer_size: 10
+        latency: 0.3
+
+      filter:
+        min_velocity: 1.0  # [m/s]
+        moving_time: 0.5  # [s]

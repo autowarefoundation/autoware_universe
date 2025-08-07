@@ -46,18 +46,21 @@ bool PedestrianAndBicycleTracker::measure(
 }
 
 bool PedestrianAndBicycleTracker::getTrackedObject(
-  const rclcpp::Time & time, types::DynamicObject & object) const
+  const rclcpp::Time & time, types::DynamicObject & object,
+  [[maybe_unused]] const bool to_publish) const
 {
   using Label = autoware_perception_msgs::msg::ObjectClassification;
   const uint8_t label = getHighestProbLabel();
 
-  if (label == Label::PEDESTRIAN) {
+  if (label == Label::BICYCLE || label == Label::MOTORCYCLE) {
+    bicycle_tracker_.getTrackedObject(time, object);
+  } else if (label == Label::PEDESTRIAN) {
     pedestrian_tracker_.getTrackedObject(time, object);
-  } else if (label == Label::BICYCLE || label == Label::MOTORCYCLE) {
+  } else {
+    // If the label is others, use the bicycle tracker as a fallback
     bicycle_tracker_.getTrackedObject(time, object);
   }
   object.uuid = object_.uuid;
-  object.classification = object_.classification;
   return true;
 }
 

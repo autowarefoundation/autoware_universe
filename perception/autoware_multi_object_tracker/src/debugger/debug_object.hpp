@@ -57,6 +57,7 @@ struct ObjectData
 
   // existence probabilities
   std::vector<float> existence_vector;
+  float total_existence_probability;
 
   // detection channel id
   uint channel_id;
@@ -74,8 +75,6 @@ private:
   const std::vector<types::InputChannel> channels_config_;
 
   visualization_msgs::msg::MarkerArray markers_;
-  std::unordered_set<int> current_ids_{};
-  std::unordered_set<int> previous_ids_{};
   rclcpp::Time message_time_;
 
   std::vector<ObjectData> object_data_list_;

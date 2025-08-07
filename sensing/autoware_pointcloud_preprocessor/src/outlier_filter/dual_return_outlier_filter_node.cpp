@@ -75,7 +75,7 @@ DualReturnOutlierFilterComponent::DualReturnOutlierFilterComponent(
   }
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
-    std::bind(&DualReturnOutlierFilterComponent::paramCallback, this, _1));
+    std::bind(&DualReturnOutlierFilterComponent::param_callback, this, _1));
 }
 
 void DualReturnOutlierFilterComponent::onVisibilityChecker(DiagnosticStatusWrapper & stat)
@@ -338,7 +338,7 @@ void DualReturnOutlierFilterComponent::filter(
   output.header = input->header;
 }
 
-rcl_interfaces::msg::SetParametersResult DualReturnOutlierFilterComponent::paramCallback(
+rcl_interfaces::msg::SetParametersResult DualReturnOutlierFilterComponent::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);

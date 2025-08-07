@@ -2,6 +2,49 @@
 Changelog for package autoware_behavior_path_start_planner_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(behavior_path_planner): organize a part of behavior path info/debug markers (`#10729 <https://github.com/autowarefoundation/autoware_universe/issues/10729>`_)
+  * feat(behavior_path_planner): organize a part of behavior path info/debug markers
+  * Update planning/behavior_path_planner/autoware_behavior_path_goal_planner_module/src/goal_planner_module.cpp
+  Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
+  * Update planning/behavior_path_planner/autoware_behavior_path_goal_planner_module/src/util.cpp
+  Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
+  ---------
+  Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
+* feat!: remove obstacle_stop_planner and obstacle_cruise_planner (`#10695 <https://github.com/autowarefoundation/autoware_universe/issues/10695>`_)
+  * feat: remove obstacle_stop_planner and obstacle_cruise_planner
+  * update
+  * fix
+  ---------
+* Contributors: TaikiYamada4, Takayuki Murooka
+
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* refactor(departure_checker): move lane departure checker class to departure_checker  (`#10337 <https://github.com/autowarefoundation/autoware_universe/issues/10337>`_)
+  * RT1-9640: separate lane departure checker library
+  * move back parameter
+  * separating parameters
+  * renamed to boundary departure checker
+  * pre-commit
+  * remove trajectory deviation
+  * rename namespace
+  * move boundary departure checker to common folder
+  * rename class name
+  ---------
+* feat(start_planner): add virtual stop detail (`#10573 <https://github.com/autowarefoundation/autoware_universe/issues/10573>`_)
+  * feat(start_planner_module): add isInsideLanelets method to check vehicle footprint within lanelets
+  ---------
+* Contributors: Kyoichi Sugahara, TaikiYamada4, Zulfaqar Azmi
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

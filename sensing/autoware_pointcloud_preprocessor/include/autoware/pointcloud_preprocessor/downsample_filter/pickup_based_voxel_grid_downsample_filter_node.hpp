@@ -17,17 +17,24 @@
 
 #include "autoware/pointcloud_preprocessor/filter.hpp"
 
-#include <Eigen/Core>
-
-#include <pcl_conversions/pcl_conversions.h>
 #include <sensor_msgs/msg/point_cloud2.h>
 
-#include <algorithm>
-#include <cmath>
 #include <vector>
 
 namespace autoware::pointcloud_preprocessor
 {
+
+struct VoxelSize
+{
+  float x;
+  float y;
+  float z;
+};
+
+void downsample_with_voxel_grid(
+  const sensor_msgs::msg::PointCloud2 & input, const VoxelSize & voxel_size,
+  sensor_msgs::msg::PointCloud2 & output);
+
 /**
  * @class PickupBasedVoxelGridDownsampleFilterComponent
  * @brief A filter component for downsampling point clouds using a voxel grid approach.
@@ -44,18 +51,15 @@ protected:
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
 
 private:
-  float voxel_size_x_;  ///< The size of the voxel in the x dimension.
-  float voxel_size_y_;  ///< The size of the voxel in the y dimension.
-  float voxel_size_z_;  ///< The size of the voxel in the z dimension.
+  VoxelSize voxel_size_;  ///< The size of the voxel grid.
 
   /** \brief Parameter service callback result : needed to be hold */
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   /** \brief Parameter service callback */
-  rcl_interfaces::msg::SetParametersResult paramCallback(const std::vector<rclcpp::Parameter> & p);
+  rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> & p);
 
 public:
-  PCL_MAKE_ALIGNED_OPERATOR_NEW
   explicit PickupBasedVoxelGridDownsampleFilterComponent(const rclcpp::NodeOptions & options);
 };
 }  // namespace autoware::pointcloud_preprocessor

@@ -80,9 +80,13 @@ void AutonomousMode::update(bool transition)
   }
 }
 
-bool AutonomousMode::isModeChangeCompleted(
-  const Odometry & kinematics, const Trajectory & trajectory)
+bool AutonomousMode::isModeChangeCompleted(const InputData & input_data)
 {
+  if (!input_data.kinematics) return false;
+  if (!input_data.trajectory) return false;
+  const auto & kinematics = input_data.kinematics.value();
+  const auto & trajectory = input_data.trajectory.value();
+
   if (!check_engage_condition_) {
     return true;
   }
@@ -209,15 +213,16 @@ std::pair<bool, bool> AutonomousMode::hasDangerLateralAcceleration(
   return {has_large_lat_acc, has_large_lat_acc_diff};
 }
 
-bool AutonomousMode::isModeChangeAvailable(
-  const Odometry & kinematics, const Trajectory & trajectory,
-  const Control & trajectory_follower_control_cmd, const Control & control_cmd)
+bool AutonomousMode::isModeChangeAvailable(const InputData & input_data)
 {
-  if (!check_engage_condition_) {
-    setAllOk(debug_info_);
-    return true;
-  }
-
+  if (!input_data.kinematics) return false;
+  if (!input_data.trajectory) return false;
+  if (!input_data.trajectory_follower_control_cmd) return false;
+  if (!input_data.control_cmd) return false;
+  const auto & kinematics = input_data.kinematics.value();
+  const auto & trajectory = input_data.trajectory.value();
+  const auto & trajectory_follower_control_cmd = input_data.trajectory_follower_control_cmd.value();
+  const auto & control_cmd = input_data.control_cmd.value();
   const auto current_speed = kinematics.twist.twist.linear.x;
   const auto target_control_speed = control_cmd.longitudinal.velocity;
   const auto & param = engage_acceptable_param_;
@@ -229,6 +234,11 @@ bool AutonomousMode::isModeChangeAvailable(
       "stationary.");
     debug_info_ = DebugInfo{};  // all false
     return false;
+  }
+
+  if (!check_engage_condition_) {
+    setAllOk(debug_info_);
+    return true;
   }
 
   if (trajectory.points.size() < 2) {

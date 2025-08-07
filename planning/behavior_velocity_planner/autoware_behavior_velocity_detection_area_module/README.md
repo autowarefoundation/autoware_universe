@@ -12,16 +12,19 @@ This module is activated when there is a detection area on the target lane.
 
 ### Module Parameters
 
-| Parameter                           | Type   | Description                                                                                        |
-| ----------------------------------- | ------ | -------------------------------------------------------------------------------------------------- |
-| `use_dead_line`                     | bool   | [-] weather to use dead line or not                                                                |
-| `use_pass_judge_line`               | bool   | [-] weather to use pass judge line or not                                                          |
-| `state_clear_time`                  | double | [s] when the vehicle is stopping for certain time without incoming obstacle, move to STOPPED state |
-| `stop_margin`                       | double | [m] a margin that the vehicle tries to stop before stop_line                                       |
-| `dead_line_margin`                  | double | [m] ignore threshold that vehicle behind is collide with ego vehicle or not                        |
-| `hold_stop_margin_distance`         | double | [m] parameter for restart prevention (See Algorithm section)                                       |
-| `distance_to_judge_over_stop_line`  | double | [m] parameter for judging that the stop line has been crossed                                      |
-| `suppress_pass_judge_when_stopping` | bool   | [m] parameter for suppressing pass judge when stopping                                             |
+| Parameter                           | Type   | Description                                                                                                                                              |
+| ----------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `use_dead_line`                     | bool   | [-] weather to use dead line or not                                                                                                                      |
+| `use_pass_judge_line`               | bool   | [-] weather to use pass judge line or not                                                                                                                |
+| `state_clear_time`                  | double | [s] when the vehicle is stopping for certain time without incoming obstacle, move to STOPPED state                                                       |
+| `stop_margin`                       | double | [m] a margin that the vehicle tries to stop before stop_line                                                                                             |
+| `dead_line_margin`                  | double | [m] ignore threshold that vehicle behind is collide with ego vehicle or not                                                                              |
+| `use_max_acceleration`              | bool   | [-] whether to consider feasible stop distance based on maximum acceleration when inserting stop point                                                   |
+| `max_acceleration`                  | double | [m/s^2] maximum acceleration used to calculate feasible stop distance when `use_max_acceleration` is true                                                |
+| `hold_stop_margin_distance`         | double | [m] parameter for restart prevention (See Algorithm section)                                                                                             |
+| `distance_to_judge_over_stop_line`  | double | [m] parameter for judging that the stop line has been crossed                                                                                            |
+| `suppress_pass_judge_when_stopping` | bool   | [m] parameter for suppressing pass judge when stopping                                                                                                   |
+| `enable_detected_obstacle_logging`  | bool   | [-] enable/disable logging of detected obstacle positions, time elapsed since last detection, and ego vehicle position when ego-vehicle is in STOP state |
 
 ### Inner-workings / Algorithm
 
@@ -29,7 +32,7 @@ This module is activated when there is a detection area on the target lane.
 2. Inserts stop point l[m] in front of the stop line
 3. Inserts a pass judge point to a point where the vehicle can stop with a max deceleration
 4. Sets velocity as zero behind the stop line when the ego-vehicle is in front of the pass judge point
-5. If the ego vehicle has passed the pass judge point already, it doesn’t stop and pass through.
+5. If the ego vehicle has passed the pass judge point already, it doesn't stop and pass through.
 
 #### Flowchart
 
@@ -100,16 +103,22 @@ If it needs X meters (e.g. 0.5 meters) to stop once the vehicle starts moving du
 This module has parameter `hold_stop_margin_distance` in order to prevent from these redundant restart. If the vehicle is stopped within `hold_stop_margin_distance` meters from stop point of the module (\_front_to_stop_line < hold_stop_margin_distance), the module judges that the vehicle has already stopped for the module's stop point and plans to keep stopping current position even if the vehicle is stopped due to other factors.
 
 <figure markdown>
-  ![example](restart_prevention.svg){width=1000}
+  ![example](docs/restart_prevention.svg){width=1000}
   <figcaption>parameters</figcaption>
 </figure>
 
 <figure markdown>
-  ![example](restart.svg){width=1000}
+  ![example](docs/restart.svg){width=1000}
   <figcaption>outside the hold_stop_margin_distance</figcaption>
 </figure>
 
 <figure markdown>
-  ![example](keep_stopping.svg){width=1000}
+  ![example](docs/keep_stopping.svg){width=1000}
   <figcaption>inside the hold_stop_margin_distance</figcaption>
 </figure>
+
+#### Feasible stop distance
+
+If `use_max_acceleration` is _true_, the module ensures the vehicle can stop within the physical limit set by `max_acceleration`.
+
+Required braking distance: \(d*{req}=v^2/(2a*{max})\). If this exceeds the remaining distance to the stop line \(d*{stop}\), the stop point is shifted forward by \(d*{req}-d\_{stop}\). This adjustment is applied only once, when the module transitions to the STOP state.

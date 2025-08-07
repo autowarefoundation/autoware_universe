@@ -212,6 +212,9 @@ Time get_newer_stamp(const Time & stamp1, const Time & stamp2)
 
 }  // namespace util
 
+namespace autoware::traffic_light
+{
+
 autoware_perception_msgs::msg::TrafficLightGroupArray SignalMatchValidator::validateSignals(
   const TrafficSignalArray & perception_signals, const TrafficSignalArray & external_signals)
 {
@@ -240,8 +243,9 @@ autoware_perception_msgs::msg::TrafficLightGroupArray SignalMatchValidator::vali
     // We don't validate the pedestrian signals
     // TODO(TomohitoAndo): Validate pedestrian signals
     if (isPedestrianSignal(signal_id)) {
-      validated_signals.traffic_light_groups.emplace_back(util::get_highest_confidence_signal(
-        perception_result, external_result, external_priority_));
+      validated_signals.traffic_light_groups.emplace_back(
+        util::get_highest_confidence_signal(
+          perception_result, external_result, external_priority_));
 
       continue;
     }
@@ -291,3 +295,5 @@ bool SignalMatchValidator::isPedestrianSignal(const lanelet::Id & signal_id)
   return map_pedestrian_signal_regulatory_elements_set_.find(signal_id) !=
          map_pedestrian_signal_regulatory_elements_set_.end();
 }
+
+}  // namespace autoware::traffic_light

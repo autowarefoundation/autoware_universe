@@ -1,0 +1,11 @@
+<library path="tier4_perception_rviz_plugin">
+
+  <!-- Displays plugins -->
+
+  <class name="tier4_perception_rviz_plugin/DetectedObjectsWithFeature" type="autoware::rviz_plugins::object_detection::DetectedObjectsWithFeatureDisplay" base_class_type="rviz_common::Display">
+    <description>
+            Convert a DetectedObjectsWithFeature to markers and display them.
+    </description>
+    <message_type>tier4_perception_msgs/msg/DetectedObjectsWithFeature</message_type>
+  </class>
+</library>

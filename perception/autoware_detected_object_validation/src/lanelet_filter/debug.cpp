@@ -12,7 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "lanelet_filter.hpp"
+#include "lanelet_filter_base.hpp"
+
+#include <autoware_perception_msgs/msg/detected_object.hpp>
+#include <autoware_perception_msgs/msg/detected_objects.hpp>
+#include <autoware_perception_msgs/msg/tracked_object.hpp>
+#include <autoware_perception_msgs/msg/tracked_objects.hpp>
 
 #include <boost/geometry/algorithms/convex_hull.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
@@ -94,7 +99,8 @@ std::optional<visualization_msgs::msg::Marker> createPolygonMarker(
   return marker;
 }
 
-void ObjectLaneletFilterNode::publishDebugMarkers(
+template <typename ObjsMsgType, typename ObjMsgType>
+void ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::publishDebugMarkers(
   rclcpp::Time stamp, const LinearRing2d & hull, const std::vector<BoxAndLanelet> & lanelets)
 {
   using visualization_msgs::msg::Marker;
@@ -126,5 +132,12 @@ void ObjectLaneletFilterNode::publishDebugMarkers(
   }
   viz_pub_->publish(marker_array);
 }
+
+// explicit instantiation
+template class ObjectLaneletFilterBase<
+  autoware_perception_msgs::msg::DetectedObjects, autoware_perception_msgs::msg::DetectedObject>;
+template class ObjectLaneletFilterBase<
+  autoware_perception_msgs::msg::TrackedObjects, autoware_perception_msgs::msg::TrackedObject>;
+
 }  // namespace lanelet_filter
 }  // namespace autoware::detected_object_validation

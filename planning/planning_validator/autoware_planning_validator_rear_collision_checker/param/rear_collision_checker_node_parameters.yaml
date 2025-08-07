@@ -1,0 +1,183 @@
+rear_collision_checker_node:
+  common:
+    on_time_buffer:
+      type: double
+      validation:
+        gt_eq<>: [0.0]
+    off_time_buffer:
+      type: double
+      validation:
+        gt_eq<>: [0.0]
+
+    pointcloud:
+      range:
+        dead_zone:
+          type: double
+          validation:
+            gt_eq<>: [0.0]
+        buffer:
+          type: double
+          validation:
+            gt_eq<>: [0.0]
+      crop_box_filter:
+        x:
+          max:
+            type: double
+          min:
+            type: double
+        z:
+          max:
+            type: double
+          min:
+            type: double
+      voxel_grid_filter:
+        x:
+          type: double
+          validation:
+            gt<>: [0.0]
+        y:
+          type: double
+          validation:
+            gt<>: [0.0]
+        z:
+          type: double
+          validation:
+            gt<>: [0.0]
+      clustering:
+        cluster_tolerance:
+          type: double
+          validation:
+            gt<>: [0.0]
+        min_cluster_height:
+          type: double
+          validation:
+            gt<>: [0.0]
+        min_cluster_size:
+          type: int
+          validation:
+            gt<>: [0]
+        max_cluster_size:
+          type: int
+          validation:
+            gt<>: [0]
+      velocity_estimation:
+        observation_time:
+          type: double
+          validation:
+            gt_eq<>: [0.0]
+        max_acceleration:
+          type: double
+          validation:
+            gt_eq<>: [0.0]
+      latency:
+        type: double
+        validation:
+          gt_eq<>: [0.0]
+
+    filter:
+      min_velocity:
+        type: double
+      moving_time:
+        type: double
+
+    time_to_collision:
+      margin:
+        type: double
+        validation:
+          gt<>: [0.0]
+
+    ego:
+      reaction_time:
+        type: double
+        validation:
+          gt<>: [0.0]
+      min_velocity:
+        type: double
+        validation:
+          gt<>: [0.0]
+      max_velocity:
+        type: double
+        validation:
+          gt<>: [0.0]
+      max_acceleration:
+        type: double
+        validation:
+          gt<>: [0.0]
+      max_deceleration:
+        type: double
+      max_positive_jerk:
+        type: double
+        validation:
+          gt<>: [0.0]
+      max_negative_jerk:
+        type: double
+      nominal_deceleration:
+        type: double
+      nominal_positive_jerk:
+        type: double
+        validation:
+          gt<>: [0.0]
+      nominal_negative_jerk:
+        type: double
+
+    blind_spot:
+      lookahead_time:
+        type: double
+        validation:
+          gt<>: [0.0]
+      metric:
+        type: string
+        validation:
+          one_of<>: [[ttc, rss]]
+      check:
+        front:
+          type: bool
+        left:
+          type: bool
+        right:
+          type: bool
+      offset:
+        inner:
+          type: double
+        outer:
+          type: double
+      participants:
+        reaction_time:
+          type: double
+          validation:
+            gt<>: [0.0]
+        max_velocity:
+          type: double
+          validation:
+            gt<>: [0.0]
+        max_deceleration:
+          type: double
+
+    adjacent_lane:
+      lookahead_time:
+        type: double
+        validation:
+          gt<>: [0.0]
+      metric:
+        type: string
+        validation:
+          one_of<>: [[ttc, rss]]
+      check:
+        front:
+          type: bool
+      offset:
+        left:
+          type: double
+        right:
+          type: double
+      participants:
+        reaction_time:
+          type: double
+          validation:
+            gt<>: [0.0]
+        max_velocity:
+          type: double
+          validation:
+            gt<>: [0.0]
+        max_deceleration:
+          type: double

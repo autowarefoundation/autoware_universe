@@ -26,7 +26,7 @@ namespace autoware::cuda_pointcloud_preprocessor
 
 // TODO(knzo25): this checks already exists within the pointcloud_preprocessor. After this PR is
 // merged I will move it somewhere all classes that require checks can access it
-bool is_data_layout_compatible_with_point_xyzircaedt(
+[[nodiscard]] inline bool is_data_layout_compatible_with_point_xyzircaedt(
   const std::vector<sensor_msgs::msg::PointField> & fields)
 {
   if (fields.size() != 10) {
@@ -85,7 +85,6 @@ bool is_data_layout_compatible_with_point_xyzircaedt(
   same_layout &= field_time_stamp.count == 1;
   return same_layout;
 }
-
 }  // namespace autoware::cuda_pointcloud_preprocessor
 
 #endif  // AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__MEMORY_HPP_

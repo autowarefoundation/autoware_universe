@@ -1,0 +1,54 @@
+/**:
+  ros__parameters:
+    trajectory_checker:
+      interval:
+        enable: true
+        threshold: 100.0
+      curvature:
+        enable: true
+        threshold: 1.0
+      relative_angle:
+        enable: true
+        threshold: 2.0 # (= 115 degree)
+      lateral_accel:
+        enable: true
+        threshold: 9.8
+      min_lon_accel:
+        enable: true
+        threshold: -9.8
+      max_lon_accel:
+        enable: true
+        threshold: 9.8
+      lateral_jerk:
+        enable: true
+        threshold: 7.0
+      steering:
+        enable: true
+        threshold: 1.414
+      steering_rate:
+        enable: true
+        threshold: 10.0
+      distance_deviation:
+        enable: true
+        threshold: 100.0
+      lon_distance_deviation:
+        enable: true
+        threshold: 1.0
+      velocity_deviation:
+        enable: true
+        threshold: 100.0
+      yaw_deviation:
+        enable: true
+        threshold: 1.5708 # (= 90 degrees)
+        th_trajectory_yaw_shift: 0.1  # [rad] yaw deviation is only checked if the nearest yaw jumped by more than this value between the previous and current trajectory
+      forward_trajectory_length:
+        enable: true
+        acceleration: -3.0
+        margin: 2.0
+      trajectory_shift:
+        enable: true
+        lat_shift_th: 0.5
+        forward_shift_th: 1.0
+        backward_shift_th: 0.1
+        handling_type: 2  # handling types are defined in common planning validator parameters
+        override_error_diag: true

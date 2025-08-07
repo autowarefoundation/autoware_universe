@@ -34,8 +34,10 @@ LocalizationEvaluatorNode::LocalizationEvaluatorNode(const rclcpp::NodeOptions &
   tf_buffer_ptr_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ptr_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_ptr_);
 
-  sync_.registerCallback(std::bind(
-    &LocalizationEvaluatorNode::syncCallback, this, std::placeholders::_1, std::placeholders::_2));
+  sync_.registerCallback(
+    std::bind(
+      &LocalizationEvaluatorNode::syncCallback, this, std::placeholders::_1,
+      std::placeholders::_2));
 
   output_file_str_ = declare_parameter<std::string>("output_file");
   if (output_file_str_.empty()) {

@@ -38,6 +38,11 @@ struct IntersectionStopLines
   std::optional<size_t> default_stopline{std::nullopt};
 
   /**
+   * collision_stopline is ahead of closest_idx by the braking distance
+   */
+  size_t collision_stopline{0};
+
+  /**
    * first_attention_stopline is null if ego footprint along the path does not intersect with
    * attention area. if path[0] satisfies the condition, it is 0
    */
@@ -71,6 +76,13 @@ struct IntersectionStopLines
    * the centerline of the first_attention_lane
    */
   size_t occlusion_wo_tl_pass_judge_line{0};
+
+  /**
+   * maximum_footprint_overshoot_line is the place after first_attention_stopline where ego's
+   * footprint most gets close to the left/right boundary of assigned_lane when ego is turning
+   * right/left respectively
+   */
+  std::optional<size_t> maximum_footprint_overshoot_line{std::nullopt};
 };
 }  // namespace autoware::behavior_velocity_planner
 

@@ -40,9 +40,23 @@
           "type": "boolean",
           "description": "if true, remove points within the box from the pointcloud; otherwise, remove points outside the box.",
           "default": "false"
+        },
+        "processing_time_threshold_sec": {
+          "type": "number",
+          "description": "Threshold in seconds. If the processing time of the node exceeds this value, a diagnostic warning will be issued.",
+          "default": 0.01
         }
       },
-      "required": ["min_x", "min_y", "min_z", "max_x", "max_y", "max_z", "negative"],
+      "required": [
+        "min_x",
+        "min_y",
+        "min_z",
+        "max_x",
+        "max_y",
+        "max_z",
+        "negative",
+        "processing_time_threshold_sec"
+      ],
       "additionalProperties": false
     }
   },

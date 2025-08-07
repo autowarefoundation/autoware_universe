@@ -1,14 +1,60 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
-  <arg name="selected_input_channels" default="['detected_objects']"/>
-  <arg name="output" default="objects"/>
+  <arg name="input/detection01/objects" default="input/objects01"/>
+  <arg name="input/detection01/channel" default="none"/>
+  <arg name="input/detection02/objects" default="input/objects02"/>
+  <arg name="input/detection02/channel" default="none"/>
+  <arg name="input/detection03/objects" default="input/objects03"/>
+  <arg name="input/detection03/channel" default="none"/>
+  <arg name="input/detection04/objects" default="input/objects04"/>
+  <arg name="input/detection04/channel" default="none"/>
+  <arg name="input/detection05/objects" default="input/objects05"/>
+  <arg name="input/detection05/channel" default="none"/>
+  <arg name="input/detection06/objects" default="input/objects06"/>
+  <arg name="input/detection06/channel" default="none"/>
+  <arg name="input/detection07/objects" default="input/objects07"/>
+  <arg name="input/detection07/channel" default="none"/>
+  <arg name="input/detection08/objects" default="input/objects08"/>
+  <arg name="input/detection08/channel" default="none"/>
+  <arg name="input/detection09/objects" default="input/objects09"/>
+  <arg name="input/detection09/channel" default="none"/>
+  <arg name="input/detection10/objects" default="input/objects10"/>
+  <arg name="input/detection10/channel" default="none"/>
+  <arg name="input/detection11/objects" default="input/objects11"/>
+  <arg name="input/detection11/channel" default="none"/>
+  <arg name="input/detection12/objects" default="input/objects12"/>
+  <arg name="input/detection12/channel" default="none"/>
+  <arg name="output/objects" default="objects"/>
   <arg name="tracker_setting_path" default="$(find-pkg-share autoware_multi_object_tracker)/config/multi_object_tracker_node.param.yaml"/>
   <arg name="data_association_matrix_path" default="$(find-pkg-share autoware_multi_object_tracker)/config/data_association_matrix.param.yaml"/>
   <arg name="input_channels_path" default="$(find-pkg-share autoware_multi_object_tracker)/config/input_channels.param.yaml"/>
 
   <node pkg="autoware_multi_object_tracker" exec="multi_object_tracker_node" name="multi_object_tracker" output="both">
-    <param name="selected_input_channels" value="$(var selected_input_channels)"/>
-    <remap from="output" to="$(var output)"/>
+    <param name="input/detection01/objects" value="$(var input/detection01/objects)"/>
+    <param name="input/detection01/channel" value="$(var input/detection01/channel)"/>
+    <param name="input/detection02/objects" value="$(var input/detection02/objects)"/>
+    <param name="input/detection02/channel" value="$(var input/detection02/channel)"/>
+    <param name="input/detection03/objects" value="$(var input/detection03/objects)"/>
+    <param name="input/detection03/channel" value="$(var input/detection03/channel)"/>
+    <param name="input/detection04/objects" value="$(var input/detection04/objects)"/>
+    <param name="input/detection04/channel" value="$(var input/detection04/channel)"/>
+    <param name="input/detection05/objects" value="$(var input/detection05/objects)"/>
+    <param name="input/detection05/channel" value="$(var input/detection05/channel)"/>
+    <param name="input/detection06/objects" value="$(var input/detection06/objects)"/>
+    <param name="input/detection06/channel" value="$(var input/detection06/channel)"/>
+    <param name="input/detection07/objects" value="$(var input/detection07/objects)"/>
+    <param name="input/detection07/channel" value="$(var input/detection07/channel)"/>
+    <param name="input/detection08/objects" value="$(var input/detection08/objects)"/>
+    <param name="input/detection08/channel" value="$(var input/detection08/channel)"/>
+    <param name="input/detection09/objects" value="$(var input/detection09/objects)"/>
+    <param name="input/detection09/channel" value="$(var input/detection09/channel)"/>
+    <param name="input/detection10/objects" value="$(var input/detection10/objects)"/>
+    <param name="input/detection10/channel" value="$(var input/detection10/channel)"/>
+    <param name="input/detection11/objects" value="$(var input/detection11/objects)"/>
+    <param name="input/detection11/channel" value="$(var input/detection11/channel)"/>
+    <param name="input/detection12/objects" value="$(var input/detection12/objects)"/>
+    <param name="input/detection12/channel" value="$(var input/detection12/channel)"/>
+    <remap from="output/objects" to="$(var output/objects)"/>
     <param from="$(var tracker_setting_path)"/>
     <param from="$(var data_association_matrix_path)"/>
     <param from="$(var input_channels_path)"/>

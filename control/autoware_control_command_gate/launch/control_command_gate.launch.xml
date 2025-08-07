@@ -1,0 +1,26 @@
+<launch>
+  <arg name="config" default="$(find-pkg-share autoware_control_command_gate)/config/default.param.yaml"/>
+  <arg name="output/control" default="/control/command/control_cmd"/>
+  <arg name="output/gear" default="/control/command/gear_cmd"/>
+  <arg name="output/turn_indicators" default="/control/command/turn_indicators_cmd"/>
+  <arg name="output/hazard_lights" default="/control/command/hazard_lights_cmd"/>
+  <arg name="inputs/main/control" default="/control/trajectory_follower/control_cmd"/>
+  // Confirm that "main" is listed in config input_names
+  <arg name="inputs/main/gear" default="/control/shift_decider/gear_cmd"/>
+  // Confirm that "main" is listed in config input_names
+  <arg name="inputs/main/hazard_lights" default="/planning/hazard_lights_cmd"/>
+  // Confirm that "main" is listed in config input_names
+  <arg name="inputs/main/turn_indicators" default="/planning/turn_indicators_cmd"/>
+  // Confirm that "main" is listed in config input_names
+  <node pkg="autoware_control_command_gate" exec="control_command_gate_node">
+    <param from="$(var config)"/>
+    <remap from="~/output/control" to="$(var output/control)"/>
+    <remap from="~/output/gear" to="$(var output/gear)"/>
+    <remap from="~/output/turn_indicators" to="$(var output/turn_indicators)"/>
+    <remap from="~/output/hazard_lights" to="$(var output/hazard_lights)"/>
+    <remap from="~/inputs/main/control" to="$(var inputs/main/control)"/>
+    <remap from="~/inputs/main/gear" to="$(var inputs/main/gear)"/>
+    <remap from="~/inputs/main/hazard_lights" to="$(var inputs/main/hazard_lights)"/>
+    <remap from="~/inputs/main/turn_indicators" to="$(var inputs/main/turn_indicators)"/>
+  </node>
+</launch>

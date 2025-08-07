@@ -43,8 +43,8 @@ using autoware_utils::ScopedTimeTrack;
 RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
 : FusionNode<ClusterMsgType, RoiMsgType, ClusterMsgType>("roi_cluster_fusion", options)
 {
-  trust_object_iou_mode_ = declare_parameter<std::string>("trust_object_iou_mode");
-  non_trust_object_iou_mode_ = declare_parameter<std::string>("non_trust_object_iou_mode");
+  strict_iou_match_mode_ = declare_parameter<std::string>("strict_iou_match_mode");
+  rough_iou_match_mode_ = declare_parameter<std::string>("rough_iou_match_mode");
   use_cluster_semantic_type_ = declare_parameter<bool>("use_cluster_semantic_type");
   only_allow_inside_cluster_ = declare_parameter<bool>("only_allow_inside_cluster");
   roi_scale_factor_ = declare_parameter<double>("roi_scale_factor");
@@ -52,7 +52,7 @@ RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
   unknown_iou_threshold_ = declare_parameter<double>("unknown_iou_threshold");
   remove_unknown_ = declare_parameter<bool>("remove_unknown");
   fusion_distance_ = declare_parameter<double>("fusion_distance");
-  trust_object_distance_ = declare_parameter<double>("trust_object_distance");
+  strict_iou_fusion_distance_ = declare_parameter<double>("strict_iou_fusion_distance");
 
   // publisher
   pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
@@ -87,18 +87,23 @@ void RoiClusterFusionNode::fuse_on_single_image(
   geometry_msgs::msg::TransformStamped transform_stamped;
   {
     const auto transform_stamped_optional = getTransformStamped(
-      tf_buffer_, /*target*/ camera_info.header.frame_id,
-      /*source*/ input_cluster_msg.header.frame_id, camera_info.header.stamp);
+      tf_buffer_, /*target*/ input_rois_msg.header.frame_id,
+      /*source*/ input_cluster_msg.header.frame_id, input_rois_msg.header.stamp);
     if (!transform_stamped_optional) {
       RCLCPP_WARN_STREAM(
         get_logger(), "Failed to get transform from " << input_cluster_msg.header.frame_id << " to "
-                                                      << camera_info.header.frame_id);
+                                                      << input_rois_msg.header.frame_id);
       return;
     }
     transform_stamped = transform_stamped_optional.value();
   }
 
   std::map<std::size_t, RegionOfInterest> m_cluster_roi;
+
+  std::vector<sensor_msgs::msg::RegionOfInterest> debug_image_rois;
+  std::vector<Eigen::Vector2d> debug_obstacle_points;
+  std::vector<sensor_msgs::msg::RegionOfInterest> debug_obstacle_rois;
+  std::vector<double> debug_max_iou_for_image_rois;
 
   for (std::size_t i = 0; i < input_cluster_msg.feature_objects.size(); ++i) {
     if (input_cluster_msg.feature_objects.at(i).feature.cluster.data.empty()) {
@@ -141,7 +146,7 @@ void RoiClusterFusionNode::fuse_on_single_image(
         max_y = std::max(py, max_y);
 
         projected_points.push_back(projected_point);
-        if (debugger_) debugger_->obstacle_points_.push_back(projected_point);
+        if (debugger_) debug_obstacle_points.push_back(projected_point);
       }
     }
     if (projected_points.empty()) {
@@ -154,7 +159,7 @@ void RoiClusterFusionNode::fuse_on_single_image(
     roi.width = max_x - min_x;
     roi.height = max_y - min_y;
     m_cluster_roi.insert(std::make_pair(i, roi));
-    if (debugger_) debugger_->obstacle_rois_.push_back(roi);
+    if (debugger_) debug_obstacle_rois.push_back(roi);
   }
 
   for (const auto & feature_obj : input_rois_msg.feature_objects) {
@@ -165,16 +170,16 @@ void RoiClusterFusionNode::fuse_on_single_image(
       feature_obj.object.classification.front().label != ObjectClassification::UNKNOWN;
     for (const auto & cluster_map : m_cluster_roi) {
       double iou(0.0);
-      bool is_use_non_trust_object_iou_mode = is_far_enough(
-        input_cluster_msg.feature_objects.at(cluster_map.first), trust_object_distance_);
+      bool use_rough_iou_match = is_far_enough(
+        input_cluster_msg.feature_objects.at(cluster_map.first), strict_iou_fusion_distance_);
       auto image_roi = feature_obj.feature.roi;
       auto cluster_roi = cluster_map.second;
       sanitizeROI(image_roi, camera_info.width, camera_info.height);
       sanitizeROI(cluster_roi, camera_info.width, camera_info.height);
-      if (is_use_non_trust_object_iou_mode || is_roi_label_known) {
-        iou = cal_iou_by_mode(cluster_roi, image_roi, non_trust_object_iou_mode_);
+      if (use_rough_iou_match || (!is_roi_label_known)) {
+        iou = cal_iou_by_mode(cluster_roi, image_roi, rough_iou_match_mode_);
       } else {
-        iou = cal_iou_by_mode(cluster_roi, image_roi, trust_object_iou_mode_);
+        iou = cal_iou_by_mode(cluster_roi, image_roi, strict_iou_match_mode_);
       }
 
       const bool passed_inside_cluster_gate =
@@ -205,12 +210,17 @@ void RoiClusterFusionNode::fuse_on_single_image(
           std::clamp(feature_obj.object.existence_probability, min_roi_existence_prob_, 1.0f);
       }
     }
-    if (debugger_) debugger_->image_rois_.push_back(feature_obj.feature.roi);
-    if (debugger_) debugger_->max_iou_for_image_rois_.push_back(max_iou);
+    if (debugger_) debug_image_rois.push_back(feature_obj.feature.roi);
+    if (debugger_) debug_max_iou_for_image_rois.push_back(max_iou);
   }
 
   // note: debug objects are safely cleared in fusion_node.cpp
+  // TODO(badai-nguyen): revise the shared debugger_ usage
   if (debugger_) {
+    debugger_->image_rois_ = debug_image_rois;
+    debugger_->obstacle_rois_ = debug_obstacle_rois;
+    debugger_->obstacle_points_ = debug_obstacle_points;
+    debugger_->max_iou_for_image_rois_ = debug_max_iou_for_image_rois;
     debugger_->publishImage(det2d_status.id, input_rois_msg.header.stamp);
   }
 }

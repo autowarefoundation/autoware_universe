@@ -303,8 +303,9 @@ TEST_F(TestDynamicObstacleMethods, testCalculateLateralNearestPoint)
   for (size_t i = 0; i < lateral_nearest_points.size(); ++i) {
     const auto p = path.at(i);
     const auto curr_nearest_point = lateral_nearest_points.at(i);
-    auto deviation = std::abs(autoware_utils::calc_lateral_deviation(
-      p.point.pose, autoware_utils::create_point(curr_nearest_point.x, curr_nearest_point.y, 0)));
+    auto deviation = std::abs(
+      autoware_utils::calc_lateral_deviation(
+        p.point.pose, autoware_utils::create_point(curr_nearest_point.x, curr_nearest_point.y, 0)));
     EXPECT_DOUBLE_EQ(deviation, 0.0);
   }
 

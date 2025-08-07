@@ -38,7 +38,7 @@ private:
 
   void postprocess(const ClusterMsgType & output_cluster_msg, ClusterMsgType & output_msg) override;
 
-  std::string trust_object_iou_mode_{"iou"};
+  std::string strict_iou_match_mode_{"iou"};
   bool use_cluster_semantic_type_{false};
   bool only_allow_inside_cluster_{false};
   double roi_scale_factor_{1.1};
@@ -48,8 +48,8 @@ private:
     0.1;  // keep small value to lessen affect on merger object stage
   bool remove_unknown_;
   double fusion_distance_;
-  double trust_object_distance_;
-  std::string non_trust_object_iou_mode_{"iou_x"};
+  double strict_iou_fusion_distance_;
+  std::string rough_iou_match_mode_{"iou_x"};
 
   bool is_far_enough(const ClusterObjType & obj, const double distance_threshold);
   bool out_of_scope(const ClusterObjType & obj);

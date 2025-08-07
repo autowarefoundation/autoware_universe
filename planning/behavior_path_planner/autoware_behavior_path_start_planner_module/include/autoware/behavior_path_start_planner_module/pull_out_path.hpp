@@ -16,15 +16,23 @@
 #define AUTOWARE__BEHAVIOR_PATH_START_PLANNER_MODULE__PULL_OUT_PATH_HPP_
 
 #include "autoware/behavior_path_planner_common/utils/path_shifter/path_shifter.hpp"
+#include "autoware/behavior_path_start_planner_module/data_structs.hpp"
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
+#include <geometry_msgs/msg/point.hpp>
+#include <geometry_msgs/msg/pose.hpp>
 
+#include <algorithm>
+#include <cmath>
+#include <limits>
 #include <utility>
 #include <vector>
 
 namespace autoware::behavior_path_planner
 {
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
+using geometry_msgs::msg::Pose;
+
 struct PullOutPath
 {
   std::vector<PathWithLaneId> partial_paths{};
@@ -33,5 +41,6 @@ struct PullOutPath
   Pose start_pose{};
   Pose end_pose{};
 };
+
 }  // namespace autoware::behavior_path_planner
 #endif  // AUTOWARE__BEHAVIOR_PATH_START_PLANNER_MODULE__PULL_OUT_PATH_HPP_

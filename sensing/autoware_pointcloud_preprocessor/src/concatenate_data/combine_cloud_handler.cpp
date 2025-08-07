@@ -126,6 +126,8 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
 
   for (const auto & [topic, cloud] : topic_to_cloud_map) {
     pc_stamps.emplace_back(cloud->header.stamp);
+    concatenate_cloud_result.topic_to_original_stamp_map[topic] =
+      rclcpp::Time(cloud->header.stamp).seconds();
   }
   std::sort(pc_stamps.begin(), pc_stamps.end(), std::greater<rclcpp::Time>());
   const auto oldest_stamp = pc_stamps.back();
@@ -135,6 +137,9 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
   // Before combining the pointclouds, initialize and reserve space for the concatenated pointcloud
   concatenate_cloud_result.concatenate_cloud_ptr =
     std::make_unique<sensor_msgs::msg::PointCloud2>();
+  concatenate_cloud_result.concatenation_info_ptr =
+    std::make_unique<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
+      concatenation_info_.reset_and_get_base_info());
   {
     // Normally, pcl::concatenatePointCloud() copies the field layout (e.g., XYZIRC)
     // from the non-empty point cloud when given one empty and one non-empty input.
@@ -166,9 +171,6 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
       output_frame_, *xyzirc_cloud, *transformed_cloud_ptr, xyzirc_cloud->header.stamp,
       rclcpp::Duration::from_seconds(1.0), node_.get_logger());
 
-    concatenate_cloud_result.topic_to_original_stamp_map[topic] =
-      rclcpp::Time(cloud->header.stamp).seconds();
-
     // compensate pointcloud
     std::unique_ptr<sensor_msgs::msg::PointCloud2> transformed_delay_compensated_cloud_ptr;
     if (is_motion_compensated_) {
@@ -186,6 +188,10 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
       pcl::concatenatePointCloud(
         *concatenate_cloud_result.concatenate_cloud_ptr, *transformed_delay_compensated_cloud_ptr,
         *concatenate_cloud_result.concatenate_cloud_ptr);
+      concatenation_info_.update_source_from_point_cloud(
+        *transformed_delay_compensated_cloud_ptr, topic,
+        autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
+        *concatenate_cloud_result.concatenation_info_ptr);
     }
 
     if (publish_synchronized_pointcloud_) {
@@ -218,6 +224,9 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
     }
   }
   concatenate_cloud_result.concatenate_cloud_ptr->header.stamp = oldest_stamp;
+  concatenation_info_.set_result(
+    *concatenate_cloud_result.concatenate_cloud_ptr,
+    *concatenate_cloud_result.concatenation_info_ptr);
 
   return concatenate_cloud_result;
 }

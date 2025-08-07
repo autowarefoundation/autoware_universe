@@ -6,8 +6,10 @@ on:
       container:
         required: true
         type: string
+      # Why is it a JSON string?
+      # https://github.com/orgs/community/discussions/11692#discussioncomment-3541856
       runner:
-        default: ubuntu-24.04
+        default: "['ubuntu-24.04']"
         required: false
         type: string
       rosdistro:
@@ -37,7 +39,7 @@ env:
 jobs:
   build-and-test-differential:
     if: ${{ inputs.run-condition }}
-    runs-on: ${{ inputs.runner }}
+    runs-on: ${{ fromJson(inputs.runner) }}
     container: ${{ inputs.container }}${{ inputs.container-suffix }}
     steps:
       - name: Set PR fetch depth
