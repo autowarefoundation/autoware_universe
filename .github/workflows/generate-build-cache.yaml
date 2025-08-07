@@ -1,0 +1,11 @@
+name: Generate build cache
+
+on:
+  workflow_dispatch:
+
+jobs:
+  generate-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
