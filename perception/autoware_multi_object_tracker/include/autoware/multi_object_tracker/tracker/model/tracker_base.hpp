@@ -111,7 +111,7 @@ public:
   float getKnownObjectProbability() const;
   double getPositionCovarianceDeterminant() const;
   virtual TrackerType getTrackerType() const { return tracker_type_; }
-  int getTrackerPriority() const { return static_cast<int>(tracker_type_); }
+  int getTrackerPriority() const { return static_cast<int>(getTrackerType()); }
 
   std::uint8_t getHighestProbLabel() const
   {
