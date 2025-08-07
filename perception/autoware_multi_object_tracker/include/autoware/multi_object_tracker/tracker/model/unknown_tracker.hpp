@@ -49,6 +49,8 @@ public:
     const rclcpp::Time & time, const types::DynamicObject & object,
     const bool enable_velocity_estimation, const bool enable_motion_output);
 
+  TrackerType tracker_type_{TrackerType::UNKNOWN};
+
   bool predict(const rclcpp::Time & time) override;
   bool measure(
     const types::DynamicObject & object, const rclcpp::Time & time,

@@ -40,8 +40,6 @@ namespace autoware::multi_object_tracker
 PedestrianTracker::PedestrianTracker(const rclcpp::Time & time, const types::DynamicObject & object)
 : Tracker(time, object), logger_(rclcpp::get_logger("PedestrianTracker"))
 {
-  Tracker::tracker_priority_ = 1; // VRU group
-
   if (object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
     // set default initial size
     auto & object_extension = object_.shape.dimensions;
@@ -206,7 +204,7 @@ bool PedestrianTracker::getTrackedObject(
     return true;
   }
 
-  object = Tracker::object_;
+  object = object_;
   object.time = time;
 
   // predict from motion model

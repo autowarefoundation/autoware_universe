@@ -45,6 +45,8 @@ public:
     const object_model::ObjectModel & object_model, const rclcpp::Time & time,
     const types::DynamicObject & object);
 
+  TrackerType tracker_type_{TrackerType::VEHICLE};
+
   bool predict(const rclcpp::Time & time) override;
   bool measure(
     const types::DynamicObject & object, const rclcpp::Time & time,

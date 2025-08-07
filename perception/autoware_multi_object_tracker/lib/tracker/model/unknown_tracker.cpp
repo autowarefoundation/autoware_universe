@@ -44,8 +44,6 @@ UnknownTracker::UnknownTracker(
   enable_velocity_estimation_(enable_velocity_estimation),
   enable_motion_output_(enable_motion_output)
 {
-  Tracker::tracker_priority_ = 3; // unknown group
-
   if (enable_velocity_estimation_) {
     // Set motion model parameters
     {
@@ -227,7 +225,7 @@ bool UnknownTracker::getTrackedObject(
   // else, allow extrapolation
 
   // get the object
-  object = Tracker::object_;
+  object = object_;
 
   if (enable_velocity_estimation_) {
     // predict from motion model

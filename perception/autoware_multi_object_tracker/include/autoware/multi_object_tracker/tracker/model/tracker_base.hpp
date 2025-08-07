@@ -40,6 +40,15 @@
 namespace autoware::multi_object_tracker
 {
 
+enum class TrackerType {
+  PASS_THROUGH = 0,
+  PEDESTRIAN_AND_BICYCLE = 1,
+  PEDESTRIAN = 2,
+  MULTIPLE_VEHICLE = 3,
+  VEHICLE = 4,
+  UNKNOWN = 5,
+};
+
 class Tracker
 {
 private:
@@ -98,7 +107,8 @@ public:
     const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
   float getKnownObjectProbability() const;
   double getPositionCovarianceDeterminant() const;
-  int getTrackerPriority() const { return tracker_priority_; }
+  TrackerType getTrackerType() const { return tracker_type_; }
+  int getTrackerPriority() const { return static_cast<int>(tracker_type_); }
 
   std::uint8_t getHighestProbLabel() const
   {
@@ -129,7 +139,7 @@ public:
 
 protected:
   types::DynamicObject object_;
-  int tracker_priority_{ 0 };  // lower the value, higher the priority
+  TrackerType tracker_type_{TrackerType::UNKNOWN};
 
   void updateCache(const types::DynamicObject & object, const rclcpp::Time & time) const
   {

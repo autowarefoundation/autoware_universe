@@ -34,6 +34,9 @@ private:
 
 public:
   PassThroughTracker(const rclcpp::Time & time, const types::DynamicObject & object);
+
+  TrackerType tracker_type_{TrackerType::PASS_THROUGH};
+
   bool predict(const rclcpp::Time & time) override;
   bool measure(
     const types::DynamicObject & object, const rclcpp::Time & time,
