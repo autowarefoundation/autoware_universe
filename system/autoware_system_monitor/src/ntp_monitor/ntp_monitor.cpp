@@ -51,7 +51,7 @@ NTPMonitor::NTPMonitor(const rclcpp::NodeOptions & options)
   chronyc_exists_ = (p.empty()) ? false : true;
 
   updater_.setHardwareID(hostname_);
-  updater_.add("NTP Offset", this, &NTPMonitor::checkOffset);
+  updater_.add(std::string(hostname_) + ": NTP Offset", this, &NTPMonitor::checkOffset);
 
   // Start timer to execute top command
   timer_callback_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);

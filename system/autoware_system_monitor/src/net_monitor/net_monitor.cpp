@@ -62,12 +62,16 @@ NetMonitor::NetMonitor(const rclcpp::NodeOptions & options)
 
   gethostname(hostname_, sizeof(hostname_));
   updater_.setHardwareID(hostname_);
-  updater_.add("Network Connection", this, &NetMonitor::check_connection);
-  updater_.add("Network Usage", this, &NetMonitor::check_usage);
-  updater_.add("Network Traffic", this, &NetMonitor::monitor_traffic);
-  updater_.add("Network CRC Error", this, &NetMonitor::check_crc_error);
-  updater_.add("IP Packet Reassembles Failed", this, &NetMonitor::check_reassembles_failed);
-  updater_.add("UDP Buf Errors", this, &NetMonitor::check_udp_buf_errors);
+  updater_.add(
+    std::string(hostname_) + ": Network Connection", this, &NetMonitor::check_connection);
+  updater_.add(std::string(hostname_) + ": Network Usage", this, &NetMonitor::check_usage);
+  updater_.add(std::string(hostname_) + ": Network Traffic", this, &NetMonitor::monitor_traffic);
+  updater_.add(std::string(hostname_) + ": Network CRC Error", this, &NetMonitor::check_crc_error);
+  updater_.add(
+    std::string(hostname_) + ": IP Packet Reassembles Failed", this,
+    &NetMonitor::check_reassembles_failed);
+  updater_.add(
+    std::string(hostname_) + ": UDP Buf Errors", this, &NetMonitor::check_udp_buf_errors);
 
   // Publisher
   rclcpp::QoS durable_qos{1};

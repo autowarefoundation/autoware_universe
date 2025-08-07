@@ -456,7 +456,7 @@ void ProcessMonitor::initialize()
   gethostname(hostname_, sizeof(hostname_));
 
   updater_.setHardwareID(hostname_);
-  updater_.add("Tasks Summary", this, &ProcessMonitor::monitorProcesses);
+  updater_.add(std::string(hostname_) + ": Tasks Summary", this, &ProcessMonitor::monitorProcesses);
 
   // As long as the number of processes is less than EXPECTED_NUM_PROCESSES,
   // the size of the maps can be a compile-time constant.
@@ -471,12 +471,14 @@ void ProcessMonitor::initialize()
   snapshot_ = std::make_unique<ProcessStatistics>();
 
   for (int32_t index = 0; index < getNumOfProcs(); ++index) {
-    auto task = std::make_shared<DiagTask>(fmt::format("High-load Proc[{}]", index));
+    auto task = std::make_shared<DiagTask>(
+      fmt::format(std::string(hostname_) + ": High-load Proc[{}]", index));
     load_tasks_.emplace_back(task);
     updater_.add(*task);  // The life of task is managed by load_tasks_.
   }
   for (int32_t index = 0; index < getNumOfProcs(); ++index) {
-    auto task = std::make_shared<DiagTask>(fmt::format("High-mem Proc[{}]", index));
+    auto task = std::make_shared<DiagTask>(
+      fmt::format(std::string(hostname_) + ": High-mem Proc[{}]", index));
     memory_tasks_.emplace_back(task);
     updater_.add(*task);  // The life of task is managed by memory_tasks_.
   }
