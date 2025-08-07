@@ -33,6 +33,7 @@ private:
   rclcpp::Logger logger_;
 
   object_model::ObjectModel object_model_ = object_model::pedestrian;
+  TrackerType tracker_type_{TrackerType::PEDESTRIAN};
 
   // cspell: ignore CTRV
   CTRVMotionModel motion_model_;
@@ -40,8 +41,6 @@ private:
 
 public:
   PedestrianTracker(const rclcpp::Time & time, const types::DynamicObject & object);
-
-  TrackerType tracker_type_{TrackerType::PEDESTRIAN};
 
   bool predict(const rclcpp::Time & time) override;
   bool measure(

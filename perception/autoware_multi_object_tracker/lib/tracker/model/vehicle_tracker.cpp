@@ -44,8 +44,8 @@ VehicleTracker::VehicleTracker(
   const object_model::ObjectModel & object_model, const rclcpp::Time & time,
   const types::DynamicObject & object)
 : Tracker(time, object),
-  object_model_(object_model),
   logger_(rclcpp::get_logger("VehicleTracker")),
+  object_model_(object_model),
   tracking_offset_(Eigen::Vector2d::Zero())
 {
   // set tracker type based on object model

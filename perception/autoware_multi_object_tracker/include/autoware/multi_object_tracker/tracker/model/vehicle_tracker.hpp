@@ -30,8 +30,10 @@ namespace autoware::multi_object_tracker
 class VehicleTracker : public Tracker
 {
 private:
-  object_model::ObjectModel object_model_;
   rclcpp::Logger logger_;
+
+  object_model::ObjectModel object_model_;
+  TrackerType tracker_type_{TrackerType::VEHICLE};
 
   double velocity_deviation_threshold_;
 
@@ -44,8 +46,6 @@ public:
   VehicleTracker(
     const object_model::ObjectModel & object_model, const rclcpp::Time & time,
     const types::DynamicObject & object);
-
-  TrackerType tracker_type_{TrackerType::VEHICLE};
 
   bool predict(const rclcpp::Time & time) override;
   bool measure(

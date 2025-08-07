@@ -34,6 +34,7 @@ private:
   rclcpp::Logger logger_;
 
   object_model::ObjectModel object_model_ = object_model::unknown;
+  TrackerType tracker_type_{TrackerType::UNKNOWN};
 
   CVMotionModel motion_model_;
   StaticMotionModel static_motion_model_;
@@ -48,8 +49,6 @@ public:
   UnknownTracker(
     const rclcpp::Time & time, const types::DynamicObject & object,
     const bool enable_velocity_estimation, const bool enable_motion_output);
-
-  TrackerType tracker_type_{TrackerType::UNKNOWN};
 
   bool predict(const rclcpp::Time & time) override;
   bool measure(
