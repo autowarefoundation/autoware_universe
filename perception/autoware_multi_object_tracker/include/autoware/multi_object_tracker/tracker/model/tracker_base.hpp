@@ -110,7 +110,7 @@ public:
     const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
   float getKnownObjectProbability() const;
   double getPositionCovarianceDeterminant() const;
-  TrackerType getTrackerType() const { return tracker_type_; }
+  virtual TrackerType getTrackerType() const { return tracker_type_; }
   int getTrackerPriority() const { return static_cast<int>(tracker_type_); }
 
   std::uint8_t getHighestProbLabel() const

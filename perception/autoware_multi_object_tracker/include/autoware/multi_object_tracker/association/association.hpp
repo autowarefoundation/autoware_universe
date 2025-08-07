@@ -91,6 +91,9 @@ private:
   // Cache of squared distances for each class pair to avoid sqrt in inner loop
   Eigen::MatrixXd squared_distance_matrix_;
 
+  // array of labels that can be assigned to each tracker type
+  std::map<TrackerType, std::array<bool, types::NUM_LABELS>> can_assign_map_;
+
   // Helper to compute max search distances from config
   void updateMaxSearchDistances();
 

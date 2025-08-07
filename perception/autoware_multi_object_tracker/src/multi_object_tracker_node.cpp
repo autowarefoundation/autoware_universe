@@ -195,6 +195,8 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         std::make_pair(
           Label::MOTORCYCLE,
           getTrackerType(this->declare_parameter<std::string>("motorcycle_tracker"))));
+      config.tracker_map.insert(
+        std::make_pair(Label::UNKNOWN, TrackerType::UNKNOWN));  // Default for unknown objects
 
       // Declare parameters
       config.tracker_lifetime = declare_parameter<double>("tracker_lifetime");
@@ -228,17 +230,31 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     AssociatorConfig associator_config;
     {
       auto initializeMatrixInt = [](const std::vector<int64_t> & vector) {
-        const int label_num = static_cast<int>(std::sqrt(vector.size()));
+        const int label_num = types::NUM_LABELS;
+        if (vector.size() != label_num * label_num) {
+          throw std::runtime_error("Invalid can_assign_matrix size");
+        }
         std::vector<int> converted_vector(vector.begin(), vector.end());
-        Eigen::Map<Eigen::MatrixXi> matrix_tmp(converted_vector.data(), label_num, label_num);
-        // transpose to make it row-major
-        return matrix_tmp.transpose();
+        // Use row-major mapping to match the YAML layout
+        using RowMajorMatrixXi =
+          Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+        Eigen::Map<RowMajorMatrixXi> matrix_tmp(converted_vector.data(), label_num, label_num);
+
+        // Convert to column-major (Eigen's default) for consistency
+        return Eigen::MatrixXi(matrix_tmp);
       };
       auto initializeMatrixDouble = [](const std::vector<double> & vector) {
-        const int label_num = static_cast<int>(std::sqrt(vector.size()));
-        Eigen::Map<const Eigen::MatrixXd> matrix_tmp(vector.data(), label_num, label_num);
-        // transpose to make it row-major
-        return matrix_tmp.transpose();
+        const int label_num = types::NUM_LABELS;
+        if (vector.size() != label_num * label_num) {
+          throw std::runtime_error("Invalid max_dist_matrix size");
+        }
+        // Use row-major mapping to match the YAML layout
+        using RowMajorMatrixXd =
+          Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+        Eigen::Map<const RowMajorMatrixXd> matrix_tmp(vector.data(), label_num, label_num);
+
+        // Convert to column-major (Eigen's default) for consistency
+        return Eigen::MatrixXd(matrix_tmp);
       };
       associator_config.can_assign_matrix =
         initializeMatrixInt(this->declare_parameter<std::vector<int64_t>>("can_assign_matrix"));

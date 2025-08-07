@@ -19,6 +19,7 @@
 
 #include "autoware/multi_object_tracker/tracker/model/vehicle_tracker.hpp"
 
+#include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
 
 #include <Eigen/Core>
@@ -47,6 +48,19 @@ VehicleTracker::VehicleTracker(
   logger_(rclcpp::get_logger("VehicleTracker")),
   tracking_offset_(Eigen::Vector2d::Zero())
 {
+  // set tracker type based on object model
+  if (object_model.type == object_model::ObjectModelType::NormalVehicle) {
+    tracker_type_ = TrackerType::NORMAL_VEHICLE;
+  } else if (object_model.type == object_model::ObjectModelType::BigVehicle) {
+    tracker_type_ = TrackerType::BIG_VEHICLE;
+  } else if (object_model.type == object_model::ObjectModelType::Bicycle) {
+    tracker_type_ = TrackerType::BICYCLE;
+  } else {
+    // not supported object model type
+    RCLCPP_ERROR(logger_, "Unsupported object model type: %d", static_cast<int>(object_model.type));
+    tracker_type_ = TrackerType::UNKNOWN;
+  }
+
   // velocity deviation threshold
   //   if the predicted velocity is close to the observed velocity,
   //   the observed velocity is used as the measurement.

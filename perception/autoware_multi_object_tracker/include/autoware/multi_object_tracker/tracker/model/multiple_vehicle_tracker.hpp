@@ -38,6 +38,7 @@ public:
   MultipleVehicleTracker(const rclcpp::Time & time, const types::DynamicObject & object);
 
   TrackerType tracker_type_{TrackerType::MULTIPLE_VEHICLE};
+  TrackerType getTrackerType() const { return TrackerType::MULTIPLE_VEHICLE; }
 
   bool predict(const rclcpp::Time & time) override;
   bool measure(
