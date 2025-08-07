@@ -270,32 +270,13 @@ void update_departure_intervals(
   merge_departure_intervals(departure_intervals);
 }
 
-void update_critical_departure_points(
+CriticalDeparturePoints find_new_critical_departure_points(
   const Side<DeparturePoints> & new_departure_points,
-  CriticalDeparturePoints & critical_departure_points,
+  const CriticalDeparturePoints & critical_departure_points,
   const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
-  const double th_point_merge_distance_m, const double offset_from_ego,
-  const double th_pt_shift_dist_m, const double th_pt_shift_angle_rad)
+  const double th_point_merge_distance_m)
 {
-  for (auto & crit_dpt_pt_mut : critical_departure_points) {
-    crit_dpt_pt_mut.dist_on_traj =
-      trajectory::closest(aw_ref_traj, crit_dpt_pt_mut.point_on_prev_traj);
-    if (crit_dpt_pt_mut.dist_on_traj < offset_from_ego) {
-      crit_dpt_pt_mut.can_be_removed = true;
-      continue;
-    }
-
-    const auto updated_point = aw_ref_traj.compute(crit_dpt_pt_mut.dist_on_traj);
-    if (
-      const auto is_shifted_opt = utils::is_point_shifted(
-        crit_dpt_pt_mut.point_on_prev_traj.pose, updated_point.pose, th_pt_shift_dist_m,
-        th_pt_shift_angle_rad)) {
-      crit_dpt_pt_mut.can_be_removed = true;
-    }
-  }
-  utils::remove_if(
-    critical_departure_points, [](const DeparturePoint & pt) { return pt.can_be_removed; });
-
+  CriticalDeparturePoints new_critical_departure_points;
   for (const auto side_key : g_side_keys) {
     for (const auto & dpt_pt : new_departure_points[side_key]) {
       if (dpt_pt.departure_type != DepartureType::CRITICAL_DEPARTURE) {
@@ -318,10 +299,10 @@ void update_critical_departure_points(
 
       CriticalDeparturePoint crit_pt(dpt_pt);
       crit_pt.point_on_prev_traj = aw_ref_traj.compute(crit_pt.dist_on_traj);
-      critical_departure_points.push_back(crit_pt);
+      new_critical_departure_points.push_back(crit_pt);
     }
   }
-  std::sort(critical_departure_points.begin(), critical_departure_points.end());
+  return new_critical_departure_points;
 }
 
 std::vector<std::tuple<Pose, Pose, double>> get_slow_down_intervals(
