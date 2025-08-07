@@ -14,6 +14,7 @@
 
 #include "node.hpp"
 
+#include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/update_param.hpp>
@@ -38,7 +39,6 @@
 #else
 #include <tf2_eigen/tf2_eigen.hpp>
 #endif
-#include <tf2/utils.h>
 
 #include <algorithm>
 #include <functional>
@@ -325,20 +325,9 @@ std::optional<StopObstacle> SurroundObstacleCheckerNode::getNearestObstacleByPoi
 
   if (was_minimum_distance_updated) {
     // transform the nearest point from base_link to map frame
-    const auto nearest_point_map = [&]() {
-      geometry_msgs::msg::Point nearest_point_map;
-      const auto & pose = odometry_ptr_->pose.pose;
-      const double cos_yaw = std::cos(tf2::getYaw(pose.orientation));
-      const double sin_yaw = std::sin(tf2::getYaw(pose.orientation));
-      const double x_rot =
-        cos_yaw * nearest_point_base_link.x - sin_yaw * nearest_point_base_link.y;
-      const double y_rot =
-        sin_yaw * nearest_point_base_link.x + cos_yaw * nearest_point_base_link.y;
-      nearest_point_map.x = x_rot + pose.position.x;
-      nearest_point_map.y = y_rot + pose.position.y;
-      nearest_point_map.z = nearest_point_base_link.z + pose.position.z;
-      return nearest_point_map;
-    }();
+    const auto & pose = odometry_ptr_->pose.pose;
+    const auto nearest_point_map =
+      autoware::universe_utils::transformPoint(nearest_point_base_link, pose);
 
     StopObstacle obstacle;
     obstacle.is_point_cloud = true;
