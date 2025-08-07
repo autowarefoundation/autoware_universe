@@ -67,7 +67,7 @@ bool ArrivalChecker::is_arrived(const PoseStamped & pose) const
   const double yaw_diff = autoware_utils::normalize_radian(yaw_pose - yaw_goal);
 
   // Adjust distance threshold if vehicle is past the goal
-  double distance_threshold = distance_; // Always initialize to normal value
+  double distance_threshold = distance_;  // Always initialize to normal value
   if (x_in_goal > 0.0) {
     // Vehicle is past the goal in the goal's heading direction
     distance_threshold = distance_past_goal_;
