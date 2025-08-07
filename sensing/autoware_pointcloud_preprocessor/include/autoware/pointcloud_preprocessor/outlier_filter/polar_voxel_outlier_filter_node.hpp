@@ -16,7 +16,6 @@
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__OUTLIER_FILTER__POLAR_VOXEL_OUTLIER_FILTER_NODE_HPP_
 
 #include "autoware/pointcloud_preprocessor/filter.hpp"
-#include "autoware/pointcloud_preprocessor/utility/memory.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -28,60 +27,44 @@
 
 #include <memory>
 #include <mutex>
+#include <optional>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 namespace autoware::pointcloud_preprocessor
 {
-
-// Forward declaration for PointProcessingResult
+// Forward declarations for structures used in extracted methods
+struct VoxelInfo;
+struct VoxelCounts;
 struct PointProcessingResult;
+struct PointCounts;
 
-using PointCloud2ConstPtr = sensor_msgs::msg::PointCloud2::ConstSharedPtr;
-using IndicesPtr = pcl::IndicesPtr;
-
-/** \brief Polar Voxel Outlier Filter Component
- * Filters outlier points by grouping points into polar voxels and removing voxels
- * with insufficient point density. Supports both PointXYZ and PointXYZIRCAEDT formats,
- * with advanced return type classification for LiDAR data.
- */
 class PolarVoxelOutlierFilterComponent : public autoware::pointcloud_preprocessor::Filter
 {
-protected:
-  void filter(
-    const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
+public:
+  explicit PolarVoxelOutlierFilterComponent(const rclcpp::NodeOptions & options);
 
-  OnSetParametersCallbackHandle::SharedPtr set_param_res_;
-  rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> & p);
-
-private:
-  /** \brief Structure to represent Cartesian coordinates */
+  // Custom coordinate types for type safety and self-documenting code
   struct CartesianCoordinate
   {
-    double x;
-    double y;
-    double z;
-
+    double x, y, z;
     CartesianCoordinate(double x_val, double y_val, double z_val) : x(x_val), y(y_val), z(z_val) {}
   };
 
-  /** \brief Structure to represent polar coordinates */
   struct PolarCoordinate
   {
-    double radius;
-    double azimuth;
-    double elevation;
-
-    PolarCoordinate(double r, double a, double e) : radius(r), azimuth(a), elevation(e) {}
+    double radius, azimuth, elevation;
+    PolarCoordinate(double radius_val, double azimuth_val, double elevation_val)
+    : radius(radius_val), azimuth(azimuth_val), elevation(elevation_val)
+    {
+    }
   };
 
-  /** \brief Structure to represent a polar voxel index */
   struct PolarVoxelIndex
   {
-    int32_t radius_idx;
-    int32_t azimuth_idx;
-    int32_t elevation_idx;
+    int32_t radius_idx, azimuth_idx, elevation_idx;
 
     bool operator==(const PolarVoxelIndex & other) const
     {
@@ -90,23 +73,111 @@ private:
     }
   };
 
-  /** \brief Hash function for PolarVoxelIndex */
   struct PolarVoxelIndexHash
   {
     std::size_t operator()(const PolarVoxelIndex & idx) const
     {
-      std::size_t h1 = std::hash<int32_t>{}(idx.radius_idx);
-      std::size_t h2 = std::hash<int32_t>{}(idx.azimuth_idx);
-      std::size_t h3 = std::hash<int32_t>{}(idx.elevation_idx);
-
-      return h1 ^ (h2 << 1) ^ (h3 << 2);
+      return std::hash<int32_t>{}(idx.radius_idx) ^ (std::hash<int32_t>{}(idx.azimuth_idx) << 1) ^
+             (std::hash<int32_t>{}(idx.elevation_idx) << 2);
     }
   };
 
-  // Thread safety
-  mutable std::mutex mutex_;
+private:
+  // Type aliases to eliminate long type name duplication
+  using VoxelCountMap = std::unordered_map<PolarVoxelIndex, VoxelCounts, PolarVoxelIndexHash>;
+  using VoxelIndexSet = std::unordered_set<PolarVoxelIndex, PolarVoxelIndexHash>;
+  using VoxelInfoVector = std::vector<std::optional<VoxelInfo>>;
+  using ValidPointsMask = std::vector<bool>;
 
-  // Filter parameters
+  // Processing context to eliminate parameter list duplication
+  struct ProcessingContext
+  {
+    const PointCloud2ConstPtr & input;
+    const ValidPointsMask & valid_points_mask;
+    const VoxelCountMap & voxel_counts;
+    const VoxelIndexSet & valid_voxels;
+  };
+
+  // Main filter method
+  void filter(
+    const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
+
+  // Main filtering functions
+  void filter_point_xyz(
+    const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output);
+  void filter_point_xyzircaedt(
+    const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output);
+
+  // Phase 1: Data collection methods
+  VoxelInfoVector collect_voxel_info_xyz(
+    const pcl::PointCloud<pcl::PointXYZ>::Ptr & pcl_input) const;
+  VoxelInfoVector collect_voxel_info_xyzircaedt(const PointCloud2ConstPtr & input) const;
+
+  // Phase 2: Voxel validation methods
+  VoxelCountMap count_voxels(const VoxelInfoVector & point_voxel_info) const;
+  VoxelIndexSet determine_valid_voxels_simple(const VoxelCountMap & voxel_counts) const;
+  VoxelIndexSet determine_valid_voxels_with_return_types(
+    const VoxelCountMap & voxel_counts, size_t & voxels_passed_secondary_test) const;
+
+  // Phase 3: Point filtering methods
+  ValidPointsMask create_valid_points_mask(
+    const VoxelInfoVector & point_voxel_info, const VoxelIndexSet & valid_voxels,
+    bool filter_secondary = false) const;
+
+  // Phase 4: Output creation methods
+  void create_filtered_output_xyz(
+    const pcl::PointCloud<pcl::PointXYZ>::Ptr & pcl_input,
+    const ValidPointsMask & valid_points_mask, PointCloud2 & output) const;
+
+  void create_filtered_output_xyzircaedt(
+    const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask,
+    PointCloud2 & output) const;
+
+  // Phase 5: Noise cloud publishing methods
+  void publish_noise_cloud_xyz(
+    const pcl::PointCloud<pcl::PointXYZ>::Ptr & pcl_input,
+    const ValidPointsMask & valid_points_mask, const VoxelInfoVector & point_voxel_info,
+    const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input) const;
+
+  void publish_noise_cloud_xyzircaedt(
+    const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask) const;
+
+  // Phase 6: Diagnostic publishing methods
+  void publish_diagnostics_simple(const ProcessingContext & context) const;
+  void publish_diagnostics_with_return_types(
+    const ProcessingContext & context, size_t voxels_passed_secondary_test) const;
+
+  // Common logic extraction methods
+  PointProcessingResult create_processing_result(
+    const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask,
+    const VoxelCountMap & voxel_counts, const VoxelIndexSet & valid_voxels,
+    size_t voxels_passed_secondary_test = 0) const;
+
+  sensor_msgs::msg::PointCloud2 create_noise_cloud(
+    const PointCloud2ConstPtr & input, size_t noise_count) const;
+
+  PointCounts calculate_point_counts(const ValidPointsMask & valid_points_mask) const;
+
+  void setup_output_header(
+    PointCloud2 & output, const PointCloud2ConstPtr & input, size_t valid_count) const;
+
+  // Helper functions
+  static PolarCoordinate cartesian_to_polar(const CartesianCoordinate & cartesian);
+  PolarVoxelIndex cartesian_to_polar_voxel(const CartesianCoordinate & cartesian) const;
+  PolarVoxelIndex polar_to_polar_voxel(const PolarCoordinate & polar) const;
+  bool is_primary_return_type(uint8_t return_type) const;
+  bool validate_point_basic(const PolarCoordinate & polar) const;
+
+  void publish_diagnostics(
+    const PointProcessingResult & result, bool has_return_type_classification);
+
+  // Parameter callback
+  rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> & p);
+
+  // Diagnostic functions
+  void on_visibility_check(diagnostic_updater::DiagnosticStatusWrapper & stat);
+  void on_filter_ratio_check(diagnostic_updater::DiagnosticStatusWrapper & stat);
+
   double radial_resolution_m_;
   double azimuth_resolution_rad_;
   double elevation_resolution_rad_;
@@ -116,58 +187,29 @@ private:
   bool use_return_type_classification_;
   bool filter_secondary_returns_;
   int secondary_noise_threshold_;
-  std::vector<int64_t> primary_return_types_;
+  std::vector<int> primary_return_types_;
   double visibility_error_threshold_;
   double visibility_warn_threshold_;
   double filter_ratio_error_threshold_;
   double filter_ratio_warn_threshold_;
 
-  // Metrics - using std::optional to avoid dummy values
-  std::optional<double> visibility_;
-  std::optional<double> filter_ratio_;
+  // State variables using std::optional for safe initialization
+  mutable std::optional<double> visibility_;
+  mutable std::optional<double> filter_ratio_;
 
-  // Diagnostics and publishers
-  diagnostic_updater::Updater updater_{this};
+  // Publishers
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr visibility_pub_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr ratio_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr noise_cloud_pub_;
 
-  /** \brief Filter using regular PointXYZ (compute polar coordinates) */
-  void filter_point_xyz(
-    const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output);
+  // Diagnostics
+  diagnostic_updater::Updater updater_;
 
-  /** \brief Filter using PointXYZIRCAEDT (use pre-computed polar coordinates) */
-  void filter_point_xyzircaedt(
-    const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output);
+  // Parameter callback handle
+  OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
-  /** \brief Convert Cartesian coordinates to polar voxel index */
-  PolarVoxelIndex cartesian_to_polar_voxel(const CartesianCoordinate & cartesian) const;
-
-  /** \brief Convert Cartesian point to polar coordinates */
-  static PolarCoordinate cartesian_to_polar(const CartesianCoordinate & cartesian);
-
-  /** \brief Convert pre-computed polar coordinates to voxel index */
-  PolarVoxelIndex polar_to_polar_voxel(const PolarCoordinate & polar) const;
-
-  /** \brief Check if return type is in primary returns list */
-  bool is_primary_return_type(uint8_t return_type) const;
-
-  /** \brief Diagnostics callback for visibility validation */
-  void on_visibility_check(diagnostic_updater::DiagnosticStatusWrapper & stat);
-
-  /** \brief Diagnostics callback for filter ratio validation */
-  void on_filter_ratio_check(diagnostic_updater::DiagnosticStatusWrapper & stat);
-
-  /** \brief Validate basic polar coordinate constraints */
-  bool validate_point_basic(const PolarCoordinate & polar) const;
-
-  /** \brief Publish processing diagnostics */
-  void publish_diagnostics(
-    const PointProcessingResult & result, bool has_return_type_classification);
-
-public:
-  PCL_MAKE_ALIGNED_OPERATOR_NEW
-  explicit PolarVoxelOutlierFilterComponent(const rclcpp::NodeOptions & options);
+  // Thread safety
+  mutable std::mutex mutex_;
 };
 }  // namespace autoware::pointcloud_preprocessor
 
