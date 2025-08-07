@@ -1,0 +1,58 @@
+/**:
+  ros__parameters:
+    detection_lane:
+      pointcloud:
+        range:
+          min: 80.0
+          max: 140.0
+        offset:
+          left: -0.3
+          right: -0.3
+        voxel_grid_filter:
+          x: 0.1
+          y: 0.1
+          z: 0.5
+        clustering:
+          cluster_tolerance: 0.5  #[m]
+          min_cluster_height: 0.1
+          min_cluster_size: 5
+          max_cluster_size: 10000
+        velocity_estimation:
+          observation_time: 0.3
+        latency: 0.3
+
+      filter:
+        min_velocity: 1.0
+
+      stop:
+        margin: 0.0
+        on_time_buffer: 1.0
+        off_time_buffer: 0.5
+        use_sudden_stop: true
+
+      hold:
+        margin: 0.0
+
+      dead_line:
+        enable: true
+        margin: 0.5
+
+      enable_rtc: false # If set to true, the scene modules require approval from the rtc (request to cooperate) function. If set to false, the modules can be executed without requiring rtc approval
+
+    intersection_names: [shiojiri, komatsu]
+
+    config:
+      shiojiri:
+        mgrs_grid: 53SQA
+        lane_id: 192
+        stop_line_id: 88642
+        lane_1st_ids: [53437, 53400, 53506]
+        ttc_threshold: 20.0
+
+      komatsu:
+        mgrs_grid: 53SPA
+        lane_id: 185
+        stop_line_id: 128271
+        lane_1st_ids: [128324, 128080, 128176, 128228, 128122, 128074, 128248, 176]
+        lane_2nd_ids: [128323, 128079, 128175, 128227, 128226, 128073, 128247, 175]
+        ttc_threshold: 20.0
