@@ -137,9 +137,10 @@ inline InverseCovariance2D precomputeInverseCovarianceFromPose(
   const std::array<double, 36> & pose_covariance)
 {
   // Step 1: Extract a, b, d directly from pose_covariance (no temporary Matrix2d)
-  const double a = pose_covariance[0];  // cov(0,0)
+  constexpr double minimum_cov = 0.25;  // 0.5 m to avoid too large mahalanobis distance
+  const double a = std::max(pose_covariance[0], minimum_cov);  // cov(0,0)
   const double b = pose_covariance[1];  // cov(0,1) == pose_covariance[6] (symmetry)
-  const double d = pose_covariance[7];  // cov(1,1)
+  const double d = std::max(pose_covariance[7], minimum_cov);  // cov(1,1)
 
   // Step 2: Compute determinant and inverse components in one pass
   const double det = a * d - b * b;
@@ -249,6 +250,17 @@ double DataAssociation::calculateScore(
 {
   if (!config_.can_assign_matrix(tracker_label, measurement_label)) {
     return 0.0;
+  }
+
+  // when the tracker and measurements are unknown, use generalized IoU
+  if (tracker_label == Label::UNKNOWN && measurement_label == Label::UNKNOWN) {
+    const double & generalized_iou_threshold = config_.unknown_association_giou_threshold;
+    const double generalized_iou = shapes::get2dGeneralizedIoU(tracked_object, measurement_object);
+    if (generalized_iou < generalized_iou_threshold) {
+      return 0.0;
+    }
+    // rescale score to [0, 1]
+    return (generalized_iou - generalized_iou_threshold) / (1.0 - generalized_iou_threshold);
   }
 
   // area gate

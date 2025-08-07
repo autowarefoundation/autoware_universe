@@ -3,11 +3,19 @@
     boundary_departure_prevention:
       boundary_types_to_detect: [road_border]
       th_max_lateral_query_num: 5
-      th_dist_hysteresis_m: 1.0
+      th_point_merge_distance_m: 1.0
       th_pt_shift:
         dist_m: 0.2
         angle_deg: 5.0
         goal_dist_m: 1.0
+
+      th_cutoff_time_s:
+        predicted_path: 3.5
+        near_boundary: 3.5
+        departure: 2.0
+
+      on_time_buffer_s: 0.15
+      off_time_buffer_s: 0.15
 
       abnormality:
         normal:

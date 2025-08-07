@@ -61,6 +61,28 @@ autoware::multi_object_tracker::TrackerProcessorConfig createProcessorConfig()
     config.confident_count_threshold[class_label] = 3;  // All classes have threshold 3
   }
 
+  // Generalized IoU threshold for each class
+  config.pruning_giou_thresholds = {
+    {autoware_perception_msgs::msg::ObjectClassification::UNKNOWN, -0.3},
+    {autoware_perception_msgs::msg::ObjectClassification::CAR, -0.4},
+    {autoware_perception_msgs::msg::ObjectClassification::TRUCK, -0.6},
+    {autoware_perception_msgs::msg::ObjectClassification::BUS, -0.6},
+    {autoware_perception_msgs::msg::ObjectClassification::TRAILER, -0.6},
+    {autoware_perception_msgs::msg::ObjectClassification::MOTORCYCLE, -0.1},
+    {autoware_perception_msgs::msg::ObjectClassification::BICYCLE, -0.1},
+    {autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN, -0.1}};
+
+  // overlap distance threshold for each class
+  config.pruning_distance_thresholds = {
+    {autoware_perception_msgs::msg::ObjectClassification::UNKNOWN, 9.0},
+    {autoware_perception_msgs::msg::ObjectClassification::CAR, 5.0},
+    {autoware_perception_msgs::msg::ObjectClassification::TRUCK, 9.0},
+    {autoware_perception_msgs::msg::ObjectClassification::BUS, 9.0},
+    {autoware_perception_msgs::msg::ObjectClassification::TRAILER, 9.0},
+    {autoware_perception_msgs::msg::ObjectClassification::MOTORCYCLE, 4.0},
+    {autoware_perception_msgs::msg::ObjectClassification::BICYCLE, 3.0},
+    {autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN, 2.0}};
+
   return config;
 }
 
@@ -105,8 +127,8 @@ autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig()
     36.00, 60.00, 60.00, 10000.00, 10000.00, 10000.00, 36.00, 12.10, 36.00, 60.00, 60.00, 10000.00,
     10000.00, 10000.00, 60.00, 12.10, 36.00, 60.00, 60.00, 10000.00, 10000.00, 10000.00, 60.00,
     12.10, 36.00, 60.00, 60.00, 10000.00, 10000.00, 10000.00, 2.50, 10000.00, 10000.00, 10000.00,
-    10000.00, 2.50, 2.50, 1.50, 2.50, 10000.00, 10000.00, 10000.00, 10000.00, 2.50, 2.50, 1.50,
-    2.00, 10000.00, 10000.00, 10000.00, 10000.00, 2.00, 2.00, 1.50;
+    10000.00, 2.50, 2.50, 2.50, 2.50, 10000.00, 10000.00, 10000.00, 10000.00, 2.50, 2.50, 2.50,
+    2.00, 10000.00, 10000.00, 10000.00, 10000.00, 2.00, 2.00, 2.00;
   config.max_area_matrix = max_area_matrix;
 
   // Initialize min_area_matrix (8x8) from data_association_matrix.param.yaml
@@ -140,6 +162,9 @@ autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig()
   // Pre-process matrices
   config.max_rad_matrix = config.max_rad_matrix.cwiseAbs();
   config.max_dist_matrix = config.max_dist_matrix.array().square();
+
+  config.unknown_association_giou_threshold =
+    -0.8;  // Default GIoU threshold for unknown-unknown association
 
   return config;
 }

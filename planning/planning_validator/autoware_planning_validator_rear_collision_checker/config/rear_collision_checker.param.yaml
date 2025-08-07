@@ -33,15 +33,8 @@
         min_velocity: 1.0                           # [m/s]
         moving_time: 0.5                            # [s]
 
-      vehicle:
-        reaction_time: 1.2                          # [s]
-        max_velocity: 16.6                          # [m/s] (60 km/h)
-        max_deceleration: -2.0                      # [m/s^2]
-
-      vulnerable_road_user:
-        reaction_time: 1.2                          # [s]
-        max_velocity: 5.5                           # [m/s] (20 km/h)
-        max_deceleration: -2.0                      # [m/s^2]
+      time_to_collision:
+        margin: 2.0                                 # [s]
 
       ego:
         reaction_time: 1.2                          # [s]
@@ -57,6 +50,7 @@
 
       blind_spot:
         lookahead_time: 4.0                         # [s]
+        metric: ttc
         check:
           front: false
           left: true
@@ -64,11 +58,20 @@
         offset:
           inner: 0.1                                # [m]
           outer: 0.3                                # [m]
+        participants:
+          reaction_time: 1.2                        # [s]
+          max_velocity: 5.5                         # [m/s] (20 km/h)
+          max_deceleration: -2.0                    # [m/s^2]
 
       adjacent_lane:
         lookahead_time: 4.0                         # [s]
+        metric: rss
         check:
           front: true
         offset:
           left: -0.5                                # [m]
           right: -0.5                               # [m]
+        participants:
+          reaction_time: 1.2                        # [s]
+          max_velocity: 16.6                        # [m/s] (60 km/h)
+          max_deceleration: -2.0                    # [m/s^2]

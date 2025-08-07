@@ -27,6 +27,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace autoware::planning_validator
 {
@@ -41,7 +42,7 @@ public:
   void init(
     rclcpp::Node & node, const std::string & name,
     const std::shared_ptr<PlanningValidatorContext> & context) override;
-  void validate(bool & is_critical) override;
+  void validate() override;
   void setup_diag() override;
   std::string get_module_name() const override { return module_name_; };
 
@@ -76,6 +77,8 @@ private:
     DebugData & debug_data, const rclcpp::Time & time_stamp,
     const PointCloud::Ptr & filtered_point_cloud, const TargetLanelet & target_lanelet) const;
 
+  void update_tracked_object(PCDObject & object, const PCDObject & new_data) const;
+
   void publish_markers(const DebugData & debug_data) const;
 
   void set_lanelets_debug_marker(const DebugData & debug_data) const;
@@ -83,6 +86,9 @@ private:
   void set_pcd_objects_debug_marker(const DebugData & debug_data) const;
 
   void publish_planning_factor(const DebugData & debug_data) const;
+
+  void set_diag_status(
+    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg) const;
 
   void reset_data()
   {
@@ -101,6 +107,7 @@ private:
 
   PCDObjectsMap history_;
   mutable TargetLaneletsMap target_lanelets_map_;
+  std::vector<lanelet::Id> collision_lanes_;
   rclcpp::Time last_invalid_time_;
   rclcpp::Time last_valid_time_;
 };
