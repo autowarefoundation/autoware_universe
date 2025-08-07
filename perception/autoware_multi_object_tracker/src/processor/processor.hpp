@@ -44,7 +44,6 @@ struct TrackerProcessorConfig
   float tracker_lifetime;                              // [s]
   float min_known_object_removal_iou;                  // ratio [0, 1]
   float min_unknown_object_removal_iou;                // ratio [0, 1]
-  std::map<LabelType, int> confident_count_threshold;  // [count]
   bool enable_unknown_object_velocity_estimation;
   bool enable_unknown_object_motion_output;
   std::map<LabelType, double> pruning_giou_thresholds;

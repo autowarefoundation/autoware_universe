@@ -57,10 +57,6 @@ autoware::multi_object_tracker::TrackerProcessorConfig createProcessorConfig()
       {"BICYCLE", autoware_perception_msgs::msg::ObjectClassification::BICYCLE},
       {"PEDESTRIAN", autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN}};
 
-  for (const auto & [class_name, class_label] : class_name_to_label) {
-    config.confident_count_threshold[class_label] = 3;  // All classes have threshold 3
-  }
-
   // Generalized IoU threshold for each class
   config.pruning_giou_thresholds = {
     {autoware_perception_msgs::msg::ObjectClassification::UNKNOWN, -0.3},

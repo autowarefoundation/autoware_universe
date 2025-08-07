@@ -183,18 +183,6 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       config.min_unknown_object_removal_iou =
         declare_parameter<double>("min_unknown_object_removal_iou");
 
-      // Map from class name to label
-      std::map<std::string, LabelType> class_name_to_label = {
-        {"UNKNOWN", Label::UNKNOWN}, {"CAR", Label::CAR},
-        {"TRUCK", Label::TRUCK},     {"BUS", Label::BUS},
-        {"TRAILER", Label::TRAILER}, {"MOTORBIKE", Label::MOTORCYCLE},
-        {"BICYCLE", Label::BICYCLE}, {"PEDESTRIAN", Label::PEDESTRIAN}};
-
-      // Declare parameters and initialize confident_count_threshold_map
-      for (const auto & [class_name, class_label] : class_name_to_label) {
-        int64_t value = declare_parameter<int64_t>("confident_count_threshold." + class_name);
-        config.confident_count_threshold[class_label] = static_cast<int>(value);
-      }
 
       // Declare parameters for generalized IoU threshold
       std::vector<double> pruning_giou_thresholds =
