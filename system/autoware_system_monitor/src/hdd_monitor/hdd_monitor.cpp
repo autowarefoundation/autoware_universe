@@ -73,6 +73,12 @@ HddMonitor::HddMonitor(const rclcpp::NodeOptions & options)
   // start HDD transfer measurement
   startHddTransferMeasurement();
 
+  // Publisher
+  rclcpp::QoS durable_qos{1};
+  durable_qos.transient_local();
+  pub_hdd_status_ =
+    this->create_publisher<tier4_external_api_msgs::msg::HddStatus>("~/hdd_status", durable_qos);
+
   timer_ = rclcpp::create_timer(this, get_clock(), 1s, std::bind(&HddMonitor::onTimer, this));
 }
 
@@ -243,6 +249,8 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
     return;
   }
 
+  hdd_partition_statuses_.clear();
+
   int hdd_index = 0;
   int whole_level = DiagStatus::OK;
   std::string error_str = "";
@@ -298,7 +306,12 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
     std::string line;
     int index = 0;
     std::vector<std::string> list;
+    std::string filesystem;
+    int size;
+    int used;
     int avail;
+    int capacity;
+    std::string mounted;
 
     while (std::getline(is_out, line) && !line.empty()) {
       // Skip header
@@ -308,13 +321,31 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
       }
 
       boost::split(list, line, boost::is_space(), boost::token_compress_on);
-
+      bool is_line_read_error = false;
       try {
-        avail = std::stoi(list[3].c_str());
+        filesystem = list.at(0);
+        size = std::stoi(list.at(1));
+        used = std::stoi(list.at(2));
+        avail = std::stoi(list.at(3));
+        std::string capacity_str = list.at(4);
+        if (!capacity_str.empty() && capacity_str.back() == '%') {
+          capacity_str.pop_back();
+        }
+        capacity = std::stoi(capacity_str);
+        mounted = list.at(5);
+        if (list.size() > 6) {
+          std::string::size_type pos = line.find("% /");
+          if (pos != std::string::npos) {
+            mounted = line.substr(pos + 2);  // 2 is "% " length
+          }
+        }
       } catch (std::exception & e) {
+        is_line_read_error = true;
+        size = -1;
+        used = -1;
         avail = -1;
+        capacity = -1;
         error_str = e.what();
-        stat.add(fmt::format("HDD {}: status", hdd_index), "avail string error");
       }
 
       if (avail <= itr->second.free_error_) {
@@ -325,20 +356,25 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
         level = DiagStatus::OK;
       }
 
-      stat.add(fmt::format("HDD {}: status", hdd_index), usage_dict_.at(level));
-      stat.add(fmt::format("HDD {}: filesystem", hdd_index), list[0].c_str());
-      stat.add(fmt::format("HDD {}: size", hdd_index), (list[1] + " MiB").c_str());
-      stat.add(fmt::format("HDD {}: used", hdd_index), (list[2] + " MiB").c_str());
-      stat.add(fmt::format("HDD {}: avail", hdd_index), (list[3] + " MiB").c_str());
-      stat.add(fmt::format("HDD {}: use", hdd_index), list[4].c_str());
-      std::string mounted_ = list[5];
-      if (list.size() > 6) {
-        std::string::size_type pos = line.find("% /");
-        if (pos != std::string::npos) {
-          mounted_ = line.substr(pos + 2);  // 2 is "% " length
-        }
+      if (is_line_read_error) {
+        stat.add(fmt::format("HDD {}: status", hdd_index), "string error");
+      } else {
+        stat.add(fmt::format("HDD {}: status", hdd_index), usage_dict_.at(level));
+        stat.add(fmt::format("HDD {}: filesystem", hdd_index), filesystem.c_str());
+        stat.add(fmt::format("HDD {}: size", hdd_index), fmt::format("{} MiB", size));
+        stat.add(fmt::format("HDD {}: used", hdd_index), fmt::format("{} MiB", used));
+        stat.add(fmt::format("HDD {}: avail", hdd_index), fmt::format("{} MiB", avail));
+        stat.add(fmt::format("HDD {}: use", hdd_index), fmt::format("{}", capacity));
+        stat.add(fmt::format("HDD {}: mounted on", hdd_index), mounted.c_str());
+
+        auto & hdd_partition_status = hdd_partition_statuses_.emplace_back();
+        hdd_partition_status.size = size;
+        hdd_partition_status.used = used;
+        hdd_partition_status.avail = avail;
+        hdd_partition_status.capacity = capacity;
+        hdd_partition_status.filesystem = filesystem;
+        hdd_partition_status.mounted_on = mounted;
       }
-      stat.add(fmt::format("HDD {}: mounted on", hdd_index), mounted_.c_str());
 
       whole_level = std::max(whole_level, level);
       ++index;
@@ -583,6 +619,8 @@ void HddMonitor::onTimer()
   updateHddConnections();
   updateHddInfoList();
   updateHddStatistics();
+
+  publishHddStatus();
 }
 
 void HddMonitor::updateHddInfoList()
@@ -923,6 +961,43 @@ int HddMonitor::unmountDevice(std::string & device)
     return -1;
   }
   return responses[0];
+}
+
+void HddMonitor::publishHddStatus()
+{
+  tier4_external_api_msgs::msg::HddStatus hdd_status;
+  hdd_status.stamp = this->now();
+  hdd_status.hostname = hostname_;
+
+  for (const auto & hdd_partition_status : hdd_partition_statuses_) {
+    auto & partition = hdd_status.partitions.emplace_back();
+    partition.size = hdd_partition_status.size;
+    partition.used = hdd_partition_status.used;
+    partition.avail = hdd_partition_status.avail;
+    partition.capacity = hdd_partition_status.capacity;
+    partition.filesystem = hdd_partition_status.filesystem;
+    partition.mounted_on = hdd_partition_status.mounted_on;
+  }
+
+  int index = 0;
+  for (auto itr = hdd_params_.begin(); itr != hdd_params_.end(); ++itr, ++index) {
+    if (!hdd_connected_flags_[itr->first]) {
+      continue;
+    }
+
+    float read_data_rate = hdd_stats_[itr->first].read_data_rate_MBs_;
+    float write_data_rate = hdd_stats_[itr->first].write_data_rate_MBs_;
+    float read_iops = hdd_stats_[itr->first].read_iops_;
+    float write_iops = hdd_stats_[itr->first].write_iops_;
+
+    auto & device = hdd_status.devices.emplace_back();
+    device.name = itr->second.disk_device_;
+    device.read_data_rate = read_data_rate;
+    device.write_data_rate = write_data_rate;
+    device.read_iops = read_iops;
+    device.write_iops = write_iops;
+  }
+  pub_hdd_status_->publish(hdd_status);
 }
 
 #include <rclcpp_components/register_node_macro.hpp>

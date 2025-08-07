@@ -174,6 +174,7 @@ struct PlanningValidatorContext
     data = std::make_shared<PlanningValidatorData>();
     validation_status = std::make_shared<PlanningValidatorStatus>();
     diag_updater = std::make_shared<Updater>(node);
+    init_validation_status();
   }
 
   autoware::vehicle_info_utils::VehicleInfo vehicle_info;
