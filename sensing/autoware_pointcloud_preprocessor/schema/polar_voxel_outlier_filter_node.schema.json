@@ -68,6 +68,11 @@
           },
           "default": "[1, 6, 10]"
         },
+        "publish_noise_cloud": {
+          "type": "boolean",
+          "description": "whether to generate and publish noise point cloud for debugging (default: false for performance optimization)",
+          "default": "false"
+        },
         "filter_ratio_error_threshold": {
           "type": "number",
           "description": "the filter ratio threshold for error diagnostics (ratio of output/input points)",
@@ -108,6 +113,7 @@
         "filter_secondary_returns",
         "secondary_noise_threshold",
         "primary_return_types",
+        "publish_noise_cloud",
         "filter_ratio_error_threshold",
         "filter_ratio_warn_threshold",
         "visibility_error_threshold",
