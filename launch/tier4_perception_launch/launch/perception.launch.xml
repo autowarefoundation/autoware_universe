@@ -141,6 +141,7 @@
   <arg name="use_object_validator" default="true" description="use obstacle_pointcloud based object validator"/>
   <arg name="objects_validation_method" default="obstacle_pointcloud" description="options: `obstacle_pointcloud` or `occupancy_grid`"/>
   <arg name="use_perception_online_evaluator" default="false" description="use perception online evaluator"/>
+  <arg name="use_perception_analytics_publisher" default="true" description="use perception analytics publisher"/>
   <arg name="use_obstacle_segmentation_single_frame_filter" description="use single frame filter at the ground segmentation"/>
   <arg name="use_obstacle_segmentation_time_series_filter" description="use time series filter at the ground segmentation"/>
 
@@ -383,5 +384,10 @@
   <!-- perception evaluator -->
   <group if="$(var use_perception_online_evaluator)">
     <include file="$(find-pkg-share autoware_perception_online_evaluator)/launch/perception_online_evaluator.launch.xml"/>
+  </group>
+
+  <!-- perception analytics publisher-->
+  <group if="$(var use_perception_analytics_publisher)">
+    <include file="$(find-pkg-share autoware_perception_online_evaluator)/launch/perception_analytics_publisher.launch.xml"/>
   </group>
 </launch>
