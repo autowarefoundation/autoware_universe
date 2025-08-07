@@ -32,7 +32,7 @@ autoware::multi_object_tracker::TrackerProcessorConfig createProcessorConfig()
 
   // Set tracker types for different object classes
   config.tracker_map = {
-    {ObjectClassification::UNKNOWN, TrackerType::UNKNOWN}, 
+    {ObjectClassification::UNKNOWN, TrackerType::UNKNOWN},
     {ObjectClassification::CAR, TrackerType::MULTIPLE_VEHICLE},
     {ObjectClassification::TRUCK, TrackerType::MULTIPLE_VEHICLE},
     {ObjectClassification::BUS, TrackerType::MULTIPLE_VEHICLE},
@@ -83,7 +83,7 @@ autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig()
   // For a 8x8 matrix (8 object classes: UNKNOWN, CAR, TRUCK, BUS, TRAILER, MOTORCYCLE, BICYCLE,
   // PEDESTRIAN)
   std::map<ObjectClassification::_label_type, TrackerType> tracker_map = {
-    {ObjectClassification::UNKNOWN, TrackerType::UNKNOWN}, 
+    {ObjectClassification::UNKNOWN, TrackerType::UNKNOWN},
     {ObjectClassification::CAR, TrackerType::MULTIPLE_VEHICLE},
     {ObjectClassification::TRUCK, TrackerType::MULTIPLE_VEHICLE},
     {ObjectClassification::BUS, TrackerType::MULTIPLE_VEHICLE},
