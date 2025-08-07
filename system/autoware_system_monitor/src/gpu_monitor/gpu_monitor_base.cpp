@@ -116,9 +116,9 @@ void GPUMonitorBase::publishGPUStatus()
     tier4_external_api_msgs::msg::GpuUnitStatus gpu_unit;
     gpu_unit.name = measured_status.name;
     gpu_unit.usage = measured_status.usage;
-    gpu_unit.clock = measured_status.clock;
-    gpu_unit.temperature = measured_status.temperature;
-    gpu_unit.thermal_throttling = measured_status.thermal_throttling == DiagStatus::OK
+    gpu_unit.clock = static_cast<uint32_t>(measured_status.clock);
+    gpu_unit.temperature = static_cast<uint32_t>(measured_status.temperature);
+    gpu_unit.thermal_throttling = (measured_status.thermal_throttling == DiagStatus::OK)
                                     ? GpuUnitStatus::THERMAL_THROTTLING_OFF
                                     : GpuUnitStatus::THERMAL_THROTTLING_ON;
     gpu_status.gpus.push_back(gpu_unit);
