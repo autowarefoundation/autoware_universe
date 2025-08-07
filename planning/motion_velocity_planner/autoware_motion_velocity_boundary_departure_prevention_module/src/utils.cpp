@@ -81,7 +81,7 @@ DepartureIntervals init_departure_intervals(
         continue;
       }
 
-      const auto & prev = departure_points[idx_end - 1];
+      const auto & prev = interval.candidates.back();
       const auto diff = std::abs(curr.dist_on_traj - prev.dist_on_traj);
 
       if (diff >= vehicle_length_m) {
@@ -95,14 +95,12 @@ DepartureIntervals init_departure_intervals(
       continue;
     }
 
-    std::sort(interval.candidates.begin(), interval.candidates.end());
-
     interval.start_dist_on_traj = interval.candidates.front().dist_on_traj - vehicle_length_m;
     interval.start = aw_ref_traj.compute(interval.start_dist_on_traj);
     interval.end_dist_on_traj = interval.candidates.back().dist_on_traj;
     interval.end = aw_ref_traj.compute(interval.end_dist_on_traj);
     departure_intervals.push_back(interval);
-    idx = idx_end + 1;
+    idx = idx_end;
   }
   return departure_intervals;
 }
