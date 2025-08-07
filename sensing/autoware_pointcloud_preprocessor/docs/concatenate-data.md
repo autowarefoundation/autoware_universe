@@ -49,9 +49,10 @@ By setting the `input_twist_topic_type` parameter to `twist` or `odom`, the subs
 
 ### Output
 
-| Name              | Type                            | Description               |
-| ----------------- | ------------------------------- | ------------------------- |
-| `~/output/points` | `sensor_msgs::msg::Pointcloud2` | Concatenated point clouds |
+| Name              | Type                                                     | Description                                                                                                 |
+| ----------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `~/output/points` | `sensor_msgs::msg::Pointcloud2`                          | Concatenated point clouds                                                                                   |
+| `~/output/info`   | `autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo` | Information about the concatenated point cloud, including extents of source point clouds and their statuses |
 
 ### Core Parameters
 
@@ -152,6 +153,31 @@ From the example above, the noise ranges from 0 to 8 ms, so the user should set 
 The figure below demonstrates how `lidar_timestamp_noise_window` works with the `concatenate_and_time_sync_node`. If the green `X` is within the range of the red triangles, it indicates that the point cloud matches the reference timestamp of the collector.
 
 ![noise_timestamp_offset](./image/noise_timestamp_offset.drawio.svg)
+
+## Meta Information Topic
+
+The concatenation node publishes detailed meta information about the concatenation process through the `~/output/info` topic. For detailed information about the `ConcatenatedPointCloudInfo` message structure, please refer to the [autoware_msgs repository documentation](https://github.com/autowarefoundation/autoware_msgs/tree/main/autoware_sensing_msgs#concatenated-point-cloud-messages).
+
+### Handling Serialized Configuration
+
+The `matching_strategy_config` field contains serialized configuration data for the matching strategy.
+If a strategy has its own configuration, it requires serialization and deserialization implementation based on the `StrategyConfig` class defined in [cloud_info.hpp](../include/autoware/pointcloud_preprocessor/concatenate_data/concatenation_info.hpp).
+
+Here's how to work with serialized configuration for the Advanced strategy:
+
+#### Serialization Example
+
+```cpp
+auto cfg = StrategyAdvancedConfig(reference_timestamp_min, reference_timestamp_max);
+ConcatenationInfo::set_config(cfg.serialize(), concatenation_info_msg);
+```
+
+#### Deserialization Example
+
+```cpp
+std::vector<uint8_t> raw_cfg = concat_info_msg->matching_strategy_config;
+auto cfg = StrategyAdvancedConfig(raw_cfg);
+```
 
 ## Launch
 

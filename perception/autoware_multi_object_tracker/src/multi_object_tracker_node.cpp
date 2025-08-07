@@ -60,7 +60,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   double publish_rate = declare_parameter<double>("publish_rate");  // [hz]
   world_frame_id_ = declare_parameter<std::string>("world_frame_id");
   std::string ego_frame_id = declare_parameter<std::string>("ego_frame_id");
-  bool enable_delay_compensation{declare_parameter<bool>("enable_delay_compensation")};
+  enable_delay_compensation_ = declare_parameter<bool>("enable_delay_compensation");
   bool enable_odometry_uncertainty = declare_parameter<bool>("consider_odometry_uncertainty");
   bool use_time_keeper = declare_parameter<bool>("publish_processing_time_detail");
 
@@ -108,7 +108,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
     // trust object existence probability
     input_channel_config.trust_existence_probability = declare_parameter<bool>(
-      "input_channels." + input_channel + ".flags.can_trust_existence_probability", true);
+      "input_channels." + input_channel + ".flags.can_trust_existence_probability", false);
 
     // trust object extension, size beyond the visible area
     input_channel_config.trust_extension = declare_parameter<bool>(
@@ -146,7 +146,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   // Create ROS time based timer.
   // If the delay compensation is enabled, the timer is used to publish the output at the correct
   // time.
-  if (enable_delay_compensation) {
+  if (enable_delay_compensation_) {
     publisher_period_ = 1.0 / publish_rate;    // [s]
     constexpr double timer_multiplier = 10.0;  // 10 times frequent for publish timing check
     const auto timer_period = rclcpp::Rate(publish_rate * timer_multiplier).period();
@@ -167,12 +167,14 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         std::make_pair(Label::BUS, this->declare_parameter<std::string>("bus_tracker")));
       config.tracker_map.insert(
         std::make_pair(Label::TRAILER, this->declare_parameter<std::string>("trailer_tracker")));
-      config.tracker_map.insert(std::make_pair(
-        Label::PEDESTRIAN, this->declare_parameter<std::string>("pedestrian_tracker")));
+      config.tracker_map.insert(
+        std::make_pair(
+          Label::PEDESTRIAN, this->declare_parameter<std::string>("pedestrian_tracker")));
       config.tracker_map.insert(
         std::make_pair(Label::BICYCLE, this->declare_parameter<std::string>("bicycle_tracker")));
-      config.tracker_map.insert(std::make_pair(
-        Label::MOTORCYCLE, this->declare_parameter<std::string>("motorcycle_tracker")));
+      config.tracker_map.insert(
+        std::make_pair(
+          Label::MOTORCYCLE, this->declare_parameter<std::string>("motorcycle_tracker")));
 
       // Declare parameters
       config.tracker_lifetime = declare_parameter<double>("tracker_lifetime");
@@ -192,6 +194,22 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       for (const auto & [class_name, class_label] : class_name_to_label) {
         int64_t value = declare_parameter<int64_t>("confident_count_threshold." + class_name);
         config.confident_count_threshold[class_label] = static_cast<int>(value);
+      }
+
+      // Declare parameters for generalized IoU threshold
+      std::vector<double> pruning_giou_thresholds =
+        declare_parameter<std::vector<double>>("pruning_generalized_iou_thresholds");
+      for (size_t i = 0; i < pruning_giou_thresholds.size(); ++i) {
+        const auto label = static_cast<LabelType>(i);
+        config.pruning_giou_thresholds[label] = pruning_giou_thresholds.at(i);
+      }
+
+      // Declare parameters for overlap distance threshold
+      std::vector<double> pruning_distance_threshold_list =
+        declare_parameter<std::vector<double>>("pruning_distance_thresholds");
+      for (size_t i = 0; i < pruning_distance_threshold_list.size(); ++i) {
+        const auto label = static_cast<LabelType>(i);
+        config.pruning_distance_thresholds[label] = pruning_distance_threshold_list[i];
       }
 
       config.enable_unknown_object_velocity_estimation =
@@ -237,8 +255,9 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
             associator_config.max_dist_matrix(i, j) * associator_config.max_dist_matrix(i, j);
         }
       }
-
-      config.max_dist_matrix = associator_config.max_dist_matrix;
+      // Set the unknown-unknown association GIoU threshold
+      associator_config.unknown_association_giou_threshold =
+        declare_parameter<double>("unknown_association_giou_threshold");
     }
 
     // Initialize processor with parameters
@@ -315,7 +334,7 @@ void MultiObjectTracker::onTimer()
   should_publish = should_publish || elapsed_time > maximum_publish_interval;
 
   // Publish with delay compensation to the current time
-  if (should_publish) checkAndPublish(current_time);
+  if (should_publish) checkAndPublish(last_published_time_);
 }
 
 void MultiObjectTracker::runProcess(const types::DynamicObjectList & detected_objects)
@@ -389,7 +408,8 @@ void MultiObjectTracker::publish(const rclcpp::Time & time) const
   // Create output msg
   autoware_perception_msgs::msg::TrackedObjects output_msg;
   output_msg.header.frame_id = world_frame_id_;
-  processor_->getTrackedObjects(time, output_msg);
+  const rclcpp::Time object_time = enable_delay_compensation_ ? this->now() : time;
+  processor_->getTrackedObjects(object_time, output_msg);
 
   // Publish
   {

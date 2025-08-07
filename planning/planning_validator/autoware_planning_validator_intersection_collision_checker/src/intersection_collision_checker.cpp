@@ -82,10 +82,34 @@ void IntersectionCollisionChecker::init(
 
 void IntersectionCollisionChecker::setup_diag()
 {
-  context_->add_diag(
-    "intersection_validation_collision_check",
-    context_->validation_status->is_valid_intersection_collision_check,
-    "risk of collision at intersection turn");
+  if (!context_->diag_updater) return;
+
+  const auto & status = context_->validation_status->is_valid_intersection_collision_check;
+  context_->diag_updater->add("intersection_validation_collision_check", [&](auto & stat) {
+    const std::string msg = "risk of collision at intersection turn";
+    set_diag_status(stat, status, msg);
+  });
+}
+
+void IntersectionCollisionChecker::set_diag_status(
+  DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg) const
+{
+  if (is_ok) {
+    stat.summary(DiagnosticStatus::OK, "validated.");
+    return;
+  }
+
+  const auto invalid_count = context_->validation_status->invalid_count;
+  const auto count_threshold = context_->params.diag_error_count_threshold;
+  if (invalid_count < count_threshold) {
+    const auto warn_msg =
+      msg + " (invalid count is less than error threshold: " + std::to_string(invalid_count) +
+      " < " + std::to_string(count_threshold) + ")";
+    stat.summary(DiagnosticStatus::WARN, warn_msg);
+    return;
+  }
+
+  stat.summary(DiagnosticStatus::ERROR, msg);
 }
 
 bool IntersectionCollisionChecker::is_data_ready(std::string & msg)
@@ -103,7 +127,7 @@ bool IntersectionCollisionChecker::is_data_ready(std::string & msg)
   return true;
 }
 
-void IntersectionCollisionChecker::validate(bool & is_critical)
+void IntersectionCollisionChecker::validate()
 {
   context_->validation_status->is_valid_intersection_collision_check = true;
 
@@ -115,7 +139,6 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
   std::string data_msg;
   if (!is_data_ready(data_msg)) {
     RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "%s, skip collision check", data_msg.c_str());
-    is_critical = false;
     reset_data();
     return;
   }
@@ -363,7 +386,7 @@ bool IntersectionCollisionChecker::check_collision(
     ego_vel < p.filter.min_velocity ? p.close_time_th : abs(ego_vel / p.ego_deceleration);
   auto is_colliding = [&](const PCDObject & object, const std::pair<double, double> & ego_time) {
     if (!object.is_reliable) return false;
-    if (object.distance_to_overlap < p.close_distance_th && ego_time.first < close_time_th)
+    if (object.ttc < std::numeric_limits<double>::epsilon() && ego_time.first < close_time_th)
       return true;
     if (object.is_moving && ego_object_overlap_time(object.ttc, ego_time) < p.ttc_threshold) {
       return true;
@@ -392,7 +415,7 @@ bool IntersectionCollisionChecker::check_collision(
     }
   }
 
-  static constexpr double max_history_time = 1.0;
+  const auto max_history_time = p.pointcloud.velocity_estimation.max_history_time;
   auto itr = history_.begin();
   while (itr != history_.end()) {
     if ((clock_->now() - itr->second.last_update_time).seconds() > max_history_time) {
@@ -415,11 +438,12 @@ void IntersectionCollisionChecker::update_tracked_object(
   const auto & vel_params = p.pointcloud.velocity_estimation;
 
   object.update(
-    new_data.distance_to_overlap, dt, vel_params.max_velocity, vel_params.max_acceleration);
+    new_data.distance_to_overlap, dt, vel_params.max_velocity, vel_params.max_acceleration,
+    p.close_distance_th);
 
   object.is_reliable = object.track_duration > vel_params.observation_time;
 
-  static constexpr double eps = 0.01;
+  static constexpr double zero_vel_th = 0.1;
   object.last_update_time = new_data.last_update_time;
   object.pose = new_data.pose;
   object.distance_to_overlap = new_data.distance_to_overlap;
@@ -427,7 +451,15 @@ void IntersectionCollisionChecker::update_tracked_object(
     std::max(0.0, object.distance_to_overlap - object.velocity * p.pointcloud.latency);
   object.moving_time = (object.velocity < p.filter.min_velocity) ? 0.0 : object.moving_time + dt;
   object.is_moving = object.moving_time > p.filter.moving_time;
-  object.ttc = object.delay_compensated_distance_to_overlap / std::max(object.velocity, eps);
+  object.ttc = std::invoke([&]() {
+    if (object.velocity < -zero_vel_th) {
+      return std::numeric_limits<double>::infinity();  // if object is moving away, set ttc to inf
+    }
+    if (object.delay_compensated_distance_to_overlap < p.close_distance_th) {
+      return 0.0;  // if the object is close and moving forward, set ttc to 0
+    }
+    return object.delay_compensated_distance_to_overlap / std::max(object.velocity, zero_vel_th);
+  });
 }
 
 std::optional<PCDObject> IntersectionCollisionChecker::get_pcd_object(

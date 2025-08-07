@@ -142,8 +142,9 @@ std::pair<std::shared_ptr<PlanningValidatorNode>, std::shared_ptr<PubSubManager>
   manager->trajectory_pub_->publish(trajectory);
   manager->kinematics_pub_->publish(ego_odom);
   manager->acceleration_pub_->publish(acceleration);
-  manager->pointcloud_pub_->publish(sensor_msgs::msg::PointCloud2{}.set__header(
-    std_msgs::msg::Header{}.set__frame_id("base_link")));
+  manager->pointcloud_pub_->publish(
+    sensor_msgs::msg::PointCloud2{}.set__header(
+      std_msgs::msg::Header{}.set__frame_id("base_link")));
   manager->map_pub_->publish(autoware::test_utils::makeMapBinMsg());
   manager->route_pub_->publish(autoware::test_utils::makeBehaviorNormalRoute());
   spinSome(validator);

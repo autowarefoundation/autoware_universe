@@ -135,15 +135,13 @@ public:
 
   void update_history(const double dist, const double dt)
   {
-    static constexpr size_t max_size = 10;
-
     const auto last_timestamp = timestamp_history.empty() ? 0.0 : timestamp_history.back();
 
     distance_history.push_back(dist);
     timestamp_history.push_back(last_timestamp + dt);
 
-    if (distance_history.size() > max_size) distance_history.pop_front();
-    if (timestamp_history.size() > max_size) timestamp_history.pop_front();
+    if (distance_history.size() > buffer_size) distance_history.pop_front();
+    if (timestamp_history.size() > buffer_size) timestamp_history.pop_front();
   }
 
   bool update_velocity()
@@ -178,8 +176,17 @@ public:
     return true;
   }
 
-  void update(const double dist, const double dt, const double raw_vel_th, const double accel_th)
+  void update(
+    const double dist, const double dt, const double raw_vel_th, const double accel_th,
+    const double min_dist_th)
   {
+    // distance measurement is not reliable near the overlap point, skip velocity update
+    if (is_reliable && delay_compensated_distance_to_overlap < min_dist_th) {
+      update_history(dist, dt);
+      track_duration += dt;
+      return;
+    }
+
     const auto raw_velocity = (distance_to_overlap - dist) / dt;
     if (abs(raw_velocity) > raw_vel_th) {
       reset();

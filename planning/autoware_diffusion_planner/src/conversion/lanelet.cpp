@@ -166,10 +166,11 @@ std::vector<LaneSegment> LaneletConverter::convert_to_lane_segments(
 
     const auto & attrs = lanelet.attributes();
     bool is_intersection = attrs.find("turn_direction") != attrs.end();
-    std::optional<float> speed_limit_mps = attrs.find("speed_limit") != attrs.end()
-                                             ? std::make_optional(autoware_utils_math::kmph2mps(
-                                                 std::stof(attrs.at("speed_limit").value())))
-                                             : std::nullopt;
+    std::optional<float> speed_limit_mps =
+      attrs.find("speed_limit") != attrs.end()
+        ? std::make_optional(
+            autoware_utils_math::kmph2mps(std::stof(attrs.at("speed_limit").value())))
+        : std::nullopt;
 
     // TODO(Daniel): get proper light state, use behavior_velocity_traffic_light module as guide.
     auto traffic_light = TrafficLightElement::UNKNOWN;
