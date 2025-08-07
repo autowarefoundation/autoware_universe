@@ -29,7 +29,6 @@
   <arg name="build_only" default="false" description="exit after trt engine is built"/>
   <let name="use_bytetrack" value="false" if="$(var build_only)"/>
   <let name="use_decompress" value="false" if="$(var build_only)"/>
-  
 
   <arg name="decompress_param_path" default="$(find-pkg-share autoware_image_transport_decompressor)/config/image_transport_decompressor.param.yaml"/>
   <node pkg="autoware_image_transport_decompressor" exec="image_transport_decompressor_node" name="$(var image_transport_decompressor_node_name)" if="$(var use_decompress)">
