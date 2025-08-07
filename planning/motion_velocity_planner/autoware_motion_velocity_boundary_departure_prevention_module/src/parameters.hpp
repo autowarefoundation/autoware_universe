@@ -57,6 +57,8 @@ struct NodeParam
   double th_pt_shift_dist_m{1.0};
   double th_pt_shift_angle_rad{autoware_utils_math::deg2rad(2.0)};
   double th_goal_shift_dist_m{1.0};
+  double on_time_buffer_s{0.1};
+  double off_time_buffer_s{0.1};
   BDCParam bdc_param;
   std::unordered_set<DepartureType> slow_down_types;
   std::unordered_map<DepartureType, int8_t> diagnostic_level;
@@ -76,8 +78,16 @@ struct NodeParam
     th_goal_shift_dist_m =
       get_or_declare_parameter<double>(node, module_name + "th_pt_shift.goal_dist_m");
 
+    bdc_param.th_cutoff_time_predicted_path_s =
+      get_or_declare_parameter<double>(node, module_name + "th_cutoff_time_s.predicted_path");
+    bdc_param.th_cutoff_time_near_boundary_s =
+      get_or_declare_parameter<double>(node, module_name + "th_cutoff_time_s.near_boundary");
+    bdc_param.th_cutoff_time_departure_s =
+      get_or_declare_parameter<double>(node, module_name + "th_cutoff_time_s.departure");
+
     bdc_param.th_max_lateral_query_num =
       get_or_declare_parameter<int>(node, module_name + "th_max_lateral_query_num");
+
     std::invoke([&node, &module_name, this]() {
       const std::string ns_abnormality{module_name + "abnormality."};
       const std::string ns_normal_abnormality{ns_abnormality + "normal."};
