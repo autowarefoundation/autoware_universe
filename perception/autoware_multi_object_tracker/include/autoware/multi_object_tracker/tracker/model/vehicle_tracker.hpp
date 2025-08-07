@@ -33,7 +33,6 @@ private:
   rclcpp::Logger logger_;
 
   object_model::ObjectModel object_model_;
-  TrackerType tracker_type_{TrackerType::VEHICLE};
 
   double velocity_deviation_threshold_;
 

@@ -31,7 +31,6 @@ private:
   types::DynamicObject prev_observed_object_;
   rclcpp::Logger logger_;
   rclcpp::Time last_update_time_;
-  TrackerType tracker_type_{TrackerType::PASS_THROUGH};
 
 public:
   PassThroughTracker(const rclcpp::Time & time, const types::DynamicObject & object);

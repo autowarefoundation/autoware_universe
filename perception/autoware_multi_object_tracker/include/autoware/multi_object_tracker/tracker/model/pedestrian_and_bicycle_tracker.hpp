@@ -32,12 +32,11 @@ class PedestrianAndBicycleTracker : public Tracker
 private:
   PedestrianTracker pedestrian_tracker_;
   VehicleTracker bicycle_tracker_;
-  TrackerType tracker_type_{TrackerType::PEDESTRIAN_AND_BICYCLE};
 
 public:
   PedestrianAndBicycleTracker(const rclcpp::Time & time, const types::DynamicObject & object);
 
-  TrackerType getTrackerType() const { return TrackerType::PEDESTRIAN_AND_BICYCLE; }
+  TrackerType getTrackerType() const override { return TrackerType::PEDESTRIAN_AND_BICYCLE; }
 
   bool predict(const rclcpp::Time & time) override;
   bool measure(

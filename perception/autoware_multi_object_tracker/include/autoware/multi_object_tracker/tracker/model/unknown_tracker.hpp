@@ -34,7 +34,6 @@ private:
   rclcpp::Logger logger_;
 
   object_model::ObjectModel object_model_ = object_model::unknown;
-  TrackerType tracker_type_{TrackerType::UNKNOWN};
 
   CVMotionModel motion_model_;
   StaticMotionModel static_motion_model_;
