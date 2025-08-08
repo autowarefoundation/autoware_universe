@@ -239,8 +239,8 @@ void StreamPetrNetwork::printProfiling() const
 {
   if (profiler_) {
     logger_->log(
-      autoware::tensorrt_common::Severity::kINFO, 
-      "StreamPETR Profiling\n%s", profiler_->toString().c_str());
+      autoware::tensorrt_common::Severity::kINFO, "StreamPETR Profiling\n%s",
+      profiler_->toString().c_str());
   }
 }
 

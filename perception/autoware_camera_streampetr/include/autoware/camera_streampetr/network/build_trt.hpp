@@ -15,9 +15,10 @@
 #ifndef AUTOWARE__CAMERA_STREAMPETR__NETWORK__BUILD_TRT_HPP_
 #define AUTOWARE__CAMERA_STREAMPETR__NETWORK__BUILD_TRT_HPP_
 
+#include <rclcpp/rclcpp.hpp>
+
 #include <NvInfer.h>
 #include <NvOnnxParser.h>
-#include <rclcpp/rclcpp.hpp>
 
 #include <algorithm>
 #include <filesystem>
@@ -81,10 +82,10 @@ std::string initEngine(
     std::filesystem::path(onnx_file_path).replace_extension(".engine").string();
   if (std::filesystem::exists(engine_file_path)) return engine_file_path;
   RCLCPP_INFO(logger, "Building engine file: %s", engine_file_path.c_str());
-  
+
   // Create TensorRT logger
   auto trt_logger = std::make_shared<autoware::tensorrt_common::Logger>();
-  
+
   // Create builder
   auto builder = std::unique_ptr<nvinfer1::IBuilder>(nvinfer1::createInferBuilder(*trt_logger));
   if (!builder) {

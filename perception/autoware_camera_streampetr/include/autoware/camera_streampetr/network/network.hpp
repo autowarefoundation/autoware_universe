@@ -88,7 +88,7 @@ public:
   SubNetwork(const std::string & engine_path, IRuntime * runtime, cudaStream_t stream)
   {
     stream_ = stream;
-    
+
     // Load the engine using TrtCommon's runtime approach
     std::ifstream engine_file(engine_path, std::ios::binary);
     if (!engine_file) {
@@ -101,12 +101,12 @@ public:
     // Read the engine file into a buffer
     std::vector<char> engineData(fsize);
     engine_file.read(engineData.data(), fsize);
-    
+
     auto engine = runtime->deserializeCudaEngine(engineData.data(), fsize);
     if (!engine) {
       throw std::runtime_error("Failed to deserialize engine from: " + engine_path);
     }
-    
+
     auto context = engine->createExecutionContext();
     if (!context) {
       throw std::runtime_error("Failed to create execution context");
@@ -137,7 +137,8 @@ public:
     }
   }
 
-  ~SubNetwork() {
+  ~SubNetwork()
+  {
     if (context_) {
       delete context_;
     }
@@ -183,29 +184,26 @@ public:
     cudaEventCreate(&end_event_);
   }
 
-  ~Duration() {
+  ~Duration()
+  {
     cudaEventDestroy(begin_event_);
     cudaEventDestroy(end_event_);
   }
 
-  void MarkBegin(cudaStream_t stream) { 
-    cudaEventRecord(begin_event_, stream); 
-  }
+  void MarkBegin(cudaStream_t stream) { cudaEventRecord(begin_event_, stream); }
 
-  void MarkEnd(cudaStream_t stream) { 
-    cudaEventRecord(end_event_, stream); 
-  }
+  void MarkEnd(cudaStream_t stream) { cudaEventRecord(end_event_, stream); }
 
   float Elapsed()
   {
     float elapsed_ms;
     cudaEventElapsedTime(&elapsed_ms, begin_event_, end_event_);
-    
+
     // Report to profiler if available
     if (profiler_) {
       profiler_->reportLayerTime(layer_name_.c_str(), elapsed_ms);
     }
-    
+
     return elapsed_ms;
   }
 };  // class Duration
