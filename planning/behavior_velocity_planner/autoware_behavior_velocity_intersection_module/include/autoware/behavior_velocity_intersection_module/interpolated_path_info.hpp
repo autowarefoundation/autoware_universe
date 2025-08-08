@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef INTERPOLATED_PATH_INFO_HPP_
-#define INTERPOLATED_PATH_INFO_HPP_
+#ifndef AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__INTERPOLATED_PATH_INFO_HPP_
+#define AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__INTERPOLATED_PATH_INFO_HPP_
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
@@ -45,4 +45,4 @@ struct InterpolatedPathInfo
 
 }  // namespace autoware::behavior_velocity_planner
 
-#endif  // INTERPOLATED_PATH_INFO_HPP_
+#endif  // AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__INTERPOLATED_PATH_INFO_HPP_

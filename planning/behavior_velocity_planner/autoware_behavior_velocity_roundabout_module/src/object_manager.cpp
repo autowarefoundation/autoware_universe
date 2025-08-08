@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/behavior_velocity_intersection_module/object_manager.hpp"
+#include "object_manager.hpp"
 
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
@@ -76,23 +76,19 @@ ObjectInfo::ObjectInfo(const unique_identifier_msgs::msg::UUID & uuid) : uuid_st
 
 void ObjectInfo::initialize(
   const autoware_perception_msgs::msg::PredictedObject & object,
-  std::optional<lanelet::ConstLanelet> attention_lanelet_opt,
-  std::optional<lanelet::ConstLineString3d> stopline_opt)
+  std::optional<lanelet::ConstLanelet> attention_lanelet_opt)
 {
   predicted_object_ = object;
   attention_lanelet_opt_ = attention_lanelet_opt;
-  stopline_opt_ = stopline_opt;
   unsafe_interval_ = std::nullopt;
-  calc_dist_to_stopline();
 }
 
 void ObjectInfo::update_safety(
   const std::optional<CollisionInterval> & unsafe_interval,
-  const std::optional<CollisionInterval> & safe_interval, const bool safe_under_traffic_control)
+  const std::optional<CollisionInterval> & safe_interval)
 {
   unsafe_interval_ = unsafe_interval;
   safe_interval_ = safe_interval;
-  safe_under_traffic_control_ = safe_under_traffic_control;
 }
 
 std::optional<geometry_msgs::msg::Point> ObjectInfo::estimated_past_position(
@@ -116,87 +112,8 @@ std::optional<geometry_msgs::msg::Point> ObjectInfo::estimated_past_position(
   return std::make_optional(past_position);
 }
 
-void ObjectInfo::calc_dist_to_stopline()
-{
-  if (!stopline_opt_ || !attention_lanelet_opt_) {
-    return;
-  }
-  const auto attention_lanelet = attention_lanelet_opt_.value();
-  const auto object_arc_coords = lanelet::utils::getArcCoordinates(
-    {attention_lanelet}, predicted_object_.kinematics.initial_pose_with_covariance.pose);
-  const auto stopline = stopline_opt_.value();
-  geometry_msgs::msg::Pose stopline_center;
-  stopline_center.position.x = (stopline.front().x() + stopline.back().x()) / 2.0;
-  stopline_center.position.y = (stopline.front().y() + stopline.back().y()) / 2.0;
-  stopline_center.position.z = (stopline.front().z() + stopline.back().z()) / 2.0;
-  const auto stopline_arc_coords =
-    lanelet::utils::getArcCoordinates({attention_lanelet}, stopline_center);
-  dist_to_stopline_opt_ = (stopline_arc_coords.length - object_arc_coords.length);
-}
-
-bool ObjectInfo::can_stop_before_stopline(const double brake_deceleration) const
-{
-  if (!dist_to_stopline_opt_) {
-    return false;
-  }
-  const double velocity = predicted_object_.kinematics.initial_twist_with_covariance.twist.linear.x;
-  const double dist_to_stopline = dist_to_stopline_opt_.value();
-  const double braking_distance = (velocity * velocity) / (2.0 * brake_deceleration);
-  return dist_to_stopline > braking_distance;
-}
-
-bool ObjectInfo::can_stop_before_ego_lane(
-  const double brake_deceleration, const double tolerable_overshoot,
-  lanelet::ConstLanelet ego_lane) const
-{
-  if (!dist_to_stopline_opt_ || !stopline_opt_ || !attention_lanelet_opt_) {
-    return false;
-  }
-  const double dist_to_stopline = dist_to_stopline_opt_.value();
-  const double velocity = predicted_object_.kinematics.initial_twist_with_covariance.twist.linear.x;
-  const double braking_distance = (velocity * velocity) / (2.0 * brake_deceleration);
-  if (dist_to_stopline > braking_distance) {
-    return false;
-  }
-  const auto attention_lanelet = attention_lanelet_opt_.value();
-  const auto stopline = stopline_opt_.value();
-  const auto stopline_p1 = stopline.front();
-  const auto stopline_p2 = stopline.back();
-  const autoware_utils::Point2d stopline_mid{
-    (stopline_p1.x() + stopline_p2.x()) / 2.0, (stopline_p1.y() + stopline_p2.y()) / 2.0};
-  const auto attention_lane_end = attention_lanelet.centerline().back();
-  const autoware_utils::LineString2d attention_lane_later_part(
-    {autoware_utils::Point2d{stopline_mid.x(), stopline_mid.y()},
-     autoware_utils::Point2d{attention_lane_end.x(), attention_lane_end.y()}});
-  std::vector<autoware_utils::Point2d> ego_collision_points;
-  bg::intersection(
-    attention_lane_later_part, ego_lane.centerline2d().basicLineString(), ego_collision_points);
-  if (ego_collision_points.empty()) {
-    return false;
-  }
-  const auto expected_collision_point = ego_collision_points.front();
-  // distance from object expected stop position to collision point
-  const double stopline_to_object = -1.0 * dist_to_stopline + braking_distance;
-  const double stopline_to_ego_path = std::hypot(
-    expected_collision_point.x() - stopline_mid.x(),
-    expected_collision_point.y() - stopline_mid.y());
-  const double object_to_ego_path = stopline_to_ego_path - stopline_to_object;
-  // NOTE: if object_to_ego_path < 0, object passed ego path
-  return object_to_ego_path > tolerable_overshoot;
-}
-
-bool ObjectInfo::before_stopline_by(const double margin) const
-{
-  if (!dist_to_stopline_opt_) {
-    return false;
-  }
-  const double dist_to_stopline = dist_to_stopline_opt_.value();
-  return dist_to_stopline < margin;
-}
-
 std::shared_ptr<ObjectInfo> ObjectInfoManager::registerObject(
-  const unique_identifier_msgs::msg::UUID & uuid, const bool belong_attention_area,
-  const bool belong_intersection_area, const bool is_parked_vehicle)
+  const unique_identifier_msgs::msg::UUID & uuid, const bool belong_attention_area)
 {
   if (objects_info_.count(uuid) == 0) {
     auto object = std::make_shared<ObjectInfo>(uuid);
@@ -205,28 +122,17 @@ std::shared_ptr<ObjectInfo> ObjectInfoManager::registerObject(
   auto object = objects_info_[uuid];
   if (belong_attention_area) {
     attention_area_objects_.push_back(object);
-  } else if (belong_intersection_area) {
-    intersection_area_objects_.push_back(object);
-  }
-  if (is_parked_vehicle) {
-    parked_objects_.push_back(object);
   }
   return object;
 }
 
 void ObjectInfoManager::registerExistingObject(
   const unique_identifier_msgs::msg::UUID & uuid, const bool belong_attention_area,
-  const bool belong_intersection_area, const bool is_parked_vehicle,
   std::shared_ptr<ObjectInfo> object)
 {
   objects_info_[uuid] = object;
   if (belong_attention_area) {
     attention_area_objects_.push_back(object);
-  } else if (belong_intersection_area) {
-    intersection_area_objects_.push_back(object);
-  }
-  if (is_parked_vehicle) {
-    parked_objects_.push_back(object);
   }
 }
 
@@ -234,24 +140,17 @@ void ObjectInfoManager::clearObjects()
 {
   objects_info_.clear();
   attention_area_objects_.clear();
-  intersection_area_objects_.clear();
-  parked_objects_.clear();
 };
 
 std::vector<std::shared_ptr<ObjectInfo>> ObjectInfoManager::allObjects() const
 {
-  std::vector<std::shared_ptr<ObjectInfo>> all_objects = attention_area_objects_;
-  all_objects.insert(
-    all_objects.end(), intersection_area_objects_.begin(), intersection_area_objects_.end());
-  all_objects.insert(all_objects.end(), parked_objects_.begin(), parked_objects_.end());
-  return all_objects;
+  return attention_area_objects_;
 }
 
 std::optional<CollisionInterval> findPassageInterval(
   const autoware_perception_msgs::msg::PredictedPath & predicted_path,
   const autoware_perception_msgs::msg::Shape & shape, const lanelet::BasicPolygon2d & ego_lane_poly,
-  const std::optional<lanelet::ConstLanelet> & first_attention_lane_opt,
-  const std::optional<lanelet::ConstLanelet> & second_attention_lane_opt)
+  const std::optional<lanelet::ConstLanelet> & first_attention_lane_opt)
 {
   const auto first_itr = std::adjacent_find(
     predicted_path.path.cbegin(), predicted_path.path.cend(), [&](const auto & a, const auto & b) {
@@ -283,13 +182,6 @@ std::optional<CollisionInterval> findPassageInterval(
             first_attention_lane_opt.value(),
             lanelet::BasicPoint2d(first_itr->position.x, first_itr->position.y))) {
         return CollisionInterval::LanePosition::FIRST;
-      }
-    }
-    if (second_attention_lane_opt) {
-      if (lanelet::geometry::inside(
-            second_attention_lane_opt.value(),
-            lanelet::BasicPoint2d(first_itr->position.x, first_itr->position.y))) {
-        return CollisionInterval::LanePosition::SECOND;
       }
     }
     return CollisionInterval::LanePosition::ELSE;

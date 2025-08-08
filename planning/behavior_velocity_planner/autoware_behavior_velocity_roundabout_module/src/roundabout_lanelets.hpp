@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef INTERSECTION_LANELETS_HPP_
-#define INTERSECTION_LANELETS_HPP_
+#ifndef ROUNDABOUT_LANELETS_HPP_
+#define ROUNDABOUT_LANELETS_HPP_
 
-#include "interpolated_path_info.hpp"
-
+#include <autoware/behavior_velocity_intersection_module/interpolated_path_info.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 
 #include <lanelet2_core/primitives/CompoundPolygon.h>
@@ -31,50 +30,36 @@ namespace autoware::behavior_velocity_planner
 {
 
 /**
- * @brief see the document for more details of IntersectionLanelets
+ * @brief see the document for more details of RoundaboutLanelets
  */
-struct IntersectionLanelets
+struct RoundaboutLanelets
 {
 public:
   /**
    * update conflicting lanelets and traffic priority information
    */
   void update(
-    const bool is_prioritized, const InterpolatedPathInfo & interpolated_path_info,
+    const InterpolatedPathInfo & interpolated_path_info,
     const autoware_utils::LinearRing2d & footprint, const double vehicle_length,
-    lanelet::routing::RoutingGraphPtr routing_graph_ptr);
+    [[maybe_unused]] lanelet::routing::RoutingGraphPtr routing_graph_ptr);
 
-  const lanelet::ConstLanelets & attention() const
-  {
-    return is_prioritized_ ? attention_non_preceding_ : attention_;
-  }
+  const lanelet::ConstLanelets & attention() const { return attention_; }
   const std::vector<std::optional<lanelet::ConstLineString3d>> & attention_stoplines() const
   {
-    return is_prioritized_ ? attention_non_preceding_stoplines_ : attention_stoplines_;
+    return attention_stoplines_;
   }
   const lanelet::ConstLanelets & conflicting() const { return conflicting_; }
   const lanelet::ConstLanelets & adjacent() const { return adjacent_; }
-  const lanelet::ConstLanelets & occlusion_attention() const
-  {
-    return is_prioritized_ ? attention_non_preceding_ : occlusion_attention_;
-  }
   const lanelet::ConstLanelets & attention_non_preceding() const
   {
     return attention_non_preceding_;
   }
-  const std::vector<lanelet::CompoundPolygon3d> & attention_area() const
-  {
-    return is_prioritized_ ? attention_non_preceding_area_ : attention_area_;
-  }
+  const std::vector<lanelet::CompoundPolygon3d> & attention_area() const { return attention_area_; }
   const std::vector<lanelet::CompoundPolygon3d> & conflicting_area() const
   {
     return conflicting_area_;
   }
   const std::vector<lanelet::CompoundPolygon3d> & adjacent_area() const { return adjacent_area_; }
-  const std::vector<lanelet::CompoundPolygon3d> & occlusion_attention_area() const
-  {
-    return occlusion_attention_area_;
-  }
   const std::optional<lanelet::ConstLanelet> & first_conflicting_lane() const
   {
     return first_conflicting_lane_;
@@ -91,14 +76,6 @@ public:
   {
     return first_attention_area_;
   }
-  const std::optional<lanelet::ConstLanelet> & second_attention_lane() const
-  {
-    return second_attention_lane_;
-  }
-  const std::optional<lanelet::CompoundPolygon3d> & second_attention_area() const
-  {
-    return second_attention_area_;
-  }
 
   /**
    * the set of attention lanelets which is topologically merged
@@ -107,7 +84,7 @@ public:
   std::vector<lanelet::CompoundPolygon3d> attention_area_;
 
   /**
-   * the stop lines for each attention_lanelets associated with traffic lights. At intersection
+   * the stop lines for each attention_lanelets associated with traffic lights. At roundabout
    * without traffic lights, each value is null
    */
   std::vector<std::optional<lanelet::ConstLineString3d>> attention_stoplines_;
@@ -124,27 +101,16 @@ public:
   std::vector<std::optional<lanelet::ConstLineString3d>> attention_non_preceding_stoplines_;
 
   /**
-   * the conflicting lanelets of the objective intersection lanelet
+   * the conflicting lanelets of the objective roundabout lanelet
    */
   lanelet::ConstLanelets conflicting_;
   std::vector<lanelet::CompoundPolygon3d> conflicting_area_;
 
   /**
-   *
+   * the adjacent lanelets of the objective roundabout lanelet
    */
   lanelet::ConstLanelets adjacent_;
   std::vector<lanelet::CompoundPolygon3d> adjacent_area_;
-
-  /**
-   * the set of attention lanelets for occlusion detection which is topologically merged
-   */
-  lanelet::ConstLanelets occlusion_attention_;
-  std::vector<lanelet::CompoundPolygon3d> occlusion_attention_area_;
-
-  /**
-   * the vector of sum of each occlusion_attention lanelet
-   */
-  std::vector<double> occlusion_attention_size_;
 
   /**
    * the first conflicting lanelet which ego path points intersect for the first time
@@ -157,23 +123,10 @@ public:
    */
   std::optional<lanelet::ConstLanelet> first_attention_lane_{std::nullopt};
   std::optional<lanelet::CompoundPolygon3d> first_attention_area_{std::nullopt};
-
-  /**
-   * the second attention lanelet which ego path points intersect next to the
-   * first_attention_lanelet
-   */
-  bool second_attention_lane_empty_{false};
-  std::optional<lanelet::ConstLanelet> second_attention_lane_{std::nullopt};
-  std::optional<lanelet::CompoundPolygon3d> second_attention_area_{std::nullopt};
-
-  /**
-   * flag if the intersection is prioritized by the traffic light
-   */
-  bool is_prioritized_{false};
 };
 
 /**
- * @brief see the document for more details of PathLanelets
+ * @brief Struct representing the lanelets along a path
  */
 struct PathLanelets
 {
@@ -181,9 +134,9 @@ struct PathLanelets
   // lanelet::ConstLanelet entry2ego; this is included in `all` if exists
   lanelet::ConstLanelet
     ego_or_entry2exit;  // this is `assigned lane` part of the path(not from
-                        // ego) if ego is before the intersection, otherwise from ego to exit
+                        // ego) if ego is before the roundabout, otherwise from ego to exit
   std::optional<lanelet::ConstLanelet> next =
-    std::nullopt;  // this is nullopt is the goal is inside intersection
+    std::nullopt;  // this is nullopt if the goal is inside roundabout
   lanelet::ConstLanelets all;
   lanelet::ConstLanelets
     conflicting_interval_and_remaining;  // the left/right-most interval of path conflicting with
@@ -192,4 +145,4 @@ struct PathLanelets
 };
 }  // namespace autoware::behavior_velocity_planner
 
-#endif  // INTERSECTION_LANELETS_HPP_
+#endif  // ROUNDABOUT_LANELETS_HPP_

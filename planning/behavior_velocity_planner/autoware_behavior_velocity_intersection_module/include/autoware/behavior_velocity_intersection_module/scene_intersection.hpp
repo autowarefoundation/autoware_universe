@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SCENE_INTERSECTION_HPP_
-#define SCENE_INTERSECTION_HPP_
+#ifndef AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__SCENE_INTERSECTION_HPP_
+#define AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__SCENE_INTERSECTION_HPP_
 
 #include "decision_result.hpp"
 #include "interpolated_path_info.hpp"
@@ -866,4 +866,4 @@ private:
 
 }  // namespace autoware::behavior_velocity_planner
 
-#endif  // SCENE_INTERSECTION_HPP_
+#endif  // AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__SCENE_INTERSECTION_HPP_

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef OBJECT_MANAGER_HPP_
-#define OBJECT_MANAGER_HPP_
+#ifndef AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__OBJECT_MANAGER_HPP_
+#define AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__OBJECT_MANAGER_HPP_
 
 #include <rclcpp/time.hpp>
 
@@ -289,4 +289,4 @@ std::optional<CollisionInterval> findPassageInterval(
 
 }  // namespace autoware::behavior_velocity_planner
 
-#endif  // OBJECT_MANAGER_HPP_
+#endif  // AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__OBJECT_MANAGER_HPP_
