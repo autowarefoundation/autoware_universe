@@ -183,30 +183,6 @@ private:
 };
 
 /**
- * @brief Extracts route segments from the map lane segments matrix and transforms them to
- * ego-centric coordinates.
- *
- * @param map_lane_segments_matrix Matrix containing lane segment data in map coordinates.
- * @param transform_matrix Transformation matrix to apply to the points.
- * @param col_id_mapping Map of segment IDs to their corresponding column indices in the lane
- * segments matrix.
- * @param traffic_light_id_map Map of lanelet IDs to traffic signal information.
- * @param lanelet_map_ptr Shared pointer to the lanelet map.
- * @param current_lanes List of current lanelets to extract.
- * @return Flattened vectors containing the transformed route segments in ego-centric coordinates
- * and speed limits.
- * @deprecated Use LaneSegmentContext::get_route_segments instead.
- */
-[[deprecated("Use LaneSegmentContext::get_route_segments instead")]] std::pair<
-  std::vector<float>, std::vector<float>>
-get_route_segments(
-  const Eigen::MatrixXf & map_lane_segments_matrix, const Eigen::Matrix4f & transform_matrix,
-  const ColLaneIDMaps & col_id_mapping,
-  const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
-  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
-  const lanelet::ConstLanelets & current_lanes);
-
-/**
  * @brief Extracts lane tensor data from ego-centric lane segments.
  *
  * @param lane_segments_matrix Matrix containing ego-centric lane segment data.
