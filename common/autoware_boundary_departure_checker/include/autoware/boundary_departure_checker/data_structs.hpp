@@ -120,16 +120,19 @@ struct ProjectionToBound
   double lon_dist_on_ref_traj{std::numeric_limits<double>::max()};
   Segment2d nearest_bound_seg;
   double lat_dist{std::numeric_limits<double>::max()};
+  double lon_offset{};  // offset between the pt_on_ego and the front of the ego segment
   size_t ego_sides_idx{0};
   double time_from_start{std::numeric_limits<double>::max()};
   ProjectionToBound() = default;
   explicit ProjectionToBound(size_t idx) : ego_sides_idx(idx) {}
   ProjectionToBound(
-    Point2d pt_on_ego, Point2d pt_on_bound, Segment2d seg, double lat_dist, size_t idx)
+    Point2d pt_on_ego, Point2d pt_on_bound, Segment2d seg, double lat_dist, double lon_offset,
+    size_t idx)
   : pt_on_ego(std::move(pt_on_ego)),
     pt_on_bound(std::move(pt_on_bound)),
     nearest_bound_seg(std::move(seg)),
     lat_dist(lat_dist),
+    lon_offset(lon_offset),
     ego_sides_idx(idx)
   {
   }

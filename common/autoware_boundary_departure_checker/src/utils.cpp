@@ -492,7 +492,8 @@ tl::expected<ProjectionToBound, std::string> segment_to_segment_nearest_projecti
     const auto is_intersecting = autoware_utils::intersect(
       to_geom_pt(ego_f), to_geom_pt(ego_b), to_geom_pt(lane_pt1), to_geom_pt(lane_pt2))) {
     Point2d point(is_intersecting->x, is_intersecting->y);
-    return ProjectionToBound{point, point, lane_seg, 0.0, ego_sides_idx};
+    return ProjectionToBound{
+      point, point, lane_seg, 0.0, boost::geometry::distance(point, ego_f), ego_sides_idx};
   }
 
   std::vector<ProjectionToBound> projections;
@@ -500,22 +501,26 @@ tl::expected<ProjectionToBound, std::string> segment_to_segment_nearest_projecti
   constexpr bool swap_result = true;
   if (const auto projection_opt = point_to_segment_projection(ego_f, lane_seg, swap_result)) {
     const auto & [pt_ego, pt_lane, dist] = *projection_opt;
-    projections.emplace_back(pt_ego, pt_lane, lane_seg, dist, ego_sides_idx);
+    const auto lon_offset = boost::geometry::distance(pt_ego, ego_f);
+    projections.emplace_back(pt_ego, pt_lane, lane_seg, dist, lon_offset, ego_sides_idx);
   }
 
   if (const auto projection_opt = point_to_segment_projection(ego_b, lane_seg, swap_result)) {
     const auto & [pt_ego, pt_lane, dist] = *projection_opt;
-    projections.emplace_back(pt_ego, pt_lane, lane_seg, dist, ego_sides_idx);
+    const auto lon_offset = boost::geometry::distance(pt_ego, ego_f);
+    projections.emplace_back(pt_ego, pt_lane, lane_seg, dist, lon_offset, ego_sides_idx);
   }
 
   if (const auto projection_opt = point_to_segment_projection(lane_pt1, ego_seg, !swap_result)) {
     const auto & [pt_ego, pt_lane, dist] = *projection_opt;
-    projections.emplace_back(pt_ego, pt_lane, lane_seg, dist, ego_sides_idx);
+    const auto lon_offset = boost::geometry::distance(pt_ego, ego_f);
+    projections.emplace_back(pt_ego, pt_lane, lane_seg, dist, lon_offset, ego_sides_idx);
   }
 
   if (const auto projection_opt = point_to_segment_projection(lane_pt2, ego_seg, !swap_result)) {
     const auto & [pt_ego, pt_lane, dist] = *projection_opt;
-    projections.emplace_back(pt_ego, pt_lane, lane_seg, dist, ego_sides_idx);
+    const auto lon_offset = boost::geometry::distance(pt_ego, ego_f);
+    projections.emplace_back(pt_ego, pt_lane, lane_seg, dist, lon_offset, ego_sides_idx);
   }
 
   if (projections.empty())
@@ -555,7 +560,13 @@ ProjectionToBound find_closest_segment(
       const auto is_intersecting_rear = autoware_utils::intersect(
         to_geom_pt(ego_lr), to_geom_pt(ego_rr), to_geom_pt(seg_f), to_geom_pt(seg_r))) {
       Point2d point(is_intersecting_rear->x, is_intersecting_rear->y);
-      closest_proj = ProjectionToBound{point, point, seg, 0.0, curr_fp_idx};
+      closest_proj =
+        ProjectionToBound{point,
+                          point,
+                          seg,
+                          0.0,
+                          boost::geometry::distance(ego_side_seg.first, ego_side_seg.second),
+                          curr_fp_idx};
       break;
     }
   }
@@ -588,7 +599,7 @@ ProjectionsToBound get_closest_boundary_segments_from_side(
     for (const auto & side_key : g_side_keys) {
       auto closest_bound = find_closest_segment(fp[side_key], rear_seg, i, boundaries[side_key]);
       closest_bound.time_from_start = rclcpp::Duration(ego_pred_traj[i].time_from_start).seconds();
-      closest_bound.lon_dist_on_ref_traj = s;
+      closest_bound.lon_dist_on_ref_traj = s - closest_bound.lon_offset;
       side[side_key].push_back(closest_bound);
     }
     if (i > 1) {
