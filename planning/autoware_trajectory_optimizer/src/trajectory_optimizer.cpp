@@ -16,11 +16,11 @@
 
 #include "autoware/motion_utils/resample/resample.hpp"
 #include "autoware/trajectory_optimizer/utils.hpp"
-#include "autoware_utils/ros/parameter.hpp"
 
 #include <autoware/motion_utils/trajectory/conversion.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
@@ -89,7 +89,7 @@ void TrajectoryOptimizer::initialize_optimizers()
 rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
   const std::vector<rclcpp::Parameter> & parameters)
 {
-  using autoware_utils::update_param;
+  using autoware_utils_rclcpp::update_param;
   auto params = params_;
 
   update_param<double>(parameters, "keep_last_trajectory_s", params.keep_last_trajectory_s);
