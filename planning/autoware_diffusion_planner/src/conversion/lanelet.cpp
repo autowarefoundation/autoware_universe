@@ -172,52 +172,6 @@ std::vector<LaneSegment> LaneletConverter::convert_to_lane_segments(
   return lane_segments;
 }
 
-std::optional<PolylineData> LaneletConverter::convert(
-  const geometry_msgs::msg::Point & position, double distance_threshold) const
-{
-  std::vector<LanePoint> container;
-  // parse lanelet layers
-  for (const auto & lanelet : lanelet_map_ptr_->laneletLayer) {
-    const auto lanelet_subtype = to_subtype_name(lanelet);
-    if (is_lane_like(lanelet_subtype)) {
-      // convert centerlines
-      if (is_roadway_like(lanelet_subtype)) {
-        auto points = from_linestring(lanelet.centerline3d(), position, distance_threshold);
-        insert_lane_points(points, container);
-      }
-      // convert boundaries except of virtual lines
-      if (!is_turnable_intersection(lanelet)) {
-        const auto left_bound = lanelet.leftBound3d();
-        if (is_boundary_like(left_bound)) {
-          auto points = from_linestring(left_bound, position, distance_threshold);
-          insert_lane_points(points, container);
-        }
-        const auto right_bound = lanelet.rightBound3d();
-        if (is_boundary_like(right_bound)) {
-          auto points = from_linestring(right_bound, position, distance_threshold);
-          insert_lane_points(points, container);
-        }
-      }
-    } else if (is_crosswalk_like(lanelet_subtype)) {
-      auto points = from_polygon(lanelet.polygon3d(), position, distance_threshold);
-      insert_lane_points(points, container);
-    }
-  }
-
-  // parse linestring layers
-  for (const auto & linestring : lanelet_map_ptr_->lineStringLayer) {
-    if (is_boundary_like(linestring)) {
-      auto points = from_linestring(linestring, position, distance_threshold);
-      insert_lane_points(points, container);
-    }
-  }
-
-  return container.size() == 0
-           ? std::nullopt
-           : std::make_optional<PolylineData>(
-               container, max_num_polyline_, max_num_point_, point_break_distance_);
-}
-
 // Template function for converting any geometry type to lane points
 template <typename GeometryType>
 std::vector<LanePoint> LaneletConverter::from_geometry(

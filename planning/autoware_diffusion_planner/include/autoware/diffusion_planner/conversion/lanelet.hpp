@@ -223,37 +223,11 @@ public:
   }
 
   /**
-   * @brief Convert a lanelet map to the polyline data except of points whose distance from the
-   * specified position is farther than the threshold.
-   *
-   * @param position Origin to check the distance from this.
-   * @param distance_threshold Distance threshold
-   * @return std::optional<PolylineData>
-   */
-  [[nodiscard]] std::optional<PolylineData> convert(
-    const geometry_msgs::msg::Point & position, double distance_threshold) const;
-
-  /**
    * @brief Convert a lanelet map to line segment data
    * @return std::vector<LaneSegment>
    */
   [[nodiscard]] std::vector<LaneSegment> convert_to_lane_segments(
     const int64_t num_lane_points) const;
-
-  /**
-   * @brief Convert lane segment data to matrix form
-   * @return Eigen::MatrixXf
-   */
-  [[nodiscard]] Eigen::MatrixXf get_map_as_lane_segments(
-    const std::vector<LaneSegment> & lane_segments);
-
-  [[nodiscard]] Eigen::MatrixXf process_segment_to_matrix(
-    const LaneSegment & segment, float center_x, float center_y, float mask_range) const;
-
-  [[nodiscard]] Eigen::MatrixXf process_segments_to_matrix(
-    const std::vector<LaneSegment> & lane_segments,
-    std::map<int64_t, int64_t> & segment_row_indices, float center_x, float center_y,
-    float mask_range) const;
 
   /**
    * @brief Convert a linestring to the set of polylines.
