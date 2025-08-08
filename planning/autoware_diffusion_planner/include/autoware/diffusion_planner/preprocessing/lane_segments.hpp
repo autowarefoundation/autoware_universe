@@ -115,6 +115,7 @@ public:
     const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map, const float center_x,
     const float center_y, const int64_t m) const;
 
+private:
   /**
    * @brief Add traffic light one-hot encoding to a segment matrix.
    *
@@ -146,7 +147,6 @@ public:
     return lanelet_map_ptr_;
   }
 
-private:
   const Eigen::MatrixXf &
     map_lane_segments_matrix_;  //!< Matrix containing lane segment data in map coordinates.
   const ColLaneIDMaps &
