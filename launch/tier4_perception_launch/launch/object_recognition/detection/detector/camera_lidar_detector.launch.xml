@@ -91,7 +91,7 @@
   <let name="detected_object_feature_remover/output/objects" value="$(var output/rule_detector/objects)"/>
 
   <arg name="enable_2d_detection" default="false" description="true: when 2d detection yolox model run the same machine, false: when it run in separate machine"/>
-  <include file="$(find-pkg-share tier4_perception_launch)/launch/object_recognition/detection/detector/camera_2d_detector.launch.xml" if="$(var enable_2d_detection)"/>
+  <include file="$(find-pkg-share tier4_perception_launch)/launch/object_recognition/detection/detector/camera_2d_detector.launch.xml" if="$(var enable_2d_detection)">
     <arg name="image_raw0" value="$(var input/camera0/image)"/>
     <arg name="image_raw1" value="$(var input/camera1/image)"/>
     <arg name="image_raw2" value="$(var input/camera2/image)"/>
