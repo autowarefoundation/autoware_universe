@@ -114,29 +114,6 @@ TEST_F(LaneSegmentsTest, TransformSelectedRowsNoTranslation)
   }
 }
 
-TEST_F(LaneSegmentsTest, TransformAndSelectRowsThrowsOnInvalidInput)
-{
-  preprocess::ColLaneIDMaps col_id_mapping;
-  auto input_matrix = preprocess::process_segments_to_matrix(lane_segments_, col_id_mapping);
-
-  // Wrong number of rows
-  Eigen::MatrixXf bad_matrix = input_matrix.topRows(input_matrix.rows() - 1);
-  std::map<lanelet::Id, preprocess::TrafficSignalStamped> traffic_light_id_map;
-  std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr;
-  EXPECT_THROW(
-    preprocess::transform_and_select_rows(
-      bad_matrix, Eigen::Matrix4f::Identity(), col_id_mapping, traffic_light_id_map,
-      lanelet_map_ptr, 0, 0, 1),
-    std::invalid_argument);
-
-  // m <= 0
-  EXPECT_THROW(
-    preprocess::transform_and_select_rows(
-      input_matrix, Eigen::Matrix4f::Identity(), col_id_mapping, traffic_light_id_map,
-      lanelet_map_ptr, 0, 0, 0),
-    std::invalid_argument);
-}
-
 TEST_F(LaneSegmentsTest, ExtractLaneTensorDataAndSpeedTensorData)
 {
   preprocess::ColLaneIDMaps col_id_mapping;

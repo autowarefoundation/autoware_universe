@@ -91,9 +91,18 @@ std::tuple<Eigen::MatrixXf, ColLaneIDMaps> LaneSegmentContext::transform_and_sel
   const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map, const float center_x,
   const float center_y, const int64_t m) const
 {
-  return ::autoware::diffusion_planner::preprocess::transform_and_select_rows(
-    map_lane_segments_matrix_, transform_matrix, col_id_mapping_, traffic_light_id_map,
-    lanelet_map_ptr_, center_x, center_y, m);
+  if (map_lane_segments_matrix_.rows() != FULL_MATRIX_ROWS || m <= 0) {
+    throw std::invalid_argument(
+      "Input matrix must have at least FULL_MATRIX_ROWS columns and m must be greater than 0.");
+  }
+  std::vector<ColWithDistance> distances;
+  // Step 1: Compute distances
+  compute_distances(transform_matrix, distances, center_x, center_y, 100.0f);
+  // Step 2: Sort indices by distance
+  sort_indices_by_distance(distances);
+  // Step 3: Apply transformation to selected rows
+  return transform_points_and_add_traffic_info(
+    transform_matrix, traffic_light_id_map, distances, m);
 }
 
 void LaneSegmentContext::add_traffic_light_one_hot_encoding_to_segment(
@@ -314,28 +323,6 @@ void apply_transforms(
   output_matrix.row(LB_Y) = output_matrix.row(LB_Y) - output_matrix.row(Y);
   output_matrix.row(RB_X) = output_matrix.row(RB_X) - output_matrix.row(X);
   output_matrix.row(RB_Y) = output_matrix.row(RB_Y) - output_matrix.row(Y);
-}
-
-std::tuple<Eigen::MatrixXf, ColLaneIDMaps> transform_and_select_rows(
-  const Eigen::MatrixXf & input_matrix, const Eigen::Matrix4f & transform_matrix,
-  const ColLaneIDMaps & col_id_mapping,
-  const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
-  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr, const float center_x,
-  const float center_y, const int64_t m)
-{
-  if (input_matrix.rows() != FULL_MATRIX_ROWS || m <= 0) {
-    throw std::invalid_argument(
-      "Input matrix must have at least FULL_MATRIX_ROWS columns and m must be greater than 0.");
-  }
-  std::vector<ColWithDistance> distances;
-  // Step 1: Compute distances
-  compute_distances(input_matrix, transform_matrix, distances, center_x, center_y, 100.0f);
-  // Step 2: Sort indices by distance
-  sort_indices_by_distance(distances);
-  // Step 3: Apply transformation to selected rows
-  return transform_points_and_add_traffic_info(
-    input_matrix, transform_matrix, distances, col_id_mapping, traffic_light_id_map,
-    lanelet_map_ptr, m);
 }
 
 Eigen::MatrixXf process_segments_to_matrix(

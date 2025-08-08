@@ -312,27 +312,6 @@ std::tuple<Eigen::MatrixXf, ColLaneIDMaps> transform_points_and_add_traffic_info
   const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
   const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr, int64_t m);
 
-/**
- * @brief Transforms and selects columns from the input matrix based on proximity to a center point.
- *
- * @param input_matrix Input matrix containing lane segment data.
- * @param transform_matrix Transformation matrix to apply to the points.
- * @param col_id_mapping Mapping between lanelet IDs and matrix columns.
- * @param traffic_light_id_map Map of lanelet IDs to traffic signal information.
- * @param lanelet_map_ptr Shared pointer to the lanelet map.
- * @param center_x X-coordinate of the center point.
- * @param center_y Y-coordinate of the center point.
- * @param m Maximum number of columns (segments) to select.
- * @return Tuple of the transformed matrix and updated column ID mapping.
- * @throws std::invalid_argument If input_matrix dimensions are not correct or if m <= 0.
- */
-std::tuple<Eigen::MatrixXf, ColLaneIDMaps> transform_and_select_rows(
-  const Eigen::MatrixXf & input_matrix, const Eigen::Matrix4f & transform_matrix,
-  const ColLaneIDMaps & col_id_mapping,
-  const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
-  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr, const float center_x,
-  const float center_y, const int64_t m);
-
 }  // namespace autoware::diffusion_planner::preprocess
 
 #endif  // AUTOWARE__DIFFUSION_PLANNER__PREPROCESSING__LANE_SEGMENTS_HPP_
