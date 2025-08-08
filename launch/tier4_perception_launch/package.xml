@@ -15,6 +15,7 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
   <exec_depend>autoware_bevfusion</exec_depend>
+  <exec_depend>autoware_bytetrack</exec_depend>
   <exec_depend>autoware_cluster_merger</exec_depend>
   <exec_depend>autoware_compare_map_segmentation</exec_depend>
   <exec_depend>autoware_crosswalk_traffic_light_estimator</exec_depend>
@@ -56,7 +57,6 @@
   <exec_depend>autoware_traffic_light_visualization</exec_depend>
   <exec_depend>pointcloud_to_laserscan</exec_depend>
   <exec_depend>topic_tools</exec_depend>
-  <exec_depend>autoware_bytetrack</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
