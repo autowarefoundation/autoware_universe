@@ -288,8 +288,7 @@ public:
   std::map<lanelet::Id, TrafficSignalStamped> traffic_light_id_map_;
   std::unique_ptr<LaneletConverter> lanelet_converter_ptr_;
   std::vector<LaneSegment> lane_segments_;
-  Eigen::MatrixXf map_lane_segments_matrix_;
-  ColLaneIDMaps col_id_mapping_;
+  std::unique_ptr<preprocess::LaneSegmentContext> lane_segment_context_;
   bool is_map_loaded_{false};
 
   // Node elements
