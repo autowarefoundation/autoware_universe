@@ -246,7 +246,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       auto initializeMatrixDouble = [](const std::vector<double> & vector) {
         const int label_num = types::NUM_LABELS;
         if (vector.size() != label_num * label_num) {
-          throw std::runtime_error("Invalid max_dist_matrix size");
+          throw std::runtime_error("Invalid association matrix configuration size");
         }
         // Use row-major mapping to match the YAML layout
         using RowMajorMatrixXd =
