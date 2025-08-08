@@ -139,14 +139,6 @@ private:
     const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix,
     int64_t num_segments) const;
 
-  // Getters for accessing the encapsulated data
-  const Eigen::MatrixXf & get_map_lane_segments_matrix() const { return map_lane_segments_matrix_; }
-  const ColLaneIDMaps & get_col_id_mapping() const { return col_id_mapping_; }
-  const std::shared_ptr<lanelet::LaneletMap> & get_lanelet_map_ptr() const
-  {
-    return lanelet_map_ptr_;
-  }
-
   const Eigen::MatrixXf
     map_lane_segments_matrix_;  //!< Matrix containing lane segment data in map coordinates.
   const ColLaneIDMaps
