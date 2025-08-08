@@ -78,7 +78,6 @@ std::optional<geometry_msgs::msg::Point> calculate_stop_position(
   const auto & check_unfeasible_stop = [&](const auto stop_distance) -> bool {
     const auto stop_decel = (current_velocity * current_velocity) / (2 * stop_distance);
     if (stop_decel > params.stop_deceleration_limit) {
-      unfeasible_stop_deceleration = stop_decel;
       if (stop_decel > unfeasible_stop_deceleration.value_or(0.0)) {
         unfeasible_stop_deceleration = stop_decel;
       }
