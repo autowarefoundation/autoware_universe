@@ -199,12 +199,10 @@ public:
    * filtering based on hysteresis and distance, and grouping results using side keys.
    *
    * @param projections_to_bound Closest projections to road boundaries for each side.
-   * @param lon_offset_m         Longitudinal offset from ego to front of trajectory (including
-   * vehicle length).
    * @return Side-keyed container of filtered departure points.
    */
   Side<DeparturePoints> get_departure_points(
-    const ClosestProjectionsToBound & projections_to_bound, const double lon_offset_m);
+    const ClosestProjectionsToBound & projections_to_bound);
   // === Abnormalities
 
 private:
