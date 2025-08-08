@@ -160,16 +160,18 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     TrackerProcessorConfig config;
     {
       // convert string to TrackerType
+      static const std::unordered_map<std::string, TrackerType> TRACKER_TYPE_MAP = {
+          {"multi_vehicle_tracker", TrackerType::MULTIPLE_VEHICLE},
+          {"pedestrian_and_bicycle_tracker", TrackerType::PEDESTRIAN_AND_BICYCLE},
+          {"normal_vehicle_tracker", TrackerType::NORMAL_VEHICLE},
+          {"pedestrian_tracker", TrackerType::PEDESTRIAN},
+          {"big_vehicle_tracker", TrackerType::BIG_VEHICLE},
+          {"bicycle_tracker", TrackerType::BICYCLE},
+          {"pass_through_tracker", TrackerType::PASS_THROUGH}
+      };
       auto getTrackerType = [](const std::string & tracker_name) -> TrackerType {
-        if (tracker_name == "multi_vehicle_tracker") return TrackerType::MULTIPLE_VEHICLE;
-        if (tracker_name == "pedestrian_and_bicycle_tracker")
-          return TrackerType::PEDESTRIAN_AND_BICYCLE;
-        if (tracker_name == "normal_vehicle_tracker") return TrackerType::NORMAL_VEHICLE;
-        if (tracker_name == "pedestrian_tracker") return TrackerType::PEDESTRIAN;
-        if (tracker_name == "big_vehicle_tracker") return TrackerType::BIG_VEHICLE;
-        if (tracker_name == "bicycle_tracker") return TrackerType::BICYCLE;
-        if (tracker_name == "pass_through_tracker") return TrackerType::PASS_THROUGH;
-        return TrackerType::UNKNOWN;
+        auto it = TRACKER_TYPE_MAP.find(tracker_name);
+        return it != TRACKER_TYPE_MAP.end() ? it->second : TrackerType::UNKNOWN;
       };
 
       config.tracker_map.insert(
