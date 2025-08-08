@@ -139,13 +139,6 @@ private:
     const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix,
     int64_t num_segments) const;
 
-  const Eigen::MatrixXf
-    map_lane_segments_matrix_;  //!< Matrix containing lane segment data in map coordinates.
-  const ColLaneIDMaps
-    col_id_mapping_;  //!< Map of segment IDs to their corresponding column indices.
-  const std::shared_ptr<lanelet::LaneletMap>
-    lanelet_map_ptr_;  //!< Shared pointer to the lanelet map.
-
   /**
    * @brief Compute distances of lane segments from a center point.
    *
@@ -172,6 +165,11 @@ private:
     const Eigen::Matrix4f & transform_matrix,
     const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
     const std::vector<ColWithDistance> & distances, int64_t m) const;
+
+  // variables
+  const Eigen::MatrixXf map_lane_segments_matrix_;
+  const ColLaneIDMaps col_id_mapping_;
+  const std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
 };
 
 /**
