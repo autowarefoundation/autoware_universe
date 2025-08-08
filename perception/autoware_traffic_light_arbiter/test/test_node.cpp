@@ -21,10 +21,12 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
 #include <cmath>
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -475,5 +477,178 @@ TEST(TrafficLightArbiterTest, testTrafficSignalBothMsg)
   }
 
   EXPECT_TRUE(isEqual(latest_msg, gt_msg));
+  rclcpp::shutdown();
+}
+
+// Helper function to generate external message with specific traffic light ID
+void generateExternalMsgWithId(
+  TrafficSignalArray & external_msg, const builtin_interfaces::msg::Time & time,
+  const uint64_t traffic_light_id, const TrafficElement::_color_type color = TrafficElement::GREEN)
+{
+  external_msg.stamp = time;
+  external_msg.traffic_light_groups.clear();
+
+  TrafficSignal traffic_light_group;
+  traffic_light_group.traffic_light_group_id = traffic_light_id;
+
+  // Add a traffic light element
+  TrafficElement element;
+  element.color = color;
+  element.shape = TrafficElement::CIRCLE;
+  element.status = TrafficElement::SOLID_ON;
+  element.confidence = 0.8;
+  traffic_light_group.elements.push_back(element);
+
+  external_msg.traffic_light_groups.push_back(traffic_light_group);
+}
+
+TEST(TrafficLightArbiterTest, testMultipleExternalSources)
+{
+  rclcpp::init(0, nullptr);
+  const std::string input_map_topic = "/traffic_light_arbiter/sub/vector_map";
+  const std::string input_external_topic = "/traffic_light_arbiter/sub/external_traffic_signals";
+  const std::string output_topic = "/traffic_light_arbiter/pub/traffic_signals";
+  auto test_manager = generateTestManager();
+  auto test_target_node = generateNode();
+
+  // map msg preparation
+  LaneletMapBin vector_map_msg;
+  generateMap(vector_map_msg);
+
+  // test callback preparation
+  TrafficSignalArray latest_msg;
+  auto callback = [&latest_msg](const TrafficSignalArray::ConstSharedPtr msg) {
+    latest_msg = *msg;
+  };
+  test_manager->set_subscriber<TrafficSignalArray>(output_topic, callback);
+
+  // Publish map first
+  test_manager->test_pub_msg<LaneletMapBin>(
+    test_target_node, input_map_topic, vector_map_msg, rclcpp::QoS(1).transient_local());
+
+  // Create external messages from different sources with different traffic light IDs
+  TrafficSignalArray external_msg_source1, external_msg_source2;
+  auto current_time = test_target_node->now();
+
+  // Source 1: Traffic light ID 1012 (GREEN)
+  generateExternalMsgWithId(external_msg_source1, current_time, 1012, TrafficElement::GREEN);
+
+  // Source 2: Traffic light ID 1015 (RED) - published slightly later
+  auto later_time = current_time + rclcpp::Duration::from_seconds(1.0);
+  generateExternalMsgWithId(external_msg_source2, later_time, 1015, TrafficElement::RED);
+
+  // Publish first external source
+  test_manager->test_pub_msg<TrafficSignalArray>(
+    test_target_node, input_external_topic, external_msg_source1);
+
+  // Brief wait to ensure processing
+  rclcpp::sleep_for(std::chrono::milliseconds(100));
+
+  // Verify first source data is present and GREEN
+  EXPECT_EQ(latest_msg.traffic_light_groups.size(), 1)
+    << "Expected 1 traffic light group from first source";
+  if (!latest_msg.traffic_light_groups.empty()) {
+    EXPECT_EQ(
+      static_cast<uint64_t>(latest_msg.traffic_light_groups[0].traffic_light_group_id), 1012u);
+    EXPECT_EQ(latest_msg.traffic_light_groups[0].elements[0].color, TrafficElement::GREEN)
+      << "Traffic light 1012 should be GREEN from source 1";
+  }
+
+  // Publish second external source (different traffic light)
+  test_manager->test_pub_msg<TrafficSignalArray>(
+    test_target_node, input_external_topic, external_msg_source2);
+
+  // Wait for processing
+  rclcpp::sleep_for(std::chrono::milliseconds(100));
+
+  // Verify both traffic lights are present in the output
+  EXPECT_EQ(latest_msg.traffic_light_groups.size(), 2)
+    << "Expected 2 traffic light groups (one from each external source)";
+
+  // Check that both traffic light IDs are present
+  std::set<uint64_t> found_ids;
+  for (const auto & group : latest_msg.traffic_light_groups) {
+    found_ids.insert(static_cast<uint64_t>(group.traffic_light_group_id));
+  }
+
+  EXPECT_TRUE(found_ids.count(1012u)) << "Traffic light 1012 from source 1 should be present";
+  EXPECT_TRUE(found_ids.count(1015u)) << "Traffic light 1015 from source 2 should be present";
+
+  // Verify the colors are correct for each traffic light
+  for (const auto & group : latest_msg.traffic_light_groups) {
+    if (static_cast<uint64_t>(group.traffic_light_group_id) == 1012u) {
+      EXPECT_EQ(group.elements[0].color, TrafficElement::GREEN)
+        << "Traffic light 1012 should be GREEN";
+    } else if (static_cast<uint64_t>(group.traffic_light_group_id) == 1015u) {
+      EXPECT_EQ(group.elements[0].color, TrafficElement::RED) << "Traffic light 1015 should be RED";
+    }
+  }
+
+  rclcpp::shutdown();
+}
+
+TEST(TrafficLightArbiterTest, testExternalSourceTimeout)
+{
+  rclcpp::init(0, nullptr);
+  const std::string input_map_topic = "/traffic_light_arbiter/sub/vector_map";
+  const std::string input_external_topic = "/traffic_light_arbiter/sub/external_traffic_signals";
+  const std::string output_topic = "/traffic_light_arbiter/pub/traffic_signals";
+  auto test_manager = generateTestManager();
+  auto test_target_node = generateNode();
+
+  // map msg preparation
+  LaneletMapBin vector_map_msg;
+  generateMap(vector_map_msg);
+
+  // test callback preparation
+  TrafficSignalArray latest_msg;
+  auto callback = [&latest_msg](const TrafficSignalArray::ConstSharedPtr msg) {
+    latest_msg = *msg;
+  };
+  test_manager->set_subscriber<TrafficSignalArray>(output_topic, callback);
+
+  // Publish map first
+  test_manager->test_pub_msg<LaneletMapBin>(
+    test_target_node, input_map_topic, vector_map_msg, rclcpp::QoS(1).transient_local());
+
+  // Create old external message (should be rejected due to timeout)
+  TrafficSignalArray old_external_msg;
+  auto old_time =
+    test_target_node->now() - rclcpp::Duration::from_seconds(
+                                20.0);  // 20 seconds ago (should exceed external_delay_tolerance)
+  generateExternalMsgWithId(old_external_msg, old_time, 1012, TrafficElement::GREEN);
+
+  // Create recent external message (should be accepted)
+  TrafficSignalArray recent_external_msg;
+  auto recent_time = test_target_node->now();
+  generateExternalMsgWithId(recent_external_msg, recent_time, 1012, TrafficElement::RED);
+
+  // Publish old message first (should be rejected)
+  test_manager->test_pub_msg<TrafficSignalArray>(
+    test_target_node, input_external_topic, old_external_msg);
+
+  rclcpp::sleep_for(std::chrono::milliseconds(100));
+
+  // Should have no traffic lights due to timeout rejection
+  EXPECT_EQ(latest_msg.traffic_light_groups.size(), 0)
+    << "Expected no traffic light groups (old message should be rejected due to timeout)";
+
+  // Publish recent message (should be accepted)
+  test_manager->test_pub_msg<TrafficSignalArray>(
+    test_target_node, input_external_topic, recent_external_msg);
+
+  rclcpp::sleep_for(std::chrono::milliseconds(100));
+
+  // Should now have the recent traffic light
+  EXPECT_EQ(latest_msg.traffic_light_groups.size(), 1)
+    << "Expected 1 traffic light group (recent message should be accepted)";
+
+  if (!latest_msg.traffic_light_groups.empty()) {
+    EXPECT_EQ(latest_msg.traffic_light_groups[0].traffic_light_group_id, 1012)
+      << "Should have traffic light ID 1012";
+    EXPECT_EQ(latest_msg.traffic_light_groups[0].elements[0].color, TrafficElement::RED)
+      << "Recent traffic light should be RED";
+  }
+
   rclcpp::shutdown();
 }
