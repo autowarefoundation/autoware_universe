@@ -25,6 +25,7 @@
 
 #include <gtest/gtest.h>
 
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
@@ -66,11 +67,13 @@ protected:
   // Member variables
   std::shared_ptr<rclcpp::Node> node_;
   std::shared_ptr<ShiftPullOut> shift_pull_out_;
+  autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
 
 private:
   void initialize_shift_pull_out_planner()
   {
     auto parameters = StartPlannerParameters::init(*node_);
+    vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*node_).getVehicleInfo();
 
     shift_pull_out_ = std::make_shared<ShiftPullOut>(*node_, parameters);
   }
@@ -94,6 +97,20 @@ TEST_F(TestShiftPullOut, GenerateValidShiftPullOutPath)
     << "Generated shift pull out path does not have the expected number of partial paths.";
   EXPECT_EQ(debug_data.conditions_evaluation.back(), "success")
     << "shift pull out path planning did not succeed.";
-}
 
+  // Plot and save the generated path for visualization
+  if (result.has_value() && !result->partial_paths.empty()) {
+    // Get lanelets from route segments
+    std::vector<lanelet::ConstLanelet> lanelets;
+    for (const auto & segment : route.segments) {
+      for (const auto & primitive : segment.primitives) {
+        const auto lanelet = planner_data->route_handler->getLaneletsFromId(primitive.id);
+        lanelets.push_back(lanelet);
+      }
+    }
+    StartPlannerTestHelper::plot_and_save_path(
+      result->partial_paths, lanelets, vehicle_info_, PlannerType::SHIFT,
+      "shift_pull_out_path.png");
+  }
+}
 }  // namespace autoware::behavior_path_planner
