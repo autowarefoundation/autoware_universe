@@ -56,6 +56,7 @@
   <exec_depend>autoware_traffic_light_visualization</exec_depend>
   <exec_depend>pointcloud_to_laserscan</exec_depend>
   <exec_depend>topic_tools</exec_depend>
+  <exec_depend>autoware_bytetrack</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
