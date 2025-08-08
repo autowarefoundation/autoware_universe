@@ -480,7 +480,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
   const auto closest_projections_to_bound_opt =
     boundary_departure_checker_ptr_->get_closest_projections_to_boundaries(
-      *ref_traj_pts_opt, output_.abnormalities_data.projections_to_bound, curr_vel, curr_acc);
+      output_.abnormalities_data.projections_to_bound, curr_vel, curr_acc);
   toc_curr_watch("get_ref_traj");
 
   if (!closest_projections_to_bound_opt) {

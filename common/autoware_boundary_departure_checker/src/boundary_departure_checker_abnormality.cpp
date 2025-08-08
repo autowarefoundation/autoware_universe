@@ -168,7 +168,6 @@ BoundaryDepartureChecker::get_boundary_segments_from_side(
 
 tl::expected<std::vector<ClosestProjectionToBound>, std::string>
 BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
-  [[maybe_unused]] const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
   const Abnormalities<ProjectionsToBound> & projections_to_bound, const double min_braking_dist,
   const double max_braking_dist, const SideKey side_key)
 {
@@ -284,7 +283,6 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
 
 tl::expected<ClosestProjectionsToBound, std::string>
 BoundaryDepartureChecker::get_closest_projections_to_boundaries(
-  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
   const Abnormalities<ProjectionsToBound> & projections_to_bound, const double curr_vel,
   const double curr_acc)
 {
@@ -301,7 +299,7 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries(
 
   for (const auto side_key : g_side_keys) {
     const auto min_to_bound_opt = get_closest_projections_to_boundaries_side(
-      aw_ref_traj, projections_to_bound, min_braking_dist, max_braking_dist, side_key);
+      projections_to_bound, min_braking_dist, max_braking_dist, side_key);
 
     if (!min_to_bound_opt) {
       return tl::make_unexpected(min_to_bound_opt.error());
