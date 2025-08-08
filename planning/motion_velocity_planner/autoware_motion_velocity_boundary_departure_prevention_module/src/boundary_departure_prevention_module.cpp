@@ -136,16 +136,21 @@ void BoundaryDeparturePreventionModule::update_parameters(
       configs.insert({AbnormalityType::NORMAL, normal_config});
     }
 
-    auto compensate_steering = has_type(AbnormalityType::STEERING);
-    update_param(parameters, ns_steering_abnormality + "enable", compensate_steering);
-    if (compensate_steering) {
-      SteeringConfig steering_config;
-      abnormality_types_to_compensate.emplace_back(AbnormalityType::STEERING);
-      update_param(
-        parameters, ns_steering_abnormality + "steering_rate_rps",
-        steering_config.steering_rate_rps);
-      configs.insert({AbnormalityType::STEERING, steering_config});
-    }
+    // // // auto compensate_steering = has_type(AbnormalityType::STEERING);
+    // // // update_param(parameters, ns_steering_abnormality + "enable", compensate_steering);
+    // // if (compensate_steering) {
+    // //   SteeringConfig steering_config;
+    // //   abnormality_types_to_compensate.emplace_back(AbnormalityType::STEERING);
+    //   // update_param(parameters, ns_steering_abnormality + "delay_s", steering_config.delay_s);
+    //   // update_param(parameters, ns_steering_abnormality + "factor", steering_config.factor);
+    //   // update_param(parameters, ns_steering_abnormality + "offset_rps",
+    //   steering_config.offset_rps);
+    //   // update_param(parameters, ns_steering_abnormality + "steering_rate_velocities_mps",
+    //   steering_config.steering_rate_velocities_mps);
+    //   // update_param(parameters, ns_steering_abnormality + "steering_rate_limits_rps",
+    //   steering_config.steering_rate_limits_rps); configs.insert({AbnormalityType::STEERING,
+    //   steering_config});
+    // }
 
     auto compensate_localization = has_type(AbnormalityType::LOCALIZATION);
     update_param(parameters, ns_localization_abnormality + "enable", compensate_localization);
@@ -197,7 +202,8 @@ void BoundaryDeparturePreventionModule::subscribe_topics(rclcpp::Node & node)
       &node, "/api/operation_mode/state", 1);
   route_polling_sub_ = autoware_utils::InterProcessPollingSubscriber<
     LaneletRoute, autoware_utils::polling_policy::Newest>::
-    create_subscription(&node, "/planning/mission_planning/route");
+    create_subscription(
+      &node, "/planning/mission_planning/route", rclcpp::QoS(1).transient_local());
 }
 
 void BoundaryDeparturePreventionModule::publish_topics(rclcpp::Node & node)
