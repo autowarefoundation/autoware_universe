@@ -90,8 +90,12 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
   debug_data_.base_link2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
 
   // Find obstacles in detection area
-  const auto obstacle_points = detection_area::get_obstacle_points(
-    detection_area_reg_elem_.detectionAreas(), *planner_data_->no_ground_pointcloud);
+  std::vector<geometry_msgs::msg::Point> obstacle_points = {};
+  if (planner_data_->no_ground_pointcloud) {
+    obstacle_points = detection_area::get_obstacle_points(
+      detection_area_reg_elem_.detectionAreas(), *planner_data_->no_ground_pointcloud);
+  }
+
   debug_data_.obstacle_points = obstacle_points;
   if (!obstacle_points.empty()) {
     last_obstacle_found_time_ = std::make_shared<const rclcpp::Time>(clock_->now());
