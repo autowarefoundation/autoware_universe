@@ -147,11 +147,11 @@ private:
     return lanelet_map_ptr_;
   }
 
-  const Eigen::MatrixXf &
+  const Eigen::MatrixXf
     map_lane_segments_matrix_;  //!< Matrix containing lane segment data in map coordinates.
-  const ColLaneIDMaps &
+  const ColLaneIDMaps
     col_id_mapping_;  //!< Map of segment IDs to their corresponding column indices.
-  const std::shared_ptr<lanelet::LaneletMap> &
+  const std::shared_ptr<lanelet::LaneletMap>
     lanelet_map_ptr_;  //!< Shared pointer to the lanelet map.
 
   /**
