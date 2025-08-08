@@ -26,6 +26,7 @@ PedestrianAndBicycleTracker::PedestrianAndBicycleTracker(
   pedestrian_tracker_(time, object),
   bicycle_tracker_(object_model::bicycle, time, object)
 {
+  tracker_type_ = TrackerType::PEDESTRIAN_AND_BICYCLE;
 }
 
 bool PedestrianAndBicycleTracker::predict(const rclcpp::Time & time)

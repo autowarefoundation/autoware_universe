@@ -30,8 +30,9 @@ namespace autoware::multi_object_tracker
 class VehicleTracker : public Tracker
 {
 private:
-  object_model::ObjectModel object_model_;
   rclcpp::Logger logger_;
+
+  object_model::ObjectModel object_model_;
 
   double velocity_deviation_threshold_;
 

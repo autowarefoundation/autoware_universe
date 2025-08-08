@@ -39,6 +39,7 @@ PassThroughTracker::PassThroughTracker(
 : Tracker(time, object), logger_(rclcpp::get_logger("PassThroughTracker")), last_update_time_(time)
 {
   prev_observed_object_ = object;
+  tracker_type_ = TrackerType::PASS_THROUGH;
 }
 
 bool PassThroughTracker::predict(const rclcpp::Time & time)

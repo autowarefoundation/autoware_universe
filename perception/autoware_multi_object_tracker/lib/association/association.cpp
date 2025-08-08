@@ -172,8 +172,10 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
   // Pre-allocate vectors to avoid reallocations
   std::vector<types::DynamicObject> tracked_objects;
   std::vector<std::uint8_t> tracker_labels;
+  std::vector<TrackerType> tracker_types;
   tracked_objects.reserve(trackers.size());
   tracker_labels.reserve(trackers.size());
+  tracker_types.reserve(trackers.size());
   // Build R-tree and store tracker data
   {
     size_t tracker_idx = 0;
@@ -185,6 +187,7 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
       tracker->getTrackedObject(measurements.header.stamp, tracked_object);
       tracked_objects.push_back(tracked_object);
       tracker_labels.push_back(tracker->getHighestProbLabel());
+      tracker_types.push_back(tracker->getTrackerType());
 
       Point p(tracked_object.pose.position.x, tracked_object.pose.position.y);
       rtree_points.push_back(std::make_pair(p, tracker_idx));
@@ -208,6 +211,13 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
     const auto & measurement_object = measurements.objects[measurement_idx];
     const auto measurement_label =
       autoware::object_recognition_utils::getHighestProbLabel(measurement_object.classification);
+    if (measurement_label >= types::NUM_LABELS) {
+      RCLCPP_WARN(
+        rclcpp::get_logger("DataAssociation"),
+        "Measurement label %d is out of range. Skipping association.",
+        static_cast<int>(measurement_label));
+      continue;
+    }
 
     // Get pre-computed maximum squared distance for this measurement class
     const double max_squared_dist = max_squared_dist_per_class_[measurement_label];
@@ -229,13 +239,20 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
     // Process nearby trackers
     for (const auto & tracker_value : nearby_trackers) {
       const size_t tracker_idx = tracker_value.second;
+      const auto tracker_type = tracker_types[tracker_idx];
+
+      // Check if this tracker can be assigned to the measurement
+      bool can_assign =
+        config_.can_assign_map.at(tracker_type)[static_cast<int>(measurement_label)];
+      if (!can_assign) continue;
+
+      // Calculate score for this tracker-measurement pair
       const auto & tracked_object = tracked_objects[tracker_idx];
       const auto tracker_label = tracker_labels[tracker_idx];
-
-      // The actual distance check was already done in the R-tree query
-      double score = calculateScore(
+      const double score = calculateScore(
         tracked_object, tracker_label, measurement_object, measurement_label,
         tracker_inverse_covariances[tracker_idx]);
+
       score_matrix(tracker_idx, measurement_idx) = score;
     }
   }
@@ -248,10 +265,6 @@ double DataAssociation::calculateScore(
   const types::DynamicObject & measurement_object, const std::uint8_t measurement_label,
   const InverseCovariance2D & inv_cov) const
 {
-  if (!config_.can_assign_matrix(tracker_label, measurement_label)) {
-    return 0.0;
-  }
-
   // when the tracker and measurements are unknown, use generalized IoU
   if (tracker_label == Label::UNKNOWN && measurement_label == Label::UNKNOWN) {
     const double & generalized_iou_threshold = config_.unknown_association_giou_threshold;
