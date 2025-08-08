@@ -147,8 +147,18 @@ void LaneSegmentContext::apply_transforms(
   const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix,
   int64_t num_segments) const
 {
-  ::autoware::diffusion_planner::preprocess::apply_transforms(
-    transform_matrix, output_matrix, num_segments);
+  // transform the x and y coordinates
+  transform_selected_rows(transform_matrix, output_matrix, num_segments, X);
+  // the dx and dy coordinates do not require translation
+  transform_selected_rows(transform_matrix, output_matrix, num_segments, dX, false);
+  transform_selected_rows(transform_matrix, output_matrix, num_segments, LB_X);
+  transform_selected_rows(transform_matrix, output_matrix, num_segments, RB_X);
+
+  // subtract center from boundaries
+  output_matrix.row(LB_X) = output_matrix.row(LB_X) - output_matrix.row(X);
+  output_matrix.row(LB_Y) = output_matrix.row(LB_Y) - output_matrix.row(Y);
+  output_matrix.row(RB_X) = output_matrix.row(RB_X) - output_matrix.row(X);
+  output_matrix.row(RB_Y) = output_matrix.row(RB_Y) - output_matrix.row(Y);
 }
 
 void LaneSegmentContext::compute_distances(
@@ -288,23 +298,6 @@ Eigen::Matrix<float, 1, TRAFFIC_LIGHT_ONE_HOT_DIM> get_traffic_signal_row_vector
   return {
     static_cast<float>(is_green), static_cast<float>(is_amber), static_cast<float>(is_red),
     static_cast<float>(!has_color), 0.f};
-}
-
-void apply_transforms(
-  const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, int64_t num_segments)
-{
-  // transform the x and y coordinates
-  transform_selected_rows(transform_matrix, output_matrix, num_segments, X);
-  // the dx and dy coordinates do not require translation
-  transform_selected_rows(transform_matrix, output_matrix, num_segments, dX, false);
-  transform_selected_rows(transform_matrix, output_matrix, num_segments, LB_X);
-  transform_selected_rows(transform_matrix, output_matrix, num_segments, RB_X);
-
-  // subtract center from boundaries
-  output_matrix.row(LB_X) = output_matrix.row(LB_X) - output_matrix.row(X);
-  output_matrix.row(LB_Y) = output_matrix.row(LB_Y) - output_matrix.row(Y);
-  output_matrix.row(RB_X) = output_matrix.row(RB_X) - output_matrix.row(X);
-  output_matrix.row(RB_Y) = output_matrix.row(RB_Y) - output_matrix.row(Y);
 }
 
 Eigen::MatrixXf process_segments_to_matrix(

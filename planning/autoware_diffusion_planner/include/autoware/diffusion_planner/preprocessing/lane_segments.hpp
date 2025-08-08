@@ -257,16 +257,6 @@ Eigen::Matrix<float, 1, TRAFFIC_LIGHT_ONE_HOT_DIM> get_traffic_signal_row_vector
   const autoware_perception_msgs::msg::TrafficLightGroup & signal);
 
 /**
- * @brief Applies coordinate transforms to the output matrix for all segments.
- *
- * @param transform_matrix Transformation matrix to apply.
- * @param output_matrix Matrix to transform (in-place).
- * @param num_segments Number of segments to transform.
- */
-void apply_transforms(
-  const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, int64_t num_segments);
-
-/**
  * @brief Transforms selected rows of the output matrix using a transformation matrix.
  *
  * @param transform_matrix Transformation matrix to apply.
