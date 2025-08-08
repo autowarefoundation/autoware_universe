@@ -161,8 +161,7 @@ struct DiffusionPlannerDebugParams
  * - agent_data_: Optional input data for inference.
  * - params_, debug_params_, normalization_map_: Node and debug parameters, normalization info.
  * - Lanelet map and routing members: route_ptr_, lanelet_map_ptr_, routing_graph_ptr_,
- * traffic_rules_ptr_, lanelet_converter_ptr_, lane_segments_, map_lane_segments_matrix_,
- * col_id_mapping_, is_map_loaded_.
+ * traffic_rules_ptr_, lane_segment_context_, is_map_loaded_.
  * - ROS 2 node elements: timer_, publishers, subscriptions, and time_keeper_.
  * - generator_uuid_: Unique identifier for the planner instance.
  * - vehicle_info_: Vehicle-specific parameters.
@@ -286,10 +285,7 @@ public:
   std::shared_ptr<lanelet::routing::RoutingGraph> routing_graph_ptr_;
   std::shared_ptr<lanelet::traffic_rules::TrafficRules> traffic_rules_ptr_;
   std::map<lanelet::Id, TrafficSignalStamped> traffic_light_id_map_;
-  std::unique_ptr<LaneletConverter> lanelet_converter_ptr_;
-  std::vector<LaneSegment> lane_segments_;
-  Eigen::MatrixXf map_lane_segments_matrix_;
-  ColLaneIDMaps col_id_mapping_;
+  std::unique_ptr<preprocess::LaneSegmentContext> lane_segment_context_;
   bool is_map_loaded_{false};
 
   // Node elements
