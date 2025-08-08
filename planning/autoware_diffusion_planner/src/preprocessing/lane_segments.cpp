@@ -34,6 +34,73 @@
 
 namespace autoware::diffusion_planner::preprocess
 {
+
+// LaneSegmentContext implementation
+LaneSegmentContext::LaneSegmentContext(
+  const Eigen::MatrixXf & map_lane_segments_matrix, const ColLaneIDMaps & col_id_mapping,
+  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr)
+: map_lane_segments_matrix_(map_lane_segments_matrix),
+  col_id_mapping_(col_id_mapping),
+  lanelet_map_ptr_(lanelet_map_ptr)
+{
+}
+
+std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_route_segments(
+  const Eigen::Matrix4f & transform_matrix,
+  const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
+  const lanelet::ConstLanelets & current_lanes) const
+{
+  return ::autoware::diffusion_planner::preprocess::get_route_segments(
+    map_lane_segments_matrix_, transform_matrix, col_id_mapping_, traffic_light_id_map,
+    lanelet_map_ptr_, current_lanes);
+}
+
+std::tuple<Eigen::MatrixXf, ColLaneIDMaps> LaneSegmentContext::transform_and_select_rows(
+  const Eigen::Matrix4f & transform_matrix,
+  const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map, const float center_x,
+  const float center_y, const int64_t m) const
+{
+  return ::autoware::diffusion_planner::preprocess::transform_and_select_rows(
+    map_lane_segments_matrix_, transform_matrix, col_id_mapping_, traffic_light_id_map,
+    lanelet_map_ptr_, center_x, center_y, m);
+}
+
+void LaneSegmentContext::add_traffic_light_one_hot_encoding_to_segment(
+  const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
+  Eigen::MatrixXf & segment_matrix, const int64_t row_idx, const int64_t col_counter) const
+{
+  ::autoware::diffusion_planner::preprocess::add_traffic_light_one_hot_encoding_to_segment(
+    segment_matrix, col_id_mapping_, traffic_light_id_map, lanelet_map_ptr_, row_idx, col_counter);
+}
+
+void LaneSegmentContext::apply_transforms(
+  const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix,
+  int64_t num_segments) const
+{
+  ::autoware::diffusion_planner::preprocess::apply_transforms(
+    transform_matrix, output_matrix, num_segments);
+}
+
+void LaneSegmentContext::compute_distances(
+  const Eigen::Matrix4f & transform_matrix, std::vector<ColWithDistance> & distances,
+  const float center_x, const float center_y, const float mask_range) const
+{
+  ::autoware::diffusion_planner::preprocess::compute_distances(
+    map_lane_segments_matrix_, transform_matrix, distances, center_x, center_y, mask_range);
+}
+
+std::tuple<Eigen::MatrixXf, ColLaneIDMaps>
+LaneSegmentContext::transform_points_and_add_traffic_info(
+  const Eigen::Matrix4f & transform_matrix,
+  const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
+  const std::vector<ColWithDistance> & distances, int64_t m) const
+{
+  return ::autoware::diffusion_planner::preprocess::transform_points_and_add_traffic_info(
+    map_lane_segments_matrix_, transform_matrix, distances, col_id_mapping_, traffic_light_id_map,
+    lanelet_map_ptr_, m);
+}
+
+// Existing standalone functions below...
 void compute_distances(
   const Eigen::MatrixXf & input_matrix, const Eigen::Matrix4f & transform_matrix,
   std::vector<ColWithDistance> & distances, const float center_x, const float center_y,
