@@ -248,22 +248,6 @@ inline void sort_indices_by_distance(std::vector<ColWithDistance> & distances)
 }
 
 /**
- * @brief Adds one-hot encoded traffic light information to a segment matrix.
- *
- * @param segment_matrix The segment matrix to modify (in-place).
- * @param col_id_mapping Mapping between lanelet IDs and matrix columns.
- * @param traffic_light_id_map Map of lanelet IDs to traffic signal information.
- * @param lanelet_map_ptr Shared pointer to the lanelet map.
- * @param row_idx The row index in the matrix corresponding to the segment.
- * @param col_counter The column counter for the segment.
- */
-void add_traffic_light_one_hot_encoding_to_segment(
-  [[maybe_unused]] Eigen::MatrixXf & segment_matrix, const ColLaneIDMaps & col_id_mapping,
-  const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
-  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr, const int64_t row_idx,
-  [[maybe_unused]] const int64_t col_counter);
-
-/**
  * @brief Returns a one-hot encoded row vector for the traffic signal state.
  *
  * @param signal The traffic light group message.
@@ -294,23 +278,6 @@ void apply_transforms(
 void transform_selected_rows(
   const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, int64_t num_segments,
   int64_t row_idx, bool do_translation = true);
-
-/**
- * @brief Transforms and selects columns from the input matrix based on distances, and adds traffic
- * info.
- *
- * @param input_matrix Input matrix containing lane segment data.
- * @param transform_matrix Transformation matrix to apply to the points.
- * @param distances Vector of columns with distances, used to select columns.
- * @param lanelet_map_ptr Shared pointer to the lanelet map.
- * @param m Maximum number of columns (segments) to select.
- * @return Tuple of the transformed matrix and updated column ID mapping.
- */
-std::tuple<Eigen::MatrixXf, ColLaneIDMaps> transform_points_and_add_traffic_info(
-  const Eigen::MatrixXf & input_matrix, const Eigen::Matrix4f & transform_matrix,
-  const std::vector<ColWithDistance> & distances, const ColLaneIDMaps & col_id_mapping,
-  const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
-  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr, int64_t m);
 
 }  // namespace autoware::diffusion_planner::preprocess
 
