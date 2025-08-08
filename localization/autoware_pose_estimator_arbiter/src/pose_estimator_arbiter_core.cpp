@@ -20,7 +20,11 @@
 #include "stopper/stopper_yabloc.hpp"
 #include "switch_rule/enable_all_rule.hpp"
 
+#if __has_include(<magic_enum/magic_enum.hpp>)
+#include <magic_enum/magic_enum.hpp>
+#else
 #include <magic_enum.hpp>
+#endif
 
 #include <memory>
 #include <set>
