@@ -35,13 +35,13 @@
 
 struct Memory
 {
-  int mem_len;
-  int pre_len;
-  void * mem_buf;    // pre_len
-  float * pre_buf;   // 1, pre_len, 1
-  float * post_buf;  // 1, mem_len, 1
+  int mem_len;         // Length of the updated memory buffer output from the model (post_memory_length)
+  int pre_len;         // Length of the  memory buffer input to the model (pre_memory_length)
+  void * mem_buf;      // GPU memory buffer for temporal data storage (size: pre_len)
+  float * pre_buf;     // Pointer to pre-memory timestamp buffer [1, pre_len, 1] - stores timestamps from previous frames
+  float * post_buf;    // Pointer to post-memory timestamp buffer [1, mem_len, 1] - stores current frame timestamps
 
-  cudaStream_t mem_stream;
+  cudaStream_t mem_stream;  // CUDA stream for asynchronous memory operations
 
   void Init(cudaStream_t stream, const int pre_length, const int post_length)
   {

@@ -54,8 +54,12 @@
 #include "autoware/camera_streampetr/postprocess/postprocess_kernel.hpp"
 #include "autoware/camera_streampetr/utils.hpp"
 
+// TensorRT Common
+#include "autoware/tensorrt_common/tensorrt_common.hpp"
+
 namespace autoware::camera_streampetr
 {
+
 using cuda::Tensor;
 using nvinfer1::DataType;
 using nvinfer1::Dims;
@@ -64,11 +68,15 @@ using nvinfer1::IExecutionContext;
 using nvinfer1::ILogger;
 using nvinfer1::IRuntime;
 
+// Use tensorrt_common components
+using autoware::tensorrt_common::Logger;
+using autoware::tensorrt_common::Profiler;
+using autoware::tensorrt_common::TrtCommon;
+
 class SubNetwork
 {
 private:
-  ICudaEngine * engine_;
-  IExecutionContext * context_;
+  std::unique_ptr<TrtCommon> trt_common_;
   cudaStream_t stream_;
 
 public:
@@ -77,9 +85,11 @@ public:
   cudaGraph_t graph;
   cudaGraphExec_t graph_exec;
 
-  SubNetwork(std::string engine_path, IRuntime * runtime, cudaStream_t stream)
+  SubNetwork(const std::string & engine_path, IRuntime * runtime, cudaStream_t stream)
   {
     stream_ = stream;
+    
+    // Load the engine using TrtCommon's runtime approach
     std::ifstream engine_file(engine_path, std::ios::binary);
     if (!engine_file) {
       throw std::runtime_error("Error opening engine file: " + engine_path);
@@ -90,22 +100,32 @@ public:
 
     // Read the engine file into a buffer
     std::vector<char> engineData(fsize);
-
     engine_file.read(engineData.data(), fsize);
-    engine_ = runtime->deserializeCudaEngine(engineData.data(), fsize);
-    context_ = engine_->createExecutionContext();
-
-    int nb = engine_->getNbIOTensors();
-
-    for (int n = 0; n < nb; n++) {
-      std::string name = engine_->getIOTensorName(n);
-      Dims d = engine_->getTensorShape(name.c_str());
-      DataType dtype = engine_->getTensorDataType(name.c_str());
-      bindings[name] = std::make_shared<Tensor>(name, d, dtype);
-      bindings[name]->iomode = engine_->getTensorIOMode(name.c_str());
-      std::cout << *(bindings[name]) << std::endl;
-      context_->setTensorAddress(name.c_str(), bindings[name]->ptr);
+    
+    auto engine = runtime->deserializeCudaEngine(engineData.data(), fsize);
+    if (!engine) {
+      throw std::runtime_error("Failed to deserialize engine from: " + engine_path);
     }
+    
+    auto context = engine->createExecutionContext();
+    if (!context) {
+      throw std::runtime_error("Failed to create execution context");
+    }
+
+    int nb = engine->getNbIOTensors();
+    for (int n = 0; n < nb; n++) {
+      std::string name = engine->getIOTensorName(n);
+      Dims d = engine->getTensorShape(name.c_str());
+      DataType dtype = engine->getTensorDataType(name.c_str());
+      bindings[name] = std::make_shared<Tensor>(name, d, dtype);
+      bindings[name]->iomode = engine->getTensorIOMode(name.c_str());
+      std::cout << *(bindings[name]) << std::endl;
+      context->setTensorAddress(name.c_str(), bindings[name]->ptr);
+    }
+
+    // Store the raw pointers for direct access
+    engine_ = engine;
+    context_ = context;
   }
 
   void Enqueue()
@@ -117,7 +137,14 @@ public:
     }
   }
 
-  ~SubNetwork() {}
+  ~SubNetwork() {
+    if (context_) {
+      delete context_;
+    }
+    if (engine_) {
+      delete engine_;
+    }
+  }
 
   void EnableCudaGraph()
   {
@@ -135,48 +162,53 @@ public:
     cudaGraphInstantiate(&graph_exec, graph, 0);
 #endif
   }
+
+private:
+  ICudaEngine * engine_;
+  IExecutionContext * context_;
 };  // class SubNetwork
 
 class Duration
 {
-  // stat
-  std::vector<float> stats;
-  cudaEvent_t b, e;
-  std::string m_name;
+  // CUDA events for timing
+  cudaEvent_t begin_event_, end_event_;
+  std::string layer_name_;
+  std::shared_ptr<Profiler> profiler_;
 
 public:
-  explicit Duration(std::string name) : m_name(name)
+  explicit Duration(const std::string & name, std::shared_ptr<Profiler> profiler = nullptr)
+  : layer_name_(name), profiler_(profiler)
   {
-    cudaEventCreate(&b);
-    cudaEventCreate(&e);
+    cudaEventCreate(&begin_event_);
+    cudaEventCreate(&end_event_);
   }
 
-  void MarkBegin(cudaStream_t s) { cudaEventRecord(b, s); }
+  ~Duration() {
+    cudaEventDestroy(begin_event_);
+    cudaEventDestroy(end_event_);
+  }
 
-  void MarkEnd(cudaStream_t s) { cudaEventRecord(e, s); }
+  void MarkBegin(cudaStream_t stream) { 
+    cudaEventRecord(begin_event_, stream); 
+  }
+
+  void MarkEnd(cudaStream_t stream) { 
+    cudaEventRecord(end_event_, stream); 
+  }
 
   float Elapsed()
   {
-    float val;
-    cudaEventElapsedTime(&val, b, e);
-    stats.push_back(val);
-    return val;
+    float elapsed_ms;
+    cudaEventElapsedTime(&elapsed_ms, begin_event_, end_event_);
+    
+    // Report to profiler if available
+    if (profiler_) {
+      profiler_->reportLayerTime(layer_name_.c_str(), elapsed_ms);
+    }
+    
+    return elapsed_ms;
   }
 };  // class Duration
-
-class Logger : public ILogger
-{
-public:
-  void log(ILogger::Severity severity, const char * msg) noexcept override
-  {
-    // Only print error messages
-    if (severity == ILogger::Severity::kERROR) {
-      std::cerr << msg << std::endl;
-    }
-  }
-};
-
-Logger gLogger;
 
 struct NetworkConfig
 {
@@ -240,11 +272,14 @@ public:
 
   void printBindingInfo();
   void wipe_memory();
+  void printProfiling() const;
 
 private:
   autoware_perception_msgs::msg::DetectedObject bbox_to_ros_msg(const Box3D & bbox);
 
   NetworkConfig config_;
+  std::shared_ptr<Logger> logger_;
+  std::shared_ptr<Profiler> profiler_;
   std::unique_ptr<IRuntime> runtime_;
   std::unique_ptr<SubNetwork> backbone_;
   std::unique_ptr<SubNetwork> pts_head_;

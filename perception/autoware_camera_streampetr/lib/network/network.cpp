@@ -81,8 +81,12 @@ StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config) : config_(con
 {
   cudaStreamCreate(&stream_);
 
+  // Initialize logger and profiler from tensorrt_common
+  logger_ = std::make_shared<autoware::tensorrt_common::Logger>();
+  profiler_ = std::make_shared<autoware::tensorrt_common::Profiler>();
+
   // Initialize TensorRT runtime
-  runtime_ = std::unique_ptr<IRuntime>{nvinfer1::createInferRuntime(gLogger)};
+  runtime_ = std::unique_ptr<IRuntime>{nvinfer1::createInferRuntime(*logger_)};
   backbone_ = std::make_unique<SubNetwork>(config_.engine_backbone_path, runtime_.get(), stream_);
   pts_head_ = std::make_unique<SubNetwork>(config_.engine_head_path, runtime_.get(), stream_);
   pos_embed_ =
@@ -102,11 +106,11 @@ StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config) : config_(con
   mem_.pre_buf = static_cast<float *>(pts_head_->bindings["pre_memory_timestamp"]->ptr);
   mem_.post_buf = static_cast<float *>(pts_head_->bindings["post_memory_timestamp"]->ptr);
 
-  // events for measurement
-  dur_backbone_ = std::make_unique<Duration>("backbone");
-  dur_ptshead_ = std::make_unique<Duration>("ptshead");
-  dur_pos_embed_ = std::make_unique<Duration>("pos_embed");
-  dur_postprocess_ = std::make_unique<Duration>("postprocess");
+  // events for measurement - pass profiler to Duration objects
+  dur_backbone_ = std::make_unique<Duration>("backbone", profiler_);
+  dur_ptshead_ = std::make_unique<Duration>("ptshead", profiler_);
+  dur_pos_embed_ = std::make_unique<Duration>("pos_embed", profiler_);
+  dur_postprocess_ = std::make_unique<Duration>("postprocess", profiler_);
 
   if (config_.iou_threshold > 0.0) {
     NMSParams p;
@@ -222,6 +226,22 @@ void StreamPetrNetwork::inference_detector(
   forward_time_ms.push_back(dur_ptshead_->Elapsed());
   forward_time_ms.push_back(dur_pos_embed_->Elapsed());
   forward_time_ms.push_back(dur_postprocess_->Elapsed());
+}
+
+StreamPetrNetwork::~StreamPetrNetwork()
+{
+  if (stream_) {
+    cudaStreamDestroy(stream_);
+  }
+}
+
+void StreamPetrNetwork::printProfiling() const
+{
+  if (profiler_) {
+    logger_->log(
+      autoware::tensorrt_common::Severity::kINFO, 
+      "StreamPETR Profiling\n%s", profiler_->toString().c_str());
+  }
 }
 
 }  // namespace autoware::camera_streampetr

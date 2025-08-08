@@ -17,13 +17,18 @@
 
 #include <NvInfer.h>
 #include <NvOnnxParser.h>
+#include <rclcpp/rclcpp.hpp>
 
 #include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
+
+// TensorRT Common
+#include "autoware/tensorrt_common/logger.hpp"
 
 namespace autoware::camera_streampetr
 {
@@ -76,8 +81,12 @@ std::string initEngine(
     std::filesystem::path(onnx_file_path).replace_extension(".engine").string();
   if (std::filesystem::exists(engine_file_path)) return engine_file_path;
   RCLCPP_INFO(logger, "Building engine file: %s", engine_file_path.c_str());
+  
+  // Create TensorRT logger
+  auto trt_logger = std::make_shared<autoware::tensorrt_common::Logger>();
+  
   // Create builder
-  auto builder = std::unique_ptr<nvinfer1::IBuilder>(nvinfer1::createInferBuilder(gLogger));
+  auto builder = std::unique_ptr<nvinfer1::IBuilder>(nvinfer1::createInferBuilder(*trt_logger));
   if (!builder) {
     throw std::runtime_error("Failed to create TensorRT builder");
   }
@@ -93,7 +102,7 @@ std::string initEngine(
 
   // Create ONNX parser
   auto parser =
-    std::unique_ptr<nvonnxparser::IParser>(nvonnxparser::createParser(*network, gLogger));
+    std::unique_ptr<nvonnxparser::IParser>(nvonnxparser::createParser(*network, *trt_logger));
   if (!parser) {
     throw std::runtime_error("Failed to create ONNX parser");
   }
