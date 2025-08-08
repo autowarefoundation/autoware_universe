@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.14)
 project(autoware_trajectory_optimizer)
 
 find_package(autoware_cmake REQUIRED)
