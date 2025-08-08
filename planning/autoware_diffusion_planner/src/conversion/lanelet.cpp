@@ -31,13 +31,6 @@
 #include <vector>
 namespace autoware::diffusion_planner
 {
-enum LIGHT_SIGNAL_STATE {
-  GREEN = 0,
-  AMBER = 1,
-  RED = 2,
-  UNKNOWN = 3,
-};
-
 // Compute Euclidean distance between two LanePoints
 inline float euclidean_distance(const LanePoint & p1, const LanePoint & p2)
 {
@@ -172,11 +165,9 @@ std::vector<LaneSegment> LaneletConverter::convert_to_lane_segments(
             autoware_utils_math::kmph2mps(std::stof(attrs.at("speed_limit").value())))
         : std::nullopt;
 
-    // TODO(Daniel): get proper light state, use behavior_velocity_traffic_light module as guide.
-    auto traffic_light = TrafficLightElement::UNKNOWN;
     lane_segments.emplace_back(
       lanelet.id(), lane_polyline, is_intersection, left_boundary_segments, right_boundary_segments,
-      speed_limit_mps, traffic_light);
+      speed_limit_mps);
   }
   return lane_segments;
 }

@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -168,10 +169,6 @@ TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsAttributes)
   for (const auto & segment : lane_segments) {
     // Check ID is valid
     EXPECT_GT(segment.id, 0) << "Lane segment ID should be positive";
-
-    // Check traffic light state (should be UNKNOWN in this test)
-    EXPECT_EQ(segment.traffic_light, autoware_perception_msgs::msg::TrafficLightElement::UNKNOWN)
-      << "Traffic light state should be UNKNOWN";
   }
 }
 
@@ -450,6 +447,23 @@ TEST_F(LaneletIntegrationTest, CheckPointOrdering)
         << segment.id << ". Distance: " << dist << " meters";
     }
   }
+}
+
+TEST_F(LaneletIntegrationTest, AddTrafficLightOneHotEncodingToSegmentNoTrafficLight)
+{
+  const int64_t num_lane_points = 20;
+  auto lane_segments = lanelet_converter_->convert_to_lane_segments(num_lane_points);
+
+  autoware::diffusion_planner::preprocess::ColLaneIDMaps col_id_mapping;
+  auto input_matrix = autoware::diffusion_planner::preprocess::process_segments_to_matrix(
+    lane_segments, col_id_mapping);
+
+  // Should not throw
+  std::map<lanelet::Id, autoware::diffusion_planner::preprocess::TrafficSignalStamped>
+    traffic_light_id_map;
+  EXPECT_NO_THROW(
+    autoware::diffusion_planner::preprocess::add_traffic_light_one_hot_encoding_to_segment(
+      input_matrix, col_id_mapping, traffic_light_id_map, lanelet_map_ptr_, 0, 0));
 }
 
 int main(int argc, char ** argv)

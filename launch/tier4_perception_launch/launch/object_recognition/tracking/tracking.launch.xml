@@ -36,6 +36,8 @@
   <arg name="input/lidar_dnn_short_range/objects" default="/perception/object_recognition/detection/$(var lidar_short_range_detection_model_type)/objects"/>
   <arg name="input/camera_lidar_rule_detector/channel" default="camera_lidar_fusion"/>
   <arg name="input/camera_lidar_rule_detector/objects" default="/perception/object_recognition/detection/clustering/camera_lidar_fusion/objects"/>
+  <arg name="input/irregular_object_detector/channel" default="camera_lidar_fusion_irregular"/>
+  <arg name="input/irregular_object_detector/objects" default="/perception/object_recognition/detection/irregular_object/objects"/>
   <arg name="input/tracker_based_detector/channel" default="detection_by_tracker"/>
   <arg name="input/tracker_based_detector/objects" default="/perception/object_recognition/detection/detection_by_tracker/objects"/>
   <arg name="input/radar/channel" default="radar"/>
@@ -110,31 +112,38 @@
     <let name="input/detection03/channel" value="$(var input/camera_lidar_rule_detector/channel)"/>
     <let name="input/detection03/objects" value="$(var input/camera_lidar_rule_detector/objects)"/>
 
-    <let name="input/detection04/channel" value="$(var input/tracker_based_detector/channel)"/>
-    <let name="input/detection04/channel" value="none" unless="$(var use_detection_by_tracker)"/>
-    <let name="input/detection04/objects" value="$(var input/tracker_based_detector/objects)"/>
+    <let name="input/detection04/channel" value="$(var input/irregular_object_detector/channel)"/>
+    <let name="input/detection04/objects" value="$(var input/irregular_object_detector/objects)"/>
 
-    <let name="input/detection05/channel" value="$(var input/radar/channel)"/>
-    <let name="input/detection05/objects" value="$(var input/radar/far_objects)"/>
+    <let name="input/detection05/channel" value="$(var input/tracker_based_detector/channel)"/>
+    <let name="input/detection05/channel" value="none" unless="$(var use_detection_by_tracker)"/>
+    <let name="input/detection05/objects" value="$(var input/tracker_based_detector/objects)"/>
+
+    <let name="input/detection06/channel" value="$(var input/radar/channel)"/>
+    <let name="input/detection06/objects" value="$(var input/radar/far_objects)"/>
 
     <!-- camera lidar -->
     <group scoped="false" if="$(eval '&quot;$(var mode)&quot;==&quot;camera_lidar_fusion&quot;')">
       <!-- radar far object is not used -->
-      <let name="input/detection05/channel" value="none"/>
+      <let name="input/detection06/channel" value="none"/>
     </group>
 
     <!-- lidar radar -->
     <group scoped="false" if="$(eval '&quot;$(var mode)&quot;==&quot;lidar_radar_fusion&quot;')">
       <!-- camera lidar fusion is not used -->
       <let name="input/detection03/channel" value="none"/>
+      <!-- irregular object detector is not used -->
+      <let name="input/detection04/channel" value="none"/>
     </group>
 
     <!-- lidar -->
     <group scoped="false" if="$(eval '&quot;$(var mode)&quot;==&quot;lidar&quot;')">
       <!-- camera lidar detector is not used -->
       <let name="input/detection03/channel" value="none"/>
+      <!-- irregular object detector is not used -->
+      <let name="input/detection04/channel" value="none"/>
       <!-- radar far object is not used -->
-      <let name="input/detection05/channel" value="none"/>
+      <let name="input/detection06/channel" value="none"/>
     </group>
 
     <!-- radar -->
@@ -143,8 +152,10 @@
       <let name="input/detection01/channel" value="none"/>
       <!-- camera lidar fusion is not used -->
       <let name="input/detection03/channel" value="none"/>
-      <!-- detection by tracker is not used -->
+      <!-- irregular object detector is not used -->
       <let name="input/detection04/channel" value="none"/>
+      <!-- detection by tracker is not used -->
+      <let name="input/detection05/channel" value="none"/>
       <!-- normal radar object to be used-->
       <let name="input/detection05/objects" value="$(var input/radar/objects)"/>
     </group>
@@ -161,6 +172,8 @@
       <arg name="input/detection04/channel" value="$(var input/detection04/channel)"/>
       <arg name="input/detection05/objects" value="$(var input/detection05/objects)"/>
       <arg name="input/detection05/channel" value="$(var input/detection05/channel)"/>
+      <arg name="input/detection06/objects" value="$(var input/detection06/objects)"/>
+      <arg name="input/detection06/channel" value="$(var input/detection06/channel)"/>
       <arg name="output/objects" value="$(var output/objects)"/>
       <arg name="data_association_matrix_path" value="$(var object_recognition_tracking_multi_object_tracker_data_association_matrix_param_path)"/>
       <arg name="input_channels_path" value="$(var object_recognition_tracking_multi_object_tracker_input_channels_param_path)"/>
