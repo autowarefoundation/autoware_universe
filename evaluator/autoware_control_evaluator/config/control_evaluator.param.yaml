@@ -1,5 +1,9 @@
 /**:
   ros__parameters:
+    output_metrics_only_moving:
+      enabled: true # if true, aggregate metrics for output_metrics statistics only when the ego is moving
+      metric_list:
+        - closest_object_distance
     planning_factor_metrics:
       topic_prefix: /planning/planning_factors/
       stop_deviation:

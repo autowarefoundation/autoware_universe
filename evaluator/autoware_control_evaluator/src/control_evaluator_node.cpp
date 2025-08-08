@@ -75,6 +75,26 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
   output_metrics_ = declare_parameter<bool>("output_metrics");
   distance_filter_thr_m_ = declare_parameter<double>("object_metrics.distance_filter_thr_m");
 
+  // Setting about Output metrics only when the vehicle is moving
+  const bool output_metrics_only_moving_enabled =
+    declare_parameter<bool>("output_metrics_only_moving.enabled");
+  const std::vector<std::string> output_metrics_only_moving_metric_list =
+    declare_parameter<std::vector<std::string>>("output_metrics_only_moving.metric_list");
+
+  is_output_metrics_only_moving.fill(false);
+  if (output_metrics_only_moving_enabled) {
+    for (const auto & metric_str : output_metrics_only_moving_metric_list) {
+      const auto it = str_to_metric.find(metric_str);
+      if (it != str_to_metric.end()) {
+        is_output_metrics_only_moving[static_cast<size_t>(it->second)] = true;
+      } else {
+        RCLCPP_ERROR(
+          get_logger(), "Unknown metric '%s' in output_metrics_only_moving.metric_list",
+          metric_str.c_str());
+      }
+    }
+  }
+
   // Timer callback to publish evaluator diagnostics
   using namespace std::literals::chrono_literals;
   timer_ =
@@ -188,12 +208,15 @@ void ControlEvaluatorNode::getRouteData()
 void ControlEvaluatorNode::AddMetricMsg(
   const Metric & metric, const double & metric_value, const bool & accumulate_metric)
 {
+  auto metric_id = static_cast<size_t>(metric);
   MetricMsg metric_msg;
   metric_msg.name = metric_to_str.at(metric);
   metric_msg.value = std::to_string(metric_value);
   metrics_msg_.metric_array.push_back(metric_msg);
-  if (output_metrics_ && accumulate_metric) {
-    metric_accumulators_[static_cast<size_t>(metric)].add(metric_value);
+  if (
+    output_metrics_ && accumulate_metric &&
+    (ego_speed_ > 0.001 || !is_output_metrics_only_moving[metric_id])) {
+    metric_accumulators_[metric_id].add(metric_value);
   }
 }
 
@@ -238,7 +261,7 @@ void ControlEvaluatorNode::AddBoundaryDistanceMetricMsg(
 
   if (behavior_path.left_bound.size() >= 1) {
     LineString2d left_boundary;
-    for (const auto & p : behavior_path.left_bound) left_boundary.push_back(Point2d(p.x, p.y));
+    for (const auto & p : behavior_path.left_bound) left_boundary.emplace_back(p.x, p.y);
     double distance_to_left_boundary =
       metrics::utils::calc_distance_to_line(current_vehicle_footprint, left_boundary);
 
@@ -251,7 +274,7 @@ void ControlEvaluatorNode::AddBoundaryDistanceMetricMsg(
 
   if (behavior_path.right_bound.size() >= 1) {
     LineString2d right_boundary;
-    for (const auto & p : behavior_path.right_bound) right_boundary.push_back(Point2d(p.x, p.y));
+    for (const auto & p : behavior_path.right_bound) right_boundary.emplace_back(p.x, p.y);
     double distance_to_right_boundary =
       metrics::utils::calc_distance_to_line(current_vehicle_footprint, right_boundary);
 
@@ -425,7 +448,7 @@ void ControlEvaluatorNode::AddGoalDeviationMetricMsg(const Odometry & odom)
   const double yaw_deviation_value_abs = std::abs(yaw_deviation_value);
 
   const bool is_ego_stopped_near_goal =
-    std::abs(longitudinal_deviation_value) < 3.0 && std::abs(odom.twist.twist.linear.x) < 0.001;
+    std::abs(longitudinal_deviation_value) < 3.0 && ego_speed_ < 0.001;
 
   AddMetricMsg(
     Metric::goal_longitudinal_deviation, longitudinal_deviation_value, is_ego_stopped_near_goal);
@@ -439,7 +462,7 @@ void ControlEvaluatorNode::AddGoalDeviationMetricMsg(const Odometry & odom)
   AddMetricMsg(Metric::goal_yaw_deviation_abs, yaw_deviation_value_abs, is_ego_stopped_near_goal);
 }
 
-void ControlEvaluatorNode::AddStopDeviationMetricMsg(const Odometry & odom)
+void ControlEvaluatorNode::AddStopDeviationMetricMsg()
 {
   const auto get_min_distance_signed =
     [](const PlanningFactorArray::ConstSharedPtr & planning_factors) -> std::optional<double> {
@@ -482,7 +505,7 @@ void ControlEvaluatorNode::AddStopDeviationMetricMsg(const Odometry & odom)
 
   const auto [closest_module_name, closest_min_distance] = *min_distance_pair;
   const bool is_ego_stopped_near_stop_decision =
-    std::abs(closest_min_distance) < 3.0 && std::abs(odom.twist.twist.linear.x) < 0.001;
+    std::abs(closest_min_distance) < 3.0 && ego_speed_ < 0.001;
   if (output_metrics_ && is_ego_stopped_near_stop_decision) {
     stop_deviation_accumulators_[closest_module_name].add(closest_min_distance);
     stop_deviation_abs_accumulators_[closest_module_name].add(std::abs(closest_min_distance));
@@ -549,9 +572,10 @@ void ControlEvaluatorNode::onTimer()
   const auto odom = odometry_sub_.take_data();
   if (odom) {
     const Pose ego_pose = odom->pose.pose;
+    ego_speed_ = std::abs(odom->twist.twist.linear.x);
 
     // add planning_factor related metrics
-    AddStopDeviationMetricMsg(*odom);
+    AddStopDeviationMetricMsg();
 
     // add object related metrics
     const auto objects = objects_sub_.take_data();
