@@ -464,7 +464,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
   const auto closest_projections_to_bound_opt =
     boundary_departure_checker_ptr_->get_closest_projections_to_boundaries(
-      *ref_traj_pts_opt, output_.abnormalities_data.projections_to_bound, curr_vel, curr_acc);
+      output_.abnormalities_data.projections_to_bound, curr_vel, curr_acc);
   toc_curr_watch("get_ref_traj");
 
   if (!closest_projections_to_bound_opt) {
@@ -485,8 +485,8 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
     return ego_dist_on_traj_m + lon_offset_m(take_front_offset);
   };
 
-  output_.departure_points = boundary_departure_checker_ptr_->get_departure_points(
-    output_.closest_projections_to_bound, lon_offset_m(planner_data->is_driving_forward));
+  output_.departure_points =
+    boundary_departure_checker_ptr_->get_departure_points(output_.closest_projections_to_bound);
   toc_curr_watch("get_departure_points");
 
   utils::update_critical_departure_points(

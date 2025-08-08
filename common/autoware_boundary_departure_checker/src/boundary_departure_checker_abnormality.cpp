@@ -172,7 +172,6 @@ BoundaryDepartureChecker::get_boundary_segments_from_side(
 
 tl::expected<std::vector<ClosestProjectionToBound>, std::string>
 BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
-  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
   const Abnormalities<ProjectionsToBound> & projections_to_bound, const double min_braking_dist,
   const double max_braking_dist, const SideKey side_key)
 {
@@ -260,8 +259,6 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
       std::abs(min_to_bound.back().lon_dist_on_ref_traj - min_pt->lon_dist_on_ref_traj) < 0.5) {
       continue;
     }
-    min_pt->lon_dist_on_ref_traj =
-      trajectory::closest(aw_ref_traj, utils::to_geom_pt(min_pt->pt_on_ego));
 
     const auto is_exceeding_cutoff =
       [&min_pt](const auto type, const auto braking_dist, const auto cutoff_time) {
@@ -292,7 +289,6 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
 
 tl::expected<ClosestProjectionsToBound, std::string>
 BoundaryDepartureChecker::get_closest_projections_to_boundaries(
-  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
   const Abnormalities<ProjectionsToBound> & projections_to_bound, const double curr_vel,
   const double curr_acc)
 {
@@ -309,7 +305,7 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries(
 
   for (const auto side_key : g_side_keys) {
     const auto min_to_bound_opt = get_closest_projections_to_boundaries_side(
-      aw_ref_traj, projections_to_bound, min_braking_dist, max_braking_dist, side_key);
+      projections_to_bound, min_braking_dist, max_braking_dist, side_key);
 
     if (!min_to_bound_opt) {
       return tl::make_unexpected(min_to_bound_opt.error());
@@ -338,7 +334,7 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries(
 }
 
 Side<DeparturePoints> BoundaryDepartureChecker::get_departure_points(
-  const ClosestProjectionsToBound & projections_to_bound, const double lon_offset_m)
+  const ClosestProjectionsToBound & projections_to_bound)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -346,8 +342,8 @@ Side<DeparturePoints> BoundaryDepartureChecker::get_departure_points(
 
   Side<DeparturePoints> departure_points;
   for (const auto side_key : g_side_keys) {
-    departure_points[side_key] = utils::get_departure_points(
-      projections_to_bound[side_key], th_point_merge_distance_m, lon_offset_m);
+    departure_points[side_key] =
+      utils::get_departure_points(projections_to_bound[side_key], th_point_merge_distance_m);
   }
   return departure_points;
 }
