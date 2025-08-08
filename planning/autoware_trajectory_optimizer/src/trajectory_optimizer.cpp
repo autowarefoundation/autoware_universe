@@ -152,7 +152,7 @@ void TrajectoryOptimizer::reset_previous_data()
 
 void TrajectoryOptimizer::set_up_params()
 {
-  using autoware_utils::get_or_declare_parameter;
+  using autoware_utils_rclcpp::get_or_declare_parameter;
 
   params_.keep_last_trajectory_s =
     get_or_declare_parameter<double>(*this, "keep_last_trajectory_s");
