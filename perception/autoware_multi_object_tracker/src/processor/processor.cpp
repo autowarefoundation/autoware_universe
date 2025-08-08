@@ -222,7 +222,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     types::DynamicObject object;
     uint8_t label;
     bool is_unknown;
-    uint channel_priority;
+    int tracker_priority;
     int measurement_count;
     double elapsed_time;
     bool is_valid;
@@ -232,7 +232,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
       object(),
       label(0),
       is_unknown(false),
-      channel_priority(types::max_channel_size),
+      tracker_priority(0),
       measurement_count(0),
       elapsed_time(0.0),
       is_valid(false)
@@ -299,7 +299,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
 
     data.label = tracker->getHighestProbLabel();
     data.is_unknown = (data.label == Label::UNKNOWN);
-    data.channel_priority = tracker->getChannelIndex();
+    data.tracker_priority = tracker->getTrackerPriority();
     data.measurement_count = tracker->getTotalMeasurementCount();
     data.elapsed_time = tracker->getElapsedTimeFromLastUpdate(time);
     data.is_valid = true;
@@ -310,8 +310,8 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
   // Sort valid trackers by priority
   std::sort(
     valid_trackers.begin(), valid_trackers.end(), [](const TrackerData & a, const TrackerData & b) {
-      if (a.channel_priority != b.channel_priority) {
-        return a.channel_priority < b.channel_priority;  // Lower index first
+      if (a.tracker_priority != b.tracker_priority) {
+        return a.tracker_priority < b.tracker_priority;  // Lower index first
       }
       if (a.is_unknown != b.is_unknown) {
         return b.is_unknown;  // Non-unknown first
@@ -434,12 +434,12 @@ bool TrackerProcessor::canMergeOverlappedTarget(
     return false;
   }
 
-  // if the other is not confident, do not remove the target
+  // 1. if the other is not confident, do not remove the target
   if (!other.isConfident(time, adaptive_threshold_cache_, ego_pose_)) {
     return false;
   }
 
-  // 1. compare known class probability
+  // 2. compare known class probability
   const float target_known_prob = target.getKnownObjectProbability();
   const float other_known_prob = other.getKnownObjectProbability();
   constexpr float min_known_prob = 0.2;
@@ -465,7 +465,7 @@ bool TrackerProcessor::canMergeOverlappedTarget(
     // if there is no big difference in the probability per channel, compare the covariance size
     return target.getPositionCovarianceDeterminant() > other.getPositionCovarianceDeterminant();
   }
-  // 2. the target class is unknown
+  // 3. the target class is unknown
   if (other_known_prob < min_known_prob) {
     // both are unknown, remove the larger uncertainty one
     return target.getPositionCovarianceDeterminant() > other.getPositionCovarianceDeterminant();
