@@ -150,6 +150,7 @@ struct DiffusionPlannerDebugParams
  * - create_input_data: Prepare input data for inference.
  * - get_ego_centric_agent_data: Extract ego-centric agent data from tracked objects.
  * - create_trajectory: Convert predictions to a trajectory in map coordinates.
+ * - create_ego_agent_past: Create a representation of the ego agent's past trajectory.
  *
  * @section Internal State
  * @brief
