@@ -162,7 +162,6 @@ public:
    * trajectory index, and selects the best candidate based on lateral distance and classification
    * logic (CRITICAL/NEAR).
    *
-   * @param aw_ref_traj          Reference trajectory used to compute longitudinal distances.
    * @param projections_to_bound Abnormality-aware projections to boundaries.
    * @param side_key             Side to process (left or right).
    * @return Vector of closest projections with departure classification, or an error message on
@@ -170,7 +169,6 @@ public:
    */
   tl::expected<std::vector<ClosestProjectionToBound>, std::string>
   get_closest_projections_to_boundaries_side(
-    const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
     const Abnormalities<ProjectionsToBound> & projections_to_bound, const double min_braking_dist,
     const double max_braking_dist, const SideKey side_key);
 
@@ -182,13 +180,11 @@ public:
    * type based on braking feasibility (APPROACHING_DEPARTURE) using trajectory spacing and braking
    * model.
    *
-   * @param aw_ref_traj          Reference trajectory.
    * @param projections_to_bound Abnormality-wise projections to boundaries.
    * @return ClosestProjectionsToBound structure containing selected points for both sides, or error
    * string.
    */
   tl::expected<ClosestProjectionsToBound, std::string> get_closest_projections_to_boundaries(
-    const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
     const Abnormalities<ProjectionsToBound> & projections_to_bound, const double curr_vel,
     const double curr_acc);
 
