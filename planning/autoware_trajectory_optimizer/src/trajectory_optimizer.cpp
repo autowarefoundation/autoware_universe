@@ -42,9 +42,9 @@ TrajectoryOptimizer::TrajectoryOptimizer(const rclcpp::NodeOptions & options)
 {
   // create time_keeper and its publisher
   // NOTE: This has to be called before setupSmoother to pass the time_keeper to the smoother.
-  debug_processing_time_detail_ =
-    create_publisher<autoware_utils::ProcessingTimeDetail>("~/debug/processing_time_detail_ms", 1);
-  time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(debug_processing_time_detail_);
+  debug_processing_time_detail_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
+    "~/debug/processing_time_detail_ms", 1);
+  time_keeper_ = std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_);
 
   set_up_params();
 
@@ -60,9 +60,10 @@ TrajectoryOptimizer::TrajectoryOptimizer(const rclcpp::NodeOptions & options)
   trajectory_pub_ = create_publisher<Trajectory>("~/output/trajectory", 1);
   trajectories_pub_ = create_publisher<CandidateTrajectories>("~/output/trajectories", 1);
   // debug time keeper
-  debug_processing_time_detail_pub_ =
-    create_publisher<autoware_utils::ProcessingTimeDetail>("~/debug/processing_time_detail_ms", 1);
-  time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(debug_processing_time_detail_pub_);
+  debug_processing_time_detail_pub_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
+    "~/debug/processing_time_detail_ms", 1);
+  time_keeper_ =
+    std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
   // last time a trajectory was received
   last_time_ = std::make_shared<rclcpp::Time>(now());
 }
@@ -190,7 +191,7 @@ void TrajectoryOptimizer::set_up_params()
 
 void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::ConstSharedPtr msg)
 {
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   initialize_optimizers();
 
   auto create_output_trajectory_from_past = [&]() {
