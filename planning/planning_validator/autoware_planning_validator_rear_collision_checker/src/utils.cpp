@@ -134,6 +134,34 @@ std::pair<lanelet::BasicPoint2d, double> get_smallest_enclosing_circle(
   return std::make_pair(center, radius_squared);
 }
 
+auto calc_lookahead_line(
+  const std::shared_ptr<PlanningValidatorContext> & context, const double lookahead_time)
+  -> std::optional<std::pair<autoware_utils::LineString3d, double>>
+{
+  const auto & points = context->data->current_trajectory->points;
+  const auto & ego_pose = context->data->current_kinematics->pose.pose;
+  const auto & current_velocity = context->data->current_kinematics->twist.twist.linear.x;
+  const auto & vehicle_info = context->vehicle_info;
+
+  const auto lookahead_distance = current_velocity * lookahead_time;
+  const auto p_future = autoware::motion_utils::calcLongitudinalOffsetPose(
+    points, ego_pose.position, vehicle_info.max_longitudinal_offset_m + lookahead_distance);
+
+  if (!p_future.has_value()) {
+    return std::nullopt;
+  }
+
+  autoware_utils::LineString3d lookahead_line;
+
+  const auto p1 = autoware_utils::calc_offset_pose(
+    p_future.value(), 0.0, 0.5 * vehicle_info.vehicle_width_m, 0.0);
+  const auto p2 = autoware_utils::calc_offset_pose(
+    p_future.value(), 0.0, -0.5 * vehicle_info.vehicle_width_m, 0.0);
+  lookahead_line.emplace_back(p1.position.x, p1.position.y, ego_pose.position.z);
+  lookahead_line.emplace_back(p2.position.x, p2.position.y, ego_pose.position.z);
+  return std::make_pair(lookahead_line, lookahead_distance);
+}
+
 auto calc_predicted_stop_line(
   const std::shared_ptr<PlanningValidatorContext> & context, const double max_deceleration,
   const double max_positive_jerk, const double max_negative_jerk)
@@ -181,7 +209,8 @@ auto calc_predicted_stop_line(
 auto check_shift_behavior(
   const lanelet::ConstLanelets & lanelets, const bool is_unsafe_holding,
   const std::shared_ptr<PlanningValidatorContext> & context,
-  const rear_collision_checker_node::Params & parameters, DebugData & debug) -> Behavior
+  const rear_collision_checker_node::Params & parameters, DebugData & debug)
+  -> std::pair<Behavior, double>
 {
   const auto & points = context->data->current_trajectory->points;
   const auto & ego_pose = context->data->current_kinematics->pose.pose;
@@ -200,25 +229,24 @@ auto check_shift_behavior(
     const auto is_left_shift = boost::geometry::intersects(
       axle, lanelet::utils::to2D(combine_lanelet.leftBound()).basicLineString());
     if (is_left_shift) {
-      return Behavior::NONE;
+      return std::make_pair(Behavior::NONE, 0.0);
     }
 
     const auto is_right_shift = boost::geometry::intersects(
       axle, lanelet::utils::to2D(combine_lanelet.rightBound()).basicLineString());
     if (is_right_shift) {
-      return Behavior::NONE;
+      return std::make_pair(Behavior::NONE, 0.0);
     }
   }
 
   const auto constraints = parameters.common.ego;
-  const auto reachable_point = calc_predicted_stop_line(
-    context, constraints.nominal_deceleration, constraints.nominal_positive_jerk,
-    constraints.nominal_negative_jerk);
+  const auto reachable_point =
+    calc_lookahead_line(context, parameters.common.adjacent_lane.lookahead_time);
   const auto stoppable_point = calc_predicted_stop_line(
     context, constraints.max_deceleration, constraints.max_positive_jerk,
     constraints.max_negative_jerk);
   if (!reachable_point.has_value() || !stoppable_point.has_value()) {
-    return Behavior::NONE;
+    return std::make_pair(Behavior::NONE, 0.0);
   }
 
   {
@@ -259,23 +287,24 @@ auto check_shift_behavior(
     const auto is_left_shift = boost::geometry::intersects(
       axle, lanelet::utils::to2D(combine_lanelet.leftBound()).basicLineString());
     if (is_left_shift && std::abs(points.at(i).longitudinal_velocity_mps) > 1e-3) {
-      return i < nearest_idx ? Behavior::NONE : Behavior::SHIFT_LEFT;
+      return std::make_pair((i < nearest_idx ? Behavior::NONE : Behavior::SHIFT_LEFT), distance);
     }
 
     const auto is_right_shift = boost::geometry::intersects(
       axle, lanelet::utils::to2D(combine_lanelet.rightBound()).basicLineString());
     if (is_right_shift && std::abs(points.at(i).longitudinal_velocity_mps) > 1e-3) {
-      return i < nearest_idx ? Behavior::NONE : Behavior::SHIFT_RIGHT;
+      return std::make_pair((i < nearest_idx ? Behavior::NONE : Behavior::SHIFT_RIGHT), distance);
     }
   }
 
-  return Behavior::NONE;
+  return std::make_pair(Behavior::NONE, 0.0);
 }
 
 auto check_turn_behavior(
   const lanelet::ConstLanelets & lanelets, const bool is_unsafe_holding,
   const std::shared_ptr<PlanningValidatorContext> & context,
-  const rear_collision_checker_node::Params & parameters, DebugData & debug) -> Behavior
+  const rear_collision_checker_node::Params & parameters, DebugData & debug)
+  -> std::pair<Behavior, double>
 {
   const auto & points = context->data->current_trajectory->points;
   const auto & ego_pose = context->data->current_kinematics->pose.pose;
@@ -315,14 +344,13 @@ auto check_turn_behavior(
 
   const auto & p = parameters.common.blind_spot;
   const auto constraints = parameters.common.ego;
-  const auto reachable_point = calc_predicted_stop_line(
-    context, constraints.nominal_deceleration, constraints.nominal_positive_jerk,
-    constraints.nominal_negative_jerk);
+  const auto reachable_point =
+    calc_lookahead_line(context, parameters.common.blind_spot.lookahead_time);
   const auto stoppable_point = calc_predicted_stop_line(
     context, constraints.max_deceleration, constraints.max_positive_jerk,
     constraints.max_negative_jerk);
   if (!reachable_point.has_value() || !stoppable_point.has_value()) {
-    return Behavior::NONE;
+    return std::make_pair(Behavior::NONE, 0.0);
   }
 
   {
@@ -367,12 +395,12 @@ auto check_turn_behavior(
       }
 
       if (!distance_to_stop_point.has_value()) {
-        return is_reachable ? Behavior::TURN_LEFT : Behavior::NONE;
+        return std::make_pair((is_reachable ? Behavior::TURN_LEFT : Behavior::NONE), distance);
       }
       if (distance_to_stop_point.value() < distance + buffer) {
-        return Behavior::NONE;
+        return std::make_pair(Behavior::NONE, distance);
       }
-      return is_reachable ? Behavior::TURN_LEFT : Behavior::NONE;
+      return std::make_pair((is_reachable ? Behavior::TURN_LEFT : Behavior::NONE), distance);
     }
 
     if (turn_direction == "right" && p.check.right) {
@@ -384,16 +412,16 @@ auto check_turn_behavior(
       }
 
       if (!distance_to_stop_point.has_value()) {
-        return is_reachable ? Behavior::TURN_RIGHT : Behavior::NONE;
+        return std::make_pair((is_reachable ? Behavior::TURN_RIGHT : Behavior::NONE), distance);
       }
       if (distance_to_stop_point.value() < distance + buffer) {
-        return Behavior::NONE;
+        return std::make_pair(Behavior::NONE, distance);
       }
-      return is_reachable ? Behavior::TURN_RIGHT : Behavior::NONE;
+      return std::make_pair((is_reachable ? Behavior::TURN_RIGHT : Behavior::NONE), distance);
     }
   }
 
-  return Behavior::NONE;
+  return std::make_pair(Behavior::NONE, 0.0);
 }
 
 void cut_by_lanelets(const lanelet::ConstLanelets & lanelets, DetectionAreas & detection_areas)
@@ -419,6 +447,52 @@ void cut_by_lanelets(const lanelet::ConstLanelets & lanelets, DetectionAreas & d
     }
 
     original = polygon3d;
+  }
+}
+
+void fill_rss_distance(
+  PointCloudObjects & objects, const std::shared_ptr<PlanningValidatorContext> & context,
+  [[maybe_unused]] const double distance_to_conflict_point, const double reaction_time,
+  const double max_deceleration, const double max_velocity,
+  const rear_collision_checker_node::Params & parameters)
+{
+  const auto & p = parameters;
+  const auto & max_deceleration_ego = p.common.ego.max_deceleration;
+  const auto & current_velocity = context->data->current_kinematics->twist.twist.linear.x;
+
+  for (auto & object : objects) {
+    const auto stop_distance_object =
+      reaction_time * object.velocity +
+      0.5 * std::pow(object.velocity, 2.0) / std::abs(max_deceleration);
+    const auto stop_distance_ego =
+      0.5 * std::pow(current_velocity, 2.0) / std::abs(max_deceleration_ego);
+
+    object.rss_distance = stop_distance_object - stop_distance_ego;
+    object.safe = object.rss_distance < object.relative_distance_with_delay_compensation;
+    object.ignore =
+      object.moving_time < p.common.filter.moving_time || object.velocity > max_velocity;
+  }
+}
+
+void fill_time_to_collision(
+  PointCloudObjects & objects, const std::shared_ptr<PlanningValidatorContext> & context,
+  const double distance_to_conflict_point, [[maybe_unused]] const double reaction_time,
+  [[maybe_unused]] const double max_deceleration, const double max_velocity,
+  const rear_collision_checker_node::Params & parameters)
+{
+  const auto & p = parameters;
+  const auto & current_velocity = context->data->current_kinematics->twist.twist.linear.x;
+
+  for (auto & object : objects) {
+    const auto time_to_reach_ego =
+      distance_to_conflict_point / std::max(current_velocity, p.common.ego.min_velocity);
+    const auto time_to_reach_obj =
+      (distance_to_conflict_point + object.relative_distance_with_delay_compensation) /
+      std::max(object.velocity, p.common.filter.min_velocity);
+    object.time_to_collision = std::abs(time_to_reach_ego - time_to_reach_obj);
+    object.safe = object.time_to_collision > p.common.time_to_collision.margin;
+    object.ignore =
+      object.moving_time < p.common.filter.moving_time || object.velocity > max_velocity;
   }
 }
 
@@ -559,6 +633,54 @@ auto generate_half_lanelet(
   return half_lanelet;
 }
 
+auto get_range_for_rss(
+  const std::shared_ptr<PlanningValidatorContext> & context,
+  [[maybe_unused]] const double distance_to_conflict_point, const double reaction_time,
+  const double max_deceleration, const double max_velocity,
+  const rear_collision_checker_node::Params & parameters) -> std::pair<double, double>
+{
+  const auto & p = parameters;
+  const auto & max_deceleration_ego = p.common.ego.max_deceleration;
+  const auto & current_velocity = context->data->current_kinematics->twist.twist.linear.x;
+
+  const auto stop_distance_object =
+    reaction_time * max_velocity + 0.5 * std::pow(max_velocity, 2.0) / std::abs(max_deceleration);
+  const auto stop_distance_ego =
+    0.5 * std::pow(current_velocity, 2.0) / std::abs(max_deceleration_ego);
+
+  const auto forward_distance = p.common.pointcloud.range.buffer +
+                                std::max(
+                                  context->vehicle_info.max_longitudinal_offset_m,
+                                  (p.common.blind_spot.check.front ? stop_distance_ego : 0.0));
+  const auto backward_distance = p.common.pointcloud.range.buffer -
+                                 context->vehicle_info.min_longitudinal_offset_m +
+                                 std::max(0.0, stop_distance_object - stop_distance_ego);
+
+  return std::make_pair(forward_distance, backward_distance);
+}
+
+auto get_range_for_ttc(
+  const std::shared_ptr<PlanningValidatorContext> & context,
+  const double distance_to_conflict_point, [[maybe_unused]] const double reaction_time,
+  [[maybe_unused]] const double max_deceleration, const double max_velocity,
+  const rear_collision_checker_node::Params & parameters) -> std::pair<double, double>
+{
+  const auto & p = parameters;
+  const auto & current_velocity = context->data->current_kinematics->twist.twist.linear.x;
+
+  const auto time_to_reach_ego =
+    distance_to_conflict_point / std::max(current_velocity, p.common.ego.min_velocity);
+
+  const auto forward_distance =
+    p.common.pointcloud.range.buffer + context->vehicle_info.max_longitudinal_offset_m;
+  const auto backward_distance =
+    p.common.pointcloud.range.buffer +
+    (time_to_reach_ego + p.common.time_to_collision.margin) * max_velocity -
+    distance_to_conflict_point;
+
+  return std::make_pair(forward_distance, backward_distance);
+}
+
 auto create_polygon_marker_array(
   const std::vector<autoware_utils::Polygon3d> & polygons, const std::string & ns,
   const std_msgs::msg::ColorRGBA & color) -> MarkerArray
@@ -663,7 +785,8 @@ auto create_pointcloud_object_marker_array(
          << "[s]\nRelativeDistance(RAW):" << object.relative_distance
          << "[m]\nRelativeDistance(w/DC):" << object.relative_distance_with_delay_compensation
          << "[m]\nVelocity:" << object.velocity << "[m/s]\nRSSDistance" << object.rss_distance
-         << "[m]\nFurthestLaneID:" << object.furthest_lane.id() << "\nDetail:" << object.detail;
+         << "[m]\nTimeToCollision:" << object.time_to_collision
+         << "[s]\nFurthestLaneID:" << object.furthest_lane.id() << "\nDetail:" << object.detail;
 
       marker.text = ss.str();
       marker.pose = object.pose;

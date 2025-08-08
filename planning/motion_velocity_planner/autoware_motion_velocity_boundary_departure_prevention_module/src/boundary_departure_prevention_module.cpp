@@ -32,6 +32,19 @@
 #include <unordered_map>
 #include <vector>
 
+namespace
+{
+using autoware::motion_velocity_planner::experimental::DepartureType;
+std::string to_string(DepartureType type)
+{
+  auto str = std::string(magic_enum::enum_name(type));
+  std::transform(
+    str.begin(), str.end(), str.begin(), [](unsigned char c) { return std::tolower(c); });
+  std::replace(str.begin(), str.end(), '_', ' ');
+  return str;
+}
+}  // namespace
+
 namespace autoware::motion_velocity_planner::experimental
 {
 
@@ -51,22 +64,30 @@ void BoundaryDeparturePreventionModule::init(
   updater_ptr_->setHardwareID("motion_velocity_boundary_departure_prevention");
   updater_ptr_->add(
     "boundary_departure", [this](diagnostic_updater::DiagnosticStatusWrapper & stat) {
-      int8_t lvl{DiagStatus::OK};
-      std::string msg{"OK"};
+      const auto type = std::invoke([&]() {
+        if (output_.diagnostic_output[DepartureType::CRITICAL_DEPARTURE]) {
+          return DepartureType::CRITICAL_DEPARTURE;
+        }
+        if (output_.diagnostic_output[DepartureType::APPROACHING_DEPARTURE]) {
+          return DepartureType::APPROACHING_DEPARTURE;
+        }
+        if (output_.diagnostic_output[DepartureType::NEAR_BOUNDARY]) {
+          return DepartureType::NEAR_BOUNDARY;
+        }
+        return DepartureType::NONE;
+      });
 
-      if (output_.diagnostic_output[DepartureType::CRITICAL_DEPARTURE]) {
-        lvl = node_param_.diagnostic_level[DepartureType::CRITICAL_DEPARTURE];
-        msg = "vehicle is leaving boundary";
-      } else if (output_.diagnostic_output[DepartureType::APPROACHING_DEPARTURE]) {
-        lvl = node_param_.diagnostic_level[DepartureType::APPROACHING_DEPARTURE];
-        msg = "vehicle is moving towards the boundary";
-      } else if (output_.diagnostic_output[DepartureType::NEAR_BOUNDARY]) {
-        lvl = node_param_.diagnostic_level[DepartureType::NEAR_BOUNDARY];
-        msg = "vehicle is near boundary";
+      auto lvl = node_param_.diagnostic_level[type];
+      auto msg = to_string(type);
+
+      if (lvl != DiagStatus::OK && type != DepartureType::NONE) {
+        RCLCPP_ERROR_THROTTLE(logger_, *clock_ptr_, 1000, "%s", msg.c_str());
       }
 
       stat.summary(lvl, msg);
     });
+  last_found_time_ptr_ = std::make_unique<double>(clock_ptr_->now().seconds());
+  last_lost_time_ptr_ = std::make_unique<double>(clock_ptr_->now().seconds());
 }
 
 void BoundaryDeparturePreventionModule::update_parameters(
@@ -174,6 +195,9 @@ void BoundaryDeparturePreventionModule::subscribe_topics(rclcpp::Node & node)
   op_mode_state_polling_sub_ =
     autoware_utils::InterProcessPollingSubscriber<OperationModeState>::create_subscription(
       &node, "/api/operation_mode/state", 1);
+  route_polling_sub_ = autoware_utils::InterProcessPollingSubscriber<
+    LaneletRoute, autoware_utils::polling_policy::Newest>::
+    create_subscription(&node, "/planning/mission_planning/route");
 }
 
 void BoundaryDeparturePreventionModule::publish_topics(rclcpp::Node & node)
@@ -211,6 +235,10 @@ void BoundaryDeparturePreventionModule::take_data()
   if (const auto op_mode_state_msg = op_mode_state_polling_sub_->take_data()) {
     op_mode_state_ptr_ = op_mode_state_msg;
   }
+
+  if (const auto route_msg = route_polling_sub_->take_data()) {
+    route_ptr_ = route_msg;
+  }
 }
 
 VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
@@ -232,6 +260,17 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
 
   if (const auto is_timeout_opt = is_data_timeout(planner_data->current_odometry)) {
     RCLCPP_WARN_THROTTLE(logger_, *clock_ptr_, throttle_duration_ms, "%s", is_timeout_opt->c_str());
+    return {};
+  }
+
+  if (const auto is_new_route = is_route_changed()) {
+    RCLCPP_WARN(logger_, "%s. Reset output.", is_new_route->c_str());
+    output_ = Output();
+  }
+
+  if (!is_autonomous_mode()) {
+    RCLCPP_DEBUG_THROTTLE(logger_, *clock_ptr_, throttle_duration_ms, "Not in autonomous mode.");
+    updater_ptr_->force_update();
     return {};
   }
 
@@ -258,12 +297,12 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
       return msg;
     }));
 
+    updater_ptr_->force_update();
     if (!result_opt) {
       RCLCPP_DEBUG(logger_, "Planning skipped: %s", result_opt.error().c_str());
       return {};
     }
 
-    updater_ptr_->force_update();
     return *result_opt;
   } catch (const std::exception & e) {
     RCLCPP_WARN(logger_, "Exception is caught: %s", e.what());
@@ -296,6 +335,10 @@ std::optional<std::string> BoundaryDeparturePreventionModule::is_data_invalid(
 
   if (!steering_angle_ptr_) {
     return {"waiting for steering angle..."};
+  }
+
+  if (!route_ptr_) {
+    return {"waiting for route..."};
   }
 
   constexpr size_t min_pts_size = 4;
@@ -342,29 +385,37 @@ std::optional<std::string> BoundaryDeparturePreventionModule::is_data_timeout(
   return std::nullopt;
 }
 
-bool BoundaryDeparturePreventionModule::is_goal_changed(
-  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const Pose & new_goal)
+bool BoundaryDeparturePreventionModule::is_autonomous_mode() const
 {
-  if (!prev_goal_ptr_) {
-    prev_goal_ptr_ = std::make_unique<Pose>(new_goal);
-    return false;
+  return (op_mode_state_ptr_->mode == OperationModeState::AUTONOMOUS) &&
+         op_mode_state_ptr_->is_autoware_control_enabled;
+}
+
+std::optional<std::string> BoundaryDeparturePreventionModule::is_route_changed()
+{
+  if (!prev_route_ptr_) {
+    prev_route_ptr_ = std::make_unique<LaneletRoute>(*route_ptr_);
+    return fmt::format("Initializing previous route pointer.");
   }
 
-  const auto diff_to_new_goal = autoware_utils::calc_distance2d(*prev_goal_ptr_, new_goal);
+  const auto prev_uuid = autoware_utils::to_boost_uuid(prev_route_ptr_->uuid);
+  const auto curr_uuid = autoware_utils::to_boost_uuid(route_ptr_->uuid);
 
-  if (diff_to_new_goal < node_param_.th_goal_shift_dist_m) {
-    *prev_goal_ptr_ = new_goal;
-    return false;
+  if (prev_uuid != curr_uuid) {
+    *prev_route_ptr_ = *route_ptr_;
+    return fmt::format("Route has changed.");
   }
 
-  const auto dist_on_curr_traj = trajectory::closest(aw_ref_traj, *prev_goal_ptr_);
-  const auto goal_on_curr_traj = aw_ref_traj.compute(dist_on_curr_traj);
+  const auto & prev_goal = prev_route_ptr_->goal_pose;
+  const auto & curr_goal = route_ptr_->goal_pose;
+  const auto diff_to_new_goal = autoware_utils::calc_distance2d(prev_goal, curr_goal);
 
-  const auto diff_on_curr_traj =
-    autoware_utils::calc_distance2d(*prev_goal_ptr_, goal_on_curr_traj.pose);
-  *prev_goal_ptr_ = new_goal;
+  if (diff_to_new_goal > node_param_.th_goal_shift_dist_m) {
+    *prev_route_ptr_ = *route_ptr_;
+    return fmt::format("Goal changed due to exceeding threshold.");
+  }
 
-  return diff_on_curr_traj >= node_param_.th_goal_shift_dist_m;
+  return std::nullopt;
 }
 
 tl::expected<VelocityPlanningResult, std::string>
@@ -376,6 +427,8 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
   const auto & vehicle_info = planner_data->vehicle_info_;
   const auto & curr_odom = planner_data->current_odometry;
+  const auto curr_vel = planner_data->current_odometry.twist.twist.linear.x;
+  const auto curr_acc = planner_data->current_acceleration.accel.accel.linear.x;
   const auto & curr_pose = curr_odom.pose;
   const auto & curr_position = curr_pose.pose.position;
   const auto & goal_position = raw_trajectory_points.back().pose.position;
@@ -398,12 +451,6 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
   if (!ref_traj_pts_opt) {
     return tl::make_unexpected(ref_traj_pts_opt.error().what);
   }
-  toc_curr_watch("get_ref_traj");
-
-  if (is_goal_changed(*ref_traj_pts_opt, raw_trajectory_points.back().pose)) {
-    RCLCPP_WARN(logger_, "Goal changed.");
-    output_ = Output();
-  }
 
   const auto abnormality_data_opt = boundary_departure_checker_ptr_->get_abnormalities_data(
     ego_pred_traj_ptr_->points, *ref_traj_pts_opt, curr_pose, *steering_angle_ptr_);
@@ -417,7 +464,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
   const auto closest_projections_to_bound_opt =
     boundary_departure_checker_ptr_->get_closest_projections_to_boundaries(
-      *ref_traj_pts_opt, output_.abnormalities_data.projections_to_bound);
+      *ref_traj_pts_opt, output_.abnormalities_data.projections_to_bound, curr_vel, curr_acc);
   toc_curr_watch("get_ref_traj");
 
   if (!closest_projections_to_bound_opt) {
@@ -444,33 +491,77 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
   utils::update_critical_departure_points(
     output_.departure_points, output_.critical_departure_points, *ref_traj_pts_opt,
-    node_param_.bdc_param.th_dist_hysteresis_m,
+    node_param_.bdc_param.th_point_merge_distance_m,
     ego_dist_on_traj_with_offset_m(!planner_data->is_driving_forward),
     node_param_.th_pt_shift_dist_m, node_param_.th_pt_shift_angle_rad);
   toc_curr_watch("update_critical_departure_points");
 
-  if (output_.departure_intervals.empty()) {
+  const auto is_departure_persist = std::invoke([&]() {
+    const auto is_found =
+      std::any_of(g_side_keys.begin(), g_side_keys.end(), [&](const auto side_key) {
+        return !closest_projections_to_bound_opt.value()[side_key].empty();
+      });
+
+    if (!is_found) {
+      *last_lost_time_ptr_ = clock_ptr_->now().seconds();
+      return false;
+    }
+
+    const auto t_diff = clock_ptr_->now().seconds() - *last_lost_time_ptr_;
+    return t_diff >= node_param_.on_time_buffer_s;
+  });
+
+  if (output_.departure_intervals.empty() && is_departure_persist) {
     output_.departure_intervals = utils::init_departure_intervals(
       *ref_traj_pts_opt, output_.departure_points,
       ego_dist_on_traj_with_offset_m(!planner_data->is_driving_forward),
       node_param_.slow_down_types);
-  } else {
+  }
+
+  if (!output_.departure_intervals.empty()) {
     auto & departure_intervals_mut = output_.departure_intervals;
     const auto & ref_traj_front_pt = raw_trajectory_points.front();
+
+    const auto is_reset_interval = std::invoke([&]() {
+      const auto is_departure_found = std::any_of(
+        g_side_keys.begin(), g_side_keys.end(),
+        [&](const auto side_key) { return !output_.departure_points[side_key].empty(); });
+
+      if (is_departure_found) {
+        *last_found_time_ptr_ = clock_ptr_->now().seconds();
+        return false;
+      }
+      const auto t_diff = clock_ptr_->now().seconds() - *last_found_time_ptr_;
+      return t_diff >= node_param_.off_time_buffer_s;
+    });
+
     utils::update_departure_intervals(
       departure_intervals_mut, output_.departure_points, *ref_traj_pts_opt,
       vehicle_info.vehicle_length_m, ref_traj_front_pt,
       ego_dist_on_traj_with_offset_m(!planner_data->is_driving_forward),
       node_param_.th_pt_shift_dist_m, node_param_.th_pt_shift_angle_rad,
-      node_param_.slow_down_types);
+      node_param_.slow_down_types, is_reset_interval, is_departure_persist);
+
+    if (is_reset_interval) {
+      *last_found_time_ptr_ = clock_ptr_->now().seconds();
+    }
+    const auto reset_lost_time =
+      std::any_of(g_side_keys.begin(), g_side_keys.end(), [&](const auto side_key) {
+        return output_.departure_intervals.empty() || output_.departure_points[side_key].empty();
+      });
+
+    if (reset_lost_time) {
+      *last_lost_time_ptr_ = clock_ptr_->now().seconds();
+    }
   }
+
   toc_curr_watch("update_departure_intervals");
 
   slow_down_wall_marker_.markers.clear();
 
   output_.slowdown_intervals = utils::get_slow_down_intervals(
-    *ref_traj_pts_opt, output_.departure_intervals, *slow_down_interpolator_ptr_, vehicle_info,
-    output_.abnormalities_data.boundary_segments, curr_odom.twist.twist.linear.x,
+    *ref_traj_pts_opt, output_.departure_intervals, *slow_down_interpolator_ptr_,
+    curr_odom.twist.twist.linear.x, planner_data->current_acceleration.accel.accel.linear.x,
     ego_dist_on_traj_with_offset_m(planner_data->is_driving_forward));
   toc_curr_watch("get_slow_down_interval");
 
@@ -480,8 +571,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
     slowdown_intervals.emplace_back(start_pose.position, end_pose.position, vel);
     const auto markers_start = autoware::motion_utils::createSlowDownVirtualWallMarker(
       start_pose, "boundary_departure_prevention_start", clock_ptr_->now(),
-      static_cast<int32_t>(idx), ego_dist_on_traj_with_offset_m(planner_data->is_driving_forward),
-      "", planner_data->is_driving_forward);
+      static_cast<int32_t>(idx), 0.0, "", planner_data->is_driving_forward);
     autoware_utils::append_marker_array(markers_start, &slow_down_wall_marker_);
     const auto markers_end = autoware::motion_utils::createSlowDownVirtualWallMarker(
       end_pose, "boundary_departure_prevention_end", clock_ptr_->now(),

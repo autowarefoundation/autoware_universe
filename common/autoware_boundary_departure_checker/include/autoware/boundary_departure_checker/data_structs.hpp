@@ -103,6 +103,7 @@ struct ProjectionToBound
   Segment2d nearest_bound_seg;
   double lat_dist{std::numeric_limits<double>::max()};
   size_t ego_sides_idx{0};
+  double time_from_start{std::numeric_limits<double>::max()};
   ProjectionToBound() = default;
   explicit ProjectionToBound(size_t idx) : ego_sides_idx(idx) {}
   ProjectionToBound(
@@ -188,7 +189,7 @@ struct DeparturePoint
   DepartureType departure_type{DepartureType::NONE};
   AbnormalityType abnormality_type{AbnormalityType::NORMAL};
   Point2d point;
-  double th_dist_hysteresis{2.0};
+  double th_point_merge_distance_m{2.0};
   double lat_dist_to_bound{1000.0};
   double dist_on_traj{1000.0};
   double velocity{0.0};
@@ -202,7 +203,7 @@ struct DeparturePoint
   [[nodiscard]] bool is_nearby(const Point2d & candidate_point) const
   {
     const auto diff = boost::geometry::distance(point, candidate_point);
-    return diff < th_dist_hysteresis;
+    return diff < th_point_merge_distance_m;
   }
 
   [[nodiscard]] Point to_geom_pt(const double z = 0.0) const
@@ -224,7 +225,7 @@ struct CriticalDeparturePoint : DeparturePoint
     departure_type = base.departure_type;
     abnormality_type = base.abnormality_type;
     point = base.point;
-    th_dist_hysteresis = base.th_dist_hysteresis;
+    th_point_merge_distance_m = base.th_point_merge_distance_m;
     lat_dist_to_bound = base.lat_dist_to_bound;
     dist_on_traj = base.dist_on_traj;
     velocity = base.velocity;

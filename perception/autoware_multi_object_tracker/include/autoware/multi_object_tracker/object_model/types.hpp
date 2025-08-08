@@ -44,6 +44,7 @@ namespace types
 // constants
 constexpr size_t max_channel_size = 12;
 constexpr float default_existence_probability = 0.75;
+constexpr int NUM_LABELS = 8;
 
 // channel configuration
 struct InputChannel
@@ -53,7 +54,7 @@ struct InputChannel
   std::string long_name = "Detected Object";  // full name of the detection
   std::string short_name = "DET";             // abbreviation of the name
   bool is_spawn_enabled = true;               // enable spawn of the object
-  bool trust_existence_probability = true;    // trust object existence probability
+  bool trust_existence_probability = false;   // trust object existence probability
   bool trust_extension = true;                // trust object extension
   bool trust_classification = true;           // trust object classification
   bool trust_orientation = true;              // trust object orientation(yaw)

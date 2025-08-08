@@ -248,19 +248,19 @@ VelocityPlanningResult RunOutModule::plan(
   time_keeper_->end_track("calc_slowdowns()");
 
   time_keeper_->start_track("publish_debug()");
-  virtual_wall_marker_creator.add_virtual_walls(run_out::create_virtual_walls(
-    result.velocity_planning_result, smoothed_trajectory_points,
-    planner_data->vehicle_info_.max_longitudinal_offset_m));
+  virtual_wall_marker_creator.add_virtual_walls(
+    run_out::create_virtual_walls(
+      result.velocity_planning_result, smoothed_trajectory_points,
+      planner_data->vehicle_info_.max_longitudinal_offset_m));
   virtual_wall_publisher_->publish(virtual_wall_marker_creator.create_markers(now));
   add_planning_factors(smoothed_trajectory_points, result, safety_factor_per_object);
   if (debug_publisher_->get_subscription_count() > 0) {
     const auto & filtering_data_to_publish =
       filtering_data[run_out::Parameters::string_to_label(params_.debug.object_label)];
-    debug_publisher_->publish(run_out::make_debug_markers(
-      ego_footprint, filtered_objects, decisions_tracker_, smoothed_trajectory_points,
-      params_.ignore_collision_conditions.if_ego_arrives_first_and_cannot_stop
-        .calculated_stop_time_limit,
-      filtering_data_to_publish));
+    debug_publisher_->publish(
+      run_out::make_debug_markers(
+        ego_footprint, filtered_objects, decisions_tracker_, smoothed_trajectory_points,
+        filtering_data_to_publish, params_));
   }
   publish_debug_trajectory(smoothed_trajectory_points, result.velocity_planning_result);
   objects_of_interest_marker_interface_->publishMarkerArray();

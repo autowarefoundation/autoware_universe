@@ -254,6 +254,8 @@ IntersectionModuleManager::IntersectionModuleManager(rclcpp::Node & node)
   // occlusion
   {
     ip.occlusion.enable = get_or_declare_parameter<bool>(node, ns + ".occlusion.enable");
+    ip.occlusion.request_approval_wo_traffic_light =
+      get_or_declare_parameter<bool>(node, ns + ".occlusion.request_approval_wo_traffic_light");
     ip.occlusion.occlusion_attention_area_length =
       get_or_declare_parameter<double>(node, ns + ".occlusion.occlusion_attention_area_length");
     ip.occlusion.free_space_max =
@@ -550,10 +552,11 @@ void MergeFromPrivateModuleManager::launchNewModules(
       if (next_lane_location != "private") {
         const auto associative_ids =
           planning_utils::getAssociativeIntersectionLanelets(ll, lanelet_map, routing_graph);
-        registerModule(std::make_shared<MergeFromPrivateRoadModule>(
-          module_id, lane_id, planner_data_, merge_from_private_area_param_, associative_ids,
-          logger_.get_child("merge_from_private_road_module"), clock_, time_keeper_,
-          planning_factor_interface_));
+        registerModule(
+          std::make_shared<MergeFromPrivateRoadModule>(
+            module_id, lane_id, planner_data_, merge_from_private_area_param_, associative_ids,
+            logger_.get_child("merge_from_private_road_module"), clock_, time_keeper_,
+            planning_factor_interface_));
         continue;
       }
     } else {
@@ -565,10 +568,11 @@ void MergeFromPrivateModuleManager::launchNewModules(
         if (conflicting_attr == "urban") {
           const auto associative_ids =
             planning_utils::getAssociativeIntersectionLanelets(ll, lanelet_map, routing_graph);
-          registerModule(std::make_shared<MergeFromPrivateRoadModule>(
-            module_id, lane_id, planner_data_, merge_from_private_area_param_, associative_ids,
-            logger_.get_child("merge_from_private_road_module"), clock_, time_keeper_,
-            planning_factor_interface_));
+          registerModule(
+            std::make_shared<MergeFromPrivateRoadModule>(
+              module_id, lane_id, planner_data_, merge_from_private_area_param_, associative_ids,
+              logger_.get_child("merge_from_private_road_module"), clock_, time_keeper_,
+              planning_factor_interface_));
           continue;
         }
       }

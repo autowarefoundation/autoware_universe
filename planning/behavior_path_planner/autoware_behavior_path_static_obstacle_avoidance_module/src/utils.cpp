@@ -23,6 +23,7 @@
 
 #include <Eigen/Dense>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware_utils_geometry/boost_geometry.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
 
 #include <boost/geometry/algorithms/buffer.hpp>
@@ -1265,9 +1266,14 @@ bool isWithinLanes(
 {
   const auto & rh = planner_data->route_handler;
   const auto & ego_pose = planner_data->self_odometry->pose.pose;
+  const double vehicle_width = planner_data->parameters.vehicle_info.vehicle_width_m;
+  autoware_utils_geometry::Point2d p1(0.0, -vehicle_width / 2.0);
+  autoware_utils_geometry::Point2d p2(0.0, vehicle_width / 2.0);
+  autoware_utils_geometry::LineString2d line;
+  line.push_back(p1);
+  line.push_back(p2);
   const auto transform = autoware_utils::pose2transform(ego_pose);
-  const auto footprint = autoware_utils::transform_vector(
-    planner_data->parameters.vehicle_info.createFootprint(), transform);
+  const auto vehicle_baselink_line = autoware_utils::transform_vector(line, transform);
 
   if (!closest_lanelet.has_value()) {
     return true;
@@ -1294,7 +1300,7 @@ bool isWithinLanes(
 
   const auto combine_lanelet = lanelet::utils::combineLaneletsShape(concat_lanelets);
 
-  return boost::geometry::within(footprint, combine_lanelet.polygon2d().basicPolygon());
+  return boost::geometry::within(vehicle_baselink_line, combine_lanelet.polygon2d().basicPolygon());
 }
 
 bool isShiftNecessary(const bool & is_object_on_right, const double & shift_length)
@@ -1906,6 +1912,23 @@ void fillObjectStoppableJudge(
   object_data.is_stoppable = same_id_obj->is_stoppable;
 }
 
+void fillObjectAvoidableByDesiredShiftLength(
+  ObjectData & object_data, const ObjectDataArray & previous_target_objects)
+{
+  const auto id = object_data.object.object_id;
+  const auto same_id_obj = std::find_if(
+    previous_target_objects.begin(), previous_target_objects.end(),
+    [&id](const auto & o) { return o.object.object_id == id; });
+
+  if (same_id_obj == previous_target_objects.end()) {
+    object_data.is_avoidable_by_desired_shift_length = false;
+    return;
+  }
+
+  object_data.is_avoidable_by_desired_shift_length =
+    same_id_obj->is_avoidable_by_desired_shift_length;
+}
+
 void compensateLostTargetObjects(
   AvoidancePlanningData & data, const ObjectDataArray & stored_objects,
   const std::shared_ptr<const PlannerData> & planner_data)
@@ -2339,7 +2362,8 @@ lanelet::ConstLanelets getAdjacentLane(
     }
   }
 
-  for (std::size_t i = 0; i < lanes.size(); ++i) {
+  const auto lanes_size = lanes.size();
+  for (std::size_t i = 0; i < lanes_size; ++i) {
     const auto & lane = lanes[i];
     for (const auto & next_lane : rh->getNextLanelets(lane)) {
       if (!exist(next_lane.id())) {
@@ -2370,8 +2394,9 @@ std::vector<ExtendedPredictedObject> getSafetyCheckTargetObjects(
 
   const auto append = [&](const auto & objects) {
     std::for_each(objects.objects.begin(), objects.objects.end(), [&](const auto & object) {
-      target_objects.push_back(utils::path_safety_checker::transform(
-        object, time_horizon, parameters->ego_predicted_path_params.time_resolution));
+      target_objects.push_back(
+        utils::path_safety_checker::transform(
+          object, time_horizon, parameters->ego_predicted_path_params.time_resolution));
     });
   };
 

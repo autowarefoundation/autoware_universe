@@ -447,6 +447,9 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
       declare_parameter<bool>("crosswalk_with_signal.use_crosswalk_signal");
     double threshold_velocity_assumed_as_stopping =
       declare_parameter<double>("crosswalk_with_signal.threshold_velocity_assumed_as_stopping");
+    double crossing_intention_duration = declare_parameter<double>("crossing_intention_duration");
+    double no_crossing_intention_duration =
+      declare_parameter<double>("no_crossing_intention_duration");
     std::vector<double> distance_set_for_no_intention_to_walk =
       declare_parameter<std::vector<double>>(
         "crosswalk_with_signal.distance_set_for_no_intention_to_walk");
@@ -458,7 +461,8 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
       max_crosswalk_user_delta_yaw_threshold_for_lanelet, use_crosswalk_signal,
       threshold_velocity_assumed_as_stopping, distance_set_for_no_intention_to_walk,
       timeout_set_for_no_intention_to_walk, prediction_sampling_time_interval_,
-      prediction_time_horizon_.pedestrian);
+      prediction_time_horizon_.pedestrian, crossing_intention_duration,
+      no_crossing_intention_duration);
   }
 
   // debug parameter
