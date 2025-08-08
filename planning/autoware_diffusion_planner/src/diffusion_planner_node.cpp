@@ -719,16 +719,16 @@ void DiffusionPlanner::on_map(const HADMapBin::ConstSharedPtr map_msg)
     lanelet_map_ptr_, constants::LaneletConverterParams::MAX_LANELETS,
     constants::LaneletConverterParams::MAX_POINTS_PER_LANE,
     constants::LaneletConverterParams::SEARCH_RADIUS_M);
-  lane_segments_ = lanelet_converter->convert_to_lane_segments(POINTS_PER_SEGMENT);
+  auto lane_segments = lanelet_converter->convert_to_lane_segments(POINTS_PER_SEGMENT);
 
-  if (lane_segments_.empty()) {
+  if (lane_segments.empty()) {
     RCLCPP_ERROR(get_logger(), "No lane segments found in the map");
     throw std::runtime_error("No lane segments found in the map");
   }
 
   ColLaneIDMaps col_id_mapping;
   Eigen::MatrixXf map_lane_segments_matrix =
-    preprocess::process_segments_to_matrix(lane_segments_, col_id_mapping);
+    preprocess::process_segments_to_matrix(lane_segments, col_id_mapping);
 
   // Create LaneSegmentContext with the static data
   lane_segment_context_ = std::make_unique<preprocess::LaneSegmentContext>(
