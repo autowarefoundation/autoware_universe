@@ -15,6 +15,7 @@
 #include "utils.hpp"
 
 #include <autoware/boundary_departure_checker/conversion.hpp>
+#include <autoware/boundary_departure_checker/data_structs.hpp>
 #include <autoware/trajectory/utils/closest.hpp>
 #include <magic_enum.hpp>
 #include <range/v3/algorithm/sort.hpp>
@@ -24,8 +25,6 @@
 #include <fmt/format.h>
 
 #include <algorithm>
-#include <limits>
-#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -201,7 +200,6 @@ void merge_departure_intervals(DepartureIntervals & departure_intervals)
   if (departure_intervals.size() <= 1) {
     return;
   }
-  // Sort intervals by start distance to make merging straightforward
   std::sort(
     departure_intervals.begin(), departure_intervals.end(),
     [](const auto & a, const auto & b) { return a.start_dist_on_traj < b.start_dist_on_traj; });
@@ -210,26 +208,26 @@ void merge_departure_intervals(DepartureIntervals & departure_intervals)
   merged.reserve(departure_intervals.size());
   merged.push_back(departure_intervals.front());
 
-  for (size_t i = 1; i < departure_intervals.size(); ++i) {
-    auto & last_merged = merged.back();
-    const auto & current = departure_intervals[i];
+  std::optional<DepartureInterval> last_merged_left;
+  std::optional<DepartureInterval> last_merged_right;
 
-    // Check for overlap on the same side
-    bool is_overlapping = (last_merged.end_dist_on_traj >= current.start_dist_on_traj) &&
-                          (last_merged.side_key == current.side_key);
+  for (auto & current : departure_intervals) {
+    auto & last_merged = current.side_key == SideKey::LEFT ? last_merged_left : last_merged_right;
 
-    if (is_overlapping) {
-      // Extend the previous interval if the current one goes further
-      if (current.end_dist_on_traj > last_merged.end_dist_on_traj) {
-        last_merged.end = current.end;
-        last_merged.end_dist_on_traj = current.end_dist_on_traj;
+    bool is_overlapping = last_merged &&
+                          (last_merged->end_dist_on_traj >= current.start_dist_on_traj) &&
+                          (last_merged->side_key == current.side_key);
+
+    if (is_overlapping) {  // extend the previous interval
+      if (current.end_dist_on_traj > last_merged->end_dist_on_traj) {
+        last_merged->end = current.end;
+        last_merged->end_dist_on_traj = current.end_dist_on_traj;
       }
-      // You can also merge the 'candidates' vectors here if needed
-      last_merged.candidates.insert(
-        last_merged.candidates.end(), current.candidates.begin(), current.candidates.end());
-    } else {
-      // No overlap, start a new merged interval
+      last_merged->candidates.insert(
+        last_merged->candidates.end(), current.candidates.begin(), current.candidates.end());
+    } else {  // start a new merged interval
       merged.push_back(current);
+      last_merged = current;
     }
   }
 
