@@ -89,7 +89,7 @@ public:
   void AddKinematicStateMetricMsg(
     const Odometry & odom, const AccelWithCovarianceStamped & accel_stamped);
   void AddSteeringMetricMsg(const SteeringReport & steering_report);
-  void AddStopDeviationMetricMsg(const Odometry & odom);
+  void AddStopDeviationMetricMsg();
   void onTimer();
 
 private:

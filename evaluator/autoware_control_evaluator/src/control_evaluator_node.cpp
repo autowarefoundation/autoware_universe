@@ -462,7 +462,7 @@ void ControlEvaluatorNode::AddGoalDeviationMetricMsg(const Odometry & odom)
   AddMetricMsg(Metric::goal_yaw_deviation_abs, yaw_deviation_value_abs, is_ego_stopped_near_goal);
 }
 
-void ControlEvaluatorNode::AddStopDeviationMetricMsg(const Odometry & odom)
+void ControlEvaluatorNode::AddStopDeviationMetricMsg()
 {
   const auto get_min_distance_signed =
     [](const PlanningFactorArray::ConstSharedPtr & planning_factors) -> std::optional<double> {
@@ -575,7 +575,7 @@ void ControlEvaluatorNode::onTimer()
     ego_speed_ = std::abs(odom->twist.twist.linear.x);
 
     // add planning_factor related metrics
-    AddStopDeviationMetricMsg(*odom);
+    AddStopDeviationMetricMsg();
 
     // add object related metrics
     const auto objects = objects_sub_.take_data();
