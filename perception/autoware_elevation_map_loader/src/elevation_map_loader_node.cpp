@@ -81,7 +81,7 @@ ElevationMapLoaderNode::ElevationMapLoaderNode(const rclcpp::NodeOptions & optio
   data_manager_.use_lane_filter_ = use_lane_filter;
 
   lane_filter_.use_lane_filter_ = use_lane_filter;
-  lane_filter_.lane_margin_ = this->declare_parameter("lane_margin");
+  lane_filter_.lane_margin_ = this->declare_parameter<double>("lane_margin");
 
   rclcpp::QoS durable_qos{1};
   durable_qos.transient_local();
