@@ -27,7 +27,7 @@ Error acceleration calculations are made based on the velocity calculations abov
 
 | Name                                     | Type                                       | Description                                 |
 | ---------------------------------------- | ------------------------------------------ | ------------------------------------------- |
-| `/planning/scenario_planning/trajectory` | autoware_planning_msgs::msg::Trajectory    | Output trajectory from planning module.     |
+| `/planning/trajectory` | autoware_planning_msgs::msg::Trajectory    | Output trajectory from planning module.     |
 | `/control/command/control_cmd`           | autoware_control_msgs::msg::Control        | Output control command from control module. |
 | `/vehicle/status/steering_status`        | autoware_vehicle_msgs::msg::SteeringReport | Steering information from vehicle.          |
 | `/localization/kinematic_state`          | nav_msgs::msg::Odometry                    | Use twist from odometry.                    |
