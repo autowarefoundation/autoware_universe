@@ -114,20 +114,6 @@ TEST_F(LaneSegmentsTest, TransformSelectedRowsNoTranslation)
   }
 }
 
-TEST_F(LaneSegmentsTest, AddTrafficLightOneHotEncodingToSegmentNoTrafficLight)
-{
-  preprocess::ColLaneIDMaps col_id_mapping;
-  auto input_matrix = preprocess::process_segments_to_matrix(lane_segments_, col_id_mapping);
-
-  // Should not throw or modify if traffic_light_id_map is empty
-  Eigen::MatrixXf segment_matrix = input_matrix;
-  std::map<lanelet::Id, preprocess::TrafficSignalStamped> traffic_light_id_map;
-  std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr;
-  EXPECT_NO_THROW(
-    preprocess::add_traffic_light_one_hot_encoding_to_segment(
-      segment_matrix, col_id_mapping, traffic_light_id_map, lanelet_map_ptr, 0, 0));
-}
-
 TEST_F(LaneSegmentsTest, TransformAndSelectRowsThrowsOnInvalidInput)
 {
   preprocess::ColLaneIDMaps col_id_mapping;

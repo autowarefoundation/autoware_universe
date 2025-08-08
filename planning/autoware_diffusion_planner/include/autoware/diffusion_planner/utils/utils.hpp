@@ -55,5 +55,21 @@ std::vector<float> create_float_data(const std::vector<int64_t> & shape, float f
  */
 bool check_input_map(const std::unordered_map<std::string, std::vector<float>> & input_map);
 
+/**
+ * @brief Converts a geometry_msgs::msg::Pose to a 4x4 transformation matrix.
+ *
+ * @param pose The pose containing position and orientation information.
+ * @return A 4x4 transformation matrix representing the pose.
+ */
+Eigen::Matrix4f pose_to_matrix4f(const geometry_msgs::msg::Pose & pose);
+
+/**
+ * @brief Extracts yaw angle from rotation matrix and converts to cos/sin representation.
+ *
+ * @param rotation_matrix 3x3 rotation matrix.
+ * @return A pair containing cos(yaw) and sin(yaw).
+ */
+std::pair<float, float> rotation_matrix_to_cos_sin(const Eigen::Matrix3f & rotation_matrix);
+
 }  // namespace autoware::diffusion_planner::utils
 #endif  // AUTOWARE__DIFFUSION_PLANNER__UTILS__UTILS_HPP_

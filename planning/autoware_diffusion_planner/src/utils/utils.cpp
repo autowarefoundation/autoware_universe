@@ -92,4 +92,46 @@ bool check_input_map(const std::unordered_map<std::string, std::vector<float>> &
   return true;
 }
 
+Eigen::Matrix4f pose_to_matrix4f(const geometry_msgs::msg::Pose & pose)
+{
+  // Extract position
+  double x = pose.position.x;
+  double y = pose.position.y;
+  double z = pose.position.z;
+
+  // Create Eigen quaternion and normalize it just in case
+  Eigen::Quaternionf q = std::invoke([&pose]() -> Eigen::Quaternionf {
+    double qx = pose.orientation.x;
+    double qy = pose.orientation.y;
+    double qz = pose.orientation.z;
+    double qw = pose.orientation.w;
+
+    // Create Eigen quaternion and normalize it just in case
+    Eigen::Quaternionf q(qw, qx, qy, qz);
+    return (q.norm() < std::numeric_limits<float>::epsilon()) ? Eigen::Quaternionf::Identity()
+                                                              : q.normalized();
+  });
+
+  // Rotation matrix (3x3)
+  Eigen::Matrix3f R = q.toRotationMatrix();
+
+  // Translation vector
+  Eigen::Vector3f t(x, y, z);
+
+  // Create 4x4 transformation matrix
+  Eigen::Matrix4f pose_matrix = Eigen::Matrix4f::Identity();
+  pose_matrix.block<3, 3>(0, 0) = R;
+  pose_matrix.block<3, 1>(0, 3) = t;
+
+  return pose_matrix;
+}
+
+std::pair<float, float> rotation_matrix_to_cos_sin(const Eigen::Matrix3f & rotation_matrix)
+{
+  // Extract yaw angle from rotation matrix and convert to cos/sin
+  // Using atan2 to get the yaw angle from the rotation matrix
+  const float yaw = std::atan2(rotation_matrix(1, 0), rotation_matrix(0, 0));
+  return {std::cos(yaw), std::sin(yaw)};
+}
+
 }  // namespace autoware::diffusion_planner::utils
