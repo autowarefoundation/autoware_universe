@@ -330,7 +330,7 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries(
 }
 
 Side<DeparturePoints> BoundaryDepartureChecker::get_departure_points(
-  const ClosestProjectionsToBound & projections_to_bound, const double lon_offset_m)
+  const ClosestProjectionsToBound & projections_to_bound)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -338,8 +338,8 @@ Side<DeparturePoints> BoundaryDepartureChecker::get_departure_points(
 
   Side<DeparturePoints> departure_points;
   for (const auto side_key : g_side_keys) {
-    departure_points[side_key] = utils::get_departure_points(
-      projections_to_bound[side_key], th_point_merge_distance_m, lon_offset_m);
+    departure_points[side_key] =
+      utils::get_departure_points(projections_to_bound[side_key], th_point_merge_distance_m);
   }
   return departure_points;
 }

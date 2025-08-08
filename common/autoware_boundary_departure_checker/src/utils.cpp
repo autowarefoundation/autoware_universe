@@ -53,8 +53,7 @@ using autoware::boundary_departure_checker::utils::to_segment_2d;
 namespace bg = boost::geometry;
 
 DeparturePoint create_departure_point(
-  const ClosestProjectionToBound & projection_to_bound, const double th_point_merge_distance_m,
-  [[maybe_unused]] const double lon_offset_m)
+  const ClosestProjectionToBound & projection_to_bound, const double th_point_merge_distance_m)
 {
   DeparturePoint point;
   point.uuid = autoware_utils::to_hex_string(autoware_utils::generate_uuid());
@@ -648,13 +647,12 @@ DeparturePoints cluster_by_distance(const DeparturePoints & departure_points)
 
 DeparturePoints get_departure_points(
   const std::vector<ClosestProjectionToBound> & projections_to_bound,
-  const double th_point_merge_distance_m, const double lon_offset_m)
+  const double th_point_merge_distance_m)
 {
   DeparturePoints departure_points;
   departure_points.reserve(projections_to_bound.size());
   for (const auto & projection_to_bound : projections_to_bound) {
-    const auto point =
-      create_departure_point(projection_to_bound, th_point_merge_distance_m, lon_offset_m);
+    const auto point = create_departure_point(projection_to_bound, th_point_merge_distance_m);
 
     if (point.can_be_removed) {
       continue;

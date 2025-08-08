@@ -388,13 +388,11 @@ double compute_braking_distance(
  * @param projections_to_bound  List of lateral projections to road boundaries.
  * @param th_point_merge_distance_m  Threshold distance used for hysteresis logic in departure
  * classification.
- * @param lon_offset_m          Longitudinal offset from ego base link to the reference
- * trajectory.
  * @return Filtered, sorted `DeparturePoints` with only relevant departure markers.
  */
 DeparturePoints get_departure_points(
   const std::vector<ClosestProjectionToBound> & projections_to_bound,
-  const double th_point_merge_distance_m, const double lon_offset_m);
+  const double th_point_merge_distance_m);
 
 /**
  * @brief Find nearby uncrossable linestrings around the given pose.

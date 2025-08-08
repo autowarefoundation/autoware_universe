@@ -501,8 +501,8 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
     return ego_dist_on_traj_m + lon_offset_m(take_front_offset);
   };
 
-  output_.departure_points = boundary_departure_checker_ptr_->get_departure_points(
-    output_.closest_projections_to_bound, lon_offset_m(planner_data->is_driving_forward));
+  output_.departure_points =
+    boundary_departure_checker_ptr_->get_departure_points(output_.closest_projections_to_bound);
   toc_curr_watch("get_departure_points");
 
   // update output_.critical_departure_points
