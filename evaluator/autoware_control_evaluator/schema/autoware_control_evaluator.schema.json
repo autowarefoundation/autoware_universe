@@ -6,6 +6,25 @@
     "autoware_control_evaluator": {
       "type": "object",
       "properties": {
+        "output_metrics_only_moving": {
+          "description": "aggregate some metrics for output_metrics statistics only when the ego is moving",
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "description": "enable output_metrics_only_moving",
+              "type": "boolean",
+              "default": true
+            },
+            "metric_list": {
+              "description": "list of metrics to enable for output_metrics_only_moving",
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": ["closest_object_distance"]
+            }
+          }
+        },
         "planning_factor_metrics": {
           "description": "metrics' parameters for planning_factor evaluation",
           "type": "object",
