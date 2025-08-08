@@ -168,7 +168,7 @@ BoundaryDepartureChecker::get_boundary_segments_from_side(
 
 tl::expected<std::vector<ClosestProjectionToBound>, std::string>
 BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
-  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
+  [[maybe_unused]] const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
   const Abnormalities<ProjectionsToBound> & projections_to_bound, const double min_braking_dist,
   const double max_braking_dist, const SideKey side_key)
 {
@@ -256,8 +256,6 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
       std::abs(min_to_bound.back().lon_dist_on_ref_traj - min_pt->lon_dist_on_ref_traj) < 0.5) {
       continue;
     }
-    min_pt->lon_dist_on_ref_traj =
-      trajectory::closest(aw_ref_traj, utils::to_geom_pt(min_pt->pt_on_ego));
 
     const auto is_exceeding_cutoff =
       [&min_pt](const auto type, const auto braking_dist, const auto cutoff_time) {

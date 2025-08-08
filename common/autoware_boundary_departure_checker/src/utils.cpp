@@ -25,6 +25,7 @@
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <range/v3/view.hpp>
 #include <tl_expected/expected.hpp>
 
@@ -53,7 +54,7 @@ namespace bg = boost::geometry;
 
 DeparturePoint create_departure_point(
   const ClosestProjectionToBound & projection_to_bound, const double th_point_merge_distance_m,
-  const double lon_offset_m)
+  [[maybe_unused]] const double lon_offset_m)
 {
   DeparturePoint point;
   point.uuid = autoware_utils::to_hex_string(autoware_utils::generate_uuid());
@@ -61,7 +62,7 @@ DeparturePoint create_departure_point(
   point.departure_type = projection_to_bound.departure_type;
   point.point = projection_to_bound.pt_on_bound;
   point.th_point_merge_distance_m = th_point_merge_distance_m;
-  point.dist_on_traj = projection_to_bound.lon_dist_on_ref_traj - lon_offset_m;
+  point.dist_on_traj = projection_to_bound.lon_dist_on_ref_traj;  // - lon_offset_m;
   point.idx_from_ego_traj = projection_to_bound.ego_sides_idx;
   point.can_be_removed = (point.departure_type == DepartureType::NONE) || point.dist_on_traj <= 0.0;
   return point;
@@ -576,6 +577,7 @@ ProjectionsToBound get_closest_boundary_segments_from_side(
     side[side_key].reserve(ego_sides_from_footprints.size());
   }
 
+  auto s = 0.0;
   for (size_t i = 0; i < ego_pred_traj.size(); ++i) {
     const auto & fp = ego_sides_from_footprints[i];
 
@@ -587,7 +589,11 @@ ProjectionsToBound get_closest_boundary_segments_from_side(
     for (const auto & side_key : g_side_keys) {
       auto closest_bound = find_closest_segment(fp[side_key], rear_seg, i, boundaries[side_key]);
       closest_bound.time_from_start = rclcpp::Duration(ego_pred_traj[i].time_from_start).seconds();
+      closest_bound.lon_dist_on_ref_traj = s;
       side[side_key].push_back(closest_bound);
+    }
+    if (i > 1) {
+      s += autoware_utils_geometry::calc_distance2d(ego_pred_traj[i - 1], ego_pred_traj[i]);
     }
   }
 

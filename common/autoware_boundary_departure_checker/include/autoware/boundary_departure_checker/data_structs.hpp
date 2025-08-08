@@ -117,6 +117,7 @@ struct ProjectionToBound
 {
   Point2d pt_on_ego;    // orig
   Point2d pt_on_bound;  // proj
+  double lon_dist_on_ref_traj{std::numeric_limits<double>::max()};
   Segment2d nearest_bound_seg;
   double lat_dist{std::numeric_limits<double>::max()};
   size_t ego_sides_idx{0};
@@ -136,7 +137,6 @@ struct ProjectionToBound
 
 struct ClosestProjectionToBound : ProjectionToBound
 {
-  double lon_dist_on_ref_traj{std::numeric_limits<double>::max()};
   DepartureType departure_type = DepartureType::NONE;
   AbnormalityType abnormality_type = AbnormalityType::NORMAL;
   ClosestProjectionToBound() = default;
@@ -147,14 +147,13 @@ struct ClosestProjectionToBound : ProjectionToBound
     nearest_bound_seg = base.nearest_bound_seg;
     lat_dist = base.lat_dist;
     ego_sides_idx = base.ego_sides_idx;
+    lon_dist_on_ref_traj = base.lon_dist_on_ref_traj;
   }
 
   ClosestProjectionToBound(
-    const ProjectionToBound & base, const double lon_dist, const AbnormalityType abnormality_type,
+    const ProjectionToBound & base, const AbnormalityType abnormality_type,
     const DepartureType departure_type)
-  : lon_dist_on_ref_traj(lon_dist),
-    departure_type(departure_type),
-    abnormality_type(abnormality_type)
+  : departure_type(departure_type), abnormality_type(abnormality_type)
   {
     pt_on_ego = base.pt_on_ego;
     pt_on_bound = base.pt_on_bound;
