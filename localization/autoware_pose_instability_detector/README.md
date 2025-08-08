@@ -13,8 +13,8 @@ The results of this comparison are then output to the `/diagnostics` topic.
 
 ![rqt_runtime_monitor](./media/rqt_runtime_monitor.png)
 
-If this node outputs WARN messages to `/diagnostics`, it means that the EKF output is significantly different from the integrated twist values.
-In other words, WARN outputs indicate that the vehicle has moved to a place outside the expected range based on the twist values.
+If this node outputs ERROR messages to `/diagnostics`, it means that the EKF output is significantly different from the integrated twist values.
+In other words, ERROR outputs indicate that the vehicle has moved to a place outside the expected range based on the twist values.
 This discrepancy suggests that there may be an issue with either the estimated pose or the input twist.
 
 The following diagram provides an overview of how the procedure looks like:

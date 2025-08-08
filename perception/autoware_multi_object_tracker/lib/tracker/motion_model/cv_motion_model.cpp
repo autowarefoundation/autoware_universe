@@ -19,8 +19,6 @@
 
 #include "autoware/multi_object_tracker/tracker/motion_model/cv_motion_model.hpp"
 
-#include "autoware/multi_object_tracker/tracker/motion_model/motion_model_base.hpp"
-
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware_utils/math/normalization.hpp>
@@ -66,11 +64,11 @@ bool CVMotionModel::initialize(
   const std::array<double, 36> & twist_cov)
 {
   // initialize state vector X
-  Eigen::MatrixXd X(DIM, 1);
+  StateVec X;
   X << x, y, vx, vy;
 
   // initialize covariance matrix P
-  Eigen::MatrixXd P = Eigen::MatrixXd::Zero(DIM, DIM);
+  StateMat P = StateMat::Zero();
   P(IDX::X, IDX::X) = pose_cov[XYZRPY_COV_IDX::X_X];
   P(IDX::Y, IDX::Y) = pose_cov[XYZRPY_COV_IDX::Y_Y];
   P(IDX::VX, IDX::VX) = twist_cov[XYZRPY_COV_IDX::X_X];
@@ -89,14 +87,14 @@ bool CVMotionModel::updateStatePose(
   constexpr int DIM_Y = 2;
 
   // update state
-  Eigen::MatrixXd Y(DIM_Y, 1);
+  Eigen::Matrix<double, DIM_Y, 1> Y;
   Y << x, y;
 
-  Eigen::MatrixXd C = Eigen::MatrixXd::Zero(DIM_Y, DIM);
+  Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
   C(0, IDX::X) = 1.0;
   C(1, IDX::Y) = 1.0;
 
-  Eigen::MatrixXd R = Eigen::MatrixXd::Zero(DIM_Y, DIM_Y);
+  Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
   R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
   R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
   R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X];
@@ -116,16 +114,16 @@ bool CVMotionModel::updateStatePoseVel(
   constexpr int DIM_Y = 4;
 
   // update state
-  Eigen::MatrixXd Y(DIM_Y, 1);
+  Eigen::Matrix<double, DIM_Y, 1> Y;
   Y << x, y, vx, vy;
 
-  Eigen::MatrixXd C = Eigen::MatrixXd::Zero(DIM_Y, DIM);
+  Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
   C(0, IDX::X) = 1.0;
   C(1, IDX::Y) = 1.0;
   C(2, IDX::VX) = 1.0;
   C(3, IDX::VY) = 1.0;
 
-  Eigen::MatrixXd R = Eigen::MatrixXd::Zero(DIM_Y, DIM_Y);
+  Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
   R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
   R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
   R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X];
@@ -140,8 +138,8 @@ bool CVMotionModel::updateStatePoseVel(
 
 bool CVMotionModel::limitStates()
 {
-  Eigen::MatrixXd X_t(DIM, 1);
-  Eigen::MatrixXd P_t(DIM, DIM);
+  StateVec X_t;
+  StateMat P_t;
   ekf_.getX(X_t);
   ekf_.getP(P_t);
   if (!(-motion_params_.max_vx <= X_t(IDX::VX) && X_t(IDX::VX) <= motion_params_.max_vx)) {
@@ -161,8 +159,8 @@ bool CVMotionModel::adjustPosition(const double & x, const double & y)
   if (!checkInitialized()) return false;
 
   // adjust position
-  Eigen::MatrixXd X_t(DIM, 1);
-  Eigen::MatrixXd P_t(DIM, DIM);
+  StateVec X_t;
+  StateMat P_t;
   ekf_.getX(X_t);
   ekf_.getP(P_t);
   X_t(IDX::X) += x;
@@ -192,23 +190,23 @@ bool CVMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) const
    */
 
   // Current state vector X t
-  Eigen::MatrixXd X_t(DIM, 1);
+  StateVec X_t;
   ekf.getX(X_t);
 
   // Predict state vector X t+1
-  Eigen::MatrixXd X_next_t(DIM, 1);  // predicted state
+  StateVec X_next_t;  // predicted state
   X_next_t(IDX::X) = X_t(IDX::X) + X_t(IDX::VX) * dt;
   X_next_t(IDX::Y) = X_t(IDX::Y) + X_t(IDX::VY) * dt;
   X_next_t(IDX::VX) = X_t(IDX::VX);
   X_next_t(IDX::VY) = X_t(IDX::VY);
 
   // State transition matrix A
-  Eigen::MatrixXd A = Eigen::MatrixXd::Identity(DIM, DIM);
+  StateMat A = StateMat::Identity();
   A(IDX::X, IDX::VX) = dt;
   A(IDX::Y, IDX::VY) = dt;
 
   // Process noise covariance Q
-  Eigen::MatrixXd Q = Eigen::MatrixXd::Zero(DIM, DIM);
+  StateMat Q = StateMat::Zero();
   Q(IDX::X, IDX::X) = motion_params_.q_cov_x * dt * dt;
   Q(IDX::X, IDX::Y) = 0.0;
   Q(IDX::Y, IDX::Y) = motion_params_.q_cov_y * dt * dt;
@@ -229,8 +227,8 @@ bool CVMotionModel::getPredictedState(
   geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const
 {
   // get predicted state
-  Eigen::MatrixXd X(DIM, 1);
-  Eigen::MatrixXd P(DIM, DIM);
+  StateVec X;
+  StateMat P;
   if (!MotionModel::getPredictedState(time, X, P)) {
     return false;
   }
@@ -271,13 +269,13 @@ bool CVMotionModel::getPredictedState(
   constexpr double wy_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
   constexpr double wz_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
   // rotate covariance matrix
-  Eigen::MatrixXd twist_cov_rotate(2, 2);
+  Eigen::Matrix2d twist_cov_rotate;
   twist_cov_rotate(0, 0) = P(IDX::VX, IDX::VX);
   twist_cov_rotate(0, 1) = P(IDX::VX, IDX::VY);
   twist_cov_rotate(1, 0) = P(IDX::VY, IDX::VX);
   twist_cov_rotate(1, 1) = P(IDX::VY, IDX::VY);
-  Eigen::MatrixXd R_yaw = Eigen::Rotation2Dd(-yaw).toRotationMatrix();
-  Eigen::MatrixXd twist_cov_rotated = R_yaw * twist_cov_rotate * R_yaw.transpose();
+  Eigen::Matrix2d R_yaw = Eigen::Rotation2Dd(-yaw).toRotationMatrix();
+  Eigen::Matrix2d twist_cov_rotated = R_yaw * twist_cov_rotate * R_yaw.transpose();
   twist_cov[XYZRPY_COV_IDX::X_X] = twist_cov_rotated(0, 0);
   twist_cov[XYZRPY_COV_IDX::X_Y] = twist_cov_rotated(0, 1);
   twist_cov[XYZRPY_COV_IDX::Y_X] = twist_cov_rotated(1, 0);

@@ -44,8 +44,12 @@
 #include <vector>
 
 ByteTracker::ByteTracker(
-  int track_buffer, float track_thresh, float high_thresh, float match_thresh)
-: track_thresh(track_thresh), high_thresh(high_thresh), match_thresh(match_thresh)
+  int track_buffer, double classification_decay_constant, float track_thresh, float high_thresh,
+  float match_thresh)
+: classification_decay_constant(classification_decay_constant),
+  track_thresh(track_thresh),
+  high_thresh(high_thresh),
+  match_thresh(match_thresh)
 
 {
   frame_id = 0;
@@ -125,7 +129,7 @@ std::vector<STrack> ByteTracker::update(const std::vector<ByteTrackObject> & obj
     STrack * track = strack_pool[matches[i][0]];
     STrack * det = &detections[matches[i][1]];
     if (track->state == TrackState::Tracked) {
-      track->update(*det, this->frame_id);
+      track->update(*det, this->frame_id, classification_decay_constant);
       activated_stracks.push_back(*track);
     } else {
       track->re_activate(*det, this->frame_id, false);
@@ -158,7 +162,7 @@ std::vector<STrack> ByteTracker::update(const std::vector<ByteTrackObject> & obj
     STrack * track = r_tracked_stracks[matches[i][0]];
     STrack * det = &detections[matches[i][1]];
     if (track->state == TrackState::Tracked) {
-      track->update(*det, this->frame_id);
+      track->update(*det, this->frame_id, classification_decay_constant);
       activated_stracks.push_back(*track);
     } else {
       track->re_activate(*det, this->frame_id, false);
@@ -187,7 +191,8 @@ std::vector<STrack> ByteTracker::update(const std::vector<ByteTrackObject> & obj
   linear_assignment(dists, dist_size, dist_size_size, 0.7, matches, u_unconfirmed, u_detection);
 
   for (size_t i = 0; i < matches.size(); i++) {
-    unconfirmed[matches[i][0]]->update(detections[matches[i][1]], this->frame_id);
+    unconfirmed[matches[i][0]]->update(
+      detections[matches[i][1]], this->frame_id, classification_decay_constant);
     activated_stracks.push_back(*unconfirmed[matches[i][0]]);
   }
 

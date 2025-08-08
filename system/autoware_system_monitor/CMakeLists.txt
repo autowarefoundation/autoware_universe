@@ -70,6 +70,7 @@ message(STATUS "GPU PLATFORM: " ${CMAKE_GPU_PLATFORM})
 set(CPU_MONITOR_SOURCE
   src/cpu_monitor/cpu_monitor_base.cpp
   src/cpu_monitor/${CMAKE_CPU_PLATFORM}_cpu_monitor.cpp
+  src/cpu_monitor/cpu_usage_statistics.cpp
 )
 
 ament_auto_add_library(cpu_monitor_lib SHARED
@@ -203,26 +204,22 @@ if(BUILD_TESTING)
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/test/data/process_monitor $<TARGET_FILE_DIR:test_process_monitor>
     COMMENT "Copying test data files to the build directory after build"
   )
+
+  ament_add_ros_isolated_gtest(test_cpu_monitor
+    test/src/cpu_monitor/test_${CMAKE_CPU_PLATFORM}_cpu_monitor.cpp
+    ${CPU_MONITOR_SOURCE}
+  )
+
+  target_include_directories(test_cpu_monitor
+    PRIVATE "include"
+  )
+
+  target_link_libraries(test_cpu_monitor cpu_monitor_lib ${Boost_LIBRARIES} ${LIBRARIES})
+
 endif()
 
 # TODO(yunus.caliskan): Port the tests to ROS 2, robustify the tests.
 if(BUILD_TESTING)
-  # ament_add_ros_isolated_gtest(test_cpu_monitor
-  #   test/src/cpu_monitor/test_${CMAKE_CPU_PLATFORM}_cpu_monitor.cpp
-  #   ${CPU_MONITOR_SOURCE}
-  # )
-
-  # ament_target_dependencies(test_cpu_monitor
-  #   "rclcpp"
-  #   "diagnostic_msgs"
-  # )
-
-  # target_include_directories(test_cpu_monitor
-  #   PRIVATE "include"
-  # )
-
-  # target_link_libraries(test_cpu_monitor ${Boost_LIBRARIES} ${LIBRARIES})
-
   # ament_add_ros_isolated_gtest(test_hdd_monitor
   #   test/src/hdd_monitor/test_hdd_monitor.cpp
   #   src/hdd_monitor/hdd_monitor.cpp

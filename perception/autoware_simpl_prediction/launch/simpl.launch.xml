@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <!-- model parameters -->
+  <arg name="data_path" default="$(env HOME)/autoware_data/simpl_prediction"/>
+  <arg name="param_path" default="$(find-pkg-share autoware_simpl_prediction)/config/simpl.param.yaml"/>
+
+  <!-- I/O topics -->
+  <arg name="input/objects" default="/input/objects"/>
+  <arg name="input/vector_map" default="/map/vector_map"/>
+  <arg name="output/objects" default="/output/objects"/>
+
+  <!-- only build engine -->
+  <arg name="build_only" default="false"/>
+
+  <node pkg="autoware_simpl_prediction" exec="autoware_simpl_prediction_exe" output="screen">
+    <param from="$(var param_path)" allow_substs="true"/>
+    <remap from="~/input/objects" to="$(var input/objects)"/>
+    <remap from="~/input/vector_map" to="$(var input/vector_map)"/>
+    <remap from="~/output/objects" to="$(var output/objects)"/>
+    <param name="build_only" value="$(var build_only)"/>
+  </node>
+</launch>

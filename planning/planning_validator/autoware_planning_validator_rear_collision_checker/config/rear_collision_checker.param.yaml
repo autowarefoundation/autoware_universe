@@ -1,0 +1,77 @@
+/**:
+  ros__parameters:
+    common:
+      on_time_buffer: 0.5                           # [s]
+      off_time_buffer: 1.5                          # [s]
+
+      pointcloud:
+        range:
+          dead_zone: 0.3                            # [m]
+          buffer: 1.0                               # [m]
+        crop_box_filter:
+          x:
+            max: 30.0                               # [m]
+            min: -100.0                             # [m]
+          z:
+            max: -1.0                               # [m]
+            min: 0.3                                # [m]
+        voxel_grid_filter:
+          x: 0.1                                    # [m]
+          y: 0.1                                    # [m]
+          z: 0.5                                    # [m]
+        clustering:
+          cluster_tolerance: 0.15                   # [m]
+          min_cluster_height: 0.1                   # [m]
+          min_cluster_size: 5                       # [points]
+          max_cluster_size: 10000                   # [points]
+        velocity_estimation:
+          observation_time: 0.3                     # [s]
+          max_acceleration: 10.0                    # [m/s^2]
+        latency: 0.3                                # [s]
+
+      filter:
+        min_velocity: 1.0                           # [m/s]
+        moving_time: 0.5                            # [s]
+
+      time_to_collision:
+        margin: 2.0                                 # [s]
+
+      ego:
+        reaction_time: 1.2                          # [s]
+        min_velocity: 1.38                          # [m/s]
+        max_velocity: 16.6                          # [m/s]
+        max_acceleration: 1.5                       # [m/s^2]
+        max_deceleration: -4.0                      # [m/s^2]
+        max_positive_jerk: 5.0                      # [m/s^3]
+        max_negative_jerk: -5.0                     # [m/s^3]
+        nominal_deceleration: -1.5                  # [m/s^2]
+        nominal_positive_jerk: 0.6                  # [m/s^3]
+        nominal_negative_jerk: -0.6                 # [m/s^3]
+
+      blind_spot:
+        lookahead_time: 4.0                         # [s]
+        metric: ttc
+        check:
+          front: false
+          left: true
+          right: false
+        offset:
+          inner: 0.1                                # [m]
+          outer: 0.3                                # [m]
+        participants:
+          reaction_time: 1.2                        # [s]
+          max_velocity: 5.5                         # [m/s] (20 km/h)
+          max_deceleration: -2.0                    # [m/s^2]
+
+      adjacent_lane:
+        lookahead_time: 4.0                         # [s]
+        metric: rss
+        check:
+          front: true
+        offset:
+          left: -0.5                                # [m]
+          right: -0.5                               # [m]
+        participants:
+          reaction_time: 1.2                        # [s]
+          max_velocity: 16.6                        # [m/s] (60 km/h)
+          max_deceleration: -2.0                    # [m/s^2]

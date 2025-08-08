@@ -1,0 +1,28 @@
+name: tag release after PR merge
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  tag-on-merge:
+    if: |
+      github.event.pull_request.merged == true &&
+      contains(
+        join(github.event.pull_request.labels.*.name, ','),
+        'release:bump-version'
+      )
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+
+      - name: Run
+        uses: autowarefoundation/autoware-github-actions/release-new-tag-when-merged@v1
+        with:
+          github_token: ${{ steps.generate-token.outputs.token }}
+          commit_sha: ${{ github.event.pull_request.merge_commit_sha }}

@@ -27,12 +27,13 @@
 #include "traits.hpp"
 
 #include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
-#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <point_cloud_msg_wrapper/point_cloud_msg_wrapper.hpp>
 
 #include <autoware_internal_debug_msgs/msg/int32_stamped.hpp>
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
+#include <autoware_sensing_msgs/msg/concatenated_point_cloud_info.hpp>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
@@ -72,8 +73,6 @@ public:
 
   void add_cloud_collector(const std::shared_ptr<CloudCollector<MsgTraits>> & collector);
 
-  void check_concat_status(diagnostic_updater::DiagnosticStatusWrapper & stat);
-
 private:
   struct Parameters
   {
@@ -95,11 +94,18 @@ private:
 
   double current_concatenate_cloud_timestamp_{0.0};
   double latest_concatenate_cloud_timestamp_{0.0};
-  bool drop_previous_but_late_pointcloud_{false};
-  bool publish_pointcloud_{false};
-  bool is_concatenated_cloud_empty_{false};
-  std::shared_ptr<CollectorInfoBase> diagnostic_collector_info_;
-  std::unordered_map<std::string, double> diagnostic_topic_to_original_stamp_map_;
+
+  struct DiagnosticInfo
+  {
+    bool drop_previous_but_late_pointcloud{false};
+    bool publish_pointcloud{false};
+    bool is_concatenated_cloud_empty{false};
+    std::shared_ptr<CollectorInfoBase> collector_info;
+    std::unordered_map<std::string, double> topic_to_original_stamp_map;
+    std::unordered_map<std::string, double> topic_to_pipeline_latency_map;
+    double processing_time{0.0};
+    double pipeline_latency{0.0};
+  };
 
   std::shared_ptr<CombineCloudHandler<MsgTraits>> combine_cloud_handler_;
   std::list<std::shared_ptr<CloudCollector<MsgTraits>>> cloud_collectors_;
@@ -118,12 +124,19 @@ private:
 
   // publishers
   std::shared_ptr<PublisherType> concatenated_cloud_publisher_;
+  rclcpp::Publisher<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>::SharedPtr
+    concatenation_info_publisher_;
   std::unordered_map<std::string, std::shared_ptr<PublisherType>>
     topic_to_transformed_cloud_publisher_map_;
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
 
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
-  diagnostic_updater::Updater diagnostic_updater_{this};
+
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_;
+  void publish_debug_message(
+    const double processing_time, const double cyclic_time,
+    const std::unordered_map<std::string, double> & topic_to_pipeline_latency_map);
+  void check_concat_status(const DiagnosticInfo & diagnostic_info);
 
   void initialize_pub_sub();
 

@@ -22,10 +22,10 @@
 
 namespace autoware::bytetrack
 {
-ByteTrack::ByteTrack(const int track_buffer_length)
+ByteTrack::ByteTrack(const int track_buffer_length, const double classification_decay_constant)
 {
   // Tracker initialization
-  tracker_ = std::make_unique<ByteTracker>(track_buffer_length);
+  tracker_ = std::make_unique<ByteTracker>(track_buffer_length, classification_decay_constant);
 }
 
 bool ByteTrack::do_inference(ObjectArray & objects)

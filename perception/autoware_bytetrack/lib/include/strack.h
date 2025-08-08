@@ -73,7 +73,7 @@ public:
 
   void activate(int frame_id);
   void re_activate(STrack & new_track, int frame_id, bool new_id = false);
-  void update(STrack & new_track, int frame_id);
+  void update(STrack & new_track, int frame_id, double classification_decay_constant);
   void predict(const int frame_id);
 
   void load_parameters(const std::string & filename);

@@ -179,31 +179,32 @@ private:
     return start_shift_length < threshold && end_shift_length < threshold;
   };
 
-  inline bool existShiftSideLane(
-    const double start_shift_length, const double end_shift_length, const bool no_left_lanes,
-    const bool no_right_lanes, const double threshold) const
+  inline bool isAdjacentToHatchedRoadMarking(
+    const double start_shift_length, const double end_shift_length,
+    const bool left_hatched_road_marking_only, const bool right_hatched_road_marking_only,
+    const double threshold) const
   {
     const auto relative_shift_length = end_shift_length - start_shift_length;
     if (isAvoidShift(start_shift_length, end_shift_length, threshold)) {
       // Left avoid. But there is no adjacent lane. No need blinker.
-      if (relative_shift_length > 0.0 && no_left_lanes) {
+      if (relative_shift_length > 0.0 && left_hatched_road_marking_only) {
         return false;
       }
 
       // Right avoid. But there is no adjacent lane. No need blinker.
-      if (relative_shift_length < 0.0 && no_right_lanes) {
+      if (relative_shift_length < 0.0 && right_hatched_road_marking_only) {
         return false;
       }
     }
 
     if (isReturnShift(start_shift_length, end_shift_length, threshold)) {
       // Right return. But there is no adjacent lane. No need blinker.
-      if (relative_shift_length > 0.0 && no_right_lanes) {
+      if (relative_shift_length > 0.0 && right_hatched_road_marking_only) {
         return false;
       }
 
       // Left return. But there is no adjacent lane. No need blinker.
-      if (relative_shift_length < 0.0 && no_left_lanes) {
+      if (relative_shift_length < 0.0 && left_hatched_road_marking_only) {
         return false;
       }
     }
@@ -211,12 +212,12 @@ private:
     if (isLeftMiddleShift(start_shift_length, end_shift_length, threshold)) {
       // Left avoid. But there is no adjacent lane. No need blinker.
 
-      if (relative_shift_length > 0.0 && no_left_lanes) {
+      if (relative_shift_length > 0.0 && left_hatched_road_marking_only) {
         return false;
       }
 
       // Left return. But there is no adjacent lane. No need blinker.
-      if (relative_shift_length < 0.0 && no_left_lanes) {
+      if (relative_shift_length < 0.0 && left_hatched_road_marking_only) {
         return false;
       }
     }
@@ -224,12 +225,12 @@ private:
     if (isRightMiddleShift(start_shift_length, end_shift_length, threshold)) {
       // Right avoid. But there is no adjacent lane. No need blinker.
 
-      if (relative_shift_length < 0.0 && no_right_lanes) {
+      if (relative_shift_length < 0.0 && right_hatched_road_marking_only) {
         return false;
       }
 
       // Left avoid. But there is no adjacent lane. No need blinker.
-      if (relative_shift_length > 0.0 && no_right_lanes) {
+      if (relative_shift_length > 0.0 && right_hatched_road_marking_only) {
         return false;
       }
     }

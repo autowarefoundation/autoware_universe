@@ -18,7 +18,6 @@ This ros package enables communication between Autoware and CARLA for autonomous
 - [CARLA Installation](https://carla.readthedocs.io/en/latest/start_quickstart/)
 - [Carla Lanelet2 Maps](https://bitbucket.org/carla-simulator/autoware-contents/src/master/maps/)
 - [Python Package for CARLA 0.9.15 ROS 2 Humble communication](https://github.com/gezp/carla_ros/releases/tag/carla-0.9.15-ubuntu-22.04)
-
   - Install the wheel using pip.
   - OR add the egg file to the `PYTHONPATH`.
 
@@ -134,7 +133,6 @@ The `carla_ros.py` sets up the CARLA world:
 The maps provided by the Carla Simulator ([Carla Lanelet2 Maps](https://bitbucket.org/carla-simulator/autoware-contents/src/master/maps/)) currently lack proper traffic light components for Autoware and have different latitude and longitude coordinates compared to the pointcloud map. To enable traffic light recognition, follow the steps below to modify the maps.
 
 - Options to Modify the Map
-
   - A. Create a New Map from Scratch
   - Use the [TIER IV Vector Map Builder](https://tools.tier4.jp/feature/vector_map_builder_ll2/) to create a new map.
 

@@ -55,8 +55,9 @@ void DiagGraphSubscription::register_update_callback(const CallbackType & callba
 
 void DiagGraphSubscription::on_struct(const DiagGraphStruct & msg)
 {
-  graph_->create(msg);
-  if (create_callback_) create_callback_(graph_);
+  if (graph_->create(msg)) {
+    if (create_callback_) create_callback_(graph_);
+  }
 }
 
 void DiagGraphSubscription::on_status(const DiagGraphStatus & msg)

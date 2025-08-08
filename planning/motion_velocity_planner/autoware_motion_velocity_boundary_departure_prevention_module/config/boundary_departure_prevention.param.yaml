@@ -1,0 +1,76 @@
+/**:
+  ros__parameters:
+    boundary_departure_prevention:
+      boundary_types_to_detect: [road_border]
+      th_max_lateral_query_num: 5
+      th_point_merge_distance_m: 1.0
+      th_pt_shift:
+        dist_m: 0.2
+        angle_deg: 5.0
+        goal_dist_m: 1.0
+
+      th_cutoff_time_s:
+        predicted_path: 3.5
+        near_boundary: 3.5
+        departure: 2.0
+
+      on_time_buffer_s: 0.15
+      off_time_buffer_s: 0.15
+
+      abnormality:
+        normal:
+          enable: true
+          footprint_envelop:
+            lon_m: 0.0
+            lat_m: 0.0
+
+        localization:
+          enable: true
+          footprint_envelop:
+            lon_m: 0.25
+            lat_m: 0.25
+
+        longitudinal:
+          enable: true
+          lon_tracking:
+            scale: 1.0
+            extra_margin_m: 0.0
+
+        steering:
+          enable: false
+          steering_rate_rps: 1.0
+
+      diagnostic:
+        # Diagnostic status
+        #  0: OK (Default)
+        #  1: WARN
+        #  2: ERROR
+        near_boundary: 1
+        approaching_departure: 1
+        critical_departure: 2
+
+      slow_down_behavior:
+        enable:
+          slow_down_near_boundary: false
+          slow_down_before_departure: false
+          stop_before_departure: false
+
+        th_trigger:
+          th_vel_kmph:
+            min: 5.0
+            max: 30.0
+          th_acc_mps2:
+            min: -1.0
+            max: -2.5
+          th_jerk_mps3:
+            min: -1.0
+            max: -1.5
+          brake_delay_s: 1.3
+          dist_error_m: 1.0
+          th_dist_to_boundary_m:
+            left:
+              min: 0.01
+              max: 0.5
+            right:
+              min: 0.01
+              max: 0.5

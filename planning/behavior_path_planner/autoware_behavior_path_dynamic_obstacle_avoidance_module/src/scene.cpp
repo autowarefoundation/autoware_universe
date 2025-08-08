@@ -972,8 +972,9 @@ LatFeasiblePaths DynamicObstacleAvoidanceModule::generateLateralFeasiblePaths(
   } else {
     // check if the ego is during lane change.
     if (prev_input_ref_path_points_ && !prev_input_ref_path_points_->empty()) {
-      const double dist_ref_paths = std::abs(autoware::motion_utils::calcLateralOffset(
-        ego_ref_path_points, prev_input_ref_path_points_->front().point.pose.position));
+      const double dist_ref_paths = std::abs(
+        autoware::motion_utils::calcLateralOffset(
+          ego_ref_path_points, prev_input_ref_path_points_->front().point.pose.position));
       constexpr double epsilon_ref_paths_diff = 1.0;
       if (epsilon_ref_paths_diff < dist_ref_paths) {
         ref_path_before_lane_change_ = *prev_input_ref_path_points_;
@@ -1470,8 +1471,9 @@ DynamicObstacleAvoidanceModule::calcMinMaxLateralOffsetToAvoidRegulatedObject(
     }
     const size_t obj_point_idx =
       autoware::motion_utils::findNearestIndex(ref_points_for_obj_poly, obj_pos);
-    const double paths_lat_diff = std::abs(autoware::motion_utils::calcLateralOffset(
-      prev_object->ref_points_for_obj_poly, ref_points_for_obj_poly.at(obj_point_idx).position));
+    const double paths_lat_diff = std::abs(
+      autoware::motion_utils::calcLateralOffset(
+        prev_object->ref_points_for_obj_poly, ref_points_for_obj_poly.at(obj_point_idx).position));
 
     constexpr double min_paths_lat_diff = 0.3;
     if (paths_lat_diff < min_paths_lat_diff) {
@@ -1571,8 +1573,9 @@ DynamicObstacleAvoidanceModule::calcMinMaxLateralOffsetToAvoidUnregulatedObject(
       ref_points_for_obj_poly.size() < 2) {
       return true;
     }
-    const double paths_lat_diff = std::abs(autoware::motion_utils::calcLateralOffset(
-      prev_object->ref_points_for_obj_poly, ref_points_for_obj_poly.at(obj_point_idx).position));
+    const double paths_lat_diff = std::abs(
+      autoware::motion_utils::calcLateralOffset(
+        prev_object->ref_points_for_obj_poly, ref_points_for_obj_poly.at(obj_point_idx).position));
 
     constexpr double min_paths_lat_diff = 0.3;
     if (paths_lat_diff < min_paths_lat_diff) {
@@ -1695,8 +1698,9 @@ DynamicObstacleAvoidanceModule::calcEgoPathBasedDynamicObstaclePolygon(
   std::vector<geometry_msgs::msg::Pose> obj_inner_bound_poses;
   for (size_t i = lon_bound_start_idx; i <= lon_bound_end_idx; ++i) {
     // NOTE: object.lat_offset_to_avoid->min_value is not the minimum value but the inner value.
-    obj_inner_bound_poses.push_back(autoware_utils::calc_offset_pose(
-      ref_points_for_obj_poly.at(i), 0.0, object.lat_offset_to_avoid->min_value, 0.0));
+    obj_inner_bound_poses.push_back(
+      autoware_utils::calc_offset_pose(
+        ref_points_for_obj_poly.at(i), 0.0, object.lat_offset_to_avoid->min_value, 0.0));
   }
 
   // calculate start index laterally feasible for ego to shift considering maximum lateral jerk and

@@ -1,0 +1,18 @@
+/**:
+  ros__parameters:
+    detector:
+      onnx_path: $(var data_path)/simpl.onnx
+      engine_path: $(var data_path)/simpl.engine
+      precision: fp32
+    preprocess:
+      labels: [VEHICLE, PEDESTRIAN, MOTORCYCLIST, CYCLIST, LARGE_VEHICLE]
+      max_num_agent: 50
+      num_past: 8
+      max_num_polyline: 300
+      max_num_point: 10
+      polyline_range_distance: 150.0
+      polyline_break_distance: 5.0
+    postprocess:
+      num_mode: 6
+      num_future: 80
+      score_threshold: 0.15

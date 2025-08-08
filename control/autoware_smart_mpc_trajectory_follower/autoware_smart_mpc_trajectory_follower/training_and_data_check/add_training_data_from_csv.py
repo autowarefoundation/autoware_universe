@@ -119,7 +119,7 @@ class add_data_from_csv:
         os.chdir(dir_exe)
 
     def add_data_from_csv(self, dir_name: str, add_mode=default_add_mode) -> None:
-        """Adding teacher data for training from a CSV file."""
+        """Add teacher data for training from a CSV file."""
         acc_ctrl_queue_size = drive_functions.acc_ctrl_queue_size
         steer_ctrl_queue_size = drive_functions.steer_ctrl_queue_size
         ctrl_time_step = drive_functions.ctrl_time_step

@@ -29,7 +29,15 @@ DynamicObject toDynamicObject(
 
   // initialize existence_probabilities, using channel information
   dynamic_object.channel_index = channel_index;
-  dynamic_object.existence_probability = det_object.existence_probability;
+  if (det_object.existence_probability < 1e-6) {
+    // given existence probability is too low, may the value is not set
+    dynamic_object.existence_probability = default_existence_probability;
+  } else if (det_object.existence_probability > 0.999) {
+    // given existence probability is too high, may the value is not set
+    dynamic_object.existence_probability = 0.999;
+  } else {
+    dynamic_object.existence_probability = det_object.existence_probability;
+  }
 
   dynamic_object.classification = det_object.classification;
 
@@ -57,6 +65,7 @@ DynamicObject toDynamicObject(
 
   // shape
   dynamic_object.shape = det_object.shape;
+  dynamic_object.area = getArea(det_object.shape);
 
   return dynamic_object;
 }
@@ -103,6 +112,28 @@ autoware_perception_msgs::msg::TrackedObject toTrackedObjectMsg(const DynamicObj
 
   return tracked_object;
 }
+
+double getArea(const autoware_perception_msgs::msg::Shape & shape)
+{
+  switch (shape.type) {
+    case autoware_perception_msgs::msg::Shape::BOUNDING_BOX:
+      return shape.dimensions.x * shape.dimensions.y;
+    case autoware_perception_msgs::msg::Shape::CYLINDER:
+      return shape.dimensions.x * shape.dimensions.x * M_PI * 0.25;
+    case autoware_perception_msgs::msg::Shape::POLYGON: {
+      double area = 0.0;
+      for (size_t i = 0; i < shape.footprint.points.size(); ++i) {
+        size_t j = (i + 1) % shape.footprint.points.size();
+        area += 0.5 * (shape.footprint.points.at(i).x * shape.footprint.points.at(j).y -
+                       shape.footprint.points.at(j).x * shape.footprint.points.at(i).y);
+      }
+      return area;
+    }
+    default:
+      return 0.0;
+  }
+}
+
 }  // namespace types
 
 }  // namespace autoware::multi_object_tracker

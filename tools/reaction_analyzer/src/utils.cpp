@@ -339,9 +339,10 @@ PointCloud2::SharedPtr create_entity_pointcloud_ptr(
         const double p_z = -entity_params.z_l / 2 + i * pointcloud_sampling_distance;
         const auto tmp = tf2::Vector3(p_x, p_y, p_z);
         tf2::Vector3 data_out = tf * tmp;
-        point_cloud.emplace_back(pcl::PointXYZ(
-          static_cast<float>(data_out.x()), static_cast<float>(data_out.y()),
-          static_cast<float>(data_out.z())));
+        point_cloud.emplace_back(
+          pcl::PointXYZ(
+            static_cast<float>(data_out.x()), static_cast<float>(data_out.y()),
+            static_cast<float>(data_out.z())));
       }
     }
   }
