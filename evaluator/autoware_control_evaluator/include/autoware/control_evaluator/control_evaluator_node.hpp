@@ -89,7 +89,7 @@ public:
   void AddKinematicStateMetricMsg(
     const Odometry & odom, const AccelWithCovarianceStamped & accel_stamped);
   void AddSteeringMetricMsg(const SteeringReport & steering_report);
-  void AddStopDeviationMetricMsg(const Odometry & odom);
+  void AddStopDeviationMetricMsg();
   void onTimer();
 
 private:
@@ -164,6 +164,10 @@ private:
   std::optional<double> prev_steering_angle_{std::nullopt};
   std::optional<double> prev_steering_rate_{std::nullopt};
   std::optional<double> prev_steering_angle_timestamp_{std::nullopt};
+
+  // for output_metrics_only_moving
+  float ego_speed_{0.0};
+  std::array<bool, static_cast<size_t>(Metric::SIZE)> is_output_metrics_only_moving{};
 };
 }  // namespace control_diagnostics
 

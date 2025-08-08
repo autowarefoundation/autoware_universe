@@ -65,8 +65,7 @@ protected:
       return segments;
     }();
     constexpr auto speed_limit = 30.0f;
-    lane_segments_.emplace_back(
-      0, polyline, false, left_boundaries, right_boundaries, speed_limit, 1);
+    lane_segments_.emplace_back(0, polyline, false, left_boundaries, right_boundaries, speed_limit);
   }
 
   std::vector<LaneSegment> lane_segments_;
