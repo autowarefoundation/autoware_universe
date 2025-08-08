@@ -73,7 +73,7 @@ ElevationMapLoaderNode::ElevationMapLoaderNode(const rclcpp::NodeOptions & optio
     throw std::runtime_error("sequential_map_load_num should be larger than 0.");
   }
   use_inpaint_ = this->declare_parameter("use_inpaint", true);
-  inpaint_radius_ = this->declare_parameter("inpaint_radius");
+  inpaint_radius_ = this->declare_parameter<double>("inpaint_radius");
   use_elevation_map_cloud_publisher_ =
     this->declare_parameter("use_elevation_map_cloud_publisher", false);
   elevation_map_directory_ = this->declare_parameter("elevation_map_directory", "path_default");
