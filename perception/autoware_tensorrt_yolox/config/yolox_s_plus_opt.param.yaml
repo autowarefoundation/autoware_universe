@@ -1,6 +1,9 @@
 # cspell: ignore semseg
 /**:
   ros__parameters:
+    model_path: "models/your_model.onnx"
+    label_path: "models/your_labels.txt"
+    color_map_path: "models/your_colormap.txt"
 
     # refine segmentation mask by overlay roi class
     # disable when sematic segmentation accuracy is good enough
