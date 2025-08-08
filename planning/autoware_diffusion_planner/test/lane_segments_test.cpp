@@ -83,18 +83,6 @@ TEST_F(LaneSegmentsTest, ProcessSegmentsToMatrixThrowsOnWrongRows)
     preprocess::process_segments_to_matrix(segments, col_id_mapping), std::runtime_error);
 }
 
-TEST_F(LaneSegmentsTest, ComputeDistancesThrowsOnBadCols)
-{
-  preprocess::ColLaneIDMaps col_id_mapping;
-  auto input_matrix = preprocess::process_segments_to_matrix(lane_segments_, col_id_mapping);
-  // Remove a column to break divisibility
-  Eigen::MatrixXf bad_matrix = input_matrix.leftCols(input_matrix.cols() - 1);
-  std::vector<preprocess::ColWithDistance> distances;
-  EXPECT_THROW(
-    preprocess::compute_distances(bad_matrix, Eigen::Matrix4f::Identity(), distances, 0, 0, 100.0),
-    std::runtime_error);
-}
-
 TEST_F(LaneSegmentsTest, TransformSelectedRowsNoTranslation)
 {
   preprocess::ColLaneIDMaps col_id_mapping;

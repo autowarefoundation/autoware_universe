@@ -220,22 +220,6 @@ Eigen::MatrixXf process_segments_to_matrix(
 Eigen::MatrixXf process_segment_to_matrix(const LaneSegment & segment);
 
 /**
- * @brief Computes distances of lane segments from a center point and stores the results.
- *
- * @param input_matrix Input matrix containing lane segment data.
- * @param transform_matrix Transformation matrix to apply to the points.
- * @param distances Output vector to store column indices, distances, and mask inclusion.
- * @param center_x X-coordinate of the center point.
- * @param center_y Y-coordinate of the center point.
- * @param mask_range Range within which columns are considered "inside" the mask.
- * @deprecated Use LaneSegmentContext::compute_distances instead.
- */
-[[deprecated("Use LaneSegmentContext::compute_distances instead")]] void compute_distances(
-  const Eigen::MatrixXf & input_matrix, const Eigen::Matrix4f & transform_matrix,
-  std::vector<ColWithDistance> & distances, const float center_x, const float center_y,
-  const float mask_range = 100.0);
-
-/**
  * @brief Sorts the columns by their squared distances in ascending order.
  *
  * @param distances Vector of columns with distances to be sorted.
