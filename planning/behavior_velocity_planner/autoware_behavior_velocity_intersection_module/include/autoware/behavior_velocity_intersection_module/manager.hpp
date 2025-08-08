@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MANAGER_HPP_
-#define MANAGER_HPP_
+#ifndef AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__MANAGER_HPP_
+#define AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__MANAGER_HPP_
 
 #include "scene_intersection.hpp"
 #include "scene_merge_from_private_road.hpp"
@@ -112,4 +112,4 @@ class MergeFromPrivateModulePlugin : public PluginWrapper<MergeFromPrivateModule
 
 }  // namespace autoware::behavior_velocity_planner
 
-#endif  // MANAGER_HPP_
+#endif  // AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__MANAGER_HPP_

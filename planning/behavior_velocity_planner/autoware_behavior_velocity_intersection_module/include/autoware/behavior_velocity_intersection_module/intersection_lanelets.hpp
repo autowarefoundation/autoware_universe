@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef INTERSECTION_LANELETS_HPP_
-#define INTERSECTION_LANELETS_HPP_
+#ifndef AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__INTERSECTION_LANELETS_HPP_
+#define AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__INTERSECTION_LANELETS_HPP_
 
 #include "interpolated_path_info.hpp"
 
@@ -192,4 +192,4 @@ struct PathLanelets
 };
 }  // namespace autoware::behavior_velocity_planner
 
-#endif  // INTERSECTION_LANELETS_HPP_
+#endif  // AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__INTERSECTION_LANELETS_HPP_

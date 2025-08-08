@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef UTIL_HPP_
-#define UTIL_HPP_
+#ifndef AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__UTIL_HPP_
+#define AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__UTIL_HPP_
 
 #include "interpolated_path_info.hpp"
 
@@ -154,4 +154,4 @@ std::optional<size_t> find_maximum_footprint_overshoot_position(
 
 }  // namespace autoware::behavior_velocity_planner::util
 
-#endif  // UTIL_HPP_
+#endif  // AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__UTIL_HPP_

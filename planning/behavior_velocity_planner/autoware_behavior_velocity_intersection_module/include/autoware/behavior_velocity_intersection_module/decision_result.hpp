@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef DECISION_RESULT_HPP_
-#define DECISION_RESULT_HPP_
+#ifndef AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__DECISION_RESULT_HPP_
+#define AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__DECISION_RESULT_HPP_
 
 #include <optional>
 #include <string>
@@ -171,4 +171,4 @@ std::string formatDecisionResult(
 
 }  // namespace autoware::behavior_velocity_planner
 
-#endif  // DECISION_RESULT_HPP_
+#endif  // AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__DECISION_RESULT_HPP_
