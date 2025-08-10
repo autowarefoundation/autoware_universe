@@ -274,7 +274,7 @@ auto check_shift_behavior(
       }
     }
 
-    if (stoppable_point.value().second > distance) {
+    if (stoppable_point.value().second > distance && !parameters.common.check_on_unstoppable) {
       autoware_utils::LineString2d line_2d{
         stoppable_point.value().first.front().to_2d(),
         stoppable_point.value().first.back().to_2d()};
@@ -386,10 +386,16 @@ auto check_turn_behavior(
 
     const auto is_reachable = distance < reachable_point.value().second || is_unsafe_holding;
 
+    if (total_length - vehicle_info.min_longitudinal_offset_m < ego_coordinate_on_arc.length) {
+      continue;
+    }
+
     if (turn_direction == "left" && p.check.left) {
       const auto sibling_straight_lanelet = get_sibling_straight_lanelet(lane, routing_graph_ptr);
 
-      if (exceed_dead_line(sibling_straight_lanelet, distance, false)) {
+      if (
+        !parameters.common.check_on_unstoppable &&
+        exceed_dead_line(sibling_straight_lanelet, distance, false)) {
         debug.text = "unable to stop before the conflict area under limited braking.";
         continue;
       }
@@ -406,7 +412,9 @@ auto check_turn_behavior(
     if (turn_direction == "right" && p.check.right) {
       const auto sibling_straight_lanelet = get_sibling_straight_lanelet(lane, routing_graph_ptr);
 
-      if (exceed_dead_line(sibling_straight_lanelet, distance, true)) {
+      if (
+        !parameters.common.check_on_unstoppable &&
+        exceed_dead_line(sibling_straight_lanelet, distance, true)) {
         debug.text = "unable to stop before the conflict area under limited braking.";
         continue;
       }

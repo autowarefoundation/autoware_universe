@@ -8,6 +8,8 @@ rear_collision_checker_node:
       type: double
       validation:
         gt_eq<>: [0.0]
+    check_on_unstoppable:
+      type: bool
 
     pointcloud:
       range:
