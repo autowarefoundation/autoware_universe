@@ -2,7 +2,7 @@
   <arg name="input/odometry" default="/localization/kinematic_state"/>
   <arg name="input/lanelet_map_bin" default="/map/vector_map"/>
   <arg name="input/route" default="/planning/mission_planning/route"/>
-  <arg name="input/reference_trajectory" default="/planning/scenario_planning/trajectory"/>
+  <arg name="input/reference_trajectory" default="/planning/trajectory"/>
   <arg name="input/predicted_trajectory" default="/control/trajectory_follower/predicted_trajectory"/>
   <arg name="config_file" default="$(find-pkg-share autoware_lane_departure_checker)/config/lane_departure_checker.param.yaml"/>
 

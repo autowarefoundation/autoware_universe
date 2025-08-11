@@ -8,7 +8,7 @@
     <param from="$(find-pkg-share autoware_trajectory_follower_node)/config/simple_trajectory_follower.param.yaml" allow_substs="true"/>
 
     <remap from="input/kinematics" to="/localization/kinematic_state"/>
-    <remap from="input/trajectory" to="/planning/scenario_planning/trajectory"/>
+    <remap from="input/trajectory" to="/planning/trajectory"/>
     <remap from="output/control_cmd" to="/vehicle/command/manual_control_cmd"/>
   </node>
 </launch>

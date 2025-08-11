@@ -138,7 +138,7 @@
           <!-- input -->
           <remap from="kinematics" to="/localization/kinematic_state"/>
           <remap from="steering" to="/vehicle/status/steering_status"/>
-          <remap from="trajectory" to="/planning/scenario_planning/trajectory"/>
+          <remap from="trajectory" to="/planning/trajectory"/>
           <remap from="control_cmd" to="/control/command/control_cmd"/>
           <remap from="trajectory_follower_control_cmd" to="/control/trajectory_follower/control_cmd"/>
           <remap from="control_mode_report" to="/vehicle/status/control_mode"/>
@@ -157,7 +157,7 @@
       <group if="$(eval &quot;'$(var trajectory_follower_mode)' == 'trajectory_follower_node'&quot;)">
         <load_composable_node target="/control/control_container">
           <composable_node pkg="autoware_trajectory_follower_node" plugin="autoware::motion::control::trajectory_follower_node::Controller" name="controller_node_exe" namespace="trajectory_follower">
-            <remap from="~/input/reference_trajectory" to="/planning/scenario_planning/trajectory"/>
+            <remap from="~/input/reference_trajectory" to="/planning/trajectory"/>
             <remap from="~/input/current_odometry" to="/localization/kinematic_state"/>
             <remap from="~/input/current_steering" to="/vehicle/status/steering_status"/>
             <remap from="~/input/current_accel" to="/localization/acceleration"/>
@@ -215,7 +215,7 @@
             <remap from="~/input/odometry" to="/localization/kinematic_state"/>
             <remap from="~/input/lanelet_map_bin" to="/map/vector_map"/>
             <remap from="~/input/route" to="/planning/mission_planning/route"/>
-            <remap from="~/input/reference_trajectory" to="/planning/scenario_planning/trajectory"/>
+            <remap from="~/input/reference_trajectory" to="/planning/trajectory"/>
             <remap from="~/input/predicted_trajectory" to="/control/trajectory_follower/lateral/predicted_trajectory"/>
             <param from="$(var nearest_search_param_path)"/>
             <param from="$(var lane_departure_checker_param_path)"/>
@@ -233,7 +233,7 @@
             <remap from="~/input/kinematics" to="/localization/kinematic_state"/>
             <remap from="~/input/operational_mode_state" to="/api/operation_mode/state"/>
             <remap from="~/input/measured_acceleration" to="/localization/acceleration"/>
-            <remap from="~/input/reference_trajectory" to="/planning/scenario_planning/trajectory"/>
+            <remap from="~/input/reference_trajectory" to="/planning/trajectory"/>
             <remap from="~/input/predicted_trajectory" to="/control/trajectory_follower/lateral/predicted_trajectory"/>
             <remap from="~/output/validation_status" to="~/validation_status"/>
             <param from="$(var control_validator_param_path)"/>
@@ -275,7 +275,7 @@
           <composable_node pkg="autoware_obstacle_collision_checker" plugin="autoware::obstacle_collision_checker::ObstacleCollisionCheckerNode" name="obstacle_collision_checker">
             <remap from="input/lanelet_map_bin" to="/map/vector_map"/>
             <remap from="input/obstacle_pointcloud" to="/perception/obstacle_segmentation/pointcloud"/>
-            <remap from="input/reference_trajectory" to="/planning/scenario_planning/trajectory"/>
+            <remap from="input/reference_trajectory" to="/planning/trajectory"/>
             <remap from="input/predicted_trajectory" to="/control/trajectory_follower/lateral/predicted_trajectory"/>
             <remap from="input/odometry" to="/localization/kinematic_state"/>
             <param from="$(var obstacle_collision_checker_param_path)"/>
@@ -290,7 +290,7 @@
         <load_composable_node target="/control/control_check_container">
           <composable_node pkg="autoware_predicted_path_checker" plugin="autoware::predicted_path_checker::PredictedPathCheckerNode" name="predicted_path_checker">
             <remap from="~/input/objects" to="/perception/object_recognition/objects"/>
-            <remap from="~/input/reference_trajectory" to="/planning/scenario_planning/trajectory"/>
+            <remap from="~/input/reference_trajectory" to="/planning/trajectory"/>
             <remap from="~/input/current_accel" to="/localization/acceleration"/>
             <remap from="~/input/odometry" to="/localization/kinematic_state"/>
             <remap from="~/input/predicted_trajectory" to="/control/trajectory_follower/lateral/predicted_trajectory"/>

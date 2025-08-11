@@ -51,7 +51,7 @@ OptimizationBasedPlanner::OptimizationBasedPlanner(
 : CruisePlannerInterface(node, common_param, cruise_planning_param)
 {
   smoothed_traj_sub_ = node.create_subscription<Trajectory>(
-    "/planning/scenario_planning/trajectory", rclcpp::QoS{1},
+    "/planning/trajectory", rclcpp::QoS{1},
     [this](const Trajectory::ConstSharedPtr msg) { smoothed_trajectory_ptr_ = msg; });
 
   // parameter
