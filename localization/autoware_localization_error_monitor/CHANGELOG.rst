@@ -2,6 +2,9 @@
 Changelog for package autoware_localization_error_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.46.0 (2025-06-20)
 -------------------
 

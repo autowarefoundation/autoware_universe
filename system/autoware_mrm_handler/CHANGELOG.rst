@@ -2,6 +2,15 @@
 Changelog for package autoware_mrm_handler
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* feat: use mrm in all operation mode state (`#10259 <https://github.com/autowarefoundation/autoware_universe/issues/10259>`_)
+  * feat: use mrm in all operation mode
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Tetsuhiro Kawaguchi
+
 0.46.0 (2025-06-20)
 -------------------
 

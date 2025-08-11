@@ -2,6 +2,9 @@
 Changelog for package autoware_ad_api_visualizers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.46.0 (2025-06-20)
 -------------------
 
