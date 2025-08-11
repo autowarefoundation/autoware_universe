@@ -133,6 +133,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     ${NVONNXPARSER}
     ${CUDA_LIBRARIES}
     ${CUBLAS_LIBRARIES}
+    Eigen3::Eigen
   )
 
   # Main source files
@@ -165,6 +166,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     ${CUDNN_LIBRARY}
     ${TENSORRT_OPS_TARGET}
     dl
+    Eigen3::Eigen
   )
 
   add_dependencies(${PROJECT_NAME} ${TENSORRT_OPS_TARGET})
