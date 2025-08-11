@@ -2,8 +2,8 @@
 Changelog for package autoware_traffic_light_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.0 (2025-08-11)
+-------------------
 * fix(autoware_traffic_light_utils): remove default value `setSignalUnknown (`#10635 <https://github.com/autowarefoundation/autoware_universe/issues/10635>`_)
   * remove default value
   * fix

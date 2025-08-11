@@ -2,8 +2,8 @@
 Changelog for package autoware_radar_object_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.0 (2025-08-11)
+-------------------
 * feat(autoware_radar_object_tracker): change package name in config file (`#10988 <https://github.com/autowarefoundation/autoware_universe/issues/10988>`_)
   change package name in config file
 * style(pre-commit): autofix (`#10982 <https://github.com/autowarefoundation/autoware_universe/issues/10982>`_)

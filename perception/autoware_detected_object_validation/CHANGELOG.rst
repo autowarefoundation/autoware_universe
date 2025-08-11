@@ -2,8 +2,8 @@
 Changelog for package autoware_detected_object_validation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.0 (2025-08-11)
+-------------------
 * fix(autoware_detected_object_validation): templatize lanelet filter (`#10883 <https://github.com/autowarefoundation/autoware_universe/issues/10883>`_)
   * templatize node and add filter for tracked objects
   * add test for tracked objects

@@ -2,8 +2,8 @@
 Changelog for package autoware_scenario_simulator_v2_adapter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.0 (2025-08-11)
+-------------------
 * feat(autoware_scenario_simulator_v2_adapter): support converting all diagnostics to UserDefinedValue (`#11033 <https://github.com/autowarefoundation/autoware_universe/issues/11033>`_)
   * convert all diagnostics to userdefinedvalues
   * feat(intersection_collision_checker): improve logic to address false negatives (`#11030 <https://github.com/autowarefoundation/autoware_universe/issues/11030>`_)

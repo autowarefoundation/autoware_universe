@@ -2,8 +2,8 @@
 Changelog for package autoware_command_mode_switcher
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.0 (2025-08-11)
+-------------------
 * feat(autoware_command_mode_switcher_plugins): publish hazard lights c… (`#10952 <https://github.com/autowarefoundation/autoware_universe/issues/10952>`_)
   * feat(autoware_command_mode_switcher_plugins): publish hazard lights command (`#2142 <https://github.com/autowarefoundation/autoware_universe/issues/2142>`_)
   * feat: add publisher

@@ -2,8 +2,8 @@
 Changelog for package autoware_bytetrack
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.0 (2025-08-11)
+-------------------
 * feat: enhance bytracker classification management (`#10898 <https://github.com/autowarefoundation/autoware_universe/issues/10898>`_)
   * feat: enhance bytracker classification management
   * fix a bug in score reset after switching label

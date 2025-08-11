@@ -2,8 +2,8 @@
 Changelog for package autoware_pipeline_latency_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.0 (2025-08-11)
+-------------------
 * feat(autoware_pipeline_latency_monitor): add autoware_pipeline_latency_monitor package (`#10798 <https://github.com/autowarefoundation/autoware_universe/issues/10798>`_)
   * feat(sensor_to_control_latency_checker): add node to monitor sensor data latency and publish diagnostics
   * feat(sensor_to_control_latency_checker): add offset parameters for processing times in latency calculations

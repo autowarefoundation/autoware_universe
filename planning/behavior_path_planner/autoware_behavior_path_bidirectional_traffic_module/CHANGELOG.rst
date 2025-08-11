@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_bidirectional_traffic_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.0 (2025-08-11)
+-------------------
 * style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
 * chore(bidirectional_traffic): modify readme (`#10943 <https://github.com/autowarefoundation/autoware_universe/issues/10943>`_)

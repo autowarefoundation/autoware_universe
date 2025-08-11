@@ -2,8 +2,8 @@
 Changelog for package autoware_lidar_centerpoint
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.0 (2025-08-11)
+-------------------
 * feat(autoware_lidar_centerpoint): add class-wise confidence thresholds to CenterPoint (`#10881 <https://github.com/autowarefoundation/autoware_universe/issues/10881>`_)
   * Add PreprocessCuda to CenterPoint
   * style(pre-commit): autofix

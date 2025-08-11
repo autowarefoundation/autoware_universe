@@ -2,8 +2,8 @@
 Changelog for package autoware_multi_object_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.0 (2025-08-11)
+-------------------
 * fix(multi object tracker): tracker type to associate (`#11132 <https://github.com/autowarefoundation/autoware_universe/issues/11132>`_)
   * feat(multi_object_tracker): add tracker priority for object classification
   * feat(multi_object_tracker): introduce TrackerType enum and update tracker implementations

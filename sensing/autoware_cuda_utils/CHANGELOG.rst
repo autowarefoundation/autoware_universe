@@ -2,8 +2,8 @@
 Changelog for package autoware_cuda_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.0 (2025-08-11)
+-------------------
 * feat(autoware_cuda_utils): add thrust utils (`#10997 <https://github.com/autowarefoundation/autoware_universe/issues/10997>`_)
   * feat(autoware_cuda_utils): add thrust utils that ensure thrust is executed on a particular stream
   * chore: skip thrust utils test if no CUDA device is available

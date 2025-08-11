@@ -2,8 +2,8 @@
 Changelog for package autoware_tensorrt_plugins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.0 (2025-08-11)
+-------------------
 * feat(autoware_tensorrt_plugins): add vad trt plugins suppport (`#11092 <https://github.com/autowarefoundation/autoware_universe/issues/11092>`_)
   * feat(tensorrt_plugins): add multi_scale_deformable_attention, rotate, and
   select_and_pad plugins

@@ -2,8 +2,8 @@
 Changelog for package autoware_system_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.0 (2025-08-11)
+-------------------
 * feat(autoware_system_monitor): publish gpu_status (`#11022 <https://github.com/autowarefoundation/autoware_universe/issues/11022>`_)
   * feat(autoware_system_monitor): publish gpu_status
   * style(pre-commit): autofix

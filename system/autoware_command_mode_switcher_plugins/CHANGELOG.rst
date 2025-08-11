@@ -2,8 +2,8 @@
 Changelog for package autoware_command_mode_switcher_plugins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.0 (2025-08-11)
+-------------------
 * feat(autoware_command_mode_swicher_plugins): publish velocity limit again (`#11141 <https://github.com/autowarefoundation/autoware_universe/issues/11141>`_)
   feat: publish velocity limit again
 * fix(command_mode_switcher_plugins): fix velocity limit message (`#10960 <https://github.com/autowarefoundation/autoware_universe/issues/10960>`_)

@@ -2,8 +2,8 @@
 Changelog for package autoware_image_projection_based_fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.0 (2025-08-11)
+-------------------
 * chore(image_projection_based_fusion): add initializing status log (`#11112 <https://github.com/autowarefoundation/autoware_universe/issues/11112>`_)
   * chore(image_projection_based_fusion): add initializing status log
   * chore: change to warning

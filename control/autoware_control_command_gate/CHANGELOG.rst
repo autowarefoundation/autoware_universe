@@ -2,8 +2,8 @@
 Changelog for package autoware_control_command_gate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.0 (2025-08-11)
+-------------------
 * feat: enable to remap control cmd from autoware launch (`#11019 <https://github.com/autowarefoundation/autoware_universe/issues/11019>`_)
   * feat: add args
   * feat: add another cmd

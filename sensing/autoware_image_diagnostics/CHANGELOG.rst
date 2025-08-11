@@ -2,8 +2,8 @@
 Changelog for package autoware_image_diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.0 (2025-08-11)
+-------------------
 * chore(autoware_image_diagnostics): fine tune parameters (`#10806 <https://github.com/autowarefoundation/autoware_universe/issues/10806>`_)
   chore: fine tune paramters
 * Contributors: Yi-Hsiang Fang (Vivid)

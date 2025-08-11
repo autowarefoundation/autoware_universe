@@ -2,8 +2,8 @@
 Changelog for package autoware_command_mode_decider
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.0 (2025-08-11)
+-------------------
 * feat(autoware_command_mode_decider): add initialize (`#10935 <https://github.com/autowarefoundation/autoware_universe/issues/10935>`_)
   * feat: add initialize
   * fix: override in plugins

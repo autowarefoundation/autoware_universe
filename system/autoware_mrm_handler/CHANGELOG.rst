@@ -2,8 +2,8 @@
 Changelog for package autoware_mrm_handler
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.0 (2025-08-11)
+-------------------
 * feat: use mrm in all operation mode state (`#10259 <https://github.com/autowarefoundation/autoware_universe/issues/10259>`_)
   * feat: use mrm in all operation mode
   * style(pre-commit): autofix

@@ -2,8 +2,8 @@
 Changelog for package tier4_localization_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.0 (2025-08-11)
+-------------------
 * feat(autoware_pose_instability_detector): make pose_instability_detector configurable in autoware_launch (`#10961 <https://github.com/autowarefoundation/autoware_universe/issues/10961>`_)
   make pose_instability_detector configurable in autoware_launch
 * Contributors: Taiki Yamada
