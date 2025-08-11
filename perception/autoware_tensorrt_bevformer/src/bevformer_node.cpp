@@ -37,7 +37,7 @@
 #include "autoware/tensorrt_bevformer/preprocessing/preprocessing_pipeline.hpp"
 #include "autoware/tensorrt_bevformer/ros_utils.hpp"
 
-#include "autoware_internal_perception_msgs/msg/can_bus_data.hpp"
+#include "autoware_localization_msgs/msg/kinematic_state.hpp"
 #include "autoware_internal_perception_msgs/msg/scene_info.hpp"
 #include "geometry_msgs/msg/quaternion.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
@@ -472,6 +472,45 @@ void TRTBEVFormerNode::calculateSensor2LidarTransformsFromTF(
   }
 }
 
+// helper method to extract CAN bus data:
+std::vector<float> TRTBEVFormerNode::extractCanBusFromKinematicState(
+  const autoware_localization_msgs::msg::KinematicState::ConstSharedPtr & kinematic_state_msg)
+{
+  std::vector<float> can_bus_data(18, 0.0f);
+  
+  // Map position (3 values)
+  can_bus_data[0] = static_cast<float>(kinematic_state_msg->pose_with_covariance.pose.position.x);
+  can_bus_data[1] = static_cast<float>(kinematic_state_msg->pose_with_covariance.pose.position.y);
+  can_bus_data[2] = static_cast<float>(kinematic_state_msg->pose_with_covariance.pose.position.z);
+  
+  // Map orientation (4 values: w, x, y, z)
+  can_bus_data[3] = static_cast<float>(kinematic_state_msg->pose_with_covariance.pose.orientation.w);
+  can_bus_data[4] = static_cast<float>(kinematic_state_msg->pose_with_covariance.pose.orientation.x);
+  can_bus_data[5] = static_cast<float>(kinematic_state_msg->pose_with_covariance.pose.orientation.y);
+  can_bus_data[6] = static_cast<float>(kinematic_state_msg->pose_with_covariance.pose.orientation.z);
+  
+  // Map linear velocity (3 values)
+  can_bus_data[7] = static_cast<float>(kinematic_state_msg->twist_with_covariance.twist.linear.x);
+  can_bus_data[8] = static_cast<float>(kinematic_state_msg->twist_with_covariance.twist.linear.y);
+  can_bus_data[9] = static_cast<float>(kinematic_state_msg->twist_with_covariance.twist.linear.z);
+  
+  // Map angular velocity (3 values)
+  can_bus_data[10] = static_cast<float>(kinematic_state_msg->twist_with_covariance.twist.angular.x);
+  can_bus_data[11] = static_cast<float>(kinematic_state_msg->twist_with_covariance.twist.angular.y);
+  can_bus_data[12] = static_cast<float>(kinematic_state_msg->twist_with_covariance.twist.angular.z);
+  
+  // Map linear acceleration (3 values)
+  can_bus_data[13] = static_cast<float>(kinematic_state_msg->accel_with_covariance.accel.linear.x);
+  can_bus_data[14] = static_cast<float>(kinematic_state_msg->accel_with_covariance.accel.linear.y);
+  can_bus_data[15] = static_cast<float>(kinematic_state_msg->accel_with_covariance.accel.linear.z);
+  
+  // Padding for compatibility (2 values)
+  can_bus_data[16] = 0.0f;
+  can_bus_data[17] = 0.0f;
+  
+  return can_bus_data;
+}
+
 void TRTBEVFormerNode::callback(
   const sensor_msgs::msg::Image::ConstSharedPtr & msg_fl_img,
   const sensor_msgs::msg::Image::ConstSharedPtr & msg_f_img,
@@ -479,13 +518,13 @@ void TRTBEVFormerNode::callback(
   const sensor_msgs::msg::Image::ConstSharedPtr & msg_bl_img,
   const sensor_msgs::msg::Image::ConstSharedPtr & msg_b_img,
   const sensor_msgs::msg::Image::ConstSharedPtr & msg_br_img,
-  const autoware_internal_perception_msgs::msg::CanBusData::ConstSharedPtr & can_bus_msg,
+  const autoware_localization_msgs::msg::KinematicState::ConstSharedPtr & can_bus_msg,
   const autoware_internal_perception_msgs::msg::SceneInfo::ConstSharedPtr & scene_info)
 {
   auto t_preprocess_start = std::chrono::steady_clock::now();
 
-  // Get CAN bus data directly from the synchronized message
-  std::vector<float> latest_can_bus = can_bus_msg->can_bus.data;
+  // Extract CAN bus data from KinematicState message
+  std::vector<float> latest_can_bus = extractCanBusFromKinematicState(can_bus_msg);
 
   const std::string & scene_token = scene_info->scene_token;
 

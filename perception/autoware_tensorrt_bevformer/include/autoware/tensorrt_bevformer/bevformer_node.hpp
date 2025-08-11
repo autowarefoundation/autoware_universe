@@ -47,7 +47,7 @@
 #include <Eigen/Geometry>
 #include <rclcpp/logging.hpp>
 
-#include "autoware_internal_perception_msgs/msg/can_bus_data.hpp"
+#include "autoware_localization_msgs/msg/kinematic_state.hpp"
 #include "autoware_internal_perception_msgs/msg/scene_info.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include <geometry_msgs/msg/quaternion.hpp>
@@ -123,7 +123,7 @@ private:
   bool camera_info_received_flag_ = false;
 
   // can_bus and scene_info subscriptions
-  message_filters::Subscriber<autoware_internal_perception_msgs::msg::CanBusData> sub_can_bus_;
+  message_filters::Subscriber<autoware_localization_msgs::msg::KinematicState> sub_can_bus_;
   message_filters::Subscriber<autoware_internal_perception_msgs::msg::SceneInfo> scene_info_sub_;
 
   // tf listener
@@ -146,7 +146,7 @@ private:
   typedef message_filters::sync_policies::ApproximateTime<
     sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::Image,
     sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::Image,
-    autoware_internal_perception_msgs::msg::CanBusData,
+    autoware_localization_msgs::msg::KinematicState,
     autoware_internal_perception_msgs::msg::SceneInfo>
     MultiSensorSyncPolicy;
 
@@ -172,6 +172,10 @@ private:
     const std::vector<sensor_msgs::msg::Image::ConstSharedPtr> & image_msgs,
     const Eigen::Quaterniond & ego2global_rot_ref,
     const Eigen::Translation3d & ego2global_trans_ref);
+
+  // Helper function to extract CAN bus data
+  std::vector<float> extractCanBusFromKinematicState(
+    const autoware_localization_msgs::msg::KinematicState::ConstSharedPtr & kinematic_state_msg);
 
   // Initialization methods
   void startCameraInfoSubscription();
@@ -200,7 +204,7 @@ public:
     const sensor_msgs::msg::Image::ConstSharedPtr & msg_bl_img,
     const sensor_msgs::msg::Image::ConstSharedPtr & msg_b_img,
     const sensor_msgs::msg::Image::ConstSharedPtr & msg_br_img,
-    const autoware_internal_perception_msgs::msg::CanBusData::ConstSharedPtr & can_bus_msg,
+    const autoware_localization_msgs::msg::KinematicState::ConstSharedPtr & can_bus_msg,
     const autoware_internal_perception_msgs::msg::SceneInfo::ConstSharedPtr & scene_info);
 
   void cameraInfoCallback(int idx, const sensor_msgs::msg::CameraInfo::SharedPtr msg);
