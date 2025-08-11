@@ -2,6 +2,25 @@
 Changelog for package autoware_planning_validator_trajectory_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* refactor(planning_validator): refactor planning validator configuration and error handling (`#11081 <https://github.com/autowarefoundation/autoware_universe/issues/11081>`_)
+  * refactor trajectory check error handling
+  * define set_diag_status function for each module locally
+  * update documentation
+  ---------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(planning_validator): fix conflict between trajectory shift and distance deviation checks (`#10799 <https://github.com/autowarefoundation/autoware_universe/issues/10799>`_)
+  * use global is_critical_error flag for trajectory diagnostics update
+  * add warning to readme
+  * Update planning/planning_validator/autoware_planning_validator/README.md
+  ---------
+* fix(planning_validator_trajectory_checker): set is_critical_error flag to false at start of validation (`#10912 <https://github.com/autowarefoundation/autoware_universe/issues/10912>`_)
+  set is_critical_error flag to false at start of validation
+* fix(planning_validator): check the yaw deviation of the initial trajectory (`#10878 <https://github.com/autowarefoundation/autoware_universe/issues/10878>`_)
+* Contributors: Maxime CLEMENT, Mete Fatih Cırıt, mkquda
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

@@ -2,6 +2,16 @@
 Changelog for package autoware_behavior_velocity_traffic_light_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* style(pre-commit): autofix (`#10982 <https://github.com/autowarefoundation/autoware_universe/issues/10982>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(autoware_behavior_velocity_traffic_light_module): enhance rviz for v2i (`#10867 <https://github.com/autowarefoundation/autoware_universe/issues/10867>`_)
+  update
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Yukinari Hisaki
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

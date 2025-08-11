@@ -2,6 +2,18 @@
 Changelog for package autoware_behavior_velocity_crosswalk_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(crosswalk): improve robustness to prevent stop decision from being canceled by transient noise (`#11027 <https://github.com/autowarefoundation/autoware_universe/issues/11027>`_)
+  * feat(crosswalk): improve robustness to prevent stop decision from being canceled by transient noise
+  * docs: readme
+  * fix: small change
+  ---------
+* fix(crosswalk): incorrect stop point calculation (`#10922 <https://github.com/autowarefoundation/autoware_universe/issues/10922>`_)
+* Contributors: Mete Fatih Cırıt, Satoshi OTA
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
