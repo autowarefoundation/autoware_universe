@@ -270,8 +270,6 @@ bool VehicleTracker::measure(
       tf2::Quaternion q;
       q.setRPY(0, 0, updating_yaw + M_PI);
       updating_object.pose.orientation = tf2::toMsg(q);
-      // updating_object.anchor_point.x = -updating_object.anchor_point.x;
-      // updating_object.anchor_point.y = -updating_object.anchor_point.y;
     }
   }
 
@@ -305,6 +303,14 @@ bool VehicleTracker::getTrackedObject(
     return false;
   }
   object.shape.dimensions.x = motion_model_.getLength();  // set length
+
+  // todo: check and limit the size of the object
+  // * check the size limit
+  // * if it is too large
+  //   * get front and rear point covariance
+  //   * set the center point weighted by the covariance(larger covariance has lower weight)
+  //   * resize the object
+  // * if it is too small: no issue (since the tracker already has minimum size)
 
   // cache object
   updateCache(object, time);

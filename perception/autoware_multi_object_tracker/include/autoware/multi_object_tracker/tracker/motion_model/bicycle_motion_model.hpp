@@ -104,6 +104,9 @@ public:
     const double & x, const double & y, const double & yaw, const std::array<double, 36> & pose_cov,
     const double & vel_x, const double & vel_y, const std::array<double, 36> & twist_cov, const double & length);
 
+  // todo: updateStateFrontOnly
+  // todo: updateStateRearOnly
+
   bool adjustPosition(const double & delta_x, const double & delta_y);
 
   bool limitStates();
