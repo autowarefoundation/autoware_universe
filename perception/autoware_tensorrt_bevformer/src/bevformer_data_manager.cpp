@@ -62,9 +62,22 @@ void BEVFormerDataManager::initializePrevBev(const std::vector<int64_t> & shape)
     total_size *= dim;
   }
 
-  // Initialize with random values following normal distribution
+  // Resize the vector
   prev_bev_.resize(total_size);
 
+  // Generate random values
+  generateRandomBev();
+
+  RCLCPP_INFO(logger_, "Initialized prev_bev with %zu random values", total_size);
+}
+
+void BEVFormerDataManager::generateRandomBev()
+{
+  if (prev_bev_.empty()) {
+    RCLCPP_WARN(logger_, "Cannot generate random BEV - vector not allocated");
+    return;
+  }
+  
   std::random_device rd;
   std::mt19937 gen(rd());
   std::normal_distribution<float> dist(0.0f, 1.0f);
@@ -72,8 +85,18 @@ void BEVFormerDataManager::initializePrevBev(const std::vector<int64_t> & shape)
   for (auto & val : prev_bev_) {
     val = dist(gen);
   }
+  
+  RCLCPP_DEBUG(logger_, "Generated random BEV with %zu values", prev_bev_.size());
+}
 
-  RCLCPP_INFO(logger_, "Initialized prev_bev with %zu random values", total_size);
+float BEVFormerDataManager::getUsePrevBev()
+{
+  if (is_first_frame_) {
+    RCLCPP_INFO(logger_, "First frame detected, using random BEV");
+    is_first_frame_ = false;  // Set to false after first use
+    return 0.0f;  // Don't use previous BEV for first frame
+  }
+  return 1.0f;  // Always use previous BEV after first frame
 }
 
 std::vector<float> BEVFormerDataManager::processCanBus(
@@ -128,7 +151,7 @@ std::vector<float> BEVFormerDataManager::processCanBus(
 }
 
 std::vector<float> BEVFormerDataManager::processCanbusWithTemporal(
-  const std::vector<float> & can_bus, bool reset)
+  const std::vector<float> & can_bus, float use_prev_bev)
 {
   if (can_bus.size() < 18) {
     RCLCPP_ERROR(logger_, "Invalid CAN bus size: %zu, expected at least 18", can_bus.size());
@@ -142,21 +165,20 @@ std::vector<float> BEVFormerDataManager::processCanbusWithTemporal(
   current_tmp_pos_ = {processed_can_bus[0], processed_can_bus[1], processed_can_bus[2]};
   current_tmp_angle_ = processed_can_bus[17];
 
-  // Apply temporal adjustments based on whether we use prev_bev
-  float use_prev_bev = reset ? 0.0f : 1.0f;
-
   if (use_prev_bev == 1.0f) {
+    // Use temporal data (subtract previous position/angle)
     processed_can_bus[0] -= prev_frame_info_.prev_pos[0];
     processed_can_bus[1] -= prev_frame_info_.prev_pos[1];
     processed_can_bus[2] -= prev_frame_info_.prev_pos[2];
     processed_can_bus[17] -= prev_frame_info_.prev_angle;
+    RCLCPP_DEBUG(logger_, "Using temporal BEV data (subsequent frame)");
   } else {
+    // First frame - zero out relative positions
     processed_can_bus[0] = 0.0f;
     processed_can_bus[1] = 0.0f;
     processed_can_bus[2] = 0.0f;
     processed_can_bus[17] = 0.0f;
-
-    RCLCPP_INFO(logger_, "Reset CAN bus to zeros for new scene");
+    RCLCPP_INFO(logger_, "Using random BEV (first frame)");
   }
 
   return processed_can_bus;
