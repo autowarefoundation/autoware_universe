@@ -10,9 +10,8 @@
   <arg name="input/img_back" default="/nuscenes/CAM_BACK/image"/>
   <arg name="input/img_back_right" default="/nuscenes/CAM_BACK_RIGHT/image"/>
 
-  <!-- CAN bus and scene topics -->
+  <!-- CAN bus topic -->
   <arg name="input/can_bus" default="/nuscenes/can_bus"/>
-  <arg name="input/reset_bevformer_history" default="/reset_bevformer_history"/>
 
   <arg name="output/boxes" default="/tensorrt_bevformer/output/boxes"/>
   <arg name="output/bboxes" default="/nuscenes/bboxes"/>
@@ -59,7 +58,6 @@
     <remap from="~/input/topic_img_br" to="$(var input/img_back_right)"/>
 
     <remap from="~/input/can_bus" to="$(var input/can_bus)"/>
-    <remap from="~/input/reset_bevformer_history" to="$(var input/reset_bevformer_history)"/>
 
     <remap from="~/input/topic_img_fl/camera_info" to="$(var input/img_front_left/camera_info)"/>
     <remap from="~/input/topic_img_f/camera_info" to="$(var input/img_front/camera_info)"/>

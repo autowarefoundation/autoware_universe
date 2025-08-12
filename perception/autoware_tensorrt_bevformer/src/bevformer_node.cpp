@@ -285,7 +285,6 @@ void TRTBEVFormerNode::startImageSubscription()
   using std::placeholders::_5;
   using std::placeholders::_6;
   using std::placeholders::_7;
-  using std::placeholders::_8;
 
   // Subscribe to topics
   sub_fl_img_.subscribe(this, "~/input/topic_img_fl", rclcpp::QoS{1}.get_rmw_qos_profile());
@@ -303,15 +302,6 @@ void TRTBEVFormerNode::startImageSubscription()
 
   sync_->registerCallback(
     std::bind(&TRTBEVFormerNode::callback, this, _1, _2, _3, _4, _5, _6, _7));
-
-  reset_flag_sub_ = this->create_subscription<std_msgs::msg::Bool>(
-    "~/input/reset_bevformer_history",
-    rclcpp::QoS{1},
-    [this](const std_msgs::msg::Bool::ConstSharedPtr msg) {
-      reset = msg->data;
-    }
-  );
-
 }
 
 void TRTBEVFormerNode::startCameraInfoSubscription()
@@ -479,7 +469,7 @@ void TRTBEVFormerNode::calculateSensor2LidarTransformsFromTF(
   }
 }
 
-// helper method to extract CAN bus data:
+// helper method to extract CAN bus data
 std::vector<float> TRTBEVFormerNode::extractCanBusFromKinematicState(
   const autoware_localization_msgs::msg::KinematicState::ConstSharedPtr & kinematic_state_msg)
 {
@@ -536,9 +526,8 @@ void TRTBEVFormerNode::callback(
   std::vector<sensor_msgs::msg::Image::ConstSharedPtr> image_msgs = {
     msg_f_img, msg_fr_img, msg_fl_img, msg_b_img, msg_bl_img, msg_br_img};
 
-  // Process ego2global transform for canbus processing
   // Use the reference timestamp
-  rclcpp::Time ref_time = msg_f_img->header.stamp;
+  rclcpp::Time ref_time = this->now();
   RCLCPP_DEBUG(this->get_logger(), "Ref time Initialized");
   Eigen::Quaterniond ego2global_rot;
   Eigen::Translation3d ego2global_trans;
@@ -609,12 +598,12 @@ void TRTBEVFormerNode::callback(
 
   auto t_inference_start = t_preprocess_end;
 
-  // Apply temporal processing
-  std::vector<float> processed_can_bus =
-    data_manager_->processCanbusWithTemporal(initial_can_bus, reset);
+  // Get use_prev_bev flag ONCE at the beginning of inference phase
+  float use_prev_bev = data_manager_->getUsePrevBev();
 
-  // Determine if we should use previous BEV
-  float use_prev_bev = reset ? 0.0f : 1.0f;
+  // Apply temporal processing with the determined flag
+  std::vector<float> processed_can_bus =
+    data_manager_->processCanbusWithTemporal(initial_can_bus, use_prev_bev);
 
   // Get the previous BEV features
   const std::vector<float> & prev_bev = data_manager_->getPrevBev();
