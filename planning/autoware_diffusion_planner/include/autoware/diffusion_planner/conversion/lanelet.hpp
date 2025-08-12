@@ -207,10 +207,6 @@ public:
    * @brief Construct a new Lanelet Converter object
    *
    * @param lanelet_map_ptr Pointer of loaded lanelet map.
-   * @param max_num_polyline The max number of polylines to be contained in the tensor. If the total
-   * number of polylines are less than this value, zero-filled polylines will be padded.
-   * @param max_num_point The max number of points to be contained in a single polyline.
-   * @param point_break_distance Distance threshold to separate two polylines.
    */
   explicit LaneletConverter(const lanelet::LaneletMapConstPtr lanelet_map_ptr)
   : lanelet_map_ptr_(lanelet_map_ptr)
