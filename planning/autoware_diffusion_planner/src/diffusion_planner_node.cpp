@@ -451,9 +451,8 @@ InputDataMap DiffusionPlanner::create_input_data()
   // map data on ego reference frame
   {
     std::tuple<Eigen::MatrixXf, ColLaneIDMaps> matrix_mapping_tuple =
-      preprocess::transform_and_select_rows(
-        map_lane_segments_matrix_, map_to_ego_transform, col_id_mapping_, traffic_light_id_map_,
-        lanelet_map_ptr_, center_x, center_y, LANES_SHAPE[1]);
+      lane_segment_context_->transform_and_select_rows(
+        map_to_ego_transform, traffic_light_id_map_, center_x, center_y, LANES_SHAPE[1]);
     const Eigen::MatrixXf & ego_centric_lane_segments = std::get<0>(matrix_mapping_tuple);
     input_data_map["lanes"] = preprocess::extract_lane_tensor_data(ego_centric_lane_segments);
     input_data_map["lanes_speed_limit"] =
@@ -478,9 +477,8 @@ InputDataMap DiffusionPlanner::create_input_data()
     auto current_lanes = route_handler_->getLaneletSequence(
       current_preferred_lane, backward_path_length, forward_path_length);
 
-    const auto [route_lanes, route_lanes_speed_limit] = preprocess::get_route_segments(
-      map_lane_segments_matrix_, map_to_ego_transform, col_id_mapping_, traffic_light_id_map_,
-      lanelet_map_ptr_, current_lanes);
+    const auto [route_lanes, route_lanes_speed_limit] = lane_segment_context_->get_route_segments(
+      map_to_ego_transform, traffic_light_id_map_, current_lanes);
     input_data_map["route_lanes"] = route_lanes;
     input_data_map["route_lanes_speed_limit"] = route_lanes_speed_limit;
   }
@@ -717,16 +715,21 @@ void DiffusionPlanner::on_map(const HADMapBin::ConstSharedPtr map_msg)
   lanelet::utils::conversion::fromBinMsg(
     *map_msg, lanelet_map_ptr_, &traffic_rules_ptr_, &routing_graph_ptr_);
 
-  lanelet_converter_ptr_ = std::make_unique<LaneletConverter>(lanelet_map_ptr_);
-  lane_segments_ = lanelet_converter_ptr_->convert_to_lane_segments(POINTS_PER_SEGMENT);
+  auto lanelet_converter = std::make_unique<LaneletConverter>(lanelet_map_ptr_);
+  auto lane_segments = lanelet_converter->convert_to_lane_segments(POINTS_PER_SEGMENT);
 
-  if (lane_segments_.empty()) {
+  if (lane_segments.empty()) {
     RCLCPP_ERROR(get_logger(), "No lane segments found in the map");
     throw std::runtime_error("No lane segments found in the map");
   }
 
-  map_lane_segments_matrix_ =
-    preprocess::process_segments_to_matrix(lane_segments_, col_id_mapping_);
+  ColLaneIDMaps col_id_mapping;
+  Eigen::MatrixXf map_lane_segments_matrix =
+    preprocess::process_segments_to_matrix(lane_segments, col_id_mapping);
+
+  // Create LaneSegmentContext with the static data
+  lane_segment_context_ = std::make_unique<preprocess::LaneSegmentContext>(
+    map_lane_segments_matrix, col_id_mapping, lanelet_map_ptr_);
 
   route_handler_->setMap(*map_msg);
   is_map_loaded_ = true;

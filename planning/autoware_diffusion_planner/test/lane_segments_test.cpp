@@ -83,18 +83,6 @@ TEST_F(LaneSegmentsTest, ProcessSegmentsToMatrixThrowsOnWrongRows)
     preprocess::process_segments_to_matrix(segments, col_id_mapping), std::runtime_error);
 }
 
-TEST_F(LaneSegmentsTest, ComputeDistancesThrowsOnBadCols)
-{
-  preprocess::ColLaneIDMaps col_id_mapping;
-  auto input_matrix = preprocess::process_segments_to_matrix(lane_segments_, col_id_mapping);
-  // Remove a column to break divisibility
-  Eigen::MatrixXf bad_matrix = input_matrix.leftCols(input_matrix.cols() - 1);
-  std::vector<preprocess::ColWithDistance> distances;
-  EXPECT_THROW(
-    preprocess::compute_distances(bad_matrix, Eigen::Matrix4f::Identity(), distances, 0, 0, 100.0),
-    std::runtime_error);
-}
-
 TEST_F(LaneSegmentsTest, TransformSelectedRowsNoTranslation)
 {
   preprocess::ColLaneIDMaps col_id_mapping;
@@ -112,29 +100,6 @@ TEST_F(LaneSegmentsTest, TransformSelectedRowsNoTranslation)
   for (int i = 0; i < matrix.cols(); ++i) {
     EXPECT_FLOAT_EQ(matrix(dX, i), input_matrix(dX, i));
   }
-}
-
-TEST_F(LaneSegmentsTest, TransformAndSelectRowsThrowsOnInvalidInput)
-{
-  preprocess::ColLaneIDMaps col_id_mapping;
-  auto input_matrix = preprocess::process_segments_to_matrix(lane_segments_, col_id_mapping);
-
-  // Wrong number of rows
-  Eigen::MatrixXf bad_matrix = input_matrix.topRows(input_matrix.rows() - 1);
-  std::map<lanelet::Id, preprocess::TrafficSignalStamped> traffic_light_id_map;
-  std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr;
-  EXPECT_THROW(
-    preprocess::transform_and_select_rows(
-      bad_matrix, Eigen::Matrix4f::Identity(), col_id_mapping, traffic_light_id_map,
-      lanelet_map_ptr, 0, 0, 1),
-    std::invalid_argument);
-
-  // m <= 0
-  EXPECT_THROW(
-    preprocess::transform_and_select_rows(
-      input_matrix, Eigen::Matrix4f::Identity(), col_id_mapping, traffic_light_id_map,
-      lanelet_map_ptr, 0, 0, 0),
-    std::invalid_argument);
 }
 
 TEST_F(LaneSegmentsTest, ExtractLaneTensorDataAndSpeedTensorData)
