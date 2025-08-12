@@ -44,18 +44,6 @@ std::string get_absolute_path_to_test_data(
   return dir + "/test_data/" + route_filename;
 }
 
-std::string get_build_directory_path()
-{
-  const auto package_dir =
-    ament_index_cpp::get_package_share_directory("autoware_behavior_path_start_planner_module");
-  size_t pos = package_dir.find("/install");
-  if (pos != std::string::npos) {
-    // change to build directory
-    return package_dir.substr(0, pos) + "/build";
-  }
-  return {};
-}
-
 template <class T>
 T loadMessageInYaml(
   const std::string & yaml_file, std::vector<std::string> corrupted_check_list = {})
