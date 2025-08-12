@@ -38,7 +38,6 @@
 #include "autoware/tensorrt_bevformer/ros_utils.hpp"
 
 #include "autoware_localization_msgs/msg/kinematic_state.hpp"
-#include "autoware_internal_perception_msgs/msg/scene_info.hpp"
 #include "geometry_msgs/msg/quaternion.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
@@ -296,15 +295,23 @@ void TRTBEVFormerNode::startImageSubscription()
   sub_b_img_.subscribe(this, "~/input/topic_img_b", rclcpp::QoS{1}.get_rmw_qos_profile());
   sub_br_img_.subscribe(this, "~/input/topic_img_br", rclcpp::QoS{1}.get_rmw_qos_profile());
   sub_can_bus_.subscribe(this, "~/input/can_bus", rclcpp::QoS{1}.get_rmw_qos_profile());
-  scene_info_sub_.subscribe(this, "~/input/scene_token", rclcpp::QoS{1}.get_rmw_qos_profile());
 
   // Synchronize
   sync_ = std::make_shared<Sync>(
     MultiSensorSyncPolicy(10), sub_fl_img_, sub_f_img_, sub_fr_img_, sub_bl_img_, sub_b_img_,
-    sub_br_img_, sub_can_bus_, scene_info_sub_);
+    sub_br_img_, sub_can_bus_);
 
   sync_->registerCallback(
-    std::bind(&TRTBEVFormerNode::callback, this, _1, _2, _3, _4, _5, _6, _7, _8));
+    std::bind(&TRTBEVFormerNode::callback, this, _1, _2, _3, _4, _5, _6, _7));
+
+  reset_flag_sub_ = this->create_subscription<std_msgs::msg::Bool>(
+    "~/input/reset_bevformer_history",
+    rclcpp::QoS{1},
+    [this](const std_msgs::msg::Bool::ConstSharedPtr msg) {
+      reset = msg->data;
+    }
+  );
+
 }
 
 void TRTBEVFormerNode::startCameraInfoSubscription()
@@ -518,15 +525,12 @@ void TRTBEVFormerNode::callback(
   const sensor_msgs::msg::Image::ConstSharedPtr & msg_bl_img,
   const sensor_msgs::msg::Image::ConstSharedPtr & msg_b_img,
   const sensor_msgs::msg::Image::ConstSharedPtr & msg_br_img,
-  const autoware_localization_msgs::msg::KinematicState::ConstSharedPtr & can_bus_msg,
-  const autoware_internal_perception_msgs::msg::SceneInfo::ConstSharedPtr & scene_info)
+  const autoware_localization_msgs::msg::KinematicState::ConstSharedPtr & can_bus_msg)
 {
   auto t_preprocess_start = std::chrono::steady_clock::now();
 
   // Extract CAN bus data from KinematicState message
   std::vector<float> latest_can_bus = extractCanBusFromKinematicState(can_bus_msg);
-
-  const std::string & scene_token = scene_info->scene_token;
 
   // Create vector of image messages for transform calculation
   std::vector<sensor_msgs::msg::Image::ConstSharedPtr> image_msgs = {
@@ -534,7 +538,8 @@ void TRTBEVFormerNode::callback(
 
   // Process ego2global transform for canbus processing
   // Use the reference timestamp
-  rclcpp::Time ref_time = scene_info->header.stamp;
+  rclcpp::Time ref_time = msg_f_img->header.stamp;
+  RCLCPP_DEBUG(this->get_logger(), "Ref time Initialized");
   Eigen::Quaterniond ego2global_rot;
   Eigen::Translation3d ego2global_trans;
 
@@ -554,6 +559,7 @@ void TRTBEVFormerNode::callback(
       this->get_logger(), "Transform lookup failed at time %f: %s", ref_time.seconds(), ex.what());
     return;
   }
+  RCLCPP_DEBUG(this->get_logger(), "Transform functions done");
 
   // Update sensor2lidar transforms for each camera with its own timestamp
   calculateSensor2LidarTransformsFromTF(image_msgs, ego2global_rot, ego2global_trans);
@@ -605,10 +611,10 @@ void TRTBEVFormerNode::callback(
 
   // Apply temporal processing
   std::vector<float> processed_can_bus =
-    data_manager_->processCanbusWithTemporal(initial_can_bus, scene_token);
+    data_manager_->processCanbusWithTemporal(initial_can_bus, reset);
 
   // Determine if we should use previous BEV
-  float use_prev_bev = data_manager_->getUsePrevBev(scene_token);
+  float use_prev_bev = reset ? 0.0f : 1.0f;
 
   // Get the previous BEV features
   const std::vector<float> & prev_bev = data_manager_->getPrevBev();
