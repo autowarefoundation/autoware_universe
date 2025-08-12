@@ -52,7 +52,7 @@ def launch_setup(context, *args, **kwargs):
         ("input/manual_gear_command", "/vehicle/command/manual_gear_command"),
         ("input/turn_indicators_command", "/control/command/turn_indicators_cmd"),
         ("input/hazard_lights_command", "/control/command/hazard_lights_cmd"),
-        ("input/trajectory", "/planning/scenario_planning/trajectory"),
+        ("input/trajectory", "/planning/trajectory"),
         ("input/engage", "/vehicle/engage"),
         ("input/control_mode_request", "/control/control_mode_request"),
         ("output/twist", "/vehicle/status/velocity_status"),

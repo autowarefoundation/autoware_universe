@@ -2,6 +2,22 @@
 Changelog for package autoware_behavior_path_goal_planner_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* chore(goal_planner): fix logging throttle after lane change execution (`#10972 <https://github.com/autowarefoundation/autoware_universe/issues/10972>`_)
+  chore(goal_planner): fix logging throttle
+* perf(goal_planner): reduce sample size for Bezier paths (`#10927 <https://github.com/autowarefoundation/autoware_universe/issues/10927>`_)
+* feat(goal_planner): add infomation to the PlanningFactor topic  (`#10897 <https://github.com/autowarefoundation/autoware_universe/issues/10897>`_)
+  * add infomation to the PlanningFactor interface.
+  * add has_value check
+  * add detail when backward
+  * shorten planning factor detail
+  ---------
+* feat(goal_planner): check pull over lane crossing validity when triggering candidate generation thread (`#10784 <https://github.com/autowarefoundation/autoware_universe/issues/10784>`_)
+* Contributors: Kotakku, Mamoru Sobue, Mete Fatih Cırıt
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

@@ -2,6 +2,79 @@
 Changelog for package autoware_image_projection_based_fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* chore(image_projection_based_fusion): add initializing status log (`#11112 <https://github.com/autowarefoundation/autoware_universe/issues/11112>`_)
+  * chore(image_projection_based_fusion): add initializing status log
+  * chore: change to warning
+  ---------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(roi_cluster_fusion): fix bug in debug mode (`#11054 <https://github.com/autowarefoundation/autoware_universe/issues/11054>`_)
+  * fix(roi_cluster_fusion): fix bug in debug mode
+  * chore: refactor
+  * chore: docs
+  * fix debug iou
+  ---------
+* fix(tier4_perception_launch): add one more camera fusion (`#10973 <https://github.com/autowarefoundation/autoware_universe/issues/10973>`_)
+  * fix(tier4_perception_launch): add one more camera fusion
+  * fix: missing launch
+  * feat(detection.launch): add support for additional camera inputs (camera8)
+  * fix: missing launch param
+  ---------
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* fix(image_projection_based_fusion): loosen rois_number check (`#10924 <https://github.com/autowarefoundation/autoware_universe/issues/10924>`_)
+* feat(autoware_lidar_centerpoint): add class-wise confidence thresholds to CenterPoint (`#10881 <https://github.com/autowarefoundation/autoware_universe/issues/10881>`_)
+  * Add PreprocessCuda to CenterPoint
+  * style(pre-commit): autofix
+  * style(pre-commit): autofix
+  * Add intensity preprocessing
+  * style(pre-commit): autofix
+  * Fix config\_.point_feature_size\_ typo
+  * style(pre-commit): autofix
+  * Fix point typo
+  * style(pre-commit): autofix
+  * Change score_threshold to score_thresholds
+  * Use <autoware/cuda_utils/cuda_utils.hpp> for clear_async
+  * Rename pre_ptr\_ to pre_proc_ptr\_
+  * Remove unused getCacheSize() and getIdx
+  * Use template in generateVoxels_random_kernel instead
+  * style(pre-commit): autofix
+  * Remove references in generateVoxels_random_kernel
+  * Remove references in generateVoxels_random_kernel
+  * style(pre-commit): autofix
+  * Remove generateIntensityFeatures_kernel and add the case of 11 to ENCODER_IN_FEATURE_SIZE for generateFeatures_kernel
+  * style(pre-commit): autofix
+  * Add class-wise confidence thresholds to CenterPoint
+  * style(pre-commit): autofix
+  * Remov empty line changes
+  * Update score_threshold to score_thresholds in REAMME
+  * style(pre-commit): autofix
+  * Change score_thresholds from pass by value to pass by reference
+  * style(pre-commit): autofix
+  * Add information about class names in scehema
+  * Change vector<double> to vector<float>
+  * Remove thrust and add stream\_ to PostProcessCUDA
+  * style(pre-commit): autofix
+  * Fix incorrect initialization of score_thresholds\_ vector
+  * Fix postprocess CudaMemCpy error
+  * Fix postprocess score_thresholds_d_ptr\_ typing error
+  * Fix score_thresholds typing in node.cpp
+  * Static casting params.score_thresholds vector
+  * style(pre-commit): autofix
+  * Update perception/autoware_lidar_centerpoint/src/node.cpp
+  * Update perception/autoware_lidar_centerpoint/include/autoware/lidar_centerpoint/centerpoint_config.hpp
+  * Update centerpoint_config.hpp
+  * Update node.cpp
+  * Update score_thresholds\_ to double since ros2 supports only double instead of float
+  * style(pre-commit): autofix
+  * Fix cuda memory and revert double score_thresholds\_ to float score_thresholds\_
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+* Contributors: Kok Seang Tan, Mete Fatih Cırıt, badai nguyen
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

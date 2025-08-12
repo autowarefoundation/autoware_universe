@@ -2,6 +2,11 @@
 Changelog for package autoware_ground_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* feat(autoware_ground_segmentation): change point follow logic (`#294 <https://github.com/autowarefoundation/autoware_universe/issues/294>`_) (`#10879 <https://github.com/autowarefoundation/autoware_universe/issues/10879>`_)
+* Contributors: Kaan Çolak
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
