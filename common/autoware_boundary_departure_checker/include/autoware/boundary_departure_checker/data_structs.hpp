@@ -244,7 +244,6 @@ struct DepartureInterval
   double end_dist_on_traj;
 
   bool start_at_traj_front{false};
-  bool has_merged{false};
 
   DeparturePoints candidates;
 };

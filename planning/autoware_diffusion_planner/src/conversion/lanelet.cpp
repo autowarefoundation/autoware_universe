@@ -31,13 +31,6 @@
 #include <vector>
 namespace autoware::diffusion_planner
 {
-enum LIGHT_SIGNAL_STATE {
-  GREEN = 0,
-  AMBER = 1,
-  RED = 2,
-  UNKNOWN = 3,
-};
-
 // Compute Euclidean distance between two LanePoints
 inline float euclidean_distance(const LanePoint & p1, const LanePoint & p2)
 {
@@ -172,59 +165,11 @@ std::vector<LaneSegment> LaneletConverter::convert_to_lane_segments(
             autoware_utils_math::kmph2mps(std::stof(attrs.at("speed_limit").value())))
         : std::nullopt;
 
-    // TODO(Daniel): get proper light state, use behavior_velocity_traffic_light module as guide.
-    auto traffic_light = TrafficLightElement::UNKNOWN;
     lane_segments.emplace_back(
       lanelet.id(), lane_polyline, is_intersection, left_boundary_segments, right_boundary_segments,
-      speed_limit_mps, traffic_light);
+      speed_limit_mps);
   }
   return lane_segments;
-}
-
-std::optional<PolylineData> LaneletConverter::convert(
-  const geometry_msgs::msg::Point & position, double distance_threshold) const
-{
-  std::vector<LanePoint> container;
-  // parse lanelet layers
-  for (const auto & lanelet : lanelet_map_ptr_->laneletLayer) {
-    const auto lanelet_subtype = to_subtype_name(lanelet);
-    if (is_lane_like(lanelet_subtype)) {
-      // convert centerlines
-      if (is_roadway_like(lanelet_subtype)) {
-        auto points = from_linestring(lanelet.centerline3d(), position, distance_threshold);
-        insert_lane_points(points, container);
-      }
-      // convert boundaries except of virtual lines
-      if (!is_turnable_intersection(lanelet)) {
-        const auto left_bound = lanelet.leftBound3d();
-        if (is_boundary_like(left_bound)) {
-          auto points = from_linestring(left_bound, position, distance_threshold);
-          insert_lane_points(points, container);
-        }
-        const auto right_bound = lanelet.rightBound3d();
-        if (is_boundary_like(right_bound)) {
-          auto points = from_linestring(right_bound, position, distance_threshold);
-          insert_lane_points(points, container);
-        }
-      }
-    } else if (is_crosswalk_like(lanelet_subtype)) {
-      auto points = from_polygon(lanelet.polygon3d(), position, distance_threshold);
-      insert_lane_points(points, container);
-    }
-  }
-
-  // parse linestring layers
-  for (const auto & linestring : lanelet_map_ptr_->lineStringLayer) {
-    if (is_boundary_like(linestring)) {
-      auto points = from_linestring(linestring, position, distance_threshold);
-      insert_lane_points(points, container);
-    }
-  }
-
-  return container.size() == 0
-           ? std::nullopt
-           : std::make_optional<PolylineData>(
-               container, max_num_polyline_, max_num_point_, point_break_distance_);
 }
 
 // Template function for converting any geometry type to lane points

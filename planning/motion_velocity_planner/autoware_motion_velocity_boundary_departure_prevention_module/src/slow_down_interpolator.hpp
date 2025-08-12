@@ -80,6 +80,10 @@ private:
   static tl::expected<double, std::string> find_reach_time(
     double j, double a, double v0, double dist, double t_min, double t_max);
 
+  static std::optional<double> find_feasible_accel(
+    double gap, double v0, double vt, double a0, double a_comfortable, double a_max,
+    double j_comfortable);
+
   [[nodiscard]] std::optional<double> get_comfort_distance(
     const double lon_dist_to_dpt_pt, const double v_0, const double v_target,
     const double a_0) const;
