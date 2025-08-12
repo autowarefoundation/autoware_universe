@@ -21,7 +21,7 @@ namespace autoware::diffusion_planner::test
 
 TEST_F(LaneletTest, ConvertToLaneSegments)
 {
-  LaneletConverter converter(lanelet_map_, 10, 20, 1.0);
+  LaneletConverter converter(lanelet_map_);
 
   auto lane_segments = converter.convert_to_lane_segments(10);
 
@@ -31,7 +31,7 @@ TEST_F(LaneletTest, ConvertToLaneSegments)
 
 TEST_F(LaneletTest, FromLineString)
 {
-  LaneletConverter converter(lanelet_map_, 10, 20, 1.0);
+  LaneletConverter converter(lanelet_map_);
 
   auto points = converter.from_linestring(centerline_);
 
