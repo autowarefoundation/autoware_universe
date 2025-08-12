@@ -48,7 +48,6 @@
 #include <rclcpp/logging.hpp>
 
 #include "autoware_localization_msgs/msg/kinematic_state.hpp"
-#include "std_msgs/msg/bool.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include <geometry_msgs/msg/quaternion.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
@@ -104,7 +103,6 @@ private:
   float score_thre_;         // Score threshold for object detection
   bool has_twist_ = true;    // whether set twist for objects
   bool debug_mode_ = false;  // Flag to enable debug mode for nuscenes marker visualization
-  bool reset = false;
 
   // Publishers and subscribers
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr pub_boxes_;
@@ -123,9 +121,8 @@ private:
     caminfo_received_;  // Flag indicating if camera info has been received for each camera
   bool camera_info_received_flag_ = false;
 
-  // can_bus and scene_info subscriptions
+  // can_bus subscription
   message_filters::Subscriber<autoware_localization_msgs::msg::KinematicState> sub_can_bus_;
-  rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr reset_flag_sub_;
 
   // tf listener
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};

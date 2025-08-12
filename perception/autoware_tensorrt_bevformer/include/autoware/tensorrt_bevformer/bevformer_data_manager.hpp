@@ -70,11 +70,11 @@ public:
    * @brief Process CAN bus data with temporal adjustment
    *
    * @param can_bus Raw CAN bus data
-   * @param reset The flag for resetting the bevformer history
+   * @param use_prev_bev Flag indicating whether to use previous BEV (0.0f or 1.0f)
    * @return std::vector<float> Processed CAN bus data
    */
   std::vector<float> processCanbusWithTemporal(
-    const std::vector<float> & can_bus, bool reset);
+    const std::vector<float> & can_bus, float use_prev_bev);
 
   /**
    * @brief Update previous BEV with new data
@@ -93,9 +93,10 @@ public:
   const std::vector<float> & getPrevBev() const { return prev_bev_; }
 
   /**
-   * @brief Check if we should use previous BEV
-   * @return float 1.0 if we should use previous BEV, 0.0 otherwise
+   * @brief Check if we should use previous BEV (for real-world continuous driving)
+   * @return float 1.0 if we should use previous BEV, 0.0 for first frame
    */
+  float getUsePrevBev();
 
   /**
    * @brief Process quaternion to extract yaw angle
@@ -123,6 +124,8 @@ public:
 private:
   rclcpp::Logger logger_;
 
+  bool is_first_frame_ = true;  // Track first frame for real-world usage
+
   std::vector<float> current_tmp_pos_;  // Store tmp_pos for later update
   float current_tmp_angle_;             // Store tmp_angle for later update
 
@@ -136,6 +139,11 @@ private:
     float prev_angle{0.0f};
   };
   PrevFrameInfo prev_frame_info_;
+
+  /**
+   * @brief Generate random BEV values using normal distribution
+   */
+  void generateRandomBev();
 };
 
 }  // namespace tensorrt_bevformer
