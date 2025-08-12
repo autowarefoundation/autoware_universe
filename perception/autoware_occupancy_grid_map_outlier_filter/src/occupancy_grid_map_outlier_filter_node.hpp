@@ -19,6 +19,9 @@
 #include "autoware_utils/ros/published_time_publisher.hpp"
 #include "autoware_utils/system/time_keeper.hpp"
 
+#include <message_filters/subscriber.hpp>
+#include <message_filters/sync_policies/exact_time.hpp>
+#include <message_filters/synchronizer.hpp>
 #include <pcl/common/impl/common.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -28,9 +31,6 @@
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <std_msgs/msg/header.hpp>
 
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/exact_time.h>
-#include <message_filters/synchronizer.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/search/kdtree.h>

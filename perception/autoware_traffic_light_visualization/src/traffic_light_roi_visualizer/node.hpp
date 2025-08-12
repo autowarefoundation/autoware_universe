@@ -28,9 +28,10 @@
 #else
 #include <cv_bridge/cv_bridge.h>  // for ROS 2 Humble or older
 #endif
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <message_filters/synchronizer.h>
+#include <message_filters/subscriber.hpp>
+#include <message_filters/sync_policies/approximate_time.hpp>
+#include <message_filters/synchronizer.hpp>
+
 #include <opencv2/imgproc/imgproc_c.h>
 
 #include <map>

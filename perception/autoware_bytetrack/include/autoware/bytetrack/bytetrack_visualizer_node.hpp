@@ -17,6 +17,9 @@
 
 #include <image_transport/image_transport.hpp>
 #include <image_transport/subscriber_filter.hpp>
+#include <message_filters/subscriber.hpp>
+#include <message_filters/sync_policies/exact_time.hpp>
+#include <message_filters/synchronizer.hpp>
 #include <opencv2/opencv.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -24,10 +27,6 @@
 #include <tier4_perception_msgs/msg/dynamic_object_array.hpp>
 
 #include <boost/uuid/uuid.hpp>
-
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/exact_time.h>
-#include <message_filters/synchronizer.h>
 
 #include <algorithm>
 #include <memory>

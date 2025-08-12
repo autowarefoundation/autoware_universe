@@ -15,6 +15,10 @@
 #ifndef SUBSCRIBER_HPP_
 #define SUBSCRIBER_HPP_
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <message_filters/cache.hpp>
+#include <message_filters/subscriber.hpp>
+#include <message_filters/sync_policies/exact_time.hpp>
+#include <message_filters/synchronizer.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 #include <utils.hpp>
@@ -22,10 +26,6 @@
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
-#include <message_filters/cache.h>
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/exact_time.h>
-#include <message_filters/synchronizer.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
