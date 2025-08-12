@@ -44,13 +44,15 @@ if(BUILD_TESTING)
   # Create test output directories
   add_custom_target(create_test_directories ALL
     COMMAND ${CMAKE_COMMAND} -E make_directory
-      ${CMAKE_BINARY_DIR}/test_plots/shift_pull_out
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_results/clothoid_pull_out
     COMMAND ${CMAKE_COMMAND} -E make_directory
-      ${CMAKE_BINARY_DIR}/test_plots/geometric_pull_out
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_results/shift_pull_out
     COMMAND ${CMAKE_COMMAND} -E make_directory
-      ${CMAKE_BINARY_DIR}/test_plots/freespace_pull_out
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_results/geometric_pull_out
     COMMAND ${CMAKE_COMMAND} -E make_directory
-      ${CMAKE_BINARY_DIR}/test_plots/default
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_results/freespace_pull_out
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_results/default
   )
   add_dependencies(test_${PROJECT_NAME} create_test_directories)
 endif()

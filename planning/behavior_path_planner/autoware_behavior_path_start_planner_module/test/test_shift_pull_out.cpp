@@ -81,36 +81,48 @@ private:
 
 TEST_F(TestShiftPullOut, GenerateValidShiftPullOutPath)
 {
-  auto planner_data = std::make_shared<PlannerData>();
-  planner_data->init_parameters(*node_);
-  const auto route = StartPlannerTestHelper::set_route_from_yaml(planner_data, "route_data2.yaml");
-  const auto start_pose = route.start_pose;
-  const auto goal_pose = route.goal_pose;
-  StartPlannerTestHelper::set_odometry(planner_data, start_pose);
-  // Plan the pull out path
-  PlannerDebugData debug_data;
-  auto result = call_plan(start_pose, goal_pose, planner_data, debug_data);
+  // Test data files to be tested
+  const std::vector<std::string> yaml_files = {"route_data2.yaml"};
+  
+  for (const auto & yaml_file : yaml_files) {
+    std::cout << "Testing with YAML file: " + yaml_file << std::endl;
 
-  // Assert that a valid shift pull out path is generated
-  ASSERT_TRUE(result.has_value()) << "shift pull out path generation failed.";
-  EXPECT_EQ(result->partial_paths.size(), 1UL)
-    << "Generated shift pull out path does not have the expected number of partial paths.";
-  EXPECT_EQ(debug_data.conditions_evaluation.back(), "success")
-    << "shift pull out path planning did not succeed.";
+    auto planner_data = std::make_shared<PlannerData>();
+    planner_data->init_parameters(*node_);
+    const auto route = StartPlannerTestHelper::set_route_from_yaml(planner_data, yaml_file);
+    const auto start_pose = route.start_pose;
+    const auto goal_pose = route.goal_pose;
+    StartPlannerTestHelper::set_odometry(planner_data, start_pose);
+    
+    // Plan the pull out path
+    PlannerDebugData debug_data;
+    auto result = call_plan(start_pose, goal_pose, planner_data, debug_data);
 
-  // Plot and save the generated path for visualization
-  if (result.has_value() && !result->partial_paths.empty()) {
-    // Get lanelets from route segments
-    std::vector<lanelet::ConstLanelet> lanelets;
-    for (const auto & segment : route.segments) {
-      for (const auto & primitive : segment.primitives) {
-        const auto lanelet = planner_data->route_handler->getLaneletsFromId(primitive.id);
-        lanelets.push_back(lanelet);
+    // Assert that a valid shift pull out path is generated
+    ASSERT_TRUE(result.has_value()) << "shift pull out path generation failed for " + yaml_file;
+    EXPECT_EQ(result->partial_paths.size(), 1UL)
+      << "Generated shift pull out path does not have the expected number of partial paths for " + yaml_file;
+    EXPECT_EQ(debug_data.conditions_evaluation.back(), "success")
+      << "shift pull out path planning did not succeed for " + yaml_file;
+
+    // Plot and save the generated path for visualization
+    if (result.has_value() && !result->partial_paths.empty()) {
+      // Get lanelets from route segments
+      std::vector<lanelet::ConstLanelet> lanelets;
+      for (const auto & segment : route.segments) {
+        for (const auto & primitive : segment.primitives) {
+          const auto lanelet = planner_data->route_handler->getLaneletsFromId(primitive.id);
+          lanelets.push_back(lanelet);
+        }
       }
+      
+      // Generate filename based on YAML file name
+      std::string yaml_basename = yaml_file.substr(0, yaml_file.find_last_of('.'));
+      std::string plot_filename = yaml_basename + ".png";
+      
+      StartPlannerTestHelper::plot_and_save_path(
+        result->partial_paths, lanelets, vehicle_info_, PlannerType::SHIFT, plot_filename);
     }
-    StartPlannerTestHelper::plot_and_save_path(
-      result->partial_paths, lanelets, vehicle_info_, PlannerType::SHIFT,
-      "shift_pull_out_path.png");
   }
 }
 }  // namespace autoware::behavior_path_planner

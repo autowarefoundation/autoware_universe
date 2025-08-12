@@ -282,30 +282,30 @@ void StartPlannerTestHelper::plot_and_save_path(
   const auto end_pose = partial_paths.back().points.back().point.pose;
   plot_footprint(axes[0], end_pose, vehicle_info);
 
-  // Save the plot
-  std::string build_dir = get_build_directory_path();
-  if (!build_dir.empty()) {
-    std::string test_plot_dir =
-      build_dir + "/autoware_behavior_path_start_planner_module/test_plots/";
+  const std::string file_path = __FILE__;
+  const std::string package_name = "autoware_behavior_path_start_planner_module";
+  size_t pos = file_path.rfind(package_name);
+  if (pos != std::string::npos) {
+    std::string test_result_dir = file_path.substr(0, pos) + package_name + "/test_results/";
     std::string output_path;
     switch (planner_type) {
       case PlannerType::SHIFT:
-        output_path = test_plot_dir + "shift_pull_out/";
+        output_path = test_result_dir + "shift_pull_out/";
         break;
       case PlannerType::GEOMETRIC:
-        output_path = test_plot_dir + "geometric_pull_out/";
+        output_path = test_result_dir + "geometric_pull_out/";
         break;
       case PlannerType::FREESPACE:
-        output_path = test_plot_dir + "freespace_pull_out/";
+        output_path = test_result_dir + "freespace_pull_out/";
         break;
       default:
-        output_path = test_plot_dir + "default/";
+        output_path = test_result_dir + "default/";
         break;
     }
     // Save the plot
     plt.savefig(Args(output_path + filename), Kwargs("dpi"_a = 300));
   } else {
-    std::cerr << "Failed to get build directory path. Cannot save plot." << std::endl;
+    std::cerr << "Failed to get test_results directory path. Cannot save plot." << std::endl;
   }
 }
 
