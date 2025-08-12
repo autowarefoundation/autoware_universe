@@ -29,19 +29,6 @@ TEST_F(LaneletTest, ConvertToLaneSegments)
   EXPECT_EQ(lane_segments[0].polyline.size(), 10);  // Expect 10 points in the polyline
 }
 
-TEST_F(LaneletTest, ConvertLaneletToPolyline)
-{
-  LaneletConverter converter(lanelet_map_, 10, 20, 1.0);
-
-  geometry_msgs::msg::Point position;
-  position.x = 5.0;
-  position.y = 0.0;
-
-  auto polyline_data = converter.convert(position, 15.0);
-
-  ASSERT_TRUE(polyline_data.has_value());
-}
-
 TEST_F(LaneletTest, FromLineString)
 {
   LaneletConverter converter(lanelet_map_, 10, 20, 1.0);

@@ -2,6 +2,306 @@
 Changelog for package autoware_multi_object_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* fix(multi object tracker): tracker type to associate (`#11132 <https://github.com/autowarefoundation/autoware_universe/issues/11132>`_)
+  * feat(multi_object_tracker): add tracker priority for object classification
+  * feat(multi_object_tracker): introduce TrackerType enum and update tracker implementations
+  * refactor(multi_object_tracker): remove confident_count_threshold parameter and related logic
+  * feat(multi_object_tracker): update TrackerType enum and refactor tracker map usage
+  * feat(multi_object_tracker): add can_assign_map for tracker type assignments and update related logic
+  * refactor(tracker_processor): improve tracker sorting logic and remove debug output
+  * feat(multi_object_tracker): make tracker_type private
+  * refactor(tracker_processor): remove debug output from mergeOverlappedTracker function
+  * feat(multi_object_tracker): refactor can_assign_map initialization and update tracker_map usage
+  * style(pre-commit): autofix
+  * feat(trackers): initialize tracker_type in constructors for all tracker classes
+  * refactor(processor): replace std::map with std::unordered_map for tracker_map and thresholds
+  refactor(multi_object_tracker): update error message for invalid association matrix size
+  * feat(multi_object_tracker): refactor tracker type retrieval using unordered_map for improved efficiency
+  * style(pre-commit): autofix
+  * refactor(processor): rename channel_priority to tracker_priority for clarity in mergeOverlappedTracker
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(multi_object_tracker): add irregular objects topic (`#11102 <https://github.com/autowarefoundation/autoware_universe/issues/11102>`_)
+  * fix(multi_object_tracker): add irregular objects topic
+  * fix: change channel order
+  * Update launch/tier4_perception_launch/launch/object_recognition/tracking/tracking.launch.xml
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update launch/tier4_perception_launch/launch/object_recognition/tracking/tracking.launch.xml
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update perception/autoware_multi_object_tracker/config/input_channels.param.yaml
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update launch/tier4_perception_launch/launch/object_recognition/tracking/tracking.launch.xml
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * fix: unused channels
+  * fix: schema
+  * docs: update readme
+  * style(pre-commit): autofix
+  * fix: short name
+  * feat: add lidar_centerpoint_short_range input channel with default flags
+  ---------
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* fix(multi object tracker): fix classification filter implementation (`#11111 <https://github.com/autowarefoundation/autoware_universe/issues/11111>`_)
+  * feat(tracker): implement Bayesian update for classification probabilities
+  * feat(tracker): add UUID to updated classification debug output
+  * feat(tracker): add classification handling in Tracker and TrackerProcessor
+  * feat(tracker): enhance classification update with normalization and refined probability calculations
+  * feat(tracker): simplify classification update logic and remove unused UUID debug output
+  * fix(tracker): bring back the association matrix
+  * refactor(tracker): move normalization logic inline in updateClassification
+  * fix(tracker): remove redundant classification assignment in tracked objects
+  * fix(tracker): adjust true negative rate and improve normalization comment in updateClassification
+  * feat(tracker): add updateClassification method and integrate it in mergeOverlappedTracker
+  * fix(tracker): add cached_measurement_count\_ to improve object caching logic
+  * fix(tracker): add fallback logic for unknown labels in vehicle and pedestrian trackers
+  * fix(tracker): update fallback logic for unknown labels in vehicle and bicycle trackers
+  * fix(tracker): improve channel priority handling in getChannelIndex and mergeOverlappedTracker
+  * fix(tracker): update area parameters for motorbike, bicycle, and pedestrian in data association matrix
+  fix(tracker): disable unknown object motion output in configuration and schema
+  * chore: refactoring probability parameters
+  * chore: refactoring probability parameters for clarity
+  ---------
+* fix(autoware_multi_object_tracker): existence probability adjustment to mitigate tracker lost  (`#11109 <https://github.com/autowarefoundation/autoware_universe/issues/11109>`_)
+  * feat(tracker_processor): set existence probability for tracked objects
+  * refactor(tracker): rename classification parameter for clarity in updateClassification method
+  * fix(association): ensure minimum covariance values to prevent large Mahalanobis distance
+  * feat(tracker): disable trust in existence probability for input channels
+  * fix(tracker): update decay rate for existence probability to reflect a 0.5s half-life
+  * style(pre-commit): autofix
+  * fix(association): correct spelling of "mahalanobis" in comment for clarity
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(multi_object_tracker): improve unknown pruning and assocation by using generalized iou (`#11036 <https://github.com/autowarefoundation/autoware_universe/issues/11036>`_)
+  * feat(multi_object_tracker): add generalized IoU calculations and parameters for improved tracking accuracy
+  * fix(data_association_matrix): update max_dist_matrix values for improved object tracking
+  * feat(multi_object_tracker): update parameter names and add overlap distance thresholds for improved tracking
+  * feat(data_association): implement generalized IoU scoring for unknown tracker and measurement labels
+  * feat(multi_object_tracker): add generalized IoU and overlap distance thresholds for object classes
+  * feat(multi_object_tracker): add schema definitions for generalized IoU and overlap distance thresholds
+  * feat(multi_object_tracker): add enable_delay_compensation\_ member variable and update related logic
+  * feat(multi_object_tracker): add unknown association GIoU threshold for improved tracking accuracy
+  * fix(multi_object_tracker): fix processor.cpp to avoid shadow over
+  * refactor(multi_object_tracker): rename generalized IoU and overlap distance thresholds to pruning parameters
+  * fix(shapes): optimize area calculations in get2dPrecisionRecallGIoU function
+  * fix(shapes): update get2dGeneralizedIoU to return -1.0 for invalid polygons instead of false
+  * fix(multi_object_tracker): simplify access to pruning distance thresholds
+  ---------
+* test(multi_object_tracker): add test bench and performance testing for multi-object tracker (`#10974 <https://github.com/autowarefoundation/autoware_universe/issues/10974>`_)
+  * Add test bench and performance testing for multi-object tracker
+  - Introduced `test_bench.hpp` and `test_bench.cpp` to simulate tracking scenarios and generate detections.
+  - Implemented performance measurement for various functions in the multi-object tracker.
+  - Created utility functions in `test_utils.hpp` and `test_utils.cpp` for performance statistics and message conversion.
+  - Added `RosbagWriterHelper` and `RosbagReaderHelper` classes to facilitate writing and reading from rosbag files during tests.
+  - Developed tests for performance profiling against varying car and pedestrian counts.
+  - Established a basic test framework using Google Test for the multi-object tracker.
+  * refactor: remove unused dependencies and improve performance measurement in tests
+  * style(pre-commit): autofix
+  * fix(tracking_test_bench): optimize grid update by tracking previous cell keys
+  * fix(package): add tf2_ros dependency
+  fix(test_bench): enable new object addition logic
+  fix(test_bench): set new_obj_dist\_ to 0.0 for no new objects
+  fix(test_multi_object_tracker): clean up debug output in runIterations
+  * refactor(CMakeLists): remove unnecessary blank lines before ament_auto_package
+  * docs(README): add performance benchmark and unit testing instructions
+  * feat(tests): add performance tests with rosbag support and resource directory definition
+  * chore(metadata): remove obsolete metadata.yaml file
+  * fix(docs): update muSSP path in README for accuracy
+  * feat(tests): enhance RosbagWriterHelper and add RosbagReaderHelper for improved bag file handling
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(multi_object_tracker): correct index usage of association matrix (`#10981 <https://github.com/autowarefoundation/autoware_universe/issues/10981>`_)
+  fix(multi_object_tracker): correct index usage in mergeOverlappedTracker function
+* feat(tracking): add short range detection support and update related parameters (`#10956 <https://github.com/autowarefoundation/autoware_universe/issues/10956>`_)
+  * feat(tracking): add short range detection support and update related parameters
+  * fix(tracking): correct spelling of short range in tracking parameters
+  ---------
+* perf(multi_object_tracker): fast IoU calculation in the tracker association and merging (`#10929 <https://github.com/autowarefoundation/autoware_universe/issues/10929>`_)
+  * feat(multi_object_tracker): enhance pedestrian handling in tracker association and merging
+  - Introduced a distance-based scoring mechanism for pedestrian measurements in the DataAssociation class, bypassing the IoU check.
+  - Updated the mergeOverlappedTracker method to implement specific merging criteria for overlapping pedestrian trackers, improving accuracy in tracking.
+  - Added a new helper function, canMergePedestrianTargets, to encapsulate the logic for merging pedestrian targets based on confidence and distance.
+  These changes enhance the robustness of the multi-object tracking system, particularly for pedestrian detection and association.
+  * refactor(multi_object_tracker): improve scoring logic and optimize probability vector handling
+  - Updated the scoring logic in the DataAssociation class to return a score of 0.0 when below the threshold, enhancing clarity in score calculations for pedestrian measurements.
+  - Changed the handling of existence probability vectors in the TrackerProcessor class to use const references, improving performance by avoiding unnecessary copies.
+  These changes aim to enhance the efficiency and readability of the multi-object tracking system.
+  * feat(multi_object_tracker): add 1D IoU calculation and enhance tracker merging logic
+  - Introduced a new function, get1dIoU, for calculating the Intersection over Union (IoU) for 1D objects, improving the tracking accuracy for specific scenarios.
+  - Updated the mergeOverlappedTracker method to utilize the new 1D IoU calculation for pedestrian tracking, enhancing the merging criteria based on IoU thresholds.
+  - Refactored the canMergeOverlappedTarget function to streamline the merging logic and improve readability.
+  These changes aim to enhance the robustness and accuracy of the multi-object tracking system, particularly for pedestrian detection and association.
+  * refactor(multi_object_tracker): update IoU calculations for pedestrian tracking
+  - Modified the scoring logic in the DataAssociation class to utilize 1D IoU for pedestrian measurements, enhancing the accuracy of the association process.
+  - Adjusted the minimum union length threshold in the get1dIoU function to improve the robustness of the IoU calculation for 1D objects.
+  These changes aim to refine the multi-object tracking system's handling of pedestrian detection and association, ensuring more reliable tracking performance.
+  * refactor(multi_object_tracker): enhance 1D IoU calculation logic
+  - Updated the get1dIoU function to improve the accuracy of intersection over union calculations for 1D objects.
+  - Adjusted the logic for determining radii and union length, ensuring more reliable IoU results in tracking scenarios.
+  These changes aim to further refine the multi-object tracking system's performance, particularly in pedestrian detection and association.
+  * refactor(multi_object_tracker): improve 1D IoU calculation for accuracy
+  - Enhanced the get1dIoU function by refining the logic for radius computation and distance checks, ensuring more accurate intersection over union results for 1D objects.
+  - Adjusted the handling of minimum length and union length calculations to improve robustness in tracking scenarios.
+  These updates aim to further optimize the multi-object tracking system's performance, particularly in pedestrian detection and association.
+  * refactor(multi_object_tracker): further refine 1D IoU calculation
+  - Updated the get1dIoU function to use constexpr for minimum lengths and const for radius calculations, enhancing code clarity and performance.
+  - Adjusted the IoU calculation logic to improve accuracy in determining intersection over union for 1D objects.
+  These changes aim to optimize the multi-object tracking system's performance, particularly in pedestrian detection and association.
+  * refactor(multi_object_tracker): simplify 1D IoU calculation logic
+  - Revised the get1dIoU function to streamline the calculation of intersection over union for 1D objects.
+  - Removed redundant comments and improved the clarity of the logic for determining intersection and union lengths.
+  These changes aim to enhance the readability and maintainability of the multi-object tracking system's IoU calculations.
+  * refactor(multi_object_tracker): correct intersection length calculation in get1dIoU
+  - Fixed the calculation of intersection length in the get1dIoU function to ensure accurate results for 1D IoU.
+  - This change enhances the reliability of intersection over union calculations, contributing to improved performance in multi-object tracking scenarios.
+  ---------
+* fix(autoware_multi_object_tracker): orientation availability update on trackers (`#10907 <https://github.com/autowarefoundation/autoware_universe/issues/10907>`_)
+  feat(tracker): enhance orientation availability handling in updateWithMeasurement method
+* feat(multi_object_tracker):  parameters tuned for mahalanobis distance (`#10789 <https://github.com/autowarefoundation/autoware_universe/issues/10789>`_)
+  * feat(multi_object_tracker):  parameters tuned for mahalanobis distance
+  * style(pre-commit): autofix
+  * refactor(multi_object_tracker): clarify Mahalanobis distance threshold comment
+  Updated the comment for the Mahalanobis distance threshold in the DataAssociation class to provide clearer context regarding its empirical value and confidence level. This change enhances code readability and understanding of the threshold's significance in the distance calculation.
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(multi_object_tracker):  Static matrices and Template-based Kalman filter with AVX2 optimizations (`#10857 <https://github.com/autowarefoundation/autoware_universe/issues/10857>`_)
+  * feat(multi_object_tracker): add AVX2 support for multi-object and radar object trackers
+  * feat(trackers): enable AVX2 and FMA support in CMake for multi-object and radar object trackers
+  * feat(multi_object_tracker): implement KalmanFilterTemplate and update motion model classes
+  - Added a new KalmanFilterTemplate class for flexible state estimation.
+  - Updated BicycleMotionModel to utilize the new KalmanFilterTemplate.
+  - Modified motion model base classes to integrate the new Kalman filter implementation.
+  - Commented out unused includes and constants for clarity.
+  * refactor(multi_object_tracker): remove unused Kalman filter dependencies and optimize motion model calculations
+  - Removed unnecessary dependencies on the Kalman filter from multiple tracker model headers and the package.xml file.
+  - Simplified state update calculations in the Kalman filter template for improved readability and performance.
+  - Enhanced motion model base class by pre-allocating memory for temporary variables to reduce overhead.
+  These changes aim to streamline the multi-object tracking implementation and improve code maintainability.
+  * refactor(multi_object_tracker): remove Kalman filter dependency and enhance static motion model
+  - Eliminated the inclusion of the Kalman filter header in the static motion model implementation.
+  - Updated the StaticMotionModel class to inherit from MotionModel<2> for improved type safety.
+  - Refactored state and covariance matrix declarations to use specific types (StateVec and StateMat) instead of generic Eigen matrices, enhancing code clarity and maintainability.
+  - Streamlined initialization and state update methods to utilize the new type definitions, improving performance and readability.
+  These changes aim to simplify the static motion model's implementation and reduce unnecessary dependencies.
+  * refactor(multi_object_tracker): remove unused commented code in motion model headers and implementations
+  - Deleted commented-out code related to dimension definitions in bicycle, CTRV, and CV motion model headers to enhance code clarity.
+  - Cleaned up the bicycle motion model implementation by removing unnecessary commented matrix declarations.
+  These changes aim to streamline the codebase and improve maintainability by eliminating obsolete comments.
+  * update(copyright): update copyright year in header files
+  - Changed copyright year from 2024 to 2025 in the kalman_filter_template.hpp file.
+  - Removed commented-out code in motion_model_base.hpp to enhance code clarity.
+  These changes ensure proper copyright representation and improve the maintainability of the codebase by eliminating obsolete comments.
+  ---------
+* perf: optimize multi-object tracker  (`#10837 <https://github.com/autowarefoundation/autoware_universe/issues/10837>`_)
+  * perf: optimize multi-object tracker with grid-based spatial indexing
+  * feat(multi_object_tracker): enhance data association with inverse covariance calculations
+  - Introduced InverseCovariance2D struct for efficient Mahalanobis distance computation.
+  - Replaced the existing Mahalanobis distance function with an optimized inline version.
+  - Updated calculateScore method to utilize precomputed inverse covariance for improved performance.
+  - Added precomputeInverseCovarianceFromPose function to streamline inverse covariance extraction from pose covariance data.
+  This update aims to enhance the efficiency of the multi-object tracking process by reducing computational overhead in distance calculations.
+  * refactor(multi_object_tracker): optimize inverse covariance calculations and area summation
+  - Updated the inverse covariance precomputation logic to improve efficiency by reserving space in the vector and using a loop for calculations.
+  - Refactored the area summation function to replace the use of `std::accumulate` with a more explicit loop for clarity and potential performance gains.
+  - Enhanced eigenvalue calculation in the tracker model for better performance with a direct approach for 2x2 matrices.
+  These changes aim to streamline the multi-object tracking process and improve computational efficiency.
+  * refactor(multi_object_tracker): clean up code and remove unused benchmarking
+  - Removed commented-out test code from CMakeLists.txt to streamline the build process.
+  - Eliminated unused benchmarking code and associated variables from association.cpp to enhance readability and maintainability.
+  - Refactored area summation in shapes.cpp to use a more concise approach with `std::accumulate`.
+  These changes aim to improve code clarity and reduce unnecessary complexity in the multi-object tracker module.
+  * refactor(multi_object_tracker): rename variable for clarity in association calculations
+  - Renamed `inv_covs` to `inverse_covariances` for improved readability and understanding of the code.
+  - Updated references in the `calcScoreMatrix` method to reflect the new variable name.
+  These changes enhance code clarity without altering functionality in the multi-object tracking module.
+  * refactor(multi_object_tracker): rename inverse covariance variable for clarity
+  - Renamed `inverse_covariances` to `tracker_inverse_covariances` in the `calcScoreMatrix` method to enhance code readability.
+  - Removed unused commented-out code related to covariance calculation.
+  These changes improve the clarity of the multi-object tracking code without affecting its functionality.
+  * refactor(association): remove unused Mahalanobis distance function
+  - Deleted the inline `getMahalanobisDistance` function from the association module as it was not utilized in the current implementation. This cleanup enhances code maintainability and readability.
+  ---------
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* feat(autoware_multi_object_tracker): unknown as static object (`#10771 <https://github.com/autowarefoundation/autoware_universe/issues/10771>`_)
+  * feat(multi_object_tracker): add unknown object velocity estimation feature
+  - Introduced a new parameter `enable_unknown_object_velocity_estimation` in the configuration to control velocity estimation for unknown objects.
+  - Updated the `UnknownTracker` class to accept a boolean flag for enabling velocity estimation, modifying its behavior accordingly.
+  - Adjusted the `createNewTracker` method to utilize the new configuration parameter when instantiating `UnknownTracker`.
+  - Enhanced the logic in the `UnknownTracker` methods to conditionally execute based on the velocity estimation flag.
+  This change improves the tracking capabilities by allowing for optional velocity estimation of unknown objects.
+  * fix(unknown_tracker): correct velocity estimation logic in UnknownTracker
+  - Removed the unnecessary check for `enable_velocity_estimation\_` when accessing object velocity.
+  - Updated the predict method to return true when velocity estimation is not enabled, simplifying the control flow.
+  These changes enhance the clarity and functionality of the UnknownTracker's velocity estimation process.
+  * style(pre-commit): autofix
+  * feat(static_motion_model): implement static motion model for unknown tracker
+  - Added a new StaticMotionModel class to handle tracking without velocity estimation.
+  - Integrated StaticMotionModel into the UnknownTracker, allowing it to switch between dynamic and static motion models based on the velocity estimation flag.
+  - Updated initialization and state prediction methods to accommodate the new static model, enhancing tracking capabilities for stationary objects.
+  This change improves the flexibility and robustness of the tracking system by enabling static tracking when velocity estimation is not applicable.
+  * style(pre-commit): autofix
+  * Revert "style(pre-commit): autofix"
+  This reverts commit 4bbfa0e8df70b5e29880a808176a97cdc889f413.
+  * Revert "feat(static_motion_model): implement static motion model for unknown tracker"
+  This reverts commit 7984b448f16e26c845ab0ad3b37403e1e2dc68ac.
+  * Revert "Revert "feat(static_motion_model): implement static motion model for unknown tracker""
+  This reverts commit 87fd7f63d34fef644874476a477ba0d041099712.
+  * feat(unknown_tracker): enhance tracking with improved motion model and local offset adjustment
+  - Updated the UnknownTracker to better handle velocity estimation, allowing for dynamic and static motion models based on the `enable_velocity_estimation\_` flag.
+  - Improved initialization of motion parameters and covariance matrices for both dynamic and static models.
+  - Added logic to adjust footprint points based on local offsets derived from the object's pose, enhancing tracking accuracy.
+  - Refactored code for clarity and maintainability, ensuring consistent handling of object states.
+  These changes significantly improve the tracking capabilities and robustness of the UnknownTracker in various scenarios.
+  * fix(unknown_tracker): adjust motion model parameters for improved tracking
+  - Updated the standard deviation values for the motion model in the UnknownTracker to enhance tracking accuracy.
+  - Removed unnecessary commented code to improve code clarity.
+  These changes refine the motion model's performance, particularly in static scenarios.
+  * refactor(shapes): optimize bounding box calculation in convertConvexHullToBoundingBox
+  - Introduced local variable for footprint points to enhance readability and performance.
+  - Pre-allocated boundary values using the first point to reduce unnecessary comparisons.
+  - Replaced std::max and std::min with direct comparisons for efficiency.
+  - Simplified center calculation to avoid redundant operations.
+  - Used references in footprint point adjustments to minimize copying.
+  These changes improve the efficiency and clarity of the bounding box calculation process in the object model.
+  * refactor(unknown_tracker): optimize offset calculation and improve readability
+  - Introduced local variables for original position coordinates to enhance clarity.
+  - Simplified the transformation of global offsets to local coordinates by pre-calculating rotation values.
+  - Streamlined footprint point adjustments to improve performance and maintainability.
+  These changes enhance the efficiency and readability of the UnknownTracker's object tracking logic.
+  * style(pre-commit): autofix
+  * chore: adjust motion model parameter q_stddev_x
+  * feat(multi_object_tracker): enhance tracking capabilities with new parameters and method adjustments
+  - Enabled unknown object velocity estimation and added an option for position extrapolation in the multi-object tracker configuration.
+  - Updated the `getTrackedObject` method across various tracker models to include a `to_publish` parameter, allowing for more flexible object retrieval.
+  - Adjusted the implementation of `getTrackedObject` in the `UnknownTracker` to conditionally limit time based on the latest measurement when extrapolation is disabled.
+  These changes improve the flexibility and accuracy
+  of the tracking system, particularly in handling unknown objects.
+  * fix(unknown_tracker): update motion model parameters for enhanced tracking accuracy
+  - Increased the standard deviation values for the motion model parameters in the UnknownTracker to improve tracking performance.
+  - Adjusted q_stddev_x and q_stddev_y to 1.5, and q_stddev_vx and q_stddev_vy to 9.8 * 0.5, optimizing the model for better responsiveness.
+  These changes refine the motion model's effectiveness, particularly in dynamic tracking scenarios.
+  * refactor(unknown_tracker): rename extrapolation parameter and adjust logic for motion output
+  - Renamed the parameter `enable_unknown_object_extrapolation` to `enable_unknown_object_motion_output` for clarity in configuration.
+  - Updated the `UnknownTracker` class to reflect this change, modifying constructor and method signatures accordingly.
+  - Adjusted logic in `getTrackedObject` to handle motion output conditions, ensuring proper behavior when motion output is disabled.
+  These changes enhance the clarity and functionality of the tracking system, particularly in managing unknown object states.
+  * feat(unknown_tracker): add last_shape and last_pose for improved tracking state management
+  - Introduced `last_shape\_` and `last_pose\_` members to the `UnknownTracker` class to maintain the previous state of the tracked object.
+  - Updated the `measure` method to store the current pose in `last_pose\_` for future reference.
+  - Modified the `getTrackedObject` method to utilize `last_pose\_` when motion output is disabled, ensuring consistent object pose retrieval.
+  These enhancements improve the tracking system's ability to manage and reference the state of unknown objects effectively.
+  * feat(multi_object_tracker): add parameters for unknown object velocity estimation
+  - Introduced `enable_unknown_object_velocity_estimation` and `enable_unknown_object_motion_output` parameters to the multi-object tracker schema.
+  - These additions allow for enhanced tracking capabilities by enabling velocity estimation and exporting unknown object velocity.
+  This update improves the flexibility and functionality of the tracking system in handling unknown objects.
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Mete Fatih Cırıt, Taekjin LEE, badai nguyen, lei.gu
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

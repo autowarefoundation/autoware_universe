@@ -1,6 +1,92 @@
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Changelog for package autoware_system_monitor
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+0.47.0 (2025-08-11)
+-------------------
+* feat(autoware_system_monitor): publish gpu_status (`#11022 <https://github.com/autowarefoundation/autoware_universe/issues/11022>`_)
+  * feat(autoware_system_monitor): publish gpu_status
+  * style(pre-commit): autofix
+  * fix cpplint
+  * Make a get function const and change unsigned int variables to int
+  * add destructor to call nvmlShutdown
+  * add casting
+  * add casting
+  * Make shut_down method protected
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(autoware_system_monitor): publish hdd_status (`#11023 <https://github.com/autowarefoundation/autoware_universe/issues/11023>`_)
+  * feat(autoware_system_monitor): publish hdd_status
+  * style(pre-commit): autofix
+  * Improve HDD status handling: use emplace_back and safe vector access
+  * style(pre-commit): autofix
+  * remove try block and use read values
+  * Improve df error handling
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(autoware_system_monitor): publish cpu_temperature (`#11020 <https://github.com/autowarefoundation/autoware_universe/issues/11020>`_)
+  * feat(autoware_system_monitor): publish cpu_temperature
+  * style(pre-commit): autofix
+  * make getter functions const
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(autoware_system_monitor): publish memory_status (`#11021 <https://github.com/autowarefoundation/autoware_universe/issues/11021>`_)
+  * feat(autoware_system_monitor): publish memory_status
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(autoware_system_monitor): publish network_status (`#11024 <https://github.com/autowarefoundation/autoware_universe/issues/11024>`_)
+  * feat(autoware_system_monitor): publish network_status
+  * style(pre-commit): autofix
+  * fix cppcheck
+  * replace push_back with emblace_back
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(autoware_system_monitor): fix a ticket link in CHANGELOG.rst (about v0.44.0) (`#10966 <https://github.com/autowarefoundation/autoware_universe/issues/10966>`_)
+  fix: fix a ticket link in CHANGELOG.rst (about v0.44.0)
+* fix: use autowarefoundation for CHANGELOG instead of youtalk fork (`#10950 <https://github.com/autowarefoundation/autoware_universe/issues/10950>`_)
+* fix(autoware_system_monitor): allow variations of arm64 thermal zone type name (`#10937 <https://github.com/autowarefoundation/autoware_universe/issues/10937>`_)
+  * Fixed the bug with which cpu_monitor fails to get CPU, GPU temperatures on
+  Jetson AGX Orin.
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix: process_monitor should support negative priority (`#10832 <https://github.com/autowarefoundation/autoware_universe/issues/10832>`_)
+  Fixed a bug of autoware_system_monitor/process_monitor with which negative process priorities are printed as huge integer.
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* fix(cpu monitor): read /proc/stat directly instead of executing mpstat (`#10873 <https://github.com/autowarefoundation/autoware_universe/issues/10873>`_)
+  Reduced CPU load for the "autoware_system_monitor / cpu_monitor" node.
+  * The "cpu_monitor" node does not execute the "mpstat" command any more.
+  * Instead, the "cpu_monitor" node reads CPU load information directly from "/proc/stat".
+  * The unit tests about the "mpstat" command are removed because the "mpstat" command is not used.
+  * The document about "autoware_system_monitor", README.md, was updated about confirmed hardware platforms.
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(cpu_monitor): collect cpu information on timer thread (`#10545 <https://github.com/autowarefoundation/autoware_universe/issues/10545>`_)
+  * Separated two thread contexts for performance improvement.
+  ** The version before PR `#10545 <https://github.com/autowarefoundation/autoware_universe/issues/10545>`_ did both tasks in the publishing context thread.
+  ** This was the reason why the "cpu_monitor" node was unable to publish topics every second (1 Hz) as expected.
+  ** Newly introduced onTimer() callback context thread collects information with checkXXX().
+  ** The publishing context thread publishes the information with updateXXX().
+  ** "mutex_snapshot\_ " is used for guarding data structure between those two threads.
+  * Enabled unit tests for the "cpu_monitor" node, which had been disabled.
+  ** "mutex_context\_" is used for guarding variables between the unit test thread and the timer callback thread.
+  ** However, currently, unit tests disable the timer and call onTimer() by themselves.
+  *** If the timer was running, it would interfere with unit tests.
+  ** This "disabling" makes the mutual exclusion with "mutex_context\_" meaningless, but the mutex is kept for future change.
+  * "Lazy initialization" with getTemperatureFileNames() and getFrequencyFileNames() is introduced.
+  ** They are executed on the first call of onTimer().
+  ** The implementation before this PR seemed to have tried to employ polymorphism, but it didn't work.
+  * Removed obscure abbreviations.
+  * Declared the ROS2 topics explicitly as "read only".
+  * Updated copyright years.
+  * Modified "README.md" to clarify that the "autoware_system_monitor" is confirmed only on Intel x86_64 platforms with the latest environment.
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+  Co-authored-by: Ryohsuke Mitsudome <43976834+mitsudome-r@users.noreply.github.com>
+* Contributors: Esteve Fernandez, Mete Fatih Cırıt, nishikawa-masaki, takeshi iwa
 
 0.46.0 (2025-06-20)
 -------------------
@@ -39,7 +125,6 @@ Changelog for package autoware_system_monitor
 0.44.0 (2025-04-18)
 -------------------
 * fix(process_monitor): get process statistics directly from /proc files to avoid process spawning of Linux commands (`#10379 <https://github.com/autowarefoundation/autoware_universe/issues/10379>`_)
-  ---------
 * Contributors: nishikawa-masaki
 
 0.43.0 (2025-03-21)

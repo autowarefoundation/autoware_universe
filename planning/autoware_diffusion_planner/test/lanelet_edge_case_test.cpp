@@ -67,26 +67,6 @@ protected:
   std::shared_ptr<lanelet::traffic_rules::TrafficRules> traffic_rules_ptr_;
 };
 
-// Test edge case: Empty lanelet map
-TEST_F(LaneletEdgeCaseTest, ConvertEmptyLaneletMap)
-{
-  const size_t max_num_polyline = 100;
-  const size_t max_num_point = 20;
-  const double point_break_distance = 100.0;
-  LaneletConverter converter(
-    lanelet_map_ptr_, max_num_polyline, max_num_point, point_break_distance);
-
-  geometry_msgs::msg::Point position;
-  position.x = 0.0;
-  position.y = 0.0;
-  position.z = 0.0;
-
-  auto result = converter.convert(position, 100.0);
-
-  // Should return empty optional
-  EXPECT_FALSE(result.has_value());
-}
-
 // Test edge case: Lanelet with invalid speed limit string
 TEST_F(LaneletEdgeCaseTest, ConvertLaneletInvalidSpeedLimit)
 {
@@ -257,79 +237,6 @@ TEST_F(LaneletEdgeCaseTest, ConvertLaneletIntersectionAttributes)
     ASSERT_EQ(segments.size(), 1);
     EXPECT_TRUE(segments[0].is_intersection);
   }
-}
-
-// Test edge case: Distance threshold boundary conditions
-TEST_F(LaneletEdgeCaseTest, ConvertDistanceThresholdBoundary)
-{
-  auto left = createLineString({{0, 0, 0}, {10, 0, 0}});
-  auto right = createLineString({{0, 2, 0}, {10, 2, 0}});
-
-  lanelet::AttributeMap attrs;
-  attrs["subtype"] = "road";
-
-  auto lanelet = createLanelet(left, right, attrs);
-  lanelet_map_ptr_->add(lanelet);
-
-  const size_t max_num_polyline = 100;
-  const size_t max_num_point = 20;
-  const double point_break_distance = 100.0;
-  LaneletConverter converter(
-    lanelet_map_ptr_, max_num_polyline, max_num_point, point_break_distance);
-
-  // Test with position exactly at distance threshold
-  geometry_msgs::msg::Point position;
-  position.x = 15.0;  // 5 units away from end of lanelet
-  position.y = 1.0;
-  position.z = 0.0;
-
-  // Test with threshold exactly at distance
-  auto result1 = converter.convert(position, 5.0);
-  EXPECT_TRUE(result1.has_value());
-
-  // Test with threshold just below distance
-  auto result2 = converter.convert(position, 4.999);
-  EXPECT_FALSE(result2.has_value());
-}
-
-// Test edge case: Crosswalk polygon conversion
-TEST_F(LaneletEdgeCaseTest, ConvertCrosswalkPolygon)
-{
-  // Create a crosswalk as a polygon
-  auto p1 = lanelet::Point3d(1, 0, 0, 0);
-  auto p2 = lanelet::Point3d(2, 10, 0, 0);
-  auto p3 = lanelet::Point3d(3, 10, 3, 0);
-  auto p4 = lanelet::Point3d(4, 0, 3, 0);
-
-  lanelet::LineString3d left;
-  left.push_back(p1);
-  left.push_back(p2);
-
-  lanelet::LineString3d right;
-  right.push_back(p4);
-  right.push_back(p3);
-
-  lanelet::AttributeMap attrs;
-  attrs["subtype"] = "crosswalk";
-
-  auto crosswalk = createLanelet(left, right, attrs);
-  lanelet_map_ptr_->add(crosswalk);
-
-  const size_t max_num_polyline = 100;
-  const size_t max_num_point = 20;
-  const double point_break_distance = 100.0;
-  LaneletConverter converter(
-    lanelet_map_ptr_, max_num_polyline, max_num_point, point_break_distance);
-
-  geometry_msgs::msg::Point position;
-  position.x = 5.0;
-  position.y = 1.5;
-  position.z = 0.0;
-
-  auto result = converter.convert(position, 100.0);
-
-  // Result should contain crosswalk points
-  EXPECT_TRUE(result.has_value());
 }
 
 // Test edge case: Convert empty map to lane segments

@@ -66,7 +66,7 @@ struct LaneletRoute
 struct Trajectory
 {
   using Message = autoware_planning_msgs::msg::Trajectory;
-  static constexpr char name[] = "/planning/scenario_planning/trajectory";
+  static constexpr char name[] = "/planning/trajectory";
   static constexpr size_t depth = 1;
   static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
   static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_VOLATILE;
