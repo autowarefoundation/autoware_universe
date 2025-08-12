@@ -31,14 +31,6 @@ constexpr float LANE_MASK_RANGE_M = 100.0f;
 constexpr double BACKWARD_PATH_LENGTH_M = 0.0;
 constexpr double FORWARD_PATH_LENGTH_M = 150.0;
 
-// LaneletConverter parameters
-struct LaneletConverterParams
-{
-  static constexpr int MAX_LANELETS = 100;
-  static constexpr int MAX_POINTS_PER_LANE = 20;
-  static constexpr double SEARCH_RADIUS_M = 100.0;
-};
-
 // Visualization parameters
 struct VisualizationParams
 {

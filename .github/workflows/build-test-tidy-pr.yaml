@@ -33,6 +33,7 @@ jobs:
           files: |
             perception/**
             sensing/**
+            planning/autoware_diffusion_planner/**
 
       - name: Output result
         run: |
