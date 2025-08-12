@@ -165,12 +165,11 @@ void update_departure_intervals(
  * @param[in] th_pt_shift_dist_m Threshold distance to detect point drift.
  * @param[in] th_pt_shift_angle_rad Threshold angle to detect pose change.
  */
-void update_critical_departure_points(
+CriticalDeparturePoints find_new_critical_departure_points(
   const Side<DeparturePoints> & new_departure_points,
-  CriticalDeparturePoints & critical_departure_points,
+  const CriticalDeparturePoints & critical_departure_points,
   const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
-  const double th_point_merge_distance_m, const double offset_from_ego,
-  const double th_pt_shift_dist_m, const double th_pt_shift_angle_rad);
+  const double th_point_merge_distance_m);
 
 /**
  * @brief Build slow-down segments ahead of the ego vehicle.

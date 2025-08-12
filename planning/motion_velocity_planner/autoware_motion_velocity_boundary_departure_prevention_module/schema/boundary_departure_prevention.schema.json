@@ -72,9 +72,21 @@
         },
 
         "on_time_buffer_s": {
-          "type": "number",
-          "description": "Continuous detection time threshold to insert departure point into departure interval. [s]",
-          "default": 0.15
+          "type": "object",
+          "properties": {
+            "near_boundary": {
+              "type": "number",
+              "description": "Continuous detection time threshold to insert departure point into departure interval. [s]",
+              "default": 0.15
+            },
+            "critical_departure": {
+              "type": "number",
+              "description": "Continuous detection time required to accept new critical departure point. [s]",
+              "default": 0.15
+            }
+          },
+          "required": ["near_boundary", "critical_departure"],
+          "additionalProperties": false
         },
 
         "off_time_buffer_s": {
