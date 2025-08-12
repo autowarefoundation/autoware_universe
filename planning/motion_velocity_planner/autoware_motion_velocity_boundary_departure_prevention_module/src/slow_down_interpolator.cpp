@@ -132,16 +132,17 @@ tl::expected<double, std::string> SlowDownInterpolator::find_reach_time(
 }
 
 std::optional<double> SlowDownInterpolator::find_feasible_accel(
-  double gap, double v0, double vt, double a0, double a_comf, double a_max, double j_comf)
+  double gap, double v0, double vt, double a0, double a_comfortable, double a_max,
+  double j_comfortable)
 {
-  if (d_slow(v0, vt, a0, a_max, j_comf) > gap)
-    return std::nullopt;  // even a_max + j_comf won't fit
+  if (d_slow(v0, vt, a0, a_max, j_comfortable) > gap)
+    return std::nullopt;  // even a_max + j_comfortable won't fit
 
-  double lo = a_comf;             // weaker (less negative)
+  double lo = a_comfortable;      // weaker (less negative)
   double hi = a_max;              // stronger
   for (int i = 0; i < 40; ++i) {  // 40 iters → <1 mm precision
     double mid = 0.5 * (lo + hi);
-    (d_slow(v0, vt, a0, mid, j_comf) > gap ? lo : hi) = mid;
+    (d_slow(v0, vt, a0, mid, j_comfortable) > gap ? lo : hi) = mid;
 
     if (std::abs(hi) - std::abs(mid) < std::numeric_limits<double>::epsilon()) {
       break;
@@ -206,8 +207,9 @@ tl::expected<double, std::string> SlowDownInterpolator::calc_velocity_with_profi
   const auto v_brake = v_t(t_brake, j_brake, a_lim, v_0);
 
   if (lon_dist_to_dpt_pt < 1e-3) {
-    const double v_feas = std::sqrt(std::max(v_0 * v_0 + 2.0 * a_brake * lon_dist_to_dpt_pt, 0.0));
-    return std::max(v_target, std::min(v_0, v_feas));
+    const double v_feasible =
+      std::sqrt(std::max(v_0 * v_0 + 2.0 * a_brake * lon_dist_to_dpt_pt, 0.0));
+    return std::max(v_target, std::min(v_0, v_feasible));
   }
 
   /* ---------- Case 1: Target lies inside jerk ramp ---------- */
