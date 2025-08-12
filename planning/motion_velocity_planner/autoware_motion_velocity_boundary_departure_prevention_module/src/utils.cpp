@@ -314,8 +314,8 @@ std::vector<std::tuple<Pose, Pose, double>> get_slow_down_intervals(
   std::vector<std::tuple<Pose, Pose, double>> slowdown_intervals;
 
   for (const auto & departure_interval : departure_intervals) {
-    const auto slow_down_dist_on_traj_m = departure_interval.end_dist_on_traj;
-    const auto lon_dist_to_bound_m = slow_down_dist_on_traj_m - ego_dist_on_traj_m;
+    const auto slow_down_dist_on_traj_m = departure_interval.start_dist_on_traj;
+    const auto lon_dist_to_bound_m = (slow_down_dist_on_traj_m - ego_dist_on_traj_m);
 
     const auto & candidates = departure_interval.candidates;
     const auto lat_dist_to_bound_itr = std::min_element(
@@ -339,7 +339,7 @@ std::vector<std::tuple<Pose, Pose, double>> get_slow_down_intervals(
 
     const auto rel_dist_m = vel_opt->rel_dist_m;
     const auto start_pose = std::invoke([&]() {
-      if (ego_dist_on_traj_m + rel_dist_m < lon_dist_to_bound_m) {
+      if (ego_dist_on_traj_m + rel_dist_m < slow_down_dist_on_traj_m) {
         return ref_traj_pts.compute(ego_dist_on_traj_m + rel_dist_m).pose;
       }
       return departure_interval.start.pose;
