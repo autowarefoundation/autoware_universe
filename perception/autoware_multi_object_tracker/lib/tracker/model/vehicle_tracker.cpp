@@ -45,8 +45,7 @@ VehicleTracker::VehicleTracker(
   const types::DynamicObject & object)
 : Tracker(time, object),
   logger_(rclcpp::get_logger("VehicleTracker")),
-  object_model_(object_model),
-  tracking_offset_(Eigen::Vector2d::Zero())
+  object_model_(object_model)
 {
   // set tracker type based on object model
   if (object_model.type == object_model::ObjectModelType::NormalVehicle) {
@@ -202,14 +201,6 @@ bool VehicleTracker::measureWithPose(
   constexpr double gain = 0.1;
   object_.pose.position.z = (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
 
-  // remove cached object
-  removeCache();
-
-  return is_updated;
-}
-
-bool VehicleTracker::measureWithShape(const types::DynamicObject & object)
-{
   if (object.shape.type != autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
     // do not update shape if the input is not a bounding box
     return false;
@@ -227,38 +218,26 @@ bool VehicleTracker::measureWithShape(const types::DynamicObject & object)
   }
 
   // update object size
-  constexpr double gain = 0.4;
-  constexpr double gain_inv = 1.0 - gain;
-  auto & object_extension = object_.shape.dimensions;
-  object_extension.x = gain_inv * object_extension.x + gain * object.shape.dimensions.x;
-  object_extension.y = gain_inv * object_extension.y + gain * object.shape.dimensions.y;
-  object_extension.z = gain_inv * object_extension.z + gain * object.shape.dimensions.z;
-
-  // set shape type, which is bounding box
-  object_.shape.type = object.shape.type;
-  object_.area = types::getArea(object.shape);
+  {
+    constexpr double gain = 0.4;
+    constexpr double gain_inv = 1.0 - gain;
+    auto & object_extension = object_.shape.dimensions;
+    object_extension.x = gain_inv * object_extension.x + gain * object.shape.dimensions.x;
+    object_extension.y = gain_inv * object_extension.y + gain * object.shape.dimensions.y;
+    object_extension.z = gain_inv * object_extension.z + gain * object.shape.dimensions.z;
+    // update motion model
+    motion_model_.updateExtendedState(object_extension.x);
+  }
 
   // set maximum and minimum size
   limitObjectExtension(object_model_);
 
-  // update motion model
-  motion_model_.updateExtendedState(object_extension.x);
+  // set shape type, which is bounding box
+  object_.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+  object_.area = types::getArea(object.shape);
 
-  // update offset into object position
-  {
-    // rotate back the offset vector from object coordinate to global coordinate
-    const double yaw = motion_model_.getStateElement(IDX::YAW);
-    const double offset_x_global =
-      tracking_offset_.x() * std::cos(yaw) - tracking_offset_.y() * std::sin(yaw);
-    const double offset_y_global =
-      tracking_offset_.x() * std::sin(yaw) + tracking_offset_.y() * std::cos(yaw);
-    motion_model_.adjustPosition(-gain * offset_x_global, -gain * offset_y_global);
-    // update offset (object coordinate)
-    tracking_offset_.x() = gain_inv * tracking_offset_.x();
-    tracking_offset_.y() = gain_inv * tracking_offset_.y();
-  }
 
-  return true;
+  return is_updated;
 }
 
 bool VehicleTracker::measure(
@@ -293,16 +272,11 @@ bool VehicleTracker::measure(
     }
   }
 
-  // update tracking offset
-  shapes::calcAnchorPointOffset(object_, tracking_offset_, updating_object);
-
   // update pose
   measureWithPose(updating_object, channel_info);
 
-  // update shape
-  if (channel_info.trust_extension) {
-    measureWithShape(updating_object);
-  }
+  // remove cached object
+  removeCache();
 
   return true;
 }
