@@ -117,7 +117,7 @@ struct ProjectionToBound
 {
   Point2d pt_on_ego;    // orig
   Point2d pt_on_bound;  // proj
-  double lon_dist_on_ref_traj{std::numeric_limits<double>::max()};
+  double lon_dist_on_pred_traj{std::numeric_limits<double>::max()};
   Segment2d nearest_bound_seg;
   double lat_dist{std::numeric_limits<double>::max()};
   double lon_offset{};  // offset between the pt_on_ego and the front of the ego segment
@@ -150,7 +150,7 @@ struct ClosestProjectionToBound : ProjectionToBound
     nearest_bound_seg = base.nearest_bound_seg;
     lat_dist = base.lat_dist;
     ego_sides_idx = base.ego_sides_idx;
-    lon_dist_on_ref_traj = base.lon_dist_on_ref_traj;
+    lon_dist_on_pred_traj = base.lon_dist_on_pred_traj;
   }
 
   ClosestProjectionToBound(

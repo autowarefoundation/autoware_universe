@@ -61,7 +61,7 @@ DeparturePoint create_departure_point(
   point.departure_type = projection_to_bound.departure_type;
   point.point = projection_to_bound.pt_on_bound;
   point.th_point_merge_distance_m = th_point_merge_distance_m;
-  point.dist_on_traj = projection_to_bound.lon_dist_on_ref_traj;  // - lon_offset_m;
+  point.dist_on_traj = projection_to_bound.lon_dist_on_pred_traj;  // - lon_offset_m;
   point.idx_from_ego_traj = projection_to_bound.ego_sides_idx;
   point.can_be_removed = (point.departure_type == DepartureType::NONE) || point.dist_on_traj <= 0.0;
   return point;
@@ -599,7 +599,7 @@ ProjectionsToBound get_closest_boundary_segments_from_side(
     for (const auto & side_key : g_side_keys) {
       auto closest_bound = find_closest_segment(fp[side_key], rear_seg, i, boundaries[side_key]);
       closest_bound.time_from_start = rclcpp::Duration(ego_pred_traj[i].time_from_start).seconds();
-      closest_bound.lon_dist_on_ref_traj = s - closest_bound.lon_offset;
+      closest_bound.lon_dist_on_pred_traj = s - closest_bound.lon_offset;
       side[side_key].push_back(closest_bound);
     }
     if (i > 1) {

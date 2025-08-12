@@ -252,13 +252,13 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
 
     if (
       !min_to_bound.empty() && min_pt->departure_type != DepartureType::CRITICAL_DEPARTURE &&
-      std::abs(min_to_bound.back().lon_dist_on_ref_traj - min_pt->lon_dist_on_ref_traj) < 0.5) {
+      std::abs(min_to_bound.back().lon_dist_on_pred_traj - min_pt->lon_dist_on_pred_traj) < 0.5) {
       continue;
     }
 
     const auto is_exceeding_cutoff =
       [&min_pt](const auto type, const auto braking_dist, const auto cutoff_time) {
-        return min_pt->departure_type == type && min_pt->lon_dist_on_ref_traj > braking_dist &&
+        return min_pt->departure_type == type && min_pt->lon_dist_on_pred_traj > braking_dist &&
                min_pt->time_from_start > cutoff_time;
       };
 
@@ -317,7 +317,7 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries(
     for (auto itr = std::next(min_to_bound[side_key].rbegin());
          itr != min_to_bound[side_key].rend(); ++itr) {
       if (
-        min_to_bound[side_key].back().lon_dist_on_ref_traj - itr->lon_dist_on_ref_traj <
+        min_to_bound[side_key].back().lon_dist_on_pred_traj - itr->lon_dist_on_pred_traj <
         max_braking_dist) {
         itr->departure_type = DepartureType::APPROACHING_DEPARTURE;
       }
