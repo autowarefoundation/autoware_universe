@@ -2,6 +2,36 @@
 Changelog for package tier4_control_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* feat: change planning output topic name to /planning/trajectory (`#11135 <https://github.com/autowarefoundation/autoware_universe/issues/11135>`_)
+  * change planning output topic name to /planning/trajectory
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* chore: sync files (`#11091 <https://github.com/autowarefoundation/autoware_universe/issues/11091>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+  Co-authored-by: M. Fatih Cırıt <mfc@autoware.org>
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat: enable to remap control cmd from autoware launch (`#11019 <https://github.com/autowarefoundation/autoware_universe/issues/11019>`_)
+  * feat: add args
+  * feat: add another cmd
+  * fix
+  * feat: add comment
+  * style(pre-commit): autofix
+  * feat: remove ~/
+  * feat: remap vehicle cmd gate as well
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(control_validator): disable control validator error report when not in autonomous control (`#10871 <https://github.com/autowarefoundation/autoware_universe/issues/10871>`_)
+  * feat(control_validator): disable control validator error report when not in autonomous control
+  * also fix control validator launch
+  * fix: work with yaw validator; fix yaw validator missing in all valid; add a debug info
+  * chore: get rid of the yaw warn in is_all_valid
+  * chore: fix topic remapping in launch file
+  ---------
+* Contributors: Tetsuhiro Kawaguchi, Yukihiro Saito, Yuxuan Liu, awf-autoware-bot[bot]
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

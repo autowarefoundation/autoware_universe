@@ -207,18 +207,9 @@ public:
    * @brief Construct a new Lanelet Converter object
    *
    * @param lanelet_map_ptr Pointer of loaded lanelet map.
-   * @param max_num_polyline The max number of polylines to be contained in the tensor. If the total
-   * number of polylines are less than this value, zero-filled polylines will be padded.
-   * @param max_num_point The max number of points to be contained in a single polyline.
-   * @param point_break_distance Distance threshold to separate two polylines.
    */
-  explicit LaneletConverter(
-    const lanelet::LaneletMapConstPtr lanelet_map_ptr, size_t max_num_polyline,
-    size_t max_num_point, float point_break_distance)
-  : lanelet_map_ptr_(lanelet_map_ptr),
-    max_num_polyline_(max_num_polyline),
-    max_num_point_(max_num_point),
-    point_break_distance_(point_break_distance)
+  explicit LaneletConverter(const lanelet::LaneletMapConstPtr lanelet_map_ptr)
+  : lanelet_map_ptr_(lanelet_map_ptr)
   {
   }
 
@@ -285,9 +276,6 @@ private:
   [[nodiscard]] static std::vector<LanePoint> from_geometry(const GeometryType & geometry) noexcept;
 
   lanelet::LaneletMapConstPtr lanelet_map_ptr_;  //!< Pointer of lanelet map.
-  size_t max_num_polyline_;                      //!< The max number of polylines.
-  size_t max_num_point_;                         //!< The max number of points.
-  float point_break_distance_;                   //!< Distance threshold to separate two polylines.
 };
 
 std::vector<LanePoint> interpolate_points(const std::vector<LanePoint> & input, size_t num_points);

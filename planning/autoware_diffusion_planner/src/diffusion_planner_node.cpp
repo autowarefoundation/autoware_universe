@@ -717,10 +717,7 @@ void DiffusionPlanner::on_map(const HADMapBin::ConstSharedPtr map_msg)
   lanelet::utils::conversion::fromBinMsg(
     *map_msg, lanelet_map_ptr_, &traffic_rules_ptr_, &routing_graph_ptr_);
 
-  lanelet_converter_ptr_ = std::make_unique<LaneletConverter>(
-    lanelet_map_ptr_, constants::LaneletConverterParams::MAX_LANELETS,
-    constants::LaneletConverterParams::MAX_POINTS_PER_LANE,
-    constants::LaneletConverterParams::SEARCH_RADIUS_M);
+  lanelet_converter_ptr_ = std::make_unique<LaneletConverter>(lanelet_map_ptr_);
   lane_segments_ = lanelet_converter_ptr_->convert_to_lane_segments(POINTS_PER_SEGMENT);
 
   if (lane_segments_.empty()) {

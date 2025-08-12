@@ -2,6 +2,17 @@
 Changelog for package autoware_motion_velocity_run_out_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* fix(run_out): add missing ament_auto_package in CMakeList (`#11096 <https://github.com/autowarefoundation/autoware_universe/issues/11096>`_)
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(run_out): add parameters to select which debug markers to publish (`#11082 <https://github.com/autowarefoundation/autoware_universe/issues/11082>`_)
+* feat(run_out): add planning factors (`#10892 <https://github.com/autowarefoundation/autoware_universe/issues/10892>`_)
+* chore(run_out): add Zulfaqar Azmi as maintainer (`#10896 <https://github.com/autowarefoundation/autoware_universe/issues/10896>`_)
+* feat(run_out): add option for strict cutting of predicted paths (`#10887 <https://github.com/autowarefoundation/autoware_universe/issues/10887>`_)
+* Contributors: Maxime CLEMENT, Mete Fatih Cırıt
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

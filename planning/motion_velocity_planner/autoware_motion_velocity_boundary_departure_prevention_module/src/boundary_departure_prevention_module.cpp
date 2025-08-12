@@ -64,14 +64,19 @@ void BoundaryDeparturePreventionModule::init(
   updater_ptr_->setHardwareID("motion_velocity_boundary_departure_prevention");
   updater_ptr_->add(
     "boundary_departure", [this](diagnostic_updater::DiagnosticStatusWrapper & stat) {
+      const auto matches_type = [this](const DepartureType & type) -> bool {
+        return output_.diagnostic_output.find(type) != output_.diagnostic_output.end() &&
+               output_.diagnostic_output[type];
+      };
+
       const auto type = std::invoke([&]() {
-        if (output_.diagnostic_output[DepartureType::CRITICAL_DEPARTURE]) {
+        if (matches_type(DepartureType::CRITICAL_DEPARTURE)) {
           return DepartureType::CRITICAL_DEPARTURE;
         }
-        if (output_.diagnostic_output[DepartureType::APPROACHING_DEPARTURE]) {
+        if (matches_type(DepartureType::APPROACHING_DEPARTURE)) {
           return DepartureType::APPROACHING_DEPARTURE;
         }
-        if (output_.diagnostic_output[DepartureType::NEAR_BOUNDARY]) {
+        if (matches_type(DepartureType::NEAR_BOUNDARY)) {
           return DepartureType::NEAR_BOUNDARY;
         }
         return DepartureType::NONE;
@@ -86,8 +91,9 @@ void BoundaryDeparturePreventionModule::init(
 
       stat.summary(lvl, msg);
     });
-  last_found_time_ptr_ = std::make_unique<double>(clock_ptr_->now().seconds());
-  last_lost_time_ptr_ = std::make_unique<double>(clock_ptr_->now().seconds());
+  last_abnormality_fp_no_overlap_bound_time_ = clock_ptr_->now().seconds();
+  last_abnormality_fp_overlap_bound_time_ = clock_ptr_->now().seconds();
+  last_no_critical_dpt_time_ = clock_ptr_->now().seconds();
 }
 
 void BoundaryDeparturePreventionModule::update_parameters(
@@ -489,11 +495,8 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
     output_.closest_projections_to_bound, lon_offset_m(planner_data->is_driving_forward));
   toc_curr_watch("get_departure_points");
 
-  utils::update_critical_departure_points(
-    output_.departure_points, output_.critical_departure_points, *ref_traj_pts_opt,
-    node_param_.bdc_param.th_point_merge_distance_m,
-    ego_dist_on_traj_with_offset_m(!planner_data->is_driving_forward),
-    node_param_.th_pt_shift_dist_m, node_param_.th_pt_shift_angle_rad);
+  // update output_.critical_departure_points
+  update_critical_departure_points(*ref_traj_pts_opt, ego_dist_on_traj_m);
   toc_curr_watch("update_critical_departure_points");
 
   const auto is_departure_persist = std::invoke([&]() {
@@ -503,12 +506,12 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
       });
 
     if (!is_found) {
-      *last_lost_time_ptr_ = clock_ptr_->now().seconds();
+      last_abnormality_fp_overlap_bound_time_ = clock_ptr_->now().seconds();
       return false;
     }
 
-    const auto t_diff = clock_ptr_->now().seconds() - *last_lost_time_ptr_;
-    return t_diff >= node_param_.on_time_buffer_s;
+    const auto t_diff = clock_ptr_->now().seconds() - last_abnormality_fp_overlap_bound_time_;
+    return t_diff >= node_param_.on_time_buffer_s.near_boundary;
   });
 
   if (output_.departure_intervals.empty() && is_departure_persist) {
@@ -528,10 +531,10 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
         [&](const auto side_key) { return !output_.departure_points[side_key].empty(); });
 
       if (is_departure_found) {
-        *last_found_time_ptr_ = clock_ptr_->now().seconds();
+        last_abnormality_fp_no_overlap_bound_time_ = clock_ptr_->now().seconds();
         return false;
       }
-      const auto t_diff = clock_ptr_->now().seconds() - *last_found_time_ptr_;
+      const auto t_diff = clock_ptr_->now().seconds() - last_abnormality_fp_no_overlap_bound_time_;
       return t_diff >= node_param_.off_time_buffer_s;
     });
 
@@ -543,7 +546,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
       node_param_.slow_down_types, is_reset_interval, is_departure_persist);
 
     if (is_reset_interval) {
-      *last_found_time_ptr_ = clock_ptr_->now().seconds();
+      last_abnormality_fp_no_overlap_bound_time_ = clock_ptr_->now().seconds();
     }
     const auto reset_lost_time =
       std::any_of(g_side_keys.begin(), g_side_keys.end(), [&](const auto side_key) {
@@ -551,7 +554,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
       });
 
     if (reset_lost_time) {
-      *last_lost_time_ptr_ = clock_ptr_->now().seconds();
+      last_abnormality_fp_overlap_bound_time_ = clock_ptr_->now().seconds();
     }
   }
 
@@ -614,6 +617,83 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
   return result;
 }
 
+void BoundaryDeparturePreventionModule::update_critical_departure_points(
+  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const double offset_from_ego)
+{
+  for (auto & crit_dpt_pt_mut : output_.critical_departure_points) {
+    crit_dpt_pt_mut.dist_on_traj =
+      trajectory::closest(aw_ref_traj, crit_dpt_pt_mut.point_on_prev_traj);
+
+    if (crit_dpt_pt_mut.dist_on_traj < offset_from_ego) {
+      crit_dpt_pt_mut.can_be_removed = true;
+      continue;
+    }
+
+    const auto updated_point = aw_ref_traj.compute(crit_dpt_pt_mut.dist_on_traj);
+    if (
+      const auto is_shifted_opt = utils::is_point_shifted(
+        crit_dpt_pt_mut.point_on_prev_traj.pose, updated_point.pose, node_param_.th_pt_shift_dist_m,
+        node_param_.th_pt_shift_angle_rad)) {
+      crit_dpt_pt_mut.can_be_removed = true;
+    }
+  }
+
+  utils::remove_if(
+    output_.critical_departure_points, [](const DeparturePoint & pt) { return pt.can_be_removed; });
+
+  if (!is_continuous_critical_departure()) {
+    return;
+  }
+
+  auto new_critical_departure_point = utils::find_new_critical_departure_points(
+    output_.departure_points, output_.critical_departure_points, aw_ref_traj,
+    node_param_.bdc_param.th_point_merge_distance_m);
+
+  if (new_critical_departure_point.empty()) {
+    return;
+  }
+
+  std::move(
+    new_critical_departure_point.begin(), new_critical_departure_point.end(),
+    std::back_inserter(output_.critical_departure_points));
+
+  std::sort(output_.critical_departure_points.begin(), output_.critical_departure_points.end());
+}
+
+CriticalDeparturePoints find_new_critical_departure_points(
+  const Side<DeparturePoints> & new_departure_points,
+  const CriticalDeparturePoints & critical_departure_points,
+  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
+  const double th_point_merge_distance_m)
+{
+  CriticalDeparturePoints new_critical_departure_points;
+  for (const auto side_key : g_side_keys) {
+    for (const auto & dpt_pt : new_departure_points[side_key]) {
+      if (dpt_pt.departure_type != DepartureType::CRITICAL_DEPARTURE) {
+        continue;
+      }
+
+      if (dpt_pt.can_be_removed) {
+        continue;
+      }
+
+      const auto is_near_curr_pts = std::any_of(
+        critical_departure_points.begin(), critical_departure_points.end(),
+        [&](const CriticalDeparturePoint & crit_pt) {
+          return std::abs(dpt_pt.dist_on_traj - crit_pt.dist_on_traj) < th_point_merge_distance_m;
+        });
+
+      if (is_near_curr_pts) {
+        continue;
+      }
+
+      CriticalDeparturePoint crit_pt(dpt_pt);
+      crit_pt.point_on_prev_traj = aw_ref_traj.compute(crit_pt.dist_on_traj);
+      new_critical_departure_points.push_back(crit_pt);
+    }
+  }
+  return new_critical_departure_points;
+}
 std::unordered_map<DepartureType, bool> BoundaryDeparturePreventionModule::get_diagnostics(
   const double curr_vel, const double dist_with_offset_m)
 {
@@ -655,6 +735,25 @@ std::unordered_map<DepartureType, bool> BoundaryDeparturePreventionModule::get_d
     });
 
   return diag;
+}
+
+bool BoundaryDeparturePreventionModule::is_continuous_critical_departure()
+{
+  const auto is_critical_departure_found =
+    std::any_of(g_side_keys.begin(), g_side_keys.end(), [&](const auto side_key) {
+      const auto & closest_projections = output_.closest_projections_to_bound[side_key];
+      return std::any_of(
+        closest_projections.rbegin(), closest_projections.rend(),
+        [](const auto & pt) { return pt.departure_type == DepartureType::CRITICAL_DEPARTURE; });
+    });
+
+  if (!is_critical_departure_found) {
+    last_no_critical_dpt_time_ = clock_ptr_->now().seconds();
+    return false;
+  }
+
+  const auto t_diff = clock_ptr_->now().seconds() - last_no_critical_dpt_time_;
+  return t_diff >= node_param_.on_time_buffer_s.critical_departure;
 }
 }  // namespace autoware::motion_velocity_planner::experimental
 
