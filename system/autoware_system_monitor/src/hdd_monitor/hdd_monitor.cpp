@@ -40,7 +40,7 @@
 
 namespace {
 
-bool is_non-scsi_device(const std::string & device_name)
+bool is_non_scsi_device(const std::string & device_name)
 {
   // cspell:disable
   // clang-format off
