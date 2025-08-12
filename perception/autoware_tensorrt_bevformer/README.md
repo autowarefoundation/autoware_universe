@@ -29,8 +29,8 @@ The core algorithm, named `BEVFormer`, unifies multi-view images into the BEV pe
 | `~/input/topic_img_back_left/camera_info`   | `sensor_msgs::msg::CameraInfo`                       | input back_left camera parameters   |
 | `~/input/topic_img_back/camera_info`        | `sensor_msgs::msg::CameraInfo`                       | input back camera parameters        |
 | `~/input/topic_img_back_right/camera_info`  | `sensor_msgs::msg::CameraInfo`                       | input back_right camera parameters  |
-| `~/input/scene_token`                       | `autoware_internal_perception_msgs::msg::SceneInfo`  | nuScenes scene token                |
-| `~/input/can_bus`                           | `autoware_internal_perception_msgs::msg::CanBusData` | CAN bus data for ego-motion         |
+| `~/input/reset_bevformer_history`                       | `std_msgs::msg::Bool`  | Flag for scene change to maintain temporal consistency                |
+| `~/input/can_bus`                           | `autoware_localization_msgs::msg::KinematicState` | CAN bus data for ego-motion         |
 
 ### Outputs
 
