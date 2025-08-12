@@ -64,14 +64,19 @@ void BoundaryDeparturePreventionModule::init(
   updater_ptr_->setHardwareID("motion_velocity_boundary_departure_prevention");
   updater_ptr_->add(
     "boundary_departure", [this](diagnostic_updater::DiagnosticStatusWrapper & stat) {
+      const auto matches_type = [this](const DepartureType & type) -> bool {
+        return output_.diagnostic_output.find(type) != output_.diagnostic_output.end() &&
+               output_.diagnostic_output[type];
+      };
+
       const auto type = std::invoke([&]() {
-        if (output_.diagnostic_output[DepartureType::CRITICAL_DEPARTURE]) {
+        if (matches_type(DepartureType::CRITICAL_DEPARTURE)) {
           return DepartureType::CRITICAL_DEPARTURE;
         }
-        if (output_.diagnostic_output[DepartureType::APPROACHING_DEPARTURE]) {
+        if (matches_type(DepartureType::APPROACHING_DEPARTURE)) {
           return DepartureType::APPROACHING_DEPARTURE;
         }
-        if (output_.diagnostic_output[DepartureType::NEAR_BOUNDARY]) {
+        if (matches_type(DepartureType::NEAR_BOUNDARY)) {
           return DepartureType::NEAR_BOUNDARY;
         }
         return DepartureType::NONE;
