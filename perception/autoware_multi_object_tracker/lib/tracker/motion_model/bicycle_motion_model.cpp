@@ -499,7 +499,7 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   const double q_cov_vel_y = q_cov_slip_rate * dt2 * 4.0;
   const double q_cov_x = 0.25 * motion_params_.q_cov_acc_long * dt4;
   const double q_cov_y = 0.25 * motion_params_.q_cov_acc_lat * dt4;
-  const double q_cov_x2 = 0.25 * motion_params_.q_cov_acc_long * dt4 + 27.0 * dt2; // length uncertainty
+  const double q_cov_x2 = 0.25 * motion_params_.q_cov_acc_long * dt4 + 9.0 * dt2; // length uncertainty
   const double q_cov_y2 = 0.25 * motion_params_.q_cov_acc_lat * dt4 + q_cov_yaw * length * length + 9.0 * dt2; // yaw uncertainty
 
   StateMat Q;

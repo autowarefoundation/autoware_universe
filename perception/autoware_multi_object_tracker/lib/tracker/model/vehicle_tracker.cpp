@@ -180,7 +180,8 @@ bool VehicleTracker::measureWithPose(
     const double yaw = tf2::getYaw(object.pose.orientation);
     const double vel_x = object.twist.linear.x;
     const double vel_y = object.twist.linear.y;
-    const double length = object_.shape.dimensions.x - object_.shape.dimensions.y;
+    constexpr double min_length = 1.0;  // minimum length to avoid division by zero
+    const double length = std::max(object.shape.dimensions.x - object.shape.dimensions.y, min_length);
 
     if (is_yaw_available && is_velocity_available) {
       // update with yaw angle and velocity
@@ -226,7 +227,7 @@ bool VehicleTracker::measureWithPose(
     constexpr double gain = 0.4;
     constexpr double gain_inv = 1.0 - gain;
     auto & object_extension = object_.shape.dimensions;
-    object_extension.x = gain_inv * object_extension.x + gain * object.shape.dimensions.x;
+    object_extension.x = motion_model_.getLength() + object.shape.dimensions.y; // tracked by motion model
     object_extension.y = gain_inv * object_extension.y + gain * object.shape.dimensions.y;
     object_extension.z = gain_inv * object_extension.z + gain * object.shape.dimensions.z;
   }
