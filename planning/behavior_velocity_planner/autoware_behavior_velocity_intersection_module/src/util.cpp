@@ -55,7 +55,7 @@ static std::optional<size_t> getDuplicatedPointIdx(
   for (size_t i = 0; i < path.points.size(); i++) {
     const auto & p = path.points.at(i).point.pose.position;
 
-    constexpr double min_dist = 0.001;
+    constexpr double min_dist = 0.05;
     if (autoware_utils::calc_distance2d(p, point) < min_dist) {
       return i;
     }
