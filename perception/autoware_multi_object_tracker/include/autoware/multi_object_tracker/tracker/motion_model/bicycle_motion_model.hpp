@@ -34,15 +34,11 @@
 namespace autoware::multi_object_tracker
 {
 
-class BicycleMotionModel : public MotionModel<5>
+class BicycleMotionModel : public MotionModel<6>
 {
 private:
   // attributes
   rclcpp::Logger logger_;
-
-  // extended state
-  double lf_;
-  double lr_;
 
   // motion parameters: process noise and motion limits
   struct MotionParams
@@ -70,7 +66,12 @@ private:
 public:
   BicycleMotionModel();
 
-  enum IDX { X = 0, Y = 1, YAW = 2, VEL = 3, SLIP = 4 };
+  // bicycle model state indices
+  // X1, Y1: position of the rear wheel
+  // X2, Y2: position of the front wheel
+  // VX: longitudinal velocity
+  // VY: lateral velocity of the front wheel
+  enum IDX { X1 = 0, Y1 = 1, X2 = 2, Y2 = 3, VX = 4, VY = 5 };
 
   bool initialize(
     const rclcpp::Time & time, const double & x, const double & y, const double & yaw,
@@ -86,31 +87,33 @@ public:
 
   void setMotionLimits(const double & max_vel, const double & max_slip);
 
-  bool updateStatePose(const double & x, const double & y, const std::array<double, 36> & pose_cov);
+  double getYawState() const;
+  double getLength() const;
+
+  bool updateStatePose(const double & x, const double & y, const std::array<double, 36> & pose_cov, const double & length);
 
   bool updateStatePoseHead(
     const double & x, const double & y, const double & yaw,
-    const std::array<double, 36> & pose_cov);
+    const std::array<double, 36> & pose_cov, const double & length);
 
   bool updateStatePoseVel(
-    const double & x, const double & y, const std::array<double, 36> & pose_cov, const double & vel,
-    const std::array<double, 36> & twist_cov);
+    const double & x, const double & y, const std::array<double, 36> & pose_cov, const double & vel_x,
+    const double & vel_y, const std::array<double, 36> & twist_cov, const double & length);
 
   bool updateStatePoseHeadVel(
     const double & x, const double & y, const double & yaw, const std::array<double, 36> & pose_cov,
-    const double & vel, const std::array<double, 36> & twist_cov);
+    const double & vel_x, const double & vel_y, const std::array<double, 36> & twist_cov, const double & length);
 
-  bool adjustPosition(const double & x, const double & y);
+  bool adjustPosition(const double & delta_x, const double & delta_y);
 
   bool limitStates();
-
-  bool updateExtendedState(const double & length);
 
   bool predictStateStep(const double dt, KalmanFilter & ekf) const override;
 
   bool getPredictedState(
     const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
     geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const override;
+
 };
 
 }  // namespace autoware::multi_object_tracker

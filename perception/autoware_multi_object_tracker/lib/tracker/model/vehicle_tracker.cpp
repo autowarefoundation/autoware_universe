@@ -127,21 +127,23 @@ VehicleTracker::VehicleTracker(
       pose_cov[XYZRPY_COV_IDX::YAW_YAW] = p0_cov_yaw;
     }
 
-    double vel = 0.0;
-    double vel_cov = object_model_.initial_covariance.vel_long;
+    double vel_x = 0.0;
+    double vel_y = 0.0;
+    double vel_x_cov = object_model_.initial_covariance.vel_long;
+    double vel_y_cov = object_model_.bicycle_state.init_slip_angle_cov;
     if (object.kinematics.has_twist) {
-      vel = object.twist.linear.x;
+      vel_x = object.twist.linear.x;
+      vel_y = object.twist.linear.y;
     }
     if (object.kinematics.has_twist_covariance) {
-      vel_cov = object.twist_covariance[XYZRPY_COV_IDX::X_X];
+      vel_x_cov = object.twist_covariance[XYZRPY_COV_IDX::X_X];
+      vel_y_cov = object.twist_covariance[XYZRPY_COV_IDX::Y_Y];
     }
 
-    const double slip = 0.0;
-    const double slip_cov = object_model_.bicycle_state.init_slip_angle_cov;
-    const double & length = object_.shape.dimensions.x;
+    const double length = object_.shape.dimensions.x - object_.shape.dimensions.y;
 
     // initialize motion model
-    motion_model_.initialize(time, x, y, yaw, pose_cov, vel, vel_cov, slip, slip_cov, length);
+    motion_model_.initialize(time, x, y, yaw, pose_cov, vel_x, vel_x_cov, vel_y, vel_y_cov, length);
   }
 }
 
@@ -162,7 +164,7 @@ bool VehicleTracker::measureWithPose(
   // and the predicted velocity is close to the observed velocity
   bool is_velocity_available = false;
   if (object.kinematics.has_twist) {
-    const double tracked_vel = motion_model_.getStateElement(IDX::VEL);
+    const double tracked_vel = motion_model_.getStateElement(IDX::VX);
     const double & observed_vel = object.twist.linear.x;
     if (std::fabs(tracked_vel - observed_vel) < velocity_deviation_threshold_) {
       // Velocity deviation is small
@@ -176,23 +178,25 @@ bool VehicleTracker::measureWithPose(
     const double x = object.pose.position.x;
     const double y = object.pose.position.y;
     const double yaw = tf2::getYaw(object.pose.orientation);
-    const double vel = object.twist.linear.x;
+    const double vel_x = object.twist.linear.x;
+    const double vel_y = object.twist.linear.y;
+    const double length = object_.shape.dimensions.x - object_.shape.dimensions.y;
 
     if (is_yaw_available && is_velocity_available) {
       // update with yaw angle and velocity
       is_updated = motion_model_.updateStatePoseHeadVel(
-        x, y, yaw, object.pose_covariance, vel, object.twist_covariance);
+        x, y, yaw, object.pose_covariance, vel_x, vel_y, object.twist_covariance, length);
     } else if (is_yaw_available && !is_velocity_available) {
       // update with yaw angle, but without velocity
-      is_updated = motion_model_.updateStatePoseHead(x, y, yaw, object.pose_covariance);
+      is_updated = motion_model_.updateStatePoseHead(x, y, yaw, object.pose_covariance, length);
     } else if (!is_yaw_available && is_velocity_available) {
       // update without yaw angle, but with velocity
       is_updated = motion_model_.updateStatePoseVel(
-        x, y, object.pose_covariance, vel, object.twist_covariance);
+        x, y, object.pose_covariance, vel_x, vel_y, object.twist_covariance, length);
     } else {
       // update without yaw angle and velocity
       is_updated = motion_model_.updateStatePose(
-        x, y, object.pose_covariance);  // update without yaw angle and velocity
+        x, y, object.pose_covariance, length);  // update without yaw angle and velocity
     }
     motion_model_.limitStates();
   }
@@ -225,8 +229,6 @@ bool VehicleTracker::measureWithPose(
     object_extension.x = gain_inv * object_extension.x + gain * object.shape.dimensions.x;
     object_extension.y = gain_inv * object_extension.y + gain * object.shape.dimensions.y;
     object_extension.z = gain_inv * object_extension.z + gain * object.shape.dimensions.z;
-    // update motion model
-    motion_model_.updateExtendedState(object_extension.x);
   }
 
   // set maximum and minimum size
@@ -258,7 +260,7 @@ bool VehicleTracker::measure(
   types::DynamicObject updating_object = in_object;
   // turn 180 deg if the updating object heads opposite direction
   {
-    const double this_yaw = motion_model_.getStateElement(IDX::YAW);
+    const double this_yaw = motion_model_.getYawState();
     const double updating_yaw = tf2::getYaw(updating_object.pose.orientation);
     double yaw_diff = updating_yaw - this_yaw;
     while (yaw_diff > M_PI) yaw_diff -= 2 * M_PI;
