@@ -20,6 +20,7 @@
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
 #include <autoware_system_msgs/srv/change_operation_mode.hpp>
 
+#include <unordered_set>
 #include <vector>
 
 namespace autoware::command_mode_decider
@@ -75,6 +76,15 @@ uint16_t CommandModeDecider::to_mrm_behavior(uint16_t command_mode)
 std::vector<uint16_t> CommandModeDecider::decide(
   const RequestModeStatus & request, const CommandModeStatusTable & table)
 {
+  const auto modes = decide(request, table, last_modes_);
+  last_modes_ = std::unordered_set<uint16_t>(modes.begin(), modes.end());
+  return modes;
+}
+
+std::vector<uint16_t> CommandModeDecider::decide(
+  const RequestModeStatus & request, const CommandModeStatusTable & table,
+  const std::unordered_set<uint16_t> & last_modes) const
+{
   const auto create_vector = [](uint16_t mode) {
     std::vector<uint16_t> result;
     result.push_back(mode);
@@ -83,9 +93,11 @@ std::vector<uint16_t> CommandModeDecider::decide(
 
   // Use the specified operation mode if available.
   {
-    const auto available = table.available(request.operation_mode, !request.autoware_control);
+    const auto mode = request.operation_mode;
+    const auto same = last_modes.count(mode);
+    const auto available = table.available(mode, !request.autoware_control || same);
     if (available) {
-      return create_vector(request.operation_mode);
+      return create_vector(mode);
     }
   }
 
