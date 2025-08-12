@@ -29,7 +29,7 @@ ArrivalChecker::ArrivalChecker(rclcpp::Node * node) : vehicle_stop_checker_(node
   angle_ = autoware_utils::deg2rad(angle_deg);
   distance_ = node->declare_parameter<double>("arrival_check_distance");
   duration_ = node->declare_parameter<double>("arrival_check_duration");
-  distance_past_goal_ = node->declare_parameter<double>("arrival_check_past_goal_distance");
+  distance_past_goal_ = node->declare_parameter<double>("arrival_check_overshoot_distance");
 }
 
 void ArrivalChecker::set_goal()
