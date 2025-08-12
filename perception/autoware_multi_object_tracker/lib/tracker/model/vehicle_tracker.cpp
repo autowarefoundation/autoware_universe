@@ -140,7 +140,7 @@ VehicleTracker::VehicleTracker(
       vel_y_cov = object.twist_covariance[XYZRPY_COV_IDX::Y_Y];
     }
 
-    const double length = object_.shape.dimensions.x - object_.shape.dimensions.y;
+    const double & length = object_.shape.dimensions.x;
 
     // initialize motion model
     motion_model_.initialize(time, x, y, yaw, pose_cov, vel_x, vel_x_cov, vel_y, vel_y_cov, length);
@@ -181,7 +181,7 @@ bool VehicleTracker::measureWithPose(
     const double vel_x = object.twist.linear.x;
     const double vel_y = object.twist.linear.y;
     constexpr double min_length = 1.0;  // minimum length to avoid division by zero
-    const double length = std::max(object.shape.dimensions.x - object.shape.dimensions.y, min_length);
+    const double length = std::max(object.shape.dimensions.x, min_length);
 
     if (is_yaw_available && is_velocity_available) {
       // update with yaw angle and velocity
@@ -227,7 +227,7 @@ bool VehicleTracker::measureWithPose(
     constexpr double gain = 0.4;
     constexpr double gain_inv = 1.0 - gain;
     auto & object_extension = object_.shape.dimensions;
-    object_extension.x = motion_model_.getLength() + object.shape.dimensions.y; // tracked by motion model
+    object_extension.x = motion_model_.getLength(); // tracked by motion model
     object_extension.y = gain_inv * object_extension.y + gain * object.shape.dimensions.y;
     object_extension.z = gain_inv * object_extension.z + gain * object.shape.dimensions.z;
   }
@@ -304,9 +304,7 @@ bool VehicleTracker::getTrackedObject(
     RCLCPP_WARN(logger_, "VehicleTracker::getTrackedObject: Failed to get predicted state.");
     return false;
   }
-  double length = motion_model_.getLength();
-  auto & width = object.shape.dimensions.y;
-  object.shape.dimensions.x = length + width;  // set length
+  object.shape.dimensions.x = motion_model_.getLength();  // set length
 
   // cache object
   updateCache(object, time);
