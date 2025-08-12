@@ -77,7 +77,7 @@ void BEVFormerDataManager::generateRandomBev()
     RCLCPP_WARN(logger_, "Cannot generate random BEV - vector not allocated");
     return;
   }
-  
+
   std::random_device rd;
   std::mt19937 gen(rd());
   std::normal_distribution<float> dist(0.0f, 1.0f);
@@ -85,7 +85,7 @@ void BEVFormerDataManager::generateRandomBev()
   for (auto & val : prev_bev_) {
     val = dist(gen);
   }
-  
+
   RCLCPP_DEBUG(logger_, "Generated random BEV with %zu values", prev_bev_.size());
 }
 
@@ -94,7 +94,7 @@ float BEVFormerDataManager::getUsePrevBev()
   if (is_first_frame_) {
     RCLCPP_INFO(logger_, "First frame detected, using random BEV");
     is_first_frame_ = false;  // Set to false after first use
-    return 0.0f;  // Don't use previous BEV for first frame
+    return 0.0f;              // Don't use previous BEV for first frame
   }
   return 1.0f;  // Always use previous BEV after first frame
 }
