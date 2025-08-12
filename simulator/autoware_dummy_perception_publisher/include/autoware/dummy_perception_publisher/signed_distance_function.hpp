@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__DUMMY_PERCEPTION_PUBLISHER__SIGNED_DISTANCE_FUNCTION_HPP_
 #define AUTOWARE__DUMMY_PERCEPTION_PUBLISHER__SIGNED_DISTANCE_FUNCTION_HPP_
 
-#include <tf2/LinearMath/Transform.h>
+#include <tf2/LinearMath/Transform.hpp>
 
 #include <limits>
 #include <memory>

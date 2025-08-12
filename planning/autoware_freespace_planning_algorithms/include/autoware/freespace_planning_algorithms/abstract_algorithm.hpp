@@ -18,11 +18,10 @@
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+#include <tf2/utils.hpp>
 
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <nav_msgs/msg/occupancy_grid.hpp>
-
-#include <tf2/utils.h>
 
 #include <algorithm>
 #include <limits>

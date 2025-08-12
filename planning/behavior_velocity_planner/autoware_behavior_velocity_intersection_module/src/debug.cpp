@@ -19,8 +19,7 @@
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
-
-#include <tf2/utils.h>
+#include <tf2/utils.hpp>
 
 #include <tuple>
 

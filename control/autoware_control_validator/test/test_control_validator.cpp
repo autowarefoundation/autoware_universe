@@ -16,13 +16,13 @@
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <rclcpp/node_options.hpp>
+#include <tf2/LinearMath/Quaternion.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <gtest/gtest-param-test.h>
 #include <gtest/gtest.h>
-#include <tf2/LinearMath/Quaternion.h>
 
 #include <cmath>
 #include <memory>

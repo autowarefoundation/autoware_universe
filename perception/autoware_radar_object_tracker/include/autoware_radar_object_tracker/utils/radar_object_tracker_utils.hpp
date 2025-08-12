@@ -38,9 +38,10 @@
 #else
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #endif
-#include <tf2/LinearMath/Transform.h>
-#include <tf2/convert.h>
-#include <tf2/transform_datatypes.h>
+#include <tf2/LinearMath/Transform.hpp>
+#include <tf2/convert.hpp>
+#include <tf2/transform_datatypes.hpp>
+
 #include <tf2_ros/buffer.h>
 
 #include <string>

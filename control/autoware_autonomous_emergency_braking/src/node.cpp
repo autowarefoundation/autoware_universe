@@ -24,6 +24,7 @@
 #include <autoware_utils/ros/update_param.hpp>
 #include <pcl_ros/transforms.hpp>
 #include <rclcpp/node.hpp>
+#include <tf2/utils.hpp>
 
 #include <geometry_msgs/msg/polygon.hpp>
 
@@ -41,7 +42,6 @@
 #include <pcl/point_types.h>
 #include <pcl/registration/gicp.h>
 #include <pcl/segmentation/extract_clusters.h>
-#include <tf2/utils.h>
 
 #include <algorithm>
 #include <cmath>

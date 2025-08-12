@@ -17,10 +17,9 @@
 #include "autoware/universe_utils/geometry/gjk_2d.hpp"
 
 #include <Eigen/Geometry>
+#include <tf2/convert.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-
-#include <tf2/convert.h>
 
 #include <string>
 
