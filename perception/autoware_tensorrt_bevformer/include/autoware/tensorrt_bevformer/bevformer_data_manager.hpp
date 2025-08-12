@@ -70,11 +70,11 @@ public:
    * @brief Process CAN bus data with temporal adjustment
    *
    * @param can_bus Raw CAN bus data
-   * @param scene_token Current scene token
+   * @param reset The flag for resetting the bevformer history
    * @return std::vector<float> Processed CAN bus data
    */
   std::vector<float> processCanbusWithTemporal(
-    const std::vector<float> & can_bus, const std::string & scene_token);
+    const std::vector<float> & can_bus, bool reset);
 
   /**
    * @brief Update previous BEV with new data
@@ -94,11 +94,8 @@ public:
 
   /**
    * @brief Check if we should use previous BEV
-   *
-   * @param scene_token Current scene token
    * @return float 1.0 if we should use previous BEV, 0.0 otherwise
    */
-  float getUsePrevBev(const std::string & scene_token);
 
   /**
    * @brief Process quaternion to extract yaw angle
@@ -135,7 +132,6 @@ private:
   // Previous frame info
   struct PrevFrameInfo
   {
-    std::string scene_token;
     std::vector<float> prev_pos{0.0f, 0.0f, 0.0f};
     float prev_angle{0.0f};
   };

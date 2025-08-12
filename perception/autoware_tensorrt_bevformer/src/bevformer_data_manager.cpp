@@ -48,7 +48,6 @@ namespace tensorrt_bevformer
 BEVFormerDataManager::BEVFormerDataManager(const rclcpp::Logger & logger) : logger_(logger)
 {
   // Initialize prev_frame_info
-  prev_frame_info_.scene_token = "";
   prev_frame_info_.prev_pos = {0.0f, 0.0f, 0.0f};
   prev_frame_info_.prev_angle = 0.0f;
 
@@ -129,7 +128,7 @@ std::vector<float> BEVFormerDataManager::processCanBus(
 }
 
 std::vector<float> BEVFormerDataManager::processCanbusWithTemporal(
-  const std::vector<float> & can_bus, const std::string & scene_token)
+  const std::vector<float> & can_bus, bool reset)
 {
   if (can_bus.size() < 18) {
     RCLCPP_ERROR(logger_, "Invalid CAN bus size: %zu, expected at least 18", can_bus.size());
@@ -144,7 +143,7 @@ std::vector<float> BEVFormerDataManager::processCanbusWithTemporal(
   current_tmp_angle_ = processed_can_bus[17];
 
   // Apply temporal adjustments based on whether we use prev_bev
-  float use_prev_bev = getUsePrevBev(scene_token);
+  float use_prev_bev = reset ? 0.0f : 1.0f;
 
   if (use_prev_bev == 1.0f) {
     processed_can_bus[0] -= prev_frame_info_.prev_pos[0];
@@ -160,9 +159,6 @@ std::vector<float> BEVFormerDataManager::processCanbusWithTemporal(
     RCLCPP_INFO(logger_, "Reset CAN bus to zeros for new scene");
   }
 
-  // Update scene token
-  prev_frame_info_.scene_token = scene_token;
-
   return processed_can_bus;
 }
 
@@ -177,18 +173,6 @@ float BEVFormerDataManager::quaternionToYaw(float w, float x, float y, float z)
   float siny_cosp = 2.0f * (w * z + x * y);
   float cosy_cosp = 1.0f - 2.0f * (y * y + z * z);
   return std::atan2(siny_cosp, cosy_cosp);
-}
-
-float BEVFormerDataManager::getUsePrevBev(const std::string & scene_token)
-{
-  // If the scene token changes, don't use previous BEV
-  if (prev_frame_info_.scene_token != scene_token) {
-    RCLCPP_INFO(
-      logger_, "Scene changed: '%s' -> '%s'. NOT using previous BEV.",
-      prev_frame_info_.scene_token.c_str(), scene_token.c_str());
-    return 0.0f;
-  }
-  return 1.0f;
 }
 
 void BEVFormerDataManager::updatePrevBev(const std::vector<float> & bev_embed)
