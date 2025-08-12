@@ -111,7 +111,7 @@ private:
 
   std::unique_ptr<double> last_lost_time_ptr_;
   std::unique_ptr<double> last_found_time_ptr_;
-  std::unique_ptr<double> last_no_critical_dpt_time_ptr_;
+  double last_no_critical_dpt_time_;
 
   autoware_utils::InterProcessPollingSubscriber<Trajectory>::SharedPtr ego_pred_traj_polling_sub_;
   autoware_utils::InterProcessPollingSubscriber<Control>::SharedPtr control_cmd_polling_sub_;

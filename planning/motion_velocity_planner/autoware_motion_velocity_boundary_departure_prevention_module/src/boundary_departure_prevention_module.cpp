@@ -88,6 +88,7 @@ void BoundaryDeparturePreventionModule::init(
     });
   last_found_time_ptr_ = std::make_unique<double>(clock_ptr_->now().seconds());
   last_lost_time_ptr_ = std::make_unique<double>(clock_ptr_->now().seconds());
+  last_no_critical_dpt_time_ = clock_ptr_->now().seconds();
 }
 
 void BoundaryDeparturePreventionModule::update_parameters(
@@ -733,11 +734,6 @@ std::unordered_map<DepartureType, bool> BoundaryDeparturePreventionModule::get_d
 
 bool BoundaryDeparturePreventionModule::is_continuous_critical_departure()
 {
-  if (!last_no_critical_dpt_time_ptr_) {
-    last_no_critical_dpt_time_ptr_ = std::make_unique<double>(clock_ptr_->now().seconds());
-    return false;
-  }
-
   const auto is_critical_departure_found =
     std::any_of(g_side_keys.begin(), g_side_keys.end(), [&](const auto side_key) {
       const auto & closest_projections = output_.closest_projections_to_bound[side_key];
@@ -747,11 +743,11 @@ bool BoundaryDeparturePreventionModule::is_continuous_critical_departure()
     });
 
   if (!is_critical_departure_found) {
-    *last_no_critical_dpt_time_ptr_ = clock_ptr_->now().seconds();
+    last_no_critical_dpt_time_ = clock_ptr_->now().seconds();
     return false;
   }
 
-  const auto t_diff = clock_ptr_->now().seconds() - *last_no_critical_dpt_time_ptr_;
+  const auto t_diff = clock_ptr_->now().seconds() - last_no_critical_dpt_time_;
   return t_diff >= node_param_.on_time_buffer_s.critical_departure;
 }
 }  // namespace autoware::motion_velocity_planner::experimental
