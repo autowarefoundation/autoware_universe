@@ -38,6 +38,20 @@
 #include <utility>
 #include <vector>
 
+namespace {
+
+bool is_non-scsi_device(const std::string & device_name)
+{
+  // cspell:disable
+  // clang-format off
+  return (boost::starts_with(device_name, "/dev/nvme") ||   // NVMe SSD
+          boost::starts_with(device_name, "/dev/mmcblk"));  // SD card, eMMC
+  // cspell:enable
+  // clang-format on
+}
+
+}  // namespace
+
 namespace bp = boost::process;
 
 HddMonitor::HddMonitor(const rclcpp::NodeOptions & options)
@@ -848,7 +862,7 @@ void HddMonitor::updateHddConnections()
           const std::regex pattern("\\d+$");
           hdd_param.second.disk_device_ =
             std::regex_replace(hdd_param.second.part_device_, pattern, "");
-        } else if (boost::starts_with(hdd_param.second.part_device_, "/dev/nvme")) {
+        } else if (is_non_scsi_device(hdd_param.second.part_device_)) {
           const std::regex pattern("p\\d+$");
           hdd_param.second.disk_device_ =
             std::regex_replace(hdd_param.second.part_device_, pattern, "");
