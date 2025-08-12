@@ -86,8 +86,8 @@ void BoundaryDeparturePreventionModule::init(
 
       stat.summary(lvl, msg);
     });
-  last_found_time_ptr_ = std::make_unique<double>(clock_ptr_->now().seconds());
-  last_lost_time_ptr_ = std::make_unique<double>(clock_ptr_->now().seconds());
+  last_abnormality_fp_no_overlap_bound_time_ = clock_ptr_->now().seconds();
+  last_abnormality_fp_overlap_bound_time_ = clock_ptr_->now().seconds();
   last_no_critical_dpt_time_ = clock_ptr_->now().seconds();
 }
 
@@ -501,11 +501,11 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
       });
 
     if (!is_found) {
-      *last_lost_time_ptr_ = clock_ptr_->now().seconds();
+      last_abnormality_fp_overlap_bound_time_ = clock_ptr_->now().seconds();
       return false;
     }
 
-    const auto t_diff = clock_ptr_->now().seconds() - *last_lost_time_ptr_;
+    const auto t_diff = clock_ptr_->now().seconds() - last_abnormality_fp_overlap_bound_time_;
     return t_diff >= node_param_.on_time_buffer_s.near_boundary;
   });
 
@@ -526,10 +526,10 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
         [&](const auto side_key) { return !output_.departure_points[side_key].empty(); });
 
       if (is_departure_found) {
-        *last_found_time_ptr_ = clock_ptr_->now().seconds();
+        last_abnormality_fp_no_overlap_bound_time_ = clock_ptr_->now().seconds();
         return false;
       }
-      const auto t_diff = clock_ptr_->now().seconds() - *last_found_time_ptr_;
+      const auto t_diff = clock_ptr_->now().seconds() - last_abnormality_fp_no_overlap_bound_time_;
       return t_diff >= node_param_.off_time_buffer_s;
     });
 
@@ -541,7 +541,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
       node_param_.slow_down_types, is_reset_interval, is_departure_persist);
 
     if (is_reset_interval) {
-      *last_found_time_ptr_ = clock_ptr_->now().seconds();
+      last_abnormality_fp_no_overlap_bound_time_ = clock_ptr_->now().seconds();
     }
     const auto reset_lost_time =
       std::any_of(g_side_keys.begin(), g_side_keys.end(), [&](const auto side_key) {
@@ -549,7 +549,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
       });
 
     if (reset_lost_time) {
-      *last_lost_time_ptr_ = clock_ptr_->now().seconds();
+      last_abnormality_fp_overlap_bound_time_ = clock_ptr_->now().seconds();
     }
   }
 

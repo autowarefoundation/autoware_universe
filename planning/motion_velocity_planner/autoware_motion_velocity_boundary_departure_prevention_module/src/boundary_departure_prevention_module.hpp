@@ -109,9 +109,9 @@ private:
   LaneletRoute::ConstSharedPtr route_ptr_;
   std::unordered_map<std::string, double> processing_times_ms_;
 
-  std::unique_ptr<double> last_lost_time_ptr_;
-  std::unique_ptr<double> last_found_time_ptr_;
-  double last_no_critical_dpt_time_;
+  double last_abnormality_fp_overlap_bound_time_{0.0};
+  double last_abnormality_fp_no_overlap_bound_time_{0.0};
+  double last_no_critical_dpt_time_{0.0};
 
   autoware_utils::InterProcessPollingSubscriber<Trajectory>::SharedPtr ego_pred_traj_polling_sub_;
   autoware_utils::InterProcessPollingSubscriber<Control>::SharedPtr control_cmd_polling_sub_;
