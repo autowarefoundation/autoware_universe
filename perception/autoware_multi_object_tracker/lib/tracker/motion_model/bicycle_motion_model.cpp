@@ -487,30 +487,31 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
 
 
   // Process noise covariance Q
-  // double q_stddev_yaw_rate = motion_params_.q_stddev_yaw_rate_min;
+  double q_stddev_yaw_rate = motion_params_.q_stddev_yaw_rate_min;
   double q_cov_slip_rate = motion_params_.q_cov_slip_rate_min;
   
   const double sin_2yaw = std::sin(2.0 * yaw);
   const double dt2 = dt * dt;
   const double dt4 = dt2 * dt2;
 
-  // const double q_cov_yaw = q_stddev_yaw_rate * q_stddev_yaw_rate * dt2;
+  const double q_cov_yaw = q_stddev_yaw_rate * q_stddev_yaw_rate * dt2;
   const double q_cov_vel_x = motion_params_.q_cov_acc_long * dt2;
-  const double q_cov_vel_y = q_cov_slip_rate * dt2 * 2.0;
+  const double q_cov_vel_y = q_cov_slip_rate * dt2 * 4.0;
   const double q_cov_x = 0.25 * motion_params_.q_cov_acc_long * dt4;
   const double q_cov_y = 0.25 * motion_params_.q_cov_acc_lat * dt4;
+  const double q_cov_y2 = 0.25 * motion_params_.q_cov_acc_lat * dt4 + q_cov_yaw * length * length;
 
   StateMat Q;
   Q.setZero();
   Q(IDX::X1, IDX::X1) = (q_cov_x * cos_yaw * cos_yaw + q_cov_y * sin_yaw * sin_yaw);
   Q(IDX::X1, IDX::Y1) = (0.5f * (q_cov_x - q_cov_y) * sin_2yaw);
-  Q(IDX::Y1, IDX::Y1) = (q_cov_x * sin_yaw * sin_yaw + q_cov_y * cos_yaw * cos_yaw);
   Q(IDX::Y1, IDX::X1) = Q(IDX::X1, IDX::Y1);
+  Q(IDX::Y1, IDX::Y1) = (q_cov_x * sin_yaw * sin_yaw + q_cov_y * cos_yaw * cos_yaw);
 
-  Q(IDX::X2, IDX::X2) = (q_cov_x * cos_yaw * cos_yaw + q_cov_y * sin_yaw * sin_yaw);
-  Q(IDX::X2, IDX::Y2) = (0.5f * (q_cov_x - q_cov_y) * sin_2yaw);
-  Q(IDX::Y2, IDX::Y2) = (q_cov_x * sin_yaw * sin_yaw + q_cov_y * cos_yaw * cos_yaw);
+  Q(IDX::X2, IDX::X2) = (q_cov_x * cos_yaw * cos_yaw + q_cov_y2 * sin_yaw * sin_yaw);
+  Q(IDX::X2, IDX::Y2) = (0.5f * (q_cov_x - q_cov_y2) * sin_2yaw);
   Q(IDX::Y2, IDX::X2) = Q(IDX::X2, IDX::Y2);
+  Q(IDX::Y2, IDX::Y2) = (q_cov_x * sin_yaw * sin_yaw + q_cov_y2 * cos_yaw * cos_yaw);
   // todo: add yaw process noise
 
   Q(IDX::VX, IDX::VX) = q_cov_vel_x;

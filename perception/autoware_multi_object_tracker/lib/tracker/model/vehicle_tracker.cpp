@@ -269,8 +269,8 @@ bool VehicleTracker::measure(
       tf2::Quaternion q;
       q.setRPY(0, 0, updating_yaw + M_PI);
       updating_object.pose.orientation = tf2::toMsg(q);
-      updating_object.anchor_point.x = -updating_object.anchor_point.x;
-      updating_object.anchor_point.y = -updating_object.anchor_point.y;
+      // updating_object.anchor_point.x = -updating_object.anchor_point.x;
+      // updating_object.anchor_point.y = -updating_object.anchor_point.y;
     }
   }
 
@@ -303,6 +303,9 @@ bool VehicleTracker::getTrackedObject(
     RCLCPP_WARN(logger_, "VehicleTracker::getTrackedObject: Failed to get predicted state.");
     return false;
   }
+  double length = motion_model_.getLength();
+  auto & width = object.shape.dimensions.y;
+  object.shape.dimensions.x = length + width;  // set length
 
   // cache object
   updateCache(object, time);
