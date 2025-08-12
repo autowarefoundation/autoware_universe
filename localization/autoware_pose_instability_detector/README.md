@@ -19,7 +19,7 @@ This discrepancy suggests that there may be an issue with either the estimated p
 
 The following diagram provides an overview of how the procedure looks like:
 
-![procedure](./media/pose_instabilty_detector_procedure.svg)
+![procedure](./media/pose_instability_detector_procedure.drawio.svg)
 
 ## Dead reckoning algorithm
 
