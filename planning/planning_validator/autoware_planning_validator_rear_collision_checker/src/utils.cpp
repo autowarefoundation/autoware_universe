@@ -361,7 +361,7 @@ auto check_turn_behavior(
 
   const auto get_yaw_diff_between_ego_and_lane_end =
     [&ego_pose](const auto & lanelet) -> std::optional<double> {
-    if (lanelet.centerline().size() < 1) return std::nullopt;
+    if (lanelet.centerline().size() < 2) return std::nullopt;
     const auto p1 = lanelet.centerline()[lanelet.centerline().size() - 1];
     const auto p2 = lanelet.centerline()[lanelet.centerline().size() - 2];
     const auto yaw_lane_end = std::atan2(p1.y() - p2.y(), p1.x() - p2.x());
@@ -405,10 +405,8 @@ auto check_turn_behavior(
       const auto sibling_straight_lanelet = get_sibling_straight_lanelet(lane, routing_graph_ptr);
       const auto yaw_diff = get_yaw_diff_between_ego_and_lane_end(lane);
 
-      if (yaw_diff.has_value()) {
-        if (yaw_diff.value() > -1.0 * p.check.yaw_th) {
-          continue;
-        }
+      if (yaw_diff.has_value() && yaw_diff.value() > -1.0 * p.check.yaw_th) {
+        continue;
       }
 
       if (
@@ -431,10 +429,8 @@ auto check_turn_behavior(
       const auto sibling_straight_lanelet = get_sibling_straight_lanelet(lane, routing_graph_ptr);
       const auto yaw_diff = get_yaw_diff_between_ego_and_lane_end(lane);
 
-      if (yaw_diff.has_value()) {
-        if (yaw_diff.value() < p.check.yaw_th) {
-          continue;
-        }
+      if (yaw_diff.has_value() && yaw_diff.value() < p.check.yaw_th) {
+        continue;
       }
 
       if (
