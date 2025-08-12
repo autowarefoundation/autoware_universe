@@ -83,7 +83,7 @@ TEST_F(TestShiftPullOut, GenerateValidShiftPullOutPath)
 {
   // Test data files to be tested
   const std::vector<std::string> yaml_files = {"route_data2.yaml"};
-  
+
   for (const auto & yaml_file : yaml_files) {
     std::cout << "Testing with YAML file: " + yaml_file << std::endl;
 
@@ -93,7 +93,7 @@ TEST_F(TestShiftPullOut, GenerateValidShiftPullOutPath)
     const auto start_pose = route.start_pose;
     const auto goal_pose = route.goal_pose;
     StartPlannerTestHelper::set_odometry(planner_data, start_pose);
-    
+
     // Plan the pull out path
     PlannerDebugData debug_data;
     auto result = call_plan(start_pose, goal_pose, planner_data, debug_data);
@@ -101,7 +101,8 @@ TEST_F(TestShiftPullOut, GenerateValidShiftPullOutPath)
     // Assert that a valid shift pull out path is generated
     ASSERT_TRUE(result.has_value()) << "shift pull out path generation failed for " + yaml_file;
     EXPECT_EQ(result->partial_paths.size(), 1UL)
-      << "Generated shift pull out path does not have the expected number of partial paths for " + yaml_file;
+      << "Generated shift pull out path does not have the expected number of partial paths for " +
+           yaml_file;
     EXPECT_EQ(debug_data.conditions_evaluation.back(), "success")
       << "shift pull out path planning did not succeed for " + yaml_file;
 
@@ -115,11 +116,11 @@ TEST_F(TestShiftPullOut, GenerateValidShiftPullOutPath)
           lanelets.push_back(lanelet);
         }
       }
-      
+
       // Generate filename based on YAML file name
       std::string yaml_basename = yaml_file.substr(0, yaml_file.find_last_of('.'));
       std::string plot_filename = yaml_basename + ".png";
-      
+
       StartPlannerTestHelper::plot_and_save_path(
         result->partial_paths, lanelets, vehicle_info_, PlannerType::SHIFT, plot_filename);
     }
