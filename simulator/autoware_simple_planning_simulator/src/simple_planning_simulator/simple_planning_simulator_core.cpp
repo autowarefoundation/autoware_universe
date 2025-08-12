@@ -110,7 +110,8 @@ SimplePlanningSimulator::SimplePlanningSimulator(const rclcpp::NodeOptions & opt
     "input/vector_map", rclcpp::QoS(10).transient_local(),
     std::bind(&SimplePlanningSimulator::on_map, this, _1));
   sub_init_pose_ = create_subscription<PoseWithCovarianceStamped>(
-    "input/initialpose", QoS{1}, std::bind(&SimplePlanningSimulator::on_initialpose, this, _1));
+    "input/initialpose", rclcpp::QoS(1).transient_local().reliable(),
+    std::bind(&SimplePlanningSimulator::on_initialpose, this, _1));
   sub_init_twist_ = create_subscription<TwistStamped>(
     "input/initialtwist", QoS{1}, std::bind(&SimplePlanningSimulator::on_initialtwist, this, _1));
   sub_manual_ackermann_cmd_ = create_subscription<Control>(
