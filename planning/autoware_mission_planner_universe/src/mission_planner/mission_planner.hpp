@@ -114,7 +114,12 @@ private:
   std::optional<LaneletRoute::ConstSharedPtr> original_route_;
   LaneletRoute::ConstSharedPtr current_route_;
 
-  ManualLaneChangeHandler manual_lane_change_handler_{&current_route_};
+  ManualLaneChangeHandler manual_lane_change_handler_{
+    &current_route_,
+    [&](const int64_t id) {
+      return planner_->getRouteHandler().getLaneletMapPtr()->laneletLayer.get(id);
+    }
+  };
 
   lanelet::LaneletMapPtr lanelet_map_ptr_{nullptr};
 

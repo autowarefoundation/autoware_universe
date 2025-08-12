@@ -367,7 +367,7 @@ void MissionPlanner::on_set_preferred_lane(
     throw service_utils::ServiceException(
       ResponseCode::ERROR_REROUTE_FAILED, "New route is not safe. Reroute failed.");
   }
-
+  // Generate a new UUID for the route
   boost::uuids::random_generator gen;
   boost::uuids::uuid uuid = gen();
   std::copy(uuid.begin(), uuid.end(), route.uuid.uuid.begin());
@@ -495,6 +495,9 @@ void MissionPlanner::on_set_waypoint_route(
     throw service_utils::ServiceException(
       ResponseCode::ERROR_REROUTE_FAILED, "New route is not safe. Reroute failed.");
   }
+
+  // Reset manual lane change handler
+  manual_lane_change_handler_.reset();
 
   change_route(route);
   change_state(RouteState::SET);

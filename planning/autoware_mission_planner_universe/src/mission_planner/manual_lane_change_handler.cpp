@@ -64,53 +64,76 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
 
   bool route_updated = false;
   for (auto iter = start_iter; iter != final_iter; ++iter) {
-    auto & current_segment = *iter;
+    auto & current_segment = iter;
+    auto next_segment = iter+1;
 
     // Find the index of the current preferred primitive
     auto current_it = std::find_if(
-      current_segment.primitives.begin(), current_segment.primitives.end(),
+      current_segment->primitives.begin(), current_segment->primitives.end(),
       [&current_segment](const LaneletPrimitive & p) {
-        return p.id == current_segment.preferred_primitive.id;
-      });
+        return p.id == current_segment->preferred_primitive.id;
+      }
+    );
+    if (current_it == current_segment->primitives.end()) continue;
 
-    if (current_it == current_segment.primitives.end()) continue;
+    // Find the index of the current preferred primitive
+    auto next_it = next_segment != final_iter ? std::find_if(
+      next_segment->primitives.begin(), next_segment->primitives.end(),
+      [&next_segment](const LaneletPrimitive & p) {
+        return p.id == next_segment->preferred_primitive.id;
+      }
+    ) : next_segment->primitives.end();
 
-    std::size_t current_index = std::distance(current_segment.primitives.begin(), current_it);
+    std::size_t current_index = std::distance(current_segment->primitives.begin(), current_it);
+
+    const auto current_lanelet = next_it != current_segment->primitives.end() ? get_lanelet_by_id_(current_it->id) : lanelet::ConstLanelet{};
+    std::string current_turning_dir = current_lanelet.attributeOr("turn_direction", "none");
+
+    const auto next_lanelet = next_it != next_segment->primitives.end() ? get_lanelet_by_id_(next_it->id) : lanelet::ConstLanelet{};
+    std::string next_turning_dir = next_lanelet.attributeOr("turn_direction", "none");
+
+    std::cerr << "current lanelet ID: " << current_it->id << ", dir: " << current_turning_dir << "\n";
+    std::cerr << "next lanelet ID: " << next_it->id << ", next dir: " << next_turning_dir << "\n";
+
+    const bool left_shift_not_available = (override_direction == DIRECTION::MANUAL_LEFT && current_index == 0);
+    const bool right_shift_not_available = (override_direction == DIRECTION::MANUAL_RIGHT &&
+       current_index + 1 == current_segment->primitives.size());
+    const bool next_segment_is_left_turn = (next_turning_dir == "left");
+    const bool next_segment_is_right_turn = (next_turning_dir == "right");
 
     const bool current_segment_shift_not_available =
-      (override_direction == DIRECTION::MANUAL_LEFT && current_index == 0) ||
-      (override_direction == DIRECTION::MANUAL_RIGHT &&
-       current_index + 1 == current_segment.primitives.size());
+      left_shift_not_available || right_shift_not_available || next_segment_is_left_turn || next_segment_is_right_turn;
 
     if (current_segment_shift_not_available) {
       RCLCPP_INFO_STREAM(
         logger_, "Cannot shift on the current segment (ID: "
-                   << current_segment.preferred_primitive.id << ")");
+                   << current_segment->preferred_primitive.id << ")");
       break;
     }
 
     if (override_direction == DIRECTION::MANUAL_LEFT && current_index > 0) {
       // shift to the primitive on the left
       route_updated = true;
-      current_segment.preferred_primitive = current_segment.primitives.at(current_index - 1);
+      current_segment->preferred_primitive = current_segment->primitives.at(current_index - 1);
       RCLCPP_INFO_STREAM(
         logger_, "Shifted left from "
-                   << current_segment.primitives.at(current_index).id
-                   << " to primitive ID: " << current_segment.preferred_primitive.id);
+                   << current_segment->primitives.at(current_index).id
+                   << " to primitive ID: " << current_segment->preferred_primitive.id);
     } else if (
       override_direction == DIRECTION::MANUAL_RIGHT &&
-      current_index + 1 < current_segment.primitives.size()) {
+      current_index + 1 < current_segment->primitives.size()) {
       // shift to the primitive on the right
       route_updated = true;
-      current_segment.preferred_primitive = current_segment.primitives.at(current_index + 1);
+      current_segment->preferred_primitive = current_segment->primitives.at(current_index + 1);
       RCLCPP_INFO_STREAM(
         logger_, "Shifted right from "
-                   << current_segment.primitives.at(current_index).id
-                   << " to primitive ID: " << current_segment.preferred_primitive.id);
+                   << current_segment->primitives.at(current_index).id
+                   << " to primitive ID: " << current_segment->preferred_primitive.id);
     }
   }
 
   if (!route_updated) {
+    reset();
     return {
       LaneletRoute(), false,
       std::string("Manual lane selection to ") +
