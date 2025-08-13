@@ -95,7 +95,6 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   find_package(std_msgs REQUIRED)
   find_package(sensor_msgs REQUIRED)
   find_package(tf2_geometry_msgs REQUIRED)
-  find_package(autoware_internal_perception_msgs REQUIRED)
   find_package(visualization_msgs REQUIRED)
   find_package(ament_index_cpp REQUIRED)
 
