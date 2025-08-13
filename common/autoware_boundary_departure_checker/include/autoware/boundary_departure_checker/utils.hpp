@@ -386,12 +386,15 @@ double compute_braking_distance(
  * - Retains only points up to and including the first CRITICAL_DEPARTURE point (if any).
  *
  * @param projections_to_bound  List of lateral projections to road boundaries.
+ * @param pred_traj_idx_to_ref_traj_lon_dist mapping from an index of the predicted trajectory to
+ * the corresponding arc length on the reference trajectory
  * @param th_point_merge_distance_m  Threshold distance used for hysteresis logic in departure
  * classification.
  * @return Filtered, sorted `DeparturePoints` with only relevant departure markers.
  */
 DeparturePoints get_departure_points(
   const std::vector<ClosestProjectionToBound> & projections_to_bound,
+  const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist,
   const double th_point_merge_distance_m);
 
 /**

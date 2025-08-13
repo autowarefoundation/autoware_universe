@@ -210,7 +210,8 @@ struct DeparturePoint
   Point2d point;
   double th_point_merge_distance_m{2.0};
   double lat_dist_to_bound{1000.0};
-  double dist_on_traj{1000.0};
+  double ego_dist_on_ref_traj{1000.0};  // [m] distance along the reference trajectory of the
+                                        // corresponding predicted trajectory point
   double velocity{0.0};
   size_t idx_from_ego_traj{};
   bool can_be_removed{false};
@@ -230,7 +231,10 @@ struct DeparturePoint
     return autoware_utils::to_msg(point.to_3d(z));
   }
 
-  bool operator<(const DeparturePoint & other) const { return dist_on_traj < other.dist_on_traj; }
+  bool operator<(const DeparturePoint & other) const
+  {
+    return ego_dist_on_ref_traj < other.ego_dist_on_ref_traj;
+  }
 };
 using DeparturePoints = std::vector<DeparturePoint>;
 
@@ -246,7 +250,7 @@ struct CriticalDeparturePoint : DeparturePoint
     point = base.point;
     th_point_merge_distance_m = base.th_point_merge_distance_m;
     lat_dist_to_bound = base.lat_dist_to_bound;
-    dist_on_traj = base.dist_on_traj;
+    ego_dist_on_ref_traj = base.ego_dist_on_ref_traj;
     velocity = base.velocity;
     can_be_removed = base.can_be_removed;
   }

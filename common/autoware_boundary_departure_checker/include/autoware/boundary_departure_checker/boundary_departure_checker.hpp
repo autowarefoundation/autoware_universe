@@ -195,10 +195,13 @@ public:
    * filtering based on hysteresis and distance, and grouping results using side keys.
    *
    * @param projections_to_bound Closest projections to road boundaries for each side.
+   * @param pred_traj_idx_to_ref_traj_lon_dist mapping from an index of the predicted trajectory to
+   * the corresponding arc length on the reference trajectory
    * @return Side-keyed container of filtered departure points.
    */
   Side<DeparturePoints> get_departure_points(
-    const ClosestProjectionsToBound & projections_to_bound);
+    const ClosestProjectionsToBound & projections_to_bound,
+    const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist);
   // === Abnormalities
 
 private:

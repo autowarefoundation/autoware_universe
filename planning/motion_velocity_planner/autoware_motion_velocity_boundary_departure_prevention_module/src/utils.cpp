@@ -55,8 +55,8 @@ DepartureIntervals init_departure_intervals(
     }
 
     DepartureInterval interval;
-    interval.start = aw_ref_traj.compute(departure_points[idx].dist_on_traj);
-    interval.start_dist_on_traj = departure_points[idx].dist_on_traj;
+    interval.start = aw_ref_traj.compute(departure_points[idx].ego_dist_on_ref_traj);
+    interval.start_dist_on_traj = departure_points[idx].ego_dist_on_ref_traj;
     interval.candidates.push_back(departure_points[idx]);
     interval.side_key = side_key;
 
@@ -81,7 +81,7 @@ DepartureIntervals init_departure_intervals(
       }
 
       const auto & prev = interval.candidates.back();
-      const auto diff = std::abs(curr.dist_on_traj - prev.dist_on_traj);
+      const auto diff = std::abs(curr.ego_dist_on_ref_traj - prev.ego_dist_on_ref_traj);
 
       if (diff >= vehicle_length_m) {
         break;
@@ -94,9 +94,10 @@ DepartureIntervals init_departure_intervals(
       continue;
     }
 
-    interval.start_dist_on_traj = interval.candidates.front().dist_on_traj - vehicle_length_m;
+    interval.start_dist_on_traj =
+      interval.candidates.front().ego_dist_on_ref_traj - vehicle_length_m;
     interval.start = aw_ref_traj.compute(interval.start_dist_on_traj);
-    interval.end_dist_on_traj = interval.candidates.back().dist_on_traj;
+    interval.end_dist_on_traj = interval.candidates.back().ego_dist_on_ref_traj;
     interval.end = aw_ref_traj.compute(interval.end_dist_on_traj);
     departure_intervals.push_back(interval);
     idx = idx_end;
@@ -177,15 +178,17 @@ void check_departure_points_between_intervals(
         continue;
       }
       if (
-        departure_point.dist_on_traj >= departure_interval.start_dist_on_traj &&
-        departure_point.dist_on_traj <= departure_interval.end_dist_on_traj) {
+        departure_point.ego_dist_on_ref_traj >= departure_interval.start_dist_on_traj &&
+        departure_point.ego_dist_on_ref_traj <= departure_interval.end_dist_on_traj) {
         departure_point.can_be_removed = true;
         continue;
       }
 
-      if (departure_interval.end_dist_on_traj - departure_point.dist_on_traj <= vehicle_length_m) {
-        departure_interval.end = aw_ref_traj.compute(departure_point.dist_on_traj);
-        departure_interval.end_dist_on_traj = departure_point.dist_on_traj;
+      if (
+        departure_interval.end_dist_on_traj - departure_point.ego_dist_on_ref_traj <=
+        vehicle_length_m) {
+        departure_interval.end = aw_ref_traj.compute(departure_point.ego_dist_on_ref_traj);
+        departure_interval.end_dist_on_traj = departure_point.ego_dist_on_ref_traj;
         departure_point.can_be_removed = true;
         if (departure_point.departure_type == DepartureType::CRITICAL_DEPARTURE) {
           break;
@@ -290,7 +293,8 @@ CriticalDeparturePoints find_new_critical_departure_points(
       const auto is_near_curr_pts = std::any_of(
         critical_departure_points.begin(), critical_departure_points.end(),
         [&](const CriticalDeparturePoint & crit_pt) {
-          return std::abs(dpt_pt.dist_on_traj - crit_pt.dist_on_traj) < th_point_merge_distance_m;
+          return std::abs(dpt_pt.ego_dist_on_ref_traj - crit_pt.ego_dist_on_ref_traj) <
+                 th_point_merge_distance_m;
         });
 
       if (is_near_curr_pts) {
@@ -298,7 +302,7 @@ CriticalDeparturePoints find_new_critical_departure_points(
       }
 
       CriticalDeparturePoint crit_pt(dpt_pt);
-      crit_pt.point_on_prev_traj = aw_ref_traj.compute(crit_pt.dist_on_traj);
+      crit_pt.point_on_prev_traj = aw_ref_traj.compute(crit_pt.ego_dist_on_ref_traj);
       new_critical_departure_points.push_back(crit_pt);
     }
   }

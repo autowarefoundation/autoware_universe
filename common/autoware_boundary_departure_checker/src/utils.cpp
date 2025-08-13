@@ -53,7 +53,9 @@ using autoware::boundary_departure_checker::utils::to_segment_2d;
 namespace bg = boost::geometry;
 
 DeparturePoint create_departure_point(
-  const ClosestProjectionToBound & projection_to_bound, const double th_point_merge_distance_m)
+  const ClosestProjectionToBound & projection_to_bound,
+  const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist,
+  const double th_point_merge_distance_m)
 {
   DeparturePoint point;
   point.uuid = autoware_utils::to_hex_string(autoware_utils::generate_uuid());
@@ -61,9 +63,11 @@ DeparturePoint create_departure_point(
   point.departure_type = projection_to_bound.departure_type;
   point.point = projection_to_bound.pt_on_bound;
   point.th_point_merge_distance_m = th_point_merge_distance_m;
-  point.dist_on_traj = projection_to_bound.lon_dist_on_pred_traj;  // - lon_offset_m;
   point.idx_from_ego_traj = projection_to_bound.ego_sides_idx;
-  point.can_be_removed = (point.departure_type == DepartureType::NONE) || point.dist_on_traj <= 0.0;
+  point.ego_dist_on_ref_traj =
+    pred_traj_idx_to_ref_traj_lon_dist[projection_to_bound.ego_sides_idx];
+  point.can_be_removed =
+    (point.departure_type == DepartureType::NONE) || point.ego_dist_on_ref_traj <= 0.0;
   return point;
 }
 
@@ -637,7 +641,7 @@ DeparturePoints cluster_by_distance(const DeparturePoints & departure_points)
   for (auto it = std::next(departure_points.begin()); it < departure_points.end(); ++it) {
     if (
       it->departure_type == DepartureType::CRITICAL_DEPARTURE ||
-      std::abs(ref_point_it->dist_on_traj - it->dist_on_traj) >
+      std::abs(ref_point_it->ego_dist_on_ref_traj - it->ego_dist_on_ref_traj) >
         ref_point_it->th_point_merge_distance_m) {
       ref_point_it = it;
       filtered_points.push_back(*ref_point_it);
@@ -658,12 +662,14 @@ DeparturePoints cluster_by_distance(const DeparturePoints & departure_points)
 
 DeparturePoints get_departure_points(
   const std::vector<ClosestProjectionToBound> & projections_to_bound,
+  const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist,
   const double th_point_merge_distance_m)
 {
   DeparturePoints departure_points;
   departure_points.reserve(projections_to_bound.size());
   for (const auto & projection_to_bound : projections_to_bound) {
-    const auto point = create_departure_point(projection_to_bound, th_point_merge_distance_m);
+    const auto point = create_departure_point(
+      projection_to_bound, pred_traj_idx_to_ref_traj_lon_dist, th_point_merge_distance_m);
 
     if (point.can_be_removed) {
       continue;
