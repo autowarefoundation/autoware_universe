@@ -35,25 +35,9 @@
 namespace autoware::diffusion_planner::preprocess
 {
 
-/**
- * @brief Processes multiple lane segments and converts them into a single matrix.
- *
- * @param lane_segments Vector of lane segments to process.
- * @param col_id_mapping Map to store the starting column index of each segment in the resulting
- * matrix.
- * @return A matrix containing the processed lane segment data (transposed: columns are segments).
- * @throws std::runtime_error If any segment matrix does not have the expected number of rows.
- */
+// Internal functions
 Eigen::MatrixXf process_segments_to_matrix(
   const std::vector<LaneSegment> & lane_segments, ColLaneIDMaps & col_id_mapping);
-
-/**
- * @brief Processes a single lane segment and converts it into a matrix representation.
- *
- * @param segment The lane segment to process.
- * @return A matrix containing the processed lane segment data, or an empty matrix if the segment is
- * invalid.
- */
 Eigen::MatrixXf process_segment_to_matrix(const LaneSegment & segment);
 
 // LaneSegmentContext implementation
