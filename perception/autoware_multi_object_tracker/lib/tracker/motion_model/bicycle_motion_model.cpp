@@ -182,51 +182,22 @@ bool BicycleMotionModel::updateStatePoseHead(
 }
 
 bool BicycleMotionModel::updateStatePoseVel(
-  const double & x, const double & y, const std::array<double, 36> & pose_cov, const double & vel_x, const double & vel_y, 
+  const double & x, const double & y, const std::array<double, 36> & pose_cov, const double & yaw, const double & vel_x, const double & vel_y, 
   const std::array<double, 36> & twist_cov, const double & length)
 {
   // check if the state is initialized
   if (!checkInitialized()) return false;
 
-  // convert the state to the bicycle model state
-  const double yaw = getYawState();
-  double lr = length * motion_params_.lr_ratio;
-  double lf = length * motion_params_.lf_ratio;
-  lr = std::max(lr, motion_params_.lr_min);
-  lf = std::max(lf, motion_params_.lf_min);
-  const double x1 = x - lr * std::cos(yaw);
-  const double y1 = y - lr * std::sin(yaw);
-  const double x2 = x + lf * std::cos(yaw);
-  const double y2 = y + lf * std::sin(yaw);
+  // using given yaw to fix the velocity direction
+  // input yaw is velocity direction
+  const double ground_vel_x = vel_x * std::cos(yaw) - vel_y * std::sin(yaw);
+  const double ground_vel_y = vel_x * std::sin(yaw) + vel_y * std::cos(yaw);
+  const double vel_angle = std::atan2(ground_vel_y, ground_vel_x);
+  const double vel_long = std::hypot(ground_vel_x, ground_vel_y);
+  constexpr double vel_lat = 0.0;  // lateral velocity is not provided
 
-  // update state, with velocity
-  constexpr int DIM_Y = 6;
-  Eigen::Matrix<double, DIM_Y, 1> Y;
-  Y << x1, y1, x2, y2, vel_x, vel_y * 2.0;
-
-  Eigen::Matrix<double, DIM_Y, DIM> C;
-  C.setZero();
-  C(0, IDX::X1) = 1.0;
-  C(1, IDX::Y1) = 1.0;
-  C(2, IDX::X2) = 1.0;
-  C(3, IDX::Y2) = 1.0;
-  C(4, IDX::VX) = 1.0;
-  C(5, IDX::VY) = 1.0;
-
-  Eigen::Matrix<double, DIM_Y, DIM_Y> R;
-  R.setZero();
-  R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
-  R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
-  R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X];
-  R(1, 1) = pose_cov[XYZRPY_COV_IDX::Y_Y];
-  R(2, 2) = pose_cov[XYZRPY_COV_IDX::X_X];
-  R(2, 3) = pose_cov[XYZRPY_COV_IDX::X_Y];
-  R(3, 2) = pose_cov[XYZRPY_COV_IDX::Y_X];
-  R(3, 3) = pose_cov[XYZRPY_COV_IDX::Y_Y];
-  R(4, 4) = twist_cov[XYZRPY_COV_IDX::X_X];
-  R(5, 5) = twist_cov[XYZRPY_COV_IDX::Y_Y];
-
-  return ekf_.update<DIM_Y>(Y, C, R);
+  return updateStatePoseHeadVel(
+    x, y, vel_angle, pose_cov, vel_long, vel_lat, twist_cov, length);
 }
 
 bool BicycleMotionModel::updateStatePoseHeadVel(

@@ -193,7 +193,7 @@ bool VehicleTracker::measureWithPose(
     } else if (!is_yaw_available && is_velocity_available) {
       // update without yaw angle, but with velocity
       is_updated = motion_model_.updateStatePoseVel(
-        x, y, object.pose_covariance, vel_x, vel_y, object.twist_covariance, length);
+        x, y, object.pose_covariance, yaw, vel_x, vel_y, object.twist_covariance, length);
     } else {
       // update without yaw angle and velocity
       is_updated = motion_model_.updateStatePose(
