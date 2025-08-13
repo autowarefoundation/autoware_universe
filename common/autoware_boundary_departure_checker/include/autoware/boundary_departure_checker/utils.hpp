@@ -158,23 +158,6 @@ std::vector<LinearRing2d> create_vehicle_footprints(
   const FootprintMargin & margin = {0.0, 0.0});
 
 /**
- * @brief Generate vehicle footprints that reflect the vehicle's steering behavior.
- *
- * This function creates a wider footprint when the steering angle is high, simulating the way
- * a turning vehicle sweeps outward. The lateral margin increases over time based on an assumed
- * steering rate. The output is useful for predicting how the vehicle might occupy space during
- * turns.
- *
- * @param trajectory        Predicted trajectory of the ego vehicle.
- * @param vehicle_info      Vehicle dimensions.
- * @param current_steering  Latest steering angle from the vehicle.
- * @return Footprints that adapt laterally to simulate steering influence over time.
- */
-std::vector<LinearRing2d> create_vehicle_footprints(
-  const TrajectoryPoints & trajectory, const VehicleInfo & vehicle_info,
-  const SteeringReport & current_steering);
-
-/**
  * @brief Generate vehicle footprints with adjustments based on abnormality type.
  *
  * This function creates different footprint shapes depending on the specified abnormality:

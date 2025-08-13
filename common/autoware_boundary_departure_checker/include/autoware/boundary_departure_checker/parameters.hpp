@@ -85,7 +85,11 @@ struct LongitudinalConfig : NormalConfig
 
 struct SteeringConfig
 {
-  double steering_rate_rps{1.0};
+  double delay_s{};
+  double offset_rps{};
+  double factor{};
+  std::vector<double> steering_rate_velocities_mps;
+  std::vector<double> steering_rate_limits_rps;
 };
 
 using AbnormalityConfig =
