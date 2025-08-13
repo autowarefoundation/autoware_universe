@@ -134,42 +134,9 @@ double BicycleMotionModel::getLength() const
 bool BicycleMotionModel::updateStatePose(
   const double & x, const double & y, const std::array<double, 36> & pose_cov, const double & length)
 {
-  // check if the state is initialized
-  if (!checkInitialized()) return false;
-
-  // convert the state to the bicycle model state
+  // yaw angle is not provided, so we use the current yaw state
   const double yaw = getYawState();
-  double lr = length * motion_params_.lr_ratio;
-  double lf = length * motion_params_.lf_ratio;
-  lr = std::max(lr, motion_params_.lr_min);
-  lf = std::max(lf, motion_params_.lf_min);
-  const double x1 = x - lr * std::cos(yaw);
-  const double y1 = y - lr * std::sin(yaw);
-  const double x2 = x + lf * std::cos(yaw);
-  const double y2 = y + lf * std::sin(yaw);
-
-  // update state
-  constexpr int DIM_Y = 4;
-  Eigen::Matrix<double, DIM_Y, 1> Y;
-  Y << x1, y1, x2, y2;
-
-  Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
-  C(0, IDX::X1) = 1.0;
-  C(1, IDX::Y1) = 1.0;
-  C(2, IDX::X2) = 1.0;
-  C(3, IDX::Y2) = 1.0;
-
-  Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
-  R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
-  R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
-  R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X];
-  R(1, 1) = pose_cov[XYZRPY_COV_IDX::Y_Y];
-  R(2, 2) = pose_cov[XYZRPY_COV_IDX::X_X];
-  R(2, 3) = pose_cov[XYZRPY_COV_IDX::X_Y];
-  R(3, 2) = pose_cov[XYZRPY_COV_IDX::Y_X];
-  R(3, 3) = pose_cov[XYZRPY_COV_IDX::Y_Y];
-
-  return ekf_.update(Y, C, R);
+  return updateStatePoseHead(x, y, yaw, pose_cov, length);
 }
 
 bool BicycleMotionModel::updateStatePoseHead(
@@ -269,7 +236,7 @@ bool BicycleMotionModel::updateStatePoseHeadVel(
   // check if the state is initialized
   if (!checkInitialized()) return false;
 
-  // update state, with velocity
+  // convert the state to the bicycle model state
   double lr = length * motion_params_.lr_ratio;
   double lf = length * motion_params_.lf_ratio;
   lr = std::max(lr, motion_params_.lr_min);
@@ -279,10 +246,15 @@ bool BicycleMotionModel::updateStatePoseHeadVel(
   const double x2 = x + lf * std::cos(yaw);
   const double y2 = y + lf * std::sin(yaw);
 
+  const double yaw_track = getYawState();
+  const double yaw_delta = yaw - yaw_track;
+  const double vel_long = vel_x * std::cos(yaw_delta) - vel_y * std::sin(yaw_delta);
+  const double vel_lat = vel_x * std::sin(yaw_delta) + vel_y * std::cos(yaw_delta);
+
   // update state
   constexpr int DIM_Y = 6;
   Eigen::Matrix<double, DIM_Y, 1> Y;
-  Y << x1, y1, x2, y2, vel_x, vel_y * 2.0;
+  Y << x1, y1, x2, y2, vel_long, vel_lat * 2.0;
 
   Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
   C(0, IDX::X1) = 1.0;
@@ -332,10 +304,11 @@ bool BicycleMotionModel::limitStates()
   if (!(-motion_params_.max_vel <= X_t(IDX::VX) && X_t(IDX::VX) <= motion_params_.max_vel)) {
     X_t(IDX::VX) = X_t(IDX::VX) < 0 ? -motion_params_.max_vel : motion_params_.max_vel;
   }
+
   // // maximum slip angle
   // const double slip_angle = std::atan2(X_t(IDX::VY), X_t(IDX::VX));
   // if (!(-motion_params_.max_slip <= slip_angle && slip_angle <= motion_params_.max_slip)) {
-  //   X_t(IDX::VY) = X_t(IDX::VY) < 0 ? -motion_params_.max_slip : motion_params_.max_slip;
+  //   X_t(IDX::VY) = X_t(IDX::VY) < 0 ? -motion_params_.max_slip * X_t(IDX::VX) : motion_params_.max_slip * X_t(IDX::VX);
   // }
 
   // overwrite state

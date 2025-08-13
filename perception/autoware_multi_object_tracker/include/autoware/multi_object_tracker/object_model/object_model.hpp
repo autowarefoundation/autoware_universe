@@ -159,6 +159,7 @@ public:
         measurement_covariance.pos_y = sq(0.4);
         measurement_covariance.yaw = sq(deg2rad(22.0));
         measurement_covariance.vel_long = sq(1.0);
+        measurement_covariance.vel_lat = sq(kmph2mps(3.0));
 
         // bicycle motion model
         bicycle_state.init_slip_angle_cov = sq(deg2rad(5.0));
@@ -203,6 +204,7 @@ public:
         measurement_covariance.pos_y = sq(0.4);
         measurement_covariance.yaw = sq(deg2rad(22.0));
         measurement_covariance.vel_long = sq(kmph2mps(10.0));
+        measurement_covariance.vel_lat = sq(kmph2mps(3.0));
 
         // bicycle motion model
         bicycle_state.init_slip_angle_cov = sq(deg2rad(5.0));
@@ -247,6 +249,7 @@ public:
         measurement_covariance.pos_y = sq(0.4);
         measurement_covariance.yaw = sq(deg2rad(30.0));
         measurement_covariance.vel_long = sq(kmph2mps(10.0));
+        measurement_covariance.vel_lat = sq(kmph2mps(3.0));
 
         // bicycle motion model
         bicycle_state.init_slip_angle_cov = sq(deg2rad(5.0));
@@ -291,6 +294,7 @@ public:
         measurement_covariance.pos_y = sq(0.4);
         measurement_covariance.yaw = sq(deg2rad(30.0));
         measurement_covariance.vel_long = sq(kmph2mps(5.0));
+        measurement_covariance.vel_lat = sq(kmph2mps(3.0));
         break;
 
       case ObjectModelType::Unknown:
