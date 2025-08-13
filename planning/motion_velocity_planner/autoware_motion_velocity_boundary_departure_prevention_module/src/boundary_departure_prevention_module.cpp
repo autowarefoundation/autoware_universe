@@ -492,7 +492,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
   output_.closest_projections_to_bound = *closest_projections_to_bound_opt;
 
   const auto ego_dist_on_traj_m =
-    experimental::trajectory::closest(*ref_traj_pts_opt, curr_pose.pose);
+    motion_utils::calcSignedArcLength(raw_trajectory_points, 0UL, curr_pose.pose.position);
   toc_curr_watch("chk_ego_dist_on_traj");
 
   const auto lon_offset_m = [&vehicle_info](const bool take_front_offset) {

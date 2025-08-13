@@ -103,12 +103,6 @@ std::vector<SegmentWithIdx> create_local_segments(const lanelet::ConstLineString
 
 namespace autoware::boundary_departure_checker::utils
 {
-double calc_dist_on_traj(
-  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const Point2d & point)
-{
-  return trajectory::closest(aw_ref_traj, to_geom_pt(point));
-}
-
 TrajectoryPoints cutTrajectory(const TrajectoryPoints & trajectory, const double length)
 {
   if (trajectory.empty()) {
