@@ -87,7 +87,6 @@ using autoware::vehicle_info_utils::VehicleInfo;
 using builtin_interfaces::msg::Duration;
 using builtin_interfaces::msg::Time;
 using geometry_msgs::msg::Point;
-using preprocess::ColLaneIDMaps;
 using preprocess::TrafficSignalStamped;
 using rcl_interfaces::msg::SetParametersResult;
 using std_msgs::msg::ColorRGBA;

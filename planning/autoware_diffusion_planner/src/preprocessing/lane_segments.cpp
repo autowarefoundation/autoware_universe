@@ -39,6 +39,19 @@ namespace autoware::diffusion_planner::preprocess
 Eigen::MatrixXf process_segments_to_matrix(
   const std::vector<LaneSegment> & lane_segments, ColLaneIDMaps & col_id_mapping);
 Eigen::MatrixXf process_segment_to_matrix(const LaneSegment & segment);
+std::vector<float> extract_lane_tensor_data(const Eigen::MatrixXf & lane_segments_matrix);
+std::vector<float> extract_lane_speed_tensor_data(const Eigen::MatrixXf & lane_segments_matrix);
+Eigen::Matrix<float, 1, TRAFFIC_LIGHT_ONE_HOT_DIM> get_traffic_signal_row_vector(
+  const autoware_perception_msgs::msg::TrafficLightGroup & signal);
+void transform_selected_rows(
+  const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, int64_t num_segments,
+  int64_t row_idx, bool do_translation = true);
+inline void sort_indices_by_distance(std::vector<ColWithDistance> & distances)
+{
+  std::sort(distances.begin(), distances.end(), [&](auto & a, auto & b) {
+    return a.distance_squared < b.distance_squared;
+  });
+}
 
 // LaneSegmentContext implementation
 LaneSegmentContext::LaneSegmentContext(const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr)
@@ -96,7 +109,7 @@ std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_route_
     speed_limit_vector};
 }
 
-std::tuple<Eigen::MatrixXf, ColLaneIDMaps> LaneSegmentContext::transform_and_select_rows(
+std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_lane_segments(
   const Eigen::Matrix4f & transform_matrix,
   const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map, const float center_x,
   const float center_y, const int64_t m) const
@@ -111,8 +124,11 @@ std::tuple<Eigen::MatrixXf, ColLaneIDMaps> LaneSegmentContext::transform_and_sel
   // Step 2: Sort indices by distance
   sort_indices_by_distance(distances);
   // Step 3: Apply transformation to selected rows
-  return transform_points_and_add_traffic_info(
-    transform_matrix, traffic_light_id_map, distances, m);
+  const auto [ego_centric_lane_segments, _] =
+    transform_points_and_add_traffic_info(transform_matrix, traffic_light_id_map, distances, m);
+  return {
+    preprocess::extract_lane_tensor_data(ego_centric_lane_segments),
+    preprocess::extract_lane_speed_tensor_data(ego_centric_lane_segments)};
 }
 
 void LaneSegmentContext::add_traffic_light_one_hot_encoding_to_segment(
