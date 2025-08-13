@@ -35,14 +35,24 @@
 namespace autoware::diffusion_planner::preprocess
 {
 
+// Internal functions
+Eigen::MatrixXf process_segments_to_matrix(
+  const std::vector<LaneSegment> & lane_segments, ColLaneIDMaps & col_id_mapping);
+Eigen::MatrixXf process_segment_to_matrix(const LaneSegment & segment);
+
 // LaneSegmentContext implementation
-LaneSegmentContext::LaneSegmentContext(
-  const Eigen::MatrixXf & map_lane_segments_matrix, const ColLaneIDMaps & col_id_mapping,
-  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr)
-: map_lane_segments_matrix_(map_lane_segments_matrix),
-  col_id_mapping_(col_id_mapping),
-  lanelet_map_ptr_(lanelet_map_ptr)
+LaneSegmentContext::LaneSegmentContext(const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr)
+: lanelet_map_ptr_(lanelet_map_ptr)
 {
+  auto lanelet_converter = std::make_unique<LaneletConverter>(lanelet_map_ptr_);
+  const std::vector<autoware::diffusion_planner::LaneSegment> lane_segments =
+    lanelet_converter->convert_to_lane_segments(POINTS_PER_SEGMENT);
+
+  if (lane_segments.empty()) {
+    throw std::runtime_error("No lane segments found in the map");
+  }
+
+  map_lane_segments_matrix_ = process_segments_to_matrix(lane_segments, col_id_mapping_);
 }
 
 std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_route_segments(

@@ -79,13 +79,9 @@ public:
   /**
    * @brief Constructor that initializes the context with static data determined at initialization.
    *
-   * @param map_lane_segments_matrix Matrix containing lane segment data in map coordinates.
-   * @param col_id_mapping Map of segment IDs to their corresponding column indices.
    * @param lanelet_map_ptr Shared pointer to the lanelet map.
    */
-  LaneSegmentContext(
-    const Eigen::MatrixXf & map_lane_segments_matrix, const ColLaneIDMaps & col_id_mapping,
-    const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr);
+  explicit LaneSegmentContext(const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr);
 
   /**
    * @brief Get route segments and transform them to ego-centric coordinates.
@@ -167,8 +163,8 @@ private:
     const std::vector<ColWithDistance> & distances, int64_t m) const;
 
   // variables
-  const Eigen::MatrixXf map_lane_segments_matrix_;
-  const ColLaneIDMaps col_id_mapping_;
+  Eigen::MatrixXf map_lane_segments_matrix_;
+  ColLaneIDMaps col_id_mapping_;
   const std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
 };
 
@@ -187,27 +183,6 @@ std::vector<float> extract_lane_tensor_data(const Eigen::MatrixXf & lane_segment
  * @return A flattened vector of lane speed tensor data.
  */
 std::vector<float> extract_lane_speed_tensor_data(const Eigen::MatrixXf & lane_segments_matrix);
-
-/**
- * @brief Processes multiple lane segments and converts them into a single matrix.
- *
- * @param lane_segments Vector of lane segments to process.
- * @param col_id_mapping Map to store the starting column index of each segment in the resulting
- * matrix.
- * @return A matrix containing the processed lane segment data (transposed: columns are segments).
- * @throws std::runtime_error If any segment matrix does not have the expected number of rows.
- */
-Eigen::MatrixXf process_segments_to_matrix(
-  const std::vector<LaneSegment> & lane_segments, ColLaneIDMaps & col_id_mapping);
-
-/**
- * @brief Processes a single lane segment and converts it into a matrix representation.
- *
- * @param segment The lane segment to process.
- * @return A matrix containing the processed lane segment data, or an empty matrix if the segment is
- * invalid.
- */
-Eigen::MatrixXf process_segment_to_matrix(const LaneSegment & segment);
 
 /**
  * @brief Sorts the columns by their squared distances in ascending order.
