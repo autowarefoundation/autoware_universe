@@ -235,6 +235,9 @@ bool BicycleMotionModel::updateStatePoseHeadVel(
   C(4, IDX::VX) = 1.0;
   C(5, IDX::VY) = 1.0;
 
+  // todo: add yaw covariance in lateral position
+  // todo: if wheel_base is changed a lot, add covariance in longitudinal position
+
   Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
   R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
   R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
@@ -295,6 +298,18 @@ bool BicycleMotionModel::limitStates()
       X_t(IDX::VY) = X_t(IDX::VY) < 0 ? -vel_lat_limit : vel_lat_limit;
 
     }
+
+  }
+
+  // debug message
+  {
+    const double wheel_base = std::hypot(X_t(IDX::X2) - X_t(IDX::X1), X_t(IDX::Y2) - X_t(IDX::Y1));
+    const double yaw_rate = X_t(IDX::VY) / wheel_base;  // [rad/s] yaw rate
+    RCLCPP_WARN(
+      logger_,
+      "BicycleMotionModel::limitStates: current state: x1: %f, y1: %f, vx: %f, vy: %f, wheel_base: %f, yaw_rate: %f",
+      X_t(IDX::X1), X_t(IDX::Y1), X_t(IDX::VX), X_t(IDX::VY), wheel_base, yaw_rate
+    );
   }
 
   // overwrite state
@@ -377,7 +392,7 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   constexpr double gamma = 0.69314718056;  // natural logarithm of 2
   const double decay_rate = std::exp(-dt * gamma / 2.0);
   X_next_t(IDX::VY) = vel_y * decay_rate;  // slip angle decays exponentially
-
+  // X_next_t(IDX::VY) = vel_y;
 
   // State transition matrix A
   ProcessMat A;
@@ -407,6 +422,7 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
 
   A(IDX::VX, IDX::VX) = 1.0;  // velocity does not change
   A(IDX::VY, IDX::VY) = decay_rate;
+  // A(IDX::VY, IDX::VY) = 1.0;
 
   // // Process noise covariance Q
   // double q_stddev_yaw_rate = motion_params_.q_stddev_yaw_rate_min;
@@ -440,9 +456,9 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   // }
 
   // Process noise covariance Q
-  double q_cov_slip_rate = motion_params_.q_cov_slip_rate_min;
-  constexpr double q_cov_length = 9.0;  // length uncertainty
-  const double q_stddev_yaw_rate = 4.0;
+  double q_cov_slip_rate = motion_params_.q_cov_slip_rate_min + 0.6;
+  constexpr double q_cov_length = 1.0;  // length uncertainty
+  const double q_stddev_yaw_rate = 0.01;
   const double q_stddev_head = q_stddev_yaw_rate * wheel_base * dt; // yaw uncertainty
   
   const double dt2 = dt * dt;
@@ -452,8 +468,10 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   const double q_cov_vel_y = q_cov_slip_rate * dt2 * 4.0;
   const double q_cov_x = 0.25 * motion_params_.q_cov_acc_long * dt4;
   const double q_cov_y = 0.25 * motion_params_.q_cov_acc_lat * dt4;
-  const double q_cov_x2 = 0.25 * motion_params_.q_cov_acc_long * dt4 + q_cov_length * dt2;
-  const double q_cov_y2 = 0.25 * motion_params_.q_cov_acc_lat * dt4 + q_stddev_head * q_stddev_head; 
+  // const double q_cov_x2 = 0.25 * motion_params_.q_cov_acc_long * dt4 + q_cov_length * dt2;
+  // const double q_cov_y2 = 0.25 * motion_params_.q_cov_acc_lat * dt4 + q_stddev_head * q_stddev_head; 
+  const double q_cov_x2 = q_cov_length * dt2;
+  const double q_cov_y2 = q_stddev_head * q_stddev_head; 
 
   StateMat Q;
   Q.setZero();
