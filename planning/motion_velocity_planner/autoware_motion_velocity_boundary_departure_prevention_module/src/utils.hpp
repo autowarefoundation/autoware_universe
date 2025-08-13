@@ -134,7 +134,7 @@ DepartureIntervals init_departure_intervals(
  * @param[in,out] departure_points Per-side departure points; may be marked removable.
  * @param[in] aw_ref_traj Reference trajectory.
  * @param[in] vehicle_length_m Used to extend intervals if points are nearby.
- * @param[in] ref_traj_fr_pt First trajectory point (used when interval starts at front).
+ * @param[in] raw_ref_traj Reference trajectory (raw points).
  * @param[in] ego_dist_from_traj_front Ego’s current distance along the trajectory.
  * @param[in] th_pt_shift_dist_m Threshold distance for detecting shifted points.
  * @param[in] th_pt_shift_angle_rad Threshold angle for detecting shifted points.
@@ -146,7 +146,7 @@ DepartureIntervals init_departure_intervals(
 void update_departure_intervals(
   DepartureIntervals & departure_intervals, Side<DeparturePoints> & departure_points,
   const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const double vehicle_length_m,
-  const TrajectoryPoint & ref_traj_fr_pt, const double ego_dist_from_traj_front,
+  const std::vector<TrajectoryPoint> & raw_ref_traj, const double ego_dist_from_traj_front,
   const double th_pt_shift_dist_m, const double th_pt_shift_angle_rad,
   const std::unordered_set<DepartureType> & enable_type, const bool is_reset_interval,
   const bool is_departure_persist);
@@ -168,8 +168,7 @@ void update_departure_intervals(
 CriticalDeparturePoints find_new_critical_departure_points(
   const Side<DeparturePoints> & new_departure_points,
   const CriticalDeparturePoints & critical_departure_points,
-  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
-  const double th_point_merge_distance_m);
+  const std::vector<TrajectoryPoint> & raw_ref_traj, const double th_point_merge_distance_m);
 
 /**
  * @brief Build slow-down segments ahead of the ego vehicle.

@@ -117,18 +117,22 @@ struct ProjectionToBound
 {
   Point2d pt_on_ego;    // orig
   Point2d pt_on_bound;  // proj
+  double lon_dist_on_pred_traj{std::numeric_limits<double>::max()};
   Segment2d nearest_bound_seg;
   double lat_dist{std::numeric_limits<double>::max()};
+  double lon_offset{};  // offset between the pt_on_ego and the front of the ego segment
   size_t ego_sides_idx{0};
   double time_from_start{std::numeric_limits<double>::max()};
   ProjectionToBound() = default;
   explicit ProjectionToBound(size_t idx) : ego_sides_idx(idx) {}
   ProjectionToBound(
-    Point2d pt_on_ego, Point2d pt_on_bound, Segment2d seg, double lat_dist, size_t idx)
+    Point2d pt_on_ego, Point2d pt_on_bound, Segment2d seg, double lat_dist, double lon_offset,
+    size_t idx)
   : pt_on_ego(std::move(pt_on_ego)),
     pt_on_bound(std::move(pt_on_bound)),
     nearest_bound_seg(std::move(seg)),
     lat_dist(lat_dist),
+    lon_offset(lon_offset),
     ego_sides_idx(idx)
   {
   }
@@ -136,7 +140,6 @@ struct ProjectionToBound
 
 struct ClosestProjectionToBound : ProjectionToBound
 {
-  double lon_dist_on_ref_traj{std::numeric_limits<double>::max()};
   DepartureType departure_type = DepartureType::NONE;
   AbnormalityType abnormality_type = AbnormalityType::NORMAL;
   ClosestProjectionToBound() = default;
@@ -147,14 +150,13 @@ struct ClosestProjectionToBound : ProjectionToBound
     nearest_bound_seg = base.nearest_bound_seg;
     lat_dist = base.lat_dist;
     ego_sides_idx = base.ego_sides_idx;
+    lon_dist_on_pred_traj = base.lon_dist_on_pred_traj;
   }
 
   ClosestProjectionToBound(
-    const ProjectionToBound & base, const double lon_dist, const AbnormalityType abnormality_type,
+    const ProjectionToBound & base, const AbnormalityType abnormality_type,
     const DepartureType departure_type)
-  : lon_dist_on_ref_traj(lon_dist),
-    departure_type(departure_type),
-    abnormality_type(abnormality_type)
+  : departure_type(departure_type), abnormality_type(abnormality_type)
   {
     pt_on_ego = base.pt_on_ego;
     pt_on_bound = base.pt_on_bound;
@@ -208,7 +210,8 @@ struct DeparturePoint
   Point2d point;
   double th_point_merge_distance_m{2.0};
   double lat_dist_to_bound{1000.0};
-  double dist_on_traj{1000.0};
+  double ego_dist_on_ref_traj{1000.0};  // [m] distance along the reference trajectory of the
+                                        // corresponding predicted trajectory point
   double velocity{0.0};
   size_t idx_from_ego_traj{};
   bool can_be_removed{false};
@@ -228,13 +231,16 @@ struct DeparturePoint
     return autoware_utils::to_msg(point.to_3d(z));
   }
 
-  bool operator<(const DeparturePoint & other) const { return dist_on_traj < other.dist_on_traj; }
+  bool operator<(const DeparturePoint & other) const
+  {
+    return ego_dist_on_ref_traj < other.ego_dist_on_ref_traj;
+  }
 };
 using DeparturePoints = std::vector<DeparturePoint>;
 
 struct CriticalDeparturePoint : DeparturePoint
 {
-  TrajectoryPoint point_on_prev_traj;
+  geometry_msgs::msg::Pose pose_on_current_ref_traj;
   CriticalDeparturePoint() = default;
   explicit CriticalDeparturePoint(const DeparturePoint & base)
   {
@@ -244,7 +250,7 @@ struct CriticalDeparturePoint : DeparturePoint
     point = base.point;
     th_point_merge_distance_m = base.th_point_merge_distance_m;
     lat_dist_to_bound = base.lat_dist_to_bound;
-    dist_on_traj = base.dist_on_traj;
+    ego_dist_on_ref_traj = base.ego_dist_on_ref_traj;
     velocity = base.velocity;
     can_be_removed = base.can_be_removed;
   }

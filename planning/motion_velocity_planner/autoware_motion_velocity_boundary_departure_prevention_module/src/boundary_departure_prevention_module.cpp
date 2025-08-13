@@ -22,6 +22,8 @@
 #include <autoware/boundary_departure_checker/parameters.hpp>
 #include <autoware/boundary_departure_checker/utils.hpp>
 #include <autoware/motion_utils/marker/marker_helper.hpp>
+#include <autoware/motion_utils/trajectory/interpolation.hpp>
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
 #include <autoware/trajectory/utils/closest.hpp>
 #include <magic_enum.hpp>
@@ -480,7 +482,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
   const auto closest_projections_to_bound_opt =
     boundary_departure_checker_ptr_->get_closest_projections_to_boundaries(
-      *ref_traj_pts_opt, output_.abnormalities_data.projections_to_bound, curr_vel, curr_acc);
+      output_.abnormalities_data.projections_to_bound, curr_vel, curr_acc);
   toc_curr_watch("get_ref_traj");
 
   if (!closest_projections_to_bound_opt) {
@@ -490,7 +492,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
   output_.closest_projections_to_bound = *closest_projections_to_bound_opt;
 
   const auto ego_dist_on_traj_m =
-    experimental::trajectory::closest(*ref_traj_pts_opt, curr_pose.pose);
+    motion_utils::calcSignedArcLength(raw_trajectory_points, 0UL, curr_pose.pose.position);
   toc_curr_watch("chk_ego_dist_on_traj");
 
   const auto lon_offset_m = [&vehicle_info](const bool take_front_offset) {
@@ -501,12 +503,18 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
     return ego_dist_on_traj_m + lon_offset_m(take_front_offset);
   };
 
+  std::vector<double> pred_traj_idx_to_ref_traj_lon_dist;
+  pred_traj_idx_to_ref_traj_lon_dist.reserve(ego_pred_traj_ptr_->points.size());
+  for (const auto & p : ego_pred_traj_ptr_->points) {
+    pred_traj_idx_to_ref_traj_lon_dist.push_back(
+      motion_utils::calcSignedArcLength(raw_trajectory_points, 0UL, p.pose.position));
+  }
   output_.departure_points = boundary_departure_checker_ptr_->get_departure_points(
-    output_.closest_projections_to_bound, lon_offset_m(planner_data->is_driving_forward));
+    output_.closest_projections_to_bound, pred_traj_idx_to_ref_traj_lon_dist);
   toc_curr_watch("get_departure_points");
 
   // update output_.critical_departure_points
-  update_critical_departure_points(*ref_traj_pts_opt, ego_dist_on_traj_m);
+  update_critical_departure_points(raw_trajectory_points, ego_dist_on_traj_m);
   toc_curr_watch("update_critical_departure_points");
 
   const auto is_departure_persist = std::invoke([&]() {
@@ -533,7 +541,6 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
   if (!output_.departure_intervals.empty()) {
     auto & departure_intervals_mut = output_.departure_intervals;
-    const auto & ref_traj_front_pt = raw_trajectory_points.front();
 
     const auto is_reset_interval = std::invoke([&]() {
       const auto is_departure_found = std::any_of(
@@ -550,7 +557,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
     utils::update_departure_intervals(
       departure_intervals_mut, output_.departure_points, *ref_traj_pts_opt,
-      vehicle_info.vehicle_length_m, ref_traj_front_pt,
+      vehicle_info.vehicle_length_m, raw_trajectory_points,
       ego_dist_on_traj_with_offset_m(!planner_data->is_driving_forward),
       node_param_.th_pt_shift_dist_m, node_param_.th_pt_shift_angle_rad,
       node_param_.slow_down_types, is_reset_interval, is_departure_persist);
@@ -595,7 +602,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
   for (auto && [idx, critical_pt] : output_.critical_departure_points | ranges::views::enumerate) {
     const auto markers_end = autoware::motion_utils::createStopVirtualWallMarker(
-      critical_pt.point_on_prev_traj.pose, "boundary_departure_prevention_end", clock_ptr_->now(),
+      critical_pt.pose_on_current_ref_traj, "boundary_departure_prevention_end", clock_ptr_->now(),
       static_cast<int32_t>(idx + output_.departure_intervals.size() + 1), 0.0, "",
       planner_data->is_driving_forward);
     autoware_utils::append_marker_array(markers_end, &slow_down_wall_marker_);
@@ -617,9 +624,8 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
   toc_curr_watch("check_stopping_dist");
 
-  output_.diagnostic_output = get_diagnostics(
-    curr_odom.twist.twist.linear.x,
-    ego_dist_on_traj_with_offset_m(planner_data->is_driving_forward));
+  output_.diagnostic_output = get_diagnostics(curr_odom.twist.twist.linear.x);
+
   toc_curr_watch("get_diagnostics");
 
   VelocityPlanningResult result;
@@ -628,21 +634,22 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 }
 
 void BoundaryDeparturePreventionModule::update_critical_departure_points(
-  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const double offset_from_ego)
+  const std::vector<TrajectoryPoint> & raw_ref_traj, const double offset_from_ego)
 {
   for (auto & crit_dpt_pt_mut : output_.critical_departure_points) {
-    crit_dpt_pt_mut.dist_on_traj =
-      trajectory::closest(aw_ref_traj, crit_dpt_pt_mut.point_on_prev_traj);
+    crit_dpt_pt_mut.ego_dist_on_ref_traj = motion_utils::calcSignedArcLength(
+      raw_ref_traj, 0UL, crit_dpt_pt_mut.pose_on_current_ref_traj.position);
 
-    if (crit_dpt_pt_mut.dist_on_traj < offset_from_ego) {
+    if (crit_dpt_pt_mut.ego_dist_on_ref_traj < offset_from_ego) {
       crit_dpt_pt_mut.can_be_removed = true;
       continue;
     }
 
-    const auto updated_point = aw_ref_traj.compute(crit_dpt_pt_mut.dist_on_traj);
+    const auto updated_pose =
+      motion_utils::calcInterpolatedPose(raw_ref_traj, crit_dpt_pt_mut.ego_dist_on_ref_traj);
     if (
       const auto is_shifted_opt = utils::is_point_shifted(
-        crit_dpt_pt_mut.point_on_prev_traj.pose, updated_point.pose, node_param_.th_pt_shift_dist_m,
+        crit_dpt_pt_mut.pose_on_current_ref_traj, updated_pose, node_param_.th_pt_shift_dist_m,
         node_param_.th_pt_shift_angle_rad)) {
       crit_dpt_pt_mut.can_be_removed = true;
     }
@@ -656,7 +663,7 @@ void BoundaryDeparturePreventionModule::update_critical_departure_points(
   }
 
   auto new_critical_departure_point = utils::find_new_critical_departure_points(
-    output_.departure_points, output_.critical_departure_points, aw_ref_traj,
+    output_.departure_points, output_.critical_departure_points, raw_ref_traj,
     node_param_.bdc_param.th_point_merge_distance_m);
 
   if (new_critical_departure_point.empty()) {
@@ -670,42 +677,8 @@ void BoundaryDeparturePreventionModule::update_critical_departure_points(
   std::sort(output_.critical_departure_points.begin(), output_.critical_departure_points.end());
 }
 
-CriticalDeparturePoints find_new_critical_departure_points(
-  const Side<DeparturePoints> & new_departure_points,
-  const CriticalDeparturePoints & critical_departure_points,
-  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
-  const double th_point_merge_distance_m)
-{
-  CriticalDeparturePoints new_critical_departure_points;
-  for (const auto side_key : g_side_keys) {
-    for (const auto & dpt_pt : new_departure_points[side_key]) {
-      if (dpt_pt.departure_type != DepartureType::CRITICAL_DEPARTURE) {
-        continue;
-      }
-
-      if (dpt_pt.can_be_removed) {
-        continue;
-      }
-
-      const auto is_near_curr_pts = std::any_of(
-        critical_departure_points.begin(), critical_departure_points.end(),
-        [&](const CriticalDeparturePoint & crit_pt) {
-          return std::abs(dpt_pt.dist_on_traj - crit_pt.dist_on_traj) < th_point_merge_distance_m;
-        });
-
-      if (is_near_curr_pts) {
-        continue;
-      }
-
-      CriticalDeparturePoint crit_pt(dpt_pt);
-      crit_pt.point_on_prev_traj = aw_ref_traj.compute(crit_pt.dist_on_traj);
-      new_critical_departure_points.push_back(crit_pt);
-    }
-  }
-  return new_critical_departure_points;
-}
 std::unordered_map<DepartureType, bool> BoundaryDeparturePreventionModule::get_diagnostics(
-  const double curr_vel, const double dist_with_offset_m)
+  const double curr_vel)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -735,13 +708,14 @@ std::unordered_map<DepartureType, bool> BoundaryDeparturePreventionModule::get_d
 
   diag[DepartureType::CRITICAL_DEPARTURE] = std::any_of(
     output_.critical_departure_points.cbegin(), output_.critical_departure_points.cend(),
-    [&th_trigger, &curr_vel, &dist_with_offset_m](const DeparturePoint & pt) {
+    [&th_trigger, &curr_vel](const DeparturePoint & pt) {
       const auto braking_start_vel =
         std::clamp(curr_vel, th_trigger.th_vel_mps.min, th_trigger.th_vel_mps.max);
-      const auto braking_dist = boundary_departure_checker::utils::compute_braking_distance(
-        braking_start_vel, 0.0, th_trigger.th_acc_mps2.min, th_trigger.th_jerk_mps3.max,
-        th_trigger.brake_delay_s);
-      return pt.dist_on_traj - dist_with_offset_m <= braking_dist;
+      const auto braking_dist =
+        boundary_departure_checker::utils::calc_judge_line_dist_with_jerk_limit(
+          braking_start_vel, 0.0, th_trigger.th_acc_mps2.min, th_trigger.th_jerk_mps3.max,
+          th_trigger.brake_delay_s);
+      return pt.ego_dist_on_ref_traj <= braking_dist;
     });
 
   return diag;
