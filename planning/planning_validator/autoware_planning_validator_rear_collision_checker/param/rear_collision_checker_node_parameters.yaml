@@ -8,6 +8,8 @@ rear_collision_checker_node:
       type: double
       validation:
         gt_eq<>: [0.0]
+    check_on_unstoppable:
+      type: bool
 
     pointcloud:
       range:
@@ -136,6 +138,10 @@ rear_collision_checker_node:
           type: bool
         right:
           type: bool
+        yaw_th:
+          type: double
+          validation:
+            gt<>: [0.0]
       offset:
         inner:
           type: double
