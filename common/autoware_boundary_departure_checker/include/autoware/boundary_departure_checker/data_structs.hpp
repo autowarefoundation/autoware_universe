@@ -45,7 +45,15 @@ enum class DepartureType {
   CRITICAL_DEPARTURE,
 };
 
-enum class AbnormalityType { NORMAL, LOCALIZATION, LONGITUDINAL, STEERING };
+enum class AbnormalityType {
+  NORMAL,
+  LOCALIZATION,
+  LONGITUDINAL,
+  STEERING_STUCK,
+  STEERING_ACCELERATED,
+  STEERING_SUDDEN_LEFT,
+  STEERING_SUDDEN_RIGHT
+};
 
 enum class SideKey { LEFT, RIGHT };
 constexpr std::array<SideKey, 2> g_side_keys = {SideKey::LEFT, SideKey::RIGHT};
@@ -56,13 +64,19 @@ struct Abnormalities
   T normal;
   T longitudinal;
   T localization;
-  T steering;
+  T steering_stuck;
+  T steering_accelerated;
+  T steering_sudden_left;
+  T steering_sudden_right;
   T & operator[](const AbnormalityType key)
   {
     if (key == AbnormalityType::NORMAL) return normal;
     if (key == AbnormalityType::LOCALIZATION) return localization;
     if (key == AbnormalityType::LONGITUDINAL) return longitudinal;
-    if (key == AbnormalityType::STEERING) return steering;
+    if (key == AbnormalityType::STEERING_ACCELERATED) return steering_accelerated;
+    if (key == AbnormalityType::STEERING_STUCK) return steering_stuck;
+    if (key == AbnormalityType::STEERING_SUDDEN_LEFT) return steering_sudden_left;
+    if (key == AbnormalityType::STEERING_SUDDEN_RIGHT) return steering_sudden_right;
     throw std::invalid_argument("Invalid key: " + std::string(magic_enum::enum_name(key)));
   }
 
@@ -71,7 +85,10 @@ struct Abnormalities
     if (key == AbnormalityType::NORMAL) return normal;
     if (key == AbnormalityType::LOCALIZATION) return localization;
     if (key == AbnormalityType::LONGITUDINAL) return longitudinal;
-    if (key == AbnormalityType::STEERING) return steering;
+    if (key == AbnormalityType::STEERING_ACCELERATED) return steering_accelerated;
+    if (key == AbnormalityType::STEERING_STUCK) return steering_stuck;
+    if (key == AbnormalityType::STEERING_SUDDEN_LEFT) return steering_sudden_left;
+    if (key == AbnormalityType::STEERING_SUDDEN_RIGHT) return steering_sudden_right;
     throw std::invalid_argument("Invalid key: " + std::string(magic_enum::enum_name(key)));
   }
 };

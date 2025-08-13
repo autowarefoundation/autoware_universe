@@ -3,6 +3,7 @@
     common:
       on_time_buffer: 0.5                           # [s]
       off_time_buffer: 1.5                          # [s]
+      check_on_unstoppable: false
 
       pointcloud:
         range:
@@ -55,6 +56,7 @@
           front: false
           left: true
           right: false
+          yaw_th: 0.78                              # [rad] (45 deg)
         offset:
           inner: 0.1                                # [m]
           outer: 0.3                                # [m]
