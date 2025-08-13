@@ -276,11 +276,26 @@ bool BicycleMotionModel::limitStates()
     X_t(IDX::VX) = X_t(IDX::VX) < 0 ? -motion_params_.max_vel : motion_params_.max_vel;
   }
 
-  // // maximum slip angle
-  // const double slip_angle = std::atan2(X_t(IDX::VY), X_t(IDX::VX));
-  // if (!(-motion_params_.max_slip <= slip_angle && slip_angle <= motion_params_.max_slip)) {
-  //   X_t(IDX::VY) = X_t(IDX::VY) < 0 ? -motion_params_.max_slip * X_t(IDX::VX) : motion_params_.max_slip * X_t(IDX::VX);
-  // }
+  // maximum lateral velocity by lateral acceleration limitations
+  // a_max = vel_long^2 * vel_lat / wheel_base
+  // vel_lat_limit = a_max * wheel_base / vel_long^2
+  {
+    const double wheel_base = std::hypot(X_t(IDX::X2) - X_t(IDX::X1), X_t(IDX::Y2) - X_t(IDX::Y1));
+    constexpr double acc_lat_max = 9.81 * 0.35;  // [m/s^2] maximum lateral acceleration (0.35g);
+    const double vel_lat_limit = acc_lat_max * wheel_base / (X_t(IDX::VX) * X_t(IDX::VX));
+    if (std::abs(X_t(IDX::VY)) > vel_lat_limit) {
+
+      // //debug message
+      // RCLCPP_WARN(
+      //   logger_,
+      //   "BicycleMotionModel::limitStates: limited lateral velocity from %f to %f",
+      //    X_t(IDX::VY), vel_lat_limit);
+
+      // limit lateral velocity
+      X_t(IDX::VY) = X_t(IDX::VY) < 0 ? -vel_lat_limit : vel_lat_limit;
+
+    }
+  }
 
   // overwrite state
   ekf_.init(X_t, P_t);
@@ -447,7 +462,7 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   // Process noise covariance Q
   double q_cov_slip_rate = motion_params_.q_cov_slip_rate_min;
   constexpr double q_cov_length = 9.0;  // length uncertainty
-  const double & q_stddev_yaw_rate = motion_params_.q_stddev_yaw_rate_min;
+  const double q_stddev_yaw_rate = 4.0;
   const double q_stddev_head = q_stddev_yaw_rate * wheel_base * dt; // yaw uncertainty
   
   const double dt2 = dt * dt;
@@ -458,7 +473,7 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   const double q_cov_x = 0.25 * motion_params_.q_cov_acc_long * dt4;
   const double q_cov_y = 0.25 * motion_params_.q_cov_acc_lat * dt4;
   const double q_cov_x2 = 0.25 * motion_params_.q_cov_acc_long * dt4 + q_cov_length * dt2;
-  const double q_cov_y2 = 0.25 * motion_params_.q_cov_acc_lat * dt4 + q_stddev_head * q_stddev_head + 9.0 * dt2; 
+  const double q_cov_y2 = 0.25 * motion_params_.q_cov_acc_lat * dt4 + q_stddev_head * q_stddev_head; 
 
   StateMat Q;
   Q.setZero();
