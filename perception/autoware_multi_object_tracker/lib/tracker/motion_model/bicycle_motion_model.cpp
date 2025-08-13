@@ -501,23 +501,24 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
 
 
   // Process noise covariance Q
-  double q_stddev_yaw_rate = motion_params_.q_stddev_yaw_rate_min;
   double q_cov_slip_rate = motion_params_.q_cov_slip_rate_min;
+  constexpr double q_cov_length = 9.0;  // length uncertainty
+  const double & q_stddev_yaw_rate = motion_params_.q_stddev_yaw_rate_min;
+  const double q_stddev_head = q_stddev_yaw_rate * wheel_base * dt; // yaw uncertainty
   
-  const double sin_2yaw = std::sin(2.0 * yaw);
   const double dt2 = dt * dt;
   const double dt4 = dt2 * dt2;
 
-  const double q_cov_yaw = q_stddev_yaw_rate * q_stddev_yaw_rate * dt2;
   const double q_cov_vel_x = motion_params_.q_cov_acc_long * dt2;
   const double q_cov_vel_y = q_cov_slip_rate * dt2 * 4.0;
   const double q_cov_x = 0.25 * motion_params_.q_cov_acc_long * dt4;
   const double q_cov_y = 0.25 * motion_params_.q_cov_acc_lat * dt4;
-  const double q_cov_x2 = 0.25 * motion_params_.q_cov_acc_long * dt4 + 9.0 * dt2; // length uncertainty
-  const double q_cov_y2 = 0.25 * motion_params_.q_cov_acc_lat * dt4 + q_cov_yaw * wheel_base * wheel_base + 9.0 * dt2; // yaw uncertainty
+  const double q_cov_x2 = 0.25 * motion_params_.q_cov_acc_long * dt4 + q_cov_length * dt2;
+  const double q_cov_y2 = 0.25 * motion_params_.q_cov_acc_lat * dt4 + q_stddev_head * q_stddev_head + 9.0 * dt2; 
 
   StateMat Q;
   Q.setZero();
+  const double sin_2yaw = std::sin(2.0 * yaw);
   Q(IDX::X1, IDX::X1) = (q_cov_x * cos_yaw * cos_yaw + q_cov_y * sin_yaw * sin_yaw);
   Q(IDX::X1, IDX::Y1) = (0.5f * (q_cov_x - q_cov_y) * sin_2yaw);
   Q(IDX::Y1, IDX::X1) = Q(IDX::X1, IDX::Y1);
@@ -579,10 +580,10 @@ bool BicycleMotionModel::getPredictedState(
   constexpr double zz_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
   constexpr double rr_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
   constexpr double pp_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
-  pose_cov[XYZRPY_COV_IDX::X_X] = P(IDX::X1, IDX::X1);
-  pose_cov[XYZRPY_COV_IDX::X_Y] = P(IDX::X1, IDX::Y1);
-  pose_cov[XYZRPY_COV_IDX::Y_X] = P(IDX::Y1, IDX::X1);
-  pose_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::Y1, IDX::Y1);
+  pose_cov[XYZRPY_COV_IDX::X_X] = (P(IDX::X1, IDX::X1) + P(IDX::X2, IDX::X2)) * 0.25;
+  pose_cov[XYZRPY_COV_IDX::X_Y] = (P(IDX::X1, IDX::Y1) + P(IDX::X2, IDX::Y2)) * 0.25;
+  pose_cov[XYZRPY_COV_IDX::Y_X] = (P(IDX::Y1, IDX::X1) + P(IDX::Y2, IDX::X2)) * 0.25;
+  pose_cov[XYZRPY_COV_IDX::Y_Y] = (P(IDX::Y1, IDX::Y1) + P(IDX::Y2, IDX::Y2)) * 0.25;
   pose_cov[XYZRPY_COV_IDX::YAW_YAW] = P(IDX::X2, IDX::X2) * cos(yaw) + P(IDX::Y2, IDX::Y2) * sin(yaw);
   pose_cov[XYZRPY_COV_IDX::Z_Z] = zz_cov;
   pose_cov[XYZRPY_COV_IDX::ROLL_ROLL] = rr_cov;
