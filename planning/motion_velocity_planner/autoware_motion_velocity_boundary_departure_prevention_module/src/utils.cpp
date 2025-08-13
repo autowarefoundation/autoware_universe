@@ -94,8 +94,7 @@ DepartureIntervals init_departure_intervals(
       continue;
     }
 
-    interval.start_dist_on_traj =
-      interval.candidates.front().ego_dist_on_ref_traj - vehicle_length_m;
+    interval.start_dist_on_traj = interval.candidates.front().ego_dist_on_ref_traj;
     interval.start = aw_ref_traj.compute(interval.start_dist_on_traj);
     interval.end_dist_on_traj = interval.candidates.back().ego_dist_on_ref_traj;
     interval.end = aw_ref_traj.compute(interval.end_dist_on_traj);

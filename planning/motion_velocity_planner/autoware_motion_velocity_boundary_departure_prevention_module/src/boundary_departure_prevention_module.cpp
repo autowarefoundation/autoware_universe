@@ -624,9 +624,8 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
   toc_curr_watch("check_stopping_dist");
 
-  output_.diagnostic_output = get_diagnostics(
-    curr_odom.twist.twist.linear.x,
-    ego_dist_on_traj_with_offset_m(planner_data->is_driving_forward));
+  output_.diagnostic_output = get_diagnostics(curr_odom.twist.twist.linear.x);
+
   toc_curr_watch("get_diagnostics");
 
   VelocityPlanningResult result;
@@ -678,7 +677,7 @@ void BoundaryDeparturePreventionModule::update_critical_departure_points(
 }
 
 std::unordered_map<DepartureType, bool> BoundaryDeparturePreventionModule::get_diagnostics(
-  const double curr_vel, const double dist_with_offset_m)
+  const double curr_vel)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -708,13 +707,13 @@ std::unordered_map<DepartureType, bool> BoundaryDeparturePreventionModule::get_d
 
   diag[DepartureType::CRITICAL_DEPARTURE] = std::any_of(
     output_.critical_departure_points.cbegin(), output_.critical_departure_points.cend(),
-    [&th_trigger, &curr_vel, &dist_with_offset_m](const DeparturePoint & pt) {
+    [&th_trigger, &curr_vel](const DeparturePoint & pt) {
       const auto braking_start_vel =
         std::clamp(curr_vel, th_trigger.th_vel_mps.min, th_trigger.th_vel_mps.max);
       const auto braking_dist = boundary_departure_checker::utils::compute_braking_distance(
         braking_start_vel, 0.0, th_trigger.th_acc_mps2.min, th_trigger.th_jerk_mps3.max,
         th_trigger.brake_delay_s);
-      return pt.ego_dist_on_ref_traj - dist_with_offset_m <= braking_dist;
+      return pt.ego_dist_on_ref_traj <= braking_dist;
     });
 
   return diag;

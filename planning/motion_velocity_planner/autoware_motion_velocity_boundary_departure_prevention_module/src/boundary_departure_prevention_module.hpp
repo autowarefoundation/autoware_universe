@@ -74,8 +74,7 @@ private:
   void update_critical_departure_points(
     const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const double offset_from_ego);
 
-  std::unordered_map<DepartureType, bool> get_diagnostics(
-    const double curr_vel, const double dist_with_offset_m);
+  std::unordered_map<DepartureType, bool> get_diagnostics(const double curr_vel);
 
   /**
    * @brief Check if critical departure has been continuously observed.
