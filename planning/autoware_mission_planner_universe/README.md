@@ -39,6 +39,7 @@ It distributes route requests and planning results according to current MRM oper
 | `/planning/mission_planning/mission_planner/clear_route`            | tier4_planning_msgs/srv/ClearRoute       | route clear request                        |
 | `/planning/mission_planning/mission_planner/set_waypoint_route`     | tier4_planning_msgs/srv/SetWaypointRoute | route request with lanelet waypoints.      |
 | `/planning/mission_planning/mission_planner/set_lanelet_route`      | tier4_planning_msgs/srv/SetLaneletRoute  | route request with pose waypoints.         |
+| `/planning/mission_planning/mission_planner/set_preferred_lane`     | tier4_planning_msgs/srv/SetPreferredLane | lane change request with direction         |
 | `/planning/mission_planning/route_selector/main/clear_route`        | tier4_planning_msgs/srv/ClearRoute       | main route clear request                   |
 | `/planning/mission_planning/route_selector/main/set_waypoint_route` | tier4_planning_msgs/srv/SetWaypointRoute | main route request with lanelet waypoints. |
 | `/planning/mission_planning/route_selector/main/set_lanelet_route`  | tier4_planning_msgs/srv/SetLaneletRoute  | main route request with pose waypoints.    |
@@ -195,6 +196,16 @@ The interface for the MRM that pulls over the road shoulder. It has to be stoppe
 
 This is a goal change to pull over, avoid parked vehicles, and so on by a planning component. If the modified goal is outside the calculated route, a reroute is required. This goal modification is executed by checking the local environment and path safety as the vehicle actually approaches the destination. And this modification is allowed for both normal_route and mrm_route.
 The new route generated here is sent to the AD API so that it can also be referenced by the application. Note, however, that the specifications here are subject to change in the future.
+
+#### Setting Preferred Lane
+
+This service allows for shifting the current preferred lane to the left or right, or reverting to the default preferred lane received from the route planner.
+As the vehicle moves, the shifting is done relative to the current preferred lane.
+
+Based on certain criteria, shifting may be rejected, as in the following cases:
+
+1. Left or Right shift is not available due to no lane being present to shift to
+2. The next segment is a turn or the very last lane - this is to ensure that we can navigate the enter path and end up at the goal
 
 #### Rerouting Limitations
 

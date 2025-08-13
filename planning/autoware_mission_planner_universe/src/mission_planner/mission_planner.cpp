@@ -98,7 +98,7 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
     "~/clear_route", service_utils::handle_exception(&MissionPlanner::on_clear_route, this));
   srv_set_preferred_lane = create_service<SetPreferredLane>(
     "~/set_preferred_lane",
-    service_utils::handle_exception(&MissionPlanner::on_set_preferred_lane, this));
+    service_utils::handle_exception(&MissionPlanner::set_preferred_lane, this));
   srv_set_lanelet_route = create_service<SetLaneletRoute>(
     "~/set_lanelet_route",
     service_utils::handle_exception(&MissionPlanner::on_set_lanelet_route, this));
@@ -269,7 +269,7 @@ void MissionPlanner::on_clear_route(
   res->status.success = true;
 }
 
-void MissionPlanner::on_set_preferred_lane(
+void MissionPlanner::set_preferred_lane(
   const SetPreferredLane::Request::SharedPtr req, const SetPreferredLane::Response::SharedPtr res)
 {
   using ResponseCode = autoware_adapi_v1_msgs::srv::SetRoute::Response;

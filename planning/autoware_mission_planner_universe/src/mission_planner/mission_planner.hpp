@@ -131,7 +131,7 @@ private:
 
   void on_clear_route(
     const ClearRoute::Request::SharedPtr req, const ClearRoute::Response::SharedPtr res);
-  void on_set_preferred_lane(
+  void set_preferred_lane(
     const SetPreferredLane::Request::SharedPtr req,
     const SetPreferredLane::Response::SharedPtr res);
   void on_set_lanelet_route(
