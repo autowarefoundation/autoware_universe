@@ -18,6 +18,7 @@
 #include "autoware/diffusion_planner/conversion/lanelet.hpp"
 #include "autoware/diffusion_planner/polyline.hpp"
 #include "autoware/diffusion_planner/preprocessing/lane_segments.hpp"
+#include "autoware/diffusion_planner/preprocessing/traffic_signals.hpp"
 
 #include <Eigen/Dense>
 
@@ -65,12 +66,17 @@ protected:
     test_lanelet.setAttribute(lanelet::AttributeName::Subtype, lanelet::AttributeValueString::Road);
     test_lanelet.setAttribute(
       lanelet::AttributeName::Location, lanelet::AttributeValueString::Urban);
+    test_lanelet.setAttribute("speed_limit", "30");  // Add speed limit attribute
 
     // Add to map
     lanelet_map_->add(test_lanelet);
+
+    // Store the lanelet for tests
+    test_lanelet_ = test_lanelet;
   }
 
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_;
+  lanelet::Lanelet test_lanelet_;
 };
 
 }  // namespace autoware::diffusion_planner::test
