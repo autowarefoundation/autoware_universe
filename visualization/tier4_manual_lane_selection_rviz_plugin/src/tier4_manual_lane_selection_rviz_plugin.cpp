@@ -14,9 +14,9 @@
 
 #include "tier4_manual_lane_selection_rviz_plugin/tier4_manual_lane_selection_rviz_plugin.hpp"
 
-#include <memory> 
-
 #include <pluginlib/class_list_macros.hpp>
+
+#include <memory>
 PLUGINLIB_EXPORT_CLASS(ManualLaneSelection, rviz_common::Panel)
 
 using tier4_planning_msgs::srv::SetPreferredLane;

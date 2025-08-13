@@ -14,9 +14,9 @@
 
 #include "manual_lane_change_handler.hpp"
 
-#include <string>
-
 #include "mission_planner.hpp"
+
+#include <string>
 
 namespace autoware::mission_planner_universe
 {
@@ -81,47 +81,55 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
   bool route_updated = false;
   for (auto iter = start_iter; iter != final_iter; ++iter) {
     auto & current_segment = iter;
-    auto next_segment = iter+1;
+    auto next_segment = iter + 1;
 
     // Find the index of the current preferred primitive
     auto current_it = std::find_if(
       current_segment->primitives.begin(), current_segment->primitives.end(),
       [&current_segment](const LaneletPrimitive & p) {
         return p.id == current_segment->preferred_primitive.id;
-      }
-    );
+      });
     if (current_it == current_segment->primitives.end()) continue;
 
     // Find the index of the current preferred primitive
-    auto next_it = next_segment != final_iter ? std::find_if(
-      next_segment->primitives.begin(), next_segment->primitives.end(),
-      [&next_segment](const LaneletPrimitive & p) {
-        return p.id == next_segment->preferred_primitive.id;
-      }
-    ) : next_segment->primitives.end();
+    auto next_it = next_segment != final_iter
+                     ? std::find_if(
+                         next_segment->primitives.begin(), next_segment->primitives.end(),
+                         [&next_segment](const LaneletPrimitive & p) {
+                           return p.id == next_segment->preferred_primitive.id;
+                         })
+                     : next_segment->primitives.end();
 
     std::size_t current_index = std::distance(current_segment->primitives.begin(), current_it);
 
-    const auto current_lanelet = next_it != current_segment->primitives.end() ? get_lanelet_by_id_(current_it->id) : lanelet::ConstLanelet{};
+    const auto current_lanelet = next_it != current_segment->primitives.end()
+                                   ? get_lanelet_by_id_(current_it->id)
+                                   : lanelet::ConstLanelet{};
     std::string current_turning_dir = current_lanelet.attributeOr("turn_direction", "none");
 
-    const auto next_lanelet = next_it != next_segment->primitives.end() ? get_lanelet_by_id_(next_it->id) : lanelet::ConstLanelet{};
+    const auto next_lanelet = next_it != next_segment->primitives.end()
+                                ? get_lanelet_by_id_(next_it->id)
+                                : lanelet::ConstLanelet{};
     std::string next_turning_dir = next_lanelet.attributeOr("turn_direction", "none");
 
-    const bool left_shift_not_available = (override_direction == DIRECTION::MANUAL_LEFT && current_index == 0);
-    const bool right_shift_not_available = (override_direction == DIRECTION::MANUAL_RIGHT &&
+    const bool left_shift_not_available =
+      (override_direction == DIRECTION::MANUAL_LEFT && current_index == 0);
+    const bool right_shift_not_available =
+      (override_direction == DIRECTION::MANUAL_RIGHT &&
        current_index + 1 == current_segment->primitives.size());
     const bool next_segment_is_left_turn = (next_turning_dir == "left");
     const bool next_segment_is_right_turn = (next_turning_dir == "right");
 
     const bool current_segment_shift_not_available =
-      left_shift_not_available || right_shift_not_available || next_segment_is_left_turn || next_segment_is_right_turn;
+      left_shift_not_available || right_shift_not_available || next_segment_is_left_turn ||
+      next_segment_is_right_turn;
 
     if (current_segment_shift_not_available) {
-      std::string shift_unavailable_reason = left_shift_not_available ? "left shift not available" :
-                                             right_shift_not_available ? "right shift not available" :
-                                             next_segment_is_left_turn ? "next segment is left turn" :
-                                             "next segment is right turn";
+      std::string shift_unavailable_reason =
+        left_shift_not_available    ? "left shift not available"
+        : right_shift_not_available ? "right shift not available"
+        : next_segment_is_left_turn ? "next segment is left turn"
+                                    : "next segment is right turn";
       RCLCPP_INFO_STREAM(
         logger_, "Cannot shift on the current segment (ID: "
                    << current_segment->preferred_primitive.id << ")");

@@ -40,7 +40,9 @@ struct LaneChangeRequestResult
 class ManualLaneChangeHandler
 {
 public:
-  explicit ManualLaneChangeHandler(LaneletRoute::ConstSharedPtr * current_route, std::function<lanelet::ConstLanelet(const int64_t)> get_lanelet_by_id)
+  explicit ManualLaneChangeHandler(
+    LaneletRoute::ConstSharedPtr * current_route,
+    std::function<lanelet::ConstLanelet(const int64_t)> get_lanelet_by_id)
   : current_route_(current_route),
     get_lanelet_by_id_(get_lanelet_by_id),
     original_route_{std::nullopt},
@@ -50,10 +52,7 @@ public:
   LaneChangeRequestResult process_lane_change_request(
     const int64_t ego_lanelet_id, const SetPreferredLane::Request::SharedPtr req);
 
-  void reset()
-  {
-    original_route_ = std::nullopt;
-  }
+  void reset() { original_route_ = std::nullopt; }
 
 private:
   LaneletRoute::ConstSharedPtr * current_route_;
