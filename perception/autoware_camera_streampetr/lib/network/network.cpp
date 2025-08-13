@@ -14,8 +14,8 @@
 
 #include "autoware/camera_streampetr/network/network.hpp"
 
-#include <autoware/tensorrt_common/utils.hpp>
 #include <autoware/cuda_utils/cuda_utils.hpp>
+#include <autoware/tensorrt_common/utils.hpp>
 
 #include <NvInfer.h>
 #include <NvOnnxParser.h>
@@ -111,18 +111,19 @@ void setSigmoidAndSoftmaxLayersToFP32(std::shared_ptr<nvinfer1::INetworkDefiniti
   }
 }
 
-
 StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config) : config_(config)
 {
   cudaStreamCreate(&stream_);
 
   // Initialize TrtCommon configurations
   auto backbone_config = tensorrt_common::TrtCommonConfig(
-    config_.onnx_backbone_path, config_.trt_precision, config_.engine_backbone_path, config_.workspace_size);
+    config_.onnx_backbone_path, config_.trt_precision, config_.engine_backbone_path,
+    config_.workspace_size);
   auto pts_head_config = tensorrt_common::TrtCommonConfig(
-    config_.onnx_head_path, config_.trt_precision, config_.engine_head_path, config_.workspace_size);
+    config_.onnx_head_path, config_.trt_precision, config_.engine_head_path,
+    config_.workspace_size);
   auto pos_embed_config = tensorrt_common::TrtCommonConfig(
-    config_.onnx_position_embedding_path, config_.trt_precision, 
+    config_.onnx_position_embedding_path, config_.trt_precision,
     config_.engine_position_embedding_path, config_.workspace_size);
 
   // Initialize TrtCommon instances
@@ -130,12 +131,13 @@ StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config) : config_(con
   pts_head_ = std::make_unique<SubNetwork>(pts_head_config, profiler_);
   pos_embed_ = std::make_unique<SubNetwork>(pos_embed_config, profiler_);
 
-  if (config_.trt_precision == "fp16"){
-    RCLCPP_INFO(rclcpp::get_logger(config_.logger_name.c_str()), "Setting sigmoid and softmax layers to FP32 precision for stability");
+  if (config_.trt_precision == "fp16") {
+    RCLCPP_INFO(
+      rclcpp::get_logger(config_.logger_name.c_str()),
+      "Setting sigmoid and softmax layers to FP32 precision for stability");
     setSigmoidAndSoftmaxLayersToFP32(pts_head_->getNetwork());
   }
 
-  
   // Setup TensorRT engines
   if (!backbone_->setup() || !pts_head_->setup() || !pos_embed_->setup()) {
     throw std::runtime_error("Failed to setup TRT engines.");
@@ -277,6 +279,5 @@ StreamPetrNetwork::~StreamPetrNetwork()
     cudaStreamDestroy(stream_);
   }
 }
-
 
 }  // namespace autoware::camera_streampetr

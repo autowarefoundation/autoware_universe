@@ -55,8 +55,8 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   debug_mode_(declare_parameter<bool>("debug_mode"))
 {
   RCLCPP_INFO(
-    rclcpp::get_logger(logger_name_.c_str()), "nvinfer: %d.%d.%d\n", NV_TENSORRT_MAJOR, NV_TENSORRT_MINOR, NV_TENSORRT_PATCH);
-
+    rclcpp::get_logger(logger_name_.c_str()), "nvinfer: %d.%d.%d\n", NV_TENSORRT_MAJOR,
+    NV_TENSORRT_MINOR, NV_TENSORRT_PATCH);
 
   // Initialize network
   const int roi_width = declare_parameter<int>("model_params.input_image_width");
@@ -67,8 +67,10 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   const std::string position_embedding_path =
     declare_parameter<std::string>("model_params.position_embedding_path");
 
-  const std::string backbone_engine_path = declare_parameter<std::string>("model_params.backbone_engine_path", "");
-  const std::string head_engine_path = declare_parameter<std::string>("model_params.head_engine_path", "");
+  const std::string backbone_engine_path =
+    declare_parameter<std::string>("model_params.backbone_engine_path", "");
+  const std::string head_engine_path =
+    declare_parameter<std::string>("model_params.head_engine_path", "");
   const std::string position_embedding_engine_path =
     declare_parameter<std::string>("model_params.position_embedding_engine_path", "");
 
@@ -95,20 +97,37 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   const int pre_memory_length = declare_parameter<int>("model_params.pre_memory_length", 1024);
   const int post_memory_length = declare_parameter<int>("model_params.post_memory_length", 1280);
 
-  NetworkConfig network_config {
-    logger_name_, use_temporal, search_distance_2d, circle_nms_dist_threshold,
-    iou_threshold, confidence_threshold, class_names,
-    num_proposals, yaw_norm_thresholds, detection_range, pre_memory_length, post_memory_length,
-    roi_height, roi_width, static_cast<int>(rois_number_),
-    workspace_size, trt_precision,
-    backbone_path, head_path, position_embedding_path,
-    backbone_engine_path, head_engine_path, position_embedding_engine_path
-  };
+  NetworkConfig network_config{
+    logger_name_,
+    use_temporal,
+    search_distance_2d,
+    circle_nms_dist_threshold,
+    iou_threshold,
+    confidence_threshold,
+    class_names,
+    num_proposals,
+    yaw_norm_thresholds,
+    detection_range,
+    pre_memory_length,
+    post_memory_length,
+    roi_height,
+    roi_width,
+    static_cast<int>(rois_number_),
+    workspace_size,
+    trt_precision,
+    backbone_path,
+    head_path,
+    position_embedding_path,
+    backbone_engine_path,
+    head_engine_path,
+    position_embedding_engine_path};
 
   network_ = std::make_unique<StreamPetrNetwork>(network_config);
 
   if (build_only) {
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_.c_str()), "TensorRT engine files built successfully. Shutting Down...");
+    RCLCPP_INFO(
+      rclcpp::get_logger(logger_name_.c_str()),
+      "TensorRT engine files built successfully. Shutting Down...");
     rclcpp::shutdown();
     return;
   }
@@ -117,7 +136,9 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   camera_info_subs_.resize(rois_number_);
 
   if (multithreading_) {
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_.c_str()), "Will be using multithreading for image callbacks.");
+    RCLCPP_INFO(
+      rclcpp::get_logger(logger_name_.c_str()),
+      "Will be using multithreading for image callbacks.");
     camera_callback_groups_.resize(rois_number_);
   }
   const bool is_compressed_image = declare_parameter<bool>("is_compressed_image");
@@ -283,8 +304,8 @@ std::optional<std::vector<float>> StreamPetrNode::get_camera_extrinsics_vector()
         tf_buffer_.lookupTransform(camera_links[i], "base_link", tf2::TimePointZero);
     } catch (const tf2::TransformException & ex) {
       RCLCPP_ERROR(
-        rclcpp::get_logger(logger_name_.c_str()), "Could not transform from base_link to %s: %s", camera_links[i].c_str(),
-        ex.what());
+        rclcpp::get_logger(logger_name_.c_str()), "Could not transform from base_link to %s: %s",
+        camera_links[i].c_str(), ex.what());
       return std::nullopt;
     }
 
@@ -337,7 +358,8 @@ StreamPetrNode::get_ego_pose_vector(const rclcpp::Time & stamp)
     current_transform = tf_buffer_.lookupTransform("map", "base_link", stamp);
   } catch (const tf2::TransformException & ex) {
     RCLCPP_ERROR(
-      rclcpp::get_logger(logger_name_.c_str()), "Could not get transform from map to base_link at timestamp: %s", ex.what());
+      rclcpp::get_logger(logger_name_.c_str()),
+      "Could not get transform from map to base_link at timestamp: %s", ex.what());
     return std::nullopt;
   }
 

@@ -65,7 +65,6 @@ public:
   explicit StreamPetrNode(const rclcpp::NodeOptions & node_options);
 
 private:
-  
   void camera_info_callback(CameraInfo::ConstSharedPtr input_camera_info_msg, const int camera_id);
   void camera_image_callback(Image::ConstSharedPtr input_camera_image_msg, const int camera_id);
 

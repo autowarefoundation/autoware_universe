@@ -14,7 +14,7 @@
 
   <node pkg="autoware_camera_streampetr" exec="autoware_camera_streampetr_node" name="stream_petr" output="screen">
     <param from="$(var param_path)" allow_substs="true"/>
-    <param name="build_only" value="$(var build_only)"/> 
+    <param name="build_only" value="$(var build_only)"/>
     <param name="debug_mode" value="$(var debug_mode)"/>
     <param name="model_params.backbone_path" value="$(var model_path)/simplify_extract_img_feat.onnx"/>
     <param name="model_params.head_path" value="$(var model_path)/simplify_pts_head_memory.onnx"/>

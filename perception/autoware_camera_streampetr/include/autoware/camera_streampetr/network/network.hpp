@@ -68,7 +68,6 @@ using cuda::Tensor;
 using nvinfer1::DataType;
 using nvinfer1::Dims;
 
-
 // Use tensorrt_common components
 using autoware::tensorrt_common::Logger;
 using autoware::tensorrt_common::Profiler;
@@ -77,22 +76,22 @@ using autoware::tensorrt_common::TrtCommonConfig;
 
 class SubNetwork : public TrtCommon
 {
-  public:
-    std::unordered_map<std::string, std::shared_ptr<Tensor>> bindings;
+public:
+  std::unordered_map<std::string, std::shared_ptr<Tensor>> bindings;
 
-    using TrtCommon::TrtCommon;
-    void setBindings()
-    {
-      for (int n = 0; n < getNbIOTensors(); n++) {
-        std::string name = getIOTensorName(n);
-        Dims d = getTensorShape(name.c_str());
-        DataType dtype = getTensorDataType(name.c_str());
-        bindings[name] = std::make_shared<Tensor>(name, d, dtype);
-        bindings[name]->iomode = getTensorIOMode(name.c_str());
-        std::cout << *(bindings[name]) << std::endl;
-        setTensorAddress(name.c_str(), bindings[name]->ptr);
-      }
+  using TrtCommon::TrtCommon;
+  void setBindings()
+  {
+    for (int n = 0; n < getNbIOTensors(); n++) {
+      std::string name = getIOTensorName(n);
+      Dims d = getTensorShape(name.c_str());
+      DataType dtype = getTensorDataType(name.c_str());
+      bindings[name] = std::make_shared<Tensor>(name, d, dtype);
+      bindings[name]->iomode = getTensorIOMode(name.c_str());
+      std::cout << *(bindings[name]) << std::endl;
+      setTensorAddress(name.c_str(), bindings[name]->ptr);
     }
+  }
 };
 
 class Duration
@@ -168,7 +167,6 @@ struct NetworkConfig
   std::string engine_head_path = "";
   std::string engine_position_embedding_path = "";
 };
-
 
 class StreamPetrNetwork
 {
