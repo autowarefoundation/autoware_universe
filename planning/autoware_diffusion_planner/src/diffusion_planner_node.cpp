@@ -711,25 +711,12 @@ void DiffusionPlanner::on_timer()
 
 void DiffusionPlanner::on_map(const HADMapBin::ConstSharedPtr map_msg)
 {
-  lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
+  std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr = std::make_shared<lanelet::LaneletMap>();
   lanelet::utils::conversion::fromBinMsg(
-    *map_msg, lanelet_map_ptr_, &traffic_rules_ptr_, &routing_graph_ptr_);
-
-  auto lanelet_converter = std::make_unique<LaneletConverter>(lanelet_map_ptr_);
-  auto lane_segments = lanelet_converter->convert_to_lane_segments(POINTS_PER_SEGMENT);
-
-  if (lane_segments.empty()) {
-    RCLCPP_ERROR(get_logger(), "No lane segments found in the map");
-    throw std::runtime_error("No lane segments found in the map");
-  }
-
-  ColLaneIDMaps col_id_mapping;
-  Eigen::MatrixXf map_lane_segments_matrix =
-    preprocess::process_segments_to_matrix(lane_segments, col_id_mapping);
+    *map_msg, lanelet_map_ptr, &traffic_rules_ptr_, &routing_graph_ptr_);
 
   // Create LaneSegmentContext with the static data
-  lane_segment_context_ = std::make_unique<preprocess::LaneSegmentContext>(
-    map_lane_segments_matrix, col_id_mapping, lanelet_map_ptr_);
+  lane_segment_context_ = std::make_unique<preprocess::LaneSegmentContext>(lanelet_map_ptr);
 
   route_handler_->setMap(*map_msg);
   is_map_loaded_ = true;
