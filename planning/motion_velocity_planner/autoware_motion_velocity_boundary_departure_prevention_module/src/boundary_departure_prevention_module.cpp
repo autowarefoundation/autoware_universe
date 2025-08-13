@@ -677,41 +677,6 @@ void BoundaryDeparturePreventionModule::update_critical_departure_points(
   std::sort(output_.critical_departure_points.begin(), output_.critical_departure_points.end());
 }
 
-CriticalDeparturePoints find_new_critical_departure_points(
-  const Side<DeparturePoints> & new_departure_points,
-  const CriticalDeparturePoints & critical_departure_points,
-  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
-  const double th_point_merge_distance_m)
-{
-  CriticalDeparturePoints new_critical_departure_points;
-  for (const auto side_key : g_side_keys) {
-    for (const auto & dpt_pt : new_departure_points[side_key]) {
-      if (dpt_pt.departure_type != DepartureType::CRITICAL_DEPARTURE) {
-        continue;
-      }
-
-      if (dpt_pt.can_be_removed) {
-        continue;
-      }
-
-      const auto is_near_curr_pts = std::any_of(
-        critical_departure_points.begin(), critical_departure_points.end(),
-        [&](const CriticalDeparturePoint & crit_pt) {
-          return std::abs(dpt_pt.ego_dist_on_ref_traj - crit_pt.ego_dist_on_ref_traj) <
-                 th_point_merge_distance_m;
-        });
-
-      if (is_near_curr_pts) {
-        continue;
-      }
-
-      CriticalDeparturePoint crit_pt(dpt_pt);
-      crit_pt.point_on_prev_traj = aw_ref_traj.compute(crit_pt.ego_dist_on_ref_traj);
-      new_critical_departure_points.push_back(crit_pt);
-    }
-  }
-  return new_critical_departure_points;
-}
 std::unordered_map<DepartureType, bool> BoundaryDeparturePreventionModule::get_diagnostics(
   const double curr_vel, const double dist_with_offset_m)
 {
