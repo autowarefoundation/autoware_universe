@@ -23,9 +23,6 @@
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
-#include <pcl/pcl_base.h>
-#include <pcl/point_types.h>
-
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -78,8 +75,11 @@ public:
   {
     std::size_t operator()(const PolarVoxelIndex & idx) const
     {
-      return std::hash<int32_t>{}(idx.radius_idx) ^ (std::hash<int32_t>{}(idx.azimuth_idx) << 1) ^
-             (std::hash<int32_t>{}(idx.elevation_idx) << 2);
+      auto h1 = std::hash<int32_t>{}(idx.radius_idx);
+      auto h2 = std::hash<int32_t>{}(idx.azimuth_idx);
+      auto h3 = std::hash<int32_t>{}(idx.elevation_idx);
+
+      return h1 ^ (h2 << 1) ^ (h3 << 2);
     }
   };
 
@@ -101,87 +101,53 @@ private:
     const VoxelIndexSet & valid_voxels;
   };
 
-  // Main filter method
   void filter(
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
 
-  // Main filtering functions
-  void filter_point_xyz(
-    const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output);
-  void filter_point_xyzircaedt(
-    const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output);
-
-  // Phase 1: Data collection methods
-  VoxelInfoVector collect_voxel_info_xyz(
-    const pcl::PointCloud<pcl::PointXYZ>::Ptr & pcl_input) const;
-  VoxelInfoVector collect_voxel_info_xyzircaedt(const PointCloud2ConstPtr & input) const;
-
-  // Phase 2: Voxel validation methods
+  VoxelInfoVector collect_voxel_info(const PointCloud2ConstPtr & input) const;
   VoxelCountMap count_voxels(const VoxelInfoVector & point_voxel_info) const;
   VoxelIndexSet determine_valid_voxels_simple(const VoxelCountMap & voxel_counts) const;
   VoxelIndexSet determine_valid_voxels_with_return_types(
     const VoxelCountMap & voxel_counts, size_t & voxels_passed_secondary_test) const;
-
-  // Phase 3: Point filtering methods
+  VoxelIndexSet determine_valid_voxels(
+    const VoxelCountMap & voxel_counts, size_t & voxels_passed_secondary_test) const;
   ValidPointsMask create_valid_points_mask(
-    const VoxelInfoVector & point_voxel_info, const VoxelIndexSet & valid_voxels,
-    bool filter_secondary = false) const;
-
-  // Phase 4: Output creation methods
-  void create_filtered_output_xyz(
-    const pcl::PointCloud<pcl::PointXYZ>::Ptr & pcl_input,
-    const ValidPointsMask & valid_points_mask, PointCloud2 & output) const;
-
-  void create_filtered_output_xyzircaedt(
+    const VoxelInfoVector & point_voxel_info, const VoxelIndexSet & valid_voxels) const;
+  void create_filtered_output(
     const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask,
     PointCloud2 & output) const;
-
-  // Phase 5: Noise cloud publishing methods
-  void publish_noise_cloud_xyz(
-    const pcl::PointCloud<pcl::PointXYZ>::Ptr & pcl_input,
-    const ValidPointsMask & valid_points_mask, const VoxelInfoVector & point_voxel_info,
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input) const;
-
-  void publish_noise_cloud_xyzircaedt(
+  void publish_noise_cloud(
     const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask) const;
-
-  // Phase 6: Diagnostic publishing methods
-  void publish_diagnostics_simple(const ProcessingContext & context) const;
-  void publish_diagnostics_with_return_types(
+  void publish_diagnostics(
     const ProcessingContext & context, size_t voxels_passed_secondary_test) const;
 
-  // Common logic extraction methods
+  // Helper methods
   PointProcessingResult create_processing_result(
     const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask,
     const VoxelCountMap & voxel_counts, const VoxelIndexSet & valid_voxels,
     size_t voxels_passed_secondary_test = 0) const;
-
   sensor_msgs::msg::PointCloud2 create_noise_cloud(
     const PointCloud2ConstPtr & input, size_t noise_count) const;
-
   PointCounts calculate_point_counts(const ValidPointsMask & valid_points_mask) const;
-
   void setup_output_header(
     PointCloud2 & output, const PointCloud2ConstPtr & input, size_t valid_count) const;
 
-  // Helper functions
+  // Coordinate conversion methods
   static PolarCoordinate cartesian_to_polar(const CartesianCoordinate & cartesian);
   PolarVoxelIndex cartesian_to_polar_voxel(const CartesianCoordinate & cartesian) const;
   PolarVoxelIndex polar_to_polar_voxel(const PolarCoordinate & polar) const;
+
+  // Return type and validation methods
   bool is_primary_return_type(uint8_t return_type) const;
-  bool validate_point_basic(const PolarCoordinate & polar) const;
+  bool validate_point_polar(const PolarCoordinate & polar) const;
+  bool has_return_type_field(const PointCloud2ConstPtr & input) const;
+  bool has_polar_coordinates(const PointCloud2ConstPtr & input) const;
 
-  void publish_diagnostics(
-    const PointProcessingResult & result, bool has_return_type_classification);
-
-  // Parameter callback
+  // Parameter callback and diagnostics
   rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> & p);
-
-  // Diagnostic functions
   void on_visibility_check(diagnostic_updater::DiagnosticStatusWrapper & stat);
   void on_filter_ratio_check(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
-  // Parameters
   double radial_resolution_m_;
   double azimuth_resolution_rad_;
   double elevation_resolution_rad_;
@@ -193,29 +159,26 @@ private:
   int secondary_noise_threshold_;
   std::vector<int> primary_return_types_;
   bool publish_noise_cloud_;
+
+  // Diagnostic thresholds
   double visibility_error_threshold_;
   double visibility_warn_threshold_;
   double filter_ratio_error_threshold_;
   double filter_ratio_warn_threshold_;
 
-  // State variables using std::optional for safe initialization
+  // State variables
   mutable std::optional<double> visibility_;
   mutable std::optional<double> filter_ratio_;
 
-  // Publishers
+  // Publishers and diagnostics
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr visibility_pub_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr ratio_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr noise_cloud_pub_;
-
-  // Diagnostics
   diagnostic_updater::Updater updater_;
-
-  // Parameter callback handle
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
-
-  // Thread safety
   mutable std::mutex mutex_;
 };
+
 }  // namespace autoware::pointcloud_preprocessor
 
 #endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__OUTLIER_FILTER__POLAR_VOXEL_OUTLIER_FILTER_NODE_HPP_

@@ -2,18 +2,24 @@
 
 ## Overview
 
-The Polar Voxel Outlier Filter is a point cloud outlier filtering algorithm that operates in polar coordinate space instead of Cartesian coordinate space. This filter is designed for LiDAR data processing, offering two-criteria filtering with return type classification for enhanced noise removal compared to simple occupancy-based methods.
+The Polar Voxel Outlier Filter is a point cloud outlier filtering algorithm that operates in polar coordinate space for LiDAR data processing. This filter supports both simple occupancy-based filtering and advanced two-criteria filtering with return type classification for enhanced noise removal.
 
 **Key Features**:
 
-- **Automatic format detection** and handling of both `PointXYZ` and `PointXYZIRCAEDT` point cloud formats
-- **Two-criteria filtering** for PointXYZIRCAEDT with return type classification
-- **Diagnostics** with filter ratio and visibility metrics
-- **Debug support** with optional noise point cloud publishing for analysis
+- **Flexible filtering modes** with configurable return type classification
+- **Automatic format detection** between PointXYZIRC and PointXYZIRCAEDT
+- **Two-criteria filtering** using primary and secondary return analysis (when enabled)
+- **Comprehensive diagnostics** with filter ratio and visibility metrics
+- **Optional debug support** with noise point cloud publishing for analysis
 
 ## Purpose
 
-The purpose is to remove point cloud noise such as insects and rain using a polar coordinate voxel grid approach that is optimized for LiDAR sensor characteristics. This filter provides a two-criteria filtering method for PointXYZIRCAEDT format with return type classification, which gives additional configuration flexibility when using dual return modes and also enables visibility estimation. The concept is that when two returns exist, the first return is more likely to represent a region of noise (rain, fog, smoke, and so on).
+The purpose is to remove point cloud noise such as insects and rain using a polar coordinate voxel grid approach optimized for LiDAR sensor characteristics. This filter provides configurable filtering methods:
+
+1. **Simple Mode**: Basic occupancy filtering (any return type counts equally)
+2. **Advanced Mode**: Two-criteria filtering with return type classification for enhanced accuracy
+
+The advanced mode concept is that when two returns exist, the first return is more likely to represent a region of noise (rain, fog, smoke, and so on).
 
 ## Key Differences from Cartesian Voxel Grid Filter
 
@@ -28,44 +34,52 @@ The purpose is to remove point cloud noise such as insects and rain using a pola
 2. **Adaptive Resolution**: Automatically provides higher angular resolution at closer distances and lower resolution at far distances
 3. **Range-Aware Filtering**: Can apply different filtering strategies based on distance from sensor
 4. **Azimuthal Uniformity**: Maintains consistent azimuthal coverage regardless of distance
-5. **Automatic Format Detection**: Handles both PointXYZ and PointXYZIRCAEDT formats
+5. **Configurable Return Type Classification**: Optional return type analysis for enhanced filtering
 
 ## Point Cloud Format Support
 
-### PointXYZ Format
+This filter supports point clouds with return type information (required for advanced mode) and automatically detects between two formats:
 
-- **Usage**: Standard PCL point format with (x, y, z) coordinates
+### PointXYZIRC Format
+
+- **Usage**: Point format with (x, y, z, intensity, return_type, channel) fields
 - **Processing**: Computes polar coordinates (radius, azimuth, elevation) from Cartesian coordinates
-- **Filtering**: Simple occupancy threshold - voxels with ≥ `voxel_points_threshold` points are kept
+- **Return Type**: Uses return_type field for classification (when enabled)
 - **Performance**: Good performance with coordinate conversion overhead
 
 ### PointXYZIRCAEDT Format
 
-- **Usage**: Point clouds with pre-computed polar coordinate fields (`distance`, `azimuth`, `elevation`, `return_type`)
-- **Detection**: Automatically detects when these fields are present in the point cloud
+- **Usage**: Point clouds with pre-computed polar coordinate fields and return type
+- **Fields**: (x, y, z, intensity, return_type, channel, azimuth, elevation, distance, time_stamp)
+- **Detection**: Automatically detects when polar coordinate fields are present
 - **Processing**: Uses pre-computed polar coordinates directly, no conversion needed
-- **Advanced Filtering**: Two-criteria filtering with return type classification when enabled:
-  1. **Primary Return Threshold**: `primary_returns.size() >= voxel_points_threshold`
-  2. **Secondary Noise Threshold**: `secondary_returns.size() <= secondary_noise_threshold`
-  3. **Both criteria must be satisfied** for a voxel to be kept
 - **Performance**: Faster processing as it avoids trigonometric calculations
-- **Compatibility**: Works with any point cloud format that includes the required fields
 
 ```yaml
-# Example fields that enable optimized processing and advanced filtering:
-# - distance      (float32): Pre-computed radius
+# PointXYZIRC: Computes polar coordinates from Cartesian
+# - x, y, z       (float32): Cartesian coordinates
+# - intensity     (float32): Point intensity
+# - return_type   (uint8):   Return type classification
+# - channel       (uint16):  Channel information
+
+# PointXYZIRCAEDT: Uses pre-computed polar coordinates
+# - x, y, z       (float32): Cartesian coordinates
+# - intensity     (float32): Point intensity
+# - return_type   (uint8):   Return type classification
+# - channel       (uint16):  Channel information
 # - azimuth       (float32): Pre-computed azimuth angle
 # - elevation     (float32): Pre-computed elevation angle
-# - return_type   (uint8):   Return type classification (primary=[1], secondary=all others)
+# - distance      (float32): Pre-computed radius
+# - time_stamp    (uint32):  Point timestamp
 ```
 
-**Note**: The filter automatically detects the presence of polar coordinate fields and return type information, choosing the appropriate processing path. Advanced two-criteria filtering is enabled when `use_return_type_classification=true`.
+**Note**: The filter automatically detects the format and uses the appropriate processing path. Return type classification can be enabled or disabled based on requirements.
 
 ## Inner-workings / Algorithms
 
 ### Coordinate Conversion
 
-**For PointXYZ format:**
+**For PointXYZIRC format:**
 Each point (x, y, z) is converted to polar coordinates:
 
 - **Radius**: `r = sqrt(x² + y² + z²)`
@@ -87,58 +101,82 @@ Each point is assigned to a voxel based on:
 - **Azimuth Index**: `floor(azimuth / azimuth_resolution_rad)`
 - **Elevation Index**: `floor(elevation / elevation_resolution_rad)`
 
+### Return Type Classification
+
+When `use_return_type_classification=true`, points are classified using the `return_type` field:
+
+- **Primary Returns**: Return types specified in `primary_return_types` parameter (default: [1,6,10])
+- **Secondary Returns**: All other return types not specified as primary
+- **Classification**: Used for advanced two-criteria filtering
+
 ### Filtering Methodology
 
-The filter uses different algorithms depending on the input point cloud format:
+The filter uses different algorithms based on the `use_return_type_classification` parameter:
 
-#### For PointXYZ Format
+#### Simple Mode (`use_return_type_classification=false`)
 
-1. **Format Detection**: Automatically detects standard PointXYZ format
-2. **Coordinate Conversion**: Computes polar coordinates from Cartesian coordinates
-3. **Binning**: Points are grouped into polar voxels
-4. **Simple Thresholding**: Voxels with ≥ `voxel_points_threshold` points are kept
-5. **Output**: Filtered point cloud with noise points removed
+1. **Format Detection**: Automatically detects PointXYZIRC vs PointXYZIRCAEDT
+2. **Coordinate Processing**:
+   - PointXYZIRC: Computes polar coordinates from Cartesian
+   - PointXYZIRCAEDT: Uses pre-computed polar coordinates
+3. **Voxel Binning**: Points are grouped into polar voxels
+4. **Simple Thresholding**: Voxels with ≥ `voxel_points_threshold` points (any return type) are kept
+5. **Output**: Filtered point cloud with basic noise removal
 
-#### For PointXYZIRCAEDT Format
+#### Advanced Mode (`use_return_type_classification=true`)
 
-1. **Format Detection**: Automatically detects enhanced format with return type fields
-2. **Return Type Classification**: Points are classified as primary or secondary returns
-3. **Advanced Two-Criteria Filtering** (when `use_return_type_classification=true`):
+1. **Format Detection**: Automatically detects PointXYZIRC vs PointXYZIRCAEDT
+2. **Return Type Validation**: Ensures return_type field is present
+3. **Coordinate Processing**:
+   - PointXYZIRC: Computes polar coordinates from Cartesian
+   - PointXYZIRCAEDT: Uses pre-computed polar coordinates
+4. **Return Type Classification**: Points are classified as primary or secondary returns
+5. **Two-Criteria Filtering**:
    - **Criterion 1**: Primary returns ≥ `voxel_points_threshold`
    - **Criterion 2**: Secondary returns ≤ `secondary_noise_threshold`
    - **Both criteria must be satisfied** for a voxel to be kept
-4. **Optional Secondary Filtering**: Can exclude secondary returns from output when `filter_secondary_returns=true`
-5. **Output**: Filtered point cloud with enhanced noise removal
+6. **Secondary Return Filtering**: Optional exclusion of secondary returns from output
+7. **Output**: Filtered point cloud with enhanced noise removal
+
+### Advanced Two-Criteria Filtering
+
+When enabled, for each voxel both criteria must be satisfied:
+
+- **Primary Return Threshold**: `primary_count >= voxel_points_threshold`
+- **Secondary Return Threshold**: `secondary_count <= secondary_noise_threshold`
+- **Final Decision**: `valid_voxel = (primary_threshold_met AND secondary_threshold_met)`
 
 ### Key Features
 
-- **Polar Coordinate System**: Uses (radius, azimuth, elevation) which naturally align with LiDAR sensor patterns
-- **Return Type Classification**: Configurable primary/secondary return handling
-- **Secondary Return Filtering**: Optional filtering to keep only primary returns in output
-- **Dynamic Threshold Evaluation**: Ensures primary returns dominate over secondary returns
-- **Diagnostics**: Filter ratio and visibility metrics with configurable thresholds
-- **Debug Support**: Publishes filtered-out points for analysis and tuning when enabled
+- **Flexible Architecture**: Configurable between simple and advanced filtering
+- **Format-Optimized Processing**: Automatic selection of optimal coordinate source
+- **Comprehensive Diagnostics**: Mode-specific filter ratio and visibility metrics
+- **Debug Support**: Optional noise cloud publishing for analysis and tuning
 
-### Return Type Management
+### Return Type Management (Advanced Mode Only)
 
-- **Primary Returns**: Typically stronger, more reliable returns (default: [1])
-- **Secondary Returns**: All return types not specified as primary (automatically includes [2,3,4,5,etc.])
-- **Classification Control**: Can be disabled to process all returns equally
-- **Filtering Control**: Can optionally exclude secondary returns from output
-
-Note that primary and secondary returns vary between sensors and return modes, so parametrization should be performed after studying real sensor data.
+- **Primary Returns**: Configurable list of return types (default: [1,6,10])
+- **Secondary Returns**: All return types not specified as primary
+- **Dynamic Classification**: Runtime configurable through parameter updates
+- **Output Filtering**: Optional exclusion of secondary returns from final output
 
 ## Inputs / Outputs
 
 This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, please refer [README](../README.md).
 
+### Input Requirements
+
+- **Supported Formats**: PointXYZIRC or PointXYZIRCAEDT
+- **Return Type Field**: Required only when `use_return_type_classification=true`
+- **Invalid Inputs**: Point clouds without return_type field will be rejected in advanced mode
+
 ### Additional Debug Topics
 
-| Name                                                  | Type                                                | Description                                                                    |
-| ----------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `~/polar_voxel_outlier_filter/debug/filter_ratio`     | `autoware_internal_debug_msgs::msg::Float32Stamped` | Ratio of output to input points                                                |
-| `~/polar_voxel_outlier_filter/debug/visibility`       | `autoware_internal_debug_msgs::msg::Float32Stamped` | Ratio of voxels passing secondary return threshold test (PointXYZIRCAEDT only) |
-| `~/polar_voxel_outlier_filter/debug/pointcloud_noise` | `sensor_msgs::msg::PointCloud2`                     | Filtered-out points for debugging (when enabled)                               |
+| Name                                                  | Type                                                | Description                                                                  |
+| ----------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `~/polar_voxel_outlier_filter/debug/filter_ratio`     | `autoware_internal_debug_msgs::msg::Float32Stamped` | Ratio of output to input points                                              |
+| `~/polar_voxel_outlier_filter/debug/visibility`       | `autoware_internal_debug_msgs::msg::Float32Stamped` | Ratio of voxels passing secondary return threshold test (advanced mode only) |
+| `~/polar_voxel_outlier_filter/debug/pointcloud_noise` | `sensor_msgs::msg::PointCloud2`                     | Filtered-out points for debugging (when enabled)                             |
 
 ## Parameters
 
@@ -153,11 +191,11 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 | `radial_resolution_m`      | double | Resolution in radial direction (meters)     | 0.2           |
 | `azimuth_resolution_rad`   | double | Resolution in azimuth direction (radians)   | 0.025 (~1.4°) |
 | `elevation_resolution_rad` | double | Resolution in elevation direction (radians) | 0.05 (~2.9°)  |
-| `voxel_points_threshold`   | int    | Minimum primary points required per voxel   | 2             |
+| `voxel_points_threshold`   | int    | Minimum points required per voxel           | 2             |
 | `min_radius_m`             | double | Minimum radius to consider (meters)         | 0.5           |
 | `max_radius_m`             | double | Maximum radius to consider (meters)         | 300.0         |
 
-### Advanced Filtering Parameters
+### Return Type Classification Parameters
 
 | Parameter                        | Type  | Description                                 | Default  |
 | -------------------------------- | ----- | ------------------------------------------- | -------- |
@@ -176,60 +214,100 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 
 | Parameter                      | Type   | Description                             | Default |
 | ------------------------------ | ------ | --------------------------------------- | ------- |
-| `filter_ratio_error_threshold` | double | Error threshold for filter ratio        | 0.7     |
-| `filter_ratio_warn_threshold`  | double | Warning threshold for filter ratio      | 0.3     |
+| `filter_ratio_error_threshold` | double | Error threshold for filter ratio        | 0.5     |
+| `filter_ratio_warn_threshold`  | double | Warning threshold for filter ratio      | 0.7     |
 | `visibility_error_threshold`   | double | Error threshold for visibility metric   | 0.5     |
 | `visibility_warn_threshold`    | double | Warning threshold for visibility metric | 0.7     |
-
-### Core Parameters (Schema-based)
-
-{{ json_to_markdown("sensing/autoware_pointcloud_preprocessor/schema/polar_voxel_outlier_filter_node.schema.json") }}
 
 ### Parameter Interactions
 
 - **use_return_type_classification**: Must be `true` to enable advanced two-criteria filtering
-- **filter_secondary_returns**: When `true`, only primary returns appear in output (regardless of filtering criteria)
-- **secondary_noise_threshold**: Higher values require stronger primary return dominance
-- **primary_return_types**: Only these return types are considered primary; all others are automatically secondary
+- **filter_secondary_returns**: When `true`, only primary returns appear in output (advanced mode only)
+- **secondary_noise_threshold**: Only used when `use_return_type_classification=true`
+- **primary_return_types**: Only used when `use_return_type_classification=true`
 - **publish_noise_cloud**: When `false`, improves performance by skipping noise cloud generation
 - **Diagnostics**: Visibility is only published when return type classification is enabled
 
+## Configuration Examples
+
+### Simple Mode Configuration
+
+```yaml
+# Basic occupancy filtering - any return type counts equally
+use_return_type_classification: false
+voxel_points_threshold: 2 # Total points threshold
+radial_resolution_m: 0.5
+azimuth_resolution_rad: 0.0349 # ~2 degrees
+elevation_resolution_rad: 0.0349 # ~2 degrees
+publish_noise_cloud: false # Performance optimization
+```
+
+### Advanced Mode Configuration
+
+```yaml
+# Two-criteria filtering with return type classification
+use_return_type_classification: true
+voxel_points_threshold: 2 # Primary return threshold
+secondary_noise_threshold: 4 # Secondary return threshold
+primary_return_types: [1, 6, 10] # Primary return types
+filter_secondary_returns: false # Include secondary returns in output
+radial_resolution_m: 0.2
+azimuth_resolution_rad: 0.025 # ~1.4 degrees
+elevation_resolution_rad: 0.05 # ~2.9 degrees
+publish_noise_cloud: false
+```
+
+### Debug Configuration
+
+```yaml
+# Enable debugging and monitoring
+use_return_type_classification: true
+publish_noise_cloud: true # Enable noise cloud for analysis
+filter_ratio_error_threshold: 0.3
+filter_ratio_warn_threshold: 0.5
+visibility_error_threshold: 0.4
+visibility_warn_threshold: 0.6
+```
+
 ## Assumptions / Known limits
 
-- Designed for LiDAR point clouds with polar coordinate characteristics
-- Advanced filtering requires PointXYZIRCAEDT format with `use_return_type_classification=true`
-- PointXYZ format uses simple occupancy filtering only
-- Requires finite coordinate values (filters out NaN/Inf points automatically)
-- Two-criteria filtering: Both primary return threshold AND secondary threshold evaluation must be satisfied
-- Edge case: Voxels with zero secondary returns pass threshold criterion if they have primary returns
+- **Simple mode**: Works with any point cloud format, basic occupancy filtering only
+- **Advanced mode**: Requires return_type field for enhanced filtering
+- **Supported formats**: PointXYZIRC and PointXYZIRCAEDT only
+- **Finite coordinates required**: Automatically filters out NaN/Inf points
+- **Return type dependency**: Advanced filtering effectiveness depends on accurate return type classification
 
 ## Error detection and handling
 
 The filter includes robust error handling:
 
-- Input validation for null point clouds
-- Automatic filtering of invalid points (NaN, Inf values)
-- Graceful handling of points outside configured radius ranges
-- Support for both point cloud formats with automatic detection
-- Zero division protection in threshold calculations
-- Dynamic parameter validation and updates
+- **Mode-specific validation**: Checks return_type field presence in advanced mode
+- **Input validation**: Checks for null point clouds
+- **Coordinate validation**: Filters invalid points (NaN, Inf values) automatically
+- **Range validation**: Points outside configured radius ranges are excluded
+- **Dynamic parameter validation**: Runtime parameter updates with validation
 
 ## Usage
 
 ### Launch the Filter
 
 ```bash
-# Basic launch using the filter directly in a launch file
-# (Note: This filter is typically used as part of a larger pointcloud preprocessing pipeline)
-
-# Example launch file integration:
+# Example launch file integration for simple mode:
 # <node pkg="autoware_pointcloud_preprocessor" exec="polar_voxel_outlier_filter_node" name="polar_voxel_filter">
+#   <param name="use_return_type_classification" value="false"/>
 #   <param name="radial_resolution_m" value="1.0"/>
 #   <param name="azimuth_resolution_rad" value="0.0349"/>
 #   <param name="voxel_points_threshold" value="3"/>
+# </node>
+
+# Example launch file integration for advanced mode:
+# <node pkg="autoware_pointcloud_preprocessor" exec="polar_voxel_outlier_filter_node" name="polar_voxel_filter">
 #   <param name="use_return_type_classification" value="true"/>
-#   <param name="secondary_noise_threshold" value="2"/>
-#   <param name="primary_return_types" value="[1]"/>
+#   <param name="radial_resolution_m" value="0.5"/>
+#   <param name="azimuth_resolution_rad" value="0.025"/>
+#   <param name="voxel_points_threshold" value="2"/>
+#   <param name="secondary_noise_threshold" value="4"/>
+#   <param name="primary_return_types" value="[1,6,10]"/>
 # </node>
 ```
 
@@ -237,13 +315,13 @@ The filter includes robust error handling:
 
 #### Input/Output
 
-- **Input**: `/input` (sensor_msgs/PointCloud2)
+- **Input**: `/input` (sensor_msgs/PointCloud2) - Must have return_type field for advanced mode
 - **Output**: `/output` (sensor_msgs/PointCloud2)
 
 #### Debug Topics
 
 - **Filter Ratio**: `~/polar_voxel_outlier_filter/debug/filter_ratio` (autoware_internal_debug_msgs/Float32Stamped)
-- **Visibility**: `~/polar_voxel_outlier_filter/debug/visibility` (autoware_internal_debug_msgs/Float32Stamped)
+- **Visibility**: `~/polar_voxel_outlier_filter/debug/visibility` (autoware_internal_debug_msgs/Float32Stamped) - Advanced mode only
 - **Noise Cloud**: `~/polar_voxel_outlier_filter/debug/pointcloud_noise` (sensor_msgs/PointCloud2)
 
 ### Programmatic Usage
@@ -254,10 +332,10 @@ The filter includes robust error handling:
 // Create node
 auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlierFilterComponent>(options);
 
-// The filter automatically detects point cloud format and applies appropriate processing:
-// - PointXYZ: Simple occupancy filtering with coordinate conversion
-// - PointXYZIRCAEDT: Advanced two-criteria filtering with return type classification
-//   when use_return_type_classification=true
+// The filter automatically detects point cloud format and applies filtering based on configuration:
+// - Simple mode (use_return_type_classification=false): Basic occupancy filtering
+// - Advanced mode (use_return_type_classification=true): Two-criteria filtering with return type analysis
+// - Both modes support PointXYZIRC and PointXYZIRCAEDT formats
 ```
 
 ## Performance characterization
@@ -267,132 +345,120 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 - **Time Complexity**: O(n) where n is the number of input points
 - **Space Complexity**: O(v) where v is the number of occupied voxels
 
-### Performance Impact by Format
+### Performance Impact by Mode and Format
 
-- **PointXYZIRCAEDT with Return Type Classification**:
-  - Uses pre-computed polar coordinates and return type information
-  - Advanced two-criteria filtering for enhanced noise removal
-  - Diagnostics including visibility metrics
-  - Reduced computational overhead compared to PointXYZ due to no coordinate conversion
-- **PointXYZ**: Standard performance with basic occupancy filtering
-  - Computes polar coordinates on-the-fly
-  - Additional computational cost for `sqrt`, `atan2` operations
-  - Simple threshold-based filtering only
+#### **Simple Mode**
+
+- **PointXYZIRCAEDT**: Fast processing with pre-computed coordinates
+- **PointXYZIRC**: Good performance with coordinate conversion overhead
+- **No return type analysis**: Reduced computational overhead
+
+#### **Advanced Mode**
+
+- **PointXYZIRCAEDT**: Optimal performance with pre-computed coordinates and return type analysis
+- **PointXYZIRC**: Good performance with coordinate conversion and return type analysis
+- **Enhanced filtering**: Additional return type classification processing
 
 ### Memory Usage
 
-- Uses hash maps for voxel storage, automatically handling sparse voxel occupancy
-- Memory scales with the number of occupied voxels, not the total possible voxel space
-- Single-pass processing: Visibility statistics collected during main filtering loop
-- Efficient diagnostics: Real-time performance monitoring with minimal overhead
+- **Hash-based voxel storage**: Efficiently handles sparse voxel occupancy
+- **Single-pass processing**: Minimal memory overhead
+- **Mode-specific diagnostics**: Efficient performance monitoring
 
 ### Optimization Tips
 
-1. **Use PointXYZIRCAEDT format** with return type classification for better performance and filtering quality
-2. **Enable return type classification** (`use_return_type_classification=true`) for advanced filtering
-3. **Tune voxel resolutions** based on your use case:
-   - Larger resolutions = faster processing, less precise filtering
-   - Smaller resolutions = slower processing, more precise filtering
-4. **Adjust secondary noise threshold** to control filtering aggressiveness
-5. **Configure return type mappings** to match your sensor's characteristics
-6. **Monitor diagnostics** for real-time performance assessment
-7. **Disable noise cloud publishing** (`publish_noise_cloud=false`) in production for better performance
+1. **Choose appropriate mode** based on requirements:
+   - Simple mode for basic filtering needs
+   - Advanced mode for enhanced noise removal
+2. **Use PointXYZIRCAEDT format** when available for optimal performance
+3. **Tune voxel resolutions** based on your use case
+4. **Configure return type mappings** to match your sensor (advanced mode)
+5. **Monitor diagnostics** for real-time performance assessment
+6. **Disable noise cloud publishing** in production for better performance
 
 ## Diagnostics and Monitoring
 
 ### Filter Ratio Diagnostics
 
-- Published for both input formats
-- Represents overall filtering effectiveness (output/input ratio)
-- Configurable error/warning thresholds
+- **Published for both modes**: Overall filtering effectiveness (output/input ratio)
+- **Configurable thresholds**: Error/warning levels for automated monitoring
+- **Real-time feedback**: Immediate filtering performance assessment
 
 ### Visibility Diagnostics
 
-- Only published for PointXYZIRCAEDT with return type classification enabled
-- Represents the percentage of voxels that pass the primary-to-secondary threshold test
-- Statistics collected during main filtering loop for efficiency
-- Useful for detecting sensor blockage, environmental conditions, or filtering effectiveness
+- **Advanced mode only**: Uses return type classification data
+- **Voxel-based metric**: Percentage of voxels passing secondary threshold test
+- **Environmental indicator**: Useful for detecting sensor conditions
 
 ### Debug Features
 
-- **Noise point cloud**: Contains all filtered-out points for analysis (when enabled)
-- **Runtime parameter updates**: All thresholds can be adjusted dynamically
-- **Detailed logging**: Debug messages show voxel statistics and filtering results
-
-## Implementation Files
-
-### Core Implementation
-
-- `include/autoware/pointcloud_preprocessor/outlier_filter/polar_voxel_outlier_filter_node.hpp`
-- `src/outlier_filter/polar_voxel_outlier_filter_node.cpp`
-
-### Configuration
-
-- `config/polar_voxel_outlier_filter_node.param.yaml`
-- `schema/polar_voxel_outlier_filter_node.schema.json`
-
-### Documentation
-
-- `docs/polar-voxel-outlier-filter.md` (this document)
+- **Noise point cloud**: All filtered-out points for analysis (when enabled)
+- **Runtime parameter updates**: Dynamic threshold adjustment
+- **Mode-specific logging**: Debug messages tailored to filtering mode
 
 ## Use Cases and Configuration Guidelines
 
-### Typical Applications
+### Simple Mode Use Cases
 
-1. **LiDAR Outlier Removal**: Noise removal using return type analysis
-2. **Multi-Return Processing**: Separate handling of primary and secondary returns
-3. **Dynamic Object Filtering**: Enhanced filtering of isolated points from moving objects
-4. **Range-Based Processing**: Different filtering strategies for near vs far points
-5. **Sensor Quality Assessment**: Real-time monitoring of sensor performance and environmental conditions
-6. **Noise Characterization**: Debug analysis of filtered points for sensor tuning
+1. **Legacy System Integration**: Basic filtering without return type requirements
+2. **Performance-Critical Applications**: When computational resources are limited
+3. **Unknown Return Type Reliability**: When sensor return type information is questionable
+4. **Basic Noise Removal**: Simple occupancy-based filtering requirements
+
+### Advanced Mode Use Cases
+
+1. **Modern LiDAR Processing**: Enhanced filtering with reliable return type information
+2. **Environmental Monitoring**: Visibility estimation and weather condition detection
+3. **High-Quality Filtering**: Two-criteria approach for superior noise removal
+4. **Autonomous Vehicle Applications**: Safety-critical filtering with comprehensive diagnostics
 
 ### Parameter Tuning Guidelines
 
-#### Basic Configuration
+#### Simple Mode Configuration
 
-- **For dense urban environments**: Use smaller `radial_resolution_m` (0.2-0.5m) and `azimuth_resolution_rad` (0.5-1°)
-- **For highway scenarios**: Use larger `radial_resolution_m` (0.5-1.0m) and moderate `azimuth_resolution_rad` (1-2°)
-- **For noisy sensors**: Increase `voxel_points_threshold` (3-5 points)
-- **For sparse data**: Decrease `voxel_points_threshold` (1-2 points)
+- **For dense environments**: Smaller voxel resolutions, higher point thresholds
+- **For sparse data**: Larger voxel resolutions, lower point thresholds
+- **For performance**: Larger resolutions, disable noise cloud publishing
 
-#### Advanced Configuration
+#### Advanced Mode Configuration
 
-- **For aggressive noise removal**: Lower `secondary_noise_threshold` (0-1)
-- **For conservative filtering**: Higher `secondary_noise_threshold` (2-4)
+- **For aggressive noise removal**: Lower secondary noise threshold (0-2)
+- **For conservative filtering**: Higher secondary noise threshold (3-5)
 - **For primary-only output**: Enable `filter_secondary_returns`
-- **For custom return classification**: Adjust `primary_return_types` list (all others will be considered secondary returns)
-- **For diagnostics**: Tune error/warning thresholds based on expected performance
+- **For sensor-specific optimization**: Adjust `primary_return_types` based on sensor characteristics
 
-## Comparison with Cartesian Voxel Filter
+## Comparison Table
 
-| Aspect                    | Cartesian Voxel  | Polar Voxel (PointXYZ) | Polar Voxel (PointXYZIRCAEDT) |
-| ------------------------- | ---------------- | ---------------------- | ----------------------------- |
-| **Coordinate System**     | (x, y, z)        | (r, θ, φ) computed     | (r, θ, φ) pre-computed        |
-| **Voxel Shape**           | Cubic            | Wedge-shaped           | Wedge-shaped                  |
-| **Resolution**            | Uniform          | Adaptive               | Adaptive                      |
-| **LiDAR Alignment**       | Limited          | Good                   | Good                          |
-| **Filtering Method**      | Simple threshold | Simple threshold       | Advanced two-criteria         |
-| **Return Type Support**   | None             | None                   | Full classification           |
-| **Range Handling**        | Equal treatment  | Range-aware            | Range-aware                   |
-| **Computational Cost**    | Low              | Moderate               | Low                           |
-| **Coordinate Conversion** | None             | Required               | Not Required                  |
-| **Diagnostics**           | Basic            | Basic                  | Comprehensive                 |
-| **Debug Support**         | Limited          | Limited                | Full noise analysis           |
+| Aspect                   | Simple Mode     | Advanced Mode                 |
+| ------------------------ | --------------- | ----------------------------- |
+| **Filtering Method**     | Basic occupancy | Two-criteria with return type |
+| **Return Type Required** | No              | Yes                           |
+| **Computational Cost**   | Low             | Moderate                      |
+| **Filtering Quality**    | Good            | Excellent                     |
+| **Visibility Metrics**   | None            | Full                          |
+| **Configuration**        | Simple          | Advanced                      |
+| **Use Case**             | Basic filtering | Enhanced noise removal        |
+| **Environmental Adapt**  | Limited         | Comprehensive                 |
 
-## Future extensions
+## Migration Guide
 
-### Potential Enhancements
+### Enabling Advanced Mode
 
-1. **Cylindrical Mode**: Option to use (r, θ, z) instead of (r, θ, φ) for ground-based applications
-2. **Adaptive Thresholding**: Range-dependent point thresholds based on distance from sensor
-3. **Multi-Resolution**: Different resolutions for different range bands
-4. **GPU Acceleration**: CUDA implementation for high-throughput processing
-5. **Machine Learning Integration**: AI-based return type classification and adaptive filtering
-6. **Multi-Sensor Fusion**: Support for combining multiple LiDAR sensors
-7. **Real-time Parameter Optimization**: Automatic parameter tuning based on environmental conditions
+To enable advanced filtering on existing systems:
 
-### Recently Implemented
+1. **Ensure return type field**: Verify input point clouds have return_type field
+2. **Set parameter**: `use_return_type_classification: true`
+3. **Configure return types**: Set `primary_return_types` for your sensor
+4. **Tune thresholds**: Adjust `secondary_noise_threshold` based on requirements
+5. **Monitor diagnostics**: Use visibility metrics for performance assessment
 
-- Separate handling of primary and secondary returns for improved accuracy ✅
-- Performance optimization with conditional noise cloud publishing ✅
-- Comprehensive parameter validation and runtime configuration ✅
+### Disabling Advanced Mode
+
+To use simple mode for basic filtering:
+
+1. **Set parameter**: `use_return_type_classification: false`
+2. **Configure threshold**: Set `voxel_points_threshold` for total point count
+3. **Remove advanced parameters**: Return type parameters will be ignored
+4. **Simplified monitoring**: Only filter ratio diagnostics available
+
+This approach provides **maximum flexibility** while maintaining optimal performance for both simple and advanced use cases! 🎯✨
