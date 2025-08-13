@@ -261,7 +261,7 @@ void DiffusionPlanner::load_engine(const std::string & model_path)
     nvinfer1::Dims min_dims = dims, opt_dims = dims, max_dims = dims;
     min_dims.d[0] = 1;
     opt_dims.d[0] = batch_size;
-    max_dims.d[0] = batch_size * 4;  // Allow up to 4x the specified batch size
+    max_dims.d[0] = batch_size;
     return ProfileDims{name, min_dims, opt_dims, max_dims};
   };
 
@@ -285,12 +285,11 @@ void DiffusionPlanner::load_engine(const std::string & model_path)
       make_dynamic_dims("lanes_speed_limit", to_dynamic_dims(LANES_SPEED_LIMIT_SHAPE)));
     profile_dims.emplace_back(
       make_dynamic_dims("lanes_has_speed_limit", to_dynamic_dims(LANES_HAS_SPEED_LIMIT_SHAPE)));
-    profile_dims.emplace_back(
-      make_dynamic_dims("route_lanes", to_dynamic_dims(ROUTE_LANES_SHAPE)));
+    profile_dims.emplace_back(make_dynamic_dims("route_lanes", to_dynamic_dims(ROUTE_LANES_SHAPE)));
     profile_dims.emplace_back(make_dynamic_dims(
       "route_lanes_has_speed_limit", to_dynamic_dims(ROUTE_LANES_HAS_SPEED_LIMIT_SHAPE)));
-    profile_dims.emplace_back(make_dynamic_dims(
-      "route_lanes_speed_limit", to_dynamic_dims(ROUTE_LANES_SPEED_LIMIT_SHAPE)));
+    profile_dims.emplace_back(
+      make_dynamic_dims("route_lanes_speed_limit", to_dynamic_dims(ROUTE_LANES_SPEED_LIMIT_SHAPE)));
     profile_dims.emplace_back(make_dynamic_dims("goal_pose", to_dynamic_dims(GOAL_POSE_SHAPE)));
     profile_dims.emplace_back(make_dynamic_dims("ego_shape", to_dynamic_dims(EGO_SHAPE_SHAPE)));
   }
@@ -302,8 +301,7 @@ void DiffusionPlanner::load_engine(const std::string & model_path)
     network_io.emplace_back("neighbor_agents_past", to_dynamic_dims(NEIGHBOR_SHAPE));
     network_io.emplace_back("static_objects", to_dynamic_dims(STATIC_OBJECTS_SHAPE));
     network_io.emplace_back("lanes", to_dynamic_dims(LANES_SHAPE));
-    network_io.emplace_back(
-      "lanes_has_speed_limit", to_dynamic_dims(LANES_HAS_SPEED_LIMIT_SHAPE));
+    network_io.emplace_back("lanes_has_speed_limit", to_dynamic_dims(LANES_HAS_SPEED_LIMIT_SHAPE));
     network_io.emplace_back("lanes_speed_limit", to_dynamic_dims(LANES_SPEED_LIMIT_SHAPE));
     network_io.emplace_back("route_lanes", to_dynamic_dims(ROUTE_LANES_SHAPE));
     network_io.emplace_back(
@@ -583,8 +581,35 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
     single_batch_predictions, this->now(), transforms_.first, batch_idx, ego_agent_idx);
   pub_trajectory_->publish(output_trajectory);
 
-  auto ego_trajectory_as_candidate_msg = postprocess::to_candidate_trajectories_msg(
-    output_trajectory, generator_uuid_, "DiffusionPlanner");
+  // Publish all batch results as candidate trajectories
+  const int batch_size = params_.batch_size;
+  const std::vector<autoware_planning_msgs::msg::Trajectory> all_trajectories =
+    postprocess::create_multiple_trajectories(
+      predictions, this->now(), transforms_.first, 0, ego_agent_idx);
+
+  // Start with first trajectory as main candidate
+  autoware_internal_planning_msgs::msg::CandidateTrajectories ego_trajectory_as_candidate_msg =
+    postprocess::to_candidate_trajectories_msg(
+      output_trajectory, generator_uuid_, "DiffusionPlanner");
+
+  // Add additional batch results as more candidates
+  for (int i = 1; i < batch_size && i < static_cast<int>(all_trajectories.size()); ++i) {
+    auto additional_candidate = postprocess::to_candidate_trajectories_msg(
+      all_trajectories[i], generator_uuid_, "DiffusionPlanner_batch_" + std::to_string(i));
+
+    // Add the first (and only) candidate trajectory from the additional result
+    if (!additional_candidate.candidate_trajectories.empty()) {
+      ego_trajectory_as_candidate_msg.candidate_trajectories.push_back(
+        additional_candidate.candidate_trajectories[0]);
+    }
+
+    // Add generator info as well
+    if (!additional_candidate.generator_info.empty()) {
+      ego_trajectory_as_candidate_msg.generator_info.push_back(
+        additional_candidate.generator_info[0]);
+    }
+  }
+
   pub_trajectories_->publish(ego_trajectory_as_candidate_msg);
 
   // Other agents prediction
