@@ -351,12 +351,12 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   StateVec X_t;
   ekf.getX(X_t);
 
-  const double x1 = X_t(IDX::X1);
-  const double y1 = X_t(IDX::Y1);
-  const double x2 = X_t(IDX::X2);
-  const double y2 = X_t(IDX::Y2);
-  const double vel_x = X_t(IDX::VX);
-  const double vel_y = X_t(IDX::VY);
+  const double & x1 = X_t(IDX::X1);
+  const double & y1 = X_t(IDX::Y1);
+  const double & x2 = X_t(IDX::X2);
+  const double & y2 = X_t(IDX::Y2);
+  const double & vel_x = X_t(IDX::VX);
+  const double & vel_y = X_t(IDX::VY);
 
   const double yaw = std::atan2(y2 - y1, x2 - x1);
   const double wheel_base = std::hypot(x2 - x1, y2 - y1);
@@ -438,26 +438,6 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   //   q_cov_slip_rate = std::min(q_cov_slip_rate, motion_params_.q_cov_slip_rate_max);
   //   q_cov_slip_rate = std::max(q_cov_slip_rate, motion_params_.q_cov_slip_rate_min);
   // }
-  // const double dt2 = dt * dt;
-  // const double dt4 = dt2 * dt2;
-  // const double q_cov_x = 0.25 * motion_params_.q_cov_acc_long * dt4;
-  // const double q_cov_y = 0.25 * motion_params_.q_cov_acc_lat * dt4;
-  // const double q_cov_yaw = q_stddev_yaw_rate * q_stddev_yaw_rate * dt2;
-  // const double q_cov_vel = motion_params_.q_cov_acc_long * dt2;
-  // const double q_cov_slip = q_cov_slip_rate * dt2;
-
-  // StateMat Q;
-  // Q.setZero();
-  // // Rotate the covariance matrix according to the vehicle yaw
-  // // because q_cov_x and y are in the vehicle coordinate system.
-  // Q(IDX::X, IDX::X) = (q_cov_x * cos_yaw * cos_yaw + q_cov_y * sin_yaw * sin_yaw);
-  // Q(IDX::X, IDX::Y) = (0.5f * (q_cov_x - q_cov_y) * sin_2yaw);
-  // Q(IDX::Y, IDX::Y) = (q_cov_x * sin_yaw * sin_yaw + q_cov_y * cos_yaw * cos_yaw);
-  // Q(IDX::Y, IDX::X) = Q(IDX::X, IDX::Y);
-  // Q(IDX::YAW, IDX::YAW) = q_cov_yaw;
-  // Q(IDX::VEL, IDX::VEL) = q_cov_vel;
-  // Q(IDX::SLIP, IDX::SLIP) = q_cov_slip;
-
 
   // Process noise covariance Q
   double q_cov_slip_rate = motion_params_.q_cov_slip_rate_min;
