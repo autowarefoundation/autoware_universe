@@ -375,8 +375,8 @@
             "longitudinal",
             "steering_accelerated",
             "steering_stuck",
-            "steering_left",
-            "steering_right"
+            "steering_sudden_left",
+            "steering_sudden_right"
           ],
           "additionalProperties": false
         },
