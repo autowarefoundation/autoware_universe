@@ -73,11 +73,10 @@ jobs:
         if: ${{ steps.get-self-packages.outputs.self-packages != '' }}
         uses: autowarefoundation/autoware-github-actions/colcon-build@v1
         with:
-          rosdistro: ${{ inputs.rosdistro }}
+          rosdistro: ${{ env.rosdistro }}
           target-packages: ${{ steps.get-self-packages.outputs.self-packages }}
           build-depends-repos: build_depends.repos
           cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
-          build-pre-command: ${{ inputs.build-pre-command }}
 
       - name: Store install and build contents
         uses: actions/cache/save@v4
@@ -86,4 +85,4 @@ jobs:
           path: |
             install
             build
-          key: workspace-${{ runner.arch }}-${{ rosdistro }}
+          key: workspace-${{ runner.arch }}-${{ env.rosdistro }}
