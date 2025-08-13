@@ -18,6 +18,8 @@
 #include "slow_down_interpolator.hpp"
 #include "utils.hpp"
 
+#include <autoware/boundary_departure_checker/data_structs.hpp>
+#include <autoware/boundary_departure_checker/parameters.hpp>
 #include <autoware/boundary_departure_checker/utils.hpp>
 #include <autoware/motion_utils/marker/marker_helper.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
@@ -64,14 +66,19 @@ void BoundaryDeparturePreventionModule::init(
   updater_ptr_->setHardwareID("motion_velocity_boundary_departure_prevention");
   updater_ptr_->add(
     "boundary_departure", [this](diagnostic_updater::DiagnosticStatusWrapper & stat) {
+      const auto matches_type = [this](const DepartureType & type) -> bool {
+        return output_.diagnostic_output.find(type) != output_.diagnostic_output.end() &&
+               output_.diagnostic_output[type];
+      };
+
       const auto type = std::invoke([&]() {
-        if (output_.diagnostic_output[DepartureType::CRITICAL_DEPARTURE]) {
+        if (matches_type(DepartureType::CRITICAL_DEPARTURE)) {
           return DepartureType::CRITICAL_DEPARTURE;
         }
-        if (output_.diagnostic_output[DepartureType::APPROACHING_DEPARTURE]) {
+        if (matches_type(DepartureType::APPROACHING_DEPARTURE)) {
           return DepartureType::APPROACHING_DEPARTURE;
         }
-        if (output_.diagnostic_output[DepartureType::NEAR_BOUNDARY]) {
+        if (matches_type(DepartureType::NEAR_BOUNDARY)) {
           return DepartureType::NEAR_BOUNDARY;
         }
         return DepartureType::NONE;
@@ -86,8 +93,9 @@ void BoundaryDeparturePreventionModule::init(
 
       stat.summary(lvl, msg);
     });
-  last_found_time_ptr_ = std::make_unique<double>(clock_ptr_->now().seconds());
-  last_lost_time_ptr_ = std::make_unique<double>(clock_ptr_->now().seconds());
+  last_abnormality_fp_no_overlap_bound_time_ = clock_ptr_->now().seconds();
+  last_abnormality_fp_overlap_bound_time_ = clock_ptr_->now().seconds();
+  last_no_critical_dpt_time_ = clock_ptr_->now().seconds();
 }
 
 void BoundaryDeparturePreventionModule::update_parameters(
@@ -97,6 +105,7 @@ void BoundaryDeparturePreventionModule::update_parameters(
 
   using autoware_utils::update_param;
   auto & pp = node_param_;
+  auto & configs = pp.bdc_param.abnormality_configs;
 
   const std::string module_name{"boundary_departure_prevention."};
   update_param(
@@ -104,81 +113,87 @@ void BoundaryDeparturePreventionModule::update_parameters(
   update_param(
     parameters, module_name + "th_max_lateral_query_num", pp.bdc_param.th_max_lateral_query_num);
 
-  [[maybe_unused]] const auto abnormality_params = [&module_name, &parameters, &pp]() {
-    const std::string ns_abnormality{module_name + "abnormality."};
-    const std::string ns_normal_abnormality{ns_abnormality + "normal."};
-    const std::string ns_steering_abnormality{ns_abnormality + "steering."};
-    const std::string ns_localization_abnormality{ns_abnormality + "localization."};
-    const std::string ns_longitudinal_abnormality{ns_abnormality + "longitudinal."};
+  const std::string ns_abnormality{module_name + "abnormality."};
+  const std::string ns_normal_abnormality{ns_abnormality + "normal."};
+  const std::string ns_localization_abnormality{ns_abnormality + "localization."};
+  const std::string ns_longitudinal_abnormality{ns_abnormality + "longitudinal."};
 
-    const auto has_type = [&](const AbnormalityType type_to_check) {
-      return std::any_of(
-        pp.bdc_param.abnormality_types_to_compensate.begin(),
-        pp.bdc_param.abnormality_types_to_compensate.end(),
-        [&](const AbnormalityType type) { return type == type_to_check; });
-    };
-
-    std::vector<AbnormalityType> abnormality_types_to_compensate;
-    AbnormalitiesConfigs configs;
-
-    auto compensate_normal = has_type(AbnormalityType::NORMAL);
-    update_param(parameters, ns_normal_abnormality + "enable", compensate_normal);
-    if (compensate_normal) {
-      abnormality_types_to_compensate.emplace_back(AbnormalityType::NORMAL);
-
-      NormalConfig normal_config;
-      const std::string footprint_envelop_ns{ns_normal_abnormality + "footprint_envelop."};
-
-      update_param(
-        parameters, footprint_envelop_ns + "lat_m", normal_config.footprint_envelop.lat_m);
-      update_param(
-        parameters, footprint_envelop_ns + "lon_m", normal_config.footprint_envelop.lon_m);
-      configs.insert({AbnormalityType::NORMAL, normal_config});
-    }
-
-    auto compensate_steering = has_type(AbnormalityType::STEERING);
-    update_param(parameters, ns_steering_abnormality + "enable", compensate_steering);
-    if (compensate_steering) {
-      SteeringConfig steering_config;
-      abnormality_types_to_compensate.emplace_back(AbnormalityType::STEERING);
-      update_param(
-        parameters, ns_steering_abnormality + "steering_rate_rps",
-        steering_config.steering_rate_rps);
-      configs.insert({AbnormalityType::STEERING, steering_config});
-    }
-
-    auto compensate_localization = has_type(AbnormalityType::LOCALIZATION);
-    update_param(parameters, ns_localization_abnormality + "enable", compensate_localization);
-
-    if (compensate_localization) {
-      abnormality_types_to_compensate.emplace_back(AbnormalityType::LOCALIZATION);
-      LocalizationConfig localization_config;
-      const std::string footprint_envelop_ns{ns_localization_abnormality + "footprint_envelop."};
-      update_param(
-        parameters, footprint_envelop_ns + "lat_m", localization_config.footprint_envelop.lat_m);
-      update_param(
-        parameters, footprint_envelop_ns + "lon_m", localization_config.footprint_envelop.lon_m);
-      configs.insert({AbnormalityType::LOCALIZATION, localization_config});
-    }
-
-    auto compensate_longitudinal = has_type(AbnormalityType::LONGITUDINAL);
-    update_param(parameters, ns_longitudinal_abnormality + "enable", compensate_longitudinal);
-    if (compensate_longitudinal) {
-      abnormality_types_to_compensate.emplace_back(AbnormalityType::LONGITUDINAL);
-      LongitudinalConfig longitudinal_config;
-      const std::string lon_tracking_ns{ns_longitudinal_abnormality + "lon_tracking."};
-
-      update_param(parameters, lon_tracking_ns + "scale", longitudinal_config.lon_tracking.scale);
-
-      update_param(
-        parameters, lon_tracking_ns + "extra_margin_m",
-        longitudinal_config.lon_tracking.extra_margin_m);
-      configs.insert({AbnormalityType::LONGITUDINAL, longitudinal_config});
-    }
-
-    pp.bdc_param.abnormality_types_to_compensate = abnormality_types_to_compensate;
-    pp.bdc_param.abnormality_configs = configs;
+  const auto has_type = [&](const AbnormalityType type_to_check) {
+    return std::any_of(
+      pp.bdc_param.abnormality_types_to_compensate.begin(),
+      pp.bdc_param.abnormality_types_to_compensate.end(),
+      [&](const AbnormalityType type) { return type == type_to_check; });
   };
+
+  const auto update_types_to_compensate = [&](const AbnormalityType type, const std::string & ns) {
+    const auto original_compensate = has_type(type);
+    bool new_compensate{};
+    if (update_param(parameters, ns + "enable", new_compensate)) {
+      if (new_compensate && !original_compensate) {
+        pp.bdc_param.abnormality_types_to_compensate.push_back(type);
+      } else if (!new_compensate && original_compensate) {
+        pp.bdc_param.abnormality_types_to_compensate.erase(
+          std::remove(
+            pp.bdc_param.abnormality_types_to_compensate.begin(),
+            pp.bdc_param.abnormality_types_to_compensate.end(), type),
+          pp.bdc_param.abnormality_types_to_compensate.end());
+      }
+    }
+  };
+  update_types_to_compensate(AbnormalityType::NORMAL, ns_normal_abnormality);
+  NormalConfig normal_config =
+    pp.bdc_param.get_abnormality_config<NormalConfig>(AbnormalityType::NORMAL).value();
+  const std::string footprint_envelop_ns{ns_normal_abnormality + "footprint_envelop."};
+  update_param(parameters, footprint_envelop_ns + "lat_m", normal_config.footprint_envelop.lat_m);
+  update_param(parameters, footprint_envelop_ns + "lon_m", normal_config.footprint_envelop.lon_m);
+  configs.insert_or_assign(AbnormalityType::NORMAL, normal_config);
+
+  const auto update_steer_params = [&](const auto steer_abnormality_type, const auto & ns) {
+    update_types_to_compensate(steer_abnormality_type, ns);
+    SteeringConfig steering_config =
+      pp.bdc_param.get_abnormality_config<SteeringConfig>(steer_abnormality_type).value();
+    update_param(parameters, ns + "delay_s", steering_config.delay_s);
+    update_param(parameters, ns + "factor", steering_config.factor);
+    update_param(parameters, ns + "offset_rps", steering_config.offset_rps);
+    update_param(
+      parameters, ns + "steering_rate_velocities_mps",
+      steering_config.steering_rate_velocities_mps);
+    update_param(
+      parameters, ns + "steering_rate_limits_rps", steering_config.steering_rate_limits_rps);
+    configs.insert_or_assign(steer_abnormality_type, steering_config);
+  };
+  const std::string ns_steering_abnormality_accelerated{ns_abnormality + "steering_accelerated."};
+  update_steer_params(AbnormalityType::STEERING_ACCELERATED, ns_steering_abnormality_accelerated);
+  const std::string ns_steering_abnormality_stuck{ns_abnormality + "steering_stuck."};
+  update_steer_params(AbnormalityType::STEERING_STUCK, ns_steering_abnormality_stuck);
+  const std::string ns_steering_abnormality_sudden_left{ns_abnormality + "steering_sudden_left."};
+  update_steer_params(AbnormalityType::STEERING_SUDDEN_LEFT, ns_steering_abnormality_sudden_left);
+  const std::string ns_steering_abnormality_sudden_right{ns_abnormality + "steering_sudden_right."};
+  update_steer_params(AbnormalityType::STEERING_SUDDEN_RIGHT, ns_steering_abnormality_sudden_right);
+
+  update_types_to_compensate(AbnormalityType::LOCALIZATION, ns_localization_abnormality);
+  LocalizationConfig localization_config =
+    pp.bdc_param.get_abnormality_config<LocalizationConfig>(AbnormalityType::LOCALIZATION).value();
+  const std::string localization_footprint_envelop_ns{
+    ns_localization_abnormality + "footprint_envelop."};
+  update_param(
+    parameters, localization_footprint_envelop_ns + "lat_m",
+    localization_config.footprint_envelop.lat_m);
+  update_param(
+    parameters, localization_footprint_envelop_ns + "lon_m",
+    localization_config.footprint_envelop.lon_m);
+  configs.insert_or_assign(AbnormalityType::LOCALIZATION, localization_config);
+
+  update_types_to_compensate(AbnormalityType::LOCALIZATION, ns_longitudinal_abnormality);
+  LongitudinalConfig longitudinal_config =
+    pp.bdc_param.get_abnormality_config<LongitudinalConfig>(AbnormalityType::LONGITUDINAL).value();
+  const std::string lon_tracking_ns{ns_longitudinal_abnormality + "lon_tracking."};
+  update_param(parameters, lon_tracking_ns + "scale", longitudinal_config.lon_tracking.scale);
+  update_param(
+    parameters, lon_tracking_ns + "extra_margin_m",
+    longitudinal_config.lon_tracking.extra_margin_m);
+  configs.insert_or_assign(AbnormalityType::LONGITUDINAL, longitudinal_config);
+  boundary_departure_checker_ptr_->setParam(pp.bdc_param);
 }
 
 void BoundaryDeparturePreventionModule::subscribe_topics(rclcpp::Node & node)
@@ -197,7 +212,8 @@ void BoundaryDeparturePreventionModule::subscribe_topics(rclcpp::Node & node)
       &node, "/api/operation_mode/state", 1);
   route_polling_sub_ = autoware_utils::InterProcessPollingSubscriber<
     LaneletRoute, autoware_utils::polling_policy::Newest>::
-    create_subscription(&node, "/planning/mission_planning/route");
+    create_subscription(
+      &node, "/planning/mission_planning/route", rclcpp::QoS(1).transient_local());
 }
 
 void BoundaryDeparturePreventionModule::publish_topics(rclcpp::Node & node)
@@ -489,11 +505,8 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
     output_.closest_projections_to_bound, lon_offset_m(planner_data->is_driving_forward));
   toc_curr_watch("get_departure_points");
 
-  utils::update_critical_departure_points(
-    output_.departure_points, output_.critical_departure_points, *ref_traj_pts_opt,
-    node_param_.bdc_param.th_point_merge_distance_m,
-    ego_dist_on_traj_with_offset_m(!planner_data->is_driving_forward),
-    node_param_.th_pt_shift_dist_m, node_param_.th_pt_shift_angle_rad);
+  // update output_.critical_departure_points
+  update_critical_departure_points(*ref_traj_pts_opt, ego_dist_on_traj_m);
   toc_curr_watch("update_critical_departure_points");
 
   const auto is_departure_persist = std::invoke([&]() {
@@ -503,12 +516,12 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
       });
 
     if (!is_found) {
-      *last_lost_time_ptr_ = clock_ptr_->now().seconds();
+      last_abnormality_fp_overlap_bound_time_ = clock_ptr_->now().seconds();
       return false;
     }
 
-    const auto t_diff = clock_ptr_->now().seconds() - *last_lost_time_ptr_;
-    return t_diff >= node_param_.on_time_buffer_s;
+    const auto t_diff = clock_ptr_->now().seconds() - last_abnormality_fp_overlap_bound_time_;
+    return t_diff >= node_param_.on_time_buffer_s.near_boundary;
   });
 
   if (output_.departure_intervals.empty() && is_departure_persist) {
@@ -528,10 +541,10 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
         [&](const auto side_key) { return !output_.departure_points[side_key].empty(); });
 
       if (is_departure_found) {
-        *last_found_time_ptr_ = clock_ptr_->now().seconds();
+        last_abnormality_fp_no_overlap_bound_time_ = clock_ptr_->now().seconds();
         return false;
       }
-      const auto t_diff = clock_ptr_->now().seconds() - *last_found_time_ptr_;
+      const auto t_diff = clock_ptr_->now().seconds() - last_abnormality_fp_no_overlap_bound_time_;
       return t_diff >= node_param_.off_time_buffer_s;
     });
 
@@ -543,7 +556,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
       node_param_.slow_down_types, is_reset_interval, is_departure_persist);
 
     if (is_reset_interval) {
-      *last_found_time_ptr_ = clock_ptr_->now().seconds();
+      last_abnormality_fp_no_overlap_bound_time_ = clock_ptr_->now().seconds();
     }
     const auto reset_lost_time =
       std::any_of(g_side_keys.begin(), g_side_keys.end(), [&](const auto side_key) {
@@ -551,7 +564,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
       });
 
     if (reset_lost_time) {
-      *last_lost_time_ptr_ = clock_ptr_->now().seconds();
+      last_abnormality_fp_overlap_bound_time_ = clock_ptr_->now().seconds();
     }
   }
 
@@ -614,6 +627,83 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
   return result;
 }
 
+void BoundaryDeparturePreventionModule::update_critical_departure_points(
+  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const double offset_from_ego)
+{
+  for (auto & crit_dpt_pt_mut : output_.critical_departure_points) {
+    crit_dpt_pt_mut.dist_on_traj =
+      trajectory::closest(aw_ref_traj, crit_dpt_pt_mut.point_on_prev_traj);
+
+    if (crit_dpt_pt_mut.dist_on_traj < offset_from_ego) {
+      crit_dpt_pt_mut.can_be_removed = true;
+      continue;
+    }
+
+    const auto updated_point = aw_ref_traj.compute(crit_dpt_pt_mut.dist_on_traj);
+    if (
+      const auto is_shifted_opt = utils::is_point_shifted(
+        crit_dpt_pt_mut.point_on_prev_traj.pose, updated_point.pose, node_param_.th_pt_shift_dist_m,
+        node_param_.th_pt_shift_angle_rad)) {
+      crit_dpt_pt_mut.can_be_removed = true;
+    }
+  }
+
+  utils::remove_if(
+    output_.critical_departure_points, [](const DeparturePoint & pt) { return pt.can_be_removed; });
+
+  if (!is_continuous_critical_departure()) {
+    return;
+  }
+
+  auto new_critical_departure_point = utils::find_new_critical_departure_points(
+    output_.departure_points, output_.critical_departure_points, aw_ref_traj,
+    node_param_.bdc_param.th_point_merge_distance_m);
+
+  if (new_critical_departure_point.empty()) {
+    return;
+  }
+
+  std::move(
+    new_critical_departure_point.begin(), new_critical_departure_point.end(),
+    std::back_inserter(output_.critical_departure_points));
+
+  std::sort(output_.critical_departure_points.begin(), output_.critical_departure_points.end());
+}
+
+CriticalDeparturePoints find_new_critical_departure_points(
+  const Side<DeparturePoints> & new_departure_points,
+  const CriticalDeparturePoints & critical_departure_points,
+  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
+  const double th_point_merge_distance_m)
+{
+  CriticalDeparturePoints new_critical_departure_points;
+  for (const auto side_key : g_side_keys) {
+    for (const auto & dpt_pt : new_departure_points[side_key]) {
+      if (dpt_pt.departure_type != DepartureType::CRITICAL_DEPARTURE) {
+        continue;
+      }
+
+      if (dpt_pt.can_be_removed) {
+        continue;
+      }
+
+      const auto is_near_curr_pts = std::any_of(
+        critical_departure_points.begin(), critical_departure_points.end(),
+        [&](const CriticalDeparturePoint & crit_pt) {
+          return std::abs(dpt_pt.dist_on_traj - crit_pt.dist_on_traj) < th_point_merge_distance_m;
+        });
+
+      if (is_near_curr_pts) {
+        continue;
+      }
+
+      CriticalDeparturePoint crit_pt(dpt_pt);
+      crit_pt.point_on_prev_traj = aw_ref_traj.compute(crit_pt.dist_on_traj);
+      new_critical_departure_points.push_back(crit_pt);
+    }
+  }
+  return new_critical_departure_points;
+}
 std::unordered_map<DepartureType, bool> BoundaryDeparturePreventionModule::get_diagnostics(
   const double curr_vel, const double dist_with_offset_m)
 {
@@ -655,6 +745,25 @@ std::unordered_map<DepartureType, bool> BoundaryDeparturePreventionModule::get_d
     });
 
   return diag;
+}
+
+bool BoundaryDeparturePreventionModule::is_continuous_critical_departure()
+{
+  const auto is_critical_departure_found =
+    std::any_of(g_side_keys.begin(), g_side_keys.end(), [&](const auto side_key) {
+      const auto & closest_projections = output_.closest_projections_to_bound[side_key];
+      return std::any_of(
+        closest_projections.rbegin(), closest_projections.rend(),
+        [](const auto & pt) { return pt.departure_type == DepartureType::CRITICAL_DEPARTURE; });
+    });
+
+  if (!is_critical_departure_found) {
+    last_no_critical_dpt_time_ = clock_ptr_->now().seconds();
+    return false;
+  }
+
+  const auto t_diff = clock_ptr_->now().seconds() - last_no_critical_dpt_time_;
+  return t_diff >= node_param_.on_time_buffer_s.critical_departure;
 }
 }  // namespace autoware::motion_velocity_planner::experimental
 

@@ -38,6 +38,7 @@
 #include <boost/geometry/geometries/linestring.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
 
+#include <angles/angles/angles.h>
 #include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/geometry/LineString.h>
 #include <lanelet2_core/geometry/Point.h>
@@ -274,7 +275,7 @@ auto check_shift_behavior(
       }
     }
 
-    if (stoppable_point.value().second > distance) {
+    if (stoppable_point.value().second > distance && !parameters.common.check_on_unstoppable) {
       autoware_utils::LineString2d line_2d{
         stoppable_point.value().first.front().to_2d(),
         stoppable_point.value().first.back().to_2d()};
@@ -358,6 +359,16 @@ auto check_turn_behavior(
     debug.stoppable_line = stoppable_point.value().first;
   }
 
+  const auto get_yaw_diff_between_ego_and_lane_end =
+    [&ego_pose](const auto & lanelet) -> std::optional<double> {
+    if (lanelet.centerline().size() < 2) return std::nullopt;
+    const auto p1 = lanelet.centerline()[lanelet.centerline().size() - 1];
+    const auto p2 = lanelet.centerline()[lanelet.centerline().size() - 2];
+    const auto yaw_lane_end = std::atan2(p1.y() - p2.y(), p1.x() - p2.x());
+    const auto yaw_ego = tf2::getYaw(ego_pose.orientation);
+    return angles::shortest_angular_distance(yaw_lane_end, yaw_ego);
+  };
+
   const auto exceed_dead_line =
     [&points, &ego_pose, &conflict_point, &stoppable_point, &vehicle_info](
       const auto & sibling_straight_lanelet, const auto distance, const auto is_right) {
@@ -386,10 +397,21 @@ auto check_turn_behavior(
 
     const auto is_reachable = distance < reachable_point.value().second || is_unsafe_holding;
 
+    if (total_length - vehicle_info.min_longitudinal_offset_m < ego_coordinate_on_arc.length) {
+      continue;
+    }
+
     if (turn_direction == "left" && p.check.left) {
       const auto sibling_straight_lanelet = get_sibling_straight_lanelet(lane, routing_graph_ptr);
+      const auto yaw_diff = get_yaw_diff_between_ego_and_lane_end(lane);
 
-      if (exceed_dead_line(sibling_straight_lanelet, distance, false)) {
+      if (yaw_diff.has_value() && yaw_diff.value() > -1.0 * p.check.yaw_th) {
+        continue;
+      }
+
+      if (
+        !parameters.common.check_on_unstoppable &&
+        exceed_dead_line(sibling_straight_lanelet, distance, false)) {
         debug.text = "unable to stop before the conflict area under limited braking.";
         continue;
       }
@@ -405,8 +427,15 @@ auto check_turn_behavior(
 
     if (turn_direction == "right" && p.check.right) {
       const auto sibling_straight_lanelet = get_sibling_straight_lanelet(lane, routing_graph_ptr);
+      const auto yaw_diff = get_yaw_diff_between_ego_and_lane_end(lane);
 
-      if (exceed_dead_line(sibling_straight_lanelet, distance, true)) {
+      if (yaw_diff.has_value() && yaw_diff.value() < p.check.yaw_th) {
+        continue;
+      }
+
+      if (
+        !parameters.common.check_on_unstoppable &&
+        exceed_dead_line(sibling_straight_lanelet, distance, true)) {
         debug.text = "unable to stop before the conflict area under limited braking.";
         continue;
       }

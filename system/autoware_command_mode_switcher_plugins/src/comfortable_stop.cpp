@@ -70,7 +70,10 @@ MrmState ComfortableStopSwitcher::update_mrm_state()
     return mrm_state_;
   }
 
-  if (is_stopped()) mrm_state_ = MrmState::Succeeded;
+  if (is_stopped()) {
+    mrm_state_ = MrmState::Succeeded;
+    publish_velocity_limit();
+  }
   return mrm_state_;
 }
 

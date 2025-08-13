@@ -15,7 +15,9 @@
 #include "autoware/boundary_departure_checker/utils.hpp"
 
 #include "autoware/boundary_departure_checker/conversion.hpp"
+#include "autoware/boundary_departure_checker/data_structs.hpp"
 #include "autoware/boundary_departure_checker/parameters.hpp"
+#include "autoware/boundary_departure_checker/steering_abnormality_utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
@@ -347,36 +349,6 @@ std::vector<LinearRing2d> create_vehicle_footprints(
   return vehicle_footprints;
 }
 
-std::vector<LinearRing2d> create_vehicle_footprints(
-  const TrajectoryPoints & trajectory, const VehicleInfo & vehicle_info,
-  const SteeringReport & current_steering)
-{
-  constexpr auto steering_rate_gain = 1.0;
-  constexpr auto steering_rate_rad_per_s = 0.25;
-
-  std::vector<LinearRing2d> vehicle_footprints;
-  vehicle_footprints.reserve(trajectory.size());
-  std::transform(
-    trajectory.begin(), trajectory.end(), std::back_inserter(vehicle_footprints),
-    [&](const TrajectoryPoint & p) -> LinearRing2d {
-      using autoware_utils::transform_vector;
-      using autoware_utils::pose2transform;
-      const double raw_angle_rad =
-        current_steering.steering_tire_angle +
-        (steering_rate_rad_per_s * rclcpp::Duration(p.time_from_start).seconds());
-
-      constexpr auto min_angle = autoware_utils::deg2rad(-89);
-      constexpr auto max_angle = autoware_utils::deg2rad(89);
-      const double clamped_angle_rad = std::clamp(raw_angle_rad, min_angle, max_angle);
-
-      const auto local_vehicle_footprint = vehicle_info.createFootprint(
-        std::max(std::tan(clamped_angle_rad) * steering_rate_gain, 0.0), 0.0, 0.0, 0.0, 0.0, true);
-      return transform_vector(local_vehicle_footprint, pose2transform(p.pose));
-    });
-
-  return vehicle_footprints;
-}
-
 std::vector<LinearRing2d> create_ego_footprints(
   const AbnormalityType abnormality_type, const FootprintMargin & uncertainty_fp_margin,
   const TrajectoryPoints & ego_pred_traj, const SteeringReport & current_steering,
@@ -389,8 +361,14 @@ std::vector<LinearRing2d> create_ego_footprints(
       ego_pred_traj, vehicle_info, uncertainty_fp_margin, longitudinal_config_opt->get());
   }
 
-  if (abnormality_type == AbnormalityType::STEERING) {
-    return utils::create_vehicle_footprints(ego_pred_traj, vehicle_info, current_steering);
+  if (
+    abnormality_type == AbnormalityType::STEERING_ACCELERATED ||
+    abnormality_type == AbnormalityType::STEERING_STUCK ||
+    abnormality_type == AbnormalityType::STEERING_SUDDEN_LEFT ||
+    abnormality_type == AbnormalityType::STEERING_SUDDEN_RIGHT) {
+    const auto config = param.get_abnormality_config<SteeringConfig>(abnormality_type);
+    return utils::steering::create_vehicle_footprints(
+      ego_pred_traj, vehicle_info, current_steering, *config);
   }
 
   FootprintMargin margin = uncertainty_fp_margin;

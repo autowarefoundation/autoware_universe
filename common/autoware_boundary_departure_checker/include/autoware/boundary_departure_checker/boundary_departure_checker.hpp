@@ -59,10 +59,10 @@ public:
   }
 
   BoundaryDepartureChecker(
-    const Param & param, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
+    Param param, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
     std::shared_ptr<autoware_utils::TimeKeeper> time_keeper =
       std::make_shared<autoware_utils::TimeKeeper>())
-  : param_(param),
+  : param_(std::move(param)),
     vehicle_info_ptr_(std::make_shared<autoware::vehicle_info_utils::VehicleInfo>(vehicle_info)),
     time_keeper_(std::move(time_keeper))
   {
@@ -210,7 +210,6 @@ public:
 private:
   Param param_;
   lanelet::LaneletMapPtr lanelet_map_ptr_;
-  std::unique_ptr<Param> param_ptr_;
   std::shared_ptr<VehicleInfo> vehicle_info_ptr_;
   std::unique_ptr<UncrossableBoundRTree> uncrossable_boundaries_rtree_ptr_;
 
