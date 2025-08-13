@@ -487,7 +487,6 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   Q(IDX::X2, IDX::Y2) = (0.5f * (q_cov_x2 - q_cov_y2) * sin_2yaw);
   Q(IDX::Y2, IDX::X2) = Q(IDX::X2, IDX::Y2);
   Q(IDX::Y2, IDX::Y2) = (q_cov_x2 * sin_yaw * sin_yaw + q_cov_y2 * cos_yaw * cos_yaw);
-  // todo: add yaw process noise
 
   Q(IDX::VX, IDX::VX) = q_cov_vel_x;
   Q(IDX::VY, IDX::VY) = q_cov_vel_y;
@@ -549,30 +548,6 @@ bool BicycleMotionModel::getPredictedState(
   pose_cov[XYZRPY_COV_IDX::PITCH_PITCH] = pp_cov;
 
   // set twist covariance
-  // Eigen::Matrix<double, 3, 2> cov_jacob;
-  // cov_jacob << std::cos(X(IDX::SLIP)), -X(IDX::VX) * std::sin(X(IDX::SLIP)),
-  //   std::sin(X(IDX::SLIP)), X(IDX::VX) * std::cos(X(IDX::SLIP)), std::sin(X(IDX::SLIP)) / lr_,
-  //   X(IDX::VX) * std::cos(X(IDX::SLIP)) / lr_;
-  // Eigen::Matrix2d cov_twist;
-  // cov_twist << P(IDX::VEL, IDX::VEL), P(IDX::VEL, IDX::SLIP), P(IDX::SLIP, IDX::VEL),
-  //   P(IDX::SLIP, IDX::SLIP);
-  // Eigen::Matrix3d twist_cov_mat = cov_jacob * cov_twist * cov_jacob.transpose();
-  // constexpr double vz_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
-  // constexpr double wx_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
-  // constexpr double wy_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
-  // twist_cov[XYZRPY_COV_IDX::X_X] = twist_cov_mat(0, 0);
-  // twist_cov[XYZRPY_COV_IDX::X_Y] = twist_cov_mat(0, 1);
-  // twist_cov[XYZRPY_COV_IDX::X_YAW] = twist_cov_mat(0, 2);
-  // twist_cov[XYZRPY_COV_IDX::Y_X] = twist_cov_mat(1, 0);
-  // twist_cov[XYZRPY_COV_IDX::Y_Y] = twist_cov_mat(1, 1);
-  // twist_cov[XYZRPY_COV_IDX::Y_YAW] = twist_cov_mat(1, 2);
-  // twist_cov[XYZRPY_COV_IDX::YAW_X] = twist_cov_mat(2, 0);
-  // twist_cov[XYZRPY_COV_IDX::YAW_Y] = twist_cov_mat(2, 1);
-  // twist_cov[XYZRPY_COV_IDX::YAW_YAW] = twist_cov_mat(2, 2);
-  // twist_cov[XYZRPY_COV_IDX::Z_Z] = vz_cov;
-  // twist_cov[XYZRPY_COV_IDX::ROLL_ROLL] = wx_cov;
-  // twist_cov[XYZRPY_COV_IDX::PITCH_PITCH] = wy_cov;
-
   constexpr double vel_cov = 0.1 * 0.1;
   twist_cov[XYZRPY_COV_IDX::X_X] = P(IDX::VX, IDX::VX);
   twist_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::VY, IDX::VY);
