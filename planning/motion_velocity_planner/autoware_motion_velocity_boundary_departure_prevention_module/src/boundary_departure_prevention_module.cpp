@@ -711,9 +711,10 @@ std::unordered_map<DepartureType, bool> BoundaryDeparturePreventionModule::get_d
     [&th_trigger, &curr_vel](const DeparturePoint & pt) {
       const auto braking_start_vel =
         std::clamp(curr_vel, th_trigger.th_vel_mps.min, th_trigger.th_vel_mps.max);
-      const auto braking_dist = boundary_departure_checker::utils::compute_braking_distance(
-        braking_start_vel, 0.0, th_trigger.th_acc_mps2.min, th_trigger.th_jerk_mps3.max,
-        th_trigger.brake_delay_s);
+      const auto braking_dist =
+        boundary_departure_checker::utils::calc_judge_line_dist_with_jerk_limit(
+          braking_start_vel, 0.0, th_trigger.th_acc_mps2.min, th_trigger.th_jerk_mps3.max,
+          th_trigger.brake_delay_s);
       return pt.ego_dist_on_ref_traj <= braking_dist;
     });
 
