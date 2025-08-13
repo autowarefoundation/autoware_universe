@@ -1,4 +1,20 @@
+// Copyright 2025 Autoware Foundation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "manual_lane_change_handler.hpp"
+
+#include <string>
 
 #include "mission_planner.hpp"
 
@@ -92,9 +108,6 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
     const auto next_lanelet = next_it != next_segment->primitives.end() ? get_lanelet_by_id_(next_it->id) : lanelet::ConstLanelet{};
     std::string next_turning_dir = next_lanelet.attributeOr("turn_direction", "none");
 
-    std::cerr << "current lanelet ID: " << current_it->id << ", dir: " << current_turning_dir << "\n";
-    std::cerr << "next lanelet ID: " << next_it->id << ", next dir: " << next_turning_dir << "\n";
-
     const bool left_shift_not_available = (override_direction == DIRECTION::MANUAL_LEFT && current_index == 0);
     const bool right_shift_not_available = (override_direction == DIRECTION::MANUAL_RIGHT &&
        current_index + 1 == current_segment->primitives.size());
@@ -105,6 +118,10 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
       left_shift_not_available || right_shift_not_available || next_segment_is_left_turn || next_segment_is_right_turn;
 
     if (current_segment_shift_not_available) {
+      std::string shift_unavailable_reason = left_shift_not_available ? "left shift not available" :
+                                             right_shift_not_available ? "right shift not available" :
+                                             next_segment_is_left_turn ? "next segment is left turn" :
+                                             "next segment is right turn";
       RCLCPP_INFO_STREAM(
         logger_, "Cannot shift on the current segment (ID: "
                    << current_segment->preferred_primitive.id << ")");
