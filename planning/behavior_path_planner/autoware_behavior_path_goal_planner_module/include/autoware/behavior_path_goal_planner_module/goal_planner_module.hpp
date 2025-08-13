@@ -237,6 +237,50 @@ private:
     const FreespaceParkingRequest & req) const;
 };
 
+class LaneChangeContextMonitor
+{
+public:
+  /**
+   * @brief check if lane change has been triggered(being executed)/aborted/completed
+   */
+  void update_progress(
+    const PathWithLaneId & path, const lanelet::LaneletMapConstPtr lanelet_map,
+    lanelet::routing::RoutingGraphConstPtr routing_graph, const rclcpp::Time & now);
+
+  /**
+   * @brief return the last time that lane change has been triggered or aborted
+   */
+  const std::optional<rclcpp::Time> & get_last_lane_change_trigger_time() const
+  {
+    return last_lane_change_trigger_time_;
+  }
+
+  /**
+   * @brief return lane change has been triggered or aborted just now
+   */
+  bool lane_change_status_changed() const
+  {
+    if (lane_change_completed_) {
+      return false;
+    }
+    return lane_change_status_changed_;
+  }
+
+private:
+  std::optional<bool>
+    prev_lane_change_detected_{};  //<! denote if the path was lane-changing in previous cycle
+  bool lane_change_status_changed_{
+    false};  //<! becomes true only when prev_lane_change_detected_ has changed from previous cycle
+  std::optional<rclcpp::Time>
+    last_lane_change_trigger_time_{};  //<! save the last time when lane_change_status_changed_
+                                       // was true
+
+  std::optional<lanelet::ConstLanelet> lane_change_complete_lane_{};
+
+  bool lane_change_completed_{};  //<! means current lane sequence is now along
+                                  // lane_change_complete_lane_, so ego has transitted
+};
+
 class GoalPlannerModule : public SceneModuleInterface
 {
 public:
@@ -307,9 +351,7 @@ private:
   bool trigger_thread_on_approach_{false};
 
   // signal path generator and state manager to regenerate path candidates and remain NOT_DECIDED
-  std::optional<rclcpp::Time> last_lane_change_trigger_time_{};
-  std::optional<bool> prev_lane_change_detected_{};
-  bool lane_change_status_changed_{false};
+  LaneChangeContextMonitor lane_change_monitor_{};
 
   // pre-generate lane parking paths in a separate thread
   rclcpp::TimerBase::SharedPtr lane_parking_timer_;
