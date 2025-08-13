@@ -216,6 +216,13 @@ if(BUILD_TESTING)
 
   target_link_libraries(test_cpu_monitor cpu_monitor_lib ${Boost_LIBRARIES} ${LIBRARIES})
 
+  set_tests_properties(
+    test_process_monitor
+    test_cpu_monitor
+    PROPERTIES
+      RESOURCE_LOCK system_monitor
+  )
+
 endif()
 
 # TODO(yunus.caliskan): Port the tests to ROS 2, robustify the tests.
