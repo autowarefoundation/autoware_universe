@@ -185,15 +185,6 @@ std::vector<float> extract_lane_tensor_data(const Eigen::MatrixXf & lane_segment
 std::vector<float> extract_lane_speed_tensor_data(const Eigen::MatrixXf & lane_segments_matrix);
 
 /**
- * @brief Processes a single lane segment and converts it into a matrix representation.
- *
- * @param segment The lane segment to process.
- * @return A matrix containing the processed lane segment data, or an empty matrix if the segment is
- * invalid.
- */
-Eigen::MatrixXf process_segment_to_matrix(const LaneSegment & segment);
-
-/**
  * @brief Sorts the columns by their squared distances in ascending order.
  *
  * @param distances Vector of columns with distances to be sorted.
