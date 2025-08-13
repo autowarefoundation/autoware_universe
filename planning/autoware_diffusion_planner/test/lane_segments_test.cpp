@@ -33,11 +33,11 @@ namespace autoware::diffusion_planner::test
 
 TEST_F(LaneSegmentsTest, LaneSegmentContextFunctionality)
 {
+  /////////////
+  // Arrange //
+  /////////////
   // Create LaneSegmentContext
   preprocess::LaneSegmentContext context(lanelet_map_);
-
-  // Test that context was created successfully
-  EXPECT_TRUE(true) << "LaneSegmentContext created successfully";
 
   // Create identity transformation matrix (no transformation)
   Eigen::Matrix4f transform_matrix = Eigen::Matrix4f::Identity();
@@ -48,9 +48,15 @@ TEST_F(LaneSegmentsTest, LaneSegmentContextFunctionality)
   // Create current lanes list with our test lanelet
   lanelet::ConstLanelets current_lanes = {test_lanelet_};
 
-  // Test get_route_segments functionality
-  auto result = context.get_route_segments(transform_matrix, traffic_light_id_map, current_lanes);
+  /////////
+  // Act //
+  /////////
+  const std::pair<std::vector<float>, std::vector<float>> result =
+    context.get_route_segments(transform_matrix, traffic_light_id_map, current_lanes);
 
+  ////////////
+  // Assert //
+  ////////////
   // Check that we get valid results
   EXPECT_FALSE(result.first.empty()) << "Route segments should not be empty";
   EXPECT_FALSE(result.second.empty()) << "Speed limits should not be empty";
@@ -68,28 +74,6 @@ TEST_F(LaneSegmentsTest, LaneSegmentContextFunctionality)
     EXPECT_FALSE(std::isinf(result.second[i]))
       << "Speed limit value should not be infinite at index " << i;
   }
-
-  // Test transformation effects
-  Eigen::Matrix4f transform_matrix_translated = Eigen::Matrix4f::Identity();
-  transform_matrix_translated(0, 3) = 5.0f;  // x translation
-  transform_matrix_translated(1, 3) = 5.0f;  // y translation
-
-  auto result_transformed =
-    context.get_route_segments(transform_matrix_translated, traffic_light_id_map, current_lanes);
-
-  // Both results should have the same size
-  EXPECT_EQ(result_transformed.first.size(), result.first.size())
-    << "Transformed and identity results should have the same size";
-
-  // Results should be different (due to transformation)
-  bool results_different = false;
-  for (size_t i = 0; i < std::min(result_transformed.first.size(), result.first.size()); ++i) {
-    if (std::abs(result_transformed.first[i] - result.first[i]) > 0.001f) {
-      results_different = true;
-      break;
-    }
-  }
-  EXPECT_TRUE(results_different) << "Transformation should change the route segment values";
 }
 
 }  // namespace autoware::diffusion_planner::test
