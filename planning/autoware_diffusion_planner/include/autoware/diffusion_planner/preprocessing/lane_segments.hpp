@@ -81,7 +81,7 @@ public:
    *
    * @param lanelet_map_ptr Shared pointer to the lanelet map.
    */
-  LaneSegmentContext(const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr);
+  explicit LaneSegmentContext(const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr);
 
   /**
    * @brief Get route segments and transform them to ego-centric coordinates.

@@ -26,6 +26,7 @@
 #include <map>
 #include <memory>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace autoware::diffusion_planner::test
