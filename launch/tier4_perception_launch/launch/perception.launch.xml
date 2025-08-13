@@ -8,6 +8,7 @@
   <arg name="object_recognition_detection_pointcloud_map_filter_param_path"/>
   <arg name="object_recognition_prediction_map_based_prediction_param_path"/>
   <arg name="object_recognition_detection_object_merger_data_association_matrix_param_path"/>
+  <arg name="ml_camera_lidar_object_association_merger_param_path"/>
   <arg name="object_recognition_detection_object_merger_distance_threshold_list_path"/>
   <arg name="object_recognition_detection_fusion_sync_param_path"/>
   <arg name="object_recognition_detection_roi_cluster_fusion_param_path"/>
@@ -120,7 +121,7 @@
   <arg name="image_number" default="6" description="choose image raw number(1-8)"/>
   <arg name="image_topic_name" default="image_rect_color" description="image topic name options `image_rect_color`, `image_raw"/>
   <arg name="segmentation_pointcloud_fusion_camera_ids" default="[0,1,5]" description="list of camera ids used for segmentation_pointcloud_fusion node"/>
-
+  <arg name="ml_camera_lidar_merger_priority_mode" default="0" description="priority mode for ml and camera_lidar merger, options: `0: Object0`, `1: Object1`, `2: ConfidenceBased`, `3: ClassBased`"/>
   <arg name="pointcloud_container_name" default="pointcloud_container"/>
 
   <!-- Pipeline junctions -->
@@ -140,6 +141,7 @@
   <arg name="use_object_validator" default="true" description="use obstacle_pointcloud based object validator"/>
   <arg name="objects_validation_method" default="obstacle_pointcloud" description="options: `obstacle_pointcloud` or `occupancy_grid`"/>
   <arg name="use_perception_online_evaluator" default="false" description="use perception online evaluator"/>
+  <arg name="use_perception_analytics_publisher" default="true" description="use perception analytics publisher"/>
   <arg name="use_obstacle_segmentation_single_frame_filter" description="use single frame filter at the ground segmentation"/>
   <arg name="use_obstacle_segmentation_time_series_filter" description="use time series filter at the ground segmentation"/>
 
@@ -311,6 +313,7 @@
           <arg name="use_irregular_object_detector" value="$(var use_irregular_object_detector)"/>
           <arg name="image_topic_name" value="$(var image_topic_name)"/>
           <arg name="segmentation_pointcloud_fusion_camera_ids" value="$(var segmentation_pointcloud_fusion_camera_ids)"/>
+          <arg name="ml_camera_lidar_merger_priority_mode" value="$(var ml_camera_lidar_merger_priority_mode)"/>
         </include>
       </group>
 
@@ -381,5 +384,10 @@
   <!-- perception evaluator -->
   <group if="$(var use_perception_online_evaluator)">
     <include file="$(find-pkg-share autoware_perception_online_evaluator)/launch/perception_online_evaluator.launch.xml"/>
+  </group>
+
+  <!-- perception analytics publisher-->
+  <group if="$(var use_perception_analytics_publisher)">
+    <include file="$(find-pkg-share autoware_perception_online_evaluator)/launch/perception_analytics_publisher.launch.xml"/>
   </group>
 </launch>

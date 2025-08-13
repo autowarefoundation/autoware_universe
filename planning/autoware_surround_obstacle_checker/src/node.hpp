@@ -18,9 +18,11 @@
 #include "autoware_utils/ros/logger_level_configure.hpp"
 #include "autoware_utils/ros/polling_subscriber.hpp"
 #include "debug_marker.hpp"
-#include "surround_obstacle_checker_node_parameters.hpp"
+#include "type_alias.hpp"
+#include "types.hpp"
 
 #include <autoware/motion_utils/vehicle/vehicle_state_checker.hpp>
+#include <autoware_surround_obstacle_checker/surround_obstacle_checker_node_parameters.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -48,15 +50,6 @@
 namespace autoware::surround_obstacle_checker
 {
 
-using autoware::motion_utils::VehicleStopChecker;
-using autoware::vehicle_info_utils::VehicleInfo;
-using autoware_internal_planning_msgs::msg::VelocityLimit;
-using autoware_internal_planning_msgs::msg::VelocityLimitClearCommand;
-using autoware_perception_msgs::msg::PredictedObjects;
-using autoware_perception_msgs::msg::Shape;
-
-using Obstacle = std::pair<double /* distance */, geometry_msgs::msg::Point>;
-
 enum class State { PASS, STOP };
 
 class SurroundObstacleCheckerNode : public rclcpp::Node
@@ -71,17 +64,11 @@ private:
 
   void onTimer();
 
-  void onPointCloud(const sensor_msgs::msg::PointCloud2::ConstSharedPtr msg);
+  std::optional<StopObstacle> getNearestObstacle() const;
 
-  void onDynamicObjects(const PredictedObjects::ConstSharedPtr msg);
+  std::optional<StopObstacle> getNearestObstacleByPointCloud() const;
 
-  void onOdometry(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
-
-  std::optional<Obstacle> getNearestObstacle() const;
-
-  std::optional<Obstacle> getNearestObstacleByPointCloud() const;
-
-  std::optional<Obstacle> getNearestObstacleByDynamicObject() const;
+  std::optional<StopObstacle> getNearestObstacleByDynamicObject() const;
 
   std::optional<geometry_msgs::msg::TransformStamped> getTransform(
     const std::string & source, const std::string & target, const rclcpp::Time & stamp,
@@ -108,9 +95,6 @@ private:
   rclcpp::Publisher<VelocityLimit>::SharedPtr pub_velocity_limit_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
     pub_processing_time_;
-
-  // parameter callback result
-  OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   // stop checker
   std::unique_ptr<VehicleStopChecker> vehicle_stop_checker_;

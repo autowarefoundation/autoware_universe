@@ -1,0 +1,3 @@
+<library path="autoware_motion_velocity_road_user_stop_module">
+  <class type="autoware::motion_velocity_planner::RoadUserStopModule" base_class_type="autoware::motion_velocity_planner::PluginModuleInterface"/>
+</library>

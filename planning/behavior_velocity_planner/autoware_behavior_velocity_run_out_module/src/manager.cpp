@@ -155,10 +155,11 @@ void RunOutModuleManager::launchNewModules(
 
   constexpr int64_t module_id = 0;
   if (!isModuleRegistered(module_id)) {
-    registerModule(std::make_shared<RunOutModule>(
-      module_id, planner_data_, planner_param_, logger_.get_child("run_out_module"),
-      std::move(dynamic_obstacle_creator_), debug_ptr_, clock_, time_keeper_,
-      planning_factor_interface_));
+    registerModule(
+      std::make_shared<RunOutModule>(
+        module_id, planner_data_, planner_param_, logger_.get_child("run_out_module"),
+        std::move(dynamic_obstacle_creator_), debug_ptr_, clock_, time_keeper_,
+        planning_factor_interface_));
   }
 }
 

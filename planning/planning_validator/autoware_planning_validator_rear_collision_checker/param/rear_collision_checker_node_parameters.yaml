@@ -8,6 +8,8 @@ rear_collision_checker_node:
       type: double
       validation:
         gt_eq<>: [0.0]
+    check_on_unstoppable:
+      type: bool
 
     pointcloud:
       range:
@@ -80,29 +82,11 @@ rear_collision_checker_node:
       moving_time:
         type: double
 
-    vehicle:
-      reaction_time:
+    time_to_collision:
+      margin:
         type: double
         validation:
           gt<>: [0.0]
-      max_velocity:
-        type: double
-        validation:
-          gt<>: [0.0]
-      max_deceleration:
-        type: double
-
-    vulnerable_road_user:
-      reaction_time:
-        type: double
-        validation:
-          gt<>: [0.0]
-      max_velocity:
-        type: double
-        validation:
-          gt<>: [0.0]
-      max_deceleration:
-        type: double
 
     ego:
       reaction_time:
@@ -139,20 +123,67 @@ rear_collision_checker_node:
         type: double
 
     blind_spot:
+      lookahead_time:
+        type: double
+        validation:
+          gt<>: [0.0]
+      metric:
+        type: string
+        validation:
+          one_of<>: [[ttc, rss]]
       check:
+        front:
+          type: bool
         left:
           type: bool
         right:
           type: bool
+        yaw_th:
+          type: double
+          validation:
+            gt<>: [0.0]
       offset:
         inner:
           type: double
         outer:
           type: double
+      participants:
+        reaction_time:
+          type: double
+          validation:
+            gt<>: [0.0]
+        max_velocity:
+          type: double
+          validation:
+            gt<>: [0.0]
+        max_deceleration:
+          type: double
 
     adjacent_lane:
+      lookahead_time:
+        type: double
+        validation:
+          gt<>: [0.0]
+      metric:
+        type: string
+        validation:
+          one_of<>: [[ttc, rss]]
+      check:
+        front:
+          type: bool
       offset:
         left:
           type: double
         right:
+          type: double
+      participants:
+        reaction_time:
+          type: double
+          validation:
+            gt<>: [0.0]
+        max_velocity:
+          type: double
+          validation:
+            gt<>: [0.0]
+        max_deceleration:
           type: double
