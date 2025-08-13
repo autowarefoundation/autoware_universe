@@ -38,7 +38,8 @@
 #include <utility>
 #include <vector>
 
-namespace {
+namespace
+{
 
 bool is_non_scsi_device(const std::string & device_name)
 {
