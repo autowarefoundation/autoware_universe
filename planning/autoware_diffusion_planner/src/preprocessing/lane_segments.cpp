@@ -46,12 +46,6 @@ Eigen::Matrix<float, 1, TRAFFIC_LIGHT_ONE_HOT_DIM> get_traffic_signal_row_vector
 void transform_selected_rows(
   const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, int64_t num_segments,
   int64_t row_idx, bool do_translation = true);
-inline void sort_indices_by_distance(std::vector<ColWithDistance> & distances)
-{
-  std::sort(distances.begin(), distances.end(), [&](auto & a, auto & b) {
-    return a.distance_squared < b.distance_squared;
-  });
-}
 
 // LaneSegmentContext implementation
 LaneSegmentContext::LaneSegmentContext(const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr)
@@ -122,7 +116,9 @@ std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_lane_s
   // Step 1: Compute distances
   compute_distances(transform_matrix, distances, center_x, center_y, 100.0f);
   // Step 2: Sort indices by distance
-  sort_indices_by_distance(distances);
+  std::sort(distances.begin(), distances.end(), [](const auto & a, const auto & b) {
+    return a.distance_squared < b.distance_squared;
+  });
   // Step 3: Apply transformation to selected rows
   const auto [ego_centric_lane_segments, _] =
     transform_points_and_add_traffic_info(transform_matrix, traffic_light_id_map, distances, m);
