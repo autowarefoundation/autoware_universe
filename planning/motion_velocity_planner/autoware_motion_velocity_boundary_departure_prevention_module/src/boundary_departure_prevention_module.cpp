@@ -22,6 +22,7 @@
 #include <autoware/boundary_departure_checker/parameters.hpp>
 #include <autoware/boundary_departure_checker/utils.hpp>
 #include <autoware/motion_utils/marker/marker_helper.hpp>
+#include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
 #include <autoware/trajectory/utils/closest.hpp>
@@ -513,7 +514,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
   toc_curr_watch("get_departure_points");
 
   // update output_.critical_departure_points
-  update_critical_departure_points(*ref_traj_pts_opt, ego_dist_on_traj_m);
+  update_critical_departure_points(raw_trajectory_points, ego_dist_on_traj_m);
   toc_curr_watch("update_critical_departure_points");
 
   const auto is_departure_persist = std::invoke([&]() {
@@ -540,7 +541,6 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
   if (!output_.departure_intervals.empty()) {
     auto & departure_intervals_mut = output_.departure_intervals;
-    const auto & ref_traj_front_pt = raw_trajectory_points.front();
 
     const auto is_reset_interval = std::invoke([&]() {
       const auto is_departure_found = std::any_of(
@@ -557,7 +557,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
     utils::update_departure_intervals(
       departure_intervals_mut, output_.departure_points, *ref_traj_pts_opt,
-      vehicle_info.vehicle_length_m, ref_traj_front_pt,
+      vehicle_info.vehicle_length_m, raw_trajectory_points,
       ego_dist_on_traj_with_offset_m(!planner_data->is_driving_forward),
       node_param_.th_pt_shift_dist_m, node_param_.th_pt_shift_angle_rad,
       node_param_.slow_down_types, is_reset_interval, is_departure_persist);
@@ -602,7 +602,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
   for (auto && [idx, critical_pt] : output_.critical_departure_points | ranges::views::enumerate) {
     const auto markers_end = autoware::motion_utils::createStopVirtualWallMarker(
-      critical_pt.point_on_prev_traj.pose, "boundary_departure_prevention_end", clock_ptr_->now(),
+      critical_pt.pose_on_current_ref_traj, "boundary_departure_prevention_end", clock_ptr_->now(),
       static_cast<int32_t>(idx + output_.departure_intervals.size() + 1), 0.0, "",
       planner_data->is_driving_forward);
     autoware_utils::append_marker_array(markers_end, &slow_down_wall_marker_);
@@ -634,21 +634,22 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 }
 
 void BoundaryDeparturePreventionModule::update_critical_departure_points(
-  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const double offset_from_ego)
+  const std::vector<TrajectoryPoint> & raw_ref_traj, const double offset_from_ego)
 {
   for (auto & crit_dpt_pt_mut : output_.critical_departure_points) {
-    crit_dpt_pt_mut.ego_dist_on_ref_traj =
-      trajectory::closest(aw_ref_traj, crit_dpt_pt_mut.point_on_prev_traj);
+    crit_dpt_pt_mut.ego_dist_on_ref_traj = motion_utils::calcSignedArcLength(
+      raw_ref_traj, 0UL, crit_dpt_pt_mut.pose_on_current_ref_traj.position);
 
     if (crit_dpt_pt_mut.ego_dist_on_ref_traj < offset_from_ego) {
       crit_dpt_pt_mut.can_be_removed = true;
       continue;
     }
 
-    const auto updated_point = aw_ref_traj.compute(crit_dpt_pt_mut.ego_dist_on_ref_traj);
+    const auto updated_pose =
+      motion_utils::calcInterpolatedPose(raw_ref_traj, crit_dpt_pt_mut.ego_dist_on_ref_traj);
     if (
       const auto is_shifted_opt = utils::is_point_shifted(
-        crit_dpt_pt_mut.point_on_prev_traj.pose, updated_point.pose, node_param_.th_pt_shift_dist_m,
+        crit_dpt_pt_mut.pose_on_current_ref_traj, updated_pose, node_param_.th_pt_shift_dist_m,
         node_param_.th_pt_shift_angle_rad)) {
       crit_dpt_pt_mut.can_be_removed = true;
     }
@@ -662,7 +663,7 @@ void BoundaryDeparturePreventionModule::update_critical_departure_points(
   }
 
   auto new_critical_departure_point = utils::find_new_critical_departure_points(
-    output_.departure_points, output_.critical_departure_points, aw_ref_traj,
+    output_.departure_points, output_.critical_departure_points, raw_ref_traj,
     node_param_.bdc_param.th_point_merge_distance_m);
 
   if (new_critical_departure_point.empty()) {

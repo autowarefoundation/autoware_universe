@@ -67,12 +67,12 @@ private:
    * Projects existing critical departure points onto the updated reference trajectory
    * and removes points that are outdated (i.e., passed by the ego or shifted significantly).
    *
-   * @param aw_ref_traj Current reference trajectory.
+   * @param raw_ref_traj Current reference trajectory.
    * @param offset_from_ego Minimum distance from ego to keep a point; points closer than this are
    * removed.
    */
   void update_critical_departure_points(
-    const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const double offset_from_ego);
+    const std::vector<TrajectoryPoint> & raw_ref_traj, const double offset_from_ego);
 
   std::unordered_map<DepartureType, bool> get_diagnostics(const double curr_vel);
 

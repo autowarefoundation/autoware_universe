@@ -240,7 +240,7 @@ using DeparturePoints = std::vector<DeparturePoint>;
 
 struct CriticalDeparturePoint : DeparturePoint
 {
-  TrajectoryPoint point_on_prev_traj;
+  geometry_msgs::msg::Pose pose_on_current_ref_traj;
   CriticalDeparturePoint() = default;
   explicit CriticalDeparturePoint(const DeparturePoint & base)
   {
