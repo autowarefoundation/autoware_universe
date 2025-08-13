@@ -1544,8 +1544,10 @@ void CrosswalkModule::planStop(
   // Check if the restart should be suppressed.
   const bool suppress_restart = checkRestartSuppression(ego_path, stop_factor);
   if (suppress_restart) {
-    const auto & ego_pose = planner_data_->current_odometry->pose;
-    stop_factor->stop_pose = ego_pose;
+    const auto & ego_pos = planner_data_->current_odometry->pose.position;
+    const double dist = calcSignedArcLength(ego_path.points, ego_pos, 0L);
+    const auto pose_opt = calcLongitudinalOffsetPose(ego_path.points, 0L, dist);
+    if (pose_opt.has_value()) stop_factor->stop_pose = pose_opt.value();
   }
 
   const SafetyFactorArray safety_factors = createSafetyFactorArray(stop_factor);
