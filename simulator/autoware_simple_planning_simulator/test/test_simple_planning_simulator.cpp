@@ -81,8 +81,8 @@ public:
       create_publisher<Control>("input/ackermann_control_command", rclcpp::QoS{1});
     pub_actuation_command_ =
       create_publisher<ActuationCommandStamped>("input/actuation_command", rclcpp::QoS{1});
-    pub_initialpose_ =
-      create_publisher<PoseWithCovarianceStamped>("input/initialpose", rclcpp::QoS{1});
+    pub_initialpose_ = create_publisher<PoseWithCovarianceStamped>(
+      "input/initialpose", rclcpp::QoS{1}.transient_local());
     pub_gear_cmd_ = create_publisher<GearCommand>("input/gear_command", rclcpp::QoS{1});
   }
 
