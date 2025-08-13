@@ -125,6 +125,22 @@ public:
   [[nodiscard]] nvinfer1::Dims getTensorShape(const char * tensor_name) const;
 
   /**
+   * @brief Get output tensor data type by name from TensorRT engine.
+   *
+   * @param[in] tensor_name Tensor name.
+   * @return Tensor datatype.
+   */
+  [[nodiscard]] nvinfer1::DataType getTensorDataType(const char * tensor_name) const;
+
+  /**
+   * @brief Get output tensor data type by name from TensorRT engine.
+   *
+   * @param[in] tensor_name Tensor name.
+   * @return Tensor datatype.
+   */
+  [[nodiscard]] nvinfer1::TensorIOMode getTensorIOMode(const char * tensor_name) const;
+
+  /**
    * @brief Get input tensor shape by index from TensorRT network.
    *
    * @param[in] index Tensor index.

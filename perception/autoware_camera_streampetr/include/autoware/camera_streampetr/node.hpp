@@ -65,6 +65,7 @@ public:
   explicit StreamPetrNode(const rclcpp::NodeOptions & node_options);
 
 private:
+  
   void camera_info_callback(CameraInfo::ConstSharedPtr input_camera_info_msg, const int camera_id);
   void camera_image_callback(Image::ConstSharedPtr input_camera_image_msg, const int camera_id);
 
@@ -73,6 +74,7 @@ private:
     const rclcpp::Time & stamp);
   std::optional<std::vector<float>> get_camera_extrinsics_vector();
 
+  const std::string logger_name_;
   std::vector<rclcpp::Subscription<CameraInfo>::SharedPtr> camera_info_subs_;
 
   const bool multithreading_;

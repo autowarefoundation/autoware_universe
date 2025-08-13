@@ -14,6 +14,9 @@
 
 #include "autoware/camera_streampetr/network/network.hpp"
 
+#include <autoware/tensorrt_common/utils.hpp>
+#include <autoware/cuda_utils/cuda_utils.hpp>
+
 #include <NvInfer.h>
 #include <NvOnnxParser.h>
 
@@ -26,6 +29,7 @@
 namespace autoware::camera_streampetr
 {
 
+using autoware::tensorrt_common::TrtCommonConfig;
 using Label = autoware_perception_msgs::msg::ObjectClassification;
 
 std::uint8_t getSemanticType(const std::string & class_name)
@@ -77,30 +81,69 @@ autoware_perception_msgs::msg::DetectedObject StreamPetrNetwork::bbox_to_ros_msg
   return object;
 }
 
+void setSigmoidAndSoftmaxLayersToFP32(std::shared_ptr<nvinfer1::INetworkDefinition> network)
+{
+  for (int i = 0; i < network->getNbLayers(); ++i) {
+    auto * layer = network->getLayer(i);
+    std::string layerName = layer->getName();
+
+    // Check if layer name contains "sigmoid" or "softmax" (case insensitive)
+    std::transform(layerName.begin(), layerName.end(), layerName.begin(), ::tolower);
+
+    if (layerName.find("sigmoid") != std::string::npos) {
+      layer->setPrecision(nvinfer1::DataType::kFLOAT);
+    }
+
+    if (layerName.find("softmax") != std::string::npos) {
+      layer->setPrecision(nvinfer1::DataType::kFLOAT);
+    }
+
+    if (layer->getType() == nvinfer1::LayerType::kACTIVATION) {
+      auto * activationLayer = static_cast<nvinfer1::IActivationLayer *>(layer);
+      if (activationLayer->getActivationType() == nvinfer1::ActivationType::kSIGMOID) {
+        layer->setPrecision(nvinfer1::DataType::kFLOAT);
+      }
+    }
+
+    if (layer->getType() == nvinfer1::LayerType::kSOFTMAX) {
+      layer->setPrecision(nvinfer1::DataType::kFLOAT);
+    }
+  }
+}
+
+
 StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config) : config_(config)
 {
   cudaStreamCreate(&stream_);
 
-  // Initialize logger and profiler from tensorrt_common
-  logger_ = std::make_shared<autoware::tensorrt_common::Logger>();
-  profiler_ = std::make_shared<autoware::tensorrt_common::Profiler>();
+  // Initialize TrtCommon configurations
+  auto backbone_config = tensorrt_common::TrtCommonConfig(
+    config_.onnx_backbone_path, config_.trt_precision, config_.engine_backbone_path, config_.workspace_size);
+  auto pts_head_config = tensorrt_common::TrtCommonConfig(
+    config_.onnx_head_path, config_.trt_precision, config_.engine_head_path, config_.workspace_size);
+  auto pos_embed_config = tensorrt_common::TrtCommonConfig(
+    config_.onnx_position_embedding_path, config_.trt_precision, 
+    config_.engine_position_embedding_path, config_.workspace_size);
 
-  // Initialize TensorRT runtime
-  runtime_ = std::unique_ptr<IRuntime>{nvinfer1::createInferRuntime(*logger_)};
-  backbone_ = std::make_unique<SubNetwork>(config_.engine_backbone_path, runtime_.get(), stream_);
-  pts_head_ = std::make_unique<SubNetwork>(config_.engine_head_path, runtime_.get(), stream_);
-  pos_embed_ =
-    std::make_unique<SubNetwork>(config_.engine_position_embedding_path, runtime_.get(), stream_);
+  // Initialize TrtCommon instances
+  backbone_ = std::make_unique<SubNetwork>(backbone_config, profiler_);
+  pts_head_ = std::make_unique<SubNetwork>(pts_head_config, profiler_);
+  pos_embed_ = std::make_unique<SubNetwork>(pos_embed_config, profiler_);
 
-  backbone_->EnableCudaGraph();
-  pts_head_->EnableCudaGraph();
-  pos_embed_->EnableCudaGraph();
+  if (config_.trt_precision == "fp16"){
+    RCLCPP_INFO(rclcpp::get_logger(config_.logger_name.c_str()), "Setting sigmoid and softmax layers to FP32 precision for stability");
+    setSigmoidAndSoftmaxLayersToFP32(pts_head_->getNetwork());
+  }
 
-  pts_head_->bindings["pre_memory_embedding"]->initialize_to_zeros(stream_);
-  pts_head_->bindings["pre_memory_reference_point"]->initialize_to_zeros(stream_);
-  pts_head_->bindings["pre_memory_egopose"]->initialize_to_zeros(stream_);
-  pts_head_->bindings["pre_memory_velo"]->initialize_to_zeros(stream_);
-  pts_head_->bindings["pre_memory_timestamp"]->initialize_to_zeros(stream_);
+  
+  // Setup TensorRT engines
+  if (!backbone_->setup() || !pts_head_->setup() || !pos_embed_->setup()) {
+    throw std::runtime_error("Failed to setup TRT engines.");
+  }
+
+  backbone_->setBindings();
+  pts_head_->setBindings();
+  pos_embed_->setBindings();
 
   mem_.Init(stream_, config_.pre_memory_length, config_.post_memory_length);
   mem_.pre_buf = static_cast<float *>(pts_head_->bindings["pre_memory_timestamp"]->ptr);
@@ -150,7 +193,7 @@ void StreamPetrNetwork::inference_detector(
     pos_embed_->bindings["img2lidar"]->load_from_vector(img2lidar);
 
     dur_pos_embed_->MarkBegin(stream_);
-    pos_embed_->Enqueue();
+    pos_embed_->enqueueV3(stream_);
     dur_pos_embed_->MarkEnd(stream_);
 
     cudaMemcpyAsync(
@@ -168,7 +211,7 @@ void StreamPetrNetwork::inference_detector(
   {  // feature extraction execution
     dur_backbone_->MarkBegin(stream_);
     // inference
-    backbone_->Enqueue();
+    backbone_->enqueueV3(stream_);
 
     cudaMemcpyAsync(
       pts_head_->bindings["x"]->ptr, backbone_->bindings["img_feats"]->ptr,
@@ -184,7 +227,7 @@ void StreamPetrNetwork::inference_detector(
 
     mem_.StepPre(stamp);
     // inference
-    pts_head_->Enqueue();
+    pts_head_->enqueueV3(stream_);
     mem_.StepPost(stamp);
 
     if (config_.use_temporal) {
@@ -235,13 +278,5 @@ StreamPetrNetwork::~StreamPetrNetwork()
   }
 }
 
-void StreamPetrNetwork::printProfiling() const
-{
-  if (profiler_) {
-    logger_->log(
-      autoware::tensorrt_common::Severity::kINFO, "StreamPETR Profiling\n%s",
-      profiler_->toString().c_str());
-  }
-}
 
 }  // namespace autoware::camera_streampetr

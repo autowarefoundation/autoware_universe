@@ -14,7 +14,6 @@
 
 #include "autoware/camera_streampetr/node.hpp"
 
-#include "autoware/camera_streampetr/network/build_trt.hpp"
 #include "autoware/camera_streampetr/postprocess/non_maximum_suppression.hpp"
 
 #include <Eigen/Dense>
@@ -46,6 +45,7 @@ std::vector<float> cast_to_float(const std::vector<double> & double_vector)
 
 StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
 : Node("autoware_camera_streampetr", node_options),
+  logger_name_(declare_parameter<std::string>("logger_name", "camera_streampetr")),
   multithreading_(declare_parameter<bool>("multithreading", false)),
   tf_buffer_(this->get_clock()),
   tf_listener_(tf_buffer_),
@@ -55,35 +55,69 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   debug_mode_(declare_parameter<bool>("debug_mode"))
 {
   RCLCPP_INFO(
-    get_logger(), "nvinfer: %d.%d.%d\n", NV_TENSORRT_MAJOR, NV_TENSORRT_MINOR, NV_TENSORRT_PATCH);
+    rclcpp::get_logger(logger_name_.c_str()), "nvinfer: %d.%d.%d\n", NV_TENSORRT_MAJOR, NV_TENSORRT_MINOR, NV_TENSORRT_PATCH);
 
-  // Initialize parameters
+
+  // Initialize network
+  const int roi_width = declare_parameter<int>("model_params.input_image_width");
+  const int roi_height = declare_parameter<int>("model_params.input_image_height");
+
   const std::string backbone_path = declare_parameter<std::string>("model_params.backbone_path");
   const std::string head_path = declare_parameter<std::string>("model_params.head_path");
   const std::string position_embedding_path =
     declare_parameter<std::string>("model_params.position_embedding_path");
-  const bool fp16_mode = declare_parameter<bool>("model_params.fp16_mode");
+
+  const std::string backbone_engine_path = declare_parameter<std::string>("model_params.backbone_engine_path", "");
+  const std::string head_engine_path = declare_parameter<std::string>("model_params.head_engine_path", "");
+  const std::string position_embedding_engine_path =
+    declare_parameter<std::string>("model_params.position_embedding_engine_path", "");
+
+  const std::string trt_precision = declare_parameter<std::string>("model_params.trt_precision");
   const bool build_only = declare_parameter<bool>("build_only");
   const uint64_t workspace_size =
     1ULL << declare_parameter<int>("model_params.workspace_size", 32);  // Default 4GB
 
-  const std::string engine_backbone_path =
-    initEngine(backbone_path, fp16_mode, false, workspace_size, get_logger());
-  const std::string engine_head_path =
-    initEngine(head_path, fp16_mode, true, workspace_size, get_logger());
-  const std::string engine_position_embedding_path =
-    initEngine(position_embedding_path, fp16_mode, false, workspace_size, get_logger());
+  const bool use_temporal = declare_parameter<bool>("model_params.use_temporal");
+  const double search_distance_2d =
+    declare_parameter<double>("post_process_params.iou_nms_search_distance_2d");
+  const double circle_nms_dist_threshold =
+    declare_parameter<double>("post_process_params.circle_nms_dist_threshold");
+  const double iou_threshold = declare_parameter<double>("post_process_params.iou_nms_threshold");
+  const double confidence_threshold =
+    declare_parameter<double>("post_process_params.confidence_threshold");
+  const std::vector<std::string> class_names =
+    declare_parameter<std::vector<std::string>>("model_params.class_names");
+  const int32_t num_proposals = declare_parameter<int32_t>("model_params.num_proposals");
+  const std::vector<double> yaw_norm_thresholds =
+    declare_parameter<std::vector<double>>("post_process_params.yaw_norm_thresholds");
+  const std::vector<float> detection_range =
+    cast_to_float(declare_parameter<std::vector<double>>("model_params.detection_range"));
+  const int pre_memory_length = declare_parameter<int>("model_params.pre_memory_length", 1024);
+  const int post_memory_length = declare_parameter<int>("model_params.post_memory_length", 1280);
+
+  NetworkConfig network_config {
+    logger_name_, use_temporal, search_distance_2d, circle_nms_dist_threshold,
+    iou_threshold, confidence_threshold, class_names,
+    num_proposals, yaw_norm_thresholds, detection_range, pre_memory_length, post_memory_length,
+    roi_height, roi_width, static_cast<int>(rois_number_),
+    workspace_size, trt_precision,
+    backbone_path, head_path, position_embedding_path,
+    backbone_engine_path, head_engine_path, position_embedding_engine_path
+  };
+
+  network_ = std::make_unique<StreamPetrNetwork>(network_config);
 
   if (build_only) {
-    RCLCPP_INFO(get_logger(), "TensorRT engine files built successfully. Shutting Down...");
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_.c_str()), "TensorRT engine files built successfully. Shutting Down...");
     rclcpp::shutdown();
     return;
   }
 
+  // Setup subscriptions
   camera_info_subs_.resize(rois_number_);
 
   if (multithreading_) {
-    RCLCPP_INFO(get_logger(), "Will be using multithreading for image callbacks.");
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_.c_str()), "Will be using multithreading for image callbacks.");
     camera_callback_groups_.resize(rois_number_);
   }
   const bool is_compressed_image = declare_parameter<bool>("is_compressed_image");
@@ -114,36 +148,10 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
 
   // Data store
   data_store_ = std::make_unique<CameraDataStore>(
-    this, rois_number_, declare_parameter<int>("model_params.input_image_height"),
-    declare_parameter<int>("model_params.input_image_width"), anchor_camera_id_,
+    this, rois_number_, roi_height, roi_width, anchor_camera_id_,
     declare_parameter<bool>("is_distorted_image"),
     declare_parameter<double>("downsample_factor", 1.0));
 
-  // Initialize network
-  const bool use_temporal = declare_parameter<bool>("model_params.use_temporal");
-  const double search_distance_2d =
-    declare_parameter<double>("post_process_params.iou_nms_search_distance_2d");
-  const double circle_nms_dist_threshold =
-    declare_parameter<double>("post_process_params.circle_nms_dist_threshold");
-  const double iou_threshold = declare_parameter<double>("post_process_params.iou_nms_threshold");
-  const double confidence_threshold =
-    declare_parameter<double>("post_process_params.confidence_threshold");
-  const std::vector<std::string> class_names =
-    declare_parameter<std::vector<std::string>>("model_params.class_names");
-  const int32_t num_proposals = declare_parameter<int32_t>("model_params.num_proposals");
-  const std::vector<double> yaw_norm_thresholds =
-    declare_parameter<std::vector<double>>("post_process_params.yaw_norm_thresholds");
-  const std::vector<float> detection_range =
-    cast_to_float(declare_parameter<std::vector<double>>("model_params.detection_range"));
-  const int pre_memory_length = declare_parameter<int>("model_params.pre_memory_length", 1024);
-  const int post_memory_length = declare_parameter<int>("model_params.post_memory_length", 1280);
-
-  NetworkConfig network_config(
-    engine_backbone_path, engine_head_path, engine_position_embedding_path, use_temporal,
-    search_distance_2d, circle_nms_dist_threshold, iou_threshold, confidence_threshold, class_names,
-    num_proposals, yaw_norm_thresholds, detection_range, pre_memory_length, post_memory_length);
-
-  network_ = std::make_unique<StreamPetrNetwork>(network_config);
   if (debug_mode_) {
     using autoware_utils::DebugPublisher;
     using autoware_utils::StopWatch;
@@ -181,11 +189,11 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
   const float prediction_timestamp = data_store_->get_timestamp();
 
   if (tdiff < 0) {
-    RCLCPP_WARN(get_logger(), "Not all camera info or image received");
+    RCLCPP_WARN(rclcpp::get_logger(logger_name_.c_str()), "Not all camera info or image received");
     return;
   } else if (tdiff > max_camera_time_diff_ || prediction_timestamp < 0.0) {
     RCLCPP_WARN(
-      get_logger(),
+      rclcpp::get_logger(logger_name_.c_str()),
       "Couldn't sync cameras. Sync difference: %.2f seconds, timelapsed  from start: %.2f seconds",
       tdiff, prediction_timestamp);
     network_->wipe_memory();
@@ -275,7 +283,7 @@ std::optional<std::vector<float>> StreamPetrNode::get_camera_extrinsics_vector()
         tf_buffer_.lookupTransform(camera_links[i], "base_link", tf2::TimePointZero);
     } catch (const tf2::TransformException & ex) {
       RCLCPP_ERROR(
-        get_logger(), "Could not transform from base_link to %s: %s", camera_links[i].c_str(),
+        rclcpp::get_logger(logger_name_.c_str()), "Could not transform from base_link to %s: %s", camera_links[i].c_str(),
         ex.what());
       return std::nullopt;
     }
@@ -329,7 +337,7 @@ StreamPetrNode::get_ego_pose_vector(const rclcpp::Time & stamp)
     current_transform = tf_buffer_.lookupTransform("map", "base_link", stamp);
   } catch (const tf2::TransformException & ex) {
     RCLCPP_ERROR(
-      get_logger(), "Could not get transform from map to base_link at timestamp: %s", ex.what());
+      rclcpp::get_logger(logger_name_.c_str()), "Could not get transform from map to base_link at timestamp: %s", ex.what());
     return std::nullopt;
   }
 

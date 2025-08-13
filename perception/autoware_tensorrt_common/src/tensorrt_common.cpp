@@ -247,6 +247,23 @@ nvinfer1::Dims TrtCommon::getTensorShape(const char * tensor_name) const
   return engine_->getTensorShape(tensor_name);
 }
 
+nvinfer1::TensorIOMode TrtCommon::getTensorIOMode(const char * tensor_name) const
+{
+  if (!engine_) {
+    logger_->log(nvinfer1::ILogger::Severity::kERROR, "Engine is not initialized");
+    return nvinfer1::TensorIOMode::kNONE;
+  }
+  return engine_->getTensorIOMode(tensor_name);
+}
+
+nvinfer1::DataType TrtCommon::getTensorDataType(const char * tensor_name) const
+{
+  if (!engine_) {
+    throw std::runtime_error("Engine is not initialized");
+  }
+  return engine_->getTensorDataType(tensor_name);
+}
+
 nvinfer1::Dims TrtCommon::getInputDims(const int32_t index) const
 {
   if (!network_) {

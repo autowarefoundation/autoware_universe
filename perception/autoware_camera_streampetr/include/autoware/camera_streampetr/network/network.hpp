@@ -56,6 +56,10 @@
 
 // TensorRT Common
 #include "autoware/tensorrt_common/tensorrt_common.hpp"
+#include "autoware/tensorrt_common/utils.hpp"
+
+// CUDA utilities
+#include <autoware/cuda_utils/cuda_utils.hpp>
 
 namespace autoware::camera_streampetr
 {
@@ -63,111 +67,33 @@ namespace autoware::camera_streampetr
 using cuda::Tensor;
 using nvinfer1::DataType;
 using nvinfer1::Dims;
-using nvinfer1::ICudaEngine;
-using nvinfer1::IExecutionContext;
-using nvinfer1::ILogger;
-using nvinfer1::IRuntime;
+
 
 // Use tensorrt_common components
 using autoware::tensorrt_common::Logger;
 using autoware::tensorrt_common::Profiler;
 using autoware::tensorrt_common::TrtCommon;
+using autoware::tensorrt_common::TrtCommonConfig;
 
-class SubNetwork
+class SubNetwork : public TrtCommon
 {
-private:
-  std::unique_ptr<TrtCommon> trt_common_;
-  cudaStream_t stream_;
+  public:
+    std::unordered_map<std::string, std::shared_ptr<Tensor>> bindings;
 
-public:
-  std::unordered_map<std::string, std::shared_ptr<Tensor>> bindings;
-  bool use_cuda_graph = false;
-  cudaGraph_t graph;
-  cudaGraphExec_t graph_exec;
-
-  SubNetwork(const std::string & engine_path, IRuntime * runtime, cudaStream_t stream)
-  {
-    stream_ = stream;
-
-    // Load the engine using TrtCommon's runtime approach
-    std::ifstream engine_file(engine_path, std::ios::binary);
-    if (!engine_file) {
-      throw std::runtime_error("Error opening engine file: " + engine_path);
+    using TrtCommon::TrtCommon;
+    void setBindings()
+    {
+      for (int n = 0; n < getNbIOTensors(); n++) {
+        std::string name = getIOTensorName(n);
+        Dims d = getTensorShape(name.c_str());
+        DataType dtype = getTensorDataType(name.c_str());
+        bindings[name] = std::make_shared<Tensor>(name, d, dtype);
+        bindings[name]->iomode = getTensorIOMode(name.c_str());
+        std::cout << *(bindings[name]) << std::endl;
+        setTensorAddress(name.c_str(), bindings[name]->ptr);
+      }
     }
-    engine_file.seekg(0, engine_file.end);
-    int64_t fsize = engine_file.tellg();
-    engine_file.seekg(0, engine_file.beg);
-
-    // Read the engine file into a buffer
-    std::vector<char> engineData(fsize);
-    engine_file.read(engineData.data(), fsize);
-
-    auto engine = runtime->deserializeCudaEngine(engineData.data(), fsize);
-    if (!engine) {
-      throw std::runtime_error("Failed to deserialize engine from: " + engine_path);
-    }
-
-    auto context = engine->createExecutionContext();
-    if (!context) {
-      throw std::runtime_error("Failed to create execution context");
-    }
-
-    int nb = engine->getNbIOTensors();
-    for (int n = 0; n < nb; n++) {
-      std::string name = engine->getIOTensorName(n);
-      Dims d = engine->getTensorShape(name.c_str());
-      DataType dtype = engine->getTensorDataType(name.c_str());
-      bindings[name] = std::make_shared<Tensor>(name, d, dtype);
-      bindings[name]->iomode = engine->getTensorIOMode(name.c_str());
-      std::cout << *(bindings[name]) << std::endl;
-      context->setTensorAddress(name.c_str(), bindings[name]->ptr);
-    }
-
-    // Store the raw pointers for direct access
-    engine_ = engine;
-    context_ = context;
-  }
-
-  void Enqueue()
-  {
-    if (this->use_cuda_graph) {
-      cudaGraphLaunch(graph_exec, stream_);
-    } else {
-      context_->enqueueV3(stream_);
-    }
-  }
-
-  ~SubNetwork()
-  {
-    if (context_) {
-      delete context_;
-    }
-    if (engine_) {
-      delete engine_;
-    }
-  }
-
-  void EnableCudaGraph()
-  {
-    // run first time to avoid allocation
-    this->Enqueue();
-    cudaStreamSynchronize(stream_);
-
-    cudaStreamBeginCapture(stream_, cudaStreamCaptureModeGlobal);
-    this->Enqueue();
-    cudaStreamEndCapture(stream_, &graph);
-    this->use_cuda_graph = true;
-#if CUDART_VERSION < 12000
-    cudaGraphInstantiate(&graph_exec, graph, NULL, NULL, 0);
-#else
-    cudaGraphInstantiate(&graph_exec, graph, 0);
-#endif
-  }
-
-private:
-  ICudaEngine * engine_;
-  IExecutionContext * context_;
-};  // class SubNetwork
+};
 
 class Duration
 {
@@ -210,50 +136,39 @@ public:
 
 struct NetworkConfig
 {
-  // Engine paths
-  std::string engine_backbone_path;
-  std::string engine_head_path;
-  std::string engine_position_embedding_path;
+  // Logging
+  std::string logger_name = "camera_streampetr";
 
   // Model parameters
-  bool use_temporal;
-  double search_distance_2d;
-  double circle_nms_dist_threshold;
-  double iou_threshold;
-  double confidence_threshold;
+  bool use_temporal = true;
+  double search_distance_2d = 0.0;
+  double circle_nms_dist_threshold = 0.0;
+  double iou_threshold = 0.0;
+  double confidence_threshold = 0.0;
   std::vector<std::string> class_names;
-  int32_t num_proposals;
+  int32_t num_proposals = 0;
   std::vector<double> yaw_norm_thresholds;
   std::vector<float> detection_range;
-  int pre_memory_length;
-  int post_memory_length;
+  int pre_memory_length = 0;
+  int post_memory_length = 0;
 
-  // Constructor with default initialization
-  NetworkConfig(
-    const std::string & engine_backbone_path_, const std::string & engine_head_path_,
-    const std::string & engine_position_embedding_path_, const bool use_temporal_,
-    const double search_distance_2d_, const double circle_nms_dist_threshold_,
-    const double iou_threshold_, const double confidence_threshold_,
-    const std::vector<std::string> & class_names_, const int32_t num_proposals_,
-    const std::vector<double> & yaw_norm_thresholds_, const std::vector<float> & detection_range_,
-    const int pre_memory_length_, const int post_memory_length_)
-  : engine_backbone_path(engine_backbone_path_),
-    engine_head_path(engine_head_path_),
-    engine_position_embedding_path(engine_position_embedding_path_),
-    use_temporal(use_temporal_),
-    search_distance_2d(search_distance_2d_),
-    circle_nms_dist_threshold(circle_nms_dist_threshold_),
-    iou_threshold(iou_threshold_),
-    confidence_threshold(confidence_threshold_),
-    class_names(class_names_),
-    num_proposals(num_proposals_),
-    yaw_norm_thresholds(yaw_norm_thresholds_),
-    detection_range(detection_range_),
-    pre_memory_length(pre_memory_length_),
-    post_memory_length(post_memory_length_)
-  {
-  }
+  int image_height = 0;
+  int image_width = 0;
+  int image_num = 0;
+
+  uint64_t workspace_size = 0;
+  std::string trt_precision;
+
+  // Engine paths
+  std::string onnx_backbone_path;
+  std::string onnx_head_path;
+  std::string onnx_position_embedding_path;
+
+  std::string engine_backbone_path = "";
+  std::string engine_head_path = "";
+  std::string engine_position_embedding_path = "";
 };
+
 
 class StreamPetrNetwork
 {
@@ -278,7 +193,6 @@ private:
   NetworkConfig config_;
   std::shared_ptr<Logger> logger_;
   std::shared_ptr<Profiler> profiler_;
-  std::unique_ptr<IRuntime> runtime_;
   std::unique_ptr<SubNetwork> backbone_;
   std::unique_ptr<SubNetwork> pts_head_;
   std::unique_ptr<SubNetwork> pos_embed_;
