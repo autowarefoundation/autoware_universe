@@ -9,7 +9,7 @@ The core algorithm, named `BEVFormer`, unifies multi-view images into the BEV pe
 ### Cite
 
 - Zhicheng Wang, et al., "BEVFormer: Incorporating Transformers for Multi-Camera 3D Detection" [[ref](https://arxiv.org/abs/2203.17270)]
-- This node is ported and adapted for Autoware from [Multicoreware's](https://multicorewareinc.com/) BEVFormer ROS2 C++ [repository](https://github.com/Selventhiran-Rengaraj-MCW/mcw-bevformer-cpp.git).
+- This node is ported and adapted for Autoware from [Multicoreware's](https://multicorewareinc.com/) BEVFormer ROS2 C++ repository.
 
 ## Inputs / Outputs
 
@@ -29,7 +29,6 @@ The core algorithm, named `BEVFormer`, unifies multi-view images into the BEV pe
 | `~/input/topic_img_back_left/camera_info`   | `sensor_msgs::msg::CameraInfo`                    | input back_left camera parameters                      |
 | `~/input/topic_img_back/camera_info`        | `sensor_msgs::msg::CameraInfo`                    | input back camera parameters                           |
 | `~/input/topic_img_back_right/camera_info`  | `sensor_msgs::msg::CameraInfo`                    | input back_right camera parameters                     |
-| `~/input/reset_bevformer_history`           | `std_msgs::msg::Bool`                             | Flag for scene change to maintain temporal consistency |
 | `~/input/can_bus`                           | `autoware_localization_msgs::msg::KinematicState` | CAN bus data for ego-motion                            |
 
 ### Outputs
@@ -142,8 +141,7 @@ The configuration file in `config/bevformer.param.yaml` can be modified to suit 
 ## References/External links
 
 [1] [BEVFormer (arXiv)](https://arxiv.org/abs/2203.17270)  
-[2] [Original Python BEVFormer TensorRT](https://github.com/DerryHub/BEVFormer_tensorrt.git)  
-[3] [Bevformer ROS2 C++](https://github.com/Selventhiran-Rengaraj-MCW/mcw-bevformer-cpp.git)  
-[4] [nuScenes Dataset](https://www.nuscenes.org/)
+[2] [Original Python BEVFormer TensorRT](https://github.com/DerryHub/BEVFormer_tensorrt.git)    
+[3] [nuScenes Dataset](https://www.nuscenes.org/)
 
 ---
