@@ -87,17 +87,6 @@ inline geometry_msgs::msg::Point to_geom_pt(const Point2d & point)
 }
 
 /**
- * @brief Convert a ROS 3D point into a 2D point by discarding the z-component.
- *
- * @param point A ROS point with x, y, z coordinates.
- * @return A 2D point containing only the x and y values.
- */
-inline Point2d to_pt2d(const geometry_msgs::msg::Point & point)
-{
-  return {point.x, point.y};
-}
-
-/**
  * @brief Create grouped intervals of departure points for both sides of the ego vehicle.
  *
  * This function scans through the departure points on the left and right sides of the ego vehicle
