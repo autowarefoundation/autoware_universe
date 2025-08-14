@@ -359,27 +359,6 @@ std::vector<lanelet::Id> find_lane_ids_upto(
   return lane_ids;
 }
 
-std::optional<size_t> get_first_index_intersects_line(
-  const lanelet::ConstLineString2d & line, const InterpolatedPathInfo & interpolated_path_info,
-  const autoware_utils::LinearRing2d & footprint, const double vehicle_length)
-{
-  const auto & path_ip = interpolated_path_info.path;
-  const auto [lane_start, lane_end] = interpolated_path_info.lane_id_interval;
-  const size_t vehicle_length_idx = static_cast<size_t>(vehicle_length / interpolated_path_info.ds);
-  const size_t start =
-    static_cast<size_t>(std::max<int>(0, static_cast<int>(lane_start) - vehicle_length_idx));
-  const auto line2d = line.basicLineString();
-  for (auto i = start; i <= lane_end; ++i) {
-    const auto & base_pose = path_ip.points.at(i).point.pose;
-    const auto path_footprint =
-      autoware_utils::transform_vector(footprint, autoware_utils::pose2transform(base_pose));
-    if (boost::geometry::intersects(path_footprint, line2d)) {
-      return std::make_optional<size_t>(i);
-    }
-  }
-  return std::nullopt;
-}
-
 lanelet::ConstLineString3d get_entry_line(const lanelet::ConstLanelet & lanelet)
 {
   return lanelet::ConstLineString3d{
