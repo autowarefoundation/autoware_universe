@@ -1,0 +1,5 @@
+/**:
+  ros__parameters:
+    max_allowed_processing_time_ms: 100.0
+    max_acceptable_consecutive_delay_ms: 1000.0
+    validation_callback_interval_ms: 100.0
