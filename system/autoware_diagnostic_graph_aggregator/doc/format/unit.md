@@ -10,7 +10,7 @@ Any derived object can be used where a unit object is required.
 | `path`              | `string` | no       | Any string to reference from other units.                                |
 | `type`              | `string` | yes      | The string indicating the type of derived object.                        |
 | `dependent`         | `string` | no       | The path of the dependent unit.                                          |
-| `latch`             | `float`  | no       | Whether to latch the status.                                             |
+| `latch`             | `float`  | no       | The latch seconds for this unit.                                         |
 | `$derived argument` | `any`    | no       | Additional arguments for constructing the derived object of given `type` |
 
 ## Derived object types
