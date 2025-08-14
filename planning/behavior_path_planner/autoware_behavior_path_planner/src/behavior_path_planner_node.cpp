@@ -373,7 +373,7 @@ void BehaviorPathPlannerNode::run()
   const auto output = planner_manager_->run(planner_data_);
 
   // path handling
-  const auto path = getPath(output, planner_data_, planner_manager_);
+  const auto path = getPath(output, planner_data_);
   path->header.stamp = stamp;
 
   // update planner data
