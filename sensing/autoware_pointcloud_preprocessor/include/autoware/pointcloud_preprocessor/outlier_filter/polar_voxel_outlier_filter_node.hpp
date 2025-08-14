@@ -33,11 +33,61 @@
 
 namespace autoware::pointcloud_preprocessor
 {
-// Forward declarations for structures used in extracted methods
-struct VoxelInfo;
-struct VoxelCounts;
-struct PointProcessingResult;
-struct PointCounts;
+
+// Polar voxel index for 3D polar coordinate space discretization
+struct PolarVoxelIndex
+{
+  int32_t radius_idx, azimuth_idx, elevation_idx;
+
+  bool operator==(const PolarVoxelIndex & other) const
+  {
+    return radius_idx == other.radius_idx && azimuth_idx == other.azimuth_idx &&
+           elevation_idx == other.elevation_idx;
+  }
+};
+
+// Hash function for PolarVoxelIndex to use in unordered containers
+struct PolarVoxelIndexHash
+{
+  std::size_t operator()(const PolarVoxelIndex & idx) const
+  {
+    auto h1 = std::hash<int32_t>{}(idx.radius_idx);
+    auto h2 = std::hash<int32_t>{}(idx.azimuth_idx);
+    auto h3 = std::hash<int32_t>{}(idx.elevation_idx);
+
+    return h1 ^ (h2 << 1) ^ (h3 << 2);
+  }
+};
+
+// Information about a point's relationship to its voxel
+struct PointVoxelInfo
+{
+  PolarVoxelIndex voxel_idx;
+  bool is_primary;
+
+  explicit PointVoxelInfo(const PolarVoxelIndex & idx, bool primary)
+  : voxel_idx(idx), is_primary(primary)
+  {
+  }
+};
+
+// Count statistics for points within a voxel
+struct VoxelPointCounts
+{
+  size_t primary_count = 0;
+  size_t secondary_count = 0;
+  bool is_in_visibility_range = true;
+
+  bool meets_primary_threshold(int threshold) const
+  {
+    return primary_count >= static_cast<size_t>(threshold);
+  }
+
+  bool meets_secondary_threshold(int threshold) const
+  {
+    return secondary_count <= static_cast<size_t>(threshold);
+  }
+};
 
 class PolarVoxelOutlierFilterComponent : public autoware::pointcloud_preprocessor::Filter
 {
@@ -60,77 +110,41 @@ public:
     }
   };
 
-  struct PolarVoxelIndex
-  {
-    int32_t radius_idx, azimuth_idx, elevation_idx;
-
-    bool operator==(const PolarVoxelIndex & other) const
-    {
-      return radius_idx == other.radius_idx && azimuth_idx == other.azimuth_idx &&
-             elevation_idx == other.elevation_idx;
-    }
-  };
-
-  struct PolarVoxelIndexHash
-  {
-    std::size_t operator()(const PolarVoxelIndex & idx) const
-    {
-      auto h1 = std::hash<int32_t>{}(idx.radius_idx);
-      auto h2 = std::hash<int32_t>{}(idx.azimuth_idx);
-      auto h3 = std::hash<int32_t>{}(idx.elevation_idx);
-
-      return h1 ^ (h2 << 1) ^ (h3 << 2);
-    }
-  };
-
 private:
   // Type aliases to eliminate long type name duplication
   using PointCloud2ConstPtr = sensor_msgs::msg::PointCloud2::ConstSharedPtr;
   using IndicesPtr = pcl::IndicesPtr;
-  using VoxelCountMap = std::unordered_map<PolarVoxelIndex, VoxelCounts, PolarVoxelIndexHash>;
+  using VoxelPointCountMap =
+    std::unordered_map<PolarVoxelIndex, VoxelPointCounts, PolarVoxelIndexHash>;
   using VoxelIndexSet = std::unordered_set<PolarVoxelIndex, PolarVoxelIndexHash>;
-  using VoxelInfoVector = std::vector<std::optional<VoxelInfo>>;
+  using PointVoxelInfoVector = std::vector<std::optional<PointVoxelInfo>>;
   using ValidPointsMask = std::vector<bool>;
-
-  // Processing context to eliminate parameter list duplication
-  struct ProcessingContext
-  {
-    const PointCloud2ConstPtr & input;
-    const ValidPointsMask & valid_points_mask;
-    const VoxelCountMap & voxel_counts;
-    const VoxelIndexSet & valid_voxels;
-  };
 
   void filter(
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
 
-  VoxelInfoVector collect_voxel_info(const PointCloud2ConstPtr & input) const;
-  VoxelCountMap count_voxels(const VoxelInfoVector & point_voxel_info) const;
-  VoxelIndexSet determine_valid_voxels_simple(const VoxelCountMap & voxel_counts) const;
+  PointVoxelInfoVector collect_voxel_info(const PointCloud2ConstPtr & input) const;
+  VoxelPointCountMap count_voxels(const PointVoxelInfoVector & point_voxel_info) const;
+  VoxelPointCountMap filter_voxels_by_range(const VoxelPointCountMap & voxel_counts) const;
+  VoxelIndexSet determine_valid_voxels_simple(const VoxelPointCountMap & voxel_counts) const;
   VoxelIndexSet determine_valid_voxels_with_return_types(
-    const VoxelCountMap & voxel_counts, size_t & voxels_passed_secondary_test) const;
-  VoxelIndexSet determine_valid_voxels(
-    const VoxelCountMap & voxel_counts, size_t & voxels_passed_secondary_test) const;
+    const VoxelPointCountMap & voxel_counts) const;
+  VoxelIndexSet determine_valid_voxels(const VoxelPointCountMap & voxel_counts) const;
   ValidPointsMask create_valid_points_mask(
-    const VoxelInfoVector & point_voxel_info, const VoxelIndexSet & valid_voxels) const;
+    const PointVoxelInfoVector & point_voxel_info, const VoxelIndexSet & valid_voxels) const;
   void create_filtered_output(
     const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask,
     PointCloud2 & output) const;
   void publish_noise_cloud(
     const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask) const;
   void publish_diagnostics(
-    const ProcessingContext & context, size_t voxels_passed_secondary_test) const;
+    const VoxelPointCountMap & voxel_counts, const ValidPointsMask & valid_points_mask) const;
 
   // Helper methods
-  PointProcessingResult create_processing_result(
-    const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask,
-    const VoxelCountMap & voxel_counts, const VoxelIndexSet & valid_voxels,
-    size_t voxels_passed_secondary_test = 0) const;
-  sensor_msgs::msg::PointCloud2 create_noise_cloud(
-    const PointCloud2ConstPtr & input, size_t noise_count) const;
-  PointCounts calculate_point_counts(const ValidPointsMask & valid_points_mask) const;
   void setup_output_header(
     PointCloud2 & output, const PointCloud2ConstPtr & input, size_t valid_count) const;
+  sensor_msgs::msg::PointCloud2 create_noise_cloud(
+    const PointCloud2ConstPtr & input, size_t noise_count) const;
 
   // Coordinate conversion methods
   static PolarCoordinate cartesian_to_polar(const CartesianCoordinate & cartesian);
@@ -154,6 +168,7 @@ private:
   int voxel_points_threshold_;
   double min_radius_m_;
   double max_radius_m_;
+  double visibility_estimation_max_range_m_;
   bool use_return_type_classification_;
   bool filter_secondary_returns_;
   int secondary_noise_threshold_;
@@ -178,6 +193,9 @@ private:
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
   mutable std::mutex mutex_;
 };
+
+// Forward declaration for implementation-specific structs
+struct PointCounts;
 
 }  // namespace autoware::pointcloud_preprocessor
 

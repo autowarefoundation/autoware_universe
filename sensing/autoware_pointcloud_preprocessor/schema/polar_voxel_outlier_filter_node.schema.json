@@ -42,6 +42,12 @@
           "default": "300.0",
           "minimum": 0
         },
+        "visibility_estimation_max_range_m": {
+          "type": "number",
+          "description": "the maximum range to consider for visibility estimation [m] (limits visibility calculations to reliable sensor range)",
+          "default": "20.0",
+          "minimum": 0
+        },
         "use_return_type_classification": {
           "type": "boolean",
           "description": "whether to use return type classification (if false, all returns are processed)",
@@ -109,6 +115,7 @@
         "voxel_points_threshold",
         "min_radius_m",
         "max_radius_m",
+        "visibility_estimation_max_range_m",
         "use_return_type_classification",
         "filter_secondary_returns",
         "secondary_noise_threshold",
