@@ -2,8 +2,8 @@
 Changelog for package autoware_boundary_departure_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.47.1 (2025-08-14)
+-------------------
 * fix(autoware_boundary_departure_checker): add missing dependency to magic_enum (`#11201 <https://github.com/autowarefoundation/autoware_universe/issues/11201>`_)
 * Contributors: Mete Fatih Cırıt
 
