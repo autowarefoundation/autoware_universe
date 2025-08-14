@@ -31,14 +31,6 @@
 #include <vector>
 namespace autoware::diffusion_planner
 {
-// Compute Euclidean distance between two LanePoints
-inline float euclidean_distance(const LanePoint & p1, const LanePoint & p2)
-{
-  float dx = p2.x() - p1.x();
-  float dy = p2.y() - p1.y();
-  float dz = p2.z() - p1.z();
-  return std::sqrt(dx * dx + dy * dy + dz * dz);
-}
 
 std::vector<LanePoint> interpolate_points(const std::vector<LanePoint> & input, size_t num_points)
 {
