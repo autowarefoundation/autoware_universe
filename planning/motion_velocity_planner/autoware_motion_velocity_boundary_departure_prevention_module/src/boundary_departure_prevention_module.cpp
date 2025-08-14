@@ -205,7 +205,6 @@ void BoundaryDeparturePreventionModule::update_parameters(
 
   update_param(parameters, module_name + "th_pt_shift.goal_dist_m", pp.th_goal_shift_dist_m);
 
-  // Cutoff times
   update_param(parameters, module_name + "th_cutoff_time_s.predicted_path",
                pp.bdc_param.th_cutoff_time_predicted_path_s);
   update_param(parameters, module_name + "th_cutoff_time_s.near_boundary",
@@ -213,7 +212,6 @@ void BoundaryDeparturePreventionModule::update_parameters(
   update_param(parameters, module_name + "th_cutoff_time_s.departure",
                pp.bdc_param.th_cutoff_time_departure_s);
 
-  // On/off time buffers
   update_param(parameters, module_name + "on_time_buffer_s.critical_departure",
                pp.on_time_buffer_s.critical_departure);
   update_param(parameters, module_name + "on_time_buffer_s.near_boundary",
@@ -223,7 +221,6 @@ void BoundaryDeparturePreventionModule::update_parameters(
   update_param(parameters, module_name + "off_time_buffer_s.near_boundary",
                pp.off_time_buffer_s.near_boundary);
 
-  // Slow down types
   const std::string ns_slow_down{module_name + "slow_down_behavior.enable."};
 
   bool enable_slow_down_near_bound = pp.slow_down_types.count(DepartureType::NEAR_BOUNDARY);
@@ -290,7 +287,9 @@ void BoundaryDeparturePreventionModule::update_parameters(
   update_diag(DepartureType::APPROACHING_DEPARTURE, "approaching_departure");
   update_diag(DepartureType::CRITICAL_DEPARTURE, "critical_departure");
 
-  boundary_departure_checker_ptr_->setParam(pp.bdc_param);
+  if (boundary_departure_checker_ptr_) {
+    boundary_departure_checker_ptr_->setParam(pp.bdc_param);
+  }
 }
 
 void BoundaryDeparturePreventionModule::subscribe_topics(rclcpp::Node & node)
