@@ -9,6 +9,7 @@ The Polar Voxel Outlier Filter is a point cloud outlier filtering algorithm that
 - **Flexible filtering modes** with configurable return type classification
 - **Automatic format detection** between PointXYZIRC and PointXYZIRCAEDT
 - **Two-criteria filtering** using primary and secondary return analysis (when enabled)
+- **Range-aware visibility estimation** for improved diagnostic accuracy
 - **Comprehensive diagnostics** with filter ratio and visibility metrics
 - **Optional debug support** with noise point cloud publishing for analysis
 
@@ -33,8 +34,9 @@ The advanced mode concept is that when two returns exist, the first return is mo
 1. **Natural LiDAR Representation**: LiDAR sensors naturally scan in polar patterns, making polar voxels more aligned with the data structure
 2. **Adaptive Resolution**: Automatically provides higher angular resolution at closer distances and lower resolution at far distances
 3. **Range-Aware Filtering**: Can apply different filtering strategies based on distance from sensor
-4. **Azimuthal Uniformity**: Maintains consistent azimuthal coverage regardless of distance
-5. **Configurable Return Type Classification**: Optional return type analysis for enhanced filtering
+4. **Range-Aware Visibility**: Configurable range limit for accurate visibility estimation
+5. **Azimuthal Uniformity**: Maintains consistent azimuthal coverage regardless of distance
+6. **Configurable Return Type Classification**: Optional return type analysis for enhanced filtering
 
 ## Point Cloud Format Support
 
@@ -109,6 +111,14 @@ When `use_return_type_classification=true`, points are classified using the `ret
 - **Secondary Returns**: All other return types not specified as primary
 - **Classification**: Used for advanced two-criteria filtering
 
+### Range-Aware Visibility Estimation
+
+The visibility metric is calculated only for voxels within the configured range:
+
+- **Range Filtering**: Only voxels with maximum radius ≤ `visibility_estimation_max_range_m` are considered
+- **Reliability**: Excludes potentially unreliable distant measurements from visibility calculations
+- **Configurable**: Allows adjustment based on sensor characteristics and requirements
+
 ### Filtering Methodology
 
 The filter uses different algorithms based on the `use_return_type_classification` parameter:
@@ -135,8 +145,9 @@ The filter uses different algorithms based on the `use_return_type_classificatio
    - **Criterion 1**: Primary returns ≥ `voxel_points_threshold`
    - **Criterion 2**: Secondary returns ≤ `secondary_noise_threshold`
    - **Both criteria must be satisfied** for a voxel to be kept
-6. **Secondary Return Filtering**: Optional exclusion of secondary returns from output
-7. **Output**: Filtered point cloud with enhanced noise removal
+6. **Range-Aware Visibility**: Visibility calculation limited to voxels within `visibility_estimation_max_range_m`
+7. **Secondary Return Filtering**: Optional exclusion of secondary returns from output
+8. **Output**: Filtered point cloud with enhanced noise removal
 
 ### Advanced Two-Criteria Filtering
 
@@ -150,6 +161,7 @@ When enabled, for each voxel both criteria must be satisfied:
 
 - **Flexible Architecture**: Configurable between simple and advanced filtering
 - **Format-Optimized Processing**: Automatic selection of optimal coordinate source
+- **Range-Aware Diagnostics**: Visibility estimation limited to reliable sensor range
 - **Comprehensive Diagnostics**: Mode-specific filter ratio and visibility metrics
 - **Debug Support**: Optional noise cloud publishing for analysis and tuning
 
@@ -172,11 +184,11 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 
 ### Additional Debug Topics
 
-| Name                                                  | Type                                                | Description                                                                  |
-| ----------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `~/polar_voxel_outlier_filter/debug/filter_ratio`     | `autoware_internal_debug_msgs::msg::Float32Stamped` | Ratio of output to input points                                              |
-| `~/polar_voxel_outlier_filter/debug/visibility`       | `autoware_internal_debug_msgs::msg::Float32Stamped` | Ratio of voxels passing secondary return threshold test (advanced mode only) |
-| `~/polar_voxel_outlier_filter/debug/pointcloud_noise` | `sensor_msgs::msg::PointCloud2`                     | Filtered-out points for debugging (when enabled)                             |
+| Name                                                  | Type                                                | Description                                                                                 |
+| ----------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `~/polar_voxel_outlier_filter/debug/filter_ratio`     | `autoware_internal_debug_msgs::msg::Float32Stamped` | Ratio of output to input points                                                             |
+| `~/polar_voxel_outlier_filter/debug/visibility`       | `autoware_internal_debug_msgs::msg::Float32Stamped` | Ratio of voxels passing secondary return threshold test (advanced mode only, range-limited) |
+| `~/polar_voxel_outlier_filter/debug/pointcloud_noise` | `sensor_msgs::msg::PointCloud2`                     | Filtered-out points for debugging (when enabled)                                            |
 
 ## Parameters
 
@@ -186,14 +198,15 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 
 ### Core Filtering Parameters
 
-| Parameter                  | Type   | Description                                 | Default       |
-| -------------------------- | ------ | ------------------------------------------- | ------------- |
-| `radial_resolution_m`      | double | Resolution in radial direction (meters)     | 0.2           |
-| `azimuth_resolution_rad`   | double | Resolution in azimuth direction (radians)   | 0.025 (~1.4°) |
-| `elevation_resolution_rad` | double | Resolution in elevation direction (radians) | 0.05 (~2.9°)  |
-| `voxel_points_threshold`   | int    | Minimum points required per voxel           | 2             |
-| `min_radius_m`             | double | Minimum radius to consider (meters)         | 0.5           |
-| `max_radius_m`             | double | Maximum radius to consider (meters)         | 300.0         |
+| Parameter                           | Type   | Description                                      | Default       |
+| ----------------------------------- | ------ | ------------------------------------------------ | ------------- |
+| `radial_resolution_m`               | double | Resolution in radial direction (meters)          | 0.2           |
+| `azimuth_resolution_rad`            | double | Resolution in azimuth direction (radians)        | 0.025 (~1.4°) |
+| `elevation_resolution_rad`          | double | Resolution in elevation direction (radians)      | 0.05 (~2.9°)  |
+| `voxel_points_threshold`            | int    | Minimum points required per voxel                | 2             |
+| `min_radius_m`                      | double | Minimum radius to consider (meters)              | 0.5           |
+| `max_radius_m`                      | double | Maximum radius to consider (meters)              | 300.0         |
+| `visibility_estimation_max_range_m` | double | Maximum range for visibility estimation (meters) | 100.0         |
 
 ### Return Type Classification Parameters
 
@@ -225,6 +238,7 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 - **filter_secondary_returns**: When `true`, only primary returns appear in output (advanced mode only)
 - **secondary_noise_threshold**: Only used when `use_return_type_classification=true`
 - **primary_return_types**: Only used when `use_return_type_classification=true`
+- **visibility_estimation_max_range_m**: Limits visibility calculation to reliable sensor range (advanced mode only)
 - **publish_noise_cloud**: When `false`, improves performance by skipping noise cloud generation
 - **Diagnostics**: Visibility is only published when return type classification is enabled
 
@@ -254,6 +268,7 @@ filter_secondary_returns: false # Include secondary returns in output
 radial_resolution_m: 0.2
 azimuth_resolution_rad: 0.025 # ~1.4 degrees
 elevation_resolution_rad: 0.05 # ~2.9 degrees
+visibility_estimation_max_range_m: 100.0 # Range limit for visibility calculation
 publish_noise_cloud: false
 ```
 
@@ -262,11 +277,31 @@ publish_noise_cloud: false
 ```yaml
 # Enable debugging and monitoring
 use_return_type_classification: true
+visibility_estimation_max_range_m: 80.0 # Shorter range for urban environments
 publish_noise_cloud: true # Enable noise cloud for analysis
 filter_ratio_error_threshold: 0.3
 filter_ratio_warn_threshold: 0.5
 visibility_error_threshold: 0.4
 visibility_warn_threshold: 0.6
+```
+
+### Sensor-Specific Configuration Examples
+
+```yaml
+# Long-range highway LiDAR
+visibility_estimation_max_range_m: 200.0
+radial_resolution_m: 0.5
+voxel_points_threshold: 3
+
+# Urban short-range LiDAR
+visibility_estimation_max_range_m: 50.0
+radial_resolution_m: 0.2
+voxel_points_threshold: 2
+
+# High-resolution near-field processing
+visibility_estimation_max_range_m: 30.0
+radial_resolution_m: 0.1
+azimuth_resolution_rad: 0.017 # ~1 degree
 ```
 
 ## Assumptions / Known limits
@@ -276,6 +311,7 @@ visibility_warn_threshold: 0.6
 - **Supported formats**: PointXYZIRC and PointXYZIRCAEDT only
 - **Finite coordinates required**: Automatically filters out NaN/Inf points
 - **Return type dependency**: Advanced filtering effectiveness depends on accurate return type classification
+- **Visibility range dependency**: Visibility accuracy depends on appropriate `visibility_estimation_max_range_m` setting
 
 ## Error detection and handling
 
@@ -285,6 +321,7 @@ The filter includes robust error handling:
 - **Input validation**: Checks for null point clouds
 - **Coordinate validation**: Filters invalid points (NaN, Inf values) automatically
 - **Range validation**: Points outside configured radius ranges are excluded
+- **Parameter validation**: Ensures `visibility_estimation_max_range_m` > 0
 - **Dynamic parameter validation**: Runtime parameter updates with validation
 
 ## Usage
@@ -308,6 +345,7 @@ The filter includes robust error handling:
 #   <param name="voxel_points_threshold" value="2"/>
 #   <param name="secondary_noise_threshold" value="4"/>
 #   <param name="primary_return_types" value="[1,6,10]"/>
+#   <param name="visibility_estimation_max_range_m" value="100.0"/>
 # </node>
 ```
 
@@ -321,7 +359,7 @@ The filter includes robust error handling:
 #### Debug Topics
 
 - **Filter Ratio**: `~/polar_voxel_outlier_filter/debug/filter_ratio` (autoware_internal_debug_msgs/Float32Stamped)
-- **Visibility**: `~/polar_voxel_outlier_filter/debug/visibility` (autoware_internal_debug_msgs/Float32Stamped) - Advanced mode only
+- **Visibility**: `~/polar_voxel_outlier_filter/debug/visibility` (autoware_internal_debug_msgs/Float32Stamped) - Advanced mode only, range-limited
 - **Noise Cloud**: `~/polar_voxel_outlier_filter/debug/pointcloud_noise` (sensor_msgs/PointCloud2)
 
 ### Programmatic Usage
@@ -336,6 +374,7 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 // - Simple mode (use_return_type_classification=false): Basic occupancy filtering
 // - Advanced mode (use_return_type_classification=true): Two-criteria filtering with return type analysis
 // - Both modes support PointXYZIRC and PointXYZIRCAEDT formats
+// - Advanced mode uses range-limited visibility estimation for improved accuracy
 ```
 
 ## Performance characterization
@@ -357,13 +396,14 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 
 - **PointXYZIRCAEDT**: Optimal performance with pre-computed coordinates and return type analysis
 - **PointXYZIRC**: Good performance with coordinate conversion and return type analysis
-- **Enhanced filtering**: Additional return type classification processing
+- **Enhanced filtering**: Additional return type classification and range-aware visibility processing
 
 ### Memory Usage
 
 - **Hash-based voxel storage**: Efficiently handles sparse voxel occupancy
 - **Single-pass processing**: Minimal memory overhead
 - **Mode-specific diagnostics**: Efficient performance monitoring
+- **Range filtering**: Additional hash map for visibility calculation (advanced mode only)
 
 ### Optimization Tips
 
@@ -373,8 +413,9 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 2. **Use PointXYZIRCAEDT format** when available for optimal performance
 3. **Tune voxel resolutions** based on your use case
 4. **Configure return type mappings** to match your sensor (advanced mode)
-5. **Monitor diagnostics** for real-time performance assessment
-6. **Disable noise cloud publishing** in production for better performance
+5. **Set appropriate visibility range** (`visibility_estimation_max_range_m`) for your sensor and environment
+6. **Monitor diagnostics** for real-time performance assessment
+7. **Disable noise cloud publishing** in production for better performance
 
 ## Diagnostics and Monitoring
 
@@ -387,14 +428,17 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 ### Visibility Diagnostics
 
 - **Advanced mode only**: Uses return type classification data
-- **Voxel-based metric**: Percentage of voxels passing secondary threshold test
-- **Environmental indicator**: Useful for detecting sensor conditions
+- **Range-limited metric**: Only considers voxels within `visibility_estimation_max_range_m`
+- **Voxel-based metric**: Percentage of range-limited voxels passing secondary threshold test
+- **Environmental indicator**: Useful for detecting sensor conditions within reliable range
+- **Diagnostic context**: Status messages include the configured visibility estimation range
 
 ### Debug Features
 
 - **Noise point cloud**: All filtered-out points for analysis (when enabled)
-- **Runtime parameter updates**: Dynamic threshold adjustment
+- **Runtime parameter updates**: Dynamic threshold and range adjustment
 - **Mode-specific logging**: Debug messages tailored to filtering mode
+- **Range-aware diagnostics**: Visibility calculations clearly indicate the estimation range
 
 ## Use Cases and Configuration Guidelines
 
@@ -408,9 +452,10 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 ### Advanced Mode Use Cases
 
 1. **Modern LiDAR Processing**: Enhanced filtering with reliable return type information
-2. **Environmental Monitoring**: Visibility estimation and weather condition detection
+2. **Environmental Monitoring**: Range-aware visibility estimation and weather condition detection
 3. **High-Quality Filtering**: Two-criteria approach for superior noise removal
 4. **Autonomous Vehicle Applications**: Safety-critical filtering with comprehensive diagnostics
+5. **Range-Specific Analysis**: Different visibility requirements for near vs. far field
 
 ### Parameter Tuning Guidelines
 
@@ -426,6 +471,14 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 - **For conservative filtering**: Higher secondary noise threshold (3-5)
 - **For primary-only output**: Enable `filter_secondary_returns`
 - **For sensor-specific optimization**: Adjust `primary_return_types` based on sensor characteristics
+- **For range-specific visibility**: Set `visibility_estimation_max_range_m` based on sensor effective range and application requirements
+
+#### Visibility Range Guidelines
+
+- **Urban environments**: 30-80m (shorter ranges for reliable near-field analysis)
+- **Highway applications**: 100-200m (longer ranges for high-speed scenarios)
+- **Parking/loading**: 10-30m (very short ranges for precise near-field monitoring)
+- **Sensor specifications**: Match to sensor's reliable detection range
 
 ## Comparison Table
 
@@ -435,10 +488,11 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 | **Return Type Required** | No              | Yes                           |
 | **Computational Cost**   | Low             | Moderate                      |
 | **Filtering Quality**    | Good            | Excellent                     |
-| **Visibility Metrics**   | None            | Full                          |
+| **Visibility Metrics**   | None            | Range-aware                   |
 | **Configuration**        | Simple          | Advanced                      |
 | **Use Case**             | Basic filtering | Enhanced noise removal        |
 | **Environmental Adapt**  | Limited         | Comprehensive                 |
+| **Range Awareness**      | Basic           | Configurable                  |
 
 ## Migration Guide
 
@@ -449,8 +503,9 @@ To enable advanced filtering on existing systems:
 1. **Ensure return type field**: Verify input point clouds have return_type field
 2. **Set parameter**: `use_return_type_classification: true`
 3. **Configure return types**: Set `primary_return_types` for your sensor
-4. **Tune thresholds**: Adjust `secondary_noise_threshold` based on requirements
-5. **Monitor diagnostics**: Use visibility metrics for performance assessment
+4. **Set visibility range**: Configure `visibility_estimation_max_range_m` for your application
+5. **Tune thresholds**: Adjust `secondary_noise_threshold` based on requirements
+6. **Monitor diagnostics**: Use range-aware visibility metrics for performance assessment
 
 ### Disabling Advanced Mode
 
@@ -458,7 +513,16 @@ To use simple mode for basic filtering:
 
 1. **Set parameter**: `use_return_type_classification: false`
 2. **Configure threshold**: Set `voxel_points_threshold` for total point count
-3. **Remove advanced parameters**: Return type parameters will be ignored
+3. **Remove advanced parameters**: Return type and visibility range parameters will be ignored
 4. **Simplified monitoring**: Only filter ratio diagnostics available
 
-This approach provides **maximum flexibility** while maintaining optimal performance for both simple and advanced use cases! 🎯✨
+### Updating Existing Advanced Mode Configurations
+
+For systems already using advanced mode, add the new parameter:
+
+```yaml
+# Add to existing advanced mode configuration:
+visibility_estimation_max_range_m: 100.0 # Adjust based on your sensor and application
+```
+
+This approach provides **maximum flexibility** with **range-aware visibility estimation** while maintaining optimal performance for both simple and advanced use cases! 🎯✨
