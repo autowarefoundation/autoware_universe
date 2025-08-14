@@ -119,8 +119,9 @@ void run(int /* port */, const std::vector<std::string> & list)
 
   ret = unlink(UNIXDOMAIN_SOCKET_PATH);
   if ((ret < 0) && (errno != ENOENT)) {
-    syslog(LOG_ERR, "Failed to unlink the UNIX domain socket %s %s\n",
-      UNIXDOMAIN_SOCKET_PATH, strerror(errno));
+    syslog(
+      LOG_ERR, "Failed to unlink the UNIX domain socket %s %s\n", UNIXDOMAIN_SOCKET_PATH,
+      strerror(errno));
     close(sock);
     return;
   }
@@ -140,10 +141,12 @@ void run(int /* port */, const std::vector<std::string> & list)
   }
 
   // As msr_reader is executed by root, we need to set the socket to be accessible by all users.
-  // The 'x' bits for the socket file are required to allow the socket to be connected by other users.
+  // The 'x' bits for the socket file are required to allow the socket to be connected by other
+  // users.
   ret = chmod(UNIXDOMAIN_SOCKET_PATH, 0777);
   if (ret < 0) {
-    syslog(LOG_ERR, "Failed to set the socket to be accessible by all users. %s\n", strerror(errno));
+    syslog(
+      LOG_ERR, "Failed to set the socket to be accessible by all users. %s\n", strerror(errno));
     close(sock);
     unlink(UNIXDOMAIN_SOCKET_PATH);
     return;
