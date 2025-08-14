@@ -30,6 +30,8 @@
 
 #include <fmt/format.h>
 #include <stdio.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 #include <algorithm>
 #include <cstdio>
@@ -630,7 +632,7 @@ void HddMonitor::updateHddInfoList()
   connect_diag_.clearSummary();
 
   // Create a new socket
-  int sock = socket(AF_INET, SOCK_STREAM, 0);
+  int sock = socket(AF_UNIX, SOCK_STREAM, 0);
   if (sock < 0) {
     connect_diag_.summary(DiagStatus::ERROR, "socket error");
     connect_diag_.add("socket", strerror(errno));
@@ -650,11 +652,11 @@ void HddMonitor::updateHddInfoList()
   }
 
   // Connect the socket referred to by the file descriptor
-  sockaddr_in addr;
-  memset(&addr, 0, sizeof(sockaddr_in));
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(hdd_reader_port_);
-  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  constexpr const char * UNIXDOMAIN_SOCKET_PATH = "/tmp/hdd_reader.sock";
+  struct sockaddr_un addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sun_family = AF_UNIX;
+  strncpy(addr.sun_path, UNIXDOMAIN_SOCKET_PATH, sizeof(addr.sun_path) - 1);
   // cppcheck-suppress cstyleCast
   ret = connect(sock, (struct sockaddr *)&addr, sizeof(addr));
   if (ret < 0) {
@@ -872,7 +874,7 @@ void HddMonitor::updateHddConnections()
 int HddMonitor::unmountDevice(std::string & device)
 {
   // Create a new socket
-  int sock = socket(AF_INET, SOCK_STREAM, 0);
+  int sock = socket(AF_UNIX, SOCK_STREAM, 0);
   if (sock < 0) {
     RCLCPP_ERROR(get_logger(), "socket create error. %s", strerror(errno));
     return -1;
@@ -890,11 +892,11 @@ int HddMonitor::unmountDevice(std::string & device)
   }
 
   // Connect the socket referred to by the file descriptor
-  sockaddr_in addr;
-  memset(&addr, 0, sizeof(sockaddr_in));
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(hdd_reader_port_);
-  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  constexpr const char * UNIXDOMAIN_SOCKET_PATH = "/tmp/hdd_reader.sock";
+  struct sockaddr_un addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sun_family = AF_UNIX;
+  strncpy(addr.sun_path, UNIXDOMAIN_SOCKET_PATH, sizeof(addr.sun_path) - 1);
   // cppcheck-suppress cstyleCast
   ret = connect(sock, (struct sockaddr *)&addr, sizeof(addr));
   if (ret < 0) {
