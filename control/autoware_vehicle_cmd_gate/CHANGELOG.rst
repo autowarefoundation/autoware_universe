@@ -2,6 +2,9 @@
 Changelog for package autoware_vehicle_cmd_gate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(autoware_vehicle_cmd_gate): steer rate limit with lateral jerk constraint (`#11057 <https://github.com/autowarefoundation/autoware_universe/issues/11057>`_)

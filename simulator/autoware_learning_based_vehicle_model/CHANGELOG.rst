@@ -2,6 +2,9 @@
 Changelog for package autoware_learning_based_vehicle_model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.47.0 (2025-08-11)
 -------------------
 

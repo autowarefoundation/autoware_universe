@@ -2,6 +2,9 @@
 Changelog for package autoware_behavior_path_start_planner_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.47.0 (2025-08-11)
 -------------------
 * fix(start_planner): incorrect function call (`#11107 <https://github.com/autowarefoundation/autoware_universe/issues/11107>`_)

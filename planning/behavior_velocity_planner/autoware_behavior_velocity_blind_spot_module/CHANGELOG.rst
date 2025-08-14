@@ -2,6 +2,9 @@
 Changelog for package autoware_behavior_velocity_blind_spot_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(blind_spot): new re-designed blind_spot module (`#11079 <https://github.com/autowarefoundation/autoware_universe/issues/11079>`_)

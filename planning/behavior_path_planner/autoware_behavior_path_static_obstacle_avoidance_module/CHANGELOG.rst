@@ -2,6 +2,9 @@
 Changelog for package autoware_behavior_path_static_obstacle_avoidance_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.47.0 (2025-08-11)
 -------------------
 * fix(static_obstacle_avoidance): fix coding error (`#11106 <https://github.com/autowarefoundation/autoware_universe/issues/11106>`_)

@@ -2,6 +2,9 @@
 Changelog for package autoware_behavior_path_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.47.0 (2025-08-11)
 -------------------
 * fix(behavior_path_planner): resample the path before generating the drivable area (`#10989 <https://github.com/autowarefoundation/autoware_universe/issues/10989>`_)

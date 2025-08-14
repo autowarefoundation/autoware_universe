@@ -2,6 +2,9 @@
 Changelog for package tier4_state_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(tier4_state_rviz_plugin): save & load config of VelocitySteeringFactorsPanel (`#10026 <https://github.com/autowarefoundation/autoware_universe/issues/10026>`_)

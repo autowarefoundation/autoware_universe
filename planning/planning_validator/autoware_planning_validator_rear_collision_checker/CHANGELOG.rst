@@ -2,6 +2,9 @@
 Changelog for package autoware_planning_validator_rear_collision_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(rear_collision_checker): support selecting safety metric from TTC or RSS (`#11072 <https://github.com/autowarefoundation/autoware_universe/issues/11072>`_)

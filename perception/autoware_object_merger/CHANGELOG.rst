@@ -2,6 +2,9 @@
 Changelog for package autoware_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.47.0 (2025-08-11)
 -------------------
 * fix(autoware_object_merger): add merger priority_mode (`#11042 <https://github.com/autowarefoundation/autoware_universe/issues/11042>`_)

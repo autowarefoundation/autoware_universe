@@ -2,6 +2,9 @@
 Changelog for package autoware_surround_obstacle_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(surround_obstacle_checker): add safety factors to the published planning factor (`#11077 <https://github.com/autowarefoundation/autoware_universe/issues/11077>`_)

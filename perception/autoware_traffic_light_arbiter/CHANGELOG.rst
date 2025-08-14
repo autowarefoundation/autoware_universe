@@ -2,6 +2,9 @@
 Changelog for package autoware_traffic_light_arbiter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(autoware_traffic_light_arbiter): handle multiple external sources (`#11100 <https://github.com/autowarefoundation/autoware_universe/issues/11100>`_)

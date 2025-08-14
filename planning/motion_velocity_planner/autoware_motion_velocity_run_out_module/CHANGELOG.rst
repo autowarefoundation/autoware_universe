@@ -2,6 +2,9 @@
 Changelog for package autoware_motion_velocity_run_out_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.47.0 (2025-08-11)
 -------------------
 * fix(run_out): add missing ament_auto_package in CMakeList (`#11096 <https://github.com/autowarefoundation/autoware_universe/issues/11096>`_)

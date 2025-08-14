@@ -2,6 +2,9 @@
 Changelog for package tier4_autoware_api_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(tier4_autoware_api_launch): add arg for replacing default adapi … (`#10954 <https://github.com/autowarefoundation/autoware_universe/issues/10954>`_)

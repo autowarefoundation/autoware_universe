@@ -2,6 +2,9 @@
 Changelog for package autoware_radar_tracks_msgs_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.47.0 (2025-08-11)
 -------------------
 * fix(radar_tracks_objects_converter): publish topic even if objects array is empty (`#11002 <https://github.com/autowarefoundation/autoware_universe/issues/11002>`_)

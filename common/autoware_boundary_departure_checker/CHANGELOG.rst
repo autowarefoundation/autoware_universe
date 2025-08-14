@@ -2,6 +2,11 @@
 Changelog for package autoware_boundary_departure_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* fix(autoware_boundary_departure_checker): add missing dependency to magic_enum (`#11201 <https://github.com/autowarefoundation/autoware_universe/issues/11201>`_)
+* Contributors: Mete Fatih Cırıt
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(boundary_departure): configurable departure points and type based on time (`#11073 <https://github.com/autowarefoundation/autoware_universe/issues/11073>`_)

@@ -2,6 +2,9 @@
 Changelog for package autoware_motion_velocity_road_user_stop_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.47.0 (2025-08-11)
 -------------------
 * fix(road_user_stop): remove generate_parameter_library's default_value parameters (`#11117 <https://github.com/autowarefoundation/autoware_universe/issues/11117>`_)

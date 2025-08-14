@@ -2,6 +2,9 @@
 Changelog for package autoware_tensorrt_bevdet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(autoware_bevdet): implementation of bevdet using tensorrt (`#10441 <https://github.com/autowarefoundation/autoware_universe/issues/10441>`_)

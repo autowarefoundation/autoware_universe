@@ -2,6 +2,9 @@
 Changelog for package autoware_diffusion_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.47.0 (2025-08-11)
 -------------------
 * refactor(diffusion_planner): remove unused code (`#11137 <https://github.com/autowarefoundation/autoware_universe/issues/11137>`_)

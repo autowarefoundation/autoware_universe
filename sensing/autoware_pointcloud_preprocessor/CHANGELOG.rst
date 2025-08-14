@@ -2,6 +2,9 @@
 Changelog for package autoware_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.47.0 (2025-08-11)
 -------------------
 * refactor(pointcloud_preprocessor): extract downsample logic from pickup_based_voxel_downsample_filter (`#11098 <https://github.com/autowarefoundation/autoware_universe/issues/11098>`_)
