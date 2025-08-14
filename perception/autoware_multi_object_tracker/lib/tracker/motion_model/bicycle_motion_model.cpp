@@ -273,6 +273,22 @@ bool BicycleMotionModel::limitStates()
     // reverse the velocity
     X_t(IDX::VX) = -X_t(IDX::VX);
     // rotation velocity does not change
+
+    // replace covariance
+    const double cov_1_xx = P_t(IDX::X1, IDX::X1);
+    const double cov_1_xy = P_t(IDX::X1, IDX::Y1);
+    const double cov_1_yy = P_t(IDX::Y1, IDX::Y1);
+    const double cov_2_xx = P_t(IDX::X2, IDX::X2);
+    const double cov_2_xy = P_t(IDX::X2, IDX::Y2);
+    const double cov_2_yy = P_t(IDX::Y2, IDX::Y2);
+    P_t(IDX::X1, IDX::X1) = cov_2_xx;
+    P_t(IDX::X1, IDX::Y1) = cov_2_xy;
+    P_t(IDX::Y1, IDX::X1) = cov_2_xy;
+    P_t(IDX::Y1, IDX::Y1) = cov_2_yy;
+    P_t(IDX::X2, IDX::X2) = cov_1_xx;
+    P_t(IDX::X2, IDX::Y2) = cov_1_xy;
+    P_t(IDX::Y2, IDX::X2) = cov_1_xy;
+    P_t(IDX::Y2, IDX::Y2) = cov_1_yy;
   }
   // maximum velocity
   if (!(-motion_params_.max_vel <= X_t(IDX::VX) && X_t(IDX::VX) <= motion_params_.max_vel)) {
@@ -296,20 +312,7 @@ bool BicycleMotionModel::limitStates()
 
       // limit lateral velocity
       X_t(IDX::VY) = X_t(IDX::VY) < 0 ? -vel_lat_limit : vel_lat_limit;
-
     }
-
-  }
-
-  // debug message
-  {
-    const double wheel_base = std::hypot(X_t(IDX::X2) - X_t(IDX::X1), X_t(IDX::Y2) - X_t(IDX::Y1));
-    const double yaw_rate = X_t(IDX::VY) / wheel_base;  // [rad/s] yaw rate
-    RCLCPP_WARN(
-      logger_,
-      "BicycleMotionModel::limitStates: current state: x1: %f, y1: %f, vx: %f, vy: %f, wheel_base: %f, yaw_rate: %f",
-      X_t(IDX::X1), X_t(IDX::Y1), X_t(IDX::VX), X_t(IDX::VY), wheel_base, yaw_rate
-    );
   }
 
   // overwrite state

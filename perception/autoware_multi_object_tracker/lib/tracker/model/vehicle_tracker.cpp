@@ -200,7 +200,24 @@ bool VehicleTracker::measureWithPose(
         x, y, object.pose_covariance, length);  // update without yaw angle and velocity
     }
     motion_model_.limitStates();
+
+    {
+      //debug output
+      const double wheel_base = motion_model_.getLength();
+      const double yaw_rate = motion_model_.getStateElement(IDX::VY) / wheel_base;  // [rad/s] yaw rate
+      if (wheel_base > 8.0 || std::abs(yaw_rate) > 0.2) {
+        RCLCPP_WARN(
+          logger_,
+          "VehicleTracker::measureWithPose: UUID %s x1: %f, y1: %f,  vx: %f, vy: %f, wheel_base: %f, yaw_rate: %f",
+          getUuidString().c_str(),
+          motion_model_.getStateElement(IDX::X1), motion_model_.getStateElement(IDX::Y1),
+          motion_model_.getStateElement(IDX::VX), motion_model_.getStateElement(IDX::VY),
+          wheel_base, yaw_rate);
+      }
+    }
   }
+
+  
 
   // position z
   constexpr double gain = 0.1;
