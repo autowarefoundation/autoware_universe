@@ -35,9 +35,6 @@
 namespace autoware::planning_validator::collision_checker_utils
 {
 
-TrajectoryPoints trim_trajectory_points(
-  const TrajectoryPoints & trajectory_points, const geometry_msgs::msg::Pose & start_pose);
-
 void set_trajectory_lanelets(
   const TrajectoryPoints & trajectory_points, const RouteHandler & route_handler,
   const geometry_msgs::msg::Pose & ego_pose, EgoLanelets & lanelets);
