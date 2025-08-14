@@ -173,11 +173,13 @@ void PlanningFactorRvizPlugin::processMessage(
         break;
     }
 
-    for (const auto & safety_factor : factor.safety_factors.factors) {
-      const auto color = safety_factor.is_safe ? getGreen(0.999) : getRed(0.999);
-      for (const auto & point : safety_factor.points) {
-        const auto safety_factor_marker = createTargetMarker(i++, point, color, factor.module);
-        add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(safety_factor_marker));
+    if (show_safety_factors_.getBool()) {
+      for (const auto & safety_factor : factor.safety_factors.factors) {
+        const auto color = safety_factor.is_safe ? getGreen(0.999) : getRed(0.999);
+        for (const auto & point : safety_factor.points) {
+          const auto safety_factor_marker = createTargetMarker(i++, point, color, factor.module);
+          add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(safety_factor_marker));
+        }
       }
     }
   }

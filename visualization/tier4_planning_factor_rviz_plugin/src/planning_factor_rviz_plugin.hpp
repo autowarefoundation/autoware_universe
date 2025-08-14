@@ -17,6 +17,7 @@
 
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rviz_common/display.hpp>
+#include <rviz_common/properties/bool_property.hpp>
 #include <rviz_common/properties/float_property.hpp>
 #include <rviz_default_plugins/displays/marker/marker_common.hpp>
 #include <rviz_default_plugins/displays/marker_array/marker_array_display.hpp>
@@ -38,6 +39,7 @@ public:
   PlanningFactorRvizPlugin()
   : marker_common_{this},
     baselink2front_{"Baselink To Front", 0.0, "Length between base link to front.", this},
+    show_safety_factors_{"Show Safety Factors", true, "Display safety factor markers", this},
     topic_name_{"planning_factors"}
   {
   }
@@ -62,6 +64,16 @@ public:
   {
     RosTopicDisplay::Display::load(config);
     marker_common_.load(config);
+    bool show_safety_factors;
+    if (config.mapGetBool("show_safety_factors", &show_safety_factors)) {
+      show_safety_factors_.setValue(show_safety_factors);
+    }
+  }
+
+  void save(rviz_common::Config config) const override
+  {
+    RosTopicDisplay::Display::save(config);
+    config.mapSetValue("show_safety_factors", show_safety_factors_.getBool());
   }
 
   void update(float wall_dt, float ros_dt) override { marker_common_.update(wall_dt, ros_dt); }
@@ -91,6 +103,7 @@ private:
   rviz_default_plugins::displays::MarkerCommon marker_common_;
 
   rviz_common::properties::FloatProperty baselink2front_;
+  rviz_common::properties::BoolProperty show_safety_factors_;
 
   std::string topic_name_;
 };
