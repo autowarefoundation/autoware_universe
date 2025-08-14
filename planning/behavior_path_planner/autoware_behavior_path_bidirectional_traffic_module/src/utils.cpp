@@ -69,18 +69,6 @@ lanelet::ConstLanelets filter_lanelets_by_ids(
   return filtered_lanelets;
 }
 
-lanelet::ConstLanelets filter_intersection_lanelets(const lanelet::ConstLanelets & all_lanelets)
-{
-  std::vector<lanelet::ConstLanelet> intersection_lanelets;
-  for (const lanelet::ConstLanelet & lane : all_lanelets) {
-    std::string_view turn_direction = lane.attributeOr("turn_direction", "none");
-    if (turn_direction == "straight") {
-      intersection_lanelets.emplace_back(lane);
-    }
-  }
-  return intersection_lanelets;
-}
-
 lanelet::ConstLanelets get_inflow_lanelets(
   const lanelet::ConstLanelets & lanelets,
   const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> & get_prev_lanelets)
