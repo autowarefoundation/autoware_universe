@@ -150,10 +150,12 @@ bool BicycleMotionModel::updateStatePoseHead(
   double lf = length * motion_params_.lf_ratio;
   lr = std::max(lr, motion_params_.lr_min);
   lf = std::max(lf, motion_params_.lf_min);
-  const double x1 = x - lr * std::cos(yaw);
-  const double y1 = y - lr * std::sin(yaw);
-  const double x2 = x + lf * std::cos(yaw);
-  const double y2 = y + lf * std::sin(yaw);
+  const double cos_yaw = std::cos(yaw);
+  const double sin_yaw = std::sin(yaw);
+  const double x1 = x - lr * cos_yaw;
+  const double y1 = y - lr * sin_yaw;
+  const double x2 = x + lf * cos_yaw;
+  const double y2 = y + lf * sin_yaw;
 
   // update state
   constexpr int DIM_Y = 4;
@@ -175,8 +177,6 @@ bool BicycleMotionModel::updateStatePoseHead(
   R(2, 3) = pose_cov[XYZRPY_COV_IDX::X_Y];
   R(3, 2) = pose_cov[XYZRPY_COV_IDX::Y_X];
   R(3, 3) = pose_cov[XYZRPY_COV_IDX::Y_Y];
-
-  // todo: implement yaw covariance
 
   return ekf_.update(Y, C, R);
 }
@@ -221,8 +221,6 @@ bool BicycleMotionModel::updateStatePoseHeadVel(
   const double yaw_delta = yaw - yaw_track;
   const double vel_long = vel_x * std::cos(yaw_delta) - vel_y * std::sin(yaw_delta);
   const double vel_lat = vel_x * std::sin(yaw_delta) + vel_y * std::cos(yaw_delta);
-  // const double vel_long = vel_x;
-  // const double vel_lat = vel_y;
 
   // update state
   constexpr int DIM_Y = 6;
@@ -304,14 +302,14 @@ bool BicycleMotionModel::limitStates()
     const double vel_lat_limit = acc_lat_max * wheel_base / (X_t(IDX::VX) * X_t(IDX::VX));
     if (std::abs(X_t(IDX::VY)) > vel_lat_limit) {
 
-      // //debug message
-      // RCLCPP_WARN(
-      //   logger_,
-      //   "BicycleMotionModel::limitStates: limited lateral velocity from %f to %f",
-      //    X_t(IDX::VY), vel_lat_limit);
+      //debug message
+      RCLCPP_WARN(
+        logger_,
+        "BicycleMotionModel::limitStates: limited lateral velocity from %f to %f",
+         X_t(IDX::VY), vel_lat_limit);
 
       // limit lateral velocity
-      X_t(IDX::VY) = X_t(IDX::VY) < 0 ? -vel_lat_limit : vel_lat_limit;
+      // X_t(IDX::VY) = X_t(IDX::VY) < 0 ? -vel_lat_limit : vel_lat_limit;
     }
   }
 
