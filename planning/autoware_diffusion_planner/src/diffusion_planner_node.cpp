@@ -250,7 +250,7 @@ void DiffusionPlanner::load_engine(const std::string & model_path)
   auto to_dynamic_dims = [batch_size](auto const & arr) {
     nvinfer1::Dims dims;
     dims.nbDims = static_cast<int>(arr.size());
-    // I don't know why but when batch_size is 1, the dimension must be explicitly set to 1
+    // TensorRT requires the batch dimension to be explicitly set to 1 when batch_size == 1
     dims.d[0] = (batch_size == 1 ? 1 : -1);
     for (size_t i = 1; i < arr.size(); ++i) {
       dims.d[i] = static_cast<int>(arr[i]);
