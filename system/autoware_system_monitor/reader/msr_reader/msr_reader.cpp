@@ -139,10 +139,12 @@ void run(const std::string & socket_path, const std::vector<std::string> & list)
   }
 
   // As msr_reader is executed by root, we need to set the socket to be accessible by all users.
-  // The 'x' bits for the socket file are required to allow the socket to be connected by other users.
+  // The 'x' bits for the socket file are required to allow the socket to be connected
+  // by other users.
   ret = chmod(socket_path.c_str(), 0777);
   if (ret < 0) {
-    syslog(LOG_ERR, "Failed to set the socket to be accessible by all users. %s\n", strerror(errno));
+    syslog(LOG_ERR, "Failed to set the socket to be accessible by all users. %s\n",
+      strerror(errno));
     close(sock);
     unlink(socket_path.c_str());
     return;
