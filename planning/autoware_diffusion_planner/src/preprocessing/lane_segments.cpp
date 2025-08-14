@@ -111,7 +111,7 @@ std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_lane_s
 {
   if (map_lane_segments_matrix_.rows() != FULL_MATRIX_ROWS || m <= 0) {
     throw std::invalid_argument(
-      "Input matrix must have at least FULL_MATRIX_ROWS columns and m must be greater than 0.");
+      "Input matrix must have at least FULL_MATRIX_ROWS rows and m must be greater than 0.");
   }
   std::vector<ColWithDistance> distances;
   // Step 1: Compute distances
