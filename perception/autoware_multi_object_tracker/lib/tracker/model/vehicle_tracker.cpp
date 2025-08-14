@@ -160,17 +160,18 @@ bool VehicleTracker::measureWithPose(
     object.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE &&
     channel_info.trust_orientation;
 
-  // velocity capability is checked only when the object has velocity measurement
-  // and the predicted velocity is close to the observed velocity
-  bool is_velocity_available = false;
-  if (object.kinematics.has_twist) {
-    const double tracked_vel = motion_model_.getStateElement(IDX::VX);
-    const double & observed_vel = object.twist.linear.x;
-    if (std::fabs(tracked_vel - observed_vel) < velocity_deviation_threshold_) {
-      // Velocity deviation is small
-      is_velocity_available = true;
-    }
-  }
+  // // velocity capability is checked only when the object has velocity measurement
+  // // and the predicted velocity is close to the observed velocity
+  // bool is_velocity_available = false;
+  // if (object.kinematics.has_twist) {
+  //   const double tracked_vel = motion_model_.getStateElement(IDX::VX);
+  //   const double & observed_vel = object.twist.linear.x;
+  //   if (std::fabs(tracked_vel - observed_vel) < velocity_deviation_threshold_) {
+  //     // Velocity deviation is small
+  //     is_velocity_available = true;
+  //   }
+  // }
+  bool is_velocity_available = object.kinematics.has_twist;
 
   // update
   bool is_updated = false;
