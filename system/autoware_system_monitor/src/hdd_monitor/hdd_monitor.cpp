@@ -40,12 +40,16 @@
 #include <utility>
 #include <vector>
 
+namespace {
+  constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/hdd_reader.sock";
+}  // namespace
+
 namespace bp = boost::process;
 
 HddMonitor::HddMonitor(const rclcpp::NodeOptions & options)
 : Node("hdd_monitor", options),
   updater_(this),
-  hdd_reader_port_(declare_parameter<int>("hdd_reader_port", 7635)),
+  hdd_reader_socket_path_(declare_parameter<std::string>("hdd_reader_socket_path", DEFAULT_SOCKET_PATH)),
   last_hdd_stat_update_time_{0, 0, this->get_clock()->get_clock_type()}
 {
   using namespace std::literals::chrono_literals;
@@ -651,12 +655,10 @@ void HddMonitor::updateHddInfoList()
     return;
   }
 
-  // Connect the socket referred to by the file descriptor
-  constexpr const char * UNIXDOMAIN_SOCKET_PATH = "/tmp/hdd_reader.sock";
   struct sockaddr_un addr;
   memset(&addr, 0, sizeof(addr));
   addr.sun_family = AF_UNIX;
-  strncpy(addr.sun_path, UNIXDOMAIN_SOCKET_PATH, sizeof(addr.sun_path) - 1);
+  strncpy(addr.sun_path, hdd_reader_socket_path_.c_str(), sizeof(addr.sun_path) - 1);
   // cppcheck-suppress cstyleCast
   ret = connect(sock, (struct sockaddr *)&addr, sizeof(addr));
   if (ret < 0) {
@@ -892,11 +894,10 @@ int HddMonitor::unmountDevice(std::string & device)
   }
 
   // Connect the socket referred to by the file descriptor
-  constexpr const char * UNIXDOMAIN_SOCKET_PATH = "/tmp/hdd_reader.sock";
   struct sockaddr_un addr;
   memset(&addr, 0, sizeof(addr));
   addr.sun_family = AF_UNIX;
-  strncpy(addr.sun_path, UNIXDOMAIN_SOCKET_PATH, sizeof(addr.sun_path) - 1);
+  strncpy(addr.sun_path, hdd_reader_socket_path_.c_str(), sizeof(addr.sun_path) - 1);
   // cppcheck-suppress cstyleCast
   ret = connect(sock, (struct sockaddr *)&addr, sizeof(addr));
   if (ret < 0) {

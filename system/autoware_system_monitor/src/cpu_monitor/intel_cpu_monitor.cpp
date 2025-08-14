@@ -35,17 +35,21 @@
 #include <string>
 #include <vector>
 
+namespace {
+  constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/msr_reader.sock";
+}  // namespace
+
 namespace fs = boost::filesystem;
 
 CPUMonitor::CPUMonitor(const rclcpp::NodeOptions & options) : CPUMonitorBase("cpu_monitor", options)
 {
-  msr_reader_port_ = declare_parameter<int>("msr_reader_port", 7634);
+  msr_reader_socket_path_ = declare_parameter<std::string>("msr_reader_socket_path", DEFAULT_SOCKET_PATH);
 }
 
 CPUMonitor::CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
 : CPUMonitorBase(node_name, options)
 {
-  msr_reader_port_ = declare_parameter<int>("msr_reader_port", 7634);
+  msr_reader_socket_path_ = declare_parameter<std::string>("msr_reader_socket_path", DEFAULT_SOCKET_PATH);
 }
 
 void CPUMonitor::checkThermalThrottling()
@@ -81,12 +85,11 @@ void CPUMonitor::checkThermalThrottling()
     return;
   }
 
-  constexpr const char * UNIXDOMAIN_SOCKET_PATH = "/tmp/msr_reader.sock";
   // Connect the socket referred to by the file descriptor
   struct sockaddr_un addr;
   memset(&addr, 0, sizeof(addr));
   addr.sun_family = AF_UNIX;
-  strncpy(addr.sun_path, UNIXDOMAIN_SOCKET_PATH, sizeof(addr.sun_path) - 1);
+  strncpy(addr.sun_path, msr_reader_socket_path_.c_str(), sizeof(addr.sun_path) - 1);
   // cppcheck-suppress cstyleCast
   ret = connect(sock, (struct sockaddr *)&addr, sizeof(addr));
   if (ret < 0) {

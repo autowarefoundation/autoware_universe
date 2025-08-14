@@ -50,8 +50,9 @@
 #include <utility>
 #include <vector>
 
-// 7634-7647 Unassigned
-constexpr int PORT = 7635;
+namespace {
+  constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/hdd_reader.sock";
+}  // namespace
 
 /**
  * @brief ATA PASS-THROUGH (12) command
@@ -531,14 +532,10 @@ int unmount_device_with_lazy(boost::archive::text_iarchive & ia, boost::archive:
 
 /**
  * @brief hdd_reader main procedure
- * @param [in] port port to listen
+ * @param [in] socket_path path of UNIX domain socket to listen
  */
-void run(int port)
+void run(const std::string & socket_path)
 {
-  (void)port;  // unused with AF_UNIX
-
-  constexpr const char * UNIXDOMAIN_SOCKET_PATH = "/tmp/hdd_reader.sock";
-
   // Create a new socket
   int sock = socket(AF_UNIX, SOCK_STREAM, 0);
   if (sock < 0) {
@@ -549,10 +546,10 @@ void run(int port)
   int ret = 0;
 
   // Remove previous binding if exists
-  ret = unlink(UNIXDOMAIN_SOCKET_PATH);
+  ret = unlink(socket_path.c_str());
   if ((ret < 0) && (errno != ENOENT)) {
     syslog(
-      LOG_ERR, "Failed to unlink the UNIX domain socket %s %s\n", UNIXDOMAIN_SOCKET_PATH,
+      LOG_ERR, "Failed to unlink the UNIX domain socket %s %s\n", socket_path.c_str(),
       strerror(errno));
     close(sock);
     return;
@@ -562,23 +559,23 @@ void run(int port)
   struct sockaddr_un addr;
   memset(&addr, 0, sizeof(addr));
   addr.sun_family = AF_UNIX;
-  strncpy(addr.sun_path, UNIXDOMAIN_SOCKET_PATH, sizeof(addr.sun_path) - 1);
+  strncpy(addr.sun_path, socket_path.c_str(), sizeof(addr.sun_path) - 1);
   // cppcheck-suppress cstyleCast
   ret = bind(sock, (struct sockaddr *)&addr, sizeof(addr));
   if (ret < 0) {
     syslog(LOG_ERR, "Failed to bind the UNIX domain socket. %s\n", strerror(errno));
     close(sock);
-    unlink(UNIXDOMAIN_SOCKET_PATH);
+    unlink(socket_path.c_str());
     return;
   }
 
   // Allow other users to access the socket created by root (if applicable)
-  ret = chmod(UNIXDOMAIN_SOCKET_PATH, 0777);
+  ret = chmod(socket_path.c_str(), 0777);
   if (ret < 0) {
     syslog(
       LOG_ERR, "Failed to set the socket to be accessible by all users. %s\n", strerror(errno));
     close(sock);
-    unlink(UNIXDOMAIN_SOCKET_PATH);
+    unlink(socket_path.c_str());
     return;
   }
 
@@ -587,7 +584,7 @@ void run(int port)
   if (ret < 0) {
     syslog(LOG_ERR, "Failed to prepare to accept connections on socket FD. %s\n", strerror(errno));
     close(sock);
-    unlink(UNIXDOMAIN_SOCKET_PATH);
+    unlink(socket_path.c_str());
     return;
   }
 
@@ -601,7 +598,7 @@ void run(int port)
       syslog(
         LOG_ERR, "Failed to prepare to accept connections on socket FD. %s\n", strerror(errno));
       close(sock);
-      unlink(UNIXDOMAIN_SOCKET_PATH);
+      unlink(socket_path.c_str());
       return;
     }
 
@@ -612,7 +609,7 @@ void run(int port)
       syslog(LOG_ERR, "Failed to receive. %s\n", strerror(errno));
       close(new_sock);
       close(sock);
-      unlink(UNIXDOMAIN_SOCKET_PATH);
+      unlink(socket_path.c_str());
       return;
     }
     // No data received
@@ -620,7 +617,7 @@ void run(int port)
       syslog(LOG_ERR, "No data received. %s\n", strerror(errno));
       close(new_sock);
       close(sock);
-      unlink(UNIXDOMAIN_SOCKET_PATH);
+      unlink(socket_path.c_str());
       return;
     }
 
@@ -636,7 +633,7 @@ void run(int port)
       syslog(LOG_ERR, "exception. %s\n", e.what());
       close(new_sock);
       close(sock);
-      unlink(UNIXDOMAIN_SOCKET_PATH);
+      unlink(socket_path.c_str());
       return;
     }
 
@@ -657,7 +654,7 @@ void run(int port)
     if (ret != 0) {
       close(new_sock);
       close(sock);
-      unlink(UNIXDOMAIN_SOCKET_PATH);
+      unlink(socket_path.c_str());
       return;
     }
 
@@ -675,7 +672,7 @@ void run(int port)
   }
 
   close(sock);
-  unlink(UNIXDOMAIN_SOCKET_PATH);
+  unlink(socket_path.c_str());
 }
 
 int main(int argc, char ** argv)
@@ -683,26 +680,21 @@ int main(int argc, char ** argv)
   try {
     static struct option long_options[] = {
       {"help", no_argument, nullptr, 'h'},
-      {"port", required_argument, nullptr, 'p'},
+      {"socket", required_argument, nullptr, 's'},
       {nullptr, 0, nullptr, 0}};
 
     // Parse command-line options
     int c = 0;
     int option_index = 0;
-    int port = PORT;
-    while ((c = getopt_long(argc, argv, "hp:", long_options, &option_index)) != -1) {
+    std::string socket_path = DEFAULT_SOCKET_PATH;
+    while ((c = getopt_long(argc, argv, "hs:", long_options, &option_index)) != -1) {
       switch (c) {
         case 'h':
           usage();
           return EXIT_SUCCESS;
 
-        case 'p':
-          try {
-            port = boost::lexical_cast<int>(optarg);
-          } catch (const boost::bad_lexical_cast & e) {
-            printf("Error: %s\n", e.what());
-            return EXIT_FAILURE;
-          }
+        case 's':
+          socket_path = optarg;
           break;
 
         default:
@@ -719,7 +711,7 @@ int main(int argc, char ** argv)
     // Open connection to system logger
     openlog(nullptr, LOG_PID, LOG_DAEMON);
 
-    run(port);
+    run(socket_path);
 
     // Close descriptor used to write to system logger
     closelog();

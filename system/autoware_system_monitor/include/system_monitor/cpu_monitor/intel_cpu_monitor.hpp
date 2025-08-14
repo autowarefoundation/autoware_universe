@@ -75,7 +75,7 @@ protected:
   // Therefore, Thermal Throttling report is implemented in each derived class.
 
   // Intel CPU uses msr_reader to get thermal throttling data.
-  int msr_reader_port_;  //!< @brief port number to connect to msr_reader
+  std::string msr_reader_socket_path_;  //!< @brief UNIX domain socket path to connect to msr_reader
 
   struct ThermalThrottlingData
   {
