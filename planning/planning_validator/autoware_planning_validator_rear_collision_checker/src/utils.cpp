@@ -258,6 +258,8 @@ auto check_shift_behavior(
 
   const auto distance_to_stop_point =
     autoware::motion_utils::calcDistanceToForwardStopPoint(points, ego_pose);
+  const auto distance_residual =
+    autoware::motion_utils::calcSignedArcLength(points, ego_pose.position, nearest_idx);
 
   for (size_t i = 0; i < points.size(); i++) {
     const auto p1 = autoware_utils::calc_offset_pose(
@@ -268,7 +270,11 @@ auto check_shift_behavior(
     axle.emplace_back(p1.position.x, p1.position.y);
     axle.emplace_back(p2.position.x, p2.position.y);
 
-    const auto distance = autoware::motion_utils::calcSignedArcLength(points, nearest_idx, i);
+    // To reduce computational cost, the distance from the ego to the nearest point on the path and
+    // the distance from the nearest point to index=i are calculated separately and then summed to
+    // obtain the distance from the ego to the point at index=i.
+    const auto distance =
+      autoware::motion_utils::calcSignedArcLength(points, nearest_idx, i) + distance_residual;
     if (reachable_point.value().second < distance && !is_unsafe_holding) {
       autoware_utils::LineString2d line_2d{
         reachable_point.value().first.front().to_2d(),
