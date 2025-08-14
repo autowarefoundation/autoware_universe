@@ -65,7 +65,6 @@ using autoware_utils::deg2rad;
 using autoware_utils::rad2deg;
 using start_planner_utils::get_lane_ids_from_pose;
 using start_planner_utils::getPullOutLanes;
-using start_planner_utils::print_path_with_lane_id_details;
 using start_planner_utils::set_lane_ids_to_path_point;
 
 std::vector<geometry_msgs::msg::Point> correct_clothoid_by_rigid_transform(
