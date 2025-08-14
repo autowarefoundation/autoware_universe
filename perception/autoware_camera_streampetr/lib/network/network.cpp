@@ -17,6 +17,7 @@
 #include <autoware/cuda_utils/cuda_utils.hpp>
 #include <autoware/tensorrt_common/utils.hpp>
 
+#include <algorithm>
 #include <NvInfer.h>
 #include <NvOnnxParser.h>
 
