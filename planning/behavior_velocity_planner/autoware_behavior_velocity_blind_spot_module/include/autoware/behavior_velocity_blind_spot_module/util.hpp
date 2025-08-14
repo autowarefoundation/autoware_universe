@@ -59,14 +59,6 @@ std::vector<lanelet::Id> find_lane_ids_upto(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const lanelet::Id lane_id);
 
 /**
- * @brief obtain the index where the footprint on the path intersects with `line` for the first time
- * on the interval of `interpolated_path_info`
- */
-std::optional<size_t> get_first_index_intersects_line(
-  const lanelet::ConstLineString2d & line, const InterpolatedPathInfo & interpolated_path_info,
-  const autoware_utils::LinearRing2d & footprint, const double vehicle_length);
-
-/**
  * @brief generate a linestring consisting of two points of the entry part of `lanelet`
  * @note returned linestring is from left to right of `lanelet`'s boundary
  */
