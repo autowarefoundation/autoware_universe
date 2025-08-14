@@ -267,7 +267,15 @@ void DiffusionPlanner::load_engine(const std::string & model_path)
   };
 
   std::string precision = "fp32";  // Default precision
-  auto trt_config = tensorrt_common::TrtCommonConfig(model_path, precision);
+
+  // Create engine path with batch size suffix to avoid conflicts
+  std::filesystem::path engine_path(model_path);
+  std::string engine_file_path =
+    (engine_path.parent_path() /
+     (engine_path.stem().string() + "_batch" + std::to_string(batch_size) + ".engine"))
+      .string();
+
+  auto trt_config = tensorrt_common::TrtCommonConfig(model_path, precision, engine_file_path);
   trt_common_ = std::make_unique<TrtConvCalib>(trt_config);
 
   std::vector<ProfileDims> profile_dims;
