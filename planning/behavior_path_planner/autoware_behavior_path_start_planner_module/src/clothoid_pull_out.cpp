@@ -378,7 +378,6 @@ std::optional<std::vector<geometry_msgs::msg::Point>> convert_arc_to_clothoid(
   }
 
   double radius = arc_segment.radius;
-  bool is_clockwise = arc_segment.is_clockwise;
 
   // Clothoid parameters
   double A = A_min;
@@ -394,6 +393,8 @@ std::optional<std::vector<geometry_msgs::msg::Point>> convert_arc_to_clothoid(
   std::vector<ClothoidSegment> segments;
 
   if (total_angle >= 2.0 * alpha_clothoid) {
+    const bool is_clockwise = arc_segment.is_clockwise;
+
     // Case A: CAC(A, L, θ)
     double theta_arc = total_angle - 2.0 * alpha_clothoid;
 
