@@ -84,11 +84,6 @@ public:
     marker_common_.addMessage(markers_ptr);
   }
 
-  void delete_marker(rviz_default_plugins::displays::MarkerID marker_id)
-  {
-    marker_common_.deleteMarker(marker_id);
-  }
-
 private:
   void processMessage(
     const autoware_internal_planning_msgs::msg::PlanningFactorArray::ConstSharedPtr msg) override;

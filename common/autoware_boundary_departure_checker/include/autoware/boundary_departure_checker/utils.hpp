@@ -350,28 +350,6 @@ ProjectionsToBound get_closest_boundary_segments_from_side(
   const EgoSides & ego_sides_from_footprints);
 
 /**
- * @brief Estimate braking distance using jerk, acceleration, and braking delay constraints.
- *
- * This function calculates how far a vehicle will travel while slowing down from an initial
- * velocity to a target velocity, considering:
- * - A first phase where deceleration increases gradually (jerk-limited).
- * - A second phase of constant deceleration.
- * - An initial delay before braking begins.
- *
- * The output is useful in planning safe stopping behavior under motion constraints.
- *
- * @param v_init            Initial velocity (m/s).
- * @param v_end             Target (final) velocity after braking (m/s).
- * @param acc               Constant deceleration value (must be positive).
- * @param jerk              Jerk value (rate of change of acceleration), assumed positive.
- * @param t_braking_delay   Delay before braking begins (s).
- * @return Total braking distance (meters).
- */
-double compute_braking_distance(
-  const double v_init, const double v_end, const double acc, const double jerk,
-  double t_braking_delay);
-
-/**
  * @brief Generate filtered and sorted departure points from lateral projections to road
  * boundaries.
  *

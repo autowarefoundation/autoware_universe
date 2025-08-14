@@ -608,24 +608,6 @@ ProjectionsToBound get_closest_boundary_segments_from_side(
   return side;
 }
 
-double compute_braking_distance(
-  double v_init, double v_end, double acc, double jerk, double t_braking_delay)
-{
-  // Phase 1: jerk phase
-  const double t1 = acc / jerk;
-  const double d1 = std::max(v_init * t1 - (acc / 6.0) * t1 * t1, 0.0);
-
-  // Midpoint velocity after jerk phase
-  const double v_mid = std::max(v_init - (acc / 2.0) * t1, 0.0);
-
-  // Phase 2: constant deceleration
-  const double dv2 = std::max(v_mid - v_end, 0.0);
-  const double t2 = dv2 / acc;
-  const double d2 = ((v_mid + v_end) / 2.0) * t2;
-
-  return d1 + d2 + v_init * t_braking_delay;
-}
-
 DeparturePoints cluster_by_distance(const DeparturePoints & departure_points)
 {
   DeparturePoints filtered_points;
