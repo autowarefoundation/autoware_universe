@@ -67,15 +67,29 @@ private:
    * Projects existing critical departure points onto the updated reference trajectory
    * and removes points that are outdated (i.e., passed by the ego or shifted significantly).
    *
-   * @param aw_ref_traj Current reference trajectory.
+   * @param raw_ref_traj Current reference trajectory.
    * @param offset_from_ego Minimum distance from ego to keep a point; points closer than this are
    * removed.
    */
   void update_critical_departure_points(
-    const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const double offset_from_ego);
+    const std::vector<TrajectoryPoint> & raw_ref_traj, const double offset_from_ego);
 
+  /**
+   * @brief Evaluate boundary departure diagnostic status.
+   *
+   * Checks for each side whether the ego is near a boundary, approaching departure,
+   * or in a critical departure state. Returns a map of each departure type to its active status.
+   *
+   * - `NEAR_BOUNDARY` and `APPROACHING_DEPARTURE` are flagged based on type presence.
+   * - `CRITICAL_DEPARTURE` is flagged if any critical point lies within braking distance,
+   *   calculated using velocity, acceleration, jerk, and brake delay thresholds.
+   *
+   * @param ego_dist_on_traj Ego vehicle’s distance along the reference trajectory.
+   * @param curr_vel Current velocity of the ego vehicle.
+   * @return Map of `DepartureType` to boolean indicating active status.
+   */
   std::unordered_map<DepartureType, bool> get_diagnostics(
-    const double curr_vel, const double dist_with_offset_m);
+    const double ego_dist_on_traj, const double curr_vel);
 
   /**
    * @brief Check if critical departure has been continuously observed.

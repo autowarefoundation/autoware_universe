@@ -16,6 +16,8 @@
 
 #include <autoware/boundary_departure_checker/conversion.hpp>
 #include <autoware/boundary_departure_checker/data_structs.hpp>
+#include <autoware/motion_utils/trajectory/interpolation.hpp>
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/utils/closest.hpp>
 #include <magic_enum.hpp>
 #include <range/v3/algorithm/sort.hpp>
@@ -55,8 +57,8 @@ DepartureIntervals init_departure_intervals(
     }
 
     DepartureInterval interval;
-    interval.start = aw_ref_traj.compute(departure_points[idx].dist_on_traj);
-    interval.start_dist_on_traj = departure_points[idx].dist_on_traj;
+    interval.start = aw_ref_traj.compute(departure_points[idx].ego_dist_on_ref_traj);
+    interval.start_dist_on_traj = departure_points[idx].ego_dist_on_ref_traj;
     interval.candidates.push_back(departure_points[idx]);
     interval.side_key = side_key;
 
@@ -81,7 +83,7 @@ DepartureIntervals init_departure_intervals(
       }
 
       const auto & prev = interval.candidates.back();
-      const auto diff = std::abs(curr.dist_on_traj - prev.dist_on_traj);
+      const auto diff = std::abs(curr.ego_dist_on_ref_traj - prev.ego_dist_on_ref_traj);
 
       if (diff >= vehicle_length_m) {
         break;
@@ -94,9 +96,9 @@ DepartureIntervals init_departure_intervals(
       continue;
     }
 
-    interval.start_dist_on_traj = interval.candidates.front().dist_on_traj - vehicle_length_m;
+    interval.start_dist_on_traj = interval.candidates.front().ego_dist_on_ref_traj;
     interval.start = aw_ref_traj.compute(interval.start_dist_on_traj);
-    interval.end_dist_on_traj = interval.candidates.back().dist_on_traj;
+    interval.end_dist_on_traj = interval.candidates.back().ego_dist_on_ref_traj;
     interval.end = aw_ref_traj.compute(interval.end_dist_on_traj);
     departure_intervals.push_back(interval);
     idx = idx_end;
@@ -119,25 +121,26 @@ DepartureIntervals init_departure_intervals(
 }
 
 void update_departure_intervals_poses(
-  DepartureIntervals & departure_intervals,
-  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
-  const TrajectoryPoint & ref_traj_fr_pt, const double ego_dist_from_traj_front,
-  const double th_pt_shift_dist_m, const double th_pt_shift_angle_rad)
+  DepartureIntervals & departure_intervals, const std::vector<TrajectoryPoint> & raw_ref_traj,
+  const double ego_dist_from_traj_front, const double th_pt_shift_dist_m,
+  const double th_pt_shift_angle_rad)
 {
   for (auto & dpt_pt : departure_intervals) {
     // update start end pose
     if (!dpt_pt.start_at_traj_front) {
-      dpt_pt.start_dist_on_traj = trajectory::closest(aw_ref_traj, dpt_pt.start);
+      dpt_pt.start_dist_on_traj =
+        motion_utils::calcSignedArcLength(raw_ref_traj, 0UL, dpt_pt.start.pose.position);
       constexpr auto th_dist_from_start{1.0};
       dpt_pt.start_at_traj_front = dpt_pt.start_dist_on_traj < th_dist_from_start;
     }
 
     if (dpt_pt.start_at_traj_front) {
       dpt_pt.start_dist_on_traj = 0.0;
-      dpt_pt.start = ref_traj_fr_pt;
+      dpt_pt.start = raw_ref_traj.front();
     }
 
-    dpt_pt.end_dist_on_traj = trajectory::closest(aw_ref_traj, dpt_pt.end);
+    dpt_pt.end_dist_on_traj =
+      motion_utils::calcSignedArcLength(raw_ref_traj, 0UL, dpt_pt.end.pose.position);
   }
 
   // remove if ego already pass the end pose.
@@ -145,15 +148,15 @@ void update_departure_intervals_poses(
     if (interval.end_dist_on_traj < ego_dist_from_traj_front) {
       return true;
     }
-    auto point_of_curr_traj = aw_ref_traj.compute(interval.end_dist_on_traj);
+    auto curr_pose =
+      autoware::motion_utils::calcInterpolatedPose(raw_ref_traj, interval.end_dist_on_traj);
     const auto & prev_pose = interval.end.pose;
-    const auto & curr_pose = point_of_curr_traj.pose;
     if (
       const auto is_shifted_opt =
         utils::is_point_shifted(prev_pose, curr_pose, th_pt_shift_dist_m, th_pt_shift_angle_rad)) {
       return true;
     }
-    interval.end = point_of_curr_traj;
+    interval.end.pose = curr_pose;
     return false;
   });
 }
@@ -177,15 +180,17 @@ void check_departure_points_between_intervals(
         continue;
       }
       if (
-        departure_point.dist_on_traj >= departure_interval.start_dist_on_traj &&
-        departure_point.dist_on_traj <= departure_interval.end_dist_on_traj) {
+        departure_point.ego_dist_on_ref_traj >= departure_interval.start_dist_on_traj &&
+        departure_point.ego_dist_on_ref_traj <= departure_interval.end_dist_on_traj) {
         departure_point.can_be_removed = true;
         continue;
       }
 
-      if (departure_interval.end_dist_on_traj - departure_point.dist_on_traj <= vehicle_length_m) {
-        departure_interval.end = aw_ref_traj.compute(departure_point.dist_on_traj);
-        departure_interval.end_dist_on_traj = departure_point.dist_on_traj;
+      if (
+        departure_interval.end_dist_on_traj - departure_point.ego_dist_on_ref_traj <=
+        vehicle_length_m) {
+        departure_interval.end = aw_ref_traj.compute(departure_point.ego_dist_on_ref_traj);
+        departure_interval.end_dist_on_traj = departure_point.ego_dist_on_ref_traj;
         departure_point.can_be_removed = true;
         if (departure_point.departure_type == DepartureType::CRITICAL_DEPARTURE) {
           break;
@@ -237,13 +242,13 @@ void merge_departure_intervals(DepartureIntervals & departure_intervals)
 void update_departure_intervals(
   DepartureIntervals & departure_intervals, Side<DeparturePoints> & departure_points,
   const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const double vehicle_length_m,
-  const TrajectoryPoint & ref_traj_fr_pt, const double ego_dist_from_traj_front,
+  const std::vector<TrajectoryPoint> & raw_ref_traj, const double ego_dist_from_traj_front,
   const double th_pt_shift_dist_m, const double th_pt_shift_angle_rad,
   const std::unordered_set<DepartureType> & enable_type, const bool is_reset_interval,
   const bool is_departure_persist)
 {
   update_departure_intervals_poses(
-    departure_intervals, aw_ref_traj, ref_traj_fr_pt, ego_dist_from_traj_front, th_pt_shift_dist_m,
+    departure_intervals, raw_ref_traj, ego_dist_from_traj_front, th_pt_shift_dist_m,
     th_pt_shift_angle_rad);
 
   for (const auto side_key : g_side_keys) {
@@ -273,8 +278,7 @@ void update_departure_intervals(
 CriticalDeparturePoints find_new_critical_departure_points(
   const Side<DeparturePoints> & new_departure_points,
   const CriticalDeparturePoints & critical_departure_points,
-  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
-  const double th_point_merge_distance_m)
+  const std::vector<TrajectoryPoint> & raw_ref_traj, const double th_point_merge_distance_m)
 {
   CriticalDeparturePoints new_critical_departure_points;
   for (const auto side_key : g_side_keys) {
@@ -290,7 +294,8 @@ CriticalDeparturePoints find_new_critical_departure_points(
       const auto is_near_curr_pts = std::any_of(
         critical_departure_points.begin(), critical_departure_points.end(),
         [&](const CriticalDeparturePoint & crit_pt) {
-          return std::abs(dpt_pt.dist_on_traj - crit_pt.dist_on_traj) < th_point_merge_distance_m;
+          return std::abs(dpt_pt.ego_dist_on_ref_traj - crit_pt.ego_dist_on_ref_traj) <
+                 th_point_merge_distance_m;
         });
 
       if (is_near_curr_pts) {
@@ -298,7 +303,8 @@ CriticalDeparturePoints find_new_critical_departure_points(
       }
 
       CriticalDeparturePoint crit_pt(dpt_pt);
-      crit_pt.point_on_prev_traj = aw_ref_traj.compute(crit_pt.dist_on_traj);
+      crit_pt.pose_on_current_ref_traj =
+        motion_utils::calcInterpolatedPose(raw_ref_traj, crit_pt.ego_dist_on_ref_traj);
       new_critical_departure_points.push_back(crit_pt);
     }
   }

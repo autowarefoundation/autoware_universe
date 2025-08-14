@@ -155,9 +155,9 @@ private:
    * @param traffic_light_id_map Map of lanelet IDs to traffic signal information.
    * @param distances Vector of columns with distances, used to select columns.
    * @param m Maximum number of columns (segments) to select.
-   * @return Tuple of the transformed matrix and updated column ID mapping.
+   * @return The transformed matrix
    */
-  std::tuple<Eigen::MatrixXf, ColLaneIDMaps> transform_points_and_add_traffic_info(
+  Eigen::MatrixXf transform_points_and_add_traffic_info(
     const Eigen::Matrix4f & transform_matrix,
     const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
     const std::vector<ColWithDistance> & distances, int64_t m) const;
