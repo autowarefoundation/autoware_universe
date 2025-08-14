@@ -339,7 +339,7 @@ bool BicycleMotionModel::adjustPosition(const double & delta_x, const double & d
 
 bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) const
 {
-  /*  Motion model: static bicycle model (constant slip angle, constant velocity)
+  /*  Motion model: static bicycle model (constant turn rate, constant velocity)
    *
    * wheel_base = sqrt((x2 - x1)^2 + (y2 - y1)^2)
    * yaw = atan2(y2 - y1, x2 - x1)
@@ -350,7 +350,7 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
    * x2_{k+1}   = x2_k + vel_x_k*(x2_k - x1_k)/wheel_base * dt - vel_y_k*(y2_k - y1_k)/wheel_base * dt
    * y2_{k+1}   = y2_k + vel_x_k*(y2_k - y1_k)/wheel_base * dt + vel_y_k*(x2_k - x1_k)/wheel_base * dt
    * vel_x_{k+1} = vel_x_k
-   * vel_y_{k+1} = vel_y_k * exp(-dt / 2.0)  // slip angle decays exponentially with a half-life of 2 seconds
+   * vel_y_{k+1} = vel_y_k * exp(-dt / 2.0)  // lateral velocity decays exponentially with a half-life of 2 seconds
    */
 
   /*  Jacobian Matrix
@@ -363,7 +363,7 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
    * A_vy = [0, 0, 0, 0, 0, exp(-dt / 2.0)]
    */
 
-  // Current state vector X t
+  // Current state vector X_t
   StateVec X_t;
   ekf.getX(X_t);
 
@@ -392,7 +392,7 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   // Apply exponential decay to slip angle over time, with a half-life of 2 seconds
   constexpr double gamma = 0.69314718056;  // natural logarithm of 2
   const double decay_rate = std::exp(-dt * gamma / 2.0);
-  X_next_t(IDX::VY) = vel_y * decay_rate;  // slip angle decays exponentially
+  X_next_t(IDX::VY) = vel_y * decay_rate;  // lateral velocity decays exponentially
   // X_next_t(IDX::VY) = vel_y;
 
   // State transition matrix A
@@ -428,7 +428,6 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   constexpr double q_cov_length = 1.0;  // length uncertainty
 
   double q_stddev_yaw_rate = motion_params_.q_stddev_yaw_rate_min;
-  // q_stddev_yaw_rate = 0.0001; // a very small value for now
   if (vel_x > 0.01) {
     /* uncertainty of the yaw rate is limited by the following:
      *  - centripetal acceleration a_lat : d(yaw)/dt = w = a_lat/vel_x
