@@ -22,18 +22,19 @@
 #include "autoware/path_optimizer/state_equation_generator.hpp"
 #include "autoware/path_optimizer/type_alias.hpp"
 #include "autoware/path_optimizer/utils/conditional_timer.hpp"
+#include "autoware_internal_debug_msgs/msg/spline_debug.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 #include "autoware_utils/system/time_keeper.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 #include "gtest/gtest.h"
 
 // Add new includes for spline coefficient publishing
-#include "std_msgs/msg/float32_multi_array.hpp"
-#include "std_msgs/msg/multi_array_layout.hpp"
-#include "std_msgs/msg/multi_array_dimension.hpp"
-
 #include <Eigen/Core>
 #include <Eigen/Sparse>
+
+#include "std_msgs/msg/float32_multi_array.hpp"
+#include "std_msgs/msg/multi_array_dimension.hpp"
+#include "std_msgs/msg/multi_array_layout.hpp"
 
 #include <memory>
 #include <optional>
@@ -319,10 +320,7 @@ private:
   rclcpp::Publisher<Trajectory>::SharedPtr debug_mpt_traj_pub_;
 
   // Add new publishers for spline coefficients and curvatures
-  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_spline_knots_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_spline_coeffs_x_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_spline_coeffs_y_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_curvatures_pub_;
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::SplineDebug>::SharedPtr debug_spline_pub_;
 
   // argument
   bool enable_debug_info_;
@@ -411,11 +409,11 @@ private:
   void publishDebugTrajectories(
     const std_msgs::msg::Header & header, const std::vector<ReferencePoint> & ref_points,
     const std::vector<TrajectoryPoint> & mpt_traj_points) const;
-  
+
   // Add new method to publish spline coefficients and curvatures
   void publishSplineCoefficientsAndCurvatures(
     const autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline) const;
-  
+
   std::vector<TrajectoryPoint> extractFixedPoints(
     const std::vector<ReferencePoint> & ref_points) const;
 

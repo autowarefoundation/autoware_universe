@@ -427,14 +427,8 @@ MPTOptimizer::MPTOptimizer(
   debug_ref_traj_pub_ = node->create_publisher<Trajectory>("~/debug/mpt_ref_traj", 1);
   debug_mpt_traj_pub_ = node->create_publisher<Trajectory>("~/debug/mpt_traj", 1);
 
-  debug_spline_knots_pub_ = node->create_publisher<std_msgs::msg::Float32MultiArray>(
-    "~/debug/spline_knots", 1);
-  debug_spline_coeffs_x_pub_ = node->create_publisher<std_msgs::msg::Float32MultiArray>(
-    "~/debug/spline_coeffs_x", 1);
-  debug_spline_coeffs_y_pub_ = node->create_publisher<std_msgs::msg::Float32MultiArray>(
-    "~/debug/spline_coeffs_y", 1);
-  debug_curvatures_pub_ = node->create_publisher<std_msgs::msg::Float32MultiArray>(
-    "~/debug/curvatures", 1);
+  debug_spline_pub_ =
+   node->create_publisher<autoware_internal_debug_msgs::msg::SplineDebug>("~/debug/spline_coefficients", 1);
 }
 
 void MPTOptimizer::updateVehicleCircles()
@@ -564,7 +558,6 @@ void MPTOptimizer::publishSplineCoefficientsAndCurvatures(
     msg_knots.data.push_back(knots[i]);
   }
 
-  debug_spline_knots_pub_->publish(msg_knots);
   std_msgs::msg::Float32MultiArray msg_x;
   msg_x.layout.dim.push_back(std_msgs::msg::MultiArrayDimension());
   msg_x.layout.dim[0].size = x_coeffs.size();
@@ -575,9 +568,6 @@ void MPTOptimizer::publishSplineCoefficientsAndCurvatures(
   for (size_t i = 0; i < static_cast<size_t>(x_coeffs.size()); ++i) {
     msg_x.data.push_back(x_coeffs[i]);
   }
-
-  // Publish the message
-  debug_spline_coeffs_x_pub_->publish(msg_x);
 
   // Create a Float32MultiArray message
   std_msgs::msg::Float32MultiArray msg_y;
@@ -591,9 +581,6 @@ void MPTOptimizer::publishSplineCoefficientsAndCurvatures(
     msg_y.data.push_back(y_coeffs[i]);
   }
 
-  // Publish the message
-  debug_spline_coeffs_y_pub_->publish(msg_y);
-
   // Create a Float32MultiArray message
   std_msgs::msg::Float32MultiArray msg_curvatures;
   msg_curvatures.layout.dim.push_back(std_msgs::msg::MultiArrayDimension());
@@ -606,8 +593,12 @@ void MPTOptimizer::publishSplineCoefficientsAndCurvatures(
     msg_curvatures.data.push_back(curvatures[i]);
   }
 
-  // Publish the message
-  debug_curvatures_pub_->publish(msg_curvatures);
+  autoware_internal_debug_msgs::msg::SplineDebug msg;
+  msg.knots = msg_knots;
+  msg.x_coeffs = msg_x;
+  msg.y_coeffs = msg_y;
+  msg.curvatures = msg_curvatures;
+  debug_spline_pub_->publish(msg);
 }
 
 std::vector<ReferencePoint> MPTOptimizer::calcReferencePoints(
