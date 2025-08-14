@@ -450,13 +450,10 @@ InputDataMap DiffusionPlanner::create_input_data()
 
   // map data on ego reference frame
   {
-    std::tuple<Eigen::MatrixXf, ColLaneIDMaps> matrix_mapping_tuple =
-      lane_segment_context_->transform_and_select_rows(
-        map_to_ego_transform, traffic_light_id_map_, center_x, center_y, LANES_SHAPE[1]);
-    const Eigen::MatrixXf & ego_centric_lane_segments = std::get<0>(matrix_mapping_tuple);
-    input_data_map["lanes"] = preprocess::extract_lane_tensor_data(ego_centric_lane_segments);
-    input_data_map["lanes_speed_limit"] =
-      preprocess::extract_lane_speed_tensor_data(ego_centric_lane_segments);
+    const auto [lanes, lanes_speed_limit] = lane_segment_context_->get_lane_segments(
+      map_to_ego_transform, traffic_light_id_map_, center_x, center_y, LANES_SHAPE[1]);
+    input_data_map["lanes"] = lanes;
+    input_data_map["lanes_speed_limit"] = lanes_speed_limit;
   }
 
   // route data on ego reference frame
