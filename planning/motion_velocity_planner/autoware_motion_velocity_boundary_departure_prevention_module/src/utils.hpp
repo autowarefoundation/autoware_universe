@@ -27,36 +27,6 @@ namespace autoware::motion_velocity_planner::experimental::utils
 {
 
 /**
- * @brief Erase elements from an associative container if they match a given predicate.
- *
- * This function iterates over a `std::map` or `std::unordered_map` and removes all key-value
- * pairs for which the predicate returns true. The predicate must accept a `std::pair<Key, Value>`.
- *
- * @tparam Container Must be either `std::map` or `std::unordered_map`.
- * @tparam Predicate Unary function or lambda that returns true for elements to be removed.
- * @param container The map to remove elements from.
- * @param pred      The predicate used to test elements for removal.
- */
-template <
-  typename Container, typename Predicate,
-  typename = std::enable_if_t<
-    std::is_same_v<
-      Container, std::map<typename Container::key_type, typename Container::mapped_type>> ||
-    std::is_same_v<
-      Container,
-      std::unordered_map<typename Container::key_type, typename Container::mapped_type>>>>
-void erase_if(Container & container, Predicate pred)
-{
-  for (auto it = container.begin(); it != container.end();) {
-    if (pred(*it)) {  // For map, *it is a std::pair, so pred should handle pair<Key, Value>
-      it = container.erase(it);
-    } else {
-      ++it;
-    }
-  }
-}
-
-/**
  * @brief Remove elements from a sequential container based on a predicate.
  *
  * This utility function uses `std::remove_if` followed by `erase` to remove all elements
@@ -84,17 +54,6 @@ void remove_if(Container & container, Predicate pred)
 inline geometry_msgs::msg::Point to_geom_pt(const Point2d & point)
 {
   return autoware_utils::to_msg(point.to_3d(0.0));
-}
-
-/**
- * @brief Convert a ROS 3D point into a 2D point by discarding the z-component.
- *
- * @param point A ROS point with x, y, z coordinates.
- * @return A 2D point containing only the x and y values.
- */
-inline Point2d to_pt2d(const geometry_msgs::msg::Point & point)
-{
-  return {point.x, point.y};
 }
 
 /**
