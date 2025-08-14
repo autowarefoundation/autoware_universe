@@ -266,31 +266,29 @@ bool BicycleMotionModel::limitStates()
   if (motion_params_.max_reverse_vel < 0 && X_t(IDX::VX) < motion_params_.max_reverse_vel) {
     // rotate the object orientation by 180 degrees
     // replace X1 and Y1 with X2 and Y2
-    const double x1 = X_t(IDX::X1);
-    const double y1 = X_t(IDX::Y1);
-    X_t(IDX::X1) = X_t(IDX::X2);
-    X_t(IDX::Y1) = X_t(IDX::Y2);
-    X_t(IDX::X2) = x1;
-    X_t(IDX::Y2) = y1;
+    const double x_center = (X_t(IDX::X1) * motion_params_.lr_ratio + X_t(IDX::X2) * motion_params_.lf_ratio) / (motion_params_.lr_ratio + motion_params_.lf_ratio);
+    const double y_center = (X_t(IDX::Y1) * motion_params_.lr_ratio + X_t(IDX::Y2) * motion_params_.lf_ratio) / (motion_params_.lr_ratio + motion_params_.lf_ratio);
+    const double x1_rel = X_t(IDX::X1) - x_center;
+    const double y1_rel = X_t(IDX::Y1) - y_center;
+    const double x2_rel = X_t(IDX::X2) - x_center;
+    const double y2_rel = X_t(IDX::Y2) - y_center;
+
+    X_t(IDX::X1) = x_center + x2_rel;
+    X_t(IDX::Y1) = y_center + y2_rel;
+    X_t(IDX::X2) = x_center + x1_rel;
+    X_t(IDX::Y2) = y_center + y1_rel;
+
     // reverse the velocity
     X_t(IDX::VX) = -X_t(IDX::VX);
     // rotation velocity does not change
 
     // replace covariance
-    const double cov_1_xx = P_t(IDX::X1, IDX::X1);
-    const double cov_1_xy = P_t(IDX::X1, IDX::Y1);
-    const double cov_1_yy = P_t(IDX::Y1, IDX::Y1);
-    const double cov_2_xx = P_t(IDX::X2, IDX::X2);
-    const double cov_2_xy = P_t(IDX::X2, IDX::Y2);
-    const double cov_2_yy = P_t(IDX::Y2, IDX::Y2);
-    P_t(IDX::X1, IDX::X1) = cov_2_xx;
-    P_t(IDX::X1, IDX::Y1) = cov_2_xy;
-    P_t(IDX::Y1, IDX::X1) = cov_2_xy;
-    P_t(IDX::Y1, IDX::Y1) = cov_2_yy;
-    P_t(IDX::X2, IDX::X2) = cov_1_xx;
-    P_t(IDX::X2, IDX::Y2) = cov_1_xy;
-    P_t(IDX::Y2, IDX::X2) = cov_1_xy;
-    P_t(IDX::Y2, IDX::Y2) = cov_1_yy;
+    // Swap rows and columns
+    P_t.row(IDX::X1).swap(P_t.row(IDX::X2));
+    P_t.row(IDX::Y1).swap(P_t.row(IDX::Y2));
+    P_t.col(IDX::X1).swap(P_t.col(IDX::X2));
+    P_t.col(IDX::Y1).swap(P_t.col(IDX::Y2));
+
   }
   // maximum velocity
   if (!(-motion_params_.max_vel <= X_t(IDX::VX) && X_t(IDX::VX) <= motion_params_.max_vel)) {
@@ -468,6 +466,17 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   Q(IDX::Y2, IDX::X2) = Q(IDX::X2, IDX::Y2);
   Q(IDX::Y2, IDX::Y2) = (q_cov_long2 * sin_yaw * sin_yaw + q_cov_lat2 * cos_yaw * cos_yaw);
 
+  // covariance between X1 and X2, Y1 and Y2, shares the same covariance of rear axle
+  const double coefficient = 0.01;
+  Q(IDX::X1, IDX::X2) = Q(IDX::X1, IDX::X1) * coefficient;
+  Q(IDX::X2, IDX::X1) = Q(IDX::X1, IDX::X1) * coefficient;
+  Q(IDX::Y1, IDX::Y2) = Q(IDX::Y1, IDX::Y1) * coefficient;
+  Q(IDX::Y2, IDX::Y1) = Q(IDX::Y1, IDX::Y1) * coefficient;
+  Q(IDX::X1, IDX::Y2) = Q(IDX::X1, IDX::Y1) * coefficient;
+  Q(IDX::Y2, IDX::X1) = Q(IDX::X1, IDX::Y1) * coefficient;
+  Q(IDX::Y1, IDX::X2) = Q(IDX::X1, IDX::Y1) * coefficient; 
+  Q(IDX::X2, IDX::Y1) = Q(IDX::X1, IDX::Y1) * coefficient;  
+
   // covariance of velocity
   const double q_cov_vel_long = motion_params_.q_cov_acc_long * dt2;
   const double q_cov_vel_lat = motion_params_.q_cov_acc_lat * dt2;
@@ -495,6 +504,8 @@ bool BicycleMotionModel::getPredictedState(
   }
   const double yaw = std::atan2(X(IDX::Y2) - X(IDX::Y1), X(IDX::X2) - X(IDX::X1));
   const double wheel_base = std::hypot(X(IDX::X2) - X(IDX::X1), X(IDX::Y2) - X(IDX::Y1));
+  const double wheel_base_inv = 1.0 / wheel_base;
+  const double wheel_base_inv_sq = wheel_base_inv * wheel_base_inv;
 
   // set position
   pose.position.x = 0.5 * (X(IDX::X1) + X(IDX::X2));
@@ -515,7 +526,7 @@ bool BicycleMotionModel::getPredictedState(
   twist.linear.z = 0.0;
   twist.angular.x = 0.0;
   twist.angular.y = 0.0;
-  twist.angular.z = X(IDX::VY) / wheel_base;
+  twist.angular.z = X(IDX::VY) * wheel_base_inv;
 
   // set pose covariance
   constexpr double zz_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
@@ -525,7 +536,7 @@ bool BicycleMotionModel::getPredictedState(
   pose_cov[XYZRPY_COV_IDX::X_Y] = (P(IDX::X1, IDX::Y1) + P(IDX::X2, IDX::Y2)) * 0.25;
   pose_cov[XYZRPY_COV_IDX::Y_X] = (P(IDX::Y1, IDX::X1) + P(IDX::Y2, IDX::X2)) * 0.25;
   pose_cov[XYZRPY_COV_IDX::Y_Y] = (P(IDX::Y1, IDX::Y1) + P(IDX::Y2, IDX::Y2)) * 0.25;
-  pose_cov[XYZRPY_COV_IDX::YAW_YAW] = P(IDX::X2, IDX::X2) * cos(yaw) + P(IDX::Y2, IDX::Y2) * sin(yaw);
+  pose_cov[XYZRPY_COV_IDX::YAW_YAW] = P(IDX::X2, IDX::X2) * cos(yaw) * wheel_base_inv_sq + P(IDX::Y2, IDX::Y2) * sin(yaw) * wheel_base_inv_sq;
   pose_cov[XYZRPY_COV_IDX::Z_Z] = zz_cov;
   pose_cov[XYZRPY_COV_IDX::ROLL_ROLL] = rr_cov;
   pose_cov[XYZRPY_COV_IDX::PITCH_PITCH] = pp_cov;
@@ -534,7 +545,7 @@ bool BicycleMotionModel::getPredictedState(
   constexpr double vel_cov = 0.1 * 0.1;
   twist_cov[XYZRPY_COV_IDX::X_X] = P(IDX::VX, IDX::VX);
   twist_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::VY, IDX::VY);
-  twist_cov[XYZRPY_COV_IDX::YAW_YAW] = P(IDX::VY, IDX::VY) / (wheel_base * wheel_base) * 0.25;
+  twist_cov[XYZRPY_COV_IDX::YAW_YAW] = P(IDX::VY, IDX::VY) * wheel_base_inv_sq * 0.25;
   twist_cov[XYZRPY_COV_IDX::Z_Z] = vel_cov;
   twist_cov[XYZRPY_COV_IDX::ROLL_ROLL] = vel_cov;
   twist_cov[XYZRPY_COV_IDX::PITCH_PITCH] = vel_cov;
