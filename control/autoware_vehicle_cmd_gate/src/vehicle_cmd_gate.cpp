@@ -342,14 +342,17 @@ bool VehicleCmdGate::isDataReady()
   // emergency state must be received before running
   if (use_emergency_handling_) {
     if (!emergency_state_heartbeat_received_time_) {
-      RCLCPP_WARN(get_logger(), "emergency_state_heartbeat_received_time_ is false");
+      RCLCPP_WARN_THROTTLE(
+        get_logger(), *get_clock(), 5000, "emergency_state_heartbeat_received_time_ is false");
       return false;
     }
   }
 
   if (check_external_emergency_heartbeat_) {
     if (!external_emergency_stop_heartbeat_received_time_) {
-      RCLCPP_WARN(get_logger(), "external_emergency_stop_heartbeat_received_time_ is false");
+      RCLCPP_WARN_THROTTLE(
+        get_logger(), *get_clock(), 5000,
+        "external_emergency_stop_heartbeat_received_time_ is false");
       return false;
     }
   }
