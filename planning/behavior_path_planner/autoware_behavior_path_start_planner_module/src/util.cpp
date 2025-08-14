@@ -200,51 +200,6 @@ std::vector<double> calc_curvature_from_trajectory(
   return curvatures;
 }
 
-std::vector<double> calc_curvature_from_points(
-  const std::vector<geometry_msgs::msg::Point> & points)
-{
-  using autoware_utils::calc_curvature;
-
-  std::vector<double> curvatures;
-
-  if (points.size() < 3) {
-    // Cannot calculate curvature with less than 3 points
-    curvatures.resize(points.size(), 0.0);
-    return curvatures;
-  }
-
-  curvatures.reserve(points.size());
-
-  for (size_t i = 0; i < points.size(); ++i) {
-    try {
-      if (i == 0) {
-        // First point: use next 2 points
-        const auto & p1 = points[0];
-        const auto & p2 = points[1];
-        const auto & p3 = points[2];
-        curvatures.push_back(calc_curvature(p1, p2, p3));
-      } else if (i == points.size() - 1) {
-        // Last point: use previous 2 points
-        const auto & p1 = points[i - 2];
-        const auto & p2 = points[i - 1];
-        const auto & p3 = points[i];
-        curvatures.push_back(calc_curvature(p1, p2, p3));
-      } else {
-        // Middle points: use surrounding points
-        const auto & p1 = points[i - 1];
-        const auto & p2 = points[i];
-        const auto & p3 = points[i + 1];
-        curvatures.push_back(calc_curvature(p1, p2, p3));
-      }
-    } catch (const std::runtime_error & e) {
-      // Set curvature to 0 if points are too close
-      curvatures.push_back(0.0);
-    }
-  }
-
-  return curvatures;
-}
-
 Pose find_target_pose_along_path(
   const PathWithLaneId & centerline_path, const Pose & start_pose,
   const double longitudinal_distance)
