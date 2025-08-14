@@ -221,6 +221,8 @@ bool BicycleMotionModel::updateStatePoseHeadVel(
   const double yaw_delta = yaw - yaw_track;
   const double vel_long = vel_x * std::cos(yaw_delta) - vel_y * std::sin(yaw_delta);
   const double vel_lat = vel_x * std::sin(yaw_delta) + vel_y * std::cos(yaw_delta);
+  // const double vel_long = vel_x;
+  // const double vel_lat = vel_y;
 
   // update state
   constexpr int DIM_Y = 6;
@@ -425,72 +427,52 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
 
   A(IDX::VX, IDX::VX) = 1.0;  // velocity does not change
   A(IDX::VY, IDX::VY) = decay_rate;
-  // A(IDX::VY, IDX::VY) = 1.0;
-
-  // // Process noise covariance Q
-  // double q_stddev_yaw_rate = motion_params_.q_stddev_yaw_rate_min;
-  // if (vel > 0.01) {
-  //   /* uncertainty of the yaw rate is limited by the following:
-  //    *  - centripetal acceleration a_lat : d(yaw)/dt = w = a_lat/v
-  //    *  - or maximum slip angle slip_max : w = v*sin(slip_max)/l_r
-  //    */
-  //   q_stddev_yaw_rate = std::min(
-  //     motion_params_.q_stddev_acc_lat / vel,
-  //     vel * std::sin(motion_params_.q_max_slip_angle) / lr_);  // [rad/s]
-  //   q_stddev_yaw_rate = std::clamp(
-  //     q_stddev_yaw_rate, motion_params_.q_stddev_yaw_rate_min,
-  //     motion_params_.q_stddev_yaw_rate_max);
-  // }
-  // double q_cov_slip_rate{0.0};
-  // if (vel <= 0.01) {
-  //   q_cov_slip_rate = motion_params_.q_cov_slip_rate_min;
-  // } else {
-  //   /* The slip angle rate uncertainty is modeled as follows:
-  //    * d(slip)/dt ~ - sin(slip)/v * d(v)/dt + l_r/v * d(w)/dt
-  //    * where sin(slip) = w * l_r / v
-  //    *
-  //    * d(w)/dt is assumed to be proportional to w (more uncertain when slip is large)
-  //    * d(v)/dt and d(w)/t are considered to be uncorrelated
-  //    */
-  //   q_cov_slip_rate =
-  //     std::pow(motion_params_.q_stddev_acc_lat * sin_slip / vel, 2) + std::pow(sin_slip * 1.5, 2);
-  //   q_cov_slip_rate = std::min(q_cov_slip_rate, motion_params_.q_cov_slip_rate_max);
-  //   q_cov_slip_rate = std::max(q_cov_slip_rate, motion_params_.q_cov_slip_rate_min);
-  // }
 
   // Process noise covariance Q
-  double q_cov_slip_rate = motion_params_.q_cov_slip_rate_min + 0.6;
   constexpr double q_cov_length = 1.0;  // length uncertainty
-  const double q_stddev_yaw_rate = 0.01;
+
+  double q_stddev_yaw_rate = motion_params_.q_stddev_yaw_rate_min;
+  // q_stddev_yaw_rate = 0.0001; // a very small value for now
+  if (vel_x > 0.01) {
+    /* uncertainty of the yaw rate is limited by the following:
+     *  - centripetal acceleration a_lat : d(yaw)/dt = w = a_lat/vel_x
+     *  - or maximum slip angle slip_max : w = vel_x*sin(slip_max)/wheel_base
+     */
+    q_stddev_yaw_rate = std::min(
+      motion_params_.q_stddev_acc_lat / vel_x,
+      vel_x * std::sin(motion_params_.q_max_slip_angle) / wheel_base);  // [rad/s]
+    q_stddev_yaw_rate = std::clamp(
+      q_stddev_yaw_rate, motion_params_.q_stddev_yaw_rate_min,
+      motion_params_.q_stddev_yaw_rate_max);
+  }
   const double q_stddev_head = q_stddev_yaw_rate * wheel_base * dt; // yaw uncertainty
   
   const double dt2 = dt * dt;
   const double dt4 = dt2 * dt2;
 
-  const double q_cov_vel_x = motion_params_.q_cov_acc_long * dt2;
-  const double q_cov_vel_y = q_cov_slip_rate * dt2 * 4.0;
-  const double q_cov_x = 0.25 * motion_params_.q_cov_acc_long * dt4;
-  const double q_cov_y = 0.25 * motion_params_.q_cov_acc_lat * dt4;
-  // const double q_cov_x2 = 0.25 * motion_params_.q_cov_acc_long * dt4 + q_cov_length * dt2;
-  // const double q_cov_y2 = 0.25 * motion_params_.q_cov_acc_lat * dt4 + q_stddev_head * q_stddev_head; 
-  const double q_cov_x2 = q_cov_length * dt2;
-  const double q_cov_y2 = q_stddev_head * q_stddev_head; 
+  const double q_cov_long = 0.25 * motion_params_.q_cov_acc_long * dt4;
+  const double q_cov_lat = 0.25 * motion_params_.q_cov_acc_lat * dt4;
+  const double q_cov_long2 = q_cov_long + q_cov_length * dt2;
+  const double q_cov_lat2 = q_cov_lat + q_stddev_head * q_stddev_head;
 
   StateMat Q;
   Q.setZero();
   const double sin_2yaw = std::sin(2.0 * yaw);
-  Q(IDX::X1, IDX::X1) = (q_cov_x * cos_yaw * cos_yaw + q_cov_y * sin_yaw * sin_yaw);
-  Q(IDX::X1, IDX::Y1) = (0.5f * (q_cov_x - q_cov_y) * sin_2yaw);
+  Q(IDX::X1, IDX::X1) = (q_cov_long * cos_yaw * cos_yaw + q_cov_lat * sin_yaw * sin_yaw);
+  Q(IDX::X1, IDX::Y1) = (0.5f * (q_cov_long - q_cov_lat) * sin_2yaw);
   Q(IDX::Y1, IDX::X1) = Q(IDX::X1, IDX::Y1);
-  Q(IDX::Y1, IDX::Y1) = (q_cov_x * sin_yaw * sin_yaw + q_cov_y * cos_yaw * cos_yaw);
+  Q(IDX::Y1, IDX::Y1) = (q_cov_long * sin_yaw * sin_yaw + q_cov_lat * cos_yaw * cos_yaw);
 
-  Q(IDX::X2, IDX::X2) = (q_cov_x2 * cos_yaw * cos_yaw + q_cov_y2 * sin_yaw * sin_yaw);
-  Q(IDX::X2, IDX::Y2) = (0.5f * (q_cov_x2 - q_cov_y2) * sin_2yaw);
+  Q(IDX::X2, IDX::X2) = (q_cov_long2 * cos_yaw * cos_yaw + q_cov_lat2 * sin_yaw * sin_yaw);
+  Q(IDX::X2, IDX::Y2) = (0.5f * (q_cov_long2 - q_cov_lat2) * sin_2yaw);
   Q(IDX::Y2, IDX::X2) = Q(IDX::X2, IDX::Y2);
-  Q(IDX::Y2, IDX::Y2) = (q_cov_x2 * sin_yaw * sin_yaw + q_cov_y2 * cos_yaw * cos_yaw);
+  Q(IDX::Y2, IDX::Y2) = (q_cov_long2 * sin_yaw * sin_yaw + q_cov_lat2 * cos_yaw * cos_yaw);
 
-  Q(IDX::VX, IDX::VX) = q_cov_vel_x;
-  Q(IDX::VY, IDX::VY) = q_cov_vel_y;
+  // covariance of velocity
+  const double q_cov_vel_long = motion_params_.q_cov_acc_long * dt2;
+  const double q_cov_vel_lat = motion_params_.q_cov_acc_lat * dt2;
+  Q(IDX::VX, IDX::VX) = q_cov_vel_long;
+  Q(IDX::VY, IDX::VY) = q_cov_vel_lat;
 
 
   // control-input model B and control-input u are not used
