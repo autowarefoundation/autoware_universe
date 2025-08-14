@@ -35,7 +35,9 @@
 namespace autoware::diffusion_planner::preprocess
 {
 
-// Internal functions
+// Internal functions declaration
+namespace
+{
 Eigen::MatrixXf process_segments_to_matrix(
   const std::vector<LaneSegment> & lane_segments, ColLaneIDMaps & col_id_mapping);
 Eigen::MatrixXf process_segment_to_matrix(const LaneSegment & segment);
@@ -44,6 +46,7 @@ Eigen::Matrix<float, 1, TRAFFIC_LIGHT_ONE_HOT_DIM> get_traffic_signal_row_vector
 void transform_selected_rows(
   const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, int64_t num_segments,
   int64_t row_idx, bool do_translation = true);
+}  // namespace
 
 // LaneSegmentContext implementation
 LaneSegmentContext::LaneSegmentContext(const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr)
@@ -284,6 +287,10 @@ LaneSegmentContext::transform_points_and_add_traffic_info(
   return {output_matrix, new_col_id_mapping};
 }
 
+// Internal functions implementation
+namespace
+{
+
 void transform_selected_rows(
   const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, int64_t num_segments,
   int64_t row_idx, bool do_translation)
@@ -396,5 +403,7 @@ Eigen::MatrixXf process_segment_to_matrix(const LaneSegment & segment)
 
   return segment_data;
 }
+
+}  // namespace
 
 }  // namespace autoware::diffusion_planner::preprocess
