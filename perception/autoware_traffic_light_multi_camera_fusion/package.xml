@@ -12,6 +12,7 @@
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
 
+  <build_depend>ament_cmake_gtest</build_depend>
   <build_depend>autoware_cmake</build_depend>
 
   <depend>autoware_lanelet2_extension</depend>
