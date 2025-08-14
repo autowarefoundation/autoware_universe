@@ -427,14 +427,14 @@ MPTOptimizer::MPTOptimizer(
   debug_ref_traj_pub_ = node->create_publisher<Trajectory>("~/debug/mpt_ref_traj", 1);
   debug_mpt_traj_pub_ = node->create_publisher<Trajectory>("~/debug/mpt_traj", 1);
 
-  debug_spline_knots_pub_ = node->create_publisher<std_msgs::msg::Float32MultiArray>(
-    "~/debug/spline_knots", 1);
-  debug_spline_coeffs_x_pub_ = node->create_publisher<std_msgs::msg::Float32MultiArray>(
-    "~/debug/spline_coeffs_x", 1);
-  debug_spline_coeffs_y_pub_ = node->create_publisher<std_msgs::msg::Float32MultiArray>(
-    "~/debug/spline_coeffs_y", 1);
-  debug_curvatures_pub_ = node->create_publisher<std_msgs::msg::Float32MultiArray>(
-    "~/debug/curvatures", 1);
+  debug_spline_knots_pub_ =
+    node->create_publisher<std_msgs::msg::Float32MultiArray>("~/debug/spline_knots", 1);
+  debug_spline_coeffs_x_pub_ =
+    node->create_publisher<std_msgs::msg::Float32MultiArray>("~/debug/spline_coeffs_x", 1);
+  debug_spline_coeffs_y_pub_ =
+    node->create_publisher<std_msgs::msg::Float32MultiArray>("~/debug/spline_coeffs_y", 1);
+  debug_curvatures_pub_ =
+    node->create_publisher<std_msgs::msg::Float32MultiArray>("~/debug/curvatures", 1);
 }
 
 void MPTOptimizer::updateVehicleCircles()

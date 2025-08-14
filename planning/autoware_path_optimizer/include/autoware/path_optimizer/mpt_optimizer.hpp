@@ -28,12 +28,12 @@
 #include "gtest/gtest.h"
 
 // Add new includes for spline coefficient publishing
-#include "std_msgs/msg/float32_multi_array.hpp"
-#include "std_msgs/msg/multi_array_layout.hpp"
-#include "std_msgs/msg/multi_array_dimension.hpp"
-
 #include <Eigen/Core>
 #include <Eigen/Sparse>
+
+#include "std_msgs/msg/float32_multi_array.hpp"
+#include "std_msgs/msg/multi_array_dimension.hpp"
+#include "std_msgs/msg/multi_array_layout.hpp"
 
 #include <memory>
 #include <optional>
@@ -411,11 +411,11 @@ private:
   void publishDebugTrajectories(
     const std_msgs::msg::Header & header, const std::vector<ReferencePoint> & ref_points,
     const std::vector<TrajectoryPoint> & mpt_traj_points) const;
-  
+
   // Add new method to publish spline coefficients and curvatures
   void publishSplineCoefficientsAndCurvatures(
     const autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline) const;
-  
+
   std::vector<TrajectoryPoint> extractFixedPoints(
     const std::vector<ReferencePoint> & ref_points) const;
 
