@@ -195,7 +195,121 @@ void BoundaryDeparturePreventionModule::update_parameters(
     parameters, lon_tracking_ns + "extra_margin_m",
     longitudinal_config.lon_tracking.extra_margin_m);
   configs.insert_or_assign(AbnormalityType::LONGITUDINAL, longitudinal_config);
-  boundary_departure_checker_ptr_->setParam(pp.bdc_param);
+
+  // Point/goal shift thresholds
+  update_param(parameters, module_name + "th_pt_shift.dist_m", pp.th_pt_shift_dist_m);
+
+  auto th_pt_shift_angle_deg = autoware_utils_math::rad2deg(pp.th_pt_shift_angle_rad);
+  update_param(parameters, module_name + "th_pt_shift.angle_deg", th_pt_shift_angle_deg);
+  pp.th_pt_shift_angle_rad = autoware_utils_math::deg2rad(th_pt_shift_angle_deg);
+
+  update_param(parameters, module_name + "th_pt_shift.goal_dist_m", pp.th_goal_shift_dist_m);
+
+  update_param(
+    parameters, module_name + "th_cutoff_time_s.predicted_path",
+    pp.bdc_param.th_cutoff_time_predicted_path_s);
+  update_param(
+    parameters, module_name + "th_cutoff_time_s.near_boundary",
+    pp.bdc_param.th_cutoff_time_near_boundary_s);
+  update_param(
+    parameters, module_name + "th_cutoff_time_s.departure",
+    pp.bdc_param.th_cutoff_time_departure_s);
+
+  update_param(
+    parameters, module_name + "on_time_buffer_s.critical_departure",
+    pp.on_time_buffer_s.critical_departure);
+  update_param(
+    parameters, module_name + "on_time_buffer_s.near_boundary", pp.on_time_buffer_s.near_boundary);
+  update_param(
+    parameters, module_name + "off_time_buffer_s.critical_departure",
+    pp.off_time_buffer_s.critical_departure);
+  update_param(
+    parameters, module_name + "off_time_buffer_s.near_boundary",
+    pp.off_time_buffer_s.near_boundary);
+
+  const std::string ns_slow_down{module_name + "slow_down_behavior.enable."};
+
+  bool enable_slow_down_near_bound = pp.slow_down_types.count(DepartureType::NEAR_BOUNDARY);
+  if (update_param(
+        parameters, ns_slow_down + "slow_down_near_boundary", enable_slow_down_near_bound)) {
+    if (enable_slow_down_near_bound)
+      pp.slow_down_types.insert(DepartureType::NEAR_BOUNDARY);
+    else
+      pp.slow_down_types.erase(DepartureType::NEAR_BOUNDARY);
+  }
+
+  bool enable_approaching_dpt = pp.slow_down_types.count(DepartureType::APPROACHING_DEPARTURE);
+  if (update_param(
+        parameters, ns_slow_down + "slow_down_before_departure", enable_approaching_dpt)) {
+    if (enable_approaching_dpt)
+      pp.slow_down_types.insert(DepartureType::APPROACHING_DEPARTURE);
+    else
+      pp.slow_down_types.erase(DepartureType::APPROACHING_DEPARTURE);
+  }
+
+  bool enable_critical_dpt = pp.slow_down_types.count(DepartureType::CRITICAL_DEPARTURE);
+  if (update_param(parameters, ns_slow_down + "stop_before_departure", enable_critical_dpt)) {
+    if (enable_critical_dpt)
+      pp.slow_down_types.insert(DepartureType::CRITICAL_DEPARTURE);
+    else
+      pp.slow_down_types.erase(DepartureType::CRITICAL_DEPARTURE);
+  }
+
+  // Trigger thresholds
+  const std::string ns_th_trigger{module_name + "slow_down_behavior.th_trigger."};
+
+  auto th_vel_min_kmph = autoware_utils_math::mps2kmph(pp.bdc_param.th_trigger.th_vel_mps.min);
+  update_param(parameters, ns_th_trigger + "th_vel_kmph.min", th_vel_min_kmph);
+  pp.bdc_param.th_trigger.th_vel_mps.min = autoware_utils_math::kmph2mps(th_vel_min_kmph);
+
+  auto th_vel_max_kmph = autoware_utils_math::mps2kmph(pp.bdc_param.th_trigger.th_vel_mps.max);
+  update_param(parameters, ns_th_trigger + "th_vel_kmph.max", th_vel_max_kmph);
+  pp.bdc_param.th_trigger.th_vel_mps.max = autoware_utils_math::kmph2mps(th_vel_max_kmph);
+
+  update_param(
+    parameters, ns_th_trigger + "th_acc_mps2.min", pp.bdc_param.th_trigger.th_acc_mps2.min);
+  update_param(
+    parameters, ns_th_trigger + "th_acc_mps2.max", pp.bdc_param.th_trigger.th_acc_mps2.max);
+
+  update_param(
+    parameters, ns_th_trigger + "th_jerk_mps3.min", pp.bdc_param.th_trigger.th_jerk_mps3.min);
+  update_param(
+    parameters, ns_th_trigger + "th_jerk_mps3.max", pp.bdc_param.th_trigger.th_jerk_mps3.max);
+
+  update_param(parameters, ns_th_trigger + "brake_delay_s", pp.bdc_param.th_trigger.brake_delay_s);
+  update_param(parameters, ns_th_trigger + "dist_error_m", pp.bdc_param.th_trigger.dist_error_m);
+
+  const std::string ns_dist_to_bound{ns_th_trigger + "th_dist_to_boundary_m."};
+  const std::string ns_dist_to_bound_left{ns_dist_to_bound + "left."};
+  const std::string ns_dist_to_bound_right{ns_dist_to_bound + "right."};
+
+  update_param(
+    parameters, ns_dist_to_bound_left + "min",
+    pp.bdc_param.th_trigger.th_dist_to_boundary_m.left.min);
+  update_param(
+    parameters, ns_dist_to_bound_left + "max",
+    pp.bdc_param.th_trigger.th_dist_to_boundary_m.left.max);
+  update_param(
+    parameters, ns_dist_to_bound_right + "min",
+    pp.bdc_param.th_trigger.th_dist_to_boundary_m.right.min);
+  update_param(
+    parameters, ns_dist_to_bound_right + "max",
+    pp.bdc_param.th_trigger.th_dist_to_boundary_m.right.max);
+
+  // Diagnostic levels
+  const auto update_diag = [&](DepartureType type, const std::string & key) {
+    auto level = static_cast<int8_t>(pp.diagnostic_level.at(type));
+    if (update_param(parameters, module_name + "diagnostic." + key, level)) {
+      pp.diagnostic_level[type] = static_cast<int8_t>(level);
+    }
+  };
+  update_diag(DepartureType::NEAR_BOUNDARY, "near_boundary");
+  update_diag(DepartureType::APPROACHING_DEPARTURE, "approaching_departure");
+  update_diag(DepartureType::CRITICAL_DEPARTURE, "critical_departure");
+
+  if (boundary_departure_checker_ptr_) {
+    boundary_departure_checker_ptr_->setParam(pp.bdc_param);
+  }
 }
 
 void BoundaryDeparturePreventionModule::subscribe_topics(rclcpp::Node & node)

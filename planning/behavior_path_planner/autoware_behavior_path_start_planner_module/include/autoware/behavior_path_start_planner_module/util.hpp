@@ -64,14 +64,6 @@ std::vector<double> calc_curvature_from_trajectory(
   const autoware_planning_msgs::msg::Trajectory & trajectory);
 
 /**
- * @brief Calculate curvature values from point array
- * @param points Input point array
- * @return Vector of curvature values for each point
- */
-std::vector<double> calc_curvature_from_points(
-  const std::vector<geometry_msgs::msg::Point> & points);
-
-/**
  * @brief Find target pose along path at specified longitudinal distance
  * @param centerline_path Centerline path to search along
  * @param start_pose Starting pose
