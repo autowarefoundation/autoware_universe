@@ -27,8 +27,8 @@
 #include <boost/filesystem.hpp>
 
 #include <fmt/format.h>
-#include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 
 #include <algorithm>
 #include <regex>
@@ -54,7 +54,7 @@ void CPUMonitor::checkThermalThrottling()
   const auto t_start = std::chrono::high_resolution_clock::now();
 
   // Create a new socket
-  int sock = socket(AF_INET, SOCK_STREAM, 0);
+  int sock = socket(AF_UNIX, SOCK_STREAM, 0);
   if (sock < 0) {
     std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
     thermal_throttling_data_.clear();
@@ -81,12 +81,12 @@ void CPUMonitor::checkThermalThrottling()
     return;
   }
 
+  constexpr const char * UNIXDOMAIN_SOCKET_PATH = "/tmp/msr_reader.sock";
   // Connect the socket referred to by the file descriptor
-  sockaddr_in addr;
-  memset(&addr, 0, sizeof(sockaddr_in));
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(msr_reader_port_);
-  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  struct sockaddr_un addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sun_family = AF_UNIX;
+  strncpy(addr.sun_path, UNIXDOMAIN_SOCKET_PATH, sizeof(addr.sun_path) - 1);
   // cppcheck-suppress cstyleCast
   ret = connect(sock, (struct sockaddr *)&addr, sizeof(addr));
   if (ret < 0) {

@@ -26,11 +26,12 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
-#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/un.h>
 #include <syslog.h>
 #include <unistd.h>
 
@@ -103,37 +104,48 @@ void usage()
  * @param [in] port port to listen
  * @param [in] list list of path to msr
  */
-void run(int port, const std::vector<std::string> & list)
+void run(int /* port */, const std::vector<std::string> & list)
 {
+  constexpr const char * UNIXDOMAIN_SOCKET_PATH = "/tmp/msr_reader.sock";
+
   // Create a new socket
-  int sock = socket(AF_INET, SOCK_STREAM, 0);
+  int sock = socket(AF_UNIX, SOCK_STREAM, 0);
   if (sock < 0) {
     syslog(LOG_ERR, "Failed to create a new socket. %s\n", strerror(errno));
     return;
   }
 
-  // Allow address reuse
   int ret = 0;
-  int opt = 1;
-  ret = setsockopt(
-    sock, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&opt), (socklen_t)sizeof(opt));
-  if (ret < 0) {
-    syslog(LOG_ERR, "Failed to set socket FD's option. %s\n", strerror(errno));
+
+  ret = unlink(UNIXDOMAIN_SOCKET_PATH);
+  if ((ret < 0) && (errno != ENOENT)) {
+    syslog(LOG_ERR, "Failed to unlink the UNIX domain socket %s %s\n",
+      UNIXDOMAIN_SOCKET_PATH, strerror(errno));
     close(sock);
     return;
   }
 
   // Give the socket FD the local address ADDR
-  sockaddr_in addr;
-  memset(&addr, 0, sizeof(sockaddr_in));
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(port);
-  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  struct sockaddr_un addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sun_family = AF_UNIX;
+  strncpy(addr.sun_path, UNIXDOMAIN_SOCKET_PATH, sizeof(addr.sun_path) - 1);
   // cppcheck-suppress cstyleCast
   ret = bind(sock, (struct sockaddr *)&addr, sizeof(addr));
   if (ret < 0) {
-    syslog(LOG_ERR, "Failed to give the socket FD the local address ADDR. %s\n", strerror(errno));
+    syslog(LOG_ERR, "Failed to bind the UNIX domain socket. %s\n", strerror(errno));
     close(sock);
+    unlink(UNIXDOMAIN_SOCKET_PATH);
+    return;
+  }
+
+  // As msr_reader is executed by root, we need to set the socket to be accessible by all users.
+  // The 'x' bits for the socket file are required to allow the socket to be connected by other users.
+  ret = chmod(UNIXDOMAIN_SOCKET_PATH, 0777);
+  if (ret < 0) {
+    syslog(LOG_ERR, "Failed to set the socket to be accessible by all users. %s\n", strerror(errno));
+    close(sock);
+    unlink(UNIXDOMAIN_SOCKET_PATH);
     return;
   }
 
@@ -142,10 +154,11 @@ void run(int port, const std::vector<std::string> & list)
   if (ret < 0) {
     syslog(LOG_ERR, "Failed to prepare to accept connections on socket FD. %s\n", strerror(errno));
     close(sock);
+    unlink(UNIXDOMAIN_SOCKET_PATH);
     return;
   }
 
-  sockaddr_in client;
+  sockaddr_un client;
   socklen_t len = sizeof(client);
 
   while (true) {
@@ -155,6 +168,7 @@ void run(int port, const std::vector<std::string> & list)
       syslog(
         LOG_ERR, "Failed to prepare to accept connections on socket FD. %s\n", strerror(errno));
       close(sock);
+      unlink(UNIXDOMAIN_SOCKET_PATH);
       return;
     }
 
@@ -208,6 +222,7 @@ void run(int port, const std::vector<std::string> & list)
   }
 
   close(sock);
+  unlink(UNIXDOMAIN_SOCKET_PATH);
 }
 
 int main(int argc, char ** argv)
