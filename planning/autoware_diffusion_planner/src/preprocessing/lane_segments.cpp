@@ -121,7 +121,7 @@ std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_lane_s
     return a.distance_squared < b.distance_squared;
   });
   // Step 3: Apply transformation to selected rows
-  const auto [ego_centric_lane_segments, _] =
+  const Eigen::MatrixXf ego_centric_lane_segments =
     transform_points_and_add_traffic_info(transform_matrix, traffic_light_id_map, distances, m);
 
   // Extract lane tensor data
@@ -236,8 +236,7 @@ void LaneSegmentContext::compute_distances(
   }
 }
 
-std::tuple<Eigen::MatrixXf, ColLaneIDMaps>
-LaneSegmentContext::transform_points_and_add_traffic_info(
+Eigen::MatrixXf LaneSegmentContext::transform_points_and_add_traffic_info(
   const Eigen::Matrix4f & transform_matrix,
   const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
   const std::vector<ColWithDistance> & distances, int64_t m) const
@@ -256,7 +255,6 @@ LaneSegmentContext::transform_points_and_add_traffic_info(
   output_matrix.setZero();
 
   int64_t added_segments = 0;
-  ColLaneIDMaps new_col_id_mapping;
   for (auto distance : distances) {
     if (!distance.inside) {
       continue;
@@ -284,7 +282,7 @@ LaneSegmentContext::transform_points_and_add_traffic_info(
   }
 
   apply_transforms(transform_matrix, output_matrix, added_segments);
-  return {output_matrix, new_col_id_mapping};
+  return output_matrix;
 }
 
 // Internal functions implementation
