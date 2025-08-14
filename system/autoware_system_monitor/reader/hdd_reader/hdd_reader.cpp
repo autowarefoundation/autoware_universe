@@ -50,8 +50,9 @@
 #include <utility>
 #include <vector>
 
-namespace {
-  constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/hdd_reader.sock";
+namespace
+{
+constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/hdd_reader.sock";
 }  // namespace
 
 /**

@@ -40,8 +40,9 @@
 #include <utility>
 #include <vector>
 
-namespace {
-  constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/hdd_reader.sock";
+namespace
+{
+constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/hdd_reader.sock";
 }  // namespace
 
 namespace bp = boost::process;
@@ -49,7 +50,8 @@ namespace bp = boost::process;
 HddMonitor::HddMonitor(const rclcpp::NodeOptions & options)
 : Node("hdd_monitor", options),
   updater_(this),
-  hdd_reader_socket_path_(declare_parameter<std::string>("hdd_reader_socket_path", DEFAULT_SOCKET_PATH)),
+  hdd_reader_socket_path_(
+    declare_parameter<std::string>("hdd_reader_socket_path", DEFAULT_SOCKET_PATH)),
   last_hdd_stat_update_time_{0, 0, this->get_clock()->get_clock_type()}
 {
   using namespace std::literals::chrono_literals;
