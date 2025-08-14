@@ -58,13 +58,14 @@ struct NodeParam
   double th_pt_shift_dist_m{1.0};
   double th_pt_shift_angle_rad{autoware_utils_math::deg2rad(2.0)};
   double th_goal_shift_dist_m{1.0};
-  struct
+  struct OnOffTimeBuffer
   {
     double near_boundary{0.15};
     double critical_departure{0.15};
-  } on_time_buffer_s;
+  };
 
-  double off_time_buffer_s{0.15};
+  OnOffTimeBuffer on_time_buffer_s;
+  OnOffTimeBuffer off_time_buffer_s;
 
   BDCParam bdc_param;
   std::unordered_set<DepartureType> slow_down_types;
@@ -96,7 +97,10 @@ struct NodeParam
       get_or_declare_parameter<double>(node, module_name + "on_time_buffer_s.critical_departure");
     on_time_buffer_s.near_boundary =
       get_or_declare_parameter<double>(node, module_name + "on_time_buffer_s.near_boundary");
-    off_time_buffer_s = get_or_declare_parameter<double>(node, module_name + "off_time_buffer_s");
+    off_time_buffer_s.critical_departure =
+      get_or_declare_parameter<double>(node, module_name + "off_time_buffer_s.critical_departure");
+    off_time_buffer_s.near_boundary =
+      get_or_declare_parameter<double>(node, module_name + "off_time_buffer_s.near_boundary");
 
     bdc_param.th_max_lateral_query_num =
       get_or_declare_parameter<int>(node, module_name + "th_max_lateral_query_num");

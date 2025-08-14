@@ -17,7 +17,9 @@
       on_time_buffer_s:
         near_boundary: 0.15
         critical_departure: 0.15
-      off_time_buffer_s: 0.15
+      off_time_buffer_s:
+        near_boundary: 0.15
+        critical_departure: 0.15
 
       abnormality:
         normal:
