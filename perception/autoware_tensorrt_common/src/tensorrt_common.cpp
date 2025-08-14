@@ -26,6 +26,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -256,10 +257,10 @@ nvinfer1::TensorIOMode TrtCommon::getTensorIOMode(const char * tensor_name) cons
   return engine_->getTensorIOMode(tensor_name);
 }
 
-nvinfer1::DataType TrtCommon::getTensorDataType(const char * tensor_name) const
+std::optional<nvinfer1::DataType> TrtCommon::getTensorDataType(const char * tensor_name) const
 {
   if (!engine_) {
-    throw std::runtime_error("Engine is not initialized");
+    return std::nullopt;
   }
   return engine_->getTensorDataType(tensor_name);
 }

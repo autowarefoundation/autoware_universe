@@ -75,7 +75,6 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
     declare_parameter<std::string>("model_params.position_embedding_engine_path", "");
 
   const std::string trt_precision = declare_parameter<std::string>("model_params.trt_precision");
-  const bool build_only = declare_parameter<bool>("build_only");
   const uint64_t workspace_size =
     1ULL << declare_parameter<int>("model_params.workspace_size", 32);  // Default 4GB
 
@@ -124,7 +123,7 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
 
   network_ = std::make_unique<StreamPetrNetwork>(network_config);
 
-  if (build_only) {
+  if (declare_parameter<bool>("build_only", false)) {
     RCLCPP_INFO(
       rclcpp::get_logger(logger_name_.c_str()),
       "TensorRT engine files built successfully. Shutting Down...");

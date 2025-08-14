@@ -131,9 +131,11 @@ StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config) : config_(con
   pts_head_ = std::make_unique<SubNetwork>(pts_head_config, profiler_);
   pos_embed_ = std::make_unique<SubNetwork>(pos_embed_config, profiler_);
 
+  auto logger = rclcpp::get_logger(config_.logger_name.c_str());
+
   if (config_.trt_precision == "fp16") {
     RCLCPP_INFO(
-      rclcpp::get_logger(config_.logger_name.c_str()),
+      logger,
       "Setting sigmoid and softmax layers to FP32 precision for stability");
     setSigmoidAndSoftmaxLayersToFP32(pts_head_->getNetwork());
   }
@@ -143,9 +145,10 @@ StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config) : config_(con
     throw std::runtime_error("Failed to setup TRT engines.");
   }
 
-  backbone_->setBindings();
-  pts_head_->setBindings();
-  pos_embed_->setBindings();
+  // Setup TensorRT bindings
+  if (!backbone_->setBindings(logger) || !pts_head_->setBindings(logger) || !pos_embed_->setBindings(logger)) {
+    throw std::runtime_error("Failed to setup TRT bindings.");
+  }
 
   mem_.Init(stream_, config_.pre_memory_length, config_.post_memory_length);
   mem_.pre_buf = static_cast<float *>(pts_head_->bindings["pre_memory_timestamp"]->ptr);

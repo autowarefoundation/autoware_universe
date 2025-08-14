@@ -80,17 +80,27 @@ public:
   std::unordered_map<std::string, std::shared_ptr<Tensor>> bindings;
 
   using TrtCommon::TrtCommon;
-  void setBindings()
+  bool setBindings(const rclcpp::Logger & logger)
   {
     for (int n = 0; n < getNbIOTensors(); n++) {
       std::string name = getIOTensorName(n);
       Dims d = getTensorShape(name.c_str());
-      DataType dtype = getTensorDataType(name.c_str());
+      auto dtype_opt = getTensorDataType(name.c_str());
+      if (!dtype_opt.has_value()) {
+       RCLCPP_WARN(logger, "Warning: Could not get data type for tensor: %s", name.c_str());
+        return false;
+      }
+      DataType dtype = dtype_opt.value();
       bindings[name] = std::make_shared<Tensor>(name, d, dtype);
       bindings[name]->iomode = getTensorIOMode(name.c_str());
-      std::cout << *(bindings[name]) << std::endl;
+      
+      std::stringstream ss;
+      ss << *(bindings[name]);
+      RCLCPP_INFO(logger, "%s", ss.str().c_str());
+
       setTensorAddress(name.c_str(), bindings[name]->ptr);
     }
+    return true;
   }
 };
 

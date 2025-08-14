@@ -23,6 +23,7 @@
 #include <NvOnnxParser.h>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -128,9 +129,9 @@ public:
    * @brief Get output tensor data type by name from TensorRT engine.
    *
    * @param[in] tensor_name Tensor name.
-   * @return Tensor datatype.
+   * @return Tensor datatype or nullopt if engine is not initialized.
    */
-  [[nodiscard]] nvinfer1::DataType getTensorDataType(const char * tensor_name) const;
+  [[nodiscard]] std::optional<nvinfer1::DataType> getTensorDataType(const char * tensor_name) const;
 
   /**
    * @brief Get output tensor data type by name from TensorRT engine.
