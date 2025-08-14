@@ -24,16 +24,6 @@
 namespace autoware::command_mode_decider
 {
 
-void logging_mode_change(
-  const rclcpp::Logger & logger, const std::string & name, uint16_t prev, uint16_t next)
-{
-  if (prev != next) {
-    const auto prev_text = std::to_string(prev);
-    const auto next_text = std::to_string(next);
-    RCLCPP_INFO_STREAM(logger, name << " mode changed: " << prev_text << " -> " << next_text);
-  }
-}
-
 std::string text(const std::vector<uint16_t> & modes)
 {
   std::string result;
