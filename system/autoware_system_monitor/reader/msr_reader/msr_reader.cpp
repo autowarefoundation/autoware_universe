@@ -95,8 +95,8 @@ typedef struct
 void usage()
 {
   printf("Usage: msr_reader [options]\n");
-  printf("  -h --help   : Display help\n");
-  printf("  -s --socket # : Path of UNIX domain socket.\n");
+  printf("  -h --help        : Display help\n");
+  printf("  -s --socket PATH : Path of UNIX domain socket\n");
   printf("\n");
 }
 

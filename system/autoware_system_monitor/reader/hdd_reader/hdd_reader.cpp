@@ -156,8 +156,8 @@ struct SmartData
 void usage()
 {
   printf("Usage: hdd_reader [options]\n");
-  printf("  -h --help   : Display help\n");
-  printf("  -p --port # : Port number to listen to.\n");
+  printf("  -h --help        : Display help\n");
+  printf("  -s --socket PATH : Path of UNIX domain socket\n");
   printf("\n");
 }
 
