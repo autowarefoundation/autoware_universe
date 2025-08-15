@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_calibration_status parameters",
+  "type": "object",
+  "definitions": {
+    "calibration_status": {
+      "type": "object",
+      "properties": {
+        "onnx_path": {
+          "type": "string",
+          "description": "Path to the ONNX model file used for calibration status verification.",
+          "default": "$(var model_path)/$(var model_name).onnx"
+        },
+        "runtime_mode": {
+          "type": "string",
+          "description": "The mode of calibration status node, which determines when the calibration status verification is performed. 'manual' triggers by service, 'periodic' runs at a fixed interval, and 'active' runs continuously.",
+          "default": "active",
+          "enum": ["manual", "periodic", "active"]
+        },
+        "period": {
+          "type": "number",
+          "description": "The period duration in seconds. For manual mode it determines the timeout duration for the service request. For periodic mode it determines how often the calibration status is verified.",
+          "default": "5.0"
+        },
+        "queue_size": {
+          "type": "integer",
+          "description": "The queue size in synchronized callbacks.",
+          "default": 10
+        },
+        "input": {
+          "type": "object",
+          "properties": {
+            "cloud_topics": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of LiDAR topics to subscribe for calibration status verification. If only a single LiDAR topic is specified with multiple camera topics, all the camera topics will be validated against that single LiDAR topic. If multiple LiDAR topics are specified with multiple camera topics, each camera topic will be validated against the corresponding LiDAR topic in the list (both lists size must match). If multiple LiDAR topics are specified with a single camera topic, the single camera topic will be validated against all the LiDAR topics in the list.",
+              "default": ["pointcloud"]
+            },
+            "image_topics": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of camera topics to subscribe for calibration status verification. Same rules as for cloud_topics apply here.",
+              "default": ["camera0/image_rect"]
+            },
+            "approx_deltas": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "The approximate time deltas in seconds for each topic pair (LiDAR and camera) for Approximate Time Synchronization Policy. The length of this array must be equal to maximum length of cloud_topics and image_topics arrays",
+              "default": ["0.1"]
+            }
+          },
+          "required": ["cloud_topics", "image_topics", "approx_deltas"],
+          "additionalProperties": false
+        },
+        "prerequisite": {
+          "type": "object",
+          "properties": {
+            "check_velocity": {
+              "type": "boolean",
+              "description": "Flag to enable or disable velocity check for calibration status verification. If enabled, the node will subscribe to the specified velocity source topics and verify that the vehicle is moving at maximum velocity defined by velocity_threshold.",
+              "default": true
+            },
+            "velocity_source": {
+              "type": "string",
+              "description": "The msg type to subscribe for velocity check. Available options are 'twist', 'twist_stamped', 'twist_with_cov', 'twist_with_cov_stamped', 'odometry'.",
+              "enum": [
+                "twist",
+                "twist_with_cov",
+                "twist_stamped",
+                "twist_with_cov_stamped",
+                "odometry"
+              ],
+              "default": "twist_with_cov_stamped"
+            },
+            "velocity_threshold": {
+              "type": "number",
+              "description": "The maximum velocity threshold in meters per second for the vehicle to be considered moving. If the vehicle's velocity is below this threshold, the calibration status verification will not be performed.",
+              "default": 0.1
+            }
+          },
+          "required": ["check_velocity", "velocity_source", "velocity_threshold"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["onnx_path", "runtime_mode", "period", "queue_size", "input", "prerequisite"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/calibration_status"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <arg name="input_velocity" default="/sensing/vehicle_velocity_converter/twist_with_covariance"/>
+  <arg name="validate_calibration_srv" default="validate_calibration"/>
+  <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
+  <arg name="model_name" default="calibration_status" description="options: `calibration_status"/>
+  <arg name="model_path" default="$(var data_path)/calibration_status"/>
+  <arg name="model_param_path" default="$(find-pkg-share autoware_calibration_status)/config/$(var model_name).param.yaml"/>
+  <arg name="ml_package_param_path" default="$(var model_path)/ml_package_$(var model_name).param.yaml"/>
+  <arg name="build_only" default="false" description="shutdown node after TensorRT engine file is built"/>
+
+  <!-- TODO(amadeuszsz): remove decompressor node from launch file-->
+  <arg name="decompressor_param_file" default="$(find-pkg-share autoware_image_transport_decompressor)/config/image_transport_decompressor.param.yaml"/>
+  <node pkg="autoware_image_transport_decompressor" exec="image_transport_decompressor_node" name="image_transport_decompressor_node">
+    <remap from="~/input/compressed_image" to="/sensing/camera/camera8/image_raw/compressed"/>
+    <remap from="~/output/raw_image" to="/sensing/camera/camera8/image_rect_color"/>
+    <param from="$(var decompressor_param_file)"/>
+    <param name="use_sim_time" value="true"/>
+  </node>
+
+  <node pkg="autoware_calibration_status" exec="calibration_status_node" name="calibration_status" output="both">
+    <param from="$(var model_param_path)" allow_substs="true"/>
+    <param from="$(var ml_package_param_path)"/>
+    <remap from="~/input/velocity" to="$(var input_velocity)"/>
+    <param name="use_sim_time" value="true"/>
+  </node>
+</launch>

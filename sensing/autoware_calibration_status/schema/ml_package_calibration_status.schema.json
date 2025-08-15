@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ML package autoware_calibration_status parameters",
+  "type": "object",
+  "definitions": {
+    "calibration_status": {
+      "type": "object",
+      "properties": {
+        "lidar_range": {
+          "type": "number",
+          "description": "The range of the LiDAR points which are considered as valid.",
+          "default": "128.0"
+        },
+        "dilation_size": {
+          "type": "integer",
+          "description": "The size of the dilation kernel used for point cloud processing, 1 means 3x3 kernel, 2 means 5x5 kernel, etc.",
+          "default": 1
+        }
+      },
+      "required": ["lidar_range", "dilation_size"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/calibration_status"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
