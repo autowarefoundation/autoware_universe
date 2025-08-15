@@ -87,7 +87,6 @@ using autoware::vehicle_info_utils::VehicleInfo;
 using builtin_interfaces::msg::Duration;
 using builtin_interfaces::msg::Time;
 using geometry_msgs::msg::Point;
-using preprocess::ColLaneIDMaps;
 using preprocess::TrafficSignalStamped;
 using rcl_interfaces::msg::SetParametersResult;
 using std_msgs::msg::ColorRGBA;
@@ -112,6 +111,7 @@ struct DiffusionPlannerParams
   bool update_traffic_light_group_info;
   bool keep_last_traffic_light_group_info;
   double traffic_light_group_msg_timeout_seconds;
+  int batch_size;
 };
 struct DiffusionPlannerDebugParams
 {
@@ -160,7 +160,7 @@ struct DiffusionPlannerDebugParams
  * - ONNX Runtime members: env_, session_options_, session_, allocator_, cuda_options_.
  * - agent_data_: Optional input data for inference.
  * - params_, debug_params_, normalization_map_: Node and debug parameters, normalization info.
- * - Lanelet map and routing members: route_ptr_, lanelet_map_ptr_, routing_graph_ptr_,
+ * - Lanelet map and routing members: route_ptr_, routing_graph_ptr_,
  * traffic_rules_ptr_, lane_segment_context_, is_map_loaded_.
  * - ROS 2 node elements: timer_, publishers, subscriptions, and time_keeper_.
  * - generator_uuid_: Unique identifier for the planner instance.
@@ -244,6 +244,13 @@ public:
    */
   std::vector<float> create_ego_agent_past(const Eigen::Matrix4f & map_to_ego_transform);
 
+  /**
+   * @brief Replicate single sample data for batch processing.
+   * @param single_data Single sample data.
+   * @return Vector replicated for the configured batch size.
+   */
+  std::vector<float> replicate_for_batch(const std::vector<float> & single_data);
+
   // current state
   Odometry ego_kinematic_state_;
 
@@ -281,7 +288,6 @@ public:
 
   // Lanelet map
   LaneletRoute::ConstSharedPtr route_ptr_;
-  std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
   std::shared_ptr<lanelet::routing::RoutingGraph> routing_graph_ptr_;
   std::shared_ptr<lanelet::traffic_rules::TrafficRules> traffic_rules_ptr_;
   std::map<lanelet::Id, TrafficSignalStamped> traffic_light_id_map_;

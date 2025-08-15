@@ -211,11 +211,6 @@ public:
   double quantile(double p) const;
 
   /**
-   * Return number of centroids in the t-digest
-   */
-  size_t centroid_count() const { return (*active).values.size(); }
-
-  /**
    * Retrieve the number of merged data points in the t-digest
    *
    * @return
