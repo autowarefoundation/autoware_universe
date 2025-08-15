@@ -27,9 +27,12 @@ ArrivalChecker::ArrivalChecker(rclcpp::Node * node) : vehicle_stop_checker_(node
 {
   const double angle_deg = node->declare_parameter<double>("arrival_check_angle_deg");
   angle_ = autoware_utils::deg2rad(angle_deg);
-  arrival_check_lateral_distance_ = node->declare_parameter<double>("arrival_check_lateral_distance");
-  arrival_check_longitudinal_distance_ = node->declare_parameter<double>("arrival_check_longitudinal_distance");
-  arrival_check_longitudinal_overshoot_distance_ = node->declare_parameter<double>("arrival_check_longitudinal_overshoot_distance");
+  arrival_check_lateral_distance_ =
+    node->declare_parameter<double>("arrival_check_lateral_distance");
+  arrival_check_longitudinal_distance_ =
+    node->declare_parameter<double>("arrival_check_longitudinal_distance");
+  arrival_check_longitudinal_overshoot_distance_ =
+    node->declare_parameter<double>("arrival_check_longitudinal_overshoot_distance");
   duration_ = node->declare_parameter<double>("arrival_check_duration");
 }
 
@@ -69,12 +72,14 @@ bool ArrivalChecker::is_arrived(const PoseStamped & pose) const
   const double yaw_diff = autoware_utils::normalize_radian(yaw_pose - yaw_goal);
 
   if (std::abs(lateral_offset_to_goal) > arrival_check_lateral_distance_) {
-    // If the lateral offset is larger than the threshold, we consider that the vehicle is not arrived.
+    // If the lateral offset is larger than the threshold, we consider that the vehicle is not
+    // arrived.
     return false;
   }
 
   // Adjust distance threshold if vehicle is past the goal
-  double distance_threshold_longitudinal = arrival_check_longitudinal_distance_;  // Always initialize to normal value
+  double distance_threshold_longitudinal =
+    arrival_check_longitudinal_distance_;  // Always initialize to normal value
 
   if (longitudinal_offset_to_goal > 0.0) {
     // Vehicle is past the goal in the goal's heading direction
