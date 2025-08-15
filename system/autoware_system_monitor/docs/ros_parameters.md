@@ -42,11 +42,11 @@ hdd_monitor:
 
 hdd_monitor:
 
-| Name                   |  Type  |  Unit   |        Default        | Notes                                                                  |
-| :--------------------- | :----: | :-----: | :-------------------: | :--------------------------------------------------------------------- |
-| hdd_reader_socket_path | string |   n/a   | /tmp/hddr_reader.sock | UNIX domain socket path to connect to hdd_reader.                      |
-| usage_warn             | float  | %(1e-2) |         0.95          | Generates warning when disk usage reaches a specified value or higher. |
-| usage_error            | float  | %(1e-2) |         0.99          | Generates error when disk usage reaches a specified value or higher.   |
+| Name                   |  Type  |  Unit   |        Default       | Notes                                                                  |
+| :--------------------- | :----: | :-----: | :------------------: | :--------------------------------------------------------------------- |
+| hdd_reader_socket_path | string |   n/a   | /tmp/hdd_reader.sock | UNIX domain socket path to connect to hdd_reader.                      |
+| usage_warn             | float  | %(1e-2) |         0.95         | Generates warning when disk usage reaches a specified value or higher. |
+| usage_error            | float  | %(1e-2) |         0.99         | Generates error when disk usage reaches a specified value or higher.   |
 
 ## <u>Memory Monitor</u>
 
