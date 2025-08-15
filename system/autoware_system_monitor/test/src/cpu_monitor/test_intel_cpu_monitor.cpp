@@ -803,7 +803,7 @@ TEST_F(CPUMonitorTestSuite, throttlingConnectErrorTest)
   ASSERT_EQ(status.level, DiagStatus::ERROR);
   ASSERT_STREQ(status.message.c_str(), "connect error");
   ASSERT_TRUE(findValue(status, "connect", value));
-  // the UNIX domain socket file is not created.
+  // There is no UNIX domain socket file.
   ASSERT_STREQ(value.c_str(), strerror(ENOENT));
 }
 
