@@ -457,46 +457,6 @@ std::optional<std::vector<geometry_msgs::msg::Point>> convert_arc_to_clothoid(
   return clothoid_path;
 }
 
-std::optional<std::vector<geometry_msgs::msg::Point>> convert_arc_to_clothoid_with_correction(
-  const ArcSegment & arc_segment, const geometry_msgs::msg::Pose & start_pose,
-  double initial_velocity, double wheel_base, double max_steer_angle_rate, double point_interval)
-{
-  // Calculate minimum radius (from arc_segment)
-  const double minimum_radius = arc_segment.radius;
-
-  // Calculate optimal clothoid parameters from vehicle parameters
-  const double circular_steer_angle = std::atan(wheel_base / minimum_radius);
-  const double minimum_steer_time = circular_steer_angle / max_steer_angle_rate;
-  const double L_min = initial_velocity * minimum_steer_time;
-  const double A_min = std::sqrt(minimum_radius * L_min);
-
-  RCLCPP_DEBUG(
-    rclcpp::get_logger("ClothoidPullOut"),
-    "Clothoid parameters: radius=%.3f, A_min=%.3f, L_min=%.3f, velocity=%.3f", minimum_radius,
-    A_min, L_min, initial_velocity);
-
-  // Execute original clothoid conversion
-  auto clothoid_points_opt =
-    convert_arc_to_clothoid(arc_segment, start_pose, A_min, L_min, point_interval);
-
-  if (!clothoid_points_opt) {
-    RCLCPP_DEBUG(
-      rclcpp::get_logger("ClothoidPullOut"),
-      "Clothoid conversion failed! Check parameters and arc segment validity.");
-    RCLCPP_DEBUG(
-      rclcpp::get_logger("ClothoidPullOut"),
-      "Arc segment: radius=%.3f, center=(%.3f, %.3f), is_clockwise=%s", arc_segment.radius,
-      arc_segment.center.x, arc_segment.center.y, arc_segment.is_clockwise ? "true" : "false");
-    return std::nullopt;
-  }
-
-  // Apply endpoint correction
-  auto corrected_points =
-    correct_clothoid_by_rigid_transform(*clothoid_points_opt, arc_segment, start_pose);
-
-  return corrected_points;
-}
-
 std::optional<PathWithLaneId> create_path_with_lane_id_from_clothoid_paths(
   const std::vector<std::vector<geometry_msgs::msg::Point>> & clothoid_paths, double velocity,
   double target_velocity, double acceleration, const lanelet::ConstLanelets & search_lanes,
