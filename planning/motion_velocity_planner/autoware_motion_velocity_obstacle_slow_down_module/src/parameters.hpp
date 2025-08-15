@@ -57,7 +57,6 @@ struct CommonParam
 
 struct ObstacleFilteringParam
 {
-  PointcloudObstacleFilteringParam pointcloud_obstacle_filtering_param;
   std::vector<uint8_t> object_types{};
 
   bool use_pointcloud{false};
