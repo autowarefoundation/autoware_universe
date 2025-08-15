@@ -156,6 +156,8 @@ void update_departure_intervals_poses(
         utils::is_point_shifted(prev_pose, curr_pose, th_pt_shift_dist_m, th_pt_shift_angle_rad)) {
       return true;
     }
+    interval.start.pose =
+      motion_utils::calcInterpolatedPose(raw_ref_traj, interval.start_dist_on_traj);
     interval.end.pose = curr_pose;
     return false;
   });
