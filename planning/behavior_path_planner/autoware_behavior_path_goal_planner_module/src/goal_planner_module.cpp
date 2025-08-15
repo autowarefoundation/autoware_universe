@@ -69,6 +69,9 @@ namespace autoware::behavior_path_planner
 
 {
 
+/**
+ * @brief check if `lane_ids` is not lane changing upto `search_id`
+ */
 static bool route_is_straight(
   std::vector<lanelet::Id> lane_ids, const lanelet::LaneletMapConstPtr lanelet_map,
   lanelet::routing::RoutingGraphConstPtr routing_graph, const lanelet::Id search_id)
@@ -84,7 +87,7 @@ static bool route_is_straight(
     if (!is_straight) {
       return false;
     }
-    if (is_straight && lane1.id() == search_id) {
+    if (lane1.id() == search_id) {
       return true;
     }
   }
