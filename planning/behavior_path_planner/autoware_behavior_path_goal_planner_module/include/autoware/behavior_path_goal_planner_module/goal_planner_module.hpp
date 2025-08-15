@@ -278,7 +278,7 @@ private:
   std::optional<lanelet::ConstLanelet> lane_change_complete_lane_{};
 
   bool lane_change_completed_{};  //<! means current lane sequence is now along
-                                  // lane_change_complete_lane_, so ego has transitted
+                                  // lane_change_complete_lane_, so ego has made transit
 };
 
 class GoalPlannerModule : public SceneModuleInterface
