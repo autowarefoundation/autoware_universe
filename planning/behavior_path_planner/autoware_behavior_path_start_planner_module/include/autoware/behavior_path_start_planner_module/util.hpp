@@ -56,14 +56,6 @@ std::optional<PathWithLaneId> extractCollisionCheckSection(
   const PullOutPath & path, const double collision_check_distance_from_end);
 
 /**
- * @brief Calculate curvature values from trajectory points
- * @param trajectory Input trajectory
- * @return Vector of curvature values for each trajectory point
- */
-std::vector<double> calc_curvature_from_trajectory(
-  const autoware_planning_msgs::msg::Trajectory & trajectory);
-
-/**
  * @brief Find target pose along path at specified longitudinal distance
  * @param centerline_path Centerline path to search along
  * @param start_pose Starting pose
