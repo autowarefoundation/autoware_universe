@@ -89,10 +89,7 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
     // Find the index of the current preferred primitive
     auto current_it = std::find_if(
       current_segment.primitives.begin(), current_segment.primitives.end(),
-      [&](const LaneletPrimitive & p) {
-        return p.id == current_segment.preferred_primitive.id;
-      }
-    );
+      [&](const LaneletPrimitive & p) { return p.id == current_segment.preferred_primitive.id; });
     if (current_it == current_segment.primitives.end()) {
       throw std::runtime_error(
         "ManualLaneChangeHandler: Preferred primitive not found in current segment.");
@@ -103,8 +100,7 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
       next_segment.primitives.begin(), next_segment.primitives.end(),
       [&next_segment](const LaneletPrimitive & p) {
         return p.id == next_segment.preferred_primitive.id;
-      }
-    );
+      });
     if (next_it == next_segment.primitives.end()) {
       throw std::runtime_error(
         "ManualLaneChangeHandler: Preferred primitive not found in next segment.");
@@ -118,8 +114,10 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
     const auto next_lanelet = get_lanelet_by_id_(next_it->id);
     std::string next_turning_dir = next_lanelet.attributeOr("turn_direction", "none");
 
-    const bool left_shift_not_available = (override_direction == DIRECTION::MANUAL_LEFT && current_index == 0);
-    const bool right_shift_not_available = (override_direction == DIRECTION::MANUAL_RIGHT &&
+    const bool left_shift_not_available =
+      (override_direction == DIRECTION::MANUAL_LEFT && current_index == 0);
+    const bool right_shift_not_available =
+      (override_direction == DIRECTION::MANUAL_RIGHT &&
        current_index + 1 == current_segment.primitives.size());
     const bool next_segment_is_left_turn = (next_turning_dir == "left");
     const bool next_segment_is_right_turn = (next_turning_dir == "right");
