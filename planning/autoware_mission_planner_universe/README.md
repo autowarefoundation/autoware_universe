@@ -207,6 +207,46 @@ Based on certain criteria, shifting may be rejected, as in the following cases:
 1. Left or Right shift is not available due to no lane being present to shift to
 2. The next segment is a turn or the very last lane - this is to ensure that we can navigate the enter path and end up at the goal
 
+```plantuml
+@startuml
+title process_lane_change_request
+
+start
+:Compute override_direction from request;
+
+if (override_direction == AUTO) then (yes)
+  if (currently in lane-change override) then (yes)
+    :revert to original route;
+    stop
+  else (no)
+    :do nothing;
+    stop
+  endif
+else (no)
+  if (has a route been set?) then (yes)
+    :find initial segment;
+    while (not penultimate segment) is (yes)
+      if (shift unavailable\nor next segment is turn?) then (yes)
+        --> while (not penultimate segment)   ' continue
+      else (no)
+        if (left-shift requested and possible) then (yes)
+          :shift left;
+        elseif (right-shift requested and possible) then (yes)
+          :shift right;
+        endif
+        --> while (not penultimate segment)   ' jump back instead of implicit join
+      endif
+    endwhile (no)
+    stop
+
+  else (no)
+    :do nothing;
+    stop
+  endif
+endif
+@enduml
+```
+
 #### Rerouting Limitations
 
 - The safety judgment of rerouting is not guaranteed to the level of trajectory or control. Therefore, the distance to the reroute change must be large for the safety.
