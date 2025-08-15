@@ -178,7 +178,7 @@
         <remap from="~/input/traffic_signals" to="/perception/traffic_light_recognition/traffic_signals"/>
         <remap from="~/input/virtual_traffic_light_states" to="/perception/virtual_traffic_light_states"/>
         <remap from="~/input/occupancy_grid" to="/perception/occupancy_grid_map/map"/>
-        <remap from="~/output/trajectory" to="motion_velocity_planner/trajectory"/>
+        <remap from="~/output/trajectory" to="$(var interface_output_topic)"/>
         <remap from="~/output/velocity_limit" to="/planning/scenario_planning/max_velocity_candidates"/>
         <remap from="~/output/clear_velocity_limit" to="/planning/scenario_planning/clear_velocity_limit"/>
         <remap from="~/output/stop_reasons" to="/planning/scenario_planning/status/stop_reasons"/>
