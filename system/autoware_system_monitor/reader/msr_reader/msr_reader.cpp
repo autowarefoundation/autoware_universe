@@ -45,8 +45,9 @@
 
 namespace fs = boost::filesystem;
 
-namespace {
-  constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/msr_reader.sock";
+namespace
+{
+constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/msr_reader.sock";
 }  // namespace
 
 /**
@@ -118,8 +119,9 @@ void run(const std::string & socket_path, const std::vector<std::string> & list)
 
   ret = unlink(socket_path.c_str());
   if ((ret < 0) && (errno != ENOENT)) {
-    syslog(LOG_ERR, "Failed to unlink the UNIX domain socket %s %s\n",
-      socket_path.c_str(), strerror(errno));
+    syslog(
+      LOG_ERR, "Failed to unlink the UNIX domain socket %s %s\n", socket_path.c_str(),
+      strerror(errno));
     close(sock);
     return;
   }
@@ -143,8 +145,8 @@ void run(const std::string & socket_path, const std::vector<std::string> & list)
   // by other users.
   ret = chmod(socket_path.c_str(), 0777);
   if (ret < 0) {
-    syslog(LOG_ERR, "Failed to set the socket to be accessible by all users. %s\n",
-      strerror(errno));
+    syslog(
+      LOG_ERR, "Failed to set the socket to be accessible by all users. %s\n", strerror(errno));
     close(sock);
     unlink(socket_path.c_str());
     return;

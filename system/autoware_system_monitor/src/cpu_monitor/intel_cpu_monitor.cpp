@@ -35,21 +35,24 @@
 #include <string>
 #include <vector>
 
-namespace {
-  constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/msr_reader.sock";
+namespace
+{
+constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/msr_reader.sock";
 }  // namespace
 
 namespace fs = boost::filesystem;
 
 CPUMonitor::CPUMonitor(const rclcpp::NodeOptions & options) : CPUMonitorBase("cpu_monitor", options)
 {
-  msr_reader_socket_path_ = declare_parameter<std::string>("msr_reader_socket_path", DEFAULT_SOCKET_PATH);
+  msr_reader_socket_path_ =
+    declare_parameter<std::string>("msr_reader_socket_path", DEFAULT_SOCKET_PATH);
 }
 
 CPUMonitor::CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
 : CPUMonitorBase(node_name, options)
 {
-  msr_reader_socket_path_ = declare_parameter<std::string>("msr_reader_socket_path", DEFAULT_SOCKET_PATH);
+  msr_reader_socket_path_ =
+    declare_parameter<std::string>("msr_reader_socket_path", DEFAULT_SOCKET_PATH);
 }
 
 void CPUMonitor::checkThermalThrottling()
