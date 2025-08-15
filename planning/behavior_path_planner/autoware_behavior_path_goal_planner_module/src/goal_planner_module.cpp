@@ -35,6 +35,9 @@
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <magic_enum.hpp>
+#include <range/v3/view/drop.hpp>
+#include <range/v3/view/reverse.hpp>
+#include <range/v3/view/zip.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <algorithm>
@@ -46,6 +49,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -61,9 +65,37 @@ using autoware_utils::calc_distance2d;
 using autoware_utils::calc_offset_pose;
 using autoware_utils::create_marker_color;
 using nav_msgs::msg::OccupancyGrid;
-
 namespace autoware::behavior_path_planner
+
 {
+
+static bool route_is_straight(
+  std::vector<lanelet::Id> lane_ids, const lanelet::LaneletMapConstPtr lanelet_map,
+  lanelet::routing::RoutingGraphConstPtr routing_graph, const lanelet::Id search_id)
+{
+  for (const auto [lane1_id, lane2_id] :
+       ranges::views::zip(lane_ids, lane_ids | ranges::views::drop(1))) {
+    const auto lane1 = lanelet_map->laneletLayer.get(lane1_id);
+    const auto lane2 = lanelet_map->laneletLayer.get(lane2_id);
+    const auto lane1_nexts = routing_graph->following(lane1);
+    const auto is_straight = std::any_of(
+      lane1_nexts.begin(), lane1_nexts.end(),
+      [&](const auto & next_lane) { return next_lane.id() == lane2.id(); });
+    if (!is_straight) {
+      return false;
+    }
+    if (is_straight && lane1.id() == search_id) {
+      return true;
+    }
+  }
+  // here means lane_ids is straight, but search_id is not found, possibly because ego has passed
+  // search_id lanelet
+  const auto front_lane = lanelet_map->laneletLayer.get(lane_ids.front());
+  const auto prev_lanes = routing_graph->previous(front_lane);
+  return std::any_of(prev_lanes.begin(), prev_lanes.end(), [&](const auto & prev_lane) {
+    return prev_lane.id() == search_id;
+  });
+}
 
 void LaneChangeContextMonitor::update_progress(
   const PathWithLaneId & path, const lanelet::LaneletMapConstPtr lanelet_map,
@@ -83,18 +115,21 @@ void LaneChangeContextMonitor::update_progress(
   if (lane_ids.empty()) {
     return;
   }
-  if (lane_change_complete_lane_ && lane_change_complete_lane_.value().id() == lane_ids.front()) {
-    // NOTE(soblin): assume that lane change module outputs a path starting from this lanelet
+
+  const auto lane_change_complete_lane =
+    goal_planner_utils::find_last_lane_change_completed_lanelet(path, lanelet_map, routing_graph);
+  const auto lane_change_detected = lane_change_complete_lane_.has_value();
+  if (
+    !lane_change_detected && lane_change_complete_lane_ &&
+    route_is_straight(lane_ids, lanelet_map, routing_graph, lane_change_complete_lane_->id())) {
     lane_change_completed_ = true;
     return;
   }
 
   {
-    lane_change_complete_lane_ =
-      goal_planner_utils::find_last_lane_change_completed_lanelet(path, lanelet_map, routing_graph);
+    lane_change_complete_lane_ = lane_change_complete_lane;
   }
 
-  const auto lane_change_detected = lane_change_complete_lane_.has_value();
   {
     const auto lane_change_detected_from_beginning =
       !prev_lane_change_detected_ && lane_change_detected;
@@ -739,6 +774,10 @@ std::pair<LaneParkingResponse, FreespaceParkingResponse> GoalPlannerModule::sync
 void GoalPlannerModule::updateData()
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  if (!utils::isAllowedGoalModification(planner_data_->route_handler)) {
+    return;
+  }
 
   if (!goal_searcher_) {
     goal_searcher_.emplace(GoalSearcher::create(parameters_, vehicle_footprint_, planner_data_));
