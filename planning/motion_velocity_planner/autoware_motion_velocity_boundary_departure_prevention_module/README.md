@@ -65,20 +65,9 @@ In such cases, the actual motion of the vehicle diverges from the MPC trajectory
 - **Catches lateral deviations early**: If the vehicle drifts due to steering faults, like stuck actuators or sudden command spikes, the expanded margin ahead of the vehicle can detect the deviation before the ego crosses into an unsafe region.
 - **Predicts future risk along the path**: The margin extends along the forward direction of the predicted path, enabling the system to foresee potential boundary violations caused by small steering errors that compound over time.
 
-<div align="center">
-  <table style="table-layout: fixed; width: 600px;">
-    <tr>
-      <th style="text-align: center; width: 50%; word-wrap: break-word; white-space: normal;">Without Abnormality Margins</th>
-      <th style="text-align: center; width: 50%; word-wrap: break-word; white-space: normal;">With Steering Abnormality Margin</th>
-    </tr>
-    <tr>
-      <td style="text-align: center;"><img src="./images/normal_no_abnormalities_footprint.png" alt="Footprint without abnormality margin" width="250"></td>
-      <td style="text-align: center;"><img src="./images/steering_abnormalities_footprint.png" alt="Footprint with localization abnormality margin" width="250"></td>
-    </tr>
-  </table>
-</div>
-
-This method works even when control outputs are inaccurate. Because the margin is computed using the predicted path, not just the current pose, it accounts for latency, actuator delays, and other uncertainties in vehicle response. This allows the system to trigger early mitigation actions, such as slowing down or stopping, before the situation becomes critical.
+| Example steering abnormality trajectories                                                      |
+| ---------------------------------------------------------------------------------------------- |
+| ![Example steering abnormality trajectories](./images/steering_abnormalities_trajectories.svg) |
 
 ### Longitudinal Tracking Abnormality
 
