@@ -123,12 +123,14 @@ jobs:
           echo "::notice::BUILD_TYPE_CUDA_STATE=$build_type_cuda_state"
         shell: bash
 
-      - name: Prepare build_depends.repos file
-        uses: ./.github/actions/combine-repos-action
+      - name: Restore install and build contents
+        uses: actions/cache/restore@v4
+        id: cache
         with:
-          base_file: build_depends_humble.repos
-          overlay_file: build_depends_nightly.repos
-          output_file: build_depends.repos
+          path: |
+            install
+            build
+          key: workspace-${{ runner.arch }}-${{ env.rosdistro }}
 
       - name: Build
         if: ${{ steps.get-self-packages.outputs.self-packages != '' }}
