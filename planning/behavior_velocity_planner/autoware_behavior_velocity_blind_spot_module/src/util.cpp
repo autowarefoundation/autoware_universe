@@ -226,22 +226,6 @@ std::optional<lanelet::LineString3d> generate_blind_ego_side_path_boundary_befor
   return std::make_optional<lanelet::LineString3d>(lanelet::InvalId, points);
 }
 
-/**
- * @brief get the sibling lanelet of `intersection_lanelet` whose turn_direction is straight
- */
-std::optional<lanelet::ConstLanelet> sibling_straight_lanelet(
-  const lanelet::ConstLanelet & intersection_lanelet,
-  const lanelet::routing::RoutingGraphConstPtr routing_graph_ptr)
-{
-  for (const auto & sibling_lanelet : autoware::experimental::lanelet2_utils::sibling_lanelets(
-         intersection_lanelet, routing_graph_ptr)) {
-    if (autoware::experimental::lanelet2_utils::is_straight_direction(sibling_lanelet)) {
-      return sibling_lanelet;
-    }
-  }
-  return std::nullopt;
-}
-
 static std::optional<size_t> getDuplicatedPointIdx(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
   const geometry_msgs::msg::Point & point)
@@ -520,17 +504,6 @@ std::optional<lanelet::LineString3d> generate_virtual_ego_straight_path_after_tu
   const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction,
   const double ego_width)
 {
-  /*
-  if (const auto sibling_straight_lanelet_opt =
-        helper::sibling_straight_lanelet(intersection_lanelet, routing_graph_ptr);
-      sibling_straight_lanelet_opt) {
-    const auto & sibling_straight_lanelet = sibling_straight_lanelet_opt.value();
-    const auto & target_linestring = (turn_direction == TurnDirection::Left)
-                                       ? sibling_straight_lanelet.leftBound()
-                                       : sibling_straight_lanelet.rightBound();
-    return remove_const(target_linestring);
-  }
-  */
   const double extend_length = lanelet::utils::getLaneletLength3d(intersection_lanelet);
 
   const auto path_linestring = to_bg2d(path.points);
