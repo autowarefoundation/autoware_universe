@@ -131,13 +131,13 @@ Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tensor
   // copy relevant part of data to Eigen matrix
   constexpr auto prediction_shape = OUTPUT_SHAPE;
 
-  auto batch_size = prediction_shape[0];
-  auto agent_size = prediction_shape[1];
-  auto rows = prediction_shape[2];
-  auto cols = prediction_shape[3];
+  const int64_t agent_size = prediction_shape[1];
+  const int64_t rows = prediction_shape[2];
+  const int64_t cols = prediction_shape[3];
+  const int64_t batch = prediction.size() / (agent_size * rows * cols);
 
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data(
-    batch_size * agent_size * rows, cols);
+    batch * agent_size * rows, cols);
   tensor_data.setZero();
 
   // Ensure prediction has enough data
@@ -160,9 +160,9 @@ Eigen::MatrixXf get_prediction_matrix(
   const auto prediction_shape = OUTPUT_SHAPE;
 
   // copy relevant part of data to Eigen matrix
-  auto agent_size = prediction_shape[1];
-  auto rows = prediction_shape[2];
-  auto cols = prediction_shape[3];
+  const int64_t agent_size = prediction_shape[1];
+  const int64_t rows = prediction_shape[2];
+  const int64_t cols = prediction_shape[3];
 
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
     get_tensor_data(prediction);

@@ -63,6 +63,12 @@
           "default": false,
           "description": "On build only, do not run the planner"
         },
+        "batch_size": {
+          "type": "integer",
+          "default": 1,
+          "minimum": 1,
+          "description": "Batch size for multi-batch inference"
+        },
         "debug_params": {
           "type": "object",
           "properties": {
@@ -87,6 +93,7 @@
         "predict_neighbor_trajectory",
         "update_traffic_light_group_info",
         "traffic_light_group_msg_timeout_seconds",
+        "batch_size",
         "debug_params"
       ]
     }
