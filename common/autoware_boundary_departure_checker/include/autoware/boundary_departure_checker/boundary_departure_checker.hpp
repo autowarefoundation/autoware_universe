@@ -59,10 +59,10 @@ public:
   }
 
   BoundaryDepartureChecker(
-    const Param & param, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
+    Param param, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
     std::shared_ptr<autoware_utils::TimeKeeper> time_keeper =
       std::make_shared<autoware_utils::TimeKeeper>())
-  : param_(param),
+  : param_(std::move(param)),
     vehicle_info_ptr_(std::make_shared<autoware::vehicle_info_utils::VehicleInfo>(vehicle_info)),
     time_keeper_(std::move(time_keeper))
   {
@@ -162,7 +162,6 @@ public:
    * trajectory index, and selects the best candidate based on lateral distance and classification
    * logic (CRITICAL/NEAR).
    *
-   * @param aw_ref_traj          Reference trajectory used to compute longitudinal distances.
    * @param projections_to_bound Abnormality-aware projections to boundaries.
    * @param side_key             Side to process (left or right).
    * @return Vector of closest projections with departure classification, or an error message on
@@ -170,7 +169,6 @@ public:
    */
   tl::expected<std::vector<ClosestProjectionToBound>, std::string>
   get_closest_projections_to_boundaries_side(
-    const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
     const Abnormalities<ProjectionsToBound> & projections_to_bound, const double min_braking_dist,
     const double max_braking_dist, const SideKey side_key);
 
@@ -182,13 +180,11 @@ public:
    * type based on braking feasibility (APPROACHING_DEPARTURE) using trajectory spacing and braking
    * model.
    *
-   * @param aw_ref_traj          Reference trajectory.
    * @param projections_to_bound Abnormality-wise projections to boundaries.
    * @return ClosestProjectionsToBound structure containing selected points for both sides, or error
    * string.
    */
   tl::expected<ClosestProjectionsToBound, std::string> get_closest_projections_to_boundaries(
-    const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
     const Abnormalities<ProjectionsToBound> & projections_to_bound, const double curr_vel,
     const double curr_acc);
 
@@ -199,18 +195,18 @@ public:
    * filtering based on hysteresis and distance, and grouping results using side keys.
    *
    * @param projections_to_bound Closest projections to road boundaries for each side.
-   * @param lon_offset_m         Longitudinal offset from ego to front of trajectory (including
-   * vehicle length).
+   * @param pred_traj_idx_to_ref_traj_lon_dist mapping from an index of the predicted trajectory to
+   * the corresponding arc length on the reference trajectory
    * @return Side-keyed container of filtered departure points.
    */
   Side<DeparturePoints> get_departure_points(
-    const ClosestProjectionsToBound & projections_to_bound, const double lon_offset_m);
+    const ClosestProjectionsToBound & projections_to_bound,
+    const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist);
   // === Abnormalities
 
 private:
   Param param_;
   lanelet::LaneletMapPtr lanelet_map_ptr_;
-  std::unique_ptr<Param> param_ptr_;
   std::shared_ptr<VehicleInfo> vehicle_info_ptr_;
   std::unique_ptr<UncrossableBoundRTree> uncrossable_boundaries_rtree_ptr_;
 

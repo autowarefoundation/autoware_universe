@@ -17,6 +17,7 @@
 
   <depend>autoware_adapi_v1_msgs</depend>
   <depend>autoware_internal_debug_msgs</depend>
+  <depend>autoware_interpolation</depend>
   <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_motion_utils</depend>
@@ -29,6 +30,7 @@
   <depend>diagnostic_updater</depend>
   <depend>eigen</depend>
   <depend>geometry_msgs</depend>
+  <depend>magic_enum</depend>
   <depend>nav_msgs</depend>
   <depend>range-v3</depend>
   <depend>rclcpp</depend>
