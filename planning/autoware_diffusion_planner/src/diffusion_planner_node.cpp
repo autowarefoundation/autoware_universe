@@ -588,18 +588,17 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
   const int batch_size = params_.batch_size;
 
   // Start with first trajectory as main candidate
-  autoware_internal_planning_msgs::msg::CandidateTrajectories ego_trajectory_as_candidate_msg =
+  CandidateTrajectories ego_trajectory_as_candidate_msg =
     postprocess::to_candidate_trajectories_msg(
       output_trajectory, generator_uuid_, "DiffusionPlanner");
 
   // Add additional batch results as more candidates
   for (int i = 1; i < batch_size; i++) {
-    const autoware_planning_msgs::msg::Trajectory trajectory =
+    const Trajectory trajectory =
       postprocess::create_trajectory(predictions, this->now(), transforms_.first, i, ego_agent_idx);
 
-    const autoware_internal_planning_msgs::msg::CandidateTrajectories additional_candidate =
-      postprocess::to_candidate_trajectories_msg(
-        trajectory, generator_uuid_, "DiffusionPlanner_batch_" + std::to_string(i));
+    const CandidateTrajectories additional_candidate = postprocess::to_candidate_trajectories_msg(
+      trajectory, generator_uuid_, "DiffusionPlanner_batch_" + std::to_string(i));
 
     ego_trajectory_as_candidate_msg.candidate_trajectories.push_back(
       additional_candidate.candidate_trajectories[0]);
