@@ -53,6 +53,11 @@
           "type": "boolean",
           "description": "This flag is for considering no_drivable_lanes in planning or not",
           "default": "false"
+        },
+        "prioritize_bus_stop_as_start_lane": {
+          "type": "boolean",
+          "description": "If the start pose overlaps multiple lanelets, prioritize the one tagged as 'bus_stop'",
+          "default": "false"
         }
       },
       "required": [
@@ -64,7 +69,8 @@
         "enable_correct_goal_pose",
         "reroute_time_threshold",
         "minimum_reroute_length",
-        "consider_no_drivable_lanes"
+        "consider_no_drivable_lanes",
+        "prioritize_bus_stop_as_start_lane"
       ]
     }
   },
