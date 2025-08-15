@@ -126,7 +126,6 @@ void run(const std::string & socket_path, const std::vector<std::string> & list)
     return;
   }
 
-  // Give the socket FD the local address ADDR
   struct sockaddr_un addr;
   memset(&addr, 0, sizeof(addr));
   addr.sun_family = AF_UNIX;
