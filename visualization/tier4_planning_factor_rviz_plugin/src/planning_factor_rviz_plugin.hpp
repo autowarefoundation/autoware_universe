@@ -38,7 +38,6 @@ class PlanningFactorRvizPlugin
 public:
   PlanningFactorRvizPlugin()
   : marker_common_{this},
-    baselink2front_{"Baselink To Front", 0.0, "Length between base link to front.", this},
     show_safety_factors_{"Show Safety Factors", true, "Display safety factor markers", this},
     topic_name_{"planning_factors"}
   {
@@ -57,7 +56,7 @@ public:
     const auto vehicle_info =
       autoware::vehicle_info_utils::VehicleInfoUtils(*rviz_ros_node_.lock()->get_raw_node())
         .getVehicleInfo();
-    baselink2front_.setValue(vehicle_info.max_longitudinal_offset_m);
+    baselink2front_ = vehicle_info.max_longitudinal_offset_m;
   }
 
   void load(const rviz_common::Config & config) override
@@ -102,7 +101,7 @@ private:
 
   rviz_default_plugins::displays::MarkerCommon marker_common_;
 
-  rviz_common::properties::FloatProperty baselink2front_;
+  double baselink2front_ = 0;
   rviz_common::properties::BoolProperty show_safety_factors_;
 
   std::string topic_name_;

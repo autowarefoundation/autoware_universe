@@ -159,7 +159,7 @@ void PlanningFactorRvizPlugin::processMessage(
       case autoware_internal_planning_msgs::msg::PlanningFactor::STOP:
         for (const auto & control_point : factor.control_points) {
           const auto virtual_wall = createStopVirtualWallMarker(
-            control_point.pose, text, msg->header.stamp, i++, baselink2front_.getFloat());
+            control_point.pose, text, msg->header.stamp, i++, baselink2front_);
           add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(virtual_wall));
         }
         break;
@@ -167,7 +167,7 @@ void PlanningFactorRvizPlugin::processMessage(
       case autoware_internal_planning_msgs::msg::PlanningFactor::SLOW_DOWN:
         for (const auto & control_point : factor.control_points) {
           const auto virtual_wall = createSlowDownVirtualWallMarker(
-            control_point.pose, text, msg->header.stamp, i++, baselink2front_.getFloat());
+            control_point.pose, text, msg->header.stamp, i++, baselink2front_);
           add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(virtual_wall));
         }
         break;
