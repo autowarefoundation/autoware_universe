@@ -13993,13 +13993,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#blinker-conflicts" class="md-nav__link">
-    Blinker conflicts
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -14096,41 +14089,6 @@
 <td align="left">bool</td>
 <td align="left">flag to activate blinkers when swerving</td>
 <td align="left">true</td>
-</tr>
-<tr>
-<td align="left">turn_signal_roundabout_on_entry</td>
-<td align="left">[-]</td>
-<td align="left">string</td>
-<td align="left">turn signal on entry to roundabout. "None", "Left", "Right"</td>
-<td align="left">"None"</td>
-</tr>
-<tr>
-<td align="left">turn_signal_roundabout_entry_indicator_persistence</td>
-<td align="left">[-]</td>
-<td align="left">bool</td>
-<td align="left">whether to keep the indicator on after entering the roundabout. If true, the indicator will be kept on until the exit point. If false, the indicator will be turned off after entering the roundabout.</td>
-<td align="left">false</td>
-</tr>
-<tr>
-<td align="left">turn_signal_roundabout_on_exit</td>
-<td align="left">[-]</td>
-<td align="left">string</td>
-<td align="left">turn signal on exit from roundabout. "None", "Left", "Right"</td>
-<td align="left">"Left"</td>
-</tr>
-<tr>
-<td align="left">turn_signal_roundabout_search_distance</td>
-<td align="left">[m]</td>
-<td align="left">double</td>
-<td align="left">constant search distance to decide activation of blinkers at roundabouts</td>
-<td align="left">30.0</td>
-</tr>
-<tr>
-<td align="left">turn_signal_roundabout_angle_threshold_degree</td>
-<td align="left">deg</td>
-<td align="left">double</td>
-<td align="left">angle threshold to determined the end point of roundabout required section</td>
-<td align="left">15.0</td>
 </tr>
 </tbody>
 </table>
@@ -14263,73 +14221,7 @@
   Terminal point of the path of pull over.</li>
 </ul>
 <p><img alt="section_pull_over" src="../../images/turn_signal_decider/pull_over.drawio.svg"></p>
-<h4 id="6-roundabout">6. Roundabout<a class="headerlink" href="#6-roundabout" title="Permanent link">#</a></h4>
-<p>For roundabout scenarios, the turn signal decider handles both entry and exit turn signals based on the <code>roundabout</code> attribute in the lanelet map. The roundabout functionality supports the following configurations:</p>
-<p>Entry Turn Signal:</p>
-<ul>
-<li><strong>desired start point</strong>: <code>v * turn_signal_search_time</code> meters before the start point of the roundabout entry lanelet.</li>
-<li><strong>desired end point</strong>: Terminal point of the roundabout entry lanelet (or exit lanelet if <code>turn_signal_roundabout_entry_indicator_persistence</code> is enabled).</li>
-<li><strong>required start point</strong>: Initial point of the roundabout entry lanelet.</li>
-<li><strong>required end point</strong>: The earliest point that satisfies the following condition. <span class="arithmatex">\(\theta - \theta_{\textrm{end}} &lt; \delta\)</span>, where <span class="arithmatex">\(\theta_{\textrm{end}}\)</span> is yaw angle of the terminal point of the lanelet, <span class="arithmatex">\(\theta\)</span> is the angle of a required end point and <span class="arithmatex">\(\delta\)</span> is the threshold defined by the user. (This is the same as the right/left turn signal logic.)</li>
-</ul>
-<p>Exit Turn Signal:</p>
-<ul>
-<li><strong>desired start point</strong>: Start point of the roundabout exit lanelet (or from a lanelet with <code>enable_exit_turn_signal</code> attribute if found).</li>
-<li><strong>desired end point</strong>: Terminal point of the roundabout exit lanelet.</li>
-<li><strong>required start point</strong>: Initial point of the roundabout exit lanelet.</li>
-<li><strong>required end point</strong>: The earliest point that satisfies the following condition. <span class="arithmatex">\(\theta - \theta_{\textrm{end}} &lt; \delta\)</span>, where <span class="arithmatex">\(\theta_{\textrm{end}}\)</span> is yaw angle of the terminal point of the lanelet, <span class="arithmatex">\(\theta\)</span> is the angle of a required end point and <span class="arithmatex">\(\delta\)</span> is the threshold defined by the user.(This is the same as the right/left turn signal logic.)</li>
-</ul>
-<p>Special Features:</p>
-<ul>
-<li><strong>Exit-based entry signal</strong>: If a specific exit lanelet ID is defined as an attribute in the entry lanelet (e.g., <code>turn_signal_left</code> or <code>turn_signal_right</code>), the entry turn signal will be overridden accordingly.</li>
-<li><strong>Indicator persistence</strong>: When <code>turn_signal_roundabout_entry_indicator_persistence</code> is enabled, the entry turn signal remains active until the vehicle exits the roundabout.</li>
-<li><strong>Enable exit turn signal</strong>: Lanelets with the <code>enable_exit_turn_signal</code> attribute allow early activation of exit turn signals.</li>
-</ul>
-<h5 id="example-parameter-settings-based-on-country-specific-rules">Example parameter settings based on country-specific rules<a class="headerlink" href="#example-parameter-settings-based-on-country-specific-rules" title="Permanent link">#</a></h5>
-<table>
-<thead>
-<tr>
-<th align="left">Country</th>
-<th align="left">Entry (<code>turn_signal_roundabout_on_entry</code>)</th>
-<th align="left">Exit (<code>turn_signal_roundabout_on_exit</code>)</th>
-<th align="left">Entry indicator persistence (<code>turn_signal_roundabout_entry_indicator_persistence</code>)</th>
-<th align="left">Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td align="left">Japan</td>
-<td align="left">"None"</td>
-<td align="left">"Left"</td>
-<td align="left">false</td>
-<td align="left"></td>
-</tr>
-<tr>
-<td align="left">United Kingdom</td>
-<td align="left">"None"</td>
-<td align="left">"Left"</td>
-<td align="left">true</td>
-<td align="left">Turn signal direction is defined in the map</td>
-</tr>
-<tr>
-<td align="left">Germany</td>
-<td align="left">"None"</td>
-<td align="left">"Right"</td>
-<td align="left">false</td>
-<td align="left"></td>
-</tr>
-<tr>
-<td align="left">South Korea</td>
-<td align="left">"Left"</td>
-<td align="left">"Right"</td>
-<td align="left">false</td>
-<td align="left"></td>
-</tr>
-</tbody>
-</table>
-<h3 id="blinker-conflicts">Blinker conflicts<a class="headerlink" href="#blinker-conflicts" title="Permanent link">#</a></h3>
-<p>When ego vehicle has to activate several blinkers, it uses the following rules to decide which blinker to activate. Note that this algorithm is based on the Japanese Road Traffic Law, so it may not be suitable for other countries.
-When it comes to handle several blinkers, it gives priority to the first blinker that comes first. However, this rule sometimes activate unnatural blinkers, so turn signal decider uses the following five rules to decide the necessary turn signal.</p>
+<p>When it comes to handle several blinkers, it gives priority to the first blinker that comes first. However, this rule sometimes activate unnatural blinkers, so turn signal decider uses the following five rules to decide the necessary turn signal.</p>
 <ul>
 <li>pattern1
   <img alt="pattern1" src="../../images/turn_signal_decider/pattern1.drawio.svg"></li>
