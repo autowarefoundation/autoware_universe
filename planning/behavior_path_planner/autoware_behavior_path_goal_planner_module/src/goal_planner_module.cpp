@@ -65,8 +65,8 @@ using autoware_utils::calc_distance2d;
 using autoware_utils::calc_offset_pose;
 using autoware_utils::create_marker_color;
 using nav_msgs::msg::OccupancyGrid;
-namespace autoware::behavior_path_planner
 
+namespace autoware::behavior_path_planner
 {
 
 /**
