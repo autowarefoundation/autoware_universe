@@ -216,6 +216,7 @@ auto check_shift_behavior(
   const auto & points = context->data->current_trajectory->points;
   const auto & ego_pose = context->data->current_kinematics->pose.pose;
   const auto & vehicle_width = context->vehicle_info.vehicle_width_m;
+  const auto & max_longitudinal_offset = context->vehicle_info.max_longitudinal_offset_m;
 
   const auto combine_lanelet = lanelet::utils::combineLaneletsShape(lanelets);
   const auto nearest_idx =
@@ -255,6 +256,11 @@ auto check_shift_behavior(
     debug.stoppable_line = stoppable_point.value().first;
   }
 
+  const auto distance_to_stop_point =
+    autoware::motion_utils::calcDistanceToForwardStopPoint(points, ego_pose);
+  const auto distance_residual =
+    autoware::motion_utils::calcSignedArcLength(points, ego_pose.position, nearest_idx);
+
   for (size_t i = 0; i < points.size(); i++) {
     const auto p1 = autoware_utils::calc_offset_pose(
       autoware_utils::get_pose(points.at(i)), 0.0, 0.5 * vehicle_width, 0.0);
@@ -264,7 +270,11 @@ auto check_shift_behavior(
     axle.emplace_back(p1.position.x, p1.position.y);
     axle.emplace_back(p2.position.x, p2.position.y);
 
-    const auto distance = autoware::motion_utils::calcSignedArcLength(points, nearest_idx, i);
+    // To reduce computational cost, the distance from the ego to the nearest point on the path and
+    // the distance from the nearest point to index=i are calculated separately and then summed to
+    // obtain the distance from the ego to the point at index=i.
+    const auto distance =
+      autoware::motion_utils::calcSignedArcLength(points, nearest_idx, i) + distance_residual;
     if (reachable_point.value().second < distance && !is_unsafe_holding) {
       autoware_utils::LineString2d line_2d{
         reachable_point.value().first.front().to_2d(),
@@ -285,16 +295,28 @@ auto check_shift_behavior(
       }
     }
 
+    if (i < nearest_idx) {
+      continue;
+    }
+
     const auto is_left_shift = boost::geometry::intersects(
       axle, lanelet::utils::to2D(combine_lanelet.leftBound()).basicLineString());
-    if (is_left_shift && std::abs(points.at(i).longitudinal_velocity_mps) > 1e-3) {
-      return std::make_pair((i < nearest_idx ? Behavior::NONE : Behavior::SHIFT_LEFT), distance);
+    if (is_left_shift) {
+      const auto has_stop_point_before_conflict_area =
+        distance_to_stop_point.has_value() &&
+        distance_to_stop_point.value() + max_longitudinal_offset < distance;
+      return std::make_pair(
+        (has_stop_point_before_conflict_area ? Behavior::NONE : Behavior::SHIFT_LEFT), distance);
     }
 
     const auto is_right_shift = boost::geometry::intersects(
       axle, lanelet::utils::to2D(combine_lanelet.rightBound()).basicLineString());
-    if (is_right_shift && std::abs(points.at(i).longitudinal_velocity_mps) > 1e-3) {
-      return std::make_pair((i < nearest_idx ? Behavior::NONE : Behavior::SHIFT_RIGHT), distance);
+    if (is_right_shift) {
+      const auto has_stop_point_before_conflict_area =
+        distance_to_stop_point.has_value() &&
+        distance_to_stop_point.value() + max_longitudinal_offset < distance;
+      return std::make_pair(
+        (has_stop_point_before_conflict_area ? Behavior::NONE : Behavior::SHIFT_RIGHT), distance);
     }
   }
 
