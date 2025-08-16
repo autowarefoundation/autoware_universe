@@ -31,12 +31,12 @@
 
 #include <autoware_vehicle_info_utils/vehicle_info.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+#include <tf2/utils.hpp>
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <lanelet2_core/Forward.h>
-#include <tf2/utils.h>
 
 #include <atomic>
 #include <deque>

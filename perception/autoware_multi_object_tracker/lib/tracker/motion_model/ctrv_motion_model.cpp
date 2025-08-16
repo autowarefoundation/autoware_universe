@@ -24,8 +24,7 @@
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/ros/msg_covariance.hpp>
-
-#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Quaternion.hpp>
 
 namespace autoware::multi_object_tracker
 {
