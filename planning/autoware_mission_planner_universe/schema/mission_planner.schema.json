@@ -22,6 +22,12 @@
           "default": "1.0",
           "minimum": 0.0
         },
+        "arrival_check_overshoot_distance": {
+          "type": "number",
+          "description": "Distance threshold for goal check when the vehicle has passed the goal",
+          "default": "2.0",
+          "minimum": 0.0
+        },
         "arrival_check_duration": {
           "type": "number",
           "description": "Duration threshold for goal check",
