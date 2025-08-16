@@ -32,7 +32,7 @@
     topic: /initialpose3d
     topic_type: geometry_msgs/msg/PoseWithCovarianceStamped
     best_effort: false
-    transient_local: false
+    transient_local: true
     warn_rate: 0.0
     error_rate: 0.0
     timeout: 0.0
