@@ -12,6 +12,8 @@
     vehicle_shape_margin_m: 0.5
     replan_when_obstacle_found: true
     replan_when_course_out: true
+    parking_accuracy_tolerance: 1.0
+    max_replan_count: 3
 
     # -- Configurations common to the all planners --
     # base configs
