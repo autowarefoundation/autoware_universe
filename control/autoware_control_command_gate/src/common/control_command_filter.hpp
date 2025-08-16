@@ -49,7 +49,6 @@ public:
   VehicleCmdFilter();
   ~VehicleCmdFilter() = default;
 
-  void setWheelBase(double v) { param_.wheel_base = v; }
   void setCurrentSpeed(double v) { current_speed_ = v; }
   void setParam(const VehicleCmdFilterParam & p);
   VehicleCmdFilterParam getParam() const;
