@@ -29,6 +29,7 @@
   <depend>autoware_test_utils</depend>
   <depend>autoware_utils</depend>
   <depend>pluginlib</depend>
+  <depend>range-v3</depend>
   <depend>rclcpp</depend>
   <depend>visualization_msgs</depend>
 

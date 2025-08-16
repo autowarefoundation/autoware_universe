@@ -35,6 +35,9 @@
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <magic_enum.hpp>
+#include <range/v3/view/drop.hpp>
+#include <range/v3/view/reverse.hpp>
+#include <range/v3/view/zip.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <algorithm>
@@ -46,6 +49,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -64,6 +68,86 @@ using nav_msgs::msg::OccupancyGrid;
 
 namespace autoware::behavior_path_planner
 {
+
+/**
+ * @brief check if `lane_ids` is not lane changing upto `search_id`
+ */
+static bool route_is_straight(
+  std::vector<lanelet::Id> lane_ids, const lanelet::LaneletMapConstPtr lanelet_map,
+  lanelet::routing::RoutingGraphConstPtr routing_graph, const lanelet::Id search_id)
+{
+  for (const auto [lane1_id, lane2_id] :
+       ranges::views::zip(lane_ids, lane_ids | ranges::views::drop(1))) {
+    const auto lane1 = lanelet_map->laneletLayer.get(lane1_id);
+    const auto lane2 = lanelet_map->laneletLayer.get(lane2_id);
+    const auto lane1_nexts = routing_graph->following(lane1);
+    const auto is_straight = std::any_of(
+      lane1_nexts.begin(), lane1_nexts.end(),
+      [&](const auto & next_lane) { return next_lane.id() == lane2.id(); });
+    if (!is_straight) {
+      return false;
+    }
+    if (lane1.id() == search_id) {
+      return true;
+    }
+  }
+  // here means lane_ids is straight, but search_id is not found, possibly because ego has passed
+  // search_id lanelet
+  const auto front_lane = lanelet_map->laneletLayer.get(lane_ids.front());
+  const auto prev_lanes = routing_graph->previous(front_lane);
+  return std::any_of(prev_lanes.begin(), prev_lanes.end(), [&](const auto & prev_lane) {
+    return prev_lane.id() == search_id;
+  });
+}
+
+void LaneChangeContextMonitor::update_progress(
+  const PathWithLaneId & path, const lanelet::LaneletMapConstPtr lanelet_map,
+  lanelet::routing::RoutingGraphConstPtr routing_graph, const rclcpp::Time & now)
+{
+  if (lane_change_completed_) {
+    return;
+  }
+  std::vector<lanelet::Id> lane_ids;
+  for (const auto & point : path.points) {
+    for (const auto & lane_id : point.lane_ids) {
+      if (std::find(lane_ids.begin(), lane_ids.end(), lane_id) == lane_ids.end()) {
+        lane_ids.push_back(lane_id);
+      }
+    }
+  }
+  if (lane_ids.empty()) {
+    return;
+  }
+
+  const auto lane_change_complete_lane =
+    goal_planner_utils::find_last_lane_change_completed_lanelet(path, lanelet_map, routing_graph);
+  const auto lane_change_detected = lane_change_complete_lane_.has_value();
+  if (
+    !lane_change_detected && lane_change_complete_lane_ &&
+    route_is_straight(lane_ids, lanelet_map, routing_graph, lane_change_complete_lane_->id())) {
+    lane_change_completed_ = true;
+    return;
+  }
+
+  {
+    lane_change_complete_lane_ = lane_change_complete_lane;
+  }
+
+  {
+    const auto lane_change_detected_from_beginning =
+      !prev_lane_change_detected_ && lane_change_detected;
+    lane_change_status_changed_ =
+      lane_change_detected_from_beginning ||
+      (prev_lane_change_detected_ && prev_lane_change_detected_.value() != lane_change_detected);
+  }
+  {
+    prev_lane_change_detected_ = lane_change_detected;
+  }
+  if (lane_change_status_changed_) {
+    last_lane_change_trigger_time_ = now;
+  }
+}
+
 GoalPlannerModule::GoalPlannerModule(
   const std::string & name, rclcpp::Node & node,
   const std::shared_ptr<GoalPlannerParameters> & parameters,
@@ -640,7 +724,7 @@ std::pair<LaneParkingResponse, FreespaceParkingResponse> GoalPlannerModule::sync
     lane_parking_request_.value().update(
       *planner_data_, getCurrentStatus(), getPreviousModuleOutput(), pull_over_path,
       path_decision_controller_.get_current_state(), trigger_thread_on_approach_,
-      last_lane_change_trigger_time_);
+      lane_change_monitor_.get_last_lane_change_trigger_time());
     // NOTE: RouteHandler holds several shared pointers in it, so just copying PlannerData as
     // value does not adds the reference counts of RouteHandler.lanelet_map_ptr_ and others. Since
     // behavior_path_planner::run() updates
@@ -655,7 +739,8 @@ std::pair<LaneParkingResponse, FreespaceParkingResponse> GoalPlannerModule::sync
     const auto & lane_change_triggered_thread_side =
       lane_parking_response_.last_lane_change_trigger_time;
     if (!is_lane_change_context_expired(
-          lane_change_triggered_thread_side, last_lane_change_trigger_time_)) {
+          lane_change_triggered_thread_side,
+          lane_change_monitor_.get_last_lane_change_trigger_time())) {
       lane_parking_response = lane_parking_response_;
     } else {
       RCLCPP_INFO_THROTTLE(
@@ -693,6 +778,10 @@ void GoalPlannerModule::updateData()
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
+  if (!utils::isAllowedGoalModification(planner_data_->route_handler)) {
+    return;
+  }
+
   if (!goal_searcher_) {
     goal_searcher_.emplace(GoalSearcher::create(parameters_, vehicle_footprint_, planner_data_));
   }
@@ -714,17 +803,9 @@ void GoalPlannerModule::updateData()
     goal_candidates_ = generateGoalCandidates(goal_searcher_.value(), use_bus_stop_area_);
   }
 
-  const auto lane_change_detected =
-    goal_planner_utils::find_lane_change_completed_lanelet(
-      getPreviousModuleOutput().path, planner_data_->route_handler->getLaneletMapPtr(),
-      planner_data_->route_handler->getRoutingGraphPtr())
-      .has_value();
-  lane_change_status_changed_ =
-    prev_lane_change_detected_ && prev_lane_change_detected_.value() != lane_change_detected;
-  prev_lane_change_detected_ = lane_change_detected;
-  if (lane_change_status_changed_) {
-    last_lane_change_trigger_time_ = clock_->now();
-  }
+  lane_change_monitor_.update_progress(
+    getPreviousModuleOutput().path, planner_data_->route_handler->getLaneletMapPtr(),
+    planner_data_->route_handler->getRoutingGraphPtr(), clock_->now());
 
   const lanelet::ConstLanelets current_lanes =
     utils::getCurrentLanesFromPath(getPreviousModuleOutput().reference_path, planner_data_);
@@ -748,7 +829,7 @@ void GoalPlannerModule::updateData()
   }
 
   if (getCurrentStatus() == ModuleStatus::IDLE) {
-    if (lane_change_status_changed_) {
+    if (lane_change_monitor_.lane_change_status_changed()) {
       [[maybe_unused]] const auto send_only_request = syncWithThreads();
       RCLCPP_INFO(getLogger(), "restart preparing goal candidates since lane_change is detected");
     }
@@ -785,7 +866,7 @@ void GoalPlannerModule::updateData()
   path_decision_controller_.transit_state(
     pull_over_path_recv, upstream_module_has_stopline_except_terminal, clock_->now(),
     static_target_objects, dynamic_target_objects, planner_data_, occupancy_grid_map_,
-    is_current_safe, lane_change_status_changed_, parameters_, goal_searcher,
+    is_current_safe, lane_change_monitor_.lane_change_status_changed(), parameters_, goal_searcher,
     debug_data_.ego_polygons_expanded);
   const auto new_decision_state = path_decision_controller_.get_current_state();
 
