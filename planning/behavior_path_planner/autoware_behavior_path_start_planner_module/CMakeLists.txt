@@ -29,6 +29,10 @@ if(BUILD_TESTING)
     test/include
   )
 
+  # Link autoware_pyplot for plotting functionality
+  find_package(autoware_pyplot REQUIRED)
+  ament_target_dependencies(start_planner_test_helper autoware_pyplot)
+
   file(GLOB_RECURSE TEST_SOURCES test/*.cpp)
   ament_add_ros_isolated_gtest(test_${PROJECT_NAME}
     ${TEST_SOURCES}
@@ -36,6 +40,21 @@ if(BUILD_TESTING)
   target_link_libraries(test_${PROJECT_NAME} ${PROJECT_NAME}
     start_planner_test_helper
   )
+
+  # Create test output directories
+  add_custom_target(create_test_directories ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_results/clothoid_pull_out
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_results/shift_pull_out
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_results/geometric_pull_out
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_results/freespace_pull_out
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_results/default
+  )
+  add_dependencies(test_${PROJECT_NAME} create_test_directories)
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE config test_data)
