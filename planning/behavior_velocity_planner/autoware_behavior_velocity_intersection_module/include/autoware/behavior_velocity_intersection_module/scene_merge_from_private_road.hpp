@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SCENE_MERGE_FROM_PRIVATE_ROAD_HPP_
-#define SCENE_MERGE_FROM_PRIVATE_ROAD_HPP_
+#ifndef AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__SCENE_MERGE_FROM_PRIVATE_ROAD_HPP_
+#define AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__SCENE_MERGE_FROM_PRIVATE_ROAD_HPP_
 
 #include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/state_machine.hpp>
@@ -94,4 +94,4 @@ private:
 };
 }  // namespace autoware::behavior_velocity_planner
 
-#endif  // SCENE_MERGE_FROM_PRIVATE_ROAD_HPP_
+#endif  // AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__SCENE_MERGE_FROM_PRIVATE_ROAD_HPP_
