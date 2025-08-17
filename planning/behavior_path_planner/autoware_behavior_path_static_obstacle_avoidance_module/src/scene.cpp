@@ -1474,6 +1474,10 @@ bool StaticObstacleAvoidanceModule::isValidShiftLine(
         const auto shift_length = proposed_shift_path.shift_length.at(i);
         const auto THRESHOLD = minimum_distance + std::abs(shift_length);
 
+        if (std::abs(shift_length) < 1e-3) {
+          continue;
+        }
+
         if (
           boost::geometry::distance(basic_point, (shift_length > 0.0 ? left_bound : right_bound)) <
           THRESHOLD) {
