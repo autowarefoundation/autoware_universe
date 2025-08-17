@@ -25,7 +25,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::extra_selector
+namespace autoware::scenario_selector
 {
 using autoware::planning_test_manager::PlanningInterfaceTestManager;
 

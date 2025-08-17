@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__DEFAULT_SCENARIO_SELECTOR__NODE_HPP_
 #define AUTOWARE__DEFAULT_SCENARIO_SELECTOR__NODE_HPP_
 
+#include <autoware/scenario_selector_base.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -47,12 +48,17 @@
 #include <memory>
 #include <string>
 
-namespace autoware::default_scenario_selector
+namespace autoware::scenario_selector
 {
-class DefaultScenarioSelectorNode : public rclcpp::Node
+class DefaultScenarioSelectorNode : public rclcpp::Node,
+                                    public autoware::scenario_selector::ScenarioSelectorBase
 {
 public:
+  DefaultScenarioSelectorNode() : DefaultScenarioSelectorNode(rclcpp::NodeOptions{}) {}
+
   explicit DefaultScenarioSelectorNode(const rclcpp::NodeOptions & node_options);
+
+  std::string select() override;
 
   void onOdom(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
 
@@ -138,5 +144,5 @@ private:
   // processing time
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
 };
-}  // namespace autoware::default_scenario_selector
+}  // namespace autoware::scenario_selector
 #endif  // AUTOWARE__DEFAULT_SCENARIO_SELECTOR__NODE_HPP_

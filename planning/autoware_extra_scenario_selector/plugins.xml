@@ -1,0 +1,7 @@
+<library path="autoware_extra_scenario_selector">
+  <class
+    type="autoware::scenario_selector::ExtraScenarioSelectorNode"
+    base_class_type="autoware::scenario_selector::ScenarioSelectorBase">
+    <description>Extra scenario selector</description>
+  </class>
+</library>

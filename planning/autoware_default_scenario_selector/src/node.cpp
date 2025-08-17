@@ -30,7 +30,7 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::default_scenario_selector
+namespace autoware::scenario_selector
 {
 namespace
 {
@@ -130,8 +130,13 @@ bool isStopped(
 
 }  // namespace
 
-autoware_planning_msgs::msg::Trajectory::ConstSharedPtr DefaultScenarioSelectorNode::getScenarioTrajectory(
-  const std::string & scenario)
+std::string DefaultScenarioSelectorNode::select()
+{
+  return "default scenario selector";
+}
+
+autoware_planning_msgs::msg::Trajectory::ConstSharedPtr
+DefaultScenarioSelectorNode::getScenarioTrajectory(const std::string & scenario)
 {
   if (scenario == autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING) {
     return lane_driving_trajectory_;
@@ -265,7 +270,8 @@ bool DefaultScenarioSelectorNode::isEmptyParkingTrajectory() const
   return false;
 }
 
-void DefaultScenarioSelectorNode::onMap(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg)
+void DefaultScenarioSelectorNode::onMap(
+  const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg)
 {
   route_handler_ = std::make_shared<autoware::route_handler::RouteHandler>(*msg);
 }
@@ -494,7 +500,12 @@ DefaultScenarioSelectorNode::DefaultScenarioSelectorNode(const rclcpp::NodeOptio
   pub_processing_time_ = this->create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "~/debug/processing_time_ms", 1);
 }
-}  // namespace autoware::default_scenario_selector
+}  // namespace autoware::scenario_selector
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::default_scenario_selector::DefaultScenarioSelectorNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::scenario_selector::DefaultScenarioSelectorNode)
+
+#include <pluginlib/class_list_macros.hpp>
+PLUGINLIB_EXPORT_CLASS(
+  autoware::scenario_selector::DefaultScenarioSelectorNode,
+  autoware::scenario_selector::ScenarioSelectorBase)

@@ -1,0 +1,4 @@
+/**:
+  ros__parameters:
+    # Short key for selector class mapping
+    selector_type: "Extra"   # or "Extra"

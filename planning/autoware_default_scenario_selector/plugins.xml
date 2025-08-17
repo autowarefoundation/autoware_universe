@@ -1,0 +1,7 @@
+<library path="autoware_default_scenario_selector">
+  <class
+    type="autoware::scenario_selector::DefaultScenarioSelectorNode"
+    base_class_type="autoware::scenario_selector::ScenarioSelectorBase">
+    <description>Default Scenario Selector as ScenarioSelectorBase</description>
+  </class>
+</library>

@@ -1,14 +1,14 @@
 <launch>
-  <arg name="input_lane_driving_trajectory"/>
-  <arg name="input_parking_trajectory"/>
-  <arg name="input_lanelet_map"/>
-  <arg name="input_route"/>
-  <arg name="input_odometry"/>
-  <arg name="input_operation_mode_state"/>
-  <arg name="is_parking_completed"/>
+  <arg name="input_lane_driving_trajectory" default="/planning/scenario_planning/lane_driving/trajectory"/>
+  <arg name="input_parking_trajectory" default="/planning/scenario_planning/parking/trajectory"/>
+  <arg name="input_lanelet_map" default="/map/vector_map"/>
+  <arg name="input_route" default="/planning/mission_planning/route"/>
+  <arg name="input_odometry" default="/localization/kinematic_state"/>
+  <arg name="input_operation_mode_state" default="/system/operation_mode/state"/>
+  <arg name="output_scenario" default="/planning/scenario_selector/scenario"/>
+  <arg name="output_trajectory" default="/planning/scenario_selector/trajectory"/>
+  <arg name="is_parking_completed" default="/planning/scenario_planning/parking/is_completed"/>
 
-  <arg name="output_scenario"/>
-  <arg name="output_trajectory"/>
   <!-- Parameter -->
   <arg name="config_file" default="$(find-pkg-share autoware_default_scenario_selector)/config/default_scenario_selector.param.yaml"/>
 

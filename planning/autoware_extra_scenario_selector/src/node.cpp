@@ -30,7 +30,7 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::extra_selector
+namespace autoware::scenario_selector
 {
 namespace
 {
@@ -194,8 +194,13 @@ bool isStopped(
 }
 }  // namespace
 
-autoware_planning_msgs::msg::Trajectory::ConstSharedPtr ExtraScenarioSelectorNode::getScenarioTrajectory(
-  const std::string & scenario)
+std::string ExtraScenarioSelectorNode::select()
+{
+  return "extra scenario selector";
+}
+
+autoware_planning_msgs::msg::Trajectory::ConstSharedPtr
+ExtraScenarioSelectorNode::getScenarioTrajectory(const std::string & scenario)
 {
   if (scenario == autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING) {
     return lane_driving_trajectory_;
@@ -406,7 +411,8 @@ bool ExtraScenarioSelectorNode::isEmptyParkingTrajectory() const
   return false;
 }
 
-void ExtraScenarioSelectorNode::onMap(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg)
+void ExtraScenarioSelectorNode::onMap(
+  const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg)
 {
   route_handler_ = std::make_shared<autoware::route_handler::RouteHandler>(*msg);
 }
@@ -623,7 +629,8 @@ ExtraScenarioSelectorNode::ExtraScenarioSelectorNode(const rclcpp::NodeOptions &
   sub_waypoint_following_trajectory_ =
     this->create_subscription<autoware_planning_msgs::msg::Trajectory>(
       "input/waypoint_following/trajectory", rclcpp::QoS{1},
-      std::bind(&ExtraScenarioSelectorNode::onWaypointFollowingTrajectory, this, std::placeholders::_1));
+      std::bind(
+        &ExtraScenarioSelectorNode::onWaypointFollowingTrajectory, this, std::placeholders::_1));
 
   sub_lanelet_map_ = this->create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
     "input/lanelet_map", rclcpp::QoS{1}.transient_local(),
@@ -663,7 +670,12 @@ ExtraScenarioSelectorNode::ExtraScenarioSelectorNode(const rclcpp::NodeOptions &
     "~/debug/processing_time_ms", 1);
 }
 
-}  // namespace autoware::extra_selector
+}  // namespace autoware::scenario_selector
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::extra_selector::ExtraScenarioSelectorNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::scenario_selector::ExtraScenarioSelectorNode)
+
+#include <pluginlib/class_list_macros.hpp>
+PLUGINLIB_EXPORT_CLASS(
+  autoware::scenario_selector::ExtraScenarioSelectorNode,
+  autoware::scenario_selector::ScenarioSelectorBase)

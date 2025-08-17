@@ -1,0 +1,29 @@
+<launch>
+  <!-- <arg name="input_scenario"/> -->
+  <!-- <arg name="input_trajectory"/> -->
+
+  <!-- <arg name="output_scenario"/> -->
+  <!-- <arg name="output_trajectory"/> -->
+
+  <arg name="input_scenario" default="/planning/scenario_selector/scenario"/>
+  <arg name="input_trajectory" default="/planning/scenario_selector/trajectory"/>
+  <arg name="output_scenario" default="/planning/scenario_planning/scenario"/>
+  <arg name="output_trajectory" default="/planning/scenario_planning/scenario_selector/trajectory"/>
+
+  <!-- param -->
+  <arg name="config_file" default="$(find-pkg-share autoware_scenario_gate)/config/scenario_gate.param.yaml" />
+  <arg name="default_selector_config_file" default="$(find-pkg-share autoware_default_scenario_selector)/config/default_scenario_selector.param.yaml" />
+  <arg name="extra_selector_config_file" default="$(find-pkg-share autoware_extra_scenario_selector)/config/extra_scenario_selector.param.yaml" />
+
+  <node pkg="autoware_scenario_gate" exec="autoware_scenario_gate_node" name="autoware_scenario_gate" output="screen">
+    <remap from="input/scenario" to="$(var input_scenario)"/>
+    <remap from="input/trajectory" to="$(var input_trajectory)"/>
+
+    <remap from="output/scenario" to="$(var output_scenario)"/>
+    <remap from="output/trajectory" to="$(var output_trajectory)"/>
+
+    <param from="$(var config_file)"/>
+    <param from="$(var default_selector_config_file)"/>
+    <param from="$(var extra_selector_config_file)"/>
+  </node>
+</launch>

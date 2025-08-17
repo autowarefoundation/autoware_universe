@@ -30,6 +30,7 @@
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_ros</depend>
   <depend>tier4_planning_msgs</depend>
+  <depend>autoware_scenario_gate</depend>
 
   <exec_depend>ros2cli</exec_depend>
   <exec_depend>topic_tools</exec_depend>

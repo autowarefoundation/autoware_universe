@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__EXTRA_SCENARIO_SELECTOR__NODE_HPP_
 #define AUTOWARE__EXTRA_SCENARIO_SELECTOR__NODE_HPP_
 
+#include <autoware/scenario_selector_base.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -47,12 +48,17 @@
 #include <memory>
 #include <string>
 
-namespace autoware::extra_selector
+namespace autoware::scenario_selector
 {
-class ExtraScenarioSelectorNode : public rclcpp::Node
+class ExtraScenarioSelectorNode : public rclcpp::Node,
+                                  public autoware::scenario_selector::ScenarioSelectorBase
 {
 public:
+  ExtraScenarioSelectorNode() : ExtraScenarioSelectorNode(rclcpp::NodeOptions{}) {}
+
   explicit ExtraScenarioSelectorNode(const rclcpp::NodeOptions & node_options);
+
+  std::string select() override;
 
   void onOdom(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
 
@@ -112,9 +118,11 @@ private:
     pub_processing_time_;
 
   // polling subscribers
-  autoware_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry, autoware_utils::polling_policy::All>::SharedPtr sub_odom_;
+  autoware_utils::InterProcessPollingSubscriber<
+    nav_msgs::msg::Odometry, autoware_utils::polling_policy::All>::SharedPtr sub_odom_;
   autoware_utils::InterProcessPollingSubscriber<std_msgs::msg::Bool>::SharedPtr sub_parking_state_;
-  autoware_utils::InterProcessPollingSubscriber<std_msgs::msg::Bool>::SharedPtr sub_waypoint_following_state_;
+  autoware_utils::InterProcessPollingSubscriber<std_msgs::msg::Bool>::SharedPtr
+    sub_waypoint_following_state_;
   autoware_utils::InterProcessPollingSubscriber<
     autoware_adapi_v1_msgs::msg::OperationModeState>::SharedPtr sub_operation_mode_state_;
 
@@ -154,6 +162,6 @@ private:
   // processing time
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
 };
-}  // namespace autoware::extra_selector
+}  // namespace autoware::scenario_selector
 
 #endif  // AUTOWARE__EXTRA_SCENARIO_SELECTOR__NODE_HPP_

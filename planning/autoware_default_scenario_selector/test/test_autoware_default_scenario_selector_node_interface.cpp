@@ -25,7 +25,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::default_scenario_selector
+namespace autoware::scenario_selector
 {
 using autoware::planning_test_manager::PlanningInterfaceTestManager;
 
@@ -130,4 +130,4 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
   ASSERT_NO_THROW(test_manager->testWithOffTrackOdometry(test_target_node, input_odometry_topic));
   rclcpp::shutdown();
 }
-}  // namespace autoware::default_scenario_selector
+}  // namespace autoware::scenario_selector

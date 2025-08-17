@@ -4,12 +4,16 @@ project(autoware_extra_scenario_selector)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
+find_package(pluginlib REQUIRED)
+
+pluginlib_export_plugin_description_file(autoware_scenario_gate plugins.xml)
+
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/node.cpp
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
-  PLUGIN "autoware::extra_selector::ExtraScenarioSelectorNode"
+  PLUGIN "autoware::scenario_selector::ExtraScenarioSelectorNode"
   EXECUTABLE ${PROJECT_NAME}_node
 )
 
