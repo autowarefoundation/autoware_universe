@@ -44,6 +44,7 @@ public:
   {
     return RequiredSubscriptionInfo{};
   }
+  ~BoundaryDeparturePreventionModule() override { updater_ptr_.reset(); }
 
 private:
   // === Interface and inputs validation ====
