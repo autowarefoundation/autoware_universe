@@ -188,7 +188,7 @@ void StartPlannerTestHelper::plot_footprint(
   const double base_to_front = vehicle_info.front_overhang_m + vehicle_info.wheel_base_m;
   const double base_to_rear = vehicle_info.rear_overhang_m;
   const double base_to_left = vehicle_info.wheel_tread_m / 2.0 + vehicle_info.left_overhang_m;
-  ;
+
   const double base_to_right = vehicle_info.wheel_tread_m / 2.0 + vehicle_info.right_overhang_m;
   std::vector<std::pair<double, double>> corners = {
     {base_to_front, base_to_left},    // Front left
@@ -277,6 +277,9 @@ void StartPlannerTestHelper::plot_and_save_path(
     std::string test_result_dir = file_path.substr(0, pos) + package_name + "/test_results/";
     std::string output_path;
     switch (planner_type) {
+      case PlannerType::CLOTHOID:
+        output_path = test_result_dir + "clothoid_pull_out/";
+        break;
       case PlannerType::SHIFT:
         output_path = test_result_dir + "shift_pull_out/";
         break;
@@ -287,8 +290,10 @@ void StartPlannerTestHelper::plot_and_save_path(
         output_path = test_result_dir + "freespace_pull_out/";
         break;
       default:
-        output_path = test_result_dir + "default/";
-        break;
+        // Don't save plot for default case
+        std::cerr << "Unsupported planner type for plotting: " << static_cast<int>(planner_type)
+                  << std::endl;
+        return;
     }
     // Save the plot
     plt.savefig(Args(output_path + filename), Kwargs("dpi"_a = 300));

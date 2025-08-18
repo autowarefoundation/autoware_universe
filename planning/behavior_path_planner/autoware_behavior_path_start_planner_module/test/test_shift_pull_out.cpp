@@ -106,11 +106,16 @@ TEST_F(TestShiftPullOut, GenerateValidShiftPullOutPath)
     EXPECT_EQ(debug_data.conditions_evaluation.back(), "success")
       << "shift pull out path planning did not succeed for " + yaml_file;
 
+#ifdef ENABLE_PLOT
     // Plot and save the generated path for visualization
     if (result.has_value() && !result->partial_paths.empty()) {
       // Get lanelets from route segments
       std::vector<lanelet::ConstLanelet> lanelets;
       for (const auto & segment : route.segments) {
+        // Add preferred primitive if it exists
+        const auto preferred_lanelet =
+          planner_data->route_handler->getLaneletsFromId(segment.preferred_primitive.id);
+        lanelets.push_back(preferred_lanelet);
         for (const auto & primitive : segment.primitives) {
           const auto lanelet = planner_data->route_handler->getLaneletsFromId(primitive.id);
           lanelets.push_back(lanelet);
@@ -124,6 +129,7 @@ TEST_F(TestShiftPullOut, GenerateValidShiftPullOutPath)
       StartPlannerTestHelper::plot_and_save_path(
         result->partial_paths, lanelets, vehicle_info_, PlannerType::SHIFT, plot_filename);
     }
+#endif
   }
 }
 }  // namespace autoware::behavior_path_planner

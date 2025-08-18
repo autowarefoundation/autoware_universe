@@ -29,7 +29,9 @@ if(BUILD_TESTING)
     test/include
   )
 
-  # Link autoware_pyplot for plotting functionality
+  # Check if ENABLE_PLOT is set
+  option(ENABLE_PLOT "Enable plotting in tests" OFF)
+
   find_package(autoware_pyplot REQUIRED)
   ament_target_dependencies(start_planner_test_helper autoware_pyplot)
 
@@ -41,20 +43,23 @@ if(BUILD_TESTING)
     start_planner_test_helper
   )
 
-  # Create test output directories
-  add_custom_target(create_test_directories ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory
-      ${CMAKE_CURRENT_SOURCE_DIR}/test_results/clothoid_pull_out
-    COMMAND ${CMAKE_COMMAND} -E make_directory
-      ${CMAKE_CURRENT_SOURCE_DIR}/test_results/shift_pull_out
-    COMMAND ${CMAKE_COMMAND} -E make_directory
-      ${CMAKE_CURRENT_SOURCE_DIR}/test_results/geometric_pull_out
-    COMMAND ${CMAKE_COMMAND} -E make_directory
-      ${CMAKE_CURRENT_SOURCE_DIR}/test_results/freespace_pull_out
-    COMMAND ${CMAKE_COMMAND} -E make_directory
-      ${CMAKE_CURRENT_SOURCE_DIR}/test_results/default
-  )
-  add_dependencies(test_${PROJECT_NAME} create_test_directories)
+  # Pass ENABLE_PLOT definition to test executable
+  if(ENABLE_PLOT)
+    target_compile_definitions(test_${PROJECT_NAME} PRIVATE ENABLE_PLOT)
+
+    # Create test output directories only when plotting is enabled
+    add_custom_target(create_test_directories ALL
+      COMMAND ${CMAKE_COMMAND} -E make_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_results/clothoid_pull_out
+      COMMAND ${CMAKE_COMMAND} -E make_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_results/shift_pull_out
+      COMMAND ${CMAKE_COMMAND} -E make_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_results/geometric_pull_out
+      COMMAND ${CMAKE_COMMAND} -E make_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_results/freespace_pull_out
+    )
+    add_dependencies(test_${PROJECT_NAME} create_test_directories)
+  endif()
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE config test_data)
