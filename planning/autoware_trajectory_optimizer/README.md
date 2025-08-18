@@ -20,7 +20,3 @@ This package depends on the following packages:
 {{ json_to_markdown("planning/autoware_trajectory_optimizer/schema/trajectory_optimizer.schema.json") }}
 
 Parameters can be set via YAML configuration files in the `config/` directory.
-
-## License
-
-This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
