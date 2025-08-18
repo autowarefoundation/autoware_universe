@@ -116,7 +116,10 @@ bool StaticObstacleAvoidanceModule::isExecutionReady() const
   RCLCPP_DEBUG_STREAM(getLogger(), std::boolalpha << "COMFORTABLE:" << avoid_data_.comfortable);
   RCLCPP_DEBUG_STREAM(getLogger(), std::boolalpha << "VALID:" << avoid_data_.valid);
   RCLCPP_DEBUG_STREAM(getLogger(), std::boolalpha << "READY:" << avoid_data_.ready);
-  return avoid_data_.safe && avoid_data_.comfortable && avoid_data_.valid && avoid_data_.ready;
+  RCLCPP_DEBUG_STREAM(
+    getLogger(), std::boolalpha << "NEED APPROVAL:" << avoid_data_.request_operator);
+  return avoid_data_.safe && avoid_data_.comfortable && avoid_data_.valid && avoid_data_.ready &&
+         !avoid_data_.request_operator;
 }
 
 AvoidanceState StaticObstacleAvoidanceModule::getCurrentModuleState(
@@ -577,7 +580,8 @@ void StaticObstacleAvoidanceModule::fillShiftLine(
   const auto avoidance_ready = helper_->isReady(data.target_objects);
   data.ready = helper_->isReady(data.new_shift_line, path_shifter_.getLastShiftLength()) &&
                avoidance_ready.first;
-  data.request_operator = avoidance_ready.second;
+  data.request_operator =
+    is_operator_approval_required(data.candidate_path, debug) || avoidance_ready.second;
 }
 
 void StaticObstacleAvoidanceModule::fillEgoStatus(
@@ -852,59 +856,6 @@ bool StaticObstacleAvoidanceModule::isSafePath(
 
     return false;
   }();
-
-  const auto is_within_current_lane = [&, this](const auto is_right) {
-    if (avoid_data_.new_shift_line.empty()) return true;
-
-    const auto combine_lanelet = lanelet::utils::combineLaneletsShape(avoid_data_.current_lanelets);
-    const auto bound = is_right
-                         ? lanelet::utils::to2D(combine_lanelet.rightBound().basicLineString())
-                         : lanelet::utils::to2D(combine_lanelet.leftBound().basicLineString());
-    for (size_t i = 0; i < avoid_data_.new_shift_line.back().end_idx; ++i) {
-      const auto transform =
-        autoware_utils::pose2transform(autoware_utils::get_pose(shifted_path.path.points.at(i)));
-      const auto footprint = autoware_utils::transform_vector(
-        planner_data_->parameters.vehicle_info.createFootprint(), transform);
-      if (boost::geometry::intersects(footprint, bound)) {
-        return false;
-      }
-    }
-
-    return true;
-  };
-
-  if (parameters_->policy_detection_reliability == "not_enough") {
-    lanelet::ConstLanelets check_lanes{};
-    for (const auto & lane : avoid_data_.current_lanelets) {
-      if (avoid_data_.target_objects.empty()) {
-        break;
-      }
-
-      check_lanes.push_back(lane);
-
-      if (lane.id() == avoid_data_.target_objects.back().overhang_lanelet.id()) {
-        break;
-      }
-    }
-    if (has_left_shift) {
-      const auto exist_adjacent_lane =
-        std::all_of(check_lanes.begin(), check_lanes.end(), [this](const auto & lane) {
-          return planner_data_->route_handler->getLeftLanelet(lane, true, false);
-        });
-      if (!exist_adjacent_lane && !is_within_current_lane(false)) {
-        return false;
-      }
-    }
-    if (has_right_shift) {
-      const auto exist_adjacent_lane =
-        std::all_of(check_lanes.begin(), check_lanes.end(), [this](const auto & lane) {
-          return planner_data_->route_handler->getRightLanelet(lane, true, false);
-        });
-      if (!exist_adjacent_lane && !is_within_current_lane(true)) {
-        return false;
-      }
-    }
-  }
 
   if (!has_left_shift && !has_right_shift) {
     return true;
@@ -1513,6 +1464,116 @@ bool StaticObstacleAvoidanceModule::isValidShiftLine(
   }
 
   return true;  // valid shift line.
+}
+
+bool StaticObstacleAvoidanceModule::is_operator_approval_required(
+  ShiftedPath & shifted_path, [[maybe_unused]] DebugData & debug) const
+{
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  const auto ego_idx = planner_data_->findEgoIndex(shifted_path.path.points);
+
+  const auto has_left_shift = [&]() {
+    for (size_t i = ego_idx; i < shifted_path.shift_length.size(); i++) {
+      const auto length = shifted_path.shift_length.at(i);
+
+      if (parameters_->lateral_execution_threshold < length) {
+        return true;
+      }
+    }
+
+    return false;
+  }();
+
+  const auto has_right_shift = [&]() {
+    for (size_t i = ego_idx; i < shifted_path.shift_length.size(); i++) {
+      const auto length = shifted_path.shift_length.at(i);
+
+      if (parameters_->lateral_execution_threshold < -1.0 * length) {
+        return true;
+      }
+    }
+
+    return false;
+  }();
+
+  const auto is_return_shift =
+    [](const double start_shift_length, const double end_shift_length, const double threshold) {
+      return std::abs(start_shift_length) > threshold && std::abs(end_shift_length) < threshold;
+    };
+
+  if (!has_left_shift && !has_right_shift) {
+    return false;
+  }
+
+  if (avoid_data_.new_shift_line.empty()) {
+    return false;
+  }
+
+  const auto shift_line = avoid_data_.new_shift_line.back();
+  if (is_return_shift(
+        shift_line.start_shift_length, shift_line.end_shift_length,
+        parameters_->lateral_small_shift_threshold)) {
+    return false;
+  }
+
+  const auto is_within_current_lane = [&, this](const auto is_right) {
+    const auto combine_lanelet = lanelet::utils::combineLaneletsShape(avoid_data_.current_lanelets);
+    const auto bound = is_right
+                         ? lanelet::utils::to2D(combine_lanelet.rightBound().basicLineString())
+                         : lanelet::utils::to2D(combine_lanelet.leftBound().basicLineString());
+
+    for (size_t i = shift_line.start_idx; i < shift_line.end_idx; ++i) {
+      const auto transform =
+        autoware_utils::pose2transform(autoware_utils::get_pose(shifted_path.path.points.at(i)));
+      const auto footprint = autoware_utils::transform_vector(
+        planner_data_->parameters.vehicle_info.createFootprint(), transform);
+      if (boost::geometry::intersects(footprint, bound)) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  if (parameters_->policy_detection_reliability != "not_enough") {
+    return false;
+  }
+
+  lanelet::ConstLanelets check_lanes{};
+  for (const auto & lane : avoid_data_.current_lanelets) {
+    if (avoid_data_.target_objects.empty()) {
+      break;
+    }
+
+    check_lanes.push_back(lane);
+
+    if (lane.id() == avoid_data_.target_objects.back().overhang_lanelet.id()) {
+      break;
+    }
+  }
+
+  if (has_left_shift) {
+    const auto exist_adjacent_lane =
+      std::all_of(check_lanes.begin(), check_lanes.end(), [this](const auto & lane) {
+        return planner_data_->route_handler->getLeftLanelet(lane, true, false);
+      });
+    if (!exist_adjacent_lane && !is_within_current_lane(false)) {
+      return true;
+    }
+  }
+
+  if (has_right_shift) {
+    const auto exist_adjacent_lane =
+      std::all_of(check_lanes.begin(), check_lanes.end(), [this](const auto & lane) {
+        return planner_data_->route_handler->getRightLanelet(lane, true, false);
+      });
+    if (!exist_adjacent_lane && !is_within_current_lane(true)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 void StaticObstacleAvoidanceModule::updateData()
