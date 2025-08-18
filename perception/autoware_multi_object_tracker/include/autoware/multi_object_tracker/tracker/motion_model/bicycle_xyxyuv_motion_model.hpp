@@ -34,7 +34,7 @@
 namespace autoware::multi_object_tracker
 {
 
-class BicycleMotionModel : public MotionModel<6>
+class BicycleXYXYUVMotionModel : public MotionModel<6>
 {
 private:
   // attributes
@@ -65,7 +65,7 @@ private:
   } motion_params_;
 
 public:
-  BicycleMotionModel();
+  BicycleXYXYUVMotionModel();
 
   // bicycle model state indices
   // X1, Y1: position of the rear wheel
