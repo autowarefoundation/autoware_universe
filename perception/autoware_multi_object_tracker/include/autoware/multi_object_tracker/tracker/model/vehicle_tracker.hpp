@@ -22,7 +22,7 @@
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
-#include "autoware/multi_object_tracker/tracker/motion_model/bicycle_xyxyuv_motion_model.hpp"
+#include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
 
 namespace autoware::multi_object_tracker
 {
@@ -36,8 +36,8 @@ private:
 
   double velocity_deviation_threshold_;
 
-  BicycleXYXYUVMotionModel motion_model_;
-  using IDX = BicycleXYXYUVMotionModel::IDX;
+  BicycleMotionModel motion_model_;
+  using IDX = BicycleMotionModel::IDX;
 
 public:
   VehicleTracker(
