@@ -72,7 +72,7 @@ FrameMetrics PerceptionAnalyticsCalculator::calculate(const tf2_ros::Buffer & tf
     transform_stamped = tf_buffer.lookupTransform(
       "base_link", objects_frame_id, rclcpp::Time{objects_time}, tf2::durationFromSec(0.1));
   } catch (const tf2::TransformException & ex) {
-    RCLCPP_WARN(
+    RCLCPP_DEBUG(
       rclcpp::get_logger("PerceptionAnalyticsCalculator"),
       "TF lookup failed, skipping max distance calculation.");
     return metrics;
