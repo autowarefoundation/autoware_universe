@@ -1,25 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <launch>
   <!-- I/O topics -->
-  <arg name="input_scenario"    default="/planning/scenario_selector/scenario"/>
-  <arg name="input_trajectory"  default="/planning/scenario_selector/trajectory"/>
-  <arg name="output_scenario"   default="/planning/scenario_planning/scenario"/>
-  <arg name="output_trajectory" default="/planning/scenario_planning/scenario_selector/trajectory"/>
+  <arg name="input_lane_driving_trajectory"/>
+  <arg name="input_parking_trajectory"/>
+  <arg name="input_waypoint_following_trajectory"/>
+  <arg name="input_lanelet_map"/>
+  <arg name="input_route"/>
+  <arg name="input_odometry"/>
+  <arg name="input_operation_mode_state"/>
+  <arg name="output_scenario"/>
+  <arg name="output_trajectory"/>
+
+  <arg name="is_parking_completed"/>
+  <arg name="is_waypoint_following_completed"/>
 
   <!-- Gate params -->
   <arg name="gate_param_path" default="$(find-pkg-share autoware_scenario_gate)/config/scenario_gate.param.yaml"/>
 
-  <!-- 必須包含 namespace 屬性 -->
   <node_container pkg="rclcpp_components" exec="component_container_mt" name="scenario_gate_container" namespace="">
-    <composable_node pkg="autoware_scenario_gate"
-                     plugin="autoware::scenario_gate::ScenarioGateNode"
-                     name="scenario_gate"
-                     namespace="">
+    <composable_node pkg="autoware_scenario_gate" plugin="autoware::scenario_gate::ScenarioGateNode" name="scenario_gate" namespace="">
       <param from="$(var gate_param_path)"/>
 
-      <remap from="input/scenario"    to="$(var input_scenario)"/>
-      <remap from="input/trajectory"  to="$(var input_trajectory)"/>
-      <remap from="output/scenario"   to="$(var output_scenario)"/>
+      <remap from="input/lane_driving/trajectory" to="$(var input_lane_driving_trajectory)"/>
+      <remap from="input/parking/trajectory" to="$(var input_parking_trajectory)"/>
+      <remap from="input/waypoint_following/trajectory" to="$(var input_waypoint_following_trajectory)"/>
+      <remap from="input/lanelet_map" to="$(var input_lanelet_map)"/>
+      <remap from="input/route" to="$(var input_route)"/>
+      <remap from="input/odometry" to="$(var input_odometry)"/>
+      <remap from="input/operation_mode_state" to="$(var input_operation_mode_state)"/>
+      <remap from="is_parking_completed" to="$(var is_parking_completed)"/>
+      <remap from="is_waypoint_following_completed" to="$(var is_waypoint_following_completed)"/>
+
+      <remap from="output/scenario" to="$(var output_scenario)"/>
       <remap from="output/trajectory" to="$(var output_trajectory)"/>
     </composable_node>
   </node_container>

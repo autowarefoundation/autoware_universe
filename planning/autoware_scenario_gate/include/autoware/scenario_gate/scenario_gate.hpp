@@ -41,15 +41,6 @@ private:
   void onSelectorScenario(const autoware_internal_planning_msgs::msg::Scenario::ConstSharedPtr msg);
   void onSelectorTrajectory(const autoware_planning_msgs::msg::Trajectory::ConstSharedPtr msg);
 
-  // Subscriptions
-  rclcpp::Subscription<autoware_internal_planning_msgs::msg::Scenario>::SharedPtr
-    sub_selector_scenario_;
-  rclcpp::Subscription<autoware_planning_msgs::msg::Trajectory>::SharedPtr sub_selector_traj_;
-
-  // Publishers
-  rclcpp::Publisher<autoware_planning_msgs::msg::Trajectory>::SharedPtr pub_trajectory_;
-  rclcpp::Publisher<autoware_internal_planning_msgs::msg::Scenario>::SharedPtr pub_scenario_;
-
   std::string selector_info_;
   std::unique_ptr<pluginlib::ClassLoader<autoware::scenario_selector::ScenarioSelectorPlugin>>
     loader_;
