@@ -82,20 +82,22 @@ private:
 TEST_F(TestShiftPullOut, GenerateValidShiftPullOutPath)
 {
   // Test data files to be tested
-  const std::vector<std::string> yaml_files = {"route_data2.yaml"};
+  const std::vector<std::string> yaml_files = {
+    "route_data2.yaml", "route_data3.yaml", "route_data4.yaml"};
+
+  auto planner_data = std::make_shared<PlannerData>();
+  planner_data->init_parameters(*node_);
+  PlannerDebugData debug_data;
 
   for (const auto & yaml_file : yaml_files) {
     std::cout << "Testing with YAML file: " + yaml_file << std::endl;
 
-    auto planner_data = std::make_shared<PlannerData>();
-    planner_data->init_parameters(*node_);
     const auto route = StartPlannerTestHelper::set_route_from_yaml(planner_data, yaml_file);
     const auto start_pose = route.start_pose;
     const auto goal_pose = route.goal_pose;
     StartPlannerTestHelper::set_odometry(planner_data, start_pose);
 
     // Plan the pull out path
-    PlannerDebugData debug_data;
     auto result = call_plan(start_pose, goal_pose, planner_data, debug_data);
 
     // Assert that a valid shift pull out path is generated

@@ -231,7 +231,7 @@ void StartPlannerTestHelper::plot_and_save_path(
   }
 
   // Initialize pyplot
-  pybind11::scoped_interpreter guard{};
+  static pybind11::scoped_interpreter guard{};
   auto plt = autoware::pyplot::import();
 
   auto [fig, axes] = plt.subplots(1, 1);
