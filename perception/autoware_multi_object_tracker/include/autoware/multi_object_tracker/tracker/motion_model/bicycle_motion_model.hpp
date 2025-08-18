@@ -61,6 +61,7 @@ private:
     double max_slip = 0.5236;  // [rad] maximum slip angle, 30deg
     double max_reverse_vel =
       -1.389;  // [m/s] maximum reverse velocity, -5km/h. The value is expected to be negative
+    double wheel_pos_ratio = (lf_ratio + lr_ratio) / lr_ratio; // [-] distance ratio of the wheel base over center-to-rear-wheel
   } motion_params_;
 
 public:

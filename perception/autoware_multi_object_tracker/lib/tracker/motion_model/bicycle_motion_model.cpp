@@ -69,6 +69,7 @@ void BicycleMotionModel::setMotionParams(
   motion_params_.lr_min = std::max(minimum_wheel_pos, lr_min);
   motion_params_.lf_ratio = lf_ratio;
   motion_params_.lr_ratio = lr_ratio;
+  motion_params_.wheel_pos_ratio = (lf_ratio + lr_ratio) / lr_ratio;  // [-] distance ratio of the wheel base over center-to-rear-wheel
 }
 
 void BicycleMotionModel::setMotionLimits(const double & max_vel, const double & max_slip)
@@ -94,7 +95,7 @@ bool BicycleMotionModel::initialize(
 
   // initialize state vector X
   StateVec X;
-  X << x1, y1, x2, y2, vel_long, vel_lat * 2.0;
+  X << x1, y1, x2, y2, vel_long, vel_lat * motion_params_.wheel_pos_ratio;
 
   // initialize covariance matrix P
   StateMat P;
@@ -108,7 +109,7 @@ bool BicycleMotionModel::initialize(
   P(IDX::Y2, IDX::X2) = pose_cov[XYZRPY_COV_IDX::Y_X];
   P(IDX::Y2, IDX::Y2) = pose_cov[XYZRPY_COV_IDX::Y_Y];
   P(IDX::V_LONG, IDX::V_LONG) = vel_long_cov;
-  P(IDX::V_LAT, IDX::V_LAT) = vel_lat_cov;
+  P(IDX::V_LAT, IDX::V_LAT) = vel_lat_cov * motion_params_.wheel_pos_ratio;
 
   return MotionModel::initialize(time, X, P);
 }
@@ -224,7 +225,7 @@ bool BicycleMotionModel::updateStatePoseHeadVel(
   // update state
   constexpr int DIM_Y = 6;
   Eigen::Matrix<double, DIM_Y, 1> Y;
-  Y << x1, y1, x2, y2, vel_long_fixed, vel_lat_fixed * 2.0;
+  Y << x1, y1, x2, y2, vel_long_fixed, vel_lat_fixed * motion_params_.wheel_pos_ratio;
 
   Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
   C(0, IDX::X1) = 1.0;
@@ -247,7 +248,7 @@ bool BicycleMotionModel::updateStatePoseHeadVel(
   R(3, 2) = pose_cov[XYZRPY_COV_IDX::Y_X];
   R(3, 3) = pose_cov[XYZRPY_COV_IDX::Y_Y];
   R(4, 4) = twist_cov[XYZRPY_COV_IDX::X_X];
-  R(5, 5) = twist_cov[XYZRPY_COV_IDX::Y_Y];
+  R(5, 5) = twist_cov[XYZRPY_COV_IDX::Y_Y] * motion_params_.wheel_pos_ratio;
 
   return ekf_.update(Y, C, R);
 }
@@ -518,7 +519,7 @@ bool BicycleMotionModel::getPredictedState(
 
   // set twist
   twist.linear.x = X(IDX::V_LONG);
-  twist.linear.y = X(IDX::V_LAT) * 0.5;
+  twist.linear.y = X(IDX::V_LAT) / motion_params_.wheel_pos_ratio;  // lateral velocity is scaled by wheel position ratio
   twist.linear.z = 0.0;
   twist.angular.x = 0.0;
   twist.angular.y = 0.0;
@@ -541,7 +542,7 @@ bool BicycleMotionModel::getPredictedState(
   constexpr double vel_cov = 0.1 * 0.1;
   twist_cov[XYZRPY_COV_IDX::X_X] = P(IDX::V_LONG, IDX::V_LONG);
   twist_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::V_LAT, IDX::V_LAT);
-  twist_cov[XYZRPY_COV_IDX::YAW_YAW] = P(IDX::V_LAT, IDX::V_LAT) * wheel_base_inv_sq * 0.25;
+  twist_cov[XYZRPY_COV_IDX::YAW_YAW] = P(IDX::V_LAT, IDX::V_LAT) * wheel_base_inv_sq / (motion_params_.wheel_pos_ratio * motion_params_.wheel_pos_ratio);
   twist_cov[XYZRPY_COV_IDX::Z_Z] = vel_cov;
   twist_cov[XYZRPY_COV_IDX::ROLL_ROLL] = vel_cov;
   twist_cov[XYZRPY_COV_IDX::PITCH_PITCH] = vel_cov;
