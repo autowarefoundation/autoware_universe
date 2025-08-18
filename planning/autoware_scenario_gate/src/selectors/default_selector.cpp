@@ -7,12 +7,12 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
+// distributed under the License is distributed on an "AS IS",
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/extra_scenario_selector/node.hpp"
+#include "autoware/selectors/default_selector.hpp"
 
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
@@ -24,8 +24,6 @@
 #include <lanelet2_core/geometry/Point.h>
 #include <lanelet2_core/geometry/Polygon.h>
 
-#include <chrono>
-#include <cmath>
 #include <deque>
 #include <memory>
 #include <string>
@@ -45,32 +43,7 @@ std::shared_ptr<lanelet::ConstPolygon3d> findNearestParkinglot(
   const auto result = lanelet::utils::query::getLinkedParkingLot(
     current_position, lanelet_map_ptr, linked_parking_lot.get());
 
-  if (result) {
-    return linked_parking_lot;
-  } else {
-    return {};
-  }
-}
-
-std::shared_ptr<lanelet::ConstPolygon3d> findNearestWaypointZone(
-  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
-  const lanelet::BasicPoint2d & current_position)
-{
-  const auto linked_waypoint_zone = std::make_shared<lanelet::ConstPolygon3d>();
-  const auto result = lanelet::utils::query::getLinkedWaypointZone(
-    current_position, lanelet_map_ptr, linked_waypoint_zone.get());
-  if (result) return linked_waypoint_zone;
-  return {};
-}
-
-std::shared_ptr<lanelet::ConstPolygon3d> findNearestWaypointZone(
-  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
-  const lanelet::BasicPoint2d & current_position, const double distance_threshold)
-{
-  const auto linked_waypoint_zone = std::make_shared<lanelet::ConstPolygon3d>();
-  const auto result = lanelet::utils::query::getLinkedWaypointZone(
-    current_position, lanelet_map_ptr, linked_waypoint_zone.get(), distance_threshold);
-  if (result) return linked_waypoint_zone;
+  if (result) return linked_parking_lot;
   return {};
 }
 
@@ -81,12 +54,9 @@ bool isInLane(
   const lanelet::BasicPoint2d search_point(current_pos.x, current_pos.y);
   std::vector<std::pair<double, lanelet::Lanelet>> nearest_lanelets =
     lanelet::geometry::findNearest(lanelet_map_ptr->laneletLayer, search_point, 1);
-
   if (nearest_lanelets.empty()) return false;
-
   const auto dist_to_nearest_lanelet = nearest_lanelets.front().first;
   static constexpr double margin = 0.01;
-
   return dist_to_nearest_lanelet < margin;
 }
 
@@ -106,54 +76,15 @@ bool isAlongLane(
   return dist_to_centerline < margin;
 }
 
-bool isAlongOrInWaypointZone(
-  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
-  const geometry_msgs::msg::Pose & current_pose, const double distance_threshold = 3.0)
-{
-  if (!lanelet_map_ptr) {
-    return false;
-  }
-
-  lanelet::BasicPoint2d ego_2d(current_pose.position.x, current_pose.position.y);
-  auto nearest_zone = findNearestWaypointZone(lanelet_map_ptr, ego_2d, distance_threshold);
-  if (!nearest_zone) {
-    return false;
-  }
-
-  return true;
-}
-
-[[maybe_unused]] bool isInWaypointZone(
-  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
-  const geometry_msgs::msg::Pose & current_pose)
-{
-  const auto & p = current_pose.position;
-  const lanelet::Point3d search_point(lanelet::InvalId, p.x, p.y, p.z);
-
-  const auto nearest_waypoint_zone =
-    findNearestWaypointZone(lanelet_map_ptr, search_point.basicPoint2d());
-
-  if (!nearest_waypoint_zone) {
-    return false;
-  }
-
-  return lanelet::geometry::within(search_point, nearest_waypoint_zone->basicPolygon());
-}
-
 bool isInParkingLot(
   const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
   const geometry_msgs::msg::Pose & current_pose)
 {
   const auto & p = current_pose.position;
   const lanelet::Point3d search_point(lanelet::InvalId, p.x, p.y, p.z);
-
   const auto nearest_parking_lot =
     findNearestParkinglot(lanelet_map_ptr, search_point.basicPoint2d());
-
-  if (!nearest_parking_lot) {
-    return false;
-  }
-
+  if (!nearest_parking_lot) return false;
   return lanelet::geometry::within(search_point, nearest_parking_lot->basicPolygon());
 }
 
@@ -161,15 +92,10 @@ bool isNearTrajectoryEnd(
   const autoware_planning_msgs::msg::Trajectory::ConstSharedPtr trajectory,
   const geometry_msgs::msg::Pose & current_pose, const double th_dist)
 {
-  if (!trajectory || trajectory->points.empty()) {
-    return false;
-  }
-
+  if (!trajectory || trajectory->points.empty()) return false;
   const auto & p1 = current_pose.position;
   const auto & p2 = trajectory->points.back().pose.position;
-
   const auto dist = std::hypot(p1.x - p2.x, p1.y - p2.y);
-
   return dist < th_dist;
 }
 
@@ -178,56 +104,58 @@ bool isStopped(
   const double th_stopped_velocity_mps)
 {
   for (const auto & twist : twist_buffer) {
-    if (std::abs(twist->twist.linear.x) > th_stopped_velocity_mps) {
-      return false;
-    }
+    if (std::abs(twist->twist.linear.x) > th_stopped_velocity_mps) return false;
   }
   return true;
 }
+
 }  // namespace
 
-/*=========================
-  ScenarioSelectorPlugin API
-=========================*/
-void ExtraScenarioSelector::initialize(rclcpp::Node * node)
+/* ============================= Plugin API ============================= */
+
+void DefaultScenarioSelector::initialize(rclcpp::Node * node)
 {
   node_ = node;
 
-  node_->declare_parameter("update_rate", update_rate_);
-  node_->declare_parameter("th_max_message_delay_sec", th_max_message_delay_sec_);
-  node_->declare_parameter("th_arrived_distance_m", th_arrived_distance_m_);
-  node_->declare_parameter("th_stopped_time_sec", th_stopped_time_sec_);
-  node_->declare_parameter("th_stopped_velocity_mps", th_stopped_velocity_mps_);
-  node_->declare_parameter("enable_mode_switching", enable_mode_switching_);
+  update_rate_ = node_->declare_parameter<double>("update_rate", 10.0);
+  th_max_message_delay_sec_ = node_->declare_parameter<double>("th_max_message_delay_sec", 1.0);
+  th_arrived_distance_m_ = node_->declare_parameter<double>("th_arrived_distance_m", 1.0);
+  th_stopped_time_sec_ = node_->declare_parameter<double>("th_stopped_time_sec", 1.0);
+  th_stopped_velocity_mps_ = node_->declare_parameter<double>("th_stopped_velocity_mps", 0.01);
+  enable_mode_switching_ = node_->declare_parameter<bool>("enable_mode_switching", true);
 
-  node_->get_parameter("update_rate", update_rate_);
-  node_->get_parameter("th_max_message_delay_sec", th_max_message_delay_sec_);
-  node_->get_parameter("th_arrived_distance_m", th_arrived_distance_m_);
-  node_->get_parameter("th_stopped_time_sec", th_stopped_time_sec_);
-  node_->get_parameter("th_stopped_velocity_mps", th_stopped_velocity_mps_);
-  node_->get_parameter("enable_mode_switching", enable_mode_switching_);
+  if (update_rate_ <= 0.0) {
+    RCLCPP_WARN(node_->get_logger(), "update_rate <= 0 (%.3f). Forcing to 10.0 Hz.", update_rate_);
+    update_rate_ = 10.0;
+  }
 
-  // Input（topic 名稱完全沿用原本）
-  sub_lane_driving_trajectory_ = node_->create_subscription<autoware_planning_msgs::msg::Trajectory>(
-    "input/lane_driving/trajectory", rclcpp::QoS{1},
-    std::bind(&ExtraScenarioSelector::onLaneDrivingTrajectory, this, std::placeholders::_1));
+  RCLCPP_INFO(
+    node_->get_logger(),
+    "Selector params: update_rate=%.3f, th_max_delay=%.3f, th_arrived=%.3f, th_stopped_time=%.3f, "
+    "th_stopped_vel=%.4f, enable_mode_switching=%s",
+    update_rate_, th_max_message_delay_sec_, th_arrived_distance_m_, th_stopped_time_sec_,
+    th_stopped_velocity_mps_, enable_mode_switching_ ? "true" : "false");
+
+  lane_driving_stop_time_ = {};
+  empty_parking_trajectory_time_ = {};
+
+  /* Inputs */
+  sub_lane_driving_trajectory_ =
+    node_->create_subscription<autoware_planning_msgs::msg::Trajectory>(
+      "input/lane_driving/trajectory", rclcpp::QoS{1},
+      std::bind(&DefaultScenarioSelector::onLaneDrivingTrajectory, this, std::placeholders::_1));
 
   sub_parking_trajectory_ = node_->create_subscription<autoware_planning_msgs::msg::Trajectory>(
     "input/parking/trajectory", rclcpp::QoS{1},
-    std::bind(&ExtraScenarioSelector::onParkingTrajectory, this, std::placeholders::_1));
-
-  sub_waypoint_following_trajectory_ =
-    node_->create_subscription<autoware_planning_msgs::msg::Trajectory>(
-      "input/waypoint_following/trajectory", rclcpp::QoS{1},
-      std::bind(&ExtraScenarioSelector::onWaypointFollowingTrajectory, this, std::placeholders::_1));
+    std::bind(&DefaultScenarioSelector::onParkingTrajectory, this, std::placeholders::_1));
 
   sub_lanelet_map_ = node_->create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
     "input/lanelet_map", rclcpp::QoS{1}.transient_local(),
-    std::bind(&ExtraScenarioSelector::onMap, this, std::placeholders::_1));
+    std::bind(&DefaultScenarioSelector::onMap, this, std::placeholders::_1));
 
   sub_route_ = node_->create_subscription<autoware_planning_msgs::msg::LaneletRoute>(
     "input/route", rclcpp::QoS{1}.transient_local(),
-    std::bind(&ExtraScenarioSelector::onRoute, this, std::placeholders::_1));
+    std::bind(&DefaultScenarioSelector::onRoute, this, std::placeholders::_1));
 
   sub_odom_ = decltype(sub_odom_)::element_type::create_subscription(
     node_, "input/odometry", rclcpp::QoS{100});
@@ -235,44 +163,50 @@ void ExtraScenarioSelector::initialize(rclcpp::Node * node)
   sub_parking_state_ = decltype(sub_parking_state_)::element_type::create_subscription(
     node_, "is_parking_completed", rclcpp::QoS{1});
 
-  sub_waypoint_following_state_ =
-    decltype(sub_waypoint_following_state_)::element_type::create_subscription(
-      node_, "is_waypoint_following_completed", rclcpp::QoS{1});
-
   sub_operation_mode_state_ =
     decltype(sub_operation_mode_state_)::element_type::create_subscription(
       node_, "input/operation_mode_state", rclcpp::QoS{1}.transient_local());
 
-  // Output（沿用）
+  /* Outputs */
   pub_scenario_ = node_->create_publisher<autoware_internal_planning_msgs::msg::Scenario>(
     "output/scenario", rclcpp::QoS{1});
   pub_trajectory_ = node_->create_publisher<autoware_planning_msgs::msg::Trajectory>(
     "output/trajectory", rclcpp::QoS{1});
 
-  // Timer
-  const auto period_ns = rclcpp::Rate(static_cast<double>(update_rate_)).period();
+  /* Timer */
+  const auto hz = static_cast<double>(update_rate_);
+  const auto period_ns = rclcpp::Rate(hz > 0.0 ? hz : 10.0).period();
   timer_ = rclcpp::create_timer(
-    node_, node_->get_clock(), period_ns, std::bind(&ExtraScenarioSelector::onTimer, this));
+    node_, node_->get_clock(), period_ns, std::bind(&DefaultScenarioSelector::onTimer, this));
 
-  // Debug publisher
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(node_);
+
   pub_processing_time_ = node_->create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "~/debug/processing_time_ms", 1);
 }
 
-bool ExtraScenarioSelector::ready() const
+bool DefaultScenarioSelector::ready() const
 {
-  return static_cast<bool>(route_) && static_cast<bool>(current_pose_) &&
-         static_cast<bool>(operation_mode_state_) && static_cast<bool>(route_handler_);
+  if (!current_pose_) return false;
+  if (!route_handler_) return false;
+  if (!route_) return false;
+  if (!twist_) return false;
+  if (!operation_mode_state_) return false;
+
+  if (!route_handler_->isHandlerReady()) return false;
+
+  return true;
 }
 
-std::string ExtraScenarioSelector::select()
+/* ============================= Original Logic ============================= */
+
+std::string DefaultScenarioSelector::select()
 {
-  return "extra scenario selector";
+  return "default scenario selector";
 }
 
 autoware_planning_msgs::msg::Trajectory::ConstSharedPtr
-ExtraScenarioSelector::getScenarioTrajectory(const std::string & scenario)
+DefaultScenarioSelector::getScenarioTrajectory(const std::string & scenario)
 {
   if (scenario == autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING) {
     return lane_driving_trajectory_;
@@ -280,14 +214,11 @@ ExtraScenarioSelector::getScenarioTrajectory(const std::string & scenario)
   if (scenario == autoware_internal_planning_msgs::msg::Scenario::PARKING) {
     return parking_trajectory_;
   }
-  if (scenario == autoware_internal_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING) {
-    return waypoint_following_trajectory_;
-  }
   RCLCPP_ERROR_STREAM(node_->get_logger(), "invalid scenario argument: " << scenario);
   return lane_driving_trajectory_;
 }
 
-std::string ExtraScenarioSelector::selectScenarioByPosition()
+std::string DefaultScenarioSelector::selectScenarioByPosition()
 {
   const auto is_in_lane =
     isInLane(route_handler_->getLaneletMapPtr(), current_pose_->pose.pose.position);
@@ -295,14 +226,10 @@ std::string ExtraScenarioSelector::selectScenarioByPosition()
     isInLane(route_handler_->getLaneletMapPtr(), route_->goal_pose.position);
   const auto is_in_parking_lot =
     isInParkingLot(route_handler_->getLaneletMapPtr(), current_pose_->pose.pose);
-  const auto is_along_or_in_waypoint_zone =
-    isAlongOrInWaypointZone(route_handler_->getLaneletMapPtr(), current_pose_->pose.pose);
 
   if (current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::EMPTY) {
-    if (is_in_lane && is_goal_in_lane && !is_along_or_in_waypoint_zone) {
+    if (is_in_lane && is_goal_in_lane) {
       return autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING;
-    } else if (is_along_or_in_waypoint_zone) {
-      return autoware_internal_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
     } else if (is_in_parking_lot) {
       return autoware_internal_planning_msgs::msg::Scenario::PARKING;
     }
@@ -310,9 +237,6 @@ std::string ExtraScenarioSelector::selectScenarioByPosition()
   }
 
   if (current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING) {
-    if (is_along_or_in_waypoint_zone) {
-      return autoware_internal_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
-    }
     if (is_in_parking_lot && !is_goal_in_lane) {
       return autoware_internal_planning_msgs::msg::Scenario::PARKING;
     }
@@ -323,25 +247,12 @@ std::string ExtraScenarioSelector::selectScenarioByPosition()
       is_parking_completed_ = false;
       return autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING;
     }
-    if (is_parking_completed_ && is_along_or_in_waypoint_zone) {
-      is_parking_completed_ = false;
-      return autoware_internal_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
-    }
-  }
-
-  if (current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING) {
-    if (is_in_lane && (!is_along_or_in_waypoint_zone || is_waypoint_following_completed_)) {
-      return autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING;
-    }
-    if (is_in_parking_lot && !is_goal_in_lane) {
-      return autoware_internal_planning_msgs::msg::Scenario::PARKING;
-    }
   }
 
   return current_scenario_;
 }
 
-void ExtraScenarioSelector::updateCurrentScenario()
+void DefaultScenarioSelector::updateCurrentScenario()
 {
   const auto prev_scenario = current_scenario_;
 
@@ -349,86 +260,53 @@ void ExtraScenarioSelector::updateCurrentScenario()
   const auto is_near_trajectory_end =
     isNearTrajectoryEnd(scenario_trajectory, current_pose_->pose.pose, th_arrived_distance_m_);
 
-  const auto is_stopped = isStopped(twist_buffer_, th_stopped_velocity_mps_);
+  const auto stopped_now = isStopped(twist_buffer_, th_stopped_velocity_mps_);
 
-  if (is_near_trajectory_end && is_stopped) {
+  if (is_near_trajectory_end && stopped_now) {
     current_scenario_ = selectScenarioByPosition();
   }
 
   if (enable_mode_switching_) {
     if (isCurrentLaneDriving()) {
-      if (isSwitchToParking(is_stopped)) {
-        current_scenario_ = autoware_internal_planning_msgs::msg::Scenario::PARKING;
-      } else if (isSwitchToWaypointFollowing(is_stopped)) {
-        current_scenario_ = autoware_internal_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
-      }
+      current_scenario_ = isSwitchToParking(stopped_now)
+                            ? autoware_internal_planning_msgs::msg::Scenario::PARKING
+                            : current_scenario_;
     } else if (isCurrentParking()) {
-      if (isSwitchToLaneDrivingFromParking()) {
-        current_scenario_ = autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING;
-      } else if (isSwitchToWaypointFollowing(is_stopped)) {
-        current_scenario_ = autoware_internal_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
-      }
-    } else if (isCurrentWaypointFollowing()) {
-      if (isSwitchToLaneDrivingFromWaypointFollowing(is_stopped)) {
-        current_scenario_ = autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING;
-      } else if (isSwitchToParking(is_stopped)) {
-        current_scenario_ = autoware_internal_planning_msgs::msg::Scenario::PARKING;
-      }
+      current_scenario_ = isSwitchToLaneDriving()
+                            ? autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING
+                            : current_scenario_;
     }
   }
 
   if (current_scenario_ != prev_scenario) {
-    switch_parking_stop_time_ = {};
-    switch_waypoint_following_stop_time_ = {};
+    lane_driving_stop_time_ = {};
     empty_parking_trajectory_time_ = {};
-    waypoint_following_stop_time_ = {};
     RCLCPP_DEBUG_STREAM(
       node_->get_logger(), "scenario changed: " << prev_scenario << " -> " << current_scenario_);
   }
 }
 
-bool ExtraScenarioSelector::isSwitchToWaypointFollowing(const bool is_stopped)
-{
-  const auto is_along_or_in_waypoint_zone =
-    isAlongOrInWaypointZone(route_handler_->getLaneletMapPtr(), current_pose_->pose.pose);
-
-  if (!is_stopped || !isAutonomous() || !is_along_or_in_waypoint_zone) {
-    switch_waypoint_following_stop_time_ = {};
-    return false;
-  }
-
-  if (!switch_waypoint_following_stop_time_) {
-    switch_waypoint_following_stop_time_ = node_->now();
-    return false;
-  }
-
-  static constexpr double switch_stopping_timeout_s = 5.0;
-  return (node_->now() - switch_waypoint_following_stop_time_.get()).seconds() >
-         switch_stopping_timeout_s;
-}
-
-bool ExtraScenarioSelector::isSwitchToParking(const bool is_stopped)
+bool DefaultScenarioSelector::isSwitchToParking(const bool stopped_now)
 {
   const auto is_in_parking_lot =
     isInParkingLot(route_handler_->getLaneletMapPtr(), current_pose_->pose.pose);
   const auto is_goal_in_lane =
     isInLane(route_handler_->getLaneletMapPtr(), route_->goal_pose.position);
 
-  if (!is_stopped || !isAutonomous() || !is_in_parking_lot || is_goal_in_lane) {
-    switch_parking_stop_time_ = {};
+  if (!stopped_now || !isAutonomous() || !is_in_parking_lot || is_goal_in_lane) {
+    lane_driving_stop_time_ = {};
     return false;
   }
 
-  if (!switch_parking_stop_time_) {
-    switch_parking_stop_time_ = node_->now();
+  if (!lane_driving_stop_time_) {
+    lane_driving_stop_time_ = node_->now();
     return false;
   }
 
-  static constexpr double switch_stopping_timeout_s = 5.0;
-  return (node_->now() - switch_parking_stop_time_.get()).seconds() > switch_stopping_timeout_s;
+  return (node_->now() - lane_driving_stop_time_.get()).seconds() > lane_stopping_timeout_s;
 }
 
-bool ExtraScenarioSelector::isSwitchToLaneDrivingFromParking()
+bool DefaultScenarioSelector::isSwitchToLaneDriving()
 {
   const auto is_along_lane = isAlongLane(route_handler_, current_pose_->pose.pose);
 
@@ -443,36 +321,10 @@ bool ExtraScenarioSelector::isSwitchToLaneDrivingFromParking()
   }
 
   const auto duration = (node_->now() - empty_parking_trajectory_time_.get()).seconds();
-
-  static constexpr double empty_parking_trajectory_timeout_s = 3.0;
   return duration > empty_parking_trajectory_timeout_s;
 }
 
-bool ExtraScenarioSelector::isSwitchToLaneDrivingFromWaypointFollowing(const bool is_stopped)
-{
-  const auto is_along_or_in_waypoint_zone =
-    isAlongOrInWaypointZone(route_handler_->getLaneletMapPtr(), current_pose_->pose.pose);
-  const auto is_along_lane = isAlongLane(route_handler_, current_pose_->pose.pose);
-
-  if (
-    !is_stopped || !is_along_lane ||
-    !(!is_along_or_in_waypoint_zone || is_waypoint_following_completed_)) {
-    waypoint_following_stop_time_ = {};
-    return false;
-  }
-
-  if (!waypoint_following_stop_time_) {
-    waypoint_following_stop_time_ = node_->now();
-    return false;
-  }
-
-  static constexpr double waypoint_following_stopping_timeout_s = 5.0;
-  const auto duration = (node_->now() - waypoint_following_stop_time_.get()).seconds();
-
-  return duration > waypoint_following_stopping_timeout_s;
-}
-
-bool ExtraScenarioSelector::isAutonomous() const
+bool DefaultScenarioSelector::isAutonomous() const
 {
   return operation_mode_state_ &&
          operation_mode_state_->mode ==
@@ -480,33 +332,29 @@ bool ExtraScenarioSelector::isAutonomous() const
          operation_mode_state_->is_autoware_control_enabled;
 }
 
-bool ExtraScenarioSelector::isEmptyParkingTrajectory() const
+bool DefaultScenarioSelector::isEmptyParkingTrajectory() const
 {
-  if (parking_trajectory_) {
-    return parking_trajectory_->points.size() <= 1;
-  }
+  if (parking_trajectory_) return parking_trajectory_->points.size() <= 1;
   return false;
 }
 
-/*=========================
-  ROS I/O
-=========================*/
-void ExtraScenarioSelector::onMap(
-  const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg)
+void DefaultScenarioSelector::onMap(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg)
 {
   route_handler_ = std::make_shared<autoware::route_handler::RouteHandler>(*msg);
 }
 
-void ExtraScenarioSelector::onRoute(
+void DefaultScenarioSelector::onRoute(
   const autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr msg)
 {
+  // When the route id is the same (e.g. rerouting with modified goal) keep the current scenario.
+  // Otherwise, reset the scenario.
   if (!route_handler_ || route_handler_->getRouteUuid() != msg->uuid) {
     current_scenario_ = autoware_internal_planning_msgs::msg::Scenario::EMPTY;
   }
   route_ = msg;
 }
 
-void ExtraScenarioSelector::onOdom(const nav_msgs::msg::Odometry::ConstSharedPtr msg)
+void DefaultScenarioSelector::onOdom(const nav_msgs::msg::Odometry::ConstSharedPtr msg)
 {
   current_pose_ = msg;
   auto twist = std::make_shared<geometry_msgs::msg::TwistStamped>();
@@ -516,46 +364,34 @@ void ExtraScenarioSelector::onOdom(const nav_msgs::msg::Odometry::ConstSharedPtr
   twist_ = twist;
   twist_buffer_.push_back(twist);
 
-  // 刪除過舊資料
-  while (true) {
+  while (!twist_buffer_.empty()) {
     const auto time_diff =
       rclcpp::Time(msg->header.stamp) - rclcpp::Time(twist_buffer_.front()->header.stamp);
-
-    if (time_diff.seconds() < th_stopped_time_sec_) {
-      break;
-    }
-
+    if (time_diff.seconds() < th_stopped_time_sec_) break;
     twist_buffer_.pop_front();
-    if (twist_buffer_.empty()) break;
   }
 }
 
-bool ExtraScenarioSelector::isDataReady()
+bool DefaultScenarioSelector::isDataReady()
 {
   if (!current_pose_) {
     RCLCPP_INFO_THROTTLE(
       node_->get_logger(), *node_->get_clock(), 5000, "Waiting for current pose.");
     return false;
   }
-
   if (!route_handler_) {
     RCLCPP_INFO_THROTTLE(
       node_->get_logger(), *node_->get_clock(), 5000, "Waiting for route handler.");
     return false;
   }
-
   if (!route_) {
-    RCLCPP_INFO_THROTTLE(
-      node_->get_logger(), *node_->get_clock(), 5000, "Waiting for route.");
+    RCLCPP_INFO_THROTTLE(node_->get_logger(), *node_->get_clock(), 5000, "Waiting for route.");
     return false;
   }
-
   if (!twist_) {
-    RCLCPP_INFO_THROTTLE(
-      node_->get_logger(), *node_->get_clock(), 5000, "Waiting for twist.");
+    RCLCPP_INFO_THROTTLE(node_->get_logger(), *node_->get_clock(), 5000, "Waiting for twist.");
     return false;
   }
-
   if (!operation_mode_state_) {
     RCLCPP_INFO_THROTTLE(
       node_->get_logger(), *node_->get_clock(), 5000, "Waiting for operation mode state.");
@@ -569,11 +405,10 @@ bool ExtraScenarioSelector::isDataReady()
       node_->get_logger(), *node_->get_clock(), 5000, "Waiting for route handler.");
     return false;
   }
-
   return true;
 }
 
-void ExtraScenarioSelector::updateData()
+void DefaultScenarioSelector::updateData()
 {
   {
     stop_watch.tic();
@@ -583,13 +418,9 @@ void ExtraScenarioSelector::updateData()
     is_parking_completed_ = msg ? msg->data : is_parking_completed_;
   }
   {
-    auto msg = sub_waypoint_following_state_->take_data();
-    is_waypoint_following_completed_ = msg ? msg->data : is_waypoint_following_completed_;
-  }
-  {
     auto msgs = sub_odom_->take_data();
-    for (const auto & msg : msgs) {
-      onOdom(msg);
+    for (const auto & m : msgs) {
+      onOdom(m);
     }
   }
   {
@@ -598,13 +429,11 @@ void ExtraScenarioSelector::updateData()
   }
 }
 
-void ExtraScenarioSelector::onTimer()
+void DefaultScenarioSelector::onTimer()
 {
   updateData();
 
-  if (!isDataReady()) {
-    return;
-  }
+  if (!isDataReady()) return;
 
   // Initialize Scenario
   if (current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::EMPTY) {
@@ -612,13 +441,12 @@ void ExtraScenarioSelector::onTimer()
   }
 
   updateCurrentScenario();
+
   autoware_internal_planning_msgs::msg::Scenario scenario;
   scenario.current_scenario = current_scenario_;
-
   if (current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::PARKING) {
     scenario.activating_scenarios.push_back(current_scenario_);
   }
-
   pub_scenario_->publish(scenario);
 
   // Publish ProcessingTime
@@ -628,41 +456,32 @@ void ExtraScenarioSelector::onTimer()
   pub_processing_time_->publish(processing_time_msg);
 }
 
-void ExtraScenarioSelector::onLaneDrivingTrajectory(
+void DefaultScenarioSelector::onLaneDrivingTrajectory(
   const autoware_planning_msgs::msg::Trajectory::ConstSharedPtr msg)
 {
   lane_driving_trajectory_ = msg;
-
-  if (!isCurrentLaneDriving()) return;
+  if (current_scenario_ != autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING) return;
   publishTrajectory(msg);
 }
 
-void ExtraScenarioSelector::onParkingTrajectory(
+void DefaultScenarioSelector::onParkingTrajectory(
   const autoware_planning_msgs::msg::Trajectory::ConstSharedPtr msg)
 {
   parking_trajectory_ = msg;
-
-  if (!isCurrentParking()) return;
+  if (current_scenario_ != autoware_internal_planning_msgs::msg::Scenario::PARKING) return;
   publishTrajectory(msg);
 }
 
-void ExtraScenarioSelector::onWaypointFollowingTrajectory(
-  const autoware_planning_msgs::msg::Trajectory::ConstSharedPtr msg)
-{
-  waypoint_following_trajectory_ = msg;
-
-  if (!isCurrentWaypointFollowing()) return;
-  publishTrajectory(msg);
-}
-
-void ExtraScenarioSelector::publishTrajectory(
+void DefaultScenarioSelector::publishTrajectory(
   const autoware_planning_msgs::msg::Trajectory::ConstSharedPtr msg)
 {
   const auto now = node_->now();
   const auto delay_sec = (now - msg->header.stamp).seconds();
   if (delay_sec <= th_max_message_delay_sec_) {
     pub_trajectory_->publish(*msg);
-    published_time_publisher_->publish_if_subscribed(pub_trajectory_, msg->header.stamp);
+    if (published_time_publisher_) {
+      published_time_publisher_->publish_if_subscribed(pub_trajectory_, msg->header.stamp);
+    }
   } else {
     RCLCPP_WARN_THROTTLE(
       node_->get_logger(), *node_->get_clock(), std::chrono::milliseconds(1000).count(),
@@ -675,5 +494,5 @@ void ExtraScenarioSelector::publishTrajectory(
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::scenario_selector::ExtraScenarioSelector,
+  autoware::scenario_selector::DefaultScenarioSelector,
   autoware::scenario_selector::ScenarioSelectorPlugin)

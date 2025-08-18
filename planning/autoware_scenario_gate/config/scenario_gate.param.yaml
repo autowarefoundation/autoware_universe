@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
-    selector_type: "Default"   # "Default" or "Extra"
+    selector_type: "Extra"   # "Default" or "Extra"
     update_rate: 10.0
     th_max_message_delay_sec: 1.0
     th_arrived_distance_m: 1.0

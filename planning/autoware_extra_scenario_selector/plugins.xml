@@ -1,7 +1,0 @@
-<library path="autoware_extra_scenario_selector">
-  <class
-    type="autoware::scenario_selector::ExtraScenarioSelector"
-    base_class_type="autoware::scenario_selector::ScenarioSelectorPlugin">
-    <description>Extra scenario selector</description>
-  </class>
-</library>

@@ -1,0 +1,13 @@
+<library path="autoware_scenario_gate_selectors">
+  <class
+    type="autoware::scenario_selector::DefaultScenarioSelector"
+    base_class_type="autoware::scenario_selector::ScenarioSelectorPlugin">
+    <description>Default scenario selector (in gate)</description>
+  </class>
+
+  <class
+    type="autoware::scenario_selector::ExtraScenarioSelector"
+    base_class_type="autoware::scenario_selector::ScenarioSelectorPlugin">
+    <description>Extra scenario selector with waypoint-following (in gate)</description>
+  </class>
+</library>
