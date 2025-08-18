@@ -97,9 +97,10 @@ CameraDataStore::CameraDataStore(
   is_frozen_ = false;
   active_updates_ = 0;
 
-  if (is_distorted_image_ && (downsample_factor_ <= 0.0 || downsample_factor_ > 1.0))
+  if (is_distorted_image_ && (downsample_factor_ <= 0.0 || downsample_factor_ > 1.0)) {
     throw std::runtime_error(
       "downsample_factor must be in range (0,1] when is_distorted_image is true");
+  }
 }
 
 void CameraDataStore::update_camera_image(
@@ -124,7 +125,9 @@ void CameraDataStore::update_camera_image(
   float bottom_crop_portion = 0.0f;  // what portion of bottom to crop. We only crop at the top
                                      // along height, so hardcoded to 0.0f
   int crop_h = static_cast<int>((1.0f - bottom_crop_portion) * newH) - image_height_;
-  if (crop_h < 0) crop_h = 0;
+  if (crop_h < 0) {
+    crop_h = 0;
+  }
   int crop_w = std::max(0, (newW - image_width_) / 2);
 
   int start_x = std::max(0, crop_w);
@@ -218,8 +221,9 @@ void CameraDataStore::update_camera_image(
   {
     std::lock_guard<std::mutex> lock(freeze_mutex_);
     --active_updates_;
-    if (is_frozen_ && active_updates_ == 0)
+    if (is_frozen_ && active_updates_ == 0) {
       freeze_cv_.notify_all();  // Notify freeze_updates() to continue
+    }
   }
 }
 
@@ -232,7 +236,9 @@ void CameraDataStore::update_camera_info(
 bool CameraDataStore::check_if_all_camera_info_received() const
 {
   for (const auto & camera_info : camera_info_list_) {
-    if (!camera_info) return false;
+    if (!camera_info) {
+      return false;
+    }
   }
 
   return true;
@@ -241,14 +247,18 @@ bool CameraDataStore::check_if_all_camera_info_received() const
 bool CameraDataStore::check_if_all_camera_image_received() const
 {
   for (const auto & camera_info_timestamp : camera_image_timestamp_) {
-    if (camera_info_timestamp < 0) return false;
+    if (camera_info_timestamp < 0) {
+      return false;
+    }
   }
   return true;
 }
 
 float CameraDataStore::check_if_all_images_synced() const
 {
-  if (!check_if_all_camera_info_received() || !check_if_all_camera_image_received()) return -1.0;
+  if (!check_if_all_camera_info_received() || !check_if_all_camera_image_received()) {
+    return -1.0;
+  }
 
   double min_time = std::numeric_limits<double>::max();
   double max_time = std::numeric_limits<double>::min();

@@ -25,7 +25,7 @@ const size_t THREADS_PER_BLOCK = 256;
 
 struct is_score_greater
 {
-  is_score_greater(float t) : t_(t) {}
+  explicit is_score_greater(float t) : t_(t) {}
 
   __device__ bool operator()(const Box3D & b) { return b.score > t_; }
 

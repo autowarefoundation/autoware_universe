@@ -265,10 +265,11 @@ void StreamPetrNetwork::inference_detector(
     raw_objects.push_back(this->bbox_to_ros_msg(det_boxes3d[i]));
   }
 
-  if (config_.iou_threshold > 0.0)
+  if (config_.iou_threshold > 0.0) {
     iou_bev_nms_.apply(raw_objects, output_objects);
-  else
+  } else {
     output_objects = std::move(raw_objects);
+  }
   dur_postprocess_->MarkEnd(stream_);
 
   forward_time_ms.push_back(dur_backbone_->Elapsed());

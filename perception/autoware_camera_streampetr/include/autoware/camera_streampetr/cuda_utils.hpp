@@ -49,19 +49,23 @@
 #include <NvInferRuntime.h>
 #include <cuda_runtime_api.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
+#include <string>
 #include <type_traits>
 #include <vector>
 
 namespace cuda
 {
 
-using namespace nvinfer1;
+using nvinfer1::DataType;
+using nvinfer1::Dims;
+using nvinfer1::TensorIOMode;
 
 inline unsigned int getElementSize(DataType t)
 {
@@ -227,7 +231,9 @@ struct Tensor
     header << "{'descr': '" << dtype_str << "', 'fortran_order': False, 'shape': (";
 
     for (int i = 0; i < dim.nbDims; i++) {
-      if (i > 0) header << ", ";
+      if (i > 0) {
+        header << ", ";
+      }
       header << dim.d[i];
     }
     header << "), }";
@@ -256,7 +262,7 @@ struct Tensor
 
 inline std::ostream & operator<<(std::ostream & os, Tensor & t)
 {
-  os << "[" << (int)(t.iomode) << "] ";
+  os << "[" << static_cast<int>(t.iomode) << "] ";
   os << t.name << ", [";
 
   for (int nd = 0; nd < t.dim.nbDims; nd++) {

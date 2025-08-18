@@ -190,17 +190,24 @@ void StreamPetrNode::camera_info_callback(
 void StreamPetrNode::camera_image_callback(
   Image::ConstSharedPtr input_camera_image_msg, const int camera_id)
 {
-  if (stop_watch_ptr_ && anchor_camera_id_ == camera_id) stop_watch_ptr_->tic("latency/total");
+  if (stop_watch_ptr_ && anchor_camera_id_ == camera_id) {
+    stop_watch_ptr_->tic("latency/total");
+  }
 
   const auto objects_sub_count =
     pub_objects_->get_subscription_count() + pub_objects_->get_intra_process_subscription_count();
-  if (objects_sub_count < 1) return;  // No subscribers, skip processing
-
-  if (!data_store_->check_if_all_camera_info_received()) return;
+  if (objects_sub_count < 1) {
+    return;  // No subscribers, skip processing
+  }
+  if (!data_store_->check_if_all_camera_info_received()) {
+    return;
+  }
 
   data_store_->update_camera_image(camera_id, input_camera_image_msg);
 
-  if (camera_id == anchor_camera_id_) step(input_camera_image_msg->header.stamp);
+  if (camera_id == anchor_camera_id_) {
+    step(input_camera_image_msg->header.stamp);
+  }
 }
 
 void StreamPetrNode::step(const rclcpp::Time & stamp)
@@ -221,7 +228,9 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
     data_store_->restart();
     return;
   }
-  if (multithreading_) data_store_->freeze_updates();
+  if (multithreading_) {
+    data_store_->freeze_updates();
+  }
 
   const auto ego_pose_result = get_ego_pose_vector(stamp);
   if (!ego_pose_result.has_value()) {
@@ -235,7 +244,9 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
     return;
   }
 
-  if (stop_watch_ptr_) stop_watch_ptr_->tic("latency/inference");
+  if (stop_watch_ptr_) {
+    stop_watch_ptr_->tic("latency/inference");
+  }
   std::vector<float> forward_time_ms;
   std::vector<autoware_perception_msgs::msg::DetectedObject> output_objects;
 
@@ -244,10 +255,14 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
     data_store_->get_camera_info_vector(), extrinsic_vectors.value(), prediction_timestamp,
     output_objects, forward_time_ms);
 
-  if (multithreading_) data_store_->unfreeze_updates();
+  if (multithreading_) {
+    data_store_->unfreeze_updates();
+  }
 
   double inference_time_ms = -1.0;
-  if (stop_watch_ptr_) inference_time_ms = stop_watch_ptr_->toc("latency/inference", true);
+  if (stop_watch_ptr_) {
+    inference_time_ms = stop_watch_ptr_->toc("latency/inference", true);
+  }
 
   DetectedObjects output_msg;
   output_msg.objects = output_objects;
