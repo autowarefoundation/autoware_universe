@@ -24,8 +24,8 @@ It distributes route requests and planning results according to current MRM oper
 | `map_frame`                                     | string | The frame name for map                                                                                                     |
 | `arrival_check_angle_deg`                       | double | Angle threshold for goal check                                                                                             |
 | `arrival_check_lateral_distance`                | double | Lateral distance threshold for goal check                                                                                  |
-| `arrival_check_longitudinal_distance`           | double | Longitudinal distance threshold for goal check                                                                             |
-| `arrival_check_longitudinal_overshoot_distance` | double | If the vehicle has passed the goal(overshot), this distance will be used for goal checking.                                |
+| `arrival_check_longitudinal_undershoot_distance`| double | Longitudinal distance threshold for goal check when the vehicle has not yet reached the goal                                                                             |
+| `arrival_check_longitudinal_overshoot_distance` | double | Longitudinal distance threshold for goal check when the vehicle has passed the goal                                |
 | `arrival_check_duration`                        | double | Duration threshold for goal check                                                                                          |
 | `goal_angle_threshold`                          | double | Max goal pose angle for goal approve                                                                                       |
 | `enable_correct_goal_pose`                      | bool   | Enabling correction of goal pose according to the closest lanelet orientation                                              |

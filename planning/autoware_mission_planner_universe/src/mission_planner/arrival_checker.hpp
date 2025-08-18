@@ -39,7 +39,7 @@ private:
   double angle_;
   double duration_;
   double arrival_check_lateral_distance_;
-  double arrival_check_longitudinal_distance_;
+  double arrival_check_longitudinal_undershoot_distance_;
   double arrival_check_longitudinal_overshoot_distance_;
   std::optional<PoseWithUuidStamped> goal_with_uuid_;
   rclcpp::Subscription<PoseWithUuidStamped>::SharedPtr sub_goal_;
