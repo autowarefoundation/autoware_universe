@@ -237,9 +237,17 @@ Example of the nearest projections are shown in the following images:
 
 #### Description
 
-#### 1. Target Speed from Lateral Clearance
+#### 1. Target Velocity from Lateral Clearance
 
-The target speed $v_{\text{target}}$ is obtained by linearly interpolating the current lateral distance to the boundary between $[\text{lat.min},\text{lat.max}]$ and the speed range $[v_{\min},v_{\max}]$, with saturation at the endpoints.
+The target velocity, $v_{\text{target}}$, is determined based on the vehicle's lateral distance from the boundary. This process ensures the vehicle's speed is reduced as it gets closer to the specified boundary (e.g. `road_border`).
+
+- **Concept**: The system defines a **minimum velocity** ($v_{\min}$) and a **maximum velocity** ($v_{\max}$). It also sets a **safe lateral zone** between a minimum distance ($d_{\text{lat,min}}$) and a maximum distance ($d_{\text{lat,max}}$).
+- **How it Works**:
+  - If the vehicle is too close to the boundary (at or within $d_{\text{lat,min}}$), the system commands the minimum velocity, $v_{\min}$.
+  - If the vehicle is well within its lane (at or beyond $d_{\text{lat,max}}$), it is permitted to drive at the maximum velocity, $v_{\max}$.
+  - If the vehicle is between these two distances, its target velocity is scaled between $v_{\min}$ and $v_{\max}$. This is achieved by a linear interpolation.
+
+The target velocity, $v_{\text{target}}$, is calculated using the following formula:
 
 $$
 v_{\text{target}}(d_{\text{lat}})=
@@ -255,27 +263,27 @@ d_{\text{lat}} \ge d_{\text{lat,max}}.
 \end{cases}
 $$
 
-#### 2. Longitudinal feasibility and acceleration tiers
+#### 2. Longitudinal feasibility and deceleration tiers
 
-With $v_{\text{target}}$ obtained, the module considers the **longitudinal gap** to the point and evaluates three braking envelopes:
+Once the $v_{\text{target}}$ is determined, the system considers the **longitudinal gap**—the distance to the start of target interval, to decide on the appropriate deceleration profile. The system prioritizes comfort and only uses more aggressive braking when necessary.
 
-- **Comfort.** Using $(j_{\text{comfort}}\le0,\ a_{\text{comfort}}\le0)$, it computes the distance required to go from $v_0$ to $v_{\text{target}}$ via $d_{\text{slow}}(\cdot)$. If that distance fits the gap, the comfort envelope is selected.
-- **Feasible.** If comfort does not fit, jerk is kept at $j_{\text{comfort}}$ and the **least-negative** acceleration $a\in[a_{\text{comfort}},a_{\max}]$ that fits the gap is found by binary search (monotonicity of $d_{\text{slow}}$ in $|a|$). If such an $a$ exists, it is used.
-- **Hard.** Otherwise, the hard limits $(j_{\max}\le0,\ a_{\max}\le0)$ are applied; the used distance is clamped to the available gap if necessary.
+The module chooses one of three deceleration tiers:
+
+- **Comfort**: The system first checks if it can slow down to the target velocity using a comfortable deceleration profile. This profile is defined by gentle limits on jerk and acceleration ($(j_{\text{comfort}}\le0,\ a_{\text{comfort}}\le0)$). If the distance to the start of target interval is sufficient for this gentle braking, the comfort profile is selected.
+- **Feasible**: If the comfort profile is not sufficient to stop in time, the system finds the **least-negative** (or most gentle) acceleration that will still allow the vehicle to reach the target velocity within the available gap. This is like pressing the brake pedal a bit harder, but only as much as needed. The jerk remains at the comfortable limit ($j_{\text{brake}} = j_{\text{comfort}}$) to avoid abrupt changes.
+- **Hard**: If neither of the above profiles is sufficient, the system applies the **maximum possible braking** (the "hard" limits on jerk and acceleration, $(j_{\max}\le0,\ a_{\max}\le0)$). This is used in situations where a quick, forceful stop is required to avoid prevent ego from driving onto the road boundary.
 
 ### 3) Commanded speed via an analytic S-curve (with equations)
 
-Given the selected limits $(j_{\text{brake}}\le 0,\ a_{\text{brake}}\le 0)$ and the requested longitudinal distance to the point $s_\star$, the solver computes the speed to command **now** so that the vehicle arrives at the point with $v_{\text{target}}$.
+This section details how the system calculates the final commanded velocity based on the deceleration profile selected in Section 2. It uses an analytic S-curve to ensure a smooth, comfortable deceleration to the target velocity at the specified distance. An S-curve motion profile provides a smooth transition by controlling the rate of change of acceleration, or jerk.
 
-1. **Active acceleration for the ramp.**
-   Because braking should not be weakened, the ramp starts from
+The values for **jerk** ($j_{\text{brake}}$) and **braking acceleration** ($a_{\text{brake}}$) used in the following steps are determined by the **longitudinal feasibility tier** selected earlier (Comfort, Feasible, or Hard).
 
-   $$
-   a_{\text{act}}=\min(a_0,\ a_{\text{brake}})\le 0,\qquad j=j_{\text{brake}}\le 0.
-   $$
+1. **Deceleration Selection**: The system begins by selecting the initial active acceleration, $a_{\text{act}}$, which is the lesser (more negative) of the current acceleration and the braking acceleration value from the selected tier. The jerk, $j$, is also set to the value from the selected tier.
 
-2. **Jerk ramp to the target acceleration.**
-   Over the jerk phase,
+   $$a_{\text{act}}=\min(a_{\text{curr}},\ a_{\text{brake}})\le 0,\qquad j=j_{\text{brake}}\le 0.$$
+
+2. **Jerk Ramp**: The vehicle enters a jerk phase where its acceleration changes smoothly over time. The equations below describe the vehicle's acceleration, velocity, and distance during this phase.
 
    $$
    \begin{aligned}
@@ -288,15 +296,11 @@ Given the selected limits $(j_{\text{brake}}\le 0,\ a_{\text{brake}}\le 0)$ and 
    \end{aligned}
    $$
 
-3. **Waypoint inside the jerk ramp.**
-   If $s_\star\in[0,s_j]$, find $t^\star\in[0,t_j]$ such that $s(t^\star)=s_\star$ (the code uses bisection), and set
+3. **Waypoint Inside the Jerk Ramp**: If the longitudinal distance to the start of the target interval, $s_\star$, falls within the distance covered during the initial jerk phase ($s_\star \in [0, s_j]$), the system finds the required time and corresponding velocity to reach that point. The commanded velocity, $v_{\text{cmd}}$, is then set to the greater of the target velocity and the velocity calculated for that point, ensuring a safe and controlled deceleration.
 
-   $$
-   v_{\text{cmd}}=\max\!\bigl(v_{\text{target}},\, v(t^\star)\bigr).
-   $$
+   $$v_{\text{cmd}}=\max\!\bigl(v_{\text{target}},\, v(t^\star)\bigr).$$
 
-4. **Waypoint after the jerk ramp.**
-   Otherwise, with remaining distance $s_{\text{rem}}=s_\star-s_j$,
+4. **Waypoint After the Jerk Ramp**: If the target point is farther away ($s_\star > s_j$), the vehicle will have completed its initial jerk phase. The remaining distance, $s_{\text{rem}}$, is used to calculate the final velocity. The commanded velocity is determined based on the constant deceleration phase that follows the initial jerk.
 
    $$
    \begin{aligned}
@@ -309,7 +313,7 @@ Given the selected limits $(j_{\text{brake}}\le 0,\ a_{\text{brake}}\le 0)$ and 
 
 !!! Note
 
-    To avoid sudden unintended deceleration, when the longitudinal gap between the ego vehicle and the target point is very small, the module returns the largest safe speed instead of immediately forcing the vehicle to the target speed.
+    To prevent sudden, unintended deceleration, the system returns the largest safe velocity if the longitudinal gap is very small. This ensures that the vehicle does not brake abruptly when approaching the target point.
 
 ## Parameters
 
