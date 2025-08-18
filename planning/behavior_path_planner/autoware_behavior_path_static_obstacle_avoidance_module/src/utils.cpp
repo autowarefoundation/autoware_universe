@@ -2605,7 +2605,7 @@ DrivableLanes generateNotExpandedDrivableLanes(const lanelet::ConstLanelet & lan
 
 DrivableLanes generateExpandedDrivableLanes(
   const lanelet::ConstLanelet & lanelet, const std::shared_ptr<const PlannerData> & planner_data,
-  const std::shared_ptr<AvoidanceParameters> & parameters)
+  const std::string & use_lane_type)
 {
   const auto & route_handler = planner_data->route_handler;
 
@@ -2613,11 +2613,11 @@ DrivableLanes generateExpandedDrivableLanes(
   current_drivable_lanes.left_lane = lanelet;
   current_drivable_lanes.right_lane = lanelet;
 
-  if (parameters->use_lane_type == "current_lane") {
+  if (use_lane_type == "current_lane") {
     return current_drivable_lanes;
   }
 
-  const auto use_opposite_lane = parameters->use_lane_type == "opposite_direction_lane";
+  const auto use_opposite_lane = use_lane_type == "opposite_direction_lane";
 
   // 1. get left/right side lanes
   const auto update_left_lanelets = [&](const lanelet::ConstLanelet & target_lane) {
