@@ -14093,24 +14093,24 @@ The merit of using this model is that it can handle both longitudinal and latera
 <p><img alt="kinematic_bicycle_model" src="../image/kinematic_bicycle_model.png"></p>
 <ul>
 <li><strong>state variable</strong><ul>
-<li>rear wheel position( <span class="arithmatex">\(x_1,y_1\)</span> ), front wheel position( <span class="arithmatex">\(x_2,y_2\)</span> ), longitudinal velocity( <span class="arithmatex">\(v_{long}\)</span> ), and lateral velocity ( <span class="arithmatex">\(v_{lat}\)</span> )</li>
+<li>rear wheel position( <span class="arithmatex">\(x_1=x-l_r\cos\psi\)</span>, <span class="arithmatex">\(y_1=y-l\sin\psi\)</span> ) front wheel position( <span class="arithmatex">\(x_2=x+l_f\cos\psi\)</span>, <span class="arithmatex">\(y_2=y+l_f\sin\psi\)</span> ) longitudinal velocity( <span class="arithmatex">\(v_{long} = v\cos\beta\)</span> ), and lateral velocity of the front wheel ( <span class="arithmatex">\(v_{lat}=\frac{l_r+l_f}{l_r}v\sin\beta\)</span> )</li>
 <li><span class="arithmatex">\([x_{1k}, y_{1k}, x_{2k}, y_{2k}, v_{long,k}, v_{lat,k} ]^\mathrm{T}\)</span></li>
 </ul>
 </li>
 <li><strong>Prediction Equation</strong><ul>
 <li><span class="arithmatex">\(dt\)</span>: sampling time</li>
-<li><span class="arithmatex">\(wheel\_base = \sqrt{(x_2 - x_1)^2 + (y_2 - y_1)^2}\)</span> : distance between front and rear wheels</li>
-<li><span class="arithmatex">\(\cos\theta = \frac{x_2 - x_1}{wheel\_base}\)</span>, <span class="arithmatex">\(\sin\theta = \frac{y_2 - y_1}{wheel\_base}\)</span> : vehicle orientation components</li>
-<li><span class="arithmatex">\(\gamma = \frac{\ln(2)}{half\_life}\)</span> : decay constant for lateral velocity (half-life = 0.8s)</li>
+<li><span class="arithmatex">\(l_{wheelbase} = l_r + l_f = \sqrt{(x_2 - x_1)^2 + (y_2 - y_1)^2}\)</span> : distance between front and rear wheels</li>
+<li><span class="arithmatex">\(\cos\theta = \frac{x_2 - x_1}{l_{wheelbase}}\)</span>, <span class="arithmatex">\(\sin\theta = \frac{y_2 - y_1}{l_{wheelbase}}\)</span> : vehicle orientation components</li>
+<li><span class="arithmatex">\(\gamma = \frac{\ln(2)}{t_{halflife}}\)</span> : decay constant for lateral velocity</li>
 </ul>
 </li>
 </ul>
 <div class="arithmatex">\[
 \begin{aligned}
-x_{1,k+1} &amp; = x_{1,k} + v_{long,k} \cos\theta \cdot dt \\
-y_{1,k+1} &amp; = y_{1,k} + v_{long,k} \sin\theta \cdot dt \\
-x_{2,k+1} &amp; = x_{2,k} + v_{long,k} \cos\theta \cdot dt - v_{lat,k} \sin\theta \cdot dt \\
-y_{2,k+1} &amp; = y_{2,k} + v_{long,k} \sin\theta \cdot dt + v_{lat,k} \cos\theta \cdot dt \\
+x_{1,k+1} &amp; = x_{1,k} + v_{long,k} \cos\psi \cdot dt \\
+y_{1,k+1} &amp; = y_{1,k} + v_{long,k} \sin\psi \cdot dt \\
+x_{2,k+1} &amp; = x_{2,k} + v_{long,k} \cos\psi \cdot dt - v_{lat,k} \sin\psi \cdot dt \\
+y_{2,k+1} &amp; = y_{2,k} + v_{long,k} \sin\psi \cdot dt + v_{lat,k} \cos\psi \cdot dt \\
 v_{long,k+1} &amp; = v_{long,k} \\
 v_{lat,k+1} &amp; = v_{lat,k} \cdot e^{-\gamma \cdot dt}
 \end{aligned}
@@ -14120,10 +14120,10 @@ v_{lat,k+1} &amp; = v_{lat,k} \cdot e^{-\gamma \cdot dt}
 </ul>
 <div class="arithmatex">\[
 A = \begin{bmatrix}
-1 - \frac{v_{long} \cdot dt}{wheel\_base} &amp; 0 &amp; \frac{v_{long} \cdot dt}{wheel\_base} &amp; 0 &amp; \cos\theta \cdot dt &amp; 0 \\
-0 &amp; 1 - \frac{v_{long} \cdot dt}{wheel\_base} &amp; 0 &amp; \frac{v_{long} \cdot dt}{wheel\_base} &amp; \sin\theta \cdot dt &amp; 0 \\
--\frac{v_{long} \cdot dt}{wheel\_base} &amp; \frac{v_{lat} \cdot dt}{wheel\_base} &amp; 1 + \frac{v_{long} \cdot dt}{wheel\_base} &amp; -\frac{v_{lat} \cdot dt}{wheel\_base} &amp; \cos\theta \cdot dt &amp; -\sin\theta \cdot dt \\
--\frac{v_{lat} \cdot dt}{wheel\_base} &amp; \frac{v_{long} \cdot dt}{wheel\_base} &amp; \frac{v_{lat} \cdot dt}{wheel\_base} &amp; 1 + \frac{v_{long} \cdot dt}{wheel\_base} &amp; \sin\theta \cdot dt &amp; \cos\theta \cdot dt \\
+1 - \frac{v_{long} }{l_{wheelbase}}\cdot dt &amp; 0 &amp; \frac{v_{long}}{l_{wheelbase}}\cdot dt &amp; 0 &amp; \cos\psi \cdot dt &amp; 0 \\
+0 &amp; 1 - \frac{v_{long}}{l_{wheelbase}}\cdot dt &amp; 0 &amp; \frac{v_{long}}{l_{wheelbase}}\cdot dt &amp; \sin\psi \cdot dt &amp; 0 \\
+-\frac{v_{long}}{l_{wheelbase}}\cdot dt &amp; \frac{v_{lat}}{l_{wheelbase}}\cdot dt &amp; 1 + \frac{v_{long}}{l_{wheelbase}}\cdot dt &amp; -\frac{v_{lat}}{l_{wheelbase}}\cdot dt &amp; \cos\psi \cdot dt &amp; -\sin\psi \cdot dt \\
+-\frac{v_{lat}}{l_{wheelbase}}\cdot dt &amp; \frac{v_{long}}{l_{wheelbase}}\cdot dt &amp; \frac{v_{lat}}{l_{wheelbase}}\cdot dt &amp; 1 + \frac{v_{long}}{l_{wheelbase}}\cdot dt &amp; \sin\psi \cdot dt &amp; \cos\psi \cdot dt \\
 0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 \\
 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; e^{-\gamma \cdot dt}
 \end{bmatrix}
@@ -14132,10 +14132,10 @@ A = \begin{bmatrix}
 <p>The output twist in the vehicle coordinate system is calculated from the state variables:</p>
 <ul>
 <li>Vehicle center position: <span class="arithmatex">\(x = \frac{x_1 + x_2}{2}\)</span>, <span class="arithmatex">\(y = \frac{y_1 + y_2}{2}\)</span></li>
-<li>Vehicle yaw: <span class="arithmatex">\(\psi = \arctan2(y_2 - y_1, x_2 - x_1)\)</span></li>
+<li>Vehicle yaw: <span class="arithmatex">\(\psi = tan^{-1}{(\frac{y_2 - y_1}{x_2 - x_1})}\)</span></li>
 <li>Longitudinal velocity: <span class="arithmatex">\(v_x = v_{long}\)</span></li>
-<li>Lateral velocity: <span class="arithmatex">\(v_y = \frac{v_{lat}}{wheel\_pos\_ratio}\)</span></li>
-<li>Angular velocity: <span class="arithmatex">\(\omega_z = \frac{v_{lat}}{wheel\_base}\)</span></li>
+<li>Lateral velocity: <span class="arithmatex">\(v_y = v_{lat}\frac{ {l_{wheelbase}}}{l_{f}}\)</span></li>
+<li>Angular velocity: <span class="arithmatex">\(\omega_z = \frac{v_{lat}}{l_{wheelbase}}\)</span></li>
 </ul>
 <p>The lateral velocity decays exponentially over time to model the natural stabilization of vehicle slip motion.</p>
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">#</a></h2>
