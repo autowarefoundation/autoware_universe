@@ -227,17 +227,15 @@ Example of the nearest projections are shown in the following images:
 - Red arrows show the closest projection to the left boundary.
 - Purple arrows show the closest projection to the right boundary.
 
-### Find and update departure intervals
+#### Reducing false positives
 
 !!! Warning
 
     TBA
 
-### Calculate slow down
+## Calculate slow down
 
-#### Description
-
-#### 1. Target Velocity from Lateral Clearance
+### 1. Target Velocity from Lateral Clearance
 
 The target velocity, $v_{\text{target}}$, is determined based on the vehicle's lateral distance from the boundary. This process ensures the vehicle's speed is reduced as it gets closer to the specified boundary (e.g. `road_border`).
 
@@ -263,7 +261,7 @@ d_{\text{lat}} \ge d_{\text{lat,max}}.
 \end{cases}
 $$
 
-#### 2. Longitudinal feasibility and deceleration tiers
+### 2. Longitudinal feasibility and deceleration tiers
 
 Once the $v_{\text{target}}$ is determined, the system considers the **longitudinal gap**—the distance to the start of target interval, to decide on the appropriate deceleration profile. The system prioritizes comfort and only uses more aggressive braking when necessary.
 
@@ -275,7 +273,7 @@ The module chooses one of three deceleration tiers:
 
 ### 3) Commanded speed via an analytic S-curve (with equations)
 
-This section details how the system calculates the final commanded velocity based on the deceleration profile selected in Section 2. It uses an analytic S-curve to ensure a smooth, comfortable deceleration to the target velocity at the specified distance. An S-curve motion profile provides a smooth transition by controlling the rate of change of acceleration, or jerk.
+This section details how the system calculates the final slow down velocity based on the deceleration profile selected in Section 2. It uses an analytic S-curve to ensure a smooth, comfortable deceleration to the target velocity at the specified distance. An S-curve motion profile provides a smooth transition by controlling the rate of change of acceleration, or jerk.
 
 The values for **jerk** ($j_{\text{brake}}$) and **braking acceleration** ($a_{\text{brake}}$) used in the following steps are determined by the **longitudinal feasibility tier** selected earlier (Comfort, Feasible, or Hard).
 
@@ -296,11 +294,11 @@ The values for **jerk** ($j_{\text{brake}}$) and **braking acceleration** ($a_{\
    \end{aligned}
    $$
 
-3. **Waypoint Inside the Jerk Ramp**: If the longitudinal distance to the start of the target interval, $s_\star$, falls within the distance covered during the initial jerk phase ($s_\star \in [0, s_j]$), the system finds the required time and corresponding velocity to reach that point. The commanded velocity, $v_{\text{cmd}}$, is then set to the greater of the target velocity and the velocity calculated for that point, ensuring a safe and controlled deceleration.
+3. **Waypoint Inside the Jerk Ramp**: If the longitudinal distance to the start of the target interval, $s_\star$, falls within the distance covered during the initial jerk phase ($s_\star \in [0, s_j]$), the system finds the required time and corresponding velocity to reach that point. The slow down velocity, $v_{\text{cmd}}$, is then set to the greater of the target velocity and the velocity calculated for that point, ensuring a safe and controlled deceleration.
 
    $$v_{\text{cmd}}=\max\!\bigl(v_{\text{target}},\, v(t^\star)\bigr).$$
 
-4. **Waypoint After the Jerk Ramp**: If the target point is farther away ($s_\star > s_j$), the vehicle will have completed its initial jerk phase. The remaining distance, $s_{\text{rem}}$, is used to calculate the final velocity. The commanded velocity is determined based on the constant deceleration phase that follows the initial jerk.
+4. **Waypoint After the Jerk Ramp**: If the target point is farther away ($s_\star > s_j$), the vehicle will have completed its initial jerk phase. The remaining distance, $s_{\text{rem}}$, is used to calculate the final velocity. The slow down velocity is determined based on the constant deceleration phase that follows the initial jerk.
 
    $$
    \begin{aligned}
