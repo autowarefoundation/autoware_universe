@@ -310,14 +310,15 @@ bool BicycleXYXYUVMotionModel::limitStates()
     const double wheel_base = std::hypot(X_t(IDX::X2) - X_t(IDX::X1), X_t(IDX::Y2) - X_t(IDX::Y1));
     constexpr double acc_lat_max = 9.81 * 0.35;  // [m/s^2] maximum lateral acceleration (0.35g);
     const double vel_lat_limit = acc_lat_max * wheel_base / (X_t(IDX::U) * X_t(IDX::U));
-    if (std::abs(X_t(IDX::V)) > vel_lat_limit) {
+    const double vel_lat_limit_adjusted = vel_lat_limit * motion_params_.wheel_pos_ratio;
+    if (std::abs(X_t(IDX::V)) > vel_lat_limit_adjusted) {
       // debug message
       RCLCPP_WARN(
-        logger_, "BicycleXYXYUVMotionModel::limitStates: limited lateral velocity from %f to %f",
-        X_t(IDX::V), vel_lat_limit);
+        logger_, "BicycleXYXYUVMotionModel limited lateral velocity from %f to %f when vel_long = %f, x = %f, y = %f",
+        X_t(IDX::V), vel_lat_limit_adjusted, X_t(IDX::U), X_t(IDX::X1), X_t(IDX::Y1));
 
       // limit lateral velocity
-      X_t(IDX::V) = X_t(IDX::V) < 0 ? -vel_lat_limit : vel_lat_limit;
+      X_t(IDX::V) = X_t(IDX::V) < 0 ? -vel_lat_limit_adjusted : vel_lat_limit_adjusted;
     }
   }
 
