@@ -250,17 +250,21 @@ void StaticObstacleAvoidanceModule::fillFundamentalData(
       if (!not_use_adjacent_lane || red_signal_lane_itr->id() != lanelet.id()) {
         data.drivable_lanes.push_back(
           utils::static_obstacle_avoidance::generateExpandedDrivableLanes(
-            lanelet, planner_data_, parameters_));
+            lanelet, planner_data_, parameters_->use_lane_type));
       } else {
         data.drivable_lanes.push_back(
           utils::static_obstacle_avoidance::generateNotExpandedDrivableLanes(lanelet));
         data.red_signal_lane = lanelet;
       }
     });
+  std::for_each(
+    data.current_lanelets.begin(), data.current_lanelets.end(), [&](const auto & lanelet) {
+      data.drivable_lanes_same_direction.push_back(
+        utils::static_obstacle_avoidance::generateExpandedDrivableLanes(
+          lanelet, planner_data_, "same_direction_lane"));
+    });
 
   // calc drivable bound
-  auto tmp_path = getPreviousModuleOutput().path;
-  const auto shorten_lanes = utils::cutOverlappedLanes(tmp_path, data.drivable_lanes);
   const auto use_left_side_hatched_road_marking_area = [&]() {
     if (!not_use_adjacent_lane) {
       return true;
@@ -273,14 +277,33 @@ void StaticObstacleAvoidanceModule::fillFundamentalData(
     }
     return !planner_data_->route_handler->getRoutingGraphPtr()->right(*red_signal_lane_itr);
   }();
-  data.left_bound = utils::calcBound(
-    getPreviousModuleOutput().path, planner_data_, shorten_lanes,
-    use_left_side_hatched_road_marking_area, parameters_->use_intersection_areas,
-    parameters_->use_freespace_areas, true);
-  data.right_bound = utils::calcBound(
-    getPreviousModuleOutput().path, planner_data_, shorten_lanes,
-    use_right_side_hatched_road_marking_area, parameters_->use_intersection_areas,
-    parameters_->use_freespace_areas, false);
+
+  {
+    auto tmp_path = getPreviousModuleOutput().path;
+    const auto shorten_lanes = utils::cutOverlappedLanes(tmp_path, data.drivable_lanes);
+    data.left_bound = utils::calcBound(
+      getPreviousModuleOutput().path, planner_data_, shorten_lanes,
+      use_left_side_hatched_road_marking_area, parameters_->use_intersection_areas,
+      parameters_->use_freespace_areas, true);
+    data.right_bound = utils::calcBound(
+      getPreviousModuleOutput().path, planner_data_, shorten_lanes,
+      use_right_side_hatched_road_marking_area, parameters_->use_intersection_areas,
+      parameters_->use_freespace_areas, false);
+  }
+
+  if (parameters_->policy_detection_reliability == "not_enough") {
+    auto tmp_path = getPreviousModuleOutput().path;
+    const auto shorten_lanes =
+      utils::cutOverlappedLanes(tmp_path, data.drivable_lanes_same_direction);
+    data.left_bound_same_direction = utils::calcBound(
+      getPreviousModuleOutput().path, planner_data_, shorten_lanes,
+      use_left_side_hatched_road_marking_area, parameters_->use_intersection_areas,
+      parameters_->use_freespace_areas, true);
+    data.right_bound_same_direction = utils::calcBound(
+      getPreviousModuleOutput().path, planner_data_, shorten_lanes,
+      use_right_side_hatched_road_marking_area, parameters_->use_intersection_areas,
+      parameters_->use_freespace_areas, false);
+  }
 
   // reference path
   if (isDrivingSameLane(helper_->getPreviousDrivingLanes(), data.current_lanelets)) {
@@ -1176,7 +1199,7 @@ BehaviorModuleOutput StaticObstacleAvoidanceModule::plan()
       data.current_lanelets.begin(), data.current_lanelets.end(), [&](const auto & lanelet) {
         current_drivable_area_info.drivable_lanes.push_back(
           utils::static_obstacle_avoidance::generateExpandedDrivableLanes(
-            lanelet, planner_data_, parameters_));
+            lanelet, planner_data_, parameters_->use_lane_type));
       });
     // expand hatched road markings
     current_drivable_area_info.enable_expanding_hatched_road_markings =
@@ -1451,6 +1474,10 @@ bool StaticObstacleAvoidanceModule::isValidShiftLine(
         const auto shift_length = proposed_shift_path.shift_length.at(i);
         const auto THRESHOLD = minimum_distance + std::abs(shift_length);
 
+        if (std::abs(shift_length) < 1e-3) {
+          continue;
+        }
+
         if (
           boost::geometry::distance(basic_point, (shift_length > 0.0 ? left_bound : right_bound)) <
           THRESHOLD) {
@@ -1517,58 +1544,39 @@ bool StaticObstacleAvoidanceModule::is_operator_approval_required(
     return false;
   }
 
-  const auto is_within_current_lane = [&, this](const auto is_right) {
-    const auto combine_lanelet = lanelet::utils::combineLaneletsShape(avoid_data_.current_lanelets);
-    const auto bound = is_right
-                         ? lanelet::utils::to2D(combine_lanelet.rightBound().basicLineString())
-                         : lanelet::utils::to2D(combine_lanelet.leftBound().basicLineString());
+  const auto is_in_oncoming_lane = [&, this](const auto is_right) {
+    const auto bound =
+      is_right ? avoid_data_.right_bound_same_direction : avoid_data_.left_bound_same_direction;
+    lanelet::BasicLineString2d linestring{};
+    std::for_each(bound.begin(), bound.end(), [&linestring](const auto & p) {
+      linestring.emplace_back(p.x, p.y);
+    });
 
     for (size_t i = shift_line.start_idx; i < shift_line.end_idx; ++i) {
       const auto transform =
         autoware_utils::pose2transform(autoware_utils::get_pose(shifted_path.path.points.at(i)));
       const auto footprint = autoware_utils::transform_vector(
         planner_data_->parameters.vehicle_info.createFootprint(), transform);
-      if (boost::geometry::intersects(footprint, bound)) {
-        return false;
+      if (boost::geometry::intersects(footprint, linestring)) {
+        return true;
       }
     }
 
-    return true;
+    return false;
   };
 
   if (parameters_->policy_detection_reliability != "not_enough") {
     return false;
   }
 
-  lanelet::ConstLanelets check_lanes{};
-  for (const auto & lane : avoid_data_.current_lanelets) {
-    if (avoid_data_.target_objects.empty()) {
-      break;
-    }
-
-    check_lanes.push_back(lane);
-
-    if (lane.id() == avoid_data_.target_objects.back().overhang_lanelet.id()) {
-      break;
-    }
-  }
-
   if (has_left_shift) {
-    const auto exist_adjacent_lane =
-      std::all_of(check_lanes.begin(), check_lanes.end(), [this](const auto & lane) {
-        return planner_data_->route_handler->getLeftLanelet(lane, true, false);
-      });
-    if (!exist_adjacent_lane && !is_within_current_lane(false)) {
+    if (is_in_oncoming_lane(false)) {
       return true;
     }
   }
 
   if (has_right_shift) {
-    const auto exist_adjacent_lane =
-      std::all_of(check_lanes.begin(), check_lanes.end(), [this](const auto & lane) {
-        return planner_data_->route_handler->getRightLanelet(lane, true, false);
-      });
-    if (!exist_adjacent_lane && !is_within_current_lane(true)) {
+    if (is_in_oncoming_lane(true)) {
       return true;
     }
   }
