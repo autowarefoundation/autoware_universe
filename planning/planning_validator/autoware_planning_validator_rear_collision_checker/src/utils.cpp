@@ -135,6 +135,18 @@ std::pair<lanelet::BasicPoint2d, double> get_smallest_enclosing_circle(
   return std::make_pair(center, radius_squared);
 }
 
+/**
+ * @brief Calculate a lookahead line based on the given context and lookahead time.
+ * @note The positions indicated by these variables represent the **front of the vehicle**
+ *       (not the base_link position).
+ *
+ * @param[in] context Shared pointer to the PlanningValidatorContext containing
+ *                    planning and vehicle state information.
+ * @param[in] lookahead_time Lookahead horizon in seconds.
+ * @return std::optional<std::pair<autoware_utils::LineString3d, double>>
+ *         Optional pair of lookahead line and associated value. Returns nullopt
+ *         if the lookahead line cannot be calculated.
+ */
 auto calc_lookahead_line(
   const std::shared_ptr<PlanningValidatorContext> & context, const double lookahead_time)
   -> std::optional<std::pair<autoware_utils::LineString3d, double>>
@@ -163,6 +175,20 @@ auto calc_lookahead_line(
   return std::make_pair(lookahead_line, lookahead_distance);
 }
 
+/**
+ * @brief Calculate the predicted stop line based on vehicle dynamics constraints.
+ * @note The positions indicated by these variables represent the **front of the vehicle**
+ *       (not the base_link position).
+ *
+ * @param[in] context Shared pointer to the PlanningValidatorContext containing
+ *                    planning and vehicle state information.
+ * @param[in] max_deceleration Maximum allowable deceleration [m/s^2].
+ * @param[in] max_positive_jerk Maximum allowable positive jerk [m/s^3].
+ * @param[in] max_negative_jerk Maximum allowable negative jerk [m/s^3].
+ * @return std::optional<std::pair<autoware_utils::LineString3d, double>>
+ *         Optional pair of predicted stop line and associated value. Returns nullopt
+ *         if the prediction cannot be calculated.
+ */
 auto calc_predicted_stop_line(
   const std::shared_ptr<PlanningValidatorContext> & context, const double max_deceleration,
   const double max_positive_jerk, const double max_negative_jerk)
