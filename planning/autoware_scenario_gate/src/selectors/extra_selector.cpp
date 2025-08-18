@@ -193,24 +193,17 @@ void ExtraScenarioSelector::initialize(rclcpp::Node * node)
 {
   node_ = node;
 
-  node_->declare_parameter("update_rate", update_rate_);
-  node_->declare_parameter("th_max_message_delay_sec", th_max_message_delay_sec_);
-  node_->declare_parameter("th_arrived_distance_m", th_arrived_distance_m_);
-  node_->declare_parameter("th_stopped_time_sec", th_stopped_time_sec_);
-  node_->declare_parameter("th_stopped_velocity_mps", th_stopped_velocity_mps_);
-  node_->declare_parameter("enable_mode_switching", enable_mode_switching_);
+  update_rate_ = node_->declare_parameter<double>("update_rate", 10.0);
+  th_max_message_delay_sec_ = node_->declare_parameter<double>("th_max_message_delay_sec", 1.0);
+  th_arrived_distance_m_ = node_->declare_parameter<double>("th_arrived_distance_m", 1.0);
+  th_stopped_time_sec_ = node_->declare_parameter<double>("th_stopped_time_sec", 1.0);
+  th_stopped_velocity_mps_ = node_->declare_parameter<double>("th_stopped_velocity_mps", 0.01);
+  enable_mode_switching_ = node_->declare_parameter<bool>("enable_mode_switching", true);
 
-  node_->get_parameter("update_rate", update_rate_);
-  node_->get_parameter("th_max_message_delay_sec", th_max_message_delay_sec_);
-  node_->get_parameter("th_arrived_distance_m", th_arrived_distance_m_);
-  node_->get_parameter("th_stopped_time_sec", th_stopped_time_sec_);
-  node_->get_parameter("th_stopped_velocity_mps", th_stopped_velocity_mps_);
-  node_->get_parameter("enable_mode_switching", enable_mode_switching_);
-
-  // Input（topic 名稱完全沿用原本）
-  sub_lane_driving_trajectory_ = node_->create_subscription<autoware_planning_msgs::msg::Trajectory>(
-    "input/lane_driving/trajectory", rclcpp::QoS{1},
-    std::bind(&ExtraScenarioSelector::onLaneDrivingTrajectory, this, std::placeholders::_1));
+  sub_lane_driving_trajectory_ =
+    node_->create_subscription<autoware_planning_msgs::msg::Trajectory>(
+      "input/lane_driving/trajectory", rclcpp::QoS{1},
+      std::bind(&ExtraScenarioSelector::onLaneDrivingTrajectory, this, std::placeholders::_1));
 
   sub_parking_trajectory_ = node_->create_subscription<autoware_planning_msgs::msg::Trajectory>(
     "input/parking/trajectory", rclcpp::QoS{1},
@@ -219,7 +212,8 @@ void ExtraScenarioSelector::initialize(rclcpp::Node * node)
   sub_waypoint_following_trajectory_ =
     node_->create_subscription<autoware_planning_msgs::msg::Trajectory>(
       "input/waypoint_following/trajectory", rclcpp::QoS{1},
-      std::bind(&ExtraScenarioSelector::onWaypointFollowingTrajectory, this, std::placeholders::_1));
+      std::bind(
+        &ExtraScenarioSelector::onWaypointFollowingTrajectory, this, std::placeholders::_1));
 
   sub_lanelet_map_ = node_->create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
     "input/lanelet_map", rclcpp::QoS{1}.transient_local(),
@@ -491,8 +485,7 @@ bool ExtraScenarioSelector::isEmptyParkingTrajectory() const
 /*=========================
   ROS I/O
 =========================*/
-void ExtraScenarioSelector::onMap(
-  const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg)
+void ExtraScenarioSelector::onMap(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg)
 {
   route_handler_ = std::make_shared<autoware::route_handler::RouteHandler>(*msg);
 }
@@ -516,7 +509,6 @@ void ExtraScenarioSelector::onOdom(const nav_msgs::msg::Odometry::ConstSharedPtr
   twist_ = twist;
   twist_buffer_.push_back(twist);
 
-  // 刪除過舊資料
   while (true) {
     const auto time_diff =
       rclcpp::Time(msg->header.stamp) - rclcpp::Time(twist_buffer_.front()->header.stamp);
@@ -545,14 +537,12 @@ bool ExtraScenarioSelector::isDataReady()
   }
 
   if (!route_) {
-    RCLCPP_INFO_THROTTLE(
-      node_->get_logger(), *node_->get_clock(), 5000, "Waiting for route.");
+    RCLCPP_INFO_THROTTLE(node_->get_logger(), *node_->get_clock(), 5000, "Waiting for route.");
     return false;
   }
 
   if (!twist_) {
-    RCLCPP_INFO_THROTTLE(
-      node_->get_logger(), *node_->get_clock(), 5000, "Waiting for twist.");
+    RCLCPP_INFO_THROTTLE(node_->get_logger(), *node_->get_clock(), 5000, "Waiting for twist.");
     return false;
   }
 

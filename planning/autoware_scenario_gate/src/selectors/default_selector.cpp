@@ -124,18 +124,6 @@ void DefaultScenarioSelector::initialize(rclcpp::Node * node)
   th_stopped_velocity_mps_ = node_->declare_parameter<double>("th_stopped_velocity_mps", 0.01);
   enable_mode_switching_ = node_->declare_parameter<bool>("enable_mode_switching", true);
 
-  if (update_rate_ <= 0.0) {
-    RCLCPP_WARN(node_->get_logger(), "update_rate <= 0 (%.3f). Forcing to 10.0 Hz.", update_rate_);
-    update_rate_ = 10.0;
-  }
-
-  RCLCPP_INFO(
-    node_->get_logger(),
-    "Selector params: update_rate=%.3f, th_max_delay=%.3f, th_arrived=%.3f, th_stopped_time=%.3f, "
-    "th_stopped_vel=%.4f, enable_mode_switching=%s",
-    update_rate_, th_max_message_delay_sec_, th_arrived_distance_m_, th_stopped_time_sec_,
-    th_stopped_velocity_mps_, enable_mode_switching_ ? "true" : "false");
-
   lane_driving_stop_time_ = {};
   empty_parking_trajectory_time_ = {};
 
