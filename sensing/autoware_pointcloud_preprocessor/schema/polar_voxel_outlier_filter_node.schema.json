@@ -9,19 +9,19 @@
         "radial_resolution_m": {
           "type": "number",
           "description": "the resolution in radial direction [m]",
-          "default": "0.2",
+          "default": "0.5",
           "minimum": 0
         },
         "azimuth_resolution_rad": {
           "type": "number",
           "description": "the resolution in azimuth direction [rad]",
-          "default": "0.025",
+          "default": "0.0175",
           "minimum": 0
         },
         "elevation_resolution_rad": {
           "type": "number",
           "description": "the resolution in elevation direction [rad]",
-          "default": "0.05",
+          "default": "0.0175",
           "minimum": 0
         },
         "voxel_points_threshold": {
@@ -64,6 +64,12 @@
           "default": "4",
           "minimum": 0
         },
+        "visibility_estimation_max_secondary_voxel_count": {
+          "type": "integer",
+          "description": "maximum secondary voxel count for visibility estimation calculations",
+          "default": "500",
+          "minimum": 0
+        },
         "primary_return_types": {
           "type": "array",
           "description": "list of return type values considered as primary returns (all others are secondary)",
@@ -72,38 +78,38 @@
             "minimum": 0,
             "maximum": 255
           },
-          "default": "[1, 6, 10]"
+          "default": "[1, 6, 8, 10]"
         },
         "publish_noise_cloud": {
           "type": "boolean",
-          "description": "whether to generate and publish noise point cloud for debugging (default: false for performance optimization)",
-          "default": "false"
+          "description": "whether to generate and publish noise point cloud for debugging (default: true for development)",
+          "default": "true"
         },
         "filter_ratio_error_threshold": {
           "type": "number",
           "description": "the filter ratio threshold for error diagnostics (ratio of output/input points)",
-          "default": "0.7",
+          "default": "0.5",
           "minimum": 0,
           "maximum": 1
         },
         "filter_ratio_warn_threshold": {
           "type": "number",
           "description": "the filter ratio threshold for warning diagnostics (ratio of output/input points)",
-          "default": "0.3",
+          "default": "0.7",
           "minimum": 0,
           "maximum": 1
         },
         "visibility_error_threshold": {
           "type": "number",
           "description": "the visibility threshold for error diagnostics",
-          "default": "0.5",
+          "default": "0.8",
           "minimum": 0,
           "maximum": 1
         },
         "visibility_warn_threshold": {
           "type": "number",
           "description": "the visibility threshold for warning diagnostics",
-          "default": "0.7",
+          "default": "0.9",
           "minimum": 0,
           "maximum": 1
         }
@@ -119,6 +125,7 @@
         "use_return_type_classification",
         "filter_secondary_returns",
         "secondary_noise_threshold",
+        "visibility_estimation_max_secondary_voxel_count",
         "primary_return_types",
         "publish_noise_cloud",
         "filter_ratio_error_threshold",

@@ -42,7 +42,8 @@ struct PolarVoxelIndex
   int32_t elevation_idx{};
 
   PolarVoxelIndex() = default;
-  PolarVoxelIndex(int32_t r, int32_t a, int32_t e) : radius_idx(r), azimuth_idx(a), elevation_idx(e)
+  PolarVoxelIndex(int32_t radius, int32_t azimuth, int32_t elevation)
+  : radius_idx(radius), azimuth_idx(azimuth), elevation_idx(elevation)
   {
   }
 
@@ -121,7 +122,10 @@ public:
     double azimuth{};
     double elevation{};
     PolarCoordinate() = default;
-    PolarCoordinate(double r, double a, double e) : radius(r), azimuth(a), elevation(e) {}
+    PolarCoordinate(double radius, double azimuth, double elevation)
+    : radius(radius), azimuth(azimuth), elevation(elevation)
+    {
+    }
   };
 
 private:
@@ -201,6 +205,7 @@ private:
   int secondary_noise_threshold_{};
   std::vector<int> primary_return_types_;
   bool publish_noise_cloud_{};
+  int visibility_estimation_max_secondary_voxel_count_{};  // Updated name
 
   // Diagnostic thresholds
   double visibility_error_threshold_{};
