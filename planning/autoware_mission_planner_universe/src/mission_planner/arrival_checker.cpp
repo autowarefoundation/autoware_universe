@@ -71,12 +71,16 @@ bool ArrivalChecker::is_arrived(const PoseStamped & pose) const
   const double yaw_pose = tf2::getYaw(pose.pose.orientation);
   const double yaw_diff = autoware_utils::normalize_radian(yaw_pose - yaw_goal);
 
- // Check lateral distance.
-  const bool is_within_lateral_range = std::abs(lateral_offset_to_goal) <= arrival_check_lateral_distance_;
+  // Check lateral distance.
+  const bool is_within_lateral_range =
+    std::abs(lateral_offset_to_goal) <= arrival_check_lateral_distance_;
 
   // Check longitudinal distance.
-  // The acceptable range is [-arrival_check_longitudinal_distance, +arrival_check_longitudinal_overshoot_distance_].
-  const bool is_within_longitudinal_range = longitudinal_offset_to_goal >= -arrival_check_longitudinal_distance_ && longitudinal_offset_to_goal <= arrival_check_longitudinal_overshoot_distance_;
+  // The acceptable range is [-arrival_check_longitudinal_distance,
+  // +arrival_check_longitudinal_overshoot_distance_].
+  const bool is_within_longitudinal_range =
+    longitudinal_offset_to_goal >= -arrival_check_longitudinal_distance_ &&
+    longitudinal_offset_to_goal <= arrival_check_longitudinal_overshoot_distance_;
 
   // Check angle.
   const bool is_within_angle_range = std::fabs(yaw_diff) <= angle_;
