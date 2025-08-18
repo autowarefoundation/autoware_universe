@@ -50,18 +50,18 @@
 
 namespace autoware::scenario_selector
 {
-class ExtraScenarioSelectorNode : public rclcpp::Node,
-                                  public autoware::scenario_selector::ScenarioSelectorBase
+
+class ExtraScenarioSelector final : public ScenarioSelectorPlugin
 {
 public:
-  ExtraScenarioSelectorNode() : ExtraScenarioSelectorNode(rclcpp::NodeOptions{}) {}
+  ExtraScenarioSelector() = default;
+  ~ExtraScenarioSelector() override = default;
 
-  explicit ExtraScenarioSelectorNode(const rclcpp::NodeOptions & node_options);
-
+  void initialize(rclcpp::Node * node) override;
+  bool ready() const override;
   std::string select() override;
 
   void onOdom(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
-
   bool isDataReady();
   void onTimer();
   void onMap(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg);
@@ -76,35 +76,37 @@ public:
   std::string selectScenarioByPosition();
   autoware_planning_msgs::msg::Trajectory::ConstSharedPtr getScenarioTrajectory(
     const std::string & scenario);
-
   void updateData();
 
 private:
   bool isAutonomous() const;
   bool isEmptyParkingTrajectory() const;
-  bool isSwitchToLaneDrivingFromParking();
-  bool isSwitchToLaneDrivingFromWaypointFollowing(const bool is_stopped);
+  bool isEmptyWaypointFollowingTrajectory() const;
+  bool isSwitchToLaneDriving();
   bool isSwitchToParking(const bool is_stopped);
   bool isSwitchToWaypointFollowing(const bool is_stopped);
+  bool isSwitchFromWaypointFollowingToLaneDriving();
+
+  bool isSwitchToLaneDrivingFromParking();
+  bool isSwitchToLaneDrivingFromWaypointFollowing(const bool is_stopped);
 
   inline bool isCurrentLaneDriving() const
   {
     return current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING;
   }
-
   inline bool isCurrentParking() const
   {
     return current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::PARKING;
   }
-
   inline bool isCurrentWaypointFollowing() const
   {
     return current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
   }
 
+  rclcpp::Node * node_{nullptr};
+
   rclcpp::TimerBase::SharedPtr timer_;
 
-  // subscribers
   rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr sub_lanelet_map_;
   rclcpp::Subscription<autoware_planning_msgs::msg::LaneletRoute>::SharedPtr sub_route_;
   rclcpp::Subscription<autoware_planning_msgs::msg::Trajectory>::SharedPtr
@@ -112,19 +114,19 @@ private:
   rclcpp::Subscription<autoware_planning_msgs::msg::Trajectory>::SharedPtr sub_parking_trajectory_;
   rclcpp::Subscription<autoware_planning_msgs::msg::Trajectory>::SharedPtr
     sub_waypoint_following_trajectory_;
+
   rclcpp::Publisher<autoware_planning_msgs::msg::Trajectory>::SharedPtr pub_trajectory_;
   rclcpp::Publisher<autoware_internal_planning_msgs::msg::Scenario>::SharedPtr pub_scenario_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
     pub_processing_time_;
 
-  // polling subscribers
   autoware_utils::InterProcessPollingSubscriber<
     nav_msgs::msg::Odometry, autoware_utils::polling_policy::All>::SharedPtr sub_odom_;
   autoware_utils::InterProcessPollingSubscriber<std_msgs::msg::Bool>::SharedPtr sub_parking_state_;
-  autoware_utils::InterProcessPollingSubscriber<std_msgs::msg::Bool>::SharedPtr
-    sub_waypoint_following_state_;
   autoware_utils::InterProcessPollingSubscriber<
     autoware_adapi_v1_msgs::msg::OperationModeState>::SharedPtr sub_operation_mode_state_;
+  autoware_utils::InterProcessPollingSubscriber<std_msgs::msg::Bool>::SharedPtr
+    sub_waypoint_following_state_;
 
   autoware_adapi_v1_msgs::msg::OperationModeState::ConstSharedPtr operation_mode_state_;
   autoware_planning_msgs::msg::Trajectory::ConstSharedPtr lane_driving_trajectory_;
@@ -140,7 +142,6 @@ private:
   std::shared_ptr<autoware::route_handler::RouteHandler> route_handler_;
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
 
-  // Parameters
   double update_rate_;
   double th_max_message_delay_sec_;
   double th_arrived_distance_m_;
@@ -150,18 +151,18 @@ private:
   bool is_parking_completed_;
   bool is_waypoint_following_completed_;
 
+  boost::optional<rclcpp::Time> lane_driving_stop_time_;
+  boost::optional<rclcpp::Time> empty_parking_trajectory_time_;
   boost::optional<rclcpp::Time> switch_parking_stop_time_;
   boost::optional<rclcpp::Time> switch_waypoint_following_stop_time_;
-  boost::optional<rclcpp::Time> empty_parking_trajectory_time_;
   boost::optional<rclcpp::Time> waypoint_following_stop_time_;
 
-  static constexpr double switch_stopping_timeout_s = 5.0;
+  static constexpr double lane_stopping_timeout_s = 5.0;
   static constexpr double empty_parking_trajectory_timeout_s = 3.0;
-  static constexpr double waypoint_following_stopping_timeout_s = 5.0;
 
-  // processing time
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
 };
+
 }  // namespace autoware::scenario_selector
 
 #endif  // AUTOWARE__EXTRA_SCENARIO_SELECTOR__NODE_HPP_

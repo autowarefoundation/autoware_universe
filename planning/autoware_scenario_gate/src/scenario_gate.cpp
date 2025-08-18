@@ -1,7 +1,6 @@
 #include "autoware/scenario_gate/scenario_gate.hpp"
 
 #include <pluginlib/class_loader.hpp>
-#include <rclcpp/executors/multi_threaded_executor.hpp>
 #include <rclcpp_components/register_node_macro.hpp>
 
 #include <map>
@@ -16,8 +15,8 @@ ScenarioGateNode::ScenarioGateNode(const rclcpp::NodeOptions & options)
   const std::string selector_type = this->declare_parameter<std::string>("selector_type", "Default");
 
   static const std::map<std::string, std::string> selector_map = {
-    {"Default", "autoware::scenario_selector::DefaultScenarioSelectorNode"},
-    {"Extra", "autoware::scenario_selector::ExtraScenarioSelectorNode"}};
+    {"Default", "autoware::scenario_selector::DefaultScenarioSelector"},
+    {"Extra", "autoware::scenario_selector::ExtraScenarioSelector"}};
 
   if (selector_map.count(selector_type)) {
     selector_info_ = selector_map.at(selector_type);
@@ -46,39 +45,20 @@ ScenarioGateNode::ScenarioGateNode(const rclcpp::NodeOptions & options)
     RCLCPP_INFO(get_logger(), "Loading selector plugin [%s]", selector_info_.c_str());
 
     loader_ =
-      std::make_unique<pluginlib::ClassLoader<autoware::scenario_selector::ScenarioSelectorBase>>(
-        "autoware_scenario_gate", "autoware::scenario_selector::ScenarioSelectorBase");
+      std::make_unique<pluginlib::ClassLoader<autoware::scenario_selector::ScenarioSelectorPlugin>>(
+        "autoware_scenario_gate", "autoware::scenario_selector::ScenarioSelectorPlugin");
 
     selector_plugin_ = loader_->createSharedInstance(selector_info_);
 
-    selector_node_raw_ = dynamic_cast<rclcpp::Node *>(selector_plugin_.get());
-    if (!selector_node_raw_) {
-      RCLCPP_FATAL(
-        get_logger(), "Loaded plugin does not inherit rclcpp::Node; cannot spin in-process");
-      throw std::runtime_error("Plugin is not an rclcpp::Node");
-    }
+    selector_plugin_->initialize(this);
 
-    selector_executor_ = std::make_shared<rclcpp::executors::MultiThreadedExecutor>();
-    selector_executor_->add_node(selector_node_raw_->get_node_base_interface());
-    selector_spin_thread_ = std::thread([exec = selector_executor_]() { exec->spin(); });
-
-    RCLCPP_INFO(get_logger(), "Selector component loaded and spinning");
+    RCLCPP_INFO(get_logger(), "Selector plugin [%s] loaded and initialized", selector_info_.c_str());
   } catch (const pluginlib::LibraryLoadException & e) {
-    RCLCPP_FATAL(get_logger(), "Failed to load selector component: %s", e.what());
+    RCLCPP_FATAL(get_logger(), "Failed to load selector plugin: %s", e.what());
     throw;
   } catch (const std::exception & e) {
     RCLCPP_FATAL(get_logger(), "Exception while creating selector instance: %s", e.what());
     throw;
-  }
-}
-
-ScenarioGateNode::~ScenarioGateNode()
-{
-  if (selector_executor_) {
-    selector_executor_->cancel();
-  }
-  if (selector_spin_thread_.joinable()) {
-    selector_spin_thread_.join();
   }
 }
 

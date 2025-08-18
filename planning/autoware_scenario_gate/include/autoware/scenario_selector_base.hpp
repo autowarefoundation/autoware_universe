@@ -15,18 +15,23 @@
 #ifndef AUTOWARE__SCENARIO_GATE__SCENARIO_SELECTOR_BASE_HPP_
 #define AUTOWARE__SCENARIO_GATE__SCENARIO_SELECTOR_BASE_HPP_
 
-#include <string>
+#include <rclcpp/rclcpp.hpp>
 
 namespace autoware::scenario_selector
 {
-class ScenarioSelectorBase
+
+class ScenarioSelectorPlugin
 {
 public:
-  virtual ~ScenarioSelectorBase() = default;
+  virtual ~ScenarioSelectorPlugin() = default;
 
-  // Implementations (DefaultSelector / ExtraSelector) 必須實作這個
+  virtual void initialize(rclcpp::Node * node) = 0;
+
+  virtual bool ready() const = 0;
+
   virtual std::string select() = 0;
 };
-}  // namespace autoware::scenario
+
+}  // namespace autoware::scenario_selector
 
 #endif  // AUTOWARE__SCENARIO_GATE__SCENARIO_SELECTOR_BASE_HPP_

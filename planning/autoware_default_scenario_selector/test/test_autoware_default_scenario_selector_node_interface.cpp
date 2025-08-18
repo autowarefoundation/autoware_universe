@@ -29,17 +29,19 @@ namespace autoware::scenario_selector
 {
 using autoware::planning_test_manager::PlanningInterfaceTestManager;
 
+// 讓 plugin 在整個測試期間存活
+static std::shared_ptr<DefaultScenarioSelector> g_plugin;
+
 std::shared_ptr<PlanningInterfaceTestManager> generateTestManager()
 {
   auto test_manager = std::make_shared<PlanningInterfaceTestManager>();
-
-  // set subscriber with topic name: default_scenario_selector → test_node_
+  // 監看 plugin/node 會發布的 topic
   test_manager->subscribeOutput<autoware_internal_planning_msgs::msg::Scenario>("output/scenario");
-
   return test_manager;
 }
 
-std::shared_ptr<DefaultScenarioSelectorNode> generateNode()
+// 產生一個乾淨的 node，並以該 node 初始化 plugin
+std::shared_ptr<rclcpp::Node> generateNodeAndInitPlugin()
 {
   auto node_options = rclcpp::NodeOptions{};
   node_options.append_parameter_override("update_rate", 10.0);
@@ -49,46 +51,49 @@ std::shared_ptr<DefaultScenarioSelectorNode> generateNode()
   node_options.append_parameter_override("th_stopped_velocity_mps", 0.01);
   node_options.append_parameter_override("enable_mode_switching", true);
 
-  return std::make_shared<DefaultScenarioSelectorNode>(node_options);
+  // 名稱仍用 default_scenario_selector，與原先一致，方便 YAML/命名空間
+  auto node = std::make_shared<rclcpp::Node>("default_scenario_selector", node_options);
+
+  // 建立並初始化 plugin（用此 node 的 context 建立 pub/sub/timer/params）
+  g_plugin = std::make_shared<DefaultScenarioSelector>();
+  g_plugin->initialize(node.get());
+
+  return node;
 }
 
 void publishMandatoryTopics(
-  std::shared_ptr<PlanningInterfaceTestManager> test_manager,
-  std::shared_ptr<DefaultScenarioSelectorNode> test_target_node)
+  const std::shared_ptr<PlanningInterfaceTestManager> & test_manager,
+  const std::shared_ptr<rclcpp::Node> & node)
 {
-  // publish necessary topics from test_manager
-  test_manager->publishInput(
-    test_target_node, "input/odometry", autoware::test_utils::makeOdometry());
-  test_manager->publishInput(test_target_node, "is_parking_completed", std_msgs::msg::Bool{});
-  test_manager->publishInput(
-    test_target_node, "input/parking/trajectory", autoware_planning_msgs::msg::Trajectory{});
-  test_manager->publishInput(
-    test_target_node, "input/lanelet_map", autoware::test_utils::makeMapBinMsg());
-  test_manager->publishInput(
-    test_target_node, "input/route", autoware::test_utils::makeNormalRoute());
-  test_manager->publishInput(
-    test_target_node, "input/operation_mode_state",
-    autoware_adapi_v1_msgs::msg::OperationModeState{});
+  // 發佈 plugin 所需的最基本輸入
+  test_manager->publishInput(node, "input/odometry", autoware::test_utils::makeOdometry());
+  test_manager->publishInput(node, "is_parking_completed", std_msgs::msg::Bool{});
+  test_manager->publishInput(node, "input/parking/trajectory", autoware_planning_msgs::msg::Trajectory{});
+  test_manager->publishInput(node, "input/lanelet_map", autoware::test_utils::makeMapBinMsg());
+  test_manager->publishInput(node, "input/route", autoware::test_utils::makeNormalRoute());
+  test_manager->publishInput(node, "input/operation_mode_state", autoware_adapi_v1_msgs::msg::OperationModeState{});
 }
 
 TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectoryLaneDrivingMode)
 {
   rclcpp::init(0, nullptr);
-  auto test_manager = generateTestManager();
-  auto test_target_node = generateNode();
 
-  publishMandatoryTopics(test_manager, test_target_node);
+  auto test_manager = generateTestManager();
+  auto node = generateNodeAndInitPlugin();
+
+  publishMandatoryTopics(test_manager, node);
 
   const std::string input_trajectory_topic = "input/lane_driving/trajectory";
 
-  // test for normal trajectory
-  ASSERT_NO_THROW(test_manager->testWithNormalTrajectory(test_target_node, input_trajectory_topic));
+  // 正常軌跡
+  ASSERT_NO_THROW(test_manager->testWithNormalTrajectory(node, input_trajectory_topic));
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
-  // test for trajectory with empty/one point/overlapping point
-  ASSERT_NO_THROW(
-    test_manager->testWithAbnormalTrajectory(test_target_node, input_trajectory_topic));
+  // 空/單點/重疊點等異常軌跡
+  ASSERT_NO_THROW(test_manager->testWithAbnormalTrajectory(node, input_trajectory_topic));
+
   rclcpp::shutdown();
+  g_plugin.reset();
 }
 
 TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectoryParkingMode)
@@ -96,38 +101,44 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectoryParkingMode)
   rclcpp::init(0, nullptr);
 
   auto test_manager = generateTestManager();
-  auto test_target_node = generateNode();
+  auto node = generateNodeAndInitPlugin();
 
-  publishMandatoryTopics(test_manager, test_target_node);
+  publishMandatoryTopics(test_manager, node);
 
   const std::string input_trajectory_topic = "input/parking/trajectory";
 
-  // test for normal trajectory
-  ASSERT_NO_THROW(test_manager->testWithNormalTrajectory(test_target_node, input_trajectory_topic));
+  // 正常軌跡
+  ASSERT_NO_THROW(test_manager->testWithNormalTrajectory(node, input_trajectory_topic));
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
-  // test for trajectory with empty/one point/overlapping point
-  ASSERT_NO_THROW(
-    test_manager->testWithAbnormalTrajectory(test_target_node, input_trajectory_topic));
+  // 空/單點/重疊點等異常軌跡
+  ASSERT_NO_THROW(test_manager->testWithAbnormalTrajectory(node, input_trajectory_topic));
+
   rclcpp::shutdown();
+  g_plugin.reset();
 }
 
 TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
 {
   rclcpp::init(0, nullptr);
-  auto test_manager = generateTestManager();
-  auto test_target_node = generateNode();
 
-  publishMandatoryTopics(test_manager, test_target_node);
+  auto test_manager = generateTestManager();
+  auto node = generateNodeAndInitPlugin();
+
+  publishMandatoryTopics(test_manager, node);
 
   const std::string input_trajectory_topic = "input/lane_driving/trajectory";
   const std::string input_odometry_topic = "input/odometry";
 
-  // test for normal trajectory
-  ASSERT_NO_THROW(test_manager->testWithNormalTrajectory(test_target_node, input_trajectory_topic));
+  // 正常軌跡
+  ASSERT_NO_THROW(test_manager->testWithNormalTrajectory(node, input_trajectory_topic));
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
-  ASSERT_NO_THROW(test_manager->testWithOffTrackOdometry(test_target_node, input_odometry_topic));
+  // 逸離車道的 odom 測試
+  ASSERT_NO_THROW(test_manager->testWithOffTrackOdometry(node, input_odometry_topic));
+
   rclcpp::shutdown();
+  g_plugin.reset();
 }
+
 }  // namespace autoware::scenario_selector

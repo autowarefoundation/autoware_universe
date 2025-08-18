@@ -15,8 +15,9 @@
 #ifndef AUTOWARE__DEFAULT_SCENARIO_SELECTOR__NODE_HPP_
 #define AUTOWARE__DEFAULT_SCENARIO_SELECTOR__NODE_HPP_
 
-#include <autoware/scenario_selector_base.hpp>
+#include <autoware/scenario_selector_base.hpp> 
 #include <autoware_utils/ros/published_time_publisher.hpp>
+
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
@@ -50,18 +51,19 @@
 
 namespace autoware::scenario_selector
 {
-class DefaultScenarioSelectorNode : public rclcpp::Node,
-                                    public autoware::scenario_selector::ScenarioSelectorBase
+
+class DefaultScenarioSelector final : public ScenarioSelectorPlugin
 {
 public:
-  DefaultScenarioSelectorNode() : DefaultScenarioSelectorNode(rclcpp::NodeOptions{}) {}
+  DefaultScenarioSelector() = default;
+  ~DefaultScenarioSelector() override = default;
 
-  explicit DefaultScenarioSelectorNode(const rclcpp::NodeOptions & node_options);
-
+  // ScenarioSelectorPlugin API
+  void initialize(rclcpp::Node * node) override;
+  bool ready() const override;
   std::string select() override;
 
   void onOdom(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
-
   bool isDataReady();
   void onTimer();
   void onMap(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg);
@@ -74,7 +76,6 @@ public:
   std::string selectScenarioByPosition();
   autoware_planning_msgs::msg::Trajectory::ConstSharedPtr getScenarioTrajectory(
     const std::string & scenario);
-
   void updateData();
 
 private:
@@ -87,20 +88,21 @@ private:
   {
     return current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING;
   }
-
   inline bool isCurrentParking() const
   {
     return current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::PARKING;
   }
 
+  rclcpp::Node * node_{nullptr};
+
   rclcpp::TimerBase::SharedPtr timer_;
 
-  // subscribers
   rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr sub_lanelet_map_;
   rclcpp::Subscription<autoware_planning_msgs::msg::LaneletRoute>::SharedPtr sub_route_;
   rclcpp::Subscription<autoware_planning_msgs::msg::Trajectory>::SharedPtr
     sub_lane_driving_trajectory_;
   rclcpp::Subscription<autoware_planning_msgs::msg::Trajectory>::SharedPtr sub_parking_trajectory_;
+
   rclcpp::Publisher<autoware_planning_msgs::msg::Trajectory>::SharedPtr pub_trajectory_;
   rclcpp::Publisher<autoware_internal_planning_msgs::msg::Scenario>::SharedPtr pub_scenario_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
@@ -126,14 +128,13 @@ private:
   std::shared_ptr<autoware::route_handler::RouteHandler> route_handler_;
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
 
-  // Parameters
   double update_rate_;
   double th_max_message_delay_sec_;
   double th_arrived_distance_m_;
   double th_stopped_time_sec_;
   double th_stopped_velocity_mps_;
-  bool enable_mode_switching_;
-  bool is_parking_completed_;
+  bool   enable_mode_switching_;
+  bool   is_parking_completed_;
 
   boost::optional<rclcpp::Time> lane_driving_stop_time_;
   boost::optional<rclcpp::Time> empty_parking_trajectory_time_;
@@ -145,4 +146,5 @@ private:
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
 };
 }  // namespace autoware::scenario_selector
+
 #endif  // AUTOWARE__DEFAULT_SCENARIO_SELECTOR__NODE_HPP_

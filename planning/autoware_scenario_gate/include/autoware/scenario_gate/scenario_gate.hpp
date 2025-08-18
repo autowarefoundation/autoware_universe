@@ -18,7 +18,6 @@
 #include <autoware/scenario_selector_base.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <pluginlib/class_loader.hpp>
-#include <rclcpp/executors/multi_threaded_executor.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_planning_msgs/msg/scenario.hpp>
@@ -27,8 +26,6 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <thread>
-#include <utility>
 
 namespace autoware::scenario_gate
 {
@@ -37,7 +34,7 @@ class ScenarioGateNode : public rclcpp::Node
 {
 public:
   explicit ScenarioGateNode(const rclcpp::NodeOptions & options);
-  ~ScenarioGateNode() override;
+  ~ScenarioGateNode() override = default;
 
 private:
   // Callbacks
@@ -54,14 +51,9 @@ private:
   rclcpp::Publisher<autoware_internal_planning_msgs::msg::Scenario>::SharedPtr pub_scenario_;
 
   std::string selector_info_;
-  std::unique_ptr<pluginlib::ClassLoader<autoware::scenario_selector::ScenarioSelectorBase>>
+  std::unique_ptr<pluginlib::ClassLoader<autoware::scenario_selector::ScenarioSelectorPlugin>>
     loader_;
-  std::shared_ptr<autoware::scenario_selector::ScenarioSelectorBase> selector_plugin_;
-
-  // 讓 executor 能加 node 進去 spin
-  rclcpp::Node * selector_node_raw_{nullptr};
-  std::shared_ptr<rclcpp::executors::MultiThreadedExecutor> selector_executor_;
-  std::thread selector_spin_thread_;
+  std::shared_ptr<autoware::scenario_selector::ScenarioSelectorPlugin> selector_plugin_;
 };
 
 }  // namespace autoware::scenario_gate
