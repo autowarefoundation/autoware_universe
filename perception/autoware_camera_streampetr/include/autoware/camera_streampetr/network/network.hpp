@@ -87,13 +87,13 @@ public:
       Dims d = getTensorShape(name.c_str());
       auto dtype_opt = getTensorDataType(name.c_str());
       if (!dtype_opt.has_value()) {
-       RCLCPP_WARN(logger, "Warning: Could not get data type for tensor: %s", name.c_str());
+        RCLCPP_WARN(logger, "Warning: Could not get data type for tensor: %s", name.c_str());
         return false;
       }
       DataType dtype = dtype_opt.value();
       bindings[name] = std::make_shared<Tensor>(name, d, dtype);
       bindings[name]->iomode = getTensorIOMode(name.c_str());
-      
+
       std::stringstream ss;
       ss << *(bindings[name]);
       RCLCPP_INFO(logger, "%s", ss.str().c_str());

@@ -17,10 +17,10 @@
 #include <autoware/cuda_utils/cuda_utils.hpp>
 #include <autoware/tensorrt_common/utils.hpp>
 
-#include <algorithm>
 #include <NvInfer.h>
 #include <NvOnnxParser.h>
 
+#include <algorithm>
 #include <fstream>
 #include <memory>
 #include <string>
@@ -135,9 +135,7 @@ StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config) : config_(con
   auto logger = rclcpp::get_logger(config_.logger_name.c_str());
 
   if (config_.trt_precision == "fp16") {
-    RCLCPP_INFO(
-      logger,
-      "Setting sigmoid and softmax layers to FP32 precision for stability");
+    RCLCPP_INFO(logger, "Setting sigmoid and softmax layers to FP32 precision for stability");
     setSigmoidAndSoftmaxLayersToFP32(pts_head_->getNetwork());
   }
 
@@ -147,7 +145,9 @@ StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config) : config_(con
   }
 
   // Setup TensorRT bindings
-  if (!backbone_->setBindings(logger) || !pts_head_->setBindings(logger) || !pos_embed_->setBindings(logger)) {
+  if (
+    !backbone_->setBindings(logger) || !pts_head_->setBindings(logger) ||
+    !pos_embed_->setBindings(logger)) {
     throw std::runtime_error("Failed to setup TRT bindings.");
   }
 
