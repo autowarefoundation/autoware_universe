@@ -529,30 +529,27 @@ bool BicycleMotionModel::getPredictedState(
   twist.angular.y = 0.0;
   twist.angular.z = X(IDX::V) * wheel_base_inv;
 
+  constexpr double default_cov = 0.1 * 0.1;
   // set pose covariance
-  constexpr double zz_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
-  constexpr double rr_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
-  constexpr double pp_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
   pose_cov[XYZRPY_COV_IDX::X_X] = (P(IDX::X1, IDX::X1) + P(IDX::X2, IDX::X2)) * 0.25;
   pose_cov[XYZRPY_COV_IDX::X_Y] = (P(IDX::X1, IDX::Y1) + P(IDX::X2, IDX::Y2)) * 0.25;
   pose_cov[XYZRPY_COV_IDX::Y_X] = (P(IDX::Y1, IDX::X1) + P(IDX::Y2, IDX::X2)) * 0.25;
   pose_cov[XYZRPY_COV_IDX::Y_Y] = (P(IDX::Y1, IDX::Y1) + P(IDX::Y2, IDX::Y2)) * 0.25;
   pose_cov[XYZRPY_COV_IDX::YAW_YAW] = P(IDX::X2, IDX::X2) * cos(yaw) * wheel_base_inv_sq +
                                       P(IDX::Y2, IDX::Y2) * sin(yaw) * wheel_base_inv_sq;
-  pose_cov[XYZRPY_COV_IDX::Z_Z] = zz_cov;
-  pose_cov[XYZRPY_COV_IDX::ROLL_ROLL] = rr_cov;
-  pose_cov[XYZRPY_COV_IDX::PITCH_PITCH] = pp_cov;
+  pose_cov[XYZRPY_COV_IDX::Z_Z] = default_cov;
+  pose_cov[XYZRPY_COV_IDX::ROLL_ROLL] = default_cov;
+  pose_cov[XYZRPY_COV_IDX::PITCH_PITCH] = default_cov;
 
   // set twist covariance
-  constexpr double vel_cov = 0.1 * 0.1;
   twist_cov[XYZRPY_COV_IDX::X_X] = P(IDX::U, IDX::U);
   twist_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::V, IDX::V);
   twist_cov[XYZRPY_COV_IDX::YAW_YAW] =
     P(IDX::V, IDX::V) * wheel_base_inv_sq /
     (motion_params_.wheel_pos_ratio * motion_params_.wheel_pos_ratio);
-  twist_cov[XYZRPY_COV_IDX::Z_Z] = vel_cov;
-  twist_cov[XYZRPY_COV_IDX::ROLL_ROLL] = vel_cov;
-  twist_cov[XYZRPY_COV_IDX::PITCH_PITCH] = vel_cov;
+  twist_cov[XYZRPY_COV_IDX::Z_Z] = default_cov;
+  twist_cov[XYZRPY_COV_IDX::ROLL_ROLL] = default_cov;
+  twist_cov[XYZRPY_COV_IDX::PITCH_PITCH] = default_cov;
 
   return true;
 }
