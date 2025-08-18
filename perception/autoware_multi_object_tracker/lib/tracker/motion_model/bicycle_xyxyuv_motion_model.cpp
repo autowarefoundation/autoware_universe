@@ -352,13 +352,16 @@ bool BicycleXYXYUVMotionModel::predictStateStep(const double dt, KalmanFilter & 
 
   /*  Jacobian Matrix
    *
-   * A_x1 = [1 - vel_long_k / wheel_base * dt, 0, vel_long_k / wheel_base * dt, 0, (x2_k -
-   * x1_k)/wheel_base * dt, 0] A_y1 = [0, 1 - vel_long_k / wheel_base * dt, 0, vel_long_k /
-   * wheel_base * dt, (y2_k - y1_k)/wheel_base * dt, 0] A_x2 = [- vel_long_k / wheel_base * dt,
-   * vel_lat_k / wheel_base * dt, 1 + vel_long_k / wheel_base * dt,     - vel_lat_k / wheel_base *
-   * dt, (x2_k - x1_k)/wheel_base * dt, - (y2_k - y1_k)/wheel_base * dt] A_y2 = [- vel_lat_k /
-   * wheel_base * dt, vel_long_k / wheel_base * dt,     vel_lat_k / wheel_base * dt,   1 +
-   * vel_long_k / wheel_base * dt, (y2_k - y1_k)/wheel_base * dt,   (x2_k - x1_k)/wheel_base * dt]
+   * A_x1 = [1 - vel_long_k / wheel_base * dt, 0, vel_long_k / wheel_base * dt, 0,
+             (x2_k - x1_k)/wheel_base * dt, 0]
+   * A_y1 = [0, 1 - vel_long_k / wheel_base * dt, 0, vel_long_k / wheel_base * dt,
+             (y2_k - y1_k)/wheel_base * dt, 0]
+   * A_x2 = [-vel_long_k / wheel_base * dt, vel_lat_k / wheel_base * dt,
+             1 + vel_long_k / wheel_base * dt, - vel_lat_k / wheel_base * dt,
+             (x2_k - x1_k)/wheel_base * dt, - (y2_k - y1_k)/wheel_base * dt]
+   * A_y2 = [-vel_lat_k / wheel_base * dt, vel_long_k / wheel_base * dt,
+             vel_lat_k / wheel_base * dt, 1 + vel_long_k / wheel_base * dt,
+             (y2_k - y1_k)/wheel_base * dt, (x2_k - x1_k)/wheel_base * dt]
    * A_vx = [0, 0, 0, 0, 1, 0]
    * A_vy = [0, 0, 0, 0, 0, exp(-dt / 2.0)]
    */
@@ -389,11 +392,11 @@ bool BicycleXYXYUVMotionModel::predictStateStep(const double dt, KalmanFilter & 
   X_next_t(IDX::X2) = x2 + vel_long * cos_yaw_dt - vel_lat * sin_yaw_dt;
   X_next_t(IDX::Y2) = y2 + vel_long * sin_yaw_dt + vel_lat * cos_yaw_dt;
   X_next_t(IDX::U) = vel_long;  // velocity does not change
-  // Apply exponential decay to slip angle over time, with a half-life of 2 seconds
-  constexpr double gamma = 0.69314718056;  // natural logarithm of 2
-  const double decay_rate = std::exp(-dt * gamma / 2.0);
-  X_next_t(IDX::V) = vel_lat * decay_rate;  // lateral velocity decays exponentially
-  // X_next_t(IDX::V) = vel_lat;
+  // Apply exponential decay to slip angle over time, with a half-life
+  constexpr double half_life = 0.8;                    // [s] half-life of the exponential decay
+  constexpr double gamma = 0.69314718056 / half_life;  // natural logarithm of 2 / half-life
+  const double decay_rate = std::exp(-gamma * dt);     // decay rate for half-life
+  X_next_t(IDX::V) = vel_lat * decay_rate;             // lateral velocity decays exponentially
 
   // State transition matrix A
   ProcessMat A;
@@ -421,7 +424,8 @@ bool BicycleXYXYUVMotionModel::predictStateStep(const double dt, KalmanFilter & 
   A(IDX::Y2, IDX::U) = sin_yaw_dt;
   A(IDX::Y2, IDX::V) = cos_yaw_dt;
 
-  A(IDX::U, IDX::U) = 1.0;  // velocity does not change
+  // velocity does not change
+  A(IDX::U, IDX::U) = 1.0;
   A(IDX::V, IDX::V) = decay_rate;
 
   // Process noise covariance Q
