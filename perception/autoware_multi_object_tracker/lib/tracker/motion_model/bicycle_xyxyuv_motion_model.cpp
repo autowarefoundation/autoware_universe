@@ -108,8 +108,8 @@ bool BicycleXYXYUVMotionModel::initialize(
   P(IDX::X2, IDX::Y2) = pose_cov[XYZRPY_COV_IDX::X_Y];
   P(IDX::Y2, IDX::X2) = pose_cov[XYZRPY_COV_IDX::Y_X];
   P(IDX::Y2, IDX::Y2) = pose_cov[XYZRPY_COV_IDX::Y_Y];
-  P(IDX::V_LONG, IDX::V_LONG) = vel_long_cov;
-  P(IDX::V_LAT, IDX::V_LAT) = vel_lat_cov * motion_params_.wheel_pos_ratio;
+  P(IDX::U, IDX::U) = vel_long_cov;
+  P(IDX::V, IDX::V) = vel_lat_cov * motion_params_.wheel_pos_ratio;
 
   return MotionModel::initialize(time, X, P);
 }
@@ -232,8 +232,8 @@ bool BicycleXYXYUVMotionModel::updateStatePoseHeadVel(
   C(1, IDX::Y1) = 1.0;
   C(2, IDX::X2) = 1.0;
   C(3, IDX::Y2) = 1.0;
-  C(4, IDX::V_LONG) = 1.0;
-  C(5, IDX::V_LAT) = 1.0;
+  C(4, IDX::U) = 1.0;
+  C(5, IDX::V) = 1.0;
 
   // todo: add yaw covariance in lateral position
   // todo: if wheel_base is changed a lot, add covariance in longitudinal position
@@ -261,7 +261,7 @@ bool BicycleXYXYUVMotionModel::limitStates()
   ekf_.getP(P_t);
 
   // maximum reverse velocity
-  if (motion_params_.max_reverse_vel < 0 && X_t(IDX::V_LONG) < motion_params_.max_reverse_vel) {
+  if (motion_params_.max_reverse_vel < 0 && X_t(IDX::U) < motion_params_.max_reverse_vel) {
     // rotate the object orientation by 180 degrees
     // replace X1 and Y1 with X2 and Y2
     const double x_center = (X_t(IDX::X1) * motion_params_.lr_ratio + X_t(IDX::X2) * motion_params_.lf_ratio) / (motion_params_.lr_ratio + motion_params_.lf_ratio);
@@ -277,7 +277,7 @@ bool BicycleXYXYUVMotionModel::limitStates()
     X_t(IDX::Y2) = y_center + y1_rel;
 
     // reverse the velocity
-    X_t(IDX::V_LONG) = -X_t(IDX::V_LONG);
+    X_t(IDX::U) = -X_t(IDX::U);
     // rotation velocity does not change
 
     // replace covariance
@@ -289,8 +289,8 @@ bool BicycleXYXYUVMotionModel::limitStates()
 
   }
   // maximum velocity
-  if (!(-motion_params_.max_vel <= X_t(IDX::V_LONG) && X_t(IDX::V_LONG) <= motion_params_.max_vel)) {
-    X_t(IDX::V_LONG) = X_t(IDX::V_LONG) < 0 ? -motion_params_.max_vel : motion_params_.max_vel;
+  if (!(-motion_params_.max_vel <= X_t(IDX::U) && X_t(IDX::U) <= motion_params_.max_vel)) {
+    X_t(IDX::U) = X_t(IDX::U) < 0 ? -motion_params_.max_vel : motion_params_.max_vel;
   }
 
   // maximum lateral velocity by lateral acceleration limitations
@@ -299,17 +299,17 @@ bool BicycleXYXYUVMotionModel::limitStates()
   {
     const double wheel_base = std::hypot(X_t(IDX::X2) - X_t(IDX::X1), X_t(IDX::Y2) - X_t(IDX::Y1));
     constexpr double acc_lat_max = 9.81 * 0.35;  // [m/s^2] maximum lateral acceleration (0.35g);
-    const double vel_lat_limit = acc_lat_max * wheel_base / (X_t(IDX::V_LONG) * X_t(IDX::V_LONG));
-    if (std::abs(X_t(IDX::V_LAT)) > vel_lat_limit) {
+    const double vel_lat_limit = acc_lat_max * wheel_base / (X_t(IDX::U) * X_t(IDX::U));
+    if (std::abs(X_t(IDX::V)) > vel_lat_limit) {
 
       //debug message
       RCLCPP_WARN(
         logger_,
         "BicycleXYXYUVMotionModel::limitStates: limited lateral velocity from %f to %f",
-         X_t(IDX::V_LAT), vel_lat_limit);
+         X_t(IDX::V), vel_lat_limit);
 
       // limit lateral velocity
-      X_t(IDX::V_LAT) = X_t(IDX::V_LAT) < 0 ? -vel_lat_limit : vel_lat_limit;
+      X_t(IDX::V) = X_t(IDX::V) < 0 ? -vel_lat_limit : vel_lat_limit;
     }
   }
 
@@ -371,8 +371,8 @@ bool BicycleXYXYUVMotionModel::predictStateStep(const double dt, KalmanFilter & 
   const double & y1 = X_t(IDX::Y1);
   const double & x2 = X_t(IDX::X2);
   const double & y2 = X_t(IDX::Y2);
-  const double & vel_long = X_t(IDX::V_LONG);
-  const double & vel_lat = X_t(IDX::V_LAT);
+  const double & vel_long = X_t(IDX::U);
+  const double & vel_lat = X_t(IDX::V);
 
   const double yaw = std::atan2(y2 - y1, x2 - x1);
   const double wheel_base = std::hypot(x2 - x1, y2 - y1);
@@ -388,12 +388,12 @@ bool BicycleXYXYUVMotionModel::predictStateStep(const double dt, KalmanFilter & 
   X_next_t(IDX::Y1) = y1 + vel_long * sin_yaw_dt;
   X_next_t(IDX::X2) = x2 + vel_long * cos_yaw_dt - vel_lat * sin_yaw_dt;
   X_next_t(IDX::Y2) = y2 + vel_long * sin_yaw_dt + vel_lat * cos_yaw_dt;
-  X_next_t(IDX::V_LONG) = vel_long;  // velocity does not change
+  X_next_t(IDX::U) = vel_long;  // velocity does not change
   // Apply exponential decay to slip angle over time, with a half-life of 2 seconds
   constexpr double gamma = 0.69314718056;  // natural logarithm of 2
   const double decay_rate = std::exp(-dt * gamma / 2.0);
-  X_next_t(IDX::V_LAT) = vel_lat * decay_rate;  // lateral velocity decays exponentially
-  // X_next_t(IDX::V_LAT) = vel_lat;
+  X_next_t(IDX::V) = vel_lat * decay_rate;  // lateral velocity decays exponentially
+  // X_next_t(IDX::V) = vel_lat;
 
   // State transition matrix A
   ProcessMat A;
@@ -401,28 +401,28 @@ bool BicycleXYXYUVMotionModel::predictStateStep(const double dt, KalmanFilter & 
 
   A(IDX::X1, IDX::X1) = 1.0 - vel_long * wheel_base_inv_dt;
   A(IDX::X1, IDX::X2) = vel_long * wheel_base_inv_dt;
-  A(IDX::X1, IDX::V_LONG) = cos_yaw_dt;
+  A(IDX::X1, IDX::U) = cos_yaw_dt;
 
   A(IDX::Y1, IDX::Y1) = 1.0 - vel_long * wheel_base_inv_dt;
   A(IDX::Y1, IDX::Y2) = vel_long * wheel_base_inv_dt;
-  A(IDX::Y1, IDX::V_LONG) = sin_yaw_dt;
+  A(IDX::Y1, IDX::U) = sin_yaw_dt;
 
   A(IDX::X2, IDX::X1) = -vel_long * wheel_base_inv_dt;
   A(IDX::X2, IDX::Y1) = vel_lat * wheel_base_inv_dt;
   A(IDX::X2, IDX::X2) = 1.0 + vel_long * wheel_base_inv_dt;
   A(IDX::X2, IDX::Y2) = -vel_lat * wheel_base_inv_dt;
-  A(IDX::X2, IDX::V_LONG) = cos_yaw_dt;
-  A(IDX::X2, IDX::V_LAT) = -sin_yaw_dt;
+  A(IDX::X2, IDX::U) = cos_yaw_dt;
+  A(IDX::X2, IDX::V) = -sin_yaw_dt;
 
   A(IDX::Y2, IDX::X1) = -vel_lat * wheel_base_inv_dt;
   A(IDX::Y2, IDX::Y1) = vel_long * wheel_base_inv_dt;
   A(IDX::Y2, IDX::X2) = vel_lat * wheel_base_inv_dt;
   A(IDX::Y2, IDX::Y2) = 1.0 + vel_long * wheel_base_inv_dt;
-  A(IDX::Y2, IDX::V_LONG) = sin_yaw_dt;
-  A(IDX::Y2, IDX::V_LAT) = cos_yaw_dt;
+  A(IDX::Y2, IDX::U) = sin_yaw_dt;
+  A(IDX::Y2, IDX::V) = cos_yaw_dt;
 
-  A(IDX::V_LONG, IDX::V_LONG) = 1.0;  // velocity does not change
-  A(IDX::V_LAT, IDX::V_LAT) = decay_rate;
+  A(IDX::U, IDX::U) = 1.0;  // velocity does not change
+  A(IDX::V, IDX::V) = decay_rate;
 
   // Process noise covariance Q
   constexpr double q_cov_length = 1.0;  // length uncertainty
@@ -477,8 +477,8 @@ bool BicycleXYXYUVMotionModel::predictStateStep(const double dt, KalmanFilter & 
   // covariance of velocity
   const double q_cov_vel_long = motion_params_.q_cov_acc_long * dt2;
   const double q_cov_vel_lat = motion_params_.q_cov_acc_lat * dt2;
-  Q(IDX::V_LONG, IDX::V_LONG) = q_cov_vel_long;
-  Q(IDX::V_LAT, IDX::V_LAT) = q_cov_vel_lat;
+  Q(IDX::U, IDX::U) = q_cov_vel_long;
+  Q(IDX::V, IDX::V) = q_cov_vel_lat;
 
 
   // control-input model B and control-input u are not used
@@ -518,12 +518,12 @@ bool BicycleXYXYUVMotionModel::getPredictedState(
   pose.orientation.w = quaternion.w();
 
   // set twist
-  twist.linear.x = X(IDX::V_LONG);
-  twist.linear.y = X(IDX::V_LAT) / motion_params_.wheel_pos_ratio;  // lateral velocity is scaled by wheel position ratio
+  twist.linear.x = X(IDX::U);
+  twist.linear.y = X(IDX::V) / motion_params_.wheel_pos_ratio;  // lateral velocity is scaled by wheel position ratio
   twist.linear.z = 0.0;
   twist.angular.x = 0.0;
   twist.angular.y = 0.0;
-  twist.angular.z = X(IDX::V_LAT) * wheel_base_inv;
+  twist.angular.z = X(IDX::V) * wheel_base_inv;
 
   // set pose covariance
   constexpr double zz_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
@@ -540,9 +540,9 @@ bool BicycleXYXYUVMotionModel::getPredictedState(
 
   // set twist covariance
   constexpr double vel_cov = 0.1 * 0.1;
-  twist_cov[XYZRPY_COV_IDX::X_X] = P(IDX::V_LONG, IDX::V_LONG);
-  twist_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::V_LAT, IDX::V_LAT);
-  twist_cov[XYZRPY_COV_IDX::YAW_YAW] = P(IDX::V_LAT, IDX::V_LAT) * wheel_base_inv_sq / (motion_params_.wheel_pos_ratio * motion_params_.wheel_pos_ratio);
+  twist_cov[XYZRPY_COV_IDX::X_X] = P(IDX::U, IDX::U);
+  twist_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::V, IDX::V);
+  twist_cov[XYZRPY_COV_IDX::YAW_YAW] = P(IDX::V, IDX::V) * wheel_base_inv_sq / (motion_params_.wheel_pos_ratio * motion_params_.wheel_pos_ratio);
   twist_cov[XYZRPY_COV_IDX::Z_Z] = vel_cov;
   twist_cov[XYZRPY_COV_IDX::ROLL_ROLL] = vel_cov;
   twist_cov[XYZRPY_COV_IDX::PITCH_PITCH] = vel_cov;

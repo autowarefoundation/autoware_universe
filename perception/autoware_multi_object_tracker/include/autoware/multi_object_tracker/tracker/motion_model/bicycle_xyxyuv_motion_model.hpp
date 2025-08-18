@@ -70,9 +70,9 @@ public:
   // bicycle model state indices
   // X1, Y1: position of the rear wheel
   // X2, Y2: position of the front wheel
-  // V_LONG: longitudinal velocity
-  // V_LAT: lateral velocity of the front wheel
-  enum IDX { X1 = 0, Y1 = 1, X2 = 2, Y2 = 3, V_LONG = 4, V_LAT = 5 };
+  // U: longitudinal velocity
+  // V: lateral velocity of the front wheel
+  enum IDX { X1 = 0, Y1 = 1, X2 = 2, Y2 = 3, U = 4, V = 5 };
 
   bool initialize(
     const rclcpp::Time & time, const double & x, const double & y, const double & yaw,
