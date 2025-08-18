@@ -17,7 +17,7 @@
 //
 #define EIGEN_MPL2_ONLY
 
-#include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
+#include "autoware/multi_object_tracker/tracker/motion_model/bicycle_xytvs_motion_model.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -34,14 +34,15 @@ namespace autoware::multi_object_tracker
 
 using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
 
-BicycleMotionModel::BicycleMotionModel() : logger_(rclcpp::get_logger("BicycleMotionModel"))
+BicycleXYTVSMotionModel::BicycleXYTVSMotionModel()
+: logger_(rclcpp::get_logger("BicycleXYTVSMotionModel"))
 {
   // set prediction parameters
   constexpr double dt_max = 0.11;  // [s] maximum time interval for prediction
   setMaxDeltaTime(dt_max);
 }
 
-void BicycleMotionModel::setMotionParams(
+void BicycleXYTVSMotionModel::setMotionParams(
   const double & q_stddev_acc_long, const double & q_stddev_acc_lat,
   const double & q_stddev_yaw_rate_min, const double & q_stddev_yaw_rate_max,
   const double & q_stddev_slip_rate_min, const double & q_stddev_slip_rate_max,
@@ -63,7 +64,8 @@ void BicycleMotionModel::setMotionParams(
   if (lf_min < minimum_wheel_pos || lr_min < minimum_wheel_pos) {
     RCLCPP_WARN(
       logger_,
-      "BicycleMotionModel::setMotionParams: minimum wheel position should be greater than 0.01m.");
+      "BicycleXYTVSMotionModel::setMotionParams: minimum wheel position should be greater than "
+      "0.01m.");
   }
   motion_params_.lf_min = std::max(minimum_wheel_pos, lf_min);
   motion_params_.lr_min = std::max(minimum_wheel_pos, lr_min);
@@ -71,14 +73,14 @@ void BicycleMotionModel::setMotionParams(
   motion_params_.lr_ratio = lr_ratio;
 }
 
-void BicycleMotionModel::setMotionLimits(const double & max_vel, const double & max_slip)
+void BicycleXYTVSMotionModel::setMotionLimits(const double & max_vel, const double & max_slip)
 {
   // set motion limitations
   motion_params_.max_vel = max_vel;
   motion_params_.max_slip = max_slip;
 }
 
-bool BicycleMotionModel::initialize(
+bool BicycleXYTVSMotionModel::initialize(
   const rclcpp::Time & time, const double & x, const double & y, const double & yaw,
   const std::array<double, 36> & pose_cov, const double & vel, const double & vel_cov,
   const double & slip, const double & slip_cov, const double & length)
@@ -102,7 +104,7 @@ bool BicycleMotionModel::initialize(
   return MotionModel::initialize(time, X, P);
 }
 
-bool BicycleMotionModel::updateStatePose(
+bool BicycleXYTVSMotionModel::updateStatePose(
   const double & x, const double & y, const std::array<double, 36> & pose_cov)
 {
   // check if the state is initialized
@@ -128,7 +130,7 @@ bool BicycleMotionModel::updateStatePose(
   return ekf_.update(Y, C, R);
 }
 
-bool BicycleMotionModel::updateStatePoseHead(
+bool BicycleXYTVSMotionModel::updateStatePoseHead(
   const double & x, const double & y, const double & yaw, const std::array<double, 36> & pose_cov)
 {
   // check if the state is initialized
@@ -172,7 +174,7 @@ bool BicycleMotionModel::updateStatePoseHead(
   return ekf_.update(Y, C, R);
 }
 
-bool BicycleMotionModel::updateStatePoseVel(
+bool BicycleXYTVSMotionModel::updateStatePoseVel(
   const double & x, const double & y, const std::array<double, 36> & pose_cov, const double & vel,
   const std::array<double, 36> & twist_cov)
 {
@@ -203,7 +205,7 @@ bool BicycleMotionModel::updateStatePoseVel(
   return ekf_.update<DIM_Y>(Y, C, R);
 }
 
-bool BicycleMotionModel::updateStatePoseHeadVel(
+bool BicycleXYTVSMotionModel::updateStatePoseHeadVel(
   const double & x, const double & y, const double & yaw, const std::array<double, 36> & pose_cov,
   const double & vel, const std::array<double, 36> & twist_cov)
 {
@@ -250,7 +252,7 @@ bool BicycleMotionModel::updateStatePoseHeadVel(
   return ekf_.update(Y, C, R);
 }
 
-bool BicycleMotionModel::limitStates()
+bool BicycleXYTVSMotionModel::limitStates()
 {
   StateVec X_t;
   StateMat P_t;
@@ -279,14 +281,14 @@ bool BicycleMotionModel::limitStates()
   return true;
 }
 
-bool BicycleMotionModel::updateExtendedState(const double & length)
+bool BicycleXYTVSMotionModel::updateExtendedState(const double & length)
 {
   lf_ = std::max(length * motion_params_.lf_ratio, motion_params_.lf_min);
   lr_ = std::max(length * motion_params_.lr_ratio, motion_params_.lr_min);
   return true;
 }
 
-bool BicycleMotionModel::adjustPosition(const double & x, const double & y)
+bool BicycleXYTVSMotionModel::adjustPosition(const double & x, const double & y)
 {
   // check if the state is initialized
   if (!checkInitialized()) return false;
@@ -303,7 +305,7 @@ bool BicycleMotionModel::adjustPosition(const double & x, const double & y)
   return true;
 }
 
-bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) const
+bool BicycleXYTVSMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) const
 {
   /*  Motion model: static bicycle model (constant slip angle, constant velocity)
    *
@@ -429,7 +431,7 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   return ekf.predict(X_next_t, A, Q);
 }
 
-bool BicycleMotionModel::getPredictedState(
+bool BicycleXYTVSMotionModel::getPredictedState(
   const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
   geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const
 {

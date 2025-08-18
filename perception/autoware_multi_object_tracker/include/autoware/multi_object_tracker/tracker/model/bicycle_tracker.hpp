@@ -22,7 +22,7 @@
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
-#include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
+#include "autoware/multi_object_tracker/tracker/motion_model/bicycle_xytvs_motion_model.hpp"
 
 namespace autoware::multi_object_tracker
 {
@@ -38,8 +38,8 @@ private:
 
   Eigen::Vector2d tracking_offset_;
 
-  BicycleMotionModel motion_model_;
-  using IDX = BicycleMotionModel::IDX;
+  BicycleXYTVSMotionModel motion_model_;
+  using IDX = BicycleXYTVSMotionModel::IDX;
 
 public:
   BicycleTracker(

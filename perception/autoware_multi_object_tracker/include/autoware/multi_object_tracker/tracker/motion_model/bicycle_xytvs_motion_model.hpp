@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MOTION_MODEL__BICYCLE_MOTION_MODEL_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MOTION_MODEL__BICYCLE_MOTION_MODEL_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MOTION_MODEL__BICYCLE_XYTVS_MOTION_MODEL_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MOTION_MODEL__BICYCLE_XYTVS_MOTION_MODEL_HPP_
 
 #include "autoware/multi_object_tracker/tracker/motion_model/motion_model_base.hpp"
 
@@ -30,7 +30,7 @@
 namespace autoware::multi_object_tracker
 {
 
-class BicycleMotionModel : public MotionModel<5>
+class BicycleXYTVSMotionModel : public MotionModel<5>
 {
 private:
   // attributes
@@ -64,7 +64,7 @@ private:
   } motion_params_;
 
 public:
-  BicycleMotionModel();
+  BicycleXYTVSMotionModel();
 
   enum IDX { X = 0, Y = 1, YAW = 2, VEL = 3, SLIP = 4 };
 
@@ -111,4 +111,4 @@ public:
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MOTION_MODEL__BICYCLE_MOTION_MODEL_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MOTION_MODEL__BICYCLE_XYTVS_MOTION_MODEL_HPP_
