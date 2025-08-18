@@ -72,15 +72,38 @@
         },
 
         "on_time_buffer_s": {
-          "type": "number",
-          "description": "Continuous detection time threshold to insert departure point into departure interval. [s]",
-          "default": 0.15
+          "type": "object",
+          "properties": {
+            "near_boundary": {
+              "type": "number",
+              "description": "Continuous detection time threshold to insert departure point into departure interval. [s]",
+              "default": 0.15
+            },
+            "critical_departure": {
+              "type": "number",
+              "description": "Continuous detection time required to accept new critical departure point. [s]",
+              "default": 0.15
+            }
+          },
+          "required": ["near_boundary", "critical_departure"],
+          "additionalProperties": false
         },
-
         "off_time_buffer_s": {
-          "type": "number",
-          "description": "Continuous detection time threshold to reset departure interval. [s]",
-          "default": 0.15
+          "type": "object",
+          "properties": {
+            "near_boundary": {
+              "type": "number",
+              "description": "Continuous detection time threshold to reset departure interval. [s]",
+              "default": 0.15
+            },
+            "critical_departure": {
+              "type": "number",
+              "description": "Continuous detection time threshold to reset critical departure. [s]",
+              "default": 0.15
+            }
+          },
+          "required": ["near_boundary", "critical_departure"],
+          "additionalProperties": false
         },
 
         "abnormality": {
@@ -180,28 +203,194 @@
               "additionalProperties": false
             },
 
-            "steering": {
+            "steering_accelerated": {
               "type": "object",
               "properties": {
                 "enable": {
                   "type": "boolean",
-                  "description": "Enable steering-aware footprint margin.",
+                  "description": "Enable footprint obtained from re-simulating the steering of the predicted trajectory",
                   "default": "false"
                 },
-                "steering_rate_rps": {
+                "steering_rate_velocities_mps": {
+                  "type": "array",
+                  "description": "velocities [m/s] used as keys for the steering rate limits mapping.",
+                  "default": [0.0, 3.5, 9.1, 14.7, 20.3, 25.9, 31.5]
+                },
+                "steering_rate_limits_rps": {
+                  "type": "array",
+                  "description": "steering rate limits [rad/s] mapped from the velocities",
+                  "default": [3.14, 0.777, 0.115, 0.044, 0.023, 0.014, 0.01]
+                },
+                "delay_s": {
                   "type": "number",
-                  "description": "Steering rate [rad/s] used to compute curvature-induced lateral margin.",
+                  "description": "[s] delay to apply to the re-simulated steering",
+                  "default": 0.0
+                },
+                "offset_rps": {
+                  "type": "number",
+                  "description": "[rad/s] extra steering rate to add to the original steering profile",
+                  "default": 0.0
+                },
+                "factor": {
+                  "type": "number",
+                  "description": "[-] factor to apply to the original steering profile",
+                  "default": 1.2
+                }
+              },
+              "required": [
+                "enable",
+                "steering_rate_velocities_mps",
+                "steering_rate_limits_rps",
+                "delay_s",
+                "offset_rps",
+                "factor"
+              ],
+              "additionalProperties": false
+            },
+            "steering_stuck": {
+              "type": "object",
+              "properties": {
+                "enable": {
+                  "type": "boolean",
+                  "description": "Enable footprint obtained from re-simulating the steering of the predicted trajectory",
+                  "default": "false"
+                },
+                "steering_rate_velocities_mps": {
+                  "type": "array",
+                  "description": "velocities [m/s] used as keys for the steering rate limits mapping.",
+                  "default": [0.0, 3.5, 9.1, 14.7, 20.3, 25.9, 31.5]
+                },
+                "steering_rate_limits_rps": {
+                  "type": "array",
+                  "description": "steering rate limits [rad/s] mapped from the velocities",
+                  "default": [3.14, 0.777, 0.115, 0.044, 0.023, 0.014, 0.01]
+                },
+                "delay_s": {
+                  "type": "number",
+                  "description": "[s] delay to apply to the re-simulated steering",
+                  "default": 0.0
+                },
+                "offset_rps": {
+                  "type": "number",
+                  "description": "[rad/s] extra steering rate to add to the original steering profile",
+                  "default": 0.0
+                },
+                "factor": {
+                  "type": "number",
+                  "description": "[-] factor to apply to the original steering profile",
+                  "default": 0.0
+                }
+              },
+              "required": [
+                "enable",
+                "steering_rate_velocities_mps",
+                "steering_rate_limits_rps",
+                "delay_s",
+                "offset_rps",
+                "factor"
+              ],
+              "additionalProperties": false
+            },
+            "steering_sudden_left": {
+              "type": "object",
+              "properties": {
+                "enable": {
+                  "type": "boolean",
+                  "description": "Enable footprint obtained from re-simulating the steering of the predicted trajectory",
+                  "default": "false"
+                },
+                "steering_rate_velocities_mps": {
+                  "type": "array",
+                  "description": "velocities [m/s] used as keys for the steering rate limits mapping.",
+                  "default": [0.0, 3.5, 9.1, 14.7, 20.3, 25.9, 31.5]
+                },
+                "steering_rate_limits_rps": {
+                  "type": "array",
+                  "description": "steering rate limits [rad/s] mapped from the velocities",
+                  "default": [3.14, 0.777, 0.115, 0.044, 0.023, 0.014, 0.01]
+                },
+                "delay_s": {
+                  "type": "number",
+                  "description": "[s] delay to apply to the re-simulated steering",
+                  "default": 0.0
+                },
+                "offset_rps": {
+                  "type": "number",
+                  "description": "[rad/s] extra steering rate to add to the original steering profile",
+                  "default": 0.2
+                },
+                "factor": {
+                  "type": "number",
+                  "description": "[-] factor to apply to the original steering profile",
                   "default": 1.0
                 }
               },
-              "required": ["enable", "steering_rate_rps"],
+              "required": [
+                "enable",
+                "steering_rate_velocities_mps",
+                "steering_rate_limits_rps",
+                "delay_s",
+                "offset_rps",
+                "factor"
+              ],
+              "additionalProperties": false
+            },
+            "steering_sudden_right": {
+              "type": "object",
+              "properties": {
+                "enable": {
+                  "type": "boolean",
+                  "description": "Enable footprint obtained from re-simulating the steering of the predicted trajectory",
+                  "default": "false"
+                },
+                "steering_rate_velocities_mps": {
+                  "type": "array",
+                  "description": "velocities [m/s] used as keys for the steering rate limits mapping.",
+                  "default": [0.0, 3.5, 9.1, 14.7, 20.3, 25.9, 31.5]
+                },
+                "steering_rate_limits_rps": {
+                  "type": "array",
+                  "description": "steering rate limits [rad/s] mapped from the velocities",
+                  "default": [3.14, 0.777, 0.115, 0.044, 0.023, 0.014, 0.01]
+                },
+                "delay_s": {
+                  "type": "number",
+                  "description": "[s] delay to apply to the re-simulated steering",
+                  "default": 0.0
+                },
+                "offset_rps": {
+                  "type": "number",
+                  "description": "[rad/s] extra steering rate to add to the original steering profile",
+                  "default": -0.2
+                },
+                "factor": {
+                  "type": "number",
+                  "description": "[-] factor to apply to the original steering profile",
+                  "default": 1.0
+                }
+              },
+              "required": [
+                "enable",
+                "steering_rate_velocities_mps",
+                "steering_rate_limits_rps",
+                "delay_s",
+                "offset_rps",
+                "factor"
+              ],
               "additionalProperties": false
             }
           },
-          "required": ["normal", "localization", "longitudinal", "steering"],
+          "required": [
+            "normal",
+            "localization",
+            "longitudinal",
+            "steering_accelerated",
+            "steering_stuck",
+            "steering_sudden_left",
+            "steering_sudden_right"
+          ],
           "additionalProperties": false
         },
-
         "diagnostic": {
           "type": "object",
           "properties": {

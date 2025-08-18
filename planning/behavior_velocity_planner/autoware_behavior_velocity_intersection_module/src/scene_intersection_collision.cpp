@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "scene_intersection.hpp"
-#include "util.hpp"
+#include "autoware/behavior_velocity_intersection_module/scene_intersection.hpp"
+#include "autoware/behavior_velocity_intersection_module/util.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for toGeomPoly
 #include <autoware/behavior_velocity_planner_common/utilization/trajectory_utils.hpp>  // for smoothPath
