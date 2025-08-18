@@ -24,8 +24,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -57,6 +59,9 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   enable_secondary_return_filtering_ = declare_parameter<bool>("filter_secondary_returns");
   secondary_noise_threshold_ =
     static_cast<int>(declare_parameter<int64_t>("secondary_noise_threshold"));
+  visibility_estimation_max_secondary_voxel_count_ =  // Updated name
+    static_cast<int>(
+      declare_parameter<int64_t>("visibility_estimation_max_secondary_voxel_count", 0));
   publish_noise_cloud_ = declare_parameter<bool>("publish_noise_cloud", false);
 
   auto primary_return_types_param = declare_parameter<std::vector<int64_t>>("primary_return_types");
@@ -341,23 +346,19 @@ void PolarVoxelOutlierFilterComponent::publish_diagnostics(
 {
   if (use_return_type_classification_) {
     // Calculate visibility based on valid points mask
-    uint32_t high_visibility_voxels = 0;
-    uint32_t low_visibility_voxels = 0;
+    uint32_t low_visibility_voxels_count = 0;
     for (const auto & [voxel_idx, counts] : voxel_counts) {
-      if (counts.is_in_visibility_range) {
-        if (
-          counts.meets_primary_threshold(voxel_points_threshold_) &&
-          counts.meets_secondary_threshold(secondary_noise_threshold_)) {
-          high_visibility_voxels++;
-        } else {
-          low_visibility_voxels++;
-        }
+      if (
+        counts.is_in_visibility_range &&
+        !counts.meets_secondary_threshold(voxel_points_threshold_)) {
+        low_visibility_voxels_count++;
       }
     }
-    visibility_ = ((high_visibility_voxels + low_visibility_voxels) > 0)
-                    ? static_cast<double>(high_visibility_voxels) /
-                        (high_visibility_voxels + low_visibility_voxels)
-                    : 0.0;
+    // Calculate visibility based on the proportion of maximum allowable voxels that fail the
+    // secondary threshold test
+    visibility_ = std::max(
+      0.0, 1.0 - static_cast<double>(low_visibility_voxels_count) /
+                   static_cast<double>(visibility_estimation_max_secondary_voxel_count_));
   }
   filter_ratio_ =
     (!valid_points_mask.empty())
@@ -492,6 +493,8 @@ void PolarVoxelOutlierFilterComponent::update_parameter(const rclcpp::Parameter 
     voxel_points_threshold_ = static_cast<int>(param.as_int());
   } else if (name == "secondary_noise_threshold") {
     secondary_noise_threshold_ = static_cast<int>(param.as_int());
+  } else if (name == "visibility_estimation_max_secondary_voxel_count") {  // Updated name
+    visibility_estimation_max_secondary_voxel_count_ = static_cast<int>(param.as_int());
   } else if (name == "min_radius_m") {
     min_radius_m_ = param.as_double();
   } else if (name == "max_radius_m") {
@@ -549,6 +552,7 @@ rcl_interfaces::msg::SetParametersResult PolarVoxelOutlierFilterComponent::param
     "use_return_type_classification",
     "filter_secondary_returns",
     "secondary_noise_threshold",
+    "visibility_estimation_max_secondary_voxel_count",
     "primary_return_types",
     "publish_noise_cloud",
     "visibility_error_threshold",
