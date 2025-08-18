@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef RESULT_HPP_
-#define RESULT_HPP_
+#ifndef AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__RESULT_HPP_
+#define AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__RESULT_HPP_
 
 #include <utility>
 #include <variant>
@@ -50,4 +50,4 @@ Result<Ok, Error> make_err(Args &&... args)
 
 }  // namespace autoware::behavior_velocity_planner
 
-#endif  // RESULT_HPP_
+#endif  // AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__RESULT_HPP_

@@ -48,14 +48,6 @@ bool is_turn_lanelet(const lanelet::ConstLanelet & ll)
 }
 }  // namespace
 
-TrajectoryPoints trim_trajectory_points(
-  const TrajectoryPoints & trajectory_points, const geometry_msgs::msg::Pose & start_pose)
-{
-  const auto nearest_idx =
-    autoware::motion_utils::findNearestIndex(trajectory_points, start_pose.position);
-  return TrajectoryPoints(trajectory_points.begin() + nearest_idx, trajectory_points.end());
-}
-
 void set_trajectory_lanelets(
   const TrajectoryPoints & trajectory_points, const RouteHandler & route_handler,
   const geometry_msgs::msg::Pose & ego_pose, EgoLanelets & lanelets)

@@ -35,10 +35,18 @@
 namespace autoware::diffusion_planner::preprocess
 {
 
-// Internal functions
+// Internal functions declaration
+namespace
+{
 Eigen::MatrixXf process_segments_to_matrix(
   const std::vector<LaneSegment> & lane_segments, ColLaneIDMaps & col_id_mapping);
 Eigen::MatrixXf process_segment_to_matrix(const LaneSegment & segment);
+Eigen::Matrix<float, 1, TRAFFIC_LIGHT_ONE_HOT_DIM> get_traffic_signal_row_vector(
+  const autoware_perception_msgs::msg::TrafficLightGroup & signal);
+void transform_selected_rows(
+  const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, int64_t num_segments,
+  int64_t row_idx, bool do_translation = true);
+}  // namespace
 
 // LaneSegmentContext implementation
 LaneSegmentContext::LaneSegmentContext(const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr)
@@ -96,23 +104,41 @@ std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_route_
     speed_limit_vector};
 }
 
-std::tuple<Eigen::MatrixXf, ColLaneIDMaps> LaneSegmentContext::transform_and_select_rows(
+std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_lane_segments(
   const Eigen::Matrix4f & transform_matrix,
   const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map, const float center_x,
   const float center_y, const int64_t m) const
 {
   if (map_lane_segments_matrix_.rows() != FULL_MATRIX_ROWS || m <= 0) {
     throw std::invalid_argument(
-      "Input matrix must have at least FULL_MATRIX_ROWS columns and m must be greater than 0.");
+      "Input matrix must have at least FULL_MATRIX_ROWS rows and m must be greater than 0.");
   }
   std::vector<ColWithDistance> distances;
   // Step 1: Compute distances
   compute_distances(transform_matrix, distances, center_x, center_y, 100.0f);
   // Step 2: Sort indices by distance
-  sort_indices_by_distance(distances);
+  std::sort(distances.begin(), distances.end(), [](const auto & a, const auto & b) {
+    return a.distance_squared < b.distance_squared;
+  });
   // Step 3: Apply transformation to selected rows
-  return transform_points_and_add_traffic_info(
-    transform_matrix, traffic_light_id_map, distances, m);
+  const Eigen::MatrixXf ego_centric_lane_segments =
+    transform_points_and_add_traffic_info(transform_matrix, traffic_light_id_map, distances, m);
+
+  // Extract lane tensor data
+  const auto total_lane_points = LANES_SHAPE[1] * POINTS_PER_SEGMENT;
+  Eigen::MatrixXf lane_matrix(SEGMENT_POINT_DIM, total_lane_points);
+  lane_matrix.block(0, 0, SEGMENT_POINT_DIM, total_lane_points) =
+    ego_centric_lane_segments.block(0, 0, SEGMENT_POINT_DIM, total_lane_points);
+  std::vector<float> lane_tensor_data(lane_matrix.data(), lane_matrix.data() + lane_matrix.size());
+
+  // Extract lane speed tensor data
+  const auto total_speed_points = LANES_SPEED_LIMIT_SHAPE[1];
+  std::vector<float> lane_speed_vector(total_speed_points);
+  for (int64_t i = 0; i < total_speed_points; ++i) {
+    lane_speed_vector[i] = ego_centric_lane_segments(SPEED_LIMIT, i * POINTS_PER_SEGMENT);
+  }
+
+  return {lane_tensor_data, lane_speed_vector};
 }
 
 void LaneSegmentContext::add_traffic_light_one_hot_encoding_to_segment(
@@ -210,8 +236,7 @@ void LaneSegmentContext::compute_distances(
   }
 }
 
-std::tuple<Eigen::MatrixXf, ColLaneIDMaps>
-LaneSegmentContext::transform_points_and_add_traffic_info(
+Eigen::MatrixXf LaneSegmentContext::transform_points_and_add_traffic_info(
   const Eigen::Matrix4f & transform_matrix,
   const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
   const std::vector<ColWithDistance> & distances, int64_t m) const
@@ -230,7 +255,6 @@ LaneSegmentContext::transform_points_and_add_traffic_info(
   output_matrix.setZero();
 
   int64_t added_segments = 0;
-  ColLaneIDMaps new_col_id_mapping;
   for (auto distance : distances) {
     if (!distance.inside) {
       continue;
@@ -258,8 +282,12 @@ LaneSegmentContext::transform_points_and_add_traffic_info(
   }
 
   apply_transforms(transform_matrix, output_matrix, added_segments);
-  return {output_matrix, new_col_id_mapping};
+  return output_matrix;
 }
+
+// Internal functions implementation
+namespace
+{
 
 void transform_selected_rows(
   const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, int64_t num_segments,
@@ -374,23 +402,6 @@ Eigen::MatrixXf process_segment_to_matrix(const LaneSegment & segment)
   return segment_data;
 }
 
-std::vector<float> extract_lane_tensor_data(const Eigen::MatrixXf & lane_segments_matrix)
-{
-  const auto total_lane_points = LANES_SHAPE[1] * POINTS_PER_SEGMENT;
-  Eigen::MatrixXf lane_matrix(SEGMENT_POINT_DIM, total_lane_points);
-  lane_matrix.block(0, 0, SEGMENT_POINT_DIM, total_lane_points) =
-    lane_segments_matrix.block(0, 0, SEGMENT_POINT_DIM, total_lane_points);
-  return {lane_matrix.data(), lane_matrix.data() + lane_matrix.size()};
-}
-
-std::vector<float> extract_lane_speed_tensor_data(const Eigen::MatrixXf & lane_segments_matrix)
-{
-  const auto total_lane_points = LANES_SPEED_LIMIT_SHAPE[1];
-  std::vector<float> lane_speed_vector(total_lane_points);
-  for (int64_t i = 0; i < total_lane_points; ++i) {
-    lane_speed_vector[i] = lane_segments_matrix(SPEED_LIMIT, i * POINTS_PER_SEGMENT);
-  }
-  return lane_speed_vector;
-}
+}  // namespace
 
 }  // namespace autoware::diffusion_planner::preprocess
