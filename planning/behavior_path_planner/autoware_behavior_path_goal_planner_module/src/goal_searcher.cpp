@@ -147,11 +147,6 @@ std::vector<geometry_msgs::msg::Pose> cropBoundary(
     cropped_poses.push_back(pose);
   }
 
-  for (double s = start_s; s < end_s; s += interval) {
-    const auto pose = pose_trajectory->compute(s);
-    cropped_poses.push_back(pose);
-  }
-
   return cropped_poses;
 }
 
