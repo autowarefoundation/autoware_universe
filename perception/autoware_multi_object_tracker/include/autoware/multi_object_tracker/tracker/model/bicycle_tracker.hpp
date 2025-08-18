@@ -16,38 +16,48 @@
 // Author: v1.0 Yukihiro Saito
 //
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__PEDESTRIAN_AND_BICYCLE_TRACKER_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__PEDESTRIAN_AND_BICYCLE_TRACKER_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__BICYCLE_TRACKER_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__BICYCLE_TRACKER_HPP_
 
+#include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
-#include "autoware/multi_object_tracker/tracker/model/bicycle_tracker.hpp"
-#include "autoware/multi_object_tracker/tracker/model/pedestrian_tracker.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
+#include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
 
 namespace autoware::multi_object_tracker
 {
 
-class PedestrianAndBicycleTracker : public Tracker
+class BicycleTracker : public Tracker
 {
 private:
-  PedestrianTracker pedestrian_tracker_;
-  BicycleTracker bicycle_tracker_;
+  rclcpp::Logger logger_;
+
+  object_model::ObjectModel object_model_;
+
+  double velocity_deviation_threshold_;
+
+  Eigen::Vector2d tracking_offset_;
+
+  BicycleMotionModel motion_model_;
+  using IDX = BicycleMotionModel::IDX;
 
 public:
-  PedestrianAndBicycleTracker(const rclcpp::Time & time, const types::DynamicObject & object);
-
-  TrackerType getTrackerType() const override { return TrackerType::PEDESTRIAN_AND_BICYCLE; }
+  BicycleTracker(
+    const object_model::ObjectModel & object_model, const rclcpp::Time & time,
+    const types::DynamicObject & object);
 
   bool predict(const rclcpp::Time & time) override;
   bool measure(
     const types::DynamicObject & object, const rclcpp::Time & time,
     const types::InputChannel & channel_info) override;
+  bool measureWithPose(
+    const types::DynamicObject & object, const types::InputChannel & channel_info);
+  bool measureWithShape(const types::DynamicObject & object);
   bool getTrackedObject(
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const override;
-  virtual ~PedestrianAndBicycleTracker() {}
 };
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__PEDESTRIAN_AND_BICYCLE_TRACKER_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__BICYCLE_TRACKER_HPP_

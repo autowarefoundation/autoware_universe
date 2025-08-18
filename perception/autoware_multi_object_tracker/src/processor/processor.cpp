@@ -162,7 +162,7 @@ std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
     if (tracker_type == TrackerType::PEDESTRIAN)
       return std::make_shared<PedestrianTracker>(time, object);
     if (tracker_type == TrackerType::BICYCLE)
-      return std::make_shared<VehicleTracker>(object_model::bicycle, time, object);
+      return std::make_shared<BicycleTracker>(object_model::bicycle, time, object);
     if (tracker_type == TrackerType::BIG_VEHICLE)
       return std::make_shared<VehicleTracker>(object_model::big_vehicle, time, object);
     if (tracker_type == TrackerType::PASS_THROUGH)

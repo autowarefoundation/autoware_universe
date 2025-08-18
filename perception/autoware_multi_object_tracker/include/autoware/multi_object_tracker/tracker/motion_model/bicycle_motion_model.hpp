@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MOTION_MODEL__BICYCLE_XYXYUV_MOTION_MODEL_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MOTION_MODEL__BICYCLE_XYXYUV_MOTION_MODEL_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MOTION_MODEL__BICYCLE_MOTION_MODEL_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MOTION_MODEL__BICYCLE_MOTION_MODEL_HPP_
 
 #include "autoware/multi_object_tracker/tracker/motion_model/motion_model_base.hpp"
 
@@ -30,11 +30,15 @@
 namespace autoware::multi_object_tracker
 {
 
-class BicycleXYXYUVMotionModel : public MotionModel<6>
+class BicycleMotionModel : public MotionModel<5>
 {
 private:
   // attributes
   rclcpp::Logger logger_;
+
+  // extended state
+  double lf_;
+  double lr_;
 
   // motion parameters: process noise and motion limits
   struct MotionParams
@@ -57,25 +61,17 @@ private:
     double max_slip = 0.5236;  // [rad] maximum slip angle, 30deg
     double max_reverse_vel =
       -1.389;  // [m/s] maximum reverse velocity, -5km/h. The value is expected to be negative
-    double wheel_pos_ratio =
-      (lf_ratio + lr_ratio) /
-      lr_ratio;  // [-] distance ratio of the wheel base over center-to-rear-wheel
   } motion_params_;
 
 public:
-  BicycleXYXYUVMotionModel();
+  BicycleMotionModel();
 
-  // bicycle model state indices
-  // X1, Y1: position of the rear wheel
-  // X2, Y2: position of the front wheel
-  // U: longitudinal velocity
-  // V: lateral velocity of the front wheel
-  enum IDX { X1 = 0, Y1 = 1, X2 = 2, Y2 = 3, U = 4, V = 5 };
+  enum IDX { X = 0, Y = 1, YAW = 2, VEL = 3, SLIP = 4 };
 
   bool initialize(
     const rclcpp::Time & time, const double & x, const double & y, const double & yaw,
-    const std::array<double, 36> & pose_cov, const double & vel_long, const double & vel_long_cov,
-    const double & vel_lat, const double & vel_lat_cov, const double & length);
+    const std::array<double, 36> & pose_cov, const double & vel, const double & vel_cov,
+    const double & slip, const double & slip_cov, const double & length);
 
   void setMotionParams(
     const double & q_stddev_acc_long, const double & q_stddev_acc_lat,
@@ -86,33 +82,25 @@ public:
 
   void setMotionLimits(const double & max_vel, const double & max_slip);
 
-  double getYawState() const;
-  double getLength() const;
-
-  bool updateStatePose(
-    const double & x, const double & y, const std::array<double, 36> & pose_cov,
-    const double & length);
+  bool updateStatePose(const double & x, const double & y, const std::array<double, 36> & pose_cov);
 
   bool updateStatePoseHead(
-    const double & x, const double & y, const double & yaw, const std::array<double, 36> & pose_cov,
-    const double & length);
+    const double & x, const double & y, const double & yaw,
+    const std::array<double, 36> & pose_cov);
 
   bool updateStatePoseVel(
-    const double & x, const double & y, const std::array<double, 36> & pose_cov, const double & yaw,
-    const double & vel_long, const double & vel_lat, const std::array<double, 36> & twist_cov,
-    const double & length);
+    const double & x, const double & y, const std::array<double, 36> & pose_cov, const double & vel,
+    const std::array<double, 36> & twist_cov);
 
   bool updateStatePoseHeadVel(
     const double & x, const double & y, const double & yaw, const std::array<double, 36> & pose_cov,
-    const double & vel_long, const double & vel_lat, const std::array<double, 36> & twist_cov,
-    const double & length);
+    const double & vel, const std::array<double, 36> & twist_cov);
 
-  // todo: updateStateFrontOnly
-  // todo: updateStateRearOnly
-
-  bool adjustPosition(const double & delta_x, const double & delta_y);
+  bool adjustPosition(const double & x, const double & y);
 
   bool limitStates();
+
+  bool updateExtendedState(const double & length);
 
   bool predictStateStep(const double dt, KalmanFilter & ekf) const override;
 
@@ -123,4 +111,4 @@ public:
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MOTION_MODEL__BICYCLE_XYXYUV_MOTION_MODEL_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MOTION_MODEL__BICYCLE_MOTION_MODEL_HPP_
