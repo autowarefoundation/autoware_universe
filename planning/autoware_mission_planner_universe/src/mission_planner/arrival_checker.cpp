@@ -76,8 +76,11 @@ bool ArrivalChecker::is_arrived(const PoseStamped & pose) const
     std::abs(lateral_offset_to_goal) <= arrival_check_lateral_distance_;
 
   // Check longitudinal distance.
-  // The acceptable range is [-arrival_check_longitudinal_undershoot_distance, +arrival_check_longitudinal_overshoot_distance_].
-  const bool is_within_longitudinal_range = longitudinal_offset_to_goal >= -arrival_check_longitudinal_undershoot_distance_ && longitudinal_offset_to_goal <= arrival_check_longitudinal_overshoot_distance_;
+  // The acceptable range is [-arrival_check_longitudinal_undershoot_distance,
+  // +arrival_check_longitudinal_overshoot_distance_].
+  const bool is_within_longitudinal_range =
+    longitudinal_offset_to_goal >= -arrival_check_longitudinal_undershoot_distance_ &&
+    longitudinal_offset_to_goal <= arrival_check_longitudinal_overshoot_distance_;
 
   // Check angle.
   const bool is_within_angle_range = std::fabs(yaw_diff) <= angle_;
