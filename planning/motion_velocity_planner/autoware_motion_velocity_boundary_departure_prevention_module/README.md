@@ -233,11 +233,83 @@ Example of the nearest projections are shown in the following images:
 
     TBA
 
-### Get slow down intervals
+### Calculate slow down
 
-!!! Warning
+#### Description
 
-    TBA
+#### 1. Target Speed from Lateral Clearance
+
+The target speed $v_{\text{target}}$ is obtained by linearly interpolating the current lateral distance to the boundary between $[\text{lat.min},\text{lat.max}]$ and the speed range $[v_{\min},v_{\max}]$, with saturation at the endpoints.
+
+$$
+v_{\text{target}}(d_{\text{lat}})=
+\begin{cases}
+v_{\min}, &
+d_{\text{lat}} \le d_{\text{lat,min}},\\[8pt]
+v_{\min}
++\displaystyle \frac{d_{\text{lat}}-d_{\text{lat,min}}}{\,d_{\text{lat,max}}-d_{\text{lat,min}}\,}
+\,(v_{\max}-v_{\min}), &
+d_{\text{lat,min}}< d_{\text{lat}} < d_{\text{lat,max}},\\[12pt]
+v_{\max}, &
+d_{\text{lat}} \ge d_{\text{lat,max}}.
+\end{cases}
+$$
+
+#### 2. Longitudinal feasibility and acceleration tiers
+
+With $v_{\text{target}}$ obtained, the module considers the **longitudinal gap** to the point and evaluates three braking envelopes:
+
+- **Comfort.** Using $(j_{\text{comfort}}\le0,\ a_{\text{comfort}}\le0)$, it computes the distance required to go from $v_0$ to $v_{\text{target}}$ via $d_{\text{slow}}(\cdot)$. If that distance fits the gap, the comfort envelope is selected.
+- **Feasible.** If comfort does not fit, jerk is kept at $j_{\text{comfort}}$ and the **least-negative** acceleration $a\in[a_{\text{comfort}},a_{\max}]$ that fits the gap is found by binary search (monotonicity of $d_{\text{slow}}$ in $|a|$). If such an $a$ exists, it is used.
+- **Hard.** Otherwise, the hard limits $(j_{\max}\le0,\ a_{\max}\le0)$ are applied; the used distance is clamped to the available gap if necessary.
+
+### 3) Commanded speed via an analytic S-curve (with equations)
+
+Given the selected limits $(j_{\text{brake}}\le 0,\ a_{\text{brake}}\le 0)$ and the requested longitudinal distance to the point $s_\star$, the solver computes the speed to command **now** so that the vehicle arrives at the point with $v_{\text{target}}$.
+
+1. **Active acceleration for the ramp.**
+   Because braking should not be weakened, the ramp starts from
+
+   $$
+   a_{\text{act}}=\min(a_0,\ a_{\text{brake}})\le 0,\qquad j=j_{\text{brake}}\le 0.
+   $$
+
+2. **Jerk ramp to the target acceleration.**
+   Over the jerk phase,
+
+   $$
+   \begin{aligned}
+   a(t)&=a_{\text{act}}+j\,t,\\
+   v(t)&=v_0+a_{\text{act}}\,t+\tfrac12 j t^2,\\
+   s(t)&=v_0\,t+\tfrac12 a_{\text{act}}\,t^2+\tfrac16 j t^3,\\[4pt]
+   t_j&=\frac{a_{\text{brake}}-a_{\text{act}}}{j}\ (\ge 0),\\
+   v_1&=v(t_j)=v_0+\tfrac12\frac{a_{\text{brake}}^{2}-a_{\text{act}}^{2}}{j},\\
+   s_j&=s(t_j).
+   \end{aligned}
+   $$
+
+3. **Waypoint inside the jerk ramp.**
+   If $s_\star\in[0,s_j]$, find $t^\star\in[0,t_j]$ such that $s(t^\star)=s_\star$ (the code uses bisection), and set
+
+   $$
+   v_{\text{cmd}}=\max\!\bigl(v_{\text{target}},\, v(t^\star)\bigr).
+   $$
+
+4. **Waypoint after the jerk ramp.**
+   Otherwise, with remaining distance $s_{\text{rem}}=s_\star-s_j$,
+
+   $$
+   \begin{aligned}
+   \Delta &= v_1^{2}-v_{\text{target}}^{2}+2\,a_{\text{brake}}\,s_{\text{rem}},\\
+   \text{if } \Delta<0 &: \quad v_{\text{cmd}}=v_{\text{target}},\\
+   \text{else } \ t_a&=\frac{-v_1+\sqrt{\Delta}}{a_{\text{brake}}},\qquad
+   v_{\text{cmd}}=\max\!\bigl(v_{\text{target}},\, v_1+a_{\text{brake}}\,t_a\bigr).
+   \end{aligned}
+   $$
+
+!!! Note
+
+    To avoid sudden unintended deceleration, when the longitudinal gap between the ego vehicle and the target point is very small, the module returns the largest safe speed instead of immediately forcing the vehicle to the target speed.
 
 ## Parameters
 
