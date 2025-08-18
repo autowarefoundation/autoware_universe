@@ -69,14 +69,14 @@ public:
   // bicycle model state indices
   // X1, Y1: position of the rear wheel
   // X2, Y2: position of the front wheel
-  // VX: longitudinal velocity
-  // VY: lateral velocity of the front wheel
-  enum IDX { X1 = 0, Y1 = 1, X2 = 2, Y2 = 3, VX = 4, VY = 5 };
+  // V_LONG: longitudinal velocity
+  // V_LAT: lateral velocity of the front wheel
+  enum IDX { X1 = 0, Y1 = 1, X2 = 2, Y2 = 3, V_LONG = 4, V_LAT = 5 };
 
   bool initialize(
     const rclcpp::Time & time, const double & x, const double & y, const double & yaw,
-    const std::array<double, 36> & pose_cov, const double & vel, const double & vel_cov,
-    const double & slip, const double & slip_cov, const double & length);
+    const std::array<double, 36> & pose_cov, const double & vel_long, const double & vel_long_cov,
+    const double & vel_lat, const double & vel_lat_cov, const double & length);
 
   void setMotionParams(
     const double & q_stddev_acc_long, const double & q_stddev_acc_lat,
@@ -97,12 +97,12 @@ public:
     const std::array<double, 36> & pose_cov, const double & length);
 
   bool updateStatePoseVel(
-    const double & x, const double & y,  const std::array<double, 36> & pose_cov, const double & yaw, const double & vel_x,
-    const double & vel_y, const std::array<double, 36> & twist_cov, const double & length);
+    const double & x, const double & y,  const std::array<double, 36> & pose_cov, const double & yaw, const double & vel_long,
+    const double & vel_lat, const std::array<double, 36> & twist_cov, const double & length);
 
   bool updateStatePoseHeadVel(
     const double & x, const double & y, const double & yaw, const std::array<double, 36> & pose_cov,
-    const double & vel_x, const double & vel_y, const std::array<double, 36> & twist_cov, const double & length);
+    const double & vel_long, const double & vel_lat, const std::array<double, 36> & twist_cov, const double & length);
 
   // todo: updateStateFrontOnly
   // todo: updateStateRearOnly

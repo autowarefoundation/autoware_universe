@@ -11,10 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-//
-// Author: v1.0 Yukihiro Saito
-//
+
 #define EIGEN_MPL2_ONLY
 
 #include "autoware/multi_object_tracker/tracker/model/vehicle_tracker.hpp"
@@ -164,7 +161,7 @@ bool VehicleTracker::measureWithPose(
   // // and the predicted velocity is close to the observed velocity
   // bool is_velocity_available = false;
   // if (object.kinematics.has_twist) {
-  //   const double tracked_vel = motion_model_.getStateElement(IDX::VX);
+  //   const double tracked_vel = motion_model_.getStateElement(IDX::V_LONG);
   //   const double & observed_vel = object.twist.linear.x;
   //   if (std::fabs(tracked_vel - observed_vel) < velocity_deviation_threshold_) {
   //     // Velocity deviation is small
@@ -205,14 +202,14 @@ bool VehicleTracker::measureWithPose(
     {
       //debug output
       const double wheel_base = motion_model_.getLength();
-      const double yaw_rate = motion_model_.getStateElement(IDX::VY) / wheel_base;  // [rad/s] yaw rate
+      const double yaw_rate = motion_model_.getStateElement(IDX::V_LAT) / wheel_base;  // [rad/s] yaw rate
       if (wheel_base > 8.0 || std::abs(yaw_rate) > 0.2) {
         RCLCPP_WARN(
           logger_,
           "VehicleTracker::measureWithPose: UUID %s x1: %f, y1: %f,  vx: %f, vy: %f, wheel_base: %f, yaw_rate: %f",
           getUuidString().c_str(),
           motion_model_.getStateElement(IDX::X1), motion_model_.getStateElement(IDX::Y1),
-          motion_model_.getStateElement(IDX::VX), motion_model_.getStateElement(IDX::VY),
+          motion_model_.getStateElement(IDX::V_LONG), motion_model_.getStateElement(IDX::V_LAT),
           wheel_base, yaw_rate);
       }
     }
