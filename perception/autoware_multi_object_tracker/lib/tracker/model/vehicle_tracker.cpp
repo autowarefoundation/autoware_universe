@@ -40,9 +40,7 @@ namespace autoware::multi_object_tracker
 VehicleTracker::VehicleTracker(
   const object_model::ObjectModel & object_model, const rclcpp::Time & time,
   const types::DynamicObject & object)
-: Tracker(time, object),
-  logger_(rclcpp::get_logger("VehicleTracker")),
-  object_model_(object_model)
+: Tracker(time, object), logger_(rclcpp::get_logger("VehicleTracker")), object_model_(object_model)
 {
   // set tracker type based on object model
   if (object_model.type == object_model::ObjectModelType::NormalVehicle) {
@@ -214,7 +212,7 @@ bool VehicleTracker::measureWithPose(
     constexpr double gain = 0.4;
     constexpr double gain_inv = 1.0 - gain;
     auto & object_extension = object_.shape.dimensions;
-    object_extension.x = motion_model_.getLength(); // tracked by motion model
+    object_extension.x = motion_model_.getLength();  // tracked by motion model
     object_extension.y = gain_inv * object_extension.y + gain * object.shape.dimensions.y;
     object_extension.z = gain_inv * object_extension.z + gain * object.shape.dimensions.z;
   }
@@ -225,7 +223,6 @@ bool VehicleTracker::measureWithPose(
   // set shape type, which is bounding box
   object_.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
   object_.area = types::getArea(object.shape);
-
 
   return is_updated;
 }
