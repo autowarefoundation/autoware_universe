@@ -157,27 +157,16 @@ bool VehicleTracker::measureWithPose(
     object.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE &&
     channel_info.trust_orientation;
 
-  // // velocity capability is checked only when the object has velocity measurement
-  // // and the predicted velocity is close to the observed velocity
-  // bool is_velocity_available = false;
-  // if (object.kinematics.has_twist) {
-  //   const double tracked_vel = motion_model_.getStateElement(IDX::U);
-  //   const double & observed_vel = object.twist.linear.x;
-  //   if (std::fabs(tracked_vel - observed_vel) < velocity_deviation_threshold_) {
-  //     // Velocity deviation is small
-  //     is_velocity_available = true;
-  //   }
-  // }
   bool is_velocity_available = object.kinematics.has_twist;
 
   // update
   bool is_updated = false;
   {
-    const double x = object.pose.position.x;
-    const double y = object.pose.position.y;
-    const double yaw = tf2::getYaw(object.pose.orientation);
-    const double vel_x = object.twist.linear.x;
-    const double vel_y = object.twist.linear.y;
+    const double & x = object.pose.position.x;
+    const double & y = object.pose.position.y;
+    const double & yaw = tf2::getYaw(object.pose.orientation);
+    const double & vel_x = object.twist.linear.x;
+    const double & vel_y = object.twist.linear.y;
     constexpr double min_length = 1.0;  // minimum length to avoid division by zero
     const double length = std::max(object.shape.dimensions.x, min_length);
 
@@ -198,24 +187,7 @@ bool VehicleTracker::measureWithPose(
         x, y, object.pose_covariance, length);  // update without yaw angle and velocity
     }
     motion_model_.limitStates();
-
-    {
-      //debug output
-      const double wheel_base = motion_model_.getLength();
-      const double yaw_rate = motion_model_.getStateElement(IDX::V) / wheel_base;  // [rad/s] yaw rate
-      if (wheel_base > 8.0 || std::abs(yaw_rate) > 0.2) {
-        RCLCPP_WARN(
-          logger_,
-          "VehicleTracker::measureWithPose: UUID %s x1: %f, y1: %f,  vx: %f, vy: %f, wheel_base: %f, yaw_rate: %f",
-          getUuidString().c_str(),
-          motion_model_.getStateElement(IDX::X1), motion_model_.getStateElement(IDX::Y1),
-          motion_model_.getStateElement(IDX::U), motion_model_.getStateElement(IDX::V),
-          wheel_base, yaw_rate);
-      }
-    }
   }
-
-  
 
   // position z
   constexpr double gain = 0.1;

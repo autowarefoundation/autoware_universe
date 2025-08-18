@@ -222,17 +222,10 @@ bool BicycleXYXYUVMotionModel::updateStatePoseHeadVel(
   const double x2 = x + lf * cos_yaw;
   const double y2 = y + lf * sin_yaw;
 
-  // longitudinal and lateral velocities are projected to the tracker orientation
-  // it is to separate the yaw error from the velocity input
-  const double yaw_track = getYawState();
-  const double yaw_delta = yaw - yaw_track;
-  const double vel_long_fixed = vel_long * std::cos(yaw_delta) - vel_lat * std::sin(yaw_delta);
-  const double vel_lat_fixed = vel_long * std::sin(yaw_delta) + vel_lat * std::cos(yaw_delta);
-
   // update state
   constexpr int DIM_Y = 6;
   Eigen::Matrix<double, DIM_Y, 1> Y;
-  Y << x1, y1, x2, y2, vel_long_fixed, vel_lat_fixed * motion_params_.wheel_pos_ratio;
+  Y << x1, y1, x2, y2, vel_long, vel_lat * motion_params_.wheel_pos_ratio;
 
   Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
   C(0, IDX::X1) = 1.0;
@@ -308,15 +301,10 @@ bool BicycleXYXYUVMotionModel::limitStates()
   // vel_lat_limit = a_max * wheel_base / vel_long^2
   {
     const double wheel_base = std::hypot(X_t(IDX::X2) - X_t(IDX::X1), X_t(IDX::Y2) - X_t(IDX::Y1));
-    constexpr double acc_lat_max = 9.81 * 0.35;  // [m/s^2] maximum lateral acceleration (0.35g);
+    constexpr double acc_lat_max = 9.81 * 0.5;  // [m/s^2] maximum lateral acceleration (0.5g);
     const double vel_lat_limit = acc_lat_max * wheel_base / (X_t(IDX::U) * X_t(IDX::U));
     const double vel_lat_limit_adjusted = vel_lat_limit * motion_params_.wheel_pos_ratio;
     if (std::abs(X_t(IDX::V)) > vel_lat_limit_adjusted) {
-      // debug message
-      RCLCPP_WARN(
-        logger_, "BicycleXYXYUVMotionModel limited lateral velocity from %f to %f when vel_long = %f, x = %f, y = %f",
-        X_t(IDX::V), vel_lat_limit_adjusted, X_t(IDX::U), X_t(IDX::X1), X_t(IDX::Y1));
-
       // limit lateral velocity
       X_t(IDX::V) = X_t(IDX::V) < 0 ? -vel_lat_limit_adjusted : vel_lat_limit_adjusted;
     }
