@@ -134,7 +134,7 @@ void PlanningValidatorNode::onTrajectory(const Trajectory::ConstSharedPtr & traj
       RCLCPP_DEBUG_THROTTLE(
         get_logger(), *get_clock(), 3000, "Suppressing planning validation during manual driving");
     }
-    validation_filtering(*s);
+    context_->init_validation_status();
   }
 
   s->invalid_count = isAllValid(*s) ? 0 : s->invalid_count + 1;
@@ -295,31 +295,6 @@ bool PlanningValidatorNode::infer_autonomous_control_state(
   const OperationModeState::ConstSharedPtr msg)
 {
   return (msg->mode == OperationModeState::AUTONOMOUS) && (msg->is_autoware_control_enabled);
-}
-
-void PlanningValidatorNode::validation_filtering(PlanningValidatorStatus & res)
-{
-  // Set all boolean status into valid state
-  res.is_valid_size = true;
-  res.is_valid_finite_value = true;
-  res.is_valid_interval = true;
-  res.is_valid_relative_angle = true;
-  res.is_valid_curvature = true;
-  res.is_valid_lateral_acc = true;
-  res.is_valid_lateral_jerk = true;
-  res.is_valid_longitudinal_max_acc = true;
-  res.is_valid_longitudinal_min_acc = true;
-  res.is_valid_steering = true;
-  res.is_valid_steering_rate = true;
-  res.is_valid_velocity_deviation = true;
-  res.is_valid_distance_deviation = true;
-  res.is_valid_longitudinal_distance_deviation = true;
-  res.is_valid_forward_trajectory_length = true;
-  res.is_valid_latency = true;
-  res.is_valid_yaw_deviation = true;
-  res.is_valid_trajectory_shift = true;
-  res.is_valid_intersection_collision_check = true;
-  res.is_valid_rear_collision_check = true;
 }
 
 }  // namespace autoware::planning_validator

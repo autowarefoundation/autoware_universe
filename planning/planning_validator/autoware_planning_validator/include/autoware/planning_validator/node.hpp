@@ -108,7 +108,6 @@ private:
 
   bool isAllValid(const PlanningValidatorStatus & status) const;
   bool infer_autonomous_control_state(const OperationModeState::ConstSharedPtr msg);
-  void validation_filtering(PlanningValidatorStatus & res);
 
   Trajectory::ConstSharedPtr soft_stop_trajectory_;
 
