@@ -80,7 +80,7 @@ To get the target lanelets for a right-turn intersection:
   - Lanelets with a "time to reach" exceeding the time horizon
   - Lanelets that have the `turn_direction` attribute and are not `STRAIGHT` (if parameter `right_turn.check_turn_lanes` is **FALSE**)
   - Lanelets that are determined to be **crossing** lanes (if parameter `right_turn.check_crossing_lanes` is **FALSE**)
-  - Lanelets that are deprioritized by traffic signal context (if parameter `right_turn.check_traffic_signal` is **TRUE** and the right-turn arrow signal is active)
+  - Lanelets that are **excluded based on traffic signal context** (if parameter `right_turn.check_traffic_signal` is **TRUE** and the right-turn arrow signal is active)
 - Remaining lanelets are then processed to:
   - Compute the overlap point between the ego trajectory and the target lanelet
   - Compute ego’s time to arrive and leave the overlap point
@@ -100,7 +100,7 @@ To get the target lanelets for a left-turn intersection:
   - Lanelets that are `route_lanelets`
   - Lanelets with a "time to reach" exceeding the time horizon
   - Lanelets that have the `turn_direction` attribute and are not `STRAIGHT` (if parameter `left_turn.check_turn_lanes` is **FALSE**)
-  - Lanelets that are deprioritized by traffic signal context (if parameter `left_turn.check_traffic_signal` is **TRUE** and the signal is green or amber, giving priority to the left-turn movement)
+  - Lanelets that are **excluded based on traffic signal context** (if parameter `left_turn.check_traffic_signal` is **TRUE** and the signal is green or amber, giving priority to the left-turn movement)
 - Remaining lanelets are then processed to:
   - Compute the overlap point between the ego trajectory and the target lanelet
   - Compute ego’s time to arrive and leave the overlap point
