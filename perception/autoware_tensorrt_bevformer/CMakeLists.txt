@@ -9,10 +9,6 @@ if(POLICY CMP0146)
   cmake_policy(SET CMP0146 OLD)
 endif()
 
-# Set C++ standard
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 add_compile_options(-Wno-deprecated-declarations)
 
 option(CUDA_VERBOSE "Verbose output of CUDA modules" OFF)
@@ -89,14 +85,6 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_87,code=sm_87")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
-
-  find_package(OpenCV REQUIRED)
-  find_package(Eigen3 REQUIRED)
-  find_package(std_msgs REQUIRED)
-  find_package(sensor_msgs REQUIRED)
-  find_package(tf2_geometry_msgs REQUIRED)
-  find_package(visualization_msgs REQUIRED)
-  find_package(ament_index_cpp REQUIRED)
 
   include_directories(
     include
