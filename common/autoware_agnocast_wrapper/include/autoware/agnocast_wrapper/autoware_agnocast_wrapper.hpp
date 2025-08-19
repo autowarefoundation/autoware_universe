@@ -152,6 +152,26 @@ class message_ptr
 
   std::shared_ptr<message_interface<MessageT, Ownership>> ptr_;
 
+  template <typename U> friend class AgnocastPublisher;
+  template <typename U> friend class ROS2Publisher;
+
+private:
+  agnocast::ipc_shared_ptr<MessageT> move_agnocast_ptr() && noexcept
+  {
+    if (!ptr_) {
+      return agnocast::ipc_shared_ptr<MessageT>{};
+    }
+    return std::move(*(std::move(ptr_))).move_agnocast_ptr();
+  }
+
+  auto move_ros2_ptr() && noexcept
+  {
+    if (!ptr_) {
+      return ros2_ptr_t{};
+    }
+    return std::move(*(std::move(ptr_))).move_ros2_ptr();
+  }
+
 public:
   explicit message_ptr(agnocast::ipc_shared_ptr<MessageT> && ptr)
   : ptr_(std::make_unique<agnocast_message<MessageT, Ownership>>(std::move(ptr)))
@@ -191,8 +211,8 @@ inline bool use_agnocast()
 template <typename MessageT>
 class Subscription
 {
-  // We are not storing the subscription objects for now, but this may change once
-  // agnocast::Subscription supports some functionality.
+  typename rclcpp::Subscription<MessageT>::SharedPtr ros2_sub_{nullptr};
+  typename agnocast::Subscription<MessageT>::SharedPtr agnocast_sub_{nullptr};
 
 public:
   using SharedPtr = std::shared_ptr<Subscription<MessageT>>;
@@ -214,7 +234,7 @@ public:
         : OwnershipType::Shared;
 
     if (use_agnocast()) {
-      agnocast::create_subscription<MessageT>(
+      agnocast_sub_ = agnocast::create_subscription<MessageT>(
         node, topic_name, qos,
         [callback = std::forward<Func>(callback)](agnocast::ipc_shared_ptr<MessageT> && msg) {
           callback(message_ptr<MessageT, ownership>(std::move(msg)));
@@ -223,7 +243,7 @@ public:
     } else {
       rclcpp::SubscriptionOptions ros2_options;
       ros2_options.callback_group = options.callback_group;
-      node->create_subscription<MessageT>(
+      ros2_sub_ = node->create_subscription<MessageT>(
         topic_name, qos,
         [callback = std::forward<Func>(callback)](std::unique_ptr<MessageT> msg) {
           callback(message_ptr<MessageT, ownership>(std::move(msg)));
@@ -260,8 +280,8 @@ public:
 
   virtual ~PollingSubscriber() = default;
 
-  virtual AUTOWARE_MESSAGE_SHARED_PTR(MessageT) takeData() = 0;
-  virtual AUTOWARE_MESSAGE_SHARED_PTR(MessageT) take_data() = 0;
+  virtual AUTOWARE_MESSAGE_SHARED_PTR(const MessageT) takeData() = 0;
+  virtual AUTOWARE_MESSAGE_SHARED_PTR(const MessageT) take_data() = 0;
 };
 
 template <typename MessageT>
@@ -276,14 +296,15 @@ public:
   {
   }
 
-  AUTOWARE_MESSAGE_SHARED_PTR(MessageT) takeData() override
+  AUTOWARE_MESSAGE_SHARED_PTR(const MessageT) takeData() override
   {
-    return AUTOWARE_MESSAGE_SHARED_PTR(MessageT){subscriber_->take_data()};
+    return AUTOWARE_MESSAGE_SHARED_PTR(const MessageT)(std::move(subscriber_->take_data()));
   }
 
-  AUTOWARE_MESSAGE_SHARED_PTR(MessageT) take_data() override
+  AUTOWARE_MESSAGE_SHARED_PTR(const MessageT) take_data() override
   {
-    return AUTOWARE_MESSAGE_SHARED_PTR(MessageT){subscriber_->take_data()};
+    auto data = subscriber_->take_data();
+    return AUTOWARE_MESSAGE_SHARED_PTR(const MessageT)(std::move(subscriber_->take_data()));
   }
 };
 
@@ -300,14 +321,14 @@ public:
   {
   }
 
-  AUTOWARE_MESSAGE_SHARED_PTR(MessageT) takeData() override
+  AUTOWARE_MESSAGE_SHARED_PTR(const MessageT) takeData() override
   {
-    return AUTOWARE_MESSAGE_SHARED_PTR(MessageT){subscriber_->takeData()};
+    return AUTOWARE_MESSAGE_SHARED_PTR(const MessageT)(std::move(subscriber_->take_data()));
   }
 
-  AUTOWARE_MESSAGE_SHARED_PTR(MessageT) take_data() override
+  AUTOWARE_MESSAGE_SHARED_PTR(const MessageT) take_data() override
   {
-    return AUTOWARE_MESSAGE_SHARED_PTR(MessageT){subscriber_->takeData()};
+    return AUTOWARE_MESSAGE_SHARED_PTR(const MessageT)(std::move(subscriber_->take_data()));
   }
 };
 
@@ -377,12 +398,12 @@ public:
 
   void publish(AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) && message)
   {
-    publisher_->publish(std::move(message)->move_agnocast_ptr());
+    publisher_->publish(std::move(message).move_agnocast_ptr());
   }
 
   void publish(AUTOWARE_MESSAGE_SHARED_PTR(MessageT) && message)
   {
-    publisher_->publish(std::move(message)->move_agnocast_ptr());
+    publisher_->publish(std::move(message).move_agnocast_ptr());
   }
 
   uint32_t get_subscription_count() const override { return publisher_->get_subscription_count(); }
@@ -410,17 +431,17 @@ public:
 
   AUTOWARE_MESSAGE_SHARED_PTR(MessageT) allocate_output_message_shared() override
   {
-    return AUTOWARE_MESSAGE_SHARED_PTR(MessageT){std::make_unique<MessageT>()};
+    return AUTOWARE_MESSAGE_SHARED_PTR(MessageT){std::make_shared<MessageT>()};
   }
 
   void publish(AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) && message) override
   {
-    publisher_->publish(std::move(message)->move_ros2_ptr());
+    publisher_->publish(std::move(message).move_ros2_ptr());
   }
 
   void publish(AUTOWARE_MESSAGE_SHARED_PTR(MessageT) && message) override
   {
-    publisher_->publish(std::move(message)->move_ros2_ptr());
+    publisher_->publish(*message);
   }
 
   uint32_t get_subscription_count() const override { return publisher_->get_subscription_count(); }
