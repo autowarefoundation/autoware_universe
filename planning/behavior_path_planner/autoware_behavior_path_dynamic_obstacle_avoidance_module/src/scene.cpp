@@ -116,19 +116,6 @@ void pushUniqueVector(T & base_vector, const T & additional_vector)
   base_vector.insert(base_vector.end(), additional_vector.begin(), additional_vector.end());
 }
 
-template <typename T>
-std::optional<T> getObjectFromUuid(const std::vector<T> & objects, const std::string & target_uuid)
-{
-  const auto itr = std::find_if(objects.begin(), objects.end(), [&](const auto & object) {
-    return object.uuid == target_uuid;
-  });
-
-  if (itr == objects.end()) {
-    return std::nullopt;
-  }
-  return *itr;
-}
-
 std::pair<double, double> projectObstacleVelocityToTrajectory(
   const std::vector<PathPointWithLaneId> & path_points, const PredictedObject & object,
   const size_t obj_idx)
