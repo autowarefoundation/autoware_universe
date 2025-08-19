@@ -37,7 +37,7 @@ struct Box3D
 };
 
 // cspell: ignore divup
-template<typename T1, typename T2>
+template <typename T1, typename T2>
 unsigned int divup(const T1 a, const T2 b)
 {
   if (a == 0) {

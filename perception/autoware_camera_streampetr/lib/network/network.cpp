@@ -112,8 +112,7 @@ void setSigmoidAndSoftmaxLayersToFP32(std::shared_ptr<nvinfer1::INetworkDefiniti
   }
 }
 
-StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config)
-: config_(config)
+StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config) : config_(config)
 {
   cudaStreamCreate(&stream_);
 
@@ -148,8 +147,7 @@ StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config)
   // Setup TensorRT bindings
   if (
     !backbone_->setBindings(logger) || !pts_head_->setBindings(logger) ||
-    !pos_embed_->setBindings(logger))
-  {
+    !pos_embed_->setBindings(logger)) {
     throw std::runtime_error("Failed to setup TRT bindings.");
   }
 

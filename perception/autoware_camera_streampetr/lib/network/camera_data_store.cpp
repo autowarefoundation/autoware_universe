@@ -99,7 +99,7 @@ CameraDataStore::CameraDataStore(
 
   if (is_distorted_image_ && (downsample_factor_ <= 0.0 || downsample_factor_ > 1.0)) {
     throw std::runtime_error(
-            "downsample_factor must be in range (0,1] when is_distorted_image is true");
+      "downsample_factor must be in range (0,1] when is_distorted_image is true");
   }
 }
 
@@ -108,7 +108,7 @@ void CameraDataStore::update_camera_image(
 {
   {
     std::unique_lock<std::mutex> lock(freeze_mutex_);
-    freeze_cv_.wait(lock, [&]() {return !is_frozen_;});    // Wait if frozen
+    freeze_cv_.wait(lock, [&]() { return !is_frozen_; });  // Wait if frozen
     ++active_updates_;
   }
 
@@ -142,8 +142,8 @@ void CameraDataStore::update_camera_image(
     // Create camera matrix K from camera_info
     cv::Mat K =
       (cv::Mat_<double>(3, 3) << camera_info->k[0], camera_info->k[1], camera_info->k[2],
-      camera_info->k[3], camera_info->k[4], camera_info->k[5], camera_info->k[6],
-      camera_info->k[7], camera_info->k[8]);
+       camera_info->k[3], camera_info->k[4], camera_info->k[5], camera_info->k[6],
+       camera_info->k[7], camera_info->k[8]);
 
     // Create distortion coefficients matrix D from camera_info
     const auto & d_vec = camera_info->d;
@@ -155,8 +155,8 @@ void CameraDataStore::update_camera_image(
     // Create projection matrix P from camera_info (first 3x3 part)
     cv::Mat P =
       (cv::Mat_<double>(3, 3) << camera_info->p[0], camera_info->p[1], camera_info->p[2],
-      camera_info->p[4], camera_info->p[5], camera_info->p[6], camera_info->p[8],
-      camera_info->p[9], camera_info->p[10]);
+       camera_info->p[4], camera_info->p[5], camera_info->p[6], camera_info->p[8],
+       camera_info->p[9], camera_info->p[10]);
 
     P.at<double>(0, 0) *= downsample_factor_;  // fx
     P.at<double>(0, 2) *= downsample_factor_;  // cx
@@ -285,7 +285,7 @@ std::vector<float> CameraDataStore::get_camera_info_vector() const
     const auto & camera_info_msg = camera_info_list_[camera_id];
     if (!camera_info_msg) {
       throw std::runtime_error(
-              "CameraInfo not received for camera ID: " + std::to_string(camera_id));
+        "CameraInfo not received for camera ID: " + std::to_string(camera_id));
     }
 
     int rawW = camera_info_msg->width;
@@ -414,7 +414,7 @@ void CameraDataStore::save_processed_image(const int camera_id, const std::strin
       for (int c = 0; c < 3; ++c) {
         processed_image.at<cv::Vec3f>(h, w)[c] =
           cpu_image_data[c * image_height_ * image_width_ + h * image_width_ + w] *
-          image_input_std[c] +
+            image_input_std[c] +
           image_input_mean[c];
       }
     }
@@ -450,7 +450,7 @@ void CameraDataStore::freeze_updates()
 {
   std::unique_lock<std::mutex> lock(freeze_mutex_);
   is_frozen_ = true;
-  freeze_cv_.wait(lock, [&]() {return active_updates_ == 0;});
+  freeze_cv_.wait(lock, [&]() { return active_updates_ == 0; });
 }
 
 void CameraDataStore::unfreeze_updates()
