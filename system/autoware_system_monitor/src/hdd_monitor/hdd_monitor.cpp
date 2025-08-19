@@ -301,8 +301,12 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
     bp::ipstream is_err{std::move(err_pipe)};
 
     // Invoke shell to use shell wildcard expansion
+    // because the very initial version of this code used wildcard expansion
+    // to handle incomplete device file names,
+    // but we don't need wildcard expansion anymore after a specification change.
+    // The string "part_device_" has a full device file name derived from the mount point.
     bp::child c(
-      "/bin/sh", "-c", fmt::format("df -Pm {}*", itr->second.part_device_.c_str()),
+      "/bin/sh", "-c", fmt::format("df -Pm {}", itr->second.part_device_.c_str()),
       bp::std_out > is_out, bp::std_err > is_err);
     c.wait();
 
