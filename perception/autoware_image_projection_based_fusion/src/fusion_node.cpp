@@ -72,7 +72,7 @@ FusionNode<Msg3D, Msg2D, ExportObj>::FusionNode(
   rois_timeout_sec_ = declare_parameter<double>("rois_timeout_sec");
 
   auto rois_timestamp_offsets = declare_parameter<std::vector<double>>("rois_timestamp_offsets");
-  if (rois_timestamp_offsets.size() != rois_number_) {
+  if (rois_timestamp_offsets.size() < rois_number_) {
     throw std::runtime_error(
       "Mismatch: rois_number (" + std::to_string(rois_number_) +
       ") does not match rois_timestamp_offsets size (" +
@@ -214,9 +214,10 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::initialize_collector_list()
 {
   // Initialize collector list
   for (size_t i = 0; i < num_of_collectors; ++i) {
-    fusion_collectors_.emplace_back(std::make_shared<FusionCollector<Msg3D, Msg2D, ExportObj>>(
-      std::dynamic_pointer_cast<FusionNode>(shared_from_this()), rois_number_, det2d_status_list_,
-      collector_debug_mode_));
+    fusion_collectors_.emplace_back(
+      std::make_shared<FusionCollector<Msg3D, Msg2D, ExportObj>>(
+        std::dynamic_pointer_cast<FusionNode>(shared_from_this()), rois_number_, det2d_status_list_,
+        collector_debug_mode_));
   }
   init_collector_list_ = true;
 }
@@ -234,7 +235,7 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::initialize_det2d_status(std::size_t ro
   }
   std::vector<bool> approximate_camera_projection =
     declare_parameter<std::vector<bool>>("approximate_camera_projection");
-  if (rois_number != approximate_camera_projection.size()) {
+  if (rois_number > approximate_camera_projection.size()) {
     const std::size_t current_size = approximate_camera_projection.size();
     throw std::runtime_error(
       "The number of elements in approximate_camera_projection should be the same as rois_number_. "
@@ -267,10 +268,26 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::camera_info_callback(
   // This assume the camera info does not change while the node is running
   auto & det2d_status = det2d_status_list_.at(rois_id);
   if (det2d_status.camera_projector_ptr == nullptr && check_camera_info(*input_camera_info_msg)) {
+    std::atomic<bool> initializing{true};
+    std::thread([this, &initializing, rois_id]() {
+      rclcpp::Rate rate(1.0);  // 1 Hz
+      while (rclcpp::ok() && initializing.load()) {
+        RCLCPP_WARN(
+          this->get_logger(), "Still initializing camera projector for ROI %zu... please wait...",
+          rois_id);
+        rate.sleep();
+      }
+    }).detach();
+
     det2d_status.camera_projector_ptr = std::make_unique<CameraProjection>(
       *input_camera_info_msg, approx_grid_cell_w_size_, approx_grid_cell_h_size_,
       det2d_status.project_to_unrectified_image, det2d_status.approximate_camera_projection);
     det2d_status.camera_projector_ptr->initialize();
+
+    // Mark as finished
+    initializing = false;
+    RCLCPP_INFO(
+      this->get_logger(), "Camera projector initialization for ROI %zu finished.", rois_id);
 
     std::unique_lock<std::mutex> fusion_collectors_lock(fusion_collectors_mutex_);
     for (auto & collector : fusion_collectors_) {

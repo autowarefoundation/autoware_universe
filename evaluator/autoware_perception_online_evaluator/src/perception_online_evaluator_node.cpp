@@ -104,32 +104,36 @@ void PerceptionOnlineEvaluatorNode::toMetricMsg(
   tier4_metric_msgs::msg::MetricArray & metrics_msg) const
 {
   // min value
-  metrics_msg.metric_array.emplace_back(tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
-                                          .name(metric + "/min")
-                                          .unit("")
-                                          .value(std::to_string(metric_stat.min())));
+  metrics_msg.metric_array.emplace_back(
+    tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
+      .name(metric + "/min")
+      .unit("")
+      .value(std::to_string(metric_stat.min())));
 
   // max value
-  metrics_msg.metric_array.emplace_back(tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
-                                          .name(metric + "/max")
-                                          .unit("")
-                                          .value(std::to_string(metric_stat.max())));
+  metrics_msg.metric_array.emplace_back(
+    tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
+      .name(metric + "/max")
+      .unit("")
+      .value(std::to_string(metric_stat.max())));
 
   // mean value
-  metrics_msg.metric_array.emplace_back(tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
-                                          .name(metric + "/mean")
-                                          .unit("")
-                                          .value(std::to_string(metric_stat.mean())));
+  metrics_msg.metric_array.emplace_back(
+    tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
+      .name(metric + "/mean")
+      .unit("")
+      .value(std::to_string(metric_stat.mean())));
 }
 
 void PerceptionOnlineEvaluatorNode::toMetricMsg(
   const std::string & metric, const double metric_value,
   tier4_metric_msgs::msg::MetricArray & metrics_msg) const
 {
-  metrics_msg.metric_array.emplace_back(tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
-                                          .name(metric + "/metric_value")
-                                          .unit("")
-                                          .value(std::to_string(metric_value)));
+  metrics_msg.metric_array.emplace_back(
+    tier4_metric_msgs::build<tier4_metric_msgs::msg::Metric>()
+      .name(metric + "/metric_value")
+      .unit("")
+      .value(std::to_string(metric_value)));
 }
 
 void PerceptionOnlineEvaluatorNode::onObjects(const PredictedObjects::ConstSharedPtr objects_msg)

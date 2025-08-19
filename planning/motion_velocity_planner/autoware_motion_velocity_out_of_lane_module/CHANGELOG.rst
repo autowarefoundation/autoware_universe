@@ -2,6 +2,22 @@
 Changelog for package autoware_motion_velocity_out_of_lane_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(out_of_lane): add safety factors to the published planning factor (`#11062 <https://github.com/autowarefoundation/autoware_universe/issues/11062>`_)
+* feat(out_of_lane): add objects.extra_width parameter (`#10923 <https://github.com/autowarefoundation/autoware_universe/issues/10923>`_)
+* feat(out_of_lane): cut trajectory footprints behind the current ego front (`#10949 <https://github.com/autowarefoundation/autoware_universe/issues/10949>`_)
+* feat(out_of_lane): validate predicted paths on lanelets (`#10882 <https://github.com/autowarefoundation/autoware_universe/issues/10882>`_)
+* Contributors: Maxime CLEMENT, Mete Fatih Cırıt
+
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(autoware_motion_velocity_planner): only wait for required subscriptions (`#10732 <https://github.com/autowarefoundation/autoware_universe/issues/10732>`_)
+* Contributors: Ryohsuke Mitsudome, TaikiYamada4
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -10,6 +26,9 @@ Changelog for package autoware_motion_velocity_out_of_lane_module
 * fix(motion_velocity_planner): add missing header (`#10560 <https://github.com/autowarefoundation/autoware_universe/issues/10560>`_)
 * fix(out_of_lane): throttle log message to avoid spamming the logs (`#10562 <https://github.com/autowarefoundation/autoware_universe/issues/10562>`_)
 * Contributors: Masaki Baba, Maxime CLEMENT, TaikiYamada4
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

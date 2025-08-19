@@ -28,6 +28,7 @@ MultipleVehicleTracker::MultipleVehicleTracker(
   normal_vehicle_tracker_(object_model::normal_vehicle, time, object),
   big_vehicle_tracker_(object_model::big_vehicle, time, object)
 {
+  tracker_type_ = TrackerType::MULTIPLE_VEHICLE;
 }
 
 bool MultipleVehicleTracker::predict(const rclcpp::Time & time)
@@ -48,7 +49,8 @@ bool MultipleVehicleTracker::measure(
 }
 
 bool MultipleVehicleTracker::getTrackedObject(
-  const rclcpp::Time & time, types::DynamicObject & object) const
+  const rclcpp::Time & time, types::DynamicObject & object,
+  [[maybe_unused]] const bool to_publish) const
 {
   using Label = autoware_perception_msgs::msg::ObjectClassification;
   const uint8_t label = getHighestProbLabel();
@@ -57,9 +59,11 @@ bool MultipleVehicleTracker::getTrackedObject(
     normal_vehicle_tracker_.getTrackedObject(time, object);
   } else if (label == Label::BUS || label == Label::TRUCK || label == Label::TRAILER) {
     big_vehicle_tracker_.getTrackedObject(time, object);
+  } else {
+    // If the label is others, use the normal vehicle tracker as a fallback
+    normal_vehicle_tracker_.getTrackedObject(time, object);
   }
   object.uuid = object_.uuid;
-  object.classification = object_.classification;
   return true;
 }
 

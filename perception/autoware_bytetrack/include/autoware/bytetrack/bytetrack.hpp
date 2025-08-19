@@ -47,7 +47,8 @@ using ObjectArray = std::vector<Object>;
 class ByteTrack
 {
 public:
-  explicit ByteTrack(const int track_buffer_length = 30);
+  explicit ByteTrack(
+    const int track_buffer_length = 30, const double classification_decay_constant = 0.95);
 
   bool do_inference(ObjectArray & objects);
   ObjectArray update_tracker(ObjectArray & input_objects);

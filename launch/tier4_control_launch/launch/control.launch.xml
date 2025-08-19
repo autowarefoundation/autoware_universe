@@ -37,6 +37,7 @@
   <arg name="aeb_param_path"/>
   <arg name="predicted_path_checker_param_path"/>
   <arg name="collision_detector_param_path"/>
+  <arg name="control_command_gate_param_path" default="$(find-pkg-share autoware_control_command_gate)/config/default.param.yaml"/>
 
   <!-- component -->
   <arg name="use_intra_process" default="false" description="use ROS 2 component container communication"/>
@@ -45,8 +46,32 @@
   <let name="container_executable" value="component_container" unless="$(var use_multithread)"/>
   <let name="container_executable" value="component_container_mt" if="$(var use_multithread)"/>
 
+  <!-- temporary: control_command_gate migration -->
+  <arg name="use_control_command_gate" default="false"/>
+  <let name="operation_mode_transition_manager_plugin" value="AutonomousModeTransitionFlagNode" if="$(var use_control_command_gate)"/>
+  <let name="operation_mode_transition_manager_plugin" value="OperationModeTransitionManager" unless="$(var use_control_command_gate)"/>
+
+  <!-- topic remap -->
+  <arg name="output_control_cmd" default="/control/command/control_cmd"/>
+  <arg name="output_gear_cmd" default="/control/command/gear_cmd"/>
+  <arg name="output_turn_indicators_cmd" default="/control/command/turn_indicators_cmd"/>
+  <arg name="output_hazard_lights_cmd" default="/control/command/hazard_lights_cmd"/>
+
   <group>
     <push-ros-namespace namespace="control"/>
+
+    <group if="$(var use_control_command_gate)">
+      <include file="$(find-pkg-share autoware_control_command_gate)/launch/control_command_gate.launch.xml">
+        <arg name="config" value="$(var control_command_gate_param_path)"/>
+        <arg name="output/control" value="$(var output_control_cmd)"/>
+        <arg name="output/gear" value="$(var output_gear_cmd)"/>
+        <arg name="output/turn_indicators" value="$(var output_turn_indicators_cmd)"/>
+        <arg name="output/hazard_lights" value="$(var output_hazard_lights_cmd)"/>
+      </include>
+    </group>
+    <group if="$(var use_control_command_gate)">
+      <include file="$(find-pkg-share autoware_stop_mode_operator)/launch/stop_mode_operator.launch.xml"/>
+    </group>
 
     <group>
       <!-- set a control container to run all required components in the same process -->
@@ -61,8 +86,9 @@
           <param from="$(var shift_decider_param_path)"/>
           <extra_arg name="use_intra_process_comms" value="$(var use_intra_process)"/>
         </composable_node>
+
         <!-- vehicle cmd gate -->
-        <composable_node pkg="autoware_vehicle_cmd_gate" plugin="autoware::vehicle_cmd_gate::VehicleCmdGate" name="vehicle_cmd_gate">
+        <composable_node pkg="autoware_vehicle_cmd_gate" plugin="autoware::vehicle_cmd_gate::VehicleCmdGate" name="vehicle_cmd_gate" unless="$(var use_control_command_gate)">
           <remap from="input/steering" to="/vehicle/status/steering_status"/>
           <remap from="input/operation_mode" to="/system/operation_mode/state"/>
           <remap from="input/auto/control_cmd" to="/control/trajectory_follower/control_cmd"/>
@@ -83,10 +109,10 @@
           <remap from="input/kinematics" to="/localization/kinematic_state"/>
           <remap from="input/acceleration" to="/localization/acceleration"/>
           <remap from="output/vehicle_cmd_emergency" to="/control/command/emergency_cmd"/>
-          <remap from="output/control_cmd" to="/control/command/control_cmd"/>
-          <remap from="output/gear_cmd" to="/control/command/gear_cmd"/>
-          <remap from="output/turn_indicators_cmd" to="/control/command/turn_indicators_cmd"/>
-          <remap from="output/hazard_lights_cmd" to="/control/command/hazard_lights_cmd"/>
+          <remap from="output/control_cmd" to="$(var output_control_cmd)"/>
+          <remap from="output/gear_cmd" to="$(var output_gear_cmd)"/>
+          <remap from="output/turn_indicators_cmd" to="$(var output_turn_indicators_cmd)"/>
+          <remap from="output/hazard_lights_cmd" to="$(var output_hazard_lights_cmd)"/>
           <remap from="output/gate_mode" to="/control/current_gate_mode"/>
           <remap from="output/engage" to="/api/autoware/get/engage"/>
           <remap from="output/external_emergency" to="/api/autoware/get/emergency"/>
@@ -102,16 +128,17 @@
           <param name="check_external_emergency_heartbeat" value="$(var check_external_emergency_heartbeat)"/>
           <extra_arg name="use_intra_process_comms" value="$(var use_intra_process)"/>
         </composable_node>
+
         <!-- operation mode transition manager -->
         <composable_node
           pkg="autoware_operation_mode_transition_manager"
-          plugin="autoware::operation_mode_transition_manager::OperationModeTransitionManager"
+          plugin="autoware::operation_mode_transition_manager::$(var operation_mode_transition_manager_plugin)"
           name="autoware_operation_mode_transition_manager"
         >
           <!-- input -->
           <remap from="kinematics" to="/localization/kinematic_state"/>
           <remap from="steering" to="/vehicle/status/steering_status"/>
-          <remap from="trajectory" to="/planning/scenario_planning/trajectory"/>
+          <remap from="trajectory" to="/planning/trajectory"/>
           <remap from="control_cmd" to="/control/command/control_cmd"/>
           <remap from="trajectory_follower_control_cmd" to="/control/trajectory_follower/control_cmd"/>
           <remap from="control_mode_report" to="/vehicle/status/control_mode"/>
@@ -130,7 +157,7 @@
       <group if="$(eval &quot;'$(var trajectory_follower_mode)' == 'trajectory_follower_node'&quot;)">
         <load_composable_node target="/control/control_container">
           <composable_node pkg="autoware_trajectory_follower_node" plugin="autoware::motion::control::trajectory_follower_node::Controller" name="controller_node_exe" namespace="trajectory_follower">
-            <remap from="~/input/reference_trajectory" to="/planning/scenario_planning/trajectory"/>
+            <remap from="~/input/reference_trajectory" to="/planning/trajectory"/>
             <remap from="~/input/current_odometry" to="/localization/kinematic_state"/>
             <remap from="~/input/current_steering" to="/vehicle/status/steering_status"/>
             <remap from="~/input/current_accel" to="/localization/acceleration"/>
@@ -188,7 +215,7 @@
             <remap from="~/input/odometry" to="/localization/kinematic_state"/>
             <remap from="~/input/lanelet_map_bin" to="/map/vector_map"/>
             <remap from="~/input/route" to="/planning/mission_planning/route"/>
-            <remap from="~/input/reference_trajectory" to="/planning/scenario_planning/trajectory"/>
+            <remap from="~/input/reference_trajectory" to="/planning/trajectory"/>
             <remap from="~/input/predicted_trajectory" to="/control/trajectory_follower/lateral/predicted_trajectory"/>
             <param from="$(var nearest_search_param_path)"/>
             <param from="$(var lane_departure_checker_param_path)"/>
@@ -204,8 +231,9 @@
           <composable_node pkg="autoware_control_validator" plugin="autoware::control_validator::ControlValidator" name="control_validator">
             <remap from="~/input/control_cmd" to="/control/command/control_cmd"/>
             <remap from="~/input/kinematics" to="/localization/kinematic_state"/>
+            <remap from="~/input/operational_mode_state" to="/api/operation_mode/state"/>
             <remap from="~/input/measured_acceleration" to="/localization/acceleration"/>
-            <remap from="~/input/reference_trajectory" to="/planning/scenario_planning/trajectory"/>
+            <remap from="~/input/reference_trajectory" to="/planning/trajectory"/>
             <remap from="~/input/predicted_trajectory" to="/control/trajectory_follower/lateral/predicted_trajectory"/>
             <remap from="~/output/validation_status" to="~/validation_status"/>
             <param from="$(var control_validator_param_path)"/>
@@ -247,7 +275,7 @@
           <composable_node pkg="autoware_obstacle_collision_checker" plugin="autoware::obstacle_collision_checker::ObstacleCollisionCheckerNode" name="obstacle_collision_checker">
             <remap from="input/lanelet_map_bin" to="/map/vector_map"/>
             <remap from="input/obstacle_pointcloud" to="/perception/obstacle_segmentation/pointcloud"/>
-            <remap from="input/reference_trajectory" to="/planning/scenario_planning/trajectory"/>
+            <remap from="input/reference_trajectory" to="/planning/trajectory"/>
             <remap from="input/predicted_trajectory" to="/control/trajectory_follower/lateral/predicted_trajectory"/>
             <remap from="input/odometry" to="/localization/kinematic_state"/>
             <param from="$(var obstacle_collision_checker_param_path)"/>
@@ -262,7 +290,7 @@
         <load_composable_node target="/control/control_check_container">
           <composable_node pkg="autoware_predicted_path_checker" plugin="autoware::predicted_path_checker::PredictedPathCheckerNode" name="predicted_path_checker">
             <remap from="~/input/objects" to="/perception/object_recognition/objects"/>
-            <remap from="~/input/reference_trajectory" to="/planning/scenario_planning/trajectory"/>
+            <remap from="~/input/reference_trajectory" to="/planning/trajectory"/>
             <remap from="~/input/current_accel" to="/localization/acceleration"/>
             <remap from="~/input/odometry" to="/localization/kinematic_state"/>
             <remap from="~/input/predicted_trajectory" to="/control/trajectory_follower/lateral/predicted_trajectory"/>

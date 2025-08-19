@@ -20,28 +20,21 @@
 #include <autoware/planning_validator/plugin_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <pcl/common/transforms.h>
-#include <pcl/filters/crop_hull.h>
-#include <pcl/filters/extract_indices.h>
-#include <pcl/filters/passthrough.h>
-#include <pcl/filters/voxel_grid.h>
+#include <autoware_internal_planning_msgs/msg/safety_factor_array.hpp>
+
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-#include <pcl/registration/gicp.h>
-#include <pcl/segmentation/extract_clusters.h>
-#include <pcl/surface/convex_hull.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <tf2/utils.h>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace autoware::planning_validator
 {
 using sensor_msgs::msg::PointCloud2;
 using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
+using autoware_internal_planning_msgs::msg::SafetyFactor;
+using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 
 class IntersectionCollisionChecker : public PluginInterface
 {
@@ -49,43 +42,74 @@ public:
   void init(
     rclcpp::Node & node, const std::string & name,
     const std::shared_ptr<PlanningValidatorContext> & context) override;
-  void validate(bool & is_critical) override;
+  void validate() override;
   void setup_diag() override;
   std::string get_module_name() const override { return module_name_; };
 
 private:
-  void setup_parameters(rclcpp::Node & node);
+  bool is_data_ready(std::string & msg);
+
+  [[nodiscard]] bool is_safe(DebugData & debug_data);
 
   [[nodiscard]] EgoTrajectory get_ego_trajectory() const;
+
+  void get_lanelets(DebugData & debug_data, const EgoTrajectory & ego_trajectory) const;
 
   [[nodiscard]] Direction get_turn_direction(
     const lanelet::ConstLanelets & trajectory_lanelets) const;
 
-  [[nodiscard]] Direction get_lanelets(
-    CollisionCheckerLanelets & lanelets, const EgoTrajectory & ego_trajectory) const;
-
   void filter_pointcloud(
-    PointCloud2::ConstSharedPtr & input, PointCloud::Ptr & filtered_point_cloud) const;
+    PointCloud2::ConstSharedPtr & input, PointCloud::Ptr & filtered_point_cloud,
+    DebugData & debug_data) const;
 
   void get_points_within(
     const PointCloud::Ptr & input, const BasicPolygon2d & polygon,
     const PointCloud::Ptr & output) const;
 
-  void cluster_pointcloud(const PointCloud::Ptr & input, PointCloud::Ptr & output) const;
-
-  void set_lanelets_debug_marker(const CollisionCheckerLanelets & lanelets) const;
+  void cluster_pointcloud(
+    const PointCloud::Ptr & input, PointCloud::Ptr & output, DebugData & debug_data) const;
 
   bool check_collision(
-    const TargetLanelets & target_lanelets, const PointCloud::Ptr & filtered_point_cloud,
+    DebugData & debug_data, const PointCloud::Ptr & filtered_point_cloud,
     const rclcpp::Time & time_stamp);
 
   std::optional<PCDObject> get_pcd_object(
-    const rclcpp::Time & time_stamp, const PointCloud::Ptr & filtered_point_cloud,
-    const TargetLanelet & target_lanelet) const;
+    DebugData & debug_data, const rclcpp::Time & time_stamp,
+    const PointCloud::Ptr & filtered_point_cloud, const TargetLanelet & target_lanelet) const;
 
-  CollisionCheckerParams params_;
+  void update_tracked_object(PCDObject & object, const PCDObject & new_data) const;
+
+  void publish_markers(const DebugData & debug_data) const;
+
+  void set_lanelets_debug_marker(const DebugData & debug_data) const;
+
+  void set_pcd_objects_debug_marker(const DebugData & debug_data) const;
+
+  void publish_planning_factor(const DebugData & debug_data) const;
+
+  void set_diag_status(
+    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg) const;
+
+  void reset_data()
+  {
+    history_.clear();
+    target_lanelets_map_.clear();
+    last_valid_time_ = clock_->now();
+  }
+
+  std::unique_ptr<intersection_collision_checker_node::ParamListener> param_listener_;
+
+  rclcpp::Publisher<PointCloud2>::SharedPtr pub_voxel_pointcloud_;
+  rclcpp::Publisher<PointCloud2>::SharedPtr pub_cluster_pointcloud_;
+  rclcpp::Publisher<StringStamped>::SharedPtr pub_string_;
+
+  intersection_collision_checker_node::Params params_;
+
   PCDObjectsMap history_;
-  std::optional<rclcpp::Time> last_invalid_time_;
+  mutable TargetLaneletsMap target_lanelets_map_;
+  std::vector<lanelet::Id> collision_lanes_;
+  rclcpp::Time last_invalid_time_;
+  rclcpp::Time last_valid_time_;
 };
 
 }  // namespace autoware::planning_validator

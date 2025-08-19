@@ -2,6 +2,142 @@
 Changelog for package tier4_perception_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* feat(perception_online_evaluator): add functionality to publish perception analytics info (`#11089 <https://github.com/autowarefoundation/autoware_universe/issues/11089>`_)
+  * feat: add functionality to calculate perception metrics for MOB in autoware_perception_online_evaluator
+  chore: configure settings for mob metrics calculation
+  * feat: change implementation from one topic per metric to all metrics published in one metric for better management by metric agent
+  refactor: rename FrameMetrics member to clarify variable meaning
+  refactor: use array/vector instead of unorder_map for FrameMetrics for better performance
+  chore: remap published topic name to match msg conventions
+  * fix: unittest error
+  * style(pre-commit): autofix
+  * refactor: replace MOB keyword with generalized expression of perception analytics
+  * chore: improve comment
+  * refactor: add a new autoware_perception_analytics_publisher_node to publish perception analytics info instead of using previous autoware_perception_online_evaluator_node
+  chore: modify default launch setting to match the refactoring
+  * style(pre-commit): autofix
+  * fix: add initialization for `latencies\_`
+  fix: use tf of objects timestamp instead of latest
+  feat: use ConstSharedPtr to avoid repeated copy of large message in `PerceptionAnalyticsCalculator::setPredictedObjects`
+  ---------
+  Co-authored-by: Jian Kang <jian.kang@tier4.jp>
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(multi_object_tracker): add irregular objects topic (`#11102 <https://github.com/autowarefoundation/autoware_universe/issues/11102>`_)
+  * fix(multi_object_tracker): add irregular objects topic
+  * fix: change channel order
+  * Update launch/tier4_perception_launch/launch/object_recognition/tracking/tracking.launch.xml
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update launch/tier4_perception_launch/launch/object_recognition/tracking/tracking.launch.xml
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update perception/autoware_multi_object_tracker/config/input_channels.param.yaml
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update launch/tier4_perception_launch/launch/object_recognition/tracking/tracking.launch.xml
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * fix: unused channels
+  * fix: schema
+  * docs: update readme
+  * style(pre-commit): autofix
+  * fix: short name
+  * feat: add lidar_centerpoint_short_range input channel with default flags
+  ---------
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* chore: sync files (`#11091 <https://github.com/autowarefoundation/autoware_universe/issues/11091>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+  Co-authored-by: M. Fatih Cırıt <mfc@autoware.org>
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(autoware_object_merger): add merger priority_mode (`#11042 <https://github.com/autowarefoundation/autoware_universe/issues/11042>`_)
+  * fix: add merger priority_mode
+  fix: add priority mode into launch
+  fix: add class based priority matrix
+  fix: adjust priority matrix
+  * fix: add Confidence mode support
+  * docs: schema update
+  * fix: launch
+  * fix: schema json
+  ---------
+* feat(tier4_perception_launch): add missing remappings to launch file (`#11037 <https://github.com/autowarefoundation/autoware_universe/issues/11037>`_)
+* feat(autoware_bevdet): implementation of bevdet using tensorrt (`#10441 <https://github.com/autowarefoundation/autoware_universe/issues/10441>`_)
+* feat(tracking): add short range detection support and update related parameters (`#10956 <https://github.com/autowarefoundation/autoware_universe/issues/10956>`_)
+  * feat(tracking): add short range detection support and update related parameters
+  * fix(tracking): correct spelling of short range in tracking parameters
+  ---------
+* fix(tier4_perception_launch): add one more camera fusion (`#10973 <https://github.com/autowarefoundation/autoware_universe/issues/10973>`_)
+  * fix(tier4_perception_launch): add one more camera fusion
+  * fix: missing launch
+  * feat(detection.launch): add support for additional camera inputs (camera8)
+  * fix: missing launch param
+  ---------
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* fix(perception): update radar detection logic for multi-channel support (`#10942 <https://github.com/autowarefoundation/autoware_universe/issues/10942>`_)
+  * fix(detection.launch): update radar detection logic for multi-channel support
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(radar pipeline): radar tracked object pipeline (`#10916 <https://github.com/autowarefoundation/autoware_universe/issues/10916>`_)
+  * refactor(tracking): update radar tracked objects input and adjust tracker merger references
+  * refactor(tracking): replace radar object tracker parameters with lanelet filter and update references in tracking pipeline
+  * style(pre-commit): autofix
+  * refactor(tracking): update radar tracked object sorter and adjust lanelet filter input
+  * refactor(tracking): update radar tracked object sorter parameter paths in launch files
+  * refactor(tracking): add radar tracking fusion argument and update radar switch condition
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Amadeusz Szymko, Kang, Taekjin LEE, awf-autoware-bot[bot], badai nguyen, rahulsundar-mcw
+
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(tier4_simulator_launch): add use_pointcloud_container argument (`#10770 <https://github.com/autowarefoundation/autoware_universe/issues/10770>`_)
+* chore(perception): remove unused object filter packages (`#10654 <https://github.com/autowarefoundation/autoware_universe/issues/10654>`_)
+  * Remove autoware_radar_crossing_objects_noise_filter package, including all related files such as CMakeLists.txt, README.md, configuration files, and documentation. This cleanup eliminates unused components from the perception module.
+  * Refactor perception launch files: comment out unused radar parameters related to crossing objects and clustering. This cleanup aligns with the recent removal of the autoware_radar_crossing_objects_noise_filter package, streamlining the configuration for the perception module.
+  * Update codecov.yaml to include new paths for perception components and remove references to deprecated radar packages. This change enhances the configuration for the perception module by ensuring only relevant components are tracked.
+  * Update README.md to clarify post-processing requirements for output objects in the autoware_simple_object_merger package.
+  ---------
+* feat(autoware_lidar_centerpoint): add ShortRange centerpoint as another new node base on autoware_lidar_centerpoint (`#10727 <https://github.com/autowarefoundation/autoware_universe/issues/10727>`_)
+  * Add shortrange_centerpoint launcher to autoware_lidar_centerpoint
+  * style(pre-commit): autofix
+  * Update README.md to include launching of shortrange centerpoint
+  * style(pre-commit): autofix
+  * Add option to launch shortrange centerpoint in tier4_perception_launch
+  * Add option to launch shortrange centerpoint in tier4_perception_launch
+  * style(pre-commit): autofix
+  * Update correct launcher name in lidar_dnn_detection.launch.xml
+  * Fix Update typo in lidar_dnn_detector launcher for shortrange centerpoint
+  * Add use_short_range_detection to launcher for switching shortrange detection
+  * Add use_short_range_detection to launcher for switching shortrange detection
+  * Format spaces
+  * style(pre-commit): autofix
+  * Rename shortrange to short_range
+  * Change shor_range centerpoint to one of the centerpoint variants
+  * Fix shortrange spelling warning
+  * Fix default value for use_short_range_centerpoint and fix missing short_range_centerpoint_common.param.yaml
+  * Fix default value for use_short_range_centerpoint
+  * Rename short_range_centerpoint to centerpoint_short_range for model name and type
+  * Rename short_range_centerpoint to centerpoint_short_range for model name and type
+  * Update value to default
+  * Update short range centerpoint namespace
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* chore(multi_object_tracker): multi channel multi-object-tracker, set topic by launcher (`#10577 <https://github.com/autowarefoundation/autoware_universe/issues/10577>`_)
+  * fix(multi_object_tracker): update input channel configuration and reduce max channel size
+  * fix(tracking): update input channels and correct radar detection topic names
+  * fix(tracking): update radar detection channel and remove deprecated parameters
+  * fix(tracking): update input arguments for detection channels and objects in tracking.launch.xml
+  * fix(tracking): simplify conditionals for radar and camera lidar fusion in tracking.launch.xml
+  * fix(multi_object_tracker): remove deprecated input channel topics from schema
+  * fix(multi_object_tracker): update output argument naming for consistency in launch files and publisher
+  * docs(multi_object_tracker): update README input channel configuration to reflect type changes
+  * Update README.md
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Kok Seang Tan, Ryohsuke Mitsudome, Taekjin LEE, TaikiYamada4
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -53,6 +189,12 @@ Changelog for package tier4_perception_launch
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
   Co-authored-by: badai nguyen <94814556+badai-nguyen@users.noreply.github.com>
 * Contributors: Kenzo Lobos Tsunekawa, Masaki Baba, Masato Saeki, Taekjin LEE, TaikiYamada4, badai nguyen
+
+0.44.2 (2025-06-10)
+-------------------
+* feat(tier4_simulator_launch): add use_pointcloud_container argument (`#10770 <https://github.com/autowarefoundation/autoware_universe/issues/10770>`_) (`#10786 <https://github.com/autowarefoundation/autoware_universe/issues/10786>`_)
+* feat(tier4_simulator_launch): add use_pointcloud_container argument (`#10770 <https://github.com/autowarefoundation/autoware_universe/issues/10770>`_)
+* Contributors: Ryohsuke Mitsudome
 
 0.44.1 (2025-05-01)
 -------------------

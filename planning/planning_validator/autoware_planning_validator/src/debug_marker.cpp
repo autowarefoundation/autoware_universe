@@ -78,18 +78,6 @@ void PlanningValidatorDebugMarkerPublisher::pushPoseMarker(
   marker_array_.markers.push_back(marker);
 }
 
-void PlanningValidatorDebugMarkerPublisher::pushPointMarker(
-  const geometry_msgs::msg::Point & point, const std::string & ns, int id)
-{
-  Marker marker = autoware_utils::create_default_marker(
-    "map", node_->get_clock()->now(), ns, getMarkerId(ns), Marker::SPHERE,
-    autoware_utils::create_marker_scale(0.3, 0.3, 0.3), getColorFromId(id));
-  marker.lifetime = rclcpp::Duration::from_seconds(0.2);
-  marker.pose.position = point;
-
-  marker_array_.markers.push_back(marker);
-}
-
 void PlanningValidatorDebugMarkerPublisher::pushWarningMsg(
   const geometry_msgs::msg::Pose & pose, const std::string & msg)
 {
@@ -109,25 +97,6 @@ void PlanningValidatorDebugMarkerPublisher::pushVirtualWall(const geometry_msgs:
   const auto stop_wall_marker = autoware::motion_utils::createStopVirtualWallMarker(
     pose, "autoware_planning_validator", now, 0);
   autoware_utils::append_marker_array(stop_wall_marker, &marker_array_virtual_wall_, now);
-}
-
-void PlanningValidatorDebugMarkerPublisher::pushLaneletPolygonsMarker(
-  const lanelet::BasicPolygons2d & polygons, const std::string & ns, int id)
-{
-  visualization_msgs::msg::Marker marker = autoware_utils::create_default_marker(
-    "map", node_->get_clock()->now(), ns, getMarkerId(ns), Marker::LINE_LIST,
-    autoware_utils::create_marker_scale(0.1, 0.1, 0.1), getColorFromId(id));
-  marker.lifetime = rclcpp::Duration::from_seconds(0.2);
-
-  for (const auto & p : polygons) {
-    boost::geometry::for_each_segment(p, [&](const auto & s) {
-      const auto & [p1, p2] = s;
-      marker.points.push_back(autoware_utils::create_marker_position(p1.x(), p1.y(), 0.0));
-      marker.points.push_back(autoware_utils::create_marker_position(p2.x(), p2.y(), 0.0));
-    });
-  }
-
-  marker_array_.markers.push_back(marker);
 }
 
 void PlanningValidatorDebugMarkerPublisher::pushMarker(

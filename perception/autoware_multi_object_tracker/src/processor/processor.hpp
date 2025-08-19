@@ -27,7 +27,6 @@
 #include "autoware_perception_msgs/msg/tracked_objects.hpp"
 
 #include <list>
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -40,12 +39,14 @@ using LabelType = autoware_perception_msgs::msg::ObjectClassification::_label_ty
 
 struct TrackerProcessorConfig
 {
-  std::map<LabelType, std::string> tracker_map;
-  float tracker_lifetime;                              // [s]
-  float min_known_object_removal_iou;                  // ratio [0, 1]
-  float min_unknown_object_removal_iou;                // ratio [0, 1]
-  std::map<LabelType, int> confident_count_threshold;  // [count]
-  Eigen::MatrixXd max_dist_matrix;
+  std::unordered_map<LabelType, TrackerType> tracker_map;
+  float tracker_lifetime;                // [s]
+  float min_known_object_removal_iou;    // ratio [0, 1]
+  float min_unknown_object_removal_iou;  // ratio [0, 1]
+  bool enable_unknown_object_velocity_estimation;
+  bool enable_unknown_object_motion_output;
+  std::unordered_map<LabelType, double> pruning_giou_thresholds;
+  std::unordered_map<LabelType, double> pruning_distance_thresholds;  // [m]
 };
 
 class TrackerProcessor
@@ -92,8 +93,7 @@ private:
   void removeOldTracker(const rclcpp::Time & time);
   void mergeOverlappedTracker(const rclcpp::Time & time);
   bool canMergeOverlappedTarget(
-    const Tracker & target, const Tracker & other, const rclcpp::Time & time,
-    const double iou) const;
+    const Tracker & target, const Tracker & other, const rclcpp::Time & time) const;
   std::shared_ptr<Tracker> createNewTracker(
     const types::DynamicObject & object, const rclcpp::Time & time) const;
 
