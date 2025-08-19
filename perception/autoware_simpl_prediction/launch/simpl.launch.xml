@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
   <!-- model parameters -->
-  <arg name="data_path" default="$(env HOME)/autoware_data/simpl_prediction"/>
+  <arg name="data_path" default="$(env HOME)/autoware_data"/>
   <arg name="param_path" default="$(find-pkg-share autoware_simpl_prediction)/config/simpl.param.yaml"/>
 
   <!-- I/O topics -->
