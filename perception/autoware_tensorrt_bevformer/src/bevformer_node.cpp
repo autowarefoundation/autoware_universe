@@ -37,6 +37,8 @@
 #include "autoware/tensorrt_bevformer/preprocessing/preprocessing_pipeline.hpp"
 #include "autoware/tensorrt_bevformer/ros_utils.hpp"
 
+#include <Eigen/LU>
+
 #include "autoware_localization_msgs/msg/kinematic_state.hpp"
 #include "geometry_msgs/msg/quaternion.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
