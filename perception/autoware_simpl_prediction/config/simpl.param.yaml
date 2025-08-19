@@ -1,8 +1,8 @@
 /**:
   ros__parameters:
     detector:
-      onnx_path: $(var data_path)/simpl.onnx
-      engine_path: $(var data_path)/simpl.engine
+      onnx_path: $(var data_path)/simpl_prediction/simpl.onnx
+      engine_path: $(var data_path)/simpl_prediction/simpl.engine
       precision: fp32
     preprocess:
       labels: [VEHICLE, PEDESTRIAN, MOTORCYCLIST, CYCLIST, LARGE_VEHICLE]
