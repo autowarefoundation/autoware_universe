@@ -18,7 +18,7 @@
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <tier4_system_msgs/msg/service_log.hpp>
+#include <autoware_system_msgs/msg/service_log.hpp>
 
 #include <string>
 #include <unordered_map>
@@ -31,7 +31,7 @@ public:
   explicit ServiceLogChecker(const rclcpp::NodeOptions & options);
 
 private:
-  using ServiceLog = tier4_system_msgs::msg::ServiceLog;
+  using ServiceLog = autoware_system_msgs::msg::ServiceLog;
   rclcpp::Subscription<ServiceLog>::SharedPtr sub_;
   diagnostic_updater::Updater diagnostics_;
   void on_service_log(const ServiceLog::ConstSharedPtr msg);
