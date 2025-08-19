@@ -227,11 +227,23 @@ Example of the nearest projections are shown in the following images:
 - Red arrows show the closest projection to the left boundary.
 - Purple arrows show the closest projection to the right boundary.
 
-#### Reducing false positives
+## Handling Unstable Predictions with Time Buffers
 
-!!! Warning
+The system employs a continuous detection mechanism to stabilize its response to boundary predictions, preventing two types of errors: unnecessary deceleration (**false positives**) and sudden, late deceleration (**false negatives**).
 
-    TBA
+### 1. Preventing Unnecessary Actions
+
+The **`on_time_buffer_s`** is a filter that prevents the system from overreacting to fleeting or unstable predictions. The module will only insert a departure into a list if a potential boundary departure is detected continuously for a specific duration.
+
+- **Near Boundary**: A slowdown is initiated only after a potential departure is detected for a duration greater than or equal to `on_time_buffer_s.near_boundary`. This handles general cases of the vehicle getting close to a boundary, acting as a safeguard against **false positives**.
+- **Critical Departure**: For more severe, high-risk situations, a separate check uses **`on_time_buffer_s.critical_departure`**. A critical departure is added to a **critical departure points list** only if a critical departure is consistently detected over this dedicated time period. For further usage of this list, refer to the Diagnostic Section.
+
+### 2. Preventing Prematurely Ending Actions
+
+The **`off_time_buffer_s`** is a filter that prevents the system from prematurely ending a response. Once an action is active, it won't be cleared until the system is confident the risk has passed.
+
+- **Near Boundary**: A slowdown is only cleared when no departure points are detected for a continuous duration greater than or equal to `off_time_buffer_s.near_boundary`. This prevents a **false negative**, where a brief absence of a prediction causes the vehicle to accelerate again, even if it's still in a dangerous state.
+- **Critical Departure**: The system uses `off_time_buffer_s.critical_departure` to manage a critical departure list. This list is cleared only after a critical departure has not been detected for a continuous period.
 
 ## Calculate slow down
 
@@ -263,7 +275,7 @@ $$
 
 ### 2. Longitudinal feasibility and deceleration tiers
 
-Once the $v_{\text{target}}$ is determined, the system considers the **longitudinal gap**—the distance to the start of target interval, to decide on the appropriate deceleration profile. The system prioritizes comfort and only uses more aggressive braking when necessary.
+Once the $v_{\text{target}}$ is determined, the distance to the start of target interval (i.e.: **longitudinal gap**, ), is used to decide on the appropriate deceleration profile. The system prioritizes comfort and only uses more aggressive braking when necessary.
 
 The module chooses one of three deceleration tiers:
 
