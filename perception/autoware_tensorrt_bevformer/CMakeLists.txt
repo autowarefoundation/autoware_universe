@@ -86,14 +86,6 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
 
-  include_directories(
-    include
-    ${CUDA_INCLUDE_DIRS}
-    ${OpenCV_INCLUDE_DIRS}
-    ${EIGEN3_INCLUDE_DIRS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/TensorRT/common
-  )
-
   # Build TensorRT plugin library
   file(GLOB_RECURSE TENSORRT_SRCS
     TensorRT/common/*.cpp
@@ -119,7 +111,13 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     ${NVONNXPARSER}
     ${CUDA_LIBRARIES}
     ${CUBLAS_LIBRARIES}
-    Eigen3::Eigen
+  )
+  target_include_directories(${TENSORRT_OPS_TARGET}
+    PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/TensorRT/common
+    SYSTEM PRIVATE
+      ${CUDA_INCLUDE_DIRS}
+      ${OpenCV_INCLUDE_DIRS}
   )
 
   # Main source files
@@ -157,8 +155,10 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     ${CUDNN_LIBRARY}
     ${TENSORRT_OPS_TARGET}
     dl
-    Eigen3::Eigen
   )
+
+  # Enables us to catch missing symbols at link time
+  target_link_options(${PROJECT_NAME} PRIVATE -Wl,--no-undefined)
 
   add_dependencies(${PROJECT_NAME} ${TENSORRT_OPS_TARGET})
 
@@ -170,10 +170,18 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
   target_include_directories(${PROJECT_NAME}
-    SYSTEM PUBLIC ${CUDA_INCLUDE_DIRS}
+    PUBLIC
+    # Project's public headers (export to dependents + install)
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+    PRIVATE
+    # Internal-only headers
+    ${CMAKE_CURRENT_SOURCE_DIR}/TensorRT/common
+    SYSTEM PUBLIC
+    # System/third-party includes (propagate to consumers when PUBLIC)
+    ${CUDA_INCLUDE_DIRS}
+    ${OpenCV_INCLUDE_DIRS}
   )
-
-  ament_export_libraries(${PROJECT_NAME})
 
   rclcpp_components_register_node(${PROJECT_NAME}
     PLUGIN "autoware::tensorrt_bevformer::TRTBEVFormerNode"
