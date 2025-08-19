@@ -14056,6 +14056,33 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#handling-unstable-predictions-with-time-buffers" class="md-nav__link">
+    Handling Unstable Predictions with Time Buffers
+  </a>
+  
+    <nav class="md-nav" aria-label="Handling Unstable Predictions with Time Buffers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-preventing-unnecessary-actions" class="md-nav__link">
+    1. Preventing Unnecessary Actions
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-preventing-prematurely-ending-actions" class="md-nav__link">
+    2. Preventing Prematurely Ending Actions
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#calculate-slow-down" class="md-nav__link">
     Calculate slow down
   </a>
@@ -14272,11 +14299,20 @@
 <li>Red arrows show the closest projection to the left boundary.</li>
 <li>Purple arrows show the closest projection to the right boundary.</li>
 </ul>
-<h4 id="reducing-false-positives">Reducing false positives<a class="headerlink" href="#reducing-false-positives" title="Permanent link">#</a></h4>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>TBA</p>
-</div>
+<h2 id="handling-unstable-predictions-with-time-buffers">Handling Unstable Predictions with Time Buffers<a class="headerlink" href="#handling-unstable-predictions-with-time-buffers" title="Permanent link">#</a></h2>
+<p>The system employs a continuous detection mechanism to stabilize its response to boundary predictions, preventing two types of errors: unnecessary deceleration (<strong>false positives</strong>) and sudden, late deceleration (<strong>false negatives</strong>).</p>
+<h3 id="1-preventing-unnecessary-actions">1. Preventing Unnecessary Actions<a class="headerlink" href="#1-preventing-unnecessary-actions" title="Permanent link">#</a></h3>
+<p>The <strong><code>on_time_buffer_s</code></strong> is a filter that prevents the system from overreacting to fleeting or unstable predictions. The module will only insert a departure into a list if a potential boundary departure is detected continuously for a specific duration.</p>
+<ul>
+<li><strong>Near Boundary</strong>: A slowdown is initiated only after a potential departure is detected for a duration greater than or equal to <code>on_time_buffer_s.near_boundary</code>. This handles general cases of the vehicle getting close to a boundary, acting as a safeguard against <strong>false positives</strong>.</li>
+<li><strong>Critical Departure</strong>: For more severe, high-risk situations, a separate check uses <strong><code>on_time_buffer_s.critical_departure</code></strong>. A critical departure is added to a <strong>critical departure points list</strong> only if a critical departure is consistently detected over this dedicated time period. For further usage of this list, refer to the Diagnostic Section.</li>
+</ul>
+<h3 id="2-preventing-prematurely-ending-actions">2. Preventing Prematurely Ending Actions<a class="headerlink" href="#2-preventing-prematurely-ending-actions" title="Permanent link">#</a></h3>
+<p>The <strong><code>off_time_buffer_s</code></strong> is a filter that prevents the system from prematurely ending a response. Once an action is active, it won't be cleared until the system is confident the risk has passed.</p>
+<ul>
+<li><strong>Near Boundary</strong>: A slowdown is only cleared when no departure points are detected for a continuous duration greater than or equal to <code>off_time_buffer_s.near_boundary</code>. This prevents a <strong>false negative</strong>, where a brief absence of a prediction causes the vehicle to accelerate again, even if it's still in a dangerous state.</li>
+<li><strong>Critical Departure</strong>: The system uses <code>off_time_buffer_s.critical_departure</code> to manage a critical departure list. This list is cleared only after a critical departure has not been detected for a continuous period.</li>
+</ul>
 <h2 id="calculate-slow-down">Calculate slow down<a class="headerlink" href="#calculate-slow-down" title="Permanent link">#</a></h2>
 <h3 id="1-target-velocity-from-lateral-clearance">1. Target Velocity from Lateral Clearance<a class="headerlink" href="#1-target-velocity-from-lateral-clearance" title="Permanent link">#</a></h3>
 <p>The target velocity, <span class="arithmatex">\(v_{\text{target}}\)</span>, is determined based on the vehicle's lateral distance from the boundary. This process ensures the vehicle's speed is reduced as it gets closer to the specified boundary (e.g. <code>road_border</code>).</p>
@@ -14304,7 +14340,7 @@ d_{\text{lat}} \ge d_{\text{lat,max}}.
 \end{cases}
 \]</div>
 <h3 id="2-longitudinal-feasibility-and-deceleration-tiers">2. Longitudinal feasibility and deceleration tiers<a class="headerlink" href="#2-longitudinal-feasibility-and-deceleration-tiers" title="Permanent link">#</a></h3>
-<p>Once the <span class="arithmatex">\(v_{\text{target}}\)</span> is determined, the system considers the <strong>longitudinal gap</strong>—the distance to the start of target interval, to decide on the appropriate deceleration profile. The system prioritizes comfort and only uses more aggressive braking when necessary.</p>
+<p>Once the <span class="arithmatex">\(v_{\text{target}}\)</span> is determined, the distance to the start of target interval (i.e.: <strong>longitudinal gap</strong>, ), is used to decide on the appropriate deceleration profile. The system prioritizes comfort and only uses more aggressive braking when necessary.</p>
 <p>The module chooses one of three deceleration tiers:</p>
 <ul>
 <li><strong>Comfort</strong>: The system first checks if it can slow down to the target velocity using a comfortable deceleration profile. This profile is defined by gentle limits on jerk and acceleration (<span class="arithmatex">\((j_{\text{comfort}}\le0,\ a_{\text{comfort}}\le0)\)</span>). If the distance to the start of target interval is sufficient for this gentle braking, the comfort profile is selected.</li>
