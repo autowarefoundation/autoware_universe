@@ -175,14 +175,16 @@ If any of the following conditions are met the tracking information is reset and
 
 ### Target Lanes Parameters
 
-| Name                                | Unit  | Type   | Description                                     | Default value |
-| :---------------------------------- | ----- | ------ | ----------------------------------------------- | ------------- |
-| `right_turn.enable`                 | [-]   | bool   | Flag to enable/disable the check at right turns | true          |
-| `right_turn.check_crossing_lanes`   | [-]   | bool   | Flag to enable/disable checking crossing lanes  | true          |
-| `right_turn.check_turn_lanes`       | [-]   | bool   | Flag to enable/disable checking turning lanes   | true          |
-| `right_turn.crossing_lane_angle_th` | [rad] | double | Angle threshold for determining crossing lanes  | 0.785398      |
-| `left_turn.enable`                  | [-]   | bool   | Flag to enable/disable the check at left turns  | true          |
-| `left_turn.check_turn_lanes`        | [-]   | bool   | Flag to enable/disable checking turning lanes   | true          |
+| Name                                | Unit  | Type   | Description                                         | Default value |
+| :---------------------------------- | ----- | ------ | --------------------------------------------------- | ------------- |
+| `right_turn.enable`                 | [-]   | bool   | Flag to enable/disable the check at right turns     | true          |
+| `right_turn.check_crossing_lanes`   | [-]   | bool   | Flag to enable/disable checking crossing lanes      | true          |
+| `right_turn.check_turn_lanes`       | [-]   | bool   | Flag to enable/disable checking turning lanes       | true          |
+| `right_turn.crossing_lane_angle_th` | [rad] | double | Angle threshold for determining crossing lanes      | 0.785398      |
+| `right_turn.check_traffic_signal`   | [-]   | bool   | Use traffic light context for right-turn validation | true          |
+| `left_turn.enable`                  | [-]   | bool   | Flag to enable/disable the check at left turns      | true          |
+| `left_turn.check_turn_lanes`        | [-]   | bool   | Flag to enable/disable checking turning lanes       | true          |
+| `left_turn.check_traffic_signal`    | [-]   | bool   | Use traffic light context for left-turn validation  | true          |
 
 ### Pointcloud Parameters
 
