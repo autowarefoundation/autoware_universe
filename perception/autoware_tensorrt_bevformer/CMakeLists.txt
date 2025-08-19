@@ -123,8 +123,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   target_compile_options(${TENSORRT_OPS_TARGET} PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:
       -fPIC -O2 -Wno-deprecated-declarations -Wno-unused-parameter -Wno-unused-function
-      -Wno-unused-variable -Wno-unused-but-set-variable -Wno-comment -Wno-maybe-uninitialized -Wno-switch
->
+      -Wno-unused-variable -Wno-unused-but-set-variable -Wno-comment -Wno-maybe-uninitialized -Wno-switch>
   )
   target_link_libraries(${TENSORRT_OPS_TARGET}
     ${CUDNN_LIBRARY}
@@ -154,7 +153,12 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
 
   ament_auto_add_library(${PROJECT_NAME} SHARED ${SOURCES})
   ament_target_dependencies(${PROJECT_NAME}
-    rclcpp std_msgs visualization_msgs tf2_geometry_msgs ament_index_cpp
+    rclcpp
+    std_msgs
+    visualization_msgs
+    tf2_geometry_msgs
+    ament_index_cpp
+    Eigen3
   )
 
   target_link_libraries(${PROJECT_NAME}
