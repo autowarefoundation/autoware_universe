@@ -156,18 +156,12 @@ std::optional<Pose> calculateGoalPoseWithMinMargin(
   const bool left_side_parking)
 {
   using autoware_utils::calc_offset_pose;
-  // Calculate signed distance from rear pose to boundary in y direction
-  // Project rear pose onto boundary to find the perpendicular distance
-  const auto rear_to_boundary_pose_opt =
-    goal_planner_utils::calcClosestPose(boundary, rear_pose.position);
-  if (!rear_to_boundary_pose_opt) {
+  const auto signed_lateral_distance_opt =
+    goal_planner_utils::calcSignedLateralDistanceToBoundary(boundary, rear_pose);
+  if (!signed_lateral_distance_opt) {
     return std::nullopt;
   }
-  const auto & rear_to_boundary_pose = rear_to_boundary_pose_opt.value();
-
-  // In rear pose coordinate system, y component is the lateral distance to boundary
-  const double rear_to_boundary_y =
-    autoware_utils::inverse_transform_point(rear_to_boundary_pose.position, rear_pose).y;
+  const double rear_to_boundary_y = signed_lateral_distance_opt.value();
 
   // Calculate goal pose based on parking side and rear pose position
   const double offset_y = left_side_parking
