@@ -83,7 +83,6 @@ if(BUILD_TESTING)
 
   file(GLOB_RECURSE test_files test/test_multi_object_tracker.cpp
     test/test_bench.cpp
-    test/test_bench_merge.cpp
     test/test_utils.cpp
   )
   add_definitions(-D_SRC_RESOURCES_DIR_PATH="${PROJECT_SOURCE_DIR}/test/data/")

@@ -132,7 +132,7 @@ public:
     const rclcpp::Time & stamp);
 
 private:
-  virtual void initializeObjects(const TrackingScenarioConfig & params);
+  void initializeObjects(const TrackingScenarioConfig & params);
   void setOrientationFromVelocity(
     const geometry_msgs::msg::Twist & twist, geometry_msgs::msg::Pose & pose);
   void addNewCar(const std::string & id, float x, float y);
