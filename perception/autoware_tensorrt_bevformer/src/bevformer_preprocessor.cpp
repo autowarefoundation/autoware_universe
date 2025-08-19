@@ -32,6 +32,7 @@
 
 #include "autoware/tensorrt_bevformer/bevformer_preprocessor.hpp"
 
+#include <Eigen/LU>
 #include <rclcpp/logging.hpp>
 #include <rclcpp/node.hpp>
 
