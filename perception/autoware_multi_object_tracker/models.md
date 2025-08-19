@@ -40,7 +40,7 @@ The merit of using this model is that it can handle both longitudinal and latera
 ![kinematic_bicycle_model](image/kinematic_bicycle_model.png)
 
 - **state variable**
-  - rear wheel position( $x_1=x-l_r\cos\psi$, $y_1=y-l\sin\psi$ ) front wheel position( $x_2=x+l_f\cos\psi$, $y_2=y+l_f\sin\psi$ ) longitudinal velocity( $v_{long} = v\cos\beta$ ), and lateral velocity of the front wheel ( $v_{lat}=\frac{l_r+l_f}{l_r}v\sin\beta$ )
+  - rear wheel position( $x_1=x-l_r\cos\psi$, $y_1=y-l\sin\psi$ ), front wheel position( $x_2=x+l_f\cos\psi$, $y_2=y+l_f\sin\psi$ ), longitudinal velocity( $v_{long} = v\cos\beta$ ), and lateral velocity of the front wheel ( $v_{lat}=\frac{l_r+l_f}{l_r}v\sin\beta$ )
   - $[x_{1k}, y_{1k}, x_{2k}, y_{2k}, v_{long,k}, v_{lat,k} ]^\mathrm{T}$
 - **Prediction Equation**
   - $dt$: sampling time

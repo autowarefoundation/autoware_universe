@@ -289,12 +289,12 @@ double DataAssociation::calculateScore(
   const double dist_sq = dx * dx + dy * dy;
   if (dist_sq > max_dist_sq) return 0.0;
 
-  // // mahalanobis dist gate
-  // const double mahalanobis_dist = getMahalanobisDistanceFast(dx, dy, inv_cov);
-  // constexpr double mahalanobis_dist_threshold =
-  //   11.62;  // This is an empirical value corresponding to the 99.6% confidence level
-  //           // for a chi-square distribution with 2 degrees of freedom (critical value).
-  // if (mahalanobis_dist >= mahalanobis_dist_threshold) return 0.0;
+  // mahalanobis dist gate
+  const double mahalanobis_dist = getMahalanobisDistanceFast(dx, dy, inv_cov);
+  constexpr double mahalanobis_dist_threshold =
+    11.62;  // This is an empirical value corresponding to the 99.6% confidence level
+            // for a chi-square distribution with 2 degrees of freedom (critical value).
+  if (mahalanobis_dist >= mahalanobis_dist_threshold) return 0.0;
 
   // angle gate, only if the threshold is set less than pi
   const double max_rad = config_.max_rad_matrix(tracker_label, measurement_label);
