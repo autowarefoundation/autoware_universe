@@ -263,7 +263,7 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
 double DataAssociation::calculateScore(
   const types::DynamicObject & tracked_object, const std::uint8_t tracker_label,
   const types::DynamicObject & measurement_object, const std::uint8_t measurement_label,
-  [[maybe_unused]] const InverseCovariance2D & inv_cov) const
+  const InverseCovariance2D & inv_cov) const
 {
   // when the tracker and measurements are unknown, use generalized IoU
   if (tracker_label == Label::UNKNOWN && measurement_label == Label::UNKNOWN) {
