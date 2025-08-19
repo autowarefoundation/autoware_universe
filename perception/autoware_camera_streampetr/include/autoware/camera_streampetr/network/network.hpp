@@ -125,9 +125,9 @@ public:
     cudaEventDestroy(end_event_);
   }
 
-  void MarkBegin(cudaStream_t stream) { cudaEventRecord(begin_event_, stream); }
+  void MarkBegin(cudaStream_t stream) {cudaEventRecord(begin_event_, stream);}
 
-  void MarkEnd(cudaStream_t stream) { cudaEventRecord(end_event_, stream); }
+  void MarkEnd(cudaStream_t stream) {cudaEventRecord(end_event_, stream);}
 
   float Elapsed()
   {

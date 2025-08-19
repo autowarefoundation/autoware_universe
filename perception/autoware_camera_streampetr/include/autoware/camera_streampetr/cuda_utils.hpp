@@ -95,7 +95,8 @@ struct Tensor
   DataType dtype;
   TensorIOMode iomode;
 
-  Tensor(std::string name, Dims dim, DataType dtype) : name(name), dim(dim), dtype(dtype)
+  Tensor(std::string name, Dims dim, DataType dtype)
+  : name(name), dim(dim), dtype(dtype)
   {
     if (dim.nbDims == 0) {
       volume = 0;
@@ -108,7 +109,7 @@ struct Tensor
     cudaMalloc(&ptr, volume * getElementSize(dtype));
   }
 
-  int32_t nbytes() const { return volume * getElementSize(dtype); }
+  int32_t nbytes() const {return volume * getElementSize(dtype);}
 
   ~Tensor()
   {
@@ -124,10 +125,10 @@ struct Tensor
     cudaMemcpyAsync(ptr, other->ptr, nbytes(), cudaMemcpyDeviceToDevice, stream);
   }
 
-  void initialize_to_zeros(cudaStream_t stream) { cudaMemsetAsync(ptr, 0, nbytes(), stream); }
+  void initialize_to_zeros(cudaStream_t stream) {cudaMemsetAsync(ptr, 0, nbytes(), stream);}
 
   // template<class Htype=float, class Dtype=float>
-  template <class Htype = float>
+  template<class Htype = float>
   void load_from_vector(const std::vector<Htype> & data)
   {
     if (data.size() != static_cast<std::size_t>(volume)) {

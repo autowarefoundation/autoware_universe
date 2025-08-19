@@ -39,7 +39,7 @@ std::vector<float> cast_to_float(const std::vector<double> & double_vector)
   std::vector<float> float_vector(double_vector.size());
   std::transform(
     double_vector.begin(), double_vector.end(), float_vector.begin(),
-    [](double value) { return static_cast<float>(value); });
+    [](double value) {return static_cast<float>(value);});
   return float_vector;
 }
 
