@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__CONCATENATION_INFO_HPP_
-#define AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__CONCATENATION_INFO_HPP_
+#ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__CONCATENATION_INFO_MANAGER_HPP_
+#define AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__CONCATENATION_INFO_MANAGER_HPP_
 
 #include <builtin_interfaces/msg/time.hpp>
 
@@ -148,7 +148,7 @@ const std::unordered_map<std::string, uint8_t> matching_strategy_name_map = {
  * @note This class is designed for single-threaded use and should be reset
  *       between concatenation cycles using reset_and_get_base_info().
  */
-class ConcatenationInfo
+class ConcatenationInfoManager
 {
 public:
   /**
@@ -158,14 +158,14 @@ public:
    * @param input_topics List of input topic names to track for concatenation
    * @throws std::invalid_argument if matching_strategy_name is not recognized
    */
-  ConcatenationInfo(
+  ConcatenationInfoManager(
     const std::string & matching_strategy_name, const std::vector<std::string> & input_topics)
   : concatenated_point_cloud_info_base_msg_(
       create_concatenation_info_base(matching_strategy_name, input_topics)),
     num_expected_sources_(concatenated_point_cloud_info_base_msg_.source_info.size())
   {
   }
-  ~ConcatenationInfo() = default;
+  ~ConcatenationInfoManager() = default;
 
   /**
    * @brief Reset internal state and get base concatenation info message.
@@ -394,4 +394,4 @@ private:
 
 }  // namespace autoware::pointcloud_preprocessor
 
-#endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__CONCATENATION_INFO_HPP_
+#endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__CONCATENATION_INFO_MANAGER_HPP_

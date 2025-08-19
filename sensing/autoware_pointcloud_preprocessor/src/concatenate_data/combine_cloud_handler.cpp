@@ -112,6 +112,7 @@ void CombineCloudHandler<PointCloud2Traits>::correct_pointcloud_motion(
     adjust_to_old_data_transform, *transformed_cloud_ptr, *transformed_delay_compensated_cloud_ptr);
 }
 
+// TODO(vividf): refactor this function for readability
 ConcatenatedCloudResult<PointCloud2Traits>
 CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
   std::unordered_map<std::string, PointCloud2Traits::PointCloudMessage::ConstSharedPtr> &
@@ -139,7 +140,7 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
     std::make_unique<sensor_msgs::msg::PointCloud2>();
   concatenate_cloud_result.concatenation_info_ptr =
     std::make_unique<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
-      concatenation_info_.reset_and_get_base_info());
+      concatenation_info_manager_.reset_and_get_base_info());
   {
     // Normally, pcl::concatenatePointCloud() copies the field layout (e.g., XYZIRC)
     // from the non-empty point cloud when given one empty and one non-empty input.
@@ -188,7 +189,7 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
       pcl::concatenatePointCloud(
         *concatenate_cloud_result.concatenate_cloud_ptr, *transformed_delay_compensated_cloud_ptr,
         *concatenate_cloud_result.concatenate_cloud_ptr);
-      concatenation_info_.update_source_from_point_cloud(
+      concatenation_info_manager_.update_source_from_point_cloud(
         *transformed_delay_compensated_cloud_ptr, topic,
         autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
         *concatenate_cloud_result.concatenation_info_ptr);
@@ -224,7 +225,7 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
     }
   }
   concatenate_cloud_result.concatenate_cloud_ptr->header.stamp = oldest_stamp;
-  concatenation_info_.set_result(
+  concatenation_info_manager_.set_result(
     *concatenate_cloud_result.concatenate_cloud_ptr,
     *concatenate_cloud_result.concatenation_info_ptr);
 
