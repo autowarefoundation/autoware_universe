@@ -3,7 +3,7 @@ name: pre-commit-lite
 on:
   pull_request:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   pre-commit-lite:
