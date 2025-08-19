@@ -187,13 +187,13 @@ void set_right_turn_target_lanelets(
              lanelet::AttributeValueString::Road;
   };
 
-  const auto is_red_signal_lane = [&](const lanelet::ConstLanelet & ll) {
+  const auto is_fully_priotized = [&](const lanelet::ConstLanelet & ll) {
     for (const auto & regulatory_element : ll.regulatoryElementsAs<lanelet::TrafficLight>()) {
       const auto traffic_light_elements = context->get_traffic_signal(regulatory_element->id());
       if (!traffic_light_elements.has_value()) continue;
 
-      if (autoware::traffic_light_utils::hasTrafficLightCircleColor(
-            traffic_light_elements.value(), TrafficLightElement::RED)) {
+      if (autoware::traffic_light_utils::hasTrafficLightShape(
+            traffic_light_elements.value(), TrafficLightElement::RIGHT_ARROW)) {
         return true;
       }
     }
@@ -243,7 +243,7 @@ void set_right_turn_target_lanelets(
       rclcpp::Duration(ego_traj.back_traj[overlap_index->second].time_from_start).seconds();
     if (overlap_time.first > time_horizon) continue;
     const auto & it = target_lanelets.find(id);
-    if (p.right_turn.check_traffic_signal && is_red_signal_lane(ll)) {
+    if (p.right_turn.check_traffic_signal && is_fully_priotized(lanelets.turn_lanelets.front())) {
       if (it != target_lanelets.end()) target_lanelets.erase(it);
       continue;
     }
@@ -280,13 +280,13 @@ void set_left_turn_target_lanelets(
 
   const auto & p = params.icc_parameters;
 
-  const auto is_red_signal_lane = [&](const lanelet::ConstLanelet & ll) {
+  const auto is_fully_priotized = [&](const lanelet::ConstLanelet & ll) {
     for (const auto & regulatory_element : ll.regulatoryElementsAs<lanelet::TrafficLight>()) {
       const auto traffic_light_elements = context->get_traffic_signal(regulatory_element->id());
       if (!traffic_light_elements.has_value()) continue;
 
       if (autoware::traffic_light_utils::hasTrafficLightCircleColor(
-            traffic_light_elements.value(), TrafficLightElement::RED)) {
+            traffic_light_elements.value(), TrafficLightElement::GREEN)) {
         return true;
       }
     }
@@ -320,7 +320,7 @@ void set_left_turn_target_lanelets(
       rclcpp::Duration(ego_traj.back_traj[overlap_index->first].time_from_start).seconds();
     if (overlap_time.first > time_horizon) continue;
     const auto & it = target_lanelets.find(id);
-    if (p.left_turn.check_traffic_signal && is_red_signal_lane(ll)) {
+    if (p.left_turn.check_traffic_signal && is_fully_priotized(lanelets.turn_lanelets.front())) {
       if (it != target_lanelets.end()) target_lanelets.erase(it);
       continue;
     }
