@@ -1143,7 +1143,25 @@ PriorityOrder StartPlannerModule::determinePriorityOrder(
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   PriorityOrder order_priority;
-  if (search_priority == "efficient_path") {
+
+  if (search_priority == "custom") {
+    if (parameters_->planner_priority_list.empty()) {
+      RCLCPP_ERROR(
+        getLogger(),
+        "Custom priority mode requested but planner_priority_list is empty. Falling back to "
+        "efficient_path");
+    } else {
+      try {
+        return generatePriorityOrderFromList(
+          parameters_->planner_priority_list, start_pose_candidates_num);
+      } catch (const std::runtime_error & e) {
+        RCLCPP_ERROR(
+          getLogger(), "Custom priority failed: %s. Falling back to efficient_path", e.what());
+      }
+    }
+  }
+
+  if (search_priority == "efficient_path" || search_priority == "custom") {
     for (const auto & planner : start_planners_) {
       for (size_t i = 0; i < start_pose_candidates_num; i++) {
         order_priority.emplace_back(i, planner);
@@ -1159,6 +1177,69 @@ PriorityOrder StartPlannerModule::determinePriorityOrder(
     RCLCPP_ERROR(getLogger(), "Invalid search_priority: %s", search_priority.c_str());
     throw std::domain_error("[start_planner] invalid search_priority");
   }
+  return order_priority;
+}
+
+PriorityOrder StartPlannerModule::generatePriorityOrderFromList(
+  const std::vector<std::string> & priority_list, const size_t start_pose_candidates_num)
+{
+  PriorityOrder order_priority;
+
+  // Custom priority mode always uses short_back_distance style
+  // Iterate through start_pose_candidates first, then planners
+  for (size_t i = 0; i < start_pose_candidates_num; i++) {
+    for (const auto & planner_type_str : priority_list) {
+      const auto planner_type = magic_enum::enum_cast<PlannerType>(planner_type_str);
+
+      if (!planner_type.has_value()) {
+        RCLCPP_WARN(
+          getLogger(), "Unknown planner type string: %s, skipping", planner_type_str.c_str());
+        continue;
+      }
+
+      const auto planner_type_enum = planner_type.value();
+      if (planner_type_enum == PlannerType::NONE) {
+        continue;
+      }
+
+      bool planner_enabled = false;
+      switch (planner_type_enum) {
+        case PlannerType::SHIFT:
+          planner_enabled = parameters_->enable_shift_pull_out;
+          break;
+        case PlannerType::GEOMETRIC:
+          planner_enabled = parameters_->enable_geometric_pull_out;
+          break;
+        case PlannerType::CLOTHOID:
+          planner_enabled = parameters_->enable_clothoid_fallback;
+          break;
+        case PlannerType::FREESPACE:
+          planner_enabled = parameters_->enable_freespace_planner;
+          break;
+        default:
+          planner_enabled = false;
+          break;
+      }
+
+      if (!planner_enabled) {
+        continue;
+      }
+
+      // Find the corresponding planner in start_planners_
+      for (const auto & planner : start_planners_) {
+        if (planner->getPlannerType() == planner_type_enum) {
+          order_priority.emplace_back(i, planner);
+          break;  // Found the planner, move to next in priority list
+        }
+      }
+    }
+  }
+
+  if (order_priority.empty()) {
+    RCLCPP_ERROR(getLogger(), "No valid planners found in custom priority list");
+    throw std::runtime_error("[start_planner] No valid planners available for custom priority");
+  }
+
   return order_priority;
 }
 

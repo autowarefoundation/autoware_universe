@@ -321,13 +321,16 @@ struct StartPlannerParameters
   bool check_clothoid_path_lane_departure{true};  // enable lane departure check for clothoid path
 
   // search start pose backward
-  std::string search_priority;  // "efficient_path" or "short_back_distance"
+  std::string search_priority;  // "efficient_path", "short_back_distance", or "custom"
   bool enable_back{false};
   double backward_velocity{0.0};
   double max_back_distance{0.0};
   double backward_search_resolution{0.0};
   double backward_path_update_duration{0.0};
   double ignore_distance_from_lane_end{0.0};
+
+  // planner priority configuration for custom priority mode
+  std::vector<std::string> planner_priority_list{};
   // freespace planner
   bool enable_freespace_planner{false};
   std::string freespace_planner_algorithm;

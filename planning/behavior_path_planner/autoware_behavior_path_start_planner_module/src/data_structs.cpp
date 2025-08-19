@@ -106,7 +106,7 @@ StartPlannerParameters StartPlannerParameters::init(rclcpp::Node & node)
     // search start pose backward
     p.search_priority = get_or_declare_parameter<std::string>(
       node,
-      ns + "search_priority");  // "efficient_path" or "short_back_distance"
+      ns + "search_priority");  // "efficient_path", "short_back_distance", or "custom"
     p.enable_back = get_or_declare_parameter<bool>(node, ns + "enable_back");
     p.backward_velocity = get_or_declare_parameter<double>(node, ns + "backward_velocity");
     p.max_back_distance = get_or_declare_parameter<double>(node, ns + "max_back_distance");
@@ -116,6 +116,16 @@ StartPlannerParameters StartPlannerParameters::init(rclcpp::Node & node)
       get_or_declare_parameter<double>(node, ns + "backward_path_update_duration");
     p.ignore_distance_from_lane_end =
       get_or_declare_parameter<double>(node, ns + "ignore_distance_from_lane_end");
+
+    // planner priority configuration for custom priority mode
+    // Only load planner_priority_list if search_priority is "custom"
+    if (p.search_priority == "custom") {
+      p.planner_priority_list =
+        get_or_declare_parameter<std::vector<std::string>>(node, ns + "planner_priority_list");
+    } else {
+      // For non-custom modes, initialize as empty list
+      p.planner_priority_list = {};
+    }
     // stop condition
     p.maximum_deceleration_for_stop =
       get_or_declare_parameter<double>(node, ns + "stop_condition.maximum_deceleration_for_stop");

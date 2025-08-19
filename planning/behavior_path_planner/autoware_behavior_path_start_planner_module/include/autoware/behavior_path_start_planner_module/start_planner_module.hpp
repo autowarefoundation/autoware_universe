@@ -263,6 +263,10 @@ ego pose.
 
   PriorityOrder determinePriorityOrder(
     const std::string & search_priority, const size_t start_pose_candidates_num);
+
+  PriorityOrder generatePriorityOrderFromList(
+    const std::vector<std::string> & priority_list, const size_t start_pose_candidates_num);
+
   bool findPullOutPath(
     const Pose & start_pose_candidate, const std::shared_ptr<PullOutPlannerBase> & planner,
     const Pose & refined_start_pose, const Pose & goal_pose, const double collision_check_margin,
