@@ -29,6 +29,7 @@
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
@@ -43,6 +44,7 @@
 
 namespace autoware::planning_validator
 {
+using autoware_adapi_v1_msgs::msg::OperationModeState;
 using autoware_internal_debug_msgs::msg::Float64Stamped;
 using autoware_map_msgs::msg::LaneletMapBin;
 using autoware_planning_msgs::msg::LaneletRoute;
@@ -88,6 +90,8 @@ private:
     this, "~/input/kinematics"};
   autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped> sub_acceleration_{
     this, "~/input/acceleration"};
+  autoware_utils::InterProcessPollingSubscriber<OperationModeState> sub_operational_state_{
+    this, "~/input/operational_mode_state"};
 
   // publisher
   rclcpp::Publisher<Trajectory>::SharedPtr pub_traj_;
@@ -100,8 +104,10 @@ private:
   std::shared_ptr<PlanningValidatorContext> context_;
 
   bool is_critical_error_ = false;
+  bool flag_autonomous_control_enabled_ = false;
 
   bool isAllValid(const PlanningValidatorStatus & status) const;
+  bool infer_autonomous_control_state(const OperationModeState::ConstSharedPtr msg);
 
   Trajectory::ConstSharedPtr soft_stop_trajectory_;
 

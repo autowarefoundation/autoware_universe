@@ -19,6 +19,7 @@
 #include <autoware_utils/geometry/geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
@@ -33,6 +34,7 @@
 namespace autoware::planning_validator
 {
 using autoware::planning_validator::PlanningValidatorNode;
+using autoware_adapi_v1_msgs::msg::OperationModeState;
 using autoware_map_msgs::msg::LaneletMapBin;
 using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::Trajectory;
@@ -51,6 +53,15 @@ using test_utils::WHEELBASE;
 constexpr double epsilon = 0.001;
 constexpr double scale_margin = 1.1;
 
+OperationModeState generateAutonomousOperationMode()
+{
+  OperationModeState msg;
+  msg.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
+  msg.mode = OperationModeState::AUTONOMOUS;
+  msg.is_autoware_control_enabled = true;
+  return msg;
+}
+
 class PubSubManager : public rclcpp::Node
 {
 public:
@@ -61,6 +72,8 @@ public:
     acceleration_pub_ = create_publisher<AccelWithCovarianceStamped>(
       "/planning_validator_node/input/acceleration", 1);
     pointcloud_pub_ = create_publisher<PointCloud2>("/planning_validator_node/input/pointcloud", 1);
+    operational_mode_pub_ = create_publisher<OperationModeState>(
+      "/planning_validator_node/input/operational_mode_state", 1);
     diag_sub_ = create_subscription<DiagnosticArray>(
       "/diagnostics", 1,
       [this](const DiagnosticArray::ConstSharedPtr msg) { received_diags_.push_back(msg); });
@@ -77,6 +90,7 @@ public:
   rclcpp::Publisher<Odometry>::SharedPtr kinematics_pub_;
   rclcpp::Publisher<AccelWithCovarianceStamped>::SharedPtr acceleration_pub_;
   rclcpp::Publisher<PointCloud2>::SharedPtr pointcloud_pub_;
+  rclcpp::Publisher<OperationModeState>::SharedPtr operational_mode_pub_;
   rclcpp::Publisher<LaneletMapBin>::SharedPtr map_pub_;
   rclcpp::Publisher<LaneletRoute>::SharedPtr route_pub_;
   rclcpp::Subscription<DiagnosticArray>::SharedPtr diag_sub_;
@@ -142,6 +156,7 @@ std::pair<std::shared_ptr<PlanningValidatorNode>, std::shared_ptr<PubSubManager>
   manager->trajectory_pub_->publish(trajectory);
   manager->kinematics_pub_->publish(ego_odom);
   manager->acceleration_pub_->publish(acceleration);
+  manager->operational_mode_pub_->publish(generateAutonomousOperationMode());
   manager->pointcloud_pub_->publish(
     sensor_msgs::msg::PointCloud2{}.set__header(
       std_msgs::msg::Header{}.set__frame_id("base_link")));
