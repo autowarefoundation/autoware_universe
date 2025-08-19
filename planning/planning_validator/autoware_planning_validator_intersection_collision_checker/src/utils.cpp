@@ -289,6 +289,11 @@ void set_left_turn_target_lanelets(
             traffic_light_elements.value(), TrafficLightElement::GREEN)) {
         return true;
       }
+
+      if (autoware::traffic_light_utils::hasTrafficLightCircleColor(
+            traffic_light_elements.value(), TrafficLightElement::AMBER)) {
+        return true;
+      }
     }
 
     return false;
