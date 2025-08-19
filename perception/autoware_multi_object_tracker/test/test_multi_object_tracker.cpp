@@ -17,6 +17,7 @@
 #include "autoware/multi_object_tracker/odometry.hpp"
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
 #include "test_bench.hpp"
+#include "test_bench_merge.hpp"
 #include "test_utils.hpp"
 
 #include <rclcpp/rclcpp.hpp>

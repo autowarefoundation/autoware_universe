@@ -219,8 +219,8 @@ void TrackerProcessor::removeOldTracker(const rclcpp::Time & time)
 
 double calcGeneralizedIoUThresholdUnknown(double target_speed, double generalized_iou_threshold)
 {
-  static constexpr double static_target_speed = 0.5;  // m/s
-  static constexpr double moving_target_speed = 2.0;  // m/s
+  static constexpr double static_target_speed = 0.5;  // m/s = 1.8 km/h
+  static constexpr double moving_target_speed = 2.5;  // m/s = 9.0 km/h
   static constexpr double static_iou_threshold = -0.1;
   if (target_speed < static_target_speed) {
     return static_iou_threshold;
