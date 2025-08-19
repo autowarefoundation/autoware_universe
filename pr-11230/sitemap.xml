@@ -1011,6 +1011,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11230/planning/planning_validator/autoware_planning_validator_rear_collision_checker/</loc>
+         <lastmod>2025-08-19</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-11230/planning/planning_validator/autoware_planning_validator_trajectory_checker/</loc>
          <lastmod>2025-08-19</lastmod>
          <changefreq>daily</changefreq>
