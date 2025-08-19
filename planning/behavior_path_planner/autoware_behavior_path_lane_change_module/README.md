@@ -1232,11 +1232,11 @@ The following parameters are used to judge lane change completion.
 
 ### Lane change regulations
 
-| Name                       | Unit | Type    | Description                                                | Default value |
-| :------------------------- | ---- | ------- | ---------------------------------------------------------- | ------------- |
-| `regulation.crosswalk`     | [-]  | boolean | Allow lane change in between crosswalks                    | true          |
-| `regulation.intersection`  | [-]  | boolean | Allow lane change in between intersections                 | true          |
-| `regulation.traffic_light` | [-]  | boolean | Allow lane change to be performed in between traffic light | true          |
+| Name                       | Unit | Type    | Description                                              | Default value |
+| :------------------------- | ---- | ------- | -------------------------------------------------------- | ------------- |
+| `regulation.crosswalk`     | [-]  | boolean | Consider lane change regulation in between crosswalks    | true          |
+| `regulation.intersection`  | [-]  | boolean | Consider lane change regulation in between intersections | true          |
+| `regulation.traffic_light` | [-]  | boolean | Consider lane change regulation in between traffic light | true          |
 
 ### Ego vehicle stuck detection
 
