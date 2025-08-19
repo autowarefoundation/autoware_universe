@@ -63,10 +63,10 @@ struct StrategyAdvancedConfig : public StrategyConfig
    * @param reference_timestamp_max Maximum reference timestamp for concatenation window
    */
   StrategyAdvancedConfig(
-    const builtin_interfaces::msg::Time & reference_timestamp_min,
-    const builtin_interfaces::msg::Time & reference_timestamp_max)
-  : reference_timestamp_min(reference_timestamp_min),
-    reference_timestamp_max(reference_timestamp_max)
+    const builtin_interfaces::msg::Time & reference_timestamp_min_msg,
+    const builtin_interfaces::msg::Time & reference_timestamp_max_msg)
+  : reference_timestamp_min_msg(reference_timestamp_min_msg),
+    reference_timestamp_max_msg(reference_timestamp_max_msg)
   {
   }
 
@@ -78,7 +78,8 @@ struct StrategyAdvancedConfig : public StrategyConfig
   explicit StrategyAdvancedConfig(const std::vector<uint8_t> & serialized_data)
   {
     if (
-      serialized_data.size() != sizeof(reference_timestamp_min) + sizeof(reference_timestamp_max)) {
+      serialized_data.size() !=
+      sizeof(reference_timestamp_min_msg) + sizeof(reference_timestamp_max_msg)) {
       throw std::invalid_argument("Invalid serialized data size for StrategyAdvancedConfig");
     }
 
@@ -86,12 +87,14 @@ struct StrategyAdvancedConfig : public StrategyConfig
 
     // Deserialize reference_timestamp_min
     std::memcpy(
-      &reference_timestamp_min, serialized_data.data() + offset, sizeof(reference_timestamp_min));
-    offset += sizeof(reference_timestamp_min);
+      &reference_timestamp_min_msg, serialized_data.data() + offset,
+      sizeof(reference_timestamp_min_msg));
+    offset += sizeof(reference_timestamp_min_msg);
 
     // Deserialize reference_timestamp_max
     std::memcpy(
-      &reference_timestamp_max, serialized_data.data() + offset, sizeof(reference_timestamp_max));
+      &reference_timestamp_max_msg, serialized_data.data() + offset,
+      sizeof(reference_timestamp_max_msg));
   }
 
   /**
@@ -101,29 +104,29 @@ struct StrategyAdvancedConfig : public StrategyConfig
   [[nodiscard]] std::vector<uint8_t> serialize() const final
   {
     std::vector<uint8_t> serialized;
-    serialized.reserve(sizeof(reference_timestamp_min) + sizeof(reference_timestamp_max));
+    serialized.reserve(sizeof(reference_timestamp_min_msg) + sizeof(reference_timestamp_max_msg));
 
     // Serialize reference_timestamp_min
     const auto * reference_timestamp_min_ptr =
-      reinterpret_cast<const uint8_t *>(&reference_timestamp_min);
+      reinterpret_cast<const uint8_t *>(&reference_timestamp_min_msg);
     serialized.insert(
       serialized.end(), reference_timestamp_min_ptr,
-      reference_timestamp_min_ptr + sizeof(reference_timestamp_min));
+      reference_timestamp_min_ptr + sizeof(reference_timestamp_min_msg));
 
     // Serialize reference_timestamp_max
     const auto * reference_timestamp_max_ptr =
-      reinterpret_cast<const uint8_t *>(&reference_timestamp_max);
+      reinterpret_cast<const uint8_t *>(&reference_timestamp_max_msg);
     serialized.insert(
       serialized.end(), reference_timestamp_max_ptr,
-      reference_timestamp_max_ptr + sizeof(reference_timestamp_max));
+      reference_timestamp_max_ptr + sizeof(reference_timestamp_max_msg));
 
     return serialized;
   }
 
   //! Minimum reference timestamp for concatenation time window
-  builtin_interfaces::msg::Time reference_timestamp_min;
+  builtin_interfaces::msg::Time reference_timestamp_min_msg;
   //! Maximum reference timestamp for concatenation time window
-  builtin_interfaces::msg::Time reference_timestamp_max;
+  builtin_interfaces::msg::Time reference_timestamp_max_msg;
 };
 
 /**

@@ -14,6 +14,8 @@
 
 #include "autoware/pointcloud_preprocessor/concatenate_data/combine_cloud_handler.hpp"
 
+#include "autoware/pointcloud_preprocessor/concatenate_data/concatenation_info_manager.hpp"
+
 #include <pcl_ros/transforms.hpp>
 
 #include <sensor_msgs/point_cloud2_iterator.hpp>
@@ -116,7 +118,8 @@ void CombineCloudHandler<PointCloud2Traits>::correct_pointcloud_motion(
 ConcatenatedCloudResult<PointCloud2Traits>
 CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
   std::unordered_map<std::string, PointCloud2Traits::PointCloudMessage::ConstSharedPtr> &
-    topic_to_cloud_map)
+    topic_to_cloud_map,
+  const std::shared_ptr<CollectorInfoBase> & collector_info)
 {
   ConcatenatedCloudResult<PointCloud2Traits> concatenate_cloud_result;
 
@@ -225,6 +228,29 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
     }
   }
   concatenate_cloud_result.concatenate_cloud_ptr->header.stamp = oldest_stamp;
+
+  if (const auto advanced_info = std::dynamic_pointer_cast<AdvancedCollectorInfo>(collector_info)) {
+    const auto reference_timestamp_min = advanced_info->timestamp - advanced_info->noise_window;
+    const auto reference_timestamp_max = advanced_info->timestamp + advanced_info->noise_window;
+
+    builtin_interfaces::msg::Time reference_timestamp_min_msg;
+    reference_timestamp_min_msg.sec = static_cast<int32_t>(reference_timestamp_min);
+    reference_timestamp_min_msg.nanosec =
+      static_cast<uint32_t>((reference_timestamp_min - reference_timestamp_min_msg.sec) * 1e9);
+
+    builtin_interfaces::msg::Time reference_timestamp_max_msg;
+    reference_timestamp_max_msg.sec = static_cast<int32_t>(reference_timestamp_max);
+    reference_timestamp_max_msg.nanosec =
+      static_cast<uint32_t>((reference_timestamp_max - reference_timestamp_max_msg.sec) * 1e9);
+
+    StrategyAdvancedConfig strategy_config(
+      reference_timestamp_min_msg, reference_timestamp_max_msg);
+    auto serialized_config = strategy_config.serialize();
+    ConcatenationInfoManager::set_config(
+      serialized_config, *concatenate_cloud_result.concatenation_info_ptr);
+  }
+
+  // Set strategy configuration for advanced mode
   concatenation_info_manager_.set_result(
     *concatenate_cloud_result.concatenate_cloud_ptr,
     *concatenate_cloud_result.concatenation_info_ptr);

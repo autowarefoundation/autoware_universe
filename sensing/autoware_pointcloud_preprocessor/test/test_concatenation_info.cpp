@@ -225,10 +225,10 @@ TEST_F(ConcatenationInfoTest, UpdateConcatenatedPointCloudConfig)
   // Verify we can deserialize it back
   auto deserialized_cfg =
     StrategyAdvancedConfig(concatenated_point_cloud_info_msg.matching_strategy_config);
-  EXPECT_EQ(deserialized_cfg.reference_timestamp_min.sec, reference_timestamp_min.sec);
-  EXPECT_EQ(deserialized_cfg.reference_timestamp_min.nanosec, reference_timestamp_min.nanosec);
-  EXPECT_EQ(deserialized_cfg.reference_timestamp_max.sec, reference_timestamp_max.sec);
-  EXPECT_EQ(deserialized_cfg.reference_timestamp_max.nanosec, reference_timestamp_max.nanosec);
+  EXPECT_EQ(deserialized_cfg.reference_timestamp_min_msg.sec, reference_timestamp_min.sec);
+  EXPECT_EQ(deserialized_cfg.reference_timestamp_min_msg.nanosec, reference_timestamp_min.nanosec);
+  EXPECT_EQ(deserialized_cfg.reference_timestamp_max_msg.sec, reference_timestamp_max.sec);
+  EXPECT_EQ(deserialized_cfg.reference_timestamp_max_msg.nanosec, reference_timestamp_max.nanosec);
 }
 
 TEST_F(ConcatenationInfoTest, StrategyAdvancedConfigInvalidSerializedData)
