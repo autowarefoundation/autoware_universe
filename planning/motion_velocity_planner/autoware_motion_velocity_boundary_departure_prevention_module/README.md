@@ -289,41 +289,51 @@ This section details how the system calculates the final slow down velocity base
 
 The values for **jerk** ($j_{\text{brake}}$) and **braking acceleration** ($a_{\text{brake}}$) used in the following steps are determined by the **longitudinal feasibility tier** selected earlier (Comfort, Feasible, or Hard).
 
-1. **Deceleration Selection**: The system begins by selecting the initial active acceleration, $a_{\text{act}}$, which is the lesser (more negative) of the current acceleration and the braking acceleration value from the selected tier. The jerk, $j$, is also set to the value from the selected tier.
-
-   $$a_{\text{act}}=\min(a_{\text{curr}},\ a_{\text{brake}})\le 0,\qquad j=j_{\text{brake}}\le 0.$$
-
-2. **Jerk Ramp**: The vehicle enters a jerk phase where its acceleration changes smoothly over time. The equations below describe the vehicle's acceleration, velocity, and distance during this phase.
-
-   $$
-   \begin{aligned}
-   a(t)&=a_{\text{act}}+j\,t,\\
-   v(t)&=v_0+a_{\text{act}}\,t+\tfrac12 j t^2,\\
-   s(t)&=v_0\,t+\tfrac12 a_{\text{act}}\,t^2+\tfrac16 j t^3,\\[4pt]
-   t_j&=\frac{a_{\text{brake}}-a_{\text{act}}}{j}\ (\ge 0),\\
-   v_1&=v(t_j)=v_0+\tfrac12\frac{a_{\text{brake}}^{2}-a_{\text{act}}^{2}}{j},\\
-   s_j&=s(t_j).
-   \end{aligned}
-   $$
-
-3. **Waypoint Inside the Jerk Ramp**: If the longitudinal distance to the start of the target interval, $s_\star$, falls within the distance covered during the initial jerk phase ($s_\star \in [0, s_j]$), the system finds the required time and corresponding velocity to reach that point. The slow down velocity, $v_{\text{cmd}}$, is then set to the greater of the target velocity and the velocity calculated for that point, ensuring a safe and controlled deceleration.
-
-   $$v_{\text{cmd}}=\max\!\bigl(v_{\text{target}},\, v(t^\star)\bigr).$$
-
-4. **Waypoint After the Jerk Ramp**: If the target point is farther away ($s_\star > s_j$), the vehicle will have completed its initial jerk phase. The remaining distance, $s_{\text{rem}}$, is used to calculate the final velocity. The slow down velocity is determined based on the constant deceleration phase that follows the initial jerk.
-
-   $$
-   \begin{aligned}
-   \Delta &= v_1^{2}-v_{\text{target}}^{2}+2\,a_{\text{brake}}\,s_{\text{rem}},\\
-   \text{if } \Delta<0 &: \quad v_{\text{cmd}}=v_{\text{target}},\\
-   \text{else } \ t_a&=\frac{-v_1+\sqrt{\Delta}}{a_{\text{brake}}},\qquad
-   v_{\text{cmd}}=\max\!\bigl(v_{\text{target}},\, v_1+a_{\text{brake}}\,t_a\bigr).
-   \end{aligned}
-   $$
-
 !!! Note
 
     To prevent sudden, unintended deceleration, the system returns the largest safe velocity if the longitudinal gap is very small. This ensures that the vehicle does not brake abruptly when approaching the target point.
+
+#### 1. Deceleration Selection\*\*
+
+The system begins by selecting the initial active acceleration, $a_{\text{act}}$, which is the lesser (more negative) of the current acceleration and the braking acceleration value from the selected tier. The jerk, $j$, is also set to the value from the selected tier.
+
+$$
+a_{\text{act}}=\min(a_{\text{curr}},\ a_{\text{brake}})\le 0,\qquad j=j_{\text{brake}}\le 0.
+$$
+
+#### 2. **Jerk Ramp**
+
+The vehicle enters a jerk phase where its acceleration changes smoothly over time. The equations below describe the vehicle's acceleration, velocity, and distance during this phase.
+
+$$
+\begin{aligned}
+a(t)&=a_{\text{act}}+j\,t,\\
+v(t)&=v_0+a_{\text{act}}\,t+\tfrac12 j t^2,\\
+s(t)&=v_0\,t+\tfrac12 a_{\text{act}}\,t^2+\tfrac16 j t^3,\\[4pt]
+t_j&=\frac{a_{\text{brake}}-a_{\text{act}}}{j}\ (\ge 0),\\
+v_1&=v(t_j)=v_0+\tfrac12\frac{a_{\text{brake}}^{2}-a_{\text{act}}^{2}}{j},\\
+s_j&=s(t_j).
+\end{aligned}
+$$
+
+#### 3. **Waypoint Inside the Jerk Ramp**
+
+If the longitudinal distance to the start of the target interval, $s_\star$, falls within the distance covered during the initial jerk phase ($s_\star \in [0, s_j]$), the system finds the required time and corresponding velocity to reach that point. The slow down velocity, $v_{\text{cmd}}$, is then set to the greater of the target velocity and the velocity calculated for that point, ensuring a safe and controlled deceleration.
+
+$$v_{\text{cmd}}=\max\!\bigl(v_{\text{target}},\, v(t^\star)\bigr).$$
+
+#### 4. **Waypoint After the Jerk Ramp**
+
+If the target point is farther away ($s_\star > s_j$), the vehicle will have completed its initial jerk phase. The remaining distance, $s_{\text{rem}}$, is used to calculate the final velocity. The slow down velocity is determined based on the constant deceleration phase that follows the initial jerk.
+
+$$
+\begin{aligned}
+\Delta &= v_1^{2}-v_{\text{target}}^{2}+2\,a_{\text{brake}}\,s_{\text{rem}},\\
+\text{if } \Delta<0 &: \quad v_{\text{cmd}}=v_{\text{target}},\\
+\text{else } \ t_a&=\frac{-v_1+\sqrt{\Delta}}{a_{\text{brake}}},\qquad
+v_{\text{cmd}}=\max\!\bigl(v_{\text{target}},\, v_1+a_{\text{brake}}\,t_a\bigr).
+\end{aligned}
+$$
 
 ## Parameters
 
