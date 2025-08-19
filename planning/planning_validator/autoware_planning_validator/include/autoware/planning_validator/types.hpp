@@ -173,7 +173,8 @@ struct PlanningValidatorContext
   explicit PlanningValidatorContext(rclcpp::Node * node)
   : vehicle_info(autoware::vehicle_info_utils::VehicleInfoUtils(*node).getVehicleInfo()),
     tf_buffer{node->get_clock()},
-    tf_listener{tf_buffer}
+    tf_listener{tf_buffer},
+    clock{node->get_clock()}
   {
     debug_pose_publisher = std::make_shared<PlanningValidatorDebugMarkerPublisher>(node);
     data = std::make_shared<PlanningValidatorData>();
@@ -193,6 +194,7 @@ struct PlanningValidatorContext
 
   tf2_ros::Buffer tf_buffer;
   tf2_ros::TransformListener tf_listener;
+  rclcpp::Clock::SharedPtr clock{};
 
   auto get_traffic_signal(const int64_t group_id) -> std::optional<std::vector<TrafficLightElement>>
   {
@@ -206,8 +208,7 @@ struct PlanningValidatorContext
 
     const auto & traffic_signals = data->traffic_signals;
 
-    const auto elapsed_time =
-      (rclcpp::Clock{RCL_ROS_TIME}.now() - traffic_signals->stamp).seconds();
+    const auto elapsed_time = (clock->now() - traffic_signals->stamp).seconds();
     if (elapsed_time > params.th_traffic_light_timeout) {
       return std::nullopt;
     }
