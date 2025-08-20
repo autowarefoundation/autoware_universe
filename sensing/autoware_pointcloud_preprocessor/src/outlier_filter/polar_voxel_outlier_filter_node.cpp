@@ -235,13 +235,13 @@ auto PolarVoxelOutlierFilterComponent::process_point_for_voxel_info(
 
   // Step 4: Create voxel index and determine point classification
   PolarVoxelIndex voxel_idx = polar_to_polar_voxel(*polar_opt);
-  bool is_primary = determine_if_point_is_primary(has_return_type, current_return_type);
+  bool is_primary = is_point_primary(has_return_type, current_return_type);
 
   // Step 5: Return successful result
   return PointVoxelInfo{voxel_idx, is_primary};
 }
 
-bool PolarVoxelOutlierFilterComponent::determine_if_point_is_primary(
+bool PolarVoxelOutlierFilterComponent::is_point_primary(
   bool has_return_type, uint8_t return_type) const
 {
   if (!has_return_type) {
@@ -262,30 +262,49 @@ PolarVoxelOutlierFilterComponent::create_valid_points_mask(
   ValidPointsMask valid_points_mask(point_voxel_info.size(), false);
 
   for (size_t i = 0; i < point_voxel_info.size(); ++i) {
-    const auto & optional_info = point_voxel_info[i];
-
-    // Early continue if no voxel info available
-    if (!optional_info) {
-      continue;
+    if (is_point_valid_for_mask(point_voxel_info[i], valid_voxels)) {
+      valid_points_mask[i] = true;
     }
-
-    const auto & info = *optional_info;
-
-    // Early continue if voxel is not valid
-    if (valid_voxels.count(info.voxel_idx) == 0) {
-      continue;
-    }
-
-    // Early continue if secondary return filtering is enabled and point is secondary
-    if (enable_secondary_return_filtering_ && !info.is_primary) {
-      continue;
-    }
-
-    // Point passed all checks - mark as valid
-    valid_points_mask[i] = true;
   }
 
   return valid_points_mask;
+}
+
+bool PolarVoxelOutlierFilterComponent::is_point_valid_for_mask(
+  const std::optional<PointVoxelInfo> & optional_info, const VoxelIndexSet & valid_voxels) const
+{
+  if (!has_voxel_info(optional_info)) {
+    return false;
+  }
+
+  const auto & info = *optional_info;
+
+  if (!is_voxel_in_valid_set(info.voxel_idx, valid_voxels)) {
+    return false;
+  }
+
+  return passes_secondary_return_filter(info.is_primary);
+}
+
+bool PolarVoxelOutlierFilterComponent::has_voxel_info(
+  const std::optional<PointVoxelInfo> & optional_info) const
+{
+  return optional_info.has_value();
+}
+
+bool PolarVoxelOutlierFilterComponent::is_voxel_in_valid_set(
+  const PolarVoxelIndex & voxel_idx, const VoxelIndexSet & valid_voxels) const
+{
+  return valid_voxels.count(voxel_idx) > 0;
+}
+
+bool PolarVoxelOutlierFilterComponent::passes_secondary_return_filter(bool is_primary) const
+{
+  if (!enable_secondary_return_filtering_) {
+    return true;  // All points pass when filtering is disabled
+  }
+
+  return is_primary;  // Only primary returns pass when filtering is enabled
 }
 
 void PolarVoxelOutlierFilterComponent::create_filtered_output(
@@ -447,7 +466,7 @@ bool PolarVoxelOutlierFilterComponent::is_primary_return_type(uint8_t return_typ
   return it != primary_return_types_.end();
 }
 
-bool PolarVoxelOutlierFilterComponent::validate_point_polar(const PolarCoordinate & polar) const
+bool PolarVoxelOutlierFilterComponent::is_valid_polar_point(const PolarCoordinate & polar) const
 {
   if (!has_finite_coordinates(polar)) {
     return false;
@@ -832,9 +851,23 @@ void PolarVoxelOutlierFilterComponent::create_empty_output(
 void PolarVoxelOutlierFilterComponent::conditionally_publish_noise_cloud(
   const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask)
 {
-  if (!visualization_estimation_only_ && publish_noise_cloud_ && noise_cloud_pub_) {
-    publish_noise_cloud(input, valid_points_mask);
+  // Early return if visualization only mode
+  if (visualization_estimation_only_) {
+    return;
   }
+
+  // Early return if noise cloud publishing is disabled
+  if (!publish_noise_cloud_) {
+    return;
+  }
+
+  // Early return if publisher is not available
+  if (!noise_cloud_pub_) {
+    return;
+  }
+
+  // All conditions met - publish noise cloud
+  publish_noise_cloud(input, valid_points_mask);
 }
 
 // Helper function to extract polar coordinates
@@ -861,7 +894,16 @@ PolarVoxelOutlierFilterComponent::extract_precomputed_polar_coordinates(
   sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
   sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation) const
 {
-  if (!iter_distance || !iter_azimuth || !iter_elevation) {
+  // Early return if any iterator is null
+  if (!iter_distance) {
+    return std::nullopt;
+  }
+
+  if (!iter_azimuth) {
+    return std::nullopt;
+  }
+
+  if (!iter_elevation) {
     return std::nullopt;
   }
 
@@ -869,12 +911,21 @@ PolarVoxelOutlierFilterComponent::extract_precomputed_polar_coordinates(
   float azimuth = **iter_azimuth;
   float elevation = **iter_elevation;
 
-  if (!std::isfinite(distance) || !std::isfinite(azimuth) || !std::isfinite(elevation)) {
+  // Early return if any coordinate is not finite
+  if (!std::isfinite(distance)) {
+    return std::nullopt;
+  }
+
+  if (!std::isfinite(azimuth)) {
+    return std::nullopt;
+  }
+
+  if (!std::isfinite(elevation)) {
     return std::nullopt;
   }
 
   PolarCoordinate polar(distance, azimuth, elevation);
-  return validate_point_polar(polar) ? std::optional<PolarCoordinate>{polar} : std::nullopt;
+  return is_valid_polar_point(polar) ? std::optional<PolarCoordinate>{polar} : std::nullopt;
 }
 
 // Helper function to extract computed polar coordinates from Cartesian
@@ -884,7 +935,16 @@ PolarVoxelOutlierFilterComponent::extract_computed_polar_coordinates(
   sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
   sensor_msgs::PointCloud2ConstIterator<float> * iter_z) const
 {
-  if (!iter_x || !iter_y || !iter_z) {
+  // Early return if any iterator is null
+  if (!iter_x) {
+    return std::nullopt;
+  }
+
+  if (!iter_y) {
+    return std::nullopt;
+  }
+
+  if (!iter_z) {
     return std::nullopt;
   }
 
@@ -892,13 +952,22 @@ PolarVoxelOutlierFilterComponent::extract_computed_polar_coordinates(
   float y = **iter_y;
   float z = **iter_z;
 
-  if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z)) {
+  // Early return if any coordinate is not finite
+  if (!std::isfinite(x)) {
+    return std::nullopt;
+  }
+
+  if (!std::isfinite(y)) {
+    return std::nullopt;
+  }
+
+  if (!std::isfinite(z)) {
     return std::nullopt;
   }
 
   CartesianCoordinate cartesian(x, y, z);
   PolarCoordinate polar = cartesian_to_polar(cartesian);
-  return validate_point_polar(polar) ? std::optional<PolarCoordinate>{polar} : std::nullopt;
+  return is_valid_polar_point(polar) ? std::optional<PolarCoordinate>{polar} : std::nullopt;
 }
 
 // Helper function to extract return type
@@ -923,14 +992,49 @@ void PolarVoxelOutlierFilterComponent::advance_iterators(
   sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
   sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation) const
 {
+  // Early return for polar coordinate format
   if (has_polar_coords) {
-    if (iter_distance) ++(*iter_distance);
-    if (iter_azimuth) ++(*iter_azimuth);
-    if (iter_elevation) ++(*iter_elevation);
-  } else {
-    if (iter_x) ++(*iter_x);
-    if (iter_y) ++(*iter_y);
-    if (iter_z) ++(*iter_z);
+    advance_polar_iterators(iter_distance, iter_azimuth, iter_elevation);
+    return;
+  }
+
+  // Handle Cartesian coordinate format
+  advance_cartesian_iterators(iter_x, iter_y, iter_z);
+}
+
+void PolarVoxelOutlierFilterComponent::advance_polar_iterators(
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_distance,
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation) const
+{
+  if (iter_distance) {
+    ++(*iter_distance);
+  }
+
+  if (iter_azimuth) {
+    ++(*iter_azimuth);
+  }
+
+  if (iter_elevation) {
+    ++(*iter_elevation);
+  }
+}
+
+void PolarVoxelOutlierFilterComponent::advance_cartesian_iterators(
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_z) const
+{
+  if (iter_x) {
+    ++(*iter_x);
+  }
+
+  if (iter_y) {
+    ++(*iter_y);
+  }
+
+  if (iter_z) {
+    ++(*iter_z);
   }
 }
 }  // namespace autoware::pointcloud_preprocessor
