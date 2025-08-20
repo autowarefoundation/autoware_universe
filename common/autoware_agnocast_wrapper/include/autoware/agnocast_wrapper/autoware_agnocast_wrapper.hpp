@@ -158,17 +158,11 @@ class message_ptr
 private:
   agnocast::ipc_shared_ptr<MessageT> move_agnocast_ptr() && noexcept
   {
-    if (!ptr_) {
-      return agnocast::ipc_shared_ptr<MessageT>{};
-    }
     return std::move(*(std::move(ptr_))).move_agnocast_ptr();
   }
 
   auto move_ros2_ptr() && noexcept
   {
-    if (!ptr_) {
-      return ros2_ptr_t{};
-    }
     return std::move(*(std::move(ptr_))).move_ros2_ptr();
   }
 
@@ -303,7 +297,6 @@ public:
 
   AUTOWARE_MESSAGE_SHARED_PTR(const MessageT) take_data() override
   {
-    auto data = subscriber_->take_data();
     return AUTOWARE_MESSAGE_SHARED_PTR(const MessageT)(std::move(subscriber_->take_data()));
   }
 };
