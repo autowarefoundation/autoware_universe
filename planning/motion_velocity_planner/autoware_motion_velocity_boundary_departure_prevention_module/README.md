@@ -20,7 +20,7 @@ The module addresses the following types of abnormalities:
 
 In typical operation, the MPC trajectory may contain small deviations or noise, especially when the vehicle cannot track the planned path perfectly. These deviations are minor and not necessarily the result of a malfunction, but they are still accounted for to ensure safe boundary handling.
 
-### Localization Abnormality
+### 2. Localization Abnormality
 
 Localization errors can cause the ego vehicle to misjudge its position relative to road boundaries such as curbs or road edges. This can happen due to:
 
@@ -50,7 +50,7 @@ These factors can result in the vehicle unintentionally approaching or crossing 
 
 By expanding the footprint, the system introduces a safety margin that accounts for minor localization and mapping uncertainties, especially critical at higher speeds.he expanded footprint creates a small buffer or "safety margin," allowing the vehicle to operate safely despite minor abnormality.
 
-### Steering Abnormality
+### 3. Steering Abnormality
 
 Unexpected steering behavior can cause the vehicle to deviate from its planned trajectory. Instead of using a simple margin, this module simulates a future trajectory based on a bicycle model with modified steering commands to predict potential deviations. This can occur due to:
 
@@ -76,7 +76,7 @@ This simulated trajectory is then used to create a set of predicted footprints, 
 | ---------------------------------------------------------------------------------------------- |
 | ![Example steering abnormality trajectories](./images/steering_abnormalities_trajectories.svg) |
 
-### Longitudinal Tracking Abnormality
+### 4. Longitudinal Tracking Abnormality
 
 Sometimes, the actual motion of the vehicle along the longitudinal axis does not match the MPC-predicted trajectory. For instance:
 
@@ -136,15 +136,15 @@ The ego vehicle is still some distance away from the boundary, but its predicted
 
 ### 3. Critical Departure
 
-A portion of the normal (non-expanded) ego footprint crosses an uncrossable boundary. This condition is treated as a safety-critical violation.
+A portion of the **normal (non-expanded) ego footprint** crosses an uncrossable boundary. This condition is treated as a safety-critical violation.
 
-Unlike other departure types, abnormality margins are not considered in this judgment. Including them would increase the risk of false positives, especially on narrow or constrained roads. Instead, only the actual predicted footprint is used to determine a critical departure. Upon detecting a critical departure:
+Unlike **near-boundary** departure type, **abnormality margins** are not considered in this judgment. Including them would result in high number of false positives, especially on narrow or constrained roads. Instead, only the actual predicted footprint is used to determine a critical departure. Upon detecting a critical departure:
 
 - The module does not insert a stop, but instead, it relies on previously triggered Approaching Departure to have already reduced the vehicle’s speed.
 - The module can publish a diagnostic status, which can be configured to escalate to ERROR level.
 - The ERROR level diagnostic can be connected to an external MRM (Minimum Risk Maneuver) system, which is responsible for issuing a full stop command.
 
-## Processing Flow
+## General process
 
 The following diagram shows the high-level processing flow of the Boundary Departure Prevention Module. It outlines the steps from checking proximity to the goal, through trajectory and abnormality analysis, to the publication of debug and diagnostic data.
 
@@ -163,10 +163,9 @@ else (no)
   :Check if goal shifted. Reset the module if true.;
   :Get abnormalities data;
   :Get closest projection to boundaries;
-  :Get departure points;
-  :Get critical departure points;
+  :Get departure points and find critical departure;
   :Find and update departure intervals;
-  :Get slow down intervals;
+  :Calculate slow down intervals;
 endif
 #LightBlue:Publish debug info;
 #LightBlue:Publish diagnostics;
@@ -174,7 +173,7 @@ stop
 @enduml
 ```
 
-### Generating abnormalities data
+## Generating abnormalities data
 
 The diagram below illustrates how the module processes predicted trajectory points to generate footprints with embedded abnormality margins and find their projections relative to nearby map boundaries.
 
@@ -194,7 +193,7 @@ stop
 @enduml
 ```
 
-#### Determining Closest Projection to Boundaries
+## Determining Closest Projection to Boundaries
 
 To assess how close the ego vehicle is to nearby uncrossable boundaries, the `BoundaryDepartureChecker` class calculates the nearest lateral projection between each predicted footprint and the map boundary segments. This is done separately for the left and right sides of the vehicle.
 
@@ -227,18 +226,54 @@ Example of the nearest projections are shown in the following images:
 - Red arrows show the closest projection to the left boundary.
 - Purple arrows show the closest projection to the right boundary.
 
-## Handling Unstable Predictions with Time Buffers
+## Getting Departure Points and finding Critical Departure
+
+Once the closest projections to boundaries are obtained, the system filters and classifies potential departure points to determine the appropriate response. It categorizes these points into three types: **Critical Departure**, **Near Boundary**, and **Approaching Departure**. This process begins by calculating the necessary braking distances as follows:
+
+$$
+d_{\text{total}} =
+\begin{cases}
+d_1 + d_2, & v_2 \le 0, \quad
+t_2 = \dfrac{
+    -a_{\text{max}} - \sqrt{a_0^2 - 2 j v_0}
+  }{j} \\[12pt]
+
+d_1 + d_2 + d_3, & v_2 > 0, \quad
+t_2 = \dfrac{a_{\text{max}} - a_0}{j}
+\end{cases}
+$$
+
+where
+
+- $d_1 = v_0 \cdot t_1$: distance during delay
+- $d_2 = v_0 t_2 + \dfrac{1}{2} a_0 t_2^2 + \dfrac{1}{6} j t_2^3$: distance during jerk-limited deceleration
+- $d_3 = -\dfrac{v_2^2}{2 a_{\text{max}}}$: distance under constant deceleration (if needed)
+- $v_2 = v_0 + \dfrac{a_{\text{max}}^2 - a_0^2}{2j}$: velocity after jerk ramp
+
+The two key braking distances are then computed:
+
+- **`minimum braking dist`**: The shortest distance required for the ego vehicle to stop safely without departing the lane. This is calculated using the maximum allowed acceleration and jerk (`th_acc_mps2.max` and `th_jerk_mps3.max`).
+- **`maximum braking dist`**: The longest distance required for a comfortable deceleration before the vehicle gets too close to the boundary. This is calculated using the minimum allowed acceleration and jerk (`th_acc_mps2.min` and `th_jerk_mps3.min`).
+
+These distances are used to determine if a predicted departure is within a reachable range. Specifically, the system uses these distances to make two key decisions:
+
+1. A `Near Boundary` point is only considered for a slowdown if it is within `max_braking_dist`.
+2. A `Critical Departure` point is only considered for an emergency stop if it is within `min_braking_dist`.
+3. A `Critical Departure` point is reclassified as an `Approaching Departure` if it is found beyond `min_braking_dist`, as it is too far for an immediate emergency response.
+   - Any preceding points are also reclassified to `Approaching Departure` if they are within `max_braking_dist` of the critical point.
+
+### Handling Unstable Predictions with Time Buffers
 
 The system employs a continuous detection mechanism to stabilize its response to boundary predictions, preventing two types of errors: unnecessary deceleration (**false positives**) and sudden, late deceleration (**false negatives**).
 
-### 1. Preventing Unnecessary Actions
+#### 1. Preventing Unnecessary Actions
 
 The **`on_time_buffer_s`** is a filter that prevents the system from overreacting to fleeting or unstable predictions. The module will only insert a departure into a list if a potential boundary departure is detected continuously for a specific duration.
 
 - **Near Boundary**: A slowdown is initiated only after a potential departure is detected for a duration greater than or equal to `on_time_buffer_s.near_boundary`. This handles general cases of the vehicle getting close to a boundary, acting as a safeguard against **false positives**.
 - **Critical Departure**: For more severe, high-risk situations, a separate check uses **`on_time_buffer_s.critical_departure`**. A critical departure is added to a **critical departure points list** only if a critical departure is consistently detected over this dedicated time period. For further usage of this list, refer to the Diagnostic Section.
 
-### 2. Preventing Prematurely Ending Actions
+#### 2. Preventing Prematurely Ending Actions
 
 The **`off_time_buffer_s`** is a filter that prevents the system from prematurely ending a response. Once an action is active, it won't be cleared until the system is confident the risk has passed.
 
