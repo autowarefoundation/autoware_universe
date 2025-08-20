@@ -226,8 +226,23 @@ std::optional<Pose> calcRefinedGoal(
   const bool left_side_parking, const double vehicle_width, const double base_link2front,
   const double base_link2rear, const GoalPlannerParameters & parameters);
 
-std::optional<Pose> calcClosestPose(
-  const lanelet::ConstLineString3d line, const Point & query_point);
+/**
+ * @brief Calculate signed lateral distance from vehicle pose to boundary line
+ *
+ * This function calculates the signed lateral distance from a vehicle's reference pose to the
+ * nearest intersection point with a boundary line. The calculation is performed by extending
+ * the vehicle's Y-axis (lateral direction) and finding the closest intersection with any segment
+ * of the boundary line.
+ *
+ * @param line The boundary line string containing multiple points defining the boundary
+ * @param reference_pose The vehicle's reference pose (position and orientation)
+ * @return std::optional<double> The signed lateral distance if intersection exists:
+ *         - Positive value: boundary is on the left side of the vehicle
+ *         - Negative value: boundary is on the right side of the vehicle
+ *         - std::nullopt: no intersection found (parallel or out of range)
+ */
+std::optional<double> calcSignedLateralDistanceToBoundary(
+  const lanelet::ConstLineString3d line, const Pose & reference_pose);
 
 autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
   const autoware_perception_msgs::msg::PredictedObjects & original_objects,
