@@ -129,6 +129,10 @@ public:
   };
 
 private:
+  // Parameter update helper methods
+  void update_primary_return_types(const rclcpp::Parameter & param);
+  void update_publish_noise_cloud(const rclcpp::Parameter & param);
+
   // Type aliases to eliminate long type name duplication
   using PointCloud2ConstPtr = sensor_msgs::msg::PointCloud2::ConstSharedPtr;
   using IndicesPtr = pcl::IndicesPtr;
@@ -167,6 +171,36 @@ private:
     sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
     sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation,
     sensor_msgs::PointCloud2ConstIterator<uint8_t> * iter_return_type) const;
+
+  // Point processing helper methods
+  std::optional<PolarCoordinate> extract_polar_coordinates(
+    bool has_polar_coords, sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_z,
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_distance,
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation) const;
+
+  std::optional<PolarCoordinate> extract_precomputed_polar_coordinates(
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_distance,
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation) const;
+
+  std::optional<PolarCoordinate> extract_computed_polar_coordinates(
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_z) const;
+
+  uint8_t extract_return_type(
+    bool has_return_type, sensor_msgs::PointCloud2ConstIterator<uint8_t> * iter_return_type) const;
+
+  void advance_iterators(
+    bool has_polar_coords, sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_z,
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_distance,
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation) const;
 
   void update_parameter(const rclcpp::Parameter & param);
 
@@ -225,6 +259,29 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr noise_cloud_pub_;
   diagnostic_updater::Updater updater_;
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
+
+  // Diagnostic helper methods
+  void calculate_visibility_metric(const VoxelPointCountMap & voxel_counts);
+  void calculate_filter_ratio_metric(const ValidPointsMask & valid_points_mask);
+  void publish_visibility_metric();
+  void publish_filter_ratio_metric();
+
+  // Filter pipeline helper methods
+  void validate_filter_inputs(const PointCloud2ConstPtr & input, const IndicesPtr & indices);
+  void create_output(
+    const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask,
+    PointCloud2 & output);
+  void create_empty_output(const PointCloud2ConstPtr & input, PointCloud2 & output);
+  void conditionally_publish_noise_cloud(
+    const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask);
+
+  // Point classification helper method
+  bool determine_if_point_is_primary(bool has_return_type, uint8_t return_type) const;
+
+  // Point validation helper methods
+  bool has_finite_coordinates(const PolarCoordinate & polar) const;
+  bool is_within_radius_range(const PolarCoordinate & polar) const;
+  bool has_sufficient_radius(const PolarCoordinate & polar) const;
 };
 
 }  // namespace autoware::pointcloud_preprocessor

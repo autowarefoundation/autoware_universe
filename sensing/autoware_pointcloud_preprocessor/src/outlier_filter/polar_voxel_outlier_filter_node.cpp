@@ -123,25 +123,8 @@ void PolarVoxelOutlierFilterComponent::filter(
 {
   std::scoped_lock lock(mutex_);
 
-  if (indices) {
-    RCLCPP_WARN(get_logger(), "Indices are not supported and will be ignored");
-  }
-
-  if (!input) {
-    RCLCPP_ERROR(get_logger(), "Input point cloud is null");
-    return;
-  }
-
-  if (
-    use_return_type_classification_ &&
-    !PolarVoxelOutlierFilterComponent::has_return_type_field(input)) {
-    RCLCPP_ERROR(
-      get_logger(),
-      "Advanced mode (use_return_type_classification=true) requires 'return_type' field. "
-      "Set use_return_type_classification=false for simple mode or ensure input has return_type "
-      "field.");
-    return;
-  }
+  // Phase 1: Validate inputs
+  validate_filter_inputs(input, indices);
 
   // Check if we have pre-computed polar coordinates
   bool has_polar_coords = has_polar_coordinates(input);
@@ -154,42 +137,23 @@ void PolarVoxelOutlierFilterComponent::filter(
       get_logger(), "Processing PointXYZIRC format, computing azimuth and elevation");
   }
 
-  // Phase 1: Collect voxel information (unified for both formats)
+  // Phase 2: Collect voxel information (unified for both formats)
   auto point_voxel_info = collect_voxel_info(input);
 
-  // Phase 2: Count and validate voxels (mode-dependent logic)
+  // Phase 3: Count and validate voxels (mode-dependent logic)
   auto voxel_counts = count_voxels(point_voxel_info);
   auto valid_voxels = determine_valid_voxels(voxel_counts);
 
-  // Phase 3: Create valid points mask
+  // Phase 4: Create valid points mask
   auto valid_points_mask = create_valid_points_mask(point_voxel_info, valid_voxels);
 
-  // Phase 4: Create filtered output (skip if visualization estimation only)
-  if (!visualization_estimation_only_) {
-    create_filtered_output(input, valid_points_mask, output);
+  // Phase 5: Create output (normal or empty based on mode)
+  create_output(input, valid_points_mask, output);
 
-    // Phase 5: Conditionally publish noise cloud
-    if (publish_noise_cloud_ && noise_cloud_pub_) {
-      publish_noise_cloud(input, valid_points_mask);
-    }
-  } else {
-    // For visualization estimation only, create empty output to maintain interface
-    output.header = input->header;
-    output.height = 0;
-    output.width = 0;
-    output.fields = input->fields;
-    output.is_bigendian = input->is_bigendian;
-    output.point_step = input->point_step;
-    output.row_step = 0;
-    output.is_dense = input->is_dense;
-    output.data.clear();
+  // Phase 6: Conditionally publish noise cloud
+  conditionally_publish_noise_cloud(input, valid_points_mask);
 
-    RCLCPP_DEBUG_THROTTLE(
-      get_logger(), *get_clock(), 5000,
-      "Visualization estimation only mode - no point cloud output generated");
-  }
-
-  // Phase 6: Publish diagnostics (always run for visualization estimation)
+  // Phase 7: Publish diagnostics (always run for visualization estimation)
   publish_diagnostics(voxel_counts, valid_points_mask);
 }
 
@@ -240,7 +204,7 @@ PolarVoxelOutlierFilterComponent::collect_voxel_info(const PointCloud2ConstPtr &
   return point_voxel_info;
 }
 
-// Helper function to process a single point for voxel info
+// Refactored main function with reduced complexity
 auto PolarVoxelOutlierFilterComponent::process_point_for_voxel_info(
   bool has_polar_coords, bool has_return_type,
   sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
@@ -252,53 +216,43 @@ auto PolarVoxelOutlierFilterComponent::process_point_for_voxel_info(
   sensor_msgs::PointCloud2ConstIterator<uint8_t> * iter_return_type) const
   -> std::optional<PointVoxelInfo>
 {
-  bool valid_point = false;
-  uint8_t current_return_type = 0;
+  // Step 1: Extract return type information
+  uint8_t current_return_type = extract_return_type(has_return_type, iter_return_type);
 
-  if (has_return_type && iter_return_type) {
-    current_return_type = **iter_return_type;
-    ++(*iter_return_type);
-  }
+  // Step 2: Extract polar coordinates (early return on failure)
+  auto polar_opt = extract_polar_coordinates(
+    has_polar_coords, iter_x, iter_y, iter_z, iter_distance, iter_azimuth, iter_elevation);
 
-  std::optional<PolarCoordinate> polar_opt;
-
-  if (has_polar_coords) {
-    if (
-      std::isfinite(**iter_distance) && std::isfinite(**iter_azimuth) &&
-      std::isfinite(**iter_elevation)) {
-      PolarCoordinate polar(**iter_distance, **iter_azimuth, **iter_elevation);
-      if (validate_point_polar(polar)) {
-        polar_opt = polar;
-        valid_point = true;
-      }
-    }
-    ++(*iter_distance);
-    ++(*iter_azimuth);
-    ++(*iter_elevation);
-  } else {
-    if (std::isfinite(**iter_x) && std::isfinite(**iter_y) && std::isfinite(**iter_z)) {
-      CartesianCoordinate cartesian(**iter_x, **iter_y, **iter_z);
-      PolarCoordinate polar = cartesian_to_polar(cartesian);
-      if (validate_point_polar(polar)) {
-        polar_opt = polar;
-        valid_point = true;
-      }
-    }
-    ++(*iter_x);
-    ++(*iter_y);
-    ++(*iter_z);
-  }
-
-  if (!valid_point || !polar_opt.has_value()) {
+  if (!polar_opt.has_value()) {
+    advance_iterators(
+      has_polar_coords, iter_x, iter_y, iter_z, iter_distance, iter_azimuth, iter_elevation);
     return std::nullopt;
   }
 
-  PolarVoxelIndex voxel_idx = polar_to_polar_voxel(*polar_opt);
-  bool is_primary = (has_return_type && use_return_type_classification_)
-                      ? is_primary_return_type(current_return_type)
-                      : true;
+  // Step 3: Advance iterators for successful coordinate extraction
+  advance_iterators(
+    has_polar_coords, iter_x, iter_y, iter_z, iter_distance, iter_azimuth, iter_elevation);
 
-  return std::optional<PointVoxelInfo>{PointVoxelInfo{voxel_idx, is_primary}};
+  // Step 4: Create voxel index and determine point classification
+  PolarVoxelIndex voxel_idx = polar_to_polar_voxel(*polar_opt);
+  bool is_primary = determine_if_point_is_primary(has_return_type, current_return_type);
+
+  // Step 5: Return successful result
+  return PointVoxelInfo{voxel_idx, is_primary};
+}
+
+bool PolarVoxelOutlierFilterComponent::determine_if_point_is_primary(
+  bool has_return_type, uint8_t return_type) const
+{
+  if (!has_return_type) {
+    return true;  // Default to primary when no return type info
+  }
+
+  if (!use_return_type_classification_) {
+    return true;  // Treat all as primary in simple mode
+  }
+
+  return is_primary_return_type(return_type);
 }
 
 PolarVoxelOutlierFilterComponent::ValidPointsMask
@@ -309,15 +263,28 @@ PolarVoxelOutlierFilterComponent::create_valid_points_mask(
 
   for (size_t i = 0; i < point_voxel_info.size(); ++i) {
     const auto & optional_info = point_voxel_info[i];
-    if (optional_info) {
-      const auto & info = *optional_info;
-      if (valid_voxels.count(info.voxel_idx) > 0) {
-        if (info.is_primary || !enable_secondary_return_filtering_) {
-          valid_points_mask[i] = true;
-        }
-      }
+
+    // Early continue if no voxel info available
+    if (!optional_info) {
+      continue;
     }
+
+    const auto & info = *optional_info;
+
+    // Early continue if voxel is not valid
+    if (valid_voxels.count(info.voxel_idx) == 0) {
+      continue;
+    }
+
+    // Early continue if secondary return filtering is enabled and point is secondary
+    if (enable_secondary_return_filtering_ && !info.is_primary) {
+      continue;
+    }
+
+    // Point passed all checks - mark as valid
+    valid_points_mask[i] = true;
   }
+
   return valid_points_mask;
 }
 
@@ -365,46 +332,74 @@ void PolarVoxelOutlierFilterComponent::publish_noise_cloud(
 void PolarVoxelOutlierFilterComponent::publish_diagnostics(
   const VoxelPointCountMap & voxel_counts, const ValidPointsMask & valid_points_mask)
 {
-  if (use_return_type_classification_) {
-    // Calculate visibility based on valid points mask
-    uint32_t low_visibility_voxels_count = 0;
-    for (const auto & [voxel_idx, counts] : voxel_counts) {
-      if (
-        counts.is_in_visibility_range &&
-        !counts.meets_secondary_threshold(secondary_noise_threshold_)) {
-        low_visibility_voxels_count++;
-      }
-    }
-    // Calculate visibility based on the proportion of maximum allowable voxels that fail the
-    // secondary threshold test
-    visibility_ = std::max(
-      0.0, 1.0 - static_cast<double>(low_visibility_voxels_count) /
-                   static_cast<double>(visibility_estimation_max_secondary_voxel_count_));
+  // Calculate metrics
+  calculate_visibility_metric(voxel_counts);
+  calculate_filter_ratio_metric(valid_points_mask);
+
+  // Publish metrics
+  publish_visibility_metric();
+  publish_filter_ratio_metric();
+
+  // Update diagnostics
+  updater_.force_update();
+}
+
+void PolarVoxelOutlierFilterComponent::calculate_visibility_metric(
+  const VoxelPointCountMap & voxel_counts)
+{
+  if (!use_return_type_classification_) {
+    visibility_.reset();
+    return;
   }
+
+  uint32_t low_visibility_voxels_count = 0;
+  for (const auto & [voxel_idx, counts] : voxel_counts) {
+    if (
+      counts.is_in_visibility_range &&
+      !counts.meets_secondary_threshold(secondary_noise_threshold_)) {
+      low_visibility_voxels_count++;
+    }
+  }
+
+  // Calculate visibility based on the proportion of maximum allowable voxels that fail the
+  // secondary threshold test
+  visibility_ = std::max(
+    0.0, 1.0 - static_cast<double>(low_visibility_voxels_count) /
+                 static_cast<double>(visibility_estimation_max_secondary_voxel_count_));
+}
+
+void PolarVoxelOutlierFilterComponent::calculate_filter_ratio_metric(
+  const ValidPointsMask & valid_points_mask)
+{
   filter_ratio_ =
     (!valid_points_mask.empty())
       ? static_cast<double>(std::count(valid_points_mask.begin(), valid_points_mask.end(), true)) /
           static_cast<double>(valid_points_mask.size())
       : 0.0;
+}
 
-  // Publish filter ratio
-  if (ratio_pub_) {
-    autoware_internal_debug_msgs::msg::Float32Stamped ratio_msg;
-    ratio_msg.stamp = this->now();
-    ratio_msg.data = static_cast<float>(filter_ratio_.value_or(0.0));
-    ratio_pub_->publish(ratio_msg);
+void PolarVoxelOutlierFilterComponent::publish_visibility_metric()
+{
+  if (!visibility_pub_ || !visibility_.has_value()) {
+    return;
   }
 
-  // Publish visibility (only when available)
-  if (visibility_pub_ && visibility_.has_value()) {
-    autoware_internal_debug_msgs::msg::Float32Stamped visibility_msg;
-    visibility_msg.stamp = this->now();
-    visibility_msg.data = static_cast<float>(visibility_.value());
-    visibility_pub_->publish(visibility_msg);
+  autoware_internal_debug_msgs::msg::Float32Stamped visibility_msg;
+  visibility_msg.stamp = this->now();
+  visibility_msg.data = static_cast<float>(visibility_.value());
+  visibility_pub_->publish(visibility_msg);
+}
+
+void PolarVoxelOutlierFilterComponent::publish_filter_ratio_metric()
+{
+  if (!ratio_pub_) {
+    return;
   }
 
-  // Update diagnostics
-  updater_.force_update();
+  autoware_internal_debug_msgs::msg::Float32Stamped ratio_msg;
+  ratio_msg.stamp = this->now();
+  ratio_msg.data = static_cast<float>(filter_ratio_.value_or(0.0));
+  ratio_pub_->publish(ratio_msg);
 }
 
 bool PolarVoxelOutlierFilterComponent::has_return_type_field(const PointCloud2ConstPtr & input)
@@ -454,18 +449,35 @@ bool PolarVoxelOutlierFilterComponent::is_primary_return_type(uint8_t return_typ
 
 bool PolarVoxelOutlierFilterComponent::validate_point_polar(const PolarCoordinate & polar) const
 {
-  if (
-    !std::isfinite(polar.radius) || !std::isfinite(polar.azimuth) ||
-    !std::isfinite(polar.elevation)) {
+  if (!has_finite_coordinates(polar)) {
     return false;
   }
-  if (polar.radius < min_radius_m_ || polar.radius > max_radius_m_) {
+
+  if (!is_within_radius_range(polar)) {
     return false;
   }
-  if (std::abs(polar.radius) < std::numeric_limits<double>::epsilon()) {
+
+  if (!has_sufficient_radius(polar)) {
     return false;
   }
+
   return true;
+}
+
+bool PolarVoxelOutlierFilterComponent::has_finite_coordinates(const PolarCoordinate & polar) const
+{
+  return std::isfinite(polar.radius) && std::isfinite(polar.azimuth) &&
+         std::isfinite(polar.elevation);
+}
+
+bool PolarVoxelOutlierFilterComponent::is_within_radius_range(const PolarCoordinate & polar) const
+{
+  return polar.radius >= min_radius_m_ && polar.radius <= max_radius_m_;
+}
+
+bool PolarVoxelOutlierFilterComponent::has_sufficient_radius(const PolarCoordinate & polar) const
+{
+  return std::abs(polar.radius) >= std::numeric_limits<double>::epsilon();
 }
 
 PolarVoxelOutlierFilterComponent::VoxelPointCountMap PolarVoxelOutlierFilterComponent::count_voxels(
@@ -492,120 +504,123 @@ PolarVoxelOutlierFilterComponent::VoxelPointCountMap PolarVoxelOutlierFilterComp
   return voxel_counts;
 }
 
-namespace
-{
-bool is_in_vector(const std::vector<std::string> & vec, const std::string & value)
-{
-  return std::find(vec.begin(), vec.end(), value) != vec.end();
-}
-}  // namespace
-
 void PolarVoxelOutlierFilterComponent::update_parameter(const rclcpp::Parameter & param)
 {
-  const auto & name = param.get_name();
+  using ParameterUpdater = std::function<void(const rclcpp::Parameter &)>;
 
-  if (name == "radial_resolution_m") {
-    radial_resolution_m_ = param.as_double();
-  } else if (name == "azimuth_resolution_rad") {
-    azimuth_resolution_rad_ = param.as_double();
-  } else if (name == "elevation_resolution_rad") {
-    elevation_resolution_rad_ = param.as_double();
-  } else if (name == "voxel_points_threshold") {
-    voxel_points_threshold_ = static_cast<int>(param.as_int());
-  } else if (name == "secondary_noise_threshold") {
-    secondary_noise_threshold_ = static_cast<int>(param.as_int());
-  } else if (name == "visibility_estimation_max_secondary_voxel_count") {
-    visibility_estimation_max_secondary_voxel_count_ = static_cast<int>(param.as_int());
-  } else if (name == "visualization_estimation_only") {  // Add this block
-    visualization_estimation_only_ = param.as_bool();
-  } else if (name == "min_radius_m") {
-    min_radius_m_ = param.as_double();
-  } else if (name == "max_radius_m") {
-    max_radius_m_ = param.as_double();
-  } else if (name == "visibility_estimation_max_range_m") {
-    visibility_estimation_max_range_m_ = param.as_double();
-  } else if (name == "visibility_error_threshold") {
-    visibility_error_threshold_ = param.as_double();
-  } else if (name == "visibility_warn_threshold") {
-    visibility_warn_threshold_ = param.as_double();
-  } else if (name == "filter_ratio_error_threshold") {
-    filter_ratio_error_threshold_ = param.as_double();
-  } else if (name == "filter_ratio_warn_threshold") {
-    filter_ratio_warn_threshold_ = param.as_double();
-  } else if (name == "use_return_type_classification") {
-    use_return_type_classification_ = param.as_bool();
-  } else if (name == "filter_secondary_returns") {
-    enable_secondary_return_filtering_ = param.as_bool();
-  } else if (name == "primary_return_types") {
-    auto values = param.as_integer_array();
-    primary_return_types_.clear();
-    for (const auto & val : values) {
-      primary_return_types_.push_back(static_cast<int>(val));
-    }
-  } else if (name == "publish_noise_cloud") {
-    bool new_value = param.as_bool();
-    if (new_value != publish_noise_cloud_) {
-      publish_noise_cloud_ = new_value;
-      // Recreate publisher if needed
-      if (publish_noise_cloud_ && !noise_cloud_pub_) {
-        rclcpp::PublisherOptions pub_options;
-        pub_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
-        noise_cloud_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>(
-          "polar_voxel_outlier_filter/debug/pointcloud_noise", rclcpp::SensorDataQoS(),
-          pub_options);
-      }
-    }
+  // Static map of parameter names to their update functions
+  static const std::unordered_map<std::string, ParameterUpdater> parameter_updaters = {
+    {"radial_resolution_m", [this](const auto & p) { radial_resolution_m_ = p.as_double(); }},
+    {"azimuth_resolution_rad", [this](const auto & p) { azimuth_resolution_rad_ = p.as_double(); }},
+    {"elevation_resolution_rad",
+     [this](const auto & p) { elevation_resolution_rad_ = p.as_double(); }},
+    {"voxel_points_threshold",
+     [this](const auto & p) { voxel_points_threshold_ = static_cast<int>(p.as_int()); }},
+    {"secondary_noise_threshold",
+     [this](const auto & p) { secondary_noise_threshold_ = static_cast<int>(p.as_int()); }},
+    {"visibility_estimation_max_secondary_voxel_count",
+     [this](const auto & p) {
+       visibility_estimation_max_secondary_voxel_count_ = static_cast<int>(p.as_int());
+     }},
+    {"visualization_estimation_only",
+     [this](const auto & p) { visualization_estimation_only_ = p.as_bool(); }},
+    {"min_radius_m", [this](const auto & p) { min_radius_m_ = p.as_double(); }},
+    {"max_radius_m", [this](const auto & p) { max_radius_m_ = p.as_double(); }},
+    {"visibility_estimation_max_range_m",
+     [this](const auto & p) { visibility_estimation_max_range_m_ = p.as_double(); }},
+    {"visibility_error_threshold",
+     [this](const auto & p) { visibility_error_threshold_ = p.as_double(); }},
+    {"visibility_warn_threshold",
+     [this](const auto & p) { visibility_warn_threshold_ = p.as_double(); }},
+    {"filter_ratio_error_threshold",
+     [this](const auto & p) { filter_ratio_error_threshold_ = p.as_double(); }},
+    {"filter_ratio_warn_threshold",
+     [this](const auto & p) { filter_ratio_warn_threshold_ = p.as_double(); }},
+    {"use_return_type_classification",
+     [this](const auto & p) { use_return_type_classification_ = p.as_bool(); }},
+    {"filter_secondary_returns",
+     [this](const auto & p) { enable_secondary_return_filtering_ = p.as_bool(); }},
+    {"primary_return_types", [this](const auto & p) { update_primary_return_types(p); }},
+    {"publish_noise_cloud", [this](const auto & p) { update_publish_noise_cloud(p); }}};
+
+  const auto & name = param.get_name();
+  auto it = parameter_updaters.find(name);
+
+  // Early return if parameter not found (no nested logic)
+  if (it == parameter_updaters.end()) {
+    return;
+  }
+
+  // Execute the parameter update (no nested logic)
+  it->second(param);
+}
+
+void PolarVoxelOutlierFilterComponent::update_primary_return_types(const rclcpp::Parameter & param)
+{
+  auto values = param.as_integer_array();
+  primary_return_types_.clear();
+  primary_return_types_.reserve(values.size());
+  for (const auto & val : values) {
+    primary_return_types_.push_back(static_cast<int>(val));
   }
 }
 
-rcl_interfaces::msg::SetParametersResult PolarVoxelOutlierFilterComponent::param_callback(
-  const std::vector<rclcpp::Parameter> & p)
+void PolarVoxelOutlierFilterComponent::update_publish_noise_cloud(const rclcpp::Parameter & param)
 {
-  std::scoped_lock lock(mutex_);
-
-  // Parameters that can be updated at runtime
-  static const std::vector<std::string> updatable_params = {
-    "radial_resolution_m",
-    "azimuth_resolution_rad",
-    "elevation_resolution_rad",
-    "voxel_points_threshold",
-    "min_radius_m",
-    "max_radius_m",
-    "visibility_estimation_max_range_m",
-    "use_return_type_classification",
-    "filter_secondary_returns",
-    "secondary_noise_threshold",
-    "visibility_estimation_max_secondary_voxel_count",
-    "visualization_estimation_only",
-    "primary_return_types",
-    "publish_noise_cloud",
-    "visibility_error_threshold",
-    "visibility_warn_threshold",
-    "filter_ratio_error_threshold",
-    "filter_ratio_warn_threshold"};
-
-  auto result = rcl_interfaces::msg::SetParametersResult{};
-  result.successful = true;
-
-  for (const auto & param : p) {
-    if (!is_in_vector(updatable_params, param.get_name())) {
-      result.successful = false;
-      result.reason = "Parameter " + param.get_name() + " is not updatable";
-      return result;
-    }
-
-    try {
-      update_parameter(param);
-
-      RCLCPP_DEBUG(get_logger(), "Updated parameter: %s", param.get_name().c_str());
-    } catch (const std::exception & e) {
-      result.successful = false;
-      result.reason = "Failed to update parameter " + param.get_name() + ": " + e.what();
-      return result;
-    }
+  bool new_value = param.as_bool();
+  if (new_value == publish_noise_cloud_) {
+    return;
   }
 
-  return result;
+  publish_noise_cloud_ = new_value;
+
+  // Recreate publisher if needed
+  if (publish_noise_cloud_ && !noise_cloud_pub_) {
+    rclcpp::PublisherOptions pub_options;
+    pub_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
+    noise_cloud_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>(
+      "polar_voxel_outlier_filter/debug/pointcloud_noise", rclcpp::SensorDataQoS(), pub_options);
+  }
+}
+
+PolarVoxelOutlierFilterComponent::VoxelIndexSet
+PolarVoxelOutlierFilterComponent::determine_valid_voxels(
+  const VoxelPointCountMap & voxel_counts) const
+{
+  if (use_return_type_classification_) {
+    return determine_valid_voxels_with_return_types(voxel_counts);
+  } else {
+    return determine_valid_voxels_simple(voxel_counts);
+  }
+}
+
+PolarVoxelOutlierFilterComponent::VoxelIndexSet
+PolarVoxelOutlierFilterComponent::determine_valid_voxels_simple(
+  const VoxelPointCountMap & voxel_counts) const
+{
+  VoxelIndexSet valid_voxels;
+  for (const auto & [voxel_idx, counts] : voxel_counts) {
+    size_t total_count = counts.primary_count + counts.secondary_count;
+    if (total_count >= static_cast<size_t>(voxel_points_threshold_)) {
+      valid_voxels.insert(voxel_idx);
+    }
+  }
+  return valid_voxels;
+}
+
+PolarVoxelOutlierFilterComponent::VoxelIndexSet
+PolarVoxelOutlierFilterComponent::determine_valid_voxels_with_return_types(
+  const VoxelPointCountMap & voxel_counts) const
+{
+  VoxelIndexSet valid_voxels;
+  for (const auto & [voxel_idx, counts] : voxel_counts) {
+    if (
+      counts.meets_primary_threshold(voxel_points_threshold_) &&
+      counts.meets_secondary_threshold(secondary_noise_threshold_)) {
+      valid_voxels.insert(voxel_idx);
+    }
+  }
+  return valid_voxels;
 }
 
 void PolarVoxelOutlierFilterComponent::setup_output_header(
@@ -638,121 +653,287 @@ sensor_msgs::msg::PointCloud2 PolarVoxelOutlierFilterComponent::create_noise_clo
   return noise_cloud;
 }
 
+rcl_interfaces::msg::SetParametersResult PolarVoxelOutlierFilterComponent::param_callback(
+  const std::vector<rclcpp::Parameter> & p)
+{
+  std::scoped_lock lock(mutex_);
+
+  // Parameters that can be updated at runtime
+  static const std::vector<std::string> updatable_params = {
+    "radial_resolution_m",
+    "azimuth_resolution_rad",
+    "elevation_resolution_rad",
+    "voxel_points_threshold",
+    "min_radius_m",
+    "max_radius_m",
+    "visibility_estimation_max_range_m",
+    "use_return_type_classification",
+    "filter_secondary_returns",
+    "secondary_noise_threshold",
+    "visibility_estimation_max_secondary_voxel_count",
+    "visualization_estimation_only",
+    "primary_return_types",
+    "publish_noise_cloud",
+    "visibility_error_threshold",
+    "visibility_warn_threshold",
+    "filter_ratio_error_threshold",
+    "filter_ratio_warn_threshold"};
+
+  rcl_interfaces::msg::SetParametersResult result;
+  result.successful = true;
+  result.reason = "success";
+
+  for (const auto & param : p) {
+    const std::string & name = param.get_name();
+
+    // Check if this parameter is updatable
+    bool is_updatable =
+      std::find(updatable_params.begin(), updatable_params.end(), name) != updatable_params.end();
+
+    if (!is_updatable) {
+      result.successful = false;
+      result.reason = "Parameter " + name + " is not dynamically reconfigurable";
+      return result;
+    }
+
+    // Validate parameter values
+    if (name == "visibility_estimation_max_range_m" && param.as_double() <= 0.0) {
+      result.successful = false;
+      result.reason = "visibility_estimation_max_range_m must be positive";
+      return result;
+    }
+
+    if (name == "visibility_estimation_max_secondary_voxel_count" && param.as_int() < 0) {
+      result.successful = false;
+      result.reason = "visibility_estimation_max_secondary_voxel_count must be non-negative";
+      return result;
+    }
+
+    // Update the parameter
+    update_parameter(param);
+  }
+
+  return result;
+}
+
 void PolarVoxelOutlierFilterComponent::on_visibility_check(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
   if (!visibility_.has_value()) {
-    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Visibility check disabled");
-    stat.add("visibility", "N/A (return type classification disabled)");
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::STALE, "No visibility data available");
     return;
   }
 
   double visibility_value = visibility_.value();
-  stat.add("visibility", visibility_value);
-  stat.add("visibility_estimation_max_range_m", visibility_estimation_max_range_m_);
-  stat.add("visibility_error_threshold", visibility_error_threshold_);
-  stat.add("visibility_warn_threshold", visibility_warn_threshold_);
 
   if (visibility_value < visibility_error_threshold_) {
     stat.summary(
       diagnostic_msgs::msg::DiagnosticStatus::ERROR,
-      "Visibility is critically low within " + std::to_string(visibility_estimation_max_range_m_) +
-        "m range");
+      "Low visibility detected - potential adverse weather conditions");
   } else if (visibility_value < visibility_warn_threshold_) {
     stat.summary(
       diagnostic_msgs::msg::DiagnosticStatus::WARN,
-      "Visibility is low within " + std::to_string(visibility_estimation_max_range_m_) + "m range");
+      "Reduced visibility detected - monitor environmental conditions");
   } else {
-    stat.summary(
-      diagnostic_msgs::msg::DiagnosticStatus::OK,
-      "Visibility is normal within " + std::to_string(visibility_estimation_max_range_m_) +
-        "m range");
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Visibility within normal range");
   }
+
+  stat.add("Visibility", visibility_value);
+  stat.add("Error Threshold", visibility_error_threshold_);
+  stat.add("Warning Threshold", visibility_warn_threshold_);
+  stat.add("Estimation Range (m)", visibility_estimation_max_range_m_);
+  stat.add("Max Secondary Voxels", visibility_estimation_max_secondary_voxel_count_);
 }
 
 void PolarVoxelOutlierFilterComponent::on_filter_ratio_check(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
   if (!filter_ratio_.has_value()) {
-    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "No filter ratio data");
-    stat.add("filter_ratio", "N/A");
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::STALE, "No filter ratio data available");
     return;
   }
 
   double ratio_value = filter_ratio_.value();
-  stat.add("filter_ratio", ratio_value);
-  stat.add("filter_ratio_error_threshold", filter_ratio_error_threshold_);
-  stat.add("filter_ratio_warn_threshold", filter_ratio_warn_threshold_);
 
   if (ratio_value < filter_ratio_error_threshold_) {
     stat.summary(
       diagnostic_msgs::msg::DiagnosticStatus::ERROR,
-      "Filter ratio is critically low - too many points filtered");
+      "Very low filter ratio - excessive noise or sensor malfunction");
   } else if (ratio_value < filter_ratio_warn_threshold_) {
     stat.summary(
-      diagnostic_msgs::msg::DiagnosticStatus::WARN, "Filter ratio is low - many points filtered");
+      diagnostic_msgs::msg::DiagnosticStatus::WARN,
+      "Low filter ratio - increased noise levels detected");
   } else {
-    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Filter ratio is normal");
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Filter ratio within normal range");
+  }
+
+  stat.add("Filter Ratio", ratio_value);
+  stat.add("Error Threshold", filter_ratio_error_threshold_);
+  stat.add("Warning Threshold", filter_ratio_warn_threshold_);
+  stat.add("Filtering Mode", use_return_type_classification_ ? "Advanced" : "Simple");
+  stat.add("Visualization Only", visualization_estimation_only_ ? "Yes" : "No");
+}
+
+// Additions start here
+
+void PolarVoxelOutlierFilterComponent::validate_filter_inputs(
+  const PointCloud2ConstPtr & input, const IndicesPtr & indices)
+{
+  if (indices) {
+    RCLCPP_WARN(get_logger(), "Indices are not supported and will be ignored");
+  }
+
+  if (!input) {
+    RCLCPP_ERROR(get_logger(), "Input point cloud is null");
+    throw std::invalid_argument("Input point cloud is null");
+  }
+
+  if (
+    use_return_type_classification_ &&
+    !PolarVoxelOutlierFilterComponent::has_return_type_field(input)) {
+    RCLCPP_ERROR(
+      get_logger(),
+      "Advanced mode (use_return_type_classification=true) requires 'return_type' field. "
+      "Set use_return_type_classification=false for simple mode or ensure input has return_type "
+      "field.");
+    throw std::invalid_argument("Advanced mode requires return_type field");
   }
 }
 
-PolarVoxelOutlierFilterComponent::VoxelIndexSet
-PolarVoxelOutlierFilterComponent::determine_valid_voxels_simple(
-  const VoxelPointCountMap & voxel_counts) const
+void PolarVoxelOutlierFilterComponent::create_output(
+  const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask,
+  PointCloud2 & output)
 {
-  VoxelIndexSet valid_voxels;
-
-  for (const auto & [voxel_idx, counts] : voxel_counts) {
-    size_t total_points = counts.primary_count + counts.secondary_count;
-    if (total_points > static_cast<size_t>(voxel_points_threshold_)) {
-      valid_voxels.insert(voxel_idx);
-    }
+  if (visualization_estimation_only_) {
+    create_empty_output(input, output);
+  } else {
+    create_filtered_output(input, valid_points_mask, output);
   }
-
-  return valid_voxels;
 }
 
-PolarVoxelOutlierFilterComponent::VoxelIndexSet
-PolarVoxelOutlierFilterComponent::determine_valid_voxels_with_return_types(
-  const VoxelPointCountMap & voxel_counts) const
+void PolarVoxelOutlierFilterComponent::create_empty_output(
+  const PointCloud2ConstPtr & input, PointCloud2 & output)
 {
-  VoxelIndexSet valid_voxels;
+  output.header = input->header;
+  output.height = 0;
+  output.width = 0;
+  output.fields = input->fields;
+  output.is_bigendian = input->is_bigendian;
+  output.point_step = input->point_step;
+  output.row_step = 0;
+  output.is_dense = input->is_dense;
+  output.data.clear();
 
-  // Process all voxels for filtering decision
-  for (const auto & [voxel_idx, counts] : voxel_counts) {
-    bool primary_meets_threshold = counts.meets_primary_threshold(voxel_points_threshold_);
-    bool secondary_meets_threshold = counts.meets_secondary_threshold(secondary_noise_threshold_);
-
-    // Two-criteria filtering: Both criteria must be satisfied
-    if (primary_meets_threshold && secondary_meets_threshold) {
-      valid_voxels.insert(voxel_idx);
-    }
-  }
-
-  return valid_voxels;
+  RCLCPP_DEBUG_THROTTLE(
+    get_logger(), *get_clock(), 5000,
+    "Visualization estimation only mode - no point cloud output generated");
 }
 
-// Main delegation method for voxel validation
-PolarVoxelOutlierFilterComponent::VoxelIndexSet
-PolarVoxelOutlierFilterComponent::determine_valid_voxels(
-  const VoxelPointCountMap & voxel_counts) const
+void PolarVoxelOutlierFilterComponent::conditionally_publish_noise_cloud(
+  const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask)
 {
-  if (use_return_type_classification_) {
-    return determine_valid_voxels_with_return_types(voxel_counts);
+  if (!visualization_estimation_only_ && publish_noise_cloud_ && noise_cloud_pub_) {
+    publish_noise_cloud(input, valid_points_mask);
   }
-  return determine_valid_voxels_simple(voxel_counts);
 }
 
-// Cartesian to polar voxel conversion (if needed)
-PolarVoxelIndex PolarVoxelOutlierFilterComponent::cartesian_to_polar_voxel(
-  const CartesianCoordinate & cartesian) const
+// Helper function to extract polar coordinates
+std::optional<PolarVoxelOutlierFilterComponent::PolarCoordinate>
+PolarVoxelOutlierFilterComponent::extract_polar_coordinates(
+  bool has_polar_coords, sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_z,
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_distance,
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation) const
 {
+  if (has_polar_coords) {
+    return extract_precomputed_polar_coordinates(iter_distance, iter_azimuth, iter_elevation);
+  } else {
+    return extract_computed_polar_coordinates(iter_x, iter_y, iter_z);
+  }
+}
+
+// Helper function to extract pre-computed polar coordinates
+std::optional<PolarVoxelOutlierFilterComponent::PolarCoordinate>
+PolarVoxelOutlierFilterComponent::extract_precomputed_polar_coordinates(
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_distance,
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation) const
+{
+  if (!iter_distance || !iter_azimuth || !iter_elevation) {
+    return std::nullopt;
+  }
+
+  float distance = **iter_distance;
+  float azimuth = **iter_azimuth;
+  float elevation = **iter_elevation;
+
+  if (!std::isfinite(distance) || !std::isfinite(azimuth) || !std::isfinite(elevation)) {
+    return std::nullopt;
+  }
+
+  PolarCoordinate polar(distance, azimuth, elevation);
+  return validate_point_polar(polar) ? std::optional<PolarCoordinate>{polar} : std::nullopt;
+}
+
+// Helper function to extract computed polar coordinates from Cartesian
+std::optional<PolarVoxelOutlierFilterComponent::PolarCoordinate>
+PolarVoxelOutlierFilterComponent::extract_computed_polar_coordinates(
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_z) const
+{
+  if (!iter_x || !iter_y || !iter_z) {
+    return std::nullopt;
+  }
+
+  float x = **iter_x;
+  float y = **iter_y;
+  float z = **iter_z;
+
+  if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z)) {
+    return std::nullopt;
+  }
+
+  CartesianCoordinate cartesian(x, y, z);
   PolarCoordinate polar = cartesian_to_polar(cartesian);
-  return polar_to_polar_voxel(polar);
+  return validate_point_polar(polar) ? std::optional<PolarCoordinate>{polar} : std::nullopt;
 }
 
+// Helper function to extract return type
+uint8_t PolarVoxelOutlierFilterComponent::extract_return_type(
+  bool has_return_type, sensor_msgs::PointCloud2ConstIterator<uint8_t> * iter_return_type) const
+{
+  if (!has_return_type || !iter_return_type) {
+    return 0;
+  }
+
+  uint8_t return_type = **iter_return_type;
+  ++(*iter_return_type);
+  return return_type;
+}
+
+// Helper function to advance iterators
+void PolarVoxelOutlierFilterComponent::advance_iterators(
+  bool has_polar_coords, sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_z,
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_distance,
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
+  sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation) const
+{
+  if (has_polar_coords) {
+    if (iter_distance) ++(*iter_distance);
+    if (iter_azimuth) ++(*iter_azimuth);
+    if (iter_elevation) ++(*iter_elevation);
+  } else {
+    if (iter_x) ++(*iter_x);
+    if (iter_y) ++(*iter_y);
+    if (iter_z) ++(*iter_z);
+  }
+}
 }  // namespace autoware::pointcloud_preprocessor
 
 #include <rclcpp_components/register_node_macro.hpp>
-
 RCLCPP_COMPONENTS_REGISTER_NODE(autoware::pointcloud_preprocessor::PolarVoxelOutlierFilterComponent)
