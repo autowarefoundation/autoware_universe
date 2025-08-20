@@ -61,6 +61,9 @@ autoware::multi_object_tracker::TrackerProcessorConfig createProcessorConfig()
     {ObjectClassification::TRAILER, -0.6}, {ObjectClassification::MOTORCYCLE, -0.1},
     {ObjectClassification::BICYCLE, -0.1}, {ObjectClassification::PEDESTRIAN, -0.1}};
 
+  config.pruning_moving_object_speed = 5.5;   // [m/s]
+  config.pruning_static_object_speed = 1.38;  // [m/s]
+  config.pruning_static_iou_threshold = 0.0;  // [ratio]
   // overlap distance threshold for each class
   config.pruning_distance_thresholds = {
     {ObjectClassification::UNKNOWN, 9.0}, {ObjectClassification::CAR, 5.0},

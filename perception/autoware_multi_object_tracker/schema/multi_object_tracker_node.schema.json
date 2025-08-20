@@ -101,6 +101,21 @@
           "description": "Generalized IoU threshold for each class.",
           "default": [-0.3, -0.4, -0.6, -0.6, -0.6, -0.1, -0.1, -0.1]
         },
+        "prune_static_object_speed": {
+          "type": "number",
+          "description": "Speed threshold to consider an object as static. Below this speed, nearby unknown objects should always be detected.",
+          "default": 1.38
+        },
+        "prune_moving_object_speed": {
+          "type": "number",
+          "description": "Speed threshold to consider an object as moving. Above this speed, nearby unknown objects should always be merged to avoid false unknown detections.",
+          "default": 5.5
+        },
+        "prune_static_iou_threshold": {
+          "type": "number",
+          "description": "Generalized IoU threshold for a static object.",
+          "default": 0.0
+        },
         "overlap_distance_thresholds": {
           "type": "array",
           "items": {
