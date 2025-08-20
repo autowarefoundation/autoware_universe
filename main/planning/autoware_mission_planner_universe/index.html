@@ -14091,9 +14091,19 @@ It distributes route requests and planning results according to current MRM oper
 <td>Angle threshold for goal check</td>
 </tr>
 <tr>
-<td><code>arrival_check_distance</code></td>
+<td><code>arrival_check_lateral_distance</code></td>
 <td>double</td>
-<td>Distance threshold for goal check</td>
+<td>Lateral distance threshold for goal check</td>
+</tr>
+<tr>
+<td><code>arrival_check_longitudinal_undershoot_distance</code></td>
+<td>double</td>
+<td>Longitudinal distance threshold for goal check when the vehicle has not yet reached the goal</td>
+</tr>
+<tr>
+<td><code>arrival_check_longitudinal_overshoot_distance</code></td>
+<td>double</td>
+<td>Longitudinal distance threshold for goal check when the vehicle has passed the goal</td>
 </tr>
 <tr>
 <td><code>arrival_check_duration</code></td>
