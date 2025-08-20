@@ -14052,7 +14052,7 @@
 <li>WIP(sensor visibility requirements/limitations)</li>
 </ul>
 <h2 id="attention-area">Attention area<a class="headerlink" href="#attention-area" title="Permanent link">#</a></h2>
-<p>The attention area for a roundabout is defined as the lanelets within the Roundabout regulatory element that conflict with the ego path, together with their preceding lanelets up to common.attention_area_length meters upstream. The attention area is used to determine which objects are relevant for collision checking when ego is about to enter the roundabout.</p>
+<p>The attention area for a roundabout is defined as the lanelets within the Roundabout regulatory element that conflict with the ego path. The attention area is used to determine which objects are relevant for collision checking when ego is about to enter the roundabout.</p>
 <h2 id="stoplines">Stoplines<a class="headerlink" href="#stoplines" title="Permanent link">#</a></h2>
 <p>The module computes the following stoplines:</p>
 <ul>
@@ -14167,11 +14167,6 @@
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>.attention_area_length</td>
-<td>double</td>
-<td>[m] Upstream length to include preceding lanes of conflicting lanes in attention area</td>
-</tr>
 <tr>
 <td>.attention_area_margin</td>
 <td>double</td>
