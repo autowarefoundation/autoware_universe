@@ -1,6 +1,5 @@
 <?xml version="1.0"?>
 <launch>
-
   <!-- Input topics to match exactly as published -->
   <arg name="input/img_front_left" default="/nuscenes/CAM_FRONT_LEFT/image"/>
   <arg name="input/img_front" default="/nuscenes/CAM_FRONT/image"/>
