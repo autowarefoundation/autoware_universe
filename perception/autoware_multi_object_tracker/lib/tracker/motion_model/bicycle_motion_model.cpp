@@ -60,8 +60,8 @@ void BicycleMotionModel::setMotionParams(
   motion_params_.lf_ratio = bicycle_state.wheel_pos_ratio_front;
   motion_params_.lr_ratio = bicycle_state.wheel_pos_ratio_rear;
   motion_params_.wheel_pos_ratio =
-    (motion_params_.lf_ratio + motion_params_.lr_ratio) /
-    motion_params_.lr_ratio;  // [-] distance ratio of the wheel base over center-to-rear-wheel
+    (motion_params_.lf_ratio + motion_params_.lr_ratio) / motion_params_.lr_ratio;
+  // [-] distance ratio of the wheel base over center-to-rear-wheel
   motion_params_.max_slip = bicycle_state.slip_angle_max;
   motion_params_.q_cov_length = bicycle_state.length_uncertainty * bicycle_state.length_uncertainty;
 
@@ -509,9 +509,7 @@ bool BicycleMotionModel::getPredictedState(
 
   // set twist
   twist.linear.x = X(IDX::U);
-  twist.linear.y =
-    X(IDX::V) /
-    motion_params_.wheel_pos_ratio;  // lateral velocity is scaled by wheel position ratio
+  twist.linear.y = X(IDX::V) / motion_params_.wheel_pos_ratio;  // scaled by wheel position ratio
   twist.linear.z = 0.0;
   twist.angular.x = 0.0;
   twist.angular.y = 0.0;
