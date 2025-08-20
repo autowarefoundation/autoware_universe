@@ -80,9 +80,14 @@
           },
           "default": "[1, 6, 8, 10]"
         },
+        "visualization_estimation_only": {
+          "type": "boolean",
+          "description": "whether to run filter for visualization estimation only without publishing point cloud outputs (for monitoring/diagnostic purposes only)",
+          "default": "false"
+        },
         "publish_noise_cloud": {
           "type": "boolean",
-          "description": "whether to generate and publish noise point cloud for debugging (default: true for development)",
+          "description": "whether to generate and publish noise point cloud for debugging (ignored when visualization_estimation_only=true)",
           "default": "true"
         },
         "filter_ratio_error_threshold": {
@@ -127,6 +132,7 @@
         "secondary_noise_threshold",
         "visibility_estimation_max_secondary_voxel_count",
         "primary_return_types",
+        "visualization_estimation_only",
         "publish_noise_cloud",
         "filter_ratio_error_threshold",
         "filter_ratio_warn_threshold",
