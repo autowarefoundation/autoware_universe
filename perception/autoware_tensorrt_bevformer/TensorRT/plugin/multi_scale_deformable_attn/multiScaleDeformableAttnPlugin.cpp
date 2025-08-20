@@ -136,12 +136,12 @@ void printTensorValuesM(
 
   std::cout << "[Plugin Debug] " << name << " values (first " << count << " elements):\n";
 
-  float* host_values = nullptr;
+  float * host_values = nullptr;
   try {
-      host_values = new float[count];
-  } catch (std::exception const& e) {
-      std::cerr << "Allocation failed for host_values: " << e.what() << std::endl;
-      return;
+    host_values = new float[count];
+  } catch (std::exception const & e) {
+    std::cerr << "Allocation failed for host_values: " << e.what() << std::endl;
+    return;
   }
   cudaError_t err;
 
@@ -241,16 +241,16 @@ int32_t MultiScaleDeformableAttnPlugin::enqueue(
     cudaMalloc(reinterpret_cast<void **>(&spatial_shapes_int32_temp), buffer_size);
     allocated_temp_buffer = true;
 
-    int64_t* host_int64 = nullptr;
-    int32_t* host_int32 = nullptr;
+    int64_t * host_int64 = nullptr;
+    int32_t * host_int32 = nullptr;
     try {
-        host_int64 = new int64_t[num_levels * 2];
-        host_int32 = new int32_t[num_levels * 2];
-    } catch (std::exception const& e) {
-        std::cerr << "Allocation failed in enqueue: " << e.what() << std::endl;
-        delete[] host_int64;
-        delete[] host_int32;
-        return 1;
+      host_int64 = new int64_t[num_levels * 2];
+      host_int32 = new int32_t[num_levels * 2];
+    } catch (std::exception const & e) {
+      std::cerr << "Allocation failed in enqueue: " << e.what() << std::endl;
+      delete[] host_int64;
+      delete[] host_int32;
+      return 1;
     }
 
     cudaMemcpy(host_int64, inputs[1], num_levels * 2 * sizeof(int64_t), cudaMemcpyDeviceToHost);
