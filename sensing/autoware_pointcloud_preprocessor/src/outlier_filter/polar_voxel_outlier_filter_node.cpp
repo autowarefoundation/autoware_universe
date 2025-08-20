@@ -59,9 +59,10 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   enable_secondary_return_filtering_ = declare_parameter<bool>("filter_secondary_returns");
   secondary_noise_threshold_ =
     static_cast<int>(declare_parameter<int64_t>("secondary_noise_threshold"));
-  visibility_estimation_max_secondary_voxel_count_ =  // Updated name
-    static_cast<int>(
-      declare_parameter<int64_t>("visibility_estimation_max_secondary_voxel_count", 0));
+  visibility_estimation_max_secondary_voxel_count_ = static_cast<int>(
+    declare_parameter<int64_t>("visibility_estimation_max_secondary_voxel_count", 0));
+  visualization_estimation_only_ =
+    declare_parameter<bool>("visualization_estimation_only", false);  // Add this line
   publish_noise_cloud_ = declare_parameter<bool>("publish_noise_cloud", false);
 
   auto primary_return_types_param = declare_parameter<std::vector<int64_t>>("primary_return_types");
@@ -111,8 +112,10 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   RCLCPP_INFO(
     get_logger(),
     "Polar Voxel Outlier Filter initialized - supports PointXYZIRC and PointXYZIRCAEDT with %s "
-    "filtering",
-    use_return_type_classification_ ? "advanced two-criteria" : "simple occupancy");
+    "filtering%s",
+    use_return_type_classification_ ? "advanced two-criteria" : "simple occupancy",
+    visualization_estimation_only_ ? " (visualization estimation only - no point cloud output)"
+                                   : "");
 }
 
 void PolarVoxelOutlierFilterComponent::filter(
@@ -161,15 +164,32 @@ void PolarVoxelOutlierFilterComponent::filter(
   // Phase 3: Create valid points mask
   auto valid_points_mask = create_valid_points_mask(point_voxel_info, valid_voxels);
 
-  // Phase 4: Create filtered output
-  create_filtered_output(input, valid_points_mask, output);
+  // Phase 4: Create filtered output (skip if visualization estimation only)
+  if (!visualization_estimation_only_) {
+    create_filtered_output(input, valid_points_mask, output);
 
-  // Phase 5: Conditionally publish noise cloud
-  if (publish_noise_cloud_ && noise_cloud_pub_) {
-    publish_noise_cloud(input, valid_points_mask);
+    // Phase 5: Conditionally publish noise cloud
+    if (publish_noise_cloud_ && noise_cloud_pub_) {
+      publish_noise_cloud(input, valid_points_mask);
+    }
+  } else {
+    // For visualization estimation only, create empty output to maintain interface
+    output.header = input->header;
+    output.height = 0;
+    output.width = 0;
+    output.fields = input->fields;
+    output.is_bigendian = input->is_bigendian;
+    output.point_step = input->point_step;
+    output.row_step = 0;
+    output.is_dense = input->is_dense;
+    output.data.clear();
+
+    RCLCPP_DEBUG_THROTTLE(
+      get_logger(), *get_clock(), 5000,
+      "Visualization estimation only mode - no point cloud output generated");
   }
 
-  // Phase 6: Publish diagnostics
+  // Phase 6: Publish diagnostics (always run for visualization estimation)
   publish_diagnostics(voxel_counts, valid_points_mask);
 }
 
@@ -288,7 +308,8 @@ PolarVoxelOutlierFilterComponent::create_valid_points_mask(
   ValidPointsMask valid_points_mask(point_voxel_info.size(), false);
 
   for (size_t i = 0; i < point_voxel_info.size(); ++i) {
-    if (const auto & optional_info = point_voxel_info[i]) {
+    const auto & optional_info = point_voxel_info[i];
+    if (optional_info) {
       const auto & info = *optional_info;
       if (valid_voxels.count(info.voxel_idx) > 0) {
         if (info.is_primary || !enable_secondary_return_filtering_) {
@@ -350,7 +371,7 @@ void PolarVoxelOutlierFilterComponent::publish_diagnostics(
     for (const auto & [voxel_idx, counts] : voxel_counts) {
       if (
         counts.is_in_visibility_range &&
-        !counts.meets_secondary_threshold(voxel_points_threshold_)) {
+        !counts.meets_secondary_threshold(secondary_noise_threshold_)) {
         low_visibility_voxels_count++;
       }
     }
@@ -493,8 +514,10 @@ void PolarVoxelOutlierFilterComponent::update_parameter(const rclcpp::Parameter 
     voxel_points_threshold_ = static_cast<int>(param.as_int());
   } else if (name == "secondary_noise_threshold") {
     secondary_noise_threshold_ = static_cast<int>(param.as_int());
-  } else if (name == "visibility_estimation_max_secondary_voxel_count") {  // Updated name
+  } else if (name == "visibility_estimation_max_secondary_voxel_count") {
     visibility_estimation_max_secondary_voxel_count_ = static_cast<int>(param.as_int());
+  } else if (name == "visualization_estimation_only") {  // Add this block
+    visualization_estimation_only_ = param.as_bool();
   } else if (name == "min_radius_m") {
     min_radius_m_ = param.as_double();
   } else if (name == "max_radius_m") {
@@ -553,6 +576,7 @@ rcl_interfaces::msg::SetParametersResult PolarVoxelOutlierFilterComponent::param
     "filter_secondary_returns",
     "secondary_noise_threshold",
     "visibility_estimation_max_secondary_voxel_count",
+    "visualization_estimation_only",
     "primary_return_types",
     "publish_noise_cloud",
     "visibility_error_threshold",
@@ -680,7 +704,7 @@ PolarVoxelOutlierFilterComponent::determine_valid_voxels_simple(
 
   for (const auto & [voxel_idx, counts] : voxel_counts) {
     size_t total_points = counts.primary_count + counts.secondary_count;
-    if (total_points >= static_cast<size_t>(voxel_points_threshold_)) {
+    if (total_points > static_cast<size_t>(voxel_points_threshold_)) {
       valid_voxels.insert(voxel_idx);
     }
   }

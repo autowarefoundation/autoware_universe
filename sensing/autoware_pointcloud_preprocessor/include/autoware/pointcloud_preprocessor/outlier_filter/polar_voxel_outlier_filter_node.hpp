@@ -205,7 +205,8 @@ private:
   int secondary_noise_threshold_{};
   std::vector<int> primary_return_types_;
   bool publish_noise_cloud_{};
-  int visibility_estimation_max_secondary_voxel_count_{};  // Updated name
+  int visibility_estimation_max_secondary_voxel_count_{};
+  bool visualization_estimation_only_{};
 
   // Diagnostic thresholds
   double visibility_error_threshold_{};
