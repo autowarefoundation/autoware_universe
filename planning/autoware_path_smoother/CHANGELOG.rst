@@ -2,6 +2,11 @@
 Changelog for package autoware_path_smoother
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* feat(autoware_path_smoother): create the schema file and update the readme (`#10124 <https://github.com/autowarefoundation/autoware_universe/issues/10124>`_)
+* Contributors: Vishal Chauhan
+
 0.46.0 (2025-06-20)
 -------------------
 

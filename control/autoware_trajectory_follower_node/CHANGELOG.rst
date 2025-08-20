@@ -2,6 +2,21 @@
 Changelog for package autoware_trajectory_follower_node
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* feat: change planning output topic name to /planning/trajectory (`#11135 <https://github.com/autowarefoundation/autoware_universe/issues/11135>`_)
+  * change planning output topic name to /planning/trajectory
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(autoware_trajectory_follower, autoware_mission_planner_universe, autoware_scenario_selector): use transient_local for operation_mode_state (`#11101 <https://github.com/autowarefoundation/autoware_universe/issues/11101>`_)
+  * subscribe operation-mode with transient_local
+  * fix mistake
+  * fix unit test code
+  * pre-commit
+  ---------
+* Contributors: Kem (TiankuiXian), Yukihiro Saito
+
 0.46.0 (2025-06-20)
 -------------------
 

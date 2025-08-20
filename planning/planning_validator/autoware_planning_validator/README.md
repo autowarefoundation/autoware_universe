@@ -2,6 +2,8 @@
 
 The `autoware_planning_validator` node is the last module executed in the planning component, it responsible for checking the validity of the planning trajectory before it is published to control component. The status of the validation can be viewed in the `/diagnostics` and `/validation_status` topics. When an invalidity is detected, the `autoware_planning_validator` will process the trajectory following the selected option: "0. publish the trajectory as it is", "1. stop publishing the trajectory", "2. publish the last validated trajectory".
 
+**Note**: The planning validator automatically suppresses validation errors during manual driving mode. When the vehicle is in autonomous mode, all validation checks are performed normally. During manual driving, validation errors are suppressed and only debug logs are output.
+
 The `autoware_planning_validator` node loads multiple plugins modules, each responsible for running specific validation checks on the planning trajectory:
 
 - **Latency Checker**: The `autoware_planning_validator_latency_checker` is responsible for checking the validity of planning trajectory age
@@ -17,14 +19,15 @@ The `autoware_planning_validator` node loads multiple plugins modules, each resp
 
 The `autoware_planning_validator` takes in the following inputs:
 
-| Name                      | Type                                     | Description                                    |
-| ------------------------- | ---------------------------------------- | ---------------------------------------------- |
-| `~/input/kinematics`      | nav_msgs/Odometry                        | ego pose and twist                             |
-| `~/input/acceleration`    | geometry_msgs/AccelWithCovarianceStamped | current acceleration of the ego vehicle        |
-| `~/input/trajectory`      | autoware_planning_msgs/Trajectory        | target trajectory to be validated in this node |
-| `~/input/route`           | autoware_planning_msgs/LaneletRoute      | route information                              |
-| `~/input/lanelet_map_bin` | autoware_map_msgs/LaneletMapBin          | lanelet vector map information                 |
-| `~/input/pointcloud`      | sensor_msgs/PointCloud2                  | obstacle pointcloud with ground removed        |
+| Name                             | Type                                      | Description                                      |
+| -------------------------------- | ----------------------------------------- | ------------------------------------------------ |
+| `~/input/kinematics`             | nav_msgs/Odometry                         | ego pose and twist                               |
+| `~/input/acceleration`           | geometry_msgs/AccelWithCovarianceStamped  | current acceleration of the ego vehicle          |
+| `~/input/trajectory`             | autoware_planning_msgs/Trajectory         | target trajectory to be validated in this node   |
+| `~/input/route`                  | autoware_planning_msgs/LaneletRoute       | route information                                |
+| `~/input/lanelet_map_bin`        | autoware_map_msgs/LaneletMapBin           | lanelet vector map information                   |
+| `~/input/pointcloud`             | sensor_msgs/PointCloud2                   | obstacle pointcloud with ground removed          |
+| `~/input/operational_mode_state` | autoware_adapi_v1_msgs/OperationModeState | current operation mode state (autonomous/manual) |
 
 ### Outputs
 
