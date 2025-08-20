@@ -57,7 +57,6 @@ TrajectoryOptimizer::TrajectoryOptimizer(const rclcpp::NodeOptions & options)
     "~/input/trajectories", 1,
     std::bind(&TrajectoryOptimizer::on_traj, this, std::placeholders::_1));
   // interface publisher
-  trajectory_pub_ = create_publisher<Trajectory>("~/output/trajectory", 1);
   trajectories_pub_ = create_publisher<CandidateTrajectories>("~/output/trajectories", 1);
   // debug time keeper
   debug_processing_time_detail_pub_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
@@ -93,7 +92,6 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
   using autoware_utils_rclcpp::update_param;
   auto params = params_;
 
-  update_param<double>(parameters, "keep_last_trajectory_s", params.keep_last_trajectory_s);
   update_param<double>(parameters, "nearest_dist_threshold_m", params.nearest_dist_threshold_m);
   update_param<double>(parameters, "nearest_yaw_threshold_rad", params.nearest_yaw_threshold_rad);
   update_param<double>(parameters, "target_pull_out_speed_mps", params.target_pull_out_speed_mps);
@@ -112,8 +110,6 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
   update_param<bool>(parameters, "limit_lateral_acceleration", params.limit_lateral_acceleration);
   update_param<bool>(parameters, "set_engage_speed", params.set_engage_speed);
   update_param<bool>(parameters, "fix_invalid_points", params.fix_invalid_points);
-  update_param<bool>(parameters, "publish_last_trajectory", params.publish_last_trajectory);
-  update_param<bool>(parameters, "keep_last_trajectory", params.keep_last_trajectory);
   update_param<bool>(parameters, "extend_trajectory_backward", params.extend_trajectory_backward);
 
   params_ = params;
@@ -154,8 +150,6 @@ void TrajectoryOptimizer::set_up_params()
 {
   using autoware_utils_rclcpp::get_or_declare_parameter;
 
-  params_.keep_last_trajectory_s =
-    get_or_declare_parameter<double>(*this, "keep_last_trajectory_s");
   params_.nearest_dist_threshold_m =
     get_or_declare_parameter<double>(*this, "nearest_dist_threshold_m");
   params_.nearest_yaw_threshold_rad =
@@ -179,12 +173,7 @@ void TrajectoryOptimizer::set_up_params()
   params_.limit_lateral_acceleration =
     get_or_declare_parameter<bool>(*this, "limit_lateral_acceleration");
   params_.set_engage_speed = get_or_declare_parameter<bool>(*this, "set_engage_speed");
-
   params_.fix_invalid_points = get_or_declare_parameter<bool>(*this, "fix_invalid_points");
-
-  params_.publish_last_trajectory =
-    get_or_declare_parameter<bool>(*this, "publish_last_trajectory");
-  params_.keep_last_trajectory = get_or_declare_parameter<bool>(*this, "keep_last_trajectory");
   params_.extend_trajectory_backward =
     get_or_declare_parameter<bool>(*this, "extend_trajectory_backward");
 }
@@ -194,36 +183,11 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   initialize_optimizers();
 
-  auto create_output_trajectory_from_past = [&]() {
-    CandidateTrajectory previous_trajectory;
-    previous_trajectory.points = previous_trajectory_ptr_->points;
-    previous_trajectory.header = previous_trajectory_ptr_->header;
-    previous_trajectory.header.stamp = now();
-    previous_trajectory.generator_id = msg->candidate_trajectories.front().generator_id;
-    motion_utils::calculate_time_from_start(
-      previous_trajectory.points, current_odometry_ptr_->pose.pose.position);
-    return previous_trajectory;
-  };
-  previous_trajectory_ptr_ = sub_previous_trajectory_.take_data();
   current_odometry_ptr_ = sub_current_odometry_.take_data();
   current_acceleration_ptr_ = sub_current_acceleration_.take_data();
   params_.current_odometry = *current_odometry_ptr_;
   params_.current_acceleration = *current_acceleration_ptr_;
 
-  const auto keep_last_trajectory_s = params_.keep_last_trajectory_s;
-  const auto keep_last_trajectory = params_.keep_last_trajectory;
-
-  if (previous_trajectory_ptr_ && keep_last_trajectory) {
-    auto current_time = now();
-    auto time_diff = (rclcpp::Time(current_time) - *last_time_).seconds();
-    if (time_diff < keep_last_trajectory_s) {
-      CandidateTrajectories output_trajectories = *msg;
-      output_trajectories.candidate_trajectories.clear();
-      output_trajectories.candidate_trajectories.push_back(create_output_trajectory_from_past());
-      trajectories_pub_->publish(output_trajectories);
-      return;
-    }
-  }
   last_time_ = std::make_shared<rclcpp::Time>(now());
 
   if (!current_odometry_ptr_ || !current_acceleration_ptr_) {
@@ -250,17 +214,7 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
       trajectory.points, current_odometry_ptr_->pose.pose.position);
   }
 
-  if (previous_trajectory_ptr_ && params_.publish_last_trajectory) {
-    output_trajectories.candidate_trajectories.push_back(create_output_trajectory_from_past());
-  }
-
   trajectories_pub_->publish(output_trajectories);
-
-  Trajectory output_trajectory;
-  output_trajectory.header = output_trajectories.candidate_trajectories.front().header;
-  output_trajectory.points = output_trajectories.candidate_trajectories.front().points;
-
-  trajectory_pub_->publish(output_trajectory);
 }
 
 }  // namespace autoware::trajectory_optimizer

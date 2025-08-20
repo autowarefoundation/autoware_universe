@@ -92,7 +92,6 @@ private:
   // interface subscriber
   rclcpp::Subscription<CandidateTrajectories>::SharedPtr trajectories_sub_;
   // interface publisher
-  rclcpp::Publisher<Trajectory>::SharedPtr trajectory_pub_;
   rclcpp::Publisher<CandidateTrajectories>::SharedPtr trajectories_pub_;
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr debug_processing_time_detail_;
 
@@ -100,13 +99,9 @@ private:
     this, "~/input/odometry"};
   autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped>
     sub_current_acceleration_{this, "~/input/acceleration"};
-  autoware_utils::InterProcessPollingSubscriber<Trajectory> sub_previous_trajectory_{
-    this, "~/input/previous_trajectory"};
 
   Odometry::ConstSharedPtr current_odometry_ptr_;  // current odometry
   AccelWithCovarianceStamped::ConstSharedPtr current_acceleration_ptr_;
-  Trajectory::ConstSharedPtr previous_trajectory_ptr_;
-  Trajectory::ConstSharedPtr previous_output_ptr_;
 
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
     debug_processing_time_detail_pub_;

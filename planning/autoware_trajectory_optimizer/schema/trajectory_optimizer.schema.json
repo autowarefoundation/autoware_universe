@@ -6,12 +6,6 @@
     "trajectory_optimizer_node": {
       "type": "object",
       "properties": {
-        "keep_last_trajectory_s": {
-          "type": "number",
-          "default": 0.5,
-          "minimum": 0,
-          "description": "How long to maintain the previous chosen/best trajectory as a single output for this module. Only used if keep_last_trajectory is true [s]"
-        },
         "nearest_dist_threshold_m": {
           "type": "number",
           "default": 1.5,
@@ -94,16 +88,6 @@
           "type": "boolean",
           "default": false,
           "description": "Apply velocity smoothing to the input trajectories"
-        },
-        "publish_last_trajectory": {
-          "type": "boolean",
-          "default": false,
-          "description": "Publish the previous trajectory selected by the autoware_trajectory_ranker package along with the interpolated new trajectories coming from the trajectory generator"
-        },
-        "keep_last_trajectory": {
-          "type": "boolean",
-          "default": false,
-          "description": "With this flag on, the module will only publish the previous trajectory selected by the autoware_trajectory_ranker for keep_last_trajectory_s seconds"
         },
         "extend_trajectory_backward": {
           "type": "boolean",

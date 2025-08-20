@@ -1,6 +1,5 @@
 /**:
   ros__parameters:
-    keep_last_trajectory_s: 0.5 # [s]
     nearest_dist_threshold_m: 1.5 # [m]
     nearest_yaw_threshold_rad: 1.0 # [rad]
     target_pull_out_speed_mps: 1.0 # [mps]
@@ -16,6 +15,4 @@
     set_engage_speed: false
     fix_invalid_points: true
     smooth_velocities: false
-    publish_last_trajectory: false
-    keep_last_trajectory: false
     extend_trajectory_backward: true

@@ -30,7 +30,6 @@ struct InitialMotion
 };
 struct TrajectoryOptimizerParams
 {
-  double keep_last_trajectory_s{0.0};
   double nearest_dist_threshold_m{0.0};
   double nearest_yaw_threshold_rad{0.0};
   double target_pull_out_speed_mps{0.0};
@@ -46,8 +45,6 @@ struct TrajectoryOptimizerParams
   bool limit_lateral_acceleration{false};
   bool set_engage_speed{false};
   bool fix_invalid_points{false};
-  bool publish_last_trajectory{false};
-  bool keep_last_trajectory{false};
   bool extend_trajectory_backward{false};
   Odometry current_odometry;
   AccelWithCovarianceStamped current_acceleration;
