@@ -272,7 +272,6 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     constexpr double precision_threshold = 0.;
     constexpr double recall_threshold = 0.5;
 
-    // Adjust generalized IoU threshold based on target object speed and static/moving status
     const double generalized_iou_threshold = config_.pruning_giou_thresholds.at(source_data.label);
 
     const bool is_pedestrian =
@@ -298,6 +297,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
             source_data.object, target_data.object, precision, recall, generalized_iou)) {
         return false;
       }
+      // Adjust generalized IoU threshold based on target object speed and static/moving status
       const double known_object_speed =
         is_target_known
           ? std::hypot(target_data.object.twist.linear.x, target_data.object.twist.linear.y)
