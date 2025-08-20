@@ -209,20 +209,27 @@ void TrackerProcessor::removeOldTracker(const rclcpp::Time & time)
   }
 }
 
-double calcGeneralizedIoUThresholdUnknown(double target_speed, double generalized_iou_threshold)
+inline double calcGeneralizedIoUThresholdUnknown(
+  double target_speed, double generalized_iou_threshold)
 {
   static constexpr double static_target_speed = 1.38;  // m/s
   static constexpr double moving_target_speed = 5.5;   // m/s
   static constexpr double static_iou_threshold = 0.0;
-  if (target_speed < static_target_speed) {
-    return static_iou_threshold;
+
+  // If the threshold is already larger than static threshold, just return it
+  if (generalized_iou_threshold > static_iou_threshold) {
+    return generalized_iou_threshold;
   }
-  if (target_speed < moving_target_speed) {
+  if (target_speed >= moving_target_speed) {
+    return generalized_iou_threshold;
+  }
+  if (target_speed > static_target_speed) {
+    // Linear interpolation between static and moving thresholds
     const double speed_ratio =
       (target_speed - static_target_speed) / (moving_target_speed - static_target_speed);
     return static_iou_threshold + speed_ratio * (generalized_iou_threshold - static_iou_threshold);
   }
-  return generalized_iou_threshold;
+  return static_iou_threshold;
 }
 
 // This function removes overlapped trackers based on distance and IoU criteria
