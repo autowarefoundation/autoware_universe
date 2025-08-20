@@ -28,7 +28,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore bevformer, thre, caminfo, intrin, canbus, Canbus
+// cspell:ignore thre, caminfo, intrin, Canbus, BEVFormer
 
 #include "autoware/tensorrt_bevformer/bevformer_node.hpp"
 

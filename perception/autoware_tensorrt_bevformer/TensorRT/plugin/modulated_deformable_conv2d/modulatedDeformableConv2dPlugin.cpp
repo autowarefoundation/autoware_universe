@@ -332,11 +332,15 @@ void ModulatedDeformableConv2dPlugin::destroy() noexcept
 
 nvinfer1::IPluginV2DynamicExt * ModulatedDeformableConv2dPlugin::clone() const noexcept
 {
-  auto * plugin = new ModulatedDeformableConv2dPlugin(
-    mStride, mPadding, mDilation, mDeformableGroup, mGroup, use_h2);
-  plugin->setPluginNamespace(getPluginNamespace());
-
-  return plugin;
+  try {
+    auto * plugin = new ModulatedDeformableConv2dPlugin(
+      mStride, mPadding, mDilation, mDeformableGroup, mGroup, use_h2);
+    plugin->setPluginNamespace(getPluginNamespace());
+    return plugin;
+  } catch (std::exception const & e) {
+    nvinfer1::plugin::caughtError(e);
+  }
+  return nullptr;
 }
 
 void ModulatedDeformableConv2dPlugin::setPluginNamespace(const char * pluginNamespace) noexcept
@@ -486,11 +490,16 @@ IPluginV2DynamicExt * ModulatedDeformableConv2dPluginCreator::createPlugin(
     }
   }
 
-  auto * plugin =
-    new ModulatedDeformableConv2dPlugin(stride, padding, dilation, deformableGroup, group, false);
-  plugin->setPluginNamespace(mNamespace.c_str());
-  plugin->initialize();
-  return plugin;
+  try {
+    auto * plugin = new ModulatedDeformableConv2dPlugin(
+      stride, padding, dilation, deformableGroup, group, false);
+    plugin->setPluginNamespace(mNamespace.c_str());
+    plugin->initialize();
+    return plugin;
+  } catch (std::exception const & e) {
+    nvinfer1::plugin::caughtError(e);
+  }
+  return nullptr;
 }
 
 IPluginV2DynamicExt * ModulatedDeformableConv2dPluginCreator::deserializePlugin(
@@ -575,11 +584,16 @@ IPluginV2DynamicExt * ModulatedDeformableConv2dPluginCreator2::createPlugin(
     }
   }
 
-  auto * plugin =
-    new ModulatedDeformableConv2dPlugin(stride, padding, dilation, deformableGroup, group, true);
-  plugin->setPluginNamespace(mNamespace.c_str());
-  plugin->initialize();
-  return plugin;
+  try {
+    auto * plugin = new ModulatedDeformableConv2dPlugin(
+      stride, padding, dilation, deformableGroup, group, true);
+    plugin->setPluginNamespace(mNamespace.c_str());
+    plugin->initialize();
+    return plugin;
+  } catch (std::exception const & e) {
+    nvinfer1::plugin::caughtError(e);
+  }
+  return nullptr;
 }
 
 IPluginV2DynamicExt * ModulatedDeformableConv2dPluginCreator2::deserializePlugin(

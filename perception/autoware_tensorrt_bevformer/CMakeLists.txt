@@ -138,14 +138,6 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   )
 
   ament_auto_add_library(${PROJECT_NAME} SHARED ${SOURCES})
-  ament_target_dependencies(${PROJECT_NAME}
-    rclcpp
-    std_msgs
-    visualization_msgs
-    tf2_geometry_msgs
-    ament_index_cpp
-    Eigen3
-  )
 
   target_link_libraries(${PROJECT_NAME}
     ${CUDA_LIBRARIES}

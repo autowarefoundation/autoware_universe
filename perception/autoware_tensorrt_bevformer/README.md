@@ -1,4 +1,4 @@
-# tensorrt_bevformer <!-- cspell:ignore Zhicheng, canbus, trainval, bevfomer, ROS2, bevformer, Bevformer -->
+# tensorrt_bevformer <!-- cspell:ignore Zhicheng, canbus, trainval, ROS2, bevformer, Multicoreware's, Bevformer -->
 
 ## Purpose
 
@@ -87,7 +87,7 @@ $HOME/autoware_data/tensorrt_bevformer
    <arg name="UPDATE_FREQUENCY" default="10.0"/>
    ```
 
-3. Build the autoware_tensorrt_bevfomer and ros2_dataset_bridge packages
+3. Build the autoware_tensorrt_bevformer and ros2_dataset_bridge packages
 
    ```bash
    # Build ros2_dataset_bridge

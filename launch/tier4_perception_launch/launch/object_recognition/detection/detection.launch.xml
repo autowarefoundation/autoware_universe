@@ -339,7 +339,6 @@
       <arg name="input/camera7/image" value="$(var input/camera7/image)"/>
       <arg name="input/camera7/info" value="$(var input/camera7/info)"/>
       <arg name="input/can_bus" value="$(var input/can_bus)"/>
-      <arg name="input/scene_token" value="$(var scene_token)"/>
       <arg name="number_of_cameras" value="$(var number_of_cameras)"/>
       <arg name="output/objects" value="$(var output/objects)"/>
     </include>
