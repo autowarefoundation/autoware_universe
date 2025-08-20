@@ -35,6 +35,8 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #endif
 
+#include <algorithm>
+
 namespace autoware::multi_object_tracker
 {
 VehicleTracker::VehicleTracker(
@@ -287,14 +289,6 @@ bool VehicleTracker::getTrackedObject(
     return false;
   }
   object.shape.dimensions.x = motion_model_.getLength();  // set length
-
-  // todo: check and limit the size of the object
-  // * check the size limit
-  // * if it is too large
-  //   * get front and rear point covariance
-  //   * set the center point weighted by the covariance(larger covariance has lower weight)
-  //   * resize the object
-  // * if it is too small: no issue (since the tracker already has minimum size)
 
   // cache object
   updateCache(object, time);

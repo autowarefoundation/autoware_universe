@@ -467,7 +467,7 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   Q(IDX::Y2, IDX::Y2) = (q_cov_long2 * sin_yaw * sin_yaw + q_cov_lat2 * cos_yaw * cos_yaw);
 
   // covariance between X1 and X2, Y1 and Y2, shares the same covariance of rear axle
-  const double coefficient = 0.25;  // [m^2] coefficient for covariance between front and rear axle
+  const double coefficient = 0.1;  // [m^2] coefficient for covariance between front and rear axle
   Q(IDX::X1, IDX::X2) = Q(IDX::X1, IDX::X1) * coefficient;
   Q(IDX::X2, IDX::X1) = Q(IDX::X1, IDX::X1) * coefficient;
   Q(IDX::Y1, IDX::Y2) = Q(IDX::Y1, IDX::Y1) * coefficient;
