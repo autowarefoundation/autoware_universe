@@ -208,20 +208,12 @@ void TrackerProcessor::removeOldTracker(const rclcpp::Time & time)
     }
   }
 }
-// std::string uuidToString(const unique_identifier_msgs::msg::UUID & uuid_msg)
-// {
-//   std::stringstream ss;
-//   for (auto i = 0; i < 16; ++i) {
-//     ss << std::hex << std::setfill('0') << std::setw(2) << +uuid_msg.uuid[i];
-//   }
-//   return ss.str();
-// }
 
 double calcGeneralizedIoUThresholdUnknown(double target_speed, double generalized_iou_threshold)
 {
-  static constexpr double static_target_speed = 0.5;  // m/s
-  static constexpr double moving_target_speed = 2.0;  // m/s
-  static constexpr double static_iou_threshold = -0.1;
+  static constexpr double static_target_speed = 1.38;  // m/s
+  static constexpr double moving_target_speed = 5.5;   // m/s
+  static constexpr double static_iou_threshold = 0.0;
   if (target_speed < static_target_speed) {
     return static_iou_threshold;
   }
@@ -305,10 +297,6 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
           : std::hypot(source_data.object.twist.linear.x, source_data.object.twist.linear.y);
       double generalized_iou_threshold_unknown =
         calcGeneralizedIoUThresholdUnknown(known_object_speed, generalized_iou_threshold);
-      // std::cout << "known_object_speed : " << known_object_speed
-      //       << ", Generalized IoU threshold: " << generalized_iou_threshold_unknown
-      //       << ", Target UUID: " << uuidToString(target_data.object.uuid)
-      //       << ", Source UUID: " << uuidToString(source_data.object.uuid) << std::endl;
       return (
         precision > precision_threshold || recall > recall_threshold ||
         generalized_iou > generalized_iou_threshold_unknown);
