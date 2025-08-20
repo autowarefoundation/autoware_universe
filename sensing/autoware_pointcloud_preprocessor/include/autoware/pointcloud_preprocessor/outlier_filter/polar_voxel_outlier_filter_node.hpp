@@ -161,7 +161,7 @@ private:
   void publish_diagnostics(
     const VoxelPointCountMap & voxel_counts, const ValidPointsMask & valid_points_mask);
 
-  // Point processing helper
+  // Point processing helper methods
   std::optional<PointVoxelInfo> process_point_for_voxel_info(
     bool has_polar_coords, bool has_return_type,
     sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
@@ -172,7 +172,6 @@ private:
     sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation,
     sensor_msgs::PointCloud2ConstIterator<uint8_t> * iter_return_type) const;
 
-  // Point processing helper methods
   std::optional<PolarCoordinate> extract_polar_coordinates(
     bool has_polar_coords, sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
     sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
@@ -202,9 +201,17 @@ private:
     sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
     sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation) const;
 
+  void advance_polar_iterators(
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_distance,
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation) const;
+  void advance_cartesian_iterators(
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
+    sensor_msgs::PointCloud2ConstIterator<float> * iter_z) const;
+
   void update_parameter(const rclcpp::Parameter & param);
 
-  // Helper methods
   static void setup_output_header(
     PointCloud2 & output, const PointCloud2ConstPtr & input, size_t valid_count);
   static sensor_msgs::msg::PointCloud2 create_noise_cloud(
@@ -217,7 +224,7 @@ private:
 
   // Return type and validation methods
   bool is_primary_return_type(uint8_t return_type) const;
-  bool validate_point_polar(const PolarCoordinate & polar) const;
+  bool is_valid_polar_point(const PolarCoordinate & polar) const;
   static bool has_return_type_field(const PointCloud2ConstPtr & input);
   static bool has_polar_coordinates(const PointCloud2ConstPtr & input);
 
@@ -276,12 +283,20 @@ private:
     const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask);
 
   // Point classification helper method
-  bool determine_if_point_is_primary(bool has_return_type, uint8_t return_type) const;
+  bool is_point_primary(bool has_return_type, uint8_t return_type) const;
 
   // Point validation helper methods
   bool has_finite_coordinates(const PolarCoordinate & polar) const;
   bool is_within_radius_range(const PolarCoordinate & polar) const;
   bool has_sufficient_radius(const PolarCoordinate & polar) const;
+
+  // Point validation helper methods for mask creation
+  bool is_point_valid_for_mask(
+    const std::optional<PointVoxelInfo> & optional_info, const VoxelIndexSet & valid_voxels) const;
+  bool has_voxel_info(const std::optional<PointVoxelInfo> & optional_info) const;
+  bool is_voxel_in_valid_set(
+    const PolarVoxelIndex & voxel_idx, const VoxelIndexSet & valid_voxels) const;
+  bool passes_secondary_return_filter(bool is_primary) const;
 };
 
 }  // namespace autoware::pointcloud_preprocessor
