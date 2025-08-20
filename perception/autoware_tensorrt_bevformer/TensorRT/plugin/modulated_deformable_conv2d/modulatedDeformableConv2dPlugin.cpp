@@ -491,8 +491,8 @@ IPluginV2DynamicExt * ModulatedDeformableConv2dPluginCreator::createPlugin(
   }
 
   try {
-    auto * plugin = new ModulatedDeformableConv2dPlugin(
-      stride, padding, dilation, deformableGroup, group, false);
+    auto * plugin =
+      new ModulatedDeformableConv2dPlugin(stride, padding, dilation, deformableGroup, group, false);
     plugin->setPluginNamespace(mNamespace.c_str());
     plugin->initialize();
     return plugin;
@@ -585,8 +585,8 @@ IPluginV2DynamicExt * ModulatedDeformableConv2dPluginCreator2::createPlugin(
   }
 
   try {
-    auto * plugin = new ModulatedDeformableConv2dPlugin(
-      stride, padding, dilation, deformableGroup, group, true);
+    auto * plugin =
+      new ModulatedDeformableConv2dPlugin(stride, padding, dilation, deformableGroup, group, true);
     plugin->setPluginNamespace(mNamespace.c_str());
     plugin->initialize();
     return plugin;
