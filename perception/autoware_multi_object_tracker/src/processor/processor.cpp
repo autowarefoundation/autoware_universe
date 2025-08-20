@@ -210,20 +210,20 @@ void TrackerProcessor::removeOldTracker(const rclcpp::Time & time)
 }
 
 inline double calcGeneralizedIoUThresholdUnknown(
-  double target_speed, double generalized_iou_threshold, double static_target_speed,
-  double moving_target_speed, double static_iou_threshold)
+  double object_speed, double generalized_iou_threshold, double static_object_speed,
+  double moving_object_speed, double static_iou_threshold)
 {
   // If the threshold is already larger than static threshold, just return it
   if (generalized_iou_threshold > static_iou_threshold) {
     return generalized_iou_threshold;
   }
-  if (target_speed >= moving_target_speed) {
+  if (object_speed >= moving_object_speed) {
     return generalized_iou_threshold;
   }
-  if (target_speed > static_target_speed) {
+  if (object_speed > static_object_speed) {
     // Linear interpolation between static and moving thresholds
     const double speed_ratio =
-      (target_speed - static_target_speed) / (moving_target_speed - static_target_speed);
+      (object_speed - static_object_speed) / (moving_object_speed - static_object_speed);
     return static_iou_threshold + speed_ratio * (generalized_iou_threshold - static_iou_threshold);
   }
   return static_iou_threshold;
@@ -265,9 +265,9 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     constexpr double min_union_iou_area = 1e-2;
     constexpr float min_known_prob = 0.2;
     constexpr double min_valid_iou = 1e-6;
+
     constexpr double precision_threshold = 0.;
     constexpr double recall_threshold = 0.5;
-
     const double generalized_iou_threshold = config_.pruning_giou_thresholds.at(source_data.label);
 
     const bool is_pedestrian =
@@ -299,8 +299,8 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
           ? std::hypot(target_data.object.twist.linear.x, target_data.object.twist.linear.y)
           : std::hypot(source_data.object.twist.linear.x, source_data.object.twist.linear.y);
       double generalized_iou_threshold_unknown = calcGeneralizedIoUThresholdUnknown(
-        known_object_speed, generalized_iou_threshold, config_.pruning_static_target_speed,
-        config_.pruning_moving_target_speed, config_.pruning_static_iou_threshold);
+        known_object_speed, generalized_iou_threshold, config_.pruning_static_object_speed,
+        config_.pruning_moving_object_speed, config_.pruning_static_iou_threshold);
       return (
         precision > precision_threshold || recall > recall_threshold ||
         generalized_iou > generalized_iou_threshold_unknown);
