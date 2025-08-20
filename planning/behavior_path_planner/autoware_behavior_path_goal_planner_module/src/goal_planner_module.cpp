@@ -746,7 +746,9 @@ std::pair<LaneParkingResponse, FreespaceParkingResponse> GoalPlannerModule::sync
       RCLCPP_INFO_THROTTLE(
         getLogger(), *clock_, 5000,
         "lane change has been executed or cancelled while LaneParking thread was planning. Reject "
-        "the response and wait for LaneParking thread to complete");
+        "the response and wait for LaneParking thread to complete: (%d, %d)",
+        lane_change_triggered_thread_side.has_value(),
+        lane_change_monitor_.get_last_lane_change_trigger_time().has_value());
     }
   }
 

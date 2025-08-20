@@ -1123,8 +1123,8 @@ std::optional<lanelet::ConstLanelet> find_last_lane_change_completed_lanelet(
   }
   for (unsigned i = 0, j = 1; i < reverse_path_lane_ids.size() && j < reverse_path_lane_ids.size();
        i++, j++) {
-    const auto & lane_from = lanelet_map->laneletLayer.get(reverse_path_lane_ids.at(i));
-    const auto & lane_to = lanelet_map->laneletLayer.get(reverse_path_lane_ids.at(j));
+    const auto & lane_to = lanelet_map->laneletLayer.get(reverse_path_lane_ids.at(i));
+    const auto & lane_from = lanelet_map->laneletLayer.get(reverse_path_lane_ids.at(j));
     const auto & previous = routing_graph->previous(lane_to);
     if (std::any_of(previous.begin(), previous.end(), [&](const auto & prev_lane) {
           return prev_lane.id() == lane_from.id();
