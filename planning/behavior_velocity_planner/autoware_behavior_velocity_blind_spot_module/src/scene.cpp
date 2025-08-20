@@ -393,18 +393,41 @@ BlindSpotModule::filter_attention_objects(const lanelet::BasicPolygon2d & attent
 bool BlindSpotModule::isTargetObjectType(
   const autoware_perception_msgs::msg::PredictedObject & object) const
 {
+  auto detect_non_vru = [&]() {
+    if (
+      object.classification.at(0).label ==
+        autoware_perception_msgs::msg::ObjectClassification::CAR &&
+      planner_param_.detect_non_vru.car) {
+      return true;
+    }
+    if (
+      object.classification.at(0).label ==
+        autoware_perception_msgs::msg::ObjectClassification::TRUCK &&
+      planner_param_.detect_non_vru.truck) {
+      return true;
+    }
+    if (
+      object.classification.at(0).label ==
+        autoware_perception_msgs::msg::ObjectClassification::BUS &&
+      planner_param_.detect_non_vru.bus) {
+      return true;
+    }
+    if (
+      object.classification.at(0).label ==
+        autoware_perception_msgs::msg::ObjectClassification::TRAILER &&
+      planner_param_.detect_non_vru.trailer) {
+      return true;
+    }
+    return false;
+  };
   if (
-    object.classification.at(0).label == autoware_perception_msgs::msg::ObjectClassification::CAR ||
-    object.classification.at(0).label ==
-      autoware_perception_msgs::msg::ObjectClassification::TRUCK ||
-    object.classification.at(0).label ==
-      autoware_perception_msgs::msg::ObjectClassification::TRAILER ||
     object.classification.at(0).label ==
       autoware_perception_msgs::msg::ObjectClassification::BICYCLE ||
     object.classification.at(0).label ==
       autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN ||
     object.classification.at(0).label ==
-      autoware_perception_msgs::msg::ObjectClassification::MOTORCYCLE) {
+      autoware_perception_msgs::msg::ObjectClassification::MOTORCYCLE ||
+    detect_non_vru()) {
     return true;
   }
   return false;
