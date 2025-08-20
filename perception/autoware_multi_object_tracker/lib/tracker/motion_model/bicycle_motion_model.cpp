@@ -428,7 +428,7 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   A(IDX::V, IDX::V) = decay_rate;
 
   // Process noise covariance Q
-  constexpr double q_cov_length = 1.0;  // length uncertainty
+  constexpr double q_cov_length = 0.25;  // length uncertainty
 
   double q_stddev_yaw_rate = motion_params_.q_stddev_yaw_rate_min;
   if (vel_long > 0.01) {
@@ -467,7 +467,7 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   Q(IDX::Y2, IDX::Y2) = (q_cov_long2 * sin_yaw * sin_yaw + q_cov_lat2 * cos_yaw * cos_yaw);
 
   // covariance between X1 and X2, Y1 and Y2, shares the same covariance of rear axle
-  const double coefficient = 0.01;
+  const double coefficient = 0.25; // [m^2] coefficient for covariance between front and rear axle
   Q(IDX::X1, IDX::X2) = Q(IDX::X1, IDX::X1) * coefficient;
   Q(IDX::X2, IDX::X1) = Q(IDX::X1, IDX::X1) * coefficient;
   Q(IDX::Y1, IDX::Y2) = Q(IDX::Y1, IDX::Y1) * coefficient;
@@ -531,10 +531,10 @@ bool BicycleMotionModel::getPredictedState(
 
   constexpr double default_cov = 0.1 * 0.1;
   // set pose covariance
-  pose_cov[XYZRPY_COV_IDX::X_X] = (P(IDX::X1, IDX::X1) + P(IDX::X2, IDX::X2)) * 0.25;
-  pose_cov[XYZRPY_COV_IDX::X_Y] = (P(IDX::X1, IDX::Y1) + P(IDX::X2, IDX::Y2)) * 0.25;
-  pose_cov[XYZRPY_COV_IDX::Y_X] = (P(IDX::Y1, IDX::X1) + P(IDX::Y2, IDX::X2)) * 0.25;
-  pose_cov[XYZRPY_COV_IDX::Y_Y] = (P(IDX::Y1, IDX::Y1) + P(IDX::Y2, IDX::Y2)) * 0.25;
+  pose_cov[XYZRPY_COV_IDX::X_X] = P(IDX::X1, IDX::X1);
+  pose_cov[XYZRPY_COV_IDX::X_Y] = P(IDX::X1, IDX::Y1);
+  pose_cov[XYZRPY_COV_IDX::Y_X] = P(IDX::Y1, IDX::X1);
+  pose_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::Y1, IDX::Y1);
   pose_cov[XYZRPY_COV_IDX::YAW_YAW] = P(IDX::X2, IDX::X2) * cos(yaw) * wheel_base_inv_sq +
                                       P(IDX::Y2, IDX::Y2) * sin(yaw) * wheel_base_inv_sq;
   pose_cov[XYZRPY_COV_IDX::Z_Z] = default_cov;
