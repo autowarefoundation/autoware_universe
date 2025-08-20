@@ -28,8 +28,6 @@
  * limitations under the License.
  */
 
-// cspell:ignore bevformer
-
 #include "autoware/tensorrt_bevformer/marker_util.hpp"
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -143,11 +141,9 @@ void publishDebugMarkers(
     std::swap(pose.position.x, pose.position.y);
     pose.position.y = -pose.position.y;
 
-    pose.position.y += 0.2;  // Tune this value as needed
-    pose.position.x += 0.7;  // Tune this value as needed
-
-    pose.position.z =
-      std::max(0.0f, static_cast<float>(pose.position.z)) + obj.shape.dimensions.z - 1.2;
+    pose.position.y += 0.6;
+    pose.position.x += 1.8;
+    pose.position.z = obj.shape.dimensions.z / 2.0;
 
     // Convert quaternion to yaw
     tf2::Quaternion q_orig(
