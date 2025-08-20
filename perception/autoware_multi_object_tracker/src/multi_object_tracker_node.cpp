@@ -213,6 +213,10 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         const auto label = static_cast<LabelType>(i);
         config.pruning_giou_thresholds[label] = pruning_giou_thresholds.at(i);
       }
+      config.pruning_static_object_speed = declare_parameter<double>("pruning_static_object_speed");
+      config.pruning_moving_object_speed = declare_parameter<double>("pruning_moving_object_speed");
+      config.pruning_static_iou_threshold =
+        declare_parameter<double>("pruning_static_iou_threshold");
 
       // Declare parameters for overlap distance threshold
       std::vector<double> pruning_distance_threshold_list =
