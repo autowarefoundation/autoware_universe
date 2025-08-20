@@ -57,6 +57,7 @@ TrajectoryOptimizer::TrajectoryOptimizer(const rclcpp::NodeOptions & options)
     "~/input/trajectories", 1,
     std::bind(&TrajectoryOptimizer::on_traj, this, std::placeholders::_1));
   // interface publisher
+  trajectory_pub_ = create_publisher<Trajectory>("~/output/trajectory", 1);
   trajectories_pub_ = create_publisher<CandidateTrajectories>("~/output/trajectories", 1);
   // debug time keeper
   debug_processing_time_detail_pub_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
@@ -215,6 +216,12 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
   }
 
   trajectories_pub_->publish(output_trajectories);
+
+  Trajectory output_trajectory;
+  output_trajectory.header = output_trajectories.candidate_trajectories.front().header;
+  output_trajectory.points = output_trajectories.candidate_trajectories.front().points;
+
+  trajectory_pub_->publish(output_trajectory);
 }
 
 }  // namespace autoware::trajectory_optimizer

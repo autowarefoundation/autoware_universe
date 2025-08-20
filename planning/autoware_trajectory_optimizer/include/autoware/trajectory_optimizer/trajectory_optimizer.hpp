@@ -92,6 +92,7 @@ private:
   // interface subscriber
   rclcpp::Subscription<CandidateTrajectories>::SharedPtr trajectories_sub_;
   // interface publisher
+  rclcpp::Publisher<Trajectory>::SharedPtr trajectory_pub_;
   rclcpp::Publisher<CandidateTrajectories>::SharedPtr trajectories_pub_;
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr debug_processing_time_detail_;
 
