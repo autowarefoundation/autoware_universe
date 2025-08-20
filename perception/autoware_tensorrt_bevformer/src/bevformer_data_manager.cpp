@@ -28,7 +28,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore bevformer, randn, Canbus, siny
+// cspell:ignore randn, Canbus, siny, BEVFormer
 
 #include "autoware/tensorrt_bevformer/bevformer_data_manager.hpp"
 

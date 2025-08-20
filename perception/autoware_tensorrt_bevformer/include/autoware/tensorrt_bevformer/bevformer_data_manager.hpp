@@ -28,7 +28,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore BEVFORMER, bevformer, Canbus
+// cspell:ignore BEVFORMER, Canbus
 
 #ifndef AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_DATA_MANAGER_HPP_
 #define AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_DATA_MANAGER_HPP_
