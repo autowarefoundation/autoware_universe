@@ -212,8 +212,10 @@ void TrackerProcessor::removeOldTracker(const rclcpp::Time & time)
 inline double calcGeneralizedIoUThresholdUnknown(
   double target_speed, double generalized_iou_threshold)
 {
+  // Below this speed, nearby unknown objects should always be detected.
   static constexpr double static_target_speed = 1.38;  // m/s
-  static constexpr double moving_target_speed = 5.5;   // m/s
+  // Above this speed, unknown objects should always be merged to avoid false unknown detections.
+  static constexpr double moving_target_speed = 5.5;  // m/s
   static constexpr double static_iou_threshold = 0.0;
 
   // If the threshold is already larger than static threshold, just return it
@@ -268,7 +270,6 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     constexpr double min_union_iou_area = 1e-2;
     constexpr float min_known_prob = 0.2;
     constexpr double min_valid_iou = 1e-6;
-
     constexpr double precision_threshold = 0.;
     constexpr double recall_threshold = 0.5;
 
