@@ -75,30 +75,8 @@ VehicleTracker::VehicleTracker(
   limitObjectExtension(object_model_);
 
   // Set motion model parameters
-  {
-    const double q_stddev_acc_long = object_model_.process_noise.acc_long;
-    const double q_stddev_acc_lat = object_model_.process_noise.acc_lat;
-    const double q_stddev_yaw_rate_min = object_model_.process_noise.yaw_rate_min;
-    const double q_stddev_yaw_rate_max = object_model_.process_noise.yaw_rate_max;
-    const double q_stddev_slip_rate_min = object_model_.bicycle_state.slip_rate_stddev_min;
-    const double q_stddev_slip_rate_max = object_model_.bicycle_state.slip_rate_stddev_max;
-    const double q_max_slip_angle = object_model_.bicycle_state.slip_angle_max;
-    const double lf_ratio = object_model_.bicycle_state.wheel_pos_ratio_front;
-    const double lf_min = object_model_.bicycle_state.wheel_pos_front_min;
-    const double lr_ratio = object_model_.bicycle_state.wheel_pos_ratio_rear;
-    const double lr_min = object_model_.bicycle_state.wheel_pos_rear_min;
-    motion_model_.setMotionParams(
-      q_stddev_acc_long, q_stddev_acc_lat, q_stddev_yaw_rate_min, q_stddev_yaw_rate_max,
-      q_stddev_slip_rate_min, q_stddev_slip_rate_max, q_max_slip_angle, lf_ratio, lf_min, lr_ratio,
-      lr_min);
-  }
-
-  // Set motion limits
-  {
-    const double max_vel = object_model_.process_limit.vel_long_max;
-    const double max_slip = object_model_.bicycle_state.slip_angle_max;
-    motion_model_.setMotionLimits(max_vel, max_slip);  // maximum velocity and slip angle
-  }
+  motion_model_.setMotionParams(
+    object_model_.process_noise, object_model_.bicycle_state, object_model_.process_limit);
 
   // Set initial state
   {

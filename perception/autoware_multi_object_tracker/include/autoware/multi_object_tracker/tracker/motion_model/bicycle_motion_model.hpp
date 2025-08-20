@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MOTION_MODEL__BICYCLE_MOTION_MODEL_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MOTION_MODEL__BICYCLE_MOTION_MODEL_HPP_
 
+#include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/motion_model_base.hpp"
 
 #include <Eigen/Core>
@@ -59,7 +60,8 @@ private:
       -1.389;  // [m/s] maximum reverse velocity, -5km/h. The value is expected to be negative
     double wheel_pos_ratio =
       (lf_ratio + lr_ratio) /
-      lr_ratio;  // [-] distance ratio of the wheel base over center-to-rear-wheel
+      lr_ratio;                  // [-] distance ratio of the wheel base over center-to-rear-wheel
+    double q_cov_length = 0.25;  // [m^2] covariance of the length uncertainty, 0.5m
   } motion_params_;
 
 public:
@@ -78,13 +80,8 @@ public:
     const double & vel_lat, const double & vel_lat_cov, const double & length);
 
   void setMotionParams(
-    const double & q_stddev_acc_long, const double & q_stddev_acc_lat,
-    const double & q_stddev_yaw_rate_min, const double & q_stddev_yaw_rate_max,
-    const double & q_stddev_slip_rate_min, const double & q_stddev_slip_rate_max,
-    const double & q_max_slip_angle, const double & lf_ratio, const double & lf_min,
-    const double & lr_ratio, const double & lr_min);
-
-  void setMotionLimits(const double & max_vel, const double & max_slip);
+    object_model::MotionProcessNoise process_noise, object_model::BicycleModelState bicycle_state,
+    object_model::MotionProcessLimit process_limit);
 
   double getYawState() const;
   double getLength() const;

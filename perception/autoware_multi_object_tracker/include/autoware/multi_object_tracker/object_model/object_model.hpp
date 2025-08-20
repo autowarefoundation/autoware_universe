@@ -109,6 +109,7 @@ struct BicycleModelState
   double wheel_pos_ratio_rear{0.0};   // [-]
   double wheel_pos_front_min{0.0};    // [m]
   double wheel_pos_rear_min{0.0};     // [m]
+  double length_uncertainty{0.0};     // [m] length uncertainty
 };
 
 class ObjectModel
@@ -170,6 +171,7 @@ public:
         bicycle_state.wheel_pos_ratio_rear = 0.25;
         bicycle_state.wheel_pos_front_min = 1.0;
         bicycle_state.wheel_pos_rear_min = 1.0;
+        bicycle_state.length_uncertainty = 0.5;
         break;
 
       case ObjectModelType::BigVehicle:
@@ -215,6 +217,7 @@ public:
         bicycle_state.wheel_pos_ratio_rear = 0.25;
         bicycle_state.wheel_pos_front_min = 1.5;
         bicycle_state.wheel_pos_rear_min = 1.5;
+        bicycle_state.length_uncertainty = 0.8;
         break;
 
       case ObjectModelType::Bicycle:
@@ -260,6 +263,7 @@ public:
         bicycle_state.wheel_pos_ratio_rear = 0.3;
         bicycle_state.wheel_pos_front_min = 0.3;
         bicycle_state.wheel_pos_rear_min = 0.3;
+        bicycle_state.length_uncertainty = 0.3;
         break;
 
       case ObjectModelType::Pedestrian:

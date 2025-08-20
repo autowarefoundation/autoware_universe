@@ -39,44 +39,33 @@ BicycleMotionModel::BicycleMotionModel() : logger_(rclcpp::get_logger("BicycleMo
 }
 
 void BicycleMotionModel::setMotionParams(
-  const double & q_stddev_acc_long, const double & q_stddev_acc_lat,
-  const double & q_stddev_yaw_rate_min, const double & q_stddev_yaw_rate_max,
-  const double & q_stddev_slip_rate_min, const double & q_stddev_slip_rate_max,
-  const double & q_max_slip_angle, const double & lf_ratio, const double & lf_min,
-  const double & lr_ratio, const double & lr_min)
+  object_model::MotionProcessNoise process_noise, object_model::BicycleModelState bicycle_state,
+  object_model::MotionProcessLimit process_limit)
 {
   // set process noise covariance parameters
-  motion_params_.q_stddev_acc_long = q_stddev_acc_long;
-  motion_params_.q_stddev_acc_lat = q_stddev_acc_lat;
-  motion_params_.q_cov_acc_long = q_stddev_acc_long * q_stddev_acc_long;
-  motion_params_.q_cov_acc_lat = q_stddev_acc_lat * q_stddev_acc_lat;
-  motion_params_.q_stddev_yaw_rate_min = q_stddev_yaw_rate_min;
-  motion_params_.q_stddev_yaw_rate_max = q_stddev_yaw_rate_max;
-  motion_params_.q_cov_slip_rate_min = q_stddev_slip_rate_min * q_stddev_slip_rate_min;
-  motion_params_.q_cov_slip_rate_max = q_stddev_slip_rate_max * q_stddev_slip_rate_max;
-  motion_params_.q_max_slip_angle = q_max_slip_angle;
+  motion_params_.q_stddev_acc_long = process_noise.acc_long;
+  motion_params_.q_stddev_acc_lat = process_noise.acc_lat;
+  motion_params_.q_cov_acc_long = process_noise.acc_long * process_noise.acc_long;
+  motion_params_.q_cov_acc_lat = process_noise.acc_lat * process_noise.acc_lat;
+  motion_params_.q_stddev_yaw_rate_min = process_noise.yaw_rate_min;
+  motion_params_.q_stddev_yaw_rate_max = process_noise.yaw_rate_max;
+  motion_params_.q_cov_slip_rate_min =
+    bicycle_state.slip_rate_stddev_min * bicycle_state.slip_rate_stddev_min;
+  motion_params_.q_cov_slip_rate_max =
+    bicycle_state.slip_rate_stddev_max * bicycle_state.slip_rate_stddev_max;
+  motion_params_.q_max_slip_angle = bicycle_state.slip_angle_max;
 
-  constexpr double minimum_wheel_pos = 0.01;  // minimum of 0.01m
-  if (lf_min < minimum_wheel_pos || lr_min < minimum_wheel_pos) {
-    RCLCPP_WARN(
-      logger_,
-      "BicycleMotionModel::setMotionParams: minimum wheel position should be greater than "
-      "0.01m.");
-  }
-  motion_params_.lf_min = std::max(minimum_wheel_pos, lf_min);
-  motion_params_.lr_min = std::max(minimum_wheel_pos, lr_min);
-  motion_params_.lf_ratio = lf_ratio;
-  motion_params_.lr_ratio = lr_ratio;
+  motion_params_.lf_min = bicycle_state.wheel_pos_front_min;
+  motion_params_.lr_min = bicycle_state.wheel_pos_rear_min;
+  motion_params_.lf_ratio = bicycle_state.wheel_pos_ratio_front;
+  motion_params_.lr_ratio = bicycle_state.wheel_pos_ratio_rear;
   motion_params_.wheel_pos_ratio =
-    (lf_ratio + lr_ratio) /
-    lr_ratio;  // [-] distance ratio of the wheel base over center-to-rear-wheel
-}
+    (motion_params_.lf_ratio + motion_params_.lr_ratio) /
+    motion_params_.lr_ratio;  // [-] distance ratio of the wheel base over center-to-rear-wheel
+  motion_params_.max_slip = bicycle_state.slip_angle_max;
+  motion_params_.q_cov_length = bicycle_state.length_uncertainty * bicycle_state.length_uncertainty;
 
-void BicycleMotionModel::setMotionLimits(const double & max_vel, const double & max_slip)
-{
-  // set motion limitations
-  motion_params_.max_vel = max_vel;
-  motion_params_.max_slip = max_slip;
+  motion_params_.max_vel = process_limit.vel_long_max;
 }
 
 bool BicycleMotionModel::initialize(
@@ -428,8 +417,6 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   A(IDX::V, IDX::V) = decay_rate;
 
   // Process noise covariance Q
-  constexpr double q_cov_length = 0.25;  // length uncertainty
-
   double q_stddev_yaw_rate = motion_params_.q_stddev_yaw_rate_min;
   if (vel_long > 0.01) {
     /* uncertainty of the yaw rate is limited by the following:
@@ -450,7 +437,7 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
 
   const double q_cov_long = 0.25 * motion_params_.q_cov_acc_long * dt4;
   const double q_cov_lat = 0.25 * motion_params_.q_cov_acc_lat * dt4;
-  const double q_cov_long2 = q_cov_long + q_cov_length * dt2;
+  const double q_cov_long2 = q_cov_long + motion_params_.q_cov_length * dt2;
   const double q_cov_lat2 = q_cov_lat + q_stddev_head * q_stddev_head;
 
   StateMat Q;
@@ -467,15 +454,16 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   Q(IDX::Y2, IDX::Y2) = (q_cov_long2 * sin_yaw * sin_yaw + q_cov_lat2 * cos_yaw * cos_yaw);
 
   // covariance between X1 and X2, Y1 and Y2, shares the same covariance of rear axle
-  const double coefficient = 0.1;  // [m^2] coefficient for covariance between front and rear axle
-  Q(IDX::X1, IDX::X2) = Q(IDX::X1, IDX::X1) * coefficient;
-  Q(IDX::X2, IDX::X1) = Q(IDX::X1, IDX::X1) * coefficient;
-  Q(IDX::Y1, IDX::Y2) = Q(IDX::Y1, IDX::Y1) * coefficient;
-  Q(IDX::Y2, IDX::Y1) = Q(IDX::Y1, IDX::Y1) * coefficient;
-  Q(IDX::X1, IDX::Y2) = Q(IDX::X1, IDX::Y1) * coefficient;
-  Q(IDX::Y2, IDX::X1) = Q(IDX::X1, IDX::Y1) * coefficient;
-  Q(IDX::Y1, IDX::X2) = Q(IDX::X1, IDX::Y1) * coefficient;
-  Q(IDX::X2, IDX::Y1) = Q(IDX::X1, IDX::Y1) * coefficient;
+  constexpr double cross_coefficient =
+    0.1;  // [m^2] coefficient for covariance between front and rear axle
+  Q(IDX::X1, IDX::X2) = Q(IDX::X1, IDX::X1) * cross_coefficient;
+  Q(IDX::X2, IDX::X1) = Q(IDX::X1, IDX::X1) * cross_coefficient;
+  Q(IDX::Y1, IDX::Y2) = Q(IDX::Y1, IDX::Y1) * cross_coefficient;
+  Q(IDX::Y2, IDX::Y1) = Q(IDX::Y1, IDX::Y1) * cross_coefficient;
+  Q(IDX::X1, IDX::Y2) = Q(IDX::X1, IDX::Y1) * cross_coefficient;
+  Q(IDX::Y2, IDX::X1) = Q(IDX::X1, IDX::Y1) * cross_coefficient;
+  Q(IDX::Y1, IDX::X2) = Q(IDX::X1, IDX::Y1) * cross_coefficient;
+  Q(IDX::X2, IDX::Y1) = Q(IDX::X1, IDX::Y1) * cross_coefficient;
 
   // covariance of velocity
   const double q_cov_vel_long = motion_params_.q_cov_acc_long * dt2;
