@@ -9925,6 +9925,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#visualization-only-configuration" class="md-nav__link">
+    Visualization-Only Configuration
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#simple-mode-configuration" class="md-nav__link">
     Simple Mode Configuration
   </a>
@@ -10021,8 +10028,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#performance-impact-by-mode-and-format" class="md-nav__link">
-    Performance Impact by Mode and Format
+  <a href="#performance-impact-by-mode" class="md-nav__link">
+    Performance Impact by Mode
   </a>
   
 </li>
@@ -10089,6 +10096,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#visualization-estimation-only-mode-use-cases" class="md-nav__link">
+    Visualization Estimation Only Mode Use Cases
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#simple-mode-use-cases" class="md-nav__link">
     Simple Mode Use Cases
   </a>
@@ -10130,6 +10144,20 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#enabling-visualization-estimation-only-mode" class="md-nav__link">
+    Enabling Visualization Estimation Only Mode
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dynamic-mode-switching" class="md-nav__link">
+    Dynamic Mode Switching
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#enabling-advanced-mode" class="md-nav__link">
     Enabling Advanced Mode
   </a>
@@ -10139,6 +10167,20 @@
           <li class="md-nav__item">
   <a href="#disabling-advanced-mode" class="md-nav__link">
     Disabling Advanced Mode
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compatibility-considerations" class="md-nav__link">
+    Compatibility Considerations
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#updating-existing-configurations" class="md-nav__link">
+    Updating Existing Configurations
   </a>
   
 </li>
@@ -14126,6 +14168,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#visualization-only-configuration" class="md-nav__link">
+    Visualization-Only Configuration
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#simple-mode-configuration" class="md-nav__link">
     Simple Mode Configuration
   </a>
@@ -14222,8 +14271,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#performance-impact-by-mode-and-format" class="md-nav__link">
-    Performance Impact by Mode and Format
+  <a href="#performance-impact-by-mode" class="md-nav__link">
+    Performance Impact by Mode
   </a>
   
 </li>
@@ -14290,6 +14339,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#visualization-estimation-only-mode-use-cases" class="md-nav__link">
+    Visualization Estimation Only Mode Use Cases
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#simple-mode-use-cases" class="md-nav__link">
     Simple Mode Use Cases
   </a>
@@ -14331,6 +14387,20 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#enabling-visualization-estimation-only-mode" class="md-nav__link">
+    Enabling Visualization Estimation Only Mode
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dynamic-mode-switching" class="md-nav__link">
+    Dynamic Mode Switching
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#enabling-advanced-mode" class="md-nav__link">
     Enabling Advanced Mode
   </a>
@@ -14340,6 +14410,20 @@
           <li class="md-nav__item">
   <a href="#disabling-advanced-mode" class="md-nav__link">
     Disabling Advanced Mode
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compatibility-considerations" class="md-nav__link">
+    Compatibility Considerations
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#updating-existing-configurations" class="md-nav__link">
+    Updating Existing Configurations
   </a>
   
 </li>
@@ -14377,6 +14461,7 @@
 <li><strong>Two-criteria filtering</strong> using primary and secondary return analysis (when enabled)</li>
 <li><strong>Range-aware visibility estimation</strong> for improved diagnostic accuracy</li>
 <li><strong>Comprehensive diagnostics</strong> with filter ratio and visibility metrics</li>
+<li><strong>Visualization estimation only mode</strong> for diagnostic-only operation without point cloud output</li>
 <li><strong>Optional debug support</strong> with noise point cloud publishing for analysis</li>
 </ul>
 <h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
@@ -14384,6 +14469,7 @@
 <ol>
 <li><strong>Simple Mode</strong>: Basic occupancy filtering (any return type counts equally)</li>
 <li><strong>Advanced Mode</strong>: Two-criteria filtering with return type classification for enhanced accuracy</li>
+<li><strong>Visualization Estimation Only Mode</strong>: Diagnostic-only operation for monitoring without data processing overhead</li>
 </ol>
 <p>The advanced mode concept is that when two returns exist, the first return is more likely to represent a region of noise (rain, fog, smoke, and so on).</p>
 <h2 id="key-differences-from-cartesian-voxel-grid-filter">Key Differences from Cartesian Voxel Grid Filter<a class="headerlink" href="#key-differences-from-cartesian-voxel-grid-filter" title="Permanent link">#</a></h2>
@@ -14400,6 +14486,7 @@
 <li><strong>Range-Aware Visibility</strong>: Configurable range limit for accurate visibility estimation</li>
 <li><strong>Azimuthal Uniformity</strong>: Maintains consistent azimuthal coverage regardless of distance</li>
 <li><strong>Configurable Return Type Classification</strong>: Optional return type analysis for enhanced filtering</li>
+<li><strong>Diagnostic-Only Operation</strong>: Visibility estimation without point cloud processing overhead</li>
 </ol>
 <h2 id="point-cloud-format-support">Point Cloud Format Support<a class="headerlink" href="#point-cloud-format-support" title="Permanent link">#</a></h2>
 <p>This filter supports point clouds with return type information (required for advanced mode) and automatically detects between two formats:</p>
@@ -14461,7 +14548,7 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <h3 id="return-type-classification">Return Type Classification<a class="headerlink" href="#return-type-classification" title="Permanent link">#</a></h3>
 <p>When <code>use_return_type_classification=true</code>, points are classified using the <code>return_type</code> field:</p>
 <ul>
-<li><strong>Primary Returns</strong>: Return types specified in <code>primary_return_types</code> parameter (default: [1,6,10])</li>
+<li><strong>Primary Returns</strong>: Return types specified in <code>primary_return_types</code> parameter (default: [1,6,8,10])</li>
 <li><strong>Secondary Returns</strong>: All other return types not specified as primary</li>
 <li><strong>Classification</strong>: Used for advanced two-criteria filtering</li>
 </ul>
@@ -14474,7 +14561,34 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <li><strong>Configurable</strong>: Allows adjustment based on sensor characteristics and requirements</li>
 </ul>
 <h3 id="filtering-methodology">Filtering Methodology<a class="headerlink" href="#filtering-methodology" title="Permanent link">#</a></h3>
-<p>The filter uses different algorithms based on the <code>use_return_type_classification</code> parameter:</p>
+<p>The filter uses different algorithms based on the <code>use_return_type_classification</code> parameter and can operate in two output modes:</p>
+<h4 id="normal-mode-visualization_estimation_onlyfalse">Normal Mode (<code>visualization_estimation_only=false</code>)<a class="headerlink" href="#normal-mode-visualization_estimation_onlyfalse" title="Permanent link">#</a></h4>
+<ol>
+<li><strong>Format Detection</strong>: Automatically detects PointXYZIRC vs PointXYZIRCAEDT</li>
+<li><strong>Coordinate Processing</strong>: Uses appropriate coordinate source</li>
+<li><strong>Voxel Processing</strong>: Groups points into polar voxels</li>
+<li><strong>Filtering Logic</strong>: Applies simple or advanced filtering</li>
+<li><strong>Output Generation</strong>: Creates filtered point cloud</li>
+<li><strong>Diagnostics</strong>: Publishes filter ratio and visibility metrics</li>
+<li><strong>Optional Noise Cloud</strong>: Publishes filtered-out points if enabled</li>
+</ol>
+<h4 id="visualization-estimation-only-mode-visualization_estimation_onlytrue">Visualization Estimation Only Mode (<code>visualization_estimation_only=true</code>)<a class="headerlink" href="#visualization-estimation-only-mode-visualization_estimation_onlytrue" title="Permanent link">#</a></h4>
+<ol>
+<li><strong>Format Detection</strong>: Same as normal mode</li>
+<li><strong>Coordinate Processing</strong>: Same as normal mode</li>
+<li><strong>Voxel Processing</strong>: Same as normal mode</li>
+<li><strong>Filtering Logic</strong>: Same as normal mode (for accurate diagnostics)</li>
+<li><strong>Output Generation</strong>: <strong>SKIPPED</strong> - creates empty output for interface compatibility</li>
+<li><strong>Diagnostics</strong>: <strong>ALWAYS PUBLISHED</strong> - full visibility and filter ratio metrics</li>
+<li><strong>Noise Cloud</strong>: <strong>SKIPPED</strong> - no noise cloud generation regardless of <code>publish_noise_cloud</code> setting</li>
+</ol>
+<p><strong>Use Cases for Visualization Estimation Only Mode:</strong></p>
+<ul>
+<li><strong>Environmental monitoring</strong>: Track visibility conditions without processing overhead</li>
+<li><strong>Sensor health monitoring</strong>: Monitor LiDAR performance without data pipeline impact</li>
+<li><strong>Algorithm validation</strong>: Test filtering parameters without output processing</li>
+<li><strong>Diagnostic-only applications</strong>: Pure monitoring without data transformation</li>
+</ul>
 <h4 id="simple-mode-use_return_type_classificationfalse">Simple Mode (<code>use_return_type_classification=false</code>)<a class="headerlink" href="#simple-mode-use_return_type_classificationfalse" title="Permanent link">#</a></h4>
 <ol>
 <li><strong>Format Detection</strong>: Automatically detects PointXYZIRC vs PointXYZIRCAEDT</li>
@@ -14485,7 +14599,7 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 </li>
 <li><strong>Voxel Binning</strong>: Points are grouped into polar voxels</li>
 <li><strong>Simple Thresholding</strong>: Voxels with ≥ <code>voxel_points_threshold</code> points (any return type) are kept</li>
-<li><strong>Output</strong>: Filtered point cloud with basic noise removal</li>
+<li><strong>Output</strong>: Filtered point cloud with basic noise removal (unless visualization-only mode)</li>
 </ol>
 <h4 id="advanced-mode-use_return_type_classificationtrue">Advanced Mode (<code>use_return_type_classification=true</code>)<a class="headerlink" href="#advanced-mode-use_return_type_classificationtrue" title="Permanent link">#</a></h4>
 <ol>
@@ -14503,9 +14617,9 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <li><strong>Both criteria must be satisfied</strong> for a voxel to be kept</li>
 </ul>
 </li>
-<li><strong>Range-Aware Visibility</strong>: Visibility calculation limited to voxels within <code>visibility_estimation_max_range_m</code> and based on the number of voxels that fail criterion 2, bounded by <code>visibility_estimation_max_secondary_voxel_count</code></li>
+<li><strong>Range-Aware Visibility</strong>: Visibility calculation limited to voxels within <code>visibility_estimation_max_range_m</code> and secondary voxel count limited by <code>visibility_estimation_max_secondary_voxel_count</code></li>
 <li><strong>Secondary Return Filtering</strong>: Optional exclusion of secondary returns from output</li>
-<li><strong>Output</strong>: Filtered point cloud with enhanced noise removal</li>
+<li><strong>Output</strong>: Filtered point cloud with enhanced noise removal (unless visualization-only mode)</li>
 </ol>
 <h3 id="advanced-two-criteria-filtering">Advanced Two-Criteria Filtering<a class="headerlink" href="#advanced-two-criteria-filtering" title="Permanent link">#</a></h3>
 <p>When enabled, for each voxel both criteria must be satisfied:</p>
@@ -14519,13 +14633,14 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <li><strong>Flexible Architecture</strong>: Configurable between simple and advanced filtering</li>
 <li><strong>Format-Optimized Processing</strong>: Automatic selection of optimal coordinate source</li>
 <li><strong>Range-Aware Diagnostics</strong>: Visibility estimation limited to reliable sensor range</li>
-<li><strong>Secondary Voxel Limiting</strong>: Configurable maximum on secondary voxels for visibility estimation</li>
+<li><strong>Secondary Voxel Limiting</strong>: Configurable limit on secondary voxels for visibility estimation</li>
+<li><strong>Visualization-Only Mode</strong>: Diagnostic operation without point cloud output</li>
 <li><strong>Comprehensive Diagnostics</strong>: Mode-specific filter ratio and visibility metrics</li>
 <li><strong>Debug Support</strong>: Optional noise cloud publishing for analysis and tuning</li>
 </ul>
 <h3 id="return-type-management-advanced-mode-only">Return Type Management (Advanced Mode Only)<a class="headerlink" href="#return-type-management-advanced-mode-only" title="Permanent link">#</a></h3>
 <ul>
-<li><strong>Primary Returns</strong>: Configurable list of return types (default: [1,6,10])</li>
+<li><strong>Primary Returns</strong>: Configurable list of return types (default: [1,6,8,10])</li>
 <li><strong>Secondary Returns</strong>: All return types not specified as primary</li>
 <li><strong>Dynamic Classification</strong>: Runtime configurable through parameter updates</li>
 <li><strong>Output Filtering</strong>: Optional exclusion of secondary returns from final output</li>
@@ -14551,7 +14666,7 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <tr>
 <td><code>~/polar_voxel_outlier_filter/debug/filter_ratio</code></td>
 <td><code>autoware_internal_debug_msgs::msg::Float32Stamped</code></td>
-<td>Ratio of output to input points</td>
+<td>Ratio of output to input points (always published)</td>
 </tr>
 <tr>
 <td><code>~/polar_voxel_outlier_filter/debug/visibility</code></td>
@@ -14561,7 +14676,7 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <tr>
 <td><code>~/polar_voxel_outlier_filter/debug/pointcloud_noise</code></td>
 <td><code>sensor_msgs::msg::PointCloud2</code></td>
-<td>Filtered-out points for debugging (when enabled)</td>
+<td>Filtered-out points for debugging (when enabled and not in visualization-only mode)</td>
 </tr>
 </tbody>
 </table>
@@ -14678,9 +14793,15 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 </thead>
 <tbody>
 <tr>
+<td><code>visualization_estimation_only</code></td>
+<td>bool</td>
+<td>Run filter for visualization estimation only (no point cloud output)</td>
+<td>false</td>
+</tr>
+<tr>
 <td><code>publish_noise_cloud</code></td>
 <td>bool</td>
-<td>Generate and publish noise cloud for debugging (performance impact)</td>
+<td>Generate and publish noise cloud for debugging (ignored in visualization-only mode)</td>
 <td>true</td>
 </tr>
 </tbody>
@@ -14730,43 +14851,61 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <li><strong>visibility_estimation_max_secondary_voxel_count</strong>: Only used when <code>use_return_type_classification=true</code>, limits secondary voxel counting in visibility calculations</li>
 <li><strong>primary_return_types</strong>: Only used when <code>use_return_type_classification=true</code></li>
 <li><strong>visibility_estimation_max_range_m</strong>: Limits visibility calculation to reliable sensor range (advanced mode only)</li>
-<li><strong>publish_noise_cloud</strong>: When <code>false</code>, improves performance by skipping noise cloud generation</li>
+<li><strong>visualization_estimation_only</strong>: When <code>true</code>, skips point cloud output generation but still calculates and publishes diagnostics</li>
+<li><strong>publish_noise_cloud</strong>: When <code>false</code>, improves performance by skipping noise cloud generation (ignored when <code>visualization_estimation_only=true</code>)</li>
 <li><strong>Diagnostics</strong>: Visibility is only published when return type classification is enabled</li>
 </ul>
 <h2 id="configuration-examples">Configuration Examples<a class="headerlink" href="#configuration-examples" title="Permanent link">#</a></h2>
+<h3 id="visualization-only-configuration">Visualization-Only Configuration<a class="headerlink" href="#visualization-only-configuration" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Run filter for diagnostics only - no point cloud processing</span>
+<span class="nt">visualization_estimation_only</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="nt">use_return_type_classification</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="nt">voxel_points_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="nt">secondary_noise_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
+<span class="nt">visibility_estimation_max_secondary_voxel_count</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500</span>
+<span class="nt">visibility_estimation_max_range_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20.0</span>
+<span class="nt">primary_return_types</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">6</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">8</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">10</span><span class="p p-Indicator">]</span>
+<span class="nt">radial_resolution_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.5</span>
+<span class="nt">azimuth_resolution_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0175</span>
+<span class="nt">elevation_resolution_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0175</span>
+<span class="c1"># publish_noise_cloud is ignored in visualization-only mode</span>
+</code></pre></div>
 <h3 id="simple-mode-configuration">Simple Mode Configuration<a class="headerlink" href="#simple-mode-configuration" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># Basic occupancy filtering - any return type counts equally</span>
 <span class="nt">use_return_type_classification</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
 <span class="nt">voxel_points_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span><span class="w"> </span><span class="c1"># Total points threshold</span>
 <span class="nt">radial_resolution_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.5</span>
-<span class="nt">azimuth_resolution_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0349</span><span class="w"> </span><span class="c1"># ~2 degrees</span>
-<span class="nt">elevation_resolution_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0349</span><span class="w"> </span><span class="c1"># ~2 degrees</span>
-<span class="nt">publish_noise_cloud</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w"> </span><span class="c1"># Performance optimization</span>
+<span class="nt">azimuth_resolution_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0175</span><span class="w"> </span><span class="c1"># ~1 degree</span>
+<span class="nt">elevation_resolution_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0175</span><span class="w"> </span><span class="c1"># ~1 degree</span>
+<span class="nt">visualization_estimation_only</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w"> </span><span class="c1"># Normal filtering mode</span>
+<span class="nt">publish_noise_cloud</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"> </span><span class="c1"># Enable for debugging</span>
 </code></pre></div>
 <h3 id="advanced-mode-configuration">Advanced Mode Configuration<a class="headerlink" href="#advanced-mode-configuration" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># Two-criteria filtering with return type classification</span>
 <span class="nt">use_return_type_classification</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 <span class="nt">voxel_points_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span><span class="w"> </span><span class="c1"># Primary return threshold</span>
 <span class="nt">secondary_noise_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span><span class="w"> </span><span class="c1"># Secondary return threshold</span>
-<span class="nt">visibility_estimation_max_secondary_voxel_count</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span><span class="w"> </span><span class="c1"># Max secondary voxels for visibility</span>
-<span class="nt">primary_return_types</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">6</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">10</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="c1"># Primary return types</span>
+<span class="nt">visibility_estimation_max_secondary_voxel_count</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500</span><span class="w"> </span><span class="c1"># Max secondary voxels for visibility</span>
+<span class="nt">primary_return_types</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">6</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">8</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">10</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="c1"># Primary return types</span>
 <span class="nt">filter_secondary_returns</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w"> </span><span class="c1"># Include secondary returns in output</span>
-<span class="nt">radial_resolution_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.2</span>
-<span class="nt">azimuth_resolution_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.025</span><span class="w"> </span><span class="c1"># ~1.4 degrees</span>
-<span class="nt">elevation_resolution_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.05</span><span class="w"> </span><span class="c1"># ~2.9 degrees</span>
-<span class="nt">visibility_estimation_max_range_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100.0</span><span class="w"> </span><span class="c1"># Range limit for visibility calculation</span>
-<span class="nt">publish_noise_cloud</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="nt">radial_resolution_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.5</span>
+<span class="nt">azimuth_resolution_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0175</span><span class="w"> </span><span class="c1"># ~1 degree</span>
+<span class="nt">elevation_resolution_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0175</span><span class="w"> </span><span class="c1"># ~1 degree</span>
+<span class="nt">visibility_estimation_max_range_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20.0</span><span class="w"> </span><span class="c1"># Range limit for visibility calculation</span>
+<span class="nt">visualization_estimation_only</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w"> </span><span class="c1"># Normal filtering mode</span>
+<span class="nt">publish_noise_cloud</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </code></pre></div>
 <h3 id="debug-configuration">Debug Configuration<a class="headerlink" href="#debug-configuration" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># Enable debugging and monitoring</span>
 <span class="nt">use_return_type_classification</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<span class="nt">visibility_estimation_max_range_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80.0</span><span class="w"> </span><span class="c1"># Shorter range for urban environments</span>
-<span class="nt">visibility_estimation_max_secondary_voxel_count</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span><span class="w"> </span><span class="c1"># Allow some secondary voxels in visibility calculation</span>
+<span class="nt">visibility_estimation_max_range_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20.0</span><span class="w"> </span><span class="c1"># Configured range for urban environments</span>
+<span class="nt">visibility_estimation_max_secondary_voxel_count</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500</span><span class="w"> </span><span class="c1"># Allow secondary voxels in visibility calculation</span>
+<span class="nt">visualization_estimation_only</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w"> </span><span class="c1"># Normal filtering with debug output</span>
 <span class="nt">publish_noise_cloud</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"> </span><span class="c1"># Enable noise cloud for analysis</span>
-<span class="nt">filter_ratio_error_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span>
-<span class="nt">filter_ratio_warn_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.5</span>
-<span class="nt">visibility_error_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.4</span>
-<span class="nt">visibility_warn_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.6</span>
+<span class="nt">filter_ratio_error_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.5</span>
+<span class="nt">filter_ratio_warn_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.7</span>
+<span class="nt">visibility_error_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.8</span>
+<span class="nt">visibility_warn_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.9</span>
 </code></pre></div>
 <h3 id="sensor-specific-configuration-examples">Sensor-Specific Configuration Examples<a class="headerlink" href="#sensor-specific-configuration-examples" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># Long-range highway LiDAR</span>
@@ -14774,12 +14913,14 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <span class="nt">visibility_estimation_max_secondary_voxel_count</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500</span>
 <span class="nt">radial_resolution_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.5</span>
 <span class="nt">voxel_points_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="nt">visualization_estimation_only</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
 
 <span class="c1"># Urban short-range LiDAR</span>
 <span class="nt">visibility_estimation_max_range_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20.0</span>
 <span class="nt">visibility_estimation_max_secondary_voxel_count</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500</span>
 <span class="nt">radial_resolution_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.5</span>
 <span class="nt">voxel_points_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="nt">visualization_estimation_only</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
 
 <span class="c1"># High-resolution near-field processing</span>
 <span class="nt">visibility_estimation_max_range_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20.0</span>
@@ -14787,11 +14928,19 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <span class="nt">radial_resolution_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.5</span>
 <span class="nt">azimuth_resolution_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0175</span><span class="w"> </span><span class="c1"># ~1 degree</span>
 <span class="nt">elevation_resolution_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0175</span><span class="w"> </span><span class="c1"># ~1 degree</span>
+<span class="nt">visualization_estimation_only</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+
+<span class="c1"># Environmental monitoring only</span>
+<span class="nt">visibility_estimation_max_range_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">50.0</span>
+<span class="nt">visibility_estimation_max_secondary_voxel_count</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500</span>
+<span class="nt">radial_resolution_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span><span class="w"> </span><span class="c1"># Coarser resolution for performance</span>
+<span class="nt">visualization_estimation_only</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"> </span><span class="c1"># Diagnostics only</span>
 </code></pre></div>
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <ul>
 <li><strong>Simple mode</strong>: Works with any point cloud format, basic occupancy filtering only</li>
 <li><strong>Advanced mode</strong>: Requires return_type field for enhanced filtering</li>
+<li><strong>Visualization-only mode</strong>: Runs full filtering algorithm but produces no point cloud output</li>
 <li><strong>Supported formats</strong>: PointXYZIRC and PointXYZIRCAEDT only</li>
 <li><strong>Finite coordinates required</strong>: Automatically filters out NaN/Inf points</li>
 <li><strong>Return type dependency</strong>: Advanced filtering effectiveness depends on accurate return type classification</li>
@@ -14807,6 +14956,7 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <li><strong>Range validation</strong>: Points outside configured radius ranges are excluded</li>
 <li><strong>Parameter validation</strong>: Ensures <code>visibility_estimation_max_range_m</code> &gt; 0 and <code>visibility_estimation_max_secondary_voxel_count</code> ≥ 0</li>
 <li><strong>Dynamic parameter validation</strong>: Runtime parameter updates with validation</li>
+<li><strong>Mode compatibility</strong>: Validates parameter combinations for different operating modes</li>
 </ul>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">#</a></h2>
 <h3 id="launch-the-filter">Launch the Filter<a class="headerlink" href="#launch-the-filter" title="Permanent link">#</a></h3>
@@ -14816,31 +14966,41 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <span class="c1">#   &lt;param name="radial_resolution_m" value="1.0"/&gt;</span>
 <span class="c1">#   &lt;param name="azimuth_resolution_rad" value="0.0349"/&gt;</span>
 <span class="c1">#   &lt;param name="voxel_points_threshold" value="3"/&gt;</span>
+<span class="c1">#   &lt;param name="visualization_estimation_only" value="false"/&gt;</span>
 <span class="c1"># &lt;/node&gt;</span>
 
 <span class="c1"># Example launch file integration for advanced mode:</span>
 <span class="c1"># &lt;node pkg="autoware_pointcloud_preprocessor" exec="polar_voxel_outlier_filter_node" name="polar_voxel_filter"&gt;</span>
 <span class="c1">#   &lt;param name="use_return_type_classification" value="true"/&gt;</span>
 <span class="c1">#   &lt;param name="radial_resolution_m" value="0.5"/&gt;</span>
-<span class="c1">#   &lt;param name="azimuth_resolution_rad" value="0.025"/&gt;</span>
+<span class="c1">#   &lt;param name="azimuth_resolution_rad" value="0.0175"/&gt;</span>
 <span class="c1">#   &lt;param name="voxel_points_threshold" value="2"/&gt;</span>
 <span class="c1">#   &lt;param name="secondary_noise_threshold" value="4"/&gt;</span>
-<span class="c1">#   &lt;param name="visibility_estimation_max_secondary_voxel_count" value="0"/&gt;</span>
-<span class="c1">#   &lt;param name="primary_return_types" value="[1,6,10]"/&gt;</span>
-<span class="c1">#   &lt;param name="visibility_estimation_max_range_m" value="100.0"/&gt;</span>
+<span class="c1">#   &lt;param name="visibility_estimation_max_secondary_voxel_count" value="500"/&gt;</span>
+<span class="c1">#   &lt;param name="primary_return_types" value="[1,6,8,10]"/&gt;</span>
+<span class="c1">#   &lt;param name="visibility_estimation_max_range_m" value="20.0"/&gt;</span>
+<span class="c1">#   &lt;param name="visualization_estimation_only" value="false"/&gt;</span>
+<span class="c1"># &lt;/node&gt;</span>
+
+<span class="c1"># Example launch file integration for visualization-only mode:</span>
+<span class="c1"># &lt;node pkg="autoware_pointcloud_preprocessor" exec="polar_voxel_outlier_filter_node" name="polar_voxel_filter"&gt;</span>
+<span class="c1">#   &lt;param name="use_return_type_classification" value="true"/&gt;</span>
+<span class="c1">#   &lt;param name="visualization_estimation_only" value="true"/&gt;</span>
+<span class="c1">#   &lt;param name="visibility_estimation_max_range_m" value="20.0"/&gt;</span>
+<span class="c1">#   &lt;param name="visibility_estimation_max_secondary_voxel_count" value="500"/&gt;</span>
 <span class="c1"># &lt;/node&gt;</span>
 </code></pre></div>
 <h3 id="ros-2-topics">ROS 2 Topics<a class="headerlink" href="#ros-2-topics" title="Permanent link">#</a></h3>
 <h4 id="inputoutput">Input/Output<a class="headerlink" href="#inputoutput" title="Permanent link">#</a></h4>
 <ul>
 <li><strong>Input</strong>: <code>/input</code> (sensor_msgs/PointCloud2) - Must have return_type field for advanced mode</li>
-<li><strong>Output</strong>: <code>/output</code> (sensor_msgs/PointCloud2)</li>
+<li><strong>Output</strong>: <code>/output</code> (sensor_msgs/PointCloud2) - Empty in visualization-only mode</li>
 </ul>
 <h4 id="debug-topics">Debug Topics<a class="headerlink" href="#debug-topics" title="Permanent link">#</a></h4>
 <ul>
-<li><strong>Filter Ratio</strong>: <code>~/polar_voxel_outlier_filter/debug/filter_ratio</code> (autoware_internal_debug_msgs/Float32Stamped)</li>
+<li><strong>Filter Ratio</strong>: <code>~/polar_voxel_outlier_filter/debug/filter_ratio</code> (autoware_internal_debug_msgs/Float32Stamped) - Always published</li>
 <li><strong>Visibility</strong>: <code>~/polar_voxel_outlier_filter/debug/visibility</code> (autoware_internal_debug_msgs/Float32Stamped) - Advanced mode only, range-limited</li>
-<li><strong>Noise Cloud</strong>: <code>~/polar_voxel_outlier_filter/debug/pointcloud_noise</code> (sensor_msgs/PointCloud2)</li>
+<li><strong>Noise Cloud</strong>: <code>~/polar_voxel_outlier_filter/debug/pointcloud_noise</code> (sensor_msgs/PointCloud2) - Not published in visualization-only mode</li>
 </ul>
 <h3 id="programmatic-usage">Programmatic Usage<a class="headerlink" href="#programmatic-usage" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">"autoware/pointcloud_preprocessor/outlier_filter/polar_voxel_outlier_filter_node.hpp"</span>
@@ -14851,6 +15011,7 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <span class="c1">// The filter automatically detects point cloud format and applies filtering based on configuration:</span>
 <span class="c1">// - Simple mode (use_return_type_classification=false): Basic occupancy filtering</span>
 <span class="c1">// - Advanced mode (use_return_type_classification=true): Two-criteria filtering with return type analysis</span>
+<span class="c1">// - Visualization-only mode (visualization_estimation_only=true): Diagnostics without point cloud output</span>
 <span class="c1">// - Both modes support PointXYZIRC and PointXYZIRCAEDT formats</span>
 <span class="c1">// - Advanced mode uses range-limited visibility estimation with configurable secondary voxel limiting</span>
 </code></pre></div>
@@ -14860,7 +15021,20 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <li><strong>Time Complexity</strong>: O(n) where n is the number of input points</li>
 <li><strong>Space Complexity</strong>: O(v) where v is the number of occupied voxels</li>
 </ul>
-<h3 id="performance-impact-by-mode-and-format">Performance Impact by Mode and Format<a class="headerlink" href="#performance-impact-by-mode-and-format" title="Permanent link">#</a></h3>
+<h3 id="performance-impact-by-mode">Performance Impact by Mode<a class="headerlink" href="#performance-impact-by-mode" title="Permanent link">#</a></h3>
+<h4 id="visualization-estimation-only-mode"><strong>Visualization Estimation Only Mode</strong><a class="headerlink" href="#visualization-estimation-only-mode" title="Permanent link">#</a></h4>
+<ul>
+<li><strong>Computational</strong>: Runs full filtering algorithm for accurate diagnostics</li>
+<li><strong>Memory</strong>: Minimal memory usage - no output point cloud allocation</li>
+<li><strong>I/O</strong>: Publishes diagnostics only, no point cloud output</li>
+<li><strong>Use Case</strong>: Optimal for monitoring applications without data processing needs</li>
+</ul>
+<h4 id="normal-mode"><strong>Normal Mode</strong><a class="headerlink" href="#normal-mode" title="Permanent link">#</a></h4>
+<ul>
+<li><strong>PointXYZIRCAEDT</strong>: Optimal performance with pre-computed coordinates</li>
+<li><strong>PointXYZIRC</strong>: Good performance with coordinate conversion overhead</li>
+<li><strong>Output Processing</strong>: Full point cloud generation and optional noise cloud</li>
+</ul>
 <h4 id="simple-mode"><strong>Simple Mode</strong><a class="headerlink" href="#simple-mode" title="Permanent link">#</a></h4>
 <ul>
 <li><strong>PointXYZIRCAEDT</strong>: Fast processing with pre-computed coordinates</li>
@@ -14875,32 +15049,35 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 </ul>
 <h3 id="memory-usage">Memory Usage<a class="headerlink" href="#memory-usage" title="Permanent link">#</a></h3>
 <ul>
+<li><strong>Visualization-only mode</strong>: Significantly reduced memory footprint</li>
 <li><strong>Hash-based voxel storage</strong>: Efficiently handles sparse voxel occupancy</li>
-<li><strong>Single-pass processing</strong>: Minimal memory overhead</li>
-<li><strong>Mode-specific diagnostics</strong>: Efficient performance monitoring</li>
+<li><strong>Single-pass processing</strong>: Minimal memory overhead regardless of mode</li>
+<li><strong>Mode-specific outputs</strong>: Memory allocation optimized per mode</li>
 <li><strong>Range filtering</strong>: Additional hash map for visibility calculation (advanced mode only)</li>
 </ul>
 <h3 id="optimization-tips">Optimization Tips<a class="headerlink" href="#optimization-tips" title="Permanent link">#</a></h3>
 <ol>
+<li><strong>Use visualization estimation only mode</strong> for pure monitoring applications</li>
 <li><strong>Choose appropriate mode</strong> based on requirements:<ul>
-<li>Simple mode for basic filtering needs</li>
-<li>Advanced mode for enhanced noise removal</li>
+<li>Normal mode for data processing needs</li>
+<li>Visualization-only mode for environmental/sensor monitoring</li>
 </ul>
 </li>
 <li><strong>Use PointXYZIRCAEDT format</strong> when available for optimal performance</li>
+<li><strong>Combine modes dynamically</strong> - switch at runtime based on operational needs</li>
 <li><strong>Tune voxel resolutions</strong> based on your use case</li>
 <li><strong>Configure return type mappings</strong> to match your sensor (advanced mode)</li>
 <li><strong>Set appropriate visibility range</strong> (<code>visibility_estimation_max_range_m</code>) for your sensor and environment</li>
 <li><strong>Tune secondary voxel limiting</strong> (<code>visibility_estimation_max_secondary_voxel_count</code>) for visibility estimation accuracy</li>
-<li><strong>Monitor diagnostics</strong> for real-time performance assessment</li>
-<li><strong>Disable noise cloud publishing</strong> in production for better performance</li>
+<li><strong>Monitor diagnostics</strong> for real-time performance assessment in both modes</li>
 </ol>
 <h2 id="diagnostics-and-monitoring">Diagnostics and Monitoring<a class="headerlink" href="#diagnostics-and-monitoring" title="Permanent link">#</a></h2>
 <h3 id="filter-ratio-diagnostics">Filter Ratio Diagnostics<a class="headerlink" href="#filter-ratio-diagnostics" title="Permanent link">#</a></h3>
 <ul>
-<li><strong>Published for both modes</strong>: Overall filtering effectiveness (output/input ratio)</li>
+<li><strong>Published for all modes</strong>: Overall filtering effectiveness (output/input ratio)</li>
 <li><strong>Configurable thresholds</strong>: Error/warning levels for automated monitoring</li>
 <li><strong>Real-time feedback</strong>: Immediate filtering performance assessment</li>
+<li><strong>Visualization-only mode</strong>: Shows theoretical filter effectiveness without actual filtering</li>
 </ul>
 <h3 id="visibility-diagnostics">Visibility Diagnostics<a class="headerlink" href="#visibility-diagnostics" title="Permanent link">#</a></h3>
 <ul>
@@ -14910,15 +15087,25 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <li><strong>Voxel-based metric</strong>: Percentage of range-limited voxels passing secondary threshold test</li>
 <li><strong>Environmental indicator</strong>: Useful for detecting sensor conditions within reliable range</li>
 <li><strong>Diagnostic context</strong>: Status messages include the configured visibility estimation range and secondary voxel limits</li>
+<li><strong>Available in all modes</strong>: Published even in visualization-only mode for monitoring</li>
 </ul>
 <h3 id="debug-features">Debug Features<a class="headerlink" href="#debug-features" title="Permanent link">#</a></h3>
 <ul>
-<li><strong>Noise point cloud</strong>: All filtered-out points for analysis (when enabled)</li>
+<li><strong>Noise point cloud</strong>: All filtered-out points for analysis (when enabled and not in visualization-only mode)</li>
 <li><strong>Runtime parameter updates</strong>: Dynamic threshold and range adjustment</li>
 <li><strong>Mode-specific logging</strong>: Debug messages tailored to filtering mode</li>
 <li><strong>Range-aware diagnostics</strong>: Visibility calculations clearly indicate the estimation range</li>
 </ul>
 <h2 id="use-cases-and-configuration-guidelines">Use Cases and Configuration Guidelines<a class="headerlink" href="#use-cases-and-configuration-guidelines" title="Permanent link">#</a></h2>
+<h3 id="visualization-estimation-only-mode-use-cases">Visualization Estimation Only Mode Use Cases<a class="headerlink" href="#visualization-estimation-only-mode-use-cases" title="Permanent link">#</a></h3>
+<ol>
+<li><strong>Environmental Monitoring</strong>: Track atmospheric conditions without processing overhead</li>
+<li><strong>Sensor Health Monitoring</strong>: Monitor LiDAR performance and visibility conditions</li>
+<li><strong>Algorithm Validation</strong>: Test and tune filtering parameters without output generation</li>
+<li><strong>Pure Diagnostics</strong>: Applications that only need visibility and filter ratio metrics</li>
+<li><strong>Resource-Constrained Systems</strong>: Minimize computational load while maintaining monitoring</li>
+<li><strong>Weather Station Integration</strong>: Automated visibility reporting for meteorological systems</li>
+</ol>
 <h3 id="simple-mode-use-cases">Simple Mode Use Cases<a class="headerlink" href="#simple-mode-use-cases" title="Permanent link">#</a></h3>
 <ol>
 <li><strong>Legacy System Integration</strong>: Basic filtering without return type requirements</li>
@@ -14935,6 +15122,13 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <li><strong>Range-Specific Analysis</strong>: Different visibility requirements for near vs. far field</li>
 </ol>
 <h3 id="parameter-tuning-guidelines">Parameter Tuning Guidelines<a class="headerlink" href="#parameter-tuning-guidelines" title="Permanent link">#</a></h3>
+<h4 id="visualization-estimation-only-mode-configuration">Visualization Estimation Only Mode Configuration<a class="headerlink" href="#visualization-estimation-only-mode-configuration" title="Permanent link">#</a></h4>
+<ul>
+<li><strong>For environmental monitoring</strong>: Enable advanced mode with appropriate visibility range</li>
+<li><strong>For sensor monitoring</strong>: Use return type classification for detailed analysis</li>
+<li><strong>For performance</strong>: Larger voxel resolutions to reduce computation</li>
+<li><strong>For accuracy</strong>: Smaller voxel resolutions for precise visibility estimation</li>
+</ul>
 <h4 id="simple-mode-configuration_1">Simple Mode Configuration<a class="headerlink" href="#simple-mode-configuration_1" title="Permanent link">#</a></h4>
 <ul>
 <li><strong>For dense environments</strong>: Smaller voxel resolutions, higher point thresholds</li>
@@ -14951,6 +15145,27 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <li><strong>For sensor-specific optimization</strong>: Adjust <code>primary_return_types</code> based on sensor characteristics</li>
 <li><strong>For range-specific visibility</strong>: Set <code>visibility_estimation_max_range_m</code> based on sensor effective range and application requirements</li>
 </ul>
+<h4 id="mode-selection-guidelines">Mode Selection Guidelines<a class="headerlink" href="#mode-selection-guidelines" title="Permanent link">#</a></h4>
+<ul>
+<li>
+<p><strong>Choose visualization-only mode when</strong>:</p>
+<ul>
+<li>Only diagnostic information is needed</li>
+<li>Computational resources are limited</li>
+<li>Running parallel monitoring alongside main processing</li>
+<li>Testing filter parameters without affecting downstream systems</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li><strong>Choose normal mode when</strong>:<ul>
+<li>Filtered point cloud output is required</li>
+<li>Integration into data processing pipelines</li>
+<li>Real-time filtering for perception systems</li>
+<li>Full functionality including noise cloud debugging</li>
+</ul>
+</li>
+</ul>
 <h4 id="visibility-range-guidelines">Visibility Range Guidelines<a class="headerlink" href="#visibility-range-guidelines" title="Permanent link">#</a></h4>
 <ul>
 <li><strong>Urban environments</strong>: 30-80m (shorter ranges for reliable near-field analysis)</li>
@@ -14965,6 +15180,7 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <th>Aspect</th>
 <th>Simple Mode</th>
 <th>Advanced Mode</th>
+<th>Visualization-Only Mode</th>
 </tr>
 </thead>
 <tbody>
@@ -14972,50 +15188,82 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <td><strong>Filtering Method</strong></td>
 <td>Basic occupancy</td>
 <td>Two-criteria with return type</td>
+<td>Same as selected mode</td>
 </tr>
 <tr>
 <td><strong>Return Type Required</strong></td>
 <td>No</td>
 <td>Yes</td>
+<td>Depends on mode selected</td>
 </tr>
 <tr>
 <td><strong>Computational Cost</strong></td>
 <td>Low</td>
 <td>Moderate</td>
+<td>Moderate (no output)</td>
 </tr>
 <tr>
 <td><strong>Filtering Quality</strong></td>
 <td>Good</td>
 <td>Excellent</td>
+<td>N/A (no output)</td>
 </tr>
 <tr>
 <td><strong>Visibility Metrics</strong></td>
 <td>None</td>
+<td>Range-aware with voxel limiting</td>
 <td>Range-aware with voxel limiting</td>
 </tr>
 <tr>
 <td><strong>Configuration</strong></td>
 <td>Simple</td>
 <td>Advanced</td>
+<td>Advanced (diagnostics-focused)</td>
 </tr>
 <tr>
 <td><strong>Use Case</strong></td>
 <td>Basic filtering</td>
 <td>Enhanced noise removal</td>
+<td>Monitoring/diagnostics</td>
 </tr>
 <tr>
 <td><strong>Environmental Adapt</strong></td>
 <td>Limited</td>
+<td>Comprehensive</td>
 <td>Comprehensive</td>
 </tr>
 <tr>
 <td><strong>Range Awareness</strong></td>
 <td>Basic</td>
 <td>Configurable</td>
+<td>Configurable</td>
+</tr>
+<tr>
+<td><strong>Point Cloud Output</strong></td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No (empty)</td>
 </tr>
 </tbody>
 </table>
 <h2 id="migration-guide">Migration Guide<a class="headerlink" href="#migration-guide" title="Permanent link">#</a></h2>
+<h3 id="enabling-visualization-estimation-only-mode">Enabling Visualization Estimation Only Mode<a class="headerlink" href="#enabling-visualization-estimation-only-mode" title="Permanent link">#</a></h3>
+<p>To enable diagnostic-only operation:</p>
+<ol>
+<li><strong>Set parameter</strong>: <code>visualization_estimation_only: true</code></li>
+<li><strong>Configure diagnostics</strong>: Ensure proper visibility and filter ratio thresholds</li>
+<li><strong>Verify mode</strong>: Check logs for "visualization estimation only" confirmation</li>
+<li><strong>Monitor diagnostics</strong>: Use published metrics for monitoring</li>
+<li><strong>No output expectation</strong>: Downstream nodes should handle empty point clouds</li>
+</ol>
+<h3 id="dynamic-mode-switching">Dynamic Mode Switching<a class="headerlink" href="#dynamic-mode-switching" title="Permanent link">#</a></h3>
+<p>The mode can be changed at runtime:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Switch to visualization-only mode</span>
+ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/polar_voxel_filter<span class="w"> </span>visualization_estimation_only<span class="w"> </span><span class="nb">true</span>
+
+<span class="c1"># Switch back to normal mode</span>
+ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/polar_voxel_filter<span class="w"> </span>visualization_estimation_only<span class="w"> </span><span class="nb">false</span>
+</code></pre></div>
 <h3 id="enabling-advanced-mode">Enabling Advanced Mode<a class="headerlink" href="#enabling-advanced-mode" title="Permanent link">#</a></h3>
 <p>To enable advanced filtering on existing systems:</p>
 <ol>
@@ -15034,7 +15282,22 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <li><strong>Configure threshold</strong>: Set <code>voxel_points_threshold</code> for total point count</li>
 <li><strong>Remove advanced parameters</strong>: Return type and visibility range parameters will be ignored</li>
 <li><strong>Simplified monitoring</strong>: Only filter ratio diagnostics available</li>
-</ol></div>
+</ol>
+<h3 id="compatibility-considerations">Compatibility Considerations<a class="headerlink" href="#compatibility-considerations" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>Output interface</strong>: Empty point clouds maintain topic compatibility in visualization-only mode</li>
+<li><strong>Diagnostic topics</strong>: Same diagnostic information regardless of mode</li>
+<li><strong>Parameter compatibility</strong>: All filtering parameters work in both normal and visualization-only modes</li>
+<li><strong>Performance impact</strong>: Mode changes take effect on next filter call</li>
+</ul>
+<h3 id="updating-existing-configurations">Updating Existing Configurations<a class="headerlink" href="#updating-existing-configurations" title="Permanent link">#</a></h3>
+<p>For systems already using advanced mode, add the new parameters:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Add to existing configuration:</span>
+<span class="nt">visualization_estimation_only</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w"> </span><span class="c1"># Default for normal operation</span>
+<span class="nt">visibility_estimation_max_secondary_voxel_count</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500</span><span class="w"> </span><span class="c1"># Updated default</span>
+<span class="nt">primary_return_types</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">6</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">8</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">10</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="c1"># Updated to include return type 8</span>
+</code></pre></div>
+<p>This approach provides <strong>maximum flexibility</strong> with <strong>range-aware visibility estimation</strong>, <strong>configurable secondary voxel limiting</strong>, and <strong>diagnostic-only operation</strong> while maintaining optimal performance for all use cases! 🎯✨</p></div>
 
 
 
