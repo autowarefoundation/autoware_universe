@@ -14,6 +14,7 @@
 
 #include "type_alias.hpp"
 
+#include <autoware/boundary_departure_checker/parameters.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
 
 #include <string>
@@ -57,8 +58,15 @@ struct NodeParam
   double th_pt_shift_dist_m{1.0};
   double th_pt_shift_angle_rad{autoware_utils_math::deg2rad(2.0)};
   double th_goal_shift_dist_m{1.0};
-  double on_time_buffer_s{0.1};
-  double off_time_buffer_s{0.1};
+  struct OnOffTimeBuffer
+  {
+    double near_boundary{0.15};
+    double critical_departure{0.15};
+  };
+
+  OnOffTimeBuffer on_time_buffer_s;
+  OnOffTimeBuffer off_time_buffer_s;
+
   BDCParam bdc_param;
   std::unordered_set<DepartureType> slow_down_types;
   std::unordered_map<DepartureType, int8_t> diagnostic_level;
@@ -85,20 +93,26 @@ struct NodeParam
     bdc_param.th_cutoff_time_departure_s =
       get_or_declare_parameter<double>(node, module_name + "th_cutoff_time_s.departure");
 
+    on_time_buffer_s.critical_departure =
+      get_or_declare_parameter<double>(node, module_name + "on_time_buffer_s.critical_departure");
+    on_time_buffer_s.near_boundary =
+      get_or_declare_parameter<double>(node, module_name + "on_time_buffer_s.near_boundary");
+    off_time_buffer_s.critical_departure =
+      get_or_declare_parameter<double>(node, module_name + "off_time_buffer_s.critical_departure");
+    off_time_buffer_s.near_boundary =
+      get_or_declare_parameter<double>(node, module_name + "off_time_buffer_s.near_boundary");
+
     bdc_param.th_max_lateral_query_num =
       get_or_declare_parameter<int>(node, module_name + "th_max_lateral_query_num");
 
     std::invoke([&node, &module_name, this]() {
       const std::string ns_abnormality{module_name + "abnormality."};
       const std::string ns_normal_abnormality{ns_abnormality + "normal."};
-      const std::string ns_steering_abnormality{ns_abnormality + "steering."};
       const std::string ns_localization_abnormality{ns_abnormality + "localization."};
       const std::string ns_longitudinal_abnormality{ns_abnormality + "longitudinal."};
 
       const auto compensate_normal =
         get_or_declare_parameter<bool>(node, ns_normal_abnormality + "enable");
-      const auto compensate_steering =
-        get_or_declare_parameter<bool>(node, ns_steering_abnormality + "enable");
       const auto compensate_localization =
         get_or_declare_parameter<bool>(node, ns_localization_abnormality + "enable");
       const auto compensate_longitudinal =
@@ -106,47 +120,68 @@ struct NodeParam
 
       std::vector<AbnormalityType> abnormality_types_to_compensate;
       AbnormalitiesConfigs configs;
-      abnormality_types_to_compensate.reserve(4);
+      abnormality_types_to_compensate.reserve(7);
       if (compensate_normal) {
         abnormality_types_to_compensate.emplace_back(AbnormalityType::NORMAL);
-        NormalConfig normal_config;
-        const std::string footprint_envelop_ns{ns_normal_abnormality + "footprint_envelop."};
-        normal_config.footprint_envelop.lat_m =
-          get_or_declare_parameter<double>(node, footprint_envelop_ns + "lat_m");
-        normal_config.footprint_envelop.lon_m =
-          get_or_declare_parameter<double>(node, footprint_envelop_ns + "lon_m");
-        configs.insert({AbnormalityType::NORMAL, normal_config});
       }
+      NormalConfig normal_config;
+      const std::string footprint_envelop_ns{ns_normal_abnormality + "footprint_envelop."};
+      normal_config.footprint_envelop.lat_m =
+        get_or_declare_parameter<double>(node, footprint_envelop_ns + "lat_m");
+      normal_config.footprint_envelop.lon_m =
+        get_or_declare_parameter<double>(node, footprint_envelop_ns + "lon_m");
+      configs.insert({AbnormalityType::NORMAL, normal_config});
 
-      if (compensate_steering) {
-        abnormality_types_to_compensate.emplace_back(AbnormalityType::STEERING);
+      const auto get_steer_params = [&](const auto steer_abnormality_type, const auto & ns) {
+        const auto compensate_steering = get_or_declare_parameter<bool>(node, ns + "enable");
         SteeringConfig steering_config;
-        steering_config.steering_rate_rps =
-          get_or_declare_parameter<double>(node, ns_steering_abnormality + "steering_rate_rps");
-        configs.insert({AbnormalityType::STEERING, steering_config});
-      }
+        if (compensate_steering) {
+          abnormality_types_to_compensate.emplace_back(steer_abnormality_type);
+        }
+        steering_config.steering_rate_velocities_mps =
+          get_or_declare_parameter<std::vector<double>>(node, ns + "steering_rate_velocities_mps");
+        steering_config.steering_rate_limits_rps =
+          get_or_declare_parameter<std::vector<double>>(node, ns + "steering_rate_limits_rps");
+        steering_config.delay_s = get_or_declare_parameter<double>(node, ns + "delay_s");
+        steering_config.offset_rps = get_or_declare_parameter<double>(node, ns + "offset_rps");
+        steering_config.factor = get_or_declare_parameter<double>(node, ns + "factor");
+        configs.insert({steer_abnormality_type, steering_config});
+      };
+      const std::string ns_steering_abnormality_accelerated{
+        ns_abnormality + "steering_accelerated."};
+      get_steer_params(AbnormalityType::STEERING_ACCELERATED, ns_steering_abnormality_accelerated);
+      const std::string ns_steering_abnormality_stuck{ns_abnormality + "steering_stuck."};
+      get_steer_params(AbnormalityType::STEERING_STUCK, ns_steering_abnormality_stuck);
+      const std::string ns_steering_abnormality_sudden_left{
+        ns_abnormality + "steering_sudden_left."};
+      get_steer_params(AbnormalityType::STEERING_SUDDEN_LEFT, ns_steering_abnormality_sudden_left);
+      const std::string ns_steering_abnormality_sudden_right{
+        ns_abnormality + "steering_sudden_right."};
+      get_steer_params(
+        AbnormalityType::STEERING_SUDDEN_RIGHT, ns_steering_abnormality_sudden_right);
 
       if (compensate_localization) {
         abnormality_types_to_compensate.emplace_back(AbnormalityType::LOCALIZATION);
-        LocalizationConfig localization_config;
-        const std::string footprint_envelop_ns{ns_localization_abnormality + "footprint_envelop."};
-        localization_config.footprint_envelop.lat_m =
-          get_or_declare_parameter<double>(node, footprint_envelop_ns + "lat_m");
-        localization_config.footprint_envelop.lon_m =
-          get_or_declare_parameter<double>(node, footprint_envelop_ns + "lon_m");
-        configs.insert({AbnormalityType::LOCALIZATION, localization_config});
       }
+      LocalizationConfig localization_config;
+      const std::string localization_footprint_envelop_ns{
+        ns_localization_abnormality + "footprint_envelop."};
+      localization_config.footprint_envelop.lat_m =
+        get_or_declare_parameter<double>(node, localization_footprint_envelop_ns + "lat_m");
+      localization_config.footprint_envelop.lon_m =
+        get_or_declare_parameter<double>(node, localization_footprint_envelop_ns + "lon_m");
+      configs.insert({AbnormalityType::LOCALIZATION, localization_config});
 
       if (compensate_longitudinal) {
         abnormality_types_to_compensate.emplace_back(AbnormalityType::LONGITUDINAL);
-        LongitudinalConfig longitudinal_config;
-        const std::string lon_tracking_ns{ns_longitudinal_abnormality + "lon_tracking."};
-        longitudinal_config.lon_tracking.scale =
-          get_or_declare_parameter<double>(node, lon_tracking_ns + "scale");
-        longitudinal_config.lon_tracking.extra_margin_m =
-          get_or_declare_parameter<double>(node, lon_tracking_ns + "extra_margin_m");
-        configs.insert({AbnormalityType::LONGITUDINAL, longitudinal_config});
       }
+      LongitudinalConfig longitudinal_config;
+      const std::string lon_tracking_ns{ns_longitudinal_abnormality + "lon_tracking."};
+      longitudinal_config.lon_tracking.scale =
+        get_or_declare_parameter<double>(node, lon_tracking_ns + "scale");
+      longitudinal_config.lon_tracking.extra_margin_m =
+        get_or_declare_parameter<double>(node, lon_tracking_ns + "extra_margin_m");
+      configs.insert({AbnormalityType::LONGITUDINAL, longitudinal_config});
 
       bdc_param.abnormality_types_to_compensate = abnormality_types_to_compensate;
       bdc_param.abnormality_configs = configs;

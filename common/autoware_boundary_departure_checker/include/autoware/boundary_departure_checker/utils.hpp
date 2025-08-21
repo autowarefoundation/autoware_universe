@@ -158,23 +158,6 @@ std::vector<LinearRing2d> create_vehicle_footprints(
   const FootprintMargin & margin = {0.0, 0.0});
 
 /**
- * @brief Generate vehicle footprints that reflect the vehicle's steering behavior.
- *
- * This function creates a wider footprint when the steering angle is high, simulating the way
- * a turning vehicle sweeps outward. The lateral margin increases over time based on an assumed
- * steering rate. The output is useful for predicting how the vehicle might occupy space during
- * turns.
- *
- * @param trajectory        Predicted trajectory of the ego vehicle.
- * @param vehicle_info      Vehicle dimensions.
- * @param current_steering  Latest steering angle from the vehicle.
- * @return Footprints that adapt laterally to simulate steering influence over time.
- */
-std::vector<LinearRing2d> create_vehicle_footprints(
-  const TrajectoryPoints & trajectory, const VehicleInfo & vehicle_info,
-  const SteeringReport & current_steering);
-
-/**
  * @brief Generate vehicle footprints with adjustments based on abnormality type.
  *
  * This function creates different footprint shapes depending on the specified abnormality:
@@ -367,28 +350,6 @@ ProjectionsToBound get_closest_boundary_segments_from_side(
   const EgoSides & ego_sides_from_footprints);
 
 /**
- * @brief Estimate braking distance using jerk, acceleration, and braking delay constraints.
- *
- * This function calculates how far a vehicle will travel while slowing down from an initial
- * velocity to a target velocity, considering:
- * - A first phase where deceleration increases gradually (jerk-limited).
- * - A second phase of constant deceleration.
- * - An initial delay before braking begins.
- *
- * The output is useful in planning safe stopping behavior under motion constraints.
- *
- * @param v_init            Initial velocity (m/s).
- * @param v_end             Target (final) velocity after braking (m/s).
- * @param acc               Constant deceleration value (must be positive).
- * @param jerk              Jerk value (rate of change of acceleration), assumed positive.
- * @param t_braking_delay   Delay before braking begins (s).
- * @return Total braking distance (meters).
- */
-double compute_braking_distance(
-  const double v_init, const double v_end, const double acc, const double jerk,
-  double t_braking_delay);
-
-/**
  * @brief Generate filtered and sorted departure points from lateral projections to road
  * boundaries.
  *
@@ -403,15 +364,16 @@ double compute_braking_distance(
  * - Retains only points up to and including the first CRITICAL_DEPARTURE point (if any).
  *
  * @param projections_to_bound  List of lateral projections to road boundaries.
+ * @param pred_traj_idx_to_ref_traj_lon_dist mapping from an index of the predicted trajectory to
+ * the corresponding arc length on the reference trajectory
  * @param th_point_merge_distance_m  Threshold distance used for hysteresis logic in departure
  * classification.
- * @param lon_offset_m          Longitudinal offset from ego base link to the reference
- * trajectory.
  * @return Filtered, sorted `DeparturePoints` with only relevant departure markers.
  */
 DeparturePoints get_departure_points(
   const std::vector<ClosestProjectionToBound> & projections_to_bound,
-  const double th_point_merge_distance_m, const double lon_offset_m);
+  const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist,
+  const double th_point_merge_distance_m);
 
 /**
  * @brief Find nearby uncrossable linestrings around the given pose.

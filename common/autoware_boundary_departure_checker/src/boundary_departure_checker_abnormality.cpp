@@ -42,8 +42,8 @@ namespace autoware::boundary_departure_checker
 BoundaryDepartureChecker::BoundaryDepartureChecker(
   lanelet::LaneletMapPtr lanelet_map_ptr, const VehicleInfo & vehicle_info, const Param & param,
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper)
-: lanelet_map_ptr_(lanelet_map_ptr),
-  param_ptr_(std::make_unique<Param>(param)),
+: param_(param),
+  lanelet_map_ptr_(lanelet_map_ptr),
   vehicle_info_ptr_(std::make_shared<VehicleInfo>(vehicle_info)),
   time_keeper_(std::move(time_keeper))
 {
@@ -75,17 +75,17 @@ tl::expected<AbnormalitiesData, std::string> BoundaryDepartureChecker::get_abnor
   }
 
   const auto trimmed_pred_traj =
-    utils::trim_pred_path(predicted_traj, param_ptr_->th_cutoff_time_predicted_path_s);
+    utils::trim_pred_path(predicted_traj, param_.th_cutoff_time_predicted_path_s);
 
   const auto uncertainty_fp_margin =
-    utils::calc_margin_from_covariance(curr_pose_with_cov, param_ptr_->footprint_extra_margin);
+    utils::calc_margin_from_covariance(curr_pose_with_cov, param_.footprint_extra_margin);
 
   AbnormalitiesData abnormalities_data;
-  for (const auto abnormality_type : param_ptr_->abnormality_types_to_compensate) {
+  for (const auto abnormality_type : param_.abnormality_types_to_compensate) {
     auto & fps = abnormalities_data.footprints[abnormality_type];
     fps = utils::create_ego_footprints(
       abnormality_type, uncertainty_fp_margin, trimmed_pred_traj, current_steering,
-      *vehicle_info_ptr_, *param_ptr_);
+      *vehicle_info_ptr_, param_);
 
     abnormalities_data.footprints_sides[abnormality_type] = utils::get_sides_from_footprints(fps);
   }
@@ -99,7 +99,7 @@ tl::expected<AbnormalitiesData, std::string> BoundaryDepartureChecker::get_abnor
   }
   abnormalities_data.boundary_segments = *boundary_segments_opt;
 
-  for (const auto abnormality_type : param_ptr_->abnormality_types_to_compensate) {
+  for (const auto abnormality_type : param_.abnormality_types_to_compensate) {
     auto & proj_to_bound = abnormalities_data.projections_to_bound[abnormality_type];
     proj_to_bound = utils::get_closest_boundary_segments_from_side(
       trimmed_pred_traj, abnormalities_data.boundary_segments,
@@ -122,11 +122,7 @@ BoundaryDepartureChecker::get_boundary_segments_from_side(
     return tl::make_unexpected(std::string(__func__) + ": invalid uncrossable boundaries rtree");
   }
 
-  if (!param_ptr_) {
-    return tl::make_unexpected(std::string(__func__) + ": invalid param_ptr");
-  }
-
-  const auto max_lat_query_num = param_ptr_->th_max_lateral_query_num;
+  const auto max_lat_query_num = param_.th_max_lateral_query_num;
 
   const auto & rtree = *uncrossable_boundaries_rtree_ptr_;
   const auto & linestring_layer = lanelet_map_ptr_->lineStringLayer;
@@ -172,13 +168,12 @@ BoundaryDepartureChecker::get_boundary_segments_from_side(
 
 tl::expected<std::vector<ClosestProjectionToBound>, std::string>
 BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
-  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
   const Abnormalities<ProjectionsToBound> & projections_to_bound, const double min_braking_dist,
   const double max_braking_dist, const SideKey side_key)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  const auto & abnormality_to_check = param_ptr_->abnormality_types_to_compensate;
+  const auto & abnormality_to_check = param_.abnormality_types_to_compensate;
 
   if (abnormality_to_check.empty()) {
     return tl::make_unexpected(std::string(__func__) + ": Nothing to check.");
@@ -211,11 +206,11 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
   std::vector<ClosestProjectionToBound> min_to_bound;
 
   const auto is_on_bound = [this](const double lat_dist, const SideKey side_key) {
-    return lat_dist < param_ptr_->th_trigger.th_dist_to_boundary_m[side_key].min;
+    return lat_dist < param_.th_trigger.th_dist_to_boundary_m[side_key].min;
   };
 
   const auto is_close_to_bound = [&](const double lat_dist, const SideKey side_key) {
-    return lat_dist <= param_ptr_->th_trigger.th_dist_to_boundary_m[side_key].max;
+    return lat_dist <= param_.th_trigger.th_dist_to_boundary_m[side_key].max;
   };
 
   const auto fp_size = projections_to_bound[abnormality_to_check.front()][side_key].size();
@@ -257,27 +252,23 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
 
     if (
       !min_to_bound.empty() && min_pt->departure_type != DepartureType::CRITICAL_DEPARTURE &&
-      std::abs(min_to_bound.back().lon_dist_on_ref_traj - min_pt->lon_dist_on_ref_traj) < 0.5) {
+      std::abs(min_to_bound.back().lon_dist_on_pred_traj - min_pt->lon_dist_on_pred_traj) < 0.5) {
       continue;
     }
-    min_pt->lon_dist_on_ref_traj =
-      trajectory::closest(aw_ref_traj, utils::to_geom_pt(min_pt->pt_on_ego));
 
     const auto is_exceeding_cutoff =
       [&min_pt](const auto type, const auto braking_dist, const auto cutoff_time) {
-        return min_pt->departure_type == type && min_pt->lon_dist_on_ref_traj > braking_dist &&
+        return min_pt->departure_type == type && min_pt->lon_dist_on_pred_traj > braking_dist &&
                min_pt->time_from_start > cutoff_time;
       };
 
     if (is_exceeding_cutoff(
-          DepartureType::NEAR_BOUNDARY, max_braking_dist,
-          param_ptr_->th_cutoff_time_near_boundary_s)) {
+          DepartureType::NEAR_BOUNDARY, max_braking_dist, param_.th_cutoff_time_near_boundary_s)) {
       continue;
     }
 
     if (is_exceeding_cutoff(
-          DepartureType::CRITICAL_DEPARTURE, min_braking_dist,
-          param_ptr_->th_cutoff_time_departure_s)) {
+          DepartureType::CRITICAL_DEPARTURE, min_braking_dist, param_.th_cutoff_time_departure_s)) {
       min_pt->departure_type = DepartureType::APPROACHING_DEPARTURE;
     }
 
@@ -292,12 +283,11 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
 
 tl::expected<ClosestProjectionsToBound, std::string>
 BoundaryDepartureChecker::get_closest_projections_to_boundaries(
-  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
   const Abnormalities<ProjectionsToBound> & projections_to_bound, const double curr_vel,
   const double curr_acc)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
-  const auto & th_trigger = param_ptr_->th_trigger;
+  const auto & th_trigger = param_.th_trigger;
   const auto min_braking_dist = utils::calc_judge_line_dist_with_jerk_limit(
     curr_vel, curr_acc, th_trigger.th_acc_mps2.max, th_trigger.th_jerk_mps3.max,
     th_trigger.brake_delay_s);
@@ -309,7 +299,7 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries(
 
   for (const auto side_key : g_side_keys) {
     const auto min_to_bound_opt = get_closest_projections_to_boundaries_side(
-      aw_ref_traj, projections_to_bound, min_braking_dist, max_braking_dist, side_key);
+      projections_to_bound, min_braking_dist, max_braking_dist, side_key);
 
     if (!min_to_bound_opt) {
       return tl::make_unexpected(min_to_bound_opt.error());
@@ -327,7 +317,7 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries(
     for (auto itr = std::next(min_to_bound[side_key].rbegin());
          itr != min_to_bound[side_key].rend(); ++itr) {
       if (
-        min_to_bound[side_key].back().lon_dist_on_ref_traj - itr->lon_dist_on_ref_traj <
+        min_to_bound[side_key].back().lon_dist_on_pred_traj - itr->lon_dist_on_pred_traj <
         max_braking_dist) {
         itr->departure_type = DepartureType::APPROACHING_DEPARTURE;
       }
@@ -338,16 +328,18 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries(
 }
 
 Side<DeparturePoints> BoundaryDepartureChecker::get_departure_points(
-  const ClosestProjectionsToBound & projections_to_bound, const double lon_offset_m)
+  const ClosestProjectionsToBound & projections_to_bound,
+  const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  const auto th_point_merge_distance_m = param_ptr_->th_point_merge_distance_m;
+  const auto th_point_merge_distance_m = param_.th_point_merge_distance_m;
 
   Side<DeparturePoints> departure_points;
   for (const auto side_key : g_side_keys) {
     departure_points[side_key] = utils::get_departure_points(
-      projections_to_bound[side_key], th_point_merge_distance_m, lon_offset_m);
+      projections_to_bound[side_key], pred_traj_idx_to_ref_traj_lon_dist,
+      th_point_merge_distance_m);
   }
   return departure_points;
 }
@@ -362,12 +354,8 @@ BoundaryDepartureChecker::build_uncrossable_boundaries_tree(
     return tl::make_unexpected("lanelet_map_ptr is null");
   }
 
-  if (!param_ptr_) {
-    return tl::make_unexpected("param_ptr is null");
-  }
-
   return utils::build_uncrossable_boundaries_rtree(
-    *lanelet_map_ptr, param_ptr_->boundary_types_to_detect);
+    *lanelet_map_ptr, param_.boundary_types_to_detect);
 }
 
 SegmentRtree BoundaryDepartureChecker::extractUncrossableBoundaries(

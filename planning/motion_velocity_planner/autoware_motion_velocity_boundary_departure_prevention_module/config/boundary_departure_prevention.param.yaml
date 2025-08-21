@@ -14,8 +14,12 @@
         near_boundary: 3.5
         departure: 2.0
 
-      on_time_buffer_s: 0.15
-      off_time_buffer_s: 0.15
+      on_time_buffer_s:
+        near_boundary: 0.15
+        critical_departure: 0.15
+      off_time_buffer_s:
+        near_boundary: 0.15
+        critical_departure: 0.15
 
       abnormality:
         normal:
@@ -36,9 +40,37 @@
             scale: 1.0
             extra_margin_m: 0.0
 
-        steering:
+        steering_accelerated:
           enable: false
-          steering_rate_rps: 1.0
+          steering_rate_velocities_mps: [0.0, 3.5, 9.1, 14.7, 20.3, 25.9, 31.5]
+          steering_rate_limits_rps: [3.14, 0.777, 0.115, 0.044, 0.023, 0.014, 0.010]
+          delay_s: 0.0
+          offset_rps: 0.0
+          factor: 1.2
+
+        steering_stuck:
+          enable: false
+          steering_rate_velocities_mps: [0.0, 3.5, 9.1, 14.7, 20.3, 25.9, 31.5]
+          steering_rate_limits_rps: [3.14, 0.777, 0.115, 0.044, 0.023, 0.014, 0.010]
+          delay_s: 0.0
+          offset_rps: 0.0
+          factor: 0.0
+
+        steering_sudden_left:
+          enable: false
+          steering_rate_velocities_mps: [0.0, 3.5, 9.1, 14.7, 20.3, 25.9, 31.5]
+          steering_rate_limits_rps: [3.14, 0.777, 0.115, 0.044, 0.023, 0.014, 0.010]
+          delay_s: 0.0
+          offset_rps: 0.2
+          factor: 1.0
+
+        steering_sudden_right:
+          enable: false
+          steering_rate_velocities_mps: [0.0, 3.5, 9.1, 14.7, 20.3, 25.9, 31.5]
+          steering_rate_limits_rps: [3.14, 0.777, 0.115, 0.044, 0.023, 0.014, 0.010]
+          delay_s: 0.0
+          offset_rps: -0.2
+          factor: 1.0
 
       diagnostic:
         # Diagnostic status
