@@ -291,19 +291,41 @@ TEST(PolarVoxelOutlierFilter, IsValidPolarPoint)
   EXPECT_FALSE(filter.is_valid_polar_point(polar));
 }
 
-// Unit tests for filter logic
-
-TEST(PolarVoxelOutlierFilter, FilterSimpleCloud)
+// Helper to test that a single-point cloud passes the filter
+void expect_single_point_passes(const std::function<sensor_msgs::msg::PointCloud2()> & make_cloud)
 {
   auto node = std::make_shared<TestableFilter>();
-  auto input_cloud = std::make_shared<sensor_msgs::msg::PointCloud2>(make_simple_cloud());
+  auto input_cloud = std::make_shared<sensor_msgs::msg::PointCloud2>(make_cloud());
   sensor_msgs::msg::PointCloud2 output_cloud;
   node->filter(input_cloud, nullptr, output_cloud);
 
-  // All points should pass the filter with threshold=1
-  EXPECT_EQ(output_cloud.width, 3u);
+  EXPECT_EQ(output_cloud.width, 1u);
   EXPECT_EQ(output_cloud.height, 1u);
 }
+
+void expect_points_pass(
+  const std::function<sensor_msgs::msg::PointCloud2()> & make_cloud, size_t expected_count)
+{
+  auto node = std::make_shared<TestableFilter>();
+  auto input_cloud = std::make_shared<sensor_msgs::msg::PointCloud2>(make_cloud());
+  sensor_msgs::msg::PointCloud2 output_cloud;
+  node->filter(input_cloud, nullptr, output_cloud);
+
+  EXPECT_EQ(output_cloud.width, expected_count);
+  EXPECT_EQ(output_cloud.height, 1u);
+}
+
+TEST(PolarVoxelOutlierFilter, FilterSimpleCloud)
+{
+  expect_points_pass([] { return make_simple_cloud(); }, 3u);
+}
+
+TEST(PolarVoxelOutlierFilter, FilterWithPolarCoordinates)
+{
+  expect_points_pass([] { return make_cloud_with_polar_fields(); }, 1u);
+}
+
+// Unit tests for filter logic
 
 TEST(PolarVoxelOutlierFilter, FilterRemovesAllWithHighThreshold)
 {
@@ -329,19 +351,6 @@ TEST(PolarVoxelOutlierFilter, FilterWithReturnType)
   node->filter(input_cloud, nullptr, output_cloud);
 
   // Only the first point should pass (return_type=1)
-  EXPECT_EQ(output_cloud.width, 1u);
-  EXPECT_EQ(output_cloud.height, 1u);
-}
-
-TEST(PolarVoxelOutlierFilter, FilterWithPolarCoordinates)
-{
-  auto node = std::make_shared<TestableFilter>();
-  auto input_cloud =
-    std::make_shared<sensor_msgs::msg::PointCloud2>(make_cloud_with_polar_fields());
-  sensor_msgs::msg::PointCloud2 output_cloud;
-  node->filter(input_cloud, nullptr, output_cloud);
-
-  // The point should pass the filter
   EXPECT_EQ(output_cloud.width, 1u);
   EXPECT_EQ(output_cloud.height, 1u);
 }
