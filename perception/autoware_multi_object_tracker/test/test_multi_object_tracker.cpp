@@ -369,6 +369,24 @@ public:
   ~MultiObjectTrackerTest() override = default;
 };
 
+// TEST_F(MultiObjectTrackerTest, PerformanceVsCarCount)
+// {
+//   // This test runs performance analysis with varying car counts
+//   profilePerformanceVsCarCount();
+// }
+
+// TEST_F(MultiObjectTrackerTest, PerformanceVsPedestrianCount)
+// {
+//   // This test runs performance analysis with varying pedestrian counts
+//   profilePerformanceVsPedestrianCount();
+// }
+
+// TEST_F(MultiObjectTrackerTest, PerformanceVsUnknownObjectCount)
+// {
+//   // This test runs performance analysis with varying unknown object counts
+//   profilePerformanceVsUnknownObjectCount();
+// }
+
 TEST_F(MultiObjectTrackerTest, SimulatedDataPerformanceTest)
 {
   // This test runs performance analysis using simulated tracking data
