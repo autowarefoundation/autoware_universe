@@ -293,10 +293,19 @@ double DataAssociation::calculateScore(
 
   const double min_iou = config_.min_iou_matrix(tracker_label, measurement_label);
 
-  // use 1d iou for pedestrian and unknown objects, 3d giou for other objects
-  const bool use_1d_iou = (tracker_label == Label::PEDESTRIAN) || (tracker_label == Label::UNKNOWN);
-  double iou_score = use_1d_iou ? shapes::get1dIoU(measurement_object, tracked_object)
-                                : shapes::get3dGeneralizedIoU(measurement_object, tracked_object);
+  // use 1d iou for pedestrian, 3d giou for other objects if both extensions are trustable
+  // otherwise use 2d giou
+  const bool use_1d_iou = (tracker_label == Label::PEDESTRIAN);
+  const bool use_3d_iou = (tracked_object.trust_extension) && (measurement_object.trust_extension);
+
+  double iou_score = INVALID_SCORE;
+  if (use_1d_iou) {
+    iou_score = shapes::get1dIoU(measurement_object, tracked_object);
+  } else if (use_3d_iou) {
+    iou_score = shapes::get3dGeneralizedIoU(measurement_object, tracked_object);
+  } else {
+    iou_score = shapes::get2dGeneralizedIoU(measurement_object, tracked_object);
+  }
   if (iou_score < min_iou) return INVALID_SCORE;
 
   // check if shape changes too much for vehicle labels
