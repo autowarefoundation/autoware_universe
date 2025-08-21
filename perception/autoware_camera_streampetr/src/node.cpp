@@ -212,48 +212,99 @@ void StreamPetrNode::camera_image_callback(
 
 void StreamPetrNode::step(const rclcpp::Time & stamp)
 {
+  if (!validate_camera_sync()) {
+    return;
+  }
+
+  if (!prepare_inference_data(stamp)) {
+    return;
+  }
+
+  auto inference_result = perform_inference();
+  if (!inference_result.has_value()) {
+    return;
+  }
+
+  const auto [output_objects, forward_time_ms, inference_time_ms] = inference_result.value();
+  publish_detection_results(stamp, output_objects);
+  publish_debug_metrics(forward_time_ms, inference_time_ms);
+}
+
+bool StreamPetrNode::validate_camera_sync()
+{
   const float tdiff = data_store_->check_if_all_images_synced();
   const float prediction_timestamp = data_store_->get_timestamp();
 
   if (tdiff < 0) {
     RCLCPP_WARN(rclcpp::get_logger(logger_name_.c_str()), "Not all camera info or image received");
-    return;
-  } else if (tdiff > max_camera_time_diff_ || prediction_timestamp < 0.0) {
+    return false;
+  }
+
+  if (tdiff > max_camera_time_diff_ || prediction_timestamp < 0.0) {
     RCLCPP_WARN(
       rclcpp::get_logger(logger_name_.c_str()),
-      "Couldn't sync cameras. Sync difference: %.2f seconds, timelapsed  from start: %.2f seconds",
+      "Couldn't sync cameras. Sync difference: %.2f seconds, timelapsed from start: %.2f seconds",
       tdiff, prediction_timestamp);
-    network_->wipe_memory();
-    initial_transform_set_ = false;  // Reset initial transform
-    data_store_->restart();
-    return;
+    reset_system_state();
+    return false;
   }
+
+  return true;
+}
+
+void StreamPetrNode::reset_system_state()
+{
+  network_->wipe_memory();
+  initial_transform_set_ = false;
+  data_store_->restart();
+}
+
+bool StreamPetrNode::prepare_inference_data(const rclcpp::Time & stamp)
+{
   if (multithreading_) {
     data_store_->freeze_updates();
   }
 
   const auto ego_pose_result = get_ego_pose_vector(stamp);
   if (!ego_pose_result.has_value()) {
-    data_store_->unfreeze_updates();
-    return;
-  }
-  const auto [ego_pose, ego_pose_inv] = ego_pose_result.value();
-  const auto extrinsic_vectors = get_camera_extrinsics_vector();
-  if (!extrinsic_vectors.has_value()) {
-    data_store_->unfreeze_updates();
-    return;
+    cleanup_on_failure();
+    return false;
   }
 
+  const auto extrinsic_vectors = get_camera_extrinsics_vector();
+  if (!extrinsic_vectors.has_value()) {
+    cleanup_on_failure();
+    return false;
+  }
+
+  // Store the results for inference
+  current_ego_pose_ = ego_pose_result.value();
+  current_extrinsics_ = extrinsic_vectors.value();
+  current_prediction_timestamp_ = data_store_->get_timestamp();
+
+  return true;
+}
+
+void StreamPetrNode::cleanup_on_failure()
+{
+  if (multithreading_) {
+    data_store_->unfreeze_updates();
+  }
+}
+
+std::optional<std::tuple<
+  std::vector<autoware_perception_msgs::msg::DetectedObject>, std::vector<float>, double>>
+StreamPetrNode::perform_inference()
+{
   if (stop_watch_ptr_) {
     stop_watch_ptr_->tic("latency/inference");
   }
+
   std::vector<float> forward_time_ms;
   std::vector<autoware_perception_msgs::msg::DetectedObject> output_objects;
 
-  network_->inference_detector(
-    data_store_->get_image_input(), ego_pose, ego_pose_inv, data_store_->get_image_shape(),
-    data_store_->get_camera_info_vector(), extrinsic_vectors.value(), prediction_timestamp,
-    output_objects, forward_time_ms);
+  InferenceInputs inputs = create_inference_inputs();
+  network_->inference_detector(inputs, output_objects, forward_time_ms);
 
   if (multithreading_) {
     data_store_->unfreeze_updates();
@@ -264,31 +315,57 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
     inference_time_ms = stop_watch_ptr_->toc("latency/inference", true);
   }
 
+  return std::make_tuple(output_objects, forward_time_ms, inference_time_ms);
+}
+
+InferenceInputs StreamPetrNode::create_inference_inputs()
+{
+  InferenceInputs inputs;
+  inputs.imgs = data_store_->get_image_input();
+  inputs.ego_pose = current_ego_pose_.first;
+  inputs.ego_pose_inv = current_ego_pose_.second;
+  inputs.img_metas_pad = data_store_->get_image_shape();
+  inputs.intrinsics = data_store_->get_camera_info_vector();
+  inputs.img2lidar = current_extrinsics_;
+  inputs.stamp = current_prediction_timestamp_;
+  return inputs;
+}
+
+void StreamPetrNode::publish_detection_results(
+  const rclcpp::Time & stamp,
+  const std::vector<autoware_perception_msgs::msg::DetectedObject> & output_objects)
+{
   DetectedObjects output_msg;
   output_msg.objects = output_objects;
   output_msg.header.frame_id = "base_link";
   output_msg.header.stamp = stamp;
   pub_objects_->publish(output_msg);
+}
 
-  if (debug_publisher_ptr_ && stop_watch_ptr_) {
-    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "latency/total", stop_watch_ptr_->toc("latency/total", true));
-    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "latency/preprocess", data_store_->get_preprocess_time_ms());
-    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "latency/inference", inference_time_ms);
-    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "latency/inference/backbone", forward_time_ms[0]);
-    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "latency/inference/ptshead", forward_time_ms[1]);
-    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "latency/inference/pos_embed", forward_time_ms[2]);
-    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "latency/inference/postprocess", forward_time_ms[3]);
-    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "latency/cycle_time_ms", stop_watch_ptr_->toc("latency/cycle_time_ms", true));
-    stop_watch_ptr_->tic("latency/cycle_time_ms");
+void StreamPetrNode::publish_debug_metrics(
+  const std::vector<float> & forward_time_ms, double inference_time_ms)
+{
+  if (!debug_publisher_ptr_ || !stop_watch_ptr_) {
+    return;
   }
+
+  debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "latency/total", stop_watch_ptr_->toc("latency/total", true));
+  debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "latency/preprocess", data_store_->get_preprocess_time_ms());
+  debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "latency/inference", inference_time_ms);
+  debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "latency/inference/backbone", forward_time_ms[0]);
+  debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "latency/inference/ptshead", forward_time_ms[1]);
+  debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "latency/inference/pos_embed", forward_time_ms[2]);
+  debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "latency/inference/postprocess", forward_time_ms[3]);
+  debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "latency/cycle_time_ms", stop_watch_ptr_->toc("latency/cycle_time_ms", true));
+  stop_watch_ptr_->tic("latency/cycle_time_ms");
 }
 
 std::optional<std::vector<float>> StreamPetrNode::get_camera_extrinsics_vector()
@@ -303,64 +380,123 @@ std::optional<std::vector<float>> StreamPetrNode::get_camera_extrinsics_vector()
   res.reserve(camera_links.size() * num_row * num_col);
 
   for (size_t i = 0; i < camera_links.size(); ++i) {
-    Eigen::Matrix4f K_4x4 = Eigen::Matrix4f::Identity();
-    {
-      size_t offset = i * num_row * num_col;
-      for (size_t row = 0; row < num_row; ++row) {
-        for (size_t col = 0; col < num_col; ++col) {
-          K_4x4(row, col) = intrinsics_all[offset + row * num_col + col];
-        }
-      }
-    }
-    geometry_msgs::msg::TransformStamped transform_stamped;
-    try {
-      transform_stamped =
-        tf_buffer_.lookupTransform(camera_links[i], "base_link", tf2::TimePointZero);
-    } catch (const tf2::TransformException & ex) {
-      RCLCPP_ERROR(
-        rclcpp::get_logger(logger_name_.c_str()), "Could not transform from base_link to %s: %s",
-        camera_links[i].c_str(), ex.what());
+    auto camera_transform_result = compute_camera_transform(i, camera_links, intrinsics_all);
+    if (!camera_transform_result.has_value()) {
       return std::nullopt;
     }
 
-    Eigen::Matrix4f T_lidar2cam = Eigen::Matrix4f::Identity();
-    {
-      tf2::Quaternion tf2_q(
-        transform_stamped.transform.rotation.x, transform_stamped.transform.rotation.y,
-        transform_stamped.transform.rotation.z, transform_stamped.transform.rotation.w);
-      tf2::Matrix3x3 tf2_R(tf2_q);
-
-      Eigen::Matrix3f R;
-      for (int r = 0; r < 3; ++r) {
-        for (int c = 0; c < 3; ++c) {
-          R(r, c) = static_cast<float>(tf2_R[r][c]);
-        }
-      }
-
-      Eigen::Vector3f t;
-      t << static_cast<float>(transform_stamped.transform.translation.x),
-        static_cast<float>(transform_stamped.transform.translation.y),
-        static_cast<float>(transform_stamped.transform.translation.z);
-
-      for (int r = 0; r < 3; ++r) {
-        for (int c = 0; c < 3; ++c) {
-          T_lidar2cam(r, c) = R(r, c);
-        }
-        T_lidar2cam(r, 3) = t(r);
-      }
-    }
-
-    Eigen::Matrix4f T_lidar2img = K_4x4 * T_lidar2cam;
-    Eigen::Matrix4f T_img2lidar = T_lidar2img.inverse();
-
-    for (size_t row = 0; row < num_row; ++row) {
-      for (size_t col = 0; col < num_col; ++col) {
-        res.push_back(T_img2lidar(row, col));
-      }
-    }
+    const auto transform_matrix = camera_transform_result.value();
+    append_transform_to_result(transform_matrix, res);
   }
 
   return res;
+}
+
+std::optional<Eigen::Matrix4f> StreamPetrNode::compute_camera_transform(
+  size_t camera_index, const std::vector<std::string> & camera_links,
+  const std::vector<float> & intrinsics_all)
+{
+  const Eigen::Matrix4f K_4x4 = extract_intrinsic_matrix(camera_index, intrinsics_all);
+
+  auto transform_stamped_result = get_camera_transform(camera_links[camera_index]);
+  if (!transform_stamped_result.has_value()) {
+    return std::nullopt;
+  }
+
+  const Eigen::Matrix4f T_lidar2cam =
+    create_lidar_to_camera_transform(transform_stamped_result.value());
+  const Eigen::Matrix4f T_lidar2img = K_4x4 * T_lidar2cam;
+  return T_lidar2img.inverse();
+}
+
+Eigen::Matrix4f StreamPetrNode::extract_intrinsic_matrix(
+  size_t camera_index, const std::vector<float> & intrinsics_all)
+{
+  constexpr size_t num_row = 4;
+  constexpr size_t num_col = 4;
+
+  Eigen::Matrix4f K_4x4 = Eigen::Matrix4f::Identity();
+  size_t offset = camera_index * num_row * num_col;
+
+  for (size_t row = 0; row < num_row; ++row) {
+    for (size_t col = 0; col < num_col; ++col) {
+      K_4x4(row, col) = intrinsics_all[offset + row * num_col + col];
+    }
+  }
+
+  return K_4x4;
+}
+
+std::optional<geometry_msgs::msg::TransformStamped> StreamPetrNode::get_camera_transform(
+  const std::string & camera_link)
+{
+  try {
+    return tf_buffer_.lookupTransform(camera_link, "base_link", tf2::TimePointZero);
+  } catch (const tf2::TransformException & ex) {
+    RCLCPP_ERROR(
+      rclcpp::get_logger(logger_name_.c_str()), "Could not transform from base_link to %s: %s",
+      camera_link.c_str(), ex.what());
+    return std::nullopt;
+  }
+}
+
+Eigen::Matrix4f StreamPetrNode::create_lidar_to_camera_transform(
+  const geometry_msgs::msg::TransformStamped & transform_stamped)
+{
+  Eigen::Matrix4f T_lidar2cam = Eigen::Matrix4f::Identity();
+
+  const auto rotation_matrix = extract_rotation_matrix(transform_stamped);
+  const auto translation_vector = extract_translation_vector(transform_stamped);
+
+  for (int r = 0; r < 3; ++r) {
+    for (int c = 0; c < 3; ++c) {
+      T_lidar2cam(r, c) = rotation_matrix(r, c);
+    }
+    T_lidar2cam(r, 3) = translation_vector(r);
+  }
+
+  return T_lidar2cam;
+}
+
+Eigen::Matrix3f StreamPetrNode::extract_rotation_matrix(
+  const geometry_msgs::msg::TransformStamped & transform_stamped)
+{
+  tf2::Quaternion tf2_q(
+    transform_stamped.transform.rotation.x, transform_stamped.transform.rotation.y,
+    transform_stamped.transform.rotation.z, transform_stamped.transform.rotation.w);
+  tf2::Matrix3x3 tf2_R(tf2_q);
+
+  Eigen::Matrix3f R;
+  for (int r = 0; r < 3; ++r) {
+    for (int c = 0; c < 3; ++c) {
+      R(r, c) = static_cast<float>(tf2_R[r][c]);
+    }
+  }
+
+  return R;
+}
+
+Eigen::Vector3f StreamPetrNode::extract_translation_vector(
+  const geometry_msgs::msg::TransformStamped & transform_stamped)
+{
+  Eigen::Vector3f t;
+  t << static_cast<float>(transform_stamped.transform.translation.x),
+    static_cast<float>(transform_stamped.transform.translation.y),
+    static_cast<float>(transform_stamped.transform.translation.z);
+  return t;
+}
+
+void StreamPetrNode::append_transform_to_result(
+  const Eigen::Matrix4f & transform_matrix, std::vector<float> & result)
+{
+  constexpr size_t num_row = 4;
+  constexpr size_t num_col = 4;
+
+  for (size_t row = 0; row < num_row; ++row) {
+    for (size_t col = 0; col < num_col; ++col) {
+      result.push_back(transform_matrix(row, col));
+    }
+  }
 }
 
 std::optional<std::pair<std::vector<float>, std::vector<float>>>

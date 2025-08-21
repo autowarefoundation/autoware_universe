@@ -42,7 +42,10 @@ bool NonMaximumSuppression::isTargetPairObject(
     autoware::object_recognition_utils::getHighestProbLabel(object2.classification);
 
   // if labels are not the same, and one of them is pedestrian, do not suppress
-  if (label1 != label2 && (label1 == Label::PEDESTRIAN || label2 == Label::PEDESTRIAN)) {
+  const bool labels_differ = label1 != label2;
+  const bool has_pedestrian = (label1 == Label::PEDESTRIAN || label2 == Label::PEDESTRIAN);
+
+  if (labels_differ && has_pedestrian) {
     return false;
   }
 

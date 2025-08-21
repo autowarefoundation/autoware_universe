@@ -178,6 +178,17 @@ struct NetworkConfig
   std::string engine_position_embedding_path = "";
 };
 
+struct InferenceInputs
+{
+  std::shared_ptr<Tensor> imgs;
+  std::vector<float> ego_pose;
+  std::vector<float> ego_pose_inv;
+  std::vector<float> img_metas_pad;
+  std::vector<float> intrinsics;
+  std::vector<float> img2lidar;
+  float stamp;
+};
+
 class StreamPetrNetwork
 {
 public:
@@ -185,9 +196,7 @@ public:
 
   ~StreamPetrNetwork();
   void inference_detector(
-    const std::shared_ptr<Tensor> imgs, const std::vector<float> & ego_pose,
-    const std::vector<float> & ego_pose_inv, const std::vector<float> & img_metas_pad,
-    const std::vector<float> & intrinsics, const std::vector<float> & img2lidar, const float stamp,
+    const InferenceInputs & inputs,
     std::vector<autoware_perception_msgs::msg::DetectedObject> & output_objects,
     std::vector<float> & forward_time_ms);
 
@@ -195,6 +204,19 @@ public:
 
 private:
   autoware_perception_msgs::msg::DetectedObject bbox_to_ros_msg(const Box3D & bbox);
+
+  // Helper methods for constructor
+  void initializeNetworks();
+  void setupEnginesAndBindings();
+  void initializeMemoryAndProfiling();
+  void configureNMSIfNeeded();
+
+  // Helper methods for inference_detector
+  void initializePositionEmbedding(const InferenceInputs & inputs);
+  void executeBackbone(const InferenceInputs & inputs);
+  void executePtsHead(const InferenceInputs & inputs);
+  void executePostprocessing(
+    std::vector<autoware_perception_msgs::msg::DetectedObject> & output_objects);
 
   NetworkConfig config_;
   std::shared_ptr<Logger> logger_;

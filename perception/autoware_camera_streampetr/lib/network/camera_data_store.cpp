@@ -97,9 +97,13 @@ CameraDataStore::CameraDataStore(
   is_frozen_ = false;
   active_updates_ = 0;
 
-  if (is_distorted_image_ && (downsample_factor_ <= 0.0 || downsample_factor_ > 1.0)) {
-    throw std::runtime_error(
-      "downsample_factor must be in range (0,1] when is_distorted_image is true");
+  // Validate downsample_factor when distorted image is used
+  if (is_distorted_image_) {
+    const bool invalid_downsample_factor = (downsample_factor_ <= 0.0 || downsample_factor_ > 1.0);
+    if (invalid_downsample_factor) {
+      throw std::runtime_error(
+        "downsample_factor must be in range (0,1] when is_distorted_image is true");
+    }
   }
 }
 
@@ -113,92 +117,24 @@ void CameraDataStore::update_camera_image(
   }
 
   auto start_time = std::chrono::high_resolution_clock::now();
-  int original_height = input_camera_image_msg->height;
-  int original_width = input_camera_image_msg->width;
 
-  const float scaleH = static_cast<float>(image_height_) / static_cast<float>(original_height);
-  const float scaleW = static_cast<float>(image_width_) / static_cast<float>(original_width);
-  const float resize = std::max(scaleH, scaleW);
+  // Calculate image processing parameters
+  auto params = calculate_image_processing_params(camera_id, input_camera_image_msg);
 
-  const int newW = static_cast<int>(original_width * resize);
-  const int newH = static_cast<int>(original_height * resize);
-  float bottom_crop_portion = 0.0f;  // what portion of bottom to crop. We only crop at the top
-                                     // along height, so hardcoded to 0.0f
-  int crop_h = static_cast<int>((1.0f - bottom_crop_portion) * newH) - image_height_;
-  if (crop_h < 0) {
-    crop_h = 0;
-  }
-  int crop_w = std::max(0, (newW - image_width_) / 2);
-
-  int start_x = std::max(0, crop_w);
-  int start_y = std::max(0, crop_h);
-
-  const int camera_offset = camera_id * 3 * image_height_ * image_width_;
-
+  // Process image based on distortion settings
   std::unique_ptr<Tensor> image_input_tensor;
   if (is_distorted_image_ && camera_info_list_[camera_id]) {
-    auto camera_info = camera_info_list_[camera_id];
-
-    // Create camera matrix K from camera_info
-    cv::Mat K =
-      (cv::Mat_<double>(3, 3) << camera_info->k[0], camera_info->k[1], camera_info->k[2],
-       camera_info->k[3], camera_info->k[4], camera_info->k[5], camera_info->k[6],
-       camera_info->k[7], camera_info->k[8]);
-
-    // Create distortion coefficients matrix D from camera_info
-    const auto & d_vec = camera_info->d;
-    cv::Mat D(1, static_cast<int>(d_vec.size()), CV_64F);
-    for (size_t i = 0; i < d_vec.size(); ++i) {
-      D.at<double>(0, static_cast<int>(i)) = d_vec[i];
-    }
-
-    // Create projection matrix P from camera_info (first 3x3 part)
-    cv::Mat P =
-      (cv::Mat_<double>(3, 3) << camera_info->p[0], camera_info->p[1], camera_info->p[2],
-       camera_info->p[4], camera_info->p[5], camera_info->p[6], camera_info->p[8],
-       camera_info->p[9], camera_info->p[10]);
-
-    P.at<double>(0, 0) *= downsample_factor_;  // fx
-    P.at<double>(0, 2) *= downsample_factor_;  // cx
-    P.at<double>(1, 1) *= downsample_factor_;  // fy
-    P.at<double>(1, 2) *= downsample_factor_;  // cy
-
-    cv::Mat input_image(
-      original_height, original_width, CV_8UC3,
-      const_cast<uint8_t *>(input_camera_image_msg->data.data()));
-
-    original_height = static_cast<int>(original_height * downsample_factor_);
-    original_width = static_cast<int>(original_width * downsample_factor_);
-
-    cv::Mat undistort_map_x, undistort_map_y;
-    cv::initUndistortRectifyMap(
-      K, D, cv::Mat(), P, cv::Size(original_width, original_height), CV_32FC1, undistort_map_x,
-      undistort_map_y);
-
-    cv::Mat undistorted_image;
-
-    cv::remap(input_image, undistorted_image, undistort_map_x, undistort_map_y, cv::INTER_LANCZOS4);
-
-    image_input_tensor = std::make_unique<Tensor>(
-      "camera_img", nvinfer1::Dims{3, original_height, original_width, 3},
-      nvinfer1::DataType::kUINT8);
-    cudaMemcpyAsync(
-      image_input_tensor->ptr, undistorted_image.data, image_input_tensor->nbytes(),
-      cudaMemcpyHostToDevice, streams_.at(camera_id));
-
+    image_input_tensor = process_distorted_image(camera_id, input_camera_image_msg, params);
   } else {
-    image_input_tensor = std::make_unique<Tensor>(
-      "camera_img", nvinfer1::Dims{3, original_height, original_width, 3},
-      nvinfer1::DataType::kUINT8);
-    cudaMemcpyAsync(
-      image_input_tensor->ptr, input_camera_image_msg->data.data(), image_input_tensor->nbytes(),
-      cudaMemcpyHostToDevice, streams_.at(camera_id));
+    image_input_tensor = process_regular_image(input_camera_image_msg, params, camera_id);
   }
 
+  // Launch CUDA kernel for resizing and ROI extraction
   auto err = resizeAndExtractRoi_launch(
     static_cast<std::uint8_t *>(image_input_tensor->ptr), static_cast<float *>(image_input_->ptr),
-    camera_offset, original_height, original_width, newH, newW, image_height_, image_width_,
-    start_y, start_x, static_cast<const float *>(image_input_mean_->ptr),
+    params.camera_offset, params.original_height, params.original_width, params.newH, params.newW,
+    image_height_, image_width_, params.start_y, params.start_x,
+    static_cast<const float *>(image_input_mean_->ptr),
     static_cast<const float *>(image_input_std_->ptr), streams_.at(camera_id));
 
   if (err != cudaSuccess) {
@@ -206,17 +142,8 @@ void CameraDataStore::update_camera_image(
       logger_, "resizeAndExtractRoi_launch failed with error: %s", cudaGetErrorString(err));
   }
 
-  camera_image_timestamp_[camera_id] =
-    input_camera_image_msg->header.stamp.sec + input_camera_image_msg->header.stamp.nanosec * 1e-9;
-  camera_link_names_[camera_id] = input_camera_image_msg->header.frame_id;
-
-  auto end_time = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-  preprocess_time_ms_ = duration.count();
-
-  // // Save the processed image for debugging during development
-  // std::string filename = "/home/autoware/workspace/StreamPETR_TensorRT_ROS2/data/camera_" +
-  // std::to_string(camera_id) + ".jpg"; save_processed_image(camera_id, filename);
+  // Update metadata and timing
+  update_metadata_and_timing(camera_id, input_camera_image_msg, start_time);
 
   {
     std::lock_guard<std::mutex> lock(freeze_mutex_);
@@ -225,6 +152,119 @@ void CameraDataStore::update_camera_image(
       freeze_cv_.notify_all();  // Notify freeze_updates() to continue
     }
   }
+}
+
+CameraDataStore::ImageProcessingParams CameraDataStore::calculate_image_processing_params(
+  const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg) const
+{
+  ImageProcessingParams params;
+  params.original_height = input_camera_image_msg->height;
+  params.original_width = input_camera_image_msg->width;
+
+  const float scaleH =
+    static_cast<float>(image_height_) / static_cast<float>(params.original_height);
+  const float scaleW = static_cast<float>(image_width_) / static_cast<float>(params.original_width);
+  params.resize = std::max(scaleH, scaleW);
+
+  params.newW = static_cast<int>(params.original_width * params.resize);
+  params.newH = static_cast<int>(params.original_height * params.resize);
+
+  float bottom_crop_portion = 0.0f;  // what portion of bottom to crop. We only crop at the top
+                                     // along height, so hardcoded to 0.0f
+  params.crop_h = static_cast<int>((1.0f - bottom_crop_portion) * params.newH) - image_height_;
+  if (params.crop_h < 0) {
+    params.crop_h = 0;
+  }
+  params.crop_w = std::max(0, (params.newW - image_width_) / 2);
+
+  params.start_x = std::max(0, params.crop_w);
+  params.start_y = std::max(0, params.crop_h);
+
+  params.camera_offset = camera_id * 3 * image_height_ * image_width_;
+
+  return params;
+}
+
+std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_distorted_image(
+  const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg,
+  ImageProcessingParams & params)
+{
+  auto camera_info = camera_info_list_[camera_id];
+
+  // Create camera matrix K from camera_info
+  cv::Mat K =
+    (cv::Mat_<double>(3, 3) << camera_info->k[0], camera_info->k[1], camera_info->k[2],
+     camera_info->k[3], camera_info->k[4], camera_info->k[5], camera_info->k[6], camera_info->k[7],
+     camera_info->k[8]);
+
+  // Create distortion coefficients matrix D from camera_info
+  const auto & d_vec = camera_info->d;
+  cv::Mat D(1, static_cast<int>(d_vec.size()), CV_64F);
+  for (size_t i = 0; i < d_vec.size(); ++i) {
+    D.at<double>(0, static_cast<int>(i)) = d_vec[i];
+  }
+
+  // Create projection matrix P from camera_info (first 3x3 part)
+  cv::Mat P =
+    (cv::Mat_<double>(3, 3) << camera_info->p[0], camera_info->p[1], camera_info->p[2],
+     camera_info->p[4], camera_info->p[5], camera_info->p[6], camera_info->p[8], camera_info->p[9],
+     camera_info->p[10]);
+
+  P.at<double>(0, 0) *= downsample_factor_;  // fx
+  P.at<double>(0, 2) *= downsample_factor_;  // cx
+  P.at<double>(1, 1) *= downsample_factor_;  // fy
+  P.at<double>(1, 2) *= downsample_factor_;  // cy
+
+  cv::Mat input_image(
+    params.original_height, params.original_width, CV_8UC3,
+    const_cast<uint8_t *>(input_camera_image_msg->data.data()));
+
+  params.original_height = static_cast<int>(params.original_height * downsample_factor_);
+  params.original_width = static_cast<int>(params.original_width * downsample_factor_);
+
+  cv::Mat undistort_map_x, undistort_map_y;
+  cv::initUndistortRectifyMap(
+    K, D, cv::Mat(), P, cv::Size(params.original_width, params.original_height), CV_32FC1,
+    undistort_map_x, undistort_map_y);
+
+  cv::Mat undistorted_image;
+  cv::remap(input_image, undistorted_image, undistort_map_x, undistort_map_y, cv::INTER_LANCZOS4);
+
+  auto image_input_tensor = std::make_unique<Tensor>(
+    "camera_img", nvinfer1::Dims{3, params.original_height, params.original_width, 3},
+    nvinfer1::DataType::kUINT8);
+  cudaMemcpyAsync(
+    image_input_tensor->ptr, undistorted_image.data, image_input_tensor->nbytes(),
+    cudaMemcpyHostToDevice, streams_.at(camera_id));
+
+  return image_input_tensor;
+}
+
+std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_regular_image(
+  const Image::ConstSharedPtr & input_camera_image_msg, const ImageProcessingParams & params,
+  const int camera_id)
+{
+  auto image_input_tensor = std::make_unique<Tensor>(
+    "camera_img", nvinfer1::Dims{3, params.original_height, params.original_width, 3},
+    nvinfer1::DataType::kUINT8);
+  cudaMemcpyAsync(
+    image_input_tensor->ptr, input_camera_image_msg->data.data(), image_input_tensor->nbytes(),
+    cudaMemcpyHostToDevice, streams_.at(camera_id));
+
+  return image_input_tensor;
+}
+
+void CameraDataStore::update_metadata_and_timing(
+  const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg,
+  const std::chrono::high_resolution_clock::time_point & start_time)
+{
+  camera_image_timestamp_[camera_id] =
+    input_camera_image_msg->header.stamp.sec + input_camera_image_msg->header.stamp.nanosec * 1e-9;
+  camera_link_names_[camera_id] = input_camera_image_msg->header.frame_id;
+
+  auto end_time = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+  preprocess_time_ms_ = duration.count();
 }
 
 void CameraDataStore::update_camera_info(
@@ -373,77 +413,6 @@ void CameraDataStore::restart()
   start_timestamp_ = -1.0;
   camera_image_timestamp_.assign(rois_number_, -1.0);
   camera_link_names_.assign(rois_number_, "");
-}
-
-void CameraDataStore::save_processed_image(const int camera_id, const std::string & filename) const
-{
-  // Check if camera_id is valid
-  if (camera_id < 0 || camera_id >= static_cast<int>(rois_number_)) {
-    RCLCPP_ERROR(logger_, "Invalid camera_id: %d", camera_id);
-    return;
-  }
-
-  // Calculate the offset for this camera in the image_input_ tensor
-  const int camera_offset = camera_id * 3 * image_height_ * image_width_;
-  const int image_size = 3 * image_height_ * image_width_;
-
-  // Allocate CPU memory for the processed image data
-  std::vector<float> cpu_image_data(image_size);
-
-  // Copy the processed image data from GPU to CPU
-  cudaError_t err = cudaMemcpyAsync(
-    cpu_image_data.data(), static_cast<const float *>(image_input_->ptr) + camera_offset,
-    image_size * sizeof(float), cudaMemcpyDeviceToHost, streams_.at(camera_id));
-
-  if (err != cudaSuccess) {
-    RCLCPP_ERROR(logger_, "Failed to copy image data from GPU to CPU: %s", cudaGetErrorString(err));
-    return;
-  }
-
-  // Synchronize the CUDA stream to ensure the copy is complete
-  cudaStreamSynchronize(streams_.at(camera_id));
-
-  // Create OpenCV Mat from the float data
-  cv::Mat processed_image(image_height_, image_width_, CV_32FC3);
-
-  const std::vector<float> image_input_std = {57.375, 57.120, 58.395};
-  const std::vector<float> image_input_mean = {103.530, 116.280, 123.675};
-  // Copy data to OpenCV Mat (data is in CHW format, need to convert to HWC)
-  for (int h = 0; h < image_height_; ++h) {
-    for (int w = 0; w < image_width_; ++w) {
-      for (int c = 0; c < 3; ++c) {
-        processed_image.at<cv::Vec3f>(h, w)[c] =
-          cpu_image_data[c * image_height_ * image_width_ + h * image_width_ + w] *
-            image_input_std[c] +
-          image_input_mean[c];
-      }
-    }
-  }
-
-  // Convert from float (0-255) to uint8 (0-255)
-  cv::Mat uint8_image;
-  processed_image.convertTo(uint8_image, CV_8UC3);
-
-  // Create directory if it doesn't exist
-  std::filesystem::path file_path(filename);
-  std::filesystem::path dir_path = file_path.parent_path();
-  if (!std::filesystem::exists(dir_path)) {
-    std::filesystem::create_directories(dir_path);
-  }
-
-  // Save the image
-  std::vector<int> compression_params;
-  compression_params.push_back(cv::IMWRITE_JPEG_QUALITY);
-  compression_params.push_back(95);  // High quality JPEG
-
-  bool success = cv::imwrite(filename, uint8_image, compression_params);
-
-  if (success) {
-    RCLCPP_INFO(logger_, "Processed image for camera %d saved to: %s", camera_id, filename.c_str());
-  } else {
-    RCLCPP_ERROR(
-      logger_, "Failed to save processed image for camera %d to: %s", camera_id, filename.c_str());
-  }
 }
 
 void CameraDataStore::freeze_updates()

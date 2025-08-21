@@ -58,11 +58,37 @@ public:
   float get_timestamp();
   std::vector<std::string> get_camera_link_names() const;
   void restart();
-  void save_processed_image(const int camera_id, const std::string & filename) const;
   void freeze_updates();
   void unfreeze_updates();
 
 private:
+  struct ImageProcessingParams
+  {
+    int original_height;
+    int original_width;
+    float resize;
+    int newW;
+    int newH;
+    int crop_h;
+    int crop_w;
+    int start_x;
+    int start_y;
+    int camera_offset;
+  };
+
+  // Helper methods for update_camera_image
+  ImageProcessingParams calculate_image_processing_params(
+    const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg) const;
+  std::unique_ptr<Tensor> process_distorted_image(
+    const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg,
+    ImageProcessingParams & params);
+  std::unique_ptr<Tensor> process_regular_image(
+    const Image::ConstSharedPtr & input_camera_image_msg, const ImageProcessingParams & params,
+    const int camera_id);
+  void update_metadata_and_timing(
+    const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg,
+    const std::chrono::high_resolution_clock::time_point & start_time);
+
   const size_t rois_number_;
   const int image_height_;
   const int image_width_;
