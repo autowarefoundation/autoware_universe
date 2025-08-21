@@ -291,18 +291,6 @@ TEST(PolarVoxelOutlierFilter, IsValidPolarPoint)
   EXPECT_FALSE(filter.is_valid_polar_point(polar));
 }
 
-// Helper to test that a single-point cloud passes the filter
-void expect_single_point_passes(const std::function<sensor_msgs::msg::PointCloud2()> & make_cloud)
-{
-  auto node = std::make_shared<TestableFilter>();
-  auto input_cloud = std::make_shared<sensor_msgs::msg::PointCloud2>(make_cloud());
-  sensor_msgs::msg::PointCloud2 output_cloud;
-  node->filter(input_cloud, nullptr, output_cloud);
-
-  EXPECT_EQ(output_cloud.width, 1u);
-  EXPECT_EQ(output_cloud.height, 1u);
-}
-
 void expect_points_pass(
   const std::function<sensor_msgs::msg::PointCloud2()> & make_cloud, size_t expected_count)
 {
