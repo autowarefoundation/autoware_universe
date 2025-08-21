@@ -72,15 +72,15 @@ CameraDataStore::CameraDataStore(
   logger_(node->get_logger())
 {
   image_input_ = std::make_shared<Tensor>(
-    "image_input", nvinfer1::Dims{5, 1, rois_number, 3, image_height, image_width},
+    "image_input", nvinfer1::Dims{5, {1, rois_number, 3, image_height, image_width}},
     nvinfer1::DataType::kFLOAT);  // {num_dims, batch_size, rois_number, num_channels, height,
                                   // width}
 
-  image_input_mean_ =
-    std::make_shared<Tensor>("image_input_mean", nvinfer1::Dims{1, 3}, nvinfer1::DataType::kFLOAT);
+  image_input_mean_ = std::make_shared<Tensor>(
+    "image_input_mean", nvinfer1::Dims{1, {3}}, nvinfer1::DataType::kFLOAT);
   image_input_mean_->load_from_vector({103.530, 116.280, 123.675});
   image_input_std_ =
-    std::make_shared<Tensor>("image_input_std", nvinfer1::Dims{1, 3}, nvinfer1::DataType::kFLOAT);
+    std::make_shared<Tensor>("image_input_std", nvinfer1::Dims{1, {3}}, nvinfer1::DataType::kFLOAT);
   image_input_std_->load_from_vector({57.375, 57.120, 58.395});
 
   camera_image_timestamp_ = std::vector<double>(rois_number, -1.0);
@@ -231,7 +231,7 @@ std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_distorted_imag
   cv::remap(input_image, undistorted_image, undistort_map_x, undistort_map_y, cv::INTER_LANCZOS4);
 
   auto image_input_tensor = std::make_unique<Tensor>(
-    "camera_img", nvinfer1::Dims{3, params.original_height, params.original_width, 3},
+    "camera_img", nvinfer1::Dims{3, {params.original_height, params.original_width, 3}},
     nvinfer1::DataType::kUINT8);
   cudaMemcpyAsync(
     image_input_tensor->ptr, undistorted_image.data, image_input_tensor->nbytes(),
@@ -245,7 +245,7 @@ std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_regular_image(
   const int camera_id)
 {
   auto image_input_tensor = std::make_unique<Tensor>(
-    "camera_img", nvinfer1::Dims{3, params.original_height, params.original_width, 3},
+    "camera_img", nvinfer1::Dims{3, {params.original_height, params.original_width, 3}},
     nvinfer1::DataType::kUINT8);
   cudaMemcpyAsync(
     image_input_tensor->ptr, input_camera_image_msg->data.data(), image_input_tensor->nbytes(),

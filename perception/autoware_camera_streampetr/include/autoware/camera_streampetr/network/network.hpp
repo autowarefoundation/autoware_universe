@@ -80,6 +80,7 @@ public:
   std::unordered_map<std::string, std::shared_ptr<Tensor>> bindings;
 
   using TrtCommon::TrtCommon;
+  virtual ~SubNetwork() = default;
   bool setBindings(const rclcpp::Logger & logger)
   {
     for (int n = 0; n < getNbIOTensors(); n++) {
