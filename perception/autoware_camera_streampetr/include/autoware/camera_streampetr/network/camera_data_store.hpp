@@ -30,8 +30,8 @@
 namespace autoware::camera_streampetr
 {
 
-constexpr float MAX_PERMISSIONED_CAMERA_TIME_DIFF =
-  600;  // 10 minuts. Used to keep the timestamp within limit to prevent overflow in fp16 mode.
+constexpr float MAX_ALLOWED_CAMERA_TIME_DIFF =
+  600;  // 10 minutes. Used to keep the timestamp within limit to prevent overflow in fp16 mode.
 
 class CameraDataStore
 {

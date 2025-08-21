@@ -85,7 +85,8 @@ bool shouldSetLayerToFP32(nvinfer1::ILayer * layer, const std::string & layer_na
   // Check layer name for sigmoid/softmax keywords
   if (
     layer_name_lower.find("sigmoid") != std::string::npos ||
-    layer_name_lower.find("softmax") != std::string::npos) {
+    layer_name_lower.find("softmax") != std::string::npos)
+  {
     return true;
   }
 
@@ -115,12 +116,14 @@ void setSigmoidAndSoftmaxLayersToFP32(std::shared_ptr<nvinfer1::INetworkDefiniti
   }
 }
 
-StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config) : config_(config)
+StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config)
+: config_(config)
 {
   cudaStreamCreate(&stream_);
 
   initializeNetworks();
-  setupEnginesAndBindings();
+  setupEngines();
+  setupBindings();
   initializeMemoryAndProfiling();
   configureNMSIfNeeded();
 }
@@ -151,19 +154,31 @@ void StreamPetrNetwork::initializeNetworks()
   }
 }
 
-void StreamPetrNetwork::setupEnginesAndBindings()
+void StreamPetrNetwork::setupEngines()
 {
-  // Setup TensorRT engines
-  if (!backbone_->setup() || !pts_head_->setup() || !pos_embed_->setup()) {
-    throw std::runtime_error("Failed to setup TRT engines.");
+  if (!backbone_->setup()) {
+    throw std::runtime_error("Failed to setup backbone TRT engine.");
   }
+  if (!pts_head_->setup()) {
+    throw std::runtime_error("Failed to setup pts_head TRT engine.");
+  }
+  if (!pos_embed_->setup()) {
+    throw std::runtime_error("Failed to setup pos_embed TRT engine.");
+  }
+}
 
-  // Setup TensorRT bindings
+void StreamPetrNetwork::setupBindings()
+{
   auto logger = rclcpp::get_logger(config_.logger_name.c_str());
-  if (
-    !backbone_->setBindings(logger) || !pts_head_->setBindings(logger) ||
-    !pos_embed_->setBindings(logger)) {
-    throw std::runtime_error("Failed to setup TRT bindings.");
+
+  if (!backbone_->setBindings(logger)) {
+    throw std::runtime_error("Failed to setup backbone TRT bindings.");
+  }
+  if (!pts_head_->setBindings(logger)) {
+    throw std::runtime_error("Failed to setup pts_head TRT bindings.");
+  }
+  if (!pos_embed_->setBindings(logger)) {
+    throw std::runtime_error("Failed to setup pos_embed TRT bindings.");
   }
 }
 

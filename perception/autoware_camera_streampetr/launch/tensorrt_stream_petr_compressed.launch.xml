@@ -22,7 +22,7 @@
 
     <remap from="~/input/kinematic_state" to="/localization/kinematic_state"/>
 
-    <!-- Image of ~/input/camerai will be the ith image in the model input -->
+    <!-- Image of ~/input/camera_i will be the ith image in the model input -->
     <remap from="~/input/camera0/camera_info" to="/sensing/camera/camera0/camera_info"/>
     <remap from="~/input/camera1/camera_info" to="/sensing/camera/camera1/camera_info"/>
     <remap from="~/input/camera2/camera_info" to="/sensing/camera/camera2/camera_info"/>
@@ -39,7 +39,7 @@
 
     <!-- Maximum allowed time difference for camera image sync in seconds-->
     <param name="max_camera_time_diff" value="0.15"/>
-    <!-- The forward pass begins once every anchor camera topic reaches. Choose this as the camera that causes the shortest differnce in min and max timestamp between cameras-->
+    <!-- The forward pass begins once every anchor camera topic reaches. Choose this as the camera that causes the shortest difference in min and max timestamp between cameras-->
     <param name="anchor_camera_id" value="0"/>
     <!-- Whether the input image is compressed. -->
     <param name="is_compressed_image" value="$(var is_compressed_image)"/>

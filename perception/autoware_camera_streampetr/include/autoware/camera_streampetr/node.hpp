@@ -77,7 +77,7 @@ private:
   bool prepare_inference_data(const rclcpp::Time & stamp);
   void cleanup_on_failure();
   std::optional<std::tuple<
-    std::vector<autoware_perception_msgs::msg::DetectedObject>, std::vector<float>, double>>
+      std::vector<autoware_perception_msgs::msg::DetectedObject>, std::vector<float>, double>>
   perform_inference();
   InferenceInputs create_inference_inputs();
   void publish_detection_results(
