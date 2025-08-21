@@ -57,6 +57,11 @@ void normalize_input_data(InputDataMap & input_data_map, const NormalizationMap 
   };
 
   for (auto & [key, value] : input_data_map) {
+    // Skip normalization for ego_shape
+    if (key == "ego_shape") {
+      continue;
+    }
+
     if (normalization_map.find(key) == normalization_map.end()) {
       std::string err{"Missing key " + key + " from normalization map"};
       throw std::runtime_error(err.c_str());

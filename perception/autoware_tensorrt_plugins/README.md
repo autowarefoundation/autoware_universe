@@ -30,7 +30,96 @@ We provide a wrapper for the `segment_csr` operation presented in [torch_scatter
 While ONNX supports the unique operation, TensorRT does not provide an implementation. For this reason we implement `Unique` as `CustomUnique` to avoid name classes.
 The implementation mostly follows [torch_scatter](https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/cuda/Unique.cu) implementation. Please refer to the original code for specific details.
 
+### Multi-Scale Deformable Attention
+
+The `MultiScaleDeformableAttentionPlugin` implements the multi-scale deformable attention mechanism introduced in [Deformable DETR](https://github.com/fundamentalvision/Deformable-DETR). This operation is crucial for vision transformers that need to attend to multiple scales and spatial locations efficiently.
+
+**Key features:**
+
+- Supports multi-scale feature maps with different resolutions
+- Enables learning of sampling offsets and attention weights
+- Optimized CUDA implementation for efficient GPU execution
+- Supports both FP32 and FP16 precision
+
+**Inputs:**
+
+1. `value`: Feature maps at different scales (B, L, M, D)
+2. `spatial_shapes`: Spatial dimensions of each scale (N, 2)
+3. `level_start_index`: Starting indices for each scale (N,)
+4. `sampling_loc`: Learned sampling locations (B, Q, M, L, P, 2)
+5. `attn_weight`: Learned attention weights (B, Q, M, L, P)
+
+**Output:**
+
+- Attended features (B, Q, M\*D)
+
+### Rotate
+
+The `RotatePlugin` provides efficient image rotation functionality with support for different interpolation methods. This is useful for data augmentation and geometric transformations in perception pipelines.
+
+**Key features:**
+
+- Supports bilinear and nearest neighbor interpolation
+- Arbitrary rotation angles around a specified center point
+- Optimized CUDA kernels for both FP32 and FP16 precision
+- Handles boundary conditions properly
+
+**Inputs:**
+
+1. `input`: Input image tensor (C, H, W)
+2. `angle`: Rotation angle in degrees (scalar)
+3. `center`: Center of rotation (2,)
+
+**Output:**
+
+- Rotated image with same dimensions as input
+
+**Parameters:**
+
+- `interpolation`: Interpolation mode (0 = bilinear, 1 = nearest)
+
+### Select and Pad
+
+The `SelectAndPadPlugin` enables conditional selection and padding of tensor elements based on flags. This is particularly useful for dynamic batching scenarios where sequences have variable lengths.
+
+**Key features:**
+
+- Efficiently selects valid elements based on boolean flags
+- Pads output to a fixed size with invalid tokens
+- Uses CUB library for optimized GPU selection operations
+- Supports both FP32 and FP16 precision
+
+**Inputs:**
+
+1. `feat`: Input features (B, Q, C)
+2. `flags`: Selection flags indicating valid elements (Q,)
+3. `invalid`: Padding value for invalid positions (C,)
+
+**Output:**
+
+- Selected and padded features (B, P, C)
+
+**Parameters:**
+
+- `P`: Fixed output size for padding
+
 ## Licenses
+
+### Multi-Scale Deformable Attention
+
+The implementation of multi-scale deformable attention is derived from [Deformable DETR](https://github.com/fundamentalvision/Deformable-DETR) and modified for TensorRT plugin usage. The original implementation is provided under Apache License 2.0:
+
+> Copyright (c) 2020 SenseTime. All Rights Reserved.
+>
+> Licensed under the Apache License, Version 2.0
+
+### Rotate and Select and Pad
+
+The rotate and select_and_pad plugin implementations are derived from [NVIDIA's reference implementations](https://github.com/NVIDIA/DL4AGX/tree/master/AV-Solutions/vad-trt/plugins/rotate) and are provided under Apache License 2.0:
+
+> Copyright (c) 1993-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+>
+> Licensed under the Apache License, Version 2.0
 
 ### Scatter
 

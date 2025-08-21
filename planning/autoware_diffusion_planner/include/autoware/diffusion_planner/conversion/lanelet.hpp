@@ -182,20 +182,17 @@ struct LaneSegment
   std::vector<BoundarySegment> left_boundaries;
   std::vector<BoundarySegment> right_boundaries;
   std::optional<float> speed_limit_mps{std::nullopt};
-  uint8_t traffic_light;
 
   LaneSegment(
     int64_t id, Polyline polyline, bool is_intersection,
     const std::vector<BoundarySegment> & left_boundaries,
-    const std::vector<BoundarySegment> & right_boundaries, std::optional<float> speed_limit_mps,
-    const uint8_t traffic_light)
+    const std::vector<BoundarySegment> & right_boundaries, std::optional<float> speed_limit_mps)
   : id(id),
     polyline(std::move(polyline)),
     is_intersection(is_intersection),
     left_boundaries(left_boundaries),
     right_boundaries(right_boundaries),
-    speed_limit_mps(speed_limit_mps),
-    traffic_light(traffic_light)
+    speed_limit_mps(speed_limit_mps)
   {
   }
 };
@@ -210,31 +207,11 @@ public:
    * @brief Construct a new Lanelet Converter object
    *
    * @param lanelet_map_ptr Pointer of loaded lanelet map.
-   * @param max_num_polyline The max number of polylines to be contained in the tensor. If the total
-   * number of polylines are less than this value, zero-filled polylines will be padded.
-   * @param max_num_point The max number of points to be contained in a single polyline.
-   * @param point_break_distance Distance threshold to separate two polylines.
    */
-  explicit LaneletConverter(
-    const lanelet::LaneletMapConstPtr lanelet_map_ptr, size_t max_num_polyline,
-    size_t max_num_point, float point_break_distance)
-  : lanelet_map_ptr_(lanelet_map_ptr),
-    max_num_polyline_(max_num_polyline),
-    max_num_point_(max_num_point),
-    point_break_distance_(point_break_distance)
+  explicit LaneletConverter(const lanelet::LaneletMapConstPtr lanelet_map_ptr)
+  : lanelet_map_ptr_(lanelet_map_ptr)
   {
   }
-
-  /**
-   * @brief Convert a lanelet map to the polyline data except of points whose distance from the
-   * specified position is farther than the threshold.
-   *
-   * @param position Origin to check the distance from this.
-   * @param distance_threshold Distance threshold
-   * @return std::optional<PolylineData>
-   */
-  [[nodiscard]] std::optional<PolylineData> convert(
-    const geometry_msgs::msg::Point & position, double distance_threshold) const;
 
   /**
    * @brief Convert a lanelet map to line segment data
@@ -242,21 +219,6 @@ public:
    */
   [[nodiscard]] std::vector<LaneSegment> convert_to_lane_segments(
     const int64_t num_lane_points) const;
-
-  /**
-   * @brief Convert lane segment data to matrix form
-   * @return Eigen::MatrixXf
-   */
-  [[nodiscard]] Eigen::MatrixXf get_map_as_lane_segments(
-    const std::vector<LaneSegment> & lane_segments);
-
-  [[nodiscard]] Eigen::MatrixXf process_segment_to_matrix(
-    const LaneSegment & segment, float center_x, float center_y, float mask_range) const;
-
-  [[nodiscard]] Eigen::MatrixXf process_segments_to_matrix(
-    const std::vector<LaneSegment> & lane_segments,
-    std::map<int64_t, int64_t> & segment_row_indices, float center_x, float center_y,
-    float mask_range) const;
 
   /**
    * @brief Convert a linestring to the set of polylines.
@@ -314,9 +276,6 @@ private:
   [[nodiscard]] static std::vector<LanePoint> from_geometry(const GeometryType & geometry) noexcept;
 
   lanelet::LaneletMapConstPtr lanelet_map_ptr_;  //!< Pointer of lanelet map.
-  size_t max_num_polyline_;                      //!< The max number of polylines.
-  size_t max_num_point_;                         //!< The max number of points.
-  float point_break_distance_;                   //!< Distance threshold to separate two polylines.
 };
 
 std::vector<LanePoint> interpolate_points(const std::vector<LanePoint> & input, size_t num_points);
