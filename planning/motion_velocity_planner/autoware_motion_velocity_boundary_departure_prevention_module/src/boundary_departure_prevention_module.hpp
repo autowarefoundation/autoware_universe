@@ -26,6 +26,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace autoware::motion_velocity_planner::experimental
@@ -89,7 +90,7 @@ private:
    * @param curr_vel Current velocity of the ego vehicle.
    * @return Map of `DepartureType` to boolean indicating active status.
    */
-  std::unordered_map<DepartureType, bool> get_diagnostics(
+  std::pair<int8_t, std::string> get_diagnostic_status(
     const double ego_dist_on_traj, const double curr_vel);
 
   /**
