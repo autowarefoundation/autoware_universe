@@ -167,6 +167,7 @@ bool Tracker::updateWithMeasurement(
   if (!significant_shape_change) {
     // Update object normally
     measure(object, measurement_time, channel_info);
+    object_.trust_extension = object.trust_extension;
 
     // Update object status
     getTrackedObject(measurement_time, object_);
@@ -249,7 +250,7 @@ bool Tracker::createPseudoMeasurement(
   const double dx = meas.pose.position.x - pred.pose.position.x;
   const double dy = meas.pose.position.y - pred.pose.position.y;
   const double dist2 = dx * dx + dy * dy;
-  constexpr double d_max_square_inv = 1 / 2.0;
+  constexpr double d_max_square_inv = 1 / 2.0;  // saturate when distance overs 1.414 m
   constexpr double min_w = 0.05;
   const double w_pose = std::clamp(1.0 - dist2 * d_max_square_inv, min_w, 1.0);
 
@@ -257,12 +258,24 @@ bool Tracker::createPseudoMeasurement(
   pred.pose.position.x = pred.pose.position.x * (1 - w_pose) + meas.pose.position.x * w_pose;
   pred.pose.position.y = pred.pose.position.y * (1 - w_pose) + meas.pose.position.y * w_pose;
 
-  // Blend orientation by yaw availability
-  bool is_yaw_available =
-    meas.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE;
-  if (is_yaw_available) {
+  // Blend orientation
+  if (meas.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE) {
     double yaw_pred = tf2::getYaw(pred.pose.orientation);
     double yaw_meas = tf2::getYaw(meas.pose.orientation);
+
+    // Handle SIGN_UNKNOWN: limit yaw difference to [-90°, 90°] to prevent sudden rotations
+    if (meas.kinematics.orientation_availability == types::OrientationAvailability::SIGN_UNKNOWN) {
+      double yaw_diff = yaw_meas - yaw_pred;
+      // Normalize yaw_diff to [-π, π] using fmod
+      yaw_diff = std::fmod(yaw_diff + M_PI, 2 * M_PI) - M_PI;
+      if (yaw_diff > M_PI_2) {
+        yaw_diff -= M_PI;
+      } else if (yaw_diff < -M_PI_2) {
+        yaw_diff += M_PI;
+      }
+      yaw_meas = yaw_pred + yaw_diff;
+    }
+
     double yaw_fused = yaw_pred * (1 - w_pose) + yaw_meas * w_pose;
     tf2::Quaternion q;
     q.setRPY(0, 0, yaw_fused);
