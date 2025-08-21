@@ -155,6 +155,20 @@ struct TerminalPathParameters
   bool stop_at_boundary{false};
 };
 
+struct L2OverwriteParameters
+{
+  /**
+   * @brief Parameters for managing overwriting lane change behavior during L2 driving.
+   *
+   * If enabled, this allows manual driver intervention when the lane change module
+   * is stuck waiting for approval. The driver can manually take over and drive
+   * through unsafe paths. After manual intervention, the lane change module will
+   * reset and resume its operations.
+   */
+  bool enable{false};                       ///< Flag to enable or disable the overwrite mechanism.
+  double rewrite_overshoot_threshold{5.0};  ///< Threshold for overshoot during overwrite.
+}
+
 struct Parameters
 {
   TrajectoryParameters trajectory{};
@@ -163,6 +177,7 @@ struct Parameters
   DelayParameters delay{};
   TerminalPathParameters terminal_path{};
   FrenetPlannerParameters frenet{};
+  L2OverwriteParameters l2_overwrite{};
 
   // lane change parameters
   double time_limit{50.0};

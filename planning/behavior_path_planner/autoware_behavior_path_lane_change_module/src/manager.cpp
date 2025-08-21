@@ -238,6 +238,13 @@ LCParamPtr LaneChangeModuleManager::set_params(rclcpp::Node * node, const std::s
   p.frenet.th_average_curvature =
     get_or_declare_parameter<double>(*node, parameter("frenet.th_average_curvature"));
 
+  // L2 overwrite parameters
+  {
+    p.l2_overwrite.enable = get_or_declare_parameter(*node, parameter("l2_overwrite.enable"));
+    p.l2_overwrite.rewrite_overshoot_threshold =
+      get_or_declare_parameter(*node, parameter("l2_overwrite.rewrite_overshoot_threshold"));
+  }
+
   // lane change cancel
   p.cancel.enable_on_prepare_phase =
     get_or_declare_parameter<bool>(*node, parameter("cancel.enable_on_prepare_phase"));
@@ -610,6 +617,13 @@ void LaneChangeModuleManager::updateModuleParams(const std::vector<rclcpp::Param
     update_param<double>(parameters, ns + "overhang_tolerance", p->cancel.overhang_tolerance);
     update_param<int>(
       parameters, ns + "unsafe_hysteresis_threshold", p->cancel.th_unsafe_hysteresis);
+  }
+
+  {
+    const std::string ns = "lane_change.l2_overwrite.";
+    update_param<bool>(parameters, ns + "enable", p->l2_overwrite.enable);
+    update_param<bool>(
+      parameters, ns + "rewrite_overshoot_threshold", p->l2_overwrite.rewrite_overshoot_threshold);
   }
 
   std::for_each(observers_.begin(), observers_.end(), [&p](const auto & observer) {
