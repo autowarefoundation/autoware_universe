@@ -817,7 +817,7 @@ std::pair<int8_t, std::string> BoundaryDeparturePreventionModule::get_diagnostic
   auto msg = to_string(diag_type);
 
   if (lvl != DiagStatus::OK && diag_type != DepartureType::NONE) {
-    RCLCPP_ERROR_THROTTLE(logger_, *clock_ptr_, 1000, "%s", msg.c_str());
+    RCLCPP_ERROR_THROTTLE(logger_, *clock_ptr_, throttle_duration_ms, "%s", msg.c_str());
   }
 
   return {lvl, msg};
