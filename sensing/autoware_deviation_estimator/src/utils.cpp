@@ -177,7 +177,7 @@ double get_mean_abs_vx(
 double get_mean_abs_wz(const std::vector<geometry_msgs::msg::Vector3Stamped> & gyro_list)
 {
   double mean_abs_wz = 0;
-  for (auto & msg : gyro_list) {
+  for (const auto & msg : gyro_list) {
     mean_abs_wz += abs(msg.vector.z);
   }
   mean_abs_wz /= gyro_list.size();
