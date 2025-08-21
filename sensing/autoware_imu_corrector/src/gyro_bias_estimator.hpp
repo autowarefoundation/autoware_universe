@@ -55,6 +55,13 @@ private:
   void estimate_scale_gyro(const PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr);
   void timer_callback();
   void validate_gyro_bias();
+  double extract_yaw_from_pose(const geometry_msgs::msg::Quaternion &quat_msg, tf2::Quaternion &quat_out);
+  double compute_yaw_rate_from_quat(
+  const tf2::Quaternion &quat, const tf2::Quaternion &prev_quat, double dt);
+  void publish_debug_vectors();
+  void update_angle_ekf(double yaw_ndt);
+  bool should_skip_update();
+  void update_rate_ekf(const PoseWithCovarianceStamped::ConstSharedPtr &pose_msg);
 
   static geometry_msgs::msg::Vector3 transform_vector3(
     const geometry_msgs::msg::Vector3 & vec,
@@ -123,10 +130,6 @@ private:
   const int samples_filter_pose_rate_;
   const int samples_filter_gyro_rate_;
 
-  double filtered_scale_angle_;
-  double filtered_scale_rate_;
-  double big_change_scale_rate_;
-
   double ndt_yaw_rate_;
   double gyro_yaw_rate_;
 
@@ -135,35 +138,6 @@ private:
 
   double avg_rate_pose_;
   double avg_rate_gyro_;
-
-  double big_change_detect_;
-
-  bool has_gyro_yaw_angle_init_;
-  bool filtered_scale_initialized_;
-
-  double final_bias_on_purpose_;
-  double final_scale_on_purpose_;
-  double bias_final_;
-  double scale_final_;
-
-  // EKF variables
-  double estimated_scale_;
-  double p_;
-  double q_;
-  double r_;
-  double h_;
-  double s_;
-  double k_;
-  double y_;
-  double ekf_variance_;
-  double ekf_measurement_noise_;
-
-  double estimated_scale_angle_;
-
-  Eigen::Vector2d x_state_;  // [angle, scale]
-  Eigen::Matrix2d p_angle_;
-  Eigen::Matrix2d q_angle_;
-  Eigen::Matrix<double, 1, 1> r_angle_;
 
   diagnostic_updater::Updater updater_;
 
@@ -176,7 +150,7 @@ private:
 
   std::vector<geometry_msgs::msg::Vector3Stamped> gyro_all_;
   std::vector<geometry_msgs::msg::PoseStamped> pose_buf_;
-  std::vector<geometry_msgs::msg::Vector3Stamped> gyro_buf_;
+  std::vector<geometry_msgs::msg::Vector3Stamped> gyro_scale_buf_;
   std::vector<double> scale_list_all_;
   std::vector<double> scale_out_range_;
   std::vector<double> estimated_scale_buff_;
@@ -210,8 +184,49 @@ private:
     std::string scale_summary_message;
   };
 
+  struct ScaleImuSignal
+  {
+    double final_bias_on_purpose_;
+    double final_scale_on_purpose_;
+    double bias_final_;
+    double scale_final_;
+  };
+
+  // EKF variables
+  struct EKFEstimateScaleRateVars
+  {
+    double estimated_scale_rate_;
+    double p_;
+    double q_;
+    double r_;
+    double h_;
+    double s_;
+    double k_;
+    double y_;
+    double ekf_variance_;
+    double ekf_measurement_noise_;
+    double filtered_scale_rate_;
+    int big_change_detect_;
+    bool filtered_scale_initialized_;
+  };
+  // double estimated_scale_;
+  
+  struct EKFEstimateScaleAngleVars
+  {
+    Eigen::Vector2d x_state_;  // [angle, scale]
+    Eigen::Matrix2d p_angle_;
+    Eigen::Matrix2d q_angle_;
+    Eigen::Matrix<double, 1, 1> r_angle_;
+    double filtered_scale_angle_;
+    double estimated_scale_angle_;
+    bool has_gyro_yaw_angle_init_;
+  };
+
   DiagnosticsInfo diagnostics_info_;
   GyroInfo gyro_info_;
+  EKFEstimateScaleRateVars ekf_rate_;
+  EKFEstimateScaleAngleVars ekf_angle_;
+  ScaleImuSignal scale_imu_;
 };
 }  // namespace autoware::imu_corrector
 
