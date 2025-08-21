@@ -104,8 +104,9 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
 
   // Route state will be published when the node gets ready for route api after initialization,
   // otherwise the mission planner rejects the request for the API.
-  const auto period = rclcpp::Rate(10).period();
-  data_check_timer_ = create_wall_timer(period, [this] { check_initialization(); });
+  using namespace std::literals::chrono_literals;
+  data_check_timer_ =
+    rclcpp::create_timer(this, get_clock(), 0.1s, [this] { check_initialization(); });
   is_mission_planner_ready_ = false;
 
   logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
