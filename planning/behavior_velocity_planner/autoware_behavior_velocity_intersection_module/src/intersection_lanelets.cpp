@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "intersection_lanelets.hpp"
+#include "autoware/behavior_velocity_intersection_module/intersection_lanelets.hpp"
 
-#include "util.hpp"
+#include "autoware/behavior_velocity_intersection_module/util.hpp"
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_routing/RoutingGraph.h>

@@ -114,6 +114,7 @@ struct BicycleModelState
 class ObjectModel
 {
 public:
+  ObjectModelType type{ObjectModelType::Unknown};
   ObjectSize init_size;
   ObjectSizeLimit size_limit;
   MotionProcessNoise process_noise;
@@ -122,9 +123,10 @@ public:
   StateCovariance measurement_covariance;
   BicycleModelState bicycle_state;
 
-  explicit ObjectModel(const ObjectModelType & type)
+  explicit ObjectModel(const ObjectModelType & type_set)
   {
-    switch (type) {
+    type = type_set;
+    switch (type_set) {
       case ObjectModelType::NormalVehicle:
         init_size.length = 3.0;
         init_size.width = 2.0;

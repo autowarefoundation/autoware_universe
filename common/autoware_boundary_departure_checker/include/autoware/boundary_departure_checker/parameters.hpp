@@ -85,7 +85,11 @@ struct LongitudinalConfig : NormalConfig
 
 struct SteeringConfig
 {
-  double steering_rate_rps{1.0};
+  double delay_s{};
+  double offset_rps{};
+  double factor{};
+  std::vector<double> steering_rate_velocities_mps;
+  std::vector<double> steering_rate_limits_rps;
 };
 
 using AbnormalityConfig =
@@ -134,8 +138,11 @@ struct Param
   // New params
   TriggerThreshold th_trigger;
   int th_max_lateral_query_num{5};
-  double th_dist_hysteresis_m{1.0};
+  double th_point_merge_distance_m{1.0};
   double footprint_extra_margin{0.0};
+  double th_cutoff_time_predicted_path_s{4.0};
+  double th_cutoff_time_departure_s{2.0};
+  double th_cutoff_time_near_boundary_s{3.5};
   AbnormalitiesConfigs abnormality_configs;
   std::vector<std::string> boundary_types_to_detect;
   std::vector<AbnormalityType> abnormality_types_to_compensate;

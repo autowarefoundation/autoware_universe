@@ -14,7 +14,6 @@
 
 #include "autoware/behavior_path_planner/behavior_path_planner_node.hpp"
 
-#include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
 #include "autoware/motion_utils/trajectory/conversion.hpp"
 
 #include <autoware_utils/ros/update_param.hpp>
@@ -373,7 +372,7 @@ void BehaviorPathPlannerNode::run()
   const auto output = planner_manager_->run(planner_data_);
 
   // path handling
-  const auto path = getPath(output, planner_data_, planner_manager_);
+  const auto path = getPath(output, planner_data_);
   path->header.stamp = stamp;
   // update planner data
   planner_data_->prev_output_path = path;
@@ -709,41 +708,14 @@ Path BehaviorPathPlannerNode::convertToPath(
 }
 
 PathWithLaneId::SharedPtr BehaviorPathPlannerNode::getPath(
-  const BehaviorModuleOutput & output, const std::shared_ptr<PlannerData> & planner_data,
-  const std::shared_ptr<PlannerManager> & planner_manager)
+  const BehaviorModuleOutput & output, const std::shared_ptr<PlannerData> & planner_data)
 {
   // TODO(Horibe) do some error handling when path is not available.
 
   auto path = !output.path.points.empty() ? std::make_shared<PathWithLaneId>(output.path)
                                           : planner_data->prev_output_path;
   path->header = planner_data->route_handler->getRouteHeader();
-
-  PathWithLaneId connected_path;
-  const auto module_status_ptr_vec = planner_manager->getSceneModuleStatus();
-
-  const auto resampled_path = utils::resamplePathWithSpline(
-    *path, planner_data->parameters.output_path_interval, keepInputPoints(module_status_ptr_vec));
-  return std::make_shared<PathWithLaneId>(resampled_path);
-}
-
-// This is a temporary process until motion planning can take the terminal pose into account
-bool BehaviorPathPlannerNode::keepInputPoints(
-  const std::vector<std::shared_ptr<SceneModuleStatus>> & statuses) const
-{
-  const std::vector<std::string> target_modules = {"goal_planner", "avoidance"};
-
-  const auto target_status = ModuleStatus::RUNNING;
-
-  for (auto & status : statuses) {
-    if (status->is_waiting_approval || status->status == target_status) {
-      if (
-        std::find(target_modules.begin(), target_modules.end(), status->module_name) !=
-        target_modules.end()) {
-        return true;
-      }
-    }
-  }
-  return false;
+  return path;
 }
 
 void BehaviorPathPlannerNode::onTrafficSignals(const TrafficLightGroupArray::ConstSharedPtr msg)

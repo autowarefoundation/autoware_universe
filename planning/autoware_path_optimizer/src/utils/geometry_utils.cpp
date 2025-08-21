@@ -98,7 +98,7 @@ bool isFrontDrivableArea(
   const std::vector<geometry_msgs::msg::Point> & left_bound,
   const std::vector<geometry_msgs::msg::Point> & right_bound)
 {
-  if (left_bound.empty() || right_bound.empty()) {
+  if (left_bound.size() < 2 || right_bound.size() < 2) {
     return false;
   }
 
@@ -148,7 +148,7 @@ bool isOutsideDrivableAreaFromRectangleFootprint(
   const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
   const bool use_footprint_polygon_for_outside_drivable_area_check)
 {
-  if (left_bound.empty() || right_bound.empty()) {
+  if (left_bound.size() < 2 || right_bound.size() < 2) {
     return false;
   }
 
