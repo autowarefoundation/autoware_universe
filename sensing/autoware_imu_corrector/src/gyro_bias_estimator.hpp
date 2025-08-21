@@ -55,13 +55,14 @@ private:
   void estimate_scale_gyro(const PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr);
   void timer_callback();
   void validate_gyro_bias();
-  double extract_yaw_from_pose(const geometry_msgs::msg::Quaternion &quat_msg, tf2::Quaternion &quat_out);
+  double extract_yaw_from_pose(
+    const geometry_msgs::msg::Quaternion & quat_msg, tf2::Quaternion & quat_out);
   double compute_yaw_rate_from_quat(
-  const tf2::Quaternion &quat, const tf2::Quaternion &prev_quat, double dt);
+    const tf2::Quaternion & quat, const tf2::Quaternion & prev_quat, double dt);
   void publish_debug_vectors();
   void update_angle_ekf(double yaw_ndt);
   bool should_skip_update();
-  void update_rate_ekf(const PoseWithCovarianceStamped::ConstSharedPtr &pose_msg);
+  void update_rate_ekf(const PoseWithCovarianceStamped::ConstSharedPtr & pose_msg);
 
   static geometry_msgs::msg::Vector3 transform_vector3(
     const geometry_msgs::msg::Vector3 & vec,
@@ -210,7 +211,7 @@ private:
     bool filtered_scale_initialized_;
   };
   // double estimated_scale_;
-  
+
   struct EKFEstimateScaleAngleVars
   {
     Eigen::Vector2d x_state_;  // [angle, scale]
