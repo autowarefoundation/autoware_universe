@@ -401,6 +401,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/main/perception/autoware_camera_streampetr/</loc>
+         <lastmod>2025-08-21</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/main/perception/autoware_cluster_merger/</loc>
          <lastmod>2025-08-21</lastmod>
          <changefreq>daily</changefreq>
