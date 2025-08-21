@@ -57,6 +57,9 @@ private:
   bool is_autonomous_mode() const;
 
   // === Internal logic
+  tl::expected<VelocityPlanningResult, std::string> plan(
+    const TrajectoryPoints & raw_trajectory_points,
+    const std::shared_ptr<const PlannerData> & planner_data);
 
   tl::expected<VelocityPlanningResult, std::string> plan_slow_down_intervals(
     const TrajectoryPoints & raw_trajectory_points,
