@@ -24,9 +24,10 @@ TEST(DeviationEstimatorUtils, WhetherToUseData1)
   const bool only_use_straight = false;
   const bool only_use_moving = false;
   const bool only_use_constant_velocity = false;
-  EXPECT_TRUE(autoware::deviation_estimator::whether_to_use_data(
-    is_straight, is_moving, is_constant_velocity, only_use_straight, only_use_moving,
-    only_use_constant_velocity));
+  EXPECT_TRUE(
+    autoware::deviation_estimator::whether_to_use_data(
+      is_straight, is_moving, is_constant_velocity, only_use_straight, only_use_moving,
+      only_use_constant_velocity));
 }
 
 TEST(DeviationEstimatorUtils, WhetherToUseData2)
@@ -37,9 +38,10 @@ TEST(DeviationEstimatorUtils, WhetherToUseData2)
   const bool only_use_straight = false;
   const bool only_use_moving = false;
   const bool only_use_constant_velocity = false;
-  EXPECT_TRUE(autoware::deviation_estimator::whether_to_use_data(
-    is_straight, is_moving, is_constant_velocity, only_use_straight, only_use_moving,
-    only_use_constant_velocity));
+  EXPECT_TRUE(
+    autoware::deviation_estimator::whether_to_use_data(
+      is_straight, is_moving, is_constant_velocity, only_use_straight, only_use_moving,
+      only_use_constant_velocity));
 }
 
 TEST(DeviationEstimatorUtils, WhetherToUseData3)
@@ -50,9 +52,10 @@ TEST(DeviationEstimatorUtils, WhetherToUseData3)
   const bool only_use_straight = true;
   const bool only_use_moving = false;
   const bool only_use_constant_velocity = false;
-  EXPECT_FALSE(autoware::deviation_estimator::whether_to_use_data(
-    is_straight, is_moving, is_constant_velocity, only_use_straight, only_use_moving,
-    only_use_constant_velocity));
+  EXPECT_FALSE(
+    autoware::deviation_estimator::whether_to_use_data(
+      is_straight, is_moving, is_constant_velocity, only_use_straight, only_use_moving,
+      only_use_constant_velocity));
 }
 
 TEST(DeviationEstimatorUtils, WhetherToUseData4)
@@ -63,9 +66,10 @@ TEST(DeviationEstimatorUtils, WhetherToUseData4)
   const bool only_use_straight = true;
   const bool only_use_moving = false;
   const bool only_use_constant_velocity = false;
-  EXPECT_TRUE(autoware::deviation_estimator::whether_to_use_data(
-    is_straight, is_moving, is_constant_velocity, only_use_straight, only_use_moving,
-    only_use_constant_velocity));
+  EXPECT_TRUE(
+    autoware::deviation_estimator::whether_to_use_data(
+      is_straight, is_moving, is_constant_velocity, only_use_straight, only_use_moving,
+      only_use_constant_velocity));
 }
 
 TEST(DeviationEstimatorUtils, WhetherToUseData5)
@@ -76,9 +80,10 @@ TEST(DeviationEstimatorUtils, WhetherToUseData5)
   const bool only_use_straight = true;
   const bool only_use_moving = false;
   const bool only_use_constant_velocity = false;
-  EXPECT_TRUE(autoware::deviation_estimator::whether_to_use_data(
-    is_straight, is_moving, is_constant_velocity, only_use_straight, only_use_moving,
-    only_use_constant_velocity));
+  EXPECT_TRUE(
+    autoware::deviation_estimator::whether_to_use_data(
+      is_straight, is_moving, is_constant_velocity, only_use_straight, only_use_moving,
+      only_use_constant_velocity));
 }
 
 TEST(DeviationEstimatorUtils, WhetherToUseData6)
@@ -89,9 +94,10 @@ TEST(DeviationEstimatorUtils, WhetherToUseData6)
   const bool only_use_straight = true;
   const bool only_use_moving = true;
   const bool only_use_constant_velocity = false;
-  EXPECT_FALSE(autoware::deviation_estimator::whether_to_use_data(
-    is_straight, is_moving, is_constant_velocity, only_use_straight, only_use_moving,
-    only_use_constant_velocity));
+  EXPECT_FALSE(
+    autoware::deviation_estimator::whether_to_use_data(
+      is_straight, is_moving, is_constant_velocity, only_use_straight, only_use_moving,
+      only_use_constant_velocity));
 }
 
 TEST(DeviationEstimatorUtils, WhetherToUseData7)
@@ -102,7 +108,8 @@ TEST(DeviationEstimatorUtils, WhetherToUseData7)
   const bool only_use_straight = true;
   const bool only_use_moving = true;
   const bool only_use_constant_velocity = false;
-  EXPECT_TRUE(autoware::deviation_estimator::whether_to_use_data(
-    is_straight, is_moving, is_constant_velocity, only_use_straight, only_use_moving,
-    only_use_constant_velocity));
+  EXPECT_TRUE(
+    autoware::deviation_estimator::whether_to_use_data(
+      is_straight, is_moving, is_constant_velocity, only_use_straight, only_use_moving,
+      only_use_constant_velocity));
 }
