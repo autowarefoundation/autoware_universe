@@ -465,10 +465,10 @@ std::optional<NonOccludedCollisionStop> IntersectionModule::isGreenPseudoCollisi
       });
     if (exist_close_vehicles) {
       const auto occlusion_stopline_idx = intersection_stoplines.occlusion_peeking_stopline.value();
-      const auto [holded_collision_stopline_idx, collision_stop_pose] =
+      const auto [held_collision_stopline_idx, collision_stop_pose] =
         holdStopPoseIfNecessary<NonOccludedCollisionStop>(path, collision_stopline_idx);
       return NonOccludedCollisionStop{
-        closest_idx, holded_collision_stopline_idx, occlusion_stopline_idx, std::string(""),
+        closest_idx, held_collision_stopline_idx, occlusion_stopline_idx, std::string(""),
         collision_stop_pose};
     }
   }

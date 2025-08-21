@@ -383,26 +383,26 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
   }
 
   if (is_prioritized) {
-    const auto [holded_collision_stopline_idx, collision_stop_pose] =
+    const auto [held_collision_stopline_idx, collision_stop_pose] =
       holdStopPoseIfNecessary<NonOccludedCollisionStop>(*path, collision_stopline_idx);
-    return FullyPrioritized{has_collision_with_margin, closest_idx,   holded_collision_stopline_idx,
+    return FullyPrioritized{has_collision_with_margin, closest_idx,   held_collision_stopline_idx,
                             occlusion_stopline_idx,    safety_report, collision_stop_pose};
   }
 
   // Safe
   if (!is_occlusion_state && !has_collision_with_margin) {
-    const auto [holded_collision_stopline_idx, collision_stop_pose] =
+    const auto [held_collision_stopline_idx, collision_stop_pose] =
       holdStopPoseIfNecessary<NonOccludedCollisionStop>(*path, collision_stopline_idx);
     return Safe{
-      closest_idx, holded_collision_stopline_idx, occlusion_stopline_idx, occlusion_diag,
+      closest_idx, held_collision_stopline_idx, occlusion_stopline_idx, occlusion_diag,
       collision_stop_pose};
   }
   // Only collision
   if (!is_occlusion_state && has_collision_with_margin) {
-    const auto [holded_collision_stopline_idx, collision_stop_pose] =
+    const auto [held_collision_stopline_idx, collision_stop_pose] =
       holdStopPoseIfNecessary<NonOccludedCollisionStop>(*path, collision_stopline_idx);
     return NonOccludedCollisionStop{
-      closest_idx, holded_collision_stopline_idx, occlusion_stopline_idx, occlusion_diag,
+      closest_idx, held_collision_stopline_idx, occlusion_stopline_idx, occlusion_diag,
       collision_stop_pose};
   }
   // Occluded
@@ -490,10 +490,10 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
     const bool release_static_occlusion_stuck =
       (static_occlusion_timeout_state_machine_.getState() == StateMachine::State::GO);
     if (!has_collision_with_margin && release_static_occlusion_stuck) {
-      const auto [holded_collision_stopline_idx, collision_stop_pose] =
+      const auto [held_collision_stopline_idx, collision_stop_pose] =
         holdStopPoseIfNecessary<NonOccludedCollisionStop>(*path, collision_stopline_idx);
       return Safe{
-        closest_idx, holded_collision_stopline_idx, occlusion_stopline_idx, occlusion_diag,
+        closest_idx, held_collision_stopline_idx, occlusion_stopline_idx, occlusion_diag,
         collision_stop_pose};
     }
     // occlusion_status is either STATICALLY_OCCLUDED or DYNAMICALLY_OCCLUDED
@@ -507,23 +507,23 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
             occlusion_stop_state_machine_.getDuration())
         : (is_static_occlusion ? std::make_optional<double>(max_timeout) : std::nullopt);
     if (has_collision_with_margin) {
-      const auto [holded_collision_stopline_idx, collision_stop_pose] =
+      const auto [held_collision_stopline_idx, collision_stop_pose] =
         holdStopPoseIfNecessary<PeekingTowardOcclusion>(*path, collision_stopline_idx);
       return OccludedCollisionStop{
         is_occlusion_cleared_with_margin,
         closest_idx,
-        holded_collision_stopline_idx,
+        held_collision_stopline_idx,
         occlusion_stopline_idx,
         static_occlusion_timeout,
         occlusion_diag,
         collision_stop_pose};
     } else {
-      const auto [holded_collision_stopline_idx, collision_stop_pose] =
+      const auto [held_collision_stopline_idx, collision_stop_pose] =
         holdStopPoseIfNecessary<PeekingTowardOcclusion>(*path, collision_stopline_idx);
       return PeekingTowardOcclusion{
         is_occlusion_cleared_with_margin,
         closest_idx,
-        holded_collision_stopline_idx,
+        held_collision_stopline_idx,
         occlusion_stopline_idx,
         static_occlusion_timeout,
         occlusion_diag,
