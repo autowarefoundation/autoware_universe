@@ -43,25 +43,27 @@ std::array<uint8_t, uuid_size> stringToUUID(const std::string & id)
   return uuid;
 }
 
-void printPerformanceStats(const std::string & name, const PerformanceStats & stats)
+void printFrameStatsHeader()
 {
-  std::cout << std::left << std::setw(10) << name << " - Avg: " << std::setw(8) << stats.avg
-            << " ms" << " Min: " << std::setw(8) << stats.min << " ms" << " Max: " << std::setw(8)
-            << stats.max << " ms" << std::endl;
+  std::cout << std::left << std::setw(6) << "Frame" << std::setw(10) << "Total(ms)" << std::setw(10)
+            << "Pred(ms)" << std::setw(10) << "Asc(ms)" << std::setw(10) << "Upd(ms)"
+            << std::setw(10) << "Prn(ms)" << std::setw(10) << "Spw(ms)" << std::setw(6) << "Trk"
+            << std::setw(6) << "Det" << std::setw(6) << "Prn" << std::setw(6) << "Spw"
+            << std::setw(6) << "Fin" << std::endl;
 }
 
 void printFrameStats(
-  int frame, const autoware::multi_object_tracker::types::DynamicObjectList & detections,
-  const FunctionTimings & timings)
+  int frame, int detection_size, int num_trackers0, int num_trackers2, int num_pruned,
+  int num_spawned, const FunctionTimings & timings)
 {
-  std::cout << std::left << "[Frame " << std::setw(5) << frame << "] "
-            << "Objects: " << std::setw(3) << detections.objects.size()
-            << " | Total: " << std::setw(6) << timings.total.times.back() << " ms"
-            << " | Predict: " << std::setw(6) << timings.predict.times.back() << " ms"
-            << " | Associate: " << std::setw(6) << timings.associate.times.back() << " ms"
-            << " | Update: " << std::setw(6) << timings.update.times.back() << " ms"
-            << " | Prune: " << std::setw(6) << timings.prune.times.back() << " ms"
-            << " | Spawn: " << std::setw(6) << timings.spawn.times.back() << " ms" << std::endl;
+  std::cout << std::left << std::fixed << std::setprecision(3) << std::setw(6) << frame
+            << std::setw(10) << timings.total.times.back() << std::setw(10)
+            << timings.predict.times.back() << std::setw(10) << timings.associate.times.back()
+            << std::setw(10) << timings.update.times.back() << std::setw(10)
+            << timings.prune.times.back() << std::setw(10) << timings.spawn.times.back()
+            << std::setw(6) << num_trackers0 << std::setw(6) << detection_size << std::setw(6)
+            << num_pruned << std::setw(6) << num_spawned << std::setw(6) << num_trackers2
+            << std::endl;
 }
 
 autoware_perception_msgs::msg::DetectedObject toDetectedObject(

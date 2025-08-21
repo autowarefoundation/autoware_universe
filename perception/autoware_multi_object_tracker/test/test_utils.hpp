@@ -82,13 +82,43 @@ struct FunctionTimings
     spawn.calculate();
     total.calculate();
   }
-};
+  void reserve(size_t size)
+  {
+    predict.times.reserve(size);
+    associate.times.reserve(size);
+    update.times.reserve(size);
+    prune.times.reserve(size);
+    spawn.times.reserve(size);
+    total.times.reserve(size);
+  }
+  void printPerformanceStats(const std::string & name, const PerformanceStats & stats) const
+  {
+    double percentage = (total.avg > 0) ? (stats.avg / total.avg * 100.0) : 0.0;
+    std::cout << std::setprecision(2) << std::left << std::setw(10) << name << std::setw(8)
+              << stats.avg << std::setw(8) << stats.min << std::setw(8) << stats.max << percentage
+              << std::endl;
+  }
 
-void printPerformanceStats(const std::string & name, const PerformanceStats & stats);
+  void printSummary() const
+  {
+    std::cout << "\n=== Performance Statistics ===\n";
+    std::cout << std::left << std::setw(10) << "Function" << std::setw(8) << "Avg(ms) "
+              << std::setw(8) << "Min(ms) " << std::setw(8) << "Max(ms) " << std::setw(8)
+              << "Percent(%)" << std::endl;
+
+    printPerformanceStats("Total", total);
+    printPerformanceStats("Predict", predict);
+    printPerformanceStats("Associate", associate);
+    printPerformanceStats("Update", update);
+    printPerformanceStats("Prune", prune);
+    printPerformanceStats("Spawn", spawn);
+  }
+};
+void printFrameStatsHeader();
 
 void printFrameStats(
-  int frame, const autoware::multi_object_tracker::types::DynamicObjectList & detections,
-  const FunctionTimings & timings);
+  int frame, int detection_size, int num_trackers0, int num_trackers2, int num_pruned,
+  int num_spawned, const FunctionTimings & timings);
 
 autoware_perception_msgs::msg::DetectedObjects toDetectedObjectsMsg(
   const autoware::multi_object_tracker::types::DynamicObjectList & dyn_objects);
