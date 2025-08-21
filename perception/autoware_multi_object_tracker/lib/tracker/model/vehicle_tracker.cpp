@@ -168,8 +168,10 @@ bool VehicleTracker::measureWithPose(
   }
 
   // position z
-  constexpr double gain = 0.1;
-  object_.pose.position.z = (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
+  {
+    constexpr double gain = 0.1;
+    object_.pose.position.z = (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
+  }
 
   if (object.shape.type != autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
     // do not update shape if the input is not a bounding box
