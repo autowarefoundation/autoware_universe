@@ -1,0 +1,53 @@
+<launch>
+  <arg name="build_only" default="false" description="shutdown node after TensorRT engine file is built"/>
+  <arg name="debug_mode" default="true" description="debug mode"/>
+  <arg name="param_path" default="$(find-pkg-share autoware_camera_streampetr)/config/tensorrt_stream_petr.param.yaml"/>
+  <arg name="model_path" default="$(env HOME)/autoware_data/camera_streampetr"/>
+  <arg name="is_compressed_image" default="true" description="whether the input image is compressed"/>
+
+  <let name="camera0_topic" value="/sensing/camera/camera0/image_rect_color/compressed"/>
+  <let name="camera1_topic" value="/sensing/camera/camera1/image_rect_color/compressed"/>
+  <let name="camera2_topic" value="/sensing/camera/camera2/image_rect_color/compressed"/>
+  <let name="camera3_topic" value="/sensing/camera/camera3/image_rect_color/compressed"/>
+  <let name="camera4_topic" value="/sensing/camera/camera4/image_rect_color/compressed"/>
+  <let name="camera5_topic" value="/sensing/camera/camera5/image_rect_color/compressed"/>
+
+  <node pkg="autoware_camera_streampetr" exec="autoware_camera_streampetr_node" name="stream_petr" output="screen">
+    <param from="$(var param_path)" allow_substs="true"/>
+    <param name="build_only" value="$(var build_only)"/>
+    <param name="debug_mode" value="$(var debug_mode)"/>
+    <param name="model_params.backbone_path" value="$(var model_path)/simplify_extract_img_feat.onnx"/>
+    <param name="model_params.head_path" value="$(var model_path)/simplify_pts_head_memory.onnx"/>
+    <param name="model_params.position_embedding_path" value="$(var model_path)/simplify_position_embedding.onnx"/>
+
+    <remap from="~/input/kinematic_state" to="/localization/kinematic_state"/>
+
+    <!-- Image of ~/input/camera_i will be the ith image in the model input -->
+    <remap from="~/input/camera0/camera_info" to="/sensing/camera/camera0/camera_info"/>
+    <remap from="~/input/camera1/camera_info" to="/sensing/camera/camera1/camera_info"/>
+    <remap from="~/input/camera2/camera_info" to="/sensing/camera/camera2/camera_info"/>
+    <remap from="~/input/camera3/camera_info" to="/sensing/camera/camera3/camera_info"/>
+    <remap from="~/input/camera4/camera_info" to="/sensing/camera/camera4/camera_info"/>
+    <remap from="~/input/camera5/camera_info" to="/sensing/camera/camera5/camera_info"/>
+
+    <remap from="~/input/camera0/image/compressed" to="$(var camera0_topic)"/>
+    <remap from="~/input/camera1/image/compressed" to="$(var camera1_topic)"/>
+    <remap from="~/input/camera2/image/compressed" to="$(var camera2_topic)"/>
+    <remap from="~/input/camera3/image/compressed" to="$(var camera3_topic)"/>
+    <remap from="~/input/camera4/image/compressed" to="$(var camera4_topic)"/>
+    <remap from="~/input/camera5/image/compressed" to="$(var camera5_topic)"/>
+
+    <!-- Maximum allowed time difference for camera image sync in seconds-->
+    <param name="max_camera_time_diff" value="0.15"/>
+    <!-- The forward pass begins once every anchor camera topic reaches. Choose this as the camera that causes the shortest difference in min and max timestamp between cameras-->
+    <param name="anchor_camera_id" value="0"/>
+    <!-- Whether the input image is compressed. -->
+    <param name="is_compressed_image" value="$(var is_compressed_image)"/>
+    <!-- Whether the input image is distorted. -->
+    <param name="is_distorted_image" value="false"/>
+    <!-- If is_distorted_image=true,factor to downsample the image by during undistortion. Makes undistortion faster than using full scale-->
+    <param name="downsample_factor" value="0.5"/>
+    <!-- Whether to use multithreading for handling image callbacks-->
+    <param name="multithreading" value="false"/>
+  </node>
+</launch>
