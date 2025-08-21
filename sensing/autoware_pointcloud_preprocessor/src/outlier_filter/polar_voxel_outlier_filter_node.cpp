@@ -78,13 +78,20 @@ PolarVoxelOutlierFilterComponent::extract_precomputed_polar_coordinates(
   sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
   sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation) const
 {
-  if (!iter_distance || !iter_azimuth || !iter_elevation) return std::nullopt;
+  if (!iter_distance) return std::nullopt;
+  if (!iter_azimuth) return std::nullopt;
+  if (!iter_elevation) return std::nullopt;
+
   float distance = **iter_distance;
   float azimuth = **iter_azimuth;
   float elevation = **iter_elevation;
+
   if (!all_finite(distance, azimuth, elevation)) return std::nullopt;
+
   PolarCoordinate polar(distance, azimuth, elevation);
-  return is_valid_polar_point(polar) ? std::optional<PolarCoordinate>{polar} : std::nullopt;
+  if (!is_valid_polar_point(polar)) return std::nullopt;
+
+  return polar;
 }
 
 std::optional<PolarVoxelOutlierFilterComponent::PolarCoordinate>
@@ -93,14 +100,21 @@ PolarVoxelOutlierFilterComponent::extract_computed_polar_coordinates(
   sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
   sensor_msgs::PointCloud2ConstIterator<float> * iter_z) const
 {
-  if (!iter_x || !iter_y || !iter_z) return std::nullopt;
+  if (!iter_x) return std::nullopt;
+  if (!iter_y) return std::nullopt;
+  if (!iter_z) return std::nullopt;
+
   float x = **iter_x;
   float y = **iter_y;
   float z = **iter_z;
+
   if (!all_finite(x, y, z)) return std::nullopt;
+
   CartesianCoordinate cartesian(x, y, z);
   PolarCoordinate polar = cartesian_to_polar(cartesian);
-  return is_valid_polar_point(polar) ? std::optional<PolarCoordinate>{polar} : std::nullopt;
+  if (!is_valid_polar_point(polar)) return std::nullopt;
+
+  return polar;
 }
 
 static constexpr double diagnostics_update_period_sec = 0.1;
@@ -554,8 +568,10 @@ bool PolarVoxelOutlierFilterComponent::is_valid_polar_point(const PolarCoordinat
 
 bool PolarVoxelOutlierFilterComponent::has_finite_coordinates(const PolarCoordinate & polar) const
 {
-  return std::isfinite(polar.radius) && std::isfinite(polar.azimuth) &&
-         std::isfinite(polar.elevation);
+  if (!std::isfinite(polar.radius)) return false;
+  if (!std::isfinite(polar.azimuth)) return false;
+  if (!std::isfinite(polar.elevation)) return false;
+  return true;
 }
 
 bool PolarVoxelOutlierFilterComponent::is_within_radius_range(const PolarCoordinate & polar) const
