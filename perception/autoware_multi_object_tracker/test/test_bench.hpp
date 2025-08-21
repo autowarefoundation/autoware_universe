@@ -138,10 +138,12 @@ std::vector<autoware::multi_object_tracker::types::InputChannel> createInputChan
 
 class TrackingTestBench
 {
+protected:
   const float GRID_SIZE = 15.0f;  // Larger than max car length
   std::unordered_map<uint64_t, std::vector<std::string>> spatial_grid_;
 
   UnknownObjectParams unknown_params_;
+  TrackingScenarioConfig params_;  // store params for later use
 
   uint64_t getGridKey(float x, float y) const;
 
@@ -152,6 +154,7 @@ class TrackingTestBench
 public:
   explicit TrackingTestBench(const TrackingScenarioConfig & params)
   : unknown_params_(params.unknown_params),
+    params_(params),
     base_time_(rclcpp::Clock().now(), RCL_ROS_TIME),
     object_counter_(0),
     rng_(0),  // To reproduce the same results, we need to set the seed to 0
@@ -179,25 +182,26 @@ public:
     shape_change_dist_(params.unknown_params.shape_change_prob),
     footprint_radius_scale_dist_(0.7f, 1.2f)
   {
-    initializeObjects(params);
   }
 
-  autoware::multi_object_tracker::types::DynamicObjectList generateDetections(
+  virtual autoware::multi_object_tracker::types::DynamicObjectList generateDetections(
     const rclcpp::Time & stamp);
 
-private:
-  void initializeObjects(const TrackingScenarioConfig & params);
+  virtual void initializeObjects();
+
+protected:
   void setOrientationFromVelocity(
     const geometry_msgs::msg::Twist & twist, geometry_msgs::msg::Pose & pose);
   // Functions to add new objects
-  void addNewCar(
+  virtual void addNewCar(
     const std::string & id, float x, float y, float speed_x = 0.0f, float speed_y = 0.0f);
-  void addNewPedestrian(const std::string & id, float x, float y);
-  void addNewUnknown(const std::string & id, float x, float y);
+  virtual void addNewPedestrian(const std::string & id, float x, float y);
+  virtual void addNewUnknown(const std::string & id, float x, float y);
+  virtual void updateCarStates(float dt);
   // Functions to generate random shapes for unknown objects
-  void generateClusterFootprint(
+  virtual void generateClusterFootprint(
     float base_size, std::vector<geometry_msgs::msg::Point> & footprint);
-  void updateUnknownShape(UnknownObjectState & state);
+  virtual void updateUnknownShape(UnknownObjectState & state);
   struct Shape
   {
     float x;
