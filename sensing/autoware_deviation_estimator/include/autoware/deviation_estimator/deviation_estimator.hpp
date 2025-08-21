@@ -85,7 +85,6 @@ private:
   double wz_threshold_;
   double vx_threshold_;
   double accel_threshold_;
-  double estimation_freq_;
   double time_window_;
 
   bool gyro_only_use_straight_;
