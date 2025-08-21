@@ -91,9 +91,11 @@ struct UnknownObjectParams
 };
 struct TrackingScenarioConfig
 {
-  int num_lanes = 8;        // 5 lanes
-  int cars_per_lane = 20;   // 20 cars per lane
-  float lane_width = 3.5f;  // 3.5m width per lane
+  int num_lanes = 8;                           // 5 lanes
+  int cars_per_lane = 20;                      // 20 cars per lane
+  float lane_width = 3.5f;                     // 3.5m width per lane
+  double lane_angle_cos = std::cos(M_PI / 6);  // 30 degrees angle for lanes
+  double lane_angle_sin = std::sin(M_PI / 6);  // 30 degrees angle for lanes
 
   int pedestrian_clusters = 16;              // 16 pedestrian clusters
   int pedestrians_per_cluster = 6;           // 6 pedestrians per cluster
@@ -188,7 +190,8 @@ private:
   void setOrientationFromVelocity(
     const geometry_msgs::msg::Twist & twist, geometry_msgs::msg::Pose & pose);
   // Functions to add new objects
-  void addNewCar(const std::string & id, float x, float y);
+  void addNewCar(
+    const std::string & id, float x, float y, float speed_x = 0.0f, float speed_y = 0.0f);
   void addNewPedestrian(const std::string & id, float x, float y);
   void addNewUnknown(const std::string & id, float x, float y);
   // Functions to generate random shapes for unknown objects

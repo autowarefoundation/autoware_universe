@@ -16,6 +16,7 @@
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <map>
 #include <random>
 #include <string>
@@ -314,17 +315,20 @@ autoware::multi_object_tracker::types::DynamicObjectList TrackingTestBench::gene
 
     // Predict movement
     state.pose.position.x += state.twist.linear.x * dt;
+    state.pose.position.y += state.twist.linear.y * dt;
 
     // Check for collisions
     if (checkCollisions(id)) {
       state.pose.position = old_pos;  // Revert
       state.twist.linear.x *= 0.9f;   // Reduce speed
+      state.twist.linear.y *= 0.9f;   // Reduce speed
     }
 
     updateGrid(id);  // Add to new grid position
 
     // state.pose.position.x += state.twist.linear.x * dt;
     state.pose.position.y += lateral_drift_(rng_) * dt;
+    state.pose.position.x += lateral_drift_(rng_) * dt;
 
     // Add noise and create detection
     autoware::multi_object_tracker::types::DynamicObject obj;
@@ -349,8 +353,8 @@ autoware::multi_object_tracker::types::DynamicObjectList TrackingTestBench::gene
     obj.pose.position.y += pos_noise_(rng_);
     // Set orientation based on velocity
     setOrientationFromVelocity(state.twist, obj.pose);
-    obj.twist = state.twist;
-    obj.twist.linear.x += vel_noise_(rng_);
+    obj.twist.linear.x = std::hypot(state.twist.linear.x, state.twist.linear.y);
+    obj.twist.linear.y = 0.0;
     obj.existence_probability = 0.95;
     obj.channel_index = 0;
     obj.area = state.shape.x * state.shape.y;
@@ -394,7 +398,8 @@ autoware::multi_object_tracker::types::DynamicObjectList TrackingTestBench::gene
     obj.pose.position.y += pos_noise_(rng_);
     // Set orientation based on velocity
     setOrientationFromVelocity(state.twist, obj.pose);
-    obj.twist = state.twist;
+    obj.twist.linear.x = std::hypot(state.twist.linear.x, state.twist.linear.y);
+    obj.twist.linear.y = 0.0;
     obj.existence_probability = 0.9;
     obj.channel_index = 0;
     obj.area = state.shape.x * state.shape.y;
@@ -465,6 +470,8 @@ autoware::multi_object_tracker::types::DynamicObjectList TrackingTestBench::gene
     obj.twist_covariance = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     obj.pose = state.pose;
+    obj.twist.linear.x = std::hypot(state.twist.linear.x, state.twist.linear.y);
+    obj.twist.linear.y = 0.0;
 
     // Existence probability
     // For unknown objects, use a default value to match the input stream.
@@ -481,9 +488,6 @@ autoware::multi_object_tracker::types::DynamicObjectList TrackingTestBench::gene
 
   // Add new objects occasionally
   if (new_obj_dist_(rng_)) {
-    addNewCar("car_" + std::to_string(object_counter_++), 0, 0);
-  }
-  if (new_obj_dist_(rng_)) {
     addNewPedestrian("ped_" + std::to_string(object_counter_++), 0, 0);
   }
   return detections;
@@ -498,7 +502,13 @@ void TrackingTestBench::initializeObjects(const TrackingScenarioConfig & params)
 
     for (int i = 0; i < params.cars_per_lane; ++i) {
       std::string id = "car_l" + std::to_string(lane) + "_" + std::to_string(i);
-      addNewCar(id, x, y);
+      // Rotate initial position
+      float x_rot = x * params.lane_angle_cos - y * params.lane_angle_sin;
+      float y_rot = x * params.lane_angle_sin + y * params.lane_angle_cos;
+      float speed = car_speed_dist_(rng_);
+      float speed_x = speed * params.lane_angle_cos;
+      float speed_y = speed * params.lane_angle_sin;
+      addNewCar(id, x_rot, y_rot, speed_x, speed_y);
       x += car_spacing_dist_(rng_) + car_length_dist_(rng_);
     }
   }
@@ -508,7 +518,7 @@ void TrackingTestBench::initializeObjects(const TrackingScenarioConfig & params)
     params.pedestrian_cluster_spacing;  // Use 80% of road width for pedestrian areas
   const int y_clusters = std::max(1, static_cast<int>(std::sqrt(params.pedestrian_clusters)));
   const float cluster_x_offset = (y_clusters - 1) * params.pedestrian_cluster_spacing / 2.0f;
-  const float cluster_y_offset = (y_clusters - 1) * y_spacing + params.lane_width * 0.5f;
+  const float cluster_y_offset = (y_clusters - 1) * y_spacing + params.lane_width * 0.5f + 30.0f;
 
   // Initialize pedestrians
   for (int cluster = 0; cluster < params.pedestrian_clusters; ++cluster) {
@@ -557,10 +567,12 @@ void TrackingTestBench::setOrientationFromVelocity(
     pose.orientation.w = 1.0;
   }
 }
-void TrackingTestBench::addNewCar(const std::string & id, float x, float y)
+void TrackingTestBench::addNewCar(
+  const std::string & id, float x, float y, float speed_x, float speed_y)
 {
   ObjectState state;
-  state.twist.linear.x = car_speed_dist_(rng_);
+  state.twist.linear.x = speed_x;
+  state.twist.linear.y = speed_y;
   state.shape.x = car_length_dist_(rng_);
   state.shape.y = car_width_dist_(rng_);
   state.pose.position.x = x;
