@@ -1,22 +1,31 @@
 <launch>
   <arg name="use_sim_time" default="true" description="use_sim_time"/>
   <arg name="param_path" default="$(find-pkg-share autoware_deviation_estimator)/config/deviation_estimator.param.yaml"/>
+  <arg name="initial_vehicle_velocity_converter_path" default="$(find-pkg-share autoware_deviation_estimator)/config/vehicle_velocity_converter.param.yaml"/>
   <arg name="results_dir" default="$(env HOME)"/>
 
   <arg name="in_pose_with_cov_name" default="/localization/pose_estimator/pose_with_covariance"/>
   <arg name="in_wheel_odometry" default="/vehicle/status/velocity_status"/>
   <arg name="in_imu" default="/sensing/imu/tamagawa/imu_raw"/>
-  <arg name="output_bias_angular_velocity" default="estimated_bias_angular_velocity"/>
-  <arg name="output_coef_vx" default="estimated_coef_vx"/>
+
+  <arg name="out_estimated_bias_angular_velocity" default="~/estimated_bias_angular_velocity"/>
+  <arg name="out_estimated_coef_vx" default="~/estimated_coef_vx"/>
+  <arg name="out_estimated_stddev_angular_velocity" default="~/estimated_stddev_angular_velocity"/>
+  <arg name="out_estimated_stddev_vx" default="~/estimated_stddev_vx"/>
+  <arg name="out_speed_scale_factor_error" default="~/speed_scale_factor_error"/>
 
   <node pkg="autoware_deviation_estimator" exec="deviation_estimator" name="deviation_estimator" output="screen">
     <remap from="in_pose_with_covariance" to="$(var in_pose_with_cov_name)"/>
     <remap from="in_imu" to="$(var in_imu)"/>
     <remap from="in_wheel_odometry" to="$(var in_wheel_odometry)"/>
-    <remap from="estimated_bias_angular_velocity" to="$(var output_bias_angular_velocity)"/>
-    <remap from="estimated_coef_vx" to="$(var output_coef_vx)"/>
+    <remap from="estimated_bias_angular_velocity" to="$(var out_estimated_bias_angular_velocity)"/>
+    <remap from="estimated_coef_vx" to="$(var out_estimated_coef_vx)"/>
+    <remap from="estimated_stddev_angular_velocity" to="$(var out_estimated_stddev_angular_velocity)"/>
+    <remap from="estimated_stddev_vx" to="$(var out_estimated_stddev_vx)"/>
+    <remap from="speed_scale_factor_error" to="$(var out_speed_scale_factor_error)"/>
 
     <param from="$(var param_path)"/>
+    <param from="$(var initial_vehicle_velocity_converter_path)"/>
     <param name="results_dir" value="$(var results_dir)"/>
     <param name="use_sim_time" value="$(var use_sim_time)"/>
   </node>

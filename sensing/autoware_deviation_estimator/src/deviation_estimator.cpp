@@ -19,6 +19,8 @@
 #include "autoware/universe_utils/geometry/geometry.hpp"
 #include "rclcpp/logging.hpp"
 
+#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
+
 #include <algorithm>
 #include <functional>
 #include <memory>
@@ -150,6 +152,8 @@ DeviationEstimator::DeviationEstimator(
   velocity_add_bias_uncertainty_ =
     declare_parameter<bool>("velocity_estimation.add_bias_uncertainty");
 
+  initial_speed_scale_factor_ = declare_parameter<double>("speed_scale_factor", 1.0);
+
   auto timer_callback = std::bind(&DeviationEstimator::timer_callback, this);
   auto period_control = std::chrono::duration_cast<std::chrono::nanoseconds>(
     std::chrono::duration<double>(time_window_));
@@ -162,6 +166,9 @@ DeviationEstimator::DeviationEstimator(
     "in_pose_with_covariance", 1,
     std::bind(&DeviationEstimator::callback_pose_with_covariance, this, _1));
   pub_coef_vx_ = create_publisher<std_msgs::msg::Float64>("estimated_coef_vx", 1);
+  pub_speed_scale_factor_error_ =
+    create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "speed_scale_factor_error", 1);
   pub_bias_angvel_ =
     create_publisher<geometry_msgs::msg::Vector3>("estimated_bias_angular_velocity", 1);
   pub_stddev_vx_ = create_publisher<std_msgs::msg::Float64>("estimated_stddev_vx", 1);
@@ -294,6 +301,10 @@ void DeviationEstimator::timer_callback()
   std_msgs::msg::Float64 coef_vx_msg;
   coef_vx_msg.data = vel_coef_module_->get_coef();
   pub_coef_vx_->publish(coef_vx_msg);
+  autoware_internal_debug_msgs::msg::Float64Stamped speed_scale_factor_error_msg;
+  speed_scale_factor_error_msg.stamp = get_clock()->now();
+  speed_scale_factor_error_msg.data = coef_vx_msg.data - initial_speed_scale_factor_;
+  pub_speed_scale_factor_error_->publish(speed_scale_factor_error_msg);
 
   geometry_msgs::msg::TransformStamped::ConstSharedPtr tf_base2imu_ptr =
     transform_listener_->getLatestTransform(output_frame_, imu_frame_);

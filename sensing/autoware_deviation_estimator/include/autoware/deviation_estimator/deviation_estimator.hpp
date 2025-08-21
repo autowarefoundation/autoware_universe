@@ -64,6 +64,8 @@ private:
   rclcpp::Subscription<autoware_vehicle_msgs::msg::VelocityReport>::SharedPtr sub_wheel_odometry_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr sub_imu_;
   rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr pub_coef_vx_;
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
+    pub_speed_scale_factor_error_;
   rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr pub_bias_angvel_;
   rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr pub_stddev_vx_;
   rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr pub_stddev_angvel_;
@@ -80,6 +82,7 @@ private:
   std::vector<TrajectoryData> traj_data_list_for_gyro_;
   std::vector<TrajectoryData> traj_data_list_for_velocity_;
 
+  double initial_speed_scale_factor_;
   double dt_design_;
   double dx_design_;
   double wz_threshold_;
