@@ -128,7 +128,7 @@ public:
     }
   };
 
-private:
+protected:
   // Parameter update helper methods
   void update_primary_return_types(const rclcpp::Parameter & param);
   void update_publish_noise_cloud(const rclcpp::Parameter & param);
