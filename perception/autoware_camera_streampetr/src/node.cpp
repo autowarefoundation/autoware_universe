@@ -39,7 +39,7 @@ std::vector<float> cast_to_float(const std::vector<double> & double_vector)
   std::vector<float> float_vector(double_vector.size());
   std::transform(
     double_vector.begin(), double_vector.end(), float_vector.begin(),
-    [](double value) {return static_cast<float>(value);});
+    [](double value) { return static_cast<float>(value); });
   return float_vector;
 }
 
@@ -293,7 +293,7 @@ void StreamPetrNode::cleanup_on_failure()
 }
 
 std::optional<std::tuple<
-    std::vector<autoware_perception_msgs::msg::DetectedObject>, std::vector<float>, double>>
+  std::vector<autoware_perception_msgs::msg::DetectedObject>, std::vector<float>, double>>
 StreamPetrNode::perform_inference()
 {
   if (stop_watch_ptr_) {

@@ -85,8 +85,7 @@ bool shouldSetLayerToFP32(nvinfer1::ILayer * layer, const std::string & layer_na
   // Check layer name for sigmoid/softmax keywords
   if (
     layer_name_lower.find("sigmoid") != std::string::npos ||
-    layer_name_lower.find("softmax") != std::string::npos)
-  {
+    layer_name_lower.find("softmax") != std::string::npos) {
     return true;
   }
 
@@ -116,8 +115,7 @@ void setSigmoidAndSoftmaxLayersToFP32(std::shared_ptr<nvinfer1::INetworkDefiniti
   }
 }
 
-StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config)
-: config_(config)
+StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config) : config_(config)
 {
   cudaStreamCreate(&stream_);
 
