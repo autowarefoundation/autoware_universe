@@ -283,12 +283,10 @@ double get3dGeneralizedIoU(
 
   const double total_height = std::max(z_max_src, z_max_tgt) - std::min(z_min_src, z_min_tgt);
 
-  const double intersection_volume = intersection_area * height_overlap;
-  const double union_volume = union_area * total_height;
-  const double convex_volume = convex_area * total_height;
+  const double iou =
+    std::clamp((intersection_area * height_overlap) / (union_area * total_height), 0.0, 1.0);
 
-  const double iou = std::min(1.0, intersection_volume / union_volume);
-  return iou - (convex_volume - union_volume) / convex_volume;
+  return iou - 1.0 + (union_area / convex_area);
 }
 
 }  // namespace shapes
