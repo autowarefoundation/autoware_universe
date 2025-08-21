@@ -193,6 +193,23 @@ private:
   uint8_t extract_return_type(
     bool has_return_type, sensor_msgs::PointCloud2ConstIterator<uint8_t> * iter_return_type) const;
 
+  // --- Add these template helpers for deduplication ---
+  template <typename... Iterators>
+  void advance_iterators(Iterators *... iters) const;
+
+  template <typename VoxelPredicate>
+  VoxelIndexSet determine_valid_voxels_generic(
+    const VoxelPointCountMap & voxel_counts, VoxelPredicate pred) const
+  {
+    VoxelIndexSet valid_voxels;
+    for (const auto & [voxel_idx, counts] : voxel_counts) {
+      if (pred(counts)) {
+        valid_voxels.insert(voxel_idx);
+      }
+    }
+    return valid_voxels;
+  }
+
   void advance_iterators(
     bool has_polar_coords, sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
     sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
