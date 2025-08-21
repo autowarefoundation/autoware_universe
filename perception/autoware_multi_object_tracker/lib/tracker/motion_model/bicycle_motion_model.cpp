@@ -472,7 +472,7 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   X_next_t(IDX::Y2) = y2 + vel_long * sin_yaw_dt + vel_lat * cos_yaw_dt;
   X_next_t(IDX::U) = vel_long;  // velocity does not change
   // Apply exponential decay to slip angle over time, with a half-life
-  constexpr double half_life = 0.8;                    // [s] half-life of the exponential decay
+  constexpr double half_life = 1.5;                    // [s] half-life of the exponential decay
   constexpr double gamma = 0.69314718056 / half_life;  // natural logarithm of 2 / half-life
   const double decay_rate = std::exp(-gamma * dt);     // decay rate for half-life
   X_next_t(IDX::V) = vel_lat * decay_rate;             // lateral velocity decays exponentially
