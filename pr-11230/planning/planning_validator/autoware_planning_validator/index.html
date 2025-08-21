@@ -13991,6 +13991,7 @@
 
 <div><h1 id="planning-validator">Planning Validator<a class="headerlink" href="#planning-validator" title="Permanent link">#</a></h1>
 <p>The <code>autoware_planning_validator</code> node is the last module executed in the planning component, it responsible for checking the validity of the planning trajectory before it is published to control component. The status of the validation can be viewed in the <code>/diagnostics</code> and <code>/validation_status</code> topics. When an invalidity is detected, the <code>autoware_planning_validator</code> will process the trajectory following the selected option: "0. publish the trajectory as it is", "1. stop publishing the trajectory", "2. publish the last validated trajectory".</p>
+<p><strong>Note</strong>: The planning validator automatically suppresses validation errors during manual driving mode. When the vehicle is in autonomous mode, all validation checks are performed normally. During manual driving, validation errors are suppressed and only debug logs are output.</p>
 <p>The <code>autoware_planning_validator</code> node loads multiple plugins modules, each responsible for running specific validation checks on the planning trajectory:</p>
 <ul>
 <li><strong>Latency Checker</strong>: The <code>autoware_planning_validator_latency_checker</code> is responsible for checking the validity of planning trajectory age</li>
@@ -14040,6 +14041,11 @@
 <td><code>~/input/pointcloud</code></td>
 <td>sensor_msgs/PointCloud2</td>
 <td>obstacle pointcloud with ground removed</td>
+</tr>
+<tr>
+<td><code>~/input/operational_mode_state</code></td>
+<td>autoware_adapi_v1_msgs/OperationModeState</td>
+<td>current operation mode state (autonomous/manual)</td>
 </tr>
 </tbody>
 </table>
