@@ -77,8 +77,9 @@ TRTBEVDetNode::TRTBEVDetNode(const rclcpp::NodeOptions & node_options)
   }
 
   // Wait for camera info and tf transform initialization
-  initialization_check_timer_ = this->create_wall_timer(
-    std::chrono::milliseconds(100), std::bind(&TRTBEVDetNode::checkInitialization, this));
+  initialization_check_timer_ = rclcpp::create_timer(
+    this, get_clock(), std::chrono::milliseconds(100),
+    std::bind(&TRTBEVDetNode::checkInitialization, this));
 }
 
 void TRTBEVDetNode::initModel()
