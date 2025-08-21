@@ -55,14 +55,20 @@ void BicycleMotionModel::setMotionParams(
     bicycle_state.slip_rate_stddev_max * bicycle_state.slip_rate_stddev_max;
   motion_params_.q_max_slip_angle = bicycle_state.slip_angle_max;
 
+  // set wheel position parameters
   motion_params_.lf_min = bicycle_state.wheel_pos_front_min;
   motion_params_.lr_min = bicycle_state.wheel_pos_rear_min;
   motion_params_.lf_ratio = bicycle_state.wheel_pos_ratio_front;
   motion_params_.lr_ratio = bicycle_state.wheel_pos_ratio_rear;
+
   motion_params_.wheel_pos_ratio =
     (motion_params_.lf_ratio + motion_params_.lr_ratio) / motion_params_.lr_ratio;
-  // [-] distance ratio of the wheel base over center-to-rear-wheel
-  motion_params_.max_slip = bicycle_state.slip_angle_max;
+  motion_params_.wheel_gamma_front =
+    (0.5 - motion_params_.lf_ratio) / (motion_params_.lf_ratio + motion_params_.lr_ratio);
+  motion_params_.wheel_gamma_rear =
+    (0.5 - motion_params_.lr_ratio) / (motion_params_.lf_ratio + motion_params_.lr_ratio);
+
+  // set bicycle model parameters
   motion_params_.q_cov_length = bicycle_state.length_uncertainty * bicycle_state.length_uncertainty;
 
   motion_params_.max_vel = process_limit.vel_long_max;
@@ -223,9 +229,6 @@ bool BicycleMotionModel::updateStatePoseHeadVel(
   C(4, IDX::U) = 1.0;
   C(5, IDX::V) = 1.0;
 
-  // todo: add yaw covariance in lateral position
-  // todo: if wheel_base is changed a lot, add covariance in longitudinal position
-
   Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
   R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
   R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
@@ -237,6 +240,94 @@ bool BicycleMotionModel::updateStatePoseHeadVel(
   R(3, 3) = pose_cov[XYZRPY_COV_IDX::Y_Y];
   R(4, 4) = twist_cov[XYZRPY_COV_IDX::X_X];
   R(5, 5) = twist_cov[XYZRPY_COV_IDX::Y_Y] * motion_params_.wheel_pos_ratio;
+
+  return ekf_.update(Y, C, R);
+}
+
+bool BicycleMotionModel::updateStatePoseRear(
+  const double & xr, const double & yr, const std::array<double, 36> & pose_cov)
+{
+  // check if the state is initialized
+  if (!checkInitialized()) return false;
+
+  // get the current state to extract renovate deviation
+  StateVec X_t;
+  StateMat P_t;
+  ekf_.getX(X_t);
+  ekf_.getP(P_t);
+
+  const double yaw = getYawState();
+  const double wheel_base = std::hypot(X_t(IDX::X2) - X_t(IDX::X1), X_t(IDX::Y2) - X_t(IDX::Y1));
+  const double x1 = xr + wheel_base * motion_params_.wheel_gamma_rear * std::cos(yaw);
+  const double y1 = yr + wheel_base * motion_params_.wheel_gamma_rear * std::sin(yaw);
+  const double delta_x = x1 - X_t(IDX::X1);
+  const double delta_y = y1 - X_t(IDX::Y1);
+
+  // update state
+  constexpr int DIM_Y = 4;
+  Eigen::Matrix<double, DIM_Y, 1> Y;
+  Y << x1, y1, X_t(IDX::X2) + delta_x, X_t(IDX::Y2) + delta_y;
+
+  Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
+  C(0, IDX::X1) = 1.0;
+  C(1, IDX::Y1) = 1.0;
+  C(2, IDX::X2) = 1.0;
+  C(3, IDX::Y2) = 1.0;
+
+  constexpr double uncertainty_multiplier = 4.0;  // additional uncertainty for unmeasured position
+  Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
+  R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
+  R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
+  R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X];
+  R(1, 1) = pose_cov[XYZRPY_COV_IDX::Y_Y];
+  R(2, 2) = pose_cov[XYZRPY_COV_IDX::X_X] * uncertainty_multiplier;
+  R(2, 3) = pose_cov[XYZRPY_COV_IDX::X_Y] * uncertainty_multiplier;
+  R(3, 2) = pose_cov[XYZRPY_COV_IDX::Y_X] * uncertainty_multiplier;
+  R(3, 3) = pose_cov[XYZRPY_COV_IDX::Y_Y] * uncertainty_multiplier;
+
+  return ekf_.update(Y, C, R);
+}
+
+bool BicycleMotionModel::updateStatePoseFront(
+  const double & xf, const double & yf, const std::array<double, 36> & pose_cov)
+{
+  // check if the state is initialized
+  if (!checkInitialized()) return false;
+
+  // get the current state to extract renovate deviation
+  StateVec X_t;
+  StateMat P_t;
+  ekf_.getX(X_t);
+  ekf_.getP(P_t);
+
+  const double yaw = getYawState();
+  const double wheel_base = std::hypot(X_t(IDX::X2) - X_t(IDX::X1), X_t(IDX::Y2) - X_t(IDX::Y1));
+  const double x2 = xf - wheel_base * motion_params_.wheel_gamma_front * std::cos(yaw);
+  const double y2 = yf - wheel_base * motion_params_.wheel_gamma_front * std::sin(yaw);
+  const double delta_x = x2 - X_t(IDX::X2);
+  const double delta_y = y2 - X_t(IDX::Y2);
+
+  // update state
+  constexpr int DIM_Y = 4;
+  Eigen::Matrix<double, DIM_Y, 1> Y;
+  Y << X_t(IDX::X1) + delta_x, X_t(IDX::Y1) + delta_y, x2, y2;
+
+  Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
+  C(0, IDX::X1) = 1.0;
+  C(1, IDX::Y1) = 1.0;
+  C(2, IDX::X2) = 1.0;
+  C(3, IDX::Y2) = 1.0;
+
+  constexpr double uncertainty_multiplier = 9.0;  // additional uncertainty for unmeasured position
+  Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
+  R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X] * uncertainty_multiplier;
+  R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y] * uncertainty_multiplier;
+  R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X] * uncertainty_multiplier;
+  R(1, 1) = pose_cov[XYZRPY_COV_IDX::Y_Y] * uncertainty_multiplier;
+  R(2, 2) = pose_cov[XYZRPY_COV_IDX::X_X];
+  R(2, 3) = pose_cov[XYZRPY_COV_IDX::X_Y];
+  R(3, 2) = pose_cov[XYZRPY_COV_IDX::Y_X];
+  R(3, 3) = pose_cov[XYZRPY_COV_IDX::Y_Y];
 
   return ekf_.update(Y, C, R);
 }
