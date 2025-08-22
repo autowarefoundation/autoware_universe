@@ -33,6 +33,9 @@ private:
     const std::string & id, float x, float y, float speed_x = 0.0f, float speed_y = 0.0f) override;
   void addNewUnknownNearCar(const std::string & car_id, const std::string & unk_id);
   void updateCarStates(float dt) override;
+  void addNoiseAndOrientation(
+    autoware::multi_object_tracker::types::DynamicObject & obj,
+    const UnknownObjectState & state) override;
 
   float angular_velocity_;  // Base angular velocity (rad/s)
 

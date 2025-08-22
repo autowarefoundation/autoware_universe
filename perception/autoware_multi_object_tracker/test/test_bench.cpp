@@ -296,6 +296,123 @@ bool isConvex(const std::vector<geometry_msgs::msg::Point> & polygon)
   return true;
 }
 
+void TestBench::initializeDetectionHeader(
+  autoware::multi_object_tracker::types::DynamicObjectList & detections, const rclcpp::Time & stamp)
+{
+  detections.header.stamp = stamp;
+  detections.header.frame_id = "map";
+  detections.channel_index = 0;
+}
+
+// Helper methods
+void TestBench::initializeCarObject(
+  autoware::multi_object_tracker::types::DynamicObject & obj, const std::string & id,
+  const rclcpp::Time & stamp, const ObjectState & state)
+{
+  obj.uuid.uuid = stringToUUID(id);
+  obj.time = stamp;
+  obj.classification.emplace_back();
+  obj.classification[0].label = autoware_perception_msgs::msg::ObjectClassification::TRUCK;
+  obj.shape.dimensions.x = state.shape.x;
+  obj.shape.dimensions.y = state.shape.y;
+  obj.shape.dimensions.z = 1.5;
+  obj.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+  initializeKinematics(obj);
+  obj.pose = state.pose;
+  obj.twist.linear.x = std::hypot(state.twist.linear.x, state.twist.linear.y);
+  obj.twist.linear.y = 0.0;
+  obj.existence_probability = 0.95;
+  obj.channel_index = 0;
+  obj.area = state.shape.x * state.shape.y;
+}
+
+void TestBench::initializePedestrianObject(
+  autoware::multi_object_tracker::types::DynamicObject & obj, const std::string & id,
+  const rclcpp::Time & stamp, const ObjectState & state)
+{
+  obj.uuid.uuid = stringToUUID(id);
+  obj.time = stamp;
+  obj.classification.emplace_back();
+  obj.classification[0].label = autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN;
+  obj.shape.type = autoware_perception_msgs::msg::Shape::CYLINDER;
+  obj.shape.dimensions.x = 0.4;
+  obj.shape.dimensions.y = 0.4;
+  obj.shape.dimensions.z = 1.5;
+  initializeKinematics(obj);
+  obj.pose = state.pose;
+  obj.twist.linear.x = std::hypot(state.twist.linear.x, state.twist.linear.y);
+  obj.twist.linear.y = 0.0;
+  obj.existence_probability = 0.9;
+  obj.channel_index = 0;
+  obj.area = state.shape.x * state.shape.y;
+}
+
+void TestBench::initializeUnknownObject(
+  autoware::multi_object_tracker::types::DynamicObject & obj, const std::string & id,
+  const rclcpp::Time & stamp, const UnknownObjectState & state)
+{
+  obj.uuid.uuid = stringToUUID(id);
+  obj.time = stamp;
+  obj.classification.resize(1);
+  obj.classification[0].label = autoware_perception_msgs::msg::ObjectClassification::UNKNOWN;
+  obj.classification[0].probability = 1.0;
+
+  // Shape configuration
+  obj.shape.type = state.shape_type;
+  if (obj.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
+    obj.shape.dimensions.x = state.base_size;
+    obj.shape.dimensions.y = state.base_size / 2.0;
+    obj.shape.dimensions.z = state.z_dimension;
+  } else {
+    obj.shape.footprint.points.clear();
+    for (const auto & p : state.current_footprint) {
+      geometry_msgs::msg::Point32 point;
+      point.x = p.x;
+      point.y = p.y;
+      point.z = 0.0;
+      obj.shape.footprint.points.push_back(point);
+    }
+    obj.shape.dimensions.x = 0.0;
+    obj.shape.dimensions.y = 0.0;
+    obj.shape.dimensions.z = state.z_dimension;
+  }
+
+  initializeKinematics(obj);
+  obj.pose = state.pose;
+  obj.twist.linear.x = std::hypot(state.twist.linear.x, state.twist.linear.y);
+  obj.twist.linear.y = 0.0;
+  obj.existence_probability = autoware::multi_object_tracker::types::default_existence_probability;
+  obj.channel_index = 0;
+  obj.area = obj.shape.dimensions.x * obj.shape.dimensions.y;
+}
+
+void TestBench::initializeKinematics(autoware::multi_object_tracker::types::DynamicObject & obj)
+{
+  obj.kinematics.has_position_covariance = false;
+  obj.kinematics.has_twist = false;
+  obj.kinematics.has_twist_covariance = false;
+  obj.pose_covariance = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+  obj.twist_covariance = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+}
+
+void TestBench::addNoiseAndOrientation(
+  autoware::multi_object_tracker::types::DynamicObject & obj, const ObjectState & state)
+{
+  obj.pose.position.x += pos_noise_(rng_);
+  obj.pose.position.y += pos_noise_(rng_);
+  setOrientationFromVelocity(state.twist, obj.pose);
+}
+
+void TestBench::addNoiseAndOrientation(
+  autoware::multi_object_tracker::types::DynamicObject & obj, const UnknownObjectState & state)
+{
+  obj.pose.position.x += pos_noise_(rng_);
+  obj.pose.position.y += pos_noise_(rng_);
+  setOrientationFromVelocity(state.twist, obj.pose);
+}
+
 autoware::multi_object_tracker::types::DynamicObjectList TestBench::generateDetections(
   const rclcpp::Time & stamp)
 {
@@ -303,9 +420,7 @@ autoware::multi_object_tracker::types::DynamicObjectList TestBench::generateDete
   last_stamp_ = stamp;
 
   autoware::multi_object_tracker::types::DynamicObjectList detections;
-  detections.header.stamp = stamp;
-  detections.header.frame_id = "map";
-  detections.channel_index = 0;
+  initializeDetectionHeader(detections, stamp);
 
   // Update and generate car detections
   updateCarStates(dt);
@@ -313,32 +428,8 @@ autoware::multi_object_tracker::types::DynamicObjectList TestBench::generateDete
     if (dropout_dist_(rng_)) continue;
     // Add noise and create detection
     autoware::multi_object_tracker::types::DynamicObject obj;
-    obj.uuid.uuid = stringToUUID(id);
-    obj.time = stamp;
-    obj.classification.emplace_back();
-    obj.classification[0].label = autoware_perception_msgs::msg::ObjectClassification::TRUCK;
-    obj.shape.dimensions.x = state.shape.x;
-    obj.shape.dimensions.y = state.shape.y;
-    obj.shape.dimensions.z = 1.5;
-    obj.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
-    // Kinematics
-    obj.kinematics.has_position_covariance = false;
-    obj.kinematics.has_twist = false;
-    obj.kinematics.has_twist_covariance = false;
-    obj.pose_covariance = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    obj.twist_covariance = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    obj.pose = state.pose;
-    obj.pose.position.x += pos_noise_(rng_);
-    obj.pose.position.y += pos_noise_(rng_);
-    // Set orientation based on velocity
-    setOrientationFromVelocity(state.twist, obj.pose);
-    obj.twist.linear.x = std::hypot(state.twist.linear.x, state.twist.linear.y);
-    obj.twist.linear.y = 0.0;
-    obj.existence_probability = 0.95;
-    obj.channel_index = 0;
-    obj.area = state.shape.x * state.shape.y;
+    initializeCarObject(obj, id, stamp, state);
+    addNoiseAndOrientation(obj, state);
     detections.objects.push_back(obj);
   }
   // Update and generate pedestrian detections
@@ -356,34 +447,8 @@ autoware::multi_object_tracker::types::DynamicObjectList TestBench::generateDete
     }
 
     autoware::multi_object_tracker::types::DynamicObject obj;
-    obj.uuid.uuid = stringToUUID(id);
-    obj.time = stamp;
-    obj.classification.emplace_back();
-    obj.classification[0].label = autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN;
-    obj.shape.type = autoware_perception_msgs::msg::Shape::CYLINDER;
-    obj.shape.dimensions.x = 0.4;
-    obj.shape.dimensions.y = 0.4;
-    obj.shape.dimensions.z = 1.5;
-
-    // Kinematics
-    obj.kinematics.has_position_covariance = false;
-    obj.kinematics.has_twist = false;
-    obj.kinematics.has_twist_covariance = false;
-    obj.pose_covariance = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    obj.twist_covariance = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-
-    obj.pose = state.pose;
-    obj.pose.position.x += pos_noise_(rng_);
-    obj.pose.position.y += pos_noise_(rng_);
-    // Set orientation based on velocity
-    setOrientationFromVelocity(state.twist, obj.pose);
-    obj.twist.linear.x = std::hypot(state.twist.linear.x, state.twist.linear.y);
-    obj.twist.linear.y = 0.0;
-    obj.existence_probability = 0.9;
-    obj.channel_index = 0;
-    obj.area = state.shape.x * state.shape.y;
+    initializePedestrianObject(obj, id, stamp, state);
+    addNoiseAndOrientation(obj, state);
     detections.objects.push_back(obj);
   }
 
@@ -411,59 +476,10 @@ autoware::multi_object_tracker::types::DynamicObjectList TestBench::generateDete
         state.current_footprint = new_footprint;
       }
     }
-
     // Create detection
     autoware::multi_object_tracker::types::DynamicObject obj;
-    obj.uuid.uuid = stringToUUID(id);
-    obj.time = stamp;
-
-    // Classification
-    obj.classification.resize(1);
-    obj.classification[0].label = autoware_perception_msgs::msg::ObjectClassification::UNKNOWN;
-    obj.classification[0].probability = 1.0;
-
-    // Shape configuration
-    obj.shape.type = state.shape_type;
-    if (obj.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
-      obj.shape.dimensions.x = state.base_size;
-      obj.shape.dimensions.y = state.base_size / 2.0;
-      obj.shape.dimensions.z = state.z_dimension;
-    } else {
-      obj.shape.footprint.points.clear();
-      for (const auto & p : state.current_footprint) {
-        geometry_msgs::msg::Point32 point;
-        point.x = p.x;
-        point.y = p.y;
-        point.z = 0.0;  // Z is not used for 2D footprint
-        obj.shape.footprint.points.push_back(point);
-      }
-      obj.shape.dimensions.x = 0.0;
-      obj.shape.dimensions.y = 0.0;
-      obj.shape.dimensions.z = state.z_dimension;
-    }
-
-    // Kinematics
-    obj.kinematics.has_position_covariance = false;
-    obj.kinematics.has_twist = false;
-    obj.kinematics.has_twist_covariance = false;
-    obj.pose_covariance = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    obj.twist_covariance = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    obj.pose = state.pose;
-    obj.twist.linear.x = std::hypot(state.twist.linear.x, state.twist.linear.y);
-    obj.twist.linear.y = 0.0;
-
-    // Existence probability
-    // For unknown objects, use a default value to match the input stream.
-    // In detection, unknown objects start with a probability of 0,
-    // but multi_object_tracker assigns a default value from the input.
-    // This ensures consistent output between detection and tracking.
-    obj.existence_probability =
-      autoware::multi_object_tracker::types::default_existence_probability;
-
-    obj.channel_index = 0;
-    obj.area = obj.shape.dimensions.x * obj.shape.dimensions.y;
+    initializeUnknownObject(obj, id, stamp, state);
+    addNoiseAndOrientation(obj, state);
     detections.objects.push_back(obj);
   }
 
@@ -473,6 +489,7 @@ autoware::multi_object_tracker::types::DynamicObjectList TestBench::generateDete
   }
   return detections;
 }
+
 void TestBench::updateCarStates(float dt)
 {
   for (auto & [id, state] : car_states_) {

@@ -184,15 +184,32 @@ public:
   {
   }
 
+  virtual void initializeObjects();
   virtual autoware::multi_object_tracker::types::DynamicObjectList generateDetections(
     const rclcpp::Time & stamp);
-
-  virtual void initializeObjects();
 
 protected:
   void setOrientationFromVelocity(
     const geometry_msgs::msg::Twist & twist, geometry_msgs::msg::Pose & pose);
   // Functions to add new objects
+  virtual void initializeDetectionHeader(
+    autoware::multi_object_tracker::types::DynamicObjectList & detections,
+    const rclcpp::Time & stamp);
+  virtual void initializeKinematics(autoware::multi_object_tracker::types::DynamicObject & obj);
+  virtual void initializeCarObject(
+    autoware::multi_object_tracker::types::DynamicObject & obj, const std::string & id,
+    const rclcpp::Time & stamp, const ObjectState & state);
+  virtual void initializePedestrianObject(
+    autoware::multi_object_tracker::types::DynamicObject & obj, const std::string & id,
+    const rclcpp::Time & stamp, const ObjectState & state);
+  virtual void initializeUnknownObject(
+    autoware::multi_object_tracker::types::DynamicObject & obj, const std::string & id,
+    const rclcpp::Time & stamp, const UnknownObjectState & state);
+  virtual void addNoiseAndOrientation(
+    autoware::multi_object_tracker::types::DynamicObject & obj, const ObjectState & state);
+  virtual void addNoiseAndOrientation(
+    autoware::multi_object_tracker::types::DynamicObject & obj, const UnknownObjectState & state);
+
   virtual void addNewCar(
     const std::string & id, float x, float y, float speed_x = 0.0f, float speed_y = 0.0f);
   virtual void addNewPedestrian(const std::string & id, float x, float y);

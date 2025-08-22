@@ -56,13 +56,17 @@ void TestBenchAssociation::initializeObjects()
     addNewUnknownNearCar(car_id, unk_id);
   }
 }
-
+void TestBenchAssociation::addNoiseAndOrientation(
+  autoware::multi_object_tracker::types::DynamicObject & obj, const UnknownObjectState & state)
+{
+  obj.pose.position.x += pos_noise_(rng_);
+  obj.pose.position.y += pos_noise_(rng_);
+  obj.pose.orientation = state.pose.orientation;
+}
 // Keep unknowns stuck near cars
 autoware::multi_object_tracker::types::DynamicObjectList TestBenchAssociation::generateDetections(
   const rclcpp::Time & stamp)
 {
-  auto detections = TestBench::generateDetections(stamp);
-
   // Update unknowns to follow their car (with no speed of their own)
   for (auto & [unk_id, state] : unknown_states_) {
     std::string car_id = unk_id_to_car_[unk_id];
@@ -83,6 +87,9 @@ autoware::multi_object_tracker::types::DynamicObjectList TestBenchAssociation::g
       state.pose.orientation = car_pose.orientation;
     }
   }
+
+  auto detections = TestBench::generateDetections(stamp);
+
   return detections;
 }
 
