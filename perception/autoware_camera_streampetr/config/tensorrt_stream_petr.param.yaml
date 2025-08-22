@@ -1,0 +1,18 @@
+/**:
+  ros__parameters:
+    model_params: # These are parameters that are dependent on the onnx file.
+      class_names: ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"]
+      trt_precision: "fp16"
+      use_temporal: true                                        # Can the model use temporal information or not.
+      detection_range: [-61.2, -61.2, -10.0, 61.2, 61.2, 10.0]  # [-x,-y,-z,x,y,z] from base_link. The model is not trained to predict objects outside this range.
+                                                                # So, anything outside this range is wrong, and this parameter is used to filter out objects that are outside this range
+      input_image_height: 480
+      input_image_width: 640
+      num_proposals: 5400
+      rois_number: 6
+    post_process_params: # These are post-processing parameters to improve the predictions.
+      confidence_threshold: 0.35
+      circle_nms_dist_threshold: 0.0   # turn off circle NMS by setting 0.0, otherwise set to around 0.5
+      iou_nms_search_distance_2d: 10.0
+      iou_nms_threshold: 0.5           # set to 0 to turn off iou NMS
+      yaw_norm_thresholds: [0.3, 0.3, 0.3, 0.3, 0.0]
