@@ -11,18 +11,18 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef MERGE_TEST_BENCH_HPP_
-#define MERGE_TEST_BENCH_HPP_
+#ifndef TEST_BENCH_ASSOCIATION_HPP_
+#define TEST_BENCH_ASSOCIATION_HPP_
 #include "test_bench.hpp"
 
 #include <iostream>
 #include <string>
 #include <unordered_map>
 #include <vector>
-class MergeTestBench : public TrackingTestBench
+class TestBenchAssociation : public TestBench
 {
 public:
-  explicit MergeTestBench(const TrackingScenarioConfig & params);
+  explicit TestBenchAssociation(const ScenarioParams & params);
 
   void initializeObjects() override;
   autoware::multi_object_tracker::types::DynamicObjectList generateDetections(
@@ -45,4 +45,4 @@ private:
   std::unordered_map<std::string, std::string> unk_id_to_car_;
 };
 
-#endif  // MERGE_TEST_BENCH_HPP_
+#endif  // TEST_BENCH_ASSOCIATION_HPP_

@@ -144,7 +144,7 @@ This runs the default test (`SimulatedDataPerformanceTest` and `RealDataRosbagPe
 - `PerformanceVsCarCount()`
 - `PerformanceVsPedestrianCount()`
 - `PerformanceVsUnknownObjectCount()`
-- `UnknownMergeTest()`
+- `AssociationTest()`
 
 These optional profiling tests are compiled as disabled and can be run directly using GoogleTest options:
 
@@ -153,7 +153,7 @@ To run a specific option profiling test:
 ```bash
 ./build/autoware_multi_object_tracker/test_multi_object_tracker \
   --gtest_also_run_disabled_tests \
-  --gtest_filter="*.*UnknownMergeTest"
+  --gtest_filter="*.*AssociationTest"
 ```
 
 To run multiple profiling tests together (separate with `:`):
@@ -161,7 +161,7 @@ To run multiple profiling tests together (separate with `:`):
 ```bash
 ./build/autoware_multi_object_tracker/test_multi_object_tracker \
   --gtest_also_run_disabled_tests \
-  --gtest_filter="*.*UnknownMergeTest:*.*PerformanceVsPedestrianCount"
+  --gtest_filter="*.*AssociationTest:*.*PerformanceVsPedestrianCount"
 ```
 
 This allows you to evaluate scalability with object count and other scenarios without modifying the source code.

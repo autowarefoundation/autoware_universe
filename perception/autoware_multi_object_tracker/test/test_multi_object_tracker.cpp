@@ -16,8 +16,8 @@
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/odometry.hpp"
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
-#include "merge_test_bench.hpp"
 #include "test_bench.hpp"
+#include "test_bench_association.hpp"
 #include "test_utils.hpp"
 
 #include <rclcpp/rclcpp.hpp>
@@ -57,8 +57,8 @@ double measureTimeMs(Func && func)
   return std::chrono::duration<double, std::milli>(end - start).count();
 }
 
-FunctionTimings runIterationsMerge(
-  int num_iterations, const TrackingScenarioConfig & config, bool print_frame_stats = false,
+FunctionTimings runIterationsAssociation(
+  int num_iterations, const ScenarioParams & config, bool print_frame_stats = false,
   bool write_bag = false)
 {
   RosbagWriterHelper writer(write_bag);
@@ -69,7 +69,7 @@ FunctionTimings runIterationsMerge(
 
   auto processor = std::make_unique<autoware::multi_object_tracker::TrackerProcessor>(
     processor_config, associator_config, input_channels_config);
-  MergeTestBench simulator(config);
+  TestBenchAssociation simulator(config);
   simulator.initializeObjects();
   // Performance tracking for individual functions
   FunctionTimings timings;
@@ -122,7 +122,7 @@ FunctionTimings runIterationsMerge(
 }
 
 FunctionTimings runIterations(
-  int num_iterations, const TrackingScenarioConfig & config, bool print_frame_stats = false,
+  int num_iterations, const ScenarioParams & config, bool print_frame_stats = false,
   bool write_bag = false)
 {
   RosbagWriterHelper writer(write_bag);
@@ -133,7 +133,7 @@ FunctionTimings runIterations(
 
   auto processor = std::make_unique<autoware::multi_object_tracker::TrackerProcessor>(
     processor_config, associator_config, input_channels_config);
-  TrackingTestBench simulator(config);
+  TestBench simulator(config);
   simulator.initializeObjects();
   // Performance tracking for individual functions
   FunctionTimings timings;
@@ -197,9 +197,9 @@ FunctionTimings runIterations(
   return timings;
 }
 
-void runUnknownsTest()
+void runAssociationTest()
 {
-  TrackingScenarioConfig params;
+  ScenarioParams params;
   params.num_lanes = 0;
   params.pedestrian_clusters = 0;
   params.cars_per_lane = 0;
@@ -208,7 +208,7 @@ void runUnknownsTest()
   params.unknown_params.shape_change_prob = 0.0f;    // No shape change
   params.unknown_params.max_evolution_noise = 0.0f;  // No evolution noise
 
-  FunctionTimings timings = runIterationsMerge(500, params, true, true);
+  FunctionTimings timings = runIterationsAssociation(500, params, true, true);
   std::cout << "Total time for all iterations: "
             << std::accumulate(timings.total.times.begin(), timings.total.times.end(), 0.0) << " ms"
             << std::endl;
@@ -216,7 +216,7 @@ void runUnknownsTest()
 
 void runPerformanceTest()
 {
-  const TrackingScenarioConfig params;
+  const ScenarioParams params;
   FunctionTimings timings = runIterations(50, params, true, false);
   std::cout << "Total time for all iterations: "
             << std::accumulate(timings.total.times.begin(), timings.total.times.end(), 0.0) << " ms"
@@ -339,7 +339,7 @@ struct ProfileConfig
   int step;
   int iterations_per_count;
   float simulation_duration;
-  std::function<void(TrackingScenarioConfig &, int)> config_updater;
+  std::function<void(ScenarioParams &, int)> config_updater;
 };
 
 // Common profiling function template
@@ -365,7 +365,7 @@ void profilePerformance(const ProfileConfig & config)
   // Main profiling loop
   for (int target_count = config.min_count; target_count <= config.max_count;
        target_count += config.step) {
-    TrackingScenarioConfig params;
+    ScenarioParams params;
     config.config_updater(params, target_count);
 
     FunctionTimings total_timings;
@@ -396,7 +396,7 @@ void profilePerformanceVsCarCount()
       5,     // step
       5,     // iterations_per_count
       5.0f,  // simulation_duration
-      [](TrackingScenarioConfig & params, int target_count) {
+      [](ScenarioParams & params, int target_count) {
         params.pedestrian_clusters = 0;  // No pedestrians in this profile
         params.pedestrians_per_cluster = 0;
         params.num_lanes = std::max(1, target_count / 20);
@@ -416,7 +416,7 @@ void profilePerformanceVsPedestrianCount()
       5,     // step
       5,     // iterations_per_count
       5.0f,  // simulation_duration
-      [](TrackingScenarioConfig & params, int target_count) {
+      [](ScenarioParams & params, int target_count) {
         params.num_lanes = 0;  // No cars in this profile
         params.cars_per_lane = 0;
         params.pedestrian_clusters = std::max(1, target_count / 5);
@@ -436,7 +436,7 @@ void profilePerformanceVsUnknownObjectCount()
       5,     // step
       5,     // iterations_per_count
       5.0f,  // simulation_duration
-      [](TrackingScenarioConfig & params, int target_count) {
+      [](ScenarioParams & params, int target_count) {
         params.num_lanes = 0;  // No cars in this profile
         params.cars_per_lane = 0;
         params.pedestrian_clusters = 0;  // No pedestrians in this profile
@@ -470,10 +470,10 @@ TEST_F(MultiObjectTrackerTest, DISABLED_PerformanceVsUnknownObjectCount)
   profilePerformanceVsUnknownObjectCount();
 }
 
-TEST_F(MultiObjectTrackerTest, DISABLED_UnknownMergeTest)
+TEST_F(MultiObjectTrackerTest, DISABLED_AssociationTest)  // NOLINT
 {
   // This test checks the merging of unknown objects with existing cars
-  runUnknownsTest();
+  runAssociationTest();
 }
 
 TEST_F(MultiObjectTrackerTest, SimulatedDataPerformanceTest)

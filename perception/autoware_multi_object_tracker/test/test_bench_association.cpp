@@ -11,18 +11,18 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "merge_test_bench.hpp"
+#include "test_bench_association.hpp"
 
 #include <cmath>
 #include <string>
 #include <vector>
 
-MergeTestBench::MergeTestBench(const TrackingScenarioConfig & params) : TrackingTestBench(params)
+TestBenchAssociation::TestBenchAssociation(const ScenarioParams & params) : TestBench(params)
 {
   angular_velocity_ = 0.2f;  // rad/s - base angular velocity
 }
 
-void MergeTestBench::initializeObjects()
+void TestBenchAssociation::initializeObjects()
 {
   // Define radii for concentric circles
   std::vector<float> circle_radii = {10.0f, 15.0f, 20.0f, 25.0f, 30.0f, 35.0f,
@@ -58,10 +58,10 @@ void MergeTestBench::initializeObjects()
 }
 
 // Keep unknowns stuck near cars
-autoware::multi_object_tracker::types::DynamicObjectList MergeTestBench::generateDetections(
+autoware::multi_object_tracker::types::DynamicObjectList TestBenchAssociation::generateDetections(
   const rclcpp::Time & stamp)
 {
-  auto detections = TrackingTestBench::generateDetections(stamp);
+  auto detections = TestBench::generateDetections(stamp);
 
   // Update unknowns to follow their car (with no speed of their own)
   for (auto & [unk_id, state] : unknown_states_) {
@@ -87,7 +87,7 @@ autoware::multi_object_tracker::types::DynamicObjectList MergeTestBench::generat
 }
 
 // Helper to spawn a car
-void MergeTestBench::addNewCar(
+void TestBenchAssociation::addNewCar(
   const std::string & id, float x, float y, float speed_x, float speed_y)
 {
   ObjectState state;
@@ -100,7 +100,8 @@ void MergeTestBench::addNewCar(
 }
 
 // Helper to spawn unknown near a car
-void MergeTestBench::addNewUnknownNearCar(const std::string & car_id, const std::string & unk_id)
+void TestBenchAssociation::addNewUnknownNearCar(
+  const std::string & car_id, const std::string & unk_id)
 {
   const auto & car_state = car_states_[car_id];
   UnknownObjectState state;
@@ -133,7 +134,7 @@ void MergeTestBench::addNewUnknownNearCar(const std::string & car_id, const std:
 }
 
 // Update car positions in circular motion
-void MergeTestBench::updateCarStates(float dt)
+void TestBenchAssociation::updateCarStates(float dt)
 {
   for (auto & [car_id, state] : car_states_) {
     if (car_radius_.count(car_id)) {

@@ -89,7 +89,7 @@ struct UnknownObjectParams
   float shape_change_prob = 0.4f;
   float max_evolution_noise = 0.2f;
 };
-struct TrackingScenarioConfig
+struct ScenarioParams
 {
   int num_lanes = 8;                           // 5 lanes
   int cars_per_lane = 20;                      // 20 cars per lane
@@ -136,14 +136,14 @@ autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig();
 
 std::vector<autoware::multi_object_tracker::types::InputChannel> createInputChannelsConfig();
 
-class TrackingTestBench
+class TestBench
 {
 protected:
   const float GRID_SIZE = 15.0f;  // Larger than max car length
   std::unordered_map<uint64_t, std::vector<std::string>> spatial_grid_;
 
   UnknownObjectParams unknown_params_;
-  TrackingScenarioConfig params_;  // store params for later use
+  ScenarioParams params_;  // store params for later use
 
   uint64_t getGridKey(float x, float y) const;
 
@@ -152,7 +152,7 @@ protected:
   bool checkCollisions(const std::string & id);
 
 public:
-  explicit TrackingTestBench(const TrackingScenarioConfig & params)
+  explicit TestBench(const ScenarioParams & params)
   : unknown_params_(params.unknown_params),
     params_(params),
     base_time_(rclcpp::Clock().now(), RCL_ROS_TIME),

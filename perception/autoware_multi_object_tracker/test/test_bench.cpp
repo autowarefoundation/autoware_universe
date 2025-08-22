@@ -224,12 +224,12 @@ bool isOverlapping(const ObjectState & obj1, const ObjectState & obj2)
          (obj1_bottom < obj2_top);
 }
 
-uint64_t TrackingTestBench::getGridKey(float x, float y) const
+uint64_t TestBench::getGridKey(float x, float y) const
 {
   return (static_cast<uint64_t>(x / GRID_SIZE) << 32) | static_cast<uint32_t>(y / GRID_SIZE);
 }
 
-void TrackingTestBench::updateGrid(const std::string & id, bool remove_first)
+void TestBench::updateGrid(const std::string & id, bool remove_first)
 {
   // Map to store the previous cell key for each object ID
   static std::unordered_map<std::string, uint64_t> previous_cell_keys;
@@ -252,7 +252,7 @@ void TrackingTestBench::updateGrid(const std::string & id, bool remove_first)
   previous_cell_keys[id] = key;
 }
 
-bool TrackingTestBench::checkCollisions(const std::string & id)
+bool TestBench::checkCollisions(const std::string & id)
 {
   auto & car = car_states_[id];
   auto center_key = getGridKey(car.pose.position.x, car.pose.position.y);
@@ -296,7 +296,7 @@ bool isConvex(const std::vector<geometry_msgs::msg::Point> & polygon)
   return true;
 }
 
-autoware::multi_object_tracker::types::DynamicObjectList TrackingTestBench::generateDetections(
+autoware::multi_object_tracker::types::DynamicObjectList TestBench::generateDetections(
   const rclcpp::Time & stamp)
 {
   const double dt = (stamp - last_stamp_).seconds();
@@ -473,7 +473,7 @@ autoware::multi_object_tracker::types::DynamicObjectList TrackingTestBench::gene
   }
   return detections;
 }
-void TrackingTestBench::updateCarStates(float dt)
+void TestBench::updateCarStates(float dt)
 {
   for (auto & [id, state] : car_states_) {
     // Update state
@@ -498,7 +498,7 @@ void TrackingTestBench::updateCarStates(float dt)
     state.pose.position.x += lateral_drift_(rng_) * dt;
   }
 }
-void TrackingTestBench::initializeObjects()
+void TestBench::initializeObjects()
 {
   // Initialize cars
   for (int lane = 0; lane < params_.num_lanes; ++lane) {
@@ -553,7 +553,7 @@ void TrackingTestBench::initializeObjects()
     addNewUnknown(id, x, y);
   }
 }
-void TrackingTestBench::setOrientationFromVelocity(
+void TestBench::setOrientationFromVelocity(
   const geometry_msgs::msg::Twist & twist, geometry_msgs::msg::Pose & pose)
 {
   const double velocity_magnitude =
@@ -572,8 +572,7 @@ void TrackingTestBench::setOrientationFromVelocity(
     pose.orientation.w = 1.0;
   }
 }
-void TrackingTestBench::addNewCar(
-  const std::string & id, float x, float y, float speed_x, float speed_y)
+void TestBench::addNewCar(const std::string & id, float x, float y, float speed_x, float speed_y)
 {
   ObjectState state;
   state.twist.linear.x = speed_x;
@@ -587,7 +586,7 @@ void TrackingTestBench::addNewCar(
   updateGrid(id);
 }
 
-void TrackingTestBench::addNewPedestrian(const std::string & id, float x, float y)
+void TestBench::addNewPedestrian(const std::string & id, float x, float y)
 {
   ObjectState state;
   state.twist.linear.x = pedestrian_speed_dist_(rng_) * cos_dist_(rng_);
@@ -600,7 +599,7 @@ void TrackingTestBench::addNewPedestrian(const std::string & id, float x, float 
   pedestrian_states_[id] = state;
 }
 
-void TrackingTestBench::addNewUnknown(const std::string & id, float x, float y)
+void TestBench::addNewUnknown(const std::string & id, float x, float y)
 {
   UnknownObjectState state;
   state.pose.position.x = x;
@@ -625,7 +624,7 @@ void TrackingTestBench::addNewUnknown(const std::string & id, float x, float y)
   unknown_states_[id] = state;
 }
 
-void TrackingTestBench::generateClusterFootprint(
+void TestBench::generateClusterFootprint(
   float base_size, std::vector<geometry_msgs::msg::Point> & footprint)
 {
   const int num_points = point_count_dist_(rng_);
@@ -640,7 +639,7 @@ void TrackingTestBench::generateClusterFootprint(
   }
 }
 
-void TrackingTestBench::updateUnknownShape(UnknownObjectState & state)
+void TestBench::updateUnknownShape(UnknownObjectState & state)
 {
   state.previous_footprint = state.current_footprint;
 
