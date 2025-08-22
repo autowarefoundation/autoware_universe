@@ -45,7 +45,7 @@ evaluator/autoware_planning_evaluator/** kosuke.takeuchi@tier4.jp kyoichi.sugaha
 evaluator/autoware_scenario_simulator_v2_adapter/** junya.sasaki@tier4.jp kyoichi.sugahara@tier4.jp maxime.clement@tier4.jp takamasa.horibe@tier4.jp temkei.kem@tier4.jp
 examples/autoware_diagnostic_graph_test_examples/** isamu.takagi@tier4.jp
 launch/tier4_autoware_api_launch/** isamu.takagi@tier4.jp ryohsuke.mitsudome@tier4.jp
-launch/tier4_control_launch/** takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
+launch/tier4_control_launch/** kyoichi.sugahara@tier4.jp satoshi.ota@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp takumi.odashima@tier4.jp
 launch/tier4_localization_launch/** anh.nguyen.2@tier4.jp kento.yabuuchi.2@tier4.jp masahiro.sakamoto@tier4.jp ryu.yamamoto@tier4.jp shintaro.sakoda@tier4.jp taiki.yamada@tier4.jp yamato.ando@tier4.jp
 launch/tier4_map_launch/** anh.nguyen.2@tier4.jp kento.yabuuchi.2@tier4.jp masahiro.sakamoto@tier4.jp ryu.yamamoto@tier4.jp shintaro.sakoda@tier4.jp taiki.yamada@tier4.jp yamato.ando@tier4.jp
 launch/tier4_perception_launch/** masato.saeki@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
@@ -71,6 +71,7 @@ localization/yabloc/yabloc_pose_initializer/** anh.nguyen.2@tier4.jp kento.yabuu
 map/autoware_map_tf_generator/** anh.nguyen.2@tier4.jp kento.yabuuchi.2@tier4.jp masahiro.sakamoto@tier4.jp ryu.yamamoto@tier4.jp shintaro.sakoda@tier4.jp taiki.yamada@tier4.jp yamato.ando@tier4.jp
 perception/autoware_bevfusion/** amadeusz.szymko.2@tier4.jp kenzo.lobos@tier4.jp kokseang.tan@tier4.jp kotaro.uetake@tier4.jp masato.saeki@tier4.jp
 perception/autoware_bytetrack/** lei.gu@tier4.jp manato.hirabayashi@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp
+perception/autoware_camera_streampetr/** samratthapa120@gmail.com
 perception/autoware_cluster_merger/** dai.nguyen@tier4.jp lei.gu@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 perception/autoware_compare_map_segmentation/** abrahammonrroy@yahoo.com akihisa.nagata@tier4.jp dai.nguyen@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 perception/autoware_crosswalk_traffic_light_estimator/** masato.saeki@tier4.jp satoshi.ota@tier4.jp taekjin.lee@tier4.jp tao.zhong@tier4.jp yoshi.ri@tier4.jp
