@@ -32,8 +32,9 @@
   <arg name="planning_validator_trajectory_checker_param_path"/>
   <arg name="planning_validator_intersection_collision_checker_param_path"/>
   <arg name="planning_validator_rear_collision_checker_param_path"/>
-  <arg name="input_trajectory" default="/planning/scenario_planning/velocity_smoother/trajectory"/>
-  <arg name="input_pointcloud" default="/perception/obstacle_segmentation/pointcloud"/>
+  <arg name="input_trajectory_topic_name" default="/planning/scenario_planning/velocity_smoother/trajectory"/>
+  <arg name="input_objects_topic_name" default="/perception/object_recognition/objects"/>
+  <arg name="input_pointcloud_topic_name" default="/perception/obstacle_segmentation/pointcloud"/>
   <arg name="input_route_topic_name" default="/planning/mission_planning/route"/>
   <arg name="input_vector_map_topic_name" default="/map/vector_map"/>
   <arg name="output_trajectory" default="/planning/trajectory"/>
@@ -42,8 +43,9 @@
     <node_container pkg="rclcpp_components" exec="$(var container_type)" name="planning_validator_container" namespace="" args="" output="both">
       <composable_node pkg="autoware_glog_component" plugin="autoware::glog_component::GlogComponent" name="glog_component" namespace=""/>
       <composable_node pkg="autoware_planning_validator" plugin="autoware::planning_validator::PlanningValidatorNode" name="planning_validator" namespace="">
-        <remap from="~/input/pointcloud" to="$(var input_pointcloud)"/>
-        <remap from="~/input/trajectory" to="$(var input_trajectory)"/>
+        <remap from="~/input/objects" to="$(var input_objects_topic_name)"/>
+        <remap from="~/input/pointcloud" to="$(var input_pointcloud_topic_name)"/>
+        <remap from="~/input/trajectory" to="$(var input_trajectory_topic_name)"/>
         <remap from="~/input/lanelet_map_bin" to="$(var input_vector_map_topic_name)"/>
         <remap from="~/input/route" to="$(var input_route_topic_name)"/>
         <remap from="~/input/kinematics" to="/localization/kinematic_state"/>
