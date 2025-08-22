@@ -13,7 +13,7 @@
     buffer_size_gyro: 200 # size of the buffer to store gyro data
     alpha_ndt_rate: 0.6 # complementary filter coefficient for ndt rate
     # if alpha_ndt or alpha_gyro changes it is necessary to tune delay_gyro_ms
-    # with the purpose of match the ndt rate and gyro rate 
+    # with the purpose of match the ndt rate and gyro rate
 
     ekf_rate:
       max_variance_p: 1e-8 # initial variance
