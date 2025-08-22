@@ -263,8 +263,18 @@ void RadarObjectsAdapter::parse_as_detections(
   for (const auto & input_object : input_msg.objects) {
     autoware_perception_msgs::msg::DetectedObject output_object;
 
+    // Populate common fields
     const auto & yaw = input_object.orientation;
     populate_common_fields(input_object, output_object, yaw);
+
+    // Set flags for kinematics
+    output_object.kinematics.has_position_covariance = true;
+    output_object.kinematics.orientation_availability =
+      autoware_perception_msgs::msg::DetectedObjectKinematics::AVAILABLE;
+    output_object.kinematics.has_twist = true;
+    output_object.kinematics.has_twist_covariance = true;
+
+    // Set classification
     populate_classifications(input_object.classifications, output_object.classification);
 
     output_msg.objects.push_back(output_object);
@@ -298,8 +308,18 @@ void RadarObjectsAdapter::parse_as_tracks(
       }
     }
 
+    // Populate common fields
     const auto & yaw = input_object.orientation;
     populate_common_fields(input_object, output_object, yaw);
+
+    // Set flags for kinematics
+    output_object.kinematics.orientation_availability =
+      autoware_perception_msgs::msg::TrackedObjectKinematics::AVAILABLE;
+    output_object.kinematics.is_stationary =
+      input_object.movement_status !=
+      autoware_sensing_msgs::msg::RadarObject::MOVEMENT_STATUS_DYNAMIC;
+
+    // Populate classification
     populate_classifications(input_object.classifications, output_object.classification);
 
     output_msg.objects.push_back(output_object);
