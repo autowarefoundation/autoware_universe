@@ -4,6 +4,8 @@
   <arg name="input_virtual_traffic_light_topic_name" default="/awapi/tmp/virtual_traffic_light_states"/>
   <arg name="input_vector_map_topic_name" default="/map/vector_map"/>
   <arg name="input_pointcloud_map_topic_name" default="/map/pointcloud_map"/>
+  <arg name="input_objects_topic_name" default="/perception/object_recognition/objects"/>
+  <arg name="input_pointcloud_topic_name" default="/perception/obstacle_segmentation/pointcloud"/>
   <arg name="enable_all_modules_auto_mode"/>
   <arg name="is_simulation"/>
 
@@ -183,8 +185,8 @@
       <remap from="~/input/vector_map" to="$(var input_vector_map_topic_name)"/>
       <remap from="~/input/vehicle_odometry" to="/localization/kinematic_state"/>
       <remap from="~/input/accel" to="/localization/acceleration"/>
-      <remap from="~/input/dynamic_objects" to="/perception/object_recognition/objects"/>
-      <remap from="~/input/no_ground_pointcloud" to="/perception/obstacle_segmentation/pointcloud"/>
+      <remap from="~/input/dynamic_objects" to="$(var input_objects_topic_name)"/>
+      <remap from="~/input/no_ground_pointcloud" to="$(var input_pointcloud_topic_name)"/>
       <remap from="~/input/compare_map_filtered_pointcloud" to="compare_map_filtered/pointcloud"/>
       <remap from="~/input/vector_map_inside_area_filtered_pointcloud" to="vector_map_inside_area_filtered/pointcloud"/>
       <remap from="~/input/external_velocity_limit_mps" to="/planning/scenario_planning/max_velocity_default"/>
@@ -230,7 +232,7 @@
       <composable_node pkg="autoware_behavior_path_planner" plugin="autoware::behavior_path_planner::BehaviorPathPlannerNode" name="behavior_path_planner" namespace="">
         <remap from="~/input/route" to="$(var input_route_topic_name)"/>
         <remap from="~/input/vector_map" to="$(var input_vector_map_topic_name)"/>
-        <remap from="~/input/perception" to="/perception/object_recognition/objects"/>
+        <remap from="~/input/perception" to="$(var input_objects_topic_name)"/>
         <remap from="~/input/occupancy_grid_map" to="/perception/occupancy_grid_map/map"/>
         <remap from="~/input/costmap" to="/planning/scenario_planning/parking/costmap_generator/occupancy_grid"/>
         <remap from="~/input/traffic_signals" to="$(var input_traffic_light_topic_name)"/>
@@ -299,7 +301,7 @@
         <remap from="map" to="$(var input_pointcloud_map_topic_name)"/>
         <remap from="kinematic_state" to="/localization/kinematic_state"/>
         <remap from="map_loader_service" to="/map/get_differential_pointcloud_map"/>
-        <remap from="input" to="/perception/obstacle_segmentation/pointcloud"/>
+        <remap from="input" to="$(var input_pointcloud_topic_name)"/>
         <remap from="output" to="compare_map_filtered/pointcloud"/>
         <!-- params -->
         <param from="$(var compare_map_filter_param_path)"/>
