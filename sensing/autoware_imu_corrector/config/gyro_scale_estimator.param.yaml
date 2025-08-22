@@ -1,33 +1,39 @@
 /**:
   ros__parameters:
     estimate_scale_init: 1.0 # initial scale estimation for scale
-    ekf_variance_p: 1e-8 # 0.001 # initial variance
-    ekf_variance_p_after: 5e-9
-    ekf_process_noise_q: 1e-14 #1e-10 # 1e-12 # 3e-12 # 3e-11 # estimated process noise
-    ekf_process_noise_q_after: 1e-15
-    ekf_measurement_noise_r: 0.00007 #0.005 # 0.0002 # 0.00002 # 0.00000002 # 0.000005 # device measurement noise
-    ekf_measurement_noise_r_after: 0.00005 #0.005
     min_allowed_scale: 0.9 # minimum allowed scale
     max_allowed_scale: 1.1 # maximum allowed scale
-    scale_on_purpose: 1.0 # scale to apply on purpose
-    bias_on_purpose: 0.00 # bias to apply on purpose
-    drift_scale: 0.0000000 # 0.0001 # scale to apply on purpose for drift
-    drift_bias: 0.000000 # 0.000001 # bias to apply on purpose for drift
-    alpha: 0.99 # 0.99 # 0.98
-    alpha_ndt_rate: 0.6 #0.55 # 0.65 # 0.45 # 0.65
     threshold_to_estimate_scale: 0.1 # angular speed radians
     percentage_scale_rate_allow_correct: 0.04 # scale changes above this value will trigger error
-    warning_covariance: 3e-9
-    min_covariance: 1e-11
-    alpha_gyro: 0.0
+    alpha: 0.99 # complementary filter coefficient
     delay_gyro_ms: 170 # tuned for vehicle
-    samples_to_init: 120
-    samples_to_average_delta: 3
-    samples_filter_pose_rate: 2
-    samples_filter_gyro_rate: 6
+    samples_filter_pose_rate: 2 # tuned for vehicle
+    samples_filter_gyro_rate: 6 # tuned for vehicle
+    alpha_gyro: 0.0 # gyro low pass filter coefficient
     buffer_size_gyro: 200 # size of the buffer to store gyro data
-    ekf_process_noise_q_angle: 1e-12
-    ekf_variance_p_angle: 5e-9
-    ekf_measurement_noise_r_angle: 0.00005
-    min_covariance_angle: 1e-11 # minimum covariance for angle estimation
-    decay_coefficient: 0.99999998 # decay coefficient for EKF
+    alpha_ndt_rate: 0.6 # complementary filter coefficient for ndt rate
+    # if alpha_ndt or alpha_gyro changes it is necessary to tune delay_gyro_ms
+    # with the purpose of match the ndt rate and gyro rate 
+
+    ekf_rate:
+      max_variance_p: 1e-8 # initial variance
+      variance_p_after: 5e-9 # variance after convergence
+      process_noise_q: 1e-14 # estimated process noise
+      process_noise_q_after: 1e-15 # process noise after convergence
+      measurement_noise_r: 0.00007 # device measurement noise
+      measurement_noise_r_after: 0.00005 # measurement noise after convergence
+      samples_to_init: 120 # number of samples to update faster filtered scale
+      min_covariance: 1e-11 # minimum allowed covariance for scale estimation
+
+    ekf_angle:
+      process_noise_q_angle: 1e-12 # process noise for angle estimation
+      variance_p_angle: 5e-9 # initial variance for angle estimation
+      measurement_noise_r_angle: 0.00005 # measurement noise for angle estimation
+      min_covariance_angle: 1e-11 # minimum covariance for angle estimation
+      decay_coefficient: 0.99999998 # decay coefficient for EKF
+
+    scale_imu_injection:
+      scale_on_purpose: 1.0 # scale to apply on purpose
+      bias_on_purpose: 0.00 # bias to apply on purpose
+      drift_scale: 0.0000000 # scale to apply on purpose for drift
+      drift_bias: 0.000000 # bias to apply on purpose for drift

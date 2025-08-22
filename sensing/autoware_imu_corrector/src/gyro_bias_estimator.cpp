@@ -35,36 +35,16 @@ GyroBiasEstimator::GyroBiasEstimator(const rclcpp::NodeOptions & options)
   diagnostics_updater_interval_sec_(declare_parameter<double>("diagnostics_updater_interval_sec")),
   straight_motion_ang_vel_upper_limit_(
     declare_parameter<double>("straight_motion_ang_vel_upper_limit")),
-  estimate_scale_init_(declare_parameter<double>("estimate_scale_init")),
-  ekf_variance_p_(declare_parameter<double>("ekf_variance_p")),
-  ekf_variance_p_after_(declare_parameter<double>("ekf_variance_p_after")),
-  ekf_process_noise_q_(declare_parameter<double>("ekf_process_noise_q")),
-  ekf_process_noise_q_after_(declare_parameter<double>("ekf_process_noise_q_after")),
-  ekf_measurement_noise_r_(declare_parameter<double>("ekf_measurement_noise_r")),
-  ekf_measurement_noise_r_after_(declare_parameter<double>("ekf_measurement_noise_r_after")),
   min_allowed_scale_(declare_parameter<double>("min_allowed_scale")),
   max_allowed_scale_(declare_parameter<double>("max_allowed_scale")),
-  scale_on_purpose_(declare_parameter<double>("scale_on_purpose")),
-  bias_on_purpose_(declare_parameter<double>("bias_on_purpose")),
-  drift_scale_(declare_parameter<double>("drift_scale")),
-  drift_bias_(declare_parameter<double>("drift_bias")),
   alpha_(declare_parameter<double>("alpha")),
   alpha_ndt_rate_(declare_parameter<double>("alpha_ndt_rate")),
   threshold_to_estimate_scale_(declare_parameter<double>("threshold_to_estimate_scale")),
   percentage_scale_rate_allow_correct_(
     declare_parameter<double>("percentage_scale_rate_allow_correct")),
-  warning_covariance_(declare_parameter<double>("warning_covariance")),
-  min_covariance_(declare_parameter<double>("min_covariance")),
-  min_covariance_angle_(declare_parameter<double>("min_covariance_angle")),
   alpha_gyro_(declare_parameter<double>("alpha_gyro")),
-  ekf_process_noise_q_angle_(declare_parameter<double>("ekf_process_noise_q_angle")),
-  ekf_variance_p_angle_(declare_parameter<double>("ekf_variance_p_angle")),
-  ekf_measurement_noise_r_angle_(declare_parameter<double>("ekf_measurement_noise_r_angle")),
-  decay_coefficient_(declare_parameter<double>("decay_coefficient")),
   delay_gyro_ms_(declare_parameter<int>("delay_gyro_ms")),
-  samples_to_init_(declare_parameter<int>("samples_to_init")),
   buffer_size_gyro_(declare_parameter<int>("buffer_size_gyro")),
-  samples_to_average_delta_(declare_parameter<int>("samples_to_average_delta")),
   samples_filter_pose_rate_(declare_parameter<int>("samples_filter_pose_rate")),
   samples_filter_gyro_rate_(declare_parameter<int>("samples_filter_gyro_rate")),
   ndt_yaw_rate_(0.0),
@@ -100,7 +80,6 @@ GyroBiasEstimator::GyroBiasEstimator(const rclcpp::NodeOptions & options)
     create_publisher<Vector3Stamped>("~/output/scale_vector_debug", rclcpp::SensorDataQoS());
   new_scale_debug_pub_ =
     create_publisher<Vector3Stamped>("~/output/new_scale_vector_debug", rclcpp::SensorDataQoS());
-
   imu_scaled_pub_ = create_publisher<Imu>("~/output/imu_scaled", rclcpp::QoS{1});
 
   auto bound_timer_callback = std::bind(&GyroBiasEstimator::timer_callback, this);
@@ -136,30 +115,50 @@ GyroBiasEstimator::GyroBiasEstimator(const rclcpp::NodeOptions & options)
     gyro_info_.scale_status_summary = "OK";
     gyro_info_.scale_summary_message = "Not initialized";
   }
+
   // EKF variables initialization
-  ekf_rate_.estimated_scale_rate_ = estimate_scale_init_;
-  ekf_rate_.p_ = ekf_variance_p_;
-  ekf_rate_.q_ = ekf_process_noise_q_;
-  ekf_rate_.r_ = ekf_measurement_noise_r_ * ekf_measurement_noise_r_;
-  ekf_rate_.filtered_scale_rate_ = estimate_scale_init_;
-  ekf_rate_.ekf_variance_ = ekf_variance_p_;
-  ekf_rate_.big_change_detect_ = 0;
+  double initial_scale = declare_parameter<double>("estimate_scale_init");
+  double noise_ekf_r = declare_parameter<double>("ekf_rate.measurement_noise_r");
+  ekf_rate_.max_variance_ = declare_parameter<double>("ekf_rate.max_variance_p");
+  ekf_rate_.min_covariance_ = declare_parameter<double>("ekf_rate.min_covariance");
+  ekf_rate_.estimated_scale_rate_ = initial_scale;
+  ekf_rate_.p_ = ekf_rate_.max_variance_;
+  ekf_rate_.q_ = declare_parameter<double>("ekf_rate.process_noise_q");
+  ekf_rate_.variance_p_after_ =
+    declare_parameter<double>("ekf_rate.variance_p_after");
+  ekf_rate_.measurement_noise_r_after_ =
+    declare_parameter<double>("ekf_rate.measurement_noise_r_after");
+  ekf_rate_.r_ = noise_ekf_r * noise_ekf_r;
+  ekf_rate_.filtered_scale_rate_ = initial_scale;
+  ekf_rate_.process_noise_q_after_ =
+    declare_parameter<double>("ekf_rate.process_noise_q_after");
+  ekf_rate_.samples_to_init_ =
+    declare_parameter<int>("ekf_rate.samples_to_init");
   ekf_rate_.filtered_scale_initialized_ = false;
+  ekf_rate_.big_change_detect_ = 0;
 
-  ekf_angle_.x_state_(0) = 0.0;
-  ekf_angle_.x_state_(1) = estimate_scale_init_;
-  ekf_angle_.estimated_scale_angle_ = estimate_scale_init_;
-  ekf_angle_.p_angle_ << ekf_variance_p_angle_, 0, 0, ekf_variance_p_angle_;
-  ekf_angle_.q_angle_ << 0, 0, 0, ekf_process_noise_q_angle_;
-  ekf_angle_.r_angle_ << ekf_measurement_noise_r_angle_ * ekf_measurement_noise_r_angle_;
-  ekf_angle_.filtered_scale_angle_ = estimate_scale_init_;
+  ekf_angle_.x_state_(0) = 0.0; // angle
+  ekf_angle_.x_state_(1) = initial_scale; // estimated scale
+  ekf_angle_.estimated_scale_angle_ = initial_scale;
+  ekf_angle_.max_variance_p_angle_ =
+    declare_parameter<double>("ekf_angle.variance_p_angle");
+  double noise_ekf_r_angle =
+    declare_parameter<double>("ekf_angle.measurement_noise_r_angle");
+  ekf_angle_.p_angle_ << ekf_angle_.max_variance_p_angle_, 0, 0, ekf_angle_.max_variance_p_angle_;
+  ekf_angle_.q_angle_ << 0, 0, 0, declare_parameter<double>("ekf_angle.process_noise_q_angle");
+  ekf_angle_.r_angle_ << noise_ekf_r_angle * noise_ekf_r_angle;
+  ekf_angle_.filtered_scale_angle_ = initial_scale;
   ekf_angle_.has_gyro_yaw_angle_init_ = false;
+  ekf_angle_.min_covariance_angle_ =
+    declare_parameter<double>("ekf_angle.min_covariance_angle");
+  ekf_angle_.decay_coefficient_ =
+    declare_parameter<double>("ekf_angle.decay_coefficient");
 
-  scale_imu_.final_scale_on_purpose_ = scale_on_purpose_;
-  scale_imu_.final_bias_on_purpose_ = bias_on_purpose_;
-  scale_imu_.scale_final_ = scale_on_purpose_;
-  scale_imu_.bias_final_ = bias_on_purpose_;
-
+  scale_imu_.drift_scale_ = declare_parameter<double>("scale_imu_injection.drift_scale");
+  scale_imu_.drift_bias_ = declare_parameter<double>("scale_imu_injection.drift_bias");
+  scale_imu_.scale_final_ = declare_parameter<double>("scale_imu_injection.scale_on_purpose");
+  scale_imu_.bias_final_ = declare_parameter<double>("scale_imu_injection.bias_on_purpose");
+  
   start_time_check_scale_ = this->now();
   last_time_rx_pose_ = this->now();
   last_time_rx_imu_ = this->now();
@@ -187,10 +186,8 @@ void GyroBiasEstimator::callback_imu(const Imu::ConstSharedPtr imu_msg_ptr)
   }
 
   // Add bias and scale on purpose
-  scale_imu_.scale_final_ += drift_scale_;
-  scale_imu_.bias_final_ += drift_bias_;
-  scale_imu_.final_scale_on_purpose_ = scale_imu_.scale_final_;
-  scale_imu_.final_bias_on_purpose_ = scale_imu_.bias_final_;
+  scale_imu_.scale_final_ += scale_imu_.drift_scale_;
+  scale_imu_.bias_final_ += scale_imu_.drift_bias_;
   Imu imu_msg_mod = *imu_msg_ptr;
 
   imu_msg_mod.header.stamp = this->now();
@@ -219,19 +216,19 @@ void GyroBiasEstimator::callback_imu(const Imu::ConstSharedPtr imu_msg_ptr)
   // Filter gyro data
   gyro_yaw_rate_ = alpha_gyro_ * gyro_yaw_rate_ + (1 - alpha_gyro_) * gyro.vector.z;
 
-  // EKF always update ekf_rate_.p_
+  // EKF always update p_
   ekf_rate_.p_ = ekf_rate_.p_ + ekf_rate_.q_;
 
   if (gyro_info_.scale_status != diagnostic_msgs::msg::DiagnosticStatus::ERROR) {
-    if (ekf_rate_.p_ > ekf_rate_.ekf_variance_) {
-      ekf_rate_.p_ = ekf_rate_.ekf_variance_;
+    if (ekf_rate_.p_ > ekf_rate_.max_variance_) {
+      ekf_rate_.p_ = ekf_rate_.max_variance_;
       gyro_info_.scale_summary_message =
         "Covariance is high, scale estimation hasn't been updated for a while";
       gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::WARN;
       gyro_info_.scale_status_summary = "WARN";
     }
-    if (ekf_rate_.p_ < min_covariance_) {
-      ekf_rate_.p_ = min_covariance_;
+    if (ekf_rate_.p_ < ekf_rate_.min_covariance_) {
+      ekf_rate_.p_ = ekf_rate_.min_covariance_;
       gyro_info_.scale_summary_message = "limiting covariance";
       gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::WARN;
       gyro_info_.scale_status_summary = "WARN";
@@ -244,21 +241,21 @@ void GyroBiasEstimator::callback_imu(const Imu::ConstSharedPtr imu_msg_ptr)
       // Angle is updated here but restarted when angle from pose is received
       gyro_yaw_angle_ +=
         (ekf_angle_.x_state_(1) * (gyro.vector.z) - gyro_bias_not_rotated_.value().z) * dt_imu;
-      ekf_angle_.x_state_(1) = (ekf_angle_.x_state_(1) * decay_coefficient_);
+      ekf_angle_.x_state_(1) = (ekf_angle_.x_state_(1) * ekf_angle_.decay_coefficient_);
 
       // EKF update
       ekf_angle_.x_state_(0) = gyro_yaw_angle_;
       Eigen::Matrix2d f_matrix;
       f_matrix << 1, dt_imu * (gyro.vector.z - gyro_bias_not_rotated_.value().z), 0,
-        decay_coefficient_;
+        ekf_angle_.decay_coefficient_;
       ekf_angle_.p_angle_ =
         f_matrix * ekf_angle_.p_angle_ * f_matrix.transpose() + ekf_angle_.q_angle_;
 
       // Limit covariance
       ekf_angle_.p_angle_(0, 0) =
-        std::min(std::max(ekf_angle_.p_angle_(0, 0), min_covariance_angle_), ekf_variance_p_angle_);
+        std::min(std::max(ekf_angle_.p_angle_(0, 0), ekf_angle_.min_covariance_angle_), ekf_angle_.max_variance_p_angle_);
       ekf_angle_.p_angle_(1, 1) =
-        std::min(std::max(ekf_angle_.p_angle_(1, 1), min_covariance_angle_), ekf_variance_p_angle_);
+        std::min(std::max(ekf_angle_.p_angle_(1, 1), ekf_angle_.min_covariance_angle_), ekf_angle_.max_variance_p_angle_);
     }
     if (gyro_yaw_angle_ < -M_PI) {
       gyro_yaw_angle_ += 2.0 * M_PI;
@@ -318,13 +315,13 @@ void GyroBiasEstimator::publish_debug_vectors()
   const auto now_ts = this->now();
 
   new_vector_scale.header.stamp = now_ts;
-  new_vector_scale.vector.x = scale_imu_.final_scale_on_purpose_;
+  new_vector_scale.vector.x = scale_imu_.scale_final_;
   new_vector_scale.vector.y = ekf_rate_.filtered_scale_rate_;
   new_vector_scale.vector.z = 1.0 / ekf_angle_.filtered_scale_angle_;
   new_scale_debug_pub_->publish(new_vector_scale);
 
   scale_debug.header.stamp = now_ts;
-  scale_debug.vector.x = scale_imu_.final_scale_on_purpose_;
+  scale_debug.vector.x = scale_imu_.scale_final_;
   scale_debug.vector.y = ekf_rate_.estimated_scale_rate_;
   scale_debug.vector.z = ekf_rate_.filtered_scale_rate_;
   scale_debug_pub_->publish(scale_debug);
@@ -424,16 +421,16 @@ void GyroBiasEstimator::update_rate_ekf(
     // Initialize the slow phase after the first samples
     if (!ekf_rate_.filtered_scale_initialized_) {
       estimated_scale_buff_.push_back(ekf_rate_.estimated_scale_rate_);
-      if (estimated_scale_buff_.size() > static_cast<size_t>(samples_to_init_)) {
+      if (estimated_scale_buff_.size() > static_cast<size_t>(ekf_rate_.samples_to_init_)) {
         double average_est_scale =
           std::accumulate(estimated_scale_buff_.begin(), estimated_scale_buff_.end(), 0.0) /
           static_cast<double>(estimated_scale_buff_.size());
         ekf_rate_.filtered_scale_rate_ = average_est_scale;
         estimated_scale_buff_.clear();
         // Update parameters
-        ekf_rate_.ekf_variance_ = ekf_variance_p_after_;
-        ekf_rate_.r_ = ekf_measurement_noise_r_after_ * ekf_measurement_noise_r_after_;
-        ekf_rate_.q_ = ekf_process_noise_q_after_;
+        ekf_rate_.max_variance_ = ekf_rate_.variance_p_after_;
+        ekf_rate_.r_ = ekf_rate_.measurement_noise_r_after_ * ekf_rate_.measurement_noise_r_after_;
+        ekf_rate_.q_ = ekf_rate_.process_noise_q_after_;
         ekf_rate_.filtered_scale_initialized_ = true;
       }
     }

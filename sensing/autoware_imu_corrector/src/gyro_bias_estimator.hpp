@@ -98,36 +98,15 @@ private:
   const double diagnostics_updater_interval_sec_;
   const double straight_motion_ang_vel_upper_limit_;
 
-  const double estimate_scale_init_;
-  const double ekf_variance_p_;
-  const double ekf_variance_p_after_;
-  const double ekf_process_noise_q_;
-  const double ekf_process_noise_q_after_;
-  const double ekf_measurement_noise_r_;
-  const double ekf_measurement_noise_r_after_;
   const double min_allowed_scale_;
   const double max_allowed_scale_;
-  const double scale_on_purpose_;
-  const double bias_on_purpose_;
-  const double drift_scale_;
-  const double drift_bias_;
-
   const double alpha_;
   const double alpha_ndt_rate_;
   const double threshold_to_estimate_scale_;
   const double percentage_scale_rate_allow_correct_;
-  const double warning_covariance_;
-  const double min_covariance_;
-  const double min_covariance_angle_;
   const double alpha_gyro_;
-  const double ekf_process_noise_q_angle_;
-  const double ekf_variance_p_angle_;
-  const double ekf_measurement_noise_r_angle_;
-  const double decay_coefficient_;
   const int delay_gyro_ms_;
-  const int samples_to_init_;
   const int buffer_size_gyro_;
-  const int samples_to_average_delta_;
   const int samples_filter_pose_rate_;
   const int samples_filter_gyro_rate_;
 
@@ -187,10 +166,10 @@ private:
 
   struct ScaleImuSignal
   {
-    double final_bias_on_purpose_;
-    double final_scale_on_purpose_;
     double bias_final_;
     double scale_final_;
+    double drift_scale_;
+    double drift_bias_;
   };
 
   // EKF variables
@@ -204,10 +183,15 @@ private:
     double s_;
     double k_;
     double y_;
-    double ekf_variance_;
-    double ekf_measurement_noise_;
+    double max_variance_;
+    double min_covariance_;
+    double variance_p_after_;
+    double process_noise_q_after_;
+    double measurement_noise_;
+    double measurement_noise_r_after_;
     double filtered_scale_rate_;
     int big_change_detect_;
+    int samples_to_init_;
     bool filtered_scale_initialized_;
   };
   // double estimated_scale_;
@@ -218,8 +202,11 @@ private:
     Eigen::Matrix2d p_angle_;
     Eigen::Matrix2d q_angle_;
     Eigen::Matrix<double, 1, 1> r_angle_;
+    double max_variance_p_angle_;
+    double min_covariance_angle_;
     double filtered_scale_angle_;
     double estimated_scale_angle_;
+    double decay_coefficient_;
     bool has_gyro_yaw_angle_init_;
   };
 
