@@ -206,7 +206,7 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::initialize_strategy()
       "concatenation_info_topic", "/sensing/lidar/concatenated/pointcloud_info");
     sub_concatenation_info_ =
       this->create_subscription<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
-        concatenation_info_topic, 10,
+        concatenation_info_topic, rclcpp::SensorDataQoS().keep_last(10),
         std::bind(&FusionNode::concatenation_info_callback, this, std::placeholders::_1));
   } else {
     throw std::runtime_error("Matching strategy must be 'advanced' or 'naive'");
