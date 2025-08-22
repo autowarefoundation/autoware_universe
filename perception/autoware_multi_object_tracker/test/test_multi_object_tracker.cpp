@@ -80,6 +80,28 @@ FunctionTimings runIterationsAssociation(
   if (print_frame_stats) {
     printFrameStatsHeader();
   }
+  tf2_msgs::msg::TFMessage static_tf_msg;
+  if (write_bag) {
+    std::vector<geometry_msgs::msg::TransformStamped> static_transforms;
+
+    // Publish a default map frame transform (identity transform)
+    geometry_msgs::msg::TransformStamped map_transform;
+    map_transform.header.stamp = current_time;
+    map_transform.header.frame_id = "map";
+    map_transform.child_frame_id = "base_link";
+    map_transform.transform.translation.x = 0.0;
+    map_transform.transform.translation.y = 0.0;
+    map_transform.transform.translation.z = 0.0;
+    map_transform.transform.rotation.x = 0.0;
+    map_transform.transform.rotation.y = 0.0;
+    map_transform.transform.rotation.z = 0.0;
+    map_transform.transform.rotation.w = 1.0;
+    static_transforms.push_back(map_transform);
+    // Create TF message for /tf_static topic
+    ;
+    static_tf_msg.transforms = static_transforms;
+  }
+
   for (int i = 0; i < num_iterations; ++i) {
     direct_assignment.clear();
     reverse_assignment.clear();
@@ -111,7 +133,7 @@ FunctionTimings runIterationsAssociation(
     processor->getTrackedObjects(current_time, latest_tracked_objects);
 
     latest_tracked_objects.header.frame_id = "map";
-
+    writer.write(static_tf_msg, "/tf", current_time);
     writer.write(
       toDetectedObjectsMsg(detections), "/perception/object_recognition/detection/objects",
       current_time);
