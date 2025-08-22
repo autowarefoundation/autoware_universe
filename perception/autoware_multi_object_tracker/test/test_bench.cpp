@@ -413,6 +413,28 @@ void TestBench::addNoiseAndOrientation(
   setOrientationFromVelocity(state.twist, obj.pose);
 }
 
+void TestBench::updateUnknownState(UnknownObjectState & state, double dt)
+{
+  if (state.is_moving) {
+    state.pose.position.x += state.twist.linear.x * dt;
+    state.pose.position.y += state.twist.linear.y * dt;
+  }
+  // Random shape evolution (30% chance of significant change)
+  if (shape_change_dist_(rng_)) {
+    updateUnknownShape(state);
+  } else {
+    auto new_footprint = state.current_footprint;
+    // Minor shape variations
+    for (auto & point : new_footprint) {
+      point.x += shape_evolution_noise_(rng_);
+      point.y += shape_evolution_noise_(rng_);
+    }
+    if (isConvex(new_footprint)) {
+      state.current_footprint = new_footprint;
+    }
+  }
+}
+
 autoware::multi_object_tracker::types::DynamicObjectList TestBench::generateDetections(
   const rclcpp::Time & stamp)
 {
@@ -457,25 +479,8 @@ autoware::multi_object_tracker::types::DynamicObjectList TestBench::generateDete
     if (dropout_dist_(rng_)) continue;
 
     // Move if it's a moving unknown object
-    if (state.is_moving) {
-      state.pose.position.x += state.twist.linear.x * dt;
-      state.pose.position.y += state.twist.linear.y * dt;
-    }
+    updateUnknownState(state, dt);
 
-    // Random shape evolution (30% chance of significant change)
-    if (shape_change_dist_(rng_)) {
-      updateUnknownShape(state);
-    } else {
-      auto new_footprint = state.current_footprint;
-      // Minor shape variations
-      for (auto & point : new_footprint) {
-        point.x += shape_evolution_noise_(rng_);
-        point.y += shape_evolution_noise_(rng_);
-      }
-      if (isConvex(new_footprint)) {
-        state.current_footprint = new_footprint;
-      }
-    }
     // Create detection
     autoware::multi_object_tracker::types::DynamicObject obj;
     initializeUnknownObject(obj, id, stamp, state);

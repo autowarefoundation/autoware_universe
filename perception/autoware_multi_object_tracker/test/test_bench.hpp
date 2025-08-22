@@ -215,6 +215,7 @@ protected:
   virtual void addNewPedestrian(const std::string & id, float x, float y);
   virtual void addNewUnknown(const std::string & id, float x, float y);
   virtual void updateCarStates(float dt);
+  virtual void updateUnknownState(UnknownObjectState & state, double dt);
   // Functions to generate random shapes for unknown objects
   virtual void generateClusterFootprint(
     float base_size, std::vector<geometry_msgs::msg::Point> & footprint);
