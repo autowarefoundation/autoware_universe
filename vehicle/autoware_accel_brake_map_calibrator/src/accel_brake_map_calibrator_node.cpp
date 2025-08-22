@@ -1541,10 +1541,12 @@ void AccelBrakeMapCalibrator::publish_count_map()
 
   // input self pose (to max value / min value ) and publish this
   update_success_
-    ? count_map.at(static_cast<std::vector<int8_t>::size_type>(
-        nearest_pedal_idx * w + nearest_vel_idx)) = std::numeric_limits<int8_t>::max()
-    : count_map.at(static_cast<std::vector<int8_t>::size_type>(
-        nearest_pedal_idx * w + nearest_vel_idx)) = std::numeric_limits<int8_t>::min();
+    ? count_map.at(
+        static_cast<std::vector<int8_t>::size_type>(nearest_pedal_idx * w + nearest_vel_idx)) =
+        std::numeric_limits<int8_t>::max()
+    : count_map.at(
+        static_cast<std::vector<int8_t>::size_type>(nearest_pedal_idx * w + nearest_vel_idx)) =
+        std::numeric_limits<int8_t>::min();
   data_count_with_self_pose_pub_->publish(
     get_occ_msg("base_link", h, w, map_resolution_, count_map));
 }

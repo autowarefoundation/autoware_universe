@@ -124,8 +124,9 @@ void BidirectionalTrafficModule::updateData()
                       .build(previous_path.points);
 
   if (!trajectory) {
-    RCLCPP_ERROR(
-      getLogger(), "Failed to build trajectory in BidirectionalTrafficModule::updateData");
+    RCLCPP_WARN_THROTTLE(
+      getLogger(), *clock_, 5000,
+      "Failed to build trajectory in BidirectionalTrafficModule::updateData");
     return;
   }
 

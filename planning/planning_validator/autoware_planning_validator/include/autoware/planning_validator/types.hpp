@@ -53,20 +53,32 @@ using sensor_msgs::msg::PointCloud2;
 
 enum class InvalidTrajectoryHandlingType : uint8_t {
   PUBLISH_AS_IT_IS,
-  STOP_PUBLISHING,
   USE_PREVIOUS_RESULT,
+  USE_PREVIOUS_RESULT_WITH_SOFT_STOP,
 };
+
+inline InvalidTrajectoryHandlingType get_handling_type(const int value)
+{
+  switch (value) {
+    case 0:
+      return InvalidTrajectoryHandlingType::PUBLISH_AS_IT_IS;
+    case 1:
+      return InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT;
+    case 2:
+      return InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT_WITH_SOFT_STOP;
+    default:
+      throw std::invalid_argument{"invalid_handling_type (" + std::to_string(value) + ")"};
+  }
+}
 
 struct PlanningValidatorParams
 {
-  bool enable_soft_stop_on_prev_traj = true;
   bool publish_diag = true;
   bool display_on_terminal = true;
   double soft_stop_deceleration{};
   double soft_stop_jerk_lim{};
   int diag_error_count_threshold{};
-  InvalidTrajectoryHandlingType inv_traj_handling_type{};
-  InvalidTrajectoryHandlingType inv_traj_critical_handling_type{};
+  InvalidTrajectoryHandlingType default_handling_type{};
 };
 
 struct PlanningValidatorData
@@ -162,6 +174,7 @@ struct PlanningValidatorContext
     data = std::make_shared<PlanningValidatorData>();
     validation_status = std::make_shared<PlanningValidatorStatus>();
     diag_updater = std::make_shared<Updater>(node);
+    init_validation_status();
   }
 
   autoware::vehicle_info_utils::VehicleInfo vehicle_info;
@@ -183,52 +196,50 @@ struct PlanningValidatorContext
     }
   }
 
-  void set_diag_status(
-    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg,
-    const bool & is_critical = false)
-  {
-    if (is_ok) {
-      stat.summary(DiagnosticStatus::OK, "validated.");
-      return;
-    }
-
-    const bool only_warn = std::invoke([&]() {
-      const auto handling_type =
-        is_critical ? params.inv_traj_critical_handling_type : params.inv_traj_handling_type;
-      if (handling_type != InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT) {
-        return false;
-      }
-      return params.enable_soft_stop_on_prev_traj;
-    });
-
-    if (validation_status->invalid_count < params.diag_error_count_threshold || only_warn) {
-      const auto warn_msg = msg + " (invalid count is less than error threshold: " +
-                            std::to_string(validation_status->invalid_count) + " < " +
-                            std::to_string(params.diag_error_count_threshold) + ")";
-      stat.summary(DiagnosticStatus::WARN, warn_msg);
-    } else {
-      stat.summary(DiagnosticStatus::ERROR, msg);
-    }
-  }
-
-  void add_diag(
-    const std::string & name, const bool & status, const std::string & msg,
-    const bool & is_critical = false)
-  {
-    if (diag_updater) {
-      // Do not do implicit capture, need to capture msg by copy
-      diag_updater->add(name, [this, &status, &is_critical, msg = msg](auto & stat) {
-        set_diag_status(stat, status, msg, is_critical);
-      });
-    }
-  }
-
   void update_diag()
   {
     if (diag_updater) {
       diag_updater->force_update();
     }
   }
+
+  void init_validation_status()
+  {
+    auto & s = validation_status;
+    s->is_valid_size = true;
+    s->is_valid_finite_value = true;
+    s->is_valid_interval = true;
+    s->is_valid_relative_angle = true;
+    s->is_valid_curvature = true;
+    s->is_valid_lateral_acc = true;
+    s->is_valid_lateral_jerk = true;
+    s->is_valid_longitudinal_max_acc = true;
+    s->is_valid_longitudinal_min_acc = true;
+    s->is_valid_steering = true;
+    s->is_valid_steering_rate = true;
+    s->is_valid_velocity_deviation = true;
+    s->is_valid_distance_deviation = true;
+    s->is_valid_longitudinal_distance_deviation = true;
+    s->is_valid_forward_trajectory_length = true;
+    s->is_valid_latency = true;
+    s->is_valid_yaw_deviation = true;
+    s->is_valid_trajectory_shift = true;
+    s->is_valid_intersection_collision_check = true;
+    s->is_valid_rear_collision_check = true;
+  }
+
+  void set_handling(const InvalidTrajectoryHandlingType handling_type)
+  {
+    if (inv_traj_handling > handling_type) return;
+    inv_traj_handling = handling_type;
+  }
+
+  void reset_handling() { inv_traj_handling = InvalidTrajectoryHandlingType::PUBLISH_AS_IT_IS; }
+
+  InvalidTrajectoryHandlingType get_handling() const { return inv_traj_handling; }
+
+private:
+  InvalidTrajectoryHandlingType inv_traj_handling;
 };
 
 }  // namespace autoware::planning_validator

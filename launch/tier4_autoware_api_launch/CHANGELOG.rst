@@ -2,7 +2,27 @@
 Changelog for package tier4_autoware_api_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* feat(tier4_autoware_api_launch): add arg for replacing default adapi … (`#10954 <https://github.com/autowarefoundation/autoware_universe/issues/10954>`_)
+  * feat(tier4_autoware_api_launch): add arg for replacing default adapi config
+  * Update launch/tier4_autoware_api_launch/launch/autoware_api.launch.xml
+  Co-authored-by: Takagi, Isamu <43976882+isamu-takagi@users.noreply.github.com>
+  ---------
+  Co-authored-by: Takagi, Isamu <43976882+isamu-takagi@users.noreply.github.com>
+* Contributors: Tetsuhiro Kawaguchi
+
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(tier4_autoware_api_launch): add tier4 api to replace old api (`#10752 <https://github.com/autowarefoundation/autoware_universe/issues/10752>`_)
+* chore(default_adapi): rename package (`#10756 <https://github.com/autowarefoundation/autoware_universe/issues/10756>`_)
+* Contributors: TaikiYamada4, Takagi, Isamu
+
 0.45.0 (2025-05-22)
+-------------------
+
+0.44.2 (2025-06-10)
 -------------------
 
 0.44.1 (2025-05-01)

@@ -2,6 +2,218 @@
 Changelog for package autoware_planning_validator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* feat: change planning output topic name to /planning/trajectory (`#11135 <https://github.com/autowarefoundation/autoware_universe/issues/11135>`_)
+  * change planning output topic name to /planning/trajectory
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(planning_validator): init validation status (`#11119 <https://github.com/autowarefoundation/autoware_universe/issues/11119>`_)
+  * fix(planning_validator): init validation status
+  * fix(control_validator): init validation status
+  ---------
+* refactor(planning_validator): refactor planning validator configuration and error handling (`#11081 <https://github.com/autowarefoundation/autoware_universe/issues/11081>`_)
+  * refactor trajectory check error handling
+  * define set_diag_status function for each module locally
+  * update documentation
+  ---------
+* chore: sync files (`#11091 <https://github.com/autowarefoundation/autoware_universe/issues/11091>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+  Co-authored-by: M. Fatih Cırıt <mfc@autoware.org>
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(planning_validator): suppress unnecessary error messages (`#11007 <https://github.com/autowarefoundation/autoware_universe/issues/11007>`_)
+* perf(planning_validator): switch planning_validator back to event driven (`#10979 <https://github.com/autowarefoundation/autoware_universe/issues/10979>`_)
+  make planning_validator node event driven on trajectory msg
+* feat(intersection_collision_checker): improve icc debug markers (`#10967 <https://github.com/autowarefoundation/autoware_universe/issues/10967>`_)
+  * add DebugData struct
+  * refactor and publish debug info and markers
+  * always publish lanelet debug markers
+  * refactor debug markers code
+  * remove unused functions
+  * pass string by reference
+  * set is_safe flag for rear_collision_checker debug data
+  * fix for cpp check
+  * add maintainer
+  ---------
+* fix(planning_validator): fix conflict between trajectory shift and distance deviation checks (`#10799 <https://github.com/autowarefoundation/autoware_universe/issues/10799>`_)
+  * use global is_critical_error flag for trajectory diagnostics update
+  * add warning to readme
+  * Update planning/planning_validator/autoware_planning_validator/README.md
+  ---------
+* feat(intersection_collision_checker): improve feature to reduce false positive occurrence (`#10899 <https://github.com/autowarefoundation/autoware_universe/issues/10899>`_)
+  * keep a map of already detected target lanelets
+  * fix on/off time buffers logic
+  * add debug marker to visualize colliding object
+  * use resampled trajectory instead of raw trajectory
+  * fix overlap index computation
+  * fix on/off time buffers logic for rear collision checker
+  * fix planning .pages file, fix format
+  * update readme
+  * ignore not moving pcd object
+  * handle case when object is very close to overlap point
+  ---------
+* fix: a launch mistake (`#10891 <https://github.com/autowarefoundation/autoware_universe/issues/10891>`_)
+  fix mistake
+* feat(planning_validator): improve intersection collision checker implementation (`#10839 <https://github.com/autowarefoundation/autoware_universe/issues/10839>`_)
+  * use parameter generator library
+  * add pointcloud latency compensation
+  * change msg field name
+  * add readme file
+  * add parameters dection to readme
+  * publish planning factor for intersection_collision_checker
+  * refactor lanelet selection and filtering
+  * update readme
+  * set safety factor array in planning factor
+  * clean up includes
+  * publish planning factor for rear collision checker
+  * fix spelling
+  * rename variables to avoid shadowing
+  * Update planning/planning_validator/autoware_planning_validator/src/node.cpp
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  * fix planning factor initialization
+  * fix format
+  * add on time buffer
+  ---------
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+* Contributors: Kem (TiankuiXian), Satoshi OTA, Yukihiro Saito, awf-autoware-bot[bot], mkquda
+
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(planning_validator): add condition to check the yaw deviation (`#10818 <https://github.com/autowarefoundation/autoware_universe/issues/10818>`_)
+* feat(planning_validator): implement a collision detection feature for rearward objects of the vehicle (`#10800 <https://github.com/autowarefoundation/autoware_universe/issues/10800>`_)
+  * feat(planning_validator): add new flag
+  * feat(rear_collision_checker): add new validator plugin
+  * fix: current lane extraction range
+  * fix: keep previous data when he estimated velocity may be an outlier
+  * fix: check reachable distance
+  * fix: remove unused param
+  * fix: integrate new interface
+  * fix: use common marker publisher
+  * fix: rename diag
+  * fix: parameterize
+  * fix: keep checking
+  * fix: author
+  * fix: remove unused variable
+  * chore: vru -> vulnerable_road_user
+  * fix: early return
+  * fix: cppcheck
+  * fix: cppcheck
+  * fix: cppcheck
+  * fix: clang tidy
+  ---------
+* fix(planning_validator): fix the lateral distance calculation (`#10801 <https://github.com/autowarefoundation/autoware_universe/issues/10801>`_)
+* feat(planning_validator): implement redundant collision prevention feature when ego makes a turn at intersection (`#10750 <https://github.com/autowarefoundation/autoware_universe/issues/10750>`_)
+  * create planning latency validator plugin module
+  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)"
+  This reverts commit 871a8540ade845c7c9a193029d407b411a4d685b.
+  * create planning trajectory validator plugin module
+  * Update planning/planning_validator/autoware_planning_validator/src/manager.cpp
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  * Update planning/planning_validator/autoware_planning_validator/include/autoware/planning_validator/node.hpp
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  * minor fix
+  * refactor implementation
+  * uncomment lines for adding pose markers
+  * fix CMakeLists
+  * add comment
+  * update planning launch xml
+  * Update planning/planning_validator/autoware_planning_latency_validator/include/autoware/planning_latency_validator/latency_validator.hpp
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  * Update planning/planning_validator/autoware_planning_validator/include/autoware/planning_validator/plugin_interface.hpp
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  * Update planning/planning_validator/autoware_planning_validator/include/autoware/planning_validator/types.hpp
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  * Update planning/planning_validator/autoware_planning_validator/src/node.cpp
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  * Update planning/planning_validator/autoware_planning_latency_validator/src/latency_validator.cpp
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  * apply pre-commit checks
+  * rename plugins for consistency
+  * rename directories and files to match package names
+  * refactor planning validator tests
+  * add packages maintainer
+  * separate trajectory check parameters
+  * add missing package dependencies
+  * move trajectory diagnostics test to trajectory checker module
+  * remove blank line
+  * add new planning validator plugin collision_checker
+  * add launch args for validator modules
+  * logic for setting route handler
+  * add poincloud filtering function
+  * check for turn direction lane
+  * compute target lanelets for collision check
+  * fix format
+  * refactor lanelets filtering
+  * update launch files
+  * move lanelet selection functions to utils file
+  * check for collisions
+  * check observation time of tracked object
+  * add more config params, fix pcd object function
+  * extend target lanes
+  * add off timeout after collision is detected
+  * define const value
+  * improve overlap time estimation
+  * Update planning/planning_validator/autoware_planning_validator_collision_checker/src/collision_checker.cpp
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  * rename planning_validator collision_checker module
+  * move pointcloud filtering to just before collision check
+  * use proper name for module param
+  * fix logic for extending target lanelets
+  * change logging level
+  ---------
+  Co-authored-by: GitHub Action <action@github.com>
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+* feat(planning_validator): subscribe additional topic for collision detection (`#10745 <https://github.com/autowarefoundation/autoware_universe/issues/10745>`_)
+  * feat(planning_validator): subscribe pointcloud
+  * feat(planning_validator): subscribe route and map
+  * fix(planning_validator): load glog component
+  * fix: unexpected test fail
+  ---------
+* refactor(planning_validator): implement plugin structure for planning validator node (`#10571 <https://github.com/autowarefoundation/autoware_universe/issues/10571>`_)
+  * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)
+  not sync github-release
+  * create planning latency validator plugin module
+  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)"
+  This reverts commit 871a8540ade845c7c9a193029d407b411a4d685b.
+  * create planning trajectory validator plugin module
+  * Update planning/planning_validator/autoware_planning_validator/src/manager.cpp
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  * Update planning/planning_validator/autoware_planning_validator/include/autoware/planning_validator/node.hpp
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  * minor fix
+  * refactor implementation
+  * uncomment lines for adding pose markers
+  * fix CMakeLists
+  * add comment
+  * update planning launch xml
+  * Update planning/planning_validator/autoware_planning_latency_validator/include/autoware/planning_latency_validator/latency_validator.hpp
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  * Update planning/planning_validator/autoware_planning_validator/include/autoware/planning_validator/plugin_interface.hpp
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  * Update planning/planning_validator/autoware_planning_validator/include/autoware/planning_validator/types.hpp
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  * Update planning/planning_validator/autoware_planning_validator/src/node.cpp
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  * Update planning/planning_validator/autoware_planning_latency_validator/src/latency_validator.cpp
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  * apply pre-commit checks
+  * rename plugins for consistency
+  * rename directories and files to match package names
+  * refactor planning validator tests
+  * add packages maintainer
+  * separate trajectory check parameters
+  * add missing package dependencies
+  * move trajectory diagnostics test to trajectory checker module
+  * remove blank line
+  * add launch args for validator modules
+  ---------
+  Co-authored-by: Yutaka Kondo <yutaka.kondo@youtalk.jp>
+  Co-authored-by: GitHub Action <action@github.com>
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+* Contributors: Maxime CLEMENT, Satoshi OTA, TaikiYamada4, mkquda
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -43,6 +255,9 @@ Changelog for package autoware_planning_validator
   * feat(planning_validator): add lateral jerk validation and associated parameters
   ---------
 * Contributors: Kyoichi Sugahara, TaikiYamada4, mkquda
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

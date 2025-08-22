@@ -1,0 +1,24 @@
+name: pre-commit-lite
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  pre-commit-lite:
+    if: ${{ github.event.repository.private == false }} # Use pre-commit.yaml for private repositories
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+
+      - uses: pre-commit/action@v3.0.1
+
+      - uses: pre-commit-ci/lite-action@v1.1.0
+        if: always()
+        with:
+          msg: "style(pre-commit): autofix"

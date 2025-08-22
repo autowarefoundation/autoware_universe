@@ -85,6 +85,16 @@
           "default": 0.8,
           "description": "prediction path will disabled when the estimated path length exceeds lanelet length. This parameter control the estimated path length"
         },
+        "crossing_intention_duration": {
+          "type": "number",
+          "default": 0.3,
+          "description": "Minimum duration that crossing intention must continuously persist to be judged as true"
+        },
+        "no_crossing_intention_duration": {
+          "type": "number",
+          "default": 1.0,
+          "description": "Minimum duration that lack of crossing intention must continuously persist to be judged as false"
+        },
         "lane_change_detection": {
           "type": "object",
           "properties": {
@@ -158,7 +168,9 @@
         "sigma_yaw_angle_deg",
         "object_buffer_time_length",
         "history_time_length",
-        "prediction_time_horizon_rate_for_validate_shoulder_lane_length"
+        "prediction_time_horizon_rate_for_validate_shoulder_lane_length",
+        "crossing_intention_duration",
+        "no_crossing_intention_duration"
       ]
     }
   },

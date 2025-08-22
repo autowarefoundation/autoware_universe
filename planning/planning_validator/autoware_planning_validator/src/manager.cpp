@@ -64,12 +64,10 @@ void PlanningValidatorManager::unload_plugin(rclcpp::Node & node, const std::str
   }
 }
 
-void PlanningValidatorManager::validate(bool & is_critical)
+void PlanningValidatorManager::validate()
 {
   for (auto & plugin : loaded_plugins_) {
-    bool is_critical_error = false;
-    plugin->validate(is_critical_error);
-    is_critical |= is_critical_error;
+    plugin->validate();
   }
 }
 

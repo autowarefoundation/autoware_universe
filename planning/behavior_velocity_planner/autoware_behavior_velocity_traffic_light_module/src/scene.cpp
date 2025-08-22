@@ -126,9 +126,15 @@ bool TrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
         : 0.0;
     bool to_be_stopped =
       is_stop_signal && (is_prev_state_stop_ || time_diff > planner_param_.stop_time_hysteresis);
+
+    debug_data_.is_remaining_time_used = false;
     if (planner_param_.v2i_use_remaining_time) {
       const bool will_traffic_light_turn_red_before_reaching_stop_line =
         willTrafficLightTurnRedBeforeReachingStopLine(signed_arc_length_to_stop_point);
+      if (will_traffic_light_turn_red_before_reaching_stop_line && !is_stop_signal) {
+        debug_data_.is_remaining_time_used = true;
+      }
+
       to_be_stopped = to_be_stopped || will_traffic_light_turn_red_before_reaching_stop_line;
     }
 
@@ -141,11 +147,17 @@ bool TrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
         is_stop_signal) {
         // Suppress restart
         RCLCPP_DEBUG(logger_, "Suppressing restart due to proximity to stop line.");
-        const auto & ego_pose = planner_data_->current_odometry->pose;
-        const auto restart_suppression_point =
-          Eigen::Vector2d(ego_pose.position.x, ego_pose.position.y);
-        *path = insertStopPose(input_path, stop_line.value().first, restart_suppression_point);
-        return true;
+        const auto & ego_pos = planner_data_->current_odometry->pose.position;
+        const double dist =
+          autoware::motion_utils::calcSignedArcLength(input_path.points, ego_pos, 0L);
+        const auto pose_opt =
+          autoware::motion_utils::calcLongitudinalOffsetPose(input_path.points, 0L, dist);
+        if (pose_opt.has_value()) {
+          const auto restart_suppression_point =
+            Eigen::Vector2d(pose_opt.value().position.x, pose_opt.value().position.y);
+          *path = insertStopPose(input_path, stop_line.value().first, restart_suppression_point);
+          return true;
+        }
       }
     }
 

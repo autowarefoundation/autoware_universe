@@ -168,6 +168,10 @@ BehaviorModuleOutput LaneChangeInterface::planWaitingApproval()
 
   if (!module_type_->isValidPath()) {
     path_candidate_ = std::make_shared<PathWithLaneId>();
+    updateRTCStatus(
+      std::numeric_limits<double>::lowest(), std::numeric_limits<double>::lowest(), false,
+      State::WAITING_FOR_EXECUTION);
+    module_type_->resetParameters();
     return out;
   }
 
@@ -234,9 +238,18 @@ bool LaneChangeInterface::canTransitSuccessState()
 
 bool LaneChangeInterface::canTransitFailureState()
 {
-  const auto force_activated = std::any_of(
-    rtc_interface_ptr_map_.begin(), rtc_interface_ptr_map_.end(),
-    [&](const auto & rtc) { return rtc.second->isForceActivated(uuid_map_.at(rtc.first)); });
+  const auto force_activated = std::invoke([&]() {
+    const bool is_force_activated = std::any_of(
+      rtc_interface_ptr_map_.begin(), rtc_interface_ptr_map_.end(),
+      [&](const auto & rtc) { return rtc.second->isForceActivated(uuid_map_.at(rtc.first)); });
+
+    if (is_force_activated && !module_type_->isValidPath()) {
+      RCLCPP_WARN_THROTTLE(
+        getLogger(), *clock_, 1000, "Force activated, but no valid path. Ignore force activation.");
+      return false;
+    }
+    return is_force_activated;
+  });
 
   if (force_activated) {
     RCLCPP_WARN_THROTTLE(getLogger(), *clock_, 5000, "unsafe but force executed");
@@ -259,6 +272,24 @@ bool LaneChangeInterface::canTransitFailureState()
   }
 
   if (state == LaneChangeStates::Abort) {
+    if (!module_type_->isAbortState()) {
+      RCLCPP_DEBUG(getLogger(), "Transit to Abort state.");
+
+      const auto current_pose = module_type_->getEgoPose();
+
+      const auto planning_factor_direction = std::invoke([&]() {
+        if (module_type_->getDirection() == Direction::LEFT) {
+          return PlanningFactor::SHIFT_LEFT;
+        }
+        if (module_type_->getDirection() == Direction::RIGHT) {
+          return PlanningFactor::SHIFT_RIGHT;
+        }
+        return PlanningFactor::UNKNOWN;
+      });
+
+      planning_factor_interface_->add(
+        0.0, current_pose, planning_factor_direction, SafetyFactorArray{}, true, 0.0, 0.0, "abort");
+    }
     module_type_->toAbortState();
     return false;
   }
@@ -295,6 +326,10 @@ std::pair<LaneChangeStates, std::string_view> LaneChangeInterface::check_transit
     return {LaneChangeStates::Cancel, "InvalidPath"};
   }
 
+  if (module_type_->is_near_terminal_end()) {
+    return {LaneChangeStates::Warning, "TooNearTerminal"};
+  }
+
   const auto is_preparing = module_type_->isEgoOnPreparePhase();
   const auto can_return_to_current = module_type_->isAbleToReturnCurrentLane();
 
@@ -321,10 +356,6 @@ std::pair<LaneChangeStates, std::string_view> LaneChangeInterface::check_transit
   // lane, for example, during an evasive maneuver around a static object.
   if (is_preparing && can_return_to_current) {
     return {LaneChangeStates::Cancel, "SafeToCancel"};
-  }
-
-  if (module_type_->is_near_terminal()) {
-    return {LaneChangeStates::Warning, "TooNearTerminal"};
   }
 
   if (!module_type_->isAbortEnabled()) {
@@ -392,6 +423,13 @@ void LaneChangeInterface::updateSteeringFactorPtr(const BehaviorModuleOutput & o
   const auto finish_distance = autoware::motion_utils::calcSignedArcLength(
     output.path.points, current_position, status.lane_change_path.info.shift_line.end.position);
 
+  const auto start_idx = autoware::motion_utils::findNearestIndex(
+    output.path.points, status.lane_change_path.info.shift_line.start.position);
+  const auto finish_idx = autoware::motion_utils::findNearestIndex(
+    output.path.points, status.lane_change_path.info.shift_line.end.position);
+  const double start_velocity = output.path.points.at(start_idx).point.longitudinal_velocity_mps;
+  const double end_velocity = output.path.points.at(finish_idx).point.longitudinal_velocity_mps;
+
   const auto planning_factor_direction = std::invoke([&]() {
     if (module_type_->getDirection() == Direction::LEFT) {
       return PlanningFactor::SHIFT_LEFT;
@@ -406,7 +444,9 @@ void LaneChangeInterface::updateSteeringFactorPtr(const BehaviorModuleOutput & o
   planning_factor_interface_->add(
     start_distance, finish_distance, status.lane_change_path.info.shift_line.start,
     status.lane_change_path.info.shift_line.end, planning_factor_direction,
-    utils::path_safety_checker::to_safety_factor_array(lane_change_debug.collision_check_objects));
+    utils::path_safety_checker::to_safety_factor_array(lane_change_debug.collision_check_objects),
+    true, start_velocity, end_velocity, status.lane_change_path.info.shift_line.start_shift_length,
+    status.lane_change_path.info.shift_line.end_shift_length, "");
 }
 
 void LaneChangeInterface::updateSteeringFactorPtr(
@@ -419,11 +459,23 @@ void LaneChangeInterface::updateSteeringFactorPtr(
     return PlanningFactor::SHIFT_RIGHT;
   });
 
+  const auto status = module_type_->getLaneChangeStatus();
+  const auto start_idx = autoware::motion_utils::findNearestIndex(
+    selected_path.path.points, status.lane_change_path.info.shift_line.start.position);
+  const auto finish_idx = autoware::motion_utils::findNearestIndex(
+    selected_path.path.points, status.lane_change_path.info.shift_line.end.position);
+  const double start_velocity =
+    selected_path.path.points.at(start_idx).point.longitudinal_velocity_mps;
+  const double end_velocity =
+    selected_path.path.points.at(finish_idx).point.longitudinal_velocity_mps;
+
   const auto & lane_change_debug = module_type_->getDebugData();
   planning_factor_interface_->add(
     output.start_distance_to_path_change, output.finish_distance_to_path_change,
     selected_path.info.shift_line.start, selected_path.info.shift_line.end,
     planning_factor_direction,
-    utils::path_safety_checker::to_safety_factor_array(lane_change_debug.collision_check_objects));
+    utils::path_safety_checker::to_safety_factor_array(lane_change_debug.collision_check_objects),
+    true, start_velocity, end_velocity, selected_path.info.shift_line.start_shift_length,
+    selected_path.info.shift_line.end_shift_length, "");
 }
 }  // namespace autoware::behavior_path_planner

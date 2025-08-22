@@ -32,6 +32,14 @@ LatchLevel::LatchLevel(ConfigYaml yaml)
   warn_stamp_ = std::nullopt;
   error_stamp_ = std::nullopt;
   input_level_ = DiagnosticStatus::STALE;
+
+  initializing_ = false;
+}
+
+void LatchLevel::set_initializing(bool initializing)
+{
+  initializing_ = initializing;
+  if (initializing_) reset();
 }
 
 void LatchLevel::reset()
@@ -47,7 +55,7 @@ void LatchLevel::update(const rclcpp::Time & stamp, DiagnosticLevel level)
 {
   input_level_ = level;
 
-  if (latch_enabled_) {
+  if (latch_enabled_ && !initializing_) {
     update_latch_status(stamp, level);
   }
 }

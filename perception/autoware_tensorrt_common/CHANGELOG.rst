@@ -2,6 +2,15 @@
 Changelog for package autoware_tensorrt_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* chore(autoware_tensorrt_common): improved logging when loading plugins (`#10605 <https://github.com/autowarefoundation/autoware_universe/issues/10605>`_)
+  chore: added a print with the cause of the error in case loading the plugins fails
+* Contributors: Kenzo Lobos Tsunekawa
+
+0.46.0 (2025-06-20)
+-------------------
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -17,6 +26,9 @@ Changelog for package autoware_tensorrt_common
   * Use blocking-sync in BEVFusion
   * Call cudaSetDeviceFlags in tensorrt_common
 * Contributors: Taekjin LEE, TaikiYamada4, prime number
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>autoware_motion_velocity_road_user_stop_module</name>
+  <version>0.47.0</version>
+  <description>road_user_stop module to stop ego vehicle when road users (pedestrians, cyclists) are on the road</description>
+
+  <maintainer email="takumi.odashima@tier4.jp">Takumi Odashima</maintainer>
+  <maintainer email="yuki.takagi@tier4.jp">Yuki Takagi</maintainer>
+  <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
+
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+  <buildtool_depend>generate_parameter_library</buildtool_depend>
+
+  <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_motion_utils</depend>
+  <depend>autoware_motion_velocity_planner_common</depend>
+  <depend>autoware_perception_msgs</depend>
+  <depend>autoware_planning_msgs</depend>
+  <depend>autoware_route_handler</depend>
+  <depend>autoware_universe_utils</depend>
+  <depend>autoware_vehicle_info_utils</depend>
+  <depend>generate_parameter_library</depend>
+  <depend>geometry_msgs</depend>
+  <depend>libboost-dev</depend>
+  <depend>pluginlib</depend>
+  <depend>rclcpp</depend>
+  <depend>tf2</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>visualization_msgs</depend>
+
+  <test_depend>ament_cmake_ros</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>autoware_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

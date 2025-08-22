@@ -40,6 +40,8 @@ namespace autoware::multi_object_tracker
 PedestrianTracker::PedestrianTracker(const rclcpp::Time & time, const types::DynamicObject & object)
 : Tracker(time, object), logger_(rclcpp::get_logger("PedestrianTracker"))
 {
+  tracker_type_ = TrackerType::PEDESTRIAN;
+
   if (object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
     // set default initial size
     auto & object_extension = object_.shape.dimensions;
@@ -196,7 +198,8 @@ bool PedestrianTracker::measure(
 }
 
 bool PedestrianTracker::getTrackedObject(
-  const rclcpp::Time & time, types::DynamicObject & object) const
+  const rclcpp::Time & time, types::DynamicObject & object,
+  [[maybe_unused]] const bool to_publish) const
 {
   // try to return cached object
   if (getCachedObject(time, object)) {

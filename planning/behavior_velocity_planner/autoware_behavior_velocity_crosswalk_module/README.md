@@ -346,6 +346,7 @@ In the `common` namespace, the following parameters are defined.
 | `show_processing_time`        | [-]  | bool   | whether to show processing time                                                                                                                 |
 | `traffic_light_state_timeout` | [s]  | double | timeout threshold for traffic light signal                                                                                                      |
 | `enable_rtc`                  | [-]  | bool   | if true, the scene modules should be approved by (request to cooperate)rtc function. if false, the module can be run without approval from rtc. |
+| `lost_detection_timeout`      | [s]  | double | Time to keep an object after its detection is lost                                                                                              |
 
 ## Known Issues
 

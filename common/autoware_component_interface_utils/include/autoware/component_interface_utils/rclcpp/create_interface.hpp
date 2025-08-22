@@ -65,11 +65,23 @@ template <class SpecT, class NodeT, class CallbackT>
 typename Subscription<SpecT>::SharedPtr create_subscription_impl(
   NodeT * node, CallbackT && callback)
 {
-  // This function is a wrapper for the following.
-  // https://github.com/ros2/rclcpp/blob/48068130edbb43cdd61076dc1851672ff1a80408/rclcpp/include/rclcpp/node.hpp#L207-L238
-  auto subscription = node->template create_subscription<typename SpecT::Message>(
-    SpecT::name, get_qos<SpecT>(), std::forward<CallbackT>(callback));
-  return Subscription<SpecT>::make_shared(subscription);
+  if constexpr (!std::is_null_pointer_v<CallbackT>) {
+    // This function is a wrapper for the following.
+    // https://github.com/ros2/rclcpp/blob/48068130edbb43cdd61076dc1851672ff1a80408/rclcpp/include/rclcpp/node.hpp#L207-L238
+    auto subscription = node->template create_subscription<typename SpecT::Message>(
+      SpecT::name, get_qos<SpecT>(), std::forward<CallbackT>(callback));
+    return Subscription<SpecT>::make_shared(subscription);
+  } else {
+    // If the callback is nullptr, create a subscription for polling.
+    // https://github.com/autowarefoundation/autoware.universe/tree/main/common/autoware_universe_utils/include/autoware/universe_utils/ros/polling_subscriber.hpp
+    auto group = node->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive, false);
+    auto options = rclcpp::SubscriptionOptions();
+    options.callback_group = group;
+
+    auto subscription = node->template create_subscription<typename SpecT::Message>(
+      SpecT::name, get_qos<SpecT>(), [](const typename SpecT::Message) {}, options);
+    return Subscription<SpecT>::make_shared(subscription);
+  }
 }
 
 }  // namespace autoware::component_interface_utils

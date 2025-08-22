@@ -19,11 +19,32 @@
 namespace autoware::behavior_path_planner
 {
 
+bool is_lane_change_context_expired(
+  const std::optional<rclcpp::Time> & last_lane_change_trigger_time_saved,
+  const std::optional<rclcpp::Time> & last_lane_change_trigger_time)
+{
+  if (last_lane_change_trigger_time_saved.has_value() ^ last_lane_change_trigger_time.has_value()) {
+    // when "saved" lane change was not detected but now detected, so expired
+    // which means between "saved" and now, lane change was triggered
+
+    // when "saved" lane changes was detected but now not detected, so expired
+    // which means between "saved" and now, lane change was cancelled
+    return true;
+  }
+  if (!last_lane_change_trigger_time_saved) {
+    // lane change not triggered up to now
+    return false;
+  }
+  return (last_lane_change_trigger_time.value() - last_lane_change_trigger_time_saved.value())
+           .seconds() > 0.0;
+}
+
 void LaneParkingRequest::update(
   const PlannerData & planner_data, const ModuleStatus & current_status,
   const BehaviorModuleOutput & upstream_module_output,
   const std::optional<PullOverPath> & pull_over_path, const PathDecisionState & prev_data,
-  const bool trigger_thread_on_approach)
+  const bool trigger_thread_on_approach,
+  const std::optional<rclcpp::Time> & last_lane_change_trigger_time)
 {
   planner_data_ = std::make_shared<PlannerData>(planner_data);
   planner_data_->route_handler = std::make_shared<RouteHandler>(*(planner_data.route_handler));
@@ -32,6 +53,7 @@ void LaneParkingRequest::update(
   pull_over_path_ = pull_over_path;
   prev_data_ = prev_data;
   trigger_thread_on_approach_ = trigger_thread_on_approach;
+  last_lane_change_trigger_time_ = last_lane_change_trigger_time;
 }
 
 void FreespaceParkingRequest::initializeOccupancyGridMap(

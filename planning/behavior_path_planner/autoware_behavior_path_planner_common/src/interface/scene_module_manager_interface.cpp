@@ -60,7 +60,7 @@ void SceneModuleManagerInterface::initInterface(
     pub_virtual_wall_ = node->create_publisher<MarkerArray>("~/virtual_wall/" + name_, 20);
     pub_drivable_lanes_ = node->create_publisher<MarkerArray>("~/drivable_lanes/" + name_, 20);
     pub_processing_time_ = node->create_publisher<autoware_utils::ProcessingTimeDetail>(
-      "~/processing_time/" + name_, 20);
+      "~/debug/processing_time_detail_ms/" + name_, 20);
   }
 
   // planning factor

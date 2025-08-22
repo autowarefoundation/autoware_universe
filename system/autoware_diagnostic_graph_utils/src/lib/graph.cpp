@@ -22,7 +22,20 @@ namespace autoware::diagnostic_graph_utils
 std::vector<DiagUnit *> DiagUnit::child_units() const
 {
   std::vector<DiagUnit *> result;
-  for (const auto & child : child_links()) result.push_back(child->child());
+  for (const auto & link : child_links()) {
+    result.push_back(link->child());
+  }
+  return result;
+}
+
+std::vector<DiagNode *> DiagUnit::child_nodes() const
+{
+  std::vector<DiagNode *> result;
+  for (const auto & link : child_links()) {
+    if (const auto node = dynamic_cast<DiagNode *>(link->child())) {
+      result.push_back(node);
+    }
+  }
   return result;
 }
 

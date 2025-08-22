@@ -266,7 +266,7 @@ bool CrosswalkModule::modifyPathVelocity(PathWithLaneId * path)
     default_stop_pose);
   // Decide to stop for obstruction prevention
   const auto stop_factor_for_obstruction_preventions = checkStopForObstructionPrevention(
-    sparse_resample_path, objects_ptr->objects, first_path_point_on_crosswalk,
+    *path, sparse_resample_path, objects_ptr->objects, first_path_point_on_crosswalk,
     last_path_point_on_crosswalk, default_stop_pose);
   // Decide to stop for parked vehicles (only if no other stop is planned)
   const auto stop_factor_for_parked_vehicles =
@@ -1047,7 +1047,8 @@ Polygon2d CrosswalkModule::getAttentionArea(
 }
 
 std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForObstructionPrevention(
-  const PathWithLaneId & ego_path, const std::vector<PredictedObject> & objects,
+  const PathWithLaneId & ego_path, const PathWithLaneId & sparse_resample_path,
+  const std::vector<PredictedObject> & objects,
   const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
   const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
   const std::optional<geometry_msgs::msg::Pose> & stop_pose)
@@ -1079,17 +1080,19 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForObstructionP
     }
 
     const auto & obj_pose = object.kinematics.initial_pose_with_covariance.pose;
-    const auto lateral_offset = calcLateralOffset(ego_path.points, obj_pose.position);
+    const auto lateral_offset = calcLateralOffset(sparse_resample_path.points, obj_pose.position);
     if (p.max_target_vehicle_lateral_offset < std::abs(lateral_offset)) {
       continue;
     }
 
     // check if STOP is required
     const double crosswalk_front_to_obj_rear =
-      calcSignedArcLength(ego_path.points, first_path_point_on_crosswalk, obj_pose.position) -
+      calcSignedArcLength(
+        sparse_resample_path.points, first_path_point_on_crosswalk, obj_pose.position) -
       object.shape.dimensions.x / 2.0;
     const double crosswalk_back_to_obj_rear =
-      calcSignedArcLength(ego_path.points, last_path_point_on_crosswalk, obj_pose.position) -
+      calcSignedArcLength(
+        sparse_resample_path.points, last_path_point_on_crosswalk, obj_pose.position) -
       object.shape.dimensions.x / 2.0;
     const double required_space_length =
       planner_data_->vehicle_info_.vehicle_length_m + planner_param_.required_clearance;
@@ -1324,8 +1327,8 @@ void CrosswalkModule::updateObjectState(
     const std::optional<double> ego_crosswalk_passage_direction =
       findEgoPassageDirectionAlongPath(sparse_resample_path);
     object_info_manager_.update(
-      obj_uuid, obj_pos, std::hypot(obj_vel.x, obj_vel.y), clock_->now(), is_ego_yielding,
-      has_traffic_light, collision_point, object.classification.front().label, p,
+      obj_uuid, obj_pos, std::hypot(obj_vel.x, obj_vel.y), objects_ptr->header.stamp,
+      is_ego_yielding, has_traffic_light, collision_point, object.classification.front().label, p,
       crosswalk_.polygon2d().basicPolygon(), attention_area, ego_crosswalk_passage_direction);
 
     const auto collision_state = object_info_manager_.getCollisionState(obj_uuid);
@@ -1354,7 +1357,7 @@ void CrosswalkModule::updateObjectState(
   }
 
   debug_data_.ignore_crosswalk = ignore_crosswalk;
-  object_info_manager_.finalize();
+  object_info_manager_.finalize(objects_ptr->header.stamp, p);
 }
 
 bool CrosswalkModule::isRedSignalForLanelet(const lanelet::ConstLanelet & lanelet) const
@@ -1541,8 +1544,10 @@ void CrosswalkModule::planStop(
   // Check if the restart should be suppressed.
   const bool suppress_restart = checkRestartSuppression(ego_path, stop_factor);
   if (suppress_restart) {
-    const auto & ego_pose = planner_data_->current_odometry->pose;
-    stop_factor->stop_pose = ego_pose;
+    const auto & ego_pos = planner_data_->current_odometry->pose.position;
+    const double dist = calcSignedArcLength(ego_path.points, ego_pos, 0L);
+    const auto pose_opt = calcLongitudinalOffsetPose(ego_path.points, 0L, dist);
+    if (pose_opt.has_value()) stop_factor->stop_pose = pose_opt.value();
   }
 
   const SafetyFactorArray safety_factors = createSafetyFactorArray(stop_factor);

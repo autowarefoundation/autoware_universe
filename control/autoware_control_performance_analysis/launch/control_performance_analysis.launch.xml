@@ -1,6 +1,6 @@
 <launch>
   <arg name="control_performance_analysis_param_path" default="$(find-pkg-share autoware_control_performance_analysis)/config/control_performance_analysis.param.yaml"/>
-  <arg name="input/reference_trajectory" default="/planning/scenario_planning/trajectory"/>
+  <arg name="input/reference_trajectory" default="/planning/trajectory"/>
   <arg name="input/control_raw" default="/control/command/control_cmd"/>
   <arg name="input/measured_steering" default="/vehicle/status/steering_status"/>
   <arg name="input/current_odometry" default="/localization/kinematic_state"/>

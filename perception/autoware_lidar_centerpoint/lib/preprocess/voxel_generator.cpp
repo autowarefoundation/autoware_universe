@@ -15,6 +15,7 @@
 #include "autoware/lidar_centerpoint/preprocess/voxel_generator.hpp"
 
 #include "autoware/lidar_centerpoint/centerpoint_trt.hpp"
+#include "autoware/lidar_centerpoint/preprocess/point_type.hpp"
 #include "autoware/lidar_centerpoint/preprocess/preprocess_kernel.hpp"
 
 #include <sensor_msgs/point_cloud2_iterator.hpp>
@@ -25,10 +26,12 @@
 namespace autoware::lidar_centerpoint
 {
 VoxelGeneratorTemplate::VoxelGeneratorTemplate(
-  const DensificationParam & param, const CenterPointConfig & config)
-: config_(config)
+  const DensificationParam & param, const CenterPointConfig & config, cudaStream_t & stream)
+: config_(config), stream_(stream)
 {
   pd_ptr_ = std::make_unique<PointCloudDensification>(param);
+  pre_ptr_ = std::make_unique<PreprocessCuda>(config_, stream_);
+  affine_past2current_d_ = cuda::make_unique<float[]>(AFF_MAT_SIZE);
   range_[0] = config.range_min_x_;
   range_[1] = config.range_min_y_;
   range_[2] = config.range_min_z_;
@@ -50,14 +53,14 @@ bool VoxelGeneratorTemplate::enqueuePointCloud(
   return pd_ptr_->enqueuePointCloud(input_pointcloud_msg_ptr, tf_buffer);
 }
 
-std::size_t VoxelGenerator::generateSweepPoints(float * points_d, cudaStream_t stream)
+std::size_t VoxelGenerator::generateSweepPoints(float * points_d)
 {
   std::size_t point_counter = 0;
   for (auto pc_cache_iter = pd_ptr_->getPointCloudCacheIter(); !pd_ptr_->isCacheEnd(pc_cache_iter);
        pc_cache_iter++) {
     const auto & input_pointcloud_msg_ptr = pc_cache_iter->input_pointcloud_msg_ptr;
     auto sweep_num_points = input_pointcloud_msg_ptr->height * input_pointcloud_msg_ptr->width;
-    auto point_step = input_pointcloud_msg_ptr->point_step;
+    auto output_offset = point_counter * config_.point_feature_size_;
     auto affine_past2current =
       pd_ptr_->getAffineWorldToCurrent() * pc_cache_iter->affine_past2world;
     float time_lag = static_cast<float>(
@@ -74,10 +77,15 @@ std::size_t VoxelGenerator::generateSweepPoints(float * points_d, cudaStream_t s
 
     static_assert(std::is_same<decltype(affine_past2current.matrix()), Eigen::Matrix4f &>::value);
     static_assert(!Eigen::Matrix4f::IsRowMajor, "matrices should be col-major.");
-    generateSweepPoints_launch(
-      reinterpret_cast<float *>(input_pointcloud_msg_ptr->data.get()), sweep_num_points,
-      point_step / sizeof(float), time_lag, affine_past2current.matrix().data(),
-      config_.point_feature_size_, points_d + config_.point_feature_size_ * point_counter, stream);
+
+    CHECK_CUDA_ERROR(cudaMemcpyAsync(
+      affine_past2current_d_.get(), affine_past2current.data(), AFF_MAT_SIZE * sizeof(float),
+      cudaMemcpyHostToDevice, stream_));
+    CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+
+    pre_ptr_->generateSweepPoints_launch(
+      reinterpret_cast<InputPointType *>(input_pointcloud_msg_ptr->data.get()), sweep_num_points,
+      time_lag, affine_past2current_d_.get(), points_d + output_offset);
 
     point_counter += sweep_num_points;
   }

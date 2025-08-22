@@ -191,7 +191,6 @@ Although it has a cons to converge to the local minima, it can get a good soluti
   - Due to the model error for optimization, the constraint such as collision-free is not fully met.
     - By making this parameter larger, the is for narrow-road driving may be resolved. 12180
 - modify `mpt.kinematics.optimization_center_offset`
-
   - The point on the vehicle, offset forward with this parameter from the base link` tries to follow the reference path.
 
 - change or tune the method to approximate footprints with a set of circles.

@@ -15,6 +15,7 @@
 #ifndef CONTROL_COMMAND_GATE_HPP_
 #define CONTROL_COMMAND_GATE_HPP_
 
+#include "command/compatibility.hpp"
 #include "command/filter.hpp"
 #include "command/interface.hpp"
 #include "command/selector.hpp"
@@ -56,6 +57,7 @@ private:
   diagnostic_updater::Updater diag_;
   std::unique_ptr<CommandSelector> selector_;
   CommandFilter * output_filter_;
+  Compatibility * compatibility_;
 
   uint16_t current_source_ = 0;
   bool transition_flag_ = false;

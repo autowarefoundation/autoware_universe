@@ -19,6 +19,7 @@
 #include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
@@ -446,6 +447,9 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
       declare_parameter<bool>("crosswalk_with_signal.use_crosswalk_signal");
     double threshold_velocity_assumed_as_stopping =
       declare_parameter<double>("crosswalk_with_signal.threshold_velocity_assumed_as_stopping");
+    double crossing_intention_duration = declare_parameter<double>("crossing_intention_duration");
+    double no_crossing_intention_duration =
+      declare_parameter<double>("no_crossing_intention_duration");
     std::vector<double> distance_set_for_no_intention_to_walk =
       declare_parameter<std::vector<double>>(
         "crosswalk_with_signal.distance_set_for_no_intention_to_walk");
@@ -457,7 +461,8 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
       max_crosswalk_user_delta_yaw_threshold_for_lanelet, use_crosswalk_signal,
       threshold_velocity_assumed_as_stopping, distance_set_for_no_intention_to_walk,
       timeout_set_for_no_intention_to_walk, prediction_sampling_time_interval_,
-      prediction_time_horizon_.pedestrian);
+      prediction_time_horizon_.pedestrian, crossing_intention_duration,
+      no_crossing_intention_duration);
   }
 
   // debug parameter
@@ -680,9 +685,11 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
       transformed_object.kinematics.pose_with_covariance.pose = pose_in_map.pose;
     }
 
-    // get tracking label and update it for the prediction
-    const auto & label_ = transformed_object.classification.front().label;
-    const auto label = utils::changeLabelForPrediction(label_, object, lanelet_map_ptr_);
+    // get the maximum probability label from the classification array
+    const auto & label_ =
+      autoware::object_recognition_utils::getHighestProbLabel(transformed_object.classification);
+    // overwrite the label for VRU in specific cases
+    const auto label = utils::changeVRULabelForPrediction(label_, object, lanelet_map_ptr_);
 
     switch (label) {
       case ObjectClassification::PEDESTRIAN:

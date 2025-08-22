@@ -32,64 +32,35 @@ public:
   void init(
     rclcpp::Node & node, const std::string & name,
     const std::shared_ptr<PlanningValidatorContext> & context) override;
-  void validate(bool & is_critical) override;
+  void validate() override;
   void setup_diag() override;
   std::string get_module_name() const override { return module_name_; };
 
-  bool check_valid_finite_value(const std::shared_ptr<const PlanningValidatorData> & data);
-  bool check_valid_size(
-    const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status);
-  bool check_valid_interval(
-    const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status);
-  bool check_valid_relative_angle(
-    const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status);
-  bool check_valid_curvature(
-    const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status);
-  bool check_valid_lateral_acceleration(
-    const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status);
-  bool check_valid_lateral_jerk(
-    const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status);
-  bool check_valid_max_longitudinal_acceleration(
-    const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status);
-  bool check_valid_min_longitudinal_acceleration(
-    const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status);
-  bool check_valid_steering(
-    const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status, const double vehicle_wheel_base_m);
-  bool check_valid_steering_rate(
-    const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status, const double vehicle_wheel_base_m);
-  bool check_valid_velocity_deviation(
-    const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status);
-  bool check_valid_distance_deviation(
-    const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status);
-  bool check_valid_longitudinal_distance_deviation(
-    const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status);
-  bool check_valid_forward_trajectory_length(
-    const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status);
-  bool check_valid_yaw_deviation(
-    const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status);
-  bool check_trajectory_shift(
-    const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status);
+  bool check_valid_finite_value();
+  bool check_valid_size();
+  bool check_valid_interval();
+  bool check_valid_relative_angle();
+  bool check_valid_curvature();
+  bool check_valid_lateral_acceleration();
+  bool check_valid_lateral_jerk();
+  bool check_valid_max_longitudinal_acceleration();
+  bool check_valid_min_longitudinal_acceleration();
+  bool check_valid_steering();
+  bool check_valid_steering_rate();
+  bool check_valid_velocity_deviation();
+  bool check_valid_distance_deviation();
+  bool check_valid_longitudinal_distance_deviation();
+  bool check_valid_forward_trajectory_length();
+  bool check_valid_yaw_deviation();
+  bool check_trajectory_shift();
 
 private:
   void setup_parameters(rclcpp::Node & node);
 
-  bool is_critical_error_ = false;
+  void set_diag_status(
+    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg) const;
+
+  bool override_all_error_diag_{false};
 
   TrajectoryCheckerParams params_;
 };

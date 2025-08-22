@@ -4,6 +4,7 @@
   <arg name="component_state_monitor_topic_path"/>
   <arg name="duplicated_node_checker_param_path"/>
   <arg name="processing_time_checker_param_path"/>
+  <arg name="pipeline_latency_monitor_param_path"/>
   <arg name="mrm_comfortable_stop_operator_param_path"/>
   <arg name="mrm_emergency_stop_operator_param_path"/>
   <arg name="dummy_diag_publisher_param_path"/>
@@ -26,6 +27,7 @@
   <arg name="diagnostic_graph_aggregator_graph_path"/>
   <arg name="diag_struct_topic" default="/diagnostics_graph/struct"/>
   <arg name="diag_status_topic" default="/diagnostics_graph/status"/>
+  <arg name="diag_reset_srv" default="/diagnostics_graph/reset"/>
   <arg name="availability_converter_param_path" default="$(find-pkg-share autoware_diagnostic_graph_aggregator)/config/converter.param.yaml"/>
   <arg name="command_mode_switcher_param_path" default="$(find-pkg-share autoware_command_mode_switcher)/config/default.param.yaml"/>
   <arg name="command_mode_decider_param_path" default="$(find-pkg-share autoware_command_mode_decider)/config/default.param.yaml"/>
@@ -90,6 +92,13 @@
       </include>
     </group>
 
+    <!-- Pipeline Latency Monitor -->
+    <group>
+      <include file="$(find-pkg-share autoware_pipeline_latency_monitor)/launch/pipeline_latency_monitor.launch.xml">
+        <arg name="config_file" value="$(var pipeline_latency_monitor_param_path)"/>
+      </include>
+    </group>
+
     <!-- Service Log Checker -->
     <group>
       <include file="$(find-pkg-share autoware_component_interface_tools)/launch/service_log_checker.launch.xml"/>
@@ -122,6 +131,7 @@
         <arg name="graph_file" value="$(var diagnostic_graph_aggregator_graph_path)"/>
         <arg name="~/struct" value="$(var diag_struct_topic)"/>
         <arg name="~/status" value="$(var diag_status_topic)"/>
+        <arg name="~/reset" value="$(var diag_reset_srv)"/>
         <arg name="converter_param_file" value="$(var availability_converter_param_path)"/>
       </include>
     </group>

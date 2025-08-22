@@ -2,6 +2,54 @@
 Changelog for package autoware_behavior_path_start_planner_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* fix(start_planner): incorrect function call (`#11107 <https://github.com/autowarefoundation/autoware_universe/issues/11107>`_)
+  fix: Incorrect function call
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* refactor(clothoid_pull_out): change log level from WARN to DEBUG/INFO (`#11080 <https://github.com/autowarefoundation/autoware_universe/issues/11080>`_)
+* feat(autoware_behavior_path_start_planner_module): unit test from yaml files (`#11039 <https://github.com/autowarefoundation/autoware_universe/issues/11039>`_)
+  * test from yaml file
+  * organize formats
+  ---------
+* feat(start_planner): adding clothoid trajectory planner (`#11040 <https://github.com/autowarefoundation/autoware_universe/issues/11040>`_)
+  * adding clothoid planner
+  * add README
+  ---------
+* feat(start_planner_module): replace getArcCoordinates with getArcCoordinatesOnEgoCenterline (`#10964 <https://github.com/autowarefoundation/autoware_universe/issues/10964>`_)
+* feat(start_planner): improve trajectory generation with consideration of current ego vehicle heading (`#11026 <https://github.com/autowarefoundation/autoware_universe/issues/11026>`_)
+* fix(start_planner,boundary_departure_checker): remove micro inner rings after bg::union\_ (`#10971 <https://github.com/autowarefoundation/autoware_universe/issues/10971>`_)
+* style(pre-commit): autofix (`#10982 <https://github.com/autowarefoundation/autoware_universe/issues/10982>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(start_planner): add infomation to the PlanningFactor topic (`#10889 <https://github.com/autowarefoundation/autoware_universe/issues/10889>`_)
+  * add planning factor unit test.
+  * add infomation to the planning factor interface.
+  * change control_points when backward
+  * shorten planning_factor detail
+  * modify stop reason
+  * add comment for backward maneuvers
+  ---------
+* Contributors: Kotakku, Kyoichi Sugahara, Mehmet Dogru, Mete Fatih Cırıt, Ryohsuke Mitsudome, TakumIto
+
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(behavior_path_planner): organize a part of behavior path info/debug markers (`#10729 <https://github.com/autowarefoundation/autoware_universe/issues/10729>`_)
+  * feat(behavior_path_planner): organize a part of behavior path info/debug markers
+  * Update planning/behavior_path_planner/autoware_behavior_path_goal_planner_module/src/goal_planner_module.cpp
+  Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
+  * Update planning/behavior_path_planner/autoware_behavior_path_goal_planner_module/src/util.cpp
+  Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
+  ---------
+  Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
+* feat!: remove obstacle_stop_planner and obstacle_cruise_planner (`#10695 <https://github.com/autowarefoundation/autoware_universe/issues/10695>`_)
+  * feat: remove obstacle_stop_planner and obstacle_cruise_planner
+  * update
+  * fix
+  ---------
+* Contributors: TaikiYamada4, Takayuki Murooka
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -20,6 +68,9 @@ Changelog for package autoware_behavior_path_start_planner_module
   * feat(start_planner_module): add isInsideLanelets method to check vehicle footprint within lanelets
   ---------
 * Contributors: Kyoichi Sugahara, TaikiYamada4, Zulfaqar Azmi
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

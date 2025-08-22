@@ -26,13 +26,16 @@
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/predicted_path.hpp>
+#include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 
 #include <lanelet2_core/Forward.h>
 
 #include <memory>
+#include <string>
 #include <utility>
+#include <vector>
 
 namespace autoware::behavior_path_planner::start_planner_utils
 {
@@ -51,6 +54,48 @@ lanelet::ConstLanelets getPullOutLanes(
   const std::shared_ptr<const PlannerData> & planner_data, const double backward_length);
 std::optional<PathWithLaneId> extractCollisionCheckSection(
   const PullOutPath & path, const double collision_check_distance_from_end);
+
+/**
+ * @brief Find target pose along path at specified longitudinal distance
+ * @param centerline_path Centerline path to search along
+ * @param start_pose Starting pose
+ * @param longitudinal_distance Longitudinal distance to search
+ * @return Target pose at the specified distance
+ */
+Pose find_target_pose_along_path(
+  const PathWithLaneId & centerline_path, const Pose & start_pose,
+  const double longitudinal_distance);
+
+/**
+ * @brief Calculate relative pose information in vehicle coordinate system
+ * @param start_pose Starting pose (vehicle coordinate origin)
+ * @param target_pose Target pose to calculate relative position
+ * @return RelativePoseInfo containing longitudinal, lateral distance and angle difference
+ */
+RelativePoseInfo calculate_relative_pose_in_vehicle_coordinate(
+  const Pose & start_pose, const Pose & target_pose);
+
+/**
+ * @brief Get lane_ids for a given pose
+ * @param pose Target pose
+ * @param road_lanes Target lane group for search
+ * @param previous_lane_ids Previous point's lane_ids (for inheritance, optional)
+ * @return Retrieved lane_ids
+ */
+std::vector<int64_t> get_lane_ids_from_pose(
+  const geometry_msgs::msg::Pose & pose, const lanelet::ConstLanelets & road_lanes,
+  const std::vector<int64_t> & previous_lane_ids);
+
+/**
+ * @brief Set lane_ids to PathPointWithLaneId
+ * @param point Target PathPointWithLaneId to set
+ * @param road_lanes Target lane group for search
+ * @param previous_lane_ids Previous point's lane_ids (for inheritance, optional)
+ */
+void set_lane_ids_to_path_point(
+  PathPointWithLaneId & point, const lanelet::ConstLanelets & road_lanes,
+  const std::vector<int64_t> & previous_lane_ids);
+
 }  // namespace autoware::behavior_path_planner::start_planner_utils
 
 #endif  // AUTOWARE__BEHAVIOR_PATH_START_PLANNER_MODULE__UTIL_HPP_

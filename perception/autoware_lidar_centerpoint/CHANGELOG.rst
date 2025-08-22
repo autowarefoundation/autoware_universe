@@ -2,6 +2,113 @@
 Changelog for package autoware_lidar_centerpoint
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* feat(autoware_lidar_centerpoint): add class-wise confidence thresholds to CenterPoint (`#10881 <https://github.com/autowarefoundation/autoware_universe/issues/10881>`_)
+  * Add PreprocessCuda to CenterPoint
+  * style(pre-commit): autofix
+  * style(pre-commit): autofix
+  * Add intensity preprocessing
+  * style(pre-commit): autofix
+  * Fix config\_.point_feature_size\_ typo
+  * style(pre-commit): autofix
+  * Fix point typo
+  * style(pre-commit): autofix
+  * Change score_threshold to score_thresholds
+  * Use <autoware/cuda_utils/cuda_utils.hpp> for clear_async
+  * Rename pre_ptr\_ to pre_proc_ptr\_
+  * Remove unused getCacheSize() and getIdx
+  * Use template in generateVoxels_random_kernel instead
+  * style(pre-commit): autofix
+  * Remove references in generateVoxels_random_kernel
+  * Remove references in generateVoxels_random_kernel
+  * style(pre-commit): autofix
+  * Remove generateIntensityFeatures_kernel and add the case of 11 to ENCODER_IN_FEATURE_SIZE for generateFeatures_kernel
+  * style(pre-commit): autofix
+  * Add class-wise confidence thresholds to CenterPoint
+  * style(pre-commit): autofix
+  * Remov empty line changes
+  * Update score_threshold to score_thresholds in REAMME
+  * style(pre-commit): autofix
+  * Change score_thresholds from pass by value to pass by reference
+  * style(pre-commit): autofix
+  * Add information about class names in scehema
+  * Change vector<double> to vector<float>
+  * Remove thrust and add stream\_ to PostProcessCUDA
+  * style(pre-commit): autofix
+  * Fix incorrect initialization of score_thresholds\_ vector
+  * Fix postprocess CudaMemCpy error
+  * Fix postprocess score_thresholds_d_ptr\_ typing error
+  * Fix score_thresholds typing in node.cpp
+  * Static casting params.score_thresholds vector
+  * style(pre-commit): autofix
+  * Update perception/autoware_lidar_centerpoint/src/node.cpp
+  * Update perception/autoware_lidar_centerpoint/include/autoware/lidar_centerpoint/centerpoint_config.hpp
+  * Update centerpoint_config.hpp
+  * Update node.cpp
+  * Update score_thresholds\_ to double since ros2 supports only double instead of float
+  * style(pre-commit): autofix
+  * Fix cuda memory and revert double score_thresholds\_ to float score_thresholds\_
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+* feat(autoware_lidar_centerpoint): add Intensity support to CenterPoint (`#10854 <https://github.com/autowarefoundation/autoware_universe/issues/10854>`_)
+  * Add PreprocessCuda to CenterPoint
+  * style(pre-commit): autofix
+  * style(pre-commit): autofix
+  * Add intensity preprocessing
+  * style(pre-commit): autofix
+  * Fix config\_.point_feature_size\_ typo
+  * style(pre-commit): autofix
+  * Fix point typo
+  * style(pre-commit): autofix
+  * Use <autoware/cuda_utils/cuda_utils.hpp> for clear_async
+  * Rename pre_ptr\_ to pre_proc_ptr\_
+  * Remove unused getCacheSize() and getIdx
+  * Use template in generateVoxels_random_kernel instead
+  * style(pre-commit): autofix
+  * Remove references in generateVoxels_random_kernel
+  * Remove references in generateVoxels_random_kernel
+  * style(pre-commit): autofix
+  * Remove generateIntensityFeatures_kernel and add the case of 11 to ENCODER_IN_FEATURE_SIZE for generateFeatures_kernel
+  * style(pre-commit): autofix
+  * Remov empty line changes
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Kok Seang Tan
+
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* chore(perception): delete maintainer name (`#10816 <https://github.com/autowarefoundation/autoware_universe/issues/10816>`_)
+* feat(autoware_lidar_centerpoint): add ShortRange centerpoint as another new node base on autoware_lidar_centerpoint (`#10727 <https://github.com/autowarefoundation/autoware_universe/issues/10727>`_)
+  * Add shortrange_centerpoint launcher to autoware_lidar_centerpoint
+  * style(pre-commit): autofix
+  * Update README.md to include launching of shortrange centerpoint
+  * style(pre-commit): autofix
+  * Add option to launch shortrange centerpoint in tier4_perception_launch
+  * Add option to launch shortrange centerpoint in tier4_perception_launch
+  * style(pre-commit): autofix
+  * Update correct launcher name in lidar_dnn_detection.launch.xml
+  * Fix Update typo in lidar_dnn_detector launcher for shortrange centerpoint
+  * Add use_short_range_detection to launcher for switching shortrange detection
+  * Add use_short_range_detection to launcher for switching shortrange detection
+  * Format spaces
+  * style(pre-commit): autofix
+  * Rename shortrange to short_range
+  * Change shor_range centerpoint to one of the centerpoint variants
+  * Fix shortrange spelling warning
+  * Fix default value for use_short_range_centerpoint and fix missing short_range_centerpoint_common.param.yaml
+  * Fix default value for use_short_range_centerpoint
+  * Rename short_range_centerpoint to centerpoint_short_range for model name and type
+  * Rename short_range_centerpoint to centerpoint_short_range for model name and type
+  * Update value to default
+  * Update short range centerpoint namespace
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Kok Seang Tan, Satoshi Tanaka, TaikiYamada4
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -21,6 +128,9 @@ Changelog for package autoware_lidar_centerpoint
   * chore: mistook the capabilities of edge devices
   ---------
 * Contributors: Kenzo Lobos Tsunekawa, Kok Seang Tan, Taekjin LEE, TaikiYamada4
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

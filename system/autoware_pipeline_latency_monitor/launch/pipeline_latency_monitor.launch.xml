@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Parameters -->
+  <arg name="config_file" default="$(find-pkg-share autoware_pipeline_latency_monitor)/config/pipeline_latency_monitor.param.yaml"/>
+
+  <node pkg="autoware_pipeline_latency_monitor" exec="autoware_pipeline_latency_monitor_node" name="pipeline_latency_monitor" output="screen">
+    <!-- Parameters -->
+    <param from="$(var config_file)"/>
+  </node>
+</launch>

@@ -40,6 +40,7 @@ struct TrajectoryGroup
   LaneChangePhaseMetrics prepare_metric;
   frenet_planner::Trajectory lane_changing;
   frenet_planner::FrenetState initial_state;
+  double lc_average_curvature{0.0};
   double max_lane_changing_length{0.0};
 
   TrajectoryGroup() = default;
@@ -47,13 +48,14 @@ struct TrajectoryGroup
     PathWithLaneId prepare, PathWithLaneId target_lane_ref_path,
     std::vector<double> target_lane_ref_path_dist, LaneChangePhaseMetrics prepare_metric,
     frenet_planner::Trajectory lane_changing, frenet_planner::FrenetState initial_state,
-    const double max_lane_changing_length)
+    const double lc_average_curvature, const double max_lane_changing_length)
   : prepare(std::move(prepare)),
     target_lane_ref_path(std::move(target_lane_ref_path)),
     target_lane_ref_path_dist(std::move(target_lane_ref_path_dist)),
     prepare_metric(prepare_metric),
     lane_changing(std::move(lane_changing)),
     initial_state(initial_state),
+    lc_average_curvature(lc_average_curvature),
     max_lane_changing_length(max_lane_changing_length)
   {
   }
