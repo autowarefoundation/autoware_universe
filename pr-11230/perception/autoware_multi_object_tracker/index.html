@@ -14433,6 +14433,27 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <td>N/A</td>
 </tr>
 <tr>
+<td>prune_static_object_speed</td>
+<td>float</td>
+<td>Speed threshold to consider an object as static. Below this speed, nearby unknown objects should always be detected.</td>
+<td>1.38</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>prune_moving_object_speed</td>
+<td>float</td>
+<td>Speed threshold to consider an object as moving. Above this speed, nearby unknown objects should always be merged to avoid false unknown detections.</td>
+<td>5.5</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>prune_static_iou_threshold</td>
+<td>float</td>
+<td>Generalized IoU threshold for a static object.</td>
+<td>0.0</td>
+<td>N/A</td>
+</tr>
+<tr>
 <td>overlap_distance_thresholds</td>
 <td>array</td>
 <td>Overlap distance threshold for each class.</td>
@@ -14639,6 +14660,7 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <li>Manually enable the following functions in the test source:<ul>
 <li><code>profilePerformanceVsCarCount()</code></li>
 <li><code>profilePerformanceVsPedestrianCount()</code></li>
+<li><code>profilePerformanceVsUnknownObjectCount()</code></li>
 </ul>
 </li>
 </ul>
