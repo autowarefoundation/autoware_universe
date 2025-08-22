@@ -18,6 +18,7 @@
 #include "autoware/behavior_path_goal_planner_module/decision_state.hpp"
 #include "autoware/behavior_path_goal_planner_module/fixed_goal_planner_base.hpp"
 #include "autoware/behavior_path_goal_planner_module/goal_planner_parameters.hpp"
+#include "autoware/behavior_path_goal_planner_module/lane_change.hpp"
 #include "autoware/behavior_path_goal_planner_module/pull_over_planner/bezier_pull_over.hpp"
 #include "autoware/behavior_path_goal_planner_module/pull_over_planner/freespace_pull_over.hpp"
 #include "autoware/behavior_path_goal_planner_module/thread_data.hpp"
@@ -35,6 +36,7 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace autoware::behavior_path_planner
@@ -178,8 +180,7 @@ private:
   std::atomic<bool> & is_lane_parking_cb_running_;
   rclcpp::Logger logger_;
 
-  // last_lane_change_trigger_time of the request which was used when this was waken-up previously
-  std::optional<rclcpp::Time> last_lane_change_trigger_time_saved_;
+  LaneChangeContext::State lane_change_state_last_wakeup_{LaneChangeContext::NotLaneChanging{}};
 
   std::vector<std::shared_ptr<PullOverPlannerBase>> pull_over_planners_;
   BehaviorModuleOutput
@@ -235,50 +236,6 @@ private:
   bool isStuck(
     const PredictedObjects & static_target_objects, const PredictedObjects & dynamic_target_objects,
     const FreespaceParkingRequest & req) const;
-};
-
-class LaneChangeContextMonitor
-{
-public:
-  /**
-   * @brief check if lane change has been triggered(being executed)/aborted/completed
-   */
-  void update_progress(
-    const PathWithLaneId & path, const lanelet::LaneletMapConstPtr lanelet_map,
-    lanelet::routing::RoutingGraphConstPtr routing_graph, const rclcpp::Time & now);
-
-  /**
-   * @brief return the last time that lane change has been triggered or aborted
-   */
-  const std::optional<rclcpp::Time> & get_last_lane_change_trigger_time() const
-  {
-    return last_lane_change_trigger_time_;
-  }
-
-  /**
-   * @brief return lane change has been triggered or aborted just now
-   */
-  bool lane_change_status_changed() const
-  {
-    if (lane_change_completed_) {
-      return false;
-    }
-    return lane_change_status_changed_;
-  }
-
-private:
-  std::optional<bool>
-    prev_lane_change_detected_{};  //<! denote if the path was lane-changing in previous cycle
-  bool lane_change_status_changed_{
-    false};  //<! becomes true only when prev_lane_change_detected_ has changed from previous cycle
-  std::optional<rclcpp::Time>
-    last_lane_change_trigger_time_{};  //<! save the last time when lane_change_status_changed_
-                                       // was true
-
-  std::optional<lanelet::ConstLanelet> lane_change_complete_lane_{};
-
-  bool lane_change_completed_{};  //<! means current lane sequence is now along
-                                  // lane_change_complete_lane_, so ego has made transit
 };
 
 class GoalPlannerModule : public SceneModuleInterface
@@ -351,7 +308,7 @@ private:
   bool trigger_thread_on_approach_{false};
 
   // signal path generator and state manager to regenerate path candidates and remain NOT_DECIDED
-  LaneChangeContextMonitor lane_change_monitor_{};
+  LaneChangeContext lane_change_ctx_{};
 
   // pre-generate lane parking paths in a separate thread
   rclcpp::TimerBase::SharedPtr lane_parking_timer_;
