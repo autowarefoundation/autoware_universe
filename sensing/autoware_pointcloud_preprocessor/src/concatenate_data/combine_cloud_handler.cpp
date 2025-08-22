@@ -250,7 +250,6 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
       serialized_config, *concatenate_cloud_result.concatenation_info_ptr);
   }
 
-  // Set strategy configuration for advanced mode
   concatenation_info_manager_.set_result(
     *concatenate_cloud_result.concatenate_cloud_ptr,
     *concatenate_cloud_result.concatenation_info_ptr);
