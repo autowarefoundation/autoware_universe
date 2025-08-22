@@ -167,7 +167,7 @@ struct L2OverwriteParameters
    */
   bool enable{false};                       ///< Flag to enable or disable the overwrite mechanism.
   double rewrite_overshoot_threshold{5.0};  ///< Threshold for overshoot during overwrite.
-}
+};
 
 struct Parameters
 {
