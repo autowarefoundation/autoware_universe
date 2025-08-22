@@ -41,7 +41,7 @@ AgentLabel get_model_label(const autoware_perception_msgs::msg::TrackedObject & 
   }
 }
 
-AgentState::AgentState(TrackedObject & object)
+AgentState::AgentState(const TrackedObject & object)
 {
   position_ = object.kinematics.pose_with_covariance.pose.position;
   shape_ = object.shape;
@@ -118,8 +118,8 @@ void AgentState::apply_transform(const Eigen::Matrix4f & transform)
     sin_yaw(),
     vx(),
     vy(),
-    length(),
     width(),
+    length(),
     static_cast<float>(label_ == AgentLabel::VEHICLE),
     static_cast<float>(label_ == AgentLabel::PEDESTRIAN),
     static_cast<float>(label_ == AgentLabel::BICYCLE),
