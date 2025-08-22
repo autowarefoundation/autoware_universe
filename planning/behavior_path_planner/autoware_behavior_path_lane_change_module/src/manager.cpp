@@ -622,7 +622,7 @@ void LaneChangeModuleManager::updateModuleParams(const std::vector<rclcpp::Param
   {
     const std::string ns = "lane_change.l2_overwrite.";
     update_param<bool>(parameters, ns + "enable", p->l2_overwrite.enable);
-    update_param<bool>(
+    update_param<double>(
       parameters, ns + "rewrite_overshoot_threshold", p->l2_overwrite.rewrite_overshoot_threshold);
   }
 
