@@ -240,9 +240,9 @@ LCParamPtr LaneChangeModuleManager::set_params(rclcpp::Node * node, const std::s
 
   // L2 overwrite parameters
   {
-    p.l2_overwrite.enable = get_or_declare_parameter(*node, parameter("l2_overwrite.enable"));
+    p.l2_overwrite.enable = get_or_declare_parameter<bool>(*node, parameter("l2_overwrite.enable"));
     p.l2_overwrite.rewrite_overshoot_threshold =
-      get_or_declare_parameter(*node, parameter("l2_overwrite.rewrite_overshoot_threshold"));
+      get_or_declare_parameter<double>(*node, parameter("l2_overwrite.rewrite_overshoot_threshold"));
   }
 
   // lane change cancel
