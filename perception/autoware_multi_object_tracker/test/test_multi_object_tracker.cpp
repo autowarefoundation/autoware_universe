@@ -473,6 +473,8 @@ TEST_F(MultiObjectTrackerTest, DISABLED_PerformanceVsUnknownObjectCount)
 TEST_F(MultiObjectTrackerTest, DISABLED_AssociationTest)  // NOLINT
 {
   // This test checks the merging of unknown objects with existing cars
+  // By default, this test enables recording into a rosbag; it is intended for local verification
+  // only.
   runAssociationTest();
 }
 

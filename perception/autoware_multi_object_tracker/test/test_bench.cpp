@@ -312,7 +312,7 @@ void TestBench::initializeCarObject(
   obj.uuid.uuid = stringToUUID(id);
   obj.time = stamp;
   obj.classification.emplace_back();
-  obj.classification[0].label = autoware_perception_msgs::msg::ObjectClassification::TRUCK;
+  obj.classification[0].label = autoware_perception_msgs::msg::ObjectClassification::CAR;
   obj.shape.dimensions.x = state.shape.x;
   obj.shape.dimensions.y = state.shape.y;
   obj.shape.dimensions.z = 1.5;

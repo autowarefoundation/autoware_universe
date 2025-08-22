@@ -25,7 +25,9 @@ TestBenchAssociation::TestBenchAssociation(const ScenarioParams & params) : Test
 void TestBenchAssociation::initializeObjects()
 {
   // Define radii for concentric circles
-  std::vector<float> circle_radii = {10.0f, 15.0f, 20.0f, 25.0f, 30.0f, 35.0f,
+  // The minimum value (4.5 m) reflects the realistic low-speed turning limit
+  // of a typical passenger car (wheelbase ~2.7 m, max steer angle ~30–35°).
+  std::vector<float> circle_radii = {4.5f,  10.0f, 15.0f, 20.0f, 25.0f, 30.0f, 35.0f,
                                      40.0f, 45.0f, 50.0f, 55.0f, 60.0f, 65.0f};
 
   // Calculate speeds based on radius (outer lanes faster)
@@ -56,6 +58,7 @@ void TestBenchAssociation::initializeObjects()
     addNewUnknownNearCar(car_id, unk_id);
   }
 }
+
 void TestBenchAssociation::addNoiseAndOrientation(
   autoware::multi_object_tracker::types::DynamicObject & obj, const UnknownObjectState & state)
 {

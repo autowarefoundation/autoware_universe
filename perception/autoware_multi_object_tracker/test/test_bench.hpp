@@ -55,6 +55,7 @@ struct ObjectState
     float y;
   } shape;
 };
+
 struct UnknownObjectState
 {
   geometry_msgs::msg::Pose pose;
@@ -67,6 +68,7 @@ struct UnknownObjectState
   uint8_t shape_type;
   bool is_moving;
 };
+
 struct UnknownObjectParams
 {
   // Size parameters
@@ -89,6 +91,7 @@ struct UnknownObjectParams
   float shape_change_prob = 0.4f;
   float max_evolution_noise = 0.2f;
 };
+
 struct ScenarioParams
 {
   int num_lanes = 8;                           // 5 lanes
@@ -131,9 +134,7 @@ struct ScenarioParams
 
 // Configuration creation functions
 autoware::multi_object_tracker::TrackerProcessorConfig createProcessorConfig();
-
 autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig();
-
 std::vector<autoware::multi_object_tracker::types::InputChannel> createInputChannelsConfig();
 
 class TestBench
@@ -141,14 +142,11 @@ class TestBench
 protected:
   const float GRID_SIZE = 15.0f;  // Larger than max car length
   std::unordered_map<uint64_t, std::vector<std::string>> spatial_grid_;
-
   UnknownObjectParams unknown_params_;
   ScenarioParams params_;  // store params for later use
 
   uint64_t getGridKey(float x, float y) const;
-
   void updateGrid(const std::string & id, bool remove_first = false);
-
   bool checkCollisions(const std::string & id);
 
 public:
