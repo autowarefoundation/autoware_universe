@@ -237,7 +237,6 @@
         }
       },
       "required": [
-        "keep_last_trajectory_s",
         "nearest_dist_threshold_m",
         "nearest_yaw_threshold_rad",
         "target_pull_out_speed_mps",
@@ -253,8 +252,6 @@
         "set_engage_speed",
         "fix_invalid_points",
         "smooth_velocities",
-        "publish_last_trajectory",
-        "keep_last_trajectory",
         "extend_trajectory_backward"
       ]
     }
