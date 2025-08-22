@@ -202,8 +202,8 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::initialize_strategy()
     fusion_matching_strategy_ = std::make_unique<AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>>(
       std::dynamic_pointer_cast<FusionNode>(shared_from_this()), id_to_offset_map_);
     // subscribe concatenation_info
-    auto concatenation_info_topic = declare_parameter<std::string>(
-      "concatenation_info_topic", "/sensing/lidar/concatenated/pointcloud_info");
+    auto concatenation_info_topic =
+      declare_parameter<std::string>("matching_strategy.concatenation_info_topic");
     sub_concatenation_info_ =
       this->create_subscription<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
         concatenation_info_topic, rclcpp::SensorDataQoS().keep_last(10),
@@ -522,6 +522,8 @@ template <class Msg3D, class Msg2D, class ExportObj>
 void FusionNode<Msg3D, Msg2D, ExportObj>::concatenation_info_callback(
   const autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr concatenation_info_msg)
 {
+  RCLCPP_INFO(get_logger(), "concatenation_info_callback");
+
   if (
     concatenation_info_msg->matching_strategy ==
     autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::STRATEGY_NAIVE) {

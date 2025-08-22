@@ -31,12 +31,10 @@
     publish_previous_but_late_output_msg: false
     rosbag_length: 10.0
 
-    # concatenation info topic for advanced matching strategy
-    concatenation_info_topic: "/sensing/lidar/concatenated/pointcloud_info"
-
     # matching strategy
     matching_strategy:
       type: advanced
+      concatenation_info_topic: "/sensing/lidar/concatenated/pointcloud_info"
       msg3d_noise_window: 0.02
       rois_timestamp_noise_window: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
       # type: naive
