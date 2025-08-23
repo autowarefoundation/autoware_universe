@@ -1234,7 +1234,7 @@ The following parameters are used to judge lane change completion.
 
 | Name                       | Unit | Type    | Description                                              | Default value |
 | :------------------------- | ---- | ------- | -------------------------------------------------------- | ------------- |
-| `regulation.crosswalk`     | [-]  | boolean | Consider lane change regulation in between crosswalks    | true          |
+| `regulation.crosswalk`     | [-]  | boolean | Considers lane change regulation at crosswalks. If set to `true`, lane changing are disabled at crosswalks.   | true          |
 | `regulation.intersection`  | [-]  | boolean | Consider lane change regulation in between intersections | true          |
 | `regulation.traffic_light` | [-]  | boolean | Consider lane change regulation in between traffic light | true          |
 
