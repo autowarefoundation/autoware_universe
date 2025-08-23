@@ -56,8 +56,9 @@ LaneChangeContext::State LaneChangeContext::get_next_state(
     if (
       lane_ids.front() == current_target_lane_id &&
       std::find(lane_ids.begin(), lane_ids.end(), goal_lanelet_id) != lane_ids.end()) {
-      const auto & exec = is_state<Started>() ? Executing{std::get<Started>(state_)} : state_;
-      return Completed{};
+      const auto & exec =
+        is_state<Started>() ? Executing{std::get<Started>(state_)} : std::get<Executing>(state_);
+      return Completed{exec};
     }
     return Aborted{};
   }
@@ -75,13 +76,17 @@ bool LaneChangeContext::is_not_consistent_transition(const State & from, const S
     if (is_state<Aborted>(from) || is_state<NotLaneChanging>(from)) {
       return true;
     }
-    if (is_state<Executing>(from)) {
+    if (is_state<Started>(from) || is_state<Executing>(from)) {
       const auto lane_change_target_to = std::get<Executing>(to).complete_lane();
-      const auto lane_change_target_from = std::get<Executing>(from).complete_lane();
+      const auto lane_change_target_from = is_state<Started>(from)
+                                             ? std::get<Started>(from).complete_lane()
+                                             : std::get<Executing>(from).complete_lane();
       if (lane_change_target_to != lane_change_target_from) {
         return true;
       }
-      const auto & from_start_time = std::get<Executing>(from).start_time();
+      const auto & from_start_time = is_state<Started>(from)
+                                       ? std::get<Started>(from).start_time()
+                                       : std::get<Executing>(from).start_time();
       const auto & to_start_time = std::get<Executing>(to).start_time();
       // if timestamp of `to` is larger than `from`, `to` is another lane change after `from`
       return (to_start_time - from_start_time).seconds() > 0.0;

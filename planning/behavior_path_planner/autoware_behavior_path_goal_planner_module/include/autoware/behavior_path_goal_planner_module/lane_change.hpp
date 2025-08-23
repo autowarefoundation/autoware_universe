@@ -42,8 +42,8 @@ public:
     rclcpp::Time start_time() const { return start_time_; }
 
   private:
-    lanelet::Id complete_lane_;
-    rclcpp::Time start_time_;
+    lanelet::Id complete_lane_{};
+    rclcpp::Time start_time_{};
   };
   class Executing
   {
@@ -56,14 +56,15 @@ public:
     rclcpp::Time start_time() const { return start_time_; }
 
   private:
-    lanelet::Id complete_lane_;
-    rclcpp::Time start_time_;  //<! inherit this value from previous Started/Executing
+    lanelet::Id complete_lane_{};
+    rclcpp::Time start_time_{};  //<! inherit this value from previous Started/Executing
   };
   struct Aborted
   {
   };
   struct Completed
   {
+    explicit Completed([[maybe_unused]] const Executing & exec) {}
   };
   struct NotLaneChanging
   {
@@ -71,7 +72,7 @@ public:
   using State = std::variant<Started, Executing, Aborted, Completed, NotLaneChanging>;
 
   /**
-   * @brief check if lane change has been triggered(being executed)/aborted/completed
+   * @brief compute next state
    */
   State get_next_state(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
@@ -93,6 +94,9 @@ public:
     return std::holds_alternative<T>(state);
   }
 
+  /**
+   * @brief mutate the state to next transition
+   */
   void set_state(const State & state)
   {
     is_in_consistent_transition_ = !is_not_consistent_transition(state_, state);

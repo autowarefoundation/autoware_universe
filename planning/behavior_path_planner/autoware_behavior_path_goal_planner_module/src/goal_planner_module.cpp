@@ -68,7 +68,6 @@ using nav_msgs::msg::OccupancyGrid;
 
 namespace autoware::behavior_path_planner
 {
-
 GoalPlannerModule::GoalPlannerModule(
   const std::string & name, rclcpp::Node & node,
   const std::shared_ptr<GoalPlannerParameters> & parameters,
@@ -657,7 +656,7 @@ std::pair<LaneParkingResponse, FreespaceParkingResponse> GoalPlannerModule::sync
     // `planner_data_.is_route_handler_updated` variable is set true by behavior_path_planner
     // (although this flag is not implemented yet). In that case, lane_parking_request members
     // except for route_handler should be copied from planner_data_
-    const bool lane_change_ctx_expired = !LaneChangeContext::is_not_consistent_transition(
+    const bool lane_change_ctx_expired = LaneChangeContext::is_not_consistent_transition(
       lane_parking_response_.lane_change_state, lane_change_ctx_.get_current_state());
     if (!lane_change_ctx_expired) {
       lane_parking_response = lane_parking_response_;

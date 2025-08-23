@@ -60,8 +60,8 @@ public:
   }
   const std::optional<PullOverPath> & get_pull_over_path() const { return pull_over_path_; }
   const PathDecisionState & get_prev_data() const { return prev_data_; }
-  const LaneChangeContext::State & lane_change_state() const { return lane_change_state_; }
   bool trigger_thread_on_approach() const { return trigger_thread_on_approach_; }
+  const LaneChangeContext::State & lane_change_state() const { return lane_change_state_; }
 
 private:
   std::shared_ptr<PlannerData> planner_data_;
