@@ -75,6 +75,13 @@ public:
   explicit BEVFusionTRT(
     const tensorrt_common::TrtCommonConfig & trt_config,
     const DensificationParam & densification_param, const BEVFusionConfig & config);
+  
+  // Constructor for fusion model with separate image backbone and main body
+  explicit BEVFusionTRT(
+    const tensorrt_common::TrtCommonConfig & main_trt_config,
+    const tensorrt_common::TrtCommonConfig & image_backbone_trt_config,
+    const DensificationParam & densification_param, const BEVFusionConfig & config);
+  
   virtual ~BEVFusionTRT();
 
   bool detect(
@@ -91,6 +98,9 @@ public:
 protected:
   void initPtr();
   void initTrt(const tensorrt_common::TrtCommonConfig & trt_config);
+  void initTrtFusion(
+    const tensorrt_common::TrtCommonConfig & main_trt_config,
+    const tensorrt_common::TrtCommonConfig & image_backbone_trt_config);
 
   bool preProcess(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & pc_msg_ptr,
@@ -99,10 +109,12 @@ protected:
     bool & is_num_voxels_within_range);
 
   bool inference();
+  bool inferenceFusion();
 
   bool postProcess(std::vector<Box3D> & det_boxes3d);
 
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_{nullptr};
+  std::unique_ptr<autoware::tensorrt_common::TrtCommon> image_backbone_trt_ptr_{nullptr};
   std::unique_ptr<VoxelGenerator> vg_ptr_{nullptr};
   std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{
     nullptr};
@@ -113,6 +125,7 @@ protected:
 
   BEVFusionConfig config_;
   std::vector<int> roi_start_y_vector_;
+  std::vector<Matrix4fRowM> img_aug_matrices_;
 
   // pre-process inputs
 
@@ -141,6 +154,10 @@ protected:
   CudaUniquePtr<std::uint8_t[]> roi_tensor_d_{nullptr};
   std::vector<CudaUniquePtr<std::uint8_t[]>> image_buffers_d_{};
   CudaUniquePtr<float[]> camera_masks_d_{nullptr};
+  
+  // image feature buffers for fusion model
+  CudaUniquePtr<float[]> image_feats_d_{nullptr};
+  CudaUniquePtr<float[]> img_aug_matrix_d_{nullptr};
 
   // output buffers
   CudaUniquePtr<std::int64_t[]> label_pred_output_d_{nullptr};
