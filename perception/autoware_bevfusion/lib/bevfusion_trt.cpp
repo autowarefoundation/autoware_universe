@@ -600,13 +600,11 @@ bool BEVFusionTRT::preProcess(
     network_trt_ptr_->setInputShape(
       "points", nvinfer1::Dims{2, {static_cast<std::int64_t>(num_points), config_.num_point_feature_size_}});
 
-    // For fusion model, check if using separate image backbone (image_backbone_trt_ptr_ exists)
-    if (image_backbone_trt_ptr_) {
       // Separate image backbone: set image_feats and img_aug_matrix inputs
-      network_trt_ptr_->setInputShape(
-        "image_feats", nvinfer1::Dims{4, {config_.num_cameras_, 256, config_.features_height_, config_.features_width_}});
-      network_trt_ptr_->setInputShape("img_aug_matrix", nvinfer1::Dims{3, {config_.num_cameras_, 4, 4}});
-    }
+    network_trt_ptr_->setInputShape(
+      "image_feats", nvinfer1::Dims{4, {config_.num_cameras_, 256, config_.features_height_, config_.features_width_}});
+    network_trt_ptr_->setInputShape("img_aug_matrix", nvinfer1::Dims{3, {config_.num_cameras_, 4, 4}});
+    network_trt_ptr_->setInputShape("lidar2image", nvinfer1::Dims{3, {config_.num_cameras_, 4, 4}});
     
     network_trt_ptr_->setInputShape("geom_feats", nvinfer1::Dims{2, {num_ranks_, 4}});
     network_trt_ptr_->setInputShape("kept", nvinfer1::Dims{1, {num_kept_}});
@@ -646,7 +644,7 @@ bool BEVFusionTRT::inferenceFusion()
   if (config_.sensor_fusion_) {
     image_backbone_trt_ptr_->setInputShape(
       "imgs",
-      nvinfer1::Dims{5, {1, config_.num_cameras_, 3, config_.roi_height_, config_.roi_width_}});
+      nvinfer1::Dims{4, {config_.num_cameras_, 3, config_.roi_height_, config_.roi_width_}});
     
     auto image_status = image_backbone_trt_ptr_->enqueueV3(stream_);
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));

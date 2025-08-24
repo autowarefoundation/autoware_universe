@@ -49,6 +49,7 @@ public:
       num_point_feature_size_ = 4;
     }
     sensor_fusion_ = sensor_fusion;
+    use_intensity_ = use_intensity;
     plugins_path_ = plugins_path;
 
     out_size_factor_ = out_size_factor;
@@ -119,6 +120,7 @@ public:
 
   ///// MODALITY /////
   bool sensor_fusion_{};
+  bool use_intensity_{false};
 
   // CUDA parameters
   const std::uint32_t threads_per_block_{256};  // threads number for a block
