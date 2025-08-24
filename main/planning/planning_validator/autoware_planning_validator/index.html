@@ -14097,6 +14097,11 @@
 <td>autoware_adapi_v1_msgs/OperationModeState</td>
 <td>current operation mode state (autonomous/manual)</td>
 </tr>
+<tr>
+<td><code>~/input/traffic_signals</code></td>
+<td>autoware_perception_msgs/TrafficLightGroupArray</td>
+<td>recognized traffic signal information</td>
+</tr>
 </tbody>
 </table>
 <h3 id="outputs">Outputs<a class="headerlink" href="#outputs" title="Permanent link">#</a></h3>
@@ -14174,6 +14179,12 @@
 <td align="left">double</td>
 <td align="left">jerk limit value to be used for soft stop action. [m/sss]</td>
 <td align="left">0.3</td>
+</tr>
+<tr>
+<td align="left"><code>th_traffic_light_timeout</code></td>
+<td align="left">double</td>
+<td align="left">timeout threshold [s] to discard outdated traffic light information during validation</td>
+<td align="left">0.5</td>
 </tr>
 </tbody>
 </table></div>
