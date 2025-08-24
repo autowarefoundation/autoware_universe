@@ -14095,43 +14095,46 @@ The for each trajectory point the time_from_start is computed with respect to th
 <p>Target lane selection logic applies only for Left-hand traffic (LHT). The module should be improved to be driving side agnostic.</p>
 </div>
 <h4 id="right-turn">Right Turn<a class="headerlink" href="#right-turn" title="Permanent link">#</a></h4>
-<p>To get the target lanelets for right turn intersection:</p>
+<p>To get the target lanelets for a right-turn intersection:</p>
 <ul>
-<li>Use ego turn-direction lane to define search space (bounding box enclosing turn-direction lane).</li>
-<li>Get all lanelets withing bounding box as candidate lanelets</li>
-<li>Filter out following lanelets:<ul>
+<li>Use ego’s turn-direction lane to define the search space (bounding box enclosing the turn-direction lane).</li>
+<li>Get all lanelets within the bounding box as candidate lanelets.</li>
+<li>Filter out the following lanelets:<ul>
 <li>Lanelets that are <code>route_lanelets</code></li>
 <li>Lanelets with a "time to reach" exceeding the time horizon</li>
-<li>Lanelets that have <code>turn_direction</code> attribute and are not <code>STRAIGHT</code>. (If parameter <code>right_turn.check_turning_lanes</code> is <strong>FALSE</strong>)</li>
-<li>Lanelets that are determined to be <strong>crossing</strong> lanes. (If parameter <code>right_turn.check_crossing_lanes</code> is <strong>FALSE</strong>)</li>
+<li>Lanelets that have the <code>turn_direction</code> attribute and are not <code>STRAIGHT</code> (if parameter <code>right_turn.check_turn_lanes</code> is <strong>FALSE</strong>)</li>
+<li>Lanelets that are determined to be <strong>crossing</strong> lanes (if parameter <code>right_turn.check_crossing_lanes</code> is <strong>FALSE</strong>)</li>
+<li>Lanelets that are <strong>excluded based on traffic signal context</strong> (if parameter <code>right_turn.check_traffic_signal</code> is <strong>TRUE</strong> and the right-turn arrow signal is active)</li>
 </ul>
 </li>
-<li>remaining lanelets are then processed to:<ul>
-<li>Compute overlap point between ego trajectory and target lanelet</li>
-<li>Compute ego's time to arrive and leave overlap point</li>
+<li>Remaining lanelets are then processed to:<ul>
+<li>Compute the overlap point between the ego trajectory and the target lanelet</li>
+<li>Compute ego’s time to arrive and leave the overlap point</li>
 </ul>
 </li>
 </ul>
-<p>The image below shows the target lanelets at a right turn intersection. (<code>right_turn.check_turning_lanes</code> set to <strong>FALSE</strong>)</p>
+<p>The image below shows the target lanelets at a right-turn intersection. (<code>right_turn.check_turn_lanes</code> set to <strong>FALSE</strong>)</p>
 <p><img alt="right-turn-target-lanes" src="images/right_turn_target_lanelets.png"></p>
+<hr>
 <h4 id="left-turn">Left Turn<a class="headerlink" href="#left-turn" title="Permanent link">#</a></h4>
-<p>To get the target lanelets for left turn intersection:</p>
+<p>To get the target lanelets for a left-turn intersection:</p>
 <ul>
-<li>Use ego's turn-direction lanelet(s) to get next lanelet "destination_lanelet" following the turn.</li>
-<li>We then get all lanelets preceding the "destination_lanelet" and filter out:<ul>
+<li>Use ego’s turn-direction lanelet(s) to get the next lanelet, the "destination_lanelet," following the turn.</li>
+<li>Get all lanelets preceding the "destination_lanelet" and filter out:<ul>
 <li>Lanelets that are <code>route_lanelets</code></li>
 <li>Lanelets with a "time to reach" exceeding the time horizon</li>
-<li>Lanelets that have <code>turn_direction</code> attribute and are not <code>STRAIGHT</code>. (If parameter <code>left_turn.check_turning_lanes</code> is <strong>FALSE</strong>)</li>
+<li>Lanelets that have the <code>turn_direction</code> attribute and are not <code>STRAIGHT</code> (if parameter <code>left_turn.check_turn_lanes</code> is <strong>FALSE</strong>)</li>
+<li>Lanelets that are <strong>excluded based on traffic signal context</strong> (if parameter <code>left_turn.check_traffic_signal</code> is <strong>TRUE</strong> and the signal is green or amber, giving priority to the left-turn movement)</li>
 </ul>
 </li>
-<li>remaining lanelets are then processed to:<ul>
-<li>Compute overlap point between ego trajectory and target lanelet</li>
-<li>Compute ego's time to arrive and leave overlap point</li>
+<li>Remaining lanelets are then processed to:<ul>
+<li>Compute the overlap point between the ego trajectory and the target lanelet</li>
+<li>Compute ego’s time to arrive and leave the overlap point</li>
 </ul>
 </li>
 </ul>
-<p>Target lanelets are then expanded, if necessary, up to <code>detection_range</code></p>
-<p>The image below shows the target lanelets at a left turn intersection. (<code>left.check_turning_lanes</code> set to <strong>TRUE</strong>)</p>
+<p>Target lanelets are then expanded, if necessary, up to <code>detection_range</code>.</p>
+<p>The image below shows the target lanelets at a left-turn intersection. (<code>left_turn.check_turn_lanes</code> set to <strong>TRUE</strong>)</p>
 <p><img alt="left-turn-target-lanes" src="images/left_turn_target_lanelets.png"></p>
 <h3 id="collision-check">Collision Check<a class="headerlink" href="#collision-check" title="Permanent link">#</a></h3>
 <p>After target lanes are determined, The next step is to identify pcd objects and perform velocity estimation and tracking for each target lane, and determine possibility of collision.</p>
@@ -14262,6 +14265,13 @@ If any of the following conditions are met the tracking information is reset and
 <td>0.785398</td>
 </tr>
 <tr>
+<td align="left"><code>right_turn.check_traffic_signal</code></td>
+<td>[-]</td>
+<td>bool</td>
+<td>Use traffic light context for right-turn validation</td>
+<td>true</td>
+</tr>
+<tr>
 <td align="left"><code>left_turn.enable</code></td>
 <td>[-]</td>
 <td>bool</td>
@@ -14273,6 +14283,13 @@ If any of the following conditions are met the tracking information is reset and
 <td>[-]</td>
 <td>bool</td>
 <td>Flag to enable/disable checking turning lanes</td>
+<td>true</td>
+</tr>
+<tr>
+<td align="left"><code>left_turn.check_traffic_signal</code></td>
+<td>[-]</td>
+<td>bool</td>
+<td>Use traffic light context for left-turn validation</td>
 <td>true</td>
 </tr>
 </tbody>
