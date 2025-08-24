@@ -38,6 +38,8 @@ intersection_collision_checker_node:
     right_turn:
       enable:
         type: bool
+      check_traffic_signal:
+        type: bool
       check_crossing_lanes:
         type: bool
       check_turning_lanes:
@@ -49,6 +51,8 @@ intersection_collision_checker_node:
 
     left_turn:
       enable:
+        type: bool
+      check_traffic_signal:
         type: bool
       check_turning_lanes:
         type: bool
