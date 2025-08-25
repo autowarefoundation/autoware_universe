@@ -242,6 +242,7 @@
       <arg name="pipeline_ns" value="$(var irregular_object_detector_ns)"/>
       <arg name="fusion_camera_ids" value="$(var irregular_object_detector_fusion_camera_ids)"/>
       <arg name="image_topic_name" value="$(var image_topic_name)"/>
+      <arg name="input/concatenation_info" value="$(var input/concatenation_info)"/>
       <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
       <arg name="output/objects" value="$(var irregular_object_pipeline/output/objects)"/>
       <arg name="irregular_object_detector_param_path" value="$(var irregular_object_detector_param_path)"/>
