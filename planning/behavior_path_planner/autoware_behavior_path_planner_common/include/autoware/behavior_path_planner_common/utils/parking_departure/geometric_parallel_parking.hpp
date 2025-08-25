@@ -47,20 +47,28 @@ struct ParallelParkingParameters
   // forward parking
   double after_forward_parking_straight_distance{0.0};
   double forward_parking_velocity{0.0};
+  double clothoid_forward_parking_velocity{0.0};
   double forward_parking_lane_departure_margin{0.0};
   double forward_parking_path_interval{0.0};
+  double forward_parking_max_steer_angle{0.0};
+  double forward_parking_steer_rate_lim{0.0};
 
   // backward parking
   double after_backward_parking_straight_distance{0.0};
   double backward_parking_velocity{0.0};
+  double clothoid_backward_parking_velocity{0.0};
   double backward_parking_lane_departure_margin{0.0};
   double backward_parking_path_interval{0.0};
+  double backward_parking_max_steer_angle{0.0};
+  double backward_parking_steer_rate_lim{0.0};
 
   // pull_out
   double pull_out_velocity{0.0};
   double pull_out_lane_departure_margin{0.0};
   double pull_out_arc_path_interval{0.0};
   double geometric_pull_out_max_steer_angle_margin_scale{0.0};
+  double pull_out_max_steer_angle{0.0};
+  double pull_out_steer_rate_lim{0.0};
 };
 
 class GeometricParallelParking
@@ -70,7 +78,7 @@ public:
   bool planPullOver(
     const Pose & goal_pose, const lanelet::ConstLanelets & road_lanes,
     const lanelet::ConstLanelets & pull_over_lanes, const double max_steer_angle,
-    const bool is_forward, const bool left_side_parking);
+    const bool is_forward, const bool left_side_parking, const bool use_clothoid);
   bool planPullOut(
     const Pose & start_pose, const Pose & goal_pose, const lanelet::ConstLanelets & road_lanes,
     const lanelet::ConstLanelets & pull_over_lanes, const bool left_side_start,
@@ -121,6 +129,13 @@ private:
     const double lane_departure_margin, const double arc_path_interval,
     const std::shared_ptr<autoware::boundary_departure_checker::BoundaryDepartureChecker>
       autoware_lane_departure_checker);
+  std::vector<PathWithLaneId> planOneTrialClothoid(
+    const Pose & start_pose, const Pose & goal_pose, const double R_E_far, const double L_min,
+    const lanelet::ConstLanelets & road_lanes, const lanelet::ConstLanelets & shoulder_lanes,
+    const bool is_forward, const bool left_side_parking, const double end_pose_offset,
+    const double lane_departure_margin, const double arc_path_interval,
+    const std::shared_ptr<autoware::boundary_departure_checker::BoundaryDepartureChecker>
+      autoware_lane_departure_checker);
   PathWithLaneId generateArcPath(
     const Pose & center, const double radius, const double start_yaw, double end_yaw,
     const double arc_path_interval, const bool is_left_turn, const bool is_forward);
@@ -134,12 +149,25 @@ private:
   std::vector<PathWithLaneId> generatePullOverPaths(
     const Pose & start_pose, const Pose & goal_pose, const double R_E_far,
     const lanelet::ConstLanelets & road_lanes, const lanelet::ConstLanelets & pull_over_lanes,
-    const bool is_forward, const bool left_side_parking, const double end_pose_offset,
-    const double velocity);
+    const bool is_forward, const bool left_side_parking, const bool use_clothoid,
+    const double end_pose_offset, const double velocity);
   PathWithLaneId generateStraightPath(
-    const Pose & start_pose, const lanelet::ConstLanelets & road_lanes);
+    const Pose & start_pose, const lanelet::ConstLanelets & road_lanes, const bool set_stop_end);
   void setVelocityToArcPaths(
     std::vector<PathWithLaneId> & arc_paths, const double velocity, const bool set_stop_end);
+
+  std::vector<PathWithLaneId> generateClothoidalSequence(
+    const double A, const double L, const double theta, const Pose & start_pose,
+    const Pose & end_pose, const double arc_path_interval, const bool is_left_steering,
+    const bool is_forward);
+  PathWithLaneId generateArcPathFromTwoPoses(
+    const Pose & start_pose, const Pose & goal_pose, const double arc_path_interval,
+    const bool is_left_turn, const bool is_forward);
+  PathWithLaneId generateClothoidPath(
+    const double A, const double L, const Pose & start_pose, const double arc_path_interval,
+    const bool is_left_steering, const bool is_forward);
+
+  const double clothoid_integral_interval_{0.001};
 
   // debug
   Pose Cr_{};
