@@ -20,6 +20,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #ifndef PARAMETERS_HPP_
@@ -47,10 +48,8 @@ struct Output
   DepartureIntervals departure_intervals;
   Side<DeparturePoints> departure_points;
   CriticalDeparturePoints critical_departure_points;
-  std::unordered_map<DepartureType, bool> diagnostic_output{
-    {DepartureType::NEAR_BOUNDARY, false},
-    {DepartureType::APPROACHING_DEPARTURE, false},
-    {DepartureType::CRITICAL_DEPARTURE, false}};
+
+  std::pair<int8_t, std::string> diag_status{DiagStatus::OK, "none"};
 };
 
 struct NodeParam
