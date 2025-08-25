@@ -3,6 +3,7 @@
   <!-- Current namespace -->
   <arg name="ns" description="current namespace"/>
   <arg name="pipeline_ns" description="pipeline namespace"/>
+  <arg name="input/concatenation_info"/>
   <arg name="input/pointcloud"/>
   <arg name="fusion_camera_ids" default="[0]" description="camera IDs used for fusion"/>
   <arg name="image_topic_name" default="image_raw" description="topic name of camera image"/>
@@ -12,6 +13,7 @@
     <push-ros-namespace namespace="$(var pipeline_ns)"/>
     <group>
       <include file="$(find-pkg-share tier4_perception_launch)/launch/object_recognition/detection/detector/camera_lidar_irregular_object_detector.launch.py">
+        <arg name="input/concatenation_info" value="$(var input/concatenation_info)"/>
         <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
         <arg name="output_topic" value="clusters"/>
         <arg name="pointcloud_container_name" value="$(var node/pointcloud_container)"/>
