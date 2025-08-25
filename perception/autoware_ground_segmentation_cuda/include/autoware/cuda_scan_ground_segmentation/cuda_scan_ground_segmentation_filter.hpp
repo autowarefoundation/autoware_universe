@@ -161,13 +161,13 @@ private:
    *
    */
   void assignPointToClassifyPoint(
-    const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
-    const CellCentroid * centroid_cells_list_dev, const FilterParameters * filter_parameters_dev,
-    int * cell_counts_dev, ClassifiedPointTypeStruct * classified_points_dev);
+    const PointTypeStruct * input_points_dev, const CellCentroid * centroid_cells_list_dev,
+    const FilterParameters * filter_parameters_dev, int * cell_counts_dev,
+    ClassifiedPointTypeStruct * classified_points_dev);
 
   void getCellFirstPointIndex(
     const FilterParameters * filter_parameters_dev, CellCentroid * centroid_cells_list_dev,
-    int * num_points_per_cell_dev, int * cell_first_point_indices_dev);
+    int * num_points_per_cell_dev, size_t * cell_first_point_indices_dev);
   void sortPointsInCells(
     const int * num_points_per_cell_dev, ClassifiedPointTypeStruct * classified_points_dev);
   void scanPerSectorGroundReference(
@@ -178,25 +178,13 @@ private:
    * Extract obstacle points from classified_points_dev into
    */
   void extractNonGroundPoints(
-    const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
-    ClassifiedPointTypeStruct * classified_points_dev, PointTypeStruct * output_points_dev,
-    size_t & num_output_points_host, const PointType pointtype);
+    const PointTypeStruct * input_points_dev, ClassifiedPointTypeStruct * classified_points_dev,
+    PointTypeStruct * output_points_dev, size_t & num_output_points_host,
+    const PointType pointtype);
 
-  void getObstaclePointcloud(
-    const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
-    PointTypeStruct * output_points, size_t & num_output_points);
-  /*
-   * This function splits the input point cloud into radial divisions.
-   * Each division corresponds to a specific angle range defined by the radial_divider_angle_rad.
-   * The points in each division are sorted by their distance from the center of the point cloud.
-   * @param input_points The input point cloud data.
-   * @param indices_list_dev point to device memory where array of radial division indices will be
-   * stored.
-   * @note This function assumes that the input point cloud is already allocated in device memory.f
-   */
   void calcPointNumInCell(
-    const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
-    CellCentroid * indices_list_dev, const FilterParameters * filter_parameters_dev);
+    const PointTypeStruct * input_points_dev, CellCentroid * indices_list_dev,
+    const FilterParameters * filter_parameters_dev);
 
   cudaStream_t ground_segment_stream_{};
   cudaMemPool_t mem_pool_{};
