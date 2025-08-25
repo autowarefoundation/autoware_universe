@@ -15,6 +15,7 @@
 #include "start_planner_test_helper.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#include <autoware/behavior_path_start_planner_module/util.hpp>
 #include <autoware/planning_test_manager/autoware_planning_test_manager_utils.hpp>
 #include <autoware/pyplot/pyplot.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
@@ -29,6 +30,7 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -36,6 +38,7 @@ namespace autoware::behavior_path_planner::testing
 {
 using autoware::test_utils::get_absolute_path_to_config;
 using autoware_planning_test_manager::utils::makeBehaviorRouteFromLaneId;
+namespace start_planner_utils = autoware::behavior_path_planner::start_planner_utils;
 
 std::string get_absolute_path_to_test_data(
   const std::string & package_name, const std::string & route_filename)
@@ -221,13 +224,39 @@ void StartPlannerTestHelper::plot_footprint(
 
 void StartPlannerTestHelper::plot_and_save_path(
   const std::vector<autoware_internal_planning_msgs::msg::PathWithLaneId> & partial_paths,
-  const std::vector<lanelet::ConstLanelet> & lanelets,
+  const std::shared_ptr<PlannerData> & planner_data,
   const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const PlannerType planner_type,
   const std::string & filename)
 {
   if (partial_paths.empty()) {
     std::cerr << "Path is empty" << std::endl;
     return;
+  }
+
+  // Get lanelets that actually overlap with the path using existing util functions
+  std::vector<lanelet::ConstLanelet> lanelets;
+  std::set<lanelet::Id> added_lanelet_ids;
+
+  // Get all available lanelets from the map
+  const lanelet::LaneletMap & map = *planner_data->route_handler->getLaneletMapPtr();
+  lanelet::ConstLanelets all_lanelets;
+  for (const auto & lanelet : map.laneletLayer) {
+    all_lanelets.push_back(lanelet);
+  }
+
+  for (const auto & partial_path : partial_paths) {
+    for (const auto & point : partial_path.points) {
+      const auto lane_ids = start_planner_utils::get_lane_ids_from_pose(
+        point.point.pose, all_lanelets, std::vector<int64_t>{});
+
+      for (const auto & lane_id : lane_ids) {
+        if (added_lanelet_ids.find(lane_id) == added_lanelet_ids.end()) {
+          const auto lanelet = planner_data->route_handler->getLaneletsFromId(lane_id);
+          lanelets.push_back(lanelet);
+          added_lanelet_ids.insert(lane_id);
+        }
+      }
+    }
   }
 
   // Initialize pyplot

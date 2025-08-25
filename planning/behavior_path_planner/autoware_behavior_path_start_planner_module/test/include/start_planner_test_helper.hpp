@@ -14,6 +14,7 @@
 #pragma once
 
 #include <autoware/behavior_path_start_planner_module/start_planner_module.hpp>
+#include <autoware/behavior_path_start_planner_module/util.hpp>
 #include <autoware/pyplot/pyplot.hpp>
 #include <autoware/vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -26,6 +27,7 @@
 #include <tf2/utils.h>
 
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -51,7 +53,7 @@ public:
   // Path plotting functions
   static void plot_and_save_path(
     const std::vector<autoware_internal_planning_msgs::msg::PathWithLaneId> & partial_paths,
-    const std::vector<lanelet::ConstLanelet> & lanelets,
+    const std::shared_ptr<PlannerData> & planner_data,
     const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const PlannerType planner_type,
     const std::string & filename);
 
