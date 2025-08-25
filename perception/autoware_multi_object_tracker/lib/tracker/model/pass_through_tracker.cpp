@@ -78,6 +78,7 @@ bool PassThroughTracker::getTrackedObject(
 {
   using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
   object = object_;
+  object.time = time;
 
   object.pose_covariance[XYZRPY_COV_IDX::X_X] = 0.0;
   object.pose_covariance[XYZRPY_COV_IDX::X_Y] = 0.0;
