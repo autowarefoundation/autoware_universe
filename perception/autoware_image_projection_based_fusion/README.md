@@ -116,9 +116,8 @@ If the interval is less than the match threshold, the messages are considered ma
 
 If the concatenation node from the Autoware point cloud preprocessor is being used, enable this mode.
 The advanced mode parses diagnostics from the concatenation node to verify whether all point clouds have been successfully concatenated. If concatenation is incomplete, it dynamically adjusts `rois_timestamp_offsets` based on diagnostic messages.
-Instead of using a fixed threshold, this mode requires setting three parameters:
+Instead of using a fixed threshold, this mode requires setting two parameters:
 
-- `concatenation_info_topic` (a string, from pointcloud concatenation node)
 - `msg3d_noise_window` (a single value)
 - `rois_timestamp_noise_window` (a vector)
 
@@ -129,7 +128,6 @@ These parameters enforce stricter matching between the `RoI` messages and `msg3d
   ```bash
     matching_strategy:
       type: advanced
-      concatenation_info_topic: "/sensing/lidar/concatenated/pointcloud_info"
       msg3d_noise_window: 0.02
       rois_timestamp_noise_window: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
   ```
