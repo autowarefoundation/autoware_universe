@@ -14138,6 +14138,26 @@ This module is designed for rule-based velocity decision that is easy for develo
 <td>bool</td>
 <td>[-] whether to use pass judge</td>
 </tr>
+<tr>
+<td><code>v2i.use_remaining_time</code></td>
+<td>bool</td>
+<td>[-] whether to use V2I remaining time information for traffic light decision</td>
+</tr>
+<tr>
+<td><code>v2i.last_time_allowed_to_pass</code></td>
+<td>double</td>
+<td>[s] relative time against the time of turn to red - safety margin for passing through</td>
+</tr>
+<tr>
+<td><code>v2i.velocity_threshold</code></td>
+<td>double</td>
+<td>[m/s] velocity threshold to change decision logic for V2I prediction</td>
+</tr>
+<tr>
+<td><code>v2i.required_time_to_departure</code></td>
+<td>double</td>
+<td>[s] required time to departure for low speed scenarios to prevent unsafe passing</td>
+</tr>
 </tbody>
 </table>
 <h4 id="flowchart">Flowchart<a class="headerlink" href="#flowchart" title="Permanent link">#</a></h4>

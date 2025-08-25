@@ -5934,40 +5934,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#anchor-point-based-estimation" class="md-nav__link">
-    Anchor point based estimation
-  </a>
-  
-    <nav class="md-nav" aria-label="Anchor point based estimation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#anchor-point-and-tracking-relationships" class="md-nav__link">
-    Anchor point and tracking relationships
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#manage-anchor-point-offset" class="md-nav__link">
-    Manage anchor point offset
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#known-limits-drawbacks" class="md-nav__link">
-    Known limits, drawbacks
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#references" class="md-nav__link">
     References
   </a>
@@ -14117,40 +14083,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#anchor-point-based-estimation" class="md-nav__link">
-    Anchor point based estimation
-  </a>
-  
-    <nav class="md-nav" aria-label="Anchor point based estimation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#anchor-point-and-tracking-relationships" class="md-nav__link">
-    Anchor point and tracking relationships
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#manage-anchor-point-offset" class="md-nav__link">
-    Manage anchor point offset
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#known-limits-drawbacks" class="md-nav__link">
-    Known limits, drawbacks
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#references" class="md-nav__link">
     References
   </a>
@@ -14206,79 +14138,56 @@ A = \begin{bmatrix}
 \end{bmatrix}
 \]</div>
 <h3 id="kinematic-bicycle-model-2">Kinematic bicycle model [2]<a class="headerlink" href="#kinematic-bicycle-model-2" title="Permanent link">#</a></h3>
-<p>Kinematic bicycle model uses slip angle <span class="arithmatex">\(\beta\)</span> and velocity <span class="arithmatex">\(v\)</span> to calculate yaw update.
-The merit of using this model is that it can prevent unintended yaw rotation when the vehicle is stopped.</p>
+<p>Static bicycle model uses two wheel positions (front and rear) with longitudinal and lateral velocities to represent vehicle motion.
+The merit of using this model is that it can handle both longitudinal and lateral motion while maintaining vehicle orientation through wheel base geometry.</p>
 <p><img alt="kinematic_bicycle_model" src="../image/kinematic_bicycle_model.png"></p>
 <ul>
 <li><strong>state variable</strong><ul>
-<li>pose( <span class="arithmatex">\(x,y\)</span> ), yaw( <span class="arithmatex">\(\psi\)</span> ), velocity( <span class="arithmatex">\(v\)</span> ), and slip angle ( <span class="arithmatex">\(\beta\)</span> )</li>
-<li><span class="arithmatex">\([x_{k}, y_{k}, \psi_{k}, v_{k}, \beta_{k} ]^\mathrm{T}\)</span></li>
+<li>rear wheel position( <span class="arithmatex">\(x_1=x-l_r\cos\psi\)</span>, <span class="arithmatex">\(y_1=y-l\sin\psi\)</span> ), front wheel position( <span class="arithmatex">\(x_2=x+l_f\cos\psi\)</span>, <span class="arithmatex">\(y_2=y+l_f\sin\psi\)</span> ), longitudinal velocity( <span class="arithmatex">\(v_{long} = v\cos\beta\)</span> ), and lateral velocity of the front wheel ( <span class="arithmatex">\(v_{lat}=\frac{l_r+l_f}{l_r}v\sin\beta\)</span> )</li>
+<li><span class="arithmatex">\([x_{1k}, y_{1k}, x_{2k}, y_{2k}, v_{long,k}, v_{lat,k} ]^\mathrm{T}\)</span></li>
 </ul>
 </li>
 <li><strong>Prediction Equation</strong><ul>
 <li><span class="arithmatex">\(dt\)</span>: sampling time</li>
-<li><span class="arithmatex">\(w_{k} = \dot\psi_{k} = \frac{ v_{k} \sin \left( \beta_{k} \right) }{ l_r }\)</span> : angular velocity</li>
+<li><span class="arithmatex">\(l_{wheelbase} = l_r + l_f = \sqrt{(x_2 - x_1)^2 + (y_2 - y_1)^2}\)</span> : distance between front and rear wheels</li>
+<li><span class="arithmatex">\(\cos\psi = \frac{x_2 - x_1}{l_{wheelbase}}\)</span>, <span class="arithmatex">\(\sin\psi = \frac{y_2 - y_1}{l_{wheelbase}}\)</span> : vehicle orientation components</li>
+<li><span class="arithmatex">\(\gamma = \frac{\ln(2)}{t_{halflife}}\)</span> : decay constant for lateral velocity</li>
 </ul>
 </li>
 </ul>
 <div class="arithmatex">\[
 \begin{aligned}
-x_{k+1} &amp; = x_{k} + v_{k} \cos \left( \psi_{k}+\beta_{k} \right) {d t}
-            -\frac{1}{2}  \left\lbrace w_k v_k \sin \left(\psi_{k}+\beta_{k} \right) \right\rbrace {d t}^2\\
-y_{k+1} &amp; = y_{k} + v_{k} \sin \left( \psi_{k}+\beta_{k} \right) {d t}
-            +\frac{1}{2}  \left\lbrace w_k v_k \cos \left(\psi_{k}+\beta_{k} \right) \right\rbrace {d t}^2\\
-\psi_{k+1} &amp; =\psi_{k} + w_k {d t} \\
-v_{k+1} &amp; = v_{k} \\
-\beta_{k+1} &amp; =\beta_{k}
+x_{1,k+1} &amp; = x_{1,k} + v_{long,k} \cos\psi \cdot dt \\
+y_{1,k+1} &amp; = y_{1,k} + v_{long,k} \sin\psi \cdot dt \\
+x_{2,k+1} &amp; = x_{2,k} + v_{long,k} \cos\psi \cdot dt - v_{lat,k} \sin\psi \cdot dt \\
+y_{2,k+1} &amp; = y_{2,k} + v_{long,k} \sin\psi \cdot dt + v_{lat,k} \cos\psi \cdot dt \\
+v_{long,k+1} &amp; = v_{long,k} \\
+v_{lat,k+1} &amp; = v_{lat,k} \cdot e^{-\gamma \cdot dt}
 \end{aligned}
 \]</div>
 <ul>
-<li><strong>Jacobian</strong></li>
+<li><strong>Jacobian Matrix</strong></li>
 </ul>
 <div class="arithmatex">\[
-\frac{\partial f}{\partial \mathrm x}=\left[\begin{array}{ccccc}
-1 &amp; 0
- &amp; v \cos (\psi+\beta) {d t} - \frac{1}{2} \left\lbrace w v \cos \left( \psi+\beta \right) \right\rbrace {d t}^2
- &amp; \sin (\psi+\beta) {d t} - \left\lbrace w \sin \left( \psi+\beta \right) \right\rbrace {d t}^2
- &amp; -v \sin (\psi+\beta) {d t} - \frac{v^2}{2l_r} \left\lbrace \cos(\beta)\sin(\psi+\beta)+\sin(\beta)\cos(\psi+\beta) \right\rbrace {d t}^2 \\
-0 &amp; 1
- &amp; v \sin (\psi+\beta) {d t} - \frac{1}{2} \left\lbrace w v \sin \left( \psi+\beta \right) \right\rbrace {d t}^2
- &amp; \cos (\psi+\beta) {d t} + \left\lbrace w \cos \left( \psi+\beta \right) \right\rbrace {d t}^2
- &amp; v \cos (\psi+\beta) {d t} + \frac{v^2}{2l_r} \left\lbrace \cos(\beta)\cos(\psi+\beta)-\sin(\beta)\sin(\psi+\beta) \right\rbrace {d t}^2 \\
-0 &amp; 0 &amp; 1 &amp; \frac{1}{l_r} \sin \beta {d t} &amp; \frac{v}{l_r} \cos \beta d t \\
-0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 \\
-0 &amp; 0 &amp; 0 &amp; 0 &amp; 1
-\end{array}\right]
+A = \begin{bmatrix}
+1 - \frac{v_{long} }{l_{wheelbase}}\cdot dt &amp; 0 &amp; \frac{v_{long}}{l_{wheelbase}}\cdot dt &amp; 0 &amp; \cos\psi \cdot dt &amp; 0 \\
+0 &amp; 1 - \frac{v_{long}}{l_{wheelbase}}\cdot dt &amp; 0 &amp; \frac{v_{long}}{l_{wheelbase}}\cdot dt &amp; \sin\psi \cdot dt &amp; 0 \\
+-\frac{v_{long}}{l_{wheelbase}}\cdot dt &amp; \frac{v_{lat}}{l_{wheelbase}}\cdot dt &amp; 1 + \frac{v_{long}}{l_{wheelbase}}\cdot dt &amp; -\frac{v_{lat}}{l_{wheelbase}}\cdot dt &amp; \cos\psi \cdot dt &amp; -\sin\psi \cdot dt \\
+-\frac{v_{lat}}{l_{wheelbase}}\cdot dt &amp; \frac{v_{long}}{l_{wheelbase}}\cdot dt &amp; \frac{v_{lat}}{l_{wheelbase}}\cdot dt &amp; 1 + \frac{v_{long}}{l_{wheelbase}}\cdot dt &amp; \sin\psi \cdot dt &amp; \cos\psi \cdot dt \\
+0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 \\
+0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; e^{-\gamma \cdot dt}
+\end{bmatrix}
 \]</div>
-<h4 id="remarks-on-the-output-twist">remarks on the output twist<a class="headerlink" href="#remarks-on-the-output-twist" title="Permanent link">#</a></h4>
-<p>Remarks that the velocity <span class="arithmatex">\(v_{k}\)</span> is the norm of velocity of vehicle, not the longitudinal velocity.
-So the output twist in the object coordinate <span class="arithmatex">\((x,y)\)</span> is calculated as follows.</p>
-<div class="arithmatex">\[
-\begin{aligned}
-v_{x} &amp;= v_{k} \cos \left(\beta_{k}\right) \\
-v_{y} &amp;= v_{k} \sin \left(\beta_{k}\right)
-\end{aligned}
-\]</div>
-<h2 id="anchor-point-based-estimation">Anchor point based estimation<a class="headerlink" href="#anchor-point-based-estimation" title="Permanent link">#</a></h2>
-<p>To separate the estimation of the position and the shape, we use anchor point based position estimation.</p>
-<h3 id="anchor-point-and-tracking-relationships">Anchor point and tracking relationships<a class="headerlink" href="#anchor-point-and-tracking-relationships" title="Permanent link">#</a></h3>
-<p>Anchor point is set when the tracking is initialized.
-Its position is equal to the center of the bounding box of the first tracking bounding box.</p>
-<p>Here show how anchor point is used in tracking.</p>
-<p><img alt="img" src="../image/anchor_point.drawio.svg"></p>
-<p>Raw detection is converted to anchor point coordinate, and tracking</p>
-<h3 id="manage-anchor-point-offset">Manage anchor point offset<a class="headerlink" href="#manage-anchor-point-offset" title="Permanent link">#</a></h3>
-<p>Anchor point should be kept in the same position of the object.
-In other words, the offset value must be adjusted so that the input BBOX and the output BBOX's closest plane to the ego vehicle are at the same position.</p>
-<!-- ![img](image/nearest_corner_or_side.drawio.svg) -->
-
-<h3 id="known-limits-drawbacks">Known limits, drawbacks<a class="headerlink" href="#known-limits-drawbacks" title="Permanent link">#</a></h3>
+<h4 id="remarks-on-the-output">remarks on the output<a class="headerlink" href="#remarks-on-the-output" title="Permanent link">#</a></h4>
+<p>The output twist in the vehicle coordinate system is calculated from the state variables:</p>
 <ul>
-<li>When the anchor point is further than the detection center, the tracking will be more affected by the yaw detection noise.<ul>
-<li>This can be result in unintended yaw rotation or position drift.</li>
+<li>Vehicle center position: <span class="arithmatex">\(x = \frac{x_1 + x_2}{2}\)</span>, <span class="arithmatex">\(y = \frac{y_1 + y_2}{2}\)</span></li>
+<li>Vehicle yaw: <span class="arithmatex">\(\psi = tan^{-1}{(\frac{y_2 - y_1}{x_2 - x_1})}\)</span></li>
+<li>Longitudinal velocity: <span class="arithmatex">\(v_x = v_{long}\)</span></li>
+<li>Lateral velocity: <span class="arithmatex">\(v_y = v_{lat}\frac{ {l_{wheelbase}}}{l_{f}}\)</span></li>
+<li>Angular velocity: <span class="arithmatex">\(\omega_z = \frac{v_{lat}}{l_{wheelbase}}\)</span></li>
 </ul>
-</li>
-</ul>
+<p>The lateral velocity decays exponentially over time to model the natural stabilization of vehicle slip motion.</p>
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">#</a></h2>
 <!-- cspell:ignore Wanielik, Gerd, ICIF -->
 
