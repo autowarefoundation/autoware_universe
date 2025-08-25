@@ -177,4 +177,4 @@ All pedestrian parameters follow the same patterns as vehicle parameters but wit
 - **Decrease thresholds** if incorrect matches are occurring or movement appears unrealistic
 - **Vehicle parameters** should remain strict for realistic traffic simulation
 - **Pedestrian parameters** can be more lenient due to unpredictable human movement
-- Monitor logs for validation failures to identify which parameters need adjustment
+- **Monitor logs** for validation failures to identify which parameters need adjustment
