@@ -286,7 +286,34 @@ double get3dGeneralizedIoU(
   const double iou =
     std::clamp((intersection_area * height_overlap) / (union_area * total_height), 0.0, 1.0);
 
-  return iou - 1.0 + (union_area / convex_area);
+  return iou - (convex_area - union_area) / convex_area;
+}
+
+void computePolygonDimensions(autoware_perception_msgs::msg::Shape & shape)
+{
+  // Compute axis-aligned bounding box
+  const auto & points = shape.footprint.points;
+
+  // Pre-allocate boundary values using first point
+  float max_x = points[0].x;
+  float max_y = points[0].y;
+  float max_z = points[0].z;
+  float min_x = points[0].x;
+  float min_y = points[0].y;
+  float min_z = points[0].z;
+
+  for (const auto & point : points) {
+    if (point.x < min_x) min_x = point.x;
+    if (point.x > max_x) max_x = point.x;
+    if (point.y < min_y) min_y = point.y;
+    if (point.y > max_y) max_y = point.y;
+    if (point.z < min_z) min_z = point.z;
+    if (point.z > max_z) max_z = point.z;
+  }
+
+  shape.dimensions.x = max_x - min_x;
+  shape.dimensions.y = max_y - min_y;
+  shape.dimensions.z = max_z - min_z;
 }
 
 }  // namespace shapes
