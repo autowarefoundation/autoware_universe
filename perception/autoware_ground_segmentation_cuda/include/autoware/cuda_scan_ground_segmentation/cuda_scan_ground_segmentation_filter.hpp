@@ -104,7 +104,7 @@ struct FilterParameters
   // common parameters
   float sector_angle_rad;  // radial sector angle in radians
   float inv_sector_angle_rad;
-  size_t num_sectors;      // number of radial sectors
+  uint16_t num_sectors;    // number of radial sectors
   VehicleInfo vehicle_info;
 
   // cell mode parameters
@@ -157,7 +157,7 @@ private:
   void scanObstaclePoints(
     const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
     PointTypeStruct * output_points_dev, size_t * num_output_points,
-    CellCentroid * cells_centroid_list_dev);
+    CellCentroid * centroid_cells_list_dev);
   /*
    * This function calc the cell_id for each point
    * Assign the point with initialized class into temp memory for classification
@@ -166,16 +166,16 @@ private:
    */
   void assignPointToClassifyPoint(
     const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
-    const CellCentroid * cells_centroid_list_dev, const FilterParameters * filter_parameters_dev,
+    const CellCentroid * centroid_cells_list_dev, const FilterParameters * filter_parameters_dev,
     int * cell_counts_dev, ClassifiedPointTypeStruct * classified_points_dev);
 
   void getCellFirstPointIndex(
-    const FilterParameters * filter_parameters_dev, CellCentroid * cells_centroid_list_dev,
+    const FilterParameters * filter_parameters_dev, CellCentroid * centroid_cells_list_dev,
     int * num_points_per_cell_dev, int * cell_first_point_indices_dev);
   void sortPointsInCells(
     const int * num_points_per_cell_dev, ClassifiedPointTypeStruct * classified_points_dev);
   void scanPerSectorGroundReference(
-    ClassifiedPointTypeStruct * classified_points_dev, CellCentroid * cells_centroid_list_dev,
+    ClassifiedPointTypeStruct * classified_points_dev, CellCentroid * centroid_cells_list_dev,
     const FilterParameters * filter_parameters_dev, int * last_gnd_cells_dev);
 
   /*

@@ -25,7 +25,7 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
   filter_parameters.sector_angle_rad =
     static_cast<float>(deg2rad(declare_parameter<double>("sector_angle_deg")));
   filter_parameters.inv_sector_angle_rad = 1.0f / filter_parameters.sector_angle_rad;
-  filter_parameters.num_sectors = std::ceil(2.0 * M_PI / filter_parameters.sector_angle_rad);
+  filter_parameters.num_sectors = std::ceil(2.0 * M_PI * filter_parameters.inv_sector_angle_rad);
 
   // common thresholds
   filter_parameters.global_slope_max_angle_rad =

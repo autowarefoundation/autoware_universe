@@ -22,33 +22,34 @@ __device__ const T getElementValue(
 }
 __device__ __forceinline__ float fastAtan2_0_2Pi(float y, float x)
 {
-  const float PI = 3.14159265358979323846f;
-  const float PI2 = 6.28318530717958647692f;
-  const float PI_2 = 1.57079632679489661923f;
+  // const float PI = 3.14159265358979323846f;
+  // const float PI2 = 6.28318530717958647692f;
+  // const float PI_2 = 1.57079632679489661923f;
 
-  // Avoid divide-by-zero
-  float abs_y = fabsf(y) + 1e-10f;
+  // // Avoid divide-by-zero
+  // float abs_y = fabsf(y) + 1e-10f;
 
-  float r, angle;
+  // float r, angle;
 
-  if (x >= 0.0f) {
-    // First and fourth quadrants
-    r = (x - abs_y) / (x + abs_y);
-    angle = PI_2 - r * (0.2447f + 0.0663f * fabsf(r));  // polynomial approx
-    if (y < 0.0f) {
-      angle = PI2 - angle;  // 4th quadrant
-    }
-  } else {
-    // Second and third quadrants
-    r = (x + abs_y) / (abs_y - x);
-    angle = 3.0f * PI_2 - r * (0.2447f + 0.0663f * fabsf(r));  // poly approx
-    if (y < 0.0f) {
-      angle = angle - PI2;  // wrap into [0, 2π]
-    }
+  // if (x >= 0.0f) {
+  //   // First and fourth quadrants
+  //   r = (x - abs_y) / (x + abs_y);
+  //   angle = PI_2 - r * (0.2447f + 0.0663f * fabsf(r));  // polynomial approx
+  //   if (y < 0.0f) {
+  //     angle = PI2 - angle;  // 4th quadrant
+  //   }
+  // } else {
+  //   // Second and third quadrants
+  //   r = (x + abs_y) / (abs_y - x);
+  //   angle = 3.0f * PI_2 - r * (0.2447f + 0.0663f * fabsf(r));  // poly approx
+  //   if (y < 0.0f) {
+  //     angle = angle - PI2;  // wrap into [0, 2π]
+  //   }
+  // }
+  float angle = atan2f(y, x);  // Returns [-π, π]
+  if (angle < 0.0f) {
+    angle += 2.0f * M_PI;  // Convert to [0, 2π]
   }
-
-  // Ensure within [0, 2π]
-  if (angle < 0.0f) angle += PI2;
   return angle;
 }
 __device__ inline int getCellID(
@@ -118,11 +119,11 @@ __global__ void assignPointToClassifyPointKernel(
   // This is a placeholder for the actual implementation
   // memory index for classified_points_dev is calculated as
 
-  size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  size_t idx = static_cast<size_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
     return;  // Out of bounds
   }
-  const auto inv_sector_angle_rad = filter_parameters_dev->inv_sector_angle_rad;
+  const auto & inv_sector_angle_rad = filter_parameters_dev->inv_sector_angle_rad;
   // Calculate the angle and distance from the center
   const float x = input_points[idx].x - filter_parameters_dev->center_x;
   const float y = input_points[idx].y - filter_parameters_dev->center_y;
@@ -390,7 +391,7 @@ __device__ void recheckCell(
     auto point_idx = static_cast<size_t>(idx_start_point_of_cell + i);
     auto & point = classify_points[point_idx];
     if (point.type != PointType::GROUND) {
-      continue;  // Skip non-ground points
+      continue;  
     }
     // Apply the rechecking logic
     if (point.z > cell.gnd_height_min + filter_parameters_dev->non_ground_height_threshold) {
@@ -477,7 +478,7 @@ __device__ void SegmentContinuousCell(
     // 1. height is out-of-range compared to previous cell gnd
     if (point.z - prev_cell_gnd_height > filter_parameters_dev->detection_range_z_max) {
       point.type = PointType::OUT_OF_RANGE;
-      return;  // Skip non-ground points
+      return;  
     }
 
     auto d_radius = point.radius - prev_gnd_cell.gnd_radius_avg;
@@ -486,13 +487,13 @@ __device__ void SegmentContinuousCell(
     // 2. the angle is exceed the global slope threshold
     if (point.z > filter_parameters_dev->global_slope_max_ratio * point.radius) {
       point.type = PointType::NON_GROUND;
-      continue;  // Skip non-ground points
+      continue;  
     }
 
     // 2. the angle is exceed the local slope threshold
     if (dz > filter_parameters_dev->local_slope_max_ratio * d_radius) {
       point.type = PointType::NON_GROUND;
-      continue;  // Skip non-ground points
+      continue;  
     }
 
     // 3. height from the estimated ground center estimated by local gradient
@@ -500,7 +501,7 @@ __device__ void SegmentContinuousCell(
       prev_gnd_cell.gnd_height_avg + gnd_gradient * filter_parameters_dev->cell_divider_size_m;
     if (point.z > estimated_ground_z + filter_parameters_dev->non_ground_height_threshold) {
       point.type = PointType::NON_GROUND;
-      continue;  // Skip non-ground points
+      continue;  
     }
     // if (abs(point.z - estimated_ground_z) <= filter_parameters_dev->non_ground_height_threshold)
     // {
@@ -513,7 +514,7 @@ __device__ void SegmentContinuousCell(
       point.z < -filter_parameters_dev->global_slope_max_ratio * point.radius) {
       // If the point is below the estimated ground height, classify it as non-ground
       point.type = PointType::OUT_OF_RANGE;
-      continue;  // Skip non-ground points
+      continue;  
     }
     // If the point is close to the estimated ground height, classify it as ground
     point.type = PointType::GROUND;
@@ -549,7 +550,7 @@ __device__ void SegmentDiscontinuousCell(
     // 1. height is out-of-range
     if (point.z - prev_gnd_cell.gnd_height_avg > filter_parameters_dev->detection_range_z_max) {
       point.type = PointType::OUT_OF_RANGE;
-      continue;  // Skip non-ground points
+      continue;  
     }
     // 2. the angle is exceed the global slope threshold
     auto dz = point.z - prev_gnd_cell.gnd_height_avg;
@@ -557,21 +558,21 @@ __device__ void SegmentDiscontinuousCell(
 
     if (point.z > filter_parameters_dev->global_slope_max_ratio * point.radius) {
       point.type = PointType::NON_GROUND;
-      continue;  // Skip non-ground points
+      continue;  
     }
-    // if( dz > filter_parameters_dev->local_slope_max_ratio * d_radius) {
-    //   point.type = PointType::NON_GROUND;
-    //   continue;  // Skip non-ground points
-    // }
+    if( dz > filter_parameters_dev->local_slope_max_ratio * d_radius) {
+      point.type = PointType::NON_GROUND;
+      continue;  
+    }
     // 3. local slope
     if (dz < -filter_parameters_dev->local_slope_max_ratio * d_radius) {
       point.type = PointType::OUT_OF_RANGE;
-      continue;  // Skip non-ground points
+      continue;  
     }
     if (point.z < -filter_parameters_dev->global_slope_max_ratio * point.radius) {
       // If the point is below the estimated ground height, classify it as non-ground
       point.type = PointType::OUT_OF_RANGE;
-      continue;  // Skip non-ground points
+      continue;  
     }
     point.type = PointType::GROUND;  // Mark as ground point
     updateGndPointInCell(current_cell, point);
@@ -655,6 +656,10 @@ __global__ void scanPerSectorGroundReferenceKernel(
        ++cell_index_in_sector) {
     auto sector_start_cell_index = idx * filter_parameters_dev->max_num_cells_per_sector;
     auto cell_id = sector_start_cell_index + cell_index_in_sector;
+    if(centroid_cells_list_dev[cell_id].num_points == 0) {
+      // if no points in the cell, continue
+      continue;
+    }
     auto index_start_point_current_cell = centroid_cells_list_dev[cell_id].start_point_index;
 
     // declare the points to stogare the gnd cells indexes in the sector
@@ -742,7 +747,7 @@ __global__ void calcCellPointNumberKernel(
     return;
   }
 
-  const auto inv_sector_angle_rad = filter_parameters_dev->inv_sector_angle_rad;
+  const auto & inv_sector_angle_rad = filter_parameters_dev->inv_sector_angle_rad;
 
   // Calculate the angle and distance from the center
   const float dx = input_points[idx].x - filter_parameters_dev->center_x;
@@ -910,14 +915,14 @@ void CudaScanGroundSegmentationFilter::scanPerSectorGroundReference(
 
   // Ensure block size doesn't exceed CUDA limits (max 1024 threads per block)
   const int max_threads_per_block = 1024;
-  dim3 block_dim(std::min(num_sectors, max_threads_per_block));
+  dim3 block_dim(std::min(1, max_threads_per_block));
   dim3 grid_dim((num_sectors + block_dim.x - 1) / block_dim.x);
 
   // Launch the kernel to scan for ground points in each sector
   scanPerSectorGroundReferenceKernel<<<grid_dim, block_dim, 0, ground_segment_stream_>>>(
     classified_points_dev, centroid_cells_list_dev, filter_parameters_dev, last_gnd_cells_dev);
   CHECK_CUDA_ERROR(cudaGetLastError());
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
+  // CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
 }
 
 // ============= Get obstacle point cloud =============
@@ -970,7 +975,7 @@ void CudaScanGroundSegmentationFilter::getObstaclePointcloud(
     &last_index, indices_dev + n - 1, sizeof(int), cudaMemcpyDeviceToHost, ground_segment_stream_));
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     &last_flag, flag_dev + n - 1, sizeof(int), cudaMemcpyDeviceToHost, ground_segment_stream_));
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
+  // CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
 
   const size_t num_output_points = static_cast<size_t>(last_flag + last_index);
   *num_output_points_host = num_output_points;
@@ -1025,7 +1030,7 @@ void CudaScanGroundSegmentationFilter::calcPointNumInCell(
     input_points_dev, number_input_points_, filter_parameters_dev, centroid_cells_list_dev);
   CHECK_CUDA_ERROR(cudaGetLastError());
 
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
+  // CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
 }
 
 // ========== Assign each pointcloud to specific cell =========================
@@ -1053,7 +1058,7 @@ void CudaScanGroundSegmentationFilter::assignPointToClassifyPoint(
     input_points_dev, number_input_points_, centroid_cells_list_dev, cell_counts_dev,
     filter_parameters_dev, classified_points_dev);
   CHECK_CUDA_ERROR(cudaGetLastError());
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
+  // CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
 }
 
 // ============= Extract non-ground points =============
@@ -1115,7 +1120,7 @@ void CudaScanGroundSegmentationFilter::extractNonGroundPoints(
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     &last_flag, flag_dev + number_input_points_ - 1, sizeof(int), cudaMemcpyDeviceToHost,
     ground_segment_stream_));
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
+  // CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
 
   const size_t num_output_points = static_cast<size_t>(last_flag + last_index);
   *num_output_points_host = num_output_points;
@@ -1160,7 +1165,7 @@ void CudaScanGroundSegmentationFilter::getCellFirstPointIndex(
   updateCellStartPointIndexKernel<<<blocks, threads, 0, ground_segment_stream_>>>(
     centroid_cells_list_dev, cell_first_point_indices_dev, filter_parameters_.max_num_cells);
   CHECK_CUDA_ERROR(cudaGetLastError());
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
+  // CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
 
   CHECK_CUDA_ERROR(cudaFree(d_temp_storage));
 }
@@ -1198,7 +1203,7 @@ CudaScanGroundSegmentationFilter::classifyPointcloud(
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     filter_parameters_dev, &filter_parameters_, sizeof(FilterParameters), cudaMemcpyHostToDevice,
     ground_segment_stream_));
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
+  // CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
 
   // split pointcloud to radial divisions
   // sort points in each radial division by distance from the center
@@ -1258,6 +1263,8 @@ CudaScanGroundSegmentationFilter::classifyPointcloud(
   extractNonGroundPoints(
     input_points, classified_points_dev, output_points_dev, &num_output_points);
 
+  
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
   // // mark valid points based on height threshold
 
   // Return the device memory to pool
