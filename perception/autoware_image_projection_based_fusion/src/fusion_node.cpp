@@ -202,11 +202,9 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::initialize_strategy()
     fusion_matching_strategy_ = std::make_unique<AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>>(
       std::dynamic_pointer_cast<FusionNode>(shared_from_this()), id_to_offset_map_);
     // subscribe concatenation_info
-    auto concatenation_info_topic =
-      declare_parameter<std::string>("matching_strategy.concatenation_info_topic");
     sub_concatenation_info_ =
       this->create_subscription<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
-        concatenation_info_topic, rclcpp::SensorDataQoS().keep_last(10),
+        "input/concatenation_info", rclcpp::SensorDataQoS().keep_last(10),
         std::bind(&FusionNode::concatenation_info_callback, this, std::placeholders::_1));
   } else {
     throw std::runtime_error("Matching strategy must be 'advanced' or 'naive'");

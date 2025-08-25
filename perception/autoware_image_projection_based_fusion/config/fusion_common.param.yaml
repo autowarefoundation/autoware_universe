@@ -33,7 +33,6 @@
     # matching strategy
     matching_strategy:
       type: advanced
-      concatenation_info_topic: "/sensing/lidar/concatenated/pointcloud_info"
       msg3d_noise_window: 0.02
       rois_timestamp_noise_window: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
       # type: naive
