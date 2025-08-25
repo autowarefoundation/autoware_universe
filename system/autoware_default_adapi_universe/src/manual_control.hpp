@@ -73,8 +73,6 @@ private:
   void disable_all_commands();
   void enable_common_commands();
   void enable_pedals_commands();
-  void enable_acceleration_commands();
-  void enable_velocity_commands();
   rclcpp::Subscription<OperatorHeartbeat>::SharedPtr sub_heartbeat_;
   rclcpp::Subscription<PedalsCommand>::SharedPtr sub_pedals_;
   rclcpp::Subscription<AccelerationCommand>::SharedPtr sub_acceleration_;
