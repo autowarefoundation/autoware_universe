@@ -131,7 +131,6 @@ std::vector<LaneSegment> LaneletConverter::convert_to_lane_segments(
   for (const auto & lanelet : lanelet_map_ptr_->laneletLayer) {
     const auto lanelet_subtype = to_subtype_name(lanelet);
     if (!is_lane_like(lanelet_subtype)) {
-      std::cerr << "Skipping lanelet ID, since it is not LaneLike: " << lanelet.id() << std::endl;
       continue;
     }
     Polyline lane_polyline(MapType::Unused);

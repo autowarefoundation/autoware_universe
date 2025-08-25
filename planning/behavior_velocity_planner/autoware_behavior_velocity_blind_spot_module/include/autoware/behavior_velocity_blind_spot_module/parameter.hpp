@@ -30,6 +30,13 @@ struct PlannerParam
   double minimum_default_velocity{};
   double collision_judge_debounce{};
   double critical_stopline_margin{};
+  struct DetectNonVRU
+  {
+    bool car{};
+    bool truck{};
+    bool bus{};
+    bool trailer{};
+  } detect_non_vru{};
   struct Brake
   {
     struct Critical
