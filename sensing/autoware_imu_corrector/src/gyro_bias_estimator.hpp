@@ -62,7 +62,7 @@ private:
   void publish_debug_vectors();
   void update_angle_ekf(double yaw_ndt);
   bool should_skip_update();
-  void update_rate_ekf(const PoseWithCovarianceStamped::ConstSharedPtr & pose_msg);  
+  void update_rate_ekf(const PoseWithCovarianceStamped::ConstSharedPtr & pose_msg);
 
   static geometry_msgs::msg::Vector3 transform_vector3(
     const geometry_msgs::msg::Vector3 & vec,
@@ -208,9 +208,7 @@ private:
   };
 
   sensor_msgs::msg::Imu modify_imu(
-    const sensor_msgs::msg::Imu &imu_msg,
-    ScaleImuSignal &scale_imu,
-    const rclcpp::Time &time);
+    const sensor_msgs::msg::Imu & imu_msg, ScaleImuSignal & scale_imu, const rclcpp::Time & time);
 
   DiagnosticsInfo diagnostics_info_;
   GyroInfo gyro_info_;

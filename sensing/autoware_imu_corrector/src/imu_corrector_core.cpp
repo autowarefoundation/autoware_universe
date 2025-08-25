@@ -94,9 +94,11 @@ void ImuCorrector::callback_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_
   sensor_msgs::msg::Imu imu_msg;
   imu_msg = *imu_msg_ptr;
 
-  if (gyro_scale_.vector.x == 0.0 || gyro_scale_.vector.y == 0.0 || gyro_scale_.vector.z == 0.0 ||
-      std::isnan(gyro_scale_.vector.x) || std::isnan(gyro_scale_.vector.y) || std::isnan(gyro_scale_.vector.z) ||
-    std::isinf(gyro_scale_.vector.x) || std::isinf(gyro_scale_.vector.y) || std::isinf(gyro_scale_.vector.z)) {
+  if (
+    gyro_scale_.vector.x == 0.0 || gyro_scale_.vector.y == 0.0 || gyro_scale_.vector.z == 0.0 ||
+    std::isnan(gyro_scale_.vector.x) || std::isnan(gyro_scale_.vector.y) ||
+    std::isnan(gyro_scale_.vector.z) || std::isinf(gyro_scale_.vector.x) ||
+    std::isinf(gyro_scale_.vector.y) || std::isinf(gyro_scale_.vector.z)) {
     RCLCPP_ERROR(this->get_logger(), "Gyro scale is zero, not correcting imu.");
     gyro_scale_.vector.x = 1.0;
     gyro_scale_.vector.y = 1.0;

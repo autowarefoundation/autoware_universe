@@ -159,16 +159,14 @@ GyroBiasEstimator::GyroBiasEstimator(const rclcpp::NodeOptions & options)
 }
 
 sensor_msgs::msg::Imu GyroBiasEstimator::modify_imu(
-    const sensor_msgs::msg::Imu &imu_msg,
-    ScaleImuSignal &scale_imu,
-    const rclcpp::Time &time)
+  const sensor_msgs::msg::Imu & imu_msg, ScaleImuSignal & scale_imu, const rclcpp::Time & time)
 {
   // Modify the IMU data to inject bias and scale
   scale_imu.scale_final_ += scale_imu.drift_scale_;
-  scale_imu.bias_final_  += scale_imu.drift_bias_;
+  scale_imu.bias_final_ += scale_imu.drift_bias_;
 
   sensor_msgs::msg::Imu imu_mod = imu_msg;
-  imu_mod.header.stamp    = time;
+  imu_mod.header.stamp = time;
   imu_mod.header.frame_id = imu_msg.header.frame_id;
 
   imu_mod.angular_velocity.x =
@@ -422,7 +420,7 @@ void GyroBiasEstimator::update_rate_ekf(
     auto h = avg_rate_pose_;
     // To avoid confusion with the bias sign we remove the bias from the gyro rate directly
     auto y = (avg_rate_gyro_ - gyro_bias_not_rotated_.value().z) -
-                (ekf_rate_.estimated_scale_rate_ * avg_rate_pose_);
+             (ekf_rate_.estimated_scale_rate_ * avg_rate_pose_);
     auto s = h * ekf_rate_.p_ * h + ekf_rate_.r_;
     auto k = ekf_rate_.p_ * h / s;
 

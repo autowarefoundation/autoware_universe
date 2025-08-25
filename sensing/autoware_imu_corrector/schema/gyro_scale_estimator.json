@@ -69,51 +69,130 @@
         "ekf_rate": {
           "type": "object",
           "properties": {
-            "max_variance_p": { "type": "number", "description": "Initial variance.", "default": 1e-8 },
-            "variance_p_after": { "type": "number", "description": "Variance after convergence.", "default": 5e-9 },
-            "process_noise_q": { "type": "number", "description": "Estimated process noise.", "default": 1e-14 },
-            "process_noise_q_after": { "type": "number", "description": "Process noise after convergence.", "default": 1e-15 },
-            "measurement_noise_r": { "type": "number", "description": "Device measurement noise.", "default": 0.00007 },
-            "measurement_noise_r_after": { "type": "number", "description": "Measurement noise after convergence.", "default": 0.00005 },
-            "samples_to_init": { "type": "integer", "description": "Number of samples to update filtered scale.", "default": 120 },
-            "min_covariance": { "type": "number", "description": "Minimum allowed covariance for scale estimation.", "default": 1e-11 }
+            "max_variance_p": {
+              "type": "number",
+              "description": "Initial variance.",
+              "default": 1e-8
+            },
+            "variance_p_after": {
+              "type": "number",
+              "description": "Variance after convergence.",
+              "default": 5e-9
+            },
+            "process_noise_q": {
+              "type": "number",
+              "description": "Estimated process noise.",
+              "default": 1e-14
+            },
+            "process_noise_q_after": {
+              "type": "number",
+              "description": "Process noise after convergence.",
+              "default": 1e-15
+            },
+            "measurement_noise_r": {
+              "type": "number",
+              "description": "Device measurement noise.",
+              "default": 0.00007
+            },
+            "measurement_noise_r_after": {
+              "type": "number",
+              "description": "Measurement noise after convergence.",
+              "default": 0.00005
+            },
+            "samples_to_init": {
+              "type": "integer",
+              "description": "Number of samples to update filtered scale.",
+              "default": 120
+            },
+            "min_covariance": {
+              "type": "number",
+              "description": "Minimum allowed covariance for scale estimation.",
+              "default": 1e-11
+            }
           },
           "required": [
-            "max_variance_p", "variance_p_after", "process_noise_q", "process_noise_q_after",
-            "measurement_noise_r", "measurement_noise_r_after", "samples_to_init", "min_covariance"
+            "max_variance_p",
+            "variance_p_after",
+            "process_noise_q",
+            "process_noise_q_after",
+            "measurement_noise_r",
+            "measurement_noise_r_after",
+            "samples_to_init",
+            "min_covariance"
           ]
         },
         "ekf_angle": {
           "type": "object",
           "properties": {
-            "process_noise_q_angle": { "type": "number", "description": "Process noise for angle estimation.", "default": 1e-12 },
-            "variance_p_angle": { "type": "number", "description": "Initial variance for angle estimation.", "default": 5e-9 },
-            "measurement_noise_r_angle": { "type": "number", "description": "Measurement noise for angle estimation.", "default": 0.00005 },
-            "min_covariance_angle": { "type": "number", "description": "Minimum covariance for angle estimation.", "default": 1e-11 },
-            "decay_coefficient": { "type": "number", "description": "Decay coefficient for EKF.", "default": 0.99999998 }
+            "process_noise_q_angle": {
+              "type": "number",
+              "description": "Process noise for angle estimation.",
+              "default": 1e-12
+            },
+            "variance_p_angle": {
+              "type": "number",
+              "description": "Initial variance for angle estimation.",
+              "default": 5e-9
+            },
+            "measurement_noise_r_angle": {
+              "type": "number",
+              "description": "Measurement noise for angle estimation.",
+              "default": 0.00005
+            },
+            "min_covariance_angle": {
+              "type": "number",
+              "description": "Minimum covariance for angle estimation.",
+              "default": 1e-11
+            },
+            "decay_coefficient": {
+              "type": "number",
+              "description": "Decay coefficient for EKF.",
+              "default": 0.99999998
+            }
           },
           "required": [
-            "process_noise_q_angle", "variance_p_angle", "measurement_noise_r_angle", "min_covariance_angle", "decay_coefficient"
+            "process_noise_q_angle",
+            "variance_p_angle",
+            "measurement_noise_r_angle",
+            "min_covariance_angle",
+            "decay_coefficient"
           ]
         },
         "scale_imu_injection": {
           "type": "object",
           "properties": {
-            "scale_on_purpose": { "type": "number", "description": "Scale to apply on purpose.", "default": 1.0 },
-            "bias_on_purpose": { "type": "number", "description": "Bias to apply on purpose.", "default": 0.00 },
-            "drift_scale": { "type": "number", "description": "Scale for drift.", "default": 0.0000000 },
-            "drift_bias": { "type": "number", "description": "Bias for drift.", "default": 0.000000 }
+            "scale_on_purpose": {
+              "type": "number",
+              "description": "Scale to apply on purpose.",
+              "default": 1.0
+            },
+            "bias_on_purpose": {
+              "type": "number",
+              "description": "Bias to apply on purpose.",
+              "default": 0.0
+            },
+            "drift_scale": { "type": "number", "description": "Scale for drift.", "default": 0.0 },
+            "drift_bias": { "type": "number", "description": "Bias for drift.", "default": 0.0 }
           },
-          "required": [
-            "scale_on_purpose", "bias_on_purpose", "drift_scale", "drift_bias"
-          ]
+          "required": ["scale_on_purpose", "bias_on_purpose", "drift_scale", "drift_bias"]
         }
       },
       "required": [
-        "estimate_scale_init", "min_allowed_scale", "max_allowed_scale", "threshold_to_estimate_scale",
-        "percentage_scale_rate_allow_correct", "alpha", "delay_gyro_ms", "samples_filter_pose_rate",
-        "samples_filter_gyro_rate", "alpha_gyro", "buffer_size_gyro", "alpha_ndt_rate",
-        "ekf_rate", "ekf_angle", "scale_imu_injection"
+        "estimate_scale_init",
+        "min_allowed_scale",
+        "max_allowed_scale",
+        "threshold_to_estimate_scale",
+        "percentage_scale_rate_allow_correct",
+        "alpha",
+        "delay_gyro_ms",
+        "samples_filter_pose_rate",
+        "samples_filter_gyro_rate",
+        "alpha_gyro",
+        "buffer_size_gyro",
+        "alpha_ndt_rate",
+        "ekf_rate",
+        "ekf_angle",
+        "scale_imu_injection"
       ]
     }
   },
