@@ -24,7 +24,9 @@
 
 #include <boost/geometry/algorithms/area.hpp>
 #include <boost/geometry/algorithms/distance.hpp>
+#include <boost/geometry/algorithms/envelope.hpp>
 #include <boost/geometry/algorithms/length.hpp>
+#include <boost/geometry/index/rtree.hpp>
 
 #include <lanelet2_core/geometry/LineString.h>
 #include <lanelet2_core/geometry/Point.h>
@@ -682,26 +684,53 @@ std::optional<StopPoints> generate_stop_points(
     std::nullopt, stop_points_list.instant_stopline, stop_points_list.critical_stopline};
 }
 
-tl::expected<double, std::string> calc_ego_to_last_blind_spot_lanelet_dist(
-  const autoware_utils::LinearRing2d & footprint,
-  const lanelet::ConstLanelet & last_lanelet_before_turning,
+tl::expected<double, std::string> calc_ego_to_blind_spot_lanelet_lateral_gap(
+  const autoware_utils::LinearRing2d & ego_footprint,
+  const lanelet::ConstLanelets & last_lanelets_before_turning,
   const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction)
 {
-  if (footprint.size() != 7) {
-    return tl::make_unexpected("Unexpected footprint's size.");
+  if (ego_footprint.size() != 7) {
+    return tl::make_unexpected("Unexpected ego_footprint's size.");
   }
 
   // left front is 6, left back is 4, right_front is 1, right_back is 3
   const auto front_idx = (turn_direction == TurnDirection::Left) ? 6 : 1;
   const auto back_idx = (turn_direction == TurnDirection::Left) ? 4 : 3;
-  const auto ego_side = autoware_utils::Segment2d{footprint[front_idx], footprint[back_idx]};
-  const auto & attention_area_road_boundary = lanelet::utils::to2D(
-    (turn_direction == TurnDirection::Left) ? last_lanelet_before_turning.leftBound()
-                                            : last_lanelet_before_turning.rightBound());
-  auto blind_side_distance = std::numeric_limits<double>::max();
-  for (const auto & road_bound : attention_area_road_boundary.basicLineString()) {
-    blind_side_distance = std::min(blind_side_distance, bg::distance(ego_side, road_bound));
+  const auto ego_side =
+    autoware_utils::Segment2d{ego_footprint[front_idx], ego_footprint[back_idx]};
+
+  autoware_utils::LineString2d line;
+  for (const auto & ll : last_lanelets_before_turning) {
+    const auto & attention_area_road_boundary = lanelet::utils::to2D(
+      (turn_direction == TurnDirection::Left) ? ll.leftBound() : ll.rightBound());
+    const auto ll_2d = lanelet::utils::to2D(attention_area_road_boundary);
+
+    for (const auto & ls : ll_2d) {
+      line.push_back(autoware_utils::Point2d{ls.x(), ls.y()});
+    }
   }
-  return blind_side_distance;
+
+  std::vector<autoware_utils::Segment2d> segments;
+  segments.reserve(line.size() - 1);
+  for (size_t i = 0; i + 1 < line.size(); ++i) {
+    segments.emplace_back(line[i], line[i + 1]);
+  }
+
+  bg::index::rtree<autoware_utils::Segment2d, bg::index::rstar<16>> segments_before_turning{
+    segments.begin(), segments.end()};
+
+  std::vector<autoware_utils::Segment2d> candidate_segments;
+  constexpr size_t max_candidate_size = 5;
+  candidate_segments.reserve(max_candidate_size);
+  segments_before_turning.query(
+    bg::index::nearest(ego_side, max_candidate_size), std::back_inserter(candidate_segments));
+
+  auto min_blind_side_distance = std::numeric_limits<double>::max();
+  for (const auto & [candidate_segment, candidate_idx] : candidate_segments) {
+    min_blind_side_distance =
+      std::min(min_blind_side_distance, bg::distance(ego_side, candidate_segment));
+  }
+
+  return min_blind_side_distance;
 }
 }  // namespace autoware::behavior_velocity_planner

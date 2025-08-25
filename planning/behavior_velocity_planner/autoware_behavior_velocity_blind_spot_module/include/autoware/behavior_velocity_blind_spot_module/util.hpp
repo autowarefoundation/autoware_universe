@@ -144,25 +144,23 @@ std::optional<StopPoints> generate_stop_points(
   autoware_internal_planning_msgs::msg::PathWithLaneId * path);
 
 /**
- * @brief Calculate the distance from the ego vehicle's footprint to the last lanelet's blind spot
- * boundary.
- *
- * @param[in] footprint The ego vehicle's footprint represented as a 2D polygon (must contain
- * exactly 7 points).
- * @param[in] last_lanelet_before_turning The last lanelet before the vehicle starts turning.
- * @param[in] turn_direction The turn direction (Left or Right) used to determine which side of the
- * footprint to measure.
- *
- * @return
- * - `tl::expected<double, std::string>`:
- *    - On success: The minimum distance [m] from the ego vehicle's side to the corresponding road
- * boundary.
- *    - On error: An unexpected result with a string describing the error, e.g. when the footprint
- * size is invalid.
+ * @brief Calculate the minimum lateral gap from the ego vehicle's side to the relevant road
+ * boundary just before a turn.
+ * @details This function determines the relevant side of the ego vehicle based on the turn
+ * direction and extracts the corresponding road boundary (left boundary for a left turn, right for
+ * a right turn) from the provided lanelets. It then uses an R-tree for an efficient spatial search
+ * to find the shortest distance between the vehicle's side and that boundary.
+ * @param[in] ego_footprint The 2D geometric footprint of the ego vehicle.
+ * @param[in] last_lanelets_before_turning The lanelets the vehicle occupies just before the turn,
+ * used to define the blind spot area boundary.
+ * @param[in] turn_direction The direction of the upcoming turn (left/right), which determines the
+ * relevant vehicle side and road boundary.
+ * @return A tl::expected containing the minimum lateral distance in meters on success, or an error
+ * string on failure.
  */
-tl::expected<double, std::string> calc_ego_to_last_blind_spot_lanelet_dist(
+tl::expected<double, std::string> calc_ego_to_blind_spot_lanelet_lateral_gap(
   const autoware_utils::LinearRing2d & footprint,
-  const lanelet::ConstLanelet & last_lanelet_before_turning,
+  const lanelet::ConstLanelets & lanelets_before_turning,
   const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction);
 }  // namespace autoware::behavior_velocity_planner
 
