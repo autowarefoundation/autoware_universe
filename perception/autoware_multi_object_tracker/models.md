@@ -45,7 +45,7 @@ The merit of using this model is that it can handle both longitudinal and latera
 - **Prediction Equation**
   - $dt$: sampling time
   - $l_{wheelbase} = l_r + l_f = \sqrt{(x_2 - x_1)^2 + (y_2 - y_1)^2}$ : distance between front and rear wheels
-  - $\cos\theta = \frac{x_2 - x_1}{l_{wheelbase}}$, $\sin\theta = \frac{y_2 - y_1}{l_{wheelbase}}$ : vehicle orientation components
+  - $\cos\psi = \frac{x_2 - x_1}{l_{wheelbase}}$, $\sin\psi = \frac{y_2 - y_1}{l_{wheelbase}}$ : vehicle orientation components
   - $\gamma = \frac{\ln(2)}{t_{halflife}}$ : decay constant for lateral velocity
 
 $$
