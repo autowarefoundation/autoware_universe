@@ -296,7 +296,7 @@ TurnIndicatorsCommand create_turn_indicators_command(
     *std::max_element(turn_indicator_logit.begin(), turn_indicator_logit.begin() + 4);
 
   std::vector<float> probabilities(4);
-  float sum = 0.0f;
+  float sum = 0.0001f;  // Small value to avoid division by zero
 
   // Compute exp(logit - max_logit) for numerical stability
   for (size_t i = 0; i < 4; ++i) {
