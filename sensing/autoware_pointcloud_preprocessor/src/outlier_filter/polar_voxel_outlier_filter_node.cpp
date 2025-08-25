@@ -40,81 +40,10 @@
 namespace autoware::pointcloud_preprocessor
 {
 
-// --- Template for advancing iterators ---
-template <typename... Iterators>
-void PolarVoxelOutlierFilterComponent::advance_iterators(Iterators *... iters) const
-{
-  (void)std::initializer_list<int>{((iters ? (++(*iters), 0) : 0))...};
-}
-
-// --- Helper for finite check ---
 template <typename... T>
 bool all_finite(T... values)
 {
   return (... && std::isfinite(values));
-}
-
-// Helper function to extract polar coordinates
-std::optional<PolarVoxelOutlierFilterComponent::PolarCoordinate>
-PolarVoxelOutlierFilterComponent::extract_polar_coordinates(
-  bool has_polar_coords, sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_z,
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_distance,
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation) const
-{
-  if (has_polar_coords) {
-    return extract_precomputed_polar_coordinates(iter_distance, iter_azimuth, iter_elevation);
-  } else {
-    return extract_computed_polar_coordinates(iter_x, iter_y, iter_z);
-  }
-}
-
-// Only one definition of this function should exist:
-std::optional<PolarVoxelOutlierFilterComponent::PolarCoordinate>
-PolarVoxelOutlierFilterComponent::extract_precomputed_polar_coordinates(
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_distance,
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation) const
-{
-  if (!iter_distance) return std::nullopt;
-  if (!iter_azimuth) return std::nullopt;
-  if (!iter_elevation) return std::nullopt;
-
-  float distance = **iter_distance;
-  float azimuth = **iter_azimuth;
-  float elevation = **iter_elevation;
-
-  if (!all_finite(distance, azimuth, elevation)) return std::nullopt;
-
-  PolarCoordinate polar(distance, azimuth, elevation);
-  if (!is_valid_polar_point(polar)) return std::nullopt;
-
-  return polar;
-}
-
-std::optional<PolarVoxelOutlierFilterComponent::PolarCoordinate>
-PolarVoxelOutlierFilterComponent::extract_computed_polar_coordinates(
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_z) const
-{
-  if (!iter_x) return std::nullopt;
-  if (!iter_y) return std::nullopt;
-  if (!iter_z) return std::nullopt;
-
-  float x = **iter_x;
-  float y = **iter_y;
-  float z = **iter_z;
-
-  if (!all_finite(x, y, z)) return std::nullopt;
-
-  CartesianCoordinate cartesian(x, y, z);
-  PolarCoordinate polar = cartesian_to_polar(cartesian);
-  if (!is_valid_polar_point(polar)) return std::nullopt;
-
-  return polar;
 }
 
 static constexpr double diagnostics_update_period_sec = 0.1;
@@ -138,8 +67,7 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
     static_cast<int>(declare_parameter<int64_t>("secondary_noise_threshold"));
   visibility_estimation_max_secondary_voxel_count_ = static_cast<int>(
     declare_parameter<int64_t>("visibility_estimation_max_secondary_voxel_count", 0));
-  visualization_estimation_only_ =
-    declare_parameter<bool>("visualization_estimation_only", false);  // Add this line
+  visualization_estimation_only_ = declare_parameter<bool>("visualization_estimation_only", false);
   publish_noise_cloud_ = declare_parameter<bool>("publish_noise_cloud", false);
 
   auto primary_return_types_param = declare_parameter<std::vector<int64_t>>("primary_return_types");
@@ -241,87 +169,155 @@ PolarVoxelOutlierFilterComponent::collect_voxel_info(const PointCloud2ConstPtr &
   point_voxel_info.reserve(input->width * input->height);
 
   bool has_polar_coords = has_polar_coordinates(input);
-  bool has_return_type = PolarVoxelOutlierFilterComponent::has_return_type_field(input);
-
-  // Create iterators based on point cloud format
-  std::unique_ptr<sensor_msgs::PointCloud2ConstIterator<float>> iter_x;
-  std::unique_ptr<sensor_msgs::PointCloud2ConstIterator<float>> iter_y;
-  std::unique_ptr<sensor_msgs::PointCloud2ConstIterator<float>> iter_z;
-  std::unique_ptr<sensor_msgs::PointCloud2ConstIterator<float>> iter_distance;
-  std::unique_ptr<sensor_msgs::PointCloud2ConstIterator<float>> iter_azimuth;
-  std::unique_ptr<sensor_msgs::PointCloud2ConstIterator<float>> iter_elevation;
-  std::unique_ptr<sensor_msgs::PointCloud2ConstIterator<uint8_t>> iter_return_type;
+  bool has_return_type = has_return_type_field(input);
+  size_t point_count = input->width * input->height;
 
   if (has_polar_coords) {
-    iter_distance =
-      std::make_unique<sensor_msgs::PointCloud2ConstIterator<float>>(*input, "distance");
-    iter_azimuth =
-      std::make_unique<sensor_msgs::PointCloud2ConstIterator<float>>(*input, "azimuth");
-    iter_elevation =
-      std::make_unique<sensor_msgs::PointCloud2ConstIterator<float>>(*input, "elevation");
+    process_polar_points(input, point_voxel_info, has_return_type, point_count);
   } else {
-    iter_x = std::make_unique<sensor_msgs::PointCloud2ConstIterator<float>>(*input, "x");
-    iter_y = std::make_unique<sensor_msgs::PointCloud2ConstIterator<float>>(*input, "y");
-    iter_z = std::make_unique<sensor_msgs::PointCloud2ConstIterator<float>>(*input, "z");
+    process_cartesian_points(input, point_voxel_info, has_return_type, point_count);
   }
+
+  return point_voxel_info;
+}
+
+void PolarVoxelOutlierFilterComponent::process_polar_points(
+  const PointCloud2ConstPtr & input, PointVoxelInfoVector & point_voxel_info, bool has_return_type,
+  size_t point_count)
+{
+  // Create iterators for polar coordinates (always exist for polar format)
+  sensor_msgs::PointCloud2ConstIterator<float> iter_distance(*input, "distance");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_azimuth(*input, "azimuth");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_elevation(*input, "elevation");
+
+  // Create return type iterator conditionally
+  std::unique_ptr<sensor_msgs::PointCloud2ConstIterator<uint8_t>> iter_return_type;
+  sensor_msgs::PointCloud2ConstIterator<uint8_t> dummy_return_iter(*input, "intensity");
 
   if (has_return_type) {
     iter_return_type =
       std::make_unique<sensor_msgs::PointCloud2ConstIterator<uint8_t>>(*input, "return_type");
   }
 
-  size_t point_count = input->width * input->height;
-
   for (size_t i = 0; i < point_count; ++i) {
-    point_voxel_info.emplace_back(process_point_for_voxel_info(
-      has_polar_coords, has_return_type, iter_x.get(), iter_y.get(), iter_z.get(),
-      iter_distance.get(), iter_azimuth.get(), iter_elevation.get(), iter_return_type.get()));
+    if (has_return_type) {
+      point_voxel_info.emplace_back(process_polar_point(
+        iter_distance, iter_azimuth, iter_elevation, *iter_return_type, has_return_type));
+    } else {
+      point_voxel_info.emplace_back(process_polar_point(
+        iter_distance, iter_azimuth, iter_elevation, dummy_return_iter, has_return_type));
+    }
   }
-
-  return point_voxel_info;
 }
 
-// Refactored main function with reduced complexity
-auto PolarVoxelOutlierFilterComponent::process_point_for_voxel_info(
-  bool has_polar_coords, bool has_return_type,
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_z,
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_distance,
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation,
-  sensor_msgs::PointCloud2ConstIterator<uint8_t> * iter_return_type) const
-  -> std::optional<PointVoxelInfo>
+void PolarVoxelOutlierFilterComponent::process_cartesian_points(
+  const PointCloud2ConstPtr & input, PointVoxelInfoVector & point_voxel_info, bool has_return_type,
+  size_t point_count)
+{
+  // Create iterators for cartesian coordinates (always exist for cartesian format)
+  sensor_msgs::PointCloud2ConstIterator<float> iter_x(*input, "x");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_y(*input, "y");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_z(*input, "z");
+
+  // Create return type iterator conditionally
+  std::unique_ptr<sensor_msgs::PointCloud2ConstIterator<uint8_t>> iter_return_type;
+  sensor_msgs::PointCloud2ConstIterator<uint8_t> dummy_return_iter(*input, "intensity");
+
+  if (has_return_type) {
+    iter_return_type =
+      std::make_unique<sensor_msgs::PointCloud2ConstIterator<uint8_t>>(*input, "return_type");
+  }
+
+  for (size_t i = 0; i < point_count; ++i) {
+    if (has_return_type) {
+      point_voxel_info.emplace_back(
+        process_cartesian_point(iter_x, iter_y, iter_z, *iter_return_type, has_return_type));
+    } else {
+      point_voxel_info.emplace_back(
+        process_cartesian_point(iter_x, iter_y, iter_z, dummy_return_iter, has_return_type));
+    }
+  }
+}
+
+std::optional<PointVoxelInfo> PolarVoxelOutlierFilterComponent::process_polar_point(
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_distance,
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_azimuth,
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_elevation,
+  sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_return_type, bool has_return_type) const
 {
   // Step 1: Extract return type information
   uint8_t current_return_type = extract_return_type(has_return_type, iter_return_type);
 
-  // Step 2: Extract polar coordinates (early return on failure)
-  auto polar_opt = extract_polar_coordinates(
-    has_polar_coords, iter_x, iter_y, iter_z, iter_distance, iter_azimuth, iter_elevation);
+  // Step 2: Extract polar coordinates
+  auto polar_opt =
+    extract_precomputed_polar_coordinates(iter_distance, iter_azimuth, iter_elevation);
 
+  // Step 3: Advance iterators (always advance, regardless of success/failure)
+  advance_polar_iterators(iter_distance, iter_azimuth, iter_elevation);
+  if (has_return_type) {
+    advance_return_type_iterator(iter_return_type);
+  }
+
+  // Step 4: Early return on invalid coordinates
   if (!polar_opt.has_value()) {
-    if (has_polar_coords) {
-      advance_polar_iterators(iter_distance, iter_azimuth, iter_elevation);
-    } else {
-      advance_cartesian_iterators(iter_x, iter_y, iter_z);
-    }
     return std::nullopt;
   }
 
-  // Step 3: Advance iterators for successful coordinate extraction
-  if (has_polar_coords) {
-    advance_polar_iterators(iter_distance, iter_azimuth, iter_elevation);
-  } else {
-    advance_cartesian_iterators(iter_x, iter_y, iter_z);
-  }
-
-  // Step 4: Create voxel index and determine point classification
+  // Step 5: Create voxel index and determine point classification
   PolarVoxelIndex voxel_idx = polar_to_polar_voxel(*polar_opt);
   bool is_primary = is_point_primary(has_return_type, current_return_type);
 
-  // Step 5: Return successful result
   return PointVoxelInfo{voxel_idx, is_primary};
+}
+
+std::optional<PointVoxelInfo> PolarVoxelOutlierFilterComponent::process_cartesian_point(
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_x,
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_y,
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_z,
+  sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_return_type, bool has_return_type) const
+{
+  // Step 1: Extract return type information
+  uint8_t current_return_type = extract_return_type(has_return_type, iter_return_type);
+
+  // Step 2: Extract and convert cartesian coordinates to polar
+  auto polar_opt = extract_computed_polar_coordinates(iter_x, iter_y, iter_z);
+
+  // Step 3: Advance iterators (always advance, regardless of success/failure)
+  advance_cartesian_iterators(iter_x, iter_y, iter_z);
+  if (has_return_type) {
+    advance_return_type_iterator(iter_return_type);
+  }
+
+  // Step 4: Early return on invalid coordinates
+  if (!polar_opt.has_value()) {
+    return std::nullopt;
+  }
+
+  // Step 5: Create voxel index and determine point classification
+  PolarVoxelIndex voxel_idx = polar_to_polar_voxel(*polar_opt);
+  bool is_primary = is_point_primary(has_return_type, current_return_type);
+
+  return PointVoxelInfo{voxel_idx, is_primary};
+}
+
+void PolarVoxelOutlierFilterComponent::advance_return_type_iterator(
+  sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_return_type) const
+{
+  ++iter_return_type;
+}
+
+template <typename Predicate>
+PolarVoxelOutlierFilterComponent::VoxelIndexSet
+PolarVoxelOutlierFilterComponent::determine_valid_voxels_generic(
+  const VoxelPointCountMap & voxel_counts, Predicate predicate) const
+{
+  VoxelIndexSet valid_voxels;
+  for (const auto & [voxel_idx, counts] : voxel_counts) {
+    if (predicate(counts)) {
+      valid_voxels.insert(voxel_idx);
+    }
+  }
+  return valid_voxels;
 }
 
 bool PolarVoxelOutlierFilterComponent::is_point_primary(
@@ -906,71 +902,95 @@ void PolarVoxelOutlierFilterComponent::create_output(
 void PolarVoxelOutlierFilterComponent::create_empty_output(
   const PointCloud2ConstPtr & input, PointCloud2 & output)
 {
-  output.header = input->header;
-  output.height = 0;
-  output.width = 0;
-  output.fields = input->fields;
-  output.is_bigendian = input->is_bigendian;
-  output.point_step = input->point_step;
-  output.row_step = 0;
-  output.is_dense = input->is_dense;
-  output.data.clear();
-
-  RCLCPP_DEBUG_THROTTLE(
-    get_logger(), *get_clock(), 5000,
-    "Visualization estimation only mode - no point cloud output generated");
+  setup_output_header(output, input, 0);
 }
 
 void PolarVoxelOutlierFilterComponent::conditionally_publish_noise_cloud(
   const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask)
 {
-  // Early return if visualization only mode
-  if (visualization_estimation_only_) {
-    return;
+  if (publish_noise_cloud_) {
+    publish_noise_cloud(input, valid_points_mask);
   }
-
-  // Early return if noise cloud publishing is disabled
-  if (!publish_noise_cloud_) {
-    return;
-  }
-
-  // Early return if publisher is not available
-  if (!noise_cloud_pub_) {
-    return;
-  }
-
-  // All conditions met - publish noise cloud
-  publish_noise_cloud(input, valid_points_mask);
 }
 
-// Helper function to extract return type
-uint8_t PolarVoxelOutlierFilterComponent::extract_return_type(
-  bool has_return_type, sensor_msgs::PointCloud2ConstIterator<uint8_t> * iter_return_type) const
+// Add missing helper function implementations that were referenced but not defined:
+
+std::optional<PolarVoxelOutlierFilterComponent::PolarCoordinate>
+PolarVoxelOutlierFilterComponent::extract_precomputed_polar_coordinates(
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_distance,
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_azimuth,
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_elevation) const
 {
-  if (!has_return_type || !iter_return_type) {
-    return 0;
+  float distance = *iter_distance;
+  float azimuth = *iter_azimuth;
+  float elevation = *iter_elevation;
+
+  if (!all_finite(distance, azimuth, elevation)) {
+    return std::nullopt;
   }
 
-  uint8_t return_type = **iter_return_type;
-  ++(*iter_return_type);
-  return return_type;
+  PolarCoordinate polar(distance, azimuth, elevation);
+
+  if (!is_valid_polar_point(polar)) {
+    return std::nullopt;
+  }
+
+  return polar;
+}
+
+std::optional<PolarVoxelOutlierFilterComponent::PolarCoordinate>
+PolarVoxelOutlierFilterComponent::extract_computed_polar_coordinates(
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_x,
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_y,
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_z) const
+{
+  float x = *iter_x;
+  float y = *iter_y;
+  float z = *iter_z;
+
+  if (!all_finite(x, y, z)) {
+    return std::nullopt;
+  }
+
+  CartesianCoordinate cartesian(x, y, z);
+  PolarCoordinate polar = cartesian_to_polar(cartesian);
+
+  if (!is_valid_polar_point(polar)) {
+    return std::nullopt;
+  }
+
+  return polar;
+}
+
+uint8_t PolarVoxelOutlierFilterComponent::extract_return_type(
+  bool has_return_type, sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_return_type) const
+{
+  if (!has_return_type) {
+    return 0;  // Default return type when not available
+  }
+  return *iter_return_type;
 }
 
 void PolarVoxelOutlierFilterComponent::advance_polar_iterators(
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_distance,
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation) const
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_distance,
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_azimuth,
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_elevation) const
 {
-  advance_iterators(iter_distance, iter_azimuth, iter_elevation);
+  ++iter_distance;
+  ++iter_azimuth;
+  ++iter_elevation;
 }
 
 void PolarVoxelOutlierFilterComponent::advance_cartesian_iterators(
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
-  sensor_msgs::PointCloud2ConstIterator<float> * iter_z) const
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_x,
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_y,
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_z) const
 {
-  advance_iterators(iter_x, iter_y, iter_z);
+  ++iter_x;
+  ++iter_y;
+  ++iter_z;
 }
+
 }  // namespace autoware::pointcloud_preprocessor
 
 #include <rclcpp_components/register_node_macro.hpp>
