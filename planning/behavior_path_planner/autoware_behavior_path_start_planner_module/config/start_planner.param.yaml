@@ -55,11 +55,20 @@
 
       # search start pose backward
       enable_back: true
-      search_priority: "efficient_path"  # "efficient_path" or "short_back_distance"
+      search_priority: "efficient_path"  # "efficient_path", "short_back_distance", or "custom"
       max_back_distance: 20.0
       backward_search_resolution: 2.0
       backward_path_update_duration: 3.0
       ignore_distance_from_lane_end: 0.0
+
+      # Priority list: specify planner types in order of preference
+      # Examples:
+      #   - Conservative: ["SHIFT", "GEOMETRIC"]  # exclude CLOTHOID
+      #   - Testing single planner: ["GEOMETRIC"]
+      # Note: Only required when search_priority is set to "custom"
+      # planner_priority_list: ["SHIFT", "GEOMETRIC", "CLOTHOID"]  # Default priority order
+
+
       # turns signal
       prepare_time_before_start: 0.0
       # freespace planner

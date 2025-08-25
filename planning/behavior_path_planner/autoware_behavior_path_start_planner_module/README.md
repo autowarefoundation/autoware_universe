@@ -210,6 +210,7 @@ During this backward search, different policies can be applied based on `search_
 
 Selecting `efficient_path` focuses on creating a shift pull out path, regardless of how far back the vehicle needs to move.
 Opting for `short_back_distance` aims to find a location with the least possible backward movement.
+Using `custom` allows you to specify the priority order of planners and always uses short_back_distance style (backward distance priority).
 
 **Note**: The clothoid pull out method operates as a fallback mechanism when other planners cannot generate a safe path with the specified collision margins. It is only activated when `enable_back` is false and `enable_clothoid_fallback` is true.
 
@@ -249,6 +250,46 @@ For `search_priority` set to `short_back_distance`, the array alternates between
 | N     | geometric_pull_out |
 
 This ordering is beneficial when the priority is to minimize the backward distance traveled, giving an equal chance for each planner to succeed at the closest possible starting position.
+
+##### `custom`
+
+When `search_priority` is set to `custom`, you can specify the priority order of planners using the `planner_priority_list` parameter. This mode always uses short_back_distance style (backward distance priority) to minimize the backward movement.
+
+**Configuration Example:**
+
+```yaml
+start_planner:
+  search_priority: "custom"
+  planner_priority_list: ["GEOMETRIC", "SHIFT", "CLOTHOID"] # GEOMETRIC first, then SHIFT, then CLOTHOID
+```
+
+**Priority Order:**
+
+| Index | Planner Type |
+| ----- | ------------ |
+| 0     | GEOMETRIC    |
+| 0     | SHIFT        |
+| 0     | CLOTHOID     |
+| 1     | GEOMETRIC    |
+| 1     | SHIFT        |
+| 1     | CLOTHOID     |
+| ...   | ...          |
+| N     | GEOMETRIC    |
+| N     | SHIFT        |
+| N     | CLOTHOID     |
+
+This approach allows you to:
+
+- **Customize planner priority**: Specify which planner to try first
+- **Exclude specific planners**: Simply omit them from the list
+- **Test single planner**: Use only one planner type in the list
+
+**Use Cases:**
+
+- **Conservative approach**: `["SHIFT", "GEOMETRIC"]` - Exclude CLOTHOID for safety
+- **Testing**: `["GEOMETRIC"]` - Test only geometric planner
+
+**Note**: Only enabled planners (controlled by `enable_shift_pull_out`, `enable_geometric_pull_out`, etc.) will be used, even if listed in `planner_priority_list`.
 
 ### 2. Collision detection with dynamic obstacles
 
@@ -540,14 +581,15 @@ If a safe path cannot be generated from the current position, search backwards f
 
 ### **parameters for backward pull out start point search**
 
-| Name                          | Unit | Type   | Description                                                                                                                                                          | Default value  |
-| :---------------------------- | :--- | :----- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------- |
-| enable_back                   | [-]  | bool   | flag whether to search backward for start_point                                                                                                                      | true           |
-| search_priority               | [-]  | string | In the case of `efficient_path`, use efficient paths even if the back distance is longer. In case of `short_back_distance`, use a path with as short a back distance | efficient_path |
-| max_back_distance             | [m]  | double | maximum back distance                                                                                                                                                | 30.0           |
-| backward_search_resolution    | [m]  | double | distance interval for searching backward pull out start point                                                                                                        | 2.0            |
-| backward_path_update_duration | [s]  | double | time interval for searching backward pull out start point. this prevents chattering between back driving and pull_out                                                | 3.0            |
-| ignore_distance_from_lane_end | [m]  | double | If distance from shift start pose to end of shoulder lane is less than this value, this start pose candidate is ignored                                              | 15.0           |
+| Name                          | Unit | Type   | Description                                                                                                                                                                                                                                                          | Default value  |
+| :---------------------------- | :--- | :----- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------- |
+| enable_back                   | [-]  | bool   | flag whether to search backward for start_point                                                                                                                                                                                                                      | true           |
+| search_priority               | [-]  | string | priority strategy for planner selection. `efficient_path`: prioritize efficient paths regardless of back distance. `short_back_distance`: prioritize paths with minimal back distance. `custom`: specify custom planner priority order using `planner_priority_list` | efficient_path |
+| max_back_distance             | [m]  | double | maximum back distance                                                                                                                                                                                                                                                | 30.0           |
+| backward_search_resolution    | [m]  | double | distance interval for searching backward pull out start point                                                                                                                                                                                                        | 2.0            |
+| backward_path_update_duration | [s]  | double | time interval for searching backward pull out start point. this prevents chattering between back driving and pull_out                                                                                                                                                | 3.0            |
+| ignore_distance_from_lane_end | [m]  | double | If distance from shift start pose to end of shoulder lane is less than this value, this start pose candidate is ignored                                                                                                                                              | 15.0           |
+| planner_priority_list         | [-]  | string | List of planner types in priority order for custom mode. Available types: "SHIFT", "GEOMETRIC", "CLOTHOID", "FREESPACE". Only required when `search_priority` is "custom"                                                                                            | []             |
 
 ### **freespace pull out**
 
