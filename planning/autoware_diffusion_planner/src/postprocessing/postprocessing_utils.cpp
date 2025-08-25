@@ -299,7 +299,7 @@ TurnIndicatorsCommand create_turn_indicators_command(
   float sum = 0.0001f;  // Small value to avoid division by zero
 
   // Compute exp(logit - max_logit) for numerical stability
-  for (size_t i = 0; i < 4; ++i) {
+  for (size_t i = 0; i < TURN_INDICATOR_LOGIT_SHAPE[1]; ++i) {
     probabilities[i] = std::exp(turn_indicator_logit[i] - max_logit);
     sum += probabilities[i];
   }
