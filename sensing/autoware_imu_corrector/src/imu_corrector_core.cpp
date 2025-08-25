@@ -83,7 +83,6 @@ ImuCorrector::ImuCorrector(const rclcpp::NodeOptions & options)
   gyro_scale_sub_ = create_subscription<Vector3Stamped>(
     "gyro_scale_input", rclcpp::SensorDataQoS(),
     std::bind(&ImuCorrector::callback_scale, this, std::placeholders::_1));
-  RCLCPP_INFO(this->get_logger(), "Created subscriptions");
   imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("output", rclcpp::QoS{10});
   gyro_scale_.vector.x = 1.0;
   gyro_scale_.vector.y = 1.0;
@@ -95,7 +94,9 @@ void ImuCorrector::callback_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_
   sensor_msgs::msg::Imu imu_msg;
   imu_msg = *imu_msg_ptr;
 
-  if (gyro_scale_.vector.x == 0.0 || gyro_scale_.vector.y == 0.0 || gyro_scale_.vector.z == 0.0) {
+  if (gyro_scale_.vector.x == 0.0 || gyro_scale_.vector.y == 0.0 || gyro_scale_.vector.z == 0.0 ||
+      std::isnan(gyro_scale_.vector.x) || std::isnan(gyro_scale_.vector.y) || std::isnan(gyro_scale_.vector.z) ||
+    std::isinf(gyro_scale_.vector.x) || std::isinf(gyro_scale_.vector.y) || std::isinf(gyro_scale_.vector.z)) {
     RCLCPP_ERROR(this->get_logger(), "Gyro scale is zero, not correcting imu.");
     gyro_scale_.vector.x = 1.0;
     gyro_scale_.vector.y = 1.0;

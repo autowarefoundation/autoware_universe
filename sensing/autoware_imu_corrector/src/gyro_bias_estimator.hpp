@@ -62,7 +62,7 @@ private:
   void publish_debug_vectors();
   void update_angle_ekf(double yaw_ndt);
   bool should_skip_update();
-  void update_rate_ekf(const PoseWithCovarianceStamped::ConstSharedPtr & pose_msg);
+  void update_rate_ekf(const PoseWithCovarianceStamped::ConstSharedPtr & pose_msg);  
 
   static geometry_msgs::msg::Vector3 transform_vector3(
     const geometry_msgs::msg::Vector3 & vec,
@@ -77,7 +77,6 @@ private:
   rclcpp::Publisher<Vector3Stamped>::SharedPtr gyro_scale_pub_;
   rclcpp::Publisher<Vector3Stamped>::SharedPtr gyro_debug_pub_;
   rclcpp::Publisher<Vector3Stamped>::SharedPtr scale_debug_pub_;
-  // rclcpp::Publisher<Vector3Stamped>::SharedPtr delta_debug_pub_;
   rclcpp::Publisher<Vector3Stamped>::SharedPtr new_scale_debug_pub_;
   rclcpp::Publisher<Imu>::SharedPtr imu_scaled_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
@@ -164,8 +163,10 @@ private:
     std::string scale_summary_message;
   };
 
+  // Modified IMU signal to inject bias and scale
   struct ScaleImuSignal
   {
+    bool modify_imu_scale_;
     double bias_final_;
     double scale_final_;
     double drift_scale_;
@@ -179,10 +180,6 @@ private:
     double p_;
     double q_;
     double r_;
-    double h_;
-    double s_;
-    double k_;
-    double y_;
     double max_variance_;
     double min_covariance_;
     double variance_p_after_;
@@ -209,6 +206,11 @@ private:
     double decay_coefficient_;
     bool has_gyro_yaw_angle_init_;
   };
+
+  sensor_msgs::msg::Imu modify_imu(
+    const sensor_msgs::msg::Imu &imu_msg,
+    ScaleImuSignal &scale_imu,
+    const rclcpp::Time &time);
 
   DiagnosticsInfo diagnostics_info_;
   GyroInfo gyro_info_;

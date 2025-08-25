@@ -1,39 +1,38 @@
 /**:
   ros__parameters:
-    estimate_scale_init: 1.0 # initial scale estimation for scale
-    min_allowed_scale: 0.9 # minimum allowed scale
-    max_allowed_scale: 1.1 # maximum allowed scale
-    threshold_to_estimate_scale: 0.1 # angular speed radians
-    percentage_scale_rate_allow_correct: 0.04 # scale changes above this value will trigger error
-    alpha: 0.99 # complementary filter coefficient
-    delay_gyro_ms: 170 # tuned for vehicle
-    samples_filter_pose_rate: 2 # tuned for vehicle
-    samples_filter_gyro_rate: 6 # tuned for vehicle
-    alpha_gyro: 0.0 # gyro low pass filter coefficient
-    buffer_size_gyro: 200 # size of the buffer to store gyro data
-    alpha_ndt_rate: 0.6 # complementary filter coefficient for ndt rate
-    # if alpha_ndt or alpha_gyro changes it is necessary to tune delay_gyro_ms
-    # with the purpose of match the ndt rate and gyro rate
+    estimate_scale_init: 1.0
+    min_allowed_scale: 0.9
+    max_allowed_scale: 1.1
+    threshold_to_estimate_scale: 0.1
+    percentage_scale_rate_allow_correct: 0.04
+    alpha: 0.99
+    delay_gyro_ms: 170
+    samples_filter_pose_rate: 2
+    samples_filter_gyro_rate: 6
+    alpha_gyro: 0.0
+    buffer_size_gyro: 200
+    alpha_ndt_rate: 0.6
 
     ekf_rate:
-      max_variance_p: 1e-8 # initial variance
-      variance_p_after: 5e-9 # variance after convergence
-      process_noise_q: 1e-14 # estimated process noise
-      process_noise_q_after: 1e-15 # process noise after convergence
-      measurement_noise_r: 0.00007 # device measurement noise
-      measurement_noise_r_after: 0.00005 # measurement noise after convergence
-      samples_to_init: 120 # number of samples to update faster filtered scale
-      min_covariance: 1e-11 # minimum allowed covariance for scale estimation
+      max_variance_p: 1e-8
+      variance_p_after: 5e-9
+      process_noise_q: 1e-14
+      process_noise_q_after: 1e-15
+      measurement_noise_r: 0.00007
+      measurement_noise_r_after: 0.00005
+      samples_to_init: 120
+      min_covariance: 1e-11
 
     ekf_angle:
-      process_noise_q_angle: 1e-12 # process noise for angle estimation
-      variance_p_angle: 5e-9 # initial variance for angle estimation
-      measurement_noise_r_angle: 0.00005 # measurement noise for angle estimation
-      min_covariance_angle: 1e-11 # minimum covariance for angle estimation
-      decay_coefficient: 0.99999998 # decay coefficient for EKF
+      process_noise_q_angle: 1e-12
+      variance_p_angle: 5e-9
+      measurement_noise_r_angle: 0.00005
+      min_covariance_angle: 1e-11
+      decay_coefficient: 0.99999998
 
     scale_imu_injection:
-      scale_on_purpose: 1.0 # scale to apply on purpose
-      bias_on_purpose: 0.00 # bias to apply on purpose
-      drift_scale: 0.0000000 # scale to apply on purpose for drift
-      drift_bias: 0.000000 # bias to apply on purpose for drift
+      modify_imu_scale: false
+      scale_on_purpose: 1.0
+      bias_on_purpose: 0.0
+      drift_scale: 0.0
+      drift_bias: 0.0
