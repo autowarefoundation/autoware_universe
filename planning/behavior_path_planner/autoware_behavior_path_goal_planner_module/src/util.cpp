@@ -25,6 +25,7 @@
 #include <autoware_utils/ros/marker_helper.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 #include <magic_enum.hpp>
+#include <range/v3/view/reverse.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <boost/geometry/algorithms/dispatch/distance.hpp>
@@ -1101,33 +1102,37 @@ bool has_stopline_except_terminal(const PathWithLaneId & path)
          path.points.size();
 }
 
-std::optional<lanelet::ConstLanelet> find_lane_change_completed_lanelet(
+std::optional<lanelet::ConstLanelet> find_last_lane_change_completed_lanelet(
   const PathWithLaneId & path, const lanelet::LaneletMapConstPtr lanelet_map,
   const lanelet::routing::RoutingGraphConstPtr routing_graph)
 {
-  std::vector<lanelet::Id> path_lane_ids;
-  for (const auto & point : path.points) {
+  std::vector<lanelet::Id> reverse_path_lane_ids;
+  for (const auto & point : path.points | ranges::views::reverse) {
     const auto & lane_ids = point.lane_ids;
-    for (const auto & lane_id : lane_ids) {
-      if (std::find(path_lane_ids.begin(), path_lane_ids.end(), lane_id) == path_lane_ids.end()) {
-        path_lane_ids.push_back(lane_id);
+    for (const auto & lane_id : lane_ids | ranges::views::reverse) {
+      if (
+        std::find(reverse_path_lane_ids.begin(), reverse_path_lane_ids.end(), lane_id) ==
+        reverse_path_lane_ids.end()) {
+        reverse_path_lane_ids.push_back(lane_id);
       }
     }
   }
 
-  if (path_lane_ids.size() < 2) {
+  if (reverse_path_lane_ids.size() < 2) {
     return std::nullopt;
   }
-  for (unsigned i = 0, j = 1; i < path_lane_ids.size() && j < path_lane_ids.size(); i++, j++) {
-    const auto & lane1 = lanelet_map->laneletLayer.get(path_lane_ids.at(i));
-    const auto & lane2 = lanelet_map->laneletLayer.get(path_lane_ids.at(j));
-    const auto & followings = routing_graph->following(lane1);
-    if (std::any_of(followings.begin(), followings.end(), [&](const auto & lane) {
-          return lane.id() == lane2.id();
+  for (unsigned i = 0, j = 1; i < reverse_path_lane_ids.size() && j < reverse_path_lane_ids.size();
+       i++, j++) {
+    const auto & lane_to = lanelet_map->laneletLayer.get(reverse_path_lane_ids.at(i));
+    const auto & lane_from = lanelet_map->laneletLayer.get(reverse_path_lane_ids.at(j));
+    const auto & previous = routing_graph->previous(lane_to);
+    if (std::any_of(previous.begin(), previous.end(), [&](const auto & prev_lane) {
+          return prev_lane.id() == lane_from.id();
         })) {
+      // not lane changing
       continue;
     }
-    return lane2;
+    return lane_to;
   }
   return std::nullopt;
 }
@@ -1139,7 +1144,7 @@ lanelet::ConstLanelets get_reference_lanelets_for_pullover(
   const auto & routing_graph = planner_data->route_handler->getRoutingGraphPtr();
   const auto & lanelet_map = planner_data->route_handler->getLaneletMapPtr();
   const auto lane_change_complete_lane =
-    find_lane_change_completed_lanelet(path, lanelet_map, routing_graph);
+    find_last_lane_change_completed_lanelet(path, lanelet_map, routing_graph);
   if (!lane_change_complete_lane) {
     return utils::getExtendedCurrentLanesFromPath(
       path, planner_data, backward_length, forward_length,
