@@ -111,6 +111,7 @@ struct DiffusionPlannerParams
   bool update_traffic_light_group_info;
   bool keep_last_traffic_light_group_info;
   double traffic_light_group_msg_timeout_seconds;
+  int batch_size;
 };
 struct DiffusionPlannerDebugParams
 {
@@ -237,11 +238,11 @@ public:
     const TrackedObjects & objects, const Eigen::Matrix4f & map_to_ego_transform);
 
   /**
-   * @brief Create ego agent past tensor from ego history.
-   * @param map_to_ego_transform Transformation matrix from map to ego frame.
-   * @return Vector of float values representing ego agent past.
+   * @brief Replicate single sample data for batch processing.
+   * @param single_data Single sample data.
+   * @return Vector replicated for the configured batch size.
    */
-  std::vector<float> create_ego_agent_past(const Eigen::Matrix4f & map_to_ego_transform);
+  std::vector<float> replicate_for_batch(const std::vector<float> & single_data);
 
   // current state
   Odometry ego_kinematic_state_;

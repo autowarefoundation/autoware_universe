@@ -47,6 +47,9 @@ struct TrackerProcessorConfig
   bool enable_unknown_object_motion_output;
   std::unordered_map<LabelType, double> pruning_giou_thresholds;
   std::unordered_map<LabelType, double> pruning_distance_thresholds;  // [m]
+  double pruning_static_object_speed;                                 // [m/s]
+  double pruning_moving_object_speed;                                 // [m/s]
+  double pruning_static_iou_threshold;                                // [ratio]
 };
 
 class TrackerProcessor
