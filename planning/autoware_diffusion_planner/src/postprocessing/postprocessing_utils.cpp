@@ -293,13 +293,13 @@ TurnIndicatorsCommand create_turn_indicators_command(
 
   // Find the max value for numerical stability
   const float max_logit =
-    *std::max_element(turn_indicator_logit.begin(), turn_indicator_logit.begin() + 4);
+    *std::max_element(turn_indicator_logit.begin(), turn_indicator_logit.end());
 
-  std::vector<float> probabilities(4);
+  std::vector<float> probabilities(turn_indicator_logit.size());
   float sum = 0.0001f;  // Small value to avoid division by zero
 
   // Compute exp(logit - max_logit) for numerical stability
-  for (int64_t i = 0; i < TURN_INDICATOR_LOGIT_SHAPE[1]; ++i) {
+  for (size_t i = 0; i < turn_indicator_logit.size(); ++i) {
     probabilities[i] = std::exp(turn_indicator_logit[i] - max_logit);
     sum += probabilities[i];
   }
