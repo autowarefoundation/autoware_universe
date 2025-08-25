@@ -62,6 +62,11 @@ public:
 
   bool bus_stop_area_available() const { return !bus_stop_area_polygons_.empty(); }
 
+  const lanelet::BasicPolygons2d & bus_stop_area_polygons() const
+  {
+    return bus_stop_area_polygons_;
+  }
+
 private:
   GoalSearcher(
     const GoalPlannerParameters & parameters, const LinearRing2d & vehicle_footprint,

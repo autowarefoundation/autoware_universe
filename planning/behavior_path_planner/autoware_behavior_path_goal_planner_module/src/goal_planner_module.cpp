@@ -62,6 +62,29 @@ using autoware_utils::calc_offset_pose;
 using autoware_utils::create_marker_color;
 using nav_msgs::msg::OccupancyGrid;
 
+namespace
+{
+[[maybe_unused]] autoware_perception_msgs::msg::PredictedObjects remove_objects_in_bus_stop_area(
+  const autoware_perception_msgs::msg::PredictedObjects & static_objects,
+  const lanelet::BasicPolygons2d & bus_stop_areas)
+{
+  autoware_perception_msgs::msg::PredictedObjects filtered;
+  for (const auto & static_object : static_objects.objects) {
+    const auto & pose = static_object.kinematics.initial_pose_with_covariance.pose;
+    const auto poly = autoware_utils_geometry::to_polygon2d(pose, static_object.shape);
+    for (const auto & bus_stop_area : bus_stop_areas) {
+      if (boost::geometry::intersects(poly, bus_stop_area)) {
+        continue;
+      }
+      filtered.objects.push_back(static_object);
+      break;
+    }
+  }
+  return filtered;
+}
+
+}  // namespace
+
 namespace autoware::behavior_path_planner
 {
 GoalPlannerModule::GoalPlannerModule(
@@ -777,8 +800,14 @@ void GoalPlannerModule::updateData()
     *(planner_data_->dynamic_object), *(planner_data_->route_handler), parameters_,
     planner_data_->parameters.vehicle_width, planner_data_->self_odometry->pose.pose,
     std::ref(debug_data_.objects_extraction_polygon));
-  const auto static_target_objects = utils::path_safety_checker::filterObjectsByVelocity(
-    dynamic_target_objects, parameters_.th_moving_object_velocity);
+  const auto static_target_objects_by_velocity =
+    utils::path_safety_checker::filterObjectsByVelocity(
+      dynamic_target_objects, parameters_.th_moving_object_velocity);
+  const auto static_target_objects =
+    parameters_.bus_stop_area.use_bus_stop_area
+      ? remove_objects_in_bus_stop_area(
+          static_target_objects_by_velocity, goal_searcher.bus_stop_area_polygons())
+      : static_target_objects_by_velocity;
 
   const bool upstream_module_has_stopline_except_terminal =
     goal_planner_utils::has_stopline_except_terminal(getPreviousModuleOutput().path);
