@@ -750,7 +750,7 @@ std::vector<float> DiffusionPlanner::get_turn_indicator_logits() const
   const int batch_size = params_.batch_size;
 
   // Compute total number of elements in the turn indicator logits
-  size_t turn_indicator_num_elements =
+  const size_t turn_indicator_num_elements =
     batch_size * std::accumulate(
                    TURN_INDICATOR_LOGIT_SHAPE.begin() + 1, TURN_INDICATOR_LOGIT_SHAPE.end(), 1UL,
                    std::multiplies<>());

@@ -290,34 +290,29 @@ TurnIndicatorsCommand create_turn_indicators_command(
   turn_indicators_cmd.stamp = stamp;
 
   // Apply softmax to convert logits to probabilities
-  if (turn_indicator_logits.size() >= 4) {
-    // Find the max value for numerical stability
-    const float max_logit =
-      *std::max_element(turn_indicator_logits.begin(), turn_indicator_logits.begin() + 4);
 
-    std::vector<float> probabilities(4);
-    float sum = 0.0f;
+  // Find the max value for numerical stability
+  const float max_logit =
+    *std::max_element(turn_indicator_logits.begin(), turn_indicator_logits.begin() + 4);
 
-    // Compute exp(logit - max_logit) for numerical stability
-    for (size_t i = 0; i < 4; ++i) {
-      probabilities[i] = std::exp(turn_indicator_logits[i] - max_logit);
-      sum += probabilities[i];
-    }
+  std::vector<float> probabilities(4);
+  float sum = 0.0f;
 
-    // Normalize to get probabilities
-    for (float & prob : probabilities) {
-      prob /= sum;
-    }
-
-    // Find the class with highest probability
-    const size_t max_idx = std::distance(
-      probabilities.begin(), std::max_element(probabilities.begin(), probabilities.end()));
-    turn_indicators_cmd.command = max_idx;
-
-  } else {
-    // Default to no command if not enough data
-    turn_indicators_cmd.command = TurnIndicatorsCommand::NO_COMMAND;
+  // Compute exp(logit - max_logit) for numerical stability
+  for (size_t i = 0; i < 4; ++i) {
+    probabilities[i] = std::exp(turn_indicator_logits[i] - max_logit);
+    sum += probabilities[i];
   }
+
+  // Normalize to get probabilities
+  for (float & prob : probabilities) {
+    prob /= sum;
+  }
+
+  // Find the class with highest probability
+  const size_t max_idx = std::distance(
+    probabilities.begin(), std::max_element(probabilities.begin(), probabilities.end()));
+  turn_indicators_cmd.command = max_idx;
 
   return turn_indicators_cmd;
 }
