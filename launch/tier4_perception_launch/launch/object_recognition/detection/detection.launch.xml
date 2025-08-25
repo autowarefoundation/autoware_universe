@@ -84,6 +84,7 @@
   <arg name="input/camera8/image"/>
   <arg name="input/camera8/info"/>
   <arg name="input/camera8/rois"/>
+  <arg name="input/concatenation_info"/>
   <arg name="image_topic_name"/>
   <arg name="segmentation_pointcloud_fusion_camera_ids"/>
   <arg name="input/radar"/>
@@ -214,6 +215,7 @@
       <arg name="input/camera8/image" value="$(var input/camera8/image)"/>
       <arg name="input/camera8/info" value="$(var input/camera8/info)"/>
       <arg name="input/camera8/rois" value="$(var input/camera8/rois)"/>
+      <arg name="input/concatenation_info" value="$(var input/concatenation_info)"/>
       <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
       <arg name="input/pointcloud_map/pointcloud" value="$(var pointcloud_filter/output/pointcloud)"/>
       <arg name="input/obstacle_segmentation/pointcloud" value="$(var input/obstacle_segmentation/pointcloud)"/>
@@ -240,6 +242,7 @@
       <arg name="pipeline_ns" value="$(var irregular_object_detector_ns)"/>
       <arg name="fusion_camera_ids" value="$(var irregular_object_detector_fusion_camera_ids)"/>
       <arg name="image_topic_name" value="$(var image_topic_name)"/>
+      <arg name="input/concatenation_info" value="$(var input/concatenation_info)"/>
       <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
       <arg name="output/objects" value="$(var irregular_object_pipeline/output/objects)"/>
       <arg name="irregular_object_detector_param_path" value="$(var irregular_object_detector_param_path)"/>

@@ -159,7 +159,7 @@ void PlanningFactorRvizPlugin::processMessage(
       case autoware_internal_planning_msgs::msg::PlanningFactor::STOP:
         for (const auto & control_point : factor.control_points) {
           const auto virtual_wall = createStopVirtualWallMarker(
-            control_point.pose, text, msg->header.stamp, i++, baselink2front_.getFloat());
+            control_point.pose, text, msg->header.stamp, i++, baselink2front_);
           add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(virtual_wall));
         }
         break;
@@ -167,17 +167,19 @@ void PlanningFactorRvizPlugin::processMessage(
       case autoware_internal_planning_msgs::msg::PlanningFactor::SLOW_DOWN:
         for (const auto & control_point : factor.control_points) {
           const auto virtual_wall = createSlowDownVirtualWallMarker(
-            control_point.pose, text, msg->header.stamp, i++, baselink2front_.getFloat());
+            control_point.pose, text, msg->header.stamp, i++, baselink2front_);
           add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(virtual_wall));
         }
         break;
     }
 
-    for (const auto & safety_factor : factor.safety_factors.factors) {
-      const auto color = safety_factor.is_safe ? getGreen(0.999) : getRed(0.999);
-      for (const auto & point : safety_factor.points) {
-        const auto safety_factor_marker = createTargetMarker(i++, point, color, factor.module);
-        add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(safety_factor_marker));
+    if (show_safety_factors_.getBool()) {
+      for (const auto & safety_factor : factor.safety_factors.factors) {
+        const auto color = safety_factor.is_safe ? getGreen(0.999) : getRed(0.999);
+        for (const auto & point : safety_factor.points) {
+          const auto safety_factor_marker = createTargetMarker(i++, point, color, factor.module);
+          add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(safety_factor_marker));
+        }
       }
     }
   }

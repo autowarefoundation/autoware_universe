@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "scene_intersection.hpp"
-#include "util.hpp"
+#include "autoware/behavior_velocity_intersection_module/scene_intersection.hpp"
+#include "autoware/behavior_velocity_intersection_module/util.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for to_bg2d
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>  // for planning_utils::
@@ -39,132 +39,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
-namespace autoware_utils_geometry
-{
-
-template <>
-inline geometry_msgs::msg::Point get_point(const lanelet::ConstPoint3d & p)
-{
-  geometry_msgs::msg::Point point;
-  point.x = p.x();
-  point.y = p.y();
-  point.z = p.z();
-  return point;
-}
-
-}  // namespace autoware_utils_geometry
-
-namespace
-{
-namespace bg = boost::geometry;
-
-lanelet::ConstLanelets getPrevLanelets(
-  const lanelet::ConstLanelets & lanelets_on_path, const std::set<lanelet::Id> & associative_ids)
-{
-  lanelet::ConstLanelets previous_lanelets;
-  for (const auto & ll : lanelets_on_path) {
-    if (associative_ids.find(ll.id()) != associative_ids.end()) {
-      return previous_lanelets;
-    }
-    previous_lanelets.push_back(ll);
-  }
-  return previous_lanelets;
-}
-
-// end inclusive
-lanelet::ConstLanelet generatePathLanelet(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t start_idx,
-  const size_t end_idx, const double width, const double interval)
-{
-  lanelet::Points3d lefts;
-  lanelet::Points3d rights;
-  size_t prev_idx = start_idx;
-  for (size_t i = start_idx; i <= end_idx; ++i) {
-    const auto & p = path.points.at(i).point.pose;
-    const auto & p_prev = path.points.at(prev_idx).point.pose;
-    if (i != start_idx && autoware_utils::calc_distance2d(p_prev, p) < interval) {
-      continue;
-    }
-    prev_idx = i;
-    const double yaw = tf2::getYaw(p.orientation);
-    const double x = p.position.x;
-    const double y = p.position.y;
-    // NOTE: maybe this is opposite
-    const double left_x = x + width / 2 * std::sin(yaw);
-    const double left_y = y - width / 2 * std::cos(yaw);
-    const double right_x = x - width / 2 * std::sin(yaw);
-    const double right_y = y + width / 2 * std::cos(yaw);
-    lefts.emplace_back(lanelet::InvalId, left_x, left_y, p.position.z);
-    rights.emplace_back(lanelet::InvalId, right_x, right_y, p.position.z);
-  }
-  lanelet::LineString3d left = lanelet::LineString3d(lanelet::InvalId, lefts);
-  lanelet::LineString3d right = lanelet::LineString3d(lanelet::InvalId, rights);
-
-  return lanelet::Lanelet(lanelet::InvalId, left, right);
-}
-
-std::optional<std::pair<size_t, const lanelet::CompoundPolygon3d &>> getFirstPointInsidePolygons(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-  const std::pair<size_t, size_t> lane_interval,
-  const std::vector<lanelet::CompoundPolygon3d> & polygons, const bool search_forward = true)
-{
-  if (search_forward) {
-    for (size_t i = lane_interval.first; i <= lane_interval.second; ++i) {
-      bool is_in_lanelet = false;
-      const auto & p = path.points.at(i).point.pose.position;
-      for (const auto & polygon : polygons) {
-        const auto polygon_2d = lanelet::utils::to2D(polygon);
-        is_in_lanelet = bg::within(autoware::behavior_velocity_planner::to_bg2d(p), polygon_2d);
-        if (is_in_lanelet) {
-          return std::make_optional<std::pair<size_t, const lanelet::CompoundPolygon3d &>>(
-            i, polygon);
-        }
-      }
-      if (is_in_lanelet) {
-        break;
-      }
-    }
-  } else {
-    for (size_t i = lane_interval.second; i >= lane_interval.first; --i) {
-      bool is_in_lanelet = false;
-      const auto & p = path.points.at(i).point.pose.position;
-      for (const auto & polygon : polygons) {
-        const auto polygon_2d = lanelet::utils::to2D(polygon);
-        is_in_lanelet = bg::within(autoware::behavior_velocity_planner::to_bg2d(p), polygon_2d);
-        if (is_in_lanelet) {
-          return std::make_optional<std::pair<size_t, const lanelet::CompoundPolygon3d &>>(
-            i, polygon);
-        }
-      }
-      if (is_in_lanelet) {
-        break;
-      }
-      if (i == 0) {
-        break;
-      }
-    }
-  }
-  return std::nullopt;
-}
-
-double getHighestCurvature(const lanelet::ConstLineString3d & centerline)
-{
-  std::vector<lanelet::ConstPoint3d> points;
-  for (auto point = centerline.begin(); point != centerline.end(); point++) {
-    points.push_back(*point);
-  }
-
-  autoware::interpolation::SplineInterpolationPoints2d interpolation(points);
-  const std::vector<double> curvatures = interpolation.getSplineInterpolatedCurvatures();
-  std::vector<double> curvatures_positive;
-  for (const auto & curvature : curvatures) {
-    curvatures_positive.push_back(std::fabs(curvature));
-  }
-  return *std::max_element(curvatures_positive.begin(), curvatures_positive.end());
-}
-
-}  // namespace
 
 namespace autoware::behavior_velocity_planner
 {
@@ -905,20 +779,21 @@ std::optional<PathLanelets> IntersectionModule::generatePathLanelets(
 
   PathLanelets path_lanelets;
   // prev
-  path_lanelets.prev = ::getPrevLanelets(lanelets_on_path, associative_ids_);
+  path_lanelets.prev = util::getPrevLanelets(lanelets_on_path, associative_ids_);
   path_lanelets.all = path_lanelets.prev;
 
   // entry2ego if exist
   const auto [assigned_lane_start, assigned_lane_end] = assigned_lane_interval;
   if (closest_idx > assigned_lane_start) {
     path_lanelets.all.push_back(
-      ::generatePathLanelet(path, assigned_lane_start, closest_idx, width, path_lanelet_interval));
+      util::generatePathLanelet(
+        path, assigned_lane_start, closest_idx, width, path_lanelet_interval));
   }
 
   // ego_or_entry2exit
   const auto ego_or_entry_start = std::max(closest_idx, assigned_lane_start);
-  path_lanelets.ego_or_entry2exit =
-    generatePathLanelet(path, ego_or_entry_start, assigned_lane_end, width, path_lanelet_interval);
+  path_lanelets.ego_or_entry2exit = util::generatePathLanelet(
+    path, ego_or_entry_start, assigned_lane_end, width, path_lanelet_interval);
   path_lanelets.all.push_back(path_lanelets.ego_or_entry2exit);
 
   // next
@@ -928,7 +803,7 @@ std::optional<PathLanelets> IntersectionModule::generatePathLanelets(
     if (next_lane_interval_opt) {
       const auto [next_start, next_end] = next_lane_interval_opt.value();
       path_lanelets.next =
-        generatePathLanelet(path, next_start, next_end, width, path_lanelet_interval);
+        util::generatePathLanelet(path, next_start, next_end, width, path_lanelet_interval);
       path_lanelets.all.push_back(path_lanelets.next.value());
     }
   }
@@ -939,17 +814,17 @@ std::optional<PathLanelets> IntersectionModule::generatePathLanelets(
       : util::getFirstPointInsidePolygon(path, assigned_lane_interval, first_conflicting_area);
   const auto last_inside_conflicting_idx_opt =
     first_attention_area.has_value()
-      ? ::getFirstPointInsidePolygons(path, assigned_lane_interval, attention_areas, false)
-      : ::getFirstPointInsidePolygons(path, assigned_lane_interval, conflicting_areas, false);
+      ? util::getFirstPointInsidePolygons(path, assigned_lane_interval, attention_areas, false)
+      : util::getFirstPointInsidePolygons(path, assigned_lane_interval, conflicting_areas, false);
   if (first_inside_conflicting_idx_opt && last_inside_conflicting_idx_opt) {
     const auto first_inside_conflicting_idx = first_inside_conflicting_idx_opt.value();
     const auto last_inside_conflicting_idx = last_inside_conflicting_idx_opt.value().first;
-    lanelet::ConstLanelet conflicting_interval = generatePathLanelet(
+    lanelet::ConstLanelet conflicting_interval = util::generatePathLanelet(
       path, first_inside_conflicting_idx, last_inside_conflicting_idx, width,
       path_lanelet_interval);
     path_lanelets.conflicting_interval_and_remaining.push_back(std::move(conflicting_interval));
     if (last_inside_conflicting_idx < assigned_lane_end) {
-      lanelet::ConstLanelet remaining_interval = generatePathLanelet(
+      lanelet::ConstLanelet remaining_interval = util::generatePathLanelet(
         path, last_inside_conflicting_idx, assigned_lane_end, width, path_lanelet_interval);
       path_lanelets.conflicting_interval_and_remaining.push_back(std::move(remaining_interval));
     }
@@ -975,7 +850,7 @@ std::vector<lanelet::ConstLineString3d> IntersectionModule::generateDetectionLan
     // TODO(Mamoru Sobue): instead of ignoring, only trim straight part of lanelet
     const auto fine_centerline =
       lanelet::utils::generateFineCenterline(detection_lanelet, curvature_calculation_ds);
-    const double highest_curvature = ::getHighestCurvature(fine_centerline);
+    const double highest_curvature = util::getHighestCurvature(fine_centerline);
     if (highest_curvature > curvature_threshold) {
       continue;
     }

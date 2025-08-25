@@ -27,6 +27,7 @@
   <depend>autoware_motion_utils</depend>
   <depend>autoware_rtc_interface</depend>
   <depend>autoware_test_utils</depend>
+  <depend>autoware_trajectory</depend>
   <depend>autoware_utils</depend>
   <depend>pluginlib</depend>
   <depend>rclcpp</depend>
