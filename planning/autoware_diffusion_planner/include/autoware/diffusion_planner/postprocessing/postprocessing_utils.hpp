@@ -140,14 +140,14 @@ CandidateTrajectories to_candidate_trajectories_msg(
   const Trajectory & trajectory, const UUID & generator_uuid, const std::string & generator_name);
 
 /**
- * @brief Converts turn indicator logits to TurnIndicatorsCommand message.
+ * @brief Converts turn indicator logit to TurnIndicatorsCommand message.
  *
- * @param turn_indicator_logits The turn indicator logits from the model output.
+ * @param turn_indicator_logit The turn indicator logit from the model output.
  * @param stamp The ROS time stamp for the message.
  * @return A TurnIndicatorsCommand message with the predicted turn indicators.
  */
 TurnIndicatorsCommand create_turn_indicators_command(
-  const std::vector<float> & turn_indicator_logits, const rclcpp::Time & stamp);
+  const std::vector<float> & turn_indicator_logit, const rclcpp::Time & stamp);
 
 }  // namespace autoware::diffusion_planner::postprocess
 #endif  // AUTOWARE__DIFFUSION_PLANNER__POSTPROCESSING__POSTPROCESSING_UTILS_HPP_

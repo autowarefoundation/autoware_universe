@@ -221,10 +221,10 @@ public:
   std::vector<float> do_inference_trt(InputDataMap & input_data_map);
 
   /**
-   * @brief Get turn indicator logits from the last inference.
-   * @return Vector containing turn indicator logits.
+   * @brief Get turn indicator logit from the last inference.
+   * @return Vector containing turn indicator logit.
    */
-  std::vector<float> get_turn_indicator_logits() const;
+  std::vector<float> get_turn_indicator_logit() const;
 
   /**
    * @brief Callback for dynamic parameter updates.

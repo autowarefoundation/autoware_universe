@@ -745,26 +745,26 @@ std::vector<float> DiffusionPlanner::do_inference_trt(InputDataMap & input_data_
   return output_host;
 }
 
-std::vector<float> DiffusionPlanner::get_turn_indicator_logits() const
+std::vector<float> DiffusionPlanner::get_turn_indicator_logit() const
 {
   const int batch_size = params_.batch_size;
 
-  // Compute total number of elements in the turn indicator logits
+  // Compute total number of elements in the turn indicator logit
   const size_t turn_indicator_num_elements =
     batch_size * std::accumulate(
                    TURN_INDICATOR_LOGIT_SHAPE.begin() + 1, TURN_INDICATOR_LOGIT_SHAPE.end(), 1UL,
                    std::multiplies<>());
 
   // Allocate host vector
-  std::vector<float> logits_host(turn_indicator_num_elements);
+  std::vector<float> logit_host(turn_indicator_num_elements);
 
   // Copy data from device to host
   cudaMemcpy(
-    logits_host.data(),             // destination (host)
+    logit_host.data(),              // destination (host)
     turn_indicator_logit_d_.get(),  // source (device)
     turn_indicator_num_elements * sizeof(float), cudaMemcpyDeviceToHost);
 
-  return logits_host;
+  return logit_host;
 }
 
 void DiffusionPlanner::on_timer()
@@ -802,9 +802,9 @@ void DiffusionPlanner::on_timer()
   publish_predictions(predictions);
 
   // Publish turn indicators
-  const auto turn_indicator_logits = get_turn_indicator_logits();
+  const auto turn_indicator_logit = get_turn_indicator_logit();
   const auto turn_indicators_cmd =
-    postprocess::create_turn_indicators_command(turn_indicator_logits, this->now());
+    postprocess::create_turn_indicators_command(turn_indicator_logit, this->now());
   pub_turn_indicators_->publish(turn_indicators_cmd);
 }
 

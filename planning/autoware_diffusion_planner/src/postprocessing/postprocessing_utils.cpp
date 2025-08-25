@@ -284,23 +284,23 @@ CandidateTrajectories to_candidate_trajectories_msg(
 }
 
 TurnIndicatorsCommand create_turn_indicators_command(
-  const std::vector<float> & turn_indicator_logits, const rclcpp::Time & stamp)
+  const std::vector<float> & turn_indicator_logit, const rclcpp::Time & stamp)
 {
   TurnIndicatorsCommand turn_indicators_cmd;
   turn_indicators_cmd.stamp = stamp;
 
-  // Apply softmax to convert logits to probabilities
+  // Apply softmax to convert logit to probabilities
 
   // Find the max value for numerical stability
   const float max_logit =
-    *std::max_element(turn_indicator_logits.begin(), turn_indicator_logits.begin() + 4);
+    *std::max_element(turn_indicator_logit.begin(), turn_indicator_logit.begin() + 4);
 
   std::vector<float> probabilities(4);
   float sum = 0.0f;
 
   // Compute exp(logit - max_logit) for numerical stability
   for (size_t i = 0; i < 4; ++i) {
-    probabilities[i] = std::exp(turn_indicator_logits[i] - max_logit);
+    probabilities[i] = std::exp(turn_indicator_logit[i] - max_logit);
     sum += probabilities[i];
   }
 
