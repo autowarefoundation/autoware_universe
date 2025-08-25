@@ -18,6 +18,7 @@
 #include <autoware/lanelet2_utils/intersection.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
+#include <tl_expected/expected.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
@@ -26,6 +27,7 @@
 
 #include <memory>
 #include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -141,6 +143,27 @@ std::optional<StopPoints> generate_stop_points(
   const double ego_nearest_yaw_threshold,
   autoware_internal_planning_msgs::msg::PathWithLaneId * path);
 
+/**
+ * @brief Calculate the distance from the ego vehicle's footprint to the last lanelet's blind spot
+ * boundary.
+ *
+ * @param[in] footprint The ego vehicle's footprint represented as a 2D polygon (must contain
+ * exactly 7 points).
+ * @param[in] last_lanelet_before_turning The last lanelet before the vehicle starts turning.
+ * @param[in] turn_direction The turn direction (Left or Right) used to determine which side of the
+ * footprint to measure.
+ *
+ * @return
+ * - `tl::expected<double, std::string>`:
+ *    - On success: The minimum distance [m] from the ego vehicle's side to the corresponding road
+ * boundary.
+ *    - On error: An unexpected result with a string describing the error, e.g. when the footprint
+ * size is invalid.
+ */
+tl::expected<double, std::string> calc_ego_to_last_blind_spot_lanelet_dist(
+  const autoware_utils::LinearRing2d & footprint,
+  const lanelet::ConstLanelet & last_lanelet_before_turning,
+  const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction);
 }  // namespace autoware::behavior_velocity_planner
 
 #endif  // AUTOWARE__BEHAVIOR_VELOCITY_BLIND_SPOT_MODULE__UTIL_HPP_

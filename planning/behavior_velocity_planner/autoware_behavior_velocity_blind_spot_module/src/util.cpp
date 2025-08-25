@@ -31,6 +31,7 @@
 #include <lanelet2_core/geometry/Polygon.h>
 
 #include <algorithm>
+#include <limits>
 #include <list>
 #include <memory>
 #include <optional>
@@ -681,4 +682,26 @@ std::optional<StopPoints> generate_stop_points(
     std::nullopt, stop_points_list.instant_stopline, stop_points_list.critical_stopline};
 }
 
+tl::expected<double, std::string> calc_ego_to_last_blind_spot_lanelet_dist(
+  const autoware_utils::LinearRing2d & footprint,
+  const lanelet::ConstLanelet & last_lanelet_before_turning,
+  const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction)
+{
+  if (footprint.size() != 7) {
+    return tl::make_unexpected("Unexpected footprint's size.");
+  }
+
+  // left front is 6, left back is 4, right_front is 1, right_back is 3
+  const auto front_idx = (turn_direction == TurnDirection::Left) ? 6 : 1;
+  const auto back_idx = (turn_direction == TurnDirection::Left) ? 4 : 3;
+  const auto ego_side = autoware_utils::Segment2d{footprint[front_idx], footprint[back_idx]};
+  const auto & attention_area_road_boundary = lanelet::utils::to2D(
+    (turn_direction == TurnDirection::Left) ? last_lanelet_before_turning.leftBound()
+                                            : last_lanelet_before_turning.rightBound());
+  auto blind_side_distance = std::numeric_limits<double>::max();
+  for (const auto & road_bound : attention_area_road_boundary.basicLineString()) {
+    blind_side_distance = std::min(blind_side_distance, bg::distance(ego_side, road_bound));
+  }
+  return blind_side_distance;
+}
 }  // namespace autoware::behavior_velocity_planner
