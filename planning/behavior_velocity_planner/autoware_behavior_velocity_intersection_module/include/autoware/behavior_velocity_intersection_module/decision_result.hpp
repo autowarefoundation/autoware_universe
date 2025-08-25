@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__DECISION_RESULT_HPP_
 #define AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__DECISION_RESULT_HPP_
 
+#include <geometry_msgs/msg/pose.hpp>
+
 #include <optional>
 #include <string>
 #include <variant>
@@ -68,6 +70,7 @@ struct NonOccludedCollisionStop
   size_t collision_stopline_idx{0};
   size_t occlusion_stopline_idx{0};
   std::string occlusion_report;
+  geometry_msgs::msg::Pose collision_stop_pose;
 };
 
 /**
@@ -98,6 +101,7 @@ struct PeekingTowardOcclusion
   //! intersection_occlusion(x.y)
   std::optional<double> static_occlusion_timeout{std::nullopt};
   std::string occlusion_report;
+  geometry_msgs::msg::Pose collision_stop_pose;
 };
 
 /**
@@ -113,6 +117,7 @@ struct OccludedCollisionStop
   //! contains the remaining time to release the static occlusion stuck
   std::optional<double> static_occlusion_timeout{std::nullopt};
   std::string occlusion_report;
+  geometry_msgs::msg::Pose collision_stop_pose;
 };
 
 /**
@@ -138,6 +143,7 @@ struct Safe
   size_t collision_stopline_idx{0};
   size_t occlusion_stopline_idx{0};
   std::string occlusion_report;
+  geometry_msgs::msg::Pose collision_stop_pose;
 };
 
 /**
@@ -150,6 +156,7 @@ struct FullyPrioritized
   size_t collision_stopline_idx{0};
   size_t occlusion_stopline_idx{0};
   std::string safety_report;
+  geometry_msgs::msg::Pose collision_stop_pose;
 };
 
 using DecisionResult = std::variant<
