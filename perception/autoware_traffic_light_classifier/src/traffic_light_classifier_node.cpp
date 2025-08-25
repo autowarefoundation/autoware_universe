@@ -64,6 +64,11 @@ TrafficLightClassifierNodelet::TrafficLightClassifierNodelet(const rclcpp::NodeO
 
   diagnostics_interface_ptr_ =
     std::make_unique<autoware_utils::DiagnosticsInterface>(this, "traffic_light_classifier");
+
+  if (this->declare_parameter<bool>("build_only")) {
+    RCLCPP_INFO(get_logger(), "TensorRT engine is built and shutdown node.");
+    rclcpp::shutdown();
+  }
 }
 
 void TrafficLightClassifierNodelet::connectCb()

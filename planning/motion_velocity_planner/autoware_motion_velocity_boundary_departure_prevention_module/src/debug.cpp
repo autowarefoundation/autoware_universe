@@ -84,24 +84,6 @@ inline ColorRGBA grey(float a = 0.99)
 
 namespace autoware::motion_velocity_planner::experimental::debug
 {
-Marker create_ego_sides_marker(
-  const EgoSides & ego_sides_from_footprints, Marker marker, std::string && ns,
-  const double base_link_z)
-{
-  marker.ns = ns;
-  marker.points.reserve(ego_sides_from_footprints.size() * 4);
-  const auto to_geom = [base_link_z](const auto & pt) { return to_msg(pt.to_3d(base_link_z)); };
-  for (const auto & ego_footprint_sides : ego_sides_from_footprints) {
-    const auto & left = ego_footprint_sides.left;
-    marker.points.push_back(to_geom(left.first));
-    marker.points.push_back(to_geom(left.second));
-    const auto & right = ego_footprint_sides.right;
-    marker.points.push_back(to_geom(right.first));
-    marker.points.push_back(to_geom(right.second));
-  }
-
-  return marker;
-}
 
 template <typename T>
 Marker create_projections_to_bound_marker(

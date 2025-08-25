@@ -18,6 +18,7 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 #include "autoware_lanelet2_extension/regulatory_elements/bus_stop_area.hpp"
 
+#include <Eigen/Core>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
@@ -612,8 +613,9 @@ double calcLateralDeviationBetweenPaths(
       reference_path.points, target_point.point.pose.position);
     lateral_deviation = std::max(
       lateral_deviation,
-      std::abs(autoware_utils::calc_lateral_deviation(
-        reference_path.points[nearest_index].point.pose, target_point.point.pose.position)));
+      std::abs(
+        autoware_utils::calc_lateral_deviation(
+          reference_path.points[nearest_index].point.pose, target_point.point.pose.position)));
   }
   return lateral_deviation;
 }
@@ -914,33 +916,54 @@ std::optional<Pose> calcRefinedGoal(
   return refined_goal_pose;
 }
 
-std::optional<Pose> calcClosestPose(
-  const lanelet::ConstLineString3d line, const Point & query_point)
+std::optional<double> calcSignedLateralDistanceToBoundary(
+  const lanelet::ConstLineString3d boundary, const Pose & reference_pose)
 {
-  const auto segment =
-    lanelet::utils::getClosestSegment(lanelet::BasicPoint2d{query_point.x, query_point.y}, line);
-  if (segment.empty()) {
+  if (boundary.size() < 2) {
     return std::nullopt;
   }
 
-  const Eigen::Vector2d direction(
-    (segment.back().basicPoint2d() - segment.front().basicPoint2d()).normalized());
-  const Eigen::Vector2d xf(segment.front().basicPoint2d());
-  const Eigen::Vector2d x(query_point.x, query_point.y);
-  const Eigen::Vector2d p = xf + (x - xf).dot(direction) * direction;
+  const double yaw = tf2::getYaw(reference_pose.orientation);
+  const Eigen::Vector2d y_axis_direction(-std::sin(yaw), std::cos(yaw));
+  const Eigen::Vector2d reference_point(reference_pose.position.x, reference_pose.position.y);
 
-  geometry_msgs::msg::Pose closest_pose;
-  closest_pose.position.x = p.x();
-  closest_pose.position.y = p.y();
-  closest_pose.position.z = query_point.z;
+  double min_distance = std::numeric_limits<double>::max();
+  std::optional<double> signed_lateral_distance;
 
-  const double lane_yaw =
-    std::atan2(segment.back().y() - segment.front().y(), segment.back().x() - segment.front().x());
-  tf2::Quaternion q;
-  q.setRPY(0, 0, lane_yaw);
-  closest_pose.orientation = tf2::toMsg(q);
+  for (size_t i = 0; i < boundary.size() - 1; ++i) {
+    const auto & p1 = boundary[i];
+    const auto & p2 = boundary[i + 1];
 
-  return closest_pose;
+    const Eigen::Vector2d segment_start(p1.x(), p1.y());
+    const Eigen::Vector2d segment_end(p2.x(), p2.y());
+    const Eigen::Vector2d segment_direction = segment_end - segment_start;
+
+    // Calculate intersection between Y-axis line and boundary segment
+    const double det = y_axis_direction.x() * (-segment_direction.y()) -
+                       y_axis_direction.y() * (-segment_direction.x());
+
+    if (std::abs(det) < 1e-10) {
+      // this segment and the Y-axis are parallel
+      continue;
+    }
+
+    const Eigen::Vector2d rhs = segment_start - reference_point;
+    const double t =
+      ((-segment_direction.y()) * rhs.x() - (-segment_direction.x()) * rhs.y()) / det;
+    const double s = (y_axis_direction.x() * rhs.y() - y_axis_direction.y() * rhs.x()) / det;
+
+    // Check if intersection is within segment bounds
+    if (s >= 0.0 && s <= 1.0) {
+      const double distance = std::abs(t);
+
+      if (distance < min_distance) {
+        min_distance = distance;
+        signed_lateral_distance = t;
+      }
+    }
+  }
+
+  return signed_lateral_distance;
 }
 
 autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
@@ -1050,8 +1073,9 @@ bool hasPreviousModulePathShapeChanged(
       // p.point.pose.position is not within the segment, skip lateral distance check
       continue;
     }
-    const double lateral_distance = std::abs(autoware::motion_utils::calcLateralOffset(
-      last_upstream_module_output.path.points, p.point.pose.position, nearest_seg_idx));
+    const double lateral_distance = std::abs(
+      autoware::motion_utils::calcLateralOffset(
+        last_upstream_module_output.path.points, p.point.pose.position, nearest_seg_idx));
     if (lateral_distance > LATERAL_DEVIATION_THRESH) {
       return true;
     }
@@ -1063,8 +1087,9 @@ bool hasDeviatedFromPath(
   const Point & ego_position, const BehaviorModuleOutput & upstream_module_output)
 {
   constexpr double LATERAL_DEVIATION_THRESH = 0.1;
-  return std::abs(autoware::motion_utils::calcLateralOffset(
-           upstream_module_output.path.points, ego_position)) > LATERAL_DEVIATION_THRESH;
+  return std::abs(
+           autoware::motion_utils::calcLateralOffset(
+             upstream_module_output.path.points, ego_position)) > LATERAL_DEVIATION_THRESH;
 }
 
 bool has_stopline_except_terminal(const PathWithLaneId & path)

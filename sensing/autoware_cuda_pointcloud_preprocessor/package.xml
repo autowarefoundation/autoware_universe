@@ -1,11 +1,14 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_cuda_pointcloud_preprocessor</name>
-  <version>0.46.0</version>
+  <version>0.47.0</version>
   <description>autoware_cuda_pointcloud_preprocessor</description>
   <maintainer email="kenzo.lobos@tier4.jp">Kenzo Lobos-Tsunekawa</maintainer>
   <maintainer email="amadeusz.szymko.2@tier4.jp">Amadeusz Szymko</maintainer>
   <maintainer email="max.schmeller@tier4.jp">Max Schmeller</maintainer>
+  <maintainer email="david.wong@tier4.jp">David Wong</maintainer>
+  <maintainer email="manato.hirabayashi@tier4.jp">Manato Hirabayashi</maintainer>
+  <maintainer email="yihsiang.fang@tier4.jp">Yihsiang Fang</maintainer>
   <author email="kenzo.lobos@tier4.jp">Kenzo Lobos-Tsunekawa</author>
   <license>Apache License 2.0</license>
 
@@ -18,6 +21,7 @@
   <depend>autoware_cuda_utils</depend>
   <depend>autoware_point_types</depend>
   <depend>autoware_pointcloud_preprocessor</depend>
+  <depend>autoware_sensing_msgs</depend>
   <depend>autoware_utils</depend>
   <depend>cuda_blackboard</depend>
   <depend>diagnostic_msgs</depend>

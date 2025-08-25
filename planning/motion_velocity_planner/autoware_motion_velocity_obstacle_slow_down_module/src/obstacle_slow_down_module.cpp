@@ -199,13 +199,6 @@ void ObstacleSlowDownModule::init(rclcpp::Node & node, const std::string & modul
   slow_down_planning_param_ = SlowDownPlanningParam(node);
   obstacle_filtering_param_ = ObstacleFilteringParam(node);
 
-  const double mask_lat_margin =
-    get_or_declare_parameter<double>(node, "pointcloud.mask_lat_margin");
-
-  if (mask_lat_margin < obstacle_filtering_param_.max_lat_margin) {
-    throw std::invalid_argument("point-cloud mask narrower than stop margin");
-  }
-
   objects_of_interest_marker_interface_ = std::make_unique<
     autoware::objects_of_interest_marker_interface::ObjectsOfInterestMarkerInterface>(
     &node, "motion_velocity_planner_common");
@@ -256,10 +249,8 @@ ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
 
   std::vector<autoware::motion_velocity_planner::SlowDownPointData> slow_down_points;
 
-  const PointCloud::Ptr filtered_points_ptr =
-    pointcloud.get_filtered_pointcloud_ptr(traj_points, vehicle_info);
-  const std::vector<pcl::PointIndices> clusters =
-    pointcloud.get_cluster_indices(traj_points, vehicle_info);
+  const PointCloud::Ptr filtered_points_ptr = pointcloud.get_filtered_pointcloud_ptr();
+  const std::vector<pcl::PointIndices> clusters = pointcloud.get_cluster_indices();
 
   // 3. convert clusters to obstacles
   for (const auto & cluster_indices : clusters) {
@@ -458,6 +449,17 @@ std::vector<SlowDownObstacle> ObstacleSlowDownModule::filter_slow_down_obstacle_
 
   if (!obstacle_filtering_param_.use_pointcloud) {
     return std::vector<SlowDownObstacle>{};
+  }
+
+  if (
+    point_cloud.preprocess_params_.filter_by_trajectory_polygon.lateral_margin <
+    obstacle_filtering_param_.max_lat_margin) {
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 5000,
+      "pointcloud preprocessing lateral margin in motion_velocity_planner_node (%f) is smaller "
+      "than obstacle_slow_down_module param (%f)",
+      point_cloud.preprocess_params_.filter_by_trajectory_polygon.lateral_margin,
+      obstacle_filtering_param_.max_lat_margin);
   }
 
   // Get Objects
@@ -755,9 +757,10 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
     }();
 
     // insert slow down velocity between slow start and end
-    slowdown_intervals.push_back(SlowdownInterval{
-      slow_down_traj_points.at(slow_down_start_idx ? *slow_down_start_idx : 0).pose.position,
-      slow_down_traj_points.at(*slow_down_end_idx).pose.position, stable_slow_down_vel});
+    slowdown_intervals.push_back(
+      SlowdownInterval{
+        slow_down_traj_points.at(slow_down_start_idx ? *slow_down_start_idx : 0).pose.position,
+        slow_down_traj_points.at(*slow_down_end_idx).pose.position, stable_slow_down_vel});
 
     // add debug data
     slow_down_debug_multi_array_.data.push_back(obstacle.dist_to_traj_poly);
@@ -809,9 +812,10 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
     debug_data_ptr_->obstacles_to_slow_down.push_back(obstacle);
 
     // update prev_slow_down_output_
-    new_prev_slow_down_output.push_back(SlowDownOutput{
-      obstacle.uuid, slow_down_traj_points, slow_down_start_idx, slow_down_end_idx,
-      stable_slow_down_vel, feasible_slow_down_vel, obstacle.dist_to_traj_poly, obstacle_motion});
+    new_prev_slow_down_output.push_back(
+      SlowDownOutput{
+        obstacle.uuid, slow_down_traj_points, slow_down_start_idx, slow_down_end_idx,
+        stable_slow_down_vel, feasible_slow_down_vel, obstacle.dist_to_traj_poly, obstacle_motion});
   }
 
   // update prev_slow_down_output_

@@ -31,6 +31,8 @@
 #include <lanelet2_core/primitives/Point.h>
 #include <lanelet2_core/primitives/Polygon.h>
 
+#include <deque>
+#include <limits>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -93,19 +95,130 @@ struct EgoLanelets
 
 struct PCDObject
 {
+private:
+  size_t buffer_size{10ul};
+
+public:
   rclcpp::Time last_update_time;
   geometry_msgs::msg::Pose pose;
   geometry_msgs::msg::Point overlap_point;
   lanelet::Id overlap_lanelet_id;
+  std::deque<double> distance_history;
+  std::deque<double> timestamp_history;
   double track_duration{};
   double distance_to_overlap{};
   double delay_compensated_distance_to_overlap{};
   double velocity{};
   double moving_time{};
-  double ttc{};
+  double ttc{std::numeric_limits<double>::max()};
   bool is_safe{true};
   bool is_reliable{false};
   bool is_moving{false};
+
+  PCDObject() = default;
+
+  PCDObject(
+    const geometry_msgs::msg::Pose & pose, const geometry_msgs::msg::Point & overlap_point,
+    const rclcpp::Time & time_stamp, const lanelet::Id ll_id, const double distance)
+  : last_update_time(time_stamp),
+    pose(pose),
+    overlap_point(overlap_point),
+    overlap_lanelet_id(ll_id),
+    distance_to_overlap(distance),
+    delay_compensated_distance_to_overlap(distance)
+  {
+    distance_history.push_back(distance);
+    timestamp_history.push_back(0.0);
+  }
+
+  void set_buffer_size(const size_t size) { buffer_size = size; }
+
+  void update_history(const double dist, const double dt)
+  {
+    const auto last_timestamp = timestamp_history.empty() ? 0.0 : timestamp_history.back();
+
+    distance_history.push_back(dist);
+    timestamp_history.push_back(last_timestamp + dt);
+
+    if (distance_history.size() > buffer_size) distance_history.pop_front();
+    if (timestamp_history.size() > buffer_size) timestamp_history.pop_front();
+  }
+
+  bool update_velocity()
+  {
+    // need at least two measurements to initialize velocity
+    if (distance_history.size() < 2) return false;
+
+    // perform linear regression to estimate velocity from first few samples
+    const auto n = distance_history.size();
+    const auto x0 = timestamp_history.front();
+
+    double sum_x = 0.0;
+    double sum_y = 0.0;
+    double sum_xy = 0.0;
+    double sum_x2 = 0.0;
+    for (size_t i = 0; i < n; ++i) {
+      double x_val = timestamp_history[i] - x0;
+      double y_val = distance_history[i];
+      sum_x += x_val;
+      sum_y += y_val;
+      sum_xy += x_val * y_val;
+      sum_x2 += x_val * x_val;
+    }
+
+    double denominator = n * sum_x2 - sum_x * sum_x;
+    if (std::abs(denominator) < std::numeric_limits<double>::epsilon()) {
+      return false;
+    }
+
+    double slope_m = (n * sum_xy - sum_x * sum_y) / denominator;
+    velocity = -1.0 * slope_m;  // negate value to estimate approach velocity
+    return true;
+  }
+
+  void update(
+    const double dist, const double dt, const double raw_vel_th, const double accel_th,
+    const double min_dist_th)
+  {
+    // distance measurement is not reliable near the overlap point, skip velocity update
+    if (is_reliable && delay_compensated_distance_to_overlap < min_dist_th) {
+      update_history(dist, dt);
+      track_duration += dt;
+      return;
+    }
+
+    const auto raw_velocity = (distance_to_overlap - dist) / dt;
+    if (abs(raw_velocity) > raw_vel_th) {
+      reset();
+      distance_history.push_back(dist);
+      timestamp_history.push_back(0.0);
+      return;
+    }
+
+    const auto last_vel = velocity;
+    update_history(dist, dt);
+    update_velocity();
+    track_duration += dt;
+
+    if (distance_history.size() < 3) return;
+
+    const auto accel = (velocity - last_vel) / dt;
+    if (abs(accel) > accel_th) {
+      reset();
+      distance_history.push_back(dist);
+      timestamp_history.push_back(0.0);
+    }
+  }
+
+  void reset()
+  {
+    velocity = 0.0;
+    track_duration = 0.0;
+    distance_history.clear();
+    timestamp_history.clear();
+    is_reliable = false;
+    is_safe = true;
+  }
 };
 
 struct DebugData

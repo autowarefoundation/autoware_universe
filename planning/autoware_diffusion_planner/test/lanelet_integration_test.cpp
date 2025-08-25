@@ -14,9 +14,9 @@
 
 #include "autoware/diffusion_planner/conversion/lanelet.hpp"
 #include "autoware/diffusion_planner/preprocessing/lane_segments.hpp"
-#include "autoware_test_utils/autoware_test_utils.hpp"
 
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware_test_utils/autoware_test_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -57,11 +58,7 @@ protected:
       map_bin_msg_, lanelet_map_ptr_, &traffic_rules_ptr_, &routing_graph_ptr_);
 
     // Create LaneletConverter instance
-    const size_t max_num_polyline = 100;
-    const size_t max_num_point = 20;
-    const double point_break_distance = 100.0;
-    lanelet_converter_ = std::make_unique<LaneletConverter>(
-      lanelet_map_ptr_, max_num_polyline, max_num_point, point_break_distance);
+    lanelet_converter_ = std::make_unique<LaneletConverter>(lanelet_map_ptr_);
   }
 
   void TearDown() override
@@ -168,10 +165,6 @@ TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsAttributes)
   for (const auto & segment : lane_segments) {
     // Check ID is valid
     EXPECT_GT(segment.id, 0) << "Lane segment ID should be positive";
-
-    // Check traffic light state (should be UNKNOWN in this test)
-    EXPECT_EQ(segment.traffic_light, autoware_perception_msgs::msg::TrafficLightElement::UNKNOWN)
-      << "Traffic light state should be UNKNOWN";
   }
 }
 
