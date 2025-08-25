@@ -250,29 +250,53 @@ bool VehicleTracker::measure(
 }
 
 bool VehicleTracker::getTrackedObject(
-  const rclcpp::Time & time, types::DynamicObject & object,
-  [[maybe_unused]] const bool to_publish) const
+  const rclcpp::Time & time, types::DynamicObject & object, const bool to_publish) const
 {
   // try to return cached object
-  if (getCachedObject(time, object)) {
-    return true;
-  }
-  object = object_;
-  object.time = time;
+  if (!getCachedObject(time, object)) {
+    // if there is no cached object, predict and update cache
+    object = object_;
+    object.time = time;
 
-  // predict from motion model
-  auto & pose = object.pose;
-  auto & pose_cov = object.pose_covariance;
-  auto & twist = object.twist;
-  auto & twist_cov = object.twist_covariance;
-  if (!motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov)) {
-    RCLCPP_WARN(logger_, "VehicleTracker::getTrackedObject: Failed to get predicted state.");
-    return false;
+    // predict from motion model
+    auto & pose = object.pose;
+    auto & pose_cov = object.pose_covariance;
+    auto & twist = object.twist;
+    auto & twist_cov = object.twist_covariance;
+    if (!motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov)) {
+      RCLCPP_WARN(logger_, "VehicleTracker::getTrackedObject: Failed to get predicted state.");
+      return false;
+    }
+
+    // cache object
+    updateCache(object, time);
   }
   object.shape.dimensions.x = motion_model_.getLength();  // set length
 
-  // cache object
-  updateCache(object, time);
+  // if the tracker is to be published, check twist uncertainty
+  // in case the twist uncertainty is large, lower the twist value
+  if (to_publish) {
+    using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+    // lower the x twist magnitude 1 sigma smaller
+    // if the twist is smaller than 1 sigma, the twist is zeroed
+    auto & twist = object.twist;
+    constexpr double vel_limit_buffer = 0.7;  // [m/s]
+    const double vel_limit = std::max(
+      std::sqrt(object.twist_covariance[XYZRPY_COV_IDX::X_X]) - vel_limit_buffer, 0.0);  // [m/s]
+    const double vel_long = std::abs(twist.linear.x);
+
+    if (vel_long < vel_limit) {
+      twist.linear.x = 0.0;
+    } else {
+      twist.linear.x = twist.linear.x > 0 ? twist.linear.x - vel_limit : twist.linear.x + vel_limit;
+      // debug message
+      RCLCPP_INFO(
+        logger_,
+        "VehicleTracker::getTrackedObject: twist vel_long = %f, "
+        "vel_limit = %f, adjusted vel_long = %f",
+        vel_long, vel_limit, twist.linear.x);
+    }
+  }
 
   return true;
 }
