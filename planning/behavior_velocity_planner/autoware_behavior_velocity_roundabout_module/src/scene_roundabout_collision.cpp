@@ -1,0 +1,774 @@
+// Copyright 2025 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "scene_roundabout.hpp"
+
+#include <autoware/behavior_velocity_intersection_module/util.hpp>
+#include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for toGeomPoly
+#include <autoware/behavior_velocity_planner_common/utilization/trajectory_utils.hpp>  // for smoothPath
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/object_recognition_utils/predicted_path_utils.hpp>
+#include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>  // for toPolygon2d
+#include <autoware_utils/geometry/geometry.hpp>
+#include <magic_enum.hpp>
+
+#include <boost/geometry/algorithms/correct.hpp>
+#include <boost/geometry/algorithms/intersects.hpp>
+#include <boost/geometry/algorithms/union.hpp>
+#include <boost/geometry/algorithms/within.hpp>
+
+#include <fmt/format.h>
+#include <lanelet2_core/geometry/Polygon.h>
+
+#include <algorithm>
+#include <limits>
+#include <list>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace autoware::behavior_velocity_planner
+{
+namespace bg = boost::geometry;
+
+bool RoundaboutModule::isTargetCollisionVehicleType(
+  const autoware_perception_msgs::msg::PredictedObject & object) const
+{
+  const auto label = object.classification.at(0).label;
+  const auto & p = planner_param_.collision_detection.target_type;
+
+  if (label == autoware_perception_msgs::msg::ObjectClassification::CAR && p.car) {
+    return true;
+  }
+  if (label == autoware_perception_msgs::msg::ObjectClassification::BUS && p.bus) {
+    return true;
+  }
+  if (label == autoware_perception_msgs::msg::ObjectClassification::TRUCK && p.truck) {
+    return true;
+  }
+  if (label == autoware_perception_msgs::msg::ObjectClassification::TRAILER && p.trailer) {
+    return true;
+  }
+  if (label == autoware_perception_msgs::msg::ObjectClassification::MOTORCYCLE && p.motorcycle) {
+    return true;
+  }
+  if (label == autoware_perception_msgs::msg::ObjectClassification::BICYCLE && p.bicycle) {
+    return true;
+  }
+  if (label == autoware_perception_msgs::msg::ObjectClassification::UNKNOWN && p.unknown) {
+    return true;
+  }
+  return false;
+}
+
+void RoundaboutModule::updateObjectInfoManagerArea()
+{
+  const auto & roundabout_lanelets = roundabout_lanelets_.value();
+  const auto & attention_lanelets = roundabout_lanelets.attention();
+  // const auto & attention_lanelet_stoplines = roundabout_lanelets.attention_stoplines();
+  const auto & adjacent_lanelets = roundabout_lanelets.adjacent();
+  const auto lanelet_map_ptr = planner_data_->route_handler_->getLaneletMapPtr();
+  // const auto & assigned_lanelet = lanelet_map_ptr->laneletLayer.get(lane_id_);
+  // const auto roundabout_area = util::getRoundaboutArea(assigned_lanelet, lanelet_map_ptr);
+
+  // ==========================================================================================
+  // entries that are not observed in this iteration need to be cleared
+  //
+  // NOTE: old_map is not referenced because internal data of object_info_manager is cleared
+  // ==========================================================================================
+  const auto old_map = object_info_manager_.getObjectsMap();
+  object_info_manager_.clearObjects();
+
+  for (const auto & predicted_object : planner_data_->predicted_objects->objects) {
+    if (!isTargetCollisionVehicleType(predicted_object)) {
+      continue;
+    }
+    const auto object_direction =
+      util::getObjectPoseWithVelocityDirection(predicted_object.kinematics);
+
+    const auto belong_adjacent_lanelet_id =
+      checkAngleForTargetLanelets(object_direction, adjacent_lanelets);
+    if (belong_adjacent_lanelet_id) {
+      continue;
+    }
+    const auto belong_attention_lanelet_id =
+      checkAngleForTargetLanelets(object_direction, attention_lanelets);
+
+    if (!belong_attention_lanelet_id) {
+      continue;
+    }
+    const auto idx = belong_attention_lanelet_id.value();
+    const std::optional<lanelet::ConstLanelet> attention_lanelet{attention_lanelets.at(idx)};
+
+    const auto object_it = old_map.find(predicted_object.object_id);
+    if (object_it != old_map.end()) {
+      auto object_info = object_it->second;
+      object_info_manager_.registerExistingObject(
+        predicted_object.object_id, belong_attention_lanelet_id.has_value(), object_info);
+      object_info->initialize(predicted_object, attention_lanelet);
+    } else {
+      auto object_info = object_info_manager_.registerObject(
+        predicted_object.object_id, belong_attention_lanelet_id.has_value());
+      object_info->initialize(predicted_object, attention_lanelet);
+    }
+  }
+}
+
+void RoundaboutModule::updateObjectInfoManagerCollision(
+  const PathLanelets & path_lanelets,
+  const RoundaboutModule::TimeDistanceArray & time_distance_array,
+  const bool passed_1st_judge_line_first_time,
+  autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * object_ttc_time_array)
+{
+  const auto & roundabout_lanelets = roundabout_lanelets_.value();
+
+  if (passed_1st_judge_line_first_time) {
+    object_info_manager_.setPassed1stPassJudgeLineFirstTime(clock_->now());
+  }
+
+  const double passing_time = time_distance_array.back().first;
+  const auto & concat_lanelets = lanelet::utils::combineLaneletsShape(path_lanelets.all);
+  const auto closest_arc_coords =
+    lanelet::utils::getArcCoordinates({concat_lanelets}, planner_data_->current_odometry->pose);
+  const auto & ego_lane = path_lanelets.ego_or_entry2exit;
+  debug_data_.ego_lane = ego_lane.polygon3d();
+  const auto ego_poly = ego_lane.polygon2d().basicPolygon();
+
+  const auto collision_start_margin_time =
+    planner_param_.collision_detection.collision_start_margin_time;
+  const auto collision_end_margin_time =
+    planner_param_.collision_detection.collision_end_margin_time;
+
+  constexpr size_t object_debug_size = 57;
+  {
+    object_ttc_time_array->stamp = clock_->now();
+    object_ttc_time_array->layout.dim.resize(3);
+    object_ttc_time_array->layout.dim.at(0).label = "objects";
+    object_ttc_time_array->layout.dim.at(0).size =
+      1;  // incremented in the loop, first row is lane_id
+    object_ttc_time_array->layout.dim.at(1).label =
+      "[x, y, th, length, width, speed, dangerous, ref_obj_enter_time, ref_obj_exit_time, "
+      "start_time, start_dist, "
+      "end_time, end_dist, first_collision_x, first_collision_y, last_collision_x, "
+      "last_collision_y, "
+      "prd_x[0], ... pred_x[19], pred_y[0], ... pred_y[19]]";
+    object_ttc_time_array->layout.dim.at(1).size = object_debug_size;
+    for (unsigned i = 0; i < object_debug_size; ++i) {
+      object_ttc_time_array->data.push_back(lane_id_);
+    }
+  }
+
+  for (auto & object_info : object_info_manager_.attentionObjects()) {
+    const auto & predicted_object = object_info->predicted_object();
+    // ==========================================================================================
+    // check the PredictedPath in the ascending order of its confidence to save the safe/unsafe
+    // CollisionKnowledge for most probable path
+    // ==========================================================================================
+    std::vector<const autoware_perception_msgs::msg::PredictedPath *> sorted_predicted_paths;
+    sorted_predicted_paths.reserve(predicted_object.kinematics.predicted_paths.size());
+    for (const auto & path : predicted_object.kinematics.predicted_paths) {
+      sorted_predicted_paths.push_back(&path);
+    }
+    std::sort(
+      sorted_predicted_paths.begin(), sorted_predicted_paths.end(),
+      [](const auto * lhs, const auto * rhs) { return lhs->confidence > rhs->confidence; });
+
+    // ==========================================================================================
+    // if all of the predicted path is lower confidence/geometrically does not intersect with ego
+    // path, both will be null, which is interpreted as SAFE. if any of the path is "normal", either
+    // of them has value, not both
+    // ==========================================================================================
+    std::optional<CollisionInterval> unsafe_interval{std::nullopt};
+    std::optional<CollisionInterval> safe_interval{std::nullopt};
+    std::optional<std::vector<double>> object_debug_info{std::nullopt};
+
+    for (const auto & predicted_path_ptr : sorted_predicted_paths) {
+      auto predicted_path = *predicted_path_ptr;
+      if (
+        predicted_path.confidence <
+        planner_param_.collision_detection.min_predicted_path_confidence) {
+        continue;
+      }
+      cutPredictPathWithinDuration(
+        planner_data_->predicted_objects->header.stamp, passing_time, &predicted_path);
+      if (predicted_path.path.size() < 2) {
+        continue;
+      }
+      const double time_step = rclcpp::Duration(predicted_path.time_step).seconds();
+      const double horizon = time_step * static_cast<double>(predicted_path.path.size());
+      predicted_path =
+        autoware::object_recognition_utils::resamplePredictedPath(predicted_path, 0.1, horizon);
+      if (predicted_path.path.size() < 2) {
+        continue;
+      }
+      const auto object_passage_interval_opt = findPassageInterval(
+        predicted_path, predicted_object.shape, ego_poly,
+        roundabout_lanelets.first_attention_lane());
+      if (!object_passage_interval_opt) {
+        // there is no chance of geometric collision for the entire prediction horizon
+        continue;
+      }
+      const auto & object_passage_interval = object_passage_interval_opt.value();
+      const auto object_enter_exit_time = object_passage_interval.interval_time;
+      const auto object_enter_time = std::get<0>(object_enter_exit_time);
+      const auto object_exit_time = std::get<1>(object_enter_exit_time);
+      const auto ego_start_itr = std::lower_bound(
+        time_distance_array.begin(), time_distance_array.end(),
+        object_enter_time - collision_start_margin_time,
+        [](const auto & a, const double b) { return a.first < b; });
+      if (ego_start_itr == time_distance_array.end()) {
+        // ==========================================================================================
+        // this is the case where at time "object_enter_time - collision_start_margin_time", ego is
+        // arriving at the internal of the roundabout, which means even if we assume that the object
+        // accelerates and the first collision happens faster by the TTC margin, ego will be already
+        // arriving at the internal of the roundabout.
+        // ==========================================================================================
+        continue;
+      }
+      auto ego_end_itr = std::lower_bound(
+        time_distance_array.begin(), time_distance_array.end(),
+        object_exit_time + collision_end_margin_time,
+        [](const auto & a, const double b) { return a.first < b; });
+      if (ego_end_itr == time_distance_array.end()) {
+        ego_end_itr = time_distance_array.end() - 1;
+      }
+      const double ego_start_arc_length = std::max(
+        0.0, closest_arc_coords.length + ego_start_itr->second -
+               planner_data_->vehicle_info_.rear_overhang_m);
+      const double ego_end_arc_length = std::min(
+        closest_arc_coords.length + ego_end_itr->second +
+          planner_data_->vehicle_info_.max_longitudinal_offset_m,
+        lanelet::utils::getLaneletLength2d(concat_lanelets));
+      const auto trimmed_ego_polygon = lanelet::utils::getPolygonFromArcLength(
+        {concat_lanelets}, ego_start_arc_length, ego_end_arc_length);
+      if (trimmed_ego_polygon.empty()) {
+        continue;
+      }
+      Polygon2d polygon{};
+      for (const auto & p : trimmed_ego_polygon) {
+        polygon.outer().emplace_back(p.x(), p.y());
+      }
+      bg::correct(polygon);
+      debug_data_.candidate_collision_ego_lane_polygon = toGeomPoly(polygon);
+
+      const auto & object_path = object_passage_interval.path;
+      const auto [begin, end] = object_passage_interval.interval_position;
+      Polygon2d object_polygon{};
+      for (auto i = begin; i <= end; ++i) {
+        std::vector<Polygon2d> unions{};
+        boost::geometry::union_(
+          object_polygon, autoware_utils::to_polygon2d(object_path.at(i), predicted_object.shape),
+          unions);
+        if (!unions.empty()) {
+          object_polygon = unions.front();
+          boost::geometry::correct(object_polygon);
+        }
+      }
+      const bool collision_detected = bg::intersects(polygon, object_polygon);
+      debug_data_.candidate_collision_object_polygon = toGeomPoly(object_polygon);
+      auto get_object_info = [&]() {
+        // debug info
+        const auto & pose = predicted_object.kinematics.initial_pose_with_covariance.pose;
+        const auto & shape = predicted_object.shape;
+        const auto [object_start_itr, object_end_itr] = object_passage_interval.interval_position;
+        const auto & object_start_pos = object_passage_interval.path.at(object_start_itr).position;
+        const auto & object_end_pos = object_passage_interval.path.at(object_end_itr).position;
+        std::vector<double> debug;
+        debug.reserve(object_debug_size);
+
+        debug.insert(
+          debug.end(),
+          {pose.position.x, pose.position.y, tf2::getYaw(pose.orientation), shape.dimensions.x,
+           shape.dimensions.y,
+           predicted_object.kinematics.initial_twist_with_covariance.twist.linear.x,
+           1.0 * static_cast<int>(collision_detected), object_enter_time, object_exit_time,
+           ego_start_itr->first, ego_start_itr->second, ego_end_itr->first, ego_end_itr->second,
+           object_start_pos.x, object_start_pos.y, object_end_pos.x, object_end_pos.y});
+        for (unsigned i = 0; i < 20; ++i) {
+          const auto & pos = object_passage_interval.path
+                               .at(std::min<size_t>(i, object_passage_interval.path.size() - 1))
+                               .position;
+          debug.push_back(pos.x);
+          debug.push_back(pos.y);
+        }
+        return debug;
+      };
+
+      if (collision_detected) {
+        // if judged as UNSAFE, return
+        safe_interval = std::nullopt;
+        unsafe_interval = object_passage_interval;
+        object_debug_info = get_object_info();
+        break;
+      }
+      if (!safe_interval) {
+        // ==========================================================================================
+        // save the safe_decision_knowledge for the most probable path. this value is nullified if
+        // judged UNSAFE during the iteration
+        // ==========================================================================================
+        safe_interval = object_passage_interval;
+        object_debug_info = get_object_info();
+      }
+    }
+    object_info->update_safety(unsafe_interval, safe_interval);
+    if (passed_1st_judge_line_first_time) {
+      object_info->setDecisionAt1stPassJudgeLinePassage(
+        CollisionKnowledge{
+          clock_->now(),  // stamp
+          unsafe_interval ? CollisionKnowledge::SafeType::UNSAFE
+                          : CollisionKnowledge::SafeType::SAFE,  // safe
+          unsafe_interval ? unsafe_interval : safe_interval,     // interval
+          predicted_object.kinematics.initial_twist_with_covariance.twist.linear
+            .x  // observed_velocity
+        });
+    }
+
+    // debug
+    if (object_debug_info) {
+      const auto & data = object_debug_info.value();
+      object_ttc_time_array->layout.dim.at(0).size++;
+      std::copy(data.begin(), data.end(), std::back_inserter(object_ttc_time_array->data));
+    }
+  }
+}
+
+void RoundaboutModule::cutPredictPathWithinDuration(
+  const builtin_interfaces::msg::Time & object_stamp, const double time_thr,
+  autoware_perception_msgs::msg::PredictedPath * path) const
+{
+  const rclcpp::Time current_time = clock_->now();
+  const auto original_path = path->path;
+  path->path.clear();
+
+  for (size_t k = 0; k < original_path.size(); ++k) {  // each path points
+    const auto & predicted_pose = original_path.at(k);
+    const auto predicted_time =
+      rclcpp::Time(object_stamp) + rclcpp::Duration(path->time_step) * static_cast<double>(k);
+    if ((predicted_time - current_time).seconds() < time_thr) {
+      path->path.push_back(predicted_pose);
+    }
+  }
+}
+
+std::string RoundaboutModule::generateDetectionBlameDiagnosis(
+  const std::vector<
+    std::pair<RoundaboutModule::CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>> &
+    too_late_detect_objects,
+  const std::vector<
+    std::pair<RoundaboutModule::CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>> &
+    misjudge_objects) const
+{
+  std::string diag;
+  if (!safely_passed_1st_judge_line_time_) {
+    return diag;
+  }
+  const auto [passed_1st_judge_line_time, passed_1st_judge_line_pose] =
+    safely_passed_1st_judge_line_time_.value();
+  const auto passed_1st_judge_line_time_double =
+    static_cast<double>(passed_1st_judge_line_time.nanoseconds()) / 1e+9;
+
+  const auto now = clock_->now();
+  const auto now_double = static_cast<double>(now.nanoseconds()) / 1e+9;
+
+  // CAVEAT: format library causes runtime fault if the # of placeholders is more than the # of
+  // vargs
+  for (const auto & [blame_type, object_info] : too_late_detect_objects) {
+    if (
+      blame_type == CollisionStatus::BLAME_AT_FIRST_PASS_JUDGE && object_info->unsafe_interval()) {
+      const auto & unsafe_interval = object_info->unsafe_interval().value();
+      const double time_diff = now_double - passed_1st_judge_line_time_double;
+      diag += fmt::format(
+        "object {0} was not detected when ego passed the 1st pass judge line at {1}, but now at "
+        "{2}, collision is detected after {3}~{4} seconds on the first attention lanelet of type "
+        "{5}.\n",
+        object_info->uuid_str,                                // 0
+        passed_1st_judge_line_time_double,                    // 1
+        now_double,                                           // 2
+        unsafe_interval.interval_time.first,                  // 3
+        unsafe_interval.interval_time.second,                 // 4
+        magic_enum::enum_name(unsafe_interval.lane_position)  // 5
+      );
+      const auto past_position_opt = object_info->estimated_past_position(time_diff);
+      if (past_position_opt) {
+        const auto & past_position = past_position_opt.value();
+        diag += fmt::format(
+          "this object is estimated to have been at x = {0}, y = {1} when ego passed the 1st pass "
+          "judge line({2} seconds before from now) given the estimated current velocity {3}[m/s]. "
+          "ego was at x = {4}, y = {5} when it passed the 1st pass judge line so it is the fault "
+          "of detection side that failed to detect around {6}[m] range at that time.\n",
+          past_position.x,                                                            // 0
+          past_position.y,                                                            // 1
+          time_diff,                                                                  // 2
+          object_info->observed_velocity(),                                           // 3
+          passed_1st_judge_line_pose.position.x,                                      // 4
+          passed_1st_judge_line_pose.position.y,                                      // 5
+          autoware_utils::calc_distance2d(passed_1st_judge_line_pose, past_position)  // 6
+        );
+      }
+    }
+  }
+  for (const auto & [blame_type, object_info] : misjudge_objects) {
+    if (
+      blame_type == CollisionStatus::BLAME_AT_FIRST_PASS_JUDGE && object_info->unsafe_interval() &&
+      object_info->decision_at_1st_pass_judge_line_passage()) {
+      const auto & decision_at_1st_pass_judge_line =
+        object_info->decision_at_1st_pass_judge_line_passage().value();
+      const auto decision_at_1st_pass_judge_line_time =
+        static_cast<double>(decision_at_1st_pass_judge_line.stamp.nanoseconds()) / 1e+9;
+      const auto & unsafe_interval = object_info->unsafe_interval().value();
+      diag += fmt::format(
+        "object {0} was judged as {1} when ego passed the 1st pass judge line at time {2} "
+        "previously with the estimated velocity {3}[m/s], but now at {4} collision is detected "
+        "after {5}~{6} seconds on the first attention lanelet of type {7} with the estimated "
+        "current velocity {8}[m/s]\n",
+        object_info->uuid_str,                                             // 0
+        magic_enum::enum_name(decision_at_1st_pass_judge_line.safe_type),  // 1
+        decision_at_1st_pass_judge_line_time,                              // 2
+        decision_at_1st_pass_judge_line.observed_velocity,                 // 3
+        now_double,                                                        // 4
+        unsafe_interval.interval_time.first,                               // 5
+        unsafe_interval.interval_time.second,                              // 6
+        magic_enum::enum_name(unsafe_interval.lane_position),              // 7
+        object_info->observed_velocity()                                   // 8
+      );
+    }
+  }
+  return diag;
+}
+
+std::string RoundaboutModule::generateEgoRiskEvasiveDiagnosis(
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
+  const RoundaboutModule::TimeDistanceArray & ego_time_distance_array,
+  const std::vector<
+    std::pair<RoundaboutModule::CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>> &
+    too_late_detect_objects,
+  [[maybe_unused]] const std::vector<
+    std::pair<RoundaboutModule::CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>> &
+    misjudge_objects) const
+{
+  static constexpr double min_vel = 1e-2;
+  std::string diag;
+  const double ego_vel = planner_data_->current_velocity->twist.linear.x;
+  for (const auto & [blame_type, object_info] : too_late_detect_objects) {
+    if (!object_info->unsafe_interval()) {
+      continue;
+    }
+    // object side
+    const auto & unsafe_interval = object_info->unsafe_interval().value();
+    const auto [begin, end] = unsafe_interval.interval_position;
+    const auto &p1 = unsafe_interval.path.at(begin).position,
+               p2 = unsafe_interval.path.at(end).position;
+    const auto collision_pos =
+      autoware_utils::create_point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2, (p1.z + p2.z) / 2);
+    const auto object_dist_to_margin_point =
+      autoware_utils::calc_distance2d(
+        object_info->predicted_object().kinematics.initial_pose_with_covariance.pose.position,
+        collision_pos) -
+      planner_param_.collision_detection.avoid_collision_by_acceleration
+          .object_time_margin_to_collision_point *
+        object_info->observed_velocity();
+    if (object_dist_to_margin_point <= 0.0) {
+      continue;
+    }
+    const auto object_eta_to_margin_point =
+      object_dist_to_margin_point / std::max(min_vel, object_info->observed_velocity());
+    // ego side
+    const double ego_dist_to_collision_pos =
+      autoware::motion_utils::calcSignedArcLength(path.points, closest_idx, collision_pos);
+    const auto ego_eta_to_collision_pos_it = std::lower_bound(
+      ego_time_distance_array.begin(), ego_time_distance_array.end(), ego_dist_to_collision_pos,
+      [](const auto & a, const double b) { return a.second < b; });
+    if (ego_eta_to_collision_pos_it == ego_time_distance_array.end()) {
+      continue;
+    }
+    const double ego_eta_to_collision_pos = ego_eta_to_collision_pos_it->first;
+    if (ego_eta_to_collision_pos < object_eta_to_margin_point) {
+      // this case, ego will pass the collision point before this object get close to the collision
+      // point within margin just by keeping current plan, so no need to accelerate
+      continue;
+    }
+    diag += fmt::format(
+      "the object is expected to approach the collision point by the TTC margin in {0} seconds, "
+      "while ego will arrive there in {1} seconds, so ego needs to accelerate from current "
+      "velocity {2}[m/s] to {3}[m/s]\n",
+      object_eta_to_margin_point,                             // 0
+      ego_eta_to_collision_pos,                               // 1
+      ego_vel,                                                // 2
+      ego_dist_to_collision_pos / object_eta_to_margin_point  // 3
+    );
+  }
+  return diag;
+}
+
+RoundaboutModule::CollisionStatus RoundaboutModule::detectCollision(
+  const bool is_over_pass_judge_line) const
+{
+  // ==========================================================================================
+  // if collision is detected for multiple objects, we prioritize collision on the first
+  // attention lanelet
+  // ==========================================================================================
+  bool collision_at_first_lane = false;
+  bool collision_at_non_first_lane = false;
+
+  // ==========================================================================================
+  // find the objects which are judged as UNSAFE after ego passed pass judge lines.
+  //
+  // misjudge_objects are those that were once judged as safe when ego passed the pass judge line
+  //
+  // too_late_detect_objects are those that (1) were not detected when ego passed the pass judge
+  // line (2) were judged as dangerous at the same time when ego passed the pass judge line, which
+  // means they were expected to have been detected when ego passed the pass judge lines or in the
+  // prior iteration, because ego could have judged them as UNSAFE if their information was
+  // available at that time.
+  //
+  // that case is both "too late to stop" and "too late to go" for the planner. and basically
+  // detection side is responsible for this fault
+  // ==========================================================================================
+  std::vector<std::pair<CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>> misjudge_objects;
+  std::vector<std::pair<CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>>
+    too_late_detect_objects;
+  for (const auto & object_info : object_info_manager_.attentionObjects()) {
+    const auto unsafe_info_opt = object_info->unsafe_info();
+    if (!unsafe_info_opt) {
+      continue;
+    }
+    const auto & unsafe_info = unsafe_info_opt.value();
+    // ==========================================================================================
+    // if ego is over the pass judge lines, then the visualization as "too_late_objects" or
+    // "misjudge_objects" is more important than that for "unsafe"
+    //
+    // NOTE: consider a vehicle which was not detected at 1st_pass_judge_passage, and now collision
+    // detected on the 1st lane, which is "too_late" for 1st lane passage.
+    // When the ego vehicle passed the 1st_pass_judge_line, the other vehicle was initially judged
+    // as "safe". Subsequently, however, it either accelerated or changed course, and is now judged
+    // as "collision". This situation is classified as a "misjudge".
+    // ==========================================================================================
+    auto * debug_container = &debug_data_.unsafe_targets.objects;
+    if (unsafe_info.lane_position == CollisionInterval::LanePosition::FIRST) {
+      collision_at_first_lane = true;
+    } else {
+      collision_at_non_first_lane = true;
+    }
+    if (
+      is_over_pass_judge_line &&
+      unsafe_info.lane_position == CollisionInterval::LanePosition::FIRST) {
+      const auto & decision_at_1st_pass_judge_opt =
+        object_info->decision_at_1st_pass_judge_line_passage();
+      if (!decision_at_1st_pass_judge_opt) {
+        too_late_detect_objects.emplace_back(
+          CollisionStatus::BlameType::BLAME_AT_FIRST_PASS_JUDGE, object_info);
+        debug_container = &debug_data_.too_late_detect_targets.objects;
+      } else {
+        const auto & decision_at_1st_pass_judge = decision_at_1st_pass_judge_opt.value();
+        if (decision_at_1st_pass_judge.safe_type != CollisionKnowledge::SafeType::UNSAFE) {
+          misjudge_objects.emplace_back(
+            CollisionStatus::BlameType::BLAME_AT_FIRST_PASS_JUDGE, object_info);
+          debug_container = &debug_data_.misjudge_targets.objects;
+        } else {
+          too_late_detect_objects.emplace_back(
+            CollisionStatus::BlameType::BLAME_AT_FIRST_PASS_JUDGE, object_info);
+          debug_container = &debug_data_.too_late_detect_targets.objects;
+        }
+      }
+    }
+    debug_container->emplace_back(object_info->predicted_object());
+  }
+  if (collision_at_first_lane) {
+    return {true, CollisionInterval::FIRST, too_late_detect_objects, misjudge_objects};
+  } else if (collision_at_non_first_lane) {
+    return {true, CollisionInterval::ELSE, too_late_detect_objects, misjudge_objects};
+  }
+  return {false, CollisionInterval::ELSE, too_late_detect_objects, misjudge_objects};
+}
+
+std::optional<size_t> RoundaboutModule::checkAngleForTargetLanelets(
+
+  const geometry_msgs::msg::Pose & pose, const lanelet::ConstLanelets & target_lanelets) const
+{
+  const double detection_area_angle_thr = planner_param_.common.attention_area_angle_threshold;
+  const double dist_margin = planner_param_.common.attention_area_margin;
+
+  for (unsigned i = 0; i < target_lanelets.size(); ++i) {
+    const auto & ll = target_lanelets.at(i);
+    if (!lanelet::utils::isInLanelet(pose, ll, dist_margin)) {
+      continue;
+    }
+    const double ll_angle = lanelet::utils::getLaneletAngle(ll, pose.position);
+    const double pose_angle = tf2::getYaw(pose.orientation);
+    const double angle_diff = autoware_utils::normalize_radian(ll_angle - pose_angle, -M_PI);
+    if (std::fabs(angle_diff) < detection_area_angle_thr) {
+      return std::make_optional<size_t>(i);
+    }
+  }
+  return std::nullopt;
+}
+
+RoundaboutModule::TimeDistanceArray RoundaboutModule::calcRoundaboutPassingTime(
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
+  const RoundaboutStopLines & roundabout_stoplines,
+  autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * ego_ttc_array) const
+{
+  const double roundabout_velocity =
+    planner_param_.collision_detection.velocity_profile.default_velocity;
+  const double minimum_ego_velocity =
+    planner_param_.collision_detection.velocity_profile.minimum_default_velocity;
+  const bool use_upstream_velocity =
+    planner_param_.collision_detection.velocity_profile.use_upstream;
+  const double minimum_upstream_velocity =
+    planner_param_.collision_detection.velocity_profile.minimum_upstream_velocity;
+  const double current_velocity = planner_data_->current_velocity->twist.linear.x;
+
+  // ==========================================================================================
+  // if ego is waiting for collision detection, the entry time into the roundabout
+  // is a bit delayed for the chattering hold, so we need to "shift" the TimeDistanceArray by
+  // this delay
+  // ==========================================================================================
+  // const bool is_go_out = (activated_);
+  const double time_delay = (activated_)
+                              ? 0.0
+                              : (planner_param_.collision_detection.collision_detection_hold_time -
+                                 collision_state_machine_.getDuration());
+
+  // ==========================================================================================
+  // to account for the stopline generated by upstream behavior_velocity modules (like walkway,
+  // crosswalk), if use_upstream flag is true, the raw velocity of path points after
+  // last_roundabout_stopline_candidate_idx is used, which maybe almost-zero. at those almost-zero
+  // velocity path points, ego future profile is almost "fixed" there.
+  //
+  // last_roundabout_stopline_candidate_idx must be carefully decided especially when ego
+  // velocity is almost zero, because if last_roundabout_stopline_candidate_idx is at the
+  // closest_idx for example, ego is almost "fixed" at current position for the entire
+  // spatiotemporal profile, which is judged as SAFE because that profile does not collide
+  // with the predicted paths of objects.
+  // ==========================================================================================
+  const auto last_roundabout_stopline_candidate_idx =
+    roundabout_stoplines.first_attention_stopline.value();
+  const auto closest_idx = roundabout_stoplines.closest_idx;
+
+  bool assigned_lane_found = false;
+  // crop roundabout part of the path, and set the reference velocity to roundabout_velocity
+  // for ego's ttc
+  PathWithLaneId reference_path;
+  std::optional<size_t> upstream_stopline{std::nullopt};
+  for (size_t i = 0; i + 1 < path.points.size(); ++i) {
+    auto reference_point = path.points.at(i);
+    // assume backward velocity is current ego velocity
+    if (i < closest_idx) {
+      reference_point.point.longitudinal_velocity_mps = current_velocity;
+    }
+    if (
+      i > last_roundabout_stopline_candidate_idx &&
+      std::fabs(reference_point.point.longitudinal_velocity_mps) <
+        std::numeric_limits<double>::epsilon() &&
+      !upstream_stopline) {
+      upstream_stopline = i;
+    }
+    if (!use_upstream_velocity) {
+      reference_point.point.longitudinal_velocity_mps = roundabout_velocity;
+    }
+    reference_path.points.push_back(reference_point);
+    bool has_objective_lane_id = util::hasLaneIds(path.points.at(i), associative_ids_);
+    if (assigned_lane_found && !has_objective_lane_id) {
+      break;
+    }
+    assigned_lane_found = has_objective_lane_id;
+  }
+  if (!assigned_lane_found) {
+    return {{0.0, 0.0}};  // has already passed the roundabout.
+  }
+
+  // apply smoother to reference velocity
+  PathWithLaneId smoothed_reference_path = reference_path;
+  if (!smoothPath(reference_path, smoothed_reference_path, planner_data_)) {
+    smoothed_reference_path = reference_path;
+  }
+
+  // calculate when ego is going to reach each (interpolated) points on the path
+  TimeDistanceArray time_distance_array{};
+  double dist_sum = 0.0;
+  double passing_time = time_delay;
+  time_distance_array.emplace_back(passing_time, dist_sum);
+
+  // NOTE: `reference_path` is resampled in `reference_smoothed_path`, so
+  // `last_roundabout_stopline_candidate_idx` makes no sense
+  const auto smoothed_path_closest_idx =
+    autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
+      smoothed_reference_path.points, path.points.at(closest_idx).point.pose,
+      planner_data_->ego_nearest_dist_threshold, planner_data_->ego_nearest_yaw_threshold);
+
+  const std::optional<size_t> upstream_stopline_idx_opt = [&]() -> std::optional<size_t> {
+    if (upstream_stopline) {
+      const auto upstream_stopline_point =
+        reference_path.points.at(upstream_stopline.value()).point.pose;
+      return autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
+        smoothed_reference_path.points, upstream_stopline_point,
+        planner_data_->ego_nearest_dist_threshold, planner_data_->ego_nearest_yaw_threshold);
+    }
+    return std::nullopt;
+  }();
+
+  for (size_t i = smoothed_path_closest_idx; i + 1 < smoothed_reference_path.points.size(); ++i) {
+    const auto & p1 = smoothed_reference_path.points.at(i);
+    const auto & p2 = smoothed_reference_path.points.at(i + 1);
+
+    const double dist = autoware_utils::calc_distance2d(p1, p2);
+    dist_sum += dist;
+
+    // use average velocity between p1 and p2
+    const double average_velocity =
+      (p1.point.longitudinal_velocity_mps + p2.point.longitudinal_velocity_mps) / 2.0;
+    const double passing_velocity = [=]() {
+      if (use_upstream_velocity) {
+        if (upstream_stopline_idx_opt && i > upstream_stopline_idx_opt.value()) {
+          return minimum_upstream_velocity;
+        }
+        return std::max<double>(average_velocity, minimum_ego_velocity);
+      }
+      return std::max<double>(average_velocity, minimum_ego_velocity);
+    }();
+    passing_time += (dist / passing_velocity);
+
+    time_distance_array.emplace_back(passing_time, dist_sum);
+  }
+  ego_ttc_array->stamp = clock_->now();
+  ego_ttc_array->layout.dim.resize(3);
+  ego_ttc_array->layout.dim.at(0).label = "lane_id_@[0][0], ttc_time, ttc_dist, path_x, path_y";
+  constexpr size_t ego_debug_size = 5;
+  ego_ttc_array->layout.dim.at(0).size = ego_debug_size;
+  ego_ttc_array->layout.dim.at(1).label = "values";
+  ego_ttc_array->layout.dim.at(1).size = time_distance_array.size();
+  ego_ttc_array->data.reserve(time_distance_array.size() * ego_debug_size);
+  for (unsigned i = 0; i < time_distance_array.size(); ++i) {
+    ego_ttc_array->data.push_back(lane_id_);
+  }
+  for (const auto & [t, d] : time_distance_array) {
+    ego_ttc_array->data.push_back(t);
+  }
+  for (const auto & [t, d] : time_distance_array) {
+    ego_ttc_array->data.push_back(d);
+  }
+  for (size_t i = smoothed_path_closest_idx; i < smoothed_reference_path.points.size(); ++i) {
+    const auto & p = smoothed_reference_path.points.at(i).point.pose.position;
+    ego_ttc_array->data.push_back(p.x);
+  }
+  for (size_t i = smoothed_path_closest_idx; i < smoothed_reference_path.points.size(); ++i) {
+    const auto & p = smoothed_reference_path.points.at(i).point.pose.position;
+    ego_ttc_array->data.push_back(p.y);
+  }
+  return time_distance_array;
+}
+
+}  // namespace autoware::behavior_velocity_planner
