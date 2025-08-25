@@ -30,6 +30,7 @@
 #include <Eigen/src/Core/Matrix.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -280,6 +281,45 @@ CandidateTrajectories to_candidate_trajectories_msg(
                         .candidate_trajectories({candidate_trajectory})
                         .generator_info({generator_info});
   return output;
+}
+
+TurnIndicatorsCommand create_turn_indicators_command(
+  const std::vector<float> & turn_indicator_logits, const rclcpp::Time & stamp)
+{
+  TurnIndicatorsCommand turn_indicators_cmd;
+  turn_indicators_cmd.stamp = stamp;
+
+  // Apply softmax to convert logits to probabilities
+  if (turn_indicator_logits.size() >= 4) {
+    // Find the max value for numerical stability
+    const float max_logit =
+      *std::max_element(turn_indicator_logits.begin(), turn_indicator_logits.begin() + 4);
+
+    std::vector<float> probabilities(4);
+    float sum = 0.0f;
+
+    // Compute exp(logit - max_logit) for numerical stability
+    for (size_t i = 0; i < 4; ++i) {
+      probabilities[i] = std::exp(turn_indicator_logits[i] - max_logit);
+      sum += probabilities[i];
+    }
+
+    // Normalize to get probabilities
+    for (float & prob : probabilities) {
+      prob /= sum;
+    }
+
+    // Find the class with highest probability
+    const size_t max_idx = std::distance(
+      probabilities.begin(), std::max_element(probabilities.begin(), probabilities.end()));
+    turn_indicators_cmd.command = max_idx;
+
+  } else {
+    // Default to no command if not enough data
+    turn_indicators_cmd.command = TurnIndicatorsCommand::NO_COMMAND;
+  }
+
+  return turn_indicators_cmd;
 }
 
 }  // namespace autoware::diffusion_planner::postprocess
