@@ -130,6 +130,7 @@ def generate_launch_description():
         launch_arguments.append(DeclareLaunchArgument(name, default_value=default_value))
 
     add_launch_arg("input/pointcloud", "pointcloud_map_filtered/pointcloud")
+    add_launch_arg("input/concatenation_info", "/sensing/lidar/concatenated/pointcloud_info")
     add_launch_arg("output/pointcloud", "segmentation_based_filtered/pointcloud")
     add_launch_arg("use_intra_process", "True")
     add_launch_arg("use_multithread", "True")
