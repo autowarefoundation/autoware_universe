@@ -14,6 +14,8 @@
 
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
+#include "autoware/multi_object_tracker/object_model/shapes.hpp"
+
 #include <cmath>
 #include <vector>
 
@@ -87,11 +89,9 @@ DynamicObject toDynamicObject(
   dynamic_object.shape = det_object.shape;
   dynamic_object.area = getArea(det_object.shape);
 
-  // use circle‑equivalent diameter = 2*√(area/pi) for POLYGON shape dimensions
+  // compute local axis aligned bounding box dimensions for POLYGON shape
   if (det_object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
-    double diameter = std::sqrt(dynamic_object.area) * diameter_coefficient;
-    dynamic_object.shape.dimensions.x = diameter;
-    dynamic_object.shape.dimensions.y = diameter;
+    shapes::computePolygonDimensions(dynamic_object.shape);
   }
 
   return dynamic_object;
