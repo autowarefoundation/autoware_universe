@@ -401,6 +401,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11258/perception/autoware_camera_streampetr/</loc>
+         <lastmod>2025-08-25</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-11258/perception/autoware_cluster_merger/</loc>
          <lastmod>2025-08-25</lastmod>
          <changefreq>daily</changefreq>
@@ -802,6 +807,11 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-11258/planning/autoware_surround_obstacle_checker/surround_obstacle_checker-design.ja/</loc>
+         <lastmod>2025-08-25</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11258/planning/autoware_trajectory_optimizer/</loc>
          <lastmod>2025-08-25</lastmod>
          <changefreq>daily</changefreq>
     </url>
