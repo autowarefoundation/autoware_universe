@@ -552,6 +552,8 @@ def launch_setup(context, *args, **kwargs):
                     ("~/input/pointcloud/cuda", "/sensing/lidar/concatenated/pointcloud/cuda"),
                     ("~/output/pointcloud", "/perception/obstacle_segmentation/pointcloud"),
                     ("~/output/pointcloud/cuda", "/perception/obstacle_segmentation/pointcloud/cuda"),
+                    ("~/output/ground_pointcloud", "/perception/obstacle_segmentation/ground_pointcloud"),
+                    ("~/output/ground_pointcloud/cuda", "/perception/obstacle_segmentation/ground_pointcloud/cuda"),
                 ],
                 parameters=[ground_segmentation_node_param],
                 extra_arguments=[],

@@ -83,6 +83,10 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
     std::make_unique<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>(
       *this, "~/output/pointcloud");
 
+  pub_gnd_ =
+    std::make_unique<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>(
+      *this, "~/output/ground_pointcloud");
+
   cuda_ground_segmentation_filter_ = std::make_unique<CudaScanGroundSegmentationFilter>(
     filter_parameters, max_mem_pool_size_in_byte);
 }
@@ -90,11 +94,21 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
 void CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback(
   const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & msg)
 {
-  // Process the incoming point cloud message using the CUDA ground segmentation filter
-  auto non_ground_pointcloud_ptr_ = cuda_ground_segmentation_filter_->classifyPointcloud(msg);
+  // Create unique_ptr first
+  auto non_ground_unique = std::make_unique<cuda_blackboard::CudaPointCloud2>();
+  auto ground_unique = std::make_unique<cuda_blackboard::CudaPointCloud2>();
 
-  // Publish the filtered point cloud message
-  pub_->publish(std::move(non_ground_pointcloud_ptr_));
+  // Create shared_ptr from raw pointers for the function call
+  auto non_ground_shared = std::shared_ptr<cuda_blackboard::CudaPointCloud2>(
+    non_ground_unique.get(), [](auto *) {});  // no-op deleter
+  auto ground_shared =
+    std::shared_ptr<cuda_blackboard::CudaPointCloud2>(ground_unique.get(), [](auto *) {});
+
+  cuda_ground_segmentation_filter_->classifyPointcloud(msg, non_ground_shared, ground_shared);
+
+  // Publish using the original unique_ptr
+  pub_->publish(std::move(non_ground_unique));
+  pub_gnd_->publish(std::move(ground_unique));
 }
 
 }  // namespace autoware::cuda_ground_segmentation

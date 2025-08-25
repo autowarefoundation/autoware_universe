@@ -25,6 +25,8 @@ private:
   std::unique_ptr<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>
     pub_{};
 
+  std::unique_ptr<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>
+    pub_gnd_{};
   // Cuda Ground Segmentation Filter
   std::unique_ptr<CudaScanGroundSegmentationFilter> cuda_ground_segmentation_filter_{};
 };

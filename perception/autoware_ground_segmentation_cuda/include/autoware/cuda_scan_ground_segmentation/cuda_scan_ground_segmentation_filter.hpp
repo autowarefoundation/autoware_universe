@@ -127,8 +127,10 @@ public:
   ~CudaScanGroundSegmentationFilter() = default;
 
   // Method to process the point cloud data and filter ground points
-  std::unique_ptr<cuda_blackboard::CudaPointCloud2> classifyPointcloud(
-    const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points);
+  void classifyPointcloud(
+    const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
+    cuda_blackboard::CudaPointCloud2::SharedPtr output_points,
+    cuda_blackboard::CudaPointCloud2::SharedPtr ground_points);
 
   size_t number_input_points_;
   size_t input_pointcloud_step_;
@@ -178,7 +180,7 @@ private:
   void extractNonGroundPoints(
     const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
     ClassifiedPointTypeStruct * classified_points_dev, PointTypeStruct * output_points_dev,
-    size_t & num_output_points_host);
+    size_t & num_output_points_host, const PointType pointtype);
 
   void getObstaclePointcloud(
     const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,

@@ -745,7 +745,7 @@ __global__ void CellsCentroidInitializeKernel(
   }
   centroid_cells_list_dev[idx].gnd_radius_avg = 0.0f;
   centroid_cells_list_dev[idx].gnd_height_avg = 0.0f;
-  centroid_cells_list_dev[idx].gnd_height_min = 1e6f;   // Initialize to a very high value
+  centroid_cells_list_dev[idx].gnd_height_min = 1e6f;
   centroid_cells_list_dev[idx].num_points = 0;
   centroid_cells_list_dev[idx].cell_id = -1;  // Initialize cell_id to -1
   centroid_cells_list_dev[idx].num_ground_points = 0;
@@ -791,7 +791,7 @@ __global__ void calcCellPointNumberKernel(
 // Mark obstacle points for point in classified_points_dev
 __global__ void markObstaclePointsKernel(
   ClassifiedPointTypeStruct * classified_points_dev, const int max_num_classified_points,
-  const size_t num_points, int * __restrict__ flags)
+  const size_t num_points, int * __restrict__ flags, const PointType pointtype)
 {
   size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= static_cast<size_t>(max_num_classified_points)) {
@@ -811,7 +811,7 @@ __global__ void markObstaclePointsKernel(
 
   // Mark obstacle points for point in classified_points_dev
 
-  flags[origin_index] = (point_type == PointType::NON_GROUND) ? 1 : 0;
+  flags[origin_index] = (point_type == pointtype) ? 1 : 0;
 }
 
 __global__ void markValidKernel(
@@ -1079,7 +1079,7 @@ void CudaScanGroundSegmentationFilter::assignPointToClassifyPoint(
 void CudaScanGroundSegmentationFilter::extractNonGroundPoints(
   const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
   ClassifiedPointTypeStruct * classified_points_dev, PointTypeStruct * output_points_dev,
-  size_t & num_output_points_host)
+  size_t & num_output_points_host, const PointType pointtype)
 {
   if (number_input_points_ == 0) {
     num_output_points_host = 0;
@@ -1100,7 +1100,7 @@ void CudaScanGroundSegmentationFilter::extractNonGroundPoints(
   size_t temp_storage_bytes = 0;
 
   markObstaclePointsKernel<<<grid_dim, block_dim, 0, ground_segment_stream_>>>(
-    classified_points_dev, number_input_points_, number_input_points_, flag_dev);
+    classified_points_dev, number_input_points_, number_input_points_, flag_dev, pointtype);
   // CHECK_CUDA_ERROR(cudaMemset(&flag_dev,1,number_input_points_));
   // CHECK_CUDA_ERROR(cudaGetLastError());
 
@@ -1184,32 +1184,45 @@ void CudaScanGroundSegmentationFilter::getCellFirstPointIndex(
   CHECK_CUDA_ERROR(cudaFree(d_temp_storage));
 }
 
-std::unique_ptr<cuda_blackboard::CudaPointCloud2>
-CudaScanGroundSegmentationFilter::classifyPointcloud(
-  const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points)
+void CudaScanGroundSegmentationFilter::classifyPointcloud(
+  const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
+  cuda_blackboard::CudaPointCloud2::SharedPtr output_points,
+  cuda_blackboard::CudaPointCloud2::SharedPtr ground_points)
 {
   number_input_points_ = input_points->width * input_points->height;
   input_pointcloud_step_ = input_points->point_step;
   const size_t max_bytes = number_input_points_ * sizeof(PointTypeStruct);
 
-  auto filtered_output = std::make_unique<cuda_blackboard::CudaPointCloud2>();
-  filtered_output->data = cuda_blackboard::make_unique<std::uint8_t[]>(max_bytes);
+  // auto output_points = std::make_unique<cuda_blackboard::CudaPointCloud2>();
+  output_points->data = cuda_blackboard::make_unique<std::uint8_t[]>(max_bytes);
+  ground_points->data = cuda_blackboard::make_unique<std::uint8_t[]>(max_bytes);
 
-  auto * output_points_dev = reinterpret_cast<PointTypeStruct *>(filtered_output->data.get());
+  auto * output_points_dev = reinterpret_cast<PointTypeStruct *>(output_points->data.get());
+  auto * ground_points_dev = reinterpret_cast<PointTypeStruct *>(ground_points->data.get());
   size_t num_output_points = 0;
 
   if (number_input_points_ == 0) {
-    filtered_output->width = 0;
-    filtered_output->height = 0;
+    output_points->width = 0;
+    output_points->height = 0;
 
-    filtered_output->header = input_points->header;
-    filtered_output->height = 1;  // Set height to 1 for unorganized point
-    filtered_output->is_bigendian = input_points->is_bigendian;
-    filtered_output->point_step = input_points->point_step;
-    filtered_output->row_step = static_cast<uint32_t>(num_output_points * sizeof(PointTypeStruct));
-    filtered_output->is_dense = input_points->is_dense;
-    filtered_output->fields = input_points->fields;
-    return filtered_output;  // No points to process
+    output_points->header = input_points->header;
+    output_points->height = 1;  // Set height to 1 for unorganized point
+    output_points->is_bigendian = input_points->is_bigendian;
+    output_points->point_step = input_points->point_step;
+    output_points->row_step = static_cast<uint32_t>(num_output_points * sizeof(PointTypeStruct));
+    output_points->is_dense = input_points->is_dense;
+    output_points->fields = input_points->fields;
+
+    ground_points->width = 0;
+    ground_points->height = 0;
+    ground_points->header = input_points->header;
+    ground_points->height = 1;  // Set height to 1 for unorganized
+    ground_points->is_bigendian = input_points->is_bigendian;
+    ground_points->point_step = input_points->point_step;
+    ground_points->row_step = static_cast<uint32_t>(num_output_points * sizeof(PointTypeStruct));
+    ground_points->is_dense = input_points->is_dense;
+    ground_points->fields = input_points->fields;
+    return;
   }
 
   // Allocate and copy filter parameters to device
@@ -1277,9 +1290,13 @@ CudaScanGroundSegmentationFilter::classifyPointcloud(
 
   // Extract obstacle points from classified_points_dev
   extractNonGroundPoints(
-    input_points, classified_points_dev, output_points_dev, num_output_points);
+    input_points, classified_points_dev, output_points_dev, num_output_points,
+    PointType::NON_GROUND);
 
-  
+  size_t num_ground_points = 0;
+  extractNonGroundPoints(
+    input_points, classified_points_dev, ground_points_dev, num_ground_points, PointType::GROUND);
+
   CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
   // // mark valid points based on height threshold
 
@@ -1289,16 +1306,25 @@ CudaScanGroundSegmentationFilter::classifyPointcloud(
   returnBufferToPool(classified_points_dev);
   returnBufferToPool(last_gnd_cells_dev);
 
-  filtered_output->header = input_points->header;
-  filtered_output->height = 1;  // Set height to 1 for unorganized point cloud
-  filtered_output->width = static_cast<uint32_t>(num_output_points);
-  filtered_output->is_bigendian = input_points->is_bigendian;
-  filtered_output->point_step = input_points->point_step;
-  filtered_output->row_step = static_cast<uint32_t>(num_output_points * sizeof(PointTypeStruct));
-  filtered_output->is_dense = input_points->is_dense;
-  filtered_output->fields = input_points->fields;
+  output_points->header = input_points->header;
+  output_points->height = 1;  // Set height to 1 for unorganized point cloud
+  output_points->width = static_cast<uint32_t>(num_output_points);
+  output_points->is_bigendian = input_points->is_bigendian;
+  output_points->point_step = input_points->point_step;
+  output_points->row_step = static_cast<uint32_t>(num_output_points * sizeof(PointTypeStruct));
+  output_points->is_dense = input_points->is_dense;
+  output_points->fields = input_points->fields;
 
-  return filtered_output;
+  // return output_points;
+
+  ground_points->header = input_points->header;
+  ground_points->height = 1;  // Set height to 1 for unorganized point cloud
+  ground_points->width = static_cast<uint32_t>(num_ground_points);
+  ground_points->is_bigendian = input_points->is_bigendian;
+  ground_points->point_step = input_points->point_step;
+  ground_points->row_step = static_cast<uint32_t>(num_ground_points * sizeof(PointTypeStruct));
+  ground_points->is_dense = input_points->is_dense;
+  ground_points->fields = input_points->fields;
 }
 
 }  // namespace autoware::cuda_ground_segmentation
