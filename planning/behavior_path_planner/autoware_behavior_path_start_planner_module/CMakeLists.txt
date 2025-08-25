@@ -29,8 +29,8 @@ if(BUILD_TESTING)
     test/include
   )
 
-  # Check if ENABLE_PLOT is set
-  option(ENABLE_PLOT "Enable plotting in tests" OFF)
+  # Check if EXPORT_TEST_PLOT_FIGURE is set
+  option(EXPORT_TEST_PLOT_FIGURE "Enable plotting in tests" OFF)
 
   find_package(autoware_pyplot REQUIRED)
   ament_target_dependencies(start_planner_test_helper autoware_pyplot)
@@ -43,9 +43,9 @@ if(BUILD_TESTING)
     start_planner_test_helper
   )
 
-  # Pass ENABLE_PLOT definition to test executable
-  if(ENABLE_PLOT)
-    target_compile_definitions(test_${PROJECT_NAME} PRIVATE ENABLE_PLOT)
+  # Pass EXPORT_TEST_PLOT_FIGURE definition to test executable
+  if(EXPORT_TEST_PLOT_FIGURE)
+    target_compile_definitions(test_${PROJECT_NAME} PRIVATE EXPORT_TEST_PLOT_FIGURE)
 
     # Create test output directories only when plotting is enabled
     add_custom_target(create_test_directories ALL

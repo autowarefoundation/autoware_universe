@@ -108,7 +108,7 @@ TEST_F(TestShiftPullOut, GenerateValidShiftPullOutPath)
     EXPECT_EQ(debug_data.conditions_evaluation.back(), "success")
       << "shift pull out path planning did not succeed for " + yaml_file;
 
-#ifdef ENABLE_PLOT
+#ifdef EXPORT_TEST_PLOT_FIGURE
     // Plot and save the generated path for visualization
     if (result.has_value() && !result->partial_paths.empty()) {
       // Get lanelets from route segments
