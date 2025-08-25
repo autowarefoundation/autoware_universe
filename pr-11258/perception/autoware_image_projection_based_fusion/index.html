@@ -14332,9 +14332,8 @@ If the interval is less than the match threshold, the messages are considered ma
 <h5 id="advanced-mode">Advanced Mode<a class="headerlink" href="#advanced-mode" title="Permanent link">#</a></h5>
 <p>If the concatenation node from the Autoware point cloud preprocessor is being used, enable this mode.
 The advanced mode parses diagnostics from the concatenation node to verify whether all point clouds have been successfully concatenated. If concatenation is incomplete, it dynamically adjusts <code>rois_timestamp_offsets</code> based on diagnostic messages.
-Instead of using a fixed threshold, this mode requires setting three parameters:</p>
+Instead of using a fixed threshold, this mode requires setting two parameters:</p>
 <ul>
-<li><code>concatenation_info_topic</code> (a string, from pointcloud concatenation node)</li>
 <li><code>msg3d_noise_window</code> (a single value)</li>
 <li><code>rois_timestamp_noise_window</code> (a vector)</li>
 </ul>
@@ -14344,7 +14343,6 @@ Instead of using a fixed threshold, this mode requires setting three parameters:
 <p>Example usage:</p>
 <div class="highlight"><pre><span></span><code><span class="w">  </span>matching_strategy:
 <span class="w">    </span>type:<span class="w"> </span>advanced
-<span class="w">    </span>concatenation_info_topic:<span class="w"> </span><span class="s2">"/sensing/lidar/concatenated/pointcloud_info"</span>
 <span class="w">    </span>msg3d_noise_window:<span class="w"> </span><span class="m">0</span>.02
 <span class="w">    </span>rois_timestamp_noise_window:<span class="w"> </span><span class="o">[</span><span class="m">0</span>.01,<span class="w"> </span><span class="m">0</span>.01,<span class="w"> </span><span class="m">0</span>.01,<span class="w"> </span><span class="m">0</span>.01,<span class="w"> </span><span class="m">0</span>.01,<span class="w"> </span><span class="m">0</span>.01<span class="o">]</span>
 </code></pre></div>
