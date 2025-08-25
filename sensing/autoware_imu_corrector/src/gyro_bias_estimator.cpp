@@ -132,7 +132,7 @@ GyroBiasEstimator::GyroBiasEstimator(const rclcpp::NodeOptions & options)
   ekf_rate_.process_noise_q_after_ = declare_parameter<double>("ekf_rate.process_noise_q_after");
   ekf_rate_.samples_to_init_ = declare_parameter<int>("ekf_rate.samples_to_init");
   ekf_rate_.filtered_scale_initialized_ = false;
-  ekf_rate_.big_change_detect_ = 0;
+  ekf_rate_.n_big_changes_detected_ = 0;
 
   ekf_angle_.x_state_(0) = 0.0;            // angle
   ekf_angle_.x_state_(1) = initial_scale;  // estimated scale
@@ -461,7 +461,7 @@ void GyroBiasEstimator::update_rate_ekf(
       gyro_info_.scale_status_summary = "ERR";
       gyro_info_.scale_summary_message =
         "Scale is over the maximum, check the IMU, NDT device or TF.";
-    } else if (ekf_rate_.big_change_detect_ == 0) {
+    } else if (ekf_rate_.n_big_changes_detected_ == 0) {
       gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::OK;
     }
 
@@ -473,11 +473,11 @@ void GyroBiasEstimator::update_rate_ekf(
         ekf_rate_.filtered_scale_rate_ * (1 + percentage_scale_rate_allow_correct_)) {
       ekf_rate_.filtered_scale_rate_ =
         alpha_ * ekf_rate_.filtered_scale_rate_ + (1 - alpha_) * ekf_rate_.estimated_scale_rate_;
-      ekf_rate_.big_change_detect_ = 0;
+      ekf_rate_.n_big_changes_detected_ = 0;
     } else {
-      ekf_rate_.big_change_detect_++;
-      int counter_correct_big_change = 10;  // 10 iterations approx 1 seconds
-      if (ekf_rate_.big_change_detect_ >= counter_correct_big_change) {
+      ekf_rate_.n_big_changes_detected_++;
+      const int n_iterations_until_big_change_error = 10;  // 10 iterations approx 1 seconds
+      if (ekf_rate_.n_big_changes_detected_ >= n_iterations_until_big_change_error) {
         gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
         gyro_info_.scale_status_summary = "ERR";
         gyro_info_.scale_summary_message =
@@ -519,7 +519,7 @@ bool GyroBiasEstimator::should_skip_update()
     msg.vector.z = ekf_rate_.filtered_scale_rate_;
     gyro_scale_pub_->publish(msg);
 
-    ekf_rate_.big_change_detect_ = 0;
+    ekf_rate_.n_big_changes_detected_ = 0;
     rate_pose_buff_.clear();
     return true;
   }

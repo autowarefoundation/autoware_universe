@@ -187,7 +187,7 @@ private:
     double measurement_noise_;
     double measurement_noise_r_after_;
     double filtered_scale_rate_;
-    int big_change_detect_;
+    size_t n_big_changes_detected_;
     int samples_to_init_;
     bool filtered_scale_initialized_;
   };
