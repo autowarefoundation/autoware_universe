@@ -50,6 +50,9 @@ std::pair<double, double> getObjectZRange(const types::DynamicObject & object);
 
 double get3dGeneralizedIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object);
+
+void computePolygonDimensions(autoware_perception_msgs::msg::Shape & shape);
+
 }  // namespace shapes
 }  // namespace autoware::multi_object_tracker
 
