@@ -4,6 +4,7 @@
   <arg name="output_trajectory" default="/planning/diffusion_planner/trajectory"/>
   <arg name="output_trajectories" default="/planning/generator/diffusion_planner/candidate_trajectories"/>
   <arg name="output_predicted_objects" default="~/diffusion_planner/predicted_objects"/>
+  <arg name="output_turn_indicators" default="~/diffusion_planner/turn_indicators"/>
   <arg name="input_odometry" default="/localization/kinematic_state"/>
   <arg name="input_acceleration" default="/localization/acceleration"/>
   <arg name="input_route" default="/planning/mission_planning/route"/>
@@ -16,6 +17,7 @@
     <remap from="~/output/trajectory" to="$(var output_trajectory)"/>
     <remap from="~/output/trajectories" to="$(var output_trajectories)"/>
     <remap from="~/output/predicted_objects" to="$(var output_predicted_objects)"/>
+    <remap from="~/output/turn_indicators" to="$(var output_turn_indicators)"/>
     <remap from="~/input/odometry" to="$(var input_odometry)"/>
     <remap from="~/input/acceleration" to="$(var input_acceleration)"/>
     <remap from="~/input/route" to="$(var input_route)"/>
