@@ -184,11 +184,11 @@ private:
   void extractNonGroundPoints(
     const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
     ClassifiedPointTypeStruct * classified_points_dev, PointTypeStruct * output_points_dev,
-    size_t * num_output_points_host);
+    size_t & num_output_points_host);
 
   void getObstaclePointcloud(
     const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
-    PointTypeStruct * output_points, size_t * num_output_points);
+    PointTypeStruct * output_points, size_t & num_output_points);
   /*
    * This function splits the input point cloud into radial divisions.
    * Each division corresponds to a specific angle range defined by the radial_divider_angle_rad.

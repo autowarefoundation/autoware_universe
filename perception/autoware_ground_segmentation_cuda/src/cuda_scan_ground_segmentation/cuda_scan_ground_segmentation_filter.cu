@@ -928,11 +928,11 @@ void CudaScanGroundSegmentationFilter::scanPerSectorGroundReference(
 // ============= Get obstacle point cloud =============
 void CudaScanGroundSegmentationFilter::getObstaclePointcloud(
   const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
-  PointTypeStruct * output_points_dev, size_t * num_output_points_host)
+  PointTypeStruct * output_points_dev, size_t & num_output_points_host)
 {
   const size_t n = number_input_points_;
   if (n == 0) {
-    *num_output_points_host = 0;
+    num_output_points_host = 0;
     return;
   }
 
@@ -978,7 +978,7 @@ void CudaScanGroundSegmentationFilter::getObstaclePointcloud(
   // CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
 
   const size_t num_output_points = static_cast<size_t>(last_flag + last_index);
-  *num_output_points_host = num_output_points;
+  num_output_points_host = num_output_points;
 
   if (temp_storage) {
     CHECK_CUDA_ERROR(cudaFreeAsync(temp_storage, ground_segment_stream_));
@@ -1065,10 +1065,10 @@ void CudaScanGroundSegmentationFilter::assignPointToClassifyPoint(
 void CudaScanGroundSegmentationFilter::extractNonGroundPoints(
   const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
   ClassifiedPointTypeStruct * classified_points_dev, PointTypeStruct * output_points_dev,
-  size_t * num_output_points_host)
+  size_t & num_output_points_host)
 {
   if (number_input_points_ == 0) {
-    *num_output_points_host = 0;
+    num_output_points_host = 0;
     return;  // No points to process
   }
   int * flag_dev = allocateBufferFromPool<int>(
@@ -1123,7 +1123,7 @@ void CudaScanGroundSegmentationFilter::extractNonGroundPoints(
   // CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
 
   const size_t num_output_points = static_cast<size_t>(last_flag + last_index);
-  *num_output_points_host = num_output_points;
+  num_output_points_host = num_output_points;
 
   if (temp_storage) {
     CHECK_CUDA_ERROR(cudaFreeAsync(temp_storage, ground_segment_stream_));
@@ -1261,7 +1261,7 @@ CudaScanGroundSegmentationFilter::classifyPointcloud(
 
   // Extract obstacle points from classified_points_dev
   extractNonGroundPoints(
-    input_points, classified_points_dev, output_points_dev, &num_output_points);
+    input_points, classified_points_dev, output_points_dev, num_output_points);
 
   
   CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
