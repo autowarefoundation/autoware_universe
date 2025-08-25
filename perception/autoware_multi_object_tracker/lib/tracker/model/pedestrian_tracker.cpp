@@ -225,7 +225,7 @@ bool PedestrianTracker::getTrackedObject(
     // lower the x twist magnitude 1 sigma smaller
     // if the twist is smaller than 1 sigma, the twist is zeroed
     auto & twist = object.twist;
-    constexpr double vel_limit_buffer = 0.7;  // [m/s]
+    constexpr double vel_limit_buffer = 0.7;  // [m/s] buffer not to limit certain twist
     const double vel_limit = std::max(
       std::sqrt(object.twist_covariance[XYZRPY_COV_IDX::X_X]) - vel_limit_buffer, 0.0);  // [m/s]
     const double vel_long = std::abs(twist.linear.x);
@@ -234,12 +234,6 @@ bool PedestrianTracker::getTrackedObject(
       twist.linear.x = 0.0;
     } else {
       twist.linear.x = twist.linear.x > 0 ? twist.linear.x - vel_limit : twist.linear.x + vel_limit;
-      // debug message
-      RCLCPP_INFO(
-        logger_,
-        "VehicleTracker::getTrackedObject: twist vel_long = %f, "
-        "vel_limit = %f, adjusted vel_long = %f",
-        vel_long, vel_limit, twist.linear.x);
     }
   }
 
