@@ -87,9 +87,8 @@ std::vector<float> create_ego_agent_past(
 
   const size_t start_idx =
     (odometry_msgs.size() >= num_timesteps) ? odometry_msgs.size() - num_timesteps : 0;
-  const size_t end_idx = std::min(start_idx + num_timesteps, odometry_msgs.size());
 
-  for (size_t i = start_idx; i < end_idx; ++i) {
+  for (size_t i = start_idx; i < odometry_msgs.size(); ++i) {
     const auto & historical_pose = odometry_msgs[i].pose.pose;
 
     // Convert pose to 4x4 matrix
