@@ -162,70 +162,57 @@ protected:
     const VoxelPointCountMap & voxel_counts, const ValidPointsMask & valid_points_mask);
 
   // Point processing helper methods
-  std::optional<PointVoxelInfo> process_point_for_voxel_info(
-    bool has_polar_coords, bool has_return_type,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_z,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_distance,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation,
-    sensor_msgs::PointCloud2ConstIterator<uint8_t> * iter_return_type) const;
+  void process_polar_points(
+    const PointCloud2ConstPtr & input, PointVoxelInfoVector & point_voxel_info,
+    bool has_return_type, size_t point_count);
 
-  std::optional<PolarCoordinate> extract_polar_coordinates(
-    bool has_polar_coords, sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_z,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_distance,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation) const;
+  void process_cartesian_points(
+    const PointCloud2ConstPtr & input, PointVoxelInfoVector & point_voxel_info,
+    bool has_return_type, size_t point_count);
 
+  std::optional<PointVoxelInfo> process_polar_point(
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_distance,
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_azimuth,
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_elevation,
+    sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_return_type, bool has_return_type) const;
+
+  std::optional<PointVoxelInfo> process_cartesian_point(
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_x,
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_y,
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_z,
+    sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_return_type, bool has_return_type) const;
+
+  // ADD the missing template function declaration:
+  template <typename Predicate>
+  VoxelIndexSet determine_valid_voxels_generic(
+    const VoxelPointCountMap & voxel_counts, Predicate predicate) const;
+
+  // KEEP these helper functions (already using references):
   std::optional<PolarCoordinate> extract_precomputed_polar_coordinates(
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_distance,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation) const;
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_distance,
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_azimuth,
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_elevation) const;
 
   std::optional<PolarCoordinate> extract_computed_polar_coordinates(
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_z) const;
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_x,
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_y,
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_z) const;
 
   uint8_t extract_return_type(
-    bool has_return_type, sensor_msgs::PointCloud2ConstIterator<uint8_t> * iter_return_type) const;
-
-  // --- Add these template helpers for deduplication ---
-  template <typename... Iterators>
-  void advance_iterators(Iterators *... iters) const;
-
-  template <typename VoxelPredicate>
-  VoxelIndexSet determine_valid_voxels_generic(
-    const VoxelPointCountMap & voxel_counts, VoxelPredicate pred) const
-  {
-    VoxelIndexSet valid_voxels;
-    for (const auto & [voxel_idx, counts] : voxel_counts) {
-      if (pred(counts)) {
-        valid_voxels.insert(voxel_idx);
-      }
-    }
-    return valid_voxels;
-  }
-
-  void advance_iterators(
-    bool has_polar_coords, sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_z,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_distance,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation) const;
+    bool has_return_type, sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_return_type) const;
 
   void advance_polar_iterators(
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_distance,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_azimuth,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_elevation) const;
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_distance,
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_azimuth,
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_elevation) const;
+
   void advance_cartesian_iterators(
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_x,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_y,
-    sensor_msgs::PointCloud2ConstIterator<float> * iter_z) const;
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_x,
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_y,
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_z) const;
+
+  void advance_return_type_iterator(
+    sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_return_type) const;
 
   void update_parameter(const rclcpp::Parameter & param);
 
