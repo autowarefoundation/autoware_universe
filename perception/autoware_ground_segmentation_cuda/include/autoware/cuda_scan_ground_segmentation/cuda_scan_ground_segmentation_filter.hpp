@@ -1,6 +1,6 @@
 
-#ifndef AUTOWARE__CUDA_GROUND_SEGMENTATION__CUDA_SCAN_GROUND_SEGMENTATION_FILTER_HPP_
-#define AUTOWARE__CUDA_GROUND_SEGMENTATION__CUDA_SCAN_GROUND_SEGMENTATION_FILTER_HPP_
+#ifndef AUTOWARE__CUDA_SCAN_GROUND_SEGMENTATION__CUDA_SCAN_GROUND_SEGMENTATION_FILTER_HPP_
+#define AUTOWARE__CUDA_SCAN_GROUND_SEGMENTATION__CUDA_SCAN_GROUND_SEGMENTATION_FILTER_HPP_
 
 #include <autoware/cuda_pointcloud_preprocessor/point_types.hpp>
 #include <autoware/cuda_utils/cuda_check_error.hpp>
@@ -47,13 +47,7 @@ struct ClassifiedPointTypeStruct
   float radius;
   size_t origin_index;  // index in the original point cloud
 
-  ClassifiedPointTypeStruct()
-  : z(0.0),
-    type(PointType::INIT),
-    radius(-1.0),
-    origin_index(0)
-  {
-  }
+  ClassifiedPointTypeStruct() : z(0.0), type(PointType::INIT), radius(-1.0), origin_index(0) {}
 };
 
 struct CellCentroid
@@ -104,7 +98,7 @@ struct FilterParameters
   // common parameters
   float sector_angle_rad;  // radial sector angle in radians
   float inv_sector_angle_rad;
-  uint16_t num_sectors;    // number of radial sectors
+  uint16_t num_sectors;  // number of radial sectors
   VehicleInfo vehicle_info;
 
   // cell mode parameters
@@ -207,4 +201,4 @@ private:
 };
 }  // namespace autoware::cuda_ground_segmentation
 
-#endif  // AUTOWARE__CUDA_GROUND_SEGMENTATION__CUDA_SCAN_GROUND_SEGMENTATION_FILTER_HPP_
+#endif  // AUTOWARE__CUDA_SCAN_GROUND_SEGMENTATION__CUDA_SCAN_GROUND_SEGMENTATION_FILTER_HPP_

@@ -36,9 +36,7 @@ def launch_setup(context, *args, **kwargs):
         vehicle_info_param = yaml.safe_load(f)["/**"]["ros__parameters"]
 
     ground_segmentation_node_param = ParameterFile(
-        param_file=LaunchConfiguration("cuda_ground_segmentation_node_param_path").perform(
-            context
-        ),
+        param_file=LaunchConfiguration("cuda_ground_segmentation_node_param_path").perform(context),
         allow_substs=True,
     )
 
@@ -53,7 +51,7 @@ def launch_setup(context, *args, **kwargs):
                 ("~/output/pointcloud", "/perception/obstacle_segmentation/pointcloud"),
                 ("~/output/pointcloud/cuda", "/perception/obstacle_segmentation/pointcloud/cuda"),
             ],
-            parameters=[ground_segmentation_node_param,vehicle_info_param],
+            parameters=[ground_segmentation_node_param, vehicle_info_param],
             extra_arguments=[],
         ),
     ]
@@ -98,8 +96,6 @@ def generate_launch_description():
         description="Path to config file for vehicle information",
     )
 
-    
-
     return launch.LaunchDescription(
         [
             vehicle_info_param,
@@ -112,7 +108,7 @@ def generate_launch_description():
                     FindPackageShare("autoware_ground_segmentation_cuda"),
                     "/config/cuda_scan_ground_segmentation_filter.param.yaml",
                 ],
-            )
+            ),
         ]
         + [OpaqueFunction(function=launch_setup)]
     )

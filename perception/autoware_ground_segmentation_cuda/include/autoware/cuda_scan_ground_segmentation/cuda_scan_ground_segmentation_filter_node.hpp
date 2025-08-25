@@ -29,6 +29,6 @@ private:
   std::unique_ptr<CudaScanGroundSegmentationFilter> cuda_ground_segmentation_filter_{};
 };
 
-}  // namespace autoware::cuda_scan_ground_segmentation
+}  // namespace autoware::cuda_ground_segmentation
 
 #endif  // AUTOWARE__CUDA_SCAN_GROUND_SEGMENTATION__CUDA_SCAN_GROUND_SEGMENTATION_FILTER_NODE_HPP_
