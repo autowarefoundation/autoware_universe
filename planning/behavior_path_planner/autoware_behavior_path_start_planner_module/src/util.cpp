@@ -160,46 +160,6 @@ struct PathEvaluationResult
 
 }  // anonymous namespace
 
-std::vector<double> calc_curvature_from_trajectory(
-  const autoware_planning_msgs::msg::Trajectory & trajectory)
-{
-  using autoware_utils::calc_curvature;
-
-  std::vector<double> curvatures;
-
-  if (trajectory.points.size() < 3) {
-    // Cannot calculate curvature with less than 3 points
-    curvatures.resize(trajectory.points.size(), 0.0);
-    return curvatures;
-  }
-
-  curvatures.reserve(trajectory.points.size());
-
-  for (size_t i = 0; i < trajectory.points.size(); ++i) {
-    if (i == 0) {
-      // First point: use next 2 points
-      const auto & p1 = trajectory.points[0].pose.position;
-      const auto & p2 = trajectory.points[1].pose.position;
-      const auto & p3 = trajectory.points[2].pose.position;
-      curvatures.push_back(calc_curvature(p1, p2, p3));
-    } else if (i == trajectory.points.size() - 1) {
-      // Last point: use previous 2 points
-      const auto & p1 = trajectory.points[i - 2].pose.position;
-      const auto & p2 = trajectory.points[i - 1].pose.position;
-      const auto & p3 = trajectory.points[i].pose.position;
-      curvatures.push_back(calc_curvature(p1, p2, p3));
-    } else {
-      // Middle points: use surrounding points
-      const auto & p1 = trajectory.points[i - 1].pose.position;
-      const auto & p2 = trajectory.points[i].pose.position;
-      const auto & p3 = trajectory.points[i + 1].pose.position;
-      curvatures.push_back(calc_curvature(p1, p2, p3));
-    }
-  }
-
-  return curvatures;
-}
-
 Pose find_target_pose_along_path(
   const PathWithLaneId & centerline_path, const Pose & start_pose,
   const double longitudinal_distance)

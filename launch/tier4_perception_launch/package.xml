@@ -43,6 +43,7 @@
   <exec_depend>autoware_radar_object_tracker</exec_depend>
   <exec_depend>autoware_raindrop_cluster_filter</exec_depend>
   <exec_depend>autoware_shape_estimation</exec_depend>
+  <exec_depend>autoware_simpl_prediction</exec_depend>
   <exec_depend>autoware_simple_object_merger</exec_depend>
   <exec_depend>autoware_tensorrt_bevdet</exec_depend>
   <exec_depend>autoware_tensorrt_yolox</exec_depend>
