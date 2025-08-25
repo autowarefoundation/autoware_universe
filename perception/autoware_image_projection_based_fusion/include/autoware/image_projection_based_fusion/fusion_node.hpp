@@ -28,7 +28,6 @@
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <autoware_sensing_msgs/msg/concatenated_point_cloud_info.hpp>
-#include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>

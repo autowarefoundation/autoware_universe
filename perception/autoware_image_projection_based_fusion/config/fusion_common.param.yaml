@@ -30,7 +30,6 @@
 
     publish_previous_but_late_output_msg: false
     rosbag_length: 10.0
-
     # matching strategy
     matching_strategy:
       type: advanced

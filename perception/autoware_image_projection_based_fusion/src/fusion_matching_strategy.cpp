@@ -298,11 +298,11 @@ double AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::get_concatenation_offs
       return offset;  // 0.0
     }
 
-    auto deserialized_cfg = autoware::pointcloud_preprocessor::StrategyAdvancedConfig(
+    auto matching_strategy_config = autoware::pointcloud_preprocessor::StrategyAdvancedConfig(
       concatenation_info->matching_strategy_config);
 
-    auto reference_timestamp_min_msg = deserialized_cfg.reference_timestamp_min_msg;
-    auto reference_timestamp_max_msg = deserialized_cfg.reference_timestamp_max_msg;
+    auto reference_timestamp_min_msg = matching_strategy_config.reference_timestamp_min_msg;
+    auto reference_timestamp_max_msg = matching_strategy_config.reference_timestamp_max_msg;
 
     auto reference_timestamp_min = rclcpp::Time(reference_timestamp_min_msg).seconds();
     auto reference_timestamp_max = rclcpp::Time(reference_timestamp_max_msg).seconds();

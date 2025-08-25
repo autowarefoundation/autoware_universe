@@ -522,8 +522,6 @@ template <class Msg3D, class Msg2D, class ExportObj>
 void FusionNode<Msg3D, Msg2D, ExportObj>::concatenation_info_callback(
   const autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr concatenation_info_msg)
 {
-  RCLCPP_INFO(get_logger(), "concatenation_info_callback");
-
   if (
     concatenation_info_msg->matching_strategy ==
     autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::STRATEGY_NAIVE) {
