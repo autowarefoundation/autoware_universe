@@ -18,7 +18,7 @@
 #include "autoware_utils/math/unit_conversion.hpp"
 #include "autoware_utils/ros/msg_covariance.hpp"
 
-#include <tf2/utils.h>
+#include <tf2/utils.hpp>
 
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
