@@ -14,7 +14,11 @@
 
 #include "autoware/diffusion_planner/preprocessing/preprocessing_utils.hpp"
 
+#include "autoware/diffusion_planner/dimensions.hpp"
+#include "autoware/diffusion_planner/utils/utils.hpp"
+
 #include <algorithm>
+#include <deque>
 #include <limits>
 #include <stdexcept>
 #include <string>
@@ -70,6 +74,47 @@ void normalize_input_data(InputDataMap & input_data_map, const NormalizationMap 
     const auto & [mean, std_dev] = normalization_map.at(key);
     normalize_vector(value, mean, std_dev);
   }
+}
+
+std::vector<float> create_ego_agent_past(
+  const std::deque<nav_msgs::msg::Odometry> & odometry_msgs, size_t num_timesteps,
+  const Eigen::Matrix4f & map_to_ego_transform)
+{
+  const size_t features_per_timestep = 4;  // x, y, cos, sin
+  const size_t total_size = num_timesteps * features_per_timestep;
+
+  std::vector<float> ego_agent_past(total_size, 0.0f);
+
+  const size_t start_idx =
+    (odometry_msgs.size() >= num_timesteps) ? odometry_msgs.size() - num_timesteps : 0;
+
+  for (size_t i = start_idx; i < odometry_msgs.size(); ++i) {
+    const auto & historical_pose = odometry_msgs[i].pose.pose;
+
+    // Convert pose to 4x4 matrix
+    const Eigen::Matrix4f pose_map_4x4 = utils::pose_to_matrix4f(historical_pose);
+
+    // Transform to ego frame
+    const Eigen::Matrix4f pose_ego_4x4 = map_to_ego_transform * pose_map_4x4;
+
+    // Extract position
+    const float x = pose_ego_4x4(0, 3);
+    const float y = pose_ego_4x4(1, 3);
+
+    // Extract heading as cos/sin
+    const auto [cos_yaw, sin_yaw] =
+      utils::rotation_matrix_to_cos_sin(pose_ego_4x4.block<3, 3>(0, 0));
+
+    // Store in flat array: [timestep, features]
+    const size_t timestep_idx = i - start_idx;
+    const size_t base_idx = timestep_idx * features_per_timestep;
+    ego_agent_past[base_idx + EGO_AGENT_PAST_IDX_X] = x;
+    ego_agent_past[base_idx + EGO_AGENT_PAST_IDX_Y] = y;
+    ego_agent_past[base_idx + EGO_AGENT_PAST_IDX_COS] = cos_yaw;
+    ego_agent_past[base_idx + EGO_AGENT_PAST_IDX_SIN] = sin_yaw;
+  }
+
+  return ego_agent_past;
 }
 
 }  // namespace autoware::diffusion_planner::preprocess
