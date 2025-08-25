@@ -237,7 +237,6 @@ public:
   AgentData get_ego_centric_agent_data(
     const TrackedObjects & objects, const Eigen::Matrix4f & map_to_ego_transform);
 
-
   /**
    * @brief Replicate single sample data for batch processing.
    * @param single_data Single sample data.

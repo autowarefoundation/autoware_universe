@@ -18,6 +18,7 @@
 #include "autoware/diffusion_planner/utils/utils.hpp"
 
 #include <algorithm>
+#include <deque>
 #include <limits>
 #include <stdexcept>
 #include <string>
