@@ -123,6 +123,7 @@
   <arg name="segmentation_pointcloud_fusion_camera_ids" default="[0,1,5]" description="list of camera ids used for segmentation_pointcloud_fusion node"/>
   <arg name="ml_camera_lidar_merger_priority_mode" default="0" description="priority mode for ml and camera_lidar merger, options: `0: Object0`, `1: Object1`, `2: ConfidenceBased`, `3: ClassBased`"/>
   <arg name="pointcloud_container_name" default="pointcloud_container"/>
+  <arg name="input/concatenation_info" default="/sensing/lidar/concatenated/pointcloud_info"/>
 
   <!-- Pipeline junctions -->
   <arg name="use_vector_map" default="true" description="use vector map in prediction"/>
@@ -285,6 +286,7 @@
           <arg name="input/camera8/image" value="$(var image_raw8)"/>
           <arg name="input/camera8/info" value="$(var camera_info8)"/>
           <arg name="input/camera8/rois" value="$(var detection_rois8)"/>
+          <arg name="input/concatenation_info" value="$(var input/concatenation_info)"/>
           <arg name="input/pointcloud" value="$(var perception_pointcloud)"/>
           <arg name="node/pointcloud_container" value="$(var pointcloud_container_name)"/>
           <arg name="input/radar" value="$(var input/radar)"/>
