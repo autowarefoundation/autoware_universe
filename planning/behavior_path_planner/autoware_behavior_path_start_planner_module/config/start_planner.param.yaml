@@ -51,6 +51,7 @@
       clothoid_acceleration: 1.0      # [m/s^2] acceleration for clothoid path
       clothoid_max_steer_angles_deg: [5.0, 10.0, 20.0]  # [deg] maximum steer angles to try
       clothoid_max_steer_angle_rate_deg_per_sec: 10.0   # [deg/s] maximum steer angle rate
+      clothoid_collision_check_distance_from_end: 0.0  # [m] collision check distance from end for clothoid planner
       check_clothoid_path_lane_departure: true  # enable lane departure check for clothoid path
 
       # search start pose backward
@@ -125,7 +126,7 @@
           # detection range
           object_check_forward_distance: 10.0
           object_check_backward_distance: 100.0
-          ignore_object_velocity_threshold: 1.0
+          ignore_object_velocity_threshold: 0.25
           # ObjectTypesToCheck
           object_types_to_check:
             check_car: true
