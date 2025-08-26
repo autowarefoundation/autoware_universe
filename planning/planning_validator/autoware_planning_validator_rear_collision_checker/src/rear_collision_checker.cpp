@@ -24,7 +24,13 @@
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils/transform/transforms.hpp>
+
+#if __has_include(<magic_enum/magic_enum.hpp>)
+#include <magic_enum/magic_enum.hpp>
+#else
 #include <magic_enum.hpp>
+#endif
+
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <autoware_internal_planning_msgs/msg/planning_factor.hpp>

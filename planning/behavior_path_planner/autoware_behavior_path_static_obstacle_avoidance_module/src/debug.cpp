@@ -18,7 +18,12 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
+
+#if __has_include(<magic_enum/magic_enum.hpp>)
+#include <magic_enum/magic_enum.hpp>
+#else
 #include <magic_enum.hpp>
+#endif
 
 #include <std_msgs/msg/color_rgba.hpp>
 

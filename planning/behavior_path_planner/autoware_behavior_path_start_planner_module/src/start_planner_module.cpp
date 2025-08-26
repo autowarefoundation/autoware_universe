@@ -25,7 +25,13 @@
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
+
+#if __has_include(<magic_enum/magic_enum.hpp>)
+#include <magic_enum/magic_enum.hpp>
+#else
 #include <magic_enum.hpp>
+#endif
+
 #include <rclcpp/rclcpp.hpp>
 
 #include <boost/geometry.hpp>
