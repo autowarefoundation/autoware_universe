@@ -47,10 +47,14 @@ public:
   }
   virtual ~TrajectoryModifierPluginBase() = default;
   virtual void modify_trajectory(
-    TrajectoryPoints & traj_points, const TrajectoryModifierParams & params) = 0;
+    TrajectoryPoints & traj_points, const TrajectoryModifierParams & params,
+    const TrajectoryModifierData & data) = 0;
   virtual void set_up_params() = 0;
   virtual rcl_interfaces::msg::SetParametersResult on_parameter(
     const std::vector<rclcpp::Parameter> & parameters) = 0;
+  virtual bool is_trajectory_modification_required(
+    const TrajectoryPoints & traj_points, const TrajectoryModifierParams & params,
+    const TrajectoryModifierData & data) const = 0;
   std::string get_name() const { return name_; }
   rclcpp::Node * get_node_ptr() const { return node_ptr_; }
   std::shared_ptr<autoware_utils_debug::TimeKeeper> get_time_keeper() const { return time_keeper_; }

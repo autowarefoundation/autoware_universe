@@ -7,6 +7,7 @@ autoware_package()
 ament_auto_add_library(autoware_trajectory_modifier_component SHARED
   src/trajectory_modifier.cpp
   src/utils.cpp
+  src/trajectory_modifier_plugins/stop_point_fixer.cpp
 )
 
 target_link_libraries(autoware_trajectory_modifier_component)
