@@ -632,6 +632,13 @@ def generate_launch_description():
             "/config/perception/obstacle_segmentation/occupancy_grid_based_outlier_filter/occupancy_grid_map_outlier_filter.param.yaml",
         ],
     )
+    add_launch_arg(
+        "cuda_ground_segmentation_node_param_path",
+        [
+            FindPackageShare("autoware_ground_segmentation_cuda"),
+            "/config/cuda_scan_ground_segmentation_filter.param.yaml",
+        ],
+    )
 
     set_container_executable = SetLaunchConfiguration(
         "container_executable",
