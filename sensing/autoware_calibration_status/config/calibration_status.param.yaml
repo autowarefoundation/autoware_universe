@@ -1,0 +1,14 @@
+/**:
+  ros__parameters:
+    onnx_path: "$(var model_path)/$(var model_name).onnx"
+    runtime_mode: active
+    period: 5.0
+    queue_size: 10
+    input:
+      cloud_topics: ["/sensing/lidar/concatenated/pointcloud"]
+      image_topics: ["/sensing/camera/camera8/image_rect_color"]
+      approx_deltas: [0.1]
+    prerequisite:
+      check_velocity: true
+      velocity_source: twist_with_cov_stamped
+      velocity_threshold: 1.0
