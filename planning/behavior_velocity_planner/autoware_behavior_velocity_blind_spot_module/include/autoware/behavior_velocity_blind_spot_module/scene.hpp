@@ -153,7 +153,7 @@ private:
    */
   bool isTargetObjectType(const autoware_perception_msgs::msg::PredictedObject & object) const;
 
-  static bool isVRUObjectType(const autoware_perception_msgs::msg::PredictedObject & object);
+  static bool is_vru_object_type(const autoware_perception_msgs::msg::PredictedObject & object);
 
   /**
    * @brief compute the deceleration and jerk for collision stop from `ttc`
