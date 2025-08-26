@@ -77,8 +77,10 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
 
 void TrajectoryModifier::set_up_params()
 {
-  using autoware_utils_rclcpp::get_or_declare_parameter;
-  params_.use_stop_point_fixer = get_or_declare_parameter<bool>(*this, "use_stop_point_fixer");
+  // Declare parameter with default value
+  rcl_interfaces::msg::ParameterDescriptor use_stop_point_fixer_desc;
+  use_stop_point_fixer_desc.description = "Enable the stop point fixer modifier plugin";
+  params_.use_stop_point_fixer = this->declare_parameter<bool>("use_stop_point_fixer", true, use_stop_point_fixer_desc);
 }
 
 void TrajectoryModifier::initialize_modifiers()
