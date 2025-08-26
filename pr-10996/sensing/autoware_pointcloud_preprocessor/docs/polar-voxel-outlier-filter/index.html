@@ -15321,6 +15321,12 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <td>300.0</td>
 </tr>
 <tr>
+<td><code>intensity_threshold</code></td>
+<td>int</td>
+<td>Maximum intensity threshold for secondary returns</td>
+<td>2</td>
+</tr>
+<tr>
 <td><code>visibility_estimation_max_range_m</code></td>
 <td>double</td>
 <td>Maximum range for visibility estimation (meters)</td>
@@ -15737,7 +15743,9 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 </ul>
 <h4 id="mode-selection-guidelines">Mode Selection Guidelines<a class="headerlink" href="#mode-selection-guidelines" title="Permanent link">#</a></h4>
 <ul>
-<li><strong>Choose visualization-only mode when</strong>:<ul>
+<li>
+<p><strong>Choose visualization-only mode when</strong>:</p>
+<ul>
 <li>Only diagnostic information is needed</li>
 <li>Computational resources are limited</li>
 <li>Running parallel monitoring alongside main processing</li>
