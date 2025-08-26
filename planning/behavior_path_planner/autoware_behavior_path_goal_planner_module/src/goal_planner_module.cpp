@@ -2148,10 +2148,12 @@ bool GoalPlannerModule::hasEnoughDistance(
     return false;
   }
 
-  // If the stop line is subtly exceeded, it is assumed that there is not enough distance to the
-  // starting point of parking, so to prevent this, once the vehicle has stopped, it also has a
-  // stop_distance_buffer to allow for the amount exceeded.
-  const double buffer = is_stopped ? stop_distance_buffer_ : 0.0;
+  // The planned and actual stopping behaviors may vary. When this occurs, the vehicle might not be
+  // able to stop at the planned line while satisfying all constraints. A buffer should be added to
+  // account for control errors when the velocity is low.
+  constexpr double low_velocity_threshold = 1.39;
+  const bool is_low_velocity = std::abs(current_vel) < low_velocity_threshold;
+  const double buffer = is_low_velocity ? stop_distance_buffer_ : 0.0;
   if (distance_to_start + buffer < *current_to_stop_distance) {
     return false;
   }
