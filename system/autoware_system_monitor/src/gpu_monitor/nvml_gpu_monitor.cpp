@@ -86,7 +86,7 @@ GPUMonitor::~GPUMonitor()
 void GPUMonitor::shut_down()
 {
   // When this method is called from the destructor in the process of system shutdown,
-  // all ROS2 nodes are guaranteed to be inactive.
+  // all nodes are guaranteed to be inactive.
   // Therefore, it is safe to call the NVML library's shutdown function.
   nvmlReturn_t ret = nvmlShutdown();
   if (ret != NVML_SUCCESS) {
