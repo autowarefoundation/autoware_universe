@@ -4,7 +4,7 @@
 
 The state management functionality of this package is currently being moved to the command_mode_decider package.
 When used with the command_mode_decider package, this package is only responsible for determining transition conditions.
-Also, the data `status`, `in_autoware_control`, and `in_transition` contained in the debug topic is available, so use the `/system/command_mode_decider/debug` topic instead.
+Also, the data `status`, `in_autoware_control`, and `in_transition` contained in the debug topic is not available, so use the `/system/command_mode_decider/debug` topic instead.
 
 - in_autoware_control: True when the current command mode is manual mode (default value 1000).
 - in_transition: See the is_in_transition function in the command_mode_decider package.
