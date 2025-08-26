@@ -109,8 +109,9 @@ __global__ void getCellNumPointsKernel(
 
 __global__ void assignPointToClassifyPointKernel(
   const PointTypeStruct * __restrict__ input_points, const size_t num_points,
-  const CellCentroid * cells_centroid_dev, int * cell_counts_dev,
-  const FilterParameters * filter_parameters_dev, ClassifiedPointTypeStruct * classified_points_dev)
+  const CellCentroid * __restrict__ cells_centroid_dev, int * __restrict__ cell_counts_dev,
+  const FilterParameters * __restrict__ filter_parameters_dev,
+  ClassifiedPointTypeStruct * __restrict__ classified_points_dev)
 {
   // This kernel split pointcloud into sectors and cells
   // Each point is allocated to a cell
@@ -187,7 +188,7 @@ __device__ void removeGndPointInCell(CellCentroid & cell, const ClassifiedPointT
 }
 
 __device__ void checkSegmentMode(
-  const CellCentroid * centroid_cells_list_dev, const int sector_start_cell_index,
+  const CellCentroid * __restrict__ centroid_cells_list_dev, const int sector_start_cell_index,
   const int cell_index_in_sector, const int * latest_gnd_cells_in_sector,
   const int num_latest_gnd_cells, const int gnd_cell_continual_thresh,
   const int gnd_cell_buffer_size, SegmentationMode & mode)
@@ -255,7 +256,7 @@ __device__ void checkSegmentMode(
 // }
 
 __device__ void RecursiveGndCellSearch(
-  const CellCentroid * centroid_cells_list_dev, const int last_gnd_cells_num_threshold,
+  const CellCentroid * __restrict__ centroid_cells_list_dev, const int last_gnd_cells_num_threshold,
   const int sector_start_cell_index, const int cell_index_in_sector,
   int * latest_gnd_cells_in_sector, int & num_latest_gnd_cells)
 {
@@ -284,7 +285,7 @@ __device__ void RecursiveGndCellSearch(
 }
 
 __device__ float calcLocalGndGradient(
-  const CellCentroid * centroid_cells, const int continues_checking_cell_num,
+  const CellCentroid * __restrict__ centroid_cells, const int continues_checking_cell_num,
   const int sector_start_index, const int cell_idx_in_sector, const float gradient_threshold)
 {
   // Calculate the local ground gradient based on the previous cells
@@ -325,9 +326,9 @@ __device__ float calcLocalGndGradient(
 }
 
 __device__ float fitLineFromGndCell(
-  const CellCentroid * centroid_cells, const int sector_start_idx,
+  const CellCentroid * __restrict__ centroid_cells, const int sector_start_idx,
   const int * latest_gnd_cells_in_sector, const int num_fitting_cells,
-  const FilterParameters * filter_parameters_dev)
+  const FilterParameters * __restrict__ filter_parameters_dev)
 {
   float a = 0.0f;
   float b = 0.0f;
@@ -381,8 +382,8 @@ __device__ float fitLineFromGndCell(
   return a;
 }
 __device__ void recheckCell(
-  CellCentroid & cell, ClassifiedPointTypeStruct * classify_points,
-  const FilterParameters * filter_parameters_dev)
+  CellCentroid & cell, ClassifiedPointTypeStruct * __restrict__ classify_points,
+  const FilterParameters * __restrict__ filter_parameters_dev)
 {
   // This function is called to recheck the current cell
   // It should be implemented based on the specific requirements of the segmentation algorithm
@@ -407,8 +408,9 @@ __device__ void recheckCell(
 }
 
 __device__ void SegmentInitializedCell(
-  CellCentroid * centroid_cells, ClassifiedPointTypeStruct * classify_points,
-  const FilterParameters * filter_parameters_dev, const int sector_start_cell_index,
+  CellCentroid * __restrict__ centroid_cells,
+  ClassifiedPointTypeStruct * __restrict__ classify_points,
+  const FilterParameters * __restrict__ filter_parameters_dev, const int sector_start_cell_index,
   const int cell_idx_in_sector)
 {
   auto cell_id = sector_start_cell_index + cell_idx_in_sector;
@@ -459,8 +461,9 @@ This function segments all points in continuous cells
 This cell has a continual previous gnd cells
 */
 __device__ void SegmentContinuousCell(
-  CellCentroid * centroid_cells, ClassifiedPointTypeStruct * classify_points,
-  const FilterParameters * filter_parameters_dev, const int sector_start_cell_index,
+  CellCentroid * __restrict__ centroid_cells,
+  ClassifiedPointTypeStruct * __restrict__ classify_points,
+  const FilterParameters * __restrict__ filter_parameters_dev, const int sector_start_cell_index,
   const int cell_idx_in_sector, const int * latest_gnd_cells_in_sector,
   const int num_latest_gnd_cells)
 {
@@ -540,8 +543,9 @@ Which has few discontinual gnd cells before
 */
 
 __device__ void SegmentDiscontinuousCell(
-  CellCentroid * centroid_cells, ClassifiedPointTypeStruct * classify_points,
-  const FilterParameters * filter_parameters_dev, const int sector_start_cell_index,
+  CellCentroid * __restrict__ centroid_cells,
+  ClassifiedPointTypeStruct * __restrict__ classify_points,
+  const FilterParameters * __restrict__ filter_parameters_dev, const int sector_start_cell_index,
   const int cell_idx_in_sector, const int * latest_gnd_cells_in_sector,
   const int num_latest_gnd_cells)
 {
@@ -598,8 +602,9 @@ This function is called when the prev gnd cell is far from current cell
 */
 
 __device__ void SegmentBreakCell(
-  CellCentroid * centroid_cells, ClassifiedPointTypeStruct * classify_points,
-  const FilterParameters * filter_parameters_dev, const int sector_start_cell_index,
+  CellCentroid * __restrict__ centroid_cells,
+  ClassifiedPointTypeStruct * __restrict__ classify_points,
+  const FilterParameters * __restrict__ filter_parameters_dev, const int sector_start_cell_index,
   const int cell_idx_in_sector, const int * latest_gnd_cells_in_sector,
   const int num_latest_gnd_cells)
 {
@@ -643,8 +648,9 @@ __device__ void SegmentBreakCell(
 }
 
 __global__ void scanPerSectorGroundReferenceKernel(
-  ClassifiedPointTypeStruct * classified_points_dev, CellCentroid * centroid_cells_list_dev,
-  const FilterParameters * filter_parameters_dev, int * last_gnd_cells_dev)
+  ClassifiedPointTypeStruct * __restrict__ classified_points_dev,
+  CellCentroid * __restrict__ centroid_cells_list_dev,
+  const FilterParameters * __restrict__ filter_parameters_dev, int * last_gnd_cells_dev)
 {
   // Implementation of the kernel
   // scan in each sector from cell_index_in_sector = 0 to max_num_cells_per_sector
@@ -719,7 +725,7 @@ __global__ void scanPerSectorGroundReferenceKernel(
 
 __global__ void sortPointsInCellsKernel(
   const int * __restrict__ num_points_per_cell_dev,
-  ClassifiedPointTypeStruct * classified_points_dev, const int max_num_cells,
+  ClassifiedPointTypeStruct * __restrict__ classified_points_dev, const int max_num_cells,
   const int max_num_points_per_cell)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -737,7 +743,7 @@ __global__ void sortPointsInCellsKernel(
 }
 
 __global__ void CellsCentroidInitializeKernel(
-  CellCentroid * centroid_cells_list_dev, const int max_num_cells)
+  CellCentroid * __restrict__ centroid_cells_list_dev, const int max_num_cells)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= max_num_cells) {
@@ -754,7 +760,8 @@ __global__ void CellsCentroidInitializeKernel(
 
 __global__ void calcCellPointNumberKernel(
   const PointTypeStruct * __restrict__ input_points, const size_t num_input_points,
-  const FilterParameters * filter_parameters_dev, CellCentroid * centroid_cells_list_dev)
+  const FilterParameters * __restrict__ filter_parameters_dev,
+  CellCentroid * __restrict__ centroid_cells_list_dev)
 {
   size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= num_input_points) {
@@ -790,8 +797,9 @@ __global__ void calcCellPointNumberKernel(
 
 // Mark obstacle points for point in classified_points_dev
 __global__ void markObstaclePointsKernel(
-  ClassifiedPointTypeStruct * classified_points_dev, const int max_num_classified_points,
-  const size_t num_points, int * __restrict__ flags, const PointType pointtype)
+  ClassifiedPointTypeStruct * __restrict__ classified_points_dev,
+  const int max_num_classified_points, const size_t num_points, int * __restrict__ flags,
+  const PointType pointtype)
 {
   size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= static_cast<size_t>(max_num_classified_points)) {
@@ -842,8 +850,8 @@ __global__ void scatterKernel(
 }
 
 __global__ void updateCellStartPointIndexKernel(
-  CellCentroid * centroid_cells_list_dev, const size_t * cell_first_point_indices_dev,
-  const int max_num_cells)
+  CellCentroid * __restrict__ centroid_cells_list_dev,
+  const size_t * __restrict__ cell_first_point_indices_dev, const int max_num_cells)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= max_num_cells) {
@@ -1144,7 +1152,8 @@ void CudaScanGroundSegmentationFilter::classifyPointcloud(
   ground_points->fields = input_points->fields;
 
   if (number_input_points_ == 0) {
-    output_points->width = static_cast<uint32_t>(num_output_points);;
+    output_points->width = static_cast<uint32_t>(num_output_points);
+    ;
     output_points->row_step = static_cast<uint32_t>(num_output_points * sizeof(PointTypeStruct));
 
     ground_points->width = static_cast<uint32_t>(num_output_points);
