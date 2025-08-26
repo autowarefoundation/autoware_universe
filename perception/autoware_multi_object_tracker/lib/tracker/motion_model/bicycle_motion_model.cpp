@@ -586,8 +586,10 @@ bool BicycleMotionModel::getPredictedState(
   const double wheel_base_inv_sq = wheel_base_inv * wheel_base_inv;
 
   // set position
-  pose.position.x = 0.5 * (X(IDX::X1) + X(IDX::X2));
-  pose.position.y = 0.5 * (X(IDX::Y1) + X(IDX::Y2));
+  pose.position.x = (X(IDX::X1) * motion_params_.lr_ratio + X(IDX::X2) * motion_params_.lf_ratio) /
+                    (motion_params_.lr_ratio + motion_params_.lf_ratio);
+  pose.position.y = (X(IDX::Y1) * motion_params_.lr_ratio + X(IDX::Y2) * motion_params_.lf_ratio) /
+                    (motion_params_.lr_ratio + motion_params_.lf_ratio);
   // do not change z
 
   // set orientation
