@@ -506,8 +506,7 @@ void GyroBiasEstimator::update_rate_ekf(
 bool GyroBiasEstimator::should_skip_update()
 {
   if (std::abs(gyro_yaw_rate_) < threshold_to_estimate_scale_) {
-    if (
-      gyro_info_.scale_status < diagnostic_msgs::msg::DiagnosticStatus::WARN) {
+    if (gyro_info_.scale_status < diagnostic_msgs::msg::DiagnosticStatus::WARN) {
       gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::OK;
       gyro_info_.scale_status_summary = "OK";
       gyro_info_.scale_summary_message = "Skipped scale update (yaw rate too small)";
