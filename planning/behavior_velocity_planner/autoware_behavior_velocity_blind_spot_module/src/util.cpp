@@ -685,7 +685,7 @@ std::optional<StopPoints> generate_stop_points(
     std::nullopt, stop_points_list.instant_stopline, stop_points_list.critical_stopline};
 }
 
-tl::expected<double, std::string> calc_ego_to_blind_spot_lanelet_lateral_gap(
+std::optional<double> calc_ego_to_blind_spot_lanelet_lateral_gap(
   const autoware_utils::LinearRing2d & ego_footprint,
   const lanelet::ConstLanelets & last_lanelets_before_turning,
   const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction)
@@ -711,13 +711,13 @@ tl::expected<double, std::string> calc_ego_to_blind_spot_lanelet_lateral_gap(
   }
 
   if (line.size() < 2) {
-    return tl::make_unexpected("Not enough points in lanelet boundary.");
+    return std::nullopt;
   }
 
   std::vector<autoware_utils::Segment2d> segments;
   segments.reserve(line.size() - 1);
-  for (size_t i = 0; i + 1 < line.size(); ++i) {
-    segments.emplace_back(line[i], line[i + 1]);
+  for (const auto & [p1, p2] : ranges::views::zip(line, line | ranges::views::drop(1))) {
+    segments.emplace_back(p1, p2);
   }
 
   bg::index::rtree<autoware_utils::Segment2d, bg::index::rstar<16>> segments_before_turning{

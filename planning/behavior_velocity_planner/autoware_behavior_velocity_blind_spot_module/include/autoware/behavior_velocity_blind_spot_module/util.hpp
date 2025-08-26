@@ -18,7 +18,6 @@
 #include <autoware/lanelet2_utils/intersection.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
-#include <tl_expected/expected.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
@@ -146,19 +145,14 @@ std::optional<StopPoints> generate_stop_points(
 /**
  * @brief Calculate the minimum lateral gap from the ego vehicle's side to the relevant road
  * boundary just before a turn.
- * @details This function determines the relevant side of the ego vehicle based on the turn
- * direction and extracts the corresponding road boundary (left boundary for a left turn, right for
- * a right turn) from the provided lanelets. It then uses an R-tree for an efficient spatial search
- * to find the shortest distance between the vehicle's side and that boundary.
  * @param[in] ego_footprint The 2D geometric footprint of the ego vehicle.
  * @param[in] last_lanelets_before_turning The lanelets the vehicle occupies just before the turn,
  * used to define the blind spot area boundary.
  * @param[in] turn_direction The direction of the upcoming turn (left/right), which determines the
  * relevant vehicle side and road boundary.
- * @return A tl::expected containing the minimum lateral distance in meters on success, or an error
- * string on failure.
+ * @return An optional value containing the minimum lateral distance in meters on success.
  */
-tl::expected<double, std::string> calc_ego_to_blind_spot_lanelet_lateral_gap(
+std::optional<double> calc_ego_to_blind_spot_lanelet_lateral_gap(
   const autoware_utils::LinearRing2d & footprint,
   const lanelet::ConstLanelets & lanelets_before_turning,
   const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction);

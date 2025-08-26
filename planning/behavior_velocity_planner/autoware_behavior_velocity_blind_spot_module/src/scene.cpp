@@ -446,7 +446,8 @@ bool BlindSpotModule::isTargetObjectType(
   return false;
 }
 
-bool BlindSpotModule::isVRUObjectType(const autoware_perception_msgs::msg::PredictedObject & object)
+bool BlindSpotModule::is_vru_object_type(
+  const autoware_perception_msgs::msg::PredictedObject & object)
 {
   return object.classification.at(0).label ==
            autoware_perception_msgs::msg::ObjectClassification::BICYCLE ||
