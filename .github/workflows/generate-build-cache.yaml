@@ -69,7 +69,12 @@ jobs:
           overlay_file: build_depends_nightly.repos
           output_file: build_depends.repos
 
-      - name: Build
+      - name: Resolve exact dependencies
+        run: |
+          vcs import dependency_ws < build_depends.repos
+          vcs export dependency_ws --exact-with-tags > build-depends-exact.repos
+
+      - name: Build dependencies
         if: ${{ steps.get-self-packages.outputs.self-packages != '' }}
         uses: autowarefoundation/autoware-github-actions/colcon-build@v1
         with:
@@ -77,12 +82,12 @@ jobs:
           target-packages: ${{ steps.get-self-packages.outputs.self-packages }}
           build-depends-repos: build_depends.repos
           cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
+          base-paths: ${{ dependency_ws }}
 
-      - name: Store install and build contents
+      - name: Save deps cache
         uses: actions/cache/save@v4
-        id: cache
         with:
           path: |
             install
             build
-          key: workspace-${{ runner.arch }}-${{ env.rosdistro }}
+          key: deps-ws-${{ runner.arch }}-${{ env.rosdistro }}-${{ env.BUILD_TYPE_CUDA_STATE }}-${{ hashFiles('build-depends-exact.repos') }}
