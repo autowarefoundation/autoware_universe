@@ -60,6 +60,8 @@ void BicycleMotionModel::setMotionParams(
   motion_params_.lr_min = bicycle_state.wheel_pos_rear_min;
   motion_params_.lf_ratio = bicycle_state.wheel_pos_ratio_front;
   motion_params_.lr_ratio = bicycle_state.wheel_pos_ratio_rear;
+  motion_params_.wheel_base_ratio_inv =
+    1.0 / (bicycle_state.wheel_pos_ratio_front + bicycle_state.wheel_pos_ratio_rear);
 
   motion_params_.wheel_pos_ratio =
     (motion_params_.lf_ratio + motion_params_.lr_ratio) / motion_params_.lr_ratio;
@@ -340,11 +342,11 @@ bool BicycleMotionModel::limitStates()
     // rotate the object orientation by 180 degrees
     // replace X1 and Y1 with X2 and Y2
     const double x_center =
-      (X_t(IDX::X1) * motion_params_.lf_ratio + X_t(IDX::X2) * motion_params_.lr_ratio) /
-      (motion_params_.lr_ratio + motion_params_.lf_ratio);
+      (X_t(IDX::X1) * motion_params_.lf_ratio + X_t(IDX::X2) * motion_params_.lr_ratio) *
+      motion_params_.wheel_base_ratio_inv;
     const double y_center =
-      (X_t(IDX::Y1) * motion_params_.lf_ratio + X_t(IDX::Y2) * motion_params_.lr_ratio) /
-      (motion_params_.lr_ratio + motion_params_.lf_ratio);
+      (X_t(IDX::Y1) * motion_params_.lf_ratio + X_t(IDX::Y2) * motion_params_.lr_ratio) *
+      motion_params_.wheel_base_ratio_inv;
     const double x1_rel = X_t(IDX::X1) - x_center;
     const double y1_rel = X_t(IDX::Y1) - y_center;
     const double x2_rel = X_t(IDX::X2) - x_center;
@@ -582,10 +584,10 @@ bool BicycleMotionModel::getPredictedState(
   const double wheel_base_inv_sq = wheel_base_inv * wheel_base_inv;
 
   // set position
-  pose.position.x = (X(IDX::X1) * motion_params_.lf_ratio + X(IDX::X2) * motion_params_.lr_ratio) /
-                    (motion_params_.lr_ratio + motion_params_.lf_ratio);
-  pose.position.y = (X(IDX::Y1) * motion_params_.lf_ratio + X(IDX::Y2) * motion_params_.lr_ratio) /
-                    (motion_params_.lr_ratio + motion_params_.lf_ratio);
+  pose.position.x = (X(IDX::X1) * motion_params_.lf_ratio + X(IDX::X2) * motion_params_.lr_ratio) *
+                    motion_params_.wheel_base_ratio_inv;
+  pose.position.y = (X(IDX::Y1) * motion_params_.lf_ratio + X(IDX::Y2) * motion_params_.lr_ratio) *
+                    motion_params_.wheel_base_ratio_inv;
   // do not change z
 
   // set orientation
