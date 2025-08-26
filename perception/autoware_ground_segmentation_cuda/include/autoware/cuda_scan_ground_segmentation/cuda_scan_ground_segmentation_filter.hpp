@@ -182,7 +182,7 @@ private:
     PointTypeStruct * output_points_dev, size_t & num_output_points_host,
     const PointType pointtype);
 
-  void calcPointNumInCell(
+  void countCellPointNum(
     const PointTypeStruct * input_points_dev, CellCentroid * indices_list_dev,
     const FilterParameters * filter_parameters_dev);
 

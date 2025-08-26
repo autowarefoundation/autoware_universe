@@ -939,7 +939,7 @@ void CudaScanGroundSegmentationFilter::scanPerSectorGroundReference(
 }
 
 // =========== looping all input pointcloud and update cells ==================
-void CudaScanGroundSegmentationFilter::calcPointNumInCell(
+void CudaScanGroundSegmentationFilter::countCellPointNum(
   const PointTypeStruct * input_points_dev, CellCentroid * centroid_cells_list_dev,
   const FilterParameters * filter_parameters_dev)
 {
@@ -1129,27 +1129,26 @@ void CudaScanGroundSegmentationFilter::classifyPointcloud(
   auto * ground_points_dev = reinterpret_cast<PointTypeStruct *>(ground_points->data.get());
   size_t num_output_points = 0;
 
+  output_points->header = input_points->header;
+  output_points->height = 1;  // Set height to 1 for unorganized point cloud
+  output_points->is_bigendian = input_points->is_bigendian;
+  output_points->point_step = input_points->point_step;
+  output_points->is_dense = input_points->is_dense;
+  output_points->fields = input_points->fields;
+
+  ground_points->header = input_points->header;
+  ground_points->height = 1;  // Set height to 1 for unorganized point cloud
+  ground_points->is_bigendian = input_points->is_bigendian;
+  ground_points->point_step = input_points->point_step;
+  ground_points->is_dense = input_points->is_dense;
+  ground_points->fields = input_points->fields;
+
   if (number_input_points_ == 0) {
-    output_points->width = 0;
-    output_points->height = 0;
-
-    output_points->header = input_points->header;
-    output_points->height = 1;  // Set height to 1 for unorganized point
-    output_points->is_bigendian = input_points->is_bigendian;
-    output_points->point_step = input_points->point_step;
+    output_points->width = static_cast<uint32_t>(num_output_points);;
     output_points->row_step = static_cast<uint32_t>(num_output_points * sizeof(PointTypeStruct));
-    output_points->is_dense = input_points->is_dense;
-    output_points->fields = input_points->fields;
 
-    ground_points->width = 0;
-    ground_points->height = 0;
-    ground_points->header = input_points->header;
-    ground_points->height = 1;  // Set height to 1 for unorganized
-    ground_points->is_bigendian = input_points->is_bigendian;
-    ground_points->point_step = input_points->point_step;
+    ground_points->width = static_cast<uint32_t>(num_output_points);
     ground_points->row_step = static_cast<uint32_t>(num_output_points * sizeof(PointTypeStruct));
-    ground_points->is_dense = input_points->is_dense;
-    ground_points->fields = input_points->fields;
     return;
   }
   const auto * input_points_dev =
@@ -1176,7 +1175,7 @@ void CudaScanGroundSegmentationFilter::classifyPointcloud(
 
   // calculate the centroid of each cell
 
-  calcPointNumInCell(input_points_dev, centroid_cells_list_dev, filter_parameters_dev);
+  countCellPointNum(input_points_dev, centroid_cells_list_dev, filter_parameters_dev);
   // calculate the index of the start point in each cell
   // update start point index into cell_first_point_indices_dev.start_point_index
   getCellFirstPointIndex(
@@ -1213,25 +1212,13 @@ void CudaScanGroundSegmentationFilter::classifyPointcloud(
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
 
-  output_points->header = input_points->header;
-  output_points->height = 1;  // Set height to 1 for unorganized point cloud
   output_points->width = static_cast<uint32_t>(num_output_points);
-  output_points->is_bigendian = input_points->is_bigendian;
-  output_points->point_step = input_points->point_step;
   output_points->row_step = static_cast<uint32_t>(num_output_points * sizeof(PointTypeStruct));
-  output_points->is_dense = input_points->is_dense;
-  output_points->fields = input_points->fields;
 
   // return output_points;
 
-  ground_points->header = input_points->header;
-  ground_points->height = 1;  // Set height to 1 for unorganized point cloud
   ground_points->width = static_cast<uint32_t>(num_ground_points);
-  ground_points->is_bigendian = input_points->is_bigendian;
-  ground_points->point_step = input_points->point_step;
   ground_points->row_step = static_cast<uint32_t>(num_ground_points * sizeof(PointTypeStruct));
-  ground_points->is_dense = input_points->is_dense;
-  ground_points->fields = input_points->fields;
 }
 
 }  // namespace autoware::cuda_ground_segmentation
