@@ -50,12 +50,14 @@ private:
       2.7416e-5;  // [rad^2/s^2] uncertain slip angle change rate, 0.3 deg/s
     double q_cov_slip_rate_max = 0.03046;  // [rad^2/s^2] uncertain slip angle change rate, 10 deg/s
     double q_max_slip_angle = 0.5236;      // [rad] max slip angle, 30deg
-    double lf_ratio = 0.3;     // [-] ratio of the distance from the center to the front wheel
-    double lr_ratio = 0.25;    // [-] ratio of the distance from the center to the rear wheel
-    double lf_min = 1.0;       // [m] minimum distance from the center to the front wheel
-    double lr_min = 1.0;       // [m] minimum distance from the center to the rear wheel
-    double max_vel = 27.8;     // [m/s] maximum velocity, 100km/h
-    double max_slip = 0.5236;  // [rad] maximum slip angle, 30deg
+    double lf_ratio = 0.3;   // [-] ratio of the distance from the center to the front wheel
+    double lr_ratio = 0.25;  // [-] ratio of the distance from the center to the rear wheel
+    double lf_min = 1.0;     // [m] minimum distance from the center to the front wheel
+    double lr_min = 1.0;     // [m] minimum distance from the center to the rear wheel
+    double wheel_base_ratio_inv =
+      1 / (lf_ratio + lr_ratio);  // [-] inverse of the sum of lf_ratio and lr_ratio
+    double max_vel = 27.8;        // [m/s] maximum velocity, 100km/h
+    double max_slip = 0.5236;     // [rad] maximum slip angle, 30deg
     double max_reverse_vel =
       -1.389;  // [m/s] maximum reverse velocity, -5km/h. The value is expected to be negative
     double wheel_pos_ratio =
