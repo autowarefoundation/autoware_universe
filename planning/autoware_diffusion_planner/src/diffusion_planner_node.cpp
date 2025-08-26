@@ -62,6 +62,8 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
     this->create_publisher<PredictedObjects>("~/output/predicted_objects", rclcpp::QoS(1));
   pub_route_marker_ = this->create_publisher<MarkerArray>("~/debug/route_marker", 10);
   pub_lane_marker_ = this->create_publisher<MarkerArray>("~/debug/lane_marker", 10);
+  pub_turn_indicators_ =
+    this->create_publisher<TurnIndicatorsCommand>("~/output/turn_indicators", 1);
   debug_processing_time_detail_pub_ = this->create_publisher<autoware_utils::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms", 1);
   time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(debug_processing_time_detail_pub_);
@@ -743,6 +745,28 @@ std::vector<float> DiffusionPlanner::do_inference_trt(InputDataMap & input_data_
   return output_host;
 }
 
+std::vector<float> DiffusionPlanner::get_turn_indicator_logit() const
+{
+  const int batch_size = params_.batch_size;
+
+  // Compute total number of elements in the turn indicator logit
+  const size_t turn_indicator_num_elements =
+    batch_size * std::accumulate(
+                   TURN_INDICATOR_LOGIT_SHAPE.begin() + 1, TURN_INDICATOR_LOGIT_SHAPE.end(), 1UL,
+                   std::multiplies<>());
+
+  // Allocate host vector
+  std::vector<float> logit_host(turn_indicator_num_elements);
+
+  // Copy data from device to host
+  cudaMemcpy(
+    logit_host.data(),              // destination (host)
+    turn_indicator_logit_d_.get(),  // source (device)
+    turn_indicator_num_elements * sizeof(float), cudaMemcpyDeviceToHost);
+
+  return logit_host;
+}
+
 void DiffusionPlanner::on_timer()
 {
   // Timer callback function
@@ -776,6 +800,12 @@ void DiffusionPlanner::on_timer()
   }
   const auto predictions = do_inference_trt(input_data_map);
   publish_predictions(predictions);
+
+  // Publish turn indicators
+  const auto turn_indicator_logit = get_turn_indicator_logit();
+  const auto turn_indicators_cmd =
+    postprocess::create_turn_indicators_command(turn_indicator_logit, this->now());
+  pub_turn_indicators_->publish(turn_indicators_cmd);
 }
 
 void DiffusionPlanner::on_map(const HADMapBin::ConstSharedPtr map_msg)
