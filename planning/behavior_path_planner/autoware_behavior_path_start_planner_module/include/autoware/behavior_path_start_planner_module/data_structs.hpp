@@ -293,7 +293,6 @@ struct StartPlannerParameters
   double lane_departure_check_expansion_margin{0.0};
 
   // shift pull out
-  bool enable_shift_pull_out{false};
   bool check_shift_path_lane_departure{false};
   bool allow_check_shift_path_lane_departure_override{false};
   double shift_collision_check_distance_from_end{0.0};
@@ -306,10 +305,8 @@ struct StartPlannerParameters
   double end_pose_curvature_threshold{0.0};
   double maximum_longitudinal_deviation{0.0};
   // geometric pull out
-  bool enable_geometric_pull_out{false};
   double geometric_collision_check_distance_from_end{0.0};
   bool divide_pull_out_path{false};
-  bool enable_clothoid_fallback{false};
   // Enable clothoid path search when no path is found with collision margins
   ParallelParkingParameters parallel_parking_parameters{};
 
@@ -321,7 +318,10 @@ struct StartPlannerParameters
   bool check_clothoid_path_lane_departure{true};  // enable lane departure check for clothoid path
 
   // search start pose backward
-  std::string search_priority;  // "efficient_path" or "short_back_distance"
+  // List of planner types in priority order (e.g., ["SHIFT", "GEOMETRIC", "CLOTHOID"])
+  std::vector<std::string> search_priority;
+  // Search policy: "prioritize_planner" or "short_back_distance"
+  std::string search_policy;
   bool enable_back{false};
   double backward_velocity{0.0};
   double max_back_distance{0.0};
