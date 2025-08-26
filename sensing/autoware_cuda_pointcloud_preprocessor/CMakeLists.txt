@@ -131,7 +131,6 @@ rclcpp_components_register_node(cuda_pointcloud_preprocessor
   PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaVoxelGridDownsampleFilterNode"
   EXECUTABLE cuda_voxel_grid_downsample_filter_node
 )
-
 ################################################################################
 # Install
 install(DIRECTORY launch config
