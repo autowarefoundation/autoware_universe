@@ -228,8 +228,16 @@ void BEVFusionNode::cloudCallback(
   lidar_frame_ = pc_msg_ptr->header.frame_id;
 
   if (sensor_fusion_ && (!extrinsics_available_ || !images_available_ || !intrinsics_available_)) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000,
+      "Sensor fusion mode enabled but missing required data: extrinsics_available=%s, "
+      "images_available=%s, intrinsics_available=%s. Skipping detection",
+      extrinsics_available_ ? "true" : "false",
+      images_available_ ? "true" : "false", 
+      intrinsics_available_ ? "true" : "false");
     return;
   }
+  
 
   if (sensor_fusion_ && !intrinsics_extrinsics_precomputed_) {
     std::vector<sensor_msgs::msg::CameraInfo> camera_info_msgs;
@@ -250,6 +258,9 @@ void BEVFusionNode::cloudCallback(
   const auto objects_sub_count =
     objects_pub_->get_subscription_count() + objects_pub_->get_intra_process_subscription_count();
   if (objects_sub_count < 1) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 10000,
+      "No subscribers found for detection objects topic. Skipping detection.");
     return;
   }
 
@@ -274,6 +285,9 @@ void BEVFusionNode::cloudCallback(
     pc_msg_ptr, image_msgs_, camera_masks_, tf_buffer_, det_boxes3d, proc_timing,
     is_num_voxels_within_range);
   if (!is_success) {
+    RCLCPP_ERROR_THROTTLE(
+      this->get_logger(), *this->get_clock(), 1000,
+      "BEVFusion detection failed. No detection results will be published.");
     return;
   }
 

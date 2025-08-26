@@ -34,9 +34,25 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <opencv2/opencv.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
 
 namespace autoware::bevfusion
 {
+
+// Debug function to save images
+void saveImageToFile(const std::vector<uint8_t>& image_data, int height, int width, const std::string& filename) {
+  try {
+    cv::Mat image(height, width, CV_8UC3, const_cast<uint8_t*>(image_data.data()));
+    // cv::Mat bgr_image;
+    // cv::cvtColor(image, bgr_image, cv::COLOR_RGB2BGR);
+    cv::imwrite(filename, image);
+    RCLCPP_INFO(rclcpp::get_logger("bevfusion"), "Saved image to: %s", filename.c_str());
+  } catch (const std::exception& e) {
+    RCLCPP_ERROR(rclcpp::get_logger("bevfusion"), "Failed to save image %s: %s", filename.c_str(), e.what());
+  }
+}
 
 BEVFusionTRT::BEVFusionTRT(
   const tensorrt_common::TrtCommonConfig & trt_config,
@@ -513,6 +529,7 @@ bool BEVFusionTRT::preProcess(
   }
 
   if (!vg_ptr_->enqueuePointCloud(pc_msg_ptr, tf_buffer)) {
+    RCLCPP_ERROR(rclcpp::get_logger("bevfusion"), "Failed to enqueue point cloud. Skipping detection.");
     return false;
   }
 
@@ -535,6 +552,16 @@ bool BEVFusionTRT::preProcess(
 
     for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
       int start_y = roi_start_y_vector_[camera_id];
+      
+      // Debug: Save input images
+      // if (!image_msgs[camera_id]->data.empty()) {
+      //   std::string filename = "/home/autoware/workspace/input_camera_" + std::to_string(camera_id) + ".png";
+      //   saveImageToFile(image_msgs[camera_id]->data, 
+      //                  image_msgs[camera_id]->height, 
+      //                  image_msgs[camera_id]->width, 
+      //                  filename);
+      // }
+      
       cudaMemcpyAsync(
         image_buffers_d_[camera_id].get(), image_msgs[camera_id]->data.data(),
         config_.raw_image_height_ * config_.raw_image_width_ * 3, cudaMemcpyHostToDevice, stream_);
@@ -614,6 +641,21 @@ bool BEVFusionTRT::preProcess(
 
   for (std::int64_t i = 0; i < config_.num_cameras_; i++) {
     cudaStreamSynchronize(camera_streams_[i]);
+  }
+
+  // Debug: Save ROI images after preprocessing
+  if (config_.sensor_fusion_) {
+    std::vector<uint8_t> roi_host_data(config_.roi_height_ * config_.roi_width_ * 3);
+    for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
+      cudaMemcpy(
+        roi_host_data.data(),
+        &roi_tensor_d_[camera_id * config_.roi_height_ * config_.roi_width_ * 3],
+        config_.roi_height_ * config_.roi_width_ * 3,
+        cudaMemcpyDeviceToHost);
+      
+      // std::string filename = "/home/autoware/workspace/roi_camera_" + std::to_string(camera_id) + ".png";
+      // saveImageToFile(roi_host_data, config_.roi_height_, config_.roi_width_, filename);
+    }
   }
 
   return true;

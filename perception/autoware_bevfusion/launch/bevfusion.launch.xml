@@ -3,7 +3,7 @@
   <arg name="input/pointcloud" default="/sensing/lidar/concatenated/pointcloud"/>
   <arg name="output/objects" default="objects"/>
   <arg name="data_path" default="/home/autoware/workspace/models" description="packages data and artifacts directory path"/>
-  <arg name="model_name" default="bevfusion_camera_lidar">
+  <arg name="model_name" default="bevfusion_lidar">
     <choice value="bevfusion_lidar"/>
     <choice value="bevfusion_camera_lidar"/>
   </arg>

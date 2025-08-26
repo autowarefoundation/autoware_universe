@@ -3,7 +3,7 @@
     # modality
     sensor_fusion: true
     # non-network params
-    max_camera_lidar_delay: 0.12
+    max_camera_lidar_delay: 0.2
     # plugins
     plugins_path: $(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so
     # network
