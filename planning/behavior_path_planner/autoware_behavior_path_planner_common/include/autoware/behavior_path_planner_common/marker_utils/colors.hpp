@@ -79,11 +79,6 @@ inline ColorRGBA white(float a = 0.99)
   return autoware_utils::create_marker_color(1., 1., 1., a);
 }
 
-inline ColorRGBA grey(float a = 0.99)
-{
-  return autoware_utils::create_marker_color(.5, .5, .5, a);
-}
-
 inline std::vector<ColorRGBA> colors_list(float a = 0.99)
 {
   return {red(a),     green(a),         blue(a),       yellow(a),       aqua(a),
