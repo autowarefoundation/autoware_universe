@@ -18,6 +18,7 @@
 #include <iostream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 class TestBenchAssociation : public TestBench
 {
@@ -46,6 +47,25 @@ protected:
   std::unordered_map<std::string, float> car_radius_;
   std::unordered_map<std::string, float> car_angle_;
   std::unordered_map<std::string, std::string> unk_id_to_car_;
+};
+
+class TestBenchAssociationLemniscate : public TestBenchAssociation
+{
+public:
+  explicit TestBenchAssociationLemniscate(const ScenarioParams & params);
+
+  void initializeObjects() override;
+
+private:
+  void addNewCar(
+    const std::string & id, float x, float y, float speed_x = 0.0f, float speed_y = 0.0f) override;
+  void updateCarStates(float dt) override;
+
+  std::pair<float, float> calculateLemniscateVelocity(float param, float offset);
+  std::pair<float, float> calculateLemniscatePosition(float param, float offset);
+  std::unordered_map<std::string, float> car_param_;   // Parameter along lemniscate for each car
+  std::unordered_map<std::string, float> car_offset_;  // Lateral offset for each car
+  float lemniscate_param_a_;                           // Parameter controlling size of "8" shape
 };
 
 #endif  // TEST_BENCH_ASSOCIATION_HPP_

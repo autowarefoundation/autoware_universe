@@ -18,7 +18,6 @@
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
 #include "test_bench.hpp"
 #include "test_bench_association.hpp"
-#include "test_bench_association_lemniscate.hpp"
 #include "test_utils.hpp"
 
 #include <rclcpp/rclcpp.hpp>
@@ -70,6 +69,8 @@ FunctionTimings runIterationsAssociation(
 
   auto processor = std::make_unique<autoware::multi_object_tracker::TrackerProcessor>(
     processor_config, associator_config, input_channels_config);
+  // TestBenchAssociation by default.
+  // Or use TestBenchAssociationLemniscate for more complex association scenarios
   TestBenchAssociation simulator(config);
   simulator.initializeObjects();
   // Performance tracking for individual functions
