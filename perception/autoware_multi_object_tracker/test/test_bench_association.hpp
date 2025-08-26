@@ -28,7 +28,7 @@ public:
   autoware::multi_object_tracker::types::DynamicObjectList generateDetections(
     const rclcpp::Time & stamp) override;
 
-private:
+protected:
   void addNewCar(
     const std::string & id, float x, float y, float speed_x = 0.0f, float speed_y = 0.0f) override;
   void addNewUnknownNearCar(const std::string & car_id, const std::string & unk_id);

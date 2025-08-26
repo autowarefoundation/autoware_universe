@@ -18,6 +18,7 @@
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
 #include "test_bench.hpp"
 #include "test_bench_association.hpp"
+#include "test_bench_association_lemniscate.hpp"
 #include "test_utils.hpp"
 
 #include <rclcpp/rclcpp.hpp>
