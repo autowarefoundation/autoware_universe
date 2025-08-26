@@ -47,6 +47,7 @@
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
+#include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -78,6 +79,7 @@ using autoware_perception_msgs::msg::TrackedObjects;
 using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
+using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 using HADMapBin = autoware_map_msgs::msg::LaneletMapBin;
@@ -219,6 +221,12 @@ public:
   std::vector<float> do_inference_trt(InputDataMap & input_data_map);
 
   /**
+   * @brief Get turn indicator logit from the last inference.
+   * @return Vector containing turn indicator logit.
+   */
+  std::vector<float> get_turn_indicator_logit() const;
+
+  /**
    * @brief Callback for dynamic parameter updates.
    * @param parameters Updated parameters.
    * @return Result of parameter update.
@@ -296,6 +304,7 @@ public:
   rclcpp::Publisher<PredictedObjects>::SharedPtr pub_objects_{nullptr};
   rclcpp::Publisher<MarkerArray>::SharedPtr pub_lane_marker_{nullptr};
   rclcpp::Publisher<MarkerArray>::SharedPtr pub_route_marker_{nullptr};
+  rclcpp::Publisher<TurnIndicatorsCommand>::SharedPtr pub_turn_indicators_{nullptr};
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
   autoware_utils::InterProcessPollingSubscriber<Odometry> sub_current_odometry_{
     this, "~/input/odometry"};
