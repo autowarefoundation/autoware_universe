@@ -67,7 +67,7 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
     static_cast<int>(declare_parameter<int64_t>("secondary_noise_threshold"));
   visibility_estimation_max_secondary_voxel_count_ = static_cast<int>(
     declare_parameter<int64_t>("visibility_estimation_max_secondary_voxel_count", 0));
-  visualization_estimation_only_ = declare_parameter<bool>("visualization_estimation_only", false);
+  visibility_estimation_only_ = declare_parameter<bool>("visibility_estimation_only", false);
   publish_noise_cloud_ = declare_parameter<bool>("publish_noise_cloud", false);
 
   auto primary_return_types_param = declare_parameter<std::vector<int64_t>>("primary_return_types");
@@ -120,8 +120,7 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
     "Polar Voxel Outlier Filter initialized - supports PointXYZIRC and PointXYZIRCAEDT with %s "
     "filtering%s",
     use_return_type_classification_ ? "advanced two-criteria" : "simple occupancy",
-    visualization_estimation_only_ ? " (visualization estimation only - no point cloud output)"
-                                   : "");
+    visibility_estimation_only_ ? " (visibility estimation only - no point cloud output)" : "");
 }
 
 void PolarVoxelOutlierFilterComponent::filter(
@@ -159,7 +158,7 @@ void PolarVoxelOutlierFilterComponent::filter(
   // Phase 6: Conditionally publish noise cloud
   conditionally_publish_noise_cloud(input, valid_points_mask);
 
-  // Phase 7: Publish diagnostics (always run for visualization estimation)
+  // Phase 7: Publish diagnostics (always run for visibility estimation)
   publish_diagnostics(voxel_counts, valid_points_mask);
 }
 
@@ -569,8 +568,8 @@ void PolarVoxelOutlierFilterComponent::update_parameter(const rclcpp::Parameter 
      [this](const auto & p) {
        visibility_estimation_max_secondary_voxel_count_ = static_cast<int>(p.as_int());
      }},
-    {"visualization_estimation_only",
-     [this](const auto & p) { visualization_estimation_only_ = p.as_bool(); }},
+    {"visibility_estimation_only",
+     [this](const auto & p) { visibility_estimation_only_ = p.as_bool(); }},
     {"min_radius_m", [this](const auto & p) { min_radius_m_ = p.as_double(); }},
     {"max_radius_m", [this](const auto & p) { max_radius_m_ = p.as_double(); }},
     {"visibility_estimation_max_range_m",
@@ -710,7 +709,7 @@ rcl_interfaces::msg::SetParametersResult PolarVoxelOutlierFilterComponent::param
     "filter_secondary_returns",
     "secondary_noise_threshold",
     "visibility_estimation_max_secondary_voxel_count",
-    "visualization_estimation_only",
+    "visibility_estimation_only",
     "primary_return_types",
     "publish_noise_cloud",
     "visibility_error_threshold",
@@ -815,61 +814,78 @@ void PolarVoxelOutlierFilterComponent::on_filter_ratio_check(
   stat.add("Error Threshold", filter_ratio_error_threshold_);
   stat.add("Warning Threshold", filter_ratio_warn_threshold_);
   stat.add("Filtering Mode", use_return_type_classification_ ? "Advanced" : "Simple");
-  stat.add("Visualization Only", visualization_estimation_only_ ? "Yes" : "No");
+  stat.add("Visibility Only", visibility_estimation_only_ ? "Yes" : "No");
 }
 
 void PolarVoxelOutlierFilterComponent::validate_filter_inputs(
   const PointCloud2ConstPtr & input, const IndicesPtr & indices)
 {
+  validate_indices(indices);
+  validate_input_cloud(input);
+  validate_required_fields(input);
+}
+
+void PolarVoxelOutlierFilterComponent::validate_indices(const IndicesPtr & indices)
+{
   if (indices) {
     RCLCPP_WARN(get_logger(), "Indices are not supported and will be ignored");
   }
+}
 
+void PolarVoxelOutlierFilterComponent::validate_input_cloud(const PointCloud2ConstPtr & input)
+{
   if (!input) {
     RCLCPP_ERROR(get_logger(), "Input point cloud is null");
     throw std::invalid_argument("Input point cloud is null");
   }
+}
 
-  // Check if return_type field exists when needed
-  if (use_return_type_classification_) {
-    bool has_return_type = false;
-    for (const auto & field : input->fields) {
-      if (field.name == "return_type") {
-        has_return_type = true;
-        break;
-      }
-    }
+void PolarVoxelOutlierFilterComponent::validate_required_fields(const PointCloud2ConstPtr & input)
+{
+  validate_return_type_field(input);
+  validate_intensity_field(input);
+}
 
-    if (!has_return_type) {
-      RCLCPP_ERROR(
-        get_logger(),
-        "Advanced mode (use_return_type_classification=true) requires 'return_type' field. "
-        "Set use_return_type_classification=false for simple mode or ensure input has return_type "
-        "field.");
-      throw std::invalid_argument("Advanced mode requires return_type field");
-    }
+void PolarVoxelOutlierFilterComponent::validate_return_type_field(const PointCloud2ConstPtr & input)
+{
+  if (!use_return_type_classification_) {
+    return;
   }
 
-  // Check if intensity field exists
-  bool has_intensity = false;
-  for (const auto & field : input->fields) {
-    if (field.name == "intensity") {
-      has_intensity = true;
-      break;
-    }
+  if (!has_field(input, "return_type")) {
+    RCLCPP_ERROR(
+      get_logger(),
+      "Advanced mode (use_return_type_classification=true) requires 'return_type' field. "
+      "Set use_return_type_classification=false for simple mode or ensure input has return_type "
+      "field.");
+    throw std::invalid_argument("Advanced mode requires return_type field");
   }
+}
 
-  if (!has_intensity) {
+void PolarVoxelOutlierFilterComponent::validate_intensity_field(const PointCloud2ConstPtr & input)
+{
+  if (!has_field(input, "intensity")) {
     RCLCPP_ERROR(get_logger(), "Input point cloud must have 'intensity' field");
     throw std::invalid_argument("Input point cloud must have intensity field");
   }
+}
+
+bool PolarVoxelOutlierFilterComponent::has_field(
+  const PointCloud2ConstPtr & input, const std::string & field_name)
+{
+  for (const auto & field : input->fields) {
+    if (field.name == field_name) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void PolarVoxelOutlierFilterComponent::create_output(
   const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask,
   PointCloud2 & output)
 {
-  if (visualization_estimation_only_) {
+  if (visibility_estimation_only_) {
     create_empty_output(input, output);
   } else {
     create_filtered_output(input, valid_points_mask, output);

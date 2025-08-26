@@ -11,7 +11,7 @@ The Polar Voxel Outlier Filter is a point cloud outlier filtering algorithm that
 - **Two-criteria filtering** using primary and secondary return analysis (when enabled)
 - **Range-aware visibility estimation** for improved diagnostic accuracy
 - **Comprehensive diagnostics** with filter ratio and visibility metrics
-- **Visualization estimation only mode** for diagnostic-only operation without point cloud output
+- **Visibility estimation only mode** for diagnostic-only operation without point cloud output
 - **Optional debug support** with noise point cloud publishing for analysis
 
 ## Purpose
@@ -20,7 +20,7 @@ The purpose is to remove point cloud noise such as insects and rain using a pola
 
 1. **Simple Mode**: Basic occupancy filtering (any return type counts equally)
 2. **Advanced Mode**: Two-criteria filtering with return type classification for enhanced accuracy
-3. **Visualization Estimation Only Mode**: Diagnostic-only operation for monitoring without data processing overhead
+3. **Visibility Estimation Only Mode**: Diagnostic-only operation for monitoring without data processing overhead
 
 The advanced mode concept is that when two returns exist, the first return is more likely to represent a region of noise (rain, fog, smoke, and so on).
 
@@ -127,7 +127,7 @@ The visibility metric is calculated only for voxels within the configured range:
 
 The filter uses different algorithms based on the `use_return_type_classification` parameter and can operate in two output modes:
 
-#### Normal Mode (`visualization_estimation_only=false`)
+#### Normal Mode (`visibility_estimation_only=false`)
 
 1. **Format Detection**: Automatically detects PointXYZIRC vs PointXYZIRCAEDT
 2. **Coordinate Processing**: Uses appropriate coordinate source
@@ -137,7 +137,7 @@ The filter uses different algorithms based on the `use_return_type_classificatio
 6. **Diagnostics**: Publishes filter ratio and visibility metrics
 7. **Optional Noise Cloud**: Publishes filtered-out points if enabled
 
-#### Visualization Estimation Only Mode (`visualization_estimation_only=true`)
+#### Visibility Estimation Only Mode (`visibility_estimation_only=true`)
 
 1. **Format Detection**: Same as normal mode
 2. **Coordinate Processing**: Same as normal mode
@@ -147,7 +147,7 @@ The filter uses different algorithms based on the `use_return_type_classificatio
 6. **Diagnostics**: **ALWAYS PUBLISHED** - full visibility and filter ratio metrics
 7. **Noise Cloud**: **SKIPPED** - no noise cloud generation regardless of `publish_noise_cloud` setting
 
-**Use Cases for Visualization Estimation Only Mode:**
+**Use Cases for Visibility Estimation Only Mode:**
 
 - **Environmental monitoring**: Track visibility conditions without processing overhead
 - **Sensor health monitoring**: Monitor LiDAR performance without data pipeline impact
@@ -162,7 +162,7 @@ The filter uses different algorithms based on the `use_return_type_classificatio
    - PointXYZIRCAEDT: Uses pre-computed polar coordinates
 3. **Voxel Binning**: Points are grouped into polar voxels
 4. **Simple Thresholding**: Voxels with ≥ `voxel_points_threshold` points (any return type) are kept
-5. **Output**: Filtered point cloud with basic noise removal (unless visualization-only mode)
+5. **Output**: Filtered point cloud with basic noise removal (unless visibility-only mode)
 
 #### Advanced Mode (`use_return_type_classification=true`)
 
@@ -178,7 +178,7 @@ The filter uses different algorithms based on the `use_return_type_classificatio
    - **Both criteria must be satisfied** for a voxel to be kept
 6. **Range-Aware Visibility**: Visibility calculation limited to voxels within `visibility_estimation_max_range_m` and secondary voxel count limited by `visibility_estimation_max_secondary_voxel_count`
 7. **Secondary Return Filtering**: Optional exclusion of secondary returns from output
-8. **Output**: Filtered point cloud with enhanced noise removal (unless visualization-only mode)
+8. **Output**: Filtered point cloud with enhanced noise removal (unless visibility-only mode)
 
 ### Advanced Two-Criteria Filtering
 
@@ -194,7 +194,7 @@ When enabled, for each voxel both criteria must be satisfied:
 - **Format-Optimized Processing**: Automatic selection of optimal coordinate source
 - **Range-Aware Diagnostics**: Visibility estimation limited to reliable sensor range
 - **Secondary Voxel Limiting**: Configurable limit on secondary voxels for visibility estimation
-- **Visualization-Only Mode**: Diagnostic operation without point cloud output
+- **Visibility-Only Mode**: Diagnostic operation without point cloud output
 - **Comprehensive Diagnostics**: Mode-specific filter ratio and visibility metrics
 - **Debug Support**: Optional noise cloud publishing for analysis and tuning
 
@@ -221,7 +221,7 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 | ----------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `~/polar_voxel_outlier_filter/debug/filter_ratio`     | `autoware_internal_debug_msgs::msg::Float32Stamped` | Ratio of output to input points (always published)                                          |
 | `~/polar_voxel_outlier_filter/debug/visibility`       | `autoware_internal_debug_msgs::msg::Float32Stamped` | Ratio of voxels passing secondary return threshold test (advanced mode only, range-limited) |
-| `~/polar_voxel_outlier_filter/debug/pointcloud_noise` | `sensor_msgs::msg::PointCloud2`                     | Filtered-out points for debugging (when enabled and not in visualization-only mode)         |
+| `~/polar_voxel_outlier_filter/debug/pointcloud_noise` | `sensor_msgs::msg::PointCloud2`                     | Filtered-out points for debugging (when enabled and not in visibility-only mode)            |
 
 ## Parameters
 
@@ -254,10 +254,10 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 
 ### Performance and Debug Control
 
-| Parameter                       | Type | Description                                                                         | Default |
-| ------------------------------- | ---- | ----------------------------------------------------------------------------------- | ------- |
-| `visualization_estimation_only` | bool | Run filter for visualization estimation only (no point cloud output)                | false   |
-| `publish_noise_cloud`           | bool | Generate and publish noise cloud for debugging (ignored in visualization-only mode) | true    |
+| Parameter                    | Type | Description                                                                      | Default |
+| ---------------------------- | ---- | -------------------------------------------------------------------------------- | ------- |
+| `visibility_estimation_only` | bool | Run filter for visibility estimation only (no point cloud output)                | false   |
+| `publish_noise_cloud`        | bool | Generate and publish noise cloud for debugging (ignored in visibility-only mode) | true    |
 
 ### Diagnostics Parameters
 
@@ -276,17 +276,17 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 - **visibility_estimation_max_secondary_voxel_count**: Only used when `use_return_type_classification=true`, limits secondary voxel counting in visibility calculations
 - **primary_return_types**: Only used when `use_return_type_classification=true`
 - **visibility_estimation_max_range_m**: Limits visibility calculation to reliable sensor range (advanced mode only)
-- **visualization_estimation_only**: When `true`, skips point cloud output generation but still calculates and publishes diagnostics
-- **publish_noise_cloud**: When `false`, improves performance by skipping noise cloud generation (ignored when `visualization_estimation_only=true`)
+- **visibility_estimation_only**: When `true`, skips point cloud output generation but still calculates and publishes diagnostics
+- **publish_noise_cloud**: When `false`, improves performance by skipping noise cloud generation (ignored when `visibility_estimation_only=true`)
 - **Diagnostics**: Visibility is only published when return type classification is enabled
 
 ## Configuration Examples
 
-### Visualization-Only Configuration
+### Visibility-Only Configuration
 
 ```yaml
 # Run filter for diagnostics only - no point cloud processing
-visualization_estimation_only: true
+visibility_estimation_only: true
 use_return_type_classification: true
 voxel_points_threshold: 2
 secondary_noise_threshold: 4
@@ -296,7 +296,7 @@ primary_return_types: [1, 6, 8, 10]
 radial_resolution_m: 0.5
 azimuth_resolution_rad: 0.0175
 elevation_resolution_rad: 0.0175
-# publish_noise_cloud is ignored in visualization-only mode
+# publish_noise_cloud is ignored in visibility-only mode
 ```
 
 ### Simple Mode Configuration
@@ -308,7 +308,7 @@ voxel_points_threshold: 2 # Total points threshold
 radial_resolution_m: 0.5
 azimuth_resolution_rad: 0.0175 # ~1 degree
 elevation_resolution_rad: 0.0175 # ~1 degree
-visualization_estimation_only: false # Normal filtering mode
+visibility_estimation_only: false # Normal filtering mode
 publish_noise_cloud: true # Enable for debugging
 ```
 
@@ -326,7 +326,7 @@ radial_resolution_m: 0.5
 azimuth_resolution_rad: 0.0175 # ~1 degree
 elevation_resolution_rad: 0.0175 # ~1 degree
 visibility_estimation_max_range_m: 20.0 # Range limit for visibility calculation
-visualization_estimation_only: false # Normal filtering mode
+visibility_estimation_only: false # Normal filtering mode
 publish_noise_cloud: true
 ```
 
@@ -337,7 +337,7 @@ publish_noise_cloud: true
 use_return_type_classification: true
 visibility_estimation_max_range_m: 20.0 # Configured range for urban environments
 visibility_estimation_max_secondary_voxel_count: 500 # Allow secondary voxels in visibility calculation
-visualization_estimation_only: false # Normal filtering with debug output
+visibility_estimation_only: false # Normal filtering with debug output
 publish_noise_cloud: true # Enable noise cloud for analysis
 filter_ratio_error_threshold: 0.5
 filter_ratio_warn_threshold: 0.7
@@ -353,14 +353,14 @@ visibility_estimation_max_range_m: 200.0
 visibility_estimation_max_secondary_voxel_count: 500
 radial_resolution_m: 0.5
 voxel_points_threshold: 2
-visualization_estimation_only: false
+visibility_estimation_only: false
 
 # Urban short-range LiDAR
 visibility_estimation_max_range_m: 20.0
 visibility_estimation_max_secondary_voxel_count: 500
 radial_resolution_m: 0.5
 voxel_points_threshold: 2
-visualization_estimation_only: false
+visibility_estimation_only: false
 
 # High-resolution near-field processing
 visibility_estimation_max_range_m: 20.0
@@ -368,20 +368,20 @@ visibility_estimation_max_secondary_voxel_count: 500
 radial_resolution_m: 0.5
 azimuth_resolution_rad: 0.0175 # ~1 degree
 elevation_resolution_rad: 0.0175 # ~1 degree
-visualization_estimation_only: false
+visibility_estimation_only: false
 
 # Environmental monitoring only
 visibility_estimation_max_range_m: 50.0
 visibility_estimation_max_secondary_voxel_count: 500
 radial_resolution_m: 1.0 # Coarser resolution for performance
-visualization_estimation_only: true # Diagnostics only
+visibility_estimation_only: true # Diagnostics only
 ```
 
 ## Assumptions / Known limits
 
 - **Simple mode**: Works with any point cloud format, basic occupancy filtering only
 - **Advanced mode**: Requires return_type field for enhanced filtering
-- **Visualization-only mode**: Runs full filtering algorithm but produces no point cloud output
+- **Visibility-only mode**: Runs full filtering algorithm but produces no point cloud output
 - **Supported formats**: PointXYZIRC and PointXYZIRCAEDT only
 - **Finite coordinates required**: Automatically filters out NaN/Inf points
 - **Return type dependency**: Advanced filtering effectiveness depends on accurate return type classification
@@ -411,7 +411,7 @@ The filter includes robust error handling:
 #   <param name="radial_resolution_m" value="1.0"/>
 #   <param name="azimuth_resolution_rad" value="0.0349"/>
 #   <param name="voxel_points_threshold" value="3"/>
-#   <param name="visualization_estimation_only" value="false"/>
+#   <param name="visibility_estimation_only" value="false"/>
 # </node>
 
 # Example launch file integration for advanced mode:
@@ -424,13 +424,13 @@ The filter includes robust error handling:
 #   <param name="visibility_estimation_max_secondary_voxel_count" value="500"/>
 #   <param name="primary_return_types" value="[1,6,8,10]"/>
 #   <param name="visibility_estimation_max_range_m" value="20.0"/>
-#   <param name="visualization_estimation_only" value="false"/>
+#   <param name="visibility_estimation_only" value="false"/>
 # </node>
 
-# Example launch file integration for visualization-only mode:
+# Example launch file integration for visibility-only mode:
 # <node pkg="autoware_pointcloud_preprocessor" exec="polar_voxel_outlier_filter_node" name="polar_voxel_filter">
 #   <param name="use_return_type_classification" value="true"/>
-#   <param name="visualization_estimation_only" value="true"/>
+#   <param name="visibility_estimation_only" value="true"/>
 #   <param name="visibility_estimation_max_range_m" value="20.0"/>
 #   <param name="visibility_estimation_max_secondary_voxel_count" value="500"/>
 # </node>
@@ -441,13 +441,13 @@ The filter includes robust error handling:
 #### Input/Output
 
 - **Input**: `/input` (sensor_msgs/PointCloud2) - Must have return_type field for advanced mode
-- **Output**: `/output` (sensor_msgs/PointCloud2) - Empty in visualization-only mode
+- **Output**: `/output` (sensor_msgs/PointCloud2) - Empty in visibility-only mode
 
 #### Debug Topics
 
 - **Filter Ratio**: `~/polar_voxel_outlier_filter/debug/filter_ratio` (autoware_internal_debug_msgs/Float32Stamped) - Always published
 - **Visibility**: `~/polar_voxel_outlier_filter/debug/visibility` (autoware_internal_debug_msgs/Float32Stamped) - Advanced mode only, range-limited
-- **Noise Cloud**: `~/polar_voxel_outlier_filter/debug/pointcloud_noise` (sensor_msgs/PointCloud2) - Not published in visualization-only mode
+- **Noise Cloud**: `~/polar_voxel_outlier_filter/debug/pointcloud_noise` (sensor_msgs/PointCloud2) - Not published in visibility-only mode
 
 ### Programmatic Usage
 
@@ -460,7 +460,7 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 // The filter automatically detects point cloud format and applies filtering based on configuration:
 // - Simple mode (use_return_type_classification=false): Basic occupancy filtering
 // - Advanced mode (use_return_type_classification=true): Two-criteria filtering with return type analysis
-// - Visualization-only mode (visualization_estimation_only=true): Diagnostics without point cloud output
+// - Visibility-only mode (visibility_estimation_only=true): Diagnostics without point cloud output
 // - Both modes support PointXYZIRC and PointXYZIRCAEDT formats
 // - Advanced mode uses range-limited visibility estimation with configurable secondary voxel limiting
 ```
@@ -474,7 +474,7 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 
 ### Performance Impact by Mode
 
-#### **Visualization Estimation Only Mode**
+#### **Visibility Estimation Only Mode**
 
 - **Computational**: Runs full filtering algorithm for accurate diagnostics
 - **Memory**: Minimal memory usage - no output point cloud allocation
@@ -501,7 +501,7 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 
 ### Memory Usage
 
-- **Visualization-only mode**: Significantly reduced memory footprint
+- **Visibility-only mode**: Significantly reduced memory footprint
 - **Hash-based voxel storage**: Efficiently handles sparse voxel occupancy
 - **Single-pass processing**: Minimal memory overhead regardless of mode
 - **Mode-specific outputs**: Memory allocation optimized per mode
@@ -509,10 +509,10 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 
 ### Optimization Tips
 
-1. **Use visualization estimation only mode** for pure monitoring applications
+1. **Use visibility estimation only mode** for pure monitoring applications
 2. **Choose appropriate mode** based on requirements:
    - Normal mode for data processing needs
-   - Visualization-only mode for environmental/sensor monitoring
+   - Visibility-only mode for environmental/sensor monitoring
 3. **Use PointXYZIRCAEDT format** when available for optimal performance
 4. **Combine modes dynamically** - switch at runtime based on operational needs
 5. **Tune voxel resolutions** based on your use case
@@ -528,7 +528,7 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 - **Published for all modes**: Overall filtering effectiveness (output/input ratio)
 - **Configurable thresholds**: Error/warning levels for automated monitoring
 - **Real-time feedback**: Immediate filtering performance assessment
-- **Visualization-only mode**: Shows theoretical filter effectiveness without actual filtering
+- **Visibility-only mode**: Shows theoretical filter effectiveness without actual filtering
 
 ### Visibility Diagnostics
 
@@ -538,18 +538,18 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 - **Voxel-based metric**: Percentage of range-limited voxels passing secondary threshold test
 - **Environmental indicator**: Useful for detecting sensor conditions within reliable range
 - **Diagnostic context**: Status messages include the configured visibility estimation range and secondary voxel limits
-- **Available in all modes**: Published even in visualization-only mode for monitoring
+- **Available in all modes**: Published even in visibility-only mode for monitoring
 
 ### Debug Features
 
-- **Noise point cloud**: All filtered-out points for analysis (when enabled and not in visualization-only mode)
+- **Noise point cloud**: All filtered-out points for analysis (when enabled and not in visibility-only mode)
 - **Runtime parameter updates**: Dynamic threshold and range adjustment
 - **Mode-specific logging**: Debug messages tailored to filtering mode
 - **Range-aware diagnostics**: Visibility calculations clearly indicate the estimation range
 
 ## Use Cases and Configuration Guidelines
 
-### Visualization Estimation Only Mode Use Cases
+### Visibility Estimation Only Mode Use Cases
 
 1. **Environmental Monitoring**: Track atmospheric conditions without processing overhead
 2. **Sensor Health Monitoring**: Monitor LiDAR performance and visibility conditions
@@ -575,7 +575,7 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 
 ### Parameter Tuning Guidelines
 
-#### Visualization Estimation Only Mode Configuration
+#### Visibility Estimation Only Mode Configuration
 
 - **For environmental monitoring**: Enable advanced mode with appropriate visibility range
 - **For sensor monitoring**: Use return type classification for detailed analysis
@@ -600,7 +600,7 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 
 #### Mode Selection Guidelines
 
-- **Choose visualization-only mode when**:
+- **Choose visibility-only mode when**:
 
   - Only diagnostic information is needed
   - Computational resources are limited
@@ -622,7 +622,7 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 
 ## Comparison Table
 
-| Aspect                   | Simple Mode     | Advanced Mode                   | Visualization-Only Mode         |
+| Aspect                   | Simple Mode     | Advanced Mode                   | Visibility-Only Mode            |
 | ------------------------ | --------------- | ------------------------------- | ------------------------------- |
 | **Filtering Method**     | Basic occupancy | Two-criteria with return type   | Same as selected mode           |
 | **Return Type Required** | No              | Yes                             | Depends on mode selected        |
@@ -637,13 +637,13 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 
 ## Migration Guide
 
-### Enabling Visualization Estimation Only Mode
+### Enabling Visibility Estimation Only Mode
 
 To enable diagnostic-only operation:
 
-1. **Set parameter**: `visualization_estimation_only: true`
+1. **Set parameter**: `visibility_estimation_only: true`
 2. **Configure diagnostics**: Ensure proper visibility and filter ratio thresholds
-3. **Verify mode**: Check logs for "visualization estimation only" confirmation
+3. **Verify mode**: Check logs for "visibility estimation only" confirmation
 4. **Monitor diagnostics**: Use published metrics for monitoring
 5. **No output expectation**: Downstream nodes should handle empty point clouds
 
@@ -652,11 +652,11 @@ To enable diagnostic-only operation:
 The mode can be changed at runtime:
 
 ```bash
-# Switch to visualization-only mode
-ros2 param set /polar_voxel_filter visualization_estimation_only true
+# Switch to visibility-only mode
+ros2 param set /polar_voxel_filter visibility_estimation_only true
 
 # Switch back to normal mode
-ros2 param set /polar_voxel_filter visualization_estimation_only false
+ros2 param set /polar_voxel_filter visibility_estimation_only false
 ```
 
 ### Enabling Advanced Mode
@@ -682,9 +682,9 @@ To use simple mode for basic filtering:
 
 ### Compatibility Considerations
 
-- **Output interface**: Empty point clouds maintain topic compatibility in visualization-only mode
+- **Output interface**: Empty point clouds maintain topic compatibility in visibility-only mode
 - **Diagnostic topics**: Same diagnostic information regardless of mode
-- **Parameter compatibility**: All filtering parameters work in both normal and visualization-only modes
+- **Parameter compatibility**: All filtering parameters work in both normal and visibility-only modes
 - **Performance impact**: Mode changes take effect on next filter call
 
 ### Updating Existing Configurations
@@ -693,7 +693,7 @@ For systems already using advanced mode, add the new parameters:
 
 ```yaml
 # Add to existing configuration:
-visualization_estimation_only: false # Default for normal operation
+visibility_estimation_only: false # Default for normal operation
 visibility_estimation_max_secondary_voxel_count: 500 # Updated default
 primary_return_types: [1, 6, 8, 10] # Updated to include return type 8
 ```

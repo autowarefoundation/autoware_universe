@@ -27,6 +27,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -252,7 +253,7 @@ protected:
   std::vector<int> primary_return_types_;
   bool publish_noise_cloud_{};
   int visibility_estimation_max_secondary_voxel_count_{};
-  bool visualization_estimation_only_{};
+  bool visibility_estimation_only_{};
 
   // Diagnostic thresholds
   double visibility_error_threshold_{};
@@ -299,6 +300,15 @@ protected:
   bool is_voxel_in_valid_set(
     const PolarVoxelIndex & voxel_idx, const VoxelIndexSet & valid_voxels) const;
   bool passes_secondary_return_filter(bool is_primary) const;
+
+private:
+  // Validation helper methods
+  void validate_indices(const IndicesPtr & indices);
+  void validate_input_cloud(const PointCloud2ConstPtr & input);
+  void validate_required_fields(const PointCloud2ConstPtr & input);
+  void validate_return_type_field(const PointCloud2ConstPtr & input);
+  void validate_intensity_field(const PointCloud2ConstPtr & input);
+  bool has_field(const PointCloud2ConstPtr & input, const std::string & field_name);
 };
 
 }  // namespace autoware::pointcloud_preprocessor

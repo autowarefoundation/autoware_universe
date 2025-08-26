@@ -18,7 +18,7 @@
     primary_return_types: [1, 6, 8, 10]          # Return types considered as primary returns (all others are secondary)
 
     # Performance and debug control
-    visualization_estimation_only: false         # Run filter for visualization estimation only (no point cloud output)
+    visibility_estimation_only: false           # Run filter for visibility estimation only (no point cloud output)
     publish_noise_cloud: true                    # Generate and publish noise cloud for debugging (true for development)
 
     # Diagnostic thresholds
