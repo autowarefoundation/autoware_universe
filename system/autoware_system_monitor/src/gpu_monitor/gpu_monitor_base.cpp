@@ -57,7 +57,7 @@ GPUMonitorBase::GPUMonitorBase(const std::string & node_name, const rclcpp::Node
 
 GPUMonitorBase::~GPUMonitorBase()
 {
-  // Base class destructor can't call virtual functions defined by its derived classes. 
+  // Base class destructor can't call virtual functions defined by its derived classes.
   // The CI workflow "cppcheck_differencial" fails without the explicit qualification.
   GPUMonitorBase::shut_down();
 }
