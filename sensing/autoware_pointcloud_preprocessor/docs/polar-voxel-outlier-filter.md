@@ -239,6 +239,7 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 | `voxel_points_threshold`                          | int    | Minimum points required per voxel                       | 2              |
 | `min_radius_m`                                    | double | Minimum radius to consider (meters)                     | 0.5            |
 | `max_radius_m`                                    | double | Maximum radius to consider (meters)                     | 300.0          |
+| `intensity_threshold`                             | int    | Maximum intensity threshold for secondary returns       | 2              |
 | `visibility_estimation_max_range_m`               | double | Maximum range for visibility estimation (meters)        | 20.0           |
 | `visibility_estimation_max_secondary_voxel_count` | int    | Maximum secondary voxel count for visibility estimation | 500            |
 
@@ -600,6 +601,7 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 #### Mode Selection Guidelines
 
 - **Choose visualization-only mode when**:
+
   - Only diagnostic information is needed
   - Computational resources are limited
   - Running parallel monitoring alongside main processing

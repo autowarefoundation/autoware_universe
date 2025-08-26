@@ -42,6 +42,13 @@
           "default": "300.0",
           "minimum": 0
         },
+        "intensity_threshold": {
+          "type": "integer",
+          "description": "the maximum intensity threshold for secondary returns (primary returns are not affected)",
+          "default": "2",
+          "minimum": 0,
+          "maximum": 255
+        },
         "visibility_estimation_max_range_m": {
           "type": "number",
           "description": "the maximum range to consider for visibility estimation [m] (limits visibility calculations to reliable sensor range)",
@@ -126,6 +133,7 @@
         "voxel_points_threshold",
         "min_radius_m",
         "max_radius_m",
+        "intensity_threshold",
         "visibility_estimation_max_range_m",
         "use_return_type_classification",
         "filter_secondary_returns",

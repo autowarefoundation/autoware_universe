@@ -74,10 +74,14 @@ struct PointVoxelInfo
 {
   PolarVoxelIndex voxel_idx;
   bool is_primary{false};
+  bool meets_intensity_threshold{false};
 
   PointVoxelInfo() = default;
-  explicit PointVoxelInfo(const PolarVoxelIndex & idx, bool primary)
-  : voxel_idx(idx), is_primary(primary)
+  explicit PointVoxelInfo(
+    const PolarVoxelIndex & voxel_idx, bool is_primary, bool meets_intensity_threshold)
+  : voxel_idx(voxel_idx),
+    is_primary(is_primary),
+    meets_intensity_threshold(meets_intensity_threshold)
   {
   }
 };
@@ -163,43 +167,38 @@ protected:
 
   // Point processing helper methods
   void process_polar_points(
-    const PointCloud2ConstPtr & input, PointVoxelInfoVector & point_voxel_info,
-    bool has_return_type, size_t point_count);
+    const PointCloud2ConstPtr & input, PointVoxelInfoVector & point_voxel_info, size_t point_count);
 
   void process_cartesian_points(
-    const PointCloud2ConstPtr & input, PointVoxelInfoVector & point_voxel_info,
-    bool has_return_type, size_t point_count);
+    const PointCloud2ConstPtr & input, PointVoxelInfoVector & point_voxel_info, size_t point_count);
 
   std::optional<PointVoxelInfo> process_polar_point(
     sensor_msgs::PointCloud2ConstIterator<float> & iter_distance,
     sensor_msgs::PointCloud2ConstIterator<float> & iter_azimuth,
     sensor_msgs::PointCloud2ConstIterator<float> & iter_elevation,
-    sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_return_type, bool has_return_type) const;
+    sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_intensity,
+    sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_return_type) const;
 
   std::optional<PointVoxelInfo> process_cartesian_point(
     sensor_msgs::PointCloud2ConstIterator<float> & iter_x,
     sensor_msgs::PointCloud2ConstIterator<float> & iter_y,
     sensor_msgs::PointCloud2ConstIterator<float> & iter_z,
-    sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_return_type, bool has_return_type) const;
+    sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_intensity,
+    sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_return_type) const;
 
-  // ADD the missing template function declaration:
   template <typename Predicate>
   VoxelIndexSet determine_valid_voxels_generic(
     const VoxelPointCountMap & voxel_counts, Predicate predicate) const;
 
-  // KEEP these helper functions (already using references):
-  std::optional<PolarCoordinate> extract_precomputed_polar_coordinates(
+  std::optional<PolarCoordinate> extract_polar_from_dae(
     sensor_msgs::PointCloud2ConstIterator<float> & iter_distance,
     sensor_msgs::PointCloud2ConstIterator<float> & iter_azimuth,
     sensor_msgs::PointCloud2ConstIterator<float> & iter_elevation) const;
 
-  std::optional<PolarCoordinate> extract_computed_polar_coordinates(
+  std::optional<PolarCoordinate> extract_polar_from_xyz(
     sensor_msgs::PointCloud2ConstIterator<float> & iter_x,
     sensor_msgs::PointCloud2ConstIterator<float> & iter_y,
     sensor_msgs::PointCloud2ConstIterator<float> & iter_z) const;
-
-  uint8_t extract_return_type(
-    bool has_return_type, sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_return_type) const;
 
   void advance_polar_iterators(
     sensor_msgs::PointCloud2ConstIterator<float> & iter_distance,
@@ -211,7 +210,8 @@ protected:
     sensor_msgs::PointCloud2ConstIterator<float> & iter_y,
     sensor_msgs::PointCloud2ConstIterator<float> & iter_z) const;
 
-  void advance_return_type_iterator(
+  void advance_intensity_return_iterators(
+    sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_intensity,
     sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_return_type) const;
 
   void update_parameter(const rclcpp::Parameter & param);
@@ -227,9 +227,9 @@ protected:
   PolarVoxelIndex polar_to_polar_voxel(const PolarCoordinate & polar) const;
 
   // Return type and validation methods
-  bool is_primary_return_type(uint8_t return_type) const;
+  bool is_point_primary(uint8_t return_type) const;
   bool is_valid_polar_point(const PolarCoordinate & polar) const;
-  static bool has_return_type_field(const PointCloud2ConstPtr & input);
+  bool meets_intensity_threshold(uint8_t intensity) const;
   static bool has_polar_coordinates(const PointCloud2ConstPtr & input);
 
   // Parameter callback and diagnostics
@@ -248,6 +248,7 @@ protected:
   bool use_return_type_classification_{};
   bool enable_secondary_return_filtering_{};
   int secondary_noise_threshold_{};
+  int intensity_threshold_{};
   std::vector<int> primary_return_types_;
   bool publish_noise_cloud_{};
   int visibility_estimation_max_secondary_voxel_count_{};
@@ -285,9 +286,6 @@ protected:
   void create_empty_output(const PointCloud2ConstPtr & input, PointCloud2 & output);
   void conditionally_publish_noise_cloud(
     const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask);
-
-  // Point classification helper method
-  bool is_point_primary(bool has_return_type, uint8_t return_type) const;
 
   // Point validation helper methods
   bool has_finite_coordinates(const PolarCoordinate & polar) const;
