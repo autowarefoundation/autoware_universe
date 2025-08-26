@@ -15,6 +15,7 @@
 #include "autoware/trajectory_modifier/trajectory_modifier.hpp"
 
 #include <autoware_utils/ros/update_param.hpp>
+#include <rclcpp/logging.hpp>
 #include <rclcpp_components/register_node_macro.hpp>
 
 #include <memory>
@@ -41,6 +42,8 @@ TrajectoryModifier::TrajectoryModifier(const rclcpp::NodeOptions & options)
   set_param_res_ = this->add_on_set_parameters_callback(
     std::bind(&TrajectoryModifier::on_parameter, this, std::placeholders::_1));
 
+  initialize_modifiers();
+
   RCLCPP_INFO(get_logger(), "TrajectoryModifier initialized");
 }
 
@@ -48,25 +51,24 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   if (!initialized_modifiers_) {
-    initialize_modifiers();
+    throw std::runtime_error("Modifiers not initialized");
   }
 
   current_odometry_ptr_ = sub_current_odometry_.take_data();
   current_acceleration_ptr_ = sub_current_acceleration_.take_data();
 
   if (!current_odometry_ptr_ || !current_acceleration_ptr_) {
-    RCLCPP_WARN(get_logger(), "Required input data not available");
     return;
   }
 
-  params_.current_odometry = *current_odometry_ptr_;
-  params_.current_acceleration = *current_acceleration_ptr_;
+  data_.current_odometry = *current_odometry_ptr_;
+  data_.current_acceleration = *current_acceleration_ptr_;
 
   CandidateTrajectories output_trajectories = *msg;
 
   for (auto & trajectory : output_trajectories.candidate_trajectories) {
     for (auto & modifier : modifier_plugins_) {
-      modifier->modify_trajectory(trajectory.points, params_);
+      modifier->modify_trajectory(trajectory.points, params_, data_);
     }
   }
 
@@ -75,28 +77,46 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
 
 void TrajectoryModifier::set_up_params()
 {
+  using autoware_utils_rclcpp::get_or_declare_parameter;
+  params_.use_stop_point_fixer = get_or_declare_parameter<bool>(*this, "use_stop_point_fixer");
 }
 
 void TrajectoryModifier::initialize_modifiers()
 {
-  initialized_modifiers_ = true;
-  RCLCPP_INFO(get_logger(), "Trajectory modifier plugins initialized");
-}
+  stop_point_fixer_ptr_ =
+    std::make_shared<plugin::StopPointFixer>("stop_point_fixer", this, time_keeper_, params_);
+  modifier_plugins_.push_back(stop_point_fixer_ptr_);
+  RCLCPP_INFO(get_logger(), "StopPointFixer plugin initialized");
 
-void TrajectoryModifier::reset_previous_data()
-{
-  prev_modified_traj_points_ptr_.reset();
+  initialized_modifiers_ = true;
+  RCLCPP_INFO(
+    get_logger(), "Trajectory modifier plugins initialized: %zu plugins", modifier_plugins_.size());
 }
 
 rcl_interfaces::msg::SetParametersResult TrajectoryModifier::on_parameter(
-  [[maybe_unused]] const std::vector<rclcpp::Parameter> & parameters)
+  const std::vector<rclcpp::Parameter> & parameters)
 {
   using autoware_utils_rclcpp::update_param;
-  auto params = params_;
 
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
   result.reason = "success";
+
+  try {
+    update_param<bool>(parameters, "use_stop_point_fixer", params_.use_stop_point_fixer);
+
+    for (auto & modifier : modifier_plugins_) {
+      auto plugin_result = modifier->on_parameter(parameters);
+      if (!plugin_result.successful) {
+        result.successful = false;
+        result.reason = plugin_result.reason;
+      }
+    }
+  } catch (const std::exception & e) {
+    result.successful = false;
+    result.reason = e.what();
+  }
+
   return result;
 }
 

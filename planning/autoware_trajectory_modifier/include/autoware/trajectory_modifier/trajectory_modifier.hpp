@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_HPP_
 #define AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_HPP_
 
+#include "autoware/trajectory_modifier/trajectory_modifier_plugins/stop_point_fixer.hpp"
 #include "autoware/trajectory_modifier/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
 #include "autoware/trajectory_modifier/trajectory_modifier_structs.hpp"
 
@@ -59,6 +60,7 @@ private:
     const std::vector<rclcpp::Parameter> & parameters);
 
   std::vector<std::shared_ptr<plugin::TrajectoryModifierPluginBase>> modifier_plugins_;
+  std::shared_ptr<plugin::StopPointFixer> stop_point_fixer_ptr_;
 
   rclcpp::Subscription<CandidateTrajectories>::SharedPtr trajectories_sub_;
   rclcpp::Publisher<Trajectory>::SharedPtr trajectory_pub_;
@@ -77,8 +79,8 @@ private:
     debug_processing_time_detail_pub_;
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
 
-  std::shared_ptr<TrajectoryPoints> prev_modified_traj_points_ptr_{nullptr};
   TrajectoryModifierParams params_;
+  TrajectoryModifierData data_;
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 };
 

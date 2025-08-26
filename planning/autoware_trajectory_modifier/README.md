@@ -58,8 +58,7 @@ The trajectory modifier node subscribes to candidate trajectories and applies co
 
 ### Parameters
 
-- `nearest_dist_threshold_m`: Distance threshold for nearest point search
-- `nearest_yaw_threshold_rad`: Yaw threshold for nearest point search
+- `use_stop_point_fixer`: Enable the stop point fixer modifier plugin (default: true)
 
 ## Adding New Modifier Plugins
 
