@@ -19,6 +19,7 @@
   <arg name="input/mask8" default="/perception/object_recognition/detection/mask8"/>
   <arg name="input/camera_info8" default="/sensing/camera/camera8/camera_info"/>
   <arg name="input/pointcloud" default="/sensing/lidar/top/outlier_filtered/pointcloud"/>
+  <arg name="input/concatenation_info" default="/sensing/lidar/concatenated/pointcloud_info"/>
   <arg name="output/pointcloud" default="output/pointcloud"/>
   <arg name="sync_param_path" default="$(find-pkg-share autoware_image_projection_based_fusion)/config/fusion_common.param.yaml"/>
   <arg name="semantic_segmentation_based_filter_param_path" default="$(find-pkg-share autoware_image_projection_based_fusion)/config/segmentation_pointcloud_fusion.param.yaml"/>
@@ -37,6 +38,7 @@
       <param from="$(var semantic_segmentation_based_filter_param_path)"/>
       <param from="$(var sync_param_path)"/>
       <remap from="input" to="$(var input/pointcloud)"/>
+      <remap from="input/concatenation_info" to="$(var input/concatenation_info)"/>
       <remap from="output" to="$(var output/pointcloud)"/>
 
       <!-- rois, camera and info -->

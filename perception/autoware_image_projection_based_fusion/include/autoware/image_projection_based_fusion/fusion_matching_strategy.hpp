@@ -18,6 +18,8 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_sensing_msgs/msg/concatenated_point_cloud_info.hpp>
+
 #include <cstddef>
 #include <list>
 #include <memory>
@@ -124,9 +126,10 @@ public:
     std::shared_ptr<FusionCollector<Msg3D, Msg2D, ExportObj>> & collector,
     const std::shared_ptr<MatchingContextBase> & matching_context) override;
 
-  double get_concatenated_offset(
+  double get_concatenation_offset(
     const double & msg3d_timestamp,
-    const std::optional<std::unordered_map<std::string, std::string>> & concatenated_status);
+    const std::optional<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr> &
+      concatenation_info_msg);
 
   double extract_fractional(double timestamp);
   void update_fractional_timestamp_set(double new_timestamp);
