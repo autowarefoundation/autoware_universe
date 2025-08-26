@@ -103,8 +103,8 @@ public:
   void getPositionCovarianceEigenSq(
     const rclcpp::Time & time, double & major_axis_sq, double & minor_axis_sq) const;
   bool isConfident(
-    const rclcpp::Time & time, const AdaptiveThresholdCache & cache,
-    const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
+    const AdaptiveThresholdCache & cache, const std::optional<geometry_msgs::msg::Pose> & ego_pose,
+    const std::optional<rclcpp::Time> & time) const;
   bool isExpired(
     const rclcpp::Time & time, const AdaptiveThresholdCache & cache,
     const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;

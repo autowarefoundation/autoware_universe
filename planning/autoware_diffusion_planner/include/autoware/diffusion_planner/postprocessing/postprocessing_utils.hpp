@@ -21,12 +21,10 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
-#include <autoware_perception_msgs/msg/detail/object_classification__struct.hpp>
-#include <autoware_perception_msgs/msg/detail/predicted_object__struct.hpp>
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
-#include <autoware_planning_msgs/msg/detail/trajectory__struct.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
+#include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
 
 #include <cassert>
 #include <string>
@@ -39,6 +37,7 @@ using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_perception_msgs::msg::PredictedPath;
 using autoware_planning_msgs::msg::Trajectory;
+using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 using unique_identifier_msgs::msg::UUID;
 
 /**
@@ -139,6 +138,16 @@ std::vector<Trajectory> create_multiple_trajectories(
  */
 CandidateTrajectories to_candidate_trajectories_msg(
   const Trajectory & trajectory, const UUID & generator_uuid, const std::string & generator_name);
+
+/**
+ * @brief Converts turn indicator logit to TurnIndicatorsCommand message.
+ *
+ * @param turn_indicator_logit The turn indicator logit from the model output.
+ * @param stamp The ROS time stamp for the message.
+ * @return A TurnIndicatorsCommand message with the predicted turn indicators.
+ */
+TurnIndicatorsCommand create_turn_indicators_command(
+  const std::vector<float> & turn_indicator_logit, const rclcpp::Time & stamp);
 
 }  // namespace autoware::diffusion_planner::postprocess
 #endif  // AUTOWARE__DIFFUSION_PLANNER__POSTPROCESSING__POSTPROCESSING_UTILS_HPP_

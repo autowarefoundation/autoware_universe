@@ -92,6 +92,8 @@ private:
     this, "~/input/acceleration"};
   autoware_utils::InterProcessPollingSubscriber<OperationModeState> sub_operational_state_{
     this, "~/input/operational_mode_state"};
+  autoware_utils::InterProcessPollingSubscriber<TrafficLightGroupArray> sub_traffic_signals_{
+    this, "~/input/traffic_signals"};
 
   // publisher
   rclcpp::Publisher<Trajectory>::SharedPtr pub_traj_;

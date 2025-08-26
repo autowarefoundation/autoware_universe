@@ -22,6 +22,7 @@
   <depend>autoware_planning_validator</depend>
   <depend>autoware_route_handler</depend>
   <depend>autoware_signal_processing</depend>
+  <depend>autoware_traffic_light_utils</depend>
   <depend>autoware_trajectory</depend>
   <depend>autoware_utils</depend>
   <depend>generate_parameter_library</depend>

@@ -109,6 +109,7 @@ struct BicycleModelState
   double wheel_pos_ratio_rear{0.0};   // [-]
   double wheel_pos_front_min{0.0};    // [m]
   double wheel_pos_rear_min{0.0};     // [m]
+  double length_uncertainty{0.0};     // [m] length uncertainty
 };
 
 class ObjectModel
@@ -155,10 +156,11 @@ public:
         initial_covariance.vel_lat = sq(0.2);
 
         // measurement noise model
-        measurement_covariance.pos_x = sq(0.5);
+        measurement_covariance.pos_x = sq(0.4);
         measurement_covariance.pos_y = sq(0.4);
         measurement_covariance.yaw = sq(deg2rad(22.0));
         measurement_covariance.vel_long = sq(1.0);
+        measurement_covariance.vel_lat = sq(kmph2mps(3.0));
 
         // bicycle motion model
         bicycle_state.init_slip_angle_cov = sq(deg2rad(5.0));
@@ -169,6 +171,7 @@ public:
         bicycle_state.wheel_pos_ratio_rear = 0.25;
         bicycle_state.wheel_pos_front_min = 1.0;
         bicycle_state.wheel_pos_rear_min = 1.0;
+        bicycle_state.length_uncertainty = 0.5;
         break;
 
       case ObjectModelType::BigVehicle:
@@ -200,9 +203,10 @@ public:
 
         // measurement noise model
         measurement_covariance.pos_x = sq(0.5);
-        measurement_covariance.pos_y = sq(0.4);
+        measurement_covariance.pos_y = sq(0.5);
         measurement_covariance.yaw = sq(deg2rad(22.0));
         measurement_covariance.vel_long = sq(kmph2mps(10.0));
+        measurement_covariance.vel_lat = sq(kmph2mps(3.0));
 
         // bicycle motion model
         bicycle_state.init_slip_angle_cov = sq(deg2rad(5.0));
@@ -213,6 +217,7 @@ public:
         bicycle_state.wheel_pos_ratio_rear = 0.25;
         bicycle_state.wheel_pos_front_min = 1.5;
         bicycle_state.wheel_pos_rear_min = 1.5;
+        bicycle_state.length_uncertainty = 0.8;
         break;
 
       case ObjectModelType::Bicycle:
@@ -243,10 +248,11 @@ public:
         initial_covariance.vel_lat = sq(0.2);
 
         // measurement noise model
-        measurement_covariance.pos_x = sq(0.5);
+        measurement_covariance.pos_x = sq(0.4);
         measurement_covariance.pos_y = sq(0.4);
         measurement_covariance.yaw = sq(deg2rad(30.0));
         measurement_covariance.vel_long = sq(kmph2mps(10.0));
+        measurement_covariance.vel_lat = sq(kmph2mps(3.0));
 
         // bicycle motion model
         bicycle_state.init_slip_angle_cov = sq(deg2rad(5.0));
@@ -257,6 +263,7 @@ public:
         bicycle_state.wheel_pos_ratio_rear = 0.3;
         bicycle_state.wheel_pos_front_min = 0.3;
         bicycle_state.wheel_pos_rear_min = 0.3;
+        bicycle_state.length_uncertainty = 0.3;
         break;
 
       case ObjectModelType::Pedestrian:
@@ -291,6 +298,7 @@ public:
         measurement_covariance.pos_y = sq(0.4);
         measurement_covariance.yaw = sq(deg2rad(30.0));
         measurement_covariance.vel_long = sq(kmph2mps(5.0));
+        measurement_covariance.vel_lat = sq(kmph2mps(3.0));
         break;
 
       case ObjectModelType::Unknown:
