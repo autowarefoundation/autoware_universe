@@ -304,7 +304,9 @@ double GyroBiasEstimator::extract_yaw_from_pose(
   quat_out = tf2::Quaternion(quat_msg.x, quat_msg.y, quat_msg.z, quat_msg.w);
   quat_out.normalize();
 
-  double roll, pitch, yaw;
+  double roll;
+  double pitch;
+  double yaw;
   tf2::Matrix3x3(quat_out).getRPY(roll, pitch, yaw);
   return yaw;
 }
@@ -505,8 +507,7 @@ bool GyroBiasEstimator::should_skip_update()
 {
   if (std::abs(gyro_yaw_rate_) < threshold_to_estimate_scale_) {
     if (
-      gyro_info_.scale_status != diagnostic_msgs::msg::DiagnosticStatus::ERROR &&
-      gyro_info_.scale_status != diagnostic_msgs::msg::DiagnosticStatus::WARN) {
+      gyro_info_.scale_status < diagnostic_msgs::msg::DiagnosticStatus::WARN) {
       gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::OK;
       gyro_info_.scale_status_summary = "OK";
       gyro_info_.scale_summary_message = "Skipped scale update (yaw rate too small)";
