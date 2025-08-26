@@ -150,22 +150,6 @@ void ManualControlNode::enable_pedals_commands()
     [this](const PedalsCommand & msg) { pub_pedals_->publish(msg); });
 }
 
-void ManualControlNode::enable_acceleration_commands()
-{
-  // TODO(isamu-takagi): Currently not supported.
-  sub_acceleration_ = create_subscription<AccelerationCommand>(
-    ns_ + "/command/acceleration", rclcpp::QoS(1).best_effort(),
-    [](const AccelerationCommand & msg) { (void)msg; });
-}
-
-void ManualControlNode::enable_velocity_commands()
-{
-  // TODO(isamu-takagi): Currently not supported.
-  sub_velocity_ = create_subscription<VelocityCommand>(
-    ns_ + "/command/velocity", rclcpp::QoS(1).best_effort(),
-    [](const VelocityCommand & msg) { (void)msg; });
-}
-
 void ManualControlNode::enable_common_commands()
 {
   using autoware::default_adapi::command_conversion::convert;
