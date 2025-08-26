@@ -32,7 +32,6 @@ ByteTrackNode::ByteTrackNode(const rclcpp::NodeOptions & node_options)
 {
   using std::placeholders::_1;
   using std::chrono_literals::operator""ms;
-
   int track_buffer_length = declare_parameter("track_buffer_length", 30);
   double classification_decay_constant = declare_parameter("classification_decay_constant", 0.95);
 
