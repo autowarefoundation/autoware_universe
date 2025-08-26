@@ -81,8 +81,8 @@ bool BicycleMotionModel::initialize(
   const std::array<double, 36> & pose_cov, const double & vel_long, const double & vel_long_cov,
   const double & vel_lat, const double & vel_lat_cov, const double & length)
 {
-  double lr = length * motion_params_.lr_ratio;
-  double lf = length * motion_params_.lf_ratio;
+  const double lr = length * motion_params_.lr_ratio;
+  const double lf = length * motion_params_.lf_ratio;
   const double x1 = x - lr * std::cos(yaw);
   const double y1 = y - lr * std::sin(yaw);
   const double x2 = x + lf * std::cos(yaw);
@@ -143,8 +143,8 @@ bool BicycleMotionModel::updateStatePoseHead(
   if (!checkInitialized()) return false;
 
   // convert the state to the bicycle model state
-  double lr = length * motion_params_.lr_ratio;
-  double lf = length * motion_params_.lf_ratio;
+  const double lr = length * motion_params_.lr_ratio;
+  const double lf = length * motion_params_.lf_ratio;
   const double cos_yaw = std::cos(yaw);
   const double sin_yaw = std::sin(yaw);
   const double x1 = x - lr * cos_yaw;
@@ -205,8 +205,8 @@ bool BicycleMotionModel::updateStatePoseHeadVel(
   if (!checkInitialized()) return false;
 
   // convert the state to the bicycle model state
-  double lr = length * motion_params_.lr_ratio;
-  double lf = length * motion_params_.lf_ratio;
+  const double lr = length * motion_params_.lr_ratio;
+  const double lf = length * motion_params_.lf_ratio;
   const double cos_yaw = std::cos(yaw);
   const double sin_yaw = std::sin(yaw);
   const double x1 = x - lr * cos_yaw;
