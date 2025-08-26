@@ -95,7 +95,7 @@ bool LaneChangeContext::is_not_consistent_transition(const State & from, const S
   if (is_state<NotLaneChanging>(to) && !is_state<NotLaneChanging>(from)) {
     return true;
   }
-  // Completed and NotLaneChanging -> NotLaneChanging transition is consitent
+  // {Completed} and {NotLaneChanging -> NotLaneChanging} transitions are consistent
   return false;
 }
 }  // namespace autoware::behavior_path_planner
