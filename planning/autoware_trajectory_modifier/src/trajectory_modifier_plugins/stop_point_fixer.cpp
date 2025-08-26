@@ -63,6 +63,18 @@ void StopPointFixer::modify_trajectory(
 
 void StopPointFixer::set_up_params()
 {
+  auto * node = get_node_ptr();
+  
+  // Declare plugin parameters with descriptors
+  rcl_interfaces::msg::ParameterDescriptor velocity_desc;
+  velocity_desc.description = "Velocity threshold below which ego vehicle is considered stationary";
+  params_.velocity_threshold_mps = node->declare_parameter<double>(
+    "stop_point_fixer.velocity_threshold_mps", 0.1, velocity_desc);
+    
+  rcl_interfaces::msg::ParameterDescriptor distance_desc;
+  distance_desc.description = "Minimum distance threshold to trigger trajectory replacement";
+  params_.min_distance_threshold_m = node->declare_parameter<double>(
+    "stop_point_fixer.min_distance_threshold_m", 1.0, distance_desc);
 }
 
 rcl_interfaces::msg::SetParametersResult StopPointFixer::on_parameter(
