@@ -396,7 +396,7 @@ BlindSpotModule::filter_attention_objects(
     // if object is not VRU, check lateral clearance
     if (
       is_within_attention_area &&
-      (isVRUObjectType(object) || object.shape.dimensions.y < lateral_gap)) {
+      (is_vru_object_type(object) || object.shape.dimensions.y < lateral_gap)) {
       result.push_back(object);
     }
   }

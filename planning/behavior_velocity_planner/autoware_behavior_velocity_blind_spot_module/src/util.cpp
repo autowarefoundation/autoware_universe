@@ -20,6 +20,7 @@
 #include <autoware/lanelet2_utils/topology.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <range/v3/all.hpp>
 
 #include <boost/geometry/algorithms/area.hpp>
@@ -689,15 +690,14 @@ tl::expected<double, std::string> calc_ego_to_blind_spot_lanelet_lateral_gap(
   const lanelet::ConstLanelets & last_lanelets_before_turning,
   const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction)
 {
-  if (ego_footprint.size() != 7) {
-    return tl::make_unexpected("Unexpected ego_footprint's size.");
-  }
-
-  // left front is 6, left back is 4, right_front is 1, right_back is 3
-  const auto front_idx = (turn_direction == TurnDirection::Left) ? 6 : 1;
-  const auto back_idx = (turn_direction == TurnDirection::Left) ? 4 : 3;
+  const auto front_idx = (turn_direction == TurnDirection::Left)
+                           ? vehicle_info_utils::VehicleInfo::FrontLeftIndex
+                           : vehicle_info_utils::VehicleInfo::FrontRightIndex;
+  const auto rear_idx = (turn_direction == TurnDirection::Left)
+                          ? vehicle_info_utils::VehicleInfo::RearLeftIndex
+                          : vehicle_info_utils::VehicleInfo::RearRightIndex;
   const auto ego_side =
-    autoware_utils::Segment2d{ego_footprint[front_idx], ego_footprint[back_idx]};
+    autoware_utils::Segment2d{ego_footprint[front_idx], ego_footprint[rear_idx]};
 
   std::vector<autoware_utils::Point2d> line;
   for (const auto & ll : last_lanelets_before_turning) {
