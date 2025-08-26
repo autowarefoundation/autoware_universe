@@ -690,70 +690,170 @@ sensor_msgs::msg::PointCloud2 PolarVoxelOutlierFilterComponent::create_noise_clo
   return noise_cloud;
 }
 
-rcl_interfaces::msg::SetParametersResult PolarVoxelOutlierFilterComponent::param_callback(
-  const std::vector<rclcpp::Parameter> & p)
+bool PolarVoxelOutlierFilterComponent::validate_positive_double(
+  const rclcpp::Parameter & param, std::string & reason)
 {
-  std::scoped_lock lock(mutex_);
+  if (param.as_double() <= 0.0) {
+    reason = param.get_name() + " must be positive";
+    return false;
+  }
+  return true;
+}
 
-  // Parameters that can be updated at runtime
-  static const std::vector<std::string> updatable_params = {
-    "radial_resolution_m",
-    "azimuth_resolution_rad",
-    "elevation_resolution_rad",
-    "voxel_points_threshold",
-    "min_radius_m",
-    "max_radius_m",
-    "intensity_threshold",
-    "visibility_estimation_max_range_m",
-    "use_return_type_classification",
-    "filter_secondary_returns",
-    "secondary_noise_threshold",
-    "visibility_estimation_max_secondary_voxel_count",
-    "visibility_estimation_only",
-    "primary_return_types",
-    "publish_noise_cloud",
-    "visibility_error_threshold",
-    "visibility_warn_threshold",
-    "filter_ratio_error_threshold",
-    "filter_ratio_warn_threshold"};
+bool PolarVoxelOutlierFilterComponent::validate_non_negative_double(
+  const rclcpp::Parameter & param, std::string & reason)
+{
+  if (param.as_double() < 0.0) {
+    reason = param.get_name() + " must be non-negative";
+    return false;
+  }
+  return true;
+}
 
+bool PolarVoxelOutlierFilterComponent::validate_positive_int(
+  const rclcpp::Parameter & param, std::string & reason)
+{
+  if (param.as_int() < 1) {
+    reason = param.get_name() + " must be at least 1";
+    return false;
+  }
+  return true;
+}
+
+bool PolarVoxelOutlierFilterComponent::validate_non_negative_int(
+  const rclcpp::Parameter & param, std::string & reason)
+{
+  if (param.as_int() < 0) {
+    reason = param.get_name() + " must be non-negative";
+    return false;
+  }
+  return true;
+}
+
+bool PolarVoxelOutlierFilterComponent::validate_intensity_threshold(
+  const rclcpp::Parameter & param, std::string & reason)
+{
+  int val = param.as_int();
+  if (val < 0 || val > 255) {
+    reason = "intensity_threshold must be between 0 and 255";
+    return false;
+  }
+  return true;
+}
+
+bool PolarVoxelOutlierFilterComponent::validate_primary_return_types(
+  const rclcpp::Parameter & param, std::string & reason)
+{
+  for (const auto & type : param.as_integer_array()) {
+    if (type < 0 || type > 255) {
+      reason = "primary_return_types values must be between 0 and 255";
+      return false;
+    }
+  }
+  return true;
+}
+
+bool PolarVoxelOutlierFilterComponent::validate_normalized(
+  const rclcpp::Parameter & param, std::string & reason)
+{
+  double val = param.as_double();
+  if (val < 0.0 || val > 1.0) {
+    reason = param.get_name() + " must be between 0.0 and 1.0";
+    return false;
+  }
+  return true;
+}
+
+rcl_interfaces::msg::SetParametersResult PolarVoxelOutlierFilterComponent::param_callback(
+  const std::vector<rclcpp::Parameter> & params)
+{
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
   result.reason = "success";
 
-  for (const auto & param : p) {
-    const std::string & name = param.get_name();
+  // Validation map
+  static const std::unordered_map<std::string, ParamHandler> validators = {
+    {"radial_resolution_m", validate_positive_double},
+    {"azimuth_resolution_rad", validate_positive_double},
+    {"elevation_resolution_rad", validate_positive_double},
+    {"voxel_points_threshold", validate_positive_int},
+    {"min_radius_m", validate_non_negative_double},
+    {"max_radius_m", validate_positive_double},
+    {"intensity_threshold", validate_intensity_threshold},
+    {"visibility_estimation_max_range_m", validate_positive_double},
+    {"use_return_type_classification", nullptr},
+    {"filter_secondary_returns", nullptr},
+    {"secondary_noise_threshold", validate_non_negative_int},
+    {"visibility_estimation_max_secondary_voxel_count", validate_non_negative_int},
+    {"primary_return_types", validate_primary_return_types},
+    {"visibility_estimation_only", nullptr},
+    {"publish_noise_cloud", nullptr},
+    {"filter_ratio_error_threshold", validate_normalized},
+    {"filter_ratio_warn_threshold", validate_normalized},
+    {"visibility_error_threshold", validate_normalized},
+    {"visibility_warn_threshold", validate_normalized}};
 
-    // Check if this parameter is updatable
-    bool is_updatable =
-      std::find(updatable_params.begin(), updatable_params.end(), name) != updatable_params.end();
+  // Assignment map
+  using Handler = std::function<void(const rclcpp::Parameter &)>;
+  static const std::unordered_map<std::string, Handler> handlers = {
+    {"radial_resolution_m",
+     [this](const rclcpp::Parameter & p) { radial_resolution_m_ = p.as_double(); }},
+    {"azimuth_resolution_rad",
+     [this](const rclcpp::Parameter & p) { azimuth_resolution_rad_ = p.as_double(); }},
+    {"elevation_resolution_rad",
+     [this](const rclcpp::Parameter & p) { elevation_resolution_rad_ = p.as_double(); }},
+    {"voxel_points_threshold",
+     [this](const rclcpp::Parameter & p) { voxel_points_threshold_ = p.as_int(); }},
+    {"min_radius_m", [this](const rclcpp::Parameter & p) { min_radius_m_ = p.as_double(); }},
+    {"max_radius_m", [this](const rclcpp::Parameter & p) { max_radius_m_ = p.as_double(); }},
+    {"intensity_threshold",
+     [this](const rclcpp::Parameter & p) { intensity_threshold_ = p.as_int(); }},
+    {"visibility_estimation_max_range_m",
+     [this](const rclcpp::Parameter & p) { visibility_estimation_max_range_m_ = p.as_double(); }},
+    {"use_return_type_classification",
+     [this](const rclcpp::Parameter & p) { use_return_type_classification_ = p.as_bool(); }},
+    {"filter_secondary_returns",
+     [this](const rclcpp::Parameter & p) { enable_secondary_return_filtering_ = p.as_bool(); }},
+    {"secondary_noise_threshold",
+     [this](const rclcpp::Parameter & p) { secondary_noise_threshold_ = p.as_int(); }},
+    {"visibility_estimation_max_secondary_voxel_count",
+     [this](const rclcpp::Parameter & p) {
+       visibility_estimation_max_secondary_voxel_count_ = p.as_int();
+     }},
+    {"primary_return_types",
+     [this](const rclcpp::Parameter & p) {
+       const auto & arr = p.as_integer_array();
+       primary_return_types_.clear();
+       primary_return_types_.reserve(arr.size());
+       for (auto v : arr) primary_return_types_.push_back(static_cast<int>(v));
+     }},
+    {"visibility_estimation_only",
+     [this](const rclcpp::Parameter & p) { visibility_estimation_only_ = p.as_bool(); }},
+    {"publish_noise_cloud",
+     [this](const rclcpp::Parameter & p) { publish_noise_cloud_ = p.as_bool(); }},
+    {"filter_ratio_error_threshold",
+     [this](const rclcpp::Parameter & p) { filter_ratio_error_threshold_ = p.as_double(); }},
+    {"filter_ratio_warn_threshold",
+     [this](const rclcpp::Parameter & p) { filter_ratio_warn_threshold_ = p.as_double(); }},
+    {"visibility_error_threshold",
+     [this](const rclcpp::Parameter & p) { visibility_error_threshold_ = p.as_double(); }},
+    {"visibility_warn_threshold",
+     [this](const rclcpp::Parameter & p) { visibility_warn_threshold_ = p.as_double(); }}};
 
-    if (!is_updatable) {
-      result.successful = false;
-      result.reason = "Parameter " + name + " is not dynamically reconfigurable";
-      return result;
+  for (const auto & param : params) {
+    auto vit = validators.find(param.get_name());
+    if (vit != validators.end() && vit->second) {
+      std::string reason;
+      if (!vit->second(param, reason)) {
+        result.successful = false;
+        result.reason = reason;
+        return result;
+      }
     }
-
-    // Validate parameter values
-    if (name == "intensity_threshold" && param.as_int() < 0) {
-      result.successful = false;
-      result.reason = "intensity_threshold must be non-negative";
-      return result;
+    auto hit = handlers.find(param.get_name());
+    if (hit != handlers.end()) {
+      hit->second(param);
     }
-
-    if (name == "visibility_estimation_max_range_m" && param.as_double() <= 0.0) {
-      result.successful = false;
-      result.reason = "visibility_estimation_max_range_m must be positive";
-      return result;
-    }
-
-    if (name == "visibility_estimation_max_secondary_voxel_count" && param.as_int() < 0) {
-      result.successful = false;
-      result.reason = "visibility_estimation_max_secondary_voxel_count must be non-negative";
-      return result;
-    }
-
-    update_parameter(param);
   }
 
   return result;
@@ -905,8 +1005,6 @@ void PolarVoxelOutlierFilterComponent::conditionally_publish_noise_cloud(
     publish_noise_cloud(input, valid_points_mask);
   }
 }
-
-// Add missing helper function implementations that were referenced but not defined:
 
 std::optional<PolarVoxelOutlierFilterComponent::PolarCoordinate>
 PolarVoxelOutlierFilterComponent::extract_polar_from_dae(

@@ -302,6 +302,7 @@ protected:
   bool passes_secondary_return_filter(bool is_primary) const;
 
 private:
+  using ParamHandler = std::function<bool(const rclcpp::Parameter &, std::string &)>;
   // Validation helper methods
   void validate_indices(const IndicesPtr & indices);
   void validate_input_cloud(const PointCloud2ConstPtr & input);
@@ -309,6 +310,15 @@ private:
   void validate_return_type_field(const PointCloud2ConstPtr & input);
   void validate_intensity_field(const PointCloud2ConstPtr & input);
   bool has_field(const PointCloud2ConstPtr & input, const std::string & field_name);
+
+  // Parameter validation helpers (static, private)
+  static bool validate_positive_double(const rclcpp::Parameter & param, std::string & reason);
+  static bool validate_non_negative_double(const rclcpp::Parameter & param, std::string & reason);
+  static bool validate_positive_int(const rclcpp::Parameter & param, std::string & reason);
+  static bool validate_non_negative_int(const rclcpp::Parameter & param, std::string & reason);
+  static bool validate_intensity_threshold(const rclcpp::Parameter & param, std::string & reason);
+  static bool validate_primary_return_types(const rclcpp::Parameter & param, std::string & reason);
+  static bool validate_normalized(const rclcpp::Parameter & param, std::string & reason);
 };
 
 }  // namespace autoware::pointcloud_preprocessor
