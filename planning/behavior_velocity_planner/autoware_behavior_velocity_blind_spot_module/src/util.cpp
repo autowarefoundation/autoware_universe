@@ -699,15 +699,19 @@ tl::expected<double, std::string> calc_ego_to_blind_spot_lanelet_lateral_gap(
   const auto ego_side =
     autoware_utils::Segment2d{ego_footprint[front_idx], ego_footprint[back_idx]};
 
-  autoware_utils::LineString2d line;
+  std::vector<autoware_utils::Point2d> line;
   for (const auto & ll : last_lanelets_before_turning) {
     const auto & attention_area_road_boundary = lanelet::utils::to2D(
       (turn_direction == TurnDirection::Left) ? ll.leftBound() : ll.rightBound());
     const auto ll_2d = lanelet::utils::to2D(attention_area_road_boundary);
 
     for (const auto & ls : ll_2d) {
-      line.push_back(autoware_utils::Point2d{ls.x(), ls.y()});
+      line.emplace_back(ls.x(), ls.y());
     }
+  }
+
+  if (line.size() < 2) {
+    return tl::make_unexpected("Not enough points in lanelet boundary.");
   }
 
   std::vector<autoware_utils::Segment2d> segments;
