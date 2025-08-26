@@ -9,6 +9,12 @@
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+// Autoware utils
+#include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
+#include <autoware_utils/ros/published_time_publisher.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
+
 namespace autoware::cuda_ground_segmentation
 {
 class CudaScanGroundSegmentationFilterNode : public rclcpp::Node
@@ -29,6 +35,9 @@ private:
     pub_gnd_{};
   // Cuda Ground Segmentation Filter
   std::unique_ptr<CudaScanGroundSegmentationFilter> cuda_ground_segmentation_filter_{};
+  // debugger
+  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
+  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{nullptr};
 };
 
 }  // namespace autoware::cuda_ground_segmentation

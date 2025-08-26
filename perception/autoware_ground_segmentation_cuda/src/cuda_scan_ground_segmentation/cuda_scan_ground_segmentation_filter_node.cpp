@@ -15,6 +15,15 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
   const rclcpp::NodeOptions & options)
 : Node("cuda_scan_ground_segmentation_filter_node", options)
 {
+  // Delare processing time debug
+  { 
+    using autoware_utils::DebugPublisher;
+    using autoware_utils::StopWatch;
+    stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
+    debug_publisher_ptr_ = std::make_unique<DebugPublisher>(this, "cuda_scan_ground_filter");
+    stop_watch_ptr_->tic("cyclic_time");
+    stop_watch_ptr_->tic("processing_time");
+  }
   // Declare parameters
   FilterParameters filter_parameters;
 
@@ -94,6 +103,10 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
 void CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback(
   const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & msg)
 {
+  // start time measurement
+  if (stop_watch_ptr_) {
+    stop_watch_ptr_->tic("processing_time");
+  }
   // Create unique_ptr first
   auto non_ground_unique = std::make_unique<cuda_blackboard::CudaPointCloud2>();
   auto ground_unique = std::make_unique<cuda_blackboard::CudaPointCloud2>();
@@ -109,6 +122,18 @@ void CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback(
   // Publish using the original unique_ptr
   pub_->publish(std::move(non_ground_unique));
   pub_gnd_->publish(std::move(ground_unique));
+
+  // end time measurement
+  if (debug_publisher_ptr_ && stop_watch_ptr_) {
+    stop_watch_ptr_->toc("processing_time");
+    stop_watch_ptr_->toc("cyclic_time");
+    const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
+    const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
+    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "debug/cyclic_time_ms", cyclic_time_ms);
+    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "debug/processing_time_ms", processing_time_ms);
+  }
 }
 
 }  // namespace autoware::cuda_ground_segmentation
