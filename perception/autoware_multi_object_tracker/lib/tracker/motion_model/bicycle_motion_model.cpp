@@ -81,8 +81,6 @@ bool BicycleMotionModel::initialize(
 {
   double lr = length * motion_params_.lr_ratio;
   double lf = length * motion_params_.lf_ratio;
-  lr = std::max(lr, motion_params_.lr_min);
-  lf = std::max(lf, motion_params_.lf_min);
   const double x1 = x - lr * std::cos(yaw);
   const double y1 = y - lr * std::sin(yaw);
   const double x2 = x + lf * std::cos(yaw);
@@ -145,8 +143,6 @@ bool BicycleMotionModel::updateStatePoseHead(
   // convert the state to the bicycle model state
   double lr = length * motion_params_.lr_ratio;
   double lf = length * motion_params_.lf_ratio;
-  lr = std::max(lr, motion_params_.lr_min);
-  lf = std::max(lf, motion_params_.lf_min);
   const double cos_yaw = std::cos(yaw);
   const double sin_yaw = std::sin(yaw);
   const double x1 = x - lr * cos_yaw;
