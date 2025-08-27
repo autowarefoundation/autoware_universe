@@ -188,20 +188,19 @@ __device__ void removeGndPointInCell(CellCentroid & cell, const ClassifiedPointT
 }
 
 __device__ void checkSegmentMode(
-  const int cell_index_in_sector, const int * latest_gnd_cells_in_sector,
-  const int num_latest_gnd_cells, const int gnd_cell_continual_thresh,
-  const int gnd_cell_buffer_size, SegmentationMode & mode)
+  const int cell_index_in_sector, const int * last_gnd_cells_dev, const int num_latest_gnd_cells,
+  const int gnd_cell_continual_thresh, const int gnd_cell_buffer_size, SegmentationMode & mode)
 {
   if (num_latest_gnd_cells == 0) {
     mode = SegmentationMode::UNINITIALIZED;
     return;  // No ground cells found, set mode to UNINITIALIZED
   }
-  const auto & latest_gnd_idx_in_sector = latest_gnd_cells_in_sector[0];
-  if (cell_index_in_sector - latest_gnd_idx_in_sector >= gnd_cell_continual_thresh) {
+  const auto & last_gnd_idx_in_sector = last_gnd_cells_dev[0];
+  if (cell_index_in_sector - last_gnd_idx_in_sector >= gnd_cell_continual_thresh) {
     mode = SegmentationMode::BREAK;  // If the latest ground cell is too far, set mode to BREAK
     return;
   }
-  const auto & front_gnd_idx_in_sector = latest_gnd_cells_in_sector[num_latest_gnd_cells - 1];
+  const auto & front_gnd_idx_in_sector = last_gnd_cells_dev[num_latest_gnd_cells - 1];
   if (cell_index_in_sector - front_gnd_idx_in_sector <= gnd_cell_buffer_size) {
     mode = SegmentationMode::CONTINUOUS;  // If the latest ground cell is within threshold, set mode
                                           // to CONTINUOUS
@@ -256,7 +255,7 @@ __device__ void checkSegmentMode(
 
 __device__ void RecursiveGndCellSearch(
   const CellCentroid * __restrict__ sector_cells_list_dev, const int last_gnd_cells_num_threshold,
-  const int cell_index_in_sector, int * latest_gnd_cells_in_sector, int & num_latest_gnd_cells)
+  const int cell_index_in_sector, int * last_gnd_cells_dev, int & num_latest_gnd_cells)
 {
   // Recursively search for ground cells in the sector
   if (cell_index_in_sector < 0) {
@@ -270,13 +269,13 @@ __device__ void RecursiveGndCellSearch(
 
   if (current_cell.num_ground_points > 0) {
     // If the cell has enough ground points, add it to the list
-    latest_gnd_cells_in_sector[num_latest_gnd_cells++] = cell_index_in_sector;
+    last_gnd_cells_dev[num_latest_gnd_cells++] = cell_index_in_sector;
   }
 
   // Continue searching in the previous cell
   RecursiveGndCellSearch(
     sector_cells_list_dev, last_gnd_cells_num_threshold, cell_index_in_sector - 1,
-    latest_gnd_cells_in_sector, num_latest_gnd_cells);
+    last_gnd_cells_dev, num_latest_gnd_cells);
 }
 
 __device__ float calcLocalGndGradient(
@@ -321,7 +320,7 @@ __device__ float calcLocalGndGradient(
 }
 
 __device__ float fitLineFromGndCell(
-  const CellCentroid * __restrict__ sector_cells_list_dev, const int * latest_gnd_cells_in_sector,
+  const CellCentroid * __restrict__ sector_cells_list_dev, const int * last_gnd_cells_dev,
   const int num_fitting_cells, const FilterParameters * __restrict__ filter_parameters_dev)
 {
   float a = 0.0f;
@@ -334,7 +333,7 @@ __device__ float fitLineFromGndCell(
   }
 
   if (num_fitting_cells == 1) {
-    auto cell_idx_in_sector = latest_gnd_cells_in_sector[0];
+    auto cell_idx_in_sector = last_gnd_cells_dev[0];
     const auto & cell = sector_cells_list_dev[cell_idx_in_sector];
     a = cell.gnd_height_avg / cell.gnd_radius_avg;
     b = 0.0f;  // Only one point, no line fitting needed
@@ -347,7 +346,7 @@ __device__ float fitLineFromGndCell(
   float sum_xy = 0.0f;
   float sum_xx = 0.0f;
   for (int i = 0; i < num_fitting_cells; ++i) {
-    const auto & cell_idx_in_sector = latest_gnd_cells_in_sector[i];
+    const auto & cell_idx_in_sector = last_gnd_cells_dev[i];
     const auto & cell = sector_cells_list_dev[cell_idx_in_sector];
     float x = cell.gnd_radius_avg;
     float y = cell.gnd_height_avg;
@@ -358,7 +357,7 @@ __device__ float fitLineFromGndCell(
   }
   const float denominator = (num_fitting_cells * sum_xx - sum_x * sum_x);
   if (fabsf(denominator) < 1e-6f) {
-    const auto & cell_idx_in_sector = latest_gnd_cells_in_sector[0];
+    const auto & cell_idx_in_sector = last_gnd_cells_dev[0];
     const auto & cell = sector_cells_list_dev[cell_idx_in_sector];
     a = cell.gnd_height_avg / cell.gnd_radius_avg;
     b = 0.0f;
@@ -403,7 +402,7 @@ __device__ void recheckCell(
 
 __device__ void SegmentInitializedCell(
   CellCentroid * __restrict__ sector_cells_list_dev,
-  ClassifiedPointTypeStruct * __restrict__ classify_points,
+  ClassifiedPointTypeStruct * __restrict__ cell_classify_points_dev,
   const FilterParameters * __restrict__ filter_parameters_dev, const int cell_idx_in_sector)
 {
   auto & current_cell = sector_cells_list_dev[cell_idx_in_sector];  // Use reference, not copy
@@ -411,8 +410,8 @@ __device__ void SegmentInitializedCell(
   auto const num_points_of_cell = current_cell.num_points;
 
   for (int i = 0; i < num_points_of_cell; ++i) {
-    size_t point_idx = static_cast<size_t>(idx_start_point_of_cell + i);
-    auto & point = classify_points[point_idx];
+    size_t point_idx = static_cast<size_t>(i);
+    auto & point = cell_classify_points_dev[point_idx];
 
     // 1. height is out-of-range
     if (
@@ -445,7 +444,7 @@ __device__ void SegmentInitializedCell(
     filter_parameters_dev->use_recheck_ground_cluster && current_cell.num_ground_points > 1 &&
     current_cell.gnd_radius_avg > filter_parameters_dev->recheck_start_distance) {
     // Recheck the ground points in the cell
-    recheckCell(current_cell, classify_points, filter_parameters_dev);
+    recheckCell(current_cell, cell_classify_points_dev, filter_parameters_dev);
   }
 }
 /*
@@ -454,9 +453,9 @@ This cell has a continual previous gnd cells
 */
 __device__ void SegmentContinuousCell(
   CellCentroid * __restrict__ sector_cells_list_dev,
-  ClassifiedPointTypeStruct * __restrict__ classify_points,
+  ClassifiedPointTypeStruct * __restrict__ cell_classify_points_dev,
   const FilterParameters * __restrict__ filter_parameters_dev, const int cell_idx_in_sector,
-  const int * latest_gnd_cells_in_sector, const int num_latest_gnd_cells)
+  const int * last_gnd_cells_dev, const int num_latest_gnd_cells)
 {
   // compare point of current cell with previous cell center by local slope angle
   // auto gnd_gradient = calcLocalGndGradient(
@@ -464,16 +463,16 @@ __device__ void SegmentContinuousCell(
   //   cell_idx_in_sector, filter_parameters_dev->global_slope_max_ratio);
 
   auto gnd_gradient = fitLineFromGndCell(
-    sector_cells_list_dev, latest_gnd_cells_in_sector, num_latest_gnd_cells, filter_parameters_dev);
+    sector_cells_list_dev, last_gnd_cells_dev, num_latest_gnd_cells, filter_parameters_dev);
   int cell_id = cell_idx_in_sector;
   auto & current_cell = sector_cells_list_dev[cell_id];  // Use reference, not copy
   auto const idx_start_point_of_cell = current_cell.start_point_index;
   auto const num_points_of_cell = current_cell.num_points;
-  auto & prev_gnd_cell = sector_cells_list_dev[latest_gnd_cells_in_sector[0]];
+  auto & prev_gnd_cell = sector_cells_list_dev[last_gnd_cells_dev[0]];
   auto const prev_cell_gnd_height = prev_gnd_cell.gnd_height_avg;
 
   for (size_t i = 0; i < num_points_of_cell; ++i) {
-    auto & point = classify_points[idx_start_point_of_cell + i];
+    auto & point = cell_classify_points_dev[i];
     // 1. height is out-of-range compared to previous cell gnd
     if (point.z - prev_cell_gnd_height > filter_parameters_dev->detection_range_z_max) {
       point.type = PointType::OUT_OF_RANGE;
@@ -524,7 +523,7 @@ __device__ void SegmentContinuousCell(
     filter_parameters_dev->use_recheck_ground_cluster && current_cell.num_ground_points > 1 &&
     current_cell.gnd_radius_avg > filter_parameters_dev->recheck_start_distance) {
     // Recheck the ground points in the cell
-    recheckCell(current_cell, classify_points, filter_parameters_dev);
+    recheckCell(current_cell, cell_classify_points_dev, filter_parameters_dev);
   }
 }
 /*
@@ -534,19 +533,19 @@ Which has few discontinual gnd cells before
 
 __device__ void SegmentDiscontinuousCell(
   CellCentroid * __restrict__ sector_cells_list_dev,
-  ClassifiedPointTypeStruct * __restrict__ classify_points,
+  ClassifiedPointTypeStruct * __restrict__ cell_classify_points_dev,
   const FilterParameters * __restrict__ filter_parameters_dev, const int cell_idx_in_sector,
-  const int * latest_gnd_cells_in_sector, const int num_latest_gnd_cells)
+  const int * last_gnd_cells_dev, const int num_latest_gnd_cells)
 {
   auto cell_id = cell_idx_in_sector;
   auto & current_cell = sector_cells_list_dev[cell_id];  // Use reference, not copy
   auto const idx_start_point_of_cell = current_cell.start_point_index;
   auto const num_points_of_cell = current_cell.num_points;
-  auto & prev_gnd_cell = sector_cells_list_dev[latest_gnd_cells_in_sector[0]];
+  auto & prev_gnd_cell = sector_cells_list_dev[last_gnd_cells_dev[0]];
 
   for (int i = 0; i < num_points_of_cell; ++i) {
-    size_t point_idx = static_cast<size_t>(idx_start_point_of_cell + i);
-    auto & point = classify_points[point_idx];
+    size_t point_idx = static_cast<size_t>(i);
+    auto & point = cell_classify_points_dev[point_idx];
     // 1. height is out-of-range
     if (point.z - prev_gnd_cell.gnd_height_avg > filter_parameters_dev->detection_range_z_max) {
       point.type = PointType::OUT_OF_RANGE;
@@ -582,7 +581,7 @@ __device__ void SegmentDiscontinuousCell(
     filter_parameters_dev->use_recheck_ground_cluster && current_cell.num_ground_points > 1 &&
     current_cell.gnd_radius_avg > filter_parameters_dev->recheck_start_distance) {
     // Recheck the ground points in the cell
-    recheckCell(current_cell, classify_points, filter_parameters_dev);
+    recheckCell(current_cell, cell_classify_points_dev, filter_parameters_dev);
   }
 }
 
@@ -592,19 +591,19 @@ This function is called when the prev gnd cell is far from current cell
 
 __device__ void SegmentBreakCell(
   CellCentroid * __restrict__ sector_cells_list_dev,
-  ClassifiedPointTypeStruct * __restrict__ classify_points,
+  ClassifiedPointTypeStruct * __restrict__ cell_classify_points_dev,
   const FilterParameters * __restrict__ filter_parameters_dev, const int cell_idx_in_sector,
-  const int * latest_gnd_cells_in_sector, const int num_latest_gnd_cells)
+  const int * last_gnd_cells_dev, const int num_latest_gnd_cells)
 {
   // This function is called when the cell is not continuous with the previous cell
   auto cell_id = cell_idx_in_sector;
   auto & current_cell = sector_cells_list_dev[cell_id];  // Use reference, not copy
   auto const idx_start_point_of_cell = current_cell.start_point_index;
   auto const num_points_of_cell = current_cell.num_points;
-  auto & prev_gnd_cell = sector_cells_list_dev[latest_gnd_cells_in_sector[0]];
+  auto & prev_gnd_cell = sector_cells_list_dev[last_gnd_cells_dev[0]];
 
   for (int i = 0; i < num_points_of_cell; ++i) {
-    auto & point = classify_points[idx_start_point_of_cell + i];
+    auto & point = cell_classify_points_dev[i];
 
     // 1. height is out-of-range
     if (point.z - prev_gnd_cell.gnd_height_avg > filter_parameters_dev->detection_range_z_max) {
@@ -631,7 +630,7 @@ __device__ void SegmentBreakCell(
     filter_parameters_dev->use_recheck_ground_cluster && current_cell.num_ground_points > 1 &&
     current_cell.gnd_radius_avg > filter_parameters_dev->recheck_start_distance) {
     // Recheck the ground points in the cell
-    recheckCell(current_cell, classify_points, filter_parameters_dev);
+    recheckCell(current_cell, cell_classify_points_dev, filter_parameters_dev);
   }
 }
 
@@ -652,13 +651,14 @@ __global__ void scanPerSectorGroundReferenceKernel(
 
   // Process the first cell of the sector
   SegmentationMode mode = SegmentationMode::UNINITIALIZED;
-
+  auto sector_start_cell_index = idx * filter_parameters_dev->max_num_cells_per_sector;
+  CellCentroid * sector_cells_list_dev = &centroid_cells_list_dev[sector_start_cell_index];
+  auto * sector_last_gnd_cells_dev =
+    &last_gnd_cells_dev[sector_start_cell_index * filter_parameters_dev->gnd_cell_buffer_size];
   for (int cell_index_in_sector = 0;
        cell_index_in_sector < filter_parameters_dev->max_num_cells_per_sector;
        ++cell_index_in_sector) {
-    auto sector_start_cell_index = idx * filter_parameters_dev->max_num_cells_per_sector;
-    auto cell_id = sector_start_cell_index + cell_index_in_sector;
-    if (centroid_cells_list_dev[cell_id].num_points == 0) {
+    if (sector_cells_list_dev[cell_index_in_sector].num_points == 0) {
       // if no points in the cell, continue
       continue;
     }
@@ -666,38 +666,42 @@ __global__ void scanPerSectorGroundReferenceKernel(
     // declare the points to stogare the gnd cells indexes in the sector
     // this is used to store the ground cells in the sector for line fitting
     // the size of the array is gnd_cell_buffer_size
-    assert(cell_id >= 0 && cell_id < filter_parameters_dev->max_num_cells);
-    int * latest_gnd_cells_in_sector =
-      &last_gnd_cells_dev[cell_id * filter_parameters_dev->gnd_cell_buffer_size];
     int num_latest_gnd_cells = 0;
     // get the latest gnd cells in the sector
-    CellCentroid * sector_cells_list_dev = &centroid_cells_list_dev[sector_start_cell_index];
+    size_t first_sector_classified_point_index =
+      sector_cells_list_dev[cell_index_in_sector].start_point_index;
+    ClassifiedPointTypeStruct * cell_classify_points_dev =
+      &classified_points_dev[first_sector_classified_point_index];
+    auto * last_gnd_cells_dev =
+      &sector_last_gnd_cells_dev
+        [cell_index_in_sector * filter_parameters_dev->gnd_cell_buffer_size];
 
     RecursiveGndCellSearch(
       sector_cells_list_dev, filter_parameters_dev->gnd_cell_buffer_size, cell_index_in_sector - 1,
-      latest_gnd_cells_in_sector, num_latest_gnd_cells);
+      last_gnd_cells_dev, num_latest_gnd_cells);
 
     // check the segmentation Mode based on prevoius gnd cells
     checkSegmentMode(
-      cell_index_in_sector, latest_gnd_cells_in_sector, num_latest_gnd_cells,
+      cell_index_in_sector, last_gnd_cells_dev, num_latest_gnd_cells,
       filter_parameters_dev->gnd_grid_continual_thresh, filter_parameters_dev->gnd_cell_buffer_size,
       mode);
 
     if (mode == SegmentationMode::UNINITIALIZED) {
       SegmentInitializedCell(
-        sector_cells_list_dev, classified_points_dev, filter_parameters_dev, cell_index_in_sector);
+        sector_cells_list_dev, cell_classify_points_dev, filter_parameters_dev,
+        cell_index_in_sector);
     } else if (mode == SegmentationMode::CONTINUOUS) {
       SegmentContinuousCell(
-        sector_cells_list_dev, classified_points_dev, filter_parameters_dev, cell_index_in_sector,
-        latest_gnd_cells_in_sector, num_latest_gnd_cells);
+        sector_cells_list_dev, cell_classify_points_dev, filter_parameters_dev,
+        cell_index_in_sector, last_gnd_cells_dev, num_latest_gnd_cells);
     } else if (mode == SegmentationMode::DISCONTINUOUS) {
       SegmentDiscontinuousCell(
-        sector_cells_list_dev, classified_points_dev, filter_parameters_dev, cell_index_in_sector,
-        latest_gnd_cells_in_sector, num_latest_gnd_cells);
+        sector_cells_list_dev, cell_classify_points_dev, filter_parameters_dev,
+        cell_index_in_sector, last_gnd_cells_dev, num_latest_gnd_cells);
     } else if (mode == SegmentationMode::BREAK) {
       SegmentBreakCell(
-        sector_cells_list_dev, classified_points_dev, filter_parameters_dev, cell_index_in_sector,
-        latest_gnd_cells_in_sector, num_latest_gnd_cells);
+        sector_cells_list_dev, cell_classify_points_dev, filter_parameters_dev,
+        cell_index_in_sector, last_gnd_cells_dev, num_latest_gnd_cells);
     }
     // if the first round of scan
   }
@@ -903,7 +907,7 @@ void CudaScanGroundSegmentationFilter::sortPointsInCells(
   (void)classified_points_dev;
 }
 
-// ============ Scan per sector to get ground reference =============
+// ============ Scan per sector to get ground reference and Non-Ground points =============
 void CudaScanGroundSegmentationFilter::scanPerSectorGroundReference(
   ClassifiedPointTypeStruct * classified_points_dev, CellCentroid * centroid_cells_list_dev,
   const FilterParameters * filter_parameters_dev, int * last_gnd_cells_dev)

@@ -16,7 +16,7 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
 : Node("cuda_scan_ground_segmentation_filter_node", options)
 {
   // Delare processing time debug
-  { 
+  {
     using autoware_utils::DebugPublisher;
     using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
