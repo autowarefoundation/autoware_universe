@@ -138,6 +138,11 @@ std::optional<Point2d> find_intersection_point(L1 && line1, L2 && line2)
   }
   return intersection_points.front();
 }
+
+bool is_private_lanelet(const lanelet::ConstLanelet & lanelet)
+{
+  return std::strcmp(lanelet.attributeOr("location", "else"), "private") == 0;
+}
 }  // namespace
 
 namespace helper
@@ -463,9 +468,18 @@ generate_blind_side_lanelets_before_turning(
   }
   */
   const auto intersection_lane = lanelet_map_ptr->laneletLayer.get(intersection_lane_id);
+
+  const auto is_private_intersection = is_private_lanelet(intersection_lane);
+  const auto validate_lane_attribute = [is_private_intersection](
+                                         const lanelet::ConstLanelet & lanelet) {
+    return is_private_intersection
+             ? is_private_lanelet(lanelet)  // If intersection is private, lane must also be private
+             : true;                        // ...otherwise, it's always true (allowed).
+  };
+
   const auto previous_lane_opt =
     helper::previous_lane_straight_priority(intersection_lane, routing_graph_ptr);
-  if (previous_lane_opt) {
+  if (previous_lane_opt && validate_lane_attribute(previous_lane_opt.value())) {
     const auto & previous_lane = previous_lane_opt.value();
     road_lanelets.push_back(previous_lane);
     blind_side_lanelets.push_back(blind_side_getter_function(route_handler, previous_lane));
@@ -478,7 +492,7 @@ generate_blind_side_lanelets_before_turning(
     const auto & last_road_lane = road_lanelets.front();
     const auto prev_lane_opt =
       helper::previous_lane_straight_priority(last_road_lane, routing_graph_ptr);
-    if (!prev_lane_opt) {
+    if (!prev_lane_opt || !validate_lane_attribute(prev_lane_opt.value())) {
       return std::make_pair(road_lanelets, blind_side_lanelets);
     }
     const auto & prev_lane = prev_lane_opt.value();
