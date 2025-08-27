@@ -674,7 +674,6 @@ __global__ void scanPerSectorGroundReferenceKernel(
       // if no points in the cell, continue
       continue;
     }
-    auto index_start_point_current_cell = centroid_cells_list_dev[cell_id].start_point_index;
 
     // declare the points to stogare the gnd cells indexes in the sector
     // this is used to store the ground cells in the sector for line fitting
@@ -813,7 +812,7 @@ __global__ void markObstaclePointsKernel(
   // extract origin index of point
   auto origin_index = classified_points_dev[idx].origin_index;
   auto point_type = classified_points_dev[idx].type;
-  if (origin_index >= static_cast<size_t>(num_points) || origin_index < 0) {
+  if (origin_index >= static_cast<size_t>(num_points)) {
     return;
   }
 
@@ -962,9 +961,6 @@ void CudaScanGroundSegmentationFilter::countCellPointNum(
   if (filter_parameters_.max_num_cells == 0) {
     return;  // No cells to initialize
   }
-
-  const float center_x = filter_parameters_.center_pcl_shift;
-  const float center_y = 0.0f;
 
   // Launch the kernel to divide the point cloud into radial divisions
   // Each thread will process one point and calculate its angle and distance from the center
@@ -1153,7 +1149,6 @@ void CudaScanGroundSegmentationFilter::classifyPointcloud(
 
   if (number_input_points_ == 0) {
     output_points->width = static_cast<uint32_t>(num_output_points);
-    ;
     output_points->row_step = static_cast<uint32_t>(num_output_points * sizeof(PointTypeStruct));
 
     ground_points->width = static_cast<uint32_t>(num_output_points);
