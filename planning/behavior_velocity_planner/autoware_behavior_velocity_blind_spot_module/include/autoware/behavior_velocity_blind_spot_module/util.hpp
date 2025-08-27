@@ -98,8 +98,8 @@ generate_blind_side_lanelets_before_turning(
  */
 lanelet::ConstLineString3d generate_virtual_blind_side_boundary_after_turning(
   const lanelet::ConstLanelet & outermost_lanelet,
-  const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction,
-  const double extend_length);
+  const lanelet::ConstLanelet & intersection_lanelet,
+  const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction);
 
 /**
  * @brief generate virtual LineString which is normal to the entry line of `intersection_lanelet`,
@@ -112,6 +112,19 @@ std::optional<lanelet::LineString3d> generate_virtual_ego_straight_path_after_tu
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
   const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction,
   const double ego_width);
+
+/**
+ * @brief Clip a virtual line so it ends at the farthest intersected point with the given
+ * intersection lanelet’s bounds.
+ *
+ * @return lanelet::LineString3d A linestring containing the start point and either:
+ *         - the original end point (if no intersected points found), or
+ *         - the farthest intersected point with intersection lanelet's bounds.
+ */
+lanelet::LineString3d clip_virtual_line_to_intersection_bound(
+  const lanelet::BasicPoint3d & virtual_line_start, const lanelet::BasicPoint3d & virtual_line_end,
+  const lanelet::ConstLanelet & intersection_lanelet,
+  const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction);
 
 /**
  * @brief generate a polygon representing the Path along the intersection lane, with given

@@ -128,8 +128,7 @@ BlindSpotDecision BlindSpotModule::modifyPathVelocityDetail(PathWithLaneId * pat
   const auto & last_blind_spot_lanelet_before_turning = blind_spot_lanelets_before_turning.back();
   if (!virtual_blind_lane_boundary_after_turning_) {
     virtual_blind_lane_boundary_after_turning_ = generate_virtual_blind_side_boundary_after_turning(
-      last_blind_spot_lanelet_before_turning, turn_direction_,
-      lanelet::utils::getLaneletLength3d(assigned_lanelet));
+      last_blind_spot_lanelet_before_turning, assigned_lanelet, turn_direction_);
   }
   const auto & virtual_blind_lane_boundary_after_turning =
     virtual_blind_lane_boundary_after_turning_.value();
