@@ -801,18 +801,19 @@ void DiffusionPlanner::on_timer()
   publish_debug_markers(input_data_map);
 
   // Calculate and record metrics for diagnostics using the proper logic
+  const int64_t batch_idx = 0;
   const int64_t valid_lane_count = postprocess::count_valid_elements(
-    input_data_map["lanes"], LANES_SHAPE[1], LANES_SHAPE[2], LANES_SHAPE[3], 0);
+    input_data_map["lanes"], LANES_SHAPE[1], LANES_SHAPE[2], LANES_SHAPE[3], batch_idx);
   diagnostics_inference_->add_key_value("valid_lane_count", valid_lane_count);
 
   const int64_t valid_route_count = postprocess::count_valid_elements(
     input_data_map["route_lanes"], ROUTE_LANES_SHAPE[1], ROUTE_LANES_SHAPE[2], ROUTE_LANES_SHAPE[3],
-    0);
+    batch_idx);
   diagnostics_inference_->add_key_value("valid_route_count", valid_route_count);
 
   const int64_t valid_neighbor_count = postprocess::count_valid_elements(
     input_data_map["neighbor_agents_past"], NEIGHBOR_SHAPE[1], NEIGHBOR_SHAPE[2], NEIGHBOR_SHAPE[3],
-    0);
+    batch_idx);
   diagnostics_inference_->add_key_value("valid_neighbor_count", valid_neighbor_count);
 
   // normalization of data
