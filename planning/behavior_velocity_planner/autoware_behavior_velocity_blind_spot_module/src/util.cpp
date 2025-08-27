@@ -492,7 +492,6 @@ generate_blind_side_lanelets_before_turning(
       return std::make_pair(road_lanelets, blind_side_lanelets);
     }
     const auto & prev_lane = prev_lane_opt.value();
-
     road_lanelets.insert(road_lanelets.begin(), prev_lane);
     blind_side_lanelets.insert(
       blind_side_lanelets.begin(), blind_side_getter_function(route_handler, prev_lane));
