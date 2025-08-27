@@ -4,8 +4,21 @@ project(autoware_detected_object_feature_remover)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
+find_package(PCL REQUIRED COMPONENTS common)
+find_package(pcl_conversions REQUIRED)
+find_package(OpenCV REQUIRED)
+
+set(DETECTED_OBJECT_FEATURE_REMOVER_DEPENDENCIES
+  PCL
+  OpenCV
+)
+
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/detected_object_feature_remover_node.cpp
+)
+
+ament_target_dependencies(${PROJECT_NAME}
+  ${DETECTED_OBJECT_FEATURE_REMOVER_DEPENDENCIES}
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
