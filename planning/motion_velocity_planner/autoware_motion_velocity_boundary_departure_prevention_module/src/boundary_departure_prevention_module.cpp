@@ -400,7 +400,7 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
   }
 
   if (!result_opt) {
-    RCLCPP_DEBUG(logger_, "Planning failed: %s", result_opt.error().c_str());
+    RCLCPP_DEBUG(logger_, "%s", result_opt.error().c_str());
     return {};
   }
 
@@ -414,8 +414,6 @@ tl::expected<VelocityPlanningResult, std::string> BoundaryDeparturePreventionMod
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   if (const auto invalid_data_opt = is_data_invalid(raw_trajectory_points)) {
-    RCLCPP_WARN_SKIPFIRST_THROTTLE(
-      logger_, *clock_ptr_, throttle_duration_ms, "%s", invalid_data_opt->c_str());
     return tl::make_unexpected(*invalid_data_opt);
   }
 
