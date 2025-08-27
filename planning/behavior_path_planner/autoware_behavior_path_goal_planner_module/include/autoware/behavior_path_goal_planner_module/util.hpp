@@ -268,10 +268,18 @@ bool hasDeviatedFromPath(
 bool has_stopline_except_terminal(const PathWithLaneId & path);
 
 /**
- * @brief find the lanelet that has changed "laterally" from previous lanelet on the routing graph
+ * @brief find the last lanelet that has changed "laterally" from previous lanelet on the routing
+ * graph
  * @return the lanelet that changed "laterally" if the path is lane changing, otherwise nullopt
+ * @detail if ego changes lane from A to H, lane id set is like
+ * (1) {A, {C, D}, {E, F}, H} --> return F
+ * (2) {A, {C, D}, F, H} --> return D
+ * (3) {A, C, {E, F}, H} --> return F
+ *        |   A   |   C   |   E   |   G   |
+ *        |   B   |   D   |   F   |   H   |
+ *
  */
-std::optional<lanelet::ConstLanelet> find_lane_change_completed_lanelet(
+std::optional<lanelet::ConstLanelet> find_last_lane_change_completed_lanelet(
   const PathWithLaneId & path, const lanelet::LaneletMapConstPtr lanelet_map,
   const lanelet::routing::RoutingGraphConstPtr routing_graph);
 
