@@ -49,8 +49,6 @@ void DetectedObjectFeatureRemover::pclToConvexHull(
   const pcl::PointCloud<pcl::PointXYZ> & cluster, autoware_perception_msgs::msg::Shape & shape,
   geometry_msgs::msg::Pose & pose)
 {
-  // convex hull processing
-
   // calc min and max z for convex hull height(z)
   float min_z = cluster.empty() ? 0.0 : cluster.at(0).z;
   float max_z = cluster.empty() ? 0.0 : cluster.at(0).z;
@@ -61,8 +59,10 @@ void DetectedObjectFeatureRemover::pclToConvexHull(
 
   std::vector<cv::Point> v_pointcloud;
   std::vector<cv::Point> v_polygon_points;
+  constexpr double scale = 1000.0;  // for cv::Point which takes int
+  constexpr double inv_scale = 1.0 / scale;
   for (size_t i = 0; i < cluster.size(); ++i) {
-    v_pointcloud.push_back(cv::Point(cluster.at(i).x * 1000.0, cluster.at(i).y * 1000.0));
+    v_pointcloud.push_back(cv::Point(cluster.at(i).x * scale, cluster.at(i).y * scale));
   }
   cv::convexHull(v_pointcloud, v_polygon_points);
 
@@ -70,16 +70,17 @@ void DetectedObjectFeatureRemover::pclToConvexHull(
   polygon_centroid.x = 0;
   polygon_centroid.y = 0;
   for (size_t i = 0; i < v_polygon_points.size(); ++i) {
-    polygon_centroid.x += static_cast<double>(v_polygon_points.at(i).x) / 1000.0;
-    polygon_centroid.y += static_cast<double>(v_polygon_points.at(i).y) / 1000.0;
+    polygon_centroid.x += static_cast<double>(v_polygon_points.at(i).x) * inv_scale;
+    polygon_centroid.y += static_cast<double>(v_polygon_points.at(i).y) * inv_scale;
   }
-  polygon_centroid.x = polygon_centroid.x / static_cast<double>(v_polygon_points.size());
-  polygon_centroid.y = polygon_centroid.y / static_cast<double>(v_polygon_points.size());
+  const double point_size = static_cast<double>(v_polygon_points.size());
+  polygon_centroid.x = polygon_centroid.x / point_size;
+  polygon_centroid.y = polygon_centroid.y / point_size;
 
   for (size_t i = 0; i < v_polygon_points.size(); ++i) {
     geometry_msgs::msg::Point32 point;
-    point.x = static_cast<double>(v_polygon_points.at(i).x) / 1000.0 - polygon_centroid.x;
-    point.y = static_cast<double>(v_polygon_points.at(i).y) / 1000.0 - polygon_centroid.y;
+    point.x = static_cast<double>(v_polygon_points.at(i).x) * inv_scale - polygon_centroid.x;
+    point.y = static_cast<double>(v_polygon_points.at(i).y) * inv_scale - polygon_centroid.y;
     point.z = 0.0;
     shape.footprint.points.push_back(point);
   }
