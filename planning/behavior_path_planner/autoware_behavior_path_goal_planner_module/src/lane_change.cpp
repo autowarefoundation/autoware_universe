@@ -64,7 +64,8 @@ LaneChangeContext::State LaneChangeContext::get_next_state(
   }
 
   // Aborted or NotLaneChanging
-  return is_lane_changing_path ? State{Started{goal_lanelet_id, now}} : State{NotLaneChanging{}};
+  return is_lane_changing_path ? State{Started{lane_change_complete_lane.value().id(), now}}
+                               : State{NotLaneChanging{}};
 }
 
 bool LaneChangeContext::is_not_consistent_transition(const State & from, const State & to)
