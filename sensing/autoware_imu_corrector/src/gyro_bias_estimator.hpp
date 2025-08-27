@@ -209,9 +209,10 @@ private:
   sensor_msgs::msg::Imu modify_imu(
     const sensor_msgs::msg::Imu & imu_msg, ScaleImuSignal & scale_imu, const rclcpp::Time & time);
 
-  void update_angle_ekf(double yaw_ndt, EKFEstimateScaleAngleVars &ekf_angle) const;
-  void update_rate_ekf(const PoseWithCovarianceStamped::ConstSharedPtr & pose_msg,
-                      EKFEstimateScaleRateVars & ekf_rate_state);
+  void update_angle_ekf(double yaw_ndt, EKFEstimateScaleAngleVars & ekf_angle) const;
+  void update_rate_ekf(
+    const PoseWithCovarianceStamped::ConstSharedPtr & pose_msg,
+    EKFEstimateScaleRateVars & ekf_rate_state);
 
   DiagnosticsInfo diagnostics_info_;
   GyroInfo gyro_info_;

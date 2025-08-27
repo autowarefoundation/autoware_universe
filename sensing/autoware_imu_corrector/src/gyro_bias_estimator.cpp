@@ -345,27 +345,24 @@ void GyroBiasEstimator::publish_debug_vectors()
 }
 
 void GyroBiasEstimator::update_angle_ekf(
-    double yaw_ndt,
-    EKFEstimateScaleAngleVars &ekf_angle) const
+  double yaw_ndt, EKFEstimateScaleAngleVars & ekf_angle) const
 {
-  const double angle_tolerance_eval = 0.1; // radians
+  const double angle_tolerance_eval = 0.1;  // radians
 
   if (std::abs(yaw_ndt - ekf_angle.x_state_(0)) < angle_tolerance_eval) {
-      Eigen::Matrix<double, 1, 2> h_matrix;
-      h_matrix << 1, 0;
-      Eigen::Matrix<double, 1, 1> y;
-      y << yaw_ndt - ekf_angle.x_state_(0);
-      Eigen::Matrix<double, 1, 1> s_matrix =
-          h_matrix * ekf_angle.p_angle_ * h_matrix.transpose() + ekf_angle.r_angle_;
-      Eigen::Matrix<double, 2, 1> k_matrix =
-          ekf_angle.p_angle_ * h_matrix.transpose() * s_matrix.inverse();
-      ekf_angle.x_state_ = ekf_angle.x_state_ + k_matrix * y;
-      ekf_angle.estimated_scale_angle_ = ekf_angle.x_state_(1);
-      ekf_angle.p_angle_ =
-          (Eigen::Matrix2d::Identity() - k_matrix * h_matrix) * ekf_angle.p_angle_;
-      ekf_angle.filtered_scale_angle_ =
-          alpha_ * ekf_angle.filtered_scale_angle_ +
-          (1.0 - alpha_) * ekf_angle.estimated_scale_angle_;
+    Eigen::Matrix<double, 1, 2> h_matrix;
+    h_matrix << 1, 0;
+    Eigen::Matrix<double, 1, 1> y;
+    y << yaw_ndt - ekf_angle.x_state_(0);
+    Eigen::Matrix<double, 1, 1> s_matrix =
+      h_matrix * ekf_angle.p_angle_ * h_matrix.transpose() + ekf_angle.r_angle_;
+    Eigen::Matrix<double, 2, 1> k_matrix =
+      ekf_angle.p_angle_ * h_matrix.transpose() * s_matrix.inverse();
+    ekf_angle.x_state_ = ekf_angle.x_state_ + k_matrix * y;
+    ekf_angle.estimated_scale_angle_ = ekf_angle.x_state_(1);
+    ekf_angle.p_angle_ = (Eigen::Matrix2d::Identity() - k_matrix * h_matrix) * ekf_angle.p_angle_;
+    ekf_angle.filtered_scale_angle_ =
+      alpha_ * ekf_angle.filtered_scale_angle_ + (1.0 - alpha_) * ekf_angle.estimated_scale_angle_;
   }
 }
 
@@ -445,7 +442,8 @@ void GyroBiasEstimator::update_rate_ekf(
         estimated_scale_buff_.clear();
         // Update parameters
         ekf_rate_state.max_variance_ = ekf_rate_state.variance_p_after_;
-        ekf_rate_state.r_ = ekf_rate_state.measurement_noise_r_after_ * ekf_rate_state.measurement_noise_r_after_;
+        ekf_rate_state.r_ =
+          ekf_rate_state.measurement_noise_r_after_ * ekf_rate_state.measurement_noise_r_after_;
         ekf_rate_state.q_ = ekf_rate_state.process_noise_q_after_;
         ekf_rate_state.filtered_scale_initialized_ = true;
       }
@@ -471,8 +469,8 @@ void GyroBiasEstimator::update_rate_ekf(
         ekf_rate_state.filtered_scale_rate_ * (1 - percentage_scale_rate_allow_correct_) &&
       ekf_rate_state.estimated_scale_rate_ <=
         ekf_rate_state.filtered_scale_rate_ * (1 + percentage_scale_rate_allow_correct_)) {
-      ekf_rate_state.filtered_scale_rate_ =
-        alpha_ * ekf_rate_state.filtered_scale_rate_ + (1 - alpha_) * ekf_rate_state.estimated_scale_rate_;
+      ekf_rate_state.filtered_scale_rate_ = alpha_ * ekf_rate_state.filtered_scale_rate_ +
+                                            (1 - alpha_) * ekf_rate_state.estimated_scale_rate_;
       ekf_rate_state.n_big_changes_detected_ = 0;
     } else {
       ekf_rate_state.n_big_changes_detected_++;
@@ -563,7 +561,6 @@ void GyroBiasEstimator::estimate_scale_gyro(
   previous_quat_ndt_ = quat;
 
   publish_debug_vectors();
-
 
   // Reset gyro yaw angle to the NDT yaw angle
   gyro_yaw_angle_ = ndt_yaw_angle_;

@@ -14,13 +14,12 @@
 
 #include "../src/gyro_bias_estimator.hpp"
 
+#include <Eigen/Dense>
 #include <rclcpp/rclcpp.hpp>
 
 #include <gtest/gtest.h>
 
 #include <iostream>
-
-#include <Eigen/Dense>
 
 namespace autoware::imu_corrector
 {
@@ -80,21 +79,18 @@ protected:
     return node_options;
   }
 
-  GyroBiasEstimatorTest()
-  : options(getNodeOptionsWithDefaultParams()),
-    module_(options)
-  {
-  }
+  GyroBiasEstimatorTest() : options(getNodeOptionsWithDefaultParams()), module_(options) {}
 
   // Add a helper method inside the friend class that can access private members
-  sensor_msgs::msg::Imu call_modify_imu(const sensor_msgs::msg::Imu & imu_in, 
-                                        const GyroBiasEstimator::ScaleImuSignal & scale_imu,
-                                        const rclcpp::Time & time) 
+  sensor_msgs::msg::Imu call_modify_imu(
+    const sensor_msgs::msg::Imu & imu_in, const GyroBiasEstimator::ScaleImuSignal & scale_imu,
+    const rclcpp::Time & time)
   {
-    return module_.modify_imu(imu_in, const_cast<GyroBiasEstimator::ScaleImuSignal&>(scale_imu), time);
+    return module_.modify_imu(
+      imu_in, const_cast<GyroBiasEstimator::ScaleImuSignal &>(scale_imu), time);
   }
-  double call_extract_yaw_from_pose(const geometry_msgs::msg::Quaternion & quat_msg, 
-                                   tf2::Quaternion & quat_out)
+  double call_extract_yaw_from_pose(
+    const geometry_msgs::msg::Quaternion & quat_msg, tf2::Quaternion & quat_out)
   {
     return module_.extract_yaw_from_pose(quat_msg, quat_out);
   }
@@ -104,7 +100,8 @@ protected:
     return module_.should_skip_update(gyro_yaw_rate);
   }
 
-  void call_update_angle_ekf(double yaw_ndt, GyroBiasEstimator::EKFEstimateScaleAngleVars &ekf_angle)
+  void call_update_angle_ekf(
+    double yaw_ndt, GyroBiasEstimator::EKFEstimateScaleAngleVars & ekf_angle)
   {
     module_.update_angle_ekf(yaw_ndt, ekf_angle);
   }
@@ -148,7 +145,8 @@ TEST_F(GyroBiasEstimatorTest, ModifyImuAppliesBiasAndScale)
   EXPECT_DOUBLE_EQ(imu_out.angular_velocity.y, expected_scale * 2.0 + expected_bias);
   EXPECT_DOUBLE_EQ(imu_out.angular_velocity.z, expected_scale * 3.0 + expected_bias);
 }
-TEST_F(GyroBiasEstimatorTest, ExtractYawFromPoseReturnsCorrectYaw) {
+TEST_F(GyroBiasEstimatorTest, ExtractYawFromPoseReturnsCorrectYaw)
+{
   geometry_msgs::msg::Quaternion quat_msg;
   tf2::Quaternion tf_quat;
 
@@ -166,94 +164,93 @@ TEST_F(GyroBiasEstimatorTest, ExtractYawFromPoseReturnsCorrectYaw) {
   EXPECT_NEAR(expected_yaw, yaw_extracted, 1e-6);
 }
 
-TEST_F(GyroBiasEstimatorTest, ShouldSkipUpdateReturnsTrueWhenRateSmall) {
-  double gyro_yaw_rate = 0.001; // smaller than threshold 
+TEST_F(GyroBiasEstimatorTest, ShouldSkipUpdateReturnsTrueWhenRateSmall)
+{
+  double gyro_yaw_rate = 0.001;  // smaller than threshold
   bool result = call_should_skip_update(gyro_yaw_rate);
 
   EXPECT_TRUE(result);
-
 }
 
-TEST_F(GyroBiasEstimatorTest, ShouldSkipUpdateReturnsFalseWhenRateHigh) {
-  double gyro_yaw_rate = 0.2; // bigger than threshold 
+TEST_F(GyroBiasEstimatorTest, ShouldSkipUpdateReturnsFalseWhenRateHigh)
+{
+  double gyro_yaw_rate = 0.2;  // bigger than threshold
   bool result = call_should_skip_update(gyro_yaw_rate);
 
   EXPECT_FALSE(result);
 }
 
-TEST_F(GyroBiasEstimatorTest, PositiveAngleEKFConvergence) {
-    auto ekf_angle = create_scale_angle_ekf();
-    ekf_angle.x_state_ << Eigen::Vector2d(1.02, 1.00);
-    ekf_angle.max_variance_p_angle_ = 5e-8;
-    ekf_angle.min_covariance_angle_ = 1e-6;
-    ekf_angle.p_angle_<< ekf_angle.max_variance_p_angle_, 0, 0, ekf_angle.max_variance_p_angle_;
-    double  noise = 0.00005;
-    ekf_angle.r_angle_ << noise * noise;
-    ekf_angle.estimated_scale_angle_ = 1.0;
-    ekf_angle.filtered_scale_angle_ = 1.0;
-    ekf_angle.decay_coefficient_ = 0.99999998;
+TEST_F(GyroBiasEstimatorTest, PositiveAngleEKFConvergence)
+{
+  auto ekf_angle = create_scale_angle_ekf();
+  ekf_angle.x_state_ << Eigen::Vector2d(1.02, 1.00);
+  ekf_angle.max_variance_p_angle_ = 5e-8;
+  ekf_angle.min_covariance_angle_ = 1e-6;
+  ekf_angle.p_angle_ << ekf_angle.max_variance_p_angle_, 0, 0, ekf_angle.max_variance_p_angle_;
+  double noise = 0.00005;
+  ekf_angle.r_angle_ << noise * noise;
+  ekf_angle.estimated_scale_angle_ = 1.0;
+  ekf_angle.filtered_scale_angle_ = 1.0;
+  ekf_angle.decay_coefficient_ = 0.99999998;
 
-    double true_yaw = 0.10; // Yaw angle
-    double factor_scale = 1.04;
-    int n_iter = 1000;
-    double gyro_rate = 0.1; 
-    double angle_gyro = true_yaw;
+  double true_yaw = 0.10;  // Yaw angle
+  double factor_scale = 1.04;
+  int n_iter = 1000;
+  double gyro_rate = 0.1;
+  double angle_gyro = true_yaw;
 
-    for (int i = 0; i < n_iter; ++i) {
-        angle_gyro = factor_scale * true_yaw;
-        ekf_angle.x_state_(0) = angle_gyro;
-        ekf_angle.x_state_(1) = (ekf_angle.x_state_(1) * ekf_angle.decay_coefficient_);
-        Eigen::Matrix2d f_matrix;
-        f_matrix << 1, gyro_rate, 0,
-          ekf_angle.decay_coefficient_;
-        ekf_angle.p_angle_ =
-          f_matrix * ekf_angle.p_angle_ * f_matrix.transpose() + ekf_angle.q_angle_;
-        if (i % 2 == 0) {
-          call_update_angle_ekf(true_yaw, ekf_angle);
-          angle_gyro = true_yaw;
-        }
+  for (int i = 0; i < n_iter; ++i) {
+    angle_gyro = factor_scale * true_yaw;
+    ekf_angle.x_state_(0) = angle_gyro;
+    ekf_angle.x_state_(1) = (ekf_angle.x_state_(1) * ekf_angle.decay_coefficient_);
+    Eigen::Matrix2d f_matrix;
+    f_matrix << 1, gyro_rate, 0, ekf_angle.decay_coefficient_;
+    ekf_angle.p_angle_ = f_matrix * ekf_angle.p_angle_ * f_matrix.transpose() + ekf_angle.q_angle_;
+    if (i % 2 == 0) {
+      call_update_angle_ekf(true_yaw, ekf_angle);
+      angle_gyro = true_yaw;
     }
-    std::cout << " Converged: " << 1 / ekf_angle.x_state_(1) << std::endl;
+  }
+  std::cout << " Converged: " << 1 / ekf_angle.x_state_(1) << std::endl;
 
-    // After many iterations, the state should converge to true_yaw
-    EXPECT_NEAR(1 / ekf_angle.x_state_(1), factor_scale, 7e-3);  
+  // After many iterations, the state should converge to true_yaw
+  EXPECT_NEAR(1 / ekf_angle.x_state_(1), factor_scale, 7e-3);
 }
 
-TEST_F(GyroBiasEstimatorTest, NegativeAngleEKFConvergence) {
-    auto ekf_angle = create_scale_angle_ekf();
-    ekf_angle.x_state_ << Eigen::Vector2d(1.02, 1.00);
-    ekf_angle.max_variance_p_angle_ = 5e-8;
-    ekf_angle.min_covariance_angle_ = 1e-6;
-    ekf_angle.p_angle_<< ekf_angle.max_variance_p_angle_, 0, 0, ekf_angle.max_variance_p_angle_;
-    double  noise = 0.00005;
-    ekf_angle.r_angle_ << noise * noise;
-    ekf_angle.estimated_scale_angle_ = 1.0;
-    ekf_angle.filtered_scale_angle_ = 1.0;
-    ekf_angle.decay_coefficient_ = 0.99999998;
+TEST_F(GyroBiasEstimatorTest, NegativeAngleEKFConvergence)
+{
+  auto ekf_angle = create_scale_angle_ekf();
+  ekf_angle.x_state_ << Eigen::Vector2d(1.02, 1.00);
+  ekf_angle.max_variance_p_angle_ = 5e-8;
+  ekf_angle.min_covariance_angle_ = 1e-6;
+  ekf_angle.p_angle_ << ekf_angle.max_variance_p_angle_, 0, 0, ekf_angle.max_variance_p_angle_;
+  double noise = 0.00005;
+  ekf_angle.r_angle_ << noise * noise;
+  ekf_angle.estimated_scale_angle_ = 1.0;
+  ekf_angle.filtered_scale_angle_ = 1.0;
+  ekf_angle.decay_coefficient_ = 0.99999998;
 
-    double true_yaw = 0.10; // Yaw angle
-    double factor_scale = 0.96;
-    int n_iter = 1000;
-    double gyro_rate = 0.1;
-    double angle_gyro = true_yaw;
+  double true_yaw = 0.10;  // Yaw angle
+  double factor_scale = 0.96;
+  int n_iter = 1000;
+  double gyro_rate = 0.1;
+  double angle_gyro = true_yaw;
 
-    for (int i = 0; i < n_iter; ++i) {
-        angle_gyro = factor_scale * true_yaw;
-        ekf_angle.x_state_(0) = angle_gyro;
-        ekf_angle.x_state_(1) = (ekf_angle.x_state_(1) * ekf_angle.decay_coefficient_);
-        Eigen::Matrix2d f_matrix;
-        f_matrix << 1, gyro_rate, 0,
-          ekf_angle.decay_coefficient_;
-        ekf_angle.p_angle_ =
-          f_matrix * ekf_angle.p_angle_ * f_matrix.transpose() + ekf_angle.q_angle_;
-        if (i % 2 == 0) {
-          call_update_angle_ekf(true_yaw, ekf_angle);
-          angle_gyro = true_yaw;
-        }
+  for (int i = 0; i < n_iter; ++i) {
+    angle_gyro = factor_scale * true_yaw;
+    ekf_angle.x_state_(0) = angle_gyro;
+    ekf_angle.x_state_(1) = (ekf_angle.x_state_(1) * ekf_angle.decay_coefficient_);
+    Eigen::Matrix2d f_matrix;
+    f_matrix << 1, gyro_rate, 0, ekf_angle.decay_coefficient_;
+    ekf_angle.p_angle_ = f_matrix * ekf_angle.p_angle_ * f_matrix.transpose() + ekf_angle.q_angle_;
+    if (i % 2 == 0) {
+      call_update_angle_ekf(true_yaw, ekf_angle);
+      angle_gyro = true_yaw;
     }
-    std::cout << " Converged: " << 1 / ekf_angle.x_state_(1) << std::endl;
+  }
+  std::cout << " Converged: " << 1 / ekf_angle.x_state_(1) << std::endl;
 
-    // After many iterations, the state should converge to true_yaw
-    EXPECT_NEAR(1 / ekf_angle.x_state_(1), factor_scale, 7e-3);  
+  // After many iterations, the state should converge to true_yaw
+  EXPECT_NEAR(1 / ekf_angle.x_state_(1), factor_scale, 7e-3);
 }
 }  // namespace autoware::imu_corrector
