@@ -66,6 +66,27 @@ using autoware_utils::calc_offset_pose;
 using autoware_utils::create_marker_color;
 using nav_msgs::msg::OccupancyGrid;
 
+namespace
+{
+autoware_perception_msgs::msg::PredictedObjects remove_objects_in_bus_stop_area(
+  const autoware_perception_msgs::msg::PredictedObjects & static_objects,
+  const lanelet::BasicPolygons2d & bus_stop_areas)
+{
+  autoware_perception_msgs::msg::PredictedObjects filtered;
+  for (const auto & static_object : static_objects.objects) {
+    const auto & pose = static_object.kinematics.initial_pose_with_covariance.pose;
+    const auto poly = autoware_utils_geometry::to_polygon2d(pose, static_object.shape);
+    const auto is_around_bus_stop_area = std::any_of(
+      bus_stop_areas.begin(), bus_stop_areas.end(),
+      [&](const auto & area) { return boost::geometry::intersects(poly, area); });
+    if (!is_around_bus_stop_area) {
+      filtered.objects.push_back(static_object);
+    }
+  }
+  return filtered;
+}
+}  // namespace
+
 namespace autoware::behavior_path_planner
 {
 GoalPlannerModule::GoalPlannerModule(
@@ -775,10 +796,16 @@ void GoalPlannerModule::updateData()
   debug_data_.collision_check = collision_check_map;
   // update to latest state
   // extract static and dynamic objects in extraction polygon for path collision check
-  const auto dynamic_target_objects = goal_planner_utils::extract_dynamic_objects(
+  const auto dynamic_target_objects_all = goal_planner_utils::extract_dynamic_objects(
     *(planner_data_->dynamic_object), *(planner_data_->route_handler), parameters_,
     planner_data_->parameters.vehicle_width, planner_data_->self_odometry->pose.pose,
     std::ref(debug_data_.objects_extraction_polygon));
+  const auto & dynamic_target_objects =
+    parameters_.bus_stop_area.use_bus_stop_area
+      ? remove_objects_in_bus_stop_area(
+          dynamic_target_objects_all, goal_searcher.bus_stop_area_polygons())
+      : dynamic_target_objects_all;
+
   const auto static_target_objects = utils::path_safety_checker::filterObjectsByVelocity(
     dynamic_target_objects, parameters_.th_moving_object_velocity);
 
