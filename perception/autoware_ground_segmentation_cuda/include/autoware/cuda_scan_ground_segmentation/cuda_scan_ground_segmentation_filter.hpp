@@ -92,7 +92,7 @@ struct FilterParameters
   float inv_sector_angle_rad;
 
   // cell mode parameters
-  float recheck_start_distance;     // distance to start rechecking ground cluster
+  float recheck_start_distance;  // distance to start rechecking ground cluster
   float detection_range_z_max;
   // cell parameters
   float cell_divider_size_m;
@@ -101,9 +101,9 @@ struct FilterParameters
   uint32_t max_num_cells;
   uint16_t max_num_cells_per_sector;  // number of cells per sector
   uint16_t gnd_cell_buffer_size;
-  uint16_t num_sectors;  // number of radial sectors
+  uint16_t num_sectors;                   // number of radial sectors
   uint16_t gnd_grid_continual_thresh{3};  // threshold for continual ground grid
-  bool use_recheck_ground_cluster;  // to enable recheck ground cluster
+  bool use_recheck_ground_cluster;        // to enable recheck ground cluster
 };
 
 class CudaScanGroundSegmentationFilter
@@ -153,8 +153,8 @@ private:
     ClassifiedPointTypeStruct * classified_points_dev);
 
   void getCellFirstPointIndex(
-    const FilterParameters * filter_parameters_dev, CellCentroid * centroid_cells_list_dev,
-    int * num_points_per_cell_dev, size_t * cell_first_point_indices_dev);
+    CellCentroid * centroid_cells_list_dev, int * num_points_per_cell_dev,
+    size_t * cell_first_point_indices_dev);
   void sortPointsInCells(
     const int * num_points_per_cell_dev, ClassifiedPointTypeStruct * classified_points_dev);
   void scanPerSectorGroundReference(
