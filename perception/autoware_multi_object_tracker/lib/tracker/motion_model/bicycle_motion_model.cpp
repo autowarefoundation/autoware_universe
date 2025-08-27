@@ -60,6 +60,8 @@ void BicycleMotionModel::setMotionParams(
   motion_params_.lr_min = bicycle_state.wheel_pos_rear_min;
   motion_params_.lf_ratio = bicycle_state.wheel_pos_ratio_front;
   motion_params_.lr_ratio = bicycle_state.wheel_pos_ratio_rear;
+  motion_params_.wheel_base_ratio_inv =
+    1.0 / (bicycle_state.wheel_pos_ratio_front + bicycle_state.wheel_pos_ratio_rear);
 
   motion_params_.wheel_pos_ratio =
     (motion_params_.lf_ratio + motion_params_.lr_ratio) / motion_params_.lr_ratio;
@@ -79,10 +81,8 @@ bool BicycleMotionModel::initialize(
   const std::array<double, 36> & pose_cov, const double & vel_long, const double & vel_long_cov,
   const double & vel_lat, const double & vel_lat_cov, const double & length)
 {
-  double lr = length * motion_params_.lr_ratio;
-  double lf = length * motion_params_.lf_ratio;
-  lr = std::max(lr, motion_params_.lr_min);
-  lf = std::max(lf, motion_params_.lf_min);
+  const double lr = length * motion_params_.lr_ratio;
+  const double lf = length * motion_params_.lf_ratio;
   const double x1 = x - lr * std::cos(yaw);
   const double y1 = y - lr * std::sin(yaw);
   const double x2 = x + lf * std::cos(yaw);
@@ -143,10 +143,8 @@ bool BicycleMotionModel::updateStatePoseHead(
   if (!checkInitialized()) return false;
 
   // convert the state to the bicycle model state
-  double lr = length * motion_params_.lr_ratio;
-  double lf = length * motion_params_.lf_ratio;
-  lr = std::max(lr, motion_params_.lr_min);
-  lf = std::max(lf, motion_params_.lf_min);
+  const double lr = length * motion_params_.lr_ratio;
+  const double lf = length * motion_params_.lf_ratio;
   const double cos_yaw = std::cos(yaw);
   const double sin_yaw = std::sin(yaw);
   const double x1 = x - lr * cos_yaw;
@@ -207,8 +205,8 @@ bool BicycleMotionModel::updateStatePoseHeadVel(
   if (!checkInitialized()) return false;
 
   // convert the state to the bicycle model state
-  double lr = length * motion_params_.lr_ratio;
-  double lf = length * motion_params_.lf_ratio;
+  const double lr = length * motion_params_.lr_ratio;
+  const double lf = length * motion_params_.lf_ratio;
   const double cos_yaw = std::cos(yaw);
   const double sin_yaw = std::sin(yaw);
   const double x1 = x - lr * cos_yaw;
@@ -344,11 +342,11 @@ bool BicycleMotionModel::limitStates()
     // rotate the object orientation by 180 degrees
     // replace X1 and Y1 with X2 and Y2
     const double x_center =
-      (X_t(IDX::X1) * motion_params_.lr_ratio + X_t(IDX::X2) * motion_params_.lf_ratio) /
-      (motion_params_.lr_ratio + motion_params_.lf_ratio);
+      (X_t(IDX::X1) * motion_params_.lf_ratio + X_t(IDX::X2) * motion_params_.lr_ratio) *
+      motion_params_.wheel_base_ratio_inv;
     const double y_center =
-      (X_t(IDX::Y1) * motion_params_.lr_ratio + X_t(IDX::Y2) * motion_params_.lf_ratio) /
-      (motion_params_.lr_ratio + motion_params_.lf_ratio);
+      (X_t(IDX::Y1) * motion_params_.lf_ratio + X_t(IDX::Y2) * motion_params_.lr_ratio) *
+      motion_params_.wheel_base_ratio_inv;
     const double x1_rel = X_t(IDX::X1) - x_center;
     const double y1_rel = X_t(IDX::Y1) - y_center;
     const double x2_rel = X_t(IDX::X2) - x_center;
@@ -586,8 +584,10 @@ bool BicycleMotionModel::getPredictedState(
   const double wheel_base_inv_sq = wheel_base_inv * wheel_base_inv;
 
   // set position
-  pose.position.x = 0.5 * (X(IDX::X1) + X(IDX::X2));
-  pose.position.y = 0.5 * (X(IDX::Y1) + X(IDX::Y2));
+  pose.position.x = (X(IDX::X1) * motion_params_.lf_ratio + X(IDX::X2) * motion_params_.lr_ratio) *
+                    motion_params_.wheel_base_ratio_inv;
+  pose.position.y = (X(IDX::Y1) * motion_params_.lf_ratio + X(IDX::Y2) * motion_params_.lr_ratio) *
+                    motion_params_.wheel_base_ratio_inv;
   // do not change z
 
   // set orientation
