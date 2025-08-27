@@ -205,19 +205,18 @@ Here's the expression of the steps start pose searching steps, considering the `
 
 If a safe path with sufficient clearance for static obstacles cannot be generated forward, a backward search from the vehicle's current position is conducted to locate a suitable start point for a pull out path generation.
 
-During this backward search, different policies can be applied based on `search_priority` parameters:
+During this backward search, different policies can be applied based on `search_policy` parameter:
 
-Selecting `efficient_path` focuses on creating a shift pull out path, regardless of how far back the vehicle needs to move.
-Opting for `distance_priority` aims to find a location with the least possible backward movement.
-Using `custom` allows you to specify the priority order of planners and always uses distance_priority style (backward distance priority).
+Selecting `planner_priority` focuses on creating efficient paths by trying all candidates for each planner type first.
+Opting for `distance_priority` aims to find a location with the least possible backward movement by trying all planners for each candidate first.
 
 ![priority_order](./images/priority_order.drawio.svg)
 
 `PriorityOrder` is defined as a vector of pairs, where each element consists of a `size_t` index representing a start pose candidate index, and the planner type. The PriorityOrder vector is processed sequentially from the beginning, meaning that the pairs listed at the top of the vector are given priority in the selection process for pull out path generation.
 
-##### `efficient_path`
+##### `planner_priority`
 
-When `search_priority` is set to `efficient_path` and the preference is for prioritizing `shift_pull_out`, the `PriorityOrder` array is populated in such a way that `shift_pull_out` is grouped together for all start pose candidates before moving on to the next planner type. This prioritization is reflected in the order of the array, with `shift_pull_out` being listed before geometric_pull_out.
+When `search_policy` is set to `planner_priority`, the `PriorityOrder` array is populated in such a way that all start pose candidates are tried for each planner type before moving on to the next planner type. This prioritization is reflected in the order of the array, with all candidates for the first planner being listed before any candidates for the second planner.
 
 | Index | Planner Type       |
 | ----- | ------------------ |
@@ -230,11 +229,11 @@ When `search_priority` is set to `efficient_path` and the preference is for prio
 | ...   | ...                |
 | N     | geometric_pull_out |
 
-This approach prioritizes trying all candidates with `shift_pull_out` before proceeding to `geometric_pull_out`, which may be efficient in situations where `shift_pull_out` is likely to be appropriate.
+This approach prioritizes trying all candidates with each planner type before proceeding to the next planner type, which may be efficient in situations where certain planner types are more likely to be appropriate.
 
 ##### `distance_priority`
 
-For `search_priority` set to `distance_priority`, the array alternates between planner types for each start pose candidate, which can minimize the distance the vehicle needs to move backward if the earlier candidates are successful.
+For `search_policy` set to `distance_priority`, the array alternates between planner types for each start pose candidate, which can minimize the distance the vehicle needs to move backward if the earlier candidates are successful.
 
 | Index | Planner Type       |
 | ----- | ------------------ |
@@ -247,46 +246,6 @@ For `search_priority` set to `distance_priority`, the array alternates between p
 | N     | geometric_pull_out |
 
 This ordering is beneficial when the priority is to minimize the backward distance traveled, giving an equal chance for each planner to succeed at the closest possible starting position.
-
-##### `custom`
-
-When `search_priority` is set to `custom`, you can specify the priority order of planners using the `planner_priority_list` parameter. This mode always uses distance_priority style (backward distance priority) to minimize the backward movement.
-
-**Configuration Example:**
-
-```yaml
-start_planner:
-  search_priority: "custom"
-  planner_priority_list: ["GEOMETRIC", "SHIFT", "CLOTHOID"] # GEOMETRIC first, then SHIFT, then CLOTHOID
-```
-
-**Priority Order:**
-
-| Index | Planner Type |
-| ----- | ------------ |
-| 0     | GEOMETRIC    |
-| 0     | SHIFT        |
-| 0     | CLOTHOID     |
-| 1     | GEOMETRIC    |
-| 1     | SHIFT        |
-| 1     | CLOTHOID     |
-| ...   | ...          |
-| N     | GEOMETRIC    |
-| N     | SHIFT        |
-| N     | CLOTHOID     |
-
-This approach allows you to:
-
-- **Customize planner priority**: Specify which planner to try first
-- **Exclude specific planners**: Simply omit them from the list
-- **Test single planner**: Use only one planner type in the list
-
-**Use Cases:**
-
-- **Conservative approach**: `["SHIFT", "GEOMETRIC"]` - Exclude CLOTHOID for safety
-- **Testing**: `["GEOMETRIC"]` - Test only geometric planner
-
-**Note**: Only planners listed in `search_priority` will be used. `search_priority` cannot be empty. Freespace planner is controlled separately by `enable_freespace_planner`.
 
 ### 2. Collision detection with dynamic obstacles
 
@@ -520,20 +479,17 @@ Pull out distance is calculated by the speed, lateral deviation, and the lateral
 
 #### parameters for shift pull out
 
-| Name | Unit | Type | Description | Default value |
-| :--- | :--- | :--- | :---------- | :------------ |
-
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | true          |
-
-| check_shift_path_lane_departure | [-] | bool | flag whether to check if shift path footprints are out of lane | true |
-| allow_check_shift_path_lane_departure_override | [-] | bool | flag to override/cancel lane departure check if the ego vehicle's starting pose is already out of lane | false |
-| shift_pull_out_velocity | [m/s] | double | velocity of shift pull out | 2.0 |
-| pull_out_sampling_num | [-] | int | Number of samplings in the minimum to maximum range of lateral_jerk | 4 |
-| maximum_lateral_jerk | [m/s3] | double | maximum lateral jerk | 2.0 |
-| minimum_lateral_jerk | [m/s3] | double | minimum lateral jerk | 0.1 |
-| minimum_shift_pull_out_distance | [m] | double | minimum shift pull out distance. if calculated pull out distance is shorter than this, use this for path generation. | 0.0 |
-| maximum_curvature | [1/m] | double | maximum curvature. Calculate the required pull out distance from this maximum curvature, assuming the reference path is considered a straight line and shifted by two approximate arcs. This does not compensate for curvature in a shifted path or curve. | 0.07 |
-| end_pose_curvature_threshold | [1/m] | double | The curvature threshold which is used for calculating the shift pull out distance. The shift end pose is shifted forward so that curvature on shift end pose is less than this value. This is to prevent the generated path from having a large curvature when the end pose is on a curve. If a shift end pose with a curvature below the threshold is not found, the shift pull out distance is used as the distance to the point with the lowest curvature among the points beyond a certain distance. | 0.01 |
+| Name                                           | Unit   | Type   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Default value |
+| :--------------------------------------------- | :----- | :----- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------ |
+| check_shift_path_lane_departure                | [-]    | bool   | flag whether to check if shift path footprints are out of lane                                                                                                                                                                                                                                                                                                                                                                                                                                           | true          |
+| allow_check_shift_path_lane_departure_override | [-]    | bool   | flag to override/cancel lane departure check if the ego vehicle's starting pose is already out of lane                                                                                                                                                                                                                                                                                                                                                                                                   | false         |
+| shift_pull_out_velocity                        | [m/s]  | double | velocity of shift pull out                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | 2.0           |
+| pull_out_sampling_num                          | [-]    | int    | Number of samplings in the minimum to maximum range of lateral_jerk                                                                                                                                                                                                                                                                                                                                                                                                                                      | 4             |
+| maximum_lateral_jerk                           | [m/s3] | double | maximum lateral jerk                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | 2.0           |
+| minimum_lateral_jerk                           | [m/s3] | double | minimum lateral jerk                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | 0.1           |
+| minimum_shift_pull_out_distance                | [m]    | double | minimum shift pull out distance. if calculated pull out distance is shorter than this, use this for path generation.                                                                                                                                                                                                                                                                                                                                                                                     | 0.0           |
+| maximum_curvature                              | [1/m]  | double | maximum curvature. Calculate the required pull out distance from this maximum curvature, assuming the reference path is considered a straight line and shifted by two approximate arcs. This does not compensate for curvature in a shifted path or curve.                                                                                                                                                                                                                                               | 0.07          |
+| end_pose_curvature_threshold                   | [1/m]  | double | The curvature threshold which is used for calculating the shift pull out distance. The shift end pose is shifted forward so that curvature on shift end pose is less than this value. This is to prevent the generated path from having a large curvature when the end pose is on a curve. If a shift end pose with a curvature below the threshold is not found, the shift pull out distance is used as the distance to the point with the lowest curvature among the points beyond a certain distance. | 0.01          |
 
 ### **geometric pull out**
 
@@ -546,16 +502,13 @@ See also [[1]](https://www.sciencedirect.com/science/article/pii/S14746670153474
 
 #### parameters for geometric pull out
 
-| Name | Unit | Type | Description | Default value |
-| :--- | :--- | :--- | :---------- | :------------ |
-
-                                                                                                                 | true          |
-
-| divide_pull_out_path | [-] | bool | flag whether to divide arc paths. The path is assumed to be divided because the curvature is not continuous. But it requires a stop during the departure. | false |
-| geometric_pull_out_velocity | [m/s] | double | velocity of geometric pull out | 1.0 |
-| lane_departure_margin | [m] | double | margin of deviation to lane right | 0.2 |
-| lane_departure_check_expansion_margin | [m] | double | margin to expand the ego vehicle footprint when doing lane departure checks | 0.0 |
-| geometric_pull_out_max_steer_angle_margin_scale | [-] | double | scaling factor applied to the maximum steering angle (max_steer_angle) defined in vehicle_info parameter | 0.72 |
+| Name                                            | Unit  | Type   | Description                                                                                                                                               | Default value |
+| :---------------------------------------------- | :---- | :----- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------ |
+| divide_pull_out_path                            | [-]   | bool   | flag whether to divide arc paths. The path is assumed to be divided because the curvature is not continuous. But it requires a stop during the departure. | false         |
+| geometric_pull_out_velocity                     | [m/s] | double | velocity of geometric pull out                                                                                                                            | 1.0           |
+| lane_departure_margin                           | [m]   | double | margin of deviation to lane right                                                                                                                         | 0.2           |
+| lane_departure_check_expansion_margin           | [m]   | double | margin to expand the ego vehicle footprint when doing lane departure checks                                                                               | 0.0           |
+| geometric_pull_out_max_steer_angle_margin_scale | [-]   | double | scaling factor applied to the maximum steering angle (max_steer_angle) defined in vehicle_info parameter                                                  | 0.72          |
 
 ### **clothoid pull out**
 
@@ -585,7 +538,7 @@ If a safe path cannot be generated from the current position, search backwards f
 | Name                          | Unit | Type     | Description                                                                                                                                                                 | Default value                    |
 | :---------------------------- | :--- | :------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------- |
 | enable_back                   | [-]  | bool     | flag whether to search backward for start_point                                                                                                                             | true                             |
-| search_priority               | [-]  | string[] | list of planner types in priority order. Available: "SHIFT", "GEOMETRIC", "CLOTHOID", "FREESPACE"                                                                           | ["SHIFT","GEOMETRIC","CLOTHOID"] |
+| search_priority               | [-]  | string[] | list of planner types in priority order. Available: "SHIFT", "GEOMETRIC", "CLOTHOID"                                                                                        | ["SHIFT","GEOMETRIC","CLOTHOID"] |
 | search_policy                 | [-]  | string   | search policy: "planner_priority" (planner-first: SHIFT all candidates, then GEOMETRIC ...) or "distance_priority" (candidate-first: 0m SHIFT, 0m GEOMETRIC, 2m SHIFT, ...) | "distance_priority"              |
 | max_back_distance             | [m]  | double   | maximum back distance                                                                                                                                                       | 30.0                             |
 | backward_search_resolution    | [m]  | double   | distance interval for searching backward pull out start point                                                                                                               | 2.0                              |
