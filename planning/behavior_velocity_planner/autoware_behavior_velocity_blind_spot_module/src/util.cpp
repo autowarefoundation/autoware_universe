@@ -115,7 +115,8 @@ Eigen::Vector3d linestring_normal_direction(
  * @brief extend the last part of given `line` by some length
  */
 lanelet::LineString3d generate_segment_beyond_linestring_end(
-  const lanelet::ConstLineString3d & line, const lanelet::ConstLanelet & intersection_lanelet)
+  const lanelet::ConstLineString3d & line, const lanelet::ConstLanelet & intersection_lanelet,
+  const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction)
 {
   const auto extend_length = lanelet::utils::getLaneletLength3d(intersection_lanelet);
   const auto size = line.size();
@@ -123,7 +124,7 @@ lanelet::LineString3d generate_segment_beyond_linestring_end(
   const auto & p2 = line[size - 1];
   const auto p3 = autoware::experimental::lanelet2_utils::extrapolate_point(p1, p2, extend_length);
   return clip_virtual_line_to_intersection_bound(
-    remove_const(p2), remove_const(p3), intersection_lanelet);
+    remove_const(p2), remove_const(p3), intersection_lanelet, turn_direction);
 };
 
 template <typename L1, typename L2>
@@ -511,7 +512,8 @@ lanelet::ConstLineString3d generate_virtual_blind_side_boundary_after_turning(
   const auto & target_linestring = (turn_direction == TurnDirection::Left)
                                      ? outermost_lanelet.leftBound()
                                      : outermost_lanelet.rightBound();
-  return generate_segment_beyond_linestring_end(target_linestring, intersection_lanelet);
+  return generate_segment_beyond_linestring_end(
+    target_linestring, intersection_lanelet, turn_direction);
 }
 
 std::optional<lanelet::LineString3d> generate_virtual_ego_straight_path_after_turning(
@@ -547,48 +549,42 @@ std::optional<lanelet::LineString3d> generate_virtual_ego_straight_path_after_tu
     linestring_normal_direction(entry_line, extend_length);
 
   return clip_virtual_line_to_intersection_bound(
-    virtual_straight_path_start, virtual_straight_path_end, intersection_lanelet);
+    virtual_straight_path_start, virtual_straight_path_end, intersection_lanelet, turn_direction);
 }
 
 lanelet::LineString3d clip_virtual_line_to_intersection_bound(
   const lanelet::BasicPoint3d & virtual_line_start, const lanelet::BasicPoint3d & virtual_line_end,
-  const lanelet::ConstLanelet & intersection_lanelet)
+  const lanelet::ConstLanelet & intersection_lanelet,
+  const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction)
 {
   const auto virtual_line = to_bg2d(std::vector{virtual_line_start, virtual_line_end});
 
+  const auto & farthest_bound = (turn_direction == TurnDirection::Left)
+                                  ? intersection_lanelet.rightBound()
+                                  : intersection_lanelet.leftBound();
+
   std::vector<Point2d> intersected_points;
-  const auto get_intersected_points = [&](const auto & linestring) {
-    for (size_t i = 0; i + 1 < linestring.size(); ++i) {
-      const auto & p1 = linestring[i];
-      const auto & p2 = linestring[i + 1];
+  for (size_t i = 0; i + 1 < farthest_bound.size(); ++i) {
+    const auto & p1 = farthest_bound[i];
+    const auto & p2 = farthest_bound[i + 1];
 
-      auto linestring_segment = to_bg2d(std::vector{p1, p2});
-      boost::geometry::intersection(virtual_line, linestring_segment, intersected_points);
-    }
-  };
-
-  get_intersected_points(intersection_lanelet.leftBound());
-  get_intersected_points(intersection_lanelet.rightBound());
-
-  const auto find_furthest_intersected_point = std::max_element(
-    intersected_points.begin(), intersected_points.end(), [&](const auto & a, const auto & b) {
-      return bg::comparable_distance(a, virtual_line.front()) <
-             bg::comparable_distance(b, virtual_line.front());
-    });
+    auto farthest_bound_segment = to_bg2d(std::vector{p1, p2});
+    boost::geometry::intersection(virtual_line, farthest_bound_segment, intersected_points);
+  }
 
   lanelet::Points3d points;
   points.emplace_back(lanelet::InvalId, virtual_line_start);
 
-  if (intersected_points.empty() || find_furthest_intersected_point == intersected_points.end()) {
+  if (intersected_points.empty()) {
     points.emplace_back(lanelet::InvalId, virtual_line_end);
     return lanelet::LineString3d{lanelet::InvalId, points};
   }
 
-  lanelet::Point3d furthest_intersected_point{
-    lanelet::InvalId, lanelet::BasicPoint3d{
-                        find_furthest_intersected_point->x(), find_furthest_intersected_point->y(),
-                        virtual_line_end.z()}};
-  points.emplace_back(lanelet::InvalId, furthest_intersected_point);
+  lanelet::Point3d farthest_intersected_point{
+    lanelet::InvalId,
+    lanelet::BasicPoint3d{
+      intersected_points.front().x(), intersected_points.front().y(), virtual_line_end.z()}};
+  points.emplace_back(lanelet::InvalId, farthest_intersected_point);
 
   return lanelet::LineString3d{lanelet::InvalId, points};
 }

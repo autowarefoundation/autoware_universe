@@ -123,7 +123,8 @@ std::optional<lanelet::LineString3d> generate_virtual_ego_straight_path_after_tu
  */
 lanelet::LineString3d clip_virtual_line_to_intersection_bound(
   const lanelet::BasicPoint3d & virtual_line_start, const lanelet::BasicPoint3d & virtual_line_end,
-  const lanelet::ConstLanelet & intersection_lanelet);
+  const lanelet::ConstLanelet & intersection_lanelet,
+  const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction);
 
 /**
  * @brief generate a polygon representing the Path along the intersection lane, with given
