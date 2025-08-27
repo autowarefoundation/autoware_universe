@@ -55,8 +55,8 @@
       enable_back: true
       # Planner priority list. Example: ["SHIFT", "GEOMETRIC", "CLOTHOID"]
       search_priority: ["SHIFT", "GEOMETRIC", "CLOTHOID"]
-      # Search policy: "prioritize_planner" or "short_back_distance"
-      search_policy: "short_back_distance"
+      # Search policy: "planner_priority" or "distance_priority"
+      search_policy: "distance_priority"
       max_back_distance: 20.0
       backward_search_resolution: 2.0
       backward_path_update_duration: 3.0

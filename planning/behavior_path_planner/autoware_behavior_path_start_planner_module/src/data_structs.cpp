@@ -123,7 +123,7 @@ StartPlannerParameters StartPlannerParameters::init(rclcpp::Node & node)
     }
 
     p.search_policy = get_or_declare_parameter<std::string>(node, ns + "search_policy");
-    if (p.search_policy != "short_back_distance" && p.search_policy != "prioritize_planner") {
+    if (p.search_policy != "distance_priority" && p.search_policy != "planner_priority") {
       RCLCPP_ERROR(node.get_logger(), "Invalid search_policy: %s", p.search_policy.c_str());
       throw std::runtime_error("Invalid search_policy: " + p.search_policy);
     }

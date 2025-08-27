@@ -1156,7 +1156,7 @@ PriorityOrder StartPlannerModule::determinePriorityOrder(
   }
 
   // Generate priority order based on search policy
-  if (search_policy == "short_back_distance") {
+  if (search_policy == "distance_priority") {
     // Candidate-first: try all planners for each candidate
     // Order: (candidate0, planner0), (candidate0, planner1), ..., (candidate1, planner0), ...
     for (size_t candidate_idx = 0; candidate_idx < start_pose_candidates_num; ++candidate_idx) {
@@ -1164,7 +1164,7 @@ PriorityOrder StartPlannerModule::determinePriorityOrder(
         order_priority.emplace_back(candidate_idx, planner);
       }
     }
-  } else {  // prioritize_planner
+  } else {  // planner_priority
     // Planner-first: try all candidates for each planner
     // Order: (candidate0, planner0), (candidate1, planner0), ..., (candidate0, planner1), ...
     for (const auto & planner : valid_planners) {
@@ -1179,10 +1179,8 @@ PriorityOrder StartPlannerModule::determinePriorityOrder(
 
 bool StartPlannerModule::isPlannerEnabled(const PlannerType & planner_type) const
 {
-  // Special handling for FREESPACE planner - use enable_freespace_planner flag
-  if (planner_type == PlannerType::FREESPACE) {
-    return parameters_->enable_freespace_planner;
-  }
+  // PlannerType::FREESPACE is checked by direct parameter reference,
+  // while other planners are checked by their existence in the search_priority list
 
   // Check if the planner type is in the search_priority list
   const std::string planner_type_str = std::string(magic_enum::enum_name(planner_type));
