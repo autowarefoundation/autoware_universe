@@ -46,6 +46,7 @@ private:
 
 public:
   explicit GyroBiasEstimator(const rclcpp::NodeOptions & options);
+  friend class GyroBiasEstimatorTest;
 
 private:
   void update_diagnostics(diagnostic_updater::DiagnosticStatusWrapper & stat);
@@ -60,9 +61,7 @@ private:
   double compute_yaw_rate_from_quat(
     const tf2::Quaternion & quat, const tf2::Quaternion & prev_quat, double dt);
   void publish_debug_vectors();
-  void update_angle_ekf(double yaw_ndt);
-  bool should_skip_update();
-  void update_rate_ekf(const PoseWithCovarianceStamped::ConstSharedPtr & pose_msg);
+  bool should_skip_update(double gyro_yaw_rate);
 
   static geometry_msgs::msg::Vector3 transform_vector3(
     const geometry_msgs::msg::Vector3 & vec,
@@ -209,6 +208,10 @@ private:
 
   sensor_msgs::msg::Imu modify_imu(
     const sensor_msgs::msg::Imu & imu_msg, ScaleImuSignal & scale_imu, const rclcpp::Time & time);
+
+  void update_angle_ekf(double yaw_ndt, EKFEstimateScaleAngleVars &ekf_angle) const;
+  void update_rate_ekf(const PoseWithCovarianceStamped::ConstSharedPtr & pose_msg,
+                      EKFEstimateScaleRateVars & ekf_rate_state);
 
   DiagnosticsInfo diagnostics_info_;
   GyroInfo gyro_info_;

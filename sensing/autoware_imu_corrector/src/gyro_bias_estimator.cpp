@@ -344,36 +344,34 @@ void GyroBiasEstimator::publish_debug_vectors()
   scale_debug_pub_->publish(scale_debug);
 }
 
-void GyroBiasEstimator::update_angle_ekf(double yaw_ndt)
+void GyroBiasEstimator::update_angle_ekf(
+    double yaw_ndt,
+    EKFEstimateScaleAngleVars &ekf_angle) const
 {
-  constexpr double angle_tolerance_eval = 0.1;
+  const double angle_tolerance_eval = 0.1; // radians
 
-  if (
-    std::abs(gyro_yaw_rate_) > threshold_to_estimate_scale_ && gyro_bias_.has_value() &&
-    std::abs(yaw_ndt - ekf_angle_.x_state_(0)) <
-      angle_tolerance_eval) {  // Avoid large jumps in angle
-    // Update the EKF state with the new angle
-    Eigen::Matrix<double, 1, 2> h_matrix;
-    h_matrix << 1, 0;
-    Eigen::Matrix<double, 1, 1> y;
-
-    y << yaw_ndt - ekf_angle_.x_state_(0);
-
-    Eigen::Matrix<double, 1, 1> s_matrix =
-      h_matrix * ekf_angle_.p_angle_ * h_matrix.transpose() + ekf_angle_.r_angle_;
-    Eigen::Matrix<double, 2, 1> k_matrix =
-      ekf_angle_.p_angle_ * h_matrix.transpose() * s_matrix.inverse();
-    ekf_angle_.x_state_ = ekf_angle_.x_state_ + k_matrix * y;
-    ekf_angle_.estimated_scale_angle_ = ekf_angle_.x_state_(1);
-    ekf_angle_.p_angle_ = (Eigen::Matrix2d::Identity() - k_matrix * h_matrix) * ekf_angle_.p_angle_;
-
-    ekf_angle_.filtered_scale_angle_ =
-      alpha_ * ekf_angle_.filtered_scale_angle_ + (1 - alpha_) * ekf_angle_.estimated_scale_angle_;
+  if (std::abs(yaw_ndt - ekf_angle.x_state_(0)) < angle_tolerance_eval) {
+      Eigen::Matrix<double, 1, 2> h_matrix;
+      h_matrix << 1, 0;
+      Eigen::Matrix<double, 1, 1> y;
+      y << yaw_ndt - ekf_angle.x_state_(0);
+      Eigen::Matrix<double, 1, 1> s_matrix =
+          h_matrix * ekf_angle.p_angle_ * h_matrix.transpose() + ekf_angle.r_angle_;
+      Eigen::Matrix<double, 2, 1> k_matrix =
+          ekf_angle.p_angle_ * h_matrix.transpose() * s_matrix.inverse();
+      ekf_angle.x_state_ = ekf_angle.x_state_ + k_matrix * y;
+      ekf_angle.estimated_scale_angle_ = ekf_angle.x_state_(1);
+      ekf_angle.p_angle_ =
+          (Eigen::Matrix2d::Identity() - k_matrix * h_matrix) * ekf_angle.p_angle_;
+      ekf_angle.filtered_scale_angle_ =
+          alpha_ * ekf_angle.filtered_scale_angle_ +
+          (1.0 - alpha_) * ekf_angle.estimated_scale_angle_;
   }
 }
 
 void GyroBiasEstimator::update_rate_ekf(
-  const PoseWithCovarianceStamped::ConstSharedPtr & pose_msg_ptr)
+  const PoseWithCovarianceStamped::ConstSharedPtr & pose_msg_ptr,
+  EKFEstimateScaleRateVars & ekf_rate_state)
 {
   // EKF update
   // Find in the buffer the delayed gyro data and average the last samples
@@ -422,12 +420,12 @@ void GyroBiasEstimator::update_rate_ekf(
     auto h = avg_rate_pose_;
     // To avoid confusion with the bias sign we remove the bias from the gyro rate directly
     auto y = (avg_rate_gyro_ - gyro_bias_not_rotated_.value().z) -
-             (ekf_rate_.estimated_scale_rate_ * avg_rate_pose_);
-    auto s = h * ekf_rate_.p_ * h + ekf_rate_.r_;
-    auto k = ekf_rate_.p_ * h / s;
+             (ekf_rate_state.estimated_scale_rate_ * avg_rate_pose_);
+    auto s = h * ekf_rate_state.p_ * h + ekf_rate_state.r_;
+    auto k = ekf_rate_state.p_ * h / s;
 
-    ekf_rate_.estimated_scale_rate_ = ekf_rate_.estimated_scale_rate_ + k * y;
-    ekf_rate_.p_ = (1 - k * h) * ekf_rate_.p_;
+    ekf_rate_state.estimated_scale_rate_ = ekf_rate_state.estimated_scale_rate_ + k * y;
+    ekf_rate_state.p_ = (1 - k * h) * ekf_rate_state.p_;
 
     Vector3Stamped gyro_debug_msg;
     gyro_debug_msg.header.stamp = this->now();
@@ -437,49 +435,49 @@ void GyroBiasEstimator::update_rate_ekf(
     gyro_debug_pub_->publish(gyro_debug_msg);
 
     // Initialize the slow phase after the first samples
-    if (!ekf_rate_.filtered_scale_initialized_) {
-      estimated_scale_buff_.push_back(ekf_rate_.estimated_scale_rate_);
-      if (estimated_scale_buff_.size() > static_cast<size_t>(ekf_rate_.samples_to_init_)) {
+    if (!ekf_rate_state.filtered_scale_initialized_) {
+      estimated_scale_buff_.push_back(ekf_rate_state.estimated_scale_rate_);
+      if (estimated_scale_buff_.size() > static_cast<size_t>(ekf_rate_state.samples_to_init_)) {
         double average_est_scale =
           std::accumulate(estimated_scale_buff_.begin(), estimated_scale_buff_.end(), 0.0) /
           static_cast<double>(estimated_scale_buff_.size());
-        ekf_rate_.filtered_scale_rate_ = average_est_scale;
+        ekf_rate_state.filtered_scale_rate_ = average_est_scale;
         estimated_scale_buff_.clear();
         // Update parameters
-        ekf_rate_.max_variance_ = ekf_rate_.variance_p_after_;
-        ekf_rate_.r_ = ekf_rate_.measurement_noise_r_after_ * ekf_rate_.measurement_noise_r_after_;
-        ekf_rate_.q_ = ekf_rate_.process_noise_q_after_;
-        ekf_rate_.filtered_scale_initialized_ = true;
+        ekf_rate_state.max_variance_ = ekf_rate_state.variance_p_after_;
+        ekf_rate_state.r_ = ekf_rate_state.measurement_noise_r_after_ * ekf_rate_state.measurement_noise_r_after_;
+        ekf_rate_state.q_ = ekf_rate_state.process_noise_q_after_;
+        ekf_rate_state.filtered_scale_initialized_ = true;
       }
     }
 
-    if (ekf_rate_.estimated_scale_rate_ < min_allowed_scale_) {
+    if (ekf_rate_state.estimated_scale_rate_ < min_allowed_scale_) {
       gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
       gyro_info_.scale_status_summary = "ERR";
       gyro_info_.scale_summary_message =
         "Scale is under the minimum, check the IMU, NDT device or TF.";
-    } else if (ekf_rate_.estimated_scale_rate_ > max_allowed_scale_) {
+    } else if (ekf_rate_state.estimated_scale_rate_ > max_allowed_scale_) {
       gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
       gyro_info_.scale_status_summary = "ERR";
       gyro_info_.scale_summary_message =
         "Scale is over the maximum, check the IMU, NDT device or TF.";
-    } else if (ekf_rate_.n_big_changes_detected_ == 0) {
+    } else if (ekf_rate_state.n_big_changes_detected_ == 0) {
       gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::OK;
     }
 
     // Check if the estimated scale is within the allowed range or if a big change is detected
     if (
-      ekf_rate_.estimated_scale_rate_ >=
-        ekf_rate_.filtered_scale_rate_ * (1 - percentage_scale_rate_allow_correct_) &&
-      ekf_rate_.estimated_scale_rate_ <=
-        ekf_rate_.filtered_scale_rate_ * (1 + percentage_scale_rate_allow_correct_)) {
-      ekf_rate_.filtered_scale_rate_ =
-        alpha_ * ekf_rate_.filtered_scale_rate_ + (1 - alpha_) * ekf_rate_.estimated_scale_rate_;
-      ekf_rate_.n_big_changes_detected_ = 0;
+      ekf_rate_state.estimated_scale_rate_ >=
+        ekf_rate_state.filtered_scale_rate_ * (1 - percentage_scale_rate_allow_correct_) &&
+      ekf_rate_state.estimated_scale_rate_ <=
+        ekf_rate_state.filtered_scale_rate_ * (1 + percentage_scale_rate_allow_correct_)) {
+      ekf_rate_state.filtered_scale_rate_ =
+        alpha_ * ekf_rate_state.filtered_scale_rate_ + (1 - alpha_) * ekf_rate_state.estimated_scale_rate_;
+      ekf_rate_state.n_big_changes_detected_ = 0;
     } else {
-      ekf_rate_.n_big_changes_detected_++;
+      ekf_rate_state.n_big_changes_detected_++;
       const int n_iterations_until_big_change_error = 10;  // 10 iterations approx 1 seconds
-      if (ekf_rate_.n_big_changes_detected_ >= n_iterations_until_big_change_error) {
+      if (ekf_rate_state.n_big_changes_detected_ >= n_iterations_until_big_change_error) {
         gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
         gyro_info_.scale_status_summary = "ERR";
         gyro_info_.scale_summary_message =
@@ -495,17 +493,17 @@ void GyroBiasEstimator::update_rate_ekf(
     // Scale on x , y axis is not estimated, but set to 1.0 for consistency
     vector_scale.vector.x = 1.0;
     vector_scale.vector.y = 1.0;
-    vector_scale.vector.z = ekf_rate_.filtered_scale_rate_;
+    vector_scale.vector.z = ekf_angle_.filtered_scale_angle_;
     gyro_scale_pub_->publish(vector_scale);
 
-    diagnostics_info_.estimated_gyro_scale_z = ekf_rate_.estimated_scale_rate_;
-    scale_list_all_.push_back(ekf_rate_.filtered_scale_rate_);
+    diagnostics_info_.estimated_gyro_scale_z = ekf_rate_state.estimated_scale_rate_;
+    scale_list_all_.push_back(ekf_rate_state.filtered_scale_rate_);
   }
 }
 
-bool GyroBiasEstimator::should_skip_update()
+bool GyroBiasEstimator::should_skip_update(double gyro_yaw_rate)
 {
-  if (std::abs(gyro_yaw_rate_) < threshold_to_estimate_scale_) {
+  if (std::abs(gyro_yaw_rate) < threshold_to_estimate_scale_) {
     if (gyro_info_.scale_status < diagnostic_msgs::msg::DiagnosticStatus::WARN) {
       gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::OK;
       gyro_info_.scale_status_summary = "OK";
@@ -566,19 +564,19 @@ void GyroBiasEstimator::estimate_scale_gyro(
 
   publish_debug_vectors();
 
-  update_angle_ekf(yaw_ndt);
 
   // Reset gyro yaw angle to the NDT yaw angle
   gyro_yaw_angle_ = ndt_yaw_angle_;
 
-  if (should_skip_update()) {
+  if (should_skip_update(gyro_yaw_rate_)) {
     return;
   }
 
-  // --- 7. EKF rate update (gyro yaw rate vs pose yaw rate) ---
+  // EKF rate update
   if (
     gyro_bias_.has_value() && gyro_scale_buf_.size() > static_cast<size_t>(buffer_size_gyro_ - 2)) {
-    update_rate_ekf(pose_msg_ptr);
+    update_rate_ekf(pose_msg_ptr, ekf_rate_);
+    update_angle_ekf(yaw_ndt, ekf_angle_);
   }
 }
 
