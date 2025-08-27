@@ -226,14 +226,19 @@ bool PedestrianTracker::getTrackedObject(
     // if the twist is smaller than 1 sigma, the twist is zeroed
     auto & twist = object.twist;
     constexpr double vel_limit_buffer = 0.7;  // [m/s] buffer not to limit certain twist
-    const double vel_limit = std::max(
-      std::sqrt(object.twist_covariance[XYZRPY_COV_IDX::X_X]) - vel_limit_buffer, 0.0);  // [m/s]
+    constexpr double vel_too_low_ignore =
+      0.35;  // [m/s] if the velocity is lower than this, do not limit
     const double vel_long = std::abs(twist.linear.x);
+    if (vel_long > vel_too_low_ignore) {
+      const double vel_limit = std::max(
+        std::sqrt(object.twist_covariance[XYZRPY_COV_IDX::X_X]) - vel_limit_buffer, 0.0);  // [m/s]
 
-    if (vel_long < vel_limit) {
-      twist.linear.x = 0.0;
-    } else {
-      twist.linear.x = twist.linear.x > 0 ? twist.linear.x - vel_limit : twist.linear.x + vel_limit;
+      if (vel_long < vel_limit) {
+        twist.linear.x = twist.linear.x > 0 ? vel_too_low_ignore : -vel_too_low_ignore;
+      } else {
+        twist.linear.x =
+          twist.linear.x > 0 ? twist.linear.x - vel_limit : twist.linear.x + vel_limit;
+      }
     }
   }
 
