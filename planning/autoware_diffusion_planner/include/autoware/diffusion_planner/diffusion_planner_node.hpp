@@ -32,6 +32,7 @@
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
+#include <autoware_utils_diagnostics/diagnostics_interface.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <builtin_interfaces/msg/duration.hpp>
 #include <builtin_interfaces/msg/time.hpp>
@@ -99,6 +100,7 @@ using visualization_msgs::msg::MarkerArray;
 // TensorRT
 using autoware::cuda_utils::CudaUniquePtr;
 using autoware::tensorrt_common::TrtConvCalib;
+using autoware_utils_diagnostics::DiagnosticsInterface;
 
 struct DiffusionPlannerParams
 {
@@ -324,6 +326,8 @@ public:
   rclcpp::Subscription<HADMapBin>::SharedPtr sub_map_;
   UUID generator_uuid_;
   VehicleInfo vehicle_info_;
+
+  std::unique_ptr<DiagnosticsInterface> diagnostics_inference_;
 };
 
 }  // namespace autoware::diffusion_planner
