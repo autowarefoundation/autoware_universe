@@ -46,24 +46,13 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
   filter_parameters.split_points_distance_tolerance =
     static_cast<float>(declare_parameter<double>("split_points_distance_tolerance"));
 
-  // vehicle info
-  filter_parameters.vehicle_info = VehicleInfoUtils(*this).getVehicleInfo();
-
-  // non-grid parameters
-  filter_parameters.use_virtual_ground_point = declare_parameter<bool>("use_virtual_ground_point");
-  filter_parameters.split_height_distance =
-    static_cast<float>(declare_parameter<double>("split_height_distance"));
-
   // cell mode parameters
   filter_parameters.use_recheck_ground_cluster =
     declare_parameter<bool>("use_recheck_ground_cluster");
   filter_parameters.recheck_start_distance =
     static_cast<float>(declare_parameter<double>("recheck_start_distance"));
-  filter_parameters.use_lowest_point = declare_parameter<bool>("use_lowest_point");
   filter_parameters.detection_range_z_max =
     static_cast<float>(declare_parameter<double>("detection_range_z_max"));
-  filter_parameters.center_pcl_shift =
-    static_cast<float>(declare_parameter<double>("center_pcl_shift"));
   filter_parameters.non_ground_height_threshold =
     static_cast<float>(declare_parameter<double>("non_ground_height_threshold"));
 
@@ -75,7 +64,6 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
   filter_parameters.max_num_cells =
     filter_parameters.max_num_cells_per_sector * filter_parameters.num_sectors;
   filter_parameters.gnd_cell_buffer_size = declare_parameter<int>("gnd_cell_buffer_size");
-  filter_parameters.virtual_lidar_z = filter_parameters.vehicle_info.vehicle_height_m;
 
   int64_t max_mem_pool_size_in_byte =
     declare_parameter<int64_t>("max_mem_pool_size_in_byte", 1e9);  // 1 GB

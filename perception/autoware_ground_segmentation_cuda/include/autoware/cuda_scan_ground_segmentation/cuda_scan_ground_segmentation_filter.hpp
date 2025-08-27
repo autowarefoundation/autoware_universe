@@ -81,42 +81,29 @@ struct FilterParameters
 {
   float max_radius;
   float non_ground_height_threshold;
-  float center_pcl_shift{0.0f};  // virtual center of pcl to center mass
-
   // common thresholds
   float global_slope_max_angle_rad;  // radians
   float local_slope_max_angle_rad;   // radians
   float global_slope_max_ratio;
   float local_slope_max_ratio;
   float split_points_distance_tolerance;  // distance in meters between concentric divisions
-
-  // non-cell mode parameters
-  bool use_virtual_ground_point;
-  float split_height_distance;  // minimum height threshold regardless the slope,
-                                // useful for close points
-
   // common parameters
   float sector_angle_rad;  // radial sector angle in radians
   float inv_sector_angle_rad;
-  uint16_t num_sectors;  // number of radial sectors
-  VehicleInfo vehicle_info;
 
   // cell mode parameters
-  bool use_recheck_ground_cluster;  // to enable recheck ground cluster
   float recheck_start_distance;     // distance to start rechecking ground cluster
-  bool use_lowest_point;  // to select lowest point for reference in recheck ground cluster,
-                          // otherwise select middle point
   float detection_range_z_max;
-
   // cell parameters
   float cell_divider_size_m;
-  int max_num_cells_per_sector;  // number of cells per sector
-  int max_num_cells;
-  uint16_t gnd_cell_buffer_size;
-  float virtual_lidar_z;
   float center_x{0.0f};
   float center_y{0.0f};
+  uint32_t max_num_cells;
+  uint16_t max_num_cells_per_sector;  // number of cells per sector
+  uint16_t gnd_cell_buffer_size;
+  uint16_t num_sectors;  // number of radial sectors
   uint16_t gnd_grid_continual_thresh{3};  // threshold for continual ground grid
+  bool use_recheck_ground_cluster;  // to enable recheck ground cluster
 };
 
 class CudaScanGroundSegmentationFilter

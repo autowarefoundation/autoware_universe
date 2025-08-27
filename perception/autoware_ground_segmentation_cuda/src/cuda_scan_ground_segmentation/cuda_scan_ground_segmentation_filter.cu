@@ -668,10 +668,10 @@ __global__ void scanPerSectorGroundReferenceKernel(
     // the size of the array is gnd_cell_buffer_size
     int num_latest_gnd_cells = 0;
     // get the latest gnd cells in the sector
-    size_t first_sector_classified_point_index =
+    size_t cell_first_classify_point_index =
       sector_cells_list_dev[cell_index_in_sector].start_point_index;
     ClassifiedPointTypeStruct * cell_classify_points_dev =
-      &classified_points_dev[first_sector_classified_point_index];
+      &classified_points_dev[cell_first_classify_point_index];
     auto * last_gnd_cells_dev =
       &sector_last_gnd_cells_dev
         [cell_index_in_sector * filter_parameters_dev->gnd_cell_buffer_size];
@@ -709,10 +709,10 @@ __global__ void scanPerSectorGroundReferenceKernel(
 
 __global__ void sortPointsInCellsKernel(
   const int * __restrict__ num_points_per_cell_dev,
-  ClassifiedPointTypeStruct * __restrict__ classified_points_dev, const int max_num_cells,
+  ClassifiedPointTypeStruct * __restrict__ classified_points_dev, const uint32_t max_num_cells,
   const int max_num_points_per_cell)
 {
-  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= max_num_cells) {
     return;  // Out of bounds
   }
@@ -727,9 +727,9 @@ __global__ void sortPointsInCellsKernel(
 }
 
 __global__ void CellsCentroidInitializeKernel(
-  CellCentroid * __restrict__ centroid_cells_list_dev, const int max_num_cells)
+  CellCentroid * __restrict__ centroid_cells_list_dev, const uint32_t max_num_cells)
 {
-  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= max_num_cells) {
     return;  // Out of bounds
   }
@@ -835,9 +835,9 @@ __global__ void scatterKernel(
 
 __global__ void updateCellStartPointIndexKernel(
   CellCentroid * __restrict__ centroid_cells_list_dev,
-  const size_t * __restrict__ cell_first_point_indices_dev, const int max_num_cells)
+  const size_t * __restrict__ cell_first_point_indices_dev, const uint32_t max_num_cells)
 {
-  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= max_num_cells) {
     return;  // Out of bounds
   }
