@@ -521,14 +521,15 @@ Generate smooth paths using clothoid curves that provide continuous curvature tr
 
 #### parameters for clothoid pull out
 
-| Name                                      | Unit    | Type   | Description                                                                              | Default value     |
-| :---------------------------------------- | :------ | :----- | :--------------------------------------------------------------------------------------- | :---------------- |
-| enable_clothoid_fallback                  | [-]     | bool   | flag whether to enable clothoid path search when no path is found with collision margins | true              |
-| clothoid_initial_velocity                 | [m/s]   | double | initial velocity for clothoid path                                                       | 1.0               |
-| clothoid_acceleration                     | [m/s²]  | double | acceleration for clothoid path                                                           | 1.0               |
-| clothoid_max_steer_angles_deg             | [deg]   | double | maximum steer angles to try                                                              | [5.0, 10.0, 20.0] |
-| clothoid_max_steer_angle_rate_deg_per_sec | [deg/s] | double | maximum steer angle rate                                                                 | 10.0              |
-| check_clothoid_path_lane_departure        | [-]     | bool   | flag whether to check if clothoid path footprints are out of lane                        | true              |
+| Name                                       | Unit    | Type   | Description                                                                              | Default value     |
+| :----------------------------------------- | :------ | :----- | :--------------------------------------------------------------------------------------- | :---------------- |
+| enable_clothoid_fallback                   | [-]     | bool   | flag whether to enable clothoid path search when no path is found with collision margins | true              |
+| clothoid_initial_velocity                  | [m/s]   | double | initial velocity for clothoid path                                                       | 1.0               |
+| clothoid_acceleration                      | [m/s²]  | double | acceleration for clothoid path                                                           | 1.0               |
+| clothoid_max_steer_angles_deg              | [deg]   | double | maximum steer angles to try                                                              | [5.0, 10.0, 20.0] |
+| clothoid_max_steer_angle_rate_deg_per_sec  | [deg/s] | double | maximum steer angle rate                                                                 | 10.0              |
+| clothoid_collision_check_distance_from_end | [m]     | double | collision check distance from end for clothoid planner                                   | 0.0               |
+| check_clothoid_path_lane_departure         | [-]     | bool   | flag whether to check if clothoid path footprints are out of lane                        | true              |
 
 ## **backward pull out start point search**
 

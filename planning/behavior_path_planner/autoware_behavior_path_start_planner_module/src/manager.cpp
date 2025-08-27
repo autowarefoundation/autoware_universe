@@ -140,6 +140,9 @@ void StartPlannerModuleManager::updateModuleParams(
     update_param<double>(
       parameters, ns + "clothoid_max_steer_angle_rate_deg_per_sec",
       p->clothoid_max_steer_angle_rate_deg_per_sec);
+    update_param<double>(
+      parameters, ns + "clothoid_collision_check_distance_from_end",
+      p->clothoid_collision_check_distance_from_end);
     update_param<bool>(
       parameters, ns + "check_clothoid_path_lane_departure", p->check_clothoid_path_lane_departure);
 

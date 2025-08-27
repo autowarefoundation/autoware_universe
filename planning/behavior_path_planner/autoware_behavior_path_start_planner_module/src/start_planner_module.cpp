@@ -1981,7 +1981,8 @@ void StartPlannerModule::setDebugData()
   {
     std::map<PlannerType, double> collision_check_distances = {
       {PlannerType::SHIFT, parameters_->shift_collision_check_distance_from_end},
-      {PlannerType::GEOMETRIC, parameters_->geometric_collision_check_distance_from_end}};
+      {PlannerType::GEOMETRIC, parameters_->geometric_collision_check_distance_from_end},
+      {PlannerType::CLOTHOID, parameters_->clothoid_collision_check_distance_from_end}};
 
     double collision_check_distance_from_end = collision_check_distances[status_.planner_type];
     const auto collision_check_end_pose = autoware::motion_utils::calcLongitudinalOffsetPose(
