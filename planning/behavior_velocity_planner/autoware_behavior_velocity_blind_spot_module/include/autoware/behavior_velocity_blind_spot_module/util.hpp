@@ -26,6 +26,7 @@
 
 #include <memory>
 #include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -141,6 +142,20 @@ std::optional<StopPoints> generate_stop_points(
   const double ego_nearest_yaw_threshold,
   autoware_internal_planning_msgs::msg::PathWithLaneId * path);
 
+/**
+ * @brief Calculate the minimum lateral gap from the ego vehicle's side to the relevant road
+ * boundary just before a turn.
+ * @param[in] ego_footprint The 2D geometric footprint of the ego vehicle.
+ * @param[in] last_lanelets_before_turning The lanelets the vehicle occupies just before the turn,
+ * used to define the blind spot area boundary.
+ * @param[in] turn_direction The direction of the upcoming turn (left/right), which determines the
+ * relevant vehicle side and road boundary.
+ * @return An optional value containing the minimum lateral distance in meters on success.
+ */
+std::optional<double> calc_ego_to_blind_spot_lanelet_lateral_gap(
+  const autoware_utils::LinearRing2d & footprint,
+  const lanelet::ConstLanelets & lanelets_before_turning,
+  const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction);
 }  // namespace autoware::behavior_velocity_planner
 
 #endif  // AUTOWARE__BEHAVIOR_VELOCITY_BLIND_SPOT_MODULE__UTIL_HPP_

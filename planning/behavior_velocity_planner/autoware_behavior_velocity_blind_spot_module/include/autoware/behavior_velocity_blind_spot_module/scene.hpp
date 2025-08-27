@@ -144,7 +144,7 @@ private:
    * @brief filter objects whose position is inside the attention_area and whose type is target type
    */
   std::vector<autoware_perception_msgs::msg::PredictedObject> filter_attention_objects(
-    const lanelet::BasicPolygon2d & attention_area) const;
+    const lanelet::BasicPolygon2d & attention_area, const double lateral_gap) const;
 
   /**
    * @brief Check if object is belong to targeted classes
@@ -152,6 +152,8 @@ private:
    * @return True when object belong to targeted classes
    */
   bool isTargetObjectType(const autoware_perception_msgs::msg::PredictedObject & object) const;
+
+  static bool is_vru_object_type(const autoware_perception_msgs::msg::PredictedObject & object);
 
   /**
    * @brief compute the deceleration and jerk for collision stop from `ttc`
