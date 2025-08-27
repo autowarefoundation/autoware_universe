@@ -43,12 +43,6 @@ public:
     const TrajectoryModifierData & data) const override;
 
 private:
-  bool is_ego_vehicle_moving(const TrajectoryModifierData & data) const;
-  static double calculate_distance_to_last_point(
-    const TrajectoryPoints & traj_points, const TrajectoryModifierData & data);
-  static void replace_trajectory_with_stop_point(
-    TrajectoryPoints & traj_points, const TrajectoryModifierData & data);
-
   struct Parameters
   {
     double velocity_threshold_mps{0.1};

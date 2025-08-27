@@ -12,29 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_modifier/utils.hpp"
+// This file serves as a placeholder for future trajectory modifier tests
+// The actual comprehensive tests are in test_utils.cpp and test_stop_point_fixer_integration.cpp
 
 #include <gtest/gtest.h>
 
-#include <vector>
-
-class TrajectoryModifierTest : public ::testing::Test
+TEST(TrajectoryModifierPlaceholder, PlaceholderTest)
 {
-protected:
-  void SetUp() override {}
-  void TearDown() override {}
-};
-
-TEST_F(TrajectoryModifierTest, ValidateEmptyTrajectory)
-{
-  std::vector<autoware_planning_msgs::msg::TrajectoryPoint> empty_trajectory;
-  EXPECT_FALSE(autoware::trajectory_modifier::utils::validate_trajectory(empty_trajectory));
-}
-
-TEST_F(TrajectoryModifierTest, ValidateNonEmptyTrajectory)
-{
-  std::vector<autoware_planning_msgs::msg::TrajectoryPoint> trajectory(1);
-  EXPECT_TRUE(autoware::trajectory_modifier::utils::validate_trajectory(trajectory));
+  // This is a placeholder test to ensure the test framework runs
+  EXPECT_TRUE(true);
 }
 
 int main(int argc, char ** argv)

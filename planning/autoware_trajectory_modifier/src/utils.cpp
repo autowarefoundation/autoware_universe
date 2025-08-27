@@ -14,12 +14,54 @@
 
 #include "autoware/trajectory_modifier/utils.hpp"
 
+#include <cmath>
+
 namespace autoware::trajectory_modifier::utils
 {
 
 bool validate_trajectory(const TrajectoryPoints & trajectory)
 {
   return !trajectory.empty();
+}
+
+double calculate_distance_to_last_point(
+  const TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & ego_pose)
+{
+  if (traj_points.empty()) {
+    return 0.0;
+  }
+
+  const auto & last_point = traj_points.back();
+  const double dx = last_point.pose.position.x - ego_pose.position.x;
+  const double dy = last_point.pose.position.y - ego_pose.position.y;
+
+  return std::hypot(dx, dy);
+}
+
+void replace_trajectory_with_stop_point(
+  TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & ego_pose)
+{
+  TrajectoryPoint stop_point;
+
+  stop_point.pose = ego_pose;
+  stop_point.longitudinal_velocity_mps = 0.0;
+  stop_point.lateral_velocity_mps = 0.0;
+  stop_point.acceleration_mps2 = 0.0;
+  stop_point.heading_rate_rps = 0.0;
+  stop_point.front_wheel_angle_rad = 0.0;
+  stop_point.rear_wheel_angle_rad = 0.0;
+
+  traj_points.clear();
+  traj_points.push_back(stop_point);
+}
+
+bool is_ego_vehicle_moving(const geometry_msgs::msg::Twist & twist, double velocity_threshold)
+{
+  const double current_velocity = std::sqrt(
+    twist.linear.x * twist.linear.x + twist.linear.y * twist.linear.y +
+    twist.linear.z * twist.linear.z);
+
+  return current_velocity > velocity_threshold;
 }
 
 }  // namespace autoware::trajectory_modifier::utils
