@@ -16,6 +16,8 @@
 #define AUTOWARE__TRAJECTORY_MODIFIER__UTILS_HPP_
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
+#include <geometry_msgs/msg/pose.hpp>
+#include <geometry_msgs/msg/twist.hpp>
 
 #include <vector>
 
@@ -25,6 +27,14 @@ using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
 bool validate_trajectory(const TrajectoryPoints & trajectory);
+
+double calculate_distance_to_last_point(
+  const TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & ego_pose);
+
+void replace_trajectory_with_stop_point(
+  TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & ego_pose);
+
+bool is_ego_vehicle_moving(const geometry_msgs::msg::Twist & twist, double velocity_threshold);
 
 }  // namespace autoware::trajectory_modifier::utils
 
