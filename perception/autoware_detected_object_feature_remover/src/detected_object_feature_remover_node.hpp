@@ -19,8 +19,11 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include "autoware_perception_msgs/msg/detected_objects.hpp"
-#include "tier4_perception_msgs/msg/detected_objects_with_feature.hpp"
+#include <autoware_perception_msgs/msg/detected_objects.hpp>
+#include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
+
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
 
 #include <memory>
 
@@ -40,6 +43,9 @@ private:
   bool run_convex_hull_conversion_{false};
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
   void objectCallback(const DetectedObjectsWithFeature::ConstSharedPtr input);
+  void pclToConvexHull(
+    const pcl::PointCloud<pcl::PointXYZ> & cluster, autoware_perception_msgs::msg::Shape & shape,
+    geometry_msgs::msg::Pose & pose);
   void convert(const DetectedObjectsWithFeature & objs_with_feature, DetectedObjects & objs);
 };
 
