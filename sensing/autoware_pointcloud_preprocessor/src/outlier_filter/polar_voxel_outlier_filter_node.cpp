@@ -60,13 +60,13 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   min_radius_m_ = declare_parameter<double>("min_radius_m");
   max_radius_m_ = declare_parameter<double>("max_radius_m");
   visibility_estimation_max_range_m_ =
-    declare_parameter<double>("visibility_estimation_max_range_m", 20.0);
+    declare_parameter<double>("visibility_estimation_max_range_m");
   use_return_type_classification_ = declare_parameter<bool>("use_return_type_classification", true);
   enable_secondary_return_filtering_ = declare_parameter<bool>("filter_secondary_returns");
   secondary_noise_threshold_ =
     static_cast<int>(declare_parameter<int64_t>("secondary_noise_threshold"));
-  visibility_estimation_max_secondary_voxel_count_ = static_cast<int>(
-    declare_parameter<int64_t>("visibility_estimation_max_secondary_voxel_count", 0));
+  visibility_estimation_max_secondary_voxel_count_ =
+    static_cast<int>(declare_parameter<int64_t>("visibility_estimation_max_secondary_voxel_count"));
   visibility_estimation_only_ = declare_parameter<bool>("visibility_estimation_only", false);
   publish_noise_cloud_ = declare_parameter<bool>("publish_noise_cloud", false);
 
@@ -78,11 +78,11 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
     RCLCPP_DEBUG(get_logger(), "primary_return_types_ value: %d", static_cast<int>(val));
   }
 
-  visibility_error_threshold_ = declare_parameter<double>("visibility_error_threshold", 0.5);
-  visibility_warn_threshold_ = declare_parameter<double>("visibility_warn_threshold", 0.7);
-  filter_ratio_error_threshold_ = declare_parameter<double>("filter_ratio_error_threshold", 0.5);
-  filter_ratio_warn_threshold_ = declare_parameter<double>("filter_ratio_warn_threshold", 0.7);
-  intensity_threshold_ = declare_parameter<uint8_t>("intensity_threshold", 1);
+  visibility_error_threshold_ = declare_parameter<double>("visibility_error_threshold");
+  visibility_warn_threshold_ = declare_parameter<double>("visibility_warn_threshold");
+  filter_ratio_error_threshold_ = declare_parameter<double>("filter_ratio_error_threshold");
+  filter_ratio_warn_threshold_ = declare_parameter<double>("filter_ratio_warn_threshold");
+  intensity_threshold_ = declare_parameter<uint8_t>("intensity_threshold");
 
   // Initialize diagnostics
   updater_.setHardwareID("polar_voxel_outlier_filter");
