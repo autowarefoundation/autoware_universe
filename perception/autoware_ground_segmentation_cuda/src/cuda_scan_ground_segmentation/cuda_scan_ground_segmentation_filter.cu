@@ -795,9 +795,8 @@ __global__ void calcCellPointNumberKernel(
 
 // Mark obstacle points for point in classified_points_dev
 __global__ void markObstaclePointsKernel(
-  ClassifiedPointTypeStruct * __restrict__ classified_points_dev,
-  const size_t num_points, int * __restrict__ flags,
-  const PointType pointtype)
+  ClassifiedPointTypeStruct * __restrict__ classified_points_dev, const size_t num_points,
+  int * __restrict__ flags, const PointType pointtype)
 {
   size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= num_points) {
