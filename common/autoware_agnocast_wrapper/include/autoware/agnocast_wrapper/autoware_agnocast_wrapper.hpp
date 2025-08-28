@@ -59,10 +59,10 @@ namespace autoware::agnocast_wrapper
 
 enum class OwnershipType { Unique, Shared };
 
-template <typename MessageT, OwnershipType Ownership>
+template<typename MessageT, OwnershipType Ownership>
 class message_interface;
 
-template <typename MessageT>
+template<typename MessageT>
 class message_interface<MessageT, OwnershipType::Unique>
 {
 public:
@@ -83,7 +83,7 @@ public:
   virtual std::unique_ptr<MessageT> move_ros2_ptr() && noexcept = 0;
 };
 
-template <typename MessageT>
+template<typename MessageT>
 class message_interface<MessageT, OwnershipType::Shared>
 {
 public:
@@ -96,7 +96,7 @@ public:
   virtual std::shared_ptr<MessageT> move_ros2_ptr() && noexcept = 0;
 };
 
-template <typename MessageT, OwnershipType Ownership>
+template<typename MessageT, OwnershipType Ownership>
 class agnocast_message : public message_interface<MessageT, Ownership>
 {
   using ros2_ptr_t = std::conditional_t<
@@ -107,7 +107,7 @@ class agnocast_message : public message_interface<MessageT, Ownership>
 public:
   explicit agnocast_message(agnocast::ipc_shared_ptr<MessageT> && ptr) : ptr_(std::move(ptr)) {}
 
-  MessageT & as_ref() const noexcept override { return *ptr_; }
+  MessageT & as_ref() const noexcept override { return * ptr_; }
   MessageT * as_ptr() const noexcept override { return ptr_.get(); }
 
   agnocast::ipc_shared_ptr<MessageT> move_agnocast_ptr() && noexcept override
@@ -120,7 +120,7 @@ public:
   ros2_ptr_t move_ros2_ptr() && noexcept override { return ros2_ptr_t{}; }
 };
 
-template <typename MessageT, OwnershipType Ownership>
+template<typename MessageT, OwnershipType Ownership>
 class ros2_message : public message_interface<MessageT, Ownership>
 {
   using ros2_ptr_t = std::conditional_t<
@@ -131,7 +131,7 @@ class ros2_message : public message_interface<MessageT, Ownership>
 public:
   explicit ros2_message(ros2_ptr_t && ptr) : ptr_(std::move(ptr)) {}
 
-  MessageT & as_ref() const noexcept override { return *ptr_; }
+  MessageT & as_ref() const noexcept override { return * ptr_; }
   MessageT * as_ptr() const noexcept override { return ptr_.get(); }
 
   ros2_ptr_t move_ros2_ptr() && noexcept override { return std::move(ptr_); }
@@ -144,7 +144,7 @@ public:
   }
 };
 
-template <typename MessageT, OwnershipType Ownership>
+template<typename MessageT, OwnershipType Ownership>
 class message_ptr
 {
   using ros2_ptr_t = std::conditional_t<
@@ -152,8 +152,8 @@ class message_ptr
 
   std::shared_ptr<message_interface<MessageT, Ownership>> ptr_;
 
-  template <typename U> friend class AgnocastPublisher;
-  template <typename U> friend class ROS2Publisher;
+  template<typename U> friend class AgnocastPublisher;
+  template<typename U> friend class ROS2Publisher;
 
 private:
   agnocast::ipc_shared_ptr<MessageT> move_agnocast_ptr() && noexcept
@@ -202,7 +202,7 @@ inline bool use_agnocast()
   return sv == 1;
 }
 
-template <typename MessageT>
+template<typename MessageT>
 class Subscription
 {
   typename rclcpp::Subscription<MessageT>::SharedPtr ros2_sub_{nullptr};
@@ -211,7 +211,7 @@ class Subscription
 public:
   using SharedPtr = std::shared_ptr<Subscription<MessageT>>;
 
-  template <typename Func>
+  template<typename Func>
   explicit Subscription(
     rclcpp::Node * node, const std::string & topic_name, const rclcpp::QoS & qos, Func && callback,
     const agnocast::SubscriptionOptions & options)
@@ -247,7 +247,7 @@ public:
   }
 };
 
-template <typename MessageT, typename Func>
+template<typename MessageT, typename Func>
 typename Subscription<MessageT>::SharedPtr create_subscription(
   rclcpp::Node * node, const std::string & topic_name, const rclcpp::QoS & qos, Func && callback,
   const agnocast::SubscriptionOptions & options)
@@ -256,7 +256,7 @@ typename Subscription<MessageT>::SharedPtr create_subscription(
     node, topic_name, qos, std::forward<Func>(callback), options);
 }
 
-template <typename MessageT, typename Func>
+template<typename MessageT, typename Func>
 typename Subscription<MessageT>::SharedPtr create_subscription(
   rclcpp::Node * node, const std::string & topic_name, const size_t qos_history_depth,
   Func && callback, const agnocast::SubscriptionOptions & options)
@@ -266,7 +266,7 @@ typename Subscription<MessageT>::SharedPtr create_subscription(
     std::forward<Func>(callback), options);
 }
 
-template <typename MessageT>
+template<typename MessageT>
 class PollingSubscriber
 {
 public:
@@ -278,7 +278,7 @@ public:
   virtual AUTOWARE_MESSAGE_SHARED_PTR(const MessageT) take_data() = 0;
 };
 
-template <typename MessageT>
+template<typename MessageT>
 class AgnocastPollingSubscriber : public PollingSubscriber<MessageT>
 {
   typename agnocast::PollingSubscriber<MessageT>::SharedPtr subscriber_;
@@ -301,7 +301,7 @@ public:
   }
 };
 
-template <typename MessageT>
+template<typename MessageT>
 class ROS2PollingSubscriber : public PollingSubscriber<MessageT>
 {
   typename autoware_utils::InterProcessPollingSubscriber<MessageT>::SharedPtr subscriber_;
@@ -325,7 +325,7 @@ public:
   }
 };
 
-template <typename MessageT>
+template<typename MessageT>
 typename PollingSubscriber<MessageT>::SharedPtr create_polling_subscriber(
   rclcpp::Node * node, const std::string & topic_name, const size_t qos_history_depth)
 {
@@ -338,7 +338,7 @@ typename PollingSubscriber<MessageT>::SharedPtr create_polling_subscriber(
   }
 }
 
-template <typename MessageT>
+template<typename MessageT>
 typename PollingSubscriber<MessageT>::SharedPtr create_polling_subscriber(
   rclcpp::Node * node, const std::string & topic_name, const rclcpp::QoS & qos)
 {
@@ -349,7 +349,7 @@ typename PollingSubscriber<MessageT>::SharedPtr create_polling_subscriber(
   }
 }
 
-template <typename MessageT>
+template<typename MessageT>
 class Publisher
 {
 public:
@@ -366,7 +366,7 @@ public:
   virtual uint32_t get_subscription_count() const = 0;
 };
 
-template <typename MessageT>
+template<typename MessageT>
 class AgnocastPublisher : public Publisher<MessageT>
 {
   typename agnocast::Publisher<MessageT>::SharedPtr publisher_;
@@ -402,7 +402,7 @@ public:
   uint32_t get_subscription_count() const override { return publisher_->get_subscription_count(); }
 };
 
-template <typename MessageT>
+template<typename MessageT>
 class ROS2Publisher : public Publisher<MessageT>
 {
   typename rclcpp::Publisher<MessageT>::SharedPtr publisher_{nullptr};
@@ -440,7 +440,7 @@ public:
   uint32_t get_subscription_count() const override { return publisher_->get_subscription_count(); }
 };
 
-template <typename MessageT>
+template<typename MessageT>
 typename Publisher<MessageT>::SharedPtr create_publisher(
   rclcpp::Node * node, const std::string & topic_name, const rclcpp::QoS & qos)
 {
@@ -452,7 +452,7 @@ typename Publisher<MessageT>::SharedPtr create_publisher(
   }
 }
 
-template <typename MessageT>
+template<typename MessageT>
 typename Publisher<MessageT>::SharedPtr create_publisher(
   rclcpp::Node * node, const std::string & topic_name, const size_t qos_history_depth)
 {
@@ -466,7 +466,7 @@ typename Publisher<MessageT>::SharedPtr create_publisher(
   }
 }
 
-template <typename MessageT>
+template<typename MessageT>
 typename Publisher<MessageT>::SharedPtr create_publisher(
   rclcpp::Node * node, const std::string & topic_name, const rclcpp::QoS & qos,
   const agnocast::PublisherOptions & options)
@@ -478,7 +478,7 @@ typename Publisher<MessageT>::SharedPtr create_publisher(
   }
 }
 
-template <typename MessageT>
+template<typename MessageT>
 typename Publisher<MessageT>::SharedPtr create_publisher(
   rclcpp::Node * node, const std::string & topic_name, const size_t qos_history_depth,
   const agnocast::PublisherOptions & options)
