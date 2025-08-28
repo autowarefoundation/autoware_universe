@@ -14,6 +14,9 @@
 
 #pragma once
 
+#include <string>
+#include <utility>
+
 #ifdef USE_AGNOCAST_ENABLED
 
 #include "autoware_utils/ros/polling_subscriber.hpp"
@@ -22,9 +25,7 @@
 
 #include <cstdlib>
 #include <memory>
-#include <string>
 #include <type_traits>
-#include <utility>
 
 #define AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) \
   autoware::agnocast_wrapper::message_ptr< \
