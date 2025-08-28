@@ -152,11 +152,11 @@ protected:
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
 
   PointVoxelInfoVector collect_voxel_info(const PointCloud2 & input);
-  VoxelPointCountMap count_voxels(const PointVoxelInfoVector & point_voxel_info) const;
-  VoxelIndexSet determine_valid_voxels_simple(const VoxelPointCountMap & voxel_counts) const;
+  VoxelPointCountMap count_voxel_points(const PointVoxelInfoVector & point_voxel_info) const;
+  VoxelIndexSet determine_valid_voxels_simple(const VoxelPointCountMap & voxel_point_counts) const;
   VoxelIndexSet determine_valid_voxels_with_return_types(
-    const VoxelPointCountMap & voxel_counts) const;
-  VoxelIndexSet determine_valid_voxels(const VoxelPointCountMap & voxel_counts) const;
+    const VoxelPointCountMap & voxel_point_counts) const;
+  VoxelIndexSet determine_valid_voxels(const VoxelPointCountMap & voxel_point_counts) const;
   ValidPointsMask create_valid_points_mask(
     const PointVoxelInfoVector & point_voxel_info, const VoxelIndexSet & valid_voxels) const;
   static void create_filtered_output(
@@ -164,7 +164,7 @@ protected:
   void publish_noise_cloud(
     const PointCloud2 & input, const ValidPointsMask & valid_points_mask) const;
   void publish_diagnostics(
-    const VoxelPointCountMap & voxel_counts, const ValidPointsMask & valid_points_mask);
+    const VoxelPointCountMap & voxel_point_counts, const ValidPointsMask & valid_points_mask);
 
   // Point processing helper methods
   void process_polar_points(
@@ -189,7 +189,7 @@ protected:
 
   template <typename Predicate>
   VoxelIndexSet determine_valid_voxels_generic(
-    const VoxelPointCountMap & voxel_counts, Predicate predicate) const;
+    const VoxelPointCountMap & voxel_point_counts, Predicate predicate) const;
 
   std::optional<PolarCoordinate> extract_polar_from_dae(
     sensor_msgs::PointCloud2ConstIterator<float> & iter_distance,
@@ -262,9 +262,9 @@ protected:
   double filter_ratio_warn_threshold_{};
 
   // State variables (protected by mutex_)
-  mutable std::optional<double> visibility_;
-  mutable std::optional<double> filter_ratio_;
-  mutable std::mutex mutex_;
+  std::optional<double> visibility_;
+  std::optional<double> filter_ratio_;
+  std::mutex mutex_;
 
   // Publishers and diagnostics
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr visibility_pub_;
@@ -274,7 +274,7 @@ protected:
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   // Diagnostic helper methods
-  void calculate_visibility_metric(const VoxelPointCountMap & voxel_counts);
+  void calculate_visibility_metric(const VoxelPointCountMap & voxel_point_counts);
   void calculate_filter_ratio_metric(const ValidPointsMask & valid_points_mask);
   void publish_visibility_metric();
   void publish_filter_ratio_metric();
