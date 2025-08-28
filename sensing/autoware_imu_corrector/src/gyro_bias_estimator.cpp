@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "gyro_bias_estimator.hpp"
+#include "autoware/imu_corrector/gyro_bias_estimator.hpp"
 
 #include <autoware_utils/geometry/geometry.hpp>
 
@@ -194,7 +194,7 @@ void GyroBiasEstimator::callback_imu(const Imu::ConstSharedPtr imu_msg_ptr)
   geometry_msgs::msg::TransformStamped::ConstSharedPtr tf_imu2base_ptr =
     transform_listener_->get_latest_transform(imu_frame_, output_frame_);
   if (!tf_imu2base_ptr) {
-    RCLCPP_ERROR(
+    RCLCPP_ERROR_ONCE(
       this->get_logger(), "Please publish TF %s to %s", output_frame_.c_str(),
       (imu_frame_).c_str());
     return;
@@ -374,7 +374,7 @@ void GyroBiasEstimator::update_rate_ekf(
 {
   // EKF update
   // Find in the buffer the delayed gyro data and average the last samples
-  const std::vector<geometry_msgs::msg::Vector3Stamped> gyro_local_buf = gyro_scale_buf_;
+  const std::vector<geometry_msgs::msg::Vector3Stamped> & gyro_local_buf = gyro_scale_buf_;
   rclcpp::Time pose_time(pose_msg_ptr->header.stamp);
   rclcpp::Time target_time =
     pose_time - rclcpp::Duration::from_nanoseconds(delay_gyro_ms_ * 1000 * 1000);
@@ -538,7 +538,7 @@ void GyroBiasEstimator::estimate_scale_gyro(
   const auto pose_frame = pose_msg_ptr->header.frame_id;
   auto tf_base2pose_ptr = transform_listener_->get_latest_transform(pose_frame, output_frame_);
   if (!tf_base2pose_ptr) {
-    RCLCPP_ERROR(
+    RCLCPP_ERROR_ONCE(
       this->get_logger(), "Please publish TF %s to %s", pose_frame.c_str(), output_frame_.c_str());
     diagnostics_info_.summary_message =
       "Skipped update (tf between base and pose is not available)";
@@ -573,7 +573,8 @@ void GyroBiasEstimator::estimate_scale_gyro(
 
   // EKF rate update
   if (
-    gyro_bias_.has_value() && gyro_scale_buf_.size() > static_cast<size_t>(buffer_size_gyro_ - 2)) {
+    gyro_bias_.has_value() && gyro_bias_not_rotated_.has_value()
+        && gyro_scale_buf_.size() > static_cast<size_t>(buffer_size_gyro_ - 2)) {
     update_rate_ekf(pose_msg_ptr, ekf_rate_);
     update_angle_ekf(yaw_ndt, ekf_angle_);
   }
@@ -637,7 +638,7 @@ void GyroBiasEstimator::timer_callback()
   geometry_msgs::msg::TransformStamped::ConstSharedPtr tf_base2imu_ptr =
     transform_listener_->get_latest_transform(output_frame_, imu_frame_);
   if (!tf_base2imu_ptr) {
-    RCLCPP_ERROR(
+    RCLCPP_ERROR_ONCE(
       this->get_logger(), "Please publish TF %s to %s", imu_frame_.c_str(), output_frame_.c_str());
     gyro_info_.bias_summary_message = "Skipped update (tf between base and imu is not available).";
     return;

@@ -75,7 +75,7 @@ public:
 
   struct EKFEstimateScaleAngleVars
   {
-    Eigen::Vector2d x_state_;  // [angle, scale]
+    Eigen::Vector2d x_state_;  // [angle (radians), scale]
     Eigen::Matrix2d p_angle_;
     Eigen::Matrix2d q_angle_;
     Eigen::Matrix<double, 1, 1> r_angle_;
@@ -155,8 +155,8 @@ private:
   double ndt_yaw_rate_;
   double gyro_yaw_rate_;
 
-  double gyro_yaw_angle_;
-  double ndt_yaw_angle_;
+  double gyro_yaw_angle_; // radians
+  double ndt_yaw_angle_;  // radians
 
   double avg_rate_pose_;
   double avg_rate_gyro_;
