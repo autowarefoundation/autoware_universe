@@ -14,6 +14,8 @@
 
 #include "autoware/trajectory_modifier/utils.hpp"
 
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
+
 #include <cmath>
 
 namespace autoware::trajectory_modifier::utils
@@ -31,11 +33,8 @@ double calculate_distance_to_last_point(
     return 0.0;
   }
 
-  const auto & last_point = traj_points.back();
-  const double dx = last_point.pose.position.x - ego_pose.position.x;
-  const double dy = last_point.pose.position.y - ego_pose.position.y;
-
-  return std::hypot(dx, dy);
+  return autoware::motion_utils::calcSignedArcLength(
+    traj_points, ego_pose.position, traj_points.back().pose.position);
 }
 
 void replace_trajectory_with_stop_point(

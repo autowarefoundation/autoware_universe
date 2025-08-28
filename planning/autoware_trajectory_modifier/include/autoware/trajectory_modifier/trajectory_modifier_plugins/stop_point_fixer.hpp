@@ -28,8 +28,8 @@ class StopPointFixer : public TrajectoryModifierPluginBase
 {
 public:
   StopPointFixer(
-    const std::string name, rclcpp::Node * node_ptr,
-    const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
+    const std::string & name, rclcpp::Node * node_ptr,
+    const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper,
     const TrajectoryModifierParams & params);
 
   void modify_trajectory(

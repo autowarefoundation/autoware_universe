@@ -27,6 +27,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::trajectory_modifier::plugin
@@ -38,12 +39,13 @@ class TrajectoryModifierPluginBase
 {
 public:
   TrajectoryModifierPluginBase(
-    const std::string name, rclcpp::Node * node_ptr,
+    std::string name, rclcpp::Node * node_ptr,
     const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
     [[maybe_unused]] const TrajectoryModifierParams & params)
-  : name_(name), node_ptr_(node_ptr), time_keeper_(time_keeper)
+  : name_(std::move(name)), node_ptr_(node_ptr), time_keeper_(time_keeper)
   {
-    std::cerr << "instantiated TrajectoryModifierPluginBase: " << name_ << std::endl;
+    RCLCPP_DEBUG(
+      node_ptr_->get_logger(), "instantiated TrajectoryModifierPluginBase: %s", name_.c_str());
   }
   virtual ~TrajectoryModifierPluginBase() = default;
   virtual void modify_trajectory(
