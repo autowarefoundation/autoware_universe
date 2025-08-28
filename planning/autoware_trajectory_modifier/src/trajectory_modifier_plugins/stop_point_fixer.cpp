@@ -18,6 +18,7 @@
 
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/update_param.hpp>
+#include <rclcpp/logging.hpp>
 
 #include <cmath>
 #include <memory>
@@ -27,8 +28,8 @@ namespace autoware::trajectory_modifier::plugin
 {
 
 StopPointFixer::StopPointFixer(
-  const std::string name, rclcpp::Node * node_ptr,
-  const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
+  const std::string & name, rclcpp::Node * node_ptr,
+  const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper,
   const TrajectoryModifierParams & params)
 : TrajectoryModifierPluginBase(name, node_ptr, time_keeper, params)
 {
@@ -60,8 +61,9 @@ void StopPointFixer::modify_trajectory(
 {
   if (is_trajectory_modification_required(traj_points, params, data)) {
     utils::replace_trajectory_with_stop_point(traj_points, data.current_odometry.pose.pose);
-    RCLCPP_DEBUG(
-      get_node_ptr()->get_logger(),
+    auto clock_ptr = get_node_ptr()->get_clock();
+    RCLCPP_DEBUG_THROTTLE(
+      get_node_ptr()->get_logger(), *clock_ptr, 5000,
       "StopPointFixer: Replaced trajectory with stop point. Distance to last point: %.2f m",
       utils::calculate_distance_to_last_point(traj_points, data.current_odometry.pose.pose));
   }
