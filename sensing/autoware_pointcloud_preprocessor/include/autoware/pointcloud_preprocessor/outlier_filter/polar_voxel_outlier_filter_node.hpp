@@ -190,8 +190,6 @@ protected:
 
   static void setup_output_header(
     PointCloud2 & output, const PointCloud2 & input, size_t valid_count);
-  static sensor_msgs::msg::PointCloud2 create_noise_cloud(
-    const PointCloud2 & input, size_t noise_count);
 
   // Coordinate conversion methods
   static PolarCoordinate cartesian_to_polar(const CartesianCoordinate & cartesian);
