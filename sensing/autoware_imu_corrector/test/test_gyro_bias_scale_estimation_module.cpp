@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "../src/gyro_bias_estimator.hpp"
+#include "gyro_bias_estimator.hpp"
 
 #include <Eigen/Dense>
 #include <rclcpp/rclcpp.hpp>
@@ -79,48 +79,13 @@ protected:
     return node_options;
   }
 
-  GyroBiasEstimatorTest() : options(getNodeOptionsWithDefaultParams()), module_(options) {}
-
-  // Add a helper method inside the friend class that can access private members
-  sensor_msgs::msg::Imu call_modify_imu(
-    const sensor_msgs::msg::Imu & imu_in, const GyroBiasEstimator::ScaleImuSignal & scale_imu,
-    const rclcpp::Time & time)
-  {
-    return module_.modify_imu(
-      imu_in, const_cast<GyroBiasEstimator::ScaleImuSignal &>(scale_imu), time);
-  }
-  double call_extract_yaw_from_pose(
-    const geometry_msgs::msg::Quaternion & quat_msg, tf2::Quaternion & quat_out)
-  {
-    return module_.extract_yaw_from_pose(quat_msg, quat_out);
-  }
-
-  bool call_should_skip_update(double gyro_yaw_rate)
-  {
-    return module_.should_skip_update(gyro_yaw_rate);
-  }
-
-  void call_update_angle_ekf(
-    double yaw_ndt, GyroBiasEstimator::EKFEstimateScaleAngleVars & ekf_angle)
-  {
-    module_.update_angle_ekf(yaw_ndt, ekf_angle);
-  }
-
-  GyroBiasEstimator::ScaleImuSignal create_scale_imu()
-  {
-    return GyroBiasEstimator::ScaleImuSignal{};
-  }
-
-  GyroBiasEstimator::EKFEstimateScaleAngleVars create_scale_angle_ekf()
-  {
-    return GyroBiasEstimator::EKFEstimateScaleAngleVars{};
-  }
+  GyroBiasEstimatorTest() : module_(getNodeOptionsWithDefaultParams()) {}
 };
 
 TEST_F(GyroBiasEstimatorTest, ModifyImuAppliesBiasAndScale)
 {
   sensor_msgs::msg::Imu imu_in;
-  auto scale_imu = create_scale_imu();
+  GyroBiasEstimator::ScaleImuSignal scale_imu{};
   rclcpp::Time time(100);
 
   imu_in.header.frame_id = "base_link";
@@ -133,7 +98,7 @@ TEST_F(GyroBiasEstimatorTest, ModifyImuAppliesBiasAndScale)
   scale_imu.drift_scale_ = 0.1;
   scale_imu.drift_bias_ = 0.5;
 
-  auto imu_out = call_modify_imu(imu_in, scale_imu, time);
+  auto imu_out = module_.modify_imu(imu_in, scale_imu, time);
 
   double expected_scale = 1.0 + 0.1;
   double expected_bias = 0.0 + 0.5;
@@ -159,7 +124,7 @@ TEST_F(GyroBiasEstimatorTest, ExtractYawFromPoseReturnsCorrectYaw)
   quat_msg.w = tf_quat.w();
 
   tf2::Quaternion quat_out;
-  double yaw_extracted = call_extract_yaw_from_pose(quat_msg, quat_out);
+  double yaw_extracted = module_.extract_yaw_from_pose(quat_msg, quat_out);
 
   EXPECT_NEAR(expected_yaw, yaw_extracted, 1e-6);
 }
@@ -167,7 +132,7 @@ TEST_F(GyroBiasEstimatorTest, ExtractYawFromPoseReturnsCorrectYaw)
 TEST_F(GyroBiasEstimatorTest, ShouldSkipUpdateReturnsTrueWhenRateSmall)
 {
   double gyro_yaw_rate = 0.001;  // smaller than threshold
-  bool result = call_should_skip_update(gyro_yaw_rate);
+  bool result = module_.should_skip_update(gyro_yaw_rate);
 
   EXPECT_TRUE(result);
 }
@@ -175,19 +140,20 @@ TEST_F(GyroBiasEstimatorTest, ShouldSkipUpdateReturnsTrueWhenRateSmall)
 TEST_F(GyroBiasEstimatorTest, ShouldSkipUpdateReturnsFalseWhenRateHigh)
 {
   double gyro_yaw_rate = 0.2;  // bigger than threshold
-  bool result = call_should_skip_update(gyro_yaw_rate);
+  bool result = module_.should_skip_update(gyro_yaw_rate);
 
   EXPECT_FALSE(result);
 }
 
 TEST_F(GyroBiasEstimatorTest, PositiveAngleEKFConvergence)
 {
-  auto ekf_angle = create_scale_angle_ekf();
+  GyroBiasEstimator::EKFEstimateScaleAngleVars ekf_angle{};
   ekf_angle.x_state_ << Eigen::Vector2d(1.02, 1.00);
   ekf_angle.max_variance_p_angle_ = 5e-8;
   ekf_angle.min_covariance_angle_ = 1e-6;
   ekf_angle.p_angle_ << ekf_angle.max_variance_p_angle_, 0, 0, ekf_angle.max_variance_p_angle_;
-  double noise = 0.00005;
+  ekf_angle.q_angle_ << 0, 0, 0, 4e-11;
+  double noise = 0.0005;
   ekf_angle.r_angle_ << noise * noise;
   ekf_angle.estimated_scale_angle_ = 1.0;
   ekf_angle.filtered_scale_angle_ = 1.0;
@@ -207,7 +173,7 @@ TEST_F(GyroBiasEstimatorTest, PositiveAngleEKFConvergence)
     f_matrix << 1, gyro_rate, 0, ekf_angle.decay_coefficient_;
     ekf_angle.p_angle_ = f_matrix * ekf_angle.p_angle_ * f_matrix.transpose() + ekf_angle.q_angle_;
     if (i % 2 == 0) {
-      call_update_angle_ekf(true_yaw, ekf_angle);
+      module_.update_angle_ekf(true_yaw, ekf_angle);
       angle_gyro = true_yaw;
     }
   }
@@ -219,12 +185,13 @@ TEST_F(GyroBiasEstimatorTest, PositiveAngleEKFConvergence)
 
 TEST_F(GyroBiasEstimatorTest, NegativeAngleEKFConvergence)
 {
-  auto ekf_angle = create_scale_angle_ekf();
+  GyroBiasEstimator::EKFEstimateScaleAngleVars ekf_angle{};
   ekf_angle.x_state_ << Eigen::Vector2d(1.02, 1.00);
   ekf_angle.max_variance_p_angle_ = 5e-8;
   ekf_angle.min_covariance_angle_ = 1e-6;
   ekf_angle.p_angle_ << ekf_angle.max_variance_p_angle_, 0, 0, ekf_angle.max_variance_p_angle_;
-  double noise = 0.00005;
+  ekf_angle.q_angle_ << 0, 0, 0, 4e-11;
+  double noise = 0.0005;
   ekf_angle.r_angle_ << noise * noise;
   ekf_angle.estimated_scale_angle_ = 1.0;
   ekf_angle.filtered_scale_angle_ = 1.0;
@@ -244,7 +211,7 @@ TEST_F(GyroBiasEstimatorTest, NegativeAngleEKFConvergence)
     f_matrix << 1, gyro_rate, 0, ekf_angle.decay_coefficient_;
     ekf_angle.p_angle_ = f_matrix * ekf_angle.p_angle_ * f_matrix.transpose() + ekf_angle.q_angle_;
     if (i % 2 == 0) {
-      call_update_angle_ekf(true_yaw, ekf_angle);
+      module_.update_angle_ekf(true_yaw, ekf_angle);
       angle_gyro = true_yaw;
     }
   }

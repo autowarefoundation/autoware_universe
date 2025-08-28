@@ -3,7 +3,7 @@
   "title": "Parameters for gyro scale estimator",
   "type": "object",
   "definitions": {
-    "your_node": {
+    "gyro_scale_estimator": {
       "type": "object",
       "properties": {
         "estimate_scale_init": {
@@ -200,7 +200,7 @@
     "/**": {
       "type": "object",
       "properties": {
-        "ros__parameters": { "$ref": "#/definitions/gyro_bias_estimator" }
+        "ros__parameters": { "$ref": "#/definitions/gyro_scale_estimator" }
       },
       "required": ["ros__parameters"],
       "additionalProperties": false

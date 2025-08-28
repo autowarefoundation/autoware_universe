@@ -159,7 +159,7 @@ GyroBiasEstimator::GyroBiasEstimator(const rclcpp::NodeOptions & options)
 }
 
 sensor_msgs::msg::Imu GyroBiasEstimator::modify_imu(
-  const sensor_msgs::msg::Imu & imu_msg, ScaleImuSignal & scale_imu, const rclcpp::Time & time)
+  sensor_msgs::msg::Imu & imu_msg, ScaleImuSignal & scale_imu, rclcpp::Time & time)
 {
   // Modify the IMU data to inject bias and scale
   scale_imu.scale_final_ += scale_imu.drift_scale_;
@@ -203,7 +203,9 @@ void GyroBiasEstimator::callback_imu(const Imu::ConstSharedPtr imu_msg_ptr)
   geometry_msgs::msg::Vector3Stamped gyro;
   gyro.header.stamp = imu_msg_ptr->header.stamp;
   if (scale_imu_.modify_imu_scale_) {
-    auto imu_msg_mod = modify_imu(*imu_msg_ptr, scale_imu_, this->now());
+    sensor_msgs::msg::Imu imu_msg = *imu_msg_ptr;
+    rclcpp::Time now_time = this->now();
+    auto imu_msg_mod = modify_imu(imu_msg, scale_imu_, now_time);
     // Publish modified IMU
     imu_scaled_pub_->publish(imu_msg_mod);
     // Transform gyro from modified IMU

@@ -41,11 +41,58 @@ private:
   using Vector3Stamped = geometry_msgs::msg::Vector3Stamped;
   using Vector3 = geometry_msgs::msg::Vector3;
   using Odometry = nav_msgs::msg::Odometry;
-  using Vector2d = Eigen::Vector2d;
-  using Matrix2d = Eigen::Matrix2d;
 
 public:
   explicit GyroBiasEstimator(const rclcpp::NodeOptions & options);
+  // Modified IMU signal to inject bias and scale
+  struct ScaleImuSignal
+  {
+    bool modify_imu_scale_;
+    double bias_final_;
+    double scale_final_;
+    double drift_scale_;
+    double drift_bias_;
+  };
+
+  // EKF variables
+  struct EKFEstimateScaleRateVars
+  {
+    double estimated_scale_rate_;
+    double p_;
+    double q_;
+    double r_;
+    double max_variance_;
+    double min_covariance_;
+    double variance_p_after_;
+    double process_noise_q_after_;
+    double measurement_noise_;
+    double measurement_noise_r_after_;
+    double filtered_scale_rate_;
+    size_t n_big_changes_detected_;
+    int samples_to_init_;
+    bool filtered_scale_initialized_;
+  };
+
+  struct EKFEstimateScaleAngleVars
+  {
+    Eigen::Vector2d x_state_;  // [angle, scale]
+    Eigen::Matrix2d p_angle_;
+    Eigen::Matrix2d q_angle_;
+    Eigen::Matrix<double, 1, 1> r_angle_;
+    double max_variance_p_angle_;
+    double min_covariance_angle_;
+    double filtered_scale_angle_;
+    double estimated_scale_angle_;
+    double decay_coefficient_;
+    bool has_gyro_yaw_angle_init_;
+  };
+
+  sensor_msgs::msg::Imu modify_imu(
+    sensor_msgs::msg::Imu & imu_msg, ScaleImuSignal & scale_imu, rclcpp::Time & time);
+  bool should_skip_update(double gyro_yaw_rate);
+  double extract_yaw_from_pose(
+    const geometry_msgs::msg::Quaternion & quat_msg, tf2::Quaternion & quat_out);
+  void update_angle_ekf(double yaw_ndt, EKFEstimateScaleAngleVars & ekf_angle) const;
   friend class GyroBiasEstimatorTest;
 
 private:
@@ -56,12 +103,10 @@ private:
   void estimate_scale_gyro(const PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr);
   void timer_callback();
   void validate_gyro_bias();
-  double extract_yaw_from_pose(
-    const geometry_msgs::msg::Quaternion & quat_msg, tf2::Quaternion & quat_out);
   double compute_yaw_rate_from_quat(
     const tf2::Quaternion & quat, const tf2::Quaternion & prev_quat, double dt);
   void publish_debug_vectors();
-  bool should_skip_update(double gyro_yaw_rate);
+  
 
   static geometry_msgs::msg::Vector3 transform_vector3(
     const geometry_msgs::msg::Vector3 & vec,
@@ -162,54 +207,6 @@ private:
     std::string scale_summary_message;
   };
 
-  // Modified IMU signal to inject bias and scale
-  struct ScaleImuSignal
-  {
-    bool modify_imu_scale_;
-    double bias_final_;
-    double scale_final_;
-    double drift_scale_;
-    double drift_bias_;
-  };
-
-  // EKF variables
-  struct EKFEstimateScaleRateVars
-  {
-    double estimated_scale_rate_;
-    double p_;
-    double q_;
-    double r_;
-    double max_variance_;
-    double min_covariance_;
-    double variance_p_after_;
-    double process_noise_q_after_;
-    double measurement_noise_;
-    double measurement_noise_r_after_;
-    double filtered_scale_rate_;
-    size_t n_big_changes_detected_;
-    int samples_to_init_;
-    bool filtered_scale_initialized_;
-  };
-  // double estimated_scale_;
-
-  struct EKFEstimateScaleAngleVars
-  {
-    Eigen::Vector2d x_state_;  // [angle, scale]
-    Eigen::Matrix2d p_angle_;
-    Eigen::Matrix2d q_angle_;
-    Eigen::Matrix<double, 1, 1> r_angle_;
-    double max_variance_p_angle_;
-    double min_covariance_angle_;
-    double filtered_scale_angle_;
-    double estimated_scale_angle_;
-    double decay_coefficient_;
-    bool has_gyro_yaw_angle_init_;
-  };
-
-  sensor_msgs::msg::Imu modify_imu(
-    const sensor_msgs::msg::Imu & imu_msg, ScaleImuSignal & scale_imu, const rclcpp::Time & time);
-
-  void update_angle_ekf(double yaw_ndt, EKFEstimateScaleAngleVars & ekf_angle) const;
   void update_rate_ekf(
     const PoseWithCovarianceStamped::ConstSharedPtr & pose_msg,
     EKFEstimateScaleRateVars & ekf_rate_state);
