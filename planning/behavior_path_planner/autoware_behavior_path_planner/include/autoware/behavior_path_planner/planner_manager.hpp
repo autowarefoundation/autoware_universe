@@ -518,6 +518,12 @@ public:
     *current_route_lanelet_ = ret;
   }
 
+  /**
+   * @brief initialize a watcher for the selector_type parameter of /scenario_gate node.
+   * @param node.
+   */
+  void initSelectorWatcher(rclcpp::Node & node);
+
 private:
   /**
    * @brief find and set the closest lanelet within the route to current route lanelet
@@ -580,6 +586,8 @@ private:
   std::shared_ptr<SceneModuleVisitor> debug_msg_ptr_;
 
   mutable std::optional<BehaviorModuleOutput> last_valid_reference_path_;
+
+  bool enable_waypoint_following_;
 };
 }  // namespace autoware::behavior_path_planner
 

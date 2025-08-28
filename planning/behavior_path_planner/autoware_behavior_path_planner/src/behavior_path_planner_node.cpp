@@ -98,6 +98,9 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
     // NOTE: this needs to be after launchScenePlugin()
     planner_manager_->configureModuleSlot(slot_configuration);
 
+    // init selector type
+    planner_manager_->initSelectorWatcher(*this);
+
     for (const auto & manager : planner_manager_->getSceneModuleManagers()) {
       path_candidate_publishers_.emplace(
         manager->name(), create_publisher<Path>(path_candidate_name_space + manager->name(), 1));

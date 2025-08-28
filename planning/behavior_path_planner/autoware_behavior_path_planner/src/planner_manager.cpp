@@ -20,6 +20,7 @@
 
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <magic_enum.hpp>
+#include <rclcpp/parameter_client.hpp>
 
 #include <boost/scope_exit.hpp>
 
@@ -39,7 +40,8 @@ PlannerManager::PlannerManager(rclcpp::Node & node)
     "autoware::behavior_path_planner::SceneModuleManagerInterface"),
   logger_(node.get_logger().get_child("planner_manager")),
   clock_(*node.get_clock()),
-  last_valid_reference_path_(std::nullopt)
+  last_valid_reference_path_(std::nullopt),
+  enable_waypoint_following_(false)
 {
   current_route_lanelet_ = std::make_shared<std::optional<lanelet::ConstLanelet>>(std::nullopt);
   processing_time_.emplace("total_time", 0.0);
@@ -207,10 +209,43 @@ BehaviorModuleOutput PlannerManager::run(const std::shared_ptr<PlannerData> & da
     result_output.valid_output.path, data->parameters.output_path_interval,
     keep_input_points(getSceneModuleStatus()));
 
-  pathWithoutWaypointZone(result_output.valid_output.path, data);
+  if (enable_waypoint_following_) {
+    pathWithoutWaypointZone(result_output.valid_output.path, data);
+  }
   generateCombinedDrivableArea(result_output.valid_output, data);
 
   return result_output.valid_output;
+}
+
+void PlannerManager::initSelectorWatcher(rclcpp::Node & node)
+{
+  using namespace std::chrono_literals;
+
+  const std::string gate_node = "/planning/scenario_planning/scenario_gate";
+  auto client = std::make_shared<rclcpp::SyncParametersClient>(&node, gate_node);
+
+  while (rclcpp::ok() && !client->wait_for_service(1s)) {
+    RCLCPP_INFO(logger_, "Waiting for parameter service from [%s] ...", gate_node.c_str());
+  }
+
+  while (rclcpp::ok()) {
+    try {
+      if (client->has_parameter("selector_type")) {
+        const auto active = client->get_parameter<std::string>("selector_type");
+        enable_waypoint_following_ = (active == "Extra");
+
+        RCLCPP_INFO(
+          logger_, "ScenarioGate selector_type = %s (enable_waypoint_following_=%s)",
+          active.c_str(), enable_waypoint_following_ ? "true" : "false");
+        break;
+      } else {
+        RCLCPP_INFO(logger_, "Parameter [selector_type] not declared yet, retrying...");
+      }
+    } catch (const std::exception & e) {
+      RCLCPP_WARN(logger_, "Failed to get selector_type: %s", e.what());
+    }
+    rclcpp::sleep_for(500ms);
+  }
 }
 
 void PlannerManager::pathWithoutWaypointZone(
