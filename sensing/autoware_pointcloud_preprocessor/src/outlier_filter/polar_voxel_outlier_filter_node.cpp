@@ -771,88 +771,90 @@ rcl_interfaces::msg::SetParametersResult PolarVoxelOutlierFilterComponent::param
   result.successful = true;
   result.reason = "success";
 
-  // Validation map
-  static const std::unordered_map<std::string, ParamHandler> validators = {
-    {"radial_resolution_m", validate_positive_double},
-    {"azimuth_resolution_rad", validate_positive_double},
-    {"elevation_resolution_rad", validate_positive_double},
-    {"voxel_points_threshold", validate_positive_int},
-    {"min_radius_m", validate_non_negative_double},
-    {"max_radius_m", validate_positive_double},
-    {"intensity_threshold", validate_intensity_threshold},
-    {"visibility_estimation_max_range_m", validate_positive_double},
-    {"use_return_type_classification", nullptr},
-    {"filter_secondary_returns", nullptr},
-    {"secondary_noise_threshold", validate_non_negative_int},
-    {"visibility_estimation_max_secondary_voxel_count", validate_non_negative_int},
-    {"primary_return_types", validate_primary_return_types},
-    {"visibility_estimation_only", nullptr},
-    {"publish_noise_cloud", nullptr},
-    {"filter_ratio_error_threshold", validate_normalized},
-    {"filter_ratio_warn_threshold", validate_normalized},
-    {"visibility_error_threshold", validate_normalized},
-    {"visibility_warn_threshold", validate_normalized}};
+  using Validator = std::function<bool(const rclcpp::Parameter &, std::string &)>;
+  using Assigner = std::function<void(const rclcpp::Parameter &)>;
+  struct ParamOps
+  {
+    Validator validator;
+    Assigner assigner;
+  };
 
-  // Assignment map
-  using Handler = std::function<void(const rclcpp::Parameter &)>;
-  static const std::unordered_map<std::string, Handler> handlers = {
+  static const std::unordered_map<std::string, ParamOps> param_ops = {
     {"radial_resolution_m",
-     [this](const rclcpp::Parameter & p) { radial_resolution_m_ = p.as_double(); }},
+     {validate_positive_double,
+      [this](const rclcpp::Parameter & p) { radial_resolution_m_ = p.as_double(); }}},
     {"azimuth_resolution_rad",
-     [this](const rclcpp::Parameter & p) { azimuth_resolution_rad_ = p.as_double(); }},
+     {validate_positive_double,
+      [this](const rclcpp::Parameter & p) { azimuth_resolution_rad_ = p.as_double(); }}},
     {"elevation_resolution_rad",
-     [this](const rclcpp::Parameter & p) { elevation_resolution_rad_ = p.as_double(); }},
+     {validate_positive_double,
+      [this](const rclcpp::Parameter & p) { elevation_resolution_rad_ = p.as_double(); }}},
     {"voxel_points_threshold",
-     [this](const rclcpp::Parameter & p) { voxel_points_threshold_ = p.as_int(); }},
-    {"min_radius_m", [this](const rclcpp::Parameter & p) { min_radius_m_ = p.as_double(); }},
-    {"max_radius_m", [this](const rclcpp::Parameter & p) { max_radius_m_ = p.as_double(); }},
+     {validate_positive_int,
+      [this](const rclcpp::Parameter & p) { voxel_points_threshold_ = p.as_int(); }}},
+    {"min_radius_m",
+     {validate_non_negative_double,
+      [this](const rclcpp::Parameter & p) { min_radius_m_ = p.as_double(); }}},
+    {"max_radius_m",
+     {validate_positive_double,
+      [this](const rclcpp::Parameter & p) { max_radius_m_ = p.as_double(); }}},
     {"intensity_threshold",
-     [this](const rclcpp::Parameter & p) { intensity_threshold_ = p.as_int(); }},
+     {validate_intensity_threshold,
+      [this](const rclcpp::Parameter & p) { intensity_threshold_ = p.as_int(); }}},
     {"visibility_estimation_max_range_m",
-     [this](const rclcpp::Parameter & p) { visibility_estimation_max_range_m_ = p.as_double(); }},
+     {validate_positive_double,
+      [this](const rclcpp::Parameter & p) { visibility_estimation_max_range_m_ = p.as_double(); }}},
     {"use_return_type_classification",
-     [this](const rclcpp::Parameter & p) { use_return_type_classification_ = p.as_bool(); }},
+     {nullptr,
+      [this](const rclcpp::Parameter & p) { use_return_type_classification_ = p.as_bool(); }}},
     {"filter_secondary_returns",
-     [this](const rclcpp::Parameter & p) { enable_secondary_return_filtering_ = p.as_bool(); }},
+     {nullptr,
+      [this](const rclcpp::Parameter & p) { enable_secondary_return_filtering_ = p.as_bool(); }}},
     {"secondary_noise_threshold",
-     [this](const rclcpp::Parameter & p) { secondary_noise_threshold_ = p.as_int(); }},
+     {validate_non_negative_int,
+      [this](const rclcpp::Parameter & p) { secondary_noise_threshold_ = p.as_int(); }}},
     {"visibility_estimation_max_secondary_voxel_count",
-     [this](const rclcpp::Parameter & p) {
-       visibility_estimation_max_secondary_voxel_count_ = p.as_int();
-     }},
+     {validate_non_negative_int,
+      [this](const rclcpp::Parameter & p) {
+        visibility_estimation_max_secondary_voxel_count_ = p.as_int();
+      }}},
     {"primary_return_types",
-     [this](const rclcpp::Parameter & p) {
-       const auto & arr = p.as_integer_array();
-       primary_return_types_.clear();
-       primary_return_types_.reserve(arr.size());
-       for (auto v : arr) primary_return_types_.push_back(static_cast<int>(v));
-     }},
+     {validate_primary_return_types,
+      [this](const rclcpp::Parameter & p) {
+        const auto & arr = p.as_integer_array();
+        primary_return_types_.clear();
+        primary_return_types_.reserve(arr.size());
+        for (auto v : arr) primary_return_types_.push_back(static_cast<int>(v));
+      }}},
     {"visibility_estimation_only",
-     [this](const rclcpp::Parameter & p) { visibility_estimation_only_ = p.as_bool(); }},
+     {nullptr, [this](const rclcpp::Parameter & p) { visibility_estimation_only_ = p.as_bool(); }}},
     {"publish_noise_cloud",
-     [this](const rclcpp::Parameter & p) { publish_noise_cloud_ = p.as_bool(); }},
+     {nullptr, [this](const rclcpp::Parameter & p) { publish_noise_cloud_ = p.as_bool(); }}},
     {"filter_ratio_error_threshold",
-     [this](const rclcpp::Parameter & p) { filter_ratio_error_threshold_ = p.as_double(); }},
+     {validate_normalized,
+      [this](const rclcpp::Parameter & p) { filter_ratio_error_threshold_ = p.as_double(); }}},
     {"filter_ratio_warn_threshold",
-     [this](const rclcpp::Parameter & p) { filter_ratio_warn_threshold_ = p.as_double(); }},
+     {validate_normalized,
+      [this](const rclcpp::Parameter & p) { filter_ratio_warn_threshold_ = p.as_double(); }}},
     {"visibility_error_threshold",
-     [this](const rclcpp::Parameter & p) { visibility_error_threshold_ = p.as_double(); }},
-    {"visibility_warn_threshold",
-     [this](const rclcpp::Parameter & p) { visibility_warn_threshold_ = p.as_double(); }}};
+     {validate_normalized,
+      [this](const rclcpp::Parameter & p) { visibility_error_threshold_ = p.as_double(); }}},
+    {"visibility_warn_threshold", {validate_normalized, [this](const rclcpp::Parameter & p) {
+                                     visibility_warn_threshold_ = p.as_double();
+                                   }}}};
 
   for (const auto & param : params) {
-    auto vit = validators.find(param.get_name());
-    if (vit != validators.end() && vit->second) {
-      std::string reason;
-      if (!vit->second(param, reason)) {
-        result.successful = false;
-        result.reason = reason;
-        return result;
+    auto it = param_ops.find(param.get_name());
+    if (it != param_ops.end()) {
+      if (it->second.validator) {
+        std::string reason;
+        if (!it->second.validator(param, reason)) {
+          result.successful = false;
+          result.reason = reason;
+          return result;
+        }
       }
-    }
-    auto hit = handlers.find(param.get_name());
-    if (hit != handlers.end()) {
-      hit->second(param);
+      it->second.assigner(param);
     }
   }
 
