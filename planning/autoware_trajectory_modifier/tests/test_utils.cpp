@@ -34,6 +34,10 @@ protected:
     point.pose.position.x = x;
     point.pose.position.y = y;
     point.pose.position.z = 0.0;
+    point.pose.orientation.x = 0.0;
+    point.pose.orientation.y = 0.0;
+    point.pose.orientation.z = 0.0;
+    point.pose.orientation.w = 1.0;
     point.longitudinal_velocity_mps = velocity;
     return point;
   }
@@ -44,6 +48,10 @@ protected:
     pose.position.x = x;
     pose.position.y = y;
     pose.position.z = 0.0;
+    pose.orientation.x = 0.0;
+    pose.orientation.y = 0.0;
+    pose.orientation.z = 0.0;
+    pose.orientation.w = 1.0;
     return pose;
   }
 
@@ -94,7 +102,8 @@ TEST_F(UtilsTest, CalculateDistanceEmptyTrajectory)
 TEST_F(UtilsTest, CalculateDistanceSamePosition)
 {
   TrajectoryPoints trajectory;
-  trajectory.push_back(create_trajectory_point(5.0, 5.0));
+  trajectory.push_back(create_trajectory_point(4.0, 5.0));  // Different starting point
+  trajectory.push_back(create_trajectory_point(5.0, 5.0));  // End at same position as ego
   auto ego_pose = create_pose(5.0, 5.0);
 
   double distance =
@@ -105,6 +114,7 @@ TEST_F(UtilsTest, CalculateDistanceSamePosition)
 TEST_F(UtilsTest, CalculateDistanceHorizontal)
 {
   TrajectoryPoints trajectory;
+  trajectory.push_back(create_trajectory_point(0.0, 0.0));
   trajectory.push_back(create_trajectory_point(10.0, 0.0));
   auto ego_pose = create_pose(0.0, 0.0);
 
@@ -116,6 +126,7 @@ TEST_F(UtilsTest, CalculateDistanceHorizontal)
 TEST_F(UtilsTest, CalculateDistanceVertical)
 {
   TrajectoryPoints trajectory;
+  trajectory.push_back(create_trajectory_point(0.0, 0.0));
   trajectory.push_back(create_trajectory_point(0.0, 8.0));
   auto ego_pose = create_pose(0.0, 0.0);
 
@@ -127,6 +138,7 @@ TEST_F(UtilsTest, CalculateDistanceVertical)
 TEST_F(UtilsTest, CalculateDistanceDiagonal)
 {
   TrajectoryPoints trajectory;
+  trajectory.push_back(create_trajectory_point(0.0, 0.0));
   trajectory.push_back(create_trajectory_point(3.0, 4.0));
   auto ego_pose = create_pose(0.0, 0.0);
 
@@ -145,12 +157,14 @@ TEST_F(UtilsTest, CalculateDistanceMultiplePointsUsesLast)
 
   double distance =
     autoware::trajectory_modifier::utils::calculate_distance_to_last_point(trajectory, ego_pose);
-  EXPECT_DOUBLE_EQ(distance, 10.0);  // 6-8-10 triangle
+  EXPECT_NEAR(
+    distance, 10.0, 0.1);  // 6-8-10 triangle, allowing tolerance for arc length calculation
 }
 
 TEST_F(UtilsTest, CalculateDistanceNegativeCoordinates)
 {
   TrajectoryPoints trajectory;
+  trajectory.push_back(create_trajectory_point(0.0, 0.0));
   trajectory.push_back(create_trajectory_point(-3.0, -4.0));
   auto ego_pose = create_pose(0.0, 0.0);
 
@@ -162,6 +176,7 @@ TEST_F(UtilsTest, CalculateDistanceNegativeCoordinates)
 TEST_F(UtilsTest, CalculateDistanceLargeDistance)
 {
   TrajectoryPoints trajectory;
+  trajectory.push_back(create_trajectory_point(0.0, 0.0));
   trajectory.push_back(create_trajectory_point(1000.0, 1000.0));
   auto ego_pose = create_pose(0.0, 0.0);
 
