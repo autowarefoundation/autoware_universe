@@ -19,6 +19,7 @@
 #include <rclcpp_components/register_node_macro.hpp>
 
 #include <memory>
+#include <vector>
 
 namespace autoware::trajectory_modifier
 {
@@ -80,7 +81,8 @@ void TrajectoryModifier::set_up_params()
   // Declare parameter with default value
   rcl_interfaces::msg::ParameterDescriptor use_stop_point_fixer_desc;
   use_stop_point_fixer_desc.description = "Enable the stop point fixer modifier plugin";
-  params_.use_stop_point_fixer = this->declare_parameter<bool>("use_stop_point_fixer", true, use_stop_point_fixer_desc);
+  params_.use_stop_point_fixer =
+    this->declare_parameter<bool>("use_stop_point_fixer", true, use_stop_point_fixer_desc);
 }
 
 void TrajectoryModifier::initialize_modifiers()
