@@ -55,6 +55,10 @@ protected:
     point.pose.position.x = x;
     point.pose.position.y = y;
     point.pose.position.z = 0.0;
+    point.pose.orientation.x = 0.0;
+    point.pose.orientation.y = 0.0;
+    point.pose.orientation.z = 0.0;
+    point.pose.orientation.w = 1.0;
     point.longitudinal_velocity_mps = velocity;
     return point;
   }
@@ -135,6 +139,7 @@ TEST_F(StopPointFixerIntegrationTest, TrajectoryModificationNotRequiredWhenFarFr
 TEST_F(StopPointFixerIntegrationTest, TrajectoryModificationRequiredWhenStationaryAndClose)
 {
   TrajectoryPoints trajectory;
+  trajectory.push_back(create_trajectory_point(0.0, 0.0));  // Starting point
   trajectory.push_back(create_trajectory_point(0.5, 0.0));  // Close point
 
   TrajectoryModifierParams params;
