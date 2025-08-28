@@ -149,5 +149,19 @@ CandidateTrajectories to_candidate_trajectories_msg(
 TurnIndicatorsCommand create_turn_indicators_command(
   const std::vector<float> & turn_indicator_logit, const rclcpp::Time & stamp);
 
+/**
+ * @brief Counts valid elements in a tensor with shape (B, len, dim2, dim3).
+ * An element is considered valid if not all values in the (dim2, dim3) block are zero.
+ *
+ * @param data The input tensor data (flattened).
+ * @param len The length dimension.
+ * @param dim2 The second-to-last dimension.
+ * @param dim3 The last dimension.
+ * @param batch_idx The batch index to examine (0-based).
+ * @return The number of valid elements in the specified batch.
+ */
+int64_t count_valid_elements(
+  const std::vector<float> & data, int64_t len, int64_t dim2, int64_t dim3, int64_t batch_idx);
+
 }  // namespace autoware::diffusion_planner::postprocess
 #endif  // AUTOWARE__DIFFUSION_PLANNER__POSTPROCESSING__POSTPROCESSING_UTILS_HPP_

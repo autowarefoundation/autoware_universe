@@ -93,6 +93,8 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
   // Parameter Callback
   set_param_res_ = add_on_set_parameters_callback(
     std::bind(&DiffusionPlanner::on_parameter, this, std::placeholders::_1));
+
+  diagnostics_inference_ = std::make_unique<DiagnosticsInterface>(this, "inference_status");
 }
 
 DiffusionPlanner::~DiffusionPlanner()
@@ -772,10 +774,15 @@ void DiffusionPlanner::on_timer()
   // Timer callback function
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
+  diagnostics_inference_->clear();
+
   if (!is_map_loaded_) {
     RCLCPP_INFO_THROTTLE(
       get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
       "Waiting for map data...");
+    diagnostics_inference_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, "Map data not loaded");
+    diagnostics_inference_->publish(this->now());
     return;
   }
 
@@ -785,10 +792,29 @@ void DiffusionPlanner::on_timer()
     RCLCPP_WARN_THROTTLE(
       get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
       "No input data available for inference");
+    diagnostics_inference_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, "No input data available for inference");
+    diagnostics_inference_->publish(this->now());
     return;
   }
 
   publish_debug_markers(input_data_map);
+
+  // Calculate and record metrics for diagnostics using the proper logic
+  const int64_t batch_idx = 0;
+  const int64_t valid_lane_count = postprocess::count_valid_elements(
+    input_data_map["lanes"], LANES_SHAPE[1], LANES_SHAPE[2], LANES_SHAPE[3], batch_idx);
+  diagnostics_inference_->add_key_value("valid_lane_count", valid_lane_count);
+
+  const int64_t valid_route_count = postprocess::count_valid_elements(
+    input_data_map["route_lanes"], ROUTE_LANES_SHAPE[1], ROUTE_LANES_SHAPE[2], ROUTE_LANES_SHAPE[3],
+    batch_idx);
+  diagnostics_inference_->add_key_value("valid_route_count", valid_route_count);
+
+  const int64_t valid_neighbor_count = postprocess::count_valid_elements(
+    input_data_map["neighbor_agents_past"], NEIGHBOR_SHAPE[1], NEIGHBOR_SHAPE[2], NEIGHBOR_SHAPE[3],
+    batch_idx);
+  diagnostics_inference_->add_key_value("valid_neighbor_count", valid_neighbor_count);
 
   // normalization of data
   preprocess::normalize_input_data(input_data_map, normalization_map_);
@@ -796,6 +822,9 @@ void DiffusionPlanner::on_timer()
     RCLCPP_WARN_THROTTLE(
       get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
       "Input data contains invalid values");
+    diagnostics_inference_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, "Input data contains invalid values");
+    diagnostics_inference_->publish(this->now());
     return;
   }
   const auto predictions = do_inference_trt(input_data_map);
@@ -806,6 +835,9 @@ void DiffusionPlanner::on_timer()
   const auto turn_indicators_cmd =
     postprocess::create_turn_indicators_command(turn_indicator_logit, this->now());
   pub_turn_indicators_->publish(turn_indicators_cmd);
+
+  // Publish diagnostics
+  diagnostics_inference_->publish(this->now());
 }
 
 void DiffusionPlanner::on_map(const HADMapBin::ConstSharedPtr map_msg)
