@@ -237,7 +237,7 @@ void ExtraScenarioSelector::initialize(rclcpp::Node * node)
     decltype(sub_operation_mode_state_)::element_type::create_subscription(
       node_, "input/operation_mode_state", rclcpp::QoS{1}.transient_local());
 
-  // Output（沿用）
+  // Output
   pub_scenario_ = node_->create_publisher<autoware_internal_planning_msgs::msg::Scenario>(
     "output/scenario", rclcpp::QoS{1});
   pub_trajectory_ = node_->create_publisher<autoware_planning_msgs::msg::Trajectory>(
