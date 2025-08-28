@@ -70,7 +70,7 @@ Module getModuleType(const std::string & module_name)
     module.type = Module::BLIND_SPOT;
   } else if (module_name == "crosswalk") {
     module.type = Module::CROSSWALK;
-  } else if (module_name == "detection_area") {
+  } else if (module_name == "detection_area" || module_name == "detection_lane") {
     module.type = Module::DETECTION_AREA;
   } else if (module_name == "intersection") {
     module.type = Module::INTERSECTION;
