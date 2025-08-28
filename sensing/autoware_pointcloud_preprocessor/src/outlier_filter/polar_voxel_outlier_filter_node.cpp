@@ -40,22 +40,32 @@
 namespace autoware::pointcloud_preprocessor
 {
 
+static constexpr double diagnostics_update_period_sec = 0.1;
+static constexpr size_t point_cloud_height_organized = 1;
+static constexpr double TWO_PI = 2.0 * M_PI;
+
 template <typename... T>
 bool all_finite(T... values)
 {
   return (... && std::isfinite(values));
 }
 
-static constexpr double diagnostics_update_period_sec = 0.1;
-static constexpr size_t point_cloud_height_organized = 1;
+inline double adjust_resolution_to_circle(double requested_resolution)
+{
+  int bins = static_cast<int>(std::round(TWO_PI / requested_resolution));
+  if (bins < 1) bins = 1;
+  return TWO_PI / bins;
+}
 
 PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   const rclcpp::NodeOptions & options)
 : Filter("PolarVoxelOutlierFilter", options), updater_(this)
 {
   radial_resolution_m_ = declare_parameter<double>("radial_resolution_m");
-  azimuth_resolution_rad_ = declare_parameter<double>("azimuth_resolution_rad");
-  elevation_resolution_rad_ = declare_parameter<double>("elevation_resolution_rad");
+  azimuth_resolution_rad_ =
+    adjust_resolution_to_circle(declare_parameter<double>("azimuth_resolution_rad"));
+  elevation_resolution_rad_ =
+    adjust_resolution_to_circle(declare_parameter<double>("elevation_resolution_rad"));
   voxel_points_threshold_ = static_cast<int>(declare_parameter<int64_t>("voxel_points_threshold"));
   min_radius_m_ = declare_parameter<double>("min_radius_m");
   max_radius_m_ = declare_parameter<double>("max_radius_m");
@@ -559,9 +569,14 @@ void PolarVoxelOutlierFilterComponent::update_parameter(const rclcpp::Parameter 
   // Static map of parameter names to their update functions
   static const std::unordered_map<std::string, ParameterUpdater> parameter_updaters = {
     {"radial_resolution_m", [this](const auto & p) { radial_resolution_m_ = p.as_double(); }},
-    {"azimuth_resolution_rad", [this](const auto & p) { azimuth_resolution_rad_ = p.as_double(); }},
+    {"azimuth_resolution_rad",
+     [this](const auto & p) {
+       azimuth_resolution_rad_ = adjust_resolution_to_circle(p.as_double());
+     }},
     {"elevation_resolution_rad",
-     [this](const auto & p) { elevation_resolution_rad_ = p.as_double(); }},
+     [this](const auto & p) {
+       elevation_resolution_rad_ = adjust_resolution_to_circle(p.as_double());
+     }},
     {"voxel_points_threshold",
      [this](const auto & p) { voxel_points_threshold_ = static_cast<int>(p.as_int()); }},
     {"secondary_noise_threshold",
