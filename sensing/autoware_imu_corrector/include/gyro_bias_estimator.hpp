@@ -106,7 +106,6 @@ private:
   double compute_yaw_rate_from_quat(
     const tf2::Quaternion & quat, const tf2::Quaternion & prev_quat, double dt);
   void publish_debug_vectors();
-  
 
   static geometry_msgs::msg::Vector3 transform_vector3(
     const geometry_msgs::msg::Vector3 & vec,
