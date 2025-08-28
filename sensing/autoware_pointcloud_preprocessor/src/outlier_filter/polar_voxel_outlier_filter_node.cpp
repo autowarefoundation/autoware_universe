@@ -128,11 +128,16 @@ void PolarVoxelOutlierFilterComponent::filter(
 {
   std::scoped_lock lock(mutex_);
 
+  if (!input) {
+    RCLCPP_ERROR(get_logger(), "Input point cloud is null");
+    throw std::invalid_argument("Input point cloud is null");
+  }
+
   // Phase 1: Validate inputs
-  validate_filter_inputs(input, indices);
+  validate_filter_inputs(*input, indices);
 
   // Check if we have pre-computed polar coordinates
-  bool has_polar_coords = has_polar_coordinates(input);
+  bool has_polar_coords = has_polar_coordinates(*input);
 
   if (has_polar_coords) {
     RCLCPP_DEBUG_ONCE(
@@ -143,7 +148,7 @@ void PolarVoxelOutlierFilterComponent::filter(
   }
 
   // Phase 2: Collect voxel information (unified for both formats)
-  auto point_voxel_info = collect_voxel_info(input);
+  auto point_voxel_info = collect_voxel_info(*input);
 
   // Phase 3: Count and validate voxels (mode-dependent logic)
   auto voxel_counts = count_voxels(point_voxel_info);
@@ -153,23 +158,23 @@ void PolarVoxelOutlierFilterComponent::filter(
   auto valid_points_mask = create_valid_points_mask(point_voxel_info, valid_voxels);
 
   // Phase 5: Create output (normal or empty based on mode)
-  create_output(input, valid_points_mask, output);
+  create_output(*input, valid_points_mask, output);
 
   // Phase 6: Conditionally publish noise cloud
-  conditionally_publish_noise_cloud(input, valid_points_mask);
+  conditionally_publish_noise_cloud(*input, valid_points_mask);
 
   // Phase 7: Publish diagnostics (always run for visibility estimation)
   publish_diagnostics(voxel_counts, valid_points_mask);
 }
 
 PolarVoxelOutlierFilterComponent::PointVoxelInfoVector
-PolarVoxelOutlierFilterComponent::collect_voxel_info(const PointCloud2ConstPtr & input)
+PolarVoxelOutlierFilterComponent::collect_voxel_info(const PointCloud2 & input)
 {
   PointVoxelInfoVector point_voxel_info;
-  point_voxel_info.reserve(input->width * input->height);
+  point_voxel_info.reserve(input.width * input.height);
 
   bool has_polar_coords = has_polar_coordinates(input);
-  size_t point_count = input->width * input->height;
+  size_t point_count = input.width * input.height;
 
   if (has_polar_coords) {
     process_polar_points(input, point_voxel_info, point_count);
@@ -181,14 +186,14 @@ PolarVoxelOutlierFilterComponent::collect_voxel_info(const PointCloud2ConstPtr &
 }
 
 void PolarVoxelOutlierFilterComponent::process_polar_points(
-  const PointCloud2ConstPtr & input, PointVoxelInfoVector & point_voxel_info, size_t point_count)
+  const PointCloud2 & input, PointVoxelInfoVector & point_voxel_info, size_t point_count)
 {
   // Create iterators for polar coordinates (always exist for polar format)
-  sensor_msgs::PointCloud2ConstIterator<float> iter_distance(*input, "distance");
-  sensor_msgs::PointCloud2ConstIterator<float> iter_azimuth(*input, "azimuth");
-  sensor_msgs::PointCloud2ConstIterator<float> iter_elevation(*input, "elevation");
-  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_intensity(*input, "intensity");
-  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_return_type(*input, "return_type");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_distance(input, "distance");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_azimuth(input, "azimuth");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_elevation(input, "elevation");
+  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_intensity(input, "intensity");
+  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_return_type(input, "return_type");
 
   for (size_t i = 0; i < point_count; ++i) {
     point_voxel_info.emplace_back(process_polar_point(
@@ -197,14 +202,14 @@ void PolarVoxelOutlierFilterComponent::process_polar_points(
 }
 
 void PolarVoxelOutlierFilterComponent::process_cartesian_points(
-  const PointCloud2ConstPtr & input, PointVoxelInfoVector & point_voxel_info, size_t point_count)
+  const PointCloud2 & input, PointVoxelInfoVector & point_voxel_info, size_t point_count)
 {
   // Create iterators for cartesian coordinates (always exist for cartesian format)
-  sensor_msgs::PointCloud2ConstIterator<float> iter_x(*input, "x");
-  sensor_msgs::PointCloud2ConstIterator<float> iter_y(*input, "y");
-  sensor_msgs::PointCloud2ConstIterator<float> iter_z(*input, "z");
-  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_intensity(*input, "intensity");
-  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_return_type(*input, "return_type");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_x(input, "x");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_y(input, "y");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_z(input, "z");
+  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_intensity(input, "intensity");
+  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_return_type(input, "return_type");
 
   for (size_t i = 0; i < point_count; ++i) {
     point_voxel_info.emplace_back(
@@ -348,8 +353,7 @@ bool PolarVoxelOutlierFilterComponent::passes_secondary_return_filter(bool is_pr
 }
 
 void PolarVoxelOutlierFilterComponent::create_filtered_output(
-  const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask,
-  PointCloud2 & output)
+  const PointCloud2 & input, const ValidPointsMask & valid_points_mask, PointCloud2 & output)
 {
   setup_output_header(
     output, input, std::count(valid_points_mask.begin(), valid_points_mask.end(), true));
@@ -358,15 +362,15 @@ void PolarVoxelOutlierFilterComponent::create_filtered_output(
   for (size_t i = 0; i < valid_points_mask.size(); ++i) {
     if (valid_points_mask[i]) {
       std::memcpy(
-        &output.data[output_idx * output.point_step], &input->data[i * input->point_step],
-        input->point_step);
+        &output.data[output_idx * output.point_step], &input.data[i * input.point_step],
+        input.point_step);
       output_idx++;
     }
   }
 }
 
 void PolarVoxelOutlierFilterComponent::publish_noise_cloud(
-  const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask) const
+  const PointCloud2 & input, const ValidPointsMask & valid_points_mask) const
 {
   if (!publish_noise_cloud_ || !noise_cloud_pub_) {
     return;
@@ -379,8 +383,8 @@ void PolarVoxelOutlierFilterComponent::publish_noise_cloud(
   for (size_t i = 0; i < valid_points_mask.size(); ++i) {
     if (!valid_points_mask[i]) {
       std::memcpy(
-        &noise_cloud.data[noise_idx * noise_cloud.point_step], &input->data[i * input->point_step],
-        input->point_step);
+        &noise_cloud.data[noise_idx * noise_cloud.point_step], &input.data[i * input.point_step],
+        input.point_step);
       noise_idx++;
     }
   }
@@ -461,10 +465,10 @@ void PolarVoxelOutlierFilterComponent::publish_filter_ratio_metric()
   ratio_pub_->publish(ratio_msg);
 }
 
-bool PolarVoxelOutlierFilterComponent::has_polar_coordinates(const PointCloud2ConstPtr & input)
+bool PolarVoxelOutlierFilterComponent::has_polar_coordinates(const PointCloud2 & input)
 {
   return autoware::pointcloud_preprocessor::utils::is_data_layout_compatible_with_point_xyzircaedt(
-    *input);
+    input);
 }
 
 PolarVoxelOutlierFilterComponent::PolarCoordinate
@@ -661,31 +665,31 @@ PolarVoxelOutlierFilterComponent::determine_valid_voxels_with_return_types(
 }
 
 void PolarVoxelOutlierFilterComponent::setup_output_header(
-  PointCloud2 & output, const PointCloud2ConstPtr & input, size_t valid_count)
+  PointCloud2 & output, const PointCloud2 & input, size_t valid_count)
 {
-  output.header = input->header;
+  output.header = input.header;
   output.height = point_cloud_height_organized;
   output.width = static_cast<uint32_t>(valid_count);
-  output.fields = input->fields;
-  output.is_bigendian = input->is_bigendian;
-  output.point_step = input->point_step;
+  output.fields = input.fields;
+  output.is_bigendian = input.is_bigendian;
+  output.point_step = input.point_step;
   output.row_step = output.width * output.point_step;
-  output.is_dense = input->is_dense;
+  output.is_dense = input.is_dense;
   output.data.resize(output.row_step * output.height);
 }
 
 sensor_msgs::msg::PointCloud2 PolarVoxelOutlierFilterComponent::create_noise_cloud(
-  const PointCloud2ConstPtr & input, size_t noise_count)
+  const PointCloud2 & input, size_t noise_count)
 {
   sensor_msgs::msg::PointCloud2 noise_cloud;
-  noise_cloud.header = input->header;
+  noise_cloud.header = input.header;
   noise_cloud.height = point_cloud_height_organized;
   noise_cloud.width = static_cast<uint32_t>(noise_count);
-  noise_cloud.fields = input->fields;
-  noise_cloud.is_bigendian = input->is_bigendian;
-  noise_cloud.point_step = input->point_step;
+  noise_cloud.fields = input.fields;
+  noise_cloud.is_bigendian = input.is_bigendian;
+  noise_cloud.point_step = input.point_step;
   noise_cloud.row_step = noise_cloud.width * noise_cloud.point_step;
-  noise_cloud.is_dense = input->is_dense;
+  noise_cloud.is_dense = input.is_dense;
   noise_cloud.data.resize(noise_cloud.row_step * noise_cloud.height);
   return noise_cloud;
 }
@@ -920,10 +924,9 @@ void PolarVoxelOutlierFilterComponent::on_filter_ratio_check(
 }
 
 void PolarVoxelOutlierFilterComponent::validate_filter_inputs(
-  const PointCloud2ConstPtr & input, const IndicesPtr & indices)
+  const PointCloud2 & input, const IndicesPtr & indices)
 {
   validate_indices(indices);
-  validate_input_cloud(input);
   validate_required_fields(input);
 }
 
@@ -934,21 +937,13 @@ void PolarVoxelOutlierFilterComponent::validate_indices(const IndicesPtr & indic
   }
 }
 
-void PolarVoxelOutlierFilterComponent::validate_input_cloud(const PointCloud2ConstPtr & input)
-{
-  if (!input) {
-    RCLCPP_ERROR(get_logger(), "Input point cloud is null");
-    throw std::invalid_argument("Input point cloud is null");
-  }
-}
-
-void PolarVoxelOutlierFilterComponent::validate_required_fields(const PointCloud2ConstPtr & input)
+void PolarVoxelOutlierFilterComponent::validate_required_fields(const PointCloud2 & input)
 {
   validate_return_type_field(input);
   validate_intensity_field(input);
 }
 
-void PolarVoxelOutlierFilterComponent::validate_return_type_field(const PointCloud2ConstPtr & input)
+void PolarVoxelOutlierFilterComponent::validate_return_type_field(const PointCloud2 & input)
 {
   if (!use_return_type_classification_) {
     return;
@@ -964,7 +959,7 @@ void PolarVoxelOutlierFilterComponent::validate_return_type_field(const PointClo
   }
 }
 
-void PolarVoxelOutlierFilterComponent::validate_intensity_field(const PointCloud2ConstPtr & input)
+void PolarVoxelOutlierFilterComponent::validate_intensity_field(const PointCloud2 & input)
 {
   if (!has_field(input, "intensity")) {
     RCLCPP_ERROR(get_logger(), "Input point cloud must have 'intensity' field");
@@ -973,9 +968,9 @@ void PolarVoxelOutlierFilterComponent::validate_intensity_field(const PointCloud
 }
 
 bool PolarVoxelOutlierFilterComponent::has_field(
-  const PointCloud2ConstPtr & input, const std::string & field_name)
+  const PointCloud2 & input, const std::string & field_name)
 {
-  for (const auto & field : input->fields) {
+  for (const auto & field : input.fields) {
     if (field.name == field_name) {
       return true;
     }
@@ -984,8 +979,7 @@ bool PolarVoxelOutlierFilterComponent::has_field(
 }
 
 void PolarVoxelOutlierFilterComponent::create_output(
-  const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask,
-  PointCloud2 & output)
+  const PointCloud2 & input, const ValidPointsMask & valid_points_mask, PointCloud2 & output)
 {
   if (visibility_estimation_only_) {
     create_empty_output(input, output);
@@ -995,13 +989,13 @@ void PolarVoxelOutlierFilterComponent::create_output(
 }
 
 void PolarVoxelOutlierFilterComponent::create_empty_output(
-  const PointCloud2ConstPtr & input, PointCloud2 & output)
+  const PointCloud2 & input, PointCloud2 & output)
 {
   setup_output_header(output, input, 0);
 }
 
 void PolarVoxelOutlierFilterComponent::conditionally_publish_noise_cloud(
-  const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask)
+  const PointCloud2 & input, const ValidPointsMask & valid_points_mask)
 {
   if (publish_noise_cloud_) {
     publish_noise_cloud(input, valid_points_mask);

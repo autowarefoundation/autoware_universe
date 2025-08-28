@@ -95,7 +95,7 @@
         "publish_noise_cloud": {
           "type": "boolean",
           "description": "whether to generate and publish noise point cloud for debugging (ignored when visibility_estimation_only=true)",
-          "default": "true"
+          "default": "false"
         },
         "filter_ratio_error_threshold": {
           "type": "number",
