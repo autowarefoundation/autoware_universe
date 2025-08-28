@@ -167,48 +167,24 @@ protected:
     const VoxelPointCountMap & voxel_point_counts, const ValidPointsMask & valid_points_mask);
 
   // Point processing helper methods
-  void process_polar_points(
-    const PointCloud2 & input, PointVoxelInfoVector & point_voxel_info, size_t point_count);
+  void process_polar_points(const PointCloud2 & input, PointVoxelInfoVector & point_voxel_info);
 
-  void process_cartesian_points(
-    const PointCloud2 & input, PointVoxelInfoVector & point_voxel_info, size_t point_count);
+  void process_cartesian_points(const PointCloud2 & input, PointVoxelInfoVector & point_voxel_info);
 
   std::optional<PointVoxelInfo> process_polar_point(
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_distance,
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_azimuth,
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_elevation,
-    sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_intensity,
-    sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_return_type) const;
+    float distance, float azimuth, float elevation, uint8_t intensity, uint8_t return_type) const;
 
   std::optional<PointVoxelInfo> process_cartesian_point(
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_x,
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_y,
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_z,
-    sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_intensity,
-    sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_return_type) const;
+    float x, float y, float z, uint8_t intensity, uint8_t return_type) const;
 
   template <typename Predicate>
   VoxelIndexSet determine_valid_voxels_generic(
     const VoxelPointCountMap & voxel_point_counts, Predicate predicate) const;
 
   std::optional<PolarCoordinate> extract_polar_from_dae(
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_distance,
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_azimuth,
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_elevation) const;
+    float distance, float azimuth, float elevation) const;
 
-  std::optional<PolarCoordinate> extract_polar_from_xyz(
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_x,
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_y,
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_z) const;
-
-  void advance_coordinate_iterators(
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_coord1,
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_coord2,
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_coord3) const;
-
-  void advance_intensity_return_iterators(
-    sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_intensity,
-    sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_return_type) const;
+  std::optional<PolarCoordinate> extract_polar_from_xyz(float x, float y, float z) const;
 
   void update_parameter(const rclcpp::Parameter & param);
 
