@@ -65,15 +65,15 @@ struct ClassifiedPointTypeStruct
 
 struct CellCentroid
 {
-  int cell_id;  // cell_id = sector_id * number_cells_per_sector + grid_index
-  int sector_id;
-  int cell_id_in_sector;
-  int num_points;
+  uint32_t cell_id;  // cell_id = sector_id * number_cells_per_sector + grid_index
+  uint32_t sector_id;
+  uint32_t cell_id_in_sector;
+  uint32_t num_points;
   size_t start_point_index;  // start index of points in classified_points_dev
   float gnd_radius_avg;
   float gnd_height_avg;
   float gnd_height_min;
-  int num_ground_points;
+  uint32_t num_ground_points;
   // initialize constructor
   CellCentroid()
   : cell_id(0),
@@ -112,11 +112,11 @@ struct FilterParameters
   float center_x{0.0f};
   float center_y{0.0f};
   uint32_t max_num_cells;
-  uint16_t max_num_cells_per_sector;  // number of cells per sector
-  uint16_t gnd_cell_buffer_size;
-  uint16_t num_sectors;                   // number of radial sectors
-  uint16_t gnd_grid_continual_thresh{3};  // threshold for continual ground grid
-  bool use_recheck_ground_cluster;        // to enable recheck ground cluster
+  uint32_t max_num_cells_per_sector;      // number of cells per sector
+  uint32_t num_sectors;                   // number of radial sectors
+  uint32_t gnd_grid_continual_thresh{3};  // threshold for continual ground grid
+  uint32_t use_recheck_ground_cluster;    // to enable recheck ground cluster
+  const uint32_t gnd_cell_buffer_size{5};
 };
 
 class CudaScanGroundSegmentationFilter
@@ -132,13 +132,14 @@ public:
     cuda_blackboard::CudaPointCloud2::SharedPtr output_points,
     cuda_blackboard::CudaPointCloud2::SharedPtr ground_points);
 
-  size_t number_input_points_;
-  size_t input_pointcloud_step_;
-  size_t input_xyzi_offset_[4];
+  uint32_t number_input_points_;
+  uint32_t num_process_points_host_;
+  uint32_t input_pointcloud_step_;
+  uint32_t input_xyzi_offset_[4];
   float center_x_{0.0f};
   float center_y_{0.0f};
-  const uint16_t gnd_grid_continual_thresh_{3};  // threshold for continual ground grid
-
+  const uint32_t gnd_grid_continual_thresh_{3};  // threshold for continual ground grid
+  const uint32_t continual_gnd_grid_thresh_{5};  // threshold for continual ground grid with recheck
   // Parameters
   FilterParameters filter_parameters_;
 
@@ -162,24 +163,29 @@ private:
    */
   void assignPointToClassifyPoint(
     const PointTypeStruct * input_points_dev, const CellCentroid * centroid_cells_list_dev,
-    const FilterParameters * filter_parameters_dev, int * cell_counts_dev,
+    const FilterParameters * filter_parameters_dev, uint32_t * cell_counts_dev,
     ClassifiedPointTypeStruct * classified_points_dev);
 
   void getCellFirstPointIndex(
-    CellCentroid * centroid_cells_list_dev, int * num_points_per_cell_dev,
+    CellCentroid * centroid_cells_list_dev, uint32_t * num_points_per_cell_dev,
     size_t * cell_first_point_indices_dev);
+
+  void getTotalProcessPoints(
+    const uint32_t * num_points_per_cell_dev, const uint32_t max_num_cells,
+    size_t * total_process_points_dev);
+
   void sortPointsInCells(
-    const int * num_points_per_cell_dev, ClassifiedPointTypeStruct * classified_points_dev);
+    const uint32_t * num_points_per_cell_dev, ClassifiedPointTypeStruct * classified_points_dev);
   void scanPerSectorGroundReference(
     ClassifiedPointTypeStruct * classified_points_dev, CellCentroid * centroid_cells_list_dev,
-    const FilterParameters * filter_parameters_dev, int * last_gnd_cells_dev);
+    const FilterParameters * filter_parameters_dev);
 
   /*
    * Extract obstacle points from classified_points_dev into
    */
   void extractNonGroundPoints(
     const PointTypeStruct * input_points_dev, ClassifiedPointTypeStruct * classified_points_dev,
-    PointTypeStruct * output_points_dev, size_t & num_output_points_host,
+    PointTypeStruct * output_points_dev, uint32_t & num_output_points_host,
     const PointType pointtype);
 
   void countCellPointNum(
