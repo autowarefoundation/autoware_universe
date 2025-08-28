@@ -110,7 +110,7 @@ class SmallUnknownPipeline:
         p["max_height_offset"] = gp["vehicle_height"]
         return p
 
-    def create_irregular_object_pipeline(self, input_topic, output_topic):
+    def create_irregular_object_pipeline(self, input_topic, concat_info_topic, output_topic):
         components = []
         # create cropbox filter
         components.append(
@@ -118,7 +118,11 @@ class SmallUnknownPipeline:
                 package="autoware_pointcloud_preprocessor",
                 plugin="autoware::pointcloud_preprocessor::CropBoxFilterComponent",
                 name="crop_box_filter",
-                remappings=[("input", input_topic), ("output", "cropped_range/pointcloud")],
+                remappings=[
+                    ("input", input_topic),
+                    ("input/concatenation_info", concat_info_topic),
+                    ("output", "cropped_range/pointcloud"),
+                ],
                 parameters=[
                     {
                         "input_frame": LaunchConfiguration("base_frame"),
@@ -175,7 +179,9 @@ def launch_setup(context, *args, **kwargs):
     components = []
     components.extend(
         pipeline.create_irregular_object_pipeline(
-            LaunchConfiguration("input/pointcloud"), obstacle_pointcloud_topic
+            LaunchConfiguration("input/pointcloud"),
+            LaunchConfiguration("input/concatenation_info"),
+            obstacle_pointcloud_topic,
         )
     )
     loader = LoadComposableNodes(
@@ -195,6 +201,7 @@ def generate_launch_description():
         launch_arguments.append(DeclareLaunchArgument(name, default_value=default_value))
 
     add_launch_arg("input/pointcloud", "/sensing/lidar/concatenated/pointcloud")
+    add_launch_arg("input/concatenation_info", "/sensing/lidar/concatenated/pointcloud_info")
     add_launch_arg(
         "output_topic", "/perception/object_recognition/detection/irregular_object/clusters"
     )
