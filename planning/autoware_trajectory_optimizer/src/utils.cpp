@@ -46,19 +46,16 @@ rclcpp::Logger get_logger()
   return rclcpp::get_logger("trajectory_optimizer");
 }
 
-rclcpp::Clock::SharedPtr get_clock()
-{
-  return rclcpp::Clock::make_shared(RCL_ROS_TIME);
-}
-
 void log_error_throttle(const std::string & message)
 {
-  RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 5000, "%s", message.c_str());
+  auto clock = rclcpp::Clock::make_shared(RCL_ROS_TIME);
+  RCLCPP_ERROR_THROTTLE(get_logger(), *clock, 5000, "%s", message.c_str());
 }
 
 void log_warn_throttle(const std::string & message)
 {
-  RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "%s", message.c_str());
+  auto clock = rclcpp::Clock::make_shared(RCL_ROS_TIME);
+  RCLCPP_WARN_THROTTLE(get_logger(), *clock, 5000, "%s", message.c_str());
 }
 
 void smooth_trajectory_with_elastic_band(
