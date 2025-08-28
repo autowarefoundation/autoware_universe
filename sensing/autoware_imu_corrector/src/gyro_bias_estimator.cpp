@@ -573,8 +573,8 @@ void GyroBiasEstimator::estimate_scale_gyro(
 
   // EKF rate update
   if (
-    gyro_bias_.has_value() && gyro_bias_not_rotated_.has_value()
-        && gyro_scale_buf_.size() > static_cast<size_t>(buffer_size_gyro_ - 2)) {
+    gyro_bias_.has_value() && gyro_bias_not_rotated_.has_value() &&
+    gyro_scale_buf_.size() > static_cast<size_t>(buffer_size_gyro_ - 2)) {
     update_rate_ekf(pose_msg_ptr, ekf_rate_);
     update_angle_ekf(yaw_ndt, ekf_angle_);
   }

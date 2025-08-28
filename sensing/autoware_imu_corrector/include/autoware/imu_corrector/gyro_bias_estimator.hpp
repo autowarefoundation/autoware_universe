@@ -11,8 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef GYRO_BIAS_ESTIMATOR_HPP_
-#define GYRO_BIAS_ESTIMATOR_HPP_
+#ifndef AUTOWARE__IMU_CORRECTOR__GYRO_BIAS_ESTIMATOR_HPP_
+#define AUTOWARE__IMU_CORRECTOR__GYRO_BIAS_ESTIMATOR_HPP_
 
 #include "gyro_bias_estimation_module.hpp"
 
@@ -155,8 +155,8 @@ private:
   double ndt_yaw_rate_;
   double gyro_yaw_rate_;
 
-  double gyro_yaw_angle_; // radians
-  double ndt_yaw_angle_;  // radians
+  double gyro_yaw_angle_;  // radians
+  double ndt_yaw_angle_;   // radians
 
   double avg_rate_pose_;
   double avg_rate_gyro_;
@@ -218,4 +218,4 @@ private:
 };
 }  // namespace autoware::imu_corrector
 
-#endif  // GYRO_BIAS_ESTIMATOR_HPP_
+#endif  // AUTOWARE__IMU_CORRECTOR__GYRO_BIAS_ESTIMATOR_HPP_
