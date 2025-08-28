@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "scene_intersection.hpp"
-#include "util.hpp"
+#include "autoware/behavior_velocity_intersection_module/scene_intersection.hpp"
+#include "autoware/behavior_velocity_intersection_module/util.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for toGeomPoly
 #include <autoware/behavior_velocity_planner_common/utilization/trajectory_utils.hpp>  // for smoothPath
@@ -388,28 +388,30 @@ void IntersectionModule::updateObjectInfoManagerCollision(
     }
     object_info->update_safety(unsafe_interval, safe_interval, safe_under_traffic_control);
     if (passed_1st_judge_line_first_time) {
-      object_info->setDecisionAt1stPassJudgeLinePassage(CollisionKnowledge{
-        clock_->now(),  // stamp
-        unsafe_interval
-          ? CollisionKnowledge::SafeType::UNSAFE
-          : (safe_under_traffic_control ? CollisionKnowledge::SafeType::SAFE_UNDER_TRAFFIC_CONTROL
-                                        : CollisionKnowledge::SafeType::SAFE),  // safe
-        unsafe_interval ? unsafe_interval : safe_interval,                      // interval
-        predicted_object.kinematics.initial_twist_with_covariance.twist.linear
-          .x  // observed_velocity
-      });
+      object_info->setDecisionAt1stPassJudgeLinePassage(
+        CollisionKnowledge{
+          clock_->now(),  // stamp
+          unsafe_interval
+            ? CollisionKnowledge::SafeType::UNSAFE
+            : (safe_under_traffic_control ? CollisionKnowledge::SafeType::SAFE_UNDER_TRAFFIC_CONTROL
+                                          : CollisionKnowledge::SafeType::SAFE),  // safe
+          unsafe_interval ? unsafe_interval : safe_interval,                      // interval
+          predicted_object.kinematics.initial_twist_with_covariance.twist.linear
+            .x  // observed_velocity
+        });
     }
     if (passed_2nd_judge_line_first_time) {
-      object_info->setDecisionAt2ndPassJudgeLinePassage(CollisionKnowledge{
-        clock_->now(),  // stamp
-        unsafe_interval
-          ? CollisionKnowledge::SafeType::UNSAFE
-          : (safe_under_traffic_control ? CollisionKnowledge::SafeType::SAFE_UNDER_TRAFFIC_CONTROL
-                                        : CollisionKnowledge::SafeType::SAFE),  // safe
-        unsafe_interval ? unsafe_interval : safe_interval,                      // interval
-        predicted_object.kinematics.initial_twist_with_covariance.twist.linear
-          .x  // observed_velocity
-      });
+      object_info->setDecisionAt2ndPassJudgeLinePassage(
+        CollisionKnowledge{
+          clock_->now(),  // stamp
+          unsafe_interval
+            ? CollisionKnowledge::SafeType::UNSAFE
+            : (safe_under_traffic_control ? CollisionKnowledge::SafeType::SAFE_UNDER_TRAFFIC_CONTROL
+                                          : CollisionKnowledge::SafeType::SAFE),  // safe
+          unsafe_interval ? unsafe_interval : safe_interval,                      // interval
+          predicted_object.kinematics.initial_twist_with_covariance.twist.linear
+            .x  // observed_velocity
+        });
     }
 
     // debug
@@ -440,8 +442,8 @@ void IntersectionModule::cutPredictPathWithinDuration(
 }
 
 std::optional<NonOccludedCollisionStop> IntersectionModule::isGreenPseudoCollisionStatus(
-  const size_t closest_idx, const size_t collision_stopline_idx,
-  const IntersectionStopLines & intersection_stoplines) const
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
+  const size_t collision_stopline_idx, const IntersectionStopLines & intersection_stoplines) const
 {
   // ==========================================================================================
   // if there are any vehicles on the attention area when ego entered the intersection on green
@@ -463,8 +465,11 @@ std::optional<NonOccludedCollisionStop> IntersectionModule::isGreenPseudoCollisi
       });
     if (exist_close_vehicles) {
       const auto occlusion_stopline_idx = intersection_stoplines.occlusion_peeking_stopline.value();
+      const auto [held_collision_stopline_idx, collision_stop_pose] =
+        holdStopPoseIfNecessary<NonOccludedCollisionStop>(path, collision_stopline_idx);
       return NonOccludedCollisionStop{
-        closest_idx, collision_stopline_idx, occlusion_stopline_idx, std::string("")};
+        closest_idx, held_collision_stopline_idx, occlusion_stopline_idx, std::string(""),
+        collision_stop_pose};
     }
   }
   return std::nullopt;

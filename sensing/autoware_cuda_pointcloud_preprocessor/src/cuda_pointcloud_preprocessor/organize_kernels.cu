@@ -15,9 +15,8 @@
 #include "autoware/cuda_pointcloud_preprocessor/organize_kernels.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/point_types.hpp"
 
+#include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <cub/cub.cuh>
-
-#include <limits>
 
 namespace autoware::cuda_pointcloud_preprocessor
 {
@@ -76,14 +75,21 @@ __global__ void gatherKernel(
 
 std::size_t querySortWorkspace(
   int num_items, int num_segments, int * offsets_device, std::uint32_t * keys_in_device,
-  std::uint32_t * keys_out_device)
+  std::uint32_t * keys_out_device, cudaStream_t & stream)
 {
   // Determine temporary device storage requirements
   void * temp_storage = nullptr;
   size_t temp_storage_bytes = 0;
-  cub::DeviceSegmentedRadixSort::SortKeys(
-    temp_storage, temp_storage_bytes, keys_in_device, keys_out_device, num_items, num_segments,
-    offsets_device, offsets_device + 1);
+
+  // Same as the default SortKeys arguments. Needed because the `stream` argument comes after them,
+  // so they have to be handed to the function as well.
+  int begin_bit = 0;
+  int end_bit = sizeof(std::uint32_t) * 8;
+
+  CHECK_CUDA_ERROR(
+    cub::DeviceSegmentedRadixSort::SortKeys(
+      temp_storage, temp_storage_bytes, keys_in_device, keys_out_device, num_items, num_segments,
+      offsets_device, offsets_device + 1, begin_bit, end_bit, stream));
 
   return temp_storage_bytes;
 }
@@ -97,6 +103,7 @@ void organizeLaunch(
   organizeKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
     input_points, index_tensor, ring_indexes, initial_max_rings, output_max_rings,
     initial_max_points_per_ring, output_max_points_per_ring, num_points);
+  CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
 void gatherLaunch(
@@ -108,6 +115,7 @@ void gatherLaunch(
   gatherKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
     input_points, index_tensor, output_points, num_rings, max_points_per_ring, is_valid_point,
     num_raw_points);
+  CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
 }  // namespace autoware::cuda_pointcloud_preprocessor

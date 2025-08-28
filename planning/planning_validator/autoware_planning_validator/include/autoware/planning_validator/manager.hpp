@@ -37,7 +37,7 @@ public:
     rclcpp::Node & node, const std::string & name,
     const std::shared_ptr<PlanningValidatorContext> & context);
   void unload_plugin(rclcpp::Node & node, const std::string & name);
-  void validate(bool & is_critical);
+  void validate();
 
 private:
   pluginlib::ClassLoader<PluginInterface> plugin_loader_;

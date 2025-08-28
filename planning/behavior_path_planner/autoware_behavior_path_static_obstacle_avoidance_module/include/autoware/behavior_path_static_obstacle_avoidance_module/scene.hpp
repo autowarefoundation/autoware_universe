@@ -432,6 +432,19 @@ private:
    */
   bool isSafePath(ShiftedPath & shifted_path, DebugData & debug) const;
 
+  /**
+   * @brief Check whether operator approval is required for the given shifted path.
+   *
+   * This function determines if the specified shifted path needs operator approval
+   * before it can be executed. The decision is made based on the provided path
+   * information.
+   *
+   * @param[in] shifted_path Reference to the shifted path to be evaluated.
+   * @param[in] debug Reference to debug data used during evaluation.
+   * @return true if operator approval is required, false otherwise.
+   */
+  bool is_operator_approval_required(ShiftedPath & shifted_path, DebugData & debug) const;
+
   auto getTurnSignal(const ShiftedPath & spline_shift_path, const ShiftedPath & linear_shift_path)
     -> TurnSignalInfo;
 

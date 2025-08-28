@@ -39,6 +39,7 @@ PassThroughTracker::PassThroughTracker(
 : Tracker(time, object), logger_(rclcpp::get_logger("PassThroughTracker")), last_update_time_(time)
 {
   prev_observed_object_ = object;
+  tracker_type_ = TrackerType::PASS_THROUGH;
 }
 
 bool PassThroughTracker::predict(const rclcpp::Time & time)
@@ -77,6 +78,7 @@ bool PassThroughTracker::getTrackedObject(
 {
   using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
   object = object_;
+  object.time = time;
 
   object.pose_covariance[XYZRPY_COV_IDX::X_X] = 0.0;
   object.pose_covariance[XYZRPY_COV_IDX::X_Y] = 0.0;

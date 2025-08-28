@@ -91,10 +91,18 @@ struct ObjectData
   Maneuver output_maneuver{
     Maneuver::UNINITIALIZED};  // output maneuver considering previous one shot maneuvers
 };
+struct Intention
+{
+  rclcpp::Time last_crossing_intention_time;
+  rclcpp::Time last_no_crossing_intention_time;
+  Eigen::Vector2d point;
+};
 struct CrosswalkUserData
 {
   std_msgs::msg::Header header;
   autoware_perception_msgs::msg::TrackedObject tracked_object;
+  std::vector<Intention> intention_history;
+  bool is_crossing{false};
 };
 
 using LaneletsData = std::vector<LaneletData>;

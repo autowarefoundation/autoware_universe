@@ -24,16 +24,37 @@ namespace autoware::behavior_velocity_planner
 struct PlannerParam
 {
   static PlannerParam init(rclcpp::Node & node, const std::string & ns);
-  bool use_pass_judge_line{};
-  double stop_line_margin{};
-  double backward_detection_length{};
-  double ignore_width_from_center_line{};
-  double adjacent_extend_width{};
-  double opposite_adjacent_extend_width{};
-  double max_future_movement_time{};
-  double ttc_min{};
-  double ttc_max{};
-  double ttc_ego_minimal_velocity{};
+  double backward_attention_length{};
+  double ttc_start_margin{};
+  double ttc_end_margin{};
+  double minimum_default_velocity{};
+  double collision_judge_debounce{};
+  double critical_stopline_margin{};
+  struct DetectNonVRU
+  {
+    bool car{};
+    bool truck{};
+    bool bus{};
+    bool trailer{};
+  } detect_non_vru{};
+  struct Brake
+  {
+    struct Critical
+    {
+      double deceleration{};
+      double jerk{};
+    } critical;
+    struct SemiCritical
+    {
+      double deceleration{};
+      double jerk{};
+    } semi_critical;
+  } brake;
+  struct BrakeForTTC
+  {
+    double critical_threshold_ub{};
+    double semi_critical_threshold_lb{};
+  } brake_for_ttc;
 };
 }  // namespace autoware::behavior_velocity_planner
 

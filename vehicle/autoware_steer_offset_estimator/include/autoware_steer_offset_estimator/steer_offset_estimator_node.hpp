@@ -37,6 +37,7 @@ class SteerOffsetEstimatorNode : public rclcpp::Node
 private:
   rclcpp::Publisher<Float32Stamped>::SharedPtr pub_steer_offset_;
   rclcpp::Publisher<Float32Stamped>::SharedPtr pub_steer_offset_cov_;
+  rclcpp::Publisher<Float32Stamped>::SharedPtr pub_steer_offset_error_;
   rclcpp::Subscription<TwistStamped>::SharedPtr sub_twist_;
   rclcpp::Subscription<Steering>::SharedPtr sub_steer_;
   rclcpp::TimerBase::SharedPtr timer_;
@@ -47,6 +48,7 @@ private:
   double update_hz_;
   double estimated_steer_offset_{0.0};
   double covariance_;
+  double initial_steer_offset_;
   double forgetting_factor_;
   double valid_min_velocity_;
   double valid_max_steer_;

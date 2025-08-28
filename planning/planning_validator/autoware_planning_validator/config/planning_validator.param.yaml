@@ -4,11 +4,9 @@
 
     # Operation option when invalid trajectory is detected
     #  0: publish the trajectory even if it is invalid
-    #  1: stop publishing the trajectory
-    #  2: publish the last validated trajectory
-    handling_type:
-      noncritical: 0
-      critical: 2
+    #  1: publish the last validated trajectory
+    #  2: publish the last validated trajectory with soft stop
+    default_handling_type: 0
 
     publish_diag: true  # if true, diagnostic msg is published
 
@@ -18,7 +16,10 @@
     diag_error_count_threshold: 0
     display_on_terminal: true # show error msg on terminal
 
-    # if handling type is 2 (use last valid traj), the following parameters are used to enable soft stop
-    enable_soft_stop_on_prev_traj: true
+    # if handling type is 2 (use last valid traj with soft stop), the following parameters are used to
+    # generate soft stop trajectory
     soft_stop_deceleration: -1.0 # [m/s^2]
     soft_stop_jerk_lim: 0.3 # [m/s^3]
+
+    # discard outdated traffic light information and do not use it in validation.
+    th_traffic_light_timeout: 0.5 # [s]

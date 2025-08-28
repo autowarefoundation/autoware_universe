@@ -226,8 +226,23 @@ std::optional<Pose> calcRefinedGoal(
   const bool left_side_parking, const double vehicle_width, const double base_link2front,
   const double base_link2rear, const GoalPlannerParameters & parameters);
 
-std::optional<Pose> calcClosestPose(
-  const lanelet::ConstLineString3d line, const Point & query_point);
+/**
+ * @brief Calculate signed lateral distance from vehicle pose to boundary line
+ *
+ * This function calculates the signed lateral distance from a vehicle's reference pose to the
+ * nearest intersection point with a boundary line. The calculation is performed by extending
+ * the vehicle's Y-axis (lateral direction) and finding the closest intersection with any segment
+ * of the boundary line.
+ *
+ * @param line The boundary line string containing multiple points defining the boundary
+ * @param reference_pose The vehicle's reference pose (position and orientation)
+ * @return std::optional<double> The signed lateral distance if intersection exists:
+ *         - Positive value: boundary is on the left side of the vehicle
+ *         - Negative value: boundary is on the right side of the vehicle
+ *         - std::nullopt: no intersection found (parallel or out of range)
+ */
+std::optional<double> calcSignedLateralDistanceToBoundary(
+  const lanelet::ConstLineString3d line, const Pose & reference_pose);
 
 autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
   const autoware_perception_msgs::msg::PredictedObjects & original_objects,
@@ -253,10 +268,18 @@ bool hasDeviatedFromPath(
 bool has_stopline_except_terminal(const PathWithLaneId & path);
 
 /**
- * @brief find the lanelet that has changed "laterally" from previous lanelet on the routing graph
+ * @brief find the last lanelet that has changed "laterally" from previous lanelet on the routing
+ * graph
  * @return the lanelet that changed "laterally" if the path is lane changing, otherwise nullopt
+ * @detail if ego changes lane from A to H, lane id set is like
+ * (1) {A, {C, D}, {E, F}, H} --> return F
+ * (2) {A, {C, D}, F, H} --> return D
+ * (3) {A, C, {E, F}, H} --> return F
+ *        |   A   |   C   |   E   |   G   |
+ *        |   B   |   D   |   F   |   H   |
+ *
  */
-std::optional<lanelet::ConstLanelet> find_lane_change_completed_lanelet(
+std::optional<lanelet::ConstLanelet> find_last_lane_change_completed_lanelet(
   const PathWithLaneId & path, const lanelet::LaneletMapConstPtr lanelet_map,
   const lanelet::routing::RoutingGraphConstPtr routing_graph);
 

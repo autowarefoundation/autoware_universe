@@ -50,7 +50,8 @@ public:
   ConcatenatedCloudResult<CudaPointCloud2Traits> combine_pointclouds(
     std::unordered_map<
       std::string, typename CudaPointCloud2Traits::PointCloudMessage::ConstSharedPtr> &
-      topic_to_cloud_map);
+      topic_to_cloud_map,
+    const std::shared_ptr<CollectorInfoBase> & collector_info);
 
   void allocate_pointclouds() override;
 };

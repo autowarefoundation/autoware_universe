@@ -168,6 +168,10 @@ BehaviorModuleOutput LaneChangeInterface::planWaitingApproval()
 
   if (!module_type_->isValidPath()) {
     path_candidate_ = std::make_shared<PathWithLaneId>();
+    updateRTCStatus(
+      std::numeric_limits<double>::lowest(), std::numeric_limits<double>::lowest(), false,
+      State::WAITING_FOR_EXECUTION);
+    module_type_->resetParameters();
     return out;
   }
 
@@ -234,9 +238,18 @@ bool LaneChangeInterface::canTransitSuccessState()
 
 bool LaneChangeInterface::canTransitFailureState()
 {
-  const auto force_activated = std::any_of(
-    rtc_interface_ptr_map_.begin(), rtc_interface_ptr_map_.end(),
-    [&](const auto & rtc) { return rtc.second->isForceActivated(uuid_map_.at(rtc.first)); });
+  const auto force_activated = std::invoke([&]() {
+    const bool is_force_activated = std::any_of(
+      rtc_interface_ptr_map_.begin(), rtc_interface_ptr_map_.end(),
+      [&](const auto & rtc) { return rtc.second->isForceActivated(uuid_map_.at(rtc.first)); });
+
+    if (is_force_activated && !module_type_->isValidPath()) {
+      RCLCPP_WARN_THROTTLE(
+        getLogger(), *clock_, 1000, "Force activated, but no valid path. Ignore force activation.");
+      return false;
+    }
+    return is_force_activated;
+  });
 
   if (force_activated) {
     RCLCPP_WARN_THROTTLE(getLogger(), *clock_, 5000, "unsafe but force executed");
@@ -313,6 +326,10 @@ std::pair<LaneChangeStates, std::string_view> LaneChangeInterface::check_transit
     return {LaneChangeStates::Cancel, "InvalidPath"};
   }
 
+  if (module_type_->is_near_terminal_end()) {
+    return {LaneChangeStates::Warning, "TooNearTerminal"};
+  }
+
   const auto is_preparing = module_type_->isEgoOnPreparePhase();
   const auto can_return_to_current = module_type_->isAbleToReturnCurrentLane();
 
@@ -339,10 +356,6 @@ std::pair<LaneChangeStates, std::string_view> LaneChangeInterface::check_transit
   // lane, for example, during an evasive maneuver around a static object.
   if (is_preparing && can_return_to_current) {
     return {LaneChangeStates::Cancel, "SafeToCancel"};
-  }
-
-  if (module_type_->is_near_terminal()) {
-    return {LaneChangeStates::Warning, "TooNearTerminal"};
   }
 
   if (!module_type_->isAbortEnabled()) {

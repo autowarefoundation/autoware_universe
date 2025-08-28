@@ -195,7 +195,6 @@ for each of the nodes.
   currently supporting following list:
 
 - **Publisher Message Types:**
-
   - `sensor_msgs/msg/PointCloud2`
   - `sensor_msgs/msg/CameraInfo`
   - `sensor_msgs/msg/Image`
@@ -209,7 +208,6 @@ for each of the nodes.
   - `autoware_vehicle_msgs/msg/VelocityReport`
 
 - **Subscriber Message Types:**
-
   - `sensor_msgs/msg/PointCloud2`
   - `autoware_perception_msgs/msg/DetectedObjects`
   - `autoware_perception_msgs/msg/TrackedObjects`

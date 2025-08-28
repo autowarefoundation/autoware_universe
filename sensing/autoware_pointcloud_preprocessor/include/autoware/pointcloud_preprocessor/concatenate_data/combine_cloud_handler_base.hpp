@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include "concatenation_info_manager.hpp"
 #include "traits.hpp"
 
 #include <deque>
@@ -26,6 +27,7 @@
 // ROS includes
 #include <managed_transform_buffer/managed_transform_buffer.hpp>
 
+#include <autoware_sensing_msgs/msg/concatenated_point_cloud_info.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -37,6 +39,7 @@ template <typename MsgTraits>
 struct ConcatenatedCloudResult
 {
   typename MsgTraits::PointCloudMessage::UniquePtr concatenate_cloud_ptr{nullptr};
+  autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::UniquePtr concatenation_info_ptr;
   std::optional<std::unordered_map<std::string, typename MsgTraits::PointCloudMessage::UniquePtr>>
     topic_to_transformed_cloud_map;
   std::unordered_map<std::string, double> topic_to_original_stamp_map;
@@ -55,7 +58,9 @@ public:
     is_motion_compensated_(is_motion_compensated),
     publish_synchronized_pointcloud_(publish_synchronized_pointcloud),
     keep_input_frame_in_synchronized_pointcloud_(keep_input_frame_in_synchronized_pointcloud),
-    managed_tf_buffer_(std::make_unique<managed_transform_buffer::ManagedTransformBuffer>())
+    managed_tf_buffer_(std::make_unique<managed_transform_buffer::ManagedTransformBuffer>()),
+    concatenation_info_manager_(
+      node.get_parameter("matching_strategy.type").as_string(), input_topics)
   {
   }
 
@@ -79,6 +84,7 @@ protected:
   bool publish_synchronized_pointcloud_;
   bool keep_input_frame_in_synchronized_pointcloud_;
   std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
+  ConcatenationInfoManager concatenation_info_manager_;
 
   std::deque<geometry_msgs::msg::TwistStamped> twist_queue_;
 };

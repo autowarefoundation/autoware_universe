@@ -78,6 +78,11 @@ GPUMonitor::GPUMonitor(const rclcpp::NodeOptions & options) : GPUMonitorBase("gp
   }
 }
 
+GPUMonitor::~GPUMonitor()
+{
+  shut_down();
+}
+
 void GPUMonitor::shut_down()
 {
   nvmlReturn_t ret = nvmlShutdown();
@@ -445,6 +450,66 @@ void GPUMonitor::checkFrequency(diagnostic_updater::DiagnosticStatusWrapper & st
 
   // Measure elapsed time since start time and report
   SystemMonitorUtility::stopMeasurement(t_start, stat);
+}
+
+std::vector<GPUMonitorBase::GpuStatus> GPUMonitor::getGPUStatus() const
+{
+  std::vector<GpuStatus> gpu_status_list;
+
+  int index = 0;
+  for (auto itr = gpus_.begin(); itr != gpus_.end(); ++itr, ++index) {
+    nvmlReturn_t ret{};
+    nvmlUtilization_t utilization;
+    ret = nvmlDeviceGetUtilizationRates(itr->device, &utilization);
+    if (ret != NVML_SUCCESS) {
+      continue;
+    }
+
+    unsigned int clock = 0;
+    ret = nvmlDeviceGetClockInfo(itr->device, NVML_CLOCK_GRAPHICS, &clock);
+    if (ret != NVML_SUCCESS) {
+      continue;
+    }
+
+    unsigned int temp = 0;
+    ret = nvmlDeviceGetTemperature(itr->device, NVML_TEMPERATURE_GPU, &temp);
+    if (ret != NVML_SUCCESS) {
+      continue;
+    }
+
+    unsigned long long clocksThrottleReasons = 0LL;  // NOLINT
+    ret = nvmlDeviceGetCurrentClocksThrottleReasons(itr->device, &clocksThrottleReasons);
+    if (ret != NVML_SUCCESS) {
+      continue;
+    }
+
+    int thermal_throttling = DiagStatus::OK;
+    while (clocksThrottleReasons) {
+      unsigned long long flag = clocksThrottleReasons & ((~clocksThrottleReasons) + 1);  // NOLINT
+      clocksThrottleReasons ^= flag;
+
+      switch (flag) {
+        case nvmlClocksThrottleReasonGpuIdle:
+        case nvmlClocksThrottleReasonApplicationsClocksSetting:
+        case nvmlClocksThrottleReasonSwPowerCap:
+          // we do not treat as error
+          break;
+        default:
+          thermal_throttling = DiagStatus::ERROR;
+          break;
+      }
+    }
+
+    GpuStatus gpu_status;
+    gpu_status.name = itr->name;
+    gpu_status.usage = static_cast<float>(utilization.gpu);
+    gpu_status.clock = static_cast<int>(clock);
+    gpu_status.temperature = static_cast<int>(temp);
+    gpu_status.thermal_throttling = thermal_throttling;
+    gpu_status_list.push_back(gpu_status);
+  }
+
+  return gpu_status_list;
 }
 
 bool GPUMonitor::getSupportedGPUClocks(

@@ -2,6 +2,24 @@
 Changelog for package autoware_cuda_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* feat(autoware_cuda_utils): add thrust utils (`#10997 <https://github.com/autowarefoundation/autoware_universe/issues/10997>`_)
+  * feat(autoware_cuda_utils): add thrust utils that ensure thrust is executed on a particular stream
+  * chore: skip thrust utils test if no CUDA device is available
+  * test: enable thrust tests
+  * chore: apply suggestion about wrong comment, inverted counting
+  Co-authored-by: Amadeusz Szymko <amadeuszszymko@gmail.com>
+  ---------
+  Co-authored-by: Amadeusz Szymko <amadeuszszymko@gmail.com>
+* test(cuda_utils): add unit tests, CUDA test helpers that skip if no CUDA device is available (`#10999 <https://github.com/autowarefoundation/autoware_universe/issues/10999>`_)
+  * feat: add CUDA GTest utils that allow for skipping unit tests in unsupported environments
+  * test(autoware_cuda_utils): add unit tests
+  * test: skip tests if no CUDA device is available
+  * chore: add explanation on why stream/memory deletion is not checked
+  ---------
+* Contributors: Max Schmeller
+
 0.46.0 (2025-06-20)
 -------------------
 

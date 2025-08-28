@@ -52,6 +52,8 @@
 #ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__CONCATENATE_POINTCLOUDS_HPP_
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__CONCATENATE_POINTCLOUDS_HPP_
 
+#include "concatenation_info_manager.hpp"
+
 #include <deque>
 #include <map>
 #include <memory>
@@ -70,6 +72,7 @@
 
 #include <autoware_internal_debug_msgs/msg/int32_stamped.hpp>
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
+#include <autoware_sensing_msgs/msg/concatenated_point_cloud_info.hpp>
 #include <autoware_vehicle_msgs/msg/velocity_report.hpp>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
@@ -111,6 +114,9 @@ public:
 private:
   /** \brief The output PointCloud publisher. */
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_output_;
+  /** \brief The output ConcatenatedPointCloudInfo publisher. */
+  rclcpp::Publisher<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>::SharedPtr
+    pub_output_info_;
   /** \brief Delay Compensated PointCloud publisher*/
   std::map<std::string, rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr>
     transformed_raw_pc_publisher_map_;
@@ -138,6 +144,7 @@ private:
   std::vector<std::string> input_topics_;
 
   std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
+  std::unique_ptr<ConcatenationInfoManager> concatenation_info_manager_{nullptr};
 
   std::deque<geometry_msgs::msg::TwistStamped::ConstSharedPtr> twist_ptr_queue_;
 
@@ -149,7 +156,9 @@ private:
   std::map<std::string, double> offset_map_;
 
   void checkSyncStatus();
-  void combineClouds(sensor_msgs::msg::PointCloud2::SharedPtr & concat_cloud_ptr);
+  void combineClouds(
+    sensor_msgs::msg::PointCloud2::SharedPtr & concat_cloud_ptr,
+    autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr & concatenation_info_ptr);
   void publish();
 
   void convertToXYZIRCCloud(

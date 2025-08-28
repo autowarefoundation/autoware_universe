@@ -44,6 +44,8 @@ UnknownTracker::UnknownTracker(
   enable_velocity_estimation_(enable_velocity_estimation),
   enable_motion_output_(enable_motion_output)
 {
+  tracker_type_ = TrackerType::UNKNOWN;
+
   if (enable_velocity_estimation_) {
     // Set motion model parameters
     {
@@ -226,6 +228,7 @@ bool UnknownTracker::getTrackedObject(
 
   // get the object
   object = object_;
+  object.time = time;
 
   if (enable_velocity_estimation_) {
     // predict from motion model

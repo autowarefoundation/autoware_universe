@@ -70,13 +70,34 @@ StartPlannerModule::StartPlannerModule(
   vehicle_info_{autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo()},
   is_freespace_planner_cb_running_{false}
 {
-  // set enabled planner
-  if (parameters_->enable_shift_pull_out) {
-    start_planners_.push_back(std::make_shared<ShiftPullOut>(node, *parameters, time_keeper_));
+  // set enabled planner based on search_priority list
+  for (const auto & planner_type_str : parameters_->search_priority) {
+    const auto planner_type = magic_enum::enum_cast<PlannerType>(planner_type_str);
+    if (!planner_type.has_value()) {
+      RCLCPP_WARN(getLogger(), "Unknown planner type: %s", planner_type_str.c_str());
+      continue;
+    }
+
+    switch (planner_type.value()) {
+      case PlannerType::SHIFT:
+        start_planners_.push_back(std::make_shared<ShiftPullOut>(node, *parameters, time_keeper_));
+        break;
+      case PlannerType::GEOMETRIC:
+        start_planners_.push_back(
+          std::make_shared<GeometricPullOut>(node, *parameters, time_keeper_));
+        break;
+      case PlannerType::CLOTHOID:
+        start_planners_.push_back(
+          std::make_shared<ClothoidPullOut>(node, *parameters, time_keeper_));
+        break;
+      default:
+        RCLCPP_WARN(
+          getLogger(), "Planner type %s is not supported for initialization",
+          planner_type_str.c_str());
+        break;
+    }
   }
-  if (parameters_->enable_geometric_pull_out) {
-    start_planners_.push_back(std::make_shared<GeometricPullOut>(node, *parameters, time_keeper_));
-  }
+
   if (start_planners_.empty()) {
     RCLCPP_ERROR(getLogger(), "Not found enabled planner");
   }
@@ -380,6 +401,21 @@ bool StartPlannerModule::isInsideLanelets() const
       autoware_utils::MultiPolygon2d result;
       boost::geometry::union_(combined_lanelets, lanelet_polygon, result);
       combined_lanelets = result;
+    }
+  }
+
+  // Remove micro holes (micro inner rings) caused by boost::geometry::union_
+  {
+    constexpr double area_threshold = 1e-5;  // [m^2]
+    for (auto & combined_lanelet : combined_lanelets) {
+      auto & inners = combined_lanelet.inners();
+      inners.erase(
+        std::remove_if(
+          inners.begin(), inners.end(),
+          [&](const auto & inner_ring) {
+            return std::abs(boost::geometry::area(inner_ring)) < area_threshold;
+          }),
+        inners.end());
     }
   }
 
@@ -1056,14 +1092,15 @@ PathWithLaneId StartPlannerModule::getCurrentPath() const
 
 void StartPlannerModule::planWithPriority(
   const std::vector<Pose> & start_pose_candidates, const Pose & refined_start_pose,
-  const Pose & goal_pose, const std::string & search_priority)
+  const Pose & goal_pose, const std::vector<std::string> & priority_list,
+  const std::string & search_policy)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   if (start_pose_candidates.empty()) return;
 
   const PriorityOrder order_priority =
-    determinePriorityOrder(search_priority, start_pose_candidates.size());
+    determinePriorityOrder(priority_list, search_policy, start_pose_candidates.size());
 
   std::vector<PlannerDebugData> debug_data_vector;
   {  // create a scope for the scoped time track
@@ -1087,28 +1124,69 @@ void StartPlannerModule::planWithPriority(
 }
 
 PriorityOrder StartPlannerModule::determinePriorityOrder(
-  const std::string & search_priority, const size_t start_pose_candidates_num)
+  const std::vector<std::string> & priority_list, const std::string & search_policy,
+  const size_t start_pose_candidates_num)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   PriorityOrder order_priority;
-  if (search_priority == "efficient_path") {
+
+  // Get valid planners from priority list
+  std::vector<std::shared_ptr<PullOutPlannerBase>> valid_planners;
+  for (const auto & planner_type_str : priority_list) {
+    const auto planner_type = magic_enum::enum_cast<PlannerType>(planner_type_str);
+    const auto planner_type_enum = planner_type.value();
+
+    if (!isPlannerEnabled(planner_type_enum)) {
+      continue;
+    }
+
+    // Find the corresponding planner in start_planners_
     for (const auto & planner : start_planners_) {
-      for (size_t i = 0; i < start_pose_candidates_num; i++) {
-        order_priority.emplace_back(i, planner);
+      if (planner->getPlannerType() == planner_type_enum) {
+        valid_planners.push_back(planner);
+        break;
       }
     }
-  } else if (search_priority == "short_back_distance") {
-    for (size_t i = 0; i < start_pose_candidates_num; i++) {
-      for (const auto & planner : start_planners_) {
-        order_priority.emplace_back(i, planner);
-      }
-    }
-  } else {
-    RCLCPP_ERROR(getLogger(), "Invalid search_priority: %s", search_priority.c_str());
-    throw std::domain_error("[start_planner] invalid search_priority");
   }
+
+  if (valid_planners.empty()) {
+    RCLCPP_ERROR(getLogger(), "No enabled planners found in priority list");
+    throw std::runtime_error("[start_planner] No enabled planners available");
+  }
+
+  // Generate priority order based on search policy
+  if (search_policy == "distance_priority") {
+    // Candidate-first: try all planners for each candidate
+    // Order: (candidate0, planner0), (candidate0, planner1), ..., (candidate1, planner0), ...
+    for (size_t candidate_idx = 0; candidate_idx < start_pose_candidates_num; ++candidate_idx) {
+      for (const auto & planner : valid_planners) {
+        order_priority.emplace_back(candidate_idx, planner);
+      }
+    }
+  } else {  // planner_priority
+    // Planner-first: try all candidates for each planner
+    // Order: (candidate0, planner0), (candidate1, planner0), ..., (candidate0, planner1), ...
+    for (const auto & planner : valid_planners) {
+      for (size_t candidate_idx = 0; candidate_idx < start_pose_candidates_num; ++candidate_idx) {
+        order_priority.emplace_back(candidate_idx, planner);
+      }
+    }
+  }
+
   return order_priority;
+}
+
+bool StartPlannerModule::isPlannerEnabled(const PlannerType & planner_type) const
+{
+  // PlannerType::FREESPACE is checked by direct parameter reference,
+  // while other planners are checked by their existence in the search_priority list
+
+  // Check if the planner type is in the search_priority list
+  const std::string planner_type_str = std::string(magic_enum::enum_name(planner_type));
+  return std::find(
+           parameters_->search_priority.begin(), parameters_->search_priority.end(),
+           planner_type_str) != parameters_->search_priority.end();
 }
 
 bool StartPlannerModule::findPullOutPath(
@@ -1290,14 +1368,26 @@ void StartPlannerModule::updatePullOutStatus()
   // search pull out start candidates backward
   const std::vector<Pose> start_pose_candidates = std::invoke([&]() -> std::vector<Pose> {
     if (parameters_->enable_back) {
-      return searchPullOutStartPoseCandidates(start_pose_candidates_path);
+      auto candidates = searchPullOutStartPoseCandidates(start_pose_candidates_path);
+      // Remove the first candidate from searchPullOutStartPoseCandidates
+      // (back_distance=0.0, equivalent to current position)
+      // Note: The remaining candidates yaw are assumed to be aligned along the lane yaw after
+      // backward driving
+      if (!candidates.empty()) {
+        candidates.erase(candidates.begin());
+      }
+      // Insert current_pose at the beginning to always include departure from current position as a
+      // candidate
+      candidates.insert(candidates.begin(), current_pose);
+      return candidates;
     }
-    return {*refined_start_pose};
+    return {current_pose};
   });
 
   if (!status_.backward_driving_complete) {
     planWithPriority(
-      start_pose_candidates, *refined_start_pose, goal_pose, parameters_->search_priority);
+      start_pose_candidates, *refined_start_pose, goal_pose, parameters_->search_priority,
+      parameters_->search_policy);
   }
 
   debug_data_.refined_start_pose = *refined_start_pose;
@@ -1336,7 +1426,9 @@ PathWithLaneId StartPlannerModule::calcBackwardPathFromStartPose() const
   const auto pull_out_lanes = start_planner_utils::getPullOutLanes(
     planner_data_, planner_data_->parameters.backward_path_length + parameters_->max_back_distance);
 
-  const auto arc_position_pose = lanelet::utils::getArcCoordinates(pull_out_lanes, start_pose);
+  const auto & lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
+  const auto arc_position_pose =
+    lanelet::utils::getArcCoordinatesOnEgoCenterline(pull_out_lanes, start_pose, lanelet_map_ptr);
 
   // common buffer distance for both front and back
   static constexpr double buffer = 30.0;
@@ -1380,8 +1472,10 @@ std::vector<Pose> StartPlannerModule::searchPullOutStartPoseCandidates(
 
   // Set the maximum backward distance less than the distance from the vehicle's base_link to
   // the lane's rearmost point to prevent lane departure.
+  const auto & lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
   const double current_arc_length =
-    lanelet::utils::getArcCoordinates(pull_out_lanes, start_pose).length;
+    lanelet::utils::getArcCoordinatesOnEgoCenterline(pull_out_lanes, start_pose, lanelet_map_ptr)
+      .length;
   const double allowed_backward_distance = std::clamp(
     current_arc_length - planner_data_->parameters.base_link2rear, 0.0,
     parameters_->max_back_distance);
@@ -1397,8 +1491,9 @@ std::vector<Pose> StartPlannerModule::searchPullOutStartPoseCandidates(
           parameters_->collision_check_margin_from_front_object))
       continue;
 
-    const double backed_pose_arc_length =
-      lanelet::utils::getArcCoordinates(pull_out_lanes, *backed_pose).length;
+    const double backed_pose_arc_length = lanelet::utils::getArcCoordinatesOnEgoCenterline(
+                                            pull_out_lanes, *backed_pose, lanelet_map_ptr)
+                                            .length;
     const double length_to_lane_end = std::accumulate(
       std::begin(pull_out_lanes), std::end(pull_out_lanes), 0.0,
       [](double acc, const auto & lane) { return acc + lanelet::utils::getLaneletLength2d(lane); });
@@ -1470,9 +1565,11 @@ bool StartPlannerModule::hasReachedPullOutEnd() const
     planner_data_, backward_path_length, std::numeric_limits<double>::max(),
     /*forward_only_in_route*/ true);
 
-  const auto arclength_current = lanelet::utils::getArcCoordinates(current_lanes, current_pose);
-  const auto arclength_pull_out_end =
-    lanelet::utils::getArcCoordinates(current_lanes, status_.pull_out_path.end_pose);
+  const auto & lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
+  const auto arclength_current =
+    lanelet::utils::getArcCoordinatesOnEgoCenterline(current_lanes, current_pose, lanelet_map_ptr);
+  const auto arclength_pull_out_end = lanelet::utils::getArcCoordinatesOnEgoCenterline(
+    current_lanes, status_.pull_out_path.end_pose, lanelet_map_ptr);
 
   // offset to not finish the module before engage
   constexpr double offset = 0.1;
@@ -1533,8 +1630,10 @@ TurnSignalInfo StartPlannerModule::calcTurnSignalInfo()
     return getPreviousModuleOutput().turn_signal_info;
   }
 
+  const auto & lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
   const double current_shift_length =
-    lanelet::utils::getArcCoordinates(current_lanes, current_pose).distance;
+    lanelet::utils::getArcCoordinatesOnEgoCenterline(current_lanes, current_pose, lanelet_map_ptr)
+      .distance;
 
   constexpr bool egos_lane_is_shifted = true;
   constexpr bool is_pull_out = true;
@@ -1551,8 +1650,8 @@ TurnSignalInfo StartPlannerModule::calcTurnSignalInfo()
     }
     constexpr double distance_threshold = 1.0;
     const auto stop_point = status_.pull_out_path.partial_paths.front().points.back();
-    const double distance_from_ego_to_stop_point =
-      std::abs(autoware::motion_utils::calcSignedArcLength(
+    const double distance_from_ego_to_stop_point = std::abs(
+      autoware::motion_utils::calcSignedArcLength(
         path.points, stop_point.point.pose.position, current_pose.position));
     return distance_from_ego_to_stop_point < distance_threshold;
   });
@@ -1722,7 +1821,8 @@ std::optional<PullOutStatus> StartPlannerModule::planFreespacePath(
     planner_data, backward_path_length, std::numeric_limits<double>::max(),
     /*forward_only_in_route*/ true);
 
-  const auto current_arc_coords = lanelet::utils::getArcCoordinates(current_lanes, current_pose);
+  const auto current_arc_coords = lanelet::utils::getArcCoordinatesOnEgoCenterline(
+    current_lanes, current_pose, route_handler->getLaneletMapPtr());
 
   const double s_start = std::max(0.0, current_arc_coords.length + end_pose_search_start_distance);
   const double s_end = current_arc_coords.length + end_pose_search_end_distance;
@@ -1909,7 +2009,8 @@ void StartPlannerModule::setDebugData()
   {
     std::map<PlannerType, double> collision_check_distances = {
       {PlannerType::SHIFT, parameters_->shift_collision_check_distance_from_end},
-      {PlannerType::GEOMETRIC, parameters_->geometric_collision_check_distance_from_end}};
+      {PlannerType::GEOMETRIC, parameters_->geometric_collision_check_distance_from_end},
+      {PlannerType::CLOTHOID, parameters_->clothoid_collision_check_distance_from_end}};
 
     double collision_check_distance_from_end = collision_check_distances[status_.planner_type];
     const auto collision_check_end_pose = autoware::motion_utils::calcLongitudinalOffsetPose(

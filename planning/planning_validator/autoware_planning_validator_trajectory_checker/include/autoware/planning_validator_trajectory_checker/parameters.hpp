@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__PLANNING_VALIDATOR_TRAJECTORY_CHECKER__PARAMETERS_HPP_
 #define AUTOWARE__PLANNING_VALIDATOR_TRAJECTORY_CHECKER__PARAMETERS_HPP_
 
+#include <autoware/planning_validator/types.hpp>
+
 namespace autoware::planning_validator
 {
 
@@ -22,6 +24,8 @@ struct TrajectoryCheck
 {
   bool enable = true;
   bool is_critical = false;
+  bool override_error_diag = false;
+  InvalidTrajectoryHandlingType handling_type{};
   double threshold{};
 };
 
@@ -42,7 +46,7 @@ struct TrajectoryCheckerParams
 
   struct YawDeviation : TrajectoryCheck
   {
-    double nearest_yaw_trajectory_shift_required_for_checking{};
+    double th_trajectory_yaw_shift{};
   } yaw_deviation;
 
   struct TrajectoryShift : TrajectoryCheck

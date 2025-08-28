@@ -17,6 +17,7 @@
 
 #include <autoware_command_mode_decider/plugin.hpp>
 
+#include <unordered_set>
 #include <vector>
 
 namespace autoware::command_mode_decider
@@ -32,6 +33,13 @@ public:
 
   std::vector<uint16_t> decide(
     const RequestModeStatus & request, const CommandModeStatusTable & table) override;
+
+private:
+  std::vector<uint16_t> decide(
+    const RequestModeStatus & request, const CommandModeStatusTable & table,
+    const std::unordered_set<uint16_t> & last_modes) const;
+
+  std::unordered_set<uint16_t> last_modes_;
 };
 
 }  // namespace autoware::command_mode_decider

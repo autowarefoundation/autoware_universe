@@ -17,6 +17,7 @@
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 
 #include <memory>
+#include <string>
 #include <utility>
 
 namespace autoware::steer_offset_estimator
@@ -29,6 +30,10 @@ SteerOffsetEstimatorNode::SteerOffsetEstimatorNode(const rclcpp::NodeOptions & n
   const auto vehicle_info = autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo();
   wheel_base_ = vehicle_info.wheel_base_m;
   covariance_ = this->declare_parameter<double>("initial_covariance");
+  auto initial_steer_offset_param_name =
+    this->declare_parameter<std::string>("initial_steer_offset_param_name");
+  initial_steer_offset_ = this->declare_parameter<double>(initial_steer_offset_param_name);
+
   forgetting_factor_ = this->declare_parameter<double>("forgetting_factor");
   update_hz_ = this->declare_parameter<double>("steer_update_hz");
   valid_min_velocity_ = this->declare_parameter<double>("valid_min_velocity");
@@ -40,6 +45,8 @@ SteerOffsetEstimatorNode::SteerOffsetEstimatorNode(const rclcpp::NodeOptions & n
   pub_steer_offset_ = this->create_publisher<Float32Stamped>("~/output/steering_offset", 1);
   pub_steer_offset_cov_ =
     this->create_publisher<Float32Stamped>("~/output/steering_offset_covariance", 1);
+  pub_steer_offset_error_ =
+    this->create_publisher<Float32Stamped>("~/output/steering_offset_error", 1);
 
   // subscriber
   sub_twist_ = this->create_subscription<TwistStamped>(
@@ -135,6 +142,11 @@ void SteerOffsetEstimatorNode::onTimer()
     cov_msg->stamp = this->now();
     cov_msg->data = covariance_;
     pub_steer_offset_cov_->publish(std::move(cov_msg));
+
+    auto error_msg = std::make_unique<Float32Stamped>();
+    error_msg->stamp = this->now();
+    error_msg->data = estimated_steer_offset_ - initial_steer_offset_;
+    pub_steer_offset_error_->publish(std::move(error_msg));
   }
 }
 }  // namespace autoware::steer_offset_estimator

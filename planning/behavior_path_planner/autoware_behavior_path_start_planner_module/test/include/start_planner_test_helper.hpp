@@ -16,7 +16,10 @@
 #include <autoware/behavior_path_start_planner_module/start_planner_module.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_planning_msgs/msg/lanelet_route.hpp>
+
 #include <memory>
+#include <string>
 
 namespace autoware::behavior_path_planner::testing
 {
@@ -34,6 +37,8 @@ public:
   static void set_costmap(
     std::shared_ptr<PlannerData> & planner_data, const geometry_msgs::msg::Pose & start_pose,
     const double grid_resolution, const double grid_length_x, const double grid_length_y);
+  static autoware_planning_msgs::msg::LaneletRoute set_route_from_yaml(
+    std::shared_ptr<PlannerData> & planner_data, const std::string & yaml_file);
 };
 
 }  // namespace autoware::behavior_path_planner::testing

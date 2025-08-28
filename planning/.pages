@@ -86,4 +86,5 @@ nav:
     - 'Planning Topic Converter': planning/autoware_planning_topic_converter
     - 'Planning Validator':
       - 'About Planning Validator': planning/planning_validator/autoware_planning_validator
+      - 'Trajectory Checker': planning/planning_validator/autoware_planning_validator_trajectory_checker
       - 'Intersection Collision Checker': planning/planning_validator/autoware_planning_validator_intersection_collision_checker

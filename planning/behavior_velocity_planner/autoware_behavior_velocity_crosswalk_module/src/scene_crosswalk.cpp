@@ -1327,8 +1327,8 @@ void CrosswalkModule::updateObjectState(
     const std::optional<double> ego_crosswalk_passage_direction =
       findEgoPassageDirectionAlongPath(sparse_resample_path);
     object_info_manager_.update(
-      obj_uuid, obj_pos, std::hypot(obj_vel.x, obj_vel.y), clock_->now(), is_ego_yielding,
-      has_traffic_light, collision_point, object.classification.front().label, p,
+      obj_uuid, obj_pos, std::hypot(obj_vel.x, obj_vel.y), objects_ptr->header.stamp,
+      is_ego_yielding, has_traffic_light, collision_point, object.classification.front().label, p,
       crosswalk_.polygon2d().basicPolygon(), attention_area, ego_crosswalk_passage_direction);
 
     const auto collision_state = object_info_manager_.getCollisionState(obj_uuid);
@@ -1357,7 +1357,7 @@ void CrosswalkModule::updateObjectState(
   }
 
   debug_data_.ignore_crosswalk = ignore_crosswalk;
-  object_info_manager_.finalize();
+  object_info_manager_.finalize(objects_ptr->header.stamp, p);
 }
 
 bool CrosswalkModule::isRedSignalForLanelet(const lanelet::ConstLanelet & lanelet) const
@@ -1544,8 +1544,10 @@ void CrosswalkModule::planStop(
   // Check if the restart should be suppressed.
   const bool suppress_restart = checkRestartSuppression(ego_path, stop_factor);
   if (suppress_restart) {
-    const auto & ego_pose = planner_data_->current_odometry->pose;
-    stop_factor->stop_pose = ego_pose;
+    const auto & ego_pos = planner_data_->current_odometry->pose.position;
+    const double dist = calcSignedArcLength(ego_path.points, ego_pos, 0L);
+    const auto pose_opt = calcLongitudinalOffsetPose(ego_path.points, 0L, dist);
+    if (pose_opt.has_value()) stop_factor->stop_pose = pose_opt.value();
   }
 
   const SafetyFactorArray safety_factors = createSafetyFactorArray(stop_factor);
