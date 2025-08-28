@@ -15,6 +15,8 @@
 #include "autoware/planning_validator_intersection_collision_checker/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/traffic_light_utils/traffic_light_utils.hpp>
+#include <autoware_lanelet2_extension/regulatory_elements/Forward.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
@@ -27,6 +29,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <memory>
 #include <string>
 #include <utility>
 
@@ -47,14 +50,6 @@ bool is_turn_lanelet(const lanelet::ConstLanelet & ll)
   return ll.hasAttribute("turn_direction") && ll.attribute("turn_direction") != "straight";
 }
 }  // namespace
-
-TrajectoryPoints trim_trajectory_points(
-  const TrajectoryPoints & trajectory_points, const geometry_msgs::msg::Pose & start_pose)
-{
-  const auto nearest_idx =
-    autoware::motion_utils::findNearestIndex(trajectory_points, start_pose.position);
-  return TrajectoryPoints(trajectory_points.begin() + nearest_idx, trajectory_points.end());
-}
 
 void set_trajectory_lanelets(
   const TrajectoryPoints & trajectory_points, const RouteHandler & route_handler,
@@ -171,7 +166,7 @@ lanelet::ConstLanelets extend_lanelet(
 }
 
 void set_right_turn_target_lanelets(
-  const EgoTrajectory & ego_traj, const RouteHandler & route_handler,
+  const EgoTrajectory & ego_traj, const std::shared_ptr<PlanningValidatorContext> & context,
   const intersection_collision_checker_node::Params & params, const EgoLanelets & lanelets,
   TargetLaneletsMap & target_lanelets, const double time_horizon)
 {
@@ -192,6 +187,20 @@ void set_right_turn_target_lanelets(
              lanelet::AttributeValueString::Road;
   };
 
+  const auto is_fully_prioritized = [&](const lanelet::ConstLanelet & ll) {
+    for (const auto & regulatory_element : ll.regulatoryElementsAs<lanelet::TrafficLight>()) {
+      const auto traffic_light_elements = context->get_traffic_signal(regulatory_element->id());
+      if (!traffic_light_elements.has_value()) continue;
+
+      if (autoware::traffic_light_utils::hasTrafficLightShape(
+            traffic_light_elements.value(), TrafficLightElement::RIGHT_ARROW)) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
   auto ignore_lanelet = [&](const lanelet::ConstLanelet & ll) {
     if (is_turn_lanelet(ll)) {
       return !p.right_turn.check_turning_lanes;
@@ -203,6 +212,8 @@ void set_right_turn_target_lanelets(
     return false;
   };
 
+  const auto route_handler = *context->data->route_handler;
+
   auto extend =
     [&](const lanelet::ConstLanelet & ll, const geometry_msgs::msg::Pose & overlap_point) {
       return extend_lanelet(route_handler, ll, overlap_point, p.detection_range);
@@ -210,8 +221,8 @@ void set_right_turn_target_lanelets(
 
   const auto combined_turn_lls = lanelet::utils::combineLaneletsShape(lanelets.turn_lanelets);
   const auto lanelet_map_ptr = route_handler.getLaneletMapPtr();
-  const auto candidates =
-    lanelet_map_ptr->laneletLayer.search(boost::geometry::return_envelope<lanelet::BoundingBox2d>(
+  const auto candidates = lanelet_map_ptr->laneletLayer.search(
+    boost::geometry::return_envelope<lanelet::BoundingBox2d>(
       combined_turn_lls.centerline2d().basicLineString()));
   for (const auto & ll : candidates) {
     const auto id = ll.id();
@@ -232,6 +243,10 @@ void set_right_turn_target_lanelets(
       rclcpp::Duration(ego_traj.back_traj[overlap_index->second].time_from_start).seconds();
     if (overlap_time.first > time_horizon) continue;
     const auto & it = target_lanelets.find(id);
+    if (p.right_turn.check_traffic_signal && is_fully_prioritized(lanelets.turn_lanelets.front())) {
+      if (it != target_lanelets.end()) target_lanelets.erase(it);
+      continue;
+    }
     if (it != target_lanelets.end()) {
       it->second.ego_overlap_time = overlap_time;
       it->second.is_active = true;
@@ -243,7 +258,7 @@ void set_right_turn_target_lanelets(
 }
 
 void set_left_turn_target_lanelets(
-  const EgoTrajectory & ego_traj, const RouteHandler & route_handler,
+  const EgoTrajectory & ego_traj, const std::shared_ptr<PlanningValidatorContext> & context,
   const intersection_collision_checker_node::Params & params, const EgoLanelets & lanelets,
   TargetLaneletsMap & target_lanelets, const double time_horizon)
 {
@@ -251,6 +266,8 @@ void set_left_turn_target_lanelets(
   const std::string turn_direction =
     lanelets.turn_lanelets.front().attributeOr("turn_direction", "else");
   if (turn_direction != "left") return;
+
+  const auto route_handler = *context->data->route_handler;
 
   const auto last_turn_ll = lanelets.turn_lanelets.back();
   lanelet::ConstLanelet next_lanelet;
@@ -262,6 +279,25 @@ void set_left_turn_target_lanelets(
   }
 
   const auto & p = params.icc_parameters;
+
+  const auto is_fully_prioritized = [&](const lanelet::ConstLanelet & ll) {
+    for (const auto & regulatory_element : ll.regulatoryElementsAs<lanelet::TrafficLight>()) {
+      const auto traffic_light_elements = context->get_traffic_signal(regulatory_element->id());
+      if (!traffic_light_elements.has_value()) continue;
+
+      if (autoware::traffic_light_utils::hasTrafficLightCircleColor(
+            traffic_light_elements.value(), TrafficLightElement::GREEN)) {
+        return true;
+      }
+
+      if (autoware::traffic_light_utils::hasTrafficLightCircleColor(
+            traffic_light_elements.value(), TrafficLightElement::AMBER)) {
+        return true;
+      }
+    }
+
+    return false;
+  };
 
   auto ignore_turning = [&p](const lanelet::ConstLanelet & ll) {
     if (!ll.hasAttribute("turn_direction")) return false;
@@ -289,6 +325,10 @@ void set_left_turn_target_lanelets(
       rclcpp::Duration(ego_traj.back_traj[overlap_index->first].time_from_start).seconds();
     if (overlap_time.first > time_horizon) continue;
     const auto & it = target_lanelets.find(id);
+    if (p.left_turn.check_traffic_signal && is_fully_prioritized(lanelets.turn_lanelets.front())) {
+      if (it != target_lanelets.end()) target_lanelets.erase(it);
+      continue;
+    }
     if (it != target_lanelets.end()) {
       it->second.ego_overlap_time = overlap_time;
       it->second.is_active = true;
@@ -306,7 +346,7 @@ Marker create_polygon_marker(
   visualization_msgs::msg::Marker marker = autoware_utils::create_default_marker(
     "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, id, Marker::LINE_STRIP,
     autoware_utils::create_marker_scale(0.1, 0.1, 0.1), color);
-  marker.lifetime = rclcpp::Duration::from_seconds(0.2);
+  marker.lifetime = rclcpp::Duration::from_seconds(0.5);
 
   for (const auto & p : polygon) {
     marker.points.push_back(autoware_utils::create_point(p.x(), p.y(), p.z()));
@@ -326,7 +366,7 @@ Marker create_point_marker(
   Marker marker = autoware_utils::create_default_marker(
     "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, id, marker_type,
     autoware_utils::create_marker_scale(scale, scale, scale), color);
-  marker.lifetime = rclcpp::Duration::from_seconds(0.2);
+  marker.lifetime = rclcpp::Duration::from_seconds(0.5);
   marker.pose.position = position;
 
   return marker;
@@ -334,12 +374,12 @@ Marker create_point_marker(
 
 Marker create_text_marker(
   const std::string & text, const geometry_msgs::msg::Pose & pose, const std::string & ns,
-  const size_t id, const std_msgs::msg::ColorRGBA & color)
+  const size_t id, const std_msgs::msg::ColorRGBA & color, const double scale = 0.5)
 {
   Marker marker = autoware_utils::create_default_marker(
     "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, id, Marker::TEXT_VIEW_FACING,
-    autoware_utils::create_marker_scale(0.5, 0.5, 0.5), color);
-  marker.lifetime = rclcpp::Duration::from_seconds(0.2);
+    autoware_utils::create_marker_scale(scale, scale, scale), color);
+  marker.lifetime = rclcpp::Duration::from_seconds(0.5);
   marker.pose = pose;
   marker.text = text;
   return marker;
@@ -373,7 +413,8 @@ MarkerArray get_lanelets_marker_array(const DebugData & debug_data)
     ss << "\nTimeToLeave:" << target_ll.ego_overlap_time.second << "[s]";
     auto pose = target_ll.overlap_point;
     pose.position.z += 1.0;
-    marker_array.markers.push_back(create_text_marker(ss.str(), pose, ns, target_ll.id, white));
+    marker_array.markers.push_back(
+      create_text_marker(ss.str(), pose, ns, target_ll.id, white, 1.0));
   };
 
   {  // target lanelets
@@ -397,6 +438,7 @@ MarkerArray get_objects_marker_array(const DebugData & debug_data)
 
   const auto red = autoware_utils::create_marker_color(1.0, 0.0, 0.0, 0.9);
   const auto green = autoware_utils::create_marker_color(0.0, 1.0, 0.0, 0.9);
+  const auto yellow = autoware_utils::create_marker_color(1.0, 1.0, 0.0, 0.9);
   const auto white = autoware_utils::create_marker_color(1.0, 1.0, 1.0, 0.7);
 
   auto add_text_marker = [&](const PCDObject & object) {
@@ -409,24 +451,26 @@ MarkerArray get_objects_marker_array(const DebugData & debug_data)
     ss << "Velocity:" << object.velocity << "[m/s]\n";
     ss << "TTC:" << object.ttc << "[s]";
     marker_array.markers.push_back(create_text_marker(
-      ss.str(), object.pose, "ICC_pcd_objects_text", object.overlap_lanelet_id, white));
+      ss.str(), object.pose, "ICC_pcd_objects_text", object.overlap_lanelet_id, white, 1.0));
   };
 
   auto add_line_segment_marker = [&](const PCDObject & object) {
     Marker marker = autoware_utils::create_default_marker(
       "map", rclcpp::Clock{RCL_ROS_TIME}.now(), "ICC_pcd_objects_cp", object.overlap_lanelet_id,
       Marker::LINE_LIST, autoware_utils::create_marker_scale(0.1, 0.1, 0.1), red);
-    marker.lifetime = rclcpp::Duration::from_seconds(0.2);
+    marker.lifetime = rclcpp::Duration::from_seconds(0.5);
     marker.points.push_back(object.pose.position);
     marker.points.push_back(object.overlap_point);
     marker_array.markers.push_back(marker);
   };
 
   for (const auto & pcd_obj : debug_data.pcd_objects) {
-    if (!pcd_obj.is_reliable) continue;
-    if (pcd_obj.is_safe) {
+    if (!pcd_obj.is_reliable) {
       marker_array.markers.push_back(create_point_marker(
-        pcd_obj.pose.position, "ICC_pcd_objects", pcd_obj.overlap_lanelet_id, green));
+        pcd_obj.pose.position, "ICC_pcd_objects", pcd_obj.overlap_lanelet_id, yellow, 0.5));
+    } else if (pcd_obj.is_safe) {
+      marker_array.markers.push_back(create_point_marker(
+        pcd_obj.pose.position, "ICC_pcd_objects", pcd_obj.overlap_lanelet_id, green, 0.5));
     } else {
       marker_array.markers.push_back(create_point_marker(
         pcd_obj.pose.position, "ICC_pcd_objects", pcd_obj.overlap_lanelet_id, red, 0.5, true));

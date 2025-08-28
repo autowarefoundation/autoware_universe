@@ -2,6 +2,14 @@
 Changelog for package autoware_traffic_light_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* fix(autoware_traffic_light_utils): remove default value `setSignalUnknown (`#10635 <https://github.com/autowarefoundation/autoware_universe/issues/10635>`_)
+  * remove default value
+  * fix
+  ---------
+* Contributors: Masato Saeki
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

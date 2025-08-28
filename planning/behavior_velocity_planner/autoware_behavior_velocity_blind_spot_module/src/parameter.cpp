@@ -25,22 +25,32 @@ PlannerParam PlannerParam::init(rclcpp::Node & node, const std::string & ns)
 {
   using autoware_utils::get_or_declare_parameter;
   PlannerParam param;
-  param.use_pass_judge_line = get_or_declare_parameter<bool>(node, ns + ".use_pass_judge_line");
-  param.stop_line_margin = get_or_declare_parameter<double>(node, ns + ".stop_line_margin");
-  param.backward_detection_length =
-    get_or_declare_parameter<double>(node, ns + ".backward_detection_length");
-  param.ignore_width_from_center_line =
-    get_or_declare_parameter<double>(node, ns + ".ignore_width_from_center_line");
-  param.adjacent_extend_width =
-    get_or_declare_parameter<double>(node, ns + ".adjacent_extend_width");
-  param.opposite_adjacent_extend_width =
-    get_or_declare_parameter<double>(node, ns + ".opposite_adjacent_extend_width");
-  param.max_future_movement_time =
-    get_or_declare_parameter<double>(node, ns + ".max_future_movement_time");
-  param.ttc_min = get_or_declare_parameter<double>(node, ns + ".ttc_min");
-  param.ttc_max = get_or_declare_parameter<double>(node, ns + ".ttc_max");
-  param.ttc_ego_minimal_velocity =
-    get_or_declare_parameter<double>(node, ns + ".ttc_ego_minimal_velocity");
+  param.backward_attention_length =
+    get_or_declare_parameter<double>(node, ns + ".backward_attention_length");
+  param.ttc_start_margin = get_or_declare_parameter<double>(node, ns + ".ttc_start_margin");
+  param.ttc_end_margin = get_or_declare_parameter<double>(node, ns + ".ttc_end_margin");
+  param.minimum_default_velocity =
+    get_or_declare_parameter<double>(node, ns + ".minimum_default_velocity");
+  param.collision_judge_debounce =
+    get_or_declare_parameter<double>(node, ns + ".collision_judge_debounce");
+  param.critical_stopline_margin =
+    get_or_declare_parameter<double>(node, ns + ".critical_stopline_margin");
+  param.detect_non_vru.car = get_or_declare_parameter<bool>(node, ns + ".detect_non_vru.car");
+  param.detect_non_vru.truck = get_or_declare_parameter<bool>(node, ns + ".detect_non_vru.truck");
+  param.detect_non_vru.bus = get_or_declare_parameter<bool>(node, ns + ".detect_non_vru.bus");
+  param.detect_non_vru.trailer =
+    get_or_declare_parameter<bool>(node, ns + ".detect_non_vru.trailer");
+  param.brake.critical.deceleration =
+    get_or_declare_parameter<double>(node, ns + ".brake.critical.deceleration");
+  param.brake.critical.jerk = get_or_declare_parameter<double>(node, ns + ".brake.critical.jerk");
+  param.brake.semi_critical.deceleration =
+    get_or_declare_parameter<double>(node, ns + ".brake.semi_critical.deceleration");
+  param.brake.semi_critical.jerk =
+    get_or_declare_parameter<double>(node, ns + ".brake.semi_critical.jerk");
+  param.brake_for_ttc.critical_threshold_ub =
+    get_or_declare_parameter<double>(node, ns + ".brake_for_ttc.critical_threshold_ub");
+  param.brake_for_ttc.semi_critical_threshold_lb =
+    get_or_declare_parameter<double>(node, ns + ".brake_for_ttc.semi_critical_threshold_lb");
   return param;
 }
 }  // namespace autoware::behavior_velocity_planner

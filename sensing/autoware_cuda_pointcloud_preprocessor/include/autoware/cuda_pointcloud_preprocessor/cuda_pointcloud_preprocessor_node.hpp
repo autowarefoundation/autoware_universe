@@ -90,7 +90,8 @@ private:
   void imuCallback(const sensor_msgs::msg::Imu & imu_msg);
 
   // Helper Functions
-  void validatePointcloudLayout(const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg);
+  [[nodiscard]] bool validatePointcloudLayout(
+    const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg) const;
   std::pair<double, std::uint32_t> getFirstPointTimeInfo(
     const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg);
 
