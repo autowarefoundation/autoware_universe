@@ -213,14 +213,13 @@ __device__ void checkSegmentMode(
   }
   const auto & last_gnd_idx_in_sector = last_gnd_cells_dev[0];
   if (cell_index_in_sector - last_gnd_idx_in_sector >= gnd_cell_continual_thresh) {
-    mode =
-      SegmentationMode::BREAK;  // If the latest ground cell is too far, set mode to BREAK
+    mode = SegmentationMode::BREAK;  // If the latest ground cell is too far, set mode to BREAK
     return;
   }
   const auto & front_gnd_idx_in_sector = last_gnd_cells_dev[num_latest_gnd_cells - 1];
   if (cell_index_in_sector - front_gnd_idx_in_sector <= gnd_cell_buffer_size) {
     mode = SegmentationMode::CONTINUOUS;  // If the latest ground cell is within threshold, set
-                                             // mode to CONTINUOUS
+                                          // mode to CONTINUOUS
     return;
   }
   mode = SegmentationMode::DISCONTINUOUS;  // If the latest ground cell is not within threshold, set
@@ -498,7 +497,8 @@ __device__ void SegmentContinuousCell(
       return;
     }
 
-    auto d_radius = point.radius - prev_gnd_cell.gnd_radius_avg;
+    auto d_radius =
+      point.radius - prev_gnd_cell.gnd_radius_avg + filter_parameters_dev->cell_divider_size_m;
     auto dz = point.z - prev_gnd_cell.gnd_height_avg;
 
     // 2. the angle is exceed the global slope threshold
@@ -572,19 +572,20 @@ __device__ void SegmentDiscontinuousCell(
     }
     // 2. the angle is exceed the global slope threshold
     auto dz = point.z - prev_gnd_cell.gnd_height_avg;
-    auto d_radius = point.radius - prev_gnd_cell.gnd_radius_avg;
+    auto d_radius =
+      point.radius - prev_gnd_cell.gnd_radius_avg + filter_parameters_dev->cell_divider_size_m;
     float global_height_threshold = point.radius * filter_parameters_dev->global_slope_max_ratio;
     float local_height_threshold = filter_parameters_dev->local_slope_max_ratio * d_radius;
     if (point.z > global_height_threshold) {
       point.type = PointType::NON_GROUND;
       continue;
     }
-    if (dz > local_height_threshold && d_radius > 1e-6f) {
+    if (dz > local_height_threshold) {
       point.type = PointType::NON_GROUND;
       continue;
     }
     // 3. local slope
-    if (dz < -local_height_threshold && d_radius > 1e-6f) {
+    if (dz < -local_height_threshold) {
       point.type = PointType::OUT_OF_RANGE;
       continue;
     }
