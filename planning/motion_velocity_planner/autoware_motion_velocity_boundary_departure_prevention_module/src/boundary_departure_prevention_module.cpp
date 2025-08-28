@@ -362,15 +362,42 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
 
   take_data();
 
-  if (const auto invalid_data_opt = is_data_invalid(raw_trajectory_points)) {
-    RCLCPP_WARN_SKIPFIRST_THROTTLE(
-      logger_, *clock_ptr_, throttle_duration_ms, "%s", invalid_data_opt->c_str());
+  const auto result_opt = plan_velocities(raw_trajectory_points, planner_data);
+
+  if (updater_ptr_) {
+    updater_ptr_->force_update();
+  }
+
+  if (clock_ptr_ && processing_time_publisher_) {
+    processing_time_publisher_->publish(std::invoke([&]() {
+      autoware_internal_debug_msgs::msg::Float64Stamped msg;
+      msg.stamp = clock_ptr_->now();
+      msg.data = stopwatch_ms.toc();
+      return msg;
+    }));
+  }
+
+  if (!result_opt) {
+    RCLCPP_DEBUG(logger_, "%s", result_opt.error().c_str());
     return {};
   }
 
+  return *result_opt;
+}
+
+tl::expected<VelocityPlanningResult, std::string>
+BoundaryDeparturePreventionModule::plan_velocities(
+  const TrajectoryPoints & raw_trajectory_points,
+  const std::shared_ptr<const PlannerData> & planner_data)
+{
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  if (const auto invalid_data_opt = is_data_invalid(raw_trajectory_points)) {
+    return tl::make_unexpected(*invalid_data_opt);
+  }
+
   if (const auto is_timeout_opt = is_data_timeout(planner_data->current_odometry)) {
-    RCLCPP_WARN_THROTTLE(logger_, *clock_ptr_, throttle_duration_ms, "%s", is_timeout_opt->c_str());
-    return {};
+    return tl::make_unexpected(*is_timeout_opt);
   }
 
   if (const auto is_new_route = is_route_changed()) {
@@ -379,9 +406,7 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
   }
 
   if (!is_autonomous_mode()) {
-    RCLCPP_DEBUG_THROTTLE(logger_, *clock_ptr_, throttle_duration_ms, "Not in autonomous mode.");
-    updater_ptr_->force_update();
-    return {};
+    return tl::make_unexpected("Not in autonomous mode.");
   }
 
   const auto & vehicle_info = planner_data->vehicle_info_;
@@ -400,27 +425,16 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
   try {
     auto result_opt = plan_slow_down_intervals(raw_trajectory_points, planner_data);
 
-    processing_time_publisher_->publish(std::invoke([&]() {
-      autoware_internal_debug_msgs::msg::Float64Stamped msg;
-      msg.stamp = clock_ptr_->now();
-      msg.data = stopwatch_ms.toc();
-      return msg;
-    }));
-
-    updater_ptr_->force_update();
     if (!result_opt) {
-      RCLCPP_DEBUG(logger_, "Planning skipped: %s", result_opt.error().c_str());
-      return {};
+      return tl::make_unexpected(result_opt.error());
     }
 
     return *result_opt;
   } catch (const std::exception & e) {
-    RCLCPP_WARN(logger_, "Exception is caught: %s", e.what());
+    return tl::make_unexpected(fmt::format("Exception: {}", e.what()));
   } catch (...) {
-    RCLCPP_ERROR(logger_, "Unknown exception is caught.");
+    return tl::make_unexpected("Unknown exception.");
   }
-
-  return {};
 }
 
 std::optional<std::string> BoundaryDeparturePreventionModule::is_data_invalid(

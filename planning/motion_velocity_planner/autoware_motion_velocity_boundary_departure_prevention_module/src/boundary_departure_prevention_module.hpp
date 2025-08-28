@@ -58,6 +58,17 @@ private:
   bool is_autonomous_mode() const;
 
   // === Internal logic
+  /**
+   * @brief Main entry point for boundary departure-aware velocity planning.
+   *
+   * The function first verifies input validity, checks system state (e.g., route changes,
+   * autonomy status), and initializes planning components if needed. Then it performs slow down
+   * planning to prevent the vehicle from departing road boundaries.
+   */
+
+  tl::expected<VelocityPlanningResult, std::string> plan_velocities(
+    const TrajectoryPoints & raw_trajectory_points,
+    const std::shared_ptr<const PlannerData> & planner_data);
 
   tl::expected<VelocityPlanningResult, std::string> plan_slow_down_intervals(
     const TrajectoryPoints & raw_trajectory_points,
