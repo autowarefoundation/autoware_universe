@@ -352,8 +352,9 @@ void PolarVoxelOutlierFilterComponent::publish_noise_cloud(
     return;
   }
 
-  auto noise_cloud = create_noise_cloud(
-    input, std::count(valid_points_mask.begin(), valid_points_mask.end(), false));
+  sensor_msgs::msg::PointCloud2 noise_cloud;
+  setup_output_header(
+    noise_cloud, input, std::count(valid_points_mask.begin(), valid_points_mask.end(), false));
 
   size_t noise_idx = 0;
   for (size_t i = 0; i < valid_points_mask.size(); ++i) {
@@ -660,22 +661,6 @@ void PolarVoxelOutlierFilterComponent::setup_output_header(
   output.row_step = output.width * output.point_step;
   output.is_dense = input.is_dense;
   output.data.resize(output.row_step * output.height);
-}
-
-sensor_msgs::msg::PointCloud2 PolarVoxelOutlierFilterComponent::create_noise_cloud(
-  const PointCloud2 & input, size_t noise_count)
-{
-  sensor_msgs::msg::PointCloud2 noise_cloud;
-  noise_cloud.header = input.header;
-  noise_cloud.height = point_cloud_height_organized;
-  noise_cloud.width = static_cast<uint32_t>(noise_count);
-  noise_cloud.fields = input.fields;
-  noise_cloud.is_bigendian = input.is_bigendian;
-  noise_cloud.point_step = input.point_step;
-  noise_cloud.row_step = noise_cloud.width * noise_cloud.point_step;
-  noise_cloud.is_dense = input.is_dense;
-  noise_cloud.data.resize(noise_cloud.row_step * noise_cloud.height);
-  return noise_cloud;
 }
 
 bool PolarVoxelOutlierFilterComponent::validate_positive_double(
