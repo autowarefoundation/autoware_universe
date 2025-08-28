@@ -27,10 +27,10 @@
 #include <utility>
 
 #define AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) \
-  autoware::agnocast_wrapper::message_ptr<    \
+  autoware::agnocast_wrapper::message_ptr< \
     MessageT, autoware::agnocast_wrapper::OwnershipType::Unique>
 #define AUTOWARE_MESSAGE_SHARED_PTR(MessageT) \
-  autoware::agnocast_wrapper::message_ptr<    \
+  autoware::agnocast_wrapper::message_ptr< \
     MessageT, autoware::agnocast_wrapper::OwnershipType::Shared>
 #define AUTOWARE_SUBSCRIPTION_PTR(MessageT) \
   typename autoware::agnocast_wrapper::Subscription<MessageT>::SharedPtr
@@ -105,10 +105,11 @@ class agnocast_message : public message_interface<MessageT, Ownership>
   agnocast::ipc_shared_ptr<MessageT> ptr_;
 
 public:
-  explicit agnocast_message(agnocast::ipc_shared_ptr<MessageT> && ptr) : ptr_(std::move(ptr)) {}
+  explicit agnocast_message(agnocast::ipc_shared_ptr<MessageT> && ptr)
+  : ptr_(std::move(ptr)) {}
 
-  MessageT & as_ref() const noexcept override { return * ptr_; }
-  MessageT * as_ptr() const noexcept override { return ptr_.get(); }
+  MessageT & as_ref() const noexcept override {return *ptr_;}
+  MessageT * as_ptr() const noexcept override {return ptr_.get();}
 
   agnocast::ipc_shared_ptr<MessageT> move_agnocast_ptr() && noexcept override
   {
@@ -117,7 +118,7 @@ public:
 
   // The following member function should never be called at runtime. They are implemented just for
   // inheriting `message_interface`.
-  ros2_ptr_t move_ros2_ptr() && noexcept override { return ros2_ptr_t{}; }
+  ros2_ptr_t move_ros2_ptr() && noexcept override {return ros2_ptr_t{};}
 };
 
 template<typename MessageT, OwnershipType Ownership>
@@ -129,12 +130,13 @@ class ros2_message : public message_interface<MessageT, Ownership>
   ros2_ptr_t ptr_;
 
 public:
-  explicit ros2_message(ros2_ptr_t && ptr) : ptr_(std::move(ptr)) {}
+  explicit ros2_message(ros2_ptr_t && ptr)
+  : ptr_(std::move(ptr)) {}
 
-  MessageT & as_ref() const noexcept override { return * ptr_; }
-  MessageT * as_ptr() const noexcept override { return ptr_.get(); }
+  MessageT & as_ref() const noexcept override {return *ptr_;}
+  MessageT * as_ptr() const noexcept override {return ptr_.get();}
 
-  ros2_ptr_t move_ros2_ptr() && noexcept override { return std::move(ptr_); }
+  ros2_ptr_t move_ros2_ptr() && noexcept override {return std::move(ptr_);}
 
   // The following member function should never be called at runtime. They are implemented just for
   // inheriting `message_interface`.
@@ -177,13 +179,13 @@ public:
   {
   }
 
-  MessageT & operator*() const noexcept { return ptr_->as_ref(); }
+  MessageT & operator*() const noexcept {return ptr_->as_ref();}
 
-  MessageT * operator->() const noexcept { return ptr_->as_ptr(); }
+  MessageT * operator->() const noexcept {return ptr_->as_ptr();}
 
-  explicit operator bool() const noexcept { return static_cast<bool>(ptr_->as_ptr()); }
+  explicit operator bool() const noexcept {return static_cast<bool>(ptr_->as_ptr());}
 
-  MessageT * get() const noexcept { return ptr_->as_ptr(); }
+  MessageT * get() const noexcept {return ptr_->as_ptr();}
 };
 
 // Defaults to zero if the environment variable is missing or invalid.
@@ -218,14 +220,14 @@ public:
   {
     static_assert(
       std::is_invocable_v<std::decay_t<Func>, AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) &&> ||
-        std::is_invocable_v<std::decay_t<Func>, AUTOWARE_MESSAGE_SHARED_PTR(MessageT) &&>,
+      std::is_invocable_v<std::decay_t<Func>, AUTOWARE_MESSAGE_SHARED_PTR(MessageT) &&>,
       "callback should be invocable with an rvalue reference to either AUTOWARE_MESSAGE_UNIQUE_PTR "
       "or AUTOWARE_MESSAGE_SHARED_PTR");
 
     constexpr auto ownership =
-      std::is_invocable_v<std::decay_t<Func>, AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) &&>
-        ? OwnershipType::Unique
-        : OwnershipType::Shared;
+      std::is_invocable_v<std::decay_t<Func>, AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) &&> ?
+      OwnershipType::Unique :
+      OwnershipType::Shared;
 
     if (use_agnocast()) {
       agnocast_sub_ = agnocast::create_subscription<MessageT>(
@@ -381,12 +383,12 @@ public:
 
   AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) allocate_output_message_unique() override
   {
-    return AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT){publisher_->borrow_loaned_message()};
+    return AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) {publisher_->borrow_loaned_message()};
   }
 
   AUTOWARE_MESSAGE_SHARED_PTR(MessageT) allocate_output_message_shared() override
   {
-    return AUTOWARE_MESSAGE_SHARED_PTR(MessageT){publisher_->borrow_loaned_message()};
+    return AUTOWARE_MESSAGE_SHARED_PTR(MessageT) {publisher_->borrow_loaned_message()};
   }
 
   void publish(AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) && message)
@@ -399,7 +401,7 @@ public:
     publisher_->publish(std::move(message).move_agnocast_ptr());
   }
 
-  uint32_t get_subscription_count() const override { return publisher_->get_subscription_count(); }
+  uint32_t get_subscription_count() const override {return publisher_->get_subscription_count();}
 };
 
 template<typename MessageT>
@@ -419,12 +421,12 @@ public:
 
   AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) allocate_output_message_unique() override
   {
-    return AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT){std::make_unique<MessageT>()};
+    return AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) {std::make_unique<MessageT>()};
   }
 
   AUTOWARE_MESSAGE_SHARED_PTR(MessageT) allocate_output_message_shared() override
   {
-    return AUTOWARE_MESSAGE_SHARED_PTR(MessageT){std::make_shared<MessageT>()};
+    return AUTOWARE_MESSAGE_SHARED_PTR(MessageT) {std::make_shared<MessageT>()};
   }
 
   void publish(AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) && message) override
@@ -437,7 +439,7 @@ public:
     publisher_->publish(*message);
   }
 
-  uint32_t get_subscription_count() const override { return publisher_->get_subscription_count(); }
+  uint32_t get_subscription_count() const override {return publisher_->get_subscription_count();}
 };
 
 template<typename MessageT>
