@@ -201,15 +201,10 @@ protected:
     sensor_msgs::PointCloud2ConstIterator<float> & iter_y,
     sensor_msgs::PointCloud2ConstIterator<float> & iter_z) const;
 
-  void advance_polar_iterators(
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_distance,
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_azimuth,
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_elevation) const;
-
-  void advance_cartesian_iterators(
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_x,
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_y,
-    sensor_msgs::PointCloud2ConstIterator<float> & iter_z) const;
+  void advance_coordinate_iterators(
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_coord1,
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_coord2,
+    sensor_msgs::PointCloud2ConstIterator<float> & iter_coord3) const;
 
   void advance_intensity_return_iterators(
     sensor_msgs::PointCloud2ConstIterator<uint8_t> & iter_intensity,
@@ -284,8 +279,6 @@ protected:
   void create_output(
     const PointCloud2 & input, const ValidPointsMask & valid_points_mask, PointCloud2 & output);
   void create_empty_output(const PointCloud2 & input, PointCloud2 & output);
-  void conditionally_publish_noise_cloud(
-    const PointCloud2 & input, const ValidPointsMask & valid_points_mask);
 
   // Point validation helper methods
   bool has_finite_coordinates(const PolarCoordinate & polar) const;
@@ -295,9 +288,6 @@ protected:
   // Point validation helper methods for mask creation
   bool is_point_valid_for_mask(
     const std::optional<PointVoxelInfo> & optional_info, const VoxelIndexSet & valid_voxels) const;
-  bool has_voxel_info(const std::optional<PointVoxelInfo> & optional_info) const;
-  bool is_voxel_in_valid_set(
-    const PolarVoxelIndex & voxel_idx, const VoxelIndexSet & valid_voxels) const;
   bool passes_secondary_return_filter(bool is_primary) const;
 
 private:
