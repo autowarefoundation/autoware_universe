@@ -51,7 +51,6 @@ StartPlannerParameters StartPlannerParameters::init(rclcpp::Node & node)
     p.center_line_path_interval =
       get_or_declare_parameter<double>(node, ns + "center_line_path_interval");
     // shift pull out
-    p.enable_shift_pull_out = get_or_declare_parameter<bool>(node, ns + "enable_shift_pull_out");
     p.check_shift_path_lane_departure =
       get_or_declare_parameter<bool>(node, ns + "check_shift_path_lane_departure");
     p.allow_check_shift_path_lane_departure_override =
@@ -71,13 +70,9 @@ StartPlannerParameters StartPlannerParameters::init(rclcpp::Node & node)
     p.maximum_longitudinal_deviation =
       get_or_declare_parameter<double>(node, ns + "maximum_longitudinal_deviation");
     // geometric pull out
-    p.enable_geometric_pull_out =
-      get_or_declare_parameter<bool>(node, ns + "enable_geometric_pull_out");
     p.geometric_collision_check_distance_from_end =
       get_or_declare_parameter<double>(node, ns + "geometric_collision_check_distance_from_end");
     p.divide_pull_out_path = get_or_declare_parameter<bool>(node, ns + "divide_pull_out_path");
-    p.enable_clothoid_fallback =
-      get_or_declare_parameter<bool>(node, ns + "enable_clothoid_fallback");
     p.parallel_parking_parameters.pull_out_velocity =
       get_or_declare_parameter<double>(node, ns + "geometric_pull_out_velocity");
     p.parallel_parking_parameters.pull_out_arc_path_interval =
@@ -100,13 +95,38 @@ StartPlannerParameters StartPlannerParameters::init(rclcpp::Node & node)
       get_or_declare_parameter<std::vector<double>>(node, ns + "clothoid_max_steer_angles_deg");
     p.clothoid_max_steer_angle_rate_deg_per_sec =
       get_or_declare_parameter<double>(node, ns + "clothoid_max_steer_angle_rate_deg_per_sec");
+    p.clothoid_collision_check_distance_from_end =
+      get_or_declare_parameter<double>(node, ns + "clothoid_collision_check_distance_from_end");
     p.check_clothoid_path_lane_departure =
       get_or_declare_parameter<bool>(node, ns + "check_clothoid_path_lane_departure");
 
     // search start pose backward
-    p.search_priority = get_or_declare_parameter<std::string>(
-      node,
-      ns + "search_priority");  // "efficient_path" or "short_back_distance"
+    p.search_priority =
+      get_or_declare_parameter<std::vector<std::string>>(node, ns + "search_priority");
+    if (p.search_priority.empty()) {
+      RCLCPP_ERROR(node.get_logger(), "search_priority cannot be empty");
+      throw std::runtime_error("search_priority cannot be empty");
+    }
+
+    // Validate each planner type in search_priority
+    for (const auto & planner_type_str : p.search_priority) {
+      const auto planner_type =
+        magic_enum::enum_cast<autoware::behavior_path_planner::PlannerType>(planner_type_str);
+      if (
+        !planner_type.has_value() ||
+        planner_type.value() == autoware::behavior_path_planner::PlannerType::NONE) {
+        RCLCPP_ERROR(
+          node.get_logger(), "Invalid planner type in search_priority: %s",
+          planner_type_str.c_str());
+        throw std::runtime_error("Invalid planner type in search_priority: " + planner_type_str);
+      }
+    }
+
+    p.search_policy = get_or_declare_parameter<std::string>(node, ns + "search_policy");
+    if (p.search_policy != "distance_priority" && p.search_policy != "planner_priority") {
+      RCLCPP_ERROR(node.get_logger(), "Invalid search_policy: %s", p.search_policy.c_str());
+      throw std::runtime_error("Invalid search_policy: " + p.search_policy);
+    }
     p.enable_back = get_or_declare_parameter<bool>(node, ns + "enable_back");
     p.backward_velocity = get_or_declare_parameter<double>(node, ns + "backward_velocity");
     p.max_back_distance = get_or_declare_parameter<double>(node, ns + "max_back_distance");
