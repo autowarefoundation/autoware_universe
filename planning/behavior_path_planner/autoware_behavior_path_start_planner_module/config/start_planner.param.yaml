@@ -54,9 +54,9 @@
       # search start pose backward
       enable_back: true
       # Planner priority list. Example: ["SHIFT", "GEOMETRIC", "CLOTHOID"]
-      search_priority: ["SHIFT", "GEOMETRIC", "CLOTHOID"]
+      search_priority: ["SHIFT", "GEOMETRIC"]
       # Search policy: "planner_priority" or "distance_priority"
-      search_policy: "distance_priority"
+      search_policy: "planner_priority"
       max_back_distance: 20.0
       backward_search_resolution: 2.0
       backward_path_update_duration: 3.0

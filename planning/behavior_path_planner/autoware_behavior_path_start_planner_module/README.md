@@ -535,15 +535,15 @@ If a safe path cannot be generated from the current position, search backwards f
 
 ### **parameters for backward pull out start point search**
 
-| Name                          | Unit | Type     | Description                                                                                                                                                                 | Default value                    |
-| :---------------------------- | :--- | :------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------- |
-| enable_back                   | [-]  | bool     | flag whether to search backward for start_point                                                                                                                             | true                             |
-| search_priority               | [-]  | string[] | list of planner types in priority order. Available: "SHIFT", "GEOMETRIC", "CLOTHOID"                                                                                        | ["SHIFT","GEOMETRIC","CLOTHOID"] |
-| search_policy                 | [-]  | string   | search policy: "planner_priority" (planner-first: SHIFT all candidates, then GEOMETRIC ...) or "distance_priority" (candidate-first: 0m SHIFT, 0m GEOMETRIC, 2m SHIFT, ...) | "distance_priority"              |
-| max_back_distance             | [m]  | double   | maximum back distance                                                                                                                                                       | 30.0                             |
-| backward_search_resolution    | [m]  | double   | distance interval for searching backward pull out start point                                                                                                               | 2.0                              |
-| backward_path_update_duration | [s]  | double   | time interval for searching backward pull out start point. this prevents chattering between back driving and pull_out                                                       | 3.0                              |
-| ignore_distance_from_lane_end | [m]  | double   | If distance from shift start pose to end of shoulder lane is less than this value, this start pose candidate is ignored                                                     | 15.0                             |
+| Name                          | Unit | Type     | Description                                                                                                                                                                 | Default value         |
+| :---------------------------- | :--- | :------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------- |
+| enable_back                   | [-]  | bool     | flag whether to search backward for start_point                                                                                                                             | true                  |
+| search_priority               | [-]  | string[] | list of planner types in priority order. Available: "SHIFT", "GEOMETRIC", "CLOTHOID"                                                                                        | ["SHIFT","GEOMETRIC"] |
+| search_policy                 | [-]  | string   | search policy: "planner_priority" (planner-first: SHIFT all candidates, then GEOMETRIC ...) or "distance_priority" (candidate-first: 0m SHIFT, 0m GEOMETRIC, 2m SHIFT, ...) | "planner_priority"    |
+| max_back_distance             | [m]  | double   | maximum back distance                                                                                                                                                       | 30.0                  |
+| backward_search_resolution    | [m]  | double   | distance interval for searching backward pull out start point                                                                                                               | 2.0                   |
+| backward_path_update_duration | [s]  | double   | time interval for searching backward pull out start point. this prevents chattering between back driving and pull_out                                                       | 3.0                   |
+| ignore_distance_from_lane_end | [m]  | double   | If distance from shift start pose to end of shoulder lane is less than this value, this start pose candidate is ignored                                                     | 15.0                  |
 
 ### **freespace pull out**
 
