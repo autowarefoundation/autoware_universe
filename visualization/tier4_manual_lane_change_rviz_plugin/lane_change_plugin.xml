@@ -1,0 +1,7 @@
+<library path="tier4_manual_lane_change_rviz_plugin">
+  <class name="ManualLaneSelection"
+         type="ManualLaneSelection"
+         base_class_type="rviz_common::Panel">
+    <description>Forced Lane Change Panel</description>
+  </class>
+</library>
