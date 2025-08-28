@@ -68,14 +68,14 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   max_radius_m_ = declare_parameter<double>("max_radius_m");
   visibility_estimation_max_range_m_ =
     declare_parameter<double>("visibility_estimation_max_range_m");
-  use_return_type_classification_ = declare_parameter<bool>("use_return_type_classification", true);
+  use_return_type_classification_ = declare_parameter<bool>("use_return_type_classification");
   enable_secondary_return_filtering_ = declare_parameter<bool>("filter_secondary_returns");
   secondary_noise_threshold_ =
     static_cast<int>(declare_parameter<int64_t>("secondary_noise_threshold"));
   visibility_estimation_max_secondary_voxel_count_ =
     static_cast<int>(declare_parameter<int64_t>("visibility_estimation_max_secondary_voxel_count"));
-  visibility_estimation_only_ = declare_parameter<bool>("visibility_estimation_only", false);
-  publish_noise_cloud_ = declare_parameter<bool>("publish_noise_cloud", false);
+  visibility_estimation_only_ = declare_parameter<bool>("visibility_estimation_only");
+  publish_noise_cloud_ = declare_parameter<bool>("publish_noise_cloud");
 
   auto primary_return_types_param = declare_parameter<std::vector<int64_t>>("primary_return_types");
   primary_return_types_.clear();
@@ -168,7 +168,9 @@ void PolarVoxelOutlierFilterComponent::filter(
   create_output(*input, valid_points_mask, output);
 
   // Phase 6: Conditionally publish noise cloud
-  conditionally_publish_noise_cloud(*input, valid_points_mask);
+  if (publish_noise_cloud_) {
+    publish_noise_cloud(*input, valid_points_mask);
+  }
 
   // Phase 7: Publish diagnostics (always run for visibility estimation)
   publish_diagnostics(voxel_point_counts, valid_points_mask);
@@ -237,7 +239,7 @@ std::optional<PointVoxelInfo> PolarVoxelOutlierFilterComponent::process_polar_po
   bool passes_intensity = meets_intensity_threshold(*iter_intensity);
 
   // Step 2: Advance iterators (always advance, regardless of success/failure)
-  advance_polar_iterators(iter_distance, iter_azimuth, iter_elevation);
+  advance_coordinate_iterators(iter_distance, iter_azimuth, iter_elevation);
   advance_intensity_return_iterators(iter_intensity, iter_return_type);
 
   // Step 3: Early return on invalid coordinates
@@ -264,7 +266,7 @@ std::optional<PointVoxelInfo> PolarVoxelOutlierFilterComponent::process_cartesia
   bool passes_intensity = meets_intensity_threshold(*iter_intensity);
 
   // Step 2: Advance iterators (always advance, regardless of success/failure)
-  advance_cartesian_iterators(iter_x, iter_y, iter_z);
+  advance_coordinate_iterators(iter_x, iter_y, iter_z);
   advance_intensity_return_iterators(iter_intensity, iter_return_type);
 
   // Step 3: Early return on invalid coordinates
@@ -325,29 +327,17 @@ PolarVoxelOutlierFilterComponent::create_valid_points_mask(
 bool PolarVoxelOutlierFilterComponent::is_point_valid_for_mask(
   const std::optional<PointVoxelInfo> & optional_info, const VoxelIndexSet & valid_voxels) const
 {
-  if (!has_voxel_info(optional_info)) {
+  if (!optional_info.has_value()) {
     return false;
   }
 
   const auto & info = *optional_info;
 
-  if (!is_voxel_in_valid_set(info.voxel_idx, valid_voxels)) {
+  if (!valid_voxels.count(info.voxel_idx)) {
     return false;
   }
 
   return passes_secondary_return_filter(info.is_primary);
-}
-
-bool PolarVoxelOutlierFilterComponent::has_voxel_info(
-  const std::optional<PointVoxelInfo> & optional_info) const
-{
-  return optional_info.has_value();
-}
-
-bool PolarVoxelOutlierFilterComponent::is_voxel_in_valid_set(
-  const PolarVoxelIndex & voxel_idx, const VoxelIndexSet & valid_voxels) const
-{
-  return valid_voxels.count(voxel_idx) > 0;
 }
 
 bool PolarVoxelOutlierFilterComponent::passes_secondary_return_filter(bool is_primary) const
@@ -948,7 +938,7 @@ void PolarVoxelOutlierFilterComponent::validate_filter_inputs(
 void PolarVoxelOutlierFilterComponent::validate_indices(const IndicesPtr & indices)
 {
   if (indices) {
-    RCLCPP_WARN(get_logger(), "Indices are not supported and will be ignored");
+    RCLCPP_WARN_ONCE(get_logger(), "Indices are not supported and will be ignored");
   }
 }
 
@@ -1009,14 +999,6 @@ void PolarVoxelOutlierFilterComponent::create_empty_output(
   setup_output_header(output, input, 0);
 }
 
-void PolarVoxelOutlierFilterComponent::conditionally_publish_noise_cloud(
-  const PointCloud2 & input, const ValidPointsMask & valid_points_mask)
-{
-  if (publish_noise_cloud_) {
-    publish_noise_cloud(input, valid_points_mask);
-  }
-}
-
 std::optional<PolarVoxelOutlierFilterComponent::PolarCoordinate>
 PolarVoxelOutlierFilterComponent::extract_polar_from_dae(
   sensor_msgs::PointCloud2ConstIterator<float> & iter_distance,
@@ -1064,24 +1046,14 @@ PolarVoxelOutlierFilterComponent::extract_polar_from_xyz(
   return polar;
 }
 
-void PolarVoxelOutlierFilterComponent::advance_polar_iterators(
-  sensor_msgs::PointCloud2ConstIterator<float> & iter_distance,
-  sensor_msgs::PointCloud2ConstIterator<float> & iter_azimuth,
-  sensor_msgs::PointCloud2ConstIterator<float> & iter_elevation) const
+void PolarVoxelOutlierFilterComponent::advance_coordinate_iterators(
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_coord1,
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_coord2,
+  sensor_msgs::PointCloud2ConstIterator<float> & iter_coord3) const
 {
-  ++iter_distance;
-  ++iter_azimuth;
-  ++iter_elevation;
-}
-
-void PolarVoxelOutlierFilterComponent::advance_cartesian_iterators(
-  sensor_msgs::PointCloud2ConstIterator<float> & iter_x,
-  sensor_msgs::PointCloud2ConstIterator<float> & iter_y,
-  sensor_msgs::PointCloud2ConstIterator<float> & iter_z) const
-{
-  ++iter_x;
-  ++iter_y;
-  ++iter_z;
+  ++iter_coord1;
+  ++iter_coord2;
+  ++iter_coord3;
 }
 
 void PolarVoxelOutlierFilterComponent::advance_intensity_return_iterators(
