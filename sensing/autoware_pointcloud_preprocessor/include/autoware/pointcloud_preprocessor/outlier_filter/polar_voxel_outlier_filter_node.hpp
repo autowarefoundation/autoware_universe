@@ -61,12 +61,12 @@ struct PolarVoxelIndexHash
   std::size_t operator()(const PolarVoxelIndex & idx) const
   {
     // Fowler–Noll–Vo style hash combine for better distribution
-    auto seed = std::hash<int32_t>{}(idx.radius_idx);
-    seed ^= static_cast<std::size_t>(std::hash<int32_t>{}(idx.azimuth_idx)) + 0x9e3779b9u +
-            (static_cast<std::size_t>(seed) << 6u) + (static_cast<std::size_t>(seed) >> 2u);
-    seed ^= static_cast<std::size_t>(std::hash<int32_t>{}(idx.elevation_idx)) + 0x9e3779b9u +
-            (static_cast<std::size_t>(seed) << 6u) + (static_cast<std::size_t>(seed) >> 2u);
-    return seed;
+    auto hash = std::hash<int32_t>{}(idx.radius_idx);
+    hash ^= static_cast<std::size_t>(std::hash<int32_t>{}(idx.azimuth_idx)) + 0x9e3779b9u +
+            (static_cast<std::size_t>(hash) << 6u) + (static_cast<std::size_t>(hash) >> 2u);
+    hash ^= static_cast<std::size_t>(std::hash<int32_t>{}(idx.elevation_idx)) + 0x9e3779b9u +
+            (static_cast<std::size_t>(hash) << 6u) + (static_cast<std::size_t>(hash) >> 2u);
+    return hash;
   }
 };
 
@@ -139,6 +139,7 @@ protected:
   void update_publish_noise_cloud(const rclcpp::Parameter & param);
 
   // Type aliases to eliminate long type name duplication
+  using PointCloud2 = sensor_msgs::msg::PointCloud2;
   using PointCloud2ConstPtr = sensor_msgs::msg::PointCloud2::ConstSharedPtr;
   using IndicesPtr = pcl::IndicesPtr;
   using VoxelPointCountMap =
@@ -150,7 +151,7 @@ protected:
   void filter(
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
 
-  PointVoxelInfoVector collect_voxel_info(const PointCloud2ConstPtr & input);
+  PointVoxelInfoVector collect_voxel_info(const PointCloud2 & input);
   VoxelPointCountMap count_voxels(const PointVoxelInfoVector & point_voxel_info) const;
   VoxelIndexSet determine_valid_voxels_simple(const VoxelPointCountMap & voxel_counts) const;
   VoxelIndexSet determine_valid_voxels_with_return_types(
@@ -159,19 +160,18 @@ protected:
   ValidPointsMask create_valid_points_mask(
     const PointVoxelInfoVector & point_voxel_info, const VoxelIndexSet & valid_voxels) const;
   static void create_filtered_output(
-    const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask,
-    PointCloud2 & output);
+    const PointCloud2 & input, const ValidPointsMask & valid_points_mask, PointCloud2 & output);
   void publish_noise_cloud(
-    const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask) const;
+    const PointCloud2 & input, const ValidPointsMask & valid_points_mask) const;
   void publish_diagnostics(
     const VoxelPointCountMap & voxel_counts, const ValidPointsMask & valid_points_mask);
 
   // Point processing helper methods
   void process_polar_points(
-    const PointCloud2ConstPtr & input, PointVoxelInfoVector & point_voxel_info, size_t point_count);
+    const PointCloud2 & input, PointVoxelInfoVector & point_voxel_info, size_t point_count);
 
   void process_cartesian_points(
-    const PointCloud2ConstPtr & input, PointVoxelInfoVector & point_voxel_info, size_t point_count);
+    const PointCloud2 & input, PointVoxelInfoVector & point_voxel_info, size_t point_count);
 
   std::optional<PointVoxelInfo> process_polar_point(
     sensor_msgs::PointCloud2ConstIterator<float> & iter_distance,
@@ -218,9 +218,9 @@ protected:
   void update_parameter(const rclcpp::Parameter & param);
 
   static void setup_output_header(
-    PointCloud2 & output, const PointCloud2ConstPtr & input, size_t valid_count);
+    PointCloud2 & output, const PointCloud2 & input, size_t valid_count);
   static sensor_msgs::msg::PointCloud2 create_noise_cloud(
-    const PointCloud2ConstPtr & input, size_t noise_count);
+    const PointCloud2 & input, size_t noise_count);
 
   // Coordinate conversion methods
   static PolarCoordinate cartesian_to_polar(const CartesianCoordinate & cartesian);
@@ -231,7 +231,7 @@ protected:
   bool is_point_primary(uint8_t return_type) const;
   bool is_valid_polar_point(const PolarCoordinate & polar) const;
   bool meets_intensity_threshold(uint8_t intensity) const;
-  static bool has_polar_coordinates(const PointCloud2ConstPtr & input);
+  static bool has_polar_coordinates(const PointCloud2 & input);
 
   // Parameter callback and diagnostics
   rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> & p);
@@ -280,13 +280,12 @@ protected:
   void publish_filter_ratio_metric();
 
   // Filter pipeline helper methods
-  void validate_filter_inputs(const PointCloud2ConstPtr & input, const IndicesPtr & indices);
+  void validate_filter_inputs(const PointCloud2 & input, const IndicesPtr & indices);
   void create_output(
-    const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask,
-    PointCloud2 & output);
-  void create_empty_output(const PointCloud2ConstPtr & input, PointCloud2 & output);
+    const PointCloud2 & input, const ValidPointsMask & valid_points_mask, PointCloud2 & output);
+  void create_empty_output(const PointCloud2 & input, PointCloud2 & output);
   void conditionally_publish_noise_cloud(
-    const PointCloud2ConstPtr & input, const ValidPointsMask & valid_points_mask);
+    const PointCloud2 & input, const ValidPointsMask & valid_points_mask);
 
   // Point validation helper methods
   bool has_finite_coordinates(const PolarCoordinate & polar) const;
@@ -305,11 +304,10 @@ private:
   using ParamHandler = std::function<bool(const rclcpp::Parameter &, std::string &)>;
   // Validation helper methods
   void validate_indices(const IndicesPtr & indices);
-  void validate_input_cloud(const PointCloud2ConstPtr & input);
-  void validate_required_fields(const PointCloud2ConstPtr & input);
-  void validate_return_type_field(const PointCloud2ConstPtr & input);
-  void validate_intensity_field(const PointCloud2ConstPtr & input);
-  bool has_field(const PointCloud2ConstPtr & input, const std::string & field_name);
+  void validate_required_fields(const PointCloud2 & input);
+  void validate_return_type_field(const PointCloud2 & input);
+  void validate_intensity_field(const PointCloud2 & input);
+  bool has_field(const PointCloud2 & input, const std::string & field_name);
 
   // Parameter validation helpers (static, private)
   static bool validate_positive_double(const rclcpp::Parameter & param, std::string & reason);
