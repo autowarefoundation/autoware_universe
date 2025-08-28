@@ -1,3 +1,17 @@
+// Copyright 2025 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "autoware/cuda_scan_ground_segmentation/cuda_scan_ground_segmentation_filter.hpp"
 
 #include <cub/cub.cuh>
@@ -782,11 +796,11 @@ __global__ void calcCellPointNumberKernel(
 // Mark obstacle points for point in classified_points_dev
 __global__ void markObstaclePointsKernel(
   ClassifiedPointTypeStruct * __restrict__ classified_points_dev,
-  const int max_num_classified_points, const size_t num_points, int * __restrict__ flags,
+  const size_t num_points, int * __restrict__ flags,
   const PointType pointtype)
 {
   size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx >= static_cast<size_t>(max_num_classified_points)) {
+  if (idx >= num_points) {
     return;
   }
   // check if the classified_points_dev[idx] is existing?
@@ -1020,7 +1034,7 @@ void CudaScanGroundSegmentationFilter::extractNonGroundPoints(
   size_t temp_storage_bytes = 0;
 
   markObstaclePointsKernel<<<grid_dim, block_dim, 0, ground_segment_stream_>>>(
-    classified_points_dev, number_input_points_, number_input_points_, flag_dev, pointtype);
+    classified_points_dev, number_input_points_, flag_dev, pointtype);
   // CHECK_CUDA_ERROR(cudaMemset(&flag_dev,1,number_input_points_));
   // CHECK_CUDA_ERROR(cudaGetLastError());
 
