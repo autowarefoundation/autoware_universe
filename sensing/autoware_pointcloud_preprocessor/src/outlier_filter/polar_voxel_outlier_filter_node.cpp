@@ -27,14 +27,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <iostream>
 #include <limits>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
-#include <utility>
 #include <vector>
 
 namespace autoware::pointcloud_preprocessor
@@ -160,9 +157,9 @@ void PolarVoxelOutlierFilterComponent::filter(
   // Phase 2: Collect voxel information (unified for both formats)
   auto point_voxel_info = collect_voxel_info(*input);
 
-  // Phase 3: Count and validate voxels (mode-dependent logic)
-  auto voxel_counts = count_voxels(point_voxel_info);
-  auto valid_voxels = determine_valid_voxels(voxel_counts);
+  // Phase 3: Count points and validate voxels (mode-dependent logic)
+  auto voxel_point_counts = count_voxel_points(point_voxel_info);
+  auto valid_voxels = determine_valid_voxels(voxel_point_counts);
 
   // Phase 4: Create valid points mask
   auto valid_points_mask = create_valid_points_mask(point_voxel_info, valid_voxels);
@@ -174,7 +171,7 @@ void PolarVoxelOutlierFilterComponent::filter(
   conditionally_publish_noise_cloud(*input, valid_points_mask);
 
   // Phase 7: Publish diagnostics (always run for visibility estimation)
-  publish_diagnostics(voxel_counts, valid_points_mask);
+  publish_diagnostics(voxel_point_counts, valid_points_mask);
 }
 
 PolarVoxelOutlierFilterComponent::PointVoxelInfoVector
@@ -284,10 +281,10 @@ std::optional<PointVoxelInfo> PolarVoxelOutlierFilterComponent::process_cartesia
 template <typename Predicate>
 PolarVoxelOutlierFilterComponent::VoxelIndexSet
 PolarVoxelOutlierFilterComponent::determine_valid_voxels_generic(
-  const VoxelPointCountMap & voxel_counts, Predicate predicate) const
+  const VoxelPointCountMap & voxel_point_counts, Predicate predicate) const
 {
   VoxelIndexSet valid_voxels;
-  for (const auto & [voxel_idx, counts] : voxel_counts) {
+  for (const auto & [voxel_idx, counts] : voxel_point_counts) {
     if (predicate(counts)) {
       valid_voxels.insert(voxel_idx);
     }
@@ -403,10 +400,10 @@ void PolarVoxelOutlierFilterComponent::publish_noise_cloud(
 }
 
 void PolarVoxelOutlierFilterComponent::publish_diagnostics(
-  const VoxelPointCountMap & voxel_counts, const ValidPointsMask & valid_points_mask)
+  const VoxelPointCountMap & voxel_point_counts, const ValidPointsMask & valid_points_mask)
 {
   // Calculate metrics
-  calculate_visibility_metric(voxel_counts);
+  calculate_visibility_metric(voxel_point_counts);
   calculate_filter_ratio_metric(valid_points_mask);
 
   // Publish metrics
@@ -418,7 +415,7 @@ void PolarVoxelOutlierFilterComponent::publish_diagnostics(
 }
 
 void PolarVoxelOutlierFilterComponent::calculate_visibility_metric(
-  const VoxelPointCountMap & voxel_counts)
+  const VoxelPointCountMap & voxel_point_counts)
 {
   if (!use_return_type_classification_) {
     visibility_.reset();
@@ -426,7 +423,7 @@ void PolarVoxelOutlierFilterComponent::calculate_visibility_metric(
   }
 
   uint32_t low_visibility_voxels_count = 0;
-  for (const auto & [voxel_idx, counts] : voxel_counts) {
+  for (const auto & [voxel_idx, counts] : voxel_point_counts) {
     if (
       counts.is_in_visibility_range &&
       !counts.meets_secondary_threshold(secondary_noise_threshold_)) {
@@ -538,28 +535,29 @@ bool PolarVoxelOutlierFilterComponent::has_sufficient_radius(const PolarCoordina
   return std::abs(polar.radius) >= std::numeric_limits<double>::epsilon();
 }
 
-PolarVoxelOutlierFilterComponent::VoxelPointCountMap PolarVoxelOutlierFilterComponent::count_voxels(
+PolarVoxelOutlierFilterComponent::VoxelPointCountMap
+PolarVoxelOutlierFilterComponent::count_voxel_points(
   const PointVoxelInfoVector & point_voxel_info) const
 {
-  VoxelPointCountMap voxel_counts;
+  VoxelPointCountMap voxel_point_counts;
   for (const auto & info_opt : point_voxel_info) {
     if (info_opt.has_value()) {
       const auto & info = info_opt.value();
       if (info.is_primary) {
-        voxel_counts[info.voxel_idx].primary_count++;
+        voxel_point_counts[info.voxel_idx].primary_count++;
       } else if (info.meets_intensity_threshold) {
-        voxel_counts[info.voxel_idx].secondary_count++;
+        voxel_point_counts[info.voxel_idx].secondary_count++;
       }
     }
   }
   // Add range information for visibility calculation
-  for (const auto & [voxel_idx, counts] : voxel_counts) {
+  for (const auto & [voxel_idx, counts] : voxel_point_counts) {
     // Calculate the maximum radius for this voxel
     double voxel_max_radius = (voxel_idx.radius_idx + 1) * radial_resolution_m_;
-    voxel_counts[voxel_idx].is_in_visibility_range =
+    voxel_point_counts[voxel_idx].is_in_visibility_range =
       voxel_max_radius <= visibility_estimation_max_range_m_;
   }
-  return voxel_counts;
+  return voxel_point_counts;
 }
 
 void PolarVoxelOutlierFilterComponent::update_parameter(const rclcpp::Parameter & param)
@@ -650,33 +648,35 @@ void PolarVoxelOutlierFilterComponent::update_publish_noise_cloud(const rclcpp::
 
 PolarVoxelOutlierFilterComponent::VoxelIndexSet
 PolarVoxelOutlierFilterComponent::determine_valid_voxels(
-  const VoxelPointCountMap & voxel_counts) const
+  const VoxelPointCountMap & voxel_point_counts) const
 {
   if (use_return_type_classification_) {
-    return determine_valid_voxels_with_return_types(voxel_counts);
+    return determine_valid_voxels_with_return_types(voxel_point_counts);
   } else {
-    return determine_valid_voxels_simple(voxel_counts);
+    return determine_valid_voxels_simple(voxel_point_counts);
   }
 }
 
 PolarVoxelOutlierFilterComponent::VoxelIndexSet
 PolarVoxelOutlierFilterComponent::determine_valid_voxels_simple(
-  const VoxelPointCountMap & voxel_counts) const
+  const VoxelPointCountMap & voxel_point_counts) const
 {
-  return determine_valid_voxels_generic(voxel_counts, [this](const VoxelPointCounts & counts) {
-    size_t total = counts.primary_count + counts.secondary_count;
-    return total >= static_cast<size_t>(voxel_points_threshold_);
-  });
+  return determine_valid_voxels_generic(
+    voxel_point_counts, [this](const VoxelPointCounts & counts) {
+      size_t total = counts.primary_count + counts.secondary_count;
+      return total >= static_cast<size_t>(voxel_points_threshold_);
+    });
 }
 
 PolarVoxelOutlierFilterComponent::VoxelIndexSet
 PolarVoxelOutlierFilterComponent::determine_valid_voxels_with_return_types(
-  const VoxelPointCountMap & voxel_counts) const
+  const VoxelPointCountMap & voxel_point_counts) const
 {
-  return determine_valid_voxels_generic(voxel_counts, [this](const VoxelPointCounts & counts) {
-    return counts.meets_primary_threshold(voxel_points_threshold_) &&
-           counts.meets_secondary_threshold(secondary_noise_threshold_);
-  });
+  return determine_valid_voxels_generic(
+    voxel_point_counts, [this](const VoxelPointCounts & counts) {
+      return counts.meets_primary_threshold(voxel_points_threshold_) &&
+             counts.meets_secondary_threshold(secondary_noise_threshold_);
+    });
 }
 
 void PolarVoxelOutlierFilterComponent::setup_output_header(
