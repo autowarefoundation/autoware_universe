@@ -17,6 +17,7 @@
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_combine_cloud_handler_kernel.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_traits.hpp"
 
+#include <autoware/pointcloud_preprocessor/concatenate_data/concatenation_info_manager.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 
 #include <cuda_runtime.h>
@@ -88,7 +89,8 @@ ConcatenatedCloudResult<CudaPointCloud2Traits>
 CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
   std::unordered_map<
     std::string, typename CudaPointCloud2Traits::PointCloudMessage::ConstSharedPtr> &
-    topic_to_cloud_map)
+    topic_to_cloud_map,
+  const std::shared_ptr<CollectorInfoBase> & collector_info)
 {
   ConcatenatedCloudResult<CudaPointCloud2Traits> concatenate_cloud_result;
   std::lock_guard<std::mutex> lock(mutex_);
@@ -110,6 +112,9 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
   // Before combining the pointclouds, initialize and reserve space for the concatenated pointcloud
   concatenate_cloud_result.concatenate_cloud_ptr =
     std::make_unique<cuda_blackboard::CudaPointCloud2>();
+  concatenate_cloud_result.concatenation_info_ptr =
+    std::make_unique<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
+      concatenation_info_manager_.reset_and_get_base_info());
 
   // Reserve space based on the total size of the pointcloud data to speed up the concatenation
   // process
@@ -177,6 +182,9 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
       reinterpret_cast<PointTypeStruct *>(cloud->data.get()), num_points, transform_struct,
       output_points + concatenated_start_index, stream);
     concatenated_start_index += num_points;
+    concatenation_info_manager_.update_source_from_point_cloud(
+      *cloud, topic, autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
+      *concatenate_cloud_result.concatenation_info_ptr);
   }
 
   concatenate_cloud_result.concatenate_cloud_ptr->header.frame_id = output_frame_;
@@ -273,6 +281,31 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
   }
 
   concatenate_cloud_result.concatenate_cloud_ptr->header.stamp = oldest_stamp;
+
+  if (const auto advanced_info = std::dynamic_pointer_cast<AdvancedCollectorInfo>(collector_info)) {
+    const auto reference_timestamp_min = advanced_info->timestamp - advanced_info->noise_window;
+    const auto reference_timestamp_max = advanced_info->timestamp + advanced_info->noise_window;
+
+    builtin_interfaces::msg::Time reference_timestamp_min_msg;
+    reference_timestamp_min_msg.sec = static_cast<int32_t>(reference_timestamp_min);
+    reference_timestamp_min_msg.nanosec =
+      static_cast<uint32_t>((reference_timestamp_min - reference_timestamp_min_msg.sec) * 1e9);
+
+    builtin_interfaces::msg::Time reference_timestamp_max_msg;
+    reference_timestamp_max_msg.sec = static_cast<int32_t>(reference_timestamp_max);
+    reference_timestamp_max_msg.nanosec =
+      static_cast<uint32_t>((reference_timestamp_max - reference_timestamp_max_msg.sec) * 1e9);
+
+    StrategyAdvancedConfig strategy_config(
+      reference_timestamp_min_msg, reference_timestamp_max_msg);
+    auto serialized_config = strategy_config.serialize();
+    ConcatenationInfoManager::set_config(
+      serialized_config, *concatenate_cloud_result.concatenation_info_ptr);
+  }
+
+  concatenation_info_manager_.set_result(
+    *concatenate_cloud_result.concatenate_cloud_ptr,
+    *concatenate_cloud_result.concatenation_info_ptr);
 
   return concatenate_cloud_result;
 }

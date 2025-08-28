@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "manager.hpp"
+#include "autoware/behavior_velocity_intersection_module/manager.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
@@ -552,10 +552,11 @@ void MergeFromPrivateModuleManager::launchNewModules(
       if (next_lane_location != "private") {
         const auto associative_ids =
           planning_utils::getAssociativeIntersectionLanelets(ll, lanelet_map, routing_graph);
-        registerModule(std::make_shared<MergeFromPrivateRoadModule>(
-          module_id, lane_id, planner_data_, merge_from_private_area_param_, associative_ids,
-          logger_.get_child("merge_from_private_road_module"), clock_, time_keeper_,
-          planning_factor_interface_));
+        registerModule(
+          std::make_shared<MergeFromPrivateRoadModule>(
+            module_id, lane_id, planner_data_, merge_from_private_area_param_, associative_ids,
+            logger_.get_child("merge_from_private_road_module"), clock_, time_keeper_,
+            planning_factor_interface_));
         continue;
       }
     } else {
@@ -567,10 +568,11 @@ void MergeFromPrivateModuleManager::launchNewModules(
         if (conflicting_attr == "urban") {
           const auto associative_ids =
             planning_utils::getAssociativeIntersectionLanelets(ll, lanelet_map, routing_graph);
-          registerModule(std::make_shared<MergeFromPrivateRoadModule>(
-            module_id, lane_id, planner_data_, merge_from_private_area_param_, associative_ids,
-            logger_.get_child("merge_from_private_road_module"), clock_, time_keeper_,
-            planning_factor_interface_));
+          registerModule(
+            std::make_shared<MergeFromPrivateRoadModule>(
+              module_id, lane_id, planner_data_, merge_from_private_area_param_, associative_ids,
+              logger_.get_child("merge_from_private_road_module"), clock_, time_keeper_,
+              planning_factor_interface_));
           continue;
         }
       }

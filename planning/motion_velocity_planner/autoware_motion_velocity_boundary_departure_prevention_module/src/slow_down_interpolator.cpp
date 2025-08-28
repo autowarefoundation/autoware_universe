@@ -21,124 +21,219 @@
 
 namespace autoware::motion_velocity_planner::experimental::utils
 {
+using Response = SlowDownInterpolator::Response;
 tl::expected<SlowDownInterpolator::SlowDownPlan, std::string>
 SlowDownInterpolator::get_interp_to_point(
-  const double curr_vel, const double lon_dist_to_bound_m, double lat_dist_to_bound_m,
-  const SideKey side_key) const
+  const double curr_vel, const double curr_acc, const double lon_dist_to_bound_m,
+  const double lat_dist_to_bound_m, const SideKey side_key) const
 {
-  const auto interp_vel_mps = interp_velocity(curr_vel, lat_dist_to_bound_m, side_key);
-  const auto exp_decel_mps2 =
-    calc_expected_deceleration(curr_vel, interp_vel_mps, lon_dist_to_bound_m);
+  const auto target_vel = interp_velocity(curr_vel, lat_dist_to_bound_m, side_key);
 
-  const auto max_decel = th_trigger_.th_acc_mps2.max;
-  if (std::abs(exp_decel_mps2) > std::abs(max_decel)) {
-    return tl::unexpected<std::string>(
-      "Expected deceleration for the interpolated velocity exceeded threshold.");
+  if (lon_dist_to_bound_m < 0.0) return tl::make_unexpected("Point behind ego.");  // already past
+
+  const auto a_comfort = th_trigger_.th_acc_mps2.min;
+  const auto j_comfort = th_trigger_.th_jerk_mps3.min;
+  const auto a_max = th_trigger_.th_acc_mps2.max;
+  const auto j_max = th_trigger_.th_jerk_mps3.max;
+
+  const auto comfort_dist_opt =
+    get_comfort_distance(lon_dist_to_bound_m, curr_vel, target_vel, curr_acc);
+
+  if (comfort_dist_opt) {
+    const auto v_brake_opt = calc_velocity_with_profile(
+      curr_acc, curr_vel, target_vel, j_comfort, a_comfort, *comfort_dist_opt);
+    if (v_brake_opt) {
+      return tl::expected<SlowDownPlan, std::string>(
+        SlowDownPlan{*comfort_dist_opt, *v_brake_opt, a_comfort});
+    }
   }
 
-  const auto exp_jerk = interp_jerk(lat_dist_to_bound_m, exp_decel_mps2, side_key);
-  const auto exp_vel = calc_new_velocity(curr_vel, exp_decel_mps2, exp_jerk, lon_dist_to_bound_m);
+  const auto a_feasible_opt = find_feasible_accel(
+    lon_dist_to_bound_m, curr_vel, target_vel, curr_acc, a_comfort, a_max, j_comfort);
+  if (a_feasible_opt) {
+    const auto v_brake_opt = calc_velocity_with_profile(
+      curr_acc, curr_vel, target_vel, j_comfort, *a_feasible_opt, lon_dist_to_bound_m);
+    if (v_brake_opt) {
+      return tl::expected<SlowDownPlan, std::string>(
+        SlowDownPlan{lon_dist_to_bound_m, *v_brake_opt, a_feasible_opt.value()});
+    }
+  }
 
-  const auto rel_dist_m =
-    std::max((interp_vel_mps * interp_vel_mps - curr_vel * curr_vel) / (2 * exp_decel_mps2), 0.0);
+  const auto d_hard =
+    std::clamp(d_slow(curr_vel, target_vel, curr_acc, a_max, j_max), 0.0, lon_dist_to_bound_m);
+  const auto v_brake_opt =
+    calc_velocity_with_profile(curr_acc, curr_vel, target_vel, j_max, a_max, d_hard);
 
-  return SlowDownPlan{rel_dist_m, exp_vel, exp_decel_mps2};
+  return v_brake_opt
+           ? tl::expected<SlowDownPlan, std::string>(SlowDownPlan{d_hard, *v_brake_opt, a_max})
+           : tl::expected<SlowDownPlan, std::string>(SlowDownPlan{0.0, curr_vel, curr_acc});
 }
-
-double SlowDownInterpolator::calc_expected_deceleration(
-  const double curr_vel, const double target_vel, const double arclength_to_point_m) const
-{
-  const auto & th_acc_mps2 = th_trigger_.th_acc_mps2;
-  if (arclength_to_point_m < std::numeric_limits<double>::epsilon()) {
-    return th_acc_mps2.max;
-  }
-
-  const auto raw_decel =
-    (target_vel * target_vel - curr_vel * curr_vel) / (2.0 * arclength_to_point_m);
-  return std::clamp(raw_decel, th_acc_mps2.max, th_acc_mps2.min);
-}
-
-double SlowDownInterpolator::calc_new_velocity(
-  const double curr_vel, const double a_target, const double jerk,
-  const double lon_dist_to_point_m) const
-{
-  const auto th_slow_down_vel = th_trigger_.th_vel_mps.min;
-
-  if (curr_vel < th_slow_down_vel) {
-    return th_slow_down_vel;
-  }
-
-  const double t = lon_dist_to_point_m / std::max(curr_vel, 1e-6);  // avoid div by zero
-  const double t_j = std::abs(a_target / std::max(jerk, 1e-6));
-
-  if (t <= t_j) {
-    return std::clamp(
-      curr_vel + 0.5 * jerk * t * t, th_slow_down_vel,
-      std::max(th_slow_down_vel + std::numeric_limits<double>::epsilon(), curr_vel));
-  }
-
-  const double delta_v1 = 0.5 * a_target * a_target / jerk;
-  const double delta_v2 = a_target * (t - t_j);
-
-  return std::clamp(
-    curr_vel + delta_v1 + delta_v2, th_slow_down_vel,
-    std::max(th_slow_down_vel + std::numeric_limits<double>::epsilon(), curr_vel));
-};
 
 double SlowDownInterpolator::interp_velocity(
   const double curr_vel, const double lat_dist, const SideKey side_key) const
 {
-  if (curr_vel <= th_trigger_.th_vel_mps.min) {
-    return th_trigger_.th_vel_mps.min;
+  const auto min_vel = th_trigger_.th_vel_mps.min;
+
+  if (curr_vel <= min_vel) {
+    return min_vel;
   }
 
   const auto min_dist = th_trigger_.th_dist_to_boundary_m[side_key].min;
   const auto max_dist = th_trigger_.th_dist_to_boundary_m[side_key].max;
-  const auto lat_dist_axis = get_lat_dist_axis(side_key);
+  const auto lat_dist_axis = std::vector{min_dist, max_dist};
 
-  const auto vel_axis = get_vel_axis();
+  const auto max_vel = th_trigger_.th_vel_mps.max;
+  const auto vel_axis = std::vector{min_vel, max_vel};
+
   if (lat_dist >= max_dist) {
-    return vel_axis.back();
+    return max_vel;
   }
 
   if (lat_dist <= min_dist) {
-    return vel_axis.front();
+    return min_vel;
   }
 
   return autoware::interpolation::lerp(lat_dist_axis, vel_axis, lat_dist);
 }
 
-std::vector<double> SlowDownInterpolator::get_lat_dist_axis(const SideKey side_key) const
+double SlowDownInterpolator::v_t(const double t, const double j, const double a, const double v)
 {
-  return {
-    th_trigger_.th_dist_to_boundary_m[side_key].min,
-    th_trigger_.th_dist_to_boundary_m[side_key].max};
+  return j * t * t / 2.0 + a * t + v;
 }
 
-std::vector<double> SlowDownInterpolator::get_vel_axis() const
+double SlowDownInterpolator::s_t(const double t, const double j, const double a, const double v)
 {
-  return {th_trigger_.th_vel_mps.min, th_trigger_.th_vel_mps.max};
+  return j * t * t * t / 6.0 + a * t * t / 2.0 + v * t;
 }
 
-double SlowDownInterpolator::interp_jerk(
-  const double lat_dist_to_bound_m, const double expected_decel_mps2, const SideKey side_key) const
+tl::expected<double, std::string> SlowDownInterpolator::find_reach_time(
+  double j, double a, double v0, double dist, double t_min, double t_max)
 {
-  const auto th_dist_to_boundary_m = th_trigger_.th_dist_to_boundary_m[side_key];
-  const auto lat_ratio = (th_dist_to_boundary_m.max - lat_dist_to_bound_m) /
-                         (th_dist_to_boundary_m.max - th_dist_to_boundary_m.min);
+  const auto d = [&](double t) { return s_t(t, j, a, v0) - dist; };
 
-  const auto th_decel_mps2 = th_trigger_.th_acc_mps2;
-  const auto max_decel = std::abs(th_decel_mps2.max);
-  const auto min_decel = std::abs(th_decel_mps2.min);
-  const auto lon_ratio = (std::abs(expected_decel_mps2) - min_decel) / (max_decel - min_decel);
+  if (d(t_min) > 0.0 || d(t_max) < 0.0) return tl::make_unexpected("invalid search range");
 
-  const auto combined_ratio = 0.5 * lat_ratio + 0.5 * lon_ratio;
+  for (int iter = 0; iter < 120; ++iter) {  // ~2-32 precision
+    const auto t_mid = 0.5 * (t_min + t_max);
+    const auto d_m = d(t_mid);
 
-  const auto min_jerk = th_trigger_.th_jerk_mps3.min;
-  const auto max_jerk = th_trigger_.th_jerk_mps3.max;
-  if (combined_ratio <= 0.0) return min_jerk;
-  if (combined_ratio >= 1.0) return max_jerk;
+    if (std::abs(d_m) < std::numeric_limits<double>::epsilon()) {
+      return t_mid;
+    }
 
-  return autoware::interpolation::lerp(min_jerk, max_jerk, combined_ratio);
+    if (d_m > 0.0) {
+      t_max = t_mid;
+    } else {
+      t_min = t_mid;
+    }
+  }
+
+  return 0.5 * (t_min + t_max);
+}
+
+std::optional<double> SlowDownInterpolator::find_feasible_accel(
+  double gap, double v0, double vt, double a0, double a_comfortable, double a_max,
+  double j_comfortable)
+{
+  if (d_slow(v0, vt, a0, a_max, j_comfortable) > gap)
+    return std::nullopt;  // even a_max + j_comfortable won't fit
+
+  double lo = a_comfortable;      // weaker (less negative)
+  double hi = a_max;              // stronger
+  for (int i = 0; i < 40; ++i) {  // 40 iters → <1 mm precision
+    double mid = 0.5 * (lo + hi);
+    (d_slow(v0, vt, a0, mid, j_comfortable) > gap ? lo : hi) = mid;
+
+    if (std::abs(hi) - std::abs(mid) < std::numeric_limits<double>::epsilon()) {
+      break;
+    }
+  }
+  return hi;  // smallest accel that works
+}
+
+double SlowDownInterpolator::t_j(const double a_0, const double a, const double j)
+{
+  return (a - a_0) / j;
+}
+
+double SlowDownInterpolator::d_slow(
+  const double v_0, const double v_target, const double a_0, const double a_brake,
+  const double j_brake)
+{
+  const auto t_brake = t_j(a_0, a_brake, j_brake);
+  const auto s_brake = s_t(t_brake, j_brake, a_0, v_0);
+  const auto v_brake = v_t(t_brake, j_brake, a_0, v_0);
+
+  // If the jerk ramp alone already reaches v_target
+  if (v_brake <= v_target) {
+    const auto a = 0.5 * j_brake;
+    const auto b = a_0;
+    const auto c = v_0 - v_target;
+
+    const auto quad = b * b - 4.0 * a * c;
+    if (quad < 0.0) {
+      return 0.0;
+    }
+
+    const auto root = (-b + std::sqrt(quad)) / (2.0 * a);
+    const auto t_hit = std::max(0.0, root);
+    return s_t(t_hit, j_brake, a_0, v_0);
+  }
+
+  const auto s_const_acc_stop = (v_brake * v_brake - v_target * v_target) / (-2.0 * a_brake);
+  return s_brake + s_const_acc_stop;
+}
+
+std::optional<double> SlowDownInterpolator::get_comfort_distance(
+  const double lon_dist_to_dpt_pt, const double v_0, const double v_target, const double a_0) const
+{
+  const auto a_comfort = th_trigger_.th_acc_mps2.min;
+  const auto j_comfort = th_trigger_.th_jerk_mps3.min;
+  const auto d_comfort = d_slow(v_0, v_target, a_0, a_comfort, j_comfort);
+  if (d_comfort <= lon_dist_to_dpt_pt) {
+    return d_comfort;
+  }
+  return std::nullopt;
+}
+
+tl::expected<double, std::string> SlowDownInterpolator::calc_velocity_with_profile(
+  const double a_0, const double v_0, const double v_target, const double j_brake,
+  const double a_brake, const double lon_dist_to_dpt_pt)
+{
+  const auto a_lim = std::min(a_0, a_brake);
+
+  const auto t_brake = t_j(a_lim, a_brake, j_brake);
+  const auto d_brake = s_t(t_brake, j_brake, a_lim, v_0);
+  const auto v_brake = v_t(t_brake, j_brake, a_lim, v_0);
+
+  if (lon_dist_to_dpt_pt < 1e-3) {
+    const double v_feasible =
+      std::sqrt(std::max(v_0 * v_0 + 2.0 * a_brake * lon_dist_to_dpt_pt, 0.0));
+    return std::max(v_target, std::min(v_0, v_feasible));
+  }
+
+  /* ---------- Case 1: Target lies inside jerk ramp ---------- */
+  {
+    /* find time when distance covered equals 'lon_dist_to_dpt_pt' */
+    auto d = [&](double t) { return s_t(t, j_brake, a_lim, v_0) - lon_dist_to_dpt_pt; };
+    if (d(0.0) * d(t_brake) < 0.0) {  // sign change ⇒ lies inside
+      const auto t_hit_opt = find_reach_time(j_brake, a_lim, v_0, lon_dist_to_dpt_pt, 0.0, t_brake);
+      if (!t_hit_opt) {
+        return tl::make_unexpected("Failed to find reach time. " + t_hit_opt.error());
+      }
+      return std::max(v_target, v_t(*t_hit_opt, j_brake, a_lim, v_0));
+    }
+  }
+
+  /* ---------- Case 2: constant-accel phase to v_target ---------- */
+  const auto remaining_dist = lon_dist_to_dpt_pt - d_brake;
+  const auto disc =
+    v_brake * v_brake - v_target * v_target + 2.0 * a_brake * remaining_dist;  // a_brake ≤ 0
+
+  if (disc < 0.0) return v_target;  // v_target reached before waypoint → hold it
+
+  /* time at constant a_brake to cover remaining_dist */
+  const auto t_a = (-v_brake + std::sqrt(disc)) / a_brake;
+  return std::max(v_target, v_t(t_a, 0.0, a_brake, v_brake));  // should equal v_target numerically
 }
 }  // namespace autoware::motion_velocity_planner::experimental::utils

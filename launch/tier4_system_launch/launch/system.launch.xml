@@ -4,6 +4,7 @@
   <arg name="component_state_monitor_topic_path"/>
   <arg name="duplicated_node_checker_param_path"/>
   <arg name="processing_time_checker_param_path"/>
+  <arg name="pipeline_latency_monitor_param_path"/>
   <arg name="mrm_comfortable_stop_operator_param_path"/>
   <arg name="mrm_emergency_stop_operator_param_path"/>
   <arg name="dummy_diag_publisher_param_path"/>
@@ -88,6 +89,13 @@
     <group>
       <include file="$(find-pkg-share autoware_processing_time_checker)/launch/processing_time_checker.launch.xml">
         <arg name="config_file" value="$(var processing_time_checker_param_path)"/>
+      </include>
+    </group>
+
+    <!-- Pipeline Latency Monitor -->
+    <group>
+      <include file="$(find-pkg-share autoware_pipeline_latency_monitor)/launch/pipeline_latency_monitor.launch.xml">
+        <arg name="config_file" value="$(var pipeline_latency_monitor_param_path)"/>
       </include>
     </group>
 

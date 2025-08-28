@@ -147,11 +147,17 @@ bool TrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
         is_stop_signal) {
         // Suppress restart
         RCLCPP_DEBUG(logger_, "Suppressing restart due to proximity to stop line.");
-        const auto & ego_pose = planner_data_->current_odometry->pose;
-        const auto restart_suppression_point =
-          Eigen::Vector2d(ego_pose.position.x, ego_pose.position.y);
-        *path = insertStopPose(input_path, stop_line.value().first, restart_suppression_point);
-        return true;
+        const auto & ego_pos = planner_data_->current_odometry->pose.position;
+        const double dist =
+          autoware::motion_utils::calcSignedArcLength(input_path.points, ego_pos, 0L);
+        const auto pose_opt =
+          autoware::motion_utils::calcLongitudinalOffsetPose(input_path.points, 0L, dist);
+        if (pose_opt.has_value()) {
+          const auto restart_suppression_point =
+            Eigen::Vector2d(pose_opt.value().position.x, pose_opt.value().position.y);
+          *path = insertStopPose(input_path, stop_line.value().first, restart_suppression_point);
+          return true;
+        }
       }
     }
 
@@ -215,7 +221,7 @@ bool TrafficLightModule::willTrafficLightTurnRedBeforeReachingStopLine(
                                               ? distance_to_stop_line / ego_velocity
                                               : planner_param_.v2i_required_time_to_departure;
 
-  double seconds = predicted_passing_stop_line_time - planner_param_.v2i_last_time_allowed_to_pass;
+  double seconds = predicted_passing_stop_line_time + planner_param_.v2i_last_time_allowed_to_pass;
 
   rclcpp::Time now = clock_->now();
   // find stop signal from looking_tl_state_.predictions by using isTrafficSignalStop
