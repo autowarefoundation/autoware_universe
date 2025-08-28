@@ -384,7 +384,7 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
 
   take_data();
 
-  const auto result_opt = plan(raw_trajectory_points, planner_data);
+  const auto result_opt = plan_velocities(raw_trajectory_points, planner_data);
 
   if (updater_ptr_) {
     updater_ptr_->force_update();
@@ -407,7 +407,8 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
   return *result_opt;
 }
 
-tl::expected<VelocityPlanningResult, std::string> BoundaryDeparturePreventionModule::plan(
+tl::expected<VelocityPlanningResult, std::string>
+BoundaryDeparturePreventionModule::plan_velocities(
   const TrajectoryPoints & raw_trajectory_points,
   const std::shared_ptr<const PlannerData> & planner_data)
 {
@@ -456,8 +457,6 @@ tl::expected<VelocityPlanningResult, std::string> BoundaryDeparturePreventionMod
   } catch (...) {
     return tl::make_unexpected("Unknown exception.");
   }
-
-  return tl::make_unexpected("Planning failed due to unknown error.");
 }
 
 std::optional<std::string> BoundaryDeparturePreventionModule::is_data_invalid(

@@ -65,7 +65,7 @@ private:
    * planning to prevent the vehicle from departing road boundaries.
    */
 
-  tl::expected<VelocityPlanningResult, std::string> plan(
+  tl::expected<VelocityPlanningResult, std::string> plan_velocities(
     const TrajectoryPoints & raw_trajectory_points,
     const std::shared_ptr<const PlannerData> & planner_data);
 
