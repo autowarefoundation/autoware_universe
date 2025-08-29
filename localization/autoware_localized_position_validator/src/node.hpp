@@ -94,6 +94,9 @@ private:
   float belief_valid_ = 0.5;
   bool use_soft_bayesian_update_;
 
+  int profile_points_min_;
+  int profile_points_max_;
+
   int predicted_class_;
   float confidence_;
 

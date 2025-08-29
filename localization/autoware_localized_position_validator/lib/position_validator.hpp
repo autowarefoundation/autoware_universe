@@ -53,6 +53,8 @@ private:
   std::vector<float> coors_range_{};
   int max_voxels_;
   int max_points_per_voxel_;
+  int profile_points_min_;
+  int profile_points_max_;
 
   at::Tensor pillars_;
   at::Tensor coors_batch_;

@@ -212,9 +212,9 @@ LocalizedPositionValidatorNode::LocalizedPositionValidatorNode(
     declare_parameter<float>("model_params.prob_observe_invalid_given_state_invalid");
 
   const std::string trt_precision = declare_parameter<std::string>("trt_precision");
-  const int profile_points_min = declare_parameter<int>("trt_profile_points_min");
+  profile_points_min_ = declare_parameter<int>("trt_profile_points_min");
   const int profile_points_opt = declare_parameter<int>("trt_profile_points_opt");
-  const int profile_points_max = declare_parameter<int>("trt_profile_points_max");
+  profile_points_max_ = declare_parameter<int>("trt_profile_points_max");
 
   // update the map if the vehicle has moved from the fetched point
   // and has reached map_refetch_threshold of the map_fetch_range_
@@ -254,7 +254,7 @@ LocalizedPositionValidatorNode::LocalizedPositionValidatorNode(
   TrtCommonConfig model_param(model_onnx_path, trt_precision, model_engine_path);
   validator_ptr_ = std::make_unique<PositionValidatorTRT>(
     model_param, voxel_sizes, pcd_range, max_voxels, max_points_per_voxel,
-    profile_points_min, profile_points_opt, profile_points_max);
+    profile_points_min_, profile_points_opt, profile_points_max_);
 
   // debug
   stop_watch_ptr_ =
@@ -505,7 +505,13 @@ void LocalizedPositionValidatorNode::callback_pointcloud(
   std::vector<Eigen::Vector4f> concat_data = concatenate_points(roi_map_pts, roi_scan_pts);
 
   // run the model
-  validator_ptr_->inference(concat_data, predicted_class_, confidence_);
+  if (!validator_ptr_->inference(concat_data, predicted_class_, confidence_)) {
+    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 3000,
+      "the number of input points is not within the profile range [%d, %d]",
+      profile_points_min_, profile_points_max_);
+
+    return;
+  }
 
   ValidatorPredictionMsg res_msg;
   res_msg.header = input_pointcloud_msg_ptr->header;

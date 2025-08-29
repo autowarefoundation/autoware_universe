@@ -59,23 +59,25 @@ PositionValidatorTRT::PositionValidatorTRT(
   coors_range_.insert(coors_range_.end(), coors_range.begin(), coors_range.end());
   max_voxels_ = max_voxels;
   max_points_per_voxel_ = max_points_per_voxel;
+  profile_points_min_ = profile_points_min;
+  profile_points_max_ = profile_points_max;
 
   // initialize trt wrappers
   model_trt_ptr_ = std::make_unique<tensorrt_common::TrtCommon>(model_param);
 
   cudaStreamCreate(&stream_);
 
-  const auto pillars_prof_min = nvinfer1::Dims3{profile_points_min, 50, 4};
+  const auto pillars_prof_min = nvinfer1::Dims3{profile_points_min_, 50, 4};
   const auto pillars_prof_opt = nvinfer1::Dims3{profile_points_opt, 50, 4};
-  const auto pillars_prof_max = nvinfer1::Dims3{profile_points_max, 50, 4};
+  const auto pillars_prof_max = nvinfer1::Dims3{profile_points_max_, 50, 4};
 
-  const auto coors_batch_prof_min = nvinfer1::Dims2{profile_points_min, 4};
+  const auto coors_batch_prof_min = nvinfer1::Dims2{profile_points_min_, 4};
   const auto coors_batch_prof_opt = nvinfer1::Dims2{profile_points_opt, 4};
-  const auto coors_batch_prof_max = nvinfer1::Dims2{profile_points_max, 4};
+  const auto coors_batch_prof_max = nvinfer1::Dims2{profile_points_max_, 4};
 
-  const auto npoints_per_pillar_prof_min = nvinfer1::Dims{1, {profile_points_min}};
+  const auto npoints_per_pillar_prof_min = nvinfer1::Dims{1, {profile_points_min_}};
   const auto npoints_per_pillar_prof_opt = nvinfer1::Dims{1, {profile_points_opt}};
-  const auto npoints_per_pillar_prof_max = nvinfer1::Dims{1, {profile_points_max}};
+  const auto npoints_per_pillar_prof_max = nvinfer1::Dims{1, {profile_points_max_}};
 
   std::vector<tensorrt_common::ProfileDims> model_profile_dims{
     tensorrt_common::ProfileDims("pillars", pillars_prof_min, pillars_prof_opt, pillars_prof_max),
@@ -110,6 +112,18 @@ bool PositionValidatorTRT::inference(
 {
   // create pillars_, coors_batch_ and npoints_per_pillar_
   preprocess(points);
+
+
+  // check whether the number of input points is within the profile range
+  //
+  // TODO(a-maumau): implement a preprocess that will fill or reduce the
+  //                 input points within the profile range
+  const size_t input_points_num = pillars_.size(0);
+  if (
+    input_points_num < static_cast<size_t>(profile_points_min_) ||
+    input_points_num > static_cast<size_t>(profile_points_max_)) {
+    return false;
+  }
 
   const auto pillars_shape = nvinfer1::Dims3{
     static_cast<int>(pillars_.size(0)), static_cast<int>(pillars_.size(1)),
