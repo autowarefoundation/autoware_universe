@@ -302,9 +302,10 @@ tf2::Transform DistortionCorrectorBase::convert_matrix_to_transform(const Eigen:
 {
   tf2::Transform transform;
   transform.setOrigin(tf2::Vector3(matrix(0, 3), matrix(1, 3), matrix(2, 3)));
-  transform.setBasis(tf2::Matrix3x3(
-    matrix(0, 0), matrix(0, 1), matrix(0, 2), matrix(1, 0), matrix(1, 1), matrix(1, 2),
-    matrix(2, 0), matrix(2, 1), matrix(2, 2)));
+  transform.setBasis(
+    tf2::Matrix3x3(
+      matrix(0, 0), matrix(0, 1), matrix(0, 2), matrix(1, 0), matrix(1, 1), matrix(1, 2),
+      matrix(2, 0), matrix(2, 1), matrix(2, 2)));
   return transform;
 }
 
@@ -313,6 +314,9 @@ void DistortionCorrector<T>::undistort_pointcloud(
   bool use_imu, std::optional<AngleConversion> angle_conversion_opt,
   sensor_msgs::msg::PointCloud2 & pointcloud)
 {
+  timestamp_mismatch_count_ = 0;
+  timestamp_mismatch_fraction_ = 0.0;
+
   if (!is_pointcloud_valid(pointcloud)) return;
   if (twist_queue_.empty()) {
     RCLCPP_WARN_STREAM_THROTTLE(
@@ -346,6 +350,7 @@ void DistortionCorrector<T>::undistort_pointcloud(
   // If there is a point in a pointcloud that cannot be associated, record it to issue a warning
   bool is_twist_time_stamp_too_late = false;
   bool is_imu_time_stamp_too_late = false;
+  constexpr double time_diff = 0.1;
 
   for (; it_x != it_x.end(); ++it_x, ++it_y, ++it_z, ++it_time_stamp) {
     bool is_twist_valid = true;
@@ -359,7 +364,7 @@ void DistortionCorrector<T>::undistort_pointcloud(
       ++it_twist;
       twist_stamp = rclcpp::Time(it_twist->header.stamp).seconds();
     }
-    if (std::abs(current_point_stamp - twist_stamp) > 0.1) {
+    if (std::abs(current_point_stamp - twist_stamp) > time_diff) {
       is_twist_time_stamp_too_late = true;
       is_twist_valid = false;
     }
@@ -371,13 +376,15 @@ void DistortionCorrector<T>::undistort_pointcloud(
         imu_stamp = rclcpp::Time(it_imu->header.stamp).seconds();
       }
 
-      if (std::abs(current_point_stamp - imu_stamp) > 0.1) {
+      if (std::abs(current_point_stamp - imu_stamp) > time_diff) {
         is_imu_time_stamp_too_late = true;
         is_imu_valid = false;
       }
     } else {
       is_imu_valid = false;
     }
+
+    if (!is_twist_valid || (use_imu && !is_imu_valid)) ++timestamp_mismatch_count_;
 
     auto time_offset = static_cast<float>(current_point_stamp - prev_time_stamp_sec);
 
@@ -409,6 +416,11 @@ void DistortionCorrector<T>::undistort_pointcloud(
 
     prev_time_stamp_sec = current_point_stamp;
   }
+
+  const auto total_points = pointcloud.width * pointcloud.height;
+  timestamp_mismatch_fraction_ = total_points > 0 ? static_cast<float>(timestamp_mismatch_count_) /
+                                                      static_cast<float>(total_points)
+                                                  : 0.0f;
 
   warn_if_timestamp_is_too_late(is_twist_time_stamp_too_late, is_imu_time_stamp_too_late);
 }

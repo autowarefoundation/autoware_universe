@@ -703,6 +703,7 @@ void NormalLaneChange::resetParameters()
   status_ = LaneChangeStatus();
   unsafe_hysteresis_count_ = 0;
   lane_change_debug_.reset();
+  set_signal_activation_time(true);
 
   RCLCPP_DEBUG(logger_, "reset all flags and debug information.");
 }
@@ -846,7 +847,7 @@ bool NormalLaneChange::isAbleToReturnCurrentLane() const
   return true;
 }
 
-bool NormalLaneChange::is_near_terminal() const
+bool NormalLaneChange::is_near_terminal_end() const
 {
   if (!common_data_ptr_ || !common_data_ptr_->is_data_available()) {
     return true;
@@ -1030,8 +1031,8 @@ FilteredLanesObjects NormalLaneChange::filter_objects() const
   ranges::sort(target_lane_leading.stopped_at_bound, dist_comparator);
   ranges::sort(target_lane_leading.stopped, dist_comparator);
   ranges::sort(target_lane_leading.moving, dist_comparator);
-  ranges::sort(filtered_objects.target_lane_trailing, [&](const auto & obj1, const auto & obj2) {
-    return !dist_comparator(obj1, obj2);
+  ranges::sort(filtered_objects.target_lane_trailing, [](const auto & obj1, const auto & obj2) {
+    return obj2.dist_from_ego < obj1.dist_from_ego;
   });
 
   lane_change_debug_.filtered_objects = filtered_objects;
@@ -1168,7 +1169,7 @@ bool NormalLaneChange::get_path_using_frenet(
 
     lane_change_debug_.frenet_states.emplace_back(
       frenet_candidate.prepare_metric, frenet_candidate.lane_changing.sampling_parameter,
-      frenet_candidate.max_lane_changing_length);
+      frenet_candidate.lc_average_curvature, frenet_candidate.max_lane_changing_length);
 
     std::optional<LaneChangePath> candidate_path_opt;
     try {

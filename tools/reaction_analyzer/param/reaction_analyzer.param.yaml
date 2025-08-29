@@ -64,8 +64,8 @@
           time_debug_topic_name: /planning/scenario_planning/motion_velocity_smoother/trajectory/debug/published_time
           message_type: autoware_planning_msgs/msg/Trajectory
         planning_validator:
-          topic_name: /planning/scenario_planning/trajectory
-          time_debug_topic_name: /planning/scenario_planning/trajectory/debug/published_time
+          topic_name: /planning/trajectory
+          time_debug_topic_name: /planning/trajectory/debug/published_time
           message_type: autoware_planning_msgs/msg/Trajectory
         trajectory_follower:
           topic_name: /control/trajectory_follower/control_cmd

@@ -42,12 +42,20 @@ struct ObjectParameters
   std::vector<std::string> ignore_objects_lanelet_subtypes;
   std::vector<std::string> ignore_collisions_polygon_types;
   std::vector<std::string> ignore_collisions_lanelet_subtypes;
+  double start_ignore_collisions_time;
+  double start_ignore_collisions_distance;
   std::vector<std::string> cut_linestring_types;
   std::vector<std::string> cut_polygon_types;
   std::vector<std::string> cut_lanelet_subtypes;
+  std::vector<std::string> strict_cut_linestring_types;
+  std::vector<std::string> strict_cut_polygon_types;
+  std::vector<std::string> strict_cut_lanelet_subtypes;
   bool cut_if_crossing_ego_from_behind;
   double confidence_filtering_threshold;
   bool confidence_filtering_only_use_highest;
+  double preserved_duration;
+  double preserved_distance;
+  double standstill_duration_after_cut;
 };
 
 /// @brief conditions to ignore collisions
@@ -126,6 +134,14 @@ struct Parameters
   struct
   {
     std::string object_label;
+    struct
+    {
+      bool ego_footprint = false;
+      bool objects = false;
+      bool collisions = false;
+      bool decisions = false;
+      bool filtering_data = false;
+    } enabled_markers;
   } debug;
 
   /// @brief Get the parameter defined for a specific object label, or the default value if it was
@@ -210,6 +226,10 @@ struct Parameters
       object_parameters_per_label[label].ignore_collisions_lanelet_subtypes =
         get_object_parameter<std::vector<std::string>>(
           node, ns, label, ".ignore_collisions.lanelet_subtypes");
+      object_parameters_per_label[label].start_ignore_collisions_time =
+        get_object_parameter<double>(node, ns, label, ".ignore_collisions.start_ignore_time");
+      object_parameters_per_label[label].start_ignore_collisions_distance =
+        get_object_parameter<double>(node, ns, label, ".ignore_collisions.start_ignore_distance");
       object_parameters_per_label[label].ignore_if_stopped =
         get_object_parameter<bool>(node, ns, label, ".ignore.if_stopped");
       object_parameters_per_label[label].stopped_velocity_threshold =
@@ -227,11 +247,36 @@ struct Parameters
       object_parameters_per_label[label].cut_linestring_types =
         get_object_parameter<std::vector<std::string>>(
           node, ns, label, ".cut_predicted_paths.linestring_types");
+      object_parameters_per_label[label].strict_cut_polygon_types =
+        get_object_parameter<std::vector<std::string>>(
+          node, ns, label, ".cut_predicted_paths.strict_polygon_types");
+      object_parameters_per_label[label].strict_cut_lanelet_subtypes =
+        get_object_parameter<std::vector<std::string>>(
+          node, ns, label, ".cut_predicted_paths.strict_lanelet_subtypes");
+      object_parameters_per_label[label].strict_cut_linestring_types =
+        get_object_parameter<std::vector<std::string>>(
+          node, ns, label, ".cut_predicted_paths.strict_linestring_types");
       object_parameters_per_label[label].cut_if_crossing_ego_from_behind =
         get_object_parameter<bool>(
           node, ns, label, ".cut_predicted_paths.if_crossing_ego_from_behind");
+      object_parameters_per_label[label].preserved_duration =
+        get_object_parameter<double>(node, ns, label, ".preserved_duration");
+      object_parameters_per_label[label].preserved_distance =
+        get_object_parameter<double>(node, ns, label, ".preserved_distance");
+      object_parameters_per_label[label].standstill_duration_after_cut =
+        get_object_parameter<double>(node, ns, label, ".standstill_duration_after_cut");
     }
     debug.object_label = getOrDeclareParameter<std::string>(node, ns + ".debug.object_label");
+    debug.enabled_markers.ego_footprint =
+      getOrDeclareParameter<bool>(node, ns + ".debug.enabled_markers.ego_footprint");
+    debug.enabled_markers.objects =
+      getOrDeclareParameter<bool>(node, ns + ".debug.enabled_markers.objects");
+    debug.enabled_markers.collisions =
+      getOrDeclareParameter<bool>(node, ns + ".debug.enabled_markers.collisions");
+    debug.enabled_markers.decisions =
+      getOrDeclareParameter<bool>(node, ns + ".debug.enabled_markers.decisions");
+    debug.enabled_markers.filtering_data =
+      getOrDeclareParameter<bool>(node, ns + ".debug.enabled_markers.filtering_data");
 
     max_history_duration = std::max(stop_off_time_buffer, stop_on_time_buffer);
   }
@@ -291,7 +336,7 @@ struct Parameters
         params, ns + str + ".ignore.if_on_ego_trajectory",
         object_parameters_per_label[label].ignore_if_on_ego_trajectory);
       updateParam(
-        params, ns + ".ignore.if_behind_ego",
+        params, ns + str + ".ignore.if_behind_ego",
         object_parameters_per_label[label].ignore_if_behind_ego);
       updateParam(
         params, ns + str + ".ignore.lanelet_subtypes",
@@ -306,6 +351,12 @@ struct Parameters
         params, ns + str + ".ignore_collisions.polygon_types",
         object_parameters_per_label[label].ignore_collisions_polygon_types);
       updateParam(
+        params, ns + str + ".ignore_collisions.start_ignore_time",
+        object_parameters_per_label[label].start_ignore_collisions_time);
+      updateParam(
+        params, ns + str + ".ignore_collisions.start_ignore_distance",
+        object_parameters_per_label[label].start_ignore_collisions_distance);
+      updateParam(
         params, ns + str + ".confidence_filtering.threshold",
         object_parameters_per_label[label].confidence_filtering_threshold);
       updateParam(
@@ -315,16 +366,32 @@ struct Parameters
         params, ns + str + ".cut_predicted_paths.if_crossing_ego_from_behind",
         object_parameters_per_label[label].cut_if_crossing_ego_from_behind);
       updateParam(
-        params, ns + str + ".cut_predicted_paths.lanelet_subtypes",
-        object_parameters_per_label[label].cut_lanelet_subtypes);
+        params, ns + str + ".cut_predicted_paths.strict_lanelet_subtypes",
+        object_parameters_per_label[label].strict_cut_lanelet_subtypes);
       updateParam(
-        params, ns + str + ".cut_predicted_paths.polygon_types",
-        object_parameters_per_label[label].cut_polygon_types);
+        params, ns + str + ".cut_predicted_paths.strict_polygon_types",
+        object_parameters_per_label[label].strict_cut_polygon_types);
       updateParam(
-        params, ns + str + ".cut_predicted_paths.linestring_types",
-        object_parameters_per_label[label].cut_linestring_types);
+        params, ns + str + ".cut_predicted_paths.strict_linestring_types",
+        object_parameters_per_label[label].strict_cut_linestring_types);
+      updateParam(
+        params, ns + str + ".standstill_duration_after_cut",
+        object_parameters_per_label[label].standstill_duration_after_cut);
+      updateParam(
+        params, ns + str + ".preserved_duration",
+        object_parameters_per_label[label].preserved_duration);
+      updateParam(
+        params, ns + str + ".preserved_distance",
+        object_parameters_per_label[label].preserved_distance);
     }
     updateParam(params, ns + ".debug.object_label", debug.object_label);
+    updateParam(
+      params, ns + ".debug.enabled_markers.ego_footprint", debug.enabled_markers.ego_footprint);
+    updateParam(params, ns + ".debug.enabled_markers.objects", debug.enabled_markers.objects);
+    updateParam(params, ns + ".debug.enabled_markers.collisions", debug.enabled_markers.collisions);
+    updateParam(params, ns + ".debug.enabled_markers.decisions", debug.enabled_markers.decisions);
+    updateParam(
+      params, ns + ".debug.enabled_markers.filtering_data", debug.enabled_markers.filtering_data);
 
     max_history_duration = std::max(stop_off_time_buffer, stop_on_time_buffer);
   }

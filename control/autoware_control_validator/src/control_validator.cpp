@@ -19,6 +19,8 @@
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 
+#include <angles/angles/angles.h>
+
 #include <algorithm>
 #include <cstdint>
 #include <memory>
@@ -39,12 +41,35 @@ void LatencyValidator::validate(
 
 void TrajectoryValidator::validate(
   ControlValidatorStatus & res, const Trajectory & predicted_trajectory,
-  const Trajectory & reference_trajectory) const
+  const Trajectory & reference_trajectory)
 {
-  res.max_distance_deviation =
-    calc_max_lateral_distance(reference_trajectory, predicted_trajectory);
-  res.is_valid_max_distance_deviation =
-    res.max_distance_deviation <= max_distance_deviation_threshold;
+  // First, check with the current reference_trajectory
+  double max_dist_current = calc_max_lateral_distance(reference_trajectory, predicted_trajectory);
+  bool is_valid_current = max_dist_current <= max_distance_deviation_threshold;
+
+  // Note: The reason for comparing with the previous reference_trajectory is that
+  // the predicted_trajectory of the current cycle may not have been generated based on
+  // the reference_trajectory of the current cycle, but rather on the reference_trajectory of the
+  // previous cycle. Therefore, also check the deviation with the previous reference_trajectory.
+  // Only if the threshold is exceeded, also check with the previous reference_trajectory
+  bool is_valid_prev = true;
+  double max_dist_prev = 0.0;
+  if (!is_valid_current && prev_reference_trajectory_.has_value()) {
+    max_dist_prev =
+      calc_max_lateral_distance(prev_reference_trajectory_.value(), predicted_trajectory);
+    is_valid_prev = max_dist_prev <= max_distance_deviation_threshold;
+  }
+
+  // Only if both exceed the threshold, it is judged as abnormal
+  res.max_distance_deviation = std::max(max_dist_current, max_dist_prev);
+  res.is_valid_max_distance_deviation = is_valid_current || is_valid_prev;
+
+  // Save the previous reference_trajectory only if the timestamp is different from the current one
+  if (
+    !prev_reference_trajectory_.has_value() ||
+    prev_reference_trajectory_->header.stamp != reference_trajectory.header.stamp) {
+    prev_reference_trajectory_ = reference_trajectory;
+  }
 }
 
 void LateralJerkValidator::validate(
@@ -63,6 +88,13 @@ void LateralJerkValidator::validate(
   rclcpp::Time current_time(control_cmd.stamp);
   rclcpp::Time prev_time(prev_control_cmd_->stamp);
   const double dt = (current_time - prev_time).seconds();
+
+  // Only perform calculation if the time difference is greater than or equal to 1 msec.
+  // This avoids instability due to too small dt and prevents division by zero.
+  if (dt < 1e-3) {
+    prev_control_cmd_ = std::make_unique<Control>(control_cmd);
+    return;
+  }
 
   const double prev_steering_cmd = prev_control_cmd_->lateral.steering_tire_angle;
   const double steering_rate = (steering_cmd - prev_steering_cmd) / dt;
@@ -184,6 +216,20 @@ void OverrunValidator::validate(
   res.will_overrun_stop_point = res.pred_dist_to_stop < -will_overrun_stop_point_dist_th;
 }
 
+void YawValidator::validate(
+  ControlValidatorStatus & res, const Trajectory & reference_trajectory,
+  const Odometry & kinematics) const
+{
+  const auto interpolated_trajectory_point =
+    motion_utils::calcInterpolatedPoint(reference_trajectory, kinematics.pose.pose);
+  res.yaw_deviation = std::abs(
+    angles::shortest_angular_distance(
+      tf2::getYaw(interpolated_trajectory_point.pose.orientation),
+      tf2::getYaw(kinematics.pose.pose.orientation)));
+  res.is_valid_yaw = res.yaw_deviation <= yaw_deviation_error_th_;
+  res.is_warn_yaw = res.yaw_deviation > yaw_deviation_warn_th_;
+}
+
 ControlValidator::ControlValidator(const rclcpp::NodeOptions & options)
 : Node("control_validator", options), vehicle_info_()
 {
@@ -191,6 +237,9 @@ ControlValidator::ControlValidator(const rclcpp::NodeOptions & options)
 
   sub_control_cmd_ = create_subscription<Control>(
     "~/input/control_cmd", 1, std::bind(&ControlValidator::on_control_cmd, this, _1));
+  sub_operational_state_ =
+    autoware_utils::InterProcessPollingSubscriber<OperationModeState>::create_subscription(
+      this, "~/input/operational_mode_state", 1);
   sub_kinematics_ =
     autoware_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry>::create_subscription(
       this, "~/input/kinematics", 1);
@@ -214,6 +263,8 @@ ControlValidator::ControlValidator(const rclcpp::NodeOptions & options)
   debug_pose_publisher_ = std::make_shared<ControlValidatorDebugMarkerPublisher>(this);
 
   setup_parameters();
+
+  validation_filtering(validation_status_);
 
   setup_diag();
 }
@@ -298,6 +349,36 @@ void ControlValidator::setup_diag()
       stat, validation_status_.is_valid_lateral_jerk,
       "The lateral jerk is larger than expected value.");
   });
+
+  d.add(ns + "yaw_deviation", [&](auto & stat) {
+    set_status(
+      stat, validation_status_.is_valid_yaw, "The vehicle yaw has deviated from the trajectory.");
+    // TODO(someone): implement the dual thresholds for WARN/ERROR for the other metrics
+    if (validation_status_.is_valid_yaw && validation_status_.is_warn_yaw) {
+      stat.summary(
+        DiagnosticStatus::WARN, "The vehicle yaw is deviating but is still under the error value.");
+    }
+  });
+}
+
+bool ControlValidator::infer_autonomous_control_state(const OperationModeState::ConstSharedPtr msg)
+{
+  return (msg->mode == OperationModeState::AUTONOMOUS) && (msg->is_autoware_control_enabled);
+}
+
+void ControlValidator::validation_filtering(ControlValidatorStatus & res)
+{
+  // Set all boolean status into valid state
+  res.is_valid_max_distance_deviation = true;
+  res.is_valid_acc = true;
+  res.is_rolling_back = false;
+  res.is_over_velocity = false;
+  res.is_valid_lateral_jerk = true;
+  res.has_overrun_stop_point = false;
+  res.will_overrun_stop_point = false;
+  res.is_valid_latency = true;
+  res.is_valid_yaw = true;
+  res.is_warn_yaw = false;
 }
 
 void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
@@ -330,6 +411,10 @@ void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
       "reference_trajectory size is less than 2. Cannot validate.");
     return;
   }
+  OperationModeState::ConstSharedPtr operation_mode_msg = sub_operational_state_->take_data();
+  if (operation_mode_msg) {
+    flag_autonomous_control_enabled_ = infer_autonomous_control_state(operation_mode_msg);
+  }
   Odometry::ConstSharedPtr kinematics_msg = sub_kinematics_->take_data();
   if (!kinematics_msg) {
     return waiting(sub_kinematics_->subscriber()->get_topic_name());
@@ -361,10 +446,21 @@ void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
     validation_status_, *kinematics_msg, *control_cmd_msg, *acceleration_msg);
   velocity_validator.validate(validation_status_, *reference_trajectory_msg, *kinematics_msg);
   overrun_validator.validate(validation_status_, *reference_trajectory_msg, *kinematics_msg);
+  yaw_validator.validate(validation_status_, *reference_trajectory_msg, *kinematics_msg);
+
+  if (!flag_autonomous_control_enabled_) {
+    // if warnings or errors are being suppressed, printing simple logs
+    if (!is_all_valid(validation_status_)) {
+      RCLCPP_DEBUG_THROTTLE(
+        get_logger(), *get_clock(), 3000, "Suppressing control validation during manual driving");
+    }
+    validation_filtering(validation_status_);
+  }
 
   // post process
   validation_status_.invalid_count =
     is_all_valid(validation_status_) ? 0 : validation_status_.invalid_count + 1;
+
   diag_updater_.force_update();
 
   publish_debug_info(kinematics_msg->pose.pose);
@@ -394,7 +490,7 @@ bool ControlValidator::is_all_valid(const ControlValidatorStatus & s)
 {
   return s.is_valid_lateral_jerk && s.is_valid_max_distance_deviation && s.is_valid_acc &&
          !s.is_rolling_back && !s.is_over_velocity && !s.has_overrun_stop_point &&
-         !s.will_overrun_stop_point;
+         !s.will_overrun_stop_point && s.is_valid_yaw;
 }
 
 std::string ControlValidator::generate_error_message(const ControlValidatorStatus & s)

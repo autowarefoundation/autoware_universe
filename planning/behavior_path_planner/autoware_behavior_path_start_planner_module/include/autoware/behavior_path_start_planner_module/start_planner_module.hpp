@@ -21,6 +21,7 @@
 #include "autoware/behavior_path_planner_common/utils/path_safety_checker/path_safety_checker_parameters.hpp"
 #include "autoware/behavior_path_planner_common/utils/path_shifter/path_shifter.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
+#include "autoware/behavior_path_start_planner_module/clothoid_pull_out.hpp"
 #include "autoware/behavior_path_start_planner_module/data_structs.hpp"
 #include "autoware/behavior_path_start_planner_module/freespace_pull_out.hpp"
 #include "autoware/behavior_path_start_planner_module/geometric_pull_out.hpp"
@@ -261,7 +262,11 @@ ego pose.
   bool isMoving() const;
 
   PriorityOrder determinePriorityOrder(
-    const std::string & search_priority, const size_t start_pose_candidates_num);
+    const std::vector<std::string> & priority_list, const std::string & search_policy,
+    const size_t start_pose_candidates_num);
+
+  bool isPlannerEnabled(const PlannerType & planner_type) const;
+
   bool findPullOutPath(
     const Pose & start_pose_candidate, const std::shared_ptr<PullOutPlannerBase> & planner,
     const Pose & refined_start_pose, const Pose & goal_pose, const double collision_check_margin,
@@ -320,7 +325,8 @@ ego pose.
   PathWithLaneId getCurrentPath() const;
   void planWithPriority(
     const std::vector<Pose> & start_pose_candidates, const Pose & refined_start_pose,
-    const Pose & goal_pose, const std::string & search_priority);
+    const Pose & goal_pose, const std::vector<std::string> & priority_list,
+    const std::string & search_policy);
   PathWithLaneId generateStopPath() const;
   lanelet::ConstLanelets getPathRoadLanes(const PathWithLaneId & path) const;
   std::vector<DrivableLanes> generateDrivableLanes(const PathWithLaneId & path) const;

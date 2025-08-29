@@ -45,6 +45,12 @@ public:
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
     const std::shared_ptr<const PlannerData> planner_data) override;
   std::string get_module_name() const override { return module_name_; }
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    RequiredSubscriptionInfo required_subscription_info;
+    required_subscription_info.predicted_objects = true;
+    return required_subscription_info;
+  }
 
 private:
   void init_parameters(rclcpp::Node & node);
@@ -71,7 +77,7 @@ private:
   std::string module_name_{"uninitialized"};
   rclcpp::Clock::SharedPtr clock_{nullptr};
   std::optional<geometry_msgs::msg::Pose> previous_slowdown_pose_{std::nullopt};
-  std::vector<out_of_lane::SlowdownPose> slowdown_pose_buffer_{};
+  std::vector<out_of_lane::SlowdownPose> slowdown_pose_buffer_;
 
 protected:
   // Debug

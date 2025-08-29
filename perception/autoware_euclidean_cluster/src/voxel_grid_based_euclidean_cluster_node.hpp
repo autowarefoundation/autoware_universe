@@ -43,8 +43,6 @@ private:
   std::shared_ptr<VoxelGridBasedEuclideanCluster> cluster_;
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
-
-  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
 };
 
 }  // namespace autoware::euclidean_cluster

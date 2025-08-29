@@ -3,6 +3,7 @@ project(autoware_cuda_pointcloud_preprocessor)
 
 find_package(ament_cmake_auto REQUIRED)
 find_package(CUDA)
+find_package(agnocastlib)
 
 if(NOT ${CUDA_FOUND})
   message(WARNING "cuda was not found, so the autoware_cuda_pointcloud_preprocessor package will not be built.")
@@ -10,6 +11,10 @@ if(NOT ${CUDA_FOUND})
 elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-g -G")
   set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-g -G")
+endif()
+
+if("$ENV{ENABLE_AGNOCAST}" AND NOT agnocastlib_FOUND)
+  message(FATAL_ERROR "agnocastlib is required when Agnocast is enabled")
 endif()
 
 ament_auto_find_build_dependencies()
@@ -23,7 +28,13 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wall -Wextra -Wpedantic -Wunused-function)
 endif()
 
+if("$ENV{ENABLE_AGNOCAST}")
+    message("Agnocast support is enabled")
+    add_definitions(-DUSE_AGNOCAST_ENABLED)
+endif()
+
 if(BUILD_TESTING)
+    list(APPEND AMENT_LINT_AUTO_EXCLUDE ament_cmake_uncrustify)
     find_package(ament_lint_auto REQUIRED)
     ament_lint_auto_find_test_dependencies()
 endif()
@@ -67,6 +78,7 @@ target_link_libraries(cuda_pointcloud_preprocessor_lib
 target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
   ${autoware_pointcloud_preprocessor_INCLUDE_DIRS}
   ${autoware_point_types_INCLUDE_DIRS}
+  ${autoware_sensing_msgs_INCLUDE_DIRS}
   ${cuda_blackboard_INCLUDE_DIRS}
   ${diagnostic_msgs_INCLUDE_DIRS}
   ${geometry_msgs_INCLUDE_DIRS}
@@ -78,6 +90,16 @@ target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
   ${tf2_msgs_INCLUDE_DIRS}
   ${autoware_cuda_utils_INCLUDE_DIRS}
 )
+
+if("$ENV{ENABLE_AGNOCAST}")
+    target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
+        ${autoware_agnocast_wrapper_INCLUDE_DIRS}
+        ${agnocastlib_INCLUDE_DIRS}
+    )
+    target_link_libraries(cuda_pointcloud_preprocessor_lib
+        ${agnocastlib_LIBRARIES}
+    )
+endif()
 
 
 # Targets
@@ -114,6 +136,11 @@ rclcpp_components_register_node(cuda_pointcloud_preprocessor
 # Install
 install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}
+)
+
+install(
+  TARGETS cuda_pointcloud_preprocessor_lib
+  LIBRARY DESTINATION lib
 )
 
 ament_auto_package()

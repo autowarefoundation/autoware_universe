@@ -47,11 +47,11 @@ std::optional<geometry_msgs::msg::Pose> calculate_last_in_lane_pose(
 
 /// @brief calculate the slowdown point to insert in the trajectory
 /// @param ego_data ego data (trajectory, velocity, etc)
-/// @param out_of_lane_data data about out of lane areas
+/// @param out_of_lane_point out of lane point to avoid
 /// @param params parameters
 /// @return optional slowdown pose to insert in the trajectory
 std::optional<geometry_msgs::msg::Pose> calculate_slowdown_pose(
-  const EgoData & ego_data, const OutOfLaneData & out_of_lane_data, const PlannerParam & params);
+  const EgoData & ego_data, const OutOfLanePoint & out_of_lane_point, const PlannerParam & params);
 
 /// @brief calculate the minimum stop and slowdown distances of ego
 /// @param [inout] ego_data ego data where minimum stop and slowdown distances are set

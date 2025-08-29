@@ -1,0 +1,44 @@
+/**:
+  ros__parameters:
+    diagnostic_updater:
+      period: 1.0
+      use_fqn: true
+
+/adapi/node/autoware_state:
+  ros__parameters:
+    update_rate: 10.0
+
+/adapi/node/motion:
+  ros__parameters:
+    require_accept_start: false
+    stop_check_duration: 1.0
+
+/adapi/node/routing:
+  ros__parameters:
+    stop_check_duration: 1.0
+
+/adapi/node/vehicle_metrics:
+  ros__parameters:
+    update_rate: 0.1
+
+/adapi/node/vehicle_door:
+  ros__parameters:
+    check_autoware_control: true
+
+/adapi/node/manual/local:
+  ros__parameters:
+    mode: local
+
+/adapi/node/manual/remote:
+  ros__parameters:
+    mode: remote
+
+/adapi/node/fail_safe:
+  ros__parameters:
+    mrm_descriptions:
+      emergency_stop:
+        behavior: 2
+        description: "Emergency stop"
+      comfortable_stop:
+        behavior: 3
+        description: "Comfortable stop"

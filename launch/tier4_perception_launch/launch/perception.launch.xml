@@ -8,6 +8,7 @@
   <arg name="object_recognition_detection_pointcloud_map_filter_param_path"/>
   <arg name="object_recognition_prediction_map_based_prediction_param_path"/>
   <arg name="object_recognition_detection_object_merger_data_association_matrix_param_path"/>
+  <arg name="ml_camera_lidar_object_association_merger_param_path"/>
   <arg name="object_recognition_detection_object_merger_distance_threshold_list_path"/>
   <arg name="object_recognition_detection_fusion_sync_param_path"/>
   <arg name="object_recognition_detection_roi_cluster_fusion_param_path"/>
@@ -16,8 +17,6 @@
   <arg name="object_recognition_detection_pointpainting_fusion_common_param_path"/>
   <arg name="object_recognition_detection_lidar_model_param_path"/>
   <arg name="object_recognition_detection_radar_lanelet_filtering_range_param_path"/>
-  <arg name="object_recognition_detection_radar_crossing_objects_noise_filter_param_path"/>
-  <arg name="object_recognition_detection_radar_object_clustering_param_path"/>
   <arg name="object_recognition_detection_object_velocity_splitter_radar_param_path"/>
   <arg name="object_recognition_detection_object_velocity_splitter_radar_fusion_param_path"/>
   <arg name="object_recognition_detection_object_range_splitter_radar_param_path"/>
@@ -25,8 +24,8 @@
   <arg name="object_recognition_tracking_multi_object_tracker_data_association_matrix_param_path"/>
   <arg name="object_recognition_tracking_multi_object_tracker_input_channels_param_path"/>
   <arg name="object_recognition_tracking_multi_object_tracker_node_param_path"/>
-  <arg name="object_recognition_tracking_radar_object_tracker_data_association_matrix_param_path"/>
-  <arg name="object_recognition_tracking_radar_object_tracker_tracking_setting_param_path"/>
+  <arg name="object_recognition_tracking_radar_tracked_object_sorter_param_path"/>
+  <arg name="object_recognition_tracking_radar_tracked_object_lanelet_filter_param_path"/>
   <arg name="obstacle_segmentation_ground_segmentation_param_path"/>
   <arg name="obstacle_segmentation_ground_segmentation_elevation_map_param_path"/>
   <arg name="object_recognition_detection_obstacle_pointcloud_based_validator_param_path"/>
@@ -50,14 +49,24 @@
   <!-- ML model parameters -->
   <arg name="lidar_detection_model_type" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[0]&quot;)"/>
   <arg name="lidar_detection_model_name" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[1] if '/' in '$(var lidar_detection_model)' else ''&quot;)"/>
+  <arg name="use_short_range_detection" default="false" description="use short range detection for redundant VRU detection"/>
+  <arg name="lidar_short_range_detection_model_type" default="centerpoint_short_range" description="options: `centerpoint_short_range`">
+    <choice value="centerpoint_short_range"/>
+  </arg>
+  <arg name="lidar_short_range_detection_model_name" default="centerpoint_short_range" description="options: `centerpoint_short_range`">
+    <choice value="centerpoint_short_range"/>
+    <choice value=""/>
+  </arg>
   <arg name="bevfusion_model_path" default="$(var data_path)/bevfusion"/>
   <arg name="centerpoint_model_path" default="$(var data_path)/lidar_centerpoint"/>
   <arg name="transfusion_model_path" default="$(var data_path)/lidar_transfusion"/>
+  <arg name="short_range_centerpoint_model_path" default="$(var data_path)/lidar_short_range_centerpoint"/>
   <arg name="pointpainting_model_path" default="$(var data_path)/image_projection_based_fusion"/>
 
   <!-- Common parameters -->
   <arg name="input/pointcloud" default="/sensing/lidar/concatenated/pointcloud" description="The topic will be used in the detection module"/>
   <arg name="mode" default="camera_lidar_fusion">
+    <choice value="camera"/>
     <choice value="camera_lidar_radar_fusion"/>
     <choice value="camera_lidar_fusion"/>
     <choice value="lidar_radar_fusion"/>
@@ -106,11 +115,15 @@
   <arg name="image_raw7" default="/sensing/camera/camera7/image_rect_color"/>
   <arg name="camera_info7" default="/sensing/camera/camera7/camera_info"/>
   <arg name="detection_rois7" default="/perception/object_recognition/detection/rois7"/>
+  <arg name="image_raw8" default="/sensing/camera/camera8/image_rect_color"/>
+  <arg name="camera_info8" default="/sensing/camera/camera8/camera_info"/>
+  <arg name="detection_rois8" default="/perception/object_recognition/detection/rois8"/>
   <arg name="image_number" default="6" description="choose image raw number(1-8)"/>
   <arg name="image_topic_name" default="image_rect_color" description="image topic name options `image_rect_color`, `image_raw"/>
   <arg name="segmentation_pointcloud_fusion_camera_ids" default="[0,1,5]" description="list of camera ids used for segmentation_pointcloud_fusion node"/>
-
+  <arg name="ml_camera_lidar_merger_priority_mode" default="0" description="priority mode for ml and camera_lidar merger, options: `0: Object0`, `1: Object1`, `2: ConfidenceBased`, `3: ClassBased`"/>
   <arg name="pointcloud_container_name" default="pointcloud_container"/>
+  <arg name="input/concatenation_info" default="/sensing/lidar/concatenated/pointcloud_info"/>
 
   <!-- Pipeline junctions -->
   <arg name="use_vector_map" default="true" description="use vector map in prediction"/>
@@ -129,6 +142,7 @@
   <arg name="use_object_validator" default="true" description="use obstacle_pointcloud based object validator"/>
   <arg name="objects_validation_method" default="obstacle_pointcloud" description="options: `obstacle_pointcloud` or `occupancy_grid`"/>
   <arg name="use_perception_online_evaluator" default="false" description="use perception online evaluator"/>
+  <arg name="use_perception_analytics_publisher" default="true" description="use perception analytics publisher"/>
   <arg name="use_obstacle_segmentation_single_frame_filter" description="use single frame filter at the ground segmentation"/>
   <arg name="use_obstacle_segmentation_time_series_filter" description="use time series filter at the ground segmentation"/>
 
@@ -240,6 +254,9 @@
           <arg name="mode" value="$(var mode)"/>
           <arg name="lidar_detection_model_type" value="$(var lidar_detection_model_type)"/>
           <arg name="lidar_detection_model_name" value="$(var lidar_detection_model_name)"/>
+          <arg name="use_short_range_detection" value="$(var use_short_range_detection)"/>
+          <arg name="lidar_short_range_detection_model_type" value="$(var lidar_short_range_detection_model_type)"/>
+          <arg name="lidar_short_range_detection_model_name" value="$(var lidar_short_range_detection_model_name)"/>
           <arg name="use_multi_channel_tracker_merger" value="$(var use_multi_channel_tracker_merger)"/>
           <arg name="number_of_cameras" value="$(var image_number)"/>
           <arg name="input/camera0/image" value="$(var image_raw0)"/>
@@ -266,6 +283,10 @@
           <arg name="input/camera7/image" value="$(var image_raw7)"/>
           <arg name="input/camera7/info" value="$(var camera_info7)"/>
           <arg name="input/camera7/rois" value="$(var detection_rois7)"/>
+          <arg name="input/camera8/image" value="$(var image_raw8)"/>
+          <arg name="input/camera8/info" value="$(var camera_info8)"/>
+          <arg name="input/camera8/rois" value="$(var detection_rois8)"/>
+          <arg name="input/concatenation_info" value="$(var input/concatenation_info)"/>
           <arg name="input/pointcloud" value="$(var perception_pointcloud)"/>
           <arg name="node/pointcloud_container" value="$(var pointcloud_container_name)"/>
           <arg name="input/radar" value="$(var input/radar)"/>
@@ -279,7 +300,6 @@
           <arg name="outlier_param_path" value="$(var object_recognition_detection_outlier_param_path)"/>
           <arg name="voxel_grid_based_euclidean_param_path" value="$(var object_recognition_detection_voxel_grid_based_euclidean_cluster_param_path)"/>
           <arg name="radar_lanelet_filtering_range_param_path" value="$(var object_recognition_detection_radar_lanelet_filtering_range_param_path)"/>
-          <arg name="radar_object_clustering_param_path" value="$(var object_recognition_detection_radar_object_clustering_param_path)"/>
           <arg name="detection_by_tracker_param_path" value="$(var object_recognition_detection_detection_by_tracker_param)"/>
 
           <arg name="use_detection_by_tracker" value="$(var use_detection_by_tracker)"/>
@@ -295,6 +315,7 @@
           <arg name="use_irregular_object_detector" value="$(var use_irregular_object_detector)"/>
           <arg name="image_topic_name" value="$(var image_topic_name)"/>
           <arg name="segmentation_pointcloud_fusion_camera_ids" value="$(var segmentation_pointcloud_fusion_camera_ids)"/>
+          <arg name="ml_camera_lidar_merger_priority_mode" value="$(var ml_camera_lidar_merger_priority_mode)"/>
         </include>
       </group>
 
@@ -303,18 +324,16 @@
         <push-ros-namespace namespace="tracking"/>
         <include file="$(find-pkg-share tier4_perception_launch)/launch/object_recognition/tracking/tracking.launch.xml">
           <arg name="mode" value="$(var mode)"/>
-          <arg
-            name="object_recognition_tracking_radar_object_tracker_data_association_matrix_param_path"
-            value="$(var object_recognition_tracking_radar_object_tracker_data_association_matrix_param_path)"
-          />
-          <arg name="object_recognition_tracking_radar_object_tracker_tracking_setting_param_path" value="$(var object_recognition_tracking_radar_object_tracker_tracking_setting_param_path)"/>
-          <arg name="object_recognition_tracking_radar_object_tracker_node_param_path" value="$(var object_recognition_tracking_radar_object_tracker_node_param_path)"/>
+          <arg name="lidar_detection_model_type" value="$(var lidar_detection_model_type)"/>
+          <arg name="object_recognition_tracking_radar_tracked_object_sorter_param_path" value="$(var object_recognition_tracking_radar_tracked_object_sorter_param_path)"/>
+          <arg name="object_recognition_tracking_radar_tracked_object_lanelet_filter_param_path" value="$(var object_recognition_tracking_radar_tracked_object_lanelet_filter_param_path)"/>
           <arg name="object_recognition_tracking_object_merger_data_association_matrix_param_path" value="$(var object_recognition_tracking_object_merger_data_association_matrix_param_path)"/>
           <arg name="object_recognition_tracking_object_merger_node_param_path" value="$(var object_recognition_tracking_object_merger_node_param_path)"/>
           <arg name="use_multi_channel_tracker_merger" value="$(var use_multi_channel_tracker_merger)"/>
           <arg name="use_radar_tracking_fusion" value="$(var use_radar_tracking_fusion)"/>
           <arg name="use_detection_by_tracker" value="$(var use_detection_by_tracker)"/>
           <arg name="use_validator" value="$(var use_object_validator)"/>
+          <arg name="use_short_range_detection" value="$(var use_short_range_detection)"/>
         </include>
       </group>
 
@@ -367,5 +386,10 @@
   <!-- perception evaluator -->
   <group if="$(var use_perception_online_evaluator)">
     <include file="$(find-pkg-share autoware_perception_online_evaluator)/launch/perception_online_evaluator.launch.xml"/>
+  </group>
+
+  <!-- perception analytics publisher-->
+  <group if="$(var use_perception_analytics_publisher)">
+    <include file="$(find-pkg-share autoware_perception_online_evaluator)/launch/perception_analytics_publisher.launch.xml"/>
   </group>
 </launch>

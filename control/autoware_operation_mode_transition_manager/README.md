@@ -53,14 +53,14 @@ Here we see that `autoware_operation_mode_transition_manager` has multiple state
 
 For the mode transition:
 
-- /system/operation_mode/change_autoware_control [`tier4_system_msgs/srv/ChangeAutowareControl`]: change operation mode to Autonomous
-- /system/operation_mode/change_operation_mode [`tier4_system_msgs/srv/ChangeOperationMode`]: change operation mode
+- /system/operation_mode/change_autoware_control [`autoware_system_msgs/srv/ChangeAutowareControl`]: change operation mode to Autonomous
+- /system/operation_mode/change_operation_mode [`autoware_system_msgs/srv/ChangeOperationMode`]: change operation mode
 
 For the transition availability/completion check:
 
 - /control/command/control_cmd [`autoware_control_msgs/msg/Control`]: vehicle control signal
 - /localization/kinematic_state [`nav_msgs/msg/Odometry`]: ego vehicle state
-- /planning/scenario_planning/trajectory [`autoware_planning_msgs/msg/Trajectory`]: planning trajectory
+- /planning/trajectory [`autoware_planning_msgs/msg/Trajectory`]: planning trajectory
 - /vehicle/status/control_mode [`autoware_vehicle_msgs/msg/ControlModeReport`]: vehicle control mode (autonomous/manual)
 - /control/vehicle_cmd_gate/operation_mode [`autoware_adapi_v1_msgs/msg/OperationModeState`]: the operation mode in the `vehicle_cmd_gate`. (To be removed)
 

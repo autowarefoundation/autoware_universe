@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <arg name="diffusion_planner_param_path" default="$(find-pkg-share autoware_diffusion_planner)/config/diffusion_planner.param.yaml"/>
+  <arg name="output_trajectory" default="~/output/trajectory"/>
+  <arg name="output_trajectories" default="~/output/trajectories"/>
+  <arg name="output_predicted_objects" default="~/output/predicted_objects"/>
+  <arg name="output_turn_indicators" default="~/output/turn_indicators"/>
+  <arg name="input_odometry" default="~/input/odometry"/>
+  <arg name="input_acceleration" default="~/input/acceleration"/>
+  <arg name="input_route" default="~/input/route"/>
+  <arg name="input_traffic_signals" default="~/input/traffic_signals"/>
+  <arg name="input_tracked_objects" default="~/input/tracked_objects"/>
+  <arg name="input_vector_map" default="~/input/vector_map"/>
+
+  <node pkg="autoware_diffusion_planner" exec="autoware_diffusion_planner_node" name="diffusion_planner_node" output="both">
+    <param from="$(var diffusion_planner_param_path)" allow_substs="true"/>
+    <remap from="~/output/trajectory" to="$(var output_trajectory)"/>
+    <remap from="~/output/trajectories" to="$(var output_trajectories)"/>
+    <remap from="~/output/predicted_objects" to="$(var output_predicted_objects)"/>
+    <remap from="~/output/turn_indicators" to="$(var output_turn_indicators)"/>
+    <remap from="~/input/odometry" to="$(var input_odometry)"/>
+    <remap from="~/input/acceleration" to="$(var input_acceleration)"/>
+    <remap from="~/input/route" to="$(var input_route)"/>
+    <remap from="~/input/traffic_signals" to="$(var input_traffic_signals)"/>
+    <remap from="~/input/tracked_objects" to="$(var input_tracked_objects)"/>
+    <remap from="~/input/vector_map" to="$(var input_vector_map)"/>
+  </node>
+</launch>
