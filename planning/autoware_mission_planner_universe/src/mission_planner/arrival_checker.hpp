@@ -18,6 +18,8 @@
 #include <autoware/motion_utils/vehicle/vehicle_state_checker.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include "std_msgs/msg/bool.hpp"
+#include <autoware_internal_planning_msgs/msg/scenario.hpp>
 #include <autoware_planning_msgs/msg/pose_with_uuid_stamped.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
@@ -44,6 +46,16 @@ private:
   std::optional<PoseWithUuidStamped> goal_with_uuid_;
   rclcpp::Subscription<PoseWithUuidStamped>::SharedPtr sub_goal_;
   autoware::motion_utils::VehicleStopChecker vehicle_stop_checker_;
+
+  // scenario subscriber
+  rclcpp::Subscription<autoware_internal_planning_msgs::msg::Scenario>::SharedPtr sub_scenario_;
+  rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr sub_parking_state_;
+  std::string current_scenario_;
+  bool parking_completed_;
+
+  // callback
+  void onScenario(const autoware_internal_planning_msgs::msg::Scenario::ConstSharedPtr msg);
+  void onParking(const std_msgs::msg::Bool::ConstSharedPtr msg);
 };
 
 }  // namespace autoware::mission_planner_universe
