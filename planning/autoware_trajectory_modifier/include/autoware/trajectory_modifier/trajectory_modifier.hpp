@@ -19,8 +19,8 @@
 #include "autoware/trajectory_modifier/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
 #include "autoware/trajectory_modifier/trajectory_modifier_structs.hpp"
 
-#include <autoware_utils/ros/polling_subscriber.hpp>
-#include <autoware_utils/system/time_keeper.hpp>
+#include <autoware_utils_rclcpp/polling_subscriber.hpp>
+#include <autoware_utils_debug/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/subscription.hpp>
 
@@ -65,19 +65,19 @@ private:
   rclcpp::Subscription<CandidateTrajectories>::SharedPtr trajectories_sub_;
   rclcpp::Publisher<Trajectory>::SharedPtr trajectory_pub_;
   rclcpp::Publisher<CandidateTrajectories>::SharedPtr trajectories_pub_;
-  rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr debug_processing_time_detail_;
+  rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr debug_processing_time_detail_;
 
-  autoware_utils::InterProcessPollingSubscriber<Odometry> sub_current_odometry_{
+  autoware_utils_rclcpp::InterProcessPollingSubscriber<Odometry> sub_current_odometry_{
     this, "~/input/odometry"};
-  autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped>
+  autoware_utils_rclcpp::InterProcessPollingSubscriber<AccelWithCovarianceStamped>
     sub_current_acceleration_{this, "~/input/acceleration"};
 
   Odometry::ConstSharedPtr current_odometry_ptr_;
   AccelWithCovarianceStamped::ConstSharedPtr current_acceleration_ptr_;
 
-  rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
+  rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
     debug_processing_time_detail_pub_;
-  mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
+  mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 
   TrajectoryModifierParams params_;
   TrajectoryModifierData data_;
