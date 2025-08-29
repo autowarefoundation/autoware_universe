@@ -50,7 +50,8 @@ ArrivalChecker::ArrivalChecker(rclcpp::Node * node) : vehicle_stop_checker_(node
   parking_completed_ = false;
 }
 
-void ArrivalChecker::onScenario(const autoware_internal_planning_msgs::msg::Scenario::ConstSharedPtr msg)
+void ArrivalChecker::onScenario(
+  const autoware_internal_planning_msgs::msg::Scenario::ConstSharedPtr msg)
 {
   current_scenario_ = msg->current_scenario;  // "LANEDRIVING" or "PARKING"
 }

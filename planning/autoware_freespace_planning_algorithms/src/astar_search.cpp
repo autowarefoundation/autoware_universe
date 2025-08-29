@@ -683,7 +683,7 @@ bool AstarSearch::isGoal(const AstarNode & node) const
 
   int direction_switch_count = 0;
   double max_dist_from_goal = 0.0;
-  const int required_switch_count = 1;                // direction_changed occurs exactly once
+  const int required_switch_count = 1;                    // direction_changed occurs exactly once
   const double reparking_distance = reparking_distance_;  // 2.0
 
   const AstarNode * current = &node;

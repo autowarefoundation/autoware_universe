@@ -230,8 +230,8 @@ void FreespacePlannerNode::updateTargetIndex()
       quaternionAngularDifference(goal_pose_.pose.orientation, current_pose_.pose.orientation);
 
     RCLCPP_INFO_STREAM(
-      get_logger(), " Angle difference (goal pose vs current pose): " << angle_goal_current
-                                                                              << " degrees");
+      get_logger(),
+      " Angle difference (goal pose vs current pose): " << angle_goal_current << " degrees");
     RCLCPP_INFO_STREAM(
       get_logger(), " Final deviation from goal - X: "
                       << current_pose_.pose.position.x - goal_pose_.pose.position.x
@@ -257,8 +257,7 @@ void FreespacePlannerNode::updateTargetIndex()
     } else {
       replan_count_ = 0;
       is_completed_ = true;
-      RCLCPP_INFO_THROTTLE(
-        get_logger(), *get_clock(), 1000, " Freespace planning completed.");
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, " Freespace planning completed.");
 
       std_msgs::msg::Bool is_completed_msg;
       is_completed_msg.data = is_completed_;

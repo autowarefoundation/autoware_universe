@@ -129,9 +129,11 @@ def launch_setup(context, *args, **kwargs):
             occupancy_grid_map_updater_params,
             {
                 "input_obstacle_pointcloud": LaunchConfiguration("input_obstacle_pointcloud"),
-                "input_obstacle_and_raw_pointcloud": LaunchConfiguration("input_obstacle_and_raw_pointcloud"),
+                "input_obstacle_and_raw_pointcloud": LaunchConfiguration(
+                    "input_obstacle_and_raw_pointcloud"
+                ),
                 "updater_type": LaunchConfiguration("updater_type"),
-                "map_resolution": 0.25
+                "map_resolution": 0.25,
             },
         ],
         extra_arguments=[{"use_intra_process_comms": LaunchConfiguration("use_intra_process")}],

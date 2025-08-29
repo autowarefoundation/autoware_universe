@@ -79,7 +79,7 @@ struct AstarNode
   int steering_index;                    // steering index
   bool is_back;                          // true if the current direction of the vehicle is back
   bool reparking_direction_change;
-  AstarNode * parent = nullptr;          // parent node
+  AstarNode * parent = nullptr;  // parent node
 
   inline void set(
     const Pose & pose, const double move_cost, const double total_cost, const double steer_ind,
