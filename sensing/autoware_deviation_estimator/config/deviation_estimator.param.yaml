@@ -1,0 +1,27 @@
+/**:
+  ros__parameters:
+    time_window: 4.0
+    vx_threshold: 1.5
+    wz_threshold: 0.01
+    accel_threshold: 0.3
+    output_frame: base_link
+    gyro_estimation:
+      only_use_straight: true
+      only_use_moving: false
+      only_use_constant_velocity: false
+      add_bias_uncertainty: false
+    velocity_estimation:
+      only_use_straight: true
+      only_use_moving: true
+      only_use_constant_velocity: true
+      add_bias_uncertainty: false
+
+    # Used when adding bias-based uncertainty
+    dt_design: 10.0 # [s]
+    dx_design: 30.0 # [m]
+
+    # Used for validating the results of deviation_estimator
+    thres_coef_vx: 0.01 # [.]
+    thres_stddev_vx: 0.05 # [.]
+    thres_bias_gyro: 0.001 # [rad/s]
+    thres_stddev_gyro: 0.01 # [rad/s]
