@@ -25,7 +25,32 @@ pluginlib_export_plugin_description_file(
 
 ament_export_include_directories(include)
 
-ament_auto_package(INSTALL_TO_SHARE
-  launch
-  config
+# --- Tests ---
+if(BUILD_TESTING)
+  ament_add_ros_isolated_gtest(test_${PROJECT_NAME}_gate
+    test/test_scenario_gate_interface.cpp
+  )
+  target_link_libraries(test_${PROJECT_NAME}_gate
+    ${PROJECT_NAME}
+  )
+
+  ament_add_ros_isolated_gtest(test_${PROJECT_NAME}_default
+    test/test_default_selector.cpp
+  )
+  target_link_libraries(test_${PROJECT_NAME}_default
+    ${PROJECT_NAME}_selectors
+  )
+
+  ament_add_ros_isolated_gtest(test_${PROJECT_NAME}_extra
+    test/test_extra_selector.cpp
+  )
+  target_link_libraries(test_${PROJECT_NAME}_extra
+    ${PROJECT_NAME}_selectors
+  )
+endif()
+
+ament_auto_package(
+  INSTALL_TO_SHARE
+    launch
+    config
 )
