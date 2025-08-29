@@ -20,6 +20,18 @@ ament_auto_add_executable(waypoint_saver
   src/waypoint_saver/waypoint_saver.cpp
 )
 
+if(BUILD_TESTING)
+  ament_add_ros_isolated_gtest(test_${PROJECT_NAME}
+    test/test_waypoint_maker_utils.cpp
+  )
+  target_include_directories(test_${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+  )
+  ament_target_dependencies(test_${PROJECT_NAME}   
+    autoware_universe_utils 
+  )
+endif()
+
 ament_auto_package(
   INSTALL_TO_SHARE
   launch
