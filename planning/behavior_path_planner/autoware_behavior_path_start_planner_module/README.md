@@ -83,7 +83,8 @@ Here are some notable limitations:
 
 The `StartPlannerModule` is designed to initiate its execution based on specific criteria evaluated by the `isExecutionRequested` function. The module will **not** start under the following conditions:
 
-1. **Start pose on the middle of the road**: The module will not initiate if the start pose of the vehicle is determined to be in the middle of the road. This ensures the planner starts from a roadside position.
+1. **Start pose on the ego centerline**: The module will not initiate if the start pose of the vehicle is determined to be on the centerline or on "waypoints" (custom centerline). This ensures the planner starts from a roadside position.
+   - _Exception_: If the vehicle is located at a bus stop, this check is bypassed.
 
 2. **Vehicle is far from start position**: If the vehicle is far from the start position, the module will not execute. This prevents redundant execution when the new goal is given.
 
@@ -107,7 +108,7 @@ The transition to the success state is determined by the following conditions:
 
 - If a reverse path is being generated or the search for a pull out path fails:
   - The module does not transition to the success state.
-- If the end point of the pull out path's shift section is reached:
+- If the end point of the pull out path's shift section is reached or if the vehicle has exited the bus stop (if applicable):
   - The module transitions to the success state.
 
 The flowchart below illustrates the decision-making process in the `canTransitSuccessState` function:
@@ -138,7 +139,7 @@ endif
 else (no)
 if (driving is forward?) then (yes)
 if (pull out path is found?) then (yes)
-if (Has reached pull out end?) then (yes)
+if (Has reached pull out end \nor exited bus stop?) then (yes)
 #FF006C:true;
 stop
 else (no)
