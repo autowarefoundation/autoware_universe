@@ -36,9 +36,9 @@ TrajectoryModifier::TrajectoryModifier(const rclcpp::NodeOptions & options)
   trajectories_pub_ = create_publisher<CandidateTrajectories>("~/output/candidate_trajectories", 1);
 
   debug_processing_time_detail_pub_ =
-    create_publisher<autoware_utils::ProcessingTimeDetail>("~/debug/processing_time_detail", 1);
+    create_publisher<autoware_utils_debug::ProcessingTimeDetail>("~/debug/processing_time_detail", 1);
 
-  time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>();
+  time_keeper_ = std::make_shared<autoware_utils_debug::TimeKeeper>();
 
   set_param_res_ = this->add_on_set_parameters_callback(
     std::bind(&TrajectoryModifier::on_parameter, this, std::placeholders::_1));
