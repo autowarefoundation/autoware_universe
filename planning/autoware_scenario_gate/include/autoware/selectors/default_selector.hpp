@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__DEFAULT_SCENARIO_SELECTOR__NODE_HPP_
-#define AUTOWARE__DEFAULT_SCENARIO_SELECTOR__NODE_HPP_
+#ifndef AUTOWARE__SELECTORS__DEFAULT_SELECTOR_HPP_
+#define AUTOWARE__SELECTORS__DEFAULT_SELECTOR_HPP_
 
-#include <autoware/scenario_selector_base.hpp> 
+#include <autoware/scenario_selector_base.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
-
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
@@ -25,7 +24,6 @@
 #include <autoware_internal_planning_msgs/msg/scenario.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
-#include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <std_msgs/msg/bool.hpp>
@@ -62,21 +60,19 @@ public:
   void initialize(rclcpp::Node * node) override;
   bool ready() const override;
   std::string select() override;
+  void updateCurrentScenario() override;
+  std::string selectScenarioByPosition() override;
+  autoware_planning_msgs::msg::Trajectory::ConstSharedPtr getScenarioTrajectory(
+    const std::string & scenario) override;
+  void updateData() override;
 
   void onOdom(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
-  bool isDataReady();
   void onTimer();
   void onMap(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg);
   void onRoute(const autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr msg);
   void onLaneDrivingTrajectory(const autoware_planning_msgs::msg::Trajectory::ConstSharedPtr msg);
   void onParkingTrajectory(const autoware_planning_msgs::msg::Trajectory::ConstSharedPtr msg);
   void publishTrajectory(const autoware_planning_msgs::msg::Trajectory::ConstSharedPtr msg);
-
-  void updateCurrentScenario();
-  std::string selectScenarioByPosition();
-  autoware_planning_msgs::msg::Trajectory::ConstSharedPtr getScenarioTrajectory(
-    const std::string & scenario);
-  void updateData();
 
 private:
   bool isAutonomous() const;
@@ -133,8 +129,8 @@ private:
   double th_arrived_distance_m_;
   double th_stopped_time_sec_;
   double th_stopped_velocity_mps_;
-  bool   enable_mode_switching_;
-  bool   is_parking_completed_{false};
+  bool enable_mode_switching_;
+  bool is_parking_completed_{false};
 
   boost::optional<rclcpp::Time> lane_driving_stop_time_;
   boost::optional<rclcpp::Time> empty_parking_trajectory_time_;
@@ -147,4 +143,4 @@ private:
 };
 }  // namespace autoware::scenario_selector
 
-#endif  // AUTOWARE__DEFAULT_SCENARIO_SELECTOR__NODE_HPP_
+#endif  // AUTOWARE__SELECTORS__DEFAULT_SELECTOR_HPP_

@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__SCENARIO_GATE__SCENARIO_SELECTOR_BASE_HPP_
-#define AUTOWARE__SCENARIO_GATE__SCENARIO_SELECTOR_BASE_HPP_
+#ifndef AUTOWARE__SCENARIO_SELECTOR_BASE_HPP_
+#define AUTOWARE__SCENARIO_SELECTOR_BASE_HPP_
 
 #include <rclcpp/rclcpp.hpp>
+#include <autoware_planning_msgs/msg/trajectory.hpp>
 
 namespace autoware::scenario_selector
 {
@@ -30,7 +31,16 @@ public:
   virtual bool ready() const = 0;
 
   virtual std::string select() = 0;
-};
+
+  virtual void updateCurrentScenario() = 0;
+
+  virtual std::string selectScenarioByPosition() = 0;
+
+  virtual autoware_planning_msgs::msg::Trajectory::ConstSharedPtr getScenarioTrajectory(
+    const std::string & scenario) = 0;
+
+  virtual void updateData() = 0;
+  };
 
 }  // namespace autoware::scenario_selector
 

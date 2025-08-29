@@ -256,8 +256,43 @@ void ExtraScenarioSelector::initialize(rclcpp::Node * node)
 
 bool ExtraScenarioSelector::ready() const
 {
-  return static_cast<bool>(route_) && static_cast<bool>(current_pose_) &&
-         static_cast<bool>(operation_mode_state_) && static_cast<bool>(route_handler_);
+  if (!current_pose_) {
+    RCLCPP_INFO_THROTTLE(
+      node_->get_logger(), *node_->get_clock(), 5000, "Waiting for current pose.");
+    return false;
+  }
+
+  if (!route_handler_) {
+    RCLCPP_INFO_THROTTLE(
+      node_->get_logger(), *node_->get_clock(), 5000, "Waiting for route handler.");
+    return false;
+  }
+
+  if (!route_) {
+    RCLCPP_INFO_THROTTLE(node_->get_logger(), *node_->get_clock(), 5000, "Waiting for route.");
+    return false;
+  }
+
+  if (!twist_) {
+    RCLCPP_INFO_THROTTLE(node_->get_logger(), *node_->get_clock(), 5000, "Waiting for twist.");
+    return false;
+  }
+
+  if (!operation_mode_state_) {
+    RCLCPP_INFO_THROTTLE(
+      node_->get_logger(), *node_->get_clock(), 5000, "Waiting for operation mode state.");
+    return false;
+  }
+
+  // Check route handler is ready
+  route_handler_->setRoute(*route_);
+  if (!route_handler_->isHandlerReady()) {
+    RCLCPP_WARN_THROTTLE(
+      node_->get_logger(), *node_->get_clock(), 5000, "Waiting for route handler.");
+    return false;
+  }
+
+  return true;
 }
 
 std::string ExtraScenarioSelector::select()
@@ -522,47 +557,6 @@ void ExtraScenarioSelector::onOdom(const nav_msgs::msg::Odometry::ConstSharedPtr
   }
 }
 
-bool ExtraScenarioSelector::isDataReady()
-{
-  if (!current_pose_) {
-    RCLCPP_INFO_THROTTLE(
-      node_->get_logger(), *node_->get_clock(), 5000, "Waiting for current pose.");
-    return false;
-  }
-
-  if (!route_handler_) {
-    RCLCPP_INFO_THROTTLE(
-      node_->get_logger(), *node_->get_clock(), 5000, "Waiting for route handler.");
-    return false;
-  }
-
-  if (!route_) {
-    RCLCPP_INFO_THROTTLE(node_->get_logger(), *node_->get_clock(), 5000, "Waiting for route.");
-    return false;
-  }
-
-  if (!twist_) {
-    RCLCPP_INFO_THROTTLE(node_->get_logger(), *node_->get_clock(), 5000, "Waiting for twist.");
-    return false;
-  }
-
-  if (!operation_mode_state_) {
-    RCLCPP_INFO_THROTTLE(
-      node_->get_logger(), *node_->get_clock(), 5000, "Waiting for operation mode state.");
-    return false;
-  }
-
-  // Check route handler is ready
-  route_handler_->setRoute(*route_);
-  if (!route_handler_->isHandlerReady()) {
-    RCLCPP_WARN_THROTTLE(
-      node_->get_logger(), *node_->get_clock(), 5000, "Waiting for route handler.");
-    return false;
-  }
-
-  return true;
-}
-
 void ExtraScenarioSelector::updateData()
 {
   {
@@ -592,7 +586,7 @@ void ExtraScenarioSelector::onTimer()
 {
   updateData();
 
-  if (!isDataReady()) {
+  if (!ready()) {
     return;
   }
 

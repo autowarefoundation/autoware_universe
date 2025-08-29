@@ -175,14 +175,37 @@ void DefaultScenarioSelector::initialize(rclcpp::Node * node)
 
 bool DefaultScenarioSelector::ready() const
 {
-  if (!current_pose_) return false;
-  if (!route_handler_) return false;
-  if (!route_) return false;
-  if (!twist_) return false;
-  if (!operation_mode_state_) return false;
+  if (!current_pose_) {
+    RCLCPP_INFO_THROTTLE(
+      node_->get_logger(), *node_->get_clock(), 5000, "Waiting for current pose.");
+    return false;
+  }
+  if (!route_handler_) {
+    RCLCPP_INFO_THROTTLE(
+      node_->get_logger(), *node_->get_clock(), 5000, "Waiting for route handler.");
+    return false;
+  }
+  if (!route_) {
+    RCLCPP_INFO_THROTTLE(node_->get_logger(), *node_->get_clock(), 5000, "Waiting for route.");
+    return false;
+  }
+  if (!twist_) {
+    RCLCPP_INFO_THROTTLE(node_->get_logger(), *node_->get_clock(), 5000, "Waiting for twist.");
+    return false;
+  }
+  if (!operation_mode_state_) {
+    RCLCPP_INFO_THROTTLE(
+      node_->get_logger(), *node_->get_clock(), 5000, "Waiting for operation mode state.");
+    return false;
+  }
 
-  if (!route_handler_->isHandlerReady()) return false;
-
+  // Check route handler is ready
+  route_handler_->setRoute(*route_);
+  if (!route_handler_->isHandlerReady()) {
+    RCLCPP_WARN_THROTTLE(
+      node_->get_logger(), *node_->get_clock(), 5000, "Waiting for route handler.");
+    return false;
+  }
   return true;
 }
 
@@ -360,42 +383,6 @@ void DefaultScenarioSelector::onOdom(const nav_msgs::msg::Odometry::ConstSharedP
   }
 }
 
-bool DefaultScenarioSelector::isDataReady()
-{
-  if (!current_pose_) {
-    RCLCPP_INFO_THROTTLE(
-      node_->get_logger(), *node_->get_clock(), 5000, "Waiting for current pose.");
-    return false;
-  }
-  if (!route_handler_) {
-    RCLCPP_INFO_THROTTLE(
-      node_->get_logger(), *node_->get_clock(), 5000, "Waiting for route handler.");
-    return false;
-  }
-  if (!route_) {
-    RCLCPP_INFO_THROTTLE(node_->get_logger(), *node_->get_clock(), 5000, "Waiting for route.");
-    return false;
-  }
-  if (!twist_) {
-    RCLCPP_INFO_THROTTLE(node_->get_logger(), *node_->get_clock(), 5000, "Waiting for twist.");
-    return false;
-  }
-  if (!operation_mode_state_) {
-    RCLCPP_INFO_THROTTLE(
-      node_->get_logger(), *node_->get_clock(), 5000, "Waiting for operation mode state.");
-    return false;
-  }
-
-  // Check route handler is ready
-  route_handler_->setRoute(*route_);
-  if (!route_handler_->isHandlerReady()) {
-    RCLCPP_WARN_THROTTLE(
-      node_->get_logger(), *node_->get_clock(), 5000, "Waiting for route handler.");
-    return false;
-  }
-  return true;
-}
-
 void DefaultScenarioSelector::updateData()
 {
   {
@@ -421,7 +408,7 @@ void DefaultScenarioSelector::onTimer()
 {
   updateData();
 
-  if (!isDataReady()) return;
+  if (!ready()) return;
 
   // Initialize Scenario
   if (current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::EMPTY) {
