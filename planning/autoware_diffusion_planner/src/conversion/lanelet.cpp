@@ -31,14 +31,6 @@
 #include <vector>
 namespace autoware::diffusion_planner
 {
-// Compute Euclidean distance between two LanePoints
-inline float euclidean_distance(const LanePoint & p1, const LanePoint & p2)
-{
-  float dx = p2.x() - p1.x();
-  float dy = p2.y() - p1.y();
-  float dz = p2.z() - p1.z();
-  return std::sqrt(dx * dx + dy * dy + dz * dz);
-}
 
 std::vector<LanePoint> interpolate_points(const std::vector<LanePoint> & input, size_t num_points)
 {
@@ -139,7 +131,6 @@ std::vector<LaneSegment> LaneletConverter::convert_to_lane_segments(
   for (const auto & lanelet : lanelet_map_ptr_->laneletLayer) {
     const auto lanelet_subtype = to_subtype_name(lanelet);
     if (!is_lane_like(lanelet_subtype)) {
-      std::cerr << "Skipping lanelet ID, since it is not LaneLike: " << lanelet.id() << std::endl;
       continue;
     }
     Polyline lane_polyline(MapType::Unused);

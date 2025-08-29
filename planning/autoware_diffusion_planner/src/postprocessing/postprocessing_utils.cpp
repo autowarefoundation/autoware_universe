@@ -30,8 +30,10 @@
 #include <Eigen/src/Core/Matrix.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -131,13 +133,13 @@ Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tensor
   // copy relevant part of data to Eigen matrix
   constexpr auto prediction_shape = OUTPUT_SHAPE;
 
-  auto batch_size = prediction_shape[0];
-  auto agent_size = prediction_shape[1];
-  auto rows = prediction_shape[2];
-  auto cols = prediction_shape[3];
+  const int64_t agent_size = prediction_shape[1];
+  const int64_t rows = prediction_shape[2];
+  const int64_t cols = prediction_shape[3];
+  const int64_t batch = prediction.size() / (agent_size * rows * cols);
 
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data(
-    batch_size * agent_size * rows, cols);
+    batch * agent_size * rows, cols);
   tensor_data.setZero();
 
   // Ensure prediction has enough data
@@ -160,9 +162,9 @@ Eigen::MatrixXf get_prediction_matrix(
   const auto prediction_shape = OUTPUT_SHAPE;
 
   // copy relevant part of data to Eigen matrix
-  auto agent_size = prediction_shape[1];
-  auto rows = prediction_shape[2];
-  auto cols = prediction_shape[3];
+  const int64_t agent_size = prediction_shape[1];
+  const int64_t rows = prediction_shape[2];
+  const int64_t cols = prediction_shape[3];
 
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
     get_tensor_data(prediction);
@@ -280,6 +282,75 @@ CandidateTrajectories to_candidate_trajectories_msg(
                         .candidate_trajectories({candidate_trajectory})
                         .generator_info({generator_info});
   return output;
+}
+
+TurnIndicatorsCommand create_turn_indicators_command(
+  const std::vector<float> & turn_indicator_logit, const rclcpp::Time & stamp)
+{
+  TurnIndicatorsCommand turn_indicators_cmd;
+  turn_indicators_cmd.stamp = stamp;
+
+  // Apply softmax to convert logit to probabilities
+
+  // Find the max value for numerical stability
+  const float max_logit =
+    *std::max_element(turn_indicator_logit.begin(), turn_indicator_logit.end());
+
+  std::vector<float> probabilities(turn_indicator_logit.size());
+  float sum = 0.0001f;  // Small value to avoid division by zero
+
+  // Compute exp(logit - max_logit) for numerical stability
+  for (size_t i = 0; i < turn_indicator_logit.size(); ++i) {
+    probabilities[i] = std::exp(turn_indicator_logit[i] - max_logit);
+    sum += probabilities[i];
+  }
+
+  // Normalize to get probabilities
+  for (float & prob : probabilities) {
+    prob /= sum;
+  }
+
+  // Find the class with highest probability
+  const size_t max_idx = std::distance(
+    probabilities.begin(), std::max_element(probabilities.begin(), probabilities.end()));
+  turn_indicators_cmd.command = max_idx;
+
+  return turn_indicators_cmd;
+}
+
+int64_t count_valid_elements(
+  const std::vector<float> & data, int64_t len, int64_t dim2, int64_t dim3, int64_t batch_idx)
+{
+  const int64_t single_batch_size = len * dim2 * dim3;
+  const int64_t batch_offset = batch_idx * single_batch_size;
+
+  if (batch_offset + single_batch_size > static_cast<int64_t>(data.size()) || batch_idx < 0) {
+    return 0;  // Invalid batch index or data size
+  }
+
+  int64_t valid_count = 0;
+  const float epsilon = std::numeric_limits<float>::epsilon();
+
+  // Iterate through each element in the len dimension for the specified batch
+  for (int64_t i = 0; i < len; ++i) {
+    bool is_valid_element = false;
+
+    // Check all values in the (dim2, dim3) block for this element
+    const int64_t element_offset = batch_offset + i * dim2 * dim3;
+    for (int64_t j = 0; j < dim2 * dim3; ++j) {
+      const int64_t idx = element_offset + j;
+      if (std::abs(data[idx]) > epsilon) {
+        is_valid_element = true;
+        break;  // Found non-zero value, element is valid
+      }
+    }
+
+    if (is_valid_element) {
+      valid_count++;
+    }
+  }
+
+  return valid_count;
 }
 
 }  // namespace autoware::diffusion_planner::postprocess

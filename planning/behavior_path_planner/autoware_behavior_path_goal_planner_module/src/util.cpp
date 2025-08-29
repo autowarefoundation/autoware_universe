@@ -18,12 +18,14 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 #include "autoware_lanelet2_extension/regulatory_elements/bus_stop_area.hpp"
 
+#include <Eigen/Core>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 #include <magic_enum.hpp>
+#include <range/v3/view/reverse.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <boost/geometry/algorithms/dispatch/distance.hpp>
@@ -915,33 +917,54 @@ std::optional<Pose> calcRefinedGoal(
   return refined_goal_pose;
 }
 
-std::optional<Pose> calcClosestPose(
-  const lanelet::ConstLineString3d line, const Point & query_point)
+std::optional<double> calcSignedLateralDistanceToBoundary(
+  const lanelet::ConstLineString3d boundary, const Pose & reference_pose)
 {
-  const auto segment =
-    lanelet::utils::getClosestSegment(lanelet::BasicPoint2d{query_point.x, query_point.y}, line);
-  if (segment.empty()) {
+  if (boundary.size() < 2) {
     return std::nullopt;
   }
 
-  const Eigen::Vector2d direction(
-    (segment.back().basicPoint2d() - segment.front().basicPoint2d()).normalized());
-  const Eigen::Vector2d xf(segment.front().basicPoint2d());
-  const Eigen::Vector2d x(query_point.x, query_point.y);
-  const Eigen::Vector2d p = xf + (x - xf).dot(direction) * direction;
+  const double yaw = tf2::getYaw(reference_pose.orientation);
+  const Eigen::Vector2d y_axis_direction(-std::sin(yaw), std::cos(yaw));
+  const Eigen::Vector2d reference_point(reference_pose.position.x, reference_pose.position.y);
 
-  geometry_msgs::msg::Pose closest_pose;
-  closest_pose.position.x = p.x();
-  closest_pose.position.y = p.y();
-  closest_pose.position.z = query_point.z;
+  double min_distance = std::numeric_limits<double>::max();
+  std::optional<double> signed_lateral_distance;
 
-  const double lane_yaw =
-    std::atan2(segment.back().y() - segment.front().y(), segment.back().x() - segment.front().x());
-  tf2::Quaternion q;
-  q.setRPY(0, 0, lane_yaw);
-  closest_pose.orientation = tf2::toMsg(q);
+  for (size_t i = 0; i < boundary.size() - 1; ++i) {
+    const auto & p1 = boundary[i];
+    const auto & p2 = boundary[i + 1];
 
-  return closest_pose;
+    const Eigen::Vector2d segment_start(p1.x(), p1.y());
+    const Eigen::Vector2d segment_end(p2.x(), p2.y());
+    const Eigen::Vector2d segment_direction = segment_end - segment_start;
+
+    // Calculate intersection between Y-axis line and boundary segment
+    const double det = y_axis_direction.x() * (-segment_direction.y()) -
+                       y_axis_direction.y() * (-segment_direction.x());
+
+    if (std::abs(det) < 1e-10) {
+      // this segment and the Y-axis are parallel
+      continue;
+    }
+
+    const Eigen::Vector2d rhs = segment_start - reference_point;
+    const double t =
+      ((-segment_direction.y()) * rhs.x() - (-segment_direction.x()) * rhs.y()) / det;
+    const double s = (y_axis_direction.x() * rhs.y() - y_axis_direction.y() * rhs.x()) / det;
+
+    // Check if intersection is within segment bounds
+    if (s >= 0.0 && s <= 1.0) {
+      const double distance = std::abs(t);
+
+      if (distance < min_distance) {
+        min_distance = distance;
+        signed_lateral_distance = t;
+      }
+    }
+  }
+
+  return signed_lateral_distance;
 }
 
 autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
@@ -1079,33 +1102,37 @@ bool has_stopline_except_terminal(const PathWithLaneId & path)
          path.points.size();
 }
 
-std::optional<lanelet::ConstLanelet> find_lane_change_completed_lanelet(
+std::optional<lanelet::ConstLanelet> find_last_lane_change_completed_lanelet(
   const PathWithLaneId & path, const lanelet::LaneletMapConstPtr lanelet_map,
   const lanelet::routing::RoutingGraphConstPtr routing_graph)
 {
-  std::vector<lanelet::Id> path_lane_ids;
-  for (const auto & point : path.points) {
+  std::vector<lanelet::Id> reverse_path_lane_ids;
+  for (const auto & point : path.points | ranges::views::reverse) {
     const auto & lane_ids = point.lane_ids;
-    for (const auto & lane_id : lane_ids) {
-      if (std::find(path_lane_ids.begin(), path_lane_ids.end(), lane_id) == path_lane_ids.end()) {
-        path_lane_ids.push_back(lane_id);
+    for (const auto & lane_id : lane_ids | ranges::views::reverse) {
+      if (
+        std::find(reverse_path_lane_ids.begin(), reverse_path_lane_ids.end(), lane_id) ==
+        reverse_path_lane_ids.end()) {
+        reverse_path_lane_ids.push_back(lane_id);
       }
     }
   }
 
-  if (path_lane_ids.size() < 2) {
+  if (reverse_path_lane_ids.size() < 2) {
     return std::nullopt;
   }
-  for (unsigned i = 0, j = 1; i < path_lane_ids.size() && j < path_lane_ids.size(); i++, j++) {
-    const auto & lane1 = lanelet_map->laneletLayer.get(path_lane_ids.at(i));
-    const auto & lane2 = lanelet_map->laneletLayer.get(path_lane_ids.at(j));
-    const auto & followings = routing_graph->following(lane1);
-    if (std::any_of(followings.begin(), followings.end(), [&](const auto & lane) {
-          return lane.id() == lane2.id();
+  for (unsigned i = 0, j = 1; i < reverse_path_lane_ids.size() && j < reverse_path_lane_ids.size();
+       i++, j++) {
+    const auto & lane_to = lanelet_map->laneletLayer.get(reverse_path_lane_ids.at(i));
+    const auto & lane_from = lanelet_map->laneletLayer.get(reverse_path_lane_ids.at(j));
+    const auto & previous = routing_graph->previous(lane_to);
+    if (std::any_of(previous.begin(), previous.end(), [&](const auto & prev_lane) {
+          return prev_lane.id() == lane_from.id();
         })) {
+      // not lane changing
       continue;
     }
-    return lane2;
+    return lane_to;
   }
   return std::nullopt;
 }
@@ -1117,7 +1144,7 @@ lanelet::ConstLanelets get_reference_lanelets_for_pullover(
   const auto & routing_graph = planner_data->route_handler->getRoutingGraphPtr();
   const auto & lanelet_map = planner_data->route_handler->getLaneletMapPtr();
   const auto lane_change_complete_lane =
-    find_lane_change_completed_lanelet(path, lanelet_map, routing_graph);
+    find_last_lane_change_completed_lanelet(path, lanelet_map, routing_graph);
   if (!lane_change_complete_lane) {
     return utils::getExtendedCurrentLanesFromPath(
       path, planner_data, backward_length, forward_length,

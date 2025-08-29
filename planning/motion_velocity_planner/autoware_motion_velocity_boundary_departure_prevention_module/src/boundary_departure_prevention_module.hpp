@@ -26,6 +26,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace autoware::motion_velocity_planner::experimental
@@ -44,6 +45,7 @@ public:
   {
     return RequiredSubscriptionInfo{};
   }
+  ~BoundaryDeparturePreventionModule() override { updater_ptr_.reset(); }
 
 private:
   // === Interface and inputs validation ====
@@ -56,6 +58,17 @@ private:
   bool is_autonomous_mode() const;
 
   // === Internal logic
+  /**
+   * @brief Main entry point for boundary departure-aware velocity planning.
+   *
+   * The function first verifies input validity, checks system state (e.g., route changes,
+   * autonomy status), and initializes planning components if needed. Then it performs slow down
+   * planning to prevent the vehicle from departing road boundaries.
+   */
+
+  tl::expected<VelocityPlanningResult, std::string> plan_velocities(
+    const TrajectoryPoints & raw_trajectory_points,
+    const std::shared_ptr<const PlannerData> & planner_data);
 
   tl::expected<VelocityPlanningResult, std::string> plan_slow_down_intervals(
     const TrajectoryPoints & raw_trajectory_points,
@@ -67,15 +80,29 @@ private:
    * Projects existing critical departure points onto the updated reference trajectory
    * and removes points that are outdated (i.e., passed by the ego or shifted significantly).
    *
-   * @param aw_ref_traj Current reference trajectory.
+   * @param raw_ref_traj Current reference trajectory.
    * @param offset_from_ego Minimum distance from ego to keep a point; points closer than this are
    * removed.
    */
   void update_critical_departure_points(
-    const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const double offset_from_ego);
+    const std::vector<TrajectoryPoint> & raw_ref_traj, const double offset_from_ego);
 
-  std::unordered_map<DepartureType, bool> get_diagnostics(
-    const double curr_vel, const double dist_with_offset_m);
+  /**
+   * @brief Evaluate boundary departure diagnostic status.
+   *
+   * Checks for each side whether the ego is near a boundary, approaching departure,
+   * or in a critical departure state. Returns a map of each departure type to its active status.
+   *
+   * - `NEAR_BOUNDARY` and `APPROACHING_DEPARTURE` are flagged based on type presence.
+   * - `CRITICAL_DEPARTURE` is flagged if any critical point lies within braking distance,
+   *   calculated using velocity, acceleration, jerk, and brake delay thresholds.
+   *
+   * @param ego_dist_on_traj Ego vehicle’s distance along the reference trajectory.
+   * @param curr_vel Current velocity of the ego vehicle.
+   * @return Map of `DepartureType` to boolean indicating active status.
+   */
+  std::pair<int8_t, std::string> get_diagnostic_status(
+    const double ego_dist_on_traj, const double curr_vel);
 
   /**
    * @brief Check if critical departure has been continuously observed.
@@ -89,6 +116,21 @@ private:
    * @return True if critical departure has been continuously observed long enough, false otherwise.
    */
   bool is_continuous_critical_departure();
+
+  /**
+   * @brief Determine if critical departure condition is still active.
+   *
+   * This function checks whether a `CRITICAL_DEPARTURE` is currently observed
+   * in the closest projections and whether the system has recorded critical departure points.
+   *
+   * - If a critical departure is detected, the internal timestamp is updated, and `true` is
+   * returned.
+   * - If not, the function checks whether the absence of critical departure has persisted
+   *   beyond a configured time threshold (`off_time_buffer_s.critical_departure`).
+   *
+   * @return `true` if critical departure is still considered active, otherwise `false`.
+   */
+  bool is_critical_departure_persist();
 
   rclcpp::Clock::SharedPtr clock_ptr_;
 
@@ -112,6 +154,7 @@ private:
   double last_abnormality_fp_overlap_bound_time_{0.0};
   double last_abnormality_fp_no_overlap_bound_time_{0.0};
   double last_no_critical_dpt_time_{0.0};
+  double last_found_critical_dpt_time_{0.0};
 
   autoware_utils::InterProcessPollingSubscriber<Trajectory>::SharedPtr ego_pred_traj_polling_sub_;
   autoware_utils::InterProcessPollingSubscriber<Control>::SharedPtr control_cmd_polling_sub_;
