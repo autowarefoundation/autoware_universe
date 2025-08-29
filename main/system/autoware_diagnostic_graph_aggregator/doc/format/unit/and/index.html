@@ -14085,7 +14085,7 @@ Note that error level <code>stale</code> is treated as <code>error</code>.</p>
 <td><code>type</code></td>
 <td><code>string</code></td>
 <td>yes</td>
-<td>Specify <code>and</code> or <code>short-circuit-and</code> when using this object.</td>
+<td>Specify <code>and</code> when using this object.</td>
 </tr>
 <tr>
 <td><code>list</code></td>
@@ -14097,10 +14097,8 @@ Note that error level <code>stale</code> is treated as <code>error</code>.</p>
 </table>
 <p>If <code>list</code> is undeclared or empty, this object is evaluated as <code>ok</code>.</p>
 <h2 id="short-circuit-evaluation">Short-circuit evaluation<a class="headerlink" href="#short-circuit-evaluation" title="Permanent link">#</a></h2>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>The<code>short-circuit-and</code> is work in progress (WIP).</p>
-</div></div>
+<p>The type <code>short-circuit-and</code> is deprecated. This currently does exactly the same thing as <code>and</code>.
+To ignore errors in dependencies, use the <code>dependent</code> field of the <a href="../">unit</a> object.</p></div>
 
 
 
