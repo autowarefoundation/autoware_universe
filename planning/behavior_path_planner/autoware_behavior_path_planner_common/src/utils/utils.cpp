@@ -1159,7 +1159,14 @@ lanelet::ConstLanelets extendPrevLane(
       target_prev_lane = prev_lane;
       break;
     }
-    if (!only_in_route && !target_prev_lane) target_prev_lane = prev_lane;
+
+    if (!only_in_route) {
+      // prioritize straight lanelets over the other types of turn direction tags
+      const auto & turn_direction = prev_lane.attributeOr("turn_direction", std::string("none"));
+      if (turn_direction == "straight" || !target_prev_lane) {
+        target_prev_lane = prev_lane;
+      }
+    }
   }
   if (target_prev_lane) {
     extended_lanes.insert(extended_lanes.begin(), *target_prev_lane);
