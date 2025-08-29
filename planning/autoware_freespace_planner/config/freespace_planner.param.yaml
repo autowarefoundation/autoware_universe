@@ -1,7 +1,7 @@
 /**:
   ros__parameters:
     # -- Node Configurations --
-    planning_algorithm: "astar"  # options: astar, rrtstar
+    planning_algorithm: "astar"
     waypoints_velocity: 5.0
     update_rate: 10.0
     th_arrived_distance_m: 0.5
@@ -9,7 +9,7 @@
     th_stopped_velocity_mps: 0.01
     th_course_out_distance_m: 1.0
     th_obstacle_time_sec: 1.0
-    vehicle_shape_margin_m: 0.5
+    vehicle_shape_margin_m: 0.4
     replan_when_obstacle_found: true
     replan_when_course_out: true
     parking_accuracy_tolerance: 1.0
@@ -18,6 +18,7 @@
     # -- Configurations common to the all planners --
     # base configs
     time_limit: 30000.0
+    # robot configs # TODO replace by vehicle_info
     max_turning_ratio: 0.5 # ratio of actual turning limit of vehicle
     turning_steps: 1
     # search configs
@@ -43,6 +44,14 @@
       smoothness_weight: 0.5
       obstacle_distance_weight: 1.75
       goal_lat_distance_weight: 5.0
+      final_segment_threshold: 5.0
+      extra_steering_penalty_factor: 1.0
+      yaw_weight: 15.0
+      distance_to_goal_extension_weight: 1.0
+      reparking_forward_first_weight: 100.0
+      reparking_deviation_penalty: 10.0
+      reparking_alignment_weight: 2.0
+      reparking_distance: 2.0
 
     # -- RRT* search Configurations --
     rrtstar:
