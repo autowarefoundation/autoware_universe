@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Trajectory Modifier",
+  "type": "object",
+  "definitions": {
+    "trajectory_modifier": {
+      "type": "object",
+      "properties": {
+        "use_stop_point_fixer": {
+          "type": "boolean",
+          "description": "Enable the stop point fixer modifier plugin",
+          "default": true
+        },
+        "stop_point_fixer": {
+          "type": "object",
+          "properties": {
+            "velocity_threshold_mps": {
+              "type": "number",
+              "description": "Velocity threshold below which ego vehicle is considered stationary",
+              "default": 0.1,
+              "minimum": 0.0
+            },
+            "min_distance_threshold_m": {
+              "type": "number",
+              "description": "Minimum distance threshold to trigger trajectory replacement",
+              "default": 1.0,
+              "minimum": 0.0
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/trajectory_modifier": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/trajectory_modifier"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/trajectory_modifier"],
+  "additionalProperties": false
+}
