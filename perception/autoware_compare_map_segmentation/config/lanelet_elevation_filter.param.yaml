@@ -1,0 +1,12 @@
+# Lanelet Elevation Filter Configuration
+
+/**:
+  ros__parameters:
+    # Grid processing parameters
+    grid_resolution: 1.0          # Grid cell size in meters
+    height_threshold: 2.0         # Maximum height difference from lanelet elevation (meters)
+    sampling_distance: 0.5        # Distance between sampled points along lanelet boundaries (meters)
+    target_frame: "map"           # Target coordinate frame for processing
+
+    # Debug/Visualization parameters
+    enable_debug: false           # Enable debug mode (includes elevation markers and processing time publisher)
