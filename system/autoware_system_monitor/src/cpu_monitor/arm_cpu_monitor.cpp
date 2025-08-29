@@ -17,9 +17,9 @@
  * @brief ARM CPU monitor class
  */
 
-#include "system_monitor/cpu_monitor/arm_cpu_monitor.hpp"
+#include "arm_cpu_monitor.hpp"
 
-#include "system_monitor/system_monitor_utility.hpp"
+#include "common/system_monitor_utility.hpp"
 
 #include <string>
 #include <vector>

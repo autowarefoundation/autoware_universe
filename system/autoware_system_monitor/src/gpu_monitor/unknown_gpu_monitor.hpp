@@ -1,4 +1,4 @@
-// Copyright 2020 Autoware Foundation
+// Copyright 2020 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,17 +13,29 @@
 // limitations under the License.
 
 /**
- * @file unknown_gpu_monitor.cpp
+ * @file unknown_gpu_monitor.h
  * @brief Unknown GPU monitor class
  */
 
-#include "unknown_gpu_monitor.hpp"
+#ifndef GPU_MONITOR__UNKNOWN_GPU_MONITOR_HPP_
+#define GPU_MONITOR__UNKNOWN_GPU_MONITOR_HPP_
+
+#include "gpu_monitor_base.hpp"
 
 #include <string>
 
-GPUMonitor::GPUMonitor(const rclcpp::NodeOptions & options) : GPUMonitorBase("gpu_monitor", options)
-{
-}
+#if !defined(_GPU_NVML_) && !defined(_GPU_TEGRA_)
 
-#include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(GPUMonitor)
+class GPUMonitor : public GPUMonitorBase
+{
+public:
+  /**
+   * @brief constructor
+   * @param [in] options Options associated with this node.
+   */
+  explicit GPUMonitor(const rclcpp::NodeOptions & options);
+};
+
+#endif  // !defined(_GPU_NVML_) && !defined(_GPU_TEGRA_)
+
+#endif  // GPU_MONITOR__UNKNOWN_GPU_MONITOR_HPP_
