@@ -11880,6 +11880,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#hysteresis" class="md-nav__link">
+    Hysteresis
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -14035,6 +14042,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#hysteresis" class="md-nav__link">
+    Hysteresis
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -14088,10 +14102,27 @@
 <td><code>timeout</code></td>
 <td><code>float</code></td>
 <td>yes</td>
-<td>The name of the diagnostic status.</td>
+<td>The timeout seconds for the diagnostic status.</td>
+</tr>
+<tr>
+<td><code>hysteresis</code></td>
+<td><code>float</code></td>
+<td>yes</td>
+<td>The hysteresis seconds for the diagnostic status.</td>
 </tr>
 </tbody>
-</table></div>
+</table>
+<h2 id="hysteresis">Hysteresis<a class="headerlink" href="#hysteresis" title="Permanent link">#</a></h2>
+<p>If the <code>hysteresis</code> field is set to a number of seconds, level changes less than this time will be ignored.
+If the field is not specified, it is equivalent to specifying 0.0 seconds, in which case the input and output will always match.
+This is when the latch is set to 0.0 seconds.</p>
+<p><img alt="hysteresis-0sec" src="../../images/hysteresis-0sec.drawio.svg"></p>
+<p>This is when the hysteresis is set to 2.0 seconds.</p>
+<p><img alt="hysteresis-2sec" src="../../images/hysteresis-2sec.drawio.svg"></p>
+<p>Error level is also considered warning level when the current level is OK.
+OK level is also considered warning level when the current level is error.
+This is when the hysteresis is set to 2.0 seconds.</p>
+<p><img alt="hysteresis-warn" src="../../images/hysteresis-warn.drawio.svg"></p></div>
 
 
 

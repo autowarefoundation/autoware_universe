@@ -11802,6 +11802,20 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#dependent-failure" class="md-nav__link">
+    Dependent failure
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#latch" class="md-nav__link">
+    Latch
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -14049,6 +14063,20 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#dependent-failure" class="md-nav__link">
+    Dependent failure
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#latch" class="md-nav__link">
+    Latch
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -14094,6 +14122,18 @@ Any derived object can be used where a unit object is required.</p>
 <td>The string indicating the type of derived object.</td>
 </tr>
 <tr>
+<td><code>dependent</code></td>
+<td><code>string</code></td>
+<td>no</td>
+<td>The path of the dependent unit.</td>
+</tr>
+<tr>
+<td><code>latch</code></td>
+<td><code>float</code></td>
+<td>no</td>
+<td>The latch seconds for this unit.</td>
+</tr>
+<tr>
 <td><code>$derived argument</code></td>
 <td><code>any</code></td>
 <td>no</td>
@@ -14101,8 +14141,8 @@ Any derived object can be used where a unit object is required.</p>
 </tr>
 </tbody>
 </table>
-<p><code>$derived_arguments</code> denotes additional arguments to be passed for constructing the object which is specified by <code>type</code> parameter. For example, if "and" is provided as <code>type</code>, <code>list</code> parameter is also required.</p>
 <h2 id="derived-object-types">Derived object types<a class="headerlink" href="#derived-object-types" title="Permanent link">#</a></h2>
+<p><code>$derived_arguments</code> denotes additional arguments to be passed for constructing the object which is specified by <code>type</code> parameter. For example, if "and" is provided as <code>type</code>, <code>list</code> parameter is also required.</p>
 <ul>
 <li><a href="diag/">diag</a></li>
 <li><a href="link/">link</a></li>
@@ -14120,7 +14160,23 @@ Any derived object can be used where a unit object is required.</p>
 <li><code>stale</code></li>
 </ul>
 </li>
-</ul></div>
+</ul>
+<h2 id="dependent-failure">Dependent failure<a class="headerlink" href="#dependent-failure" title="Permanent link">#</a></h2>
+<p>The <code>dependent</code> field defines dependencies between units that do not have a parent-child relationship in the tree.
+If the unit specified in this field is not OK, the <code>is_dependent</code> field in the node status will be true.
+This allows the user to easily rule out units other than the root cause.</p>
+<h2 id="latch">Latch<a class="headerlink" href="#latch" title="Permanent link">#</a></h2>
+<p>If the <code>latch</code> field is set to a number of seconds, the worst level will be latched after the specified time has elapsed.
+If the field is not specified, the latch is disabled and the input and output levels always match.</p>
+<p><img alt="latch-none" src="../images/latch-none.drawio.svg"></p>
+<p>This is when the latch is set to 0.0 seconds.</p>
+<p><img alt="latch-0sec" src="../images/latch-0sec.drawio.svg"></p>
+<p>This is when the latch is set to 2.0 seconds.</p>
+<p><img alt="latch-2sec" src="../images/latch-2sec.drawio.svg"></p>
+<p>Error level is also considered warning level. This is when the latch is set to 2.0 seconds.</p>
+<p><img alt="latch-warn" src="../images/latch-warn.drawio.svg"></p>
+<p>When the latch is cleared, the decision starts again from that moment, independent of the previous error duration. This is when the latch is set to 2.0 seconds.</p>
+<p><img alt="latch-reset" src="../images/latch-reset.drawio.svg"></p></div>
 
 
 
