@@ -37,10 +37,6 @@ public:
   ~ScenarioGateNode() override = default;
 
 private:
-  // Callbacks
-  void onSelectorScenario(const autoware_internal_planning_msgs::msg::Scenario::ConstSharedPtr msg);
-  void onSelectorTrajectory(const autoware_planning_msgs::msg::Trajectory::ConstSharedPtr msg);
-
   std::string selector_info_;
   std::unique_ptr<pluginlib::ClassLoader<autoware::scenario_selector::ScenarioSelectorPlugin>>
     loader_;
