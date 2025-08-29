@@ -49,7 +49,6 @@
 
 #include "util.hpp"
 
-#include <QKeyEvent>
 #include <rviz_common/display_context.hpp>
 
 #include <algorithm>
