@@ -78,12 +78,6 @@ ObjectInfo::ObjectInfo(
   const double elapsed_time = current_time.seconds() - rclcpp::Time(object.header.stamp).seconds();
   double current_vel = initial_vel + initial_acc * elapsed_time;
   if (initial_acc != 0.0) {
-    if (initial_acc < 0 && 0 < initial_vel) {
-      current_vel = std::max(current_vel, 0.0);
-    }
-    if (0 < initial_acc && initial_vel < 0) {
-      current_vel = std::min(current_vel, 0.0);
-    }
     current_vel = std::clamp(
       current_vel, static_cast<double>(object.min_velocity),
       static_cast<double>(object.max_velocity));
@@ -486,13 +480,12 @@ void DummyPerceptionPublisherNode::timerCallback()
        !predicted_object.kinematics.predicted_paths.empty() && predicted_time.nanoseconds() > 0);
 
     ObjectInfo obj_info = [&]() {
-      // Only use predicted motion if the action is PREDICT
-      if (object.action == tier4_simulation_msgs::msg::DummyObject::PREDICT && matched_predicted) {
-        return ObjectInfo(object, predicted_object, predicted_time, current_time);
-      }
-
-      // Check if we have a last used prediction for this object (only if action is PREDICT)
       if (object.action == tier4_simulation_msgs::msg::DummyObject::PREDICT) {
+        if (matched_predicted) {
+          return ObjectInfo(object, predicted_object, predicted_time, current_time);
+        }
+
+        // Check if we have a last used prediction for this object
         const auto & dummy_uuid_str = autoware_utils_uuid::to_hex_string(object.id);
         auto last_used_pred_it = dummy_last_used_predictions_.find(dummy_uuid_str);
         auto last_used_time_it = dummy_last_used_prediction_times_.find(dummy_uuid_str);

@@ -114,7 +114,7 @@
               "type": "number",
               "default": 1.05,
               "minimum": 1.0,
-              "description": "Maximum speed difference ratio (5% tolerance)"
+              "description": "Maximum speed difference ratio (default: 5% tolerance)"
             },
             "min_speed_ratio": {
               "type": "number",
@@ -145,7 +145,7 @@
               "type": "number",
               "default": 1.1,
               "minimum": 1.0,
-              "description": "Maximum path length ratio for similarity (10% difference)"
+              "description": "Maximum path length ratio for similarity (default:10% difference)"
             },
             "max_overall_direction_diff": {
               "type": "number",
@@ -188,7 +188,7 @@
               "type": "number",
               "default": 1.3,
               "minimum": 1.0,
-              "description": "Maximum speed difference ratio (30% tolerance)"
+              "description": "Maximum speed difference ratio (default: 30% tolerance)"
             },
             "min_speed_ratio": {
               "type": "number",
@@ -219,7 +219,7 @@
               "type": "number",
               "default": 1.5,
               "minimum": 1.0,
-              "description": "Maximum path length ratio for similarity (50% difference)"
+              "description": "Maximum path length ratio for similarity (default: 50% difference)"
             },
             "max_overall_direction_diff": {
               "type": "number",
