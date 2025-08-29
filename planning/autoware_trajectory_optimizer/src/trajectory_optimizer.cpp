@@ -23,6 +23,7 @@
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+#include <rclcpp/logging.hpp>
 
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
@@ -192,7 +193,7 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
   last_time_ = std::make_shared<rclcpp::Time>(now());
 
   if (!current_odometry_ptr_ || !current_acceleration_ptr_) {
-    RCLCPP_ERROR(get_logger(), "No odometry or acceleration data");
+    RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 5000, "No odometry or acceleration data");
     return;
   }
 

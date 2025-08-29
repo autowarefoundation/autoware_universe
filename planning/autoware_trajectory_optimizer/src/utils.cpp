@@ -29,9 +29,10 @@
 
 #include <algorithm>
 #include <cmath>
-#include <iostream>
+#include <cstddef>
 #include <iterator>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace autoware::trajectory_optimizer::utils
@@ -45,12 +46,24 @@ rclcpp::Logger get_logger()
   return rclcpp::get_logger("trajectory_optimizer");
 }
 
+void log_error_throttle(const std::string & message)
+{
+  auto clock = rclcpp::Clock::make_shared(RCL_ROS_TIME);
+  RCLCPP_ERROR_THROTTLE(get_logger(), *clock, 5000, "%s", message.c_str());
+}
+
+void log_warn_throttle(const std::string & message)
+{
+  auto clock = rclcpp::Clock::make_shared(RCL_ROS_TIME);
+  RCLCPP_WARN_THROTTLE(get_logger(), *clock, 5000, "%s", message.c_str());
+}
+
 void smooth_trajectory_with_elastic_band(
   TrajectoryPoints & traj_points, const Odometry & current_odometry,
   const std::shared_ptr<EBPathSmoother> & eb_path_smoother_ptr)
 {
   if (!eb_path_smoother_ptr) {
-    RCLCPP_ERROR(get_logger(), "Elastic band path smoother is not initialized");
+    log_error_throttle("Elastic band path smoother is not initialized");
     return;
   }
   if (traj_points.empty()) {
@@ -72,9 +85,8 @@ void remove_invalid_points(TrajectoryPoints & input_trajectory)
   utils::remove_close_proximity_points(input_trajectory, 1E-2);
 
   if (input_trajectory.size() < 2) {
-    RCLCPP_ERROR(
-      get_logger(),
-      "No enough points in trajectory after removing close proximity points and invalid points");
+    log_error_throttle(
+      "Not enough points in trajectory after removing close proximity points and invalid points");
     return;
   }
   const bool is_driving_forward = true;
@@ -185,7 +197,7 @@ void filter_velocity(
   const Odometry & current_odometry)
 {
   if (!smoother) {
-    RCLCPP_ERROR(get_logger(), "JerkFilteredSmoother is not initialized");
+    log_error_throttle("JerkFilteredSmoother is not initialized");
     return;
   }
 
@@ -228,7 +240,7 @@ void filter_velocity(
   if (!smoother->apply(
         initial_motion_speed, initial_motion_acc, input_trajectory, input_trajectory,
         debug_trajectories, false)) {
-    RCLCPP_WARN(get_logger(), "Fail to solve optimization.");
+    log_warn_throttle("Fail to solve optimization.");
   }
 }
 
@@ -247,8 +259,9 @@ bool validate_point(const TrajectoryPoint & point)
 
 void apply_spline(TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params)
 {
-  if (traj_points.size() < 5) {
-    RCLCPP_ERROR(get_logger(), "Not enough points in trajectory for akima spline interpolation");
+  constexpr size_t minimum_points_for_akima_spline{5};
+  if (traj_points.size() < minimum_points_for_akima_spline) {
+    log_error_throttle("Not enough points in trajectory for spline interpolation");
     return;
   }
   auto trajectory_interpolation_util =
@@ -256,7 +269,7 @@ void apply_spline(TrajectoryPoints & traj_points, const TrajectoryOptimizerParam
       .set_xy_interpolator<AkimaSpline>()  // Set interpolator for x-y plane
       .build(traj_points);
   if (!trajectory_interpolation_util) {
-    RCLCPP_WARN(get_logger(), "Failed to build interpolation trajectory");
+    log_warn_throttle("Failed to build interpolation trajectory");
     return;
   }
   trajectory_interpolation_util->align_orientation_with_trajectory_direction();
@@ -274,14 +287,14 @@ void apply_spline(TrajectoryPoints & traj_points, const TrajectoryOptimizerParam
   }
 
   if (output_points.size() < 2) {
-    RCLCPP_WARN(get_logger(), "Not enough points in trajectory after akima spline interpolation");
+    log_warn_throttle("Not enough points in trajectory after akima spline interpolation");
     return;
   }
   auto last_interpolated_point = output_points.back();
   auto & original_trajectory_last_point = traj_points.back();
 
   if (!validate_point(original_trajectory_last_point)) {
-    RCLCPP_WARN(get_logger(), "Last point in original trajectory is invalid. Removing last point");
+    log_warn_throttle("Last point in original trajectory is invalid. Removing last point");
     traj_points = output_points;
     return;
   }
@@ -306,7 +319,7 @@ void interpolate_trajectory(
   }
 
   if (traj_points.size() < 2) {
-    RCLCPP_ERROR(get_logger(), "No enough points in trajectory after overlap points removal");
+    log_error_throttle("Not enough points in trajectory after overlap points removal");
     return;
   }
 
@@ -354,7 +367,7 @@ void interpolate_trajectory(
   motion_utils::calculate_time_from_start(traj_points, current_odometry.pose.pose.position);
 
   if (traj_points.size() < 2) {
-    RCLCPP_ERROR(get_logger(), "Not enough points in trajectory after overlap points removal");
+    log_error_throttle("Not enough points in trajectory after overlap points removal");
     return;
   }
 }
@@ -365,7 +378,7 @@ void add_ego_state_to_trajectory(
 {
   TrajectoryPoint ego_state;
   ego_state.pose = current_odometry.pose.pose;
-  ego_state.longitudinal_velocity_mps = current_odometry.twist.twist.linear.x;
+  ego_state.longitudinal_velocity_mps = static_cast<float>(current_odometry.twist.twist.linear.x);
 
   if (traj_points.empty()) {
     traj_points.push_back(ego_state);
