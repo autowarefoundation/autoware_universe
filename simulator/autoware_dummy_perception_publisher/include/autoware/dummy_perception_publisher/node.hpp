@@ -43,10 +43,25 @@
 #include <map>
 #include <memory>
 #include <random>
+#include <set>
+#include <string>
+#include <utility>
 #include <vector>
-
 namespace autoware::dummy_perception_publisher
 {
+
+struct CommonParameters
+{
+  double max_remapping_distance;
+  double max_remapping_yaw_diff;
+  double max_speed_difference_ratio;
+  double min_speed_ratio;
+  double max_speed_ratio;
+  double speed_check_threshold;
+  double max_position_difference;
+  double max_path_length_ratio;
+  double max_overall_direction_diff;
+};
 struct ObjectInfo
 {
   ObjectInfo(
@@ -171,26 +186,8 @@ private:
   double max_path_length_change_ratio_;
 
   // Vehicle parameters
-  double vehicle_max_remapping_distance_;
-  double vehicle_max_remapping_yaw_diff_;
-  double vehicle_max_speed_difference_ratio_;
-  double vehicle_min_speed_ratio_;
-  double vehicle_max_speed_ratio_;
-  double vehicle_speed_check_threshold_;
-  double vehicle_max_position_difference_;
-  double vehicle_max_path_length_ratio_;
-  double vehicle_max_overall_direction_diff_;
-
-  // Pedestrian parameters
-  double pedestrian_max_remapping_distance_;
-  double pedestrian_max_remapping_yaw_diff_;
-  double pedestrian_max_speed_difference_ratio_;
-  double pedestrian_min_speed_ratio_;
-  double pedestrian_max_speed_ratio_;
-  double pedestrian_speed_check_threshold_;
-  double pedestrian_max_position_difference_;
-  double pedestrian_max_path_length_ratio_;
-  double pedestrian_max_overall_direction_diff_;
+  CommonParameters pedestrian_params_;
+  CommonParameters vehicle_params_;
   void timerCallback();
   void objectCallback(const tier4_simulation_msgs::msg::DummyObject::ConstSharedPtr msg);
   void predictedObjectsCallback(

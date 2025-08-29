@@ -36,6 +36,7 @@
 
 #include <functional>
 #include <limits>
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -108,9 +109,10 @@ ObjectInfo::ObjectInfo(
 {
   // Check if 2 seconds have passed since object creation
   const double time_since_creation = (current_time - rclcpp::Time(object.header.stamp)).seconds();
+  constexpr double switch_time_threshold = 2.0;  // seconds
   // Use straight-line movement for first 2 seconds, then switch to predicted path
   if (
-    time_since_creation < 2.0 ||  // TODO: Make this configurable from node instance
+    time_since_creation < switch_time_threshold ||
     predicted_object.kinematics.predicted_paths.empty()) {
     // Reuse the logic from the other constructor
     *this = ObjectInfo(object, current_time);
@@ -380,38 +382,28 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
   max_yaw_change_ = this->declare_parameter("max_yaw_change", M_PI / 2.0);
   max_path_length_change_ratio_ = this->declare_parameter("max_path_length_change_ratio", 3.0);
 
-  // Declare vehicle parameters
-  vehicle_max_remapping_distance_ = this->declare_parameter("vehicle.max_remapping_distance", 2.0);
-  vehicle_max_remapping_yaw_diff_ =
-    this->declare_parameter("vehicle.max_remapping_yaw_diff", M_PI / 12.0);
-  vehicle_max_speed_difference_ratio_ =
-    this->declare_parameter("vehicle.max_speed_difference_ratio", 1.05);
-  vehicle_min_speed_ratio_ = this->declare_parameter("vehicle.min_speed_ratio", 0.5);
-  vehicle_max_speed_ratio_ = this->declare_parameter("vehicle.max_speed_ratio", 1.5);
-  vehicle_speed_check_threshold_ = this->declare_parameter("vehicle.speed_check_threshold", 1.0);
-  vehicle_max_position_difference_ =
-    this->declare_parameter("vehicle.max_position_difference", 1.5);
-  vehicle_max_path_length_ratio_ = this->declare_parameter("vehicle.max_path_length_ratio", 1.1);
-  vehicle_max_overall_direction_diff_ =
-    this->declare_parameter("vehicle.max_overall_direction_diff", M_PI / 6.0);
-
-  // Declare pedestrian parameters
-  pedestrian_max_remapping_distance_ =
-    this->declare_parameter("pedestrian.max_remapping_distance", 3.0);
-  pedestrian_max_remapping_yaw_diff_ =
-    this->declare_parameter("pedestrian.max_remapping_yaw_diff", M_PI / 4.0);
-  pedestrian_max_speed_difference_ratio_ =
-    this->declare_parameter("pedestrian.max_speed_difference_ratio", 1.3);
-  pedestrian_min_speed_ratio_ = this->declare_parameter("pedestrian.min_speed_ratio", 0.3);
-  pedestrian_max_speed_ratio_ = this->declare_parameter("pedestrian.max_speed_ratio", 2.0);
-  pedestrian_speed_check_threshold_ =
-    this->declare_parameter("pedestrian.speed_check_threshold", 0.5);
-  pedestrian_max_position_difference_ =
-    this->declare_parameter("pedestrian.max_position_difference", 2.5);
-  pedestrian_max_path_length_ratio_ =
-    this->declare_parameter("pedestrian.max_path_length_ratio", 1.5);
-  pedestrian_max_overall_direction_diff_ =
-    this->declare_parameter("pedestrian.max_overall_direction_diff", M_PI / 3.0);
+  // Initialize vehicle parameters
+  vehicle_params_ = {
+    this->declare_parameter("vehicle.max_remapping_distance", 2.0),
+    this->declare_parameter("vehicle.max_remapping_yaw_diff", M_PI / 12.0),
+    this->declare_parameter("vehicle.max_speed_difference_ratio", 1.05),
+    this->declare_parameter("vehicle.min_speed_ratio", 0.5),
+    this->declare_parameter("vehicle.max_speed_ratio", 1.5),
+    this->declare_parameter("vehicle.speed_check_threshold", 1.0),
+    this->declare_parameter("vehicle.max_position_difference", 1.5),
+    this->declare_parameter("vehicle.max_path_length_ratio", 1.1),
+    this->declare_parameter("vehicle.max_overall_direction_diff", M_PI / 6.0)};
+  // Initialize pedestrian parameters
+  pedestrian_params_ = {
+    this->declare_parameter("pedestrian.max_remapping_distance", 3.0),
+    this->declare_parameter("pedestrian.max_remapping_yaw_diff", M_PI / 4.0),
+    this->declare_parameter("pedestrian.max_speed_difference_ratio", 1.3),
+    this->declare_parameter("pedestrian.min_speed_ratio", 0.3),
+    this->declare_parameter("pedestrian.max_speed_ratio", 2.0),
+    this->declare_parameter("pedestrian.speed_check_threshold", 0.5),
+    this->declare_parameter("pedestrian.max_position_difference", 2.5),
+    this->declare_parameter("pedestrian.max_path_length_ratio", 1.5),
+    this->declare_parameter("pedestrian.max_overall_direction_diff", M_PI / 3.0)};
 
   // create subscriber and publisher
   rclcpp::QoS qos{1};
@@ -1247,12 +1239,13 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
   // Use class-specific thresholds
   // Pedestrians: more lenient due to unpredictable movement patterns
   // Vehicles: stricter for more predictable movement
-  const double max_remapping_distance =
-    is_pedestrian ? pedestrian_max_remapping_distance_ : vehicle_max_remapping_distance_;
-  const double max_remapping_yaw_diff =
-    is_pedestrian ? pedestrian_max_remapping_yaw_diff_ : vehicle_max_remapping_yaw_diff_;
-  const double max_speed_difference_ratio =
-    is_pedestrian ? pedestrian_max_speed_difference_ratio_ : vehicle_max_speed_difference_ratio_;
+  const double max_remapping_distance = is_pedestrian ? pedestrian_params_.max_remapping_distance
+                                                      : vehicle_params_.max_remapping_distance;
+  const double max_remapping_yaw_diff = is_pedestrian ? pedestrian_params_.max_remapping_yaw_diff
+                                                      : vehicle_params_.max_remapping_yaw_diff;
+  const double max_speed_difference_ratio = is_pedestrian
+                                              ? pedestrian_params_.max_speed_difference_ratio
+                                              : vehicle_params_.max_speed_difference_ratio;
 
   // Check if candidate has predicted paths
   if (candidate_prediction.kinematics.predicted_paths.empty()) {
@@ -1273,11 +1266,11 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
 
     // Speed bounds check - more lenient for pedestrians
     const double min_speed_ratio =
-      is_pedestrian ? pedestrian_min_speed_ratio_ : vehicle_min_speed_ratio_;
+      is_pedestrian ? pedestrian_params_.min_speed_ratio : vehicle_params_.min_speed_ratio;
     const double max_speed_ratio =
-      is_pedestrian ? pedestrian_max_speed_ratio_ : vehicle_max_speed_ratio_;
-    const double speed_check_threshold =
-      is_pedestrian ? pedestrian_speed_check_threshold_ : vehicle_speed_check_threshold_;
+      is_pedestrian ? pedestrian_params_.max_speed_ratio : vehicle_params_.max_speed_ratio;
+    const double speed_check_threshold = is_pedestrian ? pedestrian_params_.speed_check_threshold
+                                                       : vehicle_params_.speed_check_threshold;
 
     // Reject if candidate speed is too low
     if (dummy_speed > speed_check_threshold && candidate_speed < dummy_speed * min_speed_ratio) {
@@ -1432,8 +1425,8 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
   }
 
   // Maximum acceptable position difference (meters)
-  const double max_position_difference =
-    is_pedestrian ? pedestrian_max_position_difference_ : vehicle_max_position_difference_;
+  const double max_position_difference = is_pedestrian ? pedestrian_params_.max_position_difference
+                                                       : vehicle_params_.max_position_difference;
 
   if (last_prediction.kinematics.predicted_paths.empty()) {
     return false;
@@ -1525,8 +1518,8 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
       const double candidate_path_length = calculatePathLength(candidate_path);
 
       // Check path length similarity - more lenient for pedestrians
-      const double max_path_length_ratio =
-        is_pedestrian ? pedestrian_max_path_length_ratio_ : vehicle_max_path_length_ratio_;
+      const double max_path_length_ratio = is_pedestrian ? pedestrian_params_.max_path_length_ratio
+                                                         : vehicle_params_.max_path_length_ratio;
       if (last_path_length > 0.1 && candidate_path_length > 0.1) {
         const double length_ratio = std::max(
           last_path_length / candidate_path_length, candidate_path_length / last_path_length);
@@ -1568,8 +1561,8 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
 
         // Allow more direction difference for pedestrians who can change direction quickly
         const double max_overall_direction_diff = is_pedestrian
-                                                    ? pedestrian_max_overall_direction_diff_
-                                                    : vehicle_max_overall_direction_diff_;
+                                                    ? pedestrian_params_.max_overall_direction_diff
+                                                    : vehicle_params_.max_overall_direction_diff;
         if (angle_diff > max_overall_direction_diff) {
           RCLCPP_DEBUG(
             rclcpp::get_logger("dummy_perception_publisher"),
