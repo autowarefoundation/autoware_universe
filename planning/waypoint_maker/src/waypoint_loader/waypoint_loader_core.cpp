@@ -43,9 +43,6 @@ WaypointLoaderNode::WaypointLoaderNode()
   waypoint_following_state_pub_ =
     create_publisher<std_msgs::msg::Bool>("output/waypoint_following_state", rclcpp::QoS{1});
 
-  const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
-  adaptor.init_pub(pub_route_);
-
   // Init variables
   stop_time_ = {};
   state_ = 0;
@@ -313,7 +310,6 @@ void WaypointLoaderNode::generateDrivableArea(
 void WaypointLoaderNode::readCsvFile()
 {
   basic_trajectory_ = waypoint_maker::createWaypointTrajectory(csv_file_, true, max_velocity_);
-  publishRoute(basic_trajectory_, id_flip_ = id_flip_ == 0 ? 1 : 0);
 }
 
 void WaypointLoaderNode::csvFileCallback(std_msgs::msg::String::ConstSharedPtr msg)
@@ -395,27 +391,6 @@ void WaypointLoaderNode::onScenario(const autoware_internal_planning_msgs::msg::
   if (msg) {
     current_scenario_ = msg->current_scenario;
   }
-}
-
-void WaypointLoaderNode::publishRoute(
-  const autoware_planning_msgs::msg::Trajectory & trajectory, const signed short & id_flip)
-{
-  if (trajectory.points.empty()) {
-    return;
-  }
-
-  autoware_planning_msgs::msg::LaneletSegment s;
-  s.preferred_primitive.id = id_flip;
-
-  autoware_planning_msgs::msg::LaneletRoute route_msg;
-  route_msg.header.frame_id = map_frame_;
-  route_msg.header.stamp = this->now();
-
-  route_msg.start_pose = trajectory.points.front().pose;
-  route_msg.goal_pose = trajectory.points.back().pose;
-  route_msg.segments.push_back(s);
-
-  pub_route_->publish(route_msg);
 }
 
 bool WaypointLoaderNode::getEgoVehiclePose(geometry_msgs::msg::PoseStamped * ego_vehicle_pose)

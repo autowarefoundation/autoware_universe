@@ -21,8 +21,6 @@
 #include <tf2_ros/transform_listener.h>
 
 // Autoware
-#include <autoware/component_interface_specs/planning.hpp>
-#include <autoware/component_interface_utils/rclcpp.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/autoware_utils.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
@@ -45,9 +43,6 @@ private:
   rclcpp::Publisher<autoware_planning_msgs::msg::Path>::SharedPtr path_visualization_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr file_location_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr waypoint_following_state_pub_;
-
-  autoware::component_interface_utils::Publisher<
-    autoware::component_interface_specs::planning::LaneletRoute>::SharedPtr pub_route_;
 
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr file_subscriber_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr sub_odometry_;
@@ -108,8 +103,6 @@ private:
   template <class T>
   T waitForParam(
     rclcpp::Node * node, const std::string & remote_node_name, const std::string & param_name);
-  void publishRoute(
-    const autoware_planning_msgs::msg::Trajectory & trajectory, const signed short & id_flip);
   bool getEgoVehiclePose(geometry_msgs::msg::PoseStamped * ego_vehicle_pose);
   bool transformPose(
     const geometry_msgs::msg::PoseStamped & input_pose,
