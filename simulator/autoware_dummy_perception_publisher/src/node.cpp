@@ -883,7 +883,7 @@ std::set<std::string> DummyPerceptionPublisherNode::collectAvailablePredictedUUI
   return available_predicted_uuids;
 }
 
-std::vector<std::string> DummyPerceptionPublisherNode::findDisappearedPredictedObjects(
+std::vector<std::string> DummyPerceptionPublisherNode::findDisappearedPredictedObjectUUIDs(
   std::set<std::string> & available_predicted_uuids)
 {
   std::vector<std::string> dummy_objects_to_remap;
@@ -1066,7 +1066,7 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
 
   // Check for disappeared predicted objects and mark dummy objects for remapping
   std::vector<std::string> dummy_objects_to_remap =
-    findDisappearedPredictedObjects(available_predicted_uuids);
+    findDisappearedPredictedObjectUUIDs(available_predicted_uuids);
 
   // Update dummy object positions and find unmapped dummy objects
   std::vector<std::string> unmapped_dummy_uuids;
