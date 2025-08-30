@@ -1,0 +1,4 @@
+/**:
+  ros__parameters:
+    lidar_range: 128.0
+    dilation_size: 1

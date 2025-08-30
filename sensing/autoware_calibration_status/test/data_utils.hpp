@@ -1,0 +1,293 @@
+// Copyright 2025 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef DATA_UTILS_HPP_
+#define DATA_UTILS_HPP_
+
+#include <autoware/point_types/memory.hpp>
+#include <autoware/point_types/types.hpp>
+#include <opencv2/opencv.hpp>
+#include <point_cloud_msg_wrapper/point_cloud_msg_wrapper.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
+
+#include <sensor_msgs/msg/camera_info.hpp>
+#include <sensor_msgs/msg/image.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+
+#include <gtest/gtest.h>
+#include <zlib.h>
+
+#include <algorithm>
+#include <execution>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <memory>
+#include <numeric>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace data_utils
+{
+constexpr size_t image_width = 2880;
+constexpr size_t image_height = 1860;
+constexpr size_t num_features = 5;
+
+using autoware::point_types::PointXYZIRC;
+using autoware::point_types::PointXYZIRCGenerator;
+using point_cloud_msg_wrapper::PointCloud2Modifier;
+using sensor_msgs::msg::CameraInfo;
+using sensor_msgs::msg::Image;
+using sensor_msgs::msg::PointCloud2;
+
+struct TestSample
+{
+  PointCloud2::SharedPtr pointcloud;
+  Image::SharedPtr image;
+  Image::SharedPtr image_undistorted;
+  CameraInfo::SharedPtr camera_info_calibrated;
+  CameraInfo::SharedPtr camera_info_miscalibrated;
+  Eigen::Affine3d lidar_to_camera_tf_calibrated;
+  Eigen::Affine3d lidar_to_camera_tf_miscalibrated;
+  std::vector<float> input_data_calibrated;
+  std::vector<float> input_data_miscalibrated;
+  std::string sample_name;
+};
+
+const size_t chunk_size = 16384;  // 16 KB
+
+template <typename T>
+std::vector<T> load_binary(const std::string & filename)
+{
+  // Read the entire compressed file into a buffer
+  std::ifstream file(filename, std::ios::binary | std::ios::ate);
+  if (!file) {
+    throw std::runtime_error("Failed to open file: " + filename);
+  }
+  std::streamsize compressed_size = file.tellg();
+  file.seekg(0, std::ios::beg);
+  std::vector<unsigned char> compressed_buffer(compressed_size);
+  if (!file.read(reinterpret_cast<char *>(compressed_buffer.data()), compressed_size)) {
+    throw std::runtime_error("Failed to read compressed file: " + filename);
+  }
+
+  // Decompress the buffer in chunks
+  std::vector<unsigned char> decompressed_buffer;
+
+  z_stream strm = {};
+  strm.zalloc = Z_NULL;
+  strm.zfree = Z_NULL;
+  strm.opaque = Z_NULL;
+  strm.avail_in = compressed_buffer.size();
+  strm.next_in = compressed_buffer.data();
+
+  // Use +16 for gzip decoding
+  if (inflateInit2(&strm, 16 + MAX_WBITS) != Z_OK) {
+    throw std::runtime_error("inflateInit failed");
+  }
+
+  unsigned char out_chunk[chunk_size];
+  int ret;
+  do {
+    strm.avail_out = chunk_size;
+    strm.next_out = out_chunk;
+    ret = inflate(&strm, Z_NO_FLUSH);
+
+    if (ret != Z_OK && ret != Z_STREAM_END) {
+      inflateEnd(&strm);
+      throw std::runtime_error("Zlib inflate failed with error code: " + std::to_string(ret));
+    }
+
+    size_t have = chunk_size - strm.avail_out;
+    decompressed_buffer.insert(decompressed_buffer.end(), out_chunk, out_chunk + have);
+  } while (strm.avail_out == 0);
+
+  inflateEnd(&strm);  // Clean up
+
+  // Verify the final data and copy it to the result vector
+  if (decompressed_buffer.size() % sizeof(T) != 0) {
+    throw std::runtime_error("Decompressed size is not a multiple of element size.");
+  }
+
+  size_t num_elements = decompressed_buffer.size() / sizeof(T);
+  std::vector<T> data(num_elements);
+  std::memcpy(data.data(), decompressed_buffer.data(), decompressed_buffer.size());
+
+  return data;
+}
+
+PointCloud2::SharedPtr get_pointcloud(
+  const std::filesystem::path & data_dir, const std::string & sample_name)
+{
+  const auto sample_dir = data_dir / sample_name;
+  auto cloud_data = load_binary<uint8_t>(sample_dir / "pointcloud.dat.gz");
+  const size_t num_points = cloud_data.size() / sizeof(PointXYZIRC);
+  PointCloud2::SharedPtr pointcloud = std::make_shared<PointCloud2>();
+  PointCloud2Modifier<PointXYZIRC, PointXYZIRCGenerator> modifier(*pointcloud, "base_link");
+  modifier.resize(num_points);
+  pointcloud->data = std::move(cloud_data);
+  return pointcloud;
+}
+
+Image::SharedPtr get_image(const std::filesystem::path & data_dir, const std::string & sample_name)
+{
+  const auto sample_dir = data_dir / sample_name;
+  auto image_data = load_binary<uint8_t>(sample_dir / "image.dat.gz");
+
+  std::vector<size_t> indices(image_data.size() / 3);
+  std::iota(indices.begin(), indices.end(), 0);
+
+  // Swap R and B channels
+  std::for_each(std::execution::seq, indices.begin(), indices.end(), [&image_data](size_t i) {
+    std::swap(image_data[i * 3], image_data[i * 3 + 2]);
+  });
+
+  Image::SharedPtr image = std::make_shared<Image>();
+  image->height = image_height;
+  image->width = image_width;
+  image->encoding = "bgr8";
+  image->step = image->width * 3;
+  image->header.frame_id = "optical_camera_link";
+  image->data = std::move(image_data);
+  return image;
+}
+
+Image::SharedPtr get_image_undistorted(
+  const std::filesystem::path & data_dir, const std::string & sample_name)
+{
+  const auto sample_dir = data_dir / sample_name;
+  auto image_data = load_binary<uint8_t>(sample_dir / "image_undistorted.dat.gz");
+  Image::SharedPtr image_undistorted = std::make_shared<Image>();
+  image_undistorted->height = image_height;
+  image_undistorted->width = image_width;
+  image_undistorted->encoding = "bgr8";
+  image_undistorted->step = image_undistorted->width * 3;
+  image_undistorted->header.frame_id = "optical_camera_link";
+  image_undistorted->data = std::move(image_data);
+  return image_undistorted;
+}
+
+CameraInfo::SharedPtr get_camera_info(
+  const std::filesystem::path & data_dir, const std::string & sample_name, bool is_miscalibrated)
+{
+  const auto sample_dir = data_dir / sample_name;
+  const std::string suffix = is_miscalibrated ? "miscalibrated" : "calibrated";
+  CameraInfo::SharedPtr camera_info = std::make_shared<CameraInfo>();
+  camera_info->width = image_width;
+  camera_info->height = image_height;
+  camera_info->distortion_model = "plumb_bob";
+  camera_info->d.resize(8);
+  camera_info->header.frame_id = "optical_camera_link";
+
+  auto dist_coeffs =
+    load_binary<double>(sample_dir / ("distortion_coefficients_" + suffix + ".dat.gz"));
+  if (dist_coeffs.size() != 8) {
+    throw std::runtime_error("Invalid distortion coefficients size, expected 8 elements.");
+  }
+  std::move(dist_coeffs.begin(), dist_coeffs.end(), camera_info->d.begin());
+  GTEST_LOG_(INFO) << "[" << suffix << "] Distortion coefficients:\n[" << dist_coeffs.at(0) << ", "
+                   << dist_coeffs.at(1) << ", " << dist_coeffs.at(2) << ", " << dist_coeffs.at(3)
+                   << ", " << dist_coeffs.at(4) << ", " << dist_coeffs.at(5) << ", "
+                   << dist_coeffs.at(6) << ", " << dist_coeffs.at(7) << "]";
+
+  auto camera_matrix = load_binary<double>(sample_dir / ("camera_matrix_" + suffix + ".dat.gz"));
+  if (camera_matrix.size() != 9) {
+    throw std::runtime_error("Invalid camera matrix size, expected 9 elements.");
+  }
+  std::move(camera_matrix.begin(), camera_matrix.end(), camera_info->k.begin());
+  GTEST_LOG_(INFO) << "[" << suffix << "] Camera matrix:\n[" << camera_matrix.at(0) << ", "
+                   << camera_matrix.at(1) << ", " << camera_matrix.at(2) << "]\n["
+                   << camera_matrix.at(3) << ", " << camera_matrix.at(4) << ", "
+                   << camera_matrix.at(5) << "]\n[" << camera_matrix.at(6) << ", "
+                   << camera_matrix.at(7) << ", " << camera_matrix.at(8) << "]";
+
+  auto projection_matrix =
+    load_binary<double>(sample_dir / ("projection_matrix_" + suffix + ".dat.gz"));
+  if (projection_matrix.size() != 12) {
+    throw std::runtime_error("Invalid projection matrix size, expected 12 elements.");
+  }
+  std::move(projection_matrix.begin(), projection_matrix.end(), camera_info->p.begin());
+  GTEST_LOG_(INFO) << "[" << suffix << "] Projection matrix:\n[" << projection_matrix.at(0) << ", "
+                   << projection_matrix.at(1) << ", " << projection_matrix.at(2) << ", "
+                   << projection_matrix.at(3) << "]\n[" << projection_matrix.at(4) << ", "
+                   << projection_matrix.at(5) << ", " << projection_matrix.at(6) << ", "
+                   << projection_matrix.at(7) << "]\n[" << projection_matrix.at(8) << ", "
+                   << projection_matrix.at(9) << ", " << projection_matrix.at(10) << ", "
+                   << projection_matrix.at(11) << "]";
+  return camera_info;
+}
+
+Eigen::Affine3d get_lidar_to_camera_transform(
+  const std::filesystem::path & data_dir, const std::string & sample_name, bool is_miscalibrated)
+{
+  const auto sample_dir = data_dir / sample_name;
+  const std::string suffix = is_miscalibrated ? "miscalibrated" : "calibrated";
+  auto transform_data =
+    load_binary<double>(sample_dir / ("lidar_to_camera_tf_" + suffix + ".dat.gz"));
+  if (transform_data.size() != 16) {
+    throw std::runtime_error("Invalid transform data size, expected 16 elements.");
+  }
+  Eigen::Matrix4d transform_matrix =
+    Eigen::Map<const Eigen::Matrix<double, 4, 4, Eigen::RowMajor>>(transform_data.data());
+  GTEST_LOG_(INFO) << "[" << suffix << "] Lidar to camera transform:\n" << transform_matrix;
+  return Eigen::Affine3d(transform_matrix);
+}
+
+std::vector<float> get_input_data(
+  const std::filesystem::path & data_dir, const std::string & sample_name, bool is_miscalibrated)
+{
+  const auto sample_dir = data_dir / sample_name;
+  const std::string suffix = is_miscalibrated ? "miscalibrated" : "calibrated";
+  auto input_data = load_binary<float>(sample_dir / ("input_data_" + suffix + ".dat.gz"));
+  if (input_data.size() != image_width * image_height * num_features) {
+    throw std::runtime_error(
+      "Invalid input data size, expected " +
+      std::to_string(image_width * image_height * num_features) + " elements.");
+  }
+  return input_data;
+}
+
+void save_img(
+  std::vector<uint8_t> data, const int width, const int height,
+  const std::filesystem::path & data_dir, const std::string & filename,
+  const int encoding = CV_8UC3)
+{
+  std::filesystem::path output_path = data_dir / filename;
+  cv::Mat img_mat(height, width, encoding, data.data());
+  cv::imwrite(output_path.string(), img_mat);
+}
+
+TestSample load_test_sample(const std::filesystem::path & data_dir, const std::string & sample_name)
+{
+  TestSample sample;
+  sample.pointcloud = get_pointcloud(data_dir, sample_name);
+  sample.image = get_image(data_dir, sample_name);
+  sample.image_undistorted = get_image_undistorted(data_dir, sample_name);
+  sample.camera_info_calibrated = get_camera_info(data_dir, sample_name, false);
+  sample.camera_info_miscalibrated = get_camera_info(data_dir, sample_name, true);
+  sample.lidar_to_camera_tf_calibrated =
+    get_lidar_to_camera_transform(data_dir, sample_name, false);
+  sample.lidar_to_camera_tf_miscalibrated =
+    get_lidar_to_camera_transform(data_dir, sample_name, true);
+  sample.input_data_calibrated = get_input_data(data_dir, sample_name, false);
+  sample.input_data_miscalibrated = get_input_data(data_dir, sample_name, true);
+  sample.sample_name = sample_name;
+  return sample;
+}
+
+}  // namespace data_utils
+
+#endif  // DATA_UTILS_HPP_
