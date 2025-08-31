@@ -351,8 +351,6 @@ private:
   // approximate distance from the start point to the end point of pull_over.
   // this is used as an assumed value to decelerate, etc., before generating the actual path.
   const double approximate_pull_over_distance_{20.0};
-  // ego may exceed the stop distance, so add a buffer
-  const double stop_distance_buffer_{2.0};
 
   // debug
   mutable GoalPlannerDebugData debug_data_;

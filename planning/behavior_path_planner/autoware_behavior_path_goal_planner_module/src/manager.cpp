@@ -147,6 +147,8 @@ GoalPlannerParameters GoalPlannerModuleManager::initGoalPlannerParameters(
     p.decide_path_distance = node->declare_parameter<double>(ns + "decide_path_distance");
     p.maximum_deceleration = node->declare_parameter<double>(ns + "maximum_deceleration");
     p.maximum_jerk = node->declare_parameter<double>(ns + "maximum_jerk");
+    p.low_velocity_threshold = node->declare_parameter<double>(ns + "low_velocity_threshold");
+    p.stopping_distance_buffer = node->declare_parameter<double>(ns + "stopping_distance_buffer");
     p.path_priority = node->declare_parameter<std::string>(ns + "path_priority");
     p.efficient_path_order =
       node->declare_parameter<std::vector<std::string>>(ns + "efficient_path_order");
