@@ -16,8 +16,8 @@
 
 #include "autoware/trajectory_modifier/utils.hpp"
 
-#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils/ros/update_param.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <rclcpp/logging.hpp>
 
 #include <cmath>
