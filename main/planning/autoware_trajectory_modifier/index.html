@@ -8,20 +8,20 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/main/planning/autoware_path_optimizer/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/main/planning/autoware_trajectory_modifier/">
       
       
-        <link rel="prev" href="../autoware_mission_planner_universe/">
+        <link rel="prev" href="../autoware_surround_obstacle_checker/surround_obstacle_checker-design.ja/">
       
       
-        <link rel="next" href="docs/debug/">
+        <link rel="next" href="../autoware_trajectory_optimizer/">
       
       <link rel="icon" href="../../docs/assets/images/autoware-foundation.png">
       <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.20">
     
     
       
-        <title>Path optimizer - Autoware Universe Documentation</title>
+        <title>Autoware Trajectory Modifier - Autoware Universe Documentation</title>
       
     
     
@@ -77,7 +77,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#path-optimizer" class="md-skip">
+        <a href="#autoware-trajectory-modifier" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Path optimizer
+              Autoware Trajectory Modifier
             
           </span>
         </div>
@@ -8387,7 +8387,7 @@
   
   
     <li class="md-nav__item">
-      <a href="." class="md-nav__link">
+      <a href="../autoware_path_optimizer" class="md-nav__link">
         About Path Optimizer
       </a>
     </li>
@@ -8401,7 +8401,7 @@
   
   
     <li class="md-nav__item">
-      <a href="docs/mpt" class="md-nav__link">
+      <a href="../autoware_path_optimizer/docs/mpt" class="md-nav__link">
         Model Predictive Trajectory (MPT)
       </a>
     </li>
@@ -8415,7 +8415,7 @@
   
   
     <li class="md-nav__item">
-      <a href="docs/debug" class="md-nav__link">
+      <a href="../autoware_path_optimizer/docs/debug" class="md-nav__link">
         How to Debug
       </a>
     </li>
@@ -13988,37 +13988,30 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#purpose" class="md-nav__link">
-    Purpose
+  <a href="#features" class="md-nav__link">
+    Features
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#feature" class="md-nav__link">
-    Feature
+  <a href="#architecture" class="md-nav__link">
+    Architecture
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#inputs-outputs" class="md-nav__link">
-    Inputs / Outputs
-  </a>
-  
-    <nav class="md-nav" aria-label="Inputs / Outputs">
+    <nav class="md-nav" aria-label="Architecture">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#input" class="md-nav__link">
-    input
+  <a href="#plugin-interface" class="md-nav__link">
+    Plugin Interface
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#output" class="md-nav__link">
-    output
+  <a href="#current-plugins" class="md-nav__link">
+    Current Plugins
   </a>
   
 </li>
@@ -14029,145 +14022,29 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#flowchart" class="md-nav__link">
-    Flowchart
-  </a>
-  
-    <nav class="md-nav" aria-label="Flowchart">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#createplannerdata" class="md-nav__link">
-    createPlannerData
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#check-replan" class="md-nav__link">
-    check replan
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#getmodelpredictivetrajectory" class="md-nav__link">
-    getModelPredictiveTrajectory
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#applyinputvelocity" class="md-nav__link">
-    applyInputVelocity
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#insertzerovelocityoutsidedrivablearea" class="md-nav__link">
-    insertZeroVelocityOutsideDrivableArea
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#limitation" class="md-nav__link">
-    Limitation
+  <a href="#dependencies" class="md-nav__link">
+    Dependencies
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#comparison-to-other-methods" class="md-nav__link">
-    Comparison to other methods
+  <a href="#inputoutput" class="md-nav__link">
+    Input/Output
   </a>
-  
-    <nav class="md-nav" aria-label="Comparison to other methods">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#optimization-based-method" class="md-nav__link">
-    Optimization-based method
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#sampling-based-method" class="md-nav__link">
-    Sampling-based method
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#learning-based-method" class="md-nav__link">
-    Learning-based method
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#how-to-tune-parameters" class="md-nav__link">
-    How to Tune Parameters
-  </a>
-  
-    <nav class="md-nav" aria-label="How to Tune Parameters">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#drivability-in-narrow-roads" class="md-nav__link">
-    Drivability in narrow roads
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#computation-time" class="md-nav__link">
-    Computation time
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#robustness" class="md-nav__link">
-    Robustness
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#other-options" class="md-nav__link">
-    Other options
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#parameters" class="md-nav__link">
     Parameters
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
-  
-</li>
       
         <li class="md-nav__item">
-  <a href="#how-to-debug" class="md-nav__link">
-    How To Debug
+  <a href="#adding-new-modifier-plugins" class="md-nav__link">
+    Adding New Modifier Plugins
   </a>
   
 </li>
@@ -14190,630 +14067,62 @@
   
 
 
-<div><h1 id="path-optimizer">Path optimizer<a class="headerlink" href="#path-optimizer" title="Permanent link">#</a></h1>
-<h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
-<p>This package generates a trajectory that is kinematically-feasible to drive and collision-free based on the input path, drivable area.
-Only position and orientation of trajectory are updated in this module, and velocity is just taken over from the one in the input path.</p>
-<h2 id="feature">Feature<a class="headerlink" href="#feature" title="Permanent link">#</a></h2>
-<p>This package is able to</p>
+<div><h1 id="autoware-trajectory-modifier">Autoware Trajectory Modifier<a class="headerlink" href="#autoware-trajectory-modifier" title="Permanent link">#</a></h1>
+<p>The <code>autoware_trajectory_modifier</code> package provides a plugin-based architecture for post-processing trajectory points to improve trajectory quality and ensure vehicle safety. It takes candidate trajectories and applies various modification algorithms to enhance their feasibility and safety characteristics.</p>
+<h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">#</a></h2>
 <ul>
-<li>make the trajectory inside the drivable area as much as possible<ul>
-<li>NOTE: Static obstacles to avoid can be removed from the drivable area.</li>
+<li>Plugin-based architecture for extensible trajectory modifications</li>
+<li>Stop point fixing to prevent trajectory issues near stationary conditions</li>
+<li>Configurable parameters to adjust modification behavior</li>
 </ul>
-</li>
-<li>insert stop point before the planned footprint will be outside the drivable area</li>
-</ul>
-<p>Note that the velocity is just taken over from the input path.</p>
-<h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
-<h3 id="input">input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>~/input/path</code></td>
-<td>autoware_planning_msgs/msg/Path</td>
-<td>Reference path and the corresponding drivable area</td>
-</tr>
-<tr>
-<td><code>~/input/odometry</code></td>
-<td>nav_msgs/msg/Odometry</td>
-<td>Current Velocity of ego vehicle</td>
-</tr>
-</tbody>
-</table>
-<h3 id="output">output<a class="headerlink" href="#output" title="Permanent link">#</a></h3>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>~/output/trajectory</code></td>
-<td>autoware_planning_msgs/msg/Trajectory</td>
-<td>Optimized trajectory that is feasible to drive and collision-free</td>
-</tr>
-</tbody>
-</table>
-<h2 id="flowchart">Flowchart<a class="headerlink" href="#flowchart" title="Permanent link">#</a></h2>
-<p>Flowchart of functions is explained here.</p>
-<p><img src="data:image/svg+xml;base64,PCFET0NUWVBFIGh0bWw+CjwhLS1baWYgbHQgSUUgN10+IDxodG1sIGNsYXNzPSJuby1qcyBpZTYgb2xkaWUiIGxhbmc9ImVuLVVTIj4gPCFbZW5kaWZdLS0+CjwhLS1baWYgSUUgN10+ICAgIDxodG1sIGNsYXNzPSJuby1qcyBpZTcgb2xkaWUiIGxhbmc9ImVuLVVTIj4gPCFbZW5kaWZdLS0+CjwhLS1baWYgSUUgOF0+ICAgIDxodG1sIGNsYXNzPSJuby1qcyBpZTggb2xkaWUiIGxhbmc9ImVuLVVTIj4gPCFbZW5kaWZdLS0+CjwhLS1baWYgZ3QgSUUgOF0+PCEtLT4gPGh0bWwgY2xhc3M9Im5vLWpzIiBsYW5nPSJlbi1VUyI+IDwhLS08IVtlbmRpZl0tLT4KPGhlYWQ+Cgo8dGl0bGU+cGxhbnR1bWwuY29tIHwgNTIwOiBXZWIgc2VydmVyIGlzIHJldHVybmluZyBhbiB1bmtub3duIGVycm9yPC90aXRsZT4KPG1ldGEgY2hhcnNldD0iVVRGLTgiIC8+CjxtZXRhIGh0dHAtZXF1aXY9IkNvbnRlbnQtVHlwZSIgY29udGVudD0idGV4dC9odG1sOyBjaGFyc2V0PVVURi04IiAvPgo8bWV0YSBodHRwLWVxdWl2PSJYLVVBLUNvbXBhdGlibGUiIGNvbnRlbnQ9IklFPUVkZ2UiIC8+CjxtZXRhIG5hbWU9InJvYm90cyIgY29udGVudD0ibm9pbmRleCwgbm9mb2xsb3ciIC8+CjxtZXRhIG5hbWU9InZpZXdwb3J0IiBjb250ZW50PSJ3aWR0aD1kZXZpY2Utd2lkdGgsaW5pdGlhbC1zY2FsZT0xIiAvPgo8bGluayByZWw9InN0eWxlc2hlZXQiIGlkPSJjZl9zdHlsZXMtY3NzIiBocmVmPSIvY2RuLWNnaS9zdHlsZXMvbWFpbi5jc3MiIC8+CjwvaGVhZD4KPGJvZHk+CjxkaXYgaWQ9ImNmLXdyYXBwZXIiPgogICAgPGRpdiBpZD0iY2YtZXJyb3ItZGV0YWlscyIgY2xhc3M9InAtMCI+CiAgICAgICAgPGhlYWRlciBjbGFzcz0ibXgtYXV0byBwdC0xMCBsZzpwdC02IGxnOnB4LTggdy0yNDAgbGc6dy1mdWxsIG1iLTgiPgogICAgICAgICAgICA8aDEgY2xhc3M9ImlubGluZS1ibG9jayBzbTpibG9jayBzbTptYi0yIGZvbnQtbGlnaHQgdGV4dC02MCBsZzp0ZXh0LTR4bCB0ZXh0LWJsYWNrLWRhcmsgbGVhZGluZy10aWdodCBtci0yIj4KICAgICAgICAgICAgICAgIDxzcGFuIGNsYXNzPSJpbmxpbmUtYmxvY2siPldlYiBzZXJ2ZXIgaXMgcmV0dXJuaW5nIGFuIHVua25vd24gZXJyb3I8L3NwYW4+CiAgICAgICAgICAgICAgICA8c3BhbiBjbGFzcz0iY29kZS1sYWJlbCI+RXJyb3IgY29kZSA1MjA8L3NwYW4+CiAgICAgICAgICAgIDwvaDE+CiAgICAgICAgICAgIDxkaXY+CiAgICAgICAgICAgICAgICBWaXNpdCA8YSBocmVmPSJodHRwczovL3d3dy5jbG91ZGZsYXJlLmNvbS81eHgtZXJyb3ItbGFuZGluZz91dG1fc291cmNlPWVycm9yY29kZV81MjAmdXRtX2NhbXBhaWduPXd3dy5wbGFudHVtbC5jb20iIHRhcmdldD0iX2JsYW5rIiByZWw9Im5vb3BlbmVyIG5vcmVmZXJyZXIiPmNsb3VkZmxhcmUuY29tPC9hPiBmb3IgbW9yZSBpbmZvcm1hdGlvbi4KICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgIDxkaXYgY2xhc3M9Im10LTMiPjIwMjUtMDktMDEgMDY6Mzc6NDcgVVRDPC9kaXY+CiAgICAgICAgPC9oZWFkZXI+CiAgICAgICAgPGRpdiBjbGFzcz0ibXktOCBiZy1ncmFkaWVudC1ncmF5Ij4KICAgICAgICAgICAgPGRpdiBjbGFzcz0idy0yNDAgbGc6dy1mdWxsIG14LWF1dG8iPgogICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0iY2xlYXJmaXggbWQ6cHgtOCI+CiAgICAgICAgICAgICAgICAgICAgPGRpdiBpZD0iY2YtYnJvd3Nlci1zdGF0dXMiIGNsYXNzPSIgcmVsYXRpdmUgdy0xLzMgbWQ6dy1mdWxsIHB5LTE1IG1kOnAtMCBtZDpweS04IG1kOnRleHQtbGVmdCBtZDpib3JkZXItc29saWQgbWQ6Ym9yZGVyLTAgbWQ6Ym9yZGVyLWIgbWQ6Ym9yZGVyLWdyYXktNDAwIG92ZXJmbG93LWhpZGRlbiBmbG9hdC1sZWZ0IG1kOmZsb2F0LW5vbmUgdGV4dC1jZW50ZXIiPgogIDxkaXYgY2xhc3M9InJlbGF0aXZlIG1iLTEwIG1kOm0tMCI+CiAgICAKICAgIDxzcGFuIGNsYXNzPSJjZi1pY29uLWJyb3dzZXIgYmxvY2sgbWQ6aGlkZGVuIGgtMjAgYmctY2VudGVyIGJnLW5vLXJlcGVhdCI+PC9zcGFuPgogICAgPHNwYW4gY2xhc3M9ImNmLWljb24tb2sgdy0xMiBoLTEyIGFic29sdXRlIGxlZnQtMS8yIG1kOmxlZnQtYXV0byBtZDpyaWdodC0wIG1kOnRvcC0wIC1tbC02IC1ib3R0b20tNCI+PC9zcGFuPgogICAgCiAgPC9kaXY+CiAgPHNwYW4gY2xhc3M9Im1kOmJsb2NrIHctZnVsbCB0cnVuY2F0ZSI+WW91PC9zcGFuPgogIDxoMyBjbGFzcz0ibWQ6aW5saW5lLWJsb2NrIG10LTMgbWQ6bXQtMCB0ZXh0LTJ4bCB0ZXh0LWdyYXktNjAwIGZvbnQtbGlnaHQgbGVhZGluZy0xLjMiPgogIAogICAgQnJvd3NlcgogIAogIDwvaDM+CiAgCiAgPHNwYW4gY2xhc3M9ImxlYWRpbmctMS4zIHRleHQtMnhsIHRleHQtZ3JlZW4tc3VjY2VzcyI+V29ya2luZzwvc3Bhbj4KICAKPC9kaXY+CiAgICAgICAgICAgICAgICAgICAgPGRpdiBpZD0iY2YtY2xvdWRmbGFyZS1zdGF0dXMiIGNsYXNzPSIgcmVsYXRpdmUgdy0xLzMgbWQ6dy1mdWxsIHB5LTE1IG1kOnAtMCBtZDpweS04IG1kOnRleHQtbGVmdCBtZDpib3JkZXItc29saWQgbWQ6Ym9yZGVyLTAgbWQ6Ym9yZGVyLWIgbWQ6Ym9yZGVyLWdyYXktNDAwIG92ZXJmbG93LWhpZGRlbiBmbG9hdC1sZWZ0IG1kOmZsb2F0LW5vbmUgdGV4dC1jZW50ZXIiPgogIDxkaXYgY2xhc3M9InJlbGF0aXZlIG1iLTEwIG1kOm0tMCI+CiAgICA8YSBocmVmPSJodHRwczovL3d3dy5jbG91ZGZsYXJlLmNvbS81eHgtZXJyb3ItbGFuZGluZz91dG1fc291cmNlPWVycm9yY29kZV81MjAmIzM4O3V0bV9jYW1wYWlnbj13d3cucGxhbnR1bWwuY29tIiB0YXJnZXQ9Il9ibGFuayIgcmVsPSJub29wZW5lciBub3JlZmVycmVyIj4KICAgIDxzcGFuIGNsYXNzPSJjZi1pY29uLWNsb3VkIGJsb2NrIG1kOmhpZGRlbiBoLTIwIGJnLWNlbnRlciBiZy1uby1yZXBlYXQiPjwvc3Bhbj4KICAgIDxzcGFuIGNsYXNzPSJjZi1pY29uLW9rIHctMTIgaC0xMiBhYnNvbHV0ZSBsZWZ0LTEvMiBtZDpsZWZ0LWF1dG8gbWQ6cmlnaHQtMCBtZDp0b3AtMCAtbWwtNiAtYm90dG9tLTQiPjwvc3Bhbj4KICAgIDwvYT4KICA8L2Rpdj4KICA8c3BhbiBjbGFzcz0ibWQ6YmxvY2sgdy1mdWxsIHRydW5jYXRlIj5Mb3MgQW5nZWxlczwvc3Bhbj4KICA8aDMgY2xhc3M9Im1kOmlubGluZS1ibG9jayBtdC0zIG1kOm10LTAgdGV4dC0yeGwgdGV4dC1ncmF5LTYwMCBmb250LWxpZ2h0IGxlYWRpbmctMS4zIj4KICA8YSBocmVmPSJodHRwczovL3d3dy5jbG91ZGZsYXJlLmNvbS81eHgtZXJyb3ItbGFuZGluZz91dG1fc291cmNlPWVycm9yY29kZV81MjAmdXRtX2NhbXBhaWduPXd3dy5wbGFudHVtbC5jb20iIHRhcmdldD0iX2JsYW5rIiByZWw9Im5vb3BlbmVyIG5vcmVmZXJyZXIiPgogICAgQ2xvdWRmbGFyZQogIDwvYT4KICA8L2gzPgogIAogIDxzcGFuIGNsYXNzPSJsZWFkaW5nLTEuMyB0ZXh0LTJ4bCB0ZXh0LWdyZWVuLXN1Y2Nlc3MiPldvcmtpbmc8L3NwYW4+CiAgCjwvZGl2PgogICAgICAgICAgICAgICAgICAgIDxkaXYgaWQ9ImNmLWhvc3Qtc3RhdHVzIiBjbGFzcz0iY2YtZXJyb3Itc291cmNlIHJlbGF0aXZlIHctMS8zIG1kOnctZnVsbCBweS0xNSBtZDpwLTAgbWQ6cHktOCBtZDp0ZXh0LWxlZnQgbWQ6Ym9yZGVyLXNvbGlkIG1kOmJvcmRlci0wIG1kOmJvcmRlci1iIG1kOmJvcmRlci1ncmF5LTQwMCBvdmVyZmxvdy1oaWRkZW4gZmxvYXQtbGVmdCBtZDpmbG9hdC1ub25lIHRleHQtY2VudGVyIj4KICA8ZGl2IGNsYXNzPSJyZWxhdGl2ZSBtYi0xMCBtZDptLTAiPgogICAgCiAgICA8c3BhbiBjbGFzcz0iY2YtaWNvbi1zZXJ2ZXIgYmxvY2sgbWQ6aGlkZGVuIGgtMjAgYmctY2VudGVyIGJnLW5vLXJlcGVhdCI+PC9zcGFuPgogICAgPHNwYW4gY2xhc3M9ImNmLWljb24tZXJyb3Igdy0xMiBoLTEyIGFic29sdXRlIGxlZnQtMS8yIG1kOmxlZnQtYXV0byBtZDpyaWdodC0wIG1kOnRvcC0wIC1tbC02IC1ib3R0b20tNCI+PC9zcGFuPgogICAgCiAgPC9kaXY+CiAgPHNwYW4gY2xhc3M9Im1kOmJsb2NrIHctZnVsbCB0cnVuY2F0ZSI+d3d3LnBsYW50dW1sLmNvbTwvc3Bhbj4KICA8aDMgY2xhc3M9Im1kOmlubGluZS1ibG9jayBtdC0zIG1kOm10LTAgdGV4dC0yeGwgdGV4dC1ncmF5LTYwMCBmb250LWxpZ2h0IGxlYWRpbmctMS4zIj4KICAKICAgIEhvc3QKICAKICA8L2gzPgogIAogIDxzcGFuIGNsYXNzPSJsZWFkaW5nLTEuMyB0ZXh0LTJ4bCB0ZXh0LXJlZC1lcnJvciI+RXJyb3I8L3NwYW4+CiAgCjwvZGl2PgogICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgIDwvZGl2PgogICAgICAgIDwvZGl2PgoKICAgICAgICA8ZGl2IGNsYXNzPSJ3LTI0MCBsZzp3LWZ1bGwgbXgtYXV0byBtYi04IGxnOnB4LTgiPgogICAgICAgICAgICA8ZGl2IGNsYXNzPSJjbGVhcmZpeCI+CiAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJ3LTEvMiBtZDp3LWZ1bGwgZmxvYXQtbGVmdCBwci02IG1kOnBiLTEwIG1kOnByLTAgbGVhZGluZy1yZWxheGVkIj4KICAgICAgICAgICAgICAgICAgICA8aDIgY2xhc3M9InRleHQtM3hsIGZvbnQtbm9ybWFsIGxlYWRpbmctMS4zIG1iLTQiPldoYXQgaGFwcGVuZWQ/PC9oMj4KICAgICAgICAgICAgICAgICAgICA8cD5UaGVyZSBpcyBhbiB1bmtub3duIGNvbm5lY3Rpb24gaXNzdWUgYmV0d2VlbiBDbG91ZGZsYXJlIGFuZCB0aGUgb3JpZ2luIHdlYiBzZXJ2ZXIuIEFzIGEgcmVzdWx0LCB0aGUgd2ViIHBhZ2UgY2FuIG5vdCBiZSBkaXNwbGF5ZWQuPC9wPgogICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJ3LTEvMiBtZDp3LWZ1bGwgZmxvYXQtbGVmdCBsZWFkaW5nLXJlbGF4ZWQiPgogICAgICAgICAgICAgICAgICAgIDxoMiBjbGFzcz0idGV4dC0zeGwgZm9udC1ub3JtYWwgbGVhZGluZy0xLjMgbWItNCI+V2hhdCBjYW4gSSBkbz88L2gyPgogICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgPGgzIGNsYXNzPSJ0ZXh0LTE1IGZvbnQtc2VtaWJvbGQgbWItMiI+SWYgeW91IGFyZSBhIHZpc2l0b3Igb2YgdGhpcyB3ZWJzaXRlOjwvaDM+CiAgICAgICAgICAgICAgICA8cCBjbGFzcz0ibWItNiI+UGxlYXNlIHRyeSBhZ2FpbiBpbiBhIGZldyBtaW51dGVzLjwvcD4KCiAgICAgICAgICAgICAgICA8aDMgY2xhc3M9InRleHQtMTUgZm9udC1zZW1pYm9sZCBtYi0yIj5JZiB5b3UgYXJlIHRoZSBvd25lciBvZiB0aGlzIHdlYnNpdGU6PC9oMz4KICAgICAgICAgICAgICAgIDxwPjxzcGFuPlRoZXJlIGlzIGFuIGlzc3VlIGJldHdlZW4gQ2xvdWRmbGFyZSdzIGNhY2hlIGFuZCB5b3VyIG9yaWdpbiB3ZWIgc2VydmVyLiBDbG91ZGZsYXJlIG1vbml0b3JzIGZvciB0aGVzZSBlcnJvcnMgYW5kIGF1dG9tYXRpY2FsbHkgaW52ZXN0aWdhdGVzIHRoZSBjYXVzZS4gVG8gaGVscCBzdXBwb3J0IHRoZSBpbnZlc3RpZ2F0aW9uLCB5b3UgY2FuIHB1bGwgdGhlIGNvcnJlc3BvbmRpbmcgZXJyb3IgbG9nIGZyb20geW91ciB3ZWIgc2VydmVyIGFuZCBzdWJtaXQgaXQgb3VyIHN1cHBvcnQgdGVhbS4gIFBsZWFzZSBpbmNsdWRlIHRoZSBSYXkgSUQgKHdoaWNoIGlzIGF0IHRoZSBib3R0b20gb2YgdGhpcyBlcnJvciBwYWdlKS48L3NwYW4+IDxhIHJlbD0ibm9vcGVuZXIgbm9yZWZlcnJlciIgaHJlZj0gICAiaHR0cHM6Ly9kZXZlbG9wZXJzLmNsb3VkZmxhcmUuY29tL3N1cHBvcnQvdHJvdWJsZXNob290aW5nL2h0dHAtc3RhdHVzLWNvZGVzL2Nsb3VkZmxhcmUtNXh4LWVycm9ycy9lcnJvci01MjAvIj5BZGRpdGlvbmFsIHRyb3VibGVzaG9vdGluZyByZXNvdXJjZXM8L2E+LjwvcD4KICAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICA8L2Rpdj4KICAgICAgICA8L2Rpdj4KCiAgICAgICAgPGRpdiBjbGFzcz0iY2YtZXJyb3ItZm9vdGVyIGNmLXdyYXBwZXIgdy0yNDAgbGc6dy1mdWxsIHB5LTEwIHNtOnB5LTQgc206cHgtOCBteC1hdXRvIHRleHQtY2VudGVyIHNtOnRleHQtbGVmdCBib3JkZXItc29saWQgYm9yZGVyLTAgYm9yZGVyLXQgYm9yZGVyLWdyYXktMzAwIj4KICAgIDxwIGNsYXNzPSJ0ZXh0LTEzIj4KICAgICAgPHNwYW4gY2xhc3M9ImNmLWZvb3Rlci1pdGVtIHNtOmJsb2NrIHNtOm1iLTEiPkNsb3VkZmxhcmUgUmF5IElEOiA8c3Ryb25nIGNsYXNzPSJmb250LXNlbWlib2xkIj45NzgyYzJjMWRhNzFlOWU1PC9zdHJvbmc+PC9zcGFuPgogICAgICA8c3BhbiBjbGFzcz0iY2YtZm9vdGVyLXNlcGFyYXRvciBzbTpoaWRkZW4iPiZidWxsOzwvc3Bhbj4KICAgICAgPHNwYW4gaWQ9ImNmLWZvb3Rlci1pdGVtLWlwIiBjbGFzcz0iY2YtZm9vdGVyLWl0ZW0gaGlkZGVuIHNtOmJsb2NrIHNtOm1iLTEiPgogICAgICAgIFlvdXIgSVA6CiAgICAgICAgPGJ1dHRvbiB0eXBlPSJidXR0b24iIGlkPSJjZi1mb290ZXItaXAtcmV2ZWFsIiBjbGFzcz0iY2YtZm9vdGVyLWlwLXJldmVhbC1idG4iPkNsaWNrIHRvIHJldmVhbDwvYnV0dG9uPgogICAgICAgIDxzcGFuIGNsYXNzPSJoaWRkZW4iIGlkPSJjZi1mb290ZXItaXAiPjE3Mi4xODIuMjI2LjY1PC9zcGFuPgogICAgICAgIDxzcGFuIGNsYXNzPSJjZi1mb290ZXItc2VwYXJhdG9yIHNtOmhpZGRlbiI+JmJ1bGw7PC9zcGFuPgogICAgICA8L3NwYW4+CiAgICAgIDxzcGFuIGNsYXNzPSJjZi1mb290ZXItaXRlbSBzbTpibG9jayBzbTptYi0xIj48c3Bhbj5QZXJmb3JtYW5jZSAmYW1wOyBzZWN1cml0eSBieTwvc3Bhbj4gPGEgcmVsPSJub29wZW5lciBub3JlZmVycmVyIiBocmVmPSJodHRwczovL3d3dy5jbG91ZGZsYXJlLmNvbS81eHgtZXJyb3ItbGFuZGluZz91dG1fc291cmNlPWVycm9yY29kZV81MjAmIzM4O3V0bV9jYW1wYWlnbj13d3cucGxhbnR1bWwuY29tIiBpZD0iYnJhbmRfbGluayIgdGFyZ2V0PSJfYmxhbmsiPkNsb3VkZmxhcmU8L2E+PC9zcGFuPgogICAgICAKICAgIDwvcD4KICAgIDxzY3JpcHQ+KGZ1bmN0aW9uKCl7ZnVuY3Rpb24gZCgpe3ZhciBiPWEuZ2V0RWxlbWVudEJ5SWQoImNmLWZvb3Rlci1pdGVtLWlwIiksYz1hLmdldEVsZW1lbnRCeUlkKCJjZi1mb290ZXItaXAtcmV2ZWFsIik7YiYmImNsYXNzTGlzdCJpbiBiJiYoYi5jbGFzc0xpc3QucmVtb3ZlKCJoaWRkZW4iKSxjLmFkZEV2ZW50TGlzdGVuZXIoImNsaWNrIixmdW5jdGlvbigpe2MuY2xhc3NMaXN0LmFkZCgiaGlkZGVuIik7YS5nZXRFbGVtZW50QnlJZCgiY2YtZm9vdGVyLWlwIikuY2xhc3NMaXN0LnJlbW92ZSgiaGlkZGVuIil9KSl9dmFyIGE9ZG9jdW1lbnQ7ZG9jdW1lbnQuYWRkRXZlbnRMaXN0ZW5lciYmYS5hZGRFdmVudExpc3RlbmVyKCJET01Db250ZW50TG9hZGVkIixkKX0pKCk7PC9zY3JpcHQ+CiAgPC9kaXY+PCEtLSAvLmVycm9yLWZvb3RlciAtLT4KCiAgICA8L2Rpdj4KPC9kaXY+CjwvYm9keT4KPC9odG1sPg==" class="uml" alt="uml diagram" title=""></p>
-<h3 id="createplannerdata">createPlannerData<a class="headerlink" href="#createplannerdata" title="Permanent link">#</a></h3>
-<p>The following data for planning is created.</p>
-<div class="highlight"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">PlannerData</span>
-<span class="p">{</span>
-<span class="w">  </span><span class="c1">// input</span>
-<span class="w">  </span><span class="n">Header</span><span class="w"> </span><span class="n">header</span><span class="p">;</span>
-<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">TrajectoryPoint</span><span class="o">&gt;</span><span class="w"> </span><span class="n">traj_points</span><span class="p">;</span><span class="w"> </span><span class="c1">// converted from the input path</span>
-<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">geometry_msgs</span><span class="o">::</span><span class="n">msg</span><span class="o">::</span><span class="n">Point</span><span class="o">&gt;</span><span class="w"> </span><span class="n">left_bound</span><span class="p">;</span>
-<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">geometry_msgs</span><span class="o">::</span><span class="n">msg</span><span class="o">::</span><span class="n">Point</span><span class="o">&gt;</span><span class="w"> </span><span class="n">right_bound</span><span class="p">;</span>
-
-<span class="w">  </span><span class="c1">// ego</span>
-<span class="w">  </span><span class="n">geometry_msgs</span><span class="o">::</span><span class="n">msg</span><span class="o">::</span><span class="n">Pose</span><span class="w"> </span><span class="n">ego_pose</span><span class="p">;</span>
-<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">ego_vel</span><span class="p">;</span>
-<span class="p">};</span>
-</code></pre></div>
-<h3 id="check-replan">check replan<a class="headerlink" href="#check-replan" title="Permanent link">#</a></h3>
-<p>When one of the following conditions are met, trajectory optimization will be executed.
-Otherwise, previously optimized trajectory is used with updating the velocity from the latest input path.</p>
-<p>max_path_shape_around_ego_lat_dist</p>
+<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">#</a></h2>
+<p>The trajectory modifier uses a plugin-based system where different modification algorithms can be implemented as plugins. Each plugin inherits from the <code>TrajectoryModifierPluginBase</code> class and implements the required interface.</p>
+<h3 id="plugin-interface">Plugin Interface<a class="headerlink" href="#plugin-interface" title="Permanent link">#</a></h3>
+<p>All modifier plugins must inherit from <code>TrajectoryModifierPluginBase</code> and implement:</p>
 <ul>
-<li>Ego moves longer than <code>replan.max_ego_moving_dist</code> in one cycle. (default: 3.0 [m])<ul>
-<li>This is for when the ego pose is set again in the simulation.</li>
+<li><code>modify_trajectory()</code> - Main method to modify trajectory points</li>
+<li><code>set_up_params()</code> - Initialize plugin parameters</li>
+<li><code>on_parameter()</code> - Handle parameter updates</li>
+<li><code>is_trajectory_modification_required()</code> - Determine if modification is needed</li>
 </ul>
-</li>
-<li>Trajectory's end, which is considered as the goal pose, moves longer than <code>replan.max_goal_moving_dist</code> in one cycle. (default: 15.0 [ms])<ul>
-<li>When the goal pose is set again, the planning should be reset.</li>
-</ul>
-</li>
-<li>Time passes. (default: 1.0 [s])<ul>
-<li>The optimization is skipped for a while sine the optimization is sometimes heavy.</li>
-</ul>
-</li>
-<li>The input path changes laterally longer than <code>replan.max_path_shape_around_ego_lat_dist</code> in one cycle. (default: 2.0)</li>
-</ul>
-<h3 id="getmodelpredictivetrajectory">getModelPredictiveTrajectory<a class="headerlink" href="#getmodelpredictivetrajectory" title="Permanent link">#</a></h3>
-<p>This module makes the trajectory kinematically-feasible and collision-free.
-We define vehicle pose in the frenet coordinate, and minimize tracking errors by optimization.
-This optimization considers vehicle kinematics and collision checking with road boundary and obstacles.
-To decrease the computation cost, the optimization is applied to the shorter trajectory (default: 50 [m]) than the whole trajectory, and concatenate the remained trajectory with the optimized one at last.</p>
-<p>The trajectory just in front of the ego must not be changed a lot so that the steering wheel will be stable.
-Therefore, we use the previously generated trajectory in front of the ego.</p>
-<p>Optimization center on the vehicle, that tries to locate just on the trajectory, can be tuned along side the vehicle vertical axis.
-This parameter <code>mpt.kinematics.optimization center offset</code> is defined as the signed length from the back-wheel center to the optimization center.
-Some examples are shown in the following figure, and it is shown that the trajectory of vehicle shape differs according to the optimization center even if the reference trajectory (green one) is the same.</p>
-<p><img alt="mpt_optimization_offset" src="media/mpt_optimization_offset.svg"></p>
-<p>More details can be seen <a href="docs/mpt/">here</a>.</p>
-<h3 id="applyinputvelocity">applyInputVelocity<a class="headerlink" href="#applyinputvelocity" title="Permanent link">#</a></h3>
-<p>Velocity is assigned in the optimized trajectory from the velocity in the behavior path.
-The shapes of the optimized trajectory and the path are different, therefore the each nearest trajectory point to the path is searched and the velocity is interpolated with zero-order hold.</p>
-<h3 id="insertzerovelocityoutsidedrivablearea">insertZeroVelocityOutsideDrivableArea<a class="headerlink" href="#insertzerovelocityoutsidedrivablearea" title="Permanent link">#</a></h3>
-<p>Optimized trajectory is too short for velocity planning, therefore extend the trajectory by concatenating the optimized trajectory and the behavior path considering drivability.
-Generated trajectory is checked if it is inside the drivable area or not, and if outside drivable area, output a trajectory inside drivable area with the behavior path or the previously generated trajectory.</p>
-<p>As described above, the behavior path is separated into two paths: one is for optimization and the other is the remain. The first path becomes optimized trajectory, and the second path just is transformed to a trajectory. Then a trajectory inside the drivable area is calculated as follows.</p>
+<h3 id="current-plugins">Current Plugins<a class="headerlink" href="#current-plugins" title="Permanent link">#</a></h3>
+<h4 id="stop-point-fixer">Stop Point Fixer<a class="headerlink" href="#stop-point-fixer" title="Permanent link">#</a></h4>
+<p>The Stop Point Fixer plugin addresses trajectory issues when the ego vehicle is stationary or moving at very low speeds. It prevents problematic trajectory points that could cause planning issues by:</p>
 <ul>
-<li>If optimized trajectory is <strong>inside the drivable area</strong>, and the remained trajectory is inside/outside the drivable area,<ul>
-<li>the output trajectory will be just concatenation of those two trajectories.</li>
-<li>In this case, we do not care if the remained trajectory is inside or outside the drivable area since generally it is outside the drivable area (especially in a narrow road), but we want to pass a trajectory as long as possible to the latter module.</li>
+<li>Monitoring ego vehicle velocity and trajectory distance</li>
+<li>Replacing the trajectory with a single stop point when conditions are met</li>
+<li>Ensuring smooth operation during stationary periods</li>
 </ul>
-</li>
-<li>If optimized trajectory is <strong>outside the drivable area</strong>, and the remained trajectory is inside/outside the drivable area,<ul>
-<li>and if the previously generated trajectory <strong>is memorized</strong>,<ul>
-<li>the output trajectory will be the previously generated trajectory, where zero velocity is inserted to the point firstly going outside the drivable area.</li>
-</ul>
-</li>
-<li>and if the previously generated trajectory <strong>is not memorized</strong>,<ul>
-<li>the output trajectory will be a part of trajectory just transformed from the behavior path, where zero velocity is inserted to the point firstly going outside the drivable area.</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-<p>Optimization failure is dealt with the same as if the optimized trajectory is outside the drivable area.
-The output trajectory is memorized as a previously generated trajectory for the next cycle.</p>
-<p><em>Rationale</em>
-In the current design, since there are some modelling errors, the constraints are considered to be soft constraints.
-Therefore, we have to make sure that the optimized trajectory is inside the drivable area or not after optimization.</p>
-<h2 id="limitation">Limitation<a class="headerlink" href="#limitation" title="Permanent link">#</a></h2>
+<h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">#</a></h2>
+<p>This package depends on the following packages:</p>
 <ul>
-<li>Computation cost is sometimes high.</li>
-<li>Because of the approximation such as linearization, some narrow roads cannot be run by the planner.</li>
-<li>Roles of planning for <code>behavior_path_planner</code> and <code>path_optimizer</code> are not decided clearly. Both can avoid obstacles.</li>
+<li><code>autoware_internal_planning_msgs</code>: For candidate trajectory message types</li>
+<li><code>autoware_planning_msgs</code>: For output trajectory message types</li>
+<li><code>autoware_motion_utils</code>: Motion-related utility functions</li>
+<li><code>autoware_trajectory</code>: Trajectory data structures and utilities</li>
+<li><code>autoware_utils</code>: Common utility functions</li>
 </ul>
-<h2 id="comparison-to-other-methods">Comparison to other methods<a class="headerlink" href="#comparison-to-other-methods" title="Permanent link">#</a></h2>
-<p>Trajectory planning problem that satisfies kinematically-feasibility and collision-free has two main characteristics that makes hard to be solved: one is non-convex and the other is high dimension.
-Based on the characteristics, we investigate pros/cons of the typical planning methods: optimization-based, sampling-based, and learning-based method.</p>
-<h3 id="optimization-based-method">Optimization-based method<a class="headerlink" href="#optimization-based-method" title="Permanent link">#</a></h3>
+<h2 id="inputoutput">Input/Output<a class="headerlink" href="#inputoutput" title="Permanent link">#</a></h2>
 <ul>
-<li>pros: comparatively fast against high dimension by leveraging the gradient descent</li>
-<li>cons: often converge to the local minima in the non-convex problem</li>
+<li><strong>Input</strong>: <code>autoware_internal_planning_msgs::msg::CandidateTrajectories</code></li>
+<li><strong>Output</strong>: Modified <code>autoware_internal_planning_msgs::msg::CandidateTrajectories</code> and selected <code>autoware_planning_msgs::msg::Trajectory</code></li>
 </ul>
-<h3 id="sampling-based-method">Sampling-based method<a class="headerlink" href="#sampling-based-method" title="Permanent link">#</a></h3>
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
 <ul>
-<li>pros: realize global optimization</li>
-<li>cons: high computation cost especially in the complex case</li>
+<li><code>use_stop_point_fixer</code>: Enable the stop point fixer modifier plugin (default: true)</li>
+<li><code>stop_point_fixer.velocity_threshold_mps</code>: Velocity threshold below which ego vehicle is considered stationary (default: 0.1 m/s)</li>
+<li><code>stop_point_fixer.min_distance_threshold_m</code>: Minimum distance threshold to trigger trajectory replacement (default: 1.0 m)</li>
 </ul>
-<h3 id="learning-based-method">Learning-based method<a class="headerlink" href="#learning-based-method" title="Permanent link">#</a></h3>
-<ul>
-<li>under research yet</li>
-</ul>
-<p>Based on these pros/cons, we chose the optimization-based planner first.
-Although it has a cons to converge to the local minima, it can get a good solution by the preprocessing to approximate the problem to convex that almost equals to the original non-convex problem.</p>
-<h2 id="how-to-tune-parameters">How to Tune Parameters<a class="headerlink" href="#how-to-tune-parameters" title="Permanent link">#</a></h2>
-<h3 id="drivability-in-narrow-roads">Drivability in narrow roads<a class="headerlink" href="#drivability-in-narrow-roads" title="Permanent link">#</a></h3>
-<ul>
-<li>modify <code>mpt.clearance.soft_clearance_from_road</code><ul>
-<li>This parameter describes how much margin to make between the trajectory and road boundaries.</li>
-<li>Due to the model error for optimization, the constraint such as collision-free is not fully met.<ul>
-<li>By making this parameter larger, the is for narrow-road driving may be resolved. 12180</li>
-</ul>
-</li>
-</ul>
-</li>
-<li>modify <code>mpt.kinematics.optimization_center_offset</code><ul>
-<li>The point on the vehicle, offset forward with this parameter from the base link` tries to follow the reference path.</li>
-</ul>
-</li>
-</ul>
-<ul>
-<li>change or tune the method to approximate footprints with a set of circles.<ul>
-<li>See <a href="https://autowarefoundation.github.io/autoware_universe/main/planning/path_optimizer/docs/mpt/#collision-free">here</a></li>
-<li>Tuning means changing the ratio of circle's radius.</li>
-</ul>
-</li>
-</ul>
-<h3 id="computation-time">Computation time<a class="headerlink" href="#computation-time" title="Permanent link">#</a></h3>
-<ul>
-<li>under construction</li>
-</ul>
-<h3 id="robustness">Robustness<a class="headerlink" href="#robustness" title="Permanent link">#</a></h3>
-<ul>
-<li>Check if the trajectory before or after MPT is not robust<ul>
-<li>if the trajectory before MPT is not robust</li>
-<li>if the trajectory after MPT is not robust<ul>
-<li>make <code>mpt.weight.steer_input_weight</code> or <code>mpt.weight.steer_rate_weight</code> larger, which are stability of steering wheel along the trajectory.</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-<h3 id="other-options">Other options<a class="headerlink" href="#other-options" title="Permanent link">#</a></h3>
-<ul>
-<li><code>option.enable_skip_optimization</code> skips MPT optimization.</li>
-<li><code>option.enable_calculation_time_info</code> enables showing each calculation time for functions and total calculation time on the terminal.</li>
-<li><code>option.enable_outside_drivable_area_stop</code> enables stopping just before the generated trajectory point will be outside the drivable area.</li>
-</ul>
-<h3 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h3>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-<th>Range</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>option.enable_skip_optimization</td>
-<td>boolean</td>
-<td>Skip elastic band and model predictive trajectory optimization.</td>
-<td>False</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>option.enable_reset_prev_optimization</td>
-<td>boolean</td>
-<td>If true, optimization has no fix constraint to the previous result.</td>
-<td>False</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>option.enable_outside_drivable_area_stop</td>
-<td>boolean</td>
-<td>Stop if the ego's trajectory footprint is outside the drivable area.</td>
-<td>False</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>option.use_footprint_polygon_for_outside_drivable_area_check</td>
-<td>boolean</td>
-<td>If false, only the footprint's corner points are considered for drivable area check.</td>
-<td>False</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>debug.enable_pub_debug_marker</td>
-<td>boolean</td>
-<td>Publish debug markers.</td>
-<td>False</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>debug.enable_pub_extra_debug_marker</td>
-<td>boolean</td>
-<td>Publish extra debug markers.</td>
-<td>False</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>debug.enable_debug_info</td>
-<td>boolean</td>
-<td>Enable debug information.</td>
-<td>False</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>debug.enable_calculation_time_info</td>
-<td>boolean</td>
-<td>Enable calculation time information.</td>
-<td>False</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>common.output_delta_arc_length</td>
-<td>float</td>
-<td>Delta arc length for output trajectory [m].</td>
-<td>0.5</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>common.output_backward_traj_length</td>
-<td>float</td>
-<td>Backward length for backward trajectory from base_link [m].</td>
-<td>5.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>common.vehicle_stop_margin_outside_drivable_area</td>
-<td>float</td>
-<td>Vehicle stop margin to let the vehicle stop before the calculated stop point if it is calculated outside the drivable area [m].</td>
-<td>0.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>replan.max_path_shape_around_ego_lat_dist</td>
-<td>float</td>
-<td>Threshold of path shape change around ego [m].</td>
-<td>2.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>replan.max_path_shape_forward_lon_dist</td>
-<td>float</td>
-<td>Forward point to check lateral distance difference [m].</td>
-<td>100.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>replan.max_path_shape_forward_lat_dist</td>
-<td>float</td>
-<td>Threshold of path shape change around forward point [m].</td>
-<td>0.1</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>replan.max_ego_moving_dist</td>
-<td>float</td>
-<td>Threshold of ego's moving distance for replan [m].</td>
-<td>5.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>replan.max_goal_moving_dist</td>
-<td>float</td>
-<td>Threshold of goal's moving distance for replan [m].</td>
-<td>15.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>replan.max_delta_time_sec</td>
-<td>float</td>
-<td>Threshold of delta time for replan [second].</td>
-<td>0.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>option.steer_limit_constraint</td>
-<td>boolean</td>
-<td>Enable steer limit constraint.</td>
-<td>False</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>option.visualize_sampling_num</td>
-<td>integer</td>
-<td>Number of samples to visualize.</td>
-<td>1</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>option.enable_manual_warm_start</td>
-<td>boolean</td>
-<td>Enable manual warm start.</td>
-<td>False</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>option.enable_warm_start</td>
-<td>boolean</td>
-<td>Enable warm start.</td>
-<td>False</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>option.enable_optimization_validation</td>
-<td>boolean</td>
-<td>Enable optimization validation.</td>
-<td>False</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>common.num_points</td>
-<td>integer</td>
-<td>Number of points for optimization.</td>
-<td>100</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>common.delta_arc_length</td>
-<td>float</td>
-<td>Delta arc length for optimization [m].</td>
-<td>1.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>clearance.hard_clearance_from_road</td>
-<td>float</td>
-<td>Clearance from road boundary [m] if collision_free_constraints.option.hard_constraint is true.</td>
-<td>0.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>clearance.soft_clearance_from_road</td>
-<td>float</td>
-<td>Clearance from road boundary [m] if collision_free_constraints.option.soft_constraint is true.</td>
-<td>0.1</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>weight.soft_collision_free_weight</td>
-<td>float</td>
-<td>Soft weight for lateral error around the middle point.</td>
-<td>1.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>weight.lat_error_weight</td>
-<td>float</td>
-<td>Weight for lateral error.</td>
-<td>1.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>weight.yaw_error_weight</td>
-<td>float</td>
-<td>Weight for yaw error.</td>
-<td>0.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>weight.yaw_error_rate_weight</td>
-<td>float</td>
-<td>Weight for yaw error rate.</td>
-<td>0.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>weight.steer_input_weight</td>
-<td>float</td>
-<td>Weight for steering input.</td>
-<td>1.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>weight.steer_rate_weight</td>
-<td>float</td>
-<td>Weight for steering rate.</td>
-<td>1.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>weight.terminal_lat_error_weight</td>
-<td>float</td>
-<td>Weight for lateral error at terminal point.</td>
-<td>100.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>weight.terminal_yaw_error_weight</td>
-<td>float</td>
-<td>Weight for yaw error at terminal point.</td>
-<td>100.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>weight.goal_lat_error_weight</td>
-<td>float</td>
-<td>Weight for lateral error at path end point.</td>
-<td>1000.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>weight.goal_yaw_error_weight</td>
-<td>float</td>
-<td>Weight for yaw error at path end point.</td>
-<td>1000.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>avoidance.max_bound_fixing_time</td>
-<td>float</td>
-<td>Maximum bound fixing time [s].</td>
-<td>1.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>avoidance.max_longitudinal_margin_for_bound_violation</td>
-<td>float</td>
-<td>Maximum longitudinal margin for bound violation [m].</td>
-<td>1.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>avoidance.max_avoidance_cost</td>
-<td>float</td>
-<td>Maximum avoidance cost [m].</td>
-<td>0.5</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>avoidance.avoidance_cost_margin</td>
-<td>float</td>
-<td>Avoidance cost margin [m].</td>
-<td>0.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>avoidance.avoidance_cost_band_length</td>
-<td>float</td>
-<td>Avoidance cost band length [m].</td>
-<td>5.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>avoidance.avoidance_cost_decrease_rate</td>
-<td>float</td>
-<td>Decreased cost per point interval.</td>
-<td>0.05</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>avoidance.min_drivable_width</td>
-<td>float</td>
-<td>Minimum drivable width [m]. The vehicle width and this parameter are guaranteed to keep for collision-free constraint.</td>
-<td>0.2</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>weight.lat_error_weight</td>
-<td>float</td>
-<td>Weight for lateral error.</td>
-<td>0.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>weight.yaw_error_weight</td>
-<td>float</td>
-<td>Weight for yaw error.</td>
-<td>10.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>weight.steer_input_weight</td>
-<td>float</td>
-<td>Weight for yaw error.</td>
-<td>100.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>option.l_inf_norm</td>
-<td>boolean</td>
-<td>Use L-infinity norm for collision-free constraints.</td>
-<td>True</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>option.soft_constraint</td>
-<td>boolean</td>
-<td>Enable soft constraints.</td>
-<td>True</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>option.hard_constraint</td>
-<td>boolean</td>
-<td>Enable hard constraints.</td>
-<td>False</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>vehicle_circles.method</td>
-<td>string</td>
-<td>Method to represent footprint as circles.</td>
-<td>fitting_uniform_circle</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>bicycle_model.num_for_calculation</td>
-<td>integer</td>
-<td>Number of circles for calculation.</td>
-<td>3</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>bicycle_model.front_radius_ratio</td>
-<td>float</td>
-<td>Front radius ratio.</td>
-<td>1.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>bicycle_model.rear_radius_ratio</td>
-<td>float</td>
-<td>Rear radius ratio.</td>
-<td>1.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>uniform_circle.num</td>
-<td>integer</td>
-<td>Number of circles.</td>
-<td>3</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>uniform_circle.radius_ratio</td>
-<td>float</td>
-<td>Radius ratio.</td>
-<td>1.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>fitting_uniform_circle.num</td>
-<td>integer</td>
-<td>Number of circles.</td>
-<td>3</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>validation.max_lat_error</td>
-<td>float</td>
-<td>Maximum lateral error for validation [m].</td>
-<td>5.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>validation.max_yaw_error</td>
-<td>float</td>
-<td>Maximum yaw error for validation [rad].</td>
-<td>1.046</td>
-<td>N/A</td>
-</tr>
-</tbody>
-</table>
-<h2 id="how-to-debug">How To Debug<a class="headerlink" href="#how-to-debug" title="Permanent link">#</a></h2>
-<p>How to debug can be seen <a href="docs/debug/">here</a>.</p></div>
+<p>Parameters can be set via YAML configuration files in the <code>config/</code> directory.</p>
+<h2 id="adding-new-modifier-plugins">Adding New Modifier Plugins<a class="headerlink" href="#adding-new-modifier-plugins" title="Permanent link">#</a></h2>
+<p>To add a new modifier plugin:</p>
+<ol>
+<li>Create header and source files in <code>trajectory_modifier_plugins/</code></li>
+<li>Inherit from <code>TrajectoryModifierPluginBase</code></li>
+<li>Implement the required virtual methods</li>
+<li>Register the plugin in the main node's <code>initialize_modifiers()</code> method</li>
+<li>Add plugin-specific parameters to the schema and config files</li>
+</ol></div>
 
 
 
@@ -14840,7 +14149,7 @@ Although it has a cons to converge to the local minima, it can get a good soluti
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../autoware_mission_planner_universe/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Mission Planner" rel="prev">
+          <a href="../autoware_surround_obstacle_checker/surround_obstacle_checker-design.ja/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Surround Obstacle Checker" rel="prev">
             <div class="md-footer__button md-icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
             </div>
@@ -14849,20 +14158,20 @@ Although it has a cons to converge to the local minima, it can get a good soluti
                 Previous
               </span>
               <div class="md-ellipsis">
-                Mission Planner
+                Surround Obstacle Checker
               </div>
             </div>
           </a>
         
         
           
-          <a href="docs/debug/" class="md-footer__link md-footer__link--next" aria-label="Next: Debug" rel="next">
+          <a href="../autoware_trajectory_optimizer/" class="md-footer__link md-footer__link--next" aria-label="Next: Autoware Trajectory Optimizer" rel="next">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Debug
+                Autoware Trajectory Optimizer
               </div>
             </div>
             <div class="md-footer__button md-icon">
