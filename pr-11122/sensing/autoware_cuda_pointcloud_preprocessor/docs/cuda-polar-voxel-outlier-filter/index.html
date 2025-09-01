@@ -77,7 +77,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#macro-rendering-error" class="md-skip">
+        <a href="#cuda_polar_voxel_outlier_filter" class="md-skip">
           Skip to content
         </a>
       
@@ -9545,9 +9545,101 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          cuda_polar_voxel_outlier_filter
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         cuda_polar_voxel_outlier_filter
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#purpose" class="md-nav__link">
+    Purpose
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inner-workings-algorithms" class="md-nav__link">
+    Inner-workings / Algorithms
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inputs-outputs" class="md-nav__link">
+    Inputs / Outputs
+  </a>
+  
+    <nav class="md-nav" aria-label="Inputs / Outputs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#input" class="md-nav__link">
+    Input
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output" class="md-nav__link">
+    Output
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    Parameters
+  </a>
+  
+    <nav class="md-nav" aria-label="Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-parameters-schema-based" class="md-nav__link">
+    Core Parameters (Schema-based)
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assumptions-known-limits" class="md-nav__link">
+    Assumptions / Known limits
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -14023,6 +14115,82 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#purpose" class="md-nav__link">
+    Purpose
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inner-workings-algorithms" class="md-nav__link">
+    Inner-workings / Algorithms
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inputs-outputs" class="md-nav__link">
+    Inputs / Outputs
+  </a>
+  
+    <nav class="md-nav" aria-label="Inputs / Outputs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#input" class="md-nav__link">
+    Input
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output" class="md-nav__link">
+    Output
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    Parameters
+  </a>
+  
+    <nav class="md-nav" aria-label="Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-parameters-schema-based" class="md-nav__link">
+    Core Parameters (Schema-based)
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assumptions-known-limits" class="md-nav__link">
+    Assumptions / Known limits
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -14039,21 +14207,243 @@
   
 
 
-<div><h1 id="macro-rendering-error"><em>Macro Rendering Error</em><a class="headerlink" href="#macro-rendering-error" title="Permanent link">#</a></h1>
-<p><em>File</em>: <code>sensing/autoware_cuda_pointcloud_preprocessor/docs/cuda-polar-voxel-outlier-filter.md</code></p>
-<p><em>FileNotFoundError</em>: [Errno 2] No such file or directory: 'sensing/autoware_pointcloud_preprocessor/schema/polar_voxel_outlier_filter.schema.json'</p>
-<div class="highlight"><pre><span></span><code>Traceback (most recent call last):
-  File "/opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages/mkdocs_macros/plugin.py", line 703, in render
-    return md_template.render(**page_variables)
-  File "/opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "&lt;template&gt;", line 42, in top-level template code
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 71, in json_to_markdown
-    with open(json_schema_file_path) as f:
-FileNotFoundError: [Errno 2] No such file or directory: 'sensing/autoware_pointcloud_preprocessor/schema/polar_voxel_outlier_filter.schema.json'
-</code></pre></div></div>
+<div><h1 id="cuda_polar_voxel_outlier_filter">cuda_polar_voxel_outlier_filter<a class="headerlink" href="#cuda_polar_voxel_outlier_filter" title="Permanent link">#</a></h1>
+<h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
+<p>This node is a CUDA accelerated version of the <code>PolarVoxelOutlierFilter</code> available in <a href="../../autoware_pointcloud_preprocessor">autoware_cuda_pointcloud_preprocessor</a>.</p>
+<h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
+<p>This node re implements of the function of <code>autoware::pointcloud_preprocessor::PolarVoxelOutlierFilterComponent</code>, which filters outlier based on polar coordinate space instead of Cartesian coordinate space.</p>
+<h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
+<h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/input/pointcloud</code></td>
+<td><code>sensor_msgs::msg::PointCloud2</code></td>
+<td>Input pointcloud's topic.</td>
+</tr>
+<tr>
+<td><code>~/input/pointcloud/cuda</code></td>
+<td><code>negotiated_interfaces/msg/NegotiatedTopicsInfo</code></td>
+<td>Input pointcloud's type negotiation topic</td>
+</tr>
+</tbody>
+</table>
+<h3 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/output/pointcloud</code></td>
+<td><code>sensor_msgs::msg::PointCloud2</code></td>
+<td>Processed pointcloud's topic</td>
+</tr>
+<tr>
+<td><code>~/output/pointcloud/cuda</code></td>
+<td><code>negotiated_interfaces/msg/NegotiatedTopicsInfo</code></td>
+<td>Processed pointcloud's negotiation topic</td>
+</tr>
+</tbody>
+</table>
+<h4 id="additional-debug-topics">Additional Debug Topics<a class="headerlink" href="#additional-debug-topics" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/debug/filter_ratio</code></td>
+<td><code>autoware_internal_debug_msgs::msg::Float32Stamped</code></td>
+<td>Ratio of output to input points</td>
+</tr>
+<tr>
+<td><code>~/debug/visibility</code></td>
+<td><code>autoware_internal_debug_msgs::msg::Float32Stamped</code></td>
+<td>Ratio of voxels passing secondary return threshold test (PointXYZIRCAEDT only)</td>
+</tr>
+<tr>
+<td><code>~/debug/pointcloud_noise</code></td>
+<td><code>sensor_msgs::msg::PointCloud2</code></td>
+<td>Processed pointcloud's topic which is categorized as outlier</td>
+</tr>
+<tr>
+<td><code>~/debug/pointcloud_noise/cuda</code></td>
+<td><code>negotiated_interfaces/msg/NegotiatedTopicsInfo</code></td>
+<td>Negotiation topic</td>
+</tr>
+</tbody>
+</table>
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
+<p>See <a href="../../../autoware_pointcloud_preprocessor/docs/polar-voxel-outlier-filter/">the original implementation in autoware_cuda_pointcloud_preprocessor</a> for the detail.</p>
+<h3 id="core-parameters-schema-based">Core Parameters (Schema-based)<a class="headerlink" href="#core-parameters-schema-based" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>radial_resolution_m</td>
+<td>float</td>
+<td>The resolution in radial direction [m].</td>
+<td>0.5</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>azimuth_resolution_rad</td>
+<td>float</td>
+<td>The resolution in azimuth direction [rad]. The supplied value is modified to ensure consistent voxel sizes across the whole azimuth range.</td>
+<td>0.0175</td>
+<td>≥0<br>≤6.283185307179586</td>
+</tr>
+<tr>
+<td>elevation_resolution_rad</td>
+<td>float</td>
+<td>The resolution in elevation direction [rad]. The supplied value is modified to ensure consistent voxel sizes across the whole elevation range.</td>
+<td>0.0175</td>
+<td>≥0<br>≤6.283185307179586</td>
+</tr>
+<tr>
+<td>voxel_points_threshold</td>
+<td>integer</td>
+<td>The minimum number of points required per voxel.</td>
+<td>2</td>
+<td>≥1</td>
+</tr>
+<tr>
+<td>min_radius_m</td>
+<td>float</td>
+<td>The minimum radius to consider [m].</td>
+<td>0.5</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>max_radius_m</td>
+<td>float</td>
+<td>The maximum radius to consider [m].</td>
+<td>300.0</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>intensity_threshold</td>
+<td>integer</td>
+<td>The maximum intensity threshold for secondary returns (primary returns are not affected).</td>
+<td>2</td>
+<td>≥0<br>≤255</td>
+</tr>
+<tr>
+<td>visibility_estimation_max_range_m</td>
+<td>float</td>
+<td>The maximum range to consider for visibility estimation [m] (limits visibility calculations to reliable sensor range).</td>
+<td>20.0</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>use_return_type_classification</td>
+<td>boolean</td>
+<td>Whether to use return type classification (if false, all returns are processed).</td>
+<td>true</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>filter_secondary_returns</td>
+<td>boolean</td>
+<td>Whether to filter secondary returns (if true, only primary returns are kept).</td>
+<td>false</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>secondary_noise_threshold</td>
+<td>float</td>
+<td>Threshold for classifying primary vs secondary returns.</td>
+<td>4</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>visibility_estimation_max_secondary_voxel_count</td>
+<td>integer</td>
+<td>Maximum secondary voxel count for visibility estimation calculations.</td>
+<td>500</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>primary_return_types</td>
+<td>array</td>
+<td>List of return type values considered as primary returns (all others are secondary).</td>
+<td>[1, 6, 8, 10]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>visibility_estimation_only</td>
+<td>boolean</td>
+<td>Whether to run filter for visibility estimation only without publishing point cloud outputs (for monitoring/diagnostic purposes only).</td>
+<td>false</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>publish_noise_cloud</td>
+<td>boolean</td>
+<td>Whether to generate and publish noise point cloud for debugging (ignored when visibility_estimation_only=true).</td>
+<td>false</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>filter_ratio_error_threshold</td>
+<td>float</td>
+<td>The filter ratio threshold for error diagnostics (ratio of output/input points).</td>
+<td>0.5</td>
+<td>≥0<br>≤1</td>
+</tr>
+<tr>
+<td>filter_ratio_warn_threshold</td>
+<td>float</td>
+<td>The filter ratio threshold for warning diagnostics (ratio of output/input points).</td>
+<td>0.7</td>
+<td>≥0<br>≤1</td>
+</tr>
+<tr>
+<td>visibility_error_threshold</td>
+<td>float</td>
+<td>The visibility threshold for error diagnostics.</td>
+<td>0.8</td>
+<td>≥0<br>≤1</td>
+</tr>
+<tr>
+<td>visibility_warn_threshold</td>
+<td>float</td>
+<td>The visibility threshold for warning diagnostics.</td>
+<td>0.9</td>
+<td>≥0<br>≤1</td>
+</tr>
+</tbody>
+</table>
+<h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
+<p>Due to differences in floating-point arithmetic between CPUs and GPUs, the outputs of <code>autoware::pointcloud_preprocessor::PolarVoxelOutlierFilterComponent</code> and this filter may not be identical.</p>
+<p>Adding compiler options, such as the following, can reduce numerical discrepancies, though a slight performance impact can also be introduced, and it is still difficult to acquire complete identical results.</p>
+<div class="highlight"><pre><span></span><code><span class="nb">list</span><span class="p">(</span><span class="s">APPEND</span><span class="w"> </span><span class="s">CUDA_NVCC_FLAGS</span><span class="w"> </span><span class="s2">"--fmad=false"</span><span class="p">)</span>
+</code></pre></div>
+<p>To prioritize performance, these compiler options are not enabled.</p></div>
 
 
 
