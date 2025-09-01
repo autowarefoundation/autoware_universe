@@ -1,4 +1,4 @@
-// Copyright 2023 TIER IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -252,7 +252,7 @@ void GyroBiasEstimator::callback_imu(const Imu::ConstSharedPtr imu_msg_ptr)
   }
 
   // Publish results for debugging
-  if (gyro_bias_ != std::nullopt) {
+  if (gyro_bias_ != std::nullopt && gyro_bias_not_rotated_.has_value()) {
     // Angle is updated here but restarted when angle from pose is received
     gyro_yaw_angle_ +=
       (ekf_angle_.x_state_(1) * (gyro.vector.z) - gyro_bias_not_rotated_.value().z) * dt_imu;
@@ -395,8 +395,6 @@ void GyroBiasEstimator::update_rate_ekf(
 
     if (distance >= static_cast<int64_t>(samples_window)) {
       start_it = closest_delayed_it - static_cast<int64_t>(samples_window);
-    } else {
-      start_it = gyro_local_buf.begin();
     }
     double sum_gyro_delayed_rate = 0.0;
     for (auto it = start_it; it != closest_delayed_it; ++it) {
