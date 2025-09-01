@@ -1,0 +1,15 @@
+<launch>
+  <arg name="trajectory_modifier_param_path" default="$(find-pkg-share autoware_trajectory_modifier)/config/trajectory_modifier.param.yaml"/>
+  <arg name="input_candidate_trajectories" default="/planning/diffusion_planner/candidate_trajectories"/>
+  <arg name="input_odometry" default="/localization/kinematic_state"/>
+  <arg name="input_acceleration" default="/localization/acceleration"/>
+  <arg name="output_candidate_trajectories" default="~/output/candidate_trajectories"/>
+
+  <node pkg="autoware_trajectory_modifier" exec="autoware_trajectory_modifier_node" name="trajectory_modifier" output="screen">
+    <param from="$(var trajectory_modifier_param_path)"/>
+    <remap from="~/input/candidate_trajectories" to="$(var input_candidate_trajectories)"/>
+    <remap from="~/input/odometry" to="$(var input_odometry)"/>
+    <remap from="~/input/acceleration" to="$(var input_acceleration)"/>
+    <remap from="~/output/candidate_trajectories" to="$(var output_candidate_trajectories)"/>
+  </node>
+</launch>
