@@ -38,6 +38,21 @@
 #include <utility>
 #include <vector>
 
+namespace
+{
+
+bool is_non_scsi_device(const std::string & device_name)
+{
+  // cspell:disable
+  // clang-format off
+  return (boost::starts_with(device_name, "/dev/nvme") ||   // NVMe SSD
+          boost::starts_with(device_name, "/dev/mmcblk"));  // SD card, eMMC
+  // cspell:enable
+  // clang-format on
+}
+
+}  // namespace
+
 namespace bp = boost::process;
 
 HddMonitor::HddMonitor(const rclcpp::NodeOptions & options)
@@ -287,8 +302,12 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
     bp::ipstream is_err{std::move(err_pipe)};
 
     // Invoke shell to use shell wildcard expansion
+    // because the very initial version of this code used wildcard expansion
+    // to handle incomplete device file names,
+    // but we don't need wildcard expansion anymore after a specification change.
+    // The string "part_device_" has a full device file name derived from the mount point.
     bp::child c(
-      "/bin/sh", "-c", fmt::format("df -Pm {}*", itr->second.part_device_.c_str()),
+      "/bin/sh", "-c", fmt::format("df -Pm {}", itr->second.part_device_.c_str()),
       bp::std_out > is_out, bp::std_err > is_err);
     c.wait();
 
@@ -848,7 +867,7 @@ void HddMonitor::updateHddConnections()
           const std::regex pattern("\\d+$");
           hdd_param.second.disk_device_ =
             std::regex_replace(hdd_param.second.part_device_, pattern, "");
-        } else if (boost::starts_with(hdd_param.second.part_device_, "/dev/nvme")) {
+        } else if (is_non_scsi_device(hdd_param.second.part_device_)) {
           const std::regex pattern("p\\d+$");
           hdd_param.second.disk_device_ =
             std::regex_replace(hdd_param.second.part_device_, pattern, "");
