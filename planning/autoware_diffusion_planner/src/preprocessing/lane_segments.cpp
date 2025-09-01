@@ -224,10 +224,10 @@ void LaneSegmentContext::compute_distances(
     // Directly access input matrix as raw memory
     const float mean_x = map_lane_segments_matrix_.block(X, i, 1, POINTS_PER_SEGMENT).mean();
     const float mean_y = map_lane_segments_matrix_.block(Y, i, 1, POINTS_PER_SEGMENT).mean();
-    const float first_x = map_lane_segments_matrix_.block(X, i, 1, 1)(0, 0);
-    const float first_y = map_lane_segments_matrix_.block(Y, i, 1, 1)(0, 0);
-    const float last_x = map_lane_segments_matrix_.block(X, i + POINTS_PER_SEGMENT - 1, 1, 1)(0, 0);
-    const float last_y = map_lane_segments_matrix_.block(Y, i + POINTS_PER_SEGMENT - 1, 1, 1)(0, 0);
+    const float first_x = map_lane_segments_matrix_(X, i);
+    const float first_y = map_lane_segments_matrix_(Y, i);
+    const float last_x = map_lane_segments_matrix_(X, i + POINTS_PER_SEGMENT - 1);
+    const float last_y = map_lane_segments_matrix_(Y, i + POINTS_PER_SEGMENT - 1);
     const bool inside =
       is_inside(mean_x, mean_y) || is_inside(first_x, first_y) || is_inside(last_x, last_y);
 
