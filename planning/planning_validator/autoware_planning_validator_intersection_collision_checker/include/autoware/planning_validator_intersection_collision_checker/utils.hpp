@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__PLANNING_VALIDATOR_INTERSECTION_COLLISION_CHECKER__UTILS_HPP_
 #define AUTOWARE__PLANNING_VALIDATOR_INTERSECTION_COLLISION_CHECKER__UTILS_HPP_
 
+#include "autoware/planning_validator/types.hpp"
 #include "autoware/planning_validator_intersection_collision_checker/types.hpp"
 
 #include <autoware_utils/geometry/boost_geometry.hpp>
@@ -31,6 +32,7 @@
 #include <lanelet2_routing/RoutingGraph.h>
 
 #include <limits>
+#include <memory>
 
 namespace autoware::planning_validator::collision_checker_utils
 {
@@ -40,13 +42,13 @@ void set_trajectory_lanelets(
   const geometry_msgs::msg::Pose & ego_pose, EgoLanelets & lanelets);
 
 void set_right_turn_target_lanelets(
-  const EgoTrajectory & ego_traj, const RouteHandler & route_handler,
+  const EgoTrajectory & ego_traj, const std::shared_ptr<PlanningValidatorContext> & context,
   const intersection_collision_checker_node::Params & params, const EgoLanelets & lanelets,
   TargetLaneletsMap & target_lanelets,
   const double time_horizon = std::numeric_limits<double>::max());
 
 void set_left_turn_target_lanelets(
-  const EgoTrajectory & ego_traj, const RouteHandler & route_handler,
+  const EgoTrajectory & ego_traj, const std::shared_ptr<PlanningValidatorContext> & context,
   const intersection_collision_checker_node::Params & params, const EgoLanelets & lanelets,
   TargetLaneletsMap & target_lanelets,
   const double time_horizon = std::numeric_limits<double>::max());

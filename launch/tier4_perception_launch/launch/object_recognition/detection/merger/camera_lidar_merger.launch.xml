@@ -103,6 +103,7 @@
       <arg name="input/image6" value="$(var input/camera6/image)"/>
       <arg name="input/image7" value="$(var input/camera7/image)"/>
       <arg name="input/image8" value="$(var input/camera8/image)"/>
+      <arg name="input/concatenation_info" value="$(var input/concatenation_info)"/>
       <arg name="input/objects" value="$(var detected_object_roi_filter/input/objects)"/>
       <arg name="output/objects" value="$(var detected_object_roi_filter/output/objects)"/>
       <arg name="param_path" value="$(var roi_detected_object_fusion_param_path)"/>

@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__CONCATENATION_INFO_HPP_
-#define AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__CONCATENATION_INFO_HPP_
-
+#pragma once
 #include <builtin_interfaces/msg/time.hpp>
 
 #include <autoware_sensing_msgs/msg/concatenated_point_cloud_info.hpp>
@@ -63,10 +61,10 @@ struct StrategyAdvancedConfig : public StrategyConfig
    * @param reference_timestamp_max Maximum reference timestamp for concatenation window
    */
   StrategyAdvancedConfig(
-    const builtin_interfaces::msg::Time & reference_timestamp_min,
-    const builtin_interfaces::msg::Time & reference_timestamp_max)
-  : reference_timestamp_min(reference_timestamp_min),
-    reference_timestamp_max(reference_timestamp_max)
+    const builtin_interfaces::msg::Time & reference_timestamp_min_msg,
+    const builtin_interfaces::msg::Time & reference_timestamp_max_msg)
+  : reference_timestamp_min_msg(reference_timestamp_min_msg),
+    reference_timestamp_max_msg(reference_timestamp_max_msg)
   {
   }
 
@@ -78,7 +76,8 @@ struct StrategyAdvancedConfig : public StrategyConfig
   explicit StrategyAdvancedConfig(const std::vector<uint8_t> & serialized_data)
   {
     if (
-      serialized_data.size() != sizeof(reference_timestamp_min) + sizeof(reference_timestamp_max)) {
+      serialized_data.size() !=
+      sizeof(reference_timestamp_min_msg) + sizeof(reference_timestamp_max_msg)) {
       throw std::invalid_argument("Invalid serialized data size for StrategyAdvancedConfig");
     }
 
@@ -86,12 +85,14 @@ struct StrategyAdvancedConfig : public StrategyConfig
 
     // Deserialize reference_timestamp_min
     std::memcpy(
-      &reference_timestamp_min, serialized_data.data() + offset, sizeof(reference_timestamp_min));
-    offset += sizeof(reference_timestamp_min);
+      &reference_timestamp_min_msg, serialized_data.data() + offset,
+      sizeof(reference_timestamp_min_msg));
+    offset += sizeof(reference_timestamp_min_msg);
 
     // Deserialize reference_timestamp_max
     std::memcpy(
-      &reference_timestamp_max, serialized_data.data() + offset, sizeof(reference_timestamp_max));
+      &reference_timestamp_max_msg, serialized_data.data() + offset,
+      sizeof(reference_timestamp_max_msg));
   }
 
   /**
@@ -101,29 +102,29 @@ struct StrategyAdvancedConfig : public StrategyConfig
   [[nodiscard]] std::vector<uint8_t> serialize() const final
   {
     std::vector<uint8_t> serialized;
-    serialized.reserve(sizeof(reference_timestamp_min) + sizeof(reference_timestamp_max));
+    serialized.reserve(sizeof(reference_timestamp_min_msg) + sizeof(reference_timestamp_max_msg));
 
     // Serialize reference_timestamp_min
     const auto * reference_timestamp_min_ptr =
-      reinterpret_cast<const uint8_t *>(&reference_timestamp_min);
+      reinterpret_cast<const uint8_t *>(&reference_timestamp_min_msg);
     serialized.insert(
       serialized.end(), reference_timestamp_min_ptr,
-      reference_timestamp_min_ptr + sizeof(reference_timestamp_min));
+      reference_timestamp_min_ptr + sizeof(reference_timestamp_min_msg));
 
     // Serialize reference_timestamp_max
     const auto * reference_timestamp_max_ptr =
-      reinterpret_cast<const uint8_t *>(&reference_timestamp_max);
+      reinterpret_cast<const uint8_t *>(&reference_timestamp_max_msg);
     serialized.insert(
       serialized.end(), reference_timestamp_max_ptr,
-      reference_timestamp_max_ptr + sizeof(reference_timestamp_max));
+      reference_timestamp_max_ptr + sizeof(reference_timestamp_max_msg));
 
     return serialized;
   }
 
   //! Minimum reference timestamp for concatenation time window
-  builtin_interfaces::msg::Time reference_timestamp_min;
+  builtin_interfaces::msg::Time reference_timestamp_min_msg;
   //! Maximum reference timestamp for concatenation time window
-  builtin_interfaces::msg::Time reference_timestamp_max;
+  builtin_interfaces::msg::Time reference_timestamp_max_msg;
 };
 
 /**
@@ -148,7 +149,7 @@ const std::unordered_map<std::string, uint8_t> matching_strategy_name_map = {
  * @note This class is designed for single-threaded use and should be reset
  *       between concatenation cycles using reset_and_get_base_info().
  */
-class ConcatenationInfo
+class ConcatenationInfoManager
 {
 public:
   /**
@@ -158,14 +159,14 @@ public:
    * @param input_topics List of input topic names to track for concatenation
    * @throws std::invalid_argument if matching_strategy_name is not recognized
    */
-  ConcatenationInfo(
+  ConcatenationInfoManager(
     const std::string & matching_strategy_name, const std::vector<std::string> & input_topics)
   : concatenated_point_cloud_info_base_msg_(
       create_concatenation_info_base(matching_strategy_name, input_topics)),
     num_expected_sources_(concatenated_point_cloud_info_base_msg_.source_info.size())
   {
   }
-  ~ConcatenationInfo() = default;
+  ~ConcatenationInfoManager() = default;
 
   /**
    * @brief Reset internal state and get base concatenation info message.
@@ -393,5 +394,3 @@ private:
 };
 
 }  // namespace autoware::pointcloud_preprocessor
-
-#endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__CONCATENATION_INFO_HPP_

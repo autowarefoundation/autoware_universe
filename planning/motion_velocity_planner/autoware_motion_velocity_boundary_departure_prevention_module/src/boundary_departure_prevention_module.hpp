@@ -26,6 +26,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace autoware::motion_velocity_planner::experimental
@@ -57,6 +58,17 @@ private:
   bool is_autonomous_mode() const;
 
   // === Internal logic
+  /**
+   * @brief Main entry point for boundary departure-aware velocity planning.
+   *
+   * The function first verifies input validity, checks system state (e.g., route changes,
+   * autonomy status), and initializes planning components if needed. Then it performs slow down
+   * planning to prevent the vehicle from departing road boundaries.
+   */
+
+  tl::expected<VelocityPlanningResult, std::string> plan_velocities(
+    const TrajectoryPoints & raw_trajectory_points,
+    const std::shared_ptr<const PlannerData> & planner_data);
 
   tl::expected<VelocityPlanningResult, std::string> plan_slow_down_intervals(
     const TrajectoryPoints & raw_trajectory_points,
@@ -89,7 +101,7 @@ private:
    * @param curr_vel Current velocity of the ego vehicle.
    * @return Map of `DepartureType` to boolean indicating active status.
    */
-  std::unordered_map<DepartureType, bool> get_diagnostics(
+  std::pair<int8_t, std::string> get_diagnostic_status(
     const double ego_dist_on_traj, const double curr_vel);
 
   /**

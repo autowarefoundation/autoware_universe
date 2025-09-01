@@ -221,7 +221,7 @@ bool TrafficLightModule::willTrafficLightTurnRedBeforeReachingStopLine(
                                               ? distance_to_stop_line / ego_velocity
                                               : planner_param_.v2i_required_time_to_departure;
 
-  double seconds = predicted_passing_stop_line_time - planner_param_.v2i_last_time_allowed_to_pass;
+  double seconds = predicted_passing_stop_line_time + planner_param_.v2i_last_time_allowed_to_pass;
 
   rclcpp::Time now = clock_->now();
   // find stop signal from looking_tl_state_.predictions by using isTrafficSignalStop

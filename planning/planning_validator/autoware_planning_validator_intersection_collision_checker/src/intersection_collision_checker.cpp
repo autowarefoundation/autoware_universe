@@ -276,12 +276,12 @@ void IntersectionCollisionChecker::get_lanelets(
   const auto time_horizon = std::max(p.min_time_horizon, stopping_time);
   if (debug_data.turn_direction == Direction::RIGHT) {
     collision_checker_utils::set_right_turn_target_lanelets(
-      ego_trajectory, *context_->data->route_handler, params_, debug_data.ego_lanelets,
-      target_lanelets_map_, time_horizon);
+      ego_trajectory, context_, params_, debug_data.ego_lanelets, target_lanelets_map_,
+      time_horizon);
   } else {
     collision_checker_utils::set_left_turn_target_lanelets(
-      ego_trajectory, *context_->data->route_handler, params_, debug_data.ego_lanelets,
-      target_lanelets_map_, time_horizon);
+      ego_trajectory, context_, params_, debug_data.ego_lanelets, target_lanelets_map_,
+      time_horizon);
   }
 
   for (const auto & target_lanelet : target_lanelets_map_) {

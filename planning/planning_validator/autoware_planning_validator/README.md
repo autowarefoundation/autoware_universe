@@ -19,15 +19,16 @@ The `autoware_planning_validator` node loads multiple plugins modules, each resp
 
 The `autoware_planning_validator` takes in the following inputs:
 
-| Name                             | Type                                      | Description                                      |
-| -------------------------------- | ----------------------------------------- | ------------------------------------------------ |
-| `~/input/kinematics`             | nav_msgs/Odometry                         | ego pose and twist                               |
-| `~/input/acceleration`           | geometry_msgs/AccelWithCovarianceStamped  | current acceleration of the ego vehicle          |
-| `~/input/trajectory`             | autoware_planning_msgs/Trajectory         | target trajectory to be validated in this node   |
-| `~/input/route`                  | autoware_planning_msgs/LaneletRoute       | route information                                |
-| `~/input/lanelet_map_bin`        | autoware_map_msgs/LaneletMapBin           | lanelet vector map information                   |
-| `~/input/pointcloud`             | sensor_msgs/PointCloud2                   | obstacle pointcloud with ground removed          |
-| `~/input/operational_mode_state` | autoware_adapi_v1_msgs/OperationModeState | current operation mode state (autonomous/manual) |
+| Name                             | Type                                            | Description                                      |
+| -------------------------------- | ----------------------------------------------- | ------------------------------------------------ |
+| `~/input/kinematics`             | nav_msgs/Odometry                               | ego pose and twist                               |
+| `~/input/acceleration`           | geometry_msgs/AccelWithCovarianceStamped        | current acceleration of the ego vehicle          |
+| `~/input/trajectory`             | autoware_planning_msgs/Trajectory               | target trajectory to be validated in this node   |
+| `~/input/route`                  | autoware_planning_msgs/LaneletRoute             | route information                                |
+| `~/input/lanelet_map_bin`        | autoware_map_msgs/LaneletMapBin                 | lanelet vector map information                   |
+| `~/input/pointcloud`             | sensor_msgs/PointCloud2                         | obstacle pointcloud with ground removed          |
+| `~/input/operational_mode_state` | autoware_adapi_v1_msgs/OperationModeState       | current operation mode state (autonomous/manual) |
+| `~/input/traffic_signals`        | autoware_perception_msgs/TrafficLightGroupArray | recognized traffic signal information            |
 
 ### Outputs
 
@@ -51,3 +52,4 @@ The following parameters can be set for the `autoware_planning_validator`:
 | `display_on_terminal`        | bool   | show error msg on terminal                                                                                                                                                                       | true          |
 | `soft_stop_deceleration`     | double | deceleration value to be used for soft stop action. [m/ss]                                                                                                                                       | -1.0          |
 | `soft_stop_jerk_lim`         | double | jerk limit value to be used for soft stop action. [m/sss]                                                                                                                                        | 0.3           |
+| `th_traffic_light_timeout`   | double | timeout threshold [s] to discard outdated traffic light information during validation                                                                                                            | 0.5           |

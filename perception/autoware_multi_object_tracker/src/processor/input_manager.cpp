@@ -94,15 +94,6 @@ void InputStream::onMessage(
       object.shape.dimensions.y = object.shape.dimensions.x;
     }
     // else, it is bounding box and nothing to do
-
-    // calculate nearest point
-    const auto self_transform = odometry_->getTransform(timestamp);
-    if (!self_transform) {
-      return;
-    }
-    shapes::getNearestCornerOrSurface(*self_transform, object);
-
-    // if object extension is not reliable, enlarge covariance of position and extend shape
   }
 
   // Normalize the object uncertainty

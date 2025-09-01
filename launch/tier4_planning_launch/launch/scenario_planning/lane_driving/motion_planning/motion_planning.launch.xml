@@ -1,4 +1,6 @@
 <launch>
+  <arg name="input_objects_topic_name" default="/perception/object_recognition/objects"/>
+  <arg name="input_pointcloud_topic_name" default="/perception/obstacle_segmentation/pointcloud"/>
   <arg name="interface_input_topic" default="/planning/scenario_planning/lane_driving/behavior_planning/path"/>
   <arg name="interface_output_topic" default="/planning/scenario_planning/lane_driving/trajectory"/>
 
@@ -126,7 +128,7 @@
           <!-- topic remap -->
           <remap from="~/input/path" to="path_smoother/path"/>
           <remap from="~/input/odometry" to="/localization/kinematic_state"/>
-          <remap from="~/input/objects" to="/perception/object_recognition/objects"/>
+          <remap from="~/input/objects" to="$(var input_objects_topic_name)"/>
           <remap from="~/output/path" to="path_optimizer/trajectory"/>
           <!-- params -->
           <param from="$(var common_param_path)"/>
@@ -173,8 +175,8 @@
         <remap from="~/input/vector_map" to="/map/vector_map"/>
         <remap from="~/input/vehicle_odometry" to="/localization/kinematic_state"/>
         <remap from="~/input/accel" to="/localization/acceleration"/>
-        <remap from="~/input/dynamic_objects" to="/perception/object_recognition/objects"/>
-        <remap from="~/input/no_ground_pointcloud" to="/perception/obstacle_segmentation/pointcloud"/>
+        <remap from="~/input/dynamic_objects" to="$(var input_objects_topic_name)"/>
+        <remap from="~/input/no_ground_pointcloud" to="$(var input_pointcloud_topic_name)"/>
         <remap from="~/input/traffic_signals" to="/perception/traffic_light_recognition/traffic_signals"/>
         <remap from="~/input/virtual_traffic_light_states" to="/perception/virtual_traffic_light_states"/>
         <remap from="~/input/occupancy_grid" to="/perception/occupancy_grid_map/map"/>
@@ -213,8 +215,8 @@
       <composable_node pkg="autoware_surround_obstacle_checker" plugin="autoware::surround_obstacle_checker::SurroundObstacleCheckerNode" name="surround_obstacle_checker" namespace="">
         <!-- topic remap -->
         <remap from="~/input/odometry" to="/localization/kinematic_state"/>
-        <remap from="~/input/objects" to="/perception/object_recognition/objects"/>
-        <remap from="~/input/pointcloud" to="/perception/obstacle_segmentation/pointcloud"/>
+        <remap from="~/input/objects" to="$(var input_objects_topic_name)"/>
+        <remap from="~/input/pointcloud" to="$(var input_pointcloud_topic_name)"/>
         <remap from="~/output/max_velocity" to="/planning/scenario_planning/max_velocity_candidates"/>
         <remap from="~/output/velocity_limit_clear_command" to="/planning/scenario_planning/clear_velocity_limit"/>
         <remap from="~/output/stop_reasons" to="/planning/scenario_planning/status/stop_reasons"/>

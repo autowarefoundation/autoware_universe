@@ -22,6 +22,8 @@
   <depend>autoware_object_recognition_utils</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_point_types</depend>
+  <depend>autoware_pointcloud_preprocessor</depend>
+  <depend>autoware_sensing_msgs</depend>
   <depend>autoware_utils</depend>
   <depend>cv_bridge</depend>
   <depend>diagnostic_msgs</depend>

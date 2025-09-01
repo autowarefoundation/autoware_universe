@@ -52,6 +52,8 @@
   <let name="operation_mode_transition_manager_plugin" value="OperationModeTransitionManager" unless="$(var use_control_command_gate)"/>
 
   <!-- topic remap -->
+  <arg name="input_objects_topic_name" default="/perception/object_recognition/objects"/>
+  <arg name="input_pointcloud_topic_name" default="/perception/obstacle_segmentation/pointcloud"/>
   <arg name="output_control_cmd" default="/control/command/control_cmd"/>
   <arg name="output_gear_cmd" default="/control/command/gear_cmd"/>
   <arg name="output_turn_indicators_cmd" default="/control/command/turn_indicators_cmd"/>
@@ -245,10 +247,10 @@
       <group if="$(var launch_autonomous_emergency_braking)">
         <load_composable_node target="/control/control_check_container">
           <composable_node pkg="autoware_autonomous_emergency_braking" plugin="autoware::motion::control::autonomous_emergency_braking::AEB" name="autonomous_emergency_braking">
-            <remap from="~/input/pointcloud" to="/perception/obstacle_segmentation/pointcloud"/>
+            <remap from="~/input/pointcloud" to="$(var input_pointcloud_topic_name)"/>
             <remap from="~/input/velocity" to="/vehicle/status/velocity_status"/>
             <remap from="~/input/imu" to="/sensing/imu/imu_data"/>
-            <remap from="~/input/objects" to="/perception/object_recognition/objects"/>
+            <remap from="~/input/objects" to="$(var input_objects_topic_name)"/>
             <remap from="~/input/predicted_trajectory" to="/control/trajectory_follower/lateral/predicted_trajectory"/>
             <param from="$(var aeb_param_path)"/>
             <param name="check_autoware_state" value="$(var use_aeb_autoware_state_check)"/>
@@ -262,8 +264,8 @@
         <load_composable_node target="/control/control_check_container">
           <composable_node pkg="autoware_collision_detector" plugin="autoware::collision_detector::CollisionDetectorNode" name="collision_detector">
             <remap from="~/input/odometry" to="/localization/kinematic_state"/>
-            <remap from="~/input/pointcloud" to="/perception/obstacle_segmentation/pointcloud"/>
-            <remap from="~/input/objects" to="/perception/object_recognition/objects"/>
+            <remap from="~/input/pointcloud" to="$(var input_pointcloud_topic_name)"/>
+            <remap from="~/input/objects" to="$(var input_objects_topic_name)"/>
             <param from="$(var collision_detector_param_path)"/>
           </composable_node>
         </load_composable_node>
@@ -274,7 +276,7 @@
         <load_composable_node target="/control/control_check_container">
           <composable_node pkg="autoware_obstacle_collision_checker" plugin="autoware::obstacle_collision_checker::ObstacleCollisionCheckerNode" name="obstacle_collision_checker">
             <remap from="input/lanelet_map_bin" to="/map/vector_map"/>
-            <remap from="input/obstacle_pointcloud" to="/perception/obstacle_segmentation/pointcloud"/>
+            <remap from="input/obstacle_pointcloud" to="$(var input_pointcloud_topic_name)"/>
             <remap from="input/reference_trajectory" to="/planning/trajectory"/>
             <remap from="input/predicted_trajectory" to="/control/trajectory_follower/lateral/predicted_trajectory"/>
             <remap from="input/odometry" to="/localization/kinematic_state"/>
@@ -289,7 +291,7 @@
       <group if="$(var launch_predicted_path_checker)">
         <load_composable_node target="/control/control_check_container">
           <composable_node pkg="autoware_predicted_path_checker" plugin="autoware::predicted_path_checker::PredictedPathCheckerNode" name="predicted_path_checker">
-            <remap from="~/input/objects" to="/perception/object_recognition/objects"/>
+            <remap from="~/input/objects" to="$(var input_objects_topic_name)"/>
             <remap from="~/input/reference_trajectory" to="/planning/trajectory"/>
             <remap from="~/input/current_accel" to="/localization/acceleration"/>
             <remap from="~/input/odometry" to="/localization/kinematic_state"/>
@@ -304,7 +306,9 @@
 
     <!-- control evaluator -->
     <group if="$(var launch_control_evaluator)">
-      <include file="$(find-pkg-share autoware_control_evaluator)/launch/control_evaluator.launch.xml"/>
+      <include file="$(find-pkg-share autoware_control_evaluator)/launch/control_evaluator.launch.xml">
+        <arg name="input_objects_topic_name" value="$(var input_objects_topic_name)"/>
+      </include>
     </group>
   </group>
 </launch>

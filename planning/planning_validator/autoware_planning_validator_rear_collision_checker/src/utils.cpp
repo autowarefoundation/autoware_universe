@@ -321,7 +321,7 @@ auto check_shift_behavior(
       }
     }
 
-    if (i < nearest_idx) {
+    if (distance < max_longitudinal_offset) {
       continue;
     }
 

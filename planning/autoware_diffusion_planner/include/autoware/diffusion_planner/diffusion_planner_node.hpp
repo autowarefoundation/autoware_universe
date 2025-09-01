@@ -32,6 +32,7 @@
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
+#include <autoware_utils_diagnostics/diagnostics_interface.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <builtin_interfaces/msg/duration.hpp>
 #include <builtin_interfaces/msg/time.hpp>
@@ -47,6 +48,7 @@
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
+#include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -78,6 +80,7 @@ using autoware_perception_msgs::msg::TrackedObjects;
 using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
+using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 using HADMapBin = autoware_map_msgs::msg::LaneletMapBin;
@@ -97,6 +100,7 @@ using visualization_msgs::msg::MarkerArray;
 // TensorRT
 using autoware::cuda_utils::CudaUniquePtr;
 using autoware::tensorrt_common::TrtConvCalib;
+using autoware_utils_diagnostics::DiagnosticsInterface;
 
 struct DiffusionPlannerParams
 {
@@ -219,6 +223,12 @@ public:
   std::vector<float> do_inference_trt(InputDataMap & input_data_map);
 
   /**
+   * @brief Get turn indicator logit from the last inference.
+   * @return Vector containing turn indicator logit.
+   */
+  std::vector<float> get_turn_indicator_logit() const;
+
+  /**
    * @brief Callback for dynamic parameter updates.
    * @param parameters Updated parameters.
    * @return Result of parameter update.
@@ -236,13 +246,6 @@ public:
   std::pair<Eigen::Matrix4f, Eigen::Matrix4f> transforms_;
   AgentData get_ego_centric_agent_data(
     const TrackedObjects & objects, const Eigen::Matrix4f & map_to_ego_transform);
-
-  /**
-   * @brief Create ego agent past tensor from ego history.
-   * @param map_to_ego_transform Transformation matrix from map to ego frame.
-   * @return Vector of float values representing ego agent past.
-   */
-  std::vector<float> create_ego_agent_past(const Eigen::Matrix4f & map_to_ego_transform);
 
   /**
    * @brief Replicate single sample data for batch processing.
@@ -303,6 +306,7 @@ public:
   rclcpp::Publisher<PredictedObjects>::SharedPtr pub_objects_{nullptr};
   rclcpp::Publisher<MarkerArray>::SharedPtr pub_lane_marker_{nullptr};
   rclcpp::Publisher<MarkerArray>::SharedPtr pub_route_marker_{nullptr};
+  rclcpp::Publisher<TurnIndicatorsCommand>::SharedPtr pub_turn_indicators_{nullptr};
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
   autoware_utils::InterProcessPollingSubscriber<Odometry> sub_current_odometry_{
     this, "~/input/odometry"};
@@ -322,6 +326,8 @@ public:
   rclcpp::Subscription<HADMapBin>::SharedPtr sub_map_;
   UUID generator_uuid_;
   VehicleInfo vehicle_info_;
+
+  std::unique_ptr<DiagnosticsInterface> diagnostics_inference_;
 };
 
 }  // namespace autoware::diffusion_planner

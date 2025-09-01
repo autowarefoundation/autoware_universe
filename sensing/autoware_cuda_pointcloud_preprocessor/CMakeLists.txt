@@ -13,8 +13,8 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-g -G")
 endif()
 
-if(USE_AGNOCAST AND NOT agnocastlib_FOUND)
-  message(FATAL_ERROR "agnocastlib is required when USE_AGNOCAST is enabled")
+if("$ENV{ENABLE_AGNOCAST}" AND NOT agnocastlib_FOUND)
+  message(FATAL_ERROR "agnocastlib is required when Agnocast is enabled")
 endif()
 
 ament_auto_find_build_dependencies()
@@ -28,7 +28,8 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wall -Wextra -Wpedantic -Wunused-function)
 endif()
 
-if(USE_AGNOCAST)
+if("$ENV{ENABLE_AGNOCAST}")
+    message("Agnocast support is enabled")
     add_definitions(-DUSE_AGNOCAST_ENABLED)
 endif()
 
@@ -90,7 +91,7 @@ target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
   ${autoware_cuda_utils_INCLUDE_DIRS}
 )
 
-if(USE_AGNOCAST)
+if("$ENV{ENABLE_AGNOCAST}")
     target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
         ${autoware_agnocast_wrapper_INCLUDE_DIRS}
         ${agnocastlib_INCLUDE_DIRS}

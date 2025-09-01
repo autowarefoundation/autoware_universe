@@ -228,6 +228,7 @@ bool UnknownTracker::getTrackedObject(
 
   // get the object
   object = object_;
+  object.time = time;
 
   if (enable_velocity_estimation_) {
     // predict from motion model

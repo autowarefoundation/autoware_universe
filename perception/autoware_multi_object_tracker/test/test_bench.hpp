@@ -55,12 +55,47 @@ struct ObjectState
     float y;
   } shape;
 };
+struct UnknownObjectState
+{
+  geometry_msgs::msg::Pose pose;
+  geometry_msgs::msg::Twist twist;
+  std::vector<geometry_msgs::msg::Point> current_footprint;
+  std::vector<geometry_msgs::msg::Point> previous_footprint;
+  float z_dimension;
+  float base_size;
+  rclcpp::Time last_update;
+  uint8_t shape_type;
+  bool is_moving;
+};
+struct UnknownObjectParams
+{
+  // Size parameters
+  float min_size = 0.5f;
+  float max_size = 5.0f;
+  float min_z = 0.2f;
+  float max_z = 1.5f;
 
+  // Movement parameters
+  float stationary_probability = 0.7f;  // 70% chance of being stationary
+  float min_speed = 0.0f;
+  float max_speed = 15.0f;
+
+  // Shape parameters
+  float polygon_probability = 0.7f;  // 70% chance of polygon shape
+  int min_points = 3;
+  int max_points = 8;
+
+  // Evolution parameters
+  float shape_change_prob = 0.4f;
+  float max_evolution_noise = 0.2f;
+};
 struct TrackingScenarioConfig
 {
-  int num_lanes = 8;        // 5 lanes
-  int cars_per_lane = 20;   // 20 cars per lane
-  float lane_width = 3.5f;  // 3.5m width per lane
+  int num_lanes = 8;                           // 5 lanes
+  int cars_per_lane = 20;                      // 20 cars per lane
+  float lane_width = 3.5f;                     // 3.5m width per lane
+  double lane_angle_cos = std::cos(M_PI / 6);  // 30 degrees angle for lanes
+  double lane_angle_sin = std::sin(M_PI / 6);  // 30 degrees angle for lanes
 
   int pedestrian_clusters = 16;              // 16 pedestrian clusters
   int pedestrians_per_cluster = 6;           // 6 pedestrians per cluster
@@ -83,6 +118,10 @@ struct TrackingScenarioConfig
   double pedestrian_y_min = -4.0;
   double pedestrian_y_max = -2.5;
 
+  // Unknown objects configuration
+  int unknown_objects = 20;            // Number of unknown objects
+  UnknownObjectParams unknown_params;  // Parameters for unknown objects
+
   double dropout_rate = 0.05;
   double pos_noise_min = 0.0;
   double pos_noise_max = 0.2;
@@ -102,6 +141,8 @@ class TrackingTestBench
   const float GRID_SIZE = 15.0f;  // Larger than max car length
   std::unordered_map<uint64_t, std::vector<std::string>> spatial_grid_;
 
+  UnknownObjectParams unknown_params_;
+
   uint64_t getGridKey(float x, float y) const;
 
   void updateGrid(const std::string & id, bool remove_first = false);
@@ -110,9 +151,11 @@ class TrackingTestBench
 
 public:
   explicit TrackingTestBench(const TrackingScenarioConfig & params)
-  : base_time_(rclcpp::Clock().now(), RCL_ROS_TIME),
+  : unknown_params_(params.unknown_params),
+    base_time_(rclcpp::Clock().now(), RCL_ROS_TIME),
     object_counter_(0),
     rng_(0),  // To reproduce the same results, we need to set the seed to 0
+    // Known object distributions
     car_spacing_dist_(params.car_spacing_mean),
     lateral_drift_(params.lateral_drift_min, params.lateral_drift_max),
     car_speed_dist_(params.car_speed_min, params.car_speed_max),
@@ -123,7 +166,18 @@ public:
     pedestrian_y_dist_(params.pedestrian_y_min, params.pedestrian_y_max),
     dropout_dist_(params.dropout_rate),
     pos_noise_(params.pos_noise_min, params.pos_noise_max),
-    vel_noise_(params.vel_noise_min, params.vel_noise_max)
+    vel_noise_(params.vel_noise_min, params.vel_noise_max),
+    // Unknown object distributions
+    base_size_dist_(params.unknown_params.min_size, params.unknown_params.max_size),
+    z_size_noise_(params.unknown_params.min_z, params.unknown_params.max_z),
+    z_pos_noise_(params.unknown_params.min_z, params.unknown_params.max_z),
+    shape_type_dist_(0.7f),
+    point_count_dist_(params.unknown_params.min_points, params.unknown_params.max_points),
+    shape_evolution_noise_(0.0f, params.unknown_params.max_evolution_noise),
+    movement_chance_dist_(1.0f - params.unknown_params.stationary_probability),
+    moving_unknown_speed_dist_(params.unknown_params.min_speed, params.unknown_params.max_speed),
+    shape_change_dist_(params.unknown_params.shape_change_prob),
+    footprint_radius_scale_dist_(0.7f, 1.2f)
   {
     initializeObjects(params);
   }
@@ -135,9 +189,15 @@ private:
   void initializeObjects(const TrackingScenarioConfig & params);
   void setOrientationFromVelocity(
     const geometry_msgs::msg::Twist & twist, geometry_msgs::msg::Pose & pose);
-  void addNewCar(const std::string & id, float x, float y);
-
+  // Functions to add new objects
+  void addNewCar(
+    const std::string & id, float x, float y, float speed_x = 0.0f, float speed_y = 0.0f);
   void addNewPedestrian(const std::string & id, float x, float y);
+  void addNewUnknown(const std::string & id, float x, float y);
+  // Functions to generate random shapes for unknown objects
+  void generateClusterFootprint(
+    float base_size, std::vector<geometry_msgs::msg::Point> & footprint);
+  void updateUnknownShape(UnknownObjectState & state);
   struct Shape
   {
     float x;
@@ -149,7 +209,7 @@ private:
   int object_counter_;
   std::mt19937 rng_;
 
-  // Distributions
+  // Distributions for known objects
   std::normal_distribution<float> car_spacing_dist_;
   std::uniform_real_distribution<float> lateral_drift_;
   std::uniform_real_distribution<float> car_speed_dist_;
@@ -166,8 +226,23 @@ private:
   std::uniform_real_distribution<float> sin_dist_{-1.0, 1.0};
   std::bernoulli_distribution new_obj_dist_{0.0};
 
+  // Distributions for unknown objects
+  std::uniform_real_distribution<float> base_size_dist_;
+  std::uniform_real_distribution<float> z_size_noise_;
+  std::uniform_real_distribution<float> z_pos_noise_;
+  std::bernoulli_distribution shape_type_dist_;
+  std::uniform_int_distribution<int> point_count_dist_;
+  std::normal_distribution<float> shape_evolution_noise_;  // renamed from cluster_evolution_noise_
+  std::bernoulli_distribution movement_chance_dist_;
+  std::uniform_real_distribution<float> moving_unknown_speed_dist_;
+  std::bernoulli_distribution shape_change_dist_;
+  std::uniform_real_distribution<float> footprint_radius_scale_dist_;
+  std::uniform_real_distribution<float> unknown_pos_dist_{-20.0f, 20.0f};
+
   // Object states
   std::unordered_map<std::string, ObjectState> car_states_;
   std::unordered_map<std::string, ObjectState> pedestrian_states_;
+  std::unordered_map<std::string, UnknownObjectState> unknown_states_;
 };
+
 #endif  // TEST_BENCH_HPP_
