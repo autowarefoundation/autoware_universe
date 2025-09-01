@@ -298,7 +298,7 @@ double DataAssociation::calculateScore(
   const bool use_1d_iou = (tracker_label == Label::PEDESTRIAN);
   const bool use_3d_iou = (tracked_object.trust_extension) && (measurement_object.trust_extension);
 
-  double iou_score = INVALID_SCORE;
+  double iou_score;
   if (use_1d_iou) {
     iou_score = shapes::get1dIoU(measurement_object, tracked_object);
   } else if (use_3d_iou) {
