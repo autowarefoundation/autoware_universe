@@ -170,10 +170,6 @@ private:
     CellCentroid * centroid_cells_list_dev, uint32_t * num_points_per_cell_dev,
     size_t * cell_first_point_indices_dev);
 
-  void getTotalProcessPoints(
-    const uint32_t * num_points_per_cell_dev, const uint32_t max_num_cells,
-    size_t * total_process_points_dev);
-
   void sortPointsInCells(
     const uint32_t * num_points_per_cell_dev, ClassifiedPointTypeStruct * classified_points_dev);
   void scanPerSectorGroundReference(
