@@ -103,7 +103,7 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
       });
     if (next_it == next_segment.primitives.end()) {
       throw std::runtime_error(
-        "ManualLaneChangeHandler: Preferred primitive not found in next segment.");
+        "ManualLaneChangeHandler: Preferred primitive not found in next segment. next_it.id: " + std::to_string(next_segment.preferred_primitive.id));
     }
 
     std::size_t current_index = std::distance(current_segment.primitives.begin(), current_it);
