@@ -183,13 +183,16 @@ TEST_F(StopPointFixerIntegrationTest, ModifyTrajectoryWhenRequired)
 
   plugin_->modify_trajectory(trajectory, params, data);
 
-  // Should replace with single stop point at ego position
-  EXPECT_EQ(trajectory.size(), 1);
+  // Should replace with two stop points at ego position (minimum for Control)
+  EXPECT_EQ(trajectory.size(), 2);
   EXPECT_DOUBLE_EQ(trajectory[0].pose.position.x, 0.0);
   EXPECT_DOUBLE_EQ(trajectory[0].pose.position.y, 0.0);
   EXPECT_DOUBLE_EQ(trajectory[0].longitudinal_velocity_mps, 0.0);
   EXPECT_DOUBLE_EQ(trajectory[0].lateral_velocity_mps, 0.0);
   EXPECT_DOUBLE_EQ(trajectory[0].acceleration_mps2, 0.0);
+  EXPECT_DOUBLE_EQ(trajectory[1].pose.position.x, 0.0);
+  EXPECT_DOUBLE_EQ(trajectory[1].pose.position.y, 0.0);
+  EXPECT_DOUBLE_EQ(trajectory[1].longitudinal_velocity_mps, 0.0);
 }
 
 TEST_F(StopPointFixerIntegrationTest, ModifyTrajectoryWhenNotRequired)
