@@ -6,6 +6,18 @@
     "calibration_status": {
       "type": "object",
       "properties": {
+        "trt_precision": {
+          "type": "string",
+          "description": "A precision of TensorRT engine.",
+          "default": "fp16",
+          "enum": ["fp16", "fp32"]
+        },
+        "cloud_capacity": {
+          "type": "integer",
+          "description": "Capacity of the point cloud buffer (should be set to at least the maximum theoretical number of points).",
+          "default": 2000000,
+          "minimum": 1
+        },
         "onnx_path": {
           "type": "string",
           "description": "Path to the ONNX model file used for calibration status verification.",
@@ -86,9 +98,24 @@
           },
           "required": ["check_velocity", "velocity_source", "velocity_threshold"],
           "additionalProperties": false
+        },
+        "miscalibration_confidence_threshold": {
+          "type": "number",
+          "description": "The confidence threshold for determining miscalibration. Positive values shifts the decision boundary towards detecting miscalibration, while negative values shifts it towards detecting proper calibration. A value of 0.0 means that the decision is based solely on the model's output without any bias.",
+          "default": "0.0"
         }
       },
-      "required": ["onnx_path", "runtime_mode", "period", "queue_size", "input", "prerequisite"],
+      "required": [
+        "trt_precision",
+        "cloud_capacity",
+        "onnx_path",
+        "runtime_mode",
+        "period",
+        "queue_size",
+        "input",
+        "prerequisite",
+        "miscalibration_confidence_threshold"
+      ],
       "additionalProperties": false
     }
   },

@@ -145,7 +145,6 @@ inline std::string velocity_source_to_string(VelocitySource source)
  */
 struct CalibrationStatusResult
 {
-  bool is_calibrated;
   float calibration_confidence;
   float miscalibration_confidence;
   double preprocessing_time_ms;

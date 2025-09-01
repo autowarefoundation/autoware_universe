@@ -15,9 +15,29 @@
           "type": "integer",
           "description": "The size of the dilation kernel used for point cloud processing, 1 means 3x3 kernel, 2 means 5x5 kernel, etc.",
           "default": 1
+        },
+        "height": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "The height of the input image for optimization profile of the ML model, specified as [min, opt, max].",
+          "default": [1080, 1860, 2160]
+        },
+        "width": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "The width of the input image for the optimization profile of the ML model, specified as [min, opt, max].",
+          "default": [1920, 2880, 3840]
         }
       },
-      "required": ["lidar_range", "dilation_size"],
+      "required": ["lidar_range", "dilation_size", "height", "width"],
       "additionalProperties": false
     }
   },

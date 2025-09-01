@@ -64,7 +64,6 @@ The calibration status detection system operates through the following pipeline:
 ## Assumptions / Known Limits
 
 - Input images must be in BGR8 format (8-bit per channel)
-- Input images must have 1860×2880 resolution
 - Input images must be undistorted (image_raw)
 - Input point clouds should contain intensity information (XYZIRC format)
 
@@ -79,7 +78,6 @@ ros2 launch autoware_calibration_status calibration_status.launch.xml
 - Manual runtime mode via service calls
 - Periodic runtime mode with configurable intervals
 - Number of detected objects threshold as an additional requirement for calibration status check processing
-- Dynamic input image shape
 - CUDA kernels optimizations
 - Support model without intensity channel
 

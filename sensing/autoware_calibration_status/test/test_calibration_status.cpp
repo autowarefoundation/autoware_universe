@@ -26,8 +26,10 @@
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
+#include <cuda_runtime_api.h>
 #include <gtest/gtest.h>
 
+#include <cstdint>
 #include <cstring>
 #include <filesystem>
 #include <memory>
@@ -41,6 +43,9 @@ using sensor_msgs::msg::PointCloud2;
 namespace autoware::calibration_status
 {
 constexpr bool save_test_images = true;
+constexpr double lidar_range = 128.0;
+constexpr int64_t dilation_size = 1;
+constexpr int64_t cloud_capacity = 2'000'000;
 
 class CalibrationStatusTest : public autoware::cuda_utils::CudaTest
 {
@@ -66,11 +71,20 @@ protected:
     if (!std::filesystem::exists(onnx_path)) {
       GTEST_SKIP() << "ONNX model file not found: " << onnx_path;
     }
-    CalibrationStatusConfig calibration_status_config(128.0, 1);
-    calibration_status =
-      std::make_unique<CalibrationStatus>(onnx_path.string(), calibration_status_config);
+    CalibrationStatusConfig calibration_status_config(
+      lidar_range, dilation_size,
+      std::vector<int64_t>{data_utils::height - 1, data_utils::height, data_utils::height + 1},
+      std::vector<int64_t>{
+        data_utils::width - 1, data_utils::width, data_utils::width + 1});  // Dummy shape diffs
+    calibration_status = std::make_unique<CalibrationStatus>(
+      onnx_path.string(), "fp16", cloud_capacity, calibration_status_config);
   }
-  static void TearDownTestSuite() { calibration_status.reset(); }
+
+  static void TearDownTestSuite()
+  {
+    cudaDeviceSynchronize();
+    calibration_status.reset();
+  }
 };
 
 void CalibrationStatusTest::SetUp()
@@ -109,7 +123,8 @@ TEST_F(CalibrationStatusTest, TestCalibrationStatusProcessingCalibratedSamples)
         preview_img_msg->data, preview_img_msg->width, preview_img_msg->height, data_dir,
         sample.sample_name + "_fused_calibrated.png");
     }
-    EXPECT_TRUE(result.is_calibrated)
+    auto is_calibrated = result.calibration_confidence > result.miscalibration_confidence;
+    EXPECT_TRUE(is_calibrated)
       << "Calibration status should be true for calibrated sample. Calibration confidence: "
       << result.calibration_confidence
       << ", Miscalibration confidence: " << result.miscalibration_confidence;
@@ -142,7 +157,8 @@ TEST_F(CalibrationStatusTest, TestCalibrationStatusProcessingMisalibratedSamples
         preview_img_msg->data, preview_img_msg->width, preview_img_msg->height, data_dir,
         sample.sample_name + "_fused_miscalibrated.png");
     }
-    EXPECT_FALSE(result.is_calibrated)
+    auto is_calibrated = result.calibration_confidence > result.miscalibration_confidence;
+    EXPECT_FALSE(is_calibrated)
       << "Calibration status should be false for miscalibrated sample. Calibration confidence: "
       << result.calibration_confidence
       << ", Miscalibration confidence: " << result.miscalibration_confidence;

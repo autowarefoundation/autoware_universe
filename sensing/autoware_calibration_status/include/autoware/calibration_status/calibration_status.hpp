@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__CALIBRATION_STATUS__CALIBRATION_STATUS_HPP_
 #define AUTOWARE__CALIBRATION_STATUS__CALIBRATION_STATUS_HPP_
 
+#include "autoware/calibration_status/config.hpp"
 #include "autoware/calibration_status/data_type.hpp"
 #include "autoware/calibration_status/preprocess_cuda.hpp"
 #include "autoware/calibration_status/utils.hpp"
@@ -35,24 +36,6 @@ namespace autoware::calibration_status
 {
 
 /**
- * @brief Configuration parameters for calibration status processing
- */
-struct CalibrationStatusConfig
-{
-  /**
-   * @brief Constructor for CalibrationStatusConfig
-   * @param lidar_range Maximum LiDAR range for point filtering and depth normalization
-   * @param dilation_size Size of morphological dilation kernel for point projection
-   */
-  CalibrationStatusConfig(const double lidar_range, const int64_t dilation_size)
-  : lidar_range(lidar_range), dilation_size(dilation_size)
-  {
-  }
-  double lidar_range;
-  int64_t dilation_size;
-};
-
-/**
  * @brief Core calibration status detection class using CUDA and TensorRT
  *
  * This class implements deep learning-based LiDAR-camera calibration validation.
@@ -70,10 +53,14 @@ public:
   /**
    * @brief Constructor for CalibrationStatus
    * @param onnx_path Path to the ONNX model file for TensorRT engine creation
+   * @param trt_precision TensorRT precision mode
+   * @param cloud_capacity Maximum number of LiDAR points to process
    * @param config Configuration parameters for processing
    * @throws std::runtime_error if TensorRT engine setup fails
    */
-  explicit CalibrationStatus(const std::string & onnx_path, const CalibrationStatusConfig & config);
+  explicit CalibrationStatus(
+    const std::string & onnx_path, const std::string & trt_precision, int64_t cloud_capacity,
+    const CalibrationStatusConfig & config);
 
   /**
    * @brief Destructor
@@ -117,6 +104,7 @@ private:
   autoware::cuda_utils::CudaUniquePtr<double[]> tf_matrix_d_;
   autoware::cuda_utils::CudaUniquePtr<uint32_t> num_points_projected_d_;
   cudaStream_t stream_{nullptr};
+  size_t cloud_capacity_;
   const CalibrationStatusConfig config_;
 };
 

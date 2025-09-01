@@ -20,7 +20,9 @@
 namespace autoware::calibration_status
 {
 
-PreprocessCuda::PreprocessCuda(cudaStream_t & stream) : stream_(stream) {};
+PreprocessCuda::PreprocessCuda(
+  const double lidar_range, const uint32_t dilation_size, cudaStream_t & stream)
+: lidar_range_(lidar_range), dilation_size_(static_cast<int>(dilation_size)), stream_(stream) {};
 
 /**
  * @brief Performs bilinear interpolation, mimicking OpenCV's edge handling.
@@ -227,8 +229,8 @@ __device__ inline InputImageBGR8Type jet_colormap(float v)
 __global__ void projectPoints_kernel(
   const InputPointType * input_points, InputImageBGR8Type * undistorted_image,
   const double * tf_matrix, const double * projection_matrix, const size_t num_points,
-  const size_t width, const size_t height, const double lidar_range, float * metric_depth_buffer,
-  InputArrayRGBDI * output_array, uint32_t * num_points_projected)
+  const size_t width, const size_t height, const double lidar_range, const int dilation_size,
+  float * metric_depth_buffer, InputArrayRGBDI * output_array, uint32_t * num_points_projected)
 {
   size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -280,10 +282,8 @@ __global__ void projectPoints_kernel(
           undistorted_image[pixel_idx] = color;
           atomicAdd(num_points_projected, 1);
 
-#pragma unroll
-          for (int dy = -1; dy <= 1; ++dy) {
-#pragma unroll
-            for (int dx = -1; dx <= 1; ++dx) {
+          for (int dy = -dilation_size; dy <= dilation_size; ++dy) {
+            for (int dx = -dilation_size; dx <= dilation_size; ++dx) {
               if (dx == 0 && dy == 0) continue;
 
               int neighbor_u = u + dx;
@@ -337,8 +337,8 @@ cudaError_t PreprocessCuda::projectPoints_launch(
   cudaMemset(metric_depth_buffer, 0, width * height * sizeof(float));
 
   projectPoints_kernel<<<blocks, threads, 0, stream_>>>(
-    input_points, undistorted_image, tf_matrix, projection_matrix, num_points, width, height, 128.0,
-    metric_depth_buffer, output_array, num_points_projected);
+    input_points, undistorted_image, tf_matrix, projection_matrix, num_points, width, height,
+    lidar_range_, dilation_size_, metric_depth_buffer, output_array, num_points_projected);
 
   cudaFree(metric_depth_buffer);
 

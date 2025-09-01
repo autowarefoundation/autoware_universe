@@ -40,15 +40,21 @@ CalibrationStatusNode::CalibrationStatusNode(const rclcpp::NodeOptions & options
 {
   const CalibrationStatusConfig calibration_status_config(
     this->declare_parameter<double>("lidar_range"),
-    this->declare_parameter<int64_t>("dilation_size"));
+    this->declare_parameter<int64_t>("dilation_size"),
+    this->declare_parameter<std::vector<int64_t>>("height"),
+    this->declare_parameter<std::vector<int64_t>>("width"));
 
   calibration_status_ = std::make_unique<CalibrationStatus>(
-    this->declare_parameter<std::string>("onnx_path"), calibration_status_config);
+    this->declare_parameter<std::string>("onnx_path"),
+    this->declare_parameter<std::string>("trt_precision"),
+    this->declare_parameter<std::int64_t>("cloud_capacity"), calibration_status_config);
 
   // Runtime mode configuration
   runtime_mode_ = string_to_runtime_mode(this->declare_parameter<std::string>("runtime_mode"));
   period_ = this->declare_parameter<double>("period");
   queue_size_ = this->declare_parameter<int64_t>("queue_size");
+  miscalibration_confidence_threshold_ =
+    this->declare_parameter<double>("miscalibration_confidence_threshold");
 
   // Prerequisite configuration
   check_velocity_ = this->declare_parameter<bool>("prerequisite.check_velocity");
@@ -167,6 +173,7 @@ void CalibrationStatusNode::setup_sensor_synchronization()
 {
   // Determine the number of topic pairs to synchronize
   size_t num_pairs{};
+  bool use_cloud_ns{false};
 
   if (cloud_topics_.size() == 1 && image_topics_.size() > 1) {
     // Single LiDAR with multiple cameras
@@ -174,6 +181,7 @@ void CalibrationStatusNode::setup_sensor_synchronization()
   } else if (cloud_topics_.size() > 1 && image_topics_.size() == 1) {
     // Multiple LiDARs with single camera
     num_pairs = cloud_topics_.size();
+    use_cloud_ns = true;  // Associate outputs to cloud topics as there's only one image topic
   } else if (cloud_topics_.size() == image_topics_.size()) {
     // One-to-one pairing
     num_pairs = cloud_topics_.size();
@@ -191,7 +199,7 @@ void CalibrationStatusNode::setup_sensor_synchronization()
     // Determine which topics to use for this pair
     size_t cloud_idx = (cloud_topics_.size() == 1) ? 0 : i;
     size_t image_idx = (image_topics_.size() == 1) ? 0 : i;
-    auto preview_image_topic = image_topics_.at(i);
+    auto preview_image_topic = use_cloud_ns ? cloud_topics_.at(i) : image_topics_.at(i);
     if (auto pos = preview_image_topic.rfind('/'); pos != std::string::npos) {
       preview_image_topic.replace(pos + 1, std::string::npos, "points_projected");
     } else {
@@ -216,7 +224,7 @@ void CalibrationStatusNode::setup_sensor_synchronization()
     synchronizers_[i]->registerCallback(
       std::bind(
         &CalibrationStatusNode::synchronized_callback, this, std::placeholders::_1,
-        std::placeholders::_2, static_cast<int>(i)));
+        std::placeholders::_2, i));
 
     RCLCPP_INFO(
       this->get_logger(), "Synchronization pair %zu: %s <-> %s (delta: %.3f s)", i,
@@ -284,17 +292,18 @@ void CalibrationStatusNode::odometry_callback(const nav_msgs::msg::Odometry::Sha
 
 void CalibrationStatusNode::synchronized_callback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud_msg,
-  const sensor_msgs::msg::Image::ConstSharedPtr & image_msg, int pair_idx)
+  const sensor_msgs::msg::Image::ConstSharedPtr & image_msg, size_t pair_idx)
 {
   if (camera_info_msgs_.at(pair_idx) == nullptr) {
     RCLCPP_WARN_THROTTLE(
       this->get_logger(), *this->get_clock(), 1000,
-      "Camera info message for pair %d is not available. Skipping calibration check.", pair_idx);
+      "Camera info message for pair %zu is not available. Skipping calibration check.", pair_idx);
     return;
   }
   const auto velocity_check_status = get_velocity_check_status();
   if (velocity_check_status.is_vehicle_moving) {
-    publish_diagnostic_status(velocity_check_status);
+    publish_diagnostic_status(velocity_check_status, pair_idx);
+    return;
   }
 
   // Get the transform
@@ -328,7 +337,7 @@ void CalibrationStatusNode::synchronized_callback(
   auto result = calibration_status_->process(
     cloud_msg, image_msg, camera_info_msgs_[pair_idx], eigen_transform, preview_img_data);
 
-  publish_diagnostic_status(velocity_check_status, result);
+  publish_diagnostic_status(velocity_check_status, pair_idx, result);
 
   if (is_preview_subscribed) {
     preview_image_pubs_.at(pair_idx)->publish(*preview_img_msg);
@@ -354,25 +363,36 @@ VelocityCheckStatus CalibrationStatusNode::get_velocity_check_status()
 }
 
 void CalibrationStatusNode::publish_diagnostic_status(
-  const VelocityCheckStatus & velocity_check_status, const CalibrationStatusResult & result)
+  const VelocityCheckStatus & velocity_check_status, const size_t pair_idx,
+  const CalibrationStatusResult & result)
 {
   diagnostic_msgs::msg::DiagnosticStatus status;
   status.name =
     std::string(this->get_name()) + std::string(": ") + this->get_fully_qualified_name();
   status.hardware_id = this->get_name();
 
+  auto is_calibrated =
+    (result.calibration_confidence >
+     result.miscalibration_confidence + miscalibration_confidence_threshold_);
+
   if (velocity_check_status.is_vehicle_moving) {
     status.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
     status.message = "Vehicle is moving. Calibration check has been skipped.";
-  } else if (result.is_calibrated) {
+  } else if (is_calibrated) {
     status.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
-    status.message = "Calibration check passed.";
+    status.message = "Calibration is valid";
   } else {
     status.level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
-    status.message = "Calibration check failed.";
+    status.message = "Calibration is invalid.";
   }
 
   diagnostic_msgs::msg::KeyValue key_value;
+  key_value.key = "Source image topic";
+  key_value.value = image_topics_.at((image_topics_.size() == 1) ? 0 : pair_idx);
+  status.values.push_back(key_value);
+  key_value.key = "Source point cloud topic";
+  key_value.value = cloud_topics_.at((cloud_topics_.size() == 1) ? 0 : pair_idx);
+  status.values.push_back(key_value);
   key_value.key = "Is velocity check activated";
   key_value.value = velocity_check_status.is_activated ? "True" : "False";
   status.values.push_back(key_value);
@@ -382,6 +402,9 @@ void CalibrationStatusNode::publish_diagnostic_status(
   key_value.key = "Velocity threshold";
   key_value.value = std::to_string(velocity_threshold_);
   status.values.push_back(key_value);
+  key_value.key = "Miscalibration confidence threshold";
+  key_value.value = std::to_string(miscalibration_confidence_threshold_);
+  status.values.push_back(key_value);
   key_value.key = "Is vehicle moving";
   key_value.value = velocity_check_status.is_vehicle_moving ? "True" : "False";
   status.values.push_back(key_value);
@@ -389,7 +412,7 @@ void CalibrationStatusNode::publish_diagnostic_status(
   key_value.value = std::to_string(velocity_check_status.velocity_age);
   status.values.push_back(key_value);
   key_value.key = "Is calibrated";
-  key_value.value = result.is_calibrated ? "True" : "False";
+  key_value.value = is_calibrated ? "True" : "False";
   status.values.push_back(key_value);
   key_value.key = "Calibration confidence";
   key_value.value = std::to_string(result.calibration_confidence);

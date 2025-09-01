@@ -42,9 +42,9 @@
 
 namespace data_utils
 {
-constexpr size_t image_width = 2880;
-constexpr size_t image_height = 1860;
-constexpr size_t num_features = 5;
+constexpr size_t width = 2880;
+constexpr size_t height = 1860;
+constexpr size_t channels = 5;
 
 using autoware::point_types::PointXYZIRC;
 using autoware::point_types::PointXYZIRCGenerator;
@@ -156,8 +156,8 @@ Image::SharedPtr get_image(const std::filesystem::path & data_dir, const std::st
   });
 
   Image::SharedPtr image = std::make_shared<Image>();
-  image->height = image_height;
-  image->width = image_width;
+  image->height = height;
+  image->width = width;
   image->encoding = "bgr8";
   image->step = image->width * 3;
   image->header.frame_id = "optical_camera_link";
@@ -171,8 +171,8 @@ Image::SharedPtr get_image_undistorted(
   const auto sample_dir = data_dir / sample_name;
   auto image_data = load_binary<uint8_t>(sample_dir / "image_undistorted.dat.gz");
   Image::SharedPtr image_undistorted = std::make_shared<Image>();
-  image_undistorted->height = image_height;
-  image_undistorted->width = image_width;
+  image_undistorted->height = height;
+  image_undistorted->width = width;
   image_undistorted->encoding = "bgr8";
   image_undistorted->step = image_undistorted->width * 3;
   image_undistorted->header.frame_id = "optical_camera_link";
@@ -186,8 +186,8 @@ CameraInfo::SharedPtr get_camera_info(
   const auto sample_dir = data_dir / sample_name;
   const std::string suffix = is_miscalibrated ? "miscalibrated" : "calibrated";
   CameraInfo::SharedPtr camera_info = std::make_shared<CameraInfo>();
-  camera_info->width = image_width;
-  camera_info->height = image_height;
+  camera_info->width = width;
+  camera_info->height = height;
   camera_info->distortion_model = "plumb_bob";
   camera_info->d.resize(8);
   camera_info->header.frame_id = "optical_camera_link";
@@ -252,10 +252,10 @@ std::vector<float> get_input_data(
   const auto sample_dir = data_dir / sample_name;
   const std::string suffix = is_miscalibrated ? "miscalibrated" : "calibrated";
   auto input_data = load_binary<float>(sample_dir / ("input_data_" + suffix + ".dat.gz"));
-  if (input_data.size() != image_width * image_height * num_features) {
+  if (input_data.size() != width * height * channels) {
     throw std::runtime_error(
-      "Invalid input data size, expected " +
-      std::to_string(image_width * image_height * num_features) + " elements.");
+      "Invalid input data size, expected " + std::to_string(width * height * channels) +
+      " elements.");
   }
   return input_data;
 }

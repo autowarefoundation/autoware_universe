@@ -77,6 +77,7 @@ private:
   std::vector<double> approx_deltas_;
   bool check_velocity_;
   double velocity_threshold_;
+  double miscalibration_confidence_threshold_;
 
   // ROS interface
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr calibration_service_;
@@ -196,7 +197,7 @@ private:
    */
   void synchronized_callback(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud_msg,
-    const sensor_msgs::msg::Image::ConstSharedPtr & image_msg, int pair_idx);
+    const sensor_msgs::msg::Image::ConstSharedPtr & image_msg, size_t pair_idx);
 
   // Utility methods
   /**
@@ -214,10 +215,11 @@ private:
   /**
    * @brief Publish diagnostic status to ROS diagnostics system
    * @param velocity_check_status Current velocity check state
+   * @param pair_idx Index of the sensor pair being processed
    * @param result Calibration validation result (optional)
    */
   void publish_diagnostic_status(
-    const VelocityCheckStatus & velocity_check_status,
+    const VelocityCheckStatus & velocity_check_status, const size_t pair_idx,
     const CalibrationStatusResult & result = CalibrationStatusResult());
 };
 

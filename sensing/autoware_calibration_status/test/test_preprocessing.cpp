@@ -47,9 +47,12 @@ namespace autoware::calibration_status
 {
 
 constexpr bool save_test_images = true;
+constexpr double lidar_range = 128.0;
+constexpr int64_t dilation_size = 1;
+constexpr int64_t cloud_capacity = 2'000'000;
 constexpr float px_error_threshold_rgb = 0.01f;
 constexpr float px_error_threshold_di = 0.1f;
-constexpr size_t arr_error_threshold = data_utils::image_width * data_utils::image_height * 0.02;
+constexpr size_t arr_error_threshold = data_utils::width * data_utils::height * 0.02;
 
 class PreprocessingTest : public autoware::cuda_utils::CudaTest
 {
@@ -87,20 +90,18 @@ void PreprocessingTest::SetUp()
   cudaStreamCreate(&stream);
   CHECK_CUDA_ERROR(cudaStreamCreate(&stream));
 
-  in_d =
-    cuda_utils::make_unique<InputArrayRGBDI[]>(data_utils::image_height * data_utils::image_width);
+  in_d = cuda_utils::make_unique<InputArrayRGBDI[]>(data_utils::height * data_utils::width);
   out_d = cuda_utils::make_unique<float[]>(2);
-  cloud_d = cuda_utils::make_unique<InputPointType[]>(1'000'000);
-  image_d = cuda_utils::make_unique<InputImageBGR8Type[]>(
-    data_utils::image_height * data_utils::image_width);
-  image_undistorted_d = cuda_utils::make_unique<InputImageBGR8Type[]>(
-    data_utils::image_height * data_utils::image_width);
+  cloud_d = cuda_utils::make_unique<InputPointType[]>(cloud_capacity);
+  image_d = cuda_utils::make_unique<InputImageBGR8Type[]>(data_utils::height * data_utils::width);
+  image_undistorted_d =
+    cuda_utils::make_unique<InputImageBGR8Type[]>(data_utils::height * data_utils::width);
   dist_coeffs_d = cuda_utils::make_unique<double[]>(8);
   camera_matrix_d = cuda_utils::make_unique<double[]>(9);
   projection_matrix_d = cuda_utils::make_unique<double[]>(12);
   tf_matrix_d = cuda_utils::make_unique<double[]>(16);
 
-  preprocess_ptr = std::make_unique<PreprocessCuda>(stream);
+  preprocess_ptr = std::make_unique<PreprocessCuda>(lidar_range, dilation_size, stream);
 }
 
 void PreprocessingTest::TearDown()
@@ -113,13 +114,12 @@ std::vector<data_utils::TestSample> PreprocessingTest::samples;
 TEST_F(PreprocessingTest, TestPreprocessing)
 {
   for (const auto & sample : samples) {
-    cuda_utils::clear_async(in_d.get(), data_utils::image_height * data_utils::image_width, stream);
+    cuda_utils::clear_async(in_d.get(), data_utils::height * data_utils::width, stream);
     cuda_utils::clear_async(out_d.get(), 2, stream);
-    cuda_utils::clear_async(cloud_d.get(), 1'000'000, stream);
+    cuda_utils::clear_async(cloud_d.get(), cloud_capacity, stream);
+    cuda_utils::clear_async(image_d.get(), data_utils::height * data_utils::width, stream);
     cuda_utils::clear_async(
-      image_d.get(), data_utils::image_height * data_utils::image_width, stream);
-    cuda_utils::clear_async(
-      image_undistorted_d.get(), data_utils::image_height * data_utils::image_width, stream);
+      image_undistorted_d.get(), data_utils::height * data_utils::width, stream);
     cuda_utils::clear_async(dist_coeffs_d.get(), 8, stream);
     cuda_utils::clear_async(camera_matrix_d.get(), 9, stream);
     cuda_utils::clear_async(projection_matrix_d.get(), 12, stream);
@@ -131,8 +131,8 @@ TEST_F(PreprocessingTest, TestPreprocessing)
       cudaMemcpyHostToDevice, stream));
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
       image_d.get(), sample.image->data.data(),
-      sizeof(InputImageBGR8Type) * data_utils::image_height * data_utils::image_width,
-      cudaMemcpyHostToDevice, stream));
+      sizeof(InputImageBGR8Type) * data_utils::height * data_utils::width, cudaMemcpyHostToDevice,
+      stream));
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
       dist_coeffs_d.get(), sample.camera_info_calibrated->d.data(), sizeof(double) * 8,
       cudaMemcpyHostToDevice, stream));
@@ -162,14 +162,13 @@ TEST_F(PreprocessingTest, TestPreprocessing)
       stream));
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
     ASSERT_GT(num_points_projected, 0) << "Number of projected points should be greater than zero.";
-    std::vector<InputArrayRGBDI> in_host(data_utils::image_height * data_utils::image_width);
+    std::vector<InputArrayRGBDI> in_host(data_utils::height * data_utils::width);
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
-      in_host.data(), in_d.get(),
-      sizeof(InputArrayRGBDI) * data_utils::image_height * data_utils::image_width,
+      in_host.data(), in_d.get(), sizeof(InputArrayRGBDI) * data_utils::height * data_utils::width,
       cudaMemcpyDeviceToHost, stream));
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
-    std::vector<InputArrayRGBDI> input_rgbdi(data_utils::image_width * data_utils::image_height);
-    ASSERT_EQ(sample.input_data_calibrated.size(), data_utils::num_features * input_rgbdi.size());
+    std::vector<InputArrayRGBDI> input_rgbdi(data_utils::width * data_utils::height);
+    ASSERT_EQ(sample.input_data_calibrated.size(), data_utils::channels * input_rgbdi.size());
     std::memcpy(
       input_rgbdi.data(), sample.input_data_calibrated.data(),
       sample.input_data_calibrated.size() * sizeof(float));
@@ -179,12 +178,12 @@ TEST_F(PreprocessingTest, TestPreprocessing)
     size_t error_b{};
     size_t error_depth{};
     size_t error_intensity{};
-    std::vector<uint8_t> ref_data_rgb(data_utils::image_height * data_utils::image_width * 3);
-    std::vector<uint8_t> ref_data_depth(data_utils::image_height * data_utils::image_width);
-    std::vector<uint8_t> ref_data_intensity(data_utils::image_height * data_utils::image_width);
-    std::vector<uint8_t> res_data_rgb(data_utils::image_height * data_utils::image_width * 3);
-    std::vector<uint8_t> res_data_depth(data_utils::image_height * data_utils::image_width);
-    std::vector<uint8_t> res_data_intensity(data_utils::image_height * data_utils::image_width);
+    std::vector<uint8_t> ref_data_rgb(data_utils::height * data_utils::width * 3);
+    std::vector<uint8_t> ref_data_depth(data_utils::height * data_utils::width);
+    std::vector<uint8_t> ref_data_intensity(data_utils::height * data_utils::width);
+    std::vector<uint8_t> res_data_rgb(data_utils::height * data_utils::width * 3);
+    std::vector<uint8_t> res_data_depth(data_utils::height * data_utils::width);
+    std::vector<uint8_t> res_data_intensity(data_utils::height * data_utils::width);
 
     GTEST_LOG_(INFO) << "Comparing processing results with reference data (result/reference)...";
     for (size_t i = 0; i < input_rgbdi.size(); ++i) {
@@ -200,18 +199,17 @@ TEST_F(PreprocessingTest, TestPreprocessing)
       float kernel_avg_res_depth = 0.0;
       float kernel_avg_ref_intensity = 0.0;
       float kernel_avg_res_intensity = 0.0;
-      const int center_x = static_cast<int>(i) % static_cast<int>(data_utils::image_width);
-      const int center_y = static_cast<int>(i) / static_cast<int>(data_utils::image_width);
+      const int center_x = static_cast<int>(i) % static_cast<int>(data_utils::width);
+      const int center_y = static_cast<int>(i) / static_cast<int>(data_utils::width);
       for (int v = -1; v <= 1; ++v) {
         for (int u = -1; u <= 1; ++u) {
           const int neighbor_x = center_x + u;
           const int neighbor_y = center_y + v;
 
           if (
-            neighbor_x >= 0 && neighbor_x < static_cast<int>(data_utils::image_width) &&
-            neighbor_y >= 0 && neighbor_y < static_cast<int>(data_utils::image_height)) {
-            const int neighbor_idx =
-              neighbor_y * static_cast<int>(data_utils::image_width) + neighbor_x;
+            neighbor_x >= 0 && neighbor_x < static_cast<int>(data_utils::width) &&
+            neighbor_y >= 0 && neighbor_y < static_cast<int>(data_utils::height)) {
+            const int neighbor_idx = neighbor_y * static_cast<int>(data_utils::width) + neighbor_x;
 
             const auto & res_neighbor = in_host.at(neighbor_idx);
             const auto & ref_neighbor = input_rgbdi.at(neighbor_idx);
@@ -252,22 +250,22 @@ TEST_F(PreprocessingTest, TestPreprocessing)
 
     if (save_test_images) {
       data_utils::save_img(
-        ref_data_rgb, data_utils::image_width, data_utils::image_height, data_dir,
+        ref_data_rgb, data_utils::width, data_utils::height, data_dir,
         sample.sample_name + "_rgb_ref.png", CV_8UC3);
       data_utils::save_img(
-        ref_data_depth, data_utils::image_width, data_utils::image_height, data_dir,
+        ref_data_depth, data_utils::width, data_utils::height, data_dir,
         sample.sample_name + "_depth_ref.png", CV_8UC1);
       data_utils::save_img(
-        ref_data_intensity, data_utils::image_width, data_utils::image_height, data_dir,
+        ref_data_intensity, data_utils::width, data_utils::height, data_dir,
         sample.sample_name + "_intensity_ref.png", CV_8UC1);
       data_utils::save_img(
-        res_data_rgb, data_utils::image_width, data_utils::image_height, data_dir,
+        res_data_rgb, data_utils::width, data_utils::height, data_dir,
         sample.sample_name + "_rgb_res.png", CV_8UC3);
       data_utils::save_img(
-        res_data_depth, data_utils::image_width, data_utils::image_height, data_dir,
+        res_data_depth, data_utils::width, data_utils::height, data_dir,
         sample.sample_name + "_depth_res.png", CV_8UC1);
       data_utils::save_img(
-        res_data_intensity, data_utils::image_width, data_utils::image_height, data_dir,
+        res_data_intensity, data_utils::width, data_utils::height, data_dir,
         sample.sample_name + "_intensity_res.png", CV_8UC1);
     }
 

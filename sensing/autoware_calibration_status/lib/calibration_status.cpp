@@ -30,27 +30,27 @@
 
 namespace autoware::calibration_status
 {
-constexpr size_t image_width = 2880;
-constexpr size_t image_height = 1860;
-constexpr size_t num_features = 5;
-constexpr size_t max_cloud_size = 1'000'000;
+static constexpr size_t dist_coeffs_size = 8;
+static constexpr size_t camera_matrix_size = 9;
+static constexpr size_t projection_matrix_size = 12;
+static constexpr size_t tf_matrix_size = 16;
 
 CalibrationStatus::CalibrationStatus(
-  const std::string & onnx_path, const CalibrationStatusConfig & config)
-: config_(config)
+  const std::string & onnx_path, const std::string & trt_precision, int64_t cloud_capacity,
+  const CalibrationStatusConfig & config)
+: cloud_capacity_(static_cast<size_t>(cloud_capacity)), config_(config)
 {
-  tensorrt_common::TrtCommonConfig trt_config(onnx_path);
+  tensorrt_common::TrtCommonConfig trt_config(onnx_path, trt_precision);
 
   std::vector<autoware::tensorrt_common::NetworkIO> network_io{
-    autoware::tensorrt_common::NetworkIO(
-      "input", {4, {1, num_features, image_height, image_width}}),
+    autoware::tensorrt_common::NetworkIO("input", {4, {1, config_.channels, -1, -1}}),
     autoware::tensorrt_common::NetworkIO("output", {2, {1, 2}})};
 
   std::vector<autoware::tensorrt_common::ProfileDims> profile_dims{
     autoware::tensorrt_common::ProfileDims(
-      "input", {4, {1, num_features, image_height, image_width}},
-      {4, {1, num_features, image_height, image_width}},
-      {4, {1, num_features, image_height, image_width}})};
+      "input", {4, {1, config_.channels, config_.height.at(0), config_.width.at(0)}},
+      {4, {1, config_.channels, config_.height.at(1), config_.width.at(1)}},
+      {4, {1, config_.channels, config_.height.at(2), config_.width.at(2)}})};
 
   auto network_io_ptr =
     std::make_unique<std::vector<autoware::tensorrt_common::NetworkIO>>(network_io);
@@ -62,11 +62,13 @@ CalibrationStatus::CalibrationStatus(
     throw std::runtime_error("Failed to setup CalibrationStatus TensorRT engine.");
   }
 
-  in_d_ = cuda_utils::make_unique<InputArrayRGBDI[]>(image_height * image_width);
+  in_d_ = cuda_utils::make_unique<InputArrayRGBDI[]>(config_.height.at(2) * config_.width.at(2));
   out_d_ = cuda_utils::make_unique<float[]>(2);
-  cloud_d_ = cuda_utils::make_unique<InputPointType[]>(max_cloud_size);
-  image_d_ = cuda_utils::make_unique<InputImageBGR8Type[]>(image_height * image_width);
-  image_undistorted_d_ = cuda_utils::make_unique<InputImageBGR8Type[]>(image_height * image_width);
+  cloud_d_ = cuda_utils::make_unique<InputPointType[]>(cloud_capacity_);
+  image_d_ =
+    cuda_utils::make_unique<InputImageBGR8Type[]>(config_.height.at(2) * config_.width.at(2));
+  image_undistorted_d_ =
+    cuda_utils::make_unique<InputImageBGR8Type[]>(config_.height.at(2) * config_.width.at(2));
   dist_coeffs_d_ = cuda_utils::make_unique<double[]>(8);
   camera_matrix_d_ = cuda_utils::make_unique<double[]>(9);
   projection_matrix_d_ = cuda_utils::make_unique<double[]>(12);
@@ -74,7 +76,8 @@ CalibrationStatus::CalibrationStatus(
   num_points_projected_d_ = cuda_utils::make_unique<uint32_t>();
 
   CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
-  preprocess_ptr_ = std::make_unique<PreprocessCuda>(stream_);
+  preprocess_ptr_ =
+    std::make_unique<PreprocessCuda>(config.lidar_range, config.dilation_size, stream_);
 }
 
 CalibrationStatusResult CalibrationStatus::process(
@@ -86,11 +89,12 @@ CalibrationStatusResult CalibrationStatus::process(
   auto t1 = std::chrono::steady_clock::now();
 
   // Prepare data
-  cuda_utils::clear_async(in_d_.get(), image_height * image_width, stream_);
+  cuda_utils::clear_async(in_d_.get(), image_msg->height * image_msg->width, stream_);
   cuda_utils::clear_async(out_d_.get(), 2, stream_);
-  cuda_utils::clear_async(cloud_d_.get(), 1'000'000, stream_);
-  cuda_utils::clear_async(image_d_.get(), image_height * image_width, stream_);
-  cuda_utils::clear_async(image_undistorted_d_.get(), image_height * image_width, stream_);
+  cuda_utils::clear_async(cloud_d_.get(), cloud_capacity_, stream_);
+  cuda_utils::clear_async(image_d_.get(), image_msg->height * image_msg->width, stream_);
+  cuda_utils::clear_async(
+    image_undistorted_d_.get(), image_msg->height * image_msg->width, stream_);
   cuda_utils::clear_async(dist_coeffs_d_.get(), 8, stream_);
   cuda_utils::clear_async(camera_matrix_d_.get(), 9, stream_);
   cuda_utils::clear_async(projection_matrix_d_.get(), 12, stream_);
@@ -102,19 +106,21 @@ CalibrationStatusResult CalibrationStatus::process(
     sizeof(InputPointType) * cloud_msg->width * cloud_msg->height, cudaMemcpyHostToDevice,
     stream_));
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    image_d_.get(), image_msg->data.data(), sizeof(InputImageBGR8Type) * image_height * image_width,
-    cudaMemcpyHostToDevice, stream_));
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    dist_coeffs_d_.get(), camera_info_msg->d.data(), sizeof(double) * 8, cudaMemcpyHostToDevice,
+    image_d_.get(), image_msg->data.data(),
+    sizeof(InputImageBGR8Type) * image_msg->height * image_msg->width, cudaMemcpyHostToDevice,
     stream_));
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    camera_matrix_d_.get(), camera_info_msg->k.data(), sizeof(double) * 9, cudaMemcpyHostToDevice,
-    stream_));
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    projection_matrix_d_.get(), camera_info_msg->p.data(), sizeof(double) * 12,
+    dist_coeffs_d_.get(), camera_info_msg->d.data(), sizeof(double) * dist_coeffs_size,
     cudaMemcpyHostToDevice, stream_));
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    tf_matrix_d_.get(), transform.data(), sizeof(double) * 16, cudaMemcpyHostToDevice, stream_));
+    camera_matrix_d_.get(), camera_info_msg->k.data(), sizeof(double) * camera_matrix_size,
+    cudaMemcpyHostToDevice, stream_));
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    projection_matrix_d_.get(), camera_info_msg->p.data(), sizeof(double) * projection_matrix_size,
+    cudaMemcpyHostToDevice, stream_));
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    tf_matrix_d_.get(), transform.data(), sizeof(double) * tf_matrix_size, cudaMemcpyHostToDevice,
+    stream_));
 
   // Undistort image
   CHECK_CUDA_ERROR(preprocess_ptr_->undistortImage_launch(
@@ -133,14 +139,15 @@ CalibrationStatusResult CalibrationStatus::process(
   if (preview_img_data != nullptr) {
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
       preview_img_data, image_undistorted_d_.get(),
-      sizeof(InputImageBGR8Type) * image_height * image_width, cudaMemcpyDeviceToHost, stream_));
+      sizeof(InputImageBGR8Type) * image_msg->height * image_msg->width, cudaMemcpyDeviceToHost,
+      stream_));
   }
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   auto t2 = std::chrono::steady_clock::now();
 
   // Run inference
   network_trt_ptr_->setTensor(
-    "input", in_d_.get(), {4, {1, num_features, image_height, image_width}});
+    "input", in_d_.get(), {4, {1, config_.channels, image_msg->height, image_msg->width}});
   network_trt_ptr_->setTensor("output", out_d_.get());
   network_trt_ptr_->enqueueV3(stream_);
   std::vector<float> output(2);
@@ -152,12 +159,10 @@ CalibrationStatusResult CalibrationStatus::process(
   // Process output
   auto miscalib_confidence = output.at(0);
   auto calib_confidence = output.at(1);
-  auto is_calibrated = (calib_confidence > miscalib_confidence);
   auto time_preproc_us = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
   auto time_inference_us = std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count();
 
   CalibrationStatusResult result{};
-  result.is_calibrated = is_calibrated;
   result.calibration_confidence = calib_confidence;
   result.miscalibration_confidence = miscalib_confidence;
   result.preprocessing_time_ms = static_cast<double>(time_preproc_us) * 1e-3;

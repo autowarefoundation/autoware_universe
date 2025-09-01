@@ -1,5 +1,7 @@
 /**:
   ros__parameters:
+    trt_precision: fp16
+    cloud_capacity: 2000000
     onnx_path: "$(var model_path)/$(var model_name).onnx"
     runtime_mode: active
     period: 5.0
@@ -12,3 +14,4 @@
       check_velocity: true
       velocity_source: twist_with_cov_stamped
       velocity_threshold: 1.0
+    miscalibration_confidence_threshold: 0.0
