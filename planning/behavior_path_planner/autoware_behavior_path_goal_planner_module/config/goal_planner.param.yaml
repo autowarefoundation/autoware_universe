@@ -61,6 +61,8 @@
         decide_path_distance: 10.0
         maximum_deceleration: 1.0
         maximum_jerk: 1.0
+        low_velocity_threshold: 1.38
+        stopping_distance_buffer: 2.0
         path_priority: "efficient_path" # "efficient_path" or "close_goal"
         efficient_path_order: ["SHIFT", "ARC_FORWARD", "ARC_BACKWARD"] # only lane based pull over(exclude freespace parking)
         lane_departure_check_expansion_margin: 0.2
