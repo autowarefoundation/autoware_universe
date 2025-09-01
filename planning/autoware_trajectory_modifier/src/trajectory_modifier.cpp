@@ -29,14 +29,10 @@ TrajectoryModifier::TrajectoryModifier(const rclcpp::NodeOptions & options)
 {
   set_up_params();
 
-  trajectories_sub_ = create_subscription<CandidateTrajectories>(
-    "~/input/candidate_trajectories", 1,
-    std::bind(&TrajectoryModifier::on_traj, this, std::placeholders::_1));
-
   trajectories_pub_ = create_publisher<CandidateTrajectories>("~/output/candidate_trajectories", 1);
 
-  debug_processing_time_detail_pub_ =
-    create_publisher<autoware_utils_debug::ProcessingTimeDetail>("~/debug/processing_time_detail", 1);
+  debug_processing_time_detail_pub_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
+    "~/debug/processing_time_detail", 1);
 
   time_keeper_ = std::make_shared<autoware_utils_debug::TimeKeeper>();
 

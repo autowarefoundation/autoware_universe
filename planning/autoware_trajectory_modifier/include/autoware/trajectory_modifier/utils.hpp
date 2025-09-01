@@ -34,7 +34,8 @@ double calculate_distance_to_last_point(
 void replace_trajectory_with_stop_point(
   TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & ego_pose);
 
-bool is_ego_vehicle_moving(const geometry_msgs::msg::Twist & twist, double velocity_threshold);
+bool is_ego_vehicle_moving(
+  const geometry_msgs::msg::Twist & twist, const double velocity_threshold);
 
 }  // namespace autoware::trajectory_modifier::utils
 

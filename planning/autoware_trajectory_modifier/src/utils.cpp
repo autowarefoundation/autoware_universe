@@ -51,10 +51,13 @@ void replace_trajectory_with_stop_point(
   stop_point.rear_wheel_angle_rad = 0.0;
 
   traj_points.clear();
+
+  // Two points are added since that is the minimum handled by Control.
+  traj_points.push_back(stop_point);
   traj_points.push_back(stop_point);
 }
 
-bool is_ego_vehicle_moving(const geometry_msgs::msg::Twist & twist, double velocity_threshold)
+bool is_ego_vehicle_moving(const geometry_msgs::msg::Twist & twist, const double velocity_threshold)
 {
   const double current_velocity = std::sqrt(
     twist.linear.x * twist.linear.x + twist.linear.y * twist.linear.y +

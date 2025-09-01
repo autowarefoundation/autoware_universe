@@ -19,8 +19,8 @@
 #include "autoware/trajectory_modifier/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
 #include "autoware/trajectory_modifier/trajectory_modifier_structs.hpp"
 
-#include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
+#include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/subscription.hpp>
 
@@ -62,10 +62,9 @@ private:
   std::vector<std::shared_ptr<plugin::TrajectoryModifierPluginBase>> modifier_plugins_;
   std::shared_ptr<plugin::StopPointFixer> stop_point_fixer_ptr_;
 
-  rclcpp::Subscription<CandidateTrajectories>::SharedPtr trajectories_sub_;
-  rclcpp::Publisher<Trajectory>::SharedPtr trajectory_pub_;
   rclcpp::Publisher<CandidateTrajectories>::SharedPtr trajectories_pub_;
-  rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr debug_processing_time_detail_;
+  rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
+    debug_processing_time_detail_;
 
   autoware_utils_rclcpp::InterProcessPollingSubscriber<Odometry> sub_current_odometry_{
     this, "~/input/odometry"};
