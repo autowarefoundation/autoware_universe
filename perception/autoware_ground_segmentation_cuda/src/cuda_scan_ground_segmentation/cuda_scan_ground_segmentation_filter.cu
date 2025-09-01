@@ -401,7 +401,7 @@ __device__ float fitLineFromGndCell(
  */
 
 __device__ void recheckCell(
-  CellCentroid & cell, ClassifiedPointTypeStruct * __restrict__ classify_points,
+  CellCentroid & cell, ClassifiedPointTypeStruct * __restrict__ cell_classify_points_dev,
   const FilterParameters * __restrict__ filter_parameters_dev)
 {
   auto const idx_start_point_of_cell = cell.start_point_index;
@@ -410,12 +410,13 @@ __device__ void recheckCell(
     return;
   }
   for (int i = 0; i < cell.num_points; i++) {
-    auto point_idx = static_cast<size_t>(idx_start_point_of_cell + i);
-    auto & point = classify_points[point_idx];
+    auto & point = cell_classify_points_dev[i];
     if (point.type != PointType::GROUND) {
       continue;
     }
-    if (point.z > cell.gnd_height_min + filter_parameters_dev->non_ground_height_threshold) {
+    if (
+      point.z > cell.gnd_height_min + filter_parameters_dev->non_ground_height_threshold &&
+      cell.num_ground_points > 1) {
       point.type = PointType::NON_GROUND;
       removeGndPointInCell(cell, point);
     }
