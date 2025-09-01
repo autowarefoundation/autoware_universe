@@ -76,7 +76,7 @@ struct AgentState
   // Construct a new instance filling all elements by `0.0f`.
   AgentState() = default;
 
-  explicit AgentState(TrackedObject & object);
+  explicit AgentState(const TrackedObject & object);
 
   /**
    * @brief Construct a new instance with specified values.

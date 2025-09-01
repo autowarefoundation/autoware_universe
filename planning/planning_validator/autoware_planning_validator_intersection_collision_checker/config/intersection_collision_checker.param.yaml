@@ -13,12 +13,14 @@
 
       right_turn:
         enable: true
+        check_traffic_signal: true
         check_crossing_lanes: true
         check_turning_lanes: true
         crossing_lane_angle_th: 0.785398 # [rad] (45 deg)
 
       left_turn:
         enable: true
+        check_traffic_signal: true
         check_turning_lanes: true
 
       pointcloud:
