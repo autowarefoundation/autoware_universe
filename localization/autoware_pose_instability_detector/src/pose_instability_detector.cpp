@@ -165,7 +165,7 @@ void PoseInstabilityDetector::callback_timer()
   bool all_ok = true;
 
   for (size_t i = 0; i < values.size(); ++i) {
-    const bool ok = (std::abs(values[i]) < thresholds[i]) | !enable_validation_flags_[i];
+    const bool ok = (std::abs(values[i]) < thresholds[i]) || !enable_validation_flags_[i];
     all_ok &= ok;
     diagnostic_msgs::msg::KeyValue kv;
     kv.key = labels[i] + ":validation_enabled";
