@@ -1927,9 +1927,8 @@ PathWithLaneId GoalPlannerModule::generateStopPath(
   const double ego_to_stop_distance = calcSignedArcLengthFromEgo(extended_prev_path, stop_pose);
   const auto min_stop_distance = calcFeasibleDecelDistance(
     planner_data_, parameters_.maximum_deceleration, parameters_.maximum_jerk, 0.0);
-  const double eps_vel = 0.01;
-  const bool is_stopped = std::abs(current_vel) < eps_vel;
-  const double buffer = is_stopped ? stop_distance_buffer_ : 0.0;
+  const bool is_stopped = std::abs(current_vel) < parameters_.th_stopped_velocity;
+  const double buffer = is_stopped ? parameters_.stopping_distance_buffer : 0.0;
   if (min_stop_distance && ego_to_stop_distance + buffer < *min_stop_distance) {
     const auto feasible_stop_path =
       generateFeasibleStopPath(getPreviousModuleOutput().path, detail);
@@ -2178,12 +2177,15 @@ bool GoalPlannerModule::hasEnoughDistance(
     return false;
   }
 
-  // The planned and actual stopping behaviors may vary. When this occurs, the vehicle might not be
-  // able to stop at the planned line while satisfying all constraints. A buffer should be added to
-  // account for control errors when the velocity is low.
-  constexpr double low_velocity_threshold = 1.39;
-  const bool is_low_velocity = std::abs(current_vel) < low_velocity_threshold;
-  const double buffer = is_low_velocity ? stop_distance_buffer_ : 0.0;
+  // The velocity planned in the behavior path planner layer and the realized velocity may differ.
+  // This is due to detailed velocity planning in the motion planner, as well as the influence of
+  // control and the vehicle itself. Therefore, even if the goal planner once makes a stopping plan
+  // that considers deceleration constraints based on the braking distance, as the ego vehicle
+  // moves, it may later be judged that those constraints cannot be satisfied. To prevent this
+  // inconsistency, especially in low-speed ranges where stopping motion has already begun, a buffer
+  // should be added to relax the braking distance.
+  const bool is_low_velocity = std::abs(current_vel) < parameters_.low_velocity_threshold;
+  const double buffer = is_low_velocity ? parameters_.stopping_distance_buffer : 0.0;
   if (distance_to_start + buffer < *current_to_stop_distance) {
     return false;
   }
