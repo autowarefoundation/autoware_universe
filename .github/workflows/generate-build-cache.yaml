@@ -21,10 +21,6 @@ jobs:
       - name: Remove exec_depend
         uses: autowarefoundation/autoware-github-actions/remove-exec-depend@v1
 
-      - name: Get self packages
-        id: get-self-packages
-        uses: autowarefoundation/autoware-github-actions/get-self-packages@v1
-
       - name: Create ccache directory
         run: |
           mkdir -p ${CCACHE_DIR}
@@ -75,14 +71,11 @@ jobs:
           vcs export dependency_ws --exact-with-tags > build-depends-exact.repos
 
       - name: Build dependencies
-        if: ${{ steps.get-self-packages.outputs.self-packages != '' }}
-        uses: autowarefoundation/autoware-github-actions/colcon-build@v1
+        uses: esteve/autoware-github-actions/colcon-build@colcon-build-base-paths
         with:
           rosdistro: ${{ env.rosdistro }}
-          target-packages: ${{ steps.get-self-packages.outputs.self-packages }}
-          build-depends-repos: build_depends.repos
           cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
-          base-paths: ${{ dependency_ws }}
+          base-paths: dependency_ws
 
       - name: Save deps cache
         uses: actions/cache/save@v4
