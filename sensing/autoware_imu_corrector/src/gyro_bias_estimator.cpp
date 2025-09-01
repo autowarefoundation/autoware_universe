@@ -68,12 +68,15 @@ GyroBiasEstimator::GyroBiasEstimator(const rclcpp::NodeOptions & options)
   odom_sub_ = create_subscription<nav_msgs::msg::Odometry>(
     "~/input/odom", rclcpp::SensorDataQoS(),
     [this](const nav_msgs::msg::Odometry::ConstSharedPtr msg) { callback_odom(msg); });
-  gyro_bias_pub_ = create_publisher<geometry_msgs::msg::Vector3Stamped>("~/output/gyro_bias", rclcpp::SensorDataQoS());
+  gyro_bias_pub_ = create_publisher<geometry_msgs::msg::Vector3Stamped>(
+    "~/output/gyro_bias", rclcpp::SensorDataQoS());
   pose_sub_ = create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
     "~/input/pose_ndt", rclcpp::SensorDataQoS(),
-    [this](const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr msg) { callback_pose_msg(msg); });
-  gyro_scale_pub_ =
-    create_publisher<geometry_msgs::msg::Vector3Stamped>("~/output/gyro_scale", rclcpp::SensorDataQoS());
+    [this](const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr msg) {
+      callback_pose_msg(msg);
+    });
+  gyro_scale_pub_ = create_publisher<geometry_msgs::msg::Vector3Stamped>(
+    "~/output/gyro_scale", rclcpp::SensorDataQoS());
   imu_scaled_pub_ = create_publisher<sensor_msgs::msg::Imu>("~/output/imu_scaled", rclcpp::QoS{1});
 
   auto bound_timer_callback = std::bind(&GyroBiasEstimator::timer_callback, this);
@@ -383,8 +386,9 @@ void GyroBiasEstimator::update_rate_ekf(
   rate_pose_buff_.push_back(ndt_yaw_rate_);
 
   // Calculate the EKF if enough samples are available
-  if (rate_pose_buff_.size() > static_cast<size_t>(samples_filter_pose_rate_) && 
-      gyro_bias_not_rotated_.has_value()) {
+  if (
+    rate_pose_buff_.size() > static_cast<size_t>(samples_filter_pose_rate_) &&
+    gyro_bias_not_rotated_.has_value()) {
     avg_rate_pose_ =
       std::accumulate(rate_pose_buff_.begin(), rate_pose_buff_.end(), 0.0) / rate_pose_buff_.size();
     // Keep the buffer size fixed

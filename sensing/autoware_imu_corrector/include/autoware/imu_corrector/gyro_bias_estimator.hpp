@@ -92,8 +92,10 @@ private:
   void update_diagnostics(diagnostic_updater::DiagnosticStatusWrapper & stat);
   void callback_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg_ptr);
   void callback_odom(const nav_msgs::msg::Odometry::ConstSharedPtr odom_msg_ptr);
-  void callback_pose_msg(const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr);
-  void estimate_scale_gyro(const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr);
+  void callback_pose_msg(
+    const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr);
+  void estimate_scale_gyro(
+    const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr);
   void timer_callback();
   void validate_gyro_bias();
   double compute_yaw_rate_from_quat(
