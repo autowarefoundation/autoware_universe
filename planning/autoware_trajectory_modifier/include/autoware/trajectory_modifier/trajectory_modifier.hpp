@@ -62,6 +62,7 @@ private:
   std::vector<std::shared_ptr<plugin::TrajectoryModifierPluginBase>> modifier_plugins_;
   std::shared_ptr<plugin::StopPointFixer> stop_point_fixer_ptr_;
 
+  rclcpp::Subscription<CandidateTrajectories>::SharedPtr trajectories_sub_;
   rclcpp::Publisher<CandidateTrajectories>::SharedPtr trajectories_pub_;
   rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
     debug_processing_time_detail_;
