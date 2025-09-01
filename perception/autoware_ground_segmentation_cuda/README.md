@@ -1,6 +1,6 @@
 # autoware_ground_segmentation_cuda
 
-## Purpose 
+## Purpose
 
 The `autoware_ground_segmentation` algorithms have been thoroughly tested with Autoware. However, due to latency and high computational cost when processing large pointcloud, the input pointcloud range has been limited by the `crop_box_filter` based on the ego-vehicle's `base_link`. This can cause unwanted object loss, especially before a sloped road.
 
