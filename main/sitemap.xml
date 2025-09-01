@@ -1156,6 +1156,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/main/sensing/autoware_pointcloud_preprocessor/docs/polar-voxel-outlier-filter/</loc>
+         <lastmod>2025-09-01</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/main/sensing/autoware_pointcloud_preprocessor/docs/radius-search-2d-outlier-filter/</loc>
          <lastmod>2025-09-01</lastmod>
          <changefreq>daily</changefreq>
