@@ -53,6 +53,8 @@ StopModeOperator::StopModeOperator(const rclcpp::NodeOptions & options)
 
 void StopModeOperator::on_timer()
 {
+  vehicle_stop_check_.update(now(), vehicle_stop_timeout_);
+
   publish_control_command();
   publish_gear_command();
 }
@@ -74,7 +76,7 @@ void StopModeOperator::publish_gear_command()
   bool parking = false;
 
   if (enable_auto_parking_) {
-    const bool parking_vehicle_stop = vehicle_stop_check_.check(now(), 1.0);
+    const bool parking_vehicle_stop = vehicle_stop_check_.check(now(), vehicle_stop_duration_);
     const bool parking_route_state = current_route_state_.state == RouteState::UNSET ||
                                      current_route_state_.state == RouteState::ARRIVED;
     parking = parking_route_state && parking_vehicle_stop;

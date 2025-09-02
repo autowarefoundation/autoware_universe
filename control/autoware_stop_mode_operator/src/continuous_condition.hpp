@@ -26,6 +26,7 @@ class ContinuousCondition
 {
 public:
   void update(const rclcpp::Time & stamp, bool condition);
+  void update(const rclcpp::Time & stamp, double timeout);
   bool check(const rclcpp::Time & stamp, double duration) const;
 
 private:

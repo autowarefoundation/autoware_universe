@@ -27,6 +27,13 @@ void ContinuousCondition::update(const rclcpp::Time & stamp, bool condition)
   }
 }
 
+void ContinuousCondition::update(const rclcpp::Time & stamp, double timeout)
+{
+  if (timeout <= (stamp - *start_stamp_).seconds()) {
+    start_stamp_ = std::nullopt;
+  }
+}
+
 bool ContinuousCondition::check(const rclcpp::Time & stamp, double duration) const
 {
   if (!start_stamp_) {

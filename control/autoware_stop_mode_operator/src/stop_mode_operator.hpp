@@ -68,6 +68,9 @@ private:
 
   double stop_hold_acceleration_;
   bool enable_auto_parking_;
+
+  static constexpr double vehicle_stop_duration_ = 1.0;
+  static constexpr double vehicle_stop_timeout_ = 1.0;
 };
 
 }  // namespace autoware::stop_mode_operator
