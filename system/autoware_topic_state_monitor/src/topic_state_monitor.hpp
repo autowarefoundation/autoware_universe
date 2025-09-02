@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TOPIC_STATE_MONITOR__TOPIC_STATE_MONITOR_HPP_
-#define AUTOWARE__TOPIC_STATE_MONITOR__TOPIC_STATE_MONITOR_HPP_
+#ifndef TOPIC_STATE_MONITOR_HPP_
+#define TOPIC_STATE_MONITOR_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -70,4 +70,4 @@ private:
 };
 }  // namespace autoware::topic_state_monitor
 
-#endif  // AUTOWARE__TOPIC_STATE_MONITOR__TOPIC_STATE_MONITOR_HPP_
+#endif  // TOPIC_STATE_MONITOR_HPP_
