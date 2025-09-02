@@ -157,9 +157,9 @@ void LaneSegmentContext::add_traffic_light_one_hot_encoding_to_segment(
   const auto assigned_lanelet = lanelet_map_ptr_->laneletLayer.get(lane_id_itr->second);
   auto tl_reg_elems = assigned_lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
 
-  const Eigen::Matrix<float, TRAFFIC_LIGHT_ONE_HOT_DIM, 1> traffic_light_one_hot_encoding = [&]() {
-    Eigen::Matrix<float, TRAFFIC_LIGHT_ONE_HOT_DIM, 1> encoding =
-      Eigen::Matrix<float, TRAFFIC_LIGHT_ONE_HOT_DIM, 1>::Zero();
+  const Eigen::Vector<float, TRAFFIC_LIGHT_ONE_HOT_DIM> traffic_light_one_hot_encoding = [&]() {
+    Eigen::Vector<float, TRAFFIC_LIGHT_ONE_HOT_DIM> encoding =
+      Eigen::Vector<float, TRAFFIC_LIGHT_ONE_HOT_DIM>::Zero();
     if (tl_reg_elems.empty()) {
       encoding[TRAFFIC_LIGHT_NO_TRAFFIC_LIGHT - TRAFFIC_LIGHT] = 1.0f;
       return encoding;
@@ -174,7 +174,7 @@ void LaneSegmentContext::add_traffic_light_one_hot_encoding_to_segment(
 
     const auto & signal = traffic_light_stamped_info_itr->second.signal;
     const uint8_t traffic_color = identify_current_light_status(turn_direction, signal.elements);
-    return Eigen::Matrix<float, TRAFFIC_LIGHT_ONE_HOT_DIM, 1>{
+    return Eigen::Vector<float, TRAFFIC_LIGHT_ONE_HOT_DIM>{
       traffic_color == TrafficLightElement::GREEN,    // 3
       traffic_color == TrafficLightElement::AMBER,    // 2
       traffic_color == TrafficLightElement::RED,      // 1
