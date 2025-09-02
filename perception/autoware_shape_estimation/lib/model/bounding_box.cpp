@@ -49,6 +49,13 @@ namespace model
 
 constexpr float epsilon = 0.001;
 
+// Angular threshold for determining front/back direction (±45 degrees)
+// Objects within [-45°, 45°] are considered "front", beyond [135°, -135°] are "back"
+constexpr double FRONT_BACK_ANGLE_THRESHOLD = M_PI_4;  // 45 degrees in radians
+
+// Tolerance for yaw angle near 90 degrees for dimension swapping
+// When yaw is within [80°, 90°], swap x and y dimensions and adjust yaw by -90°
+constexpr double YAW_90_DEG_TOLERANCE = 10.0 * M_PI / 180.0;  // 10 degrees tolerance
 BoundingBoxShapeModel::BoundingBoxShapeModel()
 : ref_yaw_info_(boost::none), use_boost_bbox_optimizer_(false)
 {
@@ -148,8 +155,8 @@ bool BoundingBoxShapeModel::fitLShape(
   diagonal_vec << intersection_x_1 - intersection_x_2, intersection_y_1 - intersection_y_2;
 
   // calc yaw
-  tf2::Quaternion quat;
-  quat.setEuler(/* roll */ 0, /* pitch */ 0, /* yaw */ std::atan2(e_1_star.y(), e_1_star.x()));
+  double raw_yaw = std::atan2(e_1_star.y(), e_1_star.x());
+
 
   // output
   shape_output.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
@@ -159,6 +166,28 @@ bool BoundingBoxShapeModel::fitLShape(
   pose_output.position.x = (intersection_x_1 + intersection_x_2) * 0.5;
   pose_output.position.y = (intersection_y_1 + intersection_y_2) * 0.5;
   pose_output.position.z = min_z + shape_output.dimensions.z * 0.5;
+  double cluster_angle_rad = std::atan2(pose_output.position.y, pose_output.position.x);
+
+  if (-FRONT_BACK_ANGLE_THRESHOLD <= cluster_angle_rad || 
+      cluster_angle_rad < FRONT_BACK_ANGLE_THRESHOLD) { // front
+    if ((M_PI_2 - YAW_DEG_TOLERANCE) < raw_yaw && raw_yaw <= M_PI_2) {
+      raw_yaw -= M_PI_2;
+      double temp = shape_output.dimensions.x;
+      shape_output.dimensions.x = shape_output.dimensions.y;
+      shape_output.dimensions.y = temp;
+    }
+  } else if ((-M_PI + FRONT_BACK_ANGLE_THRESHOLD) > cluster_angle_rad || 
+              cluster_angle_rad >= (M_PI - FRONT_BACK_ANGLE_THRESHOLD)) { //back
+    if ((M_PI_2 - YAW_TOLERANCE) < raw_yaw && raw_yaw <= M_PI_2) {
+      raw_yaw -= M_PI_2;
+      double temp = shape_output.dimensions.x;
+      shape_output.dimensions.x = shape_output.dimensions.y;
+      shape_output.dimensions.y = temp;
+    }
+  }
+
+  tf2::Quaternion quat;
+  quat.setEuler(/* roll */ 0, /* pitch */ 0, /* yaw */ std::atan2(e_1_star.y(), e_1_star.x()));
   pose_output.orientation = tf2::toMsg(quat);
   // check wrong output
   shape_output.dimensions.x = std::max(static_cast<float>(shape_output.dimensions.x), epsilon);

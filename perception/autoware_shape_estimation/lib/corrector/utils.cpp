@@ -45,8 +45,6 @@ bool correctWithDefaultValue(
   const CorrectionBBParameters & param, autoware_perception_msgs::msg::Shape & shape,
   geometry_msgs::msg::Pose & pose)
 {
-  // TODO(Yukihiro Saito): refactor following code
-
   Eigen::Translation<double, 2> trans =
     Eigen::Translation<double, 2>(pose.position.x, pose.position.y);
   Eigen::Rotation2Dd rotate(tf2::getYaw(pose.orientation));
@@ -69,178 +67,99 @@ bool correctWithDefaultValue(
   v_point.push_back(Eigen::Vector2d(-shape.dimensions.x / 2.0, 0.0));
   v_point.push_back(Eigen::Vector2d(0.0, -shape.dimensions.y / 2.0));
 
-  // most distant index from base link
-  size_t first_most_distant_index = 0;
-  {
-    double distance = 0.0;
-    for (size_t i = 0; i < v_point.size(); ++i) {
-      if (distance < (affine_mat * v_point.at(i)).norm()) {
-        distance = (affine_mat * v_point.at(i)).norm();
-        first_most_distant_index = i;
-      }
-    }
+ // Calculate all distances and find indices in one pass
+  std::vector<std::pair<double, size_t>> point_distances;
+  for (size_t i = 0; i < v_point.size(); ++i) {
+    point_distances.emplace_back((affine_mat * v_point.at(i)).norm(), i);
   }
-  // second distant index from base link
-  size_t second_most_distant_index = 0;
-  {
-    double distance = 0.0;
-    for (size_t i = 0; i < v_point.size(); ++i) {
-      if (distance < (affine_mat * v_point.at(i)).norm() && i != first_most_distant_index) {
-        distance = (affine_mat * v_point.at(i)).norm();
-        second_most_distant_index = i;
-      }
-    }
-  }
-  // third distant index from base link
-  size_t third_most_distant_index = 0;
-  {
-    double distance = 0.0;
-    for (size_t i = 0; i < v_point.size(); ++i) {
-      if (
-        (distance < (affine_mat * v_point.at(i)).norm()) && i != first_most_distant_index &&
-        i != second_most_distant_index) {
-        distance = (affine_mat * v_point.at(i)).norm();
-        third_most_distant_index = i;
-      }
-    }
-  }
+
+  // Partial sort to get top 3
+  std::partial_sort(point_distances.begin(), point_distances.begin() + 3,
+                    point_distances.end(), std::greater<>());
+
+  size_t first_most_distant_index = point_distances[0].second;
+  size_t second_most_distant_index = point_distances[1].second;
+  size_t third_most_distant_index = point_distances[2].second;
 
   // rule based correction
   Eigen::Vector2d correction_vector = Eigen::Vector2d::Zero();
+  // Helper function to apply correction vector
+  auto applyCorrectionVector = [](Eigen::Vector2d& correction_vector, double default_size) {
+    if (correction_vector.x() == 0.0) {
+      correction_vector.y() =
+        std::max(std::abs(correction_vector.y()), default_size / 2.0) *
+          (correction_vector.y() < 0.0 ? -1.0 : 1.0) -
+        correction_vector.y();
+    } else if (correction_vector.y() == 0.0) {
+      correction_vector.x() =
+        std::max(std::abs(correction_vector.x()), default_size / 2.0) *
+          (correction_vector.x() < 0.0 ? -1.0 : 1.0) -
+        correction_vector.x();
+    }
+  };
+
+  // Check if first and second most distant points are on opposite edges (0,2 pair or 1,3 pair)
+  bool are_opposite_edges = (static_cast<int>(std::abs(
+    static_cast<int>(first_most_distant_index) - static_cast<int>(second_most_distant_index))) % 2 == 0);
+  // Calculate distances for clearer condition checking
+  double first_point_distance = (v_point.at(first_most_distant_index) * 2.0).norm();
+  double second_point_distance = (v_point.at(second_most_distant_index) * 2.0).norm();
+  double third_point_distance = (v_point.at(third_most_distant_index) * 2.0).norm();
+  // Check if points are within parameter ranges
+  bool first_in_width_range = (first_point_distance < param.max_width);
+  bool first_in_length_range = (param.min_length < first_point_distance && first_point_distance < param.max_length);
+  bool second_in_width_range = (second_point_distance < param.max_width);
+  bool second_in_length_range = (param.min_length < second_point_distance && second_point_distance < param.max_length);
+  bool third_in_width_range = (third_point_distance < param.max_width);
+  bool third_in_length_range = (third_point_distance < param.max_length);
+
 
   // 1,3 pair or 0,2 pair is most far index
-  if (
-    static_cast<int>(std::abs(
-      static_cast<int>(first_most_distant_index) - static_cast<int>(second_most_distant_index))) %
-      2 ==
-    0) {
-    if (
-      param.min_width < (v_point.at(first_most_distant_index) * 2.0).norm() &&
-      (v_point.at(first_most_distant_index) * 2.0).norm() < param.max_width) {
-      if ((v_point.at(third_most_distant_index) * 2.0).norm() < param.max_length) {
-        correction_vector = v_point.at(third_most_distant_index);
-        if (correction_vector.x() == 0.0) {
-          correction_vector.y() =
-            std::max(std::abs(correction_vector.y()), param.default_length / 2.0) *
-              (correction_vector.y() < 0.0 ? -1.0 : 1.0) -
-            correction_vector.y();
-        } else if (correction_vector.y() == 0.0) {
-          correction_vector.x() =
-            std::max(std::abs(correction_vector.x()), param.default_length / 2.0) *
-              (correction_vector.x() < 0.0 ? -1.0 : 1.0) -
-            correction_vector.x();
-        }
-      } else {
-        return false;
-      }
-    } else if (  // NOLINT
-      param.min_length < (v_point.at(first_most_distant_index) * 2.0).norm() &&
-      (v_point.at(first_most_distant_index) * 2.0).norm() < param.max_length) {
-      if ((v_point.at(third_most_distant_index) * 2.0).norm() < param.max_width) {
-        correction_vector = v_point.at(third_most_distant_index);
-        if (correction_vector.x() == 0.0) {
-          correction_vector.y() =
-            std::max(std::abs(correction_vector.y()), param.default_width / 2.0) *
-              (correction_vector.y() < 0.0 ? -1.0 : 1.0) -
-            correction_vector.y();
-        } else if (correction_vector.y() == 0.0) {
-          correction_vector.x() =
-            std::max(std::abs(correction_vector.x()), param.default_width / 2.0) *
-              (correction_vector.x() < 0.0 ? -1.0 : 1.0) -
-            correction_vector.x();
-        }
-      } else {
-        return false;
-      }
-    } else {
+  if (are_opposite_edges) {
+    // Case 1: First point fits width range, third point fits length range
+    if (first_in_width_range && third_in_length_range) {
+      correction_vector = v_point.at(third_most_distant_index);
+      applyCorrectionVector(correction_vector, param.default_length);
+    }
+    // Case 2: First point fits length range, third point fits width range  
+    else if (first_in_length_range && third_in_width_range) {
+      correction_vector = v_point.at(third_most_distant_index);
+      applyCorrectionVector(correction_vector, param.default_width);
+    }
+    else {
       return false;
     }
   }
-  // fit width
-  else if (  // NOLINT
-    (param.min_width < (v_point.at(first_most_distant_index) * 2.0).norm() &&
-     (v_point.at(first_most_distant_index) * 2.0).norm() < param.max_width) &&
-    (param.min_width < (v_point.at(second_most_distant_index) * 2.0).norm() &&
-     (v_point.at(second_most_distant_index) * 2.0).norm() <
-       param.max_width))  // both of edge is within width threshold
-  {                       // NOLINT
-    correction_vector = v_point.at(first_most_distant_index);
-    if (correction_vector.x() == 0.0) {
-      correction_vector.y() =
-        std::max(std::abs(correction_vector.y()), param.default_length / 2.0) *
-          (correction_vector.y() < 0.0 ? -1.0 : 1.0) -
-        correction_vector.y();
-    } else if (correction_vector.y() == 0.0) {
-      correction_vector.x() =
-        std::max(std::abs(correction_vector.x()), param.default_length / 2.0) *
-          (correction_vector.x() < 0.0 ? -1.0 : 1.0) -
-        correction_vector.x();
+  // Case: Adjacent edges (different scenarios based on which points fit ranges)
+  else {
+    // Case 3: Both first and second points are within width range
+    if (first_in_width_range && second_in_width_range) {
+      correction_vector = v_point.at(first_most_distant_index);
+      applyCorrectionVector(correction_vector, param.default_length);
     }
-  } else if (  // NOLINT
-    param.min_width < (v_point.at(first_most_distant_index) * 2.0).norm() &&
-    (v_point.at(first_most_distant_index) * 2.0).norm() < param.max_width) {
-    correction_vector = v_point.at(second_most_distant_index);
-    if (correction_vector.x() == 0.0) {
-      correction_vector.y() =
-        std::max(std::abs(correction_vector.y()), param.default_length / 2.0) *
-          (correction_vector.y() < 0.0 ? -1.0 : 1.0) -
-        correction_vector.y();
-    } else if (correction_vector.y() == 0.0) {
-      correction_vector.x() =
-        std::max(std::abs(correction_vector.x()), param.default_length / 2.0) *
-          (correction_vector.x() < 0.0 ? -1.0 : 1.0) -
-        correction_vector.x();
+    // Case 4: Only first point is within width range
+    else if (first_in_width_range) {
+      correction_vector = v_point.at(second_most_distant_index);
+      applyCorrectionVector(correction_vector, param.default_length);
     }
-  } else if (  // NOLINT
-    param.min_width < (v_point.at(second_most_distant_index) * 2.0).norm() &&
-    (v_point.at(second_most_distant_index) * 2.0).norm() < param.max_width) {
-    correction_vector = v_point.at(first_most_distant_index);
-
-    if (correction_vector.x() == 0.0) {
-      correction_vector.y() =
-        std::max(std::abs(correction_vector.y()), param.default_length / 2.0) *
-          (correction_vector.y() < 0.0 ? -1.0 : 1.0) -
-        correction_vector.y();
-    } else if (correction_vector.y() == 0.0) {
-      correction_vector.x() =
-        std::max(std::abs(correction_vector.x()), param.default_length / 2.0) *
-          (correction_vector.x() < 0.0 ? -1.0 : 1.0) -
-        correction_vector.x();
+    // Case 5: Only second point is within width range
+    else if (second_in_width_range) {
+      correction_vector = v_point.at(first_most_distant_index);
+      applyCorrectionVector(correction_vector, param.default_length);
     }
-  }
-  // fit length
-  else if (  // NOLINT
-    (param.min_length < (v_point.at(first_most_distant_index) * 2.0).norm() &&
-     (v_point.at(first_most_distant_index) * 2.0).norm() < param.max_length) &&
-    (v_point.at(second_most_distant_index) * 2.0).norm() < param.max_width) {
-    correction_vector = v_point.at(second_most_distant_index);
-
-    if (correction_vector.x() == 0.0) {
-      correction_vector.y() = std::max(std::abs(correction_vector.y()), param.default_width / 2.0) *
-                                (correction_vector.y() < 0.0 ? -1.0 : 1.0) -
-                              correction_vector.y();
-    } else if (correction_vector.y() == 0.0) {
-      correction_vector.x() = std::max(std::abs(correction_vector.x()), param.default_width / 2.0) *
-                                (correction_vector.x() < 0.0 ? -1.0 : 1.0) -
-                              correction_vector.x();
+    // Case 6: First point is within length range, second point fits width constraint
+    else if (first_in_length_range && (second_point_distance < param.max_width)) {
+      correction_vector = v_point.at(second_most_distant_index);
+      applyCorrectionVector(correction_vector, param.default_width);
     }
-  } else if (  // NOLINT
-    (param.min_length < (v_point.at(second_most_distant_index) * 2.0).norm() &&
-     (v_point.at(second_most_distant_index) * 2.0).norm() < param.max_length) &&
-    (v_point.at(first_most_distant_index) * 2.0).norm() < param.max_width) {
-    correction_vector = v_point.at(first_most_distant_index);
-
-    if (correction_vector.x() == 0.0) {
-      correction_vector.y() = std::max(std::abs(correction_vector.y()), param.default_width / 2.0) *
-                                (correction_vector.y() < 0.0 ? -1.0 : 1.0) -
-                              correction_vector.y();
-    } else if (correction_vector.y() == 0.0) {
-      correction_vector.x() = std::max(std::abs(correction_vector.x()), param.default_width / 2.0) *
-                                (correction_vector.x() < 0.0 ? -1.0 : 1.0) -
-                              correction_vector.x();
+    // Case 7: Second point is within length range, first point fits width constraint
+    else if (second_in_length_range && (first_point_distance < param.max_width)) {
+      correction_vector = v_point.at(first_most_distant_index);
+      applyCorrectionVector(correction_vector, param.default_width);
     }
-  } else {
-    return false;
+    else {
+      return false;
+    }
   }
 
   shape.dimensions.x += std::abs(correction_vector.x()) * 2.0;
