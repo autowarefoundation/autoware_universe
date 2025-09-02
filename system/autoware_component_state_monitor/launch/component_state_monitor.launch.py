@@ -85,7 +85,6 @@ def launch_setup(context, *args, **kwargs):
         executable="component_container",
         composable_node_descriptions=[component],
     )
-
     return [container, *topic_monitor_nodes]
 
 
