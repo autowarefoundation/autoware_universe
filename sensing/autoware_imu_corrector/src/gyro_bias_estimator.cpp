@@ -464,10 +464,10 @@ void GyroBiasEstimator::update_rate_ekf(
     // Scale on x , y axis is not estimated, but set to 1.0 for consistency
     vector_scale.vector.x = 1.0;
     vector_scale.vector.y = 1.0;
-    vector_scale.vector.z = ekf_angle_.filtered_scale_angle_;
+    vector_scale.vector.z = 1 / ekf_angle_.filtered_scale_angle_;
     gyro_scale_pub_->publish(vector_scale);
 
-    diagnostics_info_.estimated_gyro_scale_z = ekf_angle_.estimated_scale_angle_;
+    diagnostics_info_.estimated_gyro_scale_z = 1 / ekf_angle_.estimated_scale_angle_;
   }
 }
 
@@ -484,7 +484,7 @@ bool GyroBiasEstimator::should_skip_update(double gyro_yaw_rate)
     msg.header.stamp = this->now();
     msg.vector.x = 1.0;
     msg.vector.y = 1.0;
-    msg.vector.z = ekf_angle_.filtered_scale_angle_;
+    msg.vector.z = 1 / ekf_angle_.filtered_scale_angle_;
     gyro_scale_pub_->publish(msg);
 
     ekf_rate_.n_big_changes_detected_ = 0;
