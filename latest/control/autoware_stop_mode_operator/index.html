@@ -13997,6 +13997,21 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#auto-parking" class="md-nav__link">
+    Auto parking
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -14014,7 +14029,10 @@
 
 
 <div><h1 id="autoware_stop_mode_operator">autoware_stop_mode_operator<a class="headerlink" href="#autoware_stop_mode_operator" title="Permanent link">#</a></h1>
-<p>This package publishes a stop command used when stop mode is selected.</p></div>
+<p>This package publishes a stop command used when stop mode is selected.</p>
+<h2 id="auto-parking">Auto parking<a class="headerlink" href="#auto-parking" title="Permanent link">#</a></h2>
+<p>If <code>enable_auto_parking</code> is set to <code>true</code>, automatically shifts gear to parking when route is unset/arrived and the vehicle is stopped.
+Since the stop mode needs to work independently of localization, velocity should be taken from vehicle status instead of kinematic state.</p></div>
 
 
 
