@@ -322,14 +322,6 @@ void transform_selected_rows(
     transformed_block.block(0, 0, 2, num_segments * POINTS_PER_SEGMENT);
 }
 
-/**
- * @brief Identify the current traffic light status based on turn direction and traffic light
- * elements.
- *
- * @param turn_direction Integer representing the turn direction (0=straight, 1=left, 2=right)
- * @param traffic_light_elements List of traffic light elements
- * @return int The color of the relevant traffic light (0=UNKNOWN, 1=RED, 2=AMBER, 3=GREEN, 4=WHITE)
- */
 uint8_t identify_current_light_status(
   const int64_t turn_direction, const std::vector<TrafficLightElement> & traffic_light_elements)
 {
