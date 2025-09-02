@@ -116,7 +116,7 @@ Note that this node also uses `angular_velocity_offset_x`, `angular_velocity_off
 
 ### IMU scale/bias injection
 
-In order to test the result of the scale and bias estimation for the gyro, an optional artificial scale and bias could be injected ot the raw IMU data, these can be controlled by parameters, the IMU scaled can be observed through an output that could be remapped to be the input of the 'imu_corrector'.
+In order to test the result of the scale and bias estimation for the gyro, an optional artificial scale and bias can be injected into the raw IMU data using the parameters below. The IMU scale can be observed through an output that can be remapped to be the input of the 'imu_corrector'.
 
 ### Output
 
