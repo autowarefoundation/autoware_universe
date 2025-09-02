@@ -158,14 +158,15 @@ std::vector<LaneSegment> LaneletConverter::convert_to_lane_segments(
         : std::nullopt;
 
     int64_t turn_direction = LaneSegment::TURN_DIRECTION_NONE;
+    const std::map<std::string, int64_t> turn_direction_map = {
+      {"straight", LaneSegment::TURN_DIRECTION_STRAIGHT},
+      {"left", LaneSegment::TURN_DIRECTION_LEFT},
+      {"right", LaneSegment::TURN_DIRECTION_RIGHT}};
     if (is_intersection) {
       const std::string turn_direction_str = attrs.at("turn_direction").value();
-      if (turn_direction_str == "straight") {
-        turn_direction = LaneSegment::TURN_DIRECTION_STRAIGHT;
-      } else if (turn_direction_str == "left") {
-        turn_direction = LaneSegment::TURN_DIRECTION_LEFT;
-      } else if (turn_direction_str == "right") {
-        turn_direction = LaneSegment::TURN_DIRECTION_RIGHT;
+      const auto itr = turn_direction_map.find(turn_direction_str);
+      if (itr != turn_direction_map.end()) {
+        turn_direction = itr->second;
       }
     }
 
