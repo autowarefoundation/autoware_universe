@@ -117,16 +117,20 @@ void TrafficLightModuleManager::launchNewModules(
 
     // Use lanelet_id to unregister module when the route is changed
     const auto lane_id = traffic_light_reg_elem.second.id();
-    if (!isModuleRegisteredFromExistingAssociatedModule(lane_id)) {
+    auto existing_module = getRegisteredAssociatedModule(lane_id);
+    if (!existing_module) {
       registerModule(
         std::make_shared<TrafficLightModule>(
-          lane_id, *(traffic_light_reg_elem.first), traffic_light_reg_elem.second, planner_param_,
-          logger_.get_child("traffic_light_module"), clock_, time_keeper_,
+          lane_id, *(traffic_light_reg_elem.first), traffic_light_reg_elem.second, *stop_line,
+          planner_param_, logger_.get_child("traffic_light_module"), clock_, time_keeper_,
           planning_factor_interface_));
       generate_uuid(lane_id);
       updateRTCStatus(
         getUUID(lane_id), true, State::WAITING_FOR_EXECUTION, std::numeric_limits<double>::lowest(),
         path.header.stamp);
+    } else {
+      // Update the stop line for the existing module
+      existing_module->updateStopLine(*stop_line);
     }
   }
 }
@@ -141,7 +145,7 @@ TrafficLightModuleManager::getModuleExpiredFunction(
   return [this, lanelet_id_set](
            [[maybe_unused]] const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module) {
     for (const auto & id : lanelet_id_set) {
-      if (isModuleRegisteredFromExistingAssociatedModule(id)) {
+      if (getRegisteredAssociatedModule(id)) {
         return false;
       }
     }
@@ -149,23 +153,44 @@ TrafficLightModuleManager::getModuleExpiredFunction(
   };
 }
 
-bool TrafficLightModuleManager::isModuleRegisteredFromExistingAssociatedModule(
+std::shared_ptr<TrafficLightModule> TrafficLightModuleManager::getRegisteredAssociatedModule(
   const lanelet::Id & id) const
 {
   const auto lane = planner_data_->route_handler_->getLaneletMapPtr()->laneletLayer.get(id);
 
   for (const auto & registered_id : registered_module_id_set_) {
-    const auto registered_lane =
-      planner_data_->route_handler_->getLaneletMapPtr()->laneletLayer.get(registered_id);
-    for (const auto & registered_element : registered_lane.regulatoryElementsAs<TrafficLight>()) {
-      for (const auto & element : lane.regulatoryElementsAs<TrafficLight>()) {
-        if (hasSameTrafficLight(element, registered_element)) {
-          return true;
-        }
+    if (hasAssociatedTrafficLight(lane, registered_id)) {
+      return findModuleById(registered_id);
+    }
+  }
+  return nullptr;
+}
+
+bool TrafficLightModuleManager::hasAssociatedTrafficLight(
+  const lanelet::ConstLanelet & lane, const lanelet::Id & registered_id) const
+{
+  const auto registered_lane =
+    planner_data_->route_handler_->getLaneletMapPtr()->laneletLayer.get(registered_id);
+
+  for (const auto & registered_element : registered_lane.regulatoryElementsAs<TrafficLight>()) {
+    for (const auto & element : lane.regulatoryElementsAs<TrafficLight>()) {
+      if (hasSameTrafficLight(element, registered_element)) {
+        return true;
       }
     }
   }
   return false;
+}
+
+std::shared_ptr<TrafficLightModule> TrafficLightModuleManager::findModuleById(
+  const lanelet::Id & module_id) const
+{
+  for (const auto & scene_module : scene_modules_) {
+    if (scene_module->getModuleId() == module_id) {
+      return std::dynamic_pointer_cast<TrafficLightModule>(scene_module);
+    }
+  }
+  return nullptr;
 }
 
 bool TrafficLightModuleManager::hasSameTrafficLight(
