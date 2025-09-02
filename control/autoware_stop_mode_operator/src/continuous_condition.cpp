@@ -21,8 +21,7 @@ void ContinuousCondition::update(const rclcpp::Time & stamp, bool condition)
 {
   if (!condition) {
     start_stamp_ = std::nullopt;
-  }
-  if (!start_stamp_) {
+  } else if (!start_stamp_) {
     start_stamp_ = stamp;
   }
 }
