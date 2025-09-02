@@ -52,11 +52,11 @@ Note that the node calculates bias from the gyroscope data by averaging the data
 
 ### Input
 
-| Name              | Type                                            | Description      |
-| ----------------- | ----------------------------------------------- | ---------------- |
-| `~/input/imu_raw` | `sensor_msgs::msg::Imu`                         | **raw** imu data |
-| `~/input/pose`    | `geometry_msgs::msg::PoseWithCovarianceStamped` | ndt pose         |
-| `~/input/odometry`| `nav_msgs::msg::Odometry`                       | odometry data    |
+| Name               | Type                                            | Description      |
+| ------------------ | ----------------------------------------------- | ---------------- |
+| `~/input/imu_raw`  | `sensor_msgs::msg::Imu`                         | **raw** imu data |
+| `~/input/pose`     | `geometry_msgs::msg::PoseWithCovarianceStamped` | ndt pose         |
+| `~/input/odometry` | `nav_msgs::msg::Odometry`                       | odometry data    |
 
 Note that the input pose is assumed to be accurate enough. For example when using NDT, we assume that the NDT is appropriately converged.
 
@@ -66,12 +66,11 @@ In the future, with careful implementation for pose errors, the IMU bias estimat
 
 The Extended Kalman Filter (EKF) is used for scale estimation. The NDT pose is used as ground truth, and we assume it's accurate enough to provide long-term convergence for the correct scale observation.
 
-
 ### Output
 
-| Name                 | Type                                 | Description                   |
-| -------------------- | ------------------------------------ | ----------------------------- |
-| `~/output/gyro_bias` | `geometry_msgs::msg::Vector3Stamped` | bias of the gyroscope [rad/s] |
+| Name                  | Type                                 | Description                                 |
+| --------------------- | ------------------------------------ | ------------------------------------------- |
+| `~/output/gyro_bias`  | `geometry_msgs::msg::Vector3Stamped` | bias of the gyroscope [rad/s]               |
 | `~/output/gyro_scale` | `geometry_msgs::msg::Vector3Stamped` | estimated scale of the gyroscope [unitless] |
 
 ### Parameters (Bias estimation)
@@ -87,33 +86,33 @@ Note that this node also uses `angular_velocity_offset_x`, `angular_velocity_off
 
 ### Parameters (Scale estimation)
 
-| Name                                  | Type   | Description                                                                                 |
-| -------------------------------------- | ------ | ------------------------------------------------------------------------------------------- |
-| `estimate_scale_init`         | double | Initial value for scale estimation                               |
-| `min_allowed_scale`           | double | Minimum allowed scale value                                      |
-| `max_allowed_scale`           | double | Maximum allowed scale value                                      |
-| `threshold_to_estimate_scale` | double | Minimum yaw rate required to estimate scale                      |
+| Name                                  | Type   | Description                                                            |
+| ------------------------------------- | ------ | ---------------------------------------------------------------------- |
+| `estimate_scale_init`                 | double | Initial value for scale estimation                                     |
+| `min_allowed_scale`                   | double | Minimum allowed scale value                                            |
+| `max_allowed_scale`                   | double | Maximum allowed scale value                                            |
+| `threshold_to_estimate_scale`         | double | Minimum yaw rate required to estimate scale                            |
 | `percentage_scale_rate_allow_correct` | double | Allowed percentage change with respect to current scale for correction |
-| `alpha`                       | double | Filter coefficient for scale (complementary filter)              |
-| `delay_gyro_ms`               | int    | Delay applied to gyro data in milliseconds                       |
-| `samples_filter_pose_rate`    | int    | Number of samples for pose rate filtering                        |
-| `samples_filter_gyro_rate`    | int    | Number of samples for gyro rate filtering                        |
-| `alpha_gyro`                  | double | Filter coefficient for gyro rate                                 |
-| `buffer_size_gyro`            | int    | Buffer size for gyro data                                        |
-| `alpha_ndt_rate`              | double | Filter coefficient for NDT rate                                  |
-| `ekf_rate.max_variance_p`          | double | Maximum allowed variance for EKF rate estimation          |
-| `ekf_rate.variance_p_after`        | double | Variance after initialization for EKF rate estimation     |
-| `ekf_rate.process_noise_q`         | double | Process noise for EKF rate estimation                     |
-| `ekf_rate.process_noise_q_after`   | double | Process noise after initialization for EKF rate estimation|
-| `ekf_rate.measurement_noise_r`     | double | Measurement noise for EKF rate estimation                 |
-| `ekf_rate.measurement_noise_r_after` | double | Measurement noise after initialization for EKF rate estimation |
-| `ekf_rate.samples_to_init`         | int    | Number of samples to initialize EKF rate estimation       |
-| `ekf_rate.min_covariance`          | double | Minimum covariance for EKF rate estimation                |
-| `ekf_angle.process_noise_q_angle`   | double | Process noise for EKF angle estimation              |
-| `ekf_angle.variance_p_angle`       | double | Initial variance for EKF angle estimation           |
-| `ekf_angle.measurement_noise_r_angle` | double | Measurement noise for EKF angle estimation          |
-| `ekf_angle.min_covariance_angle`   | double | Minimum covariance for EKF angle estimation         |
-| `ekf_angle.decay_coefficient`      | double | Decay coefficient for EKF angle estimation          |
+| `alpha`                               | double | Filter coefficient for scale (complementary filter)                    |
+| `delay_gyro_ms`                       | int    | Delay applied to gyro data in milliseconds                             |
+| `samples_filter_pose_rate`            | int    | Number of samples for pose rate filtering                              |
+| `samples_filter_gyro_rate`            | int    | Number of samples for gyro rate filtering                              |
+| `alpha_gyro`                          | double | Filter coefficient for gyro rate                                       |
+| `buffer_size_gyro`                    | int    | Buffer size for gyro data                                              |
+| `alpha_ndt_rate`                      | double | Filter coefficient for NDT rate                                        |
+| `ekf_rate.max_variance_p`             | double | Maximum allowed variance for EKF rate estimation                       |
+| `ekf_rate.variance_p_after`           | double | Variance after initialization for EKF rate estimation                  |
+| `ekf_rate.process_noise_q`            | double | Process noise for EKF rate estimation                                  |
+| `ekf_rate.process_noise_q_after`      | double | Process noise after initialization for EKF rate estimation             |
+| `ekf_rate.measurement_noise_r`        | double | Measurement noise for EKF rate estimation                              |
+| `ekf_rate.measurement_noise_r_after`  | double | Measurement noise after initialization for EKF rate estimation         |
+| `ekf_rate.samples_to_init`            | int    | Number of samples to initialize EKF rate estimation                    |
+| `ekf_rate.min_covariance`             | double | Minimum covariance for EKF rate estimation                             |
+| `ekf_angle.process_noise_q_angle`     | double | Process noise for EKF angle estimation                                 |
+| `ekf_angle.variance_p_angle`          | double | Initial variance for EKF angle estimation                              |
+| `ekf_angle.measurement_noise_r_angle` | double | Measurement noise for EKF angle estimation                             |
+| `ekf_angle.min_covariance_angle`      | double | Minimum covariance for EKF angle estimation                            |
+| `ekf_angle.decay_coefficient`         | double | Decay coefficient for EKF angle estimation                             |
 
 ### IMU scale/bias injection
 
@@ -121,17 +120,16 @@ In order to test the result of the scale and bias estimation for the gyro, an op
 
 ### Output
 
-| Name                   | Type                                 | Description                                   |
-| ---------------------- | ------------------------------------ | --------------------------------------------- |
-| `~/output/imu_scaled`  | `sensor_msgs::msg::Imu`              | IMU data after scale correction               |
-
+| Name                  | Type                    | Description                     |
+| --------------------- | ----------------------- | ------------------------------- |
+| `~/output/imu_scaled` | `sensor_msgs::msg::Imu` | IMU data after scale correction |
 
 ### Parameters
 
-| Name                          | Type   | Description                                         |
-| ----------------------------- | ------ | --------------------------------------------------- |
-| `modify_imu_scale`       | bool   | Enable or disable scale injection                   |
-| `scale_on_purpose`         | double | Value to inject as scale                            |
-| `bias_on_purpose` | double | Value to inject as bias          |
-| `drift_scale` | double | Value to add to the scale value every loop, to simulate scale drift                |
-| `drift_bias` | double | Value to add to the bias value every loop, to simulate bias drift                |
+| Name               | Type   | Description                                                         |
+| ------------------ | ------ | ------------------------------------------------------------------- |
+| `modify_imu_scale` | bool   | Enable or disable scale injection                                   |
+| `scale_on_purpose` | double | Value to inject as scale                                            |
+| `bias_on_purpose`  | double | Value to inject as bias                                             |
+| `drift_scale`      | double | Value to add to the scale value every loop, to simulate scale drift |
+| `drift_bias`       | double | Value to add to the bias value every loop, to simulate bias drift   |
