@@ -14132,12 +14132,12 @@
 <p>msr_reader [OPTION]</p>
 <h2 id="description">Description<a class="headerlink" href="#description" title="Permanent link">#</a></h2>
 <p>Read MSR register for monitoring thermal throttling event.<br>
-This runs as a daemon process and listens to a TCP/IP port (7634 by default).</p>
+This runs as a daemon process and listens to a UNIX domain socket ("/tmp/msr_reader.sock" by default).</p>
 <p><strong>Options:</strong><br>
 <em>-h, --help</em><br>
     Display help<br>
-<em>-p, --port #</em><br>
-    Port number to listen to</p>
+<em>-s, --socket PATH</em><br>
+    UNIX domain socket path</p>
 <p><strong>Exit status:</strong><br>
 Returns 0 if OK; non-zero otherwise.</p>
 <h2 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">#</a></h2>
