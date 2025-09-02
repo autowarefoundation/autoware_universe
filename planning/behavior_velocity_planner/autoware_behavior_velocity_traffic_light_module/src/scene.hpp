@@ -124,7 +124,9 @@ private:
   // Key Feature
   const lanelet::TrafficLight & traffic_light_reg_elem_;
   lanelet::ConstLanelet lane_;
-  lanelet::ConstLineString3d stop_line_;
+  lanelet::ConstLineString3d
+    stop_line_;  // Note: this stop_line_ may not be the one bound to the traffic light regulatory
+                 // element. this is the one bound to the traffic light (line string)
 
   // State
   State state_;
