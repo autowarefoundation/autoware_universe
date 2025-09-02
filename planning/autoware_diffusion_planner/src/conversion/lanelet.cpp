@@ -149,16 +149,26 @@ std::vector<LaneSegment> LaneletConverter::convert_to_lane_segments(
       MapType::Unused, interpolate_points(right_points, num_lane_points));
 
     const auto & attrs = lanelet.attributes();
-    bool is_intersection = attrs.find("turn_direction") != attrs.end();
-    std::optional<float> speed_limit_mps =
-      attrs.find("speed_limit") != attrs.end()
-        ? std::make_optional(
-            autoware_utils_math::kmph2mps(std::stof(attrs.at("speed_limit").value())))
-        : std::nullopt;
+    const bool is_intersection = attrs.find("turn_direction") != attrs.end();
+    std::optional<float> speed_limit_mps = attrs.find("speed_limit") != attrs.end()
+                                             ? std::make_optional(autoware_utils_math::kmph2mps(
+                                                 std::stof(attrs.at("speed_limit").value())))
+                                             : std::nullopt;
+    int64_t turn_direction = -1;
+    if (is_intersection) {
+      const std::string turn_direction_str = attrs.at("turn_direction").value();
+      if (turn_direction_str == "straight") {
+        turn_direction = 0;
+      } else if (turn_direction_str == "left") {
+        turn_direction = 1;
+      } else if (turn_direction_str == "right") {
+        turn_direction = 2;
+      }
+    }
 
     lane_segments.emplace_back(
       lanelet.id(), lane_polyline, is_intersection, left_boundary_segments, right_boundary_segments,
-      speed_limit_mps);
+      speed_limit_mps, turn_direction);
   }
   return lane_segments;
 }

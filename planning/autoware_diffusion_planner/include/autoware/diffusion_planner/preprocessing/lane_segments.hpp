@@ -119,10 +119,12 @@ private:
    * @param segment_matrix The segment matrix to modify (in-place).
    * @param row_idx The row index in the matrix corresponding to the segment.
    * @param col_counter The column counter for the segment.
+   * @param turn_direction The turn direction for the segment.
    */
   void add_traffic_light_one_hot_encoding_to_segment(
     const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
-    Eigen::MatrixXf & segment_matrix, const int64_t row_idx, const int64_t col_counter) const;
+    Eigen::MatrixXf & segment_matrix, const int64_t row_idx, const int64_t col_counter,
+    const int64_t turn_direction) const;
 
   /**
    * @brief Apply coordinate transforms to the output matrix for all segments.
