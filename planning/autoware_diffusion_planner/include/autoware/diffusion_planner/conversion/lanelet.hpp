@@ -184,6 +184,11 @@ struct LaneSegment
   std::optional<float> speed_limit_mps{std::nullopt};
   int64_t turn_direction;
 
+  static const int64_t TURN_DIRECTION_NONE = -1;
+  static const int64_t TURN_DIRECTION_STRAIGHT = 0;
+  static const int64_t TURN_DIRECTION_LEFT = 1;
+  static const int64_t TURN_DIRECTION_RIGHT = 2;
+
   LaneSegment(
     int64_t id, Polyline polyline, bool is_intersection,
     const std::vector<BoundarySegment> & left_boundaries,

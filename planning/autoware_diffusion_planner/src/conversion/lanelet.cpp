@@ -156,15 +156,16 @@ std::vector<LaneSegment> LaneletConverter::convert_to_lane_segments(
         ? std::make_optional(
             autoware_utils_math::kmph2mps(std::stof(attrs.at("speed_limit").value())))
         : std::nullopt;
-    int64_t turn_direction = -1;
+
+    int64_t turn_direction = LaneSegment::TURN_DIRECTION_NONE;
     if (is_intersection) {
       const std::string turn_direction_str = attrs.at("turn_direction").value();
       if (turn_direction_str == "straight") {
-        turn_direction = 0;
+        turn_direction = LaneSegment::TURN_DIRECTION_STRAIGHT;
       } else if (turn_direction_str == "left") {
-        turn_direction = 1;
+        turn_direction = LaneSegment::TURN_DIRECTION_LEFT;
       } else if (turn_direction_str == "right") {
-        turn_direction = 2;
+        turn_direction = LaneSegment::TURN_DIRECTION_RIGHT;
       }
     }
 
