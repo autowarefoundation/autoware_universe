@@ -91,7 +91,8 @@ public:
     const Odometry & odom, const AccelWithCovarianceStamped & accel_stamped);
   void AddSteeringMetricMsg(const SteeringReport & steering_report);
   void AddStopDeviationMetricMsg();
-  void AddVelocityDeviationMetricMsg(const Trajectory & traj, const Pose & ego_pose, const Twist & twist);
+  void AddVelocityDeviationMetricMsg(
+    const Trajectory & traj, const Pose & ego_pose, const Twist & twist);
   void onTimer();
 
 private:
