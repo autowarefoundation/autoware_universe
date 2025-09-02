@@ -466,7 +466,7 @@ void GyroBiasEstimator::update_rate_ekf(
     // Scale on x , y axis is not estimated, but set to 1.0 for consistency
     vector_scale.vector.x = 1.0;
     vector_scale.vector.y = 1.0;
-    if (ekf_angle_.filtered_scale_angle_ <= std::numeric_limits<double>::epsilon()) {
+    if (std::abs(ekf_angle_.filtered_scale_angle_) <= std::numeric_limits<double>::epsilon()) {
       vector_scale.vector.z = 1.0;
     } else {
       vector_scale.vector.z = 1 / ekf_angle_.filtered_scale_angle_;
@@ -490,7 +490,7 @@ bool GyroBiasEstimator::should_skip_update(double gyro_yaw_rate)
     msg.header.stamp = this->now();
     msg.vector.x = 1.0;
     msg.vector.y = 1.0;
-    if (ekf_angle_.filtered_scale_angle_ <= std::numeric_limits<double>::epsilon()) {
+    if (std::abs(ekf_angle_.filtered_scale_angle_) <= std::numeric_limits<double>::epsilon()) {
       msg.vector.z = 1.0;
     } else {
       msg.vector.z = 1 / ekf_angle_.filtered_scale_angle_;
