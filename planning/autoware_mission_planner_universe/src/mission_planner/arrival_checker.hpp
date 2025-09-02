@@ -36,9 +36,11 @@ public:
   bool is_arrived(const PoseStamped & pose) const;
 
 private:
-  double distance_;
   double angle_;
   double duration_;
+  double arrival_check_lateral_distance_;
+  double arrival_check_longitudinal_undershoot_distance_;
+  double arrival_check_longitudinal_overshoot_distance_;
   std::optional<PoseWithUuidStamped> goal_with_uuid_;
   rclcpp::Subscription<PoseWithUuidStamped>::SharedPtr sub_goal_;
   autoware::motion_utils::VehicleStopChecker vehicle_stop_checker_;

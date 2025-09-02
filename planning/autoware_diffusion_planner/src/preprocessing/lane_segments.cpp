@@ -212,25 +212,28 @@ void LaneSegmentContext::compute_distances(
     return p_transformed.head<2>().squaredNorm();
   };
 
+  auto is_inside = [&](const float x, const float y) {
+    return (
+      x > center_x - mask_range * 1.1 && x < center_x + mask_range * 1.1 &&
+      y > center_y - mask_range * 1.1 && y < center_y + mask_range * 1.1);
+  };
+
   distances.clear();
   distances.reserve(cols / POINTS_PER_SEGMENT);
   for (int64_t i = 0; i < cols; i += POINTS_PER_SEGMENT) {
     // Directly access input matrix as raw memory
-    float x = map_lane_segments_matrix_.block(X, i, 1, POINTS_PER_SEGMENT).mean();
-    float y = map_lane_segments_matrix_.block(Y, i, 1, POINTS_PER_SEGMENT).mean();
-    bool inside =
-      (x > center_x - mask_range * 1.1 && x < center_x + mask_range * 1.1 &&
-       y > center_y - mask_range * 1.1 && y < center_y + mask_range * 1.1);
+    const float mean_x = map_lane_segments_matrix_.block(X, i, 1, POINTS_PER_SEGMENT).mean();
+    const float mean_y = map_lane_segments_matrix_.block(Y, i, 1, POINTS_PER_SEGMENT).mean();
+    const float first_x = map_lane_segments_matrix_(X, i);
+    const float first_y = map_lane_segments_matrix_(Y, i);
+    const float last_x = map_lane_segments_matrix_(X, i + POINTS_PER_SEGMENT - 1);
+    const float last_y = map_lane_segments_matrix_(Y, i + POINTS_PER_SEGMENT - 1);
+    const bool inside =
+      is_inside(mean_x, mean_y) || is_inside(first_x, first_y) || is_inside(last_x, last_y);
 
-    const auto distance_squared = [&]() {
-      float x_first = map_lane_segments_matrix_.block(X, i, 1, 1).mean();
-      float y_first = map_lane_segments_matrix_.block(Y, i, 1, 1).mean();
-      float x_last = map_lane_segments_matrix_.block(X, i + POINTS_PER_SEGMENT - 1, 1, 1).mean();
-      float y_last = map_lane_segments_matrix_.block(Y, i + POINTS_PER_SEGMENT - 1, 1, 1).mean();
-      float distance_squared_first = compute_squared_distance(x_first, y_first, transform_matrix);
-      float distance_squared_last = compute_squared_distance(x_last, y_last, transform_matrix);
-      return std::min(distance_squared_last, distance_squared_first);
-    }();
+    const float distance_first = compute_squared_distance(first_x, first_y, transform_matrix);
+    const float distance_last = compute_squared_distance(last_x, last_y, transform_matrix);
+    const float distance_squared = std::min(distance_last, distance_first);
 
     distances.push_back({static_cast<int64_t>(i), distance_squared, inside});
   }
