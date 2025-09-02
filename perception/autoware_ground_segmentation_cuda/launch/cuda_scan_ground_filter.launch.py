@@ -46,10 +46,10 @@ def launch_setup(context, *args, **kwargs):
             plugin="autoware::cuda_ground_segmentation::CudaScanGroundSegmentationFilterNode",
             name="cuda_scan_ground_segmentation_filter",
             remappings=[
-                ("~/input/pointcloud", "/sensing/lidar/concatenated/pointcloud"),
-                ("~/input/pointcloud/cuda", "/sensing/lidar/concatenated/pointcloud/cuda"),
-                ("~/output/pointcloud", "/perception/obstacle_segmentation/pointcloud"),
-                ("~/output/pointcloud/cuda", "/perception/obstacle_segmentation/pointcloud/cuda"),
+                ("~/input/pointcloud", LaunchConfiguration("input/pointcloud")),
+                ("~/input/pointcloud/cuda", [LaunchConfiguration("input/pointcloud"), "/cuda"]),
+                ("~/output/pointcloud", LaunchConfiguration("output/pointcloud")),
+                ("~/output/pointcloud/cuda", [LaunchConfiguration("output/pointcloud"), "/cuda"]),
             ],
             parameters=[ground_segmentation_node_param, vehicle_info_param],
             extra_arguments=[],
@@ -100,8 +100,8 @@ def generate_launch_description():
         [
             vehicle_info_param,
             add_launch_arg("container", ""),
-            add_launch_arg("input/pointcloud", "pointcloud"),
-            add_launch_arg("output/pointcloud", "no_ground/pointcloud"),
+            add_launch_arg("input/pointcloud", "/sensing/lidar/concatenated/pointcloud"),
+            add_launch_arg("output/pointcloud", "/perception/obstacle_segmentation/pointcloud"),
             add_launch_arg(
                 "cuda_ground_segmentation_node_param_path",
                 [
