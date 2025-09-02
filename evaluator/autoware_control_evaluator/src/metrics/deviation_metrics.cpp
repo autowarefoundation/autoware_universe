@@ -51,5 +51,11 @@ double calcYawDeviation(const Pose & base_pose, const Pose & target_pose)
   return autoware_utils::calc_yaw_deviation(base_pose, target_pose);
 }
 
+double calcLongitudinalVelocityDeviation(
+  const Trajectory & traj, const Pose & pose, const double longitudinal_velocity)
+{
+  const size_t nearest_index = autoware::motion_utils::findNearestIndex(traj.points, pose.position);
+  return longitudinal_velocity - traj.points[nearest_index].longitudinal_velocity_mps;
+}
 }  // namespace metrics
 }  // namespace control_diagnostics
