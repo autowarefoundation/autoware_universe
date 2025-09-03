@@ -35,7 +35,7 @@ namespace autoware::diffusion_planner::utils
  *         - The first matrix represents the transformation from the map frame to the ego frame.
  *         - The second matrix represents the inverse transformation (ego frame to map frame).
  */
-std::pair<Eigen::Matrix4f, Eigen::Matrix4f> get_transform_matrix(
+std::pair<Eigen::Matrix4d, Eigen::Matrix4d> get_transform_matrix(
   const nav_msgs::msg::Odometry & msg);
 
 /**
@@ -61,7 +61,7 @@ bool check_input_map(const std::unordered_map<std::string, std::vector<float>> &
  * @param pose The pose containing position and orientation information.
  * @return A 4x4 transformation matrix representing the pose.
  */
-Eigen::Matrix4f pose_to_matrix4f(const geometry_msgs::msg::Pose & pose);
+Eigen::Matrix4d pose_to_matrix4f(const geometry_msgs::msg::Pose & pose);
 
 /**
  * @brief Extracts yaw angle from rotation matrix and converts to cos/sin representation.
@@ -69,7 +69,7 @@ Eigen::Matrix4f pose_to_matrix4f(const geometry_msgs::msg::Pose & pose);
  * @param rotation_matrix 3x3 rotation matrix.
  * @return A pair containing cos(yaw) and sin(yaw).
  */
-std::pair<float, float> rotation_matrix_to_cos_sin(const Eigen::Matrix3f & rotation_matrix);
+std::pair<float, float> rotation_matrix_to_cos_sin(const Eigen::Matrix3d & rotation_matrix);
 
 }  // namespace autoware::diffusion_planner::utils
 #endif  // AUTOWARE__DIFFUSION_PLANNER__UTILS__UTILS_HPP_
