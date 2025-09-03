@@ -342,7 +342,7 @@ void DiffusionPlanner::load_engine(const std::string & model_path)
 }
 
 AgentData DiffusionPlanner::get_ego_centric_agent_data(
-  const TrackedObjects & objects, const Eigen::Matrix4f & map_to_ego_transform)
+  const TrackedObjects & objects, const Eigen::Matrix4d & map_to_ego_transform)
 {
   if (!agent_data_) {
     agent_data_ =
@@ -471,10 +471,10 @@ InputDataMap DiffusionPlanner::create_input_data()
     const auto & goal_pose = route_handler_->getGoalPose();
 
     // Convert goal pose to 4x4 transformation matrix
-    const Eigen::Matrix4f goal_pose_map_4x4 = utils::pose_to_matrix4f(goal_pose);
+    const Eigen::Matrix4d goal_pose_map_4x4 = utils::pose_to_matrix4f(goal_pose);
 
     // Transform to ego frame
-    const Eigen::Matrix4f goal_pose_ego_4x4 = map_to_ego_transform * goal_pose_map_4x4;
+    const Eigen::Matrix4d goal_pose_ego_4x4 = map_to_ego_transform * goal_pose_map_4x4;
 
     // Extract relative position
     const float x = goal_pose_ego_4x4(0, 3);

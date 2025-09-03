@@ -62,7 +62,7 @@ void normalize_input_data(
  */
 std::vector<float> create_ego_agent_past(
   const std::deque<nav_msgs::msg::Odometry> & odometry_msgs, size_t num_timesteps,
-  const Eigen::Matrix4f & map_to_ego_transform);
+  const Eigen::Matrix4d & map_to_ego_transform);
 
 }  // namespace autoware::diffusion_planner::preprocess
 #endif  // AUTOWARE__DIFFUSION_PLANNER__PREPROCESSING__PREPROCESSING_UTILS_HPP_

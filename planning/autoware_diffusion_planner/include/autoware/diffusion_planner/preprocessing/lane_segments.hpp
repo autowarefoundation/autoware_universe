@@ -52,9 +52,9 @@ using autoware_planning_msgs::msg::LaneletRoute;
  */
 struct ColWithDistance
 {
-  int64_t index;           //!< Column index in the input matrix.
-  float distance_squared;  //!< Squared distance from the center.
-  bool inside;             //!< Whether the column is within the mask range.
+  int64_t index;            //!< Column index in the input matrix.
+  double distance_squared;  //!< Squared distance from the center.
+  bool inside;              //!< Whether the column is within the mask range.
 };
 
 /**
@@ -92,7 +92,7 @@ public:
    * @return Flattened vectors containing the transformed route segments and speed limits.
    */
   std::pair<std::vector<float>, std::vector<float>> get_route_segments(
-    const Eigen::Matrix4f & transform_matrix,
+    const Eigen::Matrix4d & transform_matrix,
     const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
     const lanelet::ConstLanelets & current_lanes) const;
 
@@ -107,7 +107,7 @@ public:
    * @return Flattened vectors containing the transformed lane segments and speed limits.
    */
   std::pair<std::vector<float>, std::vector<float>> get_lane_segments(
-    const Eigen::Matrix4f & transform_matrix,
+    const Eigen::Matrix4d & transform_matrix,
     const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map, const float center_x,
     const float center_y, const int64_t m) const;
 
@@ -123,7 +123,7 @@ private:
    */
   void add_traffic_light_one_hot_encoding_to_segment(
     const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
-    Eigen::MatrixXf & segment_matrix, const int64_t row_idx, const int64_t col_counter,
+    Eigen::MatrixXd & segment_matrix, const int64_t row_idx, const int64_t col_counter,
     const int64_t turn_direction) const;
 
   /**
@@ -134,7 +134,7 @@ private:
    * @param num_segments Number of segments to transform.
    */
   void apply_transforms(
-    const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix,
+    const Eigen::Matrix4d & transform_matrix, Eigen::MatrixXd & output_matrix,
     int64_t num_segments) const;
 
   /**
@@ -147,7 +147,7 @@ private:
    * @param mask_range Range within which columns are considered "inside" the mask.
    */
   void compute_distances(
-    const Eigen::Matrix4f & transform_matrix, std::vector<ColWithDistance> & distances,
+    const Eigen::Matrix4d & transform_matrix, std::vector<ColWithDistance> & distances,
     const float center_x, const float center_y, const float mask_range = 100.0) const;
 
   /**
@@ -159,13 +159,13 @@ private:
    * @param m Maximum number of columns (segments) to select.
    * @return The transformed matrix
    */
-  Eigen::MatrixXf transform_points_and_add_traffic_info(
-    const Eigen::Matrix4f & transform_matrix,
+  Eigen::MatrixXd transform_points_and_add_traffic_info(
+    const Eigen::Matrix4d & transform_matrix,
     const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
     const std::vector<ColWithDistance> & distances, int64_t m) const;
 
   // variables
-  Eigen::MatrixXf map_lane_segments_matrix_;
+  Eigen::MatrixXd map_lane_segments_matrix_;
   ColLaneIDMaps col_id_mapping_;
   const std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
 };

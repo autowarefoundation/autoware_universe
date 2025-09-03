@@ -50,7 +50,7 @@ using unique_identifier_msgs::msg::UUID;
  * @param do_translation Whether to apply translation (true) or not (false).
  */
 void transform_output_matrix(
-  const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, int64_t column_idx,
+  const Eigen::Matrix4d & transform_matrix, Eigen::MatrixXd & output_matrix, int64_t column_idx,
   int64_t row_idx, bool do_translation = true);
 
 /**
@@ -59,7 +59,7 @@ void transform_output_matrix(
  * @param prediction The tensor prediction output.
  * @return An Eigen matrix containing the tensor data in row-major order.
  */
-Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tensor_data(
+Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tensor_data(
   const std::vector<float> & prediction);
 
 /**
@@ -71,8 +71,8 @@ Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tensor
  * @param agent The agent index to extract.
  * @return The prediction matrix for the specified batch and agent.
  */
-Eigen::MatrixXf get_prediction_matrix(
-  const std::vector<float> & prediction, const Eigen::Matrix4f & transform_ego_to_map,
+Eigen::MatrixXd get_prediction_matrix(
+  const std::vector<float> & prediction, const Eigen::Matrix4d & transform_ego_to_map,
   const int64_t batch = 0, const int64_t agent = 0);
 
 /**
@@ -86,7 +86,7 @@ Eigen::MatrixXf get_prediction_matrix(
  */
 PredictedObjects create_predicted_objects(
   const std::vector<float> & prediction, const AgentData & ego_centric_agent_data,
-  const rclcpp::Time & stamp, const Eigen::Matrix4f & transform_ego_to_map);
+  const rclcpp::Time & stamp, const Eigen::Matrix4d & transform_ego_to_map);
 /**
  * @brief Converts a prediction matrix to a Trajectory message.
  *
@@ -96,7 +96,7 @@ PredictedObjects create_predicted_objects(
  * @return A Trajectory message in map coordinates.
  */
 Trajectory get_trajectory_from_prediction_matrix(
-  const Eigen::MatrixXf & prediction_matrix, const Eigen::Matrix4f & transform_ego_to_map,
+  const Eigen::MatrixXd & prediction_matrix, const Eigen::Matrix4d & transform_ego_to_map,
   const rclcpp::Time & stamp);
 
 /**
@@ -111,7 +111,7 @@ Trajectory get_trajectory_from_prediction_matrix(
  */
 Trajectory create_trajectory(
   const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4f & transform_ego_to_map, int64_t batch, int64_t agent);
+  const Eigen::Matrix4d & transform_ego_to_map, int64_t batch, int64_t agent);
 
 /**
  * @brief Creates multiple Trajectory messages from tensor prediction for a range of batches and
@@ -126,7 +126,7 @@ Trajectory create_trajectory(
  */
 std::vector<Trajectory> create_multiple_trajectories(
   const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4f & transform_ego_to_map, int64_t start_batch, int64_t start_agent);
+  const Eigen::Matrix4d & transform_ego_to_map, int64_t start_batch, int64_t start_agent);
 
 /**
  * @brief Converts a Trajectory message to a CandidateTrajectories message with generator info.

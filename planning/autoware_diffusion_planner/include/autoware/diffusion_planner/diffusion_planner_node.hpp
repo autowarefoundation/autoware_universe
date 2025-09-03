@@ -243,9 +243,9 @@ public:
 
   // preprocessing
   std::shared_ptr<RouteHandler> route_handler_{std::make_shared<RouteHandler>()};
-  std::pair<Eigen::Matrix4f, Eigen::Matrix4f> transforms_;
+  std::pair<Eigen::Matrix4d, Eigen::Matrix4d> transforms_;
   AgentData get_ego_centric_agent_data(
-    const TrackedObjects & objects, const Eigen::Matrix4f & map_to_ego_transform);
+    const TrackedObjects & objects, const Eigen::Matrix4d & map_to_ego_transform);
 
   /**
    * @brief Replicate single sample data for batch processing.

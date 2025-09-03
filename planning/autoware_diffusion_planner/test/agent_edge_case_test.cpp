@@ -150,7 +150,7 @@ TEST_F(AgentEdgeCaseTest, AgentHistoryEmptyOperations)
   // Operations on history should not crash
   EXPECT_NO_THROW(auto latest = history.get_latest_state());
 
-  Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
   EXPECT_NO_THROW(history.apply_transform(transform));
 }
 
@@ -159,7 +159,7 @@ TEST_F(AgentEdgeCaseTest, AgentStateExtremeTransform)
 {
   AgentState agent_state(tracked_object_);
 
-  Eigen::Matrix4f extreme_transform = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d extreme_transform = Eigen::Matrix4d::Identity();
   extreme_transform(0, 3) = 1e10f;  // Very large translation
   extreme_transform(1, 3) = -1e10f;
   extreme_transform(0, 0) = 1e-10f;  // Very small scale
@@ -177,7 +177,7 @@ TEST_F(AgentEdgeCaseTest, AgentStateNaNTransform)
 {
   AgentState agent_state(tracked_object_);
 
-  Eigen::Matrix4f nan_transform = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d nan_transform = Eigen::Matrix4d::Identity();
   nan_transform(0, 3) = std::numeric_limits<float>::quiet_NaN();
   nan_transform(1, 3) = std::numeric_limits<float>::infinity();
 

@@ -30,9 +30,9 @@ using autoware_planning_msgs::msg::Trajectory;
 
 TEST(PostprocessingUtilsTest, TransformOutputMatrixTranslation)
 {
-  Eigen::MatrixXf output_matrix = Eigen::MatrixXf::Zero(4, OUTPUT_T);
+  Eigen::MatrixXd output_matrix = Eigen::MatrixXd::Zero(4, OUTPUT_T);
   output_matrix.block<2, 5>(0, 0).setOnes();
-  Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
   transform(0, 3) = 2.0f;
   transform(1, 3) = -3.0f;
 
@@ -46,9 +46,9 @@ TEST(PostprocessingUtilsTest, TransformOutputMatrixTranslation)
 
 TEST(PostprocessingUtilsTest, TransformOutputMatrixNoTranslation)
 {
-  Eigen::MatrixXf output_matrix = Eigen::MatrixXf::Zero(4, OUTPUT_T);
+  Eigen::MatrixXd output_matrix = Eigen::MatrixXd::Zero(4, OUTPUT_T);
   output_matrix.block<2, 5>(2, 0).setOnes();
-  Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
   transform(0, 3) = 2.0f;
   transform(1, 3) = -3.0f;
 
@@ -101,7 +101,7 @@ TEST(PostprocessingUtilsTest, GetPredictionMatrixTransformsCorrectly)
 
   std::vector<int64_t> shape{1, 1, rows, cols};
 
-  Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
   transform(0, 3) = 1.0f;
   transform(1, 3) = 2.0f;
 
@@ -116,9 +116,9 @@ TEST(PostprocessingUtilsTest, GetPredictionMatrixTransformsCorrectly)
 
 TEST(PostprocessingUtilsTest, GetTrajectoryFromPredictionMatrixWorks)
 {
-  Eigen::MatrixXf prediction_matrix(3, 4);
+  Eigen::MatrixXd prediction_matrix(3, 4);
   prediction_matrix << 0, 0, 1, 0, 1, 0, 1, 1, 2, 0, 1, 0;
-  Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
   rclcpp::Time stamp(123, 0);
 
   auto traj =
@@ -141,7 +141,7 @@ TEST(PostprocessingUtilsTest, CreateTrajectoryAndMultipleTrajectories)
   for (size_t i = 0; i < data.size(); ++i) data[i] = static_cast<float>(i);
 
   std::vector<int64_t> shape{batch_size, agent_size, rows, cols};
-  Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
   rclcpp::Time stamp(123, 0);
 
   auto expected_trajs = prediction_shape[1];
