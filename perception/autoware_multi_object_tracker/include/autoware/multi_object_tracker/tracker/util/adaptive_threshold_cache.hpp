@@ -36,8 +36,8 @@ private:
   static constexpr double MAX_DISTANCE = 150.0;  // meter
   static constexpr size_t DISTANCE_BIN_NUM =
     static_cast<size_t>(MAX_DISTANCE * MAX_DISTANCE * DISTANCE_SQ_BIN_INV) + 1;
-  static constexpr size_t BEV_AREA_BIN_NUM = 21;  // bin width 1 m^2
-  static constexpr double MAX_BEV_AREA = 20.0;    // m^2
+  static constexpr size_t BEV_AREA_BIN_NUM = 31;  // bin width 1 m^2
+  static constexpr double MAX_BEV_AREA = 30.0;    // m^2
 
   std::vector<double> distance_influence_table_;
   std::vector<double> bev_area_influence_table_;
