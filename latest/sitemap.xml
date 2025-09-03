@@ -1071,6 +1071,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/sensing/autoware_cuda_pointcloud_preprocessor/docs/cuda-polar-voxel-outlier-filter/</loc>
+         <lastmod>2025-09-03</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/latest/sensing/autoware_cuda_pointcloud_preprocessor/docs/cuda-voxel-grid-downsample/</loc>
          <lastmod>2025-09-03</lastmod>
          <changefreq>daily</changefreq>
