@@ -4,7 +4,6 @@ project(autoware_ground_segmentation_cuda)
 find_package(ament_cmake_auto REQUIRED)
 find_package(CUDA)
 find_package(agnocastlib)
-find_package(autoware_vehicle_info_utils REQUIRED)
 
 if(NOT ${CUDA_FOUND})
   message(WARNING "cuda was not found, so the autoware_ground_segmentation_cuda package will not be built.")
@@ -77,7 +76,6 @@ target_include_directories(cuda_ground_segmentation_lib SYSTEM PRIVATE
   ${tf2_INCLUDE_DIRS}
   ${tf2_msgs_INCLUDE_DIRS}
   ${autoware_cuda_utils_INCLUDE_DIRS}
-  ${autoware_vehicle_info_utils_INCLUDE_DIRS}
 )
 
 if(USE_AGNOCAST)

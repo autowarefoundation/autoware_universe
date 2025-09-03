@@ -17,7 +17,6 @@
 
 #include <autoware/cuda_pointcloud_preprocessor/point_types.hpp>
 #include <autoware/cuda_utils/cuda_check_error.hpp>
-#include <autoware_vehicle_info_utils/vehicle_info.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <cuda_blackboard/cuda_unique_ptr.hpp>
 
@@ -30,7 +29,6 @@
 namespace autoware::cuda_ground_segmentation
 {
 
-using autoware::vehicle_info_utils::VehicleInfo;
 enum SegmentationMode : uint8_t { UNINITIALIZED = 0, CONTINUOUS, DISCONTINUOUS, BREAK };
 
 struct PointTypeStruct

@@ -16,13 +16,11 @@
 
 #include "autoware/pointcloud_preprocessor/utility/memory.hpp"
 
-#include <autoware/vehicle_info_utils/vehicle_info_utils.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 
 namespace autoware::cuda_ground_segmentation
 {
 
-using autoware::vehicle_info_utils::VehicleInfoUtils;
 using autoware_utils::deg2rad;
 CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
   const rclcpp::NodeOptions & options)
