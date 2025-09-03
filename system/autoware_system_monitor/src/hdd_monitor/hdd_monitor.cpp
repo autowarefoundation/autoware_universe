@@ -30,6 +30,8 @@
 
 #include <fmt/format.h>
 #include <stdio.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 #include <algorithm>
 #include <cstdio>
@@ -38,12 +40,30 @@
 #include <utility>
 #include <vector>
 
+namespace
+{
+
+constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/hdd_reader.sock";
+
+bool is_non_scsi_device(const std::string & device_name)
+{
+  // cspell:disable
+  // clang-format off
+  return (boost::starts_with(device_name, "/dev/nvme") ||   // NVMe SSD
+          boost::starts_with(device_name, "/dev/mmcblk"));  // SD card, eMMC
+  // cspell:enable
+  // clang-format on
+}
+
+}  // namespace
+
 namespace bp = boost::process;
 
 HddMonitor::HddMonitor(const rclcpp::NodeOptions & options)
 : Node("hdd_monitor", options),
   updater_(this),
-  hdd_reader_port_(declare_parameter<int>("hdd_reader_port", 7635)),
+  hdd_reader_socket_path_(
+    declare_parameter<std::string>("hdd_reader_socket_path", DEFAULT_SOCKET_PATH)),
   last_hdd_stat_update_time_{0, 0, this->get_clock()->get_clock_type()}
 {
   using namespace std::literals::chrono_literals;
@@ -287,8 +307,12 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
     bp::ipstream is_err{std::move(err_pipe)};
 
     // Invoke shell to use shell wildcard expansion
+    // because the very initial version of this code used wildcard expansion
+    // to handle incomplete device file names,
+    // but we don't need wildcard expansion anymore after a specification change.
+    // The string "part_device_" has a full device file name derived from the mount point.
     bp::child c(
-      "/bin/sh", "-c", fmt::format("df -Pm {}*", itr->second.part_device_.c_str()),
+      "/bin/sh", "-c", fmt::format("df -Pm {}", itr->second.part_device_.c_str()),
       bp::std_out > is_out, bp::std_err > is_err);
     c.wait();
 
@@ -630,7 +654,7 @@ void HddMonitor::updateHddInfoList()
   connect_diag_.clearSummary();
 
   // Create a new socket
-  int sock = socket(AF_INET, SOCK_STREAM, 0);
+  int sock = socket(AF_UNIX, SOCK_STREAM, 0);
   if (sock < 0) {
     connect_diag_.summary(DiagStatus::ERROR, "socket error");
     connect_diag_.add("socket", strerror(errno));
@@ -649,12 +673,10 @@ void HddMonitor::updateHddInfoList()
     return;
   }
 
-  // Connect the socket referred to by the file descriptor
-  sockaddr_in addr;
-  memset(&addr, 0, sizeof(sockaddr_in));
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(hdd_reader_port_);
-  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  struct sockaddr_un addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sun_family = AF_UNIX;
+  strncpy(addr.sun_path, hdd_reader_socket_path_.c_str(), sizeof(addr.sun_path) - 1);
   // cppcheck-suppress cstyleCast
   ret = connect(sock, (struct sockaddr *)&addr, sizeof(addr));
   if (ret < 0) {
@@ -848,7 +870,7 @@ void HddMonitor::updateHddConnections()
           const std::regex pattern("\\d+$");
           hdd_param.second.disk_device_ =
             std::regex_replace(hdd_param.second.part_device_, pattern, "");
-        } else if (boost::starts_with(hdd_param.second.part_device_, "/dev/nvme")) {
+        } else if (is_non_scsi_device(hdd_param.second.part_device_)) {
           const std::regex pattern("p\\d+$");
           hdd_param.second.disk_device_ =
             std::regex_replace(hdd_param.second.part_device_, pattern, "");
@@ -872,7 +894,7 @@ void HddMonitor::updateHddConnections()
 int HddMonitor::unmountDevice(std::string & device)
 {
   // Create a new socket
-  int sock = socket(AF_INET, SOCK_STREAM, 0);
+  int sock = socket(AF_UNIX, SOCK_STREAM, 0);
   if (sock < 0) {
     RCLCPP_ERROR(get_logger(), "socket create error. %s", strerror(errno));
     return -1;
@@ -890,11 +912,10 @@ int HddMonitor::unmountDevice(std::string & device)
   }
 
   // Connect the socket referred to by the file descriptor
-  sockaddr_in addr;
-  memset(&addr, 0, sizeof(sockaddr_in));
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(hdd_reader_port_);
-  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  struct sockaddr_un addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sun_family = AF_UNIX;
+  strncpy(addr.sun_path, hdd_reader_socket_path_.c_str(), sizeof(addr.sun_path) - 1);
   // cppcheck-suppress cstyleCast
   ret = connect(sock, (struct sockaddr *)&addr, sizeof(addr));
   if (ret < 0) {
