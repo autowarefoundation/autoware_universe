@@ -42,8 +42,11 @@
 namespace autoware::behavior_velocity_planner
 {
 TrafficLightModule::TrafficLightModule(
-  const int64_t lane_id, const lanelet::TrafficLight & traffic_light_reg_elem,
-  lanelet::ConstLanelet lane, const PlannerParam & planner_param, const rclcpp::Logger logger,
+  const int64_t lane_id,
+  const lanelet::TrafficLight & traffic_light_reg_elem,  //
+  lanelet::ConstLanelet lane,                            //
+  const lanelet::ConstLineString3d & initial_stop_line,  //
+  const PlannerParam & planner_param, const rclcpp::Logger logger,
   const rclcpp::Clock::SharedPtr clock,
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
@@ -52,6 +55,7 @@ TrafficLightModule::TrafficLightModule(
   lane_id_(lane_id),
   traffic_light_reg_elem_(traffic_light_reg_elem),
   lane_(lane),
+  stop_line_(initial_stop_line),
   state_(State::APPROACH),
   debug_data_(),
   is_prev_state_stop_(false)
@@ -69,12 +73,9 @@ bool TrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
 
   const auto & self_pose = planner_data_->current_odometry;
 
-  // Get lanelet2 stop lines.
-  lanelet::ConstLineString3d lanelet_stop_lines = *(traffic_light_reg_elem_.stopLine());
-
   // Calculate stop pose and insert index
   const auto stop_line = calcStopPointAndInsertIndex(
-    input_path, lanelet_stop_lines,
+    input_path, stop_line_,
     planner_param_.stop_margin + planner_data_->vehicle_info_.max_longitudinal_offset_m);
 
   if (!stop_line.has_value()) {
@@ -360,6 +361,11 @@ autoware_internal_planning_msgs::msg::PathWithLaneId TrafficLightModule::insertS
     0.0 /*shift distance*/, "traffic_light");
 
   return modified_path;
+}
+
+void TrafficLightModule::updateStopLine(const lanelet::ConstLineString3d & stop_line)
+{
+  stop_line_ = stop_line;
 }
 
 }  // namespace autoware::behavior_velocity_planner

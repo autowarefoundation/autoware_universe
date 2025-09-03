@@ -25,7 +25,7 @@
 
 namespace autoware::diffusion_planner::utils
 {
-std::pair<Eigen::Matrix4f, Eigen::Matrix4f> get_transform_matrix(
+std::pair<Eigen::Matrix4d, Eigen::Matrix4d> get_transform_matrix(
   const nav_msgs::msg::Odometry & msg)
 {
   // Extract position
@@ -34,31 +34,31 @@ std::pair<Eigen::Matrix4f, Eigen::Matrix4f> get_transform_matrix(
   double z = msg.pose.pose.position.z;
 
   // Create Eigen quaternion and normalize it just in case
-  Eigen::Quaternionf q = std::invoke([&msg]() -> Eigen::Quaternionf {
+  Eigen::Quaterniond q = std::invoke([&msg]() -> Eigen::Quaterniond {
     double qx = msg.pose.pose.orientation.x;
     double qy = msg.pose.pose.orientation.y;
     double qz = msg.pose.pose.orientation.z;
     double qw = msg.pose.pose.orientation.w;
 
     // Create Eigen quaternion and normalize it just in case
-    Eigen::Quaternionf q(qw, qx, qy, qz);
-    return (q.norm() < std::numeric_limits<float>::epsilon()) ? Eigen::Quaternionf::Identity()
+    Eigen::Quaterniond q(qw, qx, qy, qz);
+    return (q.norm() < std::numeric_limits<float>::epsilon()) ? Eigen::Quaterniond::Identity()
                                                               : q.normalized();
   });
 
   // Rotation matrix (3x3)
-  Eigen::Matrix3f R = q.toRotationMatrix();
+  Eigen::Matrix3d R = q.toRotationMatrix();
 
   // Translation vector
-  Eigen::Vector3f t(x, y, z);
+  Eigen::Vector3d t(x, y, z);
 
   // Base_link → Map (forward)
-  Eigen::Matrix4f bl2map = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d bl2map = Eigen::Matrix4d::Identity();
   bl2map.block<3, 3>(0, 0) = R;
   bl2map.block<3, 1>(0, 3) = t;
 
   // Map → Base_link (inverse)
-  Eigen::Matrix4f map2bl = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d map2bl = Eigen::Matrix4d::Identity();
   map2bl.block<3, 3>(0, 0) = R.transpose();
   map2bl.block<3, 1>(0, 3) = -R.transpose() * t;
 
@@ -92,7 +92,7 @@ bool check_input_map(const std::unordered_map<std::string, std::vector<float>> &
   return true;
 }
 
-Eigen::Matrix4f pose_to_matrix4f(const geometry_msgs::msg::Pose & pose)
+Eigen::Matrix4d pose_to_matrix4f(const geometry_msgs::msg::Pose & pose)
 {
   // Extract position
   double x = pose.position.x;
@@ -100,33 +100,33 @@ Eigen::Matrix4f pose_to_matrix4f(const geometry_msgs::msg::Pose & pose)
   double z = pose.position.z;
 
   // Create Eigen quaternion and normalize it just in case
-  Eigen::Quaternionf q = std::invoke([&pose]() -> Eigen::Quaternionf {
+  Eigen::Quaterniond q = std::invoke([&pose]() -> Eigen::Quaterniond {
     double qx = pose.orientation.x;
     double qy = pose.orientation.y;
     double qz = pose.orientation.z;
     double qw = pose.orientation.w;
 
     // Create Eigen quaternion and normalize it just in case
-    Eigen::Quaternionf q(qw, qx, qy, qz);
-    return (q.norm() < std::numeric_limits<float>::epsilon()) ? Eigen::Quaternionf::Identity()
+    Eigen::Quaterniond q(qw, qx, qy, qz);
+    return (q.norm() < std::numeric_limits<float>::epsilon()) ? Eigen::Quaterniond::Identity()
                                                               : q.normalized();
   });
 
   // Rotation matrix (3x3)
-  Eigen::Matrix3f R = q.toRotationMatrix();
+  Eigen::Matrix3d R = q.toRotationMatrix();
 
   // Translation vector
-  Eigen::Vector3f t(x, y, z);
+  Eigen::Vector3d t(x, y, z);
 
   // Create 4x4 transformation matrix
-  Eigen::Matrix4f pose_matrix = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d pose_matrix = Eigen::Matrix4d::Identity();
   pose_matrix.block<3, 3>(0, 0) = R;
   pose_matrix.block<3, 1>(0, 3) = t;
 
   return pose_matrix;
 }
 
-std::pair<float, float> rotation_matrix_to_cos_sin(const Eigen::Matrix3f & rotation_matrix)
+std::pair<float, float> rotation_matrix_to_cos_sin(const Eigen::Matrix3d & rotation_matrix)
 {
   // Extract yaw angle from rotation matrix and convert to cos/sin
   // Using atan2 to get the yaw angle from the rotation matrix

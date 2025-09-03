@@ -515,6 +515,10 @@ ObstacleSlowDownModule::create_slow_down_obstacle_for_predicted_object(
   }
 
   if (dist_from_obj_poly_to_traj_poly <= p.min_lat_margin) {
+    RCLCPP_DEBUG(
+      logger_,
+      "[SlowDown] Ignore obstacle (%s) since the lateral distance to the trajectory is too close.",
+      obj_uuid_str.substr(0, 4).c_str());
     return std::nullopt;
   }
 

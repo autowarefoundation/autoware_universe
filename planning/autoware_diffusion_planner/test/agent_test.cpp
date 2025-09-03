@@ -39,7 +39,7 @@ TEST_F(AgentTest, AgentStateTransformation)
   AgentState agent_state(tracked_object_);
 
   // Apply a simple transformation
-  Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
   transform(0, 3) = 10.0;  // Translate x by 10
   transform(1, 3) = 5.0;   // Translate y by 5
 

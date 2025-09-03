@@ -78,7 +78,7 @@ void normalize_input_data(InputDataMap & input_data_map, const NormalizationMap 
 
 std::vector<float> create_ego_agent_past(
   const std::deque<nav_msgs::msg::Odometry> & odometry_msgs, size_t num_timesteps,
-  const Eigen::Matrix4f & map_to_ego_transform)
+  const Eigen::Matrix4d & map_to_ego_transform)
 {
   const size_t features_per_timestep = 4;  // x, y, cos, sin
   const size_t total_size = num_timesteps * features_per_timestep;
@@ -92,10 +92,10 @@ std::vector<float> create_ego_agent_past(
     const auto & historical_pose = odometry_msgs[i].pose.pose;
 
     // Convert pose to 4x4 matrix
-    const Eigen::Matrix4f pose_map_4x4 = utils::pose_to_matrix4f(historical_pose);
+    const Eigen::Matrix4d pose_map_4x4 = utils::pose_to_matrix4f(historical_pose);
 
     // Transform to ego frame
-    const Eigen::Matrix4f pose_ego_4x4 = map_to_ego_transform * pose_map_4x4;
+    const Eigen::Matrix4d pose_ego_4x4 = map_to_ego_transform * pose_map_4x4;
 
     // Extract position
     const float x = pose_ego_4x4(0, 3);

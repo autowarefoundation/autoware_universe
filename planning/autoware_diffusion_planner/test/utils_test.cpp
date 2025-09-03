@@ -80,7 +80,7 @@ TEST_F(UtilsTest, GetTransformMatrixIdentity)
 
   auto [bl2map, map2bl] = utils::get_transform_matrix(odom);
 
-  Eigen::Matrix4f I = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d I = Eigen::Matrix4d::Identity();
   for (int i = 0; i < 4; ++i)
     for (int j = 0; j < 4; ++j) EXPECT_NEAR(bl2map(i, j), I(i, j), 1e-6);
   for (int i = 0; i < 4; ++i)

@@ -5,4 +5,4 @@
     usage_warn_count: 1
     usage_error_count: 2
     usage_avg: true
-    msr_reader_port: 7634
+    msr_reader_socket_path: "/tmp/msr_reader.sock"
