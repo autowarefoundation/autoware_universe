@@ -5,8 +5,7 @@
   <arg name="input_gyro_scale_topic" default="gyro_scale"/>
   <arg name="output_topic" default="imu_data"/>
   <arg name="param_file" default="$(find-pkg-share autoware_imu_corrector)/config/imu_corrector.param.yaml"/>
-  <arg name="correct_for_bias_override" default="false"/>
-  <arg name="correct_for_scale_override" default="false"/>
+  <arg name="param_scale_file" default="$(find-pkg-share autoware_imu_corrector)/config/gyro_scale_estimator.param.yaml"/>
 
   <node pkg="autoware_imu_corrector" exec="imu_corrector_node" output="both">
     <remap from="input" to="$(var input_topic)"/>
@@ -14,7 +13,6 @@
     <remap from="gyro_scale_input" to="$(var input_gyro_scale_topic)"/>
     <remap from="output" to="$(var output_topic)"/>
     <param from="$(var param_file)"/>
-    <param name="correct_for_bias" value="$(var correct_for_bias_override)"/>
-    <param name="correct_for_scale" value="$(var correct_for_scale_override)"/>
+    <param from="$(var param_scale_file)"/>
   </node>
 </launch>
