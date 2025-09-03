@@ -122,7 +122,7 @@ private:
   bool camera_info_received_flag_ = false;
 
   // can_bus subscription
-  message_filters::Subscriber<autoware_localization_msgs::msg::KinematicState> sub_can_bus_;
+  message_filters::Subscriber<autoware_localization_msgs::msg::KinematicState> sub_kinematic_state;
 
   // tf listener
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
