@@ -9992,6 +9992,8 @@
         
           
         
+          
+        
       
       
         <label class="md-nav__link" for="__nav_9_7_2" id="__nav_9_7_2_label" tabindex="0">
@@ -10140,6 +10142,20 @@
     <li class="md-nav__item">
       <a href="../../../sensing/autoware_pointcloud_preprocessor/docs/pointcloud-densifier/" class="md-nav__link">
         PointCloud Densifier
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../sensing/autoware_pointcloud_preprocessor/docs/polar-voxel-outlier-filter/" class="md-nav__link">
+        Polar Voxel Outlier Filter
       </a>
     </li>
   
@@ -14271,32 +14287,35 @@
 
 <p>By expanding the footprint, the system introduces a safety margin that accounts for minor localization and mapping uncertainties, especially critical at higher speeds.he expanded footprint creates a small buffer or "safety margin," allowing the vehicle to operate safely despite minor abnormality.</p>
 <h3 id="steering-abnormality">Steering Abnormality<a class="headerlink" href="#steering-abnormality" title="Permanent link">#</a></h3>
-<p>Unexpected steering behavior can cause the vehicle to deviate from its planned trajectory, leading to boundary departure even when planning and localization are functioning correctly. This can occur due to:</p>
+<p>Unexpected steering behavior can cause the vehicle to deviate from its planned trajectory. Instead of using a simple margin, this module simulates a future trajectory based on a bicycle model with modified steering commands to predict potential deviations. This can occur due to:</p>
 <ul>
 <li><strong>Actuator faults</strong>: such as delayed or stuck steering commands.</li>
 <li><strong>Software issues</strong>: like frozen control outputs or bugs in the steering optimization logic.</li>
 <li><strong>Unexpected maneuvers</strong>: for example, emergency avoidance or unintended sharp turns.</li>
 </ul>
 <p>In such cases, the actual motion of the vehicle diverges from the MPC trajectory, increasing the risk of departure.</p>
-<h4 id="how-steering-margin-helps-with-steering-abnormality">How steering margin helps with steering abnormality<a class="headerlink" href="#how-steering-margin-helps-with-steering-abnormality" title="Permanent link">#</a></h4>
+<h4 id="how-steering-simulation-helps-with-steering-abnormality">How steering simulation helps with steering abnormality<a class="headerlink" href="#how-steering-simulation-helps-with-steering-abnormality" title="Permanent link">#</a></h4>
+<p>The module simulates a new vehicle trajectory using a bicycle model, where the steering commands are intentionally modified to represent a worst-case scenario. This simulation includes:</p>
 <ul>
-<li><strong>Catches lateral deviations early</strong>: If the vehicle drifts due to steering faults, like stuck actuators or sudden command spikes, the expanded margin ahead of the vehicle can detect the deviation before the ego crosses into an unsafe region.</li>
-<li><strong>Predicts future risk along the path</strong>: The margin extends along the forward direction of the predicted path, enabling the system to foresee potential boundary violations caused by small steering errors that compound over time.</li>
+<li><strong>Actuator Delay</strong>: A delay is introduced to the steering commands to simulate actuator latency.</li>
+<li><strong>Steering Magnification</strong>: The original steering commands from the trajectory are multiplied by a factor to simulate over- or under-steering.</li>
+<li><strong>Steering Offset</strong>: A constant offset is added to the steering commands to simulate a drift.</li>
+<li><strong>Rate Limiting</strong>: The rate of change of the steering angle is limited based on the vehicle's velocity to ensure the simulation is physically realistic.</li>
+<li><strong>Physical Limits</strong>: The final steering angle is clamped to the vehicle's maximum physical steering angle.</li>
 </ul>
-<div align="center">
-  <table style="table-layout: fixed; width: 600px;">
-    <tr>
-      <th style="text-align: center; width: 50%; word-wrap: break-word; white-space: normal;">Without Abnormality Margins</th>
-      <th style="text-align: center; width: 50%; word-wrap: break-word; white-space: normal;">With Steering Abnormality Margin</th>
-    </tr>
-    <tr>
-      <td style="text-align: center;"><img src="./images/normal_no_abnormalities_footprint.png" alt="Footprint without abnormality margin" width="250"></td>
-      <td style="text-align: center;"><img src="./images/steering_abnormalities_footprint.png" alt="Footprint with localization abnormality margin" width="250"></td>
-    </tr>
-  </table>
-</div>
-
-<p>This method works even when control outputs are inaccurate. Because the margin is computed using the predicted path, not just the current pose, it accounts for latency, actuator delays, and other uncertainties in vehicle response. This allows the system to trigger early mitigation actions, such as slowing down or stopping, before the situation becomes critical.</p>
+<p>This simulated trajectory is then used to create a set of predicted footprints, which are checked for boundary departures. This allows the system to proactively detect and mitigate risks from steering abnormalities.</p>
+<table>
+<thead>
+<tr>
+<th>Example steering abnormality trajectories</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><img alt="Example steering abnormality trajectories" src="images/steering_abnormalities_trajectories.svg"></td>
+</tr>
+</tbody>
+</table>
 <h3 id="longitudinal-tracking-abnormality">Longitudinal Tracking Abnormality<a class="headerlink" href="#longitudinal-tracking-abnormality" title="Permanent link">#</a></h3>
 <p>Sometimes, the actual motion of the vehicle along the longitudinal axis does not match the MPC-predicted trajectory. For instance:</p>
 <p>The ego vehicle might be ahead or behind the predicted position due to mismatches in acceleration or braking behavior.</p>

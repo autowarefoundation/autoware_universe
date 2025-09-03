@@ -9992,6 +9992,8 @@
         
           
         
+          
+        
       
       
         <label class="md-nav__link" for="__nav_9_7_2" id="__nav_9_7_2_label" tabindex="0">
@@ -10140,6 +10142,20 @@
     <li class="md-nav__item">
       <a href="../../../../sensing/autoware_pointcloud_preprocessor/docs/pointcloud-densifier/" class="md-nav__link">
         PointCloud Densifier
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../sensing/autoware_pointcloud_preprocessor/docs/polar-voxel-outlier-filter/" class="md-nav__link">
+        Polar Voxel Outlier Filter
       </a>
     </li>
   
@@ -14258,12 +14274,12 @@
 <p>hdd_reader [OPTION]</p>
 <h2 id="description">Description<a class="headerlink" href="#description" title="Permanent link">#</a></h2>
 <p>Read S.M.A.R.T. information for monitoring HDD temperature and life of HDD.<br>
-This runs as a daemon process and listens to a TCP/IP port (7635 by default).</p>
+This runs as a daemon process and listens to a UNIX domain socket ("/tmp/hdd_reader.sock" by default).</p>
 <p><strong>Options:</strong><br>
 <em>-h, --help</em><br>
     Display help<br>
-<em>-p, --port #</em><br>
-    Port number to listen to</p>
+<em>-s, --socket PATH</em><br>
+    UNIX domain socket path</p>
 <p><strong>Exit status:</strong><br>
 Returns 0 if OK; non-zero otherwise.</p>
 <h2 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">#</a></h2>
