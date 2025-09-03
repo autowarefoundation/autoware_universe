@@ -261,10 +261,10 @@ std::pair<PredictedObjects, PredictedObjects> separateObjectsByLanelets(
   return std::make_pair(target_objects, other_objects);
 }
 
-template std::vector<PredictedPathWithPolygon> get_highest_confidence_path(
-  const std::vector<PredictedPathWithPolygon> & predicted_paths);
-template std::vector<autoware_perception_msgs::msg::PredictedPath> get_highest_confidence_path(
-  const std::vector<autoware_perception_msgs::msg::PredictedPath> & predicted_paths);
+template std::vector<PredictedPathWithPolygon> get_highest_confidence_paths(
+  std::vector<PredictedPathWithPolygon> predicted_paths);
+template std::vector<autoware_perception_msgs::msg::PredictedPath> get_highest_confidence_paths(
+  std::vector<autoware_perception_msgs::msg::PredictedPath> predicted_paths);
 
 template std::vector<PredictedPathWithPolygon> get_object_predicted_paths(
   const std::vector<PredictedPathWithPolygon> & predicted_paths,

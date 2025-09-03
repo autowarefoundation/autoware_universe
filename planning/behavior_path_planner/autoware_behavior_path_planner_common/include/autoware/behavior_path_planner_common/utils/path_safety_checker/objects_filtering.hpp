@@ -24,6 +24,7 @@
 
 #include <lanelet2_core/geometry/Lanelet.h>
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -228,49 +229,59 @@ std::pair<PredictedObjects, PredictedObjects> separateObjectsByLanelets(
   const double yaw_threshold = M_PI);
 
 /**
- * @brief Get the predicted path with the highest confidence.
+ * @brief Gets the predicted path(s) that share the highest confidence score.
  *
- * @tparam PredictedPathType The container type for predicted paths. The elements
- * of this container must have a public member named `confidence`.
- * @param predicted_paths The container of predicted paths to search.
- * @return PredictedPathType A new container holding only the predicted path with
- * the highest confidence.
+ * @tparam PredictedPathsType The container type for predicted predicted_paths. Elements
+ * must have a public member named `confidence`.
+ * @param predicted_paths The container of predicted predicted_paths to search. This is passed
+ * by value as the function requires a mutable copy.
+ * @return PredictedPathsType A container with the highest-confidence
+ * path(s)
  */
-template <typename PredictedPathType>
-PredictedPathType get_highest_confidence_path(const PredictedPathType & predicted_paths)
+template <typename PredictedPathsType>
+PredictedPathsType get_highest_confidence_paths(PredictedPathsType predicted_paths)
 {
-  const auto max_confidence_path = std::max_element(
-    predicted_paths.begin(), predicted_paths.end(),
-    [](const auto & path1, const auto & path2) { return path1.confidence < path2.confidence; });
-  if (max_confidence_path != predicted_paths.end()) {
-    return {*max_confidence_path};
+  if (predicted_paths.empty()) {
+    return predicted_paths;
   }
 
-  return predicted_paths;
+  std::sort(predicted_paths.begin(), predicted_paths.end(), [](const auto & p1, const auto & p2) {
+    return p1.confidence > p2.confidence;
+  });
+
+  const auto highest_confidence = predicted_paths.front().confidence;
+
+  // handles if the multiple path have the same highest confidence
+  auto equal_confidence_itr = std::find_if(
+    std::next(predicted_paths.begin()), predicted_paths.end(),
+    [highest_confidence](const auto & p) { return p.confidence != highest_confidence; });
+
+  return {predicted_paths.begin(), equal_confidence_itr};
 }
 
-extern template std::vector<PredictedPathWithPolygon> get_highest_confidence_path(
-  const std::vector<PredictedPathWithPolygon> & predicted_paths);
+extern template std::vector<PredictedPathWithPolygon> get_highest_confidence_paths(
+  std::vector<PredictedPathWithPolygon> predicted_paths);
 extern template std::vector<autoware_perception_msgs::msg::PredictedPath>
-get_highest_confidence_path(
-  const std::vector<autoware_perception_msgs::msg::PredictedPath> & predicted_paths);
+get_highest_confidence_paths(
+  std::vector<autoware_perception_msgs::msg::PredictedPath> predicted_paths);
 
 /**
- * @brief Filters a container of predicted paths, returning either all paths or just the one with
- * the highest confidence.
+ * @brief Filters a container of predicted predicted_paths, returning either all predicted_paths or
+ * just the one with the highest confidence.
  *
- * @tparam PredictedPathType The container type for predicted paths, which must contain elements
- * with a `confidence` member.
- * @param predicted_paths The container of predicted paths to filter.
- * @param is_use_all_predicted_path Flag to determine whether to return all predicted paths or only
- * the one with the maximum confidence.
- * @return PredictedPathType A new container with the filtered predicted path(s).
+ * @tparam PredictedPathsType The container type for predicted predicted_paths, which must contain
+ * elements with a `confidence` member.
+ * @param predicted_paths The container of predicted predicted_paths to filter.
+ * @param is_use_all_predicted_path Flag to determine whether to return all predicted
+ * predicted_paths or only the one with the maximum confidence.
+ * @return PredictedPathsType A new container with the filtered predicted path(s).
  */
-template <typename PredictedPathType>
-PredictedPathType get_object_predicted_paths(
-  const PredictedPathType & predicted_paths, const bool is_use_all_predicted_path)
+template <typename PredictedPathsType>
+PredictedPathsType get_object_predicted_paths(
+  const PredictedPathsType & predicted_paths, const bool is_use_all_predicted_path)
 {
-  return is_use_all_predicted_path ? predicted_paths : get_highest_confidence_path(predicted_paths);
+  return is_use_all_predicted_path ? predicted_paths
+                                   : get_highest_confidence_paths(predicted_paths);
 }
 
 extern template std::vector<PredictedPathWithPolygon> get_object_predicted_paths(
@@ -285,8 +296,8 @@ get_object_predicted_paths(
  * @brief Get the predicted path from an object.
  *
  * @param obj The extended predicted object.
- * @param is_use_all_predicted_path Flag to determine whether to use all predicted paths or just the
- * one with maximum confidence.
+ * @param is_use_all_predicted_path Flag to determine whether to use all predicted predicted_paths
+ * or just the one with maximum confidence.
  * @return std::vector<PredictedPathWithPolygon> The predicted path(s) from the object.
  */
 std::vector<PredictedPathWithPolygon> getPredictedPathFromObj(
