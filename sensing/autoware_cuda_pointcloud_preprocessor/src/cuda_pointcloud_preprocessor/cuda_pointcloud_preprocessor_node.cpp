@@ -61,6 +61,7 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
   base_frame_ = declare_parameter<std::string>("base_frame");
   use_3d_undistortion_ = declare_parameter<bool>("use_3d_distortion_correction");
   use_imu_ = declare_parameter<bool>("use_imu");
+  bool enable_ring_outlier_filter = declare_parameter<bool>("enable_ring_outlier_filter");
 
   RingOutlierFilterParameters ring_outlier_filter_parameters;
   ring_outlier_filter_parameters.distance_ratio =
@@ -149,6 +150,7 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
 
   cuda_pointcloud_preprocessor_ = std::make_unique<CudaPointcloudPreprocessor>();
   cuda_pointcloud_preprocessor_->setRingOutlierFilterParameters(ring_outlier_filter_parameters);
+  cuda_pointcloud_preprocessor_->setRingOutlierFilterActive(enable_ring_outlier_filter);
   cuda_pointcloud_preprocessor_->setCropBoxParameters(crop_box_parameters);
   cuda_pointcloud_preprocessor_->setUndistortionType(undistortion_type);
 

@@ -7,6 +7,7 @@
     object_length_threshold: 0.05
     processing_time_threshold_sec: 0.01
     timestamp_mismatch_fraction_threshold: 0.01
+    enable_ring_outlier_filter: true
 
     crop_box.min_x: [0.0]
     crop_box.min_y: [0.0]
