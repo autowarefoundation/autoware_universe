@@ -15,11 +15,10 @@
 #ifndef DATA_UTILS_HPP_
 #define DATA_UTILS_HPP_
 
-#include <autoware/point_types/memory.hpp>
+#include <Eigen/Geometry>
 #include <autoware/point_types/types.hpp>
 #include <opencv2/opencv.hpp>
 #include <point_cloud_msg_wrapper/point_cloud_msg_wrapper.hpp>
-#include <tf2_eigen/tf2_eigen.hpp>
 
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
@@ -56,8 +55,10 @@ using sensor_msgs::msg::PointCloud2;
 struct TestSample
 {
   PointCloud2::SharedPtr pointcloud;
-  Image::SharedPtr image;
-  Image::SharedPtr image_undistorted;
+  Image::SharedPtr image_rgb;
+  Image::SharedPtr image_bgr;
+  Image::SharedPtr image_rgb_undistorted;
+  Image::SharedPtr image_bgr_undistorted;
   CameraInfo::SharedPtr camera_info_calibrated;
   CameraInfo::SharedPtr camera_info_miscalibrated;
   Eigen::Affine3d lidar_to_camera_tf_calibrated;
@@ -142,42 +143,31 @@ PointCloud2::SharedPtr get_pointcloud(
   return pointcloud;
 }
 
-Image::SharedPtr get_image(const std::filesystem::path & data_dir, const std::string & sample_name)
+Image::SharedPtr get_image(
+  const std::filesystem::path & data_dir, const std::string & sample_name,
+  const bool is_undistorted, const std::string & encoding)
 {
   const auto sample_dir = data_dir / sample_name;
-  auto image_data = load_binary<uint8_t>(sample_dir / "image.dat.gz");
-
-  std::vector<size_t> indices(image_data.size() / 3);
-  std::iota(indices.begin(), indices.end(), 0);
+  const std::string suffix = is_undistorted ? "_undistorted" : "";
+  auto image_data = load_binary<uint8_t>(sample_dir / ("image" + suffix + ".dat.gz"));
 
   // Swap R and B channels
-  std::for_each(std::execution::seq, indices.begin(), indices.end(), [&image_data](size_t i) {
-    std::swap(image_data[i * 3], image_data[i * 3 + 2]);
-  });
+  if (encoding == "bgr8") {
+    std::vector<size_t> indices(image_data.size() / 3);
+    std::iota(indices.begin(), indices.end(), 0);
+    std::for_each(std::execution::seq, indices.begin(), indices.end(), [&image_data](size_t i) {
+      std::swap(image_data[i * 3], image_data[i * 3 + 2]);
+    });
+  }
 
   Image::SharedPtr image = std::make_shared<Image>();
   image->height = height;
   image->width = width;
-  image->encoding = "bgr8";
+  image->encoding = encoding;
   image->step = image->width * 3;
   image->header.frame_id = "optical_camera_link";
   image->data = std::move(image_data);
   return image;
-}
-
-Image::SharedPtr get_image_undistorted(
-  const std::filesystem::path & data_dir, const std::string & sample_name)
-{
-  const auto sample_dir = data_dir / sample_name;
-  auto image_data = load_binary<uint8_t>(sample_dir / "image_undistorted.dat.gz");
-  Image::SharedPtr image_undistorted = std::make_shared<Image>();
-  image_undistorted->height = height;
-  image_undistorted->width = width;
-  image_undistorted->encoding = "bgr8";
-  image_undistorted->step = image_undistorted->width * 3;
-  image_undistorted->header.frame_id = "optical_camera_link";
-  image_undistorted->data = std::move(image_data);
-  return image_undistorted;
 }
 
 CameraInfo::SharedPtr get_camera_info(
@@ -262,11 +252,14 @@ std::vector<float> get_input_data(
 
 void save_img(
   std::vector<uint8_t> data, const int width, const int height,
-  const std::filesystem::path & data_dir, const std::string & filename,
-  const int encoding = CV_8UC3)
+  const std::filesystem::path & data_dir, const std::string & filename, const int type,
+  const std::string & encoding)
 {
   std::filesystem::path output_path = data_dir / filename;
-  cv::Mat img_mat(height, width, encoding, data.data());
+  cv::Mat img_mat(height, width, type, data.data());
+  if (encoding == "bgr8") {
+    cv::cvtColor(img_mat, img_mat, cv::COLOR_BGR2RGB);
+  }
   cv::imwrite(output_path.string(), img_mat);
 }
 
@@ -274,8 +267,10 @@ TestSample load_test_sample(const std::filesystem::path & data_dir, const std::s
 {
   TestSample sample;
   sample.pointcloud = get_pointcloud(data_dir, sample_name);
-  sample.image = get_image(data_dir, sample_name);
-  sample.image_undistorted = get_image_undistorted(data_dir, sample_name);
+  sample.image_rgb = get_image(data_dir, sample_name, false, "rgb8");
+  sample.image_bgr = get_image(data_dir, sample_name, false, "bgr8");
+  sample.image_rgb_undistorted = get_image(data_dir, sample_name, true, "rgb8");
+  sample.image_bgr_undistorted = get_image(data_dir, sample_name, true, "bgr8");
   sample.camera_info_calibrated = get_camera_info(data_dir, sample_name, false);
   sample.camera_info_miscalibrated = get_camera_info(data_dir, sample_name, true);
   sample.lidar_to_camera_tf_calibrated =

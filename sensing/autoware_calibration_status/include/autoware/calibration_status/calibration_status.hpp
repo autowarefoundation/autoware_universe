@@ -93,7 +93,7 @@ public:
 private:
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_;
   std::unique_ptr<PreprocessCuda> preprocess_ptr_;
-  autoware::cuda_utils::CudaUniquePtr<InputArrayRGBDI[]> in_d_;
+  autoware::cuda_utils::CudaUniquePtr<float[]> in_d_;
   autoware::cuda_utils::CudaUniquePtr<float[]> out_d_;
   autoware::cuda_utils::CudaUniquePtr<InputPointType[]> cloud_d_;
   autoware::cuda_utils::CudaUniquePtr<InputImageBGR8Type[]> image_d_;

@@ -30,10 +30,6 @@
 
 namespace autoware::calibration_status
 {
-static constexpr size_t dist_coeffs_size = 8;
-static constexpr size_t camera_matrix_size = 9;
-static constexpr size_t projection_matrix_size = 12;
-static constexpr size_t tf_matrix_size = 16;
 
 CalibrationStatus::CalibrationStatus(
   const std::string & onnx_path, const std::string & trt_precision, int64_t cloud_capacity,
@@ -62,7 +58,8 @@ CalibrationStatus::CalibrationStatus(
     throw std::runtime_error("Failed to setup CalibrationStatus TensorRT engine.");
   }
 
-  in_d_ = cuda_utils::make_unique<InputArrayRGBDI[]>(config_.height.at(2) * config_.width.at(2));
+  in_d_ =
+    cuda_utils::make_unique<float[]>(config_.channels * config_.height.at(2) * config_.width.at(2));
   out_d_ = cuda_utils::make_unique<float[]>(2);
   cloud_d_ = cuda_utils::make_unique<InputPointType[]>(cloud_capacity_);
   image_d_ =

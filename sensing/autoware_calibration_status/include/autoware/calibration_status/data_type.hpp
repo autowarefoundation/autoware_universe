@@ -19,6 +19,11 @@
 
 namespace autoware::calibration_status
 {
+static constexpr std::size_t dist_coeffs_size = 8;
+static constexpr std::size_t camera_matrix_size = 9;
+static constexpr std::size_t projection_matrix_size = 12;
+static constexpr std::size_t tf_matrix_size = 16;
+
 /**
  * @brief Point type for LiDAR input data
  *
@@ -47,22 +52,6 @@ struct InputImageBGR8Type
   std::uint8_t b;
   std::uint8_t g;
   std::uint8_t r;
-} __attribute__((packed));
-
-/**
- * @brief 5-channel input array for neural network inference
- *
- * Structure containing RGB image data, normalized depth, and intensity information
- * for each pixel. This represents the input format expected by the calibration
- * status detection neural network.
- */
-struct InputArrayRGBDI
-{
-  float r;
-  float g;
-  float b;
-  float depth;
-  float intensity;
 } __attribute__((packed));
 
 }  // namespace autoware::calibration_status

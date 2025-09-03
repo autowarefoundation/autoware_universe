@@ -104,7 +104,7 @@ __device__ inline InputImageBGR8Type bilinear_sample(
 __global__ void undistortImage_kernel(
   const InputImageBGR8Type * input_image, const double * dist_coeffs, const double * camera_matrix,
   const double * projection_matrix, const size_t width, const size_t height,
-  InputImageBGR8Type * output_image, InputArrayRGBDI * output_array)
+  InputImageBGR8Type * output_image, float * output_array)
 {
   const size_t x = blockIdx.x * blockDim.x + threadIdx.x;
   const size_t y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -154,25 +154,25 @@ __global__ void undistortImage_kernel(
 
     // Sample source image and write to output
     InputImageBGR8Type px;
-    InputArrayRGBDI point;
     if (u >= 0 && v >= 0 && u < width && v < height) {
       px = bilinear_sample(input_image, u, v, width, height);
     } else {
       px = {0, 0, 0};
     }
-    point = {
-      static_cast<float>(px.r) / 255.0f, static_cast<float>(px.g) / 255.0f,
-      static_cast<float>(px.b) / 255.0f, 0.0f, 0.0f};
 
     output_image[y * width + x] = px;
-    output_array[y * width + x] = point;
+    output_array[0 * height * width + y * width + x] = static_cast<float>(px.r) / 255.0f;
+    output_array[1 * height * width + y * width + x] = static_cast<float>(px.g) / 255.0f;
+    output_array[2 * height * width + y * width + x] = static_cast<float>(px.b) / 255.0f;
+    output_array[3 * height * width + y * width + x] = 0.0f;
+    output_array[4 * height * width + y * width + x] = 0.0f;
   }
 }
 
 cudaError_t PreprocessCuda::undistortImage_launch(
   const InputImageBGR8Type * input_image, const double * dist_coeffs, const double * camera_matrix,
   const double * projection_matrix, const size_t width, const size_t height,
-  InputImageBGR8Type * output_image, InputArrayRGBDI * output_array)
+  InputImageBGR8Type * output_image, float * output_array)
 {
   dim3 threads(16, 16);
   dim3 blocks((width + threads.x - 1) / threads.x, (height + threads.y - 1) / threads.y);
@@ -230,7 +230,7 @@ __global__ void projectPoints_kernel(
   const InputPointType * input_points, InputImageBGR8Type * undistorted_image,
   const double * tf_matrix, const double * projection_matrix, const size_t num_points,
   const size_t width, const size_t height, const double lidar_range, const int dilation_size,
-  float * metric_depth_buffer, InputArrayRGBDI * output_array, uint32_t * num_points_projected)
+  float * metric_depth_buffer, float * output_array, uint32_t * num_points_projected)
 {
   size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -276,8 +276,8 @@ __global__ void projectPoints_kernel(
           InputImageBGR8Type color = jet_colormap(static_cast<float>(p.intensity) / 255.0f);
           size_t pixel_idx = v * width + u;
 
-          output_array[pixel_idx].depth = current_metric_depth / lidar_range;
-          output_array[pixel_idx].intensity = static_cast<float>(p.intensity) / 255.0f;
+          output_array[3 * height * width + pixel_idx] = current_metric_depth / lidar_range;
+          output_array[4 * height * width + pixel_idx] = static_cast<float>(p.intensity) / 255.0f;
 
           undistorted_image[pixel_idx] = color;
           atomicAdd(num_points_projected, 1);
@@ -305,8 +305,10 @@ __global__ void projectPoints_kernel(
                     __float_as_uint(-current_metric_depth));
 
                   if (neighbor_returned_int == neighbor_assumed_int) {
-                    output_array[neighbor_idx].depth = current_metric_depth / lidar_range;
-                    output_array[neighbor_idx].intensity = static_cast<float>(p.intensity) / 255.0f;
+                    output_array[3 * height * width + neighbor_idx] =
+                      current_metric_depth / lidar_range;
+                    output_array[4 * height * width + neighbor_idx] =
+                      static_cast<float>(p.intensity) / 255.0f;
                     undistorted_image[neighbor_idx] = color;
                     break;
                   }
@@ -326,8 +328,7 @@ __global__ void projectPoints_kernel(
 cudaError_t PreprocessCuda::projectPoints_launch(
   const InputPointType * input_points, InputImageBGR8Type * undistorted_image,
   const double * tf_matrix, const double * projection_matrix, const size_t num_points,
-  const size_t width, const size_t height, InputArrayRGBDI * output_array,
-  uint32_t * num_points_projected)
+  const size_t width, const size_t height, float * output_array, uint32_t * num_points_projected)
 {
   dim3 threads(256);
   dim3 blocks((num_points + threads.x - 1) / threads.x);

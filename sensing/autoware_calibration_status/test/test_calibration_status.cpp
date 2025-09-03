@@ -17,16 +17,9 @@
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <autoware/cuda_utils/cuda_gtest_utils.hpp>
-#include <autoware/point_types/memory.hpp>
-#include <autoware/point_types/types.hpp>
-#include <point_cloud_msg_wrapper/point_cloud_msg_wrapper.hpp>
-#include <tf2_eigen/tf2_eigen.hpp>
 
-#include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
 
-#include <cuda_runtime_api.h>
 #include <gtest/gtest.h>
 
 #include <cstdint>
@@ -35,10 +28,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-
-using sensor_msgs::msg::CameraInfo;
-using sensor_msgs::msg::Image;
-using sensor_msgs::msg::PointCloud2;
 
 namespace autoware::calibration_status
 {
@@ -107,28 +96,29 @@ TEST_F(CalibrationStatusTest, TestCalibrationStatusProcessingCalibratedSamples)
 
   for (const auto & sample : samples) {
     auto preview_img_msg = std::make_shared<sensor_msgs::msg::Image>();
-    preview_img_msg->header = sample.image->header;
-    preview_img_msg->height = sample.image->height;
-    preview_img_msg->width = sample.image->width;
-    preview_img_msg->encoding = sample.image->encoding;
-    preview_img_msg->step = sample.image->step;
-    preview_img_msg->is_bigendian = sample.image->is_bigendian;
-    preview_img_msg->data.resize(sample.image->data.size());
+    preview_img_msg->header = sample.image_bgr->header;
+    preview_img_msg->height = sample.image_bgr->height;
+    preview_img_msg->width = sample.image_bgr->width;
+    preview_img_msg->encoding = sample.image_bgr->encoding;
+    preview_img_msg->step = sample.image_bgr->step;
+    preview_img_msg->is_bigendian = sample.image_bgr->is_bigendian;
+    preview_img_msg->data.resize(sample.image_bgr->data.size());
     uint8_t * preview_img_data = preview_img_msg->data.data();
     auto result = calibration_status->process(
-      sample.pointcloud, sample.image_undistorted, sample.camera_info_calibrated,
+      sample.pointcloud, sample.image_bgr, sample.camera_info_calibrated,
       sample.lidar_to_camera_tf_calibrated, preview_img_data);
     if (save_test_images) {
       data_utils::save_img(
         preview_img_msg->data, preview_img_msg->width, preview_img_msg->height, data_dir,
-        sample.sample_name + "_fused_calibrated.png");
+        sample.sample_name + "_fused_calibrated.png", CV_8UC3, preview_img_msg->encoding);
     }
     auto is_calibrated = result.calibration_confidence > result.miscalibration_confidence;
     EXPECT_TRUE(is_calibrated)
       << "Calibration status should be true for calibrated sample. Calibration confidence: "
       << result.calibration_confidence
       << ", Miscalibration confidence: " << result.miscalibration_confidence;
-    GTEST_LOG_(INFO) << "Calibration confidence: " << result.calibration_confidence
+    GTEST_LOG_(INFO) << "Sample: " << sample.sample_name
+                     << ", Calibration confidence: " << result.calibration_confidence
                      << ", Miscalibration confidence: " << result.miscalibration_confidence;
   }
 }
@@ -141,28 +131,29 @@ TEST_F(CalibrationStatusTest, TestCalibrationStatusProcessingMisalibratedSamples
 
   for (const auto & sample : samples) {
     auto preview_img_msg = std::make_shared<sensor_msgs::msg::Image>();
-    preview_img_msg->header = sample.image->header;
-    preview_img_msg->height = sample.image->height;
-    preview_img_msg->width = sample.image->width;
-    preview_img_msg->encoding = sample.image->encoding;
-    preview_img_msg->step = sample.image->step;
-    preview_img_msg->is_bigendian = sample.image->is_bigendian;
-    preview_img_msg->data.resize(sample.image->data.size());
+    preview_img_msg->header = sample.image_bgr->header;
+    preview_img_msg->height = sample.image_bgr->height;
+    preview_img_msg->width = sample.image_bgr->width;
+    preview_img_msg->encoding = sample.image_bgr->encoding;
+    preview_img_msg->step = sample.image_bgr->step;
+    preview_img_msg->is_bigendian = sample.image_bgr->is_bigendian;
+    preview_img_msg->data.resize(sample.image_bgr->data.size());
     uint8_t * preview_img_data = preview_img_msg->data.data();
     auto result = calibration_status->process(
-      sample.pointcloud, sample.image_undistorted, sample.camera_info_miscalibrated,
+      sample.pointcloud, sample.image_bgr, sample.camera_info_miscalibrated,
       sample.lidar_to_camera_tf_miscalibrated, preview_img_data);
     if (save_test_images) {
       data_utils::save_img(
         preview_img_msg->data, preview_img_msg->width, preview_img_msg->height, data_dir,
-        sample.sample_name + "_fused_miscalibrated.png");
+        sample.sample_name + "_fused_miscalibrated.png", CV_8UC3, preview_img_msg->encoding);
     }
     auto is_calibrated = result.calibration_confidence > result.miscalibration_confidence;
     EXPECT_FALSE(is_calibrated)
       << "Calibration status should be false for miscalibrated sample. Calibration confidence: "
       << result.calibration_confidence
       << ", Miscalibration confidence: " << result.miscalibration_confidence;
-    GTEST_LOG_(INFO) << "Calibration confidence: " << result.calibration_confidence
+    GTEST_LOG_(INFO) << "Sample: " << sample.sample_name
+                     << ", Calibration confidence: " << result.calibration_confidence
                      << ", Miscalibration confidence: " << result.miscalibration_confidence;
   }
 }

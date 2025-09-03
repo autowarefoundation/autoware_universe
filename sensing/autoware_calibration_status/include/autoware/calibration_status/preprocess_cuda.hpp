@@ -65,7 +65,7 @@ public:
   cudaError_t undistortImage_launch(
     const InputImageBGR8Type * input_image, const double * dist_coeffs,
     const double * camera_matrix, const double * projection_matrix, const size_t width,
-    const size_t height, InputImageBGR8Type * output_image, InputArrayRGBDI * output_array);
+    const size_t height, InputImageBGR8Type * output_image, float * output_array);
 
   /**
    * @brief Launch point cloud projection kernel
@@ -88,8 +88,7 @@ public:
   cudaError_t projectPoints_launch(
     const InputPointType * input_points, InputImageBGR8Type * undistorted_image,
     const double * tf_matrix, const double * projection_matrix, const size_t num_points,
-    const size_t width, const size_t height, InputArrayRGBDI * output_array,
-    uint32_t * num_points_projected);
+    const size_t width, const size_t height, float * output_array, uint32_t * num_points_projected);
 
 private:
   double lidar_range_;
