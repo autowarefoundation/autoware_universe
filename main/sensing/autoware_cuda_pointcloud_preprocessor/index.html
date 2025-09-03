@@ -9486,6 +9486,8 @@
         
           
         
+          
+        
       
       
         <label class="md-nav__link" for="__nav_9_1_2" id="__nav_9_1_2_label" tabindex="0">
@@ -9522,6 +9524,20 @@
     <li class="md-nav__item">
       <a href="docs/cuda-pointcloud-preprocessor/" class="md-nav__link">
         cuda_pointcloud_preprocessor
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="docs/cuda-polar-voxel-outlier-filter/" class="md-nav__link">
+        cuda_polar_voxel_outlier_filter
       </a>
     </li>
   
@@ -14045,7 +14061,7 @@
 <div><h1 id="autoware_cuda_pointcloud_preprocessor">autoware_cuda_pointcloud_preprocessor<a class="headerlink" href="#autoware_cuda_pointcloud_preprocessor" title="Permanent link">#</a></h1>
 <h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
 <p>The pointcloud preprocessing implemented in <code>autoware_pointcloud_preprocessor</code> has been thoroughly tested in autoware. However, the latency it introduces does not scale well with modern LiDAR devices due to the high number of points they introduce.</p>
-<p>To alleviate this issue, this package reimplements most of the pipeline presented in <code>autoware_pointcloud_preprocessor</code> leveraging the use of GPGPUs. In particular, this package makes use of CUDA to provide accelerated versions of the already established implementations, while also maintaining compatibility with normal ROS nodes/topics. &lt;!-- cSpell: ignore GPGPUs &gt;</p>
+<p>To alleviate this issue, this package reimplements most of the pipeline presented in <code>autoware_pointcloud_preprocessor</code> leveraging the use of GPGPUs. In particular, this package makes use of CUDA to provide accelerated versions of the already established implementations, while also maintaining compatibility with normal ROS nodes/topics. <!-- cSpell: ignore GPGPUs --></p>
 <h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
 <p>A detailed description of each filter's algorithm is available in the following links.</p>
 <table>
@@ -14071,6 +14087,11 @@
 <td>cuda_voxel_grid_downsample_filter</td>
 <td>Implements voxel downsample filtering of the <code>autoware_pointcloud_preprocessor</code>'s CPU version</td>
 <td><a href="docs/cuda-voxel-grid-downsample/">link</a></td>
+</tr>
+<tr>
+<td>cuda_polar_voxel_outlier_filter</td>
+<td>Implements polar voxel outlier filtering of the <code>autoware_pointcloud_preprocessor</code>'s CPU version</td>
+<td><a href="docs/cuda-polar-voxel-outlier-filter/">link</a></td>
 </tr>
 </tbody>
 </table>
