@@ -52,9 +52,9 @@ using autoware_planning_msgs::msg::LaneletRoute;
  */
 struct ColWithDistance
 {
-  int64_t index;           //!< Column index in the input matrix.
+  int64_t index;            //!< Column index in the input matrix.
   double distance_squared;  //!< Squared distance from the center.
-  bool inside;             //!< Whether the column is within the mask range.
+  bool inside;              //!< Whether the column is within the mask range.
 };
 
 /**

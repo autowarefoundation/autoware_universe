@@ -38,7 +38,7 @@ namespace autoware::diffusion_planner::preprocess
 // Internal functions declaration
 namespace
 {
-using namespace autoware_perception_msgs::msg;
+using autoware_perception_msgs::msg::TrafficLightElement;
 
 Eigen::MatrixXd process_segments_to_matrix(
   const std::vector<LaneSegment> & lane_segments, ColLaneIDMaps & col_id_mapping);
