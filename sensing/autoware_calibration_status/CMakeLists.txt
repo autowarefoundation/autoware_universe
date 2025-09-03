@@ -89,9 +89,9 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_87,code=sm_87")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
-  # NOTE(knzo25): PTX support for newer GPUs until we can compile directly
+  # NOTE(amadeuszsz): PTX support for newer GPUs until we can compile directly
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
-  # TODO(knzo25): enable when the driver supports it
+  # TODO(amadeuszsz): enable when the driver supports it
   # list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
 
   cuda_add_library(${PROJECT_NAME}_cuda_lib SHARED
@@ -149,50 +149,56 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
       test/test_preprocessing.cpp
     )
     target_include_directories(test_preprocessing PUBLIC
-      ${test_calibration_status_SOURCE_DIR}
-      ${autoware_cuda_utils_INCLUDE_DIRS}
       ${autoware_point_types_INCLUDE_DIRS}
-      ${tf2_eigen_INCLUDE_DIRS}
-      ${OpenCV_INCLUDE_DIRS}
     )
     target_link_libraries(test_preprocessing
       ${PROJECT_NAME}_lib
       gtest
       gtest_main
-      ZLIB::ZLIB
     )
     ament_target_dependencies(test_preprocessing
-      ament_index_cpp
-      tf2_eigen
-      point_cloud_msg_wrapper
       OpenCV
+      ZLIB
     )
     ament_add_test(test_preprocessing
       GENERATE_RESULT_FOR_RETURN_CODE_ZERO
       COMMAND "$<TARGET_FILE:test_preprocessing>"
     )
 
+    add_executable(test_model_inference
+      test/test_model_inference.cpp
+    )
+    target_include_directories(test_model_inference PUBLIC
+      ${autoware_point_types_INCLUDE_DIRS}
+    )
+    target_link_libraries(test_model_inference
+      ${PROJECT_NAME}_lib
+      gtest
+      gtest_main
+    )
+    ament_target_dependencies(test_model_inference
+      OpenCV
+      ZLIB
+    )
+    ament_add_test(test_model_inference
+      GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+      COMMAND "$<TARGET_FILE:test_model_inference>"
+    )
+
     add_executable(test_calibration_status
       test/test_calibration_status.cpp
     )
     target_include_directories(test_calibration_status PUBLIC
-      ${test_calibration_status_SOURCE_DIR}
-      ${autoware_cuda_utils_INCLUDE_DIRS}
       ${autoware_point_types_INCLUDE_DIRS}
-      ${tf2_eigen_INCLUDE_DIRS}
-      ${OpenCV_INCLUDE_DIRS}
     )
     target_link_libraries(test_calibration_status
       ${PROJECT_NAME}_lib
       gtest
       gtest_main
-      ZLIB::ZLIB
     )
     ament_target_dependencies(test_calibration_status
-      ament_index_cpp
-      tf2_eigen
-      point_cloud_msg_wrapper
       OpenCV
+      ZLIB
     )
     ament_add_test(test_calibration_status
       GENERATE_RESULT_FOR_RETURN_CODE_ZERO
@@ -202,6 +208,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     # Suppress pedantic warnings for test target (PCL)
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
       target_compile_options(test_preprocessing PRIVATE -Wno-pedantic)
+      target_compile_options(test_model_inference PRIVATE -Wno-pedantic)
       target_compile_options(test_calibration_status PRIVATE -Wno-pedantic)
     endif()
   endif()
