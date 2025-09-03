@@ -111,7 +111,7 @@ void ImuCorrector::callback_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_
   imu_msg.angular_velocity.x = imu_msg.angular_velocity.x - angular_velocity_offset_x_imu_link_;
   imu_msg.angular_velocity.y = imu_msg.angular_velocity.y - angular_velocity_offset_y_imu_link_;
   imu_msg.angular_velocity.z = imu_msg.angular_velocity.z - angular_velocity_offset_z_imu_link_;
-  
+
   if (correct_for_bias_) {
     imu_msg.angular_velocity.x -= gyro_bias_.vector.x;
     imu_msg.angular_velocity.y -= gyro_bias_.vector.y;
