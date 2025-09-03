@@ -187,7 +187,7 @@ bool BoundingBoxShapeModel::fitLShape(
   }
 
   tf2::Quaternion quat;
-  quat.setEuler(/* roll */ 0, /* pitch */ 0, /* yaw */ std::atan2(e_1_star.y(), e_1_star.x()));
+  quat.setEuler(/* roll */ 0, /* pitch */ 0, /* yaw */ raw_yaw);
   pose_output.orientation = tf2::toMsg(quat);
   // check wrong output
   shape_output.dimensions.x = std::max(static_cast<float>(shape_output.dimensions.x), epsilon);
