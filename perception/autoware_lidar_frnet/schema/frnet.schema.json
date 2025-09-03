@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for FRNet node",
+  "$comment": "This schema is not considered in CI workflow. See https://github.com/autowarefoundation/autoware_universe/pull/8205#issuecomment-2255074224.",
+  "type": "object",
+  "definitions": {
+    "frnet": {
+      "type": "object",
+      "properties": {
+        "onnx_path": {
+          "type": "string",
+          "description": "A path to ONNX model file.",
+          "default": "$(var model_path)/frnet.onnx",
+          "pattern": "\\.onnx$"
+        },
+        "trt_precision": {
+          "type": "string",
+          "description": "A precision of TensorRT engine.",
+          "default": "fp16",
+          "enum": ["fp16", "fp32"]
+        },
+        "fov_up_deg": {
+          "type": "number",
+          "description": "LiDAR's upper elevation angle in degrees.",
+          "default": "10.0",
+          "minimum": -90.0,
+          "maximum": 90.0
+        },
+        "fov_down_deg": {
+          "type": "number",
+          "description": "LiDAR's lower elevation angle in degrees.",
+          "default": "-30.0",
+          "minimum": -90.0,
+          "maximum": 90.0
+        },
+        "frustum_width": {
+          "type": "integer",
+          "description": "Width of the FRNet frustum in pixels.",
+          "default": "480",
+          "minimum": 1
+        },
+        "frustum_height": {
+          "type": "integer",
+          "description": "Height of the FRNet frustum in pixels.",
+          "default": "480",
+          "minimum": 1
+        },
+        "interpolation_width": {
+          "type": "integer",
+          "description": "Width of the FRNet LiDAR's points to 2D plane interpolation in pixels.",
+          "default": "480",
+          "minimum": 1
+        },
+        "interpolation_height": {
+          "type": "integer",
+          "description": "Height of the FRNet LiDAR's points to 2D plane interpolation in pixels.",
+          "default": "480",
+          "minimum": 1
+        },
+        "score_threshold": {
+          "type": "number",
+          "description": "A threshold value for the score model segmentation result. If the score is lower than this value, the point will obtain the 'unknown' class ID.",
+          "default": "0.0"
+        },
+        "excluded_class_names": {
+          "type": "array",
+          "description": "A list of class names to be excluded in filtered output cloud.",
+          "items": {
+            "type": "string"
+          },
+          "default": ["driveable_surface"]
+        },
+        "palette": {
+          "type": "array",
+          "description": "A sequence of RGB values for each class name. The length of the array must be 3 times the number of class names.",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "default": [
+            255, 120, 50, 255, 192, 203, 255, 255, 0, 0, 150, 245, 0, 255, 255, 255, 127, 0, 255, 0,
+            0, 255, 240, 150, 135, 60, 0, 160, 32, 240, 255, 0, 255, 139, 137, 137, 75, 0, 75, 150,
+            240, 80, 230, 230, 250, 0, 175, 0, 0, 0, 0
+          ]
+        }
+      },
+      "required": [
+        "onnx_path",
+        "trt_precision",
+        "fov_up_deg",
+        "fov_down_deg",
+        "frustum_width",
+        "frustum_height",
+        "interpolation_width",
+        "interpolation_height",
+        "score_threshold",
+        "excluded_class_names",
+        "palette"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/frnet"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
