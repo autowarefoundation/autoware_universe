@@ -1,0 +1,63 @@
+// Copyright 2025 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "autoware_trajectory_ranker/metrics/longitudinal_jerk_metric.hpp"
+
+#include <algorithm>
+#include <cmath>
+#include <memory>
+#include <vector>
+
+namespace autoware::trajectory_ranker::metrics
+{
+
+void LongitudinalJerk::evaluate(
+  const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result,
+  const double max_value) const
+{
+  const auto points = result->points();
+  if (!points || points->size() < 2) {
+    return;
+  }
+
+  std::vector<double> jerk;
+  std::vector<double> acceleration;
+  constexpr double epsilon = 1.0e-3;
+  const double time_resolution = resolution() > epsilon ? resolution() : epsilon;
+
+  acceleration.reserve(result->points()->size());
+  for (size_t i = 0; i < result->points()->size() - 1; i++) {
+    acceleration.push_back(
+      (result->points()->at(i + 1).longitudinal_velocity_mps -
+       result->points()->at(i).longitudinal_velocity_mps) /
+      time_resolution);
+  }
+  acceleration.push_back(acceleration.back());
+
+  jerk.reserve(result->points()->size());
+  for (size_t i = 0; i < acceleration.size() - 1; i++) {
+    const auto calculated_jerk = (acceleration.at(i + 1) - acceleration.at(i)) / time_resolution;
+    jerk.push_back(std::min(1.0, std::abs(calculated_jerk) / max_value));
+  }
+  jerk.push_back(jerk.back());
+
+  result->set_metric(index(), jerk);
+}
+
+}  // namespace autoware::trajectory_ranker::metrics
+
+#include <pluginlib/class_list_macros.hpp>
+PLUGINLIB_EXPORT_CLASS(
+  autoware::trajectory_ranker::metrics::LongitudinalJerk,
+  autoware::trajectory_ranker::metrics::MetricInterface)
