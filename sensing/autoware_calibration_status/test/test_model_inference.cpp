@@ -29,7 +29,6 @@
 #include <string>
 #include <vector>
 
-
 namespace autoware::calibration_status
 {
 
