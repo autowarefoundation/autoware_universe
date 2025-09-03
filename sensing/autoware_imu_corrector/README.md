@@ -71,7 +71,7 @@ The Extended Kalman Filter (EKF) is used for scale estimation. The NDT pose is u
 | Name                  | Type                                 | Description                                 |
 | --------------------- | ------------------------------------ | ------------------------------------------- |
 | `~/output/gyro_bias`  | `geometry_msgs::msg::Vector3Stamped` | bias of the gyroscope [rad/s]               |
-| `~/output/gyro_scale` | `geometry_msgs::msg::Vector3Stamped` | estimated scale of the gyroscope [unitless] |
+| `~/output/gyro_scale` | `geometry_msgs::msg::Vector3Stamped` | estimated scale of the gyroscope [no units] |
 
 ### Parameters (Bias estimation)
 
@@ -118,13 +118,13 @@ Note that this node also uses `angular_velocity_offset_x`, `angular_velocity_off
 
 In order to test the result of the scale and bias estimation for the gyro, an optional artificial scale and bias can be injected into the raw IMU data using the parameters below. The IMU scale can be observed through an output that can be remapped to be the input of the 'imu_corrector'.
 
-### Output
+## Output
 
 | Name                  | Type                    | Description                     |
 | --------------------- | ----------------------- | ------------------------------- |
 | `~/output/imu_scaled` | `sensor_msgs::msg::Imu` | IMU data after scale correction |
 
-### Parameters
+## Parameters
 
 | Name               | Type   | Description                                                         |
 | ------------------ | ------ | ------------------------------------------------------------------- |
