@@ -189,7 +189,7 @@ void CropBoxFilterComponent::faster_filter(
 
   // Note that tf_input_orig_frame_ is the input frame, while tf_input_frame_ is the frame of the
   // crop box
-  output.header.frame_id = tf_input_frame_;
+  output.header.frame_id = tf_output_frame_;
 
   output.height = 1;
   output.fields = input->fields;
@@ -279,7 +279,7 @@ void CropBoxFilterComponent::publish_crop_box_polygon()
   const double z2 = param_.max_z;
 
   geometry_msgs::msg::PolygonStamped polygon_msg;
-  polygon_msg.header.frame_id = tf_input_frame_;
+  polygon_msg.header.frame_id = tf_output_frame_;
   polygon_msg.header.stamp = get_clock()->now();
   polygon_msg.polygon.points.push_back(generatePoint(x1, y1, z1));
   polygon_msg.polygon.points.push_back(generatePoint(x2, y2, z1));

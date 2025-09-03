@@ -423,7 +423,7 @@ void autoware::pointcloud_preprocessor::Filter::faster_input_indices_callback(
   // For performance reason, defer the transform computation.
   // Do not use pcl_ros::transformPointCloud(). It's too slow due to the unnecessary copy.
   TransformInfo transform_info;
-  if (!calculate_transform_matrix(tf_input_frame_, *cloud, transform_info)) return;
+  if (!calculate_transform_matrix(tf_output_frame_, *cloud, transform_info)) return;
 
   // Need setInputCloud() here because we have to extract x/y/z
   IndicesPtr vindices;
