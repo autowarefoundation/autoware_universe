@@ -295,12 +295,12 @@ void TRTBEVFormerNode::startImageSubscription()
   sub_bl_img_.subscribe(this, "~/input/topic_img_bl", rclcpp::QoS{1}.get_rmw_qos_profile());
   sub_b_img_.subscribe(this, "~/input/topic_img_b", rclcpp::QoS{1}.get_rmw_qos_profile());
   sub_br_img_.subscribe(this, "~/input/topic_img_br", rclcpp::QoS{1}.get_rmw_qos_profile());
-  sub_can_bus_.subscribe(this, "~/input/can_bus", rclcpp::QoS{1}.get_rmw_qos_profile());
+  sub_kinematic_state.subscribe(this, "~/input/can_bus", rclcpp::QoS{1}.get_rmw_qos_profile());
 
   // Synchronize
   sync_ = std::make_shared<Sync>(
     MultiSensorSyncPolicy(10), sub_fl_img_, sub_f_img_, sub_fr_img_, sub_bl_img_, sub_b_img_,
-    sub_br_img_, sub_can_bus_);
+    sub_br_img_, sub_kinematic_state);
 
   sync_->registerCallback(std::bind(&TRTBEVFormerNode::callback, this, _1, _2, _3, _4, _5, _6, _7));
 }
