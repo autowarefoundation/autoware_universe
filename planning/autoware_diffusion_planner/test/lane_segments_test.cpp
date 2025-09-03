@@ -41,7 +41,7 @@ TEST_F(LaneSegmentsTest, LaneSegmentContextFunctionality)
   preprocess::LaneSegmentContext context(lanelet_map_);
 
   // Create identity transformation matrix (no transformation)
-  Eigen::Matrix4f transform_matrix = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d transform_matrix = Eigen::Matrix4d::Identity();
 
   // Create empty traffic light map (no traffic lights)
   std::map<lanelet::Id, preprocess::TrafficSignalStamped> traffic_light_id_map;
