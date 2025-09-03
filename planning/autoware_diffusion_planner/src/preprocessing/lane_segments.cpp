@@ -133,12 +133,9 @@ std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_lane_s
   Eigen::MatrixXd lane_matrix(SEGMENT_POINT_DIM, total_lane_points);
   lane_matrix.block(0, 0, SEGMENT_POINT_DIM, total_lane_points) =
     ego_centric_lane_segments.block(0, 0, SEGMENT_POINT_DIM, total_lane_points);
-  // std::vector<float> lane_tensor_data(lane_matrix.data(), lane_matrix.data() +
-  // lane_matrix.size());
-  std::vector<float> lane_tensor_data(lane_matrix.size());
-  std::transform(
-    lane_matrix.data(), lane_matrix.data() + lane_matrix.size(), lane_tensor_data.begin(),
-    [](double value) { return static_cast<float>(value); });
+  const Eigen::MatrixXf lane_matrix_f = lane_matrix.cast<float>().eval();
+  std::vector<float> lane_tensor_data(
+    lane_matrix_f.data(), lane_matrix_f.data() + lane_matrix_f.size());
 
   // Extract lane speed tensor data
   const auto total_speed_points = LANES_SPEED_LIMIT_SHAPE[1];

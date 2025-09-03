@@ -196,7 +196,7 @@ Trajectory get_trajectory_from_prediction_matrix(
   trajectory.header.stamp = stamp;
   trajectory.header.frame_id = "map";
   // TODO(Daniel): check there is no issue with the speed of 1st point (index 0)
-  constexpr double dt = 0.1f;
+  constexpr double dt = 0.1;
   Eigen::Vector4d ego_position = transform_ego_to_map * Eigen::Vector4d(0.0, 0.0, 0.0, 1.0);
   double prev_x = ego_position(0);
   double prev_y = ego_position(1);
