@@ -56,6 +56,9 @@ private:
   double angular_velocity_stddev_yy_imu_link_;
   double angular_velocity_stddev_zz_imu_link_;
 
+  bool correct_for_bias_;
+  bool correct_for_scale_;
+
   Vector3Stamped gyro_bias_;
   Vector3Stamped gyro_scale_;
 

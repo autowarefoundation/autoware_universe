@@ -7,3 +7,5 @@
     angular_velocity_stddev_yy: 0.03  # [rad/s]
     angular_velocity_stddev_zz: 0.03  # [rad/s]
     acceleration_stddev: 10000.0
+    correct_for_bias: false
+    correct_for_scale: false
