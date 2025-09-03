@@ -38,14 +38,16 @@ namespace autoware::diffusion_planner::preprocess
 // Internal functions declaration
 namespace
 {
+using autoware_perception_msgs::msg::TrafficLightElement;
+
 Eigen::MatrixXf process_segments_to_matrix(
   const std::vector<LaneSegment> & lane_segments, ColLaneIDMaps & col_id_mapping);
 Eigen::MatrixXf process_segment_to_matrix(const LaneSegment & segment);
-Eigen::Matrix<float, 1, TRAFFIC_LIGHT_ONE_HOT_DIM> get_traffic_signal_row_vector(
-  const autoware_perception_msgs::msg::TrafficLightGroup & signal);
 void transform_selected_rows(
   const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, int64_t num_segments,
   int64_t row_idx, bool do_translation = true);
+uint8_t identify_current_light_status(
+  const int64_t turn_direction, const std::vector<TrafficLightElement> & traffic_light_elements);
 }  // namespace
 
 // LaneSegmentContext implementation
@@ -90,8 +92,10 @@ std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_route_
       0, added_route_segments * POINTS_PER_SEGMENT, SEGMENT_POINT_DIM, POINTS_PER_SEGMENT) =
       map_lane_segments_matrix_.block(0, row_idx, SEGMENT_POINT_DIM, POINTS_PER_SEGMENT);
 
+    const int64_t turn_direction = map_lane_segments_matrix_(TURN_DIRECTION, row_idx);
     add_traffic_light_one_hot_encoding_to_segment(
-      traffic_light_id_map, full_route_segment_matrix, row_idx, added_route_segments);
+      traffic_light_id_map, full_route_segment_matrix, row_idx, added_route_segments,
+      turn_direction);
 
     speed_limit_vector[added_route_segments] = map_lane_segments_matrix_(SPEED_LIMIT, row_idx);
     ++added_route_segments;
@@ -143,7 +147,8 @@ std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_lane_s
 
 void LaneSegmentContext::add_traffic_light_one_hot_encoding_to_segment(
   const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
-  Eigen::MatrixXf & segment_matrix, const int64_t row_idx, const int64_t col_counter) const
+  Eigen::MatrixXf & segment_matrix, const int64_t row_idx, const int64_t col_counter,
+  const int64_t turn_direction) const
 {
   const auto lane_id_itr = col_id_mapping_.matrix_col_to_lane_id.find(row_idx);
   if (lane_id_itr == col_id_mapping_.matrix_col_to_lane_id.end()) {
@@ -152,9 +157,9 @@ void LaneSegmentContext::add_traffic_light_one_hot_encoding_to_segment(
   const auto assigned_lanelet = lanelet_map_ptr_->laneletLayer.get(lane_id_itr->second);
   auto tl_reg_elems = assigned_lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
 
-  const Eigen::Matrix<float, TRAFFIC_LIGHT_ONE_HOT_DIM, 1> traffic_light_one_hot_encoding = [&]() {
-    Eigen::Matrix<float, TRAFFIC_LIGHT_ONE_HOT_DIM, 1> encoding =
-      Eigen::Matrix<float, TRAFFIC_LIGHT_ONE_HOT_DIM, 1>::Zero();
+  const Eigen::Vector<float, TRAFFIC_LIGHT_ONE_HOT_DIM> traffic_light_one_hot_encoding = [&]() {
+    Eigen::Vector<float, TRAFFIC_LIGHT_ONE_HOT_DIM> encoding =
+      Eigen::Vector<float, TRAFFIC_LIGHT_ONE_HOT_DIM>::Zero();
     if (tl_reg_elems.empty()) {
       encoding[TRAFFIC_LIGHT_NO_TRAFFIC_LIGHT - TRAFFIC_LIGHT] = 1.0f;
       return encoding;
@@ -168,8 +173,14 @@ void LaneSegmentContext::add_traffic_light_one_hot_encoding_to_segment(
     }
 
     const auto & signal = traffic_light_stamped_info_itr->second.signal;
-    return Eigen::Matrix<float, TRAFFIC_LIGHT_ONE_HOT_DIM, 1>(
-      get_traffic_signal_row_vector(signal).transpose());
+    const uint8_t traffic_color = identify_current_light_status(turn_direction, signal.elements);
+    return Eigen::Vector<float, TRAFFIC_LIGHT_ONE_HOT_DIM>{
+      traffic_color == TrafficLightElement::GREEN,    // 3
+      traffic_color == TrafficLightElement::AMBER,    // 2
+      traffic_color == TrafficLightElement::RED,      // 1
+      traffic_color == TrafficLightElement::UNKNOWN,  // 0
+      traffic_color == TrafficLightElement::WHITE     // 4
+    };
   }();
 
   Eigen::MatrixXf one_hot_encoding_matrix =
@@ -275,8 +286,10 @@ Eigen::MatrixXf LaneSegmentContext::transform_points_and_add_traffic_info(
       map_lane_segments_matrix_.block<FULL_MATRIX_ROWS, POINTS_PER_SEGMENT>(
         0, col_idx_in_original_map);
 
+    const int64_t turn_direction =
+      map_lane_segments_matrix_(TURN_DIRECTION, col_idx_in_original_map);
     add_traffic_light_one_hot_encoding_to_segment(
-      traffic_light_id_map, output_matrix, col_idx_in_original_map, added_segments);
+      traffic_light_id_map, output_matrix, col_idx_in_original_map, added_segments, turn_direction);
 
     ++added_segments;
     if (added_segments >= num_segments) {
@@ -309,26 +322,79 @@ void transform_selected_rows(
     transformed_block.block(0, 0, 2, num_segments * POINTS_PER_SEGMENT);
 }
 
-Eigen::Matrix<float, 1, TRAFFIC_LIGHT_ONE_HOT_DIM> get_traffic_signal_row_vector(
-  const autoware_perception_msgs::msg::TrafficLightGroup & signal)
+uint8_t identify_current_light_status(
+  const int64_t turn_direction, const std::vector<TrafficLightElement> & traffic_light_elements)
 {
-  const auto is_green = autoware::traffic_light_utils::hasTrafficLightCircleColor(
-    signal.elements, autoware_perception_msgs::msg::TrafficLightElement::GREEN);
-  const auto is_amber = autoware::traffic_light_utils::hasTrafficLightCircleColor(
-    signal.elements, autoware_perception_msgs::msg::TrafficLightElement::AMBER);
-  const auto is_red = autoware::traffic_light_utils::hasTrafficLightCircleColor(
-    signal.elements, autoware_perception_msgs::msg::TrafficLightElement::RED);
-
-  const bool has_color = (is_green || is_amber || is_red);
-
-  if (
-    static_cast<float>(is_green) + static_cast<float>(is_amber) + static_cast<float>(is_red) >
-    1.f) {
-    throw std::invalid_argument("more than one traffic light");
+  // If not intersection, return WHITE (which means no traffic light is present)
+  if (turn_direction == LaneSegment::TURN_DIRECTION_NONE) {
+    return TrafficLightElement::WHITE;
   }
-  return {
-    static_cast<float>(is_green), static_cast<float>(is_amber), static_cast<float>(is_red),
-    static_cast<float>(!has_color), 0.f};
+
+  // Filter out ineffective elements (color == 0 which is UNKNOWN)
+  std::vector<TrafficLightElement> effective_elements;
+  for (const auto & element : traffic_light_elements) {
+    if (element.color != TrafficLightElement::UNKNOWN) {
+      effective_elements.push_back(element);
+    }
+  }
+
+  // If no effective elements, return UNKNOWN (0)
+  if (effective_elements.empty()) {
+    return TrafficLightElement::UNKNOWN;
+  }
+
+  // If only one effective element, return its color
+  if (effective_elements.size() == 1) {
+    return effective_elements[0].color;
+  }
+
+  // For multiple elements, find the one that matches the turn direction
+  // Map turn direction to corresponding arrow shape
+  const std::map<int64_t, uint8_t> direction_to_shape_map = {
+    {LaneSegment::TURN_DIRECTION_STRAIGHT, TrafficLightElement::UP_ARROW},  // straight
+    {LaneSegment::TURN_DIRECTION_LEFT, TrafficLightElement::LEFT_ARROW},    // left
+    {LaneSegment::TURN_DIRECTION_RIGHT, TrafficLightElement::RIGHT_ARROW}   // right
+  };
+
+  const auto target_shape_iter = direction_to_shape_map.find(turn_direction);
+  const uint8_t target_shape = (target_shape_iter != direction_to_shape_map.end())
+                                 ? target_shape_iter->second
+                                 : TrafficLightElement::UNKNOWN;
+
+  // If multiple matching elements, take the one with highest confidence
+  auto get_max_confidence_color = [](const std::vector<TrafficLightElement> & elements) {
+    return std::max_element(
+             elements.begin(), elements.end(),
+             [](const TrafficLightElement & a, const TrafficLightElement & b) {
+               return a.confidence < b.confidence;
+             })
+      ->color;
+  };
+
+  // First priority: Find elements with exactly matching direction
+  std::vector<TrafficLightElement> matching_elements;
+  for (const TrafficLightElement & element : effective_elements) {
+    if (element.shape == target_shape) {
+      matching_elements.push_back(element);
+    }
+  }
+  if (!matching_elements.empty()) {
+    return get_max_confidence_color(matching_elements);
+  }
+
+  // Second priority: Find circle elements
+  std::vector<TrafficLightElement> circle_elements;
+  for (const TrafficLightElement & element : effective_elements) {
+    if (element.shape == TrafficLightElement::CIRCLE) {
+      circle_elements.push_back(element);
+    }
+  }
+  if (!circle_elements.empty()) {
+    return get_max_confidence_color(circle_elements);
+  }
+
+  // If no matching direction or circle, return the element with highest confidence
+  return get_max_confidence_color(effective_elements);
 }
 
 Eigen::MatrixXf process_segments_to_matrix(
@@ -400,6 +466,7 @@ Eigen::MatrixXf process_segment_to_matrix(const LaneSegment & segment)
     segment_data(i, RB_Y) = right_boundaries[i].y();
     segment_data(i, SPEED_LIMIT) = segment.speed_limit_mps.value_or(0.0f);
     segment_data(i, LANE_ID) = static_cast<float>(segment.id);
+    segment_data(i, TURN_DIRECTION) = segment.turn_direction;
   }
 
   return segment_data;
