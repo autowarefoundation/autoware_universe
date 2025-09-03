@@ -33,6 +33,16 @@
         "acceleration_stddev": {
           "type": "number",
           "description": "acceleration standard deviation imu_link [m/s^2]."
+        },
+        "correct_for_bias": {
+          "type": "boolean",
+          "description": "Whether to correct for gyro bias.",
+          "default": false
+        },
+        "correct_for_scale": {
+          "type": "boolean",
+          "description": "Whether to correct for gyro scale.",
+          "default": false
         }
       },
       "required": [
