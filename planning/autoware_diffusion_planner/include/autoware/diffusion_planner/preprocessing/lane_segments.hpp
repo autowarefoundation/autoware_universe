@@ -46,6 +46,7 @@
 namespace autoware::diffusion_planner::preprocess
 {
 using autoware_planning_msgs::msg::LaneletRoute;
+using autoware_planning_msgs::msg::LaneletSegment;
 /**
  * @brief Represents a column index with its associated distance and whether it is inside a mask
  * range.
@@ -94,7 +95,7 @@ public:
   std::pair<std::vector<float>, std::vector<float>> get_route_segments(
     const Eigen::Matrix4d & transform_matrix,
     const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
-    const lanelet::ConstLanelets & current_lanes) const;
+    const LaneletRoute & route, const double center_x, const double center_y) const;
 
   /**
    * @brief Get lane segments and transform them to ego-centric coordinates.
@@ -148,7 +149,7 @@ private:
    */
   void compute_distances(
     const Eigen::Matrix4d & transform_matrix, std::vector<ColWithDistance> & distances,
-    const float center_x, const float center_y, const float mask_range = 100.0) const;
+    const double center_x, const double center_y, const double mask_range) const;
 
   /**
    * @brief Transform and select columns from input matrix based on distances.
@@ -163,6 +164,20 @@ private:
     const Eigen::Matrix4d & transform_matrix,
     const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
     const std::vector<ColWithDistance> & distances, int64_t m) const;
+
+  /**
+   * @brief Filter route lanelets starting from the closest lanelet to the center point.
+   *
+   * This function extracts lanelets from the route, finds the lanelet closest to the center point,
+   * and returns consecutive lanelets from that point onwards that are within the lane mask range.
+   *
+   * @param route The lanelet route to filter.
+   * @param center_x X-coordinate of the center point.
+   * @param center_y Y-coordinate of the center point.
+   * @return Filtered lanelets starting from the closest lanelet to the center, within mask range.
+   */
+  lanelet::Lanelets filter_route_lanelets(
+    const LaneletRoute & route, const double center_x, const double center_y) const;
 
   // variables
   Eigen::MatrixXd map_lane_segments_matrix_;

@@ -382,7 +382,6 @@ InputDataMap DiffusionPlanner::create_input_data()
     return {};
   }
 
-  route_handler_->setRoute(*route_ptr_);
   if (params_.update_traffic_light_group_info) {
     const auto & traffic_light_msg_timeout_s = params_.traffic_light_group_msg_timeout_seconds;
     preprocess::process_traffic_signals(
@@ -444,31 +443,15 @@ InputDataMap DiffusionPlanner::create_input_data()
 
   // route data on ego reference frame
   {
-    const auto & current_pose = ego_kinematic_state->pose.pose;
-    constexpr double backward_path_length{constants::BACKWARD_PATH_LENGTH_M};
-    constexpr double forward_path_length{constants::FORWARD_PATH_LENGTH_M};
-    lanelet::ConstLanelet current_preferred_lane;
-
-    if (
-      !route_handler_->isHandlerReady() || !route_handler_->getClosestPreferredLaneletWithinRoute(
-                                             current_pose, &current_preferred_lane)) {
-      RCLCPP_ERROR_STREAM_THROTTLE(
-        get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
-        "failed to find closest lanelet within route!!!");
-      return {};
-    }
-    auto current_lanes = route_handler_->getLaneletSequence(
-      current_preferred_lane, backward_path_length, forward_path_length);
-
     const auto [route_lanes, route_lanes_speed_limit] = lane_segment_context_->get_route_segments(
-      map_to_ego_transform, traffic_light_id_map_, current_lanes);
+      map_to_ego_transform, traffic_light_id_map_, *route_ptr_, center_x, center_y);
     input_data_map["route_lanes"] = replicate_for_batch(route_lanes);
     input_data_map["route_lanes_speed_limit"] = replicate_for_batch(route_lanes_speed_limit);
   }
 
   // goal pose
   {
-    const auto & goal_pose = route_handler_->getGoalPose();
+    const auto & goal_pose = route_ptr_->goal_pose;
 
     // Convert goal pose to 4x4 transformation matrix
     const Eigen::Matrix4d goal_pose_map_4x4 = utils::pose_to_matrix4f(goal_pose);
@@ -849,7 +832,6 @@ void DiffusionPlanner::on_map(const HADMapBin::ConstSharedPtr map_msg)
   // Create LaneSegmentContext with the static data
   lane_segment_context_ = std::make_unique<preprocess::LaneSegmentContext>(lanelet_map_ptr);
 
-  route_handler_->setMap(*map_msg);
   is_map_loaded_ = true;
 }
 

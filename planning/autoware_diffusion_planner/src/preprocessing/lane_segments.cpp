@@ -14,6 +14,7 @@
 
 #include "autoware/diffusion_planner/preprocessing/lane_segments.hpp"
 
+#include "autoware/diffusion_planner/constants.hpp"
 #include "autoware/diffusion_planner/dimensions.hpp"
 
 #include <autoware_lanelet2_extension/regulatory_elements/road_marking.hpp>  // for lanelet::autoware::RoadMarking
@@ -26,6 +27,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <map>
 #include <memory>
 #include <tuple>
@@ -68,7 +70,7 @@ LaneSegmentContext::LaneSegmentContext(const std::shared_ptr<lanelet::LaneletMap
 std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_route_segments(
   const Eigen::Matrix4d & transform_matrix,
   const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
-  const lanelet::ConstLanelets & current_lanes) const
+  const LaneletRoute & route, const double center_x, const double center_y) const
 {
   const auto total_route_points = ROUTE_LANES_SHAPE[1] * POINTS_PER_SEGMENT;
   Eigen::MatrixXd full_route_segment_matrix(SEGMENT_POINT_DIM, total_route_points);
@@ -77,12 +79,15 @@ std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_route_
 
   std::vector<float> speed_limit_vector(ROUTE_LANES_SHAPE[1]);
 
+  const lanelet::Lanelets route_lanelets = filter_route_lanelets(route, center_x, center_y);
+
   // Add traffic light one-hot encoding to the route segments
-  for (const auto & route_segment : current_lanes) {
+  for (const lanelet::Lanelet & route_segment : route_lanelets) {
     if (added_route_segments >= ROUTE_LANES_SHAPE[1]) {
       break;
     }
-    auto route_segment_row_itr = col_id_mapping_.lane_id_to_matrix_col.find(route_segment.id());
+    const auto route_segment_row_itr =
+      col_id_mapping_.lane_id_to_matrix_col.find(route_segment.id());
     if (route_segment_row_itr == col_id_mapping_.lane_id_to_matrix_col.end()) {
       continue;
     }
@@ -119,7 +124,9 @@ std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_lane_s
   }
   std::vector<ColWithDistance> distances;
   // Step 1: Compute distances
-  compute_distances(transform_matrix, distances, center_x, center_y, 100.0f);
+  compute_distances(
+    transform_matrix, distances, center_x, center_y,
+    autoware::diffusion_planner::constants::LANE_MASK_RANGE_M);
   // Step 2: Sort indices by distance
   std::sort(distances.begin(), distances.end(), [](const auto & a, const auto & b) {
     return a.distance_squared < b.distance_squared;
@@ -212,7 +219,7 @@ void LaneSegmentContext::apply_transforms(
 
 void LaneSegmentContext::compute_distances(
   const Eigen::Matrix4d & transform_matrix, std::vector<ColWithDistance> & distances,
-  const float center_x, const float center_y, const float mask_range) const
+  const double center_x, const double center_y, const double mask_range) const
 {
   const auto cols = map_lane_segments_matrix_.cols();
   if (cols % POINTS_PER_SEGMENT != 0) {
@@ -301,6 +308,50 @@ Eigen::MatrixXd LaneSegmentContext::transform_points_and_add_traffic_info(
 
   apply_transforms(transform_matrix, output_matrix, added_segments);
   return output_matrix;
+}
+
+lanelet::Lanelets LaneSegmentContext::filter_route_lanelets(
+  const LaneletRoute & route, const double center_x, const double center_y) const
+{
+  lanelet::Lanelets route_lanelets;
+  for (const LaneletSegment & route_segment : route.segments) {
+    route_lanelets.push_back(
+      lanelet_map_ptr_->laneletLayer.get(route_segment.preferred_primitive.id));
+  }
+
+  double closest_distance = std::numeric_limits<double>::max();
+  size_t closest_index = 0;
+
+  auto distance_to_lanelet =
+    [](const double x, const double y, const lanelet::ConstLanelet & lanelet) {
+      double distance = std::numeric_limits<double>::max();
+      for (const lanelet::ConstPoint2d & point : lanelet.centerline()) {
+        const double diff_x = point.x() - x;
+        const double diff_y = point.y() - y;
+        const double curr_distance = std::sqrt(diff_x * diff_x + diff_y * diff_y);
+        distance = std::min(distance, curr_distance);
+      }
+      return distance;
+    };
+
+  const size_t num_lanelets = route_lanelets.size();
+  for (size_t i = 0; i < num_lanelets; ++i) {
+    const double distance = distance_to_lanelet(center_x, center_y, route_lanelets[i]);
+    if (distance < closest_distance) {
+      closest_distance = distance;
+      closest_index = i;
+    }
+  }
+
+  lanelet::Lanelets filtered_route;
+  for (size_t i = closest_index; i < num_lanelets; ++i) {
+    const double distance = distance_to_lanelet(center_x, center_y, route_lanelets[i]);
+    if (distance > autoware::diffusion_planner::constants::LANE_MASK_RANGE_M) {
+      break;
+    }
+    filtered_route.push_back(route_lanelets[i]);
+  }
+  return filtered_route;
 }
 
 // Internal functions implementation
