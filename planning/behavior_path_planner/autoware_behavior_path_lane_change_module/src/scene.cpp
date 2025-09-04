@@ -1802,10 +1802,6 @@ bool NormalLaneChange::is_colliding(
     std::vector<autoware_utils_geometry::Polygon2d> collided_polygons{};
     collided_polygons.reserve(obj_path.path.size());
     for (const auto & obj_pose_with_poly : obj_path.path) {
-      if (obj_pose_with_poly.time < prepare_duration) {
-        continue;
-      }
-
       CollisionCheckDebug * debug_ptr = collided_polygons.empty() ? &debug : nullptr;
       const auto & selected_rss_param =
         obj_pose_with_poly.time < prepare_duration
