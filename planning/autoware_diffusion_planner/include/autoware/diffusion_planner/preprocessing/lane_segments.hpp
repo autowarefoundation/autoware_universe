@@ -141,14 +141,12 @@ private:
    * @brief Compute distances of lane segments from a center point.
    *
    * @param transform_matrix Transformation matrix to apply to the points.
-   * @param distances Output vector to store column indices, distances, and mask inclusion.
    * @param center_x X-coordinate of the center point.
    * @param center_y Y-coordinate of the center point.
-   * @param mask_range Range within which columns are considered "inside" the mask.
+   * @return Output vector to store column indices, distances, and mask inclusion.
    */
-  void compute_distances(
-    const Eigen::Matrix4d & transform_matrix, std::vector<ColWithDistance> & distances,
-    const float center_x, const float center_y, const float mask_range = 100.0) const;
+  std::vector<ColWithDistance> compute_distances(
+    const Eigen::Matrix4d & transform_matrix, const float center_x, const float center_y) const;
 
   /**
    * @brief Transform and select columns from input matrix based on distances.
