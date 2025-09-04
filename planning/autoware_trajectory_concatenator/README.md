@@ -2,7 +2,7 @@
 
 ## Purpose/Role
 
-This node aggregates trajectory candidates from multiple trajectory generators into a single [autoware_internal_planning_msgs/msg/Trajectories](../autoware_internal_planning_msgs/msg/Trajectories.msg) message. It is intended to be placed between trajectory generators and the selector/ranker in the new planning framework stack.
+This node aggregates trajectory candidates from multiple trajectory generators into a single [autoware_internal_planning_msgs/msg/Trajectories](../autoware_internal_planning_msgs/msg/Trajectories.msg) message. It is intended to be placed between trajectory generators and the selector/ranker.
 
 ## Algorithm Overview
 
