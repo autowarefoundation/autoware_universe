@@ -30,8 +30,8 @@
 
 // cspell:ignore BEVFORMER, bevformer
 
-#ifndef AUTOWARE__TENSORRT_BEVFORMER__ROS_UTILS_HPP_
-#define AUTOWARE__TENSORRT_BEVFORMER__ROS_UTILS_HPP_
+#ifndef ROS_UTILS_HPP_
+#define ROS_UTILS_HPP_
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -102,4 +102,4 @@ void getTransform(
 }  // namespace tensorrt_bevformer
 }  // namespace autoware
 
-#endif  // AUTOWARE__TENSORRT_BEVFORMER__ROS_UTILS_HPP_
+#endif  // ROS_UTILS_HPP_

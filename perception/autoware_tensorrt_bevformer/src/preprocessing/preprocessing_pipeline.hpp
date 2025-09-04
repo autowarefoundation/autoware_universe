@@ -30,8 +30,8 @@
 
 // cspell:ignore BEVFORMER, bevformer
 
-#ifndef AUTOWARE__TENSORRT_BEVFORMER__PREPROCESSING__PREPROCESSING_PIPELINE_HPP_
-#define AUTOWARE__TENSORRT_BEVFORMER__PREPROCESSING__PREPROCESSING_PIPELINE_HPP_
+#ifndef PREPROCESSING__PREPROCESSING_PIPELINE_HPP_
+#define PREPROCESSING__PREPROCESSING_PIPELINE_HPP_
 
 #include "augmentation_transforms.hpp"
 #include "multi_scale_flip_aug_3d.hpp"
@@ -77,4 +77,4 @@ private:
 }  // namespace preprocessing
 }  // namespace bevformer
 
-#endif  // AUTOWARE__TENSORRT_BEVFORMER__PREPROCESSING__PREPROCESSING_PIPELINE_HPP_
+#endif  // PREPROCESSING__PREPROCESSING_PIPELINE_HPP_
