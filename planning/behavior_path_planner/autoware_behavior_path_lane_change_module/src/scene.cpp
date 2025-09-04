@@ -1790,8 +1790,6 @@ bool NormalLaneChange::is_colliding(
   constexpr auto is_safe{true};
   auto current_debug_data = utils::path_safety_checker::createObjectDebug(obj);
   constexpr auto hysteresis_factor{1.0};
-  const auto obj_predicted_paths = utils::path_safety_checker::getPredictedPathFromObj(
-    obj, lane_change_parameters_->safety.collision_check.use_all_predicted_paths);
   const auto safety_check_max_vel = get_max_velocity_for_safety_check();
   const auto & bpp_param = *common_data_ptr_->bpp_param_ptr;
 
@@ -1799,7 +1797,7 @@ bool NormalLaneChange::is_colliding(
   const double prepare_duration = lane_change_path.info.duration.prepare;
   const double start_time = check_prepare_phase ? 0.0 : prepare_duration;
 
-  for (const auto & obj_path : obj_predicted_paths) {
+  for (const auto & obj_path : obj.predicted_paths) {
     utils::path_safety_checker::PredictedPathWithPolygon predicted_obj_path;
     predicted_obj_path.confidence = obj_path.confidence;
     std::copy_if(
