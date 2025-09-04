@@ -56,6 +56,16 @@ list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
 # TODO(knzo25): enable when the driver supports it
 # list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
 
+# __host__ or __device__ annotation on lambda requires --extended-lambda nvcc flag
+list(APPEND CUDA_NVCC_FLAGS "--extended-lambda")
+
+# cSpell: ignore fmad
+# NOTE(manato): adding `--fmad=false` can reduce numerical discrepancies between CPU implementations
+# and GPU implementations of the filters. But a slight performance impact can also be introduced
+# To prioritize performance, the flag is disabled
+#
+# list(APPEND CUDA_NVCC_FLAGS "--fmad=false")
+
 ################################################################################
 ### cuda_pointcloud_preprocessor ###
 cuda_add_library(cuda_pointcloud_preprocessor_lib SHARED
@@ -69,6 +79,7 @@ cuda_add_library(cuda_pointcloud_preprocessor_lib SHARED
   src/cuda_pointcloud_preprocessor/outlier_kernels.cu
   src/cuda_pointcloud_preprocessor/undistort_kernels.cu
   src/cuda_downsample_filter/cuda_voxel_grid_downsample_filter.cu
+  src/cuda_outlier_filter/cuda_polar_voxel_outlier_filter.cu
 )
 
 target_link_libraries(cuda_pointcloud_preprocessor_lib
@@ -107,6 +118,7 @@ ament_auto_add_library(cuda_pointcloud_preprocessor SHARED
   src/cuda_concatenate_data/cuda_concatenate_and_time_sync_node.cpp
   src/cuda_pointcloud_preprocessor/cuda_pointcloud_preprocessor_node.cpp
   src/cuda_downsample_filter/cuda_voxel_grid_downsample_filter_node.cpp
+  src/cuda_outlier_filter/cuda_polar_voxel_outlier_filter_node.cpp
 )
 
 target_link_libraries(cuda_pointcloud_preprocessor
@@ -130,6 +142,12 @@ rclcpp_components_register_node(cuda_pointcloud_preprocessor
 rclcpp_components_register_node(cuda_pointcloud_preprocessor
   PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaVoxelGridDownsampleFilterNode"
   EXECUTABLE cuda_voxel_grid_downsample_filter_node
+)
+
+# ========== PolarVoxel outlier filter ==========
+rclcpp_components_register_node(cuda_pointcloud_preprocessor
+  PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaPolarVoxelOutlierFilterNode"
+  EXECUTABLE cuda_polar_voxel_outlier_filter_node
 )
 
 ################################################################################

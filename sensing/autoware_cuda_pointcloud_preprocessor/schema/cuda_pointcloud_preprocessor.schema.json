@@ -43,6 +43,11 @@
           "description": "Threshold for the fraction of points that lack corresponding twist or IMU data within the allowed timestamp tolerance.",
           "default": 0.01
         },
+        "enable_ring_outlier_filter": {
+          "type": "boolean",
+          "description": "Enable/disable ring outlier filter in the cuda_pointcloud_preprocessor pipeline.",
+          "default": "true"
+        },
         "crop_box.min_x": {
           "type": "array",
           "description": "An array in which each element is the minimum x value in a crop box",

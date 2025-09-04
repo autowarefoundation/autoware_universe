@@ -62,7 +62,7 @@ public:
 
 protected:
   bool isPullOutPathCollided(
-    autoware::behavior_path_planner::PullOutPath & pull_out_path,
+    const autoware::behavior_path_planner::PullOutPath & pull_out_path,
     const std::shared_ptr<const PlannerData> & planner_data,
     double collision_check_distance_from_end) const;
 
