@@ -28,9 +28,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore bevformer
-
-#include "../../include/autoware/tensorrt_bevformer/preprocessing/augmentation_transforms.hpp"
+#include "augmentation_transforms.hpp"
 
 #include <rclcpp/logging.hpp>
 

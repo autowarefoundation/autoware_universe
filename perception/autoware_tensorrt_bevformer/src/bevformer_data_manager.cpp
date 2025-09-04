@@ -30,7 +30,7 @@
 
 // cspell:ignore randn, Canbus, siny, BEVFormer
 
-#include "autoware/tensorrt_bevformer/bevformer_data_manager.hpp"
+#include "bevformer_data_manager.hpp"
 
 #include <rclcpp/logging.hpp>
 

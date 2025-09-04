@@ -28,9 +28,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore bevformer
-
-#include "../../include/autoware/tensorrt_bevformer/preprocessing/transforms.hpp"
+#include "transforms.hpp"
 
 #include <iostream>
 #include <string>

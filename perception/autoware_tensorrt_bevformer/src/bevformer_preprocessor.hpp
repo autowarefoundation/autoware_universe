@@ -33,8 +33,8 @@
 #ifndef AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_PREPROCESSOR_HPP_
 #define AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_PREPROCESSOR_HPP_
 
-#include "autoware/tensorrt_bevformer/bevformer_data_loader.hpp"
-#include "autoware/tensorrt_bevformer/preprocessing/preprocessing_pipeline.hpp"
+#include "bevformer_data_loader.hpp"
+#include "preprocessing/preprocessing_pipeline.hpp"
 
 #include <Eigen/Core>
 #include <opencv2/opencv.hpp>
