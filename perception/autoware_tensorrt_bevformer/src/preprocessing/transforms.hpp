@@ -28,7 +28,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore BEVFORMER, bevformer
+// cspell:ignore BEVFORMER
 
 #ifndef AUTOWARE__TENSORRT_BEVFORMER__PREPROCESSING__TRANSFORMS_HPP_
 #define AUTOWARE__TENSORRT_BEVFORMER__PREPROCESSING__TRANSFORMS_HPP_

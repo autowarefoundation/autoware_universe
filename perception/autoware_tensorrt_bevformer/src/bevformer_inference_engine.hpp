@@ -33,8 +33,8 @@
 #ifndef AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_INFERENCE_ENGINE_HPP_
 #define AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_INFERENCE_ENGINE_HPP_
 
-#include "autoware/tensorrt_bevformer/bevformer_data_loader.hpp"
-#include "autoware/tensorrt_bevformer/ros_utils.hpp"
+#include "bevformer_data_loader.hpp"
+#include "ros_utils.hpp"
 
 #include <opencv2/opencv.hpp>
 #include <rclcpp/logger.hpp>

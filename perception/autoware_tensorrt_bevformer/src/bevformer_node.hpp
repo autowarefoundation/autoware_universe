@@ -33,13 +33,13 @@
 #ifndef AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_NODE_HPP_
 #define AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_NODE_HPP_
 
-#include "autoware/tensorrt_bevformer/bevformer_data_loader.hpp"
-#include "autoware/tensorrt_bevformer/bevformer_data_manager.hpp"
-#include "autoware/tensorrt_bevformer/bevformer_inference_engine.hpp"
-#include "autoware/tensorrt_bevformer/bevformer_preprocessor.hpp"
-#include "autoware/tensorrt_bevformer/marker_util.hpp"
-#include "autoware/tensorrt_bevformer/postprocessing/postprocessing.hpp"
-#include "autoware/tensorrt_bevformer/ros_utils.hpp"
+#include "bevformer_data_loader.hpp"
+#include "bevformer_data_manager.hpp"
+#include "bevformer_inference_engine.hpp"
+#include "bevformer_preprocessor.hpp"
+#include "marker_util.hpp"
+#include "postprocessing/postprocessing.hpp"
+#include "ros_utils.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
 

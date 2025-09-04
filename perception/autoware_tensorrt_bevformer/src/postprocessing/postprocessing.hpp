@@ -31,7 +31,7 @@
 // cspell:ignore bevformer
 
 #pragma once
-#include "autoware/tensorrt_bevformer/ros_utils.hpp"
+#include "ros_utils.hpp"
 
 #include <yaml-cpp/yaml.h>
 
