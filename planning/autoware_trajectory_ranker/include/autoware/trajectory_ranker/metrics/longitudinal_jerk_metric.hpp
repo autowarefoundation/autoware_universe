@@ -29,7 +29,7 @@ public:
 
   void evaluate(
     const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result,
-    const double max_value) const override;
+    const float max_value) const override;
 
   bool is_deviation() const override { return true; }
 };

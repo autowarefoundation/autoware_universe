@@ -24,17 +24,17 @@ namespace autoware::trajectory_ranker::metrics
 
 void LongitudinalJerk::evaluate(
   const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result,
-  const double max_value) const
+  const float max_value) const
 {
   const auto points = result->points();
   if (!points || points->size() < 2) {
     return;
   }
 
-  std::vector<double> jerk;
-  std::vector<double> acceleration;
-  constexpr double epsilon = 1.0e-3;
-  const double time_resolution = resolution() > epsilon ? resolution() : epsilon;
+  std::vector<float> jerk;
+  std::vector<float> acceleration;
+  constexpr float epsilon = 1.0e-3f;
+  const float time_resolution = resolution() > epsilon ? resolution() : epsilon;
 
   acceleration.reserve(points->size());
   for (size_t i = 0; i < points->size() - 1; i++) {
@@ -47,7 +47,7 @@ void LongitudinalJerk::evaluate(
   jerk.reserve(points->size());
   for (size_t i = 0; i < acceleration.size() - 1; i++) {
     const auto calculated_jerk = (acceleration.at(i + 1) - acceleration.at(i)) / time_resolution;
-    jerk.push_back(std::min(1.0, std::abs(calculated_jerk) / max_value));
+    jerk.push_back(std::min(1.0f, static_cast<float>(std::abs(calculated_jerk)) / max_value));
   }
   jerk.push_back(jerk.back());
 

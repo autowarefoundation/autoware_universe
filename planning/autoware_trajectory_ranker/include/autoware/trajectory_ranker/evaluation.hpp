@@ -110,25 +110,25 @@ protected:
    * @brief Evaluates all trajectories using loaded metrics
    * @param max_value Maximum values for normalization per metric
    */
-  void evaluate(const std::vector<double> & max_value);
+  void evaluate(const std::vector<float> & max_value);
 
   /**
    * @brief Compresses multi-dimensional metric scores
    * @param weight Weight matrix for compression
    */
-  void compress(const std::vector<std::vector<double>> & weight);
+  void compress(const std::vector<std::vector<float>> & weight);
 
   /**
    * @brief Normalizes metric scores
    * @param weight Weight matrix for normalization
    */
-  void normalize(const std::vector<std::vector<double>> & weight);
+  void normalize(const std::vector<std::vector<float>> & weight);
 
   /**
    * @brief Applies final weights to compressed scores
    * @param weight Weight vector for final scoring
    */
-  void weighting(const std::vector<double> & weight);
+  void weighting(const std::vector<float> & weight);
 
   /**
    * @brief Selects best trajectory from evaluated results

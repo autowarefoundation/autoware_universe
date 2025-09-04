@@ -38,7 +38,6 @@ using unique_identifier_msgs::msg::UUID;
 
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
-// Core data structure for trajectory evaluation (based on xx1)
 struct CoreData
 {
   CoreData(
@@ -84,38 +83,37 @@ struct CoreData
   UUID generator_id;
 };
 
-// Parameters for evaluation (based on xx1)
 struct EvaluatorParameters
 {
   explicit EvaluatorParameters(const size_t metrics_num, const size_t sample_num)
   : sample_num{sample_num},
-    time_decay_weight(metrics_num, std::vector<double>(sample_num, 0.0)),
-    score_weight(metrics_num, 0.0),
-    metrics_max_value(metrics_num, 0.0)
+    time_decay_weight(metrics_num, std::vector<float>(sample_num, 0.0f)),
+    score_weight(metrics_num, 0.0f),
+    metrics_max_value(metrics_num, 0.0f)
   {
   }
 
   size_t sample_num;
-  double resolution;
-  std::vector<std::vector<double>> time_decay_weight;  // [metrics][samples]
-  std::vector<double> score_weight;
-  std::vector<double> metrics_max_value;
+  float resolution;
+  std::vector<std::vector<float>> time_decay_weight;  // [metrics][samples]
+  std::vector<float> score_weight;
+  std::vector<float> metrics_max_value;
 };
 
 // Result of evaluation
 struct EvaluationResult
 {
   std::shared_ptr<CoreData> data;
-  std::vector<double> scores;
-  double total_score;
+  std::vector<float> scores;
+  float total_score;
 
-  explicit EvaluationResult(const std::shared_ptr<CoreData> & d) : data(d), total_score(0.0) {}
+  explicit EvaluationResult(const std::shared_ptr<CoreData> & d) : data(d), total_score(0.0f) {}
 
   Header header() const { return data->header; }
   UUID uuid() const { return data->generator_id; }
   std::shared_ptr<TrajectoryPoints> original() const { return data->original; }
   std::shared_ptr<TrajectoryPoints> points() const { return data->points; }
-  double total() const { return total_score; }
+  float total() const { return total_score; }
 };
 
 }  // namespace autoware::trajectory_ranker

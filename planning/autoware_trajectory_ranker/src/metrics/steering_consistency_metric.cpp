@@ -28,12 +28,12 @@ namespace autoware::trajectory_ranker::metrics
 
 void SteeringConsistency::evaluate(
   const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result,
-  const double max_value) const
+  const float max_value) const
 {
   if (result->previous() == nullptr) return;
   if (result->points()->size() < 2) return;
 
-  std::vector<double> steering_command;
+  std::vector<float> steering_command;
   steering_command.reserve(result->points()->size());
 
   const auto wheel_base = vehicle_info()->wheel_base_m;
@@ -41,7 +41,8 @@ void SteeringConsistency::evaluate(
     const auto current = utils::steer_command(result->points(), point.pose, wheel_base);
     const auto previous = utils::steer_command(result->previous(), point.pose, wheel_base);
 
-    steering_command.push_back(std::min(1.0, std::abs(current - previous) / max_value));
+    steering_command.push_back(
+      std::min(1.0f, static_cast<float>(std::abs(current - previous)) / max_value));
   }
 
   result->set_metric(index(), steering_command);

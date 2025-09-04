@@ -26,20 +26,22 @@ namespace autoware::trajectory_ranker::metrics
 
 void TravelDistance::evaluate(
   const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result,
-  const double max_value) const
+  const float max_value) const
 {
   const auto points = result->points();
   if (!points || points->empty()) {
     return;
   }
 
-  std::vector<double> distances;
+  std::vector<float> distances;
   distances.reserve(points->size());
 
   for (size_t i = 0; i < result->points()->size(); i++) {
     distances.push_back(
       std::min(
-        1.0, autoware::motion_utils::calcSignedArcLength(*result->points(), 0L, i) / max_value));
+        1.0f,
+        static_cast<float>(autoware::motion_utils::calcSignedArcLength(*result->points(), 0L, i)) /
+          max_value));
   }
 
   result->set_metric(index(), distances);

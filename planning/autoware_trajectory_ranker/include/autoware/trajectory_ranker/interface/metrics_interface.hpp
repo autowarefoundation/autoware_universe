@@ -53,7 +53,7 @@ public:
    * @param max_value Maximum value for normalization
    */
   virtual void evaluate(
-    const std::shared_ptr<DataInterface> & result, const double max_value) const = 0;
+    const std::shared_ptr<DataInterface> & result, const float max_value) const = 0;
 
   /**
    * @brief Checks if this metric measures deviation from ideal
@@ -66,7 +66,7 @@ public:
    * @param vehicle_info Vehicle parameters (dimensions, wheelbase, etc.)
    * @param resolution Time resolution for evaluation [s]
    */
-  void init(const std::shared_ptr<VehicleInfo> & vehicle_info, const double resolution)
+  void init(const std::shared_ptr<VehicleInfo> & vehicle_info, const float resolution)
   {
     vehicle_info_ = vehicle_info;
     resolution_ = resolution;
@@ -101,7 +101,7 @@ protected:
    * @brief Gets time resolution
    * @return Time resolution [s]
    */
-  double resolution() const { return resolution_; }
+  float resolution() const { return resolution_; }
 
 private:
   std::shared_ptr<VehicleInfo> vehicle_info_;
@@ -110,7 +110,7 @@ private:
 
   size_t index_;
 
-  double resolution_;
+  float resolution_;
 };
 
 }  // namespace autoware::trajectory_ranker::metrics

@@ -160,15 +160,32 @@ std::shared_ptr<EvaluatorParameters> TrajectoryRanker::parameters() const
   const auto parameters =
     std::make_shared<EvaluatorParameters>(node_params.metrics.name.size(), node_params.sample_num);
 
-  parameters->resolution = node_params.resolution;
-  parameters->score_weight = node_params.score_weight;
-  parameters->time_decay_weight.at(0) = node_params.time_decay_weight.s0;
-  parameters->time_decay_weight.at(1) = node_params.time_decay_weight.s1;
-  parameters->time_decay_weight.at(2) = node_params.time_decay_weight.s2;
-  parameters->time_decay_weight.at(3) = node_params.time_decay_weight.s3;
-  parameters->time_decay_weight.at(4) = node_params.time_decay_weight.s4;
-  parameters->time_decay_weight.at(5) = node_params.time_decay_weight.s5;
-  parameters->metrics_max_value = node_params.metrics.maximum;
+  // Convert double to float
+  parameters->resolution = static_cast<float>(node_params.resolution);
+
+  // Convert vector<double> to vector<float>
+  parameters->score_weight.assign(node_params.score_weight.begin(), node_params.score_weight.end());
+
+  // Convert time_decay_weight vectors
+  auto convert_vector = [](const std::vector<double> & src) {
+    std::vector<float> dst;
+    dst.reserve(src.size());
+    for (const auto & val : src) {
+      dst.push_back(static_cast<float>(val));
+    }
+    return dst;
+  };
+
+  parameters->time_decay_weight.at(0) = convert_vector(node_params.time_decay_weight.s0);
+  parameters->time_decay_weight.at(1) = convert_vector(node_params.time_decay_weight.s1);
+  parameters->time_decay_weight.at(2) = convert_vector(node_params.time_decay_weight.s2);
+  parameters->time_decay_weight.at(3) = convert_vector(node_params.time_decay_weight.s3);
+  parameters->time_decay_weight.at(4) = convert_vector(node_params.time_decay_weight.s4);
+  parameters->time_decay_weight.at(5) = convert_vector(node_params.time_decay_weight.s5);
+
+  // Convert metrics_max_value
+  parameters->metrics_max_value.assign(
+    node_params.metrics.maximum.begin(), node_params.metrics.maximum.end());
 
   return parameters;
 }

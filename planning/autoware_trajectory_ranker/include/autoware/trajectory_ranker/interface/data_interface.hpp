@@ -33,8 +33,8 @@ class DataInterface
 public:
   explicit DataInterface(const std::shared_ptr<CoreData> & core_data, const size_t metrics_num)
   : core_data_{core_data},
-    metrics_(metrics_num, std::vector<double>(core_data->points->size(), 0.0)),
-    scores_(metrics_num, 0.0)
+    metrics_(metrics_num, std::vector<float>(core_data->points->size(), 0.0f)),
+    scores_(metrics_num, 0.0f)
   {
   }
 
@@ -48,40 +48,40 @@ public:
     set_previous_points(previous_points);
   }
 
-  void compress(const std::vector<std::vector<double>> & weight)
+  void compress(const std::vector<std::vector<float>> & weight)
   {
     if (metrics_.empty() || weight.empty()) return;
     for (size_t i = 0; i < metrics_.size() && i < weight.size(); i++) {
       const auto & w = weight.at(i);
       const auto & metric = metrics_.at(i);
-      scores_.at(i) = std::inner_product(w.begin(), w.end(), metric.begin(), 0.0);
+      scores_.at(i) = std::inner_product(w.begin(), w.end(), metric.begin(), 0.0f);
     }
   }
 
-  void normalize(const double min, const double max, const size_t index, const bool flip = false)
+  void normalize(const float min, const float max, const size_t index, const bool flip = false)
   {
-    if (std::abs(max - min) < std::numeric_limits<double>::epsilon()) {
-      scores_.at(index) = 1.0;
+    if (std::abs(max - min) < std::numeric_limits<float>::epsilon()) {
+      scores_.at(index) = 1.0f;
     } else {
       scores_.at(index) =
         flip ? (max - scores_.at(index)) / (max - min) : (scores_.at(index) - min) / (max - min);
     }
   }
 
-  void weighting(const std::vector<double> & weight)
+  void weighting(const std::vector<float> & weight)
   {
     if (weight.empty() || scores_.empty()) {
-      total_ = 0.0;
+      total_ = 0.0f;
       return;
     }
     const size_t size = std::min(weight.size(), scores_.size());
-    total_ = std::inner_product(weight.begin(), weight.begin() + size, scores_.begin(), 0.0);
+    total_ = std::inner_product(weight.begin(), weight.begin() + size, scores_.begin(), 0.0f);
   }
 
   bool feasible() const
   {
     if (core_data_->points->empty()) return false;
-    constexpr double epsilon = -1e-06;
+    constexpr float epsilon = -1e-06f;
 
     const auto condition = [&epsilon](const auto & p) {
       return p.longitudinal_velocity_mps >= epsilon;
@@ -89,46 +89,46 @@ public:
     return std::all_of(core_data_->points->begin(), core_data_->points->end(), condition);
   }
 
-  void set_metric(const size_t idx, const std::vector<double> & metric)
+  void set_metric(const size_t idx, const std::vector<float> & metric)
   {
     metrics_.at(idx) = metric;
   }
 
-  auto total() const -> double { return total_; };
+  float total() const { return total_; }
 
-  auto score(const size_t index) const -> double { return scores_.at(index); }
+  float score(const size_t index) const { return scores_.at(index); }
 
-  auto points() const -> std::shared_ptr<TrajectoryPoints> { return core_data_->points; }
+  std::shared_ptr<TrajectoryPoints> points() const { return core_data_->points; }
 
-  auto previous() const -> std::shared_ptr<TrajectoryPoints> { return core_data_->previous_points; }
+  std::shared_ptr<TrajectoryPoints> previous() const { return core_data_->previous_points; }
 
-  auto original() const -> std::shared_ptr<TrajectoryPoints> { return core_data_->original; }
+  std::shared_ptr<TrajectoryPoints> original() const { return core_data_->original; }
 
-  auto objects() const -> std::shared_ptr<PredictedObjects> { return core_data_->objects; }
+  std::shared_ptr<PredictedObjects> objects() const { return core_data_->objects; }
 
-  auto steering() const -> std::shared_ptr<SteeringReport> { return core_data_->steering; }
+  std::shared_ptr<SteeringReport> steering() const { return core_data_->steering; }
 
-  auto preferred_lanes() const -> std::shared_ptr<lanelet::ConstLanelets>
+  std::shared_ptr<lanelet::ConstLanelets> preferred_lanes() const
   {
     return core_data_->preferred_lanes;
   }
 
-  auto header() const -> Header { return core_data_->header; }
+  Header header() const { return core_data_->header; }
 
-  auto uuid() const -> UUID { return core_data_->generator_id; }
+  UUID uuid() const { return core_data_->generator_id; }
 
-  auto tag() const -> std::string { return core_data_->tag; }
+  std::string tag() const { return core_data_->tag; }
 
 private:
   std::shared_ptr<CoreData> core_data_;
 
   std::shared_ptr<TrajectoryPoints> previous_points_;
 
-  std::vector<std::vector<double>> metrics_;
+  std::vector<std::vector<float>> metrics_;
 
-  std::vector<double> scores_;
+  std::vector<float> scores_;
 
-  double total_;
+  float total_;
 };
 
 }  // namespace autoware::trajectory_ranker

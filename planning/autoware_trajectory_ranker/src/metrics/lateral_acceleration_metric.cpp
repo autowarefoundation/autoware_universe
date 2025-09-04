@@ -26,20 +26,21 @@ namespace autoware::trajectory_ranker::metrics
 
 void LateralAcceleration::evaluate(
   const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result,
-  const double max_value) const
+  const float max_value) const
 {
   if (result->points()->size() < 2) return;
 
-  std::vector<double> lateral_accelerations;
-  constexpr double epsilon = 1.0e-3;
-  const double time_resolution = resolution() > epsilon ? resolution() : epsilon;
+  std::vector<float> lateral_accelerations;
+  constexpr float epsilon = 1.0e-3f;
+  const float time_resolution = resolution() > epsilon ? resolution() : epsilon;
 
   lateral_accelerations.reserve(result->points()->size());
   for (size_t i = 0; i < result->points()->size() - 1; i++) {
     const auto lateral_acc = (result->points()->at(i + 1).lateral_velocity_mps -
                               result->points()->at(i).lateral_velocity_mps) /
                              time_resolution;
-    lateral_accelerations.push_back(std::min(1.0, std::abs(lateral_acc) / max_value));
+    lateral_accelerations.push_back(
+      std::min(1.0f, static_cast<float>(std::abs(lateral_acc)) / max_value));
   }
   lateral_accelerations.push_back(lateral_accelerations.back());
 

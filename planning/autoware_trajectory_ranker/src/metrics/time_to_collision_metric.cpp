@@ -26,14 +26,14 @@ namespace autoware::trajectory_ranker::metrics
 
 void TimeToCollision::evaluate(
   const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result,
-  const double max_value) const
+  const float max_value) const
 {
-  std::vector<double> ttc;
+  std::vector<float> ttc;
 
   ttc.reserve(result->points()->size());
   for (size_t i = 0; i < result->points()->size(); i++) {
     ttc.push_back(
-      std::min(1.0, utils::time_to_collision(result->points(), result->objects(), i) / max_value));
+      std::min(1.0f, utils::time_to_collision(result->points(), result->objects(), i) / max_value));
   }
 
   result->set_metric(index(), ttc);

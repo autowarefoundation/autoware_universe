@@ -49,7 +49,7 @@ geometry_msgs::msg::Point transform_to_relative_coordinate2_d(
  * @param current_pose Current vehicle pose
  * @return Turning radius [m] (large value if path is nearly straight)
  */
-double calc_radius(
+float calc_radius(
   const geometry_msgs::msg::Point & target, const geometry_msgs::msg::Pose & current_pose);
 
 /**
@@ -58,7 +58,7 @@ double calc_radius(
  * @param current_pose Current vehicle pose
  * @return Curvature [1/m] (inverse of radius)
  */
-double curvature(
+float curvature(
   const geometry_msgs::msg::Point & target, const geometry_msgs::msg::Pose & current_pose);
 
 /**
@@ -67,7 +67,7 @@ double curvature(
  * @param ego_pose Current ego vehicle pose
  * @return Curvature [1/m] using 10m lookahead distance
  */
-double pure_pursuit(const std::shared_ptr<TrajectoryPoints> & points, const Pose & ego_pose);
+float pure_pursuit(const std::shared_ptr<TrajectoryPoints> & points, const Pose & ego_pose);
 
 /**
  * @brief Calculates steering wheel angle command using pure pursuit
@@ -76,8 +76,8 @@ double pure_pursuit(const std::shared_ptr<TrajectoryPoints> & points, const Pose
  * @param wheel_base Vehicle wheelbase [m]
  * @return Steering wheel angle [rad]
  */
-double steer_command(
-  const std::shared_ptr<TrajectoryPoints> & points, const Pose & ego_pose, const double wheel_base);
+float steer_command(
+  const std::shared_ptr<TrajectoryPoints> & points, const Pose & ego_pose, const float wheel_base);
 
 /**
  * @brief Calculates minimum time to collision with all predicted objects
@@ -86,7 +86,7 @@ double steer_command(
  * @param idx Index of ego trajectory point to evaluate
  * @return Time to collision [s] (capped at 10s maximum)
  */
-double time_to_collision(
+float time_to_collision(
   const std::shared_ptr<TrajectoryPoints> & points,
   const std::shared_ptr<PredictedObjects> & objects, const size_t idx);
 
@@ -96,7 +96,7 @@ double time_to_collision(
  * @param point2 Second trajectory point with velocity
  * @return Time to collision [s] (infinity if no collision)
  */
-double time_to_collision(const TrajectoryPoint & point1, const TrajectoryPoint & point2);
+float time_to_collision(const TrajectoryPoint & point1, const TrajectoryPoint & point2);
 
 /**
  * @brief Calculates time to collision with a predicted object at a specific time
@@ -105,7 +105,7 @@ double time_to_collision(const TrajectoryPoint & point1, const TrajectoryPoint &
  * @param object Predicted object with future path
  * @return Time to collision [s] (capped at 10s maximum)
  */
-double time_to_collision(
+float time_to_collision(
   const TrajectoryPoint & ego_point, const rclcpp::Duration & duration,
   const autoware_perception_msgs::msg::PredictedObject & object);
 

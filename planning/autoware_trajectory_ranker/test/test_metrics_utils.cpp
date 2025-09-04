@@ -101,7 +101,7 @@ TEST_F(TestMetricsUtils, CalcRadius_StraightPath)
   current_pose.position.y = 0.0;
   current_pose.orientation.w = 1.0;  // Facing +X direction
 
-  double radius = calc_radius(target, current_pose);
+  float radius = calc_radius(target, current_pose);
 
   // For a straight path, radius should be very large
   EXPECT_GT(radius, 1e8);
@@ -118,7 +118,7 @@ TEST_F(TestMetricsUtils, CalcRadius_CircularPath)
   current_pose.position.y = 0.0;
   current_pose.orientation.w = 1.0;
 
-  double radius = calc_radius(target, current_pose);
+  float radius = calc_radius(target, current_pose);
 
   // For this configuration, we can calculate expected radius
   // The radius should be positive and finite
@@ -137,7 +137,7 @@ TEST_F(TestMetricsUtils, Curvature_StraightPath)
   current_pose.position.y = 0.0;
   current_pose.orientation.w = 1.0;
 
-  double kappa = curvature(target, current_pose);
+  float kappa = curvature(target, current_pose);
 
   // For a straight path, curvature should be nearly zero
   EXPECT_NEAR(kappa, 0.0, 1e-6);
@@ -150,7 +150,7 @@ TEST_F(TestMetricsUtils, PurePursuit_BasicTest)
   // Create a straight trajectory
   for (int i = 0; i < 20; ++i) {
     TrajectoryPoint pt;
-    pt.pose.position.x = static_cast<double>(i);
+    pt.pose.position.x = static_cast<float>(i);
     pt.pose.position.y = 0.0;
     pt.pose.orientation.w = 1.0;
     points->push_back(pt);
@@ -161,7 +161,7 @@ TEST_F(TestMetricsUtils, PurePursuit_BasicTest)
   ego_pose.position.y = 0.0;
   ego_pose.orientation.w = 1.0;
 
-  double kappa = pure_pursuit(points, ego_pose);
+  float kappa = pure_pursuit(points, ego_pose);
 
   // For a straight trajectory, pure pursuit should return near-zero curvature
   EXPECT_NEAR(kappa, 0.0, 1e-6);
@@ -174,7 +174,7 @@ TEST_F(TestMetricsUtils, SteerCommand_StraightPath)
   // Create a straight trajectory
   for (int i = 0; i < 20; ++i) {
     TrajectoryPoint pt;
-    pt.pose.position.x = static_cast<double>(i);
+    pt.pose.position.x = static_cast<float>(i);
     pt.pose.position.y = 0.0;
     pt.pose.orientation.w = 1.0;
     points->push_back(pt);
@@ -185,8 +185,8 @@ TEST_F(TestMetricsUtils, SteerCommand_StraightPath)
   ego_pose.position.y = 0.0;
   ego_pose.orientation.w = 1.0;
 
-  double wheel_base = 2.5;
-  double steer = steer_command(points, ego_pose, wheel_base);
+  float wheel_base = 2.5f;
+  float steer = steer_command(points, ego_pose, wheel_base);
 
   // For a straight path, steering command should be near zero
   EXPECT_NEAR(steer, 0.0, 1e-6);
@@ -213,7 +213,7 @@ TEST_F(TestMetricsUtils, TimeToCollision_BetweenPoints)
   pt2.longitudinal_velocity_mps = 10.0;  // Moving at 10 m/s in opposite direction
   pt2.lateral_velocity_mps = 0.0;
 
-  double ttc = time_to_collision(pt1, pt2);
+  float ttc = time_to_collision(pt1, pt2);
 
   // Two objects 100m apart approaching at relative speed of 20 m/s
   // TTC should be 5 seconds
@@ -236,7 +236,7 @@ TEST_F(TestMetricsUtils, TimeToCollision_NoCollision)
   pt2.longitudinal_velocity_mps = 10.0;  // Same speed
   pt2.lateral_velocity_mps = 0.0;
 
-  double ttc = time_to_collision(pt1, pt2);
+  float ttc = time_to_collision(pt1, pt2);
 
   // Moving in same direction at same speed, no collision
   EXPECT_TRUE(std::isinf(ttc));
@@ -254,7 +254,7 @@ TEST_F(TestMetricsUtils, TimeToCollision_WithObjects_NoObjects)
 
   auto objects = std::make_shared<PredictedObjects>();  // Empty
 
-  double ttc = time_to_collision(points, objects, 0);
+  float ttc = time_to_collision(points, objects, 0);
 
   // No objects, should return max TTC value (10.0)
   EXPECT_NEAR(ttc, 10.0, 1e-6);
@@ -298,7 +298,7 @@ TEST_F(TestMetricsUtils, TimeToCollision_WithObjects_BasicCollision)
   obj.kinematics.predicted_paths.push_back(path);
   objects->objects.push_back(obj);
 
-  double ttc = time_to_collision(points, objects, 0);
+  float ttc = time_to_collision(points, objects, 0);
 
   // Should calculate collision time between ego and object
   EXPECT_GT(ttc, 0.0);

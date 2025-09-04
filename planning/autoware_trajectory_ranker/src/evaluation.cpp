@@ -65,7 +65,7 @@ void Evaluator::unload_metric(const std::string & name)
   }
 }
 
-void Evaluator::evaluate(const std::vector<double> & max_value)
+void Evaluator::evaluate(const std::vector<float> & max_value)
 {
   for (const auto & result : results_) {
     for (const auto & plugin : plugins_) {
@@ -76,21 +76,21 @@ void Evaluator::evaluate(const std::vector<double> & max_value)
   }
 }
 
-void Evaluator::normalize(const std::vector<std::vector<double>> & weight)
+void Evaluator::normalize(const std::vector<std::vector<float>> & weight)
 {
   if (results_.empty()) return;
 
   if (results_.size() < 2) {
     const auto data = results_.front();
     for (const auto & plugin : plugins_) {
-      data->normalize(0.0, data->score(plugin->index()), plugin->index());
+      data->normalize(0.0f, data->score(plugin->index()), plugin->index());
     }
     return;
   }
 
   const auto range = [weight](const size_t index) {
-    double min = 0.0;
-    double max = std::reduce(weight.at(index).begin(), weight.at(index).end());
+    float min = 0.0f;
+    float max = std::reduce(weight.at(index).begin(), weight.at(index).end());
     return std::make_pair(min, max);
   };
 
@@ -102,13 +102,13 @@ void Evaluator::normalize(const std::vector<std::vector<double>> & weight)
   }
 }
 
-void Evaluator::compress(const std::vector<std::vector<double>> & weight)
+void Evaluator::compress(const std::vector<std::vector<float>> & weight)
 {
   std::for_each(
     results_.begin(), results_.end(), [&weight](auto & data) { data->compress(weight); });
 }
 
-void Evaluator::weighting(const std::vector<double> & weight)
+void Evaluator::weighting(const std::vector<float> & weight)
 {
   std::for_each(
     results_.begin(), results_.end(), [&weight](auto & data) { data->weighting(weight); });
