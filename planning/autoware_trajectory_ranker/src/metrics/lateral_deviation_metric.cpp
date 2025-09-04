@@ -44,9 +44,9 @@ void LateralDeviation::evaluate(
   std::vector<double> deviations;
   deviations.reserve(points->size());
 
-  for (size_t i = 0; i < result->points()->size(); i++) {
-    const auto arc_coordinates = lanelet::utils::getArcCoordinates(
-      *result->preferred_lanes(), autoware_utils_geometry::get_pose(result->points()->at(i)));
+  for (const auto & point : *points) {
+    const auto arc_coordinates =
+      lanelet::utils::getArcCoordinates(*preferred_lanes, autoware_utils_geometry::get_pose(point));
     deviations.push_back(std::min(1.0, std::abs(arc_coordinates.distance) / max_value));
   }
 
