@@ -36,16 +36,15 @@ void LongitudinalJerk::evaluate(
   constexpr double epsilon = 1.0e-3;
   const double time_resolution = resolution() > epsilon ? resolution() : epsilon;
 
-  acceleration.reserve(result->points()->size());
-  for (size_t i = 0; i < result->points()->size() - 1; i++) {
+  acceleration.reserve(points->size());
+  for (size_t i = 0; i < points->size() - 1; i++) {
     acceleration.push_back(
-      (result->points()->at(i + 1).longitudinal_velocity_mps -
-       result->points()->at(i).longitudinal_velocity_mps) /
+      (points->at(i + 1).longitudinal_velocity_mps - points->at(i).longitudinal_velocity_mps) /
       time_resolution);
   }
   acceleration.push_back(acceleration.back());
 
-  jerk.reserve(result->points()->size());
+  jerk.reserve(points->size());
   for (size_t i = 0; i < acceleration.size() - 1; i++) {
     const auto calculated_jerk = (acceleration.at(i + 1) - acceleration.at(i)) / time_resolution;
     jerk.push_back(std::min(1.0, std::abs(calculated_jerk) / max_value));
