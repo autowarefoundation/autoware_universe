@@ -22,12 +22,11 @@
 #include <rclcpp/logging.hpp>
 
 #include <autoware_internal_planning_msgs/msg/candidate_trajectory.hpp>
-#include <autoware_internal_planning_msgs/msg/detail/scored_candidate_trajectories__struct.hpp>
-#include <autoware_internal_planning_msgs/msg/detail/scored_candidate_trajectory__builder.hpp>
+#include <autoware_internal_planning_msgs/msg/scored_candidate_trajectory.hpp>
 
-#include <algorithm>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::trajectory_ranker
@@ -121,13 +120,14 @@ ScoredCandidateTrajectories::ConstSharedPtr TrajectoryRanker::score(
 
   // Process each candidate trajectory
   for (const auto & candidate : msg->candidate_trajectories) {
-    // Sample the trajectory
-    auto sampled_points = std::make_shared<TrajectoryPoints>(utils::sampling(
-      candidate.points, odometry_ptr->pose.pose, params->sample_num, params->resolution));
+    auto sampled = utils::sampling(
+      candidate.points, odometry_ptr->pose.pose, params->sample_num, params->resolution);
+    auto sampled_points = std::make_shared<TrajectoryPoints>(std::move(sampled));
+    auto original_points = std::make_shared<TrajectoryPoints>(candidate.points);
 
     auto core_data = std::make_shared<CoreData>(
-      std::make_shared<TrajectoryPoints>(candidate.points), sampled_points, previous_points_,
-      objects_ptr, preferred_lanes, candidate.header, candidate.generator_id);
+      original_points, sampled_points, previous_points_, objects_ptr, preferred_lanes,
+      candidate.header, candidate.generator_id);
 
     evaluator_->add(core_data);
   }
