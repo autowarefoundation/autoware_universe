@@ -77,7 +77,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#macro-rendering-error" class="md-skip">
+        <a href="#bytetrack" class="md-skip">
           Skip to content
         </a>
       
@@ -13981,6 +13981,103 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#purpose" class="md-nav__link">
+    Purpose
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inner-workings-algorithms" class="md-nav__link">
+    Inner-workings / Algorithms
+  </a>
+  
+    <nav class="md-nav" aria-label="Inner-workings / Algorithms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cite" class="md-nav__link">
+    Cite
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2d-tracking-modification-from-original-codes" class="md-nav__link">
+    2d tracking modification from original codes
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inputs-outputs" class="md-nav__link">
+    Inputs / Outputs
+  </a>
+  
+    <nav class="md-nav" aria-label="Inputs / Outputs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bytetrack_node" class="md-nav__link">
+    bytetrack_node
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bytetrack_visualizer" class="md-nav__link">
+    bytetrack_visualizer
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    Parameters
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assumptionsknown-limits" class="md-nav__link">
+    Assumptions/Known limits
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reference-repositories" class="md-nav__link">
+    Reference repositories
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#license" class="md-nav__link">
+    License
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -13997,23 +14094,303 @@
   
 
 
-<div><h1 id="macro-rendering-error"><em>Macro Rendering Error</em><a class="headerlink" href="#macro-rendering-error" title="Permanent link">#</a></h1>
-<p><em>File</em>: <code>perception/autoware_bytetrack/README.md</code></p>
-<p><em>KeyError</em>: 'properties'</p>
-<div class="highlight"><pre><span></span><code>Traceback (most recent call last):
-  File "/opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages/mkdocs_macros/plugin.py", line 703, in render
-    return md_template.render(**page_variables)
-  File "/opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "&lt;template&gt;", line 74, in top-level template code
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 73, in json_to_markdown
-    return format_json(data)
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 62, in format_json
-    parameters = list(json_data["definitions"].values())[0]["properties"]
-KeyError: 'properties'
-</code></pre></div></div>
+<div><h1 id="bytetrack">bytetrack<a class="headerlink" href="#bytetrack" title="Permanent link">#</a></h1>
+<h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
+<p>The core algorithm, named <code>ByteTrack</code>, mainly aims to perform multi-object tracking.
+Because the algorithm associates almost every detection box including ones with low detection scores,
+the number of false negatives is expected to decrease by using it.</p>
+<p><a href="https://github.com/YoshiRi/autoware_universe/assets/3022416/40f4c158-657e-48e1-81c2-8ac39152892d">demo video</a></p>
+<h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
+<h3 id="cite">Cite<a class="headerlink" href="#cite" title="Permanent link">#</a></h3>
+<!-- cspell: ignore Yifu Peize Jiang Dongdong Fucheng Weng Zehuan Xinggang -->
+
+<ul>
+<li>Yifu Zhang, Peize Sun, Yi Jiang, Dongdong Yu, Fucheng Weng, Zehuan Yuan, Ping Luo, Wenyu Liu, and Xinggang Wang,
+  "ByteTrack: Multi-Object Tracking by Associating Every Detection Box", in the proc. of the ECCV
+  2022, [<a href="https://arxiv.org/abs/2110.06864">ref</a>]</li>
+<li>This package is ported version toward Autoware from <a href="https://github.com/ifzhang/ByteTrack/tree/main/deploy/TensorRT/cpp">this repository</a>
+  (The C++ implementation by the ByteTrack's authors)</li>
+</ul>
+<h3 id="2d-tracking-modification-from-original-codes">2d tracking modification from original codes<a class="headerlink" href="#2d-tracking-modification-from-original-codes" title="Permanent link">#</a></h3>
+<p>The paper just says that the 2d tracking algorithm is a simple Kalman filter.
+Original codes use the <code>top-left-corner</code> and <code>aspect ratio</code> and <code>size</code> as the state vector.</p>
+<p>This is sometimes unstable because the aspect ratio can be changed by the occlusion.
+So, we use the <code>top-left</code> and <code>size</code> as the state vector.</p>
+<p>Kalman filter settings can be controlled by the parameters in <code>config/bytetrack_node.param.yaml</code>.</p>
+<h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
+<h3 id="bytetrack_node">bytetrack_node<a class="headerlink" href="#bytetrack_node" title="Permanent link">#</a></h3>
+<h4 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>in/rect</code></td>
+<td><code>tier4_perception_msgs/DetectedObjectsWithFeature</code></td>
+<td>The detected objects with 2D bounding boxes</td>
+</tr>
+</tbody>
+</table>
+<h4 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>out/objects</code></td>
+<td><code>tier4_perception_msgs/DetectedObjectsWithFeature</code></td>
+<td>The detected objects with 2D bounding boxes</td>
+</tr>
+<tr>
+<td><code>out/objects/debug/uuid</code></td>
+<td><code>tier4_perception_msgs/DynamicObjectArray</code></td>
+<td>The universally unique identifiers (UUID) for each object</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bytetrack_visualizer">bytetrack_visualizer<a class="headerlink" href="#bytetrack_visualizer" title="Permanent link">#</a></h3>
+<h4 id="input_1">Input<a class="headerlink" href="#input_1" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>in/image</code></td>
+<td><code>sensor_msgs/Image</code> or <code>sensor_msgs/CompressedImage</code></td>
+<td>The input image on which object detection is performed</td>
+</tr>
+<tr>
+<td><code>in/rect</code></td>
+<td><code>tier4_perception_msgs/DetectedObjectsWithFeature</code></td>
+<td>The detected objects with 2D bounding boxes</td>
+</tr>
+<tr>
+<td><code>in/uuid</code></td>
+<td><code>tier4_perception_msgs/DynamicObjectArray</code></td>
+<td>The universally unique identifiers (UUID) for each object</td>
+</tr>
+</tbody>
+</table>
+<h4 id="output_1">Output<a class="headerlink" href="#output_1" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>out/image</code></td>
+<td><code>sensor_msgs/Image</code></td>
+<td>The image that detection bounding boxes and their UUIDs are drawn</td>
+</tr>
+</tbody>
+</table>
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
+<ul>
+<li>bytetrack</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>track_buffer_length</td>
+<td>integer</td>
+<td>The frame count that a tracklet is considered to be lost.</td>
+<td>30</td>
+<td>≥1</td>
+</tr>
+<tr>
+<td>classification_decay_constant</td>
+<td>float</td>
+<td>Decay constant for classification probability.</td>
+<td>0.95</td>
+<td>≥0.0<br>≤1.0</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>kalman filter</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>dt</td>
+<td>float</td>
+<td>Time step [s].</td>
+<td>0.1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>dim_x</td>
+<td>integer</td>
+<td>State dimension (tlbr + velocity).</td>
+<td>8</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>dim_z</td>
+<td>integer</td>
+<td>Measurement dimension (tlbr).</td>
+<td>4</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>q_cov_x</td>
+<td>float</td>
+<td>Process noise covariance for x.</td>
+<td>0.1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>q_cov_y</td>
+<td>float</td>
+<td>Process noise covariance for y.</td>
+<td>0.1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>q_cov_vx</td>
+<td>float</td>
+<td>Process noise covariance for velocity x.</td>
+<td>0.1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>q_cov_vy</td>
+<td>float</td>
+<td>Process noise covariance for velocity y.</td>
+<td>0.1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>r_cov_x</td>
+<td>float</td>
+<td>Measurement noise covariance for x.</td>
+<td>0.1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>r_cov_y</td>
+<td>float</td>
+<td>Measurement noise covariance for y.</td>
+<td>0.1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>p0_cov_x</td>
+<td>float</td>
+<td>Initial covariance for x.</td>
+<td>100</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>p0_cov_y</td>
+<td>float</td>
+<td>Initial covariance for y.</td>
+<td>100</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>p0_cov_vx</td>
+<td>float</td>
+<td>Initial covariance for velocity x.</td>
+<td>100</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>p0_cov_vy</td>
+<td>float</td>
+<td>Initial covariance for velocity y.</td>
+<td>100</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>bytetrack visualizer</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>use_raw</td>
+<td>boolean</td>
+<td>The flag for the node to switch <code>sensor_msgs/Image</code> or <code>sensor_msgs/CompressedImage</code> as input</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table>
+<h2 id="assumptionsknown-limits">Assumptions/Known limits<a class="headerlink" href="#assumptionsknown-limits" title="Permanent link">#</a></h2>
+<h2 id="reference-repositories">Reference repositories<a class="headerlink" href="#reference-repositories" title="Permanent link">#</a></h2>
+<ul>
+<li><a href="https://github.com/ifzhang/ByteTrack">https://github.com/ifzhang/ByteTrack</a></li>
+</ul>
+<h2 id="license">License<a class="headerlink" href="#license" title="Permanent link">#</a></h2>
+<p>The codes under the <code>lib</code> directory are copied from <a href="https://github.com/ifzhang/ByteTrack/tree/72ca8b45d36caf5a39e949c6aa815d9abffd1ab5/deploy/TensorRT/cpp">the original codes</a> and modified.
+The original codes belong to the MIT license stated as follows, while this ported packages are provided with Apache License 2.0:</p>
+<blockquote>
+<p>MIT License</p>
+<p>Copyright (c) 2021 Yifu Zhang</p>
+<p>Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:</p>
+<p>The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.</p>
+<p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</p>
+</blockquote></div>
 
 
 
