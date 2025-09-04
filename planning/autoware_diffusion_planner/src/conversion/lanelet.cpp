@@ -27,7 +27,9 @@
 #include <cmath>
 #include <iostream>
 #include <limits>
+#include <map>
 #include <optional>
+#include <string>
 #include <vector>
 namespace autoware::diffusion_planner
 {
@@ -149,16 +151,29 @@ std::vector<LaneSegment> LaneletConverter::convert_to_lane_segments(
       MapType::Unused, interpolate_points(right_points, num_lane_points));
 
     const auto & attrs = lanelet.attributes();
-    bool is_intersection = attrs.find("turn_direction") != attrs.end();
+    const bool is_intersection = attrs.find("turn_direction") != attrs.end();
     std::optional<float> speed_limit_mps =
       attrs.find("speed_limit") != attrs.end()
         ? std::make_optional(
             autoware_utils_math::kmph2mps(std::stof(attrs.at("speed_limit").value())))
         : std::nullopt;
 
+    int64_t turn_direction = LaneSegment::TURN_DIRECTION_NONE;
+    const std::map<std::string, int64_t> turn_direction_map = {
+      {"straight", LaneSegment::TURN_DIRECTION_STRAIGHT},
+      {"left", LaneSegment::TURN_DIRECTION_LEFT},
+      {"right", LaneSegment::TURN_DIRECTION_RIGHT}};
+    if (is_intersection) {
+      const std::string turn_direction_str = attrs.at("turn_direction").value();
+      const auto itr = turn_direction_map.find(turn_direction_str);
+      if (itr != turn_direction_map.end()) {
+        turn_direction = itr->second;
+      }
+    }
+
     lane_segments.emplace_back(
       lanelet.id(), lane_polyline, is_intersection, left_boundary_segments, right_boundary_segments,
-      speed_limit_mps);
+      speed_limit_mps, turn_direction);
   }
   return lane_segments;
 }
