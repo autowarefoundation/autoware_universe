@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_TRAJECTORY_RANKER__DATA_STRUCTS_HPP_
-#define AUTOWARE_TRAJECTORY_RANKER__DATA_STRUCTS_HPP_
+#ifndef AUTOWARE__TRAJECTORY_RANKER__DATA_STRUCTS_HPP_
+#define AUTOWARE__TRAJECTORY_RANKER__DATA_STRUCTS_HPP_
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
@@ -120,4 +120,4 @@ struct EvaluationResult
 
 }  // namespace autoware::trajectory_ranker
 
-#endif  // AUTOWARE_TRAJECTORY_RANKER__DATA_STRUCTS_HPP_
+#endif  // AUTOWARE__TRAJECTORY_RANKER__DATA_STRUCTS_HPP_

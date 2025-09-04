@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware_trajectory_ranker/metrics/metrics_utils.hpp"
+#include "autoware/trajectory_ranker/metrics/metrics_utils.hpp"
 
-#include "autoware_trajectory_ranker/utils.hpp"
+#include "autoware/trajectory_ranker/utils.hpp"
 
 #include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>

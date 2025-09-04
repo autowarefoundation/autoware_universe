@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_TRAJECTORY_RANKER__METRICS__METRICS_UTILS_HPP_
-#define AUTOWARE_TRAJECTORY_RANKER__METRICS__METRICS_UTILS_HPP_
+#ifndef AUTOWARE__TRAJECTORY_RANKER__METRICS__METRICS_UTILS_HPP_
+#define AUTOWARE__TRAJECTORY_RANKER__METRICS__METRICS_UTILS_HPP_
 
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
@@ -111,4 +111,4 @@ double time_to_collision(
 
 }  // namespace autoware::trajectory_ranker::metrics::utils
 
-#endif  // AUTOWARE_TRAJECTORY_RANKER__METRICS__METRICS_UTILS_HPP_
+#endif  // AUTOWARE__TRAJECTORY_RANKER__METRICS__METRICS_UTILS_HPP_

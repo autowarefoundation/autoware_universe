@@ -12,20 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_TRAJECTORY_RANKER__METRICS__LONGITUDINAL_JERK_METRIC_HPP_
-#define AUTOWARE_TRAJECTORY_RANKER__METRICS__LONGITUDINAL_JERK_METRIC_HPP_
+#ifndef AUTOWARE__TRAJECTORY_RANKER__METRICS__LATERAL_DEVIATION_METRIC_HPP_
+#define AUTOWARE__TRAJECTORY_RANKER__METRICS__LATERAL_DEVIATION_METRIC_HPP_
 
-#include "autoware_trajectory_ranker/interface/metrics_interface.hpp"
+#include "autoware/trajectory_ranker/interface/metrics_interface.hpp"
 
 #include <memory>
 
 namespace autoware::trajectory_ranker::metrics
 {
 
-class LongitudinalJerk : public MetricInterface
+class LateralDeviation : public MetricInterface
 {
 public:
-  LongitudinalJerk() : MetricInterface("LongitudinalJerk") {}
+  LateralDeviation() : MetricInterface("LateralDeviation") {}
 
   void evaluate(
     const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result,
@@ -36,4 +36,4 @@ public:
 
 }  // namespace autoware::trajectory_ranker::metrics
 
-#endif  // AUTOWARE_TRAJECTORY_RANKER__METRICS__LONGITUDINAL_JERK_METRIC_HPP_
+#endif  // AUTOWARE__TRAJECTORY_RANKER__METRICS__LATERAL_DEVIATION_METRIC_HPP_

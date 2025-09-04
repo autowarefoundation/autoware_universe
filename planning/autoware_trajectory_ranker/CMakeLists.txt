@@ -14,7 +14,7 @@ include_directories(
 )
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
-  src/node.cpp
+  src/trajectory_ranker.cpp
   src/evaluation.cpp
   src/utils.cpp
 )

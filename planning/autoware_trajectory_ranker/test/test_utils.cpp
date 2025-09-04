@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware_trajectory_ranker/utils.hpp"
+#include "autoware/trajectory_ranker/utils.hpp"
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <geometry_msgs/msg/pose.hpp>

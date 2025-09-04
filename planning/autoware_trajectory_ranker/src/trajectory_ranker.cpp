@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware_trajectory_ranker/node.hpp"
+#include "autoware/trajectory_ranker/trajectory_ranker.hpp"
 
-#include "autoware_trajectory_ranker/evaluation.hpp"
-#include "autoware_trajectory_ranker/utils.hpp"
+#include "autoware/trajectory_ranker/evaluation.hpp"
+#include "autoware/trajectory_ranker/utils.hpp"
 
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <magic_enum.hpp>

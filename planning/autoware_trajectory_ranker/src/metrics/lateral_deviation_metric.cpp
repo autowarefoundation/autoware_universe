@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware_trajectory_ranker/metrics/lateral_deviation_metric.hpp"
+#include "autoware/trajectory_ranker/metrics/lateral_deviation_metric.hpp"
 
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils_geometry/geometry.hpp>

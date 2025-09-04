@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware_trajectory_ranker/data_structs.hpp"
-#include "autoware_trajectory_ranker/evaluation.hpp"
+#include "autoware/trajectory_ranker/data_structs.hpp"
+#include "autoware/trajectory_ranker/evaluation.hpp"
 
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>

@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware_trajectory_ranker/data_structs.hpp"
-#include "autoware_trajectory_ranker/interface/data_interface.hpp"
-#include "autoware_trajectory_ranker/metrics/distance_metric.hpp"
-#include "autoware_trajectory_ranker/metrics/lateral_acceleration_metric.hpp"
-#include "autoware_trajectory_ranker/metrics/lateral_deviation_metric.hpp"
-#include "autoware_trajectory_ranker/metrics/longitudinal_jerk_metric.hpp"
-#include "autoware_trajectory_ranker/metrics/steering_consistency_metric.hpp"
-#include "autoware_trajectory_ranker/metrics/time_to_collision_metric.hpp"
+#include "autoware/trajectory_ranker/data_structs.hpp"
+#include "autoware/trajectory_ranker/interface/data_interface.hpp"
+#include "autoware/trajectory_ranker/metrics/distance_metric.hpp"
+#include "autoware/trajectory_ranker/metrics/lateral_acceleration_metric.hpp"
+#include "autoware/trajectory_ranker/metrics/lateral_deviation_metric.hpp"
+#include "autoware/trajectory_ranker/metrics/longitudinal_jerk_metric.hpp"
+#include "autoware/trajectory_ranker/metrics/steering_consistency_metric.hpp"
+#include "autoware/trajectory_ranker/metrics/time_to_collision_metric.hpp"
 
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>

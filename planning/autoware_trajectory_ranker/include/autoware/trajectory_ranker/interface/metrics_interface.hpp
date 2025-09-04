@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_TRAJECTORY_RANKER__INTERFACE__METRICS_INTERFACE_HPP_
-#define AUTOWARE_TRAJECTORY_RANKER__INTERFACE__METRICS_INTERFACE_HPP_
+#ifndef AUTOWARE__TRAJECTORY_RANKER__INTERFACE__METRICS_INTERFACE_HPP_
+#define AUTOWARE__TRAJECTORY_RANKER__INTERFACE__METRICS_INTERFACE_HPP_
 
-#include "autoware_trajectory_ranker/interface/data_interface.hpp"
+#include "autoware/trajectory_ranker/interface/data_interface.hpp"
 
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -115,4 +115,4 @@ private:
 
 }  // namespace autoware::trajectory_ranker::metrics
 
-#endif  // AUTOWARE_TRAJECTORY_RANKER__INTERFACE__METRICS_INTERFACE_HPP_
+#endif  // AUTOWARE__TRAJECTORY_RANKER__INTERFACE__METRICS_INTERFACE_HPP_

@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_TRAJECTORY_RANKER__METRICS__STEERING_CONSISTENCY_METRIC_HPP_
-#define AUTOWARE_TRAJECTORY_RANKER__METRICS__STEERING_CONSISTENCY_METRIC_HPP_
+#ifndef AUTOWARE__TRAJECTORY_RANKER__METRICS__STEERING_CONSISTENCY_METRIC_HPP_
+#define AUTOWARE__TRAJECTORY_RANKER__METRICS__STEERING_CONSISTENCY_METRIC_HPP_
 
-#include "autoware_trajectory_ranker/interface/metrics_interface.hpp"
+#include "autoware/trajectory_ranker/interface/metrics_interface.hpp"
 
 #include <memory>
 
@@ -36,4 +36,4 @@ public:
 
 }  // namespace autoware::trajectory_ranker::metrics
 
-#endif  // AUTOWARE_TRAJECTORY_RANKER__METRICS__STEERING_CONSISTENCY_METRIC_HPP_
+#endif  // AUTOWARE__TRAJECTORY_RANKER__METRICS__STEERING_CONSISTENCY_METRIC_HPP_

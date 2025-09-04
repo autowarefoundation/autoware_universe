@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware_trajectory_ranker/metrics/metrics_utils.hpp"
+#include "autoware/trajectory_ranker/metrics/metrics_utils.hpp"
 
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>

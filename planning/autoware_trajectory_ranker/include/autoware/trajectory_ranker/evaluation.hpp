@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_TRAJECTORY_RANKER__EVALUATION_HPP_
-#define AUTOWARE_TRAJECTORY_RANKER__EVALUATION_HPP_
+#ifndef AUTOWARE__TRAJECTORY_RANKER__EVALUATION_HPP_
+#define AUTOWARE__TRAJECTORY_RANKER__EVALUATION_HPP_
 
-#include "autoware_trajectory_ranker/data_structs.hpp"
-#include "autoware_trajectory_ranker/interface/data_interface.hpp"
-#include "autoware_trajectory_ranker/interface/metrics_interface.hpp"
+#include "autoware/trajectory_ranker/data_structs.hpp"
+#include "autoware/trajectory_ranker/interface/data_interface.hpp"
+#include "autoware/trajectory_ranker/interface/metrics_interface.hpp"
 
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
@@ -165,4 +165,4 @@ private:
 
 }  // namespace autoware::trajectory_ranker
 
-#endif  // AUTOWARE_TRAJECTORY_RANKER__EVALUATION_HPP_
+#endif  // AUTOWARE__TRAJECTORY_RANKER__EVALUATION_HPP_
