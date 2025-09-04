@@ -18,6 +18,7 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
   <depend>autoware_internal_planning_msgs</depend>
+  <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_perception_msgs</depend>
@@ -30,7 +31,6 @@
   <depend>generate_parameter_library</depend>
   <depend>geometry_msgs</depend>
   <depend>lanelet2_core</depend>
-  <depend>lanelet2_extension</depend>
   <depend>magic_enum</depend>
   <depend>nav_msgs</depend>
   <depend>pluginlib</depend>
@@ -38,7 +38,6 @@
   <depend>rclcpp_components</depend>
   <depend>std_msgs</depend>
   <depend>tf2</depend>
-  <depend>tf2_geometry_msgs</depend>
   <depend>unique_identifier_msgs</depend>
   <depend>visualization_msgs</depend>
 
