@@ -41,7 +41,7 @@ std::optional<size_t> find_segment_index(
   if (t < times.front()) return std::nullopt;
   if (t >= times.back()) return std::nullopt;
 
-  auto it = std::upper_bound(times.begin() + static_cast<std::ptrdiff_t>(start), times.end(), t);
+  auto it = std::upper_bound(times.begin() + start, times.end(), t);
 
   if (it == times.begin() || it == times.end()) return std::nullopt;
   return static_cast<size_t>(std::distance(times.begin(), it)) - 1;

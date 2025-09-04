@@ -37,8 +37,6 @@ void SteeringConsistency::evaluate(
   steering_command.reserve(result->points()->size());
 
   const auto wheel_base = vehicle_info()->wheel_base_m;
-
-  steering_command.reserve(result->points()->size());
   for (const auto & point : *result->points()) {
     const auto current = utils::steer_command(result->points(), point.pose, wheel_base);
     const auto previous = utils::steer_command(result->previous(), point.pose, wheel_base);
