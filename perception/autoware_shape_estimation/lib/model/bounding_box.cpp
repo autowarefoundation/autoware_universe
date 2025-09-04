@@ -55,7 +55,7 @@ constexpr double FRONT_BACK_ANGLE_THRESHOLD = M_PI_4;  // 45 degrees in radians
 
 // Tolerance for yaw angle near 90 degrees for dimension swapping
 // When yaw is within [80°, 90°], swap x and y dimensions and adjust yaw by -90°
-constexpr double YAW_90_DEG_TOLERANCE = 10.0 * M_PI / 180.0;  // 10 degrees tolerance
+constexpr double YAW_DEG_TOLERANCE = 10.0 * M_PI / 180.0;  // 10 degrees tolerance
 BoundingBoxShapeModel::BoundingBoxShapeModel()
 : ref_yaw_info_(boost::none), use_boost_bbox_optimizer_(false)
 {
@@ -178,7 +178,7 @@ bool BoundingBoxShapeModel::fitLShape(
     }
   } else if ((-M_PI + FRONT_BACK_ANGLE_THRESHOLD) > cluster_angle_rad || 
               cluster_angle_rad >= (M_PI - FRONT_BACK_ANGLE_THRESHOLD)) { //back
-    if ((M_PI_2 - YAW_TOLERANCE) < raw_yaw && raw_yaw <= M_PI_2) {
+    if ((M_PI_2 - YAW_DEG_TOLERANCE) < raw_yaw && raw_yaw <= M_PI_2) {
       raw_yaw -= M_PI_2;
       double temp = shape_output.dimensions.x;
       shape_output.dimensions.x = shape_output.dimensions.y;
