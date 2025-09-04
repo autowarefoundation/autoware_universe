@@ -138,6 +138,14 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   )
 
   ament_auto_add_library(${PROJECT_NAME} SHARED ${SOURCES})
+  ament_target_dependencies(${PROJECT_NAME}
+    rclcpp
+    std_msgs
+    visualization_msgs
+    tf2_geometry_msgs
+    ament_index_cpp
+    Eigen3
+  )
 
   target_link_libraries(${PROJECT_NAME}
     ${CUDA_LIBRARIES}
@@ -163,9 +171,8 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
 
   target_include_directories(${PROJECT_NAME}
     PUBLIC
-    # Project's public headers (export to dependents + install)
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
+    # Project's public headers
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
     PRIVATE
     # Internal-only headers
     ${CMAKE_CURRENT_SOURCE_DIR}/TensorRT/common
@@ -180,7 +187,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     EXECUTABLE ${PROJECT_NAME}_node
   )
 
-  install(DIRECTORY include launch config DESTINATION share/${PROJECT_NAME})
+  install(DIRECTORY src launch config DESTINATION share/${PROJECT_NAME})
   install(TARGETS ${TENSORRT_OPS_TARGET} LIBRARY DESTINATION lib)
 
   ament_auto_package()

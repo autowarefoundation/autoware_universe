@@ -28,9 +28,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore bevformer
-
-#include "../../include/autoware/tensorrt_bevformer/preprocessing/multi_scale_flip_aug_3d.hpp"
+#include "multi_scale_flip_aug_3d.hpp"
 
 #include <iostream>
 #include <memory>

@@ -28,7 +28,7 @@
  * limitations under the License.
  */
 
-#include "../../include/autoware/tensorrt_bevformer/postprocessing/postprocessing.hpp"
+#include "postprocessing.hpp"
 
 #include <algorithm>
 #include <cmath>

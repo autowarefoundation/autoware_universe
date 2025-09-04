@@ -28,9 +28,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore bevformer
-
-#include "autoware/tensorrt_bevformer/preprocessing/preprocessing_pipeline.hpp"
+#include "preprocessing_pipeline.hpp"
 
 #include <rclcpp/logging.hpp>
 

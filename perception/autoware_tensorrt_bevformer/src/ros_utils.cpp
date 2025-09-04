@@ -28,11 +28,9 @@
  * limitations under the License.
  */
 
-// cspell:ignore bevformer
+#include "ros_utils.hpp"
 
-#include "autoware/tensorrt_bevformer/ros_utils.hpp"
-
-#include "autoware/tensorrt_bevformer/bevformer_node.hpp"
+#include "bevformer_node.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>

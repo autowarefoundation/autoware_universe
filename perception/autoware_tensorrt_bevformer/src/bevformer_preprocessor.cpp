@@ -28,9 +28,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore bevformer
-
-#include "autoware/tensorrt_bevformer/bevformer_preprocessor.hpp"
+#include "bevformer_preprocessor.hpp"
 
 #include <Eigen/LU>
 #include <rclcpp/logging.hpp>

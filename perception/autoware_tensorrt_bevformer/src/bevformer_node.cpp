@@ -30,12 +30,12 @@
 
 // cspell:ignore thre, caminfo, intrin, Canbus, BEVFormer
 
-#include "autoware/tensorrt_bevformer/bevformer_node.hpp"
+#include "bevformer_node.hpp"
 
-#include "autoware/tensorrt_bevformer/marker_util.hpp"
-#include "autoware/tensorrt_bevformer/postprocessing/postprocessing.hpp"
-#include "autoware/tensorrt_bevformer/preprocessing/preprocessing_pipeline.hpp"
-#include "autoware/tensorrt_bevformer/ros_utils.hpp"
+#include "marker_util.hpp"
+#include "postprocessing/postprocessing.hpp"
+#include "preprocessing/preprocessing_pipeline.hpp"
+#include "ros_utils.hpp"
 
 #include <Eigen/LU>
 

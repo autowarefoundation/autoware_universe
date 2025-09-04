@@ -30,10 +30,10 @@
 
 // cspell:ignore bevformer
 
-#include "autoware/tensorrt_bevformer/bevformer_inference_engine.hpp"
+#include "bevformer_inference_engine.hpp"
 
 #include "ament_index_cpp/get_package_prefix.hpp"
-#include "autoware/tensorrt_bevformer/ros_utils.hpp"
+#include "ros_utils.hpp"
 
 #include <rclcpp/logging.hpp>
 

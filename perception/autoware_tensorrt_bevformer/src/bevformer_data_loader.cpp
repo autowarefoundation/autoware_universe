@@ -30,7 +30,7 @@
 
 // cspell:ignore bevformer
 
-#include "autoware/tensorrt_bevformer/bevformer_data_loader.hpp"
+#include "bevformer_data_loader.hpp"
 
 #include <opencv2/opencv.hpp>
 #include <rclcpp/logging.hpp>

@@ -28,9 +28,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore bevformer
-
-#include "../../include/autoware/tensorrt_bevformer/preprocessing/normalize_multiview_image.hpp"
+#include "normalize_multiview_image.hpp"
 
 #include <algorithm>
 #include <array>
