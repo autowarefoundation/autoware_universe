@@ -30,8 +30,8 @@
 
 // cspell:ignore BEVFORMER, Canbus
 
-#ifndef AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_DATA_MANAGER_HPP_
-#define AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_DATA_MANAGER_HPP_
+#ifndef BEVFORMER_DATA_MANAGER_HPP_
+#define BEVFORMER_DATA_MANAGER_HPP_
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -149,4 +149,4 @@ private:
 }  // namespace tensorrt_bevformer
 }  // namespace autoware
 
-#endif  // AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_DATA_MANAGER_HPP_
+#endif  // BEVFORMER_DATA_MANAGER_HPP_

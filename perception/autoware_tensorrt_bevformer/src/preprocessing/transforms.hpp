@@ -30,8 +30,8 @@
 
 // cspell:ignore BEVFORMER
 
-#ifndef AUTOWARE__TENSORRT_BEVFORMER__PREPROCESSING__TRANSFORMS_HPP_
-#define AUTOWARE__TENSORRT_BEVFORMER__PREPROCESSING__TRANSFORMS_HPP_
+#ifndef PREPROCESSING__TRANSFORMS_HPP_
+#define PREPROCESSING__TRANSFORMS_HPP_
 
 #include "data_types.hpp"
 
@@ -75,4 +75,4 @@ class MultiScaleFlipAug3D;
 }  // namespace preprocessing
 }  // namespace bevformer
 
-#endif  // AUTOWARE__TENSORRT_BEVFORMER__PREPROCESSING__TRANSFORMS_HPP_
+#endif  // PREPROCESSING__TRANSFORMS_HPP_
