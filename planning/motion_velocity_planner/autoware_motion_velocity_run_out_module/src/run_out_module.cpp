@@ -78,7 +78,7 @@ void RunOutModule::init(rclcpp::Node & node, const std::string & module_name)
   time_keeper_ = std::make_shared<autoware::universe_utils::TimeKeeper>(timekeeper_publisher_);
 
   init_parameters(node);
-  diagnostic_updater_->setHardwareID("mvp_run_out");
+  diagnostic_updater_->setHardwareID("run_out");
   diagnostic_updater_->add(
     "unavoidable_run_out_collision", this, &RunOutModule::update_unfeasible_stop_status);
 
@@ -86,7 +86,7 @@ void RunOutModule::init(rclcpp::Node & node, const std::string & module_name)
     autoware::objects_of_interest_marker_interface::ObjectsOfInterestMarkerInterface>(&node, ns_);
   planning_factor_interface_ =
     std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      &node, "mvp_run_out");
+      &node, "run_out");
 }
 
 double calculate_keep_stop_distance_range(
