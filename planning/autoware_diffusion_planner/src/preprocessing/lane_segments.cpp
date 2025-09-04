@@ -329,11 +329,6 @@ void transform_selected_rows(
 uint8_t identify_current_light_status(
   const int64_t turn_direction, const std::vector<TrafficLightElement> & traffic_light_elements)
 {
-  // If not intersection, return WHITE (which means no traffic light is present)
-  if (turn_direction == LaneSegment::TURN_DIRECTION_NONE) {
-    return TrafficLightElement::WHITE;
-  }
-
   // Filter out ineffective elements (color == 0 which is UNKNOWN)
   std::vector<TrafficLightElement> effective_elements;
   for (const auto & element : traffic_light_elements) {
@@ -355,6 +350,7 @@ uint8_t identify_current_light_status(
   // For multiple elements, find the one that matches the turn direction
   // Map turn direction to corresponding arrow shape
   const std::map<int64_t, uint8_t> direction_to_shape_map = {
+    {LaneSegment::TURN_DIRECTION_NONE, TrafficLightElement::UNKNOWN},       // none
     {LaneSegment::TURN_DIRECTION_STRAIGHT, TrafficLightElement::UP_ARROW},  // straight
     {LaneSegment::TURN_DIRECTION_LEFT, TrafficLightElement::LEFT_ARROW},    // left
     {LaneSegment::TURN_DIRECTION_RIGHT, TrafficLightElement::RIGHT_ARROW}   // right
