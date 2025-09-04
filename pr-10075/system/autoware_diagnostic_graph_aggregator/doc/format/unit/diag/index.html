@@ -9486,6 +9486,8 @@
         
           
         
+          
+        
       
       
         <label class="md-nav__link" for="__nav_9_1_2" id="__nav_9_1_2_label" tabindex="0">
@@ -9522,6 +9524,20 @@
     <li class="md-nav__item">
       <a href="../../../../../../sensing/autoware_cuda_pointcloud_preprocessor/docs/cuda-pointcloud-preprocessor/" class="md-nav__link">
         cuda_pointcloud_preprocessor
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../../sensing/autoware_cuda_pointcloud_preprocessor/docs/cuda-polar-voxel-outlier-filter/" class="md-nav__link">
+        cuda_polar_voxel_outlier_filter
       </a>
     </li>
   
@@ -9890,6 +9906,8 @@
         
           
         
+          
+        
       
       
         <label class="md-nav__link" for="__nav_9_7_2" id="__nav_9_7_2_label" tabindex="0">
@@ -10038,6 +10056,20 @@
     <li class="md-nav__item">
       <a href="../../../../../../sensing/autoware_pointcloud_preprocessor/docs/pointcloud-densifier/" class="md-nav__link">
         PointCloud Densifier
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../../sensing/autoware_pointcloud_preprocessor/docs/polar-voxel-outlier-filter/" class="md-nav__link">
+        Polar Voxel Outlier Filter
       </a>
     </li>
   
@@ -11876,6 +11908,13 @@
         <li class="md-nav__item">
   <a href="#format" class="md-nav__link">
     Format
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hysteresis" class="md-nav__link">
+    Hysteresis
   </a>
   
 </li>
@@ -14035,6 +14074,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#hysteresis" class="md-nav__link">
+    Hysteresis
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -14088,10 +14134,27 @@
 <td><code>timeout</code></td>
 <td><code>float</code></td>
 <td>yes</td>
-<td>The name of the diagnostic status.</td>
+<td>The timeout seconds for the diagnostic status.</td>
+</tr>
+<tr>
+<td><code>hysteresis</code></td>
+<td><code>float</code></td>
+<td>yes</td>
+<td>The hysteresis seconds for the diagnostic status.</td>
 </tr>
 </tbody>
-</table></div>
+</table>
+<h2 id="hysteresis">Hysteresis<a class="headerlink" href="#hysteresis" title="Permanent link">#</a></h2>
+<p>If the <code>hysteresis</code> field is set to a number of seconds, level changes less than this time will be ignored.
+If the field is not specified, it is equivalent to specifying 0.0 seconds, in which case the input and output will always match.
+This is when the latch is set to 0.0 seconds.</p>
+<p><img alt="hysteresis-0sec" src="../../images/hysteresis-0sec.drawio.svg"></p>
+<p>This is when the hysteresis is set to 2.0 seconds.</p>
+<p><img alt="hysteresis-2sec" src="../../images/hysteresis-2sec.drawio.svg"></p>
+<p>Error level is also considered warning level when the current level is OK.
+OK level is also considered warning level when the current level is error.
+This is when the hysteresis is set to 2.0 seconds.</p>
+<p><img alt="hysteresis-warn" src="../../images/hysteresis-warn.drawio.svg"></p></div>
 
 
 
