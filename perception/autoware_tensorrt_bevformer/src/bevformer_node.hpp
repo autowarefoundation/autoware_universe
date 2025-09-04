@@ -30,8 +30,8 @@
 
 // cspell:ignore BEVFORMER, bevformer, thre, caminfo, intrin
 
-#ifndef AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_NODE_HPP_
-#define AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_NODE_HPP_
+#ifndef BEVFORMER_NODE_HPP_
+#define BEVFORMER_NODE_HPP_
 
 #include "bevformer_data_loader.hpp"
 #include "bevformer_data_manager.hpp"
@@ -208,4 +208,4 @@ public:
 }  // namespace tensorrt_bevformer
 }  // namespace autoware
 
-#endif  // AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_NODE_HPP_
+#endif  // BEVFORMER_NODE_HPP_

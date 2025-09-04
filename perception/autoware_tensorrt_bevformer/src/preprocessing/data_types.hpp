@@ -30,8 +30,8 @@
 
 // cspell:ignore BEVFORMER, bevformer
 
-#ifndef AUTOWARE__TENSORRT_BEVFORMER__PREPROCESSING__DATA_TYPES_HPP_
-#define AUTOWARE__TENSORRT_BEVFORMER__PREPROCESSING__DATA_TYPES_HPP_
+#ifndef PREPROCESSING__DATA_TYPES_HPP_
+#define PREPROCESSING__DATA_TYPES_HPP_
 
 #include <opencv2/opencv.hpp>
 
@@ -97,4 +97,4 @@ public:
 }  // namespace preprocessing
 }  // namespace bevformer
 
-#endif  // AUTOWARE__TENSORRT_BEVFORMER__PREPROCESSING__DATA_TYPES_HPP_
+#endif  // PREPROCESSING__DATA_TYPES_HPP_

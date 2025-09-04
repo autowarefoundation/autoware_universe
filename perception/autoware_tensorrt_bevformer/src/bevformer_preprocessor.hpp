@@ -30,8 +30,8 @@
 
 // cspell:ignore BEVFORMER, bevformer
 
-#ifndef AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_PREPROCESSOR_HPP_
-#define AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_PREPROCESSOR_HPP_
+#ifndef BEVFORMER_PREPROCESSOR_HPP_
+#define BEVFORMER_PREPROCESSOR_HPP_
 
 #include "bevformer_data_loader.hpp"
 #include "preprocessing/preprocessing_pipeline.hpp"
@@ -111,4 +111,4 @@ private:
 }  // namespace tensorrt_bevformer
 }  // namespace autoware
 
-#endif  // AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_PREPROCESSOR_HPP_
+#endif  // BEVFORMER_PREPROCESSOR_HPP_

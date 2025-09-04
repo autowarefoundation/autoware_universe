@@ -30,8 +30,8 @@
 
 // cspell:ignore BEVFORMER, bevformer
 
-#ifndef AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_DATA_LOADER_HPP_
-#define AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_DATA_LOADER_HPP_
+#ifndef BEVFORMER_DATA_LOADER_HPP_
+#define BEVFORMER_DATA_LOADER_HPP_
 
 #include <opencv2/core.hpp>
 
@@ -55,4 +55,4 @@ public:
 }  // namespace tensorrt_bevformer
 }  // namespace autoware
 
-#endif  // AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_DATA_LOADER_HPP_
+#endif  // BEVFORMER_DATA_LOADER_HPP_

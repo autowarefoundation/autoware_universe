@@ -30,8 +30,8 @@
 
 // cspell:ignore BEVFORMER, bevformer
 
-#ifndef AUTOWARE__TENSORRT_BEVFORMER__MARKER_UTIL_HPP_
-#define AUTOWARE__TENSORRT_BEVFORMER__MARKER_UTIL_HPP_
+#ifndef MARKER_UTIL_HPP_
+#define MARKER_UTIL_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -58,4 +58,4 @@ void publishDebugMarkers(
   autoware_perception_msgs::msg::DetectedObjects & bevformer_objects);
 
 }  // namespace autoware::tensorrt_bevformer
-#endif  // AUTOWARE__TENSORRT_BEVFORMER__MARKER_UTIL_HPP_
+#endif  // MARKER_UTIL_HPP_

@@ -30,8 +30,8 @@
 
 // cspell:ignore BEVFORMER, bevformer
 
-#ifndef AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_INFERENCE_ENGINE_HPP_
-#define AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_INFERENCE_ENGINE_HPP_
+#ifndef BEVFORMER_INFERENCE_ENGINE_HPP_
+#define BEVFORMER_INFERENCE_ENGINE_HPP_
 
 #include "bevformer_data_loader.hpp"
 #include "ros_utils.hpp"
@@ -165,4 +165,4 @@ private:
 }  // namespace tensorrt_bevformer
 }  // namespace autoware
 
-#endif  // AUTOWARE__TENSORRT_BEVFORMER__BEVFORMER_INFERENCE_ENGINE_HPP_
+#endif  // BEVFORMER_INFERENCE_ENGINE_HPP_
