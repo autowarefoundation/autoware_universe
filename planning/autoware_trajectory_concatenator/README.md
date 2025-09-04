@@ -10,12 +10,6 @@ When a message arrives on `~/input/trajectories`, the node splits it by `generat
 
 A 100 ms timer then scans this buffer and drops any entry whose header stamp is older than the configured duration_time. Immediately after pruning, the timer concatenates all remaining trajectories and their accompanying `generator_info` arrays, publishes the aggregated message.
 
-### Optional - Integrate selected trajectory feedback
-
-(Enabled when `selected_trajectory.use` is true)
-
-When feedback mode is on, the node also monitors `~/input/selected_trajectory`. For every incoming message it retrieves the latest odometry to locate the ego pose along the selected path. The path is then trimmed so that it starts exactly at that pose and, if its time horizon is shorter than the threshold, additional points are appended until the minimum time-length requirement is satisfied. The resulting trajectory is assigned a fresh UUID and inserted into the same buffer that holds generator outputs, allowing it to participate in the next aggregation cycle just like any other candidate.
-
 ## Interface
 
 ### Topics
