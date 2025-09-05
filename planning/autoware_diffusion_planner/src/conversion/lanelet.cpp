@@ -207,14 +207,14 @@ std::vector<LaneSegment> convert_to_lane_segments(
     std::vector<BoundarySegment> left_boundary_segments;
     std::vector<BoundarySegment> right_boundary_segments;
     // TODO(Daniel): avoid unnecessary copy and creation
-    auto points = from_geometry(lanelet.centerline3d());
+    const auto points = from_geometry(lanelet.centerline3d());
     lane_polyline.assign_waypoints(interpolate_points(points, num_lane_points));
     const auto left_bound = lanelet.leftBound3d();
-    auto left_points = from_geometry(left_bound);
+    const auto left_points = from_geometry(left_bound);
     left_boundary_segments.emplace_back(
       MapType::Unused, interpolate_points(left_points, num_lane_points));
     const auto right_bound = lanelet.rightBound3d();
-    auto right_points = from_geometry(right_bound);
+    const auto right_points = from_geometry(right_bound);
     right_boundary_segments.emplace_back(
       MapType::Unused, interpolate_points(right_points, num_lane_points));
 
