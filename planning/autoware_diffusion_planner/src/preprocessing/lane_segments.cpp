@@ -14,6 +14,7 @@
 
 #include "autoware/diffusion_planner/preprocessing/lane_segments.hpp"
 
+#include "autoware/diffusion_planner/constants.hpp"
 #include "autoware/diffusion_planner/dimensions.hpp"
 
 #include <autoware_lanelet2_extension/regulatory_elements/road_marking.hpp>  // for lanelet::autoware::RoadMarking
@@ -117,9 +118,8 @@ std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_lane_s
     throw std::invalid_argument(
       "Input matrix must have at least FULL_MATRIX_ROWS rows and m must be greater than 0.");
   }
-  std::vector<ColWithDistance> distances;
   // Step 1: Compute distances
-  compute_distances(transform_matrix, distances, center_x, center_y, 100.0f);
+  std::vector<ColWithDistance> distances = compute_distances(transform_matrix, center_x, center_y);
   // Step 2: Sort indices by distance
   std::sort(distances.begin(), distances.end(), [](const auto & a, const auto & b) {
     return a.distance_squared < b.distance_squared;
@@ -210,9 +210,8 @@ void LaneSegmentContext::apply_transforms(
   output_matrix.row(RB_Y) = output_matrix.row(RB_Y) - output_matrix.row(Y);
 }
 
-void LaneSegmentContext::compute_distances(
-  const Eigen::Matrix4d & transform_matrix, std::vector<ColWithDistance> & distances,
-  const float center_x, const float center_y, const float mask_range) const
+std::vector<ColWithDistance> LaneSegmentContext::compute_distances(
+  const Eigen::Matrix4d & transform_matrix, const float center_x, const float center_y) const
 {
   const auto cols = map_lane_segments_matrix_.cols();
   if (cols % POINTS_PER_SEGMENT != 0) {
@@ -226,12 +225,13 @@ void LaneSegmentContext::compute_distances(
   };
 
   auto is_inside = [&](const double x, const double y) {
+    using autoware::diffusion_planner::constants::LANE_MASK_RANGE_M;
     return (
-      x > center_x - mask_range * 1.1 && x < center_x + mask_range * 1.1 &&
-      y > center_y - mask_range * 1.1 && y < center_y + mask_range * 1.1);
+      x > center_x - LANE_MASK_RANGE_M && x < center_x + LANE_MASK_RANGE_M &&
+      y > center_y - LANE_MASK_RANGE_M && y < center_y + LANE_MASK_RANGE_M);
   };
 
-  distances.clear();
+  std::vector<ColWithDistance> distances;
   distances.reserve(cols / POINTS_PER_SEGMENT);
   for (int64_t i = 0; i < cols; i += POINTS_PER_SEGMENT) {
     // Directly access input matrix as raw memory
@@ -250,6 +250,8 @@ void LaneSegmentContext::compute_distances(
 
     distances.push_back({static_cast<int64_t>(i), distance_squared, inside});
   }
+
+  return distances;
 }
 
 Eigen::MatrixXd LaneSegmentContext::transform_points_and_add_traffic_info(
@@ -327,11 +329,6 @@ void transform_selected_rows(
 uint8_t identify_current_light_status(
   const int64_t turn_direction, const std::vector<TrafficLightElement> & traffic_light_elements)
 {
-  // If not intersection, return WHITE (which means no traffic light is present)
-  if (turn_direction == LaneSegment::TURN_DIRECTION_NONE) {
-    return TrafficLightElement::WHITE;
-  }
-
   // Filter out ineffective elements (color == 0 which is UNKNOWN)
   std::vector<TrafficLightElement> effective_elements;
   for (const auto & element : traffic_light_elements) {
@@ -353,6 +350,7 @@ uint8_t identify_current_light_status(
   // For multiple elements, find the one that matches the turn direction
   // Map turn direction to corresponding arrow shape
   const std::map<int64_t, uint8_t> direction_to_shape_map = {
+    {LaneSegment::TURN_DIRECTION_NONE, TrafficLightElement::UNKNOWN},       // none
     {LaneSegment::TURN_DIRECTION_STRAIGHT, TrafficLightElement::UP_ARROW},  // straight
     {LaneSegment::TURN_DIRECTION_LEFT, TrafficLightElement::LEFT_ARROW},    // left
     {LaneSegment::TURN_DIRECTION_RIGHT, TrafficLightElement::RIGHT_ARROW}   // right
