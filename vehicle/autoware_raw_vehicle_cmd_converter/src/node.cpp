@@ -42,6 +42,12 @@ RawVehicleCommandConverterNode::RawVehicleCommandConverterNode(
   use_steer_fb_ = declare_parameter<bool>("use_steer_fb");
   use_vehicle_adaptor_ = declare_parameter<bool>("use_vehicle_adaptor", false);
 
+  // for steer offset parameters
+  initial_steer_offset_ = declare_parameter<double>("steer_offset", 0.0);
+  steer_offset_updatable_range_ = declare_parameter<double>("steer_offset_updatable_range", 0.0);
+  parameter_updatable_velocity_ = declare_parameter<double>("parameter_updatable_velocity", 0.0);
+  current_steer_offset_ = initial_steer_offset_;  // Initialize with base offset
+
   if (convert_accel_cmd_) {
     if (!accel_map_.readAccelMapFromCSV(csv_path_accel_map, true)) {
       throw std::invalid_argument("Accel map is invalid.");
@@ -114,6 +120,9 @@ RawVehicleCommandConverterNode::RawVehicleCommandConverterNode(
   sub_control_cmd_ = create_subscription<Control>(
     "~/input/control_cmd", 1, std::bind(&RawVehicleCommandConverterNode::onControlCmd, this, _1));
 
+  sub_steer_offset_ = create_subscription<Float32Stamped>(
+    "~/input/steer_offset", 1, std::bind(&RawVehicleCommandConverterNode::onSteerOffset, this, _1));
+
   pub_actuation_cmd_ = create_publisher<ActuationCommandStamped>("~/output/actuation_cmd", 1);
   debug_pub_steer_pid_ = create_publisher<Float32MultiArrayStamped>(
     "/vehicle/raw_vehicle_cmd_converter/debug/steer_pid", 1);
@@ -165,6 +174,11 @@ void RawVehicleCommandConverterNode::publishActuationCmd()
     pub_compensated_control_cmd_->publish(control_cmd);
   }
 
+  /* update steer offset if speed is below threshold */
+  if (std::abs(current_odometry_->twist.twist.linear.x) <= parameter_updatable_velocity_) {
+    current_steer_offset_ = latest_estimated_steer_offset_;
+  }
+
   /* calculate actuation command */
   double desired_accel_cmd = 0.0;
   double desired_brake_cmd = 0.0;
@@ -172,7 +186,7 @@ void RawVehicleCommandConverterNode::publishActuationCmd()
   ActuationCommandStamped actuation_cmd;
   const double acc = control_cmd.longitudinal.acceleration;
   const double vel = current_odometry_->twist.twist.linear.x;
-  const double steer = control_cmd.lateral.steering_tire_angle;
+  const double steer = control_cmd.lateral.steering_tire_angle - current_steer_offset_;
   const double steer_rate = control_cmd.lateral.steering_tire_rotation_rate;
   bool accel_cmd_is_zero = true;
   if (convert_accel_cmd_) {
@@ -266,7 +280,7 @@ double RawVehicleCommandConverterNode::calculateSteerFromMap(
 }
 
 double RawVehicleCommandConverterNode::calculateAccelMap(
-  const double current_velocity, const double desired_acc, bool & accel_cmd_is_zero)
+  const double current_velocity, const double desired_acc, bool & accel_cmd_is_zero) const
 {
   double desired_accel_cmd = 0;
   if (!accel_map_.getThrottle(desired_acc, std::abs(current_velocity), desired_accel_cmd)) {
@@ -325,6 +339,14 @@ void RawVehicleCommandConverterNode::onActuationStatus(
         "false.");
     }
   }
+}
+
+void RawVehicleCommandConverterNode::onSteerOffset(const Float32Stamped::ConstSharedPtr msg)
+{
+  const auto received_offset = static_cast<double>(msg->data);
+  const double min_offset = initial_steer_offset_ - steer_offset_updatable_range_;
+  const double max_offset = initial_steer_offset_ + steer_offset_updatable_range_;
+  latest_estimated_steer_offset_ = std::clamp(received_offset, min_offset, max_offset);
 }
 }  // namespace autoware::raw_vehicle_cmd_converter
 
