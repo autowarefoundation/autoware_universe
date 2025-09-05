@@ -60,7 +60,7 @@ private:
   autoware_utils_rclcpp::InterProcessPollingSubscriber<Odometry> sub_odometry_{
     this, "~/input/odometry"};
 
-  rclcpp::Publisher<CandidateTrajectories>::SharedPtr pub_trajectores_;
+  rclcpp::Publisher<CandidateTrajectories>::SharedPtr pub_trajectories_;
 
   std::unique_ptr<concatenator::ParamListener> listener_;
 

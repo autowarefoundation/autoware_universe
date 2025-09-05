@@ -45,7 +45,7 @@ TrajectoryConcatenatorNode::TrajectoryConcatenatorNode(const rclcpp::NodeOptions
   subs_trajectories_{this->create_subscription<CandidateTrajectories>(
     "~/input/trajectories", 1,
     std::bind(&TrajectoryConcatenatorNode::on_trajectories, this, std::placeholders::_1))},
-  pub_trajectores_{this->create_publisher<CandidateTrajectories>("~/output/trajectories", 1)},
+  pub_trajectories_{this->create_publisher<CandidateTrajectories>("~/output/trajectories", 1)},
   listener_{std::make_unique<concatenator::ParamListener>(get_node_parameters_interface())}
 {
   debug_processing_time_detail_pub_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
@@ -126,7 +126,7 @@ void TrajectoryConcatenatorNode::publish()
                         .candidate_trajectories(trajectories)
                         .generator_info(generator_info);
 
-  pub_trajectores_->publish(output);
+  pub_trajectories_->publish(output);
 }
 
 auto TrajectoryConcatenatorNode::parameters() const -> std::shared_ptr<ConcatenatorParam>
@@ -135,8 +135,6 @@ auto TrajectoryConcatenatorNode::parameters() const -> std::shared_ptr<Concatena
   const auto parameters = std::make_shared<ConcatenatorParam>();
 
   parameters->duration_time = node_params.duration_time;
-  parameters->min_end_time = node_params.selected_trajectory.endpoint_time_min;
-  parameters->extension_interval = node_params.selected_trajectory.extension_interval;
 
   return parameters;
 }

@@ -1,8 +1,8 @@
-# Trajectory concatenator
+# Trajectory Concatenator
 
 ## Purpose/Role
 
-This node aggregates trajectory candidates from multiple trajectory generators into a single [autoware_internal_planning_msgs/msg/Trajectories](../autoware_internal_planning_msgs/msg/Trajectories.msg) message. It is intended to be placed between trajectory generators and the selector/ranker.
+This node aggregates trajectory candidates from multiple trajectory generators into a single `autoware_internal_planning_msgs/msg/CandidateTrajectories` message. It is intended to be placed between trajectory generators and the selector/ranker.
 
 ## Algorithm Overview
 
@@ -14,18 +14,14 @@ A 100 ms timer then scans this buffer and drops any entry whose header stamp i
 
 ### Topics
 
-| Direction  | Topic name                    | Message Type                                       | Description                                                |
-| ---------- | ----------------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
-| Subscriber | `~/input/trajectories`        | `autoware_internal_planning_msgs/msg/Trajectories` | Trajectory sets produced by each generator                 |
-| Subscriber | `~/input/selected_trajectory` | `autoware_planning_msgs/msg/Trajectory`            | Current selector output (optional feedback)                |
-| Subscriber | `~/input/odometry`            | `nav_msgs/msg/Odometry`                            | Ego pose needed to trim and extend the feedback trajectory |
-| Publisher  | `~/output/trajectories`       | `autoware_internal_planning_msgs/msg/Trajectories` | Concatenated list of all buffered trajectories             |
+| Direction  | Topic name              | Message Type                                                | Description                                                |
+| ---------- | ----------------------- | ----------------------------------------------------------- | ---------------------------------------------------------- |
+| Subscriber | `~/input/trajectories`  | `autoware_internal_planning_msgs/msg/CandidateTrajectories` | Trajectory sets produced by each generator                 |
+| Subscriber | `~/input/odometry`      | `nav_msgs/msg/Odometry`                                     | Ego pose needed to trim and extend the feedback trajectory |
+| Publisher  | `~/output/trajectories` | `autoware_internal_planning_msgs/msg/CandidateTrajectories` | Concatenated list of all buffered trajectories             |
 
 ### Parameters
 
-| Name                                     | Type   | Default | Description                                                           |
-| ---------------------------------------- | ------ | ------- | --------------------------------------------------------------------- |
-| `duration_time`                          | double | 0.2     | Maximum age of trajectories kept in the buffer (seconds)              |
-| `selected_trajectory.use`                | bool   | false   | Enable feedback mode                                                  |
-| `selected_trajectory.endpoint_time_min`  | double | 10.0    | Minimum horizon length required for the feedback trajectory (seconds) |
-| `selected_trajectory.extension_interval` | double | 0.1     | Δt used when extending the feedback trajectory (seconds)              |
+| Name            | Type   | Default | Description                                              |
+| --------------- | ------ | ------- | -------------------------------------------------------- |
+| `duration_time` | double | 0.2     | Maximum age of trajectories kept in the buffer (seconds) |

@@ -4,16 +4,3 @@ concatenator:
     default_value: 0.2
     description: Duration time to keep the trajectory (it will be deleted once exceeding this value).
     read_only: false
-
-  selected_trajectory:
-    endpoint_time_min:
-      type: double
-      default_value: 10.0
-      description: The minimum value for time_from_start at the trajectory end point
-      read_only: false
-
-    extension_interval:
-      type: double
-      default_value: 0.1
-      description: time interval for each point extension
-      read_only: false
