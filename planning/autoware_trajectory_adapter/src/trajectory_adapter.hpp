@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TRAJECTORY_ADAPTOR_HPP_
-#define TRAJECTORY_ADAPTOR_HPP_
+#ifndef TRAJECTORY_ADAPTER_HPP_
+#define TRAJECTORY_ADAPTER_HPP_
 
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -25,16 +25,16 @@
 
 #include <memory>
 
-namespace autoware::trajectory_adaptor
+namespace autoware::trajectory_adapter
 {
 
 using autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories;
 using autoware_planning_msgs::msg::Trajectory;
 
-class TrajectoryAdaptorNode : public rclcpp::Node
+class TrajectoryAdapterNode : public rclcpp::Node
 {
 public:
-  explicit TrajectoryAdaptorNode(const rclcpp::NodeOptions & node_options);
+  explicit TrajectoryAdapterNode(const rclcpp::NodeOptions & node_options);
 
 private:
   void process(const ScoredCandidateTrajectories::ConstSharedPtr msg);
@@ -48,6 +48,6 @@ private:
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 };
 
-}  // namespace autoware::trajectory_adaptor
+}  // namespace autoware::trajectory_adapter
 
-#endif  // TRAJECTORY_ADAPTOR_HPP_
+#endif  // TRAJECTORY_ADAPTER_HPP_

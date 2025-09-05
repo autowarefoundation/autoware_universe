@@ -12,20 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "trajectory_adaptor.hpp"
+#include "trajectory_adapter.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 
 #include <memory>
 
-namespace autoware::trajectory_adaptor
+namespace autoware::trajectory_adapter
 {
 
-TrajectoryAdaptorNode::TrajectoryAdaptorNode(const rclcpp::NodeOptions & node_options)
-: Node{"trajectory_adaptor_node", node_options},
+TrajectoryAdapterNode::TrajectoryAdapterNode(const rclcpp::NodeOptions & node_options)
+: Node{"trajectory_adapter_node", node_options},
   sub_trajectories_{this->create_subscription<ScoredCandidateTrajectories>(
     "~/input/trajectories", 1,
-    std::bind(&TrajectoryAdaptorNode::process, this, std::placeholders::_1))},
+    std::bind(&TrajectoryAdapterNode::process, this, std::placeholders::_1))},
   pub_trajectory_{this->create_publisher<Trajectory>("~/output/trajectory", 1)}
 {
   debug_processing_time_detail_pub_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
@@ -34,7 +34,7 @@ TrajectoryAdaptorNode::TrajectoryAdaptorNode(const rclcpp::NodeOptions & node_op
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
 }
 
-void TrajectoryAdaptorNode::process(const ScoredCandidateTrajectories::ConstSharedPtr msg)
+void TrajectoryAdapterNode::process(const ScoredCandidateTrajectories::ConstSharedPtr msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -73,7 +73,7 @@ void TrajectoryAdaptorNode::process(const ScoredCandidateTrajectories::ConstShar
   pub_trajectory_->publish(trajectory);
 }
 
-}  // namespace autoware::trajectory_adaptor
+}  // namespace autoware::trajectory_adapter
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::trajectory_adaptor::TrajectoryAdaptorNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::trajectory_adapter::TrajectoryAdapterNode)

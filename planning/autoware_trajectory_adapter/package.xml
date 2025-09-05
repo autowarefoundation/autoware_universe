@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>autoware_trajectory_adaptor</name>
+  <name>autoware_trajectory_adapter</name>
   <version>0.1.0</version>
-  <description>The autoware_trajectory_adaptor package</description>
+  <description>The autoware_trajectory_adapter package</description>
 
   <maintainer email="daniel.sanchez@tier4.jp">Daniel Sanchez</maintainer>
   <maintainer email="yukihiro.saito@tier4.jp">Yukihiro Saito</maintainer>

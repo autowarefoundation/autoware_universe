@@ -1,4 +1,4 @@
-# Trajectory Adaptor
+# Trajectory Adapter
 
 ## Purpose/Role
 
