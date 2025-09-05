@@ -18,10 +18,12 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
+#include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
 #include <tier4_simulation_msgs/msg/dummy_object.hpp>
+#include <unique_identifier_msgs/msg/uuid.hpp>
 
 #include <pcl/common/distances.h>
 #include <pcl/point_types.h>
@@ -37,16 +39,33 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
+#include <deque>
+#include <map>
 #include <memory>
 #include <random>
+#include <set>
+#include <string>
+#include <utility>
 #include <vector>
-
 namespace autoware::dummy_perception_publisher
 {
 struct ObjectInfo
 {
   ObjectInfo(
     const tier4_simulation_msgs::msg::DummyObject & object, const rclcpp::Time & current_time);
+  ObjectInfo(
+    const tier4_simulation_msgs::msg::DummyObject & object,
+    const autoware_perception_msgs::msg::PredictedObject & predicted_object,
+    const rclcpp::Time & predicted_time, const rclcpp::Time & current_time,
+    double predicted_path_delay = 2.0);
+
+  // Position calculation methods
+  static geometry_msgs::msg::Pose calculateStraightLinePosition(
+    const tier4_simulation_msgs::msg::DummyObject & object, const rclcpp::Time & current_time);
+  static geometry_msgs::msg::Pose calculateTrajectoryBasedPosition(
+    const tier4_simulation_msgs::msg::DummyObject & object,
+    const autoware_perception_msgs::msg::PredictedObject & predicted_object,
+    const rclcpp::Time & predicted_time, const rclcpp::Time & current_time);
   double length;
   double width;
   double height;
@@ -118,10 +137,22 @@ private:
   rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr
     ground_truth_objects_pub_;
   rclcpp::Subscription<tier4_simulation_msgs::msg::DummyObject>::SharedPtr object_sub_;
+  rclcpp::Subscription<autoware_perception_msgs::msg::PredictedObjects>::SharedPtr
+    predicted_objects_sub_;
   rclcpp::TimerBase::SharedPtr timer_;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
   std::vector<tier4_simulation_msgs::msg::DummyObject> objects_;
+  std::deque<autoware_perception_msgs::msg::PredictedObjects> predicted_objects_buffer_;
+  static constexpr size_t MAX_BUFFER_SIZE = 50;  // Store last 5 seconds at 10Hz
+  std::map<std::string, std::string> dummy_to_predicted_uuid_map_;
+  std::map<std::string, rclcpp::Time> dummy_mapping_timestamps_;
+  std::map<std::string, geometry_msgs::msg::Point> dummy_last_known_positions_;
+  std::map<std::string, rclcpp::Time> dummy_creation_timestamps_;
+  std::map<std::string, autoware_perception_msgs::msg::PredictedObject>
+    dummy_last_used_predictions_;
+  std::map<std::string, rclcpp::Time> dummy_last_used_prediction_times_;
+  std::map<std::string, rclcpp::Time> dummy_prediction_update_timestamps_;
   double visible_range_;
   double detection_successful_rate_;
   bool enable_ray_tracing_;
@@ -130,11 +161,83 @@ private:
   bool publish_ground_truth_objects_;
   std::unique_ptr<PointCloudCreator> pointcloud_creator_;
 
-  double angle_increment_;
-
   std::mt19937 random_generator_;
+  std::mt19937 pedestrian_path_generator_;
+  std::uniform_real_distribution<double> path_selection_dist_;
+
+  // Configuration parameters
+  double predicted_path_delay_;
+  double min_keep_duration_;
+  double max_yaw_change_;
+  double max_path_length_change_ratio_;
+
+  // Vehicle parameters
+  double vehicle_max_remapping_distance_;
+  double vehicle_max_remapping_yaw_diff_;
+  double vehicle_max_speed_difference_ratio_;
+  double vehicle_min_speed_ratio_;
+  double vehicle_max_speed_ratio_;
+  double vehicle_speed_check_threshold_;
+  double vehicle_max_position_difference_;
+  double vehicle_max_path_length_ratio_;
+  double vehicle_max_overall_direction_diff_;
+
+  // Pedestrian parameters
+  double pedestrian_max_remapping_distance_;
+  double pedestrian_max_remapping_yaw_diff_;
+  double pedestrian_max_speed_difference_ratio_;
+  double pedestrian_min_speed_ratio_;
+  double pedestrian_max_speed_ratio_;
+  double pedestrian_speed_check_threshold_;
+  double pedestrian_max_position_difference_;
+  double pedestrian_max_path_length_ratio_;
+  double pedestrian_max_overall_direction_diff_;
   void timerCallback();
   void objectCallback(const tier4_simulation_msgs::msg::DummyObject::ConstSharedPtr msg);
+  void predictedObjectsCallback(
+    const autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr msg);
+  std::pair<autoware_perception_msgs::msg::PredictedObject, rclcpp::Time>
+  findMatchingPredictedObject(
+    const unique_identifier_msgs::msg::UUID & object_id, const rclcpp::Time & current_time);
+  void updateDummyToPredictedMapping(
+    const std::vector<tier4_simulation_msgs::msg::DummyObject> & dummy_objects,
+    const autoware_perception_msgs::msg::PredictedObjects & predicted_objects);
+  double calculateEuclideanDistance(
+    const geometry_msgs::msg::Point & pos1, const geometry_msgs::msg::Point & pos2);
+  bool isTrajectoryValid(
+    const autoware_perception_msgs::msg::PredictedObject & current_prediction,
+    const autoware_perception_msgs::msg::PredictedObject & new_prediction,
+    const std::string & dummy_uuid_str);
+  bool isValidRemappingCandidate(
+    const autoware_perception_msgs::msg::PredictedObject & candidate_prediction,
+    const std::string & dummy_uuid_str, const geometry_msgs::msg::Point & expected_position);
+  bool arePathsSimilar(
+    const autoware_perception_msgs::msg::PredictedObject & last_prediction,
+    const autoware_perception_msgs::msg::PredictedObject & candidate_prediction);
+  std::optional<geometry_msgs::msg::Point> calculateExpectedPosition(
+    const autoware_perception_msgs::msg::PredictedObject & last_prediction,
+    const std::string & dummy_uuid_str);
+
+  // Helper methods for updateDummyToPredictedMapping
+  std::set<std::string> collectAvailablePredictedUUIDs(
+    const autoware_perception_msgs::msg::PredictedObjects & predicted_objects,
+    std::map<std::string, geometry_msgs::msg::Point> & predicted_positions);
+  std::vector<std::string> findDisappearedPredictedObjects(
+    std::set<std::string> & available_predicted_uuids);
+  std::map<std::string, geometry_msgs::msg::Point> collectDummyObjectPositions(
+    const std::vector<tier4_simulation_msgs::msg::DummyObject> & dummy_objects,
+    const rclcpp::Time & current_time, std::vector<std::string> & unmapped_dummy_uuids);
+  std::optional<std::string> findBestPredictedObjectMatch(
+    const std::string & dummy_uuid, const geometry_msgs::msg::Point & dummy_position,
+    const std::set<std::string> & available_predicted_uuids,
+    const std::map<std::string, geometry_msgs::msg::Point> & predicted_positions,
+    const autoware_perception_msgs::msg::PredictedObjects & predicted_objects);
+  void createRemappingsForDisappearedObjects(
+    const std::vector<std::string> & dummy_objects_to_remap,
+    std::set<std::string> & available_predicted_uuids,
+    const std::map<std::string, geometry_msgs::msg::Point> & predicted_positions,
+    const std::map<std::string, geometry_msgs::msg::Point> & dummy_positions,
+    const autoware_perception_msgs::msg::PredictedObjects & predicted_objects);
 
 public:
   DummyPerceptionPublisherNode();

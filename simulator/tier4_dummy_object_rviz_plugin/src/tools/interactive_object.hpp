@@ -121,6 +121,8 @@ public:
     const std::array<uint8_t, 16> & uuid) const;
   [[nodiscard]] boost::optional<tf2::Transform> transform(
     const std::array<uint8_t, 16> & uuid) const;
+  [[nodiscard]] InteractiveObject * getTargetObject() const;
+  [[nodiscard]] boost::optional<std::array<uint8_t, 16>> getTargetUuid() const;
 
 private:
   size_t nearest(const Ogre::Vector3 & point) const;
@@ -149,6 +151,7 @@ protected:  // NOLINT for Qt
   rviz_default_plugins::tools::MoveTool move_tool_;
 
   rviz_common::properties::BoolProperty * enable_interactive_property_;
+  rviz_common::properties::BoolProperty * predicted_property_;
   rviz_common::properties::StringProperty * topic_property_;
   rviz_common::properties::FloatProperty * std_dev_x_;
   rviz_common::properties::FloatProperty * std_dev_y_;
