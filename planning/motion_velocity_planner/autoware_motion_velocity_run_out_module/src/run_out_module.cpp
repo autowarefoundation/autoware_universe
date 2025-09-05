@@ -168,28 +168,31 @@ void RunOutModule::add_planning_factors(
   if (trajectory.empty()) {
     return;
   }
-  geometry_msgs::msg::Pose p;
   for (auto i = 0UL; i < result.velocity_planning_result.slowdown_intervals.size(); ++i) {
     const auto & slowdown = result.velocity_planning_result.slowdown_intervals[i];
-    p.position = slowdown.from;
+    const auto length = motion_utils::calcSignedArcLength(trajectory, 0, slowdown.from);
+    const auto wall_pose = motion_utils::calcInterpolatedPose(trajectory, length);
     autoware_internal_planning_msgs::msg::SafetyFactorArray safety_array;
     safety_array.is_safe = false;
     if (safety_factor_per_object.count(result.slowdown_objects[i]) > 0UL) {
       safety_array.factors = {safety_factor_per_object.at(result.slowdown_objects[i])};
     }
     planning_factor_interface_->add(
-      trajectory, trajectory.front().pose, p, PlanningFactor::SLOW_DOWN, safety_array, true,
+      trajectory, trajectory.front().pose, wall_pose, PlanningFactor::SLOW_DOWN, safety_array, true,
       slowdown.velocity);
   }
   for (auto i = 0UL; i < result.velocity_planning_result.stop_points.size(); ++i) {
-    p.position = result.velocity_planning_result.stop_points[i];
+    const auto length = motion_utils::calcSignedArcLength(
+      trajectory, 0, result.velocity_planning_result.stop_points.at(i));
+    const auto wall_pose = motion_utils::calcInterpolatedPose(trajectory, length);
     autoware_internal_planning_msgs::msg::SafetyFactorArray safety_array;
     safety_array.is_safe = false;
     if (safety_factor_per_object.count(result.stop_objects[i]) > 0UL) {
       safety_array.factors = {safety_factor_per_object.at(result.stop_objects[i])};
     }
     planning_factor_interface_->add(
-      trajectory, trajectory.front().pose, p, PlanningFactor::STOP, safety_array, true, 0.0);
+      trajectory, trajectory.front().pose, wall_pose, PlanningFactor::STOP, safety_array, true,
+      0.0);
   }
 }
 
