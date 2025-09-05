@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "autoware_occupancy_grid_map_outlier_filter parameter",
+  "title": "autoware_occupancy_grid_map_outlier_filter parameters",
   "type": "object",
   "definitions": {
     "occupancy_grid_map_outlier_filter": {
