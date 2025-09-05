@@ -251,7 +251,6 @@ BoundarySideWithIdx BoundaryDepartureChecker::get_boundary_segments(
 
   for (const auto & [fp, traj_pt] :
        ranges::views::zip(ego_sides_from_footprints, trimmed_pred_trajectory)) {
-
     const auto ego_z_position = traj_pt.pose.position.z;
     update_closest_boundary_segments(
       fp.left, fp.right, ego_z_position, unique_ids, boundary_sides_with_idx.left);
