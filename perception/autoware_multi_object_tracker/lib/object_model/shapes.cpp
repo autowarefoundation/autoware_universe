@@ -29,7 +29,14 @@
 #include <cmath>
 #include <limits>
 #include <string>
+#include <utility>
 #include <vector>
+
+namespace
+{
+constexpr double MIN_AREA = 1e-6;
+constexpr double INVALID_SCORE = -1.0;
+}  // namespace
 
 namespace autoware::multi_object_tracker
 {
@@ -109,8 +116,6 @@ double get2dIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object,
   const double min_union_area)
 {
-  static const double MIN_AREA = 1e-6;
-
   const auto source_polygon = autoware_utils::to_polygon2d(source_object.pose, source_object.shape);
   if (boost::geometry::area(source_polygon) < MIN_AREA) return 0.0;
   const auto target_polygon = autoware_utils::to_polygon2d(target_object.pose, target_object.shape);
@@ -231,6 +236,72 @@ bool convertConvexHullToBoundingBox(
   }
 
   return true;
+}
+
+std::pair<double, double> getObjectZRange(const types::DynamicObject & object)
+{
+  const double center_z = object.pose.position.z;
+  const double height = object.shape.dimensions.z;
+  const double min_z = center_z - height / 2.0;
+  const double max_z = center_z + height / 2.0;
+  return {min_z, max_z};
+}
+
+double get3dGeneralizedIoU(
+  const types::DynamicObject & source_object, const types::DynamicObject & target_object)
+{
+  const auto source_polygon = autoware_utils::to_polygon2d(source_object.pose, source_object.shape);
+  if (boost::geometry::area(source_polygon) < MIN_AREA) return INVALID_SCORE;
+  const auto target_polygon = autoware_utils::to_polygon2d(target_object.pose, target_object.shape);
+  if (boost::geometry::area(target_polygon) < MIN_AREA) return INVALID_SCORE;
+
+  const double union_area = getUnionArea(source_polygon, target_polygon);
+  if (union_area < MIN_AREA) return INVALID_SCORE;
+
+  const double intersection_area = getIntersectionArea(source_polygon, target_polygon);
+  const double convex_area = getConvexShapeArea(source_polygon, target_polygon);
+
+  const auto [z_min_src, z_max_src] = getObjectZRange(source_object);
+  const auto [z_min_tgt, z_max_tgt] = getObjectZRange(target_object);
+
+  const double height_overlap =
+    std::max(0.0, std::min(z_max_src, z_max_tgt) - std::max(z_min_src, z_min_tgt));
+
+  if (height_overlap <= 0.0) return INVALID_SCORE;
+
+  const double total_height = std::max(z_max_src, z_max_tgt) - std::min(z_min_src, z_min_tgt);
+
+  const double iou =
+    std::clamp((intersection_area * height_overlap) / (union_area * total_height), 0.0, 1.0);
+
+  return iou - (convex_area - union_area) / convex_area;
+}
+
+void computePolygonDimensions(autoware_perception_msgs::msg::Shape & shape)
+{
+  // Compute axis-aligned bounding box
+  const auto & points = shape.footprint.points;
+
+  // Pre-allocate boundary values using first point
+  float max_x = points[0].x;
+  float max_y = points[0].y;
+  float max_z = points[0].z;
+  float min_x = points[0].x;
+  float min_y = points[0].y;
+  float min_z = points[0].z;
+
+  for (const auto & point : points) {
+    if (point.x < min_x) min_x = point.x;
+    if (point.x > max_x) max_x = point.x;
+    if (point.y < min_y) min_y = point.y;
+    if (point.y > max_y) max_y = point.y;
+    if (point.z < min_z) min_z = point.z;
+    if (point.z > max_z) max_z = point.z;
+  }
+
+  shape.dimensions.x = max_x - min_x;
+  shape.dimensions.y = max_y - min_y;
+  shape.dimensions.z = max_z - min_z;
 }
 
 }  // namespace shapes
