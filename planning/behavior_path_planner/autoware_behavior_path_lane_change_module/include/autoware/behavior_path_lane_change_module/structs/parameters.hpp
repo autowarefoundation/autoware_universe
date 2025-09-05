@@ -88,9 +88,6 @@ struct CancelParameters
 
 struct CollisionCheckParameters
 {
-  bool enable_for_prepare_phase_in_general_lanes{false};
-  bool enable_for_prepare_phase_in_intersection{true};
-  bool enable_for_prepare_phase_in_turns{true};
   bool check_current_lane{true};
   bool check_other_lanes{true};
   bool use_all_predicted_paths{false};
@@ -110,6 +107,7 @@ struct SafetyParameters
   RSSparams rss_params_for_parked{};
   RSSparams rss_params_for_abort{};
   RSSparams rss_params_for_stuck{};
+  RSSparams rss_params_for_prepare{};
   ObjectTypesToCheck target_object_types{};
   CollisionCheckParameters collision_check{};
 };

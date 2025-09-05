@@ -166,15 +166,12 @@ protected:
 
   bool is_colliding(
     const LaneChangePath & lane_change_path, const ExtendedPredictedObject & obj,
-    const std::vector<PoseWithVelocityStamped> & ego_predicted_path,
-    const RSSparams & selected_rss_param, const bool check_prepare_phase,
+    const std::vector<PoseWithVelocityStamped> & ego_predicted_path, const RSSparams & rss_param,
     CollisionCheckDebugMap & debug_data) const;
 
   double get_max_velocity_for_safety_check() const;
 
   bool is_ego_stuck() const;
-
-  bool check_prepare_phase() const;
 
   void set_stop_pose(
     const double arc_length_to_stop_pose, PathWithLaneId & path, const std::string & reason = "");
