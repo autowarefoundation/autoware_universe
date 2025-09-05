@@ -10,6 +10,7 @@
   <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
   <maintainer email="akihisa.nagata@tier4.jp">Akihisa Nagata</maintainer>
   <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
+  <maintainer email="kaan.colak.dev@gmail.com">Kaan Colak</maintainer>
   <license>Apache License 2.0</license>
 
   <!-- Original authors -->
@@ -20,19 +21,30 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
+  <depend>ament_index_cpp</depend>
+  <depend>autoware_internal_debug_msgs</depend>
+  <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_point_types</depend>
   <depend>autoware_pointcloud_preprocessor</depend>
   <depend>autoware_test_utils</depend>
   <depend>autoware_utils</depend>
   <depend>diagnostic_updater</depend>
+  <depend>geometry_msgs</depend>
   <depend>grid_map_pcl</depend>
   <depend>grid_map_ros</depend>
+  <depend>lanelet2_core</depend>
+  <depend>lanelet2_projection</depend>
+  <depend>lanelet2_routing</depend>
   <depend>nav_msgs</depend>
   <depend>pcl_conversions</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>visualization_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
