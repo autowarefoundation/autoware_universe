@@ -24,6 +24,8 @@
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 
+#include <string>
+
 namespace autoware::mission_planner_universe
 {
 
