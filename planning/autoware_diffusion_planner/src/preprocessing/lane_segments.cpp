@@ -55,9 +55,8 @@ uint8_t identify_current_light_status(
 LaneSegmentContext::LaneSegmentContext(const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr)
 : lanelet_map_ptr_(lanelet_map_ptr)
 {
-  auto lanelet_converter = std::make_unique<LaneletConverter>(lanelet_map_ptr_);
   const std::vector<autoware::diffusion_planner::LaneSegment> lane_segments =
-    lanelet_converter->convert_to_lane_segments(POINTS_PER_SEGMENT);
+    convert_to_lane_segments(lanelet_map_ptr_, POINTS_PER_SEGMENT);
 
   if (lane_segments.empty()) {
     throw std::runtime_error("No lane segments found in the map");
