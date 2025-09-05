@@ -18,9 +18,7 @@
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <autoware_internal_planning_msgs/msg/detail/scored_candidate_trajectories__struct.hpp>
 #include <autoware_internal_planning_msgs/msg/scored_candidate_trajectories.hpp>
-#include <autoware_planning_msgs/msg/detail/trajectory__struct.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 
 #include <memory>
