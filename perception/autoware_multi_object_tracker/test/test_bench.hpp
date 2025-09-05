@@ -55,6 +55,7 @@ struct ObjectState
     float y;
   } shape;
 };
+
 struct UnknownObjectState
 {
   geometry_msgs::msg::Pose pose;
@@ -67,6 +68,7 @@ struct UnknownObjectState
   uint8_t shape_type;
   bool is_moving;
 };
+
 struct UnknownObjectParams
 {
   // Size parameters
@@ -89,7 +91,8 @@ struct UnknownObjectParams
   float shape_change_prob = 0.4f;
   float max_evolution_noise = 0.2f;
 };
-struct TrackingScenarioConfig
+
+struct ScenarioParams
 {
   int num_lanes = 8;                           // 5 lanes
   int cars_per_lane = 20;                      // 20 cars per lane
@@ -131,27 +134,25 @@ struct TrackingScenarioConfig
 
 // Configuration creation functions
 autoware::multi_object_tracker::TrackerProcessorConfig createProcessorConfig();
-
 autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig();
-
 std::vector<autoware::multi_object_tracker::types::InputChannel> createInputChannelsConfig();
 
-class TrackingTestBench
+class TestBench
 {
+protected:
   const float GRID_SIZE = 15.0f;  // Larger than max car length
   std::unordered_map<uint64_t, std::vector<std::string>> spatial_grid_;
-
   UnknownObjectParams unknown_params_;
+  ScenarioParams params_;  // store params for later use
 
   uint64_t getGridKey(float x, float y) const;
-
   void updateGrid(const std::string & id, bool remove_first = false);
-
   bool checkCollisions(const std::string & id);
 
 public:
-  explicit TrackingTestBench(const TrackingScenarioConfig & params)
+  explicit TestBench(const ScenarioParams & params)
   : unknown_params_(params.unknown_params),
+    params_(params),
     base_time_(rclcpp::Clock().now(), RCL_ROS_TIME),
     object_counter_(0),
     rng_(0),  // To reproduce the same results, we need to set the seed to 0
@@ -179,25 +180,44 @@ public:
     shape_change_dist_(params.unknown_params.shape_change_prob),
     footprint_radius_scale_dist_(0.7f, 1.2f)
   {
-    initializeObjects(params);
   }
 
-  autoware::multi_object_tracker::types::DynamicObjectList generateDetections(
+  virtual void initializeObjects();
+  virtual autoware::multi_object_tracker::types::DynamicObjectList generateDetections(
     const rclcpp::Time & stamp);
 
-private:
-  void initializeObjects(const TrackingScenarioConfig & params);
+protected:
   void setOrientationFromVelocity(
     const geometry_msgs::msg::Twist & twist, geometry_msgs::msg::Pose & pose);
   // Functions to add new objects
-  void addNewCar(
+  virtual void initializeDetectionHeader(
+    autoware::multi_object_tracker::types::DynamicObjectList & detections,
+    const rclcpp::Time & stamp);
+  virtual void initializeKinematics(autoware::multi_object_tracker::types::DynamicObject & obj);
+  virtual void initializeCarObject(
+    autoware::multi_object_tracker::types::DynamicObject & obj, const std::string & id,
+    const rclcpp::Time & stamp, const ObjectState & state);
+  virtual void initializePedestrianObject(
+    autoware::multi_object_tracker::types::DynamicObject & obj, const std::string & id,
+    const rclcpp::Time & stamp, const ObjectState & state);
+  virtual void initializeUnknownObject(
+    autoware::multi_object_tracker::types::DynamicObject & obj, const std::string & id,
+    const rclcpp::Time & stamp, const UnknownObjectState & state);
+  virtual void addNoiseAndOrientation(
+    autoware::multi_object_tracker::types::DynamicObject & obj, const ObjectState & state);
+  virtual void addNoiseAndOrientation(
+    autoware::multi_object_tracker::types::DynamicObject & obj, const UnknownObjectState & state);
+
+  virtual void addNewCar(
     const std::string & id, float x, float y, float speed_x = 0.0f, float speed_y = 0.0f);
-  void addNewPedestrian(const std::string & id, float x, float y);
-  void addNewUnknown(const std::string & id, float x, float y);
+  virtual void addNewPedestrian(const std::string & id, float x, float y);
+  virtual void addNewUnknown(const std::string & id, float x, float y);
+  virtual void updateCarStates(float dt);
+  virtual void updateUnknownState(UnknownObjectState & state, double dt);
   // Functions to generate random shapes for unknown objects
-  void generateClusterFootprint(
+  virtual void generateClusterFootprint(
     float base_size, std::vector<geometry_msgs::msg::Point> & footprint);
-  void updateUnknownShape(UnknownObjectState & state);
+  virtual void updateUnknownShape(UnknownObjectState & state);
   struct Shape
   {
     float x;
