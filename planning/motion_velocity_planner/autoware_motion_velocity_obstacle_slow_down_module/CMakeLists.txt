@@ -9,4 +9,24 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   DIRECTORY src
 )
 
+if(BUILD_TESTING)
+  # Add test executable
+  ament_add_ros_isolated_gtest(test_${PROJECT_NAME}
+    test/test_planning_factor.cpp
+  )
+
+  # Set test dependencies
+  target_link_libraries(test_${PROJECT_NAME}
+    gtest_main
+    ${PROJECT_NAME}
+  )
+
+  # Set test include directories
+  target_include_directories(test_${PROJECT_NAME}
+    PRIVATE
+    src
+  )
+endif()
+
+
 ament_auto_package(INSTALL_TO_SHARE config)
