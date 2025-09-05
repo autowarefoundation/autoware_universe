@@ -66,6 +66,7 @@ struct LaneSegment
  */
 [[nodiscard]] std::vector<LaneSegment> convert_to_lane_segments(
   const lanelet::LaneletMapConstPtr lanelet_map_ptr, const int64_t num_lane_points);
+
 }  // namespace autoware::diffusion_planner
 
 #endif  // AUTOWARE__DIFFUSION_PLANNER__CONVERSION__LANELET_HPP_
