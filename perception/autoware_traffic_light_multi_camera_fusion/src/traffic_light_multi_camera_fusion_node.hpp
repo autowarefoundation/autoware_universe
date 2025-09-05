@@ -62,6 +62,12 @@ bool operator<(const FusionRecordArr & r1, const FusionRecordArr & r2)
   return rclcpp::Time(r1.header.stamp) < rclcpp::Time(r2.header.stamp);
 }
 
+struct GroupFusionInfo
+{
+  std::map<uint8_t, double> accumulated_log_odds;
+  std::map<uint8_t, FusionRecord> best_record_for_color;
+};
+
 class MultiCameraFusion : public rclcpp::Node
 {
 public:
