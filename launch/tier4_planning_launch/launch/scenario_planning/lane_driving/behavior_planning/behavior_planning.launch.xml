@@ -34,7 +34,6 @@
   <arg name="launch_no_stopping_area_module" default="true"/>
   <arg name="launch_stop_line_module" default="true"/>
   <arg name="launch_occlusion_spot_module" default="true"/>
-  <arg name="launch_run_out_module" default="true"/>
   <arg name="launch_speed_bump_module" default="true"/>
   <arg name="launch_no_drivable_lane_module" default="true"/>
 
@@ -163,11 +162,6 @@
   />
   <let
     name="behavior_velocity_planner_launch_modules"
-    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::RunOutModulePlugin, '&quot;)"
-    if="$(var launch_run_out_module)"
-  />
-  <let
-    name="behavior_velocity_planner_launch_modules"
     value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::SpeedBumpModulePlugin, '&quot;)"
     if="$(var launch_speed_bump_module)"
   />
@@ -219,7 +213,6 @@
       <param from="$(var behavior_velocity_planner_virtual_traffic_light_module_param_path)"/>
       <param from="$(var behavior_velocity_planner_occlusion_spot_module_param_path)"/>
       <param from="$(var behavior_velocity_planner_no_stopping_area_module_param_path)"/>
-      <param from="$(var behavior_velocity_planner_run_out_module_param_path)"/>
       <param from="$(var behavior_velocity_planner_speed_bump_module_param_path)"/>
       <param from="$(var behavior_velocity_planner_no_drivable_lane_module_param_path)"/>
       <!-- composable node config -->
@@ -283,37 +276,6 @@
         <param from="$(var nearest_search_param_path)"/>
         <param from="$(var path_generator_param_path)"/>
         <!-- composable node config -->
-        <extra_arg name="use_intra_process_comms" value="false"/>
-      </composable_node>
-    </load_composable_node>
-  </group>
-
-  <group if="$(var launch_compare_map_pipeline)">
-    <!-- use pointcloud container -->
-    <load_composable_node target="$(var pointcloud_container_name)">
-      <composable_node
-        pkg="autoware_compare_map_segmentation"
-        plugin="autoware::compare_map_segmentation::VoxelDistanceBasedCompareMapFilterComponent"
-        name="voxel_distance_based_compare_map_filter_node"
-        namespace=""
-      >
-        <!-- topic remap -->
-        <remap from="map" to="$(var input_pointcloud_map_topic_name)"/>
-        <remap from="kinematic_state" to="/localization/kinematic_state"/>
-        <remap from="map_loader_service" to="/map/get_differential_pointcloud_map"/>
-        <remap from="input" to="$(var input_pointcloud_topic_name)"/>
-        <remap from="output" to="compare_map_filtered/pointcloud"/>
-        <!-- params -->
-        <param from="$(var compare_map_filter_param_path)"/>
-        <extra_arg name="use_intra_process_comms" value="false"/>
-      </composable_node>
-
-      <composable_node pkg="autoware_pointcloud_preprocessor" plugin="autoware::pointcloud_preprocessor::VectorMapInsideAreaFilterComponent" name="vector_map_inside_area_filter_node" namespace="">
-        <!-- topic remap -->
-        <remap from="input/vector_map" to="$(var input_vector_map_topic_name)"/>
-        <remap from="input" to="compare_map_filtered/pointcloud"/>
-        <remap from="output" to="vector_map_inside_area_filtered/pointcloud"/>
-        <param name="polygon_type" value="no_obstacle_segmentation_area_for_run_out"/>
         <extra_arg name="use_intra_process_comms" value="false"/>
       </composable_node>
     </load_composable_node>
