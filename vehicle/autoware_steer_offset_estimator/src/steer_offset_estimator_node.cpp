@@ -16,6 +16,8 @@
 
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 
+#include <cmath>
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -49,8 +51,8 @@ SteerOffsetEstimatorNode::SteerOffsetEstimatorNode(const rclcpp::NodeOptions & n
     this->create_publisher<Float32Stamped>("~/output/steering_offset_error", 1);
 
   // subscriber
-  sub_twist_ = this->create_subscription<TwistStamped>(
-    "~/input/twist", 1, std::bind(&SteerOffsetEstimatorNode::onTwist, this, _1));
+  sub_pose_ = this->create_subscription<PoseStamped>(
+    "~/input/pose", 1, std::bind(&SteerOffsetEstimatorNode::onPose, this, _1));
   sub_steer_ = this->create_subscription<Steering>(
     "~/input/steer", 1, std::bind(&SteerOffsetEstimatorNode::onSteer, this, _1));
 
@@ -71,7 +73,7 @@ SteerOffsetEstimatorNode::SteerOffsetEstimatorNode(const rclcpp::NodeOptions & n
 }
 
 // function for diagnostics
-void SteerOffsetEstimatorNode::monitorSteerOffset(DiagnosticStatusWrapper & stat)
+void SteerOffsetEstimatorNode::monitorSteerOffset(DiagnosticStatusWrapper & stat)  // NOLINT
 {
   using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
   const double eps = 1e-3;
@@ -86,9 +88,9 @@ void SteerOffsetEstimatorNode::monitorSteerOffset(DiagnosticStatusWrapper & stat
   stat.summary(DiagStatus::OK, "Calibration OK");
 }
 
-void SteerOffsetEstimatorNode::onTwist(const TwistStamped::ConstSharedPtr msg)
+void SteerOffsetEstimatorNode::onPose(const PoseStamped::ConstSharedPtr msg)
 {
-  twist_ptr_ = msg;
+  current_pose_ptr_ = msg;
 }
 
 void SteerOffsetEstimatorNode::onSteer(const Steering::ConstSharedPtr msg)
@@ -100,13 +102,22 @@ bool SteerOffsetEstimatorNode::updateSteeringOffset()
 {
   // RLS; recursive least-squares algorithm
 
-  if (!twist_ptr_ || !steer_ptr_) {
+  if (!current_pose_ptr_ || !steer_ptr_) {
     // null input
     return false;
   }
 
-  const double vel = twist_ptr_->twist.linear.x;
-  const double wz = twist_ptr_->twist.angular.z;
+  if (!prev_pose_ptr_) {
+    prev_pose_ptr_ = current_pose_ptr_;
+    return false;
+  }
+
+  // Calculate twist from pose difference
+  TwistStamped twist = calcTwistFromPose(prev_pose_ptr_, current_pose_ptr_);
+  prev_pose_ptr_ = current_pose_ptr_;
+
+  const double vel = twist.twist.linear.x;
+  const double wz = twist.twist.angular.z;
   const double steer = steer_ptr_->steering_tire_angle;
 
   if (std::abs(vel) < valid_min_velocity_ || std::abs(steer) > valid_max_steer_) {
@@ -130,22 +141,74 @@ bool SteerOffsetEstimatorNode::updateSteeringOffset()
   return true;
 }
 
+tf2::Quaternion SteerOffsetEstimatorNode::getQuaternion(
+  const PoseStamped::ConstSharedPtr & pose_stamped_ptr)
+{
+  const auto & orientation = pose_stamped_ptr->pose.orientation;
+  return tf2::Quaternion{orientation.x, orientation.y, orientation.z, orientation.w};
+}
+
+geometry_msgs::msg::Vector3 SteerOffsetEstimatorNode::computeRelativeRotationVector(
+  const tf2::Quaternion & q1, const tf2::Quaternion & q2)
+{
+  const tf2::Quaternion diff_quaternion = q1.inverse() * q2;
+  const tf2::Vector3 axis = diff_quaternion.getAxis() * diff_quaternion.getAngle();
+  return geometry_msgs::msg::Vector3{}.set__x(axis.x()).set__y(axis.y()).set__z(axis.z());
+}
+
+TwistStamped SteerOffsetEstimatorNode::calcTwistFromPose(
+  const PoseStamped::ConstSharedPtr pose_a, const PoseStamped::ConstSharedPtr pose_b)
+{
+  const double dt =
+    (rclcpp::Time(pose_b->header.stamp) - rclcpp::Time(pose_a->header.stamp)).seconds();
+
+  TwistStamped twist;
+  twist.header = pose_b->header;
+  twist.header.frame_id = pose_b->header.frame_id;
+
+  if (std::abs(dt) < std::numeric_limits<double>::epsilon()) {
+    return twist;
+  }
+
+  const auto pose_a_quaternion = getQuaternion(pose_a);
+  const auto pose_b_quaternion = getQuaternion(pose_b);
+
+  geometry_msgs::msg::Vector3 diff_xyz;
+  const geometry_msgs::msg::Vector3 relative_rotation_vector =
+    computeRelativeRotationVector(pose_a_quaternion, pose_b_quaternion);
+
+  diff_xyz.x = pose_b->pose.position.x - pose_a->pose.position.x;
+  diff_xyz.y = pose_b->pose.position.y - pose_a->pose.position.y;
+  diff_xyz.z = pose_b->pose.position.z - pose_a->pose.position.z;
+
+  twist.twist.linear.x =
+    std::sqrt(std::pow(diff_xyz.x, 2.0) + std::pow(diff_xyz.y, 2.0) + std::pow(diff_xyz.z, 2.0)) /
+    dt;
+  twist.twist.linear.y = 0;
+  twist.twist.linear.z = 0;
+  twist.twist.angular.x = relative_rotation_vector.x / dt;
+  twist.twist.angular.y = relative_rotation_vector.y / dt;
+  twist.twist.angular.z = relative_rotation_vector.z / dt;
+
+  return twist;
+}
+
 void SteerOffsetEstimatorNode::onTimer()
 {
   if (updateSteeringOffset()) {
     auto msg = std::make_unique<Float32Stamped>();
     msg->stamp = this->now();
-    msg->data = estimated_steer_offset_;
+    msg->data = static_cast<float>(estimated_steer_offset_);
     pub_steer_offset_->publish(std::move(msg));
 
     auto cov_msg = std::make_unique<Float32Stamped>();
     cov_msg->stamp = this->now();
-    cov_msg->data = covariance_;
+    cov_msg->data = static_cast<float>(covariance_);
     pub_steer_offset_cov_->publish(std::move(cov_msg));
 
     auto error_msg = std::make_unique<Float32Stamped>();
     error_msg->stamp = this->now();
-    error_msg->data = estimated_steer_offset_ - initial_steer_offset_;
+    error_msg->data = static_cast<float>(estimated_steer_offset_ - initial_steer_offset_);
     pub_steer_offset_error_->publish(std::move(error_msg));
   }
 }
