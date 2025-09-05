@@ -103,6 +103,7 @@ ament_auto_add_library(pointcloud_preprocessor_filter SHARED
   src/outlier_filter/ring_outlier_filter_node.cpp
   src/outlier_filter/radius_search_2d_outlier_filter_node.cpp
   src/outlier_filter/voxel_grid_outlier_filter_node.cpp
+  src/outlier_filter/polar_voxel_outlier_filter_node.cpp
   src/outlier_filter/dual_return_outlier_filter_node.cpp
   src/passthrough_filter/passthrough_filter_node.cpp
   src/passthrough_filter/passthrough_filter_uint16_node.cpp
@@ -180,6 +181,11 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
 rclcpp_components_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::VoxelGridOutlierFilterComponent"
   EXECUTABLE voxel_grid_outlier_filter_node)
+
+# -- Polar Voxel Outlier Filter --
+rclcpp_components_register_node(pointcloud_preprocessor_filter
+  PLUGIN "autoware::pointcloud_preprocessor::PolarVoxelOutlierFilterComponent"
+  EXECUTABLE polar_voxel_outlier_filter_node)
 
 # -- Radius Search 2D Outlier Filter --
 rclcpp_components_register_node(pointcloud_preprocessor_filter
@@ -305,11 +311,16 @@ if(BUILD_TESTING)
     test/test_concatenation_info.cpp
   )
 
+  ament_add_gtest(test_polar_voxel_outlier_filter_node
+    test/test_polar_voxel_outlier_filter_node.cpp
+  )
+
   target_link_libraries(test_utilities pointcloud_preprocessor_filter)
   target_link_libraries(test_distortion_corrector_node pointcloud_preprocessor_filter)
   target_link_libraries(test_concatenate_node_unit pointcloud_preprocessor_filter)
   target_link_libraries(test_pickup_based_voxel_grid_downsample_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_concatenation_info concatenate_data)
+  target_link_libraries(test_polar_voxel_outlier_filter_node pointcloud_preprocessor_filter)
 
   add_ros_test(
     test/test_concatenate_node_component.py

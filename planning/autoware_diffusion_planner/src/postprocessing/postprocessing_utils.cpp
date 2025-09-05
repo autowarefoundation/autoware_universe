@@ -30,8 +30,10 @@
 #include <Eigen/src/Core/Matrix.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -41,23 +43,23 @@ using autoware_perception_msgs::msg::PredictedObject;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 
 void transform_output_matrix(
-  const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, int64_t column_idx,
+  const Eigen::Matrix4d & transform_matrix, Eigen::MatrixXd & output_matrix, int64_t column_idx,
   int64_t row_idx, bool do_translation)
 {
-  Eigen::Matrix<float, 4, OUTPUT_T> xy_block = Eigen::Matrix<float, 4, OUTPUT_T>::Zero();
+  Eigen::Matrix<double, 4, OUTPUT_T> xy_block = Eigen::Matrix<double, 4, OUTPUT_T>::Zero();
   xy_block.block<2, OUTPUT_T>(0, 0) =
     output_matrix.block<2, OUTPUT_T>(row_idx, column_idx * OUTPUT_T);
-  xy_block.row(3) = do_translation ? Eigen::Matrix<float, 1, OUTPUT_T>::Ones()
-                                   : Eigen::Matrix<float, 1, OUTPUT_T>::Zero();
+  xy_block.row(3) = do_translation ? Eigen::Matrix<double, 1, OUTPUT_T>::Ones()
+                                   : Eigen::Matrix<double, 1, OUTPUT_T>::Zero();
 
-  Eigen::Matrix<float, 4, OUTPUT_T> transformed_block = transform_matrix * xy_block;
+  Eigen::Matrix<double, 4, OUTPUT_T> transformed_block = transform_matrix * xy_block;
   output_matrix.block<2, OUTPUT_T>(row_idx, column_idx * OUTPUT_T) =
     transformed_block.block<2, OUTPUT_T>(0, 0);
 };
 
 PredictedObjects create_predicted_objects(
   const std::vector<float> & prediction, const AgentData & ego_centric_agent_data,
-  const rclcpp::Time & stamp, const Eigen::Matrix4f & transform_ego_to_map)
+  const rclcpp::Time & stamp, const Eigen::Matrix4d & transform_ego_to_map)
 {
   auto trajectory_path_to_pose_path = [&](const Trajectory & trajectory, const double object_z)
     -> std::vector<geometry_msgs::msg::Pose> {
@@ -125,19 +127,19 @@ PredictedObjects create_predicted_objects(
   return predicted_objects;
 }
 
-Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tensor_data(
+Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tensor_data(
   const std::vector<float> & prediction)
 {
   // copy relevant part of data to Eigen matrix
   constexpr auto prediction_shape = OUTPUT_SHAPE;
 
-  auto batch_size = prediction_shape[0];
-  auto agent_size = prediction_shape[1];
-  auto rows = prediction_shape[2];
-  auto cols = prediction_shape[3];
+  const int64_t agent_size = prediction_shape[1];
+  const int64_t rows = prediction_shape[2];
+  const int64_t cols = prediction_shape[3];
+  const int64_t batch = prediction.size() / (agent_size * rows * cols);
 
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data(
-    batch_size * agent_size * rows, cols);
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data(
+    batch * agent_size * rows, cols);
   tensor_data.setZero();
 
   // Ensure prediction has enough data
@@ -148,23 +150,25 @@ Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tensor
       ") is smaller than required (" + std::to_string(required_size) + ")");
   }
 
-  std::memcpy(tensor_data.data(), prediction.data(), required_size * sizeof(float));
+  for (size_t i = 0; i < required_size; ++i) {
+    tensor_data.data()[i] = static_cast<double>(prediction[i]);
+  }
   return tensor_data;
 }
 
-Eigen::MatrixXf get_prediction_matrix(
-  const std::vector<float> & prediction, const Eigen::Matrix4f & transform_ego_to_map,
+Eigen::MatrixXd get_prediction_matrix(
+  const std::vector<float> & prediction, const Eigen::Matrix4d & transform_ego_to_map,
   const int64_t batch, const int64_t agent)
 {
   // TODO(Daniel): add batch support
   const auto prediction_shape = OUTPUT_SHAPE;
 
   // copy relevant part of data to Eigen matrix
-  auto agent_size = prediction_shape[1];
-  auto rows = prediction_shape[2];
-  auto cols = prediction_shape[3];
+  const int64_t agent_size = prediction_shape[1];
+  const int64_t rows = prediction_shape[2];
+  const int64_t cols = prediction_shape[3];
 
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
     get_tensor_data(prediction);
   // Validate indices before accessing block
   const int64_t start_row = batch * agent_size * rows + agent * rows;
@@ -175,7 +179,7 @@ Eigen::MatrixXf get_prediction_matrix(
   }
 
   // Extract and copy the block to ensure we have a proper matrix, not just a view
-  Eigen::MatrixXf prediction_matrix = tensor_data.block(start_row, 0, rows, cols).eval();
+  Eigen::MatrixXd prediction_matrix = tensor_data.block(start_row, 0, rows, cols).eval();
 
   // Copy only the relevant part
   prediction_matrix.transposeInPlace();
@@ -185,15 +189,15 @@ Eigen::MatrixXf get_prediction_matrix(
 }
 
 Trajectory get_trajectory_from_prediction_matrix(
-  const Eigen::MatrixXf & prediction_matrix, const Eigen::Matrix4f & transform_ego_to_map,
+  const Eigen::MatrixXd & prediction_matrix, const Eigen::Matrix4d & transform_ego_to_map,
   const rclcpp::Time & stamp)
 {
   Trajectory trajectory;
   trajectory.header.stamp = stamp;
   trajectory.header.frame_id = "map";
   // TODO(Daniel): check there is no issue with the speed of 1st point (index 0)
-  constexpr double dt = 0.1f;
-  Eigen::Vector4f ego_position = transform_ego_to_map * Eigen::Vector4f(0.0, 0.0, 0.0, 1.0);
+  constexpr double dt = 0.1;
+  Eigen::Vector4d ego_position = transform_ego_to_map * Eigen::Vector4d(0.0, 0.0, 0.0, 1.0);
   double prev_x = ego_position(0);
   double prev_y = ego_position(1);
   for (int64_t row = 0; row < prediction_matrix.rows(); ++row) {
@@ -219,17 +223,17 @@ Trajectory get_trajectory_from_prediction_matrix(
 
 Trajectory create_trajectory(
   const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4f & transform_ego_to_map, int64_t batch, int64_t agent)
+  const Eigen::Matrix4d & transform_ego_to_map, int64_t batch, int64_t agent)
 {
   // one batch of prediction
-  Eigen::MatrixXf prediction_matrix =
+  Eigen::MatrixXd prediction_matrix =
     get_prediction_matrix(prediction, transform_ego_to_map, batch, agent);
   return get_trajectory_from_prediction_matrix(prediction_matrix, transform_ego_to_map, stamp);
 }
 
 std::vector<Trajectory> create_multiple_trajectories(
   const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4f & transform_ego_to_map, int64_t start_batch, int64_t start_agent)
+  const Eigen::Matrix4d & transform_ego_to_map, int64_t start_batch, int64_t start_agent)
 {
   constexpr auto prediction_shape = OUTPUT_SHAPE;
   constexpr auto batch_size = prediction_shape[0];
@@ -238,13 +242,13 @@ std::vector<Trajectory> create_multiple_trajectories(
   constexpr auto cols = prediction_shape[3];
 
   std::vector<Trajectory> agent_trajectories;
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
     get_tensor_data(prediction);
 
   for (int64_t batch = start_batch; batch < batch_size; ++batch) {
     for (int64_t agent = start_agent; agent < agent_size; ++agent) {
       // Copy only the relevant part
-      Eigen::MatrixXf prediction_matrix =
+      Eigen::MatrixXd prediction_matrix =
         tensor_data.block(batch * agent_size * rows + agent * rows, 0, rows, cols);
 
       prediction_matrix.transposeInPlace();
@@ -280,6 +284,75 @@ CandidateTrajectories to_candidate_trajectories_msg(
                         .candidate_trajectories({candidate_trajectory})
                         .generator_info({generator_info});
   return output;
+}
+
+TurnIndicatorsCommand create_turn_indicators_command(
+  const std::vector<float> & turn_indicator_logit, const rclcpp::Time & stamp)
+{
+  TurnIndicatorsCommand turn_indicators_cmd;
+  turn_indicators_cmd.stamp = stamp;
+
+  // Apply softmax to convert logit to probabilities
+
+  // Find the max value for numerical stability
+  const float max_logit =
+    *std::max_element(turn_indicator_logit.begin(), turn_indicator_logit.end());
+
+  std::vector<float> probabilities(turn_indicator_logit.size());
+  float sum = 0.0001f;  // Small value to avoid division by zero
+
+  // Compute exp(logit - max_logit) for numerical stability
+  for (size_t i = 0; i < turn_indicator_logit.size(); ++i) {
+    probabilities[i] = std::exp(turn_indicator_logit[i] - max_logit);
+    sum += probabilities[i];
+  }
+
+  // Normalize to get probabilities
+  for (float & prob : probabilities) {
+    prob /= sum;
+  }
+
+  // Find the class with highest probability
+  const size_t max_idx = std::distance(
+    probabilities.begin(), std::max_element(probabilities.begin(), probabilities.end()));
+  turn_indicators_cmd.command = max_idx;
+
+  return turn_indicators_cmd;
+}
+
+int64_t count_valid_elements(
+  const std::vector<float> & data, int64_t len, int64_t dim2, int64_t dim3, int64_t batch_idx)
+{
+  const int64_t single_batch_size = len * dim2 * dim3;
+  const int64_t batch_offset = batch_idx * single_batch_size;
+
+  if (batch_offset + single_batch_size > static_cast<int64_t>(data.size()) || batch_idx < 0) {
+    return 0;  // Invalid batch index or data size
+  }
+
+  int64_t valid_count = 0;
+  const float epsilon = std::numeric_limits<float>::epsilon();
+
+  // Iterate through each element in the len dimension for the specified batch
+  for (int64_t i = 0; i < len; ++i) {
+    bool is_valid_element = false;
+
+    // Check all values in the (dim2, dim3) block for this element
+    const int64_t element_offset = batch_offset + i * dim2 * dim3;
+    for (int64_t j = 0; j < dim2 * dim3; ++j) {
+      const int64_t idx = element_offset + j;
+      if (std::abs(data[idx]) > epsilon) {
+        is_valid_element = true;
+        break;  // Found non-zero value, element is valid
+      }
+    }
+
+    if (is_valid_element) {
+      valid_count++;
+    }
+  }
+
+  return valid_count;
 }
 
 }  // namespace autoware::diffusion_planner::postprocess

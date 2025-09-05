@@ -8,6 +8,8 @@ rear_collision_checker_node:
       type: double
       validation:
         gt_eq<>: [0.0]
+    check_on_unstoppable:
+      type: bool
 
     pointcloud:
       range:
@@ -80,6 +82,12 @@ rear_collision_checker_node:
       moving_time:
         type: double
 
+    time_to_collision:
+      margin:
+        type: double
+        validation:
+          gt<>: [0.0]
+
     ego:
       reaction_time:
         type: double
@@ -119,6 +127,10 @@ rear_collision_checker_node:
         type: double
         validation:
           gt<>: [0.0]
+      metric:
+        type: string
+        validation:
+          one_of<>: [[ttc, rss]]
       check:
         front:
           type: bool
@@ -126,6 +138,10 @@ rear_collision_checker_node:
           type: bool
         right:
           type: bool
+        yaw_th:
+          type: double
+          validation:
+            gt<>: [0.0]
       offset:
         inner:
           type: double
@@ -148,6 +164,10 @@ rear_collision_checker_node:
         type: double
         validation:
           gt<>: [0.0]
+      metric:
+        type: string
+        validation:
+          one_of<>: [[ttc, rss]]
       check:
         front:
           type: bool

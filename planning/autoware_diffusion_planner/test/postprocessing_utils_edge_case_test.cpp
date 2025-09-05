@@ -69,7 +69,7 @@ TEST_F(PostprocessingUtilsEdgeCaseTest, CreatePredictedObjects_EmptyAgentData)
 
   AgentData agent_data(empty_objects, NEIGHBOR_SHAPE[1], NEIGHBOR_SHAPE[2], false);
   rclcpp::Time stamp(123, 0);
-  Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
 
   auto result = postprocess::create_predicted_objects(prediction, agent_data, stamp, transform);
 
@@ -93,7 +93,7 @@ TEST_F(PostprocessingUtilsEdgeCaseTest, CreatePredictedObjects_MorePredictionsTh
 
   AgentData agent_data(objects, NEIGHBOR_SHAPE[1], NEIGHBOR_SHAPE[2], false);
   rclcpp::Time stamp(123, 0);
-  Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
 
   auto result = postprocess::create_predicted_objects(prediction, agent_data, stamp, transform);
 
@@ -112,7 +112,7 @@ TEST_F(PostprocessingUtilsEdgeCaseTest, GetPredictionMatrix_NaNInfValues)
   prediction[1] = std::numeric_limits<float>::infinity();
   prediction[2] = -std::numeric_limits<float>::infinity();
 
-  Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
 
   auto matrix = postprocess::get_prediction_matrix(prediction, transform, 0, 0);
 
@@ -134,8 +134,8 @@ TEST_F(PostprocessingUtilsEdgeCaseTest, GetPredictionMatrix_NaNInfValues)
 // Test edge case: Very large transformation values
 TEST_F(PostprocessingUtilsEdgeCaseTest, TransformOutputMatrix_LargeTransform)
 {
-  Eigen::MatrixXf output_matrix = Eigen::MatrixXf::Ones(4, OUTPUT_T);
-  Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+  Eigen::MatrixXd output_matrix = Eigen::MatrixXd::Ones(4, OUTPUT_T);
+  Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
 
   // Set very large translation values
   transform(0, 3) = 1e6f;
@@ -152,11 +152,11 @@ TEST_F(PostprocessingUtilsEdgeCaseTest, TransformOutputMatrix_LargeTransform)
 TEST_F(PostprocessingUtilsEdgeCaseTest, GetTrajectoryFromPredictionMatrix_ZeroMovement)
 {
   // Create a prediction matrix where the agent doesn't move
-  Eigen::MatrixXf prediction_matrix(5, 4);
+  Eigen::MatrixXd prediction_matrix(5, 4);
   prediction_matrix.setZero();
-  prediction_matrix.col(2) = Eigen::VectorXf::Ones(5);  // cos(yaw) = 1
+  prediction_matrix.col(2) = Eigen::VectorXd::Ones(5);  // cos(yaw) = 1
 
-  Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
   rclcpp::Time stamp(123, 0);
 
   auto trajectory =
@@ -175,12 +175,12 @@ TEST_F(PostprocessingUtilsEdgeCaseTest, GetTrajectoryFromPredictionMatrix_ZeroMo
 // Test edge case: Extreme yaw values
 TEST_F(PostprocessingUtilsEdgeCaseTest, GetTrajectoryFromPredictionMatrix_ExtremeYaw)
 {
-  Eigen::MatrixXf prediction_matrix(3, 4);
+  Eigen::MatrixXd prediction_matrix(3, 4);
   prediction_matrix << 0, 0, 1, 0,  // yaw = 0
     1, 1, 0, 1,                     // yaw = π/2
     2, 2, -1, 0;                    // yaw = π
 
-  Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
   rclcpp::Time stamp(123, 0);
 
   auto trajectory =
@@ -207,7 +207,7 @@ TEST_F(PostprocessingUtilsEdgeCaseTest, CreateMultipleTrajectories_BoundaryIndic
   std::vector<float> prediction(
     OUTPUT_SHAPE[0] * OUTPUT_SHAPE[1] * OUTPUT_SHAPE[2] * OUTPUT_SHAPE[3], 1.0f);
   rclcpp::Time stamp(123, 0);
-  Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
 
   // Test with max valid indices
   auto trajectories = postprocess::create_multiple_trajectories(
@@ -225,10 +225,10 @@ TEST_F(PostprocessingUtilsEdgeCaseTest, CreateMultipleTrajectories_BoundaryIndic
 // Test edge case: Time precision
 TEST_F(PostprocessingUtilsEdgeCaseTest, GetTrajectoryFromPredictionMatrix_TimePrecision)
 {
-  Eigen::MatrixXf prediction_matrix(100, 4);  // 100 time steps
+  Eigen::MatrixXd prediction_matrix(100, 4);  // 100 time steps
   prediction_matrix.setZero();
 
-  Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
   rclcpp::Time stamp(123, 456789012);  // Include nanoseconds
 
   auto trajectory =

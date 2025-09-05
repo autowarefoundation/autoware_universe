@@ -1,0 +1,4 @@
+/**:
+  ros__parameters:
+    meas_to_tracked_latency_topic_name: /perception/object_recognition/tracking/multi_object_tracker/debug/meas_to_tracked_object_ms
+    prediction_latency_topic_name: /perception/object_recognition/prediction/map_based_prediction/debug/processing_time_ms

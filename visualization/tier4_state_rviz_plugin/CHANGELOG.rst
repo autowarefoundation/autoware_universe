@@ -2,6 +2,18 @@
 Changelog for package tier4_state_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* feat(tier4_state_rviz_plugin): save & load config of VelocitySteeringFactorsPanel (`#10026 <https://github.com/autowarefoundation/autoware_universe/issues/10026>`_)
+  save & load rviz config
+* feat(tier4_state_rviz_plugin): use mrm description api (`#10895 <https://github.com/autowarefoundation/autoware_universe/issues/10895>`_)
+  * feat(tier4_state_rviz_plugin): use mrm description api
+  * fix timer cancel timing
+  ---------
+* chore(tier4_state_rviz_plugin): add maintainer (`#10905 <https://github.com/autowarefoundation/autoware_universe/issues/10905>`_)
+* feat(tier4_state_rviz_plugin): display unknown value (`#10861 <https://github.com/autowarefoundation/autoware_universe/issues/10861>`_)
+* Contributors: Mitsuhiro Sakamoto, Takagi, Isamu
+
 0.46.0 (2025-06-20)
 -------------------
 

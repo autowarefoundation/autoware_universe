@@ -13,6 +13,10 @@ ament_auto_add_library(gyro_bias_estimator SHARED
   src/gyro_bias_estimation_module.cpp
 )
 
+target_include_directories(gyro_bias_estimator
+  PUBLIC include
+)
+
 rclcpp_components_register_node(imu_corrector
   PLUGIN "autoware::imu_corrector::ImuCorrector"
   EXECUTABLE imu_corrector_node
@@ -37,6 +41,17 @@ if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
   add_testcase(test/test_gyro_bias_estimation_module.cpp)
+  ament_add_ros_isolated_gtest(test_gyro_bias_scale_estimation_module
+    test/test_main.cpp
+    test/test_gyro_bias_scale_estimation_module.cpp
+  )
+  target_link_libraries(test_gyro_bias_scale_estimation_module gyro_bias_estimator)
+  ament_target_dependencies(test_gyro_bias_scale_estimation_module
+    ${${PROJECT_NAME}_FOUND_BUILD_DEPENDS}
+  )
+  target_include_directories(test_gyro_bias_scale_estimation_module
+    PUBLIC include
+  )
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE

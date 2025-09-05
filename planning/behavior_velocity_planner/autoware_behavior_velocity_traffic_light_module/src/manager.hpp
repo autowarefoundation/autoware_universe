@@ -57,7 +57,12 @@ private:
 
   bool isModuleRegisteredFromRegElement(const lanelet::Id & id, const size_t module_id) const;
 
-  bool isModuleRegisteredFromExistingAssociatedModule(const lanelet::Id & id) const;
+  std::shared_ptr<TrafficLightModule> getRegisteredAssociatedModule(const lanelet::Id & id) const;
+
+  bool hasAssociatedTrafficLight(
+    const lanelet::ConstLanelet & lane, const lanelet::Id & registered_id) const;
+
+  std::shared_ptr<TrafficLightModule> findModuleById(const lanelet::Id & module_id) const;
 
   bool hasSameTrafficLight(
     const lanelet::TrafficLightConstPtr element,

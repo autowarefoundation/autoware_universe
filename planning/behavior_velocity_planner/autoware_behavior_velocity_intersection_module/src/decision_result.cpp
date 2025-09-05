@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "decision_result.hpp"
+#include "autoware/behavior_velocity_intersection_module/decision_result.hpp"
 
 #include <string>
 

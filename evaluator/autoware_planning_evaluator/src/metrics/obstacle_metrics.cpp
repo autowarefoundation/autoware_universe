@@ -50,18 +50,20 @@ Accumulator<double> calcTimeToCollision(
   const PredictedObjects & obstacles, const Trajectory & traj, const double distance_threshold)
 {
   Accumulator<double> stat;
+
+  if (traj.points.empty()) {
+    return stat;
+  }
+
   /** TODO(Maxime CLEMENT):
    * this implementation assumes static obstacles and does not work for dynamic obstacles
    */
-  TrajectoryPoint p0;
-  if (!traj.points.empty()) {
-    p0 = traj.points.front();
-  }
-
+  TrajectoryPoint p0 = traj.points.front();
   double t = 0.0;  // [s] time from start of trajectory
+  constexpr double MIN_VELOCITY_THRESHOLD = 1e-3;
   for (const TrajectoryPoint & p : traj.points) {
     const double traj_dist = calc_distance2d(p0, p);
-    if (p0.longitudinal_velocity_mps != 0) {
+    if (std::abs(p0.longitudinal_velocity_mps) > MIN_VELOCITY_THRESHOLD) {
       const double dt = traj_dist / std::abs(p0.longitudinal_velocity_mps);
       t += dt;
       for (auto obstacle : obstacles.objects) {

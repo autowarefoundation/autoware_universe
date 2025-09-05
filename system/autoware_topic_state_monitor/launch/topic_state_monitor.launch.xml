@@ -9,8 +9,10 @@
   <arg name="error_rate" description="error rate[Hz]"/>
   <arg name="timeout" description="timeout period[s]"/>
   <arg name="window_size" default="10" description="window size"/>
+  <arg name="pub_topic_name" default="/diagnostics" description="topic name to publish diagnostics"/>
 
   <node pkg="autoware_topic_state_monitor" exec="autoware_topic_state_monitor_node" name="topic_state_monitor_$(var node_name_suffix)" output="screen">
+    <remap from="/diagnostics" to="$(var pub_topic_name)"/>
     <param name="topic" value="$(var topic)"/>
     <param name="topic_type" value="$(var topic_type)"/>
     <param name="transient_local" value="$(var transient_local)"/>

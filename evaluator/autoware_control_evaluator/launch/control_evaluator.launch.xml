@@ -2,7 +2,7 @@
   <arg name="output_metrics" default="false"/>
   <arg name="input/odometry" default="/localization/kinematic_state"/>
   <arg name="input/acceleration" default="/localization/acceleration"/>
-  <arg name="input/trajectory" default="/planning/scenario_planning/trajectory"/>
+  <arg name="input/trajectory" default="/planning/trajectory"/>
   <arg name="input/vector_map" default="/map/vector_map"/>
   <arg name="input/route" default="/planning/mission_planning/route"/>
   <arg name="input/behavior_path" default="/planning/scenario_planning/lane_driving/behavior_planning/path_with_lane_id"/>

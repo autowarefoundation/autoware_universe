@@ -275,7 +275,7 @@ MPCTrajectory convertToMPCTrajectory(const Trajectory & input)
   return output;
 }
 
-Trajectory convertToAutowareTrajectory(const MPCTrajectory & input)
+Trajectory convertToAutowareTrajectory(const MPCTrajectory & input, const double wheelbase)
 {
   Trajectory output;
   TrajectoryPoint p;
@@ -288,6 +288,9 @@ Trajectory convertToAutowareTrajectory(const MPCTrajectory & input)
       static_cast<decltype(p.longitudinal_velocity_mps)>(input.vx.at(i));
     p.time_from_start =
       rclcpp::Duration::from_seconds(input.relative_time.at(i) - input.relative_time.front());
+    if (wheelbase != 0.0) {
+      p.front_wheel_angle_rad = static_cast<float>(std::atan(input.smooth_k.at(i) * wheelbase));
+    }
     output.points.push_back(p);
     if (output.points.size() == output.points.max_size()) {
       break;

@@ -2,6 +2,11 @@
 Changelog for package autoware_processing_time_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* feat(path_generator): publish processing time (`#10863 <https://github.com/autowarefoundation/autoware_universe/issues/10863>`_)
+* Contributors: Kosuke Takeuchi
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

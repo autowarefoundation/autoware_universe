@@ -533,6 +533,38 @@ lanelet::BasicPolygon2d create_polygon(
   return lanelet::utils::to2D(polygon_3d).basicPolygon();
 }
 
+std::optional<PredictedPathWithPolygon> transform_predicted_path(
+  const autoware_perception_msgs::msg::PredictedPath & path,
+  const autoware_perception_msgs::msg::Shape & obj_shape, const double obj_normal_velocity,
+  const double time_resolution)
+{
+  if (path.path.empty()) {
+    return std::nullopt;
+  }
+  PredictedPathWithPolygon pred_path_with_poly;
+  pred_path_with_poly.confidence = path.confidence;
+
+  const auto end_time =
+    rclcpp::Duration(path.time_step).seconds() * static_cast<double>(path.path.size() - 1);
+  constexpr auto eps = std::numeric_limits<double>::epsilon();
+  const auto num_iterations = static_cast<size_t>(std::ceil(end_time / time_resolution)) + 1;
+  pred_path_with_poly.path.reserve(num_iterations);
+
+  for (double t = 0.0; t < end_time + eps; t += time_resolution) {
+    if (
+      const auto obj_pose_opt = autoware::object_recognition_utils::calcInterpolatedPose(path, t)) {
+      const auto obj_polygon = autoware_utils::to_polygon2d(*obj_pose_opt, obj_shape);
+      pred_path_with_poly.path.emplace_back(t, *obj_pose_opt, obj_normal_velocity, obj_polygon);
+    }
+  }
+
+  if (pred_path_with_poly.path.empty()) {
+    return std::nullopt;
+  }
+
+  return pred_path_with_poly;
+}
+
 ExtendedPredictedObject transform(
   const PredictedObject & object, const LaneChangeParameters & lane_change_parameters)
 {
@@ -543,22 +575,17 @@ ExtendedPredictedObject transform(
   const double obj_vel_norm =
     std::hypot(extended_object.initial_twist.linear.x, extended_object.initial_twist.linear.y);
 
-  extended_object.predicted_paths.resize(object.kinematics.predicted_paths.size());
-  for (size_t i = 0; i < object.kinematics.predicted_paths.size(); ++i) {
-    const auto & path = object.kinematics.predicted_paths.at(i);
-    const double end_time =
-      rclcpp::Duration(path.time_step).seconds() * static_cast<double>(path.path.size() - 1);
-    extended_object.predicted_paths.at(i).confidence = path.confidence;
+  const auto object_predicted_paths = path_safety_checker::get_object_predicted_paths(
+    object.kinematics.predicted_paths,
+    lane_change_parameters.safety.collision_check.use_all_predicted_paths);
 
-    // create path
-    for (double t = 0.0; t < end_time + std::numeric_limits<double>::epsilon();
-         t += time_resolution) {
-      const auto obj_pose = autoware::object_recognition_utils::calcInterpolatedPose(path, t);
-      if (obj_pose) {
-        const auto obj_polygon = autoware_utils::to_polygon2d(*obj_pose, object.shape);
-        extended_object.predicted_paths.at(i).path.emplace_back(
-          t, *obj_pose, obj_vel_norm, obj_polygon);
-      }
+  extended_object.predicted_paths.reserve(object.kinematics.predicted_paths.size());
+
+  for (const auto & pred_path : object_predicted_paths) {
+    if (
+      const auto ext_path_opt =
+        transform_predicted_path(pred_path, object.shape, obj_vel_norm, time_resolution)) {
+      extended_object.predicted_paths.push_back(*ext_path_opt);
     }
   }
 

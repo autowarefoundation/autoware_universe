@@ -11,13 +11,13 @@ hdd_reader [OPTION]
 ## Description
 
 Read S.M.A.R.T. information for monitoring HDD temperature and life of HDD.<br>
-This runs as a daemon process and listens to a TCP/IP port (7635 by default).
+This runs as a daemon process and listens to a UNIX domain socket ("/tmp/hdd_reader.sock" by default).
 
 **Options:**<br>
 _-h, --help_<br>
 &nbsp;&nbsp;&nbsp;&nbsp;Display help<br>
-_-p, --port #_<br>
-&nbsp;&nbsp;&nbsp;&nbsp;Port number to listen to
+_-s, --socket PATH_<br>
+&nbsp;&nbsp;&nbsp;&nbsp;UNIX domain socket path
 
 **Exit status:**<br>
 Returns 0 if OK; non-zero otherwise.

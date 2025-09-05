@@ -2,6 +2,11 @@
 Changelog for package autoware_component_interface_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* feat(default_ad_api): use polling subscription (`#7588 <https://github.com/autowarefoundation/autoware_universe/issues/7588>`_)
+* Contributors: Takagi, Isamu
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

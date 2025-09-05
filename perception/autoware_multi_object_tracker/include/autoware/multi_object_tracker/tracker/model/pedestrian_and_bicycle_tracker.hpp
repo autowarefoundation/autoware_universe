@@ -36,6 +36,8 @@ private:
 public:
   PedestrianAndBicycleTracker(const rclcpp::Time & time, const types::DynamicObject & object);
 
+  TrackerType getTrackerType() const override { return TrackerType::PEDESTRIAN_AND_BICYCLE; }
+
   bool predict(const rclcpp::Time & time) override;
   bool measure(
     const types::DynamicObject & object, const rclcpp::Time & time,

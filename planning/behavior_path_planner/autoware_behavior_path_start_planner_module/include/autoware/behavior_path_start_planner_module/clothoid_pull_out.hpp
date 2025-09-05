@@ -116,20 +116,6 @@ std::optional<std::vector<geometry_msgs::msg::Point>> convert_arc_to_clothoid(
   double L_min, double point_interval);
 
 /**
- * @brief Improved clothoid conversion function with endpoint correction
- * @param arc_segment Arc segment to convert
- * @param start_pose Starting pose
- * @param initial_velocity Initial velocity
- * @param wheel_base Vehicle wheel base
- * @param max_steer_angle_rate Maximum steering angle rate
- * @param point_interval Interval between points
- * @return Optional clothoid path points with correction (nullopt if conversion fails)
- */
-std::optional<std::vector<geometry_msgs::msg::Point>> convert_arc_to_clothoid_with_correction(
-  const ArcSegment & arc_segment, const geometry_msgs::msg::Pose & start_pose,
-  double initial_velocity, double wheel_base, double max_steer_angle_rate, double point_interval);
-
-/**
  * @brief Create straight path to end pose
  * @param start_pose Starting pose
  * @param forward_distance Forward distance

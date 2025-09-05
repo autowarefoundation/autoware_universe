@@ -1,0 +1,41 @@
+<launch>
+  <arg name="input/pointcloud" default="/sensing/lidar/top/pointcloud_raw"/>
+  <arg name="output/pointcloud" default="/sensing/lidar/top/filtered"/>
+  <arg name="debug" default="false">
+    <choice value="true"/>
+    <choice value="false"/>
+  </arg>
+  <arg name="use_sim_time" default="false">
+    <choice value="true"/>
+    <choice value="false"/>
+  </arg>
+
+  <arg name="polar_voxel_outlier_filter_param_file" default="$(find-pkg-share autoware_pointcloud_preprocessor)/config/polar_voxel_outlier_filter_node.param.yaml"/>
+
+  <node pkg="autoware_cuda_pointcloud_preprocessor" exec="cuda_polar_voxel_outlier_filter_node" name="cuda_polar_voxel_outlier_filter" output="screen" unless="$(var debug)">
+    <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+    <remap from="~/output/pointcloud" to="$(var output/pointcloud)"/>
+    <param from="$(var polar_voxel_outlier_filter_param_file)"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+  </node>
+
+  <node
+    pkg="autoware_cuda_pointcloud_preprocessor"
+    exec="cuda_polar_voxel_outlier_filter_node"
+    name="cuda_polar_voxel_outlier_filter"
+    output="screen"
+    launch-prefix="gnome-terminal -- cuda-gdb --args"
+    if="$(var debug)"
+  >
+    <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+    <remap from="~/output/pointcloud" to="$(var output/pointcloud)"/>
+    <param from="$(var polar_voxel_outlier_filter_param_file)"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+  </node>
+
+  <!-- DEBUG -->
+  <!-- <node pkg="autoware_pointcloud_preprocessor" exec="polar_voxel_outlier_filter_node" name="cpu_polar_voxel_outlier_filter_node" output="screen" namespace="cpu"> -->
+  <!--   <remap from="/cpu/input" to="$(var input/pointcloud)"/> -->
+  <!--   <param from="$(var polar_voxel_outlier_filter_param_file)"/> -->
+  <!-- </node> -->
+</launch>

@@ -56,22 +56,6 @@ std::optional<PathWithLaneId> extractCollisionCheckSection(
   const PullOutPath & path, const double collision_check_distance_from_end);
 
 /**
- * @brief Calculate curvature values from trajectory points
- * @param trajectory Input trajectory
- * @return Vector of curvature values for each trajectory point
- */
-std::vector<double> calc_curvature_from_trajectory(
-  const autoware_planning_msgs::msg::Trajectory & trajectory);
-
-/**
- * @brief Calculate curvature values from point array
- * @param points Input point array
- * @return Vector of curvature values for each point
- */
-std::vector<double> calc_curvature_from_points(
-  const std::vector<geometry_msgs::msg::Point> & points);
-
-/**
  * @brief Find target pose along path at specified longitudinal distance
  * @param centerline_path Centerline path to search along
  * @param start_pose Starting pose
@@ -111,13 +95,6 @@ std::vector<int64_t> get_lane_ids_from_pose(
 void set_lane_ids_to_path_point(
   PathPointWithLaneId & point, const lanelet::ConstLanelets & road_lanes,
   const std::vector<int64_t> & previous_lane_ids);
-
-/**
- * @brief Print detailed information of PathWithLaneId
- * @param path PathWithLaneId to print
- * @param path_name Name of the path for identification
- */
-void print_path_with_lane_id_details(const PathWithLaneId & path, const std::string & path_name);
 
 }  // namespace autoware::behavior_path_planner::start_planner_utils
 

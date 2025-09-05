@@ -50,6 +50,7 @@ enum class Metric {
   stop_deviation,
   stop_deviation_abs,
   closest_object_distance,
+  longitudinal_velocity_deviation,
   SIZE,
 };
 
@@ -78,6 +79,7 @@ static const std::unordered_map<std::string, Metric> str_to_metric = {
   {"stop_deviation", Metric::stop_deviation},
   {"stop_deviation_abs", Metric::stop_deviation_abs},
   {"closest_object_distance", Metric::closest_object_distance},
+  {"longitudinal_velocity_deviation", Metric::longitudinal_velocity_deviation},
 };
 
 static const std::unordered_map<Metric, std::string> metric_to_str = {
@@ -105,6 +107,7 @@ static const std::unordered_map<Metric, std::string> metric_to_str = {
   {Metric::stop_deviation, "stop_deviation"},
   {Metric::stop_deviation_abs, "stop_deviation_abs"},
   {Metric::closest_object_distance, "closest_object_distance"},
+  {Metric::longitudinal_velocity_deviation, "longitudinal_velocity_deviation"},
 };
 
 // Metrics descriptions
@@ -149,6 +152,9 @@ static const std::unordered_map<Metric, std::string> metric_descriptions = {
   {Metric::closest_object_distance,
    "Distance to the closest object[m], the objects outside of the distance_filter_thr_m (default: "
    "30m) are ignored"},
+  {Metric::longitudinal_velocity_deviation,
+   "Longitudinal velocity deviation from the reference trajectory[m], positive value means the "
+   "actual velocity is larger than the planned velocity."},
 };
 
 namespace details

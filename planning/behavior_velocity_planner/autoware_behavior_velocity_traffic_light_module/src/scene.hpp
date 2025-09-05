@@ -78,7 +78,8 @@ public:
 public:
   TrafficLightModule(
     const int64_t lane_id, const lanelet::TrafficLight & traffic_light_reg_elem,
-    lanelet::ConstLanelet lane, const PlannerParam & planner_param, const rclcpp::Logger logger,
+    lanelet::ConstLanelet lane, const lanelet::ConstLineString3d & initial_stop_line,
+    const PlannerParam & planner_param, const rclcpp::Logger logger,
     const rclcpp::Clock::SharedPtr clock,
     const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
@@ -97,6 +98,8 @@ public:
   {
     return first_ref_stop_path_point_index_;
   }
+
+  void updateStopLine(const lanelet::ConstLineString3d & stop_line);
 
 private:
   bool isStopSignal();
@@ -121,6 +124,9 @@ private:
   // Key Feature
   const lanelet::TrafficLight & traffic_light_reg_elem_;
   lanelet::ConstLanelet lane_;
+  lanelet::ConstLineString3d
+    stop_line_;  // Note: this stop_line_ may not be the one bound to the traffic light regulatory
+                 // element. this is the one bound to the traffic light (line string)
 
   // State
   State state_;

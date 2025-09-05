@@ -2,6 +2,35 @@
 Changelog for package autoware_control_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* feat: change planning output topic name to /planning/trajectory (`#11135 <https://github.com/autowarefoundation/autoware_universe/issues/11135>`_)
+  * change planning output topic name to /planning/trajectory
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(control_evaluator): add option to output_metrics only when ego is moving (`#11125 <https://github.com/autowarefoundation/autoware_universe/issues/11125>`_)
+  * add output_metrics_only_moving
+  * pre-commit
+  * use emplace_back
+  * fix build failures
+  ---------
+* fix(control_evaluator): publish dist to uncrossable boundary (`#11103 <https://github.com/autowarefoundation/autoware_universe/issues/11103>`_)
+  fix(control_evaluator): Publish dist to uncrossable boundary
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(control_evaluator): add steering_angle_abs metric (`#10991 <https://github.com/autowarefoundation/autoware_universe/issues/10991>`_)
+  Co-authored-by: t4-adc <grp-rd-1-adc-admin@tier4.jp>
+* feat(control_evaluator): boundary departure check in control evaluator (`#10859 <https://github.com/autowarefoundation/autoware_universe/issues/10859>`_)
+  * feat(control_evaluator): add boundary departure check
+  * slight refactoring
+  * fix node dying due to invalid linestring reference
+  * docstring fix
+  * Revise  metric's messages and move function call
+  * add comments to the extra margin
+  ---------
+* Contributors: Kazunori-Nakajima, Kem (TiankuiXian), Mete Fatih Cırıt, Yukihiro Saito, Zulfaqar Azmi
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

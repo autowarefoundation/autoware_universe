@@ -55,13 +55,6 @@ std::string to_enum_str(const E & value, const bool to_lower_case = true)
 lanelet::BasicPolygon2d to_basic_polygon_2d(const LinearRing2d & footprint_hull);
 
 /**
- * @brief Convert a 2D line segment to a LineString2d.
- * @param segment A pair of 2D points representing a line segment.
- * @return A LineString2d containing the two endpoints.
- */
-LineString2d to_linestring_2d(const Segment2d & segment);
-
-/**
  * @brief Convert a 3D Eigen vector to a 2D point by dropping the z-coordinate.
  * @param ll_pt A 3D point in Eigen format.
  * @return A 2D point using the x and y values.

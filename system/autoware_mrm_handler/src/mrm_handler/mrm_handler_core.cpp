@@ -461,7 +461,6 @@ void MrmHandler::updateMrmState()
       const auto msg = "invalid state: " + std::to_string(mrm_state_.state);
       throw std::runtime_error(msg);
     }
-      return;
   }
 }
 

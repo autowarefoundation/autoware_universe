@@ -71,39 +71,43 @@ The module applies slightly different logic for acquiring target lanes for right
 
 #### Right Turn
 
-To get the target lanelets for right turn intersection:
+To get the target lanelets for a right-turn intersection:
 
-- Use ego turn-direction lane to define search space (bounding box enclosing turn-direction lane).
-- Get all lanelets withing bounding box as candidate lanelets
-- Filter out following lanelets:
+- Use ego’s turn-direction lane to define the search space (bounding box enclosing the turn-direction lane).
+- Get all lanelets within the bounding box as candidate lanelets.
+- Filter out the following lanelets:
   - Lanelets that are `route_lanelets`
   - Lanelets with a "time to reach" exceeding the time horizon
-  - Lanelets that have `turn_direction` attribute and are not `STRAIGHT`. (If parameter `right_turn.check_turning_lanes` is **FALSE**)
-  - Lanelets that are determined to be **crossing** lanes. (If parameter `right_turn.check_crossing_lanes` is **FALSE**)
-- remaining lanelets are then processed to:
-  - Compute overlap point between ego trajectory and target lanelet
-  - Compute ego's time to arrive and leave overlap point
+  - Lanelets that have the `turn_direction` attribute and are not `STRAIGHT` (if parameter `right_turn.check_turn_lanes` is **FALSE**)
+  - Lanelets that are determined to be **crossing** lanes (if parameter `right_turn.check_crossing_lanes` is **FALSE**)
+  - Lanelets that are **excluded based on traffic signal context** (if parameter `right_turn.check_traffic_signal` is **TRUE** and the right-turn arrow signal is active)
+- Remaining lanelets are then processed to:
+  - Compute the overlap point between the ego trajectory and the target lanelet
+  - Compute ego’s time to arrive and leave the overlap point
 
-The image below shows the target lanelets at a right turn intersection. (`right_turn.check_turning_lanes` set to **FALSE**)
+The image below shows the target lanelets at a right-turn intersection. (`right_turn.check_turn_lanes` set to **FALSE**)
 
 ![right-turn-target-lanes](./images/right_turn_target_lanelets.png)
 
+---
+
 #### Left Turn
 
-To get the target lanelets for left turn intersection:
+To get the target lanelets for a left-turn intersection:
 
-- Use ego's turn-direction lanelet(s) to get next lanelet "destination_lanelet" following the turn.
-- We then get all lanelets preceding the "destination_lanelet" and filter out:
+- Use ego’s turn-direction lanelet(s) to get the next lanelet, the "destination_lanelet," following the turn.
+- Get all lanelets preceding the "destination_lanelet" and filter out:
   - Lanelets that are `route_lanelets`
   - Lanelets with a "time to reach" exceeding the time horizon
-  - Lanelets that have `turn_direction` attribute and are not `STRAIGHT`. (If parameter `left_turn.check_turning_lanes` is **FALSE**)
-- remaining lanelets are then processed to:
-  - Compute overlap point between ego trajectory and target lanelet
-  - Compute ego's time to arrive and leave overlap point
+  - Lanelets that have the `turn_direction` attribute and are not `STRAIGHT` (if parameter `left_turn.check_turn_lanes` is **FALSE**)
+  - Lanelets that are **excluded based on traffic signal context** (if parameter `left_turn.check_traffic_signal` is **TRUE** and the signal is green or amber, giving priority to the left-turn movement)
+- Remaining lanelets are then processed to:
+  - Compute the overlap point between the ego trajectory and the target lanelet
+  - Compute ego’s time to arrive and leave the overlap point
 
-Target lanelets are then expanded, if necessary, up to `detection_range`
+Target lanelets are then expanded, if necessary, up to `detection_range`.
 
-The image below shows the target lanelets at a left turn intersection. (`left.check_turning_lanes` set to **TRUE**)
+The image below shows the target lanelets at a left-turn intersection. (`left_turn.check_turn_lanes` set to **TRUE**)
 
 ![left-turn-target-lanes](./images/left_turn_target_lanelets.png)
 
@@ -175,14 +179,16 @@ If any of the following conditions are met the tracking information is reset and
 
 ### Target Lanes Parameters
 
-| Name                                | Unit  | Type   | Description                                     | Default value |
-| :---------------------------------- | ----- | ------ | ----------------------------------------------- | ------------- |
-| `right_turn.enable`                 | [-]   | bool   | Flag to enable/disable the check at right turns | true          |
-| `right_turn.check_crossing_lanes`   | [-]   | bool   | Flag to enable/disable checking crossing lanes  | true          |
-| `right_turn.check_turn_lanes`       | [-]   | bool   | Flag to enable/disable checking turning lanes   | true          |
-| `right_turn.crossing_lane_angle_th` | [rad] | double | Angle threshold for determining crossing lanes  | 0.785398      |
-| `left_turn.enable`                  | [-]   | bool   | Flag to enable/disable the check at left turns  | true          |
-| `left_turn.check_turn_lanes`        | [-]   | bool   | Flag to enable/disable checking turning lanes   | true          |
+| Name                                | Unit  | Type   | Description                                         | Default value |
+| :---------------------------------- | ----- | ------ | --------------------------------------------------- | ------------- |
+| `right_turn.enable`                 | [-]   | bool   | Flag to enable/disable the check at right turns     | true          |
+| `right_turn.check_crossing_lanes`   | [-]   | bool   | Flag to enable/disable checking crossing lanes      | true          |
+| `right_turn.check_turn_lanes`       | [-]   | bool   | Flag to enable/disable checking turning lanes       | true          |
+| `right_turn.crossing_lane_angle_th` | [rad] | double | Angle threshold for determining crossing lanes      | 0.785398      |
+| `right_turn.check_traffic_signal`   | [-]   | bool   | Use traffic light context for right-turn validation | true          |
+| `left_turn.enable`                  | [-]   | bool   | Flag to enable/disable the check at left turns      | true          |
+| `left_turn.check_turn_lanes`        | [-]   | bool   | Flag to enable/disable checking turning lanes       | true          |
+| `left_turn.check_traffic_signal`    | [-]   | bool   | Use traffic light context for left-turn validation  | true          |
 
 ### Pointcloud Parameters
 

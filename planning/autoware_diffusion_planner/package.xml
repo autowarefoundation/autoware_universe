@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_diffusion_planner</name>
-  <version>0.0.1</version>
+  <version>0.47.0</version>
   <description>The autoware_diffusion_planner package</description>
 
   <maintainer email="daniel.sanchez@tier4.jp">Daniel Sanchez</maintainer>
@@ -29,6 +29,7 @@
   <depend>autoware_traffic_light_utils</depend>
   <depend>autoware_trajectory</depend>
   <depend>autoware_utils</depend>
+  <depend>autoware_utils_diagnostics</depend>
   <depend>autoware_utils_geometry</depend>
   <depend>autoware_utils_uuid</depend>
   <depend>autoware_vehicle_info_utils</depend>

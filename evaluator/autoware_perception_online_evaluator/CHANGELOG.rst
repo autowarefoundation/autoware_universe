@@ -1,6 +1,32 @@
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Changelog for package autoware_perception_online_evaluator
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+0.47.0 (2025-08-11)
+-------------------
+* feat(perception_online_evaluator): add functionality to publish perception analytics info (`#11089 <https://github.com/autowarefoundation/autoware_universe/issues/11089>`_)
+  * feat: add functionality to calculate perception metrics for MOB in autoware_perception_online_evaluator
+  chore: configure settings for mob metrics calculation
+  * feat: change implementation from one topic per metric to all metrics published in one metric for better management by metric agent
+  refactor: rename FrameMetrics member to clarify variable meaning
+  refactor: use array/vector instead of unorder_map for FrameMetrics for better performance
+  chore: remap published topic name to match msg conventions
+  * fix: unittest error
+  * style(pre-commit): autofix
+  * refactor: replace MOB keyword with generalized expression of perception analytics
+  * chore: improve comment
+  * refactor: add a new autoware_perception_analytics_publisher_node to publish perception analytics info instead of using previous autoware_perception_online_evaluator_node
+  chore: modify default launch setting to match the refactoring
+  * style(pre-commit): autofix
+  * fix: add initialization for `latencies\_`
+  fix: use tf of objects timestamp instead of latest
+  feat: use ConstSharedPtr to avoid repeated copy of large message in `PerceptionAnalyticsCalculator::setPredictedObjects`
+  ---------
+  Co-authored-by: Jian Kang <jian.kang@tier4.jp>
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Kang, Mete Fatih Cırıt
 
 0.46.0 (2025-06-20)
 -------------------

@@ -22,7 +22,6 @@
       th_distance_to_middle_of_the_road: 0.5
       center_line_path_interval: 1.0
       # shift pull out
-      enable_shift_pull_out: true
       check_shift_path_lane_departure: true
       allow_check_shift_path_lane_departure_override: false
       shift_collision_check_distance_from_end: -10.0
@@ -35,7 +34,6 @@
       maximum_curvature: 0.07
       end_pose_curvature_threshold: 0.1
       # geometric pull out
-      enable_geometric_pull_out: true
       geometric_collision_check_distance_from_end: 0.0
       arc_path_interval: 1.0
       divide_pull_out_path: true
@@ -44,22 +42,26 @@
       lane_departure_check_expansion_margin: 0.0
       backward_velocity: -1.0
       geometric_pull_out_max_steer_angle_margin_scale: 0.72
-      enable_clothoid_fallback: true  # Enable clothoid path search when no path is found with collision margins
 
       # clothoid pull out
       clothoid_initial_velocity: 1.0  # [m/s] initial velocity for clothoid path
       clothoid_acceleration: 1.0      # [m/s^2] acceleration for clothoid path
       clothoid_max_steer_angles_deg: [5.0, 10.0, 20.0]  # [deg] maximum steer angles to try
       clothoid_max_steer_angle_rate_deg_per_sec: 10.0   # [deg/s] maximum steer angle rate
+      clothoid_collision_check_distance_from_end: 0.0  # [m] collision check distance from end for clothoid planner
       check_clothoid_path_lane_departure: true  # enable lane departure check for clothoid path
 
       # search start pose backward
       enable_back: true
-      search_priority: "efficient_path"  # "efficient_path" or "short_back_distance"
+      # Planner priority list. Example: ["SHIFT", "GEOMETRIC", "CLOTHOID"]
+      search_priority: ["SHIFT", "GEOMETRIC"]
+      # Search policy: "planner_priority" or "distance_priority"
+      search_policy: "planner_priority"
       max_back_distance: 20.0
       backward_search_resolution: 2.0
       backward_path_update_duration: 3.0
       ignore_distance_from_lane_end: 0.0
+
       # turns signal
       prepare_time_before_start: 0.0
       # freespace planner
@@ -125,7 +127,7 @@
           # detection range
           object_check_forward_distance: 10.0
           object_check_backward_distance: 100.0
-          ignore_object_velocity_threshold: 1.0
+          ignore_object_velocity_threshold: 0.25
           # ObjectTypesToCheck
           object_types_to_check:
             check_car: true

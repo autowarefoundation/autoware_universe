@@ -1,0 +1,12 @@
+<launch>
+  <arg name="input/objects" default="/perception/object_recognition/objects"/>
+
+  <!-- perception analytics publisher -->
+  <group>
+    <node pkg="autoware_perception_online_evaluator" exec="autoware_perception_analytics_publisher_node">
+      <param from="$(find-pkg-share autoware_perception_online_evaluator)/param/perception_analytics_publisher.defaults.yaml"/>
+      <remap from="~/input/objects" to="$(var input/objects)"/>
+      <remap from="~/perception_analytics" to="/perception/perception_analytics_publisher/perception_analytics"/>
+    </node>
+  </group>
+</launch>

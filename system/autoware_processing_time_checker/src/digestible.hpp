@@ -187,18 +187,6 @@ public:
   void merge();
 
   /**
-   * Retrieve the probability that a random data point in the digest is
-   * less than or equal to x.
-   *
-   * @param x
-   *  value of interest
-   *
-   * @return
-   *  a value between [0, 1]
-   */
-  double cumulative_distribution(Values x) const;
-
-  /**
    * Retrieve the value such that p percent of all data points or less than or
    * equal to that value.
    *
@@ -209,11 +197,6 @@ public:
    *  a value from the dataset that satisfies the above condition
    */
   double quantile(double p) const;
-
-  /**
-   * Return number of centroids in the t-digest
-   */
-  size_t centroid_count() const { return (*active).values.size(); }
 
   /**
    * Retrieve the number of merged data points in the t-digest
@@ -565,89 +548,6 @@ double tdigest<Values, Weight>::quantile(double p) const
   }
 
   return quantile;
-}
-
-/**
- * Based on the equivalent function in the reference implementation available here:
- * https://github.com/tdunning/t-digest
- */
-template <typename Values, typename Weight>
-double tdigest<Values, Weight>::cumulative_distribution(Values x) const
-{
-  if (active->values.empty()) {
-    return 1.0;
-  }
-
-  if (active->values.size() == 1) {
-    if (x < min_val) {
-      return 0;
-    }
-    if (x > max_val) {
-      return 1.0;
-    }
-    if (x - min_val <= (max_val - min_val)) {
-      return 0.5;
-    }
-    return (x - min_val) / (max_val - min_val);
-  }
-
-  // From here on out we divide by active->total_weight in multiple places
-  // along several code paths.
-  // Let's make sure we're not going to divide by zero.
-  assert(active->total_weight);
-
-  // Is x at one of the extremes?
-  if (x < active->values.front().mean) {
-    const auto & first = active->values.front();
-    if (first.mean - min_val > 0) {
-      return lerp(1, first.weight / 2 - 1, (x - min_val) / (first.mean - min_val)) /
-             active->total_weight;
-    }
-    return 0;
-  }
-  if (x > active->values.back().mean) {
-    const auto & last = active->values.back();
-    if (max_val - last.mean > 0) {
-      return 1 - (lerp(
-                   1, last.weight / 2 - 1,
-                   (max_val - x) / (max_val - last.mean) / active->total_weight));
-    }
-    return 1.0;
-  }
-
-  Weight weight_so_far = 0;
-  double cdf = 0;
-  auto cdf_fn = [x, &weight_so_far, &cdf, total_weight = active->total_weight](
-                  const centroid_t & left, const centroid_t & right) {
-    assert(total_weight);
-    if (left.mean <= x && x < right.mean) {
-      // x is bracketed between left and right.
-
-      Weight delta_weight = (right.weight + left.weight) / static_cast<Weight>(2);
-      double base = weight_so_far + (left.weight / static_cast<Weight>(2));
-
-      cdf = lerp(
-              base, base + delta_weight,
-              static_cast<double>((x - left.mean)) / (right.mean - left.mean)) /
-            total_weight;
-      return true;
-    }
-
-    weight_so_far += left.weight;
-    return false;
-  };
-
-  auto it = std::adjacent_find(active->values.begin(), active->values.end(), cdf_fn);
-
-  // Did we fail to find a pair of bracketing centroids?
-  if (it == active->values.end()) {
-    // Might be between max_val and the last centroid.
-    if (x == active->values.back().mean) {
-      return 1 - 0.5 / active->total_weight;
-    }
-  }
-
-  return cdf;
 }
 
 }  // namespace digestible

@@ -23,6 +23,7 @@
 #include <NvOnnxParser.h>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -123,6 +124,22 @@ public:
    * @return Tensor shape.
    */
   [[nodiscard]] nvinfer1::Dims getTensorShape(const char * tensor_name) const;
+
+  /**
+   * @brief Get output tensor data type by name from TensorRT engine.
+   *
+   * @param[in] tensor_name Tensor name.
+   * @return Tensor datatype or nullopt if engine is not initialized.
+   */
+  [[nodiscard]] std::optional<nvinfer1::DataType> getTensorDataType(const char * tensor_name) const;
+
+  /**
+   * @brief Get output tensor data type by name from TensorRT engine.
+   *
+   * @param[in] tensor_name Tensor name.
+   * @return Tensor datatype.
+   */
+  [[nodiscard]] nvinfer1::TensorIOMode getTensorIOMode(const char * tensor_name) const;
 
   /**
    * @brief Get input tensor shape by index from TensorRT network.

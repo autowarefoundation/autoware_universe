@@ -2,6 +2,21 @@
 Changelog for package autoware_default_adapi
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(default_adapi_universe): check mrm state when reset diag (`#10894 <https://github.com/autowarefoundation/autoware_universe/issues/10894>`_)
+* feat(autoware_default_adapi_universe)!: remove interface ported to Autoware Core (`#10918 <https://github.com/autowarefoundation/autoware_universe/issues/10918>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Takagi, Isamu <isamu.takagi@tier4.jp>
+* docs(default_adapi_universe): add detailed description for autoware state arrived (`#10904 <https://github.com/autowarefoundation/autoware_universe/issues/10904>`_)
+  * focs(default_adapi_universe): add time for autoware state arrived
+  * add description
+  ---------
+* feat(default_ad_api): use polling subscription (`#7588 <https://github.com/autowarefoundation/autoware_universe/issues/7588>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Takagi, Isamu
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

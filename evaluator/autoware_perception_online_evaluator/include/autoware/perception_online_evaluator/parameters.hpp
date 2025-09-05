@@ -17,6 +17,7 @@
 
 #include "autoware/perception_online_evaluator/metrics/metric.hpp"
 
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -62,6 +63,12 @@ struct Parameters
   DebugMarkerParameter debug_marker_parameters;
   // parameters depend on object class
   std::unordered_map<uint8_t, ObjectParameter> object_parameters;
+};
+
+struct AnalyticsParameters
+{
+  std::string meas_to_tracked_latency_topic_name;
+  std::string prediction_latency_topic_name;
 };
 
 }  // namespace autoware::perception_diagnostics

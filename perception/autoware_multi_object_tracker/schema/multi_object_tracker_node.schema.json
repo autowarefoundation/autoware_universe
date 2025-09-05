@@ -91,51 +91,6 @@
           "description": "Minimum IOU between associated objects with unknown label to remove unknown tracker",
           "default": 0.001
         },
-        "confident_count_threshold": {
-          "type": "object",
-          "properties": {
-            "UNKNOWN": {
-              "type": "number",
-              "description": "Number of measurements to consider tracker as confident for unknown object classes.",
-              "default": 3
-            },
-            "CAR": {
-              "type": "number",
-              "description": "Number of measurements to consider tracker as confident for car object classes.",
-              "default": 3
-            },
-            "TRUCK": {
-              "type": "number",
-              "description": "Number of measurements to consider tracker as confident for truck object classes.",
-              "default": 3
-            },
-            "BUS": {
-              "type": "number",
-              "description": "Number of measurements to consider tracker as confident for bus object classes.",
-              "default": 3
-            },
-            "TRAILER": {
-              "type": "number",
-              "description": "Number of measurements to consider tracker as confident for trailer object classes.",
-              "default": 3
-            },
-            "MOTORBIKE": {
-              "type": "number",
-              "description": "Number of measurements to consider tracker as confident for motorbike object classes.",
-              "default": 3
-            },
-            "BICYCLE": {
-              "type": "number",
-              "description": "Number of measurements to consider tracker as confident for bicycle object classes.",
-              "default": 3
-            },
-            "PEDESTRIAN": {
-              "type": "number",
-              "description": "Number of measurements to consider tracker as confident for pedestrian object classes.",
-              "default": 3
-            }
-          }
-        },
         "generalized_iou_thresholds": {
           "type": "array",
           "items": {
@@ -145,6 +100,21 @@
           },
           "description": "Generalized IoU threshold for each class.",
           "default": [-0.3, -0.4, -0.6, -0.6, -0.6, -0.1, -0.1, -0.1]
+        },
+        "prune_static_object_speed": {
+          "type": "number",
+          "description": "Speed threshold to consider an object as static. Below this speed, nearby unknown objects should always be detected.",
+          "default": 1.38
+        },
+        "prune_moving_object_speed": {
+          "type": "number",
+          "description": "Speed threshold to consider an object as moving. Above this speed, nearby unknown objects should always be merged to avoid false unknown detections.",
+          "default": 5.5
+        },
+        "prune_static_iou_threshold": {
+          "type": "number",
+          "description": "Generalized IoU threshold for a static object.",
+          "default": 0.0
         },
         "overlap_distance_thresholds": {
           "type": "array",
@@ -212,7 +182,6 @@
         "tracker_lifetime",
         "min_known_object_removal_iou",
         "min_unknown_object_removal_iou",
-        "confident_count_threshold",
         "publish_processing_time",
         "publish_processing_time_detail",
         "publish_tentative_objects",

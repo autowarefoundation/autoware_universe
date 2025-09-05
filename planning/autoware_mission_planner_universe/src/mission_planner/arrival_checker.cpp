@@ -27,7 +27,12 @@ ArrivalChecker::ArrivalChecker(rclcpp::Node * node) : vehicle_stop_checker_(node
 {
   const double angle_deg = node->declare_parameter<double>("arrival_check_angle_deg");
   angle_ = autoware_utils::deg2rad(angle_deg);
-  distance_ = node->declare_parameter<double>("arrival_check_distance");
+  arrival_check_lateral_distance_ =
+    node->declare_parameter<double>("arrival_check_lateral_distance");
+  arrival_check_longitudinal_undershoot_distance_ =
+    node->declare_parameter<double>("arrival_check_longitudinal_undershoot_distance");
+  arrival_check_longitudinal_overshoot_distance_ =
+    node->declare_parameter<double>("arrival_check_longitudinal_overshoot_distance");
   duration_ = node->declare_parameter<double>("arrival_check_duration");
 }
 
@@ -55,16 +60,32 @@ bool ArrivalChecker::is_arrived(const PoseStamped & pose) const
     return false;
   }
 
-  // Check distance.
-  if (distance_ < autoware_utils::calc_distance2d(pose.pose, goal.pose)) {
-    return false;
-  }
+  // Compute position difference in goal frame
+  const double dx = pose.pose.position.x - goal.pose.position.x;
+  const double dy = pose.pose.position.y - goal.pose.position.y;
+
+  const double yaw_goal = tf2::getYaw(goal.pose.orientation);
+  const double longitudinal_offset_to_goal = std::cos(yaw_goal) * dx + std::sin(yaw_goal) * dy;
+  const double lateral_offset_to_goal = -std::sin(yaw_goal) * dx + std::cos(yaw_goal) * dy;
+
+  const double yaw_pose = tf2::getYaw(pose.pose.orientation);
+  const double yaw_diff = autoware_utils::normalize_radian(yaw_pose - yaw_goal);
+
+  // Check lateral distance.
+  const bool is_within_lateral_range =
+    std::abs(lateral_offset_to_goal) <= arrival_check_lateral_distance_;
+
+  // Check longitudinal distance.
+  // The acceptable range is [-arrival_check_longitudinal_undershoot_distance,
+  // +arrival_check_longitudinal_overshoot_distance_].
+  const bool is_within_longitudinal_range =
+    longitudinal_offset_to_goal >= -arrival_check_longitudinal_undershoot_distance_ &&
+    longitudinal_offset_to_goal <= arrival_check_longitudinal_overshoot_distance_;
 
   // Check angle.
-  const double yaw_pose = tf2::getYaw(pose.pose.orientation);
-  const double yaw_goal = tf2::getYaw(goal.pose.orientation);
-  const double yaw_diff = autoware_utils::normalize_radian(yaw_pose - yaw_goal);
-  if (angle_ < std::fabs(yaw_diff)) {
+  const bool is_within_angle_range = std::fabs(yaw_diff) <= angle_;
+
+  if (!is_within_lateral_range || !is_within_longitudinal_range || !is_within_angle_range) {
     return false;
   }
 

@@ -2,6 +2,60 @@
 Changelog for package autoware_cuda_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(autoware cuda pointcloud preprocessor): trim IMU/twist queues correctly (`#11055 <https://github.com/autowarefoundation/autoware_universe/issues/11055>`_)
+  fix(autoware_cuda_pointcloud_preprocessor): keep IMU/twist messages up to the one before the first point's timestamp
+* perf(autoware_cuda_pointcloud_preprocessor): execute thrust operations on the node's own CUDA stream (`#10998 <https://github.com/autowarefoundation/autoware_universe/issues/10998>`_)
+  * perf(autoware_cuda_pointcloud_preprocessor): replace default thrust calls with ones with explicit cuda stream
+  * chore: remove non-functional mempool allocator
+  ---------
+* chore(autoware_cuda_pointcloud_preprocessor): add code owners (`#11065 <https://github.com/autowarefoundation/autoware_universe/issues/11065>`_)
+* feat(autoware_pointcloud_preprocessor): add publisher for concatenated pointcloud meta info (`#10851 <https://github.com/autowarefoundation/autoware_universe/issues/10851>`_)
+  * feat(autoware_pointcloud_preprocessor): add publisher for concatenated pointcloud meta info
+  * style(pre-commit): autofix
+  * feat(autoware_cuda_pointcloud_preprocessor): handle concatenated pointcloud meta info
+  * feat(autoware_pointcloud_preprocessor): serialized config of matching strategy
+  * feat(autoware_pointcloud_preprocessor): update msg
+  * feat(autoware_pointcloud_preprocessor): update msg (2)
+  * docs(autoware_pointcloud_preprocessor): add cloud info topic description
+  * feat(autoware_pointcloud_preprocessor): add unit tests for cloud info
+  * fix(autoware_pointcloud_preprocessor): pre-commit
+  * fix(autoware_pointcloud_preprocessor): remove *_struct headers inclusion
+  * fix(autoware_pointcloud_preprocessor): check if the matching strategy cannot be enumerated
+  * test(autoware_pointcloud_preprocessor): full cloud repr
+  * feat(autoware_pointcloud_preprocessor): auto success set & more unit tests
+  * feat(autoware_pointcloud_preprocessor): publish info regardless cloud content
+  * style(autoware_pointcloud_preprocessor): typo
+  * feat(autoware_pointcloud_preprocessor): make update_concatenated_point_cloud_config static for easier integration
+  * docs(autoware_pointcloud_preprocessor): typo
+  Co-authored-by: Max Schmeller <6088931+mojomex@users.noreply.github.com>
+  * fix(autoware_pointcloud_preprocessor): publish cloud info out of condition block
+  * fix(autoware_pointcloud_preprocessor): container access with safe bound checking
+  * style(autoware_pointcloud_preprocessor): unify naming convention (part 1 - content)
+  * style(autoware_pointcloud_preprocessor): unify naming convention (part 2 - files name)
+  * style(autoware_pointcloud_preprocessor): naming convention for main API
+  * doc(autoware_pointcloud_preprocessor): add docstring
+  * feat(autoware_pointcloud_preprocessor): add remap to launch files
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Max Schmeller <6088931+mojomex@users.noreply.github.com>
+* fix(autoware_cuda_pointcloud_preprocessor): ensure type and API safety (`#10987 <https://github.com/autowarefoundation/autoware_universe/issues/10987>`_)
+  * fix: return early on invalid pointcloud format
+  * chore: add/remove (un)necessary initializer braces
+  * chore: remove useless default destructor
+  * fix: make layout check inline to comply with ODR
+  * fix: check CUDA error for each API call
+  * chore: fix most type-related clang-tidy warnings
+  * chore: create point fields with less boilerplate
+  * chore: change `num\_` fields back to `size_t`
+  * change `thrust::count` result variables to `size_t`
+  * chore: static_assert that OutputPointType and InputPointType match Autoware point types
+  ---------
+* Contributors: Amadeusz Szymko, David Wong, Max Schmeller, Mete Fatih Cırıt
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

@@ -82,6 +82,11 @@ protected:
   void updateThermalThrottlingImpl(
     diagnostic_updater::DiagnosticStatusWrapper & stat) override;  // NOLINT(runtime/references)
 
+  /**
+   * @brief Get CPU thermal throttling status
+   */
+  int getThermalThrottlingStatus() const override;
+
   // The format of Thermal Throttling report depends on CPU model.
   // So, Thermal Throttling report is implemented in derived class.
 

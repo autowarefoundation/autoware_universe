@@ -2,6 +2,24 @@
 Changelog for package autoware_simple_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(simple object merger): handle when tf could not get properly (`#10934 <https://github.com/autowarefoundation/autoware_universe/issues/10934>`_)
+  * fix(simple_object_merger): handle null transforms in object merging
+  * fix(simple_object_merger): optimize transformation handling for detected and tracked objects
+  ---------
+* fix(autoware_simple_object_merger): templatize simple object merger (`#10785 <https://github.com/autowarefoundation/autoware_universe/issues/10785>`_)
+  * templatize node and add merger for tracked objects
+  * add test
+  * refactor file name and structure, revert node name
+  * add missing include
+  * refactor: override onTimer method in object merger nodes
+  ---------
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* Contributors: Masaki Baba, Mete Fatih Cırıt, Taekjin LEE
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

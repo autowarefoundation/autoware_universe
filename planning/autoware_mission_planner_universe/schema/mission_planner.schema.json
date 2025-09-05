@@ -16,10 +16,22 @@
           "description": "Angle threshold for goal check ",
           "default": "45.0"
         },
-        "arrival_check_distance": {
+        "arrival_check_lateral_distance": {
           "type": "number",
-          "description": "Distance threshold for goal check",
+          "description": "Lateral distance threshold for goal check",
           "default": "1.0",
+          "minimum": 0.0
+        },
+        "arrival_check_longitudinal_undershoot_distance": {
+          "type": "number",
+          "description": "Longitudinal distance threshold for goal check when the vehicle has not yet reached the goal",
+          "default": "1.0",
+          "minimum": 0.0
+        },
+        "arrival_check_longitudinal_overshoot_distance": {
+          "type": "number",
+          "description": "Longitudinal distance threshold for goal check when the vehicle has passed the goal",
+          "default": "2.0",
           "minimum": 0.0
         },
         "arrival_check_duration": {

@@ -41,8 +41,8 @@ HazardLightsSelector::HazardLightsSelector(const rclcpp::NodeOptions & node_opti
       "output/hazard_lights_command", 1);
 
   // Timer
-  timer_ = this->create_wall_timer(
-    std::chrono::milliseconds(1000 / params_.update_rate),
+  timer_ = rclcpp::create_timer(
+    this, get_clock(), std::chrono::milliseconds(1000 / params_.update_rate),
     std::bind(&HazardLightsSelector::on_timer, this));
 }
 

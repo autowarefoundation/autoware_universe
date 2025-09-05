@@ -22,6 +22,7 @@
 
 #include "autoware/cuda_utils/cuda_check_error.hpp"
 
+#include <functional>
 #include <memory>
 #include <type_traits>
 
@@ -50,6 +51,37 @@ CudaUniquePtr<T> make_unique()
   T * p;
   CHECK_CUDA_ERROR(::cudaMalloc(reinterpret_cast<void **>(&p), sizeof(T)));
   return CudaUniquePtr<T>{p};
+}
+
+template <typename T>
+using CudaPooledUniquePtr = std::unique_ptr<T, std::function<void(T *)>>;
+
+template <typename T>
+CudaPooledUniquePtr<T> make_unique(const std::size_t n, cudaStream_t stream, cudaMemPool_t pool)
+{
+  using U = typename std::remove_extent_t<T>;
+  T * ptr = nullptr;
+
+  CHECK_CUDA_ERROR(
+    cudaMallocFromPoolAsync(reinterpret_cast<void **>(&ptr), sizeof(U) * n, pool, stream));
+  // Custom deleter calls cudaFreeAsync with the same stream
+  auto deleter = [stream](T * p) {
+    if (p) {
+      CHECK_CUDA_ERROR(cudaFreeAsync(p, stream));
+    }
+  };
+
+  // To prevent unexpected behavior caused by dirty region allocated by the pool,
+  // zero clear the taken region
+  CHECK_CUDA_ERROR(cudaMemsetAsync(ptr, 0, n * sizeof(T), stream));
+
+  return CudaPooledUniquePtr<T>(ptr, deleter);
+}
+
+template <typename T>
+CudaPooledUniquePtr<T> make_unique(cudaStream_t stream, cudaMemPool_t pool)
+{
+  return make_unique<T>(1, stream, pool);
 }
 
 struct CudaDeleterHost

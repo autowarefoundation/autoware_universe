@@ -26,6 +26,7 @@
 
 #include <memory>
 #include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -57,14 +58,6 @@ std::optional<InterpolatedPathInfo> generateInterpolatedPathInfo(
  */
 std::vector<lanelet::Id> find_lane_ids_upto(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const lanelet::Id lane_id);
-
-/**
- * @brief obtain the index where the footprint on the path intersects with `line` for the first time
- * on the interval of `interpolated_path_info`
- */
-std::optional<size_t> get_first_index_intersects_line(
-  const lanelet::ConstLineString2d & line, const InterpolatedPathInfo & interpolated_path_info,
-  const autoware_utils::LinearRing2d & footprint, const double vehicle_length);
 
 /**
  * @brief generate a linestring consisting of two points of the entry part of `lanelet`
@@ -105,8 +98,8 @@ generate_blind_side_lanelets_before_turning(
  */
 lanelet::ConstLineString3d generate_virtual_blind_side_boundary_after_turning(
   const lanelet::ConstLanelet & outermost_lanelet,
-  const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction,
-  const double extend_length);
+  const lanelet::ConstLanelet & intersection_lanelet,
+  const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction);
 
 /**
  * @brief generate virtual LineString which is normal to the entry line of `intersection_lanelet`,
@@ -119,6 +112,19 @@ std::optional<lanelet::LineString3d> generate_virtual_ego_straight_path_after_tu
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
   const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction,
   const double ego_width);
+
+/**
+ * @brief Clip a virtual line so it ends at the farthest intersected point with the given
+ * intersection lanelet’s bounds.
+ *
+ * @return lanelet::LineString3d A linestring containing the start point and either:
+ *         - the original end point (if no intersected points found), or
+ *         - the farthest intersected point with intersection lanelet's bounds.
+ */
+lanelet::LineString3d clip_virtual_line_to_intersection_bound(
+  const lanelet::BasicPoint3d & virtual_line_start, const lanelet::BasicPoint3d & virtual_line_end,
+  const lanelet::ConstLanelet & intersection_lanelet,
+  const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction);
 
 /**
  * @brief generate a polygon representing the Path along the intersection lane, with given
@@ -149,6 +155,20 @@ std::optional<StopPoints> generate_stop_points(
   const double ego_nearest_yaw_threshold,
   autoware_internal_planning_msgs::msg::PathWithLaneId * path);
 
+/**
+ * @brief Calculate the minimum lateral gap from the ego vehicle's side to the relevant road
+ * boundary just before a turn.
+ * @param[in] ego_footprint The 2D geometric footprint of the ego vehicle.
+ * @param[in] last_lanelets_before_turning The lanelets the vehicle occupies just before the turn,
+ * used to define the blind spot area boundary.
+ * @param[in] turn_direction The direction of the upcoming turn (left/right), which determines the
+ * relevant vehicle side and road boundary.
+ * @return An optional value containing the minimum lateral distance in meters on success.
+ */
+std::optional<double> calc_ego_to_blind_spot_lanelet_lateral_gap(
+  const autoware_utils::LinearRing2d & footprint,
+  const lanelet::ConstLanelets & lanelets_before_turning,
+  const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction);
 }  // namespace autoware::behavior_velocity_planner
 
 #endif  // AUTOWARE__BEHAVIOR_VELOCITY_BLIND_SPOT_MODULE__UTIL_HPP_

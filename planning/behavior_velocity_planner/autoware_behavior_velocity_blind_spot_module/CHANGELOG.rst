@@ -2,6 +2,14 @@
 Changelog for package autoware_behavior_velocity_blind_spot_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* feat(blind_spot): new re-designed blind_spot module (`#11079 <https://github.com/autowarefoundation/autoware_universe/issues/11079>`_)
+  feat(blind_spot): new re-designed blind_spot module(add attention_area)
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Mamoru Sobue, Mete Fatih Cırıt
+
 0.46.0 (2025-06-20)
 -------------------
 

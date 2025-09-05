@@ -22,6 +22,8 @@
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 
+#include <tier4_external_api_msgs/msg/memory_status.hpp>
+
 #include <climits>
 #include <map>
 #include <string>
@@ -65,11 +67,20 @@ protected:
    */
   std::string toHumanReadable(const std::string & str);
 
+  /**
+   * @brief publish memory status
+   * @param [in] usage memory usage
+   */
+  void publishMemoryStatus(float usage);
+
   diagnostic_updater::Updater updater_;  //!< @brief Updater class which advertises to /diagnostics
 
   char hostname_[HOST_NAME_MAX + 1];  //!< @brief host name
 
   size_t available_size_;  //!< @brief Memory available size to generate error
+
+  rclcpp::Publisher<tier4_external_api_msgs::msg::MemoryStatus>::SharedPtr
+    pub_memory_status_;  //!< @brief publisher
 
   /**
    * @brief Memory usage status messages

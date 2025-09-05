@@ -161,7 +161,7 @@ The concatenation node publishes detailed meta information about the concatenati
 ### Handling Serialized Configuration
 
 The `matching_strategy_config` field contains serialized configuration data for the matching strategy.
-If a strategy has its own configuration, it requires serialization and deserialization implementation based on the `StrategyConfig` class defined in [cloud_info.hpp](../include/autoware/pointcloud_preprocessor/concatenate_data/concatenation_info.hpp).
+If a strategy has its own configuration, it requires serialization and deserialization implementation based on the `StrategyConfig` class defined in [cloud_info.hpp](../include/autoware/pointcloud_preprocessor/concatenate_data/concatenation_info_manager.hpp).
 
 Here's how to work with serialized configuration for the Advanced strategy:
 
@@ -169,7 +169,7 @@ Here's how to work with serialized configuration for the Advanced strategy:
 
 ```cpp
 auto cfg = StrategyAdvancedConfig(reference_timestamp_min, reference_timestamp_max);
-ConcatenationInfo::set_config(cfg.serialize(), concatenation_info_msg);
+ConcatenationInfoManager::set_config(cfg.serialize(), concatenation_info_msg);
 ```
 
 #### Deserialization Example

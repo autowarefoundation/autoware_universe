@@ -110,6 +110,9 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
   pub_cpu_usage_ =
     this->create_publisher<tier4_external_api_msgs::msg::CpuUsage>("~/cpu_usage", durable_qos);
 
+  pub_cpu_temperature_ = this->create_publisher<tier4_external_api_msgs::msg::CpuTemperature>(
+    "~/cpu_temperature", durable_qos);
+
   using namespace std::literals::chrono_literals;
   // Start timer for collecting cpu statistics
   timer_callback_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
@@ -472,6 +475,13 @@ void CPUMonitorBase::updateThermalThrottlingImpl(
     this->get_logger(), "CPUMonitorBase::checkThermalThrottlingImpl not implemented.");
 }
 
+int CPUMonitorBase::getThermalThrottlingStatus() const
+{
+  RCLCPP_INFO_ONCE(
+    this->get_logger(), "CPUMonitorBase::getThermalThrottlingStatus not implemented.");
+  return DiagStatus::OK;
+}
+
 void CPUMonitorBase::checkFrequency()
 {
   // Remember start time to measure elapsed time
@@ -595,6 +605,25 @@ void CPUMonitorBase::publishCpuUsage(tier4_external_api_msgs::msg::CpuUsage usag
   pub_cpu_usage_->publish(usage);
 }
 
+void CPUMonitorBase::publishCpuTemperature()
+{
+  using tier4_external_api_msgs::msg::CpuTemperature;
+  CpuTemperature cpu_temperature;
+  cpu_temperature.stamp = this->now();
+  cpu_temperature.hostname = hostname_;
+  {
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
+    if (!temperature_data_.core_data.empty()) {
+      cpu_temperature.temperature = temperature_data_.core_data[0].temperature;
+    }
+  }
+  int thermal_throttling = getThermalThrottlingStatus();
+  cpu_temperature.thermal_throttling = (thermal_throttling == DiagStatus::OK)
+                                         ? CpuTemperature::THERMAL_THROTTLING_OFF
+                                         : CpuTemperature::THERMAL_THROTTLING_ON;
+  pub_cpu_temperature_->publish(cpu_temperature);
+}
+
 void CPUMonitorBase::onTimer()
 {
   checkTemperature();
@@ -602,4 +631,6 @@ void CPUMonitorBase::onTimer()
   checkLoad();
   checkFrequency();
   checkThermalThrottling();
+
+  publishCpuTemperature();
 }
