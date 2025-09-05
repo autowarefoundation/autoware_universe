@@ -36,6 +36,8 @@ enum class PullOverPlannerType {
   BEZIER,
   ARC_FORWARD,
   ARC_BACKWARD,
+  CLOTHOID_FORWARD,
+  CLOTHOID_BACKWARD,
   FREESPACE,
 };
 
