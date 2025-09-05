@@ -181,7 +181,7 @@ bool BEVFormerInferenceEngine::loadPlugins(const std::string & plugin_path)
     return false;
   }
 
-  auto registry = getPluginRegistryFn();
+  auto * const registry = getPluginRegistryFn();
   if (!registry) {
     RCLCPP_ERROR(logger_, "Plugin registry is null");
     dlclose(handle);
@@ -451,7 +451,7 @@ bool BEVFormerInferenceEngine::saveEngineToDisk(
   return true;
 }
 
-std::string BEVFormerInferenceEngine::getPrecisionString(PrecisionType precision) const
+std::string BEVFormerInferenceEngine::getPrecisionString(PrecisionType precision)
 {
   switch (precision) {
     case PrecisionType::FP16:

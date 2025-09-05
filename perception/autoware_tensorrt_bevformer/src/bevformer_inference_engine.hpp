@@ -132,7 +132,7 @@ private:
   bool initialized_ = false;
 
   // Helper function to get a string representation of precision type
-  std::string getPrecisionString(PrecisionType precision) const;
+  static std::string getPrecisionString(PrecisionType precision);
 
   // Add these members
   void * plugin_handle_ = nullptr;  // Store plugin library handle for cleanup
@@ -159,7 +159,7 @@ private:
 
   // New helper methods for engine building
   bool saveEngineToDisk(const std::vector<char> & engine_data, const std::string & engine_file);
-  bool checkFileExists(const std::string & file_path);
+  static bool checkFileExists(const std::string & file_path);
 };
 
 }  // namespace tensorrt_bevformer
