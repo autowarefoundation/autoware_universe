@@ -1,4 +1,4 @@
-// Copyright 2024 TIER IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -74,11 +74,7 @@ void TrajectoryConcatenatorNode::on_trajectories(const CandidateTrajectories::Co
                                .candidate_trajectories(trajectories)
                                .generator_info({generator_info});
 
-    if (buffer_.count(uuid) == 0) {
-      buffer_.emplace(uuid, std::make_shared<CandidateTrajectories>(pre_combine));
-    } else {
-      buffer_.at(uuid) = std::make_shared<CandidateTrajectories>(pre_combine);
-    }
+    buffer_[uuid] = std::make_shared<CandidateTrajectories>(pre_combine);
   }
 }
 

@@ -14,11 +14,10 @@ A 100 ms timer then scans this buffer and drops any entry whose header stamp i
 
 ### Topics
 
-| Direction  | Topic name              | Message Type                                                | Description                                                |
-| ---------- | ----------------------- | ----------------------------------------------------------- | ---------------------------------------------------------- |
-| Subscriber | `~/input/trajectories`  | `autoware_internal_planning_msgs/msg/CandidateTrajectories` | Trajectory sets produced by each generator                 |
-| Subscriber | `~/input/odometry`      | `nav_msgs/msg/Odometry`                                     | Ego pose needed to trim and extend the feedback trajectory |
-| Publisher  | `~/output/trajectories` | `autoware_internal_planning_msgs/msg/CandidateTrajectories` | Concatenated list of all buffered trajectories             |
+| Direction  | Topic name              | Message Type                                                | Description                                    |
+| ---------- | ----------------------- | ----------------------------------------------------------- | ---------------------------------------------- |
+| Subscriber | `~/input/trajectories`  | `autoware_internal_planning_msgs/msg/CandidateTrajectories` | Trajectory sets produced by each generator     |
+| Publisher  | `~/output/trajectories` | `autoware_internal_planning_msgs/msg/CandidateTrajectories` | Concatenated list of all buffered trajectories |
 
 ### Parameters
 

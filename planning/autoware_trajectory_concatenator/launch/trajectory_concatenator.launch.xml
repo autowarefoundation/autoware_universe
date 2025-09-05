@@ -7,7 +7,6 @@
   <node pkg="autoware_trajectory_concatenator" exec="autoware_trajectory_concatenator_node" name="trajectory_concatenator_node" output="screen">
     <param from="$(var trajectory_concatenator_param_path)" allow_substs="true"/>
     <remap from="~/input/trajectories" to="$(var concatenator_input_trajectories)"/>
-    <remap from="~/input/odometry" to="/localization/kinematic_state"/>
     <remap from="~/output/trajectories" to="$(var concatenator_output_trajectories)"/>
   </node>
 </launch>

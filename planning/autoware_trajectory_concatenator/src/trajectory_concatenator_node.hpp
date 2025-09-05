@@ -1,4 +1,4 @@
-// Copyright 2024 TIER IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -56,9 +56,6 @@ private:
   rclcpp::TimerBase::SharedPtr timer_;
 
   rclcpp::Subscription<CandidateTrajectories>::SharedPtr subs_trajectories_;
-
-  autoware_utils_rclcpp::InterProcessPollingSubscriber<Odometry> sub_odometry_{
-    this, "~/input/odometry"};
 
   rclcpp::Publisher<CandidateTrajectories>::SharedPtr pub_trajectories_;
 
