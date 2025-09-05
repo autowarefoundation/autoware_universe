@@ -3,7 +3,7 @@
   <arg name="input_trajectories" default="~/input/trajectories"/>
   <arg name="output_trajectory" default="~/output/trajectory"/>
 
-  <node pkg="autoware_trajectory_adaptor" exec="autoware_trajectory_adaptor_node" name="trajectory_adaptor_node" output="screen">
+  <node pkg="autoware_trajectory_adapter" exec="autoware_trajectory_adapter_node" name="trajectory_adapter_node" output="screen">
     <remap from="~/input/trajectories" to="$(var input_trajectories)"/>
     <remap from="~/output/trajectory" to="$(var output_trajectory)"/>
   </node>

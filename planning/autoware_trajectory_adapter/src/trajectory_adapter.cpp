@@ -29,7 +29,7 @@ TrajectoryAdapterNode::TrajectoryAdapterNode(const rclcpp::NodeOptions & node_op
   pub_trajectory_{this->create_publisher<Trajectory>("~/output/trajectory", 1)}
 {
   debug_processing_time_detail_pub_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
-    "~/debug/processing_time_detail_ms/trajectory_adaptor", 1);
+    "~/debug/processing_time_detail_ms/trajectory_adapter", 1);
   time_keeper_ =
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
 }
