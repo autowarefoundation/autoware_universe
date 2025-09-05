@@ -29,6 +29,7 @@
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
 #include <autoware_control_msgs/msg/control.hpp>
 #include <autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp>
+#include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_vehicle_msgs/msg/steering_report.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
@@ -44,6 +45,7 @@ namespace autoware::raw_vehicle_cmd_converter
 {
 using Control = autoware_control_msgs::msg::Control;
 using autoware_internal_debug_msgs::msg::Float32MultiArrayStamped;
+using autoware_internal_debug_msgs::msg::Float32Stamped;
 using autoware_internal_debug_msgs::msg::Float64Stamped;
 using tier4_vehicle_msgs::msg::ActuationCommandStamped;
 using tier4_vehicle_msgs::msg::ActuationStatusStamped;
@@ -91,6 +93,7 @@ public:
   rclcpp::Subscription<Control>::SharedPtr sub_control_cmd_;
   rclcpp::Subscription<ActuationStatusStamped>::SharedPtr sub_actuation_status_;
   rclcpp::Subscription<Steering>::SharedPtr sub_steering_;
+  rclcpp::Subscription<Float32Stamped>::SharedPtr sub_steer_offset_;
   // polling subscribers
   autoware_utils::InterProcessPollingSubscriber<Odometry> sub_odometry_{this, "~/input/odometry"};
   // polling subscribers for vehicle_adaptor
@@ -107,6 +110,11 @@ public:
   std::unique_ptr<TwistStamped> current_twist_ptr_;  // [m/s]
   std::unique_ptr<double> current_steer_ptr_;
   ActuationStatusStamped::ConstSharedPtr actuation_status_ptr_;
+  double current_steer_offset_{0.0};           // [rad]
+  double latest_estimated_steer_offset_{0.0};  // [rad] - latest estimated steer offset
+  double initial_steer_offset_{0.0};           // [rad] - base steer offset parameter
+  double steer_offset_updatable_range_{0.0};   // [rad] - updatable range
+  double parameter_updatable_velocity_{0.0};   // [m/s] - velocity threshold for updating offset
   Odometry::ConstSharedPtr current_odometry_;
   Control::ConstSharedPtr control_cmd_ptr_;
   rclcpp::Time control_cmd_stamp_;
@@ -139,12 +147,13 @@ public:
   bool convert_actuation_to_steering_status_{false};  // !< @brief use actuation_status or not
 
   double calculateAccelMap(
-    const double current_velocity, const double desired_acc, bool & accel_cmd_is_zero);
+    const double current_velocity, const double desired_acc, bool & accel_cmd_is_zero) const;
   double calculateBrakeMap(const double current_velocity, const double desired_acc);
   double calculateSteerFromMap(const double vel, const double steering, const double steer_rate);
   void onControlCmd(const Control::ConstSharedPtr msg);
   void onSteering(const Steering::ConstSharedPtr msg);
   void onActuationStatus(const ActuationStatusStamped::ConstSharedPtr msg);
+  void onSteerOffset(const Float32Stamped::ConstSharedPtr msg);
   void publishActuationCmd();
   // for debugging
   rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr debug_pub_steer_pid_;
