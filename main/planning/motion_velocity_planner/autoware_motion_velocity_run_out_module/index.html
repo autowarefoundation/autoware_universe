@@ -7945,8 +7945,6 @@
         
           
         
-          
-        
       
       
         <label class="md-nav__link" for="__nav_8_3_3" id="__nav_8_3_3_label" tabindex="0">
@@ -8053,20 +8051,6 @@
     <li class="md-nav__item">
       <a href="../../behavior_velocity_planner/autoware_behavior_velocity_occlusion_spot_module" class="md-nav__link">
         Occlusion Spot
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../behavior_velocity_planner/autoware_behavior_velocity_run_out_module" class="md-nav__link">
-        Run Out
       </a>
     </li>
   
@@ -14158,7 +14142,7 @@
 <h2 id="role">Role<a class="headerlink" href="#role" title="Permanent link">#</a></h2>
 <p>The <code>run_out</code> module adds deceleration and stop points to the ego trajectory in order to prevent collisions with objects that are moving towards the ego vehicle path.</p>
 <h2 id="activation">Activation<a class="headerlink" href="#activation" title="Permanent link">#</a></h2>
-<p>This module is activated if the launch parameter <code>launch_mvp_run_out_module</code> is set to true.</p>
+<p>This module is activated if the launch parameter <code>launch_run_out_module</code> is set to true.</p>
 <h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
 <p>This module calculates the times when the ego vehicle and the objects are predicted to overlap each other's trajectories.
 These times are then used to decide whether to stop before the overlap or not.</p>
