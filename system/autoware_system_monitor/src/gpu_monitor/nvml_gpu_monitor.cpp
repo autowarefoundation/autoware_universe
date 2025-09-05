@@ -237,9 +237,12 @@ void GPUMonitor::addProcessUsage(
   utils = std::make_unique<nvmlProcessUtilizationSample_t[]>(util_count);
   ret = nvmlDeviceGetProcessUtilization(device, utils.get(), &util_count, current_timestamp_);
   if (ret != NVML_SUCCESS) {
-    RCLCPP_WARN(
-      this->get_logger(), "Failed to nvmlDeviceGetProcessUtilization(2nd) NVML: %s",
-      nvmlErrorString(ret));
+    // NVML_ERROR_NOT_FOUND is expected when no process is running on the GPU.
+    if (ret != NVML_ERROR_NOT_FOUND) {
+      RCLCPP_WARN(
+        this->get_logger(), "Failed to nvmlDeviceGetProcessUtilization(2nd) NVML: %s",
+        nvmlErrorString(ret));
+    }
     return;
   }
 
