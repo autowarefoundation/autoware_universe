@@ -181,7 +181,7 @@ bool BEVFormerInferenceEngine::loadPlugins(const std::string & plugin_path)
     return false;
   }
 
-  auto * const registry = getPluginRegistryFn();
+  const auto * registry = getPluginRegistryFn();
   if (!registry) {
     RCLCPP_ERROR(logger_, "Plugin registry is null");
     dlclose(handle);
