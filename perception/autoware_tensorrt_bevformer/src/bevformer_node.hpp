@@ -190,7 +190,7 @@ private:
   cv::Mat cloneAndResize(const sensor_msgs::msg::Image::ConstSharedPtr & msg);
 
 public:
-  explicit TRTBEVFormerNode(const rclcpp::NodeOptions & options);
+  explicit TRTBEVFormerNode(const rclcpp::NodeOptions & node_options);
 
   // Callbacks
   void callback(

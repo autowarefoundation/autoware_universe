@@ -51,6 +51,9 @@ BEVFormerDataManager::BEVFormerDataManager(const rclcpp::Logger & logger) : logg
   prev_frame_info_.prev_pos = {0.0f, 0.0f, 0.0f};
   prev_frame_info_.prev_angle = 0.0f;
 
+  // Initialize current_tmp_angle_
+  current_tmp_angle_ = 0.0f;
+
   RCLCPP_INFO(logger_, "BEVFormerDataManager initialized");
 }
 
