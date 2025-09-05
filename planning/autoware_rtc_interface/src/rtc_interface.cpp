@@ -104,6 +104,8 @@ Module getModuleType(const std::string & module_name)
     module.type = Module::START_PLANNER;
   } else if (module_name == "intersection_occlusion") {
     module.type = Module::INTERSECTION_OCCLUSION;
+  } else if (module_name == "roundabout") {
+    module.type = Module::ROUNDABOUT;
   }
   return module;
 }

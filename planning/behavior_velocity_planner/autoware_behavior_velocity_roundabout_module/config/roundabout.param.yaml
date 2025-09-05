@@ -1,0 +1,37 @@
+/**:
+  ros__parameters:
+    roundabout:
+      common:
+        attention_area_margin: 0.75
+        attention_area_angle_threshold: 0.785
+        default_stopline_margin: 1.5
+        path_interpolation_ds: 0.1
+        enable_pass_judge_before_default_stopline: false
+
+
+      collision_detection:
+        collision_detection_hold_time: 0.5
+        min_predicted_path_confidence: 0.05
+        collision_start_margin_time: 3.0
+        collision_end_margin_time: 2.0
+        target_type:
+          car: true
+          bus: true
+          truck: true
+          trailer: true
+          motorcycle: true
+          bicycle: true
+          unknown: false
+        velocity_profile:
+          use_upstream: true
+          minimum_upstream_velocity: 0.01
+          default_velocity: 2.778
+          minimum_default_velocity: 1.388
+        avoid_collision_by_acceleration:
+          object_time_margin_to_collision_point: 4.0
+
+      debug:
+        ttc: [0]
+
+      enable_rtc:
+        roundabout: false
