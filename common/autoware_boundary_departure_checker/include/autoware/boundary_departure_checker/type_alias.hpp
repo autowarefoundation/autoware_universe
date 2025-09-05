@@ -48,6 +48,7 @@ using autoware_utils::MultiPolygon2d;
 using autoware_utils::Point2d;  // NOLINT
 using autoware_utils::Polygon2d;
 using autoware_utils::Segment2d;
+using autoware_utils::Segment3d;
 
 using autoware::vehicle_info_utils::VehicleInfo;  // NOLINT
 

@@ -71,6 +71,14 @@ Segment2d to_segment_2d(
   const Eigen::Matrix<double, 3, 1> & ll_pt1, const Eigen::Matrix<double, 3, 1> & ll_pt2);
 
 /**
+ * @brief Converts a 3D segment into its 2D representation by discarding the Z-coordinates.
+ *
+ * @param segment The input 3D segment to convert.
+ * @return A new 2D segment with the Z-coordinates of the original segment's endpoints removed.
+ */
+Segment2d to_segment_2d(const Segment3d & segment);
+
+/**
  * @brief Convert a 2D point and a z value into a 3D ROS geometry_msgs Point.
  * @param point A 2D point.
  * @param z The z-coordinate to assign.
