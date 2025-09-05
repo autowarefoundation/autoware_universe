@@ -31,6 +31,7 @@ velocity_type_text = {
     VelocityFactor.LANE_CHANGE: "lane change",
     VelocityFactor.AVOIDANCE: "avoidance",
     VelocityFactor.EMERGENCY_STOP_OPERATION: "emergency stop operation",
+    VelocityFactor.ROUNDABOUT: "roundabout",
 }
 
 steering_type_text = {
