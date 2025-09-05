@@ -64,8 +64,8 @@ void TrajectoryAdapterNode::process(const ScoredCandidateTrajectories::ConstShar
 
   const auto traj_points = autoware::motion_utils::removeOverlapPoints(
     trajectory_itr->candidate_trajectory
-      .points);  // to-do (go-sakayori): should be done in trajectory generator? Add more functions
-                 // to adjust the trajectory to autoware controller
+      .points);  // cspell:disable-line TODO (go-sakayori): should be done in trajectory generator?
+                 // Add more functions to adjust the trajectory to autoware controller
   const auto trajectory = autoware_planning_msgs::build<Trajectory>()
                             .header(trajectory_itr->candidate_trajectory.header)
                             .points(traj_points);
