@@ -4,7 +4,7 @@
   <arg name="in_image_compressed" default="$(var in_image)/compressed"/>
   <arg name="detection_rect" default="/perception/object_recognition/detection/rois0"/>
   <arg name="tracked_rect" default="/perception/object_recognition/detection/tracked/rois0"/>
-  <arg name="bytetrack_param_path" default="$(find-pkg-share autoware_bytetrack)/config/bytetrack.param.yaml"/>
+  <arg name="bytetrack_param_path" default="$(find-pkg-share autoware_bytetrack)/config/bytetrack_node.param.yaml"/>
   <arg name="bytetrack_visualizer_param_path" default="$(find-pkg-share autoware_bytetrack)/config/bytetrack_visualizer.param.yaml"/>
   <arg name="enable_visualizer" default="true"/>
 
