@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <arg name="input_trajectories" default="~/input/trajectories"/>
+  <arg name="output_trajectory" default="~/output/trajectory"/>
+
+  <node pkg="autoware_trajectory_adapter" exec="autoware_trajectory_adapter_node" name="trajectory_adapter_node" output="screen">
+    <remap from="~/input/trajectories" to="$(var input_trajectories)"/>
+    <remap from="~/output/trajectory" to="$(var output_trajectory)"/>
+  </node>
+</launch>
