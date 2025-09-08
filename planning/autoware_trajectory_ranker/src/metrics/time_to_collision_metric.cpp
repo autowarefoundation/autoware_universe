@@ -42,7 +42,9 @@ void TimeToCollision::evaluate(
   ttc.reserve(result->points()->size());
   for (size_t i = 0; i < result->points()->size(); i++) {
     ttc.push_back(
-      std::min(1.0f, utils::time_to_collision(result->points(), result->objects(), i) / max_value));
+      std::min(
+        1.0f,
+        utils::time_to_collision(result->points(), result->objects(), i, max_value) / max_value));
   }
 
   result->set_metric(index(), ttc);

@@ -124,9 +124,8 @@ float steer_command(
 
 float time_to_collision(
   const std::shared_ptr<TrajectoryPoints> & points,
-  const std::shared_ptr<PredictedObjects> & objects, const size_t idx)
+  const std::shared_ptr<PredictedObjects> & objects, const size_t idx, const float max_ttc_value)
 {
-  static float constexpr max_ttc_value = 10.0f;
   if (!objects || objects->objects.empty()) return max_ttc_value;
   if (!points || idx >= points->size()) return max_ttc_value;
 
@@ -135,7 +134,7 @@ float time_to_collision(
 
   for (const auto & object : objects->objects) {
     const auto time = ego_point.time_from_start;
-    const float ttc = time_to_collision(ego_point, time, object);
+    const float ttc = time_to_collision(ego_point, time, object, max_ttc_value);
     if (std::isfinite(ttc) && ttc >= 0.0f) {
       best = std::min(best, ttc);
     }
@@ -167,10 +166,8 @@ float time_to_collision(const TrajectoryPoint & point1, const TrajectoryPoint & 
 
 float time_to_collision(
   const TrajectoryPoint & ego_point, const rclcpp::Duration & duration,
-  const autoware_perception_msgs::msg::PredictedObject & object)
+  const autoware_perception_msgs::msg::PredictedObject & object, const float max_ttc_value)
 {
-  static constexpr float max_ttc_value = 10.0f;
-
   // Find the path with highest confidence
   const auto max_confidence_path = std::max_element(
     object.kinematics.predicted_paths.begin(), object.kinematics.predicted_paths.end(),

@@ -253,11 +253,12 @@ TEST_F(TestMetricsUtils, TimeToCollision_WithObjects_NoObjects)
   points->push_back(pt);
 
   auto objects = std::make_shared<PredictedObjects>();  // Empty
+  float max_ttc_value = 10.0f;
 
-  float ttc = time_to_collision(points, objects, 0);
+  float ttc = time_to_collision(points, objects, 0, max_ttc_value);
 
   // No objects, should return max TTC value (10.0)
-  EXPECT_NEAR(ttc, 10.0, 1e-6);
+  EXPECT_NEAR(ttc, max_ttc_value, 1e-6);
 }
 
 TEST_F(TestMetricsUtils, TimeToCollision_WithObjects_BasicCollision)
@@ -298,11 +299,12 @@ TEST_F(TestMetricsUtils, TimeToCollision_WithObjects_BasicCollision)
   obj.kinematics.predicted_paths.push_back(path);
   objects->objects.push_back(obj);
 
-  float ttc = time_to_collision(points, objects, 0);
+  float max_ttc_value = 10.0f;
+  float ttc = time_to_collision(points, objects, 0, max_ttc_value);
 
   // Should calculate collision time between ego and object
   EXPECT_GT(ttc, 0.0);
-  EXPECT_LE(ttc, 10.0);  // Capped at max value
+  EXPECT_LE(ttc, max_ttc_value);  // Capped at max value
 }
 
 }  // namespace autoware::trajectory_ranker::metrics::utils

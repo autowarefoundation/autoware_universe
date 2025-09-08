@@ -88,7 +88,7 @@ float steer_command(
  */
 float time_to_collision(
   const std::shared_ptr<TrajectoryPoints> & points,
-  const std::shared_ptr<PredictedObjects> & objects, const size_t idx);
+  const std::shared_ptr<PredictedObjects> & objects, const size_t idx, const float max_ttc_value);
 
 /**
  * @brief Calculates time to collision between two moving points
@@ -107,7 +107,7 @@ float time_to_collision(const TrajectoryPoint & point1, const TrajectoryPoint & 
  */
 float time_to_collision(
   const TrajectoryPoint & ego_point, const rclcpp::Duration & duration,
-  const autoware_perception_msgs::msg::PredictedObject & object);
+  const autoware_perception_msgs::msg::PredictedObject & object, const float max_ttc_value);
 
 }  // namespace autoware::trajectory_ranker::metrics::utils
 
