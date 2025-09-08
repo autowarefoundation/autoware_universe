@@ -26,12 +26,6 @@ lanelet::BasicPolygon2d to_basic_polygon_2d(const LinearRing2d & footprint_hull)
   return basic_polygon;
 }
 
-LineString2d to_linestring_2d(const Segment2d & segment)
-{
-  const auto & [fr, bk] = segment;
-  return {fr, bk};
-}
-
 Point2d to_point_2d(const Eigen::Matrix<double, 3, 1> & ll_pt)
 {
   return {ll_pt.x(), ll_pt.y()};

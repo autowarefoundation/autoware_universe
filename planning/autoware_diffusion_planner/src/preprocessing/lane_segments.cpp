@@ -14,6 +14,7 @@
 
 #include "autoware/diffusion_planner/preprocessing/lane_segments.hpp"
 
+#include "autoware/diffusion_planner/constants.hpp"
 #include "autoware/diffusion_planner/dimensions.hpp"
 
 #include <autoware_lanelet2_extension/regulatory_elements/road_marking.hpp>  // for lanelet::autoware::RoadMarking
@@ -38,23 +39,24 @@ namespace autoware::diffusion_planner::preprocess
 // Internal functions declaration
 namespace
 {
-Eigen::MatrixXf process_segments_to_matrix(
+using autoware_perception_msgs::msg::TrafficLightElement;
+
+Eigen::MatrixXd process_segments_to_matrix(
   const std::vector<LaneSegment> & lane_segments, ColLaneIDMaps & col_id_mapping);
-Eigen::MatrixXf process_segment_to_matrix(const LaneSegment & segment);
-Eigen::Matrix<float, 1, TRAFFIC_LIGHT_ONE_HOT_DIM> get_traffic_signal_row_vector(
-  const autoware_perception_msgs::msg::TrafficLightGroup & signal);
+Eigen::MatrixXd process_segment_to_matrix(const LaneSegment & segment);
 void transform_selected_rows(
-  const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, int64_t num_segments,
+  const Eigen::Matrix4d & transform_matrix, Eigen::MatrixXd & output_matrix, int64_t num_segments,
   int64_t row_idx, bool do_translation = true);
+uint8_t identify_current_light_status(
+  const int64_t turn_direction, const std::vector<TrafficLightElement> & traffic_light_elements);
 }  // namespace
 
 // LaneSegmentContext implementation
 LaneSegmentContext::LaneSegmentContext(const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr)
 : lanelet_map_ptr_(lanelet_map_ptr)
 {
-  auto lanelet_converter = std::make_unique<LaneletConverter>(lanelet_map_ptr_);
   const std::vector<autoware::diffusion_planner::LaneSegment> lane_segments =
-    lanelet_converter->convert_to_lane_segments(POINTS_PER_SEGMENT);
+    convert_to_lane_segments(lanelet_map_ptr_, POINTS_PER_SEGMENT);
 
   if (lane_segments.empty()) {
     throw std::runtime_error("No lane segments found in the map");
@@ -64,12 +66,12 @@ LaneSegmentContext::LaneSegmentContext(const std::shared_ptr<lanelet::LaneletMap
 }
 
 std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_route_segments(
-  const Eigen::Matrix4f & transform_matrix,
+  const Eigen::Matrix4d & transform_matrix,
   const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
   const lanelet::ConstLanelets & current_lanes) const
 {
   const auto total_route_points = ROUTE_LANES_SHAPE[1] * POINTS_PER_SEGMENT;
-  Eigen::MatrixXf full_route_segment_matrix(SEGMENT_POINT_DIM, total_route_points);
+  Eigen::MatrixXd full_route_segment_matrix(SEGMENT_POINT_DIM, total_route_points);
   full_route_segment_matrix.setZero();
   int64_t added_route_segments = 0;
 
@@ -90,8 +92,10 @@ std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_route_
       0, added_route_segments * POINTS_PER_SEGMENT, SEGMENT_POINT_DIM, POINTS_PER_SEGMENT) =
       map_lane_segments_matrix_.block(0, row_idx, SEGMENT_POINT_DIM, POINTS_PER_SEGMENT);
 
+    const int64_t turn_direction = map_lane_segments_matrix_(TURN_DIRECTION, row_idx);
     add_traffic_light_one_hot_encoding_to_segment(
-      traffic_light_id_map, full_route_segment_matrix, row_idx, added_route_segments);
+      traffic_light_id_map, full_route_segment_matrix, row_idx, added_route_segments,
+      turn_direction);
 
     speed_limit_vector[added_route_segments] = map_lane_segments_matrix_(SPEED_LIMIT, row_idx);
     ++added_route_segments;
@@ -105,7 +109,7 @@ std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_route_
 }
 
 std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_lane_segments(
-  const Eigen::Matrix4f & transform_matrix,
+  const Eigen::Matrix4d & transform_matrix,
   const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map, const float center_x,
   const float center_y, const int64_t m) const
 {
@@ -113,23 +117,24 @@ std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_lane_s
     throw std::invalid_argument(
       "Input matrix must have at least FULL_MATRIX_ROWS rows and m must be greater than 0.");
   }
-  std::vector<ColWithDistance> distances;
   // Step 1: Compute distances
-  compute_distances(transform_matrix, distances, center_x, center_y, 100.0f);
+  std::vector<ColWithDistance> distances = compute_distances(transform_matrix, center_x, center_y);
   // Step 2: Sort indices by distance
   std::sort(distances.begin(), distances.end(), [](const auto & a, const auto & b) {
     return a.distance_squared < b.distance_squared;
   });
   // Step 3: Apply transformation to selected rows
-  const Eigen::MatrixXf ego_centric_lane_segments =
+  const Eigen::MatrixXd ego_centric_lane_segments =
     transform_points_and_add_traffic_info(transform_matrix, traffic_light_id_map, distances, m);
 
   // Extract lane tensor data
   const auto total_lane_points = LANES_SHAPE[1] * POINTS_PER_SEGMENT;
-  Eigen::MatrixXf lane_matrix(SEGMENT_POINT_DIM, total_lane_points);
+  Eigen::MatrixXd lane_matrix(SEGMENT_POINT_DIM, total_lane_points);
   lane_matrix.block(0, 0, SEGMENT_POINT_DIM, total_lane_points) =
     ego_centric_lane_segments.block(0, 0, SEGMENT_POINT_DIM, total_lane_points);
-  std::vector<float> lane_tensor_data(lane_matrix.data(), lane_matrix.data() + lane_matrix.size());
+  const Eigen::MatrixXf lane_matrix_f = lane_matrix.cast<float>().eval();
+  std::vector<float> lane_tensor_data(
+    lane_matrix_f.data(), lane_matrix_f.data() + lane_matrix_f.size());
 
   // Extract lane speed tensor data
   const auto total_speed_points = LANES_SPEED_LIMIT_SHAPE[1];
@@ -143,7 +148,8 @@ std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_lane_s
 
 void LaneSegmentContext::add_traffic_light_one_hot_encoding_to_segment(
   const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
-  Eigen::MatrixXf & segment_matrix, const int64_t row_idx, const int64_t col_counter) const
+  Eigen::MatrixXd & segment_matrix, const int64_t row_idx, const int64_t col_counter,
+  const int64_t turn_direction) const
 {
   const auto lane_id_itr = col_id_mapping_.matrix_col_to_lane_id.find(row_idx);
   if (lane_id_itr == col_id_mapping_.matrix_col_to_lane_id.end()) {
@@ -152,27 +158,33 @@ void LaneSegmentContext::add_traffic_light_one_hot_encoding_to_segment(
   const auto assigned_lanelet = lanelet_map_ptr_->laneletLayer.get(lane_id_itr->second);
   auto tl_reg_elems = assigned_lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
 
-  const Eigen::Matrix<float, TRAFFIC_LIGHT_ONE_HOT_DIM, 1> traffic_light_one_hot_encoding = [&]() {
-    Eigen::Matrix<float, TRAFFIC_LIGHT_ONE_HOT_DIM, 1> encoding =
-      Eigen::Matrix<float, TRAFFIC_LIGHT_ONE_HOT_DIM, 1>::Zero();
+  const Eigen::Vector<double, TRAFFIC_LIGHT_ONE_HOT_DIM> traffic_light_one_hot_encoding = [&]() {
+    Eigen::Vector<double, TRAFFIC_LIGHT_ONE_HOT_DIM> encoding =
+      Eigen::Vector<double, TRAFFIC_LIGHT_ONE_HOT_DIM>::Zero();
     if (tl_reg_elems.empty()) {
-      encoding[TRAFFIC_LIGHT_NO_TRAFFIC_LIGHT - TRAFFIC_LIGHT] = 1.0f;
+      encoding[TRAFFIC_LIGHT_NO_TRAFFIC_LIGHT - TRAFFIC_LIGHT] = 1.0;
       return encoding;
     }
 
     const auto & tl_reg_elem = tl_reg_elems.front();
     const auto traffic_light_stamped_info_itr = traffic_light_id_map.find(tl_reg_elem->id());
     if (traffic_light_stamped_info_itr == traffic_light_id_map.end()) {
-      encoding[TRAFFIC_LIGHT_WHITE - TRAFFIC_LIGHT] = 1.0f;
+      encoding[TRAFFIC_LIGHT_WHITE - TRAFFIC_LIGHT] = 1.0;
       return encoding;
     }
 
     const auto & signal = traffic_light_stamped_info_itr->second.signal;
-    return Eigen::Matrix<float, TRAFFIC_LIGHT_ONE_HOT_DIM, 1>(
-      get_traffic_signal_row_vector(signal).transpose());
+    const uint8_t traffic_color = identify_current_light_status(turn_direction, signal.elements);
+    return Eigen::Vector<double, TRAFFIC_LIGHT_ONE_HOT_DIM>{
+      traffic_color == TrafficLightElement::GREEN,    // 3
+      traffic_color == TrafficLightElement::AMBER,    // 2
+      traffic_color == TrafficLightElement::RED,      // 1
+      traffic_color == TrafficLightElement::UNKNOWN,  // 0
+      traffic_color == TrafficLightElement::WHITE     // 4
+    };
   }();
 
-  Eigen::MatrixXf one_hot_encoding_matrix =
+  Eigen::MatrixXd one_hot_encoding_matrix =
     traffic_light_one_hot_encoding.replicate(1, POINTS_PER_SEGMENT);
   segment_matrix.block<TRAFFIC_LIGHT_ONE_HOT_DIM, POINTS_PER_SEGMENT>(
     TRAFFIC_LIGHT, col_counter * POINTS_PER_SEGMENT) =
@@ -180,7 +192,7 @@ void LaneSegmentContext::add_traffic_light_one_hot_encoding_to_segment(
 }
 
 void LaneSegmentContext::apply_transforms(
-  const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix,
+  const Eigen::Matrix4d & transform_matrix, Eigen::MatrixXd & output_matrix,
   int64_t num_segments) const
 {
   // transform the x and y coordinates
@@ -197,50 +209,52 @@ void LaneSegmentContext::apply_transforms(
   output_matrix.row(RB_Y) = output_matrix.row(RB_Y) - output_matrix.row(Y);
 }
 
-void LaneSegmentContext::compute_distances(
-  const Eigen::Matrix4f & transform_matrix, std::vector<ColWithDistance> & distances,
-  const float center_x, const float center_y, const float mask_range) const
+std::vector<ColWithDistance> LaneSegmentContext::compute_distances(
+  const Eigen::Matrix4d & transform_matrix, const float center_x, const float center_y) const
 {
   const auto cols = map_lane_segments_matrix_.cols();
   if (cols % POINTS_PER_SEGMENT != 0) {
     throw std::runtime_error("input matrix cols are not divisible by POINTS_PER_SEGMENT");
   }
 
-  auto compute_squared_distance = [](float x, float y, const Eigen::Matrix4f & transform_matrix) {
-    Eigen::Vector4f p(x, y, 0.0f, 1.0f);
-    Eigen::Vector4f p_transformed = transform_matrix * p;
+  auto compute_squared_distance = [](double x, double y, const Eigen::Matrix4d & transform_matrix) {
+    Eigen::Vector4d p(x, y, 0.0, 1.0);
+    Eigen::Vector4d p_transformed = transform_matrix * p;
     return p_transformed.head<2>().squaredNorm();
   };
 
-  auto is_inside = [&](const float x, const float y) {
+  auto is_inside = [&](const double x, const double y) {
+    using autoware::diffusion_planner::constants::LANE_MASK_RANGE_M;
     return (
-      x > center_x - mask_range * 1.1 && x < center_x + mask_range * 1.1 &&
-      y > center_y - mask_range * 1.1 && y < center_y + mask_range * 1.1);
+      x > center_x - LANE_MASK_RANGE_M && x < center_x + LANE_MASK_RANGE_M &&
+      y > center_y - LANE_MASK_RANGE_M && y < center_y + LANE_MASK_RANGE_M);
   };
 
-  distances.clear();
+  std::vector<ColWithDistance> distances;
   distances.reserve(cols / POINTS_PER_SEGMENT);
   for (int64_t i = 0; i < cols; i += POINTS_PER_SEGMENT) {
     // Directly access input matrix as raw memory
-    const float mean_x = map_lane_segments_matrix_.block(X, i, 1, POINTS_PER_SEGMENT).mean();
-    const float mean_y = map_lane_segments_matrix_.block(Y, i, 1, POINTS_PER_SEGMENT).mean();
-    const float first_x = map_lane_segments_matrix_(X, i);
-    const float first_y = map_lane_segments_matrix_(Y, i);
-    const float last_x = map_lane_segments_matrix_(X, i + POINTS_PER_SEGMENT - 1);
-    const float last_y = map_lane_segments_matrix_(Y, i + POINTS_PER_SEGMENT - 1);
+    const double mean_x = map_lane_segments_matrix_.block(X, i, 1, POINTS_PER_SEGMENT).mean();
+    const double mean_y = map_lane_segments_matrix_.block(Y, i, 1, POINTS_PER_SEGMENT).mean();
+    const double first_x = map_lane_segments_matrix_(X, i);
+    const double first_y = map_lane_segments_matrix_(Y, i);
+    const double last_x = map_lane_segments_matrix_(X, i + POINTS_PER_SEGMENT - 1);
+    const double last_y = map_lane_segments_matrix_(Y, i + POINTS_PER_SEGMENT - 1);
     const bool inside =
       is_inside(mean_x, mean_y) || is_inside(first_x, first_y) || is_inside(last_x, last_y);
 
-    const float distance_first = compute_squared_distance(first_x, first_y, transform_matrix);
-    const float distance_last = compute_squared_distance(last_x, last_y, transform_matrix);
-    const float distance_squared = std::min(distance_last, distance_first);
+    const double distance_first = compute_squared_distance(first_x, first_y, transform_matrix);
+    const double distance_last = compute_squared_distance(last_x, last_y, transform_matrix);
+    const double distance_squared = std::min(distance_last, distance_first);
 
     distances.push_back({static_cast<int64_t>(i), distance_squared, inside});
   }
+
+  return distances;
 }
 
-Eigen::MatrixXf LaneSegmentContext::transform_points_and_add_traffic_info(
-  const Eigen::Matrix4f & transform_matrix,
+Eigen::MatrixXd LaneSegmentContext::transform_points_and_add_traffic_info(
+  const Eigen::Matrix4d & transform_matrix,
   const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
   const std::vector<ColWithDistance> & distances, int64_t m) const
 {
@@ -254,7 +268,7 @@ Eigen::MatrixXf LaneSegmentContext::transform_points_and_add_traffic_info(
     static_cast<int64_t>(map_lane_segments_matrix_.cols() / POINTS_PER_SEGMENT);
   const int64_t num_segments = std::min(m, n_total_segments);
 
-  Eigen::MatrixXf output_matrix(FULL_MATRIX_ROWS, m * POINTS_PER_SEGMENT);
+  Eigen::MatrixXd output_matrix(FULL_MATRIX_ROWS, m * POINTS_PER_SEGMENT);
   output_matrix.setZero();
 
   int64_t added_segments = 0;
@@ -275,8 +289,10 @@ Eigen::MatrixXf LaneSegmentContext::transform_points_and_add_traffic_info(
       map_lane_segments_matrix_.block<FULL_MATRIX_ROWS, POINTS_PER_SEGMENT>(
         0, col_idx_in_original_map);
 
+    const int64_t turn_direction =
+      map_lane_segments_matrix_(TURN_DIRECTION, col_idx_in_original_map);
     add_traffic_light_one_hot_encoding_to_segment(
-      traffic_light_id_map, output_matrix, col_idx_in_original_map, added_segments);
+      traffic_light_id_map, output_matrix, col_idx_in_original_map, added_segments, turn_direction);
 
     ++added_segments;
     if (added_segments >= num_segments) {
@@ -293,53 +309,102 @@ namespace
 {
 
 void transform_selected_rows(
-  const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix, int64_t num_segments,
+  const Eigen::Matrix4d & transform_matrix, Eigen::MatrixXd & output_matrix, int64_t num_segments,
   int64_t row_idx, bool do_translation)
 {
-  Eigen::MatrixXf xy_block(4, num_segments * POINTS_PER_SEGMENT);
+  Eigen::MatrixXd xy_block(4, num_segments * POINTS_PER_SEGMENT);
   xy_block.setZero();
   xy_block.block(0, 0, 2, num_segments * POINTS_PER_SEGMENT) =
     output_matrix.block(row_idx, 0, 2, num_segments * POINTS_PER_SEGMENT);
 
-  xy_block.row(3) = do_translation ? Eigen::MatrixXf::Ones(1, num_segments * POINTS_PER_SEGMENT)
-                                   : Eigen::MatrixXf::Zero(1, num_segments * POINTS_PER_SEGMENT);
+  xy_block.row(3) = do_translation ? Eigen::MatrixXd::Ones(1, num_segments * POINTS_PER_SEGMENT)
+                                   : Eigen::MatrixXd::Zero(1, num_segments * POINTS_PER_SEGMENT);
 
-  Eigen::MatrixXf transformed_block = transform_matrix * xy_block;
+  Eigen::MatrixXd transformed_block = transform_matrix * xy_block;
   output_matrix.block(row_idx, 0, 2, num_segments * POINTS_PER_SEGMENT) =
     transformed_block.block(0, 0, 2, num_segments * POINTS_PER_SEGMENT);
 }
 
-Eigen::Matrix<float, 1, TRAFFIC_LIGHT_ONE_HOT_DIM> get_traffic_signal_row_vector(
-  const autoware_perception_msgs::msg::TrafficLightGroup & signal)
+uint8_t identify_current_light_status(
+  const int64_t turn_direction, const std::vector<TrafficLightElement> & traffic_light_elements)
 {
-  const auto is_green = autoware::traffic_light_utils::hasTrafficLightCircleColor(
-    signal.elements, autoware_perception_msgs::msg::TrafficLightElement::GREEN);
-  const auto is_amber = autoware::traffic_light_utils::hasTrafficLightCircleColor(
-    signal.elements, autoware_perception_msgs::msg::TrafficLightElement::AMBER);
-  const auto is_red = autoware::traffic_light_utils::hasTrafficLightCircleColor(
-    signal.elements, autoware_perception_msgs::msg::TrafficLightElement::RED);
-
-  const bool has_color = (is_green || is_amber || is_red);
-
-  if (
-    static_cast<float>(is_green) + static_cast<float>(is_amber) + static_cast<float>(is_red) >
-    1.f) {
-    throw std::invalid_argument("more than one traffic light");
+  // Filter out ineffective elements (color == 0 which is UNKNOWN)
+  std::vector<TrafficLightElement> effective_elements;
+  for (const auto & element : traffic_light_elements) {
+    if (element.color != TrafficLightElement::UNKNOWN) {
+      effective_elements.push_back(element);
+    }
   }
-  return {
-    static_cast<float>(is_green), static_cast<float>(is_amber), static_cast<float>(is_red),
-    static_cast<float>(!has_color), 0.f};
+
+  // If no effective elements, return UNKNOWN (0)
+  if (effective_elements.empty()) {
+    return TrafficLightElement::UNKNOWN;
+  }
+
+  // If only one effective element, return its color
+  if (effective_elements.size() == 1) {
+    return effective_elements[0].color;
+  }
+
+  // For multiple elements, find the one that matches the turn direction
+  // Map turn direction to corresponding arrow shape
+  const std::map<int64_t, uint8_t> direction_to_shape_map = {
+    {LaneSegment::TURN_DIRECTION_NONE, TrafficLightElement::UNKNOWN},       // none
+    {LaneSegment::TURN_DIRECTION_STRAIGHT, TrafficLightElement::UP_ARROW},  // straight
+    {LaneSegment::TURN_DIRECTION_LEFT, TrafficLightElement::LEFT_ARROW},    // left
+    {LaneSegment::TURN_DIRECTION_RIGHT, TrafficLightElement::RIGHT_ARROW}   // right
+  };
+
+  const auto target_shape_iter = direction_to_shape_map.find(turn_direction);
+  const uint8_t target_shape = (target_shape_iter != direction_to_shape_map.end())
+                                 ? target_shape_iter->second
+                                 : TrafficLightElement::UNKNOWN;
+
+  // If multiple matching elements, take the one with highest confidence
+  auto get_max_confidence_color = [](const std::vector<TrafficLightElement> & elements) {
+    return std::max_element(
+             elements.begin(), elements.end(),
+             [](const TrafficLightElement & a, const TrafficLightElement & b) {
+               return a.confidence < b.confidence;
+             })
+      ->color;
+  };
+
+  // First priority: Find elements with exactly matching direction
+  std::vector<TrafficLightElement> matching_elements;
+  for (const TrafficLightElement & element : effective_elements) {
+    if (element.shape == target_shape) {
+      matching_elements.push_back(element);
+    }
+  }
+  if (!matching_elements.empty()) {
+    return get_max_confidence_color(matching_elements);
+  }
+
+  // Second priority: Find circle elements
+  std::vector<TrafficLightElement> circle_elements;
+  for (const TrafficLightElement & element : effective_elements) {
+    if (element.shape == TrafficLightElement::CIRCLE) {
+      circle_elements.push_back(element);
+    }
+  }
+  if (!circle_elements.empty()) {
+    return get_max_confidence_color(circle_elements);
+  }
+
+  // If no matching direction or circle, return the element with highest confidence
+  return get_max_confidence_color(effective_elements);
 }
 
-Eigen::MatrixXf process_segments_to_matrix(
+Eigen::MatrixXd process_segments_to_matrix(
   const std::vector<LaneSegment> & lane_segments, ColLaneIDMaps & col_id_mapping)
 {
   if (lane_segments.empty()) {
     throw std::runtime_error("Empty lane segment data");
   }
-  std::vector<Eigen::MatrixXf> all_segment_matrices;
+  std::vector<Eigen::MatrixXd> all_segment_matrices;
   for (const auto & segment : lane_segments) {
-    Eigen::MatrixXf segment_matrix = process_segment_to_matrix(segment);
+    Eigen::MatrixXd segment_matrix = process_segment_to_matrix(segment);
 
     if (segment_matrix.rows() != POINTS_PER_SEGMENT) {
       throw std::runtime_error("Segment matrix rows not equal to POINTS_PER_SEGMENT");
@@ -351,7 +416,7 @@ Eigen::MatrixXf process_segments_to_matrix(
   const int64_t rows =
     static_cast<int64_t>(POINTS_PER_SEGMENT) * static_cast<int64_t>(lane_segments.size());
   const int64_t cols = all_segment_matrices[0].cols();
-  Eigen::MatrixXf stacked_matrix(rows, cols);
+  Eigen::MatrixXd stacked_matrix(rows, cols);
 
   int64_t current_row = 0;
   for (const auto & mat : all_segment_matrices) {
@@ -364,7 +429,7 @@ Eigen::MatrixXf process_segments_to_matrix(
   return stacked_matrix.transpose();
 }
 
-Eigen::MatrixXf process_segment_to_matrix(const LaneSegment & segment)
+Eigen::MatrixXd process_segment_to_matrix(const LaneSegment & segment)
 {
   if (
     segment.polyline.is_empty() || segment.left_boundaries.empty() ||
@@ -383,7 +448,7 @@ Eigen::MatrixXf process_segment_to_matrix(const LaneSegment & segment)
       "POINTS_PER_SEGMENT points");
   }
 
-  Eigen::MatrixXf segment_data(POINTS_PER_SEGMENT, FULL_MATRIX_ROWS);
+  Eigen::MatrixXd segment_data(POINTS_PER_SEGMENT, FULL_MATRIX_ROWS);
   segment_data.setZero();
 
   // Build each row
@@ -400,6 +465,7 @@ Eigen::MatrixXf process_segment_to_matrix(const LaneSegment & segment)
     segment_data(i, RB_Y) = right_boundaries[i].y();
     segment_data(i, SPEED_LIMIT) = segment.speed_limit_mps.value_or(0.0f);
     segment_data(i, LANE_ID) = static_cast<float>(segment.id);
+    segment_data(i, TURN_DIRECTION) = segment.turn_direction;
   }
 
   return segment_data;
