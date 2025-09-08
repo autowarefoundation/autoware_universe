@@ -6,7 +6,7 @@ This node aggregates trajectory candidates from multiple trajectory generators i
 
 ## Algorithm Overview
 
-When a message arrives on `~/input/trajectories`, the node splits it by `generator_id` and updates an in‑memory buffer so that only the most recent trajectory set for each generator is retained.
+When a message arrives on `~/input/trajectories`, the node splits it by `generator_id` and updates an in-memory buffer so that only the most recent trajectory set for each generator is retained.
 
 A 100 ms timer then scans this buffer and drops any entry whose header stamp is older than the configured duration_time. Immediately after pruning, the timer concatenates all remaining trajectories and their accompanying `generator_info` arrays, publishes the aggregated message.
 
