@@ -18,8 +18,8 @@
 #include "trajectory_concatenator_structs.hpp"
 
 #include <autoware_trajectory_concatenator/autoware_trajectory_concatenator_param.hpp>
-#include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
+#include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/subscription.hpp>
 
