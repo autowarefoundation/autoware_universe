@@ -34,15 +34,19 @@ void LateralDeviation::evaluate(
     return;
   }
 
-  const auto preferred_lanes = result->preferred_lanes();
-  if (!preferred_lanes || preferred_lanes->empty()) {
-    std::vector<float> zeros(points->size(), 0.0f);
-    result->set_metric(index(), zeros);
+  constexpr float epsilon = 1.0e-3f;
+  std::vector<float> deviations(points->size(), 0.0f);
+
+  if (max_value < epsilon) {
+    result->set_metric(index(), deviations);
     return;
   }
 
-  std::vector<float> deviations;
-  deviations.reserve(points->size());
+  const auto preferred_lanes = result->preferred_lanes();
+  if (!preferred_lanes || preferred_lanes->empty()) {
+    result->set_metric(index(), deviations);
+    return;
+  }
 
   for (const auto & point : *points) {
     const auto arc_coordinates =

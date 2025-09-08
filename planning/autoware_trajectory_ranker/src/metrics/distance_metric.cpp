@@ -33,8 +33,12 @@ void TravelDistance::evaluate(
     return;
   }
 
-  std::vector<float> distances;
-  distances.reserve(points->size());
+  constexpr float epsilon = 1.0e-3f;
+  std::vector<float> distances(points->size(), 0.0f);
+  if (max_value < epsilon) {
+    result->set_metric(index(), distances);
+    return;
+  }
 
   for (size_t i = 0; i < result->points()->size(); i++) {
     distances.push_back(

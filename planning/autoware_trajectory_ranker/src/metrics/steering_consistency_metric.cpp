@@ -31,10 +31,14 @@ void SteeringConsistency::evaluate(
   const float max_value) const
 {
   if (result->previous() == nullptr) return;
-  if (result->points()->size() < 2) return;
+  if (!result->points() || result->points()->size() < 2) return;
 
-  std::vector<float> steering_command;
-  steering_command.reserve(result->points()->size());
+  constexpr float epsilon = 1.0e-3f;
+  std::vector<float> steering_command(result->points()->size(), 0.0f);
+  if (max_value < epsilon) {
+    result->set_metric(index(), steering_command);
+    return;
+  }
 
   const auto wheel_base = vehicle_info()->wheel_base_m;
   for (const auto & point : *result->points()) {

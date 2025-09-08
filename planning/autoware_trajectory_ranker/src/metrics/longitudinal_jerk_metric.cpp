@@ -31,11 +31,17 @@ void LongitudinalJerk::evaluate(
     return;
   }
 
-  std::vector<float> jerk;
-  std::vector<float> acceleration;
+  std::vector<float> jerk(points->size(), 0.0f);
+
   constexpr float epsilon = 1.0e-3f;
   const float time_resolution = resolution() > epsilon ? resolution() : epsilon;
 
+  if (max_value < epsilon) {
+    result->set_metric(index(), jerk);
+    return;
+  }
+
+  std::vector<float> acceleration;
   acceleration.reserve(points->size());
   for (size_t i = 0; i < points->size() - 1; i++) {
     acceleration.push_back(
@@ -44,7 +50,6 @@ void LongitudinalJerk::evaluate(
   }
   acceleration.push_back(acceleration.back());
 
-  jerk.reserve(points->size());
   for (size_t i = 0; i < acceleration.size() - 1; i++) {
     const auto calculated_jerk = (acceleration.at(i + 1) - acceleration.at(i)) / time_resolution;
     jerk.push_back(std::min(1.0f, static_cast<float>(std::abs(calculated_jerk)) / max_value));

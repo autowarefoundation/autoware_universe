@@ -28,7 +28,16 @@ void TimeToCollision::evaluate(
   const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result,
   const float max_value) const
 {
-  std::vector<float> ttc;
+  if (!result->points() || result->points()->empty()) {
+    return;
+  }
+
+  constexpr float epsilon = 1.0e-3f;
+  std::vector<float> ttc(result->points()->size(), 0.0f);
+  if (max_value < epsilon) {
+    result->set_metric(index(), ttc);
+    return;
+  }
 
   ttc.reserve(result->points()->size());
   for (size_t i = 0; i < result->points()->size(); i++) {

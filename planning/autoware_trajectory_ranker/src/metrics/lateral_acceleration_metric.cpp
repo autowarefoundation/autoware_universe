@@ -28,11 +28,16 @@ void LateralAcceleration::evaluate(
   const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result,
   const float max_value) const
 {
-  if (result->points()->size() < 2) return;
+  if (!result->points() || result->points()->size() < 2) return;
 
-  std::vector<float> lateral_accelerations;
+  std::vector<float> lateral_accelerations(result->points()->size(), 0.0f);
   constexpr float epsilon = 1.0e-3f;
   const float time_resolution = resolution() > epsilon ? resolution() : epsilon;
+
+  if (max_value < epsilon) {
+    result->set_metric(index(), lateral_accelerations);
+    return;
+  }
 
   lateral_accelerations.reserve(result->points()->size());
   for (size_t i = 0; i < result->points()->size() - 1; i++) {
