@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_RANKER__TRAJECTORY_RANKER_HPP_
-#define AUTOWARE__TRAJECTORY_RANKER__TRAJECTORY_RANKER_HPP_
+#ifndef AUTOWARE__TRAJECTORY_RANKER__TRAJECTORY_RANKER_NODE_HPP_
+#define AUTOWARE__TRAJECTORY_RANKER__TRAJECTORY_RANKER_NODE_HPP_
 
 #include "autoware/trajectory_ranker/data_structs.hpp"
 #include "autoware/trajectory_ranker/evaluation.hpp"
@@ -84,4 +84,4 @@ private:
 
 }  // namespace autoware::trajectory_ranker
 
-#endif  // AUTOWARE__TRAJECTORY_RANKER__TRAJECTORY_RANKER_HPP_
+#endif  // AUTOWARE__TRAJECTORY_RANKER__TRAJECTORY_RANKER_NODE_HPP_
