@@ -4,7 +4,7 @@
 
 This node fuses traffic light recognition results from multiple cameras to produce a single, reliable traffic light state. By integrating information from different viewpoints, it ensures robust performance even in challenging scenarios, such as partial **occlusions** or recognition errors from an individual camera.
 
-:::mermaid
+```mermaid
 graph LR
     subgraph "Multi Camera Feeds"
         direction TB
@@ -30,7 +30,7 @@ graph LR
 
     style Fusion fill:#e0f7fa,stroke:#00796b,stroke-width:2px,color:#004d40
     style Result fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px,color:#1b5e20
-:::
+```
 
 ---
 
@@ -38,7 +38,7 @@ graph LR
 
 The fusion algorithm operates in two main stages.
 
-:::mermaid
+```mermaid
 graph TD
     subgraph "Input: Multiple Camera Results"
         A["Camera 1<br>Recognition Result"]
@@ -71,7 +71,7 @@ graph TD
     style F fill:#e0f7fa,stroke:#00796b,stroke-width:2px,color:black
     style E fill:#fff,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5,color:black
     style G fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px,color:black
-:::
+```
 
 ### Stage 1: Best View Selection (Per-Camera Fusion)
 
