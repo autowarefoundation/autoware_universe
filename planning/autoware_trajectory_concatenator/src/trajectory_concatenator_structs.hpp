@@ -12,19 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "lanelet_test.hpp"
+#ifndef TRAJECTORY_CONCATENATOR_STRUCTS_HPP_
+#define TRAJECTORY_CONCATENATOR_STRUCTS_HPP_
 
-#include <vector>
-
-namespace autoware::diffusion_planner::test
+namespace autoware::trajectory_concatenator
 {
-
-TEST_F(LaneletTest, ConvertToLaneSegments)
+struct ConcatenatorParam
 {
-  auto lane_segments = convert_to_lane_segments(lanelet_map_, 10);
+  double duration_time;
+};
+}  // namespace autoware::trajectory_concatenator
 
-  EXPECT_EQ(lane_segments.size(), 1);               // Expect one lanelet to be converted
-  EXPECT_EQ(lane_segments[0].polyline.size(), 10);  // Expect 10 points in the polyline
-}
-
-}  // namespace autoware::diffusion_planner::test
+#endif  // TRAJECTORY_CONCATENATOR_STRUCTS_HPP_
