@@ -95,7 +95,23 @@ int compareRecord(
 }
 
 double probabilityToLogOdds(double prob) {
-  // Since prob diverges as it approaches 0 or 1, round extreme values.
+  /**
+  * @brief Converts a probability value to log-odds.
+  *
+  * Log-odds is the logarithm of the odds ratio, i.e., log(p / (1-p)).
+  * This function is essential for Bayesian updating in log-space, as it allows
+  * evidence to be additively combined.
+  *
+  * The function handles edge cases where the probability `p` is very close to
+  * 0 or 1. As `p` -> 1, log-odds -> +inf. As `p` -> 0, log-odds -> -inf.
+  * To prevent floating-point divergence (infinity), the input probability is
+  * "clamped" to a safe range slightly away from the boundaries. The bounds
+  * [1e-9, 1.0 - 1e-9] are chosen as a small epsilon to ensure numerical
+  * stability while having a negligible impact on non-extreme probability values.
+  *
+  * @param prob The input probability, expected to be in the range [0.0, 1.0].
+  * @return The corresponding log-odds value.
+  */
   prob = std::clamp(prob, 1e-9, 1.0 - 1e-9);
   return std::log(prob / (1.0 - prob));
 }
@@ -326,13 +342,15 @@ void MultiCameraFusion::groupFusion(
       traffic_light_id_to_regulatory_ele_id_[p.second.roi.traffic_light_id];
     for (const auto & reg_ele_id : reg_ele_id_vec) {
       /*
-      Convert the observation's confidence into the strength of evidence (log odds) that the observation is “correct”
-      Here, we simply treat confidence as probability and perform the conversion
+      * Design decision: We convert the observation's confidence into the strength of evidence (log-odds) that the observation is “correct”.
+      * Here, we explicitly assume that the confidence value directly represents probability (i.e., confidence ∈ [0,1] is the probability that the observation is correct).
+      * Note: This assumption may not hold for all confidence scoring systems. If the confidence metric is not a true probability, this conversion may be invalid.
+      * Future maintainers should verify that the confidence values used here are indeed probabilities, or update this logic if the scoring system changes.
       */
       double evidence_log_odds = probabilityToLogOdds(confidence);
 
       // We assume the prior probability (with no information) is 0.5, meaning the log odds = 0, and then add evidence to it.
-      group_fusion_info_map[reg_ele_id].accumulated_log_odds[color] += evidence_log_odds;
+      group_fusion_info_map[reg_ele_id].accumulated_log_odds[color] += evidence_log_odds + PRIOR_LOG_ODDS;
 
       auto & best_record_for_color =
         group_fusion_info_map[reg_ele_id].best_record_for_color[color];
