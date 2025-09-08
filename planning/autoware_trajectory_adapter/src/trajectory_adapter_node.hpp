@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TRAJECTORY_ADAPTER_HPP_
-#define TRAJECTORY_ADAPTER_HPP_
+#ifndef TRAJECTORY_ADAPTER_NODE_HPP_
+#define TRAJECTORY_ADAPTER_NODE_HPP_
 
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -48,4 +48,4 @@ private:
 
 }  // namespace autoware::trajectory_adapter
 
-#endif  // TRAJECTORY_ADAPTER_HPP_
+#endif  // TRAJECTORY_ADAPTER_NODE_HPP_

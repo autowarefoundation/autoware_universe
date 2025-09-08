@@ -9,7 +9,7 @@ include_directories(
 )
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
-  src/trajectory_adapter.cpp
+  src/trajectory_adapter_node.cpp
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
