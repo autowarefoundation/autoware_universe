@@ -1,0 +1,80 @@
+evaluation:
+  sample_num:
+    type: int
+    default_value: 16
+    description: trajectory sampling parameter.
+    read_only: false
+
+  resolution:
+    type: double
+    default_value: 0.5
+    description: trajectory sampling parameter.
+    read_only: false
+
+  score_weight:
+    type: double_array
+    description: weight.
+    read_only: false
+    validation:
+      element_bounds<>: [0.0, 1.0]
+      fixed_size<>: [6]
+
+  metrics:
+    name:
+      type: string_array
+      description: metrics.
+      read_only: false
+      validation:
+        unique<>: []
+        not_empty<>: []
+    maximum:
+      type: double_array
+      default_value: [5.0, 10.0, 500.0, 6.0, 10.0, 0.1]
+      description: metrics maximum value used to obtain the normalized value
+      read_only: false
+      validation:
+        fixed_size<>: [6]
+
+  time_decay_weight:
+    s0:
+      type: double_array
+      description: weight.
+      read_only: false
+      validation:
+        element_bounds<>: [0.0, 1.0]
+        fixed_size<>: [16]
+    s1:
+      type: double_array
+      description: weight.
+      read_only: false
+      validation:
+        element_bounds<>: [0.0, 1.0]
+        fixed_size<>: [16]
+    s2:
+      type: double_array
+      description: weight.
+      read_only: false
+      validation:
+        element_bounds<>: [0.0, 1.0]
+        fixed_size<>: [16]
+    s3:
+      type: double_array
+      description: weight.
+      read_only: false
+      validation:
+        element_bounds<>: [0.0, 1.0]
+        fixed_size<>: [16]
+    s4:
+      type: double_array
+      description: weight.
+      read_only: false
+      validation:
+        element_bounds<>: [0.0, 1.0]
+        fixed_size<>: [16]
+    s5:
+      type: double_array
+      description: weight.
+      read_only: false
+      validation:
+        element_bounds<>: [0.0, 1.0]
+        fixed_size<>: [16]
