@@ -41,7 +41,7 @@ enum class TopicStatus : int8_t {
 class TopicStateMonitor
 {
 public:
-  explicit TopicStateMonitor(rclcpp::Node & node);
+  explicit TopicStateMonitor(rclcpp::Node & node, const Param & param);
 
   void setParam(const Param & param) { param_ = param; }
 

@@ -1735,18 +1735,10 @@ PathSafetyStatus NormalLaneChange::isLaneChangePathSafe(
   constexpr auto is_safe = true;
   constexpr auto is_object_behind_ego = true;
 
-  const auto is_check_prepare_phase = check_prepare_phase();
-
   const auto all_paths_collide = [&](const auto & objects) {
-    const auto stopped_obj_vel_th = lane_change_parameters_->safety.th_stopped_object_velocity;
     return ranges::all_of(ego_predicted_paths, [&](const auto & ego_predicted_path) {
       const auto check_for_collision = [&](const auto & object) {
-        const auto selected_rss_param = (object.initial_twist.linear.x <= stopped_obj_vel_th)
-                                          ? lane_change_parameters_->safety.rss_params_for_parked
-                                          : rss_params;
-        return is_colliding(
-          lane_change_path, object, ego_predicted_path, selected_rss_param, is_check_prepare_phase,
-          debug_data);
+        return is_colliding(lane_change_path, object, ego_predicted_path, rss_params, debug_data);
       };
       return ranges::any_of(objects, check_for_collision);
     });
@@ -1765,8 +1757,7 @@ PathSafetyStatus NormalLaneChange::isLaneChangePathSafe(
 
 bool NormalLaneChange::is_colliding(
   const LaneChangePath & lane_change_path, const ExtendedPredictedObject & obj,
-  const std::vector<PoseWithVelocityStamped> & ego_predicted_path,
-  const RSSparams & selected_rss_param, const bool check_prepare_phase,
+  const std::vector<PoseWithVelocityStamped> & ego_predicted_path, const RSSparams & rss_param,
   CollisionCheckDebugMap & debug_data) const
 {
   constexpr auto is_colliding{true};
@@ -1790,31 +1781,40 @@ bool NormalLaneChange::is_colliding(
   constexpr auto is_safe{true};
   auto current_debug_data = utils::path_safety_checker::createObjectDebug(obj);
   constexpr auto hysteresis_factor{1.0};
-  const auto obj_predicted_paths = utils::path_safety_checker::getPredictedPathFromObj(
-    obj, lane_change_parameters_->safety.collision_check.use_all_predicted_paths);
   const auto safety_check_max_vel = get_max_velocity_for_safety_check();
   const auto & bpp_param = *common_data_ptr_->bpp_param_ptr;
+  const auto th_yaw_diff = common_data_ptr_->lc_param_ptr->safety.collision_check.th_yaw_diff;
+  const auto prepare_duration = lane_change_path.info.duration.prepare;
 
-  const double velocity_threshold = lane_change_parameters_->safety.th_stopped_object_velocity;
-  const double prepare_duration = lane_change_path.info.duration.prepare;
-  const double start_time = check_prepare_phase ? 0.0 : prepare_duration;
+  auto & debug = current_debug_data.second;
+  debug.ego_predicted_path = ego_predicted_path;
+  debug.current_obj_pose = obj.initial_pose;
 
-  for (const auto & obj_path : obj_predicted_paths) {
-    utils::path_safety_checker::PredictedPathWithPolygon predicted_obj_path;
-    predicted_obj_path.confidence = obj_path.confidence;
-    std::copy_if(
-      obj_path.path.begin(), obj_path.path.end(), std::back_inserter(predicted_obj_path.path),
-      [&](const auto & entry) {
-        return !(
-          entry.time < start_time ||
-          (entry.time < prepare_duration && entry.velocity < velocity_threshold));
-      });
+  const auto & th_stopped_obj_vel = lane_change_parameters_->safety.th_stopped_object_velocity;
+  const auto & lane_changing_phase_rss_param =
+    (obj.initial_twist.linear.x <= th_stopped_obj_vel)
+      ? lane_change_parameters_->safety.rss_params_for_parked
+      : rss_param;
 
-    const auto collided_polygons = utils::path_safety_checker::get_collided_polygons(
-      lane_change_path.path, ego_predicted_path, obj, predicted_obj_path, bpp_param.vehicle_info,
-      selected_rss_param, hysteresis_factor, safety_check_max_vel,
-      common_data_ptr_->lc_param_ptr->safety.collision_check.th_yaw_diff,
-      current_debug_data.second);
+  for (const auto & obj_path : obj.predicted_paths) {
+    debug.obj_predicted_path = obj_path.path;
+
+    std::vector<autoware_utils_geometry::Polygon2d> collided_polygons{};
+    collided_polygons.reserve(obj_path.path.size());
+    for (const auto & obj_pose_with_poly : obj_path.path) {
+      CollisionCheckDebug * debug_ptr = collided_polygons.empty() ? &debug : nullptr;
+      const auto & selected_rss_param =
+        obj_pose_with_poly.time < prepare_duration
+          ? common_data_ptr_->lc_param_ptr->safety.rss_params_for_prepare
+          : lane_changing_phase_rss_param;
+
+      if (
+        const auto collided_polygon_opt = check_collision(
+          lane_change_path.path, bpp_param.vehicle_info, ego_predicted_path, obj_pose_with_poly,
+          selected_rss_param, th_yaw_diff, safety_check_max_vel, hysteresis_factor, debug_ptr)) {
+        collided_polygons.push_back(*collided_polygon_opt);
+      }
+    }
 
     if (collided_polygons.empty()) {
       utils::path_safety_checker::updateCollisionCheckDebugMap(
@@ -1931,32 +1931,6 @@ void NormalLaneChange::updateStopTime()
   }
 
   stop_watch_.tic("stop_time");
-}
-
-bool NormalLaneChange::check_prepare_phase() const
-{
-  const auto & route_handler = getRouteHandler();
-
-  const auto check_in_general_lanes =
-    lane_change_parameters_->safety.collision_check.enable_for_prepare_phase_in_general_lanes;
-
-  lanelet::ConstLanelet current_lane;
-  if (!route_handler->getClosestLaneletWithinRoute(getEgoPose(), &current_lane)) {
-    RCLCPP_DEBUG(
-      logger_, "Unable to get current lane. Default to %s.",
-      (check_in_general_lanes ? "true" : "false"));
-    return check_in_general_lanes;
-  }
-
-  const auto check_in_intersection =
-    lane_change_parameters_->safety.collision_check.enable_for_prepare_phase_in_intersection &&
-    common_data_ptr_->transient_data.in_intersection;
-
-  const auto check_in_turns =
-    lane_change_parameters_->safety.collision_check.enable_for_prepare_phase_in_turns &&
-    common_data_ptr_->transient_data.in_turn_direction_lane;
-
-  return check_in_intersection || check_in_turns || check_in_general_lanes;
 }
 
 void NormalLaneChange::update_dist_from_intersection()

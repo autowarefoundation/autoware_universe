@@ -175,6 +175,22 @@
             "drift_bias": { "type": "number", "description": "Bias for drift.", "default": 0.0 }
           },
           "required": ["scale_on_purpose", "bias_on_purpose", "drift_scale", "drift_bias"]
+        },
+        "on_off_correction": {
+          "type": "object",
+          "properties": {
+            "correct_for_bias": {
+              "type": "boolean",
+              "description": "Enable/disable bias correction.",
+              "default": false
+            },
+            "correct_for_scale": {
+              "type": "boolean",
+              "description": "Enable/disable scale correction.",
+              "default": false
+            }
+          },
+          "required": ["correct_for_bias", "correct_for_scale"]
         }
       },
       "required": [
@@ -192,7 +208,8 @@
         "alpha_ndt_rate",
         "ekf_rate",
         "ekf_angle",
-        "scale_imu_injection"
+        "scale_imu_injection",
+        "on_off_correction"
       ]
     }
   },
