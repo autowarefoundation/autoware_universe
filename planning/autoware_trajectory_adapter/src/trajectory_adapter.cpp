@@ -62,13 +62,9 @@ void TrajectoryAdapterNode::process(const ScoredCandidateTrajectories::ConstShar
     "best generator:" << best_generator(trajectory_itr->candidate_trajectory.generator_id)
                       << " score:" << trajectory_itr->score);
 
-  const auto traj_points = autoware::motion_utils::removeOverlapPoints(
-    trajectory_itr->candidate_trajectory
-      .points);  // cspell:disable-line TODO (go-sakayori): should be done in trajectory generator?
-                 // Add more functions to adjust the trajectory to autoware controller
   const auto trajectory = autoware_planning_msgs::build<Trajectory>()
                             .header(trajectory_itr->candidate_trajectory.header)
-                            .points(traj_points);
+                            .points(trajectory_itr->candidate_trajectory.points);
 
   pub_trajectory_->publish(trajectory);
 }
