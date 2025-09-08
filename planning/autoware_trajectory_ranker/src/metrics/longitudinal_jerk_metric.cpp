@@ -52,9 +52,9 @@ void LongitudinalJerk::evaluate(
 
   for (size_t i = 0; i < acceleration.size() - 1; i++) {
     const auto calculated_jerk = (acceleration.at(i + 1) - acceleration.at(i)) / time_resolution;
-    jerk.push_back(std::min(1.0f, static_cast<float>(std::abs(calculated_jerk)) / max_value));
+    jerk.at(i) = std::min(1.0f, static_cast<float>(std::abs(calculated_jerk)) / max_value);
   }
-  jerk.push_back(jerk.back());
+  jerk.back() = jerk.at(jerk.size() - 2);
 
   result->set_metric(index(), jerk);
 }

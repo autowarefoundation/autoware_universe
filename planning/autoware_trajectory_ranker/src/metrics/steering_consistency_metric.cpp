@@ -41,12 +41,13 @@ void SteeringConsistency::evaluate(
   }
 
   const auto wheel_base = vehicle_info()->wheel_base_m;
-  for (const auto & point : *result->points()) {
+  for (size_t i = 0; i < result->points()->size(); i++) {
+    const auto & point = result->points()->at(i);
     const auto current = utils::steer_command(result->points(), point.pose, wheel_base);
     const auto previous = utils::steer_command(result->previous(), point.pose, wheel_base);
 
-    steering_command.push_back(
-      std::min(1.0f, static_cast<float>(std::abs(current - previous)) / max_value));
+    steering_command.at(i) =
+      std::min(1.0f, static_cast<float>(std::abs(current - previous)) / max_value);
   }
 
   result->set_metric(index(), steering_command);

@@ -44,10 +44,10 @@ void LateralAcceleration::evaluate(
     const auto lateral_acc = (result->points()->at(i + 1).lateral_velocity_mps -
                               result->points()->at(i).lateral_velocity_mps) /
                              time_resolution;
-    lateral_accelerations.push_back(
-      std::min(1.0f, static_cast<float>(std::abs(lateral_acc)) / max_value));
+    lateral_accelerations.at(i) =
+      std::min(1.0f, static_cast<float>(std::abs(lateral_acc)) / max_value);
   }
-  lateral_accelerations.push_back(lateral_accelerations.back());
+  lateral_accelerations.back() = lateral_accelerations.at(lateral_accelerations.size() - 2);
 
   result->set_metric(index(), lateral_accelerations);
 }

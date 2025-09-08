@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <memory>
 #include <vector>
 
@@ -48,11 +49,11 @@ void LateralDeviation::evaluate(
     return;
   }
 
-  for (const auto & point : *points) {
-    const auto arc_coordinates =
-      lanelet::utils::getArcCoordinates(*preferred_lanes, autoware_utils_geometry::get_pose(point));
-    deviations.push_back(
-      std::min(1.0f, static_cast<float>(std::abs(arc_coordinates.distance)) / max_value));
+  for (size_t i = 0; i < points->size(); i++) {
+    const auto arc_coordinates = lanelet::utils::getArcCoordinates(
+      *preferred_lanes, autoware_utils_geometry::get_pose(points->at(i)));
+    deviations.at(i) =
+      std::min(1.0f, static_cast<float>(std::abs(arc_coordinates.distance)) / max_value);
   }
 
   result->set_metric(index(), deviations);

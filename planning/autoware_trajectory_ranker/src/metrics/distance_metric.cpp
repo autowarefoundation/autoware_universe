@@ -41,11 +41,10 @@ void TravelDistance::evaluate(
   }
 
   for (size_t i = 0; i < result->points()->size(); i++) {
-    distances.push_back(
-      std::min(
-        1.0f,
-        static_cast<float>(autoware::motion_utils::calcSignedArcLength(*result->points(), 0L, i)) /
-          max_value));
+    distances.at(i) = std::min(
+      1.0f,
+      static_cast<float>(autoware::motion_utils::calcSignedArcLength(*result->points(), 0L, i)) /
+        max_value);
   }
 
   result->set_metric(index(), distances);
