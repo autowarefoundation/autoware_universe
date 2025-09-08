@@ -25,7 +25,6 @@
 
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
-#include <nav_msgs/msg/odometry.hpp>
 
 #include <map>
 #include <memory>
@@ -40,7 +39,6 @@ using namespace std::literals::chrono_literals;
 using autoware_internal_planning_msgs::msg::CandidateTrajectories;
 using autoware_internal_planning_msgs::msg::CandidateTrajectory;
 using autoware_internal_planning_msgs::msg::GeneratorInfo;
-using nav_msgs::msg::Odometry;
 class TrajectoryConcatenatorNode : public rclcpp::Node
 {
 public:
