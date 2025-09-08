@@ -85,6 +85,9 @@ GPUMonitor::~GPUMonitor()
 
 void GPUMonitor::shut_down()
 {
+  // When this method is called from the destructor in the process of system shutdown,
+  // all nodes are guaranteed to be inactive.
+  // Therefore, it is safe to call the NVML library's shutdown function.
   nvmlReturn_t ret = nvmlShutdown();
   if (ret != NVML_SUCCESS) {
     RCLCPP_ERROR(this->get_logger(), "Failed to shut down NVML: %s", nvmlErrorString(ret));

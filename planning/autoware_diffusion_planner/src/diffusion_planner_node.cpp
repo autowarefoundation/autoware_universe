@@ -62,6 +62,8 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
     this->create_publisher<PredictedObjects>("~/output/predicted_objects", rclcpp::QoS(1));
   pub_route_marker_ = this->create_publisher<MarkerArray>("~/debug/route_marker", 10);
   pub_lane_marker_ = this->create_publisher<MarkerArray>("~/debug/lane_marker", 10);
+  pub_turn_indicators_ =
+    this->create_publisher<TurnIndicatorsCommand>("~/output/turn_indicators", 1);
   debug_processing_time_detail_pub_ = this->create_publisher<autoware_utils::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms", 1);
   time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(debug_processing_time_detail_pub_);
@@ -91,6 +93,8 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
   // Parameter Callback
   set_param_res_ = add_on_set_parameters_callback(
     std::bind(&DiffusionPlanner::on_parameter, this, std::placeholders::_1));
+
+  diagnostics_inference_ = std::make_unique<DiagnosticsInterface>(this, "inference_status");
 }
 
 DiffusionPlanner::~DiffusionPlanner()
@@ -338,7 +342,7 @@ void DiffusionPlanner::load_engine(const std::string & model_path)
 }
 
 AgentData DiffusionPlanner::get_ego_centric_agent_data(
-  const TrackedObjects & objects, const Eigen::Matrix4f & map_to_ego_transform)
+  const TrackedObjects & objects, const Eigen::Matrix4d & map_to_ego_transform)
 {
   if (!agent_data_) {
     agent_data_ =
@@ -467,10 +471,10 @@ InputDataMap DiffusionPlanner::create_input_data()
     const auto & goal_pose = route_handler_->getGoalPose();
 
     // Convert goal pose to 4x4 transformation matrix
-    const Eigen::Matrix4f goal_pose_map_4x4 = utils::pose_to_matrix4f(goal_pose);
+    const Eigen::Matrix4d goal_pose_map_4x4 = utils::pose_to_matrix4f(goal_pose);
 
     // Transform to ego frame
-    const Eigen::Matrix4f goal_pose_ego_4x4 = map_to_ego_transform * goal_pose_map_4x4;
+    const Eigen::Matrix4d goal_pose_ego_4x4 = map_to_ego_transform * goal_pose_map_4x4;
 
     // Extract relative position
     const float x = goal_pose_ego_4x4(0, 3);
@@ -743,15 +747,42 @@ std::vector<float> DiffusionPlanner::do_inference_trt(InputDataMap & input_data_
   return output_host;
 }
 
+std::vector<float> DiffusionPlanner::get_turn_indicator_logit() const
+{
+  const int batch_size = params_.batch_size;
+
+  // Compute total number of elements in the turn indicator logit
+  const size_t turn_indicator_num_elements =
+    batch_size * std::accumulate(
+                   TURN_INDICATOR_LOGIT_SHAPE.begin() + 1, TURN_INDICATOR_LOGIT_SHAPE.end(), 1UL,
+                   std::multiplies<>());
+
+  // Allocate host vector
+  std::vector<float> logit_host(turn_indicator_num_elements);
+
+  // Copy data from device to host
+  cudaMemcpy(
+    logit_host.data(),              // destination (host)
+    turn_indicator_logit_d_.get(),  // source (device)
+    turn_indicator_num_elements * sizeof(float), cudaMemcpyDeviceToHost);
+
+  return logit_host;
+}
+
 void DiffusionPlanner::on_timer()
 {
   // Timer callback function
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
+  diagnostics_inference_->clear();
+
   if (!is_map_loaded_) {
     RCLCPP_INFO_THROTTLE(
       get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
       "Waiting for map data...");
+    diagnostics_inference_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, "Map data not loaded");
+    diagnostics_inference_->publish(this->now());
     return;
   }
 
@@ -761,10 +792,29 @@ void DiffusionPlanner::on_timer()
     RCLCPP_WARN_THROTTLE(
       get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
       "No input data available for inference");
+    diagnostics_inference_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, "No input data available for inference");
+    diagnostics_inference_->publish(this->now());
     return;
   }
 
   publish_debug_markers(input_data_map);
+
+  // Calculate and record metrics for diagnostics using the proper logic
+  const int64_t batch_idx = 0;
+  const int64_t valid_lane_count = postprocess::count_valid_elements(
+    input_data_map["lanes"], LANES_SHAPE[1], LANES_SHAPE[2], LANES_SHAPE[3], batch_idx);
+  diagnostics_inference_->add_key_value("valid_lane_count", valid_lane_count);
+
+  const int64_t valid_route_count = postprocess::count_valid_elements(
+    input_data_map["route_lanes"], ROUTE_LANES_SHAPE[1], ROUTE_LANES_SHAPE[2], ROUTE_LANES_SHAPE[3],
+    batch_idx);
+  diagnostics_inference_->add_key_value("valid_route_count", valid_route_count);
+
+  const int64_t valid_neighbor_count = postprocess::count_valid_elements(
+    input_data_map["neighbor_agents_past"], NEIGHBOR_SHAPE[1], NEIGHBOR_SHAPE[2], NEIGHBOR_SHAPE[3],
+    batch_idx);
+  diagnostics_inference_->add_key_value("valid_neighbor_count", valid_neighbor_count);
 
   // normalization of data
   preprocess::normalize_input_data(input_data_map, normalization_map_);
@@ -772,10 +822,22 @@ void DiffusionPlanner::on_timer()
     RCLCPP_WARN_THROTTLE(
       get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
       "Input data contains invalid values");
+    diagnostics_inference_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, "Input data contains invalid values");
+    diagnostics_inference_->publish(this->now());
     return;
   }
   const auto predictions = do_inference_trt(input_data_map);
   publish_predictions(predictions);
+
+  // Publish turn indicators
+  const auto turn_indicator_logit = get_turn_indicator_logit();
+  const auto turn_indicators_cmd =
+    postprocess::create_turn_indicators_command(turn_indicator_logit, this->now());
+  pub_turn_indicators_->publish(turn_indicators_cmd);
+
+  // Publish diagnostics
+  diagnostics_inference_->publish(this->now());
 }
 
 void DiffusionPlanner::on_map(const HADMapBin::ConstSharedPtr map_msg)

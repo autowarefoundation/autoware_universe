@@ -52,9 +52,9 @@ using autoware_planning_msgs::msg::LaneletRoute;
  */
 struct ColWithDistance
 {
-  int64_t index;           //!< Column index in the input matrix.
-  float distance_squared;  //!< Squared distance from the center.
-  bool inside;             //!< Whether the column is within the mask range.
+  int64_t index;            //!< Column index in the input matrix.
+  double distance_squared;  //!< Squared distance from the center.
+  bool inside;              //!< Whether the column is within the mask range.
 };
 
 /**
@@ -92,7 +92,7 @@ public:
    * @return Flattened vectors containing the transformed route segments and speed limits.
    */
   std::pair<std::vector<float>, std::vector<float>> get_route_segments(
-    const Eigen::Matrix4f & transform_matrix,
+    const Eigen::Matrix4d & transform_matrix,
     const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
     const lanelet::ConstLanelets & current_lanes) const;
 
@@ -107,7 +107,7 @@ public:
    * @return Flattened vectors containing the transformed lane segments and speed limits.
    */
   std::pair<std::vector<float>, std::vector<float>> get_lane_segments(
-    const Eigen::Matrix4f & transform_matrix,
+    const Eigen::Matrix4d & transform_matrix,
     const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map, const float center_x,
     const float center_y, const int64_t m) const;
 
@@ -119,10 +119,12 @@ private:
    * @param segment_matrix The segment matrix to modify (in-place).
    * @param row_idx The row index in the matrix corresponding to the segment.
    * @param col_counter The column counter for the segment.
+   * @param turn_direction The turn direction for the segment.
    */
   void add_traffic_light_one_hot_encoding_to_segment(
     const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
-    Eigen::MatrixXf & segment_matrix, const int64_t row_idx, const int64_t col_counter) const;
+    Eigen::MatrixXd & segment_matrix, const int64_t row_idx, const int64_t col_counter,
+    const int64_t turn_direction) const;
 
   /**
    * @brief Apply coordinate transforms to the output matrix for all segments.
@@ -132,21 +134,19 @@ private:
    * @param num_segments Number of segments to transform.
    */
   void apply_transforms(
-    const Eigen::Matrix4f & transform_matrix, Eigen::MatrixXf & output_matrix,
+    const Eigen::Matrix4d & transform_matrix, Eigen::MatrixXd & output_matrix,
     int64_t num_segments) const;
 
   /**
    * @brief Compute distances of lane segments from a center point.
    *
    * @param transform_matrix Transformation matrix to apply to the points.
-   * @param distances Output vector to store column indices, distances, and mask inclusion.
    * @param center_x X-coordinate of the center point.
    * @param center_y Y-coordinate of the center point.
-   * @param mask_range Range within which columns are considered "inside" the mask.
+   * @return Output vector to store column indices, distances, and mask inclusion.
    */
-  void compute_distances(
-    const Eigen::Matrix4f & transform_matrix, std::vector<ColWithDistance> & distances,
-    const float center_x, const float center_y, const float mask_range = 100.0) const;
+  std::vector<ColWithDistance> compute_distances(
+    const Eigen::Matrix4d & transform_matrix, const float center_x, const float center_y) const;
 
   /**
    * @brief Transform and select columns from input matrix based on distances.
@@ -157,13 +157,13 @@ private:
    * @param m Maximum number of columns (segments) to select.
    * @return The transformed matrix
    */
-  Eigen::MatrixXf transform_points_and_add_traffic_info(
-    const Eigen::Matrix4f & transform_matrix,
+  Eigen::MatrixXd transform_points_and_add_traffic_info(
+    const Eigen::Matrix4d & transform_matrix,
     const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
     const std::vector<ColWithDistance> & distances, int64_t m) const;
 
   // variables
-  Eigen::MatrixXf map_lane_segments_matrix_;
+  Eigen::MatrixXd map_lane_segments_matrix_;
   ColLaneIDMaps col_id_mapping_;
   const std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
 };

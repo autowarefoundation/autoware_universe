@@ -21,12 +21,15 @@
 
 namespace autoware::diffusion_planner
 {
+inline constexpr int64_t NUM_SEGMENTS_IN_LANE = 70;
+inline constexpr int64_t NUM_SEGMENTS_IN_ROUTE = 25;
+inline constexpr int64_t MAX_NUM_NEIGHBORS = 32;
 inline constexpr int64_t POINTS_PER_SEGMENT = 20;  //!< Number of points in each lane segment.
 // Number of columns in a segment matrix
 // (X,Y,dX,dY,LeftBoundX,LeftBoundY,RightBoundX,RightBoundY,TrafficLightEncoding(Dim5),Speed Limit)
 inline constexpr int64_t TRAFFIC_LIGHT_ONE_HOT_DIM = 5;
 inline constexpr int64_t SEGMENT_POINT_DIM = 8 + TRAFFIC_LIGHT_ONE_HOT_DIM;
-inline constexpr int64_t FULL_MATRIX_ROWS = SEGMENT_POINT_DIM + 2;
+inline constexpr int64_t FULL_MATRIX_ROWS = SEGMENT_POINT_DIM + 3;
 
 inline constexpr int64_t EGO_AGENT_PAST_IDX_X = 0;
 inline constexpr int64_t EGO_AGENT_PAST_IDX_Y = 1;
@@ -50,23 +53,27 @@ inline constexpr int64_t TRAFFIC_LIGHT_WHITE = 11;
 inline constexpr int64_t TRAFFIC_LIGHT_NO_TRAFFIC_LIGHT = 12;
 inline constexpr int64_t SPEED_LIMIT = 13;
 inline constexpr int64_t LANE_ID = 14;
+inline constexpr int64_t TURN_DIRECTION = 15;
 
+inline constexpr int64_t INPUT_T = 20;
 inline constexpr int64_t OUTPUT_T = 80;  // Output timestamp number
-inline constexpr std::array<int64_t, 4> OUTPUT_SHAPE = {1, 33, 80, 4};
+inline constexpr std::array<int64_t, 4> OUTPUT_SHAPE = {1, MAX_NUM_NEIGHBORS + 1, OUTPUT_T, 4};
 inline constexpr std::array<int64_t, 2> TURN_INDICATOR_LOGIT_SHAPE = {1, 4};
 
-inline constexpr std::array<int64_t, 3> EGO_HISTORY_SHAPE = {1, 21, 4};
+inline constexpr std::array<int64_t, 3> EGO_HISTORY_SHAPE = {1, INPUT_T + 1, 4};
 inline constexpr std::array<int64_t, 2> EGO_CURRENT_STATE_SHAPE = {1, 10};
-inline constexpr std::array<int64_t, 4> NEIGHBOR_SHAPE = {1, 32, 21, 11};
+inline constexpr std::array<int64_t, 4> NEIGHBOR_SHAPE = {1, MAX_NUM_NEIGHBORS, INPUT_T + 1, 11};
 inline constexpr std::array<int64_t, 3> STATIC_OBJECTS_SHAPE = {1, 5, 10};
 inline constexpr std::array<int64_t, 4> LANES_SHAPE = {
-  1, 70, POINTS_PER_SEGMENT, SEGMENT_POINT_DIM};
-inline constexpr std::array<int64_t, 3> LANES_HAS_SPEED_LIMIT_SHAPE = {1, 70, 1};
-inline constexpr std::array<int64_t, 3> LANES_SPEED_LIMIT_SHAPE = {1, 70, 1};
+  1, NUM_SEGMENTS_IN_LANE, POINTS_PER_SEGMENT, SEGMENT_POINT_DIM};
+inline constexpr std::array<int64_t, 3> LANES_HAS_SPEED_LIMIT_SHAPE = {1, NUM_SEGMENTS_IN_LANE, 1};
+inline constexpr std::array<int64_t, 3> LANES_SPEED_LIMIT_SHAPE = {1, NUM_SEGMENTS_IN_LANE, 1};
 inline constexpr std::array<int64_t, 4> ROUTE_LANES_SHAPE = {
-  1, 25, POINTS_PER_SEGMENT, SEGMENT_POINT_DIM};
-inline constexpr std::array<int64_t, 3> ROUTE_LANES_HAS_SPEED_LIMIT_SHAPE = {1, 25, 1};
-inline constexpr std::array<int64_t, 3> ROUTE_LANES_SPEED_LIMIT_SHAPE = {1, 25, 1};
+  1, NUM_SEGMENTS_IN_ROUTE, POINTS_PER_SEGMENT, SEGMENT_POINT_DIM};
+inline constexpr std::array<int64_t, 3> ROUTE_LANES_HAS_SPEED_LIMIT_SHAPE = {
+  1, NUM_SEGMENTS_IN_ROUTE, 1};
+inline constexpr std::array<int64_t, 3> ROUTE_LANES_SPEED_LIMIT_SHAPE = {
+  1, NUM_SEGMENTS_IN_ROUTE, 1};
 inline constexpr std::array<int64_t, 2> GOAL_POSE_SHAPE = {1, 4};
 inline constexpr std::array<int64_t, 2> EGO_SHAPE_SHAPE = {1, 3};
 }  // namespace autoware::diffusion_planner

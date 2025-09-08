@@ -1422,19 +1422,16 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
     // STEP 5-7: Collision check
     // ===================================================================
     // Create PullOutPath for collision check
-    PullOutPath temp_pull_out_path;
-    temp_pull_out_path.partial_paths.push_back(clothoid_path);
-    temp_pull_out_path.start_pose =
-      clothoid_path.points.empty() ? start_pose : clothoid_path.points.front().point.pose;
-    temp_pull_out_path.end_pose = target_pose;
+    const PullOutPath temp_pull_out_path{{clothoid_path}, {}, start_pose, target_pose};
 
     if (isPullOutPathCollided(
-          temp_pull_out_path, planner_data, parameters_.shift_collision_check_distance_from_end)) {
+          temp_pull_out_path, planner_data,
+          parameters_.clothoid_collision_check_distance_from_end)) {
       RCLCPP_INFO(
         rclcpp::get_logger("ClothoidPullOut"),
         "Collision detected for steer angle %.2f deg with margin %.2f m. Continuing to next "
         "candidate.",
-        rad2deg(steer_angle), parameters_.shift_collision_check_distance_from_end);
+        rad2deg(steer_angle), parameters_.clothoid_collision_check_distance_from_end);
       planner_debug_data.conditions_evaluation.emplace_back("collision");
       continue;
     }
