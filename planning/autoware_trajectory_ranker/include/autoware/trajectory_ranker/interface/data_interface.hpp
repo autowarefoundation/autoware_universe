@@ -62,10 +62,10 @@ public:
   {
     if (std::abs(max - min) < std::numeric_limits<float>::epsilon()) {
       scores_.at(index) = 1.0f;
-    } else {
-      scores_.at(index) =
-        flip ? (max - scores_.at(index)) / (max - min) : (scores_.at(index) - min) / (max - min);
+      return;
     }
+    scores_.at(index) =
+      flip ? (max - scores_.at(index)) / (max - min) : (scores_.at(index) - min) / (max - min);
   }
 
   void weighting(const std::vector<float> & weight)
