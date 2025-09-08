@@ -242,9 +242,9 @@ std::vector<LaneSegment> convert_to_lane_segments(
     const std::vector<lanelet::format_v2::TrafficLightConstPtr> traffic_light_list =
       lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
 
-    // As per the definition, the size of traffic_light_list should be either 0 or 1, but in
-    // older maps, this may not be the case. Therefore, we handle multiple entries by simply
-    // adopting the first one.
+    // According to the definition, the number of elements in the traffic_light_list should be
+    // either 0 or 1; however, this is not always the case with older map data. Therefore, if there
+    // are multiple elements, we only use the first element.
     const int64_t traffic_light_id =
       (traffic_light_list.empty() ? LaneSegment::TRAFFIC_LIGHT_ID_NONE
                                   : traffic_light_list.front()->id());
