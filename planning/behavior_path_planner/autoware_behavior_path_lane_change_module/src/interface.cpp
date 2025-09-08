@@ -284,7 +284,7 @@ bool LaneChangeInterface::canTransitFailureState()
         if (module_type_->getDirection() == Direction::RIGHT) {
           return PlanningFactor::SHIFT_RIGHT;
         }
-        return PlanningFactor::UNKNOWN;
+        return PlanningFactor::NONE;
       });
 
       planning_factor_interface_->add(
@@ -437,7 +437,7 @@ void LaneChangeInterface::updateSteeringFactorPtr(const BehaviorModuleOutput & o
     if (module_type_->getDirection() == Direction::RIGHT) {
       return PlanningFactor::SHIFT_RIGHT;
     }
-    return PlanningFactor::UNKNOWN;
+    return PlanningFactor::NONE;
   });
 
   const auto & lane_change_debug = module_type_->getDebugData();
