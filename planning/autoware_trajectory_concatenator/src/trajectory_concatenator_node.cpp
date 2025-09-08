@@ -16,7 +16,6 @@
 
 #include "trajectory_concatenator_structs.hpp"
 
-#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
 #include <builtin_interfaces/msg/detail/duration__builder.hpp>
 #include <rclcpp/duration.hpp>
