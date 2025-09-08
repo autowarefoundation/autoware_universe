@@ -19,6 +19,7 @@
 
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 #include <nlohmann/json.hpp>
 
 #include <diagnostic_msgs/msg/detail/diagnostic_status__struct.hpp>
