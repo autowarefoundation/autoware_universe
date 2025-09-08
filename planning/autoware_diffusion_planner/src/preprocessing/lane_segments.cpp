@@ -89,13 +89,14 @@ std::pair<std::vector<float>, std::vector<float>> LaneSegmentContext::get_route_
       0, added_route_segments * POINTS_PER_SEGMENT, SEGMENT_POINT_DIM, POINTS_PER_SEGMENT) =
       map_lane_segments_matrix_.block(0, row_idx, SEGMENT_POINT_DIM, POINTS_PER_SEGMENT);
 
-    const int64_t turn_direction = lane_segments_[row_idx / POINTS_PER_SEGMENT].turn_direction;
+    const int64_t seg_idx = row_idx / POINTS_PER_SEGMENT;
+    const int64_t turn_direction = lane_segments_[seg_idx].turn_direction;
     add_traffic_light_one_hot_encoding_to_segment(
       traffic_light_id_map, full_route_segment_matrix, row_idx, added_route_segments,
       turn_direction);
 
     speed_limit_vector[added_route_segments] =
-      lane_segments_[row_idx / POINTS_PER_SEGMENT].speed_limit_mps.value_or(0.0f);
+      lane_segments_[seg_idx].speed_limit_mps.value_or(0.0f);
     ++added_route_segments;
   }
   // Transform the route segments.
