@@ -166,7 +166,6 @@ private:
   std::vector<autoware::diffusion_planner::LaneSegment> lane_segments_;
   Eigen::MatrixXd map_lane_segments_matrix_;
   ColLaneIDMaps col_id_mapping_;
-  const std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
 };
 
 }  // namespace autoware::diffusion_planner::preprocess
