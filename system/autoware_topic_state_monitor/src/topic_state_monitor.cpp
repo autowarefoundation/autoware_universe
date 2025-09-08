@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/topic_state_monitor/topic_state_monitor.hpp"
+#include "topic_state_monitor.hpp"
 
 namespace autoware::topic_state_monitor
 {
