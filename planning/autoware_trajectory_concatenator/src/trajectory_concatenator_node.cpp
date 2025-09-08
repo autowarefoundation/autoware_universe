@@ -23,10 +23,6 @@
 #include <rclcpp/logger.hpp>
 #include <rclcpp/time.hpp>
 
-#include <autoware_internal_planning_msgs/msg/detail/candidate_trajectory__builder.hpp>
-#include <autoware_internal_planning_msgs/msg/detail/candidate_trajectory__struct.hpp>
-#include <autoware_planning_msgs/msg/detail/trajectory__struct.hpp>
-
 #include <chrono>
 #include <cmath>
 #include <functional>
