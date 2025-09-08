@@ -14,8 +14,6 @@
 
 #include "trajectory_adapter.hpp"
 
-#include <autoware/motion_utils/trajectory/trajectory.hpp>
-
 #include <memory>
 
 namespace autoware::trajectory_adapter
