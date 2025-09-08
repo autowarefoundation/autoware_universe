@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <arg name="concatenator_input_trajectories" default="/planning/candidate/trajectories"/>
+  <arg name="concatenator_output_trajectories" default="/planning/trajectory_selector/concatenate/trajectories"/>
+  <arg name="trajectory_concatenator_param_path" default="$(find-pkg-share autoware_trajectory_concatenator)/config/concatenator.param.yaml"/>
+
+  <node pkg="autoware_trajectory_concatenator" exec="autoware_trajectory_concatenator_node" name="trajectory_concatenator_node" output="screen">
+    <param from="$(var trajectory_concatenator_param_path)" allow_substs="true"/>
+    <remap from="~/input/trajectories" to="$(var concatenator_input_trajectories)"/>
+    <remap from="~/output/trajectories" to="$(var concatenator_output_trajectories)"/>
+  </node>
+</launch>
