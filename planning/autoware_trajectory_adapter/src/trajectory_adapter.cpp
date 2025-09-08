@@ -43,9 +43,6 @@ void TrajectoryAdapterNode::process(const ScoredCandidateTrajectories::ConstShar
   const auto trajectory_itr = std::max_element(
     msg->scored_candidate_trajectories.begin(), msg->scored_candidate_trajectories.end(),
     [](const auto & a, const auto & b) { return a.score < b.score; });
-  if (trajectory_itr == msg->scored_candidate_trajectories.end()) {
-    return;
-  }
 
   const auto best_generator = [&msg](const auto & uuid) {
     const auto generator_itr = std::find_if(
