@@ -21,6 +21,4 @@ A 100 ms timer then scans this buffer and drops any entry whose header stamp i
 
 ### Parameters
 
-| Name            | Type   | Default | Description                                              |
-| --------------- | ------ | ------- | -------------------------------------------------------- |
-| `duration_time` | double | 0.2     | Maximum age of trajectories kept in the buffer (seconds) |
+{{ json_to_markdown("planning/autoware_trajectory_concatenator/schema/trajectory_concatenator.schema.json") }}
