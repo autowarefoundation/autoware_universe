@@ -360,6 +360,21 @@ void MissionPlanner::set_preferred_lane(
       ResponseCode::ERROR_PLANNER_FAILED, "The planned route is empty.");
   }
 
+  // trim route from the current position
+  const auto segment_it = std::find_if(route.segments.begin(), route.segments.end(), [&](const auto & segment) {
+    return std::any_of(segment.primitives.begin(), segment.primitives.end(), [&](const auto & primitive) {
+      const auto lanelet = lanelet_map_ptr_->laneletLayer.get(primitive.id);
+      return lanelet::utils::isInLanelet(route.start_pose, lanelet);
+    });
+  });
+
+  // erase segments before the current segment
+  if (segment_it != route.segments.end()) {
+    route.segments.erase(route.segments.begin(), segment_it);
+  } else {
+    RCLCPP_ERROR(get_logger(), "Failed to find the current segment on the new route.");
+  }
+
   if (is_reroute && is_autonomous_driving && !check_reroute_safety(*current_route_, route)) {
     cancel_route();
     change_state(RouteState::SET);
@@ -484,6 +499,20 @@ void MissionPlanner::on_set_lanelet_route(
     change_state(is_reroute ? RouteState::SET : RouteState::UNSET);
     throw service_utils::ServiceException(
       ResponseCode::ERROR_PLANNER_FAILED, "The planned route is empty.");
+  }
+
+  // trim route from the current position
+
+  const auto segment_it = std::find_if(route.segments.begin(), route.segments.end(), [&](const auto & segment) {
+    return std::any_of(segment.primitives.begin(), segment.primitives.end(), [&](const auto & primitive) {
+      const auto lanelet = lanelet_map_ptr_->laneletLayer.get(primitive.id);
+      return lanelet::utils::isInLanelet(odometry_->pose.pose, lanelet);
+    });
+  });
+
+  // erase segments before the current segment
+  if (segment_it != route.segments.end()) {
+    route.segments.erase(route.segments.begin(), segment_it);
   }
 
   if (is_reroute && is_autonomous_driving && !check_reroute_safety(*current_route_, route)) {
