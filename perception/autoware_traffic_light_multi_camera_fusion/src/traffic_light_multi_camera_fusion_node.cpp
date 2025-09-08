@@ -94,24 +94,25 @@ int compareRecord(
   }
 }
 
-double probabilityToLogOdds(double prob) {
+double probabilityToLogOdds(double prob)
+{
   /**
-  * @brief Converts a probability value to log-odds.
-  *
-  * Log-odds is the logarithm of the odds ratio, i.e., log(p / (1-p)).
-  * This function is essential for Bayesian updating in log-space, as it allows
-  * evidence to be additively combined.
-  *
-  * The function handles edge cases where the probability `p` is very close to
-  * 0 or 1. As `p` -> 1, log-odds -> +inf. As `p` -> 0, log-odds -> -inf.
-  * To prevent floating-point divergence (infinity), the input probability is
-  * "clamped" to a safe range slightly away from the boundaries. The bounds
-  * [1e-9, 1.0 - 1e-9] are chosen as a small epsilon to ensure numerical
-  * stability while having a negligible impact on non-extreme probability values.
-  *
-  * @param prob The input probability, expected to be in the range [0.0, 1.0].
-  * @return The corresponding log-odds value.
-  */
+   * @brief Converts a probability value to log-odds.
+   *
+   * Log-odds is the logarithm of the odds ratio, i.e., log(p / (1-p)).
+   * This function is essential for Bayesian updating in log-space, as it allows
+   * evidence to be additively combined.
+   *
+   * The function handles edge cases where the probability `p` is very close to
+   * 0 or 1. As `p` -> 1, log-odds -> +inf. As `p` -> 0, log-odds -> -inf.
+   * To prevent floating-point divergence (infinity), the input probability is
+   * "clamped" to a safe range slightly away from the boundaries. The bounds
+   * [1e-9, 1.0 - 1e-9] are chosen as a small epsilon to ensure numerical
+   * stability while having a negligible impact on non-extreme probability values.
+   *
+   * @param prob The input probability, expected to be in the range [0.0, 1.0].
+   * @return The corresponding log-odds value.
+   */
   prob = std::clamp(prob, 1e-9, 1.0 - 1e-9);
   return std::log(prob / (1.0 - prob));
 }
@@ -342,22 +343,25 @@ void MultiCameraFusion::groupFusion(
       traffic_light_id_to_regulatory_ele_id_[p.second.roi.traffic_light_id];
     for (const auto & reg_ele_id : reg_ele_id_vec) {
       /*
-      * Design decision: We convert the observation's confidence into the strength of evidence (log-odds) that the observation is “correct”.
-      * Here, we explicitly assume that the confidence value directly represents probability (i.e., confidence ∈ [0,1] is the probability that the observation is correct).
-      * Note: This assumption may not hold for all confidence scoring systems. If the confidence metric is not a true probability, this conversion may be invalid.
-      * Future maintainers should verify that the confidence values used here are indeed probabilities, or update this logic if the scoring system changes.
-      */
+       * Design decision: We convert the observation's confidence into the strength of evidence
+       * (log-odds) that the observation is “correct”. Here, we explicitly assume that the
+       * confidence value directly represents probability (i.e., confidence ∈ [0,1] is the
+       * probability that the observation is correct). Note: This assumption may not hold for all
+       * confidence scoring systems. If the confidence metric is not a true probability, this
+       * conversion may be invalid. Future maintainers should verify that the confidence values used
+       * here are indeed probabilities, or update this logic if the scoring system changes.
+       */
       double evidence_log_odds = probabilityToLogOdds(confidence);
 
-      // We assume the prior probability (with no information) is 0.5, meaning the log odds = 0, and then add evidence to it.
-      group_fusion_info_map[reg_ele_id].accumulated_log_odds[color] += evidence_log_odds + PRIOR_LOG_ODDS;
+      // We assume the prior probability (with no information) is 0.5, meaning the log odds = 0, and
+      // then add evidence to it.
+      group_fusion_info_map[reg_ele_id].accumulated_log_odds[color] +=
+        evidence_log_odds + PRIOR_LOG_ODDS;
 
-      auto & best_record_for_color =
-        group_fusion_info_map[reg_ele_id].best_record_for_color[color];
+      auto & best_record_for_color = group_fusion_info_map[reg_ele_id].best_record_for_color[color];
       if (
         best_record_for_color.signal.elements.empty() ||
-        confidence > best_record_for_color.signal.elements[0].confidence
-      ) {
+        confidence > best_record_for_color.signal.elements[0].confidence) {
         best_record_for_color = record;
       }
     }
@@ -374,8 +378,7 @@ void MultiCameraFusion::groupFusion(
     // The color with the highest logarithmic odds is the most probable one.
     auto best_element = std::max_element(
       group_info.accumulated_log_odds.begin(), group_info.accumulated_log_odds.end(),
-      [](const auto & a, const auto & b) { return a.second < b.second; }
-    );
+      [](const auto & a, const auto & b) { return a.second < b.second; });
 
     const uint8_t best_color = best_element->first;
     grouped_record_map[reg_ele_id] = group_info.best_record_for_color.at(best_color);

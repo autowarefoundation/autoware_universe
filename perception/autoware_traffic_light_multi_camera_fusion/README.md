@@ -78,6 +78,7 @@ graph TD
 First, for each individual traffic light bulb, the node selects the single most reliable detection—the "best shot"—from all available camera views.
 
 This selection is based on a strict priority queue:
+
 - **Known State:** Results with a known color (Red, Green, etc.) are prioritized over 'Unknown'.
 - **Full Visibility:** Detections from non-truncated ROIs (fully visible bulbs) are prioritized.
 - **Highest Confidence:** The result with the highest detection confidence score is prioritized.
