@@ -21,7 +21,6 @@
 #include <builtin_interfaces/msg/detail/duration__builder.hpp>
 #include <rclcpp/duration.hpp>
 #include <rclcpp/logger.hpp>
-#include <rclcpp/logging.hpp>
 #include <rclcpp/time.hpp>
 
 #include <autoware_internal_planning_msgs/msg/detail/candidate_trajectory__builder.hpp>
