@@ -16,8 +16,10 @@
 
 namespace autoware::topic_state_monitor
 {
-TopicStateMonitor::TopicStateMonitor(rclcpp::Node & node) : clock_(node.get_clock())
+TopicStateMonitor::TopicStateMonitor(rclcpp::Node & node, const Param & param)
+: clock_(node.get_clock())
 {
+  param_ = param;
 }
 
 void TopicStateMonitor::update()
