@@ -47,17 +47,17 @@ graph TD
     end
 
     subgraph "Stage 1: Per-Camera Fusion"
-        D{<div style="font-weight:bold; font-size:1.1em;">Best View Selection</div><br>For each traffic light bulb, select the single most reliable detection result.}
+        D{"Best View Selection<br><br>For each traffic light bulb,<br>select the single most<br>reliable detection result."}
     end
 
-    E(["<b>Best Detection per Bulb</b>"])
+    E["Best Detection per Bulb"]
 
     subgraph "Stage 2: Group Fusion"
-        F{<div style="font-weight:bold; font-size:1.1em;">Group Consensus</div><br>Fuse all 'best detections' into a single state for the entire traffic light group using Bayesian updating.}
+        F{"Group Consensus<br><br>Fuse all 'best detections'<br>into a single state for<br>the entire traffic light group<br>using Bayesian updating."}
     end
 
     subgraph "Final Output"
-        G(["<b>Final Group State</b><br>(e.g., GREEN)"])
+        G["Final Group State<br>(e.g., GREEN)"]
     end
 
     A --> D
@@ -92,37 +92,6 @@ Next, the "best shot" detections from Stage 1 are fused to determine a single, c
 - **Evidence Update:** Each selected detection from Stage 1 is treated as a piece of "evidence." Its confidence score is converted into a log-odds value representing the strength of that evidence.
 - **Score Accumulation:** This evidence is **added** to the corresponding color's belief score.
 - **Final Decision:** After accumulating all evidence, the color with the highest final score is chosen as the definitive state for the group.
-
----
-
-## The Rationale for Log-Odds Fusion
-
-Using log-odds provides a mathematically sound and robust method for evidence integration.
-
-### The Problem with Simple Summation
-
-If we simply summed confidence scores, eight uncertain detections of "Green" at 10% confidence each (totaling 80) could mistakenly outweigh one confident "Red" detection at 70%. This is not a reliable approach.
-
-### The Bayesian Advantage
-
-The log-odds formulation correctly models the "strength of evidence." This ensures that multiple low-confidence detections cannot easily overturn a single high-confidence one, leading to a more intuitive and robust outcome.
-
-<details>
-<summary><b>Click for Detailed Mathematical Background</b></summary>
-
-The core principle is that Bayesian updating, which is multiplicative in probability space, becomes simple **addition** in log-odds space.
-
-> Posterior Odds = Likelihood Ratio × Prior Odds
-
-By taking the logarithm of this equation, we get:
-
-> New Log-Odds = Log-Odds of Evidence + Current Log-Odds
-
-This transformation offers two key benefits:
-1.  **Computational Simplicity:** Complex multiplication and division are replaced by simple, efficient addition.
-2.  **Numerical Stability:** It prevents the numerical underflow that can occur when multiplying many small probabilities together.
-
-</details>
 
 ## Input topics
 
