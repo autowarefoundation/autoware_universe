@@ -168,7 +168,7 @@ bool BoundingBoxShapeModel::fitLShape(
   pose_output.position.z = min_z + shape_output.dimensions.z * 0.5;
   double cluster_angle_rad = std::atan2(pose_output.position.y, pose_output.position.x);
 
-  if (-FRONT_BACK_ANGLE_THRESHOLD <= cluster_angle_rad || 
+  if (-FRONT_BACK_ANGLE_THRESHOLD <= cluster_angle_rad && 
       cluster_angle_rad < FRONT_BACK_ANGLE_THRESHOLD) { // front
     if ((M_PI_2 - YAW_DEG_TOLERANCE) < raw_yaw && raw_yaw <= M_PI_2) {
       raw_yaw -= M_PI_2;
