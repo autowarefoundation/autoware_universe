@@ -83,7 +83,8 @@ private:
 TEST_F(TestClothoidPullOut, GenerateValidClothoidPullOutPath)
 {
   // Test data files to be tested
-  const std::vector<std::string> yaml_files = {"route_data2.yaml", "route_data4.yaml"};
+  const std::vector<std::string> yaml_files = {
+    "route_data2.1.yaml", "route_data2.2.yaml", "route_data4.1.yaml", "route_data4.2.yaml"};
 
   auto planner_data = std::make_shared<PlannerData>();
   planner_data->init_parameters(*node_);
