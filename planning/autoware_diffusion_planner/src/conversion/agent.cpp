@@ -142,7 +142,7 @@ AgentHistory::AgentHistory(
   }
 }
 
-void AgentHistory::update(double current_time, TrackedObject & object)
+void AgentHistory::update(double current_time, const TrackedObject & object)
 {
   AgentState state(object);
   if (state.object_id_ != object_id_) {
