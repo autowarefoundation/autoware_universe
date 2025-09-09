@@ -247,9 +247,8 @@ d_{\text{total}} =
 \begin{cases}
 d_1 + d_2, & v_2 \le 0, \quad
 t_2 = \dfrac{
-    -a_{\text{max}} - \sqrt{a_0^2 - 2 j v_0}
-  }{j} \\[12pt]
-
+-a_{\text{max}} - \sqrt{a_0^2 - 2 j v_0}
+}{j} \\[12pt]
 d_1 + d_2 + d_3, & v_2 > 0, \quad
 t_2 = \dfrac{a_{\text{max}} - a_0}{j}
 \end{cases}
@@ -279,10 +278,10 @@ The module also filters closely spaced departure points. This process ensures th
       <th style="text-align: center; width: 25%; word-wrap: break-word; white-space: normal;">Grouping nearby points</th>
       <th style="text-align: center; width: 25%; word-wrap: break-word; white-space: normal;">Remaining points after merging</th>
     </tr>>
-      <td style="text-align: center;"><img src="./images/departure_interval-closest_pts_to_boundaries.png" alt="Closest_1" width="180"></td>
-      <td style="text-align: center;"><img src="./images/departure_interval-departure_points.png" alt="dpt_pts" width="180"></td>
-      <td style="text-align: center;"><img src="./images/departure_intervals-group_nearby_pts.png" alt="group_nearby" width="180"></td>
-      <td style="text-align: center;"><img src="./images/departure_interval-dpt_pts_after_merge.png" alt="after_combine" width="180"></td>
+      <td style="text-align: center;"><img src="./images/departure_interval-closest_pts_to_boundaries.png" alt="Closest_1" width="350"></td>
+      <td style="text-align: center;"><img src="./images/departure_interval-departure_points.png" alt="dpt_pts" width="350"></td>
+      <td style="text-align: center;"><img src="./images/departure_intervals-group_nearby_pts.png" alt="group_nearby" width="350"></td>
+      <td style="text-align: center;"><img src="./images/departure_interval-dpt_pts_after_merge.png" alt="after_combine" width="350"></td>
     </tr>
   </table>
 </div>
