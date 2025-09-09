@@ -272,12 +272,13 @@ The module also filters closely spaced departure points. This process ensures th
 
 <div align="center">
   <table style="table-layout: fixed; width: 800px;">
-    <tr    <tr>
+    <tr>
       <th style="text-align: center; width: 25%; word-wrap: break-word; white-space: normal;">Closest points to boundaries</th>
       <th style="text-align: center; width: 25%; word-wrap: break-word; white-space: normal;">Departure points</th>
       <th style="text-align: center; width: 25%; word-wrap: break-word; white-space: normal;">Grouping nearby points</th>
       <th style="text-align: center; width: 25%; word-wrap: break-word; white-space: normal;">Remaining points after merging</th>
-    </tr>>
+    </tr>
+    <tr>
       <td style="text-align: center;"><img src="./images/departure_interval-closest_pts_to_boundaries.png" alt="Closest_1" width="350"></td>
       <td style="text-align: center;"><img src="./images/departure_interval-departure_points.png" alt="dpt_pts" width="350"></td>
       <td style="text-align: center;"><img src="./images/departure_intervals-group_nearby_pts.png" alt="group_nearby" width="350"></td>
