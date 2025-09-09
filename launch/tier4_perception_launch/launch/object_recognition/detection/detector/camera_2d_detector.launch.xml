@@ -31,6 +31,7 @@
       <arg name="detection_rect" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
       <arg name="tracked_rect" value="rois$(var camera_index)"/>
       <arg name="enable_visualizer" value="$(var enable_visualizer)"/>
+      <arg name="camera_index" value="$(var camera_index)"/>
     </include>
   </group>
 
@@ -48,6 +49,7 @@
       <arg name="detection_rect" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
       <arg name="tracked_rect" value="rois$(var camera_index)"/>
       <arg name="enable_visualizer" value="$(var enable_visualizer)"/>
+      <arg name="camera_index" value="$(var camera_index)"/>
     </include>
   </group>
 
@@ -65,6 +67,7 @@
       <arg name="detection_rect" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
       <arg name="tracked_rect" value="rois$(var camera_index)"/>
       <arg name="enable_visualizer" value="$(var enable_visualizer)"/>
+      <arg name="camera_index" value="$(var camera_index)"/>
     </include>
   </group>
 
@@ -82,6 +85,7 @@
       <arg name="detection_rect" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
       <arg name="tracked_rect" value="rois$(var camera_index)"/>
       <arg name="enable_visualizer" value="$(var enable_visualizer)"/>
+      <arg name="camera_index" value="$(var camera_index)"/>
     </include>
   </group>
 
@@ -99,6 +103,7 @@
       <arg name="detection_rect" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
       <arg name="tracked_rect" value="rois$(var camera_index)"/>
       <arg name="enable_visualizer" value="$(var enable_visualizer)"/>
+      <arg name="camera_index" value="$(var camera_index)"/>
     </include>
   </group>
 
@@ -116,6 +121,7 @@
       <arg name="detection_rect" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
       <arg name="tracked_rect" value="rois$(var camera_index)"/>
       <arg name="enable_visualizer" value="$(var enable_visualizer)"/>
+      <arg name="camera_index" value="$(var camera_index)"/>
     </include>
   </group>
 
@@ -133,6 +139,7 @@
       <arg name="detection_rect" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
       <arg name="tracked_rect" value="rois$(var camera_index)"/>
       <arg name="enable_visualizer" value="$(var enable_visualizer)"/>
+      <arg name="camera_index" value="$(var camera_index)"/>
     </include>
   </group>
 
@@ -150,6 +157,7 @@
       <arg name="detection_rect" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
       <arg name="tracked_rect" value="rois$(var camera_index)"/>
       <arg name="enable_visualizer" value="$(var enable_visualizer)"/>
+      <arg name="camera_index" value="$(var camera_index)"/>
     </include>
   </group>
 
@@ -167,6 +175,7 @@
       <arg name="detection_rect" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
       <arg name="tracked_rect" value="rois$(var camera_index)"/>
       <arg name="enable_visualizer" value="$(var enable_visualizer)"/>
+      <arg name="camera_index" value="$(var camera_index)"/>
     </include>
   </group>
 
@@ -184,6 +193,7 @@
       <arg name="detection_rect" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
       <arg name="tracked_rect" value="rois$(var camera_index)"/>
       <arg name="enable_visualizer" value="$(var enable_visualizer)"/>
+      <arg name="camera_index" value="$(var camera_index)"/>
     </include>
   </group>
 </launch>
