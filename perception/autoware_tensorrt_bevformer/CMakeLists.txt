@@ -115,6 +115,9 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   target_include_directories(${TENSORRT_OPS_TARGET}
     PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/TensorRT/common
+  )
+  # Separate SYSTEM include to avoid warnings in TensorRT headers with clang-tidy
+  target_include_directories(${TENSORRT_OPS_TARGET}
     SYSTEM PRIVATE
       ${CUDA_INCLUDE_DIRS}
       ${OpenCV_INCLUDE_DIRS}
