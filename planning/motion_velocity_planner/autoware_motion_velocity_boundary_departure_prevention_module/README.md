@@ -411,7 +411,7 @@ $$
 
 If the longitudinal distance to the start of the target interval, $s_\star$, falls within the distance covered during the initial jerk phase ($s_\star \in [0, s_j]$), the module finds the required time and corresponding velocity to reach that point. The slow down velocity, $v_{\text{cmd}}$, is then set to the greater of the target velocity and the velocity calculated for that point, ensuring a safe and controlled deceleration.
 
-$$v_{\text{cmd}}=\max\!\bigl(v_{\text{target}},\, v(t^\star)\bigr).$$
+$$v_{\text{cmd}} = \max\left(v_{\text{target}},\, v(t^\star)\right)$$
 
 #### 4. **Waypoint After the Jerk Ramp**
 
@@ -419,10 +419,10 @@ If the target point is farther away ($s_\star > s_j$), the vehicle will have com
 
 $$
 \begin{aligned}
-\Delta &= v_1^{2}-v_{\text{target}}^{2}+2\,a_{\text{brake}}\,s_{\text{rem}},\\
-\text{if } \Delta<0 &: \quad v_{\text{cmd}}=v_{\text{target}},\\
-\text{else } \ t_a&=\frac{-v_1+\sqrt{\Delta}}{a_{\text{brake}}},\qquad
-v_{\text{cmd}}=\max\!\bigl(v_{\text{target}},\, v_1+a_{\text{brake}}\,t_a\bigr).
+\Delta &= v_1^2 - v_{\text{target}}^2 + 2\,a_{\text{brake}}\,s_{\text{rem}}, \\
+\text{if } \Delta < 0 &: \quad v_{\text{cmd}} = v_{\text{target}}, \\
+\text{else } \quad t_a &= \frac{-v_1 + \sqrt{\Delta}}{a_{\text{brake}}}, \qquad
+v_{\text{cmd}} = \max\left(v_{\text{target}},\, v_1 + a_{\text{brake}}\,t_a\right)
 \end{aligned}
 $$
 
