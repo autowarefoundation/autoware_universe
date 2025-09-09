@@ -437,18 +437,20 @@ void ControlEvaluatorNode::AddYawDeviationMetricMsg(const Trajectory & traj, con
 void ControlEvaluatorNode::AddGoalDeviationMetricMsg(const Odometry & odom)
 {
   const Pose ego_pose = odom.pose.pose;
+  const auto & goal_pose = route_handler_.getGoalPose();
+
   const double longitudinal_deviation_value =
-    metrics::calcLongitudinalDeviation(route_handler_.getGoalPose(), ego_pose.position);
+    metrics::calcLongitudinalDeviation(goal_pose, ego_pose.position);
   const double longitudinal_deviation_value_abs = std::abs(longitudinal_deviation_value);
   const double lateral_deviation_value =
-    metrics::calcLateralDeviation(route_handler_.getGoalPose(), ego_pose.position);
+    metrics::calcLateralDeviation(goal_pose, ego_pose.position);
   const double lateral_deviation_value_abs = std::abs(lateral_deviation_value);
-  const double yaw_deviation_value =
-    metrics::calcYawDeviation(route_handler_.getGoalPose(), ego_pose);
+  const double yaw_deviation_value = metrics::calcYawDeviation(goal_pose, ego_pose);
   const double yaw_deviation_value_abs = std::abs(yaw_deviation_value);
 
   const bool is_ego_stopped_near_goal =
-    std::abs(longitudinal_deviation_value) < 3.0 && ego_speed_ < 0.001;
+    autoware_utils::calc_distance2d(ego_pose.position, goal_pose.position) < 3.0 &&
+    ego_speed_ < 0.001;
 
   AddMetricMsg(
     Metric::goal_longitudinal_deviation, longitudinal_deviation_value, is_ego_stopped_near_goal);
