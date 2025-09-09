@@ -22,21 +22,15 @@
     tracker_lifetime: 1.0  # [s]
     min_known_object_removal_iou: 0.1  # [ratio]
     min_unknown_object_removal_iou: 0.001  # [ratio]
-    confident_count_threshold:
-      UNKNOWN: 3
-      CAR: 3
-      TRUCK: 3
-      BUS: 3
-      TRAILER: 3
-      MOTORBIKE: 3
-      BICYCLE: 3
-      PEDESTRIAN: 3
 
     # pruning parameters
     # list of generalized IoU thresholds for each class
     pruning_generalized_iou_thresholds:
       # UNKNOWN,  CAR, TRUCK,  BUS, TRAILER, MOTORCYCLE, BICYCLE, PEDESTRIAN
       [    -0.3, -0.4,  -0.6, -0.6,    -0.6,       -0.1,    -0.1,       -0.1]
+    pruning_static_object_speed: 1.38  # [m/s]
+    pruning_moving_object_speed: 5.5   # [m/s]
+    pruning_static_iou_threshold: 0.0  # [ratio]
     pruning_distance_thresholds:
       # UNKNOWN, CAR, TRUCK, BUS, TRAILER, MOTORCYCLE, BICYCLE, PEDESTRIAN
       [     9.0, 5.0,   9.0, 9.0,     9.0,        4.0,     3.0,        2.0]

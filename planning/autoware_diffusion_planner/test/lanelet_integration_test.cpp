@@ -14,9 +14,9 @@
 
 #include "autoware/diffusion_planner/conversion/lanelet.hpp"
 #include "autoware/diffusion_planner/preprocessing/lane_segments.hpp"
-#include "autoware_test_utils/autoware_test_utils.hpp"
 
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware_test_utils/autoware_test_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
@@ -29,11 +29,12 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
-using autoware::diffusion_planner::LaneletConverter;
+using autoware::diffusion_planner::convert_to_lane_segments;
 using autoware::diffusion_planner::LaneSegment;
 using autoware_map_msgs::msg::LaneletMapBin;
 
@@ -55,18 +56,10 @@ protected:
     lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
     lanelet::utils::conversion::fromBinMsg(
       map_bin_msg_, lanelet_map_ptr_, &traffic_rules_ptr_, &routing_graph_ptr_);
-
-    // Create LaneletConverter instance
-    const size_t max_num_polyline = 100;
-    const size_t max_num_point = 20;
-    const double point_break_distance = 100.0;
-    lanelet_converter_ = std::make_unique<LaneletConverter>(
-      lanelet_map_ptr_, max_num_polyline, max_num_point, point_break_distance);
   }
 
   void TearDown() override
   {
-    lanelet_converter_.reset();
     lanelet_map_ptr_.reset();
     traffic_rules_ptr_.reset();
     routing_graph_ptr_.reset();
@@ -76,7 +69,6 @@ protected:
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
   lanelet::traffic_rules::TrafficRulesPtr traffic_rules_ptr_;
   lanelet::routing::RoutingGraphPtr routing_graph_ptr_;
-  std::unique_ptr<LaneletConverter> lanelet_converter_;
 };
 
 TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsBasic)
@@ -84,7 +76,7 @@ TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsBasic)
   // Test basic functionality of convert_to_lane_segments
   const int64_t num_lane_points = 10;
 
-  auto lane_segments = lanelet_converter_->convert_to_lane_segments(num_lane_points);
+  auto lane_segments = convert_to_lane_segments(lanelet_map_ptr_, num_lane_points);
 
   // Basic assertions
   EXPECT_FALSE(lane_segments.empty()) << "Lane segments should not be empty";
@@ -117,7 +109,7 @@ TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsWithDifferentPointCounts)
   const std::vector<int64_t> point_counts = {5, 20, 50};
 
   for (const auto num_points : point_counts) {
-    auto lane_segments = lanelet_converter_->convert_to_lane_segments(num_points);
+    auto lane_segments = convert_to_lane_segments(lanelet_map_ptr_, num_points);
 
     EXPECT_FALSE(lane_segments.empty())
       << "Lane segments should not be empty for " << num_points << " points";
@@ -134,7 +126,7 @@ TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsInterpolation)
   // Test that interpolation preserves start and end points
   const int64_t num_lane_points = 15;
 
-  auto lane_segments = lanelet_converter_->convert_to_lane_segments(num_lane_points);
+  auto lane_segments = convert_to_lane_segments(lanelet_map_ptr_, num_lane_points);
 
   EXPECT_FALSE(lane_segments.empty());
 
@@ -160,7 +152,7 @@ TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsAttributes)
   // Test that lane attributes are properly extracted
   const int64_t num_lane_points = 10;
 
-  auto lane_segments = lanelet_converter_->convert_to_lane_segments(num_lane_points);
+  auto lane_segments = convert_to_lane_segments(lanelet_map_ptr_, num_lane_points);
 
   EXPECT_FALSE(lane_segments.empty());
 
@@ -168,10 +160,6 @@ TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsAttributes)
   for (const auto & segment : lane_segments) {
     // Check ID is valid
     EXPECT_GT(segment.id, 0) << "Lane segment ID should be positive";
-
-    // Check traffic light state (should be UNKNOWN in this test)
-    EXPECT_EQ(segment.traffic_light, autoware_perception_msgs::msg::TrafficLightElement::UNKNOWN)
-      << "Traffic light state should be UNKNOWN";
   }
 }
 
@@ -180,8 +168,8 @@ TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsConsistency)
   // Test that multiple calls with same parameters produce consistent results
   const int64_t num_lane_points = 10;
 
-  auto lane_segments_1 = lanelet_converter_->convert_to_lane_segments(num_lane_points);
-  auto lane_segments_2 = lanelet_converter_->convert_to_lane_segments(num_lane_points);
+  auto lane_segments_1 = convert_to_lane_segments(lanelet_map_ptr_, num_lane_points);
+  auto lane_segments_2 = convert_to_lane_segments(lanelet_map_ptr_, num_lane_points);
 
   EXPECT_EQ(lane_segments_1.size(), lane_segments_2.size())
     << "Multiple calls should produce the same number of segments";
@@ -201,7 +189,7 @@ TEST_F(LaneletIntegrationTest, CheckPointSpacingConsistency)
   // Test that interpolated points have consistent spacing
   const int64_t num_lane_points = 20;
 
-  auto lane_segments = lanelet_converter_->convert_to_lane_segments(num_lane_points);
+  auto lane_segments = convert_to_lane_segments(lanelet_map_ptr_, num_lane_points);
 
   EXPECT_FALSE(lane_segments.empty());
 
@@ -249,7 +237,7 @@ TEST_F(LaneletIntegrationTest, CheckForNaNAndInfiniteValues)
   // Test that no NaN or infinite values exist in the processed data
   const int64_t num_lane_points = 10;
 
-  auto lane_segments = lanelet_converter_->convert_to_lane_segments(num_lane_points);
+  auto lane_segments = convert_to_lane_segments(lanelet_map_ptr_, num_lane_points);
 
   EXPECT_FALSE(lane_segments.empty());
 
@@ -364,7 +352,7 @@ TEST_F(LaneletIntegrationTest, CheckReasonableCoordinateRanges)
   const float max_z_allowed = max_z + tolerance;
 
   // Now convert and check that interpolated points are within bounds
-  auto lane_segments = lanelet_converter_->convert_to_lane_segments(num_lane_points);
+  auto lane_segments = convert_to_lane_segments(lanelet_map_ptr_, num_lane_points);
 
   EXPECT_FALSE(lane_segments.empty());
 
@@ -432,7 +420,7 @@ TEST_F(LaneletIntegrationTest, CheckPointOrdering)
   // Test that points maintain proper ordering (no sudden jumps)
   const int64_t num_lane_points = 15;
 
-  auto lane_segments = lanelet_converter_->convert_to_lane_segments(num_lane_points);
+  auto lane_segments = convert_to_lane_segments(lanelet_map_ptr_, num_lane_points);
 
   EXPECT_FALSE(lane_segments.empty());
 

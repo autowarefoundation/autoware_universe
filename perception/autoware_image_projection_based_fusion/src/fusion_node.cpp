@@ -201,9 +201,11 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::initialize_strategy()
   } else if (matching_strategy_ == "advanced") {
     fusion_matching_strategy_ = std::make_unique<AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>>(
       std::dynamic_pointer_cast<FusionNode>(shared_from_this()), id_to_offset_map_);
-    // subscribe diagnostics
-    sub_diag_ = this->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
-      "/diagnostics", 10, std::bind(&FusionNode::diagnostic_callback, this, std::placeholders::_1));
+    // subscribe concatenation_info
+    sub_concatenation_info_ =
+      this->create_subscription<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
+        "input/concatenation_info", rclcpp::SensorDataQoS().keep_last(10),
+        std::bind(&FusionNode::concatenation_info_callback, this, std::placeholders::_1));
   } else {
     throw std::runtime_error("Matching strategy must be 'advanced' or 'naive'");
   }
@@ -268,10 +270,26 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::camera_info_callback(
   // This assume the camera info does not change while the node is running
   auto & det2d_status = det2d_status_list_.at(rois_id);
   if (det2d_status.camera_projector_ptr == nullptr && check_camera_info(*input_camera_info_msg)) {
+    std::atomic<bool> initializing{true};
+    std::thread([this, &initializing, rois_id]() {
+      rclcpp::Rate rate(1.0);  // 1 Hz
+      while (rclcpp::ok() && initializing.load()) {
+        RCLCPP_WARN(
+          this->get_logger(), "Still initializing camera projector for ROI %zu... please wait...",
+          rois_id);
+        rate.sleep();
+      }
+    }).detach();
+
     det2d_status.camera_projector_ptr = std::make_unique<CameraProjection>(
       *input_camera_info_msg, approx_grid_cell_w_size_, approx_grid_cell_h_size_,
       det2d_status.project_to_unrectified_image, det2d_status.approximate_camera_projection);
     det2d_status.camera_projector_ptr->initialize();
+
+    // Mark as finished
+    initializing = false;
+    RCLCPP_INFO(
+      this->get_logger(), "Camera projector initialization for ROI %zu finished.", rois_id);
 
     std::unique_lock<std::mutex> fusion_collectors_lock(fusion_collectors_mutex_);
     for (auto & collector : fusion_collectors_) {
@@ -499,36 +517,22 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::rois_callback(
 }
 
 template <class Msg3D, class Msg2D, class ExportObj>
-void FusionNode<Msg3D, Msg2D, ExportObj>::diagnostic_callback(
-  const diagnostic_msgs::msg::DiagnosticArray::SharedPtr diagnostic_msg)
+void FusionNode<Msg3D, Msg2D, ExportObj>::concatenation_info_callback(
+  const autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr concatenation_info_msg)
 {
-  for (const auto & status : diagnostic_msg->status) {
-    // Filter for the concatenate_and_time_sync_node diagnostic message
-    if (status.name == std::string_view("concatenate_data: /sensing/lidar/concatenate_data")) {
-      std::optional<double> concatenate_timestamp_opt;
-
-      // First pass: Locate concatenated_cloud_timestamp
-      for (const auto & value : status.values) {
-        if (value.key == std::string_view("Concatenated pointcloud timestamp")) {
-          try {
-            concatenate_timestamp_opt = std::stod(value.value);
-          } catch (const std::exception & e) {
-            RCLCPP_ERROR(get_logger(), "Error parsing concatenated cloud timestamp: %s", e.what());
-          }
-        }
-      }
-
-      // Second pass: Fill key-value map only if timestamp was valid
-      if (concatenate_timestamp_opt.has_value()) {
-        std::unordered_map<std::string, std::string> key_value_map;
-        for (const auto & value : status.values) {
-          key_value_map.emplace(value.key, value.value);
-        }
-
-        concatenated_status_map_.emplace(
-          concatenate_timestamp_opt.value(), std::move(key_value_map));
-      }
-    }
+  if (
+    concatenation_info_msg->matching_strategy ==
+    autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::STRATEGY_NAIVE) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *get_clock(), 1000,
+      "Set the concatenation node's matching strategy to 'advanced' in "
+      "autoware_pointcloud_preprocessor to enable advanced matching in the fusion node.");
+    return;
+  } else if (
+    concatenation_info_msg->matching_strategy ==
+    autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::STRATEGY_ADVANCED) {
+    double concatenate_timestamp = rclcpp::Time(concatenation_info_msg->header.stamp).seconds();
+    concatenated_info_map_.emplace(concatenate_timestamp, concatenation_info_msg);
   }
 }
 
@@ -537,13 +541,13 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::manage_concatenated_status_map(double 
 {
   constexpr double threshold_seconds = 1.0;  // Define threshold as a constant
 
-  // Remove old entries from concatenated_status_map_
-  auto it = concatenated_status_map_.begin();
-  while (it != concatenated_status_map_.end()) {
+  // Remove old entries from concatenated_info_map_
+  auto it = concatenated_info_map_.begin();
+  while (it != concatenated_info_map_.end()) {
     if (current_timestamp - it->first > threshold_seconds) {
       RCLCPP_DEBUG(
         get_logger(), "Removing old concatenation status for timestamp: %.9f", it->first);
-      it = concatenated_status_map_.erase(it);
+      it = concatenated_info_map_.erase(it);
     } else {
       ++it;
     }
@@ -628,11 +632,11 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::manage_collector_list()
 }
 
 template <class Msg3D, class Msg2D, class ExportObj>
-std::optional<std::unordered_map<std::string, std::string>>
-FusionNode<Msg3D, Msg2D, ExportObj>::find_concatenation_status(double timestamp)
+std::optional<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr>
+FusionNode<Msg3D, Msg2D, ExportObj>::find_concatenation_info(double timestamp)
 {
-  auto it = concatenated_status_map_.find(timestamp);
-  if (it != concatenated_status_map_.end()) {
+  auto it = concatenated_info_map_.find(timestamp);
+  if (it != concatenated_info_map_.end()) {
     return it->second;
   }
   return std::nullopt;

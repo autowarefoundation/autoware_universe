@@ -72,11 +72,11 @@ bool isTargetObjectFront(
 Polygon2d createExtendedPolygon(
   const Pose & base_link_pose, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
   const double lon_length, const double lat_margin, const bool is_stopped_obj,
-  CollisionCheckDebug & debug);
+  CollisionCheckDebug * debug = nullptr);
 
 Polygon2d createExtendedPolygon(
   const PoseWithVelocityAndPolygonStamped & obj_pose_with_poly, const double lon_length,
-  const double lat_margin, const bool is_stopped_obj, CollisionCheckDebug & debug);
+  const double lat_margin, const bool is_stopped_obj, CollisionCheckDebug * debug = nullptr);
 
 /**
  * @brief Converts path (path with velocity stamped) to predicted path.
@@ -195,6 +195,13 @@ bool checkCollision(
   const PredictedPathWithPolygon & target_object_path,
   const BehaviorPathPlannerParameters & common_parameters, const RSSparams & rss_parameters,
   const double hysteresis_factor, const double yaw_difference_th, CollisionCheckDebug & debug);
+
+std::optional<Polygon2d> check_collision(
+  const PathWithLaneId & planned_path, const VehicleInfo & vehicle_info,
+  const std::vector<PoseWithVelocityStamped> & predicted_ego_path,
+  const PoseWithVelocityAndPolygonStamped & obj_pose_with_poly, const RSSparams & rss_parameters,
+  const double yaw_difference_th, const double max_velocity_limit, const double hysteresis_factor,
+  CollisionCheckDebug * debug = nullptr);
 
 /**
  * @brief Iterate the points in the ego and target's predicted path and

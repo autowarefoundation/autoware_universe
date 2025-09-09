@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/topic_state_monitor/topic_state_monitor_core.hpp"
+#include "topic_state_monitor_core.hpp"
 
 #include <memory>
 #include <string>
@@ -66,8 +66,7 @@ TopicStateMonitorNode::TopicStateMonitorNode(const rclcpp::NodeOptions & node_op
     this->add_on_set_parameters_callback(std::bind(&TopicStateMonitorNode::onParameter, this, _1));
 
   // Core
-  topic_state_monitor_ = std::make_unique<TopicStateMonitor>(*this);
-  topic_state_monitor_->setParam(param_);
+  topic_state_monitor_ = std::make_unique<TopicStateMonitor>(*this, param_);
 
   // Subscriber
   rclcpp::QoS qos = rclcpp::QoS{1};
