@@ -80,12 +80,12 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
   int64_t max_mem_pool_size_in_byte =
     declare_parameter<int64_t>("max_mem_pool_size_in_byte", 1e9);  // 1 GB
   // Initialize CUDA blackboard subscriber
-  sub_ =
-    std::make_shared<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
-      *this, "~/input/pointcloud",
-      std::bind(
-        &CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback, this,
-        std::placeholders::_1));
+  // sub_ =
+  //   std::make_shared<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
+  //     *this, "~/input/pointcloud",
+  //     std::bind(
+  //       &CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback, this,
+  //       std::placeholders::_1));
 
   // Initialize CUDA blackboard publisher
   pub_ =
@@ -98,42 +98,53 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
 
   cuda_ground_segmentation_filter_ = std::make_unique<CudaScanGroundSegmentationFilter>(
     filter_parameters, max_mem_pool_size_in_byte);
+
+  pc2_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
+    "~/input/pointcloud", 100,
+    std::bind(
+      &CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback, 
+      this, std::placeholders::_1
+    )
+  );
 }
 
 void CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback(
-  const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & msg)
+  // const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & msg)
+  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pc2_msg)
 {
   // start time measurement
   if (stop_watch_ptr_) {
     stop_watch_ptr_->tic("processing_time");
   }
-  // Create unique_ptr first
-  auto non_ground_unique = std::make_unique<cuda_blackboard::CudaPointCloud2>();
-  auto ground_unique = std::make_unique<cuda_blackboard::CudaPointCloud2>();
 
-  // Create shared_ptr from raw pointers for the function call
-  auto non_ground_shared = std::shared_ptr<cuda_blackboard::CudaPointCloud2>(
-    non_ground_unique.get(), [](auto *) {});  // no-op deleter
-  auto ground_shared =
-    std::shared_ptr<cuda_blackboard::CudaPointCloud2>(ground_unique.get(), [](auto *) {});
+  RCLCPP_INFO(this->get_logger(), "Size of the input = %u", pc2_msg->width);
+  // // Create unique_ptr first
+  // auto non_ground_unique = std::make_unique<cuda_blackboard::CudaPointCloud2>();
+  // auto ground_unique = std::make_unique<cuda_blackboard::CudaPointCloud2>();
 
-  cuda_ground_segmentation_filter_->classifyPointcloud(msg, non_ground_shared, ground_shared);
+  // // Create shared_ptr from raw pointers for the function call
+  // auto non_ground_shared = std::shared_ptr<cuda_blackboard::CudaPointCloud2>(
+  //   non_ground_unique.get(), [](auto *) {});  // no-op deleter
+  // auto ground_shared =
+  //   std::shared_ptr<cuda_blackboard::CudaPointCloud2>(ground_unique.get(), [](auto *) {});
 
-  // Publish using the original unique_ptr
-  pub_->publish(std::move(non_ground_unique));
-  pub_gnd_->publish(std::move(ground_unique));
+  // cuda_ground_segmentation_filter_->classifyPointcloud(msg, non_ground_shared, ground_shared);
 
-  // end time measurement
-  if (debug_publisher_ptr_ && stop_watch_ptr_) {
-    stop_watch_ptr_->toc("processing_time");
-    stop_watch_ptr_->toc("cyclic_time");
-    const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
-    const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
-    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "debug/cyclic_time_ms", cyclic_time_ms);
-    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "debug/processing_time_ms", processing_time_ms);
-  }
+  // // Publish using the original unique_ptr
+  // pub_->publish(std::move(non_ground_unique));
+  // pub_gnd_->publish(std::move(ground_unique));
+
+  // // end time measurement
+  // if (debug_publisher_ptr_ && stop_watch_ptr_) {
+  //   stop_watch_ptr_->toc("processing_time");
+  //   stop_watch_ptr_->toc("cyclic_time");
+  //   const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
+  //   const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
+  //   debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+  //     "debug/cyclic_time_ms", cyclic_time_ms);
+  //   debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+  //     "debug/processing_time_ms", processing_time_ms);
+  // }
 }
 
 }  // namespace autoware::cuda_ground_segmentation

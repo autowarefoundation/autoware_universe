@@ -14,8 +14,6 @@
 
 #include "autoware/cuda_scan_ground_segmentation/cuda_scan_ground_segmentation_filter.hpp"
 
-#include <autoware/cuda_scan_ground_segmentation/cuda_common.hpp>
-#include <autoware/cuda_scan_ground_segmentation/cuda_utility.cuh>
 #include <cub/cub.cuh>
 
 #include <sensor_msgs/msg/point_field.hpp>
@@ -38,7 +36,31 @@ __device__ const T getElementValue(
 }
 __device__ __forceinline__ float fastAtan2_0_2Pi(float y, float x)
 {
-  return fmodf(atan2(y, x) + 2.0f * M_PI, 2.0f * M_PI);
+  float angle = atan2f(y, x);  // Returns [-π, π]
+  if (angle < 0.0f) {
+    angle += 2.0f * M_PI;  // Convert to [0, 2π]
+  }
+  return angle;
+}
+
+/**
+ * @brief CUDA kernel to initialize an array of ClassifiedPointTypeStruct elements.
+ *
+ * This kernel sets the `z` field to 0.0f, the `type` field to PointType::INIT,
+ * the `radius` field to -1.0f, and the `origin_index` field to 0 for each element
+ * in the input array up to N elements. Each thread processes one element.
+ *
+ * @param arr Pointer to the array of ClassifiedPointTypeStruct to initialize.
+ * @param N The number of points in the array to initialize.
+ */
+__global__ void initPoints(ClassifiedPointTypeStruct * arr, uint32_t N)
+{
+  uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx >= N) return;
+  arr[idx].z = 0.0f;
+  arr[idx].type = PointType::INIT;
+  arr[idx].radius = -1.0f;
+  arr[idx].origin_index = 0;
 }
 
 /**
@@ -77,6 +99,82 @@ __global__ void getCellNumPointsKernel(
     return;  // Out of bounds
   }
   num_points_per_cell[idx] = centroid_cells_list_dev[idx].num_points;
+}
+
+/**
+ * @brief CUDA kernel to assign each point in the input point cloud to a classified cell.
+ *
+ * This kernel splits the input point cloud into sectors and cells based on the angle and distance
+ * from a specified center. Each point is assigned to a cell, and the number of points in each cell
+ * is tracked. The classified points are stored in an output array, with each point's metadata
+ * updated accordingly.
+ *
+ * @param[in]  input_points              Pointer to the input point cloud array.
+ * @param[in]  num_points                Number of points in the input point cloud.
+ * @param[in]  cells_centroid_dev        Pointer to the array of cell centroid information.
+ * @param[in,out] cell_counts_dev        Pointer to the array tracking the number of points per cell
+ * (atomic).
+ * @param[in]  filter_parameters_dev     Pointer to the filter parameters (e.g., sector angle, cell
+ * size, center).
+ * @param[out] classified_points_dev     Pointer to the output array of classified points.
+ *
+ * @details
+ * - Each thread processes one point from the input point cloud.
+ * - The angle and radius from the center are computed for each point.
+ * - The sector and cell indices are determined based on these values.
+ * - Points are atomically assigned to a slot in their corresponding cell.
+ * - The classified point's metadata (z, type, radius, origin index) is set in the output array.
+ * - Out-of-bounds checks are performed at each step to ensure memory safety.
+ *
+ * @note
+ * - The function assumes that the output arrays and counters are properly initialized.
+ * - The kernel uses atomic operations to safely increment cell counts in parallel.
+ * - The function does not update cell centroid values; it only assigns points to cells.
+ */
+__global__ void assignPointToClassifyPointKernel(
+  const PointTypeStruct * __restrict__ input_points, const uint32_t num_points,
+  const CellCentroid * __restrict__ cells_centroid_dev, uint32_t * __restrict__ cell_counts_dev,
+  const FilterParameters * __restrict__ filter_parameters_dev,
+  ClassifiedPointTypeStruct * __restrict__ classified_points_dev)
+{
+  uint32_t idx = static_cast<uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
+  if (idx >= num_points) {
+    return;  // Out of bounds
+  }
+  const auto & inv_sector_angle_rad = filter_parameters_dev->inv_sector_angle_rad;
+  // Calculate the angle and distance from the center
+  const float x = input_points[idx].x - filter_parameters_dev->center_x;
+  const float y = input_points[idx].y - filter_parameters_dev->center_y;
+  const float radius = sqrtf(x * x + y * y);
+  const float angle = fastAtan2_0_2Pi(y, x);  // replace with approximate atan
+  // Determine the radial division index
+  auto division_sector_index = static_cast<uint32_t>(angle * inv_sector_angle_rad);
+  auto cell_index_in_sector =
+    static_cast<uint32_t>(radius / filter_parameters_dev->cell_divider_size_m);
+  auto cell_id =
+    division_sector_index * filter_parameters_dev->max_num_cells_per_sector + cell_index_in_sector;
+  if (cell_id >= filter_parameters_dev->max_num_cells) {
+    return;  // Out of bounds
+  }
+
+  uint32_t slot_idx = atomicAdd(&cell_counts_dev[cell_id], 1);
+  // check local bounds for slot_idx
+  if (slot_idx >= cells_centroid_dev[cell_id].num_points) {
+    return;  // Out of bounds
+  }
+  auto classify_point_idx =
+    static_cast<uint32_t>(cells_centroid_dev[cell_id].start_point_index + slot_idx);
+  // Check global bounds
+  if (classify_point_idx >= num_points) {
+    return;  // Out of bounds
+  }
+  // add pointcloud to output grid list
+  auto & assign_classified_point_dev = classified_points_dev[classify_point_idx];
+  assign_classified_point_dev.z = input_points[idx].z;
+  assign_classified_point_dev.type = PointType::INIT;
+
+  assign_classified_point_dev.radius = radius;
+  assign_classified_point_dev.origin_index = idx;
 }
 
 /**
@@ -745,18 +843,20 @@ __global__ void scanPerSectorGroundReferenceKernel(
   }
 }
 
-// Initialize the cell list
-__global__ void cellInit(Cell * __restrict__ cell_list, int max_num_cells)
+__global__ void CellsCentroidInitializeKernel(
+  CellCentroid * __restrict__ centroid_cells_list_dev, const uint32_t max_num_cells)
 {
-  int index = threadIdx.x + blockIdx.x * blockDim.x;
-  int stride = blockDim.x * gridDim.x;
-  Cell new_cell;
-
-  for (int i = index; i < max_num_cells; i += stride) {
-    new_cell.gnd_height_min = 1e6f;
-
-    cell_list[i] = new_cell;
+  uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx >= max_num_cells) {
+    return;  // Out of bounds
   }
+  centroid_cells_list_dev[idx].gnd_radius_avg = 0.0f;
+  centroid_cells_list_dev[idx].gnd_height_avg = 0.0f;
+  centroid_cells_list_dev[idx].gnd_height_min = 1e6f;
+  centroid_cells_list_dev[idx].num_points = 0;
+  centroid_cells_list_dev[idx].cell_id = 0;  // Initialize cell_id to -1
+  centroid_cells_list_dev[idx].num_ground_points = 0;
+  centroid_cells_list_dev[idx].start_point_index = 0;
 }
 
 /**
@@ -778,54 +878,36 @@ __global__ void cellInit(Cell * __restrict__ cell_list, int max_num_cells)
  *       point count in each cell when multiple threads access the same cell concurrently.
  * @note Points that fall outside the defined grid (cell_id >= max_num_cells) are ignored.
  */
-__global__ void computeCellId(
-  const cuda::PointCloud2::Ptr input_points, FilterParameters param, int * cell_id, int * count,
-  ClassifiedPointType * classified_points)
+__global__ void calcCellPointNumberKernel(
+  const PointTypeStruct * __restrict__ input_points, const uint32_t num_input_points,
+  const FilterParameters * __restrict__ filter_parameters_dev,
+  CellCentroid * __restrict__ centroid_cells_list_dev)
 {
-  int index = threadIdx.x + blockIdx.x * blockDim.x;
-  int stride = blockDim.x * gridDim.x;
-  ClassifiedPointType cp;
-
-  cp.type = PointType::INIT;
-
-  for (int i = index; i < input_points.size(); i += stride) {
-    auto p = input_points[i];
-    float dx = p.x - param.center_x;
-    float dy = p.y - param.center_y;
-    float radius = hypotf(dx, dy);
-    float angle = fastAtan2_0_2Pi(dy, dx);
-    int sector_id = static_cast<int>(angle * param.inv_sector_angle_rad);
-    int cell_id_in_sector = static_cast<int>(radius / param.cell_divider_size_m);
-    int point_cell_id = cell_id_in_sector * param.num_sectors + sector_id;
-
-    // Save this so we don't have to recalculate later
-    cell_id[i] = point_cell_id;
-
-    // ALso, initialize classified points
-    cp.z = p.z;
-    cp.radius = radius;
-    cp.origin_index = i;
-
-    classified_points[i] = cp;
-
-    // Also update the number of points in each cell atomically
-    atomicAdd(count + point_cell_id, 1);
+  uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx >= num_input_points) {
+    return;
   }
-}
 
-__global__ void distributePointsToCell(
-  ClassifiedPointType * input, ClassifiedPointType * output, int * cell_id, int point_num,
-  int * writing_loc)
-{
-  int index = threadIdx.x + blockIdx.x * blockDim.x;
-  int stride = blockDim.x * gridDim.x;
+  const auto & inv_sector_angle_rad = filter_parameters_dev->inv_sector_angle_rad;
 
-  for (int i = index; i < point_num; i += stride) {
-    int cid = cell_id[i];
-    int wloc = atomicAdd(writing_loc + cid, 1);
+  // Calculate the angle and distance from the center
+  const float dx = input_points[idx].x - filter_parameters_dev->center_x;
+  const float dy = input_points[idx].y - filter_parameters_dev->center_y;
+  const float radius = sqrtf(dx * dx + dy * dy);
+  const float angle = fastAtan2_0_2Pi(dy, dx);  // replace with approximate atan
 
-    output[wloc] = input[i];
+  // Determine the radial division index
+  auto sector_index = static_cast<uint32_t>(angle * inv_sector_angle_rad);
+  auto cell_index_in_sector =
+    static_cast<uint32_t>(radius / filter_parameters_dev->cell_divider_size_m);
+  auto cell_id =
+    sector_index * filter_parameters_dev->max_num_cells_per_sector + cell_index_in_sector;
+
+  if (cell_id >= filter_parameters_dev->max_num_cells) {
+    return;  // Out of bounds
   }
+  auto & cell = centroid_cells_list_dev[cell_id];
+  uint32_t current_cell_points_num = atomicAdd(&cell.num_points, 1);
 }
 
 // Mark obstacle points for point in classified_points_dev
@@ -896,22 +978,81 @@ __global__ void scatterKernel(
   }
 }
 
+/**
+ * @brief CUDA kernel to update the start point index for each cell centroid.
+ *
+ * This kernel assigns the corresponding start point index from the input array
+ * `cell_first_point_indices_dev` to each element in the `centroid_cells_list_dev` array.
+ * Each thread processes one cell, identified by its global thread index.
+ *
+ * @param[out] centroid_cells_list_dev  Device pointer to the array of cell centroids to update.
+ * @param[in]  cell_first_point_indices_dev  Device pointer to the array containing the start point
+ * indices for each cell.
+ * @param[in]  max_num_cells  The total number of cells to process.
+ */
+__global__ void updateCellStartPointIndexKernel(
+  CellCentroid * __restrict__ centroid_cells_list_dev,
+  const size_t * __restrict__ cell_first_point_indices_dev, const uint32_t max_num_cells)
+{
+  uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx >= max_num_cells) {
+    return;  // Out of bounds
+  }
+  // Update the start point index for each cell
+  centroid_cells_list_dev[idx].start_point_index = cell_first_point_indices_dev[idx];
+}
+
 }  // namespace
 
 CudaScanGroundSegmentationFilter::CudaScanGroundSegmentationFilter(
   const FilterParameters & filter_parameters, const int64_t max_mem_pool_size_in_byte)
 : filter_parameters_(filter_parameters)
 {
-  stream_.reset(new CudaStream());
+  CHECK_CUDA_ERROR(cudaStreamCreate(&ground_segment_stream_));
 
-  int current_device_id = 0;
+  {
+    int current_device_id = 0;
+    CHECK_CUDA_ERROR(cudaGetDevice(&current_device_id));
+    cudaMemPoolProps pool_props = {};
+    pool_props.allocType = cudaMemAllocationTypePinned;
+    pool_props.location.id = current_device_id;
+    pool_props.location.type = cudaMemLocationTypeDevice;
 
-  CHECK_CUDA_ERROR(cudaGetDevice(&current_device_id));
-  mempool_.reset(new CudaMempool(current_device_id, max_mem_pool_size_in_byte));
+    CHECK_CUDA_ERROR(cudaMemPoolCreate(&mem_pool_, &pool_props));
 
-  dev_input_points_.reset(new cuda::PointCloud2(stream_, mempool_));
-  dev_output_points_.reset(new cuda::PointCloud2(stream_, mempool_));
-  dev_ground_points_.reset(new cuda::PointCloud2(stream_, mempool_));
+    uint64_t pool_release_threshold = max_mem_pool_size_in_byte;
+    CHECK_CUDA_ERROR(cudaMemPoolSetAttribute(
+      mem_pool_, cudaMemPoolAttrReleaseThreshold, static_cast<void *>(&pool_release_threshold)));
+  }
+}
+
+template <typename T>
+T * CudaScanGroundSegmentationFilter::allocateBufferFromPool(size_t num_elements)
+{
+  T * buffer{};
+  CHECK_CUDA_ERROR(
+    cudaMallocFromPoolAsync(&buffer, num_elements * sizeof(T), mem_pool_, ground_segment_stream_));
+  CHECK_CUDA_ERROR(cudaMemsetAsync(buffer, 0, num_elements * sizeof(T), ground_segment_stream_));
+
+  return buffer;
+}
+
+template <typename T>
+void CudaScanGroundSegmentationFilter::returnBufferToPool(T * buffer)
+{
+  CHECK_CUDA_ERROR(cudaFreeAsync(buffer, ground_segment_stream_));
+}
+
+void CudaScanGroundSegmentationFilter::scanObstaclePoints(
+  const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
+  PointTypeStruct * output_points_dev, size_t * num_output_points,
+  CellCentroid * centroid_cells_list_dev)
+{
+  // Implementation of the function to scan obstacle points
+  if (number_input_points_ == 0) {
+    *num_output_points = 0;
+    return;
+  }
 }
 
 // ============= Sort points in each cell by radius =============
@@ -941,316 +1082,59 @@ void CudaScanGroundSegmentationFilter::scanPerSectorGroundReference(
   CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
-__forceinline__ __device__ SegmentationMode checkSegmentMode(
-  int cell_id, int closest_gnd_cell_id, int furthest_gnd_cell_id, int gnd_cell_buffer_size,
-  int gnd_cell_continual_threshold)
+// =========== looping all input pointcloud and update cells ==================
+void CudaScanGroundSegmentationFilter::countCellPointNum(
+  const PointTypeStruct * input_points_dev, CellCentroid * centroid_cells_list_dev,
+  const FilterParameters * filter_parameters_dev)
 {
-  if (closest_gnd_cell_id < 0) {
-    return SegmentationMode::UNINITIALIZED;
+  // Implementation of the function to divide the point cloud into radial divisions
+  // Sort the points in each radial division by distance from the center
+  // return the indices of the points in each radial division
+  if (number_input_points_ == 0) {
+    return;
   }
 
-  if (cell_id - closest_gnd_cell_id >= gnd_cell_continual_threshold) {
-    return SegmentationMode::BREAK;
+  if (filter_parameters_.max_num_cells == 0) {
+    return;
   }
 
-  if (cell_id - furthest_gnd_cell_id <= gnd_cell_buffer_size) {
-    return SegmentationMode::CONTINUOUS;
-  }
+  dim3 block_dim(512);
 
-  return SegmentationMode::DISCONTINUOUS;
+  dim3 cells_grid_dim((filter_parameters_.max_num_cells + block_dim.x - 1) / block_dim.x);
+
+  dim3 points_grid_dim((number_input_points_ + block_dim.x - 1) / block_dim.x);
+
+  // initialize the list of cells centroid
+  CellsCentroidInitializeKernel<<<cells_grid_dim, block_dim, 0, ground_segment_stream_>>>(
+    centroid_cells_list_dev, filter_parameters_.max_num_cells);
+  CHECK_CUDA_ERROR(cudaGetLastError());
+
+  calcCellPointNumberKernel<<<points_grid_dim, block_dim, 0, ground_segment_stream_>>>(
+    input_points_dev, number_input_points_, filter_parameters_dev, centroid_cells_list_dev);
+  CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
-__forceinline__ __device__ void segmentUninitializedPoint(
-  ClassifiedPointType & p, const FilterParameters & param)
+// ========== Assign each pointcloud to specific cell =========================
+void CudaScanGroundSegmentationFilter::assignPointToClassifyPoint(
+  const PointTypeStruct * input_points_dev, const CellCentroid * centroid_cells_list_dev,
+  const FilterParameters * filter_parameters_dev, uint32_t * cell_counts_dev,
+  ClassifiedPointTypeStruct * classified_points_dev)
 {
-  if (p.z > param.detection_range_z_max || p.z < param.non_ground_height_threshold) {
-    p.type = PointType::OUT_OF_RANGE;
+  // implementation of the function to split point cloud into cells
+  if (number_input_points_ == 0) {
     return;
   }
+  dim3 block_dim(512);
+  dim3 grid_dim((number_input_points_ + block_dim.x - 1) / block_dim.x);
 
-  float global_height_th = p.radius * param.global_slope_max_ratio;
+  initPoints<<<grid_dim, block_dim, 0, ground_segment_stream_>>>(
+    classified_points_dev, number_input_points_);
+  CHECK_CUDA_ERROR(cudaGetLastError());
 
-  if (p.z > global_height_th && p.z > param.non_ground_height_threshold) {
-    p.type = PointType::NON_GROUND;
-    return;
-  }
-
-  float abs_pz = abs(p.z);
-
-  if (abs_pz < global_height_th && abs_pz < param.non_ground_height_threshold) {
-    p.type = PointType::GROUND;
-  }
-}
-
-__forceinline__ __device__ void segmentContinuousPoint(
-  ClassifiedPointType & p, const FilterParameters & param, float slope,
-  float prev_cell_gnd_height_avg, float prev_cell_gnd_radius_avg)
-{
-  if (p.z - prev_cell_gnd_height_avg > param.detection_range_z_max) {
-    p.type = PointType::OUT_OF_RANGE;
-    return;
-  }
-
-  float d_radius = p.radius - prev_cell_gnd_radius_avg + param.cell_divider_size_m;
-  float dz = p.z - prev_cell_gnd_height_avg;
-
-  if (p.z > param.global_slope_max_ratio * p.radius) {
-    p.type = PointType::NON_GROUND;
-    return;
-  }
-
-  if (dz > param.local_slope_max_ratio * d_radius) {
-    p.type = PointType::NON_GROUND;
-    return;
-  }
-
-  float estimated_ground_z = prev_cell_gnd_height_avg + slope * param.cell_divider_size_m;
-
-  if (p.z > estimated_ground_z + param.non_ground_height_threshold) {
-    p.type = PointType::NON_GROUND;
-    return;
-  }
-
-  if (
-    p.z < estimated_ground_z - param.non_ground_height_threshold ||
-    dz < -param.local_slope_max_ratio * d_radius ||
-    p.z < -param.global_slope_max_ratio * p.radius) {
-    p.type = PointType::OUT_OF_RANGE;
-    return;
-  }
-
-  p.type = PointType::GROUND;
-}
-
-__forceinline__ __device__ void segmentDiscontinuousPoint(
-  ClassifiedPointType & p, const FilterParameters & param, float prev_cell_gnd_height_avg,
-  float prev_cell_gnd_radius_avg)
-{
-  if (p.z - prev_cell_gnd_height_avg > param.detection_range_z_max) {
-    p.type = PointType::OUT_OF_RANGE;
-    return;
-  }
-
-  float dz = p.z - prev_cell_gnd_height_avg;
-  float d_radius = p.radius - prev_cell_gnd_radius_avg + param.cell_divider_size_m;
-  float global_height_threshold = p.radius * param.global_slope_max_ratio;
-  float local_height_threshold = param.local_slope_max_ratio * d_radius;
-
-  if (p.z > global_height_threshold || dz > local_height_threshold) {
-    p.type = PointType::NON_GROUND;
-    return;
-  }
-
-  if (dz < -local_height_threshold || p.z < -global_height_threshold) {
-    p.type = PointType::OUT_OF_RANGE;
-    return;
-  }
-
-  p.type = PointType::GROUND;
-}
-
-__forceinline__ __device__ void segmentBreakPoint(
-  ClassifiedPointType & p, const FilterParameters & param, float prev_cell_gnd_height_avg,
-  float prev_cell_gnd_radius_avg)
-{
-  if (p.z - prev_cell_gnd_height_avg > param.detection_range_z_max) {
-    p.type = PointType::OUT_OF_RANGE;
-    return;
-  }
-
-  float dz = p.z - prev_cell_gnd_height_avg;
-  float d_radius = p.radius - prev_cell_gnd_radius_avg;
-  float global_height_threshold = d_radius * param.global_slope_max_ratio;
-
-  p.type = (dz > global_height_threshold)
-             ? PointType::NON_GROUND
-             : ((dz < -global_height_threshold) ? PointType::OUT_OF_RANGE : PointType::GROUND);
-}
-
-__forceinline__ __device__ void segmentCell(
-  int wid,  // Index of the thread in the warp
-  ClassifiedPointType * sorted_points, const FilterParameters & param, Cell & cell,
-  float slope,                 // Slope of the line connect the previous ground cells
-  int start_pid, int end_pid,  // Start and end indices of points in the current cell
-  float prev_cell_gnd_radius_avg, float prev_cell_gnd_height_avg, const SegmentationMode & mode)
-{
-  // For computing the cell statistic
-  float t_gnd_radius_sum = 0;
-  float t_gnd_height_sum = 0;
-  float t_gnd_height_min = FLT_MAX;
-  int t_gnd_point_num = 0;
-
-  // Fit line from the recent ground cells
-  for (int j = start_pid + wid; j < end_pid; j += WARP_SIZE) {
-    auto p = sorted_points[j];
-
-    switch (mode) {
-      case (SegmentationMode::UNINITIALIZED): {
-        segmentUninitializedPoint(p, param);
-        break;
-      }
-      case (SegmentationMode::CONTINUOUS): {
-        segmentContinuousPoint(p, param, slope, prev_cell_gnd_height_avg, prev_cell_gnd_radius_avg);
-        break;
-      }
-      case (SegmentationMode::DISCONTINUOUS): {
-        segmentDiscontinuousPoint(p, param, prev_cell_gnd_height_avg, prev_cell_gnd_radius_avg);
-        break;
-      }
-      case (SegmentationMode::BREAK): {
-        segmentBreakPoint(p, param, prev_cell_gnd_height_avg, prev_cell_gnd_radius_avg);
-        break;
-      }
-    }
-
-    if (p.type == PointType::GROUND) {
-      t_gnd_radius_sum += p.radius;
-      t_gnd_height_sum += p.z;
-      t_gnd_point_num += 1;
-      t_gnd_height_min = (t_gnd_height_min > p.z) ? p.z : t_gnd_height_min;
-    }
-  }
-
-  // Wait for all threads in the warp to finish
-  __syncwarp();
-  // Find the min height and the number of ground points first
-
-  // Use reduction to compute cell's stat
-  for (int offset = WARP_SIZE >> 1; offset > 0; offset >> 1) {
-    t_gnd_point_num += __shfl_down_sync(FULL_MASK, t_gnd_point_num, offset);
-
-    float other_height_min = __shfl_down_sync(FULL_MASK, t_gnd_height_min, offset);
-
-    t_gnd_height_min = min(t_gnd_height_min, other_height_min);
-  }
-
-  // Now broadcast the min height and the number of ground points to all threads
-  float cell_gnd_height_min = __shfl_sync(FULL_MASK, t_gnd_height_min, 0);
-  int cell_gnd_point_num = __shfl_sync(FULL_MASK, t_gnd_point_num, 0);
-
-  // Now recheck the points using the height_min
-  for (int j = wid; j <) {
-  }
-
-  __syncwarp();
-
-  t_gnd_radius_sum += __shfl_down_sync(FULL_MASK, t_gnd_radius_sum, offset);
-  t_gnd_height_sum += __shfl_down_sync(FULL_MASK, t_gnd_height_sum, offset);
-
-  if (wid == 0) {
-    cell.gnd_radius_avg = t_gnd_radius_sum / (float)(t_gnd_point_num);
-    cell.gnd_height_avg = t_gnd_height_sum / (float)(t_gnd_point_num);
-    cell.gnd_height_min = t_gnd_height_min;
-    cell.num_ground_points = t_gnd_point_num;
-  }
-
-  // TODO: recheck
-}
-
-// Update partial sums and slope
-__forceinline__ __device__ void updateLineFitParam(
-  float & sum_x, float & sum_y, float & sum_xx, float & sum_xy, float & slope,
-  int num_fitting_cells, const float & old_x, const float & old_y, const float & new_x,
-  const float & new_y, const FilterParameters & param)
-{
-  sum_x = sum_x - old_x + new_x;
-  sum_y = sum_y - old_y + new_y;
-  sum_xx = sum_xx - old_x * old_x + new_x * new_x;
-  sum_xy = sum_xy - old_x * old_y + new_x * new_y;
-
-  float denom = num_fitting_cells * sum_xx - sum_x * sum_x;
-
-  slope =
-    (fabsf(denom) < 1e-6f) ? new_y / new_x : (num_fitting_cells * sum_xy - sum_x * sum_y) / denom;
-  slope = (slope > param.global_slope_max_ratio)
-            ? param.global_slope_max_ratio
-            : ((slope < -param.global_slope_max_ratio) ? -param.global_slope_max_ratio : slope);
-}
-}
-
-__global__ void sectorProcessingKernel(
-  Cell * __restrict__ cell_list, ClassifiedPointType * __restrict__ classied_points,
-  int * starting_pid, FilterParameters param)
-{
-  int index = threadIdx.x + blockIdx.x * blockDim.x;
-  // Each warp handles one sector
-  int sector_id = index / WARP_SIZE;
-  int wid = index % WARP_SIZE;
-
-  // TODO: loop on sectors, not just do this
-  if (sector_id >= param.num_sectors) {
-    return;
-  }
-
-  // Store the previous ground cells
-  int closest_gnd_cell_id, furthest_gnd_cell_id;
-
-  // Initially no ground cell is identified
-  closest_gnd_cell_id = furthest_gnd_cell_id = -1;
-
-  // Loop on the cells in a sector
-  for (int i = 0; i < param.max_num_cells_per_sector; ++i) {
-    auto mode = checkSegmentationMode(
-      i, closest_gnd_cell_id, furthest_gnd_cell_id, param.gnd_cell_buffer_size,
-      param.gnd_grid_continual_thresh);
-
-    int global_cell_id = i * param.num_sector + sector_id;
-    int start_pid = starting_pid[global_cell_id], end_pid = starting_pid[global_cell_id + 1];
-
-    // Classify the points in the cell
-    segmentCell(
-      wid, sorted_points, slope, param, start_pid, end_pid, prev_cell_gnd_radius_avg,
-      prev_cell_gnd_height_avg, mode);
-
-    // Compute the radius_avg, height_avg, height_min, and number of ground points in the cell
-
-    // Update the indices of the previous ground cells
-  }
-}
-
-void CudaScanGroundSegmentationFilter::sector_processing(
-  device_vector<Cell> & cell_list, device_vector<ClassifiedPointType> & classified_points)
-{
-}
-
-void CudaScanGroundSegmentationFilter::sort_points(
-  device_vector<Cell> & cell_list, device_vector<int> & starting_pid,
-  device_vector<ClassifiedPointType> & classified_points)
-{
-  if (dev_input_points_.empty() || filter_parameters_.max_num_cells == 0) {
-    return;
-  }
-
-  int point_num = dev_input_points_.size();
-
-  cell_list.resize(filter_parameters_.max_num_cells);
-
-  CHECK_CUDA_ERROR(
-    cuda::launchAsync<BLOCK_SIZE_X>(
-      (int)(cell_list.size()), 0, stream_->get(), cellInit, cell_list.data(),
-      (int)(cell_list.size())));
-
-  starting_pid.resize(point_num + 1);
-
-  device_vector<int> cell_id(point_num, stream_, mempool_);
-  device_vector<ClassifiedPointType> tmp_classified_points(point_num, stream_, mempool_);
-
-  CHECK_CUDA_ERROR(cuda::fill(starting_pid, 0));
-  CHECK_CUDA_ERROR(
-    cuda::launchAsync<BLOCK_SIZE_X>(
-      point_num, 0, stream_->get(), computeCellId, dev_input_points_.data(), filter_parameters_,
-      cell_id.data(), starting_pid.data(), tmp_classified_points.data()));
-
-  CHECK_CUDA_ERROR(cuda::ExclusiveScan(starting_pid));
-
-  device_vector<int> writing_loc(starting_pid, stream_, mempool_);
-
-  classified_points.resize(point_num);
-
-  CHECK_CUDA_ERROR(
-    cuda::launchAsync<BLOCK_SIZE_X>(
-      point_num, 0, stream_->get(), distributePointsToCell, tmp_classified_points.data(),
-      classified_points.data(), cell_id.data(), point_num, writing_loc.data()));
+  assignPointToClassifyPointKernel<<<grid_dim, block_dim, 0, ground_segment_stream_>>>(
+    input_points_dev, number_input_points_, centroid_cells_list_dev, cell_counts_dev,
+    filter_parameters_dev, classified_points_dev);
+  CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
 // ============= Extract non-ground points =============
@@ -1346,17 +1230,54 @@ void CudaScanGroundSegmentationFilter::getCellFirstPointIndex(
   CHECK_CUDA_ERROR(cudaFree(d_temp_storage));
 }
 
-void CudaScanGroundSegmentationFilter::classifyPointCloud(
-  sensor_msgs::msg::PointCloud2 & input_points, sensor_msgs::msg::PointCloud2 & output_points,
-  sensor_msgs::msg::PointCloud2 & ground_points)
+void CudaScanGroundSegmentationFilter::classifyPointcloud(
+  const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
+  cuda_blackboard::CudaPointCloud2::SharedPtr output_points,
+  cuda_blackboard::CudaPointCloud2::SharedPtr ground_points)
 {
-  dev_input_points_.from_point_cloud2(input_points);
+  number_input_points_ = input_points->width * input_points->height;
+  input_pointcloud_step_ = input_points->point_step;
+  const size_t max_bytes = number_input_points_ * sizeof(PointTypeStruct);
 
-  device_vector<Cell> cell_list(stream_, mempool_);
-  device_vector<int> starting_pid(stream_, mempool_);
-  device_vector<ClassifiedPointType> classified_points(stream_, mempool_);
+  // auto output_points = std::make_unique<cuda_blackboard::CudaPointCloud2>();
+  output_points->data = cuda_blackboard::make_unique<std::uint8_t[]>(max_bytes);
+  ground_points->data = cuda_blackboard::make_unique<std::uint8_t[]>(max_bytes);
 
-  sort_points(cell_list, starting_pid, classified_points);
+  auto * output_points_dev = reinterpret_cast<PointTypeStruct *>(output_points->data.get());
+  auto * ground_points_dev = reinterpret_cast<PointTypeStruct *>(ground_points->data.get());
+  uint32_t num_output_points = 0;
+
+  output_points->header = input_points->header;
+  output_points->height = 1;
+  output_points->is_bigendian = input_points->is_bigendian;
+  output_points->point_step = input_points->point_step;
+  output_points->is_dense = input_points->is_dense;
+  output_points->fields = input_points->fields;
+
+  // ground points for debugging
+  ground_points->header = input_points->header;
+  ground_points->height = 1;
+  ground_points->is_bigendian = input_points->is_bigendian;
+  ground_points->point_step = input_points->point_step;
+  ground_points->is_dense = input_points->is_dense;
+  ground_points->fields = input_points->fields;
+
+  if (number_input_points_ == 0) {
+    output_points->width = static_cast<uint32_t>(num_output_points);
+    output_points->row_step = static_cast<uint32_t>(num_output_points * sizeof(PointTypeStruct));
+
+    ground_points->width = static_cast<uint32_t>(num_output_points);
+    ground_points->row_step = static_cast<uint32_t>(num_output_points * sizeof(PointTypeStruct));
+    return;
+  }
+  const auto * input_points_dev =
+    reinterpret_cast<const PointTypeStruct *>(input_points->data.get());
+
+  // Allocate and copy filter parameters to device
+  auto * filter_parameters_dev = allocateBufferFromPool<FilterParameters>(1);
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    filter_parameters_dev, &filter_parameters_, sizeof(FilterParameters), cudaMemcpyHostToDevice,
+    ground_segment_stream_));
 
   const auto & max_num_cells = filter_parameters_.max_num_cells;
   auto * centroid_cells_list_dev = allocateBufferFromPool<CellCentroid>(max_num_cells);
@@ -1365,6 +1286,16 @@ void CudaScanGroundSegmentationFilter::classifyPointCloud(
   auto * classified_points_dev =
     allocateBufferFromPool<ClassifiedPointTypeStruct>(number_input_points_);
   auto * cell_counts_dev = allocateBufferFromPool<uint32_t>(max_num_cells);
+
+  countCellPointNum(input_points_dev, centroid_cells_list_dev, filter_parameters_dev);
+  // calculate the index of the start point in each cell
+  // update start point index into cell_first_point_indices_dev.start_point_index
+  getCellFirstPointIndex(
+    centroid_cells_list_dev, num_points_per_cell_dev, cell_first_point_indices_dev);
+
+  assignPointToClassifyPoint(
+    input_points_dev, centroid_cells_list_dev, filter_parameters_dev, cell_counts_dev,
+    classified_points_dev);
 
   scanPerSectorGroundReference(
     classified_points_dev, centroid_cells_list_dev, filter_parameters_dev);

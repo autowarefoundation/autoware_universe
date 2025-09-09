@@ -28,7 +28,6 @@
 
 #include "cuda_mempool_wrapper.hpp"
 #include "cuda_stream_wrapper.hpp"
-#include "cuda_point_cloud2.hpp"
 
 namespace autoware::cuda_ground_segmentation
 {
@@ -55,26 +54,35 @@ enum class PointType : uint8_t {
   OUT_OF_RANGE
 };
 
-struct alignas(16) ClassifiedPointType
+struct ClassifiedPointTypeStruct
 {
   float z;
   PointType type;
   float radius;
   size_t origin_index;  // index in the original point cloud
 
-  CUDAH ClassifiedPointType() : z(0.0), type(PointType::INIT), radius(-1.0), origin_index(0) {}
+  ClassifiedPointTypeStruct() : z(0.0), type(PointType::INIT), radius(-1.0), origin_index(0) {}
 };
 
-struct alignas(16) Cell
+struct CellCentroid
 {
+  uint32_t cell_id;  // cell_id = sector_id * number_cells_per_sector + grid_index
+  uint32_t sector_id;
+  uint32_t cell_id_in_sector;
+  uint32_t num_points;
+  size_t start_point_index;  // start index of points in classified_points_dev
   float gnd_radius_avg;
   float gnd_height_avg;
   float gnd_height_min;
   uint32_t num_ground_points;
   // initialize constructor
-  
-  CUDAH Cell()
-  : gnd_radius_avg(0.0f),
+  CellCentroid()
+  : cell_id(0),
+    sector_id(0),
+    cell_id_in_sector(0),
+    num_points(0),
+    start_point_index(0),
+    gnd_radius_avg(0.0f),
     gnd_height_avg(0.0f),
     gnd_height_min(0.0f),
     num_ground_points(0)
@@ -125,15 +133,6 @@ public:
     cuda_blackboard::CudaPointCloud2::SharedPtr output_points,
     cuda_blackboard::CudaPointCloud2::SharedPtr ground_points);
 
-  void classifyPointCloud(
-    sensor_msgs::msg::PointCloud2 & input_points,
-    sensor_msgs::msg::PointCloud2 & output_points,
-    sensor_msgs::msg::PointCloud2 & ground_points,
-  );
-
-private:
-  std::unique_ptr<cuda::PointCloud2> dev_input_points_, dev_output_points_, dev_ground_points_;
-
   uint32_t number_input_points_;
   uint32_t num_process_points_host_;
   uint32_t input_pointcloud_step_;
@@ -147,6 +146,12 @@ private:
 
 private:
   // Internal methods for ground segmentation logic
+
+  template <typename T>
+  T * allocateBufferFromPool(size_t num_elements);
+
+  template <typename T>
+  void returnBufferToPool(T * buffer);
   void scanObstaclePoints(
     const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
     PointTypeStruct * output_points_dev, size_t * num_output_points,
@@ -160,23 +165,23 @@ private:
   void assignPointToClassifyPoint(
     const PointTypeStruct * input_points_dev, const CellCentroid * centroid_cells_list_dev,
     const FilterParameters * filter_parameters_dev, uint32_t * cell_counts_dev,
-    ClassifiedPointType * classified_points_dev);
+    ClassifiedPointTypeStruct * classified_points_dev);
 
   void getCellFirstPointIndex(
     CellCentroid * centroid_cells_list_dev, uint32_t * num_points_per_cell_dev,
     size_t * cell_first_point_indices_dev);
 
   void sortPointsInCells(
-    const uint32_t * num_points_per_cell_dev, ClassifiedPointType * classified_points_dev);
+    const uint32_t * num_points_per_cell_dev, ClassifiedPointTypeStruct * classified_points_dev);
   void scanPerSectorGroundReference(
-    ClassifiedPointType * classified_points_dev, CellCentroid * centroid_cells_list_dev,
+    ClassifiedPointTypeStruct * classified_points_dev, CellCentroid * centroid_cells_list_dev,
     const FilterParameters * filter_parameters_dev);
 
   /*
    * Extract obstacle points from classified_points_dev into
    */
   void extractNonGroundPoints(
-    const PointTypeStruct * input_points_dev, ClassifiedPointType * classified_points_dev,
+    const PointTypeStruct * input_points_dev, ClassifiedPointTypeStruct * classified_points_dev,
     PointTypeStruct * output_points_dev, uint32_t & num_output_points_host,
     const PointType pointtype);
 
@@ -184,20 +189,7 @@ private:
     const PointTypeStruct * input_points_dev, CellCentroid * indices_list_dev,
     const FilterParameters * filter_parameters_dev);
 
-
-
-  // Distribute points to cells
-  void sort_points(
-    device_vector<Cell> & cell_list, 
-    device_vector<int> & starting_pid,
-    device_vector<ClassifiedPointType> & classified_points);
-
-  void sector_processing(
-    device_vector<Cell> & cell_list,
-    device_vector<ClassifiedPointType> & classified_points
-  );
-  
-  std::shared_ptr<CudaStream> stream_;
+  std::shared_ptr<CudaStream> ground_segment_stream_;
   std::shared_ptr<CudaMempool> mempool_;
 };
 }  // namespace autoware::cuda_ground_segmentation
