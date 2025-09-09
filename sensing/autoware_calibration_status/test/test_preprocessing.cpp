@@ -34,7 +34,7 @@ namespace autoware::calibration_status
 {
 
 constexpr bool save_test_images = true;
-constexpr double lidar_range = 128.0;
+constexpr double max_depth = 128.0;
 constexpr int64_t dilation_size = 1;
 constexpr int64_t cloud_capacity = 2'000'000;
 constexpr float px_error_threshold_rgb = 0.01f;
@@ -89,7 +89,7 @@ void PreprocessingTest::SetUp()
   projection_matrix_d = cuda_utils::make_unique<double[]>(projection_matrix_size);
   tf_matrix_d = cuda_utils::make_unique<double[]>(tf_matrix_size);
 
-  preprocess_ptr = std::make_unique<PreprocessCuda>(lidar_range, dilation_size, stream);
+  preprocess_ptr = std::make_unique<PreprocessCuda>(max_depth, dilation_size, stream);
 }
 
 void PreprocessingTest::TearDown()

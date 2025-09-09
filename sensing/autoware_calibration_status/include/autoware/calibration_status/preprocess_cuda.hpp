@@ -39,12 +39,12 @@ class PreprocessCuda
 public:
   /**
    * @brief Constructor for PreprocessCuda
-   * @param lidar_range Maximum LiDAR range for point filtering and depth normalization
+   * @param max_depth Maximum depth for projected LiDAR points in the camera frame
    * @param dilation_size Size of morphological dilation kernel for point projection
    * @param stream CUDA stream for asynchronous kernel launches
    */
   explicit PreprocessCuda(
-    const double lidar_range, const uint32_t dilation_size, cudaStream_t & stream);
+    const double max_depth, const uint32_t dilation_size, cudaStream_t & stream);
 
   /**
    * @brief Launch image undistortion kernel
@@ -91,7 +91,7 @@ public:
     const size_t width, const size_t height, float * output_array, uint32_t * num_points_projected);
 
 private:
-  double lidar_range_;
+  double max_depth_;
   int dilation_size_;
   cudaStream_t stream_;
 };

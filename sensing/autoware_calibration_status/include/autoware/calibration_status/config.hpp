@@ -29,7 +29,7 @@ struct CalibrationStatusConfig
 {
   /**
    * @brief Constructor for CalibrationStatusConfig
-   * @param lidar_range Maximum LiDAR range for point filtering and depth normalization
+   * @param max_depth Maximum depth for projected LiDAR points in the camera frame
    * @param dilation_size Size of morphological dilation kernel for point projection
    * @param height Height of the input image for optimization profile of the ML model, specified as
    * [min, opt, max].
@@ -38,10 +38,10 @@ struct CalibrationStatusConfig
    * @throws std::invalid_argument for invalid parameter values
    */
   CalibrationStatusConfig(
-    const double lidar_range, const int64_t dilation_size, const std::vector<int64_t> & height,
+    const double max_depth, const int64_t dilation_size, const std::vector<int64_t> & height,
     const std::vector<int64_t> & width)
   {
-    if (lidar_range <= 0.0) {
+    if (max_depth <= 0.0) {
       throw std::invalid_argument("Lidar range must be positive");
     }
     if (dilation_size < 0) {
@@ -70,7 +70,7 @@ struct CalibrationStatusConfig
       throw std::invalid_argument("Width values must be in ascending order: min <= opt <= max");
     }
 
-    this->lidar_range = lidar_range;
+    this->max_depth = max_depth;
     this->dilation_size = static_cast<uint32_t>(dilation_size);
     this->height = {
       static_cast<uint32_t>(height[0]), static_cast<uint32_t>(height[1]),
@@ -79,7 +79,7 @@ struct CalibrationStatusConfig
       static_cast<uint32_t>(width[0]), static_cast<uint32_t>(width[1]),
       static_cast<uint32_t>(width[2])};
   }
-  double lidar_range;
+  double max_depth;
   uint32_t dilation_size;
   std::vector<uint32_t> height;
   std::vector<uint32_t> width;

@@ -21,8 +21,8 @@ namespace autoware::calibration_status
 {
 
 PreprocessCuda::PreprocessCuda(
-  const double lidar_range, const uint32_t dilation_size, cudaStream_t & stream)
-: lidar_range_(lidar_range), dilation_size_(static_cast<int>(dilation_size)), stream_(stream) {};
+  const double max_depth, const uint32_t dilation_size, cudaStream_t & stream)
+: max_depth_(max_depth), dilation_size_(static_cast<int>(dilation_size)), stream_(stream) {};
 
 /**
  * @brief Performs bilinear interpolation, mimicking OpenCV's edge handling.
@@ -220,7 +220,7 @@ __device__ inline InputImageBGR8Type jet_colormap(float v)
  * @param num_points The total number of points in the input cloud.
  * @param width The width of the output image and data array.
  * @param height The height of the output image and data array.
- * @param lidar_range The maximum range to use for depth normalization.
+ * @param max_depth The maximum range to use for depth normalization.
  * @param metric_depth_buffer A temporary buffer of size (width*height) initialized to 0.0f, used
  * for Z-buffering.
  * @param output_array The final output 2D grid where uint8 data is stored.
@@ -229,7 +229,7 @@ __device__ inline InputImageBGR8Type jet_colormap(float v)
 __global__ void projectPoints_kernel(
   const InputPointType * input_points, InputImageBGR8Type * undistorted_image,
   const double * tf_matrix, const double * projection_matrix, const size_t num_points,
-  const size_t width, const size_t height, const double lidar_range, const int dilation_size,
+  const size_t width, const size_t height, const double max_depth, const int dilation_size,
   float * metric_depth_buffer, float * output_array, uint32_t * num_points_projected)
 {
   size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -251,7 +251,7 @@ __global__ void projectPoints_kernel(
       tf_matrix[2] * p.x + tf_matrix[6] * p.y + tf_matrix[10] * p.z + tf_matrix[14];
 
     // Ignore points that are behind or too far to the camera
-    if (p_cam_z < 0.0 || p_cam_z >= lidar_range) {
+    if (p_cam_z < 0.0 || p_cam_z >= max_depth) {
       return;
     }
 
@@ -276,7 +276,7 @@ __global__ void projectPoints_kernel(
           InputImageBGR8Type color = jet_colormap(static_cast<float>(p.intensity) / 255.0f);
           size_t pixel_idx = v * width + u;
 
-          output_array[3 * height * width + pixel_idx] = current_metric_depth / lidar_range;
+          output_array[3 * height * width + pixel_idx] = current_metric_depth / max_depth;
           output_array[4 * height * width + pixel_idx] = static_cast<float>(p.intensity) / 255.0f;
 
           undistorted_image[pixel_idx] = color;
@@ -306,7 +306,7 @@ __global__ void projectPoints_kernel(
 
                   if (neighbor_returned_int == neighbor_assumed_int) {
                     output_array[3 * height * width + neighbor_idx] =
-                      current_metric_depth / lidar_range;
+                      current_metric_depth / max_depth;
                     output_array[4 * height * width + neighbor_idx] =
                       static_cast<float>(p.intensity) / 255.0f;
                     undistorted_image[neighbor_idx] = color;
@@ -339,7 +339,7 @@ cudaError_t PreprocessCuda::projectPoints_launch(
 
   projectPoints_kernel<<<blocks, threads, 0, stream_>>>(
     input_points, undistorted_image, tf_matrix, projection_matrix, num_points, width, height,
-    lidar_range_, dilation_size_, metric_depth_buffer, output_array, num_points_projected);
+    max_depth_, dilation_size_, metric_depth_buffer, output_array, num_points_projected);
 
   cudaFree(metric_depth_buffer);
 

@@ -39,8 +39,7 @@ CalibrationStatusNode::CalibrationStatusNode(const rclcpp::NodeOptions & options
   last_velocity_update_(this->get_clock()->now())
 {
   const CalibrationStatusConfig calibration_status_config(
-    this->declare_parameter<double>("lidar_range"),
-    this->declare_parameter<int64_t>("dilation_size"),
+    this->declare_parameter<double>("max_depth"), this->declare_parameter<int64_t>("dilation_size"),
     this->declare_parameter<std::vector<int64_t>>("height"),
     this->declare_parameter<std::vector<int64_t>>("width"));
 

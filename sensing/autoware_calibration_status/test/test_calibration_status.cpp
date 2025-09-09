@@ -32,7 +32,7 @@
 namespace autoware::calibration_status
 {
 constexpr bool save_test_images = true;
-constexpr double lidar_range = 128.0;
+constexpr double max_depth = 128.0;
 constexpr int64_t dilation_size = 1;
 constexpr int64_t cloud_capacity = 2'000'000;
 
@@ -61,7 +61,7 @@ protected:
       GTEST_SKIP() << "ONNX model file not found: " << onnx_path;
     }
     CalibrationStatusConfig calibration_status_config(
-      lidar_range, dilation_size,
+      max_depth, dilation_size,
       std::vector<int64_t>{data_utils::height - 1, data_utils::height, data_utils::height + 1},
       std::vector<int64_t>{
         data_utils::width - 1, data_utils::width, data_utils::width + 1});  // Dummy shape diffs
