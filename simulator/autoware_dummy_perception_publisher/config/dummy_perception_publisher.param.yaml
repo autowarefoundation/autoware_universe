@@ -11,19 +11,19 @@
     use_fixed_random_seed: false
     object_centric_pointcloud: false
     angle_increment: 0.004363323  # 0.25 * PI / 180.0
-    
+
     # Pedestrian path selection
     pedestrian_path_seed: 42
     use_fixed_pedestrian_seed: false
-    
+
     # Prediction parameters
     predicted_path_delay: 2.0  # seconds - delay before using predicted paths
     min_keep_duration: 3.0     # seconds - minimum time to keep using same prediction
-    
+
     # Trajectory validation parameters
     max_yaw_change: 1.57079632679  # PI/2 - maximum acceptable yaw change
     max_path_length_change_ratio: 3.0  # maximum path length change ratio
-    
+
     # Remapping validation parameters - Vehicle
     vehicle:
       max_remapping_distance: 2.0      # meters
@@ -35,7 +35,7 @@
       max_position_difference: 1.5     # meters - for path similarity
       max_path_length_ratio: 1.1       # 10% difference
       max_overall_direction_diff: 0.523599  # PI/6 (30 degrees)
-    
+
     # Remapping validation parameters - Pedestrian
     pedestrian:
       max_remapping_distance: 3.0      # meters
