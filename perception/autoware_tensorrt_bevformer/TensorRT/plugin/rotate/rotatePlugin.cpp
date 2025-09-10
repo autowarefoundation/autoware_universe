@@ -254,6 +254,7 @@ IPluginV2DynamicExt * RotatePlugin::clone() const noexcept
         mode = 1;
         break;
       default:
+        mode = 0; // Default to bilinear
         break;
     }
     auto * plugin = new RotatePlugin{mode, use_h2};
@@ -326,7 +327,7 @@ IPluginV2DynamicExt * RotatePluginCreator::createPlugin(
   const char * name, const nvinfer1::PluginFieldCollection * fc) noexcept
 {
   try {
-    int mode;
+    int mode = 0;
     PluginField const * fields = fc->fields;
     for (int i = 0; i < fc->nbFields; i++) {
       char const * attrName = fields[i].name;
@@ -389,7 +390,7 @@ IPluginV2DynamicExt * RotatePluginCreator2::createPlugin(
   const char * name, const nvinfer1::PluginFieldCollection * fc) noexcept
 {
   try {
-    int mode;
+    int mode = 0;
     PluginField const * fields = fc->fields;
     for (int i = 0; i < fc->nbFields; i++) {
       char const * attrName = fields[i].name;
