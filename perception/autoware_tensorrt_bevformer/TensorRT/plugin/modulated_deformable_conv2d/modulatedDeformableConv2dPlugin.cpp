@@ -94,7 +94,7 @@ ModulatedDeformableConv2dPlugin::ModulatedDeformableConv2dPlugin(
   deserialize_value(&data, &length, &mGroup);
 }
 
-ModulatedDeformableConv2dPlugin::~ModulatedDeformableConv2dPlugin() 
+ModulatedDeformableConv2dPlugin::~ModulatedDeformableConv2dPlugin()
 {
   terminate();
 }
@@ -142,7 +142,7 @@ size_t ModulatedDeformableConv2dPlugin::getWorkspaceSize(
       sizeof_dtype = 1;
       break;
     default:
-      sizeof_dtype = 4; // Default to float size
+      sizeof_dtype = 4;  // Default to float size
       break;
   }
 
