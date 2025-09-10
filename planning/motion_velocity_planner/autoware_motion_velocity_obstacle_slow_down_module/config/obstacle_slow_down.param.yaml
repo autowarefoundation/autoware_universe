@@ -36,6 +36,7 @@
                 max_lat_margin: 1.0
                 min_ego_velocity: 4.0
                 max_ego_velocity: 8.0
+            wheel_off_track_scale: 0.0
           # car.left.moving.min_ego_velocity: 3.0  # example specific override
 
         moving_object_speed_threshold: 0.5 # [m/s] how fast the object needs to move to be considered as "moving"
@@ -53,7 +54,7 @@
           pedestrian: true
           pointcloud: false
 
-        min_lat_margin: 0.0  # lateral margin between obstacle and trajectory band with ego's width to avoid the conflict with the obstacle_stop
+        min_lat_margin: -10.0  # lateral margin between obstacle and trajectory band with ego's width to avoid the conflict with the obstacle_stop
         max_lat_margin: 1.1  # lateral margin between obstacle and trajectory band with ego's width
         lat_hysteresis_margin: 0.2
 
