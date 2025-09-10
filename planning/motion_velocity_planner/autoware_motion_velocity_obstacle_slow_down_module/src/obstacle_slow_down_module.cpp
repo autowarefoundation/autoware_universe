@@ -66,20 +66,6 @@ geometry_msgs::msg::Point to_geom_point(const autoware_utils::Point2d & point)
   return geom_point;
 }
 
-template <typename T>
-std::optional<T> get_object_from_uuid(
-  const std::vector<T> & objects, const std::string & target_uuid)
-{
-  const auto itr = std::find_if(objects.begin(), objects.end(), [&](const auto & object) {
-    return object.uuid == target_uuid;
-  });
-
-  if (itr == objects.end()) {
-    return std::nullopt;
-  }
-  return *itr;
-}
-
 // TODO(murooka) following two functions are copied from behavior_velocity_planner.
 // These should be refactored.
 double find_reach_time(
@@ -505,10 +491,10 @@ ObstacleSlowDownModule::create_slow_down_obstacle_for_predicted_object(
   const auto & obj_uuid = object->predicted_object.object_id;
   const auto & obj_uuid_str = autoware_utils::to_hex_string(obj_uuid);
   const auto & obj_label = object->predicted_object.classification.at(0).label;
-  slow_down_condition_counter_.add_current_uuid(obj_uuid_str);
+  slow_down_condition_counter_.add_current_uuid(obj_uuid);
 
   const bool is_prev_obstacle_slow_down =
-    utils::get_obstacle_from_uuid(prev_slow_down_object_obstacles_, obj_uuid_str).has_value();
+    utils::get_obstacle_from_uuid(prev_slow_down_object_obstacles_, obj_uuid).has_value();
 
   if (!is_slow_down_obstacle(obj_label)) {
     return std::nullopt;
@@ -532,9 +518,9 @@ ObstacleSlowDownModule::create_slow_down_obstacle_for_predicted_object(
     if (is_prev_obstacle_slow_down) {
       // check if exiting slow down
       if (!is_lat_dist_low) {
-        const int count = slow_down_condition_counter_.decrease_counter(obj_uuid_str);
+        const int count = slow_down_condition_counter_.decrease_counter(obj_uuid);
         if (count <= -p.successive_num_to_exit_slow_down_condition) {
-          slow_down_condition_counter_.reset(obj_uuid_str);
+          slow_down_condition_counter_.reset(obj_uuid);
           return false;
         }
       }
@@ -542,9 +528,9 @@ ObstacleSlowDownModule::create_slow_down_obstacle_for_predicted_object(
     }
     // check if entering slow down
     if (is_lat_dist_low) {
-      const int count = slow_down_condition_counter_.increase_counter(obj_uuid_str);
+      const int count = slow_down_condition_counter_.increase_counter(obj_uuid);
       if (p.successive_num_to_entry_slow_down_condition <= count) {
-        slow_down_condition_counter_.reset(obj_uuid_str);
+        slow_down_condition_counter_.reset(obj_uuid);
         return true;
       }
     }
@@ -626,7 +612,7 @@ ObstacleSlowDownModule::create_slow_down_obstacle_for_predicted_object(
   const auto side = signed_lateral_deviation > 0.0 ? Side::Left : Side::Right;
 
   return SlowDownObstacle{
-    obj_uuid_str,
+    obj_uuid,
     predicted_objects_stamp,
     object->predicted_object.classification.at(0),
     object->get_predicted_current_pose(clock_->now(), predicted_objects_stamp),
@@ -643,9 +629,6 @@ SlowDownObstacle ObstacleSlowDownModule::create_slow_down_obstacle_for_point_clo
   const geometry_msgs::msg::Point & back_collision_point, const double lat_dist_to_traj,
   const Side side)
 {
-  const unique_identifier_msgs::msg::UUID obj_uuid;
-  const auto & obj_uuid_str = autoware_utils::to_hex_string(obj_uuid);
-
   ObjectClassification unknown_object_classification;
   unknown_object_classification.label = ObjectClassification::UNKNOWN;
   unknown_object_classification.probability = 1.0;
@@ -656,7 +639,7 @@ SlowDownObstacle ObstacleSlowDownModule::create_slow_down_obstacle_for_point_clo
   const double unconfigured_lat_velocity = 0.;
 
   return SlowDownObstacle{
-    obj_uuid_str,
+    UUID{},
     stamp,
     unknown_object_classification,
     unconfigured_pose,
@@ -707,7 +690,7 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
   std::vector<SlowDownOutput> new_prev_slow_down_output;
   for (size_t i = 0; i < obstacles.size(); ++i) {
     const auto & obstacle = obstacles.at(i);
-    const auto prev_output = get_object_from_uuid(prev_slow_down_output_, obstacle.uuid);
+    const auto prev_output = utils::get_obstacle_from_uuid(prev_slow_down_output_, obstacle.uuid);
 
     const auto obstacle_motion = [&]() -> Motion {
       const auto & p = slow_down_planning_param_;
@@ -732,7 +715,7 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
     if (!dist_vec_to_slow_down) {
       RCLCPP_DEBUG(
         logger_, "[SlowDown] Ignore obstacle (%s) since distance to slow down is not valid",
-        obstacle.uuid.c_str());
+        autoware_utils_uuid::to_hex_string(obstacle.uuid).c_str());
       continue;
     }
     const auto dist_to_slow_down_start = std::get<0>(*dist_vec_to_slow_down);
@@ -791,11 +774,22 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
       autoware_utils::append_marker_array(markers, &debug_data_ptr_->slow_down_wall_marker);
 
       // update planning factor
+      autoware_internal_planning_msgs::msg::SafetyFactor safety_factor;
+      // TODO(Yuki TAKAGI): set correct type after pointcloud slow down feature is improved.
+      safety_factor.type = autoware_internal_planning_msgs::msg::SafetyFactor::UNKNOWN;
+      safety_factor.object_id = obstacle.uuid;
+      safety_factor.points = {obstacle.pose.position};
+      safety_factor.is_safe = false;
+
+      autoware_internal_planning_msgs::msg::SafetyFactorArray safety_factor_array;
+      safety_factor_array.factors = {safety_factor};
+      safety_factor_array.is_safe = false;
+
       planning_factor_interface_->add(
         slow_down_traj_points, planner_data->current_odometry.pose.pose,
         slow_down_traj_points.at(*slow_down_start_idx).pose,
         slow_down_traj_points.at(*slow_down_end_idx).pose, PlanningFactor::SLOW_DOWN,
-        SafetyFactorArray{}, planner_data->is_driving_forward, stable_slow_down_vel);
+        safety_factor_array, planner_data->is_driving_forward, stable_slow_down_vel);
     }
 
     // add debug virtual wall
@@ -903,9 +897,6 @@ void ObstacleSlowDownModule::publish_debug_info()
 
   // 5. processing time
   processing_time_publisher_->publish(create_float64_stamped(clock_->now(), stop_watch_.toc()));
-
-  // 6. planning factor
-  planning_factor_interface_->publish();
 }
 
 bool ObstacleSlowDownModule::is_slow_down_obstacle(const uint8_t label) const

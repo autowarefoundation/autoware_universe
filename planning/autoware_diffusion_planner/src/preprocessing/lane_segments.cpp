@@ -53,10 +53,8 @@ uint8_t identify_current_light_status(
 
 // LaneSegmentContext implementation
 LaneSegmentContext::LaneSegmentContext(const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr)
-: lanelet_map_ptr_(lanelet_map_ptr)
+: lane_segments_(convert_to_lane_segments(lanelet_map_ptr, POINTS_PER_SEGMENT))
 {
-  lane_segments_ = convert_to_lane_segments(lanelet_map_ptr_, POINTS_PER_SEGMENT);
-
   if (lane_segments_.empty()) {
     throw std::runtime_error("No lane segments found in the map");
   }
@@ -153,23 +151,19 @@ void LaneSegmentContext::add_traffic_light_one_hot_encoding_to_segment(
   Eigen::MatrixXd & segment_matrix, const int64_t row_idx, const int64_t col_counter,
   const int64_t turn_direction) const
 {
-  const auto lane_id_itr = col_id_mapping_.matrix_col_to_lane_id.find(row_idx);
-  if (lane_id_itr == col_id_mapping_.matrix_col_to_lane_id.end()) {
-    throw std::invalid_argument("Invalid lane row to lane id mapping");
-  }
-  const auto assigned_lanelet = lanelet_map_ptr_->laneletLayer.get(lane_id_itr->second);
-  auto tl_reg_elems = assigned_lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
+  const autoware::diffusion_planner::LaneSegment & lane_segment =
+    lane_segments_[row_idx / POINTS_PER_SEGMENT];
 
   const Eigen::Vector<double, TRAFFIC_LIGHT_ONE_HOT_DIM> traffic_light_one_hot_encoding = [&]() {
     Eigen::Vector<double, TRAFFIC_LIGHT_ONE_HOT_DIM> encoding =
       Eigen::Vector<double, TRAFFIC_LIGHT_ONE_HOT_DIM>::Zero();
-    if (tl_reg_elems.empty()) {
+    if (lane_segment.traffic_light_id == LaneSegment::TRAFFIC_LIGHT_ID_NONE) {
       encoding[TRAFFIC_LIGHT_NO_TRAFFIC_LIGHT - TRAFFIC_LIGHT] = 1.0;
       return encoding;
     }
 
-    const auto & tl_reg_elem = tl_reg_elems.front();
-    const auto traffic_light_stamped_info_itr = traffic_light_id_map.find(tl_reg_elem->id());
+    const auto traffic_light_stamped_info_itr =
+      traffic_light_id_map.find(lane_segment.traffic_light_id);
     if (traffic_light_stamped_info_itr == traffic_light_id_map.end()) {
       encoding[TRAFFIC_LIGHT_WHITE - TRAFFIC_LIGHT] = 1.0;
       return encoding;
@@ -279,11 +273,6 @@ Eigen::MatrixXd LaneSegmentContext::transform_points_and_add_traffic_info(
       continue;
     }
     const auto col_idx_in_original_map = distance.index;
-    const auto lane_id = col_id_mapping_.matrix_col_to_lane_id.find(col_idx_in_original_map);
-
-    if (lane_id == col_id_mapping_.matrix_col_to_lane_id.end()) {
-      throw std::invalid_argument("input_matrix size mismatch");
-    }
 
     // get POINTS_PER_SEGMENT rows corresponding to a single segment
     output_matrix.block<SEGMENT_POINT_DIM, POINTS_PER_SEGMENT>(
