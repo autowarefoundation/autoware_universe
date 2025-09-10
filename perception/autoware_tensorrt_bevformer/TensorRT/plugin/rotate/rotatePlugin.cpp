@@ -254,7 +254,7 @@ IPluginV2DynamicExt * RotatePlugin::clone() const noexcept
         mode = 1;
         break;
       default:
-        mode = 0; // Default to bilinear
+        mode = 0;  // Default to bilinear
         break;
     }
     auto * plugin = new RotatePlugin{mode, use_h2};
