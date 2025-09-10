@@ -115,7 +115,6 @@ bool correctWithDefaultValue(
       2 ==
     0) {
     if (
-      param.min_width < (v_point.at(first_most_distant_index) * 2.0).norm() &&
       (v_point.at(first_most_distant_index) * 2.0).norm() < param.max_width) {
       if ((v_point.at(third_most_distant_index) * 2.0).norm() < param.max_length) {
         correction_vector = v_point.at(third_most_distant_index);
@@ -158,11 +157,8 @@ bool correctWithDefaultValue(
   }
   // fit width
   else if (  // NOLINT
-    (param.min_width < (v_point.at(first_most_distant_index) * 2.0).norm() &&
-     (v_point.at(first_most_distant_index) * 2.0).norm() < param.max_width) &&
-    (param.min_width < (v_point.at(second_most_distant_index) * 2.0).norm() &&
-     (v_point.at(second_most_distant_index) * 2.0).norm() <
-       param.max_width))  // both of edge is within width threshold
+     (v_point.at(first_most_distant_index) * 2.0).norm() < param.max_width &&
+     (v_point.at(second_most_distant_index) * 2.0).norm() < param.max_width)  // both of edge is within width threshold
   {                       // NOLINT
     correction_vector = v_point.at(first_most_distant_index);
     if (correction_vector.x() == 0.0) {
@@ -192,7 +188,6 @@ bool correctWithDefaultValue(
         correction_vector.x();
     }
   } else if (  // NOLINT
-    param.min_width < (v_point.at(second_most_distant_index) * 2.0).norm() &&
     (v_point.at(second_most_distant_index) * 2.0).norm() < param.max_width) {
     correction_vector = v_point.at(first_most_distant_index);
 
