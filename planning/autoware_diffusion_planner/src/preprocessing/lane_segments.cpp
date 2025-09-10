@@ -441,11 +441,11 @@ Eigen::MatrixXd process_segment_to_matrix(const LaneSegment & segment)
   }
 
   auto encode = [](const int64_t line_type) {
-    Eigen::Vector<double, LINE_TYPE_NUM> onehot = Eigen::Vector<double, LINE_TYPE_NUM>::Zero();
+    Eigen::Vector<double, LINE_TYPE_NUM> one_hot = Eigen::Vector<double, LINE_TYPE_NUM>::Zero();
     if (line_type >= 0 && line_type < LINE_TYPE_NUM) {
-      onehot[line_type] = 1.0;
+      one_hot[line_type] = 1.0;
     }
-    return onehot;
+    return one_hot;
   };
 
   const Eigen::Vector<double, LINE_TYPE_NUM> left = encode(segment.left_line_type);
