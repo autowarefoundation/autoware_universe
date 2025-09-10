@@ -37,14 +37,15 @@ enum class VelocitySource {
 };
 
 /**
- * @brief Vehicle velocity check status for calibration prerequisites
+ * @brief Check status for calibration prerequisites
  */
-struct VelocityCheckStatus
+template <typename T>
+struct CheckStatus
 {
   bool is_activated;
-  double current_velocity;
-  bool is_vehicle_moving;
-  double velocity_age;
+  T current_state;
+  bool is_threshold_met;
+  double state_age;
 };
 
 /**

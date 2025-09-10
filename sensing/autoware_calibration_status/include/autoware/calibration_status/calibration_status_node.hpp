@@ -20,6 +20,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
@@ -76,7 +77,9 @@ private:
   std::vector<std::string> image_topics_;
   std::vector<double> approx_deltas_;
   bool check_velocity_;
+  bool check_objects_;
   double velocity_threshold_;
+  std::size_t objects_limit_;
   double miscalibration_confidence_threshold_;
 
   // ROS interface
@@ -93,6 +96,7 @@ private:
   rclcpp::Subscription<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr
     twist_with_cov_stamped_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odometry_sub_;
+  rclcpp::Subscription<autoware_perception_msgs::msg::PredictedObjects>::SharedPtr objects_sub_;
 
   // Camera info
   std::vector<rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr> camera_info_subs_;
@@ -111,9 +115,11 @@ private:
   // Core library
   std::unique_ptr<CalibrationStatus> calibration_status_;
 
-  // Current vehicle state
+  // Current state
   double current_velocity_;
   rclcpp::Time last_velocity_update_;
+  size_t current_objects_count_;
+  rclcpp::Time last_objects_update_;
 
   // Methods
   /**
@@ -125,6 +131,11 @@ private:
    * @brief Setup velocity source subscriber based on configured source type
    */
   void setup_velocity_source_interface();
+
+  /**
+   * @brief Setup object detection subscriber for object count monitoring
+   */
+  void setup_object_detection_interface();
 
   /**
    * @brief Setup sensor synchronization for active runtime mode
@@ -179,6 +190,12 @@ private:
    */
   void odometry_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
 
+  /**
+   * @brief Process detected objects messages for object count monitoring
+   * @param msg PredictedObjects message containing a list of objects
+   */
+  void objects_callback(const autoware_perception_msgs::msg::PredictedObjects::SharedPtr msg);
+
   // Camera info callbacks
   /**
    * @brief Store camera info messages for calibration processing
@@ -210,16 +227,24 @@ private:
    * @brief Get current velocity check status for calibration prerequisites
    * @return VelocityCheckStatus containing velocity state and thresholds
    */
-  VelocityCheckStatus get_velocity_check_status();
+  CheckStatus<double> get_velocity_check_status();
+
+  /**
+   * @brief Get current object count check status for calibration prerequisites
+   * @return ObjectsCheckStatus containing object count state and thresholds
+   */
+  CheckStatus<size_t> get_objects_check_status();
 
   /**
    * @brief Publish diagnostic status to ROS diagnostics system
    * @param velocity_check_status Current velocity check state
+   * @param objects_check_status Current object count check state
    * @param pair_idx Index of the sensor pair being processed
    * @param result Calibration validation result (optional)
    */
   void publish_diagnostic_status(
-    const VelocityCheckStatus & velocity_check_status, const size_t pair_idx,
+    const CheckStatus<double> & velocity_check_status,
+    const CheckStatus<size_t> & objects_check_status, const size_t pair_idx,
     const CalibrationStatusResult & result = CalibrationStatusResult());
 };
 

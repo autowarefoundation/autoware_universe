@@ -77,9 +77,10 @@ ros2 launch autoware_calibration_status calibration_status.launch.xml
 
 - Manual runtime mode via service calls
 - Periodic runtime mode with configurable intervals
-- Number of detected objects threshold as an additional requirement for calibration status check processing
+- Replace filter for objects on the scene counter to objects within the camera FOV counter (raytracing)
 - CUDA kernels optimizations
-- Support model without intensity channel
+- Support undistorted images directly
+- Support RGB8 images
 
 ## References
 

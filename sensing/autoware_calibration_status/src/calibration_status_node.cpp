@@ -36,7 +36,8 @@ CalibrationStatusNode::CalibrationStatusNode(const rclcpp::NodeOptions & options
   tf_buffer_(this->get_clock()),
   tf_listener_(tf_buffer_),
   current_velocity_(0.0),
-  last_velocity_update_(this->get_clock()->now())
+  last_velocity_update_(this->get_clock()->now()),
+  last_objects_update_(this->get_clock()->now())
 {
   const CalibrationStatusConfig calibration_status_config(
     this->declare_parameter<double>("max_depth"), this->declare_parameter<int64_t>("dilation_size"),
@@ -62,6 +63,12 @@ CalibrationStatusNode::CalibrationStatusNode(const rclcpp::NodeOptions & options
   velocity_threshold_ = this->declare_parameter<double>("prerequisite.velocity_threshold");
   if (check_velocity_) {
     setup_velocity_source_interface();
+  }
+  check_objects_ = this->declare_parameter<bool>("prerequisite.check_objects");
+  objects_limit_ =
+    static_cast<std::size_t>(this->declare_parameter<std::int64_t>("prerequisite.objects_limit"));
+  if (check_objects_) {
+    setup_object_detection_interface();
   }
 
   // Initialize diagnostic publisher
@@ -166,6 +173,13 @@ void CalibrationStatusNode::setup_velocity_source_interface()
     default:
       throw std::invalid_argument("Unsupported velocity source");
   }
+}
+
+void CalibrationStatusNode::setup_object_detection_interface()
+{
+  objects_sub_ = this->create_subscription<autoware_perception_msgs::msg::PredictedObjects>(
+    "~/input/objects", rclcpp::SensorDataQoS(),
+    std::bind(&CalibrationStatusNode::objects_callback, this, std::placeholders::_1));
 }
 
 void CalibrationStatusNode::setup_sensor_synchronization()
@@ -289,6 +303,13 @@ void CalibrationStatusNode::odometry_callback(const nav_msgs::msg::Odometry::Sha
   update_vehicle_velocity(velocity);
 }
 
+void CalibrationStatusNode::objects_callback(
+  const autoware_perception_msgs::msg::PredictedObjects::SharedPtr msg)
+{
+  current_objects_count_ = msg->objects.size();
+  last_objects_update_ = this->get_clock()->now();
+}
+
 void CalibrationStatusNode::synchronized_callback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud_msg,
   const sensor_msgs::msg::Image::ConstSharedPtr & image_msg, size_t pair_idx)
@@ -300,8 +321,9 @@ void CalibrationStatusNode::synchronized_callback(
     return;
   }
   const auto velocity_check_status = get_velocity_check_status();
-  if (velocity_check_status.is_vehicle_moving) {
-    publish_diagnostic_status(velocity_check_status, pair_idx);
+  const auto objects_check_status = get_objects_check_status();
+  if (velocity_check_status.is_threshold_met || objects_check_status.is_threshold_met) {
+    publish_diagnostic_status(velocity_check_status, objects_check_status, pair_idx);
     return;
   }
 
@@ -336,7 +358,7 @@ void CalibrationStatusNode::synchronized_callback(
   auto result = calibration_status_->process(
     cloud_msg, image_msg, camera_info_msgs_[pair_idx], eigen_transform, preview_img_data);
 
-  publish_diagnostic_status(velocity_check_status, pair_idx, result);
+  publish_diagnostic_status(velocity_check_status, objects_check_status, pair_idx, result);
 
   if (is_preview_subscribed) {
     preview_image_pubs_.at(pair_idx)->publish(*preview_img_msg);
@@ -349,7 +371,7 @@ void CalibrationStatusNode::update_vehicle_velocity(double velocity)
   last_velocity_update_ = this->get_clock()->now();
 }
 
-VelocityCheckStatus CalibrationStatusNode::get_velocity_check_status()
+CheckStatus<double> CalibrationStatusNode::get_velocity_check_status()
 {
   if (!check_velocity_) {
     return {false, 0.0, false, 0.0};
@@ -361,8 +383,21 @@ VelocityCheckStatus CalibrationStatusNode::get_velocity_check_status()
   return {true, current_velocity_, current_velocity_ > velocity_threshold_, velocity_age};
 }
 
+CheckStatus<size_t> CalibrationStatusNode::get_objects_check_status()
+{
+  if (!check_objects_) {
+    return {false, 0, false, 0.0};
+  }
+
+  auto now = this->get_clock()->now();
+  auto objects_age = (now - last_objects_update_).seconds();
+
+  return {true, current_objects_count_, current_objects_count_ > objects_limit_, objects_age};
+}
+
 void CalibrationStatusNode::publish_diagnostic_status(
-  const VelocityCheckStatus & velocity_check_status, const size_t pair_idx,
+  const CheckStatus<double> & velocity_check_status,
+  const CheckStatus<size_t> & objects_check_status, const size_t pair_idx,
   const CalibrationStatusResult & result)
 {
   diagnostic_msgs::msg::DiagnosticStatus status;
@@ -374,9 +409,9 @@ void CalibrationStatusNode::publish_diagnostic_status(
     (result.calibration_confidence >
      result.miscalibration_confidence + miscalibration_confidence_threshold_);
 
-  if (velocity_check_status.is_vehicle_moving) {
+  if (velocity_check_status.is_threshold_met || objects_check_status.is_threshold_met) {
     status.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
-    status.message = "Vehicle is moving. Calibration check has been skipped.";
+    status.message = "Calibration check skipped due to prerequisite not met.";
   } else if (is_calibrated) {
     status.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
     status.message = "Calibration is valid";
@@ -396,7 +431,7 @@ void CalibrationStatusNode::publish_diagnostic_status(
   key_value.value = velocity_check_status.is_activated ? "True" : "False";
   status.values.push_back(key_value);
   key_value.key = "Current velocity";
-  key_value.value = std::to_string(velocity_check_status.current_velocity);
+  key_value.value = std::to_string(velocity_check_status.current_state);
   status.values.push_back(key_value);
   key_value.key = "Velocity threshold";
   key_value.value = std::to_string(velocity_threshold_);
@@ -405,10 +440,25 @@ void CalibrationStatusNode::publish_diagnostic_status(
   key_value.value = std::to_string(miscalibration_confidence_threshold_);
   status.values.push_back(key_value);
   key_value.key = "Is vehicle moving";
-  key_value.value = velocity_check_status.is_vehicle_moving ? "True" : "False";
+  key_value.value = velocity_check_status.is_threshold_met ? "True" : "False";
   status.values.push_back(key_value);
   key_value.key = "Velocity age (s)";
-  key_value.value = std::to_string(velocity_check_status.velocity_age);
+  key_value.value = std::to_string(velocity_check_status.state_age);
+  status.values.push_back(key_value);
+  key_value.key = "Is object count check activated";
+  key_value.value = objects_check_status.is_activated ? "True" : "False";
+  status.values.push_back(key_value);
+  key_value.key = "Current object count";
+  key_value.value = std::to_string(objects_check_status.current_state);
+  status.values.push_back(key_value);
+  key_value.key = "Object count threshold";
+  key_value.value = std::to_string(objects_limit_);
+  status.values.push_back(key_value);
+  key_value.key = "Is object count limit exceeded";
+  key_value.value = objects_check_status.is_threshold_met ? "True" : "False";
+  status.values.push_back(key_value);
+  key_value.key = "Object count age (s)";
+  key_value.value = std::to_string(objects_check_status.state_age);
   status.values.push_back(key_value);
   key_value.key = "Is calibrated";
   key_value.value = is_calibrated ? "True" : "False";

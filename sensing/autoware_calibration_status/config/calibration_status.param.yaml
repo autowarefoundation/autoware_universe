@@ -13,5 +13,7 @@
     prerequisite:
       check_velocity: true
       velocity_source: twist_with_cov_stamped
-      velocity_threshold: 1.0
+      velocity_threshold: 5.0
+      check_objects: true
+      objects_limit: 50
     miscalibration_confidence_threshold: 0.0

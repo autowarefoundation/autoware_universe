@@ -94,6 +94,17 @@
               "type": "number",
               "description": "The maximum velocity threshold in meters per second for the vehicle to be considered moving. If the vehicle's velocity is below this threshold, the calibration status verification will not be performed.",
               "default": 0.1
+            },
+            "check_objects": {
+              "type": "boolean",
+              "description": "Flag to enable or disable object check for calibration status verification. If enabled, the node will subscribe to the specified object source topics and verify that the number of objects is within the defined limit.",
+              "default": true
+            },
+            "objects_limit": {
+              "type": "integer",
+              "description": "The maximum number of objects allowed for the vehicle to be considered in a valid state for calibration status verification. If the number of detected objects exceeds this limit, the calibration status verification will not be performed.",
+              "default": 5,
+              "minimum": 0
             }
           },
           "required": ["check_velocity", "velocity_source", "velocity_threshold"],
