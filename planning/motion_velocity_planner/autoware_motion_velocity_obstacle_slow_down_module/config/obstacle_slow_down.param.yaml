@@ -36,7 +36,7 @@
                 max_lat_margin: 1.0
                 min_ego_velocity: 4.0
                 max_ego_velocity: 8.0
-            wheel_off_track_scale: 0.0
+            wheel_off_track_scale: 0.0 # scale factor for additional stop margin against ego's wheel off-track. Even if this value is set to 0.0, the planner considers the nominal wheel off-track.
           # car.left.moving.min_ego_velocity: 3.0  # example specific override
 
         moving_object_speed_threshold: 0.5 # [m/s] how fast the object needs to move to be considered as "moving"
