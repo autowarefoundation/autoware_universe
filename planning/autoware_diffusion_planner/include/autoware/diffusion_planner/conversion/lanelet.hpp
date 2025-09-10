@@ -20,7 +20,9 @@
 #include <lanelet2_core/LaneletMap.h>
 
 #include <cstdint>
+#include <map>
 #include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
