@@ -1,8 +1,8 @@
 /**:
   ros__parameters:
     plugins_path: $(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so
-    onnx_model_path: /media/shintarosakoda/5EA85517A854EF51/diffusion_planner_training_result/train_result/20250908-094817_add_line_type_ver38/model.onnx
-    args_path: /media/shintarosakoda/5EA85517A854EF51/diffusion_planner_training_result/train_result/20250908-094817_add_line_type_ver38/args.json
+    onnx_model_path: $(env HOME)/autoware_data/diffusion_planner/diffusion_planner.onnx
+    args_path: $(env HOME)/autoware_data/diffusion_planner/diffusion_planner.param.json
     planning_frequency_hz: 10.0
     ignore_neighbors: false
     ignore_unknown_neighbors: true
@@ -13,5 +13,5 @@
     build_only: false
     batch_size: 1
     debug_params:
-      publish_debug_route: true
+      publish_debug_route: false
       publish_debug_map: false
