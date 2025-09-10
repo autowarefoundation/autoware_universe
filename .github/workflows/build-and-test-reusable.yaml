@@ -136,7 +136,7 @@ jobs:
           vcs export dependency_ws --exact-with-tags > build-depends-exact.repos
 
       - name: Build dependencies
-        uses: esteve/autoware-github-actions/colcon-build@colcon-build-base-paths
+        uses: autowarefoundation/autoware-github-actions/colcon-build@v1
         with:
           rosdistro: ${{ env.rosdistro }}
           cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
