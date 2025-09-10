@@ -49,13 +49,6 @@ namespace model
 
 constexpr float epsilon = 0.001;
 
-// Angular threshold for determining front/back direction (±45 degrees)
-// Objects within [-45°, 45°] are considered "front", beyond [135°, -135°] are "back"
-constexpr double FRONT_BACK_ANGLE_THRESHOLD = M_PI_4;  // 45 degrees in radians
-
-// Tolerance for yaw angle near 90 degrees for dimension swapping
-// When yaw is within [80°, 90°], swap x and y dimensions and adjust yaw by -90°
-constexpr double YAW_DEG_TOLERANCE = 10.0 * M_PI / 180.0;  // 10 degrees tolerance
 BoundingBoxShapeModel::BoundingBoxShapeModel()
 : ref_yaw_info_(boost::none), use_boost_bbox_optimizer_(false)
 {
