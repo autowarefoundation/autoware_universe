@@ -261,7 +261,7 @@ While ego is creeping, yellow intersection_wall appears in front ego.
 ### Map-based forced RTC
 
 RTC can be enabled for specific intersection lanelets such that even if approval is not required by default, it will be required before crossing the corresponding intersection lanelets.
-The following attribute should be added to the crosswalk lanelet in the map file:
+The following attribute should be added to the lanelet in intersection in the map file:
 
 ```xml
 <tag k='rtc_approval_required_v1' v='intersection' />
