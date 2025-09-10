@@ -27,24 +27,32 @@
 #include <cmath>
 #include <iostream>
 #include <limits>
+#include <map>
 #include <optional>
+#include <string>
 #include <vector>
 namespace autoware::diffusion_planner
 {
-enum LIGHT_SIGNAL_STATE {
-  GREEN = 0,
-  AMBER = 1,
-  RED = 2,
-  UNKNOWN = 3,
-};
 
-// Compute Euclidean distance between two LanePoints
-inline float euclidean_distance(const LanePoint & p1, const LanePoint & p2)
+namespace
 {
-  float dx = p2.x() - p1.x();
-  float dy = p2.y() - p1.y();
-  float dz = p2.z() - p1.z();
-  return std::sqrt(dx * dx + dy * dy + dz * dz);
+inline lanelet::Optional<std::string> to_subtype_name(
+  const lanelet::ConstLanelet & lanelet) noexcept
+{
+  return lanelet.hasAttribute("subtype") ? lanelet.attribute("subtype").as<std::string>()
+                                         : lanelet::Optional<std::string>();
+}
+
+inline bool is_lane_like(const lanelet::Optional<std::string> & subtype)
+{
+  if (!subtype) {
+    return false;
+  }
+  const auto & subtype_str = subtype.value();
+  return (
+    subtype_str == "road" || subtype_str == "highway" || subtype_str == "road_shoulder" ||
+    subtype_str == "bicycle_lane");
+  // subtype_str == "pedestrian_lane" || subtype_str == "bicycle_lane" || subtype_str == "walkway"
 }
 
 std::vector<LanePoint> interpolate_points(const std::vector<LanePoint> & input, size_t num_points)
@@ -137,99 +145,9 @@ std::vector<LanePoint> interpolate_points(const std::vector<LanePoint> & input, 
   return result;
 }
 
-std::vector<LaneSegment> LaneletConverter::convert_to_lane_segments(
-  const int64_t num_lane_points) const
-{
-  std::vector<LaneSegment> lane_segments;
-  lane_segments.reserve(lanelet_map_ptr_->laneletLayer.size());
-  // parse lanelet layers
-  for (const auto & lanelet : lanelet_map_ptr_->laneletLayer) {
-    const auto lanelet_subtype = to_subtype_name(lanelet);
-    if (!is_lane_like(lanelet_subtype)) {
-      std::cerr << "Skipping lanelet ID, since it is not LaneLike: " << lanelet.id() << std::endl;
-      continue;
-    }
-    Polyline lane_polyline(MapType::Unused);
-    std::vector<BoundarySegment> left_boundary_segments;
-    std::vector<BoundarySegment> right_boundary_segments;
-    // TODO(Daniel): avoid unnecessary copy and creation
-    auto points = from_linestring(lanelet.centerline3d());
-    lane_polyline.assign_waypoints(interpolate_points(points, num_lane_points));
-    const auto left_bound = lanelet.leftBound3d();
-    auto left_points = from_linestring(left_bound);
-    left_boundary_segments.emplace_back(
-      MapType::Unused, interpolate_points(left_points, num_lane_points));
-    const auto right_bound = lanelet.rightBound3d();
-    auto right_points = from_linestring(right_bound);
-    right_boundary_segments.emplace_back(
-      MapType::Unused, interpolate_points(right_points, num_lane_points));
-
-    const auto & attrs = lanelet.attributes();
-    bool is_intersection = attrs.find("turn_direction") != attrs.end();
-    std::optional<float> speed_limit_mps =
-      attrs.find("speed_limit") != attrs.end()
-        ? std::make_optional(
-            autoware_utils_math::kmph2mps(std::stof(attrs.at("speed_limit").value())))
-        : std::nullopt;
-
-    // TODO(Daniel): get proper light state, use behavior_velocity_traffic_light module as guide.
-    auto traffic_light = TrafficLightElement::UNKNOWN;
-    lane_segments.emplace_back(
-      lanelet.id(), lane_polyline, is_intersection, left_boundary_segments, right_boundary_segments,
-      speed_limit_mps, traffic_light);
-  }
-  return lane_segments;
-}
-
-std::optional<PolylineData> LaneletConverter::convert(
-  const geometry_msgs::msg::Point & position, double distance_threshold) const
-{
-  std::vector<LanePoint> container;
-  // parse lanelet layers
-  for (const auto & lanelet : lanelet_map_ptr_->laneletLayer) {
-    const auto lanelet_subtype = to_subtype_name(lanelet);
-    if (is_lane_like(lanelet_subtype)) {
-      // convert centerlines
-      if (is_roadway_like(lanelet_subtype)) {
-        auto points = from_linestring(lanelet.centerline3d(), position, distance_threshold);
-        insert_lane_points(points, container);
-      }
-      // convert boundaries except of virtual lines
-      if (!is_turnable_intersection(lanelet)) {
-        const auto left_bound = lanelet.leftBound3d();
-        if (is_boundary_like(left_bound)) {
-          auto points = from_linestring(left_bound, position, distance_threshold);
-          insert_lane_points(points, container);
-        }
-        const auto right_bound = lanelet.rightBound3d();
-        if (is_boundary_like(right_bound)) {
-          auto points = from_linestring(right_bound, position, distance_threshold);
-          insert_lane_points(points, container);
-        }
-      }
-    } else if (is_crosswalk_like(lanelet_subtype)) {
-      auto points = from_polygon(lanelet.polygon3d(), position, distance_threshold);
-      insert_lane_points(points, container);
-    }
-  }
-
-  // parse linestring layers
-  for (const auto & linestring : lanelet_map_ptr_->lineStringLayer) {
-    if (is_boundary_like(linestring)) {
-      auto points = from_linestring(linestring, position, distance_threshold);
-      insert_lane_points(points, container);
-    }
-  }
-
-  return container.size() == 0
-           ? std::nullopt
-           : std::make_optional<PolylineData>(
-               container, max_num_polyline_, max_num_point_, point_break_distance_);
-}
-
 // Template function for converting any geometry type to lane points
 template <typename GeometryType>
-std::vector<LanePoint> LaneletConverter::from_geometry(
+std::vector<LanePoint> from_geometry(
   const GeometryType & geometry, const geometry_msgs::msg::Point & position,
   double distance_threshold) noexcept
 {
@@ -264,7 +182,7 @@ std::vector<LanePoint> LaneletConverter::from_geometry(
 }
 
 template <typename GeometryType>
-std::vector<LanePoint> LaneletConverter::from_geometry(const GeometryType & geometry) noexcept
+std::vector<LanePoint> from_geometry(const GeometryType & geometry) noexcept
 {
   geometry_msgs::msg::Point position;
   position.x = 0.0;
@@ -272,30 +190,69 @@ std::vector<LanePoint> LaneletConverter::from_geometry(const GeometryType & geom
   position.z = 0.0;
   return from_geometry(geometry, position, std::numeric_limits<double>::max());
 }
+}  // namespace
 
-std::vector<LanePoint> LaneletConverter::from_linestring(
-  const lanelet::ConstLineString3d & linestring) noexcept
+std::vector<LaneSegment> convert_to_lane_segments(
+  const lanelet::LaneletMapConstPtr lanelet_map_ptr, const int64_t num_lane_points)
 {
-  return from_geometry(linestring);
-}
+  std::vector<LaneSegment> lane_segments;
+  lane_segments.reserve(lanelet_map_ptr->laneletLayer.size());
+  // parse lanelet layers
+  for (const auto & lanelet : lanelet_map_ptr->laneletLayer) {
+    const auto lanelet_subtype = to_subtype_name(lanelet);
+    if (!is_lane_like(lanelet_subtype)) {
+      continue;
+    }
+    Polyline lane_polyline(MapType::Unused);
+    std::vector<BoundarySegment> left_boundary_segments;
+    std::vector<BoundarySegment> right_boundary_segments;
+    // TODO(Daniel): avoid unnecessary copy and creation
+    const auto points = from_geometry(lanelet.centerline3d());
+    lane_polyline.assign_waypoints(interpolate_points(points, num_lane_points));
+    const auto left_bound = lanelet.leftBound3d();
+    const auto left_points = from_geometry(left_bound);
+    left_boundary_segments.emplace_back(
+      MapType::Unused, interpolate_points(left_points, num_lane_points));
+    const auto right_bound = lanelet.rightBound3d();
+    const auto right_points = from_geometry(right_bound);
+    right_boundary_segments.emplace_back(
+      MapType::Unused, interpolate_points(right_points, num_lane_points));
 
-std::vector<LanePoint> LaneletConverter::from_linestring(
-  const lanelet::ConstLineString3d & linestring, const geometry_msgs::msg::Point & position,
-  double distance_threshold) noexcept
-{
-  return from_geometry(linestring, position, distance_threshold);
-}
+    const auto & attrs = lanelet.attributes();
+    const bool is_intersection = attrs.find("turn_direction") != attrs.end();
+    std::optional<float> speed_limit_mps =
+      attrs.find("speed_limit") != attrs.end()
+        ? std::make_optional(
+            autoware_utils_math::kmph2mps(std::stof(attrs.at("speed_limit").value())))
+        : std::nullopt;
 
-std::vector<LanePoint> LaneletConverter::from_polygon(
-  const lanelet::CompoundPolygon3d & polygon) noexcept
-{
-  return from_geometry(polygon);
-}
+    int64_t turn_direction = LaneSegment::TURN_DIRECTION_NONE;
+    const std::map<std::string, int64_t> turn_direction_map = {
+      {"straight", LaneSegment::TURN_DIRECTION_STRAIGHT},
+      {"left", LaneSegment::TURN_DIRECTION_LEFT},
+      {"right", LaneSegment::TURN_DIRECTION_RIGHT}};
+    if (is_intersection) {
+      const std::string turn_direction_str = attrs.at("turn_direction").value();
+      const auto itr = turn_direction_map.find(turn_direction_str);
+      if (itr != turn_direction_map.end()) {
+        turn_direction = itr->second;
+      }
+    }
 
-std::vector<LanePoint> LaneletConverter::from_polygon(
-  const lanelet::CompoundPolygon3d & polygon, const geometry_msgs::msg::Point & position,
-  double distance_threshold) noexcept
-{
-  return from_geometry(polygon, position, distance_threshold);
+    const std::vector<lanelet::format_v2::TrafficLightConstPtr> traffic_light_list =
+      lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
+
+    // According to the definition, the number of elements in the traffic_light_list should be
+    // either 0 or 1; however, this is not always the case with older map data. Therefore, if there
+    // are multiple elements, we only use the first element.
+    const int64_t traffic_light_id =
+      (traffic_light_list.empty() ? LaneSegment::TRAFFIC_LIGHT_ID_NONE
+                                  : traffic_light_list.front()->id());
+
+    lane_segments.emplace_back(
+      lanelet.id(), lane_polyline, is_intersection, left_boundary_segments, right_boundary_segments,
+      speed_limit_mps, turn_direction, traffic_light_id);
+  }
+  return lane_segments;
 }
 }  // namespace autoware::diffusion_planner

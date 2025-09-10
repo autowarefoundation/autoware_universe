@@ -76,7 +76,7 @@ struct AgentState
   // Construct a new instance filling all elements by `0.0f`.
   AgentState() = default;
 
-  explicit AgentState(TrackedObject & object);
+  explicit AgentState(const TrackedObject & object);
 
   /**
    * @brief Construct a new instance with specified values.
@@ -131,7 +131,7 @@ struct AgentState
   // Return TrackedObject info
   [[nodiscard]] TrackedObject tracked_object() const { return tracked_object_info_; }
 
-  void apply_transform(const Eigen::Matrix4f & transform);
+  void apply_transform(const Eigen::Matrix4d & transform);
 
   [[nodiscard]] std::string to_string() const;
 
@@ -140,9 +140,9 @@ struct AgentState
 
   geometry_msgs::msg::Point position_;
   autoware_perception_msgs::msg::Shape shape_;
-  float yaw_{0.0f};
-  float cos_yaw_{0.0f};
-  float sin_yaw_{0.0f};
+  double yaw_{0.0};
+  double cos_yaw_{0.0};
+  double sin_yaw_{0.0};
   geometry_msgs::msg::Vector3 velocity_;
   AgentLabel label_{AgentLabel::VEHICLE};
   uint8_t autoware_label_;
@@ -202,7 +202,7 @@ struct AgentHistory
    * @param current_time The current timestamp.
    * @param object The object info.
    */
-  void update(double current_time, TrackedObject & object);
+  void update(double current_time, const TrackedObject & object);
   /**
    * @brief Update history with input state and latest time.
    *
@@ -247,7 +247,7 @@ struct AgentHistory
 
   void pad_history(bool pad_front = true);
 
-  void apply_transform(const Eigen::Matrix4f & transform)
+  void apply_transform(const Eigen::Matrix4d & transform)
   {
     for (auto & state : queue_) {
       state.apply_transform(transform);
@@ -281,7 +281,7 @@ struct AgentData
     const autoware_perception_msgs::msg::TrackedObjects & objects, const size_t max_num_agent = 32,
     const size_t num_timestamps = 21, const bool ignore_unknown_agents = false);
 
-  void apply_transform(const Eigen::Matrix4f & transform)
+  void apply_transform(const Eigen::Matrix4d & transform)
   {
     for (auto & history : histories_) {
       history.apply_transform(transform);
