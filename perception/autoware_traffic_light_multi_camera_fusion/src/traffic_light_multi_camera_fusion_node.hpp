@@ -139,9 +139,9 @@ private:
    * Example of a biased prior: If we wanted to assume a slight bias
    * towards "Red" by default (e.g., 60% probability), we would set this
    * to log(0.6 / 0.4) ≈ 0.405.
-   * static constexpr double PRIOR_LOG_ODDS_BIASED_TOWARDS_RED = 0.405;
+   * double prior_log_odds_; = 0.405;
    */
-  static constexpr double PRIOR_LOG_ODDS = 0.0;
+  double prior_log_odds_;
 };
 }  // namespace autoware::traffic_light
 #endif  // TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_

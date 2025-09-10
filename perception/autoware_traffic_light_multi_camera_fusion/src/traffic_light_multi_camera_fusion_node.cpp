@@ -174,6 +174,7 @@ MultiCameraFusion::MultiCameraFusion(const rclcpp::NodeOptions & node_options)
     this->declare_parameter<std::vector<std::string>>("camera_namespaces");
   is_approximate_sync_ = this->declare_parameter<bool>("approximate_sync");
   message_lifespan_ = this->declare_parameter<double>("message_lifespan");
+  prior_log_odds_ = this->declare_parameter<double>("prior_log_odds");
   for (const std::string & camera_ns : camera_namespaces) {
     std::string signal_topic = camera_ns + "/classification/traffic_signals";
     std::string roi_topic = camera_ns + "/detection/rois";
@@ -356,7 +357,7 @@ void MultiCameraFusion::groupFusion(
       // We assume the prior probability (with no information) is 0.5, meaning the log odds = 0, and
       // then add evidence to it.
       group_fusion_info_map[reg_ele_id].accumulated_log_odds[color] +=
-        evidence_log_odds + PRIOR_LOG_ODDS;
+        evidence_log_odds + prior_log_odds_;
 
       auto & best_record_for_color = group_fusion_info_map[reg_ele_id].best_record_for_color[color];
       if (
