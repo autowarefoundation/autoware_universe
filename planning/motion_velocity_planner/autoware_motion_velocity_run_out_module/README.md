@@ -6,7 +6,7 @@ The `run_out` module adds deceleration and stop points to the ego trajectory in 
 
 ## Activation
 
-This module is activated if the launch parameter `launch_mvp_run_out_module` is set to true.
+This module is activated if the launch parameter `launch_run_out_module` is set to true.
 
 ## Inner-workings / Algorithms
 

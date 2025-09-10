@@ -2,6 +2,34 @@
 Changelog for package autoware_map_based_prediction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(map_based_prediction): pedestrian crossing intention estimation logic (`#11084 <https://github.com/autowarefoundation/autoware_universe/issues/11084>`_)
+  * fix: reset crossing intention estimation when pedestrian starts or finishes crossing
+  * chore: rename variable for readability
+  ---------
+* feat(map_based_prediction): prevent predicted path from chattering under noisy pose and velocity estimation (`#11028 <https://github.com/autowarefoundation/autoware_universe/issues/11028>`_)
+  * feat(map_based_prediction): prevent predicted path from chattering under noisy pose and velocity estimation
+  * docs: update readme
+  * docs: update readme
+  * docs: update readme
+  ---------
+* fix(autoware_map_based_prediction): take most probable class for prediction (`#10930 <https://github.com/autowarefoundation/autoware_universe/issues/10930>`_)
+  * refactor(prediction): add getMaxProbabilityLabel function and rename changeLabelForPrediction to changeVRULabelForPrediction
+  * style(pre-commit): autofix
+  * refactor(prediction): remove getMaxProbabilityLabel function and update label retrieval in MapBasedPredictionNode
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(autoware_map_based_prediction): bug fix for pedestrian orientation flip (`#10906 <https://github.com/autowarefoundation/autoware_universe/issues/10906>`_)
+  * fix(predictor_vru): improve velocity calculation for crosswalk user prediction
+  Updated the velocity threshold check to use std::hypot for better accuracy in calculating the object's velocity. This change ensures that the predicted object's orientation and velocity are correctly set based on the calculated speed.
+  * refactor(predictor_vru): change object velocity variable to const
+  ---------
+* Contributors: Mete Fatih Cırıt, Satoshi OTA, Taekjin LEE
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

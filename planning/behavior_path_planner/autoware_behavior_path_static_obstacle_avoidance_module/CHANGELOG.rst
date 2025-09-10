@@ -2,6 +2,54 @@
 Changelog for package autoware_behavior_path_static_obstacle_avoidance_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* fix(static_obstacle_avoidance): fix coding error (`#11106 <https://github.com/autowarefoundation/autoware_universe/issues/11106>`_)
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(autoware_behavior_path_static_obstacle_avoidance_module): prevent chattering in avoidance decision (`#11046 <https://github.com/autowarefoundation/autoware_universe/issues/11046>`_)
+  Revert "fix(autoware_behavior_path_static_obstacle_avoidance_module): prevent chattering in avoidance decision"
+  This reverts commit 6b0d5865dc90add124c4f15c7d995ac3c95d9812.
+  update
+* fix(static_obstacle_avoidance): correct lane departure check during obstacle avoidance (`#11032 <https://github.com/autowarefoundation/autoware_universe/issues/11032>`_)
+* fix(static_obstacle_avoidance): load missing unstable classification parameter (`#11035 <https://github.com/autowarefoundation/autoware_universe/issues/11035>`_)
+  fix(static_obstacle_avoidance): load unstable_classification_time
+* style(pre-commit): autofix (`#10982 <https://github.com/autowarefoundation/autoware_universe/issues/10982>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(behavior_path_static_obstacle_avoidance_module): fix isWithinLanes (`#10948 <https://github.com/autowarefoundation/autoware_universe/issues/10948>`_)
+  * fix(behavior_path_static_obstacle_avoidance_module): fix isWithinLanes
+  * Update planning/behavior_path_planner/autoware_behavior_path_static_obstacle_avoidance_module/src/utils.cpp
+  Co-authored-by: Go Sakayori <go-sakayori@users.noreply.github.com>
+  ---------
+  Co-authored-by: Go Sakayori <go-sakayori@users.noreply.github.com>
+* fix(static_obstacle_avoidance): ensure sufficient avoidance margin on high-curvature paths for parked vehicle avoidance (`#10902 <https://github.com/autowarefoundation/autoware_universe/issues/10902>`_)
+  * fix: curvature based addtional margin
+  * fix: calculate proper overhang point
+  * fix: set offset to 0.0 when vehicle front overhangs beyond path end
+  * fix: test
+  ---------
+* fix(static_obstacle_avoidance): planning factor publish condition and control points duplication (`#10940 <https://github.com/autowarefoundation/autoware_universe/issues/10940>`_)
+  * fix planning factor publish condition and control points duplication
+  * fix coding style and access method for vector
+  ---------
+* feat(static_obstacle_avoidance): add infomation to PlanningFactor topic (`#10836 <https://github.com/autowarefoundation/autoware_universe/issues/10836>`_)
+  * feat(static_obstacle_avoidance): add planning factor test
+  * feat(static_obstacle_avoidance): add infomation of planning_factor_interface\_
+  * delete unnecessary file for test.
+  * refactor some variables.
+  * fix planning factor test namespace
+  ---------
+* fix(static_obstacle_avoidance): fix coding error (`#10890 <https://github.com/autowarefoundation/autoware_universe/issues/10890>`_)
+  fix error
+* feat(static_obstacle_avoidance): support separate lateral jerk constraints for avoidance and return maneuvers (`#10870 <https://github.com/autowarefoundation/autoware_universe/issues/10870>`_)
+  * feat(static_obstacle_avoidance): support separate lateral jerk constraints for avoidance and return maneuvers
+  * chore: renaming function
+  * chore: rewrite comment
+  * fix: json
+  ---------
+* fix(static_obstacle_avoidance): fix filtering logic to avoid vehicle in T-intersection (`#10865 <https://github.com/autowarefoundation/autoware_universe/issues/10865>`_)
+* Contributors: Kotakku, Mete Fatih Cırıt, Ryohsuke Mitsudome, Satoshi OTA, Yukinari Hisaki
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

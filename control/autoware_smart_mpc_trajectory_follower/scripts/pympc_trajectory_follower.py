@@ -79,7 +79,7 @@ class PyMPCTrajectoryFollower(Node):
 
         self.sub_trajectory_ = self.create_subscription(
             Trajectory,
-            "/planning/scenario_planning/trajectory",
+            "/planning/trajectory",
             self.onTrajectory,
             1,
         )

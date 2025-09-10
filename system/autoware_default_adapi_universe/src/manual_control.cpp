@@ -24,6 +24,9 @@ namespace autoware::default_adapi
 ManualControlNode::ManualControlNode(const rclcpp::NodeOptions & options)
 : Node("manual_control", options)
 {
+  // NOTE: Do not enable interfaces for velocity and acceleration mode in the constructor.
+  //       Enable the comment out process and enable interface when the service is called.
+
   using std::placeholders::_1;
   using std::placeholders::_2;
 
@@ -115,8 +118,19 @@ void ManualControlNode::on_select_mode(
       res->status.success = true;
       break;
     case ManualControlMode::ACCELERATION:
+      disable_all_commands();
+      // TODO(isamu-takagi): Uncomment when supporting.
+      // enable_common_commands();
+      // enable_acceleration_commands();
+      update_mode_status(ManualControlMode::DISABLED);
+      res->status.success = false;
+      res->status.message = "The selected control mode is not supported.";
+      break;
     case ManualControlMode::VELOCITY:
       disable_all_commands();
+      // TODO(isamu-takagi): Uncomment when supporting.
+      // enable_common_commands();
+      // enable_velocity_commands();
       update_mode_status(ManualControlMode::DISABLED);
       res->status.success = false;
       res->status.message = "The selected control mode is not supported.";
@@ -150,14 +164,18 @@ void ManualControlNode::enable_pedals_commands()
     [this](const PedalsCommand & msg) { pub_pedals_->publish(msg); });
 }
 
+// TODO(isamu-takagi): This function is reserved for future support.
+/*
 void ManualControlNode::enable_acceleration_commands()
 {
-  // TODO(isamu-takagi): Currently not supported.
   sub_acceleration_ = create_subscription<AccelerationCommand>(
     ns_ + "/command/acceleration", rclcpp::QoS(1).best_effort(),
     [](const AccelerationCommand & msg) { (void)msg; });
 }
+*/
 
+// TODO(isamu-takagi): This function is reserved for future support.
+/*
 void ManualControlNode::enable_velocity_commands()
 {
   // TODO(isamu-takagi): Currently not supported.
@@ -165,6 +183,7 @@ void ManualControlNode::enable_velocity_commands()
     ns_ + "/command/velocity", rclcpp::QoS(1).best_effort(),
     [](const VelocityCommand & msg) { (void)msg; });
 }
+*/
 
 void ManualControlNode::enable_common_commands()
 {
