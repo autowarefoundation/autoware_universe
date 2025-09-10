@@ -82,7 +82,7 @@ MultiScaleDeformableAttnPlugin::MultiScaleDeformableAttnPlugin(
 {
 }
 
-MultiScaleDeformableAttnPlugin::~MultiScaleDeformableAttnPlugin() throw()
+MultiScaleDeformableAttnPlugin::~MultiScaleDeformableAttnPlugin() 
 {
   terminate();
 }

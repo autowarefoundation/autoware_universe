@@ -103,7 +103,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   target_compile_options(${TENSORRT_OPS_TARGET} PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:
       -fPIC -O2 -Wno-deprecated-declarations -Wno-unused-parameter -Wno-unused-function
-      -Wno-unused-variable -Wno-unused-but-set-variable -Wno-comment -Wno-maybe-uninitialized -Wno-switch>
+      -Wno-unused-variable -Wno-unused-but-set-variable -Wno-comment -Wno-switch>
   )
   target_link_libraries(${TENSORRT_OPS_TARGET}
     ${CUDNN_LIBRARY}
