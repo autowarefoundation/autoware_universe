@@ -36,24 +36,28 @@ struct LaneSegment
   std::vector<BoundarySegment> right_boundaries;
   std::optional<float> speed_limit_mps{std::nullopt};
   int64_t turn_direction;
+  int64_t traffic_light_id;
 
   static const int64_t TURN_DIRECTION_NONE = -1;
   static const int64_t TURN_DIRECTION_STRAIGHT = 0;
   static const int64_t TURN_DIRECTION_LEFT = 1;
   static const int64_t TURN_DIRECTION_RIGHT = 2;
 
+  static const int64_t TRAFFIC_LIGHT_ID_NONE = -1;
+
   LaneSegment(
     int64_t id, Polyline polyline, bool is_intersection,
     const std::vector<BoundarySegment> & left_boundaries,
     const std::vector<BoundarySegment> & right_boundaries, std::optional<float> speed_limit_mps,
-    int64_t turn_direction)
+    int64_t turn_direction, int64_t traffic_light_id)
   : id(id),
     polyline(std::move(polyline)),
     is_intersection(is_intersection),
     left_boundaries(left_boundaries),
     right_boundaries(right_boundaries),
     speed_limit_mps(speed_limit_mps),
-    turn_direction(turn_direction)
+    turn_direction(turn_direction),
+    traffic_light_id(traffic_light_id)
   {
   }
 };

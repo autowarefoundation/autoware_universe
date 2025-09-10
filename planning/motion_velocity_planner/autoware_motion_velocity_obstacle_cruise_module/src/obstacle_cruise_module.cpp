@@ -342,9 +342,6 @@ void ObstacleCruiseModule::publish_debug_info()
 
   // 5. processing time
   processing_time_publisher_->publish(create_float64_stamped(clock_->now(), stop_watch_.toc()));
-
-  // 6. planning factor
-  planning_factor_interface_->publish();
 }
 
 std::optional<CruiseObstacle> ObstacleCruiseModule::create_cruise_obstacle(
@@ -414,7 +411,7 @@ std::optional<CruiseObstacle> ObstacleCruiseModule::create_cruise_obstacle(
   }
 
   return CruiseObstacle{
-    obj_uuid_str,
+    obj_uuid,
     predicted_objects_stamp,
     object->get_predicted_current_pose(clock_->now(), predicted_objects_stamp),
     object->get_lon_vel_relative_to_traj(traj_points),
@@ -538,7 +535,7 @@ ObstacleCruiseModule::create_collision_points_for_inside_cruise_obstacle(
     // const bool is_prev_obstacle_stop = get_obstacle_from_uuid(prev_stop_obstacles_,
     // obstacle.uuid).has_value();
     const bool is_prev_obstacle_cruise =
-      utils::get_obstacle_from_uuid(prev_cruise_object_obstacles_, obj_uuid_str).has_value();
+      utils::get_obstacle_from_uuid(prev_cruise_object_obstacles_, obj_uuid).has_value();
 
     if (is_prev_obstacle_cruise) {
       if (
@@ -749,7 +746,7 @@ std::optional<CruiseObstacle> ObstacleCruiseModule::create_yield_cruise_obstacle
   // check if obstacle is driving on the opposite direction
   if (object->get_lon_vel_relative_to_traj(traj_points) < 0.0) return std::nullopt;
   return CruiseObstacle{
-    obj_uuid_str,
+    obj_uuid,
     predicted_objects_stamp,
     object->get_predicted_current_pose(clock_->now(), predicted_objects_stamp),
     object->get_lon_vel_relative_to_traj(traj_points),

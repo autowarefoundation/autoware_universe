@@ -425,6 +425,8 @@ BoundaryDeparturePreventionModule::plan_velocities(
   try {
     auto result_opt = plan_slow_down_intervals(raw_trajectory_points, planner_data);
 
+    publish_visualization_markers();
+
     if (!result_opt) {
       return tl::make_unexpected(result_opt.error());
     }
@@ -683,52 +685,17 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
   toc_curr_watch("update_departure_intervals");
 
-  slow_down_wall_marker_.markers.clear();
-
   output_.slowdown_intervals = utils::get_slow_down_intervals(
     *ref_traj_pts_opt, output_.departure_intervals, *slow_down_interpolator_ptr_,
     curr_odom.twist.twist.linear.x, planner_data->current_acceleration.accel.accel.linear.x,
     ego_dist_on_traj_with_offset_m(planner_data->is_driving_forward));
-  toc_curr_watch("get_slow_down_interval");
 
   std::vector<SlowdownInterval> slowdown_intervals;
   for (auto && [idx, slowdown_interval] : output_.slowdown_intervals | ranges::views::enumerate) {
     const auto & [start_pose, end_pose, vel] = slowdown_interval;
     slowdown_intervals.emplace_back(start_pose.position, end_pose.position, vel);
-    const auto markers_start = autoware::motion_utils::createSlowDownVirtualWallMarker(
-      start_pose, "boundary_departure_prevention_start", clock_ptr_->now(),
-      static_cast<int32_t>(idx), 0.0, "", planner_data->is_driving_forward);
-    autoware_utils::append_marker_array(markers_start, &slow_down_wall_marker_);
-    const auto markers_end = autoware::motion_utils::createSlowDownVirtualWallMarker(
-      end_pose, "boundary_departure_prevention_end", clock_ptr_->now(),
-      static_cast<int32_t>(idx + output_.departure_intervals.size() + 1), 0.0, "",
-      planner_data->is_driving_forward);
-    autoware_utils::append_marker_array(markers_end, &slow_down_wall_marker_);
   }
-
-  for (auto && [idx, critical_pt] : output_.critical_departure_points | ranges::views::enumerate) {
-    const auto markers_end = autoware::motion_utils::createStopVirtualWallMarker(
-      critical_pt.pose_on_current_ref_traj, "boundary_departure_prevention_end", clock_ptr_->now(),
-      static_cast<int32_t>(idx + output_.departure_intervals.size() + 1), 0.0, "",
-      planner_data->is_driving_forward);
-    autoware_utils::append_marker_array(markers_end, &slow_down_wall_marker_);
-  }
-  toc_curr_watch("create_slow_down_interval_marker");
-
-  if (virtual_wall_publisher_) {
-    virtual_wall_publisher_->publish(slow_down_wall_marker_);
-  }
-
-  if (debug_publisher_) {
-    debug_marker_.markers.clear();
-    autoware_utils::append_marker_array(
-      debug::create_debug_marker_array(
-        output_, *ego_pred_traj_ptr_, clock_ptr_, curr_pose.pose.position.z, node_param_),
-      &debug_marker_);
-    debug_publisher_->publish(debug_marker_);
-  }
-
-  toc_curr_watch("check_stopping_dist");
+  toc_curr_watch("get_slow_down_interval");
 
   output_.diag_status = get_diagnostic_status(ego_dist_on_traj_m, curr_vel);
 
@@ -876,6 +843,62 @@ bool BoundaryDeparturePreventionModule::is_critical_departure_persist()
 
   const auto t_diff = clock_ptr_->now().seconds() - last_found_critical_dpt_time_;
   return t_diff >= node_param_.off_time_buffer_s.critical_departure;
+}
+
+void BoundaryDeparturePreventionModule::publish_visualization_markers()
+{
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  slow_down_wall_marker_.markers.clear();
+
+  if (!clock_ptr_) {
+    return;
+  }
+  const auto current_time = clock_ptr_->now();
+
+  publish_virtual_walls(current_time);
+  publish_debug_markers(current_time);
+}
+
+void BoundaryDeparturePreventionModule::publish_virtual_walls(const rclcpp::Time & current_time)
+{
+  if (!virtual_wall_publisher_) {
+    return;
+  }
+
+  for (const auto & [idx, slowdown_interval] :
+       output_.slowdown_intervals | ranges::views::enumerate) {
+    const auto & [start_pose, end_pose, vel] = slowdown_interval;
+    const auto markers_start = autoware::motion_utils::createSlowDownVirtualWallMarker(
+      start_pose, "boundary_departure_slow", current_time, static_cast<int32_t>(idx), 0.0, "");
+    autoware_utils::append_marker_array(markers_start, &slow_down_wall_marker_);
+  }
+
+  for (const auto & [idx, critical_pt] :
+       output_.critical_departure_points | ranges::views::enumerate) {
+    const auto markers_end = autoware::motion_utils::createStopVirtualWallMarker(
+      critical_pt.pose_on_current_ref_traj, "boundary_departure_critical", current_time,
+      static_cast<int32_t>(idx + output_.departure_intervals.size() + 1), 0.0);
+    autoware_utils::append_marker_array(markers_end, &slow_down_wall_marker_);
+  }
+
+  virtual_wall_publisher_->publish(slow_down_wall_marker_);
+}
+
+void BoundaryDeparturePreventionModule::publish_debug_markers(const rclcpp::Time & current_time)
+{
+  debug_marker_.markers.clear();
+
+  if (!debug_publisher_ || !ego_pred_traj_ptr_ || ego_pred_traj_ptr_->points.empty()) {
+    return;
+  }
+  const auto ego_z_position = ego_pred_traj_ptr_->points.front().pose.position.z;
+  autoware_utils::append_marker_array(
+    debug::create_debug_marker_array(
+      output_, *ego_pred_traj_ptr_, current_time, ego_z_position, node_param_),
+    &debug_marker_);
+
+  debug_publisher_->publish(debug_marker_);
 }
 }  // namespace autoware::motion_velocity_planner::experimental
 
