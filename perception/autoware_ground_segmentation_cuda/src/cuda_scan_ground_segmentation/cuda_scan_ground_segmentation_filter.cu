@@ -27,722 +27,10 @@
 
 namespace autoware::cuda_ground_segmentation
 {
-namespace
-{
 
-template <typename T>
-__device__ const T getElementValue(
-  const uint8_t * data, const size_t point_index, const size_t point_step, const size_t offset)
-{
-  return *reinterpret_cast<const T *>(data + offset + point_index * point_step);
-}
-__device__ __forceinline__ float fastAtan2_0_2Pi(float y, float x)
+  __device__ __forceinline__ float fastAtan2_0_2Pi(float y, float x)
 {
   return fmodf(atan2(y, x) + 2.0f * M_PI, 2.0f * M_PI);
-}
-
-/**
- * @brief CUDA kernel to set elements of a flags array to a specified value for classified points
- * extraction.
- *
- * This kernel assigns the given value to each element of the `flags` array up to `n` elements.
- *
- * @param[in,out] flags Pointer to the array of uint32_t flags to be set.
- * @param[in] n Number of elements in the flags array to set.
- * @param[in] value The value to assign to each element in the flags array.
- */
-__global__ void setFlagsKernel(uint32_t * flags, uint32_t n, const uint32_t value)
-{
-  uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < n) flags[i] = value;  // write real uint32_t  0 or 1
-}
-
-/**
- * @brief CUDA kernel to extract the number of points from each cell centroid.
- *
- * This kernel iterates over an array of cell centroids and writes the number of points
- * in each cell to a corresponding output array. Each thread processes one cell.
- *
- * @param[in] centroid_cells_list_dev Pointer to the device array of cell centroids.
- * @param[in] num_cells Number of maximum cells to process.
- * @param[out] num_points_per_cell Pointer to the device array where the number of points per cell
- * will be stored.
- */
-__global__ void getCellNumPointsKernel(
-  const CellCentroid * __restrict__ centroid_cells_list_dev, const uint32_t num_cells,
-  uint32_t * __restrict__ num_points_per_cell)
-{
-  uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx >= num_cells) {
-    return;  // Out of bounds
-  }
-  num_points_per_cell[idx] = centroid_cells_list_dev[idx].num_points;
-}
-
-/**
- * @brief Updates the ground point statistics in a cell with a new ground point.
- *
- * This function updates the running average and minimum height of ground points
- * within a cell by incorporating a newly classified ground point. It recalculates
- * the average ground height and radius based on the new point, increments the
- * ground point count, and updates the minimum ground height if the new point is lower.
- *
- * @param[in,out] cell Reference to the cell centroid structure to update.
- * @param[in] gnd_point The newly classified ground point to incorporate.
- */
-__device__ void updateGndPointInCell(
-  CellCentroid & cell, const ClassifiedPointTypeStruct & gnd_point)
-{
-  cell.gnd_height_avg = cell.gnd_height_avg * cell.num_ground_points + gnd_point.z;
-  cell.gnd_radius_avg = cell.gnd_radius_avg * cell.num_ground_points + gnd_point.radius;
-
-  cell.num_ground_points++;
-
-  cell.gnd_height_avg = cell.gnd_height_avg / cell.num_ground_points;
-  cell.gnd_radius_avg = cell.gnd_radius_avg / cell.num_ground_points;
-  // Update the min height
-  if (gnd_point.z < cell.gnd_height_min) {
-    cell.gnd_height_min = gnd_point.z;
-  }
-}
-
-/**
- * @brief Removes a ground point from a cell and updates the cell's ground statistics.
- *
- * This device function updates the average ground height and radius of a cell by removing
- * the contribution of a specified ground point. It decrements the number of ground points
- * in the cell and recalculates the averages accordingly.
- *
- * @param cell Reference to the CellCentroid structure representing the cell to update.
- * @param point The ClassifiedPointTypeStruct representing the ground point to remove.
- */
-__device__ void removeGndPointInCell(CellCentroid & cell, const ClassifiedPointTypeStruct & point)
-{
-  cell.gnd_height_avg =
-    (cell.gnd_height_avg * cell.num_ground_points - point.z) / (cell.num_ground_points - 1);
-  cell.gnd_radius_avg =
-    (cell.gnd_radius_avg * cell.num_ground_points - point.radius) / (cell.num_ground_points - 1);
-  cell.num_ground_points--;
-}
-
-/**
- * @brief Determines the segmentation mode based on the position of the current cell and the history
- * of ground cells.
- *
- * This device function analyzes the relationship between the current cell index within a sector and
- * the indices of previously detected ground cells. It sets the segmentation mode accordingly:
- * - UNINITIALIZED: No ground cells have been detected yet.
- * - BREAK: The current cell is too far from the last detected ground cell, indicating a break in
- * ground continuity.
- * - CONTINUOUS: The current cell is within a buffer threshold of the most recent ground cell,
- * indicating continuous ground.
- * - DISCONTINUOUS: The current cell is not within the buffer threshold, but not far enough to be
- * considered a break.
- *
- * @param[in] cell_index_in_sector         Index of the current cell within the sector.
- * @param[in] last_gnd_cells_dev           Device pointer to an array of indices of the most recent
- * ground cells in the sector.
- * @param[in] num_latest_gnd_cells         Number of valid entries in last_gnd_cells_dev.
- * @param[in] gnd_cell_continual_thresh    Threshold for determining a break in ground cell
- * continuity.
- * @param[in] gnd_cell_buffer_size         Buffer size for determining continuous ground.
- * @param[out] mode                        Reference to the segmentation mode to be set by this
- * function.
- */
-__device__ void checkSegmentMode(
-  const uint32_t cell_index_in_sector, const uint32_t * last_gnd_cells_dev,
-  const uint32_t num_latest_gnd_cells, const uint32_t gnd_cell_continual_thresh,
-  const uint32_t gnd_cell_buffer_size, SegmentationMode & mode)
-{
-  if (num_latest_gnd_cells == 0) {
-    mode = SegmentationMode::UNINITIALIZED;
-    return;  // No ground cells found, set mode to UNINITIALIZED
-  }
-  const auto & last_gnd_idx_in_sector = last_gnd_cells_dev[0];
-  if (cell_index_in_sector - last_gnd_idx_in_sector >= gnd_cell_continual_thresh) {
-    mode = SegmentationMode::BREAK;  // If the latest ground cell is too far, set mode to BREAK
-    return;
-  }
-  const auto & front_gnd_idx_in_sector = last_gnd_cells_dev[num_latest_gnd_cells - 1];
-  if (cell_index_in_sector - front_gnd_idx_in_sector <= gnd_cell_buffer_size) {
-    mode = SegmentationMode::CONTINUOUS;  // If the latest ground cell is within threshold, set
-                                          // mode to CONTINUOUS
-    return;
-  }
-  mode = SegmentationMode::DISCONTINUOUS;  // If the latest ground cell is not within threshold, set
-                                           // mode to DISCONTINUOUS
-  return;
-}
-
-/**
- * @brief Recursively searches for ground cells in a sector and collects their indices.
- *
- * This device function traverses the sector's cells in reverse order (from the given index down to
- * 0), collecting the indices of cells that contain ground points. The search stops when either the
- * required number of ground cells is found or the first cell is reached.
- *
- * @param[in] sector_cells_list_dev      Pointer to the array of cell centroids in the sector
- * (device memory).
- * @param[in] last_gnd_cells_num_threshold  Maximum number of ground cells to collect.
- * @param[in] cell_index_in_sector       Current cell index in the sector to check.
- * @param[out] last_gnd_cells_dev        Pointer to the array where found ground cell indices are
- * stored (device memory).
- * @param[in,out] num_latest_gnd_cells   Reference to the current count of found ground cells
- * (incremented as cells are found).
- */
-__device__ void RecursiveGndCellSearch(
-  const CellCentroid * __restrict__ sector_cells_list_dev,
-  const uint32_t last_gnd_cells_num_threshold, const uint32_t cell_index_in_sector,
-  uint32_t * last_gnd_cells_dev, uint32_t & num_latest_gnd_cells)
-{
-  if (num_latest_gnd_cells >= last_gnd_cells_num_threshold) {
-    return;  // Stop if we have enough ground cells
-  }
-  const auto & current_cell = sector_cells_list_dev[cell_index_in_sector];
-
-  if (current_cell.num_ground_points > 0) {
-    // If the cell has ground points, add it to the list
-    last_gnd_cells_dev[num_latest_gnd_cells++] = cell_index_in_sector;
-  }
-  if (cell_index_in_sector == 0) {
-    return;  // Base case: no more cells to check
-  }
-  // Continue searching in the previous cell
-  RecursiveGndCellSearch(
-    sector_cells_list_dev, last_gnd_cells_num_threshold, cell_index_in_sector - 1,
-    last_gnd_cells_dev, num_latest_gnd_cells);
-}
-/**
- * @brief Fits a line to ground cell centroids using the least squares method and returns the slope.
- *
- * This device function computes the slope (a) of a line fitted to a set of ground cell centroids,
- * represented by their average radius and height, using the least squares method. The function
- * handles special cases where there are zero or one fitting cells, and clamps the resulting slope
- * to a maximum allowed ratio specified in the filter parameters.
- *
- * @param sector_cells_list_dev Pointer to the array of CellCentroid structures representing the
- * sector's cells (device memory).
- * @param last_gnd_cells_indices_dev Pointer to the array of indices indicating which cells are used
- * for fitting (device memory).
- * @param num_fitting_cells Number of cells to use for fitting.
- * @param filter_parameters_dev Pointer to the FilterParameters structure containing fitting
- * thresholds (device memory).
- * @return The slope (a) of the fitted line. If fitting is not possible, returns 0.0f.
- */
-
-__device__ float fitLineFromGndCell(
-  const CellCentroid * __restrict__ sector_cells_list_dev,
-  const uint32_t * last_gnd_cells_indices_dev, const uint32_t num_fitting_cells,
-  const FilterParameters * __restrict__ filter_parameters_dev)
-{
-  float a = 0.0f;
-  // float b = 0.0f;
-
-  if (num_fitting_cells == 0) {
-    a = 0.0f;  // No fitting cells, set to zero
-    // b = 0.0f;  // No fitting cells, set to zero
-    return a;  // No fitting cells, return zero slope
-  }
-
-  if (num_fitting_cells == 1) {
-    auto cell_idx_in_sector = last_gnd_cells_indices_dev[0];
-    const auto & cell = sector_cells_list_dev[cell_idx_in_sector];
-    a = cell.gnd_height_avg / cell.gnd_radius_avg;
-    // b = 0.0f;  // Only one point, no line fitting needed
-    return a;  // Return the slope based on the single point
-  }
-
-  // calculate the line by least squares method
-  float sum_x = 0.0f;
-  float sum_y = 0.0f;
-  float sum_xy = 0.0f;
-  float sum_xx = 0.0f;
-  for (int i = 0; i < num_fitting_cells; ++i) {
-    const auto & cell_idx_in_sector = last_gnd_cells_indices_dev[i];
-    const auto & cell = sector_cells_list_dev[cell_idx_in_sector];
-    float x = cell.gnd_radius_avg;
-    float y = cell.gnd_height_avg;
-    sum_x += x;
-    sum_y += y;
-    sum_xy += x * y;
-    sum_xx += x * x;
-  }
-  const float denominator = (num_fitting_cells * sum_xx - sum_x * sum_x);
-  if (fabsf(denominator) < 1e-6f) {
-    const auto & cell_idx_in_sector = last_gnd_cells_indices_dev[0];
-    const auto & cell = sector_cells_list_dev[cell_idx_in_sector];
-    a = cell.gnd_height_avg / cell.gnd_radius_avg;
-    // b = 0.0f;
-    return a;  // If denominator is zero, return slope based on the first cell
-  } else {
-    a = (num_fitting_cells * sum_xy - sum_x * sum_y) / denominator;  // slope
-    a = a > filter_parameters_dev->global_slope_max_ratio
-          ? filter_parameters_dev->global_slope_max_ratio
-          : a;  // Clamp to threshold
-    a = a < -filter_parameters_dev->global_slope_max_ratio
-          ? -filter_parameters_dev->global_slope_max_ratio
-          : a;  // Clamp to threshold
-    // b = (sum_y * sum_xx - sum_x * sum_xy) / denominator;  // intercept
-  }
-  return a;
-}
-/**
- * @brief Rechecks the classification of points within a cell to ensure ground points meet height
- * criteria.
- *
- * This device function iterates through all ground points in the given cell and verifies if each
- * point still satisfies the ground height threshold. If a ground point's height (z) exceeds the
- * minimum ground height of the cell plus the non-ground height threshold from the filter
- * parameters, the point is reclassified as non-ground and removed from the cell's ground point
- * count.
- *
- * @param[in,out] cell Reference to the cell centroid structure containing cell statistics and
- * indices.
- * @param[in,out] classify_points Pointer to the array of classified point structures.
- * @param[in] filter_parameters_dev Pointer to the filter parameters structure in device memory.
- */
-
-__device__ void recheckCell(
-  CellCentroid & cell, ClassifiedPointTypeStruct * __restrict__ cell_classify_points_dev,
-  const FilterParameters * __restrict__ filter_parameters_dev)
-{
-  auto const idx_start_point_of_cell = cell.start_point_index;
-  if (cell.num_ground_points < 2) {
-    // If the cell has less than 2 ground points, we can skip rechecking
-    return;
-  }
-  for (int i = 0; i < cell.num_points; i++) {
-    auto & point = cell_classify_points_dev[i];
-    if (point.type != PointType::GROUND) {
-      continue;
-    }
-    if (
-      point.z > cell.gnd_height_min + filter_parameters_dev->non_ground_height_threshold &&
-      cell.num_ground_points > 1) {
-      point.type = PointType::NON_GROUND;
-      removeGndPointInCell(cell, point);
-    }
-  }
-}
-
-/**
- * @brief Segments and classifies points within a cell as ground, non-ground, or out-of-range.
- *
- * This device function iterates over all points in a given cell, classifies each point based on
- * height and slope criteria, and updates the cell's ground point statistics. Optionally, it can
- * recheck the ground cluster in the cell if certain conditions are met.
- *
- * @param sector_cells_list_dev         Pointer to the array of cell centroids (device memory).
- * @param cell_classify_points_dev      Pointer to the array of classified points (device memory).
- * @param filter_parameters_dev         Pointer to the filter parameters structure (device memory).
- * @param cell_idx_in_sector            Index of the current cell within the sector.
- *
- * Classification logic:
- * - Marks points as OUT_OF_RANGE if their height is outside the detection range.
- * - Marks points as NON_GROUND if their height exceeds a global slope-based threshold.
- * - Marks points as GROUND if their height is within both the slope and non-ground thresholds,
- *   and updates ground statistics for the cell.
- * - Optionally rechecks ground points in the cell if enabled and conditions are satisfied.
- */
-__device__ void SegmentInitializedCell(
-  CellCentroid * __restrict__ sector_cells_list_dev,
-  ClassifiedPointTypeStruct * __restrict__ cell_classify_points_dev,
-  const FilterParameters * __restrict__ filter_parameters_dev, const uint32_t cell_idx_in_sector)
-{
-  auto & current_cell = sector_cells_list_dev[cell_idx_in_sector];  // Use reference, not copy
-  // auto const idx_start_point_of_cell = current_cell.start_point_index;
-  auto const num_points_of_cell = current_cell.num_points;
-
-  for (int i = 0; i < num_points_of_cell; ++i) {
-    size_t point_idx = static_cast<size_t>(i);
-    auto & point = cell_classify_points_dev[point_idx];
-
-    // 1. height is out-of-range
-    if (
-      point.z > filter_parameters_dev->detection_range_z_max ||
-      point.z < -filter_parameters_dev->non_ground_height_threshold) {
-      point.type = PointType::OUT_OF_RANGE;
-      continue;
-    }
-
-    // 3. Check global slope ratio
-    // float slope_ratio = point.z / point.radius;
-    float global_height_threshold = point.radius * filter_parameters_dev->global_slope_max_ratio;
-    if (
-      point.z > global_height_threshold &&
-      point.z > filter_parameters_dev->non_ground_height_threshold) {
-      point.type = PointType::NON_GROUND;
-      continue;
-    }
-
-    // 4. Check if point meets ground criteria
-    if (
-      abs(point.z) < global_height_threshold &&
-      abs(point.z) < filter_parameters_dev->non_ground_height_threshold) {
-      point.type = PointType::GROUND;
-      updateGndPointInCell(current_cell, point);
-    }
-  }
-
-  if (
-    filter_parameters_dev->use_recheck_ground_cluster == 1 && current_cell.num_ground_points > 1 &&
-    current_cell.gnd_radius_avg > filter_parameters_dev->recheck_start_distance) {
-    // Recheck the ground points in the cell
-    recheckCell(current_cell, cell_classify_points_dev, filter_parameters_dev);
-  }
-}
-
-/**
- * @brief Segments and classifies points in a cell as ground, non-ground, or out-of-range based on
- * geometric and slope criteria.
- *
- * This device function processes all points within a given cell, comparing each point's height and
- * position relative to the previous ground cell and estimated ground gradient. The classification
- * is performed using several thresholds defined in the filter parameters, including global and
- * local slope ratios, detection range, and non-ground height threshold. Points are classified as
- * GROUND, NON_GROUND, or OUT_OF_RANGE.
- *
- * If enabled, the function also performs a recheck of ground points in the cell for further
- * refinement.
- *
- * @param sector_cells_list_dev         Pointer to the array of cell centroids for the current
- * sector (device memory).
- * @param cell_classify_points_dev      Pointer to the array of points to classify within the
- * current cell (device memory).
- * @param filter_parameters_dev         Pointer to the filter parameters structure (device memory).
- * @param cell_idx_in_sector            Index of the current cell within the sector.
- * @param last_gnd_cells_indices_dev    Pointer to the array of indices of the most recent ground
- * cells (device memory).
- * @param num_latest_gnd_cells          Number of latest ground cells to use for ground estimation.
- */
-
-__device__ void SegmentContinuousCell(
-  CellCentroid * __restrict__ sector_cells_list_dev,
-  ClassifiedPointTypeStruct * __restrict__ cell_classify_points_dev,
-  const FilterParameters * __restrict__ filter_parameters_dev, const uint32_t cell_idx_in_sector,
-  const uint32_t * last_gnd_cells_indices_dev, const uint32_t num_latest_gnd_cells)
-{
-  // compare point of current cell with previous cell center by local slope angle
-  // auto gnd_gradient = calcLocalGndGradient(
-  //   centroid_cells, filter_parameters_dev->gnd_cell_buffer_size, sector_start_cell_index,
-  //   cell_idx_in_sector, filter_parameters_dev->global_slope_max_ratio);
-
-  auto gnd_gradient = fitLineFromGndCell(
-    sector_cells_list_dev, last_gnd_cells_indices_dev, num_latest_gnd_cells, filter_parameters_dev);
-  uint32_t cell_id = cell_idx_in_sector;
-  auto & current_cell = sector_cells_list_dev[cell_id];  // Use reference, not copy
-  // auto const idx_start_point_of_cell = current_cell.start_point_index;
-  auto const num_points_of_cell = current_cell.num_points;
-  auto & prev_gnd_cell = sector_cells_list_dev[last_gnd_cells_indices_dev[0]];
-  auto const prev_cell_gnd_height = prev_gnd_cell.gnd_height_avg;
-
-  for (size_t i = 0; i < num_points_of_cell; ++i) {
-    auto & point = cell_classify_points_dev[i];
-    // 1. height is out-of-range compared to previous cell gnd
-    if (point.z - prev_cell_gnd_height > filter_parameters_dev->detection_range_z_max) {
-      point.type = PointType::OUT_OF_RANGE;
-      return;
-    }
-
-    auto d_radius =
-      point.radius - prev_gnd_cell.gnd_radius_avg + filter_parameters_dev->cell_divider_size_m;
-    auto dz = point.z - prev_gnd_cell.gnd_height_avg;
-
-    // 2. the angle is exceed the global slope threshold
-    if (point.z > filter_parameters_dev->global_slope_max_ratio * point.radius) {
-      point.type = PointType::NON_GROUND;
-      continue;
-    }
-
-    // 2. the angle is exceed the local slope threshold
-    if (dz > filter_parameters_dev->local_slope_max_ratio * d_radius) {
-      point.type = PointType::NON_GROUND;
-      continue;
-    }
-
-    // 3. height from the estimated ground center estimated by local gradient
-    float estimated_ground_z =
-      prev_gnd_cell.gnd_height_avg + gnd_gradient * filter_parameters_dev->cell_divider_size_m;
-    if (point.z > estimated_ground_z + filter_parameters_dev->non_ground_height_threshold) {
-      point.type = PointType::NON_GROUND;
-      continue;
-    }
-    // if (abs(point.z - estimated_ground_z) <= filter_parameters_dev->non_ground_height_threshold)
-    // {
-    //   continue;  // Mark as ground point
-    // }
-
-    if (
-      point.z < estimated_ground_z - filter_parameters_dev->non_ground_height_threshold ||
-      dz < -filter_parameters_dev->local_slope_max_ratio * d_radius ||
-      point.z < -filter_parameters_dev->global_slope_max_ratio * point.radius) {
-      // If the point is below the estimated ground height, classify it as non-ground
-      point.type = PointType::OUT_OF_RANGE;
-      continue;
-    }
-    // If the point is close to the estimated ground height, classify it as ground
-    point.type = PointType::GROUND;
-    updateGndPointInCell(current_cell, point);
-  }
-
-  if (
-    filter_parameters_dev->use_recheck_ground_cluster == 1 && current_cell.num_ground_points > 1 &&
-    current_cell.gnd_radius_avg > filter_parameters_dev->recheck_start_distance) {
-    // Recheck the ground points in the cell
-    recheckCell(current_cell, cell_classify_points_dev, filter_parameters_dev);
-  }
-}
-
-/**
- * @brief Segments a discontinuous cell by classifying its points as ground, non-ground, or
- * out-of-range.
- *
- * This device function processes all points within a given cell, classifying each point based on
- * its height and radius relative to the previous ground cell and configurable filter parameters.
- * The classification considers global and local slope thresholds, as well as detection range
- * limits. Points are marked as GROUND, NON_GROUND, or OUT_OF_RANGE accordingly. If enabled and
- * applicable, the function also performs a recheck on the ground points within the cell to refine
- * the classification.
- *
- * @param sector_cells_list_dev         Device pointer to the array of cell centroids for the
- * sector.
- * @param cell_classify_points_dev      Device pointer to the array of points to classify within the
- * cell.
- * @param filter_parameters_dev         Device pointer to the filter parameters structure.
- * @param cell_idx_in_sector            Index of the current cell within the sector.
- * @param last_gnd_cells_indices_dev    Device pointer to the array of indices for the latest ground
- * cells.
- * @param num_latest_gnd_cells          Number of latest ground cells in the array.
- */
-
-__device__ void SegmentDiscontinuousCell(
-  CellCentroid * __restrict__ sector_cells_list_dev,
-  ClassifiedPointTypeStruct * __restrict__ cell_classify_points_dev,
-  const FilterParameters * __restrict__ filter_parameters_dev, const uint32_t cell_idx_in_sector,
-  const uint32_t * last_gnd_cells_indices_dev, const uint32_t num_latest_gnd_cells)
-{
-  auto cell_id = cell_idx_in_sector;
-  auto & current_cell = sector_cells_list_dev[cell_id];  // Use reference, not copy
-  // auto const idx_start_point_of_cell = current_cell.start_point_index;
-  auto const num_points_of_cell = current_cell.num_points;
-  auto & prev_gnd_cell = sector_cells_list_dev[last_gnd_cells_indices_dev[0]];
-
-  for (uint32_t i = 0; i < num_points_of_cell; ++i) {
-    size_t point_idx = static_cast<size_t>(i);
-    auto & point = cell_classify_points_dev[point_idx];
-    // 1. height is out-of-range
-    if (point.z - prev_gnd_cell.gnd_height_avg > filter_parameters_dev->detection_range_z_max) {
-      point.type = PointType::OUT_OF_RANGE;
-      continue;
-    }
-    // 2. the angle is exceed the global slope threshold
-    auto dz = point.z - prev_gnd_cell.gnd_height_avg;
-    auto d_radius =
-      point.radius - prev_gnd_cell.gnd_radius_avg + filter_parameters_dev->cell_divider_size_m;
-    float global_height_threshold = point.radius * filter_parameters_dev->global_slope_max_ratio;
-    float local_height_threshold = filter_parameters_dev->local_slope_max_ratio * d_radius;
-    if (point.z > global_height_threshold) {
-      point.type = PointType::NON_GROUND;
-      continue;
-    }
-    if (dz > local_height_threshold) {
-      point.type = PointType::NON_GROUND;
-      continue;
-    }
-    // 3. local slope
-    if (dz < -local_height_threshold) {
-      point.type = PointType::OUT_OF_RANGE;
-      continue;
-    }
-    if (point.z < -global_height_threshold) {
-      // If the point is below the estimated ground height, classify it as non-ground
-      point.type = PointType::OUT_OF_RANGE;
-      continue;
-    }
-    point.type = PointType::GROUND;  // Mark as ground point
-    updateGndPointInCell(current_cell, point);
-  }
-
-  if (
-    filter_parameters_dev->use_recheck_ground_cluster == 1 && current_cell.num_ground_points > 1 &&
-    current_cell.gnd_radius_avg > filter_parameters_dev->recheck_start_distance) {
-    // Recheck the ground points in the cell
-    recheckCell(current_cell, cell_classify_points_dev, filter_parameters_dev);
-  }
-}
-
-/**
- * @brief Segments and classifies points in a cell that is not continuous with the previous cell.
- *
- * This device function processes a cell within a sector, classifying each point as GROUND,
- * NON_GROUND, or OUT_OF_RANGE based on height and slope thresholds relative to the previous ground
- * cell. It updates ground statistics for the cell and optionally rechecks ground points if certain
- * conditions are met.
- *
- * @param sector_cells_list_dev         Pointer to the array of cell centroids for the sector
- * (device memory).
- * @param cell_classify_points_dev      Pointer to the array of points to classify within the cell
- * (device memory).
- * @param filter_parameters_dev         Pointer to the filter parameters structure (device memory).
- * @param cell_idx_in_sector            Index of the current cell within the sector.
- * @param last_gnd_cells_indices_dev    Pointer to the array containing indices of the latest ground
- * cells (device memory).
- * @param num_latest_gnd_cells          Number of latest ground cells in the array.
- */
-
-__device__ void SegmentBreakCell(
-  CellCentroid * __restrict__ sector_cells_list_dev,
-  ClassifiedPointTypeStruct * __restrict__ cell_classify_points_dev,
-  const FilterParameters * __restrict__ filter_parameters_dev, const uint32_t cell_idx_in_sector,
-  const uint32_t * last_gnd_cells_indices_dev, const uint32_t num_latest_gnd_cells)
-{
-  // This function is called when the cell is not continuous with the previous cell
-  auto cell_id = cell_idx_in_sector;
-  auto & current_cell = sector_cells_list_dev[cell_id];  // Use reference, not copy
-  // auto const idx_start_point_of_cell = current_cell.start_point_index;
-  auto const num_points_of_cell = current_cell.num_points;
-  auto & prev_gnd_cell = sector_cells_list_dev[last_gnd_cells_indices_dev[0]];
-
-  for (uint32_t i = 0; i < num_points_of_cell; ++i) {
-    auto & point = cell_classify_points_dev[i];
-
-    // 1. height is out-of-range
-    if (point.z - prev_gnd_cell.gnd_height_avg > filter_parameters_dev->detection_range_z_max) {
-      point.type = PointType::OUT_OF_RANGE;
-      continue;
-    }
-
-    auto dz = point.z - prev_gnd_cell.gnd_height_avg;
-    auto d_radius = point.radius - prev_gnd_cell.gnd_radius_avg;
-    float global_height_threshold = d_radius * filter_parameters_dev->global_slope_max_ratio;
-    // 3. Global slope check
-    if (dz > global_height_threshold) {
-      point.type = PointType::NON_GROUND;
-      continue;
-    }
-    if (dz < -global_height_threshold) {
-      point.type = PointType::OUT_OF_RANGE;
-      continue;
-    }
-    point.type = PointType::GROUND;
-    updateGndPointInCell(current_cell, point);
-  }
-  if (
-    filter_parameters_dev->use_recheck_ground_cluster == 1 && current_cell.num_ground_points > 1 &&
-    current_cell.gnd_radius_avg > filter_parameters_dev->recheck_start_distance) {
-    // Recheck the ground points in the cell
-    recheckCell(current_cell, cell_classify_points_dev, filter_parameters_dev);
-  }
-}
-/**
- * @brief CUDA kernel for ground reference point extraction per sector in scan-based ground
- * segmentation.
- *
- * This kernel processes each sector in parallel, scanning through its cells to identify ground
- * reference points. For each sector, it iterates over all cells, classifying them based on the
- * number of points and their spatial relationship to previously identified ground cells. The kernel
- * supports different segmentation modes (UNINITIALIZED, CONTINUOUS, DISCONTINUOUS, BREAK) and
- * applies the appropriate segmentation logic for each cell.
- *
- * - If a cell contains no points, it is skipped.
- * - For the first cell in a sector, initialization is performed.
- * - For subsequent cells, the kernel searches for the latest ground cells in the sector and
- * determines the segmentation mode based on continuity and buffer thresholds.
- * - Depending on the mode, the cell is segmented using the corresponding segmentation function.
- *
- * @param[in,out] classified_points_dev      Device pointer to the array of classified points.
- * @param[in,out] centroid_cells_list_dev    Device pointer to the array of cell centroids for all
- * sectors.
- * @param[in]     filter_parameters_dev      Device pointer to the filter parameters structure.
- *
- * @note This kernel assumes that the number of threads launched is at least equal to the number of
- * sectors. Each thread processes one sector independently.
- */
-
-__global__ void scanPerSectorGroundReferenceKernel(
-  ClassifiedPointTypeStruct * __restrict__ classified_points_dev,
-  CellCentroid * __restrict__ centroid_cells_list_dev,
-  const FilterParameters * __restrict__ filter_parameters_dev)
-{
-  // Implementation of the kernel
-  // scan in each sector from cell_index_in_sector = 0 to max_num_cells_per_sector
-  uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx >= filter_parameters_dev->num_sectors) {
-    return;  // Out of bounds
-  }
-  // For each sector, find the ground reference points if points exist
-  // otherwise, use the previous sector ground reference points
-  // initialize the previous cell centroid
-
-  // Process the first cell of the sector
-  SegmentationMode mode = SegmentationMode::UNINITIALIZED;
-  auto sector_start_cell_index = idx * filter_parameters_dev->max_num_cells_per_sector;
-  CellCentroid * sector_cells_list_dev = &centroid_cells_list_dev[sector_start_cell_index];
-  for (int cell_index_in_sector = 0;
-       cell_index_in_sector < filter_parameters_dev->max_num_cells_per_sector;
-       ++cell_index_in_sector) {
-    if (sector_cells_list_dev[cell_index_in_sector].num_points == 0) {
-      // if no points in the cell, continue
-      continue;
-    }
-
-    // declare the points to stogare the gnd cells indexes in the sector
-    // this is used to store the ground cells in the sector for line fitting
-    // the size of the array is gnd_cell_buffer_size
-    uint32_t num_latest_gnd_cells = 0;
-    const uint32_t BUFFER_SIZE = 5;
-    // declare fixed size array to store the latest gnd cells index in the sector
-    // the size of the array is gnd_cell_buffer_size
-    uint32_t indices_latest_gnd_cells_array[BUFFER_SIZE] = {0};
-    // get the latest gnd cells in the sector
-    size_t cell_first_classify_point_index =
-      sector_cells_list_dev[cell_index_in_sector].start_point_index;
-    ClassifiedPointTypeStruct * cell_classify_points_dev =
-      &classified_points_dev[cell_first_classify_point_index];
-
-    if (cell_index_in_sector == 0) {
-      mode = SegmentationMode::UNINITIALIZED;
-      SegmentInitializedCell(
-        sector_cells_list_dev, cell_classify_points_dev, filter_parameters_dev,
-        cell_index_in_sector);
-      continue;
-    }
-    RecursiveGndCellSearch(
-      sector_cells_list_dev, filter_parameters_dev->gnd_cell_buffer_size, cell_index_in_sector - 1,
-      indices_latest_gnd_cells_array, num_latest_gnd_cells);
-
-    // check the segmentation Mode based on prevoius gnd cells
-    checkSegmentMode(
-      cell_index_in_sector, indices_latest_gnd_cells_array, num_latest_gnd_cells,
-      filter_parameters_dev->gnd_grid_continual_thresh, filter_parameters_dev->gnd_cell_buffer_size,
-      mode);
-
-    if (mode == SegmentationMode::UNINITIALIZED) {
-      SegmentInitializedCell(
-        sector_cells_list_dev, cell_classify_points_dev, filter_parameters_dev,
-        cell_index_in_sector);
-      continue;
-    }
-    if (mode == SegmentationMode::CONTINUOUS) {
-      SegmentContinuousCell(
-        sector_cells_list_dev, cell_classify_points_dev, filter_parameters_dev,
-        cell_index_in_sector, indices_latest_gnd_cells_array, num_latest_gnd_cells);
-      continue;
-    }
-    if (mode == SegmentationMode::DISCONTINUOUS) {
-      SegmentDiscontinuousCell(
-        sector_cells_list_dev, cell_classify_points_dev, filter_parameters_dev,
-        cell_index_in_sector, indices_latest_gnd_cells_array, num_latest_gnd_cells);
-      continue;
-    }
-    if (mode == SegmentationMode::BREAK) {
-      SegmentBreakCell(
-        sector_cells_list_dev, cell_classify_points_dev, filter_parameters_dev,
-        cell_index_in_sector, indices_latest_gnd_cells_array, num_latest_gnd_cells);
-      continue;
-    }
-    // if the first round of scan
-  }
 }
 
 // Initialize the cell list
@@ -828,76 +116,6 @@ __global__ void distributePointsToCell(
   }
 }
 
-// Mark obstacle points for point in classified_points_dev
-__global__ void markObstaclePointsKernel(
-  ClassifiedPointTypeStruct * __restrict__ classified_points_dev,
-  const uint32_t max_num_classified_points, uint32_t * __restrict__ flags,
-  const PointType pointtype)
-{
-  uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx >= max_num_classified_points) {
-    return;
-  }
-  // check if the classified_points_dev[idx] is existing?
-  if (classified_points_dev[idx].radius < 0.0f) {
-    return;
-  }
-
-  // extract origin index of point
-  auto origin_index = classified_points_dev[idx].origin_index;
-  auto point_type = classified_points_dev[idx].type;
-  if (origin_index >= static_cast<size_t>(max_num_classified_points)) {
-    return;
-  }
-
-  // Mark obstacle points for point in classified_points_dev
-
-  flags[origin_index] = (point_type == pointtype) ? 1 : 0;
-}
-
-/**
- * @brief CUDA kernel to scatter selected input points into an output array based on flags and
- * prefix sum indices.
- *
- * This kernel iterates over each input point and, if the corresponding flag is set (non-zero),
- * copies the point to the output array at the position specified by the exclusive prefix sum in
- * `indices`.
- *
- * @param[in] input_points   Pointer to the array of input points.
- * @param[in] flags         Pointer to the array of flags indicating valid points (1 = valid, 0 =
- * invalid).
- * @param[in] indices       Pointer to the array of exclusive prefix sum indices for output
- * positions.
- * @param[in] num_points    Total number of input points.
- * @param[out] output_points Pointer to the array where selected points are written.
- *
- * @note This kernel assumes that `indices` is the result of an exclusive prefix sum over `flags`.
- *       Only threads corresponding to valid points (flags[idx] != 0) will write to the output
- * array.
- */
-// input point idx:     0 1 2 3 4 5 6 7 8 9
-// flags:               0 1 0 1 1 0 0 1 0 0
-// indices:             0 0 1 1 2 3 3 3 4 4  <-- EXCLUSIVE PREFIX SUM
-// output point idx:    0 1 2 3
-// output points:       1 3 4 7
-__global__ void scatterKernel(
-  const PointTypeStruct * __restrict__ input_points, const uint32_t * __restrict__ flags,
-  const uint32_t * __restrict__ indices, const uint32_t num_points,
-  PointTypeStruct * __restrict__ output_points)
-{
-  uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx >= num_points) {
-    return;
-  }
-  // If the point is valid, copy it to the output points using the indices
-  if (flags[idx]) {
-    const uint32_t output_index = indices[idx];
-    output_points[output_index] = input_points[idx];
-  }
-}
-
-}  // namespace
-
 CudaScanGroundSegmentationFilter::CudaScanGroundSegmentationFilter(
   const FilterParameters & filter_parameters, const int64_t max_mem_pool_size_in_byte)
 : filter_parameters_(filter_parameters)
@@ -924,21 +142,25 @@ void CudaScanGroundSegmentationFilter::sortPointsInCells(
 
 // ============ Scan per sector to get ground reference and Non-Ground points =============
 void CudaScanGroundSegmentationFilter::scanPerSectorGroundReference(
-  ClassifiedPointTypeStruct * classified_points_dev, CellCentroid * centroid_cells_list_dev,
-  const FilterParameters * filter_parameters_dev)
+  device_vector<Cell> & cell_list,
+  device_vector<int> & starting_pid,
+  device_vector<ClassifiedPointType> & classified_points
+)
 {
   const uint32_t num_sectors = filter_parameters_.num_sectors;
   if (num_sectors == 0) {
     return;
   }
 
-  dim3 block_dim(1);
-  dim3 grid_dim((num_sectors + block_dim.x - 1) / block_dim.x);
-
-  // Launch the kernel to scan for ground points in each sector
-  scanPerSectorGroundReferenceKernel<<<grid_dim, block_dim, 0, ground_segment_stream_>>>(
-    classified_points_dev, centroid_cells_list_dev, filter_parameters_dev);
-  CHECK_CUDA_ERROR(cudaGetLastError());
+  CHECK_CUDA_ERROR(cuda::launchAsync<BLOCK_DIM_X>(
+    (int)(num_sectors * WARP_SIZE), 
+    (BLOCK_DIM_X / WARP_SIZE) * sizeof(Cell) * filter_parameters_.gnd_cell_buffer_size,
+    stream_->get(),
+    cell_list.data(), 
+    classifeid_points.data(),
+    starting_pid.data(),
+    filter_parameters_
+  ));
 }
 
 __forceinline__ __device__ SegmentationMode checkSegmentMode(
@@ -1068,21 +290,29 @@ __forceinline__ __device__ void segmentBreakPoint(
 }
 
 __forceinline__ __device__ void segmentCell(
-  int wid,  // Index of the thread in the warp
-  ClassifiedPointType * sorted_points, const FilterParameters & param, Cell & cell,
-  float slope,                 // Slope of the line connect the previous ground cells
+  const int wid,  // Index of the thread in the warp
+  ClassifiedPointType * classified_points, 
+  const FilterParameters & param, 
+  Cell & cell, float slope,     // Slope of the line connect the previous ground cells
   int start_pid, int end_pid,  // Start and end indices of points in the current cell
   float prev_cell_gnd_radius_avg, float prev_cell_gnd_height_avg, const SegmentationMode & mode)
 {
+  // Here I assume each thread handles no more than 64 points
+  int64_t ground_mask = 0, recheck_mask = 0, backup_mask = 0;
   // For computing the cell statistic
   float t_gnd_radius_sum = 0;
   float t_gnd_height_sum = 0;
   float t_gnd_height_min = FLT_MAX;
   int t_gnd_point_num = 0;
+  // For recheck
+  float minus_t_gnd_radius_sum = 0;
+  float minus_t_gnd_height_sum = 0;
+  float minus_t_gnd_point_num = 0;
+  ClassifiedPointType p;
 
   // Fit line from the recent ground cells
   for (int j = start_pid + wid; j < end_pid; j += WARP_SIZE) {
-    auto p = sorted_points[j];
+    p = classified_points[j];
 
     switch (mode) {
       case (SegmentationMode::UNINITIALIZED): {
@@ -1108,6 +338,10 @@ __forceinline__ __device__ void segmentCell(
       t_gnd_height_sum += p.z;
       t_gnd_point_num += 1;
       t_gnd_height_min = (t_gnd_height_min > p.z) ? p.z : t_gnd_height_min;
+
+      // Set the corresponding bit to 1
+      // In the recheck we don't have to check every point, just jump to the ground point
+      ground_mask |= 1 << ((j - start_pid - wid) / WARP_SIZE);
     }
   }
 
@@ -1115,12 +349,13 @@ __forceinline__ __device__ void segmentCell(
   __syncwarp();
   // Find the min height and the number of ground points first
 
-  // Use reduction to compute cell's stat
+  // Use reduction to compute the cell's stat
   for (int offset = WARP_SIZE >> 1; offset > 0; offset >> 1) {
+    t_gnd_height_sum += __shfl_down_sync(FULL_MASK, t_gnd_height_sum, offset);
+    t_gnd_radius_sum += __shfl_down_sync(FULL_MASK, t_gnd_radius_sum, offset);
     t_gnd_point_num += __shfl_down_sync(FULL_MASK, t_gnd_point_num, offset);
 
     float other_height_min = __shfl_down_sync(FULL_MASK, t_gnd_height_min, offset);
-
     t_gnd_height_min = min(t_gnd_height_min, other_height_min);
   }
 
@@ -1128,44 +363,92 @@ __forceinline__ __device__ void segmentCell(
   float cell_gnd_height_min = __shfl_sync(FULL_MASK, t_gnd_height_min, 0);
   int cell_gnd_point_num = __shfl_sync(FULL_MASK, t_gnd_point_num, 0);
 
-  // Now recheck the points using the height_min
-  for (int j = wid; j <) {
+  // This is to record the remaining ground point in each thread
+  // After looping, ground_mask will be cleared, so we need to back it up
+  recheck_mask = backup_mask = ground_mask;   
+
+  if (param.use_recheck_ground_cluster && cell_gnd_point_num > 1 &&
+      t_gnd_radius_sum / (float)(t_gnd_point_num) > param.recheck_start_distance) {
+
+    // Now recheck the points using the height_min
+    // This is to record the remaining ground point in each thread
+    recheck_mask = ground_mask; 
+    // After looping, ground_mask will be cleared, so we need to back it up
+    backup_mask = ground_mask;
+
+    while (ground_mask != 0) {
+      // Get the offset of the ground point
+      int pos = __ffs(ground_mask) - 1;
+      int gnd_pid = pos * WARP_SIZE  + start_pid + wid;
+      
+      // Clear the bit
+      ground_mask &= (ground_mask - 1);
+      p = classified_points[gnd_pid];
+
+      if (p.z > cell_gnd_height_min + param.non_ground_height_threshold && 
+            cell_gnd_point_num > 1) {
+        minus_t_gnd_height_sum += p.z;
+        minus_t_gnd_radius_sum += p.radius;
+        ++minus_t_gnd_point_num;
+
+        // If the point is no longer ground, clear the bit
+        recheck_mask &= (recheck_mask - 1);
+      }
+    }
+
+    // Now use ballot sync to see if there are any ground points remaining
+    uint32_t recheck_res = __ballot_sync(FULL_MASK, recheck_mask > 0);
+    uint32_t backup_res = __ballot_sync(FULL_MASK, backup_mask > 0);
+
+    // If no ground point remains, we have to keep the last ground point 
+    if (recheck_res == 0 && backup_res > 0) {
+      // Get the index of the last thread that detects ground point
+      int last_tid = 32 - __ffs(backup_res);
+
+      // Only the last point in that thread remain
+      if (wid == last_tid) {
+        // Luckily, the last point still remains
+        minus_t_gnd_height_sum -= p.z;
+        minus_t_gnd_radius_sum -= p.radius;
+        --minus_t_gnd_point_num;
+        recheck_mask |= (1 << (31 - __clz(backup_res)));
+      }
+    }
+
+    __syncwarp();
+
+    // Final update 
+    for (int offset = WARP_SIZE >> 1; offset > 0; offset >> 1) {
+      minus_t_gnd_height_sum += __shfl_down_sync(FULL_MASK, minus_t_gnd_height_sum, offset);
+      minus_t_gnd_radius_sum += __shfl_down_sync(FULL_MASK, minus_t_gnd_radius_sum, offset);
+      minus_t_gnd_point_num += __shfl_down_sync(FULL_MASK, minus_t_gnd_point_num, offset);
+    }
+
+    if (wid == 0) {
+      t_gnd_height_sum -= minus_t_gnd_height_sum;
+      t_gnd_radius_sum -= minus_t_gnd_radius_sum;
+      t_gnd_point_sum -= minus_t_gnd_point_sum;
+    }
   }
 
-  __syncwarp();
+  // Now update the point type in the global memory
+  while (recheck_mask != 0) {
+    // Get the offset of the ground point
+    int pos = __ffs(recheck_mask) - 1;
+    int gnd_pid = pos * WARP_SIZE  + start_pid + wid;
+   
+    classified_points[gnd_pid].type = PointType::GROUND;
+    // Clear the bit
+    recheck_mask &= (recheck_mask - 1);
+  }
 
-  t_gnd_radius_sum += __shfl_down_sync(FULL_MASK, t_gnd_radius_sum, offset);
-  t_gnd_height_sum += __shfl_down_sync(FULL_MASK, t_gnd_height_sum, offset);
-
+  // Finally, thread 0 update the cell stat
   if (wid == 0) {
     cell.gnd_radius_avg = t_gnd_radius_sum / (float)(t_gnd_point_num);
     cell.gnd_height_avg = t_gnd_height_sum / (float)(t_gnd_point_num);
     cell.gnd_height_min = t_gnd_height_min;
     cell.num_ground_points = t_gnd_point_num;
   }
-
-  // TODO: recheck
-}
-
-// Update partial sums and slope
-__forceinline__ __device__ void updateLineFitParam(
-  float & sum_x, float & sum_y, float & sum_xx, float & sum_xy, float & slope,
-  int num_fitting_cells, const float & old_x, const float & old_y, const float & new_x,
-  const float & new_y, const FilterParameters & param)
-{
-  sum_x = sum_x - old_x + new_x;
-  sum_y = sum_y - old_y + new_y;
-  sum_xx = sum_xx - old_x * old_x + new_x * new_x;
-  sum_xy = sum_xy - old_x * old_y + new_x * new_y;
-
-  float denom = num_fitting_cells * sum_xx - sum_x * sum_x;
-
-  slope =
-    (fabsf(denom) < 1e-6f) ? new_y / new_x : (num_fitting_cells * sum_xy - sum_x * sum_y) / denom;
-  slope = (slope > param.global_slope_max_ratio)
-            ? param.global_slope_max_ratio
-            : ((slope < -param.global_slope_max_ratio) ? -param.global_slope_max_ratio : slope);
-}
 }
 
 __global__ void sectorProcessingKernel(
@@ -1174,43 +457,81 @@ __global__ void sectorProcessingKernel(
 {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
   // Each warp handles one sector
-  int sector_id = index / WARP_SIZE;
-  int wid = index % WARP_SIZE;
+  int sector_stride = (blockDim.x * gridDim.x) / WARP_SIZE;
+  int wid = index % WARP_SIZE;  // Index of the thread within the warp
+  // Shared memory to backup the cell data
+  extern __shared__ Cell gnd_cell_queue[];
+  const int queue_id = (threadIdx.x / WARP_SIZE) * param.gnd_cell_buffer_size;
 
-  // TODO: loop on sectors, not just do this
-  if (sector_id >= param.num_sectors) {
-    return;
+  // Loop on sectors
+  for (int sector_id = index / WARP_SIZE; sector_id < param.num_sector; sector_id += sector_stride ) {
+    // For storing the previous ground cells
+    int closest_gnd_cell_id, furthest_gnd_cell_id, num_latest_gnd_cells = 0;
+    int head = 0, tail = 0;
+    float sum_x, sum_y, sum_xx, sum_xy;
+
+    // Initially no ground cell is identified
+    closest_gnd_cell_id = furthest_gnd_cell_id = -1;
+    sum_x = sum_y = sum_xx = sum_xy = 0.0;
+
+    // Loop on the cells in a sector
+    for (int i = 0; i < param.max_num_cells_per_sector; ++i) {
+      auto mode = checkSegmentMode(
+        i, closest_gnd_cell_id, furthest_gnd_cell_id, 
+        param.gnd_cell_buffer_size,
+        param.gnd_grid_continual_thresh);
+
+      int global_cell_id = i * param.num_sector + sector_id;
+      Cell cell;
+
+      // Classify the points in the cell
+      segmentCell(
+        wid, classified_points, slope, param, cell, 
+        starting_pid[global_cell_id], starting_pid[global_cell_id + 1], 
+        prev_cell_gnd_radius_avg,
+        prev_cell_gnd_height_avg, mode
+      );
+
+      // Update the indices of the previous ground cells if the cell contains ground points
+      if (wid == 0 && cell.num_ground_points > 0) {
+        if (num_latest_gnd_cells >= param.gnd_cell_buffer_size) {
+          // If the number of previous ground cell reach maximum, drop the first one
+          Cell head_cell = gnd_cell_queue[head++];
+          head = (head == param.gnd_cell_buffer_size) ? 0 : head;
+          --num_latest_gnd_cells;
+          sum_x -= head_cell.gnd_radius_avg;
+          sum_y -= head_cell.gnd_height_avg;
+          sum_xx -= head_cell.gnd_radius_avg * head_cell.gnd_radius_avg;
+          sum_xy -= head_cell.gnd_radius_avg * head_cell.gnd_height_avg;
+        } 
+
+        // Otherwise, add the new ground cell to the queue
+        gnd_cell_queue[tail++] = cell;
+        tail = (tail == param.gnd_cell_buffer_size) ? 0 : tail; 
+        ++num_latest_gnd_cells;
+        // Update the stats
+        closest_gnd_cell_id = i;
+        sum_x += cell.gnd_radius_avg;
+        sum_y += cell.gnd_height_avg;
+        sum_xx += cell.gnd_radius_avg * cell.gnd_radius_avg;
+        sum_xy += cell.gnd_radius_avg * cell.gnd_height_avg;
+
+        float denom = (num_latest_gnd_cells * sum_xx - sum_x * sum_x);
+
+        if (fbasf(denom) < 1e-6f) {
+          Cell head_cell = cell_queue[queue_id + head];
+          slope = head_cell.gnd_height_avg / head_cell.gnd_radius_avg;
+        } else {
+          slope = (num_latest_gnd_cells * sum_xy - sum_x * sum_y) / denom;
+          slope = fmax(fminf(slope, param.global_slope_max_ratio), -param.global_slope_max_ratio);
+        }
+
+        // Write the cell to the global memory
+        cell_list[global_cell_id] = cell;
+      }
+      __syncwarp();
+    }
   }
-
-  // Store the previous ground cells
-  int closest_gnd_cell_id, furthest_gnd_cell_id;
-
-  // Initially no ground cell is identified
-  closest_gnd_cell_id = furthest_gnd_cell_id = -1;
-
-  // Loop on the cells in a sector
-  for (int i = 0; i < param.max_num_cells_per_sector; ++i) {
-    auto mode = checkSegmentationMode(
-      i, closest_gnd_cell_id, furthest_gnd_cell_id, param.gnd_cell_buffer_size,
-      param.gnd_grid_continual_thresh);
-
-    int global_cell_id = i * param.num_sector + sector_id;
-    int start_pid = starting_pid[global_cell_id], end_pid = starting_pid[global_cell_id + 1];
-
-    // Classify the points in the cell
-    segmentCell(
-      wid, sorted_points, slope, param, start_pid, end_pid, prev_cell_gnd_radius_avg,
-      prev_cell_gnd_height_avg, mode);
-
-    // Compute the radius_avg, height_avg, height_min, and number of ground points in the cell
-
-    // Update the indices of the previous ground cells
-  }
-}
-
-void CudaScanGroundSegmentationFilter::sector_processing(
-  device_vector<Cell> & cell_list, device_vector<ClassifiedPointType> & classified_points)
-{
 }
 
 void CudaScanGroundSegmentationFilter::sort_points(
@@ -1253,97 +574,143 @@ void CudaScanGroundSegmentationFilter::sort_points(
       classified_points.data(), cell_id.data(), point_num, writing_loc.data()));
 }
 
-// ============= Extract non-ground points =============
-void CudaScanGroundSegmentationFilter::extractNonGroundPoints(
-  const PointTypeStruct * input_points_dev, ClassifiedPointTypeStruct * classified_points_dev,
-  PointTypeStruct * output_points_dev, uint32_t & num_output_points_host, const PointType pointtype)
+
+struct NonGroundChecker {
+  CUDAH bool operator()(const ClassifiedPointType & p) const {
+    return (p.type == PointType::NON_GROUND);
+  }
+};
+
+struct GroundChecker {
+  CUDAH bool operator()(const ClassifiedPointType & p) const {
+    return (p.type == PointType::GROUND);
+  }
+};
+
+template <typename CheckerType>
+__global__ void markingPoints(
+  ClassifiedPointType * classified_points, int point_num, int * mark,
+  CheckerType checker
+)
+)
 {
-  if (number_input_points_ == 0) {
-    num_output_points_host = 0;
-    return;
+  int index = threadIdx.x + blockIdx.x * blockDim.x;
+  int stride = blockDim.x * gridDim.x;
+
+  for (int i = index; i < point_num; i += stride) {
+    auto p = classified_points[i];
+
+    mark[p.original_index] = (checker(p)) ? 1 : 0;
   }
-  auto * flag_dev = allocateBufferFromPool<uint32_t>(number_input_points_);
-
-  dim3 block_dim(512);
-  dim3 grid_dim((number_input_points_ + block_dim.x - 1) / block_dim.x);
-  setFlagsKernel<<<grid_dim, block_dim, 0, ground_segment_stream_>>>(
-    flag_dev, number_input_points_, 0);
-  CHECK_CUDA_ERROR(cudaGetLastError());
-
-  // auto * flag_dev = allocateBufferFromPool<uint32_t>(number_input_points_);
-  auto * indices_dev = allocateBufferFromPool<uint32_t>(number_input_points_);
-  void * temp_storage = nullptr;
-  size_t temp_storage_bytes = 0;
-
-  markObstaclePointsKernel<<<grid_dim, block_dim, 0, ground_segment_stream_>>>(
-    classified_points_dev, number_input_points_, flag_dev, pointtype);
-
-  cub::DeviceScan::ExclusiveSum(
-    nullptr, temp_storage_bytes, flag_dev, indices_dev, static_cast<int>(number_input_points_),
-    ground_segment_stream_);
-  CHECK_CUDA_ERROR(
-    cudaMallocFromPoolAsync(&temp_storage, temp_storage_bytes, mem_pool_, ground_segment_stream_));
-
-  cub::DeviceScan::ExclusiveSum(
-    temp_storage, temp_storage_bytes, flag_dev, indices_dev, static_cast<int>(number_input_points_),
-    ground_segment_stream_);
-  CHECK_CUDA_ERROR(cudaGetLastError());
-
-  scatterKernel<<<grid_dim, block_dim, 0, ground_segment_stream_>>>(
-    input_points_dev, flag_dev, indices_dev, number_input_points_, output_points_dev);
-  CHECK_CUDA_ERROR(cudaGetLastError());
-  // Count the number of valid points
-  uint32_t last_index = 0;
-  uint32_t last_flag = 0;
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    &last_index, indices_dev + number_input_points_ - 1, sizeof(uint32_t), cudaMemcpyDeviceToHost,
-    ground_segment_stream_));
-
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    &last_flag, flag_dev + number_input_points_ - 1, sizeof(uint32_t), cudaMemcpyDeviceToHost,
-    ground_segment_stream_));
-
-  num_output_points_host = last_flag + last_index;
-
-  if (temp_storage) {
-    CHECK_CUDA_ERROR(cudaFreeAsync(temp_storage, ground_segment_stream_));
-  }
-  returnBufferToPool(flag_dev);
-  returnBufferToPool(indices_dev);
 }
 
-void CudaScanGroundSegmentationFilter::getCellFirstPointIndex(
-  CellCentroid * centroid_cells_list_dev, uint32_t * num_points_per_cell_dev,
-  size_t * cell_first_point_indices_dev)
+__global__ void extract(
+  cuda::PointCloud2::Ptr dev_input_points, int point_num, int * writing_loc,
+  cuda::PointCloud2::Ptr dev_output_points
+)
 {
-  // Validate parameters to prevent invalid kernel launch configurations
-  if (filter_parameters_.max_num_cells == 0 || filter_parameters_.num_sectors == 0) {
+  int index = threadIdx.x + blockIdx.x * blockDim.x;
+  int stride = blockDim.x * gridDim.x;
+
+  for (int i = index; i < point_num; i += stride) {
+    int2 wloc = *(int2*)(writing_loc + i);
+
+    if (wloc.x < wloc.y) {
+      dev_output_points[wloc.x] = dev_input_points[i];
+    }
+  }
+}
+
+// ============= Extract non-ground points =============
+template <typename CheckerType>
+void CudaScanGroundSegmentationFilter::extractPoints(
+  device_vector<ClassifiedPointType> & classified_points,
+  cuda::PointCloud2 & input,
+  cuda::PointCloud2 & output
+)
+{
+  int point_num = dev_input_points_->size();
+  device_vector<int> point_mark(point_num + 1, stream_, mempool_);
+
+  CHECK_CUDA_ERROR(cuda::fill(non_ground_mark, 0));
+
+  // Mark non-ground points
+  CHECK_CUDA_ERROR(cuda::launchAsync<BLOCK_DIM_X>(
+    point_num, 0, stream_->get(),
+    markingPoints,
+    classified_points.data(),
+    point_num,
+    point_mark.data(),
+    CheckerType()
+  ));
+
+  // Exclusive scan
+  device_vector<int> writing_loc(stream_, mempool_);
+
+  CHECK_CUDA_ERROR(cuda::ExclusiveScan(point_mark, writing_loc));
+
+  // Reserve the output
+  int output_size = writing_loc[point_num];
+
+  if (output_size <= 0) {
     return;
   }
 
-  void * d_temp_storage = nullptr;
+  output.resize(output_size);
 
-  size_t temp_storage_bytes = 0;
-  uint32_t threads = filter_parameters_.num_sectors;
-  uint32_t blocks = (filter_parameters_.max_num_cells + threads - 1) / threads;
-  getCellNumPointsKernel<<<blocks, threads, 0, ground_segment_stream_>>>(
-    centroid_cells_list_dev, filter_parameters_.max_num_cells, num_points_per_cell_dev);
-  CHECK_CUDA_ERROR(cudaGetLastError());
+  // Get non-ground 
+  CHECK_CUDA_ERROR(cuda::launchAsync<BLOCK_DIM_X>(
+    point_num, 0, stream_->get(),
+    extract,
+    input.data(),
+    point_num,
+    writing_loc.data(),
+    output.data()
+  ));
+}
 
-  cub::DeviceScan::ExclusiveSum(
-    d_temp_storage, temp_storage_bytes, num_points_per_cell_dev, cell_first_point_indices_dev,
-    static_cast<int>(filter_parameters_.max_num_cells), ground_segment_stream_);
-  CHECK_CUDA_ERROR(cudaMalloc(&d_temp_storage, temp_storage_bytes));
-  cub::DeviceScan::ExclusiveSum(
-    d_temp_storage, temp_storage_bytes, num_points_per_cell_dev, cell_first_point_indices_dev,
-    static_cast<int>(filter_parameters_.max_num_cells), ground_segment_stream_);
+// ============= Extract non-ground points =============
+void CudaScanGroundSegmentationFilter::extractGroundPoints(
+  device_vector<ClassifiedPointType> & classified_points
+)
+{
+  int point_num = dev_input_points_->size();
+  device_vector<int> non_ground_mark(point_num + 1, stream_, mempool_);
 
-  // update start point index in centroid_cells_list_dev
-  updateCellStartPointIndexKernel<<<blocks, threads, 0, ground_segment_stream_>>>(
-    centroid_cells_list_dev, cell_first_point_indices_dev, filter_parameters_.max_num_cells);
-  CHECK_CUDA_ERROR(cudaGetLastError());
+  CHECK_CUDA_ERROR(cuda::fill(non_ground_mark, 0));
 
-  CHECK_CUDA_ERROR(cudaFree(d_temp_storage));
+  // Mark non-ground points
+  CHECK_CUDA_ERROR(cuda::launchAsync<BLOCK_DIM_X>(
+    point_num, 0, stream_->get(),
+    markNonGroundPoints,
+    classified_points.data(),
+    point_num,
+    non_ground_mark.data()
+  ));
+
+  // Exclusive scan
+  device_vector<int> writing_loc(stream_, mempool_);
+
+  CHECK_CUDA_ERROR(cuda::ExclusiveScan(non_ground_mark, writing_loc));
+
+  // Reserve the output
+  int non_ground_point_num = writing_loc[point_num];
+
+  if (non_ground_point_num <= 0) {
+    return;
+  }
+
+  dev_output_points_.reset(new cuda::PointCloud2(non_ground_point_num, stream_, mempool_));
+
+  // Get non-ground 
+  CHECK_CUDA_ERROR(cuda::launchAsync<BLOCK_DIM_X>(
+    point_num, 0, stream_->get(),
+    getNonGroundPoints,
+    dev_input_points_->data(),
+    point_num,
+    writing_loc.data(),
+    dev_output_points_->data()
+  ));
 }
 
 void CudaScanGroundSegmentationFilter::classifyPointCloud(
@@ -1357,43 +724,11 @@ void CudaScanGroundSegmentationFilter::classifyPointCloud(
   device_vector<ClassifiedPointType> classified_points(stream_, mempool_);
 
   sort_points(cell_list, starting_pid, classified_points);
+  scanPerSectorGroundReference(cell_list, starting_pid, classified_points);
+  // Extract non-ground points
+  e(classified_points);
 
-  const auto & max_num_cells = filter_parameters_.max_num_cells;
-  auto * centroid_cells_list_dev = allocateBufferFromPool<CellCentroid>(max_num_cells);
-  auto * num_points_per_cell_dev = allocateBufferFromPool<uint32_t>(max_num_cells);
-  auto * cell_first_point_indices_dev = allocateBufferFromPool<size_t>(max_num_cells);
-  auto * classified_points_dev =
-    allocateBufferFromPool<ClassifiedPointTypeStruct>(number_input_points_);
-  auto * cell_counts_dev = allocateBufferFromPool<uint32_t>(max_num_cells);
-
-  scanPerSectorGroundReference(
-    classified_points_dev, centroid_cells_list_dev, filter_parameters_dev);
-
-  // Extract obstacle points from classified_points_dev
-  extractNonGroundPoints(
-    input_points_dev, classified_points_dev, output_points_dev, num_output_points,
-    PointType::NON_GROUND);
-
-  // Extract ground points from classified_points_dev for debugging
-  uint32_t num_ground_points = 0;
-  extractNonGroundPoints(
-    input_points_dev, classified_points_dev, ground_points_dev, num_ground_points,
-    PointType::GROUND);
-
-  returnBufferToPool(cell_counts_dev);
-  returnBufferToPool(num_points_per_cell_dev);
-  returnBufferToPool(cell_first_point_indices_dev);
-  returnBufferToPool(classified_points_dev);
-  returnBufferToPool(filter_parameters_dev);
-  returnBufferToPool(centroid_cells_list_dev);
-
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(ground_segment_stream_));
-
-  output_points->width = static_cast<uint32_t>(num_output_points);
-  output_points->row_step = static_cast<uint32_t>(num_output_points * sizeof(PointTypeStruct));
-
-  ground_points->width = static_cast<uint32_t>(num_ground_points);
-  ground_points->row_step = static_cast<uint32_t>(num_ground_points * sizeof(PointTypeStruct));
+  dev_output_points_.to_point_cloud2(output_points);
 }
 
 }  // namespace autoware::cuda_ground_segmentation

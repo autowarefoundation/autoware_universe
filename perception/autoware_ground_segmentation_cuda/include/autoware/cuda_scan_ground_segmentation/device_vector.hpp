@@ -4,6 +4,8 @@
 #include <cuda_runtime_api.h>
 #include <memory>
 #include <vector>
+#include <stdexcept>
+#include <string>
 
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 #include "cuda_stream_wrapper.hpp"
@@ -44,6 +46,20 @@ public:
     device_vector& operator=(const device_vector& other);
     device_vector& operator=(device_vector&& other);
     device_vector& operator=(const std::vector<T>& other);
+
+    // Slow, do not use unless neccessary
+    T operator[](int idx) const {
+        if (idx < 0 || idx >= ele_num_) {
+            throw std::invalid_argument("Error: out-of-bound access at index " + std::to_string(idx));
+        }
+        T val;
+
+        CHECK_CUDA_ERROR(cudaMemcpyAsync(
+            &val, data_ + idx, 1, 
+            cudaMemcpyDeviceToHost, 
+            stream_->get()
+        ));
+    }
 
     T* data() { return data_; }
     const T* data() const { return data_; }

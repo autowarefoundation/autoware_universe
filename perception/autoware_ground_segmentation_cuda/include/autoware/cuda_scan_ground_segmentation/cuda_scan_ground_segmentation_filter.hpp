@@ -146,43 +146,24 @@ private:
   FilterParameters filter_parameters_;
 
 private:
-  // Internal methods for ground segmentation logic
-  void scanObstaclePoints(
-    const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
-    PointTypeStruct * output_points_dev, size_t * num_output_points,
-    CellCentroid * centroid_cells_list_dev);
   /*
    * This function calc the cell_id for each point
    * Assign the point with initialized class into temp memory for classification
    * Memory size of each cell is depend on predefined cell point num
    *
    */
-  void assignPointToClassifyPoint(
-    const PointTypeStruct * input_points_dev, const CellCentroid * centroid_cells_list_dev,
-    const FilterParameters * filter_parameters_dev, uint32_t * cell_counts_dev,
-    ClassifiedPointType * classified_points_dev);
 
-  void getCellFirstPointIndex(
-    CellCentroid * centroid_cells_list_dev, uint32_t * num_points_per_cell_dev,
-    size_t * cell_first_point_indices_dev);
-
-  void sortPointsInCells(
-    const uint32_t * num_points_per_cell_dev, ClassifiedPointType * classified_points_dev);
-  void scanPerSectorGroundReference(
-    ClassifiedPointType * classified_points_dev, CellCentroid * centroid_cells_list_dev,
-    const FilterParameters * filter_parameters_dev);
+  void scanPerSectorGroundReference(  
+    device_vector<Cell> & cell_list,
+    device_vector<int> & starting_pid,
+    device_vector<ClassifiedPointType> & classified_points
+  );
 
   /*
    * Extract obstacle points from classified_points_dev into
    */
-  void extractNonGroundPoints(
-    const PointTypeStruct * input_points_dev, ClassifiedPointType * classified_points_dev,
-    PointTypeStruct * output_points_dev, uint32_t & num_output_points_host,
-    const PointType pointtype);
-
-  void countCellPointNum(
-    const PointTypeStruct * input_points_dev, CellCentroid * indices_list_dev,
-    const FilterParameters * filter_parameters_dev);
+  template <typename CheckerType>
+  void extractPoints(device_vector<ClassifiedPointType> & classified_points);
 
 
 
@@ -191,11 +172,6 @@ private:
     device_vector<Cell> & cell_list, 
     device_vector<int> & starting_pid,
     device_vector<ClassifiedPointType> & classified_points);
-
-  void sector_processing(
-    device_vector<Cell> & cell_list,
-    device_vector<ClassifiedPointType> & classified_points
-  );
   
   std::shared_ptr<CudaStream> stream_;
   std::shared_ptr<CudaMempool> mempool_;
