@@ -362,12 +362,14 @@ void MissionPlanner::set_preferred_lane(
   }
 
   // trim route from the current position
-  const auto segment_it = std::find_if(route.segments.begin(), route.segments.end(), [&](const auto & segment) {
-    return std::any_of(segment.primitives.begin(), segment.primitives.end(), [&](const auto & primitive) {
-      const auto lanelet = lanelet_map_ptr_->laneletLayer.get(primitive.id);
-      return lanelet::utils::isInLanelet(route.start_pose, lanelet);
+  const auto segment_it =
+    std::find_if(route.segments.begin(), route.segments.end(), [&](const auto & segment) {
+      return std::any_of(
+        segment.primitives.begin(), segment.primitives.end(), [&](const auto & primitive) {
+          const auto lanelet = lanelet_map_ptr_->laneletLayer.get(primitive.id);
+          return lanelet::utils::isInLanelet(route.start_pose, lanelet);
+        });
     });
-  });
 
   // erase segments before the current segment
   if (segment_it != route.segments.end()) {
@@ -489,12 +491,14 @@ void MissionPlanner::on_set_lanelet_route(
 
   // trim route from the current position
 
-  const auto segment_it = std::find_if(route.segments.begin(), route.segments.end(), [&](const auto & segment) {
-    return std::any_of(segment.primitives.begin(), segment.primitives.end(), [&](const auto & primitive) {
-      const auto lanelet = lanelet_map_ptr_->laneletLayer.get(primitive.id);
-      return lanelet::utils::isInLanelet(odometry_->pose.pose, lanelet);
+  const auto segment_it =
+    std::find_if(route.segments.begin(), route.segments.end(), [&](const auto & segment) {
+      return std::any_of(
+        segment.primitives.begin(), segment.primitives.end(), [&](const auto & primitive) {
+          const auto lanelet = lanelet_map_ptr_->laneletLayer.get(primitive.id);
+          return lanelet::utils::isInLanelet(odometry_->pose.pose, lanelet);
+        });
     });
-  });
 
   // erase segments before the current segment
   if (segment_it != route.segments.end()) {
