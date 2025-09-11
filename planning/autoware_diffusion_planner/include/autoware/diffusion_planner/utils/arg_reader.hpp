@@ -31,6 +31,34 @@ using json = nlohmann::json;
 using NormalizationMap =
   std::unordered_map<std::string, std::pair<std::vector<float>, std::vector<float>>>;
 
+inline void check_weight_version(const std::string & json_path)
+{
+  std::ifstream file(json_path);
+  if (!file) {
+    throw std::runtime_error("Could not open JSON file: " + json_path);
+  }
+
+  json j;
+  file >> j;
+
+  const std::string error_msg =
+    "Please use the appropriate version of diffusion_planner.onnx and "
+    "diffusion_planner.param.json. "
+    "Refer to README.md for more details.";
+
+  if (!j.contains("major_version")) {
+    throw std::runtime_error("Missing 'major_version' key in JSON. " + error_msg);
+  }
+
+  for (const auto & [key, val] : j["major_version"].items()) {
+    const int major_version = val.get<int>();
+    if (major_version != 1) {
+      throw std::runtime_error(
+        "Unsupported major_version: " + std::to_string(major_version) + ". " + error_msg);
+    }
+  }
+}
+
 inline NormalizationMap load_normalization_stats(const std::string & json_path)
 {
   std::ifstream file(json_path);
