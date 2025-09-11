@@ -125,7 +125,7 @@ void DiffusionPlanner::set_up_params()
   params_.traffic_light_group_msg_timeout_seconds =
     this->declare_parameter<double>("traffic_light_group_msg_timeout_seconds", 0.2);
   params_.batch_size = this->declare_parameter<int>("batch_size", 1);
-  params_.temperature = this->declare_parameter<float>("temperature", 0.5);
+  params_.temperature_list = this->declare_parameter<std::vector<double>>("temperature", {0.5});
 
   // debug params
   debug_params_.publish_debug_map =
@@ -154,7 +154,7 @@ SetParametersResult DiffusionPlanner::on_parameter(
       parameters, "traffic_light_group_msg_timeout_seconds",
       temp_params.traffic_light_group_msg_timeout_seconds);
     update_param<int>(parameters, "batch_size", temp_params.batch_size);
-    update_param<float>(parameters, "temperature", temp_params.temperature);
+    update_param<std::vector<double>>(parameters, "temperature", temp_params.temperature_list);
     params_ = temp_params;
   }
 
@@ -409,9 +409,13 @@ InputDataMap DiffusionPlanner::create_input_data()
 
   // random sample trajectories
   {
-    const std::vector<float> single_sampled_trajectories =
-      preprocess::create_sampled_trajectories(params_.temperature);
-    input_data_map["sampled_trajectories"] = replicate_for_batch(single_sampled_trajectories);
+    for (int64_t b = 0; b < params_.batch_size; b++) {
+      const std::vector<float> sampled_trajectories =
+        preprocess::create_sampled_trajectories(params_.temperature_list[b]);
+      input_data_map["sampled_trajectories"].insert(
+        input_data_map["sampled_trajectories"].end(), sampled_trajectories.begin(),
+        sampled_trajectories.end());
+    }
   }
 
   // Add current state to ego history

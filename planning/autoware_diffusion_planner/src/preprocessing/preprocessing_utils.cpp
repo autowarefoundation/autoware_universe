@@ -118,14 +118,14 @@ std::vector<float> create_ego_agent_past(
   return ego_agent_past;
 }
 
-std::vector<float> create_sampled_trajectories(const float temperature)
+std::vector<float> create_sampled_trajectories(const double temperature)
 {
   std::random_device rd;
   std::mt19937 gen(rd());
   std::normal_distribution<float> dist(0.0f, 1.0f);
   std::vector<float> sampled_trajectories((MAX_NUM_NEIGHBORS + 1) * (OUTPUT_T + 1) * POSE_DIM);
   for (float & val : sampled_trajectories) {
-    val = dist(gen) * temperature;
+    val = dist(gen) * static_cast<float>(temperature);
   }
   return sampled_trajectories;
 }

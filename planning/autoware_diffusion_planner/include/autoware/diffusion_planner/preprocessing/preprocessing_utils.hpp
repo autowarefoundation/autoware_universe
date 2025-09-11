@@ -73,7 +73,7 @@ std::vector<float> create_ego_agent_past(
  * @param[in] temperature Temperature parameter to control the randomness of the trajectories.
  * @return A vector of floats representing the sampled trajectories.
  */
-std::vector<float> create_sampled_trajectories(const float temperature);
+std::vector<float> create_sampled_trajectories(const double temperature);
 
 }  // namespace autoware::diffusion_planner::preprocess
 #endif  // AUTOWARE__DIFFUSION_PLANNER__PREPROCESSING__PREPROCESSING_UTILS_HPP_
