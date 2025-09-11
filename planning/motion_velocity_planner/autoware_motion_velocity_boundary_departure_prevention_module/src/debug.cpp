@@ -234,11 +234,10 @@ Marker create_departure_interval_marker(
 }
 
 MarkerArray create_debug_marker_array(
-  const Output & output, const Trajectory & ego_traj, const rclcpp::Clock::SharedPtr & clock_ptr,
+  const Output & output, const Trajectory & ego_traj, const rclcpp::Time & curr_time,
   const double base_link_z, const NodeParam & node_param)
 {
   const auto line_list = visualization_msgs::msg::Marker::LINE_LIST;
-  const auto curr_time = clock_ptr->now();
   const auto color = color::green();
   const auto m_scale = create_marker_scale(0.05, 0, 0);
 

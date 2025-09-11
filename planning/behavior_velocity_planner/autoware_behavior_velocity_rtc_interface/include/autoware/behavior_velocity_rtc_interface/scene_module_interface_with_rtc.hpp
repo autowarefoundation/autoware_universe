@@ -103,9 +103,10 @@ protected:
 
   void updateRTCStatus(
     const UUID & uuid, const bool safe, const uint8_t state, const double distance,
-    const Time & stamp)
+    const Time & stamp, const std::optional<bool> override_rtc_auto_mode = std::nullopt)
   {
-    rtc_interface_.updateCooperateStatus(uuid, safe, state, distance, distance, stamp);
+    rtc_interface_.updateCooperateStatus(
+      uuid, safe, state, distance, distance, stamp, false, override_rtc_auto_mode);
   }
 
   void removeRTCStatus(const UUID & uuid) { rtc_interface_.removeCooperateStatus(uuid); }

@@ -219,9 +219,22 @@ void CrosswalkModuleManager::launchNewModules(const PathWithLaneId & path)
         node_, road_lanelet_id, crosswalk_lanelet_id, reg_elem_id, lanelet_map_ptr, p, logger,
         clock_, time_keeper_, planning_factor_interface_));
     generate_uuid(crosswalk_lanelet_id);
+    const auto crosswalk_ll = lanelet_map_ptr->laneletLayer.get(crosswalk_lanelet_id);
+    std::optional<bool> override_rtc_auto_mode;
+    const auto key = "rtc_approval_required_v1";
+    if (crosswalk_ll.hasAttribute(key)) {
+      std::stringstream manual_modules(crosswalk_ll.attribute(key).value());
+      std::string manual_module;
+      // modules are listed in the attribute value, separated by a comma
+      while (std::getline(manual_modules, manual_module, ',')) {
+        if (manual_module == "crosswalk") {
+          override_rtc_auto_mode = false;
+        }
+      }
+    }
     updateRTCStatus(
       getUUID(crosswalk_lanelet_id), true, State::WAITING_FOR_EXECUTION,
-      std::numeric_limits<double>::lowest(), path.header.stamp);
+      std::numeric_limits<double>::lowest(), path.header.stamp, override_rtc_auto_mode);
   };
 
   const auto crosswalk_reg_elem_map = planning_utils::getRegElemMapOnPath<Crosswalk>(
