@@ -56,6 +56,12 @@ public:
     const std::shared_ptr<PlannerData> & planner_data,
     const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const PlannerType planner_type,
     const std::string & filename);
+  static void plot_and_save_path(
+    const autoware_planning_msgs::msg::LaneletRoute & route,
+    const geometry_msgs::msg::Pose & start_pose, const geometry_msgs::msg::Pose & goal_pose,
+    const std::shared_ptr<PlannerData> & planner_data,
+    const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const PlannerType planner_type,
+    const std::string & filename);
 
 private:
   static void plot_lanelet(
