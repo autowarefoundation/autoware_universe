@@ -18,6 +18,8 @@
 
 #include <autoware_utils_uuid/uuid_helper.hpp>
 
+#include <autoware_perception_msgs/msg/detail/tracked_objects__struct.hpp>
+
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Transform.h>
@@ -991,8 +993,7 @@ void DummyPerceptionPublisherNode::createRemappingsForDisappearedObjects(
   }
 
   // Find best matches for all objects that need remapping
-  std::vector<std::pair<std::string, double>>
-    mapping_candidates;  // dummy_uuid:predicted_uuid -> distance
+  std::vector<std::pair<std::string, double>> mapping_candidates;
 
   for (const auto & dummy_uuid : dummy_objects_to_remap) {
     // Use last known position if available, otherwise use current position
@@ -1121,99 +1122,81 @@ double DummyPerceptionPublisherNode::calculateEuclideanDistance(
   return std::sqrt(dx * dx + dy * dy + dz * dz);
 }
 
-bool DummyPerceptionPublisherNode::isTrajectoryValid(
-  const autoware_perception_msgs::msg::PredictedObject & current_prediction,
-  const autoware_perception_msgs::msg::PredictedObject & new_prediction,
-  const std::string & dummy_uuid_str) const
+std::optional<autoware_perception_msgs::msg::PredictedPath>
+DummyPerceptionPublisherNode::getMostLikelyPath(
+  const autoware_perception_msgs::msg::PredictedPath & current_prediction,
+  const autoware_perception_msgs::msg::PredictedObject & new_prediction) const
 {
   // If current prediction is empty, accept any new prediction
-  if (current_prediction.kinematics.predicted_paths.empty()) {
+  if (current_prediction.path.empty()) {
     return true;
   }
-
+  const auto & current_path = current_prediction.path;
+  if (current_path.empty()) {
+    return true;
+  }
   // If new prediction is empty, reject it
   if (new_prediction.kinematics.predicted_paths.empty()) {
     return false;
   }
 
-  // Get the highest confidence paths from both predictions
-  const auto & current_path = *std::max_element(
-    current_prediction.kinematics.predicted_paths.begin(),
-    current_prediction.kinematics.predicted_paths.end(),
-    [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
+  // Get yaw from quaternion
+  auto extractYaw = [](const geometry_msgs::msg::Quaternion & q) {
+    tf2::Quaternion tf_q;
+    tf2::fromMsg(q, tf_q);
+    double roll{0.0};
+    double pitch{0.0};
+    double yaw{0.0};
+    tf2::Matrix3x3(tf_q).getRPY(roll, pitch, yaw);
+    return yaw;
+  };
 
-  const auto & new_path = *std::max_element(
-    new_prediction.kinematics.predicted_paths.begin(),
-    new_prediction.kinematics.predicted_paths.end(),
-    [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
+  // Calculate path lengths
+  auto calculatePathLength = [](const auto & path) {
+    double total_length = 0.0;
+    for (size_t i = 1; i < path.size(); ++i) {
+      const auto & prev_pose = path[i - 1];
+      const auto & curr_pose = path[i];
 
-  // Check yaw angle change
-  if (!current_path.path.empty() && !new_path.path.empty()) {
-    // Get yaw from quaternion
-    auto extractYaw = [](const geometry_msgs::msg::Quaternion & q) {
-      tf2::Quaternion tf_q;
-      tf2::fromMsg(q, tf_q);
-      double roll{0.0};
-      double pitch{0.0};
-      double yaw{0.0};
-      tf2::Matrix3x3(tf_q).getRPY(roll, pitch, yaw);
-      return yaw;
-    };
+      const double dx = curr_pose.position.x - prev_pose.position.x;
+      const double dy = curr_pose.position.y - prev_pose.position.y;
+      const double dz = curr_pose.position.z - prev_pose.position.z;
+      total_length += std::sqrt(dx * dx + dy * dy + dz * dz);
+    }
+    return total_length;
+  };
 
-    const double current_yaw = extractYaw(current_path.path[0].orientation);
-    const double new_yaw = extractYaw(new_path.path[0].orientation);
+  for (const auto & candidate_prediction :
+       new_prediction.kinematics.predicted_paths) {  // Check yaw angle change
+    const auto & candidate_path = candidate_prediction.path;
+    if (candidate_path.empty()) {
+      continue;
+    }
+
+    const double current_yaw = extractYaw(current_path.at(0).orientation);
+    const double new_yaw = extractYaw(candidate_path[0].orientation);
 
     // Calculate yaw difference, handling wrap-around
     double yaw_diff = std::abs(new_yaw - current_yaw);
-    if (yaw_diff > M_PI) {
-      yaw_diff = 2.0 * M_PI - yaw_diff;
-    }
+    yaw_diff = (yaw_diff > M_PI) ? (2.0 * M_PI - yaw_diff) : yaw_diff;  // Normalize to [0, π]
 
     if (yaw_diff > max_yaw_change_) {
-      RCLCPP_DEBUG(
-        rclcpp::get_logger("dummy_perception_publisher"),
-        "Rejecting trajectory for object %s due to large yaw change: %f rad",
-        dummy_uuid_str.c_str(), yaw_diff);
-      return false;
+      continue;
     }
+
+    const double current_path_length = std::max(calculatePathLength(current_path), 0.1);
+    const double new_path_length = std::max(calculatePathLength(candidate_path), 0.1);
+
+    const double length_ratio =
+      std::max(current_path_length / new_path_length, new_path_length / current_path_length);
+    if (length_ratio > max_path_length_change_ratio_) {
+      continue;
+    }
+
+    return true;
   }
 
-  // Check path length change
-  if (!current_path.path.empty() && !new_path.path.empty()) {
-    // Calculate path lengths
-    auto calculatePathLength = [](const auto & path) {
-      double total_length = 0.0;
-      for (size_t i = 1; i < path.path.size(); ++i) {
-        const auto & prev_pose = path.path[i - 1];
-        const auto & curr_pose = path.path[i];
-
-        const double dx = curr_pose.position.x - prev_pose.position.x;
-        const double dy = curr_pose.position.y - prev_pose.position.y;
-        const double dz = curr_pose.position.z - prev_pose.position.z;
-        total_length += std::sqrt(dx * dx + dy * dy + dz * dz);
-      }
-      return total_length;
-    };
-
-    const double current_path_length = calculatePathLength(current_path);
-    const double new_path_length = calculatePathLength(new_path);
-
-    // Only check if both paths have significant length
-    if (current_path_length > 0.1 && new_path_length > 0.1) {
-      const double length_ratio =
-        std::max(current_path_length / new_path_length, new_path_length / current_path_length);
-      if (length_ratio > max_path_length_change_ratio_) {
-        RCLCPP_DEBUG(
-          rclcpp::get_logger("dummy_perception_publisher"),
-          "Rejecting trajectory for object %s due to large path length change: %fx (current: %fm, "
-          "new: %fm)",
-          dummy_uuid_str.c_str(), length_ratio, current_path_length, new_path_length);
-        return false;
-      }
-    }
-  }
-
-  return true;
+  return false;
 }
 
 bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
@@ -1228,12 +1211,14 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
       return uuid == dummy_uuid_str;
     });
 
-  if (dummy_it != objects_.end()) {
-    const auto & dummy_object = *dummy_it;
-    is_pedestrian =
-      (dummy_object.classification.label ==
-       autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN);
+  if (dummy_it == objects_.end()) {
+    return false;
   }
+
+  const auto & dummy_object = *dummy_it;
+  is_pedestrian =
+    (dummy_object.classification.label ==
+     autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN);
 
   // Use class-specific thresholds
   // Pedestrians: more lenient due to unpredictable movement patterns
@@ -1252,69 +1237,68 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
   }
 
   // Get dummy object speed for comparison (reuse dummy_it from above)
-  if (dummy_it != objects_.end()) {
-    const auto & dummy_object = *dummy_it;
-    const double dummy_speed = dummy_object.initial_state.twist_covariance.twist.linear.x;
+  const double dummy_speed = dummy_object.initial_state.twist_covariance.twist.linear.x;
 
-    // Get candidate predicted object speed
-    const auto & candidate_twist =
-      candidate_prediction.kinematics.initial_twist_with_covariance.twist;
-    const double candidate_speed = std::sqrt(
-      candidate_twist.linear.x * candidate_twist.linear.x +
-      candidate_twist.linear.y * candidate_twist.linear.y);
+  // Get candidate predicted object speed
+  const auto & candidate_twist =
+    candidate_prediction.kinematics.initial_twist_with_covariance.twist;
+  const double candidate_speed = std::sqrt(
+    candidate_twist.linear.x * candidate_twist.linear.x +
+    candidate_twist.linear.y * candidate_twist.linear.y);
 
-    // Speed bounds check - more lenient for pedestrians
-    const double min_speed_ratio =
-      is_pedestrian ? pedestrian_params_.min_speed_ratio : vehicle_params_.min_speed_ratio;
-    const double max_speed_ratio =
-      is_pedestrian ? pedestrian_params_.max_speed_ratio : vehicle_params_.max_speed_ratio;
-    const double speed_check_threshold = is_pedestrian ? pedestrian_params_.speed_check_threshold
-                                                       : vehicle_params_.speed_check_threshold;
+  // Speed bounds check - more lenient for pedestrians
+  const double min_speed_ratio =
+    is_pedestrian ? pedestrian_params_.min_speed_ratio : vehicle_params_.min_speed_ratio;
+  const double max_speed_ratio =
+    is_pedestrian ? pedestrian_params_.max_speed_ratio : vehicle_params_.max_speed_ratio;
+  const double speed_check_threshold = is_pedestrian ? pedestrian_params_.speed_check_threshold
+                                                     : vehicle_params_.speed_check_threshold;
 
-    auto is_within_speed_bounds = [&](double speed) {
-      return speed >= min_speed_ratio * dummy_speed && speed <= max_speed_ratio * dummy_speed;
-    };
+  auto is_within_speed_bounds = [&](double speed) {
+    return speed >= min_speed_ratio * dummy_speed && speed <= max_speed_ratio * dummy_speed;
+  };
 
-    // Reject if candidate speed is too different when dummy speed is significant
-    if (dummy_speed > speed_check_threshold && !is_within_speed_bounds(candidate_speed)) {
+  // Reject if candidate speed is too different when dummy speed is significant
+  if (dummy_speed > speed_check_threshold && !is_within_speed_bounds(candidate_speed)) {
+    RCLCPP_DEBUG(
+      rclcpp::get_logger("dummy_perception_publisher"),
+      "Rejecting remapping candidate for object %s (%s) due to speed difference: dummy=%fm/s, "
+      "candidate=%fm/s",
+      dummy_uuid_str.c_str(), is_pedestrian ? "pedestrian" : "vehicle", dummy_speed,
+      candidate_speed);
+    return false;
+  }
+
+  // Compare speeds if both are significant
+  if (dummy_speed > 0.1 && candidate_speed > 0.1) {
+    const double speed_ratio =
+      std::max(dummy_speed / candidate_speed, candidate_speed / dummy_speed);
+    if (speed_ratio > max_speed_difference_ratio) {
       RCLCPP_DEBUG(
         rclcpp::get_logger("dummy_perception_publisher"),
-        "Rejecting remapping candidate for object %s (%s) due to speed difference: dummy=%fm/s, "
-        "candidate=%fm/s",
-        dummy_uuid_str.c_str(), is_pedestrian ? "pedestrian" : "vehicle", dummy_speed,
-        candidate_speed);
+        "Rejecting remapping candidate for object %s (%s) due to speed difference: %fx (dummy: "
+        "%fm/s, "
+        "candidate: %fm/s, max_ratio: %f)",
+        dummy_uuid_str.c_str(), is_pedestrian ? "pedestrian" : "vehicle", speed_ratio, dummy_speed,
+        candidate_speed, max_speed_difference_ratio);
       return false;
-    }
-
-    // Compare speeds if both are significant
-    if (dummy_speed > 0.1 && candidate_speed > 0.1) {
-      const double speed_ratio =
-        std::max(dummy_speed / candidate_speed, candidate_speed / dummy_speed);
-      if (speed_ratio > max_speed_difference_ratio) {
-        RCLCPP_DEBUG(
-          rclcpp::get_logger("dummy_perception_publisher"),
-          "Rejecting remapping candidate for object %s (%s) due to speed difference: %fx (dummy: "
-          "%fm/s, "
-          "candidate: %fm/s, max_ratio: %f)",
-          dummy_uuid_str.c_str(), is_pedestrian ? "pedestrian" : "vehicle", speed_ratio,
-          dummy_speed, candidate_speed, max_speed_difference_ratio);
-        return false;
-      }
     }
   }
 
   // Calculate expected position based on last known trajectory if available
   geometry_msgs::msg::Point comparison_position = expected_position;
-
   auto last_used_pred_it = dummy_last_used_predictions_.find(dummy_uuid_str);
-  if (last_used_pred_it != dummy_last_used_predictions_.end()) {
-    const auto & last_prediction = last_used_pred_it->second;
+  if (last_used_pred_it == dummy_last_used_predictions_.end()) {
+    return false;
+  }
 
-    // Calculate where the dummy object should be based on its last known trajectory
-    const auto expected_pos = calculateExpectedPosition(last_prediction, dummy_uuid_str);
-    if (expected_pos.has_value()) {
-      comparison_position = expected_pos.value();
-    }
+  // Calculate where the dummy object should be based on its last known trajectory
+  const auto & last_prediction = last_used_pred_it->second;
+  const auto & last_trajectory = last_used_pred_it->second.kinematics.predicted_paths.at(0);
+
+  const auto expected_pos = calculateExpectedPosition(last_trajectory, dummy_uuid_str);
+  if (expected_pos.has_value()) {
+    comparison_position = expected_pos.value();
   }
 
   // Check position similarity
@@ -1335,70 +1319,26 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
   }
 
   // Additional validation using the last used prediction
-  if (last_used_pred_it != dummy_last_used_predictions_.end()) {
-    const auto & last_prediction = last_used_pred_it->second;
+  if (last_used_pred_it == dummy_last_used_predictions_.end()) {
+    return true;
+  }
 
-    // Check path similarity using isTrajectoryValid
-    if (!isTrajectoryValid(last_prediction, candidate_prediction, dummy_uuid_str)) {
-      RCLCPP_DEBUG(
-        rclcpp::get_logger("dummy_perception_publisher"),
-        "Rejecting remapping candidate for object %s due to path dissimilarity",
-        dummy_uuid_str.c_str());
-      return false;
-    }
+  // Check path similarity using getMostLikelyPath
+  if (!getMostLikelyPath(last_trajectory, candidate_prediction)) {
+    RCLCPP_DEBUG(
+      rclcpp::get_logger("dummy_perception_publisher"),
+      "Rejecting remapping candidate for object %s due to path dissimilarity",
+      dummy_uuid_str.c_str());
+    return false;
+  }
 
-    // Additional trajectory similarity check - compare path shapes
-    if (!arePathsSimilar(last_prediction, candidate_prediction)) {
-      RCLCPP_DEBUG(
-        rclcpp::get_logger("dummy_perception_publisher"),
-        "Rejecting remapping candidate for object %s due to trajectory shape dissimilarity",
-        dummy_uuid_str.c_str());
-      return false;
-    }
-
-    // Check heading similarity
-    if (
-      !last_prediction.kinematics.predicted_paths.empty() &&
-      !candidate_prediction.kinematics.predicted_paths.empty()) {
-      // Get the highest confidence paths
-      const auto & last_path = *std::max_element(
-        last_prediction.kinematics.predicted_paths.begin(),
-        last_prediction.kinematics.predicted_paths.end(),
-        [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
-
-      const auto & candidate_path = *std::max_element(
-        candidate_prediction.kinematics.predicted_paths.begin(),
-        candidate_prediction.kinematics.predicted_paths.end(),
-        [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
-
-      if (!last_path.path.empty() && !candidate_path.path.empty()) {
-        // Extract yaw from quaternions
-        auto extractYaw = [](const geometry_msgs::msg::Quaternion & q) {
-          tf2::Quaternion tf_q;
-          tf2::fromMsg(q, tf_q);
-          double roll, pitch, yaw;
-          tf2::Matrix3x3(tf_q).getRPY(roll, pitch, yaw);
-          return yaw;
-        };
-
-        const double last_yaw = extractYaw(last_path.path[0].orientation);
-        const double candidate_yaw = extractYaw(candidate_path.path[0].orientation);
-
-        // Calculate yaw difference with wrap-around
-        double yaw_diff = std::abs(candidate_yaw - last_yaw);
-        if (yaw_diff > M_PI) {
-          yaw_diff = 2.0 * M_PI - yaw_diff;
-        }
-
-        if (yaw_diff > max_remapping_yaw_diff) {
-          RCLCPP_DEBUG(
-            rclcpp::get_logger("dummy_perception_publisher"),
-            "Rejecting remapping candidate for object %s due to large yaw difference: %f rad",
-            dummy_uuid_str.c_str(), yaw_diff);
-          return false;
-        }
-      }
-    }
+  // Additional trajectory similarity check - compare path shapes
+  if (!arePathsSimilar(last_prediction, candidate_prediction)) {
+    RCLCPP_DEBUG(
+      rclcpp::get_logger("dummy_perception_publisher"),
+      "Rejecting remapping candidate for object %s due to trajectory shape dissimilarity",
+      dummy_uuid_str.c_str());
+    return false;
   }
 
   return true;
@@ -1485,83 +1425,86 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
   }
 
   // Compare path lengths and general direction if both predictions have paths
-  if (last_path.path.size() > 1 && !candidate_prediction.kinematics.predicted_paths.empty()) {
-    const auto & candidate_path = *std::max_element(
-      candidate_prediction.kinematics.predicted_paths.begin(),
-      candidate_prediction.kinematics.predicted_paths.end(),
-      [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
+  if (last_path.path.size() < 2 || candidate_prediction.kinematics.predicted_paths.empty()) {
+    return true;
+  }
+  const auto & candidate_path = *std::max_element(
+    candidate_prediction.kinematics.predicted_paths.begin(),
+    candidate_prediction.kinematics.predicted_paths.end(),
+    [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
 
-    if (candidate_path.path.size() > 1) {
-      // Calculate path lengths (total distance along path)
-      auto calculatePathLength = [](const auto & path) {
-        double total_length = 0.0;
-        for (size_t i = 1; i < path.path.size(); ++i) {
-          const auto & prev_pos = path.path[i - 1].position;
-          const auto & curr_pos = path.path[i].position;
-          const double dx = curr_pos.x - prev_pos.x;
-          const double dy = curr_pos.y - prev_pos.y;
-          const double dz = curr_pos.z - prev_pos.z;
-          total_length += std::sqrt(dx * dx + dy * dy + dz * dz);
-        }
-        return total_length;
-      };
+  auto calculatePathLength = [](const auto & path) {
+    double total_length = 0.0;
+    for (size_t i = 1; i < path.path.size(); ++i) {
+      const auto & prev_pos = path.path[i - 1].position;
+      const auto & curr_pos = path.path[i].position;
+      const double dx = curr_pos.x - prev_pos.x;
+      const double dy = curr_pos.y - prev_pos.y;
+      const double dz = curr_pos.z - prev_pos.z;
+      total_length += std::sqrt(dx * dx + dy * dy + dz * dz);
+    }
+    return total_length;
+  };
 
-      const double last_path_length = calculatePathLength(last_path);
-      const double candidate_path_length = calculatePathLength(candidate_path);
+  if (!candidate_path.path.empty()) {
+    return true;
+  }
+  // Calculate path lengths (total distance along path)
 
-      // Check path length similarity - more lenient for pedestrians
-      const double max_path_length_ratio = is_pedestrian ? pedestrian_params_.max_path_length_ratio
-                                                         : vehicle_params_.max_path_length_ratio;
-      if (last_path_length > 0.1 && candidate_path_length > 0.1) {
-        const double length_ratio = std::max(
-          last_path_length / candidate_path_length, candidate_path_length / last_path_length);
-        if (length_ratio > max_path_length_ratio) {
-          RCLCPP_DEBUG(
-            rclcpp::get_logger("dummy_perception_publisher"),
-            "Path length difference too large: %fx (last: %fm, candidate: %fm)", length_ratio,
-            last_path_length, candidate_path_length);
-          return false;
-        }
-      }
+  const double last_path_length = calculatePathLength(last_path);
+  const double candidate_path_length = calculatePathLength(candidate_path);
 
-      // Calculate direction vectors
-      const auto & last_start = last_path.path[0].position;
-      const auto & last_end = last_path.path.back().position;
-      const auto & candidate_start = candidate_path.path[0].position;
-      const auto & candidate_end = candidate_path.path.back().position;
+  // Check path length similarity - more lenient for pedestrians
+  const double max_path_length_ratio = is_pedestrian ? pedestrian_params_.max_path_length_ratio
+                                                     : vehicle_params_.max_path_length_ratio;
+  if (last_path_length > 0.1 && candidate_path_length > 0.1) {
+    const double length_ratio =
+      std::max(last_path_length / candidate_path_length, candidate_path_length / last_path_length);
+    if (length_ratio > max_path_length_ratio) {
+      RCLCPP_DEBUG(
+        rclcpp::get_logger("dummy_perception_publisher"),
+        "Path length difference too large: %fx (last: %fm, candidate: %fm)", length_ratio,
+        last_path_length, candidate_path_length);
+      return false;
+    }
+  }
 
-      // Direction vectors
-      const double last_dx = last_end.x - last_start.x;
-      const double last_dy = last_end.y - last_start.y;
-      const double candidate_dx = candidate_end.x - candidate_start.x;
-      const double candidate_dy = candidate_end.y - candidate_start.y;
+  // Calculate direction vectors
+  const auto & last_start = last_path.path[0].position;
+  const auto & last_end = last_path.path.back().position;
+  const auto & candidate_start = candidate_path.path[0].position;
+  const auto & candidate_end = candidate_path.path.back().position;
 
-      // Calculate magnitudes
-      const double last_magnitude = std::sqrt(last_dx * last_dx + last_dy * last_dy);
-      const double candidate_magnitude =
-        std::sqrt(candidate_dx * candidate_dx + candidate_dy * candidate_dy);
+  // Direction vectors
+  const double last_dx = last_end.x - last_start.x;
+  const double last_dy = last_end.y - last_start.y;
+  const double candidate_dx = candidate_end.x - candidate_start.x;
+  const double candidate_dy = candidate_end.y - candidate_start.y;
 
-      // Check if both paths have significant movement
-      if (last_magnitude > 0.5 && candidate_magnitude > 0.5) {
-        // Calculate dot product for direction similarity
-        const double dot_product = last_dx * candidate_dx + last_dy * candidate_dy;
-        const double cos_angle = dot_product / (last_magnitude * candidate_magnitude);
+  // Calculate magnitudes
+  const double last_magnitude = std::sqrt(last_dx * last_dx + last_dy * last_dy);
+  const double candidate_magnitude =
+    std::sqrt(candidate_dx * candidate_dx + candidate_dy * candidate_dy);
 
-        // Clamp to avoid numerical issues
-        const double clamped_cos = std::max(-1.0, std::min(1.0, cos_angle));
-        const double angle_diff = std::acos(clamped_cos);
+  // Check if both paths have significant movement
+  if (last_magnitude > 0.5 && candidate_magnitude > 0.5) {
+    // Calculate dot product for direction similarity
+    const double dot_product = last_dx * candidate_dx + last_dy * candidate_dy;
+    const double cos_angle = dot_product / (last_magnitude * candidate_magnitude);
 
-        // Allow more direction difference for pedestrians who can change direction quickly
-        const double max_overall_direction_diff = is_pedestrian
-                                                    ? pedestrian_params_.max_overall_direction_diff
-                                                    : vehicle_params_.max_overall_direction_diff;
-        if (angle_diff > max_overall_direction_diff) {
-          RCLCPP_DEBUG(
-            rclcpp::get_logger("dummy_perception_publisher"),
-            "Overall direction difference too large: %f rad", angle_diff);
-          return false;
-        }
-      }
+    // Clamp to avoid numerical issues
+    const double clamped_cos = std::max(-1.0, std::min(1.0, cos_angle));
+    const double angle_diff = std::acos(clamped_cos);
+
+    // Allow more direction difference for pedestrians who can change direction quickly
+    const double max_overall_direction_diff = is_pedestrian
+                                                ? pedestrian_params_.max_overall_direction_diff
+                                                : vehicle_params_.max_overall_direction_diff;
+    if (angle_diff > max_overall_direction_diff) {
+      RCLCPP_DEBUG(
+        rclcpp::get_logger("dummy_perception_publisher"),
+        "Overall direction difference too large: %f rad", angle_diff);
+      return false;
     }
   }
 
@@ -1569,11 +1512,11 @@ bool DummyPerceptionPublisherNode::arePathsSimilar(
 }
 
 std::optional<geometry_msgs::msg::Point> DummyPerceptionPublisherNode::calculateExpectedPosition(
-  const autoware_perception_msgs::msg::PredictedObject & last_prediction,
+  const autoware_perception_msgs::msg::PredictedPath & last_prediction,
   const std::string & dummy_uuid_str)
 {
   // Check if we have predicted paths
-  if (last_prediction.kinematics.predicted_paths.empty()) {
+  if (last_prediction.path.empty()) {
     return std::nullopt;
   }
 
@@ -1590,13 +1533,7 @@ std::optional<geometry_msgs::msg::Point> DummyPerceptionPublisherNode::calculate
 
   const auto & dummy_object = *dummy_it;
 
-  // Find path with highest confidence
-  auto selected_path_it = std::max_element(
-    last_prediction.kinematics.predicted_paths.begin(),
-    last_prediction.kinematics.predicted_paths.end(),
-    [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
-
-  const auto & selected_path = *selected_path_it;
+  const auto & selected_path = last_prediction;
 
   if (selected_path.path.empty()) {
     return std::nullopt;
@@ -1635,7 +1572,7 @@ std::optional<geometry_msgs::msg::Point> DummyPerceptionPublisherNode::calculate
 
   if (distance_traveled <= 0.0) {
     // No movement, use initial position
-    return last_prediction.kinematics.initial_pose_with_covariance.pose.position;
+    return std::nullopt;
   }
   if (distance_traveled >= cumulative_distances.back()) {
     // Extrapolate beyond the path end
