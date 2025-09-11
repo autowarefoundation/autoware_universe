@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__DIFFUSION_PLANNER__UTILS__ARG_READER_HPP_
 #define AUTOWARE__DIFFUSION_PLANNER__UTILS__ARG_READER_HPP_
 
+#include "autoware/diffusion_planner/constants.hpp"
+
 #include <nlohmann/json.hpp>
 
 #include <fstream>
@@ -52,7 +54,7 @@ inline void check_weight_version(const std::string & json_path)
 
   for (const auto & [key, val] : j["major_version"].items()) {
     const int major_version = val.get<int>();
-    if (major_version != 1) {
+    if (major_version != autoware::diffusion_planner::constants::WEIGHT_MAJOR_VERSION) {
       throw std::runtime_error(
         "Unsupported major_version: " + std::to_string(major_version) + ". " + error_msg);
     }
