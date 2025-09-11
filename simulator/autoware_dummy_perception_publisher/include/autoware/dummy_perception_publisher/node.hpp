@@ -69,7 +69,8 @@ struct ObjectInfo
   ObjectInfo(
     const tier4_simulation_msgs::msg::DummyObject & object,
     const autoware_perception_msgs::msg::PredictedObject & predicted_object,
-    const rclcpp::Time & predicted_time, const rclcpp::Time & current_time);
+    const rclcpp::Time & predicted_time, const rclcpp::Time & current_time,
+    const double switch_time_threshold);
 
   // Position calculation methods
   static geometry_msgs::msg::Pose calculateStraightLinePosition(
@@ -184,6 +185,7 @@ private:
   double min_keep_duration_;
   double max_yaw_change_;
   double max_path_length_change_ratio_;
+  double switch_time_threshold_;
 
   // Vehicle parameters
   CommonParameters pedestrian_params_;

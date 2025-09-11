@@ -80,6 +80,12 @@
           "minimum": 0.0,
           "description": "Minimum duration in seconds to keep using same prediction"
         },
+        "switch_time_threshold": {
+          "type": "number",
+          "default": 2.0,
+          "minimum": 0.0,
+          "description": "Time threshold in seconds to switch from straight-line to predicted path"
+        },
         "max_yaw_change": {
           "type": "number",
           "default": 1.57079632679,
@@ -257,6 +263,7 @@
         "use_fixed_pedestrian_seed",
         "predicted_path_delay",
         "min_keep_duration",
+        "switch_time_threshold",
         "max_yaw_change",
         "max_path_length_change_ratio",
         "vehicle",
