@@ -729,6 +729,11 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
     const auto slow_down_end_idx = dist_to_slow_down_start < dist_to_slow_down_end
                                      ? insert_point_in_trajectory(dist_to_slow_down_end)
                                      : std::nullopt;
+
+    if (!slow_down_end_idx) {
+      continue;
+    }
+
     // calculate slow down velocity
     const double stable_slow_down_vel = [&]() {
       if (prev_output) {
@@ -739,14 +744,10 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
       return feasible_slow_down_vel;
     }();
 
-    if (!slow_down_end_idx) {
-      continue;
-    }
-
-    if (std::all_of(
+    if (std::none_of(
           slow_down_traj_points.begin() + (slow_down_start_idx ? *slow_down_start_idx : 0),
           slow_down_traj_points.begin() + *slow_down_end_idx,
-          [&](const auto & tp) { return stable_slow_down_vel >= tp.longitudinal_velocity_mps; })) {
+          [&](const auto & tp) { return stable_slow_down_vel < tp.longitudinal_velocity_mps; })) {
       RCLCPP_DEBUG(
         logger_,
         "[SlowDown] Ignore obstacle (%s) since slow down velocity (%f) is higher than trajectory "
