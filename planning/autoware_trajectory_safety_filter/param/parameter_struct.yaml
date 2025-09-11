@@ -1,0 +1,32 @@
+safety_filter:
+  max_velocity:
+    type: double
+    default_value: 16.667
+    description: Max velocity allowance.
+    read_only: false
+
+  out_of_lane:
+    enable:
+      type: bool
+      default_value: true
+      description: Whether to check each trajectory stays within road lane
+      read_only: false
+
+    time:
+      type: double
+      default_value: 3.0
+      description: The time range to check
+      read_only: false
+
+  collision:
+    enable:
+      type: bool
+      default_value: true
+      description: Whether to check each trajectory does not collide with objects
+      read_only: false
+
+    time:
+      type: double
+      default_value: 3.0
+      description: The time range to check
+      read_only: false
