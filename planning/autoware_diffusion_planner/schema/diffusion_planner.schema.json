@@ -69,6 +69,12 @@
           "minimum": 1,
           "description": "Batch size for multi-batch inference"
         },
+        "temperature": {
+          "type": "number",
+          "default": 0.5,
+          "minimum": 0,
+          "description": "Temperature for sampling trajectories. It means the coefficient of the standard normal distribution which is used for initializing noise. val = N(0,1) * temperature"
+        },
         "debug_params": {
           "type": "object",
           "properties": {
