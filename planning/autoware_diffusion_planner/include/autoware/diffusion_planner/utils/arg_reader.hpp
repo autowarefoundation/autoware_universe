@@ -52,12 +52,10 @@ inline void check_weight_version(const std::string & json_path)
     throw std::runtime_error("Missing 'major_version' key in JSON. " + error_msg);
   }
 
-  for (const auto & [key, val] : j["major_version"].items()) {
-    const int major_version = val.get<int>();
-    if (major_version != autoware::diffusion_planner::constants::WEIGHT_MAJOR_VERSION) {
-      throw std::runtime_error(
-        "Unsupported major_version: " + std::to_string(major_version) + ". " + error_msg);
-    }
+  const int major_version = j["major_version"].get<int>();
+  if (major_version != autoware::diffusion_planner::constants::WEIGHT_MAJOR_VERSION) {
+    throw std::runtime_error(
+      "Unsupported major_version: " + std::to_string(major_version) + ". " + error_msg);
   }
 }
 
