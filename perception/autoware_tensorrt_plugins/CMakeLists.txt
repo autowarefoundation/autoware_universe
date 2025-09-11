@@ -172,7 +172,7 @@ install(
 
 install(
   TARGETS cuda_ops
-  LIBRARY DESTINATION lib 
+  LIBRARY DESTINATION lib
 )
 
 ament_auto_package()
