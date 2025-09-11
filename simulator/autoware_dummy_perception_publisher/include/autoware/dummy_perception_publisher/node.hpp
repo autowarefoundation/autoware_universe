@@ -206,7 +206,7 @@ private:
   bool isTrajectoryValid(
     const autoware_perception_msgs::msg::PredictedObject & current_prediction,
     const autoware_perception_msgs::msg::PredictedObject & new_prediction,
-    const std::string & dummy_uuid_str);
+    const std::string & dummy_uuid_str) const;
   bool isValidRemappingCandidate(
     const autoware_perception_msgs::msg::PredictedObject & candidate_prediction,
     const std::string & dummy_uuid_str, const geometry_msgs::msg::Point & expected_position);

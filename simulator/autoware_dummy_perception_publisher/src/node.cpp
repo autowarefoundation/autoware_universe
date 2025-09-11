@@ -954,12 +954,10 @@ std::optional<std::string> DummyPerceptionPublisherNode::findBestPredictedObject
       }
     }
 
-    if (!found_candidate) {
-      continue;
-    }
-
     // Validate the candidate using pose and path similarity
-    if (!isValidRemappingCandidate(candidate_pred_obj, dummy_uuid, dummy_position)) {
+    if (
+      !found_candidate ||
+      !isValidRemappingCandidate(candidate_pred_obj, dummy_uuid, dummy_position)) {
       continue;
     }
 
@@ -1005,12 +1003,10 @@ void DummyPerceptionPublisherNode::createRemappingsForDisappearedObjects(
     } else {
       // Fallback to current position if last known position is not available
       auto current_pos_it = dummy_positions.find(dummy_uuid);
-      if (current_pos_it != dummy_positions.end()) {
-        remapping_position = current_pos_it->second;
-      } else {
-        // Skip if we can't find any position for this dummy object
+      if (current_pos_it == dummy_positions.end()) {
         continue;
       }
+      remapping_position = current_pos_it->second;
     }
 
     // Find closest available predicted object for remapping
@@ -1095,17 +1091,17 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
   }
 
   for (auto it = dummy_to_predicted_uuid_map_.begin(); it != dummy_to_predicted_uuid_map_.end();) {
-    if (current_dummy_uuids.find(it->first) == current_dummy_uuids.end()) {
-      dummy_mapping_timestamps_.erase(it->first);
-      dummy_last_known_positions_.erase(it->first);
-      dummy_creation_timestamps_.erase(it->first);
-      dummy_last_used_predictions_.erase(it->first);
-      dummy_last_used_prediction_times_.erase(it->first);
-      dummy_prediction_update_timestamps_.erase(it->first);
-      it = dummy_to_predicted_uuid_map_.erase(it);
-    } else {
+    if (current_dummy_uuids.find(it->first) != current_dummy_uuids.end()) {
       ++it;
+      continue;
     }
+    dummy_mapping_timestamps_.erase(it->first);
+    dummy_last_known_positions_.erase(it->first);
+    dummy_creation_timestamps_.erase(it->first);
+    dummy_last_used_predictions_.erase(it->first);
+    dummy_last_used_prediction_times_.erase(it->first);
+    dummy_prediction_update_timestamps_.erase(it->first);
+    it = dummy_to_predicted_uuid_map_.erase(it);
   }
 
   // Update last known positions for all dummy objects
@@ -1128,7 +1124,7 @@ double DummyPerceptionPublisherNode::calculateEuclideanDistance(
 bool DummyPerceptionPublisherNode::isTrajectoryValid(
   const autoware_perception_msgs::msg::PredictedObject & current_prediction,
   const autoware_perception_msgs::msg::PredictedObject & new_prediction,
-  const std::string & dummy_uuid_str)
+  const std::string & dummy_uuid_str) const
 {
   // If current prediction is empty, accept any new prediction
   if (current_prediction.kinematics.predicted_paths.empty()) {
@@ -1157,7 +1153,9 @@ bool DummyPerceptionPublisherNode::isTrajectoryValid(
     auto extractYaw = [](const geometry_msgs::msg::Quaternion & q) {
       tf2::Quaternion tf_q;
       tf2::fromMsg(q, tf_q);
-      double roll, pitch, yaw;
+      double roll{0.0};
+      double pitch{0.0};
+      double yaw{0.0};
       tf2::Matrix3x3(tf_q).getRPY(roll, pitch, yaw);
       return yaw;
     };
