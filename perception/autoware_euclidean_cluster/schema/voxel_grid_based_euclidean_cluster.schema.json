@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_euclidean_cluster Parameters",
+  "type": "object",
+  "definitions": {
+    "voxel_grid_based_euclidean_cluster": {
+      "type": "object",
+      "properties": {
+        "tolerance": {
+          "type": "number",
+          "description": "The spatial cluster tolerance as a measure in the L2 Euclidean space.",
+          "default": 0.7
+        },
+        "voxel_leaf_size": {
+          "type": "number",
+          "description": "The voxel leaf size of x and y.",
+          "default": 0.3
+        },
+        "min_points_number_per_voxel": {
+          "type": "integer",
+          "description": "The minimum number of points required per voxel.",
+          "default": 1
+        },
+        "min_cluster_size": {
+          "type": "integer",
+          "description": "The minimum number of points that a cluster needs to contain in order to be considered valid.",
+          "default": 10
+        },
+        "max_cluster_size": {
+          "type": "integer",
+          "description": "The maximum number of points that a cluster needs to contain in order to be considered valid.",
+          "default": 3000
+        },
+        "max_voxel_cluster_for_output": {
+          "type": "integer",
+          "description": "Maximum number of voxels in a cluster when outputted.",
+          "default": 800
+        },
+        "min_voxel_cluster_size_for_filtering": {
+          "type": "integer",
+          "description": "The minimum voxel cluster size for a cluster to be checked for being a large cluster.",
+          "default": 65
+        },
+        "max_points_per_voxel_in_large_cluster": {
+          "type": "integer",
+          "description": "The maximum points per voxel allowed in large clusters (used for filtering dense clusters).",
+          "default": 10
+        },
+        "use_height": {
+          "type": "boolean",
+          "description": "Use point.z for clustering.",
+          "default": false
+        }
+      },
+      "required": [
+        "tolerance",
+        "voxel_leaf_size",
+        "min_points_number_per_voxel",
+        "min_cluster_size",
+        "max_cluster_size",
+        "max_voxel_cluster_for_output",
+        "min_voxel_cluster_size_for_filtering",
+        "max_points_per_voxel_in_large_cluster",
+        "use_height"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/voxel_grid_based_euclidean_cluster"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
