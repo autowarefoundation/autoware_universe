@@ -934,35 +934,33 @@ std::optional<std::string> DummyPerceptionPublisherNode::findBestPredictedObject
   const std::map<std::string, geometry_msgs::msg::Point> & predicted_positions,
   const autoware_perception_msgs::msg::PredictedObjects & predicted_objects)
 {
+  // Get the best matching predicted object based on several metrics
   std::string closest_pred_uuid;
   double min_distance = std::numeric_limits<double>::max();
 
+  // Iterate over all available predicted objects to find the best match
   for (const auto & pred_uuid : available_predicted_uuids) {
     const auto & pred_pos = predicted_positions.at(pred_uuid);
+    auto pred_obj = std::find_if(
+      predicted_objects.objects.begin(), predicted_objects.objects.end(),
+      [&pred_uuid](const auto & obj) {
+        return autoware_utils_uuid::to_hex_string(obj.object_id) == pred_uuid;
+      });
 
-    // Find the actual predicted object for validation
-    autoware_perception_msgs::msg::PredictedObject candidate_pred_obj;
-    bool found_candidate = false;
-
-    for (const auto & pred_obj : predicted_objects.objects) {
-      unique_identifier_msgs::msg::UUID obj_uuid;
-      obj_uuid.uuid = pred_obj.object_id.uuid;
-      const auto & obj_uuid_str = autoware_utils_uuid::to_hex_string(obj_uuid);
-
-      if (obj_uuid_str == pred_uuid) {
-        candidate_pred_obj = pred_obj;
-        found_candidate = true;
-        break;
-      }
-    }
-
-    // Validate the candidate using pose and path similarity
-    if (
-      !found_candidate ||
-      !isValidRemappingCandidate(candidate_pred_obj, dummy_uuid, dummy_position)) {
+    // Handle case where predicted object is not found (should not happen)
+    if (pred_obj == predicted_objects.objects.end()) {
       continue;
     }
 
+    // Find the actual predicted object for validation
+    const autoware_perception_msgs::msg::PredictedObject & candidate_pred_obj = *pred_obj;
+
+    // Check if there is a valid remapping candidate based on position and speed
+    if (!isValidRemappingCandidate(candidate_pred_obj, dummy_uuid, dummy_position)) {
+      continue;
+    }
+
+    // In case of multiple valid candidates, choose the closest one
     double distance = calculateEuclideanDistance(dummy_position, pred_pos);
 
     if (distance < min_distance) {
@@ -998,18 +996,15 @@ void DummyPerceptionPublisherNode::createRemappingsForDisappearedObjects(
   for (const auto & dummy_uuid : dummy_objects_to_remap) {
     // Use last known position if available, otherwise use current position
     geometry_msgs::msg::Point remapping_position;
-    auto last_pos_it = dummy_last_known_positions_.find(dummy_uuid);
-    if (last_pos_it != dummy_last_known_positions_.end()) {
-      remapping_position = last_pos_it->second;
-    } else {
-      // Fallback to current position if last known position is not available
-      auto current_pos_it = dummy_positions.find(dummy_uuid);
-      if (current_pos_it == dummy_positions.end()) {
-        continue;
-      }
-      remapping_position = current_pos_it->second;
+    auto current_pos_it = dummy_positions.find(dummy_uuid);
+    if (current_pos_it == dummy_positions.end()) {
+      continue;
     }
+    auto last_pos_it = dummy_last_known_positions_.find(dummy_uuid);
 
+    remapping_position = (last_pos_it != dummy_last_known_positions_.end())
+                           ? last_pos_it->second
+                           : current_pos_it->second;
     // Find closest available predicted object for remapping
     auto best_match = findBestPredictedObjectMatch(
       dummy_uuid, remapping_position, available_predicted_uuids, predicted_positions,
@@ -1023,6 +1018,7 @@ void DummyPerceptionPublisherNode::createRemappingsForDisappearedObjects(
   }
 
   // Sort candidates by distance to ensure closest matches get priority
+  // This is because multiple dummy objects may have the same best match
   std::sort(
     mapping_candidates.begin(), mapping_candidates.end(),
     [](const auto & a, const auto & b) { return a.second < b.second; });
@@ -1122,89 +1118,12 @@ double DummyPerceptionPublisherNode::calculateEuclideanDistance(
   return std::sqrt(dx * dx + dy * dy + dz * dz);
 }
 
-std::optional<autoware_perception_msgs::msg::PredictedPath>
-DummyPerceptionPublisherNode::getMostLikelyPath(
-  const autoware_perception_msgs::msg::PredictedPath & current_prediction,
-  const autoware_perception_msgs::msg::PredictedObject & new_prediction) const
-{
-  // If current prediction is empty, accept any new prediction
-  if (current_prediction.path.empty()) {
-    return true;
-  }
-  const auto & current_path = current_prediction.path;
-  if (current_path.empty()) {
-    return true;
-  }
-  // If new prediction is empty, reject it
-  if (new_prediction.kinematics.predicted_paths.empty()) {
-    return false;
-  }
-
-  // Get yaw from quaternion
-  auto extractYaw = [](const geometry_msgs::msg::Quaternion & q) {
-    tf2::Quaternion tf_q;
-    tf2::fromMsg(q, tf_q);
-    double roll{0.0};
-    double pitch{0.0};
-    double yaw{0.0};
-    tf2::Matrix3x3(tf_q).getRPY(roll, pitch, yaw);
-    return yaw;
-  };
-
-  // Calculate path lengths
-  auto calculatePathLength = [](const auto & path) {
-    double total_length = 0.0;
-    for (size_t i = 1; i < path.size(); ++i) {
-      const auto & prev_pose = path[i - 1];
-      const auto & curr_pose = path[i];
-
-      const double dx = curr_pose.position.x - prev_pose.position.x;
-      const double dy = curr_pose.position.y - prev_pose.position.y;
-      const double dz = curr_pose.position.z - prev_pose.position.z;
-      total_length += std::sqrt(dx * dx + dy * dy + dz * dz);
-    }
-    return total_length;
-  };
-
-  for (const auto & candidate_prediction :
-       new_prediction.kinematics.predicted_paths) {  // Check yaw angle change
-    const auto & candidate_path = candidate_prediction.path;
-    if (candidate_path.empty()) {
-      continue;
-    }
-
-    const double current_yaw = extractYaw(current_path.at(0).orientation);
-    const double new_yaw = extractYaw(candidate_path[0].orientation);
-
-    // Calculate yaw difference, handling wrap-around
-    double yaw_diff = std::abs(new_yaw - current_yaw);
-    yaw_diff = (yaw_diff > M_PI) ? (2.0 * M_PI - yaw_diff) : yaw_diff;  // Normalize to [0, π]
-
-    if (yaw_diff > max_yaw_change_) {
-      continue;
-    }
-
-    const double current_path_length = std::max(calculatePathLength(current_path), 0.1);
-    const double new_path_length = std::max(calculatePathLength(candidate_path), 0.1);
-
-    const double length_ratio =
-      std::max(current_path_length / new_path_length, new_path_length / current_path_length);
-    if (length_ratio > max_path_length_change_ratio_) {
-      continue;
-    }
-
-    return true;
-  }
-
-  return false;
-}
-
 bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
   const autoware_perception_msgs::msg::PredictedObject & candidate_prediction,
   const std::string & dummy_uuid_str, const geometry_msgs::msg::Point & expected_position)
 {
-  // Check if this is a pedestrian object
-  bool is_pedestrian = false;
+  // Perform various checks to validate if the candidate predicted object is a good match
+  // for the dummy object
   auto dummy_it =
     std::find_if(objects_.begin(), objects_.end(), [&dummy_uuid_str](const auto & obj) {
       const auto uuid = autoware_utils_uuid::to_hex_string(obj.id);
@@ -1216,7 +1135,9 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
   }
 
   const auto & dummy_object = *dummy_it;
-  is_pedestrian =
+  // Check if this is a pedestrian object
+
+  bool is_pedestrian =
     (dummy_object.classification.label ==
      autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN);
 
@@ -1225,8 +1146,6 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
   // Vehicles: stricter for more predictable movement
   const double max_remapping_distance = is_pedestrian ? pedestrian_params_.max_remapping_distance
                                                       : vehicle_params_.max_remapping_distance;
-  const double max_remapping_yaw_diff = is_pedestrian ? pedestrian_params_.max_remapping_yaw_diff
-                                                      : vehicle_params_.max_remapping_yaw_diff;
   const double max_speed_difference_ratio = is_pedestrian
                                               ? pedestrian_params_.max_speed_difference_ratio
                                               : vehicle_params_.max_speed_difference_ratio;
@@ -1289,13 +1208,11 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
   geometry_msgs::msg::Point comparison_position = expected_position;
   auto last_used_pred_it = dummy_last_used_predictions_.find(dummy_uuid_str);
   if (last_used_pred_it == dummy_last_used_predictions_.end()) {
-    return false;
+    return true;  // No last prediction, allow the match
   }
 
   // Calculate where the dummy object should be based on its last known trajectory
-  const auto & last_prediction = last_used_pred_it->second;
   const auto & last_trajectory = last_used_pred_it->second.kinematics.predicted_paths.at(0);
-
   const auto expected_pos = calculateExpectedPosition(last_trajectory, dummy_uuid_str);
   if (expected_pos.has_value()) {
     comparison_position = expected_pos.value();
@@ -1316,196 +1233,6 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
       max_remapping_distance, comparison_position.x, comparison_position.y, candidate_pos.x,
       candidate_pos.y);
     return false;
-  }
-
-  // Additional validation using the last used prediction
-  if (last_used_pred_it == dummy_last_used_predictions_.end()) {
-    return true;
-  }
-
-  // Check path similarity using getMostLikelyPath
-  if (!getMostLikelyPath(last_trajectory, candidate_prediction)) {
-    RCLCPP_DEBUG(
-      rclcpp::get_logger("dummy_perception_publisher"),
-      "Rejecting remapping candidate for object %s due to path dissimilarity",
-      dummy_uuid_str.c_str());
-    return false;
-  }
-
-  // Additional trajectory similarity check - compare path shapes
-  if (!arePathsSimilar(last_prediction, candidate_prediction)) {
-    RCLCPP_DEBUG(
-      rclcpp::get_logger("dummy_perception_publisher"),
-      "Rejecting remapping candidate for object %s due to trajectory shape dissimilarity",
-      dummy_uuid_str.c_str());
-    return false;
-  }
-
-  return true;
-}
-
-bool DummyPerceptionPublisherNode::arePathsSimilar(
-  const autoware_perception_msgs::msg::PredictedObject & last_prediction,
-  const autoware_perception_msgs::msg::PredictedObject & candidate_prediction)
-{
-  // Check if this is a pedestrian (using candidate's classification)
-  bool is_pedestrian = false;
-  if (!candidate_prediction.classification.empty()) {
-    is_pedestrian =
-      (candidate_prediction.classification[0].label ==
-       autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN);
-  }
-
-  // Maximum acceptable position difference (meters)
-  const double max_position_difference = is_pedestrian ? pedestrian_params_.max_position_difference
-                                                       : vehicle_params_.max_position_difference;
-
-  if (last_prediction.kinematics.predicted_paths.empty()) {
-    return false;
-  }
-
-  // Get the highest confidence path from last prediction
-  const auto & last_path = *std::max_element(
-    last_prediction.kinematics.predicted_paths.begin(),
-    last_prediction.kinematics.predicted_paths.end(),
-    [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
-
-  if (last_path.path.empty()) {
-    return false;
-  }
-
-  // Get candidate's current position
-  const auto & candidate_current_pos =
-    candidate_prediction.kinematics.initial_pose_with_covariance.pose.position;
-
-  // Calculate where the object should be now based on the last prediction path
-  // This requires finding the dummy object to get its UUID and then calculating expected position
-  // For now, use a simpler approach: get the time difference and interpolate/extrapolate
-
-  // Use the existing calculateExpectedPosition logic inline
-  const auto current_time = get_clock()->now();
-
-  // Find the dummy object UUID by searching through our mappings
-  std::string dummy_uuid_str;
-  for (const auto & [uuid, pred_uuid] : dummy_to_predicted_uuid_map_) {
-    // Check if this candidate matches any of our tracked predictions
-    unique_identifier_msgs::msg::UUID candidate_uuid;
-    candidate_uuid.uuid = candidate_prediction.object_id.uuid;
-    const auto candidate_uuid_str = autoware_utils_uuid::to_hex_string(candidate_uuid);
-
-    if (pred_uuid == candidate_uuid_str) {
-      dummy_uuid_str = uuid;
-      break;
-    }
-  }
-
-  if (dummy_uuid_str.empty()) {
-    // If we can't find the dummy UUID, fall back to basic comparison
-    return true;
-  }
-
-  // Get the expected position using our existing method
-  const auto expected_pos_opt = calculateExpectedPosition(last_prediction, dummy_uuid_str);
-  if (!expected_pos_opt.has_value()) {
-    return true;  // Can't calculate expected position, allow the match
-  }
-
-  const auto expected_pos = expected_pos_opt.value();
-
-  // Compare candidate's current position with expected position
-  const double position_difference =
-    calculateEuclideanDistance(candidate_current_pos, expected_pos);
-  if (position_difference > max_position_difference) {
-    RCLCPP_DEBUG(
-      rclcpp::get_logger("dummy_perception_publisher"),
-      "Position difference too large: %fm (expected: %f, %f, candidate: %f, %f)",
-      position_difference, expected_pos.x, expected_pos.y, candidate_current_pos.x,
-      candidate_current_pos.y);
-    return false;
-  }
-
-  // Compare path lengths and general direction if both predictions have paths
-  if (last_path.path.size() < 2 || candidate_prediction.kinematics.predicted_paths.empty()) {
-    return true;
-  }
-  const auto & candidate_path = *std::max_element(
-    candidate_prediction.kinematics.predicted_paths.begin(),
-    candidate_prediction.kinematics.predicted_paths.end(),
-    [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
-
-  auto calculatePathLength = [](const auto & path) {
-    double total_length = 0.0;
-    for (size_t i = 1; i < path.path.size(); ++i) {
-      const auto & prev_pos = path.path[i - 1].position;
-      const auto & curr_pos = path.path[i].position;
-      const double dx = curr_pos.x - prev_pos.x;
-      const double dy = curr_pos.y - prev_pos.y;
-      const double dz = curr_pos.z - prev_pos.z;
-      total_length += std::sqrt(dx * dx + dy * dy + dz * dz);
-    }
-    return total_length;
-  };
-
-  if (!candidate_path.path.empty()) {
-    return true;
-  }
-  // Calculate path lengths (total distance along path)
-
-  const double last_path_length = calculatePathLength(last_path);
-  const double candidate_path_length = calculatePathLength(candidate_path);
-
-  // Check path length similarity - more lenient for pedestrians
-  const double max_path_length_ratio = is_pedestrian ? pedestrian_params_.max_path_length_ratio
-                                                     : vehicle_params_.max_path_length_ratio;
-  if (last_path_length > 0.1 && candidate_path_length > 0.1) {
-    const double length_ratio =
-      std::max(last_path_length / candidate_path_length, candidate_path_length / last_path_length);
-    if (length_ratio > max_path_length_ratio) {
-      RCLCPP_DEBUG(
-        rclcpp::get_logger("dummy_perception_publisher"),
-        "Path length difference too large: %fx (last: %fm, candidate: %fm)", length_ratio,
-        last_path_length, candidate_path_length);
-      return false;
-    }
-  }
-
-  // Calculate direction vectors
-  const auto & last_start = last_path.path[0].position;
-  const auto & last_end = last_path.path.back().position;
-  const auto & candidate_start = candidate_path.path[0].position;
-  const auto & candidate_end = candidate_path.path.back().position;
-
-  // Direction vectors
-  const double last_dx = last_end.x - last_start.x;
-  const double last_dy = last_end.y - last_start.y;
-  const double candidate_dx = candidate_end.x - candidate_start.x;
-  const double candidate_dy = candidate_end.y - candidate_start.y;
-
-  // Calculate magnitudes
-  const double last_magnitude = std::sqrt(last_dx * last_dx + last_dy * last_dy);
-  const double candidate_magnitude =
-    std::sqrt(candidate_dx * candidate_dx + candidate_dy * candidate_dy);
-
-  // Check if both paths have significant movement
-  if (last_magnitude > 0.5 && candidate_magnitude > 0.5) {
-    // Calculate dot product for direction similarity
-    const double dot_product = last_dx * candidate_dx + last_dy * candidate_dy;
-    const double cos_angle = dot_product / (last_magnitude * candidate_magnitude);
-
-    // Clamp to avoid numerical issues
-    const double clamped_cos = std::max(-1.0, std::min(1.0, cos_angle));
-    const double angle_diff = std::acos(clamped_cos);
-
-    // Allow more direction difference for pedestrians who can change direction quickly
-    const double max_overall_direction_diff = is_pedestrian
-                                                ? pedestrian_params_.max_overall_direction_diff
-                                                : vehicle_params_.max_overall_direction_diff;
-    if (angle_diff > max_overall_direction_diff) {
-      RCLCPP_DEBUG(
-        rclcpp::get_logger("dummy_perception_publisher"),
-        "Overall direction difference too large: %f rad", angle_diff);
-      return false;
-    }
   }
 
   return true;

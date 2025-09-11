@@ -203,15 +203,9 @@ private:
     const autoware_perception_msgs::msg::PredictedObjects & predicted_objects);
   double calculateEuclideanDistance(
     const geometry_msgs::msg::Point & pos1, const geometry_msgs::msg::Point & pos2);
-  std::optional<autoware_perception_msgs::msg::PredictedPath> getMostLikelyPath(
-    const autoware_perception_msgs::msg::PredictedPath & current_prediction,
-    const autoware_perception_msgs::msg::PredictedObject & new_prediction) const;
   bool isValidRemappingCandidate(
     const autoware_perception_msgs::msg::PredictedObject & candidate_prediction,
     const std::string & dummy_uuid_str, const geometry_msgs::msg::Point & expected_position);
-  bool arePathsSimilar(
-    const autoware_perception_msgs::msg::PredictedObject & last_prediction,
-    const autoware_perception_msgs::msg::PredictedObject & candidate_prediction);
   std::optional<geometry_msgs::msg::Point> calculateExpectedPosition(
     const autoware_perception_msgs::msg::PredictedPath & last_prediction,
     const std::string & dummy_uuid_str);
