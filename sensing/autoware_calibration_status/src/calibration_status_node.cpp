@@ -27,6 +27,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace autoware::calibration_status
 {
@@ -99,10 +100,6 @@ CalibrationStatusNode::CalibrationStatusNode(const rclcpp::NodeOptions & options
   }
 
   if (approx_deltas_.size() != max_topics) {
-    RCLCPP_ERROR(
-      this->get_logger(),
-      "approx_deltas size (%zu) must match max(cloud_topics, image_topics) size (%zu)",
-      approx_deltas_.size(), max_topics);
     throw std::invalid_argument("Invalid approx_deltas parameter size");
   }
   setup_runtime_mode_interface();
@@ -126,17 +123,18 @@ void CalibrationStatusNode::camera_info_callback(
 
 void CalibrationStatusNode::setup_runtime_mode_interface()
 {
+  setup_input_synchronization();
   if (runtime_mode_ == RuntimeMode::MANUAL) {
     calibration_service_ = this->create_service<std_srvs::srv::Trigger>(
       "~/input/validate_calibration_srv", std::bind(
                                             &CalibrationStatusNode::handle_calibration_request,
                                             this, std::placeholders::_1, std::placeholders::_2));
   } else if (runtime_mode_ == RuntimeMode::PERIODIC) {
-    periodic_timer_ = this->create_wall_timer(
+    timer_ = this->create_wall_timer(
       std::chrono::duration<double>(period_),
-      std::bind(&CalibrationStatusNode::periodic_calibration_check, this));
+      std::bind(&CalibrationStatusNode::periodic_callback, this));
+
   } else if (runtime_mode_ == RuntimeMode::ACTIVE) {
-    setup_sensor_synchronization();
   }
 }
 
@@ -182,7 +180,7 @@ void CalibrationStatusNode::setup_object_detection_interface()
     std::bind(&CalibrationStatusNode::objects_callback, this, std::placeholders::_1));
 }
 
-void CalibrationStatusNode::setup_sensor_synchronization()
+void CalibrationStatusNode::setup_input_synchronization()
 {
   // Determine the number of topic pairs to synchronize
   size_t num_pairs{};
@@ -207,6 +205,7 @@ void CalibrationStatusNode::setup_sensor_synchronization()
   image_subs_.resize(num_pairs);
   preview_image_pubs_.resize(num_pairs);
   synchronizers_.resize(num_pairs);
+  synchronized_data_.resize(num_pairs);
 
   for (size_t i = 0; i < num_pairs; ++i) {
     // Determine which topics to use for this pair
@@ -219,29 +218,31 @@ void CalibrationStatusNode::setup_sensor_synchronization()
       preview_image_topic = "points_projected";
     }
 
-    cloud_subs_[i] = std::make_shared<message_filters::Subscriber<sensor_msgs::msg::PointCloud2>>(
-      this, cloud_topics_[cloud_idx], rmw_qos_profile_sensor_data);
-    image_subs_[i] = std::make_shared<message_filters::Subscriber<sensor_msgs::msg::Image>>(
+    cloud_subs_.at(i) =
+      std::make_shared<message_filters::Subscriber<sensor_msgs::msg::PointCloud2>>(
+        this, cloud_topics_[cloud_idx], rmw_qos_profile_sensor_data);
+    image_subs_.at(i) = std::make_shared<message_filters::Subscriber<sensor_msgs::msg::Image>>(
       this, image_topics_[image_idx], rmw_qos_profile_sensor_data);
-    preview_image_pubs_[i] =
+    preview_image_pubs_.at(i) =
       this->create_publisher<sensor_msgs::msg::Image>(preview_image_topic, rclcpp::SensorDataQoS());
 
     // Create synchronizer
-    synchronizers_[i] = std::make_shared<message_filters::Synchronizer<SyncPolicy>>(
-      SyncPolicy(queue_size_), *cloud_subs_[i], *image_subs_[i]);
+    synchronizers_.at(i) = std::make_shared<message_filters::Synchronizer<SyncPolicy>>(
+      SyncPolicy(queue_size_), *cloud_subs_.at(i), *image_subs_.at(i));
 
     // Set approximate time delta
-    synchronizers_[i]->setMaxIntervalDuration(rclcpp::Duration::from_seconds(approx_deltas_[i]));
+    synchronizers_.at(i)->setMaxIntervalDuration(
+      rclcpp::Duration::from_seconds(approx_deltas_.at(i)));
 
     // Register callback
-    synchronizers_[i]->registerCallback(
+    synchronizers_.at(i)->registerCallback(
       std::bind(
         &CalibrationStatusNode::synchronized_callback, this, std::placeholders::_1,
         std::placeholders::_2, i));
 
     RCLCPP_INFO(
       this->get_logger(), "Synchronization pair %zu: %s <-> %s (delta: %.3f s)", i,
-      cloud_topics_[cloud_idx].c_str(), image_topics_[image_idx].c_str(), approx_deltas_[i]);
+      cloud_topics_[cloud_idx].c_str(), image_topics_[image_idx].c_str(), approx_deltas_.at(i));
   }
 }
 
@@ -250,18 +251,29 @@ void CalibrationStatusNode::handle_calibration_request(
   std_srvs::srv::Trigger::Response::SharedPtr response)
 {
   (void)request;
-  (void)response;
-  // TODO(amadeuszsz): Implement actual calibration validation logic for MANUAL runtime mode
-  throw std::logic_error(
-    "Manual calibration request handling is not implemented yet. This is a placeholder for future "
-    "logic.");
+  std::size_t available_pairs{0};
+  for (size_t pair_idx = 0; pair_idx < synchronized_data_.size(); ++pair_idx) {
+    if (run(pair_idx)) {
+      ++available_pairs;
+    }
+  }
+  std::string str_msg_suffix = " (" + std::to_string(available_pairs) + " out of " +
+                               std::to_string(synchronized_data_.size()) + " pair(s)).";
+  if (available_pairs == synchronized_data_.size()) {
+    response->success = true;
+    response->message = "Calibration validation completed for all topic pairs" + str_msg_suffix;
+  } else {
+    response->success = false;
+    response->message =
+      "Calibration validation could not be completed for all topic pairs" + str_msg_suffix;
+  }
 }
 
-void CalibrationStatusNode::periodic_calibration_check()
+void CalibrationStatusNode::periodic_callback()
 {
-  // TODO(amadeuszsz): Implement periodic calibration check logic for PERIODIC runtime mode
-  throw std::logic_error(
-    "Periodic calibration check is not implemented yet. This is a placeholder for future logic.");
+  for (size_t pair_idx = 0; pair_idx < synchronized_data_.size(); ++pair_idx) {
+    run(pair_idx);
+  }
 }
 
 void CalibrationStatusNode::twist_callback(const geometry_msgs::msg::Twist::SharedPtr msg)
@@ -310,21 +322,26 @@ void CalibrationStatusNode::objects_callback(
   last_objects_update_ = this->get_clock()->now();
 }
 
-void CalibrationStatusNode::synchronized_callback(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud_msg,
-  const sensor_msgs::msg::Image::ConstSharedPtr & image_msg, size_t pair_idx)
+bool CalibrationStatusNode::run(std::size_t pair_idx)
 {
+  if (
+    synchronized_data_.at(pair_idx).first == nullptr ||
+    synchronized_data_.at(pair_idx).second == nullptr) {
+    return false;
+  }
+  const auto & [cloud_msg, image_msg] = synchronized_data_.at(pair_idx);
+
   if (camera_info_msgs_.at(pair_idx) == nullptr) {
     RCLCPP_WARN_THROTTLE(
       this->get_logger(), *this->get_clock(), 1000,
       "Camera info message for pair %zu is not available. Skipping calibration check.", pair_idx);
-    return;
+    return false;
   }
   const auto velocity_check_status = get_velocity_check_status();
   const auto objects_check_status = get_objects_check_status();
   if (velocity_check_status.is_threshold_met || objects_check_status.is_threshold_met) {
     publish_diagnostic_status(velocity_check_status, objects_check_status, pair_idx);
-    return;
+    return true;
   }
 
   // Get the transform
@@ -335,7 +352,7 @@ void CalibrationStatusNode::synchronized_callback(
     eigen_transform = tf2::transformToEigen(transform);
   } catch (const tf2::TransformException & ex) {
     RCLCPP_ERROR(this->get_logger(), "Failed to get transform: %s", ex.what());
-    return;
+    return false;
   }
 
   // Prepare preview image message if subscribed
@@ -362,6 +379,20 @@ void CalibrationStatusNode::synchronized_callback(
 
   if (is_preview_subscribed) {
     preview_image_pubs_.at(pair_idx)->publish(*preview_img_msg);
+  }
+
+  synchronized_data_.at(pair_idx) = {nullptr, nullptr};
+  return true;
+}
+
+void CalibrationStatusNode::synchronized_callback(
+  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud_msg,
+  const sensor_msgs::msg::Image::ConstSharedPtr & image_msg, size_t pair_idx)
+{
+  synchronized_data_.at(pair_idx) = {cloud_msg, image_msg};
+
+  if (runtime_mode_ == RuntimeMode::ACTIVE) {
+    run(pair_idx);
   }
 }
 
@@ -400,6 +431,7 @@ void CalibrationStatusNode::publish_diagnostic_status(
   const CheckStatus<size_t> & objects_check_status, const size_t pair_idx,
   const CalibrationStatusResult & result)
 {
+  auto now = this->get_clock()->now();
   diagnostic_msgs::msg::DiagnosticStatus status;
   status.name =
     std::string(this->get_name()) + std::string(": ") + this->get_fully_qualified_name();
@@ -426,6 +458,20 @@ void CalibrationStatusNode::publish_diagnostic_status(
   status.values.push_back(key_value);
   key_value.key = "Source point cloud topic";
   key_value.value = cloud_topics_.at((cloud_topics_.size() == 1) ? 0 : pair_idx);
+  status.values.push_back(key_value);
+  key_value.key = "Source image age (s)";
+  key_value.value = std::to_string(
+    (now - rclcpp::Time(synchronized_data_.at(pair_idx).second->header.stamp)).seconds());
+  status.values.push_back(key_value);
+  key_value.key = "Source point cloud age (s)";
+  key_value.value = std::to_string(
+    (now - rclcpp::Time(synchronized_data_.at(pair_idx).first->header.stamp)).seconds());
+  status.values.push_back(key_value);
+  key_value.key = "Point cloud and image time difference (s)";
+  key_value.value = std::to_string(
+    std::abs(
+      rclcpp::Time(synchronized_data_.at(pair_idx).first->header.stamp).seconds() -
+      rclcpp::Time(synchronized_data_.at(pair_idx).second->header.stamp).seconds()));
   status.values.push_back(key_value);
   key_value.key = "Is velocity check activated";
   key_value.value = velocity_check_status.is_activated ? "True" : "False";
@@ -480,7 +526,7 @@ void CalibrationStatusNode::publish_diagnostic_status(
   status.values.push_back(key_value);
 
   diagnostic_msgs::msg::DiagnosticArray diagnostic_array;
-  diagnostic_array.header.stamp = this->get_clock()->now();
+  diagnostic_array.header.stamp = now;
   diagnostic_array.header.frame_id = this->get_name();
   diagnostic_array.status.push_back(status);
   diagnostic_pub_->publish(diagnostic_array);

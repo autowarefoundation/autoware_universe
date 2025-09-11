@@ -85,7 +85,6 @@ private:
   // ROS interface
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr calibration_service_;
   rclcpp::Publisher<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagnostic_pub_;
-  rclcpp::TimerBase::SharedPtr periodic_timer_;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
 
@@ -102,15 +101,20 @@ private:
   std::vector<rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr> camera_info_subs_;
   std::vector<sensor_msgs::msg::CameraInfo::ConstSharedPtr> camera_info_msgs_;
 
-  // Sensor synchronization
+  // Input synchronization
   std::vector<std::shared_ptr<message_filters::Subscriber<sensor_msgs::msg::PointCloud2>>>
     cloud_subs_;
   std::vector<std::shared_ptr<message_filters::Subscriber<sensor_msgs::msg::Image>>> image_subs_;
   std::vector<rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr> preview_image_pubs_;
-
   using SyncPolicy = message_filters::sync_policies::ApproximateTime<
     sensor_msgs::msg::PointCloud2, sensor_msgs::msg::Image>;
   std::vector<std::shared_ptr<message_filters::Synchronizer<SyncPolicy>>> synchronizers_;
+
+  std::vector<std::pair<
+    sensor_msgs::msg::PointCloud2::ConstSharedPtr, sensor_msgs::msg::Image::ConstSharedPtr>>
+    synchronized_data_;
+
+  rclcpp::TimerBase::SharedPtr timer_;
 
   // Core library
   std::unique_ptr<CalibrationStatus> calibration_status_;
@@ -122,6 +126,13 @@ private:
   rclcpp::Time last_objects_update_;
 
   // Methods
+  /**
+   * @brief Main execution for the node
+   * @param pair_idx Index of the sensor pair to process
+   * @return true if processing was successful, false otherwise
+   */
+  bool run(std::size_t pair_idx);
+
   /**
    * @brief Setup runtime mode-specific interfaces (service/timer/synchronization)
    */
@@ -138,9 +149,9 @@ private:
   void setup_object_detection_interface();
 
   /**
-   * @brief Setup sensor synchronization for active runtime mode
+   * @brief Setup input synchronization for LiDAR and camera topics
    */
-  void setup_sensor_synchronization();
+  void setup_input_synchronization();
 
   // Service callbacks
   /**
@@ -152,11 +163,11 @@ private:
     const std_srvs::srv::Trigger::Request::SharedPtr request,
     std_srvs::srv::Trigger::Response::SharedPtr response);
 
-  // Timer callbacks
+  // Periodic callback
   /**
-   * @brief Periodic calibration check callback for PERIODIC runtime mode
+   * @brief Process synchronized data periodically in PERIODIC mode
    */
-  void periodic_calibration_check();
+  void periodic_callback();
 
   // Velocity callbacks
   /**

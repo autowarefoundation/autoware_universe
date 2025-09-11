@@ -75,12 +75,12 @@ ros2 launch autoware_calibration_status calibration_status.launch.xml
 
 ## Future Extensions / Unimplemented Parts
 
-- Manual runtime mode via service calls
-- Periodic runtime mode with configurable intervals
+- Manual runtime mode with detailed response (custom srv)
 - Replace filter for objects on the scene counter to objects within the camera FOV counter (raytracing)
 - CUDA kernels optimizations
 - Support undistorted images directly
 - Support RGB8 images
+- cuda_blackboard support
 
 ## References
 
