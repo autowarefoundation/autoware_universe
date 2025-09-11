@@ -1353,5 +1353,3 @@ std::optional<geometry_msgs::msg::Point> DummyPerceptionPublisherNode::calculate
   return selected_path.path.back().position;
 }
 }  // namespace autoware::dummy_perception_publisher
-
-// namespace autoware::dummy_perception_publisher
