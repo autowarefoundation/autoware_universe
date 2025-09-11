@@ -220,8 +220,12 @@ std::vector<LaneSegment> convert_to_lane_segments(
 
     const std::string left_line_type_str = lanelet.leftBound().attributeOr("type", "");
     const std::string right_line_type_str = lanelet.rightBound().attributeOr("type", "");
-    const LineType left_line_type = LINE_TYPE_MAP.at(left_line_type_str);
-    const LineType right_line_type = LINE_TYPE_MAP.at(right_line_type_str);
+    const LineType left_line_type =
+      (LINE_TYPE_MAP.count(left_line_type_str) ? LINE_TYPE_MAP.at(left_line_type_str)
+                                               : LINE_TYPE_VIRTUAL);
+    const LineType right_line_type =
+      (LINE_TYPE_MAP.count(right_line_type_str) ? LINE_TYPE_MAP.at(right_line_type_str)
+                                                : LINE_TYPE_VIRTUAL);
 
     const auto & attrs = lanelet.attributes();
     const bool is_intersection = attrs.find("turn_direction") != attrs.end();
