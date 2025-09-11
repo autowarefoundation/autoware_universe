@@ -53,14 +53,10 @@ namespace autoware::dummy_perception_publisher
 struct CommonParameters
 {
   double max_remapping_distance;
-  double max_remapping_yaw_diff;
   double max_speed_difference_ratio;
   double min_speed_ratio;
   double max_speed_ratio;
   double speed_check_threshold;
-  double max_position_difference;
-  double max_path_length_ratio;
-  double max_overall_direction_diff;
   std::string path_selection_strategy;  // "highest_confidence" or "random"
 };
 struct ObjectInfo
@@ -184,8 +180,6 @@ private:
   // Configuration parameters
   double predicted_path_delay_;
   double min_keep_duration_;
-  double max_yaw_change_;
-  double max_path_length_change_ratio_;
   double switch_time_threshold_;
 
   // Vehicle parameters

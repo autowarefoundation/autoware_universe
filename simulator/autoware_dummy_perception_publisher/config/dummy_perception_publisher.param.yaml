@@ -21,32 +21,21 @@
     min_keep_duration: 3.0     # seconds - minimum time to keep using same prediction
     switch_time_threshold: 2.0  # seconds - time threshold to switch from straight-line to predicted path
 
-    # Trajectory validation parameters
-    max_yaw_change: 1.57079632679  # PI/2 - maximum acceptable yaw change
-    max_path_length_change_ratio: 3.0  # maximum path length change ratio
 
     # Remapping validation parameters - Vehicle
     vehicle:
       max_remapping_distance: 2.0      # meters
-      max_remapping_yaw_diff: 0.261799  # PI/12 (15 degrees)
       max_speed_difference_ratio: 1.05  # 5% tolerance
       min_speed_ratio: 0.5             # 50% of dummy speed
       max_speed_ratio: 1.5             # 150% of dummy speed
       speed_check_threshold: 1.0       # m/s - apply speed checks above this
-      max_position_difference: 1.5     # meters - for path similarity
-      max_path_length_ratio: 1.1       # 10% difference
-      max_overall_direction_diff: 0.523599  # PI/6 (30 degrees)
       path_selection_strategy: "highest_confidence"  # "highest_confidence" or "random"
 
     # Remapping validation parameters - Pedestrian
     pedestrian:
       max_remapping_distance: 3.0      # meters
-      max_remapping_yaw_diff: 0.785398  # PI/4 (45 degrees)
       max_speed_difference_ratio: 1.3   # 30% tolerance
       min_speed_ratio: 0.3             # 30% of dummy speed
       max_speed_ratio: 2.0             # 200% of dummy speed
       speed_check_threshold: 0.5       # m/s - apply speed checks above this
-      max_position_difference: 2.5     # meters - for path similarity
-      max_path_length_ratio: 1.5       # 50% difference
-      max_overall_direction_diff: 1.047198  # PI/3 (60 degrees)
       path_selection_strategy: "random"  # "highest_confidence" or "random"

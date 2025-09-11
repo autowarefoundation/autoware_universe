@@ -86,19 +86,6 @@
           "minimum": 0.0,
           "description": "Time threshold in seconds to switch from straight-line to predicted path"
         },
-        "max_yaw_change": {
-          "type": "number",
-          "default": 1.57079632679,
-          "minimum": 0.0,
-          "maximum": 3.14159265359,
-          "description": "Maximum acceptable yaw change in radians (default: PI/2)"
-        },
-        "max_path_length_change_ratio": {
-          "type": "number",
-          "default": 3.0,
-          "minimum": 1.0,
-          "description": "Maximum acceptable path length change ratio"
-        },
         "vehicle": {
           "type": "object",
           "description": "Parameters for vehicle object validation",
@@ -108,13 +95,6 @@
               "default": 2.0,
               "minimum": 0.0,
               "description": "Maximum distance in meters for remapping vehicles"
-            },
-            "max_remapping_yaw_diff": {
-              "type": "number",
-              "default": 0.261799,
-              "minimum": 0.0,
-              "maximum": 3.14159265359,
-              "description": "Maximum yaw difference for remapping (default: PI/12, 15 degrees)"
             },
             "max_speed_difference_ratio": {
               "type": "number",
@@ -141,25 +121,6 @@
               "minimum": 0.0,
               "description": "Speed threshold in m/s above which to apply speed checks"
             },
-            "max_position_difference": {
-              "type": "number",
-              "default": 1.5,
-              "minimum": 0.0,
-              "description": "Maximum position difference in meters for path similarity"
-            },
-            "max_path_length_ratio": {
-              "type": "number",
-              "default": 1.1,
-              "minimum": 1.0,
-              "description": "Maximum path length ratio for similarity (default:10% difference)"
-            },
-            "max_overall_direction_diff": {
-              "type": "number",
-              "default": 0.523599,
-              "minimum": 0.0,
-              "maximum": 3.14159265359,
-              "description": "Maximum overall direction difference (default: PI/6, 30 degrees)"
-            },
             "path_selection_strategy": {
               "type": "string",
               "default": "highest_confidence",
@@ -169,14 +130,10 @@
           },
           "required": [
             "max_remapping_distance",
-            "max_remapping_yaw_diff",
             "max_speed_difference_ratio",
             "min_speed_ratio",
             "max_speed_ratio",
             "speed_check_threshold",
-            "max_position_difference",
-            "max_path_length_ratio",
-            "max_overall_direction_diff",
             "path_selection_strategy"
           ]
         },
@@ -189,13 +146,6 @@
               "default": 3.0,
               "minimum": 0.0,
               "description": "Maximum distance in meters for remapping pedestrians"
-            },
-            "max_remapping_yaw_diff": {
-              "type": "number",
-              "default": 0.785398,
-              "minimum": 0.0,
-              "maximum": 3.14159265359,
-              "description": "Maximum yaw difference for remapping (default: PI/4, 45 degrees)"
             },
             "max_speed_difference_ratio": {
               "type": "number",
@@ -222,25 +172,6 @@
               "minimum": 0.0,
               "description": "Speed threshold in m/s above which to apply speed checks"
             },
-            "max_position_difference": {
-              "type": "number",
-              "default": 2.5,
-              "minimum": 0.0,
-              "description": "Maximum position difference in meters for path similarity"
-            },
-            "max_path_length_ratio": {
-              "type": "number",
-              "default": 1.5,
-              "minimum": 1.0,
-              "description": "Maximum path length ratio for similarity (default: 50% difference)"
-            },
-            "max_overall_direction_diff": {
-              "type": "number",
-              "default": 1.047198,
-              "minimum": 0.0,
-              "maximum": 3.14159265359,
-              "description": "Maximum overall direction difference (default: PI/3, 60 degrees)"
-            },
             "path_selection_strategy": {
               "type": "string",
               "default": "random",
@@ -250,14 +181,10 @@
           },
           "required": [
             "max_remapping_distance",
-            "max_remapping_yaw_diff",
             "max_speed_difference_ratio",
             "min_speed_ratio",
             "max_speed_ratio",
             "speed_check_threshold",
-            "max_position_difference",
-            "max_path_length_ratio",
-            "max_overall_direction_diff",
             "path_selection_strategy"
           ]
         }
@@ -278,8 +205,6 @@
         "predicted_path_delay",
         "min_keep_duration",
         "switch_time_threshold",
-        "max_yaw_change",
-        "max_path_length_change_ratio",
         "vehicle",
         "pedestrian"
       ]

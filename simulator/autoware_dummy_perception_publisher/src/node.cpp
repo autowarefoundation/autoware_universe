@@ -376,33 +376,23 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
   // Declare prediction parameters
   predicted_path_delay_ = this->declare_parameter("predicted_path_delay", 2.0);
   min_keep_duration_ = this->declare_parameter("min_keep_duration", 3.0);
-  max_yaw_change_ = this->declare_parameter("max_yaw_change", M_PI / 2.0);
-  max_path_length_change_ratio_ = this->declare_parameter("max_path_length_change_ratio", 3.0);
   switch_time_threshold_ = this->declare_parameter("switch_time_threshold", 2.0);
 
   // Initialize vehicle parameters
   vehicle_params_ = {
     this->declare_parameter("vehicle.max_remapping_distance", 2.0),
-    this->declare_parameter("vehicle.max_remapping_yaw_diff", M_PI / 12.0),
     this->declare_parameter("vehicle.max_speed_difference_ratio", 1.05),
     this->declare_parameter("vehicle.min_speed_ratio", 0.5),
     this->declare_parameter("vehicle.max_speed_ratio", 1.5),
     this->declare_parameter("vehicle.speed_check_threshold", 1.0),
-    this->declare_parameter("vehicle.max_position_difference", 1.5),
-    this->declare_parameter("vehicle.max_path_length_ratio", 1.1),
-    this->declare_parameter("vehicle.max_overall_direction_diff", M_PI / 6.0),
     this->declare_parameter("vehicle.path_selection_strategy", std::string("highest_confidence"))};
   // Initialize pedestrian parameters
   pedestrian_params_ = {
     this->declare_parameter("pedestrian.max_remapping_distance", 3.0),
-    this->declare_parameter("pedestrian.max_remapping_yaw_diff", M_PI / 4.0),
     this->declare_parameter("pedestrian.max_speed_difference_ratio", 1.3),
     this->declare_parameter("pedestrian.min_speed_ratio", 0.3),
     this->declare_parameter("pedestrian.max_speed_ratio", 2.0),
     this->declare_parameter("pedestrian.speed_check_threshold", 0.5),
-    this->declare_parameter("pedestrian.max_position_difference", 2.5),
-    this->declare_parameter("pedestrian.max_path_length_ratio", 1.5),
-    this->declare_parameter("pedestrian.max_overall_direction_diff", M_PI / 3.0),
     this->declare_parameter("pedestrian.path_selection_strategy", std::string("random"))};
 
   // create subscriber and publisher
