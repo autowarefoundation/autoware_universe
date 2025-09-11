@@ -88,41 +88,12 @@ The shape fitting algorithm pipeline consists of following three stages.
       - **Purpose**: Rule-based bounding box correction using default vehicle dimensions when estimated shapes violate physical constraints
 
       - **Corner Point Analysis**:
-        ```
-        /*
-         *         ^ x
-         *         |
-         *        (0)
-         * y       |
-         * <--(1)--|--(3)--
-         *         |
-         *        (2)
-         *         |
-         */
-        ```
+
         - Calculates 4 corner points: (0)front, (1)left, (2)rear, (3)right relative to vehicle center
 
         - Ranks corners by distance from base_link: 1st, 2nd, 3rd most distant
 
       - **Multi-case Correction Logic**:
-
-        - **Case 1 - Diagonal Pairs (0-2 or 1-3 most distant)**:
-          - When opposite corners are furthest from base_link
-          - **Subcase 1a**: First pair within width range, third point below max length
-            → Apply length correction using default_length
-          - **Subcase 1b**: First pair within length range, third point below max width  
-            → Apply width correction using default_width
-        ```
-        Example Case 1a: Points (0) and (2) are most distant
-        Base_link ●────────→ (0) most distant
-                  │         
-                  │    ○ (1) third distant
-                  │         
-                  └─────────→ (2) second distant
-                            (3) closest
-        ```
-
-        - **Case 2 - Adjacent Pairs**: Handles various vehicle orientations with width/length priority logic
 
         - **Constraint Validation**: Uses min/max length/width parameters for physical feasibility checks
 
