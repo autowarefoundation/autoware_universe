@@ -19,6 +19,7 @@
     # Prediction parameters
     predicted_path_delay: 2.0  # seconds - delay before using predicted paths
     min_keep_duration: 3.0     # seconds - minimum time to keep using same prediction
+    switch_time_threshold: 2.0  # seconds - time threshold to switch from straight-line to predicted path
 
     # Trajectory validation parameters
     max_yaw_change: 1.57079632679  # PI/2 - maximum acceptable yaw change

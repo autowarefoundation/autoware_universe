@@ -90,7 +90,8 @@ ObjectInfo::ObjectInfo(
 ObjectInfo::ObjectInfo(
   const tier4_simulation_msgs::msg::DummyObject & object,
   const autoware_perception_msgs::msg::PredictedObject & predicted_object,
-  const rclcpp::Time & predicted_time, const rclcpp::Time & current_time)
+  const rclcpp::Time & predicted_time, const rclcpp::Time & current_time,
+  const double switch_time_threshold)
 : length(object.shape.dimensions.x),
   width(object.shape.dimensions.y),
   height(object.shape.dimensions.z),
@@ -101,10 +102,10 @@ ObjectInfo::ObjectInfo(
   twist_covariance_(object.initial_state.twist_covariance),
   pose_covariance_(object.initial_state.pose_covariance)
 {
-  // Check if 2 seconds have passed since object creation
+  // Check if threshold time has passed since object creation
   const double time_since_creation = (current_time - rclcpp::Time(object.header.stamp)).seconds();
-  constexpr double switch_time_threshold = 2.0;  // seconds
-  // Use straight-line movement for first 2 seconds, then switch to predicted path
+  // Use straight-line movement for first switch_time_threshold seconds, then switch to predicted
+  // path
   if (
     time_since_creation < switch_time_threshold ||
     predicted_object.kinematics.predicted_paths.empty()) {
@@ -375,6 +376,7 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
   min_keep_duration_ = this->declare_parameter("min_keep_duration", 3.0);
   max_yaw_change_ = this->declare_parameter("max_yaw_change", M_PI / 2.0);
   max_path_length_change_ratio_ = this->declare_parameter("max_path_length_change_ratio", 3.0);
+  switch_time_threshold_ = this->declare_parameter("switch_time_threshold", 2.0);
 
   // Initialize vehicle parameters
   vehicle_params_ = {
@@ -482,7 +484,8 @@ void DummyPerceptionPublisherNode::timerCallback()
     ObjectInfo obj_info = [&]() {
       if (object.action == tier4_simulation_msgs::msg::DummyObject::PREDICT) {
         if (matched_predicted) {
-          return ObjectInfo(object, predicted_object, predicted_time, current_time);
+          return ObjectInfo(
+            object, predicted_object, predicted_time, current_time, switch_time_threshold_);
         }
 
         // Check if we have a last used prediction for this object
@@ -497,7 +500,8 @@ void DummyPerceptionPublisherNode::timerCallback()
             rclcpp::get_logger("dummy_perception_publisher"),
             "Using last known prediction for lost object with ID: %s", dummy_uuid_str.c_str());
           return ObjectInfo(
-            object, last_used_pred_it->second, last_used_time_it->second, current_time);
+            object, last_used_pred_it->second, last_used_time_it->second, current_time,
+            switch_time_threshold_);
         }
 
         RCLCPP_DEBUG(
