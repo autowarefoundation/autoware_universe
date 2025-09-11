@@ -154,6 +154,7 @@ SetParametersResult DiffusionPlanner::on_parameter(
       parameters, "traffic_light_group_msg_timeout_seconds",
       temp_params.traffic_light_group_msg_timeout_seconds);
     update_param<int>(parameters, "batch_size", temp_params.batch_size);
+    update_param<float>(parameters, "temperature", temp_params.temperature);
     params_ = temp_params;
   }
 
