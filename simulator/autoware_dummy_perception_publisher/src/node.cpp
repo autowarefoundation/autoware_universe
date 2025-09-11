@@ -1271,22 +1271,15 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
     const double speed_check_threshold = is_pedestrian ? pedestrian_params_.speed_check_threshold
                                                        : vehicle_params_.speed_check_threshold;
 
-    // Reject if candidate speed is too low
-    if (dummy_speed > speed_check_threshold && candidate_speed < dummy_speed * min_speed_ratio) {
-      RCLCPP_DEBUG(
-        rclcpp::get_logger("dummy_perception_publisher"),
-        "Rejecting remapping candidate for object %s (%s) due to low speed: dummy=%fm/s, "
-        "candidate=%fm/s",
-        dummy_uuid_str.c_str(), is_pedestrian ? "pedestrian" : "vehicle", dummy_speed,
-        candidate_speed);
-      return false;
-    }
+    auto is_within_speed_bounds = [&](double speed) {
+      return speed >= min_speed_ratio * dummy_speed && speed <= max_speed_ratio * dummy_speed;
+    };
 
-    // Reject if candidate speed is too high
-    if (dummy_speed > speed_check_threshold && candidate_speed > dummy_speed * max_speed_ratio) {
+    // Reject if candidate speed is too different when dummy speed is significant
+    if (dummy_speed > speed_check_threshold && !is_within_speed_bounds(candidate_speed)) {
       RCLCPP_DEBUG(
         rclcpp::get_logger("dummy_perception_publisher"),
-        "Rejecting remapping candidate for object %s (%s) due to high speed: dummy=%fm/s, "
+        "Rejecting remapping candidate for object %s (%s) due to speed difference: dummy=%fm/s, "
         "candidate=%fm/s",
         dummy_uuid_str.c_str(), is_pedestrian ? "pedestrian" : "vehicle", dummy_speed,
         candidate_speed);
@@ -1642,74 +1635,69 @@ std::optional<geometry_msgs::msg::Point> DummyPerceptionPublisherNode::calculate
 
   if (distance_traveled <= 0.0) {
     // No movement, use initial position
-    expected_position = last_prediction.kinematics.initial_pose_with_covariance.pose.position;
-  } else if (distance_traveled >= cumulative_distances.back()) {
+    return last_prediction.kinematics.initial_pose_with_covariance.pose.position;
+  }
+  if (distance_traveled >= cumulative_distances.back()) {
     // Extrapolate beyond the path end
+
+    if (selected_path.path.size() < 2) {
+      return selected_path.path.back().position;
+    }
+    // Use the last two points to determine direction and extrapolate
+    const auto & second_last_pose = selected_path.path[selected_path.path.size() - 2];
+    const auto & last_pose = selected_path.path.back();
+
+    // Calculate direction vector from second-last to last pose
+    const double dx = last_pose.position.x - second_last_pose.position.x;
+    const double dy = last_pose.position.y - second_last_pose.position.y;
+    const double dz = last_pose.position.z - second_last_pose.position.z;
+    const double segment_length = std::sqrt(dx * dx + dy * dy + dz * dz);
+
+    if (segment_length < std::numeric_limits<double>::epsilon()) {
+      return last_pose.position;
+    }
+    // Normalize direction vector
+    const double dir_x = dx / segment_length;
+    const double dir_y = dy / segment_length;
+    const double dir_z = dz / segment_length;
+
+    // Extrapolate position
     const double overshoot_distance = distance_traveled - cumulative_distances.back();
-
-    if (selected_path.path.size() >= 2) {
-      // Use the last two points to determine direction and extrapolate
-      const auto & second_last_pose = selected_path.path[selected_path.path.size() - 2];
-      const auto & last_pose = selected_path.path.back();
-
-      // Calculate direction vector from second-last to last pose
-      const double dx = last_pose.position.x - second_last_pose.position.x;
-      const double dy = last_pose.position.y - second_last_pose.position.y;
-      const double dz = last_pose.position.z - second_last_pose.position.z;
-      const double segment_length = std::sqrt(dx * dx + dy * dy + dz * dz);
-
-      if (segment_length > 0.0) {
-        // Normalize direction vector
-        const double dir_x = dx / segment_length;
-        const double dir_y = dy / segment_length;
-        const double dir_z = dz / segment_length;
-
-        // Extrapolate position
-        expected_position.x = last_pose.position.x + dir_x * overshoot_distance;
-        expected_position.y = last_pose.position.y + dir_y * overshoot_distance;
-        expected_position.z = last_pose.position.z + dir_z * overshoot_distance;
-      } else {
-        // No direction info, use last pose position
-        expected_position = last_pose.position;
-      }
-    } else {
-      // Only one point, use it
-      expected_position = selected_path.path.back().position;
-    }
-  } else {
-    // Interpolate along the path
-    for (size_t i = 1; i < cumulative_distances.size(); ++i) {
-      if (distance_traveled <= cumulative_distances[i]) {
-        // Interpolate between path points i-1 and i
-        const double segment_start_distance = cumulative_distances[i - 1];
-        const double segment_end_distance = cumulative_distances[i];
-        const double segment_length = segment_end_distance - segment_start_distance;
-
-        if (segment_length > 0.0) {
-          const double interpolation_factor =
-            (distance_traveled - segment_start_distance) / segment_length;
-
-          const auto & start_pose = selected_path.path[i - 1];
-          const auto & end_pose = selected_path.path[i];
-
-          expected_position.x =
-            start_pose.position.x +
-            interpolation_factor * (end_pose.position.x - start_pose.position.x);
-          expected_position.y =
-            start_pose.position.y +
-            interpolation_factor * (end_pose.position.y - start_pose.position.y);
-          expected_position.z =
-            start_pose.position.z +
-            interpolation_factor * (end_pose.position.z - start_pose.position.z);
-        } else {
-          expected_position = selected_path.path[i - 1].position;
-        }
-        break;
-      }
-    }
+    expected_position.x = last_pose.position.x + dir_x * overshoot_distance;
+    expected_position.y = last_pose.position.y + dir_y * overshoot_distance;
+    expected_position.z = last_pose.position.z + dir_z * overshoot_distance;
+    return expected_position;
   }
 
-  return expected_position;
-}
+  // Interpolate along the path
+  for (size_t i = 1; i < cumulative_distances.size(); ++i) {
+    if (distance_traveled > cumulative_distances[i]) {
+      continue;
+    }
+    // Interpolate between path points i-1 and i
+    const double segment_start_distance = cumulative_distances[i - 1];
+    const double segment_end_distance = cumulative_distances[i];
+    const double segment_length = segment_end_distance - segment_start_distance;
 
+    if (segment_length < std::numeric_limits<double>::epsilon()) {
+      return selected_path.path[i - 1].position;
+    }
+    const double interpolation_factor =
+      (distance_traveled - segment_start_distance) / segment_length;
+
+    const auto & start_pose = selected_path.path[i - 1];
+    const auto & end_pose = selected_path.path[i];
+
+    expected_position.x =
+      start_pose.position.x + interpolation_factor * (end_pose.position.x - start_pose.position.x);
+    expected_position.y =
+      start_pose.position.y + interpolation_factor * (end_pose.position.y - start_pose.position.y);
+    expected_position.z =
+      start_pose.position.z + interpolation_factor * (end_pose.position.z - start_pose.position.z);
+    return expected_position;
+  }
+  return selected_path.path.back().position;
+}
 }  // namespace autoware::dummy_perception_publisher
+
+// namespace autoware::dummy_perception_publisher
