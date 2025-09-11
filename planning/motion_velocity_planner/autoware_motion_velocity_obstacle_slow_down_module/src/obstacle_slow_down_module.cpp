@@ -729,7 +729,6 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
     const auto slow_down_end_idx = dist_to_slow_down_start < dist_to_slow_down_end
                                      ? insert_point_in_trajectory(dist_to_slow_down_end)
                                      : std::nullopt;
-
     if (!slow_down_end_idx) {
       continue;
     }
