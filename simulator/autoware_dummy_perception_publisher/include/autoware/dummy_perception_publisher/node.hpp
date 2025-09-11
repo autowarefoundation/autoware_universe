@@ -218,7 +218,7 @@ private:
     const std::string & dummy_uuid_str);
 
   // Helper methods for updateDummyToPredictedMapping
-  std::set<std::string> collectAvailablePredictedUUIDs(
+  static std::set<std::string> collectAvailablePredictedUUIDs(
     const autoware_perception_msgs::msg::PredictedObjects & predicted_objects,
     std::map<std::string, geometry_msgs::msg::Point> & predicted_positions);
   std::vector<std::string> findDisappearedPredictedObjectUUIDs(
