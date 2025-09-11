@@ -159,6 +159,12 @@
               "minimum": 0.0,
               "maximum": 3.14159265359,
               "description": "Maximum overall direction difference (default: PI/6, 30 degrees)"
+            },
+            "path_selection_strategy": {
+              "type": "string",
+              "default": "highest_confidence",
+              "enum": ["highest_confidence", "random"],
+              "description": "Path selection strategy: highest_confidence (highest confidence) or random"
             }
           },
           "required": [
@@ -170,7 +176,8 @@
             "speed_check_threshold",
             "max_position_difference",
             "max_path_length_ratio",
-            "max_overall_direction_diff"
+            "max_overall_direction_diff",
+            "path_selection_strategy"
           ]
         },
         "pedestrian": {
@@ -233,6 +240,12 @@
               "minimum": 0.0,
               "maximum": 3.14159265359,
               "description": "Maximum overall direction difference (default: PI/3, 60 degrees)"
+            },
+            "path_selection_strategy": {
+              "type": "string",
+              "default": "random",
+              "enum": ["highest_confidence", "random"],
+              "description": "Path selection strategy: highest_confidence (highest confidence) or random"
             }
           },
           "required": [
@@ -244,7 +257,8 @@
             "speed_check_threshold",
             "max_position_difference",
             "max_path_length_ratio",
-            "max_overall_direction_diff"
+            "max_overall_direction_diff",
+            "path_selection_strategy"
           ]
         }
       },

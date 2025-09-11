@@ -388,7 +388,8 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
     this->declare_parameter("vehicle.speed_check_threshold", 1.0),
     this->declare_parameter("vehicle.max_position_difference", 1.5),
     this->declare_parameter("vehicle.max_path_length_ratio", 1.1),
-    this->declare_parameter("vehicle.max_overall_direction_diff", M_PI / 6.0)};
+    this->declare_parameter("vehicle.max_overall_direction_diff", M_PI / 6.0),
+    this->declare_parameter("vehicle.path_selection_strategy", std::string("highest_confidence"))};
   // Initialize pedestrian parameters
   pedestrian_params_ = {
     this->declare_parameter("pedestrian.max_remapping_distance", 3.0),
@@ -399,7 +400,8 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
     this->declare_parameter("pedestrian.speed_check_threshold", 0.5),
     this->declare_parameter("pedestrian.max_position_difference", 2.5),
     this->declare_parameter("pedestrian.max_path_length_ratio", 1.5),
-    this->declare_parameter("pedestrian.max_overall_direction_diff", M_PI / 3.0)};
+    this->declare_parameter("pedestrian.max_overall_direction_diff", M_PI / 3.0),
+    this->declare_parameter("pedestrian.path_selection_strategy", std::string("random"))};
 
   // create subscriber and publisher
   rclcpp::QoS qos{1};
@@ -797,22 +799,7 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
       const auto & pred_obj_uuid_str = autoware_utils_uuid::to_hex_string(pred_obj_uuid);
 
       if (pred_obj_uuid_str == mapped_predicted_uuid) {
-        // Validate trajectory against current prediction if available
-        // auto current_pred_it = dummy_last_used_predictions_.find(obj_uuid_str);
-        // if (current_pred_it != dummy_last_used_predictions_.end()) {
-        //   // Check if the new trajectory is valid compared to current one
-        //   if (!isTrajectoryValid(current_pred_it->second, predicted_object, obj_uuid_str)) {
-        //     // Skip this prediction update and keep using the current one
-        //     RCLCPP_DEBUG(
-        //       rclcpp::get_logger("dummy_perception_publisher"),
-        //       "Skipping trajectory update for object %s due to validation failure",
-        //       obj_uuid_str.c_str());
-        //     return std::make_pair(
-        //       current_pred_it->second, dummy_last_used_prediction_times_[obj_uuid_str]);
-        //   }
-        // }
-
-        // For pedestrians, randomly select a path when updating
+        // Apply path selection strategy based on object type configuration
         autoware_perception_msgs::msg::PredictedObject modified_predicted_object = predicted_object;
 
         // Check if this is a pedestrian object
@@ -823,24 +810,43 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
                    autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN;
           });
 
-        if (is_pedestrian && predicted_object.kinematics.predicted_paths.size() > 1) {
-          // Randomly select a path index
-          const size_t num_paths = predicted_object.kinematics.predicted_paths.size();
-          const size_t random_path_index =
-            static_cast<size_t>(path_selection_dist_(pedestrian_path_generator_) * num_paths);
+        // Determine path selection strategy based on object type
+        const std::string path_strategy = is_pedestrian ? pedestrian_params_.path_selection_strategy
+                                                        : vehicle_params_.path_selection_strategy;
 
-          // Reorder paths to put the randomly selected path first
-          // This way the static calculateTrajectoryBasedPosition will use it
+        if (predicted_object.kinematics.predicted_paths.size() > 1) {
           auto & paths = modified_predicted_object.kinematics.predicted_paths;
-          if (random_path_index > 0 && random_path_index < paths.size()) {
-            // Swap the randomly selected path with the first path
-            std::swap(paths[0], paths[random_path_index]);
-          }
 
-          RCLCPP_DEBUG(
-            rclcpp::get_logger("dummy_perception_publisher"),
-            "Randomly selected path %zu out of %zu for pedestrian %s", random_path_index, num_paths,
-            obj_uuid_str.c_str());
+          if (path_strategy == "random") {
+            // Randomly select a path index
+            const size_t num_paths = predicted_object.kinematics.predicted_paths.size();
+            const auto random_path_index =
+              static_cast<size_t>(path_selection_dist_(pedestrian_path_generator_) * num_paths);
+
+            // Reorder paths to put the randomly selected path first
+            if (random_path_index > 0 && random_path_index < paths.size()) {
+              std::swap(paths[0], paths[random_path_index]);
+            }
+
+            RCLCPP_DEBUG(
+              rclcpp::get_logger("dummy_perception_publisher"),
+              "Randomly selected path %zu out of %zu for %s object %s", random_path_index,
+              num_paths, is_pedestrian ? "pedestrian" : "vehicle", obj_uuid_str.c_str());
+          } else if (path_strategy == "highest_confidence") {
+            // Find path with highest confidence and move it to first position
+            auto max_confidence_it = std::max_element(
+              paths.begin(), paths.end(),
+              [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
+
+            if (max_confidence_it != paths.begin()) {
+              std::swap(paths[0], *max_confidence_it);
+            }
+
+            RCLCPP_DEBUG(
+              rclcpp::get_logger("dummy_perception_publisher"),
+              "Selected most likely path (confidence: %.3f) for %s object %s", paths[0].confidence,
+              is_pedestrian ? "pedestrian" : "vehicle", obj_uuid_str.c_str());
+          }
         }
 
         // Store this as the new prediction to use for some seconds

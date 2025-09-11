@@ -61,6 +61,7 @@ struct CommonParameters
   double max_position_difference;
   double max_path_length_ratio;
   double max_overall_direction_diff;
+  std::string path_selection_strategy;  // "highest_confidence" or "random"
 };
 struct ObjectInfo
 {

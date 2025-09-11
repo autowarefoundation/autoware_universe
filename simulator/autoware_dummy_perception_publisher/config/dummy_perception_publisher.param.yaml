@@ -36,6 +36,7 @@
       max_position_difference: 1.5     # meters - for path similarity
       max_path_length_ratio: 1.1       # 10% difference
       max_overall_direction_diff: 0.523599  # PI/6 (30 degrees)
+      path_selection_strategy: "highest_confidence"  # "highest_confidence" or "random"
 
     # Remapping validation parameters - Pedestrian
     pedestrian:
@@ -48,3 +49,4 @@
       max_position_difference: 2.5     # meters - for path similarity
       max_path_length_ratio: 1.5       # 50% difference
       max_overall_direction_diff: 1.047198  # PI/3 (60 degrees)
+      path_selection_strategy: "random"  # "highest_confidence" or "random"
