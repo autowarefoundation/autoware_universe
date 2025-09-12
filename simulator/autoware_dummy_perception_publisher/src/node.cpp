@@ -14,13 +14,21 @@
 
 #include "autoware/dummy_perception_publisher/node.hpp"
 
+#include "autoware/trajectory/interpolator/akima_spline.hpp"
+#include "autoware/trajectory/interpolator/interpolator.hpp"
+#include "autoware/trajectory/pose.hpp"
+#include "autoware/trajectory/trajectory_point.hpp"
 #include "autoware_utils_geometry/geometry.hpp"
 
 #include <autoware_utils_uuid/uuid_helper.hpp>
 
+#include <autoware_perception_msgs/msg/detail/tracked_objects__struct.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
+#include <geometry_msgs/msg/detail/point__struct.hpp>
+#include <geometry_msgs/msg/detail/pose_stamped__struct.hpp>
+#include <geometry_msgs/msg/detail/transform__struct.hpp>
+#include <geometry_msgs/msg/detail/transform_stamped__struct.hpp>
 
-#include <math.h>
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Transform.h>
@@ -48,8 +56,20 @@
 namespace autoware::dummy_perception_publisher
 {
 
+using autoware::experimental::trajectory::interpolator::AkimaSpline;
+using autoware_perception_msgs::msg::PredictedObject;
+using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_perception_msgs::msg::TrackedObject;
 using autoware_perception_msgs::msg::TrackedObjects;
+using geometry_msgs::msg::Point;
+using geometry_msgs::msg::Pose;
+using geometry_msgs::msg::PoseStamped;
+using geometry_msgs::msg::PoseWithCovariance;
+using geometry_msgs::msg::Transform;
+using geometry_msgs::msg::TransformStamped;
+using geometry_msgs::msg::TwistWithCovariance;
+using tier4_simulation_msgs::msg::DummyObject;
+using InterpolationTrajectory = autoware::experimental::trajectory::Trajectory<Pose>;
 
 ObjectInfo::ObjectInfo(
   const tier4_simulation_msgs::msg::DummyObject & object, const rclcpp::Time & current_time)
@@ -66,7 +86,7 @@ ObjectInfo::ObjectInfo(
   const auto current_pose = calculateStraightLinePosition(object, current_time);
 
   // calculate tf from map to moved_object
-  geometry_msgs::msg::Transform ros_map2moved_object;
+  Transform ros_map2moved_object;
   ros_map2moved_object.translation.x = current_pose.position.x;
   ros_map2moved_object.translation.y = current_pose.position.y;
   ros_map2moved_object.translation.z = current_pose.position.z;
@@ -86,13 +106,20 @@ ObjectInfo::ObjectInfo(
       static_cast<double>(object.max_velocity));
   }
 
+  // stop at zero velocity
+  if (initial_acc < 0 && initial_vel > 0) {
+    current_vel = std::max(current_vel, 0.0);
+  }
+  if (initial_acc > 0 && initial_vel < 0) {
+    current_vel = std::min(current_vel, 0.0);
+  }
+
   twist_covariance_.twist.linear.x = current_vel;
   pose_covariance_.pose = current_pose;
 }
 
 ObjectInfo::ObjectInfo(
-  const tier4_simulation_msgs::msg::DummyObject & object,
-  const autoware_perception_msgs::msg::PredictedObject & predicted_object,
+  const tier4_simulation_msgs::msg::DummyObject & object, const PredictedObject & predicted_object,
   const rclcpp::Time & predicted_time, const rclcpp::Time & current_time,
   const double switch_time_threshold)
 : length(object.shape.dimensions.x),
@@ -128,7 +155,7 @@ ObjectInfo::ObjectInfo(
   twist_covariance_.twist.linear.x = object.initial_state.twist_covariance.twist.linear.x;
 }
 
-geometry_msgs::msg::Pose ObjectInfo::calculateStraightLinePosition(
+Pose ObjectInfo::calculateStraightLinePosition(
   const tier4_simulation_msgs::msg::DummyObject & object, const rclcpp::Time & current_time)
 {
   const auto & initial_pose = object.initial_state.pose_covariance.pose;
@@ -180,9 +207,8 @@ geometry_msgs::msg::Pose ObjectInfo::calculateStraightLinePosition(
   return autoware_utils_geometry::calc_offset_pose(initial_pose, move_distance, 0.0, 0.0);
 }
 
-geometry_msgs::msg::Pose ObjectInfo::calculateTrajectoryBasedPosition(
-  const tier4_simulation_msgs::msg::DummyObject & object,
-  const autoware_perception_msgs::msg::PredictedObject & predicted_object,
+Pose ObjectInfo::calculateTrajectoryBasedPosition(
+  const tier4_simulation_msgs::msg::DummyObject & object, const PredictedObject & predicted_object,
   const rclcpp::Time & predicted_time, const rclcpp::Time & current_time)
 {
   // Select first path (which has been ordered based on random or highest confidence strategy in
@@ -203,26 +229,23 @@ geometry_msgs::msg::Pose ObjectInfo::calculateTrajectoryBasedPosition(
   if (selected_path.path.size() < 2) {  // Fallback to last pose if path has only one point
     return selected_path.path.back();
   }
-  // Calculate cumulative distances along the path
-  std::vector<double> cumulative_distances;
-  cumulative_distances.push_back(0.0);
-
-  for (size_t i = 1; i < selected_path.path.size(); ++i) {
-    const auto & prev_pose = selected_path.path[i - 1];
-    const auto & curr_pose = selected_path.path[i];
-
-    const double dx = curr_pose.position.x - prev_pose.position.x;
-    const double dy = curr_pose.position.y - prev_pose.position.y;
-    const double dz = curr_pose.position.z - prev_pose.position.z;
-    const double segment_length = std::sqrt(dx * dx + dy * dy + dz * dz);
-
-    cumulative_distances.push_back(cumulative_distances.back() + segment_length);
-  }
 
   const auto interpolated_pose = std::invoke([&]() {
+    auto trajectory_interpolation_util =
+      InterpolationTrajectory::Builder{}
+        .set_xy_interpolator<AkimaSpline>()  // Set interpolator for x-y plane
+        .build(selected_path.path);
+
+    if (!trajectory_interpolation_util) {
+      // Fallback to last pose if failed to build interpolation trajectory
+      return object.initial_state.pose_covariance.pose;
+    }
+    trajectory_interpolation_util->align_orientation_with_trajectory_direction();
+
+    const auto total_length = trajectory_interpolation_util->length();
     // Check if the distance traveled exceeds the path length (extrapolation)
-    if (distance_traveled >= cumulative_distances.back()) {
-      const double overshoot_distance = distance_traveled - cumulative_distances.back();
+    if (distance_traveled >= total_length) {
+      const double overshoot_distance = distance_traveled - total_length;
 
       // Use the last two points to determine direction and extrapolate
       const auto & second_last_pose = selected_path.path[selected_path.path.size() - 2];
@@ -245,7 +268,7 @@ geometry_msgs::msg::Pose ObjectInfo::calculateTrajectoryBasedPosition(
       const double dir_z = dz / segment_length;
 
       // Extrapolate position
-      geometry_msgs::msg::Pose interpolated_pose;
+      Pose interpolated_pose;
       interpolated_pose.position.x = last_pose.position.x + dir_x * overshoot_distance;
       interpolated_pose.position.y = last_pose.position.y + dir_y * overshoot_distance;
       interpolated_pose.position.z = last_pose.position.z + dir_z * overshoot_distance;
@@ -256,42 +279,7 @@ geometry_msgs::msg::Pose ObjectInfo::calculateTrajectoryBasedPosition(
     }
 
     // Interpolation within the path
-    geometry_msgs::msg::Pose interpolated_pose;
-    size_t segment_index = 0;
-    for (size_t i = 1; i < cumulative_distances.size(); ++i) {
-      if (distance_traveled <= cumulative_distances[i]) {
-        segment_index = i - 1;
-        break;
-      }
-    }
-    // Calculate interpolation ratio within the segment
-    const double segment_start_distance = cumulative_distances[segment_index];
-    const double segment_end_distance = cumulative_distances[segment_index + 1];
-    const double segment_length = segment_end_distance - segment_start_distance;
-
-    const double interpolation_ratio =
-      (segment_length > 0.0) ? (distance_traveled - segment_start_distance) / segment_length : 0.0;
-
-    // Interpolate between the two poses
-    const auto & pose1 = selected_path.path[segment_index];
-    const auto & pose2 = selected_path.path[segment_index + 1];
-
-    // Linear interpolation for position
-    interpolated_pose.position.x =
-      pose1.position.x + (pose2.position.x - pose1.position.x) * interpolation_ratio;
-    interpolated_pose.position.y =
-      pose1.position.y + (pose2.position.y - pose1.position.y) * interpolation_ratio;
-    interpolated_pose.position.z =
-      pose1.position.z + (pose2.position.z - pose1.position.z) * interpolation_ratio;
-
-    // Spherical linear interpolation for orientation
-    tf2::Quaternion q1;
-    tf2::Quaternion q2;
-    tf2::fromMsg(pose1.orientation, q1);
-    tf2::fromMsg(pose2.orientation, q2);
-    tf2::Quaternion q_interpolated = q1.slerp(q2, interpolation_ratio);
-    interpolated_pose.orientation = tf2::toMsg(q_interpolated);
-    return interpolated_pose;
+    return trajectory_interpolation_util->compute(distance_traveled);
   });
 
   return interpolated_pose;
@@ -395,11 +383,10 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
   object_sub_ = this->create_subscription<tier4_simulation_msgs::msg::DummyObject>(
     "input/object", 100,
     std::bind(&DummyPerceptionPublisherNode::objectCallback, this, std::placeholders::_1));
-  predicted_objects_sub_ =
-    this->create_subscription<autoware_perception_msgs::msg::PredictedObjects>(
-      "input/predicted_objects", 100,
-      std::bind(
-        &DummyPerceptionPublisherNode::predictedObjectsCallback, this, std::placeholders::_1));
+  predicted_objects_sub_ = this->create_subscription<PredictedObjects>(
+    "input/predicted_objects", 100,
+    std::bind(
+      &DummyPerceptionPublisherNode::predictedObjectsCallback, this, std::placeholders::_1));
 
   // optional ground truth publisher
   if (publish_ground_truth_objects_) {
@@ -418,7 +405,7 @@ void DummyPerceptionPublisherNode::timerCallback()
   // output msgs
   tier4_perception_msgs::msg::DetectedObjectsWithFeature output_dynamic_object_msg;
   autoware_perception_msgs::msg::TrackedObjects output_ground_truth_objects_msg;
-  geometry_msgs::msg::PoseStamped output_moved_object_pose;
+  PoseStamped output_moved_object_pose;
   sensor_msgs::msg::PointCloud2 output_pointcloud_msg;
   std_msgs::msg::Header header;
   rclcpp::Time current_time = this->now();
@@ -438,7 +425,7 @@ void DummyPerceptionPublisherNode::timerCallback()
 
   tf2::Transform tf_base_link2map;
   try {
-    geometry_msgs::msg::TransformStamped ros_base_link2map;
+    TransformStamped ros_base_link2map;
     ros_base_link2map = tf_buffer_.lookupTransform(
       /*target*/ "base_link", /*src*/ "map", current_time, rclcpp::Duration::from_seconds(0.5));
     tf2::fromMsg(ros_base_link2map.transform, tf_base_link2map);
@@ -627,7 +614,7 @@ void DummyPerceptionPublisherNode::objectCallback(
       tf2::Transform tf_input2object_origin;
       tf2::Transform tf_map2object_origin;
       try {
-        geometry_msgs::msg::TransformStamped ros_input2map;
+        TransformStamped ros_input2map;
         ros_input2map = tf_buffer_.lookupTransform(
           /*target*/ msg->header.frame_id, /*src*/ "map", msg->header.stamp,
           rclcpp::Duration::from_seconds(0.5));
@@ -644,7 +631,7 @@ void DummyPerceptionPublisherNode::objectCallback(
 
       // Use base_link Z
       if (use_base_link_z_) {
-        geometry_msgs::msg::TransformStamped ros_map2base_link;
+        TransformStamped ros_map2base_link;
         try {
           ros_map2base_link = tf_buffer_.lookupTransform(
             "map", "base_link", rclcpp::Time(0), rclcpp::Duration::from_seconds(0.5));
@@ -675,7 +662,7 @@ void DummyPerceptionPublisherNode::objectCallback(
           tf2::Transform tf_input2object_origin;
           tf2::Transform tf_map2object_origin;
           try {
-            geometry_msgs::msg::TransformStamped ros_input2map;
+            TransformStamped ros_input2map;
             ros_input2map = tf_buffer_.lookupTransform(
               /*target*/ msg->header.frame_id, /*src*/ "map", msg->header.stamp,
               rclcpp::Duration::from_seconds(0.5));
@@ -691,7 +678,7 @@ void DummyPerceptionPublisherNode::objectCallback(
           tf2::toMsg(tf_map2object_origin, objects_.at(i).initial_state.pose_covariance.pose);
           if (use_base_link_z_) {
             // Use base_link Z
-            geometry_msgs::msg::TransformStamped ros_map2base_link;
+            TransformStamped ros_map2base_link;
             try {
               ros_map2base_link = tf_buffer_.lookupTransform(
                 "map", "base_link", rclcpp::Time(0), rclcpp::Duration::from_seconds(0.5));
@@ -716,7 +703,7 @@ void DummyPerceptionPublisherNode::objectCallback(
 }
 
 void DummyPerceptionPublisherNode::predictedObjectsCallback(
-  const autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr msg)
+  const PredictedObjects::ConstSharedPtr msg)
 {
   // Add to buffer, removing oldest if necessary
   if (predicted_objects_buffer_.size() >= MAX_BUFFER_SIZE) {
@@ -728,11 +715,10 @@ void DummyPerceptionPublisherNode::predictedObjectsCallback(
   updateDummyToPredictedMapping(objects_, *msg);
 }
 
-std::pair<autoware_perception_msgs::msg::PredictedObject, rclcpp::Time>
-DummyPerceptionPublisherNode::findMatchingPredictedObject(
+std::pair<PredictedObject, rclcpp::Time> DummyPerceptionPublisherNode::findMatchingPredictedObject(
   const unique_identifier_msgs::msg::UUID & object_id, const rclcpp::Time & current_time)
 {
-  autoware_perception_msgs::msg::PredictedObject empty_object;
+  PredictedObject empty_object;
   rclcpp::Time empty_time(0, 0, RCL_ROS_TIME);
 
   const auto & obj_uuid_str = autoware_utils_uuid::to_hex_string(object_id);
@@ -782,7 +768,7 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
 
       if (pred_obj_uuid_str == mapped_predicted_uuid) {
         // Apply path selection strategy based on object type configuration
-        autoware_perception_msgs::msg::PredictedObject modified_predicted_object = predicted_object;
+        PredictedObject modified_predicted_object = predicted_object;
 
         // Check if this is a pedestrian object
         const bool is_pedestrian = std::any_of(
@@ -841,8 +827,7 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
 }
 
 std::set<std::string> DummyPerceptionPublisherNode::collectAvailablePredictedUUIDs(
-  const autoware_perception_msgs::msg::PredictedObjects & predicted_objects,
-  std::map<std::string, geometry_msgs::msg::Point> & predicted_positions)
+  const PredictedObjects & predicted_objects, std::map<std::string, Point> & predicted_positions)
 {
   std::set<std::string> available_predicted_uuids;
 
@@ -877,12 +862,11 @@ std::vector<std::string> DummyPerceptionPublisherNode::findDisappearedPredictedO
   return dummy_objects_to_remap;
 }
 
-std::map<std::string, geometry_msgs::msg::Point>
-DummyPerceptionPublisherNode::collectDummyObjectPositions(
+std::map<std::string, Point> DummyPerceptionPublisherNode::collectDummyObjectPositions(
   const std::vector<tier4_simulation_msgs::msg::DummyObject> & dummy_objects,
   const rclcpp::Time & current_time, std::vector<std::string> & unmapped_dummy_uuids)
 {
-  std::map<std::string, geometry_msgs::msg::Point> dummy_positions;
+  std::map<std::string, Point> dummy_positions;
 
   for (const auto & dummy_obj : dummy_objects) {
     const auto dummy_uuid_str = autoware_utils_uuid::to_hex_string(dummy_obj.id);
@@ -905,10 +889,10 @@ DummyPerceptionPublisherNode::collectDummyObjectPositions(
 }
 
 std::optional<std::string> DummyPerceptionPublisherNode::findBestPredictedObjectMatch(
-  const std::string & dummy_uuid, const geometry_msgs::msg::Point & dummy_position,
+  const std::string & dummy_uuid, const Point & dummy_position,
   const std::set<std::string> & available_predicted_uuids,
-  const std::map<std::string, geometry_msgs::msg::Point> & predicted_positions,
-  const autoware_perception_msgs::msg::PredictedObjects & predicted_objects)
+  const std::map<std::string, Point> & predicted_positions,
+  const PredictedObjects & predicted_objects)
 {
   // Get the best matching predicted object based on several metrics
   std::string closest_pred_uuid;
@@ -929,7 +913,7 @@ std::optional<std::string> DummyPerceptionPublisherNode::findBestPredictedObject
     }
 
     // Find the actual predicted object for validation
-    const autoware_perception_msgs::msg::PredictedObject & candidate_pred_obj = *pred_obj;
+    const PredictedObject & candidate_pred_obj = *pred_obj;
 
     // In case of multiple valid candidates, choose the closest one
     double distance = calculateEuclideanDistance(dummy_position, pred_pos);
@@ -955,9 +939,8 @@ std::optional<std::string> DummyPerceptionPublisherNode::findBestPredictedObject
 void DummyPerceptionPublisherNode::createRemappingsForDisappearedObjects(
   const std::vector<std::string> & dummy_objects_to_remap,
   std::set<std::string> & available_predicted_uuids,
-  const std::map<std::string, geometry_msgs::msg::Point> & predicted_positions,
-  const std::map<std::string, geometry_msgs::msg::Point> & dummy_positions,
-  const autoware_perception_msgs::msg::PredictedObjects & predicted_objects)
+  const std::map<std::string, Point> & predicted_positions,
+  const std::map<std::string, Point> & dummy_positions, const PredictedObjects & predicted_objects)
 {
   const rclcpp::Time current_time = this->now();
 
@@ -971,7 +954,7 @@ void DummyPerceptionPublisherNode::createRemappingsForDisappearedObjects(
 
   for (const auto & dummy_uuid : dummy_objects_to_remap) {
     // Use last known position if available, otherwise use current position
-    geometry_msgs::msg::Point remapping_position;
+    Point remapping_position;
     auto current_pos_it = dummy_positions.find(dummy_uuid);
     if (current_pos_it == dummy_positions.end()) {
       continue;
@@ -1017,12 +1000,12 @@ void DummyPerceptionPublisherNode::createRemappingsForDisappearedObjects(
 
 void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
   const std::vector<tier4_simulation_msgs::msg::DummyObject> & dummy_objects,
-  const autoware_perception_msgs::msg::PredictedObjects & predicted_objects)
+  const PredictedObjects & predicted_objects)
 {
   const rclcpp::Time current_time = this->now();
 
   // Create sets of available UUIDs
-  std::map<std::string, geometry_msgs::msg::Point> predicted_positions;
+  std::map<std::string, Point> predicted_positions;
   std::set<std::string> available_predicted_uuids =
     collectAvailablePredictedUUIDs(predicted_objects, predicted_positions);
 
@@ -1032,7 +1015,7 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
 
   // Update dummy object positions and find unmapped dummy objects
   std::vector<std::string> unmapped_dummy_uuids;
-  std::map<std::string, geometry_msgs::msg::Point> dummy_positions =
+  std::map<std::string, Point> dummy_positions =
     collectDummyObjectPositions(dummy_objects, current_time, unmapped_dummy_uuids);
 
   // Handle remapping for dummy objects whose predicted objects disappeared
@@ -1086,7 +1069,7 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
 }
 
 double DummyPerceptionPublisherNode::calculateEuclideanDistance(
-  const geometry_msgs::msg::Point & pos1, const geometry_msgs::msg::Point & pos2)
+  const Point & pos1, const Point & pos2)
 {
   double dx = pos1.x - pos2.x;
   double dy = pos1.y - pos2.y;
@@ -1095,8 +1078,8 @@ double DummyPerceptionPublisherNode::calculateEuclideanDistance(
 }
 
 bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
-  const autoware_perception_msgs::msg::PredictedObject & candidate_prediction,
-  const std::string & dummy_uuid_str, const geometry_msgs::msg::Point & expected_position)
+  const PredictedObject & candidate_prediction, const std::string & dummy_uuid_str,
+  const Point & expected_position)
 {
   // Perform various checks to validate if the candidate predicted object is a good match
   // for the dummy object
@@ -1181,7 +1164,7 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
   }
 
   // Calculate expected position based on last known trajectory if available
-  geometry_msgs::msg::Point comparison_position = expected_position;
+  Point comparison_position = expected_position;
   auto last_used_pred_it = dummy_last_used_predictions_.find(dummy_uuid_str);
   if (last_used_pred_it == dummy_last_used_predictions_.end()) {
     return true;  // No last prediction, allow the match
@@ -1214,7 +1197,7 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
   return true;
 }
 
-std::optional<geometry_msgs::msg::Point> DummyPerceptionPublisherNode::calculateExpectedPosition(
+std::optional<Point> DummyPerceptionPublisherNode::calculateExpectedPosition(
   const autoware_perception_msgs::msg::PredictedPath & last_prediction,
   const std::string & dummy_uuid_str)
 {
@@ -1271,7 +1254,7 @@ std::optional<geometry_msgs::msg::Point> DummyPerceptionPublisherNode::calculate
     cumulative_distances.push_back(cumulative_distances.back() + segment_length);
   }
 
-  geometry_msgs::msg::Point expected_position;
+  Point expected_position;
 
   if (distance_traveled <= 0.0) {
     // No movement, use initial position
