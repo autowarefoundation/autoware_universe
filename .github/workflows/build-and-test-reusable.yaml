@@ -45,9 +45,16 @@ on:
         type: string
         default: temp
         required: false
+      redis-server:
+        type: string
+        required: true
     secrets:
       codecov-token:
         required: true
+      redis-password:
+        required: true
+      tailscale-authkey:
+        required: false
 
 concurrency:
   group: ${{ inputs.concurrency-group }}
@@ -56,6 +63,7 @@ concurrency:
 env:
   CC: /usr/lib/ccache/gcc
   CXX: /usr/lib/ccache/g++
+  CCACHE_REMOTE_STORAGE: redis://{{ secrets.redis-password }}@{{ inputs.redis-server }}
 
 jobs:
   build-and-test:
@@ -64,6 +72,12 @@ jobs:
     outputs:
       coverage-files: ${{ steps.test.outputs.coverage-report-files }}
     steps:
+      - name: Tailscale
+        if: ${{ secrets.tailscale-authkey != '' }}
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.tailscale-authkey }}
+
       - name: Check out repository
         uses: actions/checkout@v4
         with:
