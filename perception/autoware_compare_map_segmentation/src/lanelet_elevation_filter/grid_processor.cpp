@@ -77,9 +77,9 @@ void GridProcessor::fillEmptyGrids(int extension_radius)
     }
   }
 
-  const size_t MAX_GRID_CELLS = 1000000;       
-  const size_t MAX_CELLS_PER_RADIUS = 100000;  
-  const size_t MAX_TOTAL_EXTENSIONS = 500000; 
+  const size_t MAX_GRID_CELLS = 1000000;
+  const size_t MAX_CELLS_PER_RADIUS = 100000;
+  const size_t MAX_TOTAL_EXTENSIONS = 500000;
 
   size_t total_extensions_added = 0;
 
@@ -89,7 +89,7 @@ void GridProcessor::fillEmptyGrids(int extension_radius)
 
     for (const auto & center_index : original_indices) {
       if (radius_limit_reached) {
-        break;  
+        break;
       }
 
       if (grid_cells_.size() > MAX_GRID_CELLS) {
@@ -109,7 +109,6 @@ void GridProcessor::fillEmptyGrids(int extension_radius)
       // Fill cells at current radius distance
       for (int dx = -radius; dx <= radius && !radius_limit_reached; ++dx) {
         for (int dy = -radius; dy <= radius && !radius_limit_reached; ++dy) {
-
           if (std::abs(dx) + std::abs(dy) != radius) continue;
 
           GridIndex extended_index;
@@ -119,13 +118,13 @@ void GridProcessor::fillEmptyGrids(int extension_radius)
           auto it = grid_cells_.find(extended_index);
           if (it == grid_cells_.end()) {
             auto elevation_opt = calculateAverageElevationFromNeighbors(extended_index);
-            
+
             // Only create extended cell if we have valid neighbor data
             if (elevation_opt.has_value()) {
               grid_cells_[extended_index] = GridCell();
               grid_cells_[extended_index].average_height = elevation_opt.value();
               grid_cells_[extended_index].is_valid = true;
-              
+
               cells_added_this_radius++;
               total_extensions_added++;
             }
@@ -145,14 +144,14 @@ void GridProcessor::fillEmptyGrids(int extension_radius)
       elevation_cache_.clear();
     }
 
-
     if (cells_added_this_radius == 0) {
       break;
     }
   }
 }
 
-std::optional<double> GridProcessor::calculateAverageElevationFromNeighbors(const GridIndex & index) const
+std::optional<double> GridProcessor::calculateAverageElevationFromNeighbors(
+  const GridIndex & index) const
 {
   std::vector<double> neighbor_elevations;
 
@@ -295,7 +294,7 @@ std::optional<double> GridProcessor::getArtificalElevationAtPoint(double x, doub
 
   // No direct data and not in cache - need to interpolate from neighbors
   auto interpolated_elevation_opt = interpolateElevationFromNeighbors(index);
-  
+
   // If no valid interpolation data available, return std::nullopt
   if (!interpolated_elevation_opt.has_value()) {
     return std::nullopt;
@@ -323,7 +322,8 @@ std::optional<double> GridProcessor::getArtificalElevationAtPoint(double x, doub
   return interpolated_elevation;
 }
 
-std::optional<double> GridProcessor::interpolateElevationFromNeighbors(const GridIndex & index) const
+std::optional<double> GridProcessor::interpolateElevationFromNeighbors(
+  const GridIndex & index) const
 {
   std::vector<double> neighbor_elevations;
 
@@ -408,7 +408,7 @@ bool GridProcessor::isPointValid(
 void GridProcessor::reset()
 {
   grid_cells_.clear();
-  elevation_cache_.clear(); 
+  elevation_cache_.clear();
 }
 
 std::vector<std::pair<GridIndex, GridCell>> GridProcessor::getGridCells() const

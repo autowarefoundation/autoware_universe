@@ -67,14 +67,13 @@ public:
   bool isPointValid(
     double x, double y, double z, double threshold, bool require_map_coverage) const;
 
-
   std::vector<std::pair<GridIndex, GridCell>> getGridCells() const;
 
   std::pair<double, double> getGridBounds() const;
 
 private:
   double grid_resolution_;
-  double inv_grid_resolution_; 
+  double inv_grid_resolution_;
   std::unordered_map<GridIndex, GridCell, GridIndexHash> grid_cells_;
 
   mutable std::unordered_map<GridIndex, double, GridIndexHash> elevation_cache_;
