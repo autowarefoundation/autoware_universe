@@ -956,6 +956,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11352/planning/behavior_velocity_planner/autoware_behavior_velocity_roundabout_module/</loc>
+         <lastmod>2025-09-12</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-11352/planning/behavior_velocity_planner/autoware_behavior_velocity_rtc_interface/</loc>
          <lastmod>2025-09-12</lastmod>
          <changefreq>daily</changefreq>
