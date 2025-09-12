@@ -335,19 +335,6 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
     random_generator_.seed(seed_gen());
   }
 
-  // Initialize pedestrian path selection
-  const unsigned int pedestrian_path_seed =
-    static_cast<unsigned int>(this->declare_parameter("pedestrian_path_seed", 42));
-  const bool use_fixed_pedestrian_seed =
-    this->declare_parameter("use_fixed_pedestrian_seed", false);
-
-  if (use_fixed_pedestrian_seed) {
-    pedestrian_path_generator_.seed(pedestrian_path_seed);
-  } else {
-    std::random_device seed_gen;
-    pedestrian_path_generator_.seed(seed_gen());
-  }
-
   // Initialize path selection distribution
   path_selection_dist_ = std::uniform_real_distribution<double>(0.0, 1.0);
 
@@ -788,7 +775,7 @@ std::pair<PredictedObject, rclcpp::Time> DummyPerceptionPublisherNode::findMatch
             // Randomly select a path index
             const size_t num_paths = predicted_object.kinematics.predicted_paths.size();
             std::uniform_int_distribution<size_t> path_index_dist(0, num_paths - 1);
-            const size_t random_path_index = path_index_dist(pedestrian_path_generator_);
+            const size_t random_path_index = path_index_dist(random_generator_);
             // Reorder paths to put the randomly selected path first
             std::swap(paths[0], paths[random_path_index]);
 

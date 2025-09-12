@@ -12,9 +12,6 @@
     object_centric_pointcloud: false
     angle_increment: 0.004363323  # 0.25 * PI / 180.0
 
-    # Pedestrian path selection
-    pedestrian_path_seed: 42
-    use_fixed_pedestrian_seed: false
 
     # Prediction parameters
     predicted_path_delay: 2.0  # seconds - delay before using predicted paths
