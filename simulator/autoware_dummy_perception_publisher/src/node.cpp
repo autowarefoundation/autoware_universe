@@ -181,27 +181,9 @@ geometry_msgs::msg::Pose ObjectInfo::calculateTrajectoryBasedPosition(
   const autoware_perception_msgs::msg::PredictedObject & predicted_object,
   const rclcpp::Time & predicted_time, const rclcpp::Time & current_time)
 {
-  // Check if this is a pedestrian
-  const bool is_pedestrian =
-    (object.classification.label ==
-     autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN);
-
-  // Select path based on object type
-  auto selected_path_it = predicted_object.kinematics.predicted_paths.begin();
-
-  if (is_pedestrian && predicted_object.kinematics.predicted_paths.size() > 1) {
-    // For pedestrians: use the first path since we've already reordered paths
-    // with the randomly selected one at index 0 in findMatchingPredictedObject
-    selected_path_it = predicted_object.kinematics.predicted_paths.begin();
-  } else {
-    // For vehicles: find path with highest confidence
-    selected_path_it = std::max_element(
-      predicted_object.kinematics.predicted_paths.begin(),
-      predicted_object.kinematics.predicted_paths.end(),
-      [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
-  }
-
-  const auto & selected_path = *selected_path_it;
+  // Select first path (which has been ordered based on random or highest confidence strategy in
+  // findMatchingPredictedObject)
+  const auto & selected_path = predicted_object.kinematics.predicted_paths.front();
 
   // Calculate elapsed time from predicted object timestamp to current time
   const double elapsed_time = (current_time - predicted_time).seconds();
@@ -210,6 +192,13 @@ geometry_msgs::msg::Pose ObjectInfo::calculateTrajectoryBasedPosition(
   const double speed = object.initial_state.twist_covariance.twist.linear.x;
   const double distance_traveled = speed * elapsed_time;
 
+  if (distance_traveled <= 0.0 || selected_path.path.empty()) {
+    return predicted_object.kinematics.initial_pose_with_covariance.pose;
+  }
+
+  if (selected_path.path.size() < 2) {  // Fallback to last pose if path has only one point
+    return selected_path.path.back();
+  }
   // Calculate cumulative distances along the path
   std::vector<double> cumulative_distances;
   cumulative_distances.push_back(0.0);
@@ -226,16 +215,11 @@ geometry_msgs::msg::Pose ObjectInfo::calculateTrajectoryBasedPosition(
     cumulative_distances.push_back(cumulative_distances.back() + segment_length);
   }
 
-  geometry_msgs::msg::Pose interpolated_pose;
+  const auto interpolated_pose = std::invoke([&]() {
+    // Check if the distance traveled exceeds the path length (extrapolation)
+    if (distance_traveled >= cumulative_distances.back()) {
+      const double overshoot_distance = distance_traveled - cumulative_distances.back();
 
-  if (distance_traveled <= 0.0 || selected_path.path.empty()) {
-    // Use initial pose if no distance traveled or path is empty
-    interpolated_pose = predicted_object.kinematics.initial_pose_with_covariance.pose;
-  } else if (distance_traveled >= cumulative_distances.back()) {
-    // Extrapolate beyond the path end
-    const double overshoot_distance = distance_traveled - cumulative_distances.back();
-
-    if (selected_path.path.size() >= 2) {
       // Use the last two points to determine direction and extrapolate
       const auto & second_last_pose = selected_path.path[selected_path.path.size() - 2];
       const auto & last_pose = selected_path.path.back();
@@ -246,29 +230,29 @@ geometry_msgs::msg::Pose ObjectInfo::calculateTrajectoryBasedPosition(
       const double dz = last_pose.position.z - second_last_pose.position.z;
       const double segment_length = std::sqrt(dx * dx + dy * dy + dz * dz);
 
-      if (segment_length > 0.0) {
-        // Normalize direction vector
-        const double dir_x = dx / segment_length;
-        const double dir_y = dy / segment_length;
-        const double dir_z = dz / segment_length;
-
-        // Extrapolate position
-        interpolated_pose.position.x = last_pose.position.x + dir_x * overshoot_distance;
-        interpolated_pose.position.y = last_pose.position.y + dir_y * overshoot_distance;
-        interpolated_pose.position.z = last_pose.position.z + dir_z * overshoot_distance;
-
-        // Keep the last orientation
-        interpolated_pose.orientation = last_pose.orientation;
-      } else {
-        // Fallback to last pose if segment length is zero
-        interpolated_pose = last_pose;
+      if (segment_length < std::numeric_limits<double>::epsilon()) {  // Fallback to last pose if
+                                                                      // segment length is zero
+        return last_pose;
       }
-    } else {
-      // Fallback to last pose if path has only one point
-      interpolated_pose = selected_path.path.back();
+
+      // Normalize direction vector
+      const double dir_x = dx / segment_length;
+      const double dir_y = dy / segment_length;
+      const double dir_z = dz / segment_length;
+
+      // Extrapolate position
+      geometry_msgs::msg::Pose interpolated_pose;
+      interpolated_pose.position.x = last_pose.position.x + dir_x * overshoot_distance;
+      interpolated_pose.position.y = last_pose.position.y + dir_y * overshoot_distance;
+      interpolated_pose.position.z = last_pose.position.z + dir_z * overshoot_distance;
+
+      // Keep the last orientation
+      interpolated_pose.orientation = last_pose.orientation;
+      return interpolated_pose;
     }
-  } else {
-    // Find which segment the distance falls into
+
+    // Interpolation within the path
+    geometry_msgs::msg::Pose interpolated_pose;
     size_t segment_index = 0;
     for (size_t i = 1; i < cumulative_distances.size(); ++i) {
       if (distance_traveled <= cumulative_distances[i]) {
@@ -297,12 +281,14 @@ geometry_msgs::msg::Pose ObjectInfo::calculateTrajectoryBasedPosition(
       pose1.position.z + (pose2.position.z - pose1.position.z) * interpolation_ratio;
 
     // Spherical linear interpolation for orientation
-    tf2::Quaternion q1, q2;
+    tf2::Quaternion q1;
+    tf2::Quaternion q2;
     tf2::fromMsg(pose1.orientation, q1);
     tf2::fromMsg(pose2.orientation, q2);
     tf2::Quaternion q_interpolated = q1.slerp(q2, interpolation_ratio);
     interpolated_pose.orientation = tf2::toMsg(q_interpolated);
-  }
+    return interpolated_pose;
+  });
 
   return interpolated_pose;
 }
@@ -806,19 +792,15 @@ DummyPerceptionPublisherNode::findMatchingPredictedObject(
         const std::string path_strategy = is_pedestrian ? pedestrian_params_.path_selection_strategy
                                                         : vehicle_params_.path_selection_strategy;
 
-        if (predicted_object.kinematics.predicted_paths.size() > 1) {
+        if (!predicted_object.kinematics.predicted_paths.empty()) {
           auto & paths = modified_predicted_object.kinematics.predicted_paths;
-
           if (path_strategy == "random") {
             // Randomly select a path index
             const size_t num_paths = predicted_object.kinematics.predicted_paths.size();
-            const auto random_path_index =
-              static_cast<size_t>(path_selection_dist_(pedestrian_path_generator_) * num_paths);
-
+            std::uniform_int_distribution<size_t> path_index_dist(0, num_paths - 1);
+            const size_t random_path_index = path_index_dist(pedestrian_path_generator_);
             // Reorder paths to put the randomly selected path first
-            if (random_path_index > 0 && random_path_index < paths.size()) {
-              std::swap(paths[0], paths[random_path_index]);
-            }
+            std::swap(paths[0], paths[random_path_index]);
 
             RCLCPP_DEBUG(
               rclcpp::get_logger("dummy_perception_publisher"),
