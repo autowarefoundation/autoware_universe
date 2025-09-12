@@ -174,7 +174,6 @@ private:
   double angle_increment_;
 
   std::mt19937 random_generator_;
-  std::mt19937 pedestrian_path_generator_;
   std::uniform_real_distribution<double> path_selection_dist_;
 
   // Configuration parameters

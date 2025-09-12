@@ -58,16 +58,6 @@
           "default": 0.004363323,
           "description": "Angle increment for ray casting (0.25 degrees in radians)"
         },
-        "pedestrian_path_seed": {
-          "type": "integer",
-          "default": 42,
-          "description": "Random seed for pedestrian path selection"
-        },
-        "use_fixed_pedestrian_seed": {
-          "type": "boolean",
-          "default": false,
-          "description": "Use fixed seed for deterministic pedestrian path selection"
-        },
         "predicted_path_delay": {
           "type": "number",
           "default": 2.0,
@@ -200,8 +190,6 @@
         "use_fixed_random_seed",
         "object_centric_pointcloud",
         "angle_increment",
-        "pedestrian_path_seed",
-        "use_fixed_pedestrian_seed",
         "predicted_path_delay",
         "min_keep_duration",
         "switch_time_threshold",
