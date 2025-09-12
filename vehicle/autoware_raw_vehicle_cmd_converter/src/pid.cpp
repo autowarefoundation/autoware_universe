@@ -14,9 +14,8 @@
 
 #include "autoware_raw_vehicle_cmd_converter/pid.hpp"
 
-#include <math.h>
-
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <vector>
 
