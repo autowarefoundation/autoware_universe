@@ -1,4 +1,4 @@
-// Copyright 2025 Tier IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -51,7 +51,7 @@ void LaneletElevationFilter::initializeGridFromMap()
     return;
   }
 
-  grid_processor_->processLaneletsWithCache(
+  grid_processor_->processLanelets(
     lanelet_map_, params_.sampling_distance, params_.extension_count, params_.cache_directory);
 }
 

@@ -1,4 +1,4 @@
-// Copyright 2025 Tier IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@
 #include <lanelet2_core/geometry/Point.h>
 
 #include <fstream>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -59,32 +60,25 @@ class GridProcessor
 public:
   explicit GridProcessor(double grid_resolution);
 
-  void processLanelets(const lanelet::LaneletMapPtr & lanelet_map, int extension_count = 20);
-
-  void processLaneletsWithCache(
+  void processLanelets(
     const lanelet::LaneletMapPtr & lanelet_map, double sampling_distance, int extension_size = 20,
     const std::string & cache_directory = "");
-
-  double getElevationAtPoint(double x, double y) const;
 
   bool isPointValid(
     double x, double y, double z, double threshold, bool require_map_coverage) const;
 
-  void reset();
 
-  // Debug/Visualization methods
   std::vector<std::pair<GridIndex, GridCell>> getGridCells() const;
 
   std::pair<double, double> getGridBounds() const;
 
 private:
   double grid_resolution_;
-  double inv_grid_resolution_;  // Precomputed 1/grid_resolution for performance
+  double inv_grid_resolution_; 
   std::unordered_map<GridIndex, GridCell, GridIndexHash> grid_cells_;
 
   mutable std::unordered_map<GridIndex, double, GridIndexHash> elevation_cache_;
 
-  // Logger for this class
   rclcpp::Logger logger_;
 
   GridIndex getGridIndex(double x, double y) const;
@@ -93,9 +87,13 @@ private:
 
   void fillEmptyGrids(int extension_radius);
 
-  double calculateAverageElevationFromNeighbors(const GridIndex & index) const;
+  void reset();
 
-  double interpolateElevationFromNeighbors(const GridIndex & index) const;
+  std::optional<double> getArtificalElevationAtPoint(double x, double y) const;
+
+  std::optional<double> calculateAverageElevationFromNeighbors(const GridIndex & index) const;
+
+  std::optional<double> interpolateElevationFromNeighbors(const GridIndex & index) const;
 
   void calculateGridStatistics();
 
@@ -104,7 +102,6 @@ private:
   std::vector<geometry_msgs::msg::Point> samplePointsFromLineString(
     const lanelet::ConstLineString3d & linestring, double sampling_distance) const;
 
-  // Cache-related functions
   std::string generateCacheFilename(
     const lanelet::LaneletMapPtr & lanelet_map, double sampling_distance, int extension_size,
     const std::string & cache_directory) const;
