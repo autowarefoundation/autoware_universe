@@ -731,7 +731,7 @@ EgoObjectProximity calc_ego_object_proximity(
   if (ego_obj_proximity.ego_dist_to_terminal_end && ego_obj_proximity.object_dist_to_terminal_end) {
     ego_obj_proximity.is_ahead_of_ego =
       (ego_obj_proximity.ego_dist_to_terminal_end->min >=
-       ego_obj_proximity.object_dist_to_terminal_end->min);
+       ego_obj_proximity.object_dist_to_terminal_end->max);
   }
 
   return ego_obj_proximity;
@@ -1205,5 +1205,11 @@ bool is_valid_start_point(const lane_change::CommonDataPtr & common_data_ptr, co
   // Check the target lane because the previous approved path might be shifted by avoidance module
   return boost::geometry::covered_by(lc_start_point, target_neighbor_poly) ||
          boost::geometry::covered_by(lc_start_point, target_lane_poly);
+}
+
+bool is_moving_object(const CommonDataPtr & common_data_ptr, const ExtendedPredictedObject & object)
+{
+  return object.initial_twist.linear.x >
+         common_data_ptr->lc_param_ptr->safety.th_stopped_object_velocity;
 }
 }  // namespace autoware::behavior_path_planner::utils::lane_change

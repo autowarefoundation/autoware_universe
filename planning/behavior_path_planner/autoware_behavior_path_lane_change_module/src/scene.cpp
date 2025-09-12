@@ -1730,6 +1730,35 @@ bool NormalLaneChange::calcAbortPath()
   return true;
 }
 
+std::optional<ExtendedPredictedObject> NormalLaneChange::find_colliding_object_if_all_paths_collide(
+  const LaneChangePath & lane_change_path,
+  const std::vector<std::vector<PoseWithVelocityStamped>> & ego_predicted_paths,
+  const ExtendedPredictedObjects & objects,
+  const utils::path_safety_checker::RSSparams & rss_params, CollisionCheckDebugMap & debug_data,
+  const bool is_approved) const
+{
+  std::optional<ExtendedPredictedObject> first_colliding_object;
+
+  for (const auto & ego_predicted_path : ego_predicted_paths) {
+    const auto check_for_collision = [&](const auto & object) {
+      return is_colliding(
+        lane_change_path, object, ego_predicted_path, rss_params, debug_data, is_approved);
+    };
+
+    const auto colliding_object_it = ranges::find_if(objects, check_for_collision);
+
+    if (colliding_object_it == objects.end()) {
+      return std::nullopt;
+    }
+
+    if (!first_colliding_object) {
+      first_colliding_object = *colliding_object_it;
+    }
+  }
+
+  return first_colliding_object;
+}
+
 PathSafetyStatus NormalLaneChange::isLaneChangePathSafe(
   const LaneChangePath & lane_change_path,
   const std::vector<std::vector<PoseWithVelocityStamped>> & ego_predicted_paths,
@@ -1739,27 +1768,26 @@ PathSafetyStatus NormalLaneChange::isLaneChangePathSafe(
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   constexpr auto is_safe = true;
-  constexpr auto is_object_behind_ego = true;
 
-  const auto all_paths_collide = [&](const auto & objects) {
-    return ranges::all_of(ego_predicted_paths, [&](const auto & ego_predicted_path) {
-      const auto check_for_collision = [&](const auto & object) {
-        return is_colliding(
-          lane_change_path, object, ego_predicted_path, rss_params, debug_data, is_approved);
-      };
-      return ranges::any_of(objects, check_for_collision);
-    });
+  const auto found_colliding_object = [&](const auto & objects) {
+    return find_colliding_object_if_all_paths_collide(
+      lane_change_path, ego_predicted_paths, objects, rss_params, debug_data, is_approved);
   };
 
-  if (all_paths_collide(collision_check_objects.trailing)) {
-    return {!is_safe, is_object_behind_ego};
+  if (
+    const auto found_colliding_object_opt =
+      found_colliding_object(collision_check_objects.trailing)) {
+    const auto is_moving_object =
+      utils::lane_change::is_moving_object(common_data_ptr_, *found_colliding_object_opt);
+    return {!is_safe, is_moving_object};
   }
 
-  if (all_paths_collide(collision_check_objects.leading)) {
-    return {!is_safe, !is_object_behind_ego};
+  constexpr auto is_moving_object_behind_ego = true;
+  if (found_colliding_object(collision_check_objects.leading)) {
+    return {!is_safe, !is_moving_object_behind_ego};
   }
 
-  return {is_safe, !is_object_behind_ego};
+  return {is_safe, !is_moving_object_behind_ego};
 }
 
 bool NormalLaneChange::is_colliding(
@@ -1895,9 +1923,7 @@ bool NormalLaneChange::is_ego_stuck() const
     filtered_objects_.current_lane.begin(), filtered_objects_.current_lane.end(),
     [&](const auto & object) {
       // Note: it needs chattering prevention.
-      if (
-        std::abs(object.initial_twist.linear.x) >
-        lc_param_ptr->safety.th_stopped_object_velocity) {  // check if stationary
+      if (utils::lane_change::is_moving_object(common_data_ptr_, object)) {  // check if stationary
         return false;
       }
 
