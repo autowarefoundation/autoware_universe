@@ -18,8 +18,9 @@
 
 #include <autoware_utils_uuid/uuid_helper.hpp>
 
-#include <autoware_perception_msgs/msg/detail/tracked_objects__struct.hpp>
+#include <autoware_perception_msgs/msg/tracked_objects.hpp>
 
+#include <math.h>
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Transform.h>
@@ -138,39 +139,42 @@ geometry_msgs::msg::Pose ObjectInfo::calculateStraightLinePosition(
 
   const double elapsed_time = current_time.seconds() - rclcpp::Time(object.header.stamp).seconds();
 
-  double move_distance;
+  double move_distance{0.0};
   double current_vel = initial_vel + initial_acc * elapsed_time;
   if (initial_acc == 0.0) {
     move_distance = initial_vel * elapsed_time;
-  } else {
-    if (initial_acc < 0 && 0 < initial_vel) {
-      current_vel = std::max(current_vel, 0.0);
-    }
-    if (0 < initial_acc && initial_vel < 0) {
-      current_vel = std::min(current_vel, 0.0);
-    }
+    return autoware_utils_geometry::calc_offset_pose(initial_pose, move_distance, 0.0, 0.0);
+  }
 
-    // add distance on acceleration or deceleration
-    current_vel = std::clamp(
-      current_vel, static_cast<double>(object.min_velocity),
-      static_cast<double>(object.max_velocity));
-    move_distance = (std::pow(current_vel, 2) - std::pow(initial_vel, 2)) * 0.5 / initial_acc;
+  // stop at zero velocity
+  if (initial_acc < 0 && initial_vel > 0) {
+    current_vel = std::max(current_vel, 0.0);
+  }
+  if (initial_acc > 0 && initial_vel < 0) {
+    current_vel = std::min(current_vel, 0.0);
+  }
+  // clamp velocity within min/max
+  current_vel = std::clamp(
+    current_vel, static_cast<double>(object.min_velocity),
+    static_cast<double>(object.max_velocity));
 
-    // add distance after reaching max_velocity
-    if (0 < initial_acc) {
-      const double time_to_reach_max_vel =
-        std::max(static_cast<double>(object.max_velocity) - initial_vel, 0.0) / initial_acc;
-      move_distance += static_cast<double>(object.max_velocity) *
-                       std::max(elapsed_time - time_to_reach_max_vel, 0.0);
-    }
+  // add distance on acceleration or deceleration
+  move_distance = (std::pow(current_vel, 2) - std::pow(initial_vel, 2)) * 0.5 / initial_acc;
 
-    // add distance after reaching min_velocity
-    if (initial_acc < 0) {
-      const double time_to_reach_min_vel =
-        std::min(static_cast<double>(object.min_velocity) - initial_vel, 0.0) / initial_acc;
-      move_distance += static_cast<double>(object.min_velocity) *
-                       std::max(elapsed_time - time_to_reach_min_vel, 0.0);
-    }
+  // add distance after reaching max_velocity
+  if (initial_acc > 0) {
+    const double time_to_reach_max_vel =
+      std::max(static_cast<double>(object.max_velocity) - initial_vel, 0.0) / initial_acc;
+    move_distance += static_cast<double>(object.max_velocity) *
+                     std::max(elapsed_time - time_to_reach_max_vel, 0.0);
+  }
+
+  // add distance after reaching min_velocity
+  if (initial_acc < 0) {
+    const double time_to_reach_min_vel =
+      std::min(static_cast<double>(object.min_velocity) - initial_vel, 0.0) / initial_acc;
+    move_distance += static_cast<double>(object.min_velocity) *
+                     std::max(elapsed_time - time_to_reach_min_vel, 0.0);
   }
 
   return autoware_utils_geometry::calc_offset_pose(initial_pose, move_distance, 0.0, 0.0);
