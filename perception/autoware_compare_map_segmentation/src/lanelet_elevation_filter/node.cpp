@@ -90,9 +90,9 @@ void LaneletElevationFilterComponent::loadParameters()
   params_.require_map_coverage = this->declare_parameter<bool>("require_map_coverage", false);
 
   // Validate parameters
-  if (params_.grid_resolution <= 0.0) {
+  if (params_.grid_resolution <= 0.1) {
     RCLCPP_ERROR(
-      this->get_logger(), "Invalid grid_resolution: %f. Must be positive.",
+      this->get_logger(), "Invalid grid_resolution: %f. Must be greater than 0.1 meters.",
       params_.grid_resolution);
     throw std::invalid_argument("grid_resolution must be positive");
   }
