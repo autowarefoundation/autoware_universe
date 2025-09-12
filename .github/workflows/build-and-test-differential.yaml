@@ -36,7 +36,6 @@ on:
         required: true
       redis-password:
         required: true
-        type: string
       tailscale-authkey:
         required: false
 
