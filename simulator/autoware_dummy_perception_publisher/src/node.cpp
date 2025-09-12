@@ -931,18 +931,18 @@ std::optional<std::string> DummyPerceptionPublisherNode::findBestPredictedObject
     // Find the actual predicted object for validation
     const autoware_perception_msgs::msg::PredictedObject & candidate_pred_obj = *pred_obj;
 
-    // Check if there is a valid remapping candidate based on position and speed
-    if (!isValidRemappingCandidate(candidate_pred_obj, dummy_uuid, dummy_position)) {
-      continue;
-    }
-
     // In case of multiple valid candidates, choose the closest one
     double distance = calculateEuclideanDistance(dummy_position, pred_pos);
 
-    if (distance < min_distance) {
-      min_distance = distance;
-      closest_pred_uuid = pred_uuid;
+    // Check if there is a valid remapping candidate based on position and speed
+    if (
+      distance >= min_distance ||
+      !isValidRemappingCandidate(candidate_pred_obj, dummy_uuid, dummy_position)) {
+      continue;
     }
+
+    min_distance = distance;
+    closest_pred_uuid = pred_uuid;
   }
 
   if (closest_pred_uuid.empty()) {
