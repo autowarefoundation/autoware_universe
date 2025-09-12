@@ -654,7 +654,7 @@ StartPlannerModule::getGapBetweenEgoAndLaneBorder(
     point_pose.position = autoware_utils::to_msg(point.to_3d());
     point_pose.orientation = ego_pose.orientation;
 
-    lanelet::ConstLanelets closest_lanelet;
+    lanelet::ConstLanelet closest_lanelet;
     if (!lanelet::utils::query::getClosestLanelet(target_lanes, point_pose, &closest_lanelet)) {
       return std::nullopt;
     }
