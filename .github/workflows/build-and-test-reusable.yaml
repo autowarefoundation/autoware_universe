@@ -73,7 +73,6 @@ jobs:
       coverage-files: ${{ steps.test.outputs.coverage-report-files }}
     steps:
       - name: Tailscale
-        if: ${{ secrets.tailscale-authkey != '' }}
         uses: tailscale/github-action@v3
         with:
           authkey: ${{ secrets.tailscale-authkey }}
