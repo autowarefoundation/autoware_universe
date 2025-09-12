@@ -303,6 +303,13 @@ bool NormalLaneChange::isLaneChangeRequired()
     return false;
   }
 
+  if (
+    is_near_terminal_end() && planner_data_ && planner_data_->operation_mode &&
+    planner_data_->operation_mode->mode != OperationModeState::AUTONOMOUS) {
+    RCLCPP_WARN(logger_, "Ego is in MANUAL Mode and near terminal end, don't run LC module");
+    return false;
+  }
+
   return true;
 }
 
