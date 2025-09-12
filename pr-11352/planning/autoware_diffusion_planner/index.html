@@ -14369,8 +14369,10 @@ colcon<span class="w"> </span>test-result<span class="w"> </span>--all
 To ensure compatibility between models and the ROS 2 node implementation, the model versioning scheme follows <strong>major</strong> and <strong>minor</strong> numbers:
 The model version is defined either by the directory name provided to the node or within the <code>diffusion_planner.param.json</code> configuration file.</p>
 <ul>
-<li><strong>Major version</strong><br>
-  Incremented when there are changes in the model <strong>inputs/outputs or architecture</strong>.  <blockquote>
+<li>
+<p><strong>Major version</strong><br>
+  Incremented when there are changes in the model <strong>inputs/outputs or architecture</strong>.  </p>
+<blockquote>
 <p>⚠️ Models with different major versions are <strong>not compatible</strong> with the current ROS node.  </p>
 </blockquote>
 </li>
