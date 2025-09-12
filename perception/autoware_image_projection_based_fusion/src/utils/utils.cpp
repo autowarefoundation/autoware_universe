@@ -188,7 +188,6 @@ void updateOutputFusedObjects(
     refine_cluster.header = in_cloud.header;
     refine_cluster.fields = in_cloud.fields;
     feature_obj.object.kinematics.pose_with_covariance.pose.position = getCentroid(refine_cluster);
-    feature_obj.object.existence_probability = 1.0f;
     feature_obj.feature.cluster = refine_cluster;
     output_fused_objects.push_back(feature_obj);
   }
