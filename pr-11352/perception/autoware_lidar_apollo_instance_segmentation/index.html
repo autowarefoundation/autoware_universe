@@ -14065,26 +14065,6 @@
     Parameters
   </a>
   
-    <nav class="md-nav" aria-label="Parameters">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#node-parameters" class="md-nav__link">
-    Node Parameters
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#core-parameters" class="md-nav__link">
-    Core Parameters
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -14180,90 +14160,210 @@ based on CNN based model and obstacle clustering method.</p>
 </tbody>
 </table>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
-<h3 id="node-parameters">Node Parameters<a class="headerlink" href="#node-parameters" title="Permanent link">#</a></h3>
-<p>None</p>
-<h3 id="core-parameters">Core Parameters<a class="headerlink" href="#core-parameters" title="Permanent link">#</a></h3>
 <table>
 <thead>
 <tr>
 <th>Name</th>
 <th>Type</th>
-<th>Default Value</th>
 <th>Description</th>
+<th>Default</th>
+<th>Range</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>score_threshold</code></td>
-<td>double</td>
-<td>0.8</td>
+<td>score_threshold</td>
+<td>float</td>
 <td>If the score of a detected object is lower than this value, the object is ignored.</td>
+<td>0.1</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>range</code></td>
-<td>int</td>
-<td>60</td>
+<td>range</td>
+<td>integer</td>
 <td>Half of the length of feature map sides. [m]</td>
+<td>70</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>width</code></td>
-<td>int</td>
-<td>640</td>
-<td>The grid width of feature map.</td>
+<td>width</td>
+<td>integer</td>
+<td>The grid width of the feature map.</td>
+<td>672</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>height</code></td>
-<td>int</td>
-<td>640</td>
-<td>The grid height of feature map.</td>
+<td>height</td>
+<td>integer</td>
+<td>The grid height of the feature map.</td>
+<td>672</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>engine_file</code></td>
-<td>string</td>
-<td>"vls-128.engine"</td>
-<td>The name of TensorRT engine file for CNN model.</td>
-</tr>
-<tr>
-<td><code>prototxt_file</code></td>
-<td>string</td>
-<td>"vls-128.prototxt"</td>
-<td>The name of prototxt file for CNN model.</td>
-</tr>
-<tr>
-<td><code>caffemodel_file</code></td>
-<td>string</td>
-<td>"vls-128.caffemodel"</td>
-<td>The name of caffemodel file for CNN model.</td>
-</tr>
-<tr>
-<td><code>use_intensity_feature</code></td>
-<td>bool</td>
-<td>true</td>
+<td>use_intensity_feature</td>
+<td>boolean</td>
 <td>The flag to use intensity feature of pointcloud.</td>
+<td>True</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>use_constant_feature</code></td>
-<td>bool</td>
-<td>false</td>
+<td>use_constant_feature</td>
+<td>boolean</td>
 <td>The flag to use direction and distance feature of pointcloud.</td>
+<td>False</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>target_frame</code></td>
-<td>string</td>
-<td>"base_link"</td>
-<td>Pointcloud data is transformed into this frame.</td>
-</tr>
-<tr>
-<td><code>z_offset</code></td>
-<td>int</td>
-<td>2</td>
+<td>z_offset</td>
+<td>float</td>
 <td>z offset from target frame. [m]</td>
+<td>-2.0</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>build_only</code></td>
-<td>bool</td>
-<td><code>false</code></td>
-<td>shutdown the node after TensorRT engine file is built</td>
+<td>onnx_file</td>
+<td>string</td>
+<td>The name of ONNX model file.</td>
+<td>hdl-64.onnx</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>score_threshold</td>
+<td>float</td>
+<td>If the score of a detected object is lower than this value, the object is ignored.</td>
+<td>0.1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range</td>
+<td>integer</td>
+<td>Half of the length of feature map sides. [m]</td>
+<td>70</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>width</td>
+<td>integer</td>
+<td>The grid width of the feature map.</td>
+<td>672</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>height</td>
+<td>integer</td>
+<td>The grid height of the feature map.</td>
+<td>672</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>use_intensity_feature</td>
+<td>boolean</td>
+<td>The flag to use intensity feature of pointcloud.</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>use_constant_feature</td>
+<td>boolean</td>
+<td>The flag to use direction and distance feature of pointcloud.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>z_offset</td>
+<td>float</td>
+<td>z offset from target frame. [m]</td>
+<td>-2.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>onnx_file</td>
+<td>string</td>
+<td>The name of ONNX model file.</td>
+<td>vlp-16.onnx</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>score_threshold</td>
+<td>float</td>
+<td>If the score of a detected object is lower than this value, the object is ignored.</td>
+<td>0.1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range</td>
+<td>integer</td>
+<td>Half of the length of feature map sides. [m]</td>
+<td>90</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>width</td>
+<td>integer</td>
+<td>The grid width of the feature map.</td>
+<td>864</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>height</td>
+<td>integer</td>
+<td>The grid height of the feature map.</td>
+<td>864</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>use_intensity_feature</td>
+<td>boolean</td>
+<td>The flag to use intensity feature of pointcloud.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>use_constant_feature</td>
+<td>boolean</td>
+<td>The flag to use direction and distance feature of pointcloud.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>z_offset</td>
+<td>float</td>
+<td>z offset from target frame. [m]</td>
+<td>-2.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>onnx_file</td>
+<td>string</td>
+<td>The name of ONNX model file.</td>
+<td>vls-128.onnx</td>
+<td>N/A</td>
 </tr>
 </tbody>
 </table>
