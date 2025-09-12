@@ -51,7 +51,6 @@ jobs:
     container: ${{ inputs.container }}${{ inputs.container-suffix }}
     steps:
       - name: Tailscale
-        if: ${{ secrets.tailscale-authkey != '' }}
         uses: tailscale/github-action@v3
         with:
           authkey: ${{ secrets.tailscale-authkey }}
