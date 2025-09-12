@@ -592,7 +592,7 @@ bool StartPlannerModule::isPreventingRearVehicleFromPassingThrough(const Pose & 
           target_lanes, ego_overhang_point_as_pose, &closest_lanelet))
       return std::nullopt;
     // Check backwards just in case the Vehicle behind ego is in a different lanelet
-    constexpr auto backwards_length = 200.0;
+    constexpr double backwards_length = 200.0;
     auto prev_lanes = autoware::behavior_path_planner::utils::getBackwardLanelets(
       *route_handler, target_lanes, ego_pose, backwards_length);
     // return all the relevant lanelets
