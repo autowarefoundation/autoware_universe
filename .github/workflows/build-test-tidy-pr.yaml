@@ -48,8 +48,11 @@ jobs:
     with:
       container: ghcr.io/autowarefoundation/autoware:universe-devel
       run-condition: ${{ needs.require-label.outputs.result == 'true' }}
+      redis-server: ${{ inputs.REDIS_SERVER }}
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
+      redis-password: ${{ secrets.REDIS_PASSWORD }}
+      tailscale-authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
 
   build-and-test-packages-above-differential:
     if: ${{ always() }}
@@ -60,8 +63,11 @@ jobs:
       container: ghcr.io/autowarefoundation/autoware:universe-devel
       run-condition: ${{ needs.require-label.outputs.result == 'true' }}
       runner: "['self-hosted', 'Linux', 'X64']"
+      redis-server: ${{ inputs.REDIS_SERVER }}
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
+      redis-password: ${{ secrets.REDIS_PASSWORD }}
+      tailscale-authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
 
   build-and-test-differential-cuda:
     if: ${{ always() }}
@@ -72,8 +78,11 @@ jobs:
       container-suffix: -cuda
       run-condition: ${{ needs.check-if-cuda-job-is-needed.outputs.cuda_job_is_needed == 'true' }}
       runner: "['self-hosted', 'Linux', 'X64']"
+      redis-server: ${{ inputs.REDIS_SERVER }}
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
+      redis-password: ${{ secrets.REDIS_PASSWORD }}
+      tailscale-authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
 
   clang-tidy-differential:
     if: ${{ always() }} # always run to provide report for status check

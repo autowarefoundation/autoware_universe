@@ -28,13 +28,22 @@ on:
         required: false
         default: ""
         type: string
+      redis-server:
+        required: true
+        type: string
     secrets:
       codecov-token:
         required: true
+      redis-password:
+        required: true
+        type: string
+      tailscale-authkey:
+        required: false
 
 env:
   CC: /usr/lib/ccache/gcc
   CXX: /usr/lib/ccache/g++
+  CCACHE_REMOTE_STORAGE: redis://{{ secrets.redis-password }}@{{ inputs.redis-server }}
 
 jobs:
   build-and-test-differential:
@@ -42,6 +51,12 @@ jobs:
     runs-on: ${{ fromJson(inputs.runner) }}
     container: ${{ inputs.container }}${{ inputs.container-suffix }}
     steps:
+      - name: Tailscale
+        if: ${{ secrets.tailscale-authkey != '' }}
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.tailscale-authkey }}
+
       - name: Set PR fetch depth
         run: echo "PR_FETCH_DEPTH=$(( ${{ github.event.pull_request.commits }} + 1 ))" >> "${GITHUB_ENV}"
         shell: bash
