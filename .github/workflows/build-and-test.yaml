@@ -17,5 +17,8 @@ jobs:
       pull-ccache: true
       push-ccache: true
       codecov-flag: total-cuda
+      redis-server: ${{ inputs.REDIS_SERVER }}
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
+      redis-password: ${{ secrets.REDIS_PASSWORD }}
+      tailscale-authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
