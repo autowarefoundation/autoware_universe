@@ -4,20 +4,20 @@
   <arg name="yolox_node_name" default="tensorrt_yolox"/>
   <arg name="image_transport_decompressor_node_name" default="image_transport_decompressor_node"/>
 
-  <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
-
+  <arg name="model_dir" default="$(env HOME)/autoware_data/tensorrt_yolox" description="packages data and artifacts directory path"/>
+  <arg
+    name="model_name"
+    default="yolox-sPlus-opt-pseudoV2-T4-960x960-T4-seg16cls"
+    description="options `yolox-sPlus-T4-960x960-pseudo-finetune.onnx` if only detection is needed, `yolox-sPlus-opt-pseudoV2-T4-960x960-T4-seg16cls.onnx` if sematic segmentation is also needed"
+  />
   <arg name="input/image" default="/sensing/camera/camera0/image_rect_color"/>
   <arg name="output/objects" default="/perception/object_recognition/detection/rois0"/>
   <arg name="output/mask" default="/perception/object_recognition/detection/mask0"/>
 
   <arg name="yolox_param_path" default="$(find-pkg-share autoware_tensorrt_yolox)/config/yolox_s_plus_opt.param.yaml"/>
-  <arg
-    name="model_path"
-    default="$(var data_path)/tensorrt_yolox/yolox-sPlus-opt-pseudoV2-T4-960x960-T4-seg16cls.onnx"
-    description="options `yolox-sPlus-T4-960x960-pseudo-finetune.onnx` if only detection is needed, `yolox-sPlus-opt-pseudoV2-T4-960x960-T4-seg16cls.onnx` if sematic segmentation is also needed"
-  />
-  <arg name="label_path" default="$(var data_path)/tensorrt_yolox/label.txt" description="label path"/>
-  <arg name="color_map_path" default="$(var data_path)/tensorrt_yolox/semseg_color_map.csv" description="color map path"/>
+  <arg name="model_path" default="$(var model_dir)/$(var model_name).onnx"/>
+  <arg name="label_path" default="$(var model_dir)/label.txt" description="label path"/>
+  <arg name="color_map_path" default="$(var model_dir)/semseg_color_map.csv" description="color map path"/>
 
   <arg name="use_decompress" default="true" description="use image decompress"/>
   <arg name="build_only" default="false" description="exit after trt engine is built"/>
