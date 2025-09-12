@@ -440,6 +440,17 @@ Eigen::MatrixXd process_segment_to_matrix(const LaneSegment & segment)
       "POINTS_PER_SEGMENT points");
   }
 
+  auto encode = [](const int64_t line_type) {
+    Eigen::Vector<double, LINE_TYPE_NUM> one_hot = Eigen::Vector<double, LINE_TYPE_NUM>::Zero();
+    if (line_type >= 0 && line_type < LINE_TYPE_NUM) {
+      one_hot[line_type] = 1.0;
+    }
+    return one_hot;
+  };
+
+  const Eigen::Vector<double, LINE_TYPE_NUM> left = encode(segment.left_line_type);
+  const Eigen::Vector<double, LINE_TYPE_NUM> right = encode(segment.right_line_type);
+
   Eigen::MatrixXd segment_data(POINTS_PER_SEGMENT, SEGMENT_POINT_DIM);
   segment_data.setZero();
 
@@ -455,6 +466,10 @@ Eigen::MatrixXd process_segment_to_matrix(const LaneSegment & segment)
     segment_data(i, LB_Y) = left_boundaries[i].y();
     segment_data(i, RB_X) = right_boundaries[i].x();
     segment_data(i, RB_Y) = right_boundaries[i].y();
+    for (int64_t j = 0; j < LINE_TYPE_NUM; ++j) {
+      segment_data(i, LINE_TYPE_LEFT_START + j) = left(j);
+      segment_data(i, LINE_TYPE_RIGHT_START + j) = right(j);
+    }
   }
 
   return segment_data;
