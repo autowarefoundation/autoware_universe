@@ -30,7 +30,7 @@
       <arg name="image_transport_decompressor_node_name" value="image_transport_decompressor_node$(var camera_index)"/>
       <arg name="input/image" value="$(var image_raw0)"/>
       <arg name="output/objects" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
-      <arg name="model_dir" value="$(var yolox_model_dir)"/>
+      <arg name="data_path" value="$(var yolox_model_dir)"/>
       <arg name="model_name" value="$(var yolox_model_name)"/>
     </include>
 
@@ -50,7 +50,7 @@
       <arg name="image_transport_decompressor_node_name" value="image_transport_decompressor_node$(var camera_index)"/>
       <arg name="input/image" value="$(var image_raw0)"/>
       <arg name="output/objects" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
-      <arg name="model_dir" value="$(var yolox_model_dir)"/>
+      <arg name="data_path" value="$(var yolox_model_dir)"/>
       <arg name="model_name" value="$(var yolox_model_name)"/>
     </include>
 
@@ -70,7 +70,7 @@
       <arg name="image_transport_decompressor_node_name" value="image_transport_decompressor_node$(var camera_index)"/>
       <arg name="input/image" value="$(var image_raw0)"/>
       <arg name="output/objects" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
-      <arg name="model_dir" value="$(var yolox_model_dir)"/>
+      <arg name="data_path" value="$(var yolox_model_dir)"/>
       <arg name="model_name" value="$(var yolox_model_name)"/>
     </include>
 
@@ -90,7 +90,7 @@
       <arg name="image_transport_decompressor_node_name" value="image_transport_decompressor_node$(var camera_index)"/>
       <arg name="input/image" value="$(var image_raw0)"/>
       <arg name="output/objects" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
-      <arg name="model_dir" value="$(var yolox_model_dir)"/>
+      <arg name="data_path" value="$(var yolox_model_dir)"/>
       <arg name="model_name" value="$(var yolox_model_name)"/>
     </include>
 
@@ -110,7 +110,7 @@
       <arg name="image_transport_decompressor_node_name" value="image_transport_decompressor_node$(var camera_index)"/>
       <arg name="input/image" value="$(var image_raw0)"/>
       <arg name="output/objects" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
-      <arg name="model_dir" value="$(var yolox_model_dir)"/>
+      <arg name="data_path" value="$(var yolox_model_dir)"/>
       <arg name="model_name" value="$(var yolox_model_name)"/>
     </include>
 
@@ -130,7 +130,7 @@
       <arg name="image_transport_decompressor_node_name" value="image_transport_decompressor_node$(var camera_index)"/>
       <arg name="input/image" value="$(var image_raw0)"/>
       <arg name="output/objects" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
-      <arg name="model_dir" value="$(var yolox_model_dir)"/>
+      <arg name="data_path" value="$(var yolox_model_dir)"/>
       <arg name="model_name" value="$(var yolox_model_name)"/>
     </include>
 
@@ -150,7 +150,7 @@
       <arg name="image_transport_decompressor_node_name" value="image_transport_decompressor_node$(var camera_index)"/>
       <arg name="input/image" value="$(var image_raw0)"/>
       <arg name="output/objects" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
-      <arg name="model_dir" value="$(var yolox_model_dir)"/>
+      <arg name="data_path" value="$(var yolox_model_dir)"/>
       <arg name="model_name" value="$(var yolox_model_name)"/>
     </include>
 
@@ -170,7 +170,7 @@
       <arg name="image_transport_decompressor_node_name" value="image_transport_decompressor_node$(var camera_index)"/>
       <arg name="input/image" value="$(var image_raw0)"/>
       <arg name="output/objects" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
-      <arg name="model_dir" value="$(var yolox_model_dir)"/>
+      <arg name="data_path" value="$(var yolox_model_dir)"/>
       <arg name="model_name" value="$(var yolox_model_name)"/>
     </include>
 
@@ -190,7 +190,7 @@
       <arg name="image_transport_decompressor_node_name" value="image_transport_decompressor_node$(var camera_index)"/>
       <arg name="input/image" value="$(var image_raw0)"/>
       <arg name="output/objects" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
-      <arg name="model_dir" value="$(var yolox_model_dir)"/>
+      <arg name="data_path" value="$(var yolox_model_dir)"/>
       <arg name="model_name" value="$(var yolox_model_name)"/>
     </include>
 
@@ -210,7 +210,7 @@
       <arg name="image_transport_decompressor_node_name" value="image_transport_decompressor_node$(var camera_index)"/>
       <arg name="input/image" value="$(var image_raw0)"/>
       <arg name="output/objects" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
-      <arg name="model_dir" value="$(var yolox_model_dir)"/>
+      <arg name="data_path" value="$(var yolox_model_dir)"/>
       <arg name="model_name" value="$(var yolox_model_name)"/>
     </include>
 
