@@ -70,7 +70,9 @@ env:
 jobs:
   build-and-test:
     runs-on: ${{ fromJson(inputs.runner) }}
-    container: ${{ inputs.container }}${{ inputs.container-suffix }}
+    container:
+      image: ${{ inputs.container }}${{ inputs.container-suffix }}
+      options: --cap-add=NET_ADMIN --device=/dev/net/tun
     outputs:
       coverage-files: ${{ steps.test.outputs.coverage-report-files }}
     steps:
