@@ -48,7 +48,9 @@ jobs:
   build-and-test-packages-above-differential:
     if: ${{ inputs.run-condition }}
     runs-on: ${{ fromJson(inputs.runner) }}
-    container: ${{ inputs.container }}${{ inputs.container-suffix }}
+    container:
+      image: ${{ inputs.container }}${{ inputs.container-suffix }}
+      options: --cap-add=NET_ADMIN --device=/dev/net/tun
     steps:
       - name: Tailscale
         uses: tailscale/github-action@v3
