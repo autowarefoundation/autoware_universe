@@ -83,24 +83,30 @@ colcon test-result --all
 
 ---
 
-## ❗ Limitations
+## ONNX Model and Versioning
 
-While the Diffusion Planner shows promising capabilities, there are several limitations to be aware of:
+The Diffusion Planner relies on an ONNX model for inference.  
+To ensure compatibility between models and the ROS 2 node implementation, the model versioning scheme follows **major** and **minor** numbers:
+The model version is defined either by the directory name provided to the node or within the `diffusion_planner.param.json` configuration file.
 
-- **Route Termination**:
-  The route input to the model consists of a sequence of preferred lanelets from the current position to the goal region. However, **this route does not necessarily end exactly at the goal position**. As a result, the ego vehicle **may continue driving past the goal** instead of stopping at the target location.
+- **Major version**  
+  Incremented when there are changes in the model **inputs/outputs or architecture**.
 
-- **Training Dataset Domain Gap**:
-  The provided diffusion model checkpoint was trained on datasets using a **proprietary Lanelet2 map that is not publicly available**. Consequently, **performance may significantly degrade when running on other maps**, especially in environments with different topology or tagging conventions.
+  > :warning: Models with different major versions are **not compatible** with the current ROS node.
 
-- **Route Adherence & Lane Changing**:
-  The model sometimes **fails to strictly follow the preferred lanelet route**. If the ego vehicle leaves the preferred lane (e.g., to avoid an obstacle), it tends to **only return to the route during curves**. It **seldom performs deliberate lane changes** to merge back into the correct route on straight segments.
+- **Minor version**  
+  Incremented when **only the weight files are updated**.  
+  As long as the major version matches, the node remains compatible, and the new model can be used directly.
 
-- **Agent and Obstacle Avoidance**:
-  Although the planner **reacts to other agents and can perform avoidance maneuvers**, this behavior is **not fully reliable**. In some cases, **collisions with static or dynamic obstacles may still occur** due to ignored agents or insufficient context comprehension.
+To download the latest model, simply run the provided setup script:  
+[How to set up a development environment](https://autowarefoundation.github.io/autoware-documentation/main/installation/autoware/source-installation/#how-to-set-up-a-development-environment)
 
-- **Lack of Static Object Context**:
-  Static environment context such as **traffic cones, guard rails, or construction barriers** is **not currently provided to the model**. Instead, an **empty tensor** is passed in their place, which can lead to **limited understanding of occlusions or drivable boundaries**.
+### Model Version History
+
+| Version | Release Date | Notes                                                                                                                                                                                                                                          | ROS Node Compatibility |
+| ------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| **0.1** | 2025/07/05   | - First public release<br>- Route planning based on TIER IV real data                                                                                                                                                                          | NG                     |
+| **1.0** | 2025/09/12   | - Route Termination learning<br>- Output turn-signal (indicator) <br>- Lane type integration in HD map for improved accuracy<br>- Added datasets:<br>&nbsp;&nbsp;- Synthetic Data: **4.0M points**<br>&nbsp;&nbsp;- Real Data: **1.5M points** | OK                     |
 
 ---
 
