@@ -92,7 +92,7 @@ The model version is defined either by the directory name provided to the node o
 - **Major version**  
   Incremented when there are changes in the model **inputs/outputs or architecture**.
 
-  > ⚠️ Models with different major versions are **not compatible** with the current ROS node.
+  > :warning: Models with different major versions are **not compatible** with the current ROS node.
 
 - **Minor version**  
   Incremented when **only the weight files are updated**.  
