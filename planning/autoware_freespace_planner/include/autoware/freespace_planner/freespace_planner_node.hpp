@@ -99,6 +99,8 @@ struct NodeParam
   double vehicle_shape_margin_m;
   bool replan_when_obstacle_found;
   bool replan_when_course_out;
+  double parking_accuracy_tolerance;
+  int max_replan_count;
 };
 
 class FreespacePlannerNode : public rclcpp::Node
@@ -142,6 +144,8 @@ private:
   std::vector<size_t> reversing_indices_;
   size_t prev_target_index_;
   size_t target_index_;
+  size_t endpoint_index_;
+  int replan_count_;
   bool is_completed_ = false;
   bool reset_in_progress_ = false;
   bool is_new_parking_cycle_ = true;

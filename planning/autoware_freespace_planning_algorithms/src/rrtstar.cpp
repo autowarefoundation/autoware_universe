@@ -118,6 +118,12 @@ bool RRTStar::makePlan(
   return true;
 }
 
+void RRTStar::setReparking(bool is_reparking)
+{
+  if (is_reparking) RCLCPP_INFO(rclcpp::get_logger("RRTStar"), "Reparking!");
+  return;
+}
+
 bool RRTStar::hasObstacleOnTrajectory(const geometry_msgs::msg::PoseArray & trajectory) const
 {
   for (const auto & pose : trajectory.poses) {
