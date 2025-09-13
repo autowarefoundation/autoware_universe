@@ -37,9 +37,9 @@ on:
       redis-password:
         required: true
       tailscale-oauth-client-id:
-        required: false
+        required: true
       tailscale-oauth-secret:
-        required: false
+        required: true
 
 env:
   CC: /usr/lib/ccache/gcc
