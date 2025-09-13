@@ -51,6 +51,7 @@ protected:
     for (const auto & [x, y, z] : points) {
       ls.push_back(lanelet::Point3d(lanelet::utils::getId(), x, y, z));
     }
+    ls.setAttribute("type", "line_thin");  // Default type
     return ls;
   }
 

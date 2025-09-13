@@ -69,6 +69,7 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
   time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(debug_processing_time_detail_pub_);
 
   set_up_params();
+  utils::check_weight_version(params_.args_path);
   normalization_map_ = utils::load_normalization_stats(params_.args_path);
 
   init_pointers();
