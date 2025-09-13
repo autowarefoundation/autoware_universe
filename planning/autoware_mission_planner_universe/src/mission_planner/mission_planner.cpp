@@ -24,6 +24,9 @@
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+
 #include <fmt/format.h>
 #include <lanelet2_core/geometry/LineString.h>
 
@@ -93,6 +96,9 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
     "~/input/modified_goal", durable_qos, std::bind(&MissionPlanner::on_modified_goal, this, _1));
   srv_clear_route = create_service<ClearRoute>(
     "~/clear_route", service_utils::handle_exception(&MissionPlanner::on_clear_route, this));
+  srv_set_preferred_lane = create_service<SetPreferredLane>(
+    "~/set_preferred_lane",
+    service_utils::handle_exception(&MissionPlanner::set_preferred_lane, this));
   srv_set_lanelet_route = create_service<SetLaneletRoute>(
     "~/set_lanelet_route",
     service_utils::handle_exception(&MissionPlanner::on_set_lanelet_route, this));
@@ -264,6 +270,174 @@ void MissionPlanner::on_clear_route(
   res->status.success = true;
 }
 
+void MissionPlanner::set_preferred_lane(
+  const SetPreferredLane::Request::SharedPtr req, const SetPreferredLane::Response::SharedPtr res)
+{
+  using ResponseCode = autoware_adapi_v1_msgs::srv::SetRoute::Response;
+  const auto is_reroute = state_.state == RouteState::SET;
+
+  RCLCPP_INFO_STREAM(
+    get_logger(), "Received lane change override request with direction: "
+                    << (req->lane_change_direction == 0   ? "LEFT"
+                        : req->lane_change_direction == 1 ? "RIGHT"
+                                                          : "AUTO"));
+
+  if (state_.state != RouteState::UNSET && state_.state != RouteState::SET) {
+    res->status.success = false;
+    throw service_utils::ServiceException(
+      ResponseCode::ERROR_INVALID_STATE,
+      fmt::format(
+        "The lanelet route cannot be set in the current state: {}",
+        route_state_to_string(state_.state)));
+  }
+  if (!is_mission_planner_ready_) {
+    res->status.success = false;
+    throw service_utils::ServiceException(
+      ResponseCode::ERROR_PLANNER_UNREADY, "The mission planner is not ready.");
+  }
+  if (is_reroute && !operation_mode_state_) {
+    res->status.success = false;
+    throw service_utils::ServiceException(
+      ResponseCode::ERROR_PLANNER_UNREADY, "Operation mode state is not received.");
+  }
+
+  const bool is_autonomous_driving =
+    operation_mode_state_ ? operation_mode_state_->mode == OperationModeState::AUTONOMOUS &&
+                              operation_mode_state_->is_autoware_control_enabled
+                          : false;
+
+  if (is_reroute && !allow_reroute_in_autonomous_mode_ && is_autonomous_driving) {
+    res->status.success = false;
+    throw service_utils::ServiceException(
+      ResponseCode::ERROR_INVALID_STATE, "Reroute is not allowed in autonomous mode.");
+  }
+
+  if (is_reroute && is_autonomous_driving) {
+    const auto reroute_availability = sub_reroute_availability_.take_data();
+    if (!reroute_availability || !reroute_availability->availability) {
+      res->status.success = false;
+      throw service_utils::ServiceException(
+        ResponseCode::ERROR_INVALID_STATE,
+        "Cannot reroute as the planner is not in lane following.");
+    }
+  }
+
+  change_state(is_reroute ? RouteState::REROUTING : RouteState::ROUTING);
+
+  const DIRECTION override_direction = req->lane_change_direction == 0   ? DIRECTION::MANUAL_LEFT
+                                       : req->lane_change_direction == 1 ? DIRECTION::MANUAL_RIGHT
+                                                                         : DIRECTION::AUTO;
+
+  lanelet::ConstLanelet closest_lanelet;
+  const bool found_closest_lane = planner_->getRouteHandler().getClosestLaneletWithinRoute(
+    odometry_->pose.pose, &closest_lanelet);
+
+  if (!found_closest_lane) {
+    res->status.success = false;
+    cancel_route();
+    change_state(is_reroute ? RouteState::SET : RouteState::UNSET);
+    throw service_utils::ServiceException(
+      ResponseCode::ERROR_PLANNER_FAILED, "Failed to find closest lanelet.");
+  }
+
+  const LaneChangeRequestResult lane_change_request_result =
+    manual_lane_change_handler_.process_lane_change_request(closest_lanelet.id(), req);
+  auto route = lane_change_request_result.route;
+
+  res->status.message = lane_change_request_result.message;
+
+  if (!lane_change_request_result.success) {
+    res->status.success = false;
+    cancel_route();
+    change_state(is_reroute ? RouteState::SET : RouteState::UNSET);
+    return;
+  }
+
+  if (route.segments.empty()) {
+    cancel_route();
+    change_state(is_reroute ? RouteState::SET : RouteState::UNSET);
+    res->status.success = false;
+    throw service_utils::ServiceException(
+      ResponseCode::ERROR_PLANNER_FAILED, "The planned route is empty.");
+  }
+
+  // trim route from the current position
+  const auto segment_it =
+    std::find_if(route.segments.begin(), route.segments.end(), [&](const auto & segment) {
+      return std::any_of(
+        segment.primitives.begin(), segment.primitives.end(), [&](const auto & primitive) {
+          const auto lanelet = lanelet_map_ptr_->laneletLayer.get(primitive.id);
+          return lanelet::utils::isInLanelet(route.start_pose, lanelet);
+        });
+    });
+
+  // erase segments before the current segment
+  if (segment_it != route.segments.end()) {
+    route.segments.erase(route.segments.begin(), segment_it);
+  } else {
+    RCLCPP_ERROR(get_logger(), "Failed to find the current segment on the new route.");
+  }
+
+  if (is_reroute && is_autonomous_driving && !check_reroute_safety(*current_route_, route)) {
+    cancel_route();
+    change_state(RouteState::SET);
+    res->status.success = false;
+    throw service_utils::ServiceException(
+      ResponseCode::ERROR_REROUTE_FAILED, "New route is not safe. Reroute failed.");
+  }
+  // Generate a new UUID for the route
+  boost::uuids::random_generator gen;
+  boost::uuids::uuid uuid = gen();
+  std::copy(uuid.begin(), uuid.end(), route.uuid.uuid.begin());
+
+  change_route(route, override_direction != DIRECTION::AUTO);
+  change_state(RouteState::SET);
+
+  res->status.success = true;
+}
+
+std::vector<autoware_planning_msgs::msg::LaneletPrimitive>
+MissionPlanner::sortPrimitivesLeftToRight(
+  const route_handler::RouteHandler & route_handler,
+  autoware_planning_msgs::msg::LaneletPrimitive preferred_primitive,
+  std::vector<autoware_planning_msgs::msg::LaneletPrimitive> primitives)
+{
+  using Primitive = autoware_planning_msgs::msg::LaneletPrimitive;
+
+  std::deque<Primitive> sorted_primitives;
+
+  auto find_primitive = [&](lanelet::Id id) -> std::optional<Primitive> {
+    auto it = std::find_if(
+      primitives.begin(), primitives.end(), [&](const Primitive & p) { return p.id == id; });
+    if (it != primitives.end()) return *it;
+    return std::nullopt;
+  };
+
+  lanelet::ConstLanelet current = route_handler.getLaneletsFromId(preferred_primitive.id);
+  // Walk left lanes
+  for (auto left = route_handler.getLeftLanelet(current, true); left;
+       left = route_handler.getLeftLanelet(*left, true)) {
+    if (auto match = find_primitive(left->id())) {
+      sorted_primitives.push_front(*match);
+    }
+  }
+
+  sorted_primitives.push_back(preferred_primitive);
+
+  // Walk right lanes
+  for (auto right = route_handler.getRightLanelet(current, true); right;
+       right = route_handler.getRightLanelet(*right, true, true)) {
+    if (auto match = find_primitive(right->id())) {
+      sorted_primitives.push_back(*match);
+    }
+  }
+
+  std::vector<autoware_planning_msgs::msg::LaneletPrimitive> result{
+    sorted_primitives.begin(), sorted_primitives.end()};
+
+  return result;
+}
+
 void MissionPlanner::on_set_lanelet_route(
   const SetLaneletRoute::Request::SharedPtr req, const SetLaneletRoute::Response::SharedPtr res)
 {
@@ -306,7 +480,7 @@ void MissionPlanner::on_set_lanelet_route(
   }
 
   change_state(is_reroute ? RouteState::REROUTING : RouteState::ROUTING);
-  const auto route = create_route(*req);
+  auto route = create_route(*req);
 
   if (route.segments.empty()) {
     cancel_route();
@@ -315,11 +489,35 @@ void MissionPlanner::on_set_lanelet_route(
       ResponseCode::ERROR_PLANNER_FAILED, "The planned route is empty.");
   }
 
+  // trim route from the current position
+
+  const auto segment_it =
+    std::find_if(route.segments.begin(), route.segments.end(), [&](const auto & segment) {
+      return std::any_of(
+        segment.primitives.begin(), segment.primitives.end(), [&](const auto & primitive) {
+          const auto lanelet = lanelet_map_ptr_->laneletLayer.get(primitive.id);
+          return lanelet::utils::isInLanelet(odometry_->pose.pose, lanelet);
+        });
+    });
+
+  // erase segments before the current segment
+  if (segment_it != route.segments.end()) {
+    route.segments.erase(route.segments.begin(), segment_it);
+  }
+
   if (is_reroute && is_autonomous_driving && !check_reroute_safety(*current_route_, route)) {
     cancel_route();
     change_state(RouteState::SET);
     throw service_utils::ServiceException(
       ResponseCode::ERROR_REROUTE_FAILED, "New route is not safe. Reroute failed.");
+  }
+
+  // --- Sort segments left-to-right at the very beginning ---
+  auto route_handler = planner_->getRouteHandler();
+
+  for (auto & segment : route.segments) {
+    segment.primitives =
+      sortPrimitivesLeftToRight(route_handler, segment.preferred_primitive, segment.primitives);
   }
 
   change_route(route);
@@ -382,6 +580,9 @@ void MissionPlanner::on_set_waypoint_route(
       ResponseCode::ERROR_REROUTE_FAILED, "New route is not safe. Reroute failed.");
   }
 
+  // Reset manual lane change handler
+  manual_lane_change_handler_.reset();
+
   change_route(route);
   change_state(RouteState::SET);
   res->status.success = true;
@@ -400,7 +601,7 @@ void MissionPlanner::change_route()
   // pub_marker_->publish();
 }
 
-void MissionPlanner::change_route(const LaneletRoute & route)
+void MissionPlanner::change_route(const LaneletRoute & route, bool emphasise_goal_lanes)
 {
   PoseWithUuidStamped goal;
   goal.header = route.header;
@@ -412,7 +613,7 @@ void MissionPlanner::change_route(const LaneletRoute & route)
   arrival_checker_.set_goal(goal);
 
   pub_route_->publish(route);
-  pub_marker_->publish(planner_->visualize(route));
+  pub_marker_->publish(planner_->visualize(route, emphasise_goal_lanes));
 }
 
 void MissionPlanner::cancel_route()
