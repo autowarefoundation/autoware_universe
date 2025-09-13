@@ -93,6 +93,8 @@
   <let name="detected_object_feature_remover/output/objects" value="$(var output/rule_detector/objects)"/>
 
   <arg name="enable_2d_detection" default="false" description="true: when 2d detection yolox model run the same machine, false: when it run in separate machine"/>
+  <arg name="yolox_model_dir" default="$(env HOME)/autoware_data/tensorrt_yolox" description="directory path of yolox model file"/>
+  <arg name="yolox_model_name" default="yolox-sPlus-opt-pseudoV2-T4-960x960-T4-seg16cls"/>
   <include file="$(find-pkg-share tier4_perception_launch)/launch/object_recognition/detection/detector/camera_2d_detector.launch.xml" if="$(var enable_2d_detection)">
     <arg name="image_raw0" value="$(var input/camera0/image)"/>
     <arg name="image_raw1" value="$(var input/camera1/image)"/>
@@ -103,6 +105,8 @@
     <arg name="image_raw6" value="$(var input/camera6/image)"/>
     <arg name="image_raw7" value="$(var input/camera7/image)"/>
     <arg name="image_number" value="$(var number_of_cameras)"/>
+    <arg name="yolox_model_dir" value="$(var yolox_model_dir)"/>
+    <arg name="yolox_model_name" value="$(var yolox_model_name)"/>
   </include>
 
   <!-- PointPainting -->
