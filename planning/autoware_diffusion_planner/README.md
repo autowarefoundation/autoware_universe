@@ -90,9 +90,9 @@ To ensure compatibility between models and the ROS 2 node implementation, the mo
 The model version is defined either by the directory name provided to the node or within the `diffusion_planner.param.json` configuration file.
 
 - **Major version**  
-  Incremented when there are changes in the model **inputs/outputs or architecture**.  
+  Incremented when there are changes in the model **inputs/outputs or architecture**.
 
-  > ⚠️ Models with different major versions are **not compatible** with the current ROS node.  
+  > ⚠️ Models with different major versions are **not compatible** with the current ROS node.
 
 - **Minor version**  
   Incremented when **only the weight files are updated**.  
@@ -100,7 +100,6 @@ The model version is defined either by the directory name provided to the node o
 
 To download the latest model, simply run the provided setup script:  
 [How to set up a development environment](https://autowarefoundation.github.io/autoware-documentation/main/installation/autoware/source-installation/#how-to-set-up-a-development-environment)
-
 
 ### Model Version History
 
