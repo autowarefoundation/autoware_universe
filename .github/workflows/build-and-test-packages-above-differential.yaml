@@ -34,7 +34,9 @@ on:
         required: true
       redis-password:
         required: true
-      tailscale-authkey:
+      tailscale-oauth-client-id:
+        required: false
+      tailscale-oauth-secret:
         required: false
 
 env:
@@ -51,7 +53,9 @@ jobs:
       - name: Tailscale
         uses: tailscale/github-action@v3
         with:
-          authkey: ${{ secrets.tailscale-authkey }}
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
 
       - name: Set PR fetch depth
         run: echo "PR_FETCH_DEPTH=$(( ${{ github.event.pull_request.commits }} + 1 ))" >> "${GITHUB_ENV}"
