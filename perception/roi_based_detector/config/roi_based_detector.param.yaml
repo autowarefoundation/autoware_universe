@@ -1,0 +1,12 @@
+/**:
+    ros__parameters:
+      target_frame: "base_link"
+      ignore_class:
+        UNKNOWN : true
+        CAR : false
+        TRUCK : false
+        BUS : false
+        TRAILER : false
+        MOTORCYCLE : false
+        BICYCLE : false
+        PEDESTRIAN : false
