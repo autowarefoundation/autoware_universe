@@ -1,0 +1,16 @@
+/**:
+  ros__parameters:
+    # Object class mapping from VAD model output to Autoware standard classification
+    # Values should be Autoware ObjectClassification string constants
+    # object_class: ["car", "truck", "construction_vehicle", "bus", "trailer", "barrier", "motorcycle", "bicycle", "pedestrian", "traffic_cone"]
+    class_mapping: ["CAR", "TRUCK", "TRUCK", "BUS", "TRUCK", "UNKNOWN", "MOTORCYCLE", "BICYCLE", "PEDESTRIAN", "UNKNOWN"]
+    # 0: car -> CAR
+    # 1: truck -> TRUCK  
+    # 2: construction_vehicle -> TRUCK
+    # 3: bus -> BUS
+    # 4: trailer -> TRUCK
+    # 5: barrier -> UNKNOWN
+    # 6: motorcycle -> MOTORCYCLE
+    # 7: bicycle -> BICYCLE
+    # 8: pedestrian -> PEDESTRIAN
+    # 9: traffic_cone -> UNKNOWN

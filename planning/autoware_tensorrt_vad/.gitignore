@@ -1,0 +1,4 @@
+install/
+build/
+log/
+test/test_data/*
