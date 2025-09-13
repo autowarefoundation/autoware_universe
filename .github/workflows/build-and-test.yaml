@@ -21,4 +21,5 @@ jobs:
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
       redis-password: ${{ secrets.REDIS_PASSWORD }}
-      tailscale-authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+      tailscale-oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+      tailscale-oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
