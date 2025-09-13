@@ -17,10 +17,10 @@
  * @brief  CPU monitor class
  */
 
-#include "system_monitor/cpu_monitor/intel_cpu_monitor.hpp"
+#include "intel_cpu_monitor.hpp"
 
-#include "system_monitor/msr_reader/msr_reader.hpp"
-#include "system_monitor/system_monitor_utility.hpp"
+#include "cpu_information.hpp"
+#include "msr_reader/msr_reader.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/archive/text_iarchive.hpp>

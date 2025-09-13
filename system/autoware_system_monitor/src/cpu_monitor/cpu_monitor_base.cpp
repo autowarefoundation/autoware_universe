@@ -17,13 +17,13 @@
  * @brief CPU monitor base class
  */
 
-#include "system_monitor/cpu_monitor/cpu_monitor_base.hpp"
+#include "cpu_monitor_base.hpp"
 
-#include "system_monitor/cpu_monitor/cpu_information.hpp"
-#include "system_monitor/cpu_monitor/cpu_usage_statistics.hpp"
-#include "system_monitor/system_monitor_utility.hpp"
+#include "cpu_information.hpp"
+#include "cpu_usage_statistics.hpp"
 
 #include <boost/filesystem.hpp>
+#include <boost/range/iterator_range_core.hpp>
 #include <boost/thread.hpp>
 
 #include <fmt/format.h>

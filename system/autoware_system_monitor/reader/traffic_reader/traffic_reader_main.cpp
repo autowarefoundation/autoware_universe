@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "system_monitor/traffic_reader/traffic_reader_service.hpp"
+#include "traffic_reader_service.hpp"
 
 #include <getopt.h>
 #include <syslog.h>
