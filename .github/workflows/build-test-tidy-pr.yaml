@@ -52,7 +52,8 @@ jobs:
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
       redis-password: ${{ secrets.REDIS_PASSWORD }}
-      tailscale-authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+      tailscale-oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+      tailscale-oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
 
   build-and-test-packages-above-differential:
     if: ${{ always() }}
@@ -67,7 +68,8 @@ jobs:
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
       redis-password: ${{ secrets.REDIS_PASSWORD }}
-      tailscale-authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+      tailscale-oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+      tailscale-oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
 
   build-and-test-differential-cuda:
     if: ${{ always() }}
@@ -82,7 +84,8 @@ jobs:
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
       redis-password: ${{ secrets.REDIS_PASSWORD }}
-      tailscale-authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+      tailscale-oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+      tailscale-oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
 
   clang-tidy-differential:
     if: ${{ always() }} # always run to provide report for status check
