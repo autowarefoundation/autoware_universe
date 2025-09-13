@@ -170,7 +170,12 @@ void GPUMonitor::getTempNames()
 
 void GPUMonitor::getLoadNames()
 {
-  const fs::path root("/sys/devices");
+  // Both Jetson AGX Xavier and Orin provide a symbolic link with the same name
+  // "/sys/devices/platform/gpu.0", which points to a platform-specific
+  // device file.
+  // Xavier also provides another symbolic link "/sys/devices/gpu.0",
+  // but Orin does not.
+  const fs::path root("/sys/devices/platform");
 
   for (const fs::path & path :
        boost::make_iterator_range(fs::directory_iterator(root), fs::directory_iterator())) {
