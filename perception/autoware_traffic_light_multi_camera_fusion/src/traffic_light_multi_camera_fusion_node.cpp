@@ -338,38 +338,43 @@ void MultiCameraFusion::groupFusion(
     if (record.signal.elements.empty()) {
       continue;
     }
-    const uint8_t color = record.signal.elements[0].color;
-    const double confidence = record.signal.elements[0].confidence;
-    const auto reg_ele_id_vec =
-      traffic_light_id_to_regulatory_ele_id_[p.second.roi.traffic_light_id];
-    for (const auto & reg_ele_id : reg_ele_id_vec) {
-      /*
-       * Design decision: We convert the observation's confidence into the strength of evidence
-       * (log-odds) that the observation is “correct”. Here, we explicitly assume that the
-       * confidence value directly represents probability (i.e., confidence ∈ [0,1] is the
-       * probability that the observation is correct). Note: This assumption may not hold for all
-       * confidence scoring systems. If the confidence metric is not a true probability, this
-       * conversion may be invalid. Future maintainers should verify that the confidence values used
-       * here are indeed probabilities, or update this logic if the scoring system changes.
-       */
 
-      // Get a reference to the log-odds map for the current regulatory element ID.
-      auto & log_odds_map = group_fusion_info_map[reg_ele_id].accumulated_log_odds;
-      // The prior should only be applied once at the beginning of the belief accumulation.
-      if (log_odds_map.find(color) == log_odds_map.end()) {
-        log_odds_map[color] = prior_log_odds_;
-      }
-      double evidence_log_odds = probabilityToLogOdds(confidence);
+    for (const auto & element : record.signal.elements) {
+      const uint8_t color = element.color;
+      const uint8_t shape = element.shape;
+      const StateKey state_key = {color, shape};
+      const double confidence = element.confidence;
+      const auto reg_ele_id_vec =
+        traffic_light_id_to_regulatory_ele_id_.at(p.second.roi.traffic_light_id);
 
-      // We assume the prior probability (with no information) is 0.5, meaning the log odds = 0, and
-      // then add evidence to it.
-      log_odds_map[color] += evidence_log_odds;
+      for (const auto & reg_ele_id : reg_ele_id_vec) {
+        /*
+        * Design decision: We convert the observation's confidence into the strength of evidence
+        * (log-odds) that the observation is “correct”. Here, we explicitly assume that the
+        * confidence value directly represents probability (i.e., confidence ∈ [0,1] is the
+        * probability that the observation is correct). Note: This assumption may not hold for all
+        * confidence scoring systems. If the confidence metric is not a true probability, this
+        * conversion may be invalid. Future maintainers should verify that the confidence values used
+        * here are indeed probabilities, or update this logic if the scoring system changes.
+        */
 
-      auto & best_record_for_color = group_fusion_info_map[reg_ele_id].best_record_for_color[color];
-      if (
-        best_record_for_color.signal.elements.empty() ||
-        confidence > best_record_for_color.signal.elements[0].confidence) {
-        best_record_for_color = record;
+        // Get a reference to the log-odds map for the current regulatory element ID.
+        auto & log_odds_map = group_fusion_info_map[reg_ele_id].accumulated_log_odds;
+        // The prior should only be applied once at the beginning of the belief accumulation.
+        if (log_odds_map.find(state_key) == log_odds_map.end()) {
+          log_odds_map[state_key] = prior_log_odds_;
+        }
+        double evidence_log_odds = probabilityToLogOdds(confidence);
+
+        // We assume the prior probability (with no information) is 0.5, meaning the log odds = 0, and
+        // then add evidence to it.
+        log_odds_map[state_key] += evidence_log_odds;
+
+        auto & best_record_for_map = group_fusion_info_map[reg_ele_id].best_record_for_state;
+        if (best_record_for_map.find(state_key) == best_record_for_map.end() ||
+            confidence > best_record_for_map.at(state_key).signal.elements[0].confidence) {
+          best_record_for_map[state_key] = record;
+        }
       }
     }
   }
@@ -387,8 +392,8 @@ void MultiCameraFusion::groupFusion(
       group_info.accumulated_log_odds.begin(), group_info.accumulated_log_odds.end(),
       [](const auto & a, const auto & b) { return a.second < b.second; });
 
-    const uint8_t best_color = best_element->first;
-    grouped_record_map[reg_ele_id] = group_info.best_record_for_color.at(best_color);
+    const StateKey best_state_key = best_element->first;
+    grouped_record_map[reg_ele_id] = group_info.best_record_for_state.at(best_state_key);
   }
 }
 
