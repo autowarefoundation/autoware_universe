@@ -352,12 +352,18 @@ void MultiCameraFusion::groupFusion(
        * conversion may be invalid. Future maintainers should verify that the confidence values used
        * here are indeed probabilities, or update this logic if the scoring system changes.
        */
+
+      // Get a reference to the log-odds map for the current regulatory element ID.
+      auto & log_odds_map = group_fusion_info_map[reg_ele_id].accumulated_log_odds;
+      // The prior should only be applied once at the beginning of the belief accumulation.
+      if (log_odds_map.find(color) == log_odds_map.end()) {
+        log_odds_map[color] = prior_log_odds_;
+      }
       double evidence_log_odds = probabilityToLogOdds(confidence);
 
       // We assume the prior probability (with no information) is 0.5, meaning the log odds = 0, and
       // then add evidence to it.
-      group_fusion_info_map[reg_ele_id].accumulated_log_odds[color] +=
-        evidence_log_odds + prior_log_odds_;
+      log_odds_map[color] += evidence_log_odds;
 
       auto & best_record_for_color = group_fusion_info_map[reg_ele_id].best_record_for_color[color];
       if (
