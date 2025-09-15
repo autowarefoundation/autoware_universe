@@ -150,7 +150,7 @@ void PointCloud2::to_point_cloud2(sensor_msgs::msg::PointCloud2& msg)
         return;
     }
 
-    device_vector<uint8_t> tmp_data(point_num * msg.point_step);
+    device_vector<uint8_t> tmp_data(point_num * msg.point_step, stream_, mempool_);
 
     CHECK_CUDA_ERROR(launchAsync<BLOCK_SIZE_X>(
         point_num, 0, stream_->get(),

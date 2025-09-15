@@ -99,20 +99,29 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
   );
 }
 
+#ifndef timeDiff
+#define timeDiff(start, end) ((end.tv_sec - start.tv_sec) * 1000000 + end.tv_usec - start.tv_usec)
+#endif
+
 void CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback(
   // const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & msg)
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pc2_msg)
 {
+  struct timeval start, end;
+
   // start time measurement
   if (stop_watch_ptr_) {
     stop_watch_ptr_->tic("processing_time");
   }
 
-  RCLCPP_INFO(this->get_logger(), "Size of the input = %u", pc2_msg->width);
-
+  gettimeofday(&start, NULL);
   sensor_msgs::msg::PointCloud2 non_ground, ground;
 
   cuda_ground_segmentation_filter_->classifyPointCloud(*pc2_msg, non_ground, ground);
+
+  gettimeofday(&end, NULL);
+
+  RCLCPP_INFO(this->get_logger(), "Total execution time = %lu", timeDiff(start, end));
 
   pub_->publish(non_ground);
   pub_gnd_->publish(ground);
@@ -128,25 +137,6 @@ void CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback(
     debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time_ms", processing_time_ms);
   }
-
-  // For debug, save PointCloud2 messages to file 
-  pcl::PointCloud<pcl::PointXYZ> cloud;
-  pcl::fromROSMsg(non_ground, cloud);
-
-  pcl::io::savePCDFileBinary("non_ground.pcd", cloud);
-
-  pcl::fromROSMsg(ground, cloud);
-
-  pcl::io::savePCDFileBinary("ground.pcd", cloud);
-
-  pcl::fromROSMsg(*pc2_msg, cloud);
-
-  pcl::io::savePCDFileBinary("original.pcd", cloud);
-
-  // pcl::fromROSMsg(cuda_ground_segmentation_filter_->save_cloud, cloud);
-
-  // pcl::io::savePCDFileBinary("converted_original.pcd", cloud);
-  exit(0);
 }
 
 }  // namespace autoware::cuda_ground_segmentation

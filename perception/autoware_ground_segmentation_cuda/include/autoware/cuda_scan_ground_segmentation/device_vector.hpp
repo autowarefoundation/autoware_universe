@@ -48,8 +48,6 @@ public:
     device_vector& operator=(const std::vector<T>& other);
 
     void to_vector(std::vector<T>& output) const {
-        // For debug
-        std::cerr << "Elenum = " << ele_num_ << std::endl;
         output.resize(ele_num_);
         copyDtoH(output.data(), data_, ele_num_);
     }

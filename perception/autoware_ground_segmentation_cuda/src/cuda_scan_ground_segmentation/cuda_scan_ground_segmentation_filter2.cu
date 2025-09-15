@@ -101,6 +101,11 @@ __global__ void getCellNumPointsKernel(
     return;  // Out of bounds
   }
   num_points_per_cell[idx] = centroid_cells_list_dev[idx].num_points;
+
+  // For debug
+  if (idx == 10000) {
+    printf("Num points per cell at %d is %d\n", idx, num_points_per_cell[idx]);
+  }
 }
 
 /**
@@ -1140,7 +1145,7 @@ void CudaScanGroundSegmentationFilter::extractNonGroundPoints(
     num_output_points_host = 0;
     return;
   }
-  device_vector<uint32_t> flag_dev(number_input_points_, stream_, mempool_);
+  device_vector<uint32_t> flag_dev(number_input_points_ + 1, stream_, mempool_);
 
   dim3 block_dim(512);
   dim3 grid_dim((number_input_points_ + block_dim.x - 1) / block_dim.x);
@@ -1149,23 +1154,25 @@ void CudaScanGroundSegmentationFilter::extractNonGroundPoints(
   CHECK_CUDA_ERROR(cudaGetLastError());
 
   // auto * flag_dev = allocateBufferFromPool<uint32_t>(number_input_points_);
-  device_vector<uint32_t> indices_dev(number_input_points_, stream_, mempool_);
+  device_vector<uint32_t> indices_dev(number_input_points_ + 1, stream_, mempool_);
 
   markObstaclePointsKernel<<<grid_dim, block_dim, 0, stream_->get()>>>(
     classified_points_dev, number_input_points_, flag_dev.data(), pointtype);
 
   CHECK_CUDA_ERROR(cuda::ExclusiveScan(flag_dev, indices_dev));
 
+  std::cerr << "Number of ground points = " << indices_dev[number_input_points_] << std::endl;
+
   output_points_dev.resize(indices_dev[number_input_points_]);
   scatterKernel<<<grid_dim, block_dim, 0, stream_->get()>>>(
     input_points_dev_->data(), flag_dev.data(), indices_dev.data(), number_input_points_, 
     output_points_dev.data());
   CHECK_CUDA_ERROR(cudaGetLastError());
-  // Count the number of valid points
-  uint32_t last_index = indices_dev[number_input_points_ - 1];
-  uint32_t last_flag = flag_dev[number_input_points_ - 1];
+  // // Count the number of valid points
+  // uint32_t last_index = indices_dev[number_input_points_ - 1];
+  // uint32_t last_flag = flag_dev[number_input_points_ - 1];
 
-  num_output_points_host = last_flag + last_index;
+  // num_output_points_host = last_flag + last_index;
 }
 
 void CudaScanGroundSegmentationFilter::getCellFirstPointIndex(
@@ -1212,6 +1219,7 @@ void CudaScanGroundSegmentationFilter::classifyPointCloud(
   device_vector<uint32_t> cell_counts_dev(max_num_cells);
 
   countCellPointNum(centroid_cells_list_dev.data());
+
   // calculate the index of the start point in each cell
   // update start point index into cell_first_point_indices_dev.start_point_index
   getCellFirstPointIndex(
@@ -1233,6 +1241,8 @@ void CudaScanGroundSegmentationFilter::classifyPointCloud(
   scanPerSectorGroundReference(
     classified_points_dev.data(), centroid_cells_list_dev.data());
 
+  std::cerr << "Size of classified point sdev = " << classified_points_dev.size() << std::endl;
+
   // Extract obstacle points from classified_points_dev
   uint32_t num_output_points = 0, num_ground_points = 0;
 
@@ -1246,7 +1256,9 @@ void CudaScanGroundSegmentationFilter::classifyPointCloud(
     PointType::GROUND);
 
   dev_output_points_->to_point_cloud2(output_points);
+  output_points.header.frame_id = "map";
   dev_ground_points_->to_point_cloud2(ground_points);
+  ground_points.header.frame_id = "map";
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_->get()));
 }

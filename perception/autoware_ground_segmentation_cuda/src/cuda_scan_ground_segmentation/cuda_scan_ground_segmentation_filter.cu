@@ -25,6 +25,8 @@
 #include <memory>
 #include <optional>
 
+#include <sys/time.h>
+
 namespace autoware::cuda_ground_segmentation
 {
 
@@ -159,7 +161,7 @@ CudaScanGroundSegmentationFilter::CudaScanGroundSegmentationFilter(
 
 __forceinline__ __device__ SegmentationMode checkSegmentationMode(
   int cell_id, int closest_gnd_cell_id, int furthest_gnd_cell_id, int gnd_cell_buffer_size,
-  int gnd_cell_continual_threshold
+  int gnd_cell_continual_threshold, int empty_cell_num
 )
 {
   if (closest_gnd_cell_id < 0) {
@@ -507,8 +509,6 @@ __global__ void sectorProcessingKernel(
         i, closest_gnd_cell_id, furthest_gnd_cell_id, 
         param.gnd_cell_buffer_size,
         param.gnd_grid_continual_thresh,
-      // For debug
-        sector_id,
         empty_cell_num
       );
 
@@ -517,9 +517,7 @@ __global__ void sectorProcessingKernel(
         wid, classified_points, param, cell, slope,
         sid, eid, 
         prev_gnd_radius_avg,
-        prev_gnd_height_avg, mode,
-        // For debug
-        i, sector_id
+        prev_gnd_height_avg, mode
       );
 
       // Update the indices of the previous ground cells if the cell contains ground points
@@ -564,7 +562,7 @@ __global__ void sectorProcessingKernel(
           cell_id_queue[tail] = i;
 
           // Write the cell to the global memory
-          cell_list[global_cell_id] = cell;
+          cell_list[gid] = cell;
         }
 
         // Wait for the thread 0 to finish its work
@@ -621,9 +619,6 @@ void CudaScanGroundSegmentationFilter::sort_points(
   int cell_num = filter_parameters_.max_num_cells;
 
   cell_list.resize(cell_num);
-
-  std::cerr << "Number of cells = " << cell_list.size() << " max_num_cells = " << filter_parameters_.max_num_cells << std::endl;
-  std::cerr << "Max num cells per sector = " << filter_parameters_.max_num_cells_per_sector << ", num_sectors = " << filter_parameters_.num_sectors << std::endl;;
 
   CHECK_CUDA_ERROR(
     cuda::launchAsync<BLOCK_SIZE_X>(
@@ -761,12 +756,6 @@ void CudaScanGroundSegmentationFilter::extractPoints(
   int point_num = dev_input_points_->size();
   device_vector<int> point_mark(point_num + 1, stream_, mempool_);
 
-  CHECK_CUDA_ERROR(cuda::fill(point_mark, 0));
-
-  // For debug
-  CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-  std::cerr << "Starting markingpoints" << std::endl;
-
   // Mark non-ground points
   CHECK_CUDA_ERROR(cuda::launchAsync<BLOCK_SIZE_X>(
     point_num, 0, stream_->get(),
@@ -802,6 +791,10 @@ void CudaScanGroundSegmentationFilter::extractPoints(
   ));
 }
 
+#ifndef timeDiff
+#define timeDiff(start, end) ((end.tv_sec - start.tv_sec) * 1000000 + end.tv_usec - start.tv_usec)
+#endif
+
 void CudaScanGroundSegmentationFilter::classifyPointCloud(
   const sensor_msgs::msg::PointCloud2 & input_points, 
   sensor_msgs::msg::PointCloud2 & output_points,
@@ -814,11 +807,10 @@ void CudaScanGroundSegmentationFilter::classifyPointCloud(
   device_vector<int> starting_pid(stream_, mempool_);
   device_vector<ClassifiedPointType> classified_points(stream_, mempool_);
 
-  std::cerr << "Size of the input points = " << dev_input_points_->size() << std::endl;
-
   removeOutliers();
   sort_points(cell_list, starting_pid, classified_points);
   scanPerSectorGroundReference(cell_list, starting_pid, classified_points);
+
   // Extract non-ground points
   extractPoints<NonGroundChecker>(
     classified_points,
@@ -834,8 +826,9 @@ void CudaScanGroundSegmentationFilter::classifyPointCloud(
   );
 
   dev_output_points_->to_point_cloud2(output_points);
+  output_points.header.frame_id = "map";
   dev_ground_points_->to_point_cloud2(ground_points);
-
+  ground_points.header.frame_id = "map";
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_->get()));
 }
 
