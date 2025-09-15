@@ -1,5 +1,5 @@
-#ifndef AUTOWARE__CUDA_SCAN_GROUND_SEGMENTATION__CUDA_PTR_HPP
-#define AUTOWARE__CUDA_SCAN_GROUND_SEGMENTATION__CUDA_PTR_HPP
+#ifndef AUTOWARE__CUDA_SCAN_GROUND_SEGMENTATION__CUDA_STREAM_WRAPPER_HPP_
+#define AUTOWARE__CUDA_SCAN_GROUND_SEGMENTATION__CUDA_STREAM_WRAPPER_HPP_
 
 #include <cuda_runtime_api.h>
 #include <memory>
@@ -13,7 +13,7 @@ namespace autoware
 class CudaStream
 {
 public:
-    CudaStream(bool is_null = false) {
+    inline CudaStream(bool is_null = false) {
         // If is_null is true, we use the default stream
         // Otherwise, we create a new stream
         if (!is_null) {
@@ -27,47 +27,33 @@ public:
     }
 
     CudaStream& operator=(const CudaStream&) = delete;
-    CudaStream& operator=(CudaStream&& other);
+    inline CudaStream& operator=(CudaStream&& other) {
+        if (this != &other) {
+            release();
+            stream_ = std::move(other.stream_);
+            other.stream_ = nullptr;
+        }
 
-    cudaStream_t get() {
+        return *this;
+    }
+
+    inline cudaStream_t& get() {
         return stream_;
     }
 
-    ~CudaStream();
+    ~CudaStream() {
+        release();
+    }
 
 private:
-    void release();
+    inline void release() {
+        if (stream_) {
+           CHECK_CUDA_ERROR(cudaStreamDestroy(stream_));
+        }
+    }
 
     cudaStream_t stream_{nullptr};
 };
-
-CudaStream::CudaStream()
-{
-    CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
-}
-
-CudaStream& CudaStream::operator=(CudaStream&& other)
-{
-    if (this != &other) {
-        release();
-        stream_ = std::move(other.stream_);
-        other.stream_ = nullptr;
-    }
-
-    return *this;
-}
-
-void CudaStream::release()
-{
-    if (stream_) {
-        CHECK_CUDA_ERROR(cudaStreamDestroy(stream_));
-    }
-}
-
-CudaStream::~CudaStream()
-{
-    release();
-}
 
 }
 

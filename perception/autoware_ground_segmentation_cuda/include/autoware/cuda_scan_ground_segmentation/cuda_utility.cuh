@@ -1,5 +1,5 @@
-#ifndef AUTOWARE__CUDA_UTILITIES_HPP_
-#define AUTOWARE__CUDA_UTILITIES_HPP_
+#ifndef AUTOWARE__CUDA_SCAN_GROUND_SEGMENTATION_CUDA_UTILITIES_HPP_
+#define AUTOWARE__CUDA_SCAN_GROUND_SEGMENTATION_CUDA_UTILITIES_HPP_
 
 #include <cuda_runtime.h>
 
@@ -57,8 +57,8 @@ cudaError_t ExclusiveScan(
         stream->get()
     );
 
-    int ele_num = (temp_storage_bytes + sizeof(int) - 1) / sizeof(int);
-    d_temp_storage.resize(ele_num);
+    int temp_ele_num = (temp_storage_bytes + sizeof(int) - 1) / sizeof(int);
+    d_temp_storage.resize(temp_ele_num);
 
     cub::DeviceScan::ExclusiveSum(
         (void*)(d_temp_storage.data()),
@@ -90,6 +90,13 @@ cudaError_t ExclusiveScan(
         input.get_mempool()
     );
 }
+
+template <typename T>
+cudaError_t ExclusiveScan(device_vector<T> & input)
+{
+    return ExclusiveScan(input, input);
+}
+
 
 template <typename T>
 __global__ void fillVector(T* vec, int ele_num, T init_val)

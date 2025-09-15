@@ -2,8 +2,6 @@
 #define AUTOWARE__CUDA_COMMON_HPP_
 
 #include <cuda_runtime.h>
-#include <cub/cub.h>
-
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 
 #ifndef CUDAH

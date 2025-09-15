@@ -18,13 +18,13 @@ class device_vector
 {
 public:
     device_vector(
-        std::shared_ptr<CudaStream> stream = std::shared_ptr<CudaStream>(true),
+        std::shared_ptr<CudaStream> stream = std::make_shared<CudaStream>(true),
         std::shared_ptr<CudaMempool> mem_pool = nullptr                
     );
 
     device_vector(
         const device_vector& other, 
-        std::shared_ptr<CudaStream> stream = nullptr, 
+        std::shared_ptr<CudaStream> stream = std::make_shared<CudaStream>(true), 
         std::shared_ptr<CudaMempool> mem_pool = nullptr,
         bool copy_all = false   // If true, use the stream and mem_pool of the other
     );
@@ -33,19 +33,26 @@ public:
 
     device_vector(
         size_t ele_num,
-        std::shared_ptr<CudaStream> stream = nullptr, 
+        std::shared_ptr<CudaStream> stream = std::make_shared<CudaStream>(true), 
         std::shared_ptr<CudaMempool> mem_pool = nullptr
     );
 
     device_vector(
         const std::vector<T>& other,
-        std::shared_ptr<CudaStream> stream = nullptr, 
+        std::shared_ptr<CudaStream> stream = std::make_shared<CudaStream>(true), 
         std::shared_ptr<CudaMempool> mem_pool = nullptr
     );
 
     device_vector& operator=(const device_vector& other);
     device_vector& operator=(device_vector&& other);
     device_vector& operator=(const std::vector<T>& other);
+
+    void to_vector(std::vector<T>& output) const {
+        // For debug
+        std::cerr << "Elenum = " << ele_num_ << std::endl;
+        output.resize(ele_num_);
+        copyDtoH(output.data(), data_, ele_num_);
+    }
 
     // Slow, do not use unless neccessary
     T operator[](int idx) const {
@@ -54,18 +61,19 @@ public:
         }
         T val;
 
-        CHECK_CUDA_ERROR(cudaMemcpyAsync(
-            &val, data_ + idx, 1, 
-            cudaMemcpyDeviceToHost, 
-            stream_->get()
-        ));
+        copyDtoH(&val, data_ + idx, 1);
+
+        CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_->get()));
+
+        return val;
     }
 
     T* data() { return data_; }
     const T* data() const { return data_; }
-    size_t size() { return ele_num_; }
+    size_t size() const { return ele_num_; }
 
     void resize(size_t new_size);
+    void reserve(size_t new_size);
     bool empty() const { return (ele_num_ == 0); }
     void clear();
 
@@ -80,6 +88,7 @@ private:
     void release();
     void copyDtoD(T* dst, const T* src, size_t ele_num);
     void copyHtoD(T* dst, const T* src, size_t ele_num);
+    void copyDtoH(T* dst, const T* src, size_t ele_num) const;
 
     T* data_;
     size_t ele_num_;    // The assumed size
@@ -147,8 +156,8 @@ device_vector<T>::device_vector(device_vector&& other)
 template <typename T>
 device_vector<T>::device_vector(
     size_t ele_num,
-    std::shared_ptr<CudaStream> stream = nullptr, 
-    std::shared_ptr<CudaMempool> mem_pool = nullptr
+    std::shared_ptr<CudaStream> stream, 
+    std::shared_ptr<CudaMempool> mem_pool
 ) :
     stream_(stream),
     mempool_(mem_pool),
@@ -164,8 +173,8 @@ device_vector<T>::device_vector(
 template <typename T>
 device_vector<T>::device_vector(
     const std::vector<T>& other,
-    std::shared_ptr<CudaStream> stream = nullptr, 
-    std::shared_ptr<CudaMempool> mem_pool = nullptr
+    std::shared_ptr<CudaStream> stream, 
+    std::shared_ptr<CudaMempool> mem_pool
 ) :
     stream_(stream),
     mempool_(mem_pool),
@@ -190,10 +199,8 @@ device_vector<T>& device_vector<T>::operator=(const device_vector& other)
     resize(other_size);
 
     if (other_size == 0) {
-        return;
+        copyDtoD(data_, other.data_, other_size);
     }
-
-    copyDtoD(data_, other.data_, other_size);
 
     return *this;
 }
@@ -214,6 +221,8 @@ device_vector<T>& device_vector<T>::operator=(device_vector&& other)
     other.ele_num_ = other.actual_ele_num_ = 0;
     other.mempool_.reset();
     other.stream_.reset();
+
+    return *this;
 }
 
 template <typename T>
@@ -246,6 +255,16 @@ void device_vector<T>::resize(size_t new_ele_num)
 }
 
 template <typename T>
+void device_vector<T>::reserve(size_t new_ele_num)
+{
+    if (new_ele_num <= actual_ele_num_ * 0.8) {
+        return;
+    }
+
+    allocate(new_ele_num);
+}
+
+template <typename T>
 void device_vector<T>::clear()
 {
     // Release the memory only
@@ -267,7 +286,7 @@ void device_vector<T>::allocate(size_t ele_num)
 {
     if (ele_num > 0) {
         if (mempool_) {
-            CHECK_CUDA_ERROR(cudaMallocFromPoolAsync(&data_, sizeof(T) * ele_num, mempool_->get()), stream_->get());
+            CHECK_CUDA_ERROR(cudaMallocFromPoolAsync(&data_, sizeof(T) * ele_num, mempool_->get(), stream_->get()));
         } else {
             CHECK_CUDA_ERROR(cudaMallocAsync(&data_, sizeof(T) * ele_num, stream_->get()));
         }
@@ -306,6 +325,16 @@ void device_vector<T>::copyHtoD(T* dst, const T* src, size_t ele_num)
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
         dst, src, sizeof(T) * ele_num, 
         cudaMemcpyHostToDevice, 
+        stream_->get()
+    ));
+}
+
+template <typename T>
+void device_vector<T>::copyDtoH(T* dst, const T* src, size_t ele_num) const
+{
+    CHECK_CUDA_ERROR(cudaMemcpyAsync(
+        dst, src, sizeof(T) * ele_num, 
+        cudaMemcpyDeviceToHost, 
         stream_->get()
     ));
 }

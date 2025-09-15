@@ -22,12 +22,12 @@ public:
     class Ptr;  // A pointer used by CUDA kernels
 
     PointCloud2(
-        std::shared_ptr<CudaStream> stream = std::shared_ptr<CudaStream>(true), 
+        std::shared_ptr<CudaStream> stream = std::make_shared<CudaStream>(true), 
         std::shared_ptr<CudaMempool> mempool = nullptr
     );
     PointCloud2(
         const PointCloud2& other,
-        std::shared_ptr<CudaStream> stream = std::shared_ptr<CudaStream>(true), 
+        std::shared_ptr<CudaStream> stream = std::make_shared<CudaStream>(true), 
         std::shared_ptr<CudaMempool> mempool = nullptr
     );
     PointCloud2(PointCloud2&& other);
@@ -76,7 +76,7 @@ public:
         return *this;
     }
 
-    CUDAH Ptr& operator=(Ptr&&) {
+    CUDAH Ptr& operator=(Ptr&& other) {
         data_ = other.data_;
         point_num_ = other.point_num_;
 
@@ -87,20 +87,20 @@ public:
     }
 
     CUDAH PointXYZ& operator[](int idx) {
-        return *reinterpret_cast<PointXYZ*>(data_[idx]);
+        return *reinterpret_cast<PointXYZ*>(&data_[idx]);
     }
 
     CUDAH const PointXYZ& operator[](int idx) const {
         // Warning: no out-of-bound check
-        return *reinterpret_cast<const PointXYZ*>(data_[idx]);
+        return *reinterpret_cast<const PointXYZ*>(&data_[idx]);
     }
 
     // Save a point to the memory
     CUDAH void emplace(const PointXYZ& p, int idx) {
-        data_[idx] = *reinterpret_cast<float4*>(&p);
+        data_[idx] = *reinterpret_cast<const float4*>(&p);
     }
 
-    CUDAH int size() {
+    CUDAH int size() const {
         return point_num_;
     }
 private:

@@ -30,6 +30,10 @@
 #include "cuda_stream_wrapper.hpp"
 #include "cuda_point_cloud2.hpp"
 
+// #ifndef DEBUG_MODE_CUDA
+// #define DEBUG_MODE_CUDA
+// #endif
+
 namespace autoware::cuda_ground_segmentation
 {
 
@@ -67,6 +71,13 @@ struct alignas(16) ClassifiedPointType
 
 struct alignas(16) Cell
 {
+#ifdef DEBUG_MODE_CUDA
+  uint32_t cell_id;  // cell_id = sector_id * number_cells_per_sector + grid_index
+  uint32_t sector_id;
+  uint32_t cell_id_in_sector;
+  uint32_t num_points;
+  size_t start_point_index;  // start index 
+#endif
   float gnd_radius_avg;
   float gnd_height_avg;
   float gnd_height_min;
@@ -112,6 +123,7 @@ struct FilterParameters
   const uint32_t gnd_cell_buffer_size{5};
 };
 
+#ifndef DEBUG_MODE_CUDA
 class CudaScanGroundSegmentationFilter
 {
 public:
@@ -120,19 +132,15 @@ public:
   ~CudaScanGroundSegmentationFilter() = default;
 
   // Method to process the point cloud data and filter ground points
-  void classifyPointcloud(
-    const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
-    cuda_blackboard::CudaPointCloud2::SharedPtr output_points,
-    cuda_blackboard::CudaPointCloud2::SharedPtr ground_points);
-
   void classifyPointCloud(
-    sensor_msgs::msg::PointCloud2 & input_points,
+    const sensor_msgs::msg::PointCloud2 & input_points,
     sensor_msgs::msg::PointCloud2 & output_points,
-    sensor_msgs::msg::PointCloud2 & ground_points,
+    sensor_msgs::msg::PointCloud2 & ground_points
   );
 
 private:
   std::unique_ptr<cuda::PointCloud2> dev_input_points_, dev_output_points_, dev_ground_points_;
+  std::unique_ptr<device_vector<int>> empty_cell_mark_;
 
   uint32_t number_input_points_;
   uint32_t num_process_points_host_;
@@ -146,6 +154,9 @@ private:
   FilterParameters filter_parameters_;
 
 private:
+  // Remove points too far from the origin
+  void removeOutliers();
+
   /*
    * This function calc the cell_id for each point
    * Assign the point with initialized class into temp memory for classification
@@ -163,9 +174,11 @@ private:
    * Extract obstacle points from classified_points_dev into
    */
   template <typename CheckerType>
-  void extractPoints(device_vector<ClassifiedPointType> & classified_points);
-
-
+  void extractPoints(
+    device_vector<ClassifiedPointType> & classified_points,
+    cuda::PointCloud2 & input,
+    cuda::PointCloud2 & output
+  );
 
   // Distribute points to cells
   void sort_points(
@@ -176,6 +189,81 @@ private:
   std::shared_ptr<CudaStream> stream_;
   std::shared_ptr<CudaMempool> mempool_;
 };
+#else
+class CudaScanGroundSegmentationFilter
+{
+public:
+  explicit CudaScanGroundSegmentationFilter(
+    const FilterParameters & filter_parameters, const int64_t max_mem_pool_size_in_byte);
+  ~CudaScanGroundSegmentationFilter() = default;
+
+  // Method to process the point cloud data and filter ground points
+  void classifyPointCloud(
+    const sensor_msgs::msg::PointCloud2 & input_points,
+    sensor_msgs::msg::PointCloud2 & output_points,
+    sensor_msgs::msg::PointCloud2 & ground_points);
+
+  uint32_t number_input_points_;
+  uint32_t num_process_points_host_;
+  uint32_t input_pointcloud_step_;
+  uint32_t input_xyzi_offset_[4];
+  float center_x_{0.0f};
+  float center_y_{0.0f};
+  const uint32_t gnd_grid_continual_thresh_{3};  // threshold for continual ground grid
+  const uint32_t continual_gnd_grid_thresh_{5};  // threshold for continual ground grid with recheck
+  // Parameters
+  FilterParameters filter_parameters_;
+
+private:
+  std::unique_ptr<cuda::PointCloud2> input_points_dev_, dev_output_points_, dev_ground_points_;
+
+  // Internal methods for ground segmentation logic
+
+  template <typename T>
+  T * allocateBufferFromPool(size_t num_elements);
+
+  template <typename T>
+  void returnBufferToPool(T * buffer);
+  void scanObstaclePoints(
+    const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
+    PointTypeStruct * output_points_dev, size_t * num_output_points,
+    Cell * centroid_cells_list_dev);
+  /*
+   * This function calc the cell_id for each point
+   * Assign the point with initialized class into temp memory for classification
+   * Memory size of each cell is depend on predefined cell point num
+   *
+   */
+  void assignPointToClassifyPoint(
+    const Cell * centroid_cells_list_dev,
+    uint32_t * cell_counts_dev,
+    ClassifiedPointType * classified_points_dev);
+
+  void getCellFirstPointIndex(
+    device_vector<Cell> & centroid_cells_list_dev, 
+    device_vector<uint32_t> & num_points_per_cell_dev,
+    device_vector<uint32_t> & cell_first_point_indices_dev);
+
+  void sortPointsInCells(
+    const uint32_t * num_points_per_cell_dev, ClassifiedPointType * classified_points_dev);
+  void scanPerSectorGroundReference(
+    ClassifiedPointType * classified_points_dev, Cell * centroid_cells_list_dev);
+
+  /*
+   * Extract obstacle points from classified_points_dev into
+   */
+  void extractNonGroundPoints(
+    ClassifiedPointType * classified_points_dev,
+    cuda::PointCloud2 & output_points_dev, uint32_t & num_output_points_host,
+    const PointType pointtype);
+
+  void countCellPointNum(Cell * indices_list_dev);
+
+  std::shared_ptr<CudaStream> stream_;
+  std::shared_ptr<CudaMempool> mempool_;
+};
+#endif
+
 }  // namespace autoware::cuda_ground_segmentation
 
 #endif  // AUTOWARE__CUDA_SCAN_GROUND_SEGMENTATION__CUDA_SCAN_GROUND_SEGMENTATION_FILTER_HPP_

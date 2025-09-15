@@ -17,6 +17,9 @@
 #include "autoware/pointcloud_preprocessor/utility/memory.hpp"
 
 #include <autoware_utils/math/unit_conversion.hpp>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/point_cloud.h>
+#include <pcl/io/pcd_io.h>
 
 namespace autoware::cuda_ground_segmentation
 {
@@ -79,27 +82,15 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
 
   int64_t max_mem_pool_size_in_byte =
     declare_parameter<int64_t>("max_mem_pool_size_in_byte", 1e9);  // 1 GB
-  // Initialize CUDA blackboard subscriber
-  // sub_ =
-  //   std::make_shared<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
-  //     *this, "~/input/pointcloud",
-  //     std::bind(
-  //       &CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback, this,
-  //       std::placeholders::_1));
 
   // Initialize CUDA blackboard publisher
-  pub_ =
-    std::make_unique<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>(
-      *this, "~/output/pointcloud");
-
-  pub_gnd_ =
-    std::make_unique<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>(
-      *this, "~/output/ground_pointcloud");
+  pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("~/output/pointcloud", 10);
+  pub_gnd_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("~/output/ground_pointcloud", 10);
 
   cuda_ground_segmentation_filter_ = std::make_unique<CudaScanGroundSegmentationFilter>(
     filter_parameters, max_mem_pool_size_in_byte);
 
-  pc2_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
+  sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "~/input/pointcloud", 100,
     std::bind(
       &CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback, 
@@ -118,33 +109,44 @@ void CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback(
   }
 
   RCLCPP_INFO(this->get_logger(), "Size of the input = %u", pc2_msg->width);
-  // // Create unique_ptr first
-  // auto non_ground_unique = std::make_unique<cuda_blackboard::CudaPointCloud2>();
-  // auto ground_unique = std::make_unique<cuda_blackboard::CudaPointCloud2>();
 
-  // // Create shared_ptr from raw pointers for the function call
-  // auto non_ground_shared = std::shared_ptr<cuda_blackboard::CudaPointCloud2>(
-  //   non_ground_unique.get(), [](auto *) {});  // no-op deleter
-  // auto ground_shared =
-  //   std::shared_ptr<cuda_blackboard::CudaPointCloud2>(ground_unique.get(), [](auto *) {});
+  sensor_msgs::msg::PointCloud2 non_ground, ground;
 
-  // cuda_ground_segmentation_filter_->classifyPointcloud(msg, non_ground_shared, ground_shared);
+  cuda_ground_segmentation_filter_->classifyPointCloud(*pc2_msg, non_ground, ground);
 
-  // // Publish using the original unique_ptr
-  // pub_->publish(std::move(non_ground_unique));
-  // pub_gnd_->publish(std::move(ground_unique));
+  pub_->publish(non_ground);
+  pub_gnd_->publish(ground);
 
-  // // end time measurement
-  // if (debug_publisher_ptr_ && stop_watch_ptr_) {
-  //   stop_watch_ptr_->toc("processing_time");
-  //   stop_watch_ptr_->toc("cyclic_time");
-  //   const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
-  //   const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
-  //   debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-  //     "debug/cyclic_time_ms", cyclic_time_ms);
-  //   debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-  //     "debug/processing_time_ms", processing_time_ms);
-  // }
+  // end time measurement
+  if (debug_publisher_ptr_ && stop_watch_ptr_) {
+    stop_watch_ptr_->toc("processing_time");
+    stop_watch_ptr_->toc("cyclic_time");
+    const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
+    const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
+    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "debug/cyclic_time_ms", cyclic_time_ms);
+    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "debug/processing_time_ms", processing_time_ms);
+  }
+
+  // For debug, save PointCloud2 messages to file 
+  pcl::PointCloud<pcl::PointXYZ> cloud;
+  pcl::fromROSMsg(non_ground, cloud);
+
+  pcl::io::savePCDFileBinary("non_ground.pcd", cloud);
+
+  pcl::fromROSMsg(ground, cloud);
+
+  pcl::io::savePCDFileBinary("ground.pcd", cloud);
+
+  pcl::fromROSMsg(*pc2_msg, cloud);
+
+  pcl::io::savePCDFileBinary("original.pcd", cloud);
+
+  // pcl::fromROSMsg(cuda_ground_segmentation_filter_->save_cloud, cloud);
+
+  // pcl::io::savePCDFileBinary("converted_original.pcd", cloud);
+  exit(0);
 }
 
 }  // namespace autoware::cuda_ground_segmentation
