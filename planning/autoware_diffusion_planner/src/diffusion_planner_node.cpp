@@ -62,11 +62,14 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
     this->create_publisher<PredictedObjects>("~/output/predicted_objects", rclcpp::QoS(1));
   pub_route_marker_ = this->create_publisher<MarkerArray>("~/debug/route_marker", 10);
   pub_lane_marker_ = this->create_publisher<MarkerArray>("~/debug/lane_marker", 10);
+  pub_turn_indicators_ =
+    this->create_publisher<TurnIndicatorsCommand>("~/output/turn_indicators", 1);
   debug_processing_time_detail_pub_ = this->create_publisher<autoware_utils::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms", 1);
   time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(debug_processing_time_detail_pub_);
 
   set_up_params();
+  utils::check_weight_version(params_.args_path);
   normalization_map_ = utils::load_normalization_stats(params_.args_path);
 
   init_pointers();
@@ -91,6 +94,8 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
   // Parameter Callback
   set_param_res_ = add_on_set_parameters_callback(
     std::bind(&DiffusionPlanner::on_parameter, this, std::placeholders::_1));
+
+  diagnostics_inference_ = std::make_unique<DiagnosticsInterface>(this, "inference_status");
 }
 
 DiffusionPlanner::~DiffusionPlanner()
@@ -121,6 +126,7 @@ void DiffusionPlanner::set_up_params()
   params_.traffic_light_group_msg_timeout_seconds =
     this->declare_parameter<double>("traffic_light_group_msg_timeout_seconds", 0.2);
   params_.batch_size = this->declare_parameter<int>("batch_size", 1);
+  params_.temperature_list = this->declare_parameter<std::vector<double>>("temperature", {0.5});
 
   // debug params
   debug_params_.publish_debug_map =
@@ -149,6 +155,7 @@ SetParametersResult DiffusionPlanner::on_parameter(
       parameters, "traffic_light_group_msg_timeout_seconds",
       temp_params.traffic_light_group_msg_timeout_seconds);
     update_param<int>(parameters, "batch_size", temp_params.batch_size);
+    update_param<std::vector<double>>(parameters, "temperature", temp_params.temperature_list);
     params_ = temp_params;
   }
 
@@ -172,6 +179,10 @@ void DiffusionPlanner::init_pointers()
   const int batch_size = params_.batch_size;
 
   // Calculate tensor sizes with batch support
+  const size_t sampled_trajectories_size =
+    batch_size * std::accumulate(
+                   SAMPLED_TRAJECTORIES_SHAPE.begin() + 1, SAMPLED_TRAJECTORIES_SHAPE.end(), 1L,
+                   std::multiplies<>());
   const size_t ego_history_size =
     batch_size * std::accumulate(
                    EGO_HISTORY_SHAPE.begin() + 1, EGO_HISTORY_SHAPE.end(), 1L, std::multiplies<>());
@@ -222,6 +233,7 @@ void DiffusionPlanner::init_pointers()
                    TURN_INDICATOR_LOGIT_SHAPE.begin() + 1, TURN_INDICATOR_LOGIT_SHAPE.end(), 1L,
                    std::multiplies<>());
 
+  sampled_trajectories_d_ = autoware::cuda_utils::make_unique<float[]>(sampled_trajectories_size);
   ego_history_d_ = autoware::cuda_utils::make_unique<float[]>(ego_history_size);
   ego_current_state_d_ = autoware::cuda_utils::make_unique<float[]>(ego_current_state_size);
   neighbor_agents_past_d_ = autoware::cuda_utils::make_unique<float[]>(neighbor_agents_past_size);
@@ -282,6 +294,8 @@ void DiffusionPlanner::load_engine(const std::string & model_path)
 
   {
     profile_dims.emplace_back(
+      make_dynamic_dims("sampled_trajectories", to_dynamic_dims(SAMPLED_TRAJECTORIES_SHAPE)));
+    profile_dims.emplace_back(
       make_dynamic_dims("ego_agent_past", to_dynamic_dims(EGO_HISTORY_SHAPE)));
     profile_dims.emplace_back(
       make_dynamic_dims("ego_current_state", to_dynamic_dims(EGO_CURRENT_STATE_SHAPE)));
@@ -305,6 +319,7 @@ void DiffusionPlanner::load_engine(const std::string & model_path)
 
   std::vector<autoware::tensorrt_common::NetworkIO> network_io;
   {  // Inputs with dynamic batch dimension
+    network_io.emplace_back("sampled_trajectories", to_dynamic_dims(SAMPLED_TRAJECTORIES_SHAPE));
     network_io.emplace_back("ego_agent_past", to_dynamic_dims(EGO_HISTORY_SHAPE));
     network_io.emplace_back("ego_current_state", to_dynamic_dims(EGO_CURRENT_STATE_SHAPE));
     network_io.emplace_back("neighbor_agents_past", to_dynamic_dims(NEIGHBOR_SHAPE));
@@ -338,7 +353,7 @@ void DiffusionPlanner::load_engine(const std::string & model_path)
 }
 
 AgentData DiffusionPlanner::get_ego_centric_agent_data(
-  const TrackedObjects & objects, const Eigen::Matrix4f & map_to_ego_transform)
+  const TrackedObjects & objects, const Eigen::Matrix4d & map_to_ego_transform)
 {
   if (!agent_data_) {
     agent_data_ =
@@ -392,6 +407,17 @@ InputDataMap DiffusionPlanner::create_input_data()
   }
 
   ego_kinematic_state_ = *ego_kinematic_state;
+
+  // random sample trajectories
+  {
+    for (int64_t b = 0; b < params_.batch_size; b++) {
+      const std::vector<float> sampled_trajectories =
+        preprocess::create_sampled_trajectories(params_.temperature_list[b]);
+      input_data_map["sampled_trajectories"].insert(
+        input_data_map["sampled_trajectories"].end(), sampled_trajectories.begin(),
+        sampled_trajectories.end());
+    }
+  }
 
   // Add current state to ego history
   ego_history_.push_back(*ego_kinematic_state);
@@ -467,10 +493,10 @@ InputDataMap DiffusionPlanner::create_input_data()
     const auto & goal_pose = route_handler_->getGoalPose();
 
     // Convert goal pose to 4x4 transformation matrix
-    const Eigen::Matrix4f goal_pose_map_4x4 = utils::pose_to_matrix4f(goal_pose);
+    const Eigen::Matrix4d goal_pose_map_4x4 = utils::pose_to_matrix4f(goal_pose);
 
     // Transform to ego frame
-    const Eigen::Matrix4f goal_pose_ego_4x4 = map_to_ego_transform * goal_pose_map_4x4;
+    const Eigen::Matrix4d goal_pose_ego_4x4 = map_to_ego_transform * goal_pose_map_4x4;
 
     // Extract relative position
     const float x = goal_pose_ego_4x4(0, 3);
@@ -585,6 +611,7 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
 std::vector<float> DiffusionPlanner::do_inference_trt(InputDataMap & input_data_map)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  auto sampled_trajectories = input_data_map["sampled_trajectories"];
   auto ego_history = input_data_map["ego_agent_past"];
   auto ego_current_state = input_data_map["ego_current_state"];
   auto neighbor_agents_past = input_data_map["neighbor_agents_past"];
@@ -610,6 +637,9 @@ std::vector<float> DiffusionPlanner::do_inference_trt(InputDataMap & input_data_
     speed_bool_array[i] = (lanes_speed_limit[i] > std::numeric_limits<float>::epsilon()) ? 1 : 0;
   }
 
+  CHECK_CUDA_ERROR(cudaMemcpy(
+    sampled_trajectories_d_.get(), sampled_trajectories.data(),
+    sampled_trajectories.size() * sizeof(float), cudaMemcpyHostToDevice));
   CHECK_CUDA_ERROR(cudaMemcpy(
     ego_history_d_.get(), ego_history.data(), ego_history.size() * sizeof(float),
     cudaMemcpyHostToDevice));
@@ -672,6 +702,8 @@ std::vector<float> DiffusionPlanner::do_inference_trt(InputDataMap & input_data_
   };
 
   bool set_input_shapes = true;
+  set_input_shapes &= network_trt_ptr_->setInputShape(
+    "sampled_trajectories", to_dims_with_batch(SAMPLED_TRAJECTORIES_SHAPE));
   set_input_shapes &=
     network_trt_ptr_->setInputShape("ego_agent_past", to_dims_with_batch(EGO_HISTORY_SHAPE));
   set_input_shapes &= network_trt_ptr_->setInputShape(
@@ -702,6 +734,7 @@ std::vector<float> DiffusionPlanner::do_inference_trt(InputDataMap & input_data_
     return {};
   }
 
+  network_trt_ptr_->setTensorAddress("sampled_trajectories", sampled_trajectories_d_.get());
   network_trt_ptr_->setTensorAddress("ego_agent_past", ego_history_d_.get());
   network_trt_ptr_->setTensorAddress("ego_current_state", ego_current_state_d_.get());
   network_trt_ptr_->setTensorAddress("neighbor_agents_past", neighbor_agents_past_d_.get());
@@ -743,15 +776,42 @@ std::vector<float> DiffusionPlanner::do_inference_trt(InputDataMap & input_data_
   return output_host;
 }
 
+std::vector<float> DiffusionPlanner::get_turn_indicator_logit() const
+{
+  const int batch_size = params_.batch_size;
+
+  // Compute total number of elements in the turn indicator logit
+  const size_t turn_indicator_num_elements =
+    batch_size * std::accumulate(
+                   TURN_INDICATOR_LOGIT_SHAPE.begin() + 1, TURN_INDICATOR_LOGIT_SHAPE.end(), 1UL,
+                   std::multiplies<>());
+
+  // Allocate host vector
+  std::vector<float> logit_host(turn_indicator_num_elements);
+
+  // Copy data from device to host
+  cudaMemcpy(
+    logit_host.data(),              // destination (host)
+    turn_indicator_logit_d_.get(),  // source (device)
+    turn_indicator_num_elements * sizeof(float), cudaMemcpyDeviceToHost);
+
+  return logit_host;
+}
+
 void DiffusionPlanner::on_timer()
 {
   // Timer callback function
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
+  diagnostics_inference_->clear();
+
   if (!is_map_loaded_) {
     RCLCPP_INFO_THROTTLE(
       get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
       "Waiting for map data...");
+    diagnostics_inference_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, "Map data not loaded");
+    diagnostics_inference_->publish(this->now());
     return;
   }
 
@@ -761,10 +821,29 @@ void DiffusionPlanner::on_timer()
     RCLCPP_WARN_THROTTLE(
       get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
       "No input data available for inference");
+    diagnostics_inference_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, "No input data available for inference");
+    diagnostics_inference_->publish(this->now());
     return;
   }
 
   publish_debug_markers(input_data_map);
+
+  // Calculate and record metrics for diagnostics using the proper logic
+  const int64_t batch_idx = 0;
+  const int64_t valid_lane_count = postprocess::count_valid_elements(
+    input_data_map["lanes"], LANES_SHAPE[1], LANES_SHAPE[2], LANES_SHAPE[3], batch_idx);
+  diagnostics_inference_->add_key_value("valid_lane_count", valid_lane_count);
+
+  const int64_t valid_route_count = postprocess::count_valid_elements(
+    input_data_map["route_lanes"], ROUTE_LANES_SHAPE[1], ROUTE_LANES_SHAPE[2], ROUTE_LANES_SHAPE[3],
+    batch_idx);
+  diagnostics_inference_->add_key_value("valid_route_count", valid_route_count);
+
+  const int64_t valid_neighbor_count = postprocess::count_valid_elements(
+    input_data_map["neighbor_agents_past"], NEIGHBOR_SHAPE[1], NEIGHBOR_SHAPE[2], NEIGHBOR_SHAPE[3],
+    batch_idx);
+  diagnostics_inference_->add_key_value("valid_neighbor_count", valid_neighbor_count);
 
   // normalization of data
   preprocess::normalize_input_data(input_data_map, normalization_map_);
@@ -772,10 +851,22 @@ void DiffusionPlanner::on_timer()
     RCLCPP_WARN_THROTTLE(
       get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
       "Input data contains invalid values");
+    diagnostics_inference_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, "Input data contains invalid values");
+    diagnostics_inference_->publish(this->now());
     return;
   }
   const auto predictions = do_inference_trt(input_data_map);
   publish_predictions(predictions);
+
+  // Publish turn indicators
+  const auto turn_indicator_logit = get_turn_indicator_logit();
+  const auto turn_indicators_cmd =
+    postprocess::create_turn_indicators_command(turn_indicator_logit, this->now());
+  pub_turn_indicators_->publish(turn_indicators_cmd);
+
+  // Publish diagnostics
+  diagnostics_inference_->publish(this->now());
 }
 
 void DiffusionPlanner::on_map(const HADMapBin::ConstSharedPtr map_msg)

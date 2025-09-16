@@ -32,6 +32,7 @@
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
+#include <autoware_utils_diagnostics/diagnostics_interface.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <builtin_interfaces/msg/duration.hpp>
 #include <builtin_interfaces/msg/time.hpp>
@@ -47,6 +48,7 @@
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
+#include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -78,6 +80,7 @@ using autoware_perception_msgs::msg::TrackedObjects;
 using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
+using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 using HADMapBin = autoware_map_msgs::msg::LaneletMapBin;
@@ -97,6 +100,7 @@ using visualization_msgs::msg::MarkerArray;
 // TensorRT
 using autoware::cuda_utils::CudaUniquePtr;
 using autoware::tensorrt_common::TrtConvCalib;
+using autoware_utils_diagnostics::DiagnosticsInterface;
 
 struct DiffusionPlannerParams
 {
@@ -112,6 +116,7 @@ struct DiffusionPlannerParams
   bool keep_last_traffic_light_group_info;
   double traffic_light_group_msg_timeout_seconds;
   int batch_size;
+  std::vector<double> temperature_list;
 };
 struct DiffusionPlannerDebugParams
 {
@@ -219,6 +224,12 @@ public:
   std::vector<float> do_inference_trt(InputDataMap & input_data_map);
 
   /**
+   * @brief Get turn indicator logit from the last inference.
+   * @return Vector containing turn indicator logit.
+   */
+  std::vector<float> get_turn_indicator_logit() const;
+
+  /**
    * @brief Callback for dynamic parameter updates.
    * @param parameters Updated parameters.
    * @return Result of parameter update.
@@ -233,9 +244,9 @@ public:
 
   // preprocessing
   std::shared_ptr<RouteHandler> route_handler_{std::make_shared<RouteHandler>()};
-  std::pair<Eigen::Matrix4f, Eigen::Matrix4f> transforms_;
+  std::pair<Eigen::Matrix4d, Eigen::Matrix4d> transforms_;
   AgentData get_ego_centric_agent_data(
-    const TrackedObjects & objects, const Eigen::Matrix4f & map_to_ego_transform);
+    const TrackedObjects & objects, const Eigen::Matrix4d & map_to_ego_transform);
 
   /**
    * @brief Replicate single sample data for batch processing.
@@ -254,6 +265,7 @@ public:
   std::unique_ptr<TrtConvCalib> trt_common_;
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_{nullptr};
   // For float inputs and output
+  CudaUniquePtr<float[]> sampled_trajectories_d_;
   CudaUniquePtr<float[]> ego_history_d_;
   CudaUniquePtr<float[]> ego_current_state_d_;
   CudaUniquePtr<float[]> neighbor_agents_past_d_;
@@ -296,6 +308,7 @@ public:
   rclcpp::Publisher<PredictedObjects>::SharedPtr pub_objects_{nullptr};
   rclcpp::Publisher<MarkerArray>::SharedPtr pub_lane_marker_{nullptr};
   rclcpp::Publisher<MarkerArray>::SharedPtr pub_route_marker_{nullptr};
+  rclcpp::Publisher<TurnIndicatorsCommand>::SharedPtr pub_turn_indicators_{nullptr};
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
   autoware_utils::InterProcessPollingSubscriber<Odometry> sub_current_odometry_{
     this, "~/input/odometry"};
@@ -315,6 +328,8 @@ public:
   rclcpp::Subscription<HADMapBin>::SharedPtr sub_map_;
   UUID generator_uuid_;
   VehicleInfo vehicle_info_;
+
+  std::unique_ptr<DiagnosticsInterface> diagnostics_inference_;
 };
 
 }  // namespace autoware::diffusion_planner

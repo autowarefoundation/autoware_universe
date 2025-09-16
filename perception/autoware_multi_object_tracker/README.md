@@ -137,18 +137,34 @@ source install/setup.bash
 ./build/autoware_multi_object_tracker/test_multi_object_tracker
 ```
 
-This runs the default test (`runPerformanceTest`) and outputs timing data.
+This runs the default test (`SimulatedDataPerformanceTest` and `RealDataRosbagPerformanceTest`) and outputs timing data.
 
-#### 3. Enable Optional Profiling Modes (Manual)
+#### 3. Run Optional Profiling Modes/Tests
 
-To evaluate scalability with object count:
+- `PerformanceVsCarCount()`
+- `PerformanceVsPedestrianCount()`
+- `PerformanceVsUnknownObjectCount()`
+- `AssociationTest()`
 
-- Manually enable the following functions in the test source:
-  - `profilePerformanceVsCarCount()`
-  - `profilePerformanceVsPedestrianCount()`
-  - `profilePerformanceVsUnknownObjectCount()`
+These optional profiling tests are compiled as disabled and can be run directly using GoogleTest options:
 
-These run additional profiling scenarios.
+To run a specific option profiling test:
+
+```bash
+./build/autoware_multi_object_tracker/test_multi_object_tracker \
+  --gtest_also_run_disabled_tests \
+  --gtest_filter="*.*AssociationTest"
+```
+
+To run multiple profiling tests together (separate with `:`):
+
+```bash
+./build/autoware_multi_object_tracker/test_multi_object_tracker \
+  --gtest_also_run_disabled_tests \
+  --gtest_filter="*.*AssociationTest:*.*PerformanceVsPedestrianCount"
+```
+
+This allows you to evaluate scalability with object count and other scenarios without modifying the source code.
 
 ### Rosbag Replay & Visualization
 
@@ -158,7 +174,7 @@ To record benchmark results for visualization in RViz:
 
 1. Enable `write_bag = true` in `runIterations()`
 2. Run the test; the output `.db3` path is printed
-3. Visualize:
+3. Play rosbag and visualize using rviz(suggested to use a product one):
 
 ```bash
 ros2 bag play <output_file>.db3
