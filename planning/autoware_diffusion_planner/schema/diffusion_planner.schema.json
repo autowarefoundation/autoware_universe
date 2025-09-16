@@ -69,6 +69,15 @@
           "minimum": 1,
           "description": "Batch size for multi-batch inference"
         },
+        "temperature": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          },
+          "default": [0.5],
+          "description": "List of temperature for sampling trajectories. Its length must be the same as `batch_size`. Each value means the coefficient of the standard normal distribution which is used for each initial noise of corresponding batch index. val = N(0,1) * temperature"
+        },
         "debug_params": {
           "type": "object",
           "properties": {
