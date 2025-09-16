@@ -412,19 +412,14 @@ __device__ void recheckCell(
   Cell & cell, ClassifiedPointType * __restrict__ cell_classify_points_dev,
   FilterParameters filter_parameters_dev)
 {
-  auto const idx_start_point_of_cell = cell.start_point_index;
   if (cell.num_ground_points < 2) {
     // If the cell has less than 2 ground points, we can skip rechecking
     return;
   }
   for (int i = 0; i < cell.num_points; i++) {
     auto & point = cell_classify_points_dev[i];
-    size_t oidx = point.origin_index;
 
-    if (point.type != PointType::GROUND) {
-      continue;
-    }
-    if (
+    if (point.type == PointType::GROUND &&
       point.z > cell.gnd_height_min + filter_parameters_dev.non_ground_height_threshold &&
       cell.num_ground_points > 1) {
       point.type = PointType::NON_GROUND;
@@ -1139,10 +1134,9 @@ void CudaScanGroundSegmentationFilter::assignPointToClassifyPoint(
 // ============= Extract non-ground points =============
 void CudaScanGroundSegmentationFilter::extractNonGroundPoints(
   ClassifiedPointType * classified_points_dev,
-  cuda::PointCloud2 & output_points_dev, uint32_t & num_output_points_host, const PointType pointtype)
+  cuda::PointCloud2 & output_points_dev, const PointType pointtype)
 {
   if (number_input_points_ == 0) {
-    num_output_points_host = 0;
     return;
   }
   device_vector<uint32_t> flag_dev(number_input_points_ + 1, stream_, mempool_);
@@ -1241,18 +1235,31 @@ void CudaScanGroundSegmentationFilter::classifyPointCloud(
   scanPerSectorGroundReference(
     classified_points_dev.data(), centroid_cells_list_dev.data());
 
-  std::cerr << "Size of classified point sdev = " << classified_points_dev.size() << std::endl;
+  std::vector<ClassifiedPointType> test;
+
+  classified_points_dev.to_vector(test);
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_->get()));
+
+  int ground_count = 0;
+
+  for (auto & p: test) {
+    if (p.type == PointType::GROUND) {
+      ++ground_count;
+    }
+  }
+
+  std::cerr << "Number of ground = " << ground_count << std::endl;
 
   // Extract obstacle points from classified_points_dev
   uint32_t num_output_points = 0, num_ground_points = 0;
 
   extractNonGroundPoints(
-    classified_points_dev.data(), *dev_output_points_, num_output_points,
+    classified_points_dev.data(), *dev_output_points_,
     PointType::NON_GROUND);
 
   // Extract ground points from classified_points_dev for debugging
   extractNonGroundPoints(
-    classified_points_dev.data(), *dev_ground_points_, num_ground_points,
+    classified_points_dev.data(), *dev_ground_points_,
     PointType::GROUND);
 
   dev_output_points_->to_point_cloud2(output_points);

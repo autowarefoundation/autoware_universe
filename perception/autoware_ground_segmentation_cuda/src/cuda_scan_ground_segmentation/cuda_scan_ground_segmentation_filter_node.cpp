@@ -123,6 +123,17 @@ void CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback(
 
   RCLCPP_INFO(this->get_logger(), "Total execution time = %lu", timeDiff(start, end));
 
+  // For debug, save the output clouds
+  pcl::PointCloud<pcl::PointXYZ> cloud;
+  pcl::fromROSMsg(non_ground, cloud);
+
+  pcl::io::savePCDFileASCII("/home/anh/Work/autoware/non_ground.pcd", cloud);
+
+  pcl::fromROSMsg(ground, cloud);
+
+  pcl::io::savePCDFileASCII("/home/anh/Work/autoware/ground.pcd", cloud);
+  // End
+
   pub_->publish(non_ground);
   pub_gnd_->publish(ground);
 

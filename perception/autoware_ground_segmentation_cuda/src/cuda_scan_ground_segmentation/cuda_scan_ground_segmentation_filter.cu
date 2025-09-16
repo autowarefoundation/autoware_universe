@@ -70,9 +70,7 @@ __global__ void cellInit(Cell * __restrict__ cell_list, int max_num_cells)
  */
 __global__ void computeCellId(
   const cuda::PointCloud2::Ptr input_points, FilterParameters param, int * cell_id, int * count,
-  ClassifiedPointType * classified_points,
-// For debug
-  int count_size
+  ClassifiedPointType * classified_points
 )
 {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
@@ -100,13 +98,6 @@ __global__ void computeCellId(
     cp.origin_index = i;
 
     classified_points[i] = cp;
-
-    // For debug
-    // if (p.x >= 6.5 && p.x <= 6.6 && p.y >= 7.2 && p.y <= 7.3 && p.z >= 0.3 && p.z <= 0.4) {
-    //   printf("Point at %d, pxyz = %f, %f, %f, radius = %f, angle = %f, sector = %d, cell id = %d\n", 
-    //           i, p.x, p.y, p.z, radius, angle, sector_id, cell_id_in_sector);
-    // }
-    // End
 
     // Also update the number of points in each cell atomically
     atomicAdd(count + point_cell_id, 1);
@@ -232,10 +223,11 @@ __forceinline__ __device__ void segmentContinuousPoint(
   }
 
   if (
-    p.z < estimated_ground_z - param.non_ground_height_threshold ||
+    p.z < estimated_ground_z - param.non_ground_height_threshold ||  // p.z < estimated_ground_z - param.non_ground_height_threshold
     dz < -param.local_slope_max_ratio * d_radius ||
     p.z < -param.global_slope_max_ratio * p.radius) {
     p.type = PointType::OUT_OF_RANGE;
+
     return;
   }
 
@@ -244,7 +236,8 @@ __forceinline__ __device__ void segmentContinuousPoint(
 
 __forceinline__ __device__ void segmentDiscontinuousPoint(
   ClassifiedPointType & p, const FilterParameters & param, float prev_cell_gnd_height_avg,
-  float prev_cell_gnd_radius_avg)
+  float prev_cell_gnd_radius_avg
+)
 {
   if (p.z - prev_cell_gnd_height_avg > param.detection_range_z_max) {
     p.type = PointType::OUT_OF_RANGE;
@@ -252,7 +245,8 @@ __forceinline__ __device__ void segmentDiscontinuousPoint(
   }
 
   float dz = p.z - prev_cell_gnd_height_avg;
-  float d_radius = p.radius - prev_cell_gnd_radius_avg + param.cell_divider_size_m;
+  // float d_radius = p.radius - prev_cell_gnd_radius_avg + param.cell_divider_size_m;
+  float d_radius = p.radius - prev_cell_gnd_radius_avg;
   float global_height_threshold = p.radius * param.global_slope_max_ratio;
   float local_height_threshold = param.local_slope_max_ratio * d_radius;
 
@@ -293,8 +287,7 @@ __forceinline__ __device__ void segmentCell(
   const FilterParameters & param, 
   Cell & cell, float slope,     // Slope of the line connect the previous ground cells
   int start_pid, int end_pid,  // Start and end indices of points in the current cell
-  float prev_cell_gnd_radius_avg, float prev_cell_gnd_height_avg, const SegmentationMode & mode
-)
+  float prev_cell_gnd_radius_avg, float prev_cell_gnd_height_avg, const SegmentationMode & mode)
 {
   if (start_pid >= end_pid) {
     return;
@@ -312,7 +305,7 @@ __forceinline__ __device__ void segmentCell(
   float minus_t_gnd_height_sum = 0;
   float minus_t_gnd_point_num = 0;
   ClassifiedPointType p;
-
+  
   // Fit line from the recent ground cells
   for (int j = start_pid + wid; j < end_pid; j += WARP_SIZE) {
     p = classified_points[j];
@@ -495,7 +488,6 @@ __global__ void sectorProcessingKernel(
                           empty_cell_mark[furthest_gnd_cell_id * param.num_sectors + sector_id];
       }
 
-      // For debug
       int gid = i * param.num_sectors + sector_id;
       int sid = starting_pid[gid], eid = starting_pid[gid + 1];
       Cell cell;
@@ -541,7 +533,11 @@ __global__ void sectorProcessingKernel(
         ++num_latest_gnd_cells;
 
         if (wid == 0) {
-          // Update the stats
+          // Add the new cell to the queue
+          cell_queue[tail] = cell;
+          cell_id_queue[tail] = i;
+
+          // Update the stats and estimate the local slope
           sum_x += cell.gnd_radius_avg;
           sum_y += cell.gnd_height_avg;
           sum_xx += cell.gnd_radius_avg * cell.gnd_radius_avg;
@@ -556,10 +552,6 @@ __global__ void sectorProcessingKernel(
             slope = (num_latest_gnd_cells * sum_xy - sum_x * sum_y) / denom;
             slope = fmax(fminf(slope, param.global_slope_max_ratio), -param.global_slope_max_ratio);
           }
-
-          // Add the new cell to the queue
-          cell_queue[tail] = cell;
-          cell_id_queue[tail] = i;
 
           // Write the cell to the global memory
           cell_list[gid] = cell;
@@ -636,8 +628,7 @@ void CudaScanGroundSegmentationFilter::sort_points(
   CHECK_CUDA_ERROR(
     cuda::launchAsync<BLOCK_SIZE_X>(
       point_num, 0, stream_->get(), computeCellId, dev_input_points_->data(), filter_parameters_,
-      cell_id.data(), starting_pid.data(), tmp_classified_points.data(),
-      (int)(starting_pid.size())
+      cell_id.data(), starting_pid.data(), tmp_classified_points.data()
     ));
 
   CHECK_CUDA_ERROR(cuda::ExclusiveScan(starting_pid));

@@ -254,7 +254,7 @@ private:
    */
   void extractNonGroundPoints(
     ClassifiedPointType * classified_points_dev,
-    cuda::PointCloud2 & output_points_dev, uint32_t & num_output_points_host,
+    cuda::PointCloud2 & output_points_dev,
     const PointType pointtype);
 
   void countCellPointNum(Cell * indices_list_dev);
