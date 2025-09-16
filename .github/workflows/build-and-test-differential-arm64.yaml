@@ -21,7 +21,7 @@ jobs:
   build-and-test-differential-arm64:
     needs: make-sure-label-is-present
     if: ${{ needs.make-sure-label-is-present.outputs.result == 'true' }}
-    runs-on: [self-hosted, Linux, ARM64]
+    runs-on: ubuntu-22.04-arm
     container: ${{ matrix.container }}${{ matrix.container-suffix }}
     strategy:
       fail-fast: false
