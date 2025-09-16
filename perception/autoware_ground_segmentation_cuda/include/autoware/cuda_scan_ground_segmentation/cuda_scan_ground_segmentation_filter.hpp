@@ -15,6 +15,10 @@
 #ifndef AUTOWARE__CUDA_SCAN_GROUND_SEGMENTATION__CUDA_SCAN_GROUND_SEGMENTATION_FILTER_HPP_
 #define AUTOWARE__CUDA_SCAN_GROUND_SEGMENTATION__CUDA_SCAN_GROUND_SEGMENTATION_FILTER_HPP_
 
+#include "cuda_mempool_wrapper.hpp"
+#include "cuda_point_cloud2.hpp"
+#include "cuda_stream_wrapper.hpp"
+
 #include <autoware/cuda_pointcloud_preprocessor/point_types.hpp>
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
@@ -25,10 +29,6 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
-
-#include "cuda_mempool_wrapper.hpp"
-#include "cuda_stream_wrapper.hpp"
-#include "cuda_point_cloud2.hpp"
 
 namespace autoware::cuda_ground_segmentation
 {
@@ -72,12 +72,9 @@ struct alignas(16) Cell
   float gnd_height_min;
   uint32_t num_ground_points;
   // initialize constructor
-  
+
   CUDAH Cell()
-  : gnd_radius_avg(0.0f),
-    gnd_height_avg(0.0f),
-    gnd_height_min(0.0f),
-    num_ground_points(0)
+  : gnd_radius_avg(0.0f), gnd_height_avg(0.0f), gnd_height_min(0.0f), num_ground_points(0)
   {
   }
 };
@@ -122,9 +119,7 @@ public:
   // Method to process the point cloud data and filter ground points
   void classifyPointCloud(
     const sensor_msgs::msg::PointCloud2 & input_points,
-    sensor_msgs::msg::PointCloud2 & output_points,
-    sensor_msgs::msg::PointCloud2 & ground_points
-  );
+    sensor_msgs::msg::PointCloud2 & output_points, sensor_msgs::msg::PointCloud2 & ground_points);
 
 private:
   std::unique_ptr<cuda::PointCloud2> dev_input_points_, dev_output_points_, dev_ground_points_;
@@ -152,28 +147,23 @@ private:
    *
    */
 
-  void scanPerSectorGroundReference(  
-    device_vector<Cell> & cell_list,
-    device_vector<int> & starting_pid,
-    device_vector<ClassifiedPointType> & classified_points
-  );
+  void scanPerSectorGroundReference(
+    device_vector<Cell> & cell_list, device_vector<int> & starting_pid,
+    device_vector<ClassifiedPointType> & classified_points);
 
   /*
    * Extract obstacle points from classified_points_dev into
    */
   template <typename CheckerType>
   void extractPoints(
-    device_vector<ClassifiedPointType> & classified_points,
-    cuda::PointCloud2 & input,
-    cuda::PointCloud2 & output
-  );
+    device_vector<ClassifiedPointType> & classified_points, cuda::PointCloud2 & input,
+    cuda::PointCloud2 & output);
 
   // Distribute points to cells
   void sort_points(
-    device_vector<Cell> & cell_list, 
-    device_vector<int> & starting_pid,
+    device_vector<Cell> & cell_list, device_vector<int> & starting_pid,
     device_vector<ClassifiedPointType> & classified_points);
-  
+
   std::shared_ptr<CudaStream> stream_;
   std::shared_ptr<CudaMempool> mempool_;
 };

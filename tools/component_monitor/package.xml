@@ -14,6 +14,7 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
+  <depend>autoware_internal_debug_msgs</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>eigen</depend>
   <depend>libpcl-all-dev</depend>
@@ -24,9 +25,9 @@
   <depend>rosbag2_cpp</depend>
   <depend>sensor_msgs</depend>
   <depend>tf2_geometry_msgs</depend>
-  <depend>autoware_internal_debug_msgs</depend>
 
   <exec_depend>autoware_launch</exec_depend>
+  <exec_depend>reaction_analyzer</exec_depend>
   <exec_depend>tier4_perception_launch</exec_depend>
 
   <test_depend>ament_cmake_ros</test_depend>

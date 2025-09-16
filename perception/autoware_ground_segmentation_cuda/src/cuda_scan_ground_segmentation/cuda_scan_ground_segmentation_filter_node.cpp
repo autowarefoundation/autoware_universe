@@ -17,9 +17,10 @@
 #include "autoware/pointcloud_preprocessor/utility/memory.hpp"
 
 #include <autoware_utils/math/unit_conversion.hpp>
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl/point_cloud.h>
+
 #include <pcl/io/pcd_io.h>
+#include <pcl/point_cloud.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 namespace autoware::cuda_ground_segmentation
 {
@@ -85,7 +86,8 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
 
   // Initialize CUDA blackboard publisher
   pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("~/output/pointcloud", 10);
-  pub_gnd_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("~/output/ground_pointcloud", 10);
+  pub_gnd_ =
+    this->create_publisher<sensor_msgs::msg::PointCloud2>("~/output/ground_pointcloud", 10);
 
   cuda_ground_segmentation_filter_ = std::make_unique<CudaScanGroundSegmentationFilter>(
     filter_parameters, max_mem_pool_size_in_byte);
@@ -93,10 +95,7 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
   sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "~/input/pointcloud", 100,
     std::bind(
-      &CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback, 
-      this, std::placeholders::_1
-    )
-  );
+      &CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback, this, std::placeholders::_1));
 }
 
 void CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback(
