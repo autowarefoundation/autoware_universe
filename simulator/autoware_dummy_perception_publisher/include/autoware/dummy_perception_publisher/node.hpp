@@ -78,8 +78,7 @@ struct ObjectInfo
   static Pose calculateTrajectoryBasedPosition(
     const DummyObject & object, const PredictedObject & predicted_object,
     const rclcpp::Time & predicted_time, const rclcpp::Time & current_time);
-  static void stopAtZeroVelocity(
-    double & current_vel, double initial_vel, double initial_acc) const;
+  static void stopAtZeroVelocity(double & current_vel, double initial_vel, double initial_acc);
   double length;
   double width;
   double height;
