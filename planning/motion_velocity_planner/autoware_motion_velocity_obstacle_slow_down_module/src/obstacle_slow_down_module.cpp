@@ -309,7 +309,7 @@ VelocityPlanningResult ObstacleSlowDownModule::plan(
 
   stop_watch_.tic();
   debug_data_ptr_ = std::make_shared<DebugData>();
-  trajectory_polygon_for_lateral_dist_map.clear();
+  trajectory_polygon_for_lateral_dist_map_.clear();
 
   // calculate collision points with trajectory with lateral stop margin
   // NOTE: For additional margin, hysteresis is not divided by two.
@@ -1062,7 +1062,7 @@ std::vector<Polygon2d> ObstacleSlowDownModule::get_trajectory_polygon(
   const TrajectoryPolygonCollisionCheck & trajectory_polygon_collision_check,
   double off_track_scale) const
 {
-  if (trajectory_polygon_for_lateral_dist_map.count(off_track_scale) == 0) {
+  if (trajectory_polygon_for_lateral_dist_map_.count(off_track_scale) == 0) {
     const auto & p = trajectory_polygon_collision_check;
     const auto decimated_traj_points = utils::decimate_trajectory_points_from_ego(
       traj_points, current_pose, ego_nearest_dist_threshold, ego_nearest_yaw_threshold,
@@ -1070,9 +1070,9 @@ std::vector<Polygon2d> ObstacleSlowDownModule::get_trajectory_polygon(
     auto traj_polys = polygon_utils::create_one_step_polygons(
       decimated_traj_points, vehicle_info, current_pose, 0.0, p.enable_to_consider_current_pose,
       p.time_to_convergence, p.decimate_trajectory_step_length, off_track_scale);
-    trajectory_polygon_for_lateral_dist_map.emplace(off_track_scale, std::move(traj_polys));
+    trajectory_polygon_for_lateral_dist_map_.emplace(off_track_scale, std::move(traj_polys));
   }
-  return trajectory_polygon_for_lateral_dist_map.at(off_track_scale);
+  return trajectory_polygon_for_lateral_dist_map_.at(off_track_scale);
 }
 
 }  // namespace autoware::motion_velocity_planner

@@ -94,7 +94,7 @@ private:
   bool need_to_clear_velocity_limit_{false};
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
   mutable std::unordered_map<double, std::vector<Polygon2d>>
-    trajectory_polygon_for_lateral_dist_map{};
+    trajectory_polygon_for_lateral_dist_map_{};
 
   std::vector<autoware::motion_velocity_planner::SlowDownPointData>
   convert_point_cloud_to_slow_down_points(
