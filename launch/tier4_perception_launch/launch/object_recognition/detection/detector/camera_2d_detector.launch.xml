@@ -16,6 +16,7 @@
   <arg name="enable_visualizer" default="false"/>
   <arg name="camera_2d_detector/model_path"/>
   <arg name="camera_2d_detector/label_path"/>
+  <arg name="camera_2d_detector/color_map_path"/>
   <arg name="tensorrt_yolox_ns" default=""/>
   <let name="tensorrt_yolox_ns" value="yolox/" if="$(var use_bytetrack)"/>
 
@@ -28,6 +29,7 @@
       <arg name="output/objects" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
       <arg name="model_path" value="$(var camera_2d_detector/model_path)"/>
       <arg name="label_path" value="$(var camera_2d_detector/label_path)"/>
+      <arg name="color_map_path" value="$(var camera_2d_detector/color_map_path)"/>
     </include>
 
     <include file="$(find-pkg-share autoware_bytetrack)/launch/bytetrack.launch.xml">
