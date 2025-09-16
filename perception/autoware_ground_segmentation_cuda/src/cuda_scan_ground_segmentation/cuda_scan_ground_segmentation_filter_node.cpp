@@ -99,40 +99,18 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
   );
 }
 
-#ifndef timeDiff
-#define timeDiff(start, end) ((end.tv_sec - start.tv_sec) * 1000000 + end.tv_usec - start.tv_usec)
-#endif
-
 void CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback(
   // const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & msg)
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pc2_msg)
 {
-  struct timeval start, end;
-
   // start time measurement
   if (stop_watch_ptr_) {
     stop_watch_ptr_->tic("processing_time");
   }
 
-  gettimeofday(&start, NULL);
   sensor_msgs::msg::PointCloud2 non_ground, ground;
 
   cuda_ground_segmentation_filter_->classifyPointCloud(*pc2_msg, non_ground, ground);
-
-  gettimeofday(&end, NULL);
-
-  RCLCPP_INFO(this->get_logger(), "Total execution time = %lu", timeDiff(start, end));
-
-  // For debug, save the output clouds
-  pcl::PointCloud<pcl::PointXYZ> cloud;
-  pcl::fromROSMsg(non_ground, cloud);
-
-  pcl::io::savePCDFileASCII("/home/anh/Work/autoware/non_ground.pcd", cloud);
-
-  pcl::fromROSMsg(ground, cloud);
-
-  pcl::io::savePCDFileASCII("/home/anh/Work/autoware/ground.pcd", cloud);
-  // End
 
   pub_->publish(non_ground);
   pub_gnd_->publish(ground);

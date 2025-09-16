@@ -148,6 +148,9 @@ CudaScanGroundSegmentationFilter::CudaScanGroundSegmentationFilter(
   dev_output_points_.reset(new cuda::PointCloud2(stream_, mempool_));
   dev_ground_points_.reset(new cuda::PointCloud2(stream_, mempool_));
   empty_cell_mark_.reset(new device_vector<int>(stream_, mempool_));
+
+  // Warm-up the memory pool a bit
+  dev_input_points_->reserve(200000);
 }
 
 __forceinline__ __device__ SegmentationMode checkSegmentationMode(
