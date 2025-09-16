@@ -106,13 +106,7 @@ ObjectInfo::ObjectInfo(
       static_cast<double>(object.max_velocity));
   }
 
-  // stop at zero velocity
-  if (initial_acc < 0 && initial_vel > 0) {
-    current_vel = std::max(current_vel, 0.0);
-  }
-  if (initial_acc > 0 && initial_vel < 0) {
-    current_vel = std::min(current_vel, 0.0);
-  }
+  stopAtZeroVelocity(current_vel, initial_vel, initial_acc);
 
   twist_covariance_.twist.linear.x = current_vel;
   pose_covariance_.pose = current_pose;
@@ -155,6 +149,17 @@ ObjectInfo::ObjectInfo(
   twist_covariance_.twist.linear.x = object.initial_state.twist_covariance.twist.linear.x;
 }
 
+void ObjectInfo::stopAtZeroVelocity(double & current_vel, double initial_vel, double initial_acc)
+{
+  // stop at zero velocity
+  if (initial_acc < 0 && initial_vel > 0) {
+    current_vel = std::max(current_vel, 0.0);
+  }
+  if (initial_acc > 0 && initial_vel < 0) {
+    current_vel = std::min(current_vel, 0.0);
+  }
+}
+
 Pose ObjectInfo::calculateStraightLinePosition(
   const tier4_simulation_msgs::msg::DummyObject & object, const rclcpp::Time & current_time)
 {
@@ -173,13 +178,7 @@ Pose ObjectInfo::calculateStraightLinePosition(
     return autoware_utils_geometry::calc_offset_pose(initial_pose, move_distance, 0.0, 0.0);
   }
 
-  // stop at zero velocity
-  if (initial_acc < 0 && initial_vel > 0) {
-    current_vel = std::max(current_vel, 0.0);
-  }
-  if (initial_acc > 0 && initial_vel < 0) {
-    current_vel = std::min(current_vel, 0.0);
-  }
+  stopAtZeroVelocity(current_vel, initial_vel, initial_acc);
   // clamp velocity within min/max
   current_vel = std::clamp(
     current_vel, static_cast<double>(object.min_velocity),
