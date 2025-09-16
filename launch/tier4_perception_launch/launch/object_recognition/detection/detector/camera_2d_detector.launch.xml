@@ -92,6 +92,7 @@
       <arg name="output/objects" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
       <arg name="model_path" value="$(var camera_2d_detector/model_path)"/>
       <arg name="label_path" value="$(var camera_2d_detector/label_path)"/>
+      <arg name="color_map_path" value="$(var camera_2d_detector/color_map_path)"/>
     </include>
 
     <include file="$(find-pkg-share autoware_bytetrack)/launch/bytetrack.launch.xml">
