@@ -1235,8 +1235,8 @@ std::optional<Point> DummyPerceptionPublisherNode::calculateExpectedPosition(
   cumulative_distances.push_back(0.0);
 
   for (size_t i = 1; i < selected_path.path.size(); ++i) {
-    const auto & prev_pose = selected_path.path[i - 1];
-    const auto & curr_pose = selected_path.path[i];
+    const auto & prev_pose = selected_path.path.at(i - 1);
+    const auto & curr_pose = selected_path.path.at(i);
 
     const double dx = curr_pose.position.x - prev_pose.position.x;
     const double dy = curr_pose.position.y - prev_pose.position.y;
@@ -1255,7 +1255,7 @@ std::optional<Point> DummyPerceptionPublisherNode::calculateExpectedPosition(
   if (distance_traveled >= cumulative_distances.back()) {
     // Extrapolate beyond the path end
     // Use the last two points to determine direction and extrapolate
-    const auto & second_last_pose = selected_path.path[selected_path.path.size() - 2];
+    const auto & second_last_pose = selected_path.path.at(selected_path.path.size() - 2);
     const auto & last_pose = selected_path.path.back();
 
     // Calculate direction vector from second-last to last pose
@@ -1282,22 +1282,22 @@ std::optional<Point> DummyPerceptionPublisherNode::calculateExpectedPosition(
 
   // Interpolate along the path
   for (size_t i = 1; i < cumulative_distances.size(); ++i) {
-    if (distance_traveled > cumulative_distances[i]) {
+    if (distance_traveled > cumulative_distances.at(i)) {
       continue;
     }
     // Interpolate between path points i-1 and i
-    const double segment_start_distance = cumulative_distances[i - 1];
-    const double segment_end_distance = cumulative_distances[i];
+    const double segment_start_distance = cumulative_distances.at(i - 1);
+    const double segment_end_distance = cumulative_distances.at(i);
     const double segment_length = segment_end_distance - segment_start_distance;
 
     if (segment_length < std::numeric_limits<double>::epsilon()) {
-      return selected_path.path[i - 1].position;
+      return selected_path.path.at(i - 1).position;
     }
     const double interpolation_factor =
       (distance_traveled - segment_start_distance) / segment_length;
 
-    const auto & start_pose = selected_path.path[i - 1];
-    const auto & end_pose = selected_path.path[i];
+    const auto & start_pose = selected_path.path.at(i - 1);
+    const auto & end_pose = selected_path.path.at(1);
 
     expected_position.x =
       start_pose.position.x + interpolation_factor * (end_pose.position.x - start_pose.position.x);
