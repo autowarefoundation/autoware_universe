@@ -1026,12 +1026,12 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
     }
   }
 
-  // Clean up mappings for dummy objects that no longer exist
   std::set<std::string> current_dummy_uuids;
   for (const auto & dummy_obj : dummy_objects) {
     current_dummy_uuids.insert(autoware_utils_uuid::to_hex_string(dummy_obj.id));
   }
 
+  // Clean up mappings for dummy objects that no longer exist
   for (auto it = dummy_to_predicted_uuid_map_.begin(); it != dummy_to_predicted_uuid_map_.end();) {
     if (current_dummy_uuids.find(it->first) != current_dummy_uuids.end()) {
       ++it;
