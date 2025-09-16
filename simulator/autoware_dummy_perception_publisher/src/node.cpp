@@ -1211,6 +1211,11 @@ std::optional<Point> DummyPerceptionPublisherNode::calculateExpectedPosition(
     return std::nullopt;
   }
 
+  // If only one point in path, return that point
+  if (selected_path.path.size() < 2) {
+    return selected_path.path.back().position;
+  }
+
   // Calculate elapsed time from last prediction to current time
   const auto current_time = get_clock()->now();
   const auto last_prediction_time_it = dummy_last_used_prediction_times_.find(dummy_uuid_str);
@@ -1226,6 +1231,7 @@ std::optional<Point> DummyPerceptionPublisherNode::calculateExpectedPosition(
 
   // Calculate cumulative distances along the path
   std::vector<double> cumulative_distances;
+  cumulative_distances.reserve(selected_path.path.size());
   cumulative_distances.push_back(0.0);
 
   for (size_t i = 1; i < selected_path.path.size(); ++i) {
@@ -1248,10 +1254,6 @@ std::optional<Point> DummyPerceptionPublisherNode::calculateExpectedPosition(
   }
   if (distance_traveled >= cumulative_distances.back()) {
     // Extrapolate beyond the path end
-
-    if (selected_path.path.size() < 2) {
-      return selected_path.path.back().position;
-    }
     // Use the last two points to determine direction and extrapolate
     const auto & second_last_pose = selected_path.path[selected_path.path.size() - 2];
     const auto & last_pose = selected_path.path.back();
