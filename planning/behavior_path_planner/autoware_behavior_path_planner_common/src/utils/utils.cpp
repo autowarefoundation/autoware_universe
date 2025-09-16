@@ -16,6 +16,7 @@
 
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
@@ -336,7 +337,7 @@ const Pose refineGoal(const Pose & goal, const lanelet::ConstLanelet & goal_lane
     return goal;
   }
 
-  const auto segment = lanelet::utils::getClosestSegment(
+  const auto segment = *autoware::experimental::lanelet2_utils::get_closest_segment(
     lanelet::utils::to2D(lanelet_point), goal_lanelet.centerline());
   if (segment.empty()) {
     return goal;

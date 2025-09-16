@@ -19,6 +19,7 @@
 #include "autoware_lanelet2_extension/regulatory_elements/bus_stop_area.hpp"
 
 #include <Eigen/Core>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
@@ -881,7 +882,7 @@ std::optional<Pose> calcRefinedGoal(
   {
     // find position
     const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(goal_pose.position);
-    const auto segment = lanelet::utils::getClosestSegment(
+    const auto segment = *autoware::experimental::lanelet2_utils::get_closest_segment(
       lanelet::utils::to2D(lanelet_point), closest_pull_over_lanelet.centerline());
     const auto p1 = segment.front().basicPoint();
     const auto p2 = segment.back().basicPoint();
