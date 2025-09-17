@@ -69,6 +69,7 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
   time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(debug_processing_time_detail_pub_);
 
   set_up_params();
+  utils::check_weight_version(params_.args_path);
   normalization_map_ = utils::load_normalization_stats(params_.args_path);
 
   init_pointers();
@@ -125,6 +126,7 @@ void DiffusionPlanner::set_up_params()
   params_.traffic_light_group_msg_timeout_seconds =
     this->declare_parameter<double>("traffic_light_group_msg_timeout_seconds", 0.2);
   params_.batch_size = this->declare_parameter<int>("batch_size", 1);
+  params_.temperature_list = this->declare_parameter<std::vector<double>>("temperature", {0.5});
 
   // debug params
   debug_params_.publish_debug_map =
@@ -153,6 +155,7 @@ SetParametersResult DiffusionPlanner::on_parameter(
       parameters, "traffic_light_group_msg_timeout_seconds",
       temp_params.traffic_light_group_msg_timeout_seconds);
     update_param<int>(parameters, "batch_size", temp_params.batch_size);
+    update_param<std::vector<double>>(parameters, "temperature", temp_params.temperature_list);
     params_ = temp_params;
   }
 
@@ -176,6 +179,10 @@ void DiffusionPlanner::init_pointers()
   const int batch_size = params_.batch_size;
 
   // Calculate tensor sizes with batch support
+  const size_t sampled_trajectories_size =
+    batch_size * std::accumulate(
+                   SAMPLED_TRAJECTORIES_SHAPE.begin() + 1, SAMPLED_TRAJECTORIES_SHAPE.end(), 1L,
+                   std::multiplies<>());
   const size_t ego_history_size =
     batch_size * std::accumulate(
                    EGO_HISTORY_SHAPE.begin() + 1, EGO_HISTORY_SHAPE.end(), 1L, std::multiplies<>());
@@ -226,6 +233,7 @@ void DiffusionPlanner::init_pointers()
                    TURN_INDICATOR_LOGIT_SHAPE.begin() + 1, TURN_INDICATOR_LOGIT_SHAPE.end(), 1L,
                    std::multiplies<>());
 
+  sampled_trajectories_d_ = autoware::cuda_utils::make_unique<float[]>(sampled_trajectories_size);
   ego_history_d_ = autoware::cuda_utils::make_unique<float[]>(ego_history_size);
   ego_current_state_d_ = autoware::cuda_utils::make_unique<float[]>(ego_current_state_size);
   neighbor_agents_past_d_ = autoware::cuda_utils::make_unique<float[]>(neighbor_agents_past_size);
@@ -286,6 +294,8 @@ void DiffusionPlanner::load_engine(const std::string & model_path)
 
   {
     profile_dims.emplace_back(
+      make_dynamic_dims("sampled_trajectories", to_dynamic_dims(SAMPLED_TRAJECTORIES_SHAPE)));
+    profile_dims.emplace_back(
       make_dynamic_dims("ego_agent_past", to_dynamic_dims(EGO_HISTORY_SHAPE)));
     profile_dims.emplace_back(
       make_dynamic_dims("ego_current_state", to_dynamic_dims(EGO_CURRENT_STATE_SHAPE)));
@@ -309,6 +319,7 @@ void DiffusionPlanner::load_engine(const std::string & model_path)
 
   std::vector<autoware::tensorrt_common::NetworkIO> network_io;
   {  // Inputs with dynamic batch dimension
+    network_io.emplace_back("sampled_trajectories", to_dynamic_dims(SAMPLED_TRAJECTORIES_SHAPE));
     network_io.emplace_back("ego_agent_past", to_dynamic_dims(EGO_HISTORY_SHAPE));
     network_io.emplace_back("ego_current_state", to_dynamic_dims(EGO_CURRENT_STATE_SHAPE));
     network_io.emplace_back("neighbor_agents_past", to_dynamic_dims(NEIGHBOR_SHAPE));
@@ -396,6 +407,17 @@ InputDataMap DiffusionPlanner::create_input_data()
   }
 
   ego_kinematic_state_ = *ego_kinematic_state;
+
+  // random sample trajectories
+  {
+    for (int64_t b = 0; b < params_.batch_size; b++) {
+      const std::vector<float> sampled_trajectories =
+        preprocess::create_sampled_trajectories(params_.temperature_list[b]);
+      input_data_map["sampled_trajectories"].insert(
+        input_data_map["sampled_trajectories"].end(), sampled_trajectories.begin(),
+        sampled_trajectories.end());
+    }
+  }
 
   // Add current state to ego history
   ego_history_.push_back(*ego_kinematic_state);
@@ -589,6 +611,7 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
 std::vector<float> DiffusionPlanner::do_inference_trt(InputDataMap & input_data_map)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  auto sampled_trajectories = input_data_map["sampled_trajectories"];
   auto ego_history = input_data_map["ego_agent_past"];
   auto ego_current_state = input_data_map["ego_current_state"];
   auto neighbor_agents_past = input_data_map["neighbor_agents_past"];
@@ -614,6 +637,9 @@ std::vector<float> DiffusionPlanner::do_inference_trt(InputDataMap & input_data_
     speed_bool_array[i] = (lanes_speed_limit[i] > std::numeric_limits<float>::epsilon()) ? 1 : 0;
   }
 
+  CHECK_CUDA_ERROR(cudaMemcpy(
+    sampled_trajectories_d_.get(), sampled_trajectories.data(),
+    sampled_trajectories.size() * sizeof(float), cudaMemcpyHostToDevice));
   CHECK_CUDA_ERROR(cudaMemcpy(
     ego_history_d_.get(), ego_history.data(), ego_history.size() * sizeof(float),
     cudaMemcpyHostToDevice));
@@ -676,6 +702,8 @@ std::vector<float> DiffusionPlanner::do_inference_trt(InputDataMap & input_data_
   };
 
   bool set_input_shapes = true;
+  set_input_shapes &= network_trt_ptr_->setInputShape(
+    "sampled_trajectories", to_dims_with_batch(SAMPLED_TRAJECTORIES_SHAPE));
   set_input_shapes &=
     network_trt_ptr_->setInputShape("ego_agent_past", to_dims_with_batch(EGO_HISTORY_SHAPE));
   set_input_shapes &= network_trt_ptr_->setInputShape(
@@ -706,6 +734,7 @@ std::vector<float> DiffusionPlanner::do_inference_trt(InputDataMap & input_data_
     return {};
   }
 
+  network_trt_ptr_->setTensorAddress("sampled_trajectories", sampled_trajectories_d_.get());
   network_trt_ptr_->setTensorAddress("ego_agent_past", ego_history_d_.get());
   network_trt_ptr_->setTensorAddress("ego_current_state", ego_current_state_d_.get());
   network_trt_ptr_->setTensorAddress("neighbor_agents_past", neighbor_agents_past_d_.get());
