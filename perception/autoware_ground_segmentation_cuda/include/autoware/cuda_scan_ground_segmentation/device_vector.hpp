@@ -52,7 +52,7 @@ public:
     copyDtoH(output.data(), data_, ele_num_);
   }
 
-  // Slow, do not use unless neccessary
+  // Slow, do not use unless necessary
   T operator[](int idx) const
   {
     if (idx < 0 || idx >= ele_num_) {
