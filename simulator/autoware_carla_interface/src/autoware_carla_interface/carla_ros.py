@@ -56,6 +56,35 @@ class carla_ros2_interface(object):
         qos.reliability = ReliabilityPolicy.BEST_EFFORT
         return qos
 
+    def _create_sensor_publishers(self):
+        """Create ROS publishers for each sensor based on sensor configuration."""
+        for sensor in self.sensors["sensors"]:
+            self.id_to_sensor_type_map[sensor["id"]] = sensor["type"]
+            if sensor["type"] == "sensor.camera.rgb":
+                self.pub_camera = self.ros2_node.create_publisher(
+                    Image, "/sensing/camera/traffic_light/image_raw", 1
+                )
+                self.pub_camera_info = self.ros2_node.create_publisher(
+                    CameraInfo, "/sensing/camera/traffic_light/camera_info", 1
+                )
+            elif sensor["type"] == "sensor.lidar.ray_cast":
+                if sensor["id"] in self.sensor_frequencies:
+                    self.pub_lidar[sensor["id"]] = self.ros2_node.create_publisher(
+                        PointCloud2,
+                        f'/sensing/lidar/{sensor["id"]}/pointcloud_before_sync',
+                        self._create_sensor_qos(),
+                    )
+                else:
+                    self.ros2_node.get_logger().info(
+                        "Please use Top, Right, or Left as the LIDAR ID"
+                    )
+            elif sensor["type"] == "sensor.other.imu":
+                self.pub_imu = self.ros2_node.create_publisher(
+                    Imu, "/sensing/imu/tamagawa/imu_raw", 1
+                )
+            else:
+                self.ros2_node.get_logger().info(f'No Publisher for {sensor["type"]} Sensor')
+
     def __init__(self):
         self.sensor_interface = SensorInterface()
         self.prev_timestamp = None
@@ -146,33 +175,7 @@ class carla_ros2_interface(object):
         )
 
         # Create Publisher for each Physical Sensors
-        for sensor in self.sensors["sensors"]:
-            self.id_to_sensor_type_map[sensor["id"]] = sensor["type"]
-            if sensor["type"] == "sensor.camera.rgb":
-                self.pub_camera = self.ros2_node.create_publisher(
-                    Image, "/sensing/camera/traffic_light/image_raw", 1
-                )
-                self.pub_camera_info = self.ros2_node.create_publisher(
-                    CameraInfo, "/sensing/camera/traffic_light/camera_info", 1
-                )
-            elif sensor["type"] == "sensor.lidar.ray_cast":
-                if sensor["id"] in self.sensor_frequencies:
-                    self.pub_lidar[sensor["id"]] = self.ros2_node.create_publisher(
-                        PointCloud2,
-                        f'/sensing/lidar/{sensor["id"]}/pointcloud_before_sync',
-                        self._create_sensor_qos(),
-                    )
-                else:
-                    self.ros2_node.get_logger().info(
-                        "Please use Top, Right, or Left as the LIDAR ID"
-                    )
-            elif sensor["type"] == "sensor.other.imu":
-                self.pub_imu = self.ros2_node.create_publisher(
-                    Imu, "/sensing/imu/tamagawa/imu_raw", 1
-                )
-            else:
-                self.ros2_node.get_logger().info(f'No Publisher for {sensor["type"]} Sensor')
-                pass
+        self._create_sensor_publishers()
 
         self.spin_thread = threading.Thread(target=rclpy.spin, args=(self.ros2_node,))
         self.spin_thread.start()
