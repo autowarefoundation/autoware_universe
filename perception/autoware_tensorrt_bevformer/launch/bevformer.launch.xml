@@ -11,8 +11,8 @@
   <!-- CAN bus topic -->
   <arg name="input/can_bus" default="/nuscenes/can_bus"/>
 
-  <arg name="output/boxes" default="/tensorrt_bevformer/output/boxes"/>
-  <arg name="output/bboxes" default="/nuscenes/bboxes"/>
+  <arg name="output/boxes" default="~/output/boxes"/>
+  <arg name="output/bboxes" default="~/output/debug/markers/bounding_boxes"/>
 
   <arg name="input/img_front_left/camera_info" default="/nuscenes/CAM_FRONT_LEFT/camera_info"/>
   <arg name="input/img_front/camera_info" default="/nuscenes/CAM_FRONT/camera_info"/>
