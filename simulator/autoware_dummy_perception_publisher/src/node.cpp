@@ -478,8 +478,9 @@ void DummyPerceptionPublisherNode::timerCallback()
       obj_info.pose_covariance_.pose.position;
 
     // Track object creation time if not already tracked
-    if (dummy_creation_timestamps_.find(dummy_uuid_str) == dummy_creation_timestamps_.end()) {
-      dummy_creation_timestamps_[dummy_uuid_str] = rclcpp::Time(object.header.stamp);
+    auto & info = dummy_predicted_info_map_[dummy_uuid_str];
+    if (!info.creation_timestamp.has_value()) {
+      info.creation_timestamp = rclcpp::Time(object.header.stamp);
     }
   }
 
@@ -1049,7 +1050,6 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
       continue;
     }
     dummy_mapping_timestamps_.erase(it->first);
-    dummy_creation_timestamps_.erase(it->first);
     dummy_last_used_predictions_.erase(it->first);
     dummy_last_used_prediction_times_.erase(it->first);
     dummy_prediction_update_timestamps_.erase(it->first);
