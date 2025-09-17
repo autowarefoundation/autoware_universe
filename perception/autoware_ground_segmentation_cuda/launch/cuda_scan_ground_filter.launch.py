@@ -25,6 +25,7 @@ from launch_ros.descriptions import ComposableNode
 from launch_ros.parameter_descriptions import ParameterFile
 from launch_ros.substitutions import FindPackageShare
 
+
 def launch_setup(context, *args, **kwargs):
 
     ground_segmentation_node_param = ParameterFile(
