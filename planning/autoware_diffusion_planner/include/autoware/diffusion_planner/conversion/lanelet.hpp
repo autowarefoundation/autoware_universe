@@ -78,10 +78,10 @@ struct LaneSegment
   static constexpr int64_t TRAFFIC_LIGHT_ID_NONE = -1;
 
   LaneSegment(
-    int64_t id, const Polyline & centerline, const Polyline & left_boundary,
-    const Polyline & right_boundary, const LanePoint & mean_point, LineType left_line_type,
-    LineType right_line_type, std::optional<float> speed_limit_mps, int64_t turn_direction,
-    int64_t traffic_light_id)
+    const int64_t id, const Polyline & centerline, const Polyline & left_boundary,
+    const Polyline & right_boundary, const LanePoint & mean_point, const LineType left_line_type,
+    const LineType right_line_type, const std::optional<float> speed_limit_mps,
+    const int64_t turn_direction, const int64_t traffic_light_id)
   : id(id),
     centerline(centerline),
     left_boundary(left_boundary),
