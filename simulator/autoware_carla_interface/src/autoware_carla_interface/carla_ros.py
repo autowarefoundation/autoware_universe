@@ -27,6 +27,8 @@ from geometry_msgs.msg import Pose
 from geometry_msgs.msg import PoseWithCovarianceStamped
 import numpy
 import rclpy
+from rclpy.qos import QoSProfile
+from rclpy.qos import ReliabilityPolicy
 from rosgraph_msgs.msg import Clock
 from sensor_msgs.msg import CameraInfo
 from sensor_msgs.msg import Image
@@ -149,8 +151,13 @@ class carla_ros2_interface(object):
                 )
             elif sensor["type"] == "sensor.lidar.ray_cast":
                 if sensor["id"] in self.sensor_frequencies:
+                    # Create QoS profile with BEST_EFFORT to match concatenation node
+                    pointcloud_qos = QoSProfile(depth=10)
+                    pointcloud_qos.reliability = ReliabilityPolicy.BEST_EFFORT
                     self.pub_lidar[sensor["id"]] = self.ros2_node.create_publisher(
-                        PointCloud2, f'/sensing/lidar/{sensor["id"]}/pointcloud_before_sync', 10
+                        PointCloud2,
+                        f'/sensing/lidar/{sensor["id"]}/pointcloud_before_sync',
+                        pointcloud_qos,
                     )
                 else:
                     self.ros2_node.get_logger().info(
