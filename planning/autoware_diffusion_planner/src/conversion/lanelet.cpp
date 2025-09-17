@@ -145,9 +145,10 @@ std::vector<LaneSegment> convert_to_lane_segments(
 
     const lanelet::AttributeMap & attrs = lanelet.attributes();
     const std::optional<float> speed_limit_mps =
-      attrs.find("speed_limit") != attrs.end() ? std::make_optional(autoware_utils_math::kmph2mps(
-                                                   std::stof(attrs.at("speed_limit").value())))
-                                               : std::nullopt;
+      attrs.find("speed_limit") != attrs.end()
+        ? std::make_optional(
+            autoware_utils_math::kmph2mps(std::stof(attrs.at("speed_limit").value())))
+        : std::nullopt;
 
     int64_t turn_direction = LaneSegment::TURN_DIRECTION_NONE;
     const std::map<std::string, int64_t> turn_direction_map = {
