@@ -67,7 +67,6 @@
   <arg name="input/pointcloud" default="/sensing/lidar/concatenated/pointcloud" description="The topic will be used in the detection module"/>
   <arg name="mode" default="camera_lidar_fusion">
     <choice value="camera"/>
-    <choice value="camera_lidar_bev"/>
     <choice value="camera_lidar_radar_fusion"/>
     <choice value="camera_lidar_fusion"/>
     <choice value="lidar_radar_fusion"/>
