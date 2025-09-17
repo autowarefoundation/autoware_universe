@@ -5,7 +5,6 @@
   <version>0.47.0</version>
   <description>The autoware_pose_instability_detector package</description>
   <maintainer email="yamato.ando@tier4.jp">Yamato Ando</maintainer>
-  <maintainer email="kento.yabuuchi.2@tier4.jp">Kento Yabuuchi</maintainer>
   <maintainer email="masahiro.sakamoto@tier4.jp">Masahiro Sakamoto</maintainer>
   <maintainer email="taiki.yamada@tier4.jp">Taiki Yamada</maintainer>
   <maintainer email="shintaro.sakoda@tier4.jp">Shintaro Sakoda</maintainer>
