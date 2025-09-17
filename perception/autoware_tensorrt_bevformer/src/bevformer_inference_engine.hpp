@@ -127,7 +127,6 @@ private:
 
   rclcpp::Logger logger_;
 
-
   bool initialized_ = false;
 
   // Helper function to get a string representation of precision type

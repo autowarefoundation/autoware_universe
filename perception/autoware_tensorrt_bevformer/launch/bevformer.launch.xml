@@ -38,7 +38,6 @@
 
   <!-- BEVFormer node -->
   <node pkg="autoware_tensorrt_bevformer" exec="autoware_tensorrt_bevformer_node" name="tensorrt_bevformer" output="screen">
-
     <param from="$(var param_file)" allow_substs="true"/>
 
     <param name="model_params.engine_file" value="$(var engine_file)"/>
