@@ -17,6 +17,7 @@
 #include "occluded_crosswalk.hpp"
 #include "parked_vehicles_stop.hpp"
 
+#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/path_utilization.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/distance/distance.hpp>

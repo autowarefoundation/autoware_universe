@@ -52,9 +52,20 @@ class RTCInterface
 public:
   RTCInterface(rclcpp::Node * node, const std::string & name, const bool enable_rtc = true);
   void publishCooperateStatus(const rclcpp::Time & stamp);
+  /// @brief update the cooperate status of the module identified by the given UUID
+  /// @param[in] uuid unique ID of the module
+  /// @param[in] safe new value for the "safe" field
+  /// @param[in] state new value for the "state" field
+  /// @param[in] start_distance new value for the "start_distance" field
+  /// @param[in] finish_distance new value for the "finish_distance" field
+  /// @param[in] stamp new value for the "stamp" field
+  /// @param[in] requested new value for the "requested" field (default to false)
+  /// @param[in] override_rtc_auto_mode optional value of the "auto_mode" field (if not set, the
+  /// "auto_mode" is only true if enable_rtc was false at initialization)
   void updateCooperateStatus(
     const UUID & uuid, const bool safe, const uint8_t state, const double start_distance,
-    const double finish_distance, const rclcpp::Time & stamp, const bool requested = false);
+    const double finish_distance, const rclcpp::Time & stamp, const bool requested = false,
+    const std::optional<bool> & override_rtc_auto_mode = std::nullopt);
   void removeCooperateStatus(const UUID & uuid);
   void removeExpiredCooperateStatus();
   void clearCooperateStatus();

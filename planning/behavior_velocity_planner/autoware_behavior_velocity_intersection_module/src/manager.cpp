@@ -24,6 +24,7 @@
 #include <limits>
 #include <memory>
 #include <set>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -363,12 +364,29 @@ void IntersectionModuleManager::launchNewModules(
     /* set RTC status as non_occluded status initially */
     const UUID uuid = getUUID(new_module->getModuleId());
     const auto occlusion_uuid = new_module->getOcclusionUUID();
+    std::optional<bool> override_rtc_auto_mode;
+    std::optional<bool> override_occlusion_rtc_auto_mode;
+    constexpr auto key = "rtc_approval_required_v1";
+    if (ll.hasAttribute(key)) {
+      std::stringstream manual_modules(ll.attribute(key).value());
+      std::string manual_module;
+      // modules are listed in the attribute value, separated by a comma
+      while (std::getline(manual_modules, manual_module, ',')) {
+        if (manual_module == "intersection") {
+          override_rtc_auto_mode = false;
+        }
+        if (manual_module == "intersection_occlusion") {
+          override_occlusion_rtc_auto_mode = false;
+        }
+      }
+    }
     rtc_interface_.updateCooperateStatus(
       uuid, true, State::WAITING_FOR_EXECUTION, std::numeric_limits<double>::lowest(),
-      std::numeric_limits<double>::lowest(), clock_->now());
+      std::numeric_limits<double>::lowest(), clock_->now(), false, override_rtc_auto_mode);
     occlusion_rtc_interface_.updateCooperateStatus(
       occlusion_uuid, true, State::WAITING_FOR_EXECUTION, std::numeric_limits<double>::lowest(),
-      std::numeric_limits<double>::lowest(), clock_->now());
+      std::numeric_limits<double>::lowest(), clock_->now(), false,
+      override_occlusion_rtc_auto_mode);
     registerModule(std::move(new_module));
   }
 }

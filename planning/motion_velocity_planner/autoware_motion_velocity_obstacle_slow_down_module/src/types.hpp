@@ -18,10 +18,20 @@
 #include "type_alias.hpp"
 
 #include <algorithm>
+#include <map>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <vector>
+
+// for SlowDownConditionCounter struct
+namespace unique_identifier_msgs::msg
+{
+inline bool operator<(const UUID & a, const UUID & b)
+{
+  return std::lexicographical_compare(
+    std::begin(a.uuid), std::end(a.uuid), std::begin(b.uuid), std::end(b.uuid));
+}
+}  // namespace unique_identifier_msgs::msg
 
 namespace autoware::motion_velocity_planner
 {
@@ -46,7 +56,7 @@ struct SlowDownPointData
 struct SlowDownObstacle
 {
   SlowDownObstacle(
-    const std::string & arg_uuid, const rclcpp::Time & arg_stamp,
+    const UUID & arg_uuid, const rclcpp::Time & arg_stamp,
     const ObjectClassification & object_classification, const geometry_msgs::msg::Pose & arg_pose,
     const double arg_lon_velocity, const double arg_lat_velocity,
     const double arg_dist_to_traj_poly, const geometry_msgs::msg::Point & arg_front_collision_point,
@@ -63,7 +73,7 @@ struct SlowDownObstacle
     side(side)
   {
   }
-  std::string uuid{};
+  UUID uuid{};
   rclcpp::Time stamp{};
   geometry_msgs::msg::Pose pose{};  // interpolated with the current stamp
   double velocity{};                // longitudinal velocity against ego's trajectory
@@ -80,7 +90,7 @@ struct SlowDownOutput
 {
   SlowDownOutput() = default;
   SlowDownOutput(
-    const std::string & arg_uuid, const std::vector<TrajectoryPoint> & traj_points,
+    const UUID & arg_uuid, const std::vector<TrajectoryPoint> & traj_points,
     const std::optional<size_t> & start_idx, const std::optional<size_t> & end_idx,
     const double arg_target_vel, const double arg_feasible_target_vel,
     const double arg_dist_from_obj_poly_to_traj_poly, const Motion obstacle_motion)
@@ -98,7 +108,7 @@ struct SlowDownOutput
     }
   }
 
-  std::string uuid{};
+  UUID uuid{};
   double target_vel{};
   double feasible_target_vel{};
   double dist_from_obj_poly_to_traj_poly{};
@@ -110,10 +120,10 @@ struct SlowDownOutput
 struct SlowDownConditionCounter
 {
   void reset_current_uuids() { current_uuids_.clear(); }
-  void add_current_uuid(const std::string & uuid) { current_uuids_.push_back(uuid); }
+  void add_current_uuid(const UUID & uuid) { current_uuids_.push_back(uuid); }
   void remove_counter_unless_updated()
   {
-    std::vector<std::string> obsolete_uuids;
+    std::vector<UUID> obsolete_uuids;
     for (const auto & key_and_value : counter_) {
       if (
         std::find(current_uuids_.begin(), current_uuids_.end(), key_and_value.first) ==
@@ -127,7 +137,7 @@ struct SlowDownConditionCounter
     }
   }
 
-  int increase_counter(const std::string & uuid)
+  int increase_counter(const UUID & uuid)
   {
     if (counter_.count(uuid) != 0) {
       counter_.at(uuid) = std::max(1, counter_.at(uuid) + 1);
@@ -136,7 +146,7 @@ struct SlowDownConditionCounter
     }
     return counter_.at(uuid);
   }
-  int decrease_counter(const std::string & uuid)
+  int decrease_counter(const UUID & uuid)
   {
     if (counter_.count(uuid) != 0) {
       counter_.at(uuid) = std::min(-1, counter_.at(uuid) - 1);
@@ -145,11 +155,11 @@ struct SlowDownConditionCounter
     }
     return counter_.at(uuid);
   }
-  void reset(const std::string & uuid) { counter_.emplace(uuid, 0); }
+  void reset(const UUID & uuid) { counter_.emplace(uuid, 0); }
 
   // NOTE: positive is for meeting entering condition, and negative is for exiting.
-  std::unordered_map<std::string, int> counter_{};
-  std::vector<std::string> current_uuids_{};
+  std::map<UUID, int> counter_{};
+  std::vector<UUID> current_uuids_{};
 };
 
 struct DebugData

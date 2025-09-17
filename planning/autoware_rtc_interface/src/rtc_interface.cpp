@@ -104,6 +104,8 @@ Module getModuleType(const std::string & module_name)
     module.type = Module::START_PLANNER;
   } else if (module_name == "intersection_occlusion") {
     module.type = Module::INTERSECTION_OCCLUSION;
+  } else if (module_name == "roundabout") {
+    module.type = Module::ROUNDABOUT;
   }
   return module;
 }
@@ -246,7 +248,8 @@ void RTCInterface::onTimer()
 
 void RTCInterface::updateCooperateStatus(
   const UUID & uuid, const bool safe, const uint8_t state, const double start_distance,
-  const double finish_distance, const rclcpp::Time & stamp, const bool requested)
+  const double finish_distance, const rclcpp::Time & stamp, const bool requested,
+  const std::optional<bool> & override_rtc_auto_mode)
 {
   std::lock_guard<std::mutex> lock(mutex_);
   // Find registered status which has same uuid
@@ -266,7 +269,7 @@ void RTCInterface::updateCooperateStatus(
     status.state.type = State::WAITING_FOR_EXECUTION;
     status.start_distance = start_distance;
     status.finish_distance = finish_distance;
-    status.auto_mode = is_auto_mode_enabled_;
+    status.auto_mode = override_rtc_auto_mode.value_or(is_auto_mode_enabled_);
     registered_status_.statuses.push_back(status);
 
     if (state != State::WAITING_FOR_EXECUTION)

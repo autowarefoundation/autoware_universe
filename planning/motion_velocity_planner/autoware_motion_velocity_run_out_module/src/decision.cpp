@@ -112,7 +112,7 @@ bool condition_to_keep_stop(
     return false;
   }
   if (
-    collision &&
+    collision && collision->type != CollisionType::pass_first_no_collision &&
     collision->ego_time_interval.first_intersection.arc_length < keep_stop_distance_range) {
     explanation << "keep stop since found collision "
                 << collision->ego_time_interval.first_intersection.arc_length << "m ahead ("

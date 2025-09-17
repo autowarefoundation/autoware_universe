@@ -218,6 +218,15 @@ std::vector<LaneSegment> convert_to_lane_segments(
     right_boundary_segments.emplace_back(
       MapType::Unused, interpolate_points(right_points, num_lane_points));
 
+    const std::string left_line_type_str = lanelet.leftBound().attributeOr("type", "");
+    const std::string right_line_type_str = lanelet.rightBound().attributeOr("type", "");
+    const LineType left_line_type =
+      (LINE_TYPE_MAP.count(left_line_type_str) ? LINE_TYPE_MAP.at(left_line_type_str)
+                                               : LINE_TYPE_VIRTUAL);
+    const LineType right_line_type =
+      (LINE_TYPE_MAP.count(right_line_type_str) ? LINE_TYPE_MAP.at(right_line_type_str)
+                                                : LINE_TYPE_VIRTUAL);
+
     const auto & attrs = lanelet.attributes();
     const bool is_intersection = attrs.find("turn_direction") != attrs.end();
     std::optional<float> speed_limit_mps =
@@ -239,9 +248,19 @@ std::vector<LaneSegment> convert_to_lane_segments(
       }
     }
 
+    const std::vector<lanelet::format_v2::TrafficLightConstPtr> traffic_light_list =
+      lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
+
+    // According to the definition, the number of elements in the traffic_light_list should be
+    // either 0 or 1; however, this is not always the case with older map data. Therefore, if there
+    // are multiple elements, we only use the first element.
+    const int64_t traffic_light_id =
+      (traffic_light_list.empty() ? LaneSegment::TRAFFIC_LIGHT_ID_NONE
+                                  : traffic_light_list.front()->id());
+
     lane_segments.emplace_back(
       lanelet.id(), lane_polyline, is_intersection, left_boundary_segments, right_boundary_segments,
-      speed_limit_mps, turn_direction);
+      left_line_type, right_line_type, speed_limit_mps, turn_direction, traffic_light_id);
   }
   return lane_segments;
 }

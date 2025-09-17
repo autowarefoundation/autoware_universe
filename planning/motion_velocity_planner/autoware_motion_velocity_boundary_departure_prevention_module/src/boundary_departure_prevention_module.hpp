@@ -132,6 +132,21 @@ private:
    */
   bool is_critical_departure_persist();
 
+  /**
+   * @brief Generates and publishes visualization markers for virtual walls and debugging.
+   */
+  void publish_visualization_markers();
+
+  /**
+   * @brief Helper function for virtual walls
+   */
+  void publish_virtual_walls(const rclcpp::Time & current_time);
+
+  /**
+   * @brief Helper function for debug markers
+   */
+  void publish_debug_markers(const rclcpp::Time & current_time);
+
   rclcpp::Clock::SharedPtr clock_ptr_;
 
   std::string module_name_;

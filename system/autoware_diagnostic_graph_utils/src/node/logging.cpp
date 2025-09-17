@@ -109,6 +109,17 @@ void LoggingNode::dump_unit(DiagNode * node, int depth, const std::string & inde
     return "-----";
   };
 
+  const auto leaf_level = [](const DiagNode * node) {
+    if (node->type() != "diag") {
+      return node->level();
+    }
+    const auto children = node->child_units();
+    if (children.empty()) {
+      return node->level();
+    }
+    return children.front()->level();
+  };
+
   if (max_depth_ < depth) {
     return;
   }
@@ -124,7 +135,7 @@ void LoggingNode::dump_unit(DiagNode * node, int depth, const std::string & inde
     path = "[anonymous group]";
   }
 
-  dump_text_ << indent << "- " + path << " " << text_level(node->level()) << std::endl;
+  dump_text_ << indent << "- " + path << " " << text_level(leaf_level(node)) << std::endl;
   for (const auto & child : node->child_nodes()) {
     dump_unit(child, depth + 1, indent + "    ");
   }

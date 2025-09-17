@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__DIFFUSION_PLANNER__UTILS__ARG_READER_HPP_
 #define AUTOWARE__DIFFUSION_PLANNER__UTILS__ARG_READER_HPP_
 
+#include "autoware/diffusion_planner/constants.hpp"
+
 #include <nlohmann/json.hpp>
 
 #include <fstream>
@@ -30,6 +32,32 @@ using json = nlohmann::json;
 // Define normalization structure: {name -> (mean, std)}
 using NormalizationMap =
   std::unordered_map<std::string, std::pair<std::vector<float>, std::vector<float>>>;
+
+inline void check_weight_version(const std::string & json_path)
+{
+  std::ifstream file(json_path);
+  if (!file) {
+    throw std::runtime_error("Could not open JSON file: " + json_path);
+  }
+
+  json j;
+  file >> j;
+
+  const std::string error_msg =
+    "Please use the appropriate version of diffusion_planner.onnx and "
+    "diffusion_planner.param.json. "
+    "Refer to README.md for more details.";
+
+  if (!j.contains("major_version")) {
+    throw std::runtime_error("Missing 'major_version' key in JSON. " + error_msg);
+  }
+
+  const int major_version = j["major_version"].get<int>();
+  if (major_version != autoware::diffusion_planner::constants::WEIGHT_MAJOR_VERSION) {
+    throw std::runtime_error(
+      "Unsupported major_version: " + std::to_string(major_version) + ". " + error_msg);
+  }
+}
 
 inline NormalizationMap load_normalization_stats(const std::string & json_path)
 {

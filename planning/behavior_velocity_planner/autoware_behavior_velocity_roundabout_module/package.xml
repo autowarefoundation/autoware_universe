@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>autoware_behavior_velocity_roundabout_module</name>
+  <version>0.46.0</version>
+  <description>The autoware_behavior_velocity_roundabout_module package</description>
+
+  <maintainer email="yukinari.hisaki.2@tier4.jp">Hisaki Yukinari</maintainer>
+  <maintainer email="mamoru.sobue@tier4.jp">Mamoru Sobue</maintainer>
+  <maintainer email="sho.iwasawa.2@tier4.jp">Sho Iwasawa</maintainer>
+
+  <license>Apache License 2.0</license>
+
+  <author email="yukinari.hisaki.2@tier4.jp">Hisaki Yukinari</author>
+  <author email="sho.iwasawa.2@tier4.jp">Sho Iwasawa</author>
+
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+  <buildtool_depend>eigen3_cmake_module</buildtool_depend>
+
+  <depend>autoware_behavior_velocity_intersection_module</depend>
+  <depend>autoware_behavior_velocity_planner</depend>
+  <depend>autoware_behavior_velocity_planner_common</depend>
+  <depend>autoware_behavior_velocity_rtc_interface</depend>
+  <depend>autoware_internal_debug_msgs</depend>
+  <depend>autoware_internal_planning_msgs</depend>
+  <depend>autoware_interpolation</depend>
+  <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_motion_utils</depend>
+  <depend>autoware_object_recognition_utils</depend>
+  <depend>autoware_perception_msgs</depend>
+  <depend>autoware_planning_msgs</depend>
+  <depend>autoware_route_handler</depend>
+  <depend>autoware_rtc_interface</depend>
+  <depend>autoware_test_utils</depend>
+  <depend>autoware_utils</depend>
+  <depend>autoware_vehicle_info_utils</depend>
+  <depend>eigen</depend>
+  <depend>geometry_msgs</depend>
+  <depend>libboost-dev</depend>
+  <depend>pluginlib</depend>
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>tier4_planning_msgs</depend>
+  <depend>visualization_msgs</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>autoware_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

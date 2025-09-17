@@ -116,6 +116,7 @@ struct DiffusionPlannerParams
   bool keep_last_traffic_light_group_info;
   double traffic_light_group_msg_timeout_seconds;
   int batch_size;
+  std::vector<double> temperature_list;
 };
 struct DiffusionPlannerDebugParams
 {
@@ -264,6 +265,7 @@ public:
   std::unique_ptr<TrtConvCalib> trt_common_;
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_{nullptr};
   // For float inputs and output
+  CudaUniquePtr<float[]> sampled_trajectories_d_;
   CudaUniquePtr<float[]> ego_history_d_;
   CudaUniquePtr<float[]> ego_current_state_d_;
   CudaUniquePtr<float[]> neighbor_agents_past_d_;
