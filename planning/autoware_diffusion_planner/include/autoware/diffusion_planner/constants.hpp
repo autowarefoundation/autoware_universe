@@ -22,7 +22,7 @@ namespace autoware::diffusion_planner::constants
 constexpr int WEIGHT_MAJOR_VERSION = 1;
 
 // Velocity thresholds
-constexpr float MOVING_VELOCITY_THRESHOLD_MPS = 0.2f;
+constexpr double MOVING_VELOCITY_THRESHOLD_MPS = 0.2;
 
 // Time constants
 constexpr double PREDICTION_TIME_STEP_S = 0.1;
@@ -30,7 +30,7 @@ constexpr double TIMER_PERIOD_S = 0.2;
 constexpr int LOG_THROTTLE_INTERVAL_MS = 5000;
 
 // Geometric constants
-constexpr float LANE_MASK_RANGE_M = 100.0f;
+constexpr double LANE_MASK_RANGE_M = 100.0;
 constexpr double BACKWARD_PATH_LENGTH_M = 0.0;
 constexpr double FORWARD_PATH_LENGTH_M = 150.0;
 

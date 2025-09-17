@@ -115,6 +115,7 @@ struct DiffusionPlannerParams
   bool update_traffic_light_group_info;
   bool keep_last_traffic_light_group_info;
   double traffic_light_group_msg_timeout_seconds;
+  bool use_route_handler;
   int batch_size;
   std::vector<double> temperature_list;
 };
@@ -176,6 +177,8 @@ class DiffusionPlanner : public rclcpp::Node
 public:
   explicit DiffusionPlanner(const rclcpp::NodeOptions & options);
   ~DiffusionPlanner();
+
+private:
   /**
    * @brief Initialize and declare node parameters.
    */
@@ -254,6 +257,14 @@ public:
    * @return Vector replicated for the configured batch size.
    */
   std::vector<float> replicate_for_batch(const std::vector<float> & single_data);
+
+  /**
+   * @brief Select route segment indices based on the route handler.
+   * @param ego_kinematic_state The current state of the ego vehicle.
+   * @return Vector of selected route segment indices.
+   */
+  std::vector<int64_t> select_route_segment_indices_by_route_handler(
+    const nav_msgs::msg::Odometry & ego_kinematic_state) const;
 
   // current state
   Odometry ego_kinematic_state_;
