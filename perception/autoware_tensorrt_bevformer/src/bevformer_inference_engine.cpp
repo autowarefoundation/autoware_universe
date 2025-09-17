@@ -820,7 +820,6 @@ BEVFormerInferenceEngine::runInference(
       stream));
 
     CHECK_CUDA(cudaStreamSynchronize(stream));
-
   } catch (const std::exception & e) {
     RCLCPP_ERROR(logger_, "Exception during inference: %s", e.what());
     // Cleanup events and stream
