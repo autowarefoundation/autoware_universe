@@ -40,7 +40,7 @@ namespace autoware::diffusion_planner::preprocess
 // Internal functions declaration
 namespace
 {
-using namespace autoware_perception_msgs::msg;
+using autoware_perception_msgs::msg::TrafficLightElement;
 
 std::map<lanelet::Id, size_t> create_lane_id_to_array_index_map(
   const std::vector<LaneSegment> & lane_segments);
