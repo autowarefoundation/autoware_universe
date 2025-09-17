@@ -99,6 +99,7 @@ std::vector<LanePoint> interpolate_points(const std::vector<LanePoint> & input, 
 std::vector<LanePoint> convert_to_polyline(const lanelet::ConstLineString3d & line_string) noexcept
 {
   std::vector<LanePoint> output;
+  output.reserve(line_string.size());
   for (const lanelet::Point3d::ConstType & point : line_string) {
     output.emplace_back(point.x(), point.y(), point.z());
   }
