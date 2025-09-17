@@ -734,6 +734,9 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
 
   // in STOPPED state
   if (m_control_state == ControlState::STOPPED) {
+    // keep STOPPED if is_under_control is false
+    if (!is_under_control && stopped_condition) return;
+
     // debug print
     if (has_nonzero_target_vel && !departure_condition_from_stopped) {
       debug_msg_once("target speed > 0, but departure condition is not met. Keep STOPPED.");
