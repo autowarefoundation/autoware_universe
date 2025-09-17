@@ -4,7 +4,6 @@
   <name>tier4_map_launch</name>
   <version>0.47.0</version>
   <description>The tier4_map_launch package</description>
-  <maintainer email="ryu.yamamoto@tier4.jp">Ryu Yamamoto</maintainer>
   <maintainer email="kento.yabuuchi.2@tier4.jp">Kento Yabuuchi</maintainer>
   <maintainer email="yamato.ando@tier4.jp">Yamato Ando</maintainer>
   <maintainer email="anh.nguyen.2@tier4.jp">NGUYEN Viet Anh</maintainer>
