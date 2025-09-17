@@ -22,7 +22,7 @@ namespace autoware::diffusion_planner::constants
 constexpr int WEIGHT_MAJOR_VERSION = 1;
 
 // Velocity thresholds
-constexpr double MOVING_VELOCITY_THRESHOLD_MPS = 0.2;
+constexpr float MOVING_VELOCITY_THRESHOLD_MPS = 0.2f;
 
 // Time constants
 constexpr double PREDICTION_TIME_STEP_S = 0.1;
