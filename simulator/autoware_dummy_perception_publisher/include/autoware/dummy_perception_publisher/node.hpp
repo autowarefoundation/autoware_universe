@@ -70,6 +70,7 @@ struct CommonParameters
 struct PredictedDummyObjectInfo
 {
   std::string predicted_uuid;
+  std::optional<geometry_msgs::msg::Point> last_known_position;
 };
 
 struct ObjectInfo
@@ -167,7 +168,6 @@ private:
   static constexpr size_t MAX_BUFFER_SIZE = 50;  // Store last 5 seconds at 10Hz
   std::map<std::string, PredictedDummyObjectInfo> dummy_predicted_info_map_;
   std::map<std::string, rclcpp::Time> dummy_mapping_timestamps_;
-  std::map<std::string, geometry_msgs::msg::Point> dummy_last_known_positions_;
   std::map<std::string, rclcpp::Time> dummy_creation_timestamps_;
   std::map<std::string, PredictedObject> dummy_last_used_predictions_;
   std::map<std::string, rclcpp::Time> dummy_last_used_prediction_times_;

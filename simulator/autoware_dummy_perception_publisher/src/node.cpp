@@ -474,7 +474,8 @@ void DummyPerceptionPublisherNode::timerCallback()
 
     // Update last known position based on calculated ObjectInfo position
     const auto & dummy_uuid_str = autoware_utils_uuid::to_hex_string(object.id);
-    dummy_last_known_positions_[dummy_uuid_str] = obj_info.pose_covariance_.pose.position;
+    dummy_predicted_info_map_[dummy_uuid_str].last_known_position =
+      obj_info.pose_covariance_.pose.position;
 
     // Track object creation time if not already tracked
     if (dummy_creation_timestamps_.find(dummy_uuid_str) == dummy_creation_timestamps_.end()) {
@@ -864,14 +865,14 @@ std::map<std::string, Point> DummyPerceptionPublisherNode::collectDummyObjectPos
 
     // Use last known position if available (which includes straight-line calculated position)
     // Otherwise calculate current position using straight-line model
-    auto last_pos_it = dummy_last_known_positions_.find(dummy_uuid_str);
+    auto info_it = dummy_predicted_info_map_.find(dummy_uuid_str);
 
     dummy_positions[dummy_uuid_str] =
-      (last_pos_it != dummy_last_known_positions_.end())
-        ? last_pos_it->second
+      (info_it != dummy_predicted_info_map_.end() &&
+       info_it->second.last_known_position.has_value())
+        ? info_it->second.last_known_position.value()
         : ObjectInfo::calculateStraightLinePosition(dummy_obj, current_time).position;
 
-    auto info_it = dummy_predicted_info_map_.find(dummy_uuid_str);
     if (info_it == dummy_predicted_info_map_.end() || info_it->second.predicted_uuid.empty()) {
       unmapped_dummy_uuids.push_back(dummy_uuid_str);
     }
@@ -954,10 +955,11 @@ void DummyPerceptionPublisherNode::createRemappingsForDisappearedObjects(
     if (current_pos_it == dummy_positions.end()) {
       continue;
     }
-    auto last_pos_it = dummy_last_known_positions_.find(dummy_uuid);
+    auto info_it = dummy_predicted_info_map_.find(dummy_uuid);
 
-    remapping_position = (last_pos_it != dummy_last_known_positions_.end())
-                           ? last_pos_it->second
+    remapping_position = (info_it != dummy_predicted_info_map_.end() &&
+                          info_it->second.last_known_position.has_value())
+                           ? info_it->second.last_known_position.value()
                            : current_pos_it->second;
     // Find closest available predicted object for remapping
     auto best_match = findBestPredictedObjectMatch(
@@ -1047,7 +1049,6 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
       continue;
     }
     dummy_mapping_timestamps_.erase(it->first);
-    dummy_last_known_positions_.erase(it->first);
     dummy_creation_timestamps_.erase(it->first);
     dummy_last_used_predictions_.erase(it->first);
     dummy_last_used_prediction_times_.erase(it->first);
@@ -1058,7 +1059,7 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
   // Update last known positions for all dummy objects
   for (const auto & dummy_obj : dummy_objects) {
     const auto dummy_uuid_str = autoware_utils_uuid::to_hex_string(dummy_obj.id);
-    dummy_last_known_positions_[dummy_uuid_str] =
+    dummy_predicted_info_map_[dummy_uuid_str].last_known_position =
       dummy_obj.initial_state.pose_covariance.pose.position;
   }
 }
