@@ -997,7 +997,7 @@ void DummyPerceptionPublisherNode::createRemappingsForDisappearedObjects(
     // Only create mapping if predicted object is still available
     if (available_predicted_uuids.find(predicted_uuid) != available_predicted_uuids.end()) {
       dummy_predicted_info_map_[dummy_uuid].predicted_uuid = predicted_uuid;
-      dummy_mapping_timestamps_[dummy_uuid] = current_time;
+      dummy_predicted_info_map_[dummy_uuid].mapping_timestamp = current_time;
       available_predicted_uuids.erase(predicted_uuid);
     }
   }
@@ -1040,7 +1040,7 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
 
     if (best_match) {
       dummy_predicted_info_map_[dummy_uuid].predicted_uuid = *best_match;
-      dummy_mapping_timestamps_[dummy_uuid] = current_time;
+      dummy_predicted_info_map_[dummy_uuid].mapping_timestamp = current_time;
       available_predicted_uuids.erase(*best_match);
     }
   }
@@ -1056,7 +1056,6 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
       ++it;
       continue;
     }
-    dummy_mapping_timestamps_.erase(it->first);
     it = dummy_predicted_info_map_.erase(it);
   }
 
