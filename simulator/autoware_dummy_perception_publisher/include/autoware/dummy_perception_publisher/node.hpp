@@ -31,6 +31,8 @@
 #include <tf2/LinearMath/Transform.h>
 #include <tf2/convert.h>
 #include <tf2/transform_datatypes.h>
+
+#include <optional>
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #else
@@ -64,6 +66,12 @@ struct CommonParameters
   double speed_check_threshold;
   std::string path_selection_strategy;  // "highest_confidence" or "random"
 };
+
+struct PredictedDummyObjectInfo
+{
+  std::string predicted_uuid;
+};
+
 struct ObjectInfo
 {
   ObjectInfo(const DummyObject & object, const rclcpp::Time & current_time);
@@ -157,7 +165,7 @@ private:
   std::vector<DummyObject> objects_;
   std::deque<PredictedObjects> predicted_objects_buffer_;
   static constexpr size_t MAX_BUFFER_SIZE = 50;  // Store last 5 seconds at 10Hz
-  std::map<std::string, std::string> dummy_to_predicted_uuid_map_;
+  std::map<std::string, PredictedDummyObjectInfo> dummy_predicted_info_map_;
   std::map<std::string, rclcpp::Time> dummy_mapping_timestamps_;
   std::map<std::string, geometry_msgs::msg::Point> dummy_last_known_positions_;
   std::map<std::string, rclcpp::Time> dummy_creation_timestamps_;

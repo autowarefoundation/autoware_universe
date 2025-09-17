@@ -710,12 +710,12 @@ std::pair<PredictedObject, rclcpp::Time> DummyPerceptionPublisherNode::findMatch
   const auto & obj_uuid_str = autoware_utils_uuid::to_hex_string(object_id);
 
   // Check if this dummy object is mapped to a predicted object
-  auto mapping_it = dummy_to_predicted_uuid_map_.find(obj_uuid_str);
-  if (mapping_it == dummy_to_predicted_uuid_map_.end()) {
+  auto mapping_it = dummy_predicted_info_map_.find(obj_uuid_str);
+  if (mapping_it == dummy_predicted_info_map_.end() || mapping_it->second.predicted_uuid.empty()) {
     return std::make_pair(empty_object, empty_time);
   }
 
-  const std::string & mapped_predicted_uuid = mapping_it->second;
+  const std::string & mapped_predicted_uuid = mapping_it->second.predicted_uuid;
 
   // Check if we should keep using the current prediction for at least min_keep_duration
   // Check if we have a last used prediction and if we should keep using it
@@ -832,9 +832,14 @@ std::vector<std::string> DummyPerceptionPublisherNode::findDisappearedPredictedO
 {
   std::vector<std::string> dummy_objects_to_remap;
 
-  for (const auto & mapping : dummy_to_predicted_uuid_map_) {
+  for (const auto & mapping : dummy_predicted_info_map_) {
     const std::string & dummy_uuid = mapping.first;
-    const std::string & predicted_uuid = mapping.second;
+    const std::string & predicted_uuid = mapping.second.predicted_uuid;
+
+    // Skip entries without a predicted UUID mapping
+    if (predicted_uuid.empty()) {
+      continue;
+    }
 
     // If the predicted object ID no longer exists, mark dummy for remapping
     if (available_predicted_uuids.find(predicted_uuid) == available_predicted_uuids.end()) {
@@ -866,7 +871,8 @@ std::map<std::string, Point> DummyPerceptionPublisherNode::collectDummyObjectPos
         ? last_pos_it->second
         : ObjectInfo::calculateStraightLinePosition(dummy_obj, current_time).position;
 
-    if (dummy_to_predicted_uuid_map_.find(dummy_uuid_str) == dummy_to_predicted_uuid_map_.end()) {
+    auto info_it = dummy_predicted_info_map_.find(dummy_uuid_str);
+    if (info_it == dummy_predicted_info_map_.end() || info_it->second.predicted_uuid.empty()) {
       unmapped_dummy_uuids.push_back(dummy_uuid_str);
     }
   }
@@ -932,7 +938,10 @@ void DummyPerceptionPublisherNode::createRemappingsForDisappearedObjects(
 
   // First, remove old mappings
   for (const auto & dummy_uuid : dummy_objects_to_remap) {
-    dummy_to_predicted_uuid_map_.erase(dummy_uuid);
+    auto it = dummy_predicted_info_map_.find(dummy_uuid);
+    if (it != dummy_predicted_info_map_.end()) {
+      it->second.predicted_uuid.clear();
+    }
   }
 
   // Find best matches for all objects that need remapping
@@ -977,7 +986,7 @@ void DummyPerceptionPublisherNode::createRemappingsForDisappearedObjects(
 
     // Only create mapping if predicted object is still available
     if (available_predicted_uuids.find(predicted_uuid) != available_predicted_uuids.end()) {
-      dummy_to_predicted_uuid_map_[dummy_uuid] = predicted_uuid;
+      dummy_predicted_info_map_[dummy_uuid].predicted_uuid = predicted_uuid;
       dummy_mapping_timestamps_[dummy_uuid] = current_time;
       available_predicted_uuids.erase(predicted_uuid);
     }
@@ -1020,7 +1029,7 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
       dummy_uuid, dummy_pos, available_predicted_uuids, predicted_positions, predicted_objects);
 
     if (best_match) {
-      dummy_to_predicted_uuid_map_[dummy_uuid] = *best_match;
+      dummy_predicted_info_map_[dummy_uuid].predicted_uuid = *best_match;
       dummy_mapping_timestamps_[dummy_uuid] = current_time;
       available_predicted_uuids.erase(*best_match);
     }
@@ -1032,7 +1041,7 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
   }
 
   // Clean up mappings for dummy objects that no longer exist
-  for (auto it = dummy_to_predicted_uuid_map_.begin(); it != dummy_to_predicted_uuid_map_.end();) {
+  for (auto it = dummy_predicted_info_map_.begin(); it != dummy_predicted_info_map_.end();) {
     if (current_dummy_uuids.find(it->first) != current_dummy_uuids.end()) {
       ++it;
       continue;
@@ -1043,7 +1052,7 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
     dummy_last_used_predictions_.erase(it->first);
     dummy_last_used_prediction_times_.erase(it->first);
     dummy_prediction_update_timestamps_.erase(it->first);
-    it = dummy_to_predicted_uuid_map_.erase(it);
+    it = dummy_predicted_info_map_.erase(it);
   }
 
   // Update last known positions for all dummy objects
