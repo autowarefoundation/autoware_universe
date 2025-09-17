@@ -447,18 +447,19 @@ void DummyPerceptionPublisherNode::timerCallback()
 
         // Check if we have a last used prediction for this object
         const auto & dummy_uuid_str = autoware_utils_uuid::to_hex_string(object.id);
-        auto last_used_pred_it = dummy_last_used_predictions_.find(dummy_uuid_str);
+        auto info_it = dummy_predicted_info_map_.find(dummy_uuid_str);
         auto last_used_time_it = dummy_last_used_prediction_times_.find(dummy_uuid_str);
 
         if (
-          last_used_pred_it != dummy_last_used_predictions_.end() &&
+          info_it != dummy_predicted_info_map_.end() &&
+          info_it->second.last_used_prediction.has_value() &&
           last_used_time_it != dummy_last_used_prediction_times_.end()) {
           RCLCPP_DEBUG(
             rclcpp::get_logger("dummy_perception_publisher"),
             "Using last known prediction for lost object with ID: %s", dummy_uuid_str.c_str());
           return ObjectInfo(
-            object, last_used_pred_it->second, last_used_time_it->second, current_time,
-            switch_time_threshold_);
+            object, info_it->second.last_used_prediction.value(), last_used_time_it->second,
+            current_time, switch_time_threshold_);
         }
 
         RCLCPP_DEBUG(
@@ -721,11 +722,17 @@ std::pair<PredictedObject, rclcpp::Time> DummyPerceptionPublisherNode::findMatch
 
   // Check if we should keep using the current prediction for at least min_keep_duration
   // Check if we have a last used prediction and if we should keep using it
-  auto last_used_pred_it = dummy_last_used_predictions_.find(obj_uuid_str);
+  auto info_it = dummy_predicted_info_map_.find(obj_uuid_str);
+  if (info_it == dummy_predicted_info_map_.end()) {
+    // Create entry if it doesn't exist (needed for later updates)
+    dummy_predicted_info_map_[obj_uuid_str];
+    info_it = dummy_predicted_info_map_.find(obj_uuid_str);
+  }
+
   auto last_update_time_it = dummy_prediction_update_timestamps_.find(obj_uuid_str);
 
   if (
-    last_used_pred_it != dummy_last_used_predictions_.end() &&
+    info_it->second.last_used_prediction.has_value() &&
     last_update_time_it != dummy_prediction_update_timestamps_.end()) {
     const double time_since_last_update = (current_time - last_update_time_it->second).seconds();
 
@@ -733,7 +740,8 @@ std::pair<PredictedObject, rclcpp::Time> DummyPerceptionPublisherNode::findMatch
     if (time_since_last_update < min_keep_duration_) {
       auto last_used_time_it = dummy_last_used_prediction_times_.find(obj_uuid_str);
       if (last_used_time_it != dummy_last_used_prediction_times_.end()) {
-        return std::make_pair(last_used_pred_it->second, last_used_time_it->second);
+        return std::make_pair(
+          info_it->second.last_used_prediction.value(), last_used_time_it->second);
       }
     }
   }
@@ -802,7 +810,7 @@ std::pair<PredictedObject, rclcpp::Time> DummyPerceptionPublisherNode::findMatch
         }
 
         // Store this as the new prediction to use for some seconds
-        dummy_last_used_predictions_[obj_uuid_str] = modified_predicted_object;
+        dummy_predicted_info_map_[obj_uuid_str].last_used_prediction = modified_predicted_object;
         dummy_last_used_prediction_times_[obj_uuid_str] = msg_time;
         dummy_prediction_update_timestamps_[obj_uuid_str] = current_time;
 
@@ -1050,7 +1058,6 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
       continue;
     }
     dummy_mapping_timestamps_.erase(it->first);
-    dummy_last_used_predictions_.erase(it->first);
     dummy_last_used_prediction_times_.erase(it->first);
     dummy_prediction_update_timestamps_.erase(it->first);
     it = dummy_predicted_info_map_.erase(it);
@@ -1161,13 +1168,16 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
 
   // Calculate expected position based on last known trajectory if available
   Point comparison_position = expected_position;
-  auto last_used_pred_it = dummy_last_used_predictions_.find(dummy_uuid_str);
-  if (last_used_pred_it == dummy_last_used_predictions_.end()) {
+  auto info_it = dummy_predicted_info_map_.find(dummy_uuid_str);
+  if (
+    info_it == dummy_predicted_info_map_.end() ||
+    !info_it->second.last_used_prediction.has_value()) {
     return true;  // No last prediction, allow the match
   }
 
   // Calculate where the dummy object should be based on its last known trajectory
-  const auto & last_trajectory = last_used_pred_it->second.kinematics.predicted_paths.at(0);
+  const auto & last_trajectory =
+    info_it->second.last_used_prediction.value().kinematics.predicted_paths.at(0);
   const auto expected_pos = calculateExpectedPosition(last_trajectory, dummy_uuid_str);
   if (expected_pos.has_value()) {
     comparison_position = expected_pos.value();
