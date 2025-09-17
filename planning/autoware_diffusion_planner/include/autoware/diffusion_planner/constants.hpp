@@ -18,6 +18,9 @@
 namespace autoware::diffusion_planner::constants
 {
 
+// WEIGHT_MAJOR_VERSION should match the major version in diffusion_planner.param.json
+constexpr int WEIGHT_MAJOR_VERSION = 1;
+
 // Velocity thresholds
 constexpr float MOVING_VELOCITY_THRESHOLD_MPS = 0.2f;
 
