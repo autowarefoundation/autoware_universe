@@ -281,6 +281,19 @@ bool set_goal(
     pre_refined_goal.point.longitudinal_velocity_mps =
       calcInterpolatedVelocity(input, closest_seg_idx_for_pre_goal);
 
+    // NOTE: add points for smooth spline interpolation between the input path and the
+    // pre_refined_goal.
+    PathPointWithLaneId pre_refined_mid_goal{};
+    constexpr double goal_to_pre_mid_goal_distance = -0.5;
+    pre_refined_mid_goal.point.pose =
+      autoware_utils::calc_offset_pose(goal, goal_to_pre_mid_goal_distance, 0.0, 0.0);
+    const size_t closest_seg_idx_for_pre_mid_goal =
+      findNearestSegmentIndex(input.points, pre_refined_mid_goal.point.pose, 3.0, M_PI_4);
+    pre_refined_mid_goal.point.pose.position.z = calcInterpolatedZ(
+      input, pre_refined_mid_goal.point.pose.position, closest_seg_idx_for_pre_mid_goal);
+    pre_refined_mid_goal.point.longitudinal_velocity_mps =
+      calcInterpolatedVelocity(input, closest_seg_idx_for_pre_mid_goal);
+
     // find min_dist_out_of_circle_index whose distance to goal is longer than search_radius_range
     const auto min_dist_out_of_circle_index_opt =
       findIndexOutOfGoalSearchRange(input.points, goal, goal_lane_id, search_radius_range);
@@ -290,16 +303,17 @@ bool set_goal(
     const size_t min_dist_out_of_circle_index = min_dist_out_of_circle_index_opt.value();
 
     // create output points
-    output_ptr->points.reserve(output_ptr->points.size() + min_dist_out_of_circle_index + 3);
+    output_ptr->points.reserve(output_ptr->points.size() + min_dist_out_of_circle_index + 4);
     for (size_t i = 0; i <= min_dist_out_of_circle_index; ++i) {
       output_ptr->points.push_back(input.points.at(i));
     }
     output_ptr->points.push_back(pre_refined_goal);
+    output_ptr->points.push_back(pre_refined_mid_goal);
     output_ptr->points.push_back(refined_goal);
 
     {  // fill skipped lane ids
       // pre refined goal
-      auto & pre_goal = output_ptr->points.at(output_ptr->points.size() - 2);
+      auto & pre_goal = output_ptr->points.at(output_ptr->points.size() - 3);
       for (size_t i = min_dist_out_of_circle_index + 1; i < input.points.size(); ++i) {
         for (const auto target_lane_id : input.points.at(i).lane_ids) {
           const bool is_lane_id_found =
@@ -307,6 +321,19 @@ bool set_goal(
             pre_goal.lane_ids.end();
           if (!is_lane_id_found) {
             pre_goal.lane_ids.push_back(target_lane_id);
+          }
+        }
+      }
+
+      // pre refined goal
+      auto & pre_mid_goal = output_ptr->points.at(output_ptr->points.size() - 2);
+      for (size_t i = min_dist_out_of_circle_index + 1; i < input.points.size(); ++i) {
+        for (const auto target_lane_id : input.points.at(i).lane_ids) {
+          const bool is_lane_id_found =
+            std::find(pre_mid_goal.lane_ids.begin(), pre_mid_goal.lane_ids.end(), target_lane_id) !=
+            pre_mid_goal.lane_ids.end();
+          if (!is_lane_id_found) {
+            pre_mid_goal.lane_ids.push_back(target_lane_id);
           }
         }
       }

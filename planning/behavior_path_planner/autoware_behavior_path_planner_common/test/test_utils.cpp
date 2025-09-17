@@ -275,7 +275,7 @@ TEST_F(BehaviorPathPlanningUtilTest, refinePathForGoal)
     const double search_radius_range = 1.0;
     const auto refined_path =
       refinePathForGoal(search_radius_range, search_rad_range, path, goal_pose, goal_lane_id);
-    EXPECT_EQ(refined_path.points.size(), 7);
+    EXPECT_EQ(refined_path.points.size(), 8);
     EXPECT_DOUBLE_EQ(refined_path.points.back().point.longitudinal_velocity_mps, 0.0);
     EXPECT_DOUBLE_EQ(refined_path.points.back().point.pose.position.x, 5.2);
   }
