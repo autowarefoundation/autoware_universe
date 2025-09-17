@@ -3,8 +3,9 @@
 <package format="3">
   <name>autoware_ground_segmentation_cuda</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>GPU-Accelerated ground segmentation</description>
   <maintainer email="dai.nguyen@tier4.jp">badai-nguyen</maintainer>
+  <maintainer email="anh.nguyen.2@tier4.jp">Anh Nguyen</maintainer>
   <author email="dai.nguyen@tier4.jp">badai-nguyen</author>
   <license>Apache License 2.0</license>
 
