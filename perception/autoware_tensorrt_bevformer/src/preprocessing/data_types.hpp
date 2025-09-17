@@ -28,7 +28,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore BEVFORMER, bevformer
+// cspell:ignore BEVFORMER
 
 #ifndef PREPROCESSING__DATA_TYPES_HPP_
 #define PREPROCESSING__DATA_TYPES_HPP_
@@ -49,16 +49,13 @@ namespace preprocessing
 
 class DataDict;
 
-// A variant type that can store different types of data
 using DataValue = std::variant<
   bool, int, float, std::string, std::vector<float>, std::vector<int>, std::vector<std::string>,
   std::vector<cv::Mat>, std::vector<cv::Size>, std::shared_ptr<DataDict>>;
 
-// A dictionary type for storing metadata
 class DataDict : public std::map<std::string, DataValue>
 {
 public:
-  // Default constructor
   DataDict() = default;
 
   // Check if a key corresponds to a nested dictionary

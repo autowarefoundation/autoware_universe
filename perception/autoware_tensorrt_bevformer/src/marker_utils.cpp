@@ -84,7 +84,7 @@ visualization_msgs::msg::MarkerArray createMarkerArray(
   // Default (ignore) (purple)
   std::array<float, 4> default_color = {1.0f, 0.0f, 1.0f, 1.0f};
 
-  // First, add a deletion marker to clear all previous markers
+  // Add a deletion marker to clear all previous markers
   int id = 0;
   visualization_msgs::msg::Marker deletion_marker;
   deletion_marker.header = detected_objects.header;

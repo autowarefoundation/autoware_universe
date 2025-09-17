@@ -46,10 +46,8 @@ namespace bevformer
 namespace preprocessing
 {
 
-// RandomScaleImageMultiViewImageTransform implementation
 DataDict RandomScaleImageMultiViewImageTransform::operator()(DataDict results)
 {
-  // Get the images
   std::vector<cv::Mat> images;
   if (!results.count("img") || !std::holds_alternative<std::vector<cv::Mat>>(results["img"])) {
     std::cerr << "Expected vector<cv::Mat> for 'img' key" << std::endl;
@@ -74,7 +72,6 @@ DataDict RandomScaleImageMultiViewImageTransform::operator()(DataDict results)
   // Apply scaling
   PreprocessResult processed = RandomScaleImageMultiViewImage(images, lidar2img, scale_);
 
-  // Update results
   results["img"] = processed.images;
   results["img_shape"] = processed.img_shape;
   results["lidar2img"] = processed.lidar2img;
@@ -96,29 +93,22 @@ PreprocessResult RandomScaleImageMultiViewImage(
 {
   PreprocessResult result;
 
-  // Create a 4x4 identity matrix
   cv::Mat scale_factor = cv::Mat::eye(4, 4, CV_32F);
 
-  // Scale the x and y axes of the matrix (image width and height)
   scale_factor.at<float>(0, 0) *= rand_scale;
   scale_factor.at<float>(1, 1) *= rand_scale;
 
-  // Loop through all input images (from different cameras)
   for (size_t i = 0; i < input_images.size(); ++i) {
     const auto & img = input_images[i];
 
-    // Compute new width and height by applying the scale
     int new_width = static_cast<int>(img.cols * rand_scale);
     int new_height = static_cast<int>(img.rows * rand_scale);
 
-    // Resize the image using OpenCV
     cv::Mat resized_img;
     cv::resize(img, resized_img, cv::Size(new_width, new_height));
 
-    // Save the resized image
     result.images.push_back(resized_img);
 
-    // Save the new image shape
     result.img_shape.push_back(resized_img.size());
 
     // Multiply the lidar-to-image matrix with the scale matrix if available
@@ -131,7 +121,6 @@ PreprocessResult RandomScaleImageMultiViewImage(
   return result;
 }
 
-// PadMultiViewImageTransform implementation
 DataDict PadMultiViewImageTransform::operator()(DataDict results)
 {
   // Convert to the Results struct expected by PadMultiViewImages
@@ -147,7 +136,6 @@ DataDict PadMultiViewImageTransform::operator()(DataDict results)
   // Apply padding
   PadMultiViewImages(padResults, size_.get(), size_divisor_, pad_val_);
 
-  // Update results dictionary
   results["img"] = padResults.img;
   results["ori_shape"] = padResults.ori_shape;
   results["img_shape"] = padResults.img_shape;
@@ -185,17 +173,15 @@ void PadMultiViewImages(
   // Clear previous metadata in case function is reused
   results.ori_shape.clear();
   results.img_shape.clear();
-  std::vector<cv::Mat> padded_images;  // Will hold the padded images
+  std::vector<cv::Mat> padded_images;
 
-  // Loop over each input image
   for (const auto & img : results.img) {
     // Store original image size (width, height)
     results.ori_shape.push_back(cv::Size(img.cols, img.rows));
 
-    cv::Mat padded;             // Output padded image
-    int bottom = 0, right = 0;  // Amount of padding to add at bottom and right
+    cv::Mat padded;
+    int bottom = 0, right = 0;
 
-    // If padding to a fixed size
     if (fixed_size) {
       // Calculate how much padding is needed on the bottom and right
       bottom = std::max(0, fixed_size->height - img.rows);
@@ -206,9 +192,8 @@ void PadMultiViewImages(
         img, padded, 0, bottom, 0, right, cv::BORDER_CONSTANT,
         cv::Scalar(pad_val, pad_val, pad_val));
 
-      // Save the fixed size info
       results.pad_fixed_size = *fixed_size;
-      results.pad_size_divisor = 0;  // Not using size_divisor mode
+      results.pad_size_divisor = 0;
     } else {
       // Compute nearest size that is divisible by size_divisor
       int new_h = (img.rows + size_divisor - 1) / size_divisor * size_divisor;
@@ -223,23 +208,19 @@ void PadMultiViewImages(
         img, padded, 0, bottom, 0, right, cv::BORDER_CONSTANT,
         cv::Scalar(pad_val, pad_val, pad_val));
 
-      // Save divisor info
-      results.pad_fixed_size = cv::Size(0, 0);  // Not using fixed size
+      results.pad_fixed_size = cv::Size(0, 0);
       results.pad_size_divisor = size_divisor;
     }
 
-    // Save the new image size after padding
     results.img_shape.push_back(cv::Size(padded.cols, padded.rows));
 
     // Add padded image to the output list
     padded_images.push_back(padded);
   }
 
-  // Replace original images with padded versions
   results.img = padded_images;
 }
 
-// DefaultFormatBundle3DTransform implementation
 DataDict DefaultFormatBundle3DTransform::operator()(DataDict results)
 {
   return DefaultFormatBundle3D(results);
@@ -269,12 +250,10 @@ DataDict DefaultFormatBundle3D(const DataDict & results)
           return formatted_results;
         }
 
-        // Get dimensions
         int height = img.rows;
         int width = img.cols;
-        int channels = img.channels();  // Should be 3
+        int channels = img.channels();
 
-        // Split channels
         std::vector<cv::Mat> channels_vec;
         cv::split(img, channels_vec);
 
@@ -283,15 +262,11 @@ DataDict DefaultFormatBundle3D(const DataDict & results)
 
         // Copy each channel's data into the correct position
         for (int c = 0; c < channels; c++) {
-          // Get source data
           const float * src = channels_vec[c].ptr<float>();
-          // Get destination row in transposed matrix
           float * dst = transposed.ptr<float>(c);
-          // Copy the entire channel
           std::memcpy(dst, src, height * width * sizeof(float));
         }
 
-        // Reshape to get proper CHW dimensions
         transposed = transposed.reshape(1, {channels, height, width});
 
         // Ensure memory is contiguous

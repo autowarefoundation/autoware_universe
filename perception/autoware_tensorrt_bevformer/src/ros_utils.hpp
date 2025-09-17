@@ -28,7 +28,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore BEVFORMER, bevformer
+// cspell:ignore BEVFORMER
 
 #ifndef ROS_UTILS_HPP_
 #define ROS_UTILS_HPP_

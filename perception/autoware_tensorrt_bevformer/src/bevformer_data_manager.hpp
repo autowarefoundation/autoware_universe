@@ -126,13 +126,11 @@ private:
 
   bool is_first_frame_ = true;  // Track first frame for real-world usage
 
-  std::vector<float> current_tmp_pos_;  // Store tmp_pos for later update
-  float current_tmp_angle_;             // Store tmp_angle for later update
+  std::vector<float> current_tmp_pos_;
+  float current_tmp_angle_;
 
-  // Previous BEV data
   std::vector<float> prev_bev_;
 
-  // Previous frame info
   struct PrevFrameInfo
   {
     std::vector<float> prev_pos{0.0f, 0.0f, 0.0f};

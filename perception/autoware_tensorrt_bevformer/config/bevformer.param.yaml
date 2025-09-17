@@ -1,5 +1,5 @@
 /**:
-  # cspell:ignore bevformer, thre
+  # cspell:ignore thre
 
   ros__parameters:
     data_params:
@@ -25,13 +25,11 @@
       onnx_file: "$(env HOME)/autoware_data/tensorrt_bevformer/bevformer_small.onnx"
       auto_convert: true
       workspace_size: 4096
-      plugin_path: ""
       precision: "fp16"
 
     post_process_params:
       score_thre: 0.2
       has_twist: true
-      debug_mode: false
       class_names:
         - "car"
         - "truck"

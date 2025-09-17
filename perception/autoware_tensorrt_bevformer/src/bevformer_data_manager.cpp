@@ -47,11 +47,9 @@ namespace tensorrt_bevformer
 
 BEVFormerDataManager::BEVFormerDataManager(const rclcpp::Logger & logger) : logger_(logger)
 {
-  // Initialize prev_frame_info
   prev_frame_info_.prev_pos = {0.0f, 0.0f, 0.0f};
   prev_frame_info_.prev_angle = 0.0f;
 
-  // Initialize current_tmp_angle_
   current_tmp_angle_ = 0.0f;
 
   RCLCPP_INFO(logger_, "BEVFormerDataManager initialized");
@@ -59,16 +57,13 @@ BEVFormerDataManager::BEVFormerDataManager(const rclcpp::Logger & logger) : logg
 
 void BEVFormerDataManager::initializePrevBev(const std::vector<int64_t> & shape)
 {
-  // Calculate the total size
   size_t total_size = 1;
   for (const auto & dim : shape) {
     total_size *= dim;
   }
 
-  // Resize the vector
   prev_bev_.resize(total_size);
 
-  // Generate random values
   generateRandomBev();
 
   RCLCPP_INFO(logger_, "Initialized prev_bev with %zu random values", total_size);
@@ -99,7 +94,7 @@ float BEVFormerDataManager::getUsePrevBev()
     is_first_frame_ = false;  // Set to false after first use
     return 0.0f;              // Don't use previous BEV for first frame
   }
-  return 1.0f;  // Always use previous BEV after first frame
+  return 1.0f;  // To use previous BEV after first frame
 }
 
 std::vector<float> BEVFormerDataManager::processCanBus(
@@ -161,7 +156,6 @@ std::vector<float> BEVFormerDataManager::processCanbusWithTemporal(
     return can_bus;
   }
 
-  // Make a copy of the CAN bus data
   std::vector<float> processed_can_bus = can_bus;
 
   // Store current position and angle BEFORE modifications

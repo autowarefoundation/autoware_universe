@@ -28,8 +28,6 @@
  * limitations under the License.
  */
 
-// cspell:ignore bevformer
-
 #include "bevformer_inference_engine.hpp"
 
 #include "ament_index_cpp/get_package_prefix.hpp"
@@ -172,7 +170,7 @@ bool BEVFormerInferenceEngine::loadPlugins(const std::string & plugin_path)
 
   plugin_handle_ = handle;
 
-  // Get and register plugin registry
+  // To Get and register plugin registry
   auto getPluginRegistryFn = (nvinfer1::IPluginRegistry * (*)()) dlsym(handle, "getPluginRegistry");
   if (!getPluginRegistryFn) {
     RCLCPP_ERROR(logger_, "Failed to find getPluginRegistry function: %s", dlerror());
@@ -315,7 +313,7 @@ bool BEVFormerInferenceEngine::buildEngineFromOnnx(
     return false;
   }
 
-  // Start building engine
+  // Starts to build engine
   auto start_time = std::chrono::high_resolution_clock::now();
 
   nvinfer1::IBuilder * builder = nvinfer1::createInferBuilder(gLogger);
@@ -355,7 +353,6 @@ bool BEVFormerInferenceEngine::buildEngineFromOnnx(
     return false;
   }
 
-  // Create config
   nvinfer1::IBuilderConfig * config = builder->createBuilderConfig();
   if (!config) {
     RCLCPP_ERROR(logger_, "Failed to create builder config");
@@ -427,7 +424,7 @@ bool BEVFormerInferenceEngine::buildEngineFromOnnx(
 
   RCLCPP_INFO(logger_, "Engine built and saved successfully in %ld seconds", duration);
 
-  // Now initialize with the newly created engine
+  // Initialize with the newly created engine
   return initialize(effective_engine_file, plugin_path);
 }
 
@@ -796,7 +793,7 @@ BEVFormerInferenceEngine::runInference(
 
     // Execute inference
     CHECK_CUDA(cudaEventRecord(start_event, stream));
-    CHECK_CUDA(cudaStreamSynchronize(stream));  // Ensure all data is transferred
+    CHECK_CUDA(cudaStreamSynchronize(stream));  // To ensure all data is transferred
 
     if (!context_->enqueueV3(stream)) {
       RCLCPP_ERROR(logger_, "Failed to run inference");
@@ -824,7 +821,6 @@ BEVFormerInferenceEngine::runInference(
 
     CHECK_CUDA(cudaStreamSynchronize(stream));
 
-    // Memory cleanup is handled automatically by CudaMemoryManager destructor
   } catch (const std::exception & e) {
     RCLCPP_ERROR(logger_, "Exception during inference: %s", e.what());
     // Cleanup events and stream
@@ -834,7 +830,6 @@ BEVFormerInferenceEngine::runInference(
     return std::make_tuple(std::vector<float>(), std::vector<float>(), std::vector<float>());
   }
 
-  // Cleanup events and stream
   CHECK_CUDA(cudaEventDestroy(start_event));
   CHECK_CUDA(cudaEventDestroy(end_event));
   CHECK_CUDA(cudaStreamDestroy(stream));

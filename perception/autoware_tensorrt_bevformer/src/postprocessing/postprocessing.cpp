@@ -38,7 +38,6 @@
 #include <utility>
 #include <vector>
 
-// Constructor for PostProcessor, initializes parameters.
 PostProcessor::PostProcessor(
   int nb_dec, int num_query, int cls_out_channels, int bbox_dims, int bev_h, int bev_w,
   float score_thr, int max_num, const std::vector<double> & pc_range,

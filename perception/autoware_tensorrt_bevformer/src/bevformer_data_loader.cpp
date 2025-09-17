@@ -28,8 +28,6 @@
  * limitations under the License.
  */
 
-// cspell:ignore bevformer
-
 #include "bevformer_data_loader.hpp"
 
 #include <opencv2/opencv.hpp>

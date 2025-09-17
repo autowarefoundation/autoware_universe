@@ -28,7 +28,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore BEVFORMER, bevformer
+// cspell:ignore BEVFORMER
 
 #ifndef MARKER_UTIL_HPP_
 #define MARKER_UTIL_HPP_

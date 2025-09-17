@@ -28,7 +28,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore BEVFORMER, bevformer
+// cspell:ignore BEVFORMER
 
 #ifndef PREPROCESSING__MULTI_SCALE_FLIP_AUG_3D_HPP_
 #define PREPROCESSING__MULTI_SCALE_FLIP_AUG_3D_HPP_
@@ -68,7 +68,7 @@ public:
   std::string toString() const;
 
 private:
-  std::shared_ptr<Compose> compose_;  // Composition of transforms
+  std::shared_ptr<Compose> compose_;
 };
 
 }  // namespace preprocessing

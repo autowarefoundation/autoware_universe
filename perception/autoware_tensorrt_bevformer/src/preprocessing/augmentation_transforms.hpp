@@ -28,7 +28,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore BEVFORMER, bevformer
+// cspell:ignore BEVFORMER
 
 #ifndef PREPROCESSING__AUGMENTATION_TRANSFORMS_HPP_
 #define PREPROCESSING__AUGMENTATION_TRANSFORMS_HPP_
@@ -52,11 +52,11 @@ namespace preprocessing
  */
 struct Results
 {
-  std::vector<cv::Mat> img;         // Padded images
-  std::vector<cv::Size> ori_shape;  // Original sizes
-  std::vector<cv::Size> img_shape;  // Final sizes after padding
-  cv::Size pad_fixed_size{0, 0};    // Fixed size for padding
-  int pad_size_divisor = 0;         // Divisor for padding
+  std::vector<cv::Mat> img;
+  std::vector<cv::Size> ori_shape;
+  std::vector<cv::Size> img_shape;
+  cv::Size pad_fixed_size{0, 0};
+  int pad_size_divisor = 0;
 };
 
 /**
@@ -64,9 +64,9 @@ struct Results
  */
 struct PreprocessResult
 {
-  std::vector<cv::Mat> images;      // Processed images
-  std::vector<cv::Mat> lidar2img;   // Transformed matrices
-  std::vector<cv::Size> img_shape;  // Final image sizes
+  std::vector<cv::Mat> images;
+  std::vector<cv::Mat> lidar2img;
+  std::vector<cv::Size> img_shape;
 };
 
 /**

@@ -116,7 +116,6 @@ TRTBEVFormerNode::TRTBEVFormerNode(const rclcpp::NodeOptions & node_options)
   onnx_file_ = this->declare_parameter<std::string>("model_params.onnx_file", "");
   workspace_size_ = this->declare_parameter<int>("model_params.workspace_size", 4096);
   auto_convert_ = this->declare_parameter<bool>("model_params.auto_convert", true);
-  plugin_path_ = this->declare_parameter<std::string>("model_params.plugin_path", "");
   precision_ = this->declare_parameter<std::string>("model_params.precision", "fp16");
   debug_mode_ = this->declare_parameter<bool>("post_process_params.debug_mode", false);
 
@@ -137,9 +136,9 @@ TRTBEVFormerNode::TRTBEVFormerNode(const rclcpp::NodeOptions & node_options)
 
   // Create publisher for detected
   pub_boxes_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
-    "~/output/boxes", rclcpp::QoS{1});
+    "~/output_boxes", rclcpp::QoS{1});
 
-  // Only create marker publisher if debug mode is enabled
+  // Only create a marker publisher if debug mode is enabled in launch command
   if (debug_mode_) {
     pub_markers_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
       "~/output_bboxes", rclcpp::QoS{1});
@@ -165,15 +164,12 @@ void TRTBEVFormerNode::initModel()
 
   // Initialize modular components
   try {
-    // Create the data manager
     RCLCPP_INFO(this->get_logger(), "Initializing data manager...");
     data_manager_ = std::make_unique<BEVFormerDataManager>(this->get_logger());
 
-    // Create the inference engine
     RCLCPP_INFO(this->get_logger(), "Initializing inference engine...");
     inference_engine_ = std::make_unique<BEVFormerInferenceEngine>(this->get_logger());
 
-    // Create the preprocessor
     RCLCPP_INFO(this->get_logger(), "Initializing preprocessor...");
     preprocessor_ = std::make_unique<BEVFormerPreprocessor>(this->get_logger(), this);
 
@@ -188,11 +184,11 @@ void TRTBEVFormerNode::initModel()
 
   // Initialize the TensorRT engine
   try {
-    // Check if auto-convert is enabled and we have an ONNX file
+    // Check if auto-convert is enabled
     if (auto_convert_ && !onnx_file_.empty()) {
       RCLCPP_INFO(this->get_logger(), "Auto-conversion enabled. Checking for engine file...");
 
-      // If engine file is not specified, generate one from the ONNX file
+      // If engine file is not specified, generate it from the ONNX file
       if (engine_file_.empty()) {
         // Create engine file path by replacing .onnx with .engine
         std::string base_path = onnx_file_;
@@ -230,7 +226,6 @@ void TRTBEVFormerNode::initModel()
           RCLCPP_ERROR(this->get_logger(), "Failed to initialize TensorRT inference engine");
         } else {
           RCLCPP_INFO(this->get_logger(), "TensorRT inference engine initialized successfully");
-          // Initialize data manager with prev_bev shape
           data_manager_->initializePrevBev(inference_engine_->getInputPrevBevShape());
         }
       } else {
@@ -336,7 +331,7 @@ void TRTBEVFormerNode::cameraInfoCallback(
   int idx, const sensor_msgs::msg::CameraInfo::SharedPtr msg)
 {
   if (caminfo_received_[idx]) {
-    return;  // already received
+    return;
   }
 
   // Get camera intrinsics
@@ -353,7 +348,6 @@ void TRTBEVFormerNode::cameraInfoCallback(
   cams2ego_rot_[idx] = rot;
   cams2ego_trans_[idx] = translation;
 
-  // CREATE VIEWPAD MATRIX
   Eigen::Matrix4d viewpad = Eigen::Matrix4d::Identity();
   viewpad.block<3, 3>(0, 0) = intrinsics;
   viewpad_matrices_[idx] = viewpad;
@@ -362,7 +356,7 @@ void TRTBEVFormerNode::cameraInfoCallback(
   camera_info_received_flag_ =
     std::all_of(caminfo_received_.begin(), caminfo_received_.end(), [](bool i) { return i; });
 
-  // Calculate static lidar2ego transform only once when all camera info is available
+  // Calculate static lidar2ego transform only once when all camera info are available
   if (camera_info_received_flag_ && !lidar2ego_transforms_ready_) {
     calculateStaticLidar2EgoTransform();
   }
@@ -470,7 +464,6 @@ void TRTBEVFormerNode::calculateSensor2LidarTransformsFromTF(
   }
 }
 
-// helper method to extract CAN bus data
 std::vector<float> TRTBEVFormerNode::extractCanBusFromKinematicState(
   const autoware_localization_msgs::msg::KinematicState::ConstSharedPtr & kinematic_state_msg)
 {
@@ -524,14 +517,12 @@ void TRTBEVFormerNode::callback(
 {
   auto t_preprocess_start = std::chrono::steady_clock::now();
 
-  // Extract CAN bus data from KinematicState message
   std::vector<float> latest_can_bus = extractCanBusFromKinematicState(can_bus_msg);
 
   // Create vector of image messages for transform calculation
   std::vector<sensor_msgs::msg::Image::ConstSharedPtr> image_msgs = {
     msg_f_img, msg_fr_img, msg_fl_img, msg_b_img, msg_bl_img, msg_br_img};
 
-  // Use the reference timestamp
   rclcpp::Time ref_time = this->now();
   RCLCPP_DEBUG(this->get_logger(), "Ref time Initialized");
   Eigen::Quaterniond ego2global_rot;

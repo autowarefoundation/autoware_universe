@@ -28,7 +28,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore BEVFORMER, bevformer
+// cspell:ignore BEVFORMER
 
 #ifndef PREPROCESSING__PREPROCESSING_PIPELINE_HPP_
 #define PREPROCESSING__PREPROCESSING_PIPELINE_HPP_

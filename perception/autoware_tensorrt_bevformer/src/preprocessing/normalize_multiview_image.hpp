@@ -28,7 +28,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore BEVFORMER, bevformer
+// cspell:ignore BEVFORMER
 
 #ifndef PREPROCESSING__NORMALIZE_MULTIVIEW_IMAGE_HPP_
 #define PREPROCESSING__NORMALIZE_MULTIVIEW_IMAGE_HPP_

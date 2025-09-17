@@ -52,7 +52,7 @@ public:
   virtual std::string toString() const = 0;
 };
 
-// Compose - Groups transforms together
+// Compose: Groups transforms together
 class Compose
 {
 public:

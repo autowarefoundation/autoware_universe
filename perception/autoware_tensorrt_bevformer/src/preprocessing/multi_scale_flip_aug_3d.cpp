@@ -51,7 +51,6 @@ DataDict MultiScaleFlipAug3D::operator()(DataDict results)
   // Create a copy to avoid modifying the original
   DataDict augmented_results = results;
 
-  // Apply composition of transforms
   if (compose_) {
     augmented_results = (*compose_)(augmented_results);
   }

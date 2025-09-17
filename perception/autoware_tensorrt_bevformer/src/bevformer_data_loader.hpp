@@ -28,7 +28,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore BEVFORMER, bevformer
+// cspell:ignore BEVFORMER
 
 #ifndef BEVFORMER_DATA_LOADER_HPP_
 #define BEVFORMER_DATA_LOADER_HPP_

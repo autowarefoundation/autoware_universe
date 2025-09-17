@@ -94,11 +94,9 @@ DataDict NormalizeMultiviewImage::operator()(DataDict results)
     normalized_images.push_back(normalized);
   }
 
-  // Update results
   results["img"] = normalized_images;
-
-  // Add normalization config
   results.setNestedDict("img_norm_cfg");
+
   auto & img_norm_cfg = results.getNestedDict("img_norm_cfg");
   img_norm_cfg["mean"] = std::vector<float>(mean_.begin(), mean_.end());
   img_norm_cfg["std"] = std::vector<float>(std_.begin(), std_.end());

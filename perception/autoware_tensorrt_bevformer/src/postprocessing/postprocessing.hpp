@@ -28,8 +28,6 @@
  * limitations under the License.
  */
 
-// cspell:ignore bevformer
-
 #pragma once
 #include "ros_utils.hpp"
 
@@ -46,7 +44,6 @@
 #include <unordered_map>
 #include <vector>
 
-// Representation of a single prediction dictionary
 struct PredictionDict
 {
   std::vector<std::vector<double>> bboxes;  // For 2D array of bounding boxes
@@ -56,7 +53,6 @@ struct PredictionDict
 using Box3D = autoware::tensorrt_bevformer::Box3D;
 using PredsDict = std::vector<PredictionDict>;
 
-// Detection structure
 struct Detection
 {
   std::vector<std::vector<double>> bboxes;
@@ -64,7 +60,6 @@ struct Detection
   std::vector<int> labels;
 };
 
-// List of detections
 using ResultList = std::vector<Detection>;
 
 class PostProcessor
@@ -85,7 +80,6 @@ public:
   std::vector<Box3D> post_process(
     const std::map<std::string, std::vector<double>> & reshapedOutputs) const;
 
-  // Making these public since they're accessed by standalone functions
   int nb_dec;
   int num_query;
   int cls_out_channels;
@@ -98,8 +92,6 @@ public:
   std::vector<double> post_center_range_;
 
 private:
-  // Helper method to load configuration
-  // bool loadConfig(const std::string& configFile);
 };
 
 // Function to denormalize bounding box coordinates

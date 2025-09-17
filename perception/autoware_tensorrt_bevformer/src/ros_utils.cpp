@@ -67,8 +67,6 @@ void box3DToDetectedObjects(
     if (box.label >= 0 && static_cast<size_t>(box.label) < class_names.size()) {
       const std::string & class_name = class_names[box.label];
 
-      // Map class name to appropriate autoware class
-      // This is a simple mapping and might need to be expanded
       if (class_name == "car") {
         classification.label = autoware_perception_msgs::msg::ObjectClassification::CAR;
       } else if (class_name == "truck") {

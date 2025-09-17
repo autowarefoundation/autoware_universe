@@ -28,7 +28,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore BEVFORMER, bevformer
+// cspell:ignore BEVFORMER
 
 #ifndef BEVFORMER_INFERENCE_ENGINE_HPP_
 #define BEVFORMER_INFERENCE_ENGINE_HPP_
@@ -125,23 +125,20 @@ private:
   nvinfer1::ICudaEngine * engine_ = nullptr;
   nvinfer1::IExecutionContext * context_ = nullptr;
 
-  // Logger for messages
   rclcpp::Logger logger_;
 
-  // Initialization flag
+
   bool initialized_ = false;
 
   // Helper function to get a string representation of precision type
   static std::string getPrecisionString(PrecisionType precision);
 
-  // Add these members
-  void * plugin_handle_ = nullptr;  // Store plugin library handle for cleanup
+  void * plugin_handle_ = nullptr;
 
-  // Add these helper methods
   std::string findPluginLibrary(const std::string & plugin_path);
   bool loadPlugins(const std::string & plugin_path);
 
-  // Input/output tensor shapes
+  // Input and output tensor shapes
   std::vector<int64_t> input_shape_image_;
   std::vector<int64_t> input_shape_prev_bev_;
   std::vector<int64_t> input_shape_can_bus_;
@@ -157,7 +154,6 @@ private:
   // Helper function to get tensor shapes from the engine
   void getTensorShapes();
 
-  // New helper methods for engine building
   bool saveEngineToDisk(const std::vector<char> & engine_data, const std::string & engine_file);
   static bool checkFileExists(const std::string & file_path);
 };

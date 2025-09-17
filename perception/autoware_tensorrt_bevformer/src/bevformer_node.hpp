@@ -28,7 +28,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore BEVFORMER, bevformer, thre, caminfo, intrin
+// cspell:ignore BEVFORMER, thre, caminfo, intrin
 
 #ifndef BEVFORMER_NODE_HPP_
 #define BEVFORMER_NODE_HPP_
@@ -159,22 +159,19 @@ private:
   std::vector<Eigen::Matrix3d> sensor2lidar_rotation_;
   std::vector<Eigen::Vector3d> sensor2lidar_translation_;
 
-  // Add the modular components
+  // To add the modular components
   std::unique_ptr<BEVFormerPreprocessor> preprocessor_;
   std::unique_ptr<BEVFormerInferenceEngine> inference_engine_;
   std::unique_ptr<BEVFormerDataManager> data_manager_;
 
-  // Helper function to calculate sensor2lidar transformations
   void calculateSensor2LidarTransformsFromTF(
     const std::vector<sensor_msgs::msg::Image::ConstSharedPtr> & image_msgs,
     const Eigen::Quaterniond & ego2global_rot_ref,
     const Eigen::Translation3d & ego2global_trans_ref);
 
-  // Helper function to extract CAN bus data
   std::vector<float> extractCanBusFromKinematicState(
     const autoware_localization_msgs::msg::KinematicState::ConstSharedPtr & kinematic_state_msg);
 
-  // Initialization methods
   void startCameraInfoSubscription();
   void checkInitialization();
   void initModel();

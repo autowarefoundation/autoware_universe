@@ -35,7 +35,7 @@ The core algorithm, named `BEVFormer`, unifies multi-view images into the BEV pe
 
 | Name              | Type                                             | Description                                 |
 | ----------------- | ------------------------------------------------ | ------------------------------------------- |
-| `~/output/boxes`  | `autoware_perception_msgs::msg::DetectedObjects` | detected objects                            |
+| `~/output_boxes`  | `autoware_perception_msgs::msg::DetectedObjects` | detected objects                            |
 | `~/output_bboxes` | `visualization_msgs::msg::MarkerArray`           | detected objects for nuScenes visualization |
 
 ## How to Use Tensorrt BEVFormer Node

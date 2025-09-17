@@ -81,12 +81,11 @@ DataDict BEVPreprocessingPipeline::processImages(
     std::cerr << "Warning: Expected 6 images, received " << images.size() << std::endl;
   }
 
-  // Store images - ensure they're float32
   std::vector<cv::Mat> image_copies;
   for (const auto & img : images) {
     cv::Mat float_img;
     if (img.type() != CV_32FC3) {
-      img.convertTo(float_img, CV_32FC3);  // Convert to float32
+      img.convertTo(float_img, CV_32FC3);
     } else {
       float_img = img.clone();
     }
@@ -97,7 +96,7 @@ DataDict BEVPreprocessingPipeline::processImages(
   // Store lidar2img matrices directly from the parameters
   results["lidar2img"] = lidar2img_matrices;
 
-  // Copy only normalization metadata
+  // Copy only metadata of normalization
   if (metadata.count("mean")) {
     results["mean"] = metadata.at("mean");
   }
