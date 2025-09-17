@@ -448,18 +448,18 @@ void DummyPerceptionPublisherNode::timerCallback()
         // Check if we have a last used prediction for this object
         const auto & dummy_uuid_str = autoware_utils_uuid::to_hex_string(object.id);
         auto info_it = dummy_predicted_info_map_.find(dummy_uuid_str);
-        auto last_used_time_it = dummy_last_used_prediction_times_.find(dummy_uuid_str);
 
         if (
           info_it != dummy_predicted_info_map_.end() &&
           info_it->second.last_used_prediction.has_value() &&
-          last_used_time_it != dummy_last_used_prediction_times_.end()) {
+          info_it->second.last_used_prediction_time.has_value()) {
           RCLCPP_DEBUG(
             rclcpp::get_logger("dummy_perception_publisher"),
             "Using last known prediction for lost object with ID: %s", dummy_uuid_str.c_str());
           return ObjectInfo(
-            object, info_it->second.last_used_prediction.value(), last_used_time_it->second,
-            current_time, switch_time_threshold_);
+            object, info_it->second.last_used_prediction.value(),
+            info_it->second.last_used_prediction_time.value(), current_time,
+            switch_time_threshold_);
         }
 
         RCLCPP_DEBUG(
@@ -738,10 +738,10 @@ std::pair<PredictedObject, rclcpp::Time> DummyPerceptionPublisherNode::findMatch
 
     // If less than min_keep_duration_ has passed since last update, keep using the same prediction
     if (time_since_last_update < min_keep_duration_) {
-      auto last_used_time_it = dummy_last_used_prediction_times_.find(obj_uuid_str);
-      if (last_used_time_it != dummy_last_used_prediction_times_.end()) {
+      if (info_it->second.last_used_prediction_time.has_value()) {
         return std::make_pair(
-          info_it->second.last_used_prediction.value(), last_used_time_it->second);
+          info_it->second.last_used_prediction.value(),
+          info_it->second.last_used_prediction_time.value());
       }
     }
   }
@@ -811,7 +811,7 @@ std::pair<PredictedObject, rclcpp::Time> DummyPerceptionPublisherNode::findMatch
 
         // Store this as the new prediction to use for some seconds
         dummy_predicted_info_map_[obj_uuid_str].last_used_prediction = modified_predicted_object;
-        dummy_last_used_prediction_times_[obj_uuid_str] = msg_time;
+        dummy_predicted_info_map_[obj_uuid_str].last_used_prediction_time = msg_time;
         dummy_prediction_update_timestamps_[obj_uuid_str] = current_time;
 
         return std::make_pair(modified_predicted_object, msg_time);
@@ -1058,7 +1058,6 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
       continue;
     }
     dummy_mapping_timestamps_.erase(it->first);
-    dummy_last_used_prediction_times_.erase(it->first);
     dummy_prediction_update_timestamps_.erase(it->first);
     it = dummy_predicted_info_map_.erase(it);
   }
@@ -1238,12 +1237,15 @@ std::optional<Point> DummyPerceptionPublisherNode::calculateExpectedPosition(
 
   // Calculate elapsed time from last prediction to current time
   const auto current_time = get_clock()->now();
-  const auto last_prediction_time_it = dummy_last_used_prediction_times_.find(dummy_uuid_str);
-  if (last_prediction_time_it == dummy_last_used_prediction_times_.end()) {
+  auto info_it = dummy_predicted_info_map_.find(dummy_uuid_str);
+  if (
+    info_it == dummy_predicted_info_map_.end() ||
+    !info_it->second.last_used_prediction_time.has_value()) {
     return std::nullopt;
   }
 
-  const double elapsed_time = (current_time - last_prediction_time_it->second).seconds();
+  const double elapsed_time =
+    (current_time - info_it->second.last_used_prediction_time.value()).seconds();
 
   // Calculate distance traveled based on elapsed time and dummy object speed
   const double speed = dummy_object.initial_state.twist_covariance.twist.linear.x;
