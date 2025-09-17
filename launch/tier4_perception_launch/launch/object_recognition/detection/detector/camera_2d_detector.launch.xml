@@ -130,7 +130,7 @@
     <include file="$(find-pkg-share autoware_tensorrt_yolox)/launch/yolox.launch.xml">
       <arg name="yolox_node_name" value="tensorrt_yolox$(var camera_index)"/>
       <arg name="image_transport_decompressor_node_name" value="image_transport_decompressor_node$(var camera_index)"/>
-      <arg name="input/image" value="$(var image_raw5)"/>
+      <arg name="input/image" value="$(var image_raw6)"/>
       <arg name="output/objects" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
     </include>
 
