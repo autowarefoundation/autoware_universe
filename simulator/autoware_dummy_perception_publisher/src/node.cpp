@@ -729,12 +729,11 @@ std::pair<PredictedObject, rclcpp::Time> DummyPerceptionPublisherNode::findMatch
     info_it = dummy_predicted_info_map_.find(obj_uuid_str);
   }
 
-  auto last_update_time_it = dummy_prediction_update_timestamps_.find(obj_uuid_str);
-
   if (
     info_it->second.last_used_prediction.has_value() &&
-    last_update_time_it != dummy_prediction_update_timestamps_.end()) {
-    const double time_since_last_update = (current_time - last_update_time_it->second).seconds();
+    info_it->second.prediction_update_timestamp.has_value()) {
+    const double time_since_last_update =
+      (current_time - info_it->second.prediction_update_timestamp.value()).seconds();
 
     // If less than min_keep_duration_ has passed since last update, keep using the same prediction
     if (time_since_last_update < min_keep_duration_) {
@@ -812,7 +811,7 @@ std::pair<PredictedObject, rclcpp::Time> DummyPerceptionPublisherNode::findMatch
         // Store this as the new prediction to use for some seconds
         dummy_predicted_info_map_[obj_uuid_str].last_used_prediction = modified_predicted_object;
         dummy_predicted_info_map_[obj_uuid_str].last_used_prediction_time = msg_time;
-        dummy_prediction_update_timestamps_[obj_uuid_str] = current_time;
+        dummy_predicted_info_map_[obj_uuid_str].prediction_update_timestamp = current_time;
 
         return std::make_pair(modified_predicted_object, msg_time);
       }
@@ -1058,7 +1057,6 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
       continue;
     }
     dummy_mapping_timestamps_.erase(it->first);
-    dummy_prediction_update_timestamps_.erase(it->first);
     it = dummy_predicted_info_map_.erase(it);
   }
 

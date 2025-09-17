@@ -74,6 +74,7 @@ struct PredictedDummyObjectInfo
   std::optional<rclcpp::Time> creation_timestamp;
   std::optional<PredictedObject> last_used_prediction;
   std::optional<rclcpp::Time> last_used_prediction_time;
+  std::optional<rclcpp::Time> prediction_update_timestamp;
 };
 
 struct ObjectInfo
@@ -171,7 +172,6 @@ private:
   static constexpr size_t MAX_BUFFER_SIZE = 50;  // Store last 5 seconds at 10Hz
   std::map<std::string, PredictedDummyObjectInfo> dummy_predicted_info_map_;
   std::map<std::string, rclcpp::Time> dummy_mapping_timestamps_;
-  std::map<std::string, rclcpp::Time> dummy_prediction_update_timestamps_;
   double visible_range_;
   double detection_successful_rate_;
   bool enable_ray_tracing_;
