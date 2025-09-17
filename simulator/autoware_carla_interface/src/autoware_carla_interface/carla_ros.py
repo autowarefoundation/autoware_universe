@@ -50,6 +50,12 @@ from .modules.carla_wrapper import SensorInterface
 
 
 class carla_ros2_interface(object):
+    def _create_sensor_qos(self):
+        """Create QoS profile for sensor data with BEST_EFFORT reliability."""
+        qos = QoSProfile(depth=10)
+        qos.reliability = ReliabilityPolicy.BEST_EFFORT
+        return qos
+
     def __init__(self):
         self.sensor_interface = SensorInterface()
         self.prev_timestamp = None
@@ -151,13 +157,10 @@ class carla_ros2_interface(object):
                 )
             elif sensor["type"] == "sensor.lidar.ray_cast":
                 if sensor["id"] in self.sensor_frequencies:
-                    # Create QoS profile with BEST_EFFORT to match concatenation node
-                    pointcloud_qos = QoSProfile(depth=10)
-                    pointcloud_qos.reliability = ReliabilityPolicy.BEST_EFFORT
                     self.pub_lidar[sensor["id"]] = self.ros2_node.create_publisher(
                         PointCloud2,
                         f'/sensing/lidar/{sensor["id"]}/pointcloud_before_sync',
-                        pointcloud_qos,
+                        self._create_sensor_qos(),
                     )
                 else:
                     self.ros2_node.get_logger().info(
