@@ -29,20 +29,20 @@ from launch_ros.substitutions import FindPackageShare
 def launch_setup(context, *args, **kwargs):
 
     ground_segmentation_node_param = ParameterFile(
-        param_file=LaunchConfiguration('cuda_ground_segmentation_node_param_path').perform(context),
+        param_file=LaunchConfiguration("cuda_ground_segmentation_node_param_path").perform(context),
         allow_substs=True,
     )
 
     nodes = [
         ComposableNode(
-            package='autoware_ground_segmentation_cuda',
-            plugin='autoware::cuda_ground_segmentation::CudaScanGroundSegmentationFilterNode',
-            name='cuda_scan_ground_segmentation_filter',
+            package="autoware_ground_segmentation_cuda",
+            plugin="autoware::cuda_ground_segmentation::CudaScanGroundSegmentationFilterNode",
+            name="cuda_scan_ground_segmentation_filter",
             remappings=[
-                ('~/input/pointcloud', LaunchConfiguration('input/pointcloud')),
-                ('~/input/pointcloud/cuda', [LaunchConfiguration('input/pointcloud'), '/cuda']),
-                ('~/output/pointcloud', LaunchConfiguration('output/pointcloud')),
-                ('~/output/pointcloud/cuda', [LaunchConfiguration('output/pointcloud'), '/cuda']),
+                ("~/input/pointcloud", LaunchConfiguration("input/pointcloud")),
+                ("~/input/pointcloud/cuda", [LaunchConfiguration("input/pointcloud"), "/cuda"]),
+                ("~/output/pointcloud", LaunchConfiguration("output/pointcloud")),
+                ("~/output/pointcloud/cuda", [LaunchConfiguration("output/pointcloud"), "/cuda"]),
             ],
             parameters=[ground_segmentation_node_param],
             extra_arguments=[],
@@ -50,19 +50,19 @@ def launch_setup(context, *args, **kwargs):
     ]
 
     loader = LoadComposableNodes(
-        condition=LaunchConfigurationNotEquals('container', ''),
+        condition=LaunchConfigurationNotEquals("container", ""),
         composable_node_descriptions=nodes,
-        target_container=LaunchConfiguration('container'),
+        target_container=LaunchConfiguration("container"),
     )
 
     container = ComposableNodeContainer(
-        name='scan_ground_filter_container',
-        namespace='',
-        package='rclcpp_components',
-        executable='component_container',
+        name="scan_ground_filter_container",
+        namespace="",
+        package="rclcpp_components",
+        executable="component_container",
         composable_node_descriptions=nodes,
-        output='screen',
-        condition=LaunchConfigurationEquals('container', ''),
+        output="screen",
+        condition=LaunchConfigurationEquals("container", ""),
     )
 
     group = GroupAction(
@@ -81,14 +81,14 @@ def generate_launch_description():
 
     return launch.LaunchDescription(
         [
-            add_launch_arg('container', ''),
-            add_launch_arg('input/pointcloud', '/sensing/lidar/concatenated/pointcloud'),
-            add_launch_arg('output/pointcloud', '/perception/obstacle_segmentation/pointcloud'),
+            add_launch_arg("container", ""),
+            add_launch_arg("input/pointcloud", "/sensing/lidar/concatenated/pointcloud"),
+            add_launch_arg("output/pointcloud", "/perception/obstacle_segmentation/pointcloud"),
             add_launch_arg(
-                'cuda_ground_segmentation_node_param_path',
+                "cuda_ground_segmentation_node_param_path",
                 [
-                    FindPackageShare('autoware_ground_segmentation_cuda'),
-                    '/config/cuda_scan_ground_segmentation_filter.param.yaml',
+                    FindPackageShare("autoware_ground_segmentation_cuda"),
+                    "/config/cuda_scan_ground_segmentation_filter.param.yaml",
                 ],
             ),
         ]
