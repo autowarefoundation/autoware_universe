@@ -311,15 +311,15 @@ void MissionPlanner::set_preferred_lane(
       ResponseCode::ERROR_INVALID_STATE, "Reroute is not allowed in autonomous mode.");
   }
 
-  if (is_reroute && is_autonomous_driving) {
-    const auto reroute_availability = sub_reroute_availability_.take_data();
-    if (!reroute_availability || !reroute_availability->availability) {
-      res->status.success = false;
-      throw service_utils::ServiceException(
-        ResponseCode::ERROR_INVALID_STATE,
-        "Cannot reroute as the planner is not in lane following.");
-    }
-  }
+  // if (is_reroute && is_autonomous_driving) {
+  //   const auto reroute_availability = sub_reroute_availability_.take_data();
+  //   if (!reroute_availability || !reroute_availability->availability) {
+  //     res->status.success = false;
+  //     throw service_utils::ServiceException(
+  //       ResponseCode::ERROR_INVALID_STATE,
+  //       "Cannot reroute as the planner is not in lane following.");
+  //   }
+  // }
 
   change_state(is_reroute ? RouteState::REROUTING : RouteState::ROUTING);
 
