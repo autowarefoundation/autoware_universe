@@ -241,6 +241,18 @@ struct PlannerData
     parameters.turn_signal_remaining_shift_length_threshold =
       node.declare_parameter<double>("turn_signal_remaining_shift_length_threshold");
     parameters.turn_signal_on_swerving = node.declare_parameter<bool>("turn_signal_on_swerving");
+    parameters.turn_signal_roundabout_on_entry =
+      node.declare_parameter<std::string>("turn_signal_roundabout_on_entry");
+    parameters.turn_signal_roundabout_on_exit =
+      node.declare_parameter<std::string>("turn_signal_roundabout_on_exit");
+    parameters.turn_signal_roundabout_entry_indicator_persistence =
+      node.declare_parameter<bool>("turn_signal_roundabout_entry_indicator_persistence");
+    parameters.turn_signal_roundabout_search_distance =
+      node.declare_parameter<double>("turn_signal_roundabout_search_distance");
+    parameters.turn_signal_roundabout_angle_threshold_deg =
+      node.declare_parameter<double>("turn_signal_roundabout_angle_threshold_deg");
+    parameters.turn_signal_roundabout_backward_depth =
+      node.declare_parameter<int>("turn_signal_roundabout_backward_depth");
 
     parameters.enable_akima_spline_first =
       node.declare_parameter<bool>("enable_akima_spline_first");
