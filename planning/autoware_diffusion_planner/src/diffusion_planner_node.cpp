@@ -37,6 +37,7 @@
 #include <functional>
 #include <iostream>
 #include <limits>
+#include <map>
 #include <memory>
 #include <numeric>
 #include <optional>
@@ -125,6 +126,7 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<bool>("keep_last_traffic_light_group_info", false);
   params_.traffic_light_group_msg_timeout_seconds =
     this->declare_parameter<double>("traffic_light_group_msg_timeout_seconds", 0.2);
+  params_.use_route_handler = this->declare_parameter<bool>("use_route_handler", true);
   params_.batch_size = this->declare_parameter<int>("batch_size", 1);
   params_.temperature_list = this->declare_parameter<std::vector<double>>("temperature", {0.5});
 
@@ -154,6 +156,7 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<double>(
       parameters, "traffic_light_group_msg_timeout_seconds",
       temp_params.traffic_light_group_msg_timeout_seconds);
+    update_param<bool>(parameters, "use_route_handler", temp_params.use_route_handler);
     update_param<int>(parameters, "batch_size", temp_params.batch_size);
     update_param<std::vector<double>>(parameters, "temperature", temp_params.temperature_list);
     params_ = temp_params;
@@ -458,32 +461,24 @@ InputDataMap DiffusionPlanner::create_input_data()
 
   // map data on ego reference frame
   {
-    const auto [lanes, lanes_speed_limit] = lane_segment_context_->get_lane_segments(
-      map_to_ego_transform, traffic_light_id_map_, center_x, center_y, LANES_SHAPE[1]);
+    const std::vector<int64_t> segment_indices = lane_segment_context_->select_lane_segment_indices(
+      map_to_ego_transform, center_x, center_y, NUM_SEGMENTS_IN_LANE);
+    const auto [lanes, lanes_speed_limit] = lane_segment_context_->create_tensor_data_from_indices(
+      map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_LANE);
     input_data_map["lanes"] = replicate_for_batch(lanes);
     input_data_map["lanes_speed_limit"] = replicate_for_batch(lanes_speed_limit);
   }
 
   // route data on ego reference frame
   {
-    const auto & current_pose = ego_kinematic_state->pose.pose;
-    constexpr double backward_path_length{constants::BACKWARD_PATH_LENGTH_M};
-    constexpr double forward_path_length{constants::FORWARD_PATH_LENGTH_M};
-    lanelet::ConstLanelet current_preferred_lane;
-
-    if (
-      !route_handler_->isHandlerReady() || !route_handler_->getClosestPreferredLaneletWithinRoute(
-                                             current_pose, &current_preferred_lane)) {
-      RCLCPP_ERROR_STREAM_THROTTLE(
-        get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
-        "failed to find closest lanelet within route!!!");
-      return {};
-    }
-    auto current_lanes = route_handler_->getLaneletSequence(
-      current_preferred_lane, backward_path_length, forward_path_length);
-
-    const auto [route_lanes, route_lanes_speed_limit] = lane_segment_context_->get_route_segments(
-      map_to_ego_transform, traffic_light_id_map_, current_lanes);
+    const std::vector<int64_t> segment_indices =
+      (params_.use_route_handler
+         ? select_route_segment_indices_by_route_handler(*ego_kinematic_state)
+         : lane_segment_context_->select_route_segment_indices(
+             *route_ptr_, center_x, center_y, NUM_SEGMENTS_IN_ROUTE));
+    const auto [route_lanes, route_lanes_speed_limit] =
+      lane_segment_context_->create_tensor_data_from_indices(
+        map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_ROUTE);
     input_data_map["route_lanes"] = replicate_for_batch(route_lanes);
     input_data_map["route_lanes_speed_limit"] = replicate_for_batch(route_lanes_speed_limit);
   }
@@ -880,6 +875,41 @@ void DiffusionPlanner::on_map(const HADMapBin::ConstSharedPtr map_msg)
 
   route_handler_->setMap(*map_msg);
   is_map_loaded_ = true;
+}
+
+std::vector<int64_t> DiffusionPlanner::select_route_segment_indices_by_route_handler(
+  const nav_msgs::msg::Odometry & ego_kinematic_state) const
+{
+  const geometry_msgs::msg::Pose & current_pose = ego_kinematic_state.pose.pose;
+  constexpr double backward_path_length{constants::BACKWARD_PATH_LENGTH_M};
+  constexpr double forward_path_length{constants::FORWARD_PATH_LENGTH_M};
+  lanelet::ConstLanelet current_preferred_lane;
+
+  if (
+    !route_handler_->isHandlerReady() ||
+    !route_handler_->getClosestPreferredLaneletWithinRoute(current_pose, &current_preferred_lane)) {
+    return {};
+  }
+  const lanelet::ConstLanelets current_lanes = route_handler_->getLaneletSequence(
+    current_preferred_lane, backward_path_length, forward_path_length);
+  const std::map<lanelet::Id, size_t> lanelet_id_to_array_index_map =
+    lane_segment_context_->get_lanelet_id_to_array_index();
+
+  std::vector<int64_t> selected_indices;
+  for (const lanelet::ConstLanelet & route_segment : current_lanes) {
+    const auto itr = lanelet_id_to_array_index_map.find(route_segment.id());
+    if (itr == lanelet_id_to_array_index_map.end()) {
+      continue;
+    }
+
+    const size_t array_index = itr->second;
+    selected_indices.push_back(array_index);
+    if (selected_indices.size() >= NUM_SEGMENTS_IN_ROUTE) {
+      break;
+    }
+  }
+
+  return selected_indices;
 }
 
 }  // namespace autoware::diffusion_planner
