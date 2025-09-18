@@ -39,8 +39,6 @@ constexpr int64_t cloud_capacity = 2'000'000;
 class CalibrationStatusTest : public autoware::cuda_utils::CudaTest
 {
 protected:
-  void SetUp() override;
-  void TearDown() override;
   static std::vector<data_utils::TestSample> samples;
   static std::unique_ptr<CalibrationStatus> calibration_status;
   static std::filesystem::path data_dir;
@@ -75,14 +73,6 @@ protected:
     calibration_status.reset();
   }
 };
-
-void CalibrationStatusTest::SetUp()
-{
-}
-
-void CalibrationStatusTest::TearDown()
-{
-}
 
 std::unique_ptr<CalibrationStatus> CalibrationStatusTest::calibration_status;
 std::filesystem::path CalibrationStatusTest::data_dir;

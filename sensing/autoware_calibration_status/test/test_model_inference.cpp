@@ -36,8 +36,6 @@ namespace autoware::calibration_status
 class ModelInferenceTest : public autoware::cuda_utils::CudaTest
 {
 protected:
-  void SetUp() override;
-  void TearDown() override;
   static std::vector<data_utils::TestSample> samples;
   static std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr;
   static autoware::cuda_utils::CudaUniquePtr<float[]> in_d;
@@ -100,14 +98,6 @@ protected:
     }
   }
 };
-
-void ModelInferenceTest::SetUp()
-{
-}
-
-void ModelInferenceTest::TearDown()
-{
-}
 
 std::unique_ptr<autoware::tensorrt_common::TrtCommon> ModelInferenceTest::network_trt_ptr;
 autoware::cuda_utils::CudaUniquePtr<float[]> ModelInferenceTest::in_d;

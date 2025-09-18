@@ -45,7 +45,6 @@ class PreprocessingTest : public autoware::cuda_utils::CudaTest
 {
 protected:
   void SetUp() override;
-  void TearDown() override;
   cudaStream_t stream;
   std::unique_ptr<PreprocessCuda> preprocess_ptr;
   autoware::cuda_utils::CudaUniquePtr<float[]> in_d;
@@ -63,26 +62,18 @@ protected:
 
   static void SetUpTestSuite()
   {
-    const char * home_env = std::getenv("HOME");
-    std::filesystem::path home_path = home_env ? home_env : "/";
-    std::filesystem::path onnx_path =
-      home_path / "autoware_data/calibration_status/calibration_status.onnx";
-    if (!std::filesystem::exists(onnx_path)) {
-      GTEST_SKIP() << "ONNX model file not found: " << onnx_path;
-    }
-
     data_dir = std::filesystem::path(
                  ament_index_cpp::get_package_share_directory("autoware_calibration_status")) /
                "data";
-
     samples.push_back(data_utils::load_test_sample(data_dir, "sample_102"));
   }
 
-  static void TearDownTestSuite() {}
+  static void TearDownTestSuite() { cudaDeviceSynchronize(); }
 };
 
 void PreprocessingTest::SetUp()
 {
+  SKIP_TEST_IF_CUDA_UNAVAILABLE();  // SetUp has been overridden, so this macro must be called here
   cudaStreamCreate(&stream);
   CHECK_CUDA_ERROR(cudaStreamCreate(&stream));
 
@@ -99,10 +90,6 @@ void PreprocessingTest::SetUp()
   tf_matrix_d = cuda_utils::make_unique<double[]>(tf_matrix_size);
 
   preprocess_ptr = std::make_unique<PreprocessCuda>(max_depth, dilation_size, stream);
-}
-
-void PreprocessingTest::TearDown()
-{
 }
 
 std::filesystem::path PreprocessingTest::data_dir;
