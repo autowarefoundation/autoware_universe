@@ -19,6 +19,7 @@
 
 #include <cuda_runtime_api.h>
 
+// cspell:ignoreWords Conrady
 namespace autoware::calibration_status
 {
 

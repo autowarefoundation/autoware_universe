@@ -145,7 +145,7 @@ TEST_F(ModelInferenceTest, TestModelInferenceCalibratedSamples)
   }
 }
 
-TEST_F(ModelInferenceTest, TestModelInferenceMisalibratedSamples)
+TEST_F(ModelInferenceTest, TestModelInferenceMiscalibratedSamples)
 {
   if (!network_trt_ptr) {
     GTEST_SKIP() << "Network TensorRT instance is not initialized due to missing ONNX model.";

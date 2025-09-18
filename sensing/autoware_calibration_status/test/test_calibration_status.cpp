@@ -112,7 +112,7 @@ TEST_F(CalibrationStatusTest, TestCalibrationStatusProcessingCalibratedSamples)
   }
 }
 
-TEST_F(CalibrationStatusTest, TestCalibrationStatusProcessingMisalibratedSamples)
+TEST_F(CalibrationStatusTest, TestCalibrationStatusProcessingMiscalibratedSamples)
 {
   if (!calibration_status) {
     GTEST_SKIP() << "CalibrationStatus instance is not initialized due to missing ONNX model.";
