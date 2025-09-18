@@ -143,16 +143,16 @@ TEST_F(ModelInferenceTest, TestModelInferenceCalibratedSamples)
       output.data(), out_d.get(), sizeof(float) * 2, cudaMemcpyDeviceToHost, stream));
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
 
-    auto miscalib_confidence = output.at(0);
-    auto calib_confidence = output.at(1);
-    auto is_calibrated = calib_confidence > miscalib_confidence;
+    auto miscalibration_confidence = output.at(0);
+    auto calibration_confidence = output.at(1);
+    auto is_calibrated = calibration_confidence > miscalibration_confidence;
 
     EXPECT_TRUE(is_calibrated)
       << "Calibration status should be true for calibrated sample. Calibration confidence: "
-      << calib_confidence << ", Miscalibration confidence: " << miscalib_confidence;
+      << calibration_confidence << ", Miscalibration confidence: " << miscalibration_confidence;
     GTEST_LOG_(INFO) << "Sample: " << sample.sample_name
-                     << ", Calibration confidence: " << calib_confidence
-                     << ", Miscalibration confidence: " << miscalib_confidence;
+                     << ", Calibration confidence: " << calibration_confidence
+                     << ", Miscalibration confidence: " << miscalibration_confidence;
   }
 }
 
@@ -182,16 +182,16 @@ TEST_F(ModelInferenceTest, TestModelInferenceMisalibratedSamples)
       output.data(), out_d.get(), sizeof(float) * 2, cudaMemcpyDeviceToHost, stream));
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
 
-    auto miscalib_confidence = output.at(0);
-    auto calib_confidence = output.at(1);
-    auto is_calibrated = calib_confidence > miscalib_confidence;
+    auto miscalibration_confidence = output.at(0);
+    auto calibration_confidence = output.at(1);
+    auto is_calibrated = calibration_confidence > miscalibration_confidence;
 
     EXPECT_FALSE(is_calibrated)
       << "Calibration status should be false for miscalibrated sample. Calibration confidence: "
-      << calib_confidence << ", Miscalibration confidence: " << miscalib_confidence;
+      << calibration_confidence << ", Miscalibration confidence: " << miscalibration_confidence;
     GTEST_LOG_(INFO) << "Sample: " << sample.sample_name
-                     << ", Calibration confidence: " << calib_confidence
-                     << ", Miscalibration confidence: " << miscalib_confidence;
+                     << ", Calibration confidence: " << calibration_confidence
+                     << ", Miscalibration confidence: " << miscalibration_confidence;
   }
 }
 

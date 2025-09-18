@@ -159,14 +159,14 @@ CalibrationStatusResult CalibrationStatus::process(
   auto t3 = std::chrono::steady_clock::now();
 
   // Process output
-  auto miscalib_confidence = output.at(0);
-  auto calib_confidence = output.at(1);
+  auto miscalibration_confidence = output.at(0);
+  auto calibration_confidence = output.at(1);
   auto time_preproc_us = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
   auto time_inference_us = std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count();
 
   CalibrationStatusResult result{};
-  result.calibration_confidence = calib_confidence;
-  result.miscalibration_confidence = miscalib_confidence;
+  result.calibration_confidence = calibration_confidence;
+  result.miscalibration_confidence = miscalibration_confidence;
   result.preprocessing_time_ms = static_cast<double>(time_preproc_us) * 1e-3;
   result.inference_time_ms = static_cast<double>(time_inference_us) * 1e-3;
   result.num_points_projected = num_points_projected;
