@@ -32,7 +32,7 @@
       <arg name="color_map_path" value="$(var camera_2d_detector/color_map_path)"/>
     </include>
 
-    <include file="$(find-pkg-share autoware_bytetrack)/launch/bytetrack.launch.xml">
+    <include file="$(find-pkg-share autoware_bytetrack)/launch/bytetrack.launch.xml" if="$(var use_bytetrack)">
       <arg name="in_image" value="$(var image_raw0)"/>
       <arg name="detection_rect" value="$(var tensorrt_yolox_ns)rois$(var camera_index)"/>
       <arg name="tracked_rect" value="rois$(var camera_index)"/>
