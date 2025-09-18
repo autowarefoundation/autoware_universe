@@ -14,6 +14,9 @@
 
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
+#include "autoware/multi_object_tracker/object_model/shapes.hpp"
+
+#include <cmath>
 #include <vector>
 
 namespace autoware::multi_object_tracker
@@ -66,6 +69,11 @@ DynamicObject toDynamicObject(
   // shape
   dynamic_object.shape = det_object.shape;
   dynamic_object.area = getArea(det_object.shape);
+
+  // compute local axis aligned bounding box dimensions for POLYGON shape
+  if (det_object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
+    shapes::computePolygonDimensions(dynamic_object.shape);
+  }
 
   return dynamic_object;
 }

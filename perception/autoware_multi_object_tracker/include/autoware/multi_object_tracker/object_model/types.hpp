@@ -100,6 +100,7 @@ struct DynamicObject
 
   // object extension (size and shape)
   autoware_perception_msgs::msg::Shape shape;
+  bool trust_extension;
   double area;
 };
 
