@@ -268,31 +268,29 @@ bool set_goal(
       calcInterpolatedZ(input, goal.position, closest_seg_idx_for_goal);
     refined_goal.point.longitudinal_velocity_mps = 0.0;
 
+    // Lambda function to create a refined goal point with interpolated z and velocity
+    auto create_refined_goal_point = [&input,
+                                      &goal](const double offset_distance) -> PathPointWithLaneId {
+      PathPointWithLaneId refined_point{};
+      refined_point.point.pose = autoware_utils::calc_offset_pose(goal, offset_distance, 0.0, 0.0);
+      const size_t closest_seg_idx =
+        findNearestSegmentIndex(input.points, refined_point.point.pose, 3.0, M_PI_4);
+      refined_point.point.pose.position.z =
+        calcInterpolatedZ(input, refined_point.point.pose.position, closest_seg_idx);
+      refined_point.point.longitudinal_velocity_mps =
+        calcInterpolatedVelocity(input, closest_seg_idx);
+      return refined_point;
+    };
+
     // calculate pre_refined_goal with interpolation
     // NOTE: z and velocity are filled
-    PathPointWithLaneId pre_refined_goal{};
     constexpr double goal_to_pre_goal_distance = -1.0;
-    pre_refined_goal.point.pose =
-      autoware_utils::calc_offset_pose(goal, goal_to_pre_goal_distance, 0.0, 0.0);
-    const size_t closest_seg_idx_for_pre_goal =
-      findNearestSegmentIndex(input.points, pre_refined_goal.point.pose, 3.0, M_PI_4);
-    pre_refined_goal.point.pose.position.z =
-      calcInterpolatedZ(input, pre_refined_goal.point.pose.position, closest_seg_idx_for_pre_goal);
-    pre_refined_goal.point.longitudinal_velocity_mps =
-      calcInterpolatedVelocity(input, closest_seg_idx_for_pre_goal);
+    const auto pre_refined_goal = create_refined_goal_point(goal_to_pre_goal_distance);
 
     // NOTE: add points for smooth spline interpolation between the input path and the
     // pre_refined_goal.
-    PathPointWithLaneId pre_refined_mid_goal{};
     constexpr double goal_to_pre_mid_goal_distance = -0.5;
-    pre_refined_mid_goal.point.pose =
-      autoware_utils::calc_offset_pose(goal, goal_to_pre_mid_goal_distance, 0.0, 0.0);
-    const size_t closest_seg_idx_for_pre_mid_goal =
-      findNearestSegmentIndex(input.points, pre_refined_mid_goal.point.pose, 3.0, M_PI_4);
-    pre_refined_mid_goal.point.pose.position.z = calcInterpolatedZ(
-      input, pre_refined_mid_goal.point.pose.position, closest_seg_idx_for_pre_mid_goal);
-    pre_refined_mid_goal.point.longitudinal_velocity_mps =
-      calcInterpolatedVelocity(input, closest_seg_idx_for_pre_mid_goal);
+    const auto pre_refined_mid_goal = create_refined_goal_point(goal_to_pre_mid_goal_distance);
 
     // find min_dist_out_of_circle_index whose distance to goal is longer than search_radius_range
     const auto min_dist_out_of_circle_index_opt =
@@ -303,7 +301,18 @@ bool set_goal(
     const size_t min_dist_out_of_circle_index = min_dist_out_of_circle_index_opt.value();
 
     // create output points
-    output_ptr->points.reserve(output_ptr->points.size() + min_dist_out_of_circle_index + 4);
+    output_ptr->points.reserve(output_ptr->points.size() + min_dist_out_of_circle_index + 5);
+
+    // NOTE: add a point to preserve the initial direction of the path when performing spline
+    // interpolation on short paths.
+    constexpr double goal_to_pre_start_distance = -1.0;
+    PathPointWithLaneId pre_start = input.points.front();
+    pre_start.point.pose =
+      autoware_utils::calc_offset_pose(pre_start.point.pose, goal_to_pre_start_distance, 0.0, 0.0);
+    if (min_dist_out_of_circle_index == 0) {
+      output_ptr->points.push_back(pre_start);
+    }
+
     for (size_t i = 0; i <= min_dist_out_of_circle_index; ++i) {
       output_ptr->points.push_back(input.points.at(i));
     }
@@ -325,7 +334,7 @@ bool set_goal(
         }
       }
 
-      // pre refined goal
+      // pre mid refined goal
       auto & pre_mid_goal = output_ptr->points.at(output_ptr->points.size() - 2);
       for (size_t i = min_dist_out_of_circle_index + 1; i < input.points.size(); ++i) {
         for (const auto target_lane_id : input.points.at(i).lane_ids) {
