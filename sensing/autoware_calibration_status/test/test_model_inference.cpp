@@ -47,12 +47,6 @@ protected:
 
   static void SetUpTestSuite()
   {
-    data_dir = std::filesystem::path(
-                 ament_index_cpp::get_package_share_directory("autoware_calibration_status")) /
-               "data";
-
-    samples.push_back(data_utils::load_test_sample(data_dir, "sample_102"));
-
     const char * home_env = std::getenv("HOME");
     std::filesystem::path home_path = home_env ? home_env : "/";
     std::filesystem::path onnx_path =
@@ -60,6 +54,11 @@ protected:
     if (!std::filesystem::exists(onnx_path)) {
       GTEST_SKIP() << "ONNX model file not found: " << onnx_path;
     }
+
+    data_dir = std::filesystem::path(
+                 ament_index_cpp::get_package_share_directory("autoware_calibration_status")) /
+               "data";
+    samples.push_back(data_utils::load_test_sample(data_dir, "sample_102"));
 
     CHECK_CUDA_ERROR(cudaStreamCreate(&stream));
 
