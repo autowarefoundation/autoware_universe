@@ -32,6 +32,7 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <optional>
@@ -41,7 +42,8 @@
 namespace autoware::calibration_status
 {
 
-using namespace std::chrono_literals;
+using std::chrono_literals::operator""ms;
+using std::chrono_literals::operator""s;
 
 /**
  * @class CameraLidarInfoCollector
