@@ -69,15 +69,13 @@ private:
 
   // conditioned update configs
   // EMA/ema below are abbreviation for exponential moving average
-  static constexpr double EMA_ALPHA = 0.2;
+  static constexpr double EMA_ALPHA_WEAK = 0.05;
+  static constexpr double EMA_ALPHA_STRONG = 0.2;
   static constexpr double SHAPE_VARIATION_THRESHOLD = 0.2;
-  static constexpr size_t WEAK_UPDATE_MAX_COUNT = 10;
   static constexpr size_t STABLE_STREAK_THRESHOLD = 4;
-  static constexpr size_t UNSTABLE_STREAK_THRESHOLD = 2;
 
-  size_t weak_update_count_{0};
   ExponentialMovingAverageShape ema_shape_{
-    EMA_ALPHA, SHAPE_VARIATION_THRESHOLD, STABLE_STREAK_THRESHOLD, UNSTABLE_STREAK_THRESHOLD};
+    EMA_ALPHA_WEAK, EMA_ALPHA_STRONG, SHAPE_VARIATION_THRESHOLD, STABLE_STREAK_THRESHOLD};
 
   // cache
   mutable rclcpp::Time cached_time_;
@@ -160,7 +158,9 @@ public:
   double computeAdaptiveThreshold(
     double base_threshold, double fallback_threshold, const AdaptiveThresholdCache & cache,
     const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
-  bool createPseudoMeasurement(const types::DynamicObject & meas, types::DynamicObject & pred);
+  bool createPseudoMeasurement(
+    const types::DynamicObject & meas, types::DynamicObject & pred,
+    const autoware_perception_msgs::msg::Shape & smoothed_shape);
 
 protected:
   types::DynamicObject object_;
@@ -197,6 +197,11 @@ protected:
   virtual bool measure(
     const types::DynamicObject & object, const rclcpp::Time & time,
     const types::InputChannel & channel_info) = 0;
+
+  virtual bool conditionedUpdate(
+    const types::DynamicObject & measurement, const types::DynamicObject & prediction,
+    const autoware_perception_msgs::msg::Shape & smoothed_shape,
+    const rclcpp::Time & measurement_time, const types::InputChannel & channel_info);
 
 public:
   virtual bool getTrackedObject(
