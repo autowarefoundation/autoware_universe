@@ -85,6 +85,9 @@ GPUMonitor::~GPUMonitor()
 
 void GPUMonitor::shut_down()
 {
+  // When this method is called from the destructor in the process of system shutdown,
+  // all nodes are guaranteed to be inactive.
+  // Therefore, it is safe to call the NVML library's shutdown function.
   nvmlReturn_t ret = nvmlShutdown();
   if (ret != NVML_SUCCESS) {
     RCLCPP_ERROR(this->get_logger(), "Failed to shut down NVML: %s", nvmlErrorString(ret));
@@ -234,9 +237,12 @@ void GPUMonitor::addProcessUsage(
   utils = std::make_unique<nvmlProcessUtilizationSample_t[]>(util_count);
   ret = nvmlDeviceGetProcessUtilization(device, utils.get(), &util_count, current_timestamp_);
   if (ret != NVML_SUCCESS) {
-    RCLCPP_WARN(
-      this->get_logger(), "Failed to nvmlDeviceGetProcessUtilization(2nd) NVML: %s",
-      nvmlErrorString(ret));
+    // NVML_ERROR_NOT_FOUND is expected when no process is running on the GPU.
+    if (ret != NVML_ERROR_NOT_FOUND) {
+      RCLCPP_WARN(
+        this->get_logger(), "Failed to nvmlDeviceGetProcessUtilization(2nd) NVML: %s",
+        nvmlErrorString(ret));
+    }
     return;
   }
 

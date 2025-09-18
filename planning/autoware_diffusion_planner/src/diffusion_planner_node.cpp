@@ -37,6 +37,7 @@
 #include <functional>
 #include <iostream>
 #include <limits>
+#include <map>
 #include <memory>
 #include <numeric>
 #include <optional>
@@ -69,6 +70,7 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
   time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(debug_processing_time_detail_pub_);
 
   set_up_params();
+  utils::check_weight_version(params_.args_path);
   normalization_map_ = utils::load_normalization_stats(params_.args_path);
 
   init_pointers();
@@ -124,7 +126,9 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<bool>("keep_last_traffic_light_group_info", false);
   params_.traffic_light_group_msg_timeout_seconds =
     this->declare_parameter<double>("traffic_light_group_msg_timeout_seconds", 0.2);
+  params_.use_route_handler = this->declare_parameter<bool>("use_route_handler", true);
   params_.batch_size = this->declare_parameter<int>("batch_size", 1);
+  params_.temperature_list = this->declare_parameter<std::vector<double>>("temperature", {0.5});
 
   // debug params
   debug_params_.publish_debug_map =
@@ -152,7 +156,9 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<double>(
       parameters, "traffic_light_group_msg_timeout_seconds",
       temp_params.traffic_light_group_msg_timeout_seconds);
+    update_param<bool>(parameters, "use_route_handler", temp_params.use_route_handler);
     update_param<int>(parameters, "batch_size", temp_params.batch_size);
+    update_param<std::vector<double>>(parameters, "temperature", temp_params.temperature_list);
     params_ = temp_params;
   }
 
@@ -176,6 +182,10 @@ void DiffusionPlanner::init_pointers()
   const int batch_size = params_.batch_size;
 
   // Calculate tensor sizes with batch support
+  const size_t sampled_trajectories_size =
+    batch_size * std::accumulate(
+                   SAMPLED_TRAJECTORIES_SHAPE.begin() + 1, SAMPLED_TRAJECTORIES_SHAPE.end(), 1L,
+                   std::multiplies<>());
   const size_t ego_history_size =
     batch_size * std::accumulate(
                    EGO_HISTORY_SHAPE.begin() + 1, EGO_HISTORY_SHAPE.end(), 1L, std::multiplies<>());
@@ -226,6 +236,7 @@ void DiffusionPlanner::init_pointers()
                    TURN_INDICATOR_LOGIT_SHAPE.begin() + 1, TURN_INDICATOR_LOGIT_SHAPE.end(), 1L,
                    std::multiplies<>());
 
+  sampled_trajectories_d_ = autoware::cuda_utils::make_unique<float[]>(sampled_trajectories_size);
   ego_history_d_ = autoware::cuda_utils::make_unique<float[]>(ego_history_size);
   ego_current_state_d_ = autoware::cuda_utils::make_unique<float[]>(ego_current_state_size);
   neighbor_agents_past_d_ = autoware::cuda_utils::make_unique<float[]>(neighbor_agents_past_size);
@@ -286,6 +297,8 @@ void DiffusionPlanner::load_engine(const std::string & model_path)
 
   {
     profile_dims.emplace_back(
+      make_dynamic_dims("sampled_trajectories", to_dynamic_dims(SAMPLED_TRAJECTORIES_SHAPE)));
+    profile_dims.emplace_back(
       make_dynamic_dims("ego_agent_past", to_dynamic_dims(EGO_HISTORY_SHAPE)));
     profile_dims.emplace_back(
       make_dynamic_dims("ego_current_state", to_dynamic_dims(EGO_CURRENT_STATE_SHAPE)));
@@ -309,6 +322,7 @@ void DiffusionPlanner::load_engine(const std::string & model_path)
 
   std::vector<autoware::tensorrt_common::NetworkIO> network_io;
   {  // Inputs with dynamic batch dimension
+    network_io.emplace_back("sampled_trajectories", to_dynamic_dims(SAMPLED_TRAJECTORIES_SHAPE));
     network_io.emplace_back("ego_agent_past", to_dynamic_dims(EGO_HISTORY_SHAPE));
     network_io.emplace_back("ego_current_state", to_dynamic_dims(EGO_CURRENT_STATE_SHAPE));
     network_io.emplace_back("neighbor_agents_past", to_dynamic_dims(NEIGHBOR_SHAPE));
@@ -342,7 +356,7 @@ void DiffusionPlanner::load_engine(const std::string & model_path)
 }
 
 AgentData DiffusionPlanner::get_ego_centric_agent_data(
-  const TrackedObjects & objects, const Eigen::Matrix4f & map_to_ego_transform)
+  const TrackedObjects & objects, const Eigen::Matrix4d & map_to_ego_transform)
 {
   if (!agent_data_) {
     agent_data_ =
@@ -397,6 +411,17 @@ InputDataMap DiffusionPlanner::create_input_data()
 
   ego_kinematic_state_ = *ego_kinematic_state;
 
+  // random sample trajectories
+  {
+    for (int64_t b = 0; b < params_.batch_size; b++) {
+      const std::vector<float> sampled_trajectories =
+        preprocess::create_sampled_trajectories(params_.temperature_list[b]);
+      input_data_map["sampled_trajectories"].insert(
+        input_data_map["sampled_trajectories"].end(), sampled_trajectories.begin(),
+        sampled_trajectories.end());
+    }
+  }
+
   // Add current state to ego history
   ego_history_.push_back(*ego_kinematic_state);
   if (ego_history_.size() > static_cast<size_t>(EGO_HISTORY_SHAPE[1])) {
@@ -436,32 +461,24 @@ InputDataMap DiffusionPlanner::create_input_data()
 
   // map data on ego reference frame
   {
-    const auto [lanes, lanes_speed_limit] = lane_segment_context_->get_lane_segments(
-      map_to_ego_transform, traffic_light_id_map_, center_x, center_y, LANES_SHAPE[1]);
+    const std::vector<int64_t> segment_indices = lane_segment_context_->select_lane_segment_indices(
+      map_to_ego_transform, center_x, center_y, NUM_SEGMENTS_IN_LANE);
+    const auto [lanes, lanes_speed_limit] = lane_segment_context_->create_tensor_data_from_indices(
+      map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_LANE);
     input_data_map["lanes"] = replicate_for_batch(lanes);
     input_data_map["lanes_speed_limit"] = replicate_for_batch(lanes_speed_limit);
   }
 
   // route data on ego reference frame
   {
-    const auto & current_pose = ego_kinematic_state->pose.pose;
-    constexpr double backward_path_length{constants::BACKWARD_PATH_LENGTH_M};
-    constexpr double forward_path_length{constants::FORWARD_PATH_LENGTH_M};
-    lanelet::ConstLanelet current_preferred_lane;
-
-    if (
-      !route_handler_->isHandlerReady() || !route_handler_->getClosestPreferredLaneletWithinRoute(
-                                             current_pose, &current_preferred_lane)) {
-      RCLCPP_ERROR_STREAM_THROTTLE(
-        get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
-        "failed to find closest lanelet within route!!!");
-      return {};
-    }
-    auto current_lanes = route_handler_->getLaneletSequence(
-      current_preferred_lane, backward_path_length, forward_path_length);
-
-    const auto [route_lanes, route_lanes_speed_limit] = lane_segment_context_->get_route_segments(
-      map_to_ego_transform, traffic_light_id_map_, current_lanes);
+    const std::vector<int64_t> segment_indices =
+      (params_.use_route_handler
+         ? select_route_segment_indices_by_route_handler(*ego_kinematic_state)
+         : lane_segment_context_->select_route_segment_indices(
+             *route_ptr_, center_x, center_y, NUM_SEGMENTS_IN_ROUTE));
+    const auto [route_lanes, route_lanes_speed_limit] =
+      lane_segment_context_->create_tensor_data_from_indices(
+        map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_ROUTE);
     input_data_map["route_lanes"] = replicate_for_batch(route_lanes);
     input_data_map["route_lanes_speed_limit"] = replicate_for_batch(route_lanes_speed_limit);
   }
@@ -471,10 +488,10 @@ InputDataMap DiffusionPlanner::create_input_data()
     const auto & goal_pose = route_handler_->getGoalPose();
 
     // Convert goal pose to 4x4 transformation matrix
-    const Eigen::Matrix4f goal_pose_map_4x4 = utils::pose_to_matrix4f(goal_pose);
+    const Eigen::Matrix4d goal_pose_map_4x4 = utils::pose_to_matrix4f(goal_pose);
 
     // Transform to ego frame
-    const Eigen::Matrix4f goal_pose_ego_4x4 = map_to_ego_transform * goal_pose_map_4x4;
+    const Eigen::Matrix4d goal_pose_ego_4x4 = map_to_ego_transform * goal_pose_map_4x4;
 
     // Extract relative position
     const float x = goal_pose_ego_4x4(0, 3);
@@ -589,6 +606,7 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
 std::vector<float> DiffusionPlanner::do_inference_trt(InputDataMap & input_data_map)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  auto sampled_trajectories = input_data_map["sampled_trajectories"];
   auto ego_history = input_data_map["ego_agent_past"];
   auto ego_current_state = input_data_map["ego_current_state"];
   auto neighbor_agents_past = input_data_map["neighbor_agents_past"];
@@ -614,6 +632,9 @@ std::vector<float> DiffusionPlanner::do_inference_trt(InputDataMap & input_data_
     speed_bool_array[i] = (lanes_speed_limit[i] > std::numeric_limits<float>::epsilon()) ? 1 : 0;
   }
 
+  CHECK_CUDA_ERROR(cudaMemcpy(
+    sampled_trajectories_d_.get(), sampled_trajectories.data(),
+    sampled_trajectories.size() * sizeof(float), cudaMemcpyHostToDevice));
   CHECK_CUDA_ERROR(cudaMemcpy(
     ego_history_d_.get(), ego_history.data(), ego_history.size() * sizeof(float),
     cudaMemcpyHostToDevice));
@@ -676,6 +697,8 @@ std::vector<float> DiffusionPlanner::do_inference_trt(InputDataMap & input_data_
   };
 
   bool set_input_shapes = true;
+  set_input_shapes &= network_trt_ptr_->setInputShape(
+    "sampled_trajectories", to_dims_with_batch(SAMPLED_TRAJECTORIES_SHAPE));
   set_input_shapes &=
     network_trt_ptr_->setInputShape("ego_agent_past", to_dims_with_batch(EGO_HISTORY_SHAPE));
   set_input_shapes &= network_trt_ptr_->setInputShape(
@@ -706,6 +729,7 @@ std::vector<float> DiffusionPlanner::do_inference_trt(InputDataMap & input_data_
     return {};
   }
 
+  network_trt_ptr_->setTensorAddress("sampled_trajectories", sampled_trajectories_d_.get());
   network_trt_ptr_->setTensorAddress("ego_agent_past", ego_history_d_.get());
   network_trt_ptr_->setTensorAddress("ego_current_state", ego_current_state_d_.get());
   network_trt_ptr_->setTensorAddress("neighbor_agents_past", neighbor_agents_past_d_.get());
@@ -851,6 +875,41 @@ void DiffusionPlanner::on_map(const HADMapBin::ConstSharedPtr map_msg)
 
   route_handler_->setMap(*map_msg);
   is_map_loaded_ = true;
+}
+
+std::vector<int64_t> DiffusionPlanner::select_route_segment_indices_by_route_handler(
+  const nav_msgs::msg::Odometry & ego_kinematic_state) const
+{
+  const geometry_msgs::msg::Pose & current_pose = ego_kinematic_state.pose.pose;
+  constexpr double backward_path_length{constants::BACKWARD_PATH_LENGTH_M};
+  constexpr double forward_path_length{constants::FORWARD_PATH_LENGTH_M};
+  lanelet::ConstLanelet current_preferred_lane;
+
+  if (
+    !route_handler_->isHandlerReady() ||
+    !route_handler_->getClosestPreferredLaneletWithinRoute(current_pose, &current_preferred_lane)) {
+    return {};
+  }
+  const lanelet::ConstLanelets current_lanes = route_handler_->getLaneletSequence(
+    current_preferred_lane, backward_path_length, forward_path_length);
+  const std::map<lanelet::Id, size_t> lanelet_id_to_array_index_map =
+    lane_segment_context_->get_lanelet_id_to_array_index();
+
+  std::vector<int64_t> selected_indices;
+  for (const lanelet::ConstLanelet & route_segment : current_lanes) {
+    const auto itr = lanelet_id_to_array_index_map.find(route_segment.id());
+    if (itr == lanelet_id_to_array_index_map.end()) {
+      continue;
+    }
+
+    const size_t array_index = itr->second;
+    selected_indices.push_back(array_index);
+    if (selected_indices.size() >= NUM_SEGMENTS_IN_ROUTE) {
+      break;
+    }
+  }
+
+  return selected_indices;
 }
 
 }  // namespace autoware::diffusion_planner

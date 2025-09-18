@@ -278,7 +278,7 @@ void PipelineLatencyMonitorNode::update_history(
   std::deque<ProcessData> & history, const rclcpp::Time & timestamp, double value)
 {
   if (value < 0.0) {
-    RCLCPP_WARN_THROTTLE(
+    RCLCPP_DEBUG_THROTTLE(
       get_logger(), *this->get_clock(), 30000,
       "Negative latency value detected: %.6f, treating as 0.0", value);
     value = 0.0;

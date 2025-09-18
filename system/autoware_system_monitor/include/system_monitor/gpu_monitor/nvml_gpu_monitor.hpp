@@ -73,6 +73,8 @@ protected:
    * @brief Terminate the node, log final statements. An independent function is preferred to allow
    * an explicit way to operate actions that require a valid rclcpp context. By default this method
    * does nothing.
+   * @note This class uses the NVML library to get GPU information. The NVML library needs to be
+   * shut down in this function.
    */
   void shut_down() override;
 

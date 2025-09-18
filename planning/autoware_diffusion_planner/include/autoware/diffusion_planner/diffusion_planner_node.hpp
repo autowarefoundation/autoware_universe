@@ -115,7 +115,9 @@ struct DiffusionPlannerParams
   bool update_traffic_light_group_info;
   bool keep_last_traffic_light_group_info;
   double traffic_light_group_msg_timeout_seconds;
+  bool use_route_handler;
   int batch_size;
+  std::vector<double> temperature_list;
 };
 struct DiffusionPlannerDebugParams
 {
@@ -175,6 +177,8 @@ class DiffusionPlanner : public rclcpp::Node
 public:
   explicit DiffusionPlanner(const rclcpp::NodeOptions & options);
   ~DiffusionPlanner();
+
+private:
   /**
    * @brief Initialize and declare node parameters.
    */
@@ -243,9 +247,9 @@ public:
 
   // preprocessing
   std::shared_ptr<RouteHandler> route_handler_{std::make_shared<RouteHandler>()};
-  std::pair<Eigen::Matrix4f, Eigen::Matrix4f> transforms_;
+  std::pair<Eigen::Matrix4d, Eigen::Matrix4d> transforms_;
   AgentData get_ego_centric_agent_data(
-    const TrackedObjects & objects, const Eigen::Matrix4f & map_to_ego_transform);
+    const TrackedObjects & objects, const Eigen::Matrix4d & map_to_ego_transform);
 
   /**
    * @brief Replicate single sample data for batch processing.
@@ -253,6 +257,14 @@ public:
    * @return Vector replicated for the configured batch size.
    */
   std::vector<float> replicate_for_batch(const std::vector<float> & single_data);
+
+  /**
+   * @brief Select route segment indices based on the route handler.
+   * @param ego_kinematic_state The current state of the ego vehicle.
+   * @return Vector of selected route segment indices.
+   */
+  std::vector<int64_t> select_route_segment_indices_by_route_handler(
+    const nav_msgs::msg::Odometry & ego_kinematic_state) const;
 
   // current state
   Odometry ego_kinematic_state_;
@@ -264,6 +276,7 @@ public:
   std::unique_ptr<TrtConvCalib> trt_common_;
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_{nullptr};
   // For float inputs and output
+  CudaUniquePtr<float[]> sampled_trajectories_d_;
   CudaUniquePtr<float[]> ego_history_d_;
   CudaUniquePtr<float[]> ego_current_state_d_;
   CudaUniquePtr<float[]> neighbor_agents_past_d_;
