@@ -115,9 +115,24 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
     const double turn_signal_intersection_angle_threshold_deg =
       planner_data_->parameters.turn_signal_intersection_angle_threshold_deg;
     const double turn_signal_search_time = planner_data_->parameters.turn_signal_search_time;
+    const std::string turn_signal_roundabout_on_entry =
+      planner_data_->parameters.turn_signal_roundabout_on_entry;
+    const std::string turn_signal_roundabout_on_exit =
+      planner_data_->parameters.turn_signal_roundabout_on_exit;
+    const bool turn_signal_roundabout_entry_indicator_persistence =
+      planner_data_->parameters.turn_signal_roundabout_entry_indicator_persistence;
+    const double turn_signal_roundabout_search_distance =
+      planner_data_->parameters.turn_signal_roundabout_search_distance;
+    const double turn_signal_roundabout_angle_threshold_deg =
+      planner_data_->parameters.turn_signal_roundabout_angle_threshold_deg;
+    const int turn_signal_roundabout_backward_depth =
+      planner_data_->parameters.turn_signal_roundabout_backward_depth;
     planner_data_->turn_signal_decider.setParameters(
       planner_data_->parameters.base_link2front, turn_signal_intersection_search_distance,
-      turn_signal_search_time, turn_signal_intersection_angle_threshold_deg);
+      turn_signal_search_time, turn_signal_intersection_angle_threshold_deg,
+      turn_signal_roundabout_on_entry, turn_signal_roundabout_on_exit,
+      turn_signal_roundabout_entry_indicator_persistence, turn_signal_roundabout_search_distance,
+      turn_signal_roundabout_angle_threshold_deg, turn_signal_roundabout_backward_depth);
   }
 
   // Start timer
@@ -560,6 +575,34 @@ void BehaviorPathPlannerNode::publish_turn_signal_debug_data(const TurnSignalDeb
       required_section_color);
     auto required_end_marker = autoware_utils::create_default_marker(
       "map", current_time, "behavior_turn_signal_required_end", 0L, Marker::CUBE, scale,
+      required_section_color);
+    required_start_marker.pose = turn_signal_info.required_start_point;
+    required_end_marker.pose = turn_signal_info.required_end_point;
+
+    marker_array.markers.push_back(desired_start_marker);
+    marker_array.markers.push_back(desired_end_marker);
+    marker_array.markers.push_back(required_start_marker);
+    marker_array.markers.push_back(required_end_marker);
+  }
+
+  // roundabout turn signal info
+  {
+    const auto & turn_signal_info = debug_data.roundabout_turn_signal_info;
+
+    auto desired_start_marker = autoware_utils::create_default_marker(
+      "map", current_time, "roundabout_turn_signal_desired_start", 0L, Marker::SPHERE, scale,
+      desired_section_color);
+    auto desired_end_marker = autoware_utils::create_default_marker(
+      "map", current_time, "roundabout_turn_signal_desired_end", 0L, Marker::SPHERE, scale,
+      desired_section_color);
+    desired_start_marker.pose = turn_signal_info.desired_start_point;
+    desired_end_marker.pose = turn_signal_info.desired_end_point;
+
+    auto required_start_marker = autoware_utils::create_default_marker(
+      "map", current_time, "roundabout_turn_signal_required_start", 0L, Marker::SPHERE, scale,
+      required_section_color);
+    auto required_end_marker = autoware_utils::create_default_marker(
+      "map", current_time, "roundabout_turn_signal_required_end", 0L, Marker::SPHERE, scale,
       required_section_color);
     required_start_marker.pose = turn_signal_info.required_start_point;
     required_end_marker.pose = turn_signal_info.required_end_point;
