@@ -349,14 +349,14 @@ void MultiCameraFusion::groupFusion(
 
       for (const auto & reg_ele_id : reg_ele_id_vec) {
         /*
-        * Design decision: We convert the observation's confidence into the strength of evidence
-        * (log-odds) that the observation is “correct”. Here, we explicitly assume that the
-        * confidence value directly represents probability (i.e., confidence ∈ [0,1] is the
-        * probability that the observation is correct). Note: This assumption may not hold for all
-        * confidence scoring systems. If the confidence metric is not a true probability, this
-        * conversion may be invalid. Future maintainers should verify that the confidence values used
-        * here are indeed probabilities, or update this logic if the scoring system changes.
-        */
+         * Design decision: We convert the observation's confidence into the strength of evidence
+         * (log-odds) that the observation is “correct”. Here, we explicitly assume that the
+         * confidence value directly represents probability (i.e., confidence ∈ [0,1] is the
+         * probability that the observation is correct). Note: This assumption may not hold for all
+         * confidence scoring systems. If the confidence metric is not a true probability, this
+         * conversion may be invalid. Future maintainers should verify that the confidence values
+         * used here are indeed probabilities, or update this logic if the scoring system changes.
+         */
 
         // Get a reference to the log-odds map for the current regulatory element ID.
         auto & log_odds_map = group_fusion_info_map[reg_ele_id].accumulated_log_odds;
@@ -366,13 +366,14 @@ void MultiCameraFusion::groupFusion(
         }
         double evidence_log_odds = probabilityToLogOdds(confidence);
 
-        // We assume the prior probability (with no information) is 0.5, meaning the log odds = 0, and
-        // then add evidence to it.
+        // We assume the prior probability (with no information) is 0.5, meaning the log odds = 0,
+        // and then add evidence to it.
         log_odds_map[state_key] += evidence_log_odds;
 
         auto & best_record_for_map = group_fusion_info_map[reg_ele_id].best_record_for_state;
-        if (best_record_for_map.find(state_key) == best_record_for_map.end() ||
-            confidence > best_record_for_map.at(state_key).signal.elements[0].confidence) {
+        if (
+          best_record_for_map.find(state_key) == best_record_for_map.end() ||
+          confidence > best_record_for_map.at(state_key).signal.elements[0].confidence) {
           best_record_for_map[state_key] = record;
         }
       }
