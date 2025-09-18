@@ -27,6 +27,13 @@
 namespace autoware::multi_object_tracker
 {
 
+// Vehicle wheel information for partial updates
+struct WheelInfo
+{
+  bool update_front_wheel;
+  geometry_msgs::msg::Point wheel_position;
+};
+
 class VehicleTracker : public Tracker
 {
 private:
@@ -51,9 +58,18 @@ public:
   bool measureWithPose(
     const types::DynamicObject & object, const types::InputChannel & channel_info);
 
+  bool conditionedUpdate(
+    const types::DynamicObject & measurement, const types::DynamicObject & prediction,
+    const autoware_perception_msgs::msg::Shape & smoothed_shape,
+    const rclcpp::Time & measurement_time, const types::InputChannel & channel_info) override;
+
   bool getTrackedObject(
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const override;
+
+  WheelInfo estimateUpdateWheel(
+    const types::DynamicObject & measurement, const types::DynamicObject & prediction,
+    const autoware_perception_msgs::msg::Shape & smoothed_shape) const;
 };
 
 }  // namespace autoware::multi_object_tracker
