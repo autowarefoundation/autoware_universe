@@ -20,6 +20,12 @@
 
 #include <autoware_utils_geometry/geometry.hpp>
 
+#ifdef ROS_DISTRO_GALACTIC
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#else
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#endif
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -175,45 +181,27 @@ bool Tracker::updateWithMeasurement(
     // Renew ema_shape_
     ema_shape_.clear();
   } else {
-    bool is_bbox = object.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
-    Eigen::Vector3d meas_shape{
-      object.shape.dimensions.x, object.shape.dimensions.y, object.shape.dimensions.z};
-    if (!ema_shape_.isInitialized()) {
-      ema_shape_.initialize(meas_shape, is_bbox);
-    } else {
-      ema_shape_.update(meas_shape, is_bbox);
-    }
-
-    // Weak update based on prediction
-    ++weak_update_count_;
-    types::DynamicObject pred;
-    getTrackedObject(measurement_time, pred);
-
-    // Create pseudo measurement
-    createPseudoMeasurement(object, pred);
-
-    // Update blended pose
-    object_.pose = pred.pose;
-
-    // Update shape if weak update continues too long or latest measurement shape is stable
-    bool is_meas_stable = ema_shape_.isStable();
-    if (weak_update_count_ >= WEAK_UPDATE_MAX_COUNT || is_meas_stable) {
-      object_.shape = object.shape;
-      // Use ema_shape_ if latest measurement shape is not stable
-      if (!is_meas_stable) {
-        Eigen::Vector3d ema_shape;
-        if (ema_shape_.getBBoxValue(ema_shape)) {
-          object_.shape.dimensions.x = ema_shape[0];
-          object_.shape.dimensions.y = ema_shape[1];
-          object_.shape.dimensions.z = ema_shape[2];
-          object_.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
-        }
-      }
-
-      // measure to update Kalman filter internal states
+    ema_shape_.processNoisyMeasurement(object);
+    if (ema_shape_.isStable()) {
+      setObjectShape(ema_shape_.getShape());
+      // Update object normally
       measure(object, measurement_time, channel_info);
-      // reset weak_update_count_
-      weak_update_count_ = 0;
+      object_.trust_extension = object.trust_extension;
+
+      // Update object status
+      getTrackedObject(measurement_time, object_);
+
+      // Renew ema_shape_
+      ema_shape_.clear();
+    } else {
+      // Get predicted object
+      types::DynamicObject predicted_object;
+      getTrackedObject(measurement_time, predicted_object);
+
+      const auto smoothed_shape = ema_shape_.getShape();
+
+      // Perform conditioned update
+      conditionedUpdate(object, predicted_object, smoothed_shape, measurement_time, channel_info);
     }
   }
 
@@ -244,7 +232,8 @@ bool Tracker::updateWithoutMeasurement(const rclcpp::Time & timestamp)
 }
 
 bool Tracker::createPseudoMeasurement(
-  const types::DynamicObject & meas, types::DynamicObject & pred)
+  const types::DynamicObject & meas, types::DynamicObject & pred,
+  const autoware_perception_msgs::msg::Shape & smoothed_shape)
 {
   // Apply linear fall‑off weight on dist square
   const double dx = meas.pose.position.x - pred.pose.position.x;
@@ -257,6 +246,10 @@ bool Tracker::createPseudoMeasurement(
   // Blend position
   pred.pose.position.x = pred.pose.position.x * (1 - w_pose) + meas.pose.position.x * w_pose;
   pred.pose.position.y = pred.pose.position.y * (1 - w_pose) + meas.pose.position.y * w_pose;
+
+  // Use smoothed shape and its area
+  pred.shape = smoothed_shape;
+  pred.area = types::getArea(smoothed_shape);
 
   // Blend orientation
   if (meas.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE) {
@@ -573,6 +566,21 @@ double Tracker::getPositionCovarianceDeterminant() const
     return std::numeric_limits<double>::max();
   }
   return determinant;
+}
+
+bool Tracker::conditionedUpdate(
+  const types::DynamicObject & measurement, const types::DynamicObject & prediction,
+  const autoware_perception_msgs::msg::Shape & smoothed_shape,
+  const rclcpp::Time & measurement_time, const types::InputChannel & channel_info)
+{
+  // For non-vehicle trackers, create pseudo measurement
+  types::DynamicObject pseudo_measurement = prediction;
+  createPseudoMeasurement(measurement, pseudo_measurement, smoothed_shape);
+
+  // Apply the measurement update directly
+  measure(pseudo_measurement, measurement_time, channel_info);
+
+  return true;
 }
 
 }  // namespace autoware::multi_object_tracker
