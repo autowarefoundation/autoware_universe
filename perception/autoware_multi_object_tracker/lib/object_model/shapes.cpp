@@ -289,31 +289,37 @@ double get3dGeneralizedIoU(
   return iou - (convex_area - union_area) / convex_area;
 }
 
-void computePolygonDimensions(autoware_perception_msgs::msg::Shape & shape)
+bool computePolygonDimensions(autoware_perception_msgs::msg::Shape & shape)
 {
-  // Compute axis-aligned bounding box
+  // Only handle polygon shapes
+  if (shape.type != autoware_perception_msgs::msg::Shape::POLYGON) {
+    return false;
+  }
   const auto & points = shape.footprint.points;
+  if (points.empty()) {
+    return false;
+  }
 
-  // Pre-allocate boundary values using first point
-  float max_x = points[0].x;
-  float max_y = points[0].y;
-  float max_z = points[0].z;
-  float min_x = points[0].x;
-  float min_y = points[0].y;
-  float min_z = points[0].z;
+  // Initialize with first point
+  float min_x = points[0].x, max_x = points[0].x;
+  float min_y = points[0].y, max_y = points[0].y;
+  float min_z = points[0].z, max_z = points[0].z;
 
-  for (const auto & point : points) {
-    if (point.x < min_x) min_x = point.x;
-    if (point.x > max_x) max_x = point.x;
-    if (point.y < min_y) min_y = point.y;
-    if (point.y > max_y) max_y = point.y;
-    if (point.z < min_z) min_z = point.z;
-    if (point.z > max_z) max_z = point.z;
+  // Start from second point to avoid redundant comparison
+  for (size_t i = 1; i < points.size(); ++i) {
+    const auto & point = points[i];
+    min_x = std::min(min_x, point.x);
+    max_x = std::max(max_x, point.x);
+    min_y = std::min(min_y, point.y);
+    max_y = std::max(max_y, point.y);
+    min_z = std::min(min_z, point.z);
+    max_z = std::max(max_z, point.z);
   }
 
   shape.dimensions.x = max_x - min_x;
   shape.dimensions.y = max_y - min_y;
   shape.dimensions.z = max_z - min_z;
+  return true;
 }
 
 }  // namespace shapes

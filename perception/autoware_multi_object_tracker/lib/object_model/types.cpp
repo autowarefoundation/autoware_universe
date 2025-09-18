@@ -90,9 +90,7 @@ DynamicObject toDynamicObject(
   dynamic_object.area = getArea(det_object.shape);
 
   // compute local axis aligned bounding box dimensions for POLYGON shape
-  if (det_object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
-    shapes::computePolygonDimensions(dynamic_object.shape);
-  }
+  shapes::computePolygonDimensions(dynamic_object.shape);
 
   return dynamic_object;
 }

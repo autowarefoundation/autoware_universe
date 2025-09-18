@@ -4,6 +4,9 @@ project(autoware_multi_object_tracker)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+
 # Ignore -Wnonportable-include-path in Clang for mussp
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wno-nonportable-include-path)
@@ -66,6 +69,8 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 target_link_libraries(${PROJECT_NAME}
   Eigen3::Eigen
   glog::glog
+  tf2::tf2
+  tf2_geometry_msgs::tf2_geometry_msgs
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}

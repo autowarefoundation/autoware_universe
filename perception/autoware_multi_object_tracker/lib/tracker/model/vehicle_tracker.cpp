@@ -301,4 +301,87 @@ bool VehicleTracker::getTrackedObject(
   return true;
 }
 
+bool VehicleTracker::conditionedUpdate(
+  const types::DynamicObject & measurement, const types::DynamicObject & prediction,
+  const autoware_perception_msgs::msg::Shape & smoothed_shape,
+  const rclcpp::Time & /*measurement_time*/, const types::InputChannel & /*channel_info*/)
+{
+  // Determine wheel to update
+  WheelInfo wheel_info = estimateUpdateWheel(measurement, prediction, smoothed_shape);
+
+  // Use motion model's pose covariance for wheel position uncertainty
+  std::array<double, 36> pose_cov = measurement.pose_covariance;
+
+  // Apply partial update based on determined wheel
+  bool update_success = false;
+  if (wheel_info.update_front_wheel) {
+    update_success = motion_model_.updateStatePoseFront(
+      wheel_info.wheel_position.x, wheel_info.wheel_position.y, pose_cov);
+  } else {
+    update_success = motion_model_.updateStatePoseRear(
+      wheel_info.wheel_position.x, wheel_info.wheel_position.y, pose_cov);
+  }
+
+  // Remove cached object if successful
+  if (update_success) {
+    removeCache();
+  }
+
+  return update_success;
+}
+
+WheelInfo VehicleTracker::estimateUpdateWheel(
+  const types::DynamicObject & measurement, const types::DynamicObject & prediction,
+  const autoware_perception_msgs::msg::Shape & /*smoothed_shape*/) const
+{
+  WheelInfo wheel_info;
+
+  // Calculate wheel positions from predicted center pose
+  const double pred_yaw = tf2::getYaw(prediction.pose.orientation);
+  const double cos_yaw = std::cos(pred_yaw);
+  const double sin_yaw = std::sin(pred_yaw);
+
+  // Get vehicle length from motion model (this is tracked and more accurate than shape)
+  const double vehicle_length = motion_model_.getLength();
+
+  // Use object model's wheel position ratios (same parameters used to initialize motion model)
+  const auto & bicycle_state = object_model_.bicycle_state;
+  const double lr =
+    std::max(vehicle_length * bicycle_state.wheel_pos_ratio_rear, bicycle_state.wheel_pos_rear_min);
+  const double lf = std::max(
+    vehicle_length * bicycle_state.wheel_pos_ratio_front, bicycle_state.wheel_pos_front_min);
+
+  // Calculate predicted wheel positions (same approach as motion model initialization)
+  geometry_msgs::msg::Point front_wheel;
+  front_wheel.x = prediction.pose.position.x + lf * cos_yaw;
+  front_wheel.y = prediction.pose.position.y + lf * sin_yaw;
+  front_wheel.z = prediction.pose.position.z;
+
+  geometry_msgs::msg::Point rear_wheel;
+  rear_wheel.x = prediction.pose.position.x - lr * cos_yaw;
+  rear_wheel.y = prediction.pose.position.y - lr * sin_yaw;
+  rear_wheel.z = prediction.pose.position.z;
+
+  // Calculate distances from measurement to predicted wheel positions
+  double dx_front = measurement.pose.position.x - front_wheel.x;
+  double dy_front = measurement.pose.position.y - front_wheel.y;
+  double dist_to_front_sq = dx_front * dx_front + dy_front * dy_front;
+
+  double dx_rear = measurement.pose.position.x - rear_wheel.x;
+  double dy_rear = measurement.pose.position.y - rear_wheel.y;
+  double dist_to_rear_sq = dx_rear * dx_rear + dy_rear * dy_rear;
+
+  // Choose wheel based on proximity to measurement
+  // Use front wheel if closer or equal (front wheel generally more stable for tracking)
+  if (dist_to_front_sq <= dist_to_rear_sq) {
+    wheel_info.update_front_wheel = true;
+    wheel_info.wheel_position = front_wheel;
+  } else {
+    wheel_info.update_front_wheel = false;
+    wheel_info.wheel_position = rear_wheel;
+  }
+
+  return wheel_info;
+}
+
 }  // namespace autoware::multi_object_tracker
