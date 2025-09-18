@@ -17,6 +17,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_perception_msgs/msg/detail/predicted_object__struct.hpp>
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
@@ -65,6 +66,18 @@ struct CommonParameters
   double max_speed_ratio;
   double speed_check_threshold;
   std::string path_selection_strategy;  // "highest_confidence" or "random"
+};
+
+struct PredictedObjectParameters
+{
+  // Configuration parameters
+  double predicted_path_delay{0.0};
+  double min_predicted_path_keep_duration{0.0};
+  double switch_time_threshold{0.0};
+
+  // Vehicle parameters
+  CommonParameters pedestrian_params;
+  CommonParameters vehicle_params;
 };
 
 // Tracking info of a single dummy object and its mapping to a predicted object
@@ -181,6 +194,7 @@ private:
   tf2_ros::TransformListener tf_listener_;
   std::vector<DummyObject> objects_;
   PredictedDummyObjectsTrackingInfo predicted_dummy_objects_tracking_info_;
+  PredictedObjectParameters predicted_object_params_;
   double visible_range_;
   double detection_successful_rate_;
   bool enable_ray_tracing_;
@@ -190,18 +204,8 @@ private:
   std::unique_ptr<PointCloudCreator> pointcloud_creator_;
 
   double angle_increment_;
-
   std::mt19937 random_generator_;
-  std::uniform_real_distribution<double> path_selection_dist_;
 
-  // Configuration parameters
-  double predicted_path_delay_;
-  double min_keep_duration_;
-  double switch_time_threshold_;
-
-  // Vehicle parameters
-  CommonParameters pedestrian_params_;
-  CommonParameters vehicle_params_;
   void timerCallback();
   void objectCallback(const DummyObject::ConstSharedPtr msg);
   void predictedObjectsCallback(const PredictedObjects::ConstSharedPtr msg);

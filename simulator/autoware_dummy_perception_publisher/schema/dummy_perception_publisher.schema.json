@@ -58,13 +58,7 @@
           "default": 0.004363323,
           "description": "Angle increment for ray casting (0.25 degrees in radians)"
         },
-        "predicted_path_delay": {
-          "type": "number",
-          "default": 2.0,
-          "minimum": 0.0,
-          "description": "Delay in seconds before using predicted paths"
-        },
-        "min_keep_duration": {
+        "min_predicted_path_keep_duration": {
           "type": "number",
           "default": 3.0,
           "minimum": 0.0,
@@ -190,8 +184,7 @@
         "use_fixed_random_seed",
         "object_centric_pointcloud",
         "angle_increment",
-        "predicted_path_delay",
-        "min_keep_duration",
+        "min_predicted_path_keep_duration",
         "switch_time_threshold",
         "vehicle",
         "pedestrian"

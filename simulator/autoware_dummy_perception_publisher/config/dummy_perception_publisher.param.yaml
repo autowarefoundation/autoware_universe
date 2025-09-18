@@ -14,10 +14,8 @@
 
 
     # Prediction parameters
-    predicted_path_delay: 2.0  # seconds - delay before using predicted paths
-    min_keep_duration: 3.0     # seconds - minimum time to keep using same prediction
+    min_predicted_path_keep_duration: 3.0     # seconds - minimum time to keep using same prediction
     switch_time_threshold: 2.0  # seconds - time threshold to switch from straight-line to predicted path
-
 
     # Remapping validation parameters - Vehicle
     vehicle:

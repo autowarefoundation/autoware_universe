@@ -334,16 +334,14 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
     random_generator_.seed(seed_gen());
   }
 
-  // Initialize path selection distribution
-  path_selection_dist_ = std::uniform_real_distribution<double>(0.0, 1.0);
-
   // Declare prediction parameters
-  predicted_path_delay_ = this->declare_parameter("predicted_path_delay", 2.0);
-  min_keep_duration_ = this->declare_parameter("min_keep_duration", 3.0);
-  switch_time_threshold_ = this->declare_parameter("switch_time_threshold", 2.0);
+  predicted_object_params_.min_predicted_path_keep_duration =
+    this->declare_parameter("min_predicted_path_keep_duration", 3.0);
+  predicted_object_params_.switch_time_threshold =
+    this->declare_parameter("switch_time_threshold", 2.0);
 
   // Initialize vehicle parameters
-  vehicle_params_ = {
+  predicted_object_params_.vehicle_params = {
     this->declare_parameter("vehicle.max_remapping_distance", 2.0),
     this->declare_parameter("vehicle.max_speed_difference_ratio", 1.05),
     this->declare_parameter("vehicle.min_speed_ratio", 0.5),
@@ -351,7 +349,7 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
     this->declare_parameter("vehicle.speed_check_threshold", 1.0),
     this->declare_parameter("vehicle.path_selection_strategy", std::string("highest_confidence"))};
   // Initialize pedestrian parameters
-  pedestrian_params_ = {
+  predicted_object_params_.pedestrian_params = {
     this->declare_parameter("pedestrian.max_remapping_distance", 3.0),
     this->declare_parameter("pedestrian.max_speed_difference_ratio", 1.3),
     this->declare_parameter("pedestrian.min_speed_ratio", 0.3),
@@ -444,7 +442,8 @@ void DummyPerceptionPublisherNode::timerCallback()
       if (object.action == tier4_simulation_msgs::msg::DummyObject::PREDICT) {
         if (matched_predicted) {
           return ObjectInfo(
-            object, predicted_object, predicted_time, current_time, switch_time_threshold_);
+            object, predicted_object, predicted_time, current_time,
+            predicted_object_params_.switch_time_threshold);
         }
 
         // Check if we have a last used prediction for this object
@@ -462,7 +461,7 @@ void DummyPerceptionPublisherNode::timerCallback()
           return ObjectInfo(
             object, info_it->second.last_used_prediction.value(),
             info_it->second.last_used_prediction_time.value(), current_time,
-            switch_time_threshold_);
+            predicted_object_params_.switch_time_threshold);
         }
 
         RCLCPP_DEBUG(
@@ -725,8 +724,9 @@ std::pair<PredictedObject, rclcpp::Time> DummyPerceptionPublisherNode::findMatch
 
   const std::string & mapped_predicted_uuid = mapping_it->second.predicted_uuid;
 
-  // Check if we should keep using the current prediction for at least min_keep_duration
-  // Check if we have a last used prediction and if we should keep using it
+  // Check if we should keep using the current prediction for at least
+  // min_predicted_path_keep_duration Check if we have a last used prediction and if we should keep
+  // using it
   auto info_it = dummy_predicted_info_map.find(obj_uuid_str);
   if (info_it == dummy_predicted_info_map.end()) {
     // Create entry if it doesn't exist (needed for later updates)
@@ -740,8 +740,9 @@ std::pair<PredictedObject, rclcpp::Time> DummyPerceptionPublisherNode::findMatch
     const double time_since_last_update =
       (current_time - info_it->second.prediction_update_timestamp.value()).seconds();
 
-    // If less than min_keep_duration_ has passed since last update, keep using the same prediction
-    if (time_since_last_update < min_keep_duration_) {
+    // If less than min_predicted_path_keep_duration has passed since last update, keep using the
+    // same prediction
+    if (time_since_last_update < predicted_object_params_.min_predicted_path_keep_duration) {
       if (info_it->second.last_used_prediction_time.has_value()) {
         return std::make_pair(
           info_it->second.last_used_prediction.value(),
@@ -781,12 +782,15 @@ std::pair<PredictedObject, rclcpp::Time> DummyPerceptionPublisherNode::findMatch
           });
 
         // Determine path selection strategy based on object type
-        const std::string path_strategy = is_pedestrian ? pedestrian_params_.path_selection_strategy
-                                                        : vehicle_params_.path_selection_strategy;
+        const auto & pedestrian_params = predicted_object_params_.pedestrian_params;
+        const auto & vehicle_params = predicted_object_params_.vehicle_params;
+        const std::string path_selection_strategy = is_pedestrian
+                                                      ? pedestrian_params.path_selection_strategy
+                                                      : vehicle_params.path_selection_strategy;
 
         if (!predicted_object.kinematics.predicted_paths.empty()) {
           auto & paths = modified_predicted_object.kinematics.predicted_paths;
-          if (path_strategy == "random") {
+          if (path_selection_strategy == "random") {
             // Randomly select a path index
             const size_t num_paths = predicted_object.kinematics.predicted_paths.size();
             std::uniform_int_distribution<size_t> path_index_dist(0, num_paths - 1);
@@ -798,7 +802,7 @@ std::pair<PredictedObject, rclcpp::Time> DummyPerceptionPublisherNode::findMatch
               rclcpp::get_logger("dummy_perception_publisher"),
               "Randomly selected path %zu out of %zu for %s object %s", random_path_index,
               num_paths, is_pedestrian ? "pedestrian" : "vehicle", obj_uuid_str.c_str());
-          } else if (path_strategy == "highest_confidence") {
+          } else if (path_selection_strategy == "highest_confidence") {
             // Find path with highest confidence and move it to first position
             auto max_confidence_it = std::max_element(
               paths.begin(), paths.end(),
@@ -1110,11 +1114,13 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
   // Use class-specific thresholds
   // Pedestrians: more lenient due to unpredictable movement patterns
   // Vehicles: stricter for more predictable movement
-  const double max_remapping_distance = is_pedestrian ? pedestrian_params_.max_remapping_distance
-                                                      : vehicle_params_.max_remapping_distance;
+  const auto & pedestrian_params = predicted_object_params_.pedestrian_params;
+  const auto & vehicle_params = predicted_object_params_.vehicle_params;
+  const double max_remapping_distance = is_pedestrian ? pedestrian_params.max_remapping_distance
+                                                      : vehicle_params.max_remapping_distance;
   const double max_speed_difference_ratio = is_pedestrian
-                                              ? pedestrian_params_.max_speed_difference_ratio
-                                              : vehicle_params_.max_speed_difference_ratio;
+                                              ? pedestrian_params.max_speed_difference_ratio
+                                              : vehicle_params.max_speed_difference_ratio;
 
   // Check if candidate has predicted paths
   if (candidate_prediction.kinematics.predicted_paths.empty()) {
@@ -1133,11 +1139,11 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
 
   // Speed bounds check - more lenient for pedestrians
   const double min_speed_ratio =
-    is_pedestrian ? pedestrian_params_.min_speed_ratio : vehicle_params_.min_speed_ratio;
+    is_pedestrian ? pedestrian_params.min_speed_ratio : vehicle_params.min_speed_ratio;
   const double max_speed_ratio =
-    is_pedestrian ? pedestrian_params_.max_speed_ratio : vehicle_params_.max_speed_ratio;
-  const double speed_check_threshold = is_pedestrian ? pedestrian_params_.speed_check_threshold
-                                                     : vehicle_params_.speed_check_threshold;
+    is_pedestrian ? pedestrian_params.max_speed_ratio : vehicle_params.max_speed_ratio;
+  const double speed_check_threshold =
+    is_pedestrian ? pedestrian_params.speed_check_threshold : vehicle_params.speed_check_threshold;
 
   auto is_within_speed_bounds = [&](double speed) {
     return speed >= min_speed_ratio * dummy_speed && speed <= max_speed_ratio * dummy_speed;
