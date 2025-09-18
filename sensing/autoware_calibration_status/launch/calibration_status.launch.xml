@@ -9,14 +9,14 @@
   <arg name="model_param_path" default="$(find-pkg-share autoware_calibration_status)/config/$(var model_name).param.yaml"/>
   <arg name="ml_package_param_path" default="$(var model_path)/ml_package_$(var model_name).param.yaml"/>
   <arg name="build_only" default="false" description="shutdown node after TensorRT engine file is built"/>
+  <arg name="use_sim_time" default="true" description="use simulation time"/>
 
-  <!-- TODO(amadeuszsz): remove decompressor node from launch file-->
   <arg name="decompressor_param_file" default="$(find-pkg-share autoware_image_transport_decompressor)/config/image_transport_decompressor.param.yaml"/>
-  <node pkg="autoware_image_transport_decompressor" exec="image_transport_decompressor_node" name="image_transport_decompressor_node">
+  <node pkg="autoware_image_transport_decompressor" exec="image_transport_decompressor_node" name="image8_transport_decompressor_node">
     <remap from="~/input/compressed_image" to="/sensing/camera/camera8/image_raw/compressed"/>
-    <remap from="~/output/raw_image" to="/sensing/camera/camera8/image_rect_color"/>
+    <remap from="~/output/raw_image" to="/sensing/camera/camera8/image_raw"/>
     <param from="$(var decompressor_param_file)"/>
-    <param name="use_sim_time" value="true"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
   </node>
 
   <node pkg="autoware_calibration_status" exec="calibration_status_node" name="calibration_status" output="both">
@@ -25,6 +25,7 @@
     <remap from="~/input/velocity" to="$(var input_velocity)"/>
     <remap from="~/input/objects" to="$(var input_objects)"/>
     <remap from="~/input/validate_calibration_srv" to="$(var validate_calibration_srv)"/>
-    <param name="use_sim_time" value="true"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+    <param name="build_only" value="$(var build_only)"/>
   </node>
 </launch>

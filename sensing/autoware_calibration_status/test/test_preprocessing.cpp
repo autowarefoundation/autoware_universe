@@ -123,16 +123,16 @@ TEST_F(PreprocessingTest, TestPreprocessing)
       sizeof(InputImageBGR8Type) * data_utils::height * data_utils::width, cudaMemcpyHostToDevice,
       stream));
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
-      dist_coeffs_d.get(), sample.camera_info_calibrated->d.data(),
+      dist_coeffs_d.get(), sample.camera_lidar_info_calibrated.d.data(),
       sizeof(double) * dist_coeffs_size, cudaMemcpyHostToDevice, stream));
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
-      camera_matrix_d.get(), sample.camera_info_calibrated->k.data(),
+      camera_matrix_d.get(), sample.camera_lidar_info_calibrated.k.data(),
       sizeof(double) * camera_matrix_size, cudaMemcpyHostToDevice, stream));
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
-      projection_matrix_d.get(), sample.camera_info_calibrated->p.data(),
+      projection_matrix_d.get(), sample.camera_lidar_info_calibrated.p.data(),
       sizeof(double) * projection_matrix_size, cudaMemcpyHostToDevice, stream));
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
-      tf_matrix_d.get(), sample.lidar_to_camera_tf_calibrated.data(),
+      tf_matrix_d.get(), sample.camera_lidar_info_calibrated.tf_camera_to_lidar.data(),
       sizeof(double) * tf_matrix_size, cudaMemcpyHostToDevice, stream));
 
     CHECK_CUDA_ERROR(preprocess_ptr->undistortImage_launch(

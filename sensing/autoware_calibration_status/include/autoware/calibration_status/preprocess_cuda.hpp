@@ -46,6 +46,10 @@ public:
   explicit PreprocessCuda(
     const double max_depth, const uint32_t dilation_size, cudaStream_t & stream);
 
+  cudaError_t copyImage_launch(
+    const InputImageBGR8Type * input_image, const size_t width, const size_t height,
+    InputImageBGR8Type * output_image, float * output_array);
+
   /**
    * @brief Launch image undistortion kernel
    *

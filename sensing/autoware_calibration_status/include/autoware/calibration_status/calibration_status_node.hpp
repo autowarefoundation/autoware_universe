@@ -16,7 +16,9 @@
 #define AUTOWARE__CALIBRATION_STATUS__CALIBRATION_STATUS_NODE_HPP_
 
 #include "autoware/calibration_status/calibration_status.hpp"
-#include "autoware/calibration_status/utils.hpp"
+#include "autoware/calibration_status/data_type.hpp"
+#include "autoware/calibration_status/data_type_eigen.hpp"
+#include "autoware/calibration_status/ros_utils.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -27,7 +29,6 @@
 #include <geometry_msgs/msg/twist_with_covariance.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_srvs/srv/trigger.hpp>
@@ -39,7 +40,6 @@
 #include <tf2_ros/transform_listener.h>
 
 #include <memory>
-#include <string>
 #include <vector>
 
 namespace autoware::calibration_status
@@ -73,14 +73,14 @@ private:
   VelocitySource velocity_source_;
   double period_;
   int64_t queue_size_;
-  std::vector<std::string> cloud_topics_;
-  std::vector<std::string> image_topics_;
-  std::vector<double> approx_deltas_;
   bool check_velocity_;
   bool check_objects_;
   double velocity_threshold_;
   std::size_t objects_limit_;
   double miscalibration_confidence_threshold_;
+
+  std::vector<CameraLidarTopicsInfo> camera_lidar_in_out_info_;
+  std::vector<CameraLidarInfo> camera_lidar_info_;
 
   // ROS interface
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr calibration_service_;
@@ -96,10 +96,6 @@ private:
     twist_with_cov_stamped_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odometry_sub_;
   rclcpp::Subscription<autoware_perception_msgs::msg::PredictedObjects>::SharedPtr objects_sub_;
-
-  // Camera info
-  std::vector<rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr> camera_info_subs_;
-  std::vector<sensor_msgs::msg::CameraInfo::ConstSharedPtr> camera_info_msgs_;
 
   // Input synchronization
   std::vector<std::shared_ptr<message_filters::Subscriber<sensor_msgs::msg::PointCloud2>>>
@@ -126,13 +122,6 @@ private:
   rclcpp::Time last_objects_update_;
 
   // Methods
-  /**
-   * @brief Main execution for the node
-   * @param pair_idx Index of the sensor pair to process
-   * @return true if processing was successful, false otherwise
-   */
-  bool run(std::size_t pair_idx);
-
   /**
    * @brief Setup runtime mode-specific interfaces (service/timer/synchronization)
    */
@@ -207,15 +196,6 @@ private:
    */
   void objects_callback(const autoware_perception_msgs::msg::PredictedObjects::SharedPtr msg);
 
-  // Camera info callbacks
-  /**
-   * @brief Store camera info messages for calibration processing
-   * @param msg Camera info message with intrinsic parameters
-   * @param image_idx Index of the camera in the configuration
-   */
-  void camera_info_callback(
-    const sensor_msgs::msg::CameraInfo::ConstSharedPtr & msg, size_t image_idx);
-
   // Sensor synchronization callback
   /**
    * @brief Process synchronized LiDAR and camera data for calibration validation
@@ -236,26 +216,33 @@ private:
 
   /**
    * @brief Get current velocity check status for calibration prerequisites
-   * @return VelocityCheckStatus containing velocity state and thresholds
+   * @param time_ref Reference time for age calculation
+   * @return VelocityFilterStatus containing velocity state and thresholds
    */
-  CheckStatus<double> get_velocity_check_status();
+  FilterStatus<double> get_velocity_filter_status(const rclcpp::Time & time_ref);
 
   /**
    * @brief Get current object count check status for calibration prerequisites
-   * @return ObjectsCheckStatus containing object count state and thresholds
+   * @param time_ref Reference time for age calculation
+   * @return ObjectsFilterStatus containing object count state and thresholds
    */
-  CheckStatus<size_t> get_objects_check_status();
+  FilterStatus<size_t> get_objects_filter_status(const rclcpp::Time & time_ref);
+
+  /**
+   * @brief Main execution for the node
+   * @param pair_idx Index of the sensor pair to process
+   * @return true if processing was successful, false otherwise
+   */
+  bool run(std::size_t pair_idx);
 
   /**
    * @brief Publish diagnostic status to ROS diagnostics system
-   * @param velocity_check_status Current velocity check state
-   * @param objects_check_status Current object count check state
+   * @param input_metadata Input metadata including filter statuses and timestamps
    * @param pair_idx Index of the sensor pair being processed
    * @param result Calibration validation result (optional)
    */
   void publish_diagnostic_status(
-    const CheckStatus<double> & velocity_check_status,
-    const CheckStatus<size_t> & objects_check_status, const size_t pair_idx,
+    const InputMetadata & input_metadata, const size_t pair_idx,
     const CalibrationStatusResult & result = CalibrationStatusResult());
 };
 

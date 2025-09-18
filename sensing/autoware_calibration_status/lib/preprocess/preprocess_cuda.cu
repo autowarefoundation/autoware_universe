@@ -24,6 +24,36 @@ PreprocessCuda::PreprocessCuda(
   const double max_depth, const uint32_t dilation_size, cudaStream_t & stream)
 : max_depth_(max_depth), dilation_size_(static_cast<int>(dilation_size)), stream_(stream) {};
 
+__global__ void copyImage_kernel(
+  const InputImageBGR8Type * input_image, const size_t width, const size_t height,
+  InputImageBGR8Type * output_image, float * output_array)
+{
+  const size_t x = blockIdx.x * blockDim.x + threadIdx.x;
+  const size_t y = blockIdx.y * blockDim.y + threadIdx.y;
+
+  if (x < width && y < height) {
+    const InputImageBGR8Type px = input_image[y * width + x];
+    output_image[y * width + x] = px;
+    output_array[0 * height * width + y * width + x] = static_cast<float>(px.r) / 255.0f;
+    output_array[1 * height * width + y * width + x] = static_cast<float>(px.g) / 255.0f;
+    output_array[2 * height * width + y * width + x] = static_cast<float>(px.b) / 255.0f;
+    output_array[3 * height * width + y * width + x] = 0.0f;
+    output_array[4 * height * width + y * width + x] = 0.0f;
+  }
+}
+
+cudaError_t PreprocessCuda::copyImage_launch(
+  const InputImageBGR8Type * input_image, const size_t width, const size_t height,
+  InputImageBGR8Type * output_image, float * output_array)
+{
+  dim3 threads(16, 16);
+  dim3 blocks((width + threads.x - 1) / threads.x, (height + threads.y - 1) / threads.y);
+
+  copyImage_kernel<<<blocks, threads, 0, stream_>>>(
+    input_image, width, height, output_image, output_array);
+  return cudaGetLastError();
+}
+
 /**
  * @brief Performs bilinear interpolation, mimicking OpenCV's edge handling.
  *
@@ -215,7 +245,7 @@ __device__ inline InputImageBGR8Type jet_colormap(float v)
  *
  * @param input_points Pointer to the input point cloud data.
  * @param undistorted_image Pointer to the undistorted image to draw on.
- * @param tf_matrix The 4x4 transformation matrix (column-major) to transform points.
+ * @param tf_matrix The 4x4 transformation matrix (row-major) to transform points.
  * @param projection_matrix The new projection matrix (P) for the undistorted image.
  * @param num_points The total number of points in the input cloud.
  * @param width The width of the output image and data array.
@@ -244,11 +274,11 @@ __global__ void projectPoints_kernel(
 
     // Transform the point into the camera coordinate frame
     const double p_cam_x =
-      tf_matrix[0] * p.x + tf_matrix[4] * p.y + tf_matrix[8] * p.z + tf_matrix[12];
+      tf_matrix[0] * p.x + tf_matrix[1] * p.y + tf_matrix[2] * p.z + tf_matrix[3];
     const double p_cam_y =
-      tf_matrix[1] * p.x + tf_matrix[5] * p.y + tf_matrix[9] * p.z + tf_matrix[13];
+      tf_matrix[4] * p.x + tf_matrix[5] * p.y + tf_matrix[6] * p.z + tf_matrix[7];
     const double p_cam_z =
-      tf_matrix[2] * p.x + tf_matrix[6] * p.y + tf_matrix[10] * p.z + tf_matrix[14];
+      tf_matrix[8] * p.x + tf_matrix[9] * p.y + tf_matrix[10] * p.z + tf_matrix[11];
 
     // Ignore points that are behind or too far to the camera
     if (p_cam_z < 0.0 || p_cam_z >= max_depth) {

@@ -37,7 +37,7 @@
         "queue_size": {
           "type": "integer",
           "description": "The queue size in synchronized callbacks.",
-          "default": 10
+          "default": 5
         },
         "input": {
           "type": "object",
@@ -48,7 +48,7 @@
                 "type": "string"
               },
               "description": "List of LiDAR topics to subscribe for calibration status verification. If only a single LiDAR topic is specified with multiple camera topics, all the camera topics will be validated against that single LiDAR topic. If multiple LiDAR topics are specified with multiple camera topics, each camera topic will be validated against the corresponding LiDAR topic in the list (both lists size must match). If multiple LiDAR topics are specified with a single camera topic, the single camera topic will be validated against all the LiDAR topics in the list.",
-              "default": ["pointcloud"]
+              "default": ["/sensing/lidar/concatenated/pointcloud"]
             },
             "image_topics": {
               "type": "array",
@@ -56,18 +56,26 @@
                 "type": "string"
               },
               "description": "List of camera topics to subscribe for calibration status verification. Same rules as for cloud_topics apply here.",
-              "default": ["camera0/image_rect"]
+              "default": ["/sensing/camera/camera8/image_raw"]
             },
             "approx_deltas": {
               "type": "array",
               "items": {
                 "type": "number"
               },
-              "description": "The approximate time deltas in seconds for each topic pair (LiDAR and camera) for Approximate Time Synchronization Policy. The length of this array must be equal to maximum length of cloud_topics and image_topics arrays",
+              "description": "The approximate time deltas in seconds for each topic pair (LiDAR and camera) for Approximate Time Synchronization Policy. The length of this array must be equal to maximum length of cloud_topics and image_topics arrays or be a single value which will be applied to all topic pairs.",
               "default": ["0.1"]
+            },
+            "already_rectified": {
+              "type": "array",
+              "items": {
+                "type": "boolean"
+              },
+              "description": "List of flags indicating whether each camera topic provides already rectified images. The length of this array must be equal to maximum length of image_topics array or be a single value which will be applied to all camera topics.",
+              "default": [true]
             }
           },
-          "required": ["cloud_topics", "image_topics", "approx_deltas"],
+          "required": ["cloud_topics", "image_topics", "approx_deltas", "already_rectified"],
           "additionalProperties": false
         },
         "prerequisite": {
@@ -93,7 +101,7 @@
             "velocity_threshold": {
               "type": "number",
               "description": "The maximum velocity threshold in meters per second for the vehicle to be considered moving. If the vehicle's velocity is below this threshold, the calibration status verification will not be performed.",
-              "default": 0.1
+              "default": 5.0
             },
             "check_objects": {
               "type": "boolean",
@@ -103,7 +111,7 @@
             "objects_limit": {
               "type": "integer",
               "description": "The maximum number of objects allowed for the vehicle to be considered in a valid state for calibration status verification. If the number of detected objects exceeds this limit, the calibration status verification will not be performed.",
-              "default": 5,
+              "default": 100,
               "minimum": 0
             }
           },

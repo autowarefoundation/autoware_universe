@@ -66,10 +66,10 @@ CalibrationStatus::CalibrationStatus(
     cuda_utils::make_unique<InputImageBGR8Type[]>(config_.height.at(2) * config_.width.at(2));
   image_undistorted_d_ =
     cuda_utils::make_unique<InputImageBGR8Type[]>(config_.height.at(2) * config_.width.at(2));
-  dist_coeffs_d_ = cuda_utils::make_unique<double[]>(8);
-  camera_matrix_d_ = cuda_utils::make_unique<double[]>(9);
-  projection_matrix_d_ = cuda_utils::make_unique<double[]>(12);
-  tf_matrix_d_ = cuda_utils::make_unique<double[]>(16);
+  dist_coeffs_d_ = cuda_utils::make_unique<double[]>(dist_coeffs_size);
+  camera_matrix_d_ = cuda_utils::make_unique<double[]>(camera_matrix_size);
+  projection_matrix_d_ = cuda_utils::make_unique<double[]>(projection_matrix_size);
+  tf_matrix_d_ = cuda_utils::make_unique<double[]>(tf_matrix_size);
   num_points_projected_d_ = cuda_utils::make_unique<uint32_t>();
 
   CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
@@ -80,8 +80,7 @@ CalibrationStatus::CalibrationStatus(
 CalibrationStatusResult CalibrationStatus::process(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud_msg,
   const sensor_msgs::msg::Image::ConstSharedPtr & image_msg,
-  const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info_msg,
-  const Eigen::Affine3d & transform, uint8_t * preview_img_data)
+  const CameraLidarInfo & camera_lidar_info, uint8_t * preview_img_data)
 {
   auto t1 = std::chrono::steady_clock::now();
 
@@ -92,10 +91,10 @@ CalibrationStatusResult CalibrationStatus::process(
   cuda_utils::clear_async(image_d_.get(), image_msg->height * image_msg->width, stream_);
   cuda_utils::clear_async(
     image_undistorted_d_.get(), image_msg->height * image_msg->width, stream_);
-  cuda_utils::clear_async(dist_coeffs_d_.get(), 8, stream_);
-  cuda_utils::clear_async(camera_matrix_d_.get(), 9, stream_);
-  cuda_utils::clear_async(projection_matrix_d_.get(), 12, stream_);
-  cuda_utils::clear_async(tf_matrix_d_.get(), 16, stream_);
+  cuda_utils::clear_async(dist_coeffs_d_.get(), dist_coeffs_size, stream_);
+  cuda_utils::clear_async(camera_matrix_d_.get(), camera_matrix_size, stream_);
+  cuda_utils::clear_async(projection_matrix_d_.get(), projection_matrix_size, stream_);
+  cuda_utils::clear_async(tf_matrix_d_.get(), tf_matrix_size, stream_);
   cuda_utils::clear_async(num_points_projected_d_.get(), 1, stream_);
 
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
@@ -107,22 +106,28 @@ CalibrationStatusResult CalibrationStatus::process(
     sizeof(InputImageBGR8Type) * image_msg->height * image_msg->width, cudaMemcpyHostToDevice,
     stream_));
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    dist_coeffs_d_.get(), camera_info_msg->d.data(), sizeof(double) * dist_coeffs_size,
+    dist_coeffs_d_.get(), camera_lidar_info.d.data(), sizeof(double) * dist_coeffs_size,
     cudaMemcpyHostToDevice, stream_));
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    camera_matrix_d_.get(), camera_info_msg->k.data(), sizeof(double) * camera_matrix_size,
+    camera_matrix_d_.get(), camera_lidar_info.k.data(), sizeof(double) * camera_matrix_size,
     cudaMemcpyHostToDevice, stream_));
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    projection_matrix_d_.get(), camera_info_msg->p.data(), sizeof(double) * projection_matrix_size,
+    projection_matrix_d_.get(), camera_lidar_info.p.data(), sizeof(double) * projection_matrix_size,
     cudaMemcpyHostToDevice, stream_));
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    tf_matrix_d_.get(), transform.data(), sizeof(double) * tf_matrix_size, cudaMemcpyHostToDevice,
-    stream_));
+    tf_matrix_d_.get(), camera_lidar_info.tf_camera_to_lidar.data(),
+    sizeof(double) * tf_matrix_size, cudaMemcpyHostToDevice, stream_));
 
-  // Undistort image
-  CHECK_CUDA_ERROR(preprocess_ptr_->undistortImage_launch(
-    image_d_.get(), dist_coeffs_d_.get(), camera_matrix_d_.get(), projection_matrix_d_.get(),
-    image_msg->width, image_msg->height, image_undistorted_d_.get(), in_d_.get()));
+  // Undistort image or just copy with appropiate memory pattern
+  if (camera_lidar_info.to_undistort) {
+    CHECK_CUDA_ERROR(preprocess_ptr_->undistortImage_launch(
+      image_d_.get(), dist_coeffs_d_.get(), camera_matrix_d_.get(), projection_matrix_d_.get(),
+      image_msg->width, image_msg->height, image_undistorted_d_.get(), in_d_.get()));
+  } else {
+    CHECK_CUDA_ERROR(preprocess_ptr_->copyImage_launch(
+      image_d_.get(), image_msg->width, image_msg->height, image_undistorted_d_.get(),
+      in_d_.get()));
+  }
 
   // Project points
   CHECK_CUDA_ERROR(preprocess_ptr_->projectPoints_launch(

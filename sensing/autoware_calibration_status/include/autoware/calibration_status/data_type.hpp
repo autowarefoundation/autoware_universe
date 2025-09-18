@@ -15,7 +15,9 @@
 #ifndef AUTOWARE__CALIBRATION_STATUS__DATA_TYPE_HPP_
 #define AUTOWARE__CALIBRATION_STATUS__DATA_TYPE_HPP_
 
+#include <cstddef>
 #include <cstdint>
+#include <string>
 
 namespace autoware::calibration_status
 {
@@ -53,6 +55,37 @@ struct InputImageBGR8Type
   std::uint8_t g;
   std::uint8_t r;
 } __attribute__((packed));
+
+/**
+ * @brief Result structure for calibration status detection
+ *
+ * Contains the complete output from calibration validation including
+ * classification results, confidence scores, and performance metrics.
+ */
+struct CalibrationStatusResult
+{
+  float calibration_confidence;
+  float miscalibration_confidence;
+  double preprocessing_time_ms;
+  double inference_time_ms;
+  uint32_t num_points_projected;
+};
+
+/**
+ * @brief Configuration structure for camera and LiDAR topic pairing
+ *
+ * Contains topic names for a camera-LiDAR sensor pair along with configuration
+ * parameters for synchronization and preprocessing.
+ */
+struct CameraLidarTopicsInfo
+{
+  std::string camera_topic;
+  std::string camera_info_topic;
+  std::string lidar_topic;
+  std::string projected_points_topic;
+  double approx_delta;
+  bool already_rectified;
+};
 
 }  // namespace autoware::calibration_status
 

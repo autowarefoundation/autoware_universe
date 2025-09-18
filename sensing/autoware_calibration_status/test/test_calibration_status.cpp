@@ -105,8 +105,7 @@ TEST_F(CalibrationStatusTest, TestCalibrationStatusProcessingCalibratedSamples)
     preview_img_msg->data.resize(sample.image_bgr->data.size());
     uint8_t * preview_img_data = preview_img_msg->data.data();
     auto result = calibration_status->process(
-      sample.pointcloud, sample.image_bgr, sample.camera_info_calibrated,
-      sample.lidar_to_camera_tf_calibrated, preview_img_data);
+      sample.pointcloud, sample.image_bgr, sample.camera_lidar_info_calibrated, preview_img_data);
     if (save_test_images) {
       data_utils::save_img(
         preview_img_msg->data, preview_img_msg->width, preview_img_msg->height, data_dir,
@@ -140,8 +139,8 @@ TEST_F(CalibrationStatusTest, TestCalibrationStatusProcessingMisalibratedSamples
     preview_img_msg->data.resize(sample.image_bgr->data.size());
     uint8_t * preview_img_data = preview_img_msg->data.data();
     auto result = calibration_status->process(
-      sample.pointcloud, sample.image_bgr, sample.camera_info_miscalibrated,
-      sample.lidar_to_camera_tf_miscalibrated, preview_img_data);
+      sample.pointcloud, sample.image_bgr, sample.camera_lidar_info_miscalibrated,
+      preview_img_data);
     if (save_test_images) {
       data_utils::save_img(
         preview_img_msg->data, preview_img_msg->width, preview_img_msg->height, data_dir,

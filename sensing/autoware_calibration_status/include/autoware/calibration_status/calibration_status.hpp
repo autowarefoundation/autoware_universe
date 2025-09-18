@@ -17,15 +17,14 @@
 
 #include "autoware/calibration_status/config.hpp"
 #include "autoware/calibration_status/data_type.hpp"
+#include "autoware/calibration_status/data_type_eigen.hpp"
 #include "autoware/calibration_status/preprocess_cuda.hpp"
-#include "autoware/calibration_status/utils.hpp"
 #include "autoware/calibration_status/visibility_control.hpp"
 
 #include <Eigen/Geometry>
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
 
-#include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
@@ -79,16 +78,14 @@ public:
    *
    * @param cloud_msg Point cloud data from LiDAR sensor
    * @param image_msg Raw camera image (BGR8 format)
-   * @param camera_info_msg Camera intrinsic parameters and distortion coefficients
-   * @param transform 6DOF transformation from LiDAR to camera coordinate frame
+   * @param camera_lidar_info Camera and LiDAR intrinsic/extrinsic parameters
    * @param preview_img_data Output buffer for visualization image with projected points
    * @return CalibrationStatusResult containing validation results and timing information
    */
   CalibrationStatusResult process(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud_msg,
     const sensor_msgs::msg::Image::ConstSharedPtr & image_msg,
-    const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info_msg,
-    const Eigen::Affine3d & transform, uint8_t * preview_img_data);
+    const CameraLidarInfo & camera_lidar_info, uint8_t * preview_img_data);
 
 private:
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_;

@@ -11,7 +11,7 @@ The calibration status detection system operates through the following pipeline:
 ### 1. Data Preprocessing (CUDA-accelerated)
 
 - **Image Undistortion**: Corrects camera distortion
-- **Point Cloud Projection**: Projects 3D LiDAR points onto undistorted 2D image plane - add depth and intensity information
+- **Point Cloud Projection**: Projects 3D LiDAR points onto undistorted 2D image plane - adds depth and intensity information
 - **Morphological Dilation**: Enhances point visibility for neural network input
 
 ### 2. Neural Network Inference (TensorRT)
@@ -64,7 +64,6 @@ The calibration status detection system operates through the following pipeline:
 ## Assumptions / Known Limits
 
 - Input images must be in BGR8 format (8-bit per channel)
-- Input images must be undistorted (image_raw)
 - Input point clouds should contain intensity information (XYZIRC format)
 
 ## Usage Example
@@ -77,9 +76,8 @@ ros2 launch autoware_calibration_status calibration_status.launch.xml
 
 - Manual runtime mode with detailed response (custom srv)
 - Replace filter for objects on the scene counter to objects within the camera FOV counter (raytracing)
-- CUDA kernels optimizations
-- Support undistorted images directly
-- Support RGB8 images
+- Multithreading for multiple camera-LiDAR pairs
+- More filters (e.g. yaw rate)
 - cuda_blackboard support
 
 ## References

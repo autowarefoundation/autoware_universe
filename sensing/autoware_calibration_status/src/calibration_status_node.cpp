@@ -14,7 +14,8 @@
 
 #include "autoware/calibration_status/calibration_status_node.hpp"
 
-#include "autoware/calibration_status/utils.hpp"
+#include "autoware/calibration_status/camera_lidar_info_collector.hpp"
+#include "autoware/calibration_status/ros_utils.hpp"
 
 #include <rclcpp/qos.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
@@ -40,6 +41,7 @@ CalibrationStatusNode::CalibrationStatusNode(const rclcpp::NodeOptions & options
   last_velocity_update_(this->get_clock()->now()),
   last_objects_update_(this->get_clock()->now())
 {
+  // Core library for calibration status
   const CalibrationStatusConfig calibration_status_config(
     this->declare_parameter<double>("max_depth"), this->declare_parameter<int64_t>("dilation_size"),
     this->declare_parameter<std::vector<int64_t>>("height"),
@@ -57,7 +59,7 @@ CalibrationStatusNode::CalibrationStatusNode(const rclcpp::NodeOptions & options
   miscalibration_confidence_threshold_ =
     this->declare_parameter<double>("miscalibration_confidence_threshold");
 
-  // Prerequisite configuration
+  // Prerequisite configuration for calibration check
   check_velocity_ = this->declare_parameter<bool>("prerequisite.check_velocity");
   velocity_source_ =
     string_to_velocity_source(this->declare_parameter<std::string>("prerequisite.velocity_source"));
@@ -72,52 +74,26 @@ CalibrationStatusNode::CalibrationStatusNode(const rclcpp::NodeOptions & options
     setup_object_detection_interface();
   }
 
-  // Initialize diagnostic publisher
+  // Input configuration
+  camera_lidar_in_out_info_ = compose_in_out_topics(
+    this->declare_parameter<std::vector<std::string>>("input.cloud_topics"),
+    this->declare_parameter<std::vector<std::string>>("input.image_topics"),
+    this->declare_parameter<std::vector<double>>("input.approx_deltas"),
+    this->declare_parameter<std::vector<bool>>("input.already_rectified"));
+
+  auto camera_lidar_info_collector =
+    std::make_shared<CameraLidarInfoCollector>(this, camera_lidar_in_out_info_);
+  camera_lidar_info_ = camera_lidar_info_collector->get_cameras_lidars_info();
+
+  // Diagnostic publisher
   diagnostic_pub_ =
     this->create_publisher<diagnostic_msgs::msg::DiagnosticArray>("/diagnostics", rclcpp::QoS(1));
 
-  // Input configuration
-  cloud_topics_ = this->declare_parameter<std::vector<std::string>>("input.cloud_topics");
-  image_topics_ = this->declare_parameter<std::vector<std::string>>("input.image_topics");
-  approx_deltas_ = this->declare_parameter<std::vector<double>>("input.approx_deltas");
-  size_t max_topics = std::max(cloud_topics_.size(), image_topics_.size());
-
-  camera_info_msgs_.resize(image_topics_.size());
-  for (size_t i = 0; i < image_topics_.size(); ++i) {
-    // Remove topic suffix and add "camera_info" suffix
-    auto camera_info_topic = image_topics_.at(i);
-    if (auto pos = camera_info_topic.rfind('/'); pos != std::string::npos) {
-      camera_info_topic.replace(pos + 1, std::string::npos, "camera_info");
-    } else {
-      camera_info_topic = "camera_info";
-    }
-
-    camera_info_subs_.emplace_back(this->create_subscription<sensor_msgs::msg::CameraInfo>(
-      camera_info_topic, rclcpp::SensorDataQoS(),
-      [this, i](const sensor_msgs::msg::CameraInfo::ConstSharedPtr msg) {
-        this->camera_info_callback(msg, i);
-      }));
-  }
-
-  if (approx_deltas_.size() != max_topics) {
-    throw std::invalid_argument("Invalid approx_deltas parameter size");
-  }
   setup_runtime_mode_interface();
 
   if (this->declare_parameter<bool>("build_only", false)) {
     RCLCPP_INFO(this->get_logger(), "TensorRT engine is built. Shutting down the node.");
     rclcpp::shutdown();
-  }
-}
-
-void CalibrationStatusNode::camera_info_callback(
-  const sensor_msgs::msg::CameraInfo::ConstSharedPtr & msg, size_t image_idx)
-{
-  if (image_idx < camera_info_msgs_.size()) {
-    if (camera_info_msgs_.at(image_idx)) return;
-    camera_info_msgs_.at(image_idx) = msg;
-  } else {
-    throw std::out_of_range("Camera info index out of range: " + std::to_string(image_idx));
   }
 }
 
@@ -182,25 +158,7 @@ void CalibrationStatusNode::setup_object_detection_interface()
 
 void CalibrationStatusNode::setup_input_synchronization()
 {
-  // Determine the number of topic pairs to synchronize
-  size_t num_pairs{};
-  bool use_cloud_ns{false};
-
-  if (cloud_topics_.size() == 1 && image_topics_.size() > 1) {
-    // Single LiDAR with multiple cameras
-    num_pairs = image_topics_.size();
-  } else if (cloud_topics_.size() > 1 && image_topics_.size() == 1) {
-    // Multiple LiDARs with single camera
-    num_pairs = cloud_topics_.size();
-    use_cloud_ns = true;  // Associate outputs to cloud topics as there's only one image topic
-  } else if (cloud_topics_.size() == image_topics_.size()) {
-    // One-to-one pairing
-    num_pairs = cloud_topics_.size();
-  } else {
-    throw std::invalid_argument(
-      "Invalid topic configuration: only 1:N, N:1, and 1:1 pairing supported");
-  }
-
+  const auto num_pairs = camera_lidar_in_out_info_.size();
   cloud_subs_.resize(num_pairs);
   image_subs_.resize(num_pairs);
   preview_image_pubs_.resize(num_pairs);
@@ -208,23 +166,13 @@ void CalibrationStatusNode::setup_input_synchronization()
   synchronized_data_.resize(num_pairs);
 
   for (size_t i = 0; i < num_pairs; ++i) {
-    // Determine which topics to use for this pair
-    size_t cloud_idx = (cloud_topics_.size() == 1) ? 0 : i;
-    size_t image_idx = (image_topics_.size() == 1) ? 0 : i;
-    auto preview_image_topic = use_cloud_ns ? cloud_topics_.at(i) : image_topics_.at(i);
-    if (auto pos = preview_image_topic.rfind('/'); pos != std::string::npos) {
-      preview_image_topic.replace(pos + 1, std::string::npos, "points_projected");
-    } else {
-      preview_image_topic = "points_projected";
-    }
-
     cloud_subs_.at(i) =
       std::make_shared<message_filters::Subscriber<sensor_msgs::msg::PointCloud2>>(
-        this, cloud_topics_[cloud_idx], rmw_qos_profile_sensor_data);
+        this, camera_lidar_in_out_info_.at(i).lidar_topic, rmw_qos_profile_sensor_data);
     image_subs_.at(i) = std::make_shared<message_filters::Subscriber<sensor_msgs::msg::Image>>(
-      this, image_topics_[image_idx], rmw_qos_profile_sensor_data);
-    preview_image_pubs_.at(i) =
-      this->create_publisher<sensor_msgs::msg::Image>(preview_image_topic, rclcpp::SensorDataQoS());
+      this, camera_lidar_in_out_info_.at(i).camera_topic, rmw_qos_profile_sensor_data);
+    preview_image_pubs_.at(i) = this->create_publisher<sensor_msgs::msg::Image>(
+      camera_lidar_in_out_info_.at(i).projected_points_topic, rclcpp::SensorDataQoS());
 
     // Create synchronizer
     synchronizers_.at(i) = std::make_shared<message_filters::Synchronizer<SyncPolicy>>(
@@ -232,7 +180,7 @@ void CalibrationStatusNode::setup_input_synchronization()
 
     // Set approximate time delta
     synchronizers_.at(i)->setMaxIntervalDuration(
-      rclcpp::Duration::from_seconds(approx_deltas_.at(i)));
+      rclcpp::Duration::from_seconds(camera_lidar_in_out_info_.at(i).approx_delta));
 
     // Register callback
     synchronizers_.at(i)->registerCallback(
@@ -241,8 +189,10 @@ void CalibrationStatusNode::setup_input_synchronization()
         std::placeholders::_2, i));
 
     RCLCPP_INFO(
-      this->get_logger(), "Synchronization pair %zu: %s <-> %s (delta: %.3f s)", i,
-      cloud_topics_[cloud_idx].c_str(), image_topics_[image_idx].c_str(), approx_deltas_.at(i));
+      this->get_logger(), "Miscalibration detection pair %zu: %s <-> %s (sync delta: %.3f s)", i,
+      camera_lidar_in_out_info_.at(i).lidar_topic.c_str(),
+      camera_lidar_in_out_info_.at(i).camera_topic.c_str(),
+      camera_lidar_in_out_info_.at(i).approx_delta);
   }
 }
 
@@ -322,6 +272,46 @@ void CalibrationStatusNode::objects_callback(
   last_objects_update_ = this->get_clock()->now();
 }
 
+void CalibrationStatusNode::synchronized_callback(
+  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud_msg,
+  const sensor_msgs::msg::Image::ConstSharedPtr & image_msg, size_t pair_idx)
+{
+  synchronized_data_.at(pair_idx) = {cloud_msg, image_msg};
+
+  if (runtime_mode_ == RuntimeMode::ACTIVE) {
+    run(pair_idx);
+  }
+}
+
+void CalibrationStatusNode::update_vehicle_velocity(double velocity)
+{
+  current_velocity_ = velocity;
+  last_velocity_update_ = this->get_clock()->now();
+}
+
+FilterStatus<double> CalibrationStatusNode::get_velocity_filter_status(
+  const rclcpp::Time & time_ref)
+{
+  if (!check_velocity_) {
+    return {false, 0.0, false, 0.0};
+  }
+
+  auto velocity_age = (time_ref - last_velocity_update_).seconds();
+
+  return {true, current_velocity_, current_velocity_ > velocity_threshold_, velocity_age};
+}
+
+FilterStatus<size_t> CalibrationStatusNode::get_objects_filter_status(const rclcpp::Time & time_ref)
+{
+  if (!check_objects_) {
+    return {false, 0, false, 0.0};
+  }
+
+  auto objects_age = (time_ref - last_objects_update_).seconds();
+
+  return {true, current_objects_count_, current_objects_count_ > objects_limit_, objects_age};
+}
+
 bool CalibrationStatusNode::run(std::size_t pair_idx)
 {
   if (
@@ -331,28 +321,22 @@ bool CalibrationStatusNode::run(std::size_t pair_idx)
   }
   const auto & [cloud_msg, image_msg] = synchronized_data_.at(pair_idx);
 
-  if (camera_info_msgs_.at(pair_idx) == nullptr) {
-    RCLCPP_WARN_THROTTLE(
-      this->get_logger(), *this->get_clock(), 1000,
-      "Camera info message for pair %zu is not available. Skipping calibration check.", pair_idx);
-    return false;
-  }
-  const auto velocity_check_status = get_velocity_check_status();
-  const auto objects_check_status = get_objects_check_status();
-  if (velocity_check_status.is_threshold_met || objects_check_status.is_threshold_met) {
-    publish_diagnostic_status(velocity_check_status, objects_check_status, pair_idx);
-    return true;
-  }
+  const auto cloud_stamp = rclcpp::Time(cloud_msg->header.stamp);
+  const auto image_stamp = rclcpp::Time(image_msg->header.stamp);
+  const auto common_stamp = std::max(cloud_stamp, image_stamp);
+  const auto velocity_check_status = get_velocity_filter_status(common_stamp);
+  const auto objects_check_status = get_objects_filter_status(common_stamp);
 
-  // Get the transform
-  Eigen::Affine3d eigen_transform;
-  try {
-    auto transform = tf_buffer_.lookupTransform(
-      image_msg->header.frame_id, cloud_msg->header.frame_id, cloud_msg->header.stamp);
-    eigen_transform = tf2::transformToEigen(transform);
-  } catch (const tf2::TransformException & ex) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to get transform: %s", ex.what());
-    return false;
+  InputMetadata input_metadata;
+  input_metadata.cloud_stamp = cloud_stamp;
+  input_metadata.image_stamp = image_stamp;
+  input_metadata.velocity_filter_status = velocity_check_status;
+  input_metadata.objects_filter_status = objects_check_status;
+  input_metadata.common_stamp = common_stamp;
+
+  if (velocity_check_status.is_threshold_met || objects_check_status.is_threshold_met) {
+    publish_diagnostic_status(input_metadata, pair_idx);
+    return true;
   }
 
   // Prepare preview image message if subscribed
@@ -373,9 +357,9 @@ bool CalibrationStatusNode::run(std::size_t pair_idx)
   }
 
   auto result = calibration_status_->process(
-    cloud_msg, image_msg, camera_info_msgs_[pair_idx], eigen_transform, preview_img_data);
+    cloud_msg, image_msg, camera_lidar_info_.at(pair_idx), preview_img_data);
 
-  publish_diagnostic_status(velocity_check_status, objects_check_status, pair_idx, result);
+  publish_diagnostic_status(input_metadata, pair_idx, result);
 
   if (is_preview_subscribed) {
     preview_image_pubs_.at(pair_idx)->publish(*preview_img_msg);
@@ -385,63 +369,23 @@ bool CalibrationStatusNode::run(std::size_t pair_idx)
   return true;
 }
 
-void CalibrationStatusNode::synchronized_callback(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud_msg,
-  const sensor_msgs::msg::Image::ConstSharedPtr & image_msg, size_t pair_idx)
-{
-  synchronized_data_.at(pair_idx) = {cloud_msg, image_msg};
-
-  if (runtime_mode_ == RuntimeMode::ACTIVE) {
-    run(pair_idx);
-  }
-}
-
-void CalibrationStatusNode::update_vehicle_velocity(double velocity)
-{
-  current_velocity_ = velocity;
-  last_velocity_update_ = this->get_clock()->now();
-}
-
-CheckStatus<double> CalibrationStatusNode::get_velocity_check_status()
-{
-  if (!check_velocity_) {
-    return {false, 0.0, false, 0.0};
-  }
-
-  auto now = this->get_clock()->now();
-  auto velocity_age = (now - last_velocity_update_).seconds();
-
-  return {true, current_velocity_, current_velocity_ > velocity_threshold_, velocity_age};
-}
-
-CheckStatus<size_t> CalibrationStatusNode::get_objects_check_status()
-{
-  if (!check_objects_) {
-    return {false, 0, false, 0.0};
-  }
-
-  auto now = this->get_clock()->now();
-  auto objects_age = (now - last_objects_update_).seconds();
-
-  return {true, current_objects_count_, current_objects_count_ > objects_limit_, objects_age};
-}
-
 void CalibrationStatusNode::publish_diagnostic_status(
-  const CheckStatus<double> & velocity_check_status,
-  const CheckStatus<size_t> & objects_check_status, const size_t pair_idx,
+  const InputMetadata & input_metadata, const size_t pair_idx,
   const CalibrationStatusResult & result)
 {
-  auto now = this->get_clock()->now();
   diagnostic_msgs::msg::DiagnosticStatus status;
-  status.name =
-    std::string(this->get_name()) + std::string(": ") + this->get_fully_qualified_name();
+  status.name = std::string(this->get_name()) + std::string("_") + std::to_string(pair_idx) +
+                std::string(": ") + this->get_fully_qualified_name();
   status.hardware_id = this->get_name();
+  auto now = this->get_clock()->now();
 
   auto is_calibrated =
     (result.calibration_confidence >
      result.miscalibration_confidence + miscalibration_confidence_threshold_);
 
-  if (velocity_check_status.is_threshold_met || objects_check_status.is_threshold_met) {
+  if (
+    input_metadata.velocity_filter_status.is_threshold_met ||
+    input_metadata.objects_filter_status.is_threshold_met) {
     status.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
     status.message = "Calibration check skipped due to prerequisite not met.";
   } else if (is_calibrated) {
@@ -454,30 +398,26 @@ void CalibrationStatusNode::publish_diagnostic_status(
 
   diagnostic_msgs::msg::KeyValue key_value;
   key_value.key = "Source image topic";
-  key_value.value = image_topics_.at((image_topics_.size() == 1) ? 0 : pair_idx);
+  key_value.value = camera_lidar_in_out_info_.at(pair_idx).camera_topic;
+  status.values.push_back(key_value);
+  key_value.key = "Source image frame";
+  key_value.value = camera_lidar_info_.at(pair_idx).camera_frame_id;
   status.values.push_back(key_value);
   key_value.key = "Source point cloud topic";
-  key_value.value = cloud_topics_.at((cloud_topics_.size() == 1) ? 0 : pair_idx);
+  key_value.value = camera_lidar_in_out_info_.at(pair_idx).lidar_topic;
   status.values.push_back(key_value);
-  key_value.key = "Source image age (s)";
-  key_value.value = std::to_string(
-    (now - rclcpp::Time(synchronized_data_.at(pair_idx).second->header.stamp)).seconds());
+  key_value.key = "Source point cloud frame";
+  key_value.value = camera_lidar_info_.at(pair_idx).lidar_frame_id;
   status.values.push_back(key_value);
-  key_value.key = "Source point cloud age (s)";
+  key_value.key = "Point cloud and image time difference (ms)";
   key_value.value = std::to_string(
-    (now - rclcpp::Time(synchronized_data_.at(pair_idx).first->header.stamp)).seconds());
-  status.values.push_back(key_value);
-  key_value.key = "Point cloud and image time difference (s)";
-  key_value.value = std::to_string(
-    std::abs(
-      rclcpp::Time(synchronized_data_.at(pair_idx).first->header.stamp).seconds() -
-      rclcpp::Time(synchronized_data_.at(pair_idx).second->header.stamp).seconds()));
+    std::abs((input_metadata.cloud_stamp - input_metadata.image_stamp).seconds()) * 1e3);
   status.values.push_back(key_value);
   key_value.key = "Is velocity check activated";
-  key_value.value = velocity_check_status.is_activated ? "True" : "False";
+  key_value.value = input_metadata.velocity_filter_status.is_activated ? "True" : "False";
   status.values.push_back(key_value);
   key_value.key = "Current velocity";
-  key_value.value = std::to_string(velocity_check_status.current_state);
+  key_value.value = std::to_string(input_metadata.velocity_filter_status.current_state);
   status.values.push_back(key_value);
   key_value.key = "Velocity threshold";
   key_value.value = std::to_string(velocity_threshold_);
@@ -486,25 +426,25 @@ void CalibrationStatusNode::publish_diagnostic_status(
   key_value.value = std::to_string(miscalibration_confidence_threshold_);
   status.values.push_back(key_value);
   key_value.key = "Is vehicle moving";
-  key_value.value = velocity_check_status.is_threshold_met ? "True" : "False";
+  key_value.value = input_metadata.velocity_filter_status.is_threshold_met ? "True" : "False";
   status.values.push_back(key_value);
-  key_value.key = "Velocity age (s)";
-  key_value.value = std::to_string(velocity_check_status.state_age);
+  key_value.key = "Velocity age (ms)";
+  key_value.value = std::to_string(input_metadata.velocity_filter_status.state_age * 1e3);
   status.values.push_back(key_value);
   key_value.key = "Is object count check activated";
-  key_value.value = objects_check_status.is_activated ? "True" : "False";
+  key_value.value = input_metadata.objects_filter_status.is_activated ? "True" : "False";
   status.values.push_back(key_value);
   key_value.key = "Current object count";
-  key_value.value = std::to_string(objects_check_status.current_state);
+  key_value.value = std::to_string(input_metadata.objects_filter_status.current_state);
   status.values.push_back(key_value);
   key_value.key = "Object count threshold";
   key_value.value = std::to_string(objects_limit_);
   status.values.push_back(key_value);
   key_value.key = "Is object count limit exceeded";
-  key_value.value = objects_check_status.is_threshold_met ? "True" : "False";
+  key_value.value = input_metadata.objects_filter_status.is_threshold_met ? "True" : "False";
   status.values.push_back(key_value);
-  key_value.key = "Object count age (s)";
-  key_value.value = std::to_string(objects_check_status.state_age);
+  key_value.key = "Object count age (ms)";
+  key_value.value = std::to_string(input_metadata.objects_filter_status.state_age * 1e3);
   status.values.push_back(key_value);
   key_value.key = "Is calibrated";
   key_value.value = is_calibrated ? "True" : "False";
@@ -526,7 +466,7 @@ void CalibrationStatusNode::publish_diagnostic_status(
   status.values.push_back(key_value);
 
   diagnostic_msgs::msg::DiagnosticArray diagnostic_array;
-  diagnostic_array.header.stamp = now;
+  diagnostic_array.header.stamp = input_metadata.common_stamp;
   diagnostic_array.header.frame_id = this->get_name();
   diagnostic_array.status.push_back(status);
   diagnostic_pub_->publish(diagnostic_array);

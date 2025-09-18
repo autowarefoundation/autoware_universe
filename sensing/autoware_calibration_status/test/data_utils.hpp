@@ -15,12 +15,14 @@
 #ifndef DATA_UTILS_HPP_
 #define DATA_UTILS_HPP_
 
+#include "autoware/calibration_status/data_type.hpp"
+#include "autoware/calibration_status/data_type_eigen.hpp"
+
 #include <Eigen/Geometry>
 #include <autoware/point_types/types.hpp>
 #include <opencv2/opencv.hpp>
 #include <point_cloud_msg_wrapper/point_cloud_msg_wrapper.hpp>
 
-#include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
@@ -45,10 +47,10 @@ constexpr size_t width = 2880;
 constexpr size_t height = 1860;
 constexpr size_t channels = 5;
 
+using autoware::calibration_status::CameraLidarInfo;
 using autoware::point_types::PointXYZIRC;
 using autoware::point_types::PointXYZIRCGenerator;
 using point_cloud_msg_wrapper::PointCloud2Modifier;
-using sensor_msgs::msg::CameraInfo;
 using sensor_msgs::msg::Image;
 using sensor_msgs::msg::PointCloud2;
 
@@ -59,10 +61,8 @@ struct TestSample
   Image::SharedPtr image_bgr;
   Image::SharedPtr image_rgb_undistorted;
   Image::SharedPtr image_bgr_undistorted;
-  CameraInfo::SharedPtr camera_info_calibrated;
-  CameraInfo::SharedPtr camera_info_miscalibrated;
-  Eigen::Affine3d lidar_to_camera_tf_calibrated;
-  Eigen::Affine3d lidar_to_camera_tf_miscalibrated;
+  CameraLidarInfo camera_lidar_info_calibrated;
+  CameraLidarInfo camera_lidar_info_miscalibrated;
   std::vector<float> input_data_calibrated;
   std::vector<float> input_data_miscalibrated;
   std::string sample_name;
@@ -170,24 +170,23 @@ Image::SharedPtr get_image(
   return image;
 }
 
-CameraInfo::SharedPtr get_camera_info(
+CameraLidarInfo get_camera_lidar_info(
   const std::filesystem::path & data_dir, const std::string & sample_name, bool is_miscalibrated)
 {
   const auto sample_dir = data_dir / sample_name;
   const std::string suffix = is_miscalibrated ? "miscalibrated" : "calibrated";
-  CameraInfo::SharedPtr camera_info = std::make_shared<CameraInfo>();
-  camera_info->width = width;
-  camera_info->height = height;
-  camera_info->distortion_model = "plumb_bob";
-  camera_info->d.resize(8);
-  camera_info->header.frame_id = "optical_camera_link";
+  auto camera_lidar_info = CameraLidarInfo();
+
+  camera_lidar_info.width = width;
+  camera_lidar_info.height = height;
+  camera_lidar_info.d.resize(autoware::calibration_status::dist_coeffs_size);
 
   auto dist_coeffs =
     load_binary<double>(sample_dir / ("distortion_coefficients_" + suffix + ".dat.gz"));
   if (dist_coeffs.size() != 8) {
     throw std::runtime_error("Invalid distortion coefficients size, expected 8 elements.");
   }
-  std::move(dist_coeffs.begin(), dist_coeffs.end(), camera_info->d.begin());
+  std::move(dist_coeffs.begin(), dist_coeffs.end(), camera_lidar_info.d.begin());
   GTEST_LOG_(INFO) << "[" << suffix << "] Distortion coefficients:\n[" << dist_coeffs.at(0) << ", "
                    << dist_coeffs.at(1) << ", " << dist_coeffs.at(2) << ", " << dist_coeffs.at(3)
                    << ", " << dist_coeffs.at(4) << ", " << dist_coeffs.at(5) << ", "
@@ -197,7 +196,8 @@ CameraInfo::SharedPtr get_camera_info(
   if (camera_matrix.size() != 9) {
     throw std::runtime_error("Invalid camera matrix size, expected 9 elements.");
   }
-  std::move(camera_matrix.begin(), camera_matrix.end(), camera_info->k.begin());
+  camera_lidar_info.k =
+    Eigen::Map<const Eigen::Matrix<double, 3, 3, Eigen::RowMajor>>(camera_matrix.data());
   GTEST_LOG_(INFO) << "[" << suffix << "] Camera matrix:\n[" << camera_matrix.at(0) << ", "
                    << camera_matrix.at(1) << ", " << camera_matrix.at(2) << "]\n["
                    << camera_matrix.at(3) << ", " << camera_matrix.at(4) << ", "
@@ -209,7 +209,8 @@ CameraInfo::SharedPtr get_camera_info(
   if (projection_matrix.size() != 12) {
     throw std::runtime_error("Invalid projection matrix size, expected 12 elements.");
   }
-  std::move(projection_matrix.begin(), projection_matrix.end(), camera_info->p.begin());
+  camera_lidar_info.p =
+    Eigen::Map<const Eigen::Matrix<double, 3, 4, Eigen::RowMajor>>(projection_matrix.data());
   GTEST_LOG_(INFO) << "[" << suffix << "] Projection matrix:\n[" << projection_matrix.at(0) << ", "
                    << projection_matrix.at(1) << ", " << projection_matrix.at(2) << ", "
                    << projection_matrix.at(3) << "]\n[" << projection_matrix.at(4) << ", "
@@ -217,23 +218,21 @@ CameraInfo::SharedPtr get_camera_info(
                    << projection_matrix.at(7) << "]\n[" << projection_matrix.at(8) << ", "
                    << projection_matrix.at(9) << ", " << projection_matrix.at(10) << ", "
                    << projection_matrix.at(11) << "]";
-  return camera_info;
-}
 
-Eigen::Affine3d get_lidar_to_camera_transform(
-  const std::filesystem::path & data_dir, const std::string & sample_name, bool is_miscalibrated)
-{
-  const auto sample_dir = data_dir / sample_name;
-  const std::string suffix = is_miscalibrated ? "miscalibrated" : "calibrated";
   auto transform_data =
     load_binary<double>(sample_dir / ("lidar_to_camera_tf_" + suffix + ".dat.gz"));
   if (transform_data.size() != 16) {
     throw std::runtime_error("Invalid transform data size, expected 16 elements.");
   }
-  Eigen::Matrix4d transform_matrix =
+  camera_lidar_info.tf_camera_to_lidar =
     Eigen::Map<const Eigen::Matrix<double, 4, 4, Eigen::RowMajor>>(transform_data.data());
-  GTEST_LOG_(INFO) << "[" << suffix << "] Lidar to camera transform:\n" << transform_matrix;
-  return Eigen::Affine3d(transform_matrix);
+
+  GTEST_LOG_(INFO) << "[" << suffix << "] Lidar to camera transform:\n"
+                   << camera_lidar_info.tf_camera_to_lidar.matrix();
+
+  camera_lidar_info.to_undistort = true;
+
+  return camera_lidar_info;
 }
 
 std::vector<float> get_input_data(
@@ -271,12 +270,8 @@ TestSample load_test_sample(const std::filesystem::path & data_dir, const std::s
   sample.image_bgr = get_image(data_dir, sample_name, false, "bgr8");
   sample.image_rgb_undistorted = get_image(data_dir, sample_name, true, "rgb8");
   sample.image_bgr_undistorted = get_image(data_dir, sample_name, true, "bgr8");
-  sample.camera_info_calibrated = get_camera_info(data_dir, sample_name, false);
-  sample.camera_info_miscalibrated = get_camera_info(data_dir, sample_name, true);
-  sample.lidar_to_camera_tf_calibrated =
-    get_lidar_to_camera_transform(data_dir, sample_name, false);
-  sample.lidar_to_camera_tf_miscalibrated =
-    get_lidar_to_camera_transform(data_dir, sample_name, true);
+  sample.camera_lidar_info_calibrated = get_camera_lidar_info(data_dir, sample_name, false);
+  sample.camera_lidar_info_miscalibrated = get_camera_lidar_info(data_dir, sample_name, true);
   sample.input_data_calibrated = get_input_data(data_dir, sample_name, false);
   sample.input_data_miscalibrated = get_input_data(data_dir, sample_name, true);
   sample.sample_name = sample_name;
