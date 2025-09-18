@@ -33,7 +33,7 @@ namespace autoware::calibration_status
  * - Transformation from camera to LiDAR coordinate frame
  * - Frame IDs for both sensors
  * - Flag indicating whether image undistortion is needed
- * 
+ *
  * All matrices are stored in row-major order for compatibility with external libraries.
  */
 struct CameraLidarInfo
@@ -41,10 +41,14 @@ struct CameraLidarInfo
   std::size_t height;
   std::size_t width;
   std::vector<double> d{std::vector<double>(dist_coeffs_size, 0.0)};
-  Eigen::Matrix<double, 3, 3, Eigen::RowMajor> k{Eigen::Matrix<double, 3, 3, Eigen::RowMajor>::Identity()};
-  Eigen::Matrix<double, 3, 3, Eigen::RowMajor> r{Eigen::Matrix<double, 3, 3, Eigen::RowMajor>::Identity()};
-  Eigen::Matrix<double, 3, 4, Eigen::RowMajor> p{Eigen::Matrix<double, 3, 4, Eigen::RowMajor>::Zero()};
-  Eigen::Matrix<double, 4, 4, Eigen::RowMajor> tf_camera_to_lidar{Eigen::Matrix<double, 4, 4, Eigen::RowMajor>::Identity()};
+  Eigen::Matrix<double, 3, 3, Eigen::RowMajor> k{
+    Eigen::Matrix<double, 3, 3, Eigen::RowMajor>::Identity()};
+  Eigen::Matrix<double, 3, 3, Eigen::RowMajor> r{
+    Eigen::Matrix<double, 3, 3, Eigen::RowMajor>::Identity()};
+  Eigen::Matrix<double, 3, 4, Eigen::RowMajor> p{
+    Eigen::Matrix<double, 3, 4, Eigen::RowMajor>::Zero()};
+  Eigen::Matrix<double, 4, 4, Eigen::RowMajor> tf_camera_to_lidar{
+    Eigen::Matrix<double, 4, 4, Eigen::RowMajor>::Identity()};
   std::string lidar_frame_id;
   std::string camera_frame_id;
   bool to_undistort;
