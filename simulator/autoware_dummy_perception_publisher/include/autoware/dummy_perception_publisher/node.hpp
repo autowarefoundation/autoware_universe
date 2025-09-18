@@ -67,6 +67,7 @@ struct CommonParameters
   std::string path_selection_strategy;  // "highest_confidence" or "random"
 };
 
+// Tracking info of a single dummy object and its mapping to a predicted object
 struct PredictedDummyObjectInfo
 {
   std::string predicted_uuid;
@@ -76,6 +77,16 @@ struct PredictedDummyObjectInfo
   std::optional<rclcpp::Time> last_used_prediction_time;
   std::optional<rclcpp::Time> prediction_update_timestamp;
   std::optional<rclcpp::Time> mapping_timestamp;
+};
+
+// Struct that holds all tracking info, to track multiple NPCs moving using predicted objects'
+// predicted paths
+struct PredictedDummyObjectsTrackingInfo
+{
+  std::deque<PredictedObjects> predicted_objects_buffer;
+  size_t max_buffer_size{50};  // Store last 5 seconds at 10Hz
+  // mapping between dummy object UUID (string) and its tracking info
+  std::map<std::string, PredictedDummyObjectInfo> dummy_predicted_info_map;
 };
 
 struct ObjectInfo
@@ -169,9 +180,7 @@ private:
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
   std::vector<DummyObject> objects_;
-  std::deque<PredictedObjects> predicted_objects_buffer_;
-  static constexpr size_t MAX_BUFFER_SIZE = 50;  // Store last 5 seconds at 10Hz
-  std::map<std::string, PredictedDummyObjectInfo> dummy_predicted_info_map_;
+  PredictedDummyObjectsTrackingInfo predicted_dummy_objects_tracking_info_;
   double visible_range_;
   double detection_successful_rate_;
   bool enable_ray_tracing_;

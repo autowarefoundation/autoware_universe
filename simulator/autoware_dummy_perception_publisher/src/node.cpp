@@ -437,6 +437,8 @@ void DummyPerceptionPublisherNode::timerCallback()
     const bool matched_predicted =
       (!predicted_object.object_id.uuid.empty() &&
        !predicted_object.kinematics.predicted_paths.empty() && predicted_time.nanoseconds() > 0);
+    auto & dummy_predicted_info_map =
+      predicted_dummy_objects_tracking_info_.dummy_predicted_info_map;
 
     ObjectInfo obj_info = [&]() {
       if (object.action == tier4_simulation_msgs::msg::DummyObject::PREDICT) {
@@ -447,10 +449,11 @@ void DummyPerceptionPublisherNode::timerCallback()
 
         // Check if we have a last used prediction for this object
         const auto & dummy_uuid_str = autoware_utils_uuid::to_hex_string(object.id);
-        auto info_it = dummy_predicted_info_map_.find(dummy_uuid_str);
+
+        auto info_it = dummy_predicted_info_map.find(dummy_uuid_str);
 
         if (
-          info_it != dummy_predicted_info_map_.end() &&
+          info_it != dummy_predicted_info_map.end() &&
           info_it->second.last_used_prediction.has_value() &&
           info_it->second.last_used_prediction_time.has_value()) {
           RCLCPP_DEBUG(
@@ -475,11 +478,11 @@ void DummyPerceptionPublisherNode::timerCallback()
 
     // Update last known position based on calculated ObjectInfo position
     const auto & dummy_uuid_str = autoware_utils_uuid::to_hex_string(object.id);
-    dummy_predicted_info_map_[dummy_uuid_str].last_known_position =
+    dummy_predicted_info_map[dummy_uuid_str].last_known_position =
       obj_info.pose_covariance_.pose.position;
 
     // Track object creation time if not already tracked
-    auto & info = dummy_predicted_info_map_[dummy_uuid_str];
+    auto & info = dummy_predicted_info_map[dummy_uuid_str];
     if (!info.creation_timestamp.has_value()) {
       info.creation_timestamp = rclcpp::Time(object.header.stamp);
     }
@@ -695,10 +698,11 @@ void DummyPerceptionPublisherNode::predictedObjectsCallback(
   const PredictedObjects::ConstSharedPtr msg)
 {
   // Add to buffer, removing oldest if necessary
-  if (predicted_objects_buffer_.size() >= MAX_BUFFER_SIZE) {
-    predicted_objects_buffer_.pop_front();
+  auto & predicted_objects_buffer = predicted_dummy_objects_tracking_info_.predicted_objects_buffer;
+  if (predicted_objects_buffer.size() >= predicted_dummy_objects_tracking_info_.max_buffer_size) {
+    predicted_objects_buffer.pop_front();
   }
-  predicted_objects_buffer_.push_back(*msg);
+  predicted_objects_buffer.push_back(*msg);
 
   // Update the dummy-to-predicted mapping based on euclidean distance
   updateDummyToPredictedMapping(objects_, *msg);
@@ -713,8 +717,9 @@ std::pair<PredictedObject, rclcpp::Time> DummyPerceptionPublisherNode::findMatch
   const auto & obj_uuid_str = autoware_utils_uuid::to_hex_string(object_id);
 
   // Check if this dummy object is mapped to a predicted object
-  auto mapping_it = dummy_predicted_info_map_.find(obj_uuid_str);
-  if (mapping_it == dummy_predicted_info_map_.end() || mapping_it->second.predicted_uuid.empty()) {
+  auto & dummy_predicted_info_map = predicted_dummy_objects_tracking_info_.dummy_predicted_info_map;
+  auto mapping_it = dummy_predicted_info_map.find(obj_uuid_str);
+  if (mapping_it == dummy_predicted_info_map.end() || mapping_it->second.predicted_uuid.empty()) {
     return std::make_pair(empty_object, empty_time);
   }
 
@@ -722,11 +727,11 @@ std::pair<PredictedObject, rclcpp::Time> DummyPerceptionPublisherNode::findMatch
 
   // Check if we should keep using the current prediction for at least min_keep_duration
   // Check if we have a last used prediction and if we should keep using it
-  auto info_it = dummy_predicted_info_map_.find(obj_uuid_str);
-  if (info_it == dummy_predicted_info_map_.end()) {
+  auto info_it = dummy_predicted_info_map.find(obj_uuid_str);
+  if (info_it == dummy_predicted_info_map.end()) {
     // Create entry if it doesn't exist (needed for later updates)
-    dummy_predicted_info_map_[obj_uuid_str];
-    info_it = dummy_predicted_info_map_.find(obj_uuid_str);
+    dummy_predicted_info_map[obj_uuid_str];
+    info_it = dummy_predicted_info_map.find(obj_uuid_str);
   }
 
   if (
@@ -746,7 +751,9 @@ std::pair<PredictedObject, rclcpp::Time> DummyPerceptionPublisherNode::findMatch
   }
 
   // Time to update: find the closest prediction in the past
-  for (auto it = predicted_objects_buffer_.rbegin(); it != predicted_objects_buffer_.rend(); ++it) {
+  const auto & predicted_objects_buffer =
+    predicted_dummy_objects_tracking_info_.predicted_objects_buffer;
+  for (auto it = predicted_objects_buffer.rbegin(); it != predicted_objects_buffer.rend(); ++it) {
     const auto & predicted_objects_msg = *it;
     const rclcpp::Time msg_time(predicted_objects_msg.header.stamp);
 
@@ -809,9 +816,9 @@ std::pair<PredictedObject, rclcpp::Time> DummyPerceptionPublisherNode::findMatch
         }
 
         // Store this as the new prediction to use for some seconds
-        dummy_predicted_info_map_[obj_uuid_str].last_used_prediction = modified_predicted_object;
-        dummy_predicted_info_map_[obj_uuid_str].last_used_prediction_time = msg_time;
-        dummy_predicted_info_map_[obj_uuid_str].prediction_update_timestamp = current_time;
+        dummy_predicted_info_map[obj_uuid_str].last_used_prediction = modified_predicted_object;
+        dummy_predicted_info_map[obj_uuid_str].last_used_prediction_time = msg_time;
+        dummy_predicted_info_map[obj_uuid_str].prediction_update_timestamp = current_time;
 
         return std::make_pair(modified_predicted_object, msg_time);
       }
@@ -840,8 +847,8 @@ std::vector<std::string> DummyPerceptionPublisherNode::findDisappearedPredictedO
   std::set<std::string> & available_predicted_uuids)
 {
   std::vector<std::string> dummy_objects_to_remap;
-
-  for (const auto & mapping : dummy_predicted_info_map_) {
+  auto & dummy_predicted_info_map = predicted_dummy_objects_tracking_info_.dummy_predicted_info_map;
+  for (const auto & mapping : dummy_predicted_info_map) {
     const std::string & dummy_uuid = mapping.first;
     const std::string & predicted_uuid = mapping.second.predicted_uuid;
 
@@ -867,21 +874,21 @@ std::map<std::string, Point> DummyPerceptionPublisherNode::collectDummyObjectPos
   const rclcpp::Time & current_time, std::vector<std::string> & unmapped_dummy_uuids)
 {
   std::map<std::string, Point> dummy_positions;
+  auto & dummy_predicted_info_map = predicted_dummy_objects_tracking_info_.dummy_predicted_info_map;
 
   for (const auto & dummy_obj : dummy_objects) {
     const auto dummy_uuid_str = autoware_utils_uuid::to_hex_string(dummy_obj.id);
 
     // Use last known position if available (which includes straight-line calculated position)
     // Otherwise calculate current position using straight-line model
-    auto info_it = dummy_predicted_info_map_.find(dummy_uuid_str);
+    auto info_it = dummy_predicted_info_map.find(dummy_uuid_str);
 
     dummy_positions[dummy_uuid_str] =
-      (info_it != dummy_predicted_info_map_.end() &&
-       info_it->second.last_known_position.has_value())
+      (info_it != dummy_predicted_info_map.end() && info_it->second.last_known_position.has_value())
         ? info_it->second.last_known_position.value()
         : ObjectInfo::calculateStraightLinePosition(dummy_obj, current_time).position;
 
-    if (info_it == dummy_predicted_info_map_.end() || info_it->second.predicted_uuid.empty()) {
+    if (info_it == dummy_predicted_info_map.end() || info_it->second.predicted_uuid.empty()) {
       unmapped_dummy_uuids.push_back(dummy_uuid_str);
     }
   }
@@ -944,11 +951,11 @@ void DummyPerceptionPublisherNode::createRemappingsForDisappearedObjects(
   const std::map<std::string, Point> & dummy_positions, const PredictedObjects & predicted_objects)
 {
   const rclcpp::Time current_time = this->now();
-
+  auto & dummy_predicted_info_map = predicted_dummy_objects_tracking_info_.dummy_predicted_info_map;
   // First, remove old mappings
   for (const auto & dummy_uuid : dummy_objects_to_remap) {
-    auto it = dummy_predicted_info_map_.find(dummy_uuid);
-    if (it != dummy_predicted_info_map_.end()) {
+    auto it = dummy_predicted_info_map.find(dummy_uuid);
+    if (it != dummy_predicted_info_map.end()) {
       it->second.predicted_uuid.clear();
     }
   }
@@ -963,12 +970,12 @@ void DummyPerceptionPublisherNode::createRemappingsForDisappearedObjects(
     if (current_pos_it == dummy_positions.end()) {
       continue;
     }
-    auto info_it = dummy_predicted_info_map_.find(dummy_uuid);
+    auto info_it = dummy_predicted_info_map.find(dummy_uuid);
 
-    remapping_position = (info_it != dummy_predicted_info_map_.end() &&
-                          info_it->second.last_known_position.has_value())
-                           ? info_it->second.last_known_position.value()
-                           : current_pos_it->second;
+    remapping_position =
+      (info_it != dummy_predicted_info_map.end() && info_it->second.last_known_position.has_value())
+        ? info_it->second.last_known_position.value()
+        : current_pos_it->second;
     // Find closest available predicted object for remapping
     auto best_match = findBestPredictedObjectMatch(
       dummy_uuid, remapping_position, available_predicted_uuids, predicted_positions,
@@ -996,8 +1003,8 @@ void DummyPerceptionPublisherNode::createRemappingsForDisappearedObjects(
 
     // Only create mapping if predicted object is still available
     if (available_predicted_uuids.find(predicted_uuid) != available_predicted_uuids.end()) {
-      dummy_predicted_info_map_[dummy_uuid].predicted_uuid = predicted_uuid;
-      dummy_predicted_info_map_[dummy_uuid].mapping_timestamp = current_time;
+      dummy_predicted_info_map[dummy_uuid].predicted_uuid = predicted_uuid;
+      dummy_predicted_info_map[dummy_uuid].mapping_timestamp = current_time;
       available_predicted_uuids.erase(predicted_uuid);
     }
   }
@@ -1028,6 +1035,8 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
     dummy_objects_to_remap, available_predicted_uuids, predicted_positions, dummy_positions,
     predicted_objects);
 
+  auto & dummy_predicted_info_map = predicted_dummy_objects_tracking_info_.dummy_predicted_info_map;
+
   // Map unmapped dummy objects to closest available predicted objects
   for (const auto & dummy_uuid : unmapped_dummy_uuids) {
     if (available_predicted_uuids.empty()) {
@@ -1037,10 +1046,9 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
     const auto & dummy_pos = dummy_positions[dummy_uuid];
     auto best_match = findBestPredictedObjectMatch(
       dummy_uuid, dummy_pos, available_predicted_uuids, predicted_positions, predicted_objects);
-
     if (best_match) {
-      dummy_predicted_info_map_[dummy_uuid].predicted_uuid = *best_match;
-      dummy_predicted_info_map_[dummy_uuid].mapping_timestamp = current_time;
+      dummy_predicted_info_map[dummy_uuid].predicted_uuid = *best_match;
+      dummy_predicted_info_map[dummy_uuid].mapping_timestamp = current_time;
       available_predicted_uuids.erase(*best_match);
     }
   }
@@ -1051,18 +1059,18 @@ void DummyPerceptionPublisherNode::updateDummyToPredictedMapping(
   }
 
   // Clean up mappings for dummy objects that no longer exist
-  for (auto it = dummy_predicted_info_map_.begin(); it != dummy_predicted_info_map_.end();) {
+  for (auto it = dummy_predicted_info_map.begin(); it != dummy_predicted_info_map.end();) {
     if (current_dummy_uuids.find(it->first) != current_dummy_uuids.end()) {
       ++it;
       continue;
     }
-    it = dummy_predicted_info_map_.erase(it);
+    it = dummy_predicted_info_map.erase(it);
   }
 
   // Update last known positions for all dummy objects
   for (const auto & dummy_obj : dummy_objects) {
     const auto dummy_uuid_str = autoware_utils_uuid::to_hex_string(dummy_obj.id);
-    dummy_predicted_info_map_[dummy_uuid_str].last_known_position =
+    dummy_predicted_info_map[dummy_uuid_str].last_known_position =
       dummy_obj.initial_state.pose_covariance.pose.position;
   }
 }
@@ -1164,9 +1172,10 @@ bool DummyPerceptionPublisherNode::isValidRemappingCandidate(
 
   // Calculate expected position based on last known trajectory if available
   Point comparison_position = expected_position;
-  auto info_it = dummy_predicted_info_map_.find(dummy_uuid_str);
+  auto & dummy_predicted_info_map = predicted_dummy_objects_tracking_info_.dummy_predicted_info_map;
+  auto info_it = dummy_predicted_info_map.find(dummy_uuid_str);
   if (
-    info_it == dummy_predicted_info_map_.end() ||
+    info_it == dummy_predicted_info_map.end() ||
     !info_it->second.last_used_prediction.has_value()) {
     return true;  // No last prediction, allow the match
   }
@@ -1234,9 +1243,10 @@ std::optional<Point> DummyPerceptionPublisherNode::calculateExpectedPosition(
 
   // Calculate elapsed time from last prediction to current time
   const auto current_time = get_clock()->now();
-  auto info_it = dummy_predicted_info_map_.find(dummy_uuid_str);
+  auto & dummy_predicted_info_map = predicted_dummy_objects_tracking_info_.dummy_predicted_info_map;
+  auto info_it = dummy_predicted_info_map.find(dummy_uuid_str);
   if (
-    info_it == dummy_predicted_info_map_.end() ||
+    info_it == dummy_predicted_info_map.end() ||
     !info_it->second.last_used_prediction_time.has_value()) {
     return std::nullopt;
   }
