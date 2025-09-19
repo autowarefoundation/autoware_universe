@@ -480,33 +480,17 @@ void MultiObjectTracker::publish(const rclcpp::Time & time) const
   tracked_objects_pub_->publish(output_msg);
 
   if (publish_merged_objects_) {
-    autoware_perception_msgs::msg::DetectedObjects merged_output_msg;
-    processor_->getMergedObjects(time, merged_output_msg);
-
-    // frame_id is map, transform objects to base_link
     const auto tf_base_to_world = odometry_->getTransform(time);  // geometry_msgs::msg::Transform
-
     if (tf_base_to_world) {
-      // Convert geometry_msgs::Transform to tf2::Transform
-      tf2::Transform tf_base_to_world_tf2;
-      tf2::fromMsg(*tf_base_to_world, tf_base_to_world_tf2);
-      // Get the inverse transform (world to base_link)
-      tf2::Transform tf_world_to_baselink = tf_base_to_world_tf2.inverse();
-
-      for (auto & obj : merged_output_msg.objects) {
-        // Convert pose to tf2::Transform for transformation
-        tf2::Transform pose_in_world;
-        tf2::fromMsg(obj.kinematics.pose_with_covariance.pose, pose_in_world);
-
-        // Transform the pose
-        tf2::Transform pose_in_baselink = tf_world_to_baselink * pose_in_world;
-
-        // Convert back to geometry_msgs::Pose
-        tf2::toMsg(pose_in_baselink, obj.kinematics.pose_with_covariance.pose);
-      }
+      autoware_perception_msgs::msg::DetectedObjects merged_output_msg;
+      processor_->getMergedObjects(time, *tf_base_to_world, merged_output_msg);
+      merged_output_msg.header.frame_id = ego_frame_id_;
+      merged_objects_pub_->publish(merged_output_msg);
+    } else {
+      RCLCPP_WARN(
+        this->get_logger(), "No odometry information available at the publishing time: %.9f",
+        time.seconds());
     }
-    merged_output_msg.header.frame_id = ego_frame_id_;
-    merged_objects_pub_->publish(merged_output_msg);
   }
 
   // Publish debug messages
