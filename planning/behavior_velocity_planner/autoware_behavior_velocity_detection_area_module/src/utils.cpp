@@ -23,6 +23,7 @@
 #include <lanelet2_core/geometry/Point.h>
 
 #include <memory>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -164,6 +165,12 @@ bool has_enough_braking_distance(
 
   return arc_lane_utils::calcSignedDistance(self_pose, line_pose.position) >
          pass_judge_line_distance;
+}
+
+double feasible_stop_distance_by_max_acceleration(
+  const double current_velocity, const double max_acceleration)
+{
+  return current_velocity * current_velocity / (2.0 * max_acceleration);
 }
 
 }  // namespace autoware::behavior_velocity_planner::detection_area

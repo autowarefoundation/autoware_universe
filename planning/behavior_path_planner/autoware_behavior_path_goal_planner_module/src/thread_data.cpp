@@ -23,7 +23,7 @@ void LaneParkingRequest::update(
   const PlannerData & planner_data, const ModuleStatus & current_status,
   const BehaviorModuleOutput & upstream_module_output,
   const std::optional<PullOverPath> & pull_over_path, const PathDecisionState & prev_data,
-  const bool trigger_thread_on_approach)
+  const bool trigger_thread_on_approach, const LaneChangeContext::State & lane_change_state)
 {
   planner_data_ = std::make_shared<PlannerData>(planner_data);
   planner_data_->route_handler = std::make_shared<RouteHandler>(*(planner_data.route_handler));
@@ -32,6 +32,7 @@ void LaneParkingRequest::update(
   pull_over_path_ = pull_over_path;
   prev_data_ = prev_data;
   trigger_thread_on_approach_ = trigger_thread_on_approach;
+  lane_change_state_ = lane_change_state;
 }
 
 void FreespaceParkingRequest::initializeOccupancyGridMap(

@@ -6,6 +6,10 @@ RTC Interface is an interface to publish the decision status of behavior plannin
 
 ## Inner-workings / Algorithms
 
+The RTC Interface works by creating a communication channel between a behavior planning module and the rest of the autonomous driving system.
+The planning module uses the interface to publish its current status, such as whether it is safe to proceed or if it is waiting for an external command.
+Other modules can then subscribe to this status information and send commands to the behavior planning module, such as "activate" or "deactivate".
+
 ### Usage example
 
 ```c++
@@ -20,6 +24,9 @@ while (...) {
   // Get safety status of the module corresponding to the module id
   const bool safe = ...
 
+  // Get the current state of the module
+  const uint8_t state = ...
+
   // Get distance to the object corresponding to the module id
   const double start_distance = ...
   const double finish_distance = ...
@@ -28,7 +35,7 @@ while (...) {
   const rclcpp::Time stamp = ...
 
   // Update status
-  rtc_interface.updateCooperateStatus(uuid, safe, start_distance, finish_distance, stamp);
+  rtc_interface.updateCooperateStatus(uuid, safe, state, start_distance, finish_distance, stamp);
 
   if (rtc_interface.isActivated(uuid)) {
     // Execute planning
@@ -51,7 +58,7 @@ rtc_interface.removeCooperateStatus(uuid);
 ### RTCInterface (Constructor)
 
 ```c++
-autoware::rtc_interface::RTCInterface(rclcpp::Node & node, const std::string & name);
+autoware::rtc_interface::RTCInterface(rclcpp::Node & node, const std::string & name, const bool enable_rtc = false);
 ```
 
 #### Description
@@ -64,6 +71,7 @@ A constructor for `autoware::rtc_interface::RTCInterface`.
 - `name` : Name of cooperate status array topic and cooperate commands service
   - Cooperate status array topic name : `~/{name}/cooperate_status`
   - Cooperate commands service name : `~/{name}/cooperate_commands`
+- `enable_rtc`: A boolean indicating whether RTC is enabled or not by default.
 
 #### Output
 
@@ -105,6 +113,8 @@ If cooperate status corresponding to `uuid` is not registered yet, add new coope
 - `start_distance` : Distance to the start object from ego vehicle
 - `finish_distance` : Distance to the finish object from ego vehicle
 - `stamp` : Time stamp
+- `requested`: A boolean indicating whether a request has been made.
+- `override_rtc_auto_mode`: An optional boolean to override the RTC mode (true forces AUTO, false forces MANUAL).
 
 #### Output
 

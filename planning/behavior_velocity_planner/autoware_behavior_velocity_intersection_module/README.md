@@ -252,9 +252,22 @@ At intersection without traffic light, if occlusion is detected, ego makes a bri
 
 ![occlusion_detection](./docs/occlusion-without-tl.drawio.svg)
 
+If the flag `occlusion.request_approval_wo_traffic_light` is `true`, `intersection_occlusion` requests approval from RTC operator. If it is `false`, it does not request approval after tbe brief stop even if occlusion is not sufficiently cleared.
+
 While ego is creeping, yellow intersection_wall appears in front ego.
 
 ![occlusion-wo-tl-creeping](./docs/occlusion-wo-tl-creeping.png)
+
+### Map-based forced RTC
+
+RTC can be enabled for specific intersection lanelets such that even if approval is not required by default, it will be required before crossing the corresponding intersection lanelets.
+The following attribute should be added to the lanelet in intersection in the map file:
+
+```xml
+<tag k='rtc_approval_required_v1' v='intersection' />
+```
+
+The value can be set to `intersection`, `intersection_occlusion`, or `intersection,intersection_occlusion`, to adjust which modules will require approvals.
 
 ## Traffic signal specific behavior
 
@@ -456,6 +469,7 @@ entity TargetObject {
 | Parameter                                      | Type     | Description                                                                                 |
 | ---------------------------------------------- | -------- | ------------------------------------------------------------------------------------------- |
 | `.enable`                                      | bool     | [-] flag to calculate occlusion detection                                                   |
+| `.request_approval_wo_traffic_light`           | bool     | [-] flag to request RTC approval when occluded without traffic light                        |
 | `.occlusion_attention_area_length`             | double   | [m] the length of attention are for occlusion detection                                     |
 | `.free_space_max`                              | int      | [-] maximum value of occupancy grid cell to treat at occluded                               |
 | `.occupied_min`                                | int      | [-] minimum value of occupancy grid cell to treat at occluded                               |
@@ -470,7 +484,6 @@ entity TargetObject {
 | `.ignore_parked_vehicle_speed_threshold`       | double   | [m/s] velocity threshold for checking parked vehicle                                        |
 | `.occlusion_detection_hold_time`               | double   | [s] hold time of occlusion detection                                                        |
 | `.temporal_stop_time_before_peeking`           | double   | [s] temporal stop duration at default_stopline before starting peeking                      |
-| `.temporal_stop_before_attention_area`         | bool     | [-] flag to temporarily stop at first_attention_stopline before peeking into attention_area |
 | `.creep_velocity_without_traffic_light`        | double   | [m/s] creep velocity to occlusion_wo_tl_pass_judge_line                                     |
 | `.static_occlusion_with_traffic_light_timeout` | double   | [s] the timeout duration for ignoring static occlusion at intersection with traffic light   |
 

@@ -1,0 +1,32 @@
+units:
+  - path: /unit/1
+    type: and
+    list:
+      - { type: link, link: /input/1 }
+      - { type: link, link: /input/2 }
+
+  - path: /unit/2
+    type: or
+    list:
+      - { type: link, link: /input/3 }
+      - { type: link, link: /input/4 }
+
+  - path: /input/1
+    type: diag
+    node: test_node
+    name: input_1
+
+  - path: /input/2
+    type: diag
+    node: test_node
+    name: input_2
+
+  - path: /input/3
+    type: diag
+    node: test_node
+    name: input_3
+
+  - path: /input/4
+    type: diag
+    node: test_node
+    name: input_4

@@ -2,6 +2,36 @@
 Changelog for package autoware_path_optimizer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): autofix (`#10982 <https://github.com/autowarefoundation/autoware_universe/issues/10982>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome
+
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* fix(path_optimizer): undefined behavior when optimizer failure (`#10726 <https://github.com/autowarefoundation/autoware_universe/issues/10726>`_)
+  * change AND condition to OR
+  * fix condition again
+  Co-authored-by: Arjun Jagdish Ram <arjun.ram@tier4.jp>
+  * fix build error
+  * revert is_optimization_failed\_ condition
+  * minor refactoring (`#1 <https://github.com/autowarefoundation/autoware_universe/issues/1>`_)
+  ---------
+  Co-authored-by: Arjun Jagdish Ram <arjun.ram@tier4.jp>
+  Co-authored-by: Takayuki Murooka <takayuki5168@gmail.com>
+* Contributors: Kento Yabuuchi, TaikiYamada4
+
+0.45.0 (2025-05-22)
+-------------------
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

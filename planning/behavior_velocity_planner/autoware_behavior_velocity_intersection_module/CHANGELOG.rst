@@ -2,6 +2,66 @@
 Changelog for package autoware_behavior_velocity_intersection_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(intersection): remove reference "traffic_light_id" as it is deprecated (`#11008 <https://github.com/autowarefoundation/autoware_universe/issues/11008>`_)
+* fix(intersection): clamp collision stopline ip index (`#11009 <https://github.com/autowarefoundation/autoware_universe/issues/11009>`_)
+* feat(intersection_occlusion): request approval when occluded without traffic light (`#10947 <https://github.com/autowarefoundation/autoware_universe/issues/10947>`_)
+* feat(intersection_module): add infomation to PlanningFactor topic (`#10835 <https://github.com/autowarefoundation/autoware_universe/issues/10835>`_)
+  * feat(intersection_module): add infomation to safety factor
+  * feat(intersection_module): add planning_factor_interface_for_occlusion\_
+  * feat(intersection_module): add planning factor test case
+  * some code fix
+  * add planning factor test case for occlusion
+  * fix comment typo
+  * marked planning_factor_interface_for_occlusion_as maybe_unused.
+  * fix safety_factors and detail
+  * fix test case and add comment
+  * fix planning factor detail when decision is safe
+  ---------
+* feat(intersection): adjust collision stopline position to be ahead of ego by braking distance (`#10900 <https://github.com/autowarefoundation/autoware_universe/issues/10900>`_)
+* fix(intersection): stop at occlusion stopline and stop twice at intersection without traffic light (`#10911 <https://github.com/autowarefoundation/autoware_universe/issues/10911>`_)
+  feat(intersection): stop at occlusion stopline and stop twice at intersection without traffic light
+* feat(intersection_occlusion): adjustable occlusion wall position for intersection without traffic_light (`#10868 <https://github.com/autowarefoundation/autoware_universe/issues/10868>`_)
+* Contributors: Kotakku, Mamoru Sobue, Mete Fatih Cırıt, Yuxuan Liu
+
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* fix(intersection): fix path lanelets generation (`#10843 <https://github.com/autowarefoundation/autoware_universe/issues/10843>`_)
+* feat(intersection): consider brake feasiblity for stuck vehicle (`#10742 <https://github.com/autowarefoundation/autoware_universe/issues/10742>`_)
+* feat(intersection): experimental overshoot in merging (`#10544 <https://github.com/autowarefoundation/autoware_universe/issues/10544>`_)
+* Contributors: Mamoru Sobue, TaikiYamada4
+
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* fix(intersection): interpolate object polygons precisely (`#10626 <https://github.com/autowarefoundation/autoware_universe/issues/10626>`_)
+  fix(intersection): debug collision check
+* fix(behavior_velocity_planner): add missing header (`#10561 <https://github.com/autowarefoundation/autoware_universe/issues/10561>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(behavior_velocity_planner): extend stop line to path bound (`#10435 <https://github.com/autowarefoundation/autoware_universe/issues/10435>`_)
+  * extend stop line to path bound
+  * style(pre-commit): autofix
+  * change signature of stop line extension function
+  * add tests for detection area module
+  * fix test for no stopping area module
+  * fix tests for traffic light module
+  * include necessary header
+  * fix test for detection area module
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(behavior_velocity_planner): only wait for the required subscriptions (`#10546 <https://github.com/autowarefoundation/autoware_universe/issues/10546>`_)
+* Contributors: Mamoru Sobue, Masaki Baba, Mitsuhiro Sakamoto, TaikiYamada4, Takayuki Murooka
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 

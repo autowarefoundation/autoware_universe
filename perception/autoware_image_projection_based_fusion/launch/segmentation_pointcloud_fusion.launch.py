@@ -45,7 +45,7 @@ class SegmentationPointcloudFusion:
         approximate_camera_projection = []
         rois_timestamp_noise_window = []
         point_project_to_unrectified_image = []
-        image_topic_name = LaunchConfiguration("image_topic_name")
+        image_topic_name = LaunchConfiguration("image_topic_name").perform(context)
 
         for index, camera_id in enumerate(self.camera_ids):
             mask_timestamp_offsets.append(
@@ -92,13 +92,16 @@ class SegmentationPointcloudFusion:
             point_project_to_unrectified_image
         )
 
-    def create_segmentation_pointcloud_fusion_node(self, input_topic, output_topic):
+    def create_segmentation_pointcloud_fusion_node(
+        self, input_topic, concat_info_topic, output_topic
+    ):
         node = Node(
             package="autoware_image_projection_based_fusion",
             executable="segmentation_pointcloud_fusion_node",
             name="segmentation_pointcloud_fusion",
             remappings=[
                 ("input", input_topic),
+                ("input/concatenation_info", concat_info_topic),
                 ("output", output_topic),
             ],
             parameters=[
@@ -112,7 +115,9 @@ class SegmentationPointcloudFusion:
 def launch_setup(context, *args, **kwargs):
     pipeline = SegmentationPointcloudFusion(context)
     segmentation_pointcloud_fusion_node = pipeline.create_segmentation_pointcloud_fusion_node(
-        LaunchConfiguration("input/pointcloud"), LaunchConfiguration("output/pointcloud")
+        LaunchConfiguration("input/pointcloud"),
+        LaunchConfiguration("input/concatenation_info"),
+        LaunchConfiguration("output/pointcloud"),
     )
     # TODO(badai-nguyen): add option of using container
     return [segmentation_pointcloud_fusion_node]
@@ -125,6 +130,7 @@ def generate_launch_description():
         launch_arguments.append(DeclareLaunchArgument(name, default_value=default_value))
 
     add_launch_arg("input/pointcloud", "pointcloud_map_filtered/pointcloud")
+    add_launch_arg("input/concatenation_info", "/sensing/lidar/concatenated/pointcloud_info")
     add_launch_arg("output/pointcloud", "segmentation_based_filtered/pointcloud")
     add_launch_arg("use_intra_process", "True")
     add_launch_arg("use_multithread", "True")

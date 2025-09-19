@@ -2,6 +2,56 @@
 Changelog for package autoware_behavior_velocity_detection_area_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(detection_area): set stop point behind actual stop line when ego exceeds max acceleration (`#10919 <https://github.com/autowarefoundation/autoware_universe/issues/10919>`_)
+  * feat(detection_area): set stop point behind actual stop line when ego exceeds max acceleration
+  * remove unintended change
+  ---------
+* Contributors: Mete Fatih Cırıt, Yukinari Hisaki
+
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(detection_area): improve log message (`#10797 <https://github.com/autowarefoundation/autoware_universe/issues/10797>`_)
+  * feat(detection_area): improve log message
+  feat(detection_area): improve log message
+  * fix clang-tidy
+  * false
+  ---------
+* fix(detection_area): fix args for calcJudgeLineDistWithAccLimit (`#10777 <https://github.com/autowarefoundation/autoware_universe/issues/10777>`_)
+* fix(planning): fix links in documentations (`#10704 <https://github.com/autowarefoundation/autoware_universe/issues/10704>`_)
+  * fix(planning): fix links in documentations
+  * fix pre-commit
+  ---------
+* Contributors: Kosuke Takeuchi, TaikiYamada4, Yuxuan Liu
+
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* fix(detection_area_module,virtual_traffic_light,no_stopping_area): support overlap lane (`#10623 <https://github.com/autowarefoundation/autoware_universe/issues/10623>`_)
+* feat(behavior_velocity_planner): extend stop line to path bound (`#10435 <https://github.com/autowarefoundation/autoware_universe/issues/10435>`_)
+  * extend stop line to path bound
+  * style(pre-commit): autofix
+  * change signature of stop line extension function
+  * add tests for detection area module
+  * fix test for no stopping area module
+  * fix tests for traffic light module
+  * include necessary header
+  * fix test for detection area module
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(behavior_velocity_planner): only wait for the required subscriptions (`#10546 <https://github.com/autowarefoundation/autoware_universe/issues/10546>`_)
+* Contributors: Mitsuhiro Sakamoto, TaikiYamada4, Takayuki Murooka, Yukinari Hisaki
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

@@ -18,6 +18,7 @@
 #include "autoware/behavior_path_goal_planner_module/decision_state.hpp"
 #include "autoware/behavior_path_goal_planner_module/fixed_goal_planner_base.hpp"
 #include "autoware/behavior_path_goal_planner_module/goal_planner_parameters.hpp"
+#include "autoware/behavior_path_goal_planner_module/lane_change.hpp"
 #include "autoware/behavior_path_goal_planner_module/pull_over_planner/bezier_pull_over.hpp"
 #include "autoware/behavior_path_goal_planner_module/pull_over_planner/freespace_pull_over.hpp"
 #include "autoware/behavior_path_goal_planner_module/thread_data.hpp"
@@ -35,6 +36,7 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace autoware::behavior_path_planner
@@ -122,12 +124,6 @@ bool isOnModifiedGoal(
   const Pose & current_pose, const std::optional<GoalCandidate> & modified_goal_opt,
   const GoalPlannerParameters & parameters);
 
-bool hasPreviousModulePathShapeChanged(
-  const BehaviorModuleOutput & upstream_module_output,
-  const BehaviorModuleOutput & last_upstream_module_output);
-bool hasDeviatedFromPath(
-  const Point & ego_position, const BehaviorModuleOutput & upstream_module_output);
-
 bool needPathUpdate(
   const Pose & current_pose, const double path_update_duration, const rclcpp::Time & now,
   const std::optional<GoalCandidate> & modified_goal,
@@ -183,6 +179,8 @@ private:
   LaneParkingResponse & response_;
   std::atomic<bool> & is_lane_parking_cb_running_;
   rclcpp::Logger logger_;
+
+  LaneChangeContext::State lane_change_state_last_wakeup_{LaneChangeContext::NotLaneChanging{}};
 
   std::vector<std::shared_ptr<PullOverPlannerBase>> pull_over_planners_;
   BehaviorModuleOutput
@@ -308,6 +306,10 @@ private:
   const bool left_side_parking_;
 
   bool trigger_thread_on_approach_{false};
+
+  // signal path generator and state manager to regenerate path candidates and remain NOT_DECIDED
+  LaneChangeContext lane_change_ctx_{};
+
   // pre-generate lane parking paths in a separate thread
   rclcpp::TimerBase::SharedPtr lane_parking_timer_;
   rclcpp::CallbackGroup::SharedPtr lane_parking_timer_cb_group_;
@@ -349,8 +351,6 @@ private:
   // approximate distance from the start point to the end point of pull_over.
   // this is used as an assumed value to decelerate, etc., before generating the actual path.
   const double approximate_pull_over_distance_{20.0};
-  // ego may exceed the stop distance, so add a buffer
-  const double stop_distance_buffer_{2.0};
 
   // debug
   mutable GoalPlannerDebugData debug_data_;
@@ -446,8 +446,8 @@ private:
   TurnSignalInfo calcTurnSignalInfo(const PullOverContextData & context_data);
   std::optional<lanelet::Id> ignore_signal_{std::nullopt};
 
-  // steering factor
-  void updateSteeringFactor(
+  // planning factor
+  void updatePlanningFactor(
     const PullOverContextData & context_data, const std::array<Pose, 2> & pose,
     const std::array<double, 2> distance);
 

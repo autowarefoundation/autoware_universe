@@ -2,6 +2,58 @@
 Changelog for package autoware_bevfusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Mete Fatih Cırıt
+
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* fix(autoware_bevfusion): fix clang-tidy errors by removing unused fields (`#10850 <https://github.com/autowarefoundation/autoware_universe/issues/10850>`_)
+  * fix clang-tidy errors by removing unused fields
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(cmake): update spconv availability messages to use STATUS and WAR… (`#10690 <https://github.com/autowarefoundation/autoware_universe/issues/10690>`_)
+  fix(cmake): update spconv availability messages to use STATUS and WARNING
+* Contributors: Taiki Yamada, TaikiYamada4, Yukihiro Saito
+
+0.45.0 (2025-05-22)
+-------------------
+* fix(autoware_bevfusion): fix clang-tidy errors by removing unused fields (`#10850 <https://github.com/autowarefoundation/autoware_universe/issues/10850>`_)
+  * fix clang-tidy errors by removing unused fields
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* chore: perception code owner update (`#10645 <https://github.com/autowarefoundation/autoware_universe/issues/10645>`_)
+  * chore: update maintainers in multiple perception packages
+  * Revert "chore: update maintainers in multiple perception packages"
+  This reverts commit f2838c33d6cd82bd032039e2a12b9cb8ba6eb584.
+  * chore: update maintainers in multiple perception packages
+  * chore: add Kok Seang Tan as maintainer in multiple perception packages
+  ---------
+* feat(autoware_bevfusion): added target architectures for bevfusion (`#10613 <https://github.com/autowarefoundation/autoware_universe/issues/10613>`_)
+  * chore: added target architectures for bevfusion
+  * chore: mistook the architecture of edge devices
+  ---------
+* feat(bevfusion.schema): add default values for sensor_fusion and thresholds array (`#10608 <https://github.com/autowarefoundation/autoware_universe/issues/10608>`_)
+* fix(autoware_bevfusion): build error when using ninja-build tool (`#10551 <https://github.com/autowarefoundation/autoware_universe/issues/10551>`_)
+* feat(autoware_bevfusion): integrated the cuda blackboard to bevfusion (`#10540 <https://github.com/autowarefoundation/autoware_universe/issues/10540>`_)
+  * feat: integrated the cuda blackboard to bevfusion
+  * chore: typo
+  * chore: the wildcard matching of schemas is a pain
+  ---------
+* Contributors: Kenzo Lobos Tsunekawa, Taekjin LEE, TaikiYamada4, Zulfaqar Azmi
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 * chore: match all package versions

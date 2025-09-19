@@ -16,25 +16,37 @@
 
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 
+#include "autoware/multi_object_tracker/object_model/types.hpp"
+
+#include <autoware_utils/geometry/geometry.hpp>
+
 #include <algorithm>
+#include <limits>
 #include <random>
 #include <vector>
 
 namespace
 {
 float updateProbability(
-  const float & prior, const float & true_positive, const float & false_positive)
+  const float & prior, const float & true_positive, const float & false_positive,
+  const bool clamp = true)
 {
-  constexpr float max_updated_probability = 0.999;
-  constexpr float min_updated_probability = 0.100;
-  const float probability =
+  float probability =
     (prior * true_positive) / (prior * true_positive + (1 - prior) * false_positive);
-  return std::clamp(probability, min_updated_probability, max_updated_probability);
+
+  if (clamp) {
+    // Normalize the probability to [0.1, 0.999]
+    constexpr float max_updated_probability = 0.999;
+    constexpr float min_updated_probability = 0.100;
+    probability = std::clamp(probability, min_updated_probability, max_updated_probability);
+  }
+
+  return probability;
 }
 float decayProbability(const float & prior, const float & delta_time)
 {
   constexpr float minimum_probability = 0.001;
-  const float decay_rate = log(0.5f) / 0.3f;  // half-life (50% decay) of 0.3s
+  const float decay_rate = log(0.5f) / 0.5f;  // half-life (50% decay) of 0.5s
   return std::max(prior * std::exp(decay_rate * delta_time), minimum_probability);
 }
 }  // namespace
@@ -59,22 +71,40 @@ Tracker::Tracker(const rclcpp::Time & time, const types::DynamicObject & detecte
   // Initialize existence probabilities
   existence_probabilities_.resize(types::max_channel_size, 0.001);
   total_existence_probability_ = 0.001;
+  classification_ = detected_object.classification;
 }
 
 void Tracker::initializeExistenceProbabilities(
   const uint & channel_index, const float & existence_probability)
 {
-  // The initial existence probability is modeled
-  // since the incoming object's existence probability is not reliable
-  // existence probability on each channel
-  constexpr float initial_existence_probability = 0.1;
-  existence_probabilities_[channel_index] = initial_existence_probability;
-
-  // total existence probability
+  // The initial existence probability is normalized to [0.1, 0.999]
+  // to avoid the existence probability being too low or too high
+  // and to avoid the existence probability being too close to 0 or 1
   constexpr float max_probability = 0.999;
   constexpr float min_probability = 0.100;
+  const float clamped_existence_probability =
+    std::clamp(existence_probability, min_probability, max_probability);
+
+  // existence probability on each channel
+  existence_probabilities_[channel_index] = clamped_existence_probability;
+
+  // total existence probability
+  total_existence_probability_ = clamped_existence_probability;
+}
+
+void Tracker::updateTotalExistenceProbability(const float & existence_probability)
+{
   total_existence_probability_ =
-    std::max(std::min(existence_probability, max_probability), min_probability);
+    updateProbability(total_existence_probability_, existence_probability, 0.2);
+}
+
+void Tracker::mergeExistenceProbabilities(std::vector<float> existence_probabilities)
+{
+  // existence probability on each channel
+  for (size_t i = 0; i < existence_probabilities.size(); ++i) {
+    // take larger value
+    existence_probabilities_[i] = std::max(existence_probabilities_[i], existence_probabilities[i]);
+  }
 }
 
 bool Tracker::updateWithMeasurement(
@@ -106,10 +136,9 @@ bool Tracker::updateWithMeasurement(
     }
 
     // update total existence probability
-    const double existence_probability =
-      channel_info.trust_existence_probability ? object.existence_probability : 0.6;
     total_existence_probability_ = updateProbability(
-      total_existence_probability_, existence_probability, probability_false_detection);
+      total_existence_probability_, object.existence_probability * probability_true_detection,
+      probability_false_detection);
   }
 
   last_update_with_measurement_time_ = measurement_time;
@@ -122,90 +151,134 @@ bool Tracker::updateWithMeasurement(
     updateClassification(object.classification);
   }
 
+  // Update orientation availability
+  if (object.kinematics.orientation_availability == types::OrientationAvailability::AVAILABLE) {
+    // if the incoming object is AVAILABLE, set the orientation availability to AVAILABLE
+    object_.kinematics.orientation_availability = types::OrientationAvailability::AVAILABLE;
+  } else if (
+    object.kinematics.orientation_availability == types::OrientationAvailability::SIGN_UNKNOWN &&
+    object_.kinematics.orientation_availability == types::OrientationAvailability::UNAVAILABLE) {
+    // if the incoming object is SIGN_UNKNOWN and the tracker is UNAVAILABLE, set the orientation
+    // availability to SIGN_UNKNOWN
+    object_.kinematics.orientation_availability = types::OrientationAvailability::SIGN_UNKNOWN;
+  }
+
   // Update object
   measure(object, measurement_time, channel_info);
+
+  // Update object status
+  getTrackedObject(measurement_time, object_);
 
   return true;
 }
 
-bool Tracker::updateWithoutMeasurement(const rclcpp::Time & now)
+bool Tracker::updateWithoutMeasurement(const rclcpp::Time & timestamp)
 {
   // Update existence probability
   ++no_measurement_count_;
   ++total_no_measurement_count_;
   {
     // decay existence probability
-    float const delta_time = (now - last_update_with_measurement_time_).seconds();
+    float const delta_time = (timestamp - last_update_with_measurement_time_).seconds();
     for (float & existence_probability : existence_probabilities_) {
       existence_probability = decayProbability(existence_probability, delta_time);
     }
     total_existence_probability_ = decayProbability(total_existence_probability_, delta_time);
   }
 
+  // Update object status
+  getTrackedObject(timestamp, object_);
+
   return true;
 }
 
 void Tracker::updateClassification(
-  const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification)
+  const std::vector<autoware_perception_msgs::msg::ObjectClassification> & input)
 {
   // classification algorithm:
-  // 0. Normalize the input classification
-  // 1-1. Update the matched classification probability with a gain (ratio of 0.05)
-  // 1-2. If the label is not found, add it to the classification list
-  // 2. Remove the class with probability < remove_threshold (0.001)
+  // 1. Update the matched classification probability
+  // 2. If the label is not found, add it to the classification list
   // 3. Normalize tracking classification
 
-  // Parameters
-  // if the remove_threshold is too high (compare to the gain), the classification will be removed
-  // immediately
-  const float gain = 0.05;
-  constexpr float remove_threshold = 0.001;
+  // If no existing classification, initialize with input
+  if (classification_.empty()) {
+    classification_ = input;
+    return;
+  }
 
-  // Normalization function
-  auto normalizeProbabilities =
-    [](std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification) {
-      float sum = 0.0;
-      for (const auto & a_class : classification) {
-        sum += a_class.probability;
-      }
-      for (auto & a_class : classification) {
-        a_class.probability /= sum;
-      }
-    };
+  // Process existing classes
+  for (auto & a_class : classification_) {
+    // Find corresponding measurement
+    auto it = std::find_if(input.begin(), input.end(), [&a_class](const auto & new_class) {
+      return new_class.label == a_class.label;
+    });
 
-  // Normalize the input
-  auto classification_input = classification;
-  normalizeProbabilities(classification_input);
-
-  auto & classification_ = object_.classification;
-
-  // Update the matched classification probability with a gain
-  for (const auto & new_class : classification_input) {
-    bool found = false;
-    for (auto & old_class : classification_) {
-      if (new_class.label == old_class.label) {
-        old_class.probability += new_class.probability * gain;
-        found = true;
-        break;
-      }
+    if (it != input.end()) {
+      // Class found in measurement
+      constexpr float true_positive_rate = 0.8f;
+      constexpr float false_positive_rate = 0.2f;
+      a_class.probability = updateProbability(
+        a_class.probability, it->probability * true_positive_rate, false_positive_rate);
+    } else {
+      // Class not observed in measurement
+      constexpr float false_negative_rate = 0.6f;
+      constexpr float true_negative_rate = 0.8f;
+      constexpr float true_positive_rate = 1.0f - false_negative_rate;
+      constexpr float false_positive_rate = 1.0f - true_negative_rate;
+      a_class.probability =
+        updateProbability(a_class.probability, true_positive_rate, false_positive_rate);
     }
-    // If the label is not found, add it to the classification list
+  }
+
+  // Add new classes from measurement that weren't in tracker
+  for (const auto & new_class : input) {
+    bool found = std::any_of(
+      classification_.begin(), classification_.end(),
+      [&new_class](const auto & old_class) { return old_class.label == new_class.label; });
+
     if (!found) {
+      constexpr float true_positive_rate = 0.8f;
       auto adding_class = new_class;
-      adding_class.probability *= gain;
+      // New class gets probability weighted by measurement confidence
+      adding_class.probability = new_class.probability * true_positive_rate;
       classification_.push_back(adding_class);
     }
   }
 
-  // If the probability is less than the threshold, remove the class
-  classification_.erase(
-    std::remove_if(
-      classification_.begin(), classification_.end(),
-      [remove_threshold](const auto & a_class) { return a_class.probability < remove_threshold; }),
-    classification_.end());
+  // Normalization
+  {
+    float sum = 0.0;
+    for (const auto & a_class : classification_) {
+      sum += a_class.probability;
+    }
+    // Normalize only if the total probability is greater than 1.0
+    if (sum > 1.0) {
+      for (auto & a_class : classification_) {
+        a_class.probability /= sum;
+      }
+    }
+  }
+}
 
-  // Normalize tracking classification
-  normalizeProbabilities(classification_);
+uint Tracker::getChannelIndex() const
+{
+  // Return the index of the channel that has highest priority
+  // lower the index, higher the priority
+
+  uint index = types::max_channel_size - 1;  // Default to lowest priority index
+  float max_probability = 0.0f;
+  constexpr float threshold = 0.5;
+  for (uint i = 0; i < existence_probabilities_.size(); ++i) {
+    if (existence_probabilities_[i] > threshold) {
+      return i;
+    }
+    if (existence_probabilities_[i] > max_probability) {
+      max_probability = existence_probabilities_[i];
+      index = i;
+    }
+  }
+  // If no channel has a probability above the threshold, return the highest probability index
+  return index;
 }
 
 void Tracker::limitObjectExtension(const object_model::ObjectModel object_model)
@@ -218,6 +291,196 @@ void Tracker::limitObjectExtension(const object_model::ObjectModel object_model)
     object_extension.y, object_model.size_limit.width_min, object_model.size_limit.width_max);
   object_extension.z = std::clamp(
     object_extension.z, object_model.size_limit.height_min, object_model.size_limit.height_max);
+}
+
+void Tracker::getPositionCovarianceEigenSq(
+  const rclcpp::Time & time, double & major_axis_sq, double & minor_axis_sq) const
+{
+  // estimate the covariance of the position at the given time
+  types::DynamicObject object = object_;
+  if (object.time.seconds() + 1e-6 < time.seconds()) {  // 1usec is allowed error
+    getTrackedObject(time, object);
+  }
+  using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+  auto & pose_cov = object.pose_covariance;
+
+  // principal component of the position covariance matrix
+  Eigen::Matrix2d covariance;
+  covariance << pose_cov[XYZRPY_COV_IDX::X_X], pose_cov[XYZRPY_COV_IDX::X_Y],
+    pose_cov[XYZRPY_COV_IDX::Y_X], pose_cov[XYZRPY_COV_IDX::Y_Y];
+  // check if the covariance is valid
+  if (covariance(0, 0) <= 0.0 || covariance(1, 1) <= 0.0) {
+    RCLCPP_WARN(
+      rclcpp::get_logger("Tracker"), "Covariance is not valid. X_X: %f, Y_Y: %f", covariance(0, 0),
+      covariance(1, 1));
+    major_axis_sq = 0.0;
+    minor_axis_sq = 0.0;
+    return;
+  }
+  // Direct eigenvalue calculation for 2x2 symmetric matrix
+  const double a = covariance(0, 0);
+  const double b = covariance(0, 1);
+  const double c = covariance(1, 1);
+  const double trace = a + c;
+  const double det = a * c - b * b;
+  const double sqrt_term = std::sqrt(trace * trace / 4.0 - det);
+
+  major_axis_sq = trace / 2.0 + sqrt_term;
+  minor_axis_sq = trace / 2.0 - sqrt_term;
+}
+
+double Tracker::getBEVArea() const
+{
+  const auto & dims = object_.shape.dimensions;
+  return dims.x * dims.y;
+}
+
+double Tracker::getDistanceSqToEgo(const std::optional<geometry_msgs::msg::Pose> & ego_pose) const
+{
+  constexpr double INVALID_DISTANCE_SQ = -1.0;
+  if (!ego_pose) {
+    return INVALID_DISTANCE_SQ;
+  }
+  const auto & p = object_.pose.position;
+  const auto & e = ego_pose->position;
+  const double dx = p.x - e.x;
+  const double dy = p.y - e.y;
+  return dx * dx + dy * dy;
+}
+
+double Tracker::computeAdaptiveThreshold(
+  double base_threshold, double fallback_threshold, const AdaptiveThresholdCache & cache,
+  const std::optional<geometry_msgs::msg::Pose> & ego_pose) const
+{
+  const double distance_sq = getDistanceSqToEgo(ego_pose);
+  if (distance_sq < 0.0) return fallback_threshold;
+
+  const double bev_area = getBEVArea();
+
+  const double bev_area_influence = cache.getBEVAreaInfluence(bev_area);
+  const double distance_influence = cache.getDistanceInfluence(distance_sq);
+
+  return base_threshold + bev_area_influence + distance_influence;
+}
+
+bool Tracker::isConfident(
+  const AdaptiveThresholdCache & cache, const std::optional<geometry_msgs::msg::Pose> & ego_pose,
+  const std::optional<rclcpp::Time> & time = std::nullopt) const
+{
+  // check the number of measurements. if the measurement is too small, definitely not confident
+  const int count = getTotalMeasurementCount();
+  if (count < 2) {
+    return false;
+  }
+  rclcpp::Time time_to_check;
+  if (!time) {
+    // add 200ms extrapolation time to the latest measurement time
+    // to consider the velocity uncertainty
+    const rclcpp::Duration extrapolate_time = rclcpp::Duration::from_seconds(0.2);
+    time_to_check = object_.time + extrapolate_time;
+  } else {
+    // use the given time
+    time_to_check = *time;
+  }
+
+  double major_axis_sq = 0.0;
+  double minor_axis_sq = 0.0;
+  getPositionCovarianceEigenSq(time_to_check, major_axis_sq, minor_axis_sq);
+
+  // if the covariance is very small, the tracker is confident
+  constexpr double STRONG_COV_THRESHOLD = 0.28;
+  if (major_axis_sq < STRONG_COV_THRESHOLD) {
+    return true;
+  }
+
+  // if the existence probability is high and the covariance is small enough with respect to its
+  // distance to ego and its bev area, the tracker is confident
+  // base threshold is 1.6, fallback threshold is 2.6;
+  const double adaptive_threshold = computeAdaptiveThreshold(1.6, 2.6, cache, ego_pose);
+
+  if (getTotalExistenceProbability() > 0.50 && major_axis_sq < adaptive_threshold) {
+    return true;
+  }
+
+  return false;
+}
+
+bool Tracker::isExpired(
+  const rclcpp::Time & time, const AdaptiveThresholdCache & cache,
+  const std::optional<geometry_msgs::msg::Pose> & ego_pose) const
+{
+  // check the number of no measurements
+  const double elapsed_time = getElapsedTimeFromLastUpdate(time);
+
+  // if the last measurement is too old, the tracker is expired
+  constexpr double EXPIRED_TIME_THRESHOLD = 1.0;  // [sec]
+  if (elapsed_time > EXPIRED_TIME_THRESHOLD) {
+    return true;
+  }
+
+  // if the tracker is not confident, the tracker is expired
+  constexpr double EXPIRED_PROBABILITY_THRESHOLD = 0.015;
+  const float existence_probability = getTotalExistenceProbability();
+  if (existence_probability < EXPIRED_PROBABILITY_THRESHOLD) {
+    return true;
+  }
+
+  // if the tracker is a bit old and the existence probability is low, check the covariance size
+  constexpr double TIME_TO_CHECK_COV = 0.18;  // [sec]
+  constexpr double EXISTENCE_PROBABILITY_TO_CHECK_COV = 0.3;
+  if (
+    elapsed_time > TIME_TO_CHECK_COV &&
+    existence_probability < EXISTENCE_PROBABILITY_TO_CHECK_COV) {
+    // if the tracker covariance is too large, the tracker is expired
+    double major_axis_sq = 0.0;
+    double minor_axis_sq = 0.0;
+    getPositionCovarianceEigenSq(time, major_axis_sq, minor_axis_sq);
+    // major_cov: base_threshold is 2.8, fallback threshold is 3.8;
+    // minor_cov: base_threshold is 2.7, fallback threshold is 3.7;
+    const double major_cov_threshold = computeAdaptiveThreshold(2.8, 3.8, cache, ego_pose);
+    const double minor_cov_threshold = computeAdaptiveThreshold(2.7, 3.7, cache, ego_pose);
+    if (major_axis_sq > major_cov_threshold || minor_axis_sq > minor_cov_threshold) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+float Tracker::getKnownObjectProbability() const
+{
+  // find unknown probability
+  float unknown_probability = 0.0;
+  for (const auto & a_class : object_.classification) {
+    if (a_class.label == autoware_perception_msgs::msg::ObjectClassification::UNKNOWN) {
+      unknown_probability = a_class.probability;
+      break;
+    }
+  }
+  // known object probability is reverse of unknown probability
+  return 1.0 - unknown_probability;
+}
+
+double Tracker::getPositionCovarianceDeterminant() const
+{
+  using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+  auto & pose_cov = object_.pose_covariance;
+
+  // The covariance size is defined as the square of the dominant eigenvalue
+  // of the 2x2 covariance matrix:
+  // | X_X  X_Y |
+  // | Y_X  Y_Y |
+  const double determinant = pose_cov[XYZRPY_COV_IDX::X_X] * pose_cov[XYZRPY_COV_IDX::Y_Y] -
+                             pose_cov[XYZRPY_COV_IDX::X_Y] * pose_cov[XYZRPY_COV_IDX::Y_X];
+  // covariance matrix is positive semi-definite
+  if (determinant <= 0.0) {
+    RCLCPP_WARN(
+      rclcpp::get_logger("Tracker"), "Covariance is not positive semi-definite. X_X: %f, Y_Y: %f",
+      pose_cov[XYZRPY_COV_IDX::X_X], pose_cov[XYZRPY_COV_IDX::Y_Y]);
+    // return a large value to indicate the covariance is not valid
+    return std::numeric_limits<double>::max();
+  }
+  return determinant;
 }
 
 }  // namespace autoware::multi_object_tracker

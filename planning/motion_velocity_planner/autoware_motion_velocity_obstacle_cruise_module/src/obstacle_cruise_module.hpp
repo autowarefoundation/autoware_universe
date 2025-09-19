@@ -43,12 +43,19 @@ class ObstacleCruiseModule : public PluginModuleInterface
 {
 public:
   void init(rclcpp::Node & node, const std::string & module_name) override;
+  void publish_planning_factor() override { planning_factor_interface_->publish(); };
   void update_parameters(const std::vector<rclcpp::Parameter> & parameters) override;
   VelocityPlanningResult plan(
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & raw_trajectory_points,
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
     const std::shared_ptr<const PlannerData> planner_data) override;
   std::string get_module_name() const override;
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    RequiredSubscriptionInfo required_subscription_info;
+    required_subscription_info.predicted_objects = true;
+    return required_subscription_info;
+  }
 
 private:
   std::string module_name_;

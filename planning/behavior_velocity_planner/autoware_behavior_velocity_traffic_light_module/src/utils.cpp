@@ -15,10 +15,12 @@
 #include "utils.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 
 #include <boost/geometry/algorithms/distance.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
 
+#include <string>
 #include <vector>
 
 namespace autoware::behavior_velocity_planner
@@ -144,5 +146,41 @@ auto calcStopPointAndInsertIndex(
     }
   }
   return std::nullopt;
+}
+
+bool isTrafficSignalRedStop(
+  const lanelet::ConstLanelet & lanelet,
+  const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & elements)
+{
+  using autoware::traffic_light_utils::hasTrafficLightCircleColor;
+  using autoware::traffic_light_utils::hasTrafficLightShape;
+
+  if (!hasTrafficLightCircleColor(
+        elements, autoware_perception_msgs::msg::TrafficLightElement::RED)) {
+    return false;
+  }
+
+  const std::string turn_direction = lanelet.attributeOr("turn_direction", "else");
+  if (turn_direction == "else") {
+    return true;
+  }
+  if (
+    turn_direction == "right" &&
+    hasTrafficLightShape(
+      elements, autoware_perception_msgs::msg::TrafficLightElement::RIGHT_ARROW)) {
+    return false;
+  }
+  if (
+    turn_direction == "left" &&
+    hasTrafficLightShape(
+      elements, autoware_perception_msgs::msg::TrafficLightElement::LEFT_ARROW)) {
+    return false;
+  }
+  if (
+    turn_direction == "straight" &&
+    hasTrafficLightShape(elements, autoware_perception_msgs::msg::TrafficLightElement::UP_ARROW)) {
+    return false;
+  }
+  return true;
 }
 }  // namespace autoware::behavior_velocity_planner

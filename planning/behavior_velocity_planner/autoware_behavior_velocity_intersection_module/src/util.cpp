@@ -12,17 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "util.hpp"
+#include "autoware/behavior_velocity_intersection_module/util.hpp"
 
-#include "interpolated_path_info.hpp"
+#include "autoware/behavior_velocity_intersection_module/interpolated_path_info.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/path_utilization.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_vehicle_info_utils/vehicle_info.hpp>
 
+#include <boost/geometry/algorithms/convex_hull.hpp>
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/intersects.hpp>
 
@@ -142,6 +145,9 @@ std::optional<size_t> getFirstPointInsidePolygonByFootprint(
   const auto & path_ip = interpolated_path_info.path;
   const auto [lane_start, lane_end] = interpolated_path_info.lane_id_interval.value();
   const size_t vehicle_length_idx = static_cast<size_t>(vehicle_length / interpolated_path_info.ds);
+  // NOTE(soblin): subtract vehicle_length_idx for the case where ego's footprint overlaps with
+  // attention lane at lane_start already. In such case, the intersection stopline needs to be
+  // generated inside the lanelet before the intersection
   const size_t start =
     static_cast<size_t>(std::max<int>(0, static_cast<int>(lane_start) - vehicle_length_idx));
   const auto area_2d = lanelet::utils::to2D(polygon).basicPolygon();
@@ -149,7 +155,11 @@ std::optional<size_t> getFirstPointInsidePolygonByFootprint(
     const auto & base_pose = path_ip.points.at(i).point.pose;
     const auto path_footprint =
       autoware_utils::transform_vector(footprint, autoware_utils::pose2transform(base_pose));
-    if (bg::intersects(path_footprint, area_2d)) {
+    const auto footprint_front_part = autoware_utils_geometry::LineString2d{
+      path_footprint.at(vehicle_info_utils::VehicleInfo::FrontLeftIndex),
+      path_footprint.at(vehicle_info_utils::VehicleInfo::FrontRightIndex)};
+    if (
+      bg::intersects(footprint_front_part, area_2d) || bg::within(footprint_front_part, area_2d)) {
       return std::make_optional<size_t>(i);
     }
   }
@@ -402,6 +412,227 @@ std::vector<lanelet::CompoundPolygon3d> getPolygon3dFromLanelets(
     polys.push_back(ll.polygon3d());
   }
   return polys;
+}
+
+static std::optional<size_t> find_maximum_footprint_overshoot_position_impl(
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
+  const autoware_utils::LinearRing2d & local_footprint,
+  const lanelet::ConstLanelet & merging_target_lanelet, const double min_distance_threshold,
+  const size_t search_start_idx, const size_t search_end_idx)
+{
+  if (search_start_idx >= path.points.size() || search_end_idx >= path.points.size()) {
+    return std::nullopt;
+  }
+  const std::vector lane_boundaries = {
+    lanelet::utils::to2D(merging_target_lanelet.rightBound().basicLineString()),
+    lanelet::utils::to2D(merging_target_lanelet.leftBound().basicLineString())};
+
+  std::optional<std::pair<size_t, lanelet::BasicLineString2d>>
+    ego_entry_index_and_non_target_boundary{std::nullopt};
+  for (unsigned i = search_start_idx; i <= search_end_idx; ++i) {
+    const auto & base_pose = path.points.at(i).point.pose;
+    const auto footprint =
+      autoware_utils::transform_vector(local_footprint, autoware_utils::pose2transform(base_pose));
+    if (boost::geometry::intersects(footprint, lane_boundaries.at(0))) {
+      ego_entry_index_and_non_target_boundary = std::make_pair(i, lane_boundaries.at(1));
+      break;
+    }
+    if (boost::geometry::intersects(footprint, lane_boundaries.at(1))) {
+      ego_entry_index_and_non_target_boundary = std::make_pair(i, lane_boundaries.at(0));
+      break;
+    }
+  }
+  if (!ego_entry_index_and_non_target_boundary) {
+    return std::nullopt;
+  }
+
+  const auto & [search_start_index, target_boundary] =
+    ego_entry_index_and_non_target_boundary.value();
+  double closest_dist = std::numeric_limits<double>::infinity();
+  std::optional<size_t> closest_index{std::nullopt};
+  for (unsigned i = search_start_index; i <= search_end_idx; ++i) {
+    const auto & base_pose = path.points.at(i).point.pose;
+    const auto footprint =
+      autoware_utils::transform_vector(local_footprint, autoware_utils::pose2transform(base_pose));
+    if (boost::geometry::intersects(footprint, target_boundary)) {
+      return i;
+    }
+
+    double footprint_to_boundary_distance = std::numeric_limits<double>::infinity();
+    for (const auto & p : footprint) {
+      const double dist = boost::geometry::distance(p, target_boundary);
+      if (dist < footprint_to_boundary_distance) {
+        footprint_to_boundary_distance = dist;
+      }
+    }
+    if (footprint_to_boundary_distance < closest_dist) {
+      closest_dist = footprint_to_boundary_distance;
+      closest_index = i;
+    }
+    if (footprint_to_boundary_distance < min_distance_threshold) {
+      return closest_index;
+    }
+  }
+  return closest_index;
+}
+
+std::optional<size_t> find_maximum_footprint_overshoot_position(
+  const InterpolatedPathInfo & interpolated_path_info,
+  const autoware_utils::LinearRing2d & local_footprint,
+  const lanelet::ConstLanelet & merging_lanelet, const double min_distance_threshold,
+  const std::string & turn_direction, const size_t search_start_idx)
+{
+  if (turn_direction != "left" && turn_direction != "right") {
+    return std::nullopt;
+  }
+
+  const auto & path = interpolated_path_info.path;
+  const auto & [_, intersection_end] = interpolated_path_info.lane_id_interval.value();
+  return find_maximum_footprint_overshoot_position_impl(
+    path, local_footprint, merging_lanelet, min_distance_threshold, search_start_idx,
+    intersection_end);
+}
+
+std::string to_string(const unique_identifier_msgs::msg::UUID & uuid)
+{
+  std::stringstream ss;
+  for (auto i = 0; i < 16; ++i) {
+    ss << std::hex << std::setfill('0') << std::setw(2) << +uuid.uuid[i];
+  }
+  return ss.str();
+}
+
+autoware_utils::Polygon2d createOneStepPolygon(
+  const geometry_msgs::msg::Pose & prev_pose, const geometry_msgs::msg::Pose & next_pose,
+  const autoware_perception_msgs::msg::Shape & shape)
+{
+  namespace bg = boost::geometry;
+  const auto prev_poly = autoware_utils::to_polygon2d(prev_pose, shape);
+  const auto next_poly = autoware_utils::to_polygon2d(next_pose, shape);
+
+  autoware_utils::Polygon2d one_step_poly;
+  for (const auto & point : prev_poly.outer()) {
+    one_step_poly.outer().push_back(point);
+  }
+  for (const auto & point : next_poly.outer()) {
+    one_step_poly.outer().push_back(point);
+  }
+
+  bg::correct(one_step_poly);
+
+  autoware_utils::Polygon2d convex_one_step_poly;
+  bg::convex_hull(one_step_poly, convex_one_step_poly);
+
+  return convex_one_step_poly;
+}
+
+lanelet::ConstLanelets getPrevLanelets(
+  const lanelet::ConstLanelets & lanelets_on_path, const std::set<lanelet::Id> & associative_ids)
+{
+  lanelet::ConstLanelets previous_lanelets;
+  for (const auto & ll : lanelets_on_path) {
+    if (associative_ids.find(ll.id()) != associative_ids.end()) {
+      return previous_lanelets;
+    }
+    previous_lanelets.push_back(ll);
+  }
+  return previous_lanelets;
+}
+
+// end inclusive
+lanelet::ConstLanelet generatePathLanelet(
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t start_idx,
+  const size_t end_idx, const double width, const double interval)
+{
+  lanelet::Points3d lefts;
+  lanelet::Points3d rights;
+  size_t prev_idx = start_idx;
+  for (size_t i = start_idx; i <= end_idx; ++i) {
+    const auto & p = path.points.at(i).point.pose;
+    const auto & p_prev = path.points.at(prev_idx).point.pose;
+    if (i != start_idx && autoware_utils::calc_distance2d(p_prev, p) < interval) {
+      continue;
+    }
+    prev_idx = i;
+    const double yaw = tf2::getYaw(p.orientation);
+    const double x = p.position.x;
+    const double y = p.position.y;
+    // NOTE: maybe this is opposite
+    const double left_x = x + width / 2 * std::sin(yaw);
+    const double left_y = y - width / 2 * std::cos(yaw);
+    const double right_x = x - width / 2 * std::sin(yaw);
+    const double right_y = y + width / 2 * std::cos(yaw);
+    lefts.emplace_back(lanelet::InvalId, left_x, left_y, p.position.z);
+    rights.emplace_back(lanelet::InvalId, right_x, right_y, p.position.z);
+  }
+  lanelet::LineString3d left = lanelet::LineString3d(lanelet::InvalId, lefts);
+  lanelet::LineString3d right = lanelet::LineString3d(lanelet::InvalId, rights);
+
+  return lanelet::Lanelet(lanelet::InvalId, left, right);
+}
+
+std::optional<std::pair<size_t, const lanelet::CompoundPolygon3d &>> getFirstPointInsidePolygons(
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
+  const std::pair<size_t, size_t> lane_interval,
+  const std::vector<lanelet::CompoundPolygon3d> & polygons, const bool search_forward)
+{
+  if (search_forward) {
+    for (size_t i = lane_interval.first; i <= lane_interval.second; ++i) {
+      bool is_in_lanelet = false;
+      const auto & p = path.points.at(i).point.pose.position;
+      for (const auto & polygon : polygons) {
+        const auto polygon_2d = lanelet::utils::to2D(polygon);
+        is_in_lanelet = bg::within(autoware::behavior_velocity_planner::to_bg2d(p), polygon_2d);
+        if (is_in_lanelet) {
+          return std::make_optional<std::pair<size_t, const lanelet::CompoundPolygon3d &>>(
+            i, polygon);
+        }
+      }
+      if (is_in_lanelet) {
+        break;
+      }
+    }
+  } else {
+    for (size_t i = lane_interval.second; i >= lane_interval.first; --i) {
+      bool is_in_lanelet = false;
+      const auto & p = path.points.at(i).point.pose.position;
+      for (const auto & polygon : polygons) {
+        const auto polygon_2d = lanelet::utils::to2D(polygon);
+        is_in_lanelet = bg::within(autoware::behavior_velocity_planner::to_bg2d(p), polygon_2d);
+        if (is_in_lanelet) {
+          return std::make_optional<std::pair<size_t, const lanelet::CompoundPolygon3d &>>(
+            i, polygon);
+        }
+      }
+      if (is_in_lanelet) {
+        break;
+      }
+      if (i == 0) {
+        break;
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+double getHighestCurvature(const lanelet::ConstLineString3d & centerline)
+{
+  std::vector<geometry_msgs::msg::Point> points;
+  for (auto point = centerline.begin(); point != centerline.end(); point++) {
+    geometry_msgs::msg::Point ros_point;
+    ros_point.x = point->x();
+    ros_point.y = point->y();
+    ros_point.z = point->z();
+    points.push_back(ros_point);
+  }
+
+  autoware::interpolation::SplineInterpolationPoints2d interpolation(points);
+  const std::vector<double> curvatures = interpolation.getSplineInterpolatedCurvatures();
+  std::vector<double> curvatures_positive;
+  for (const auto & curvature : curvatures) {
+    curvatures_positive.push_back(std::fabs(curvature));
+  }
+  return *std::max_element(curvatures_positive.begin(), curvatures_positive.end());
 }
 
 }  // namespace autoware::behavior_velocity_planner::util

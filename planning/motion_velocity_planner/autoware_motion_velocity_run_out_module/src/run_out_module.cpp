@@ -36,6 +36,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::motion_velocity_planner
@@ -65,11 +66,6 @@ void RunOutModule::init(rclcpp::Node & node, const std::string & module_name)
     node.create_publisher<visualization_msgs::msg::MarkerArray>("~/" + ns_ + "/debug_markers", 1);
   virtual_wall_publisher_ =
     node.create_publisher<visualization_msgs::msg::MarkerArray>("~/" + ns_ + "/virtual_walls", 1);
-  processing_diag_publisher_ = std::make_shared<autoware_utils::ProcessingTimePublisher>(
-    &node, "~/debug/" + ns_ + "/processing_time_ms_diag");
-  processing_time_publisher_ =
-    node.create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "~/debug/" + ns_ + "/processing_time_ms", 1);
   debug_trajectory_publisher_ = node.create_publisher<autoware_planning_msgs::msg::Trajectory>(
     "~/debug/" + ns_ + "/trajectory", 1);
   timekeeper_publisher_ = node.create_publisher<autoware::universe_utils::ProcessingTimeDetail>(
@@ -77,12 +73,15 @@ void RunOutModule::init(rclcpp::Node & node, const std::string & module_name)
   time_keeper_ = std::make_shared<autoware::universe_utils::TimeKeeper>(timekeeper_publisher_);
 
   init_parameters(node);
-  diagnostic_updater_->setHardwareID("mvp_run_out");
+  diagnostic_updater_->setHardwareID("run_out");
   diagnostic_updater_->add(
     "unavoidable_run_out_collision", this, &RunOutModule::update_unfeasible_stop_status);
 
   objects_of_interest_marker_interface_ = std::make_unique<
     autoware::objects_of_interest_marker_interface::ObjectsOfInterestMarkerInterface>(&node, ns_);
+  planning_factor_interface_ =
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
+      &node, "run_out");
 }
 
 double calculate_keep_stop_distance_range(
@@ -93,6 +92,10 @@ double calculate_keep_stop_distance_range(
   std::vector<double> arc_lengths = {0.0};
   for (auto i = 1UL; i < trajectory.size(); ++i) {
     const auto t = rclcpp::Duration(trajectory[i].time_from_start).seconds();
+    if (times.back() >= t) {
+      // we skip trajectory points where the predicted time decreases to avoid interpolation errors
+      continue;
+    }
     const auto arc_length_delta = universe_utils::calcDistance2d(trajectory[i - 1], trajectory[i]);
     times.push_back(t);
     arc_lengths.push_back(arc_lengths.back() + arc_length_delta);
@@ -151,6 +154,43 @@ void RunOutModule::publish_debug_trajectory(
   debug_trajectory_publisher_->publish(debug_trajectory);
 }
 
+void RunOutModule::add_planning_factors(
+  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
+  const run_out::RunOutResult & result,
+  const std::unordered_map<std::string, autoware_internal_planning_msgs::msg::SafetyFactor> &
+    safety_factor_per_object)
+{
+  if (trajectory.empty()) {
+    return;
+  }
+  for (auto i = 0UL; i < result.velocity_planning_result.slowdown_intervals.size(); ++i) {
+    const auto & slowdown = result.velocity_planning_result.slowdown_intervals[i];
+    const auto length = motion_utils::calcSignedArcLength(trajectory, 0, slowdown.from);
+    const auto wall_pose = motion_utils::calcInterpolatedPose(trajectory, length);
+    autoware_internal_planning_msgs::msg::SafetyFactorArray safety_array;
+    safety_array.is_safe = false;
+    if (safety_factor_per_object.count(result.slowdown_objects[i]) > 0UL) {
+      safety_array.factors = {safety_factor_per_object.at(result.slowdown_objects[i])};
+    }
+    planning_factor_interface_->add(
+      trajectory, trajectory.front().pose, wall_pose, PlanningFactor::SLOW_DOWN, safety_array, true,
+      slowdown.velocity);
+  }
+  for (auto i = 0UL; i < result.velocity_planning_result.stop_points.size(); ++i) {
+    const auto length = motion_utils::calcSignedArcLength(
+      trajectory, 0, result.velocity_planning_result.stop_points.at(i));
+    const auto wall_pose = motion_utils::calcInterpolatedPose(trajectory, length);
+    autoware_internal_planning_msgs::msg::SafetyFactorArray safety_array;
+    safety_array.is_safe = false;
+    if (safety_factor_per_object.count(result.stop_objects[i]) > 0UL) {
+      safety_array.factors = {safety_factor_per_object.at(result.stop_objects[i])};
+    }
+    planning_factor_interface_->add(
+      trajectory, trajectory.front().pose, wall_pose, PlanningFactor::STOP, safety_array, true,
+      0.0);
+  }
+}
+
 VelocityPlanningResult RunOutModule::plan(
   [[maybe_unused]] const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> &,
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
@@ -180,7 +220,7 @@ VelocityPlanningResult RunOutModule::plan(
   time_keeper_->start_track("calc_decisions()");
   const auto keep_stop_distance_range =
     calculate_keep_stop_distance_range(smoothed_trajectory_points, params_);
-  run_out::calculate_decisions(
+  const auto safety_factor_per_object = run_out::calculate_decisions(
     decisions_tracker_, filtered_objects, now, keep_stop_distance_range, params_);
   for (const auto & obj : filtered_objects) {
     if (!decisions_tracker_.get(obj.uuid)) {
@@ -206,24 +246,26 @@ VelocityPlanningResult RunOutModule::plan(
   time_keeper_->end_track("calc_slowdowns()");
 
   time_keeper_->start_track("publish_debug()");
-  virtual_wall_marker_creator.add_virtual_walls(run_out::create_virtual_walls(
-    result, smoothed_trajectory_points, planner_data->vehicle_info_.max_longitudinal_offset_m));
+  virtual_wall_marker_creator.add_virtual_walls(
+    run_out::create_virtual_walls(
+      result.velocity_planning_result, smoothed_trajectory_points,
+      planner_data->vehicle_info_.max_longitudinal_offset_m));
   virtual_wall_publisher_->publish(virtual_wall_marker_creator.create_markers(now));
+  add_planning_factors(smoothed_trajectory_points, result, safety_factor_per_object);
   if (debug_publisher_->get_subscription_count() > 0) {
     const auto & filtering_data_to_publish =
       filtering_data[run_out::Parameters::string_to_label(params_.debug.object_label)];
-    debug_publisher_->publish(run_out::make_debug_markers(
-      ego_footprint, filtered_objects, decisions_tracker_, smoothed_trajectory_points,
-      params_.ignore_collision_conditions.if_ego_arrives_first_and_cannot_stop
-        .calculated_stop_time_limit,
-      filtering_data_to_publish));
+    debug_publisher_->publish(
+      run_out::make_debug_markers(
+        ego_footprint, filtered_objects, decisions_tracker_, smoothed_trajectory_points,
+        filtering_data_to_publish, params_));
   }
-  publish_debug_trajectory(smoothed_trajectory_points, result);
+  publish_debug_trajectory(smoothed_trajectory_points, result.velocity_planning_result);
   objects_of_interest_marker_interface_->publishMarkerArray();
   time_keeper_->end_track("publish_debug()");
 
   time_keeper_->end_track("plan()");
-  return result;
+  return result.velocity_planning_result;
 }
 
 }  // namespace autoware::motion_velocity_planner

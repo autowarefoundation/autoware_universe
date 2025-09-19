@@ -2,6 +2,34 @@
 Changelog for package autoware_processing_time_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* feat(path_generator): publish processing time (`#10863 <https://github.com/autowarefoundation/autoware_universe/issues/10863>`_)
+* Contributors: Kosuke Takeuchi
+
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(processing_time_checker): output 99th and 95th percentile of processing time statics (`#10810 <https://github.com/autowarefoundation/autoware_universe/issues/10810>`_)
+  * implement digestible in processing_time_checker
+  * remove debug
+  * change to 100
+  * license
+  * fix copyright
+  * pre-commit
+  ---------
+* docs(system): fix system documentation link (`#10707 <https://github.com/autowarefoundation/autoware_universe/issues/10707>`_)
+* Contributors: Kem (TiankuiXian), TaikiYamada4, Yuxuan Liu
+
+0.45.0 (2025-05-22)
+-------------------
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 

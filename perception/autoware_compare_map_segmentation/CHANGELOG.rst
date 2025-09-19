@@ -2,6 +2,66 @@
 Changelog for package autoware_compare_map_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(autoware_pointcloud_preprocessor): add diagnostic message (`#10579 <https://github.com/autowarefoundation/autoware_universe/issues/10579>`_)
+  * feat: add diag msg
+  * chore: fix code
+  * chore: remove outlier count in ring
+  * chore: move format timestamp to utility
+  * chore: add paramter to schema
+  * chore: add parameter for cluster
+  * chore: clean code
+  * chore: fix schema
+  * chore: move diagnostic updater to filter base class
+  * chore: fix schema
+  * chore: fix spell error
+  * chore: set up diagnostic updater
+  * refactor: utilize autoware_utils diagnostic message
+  * chore: add publish
+  * chore: add detail message
+  * chore: const for time difference
+  * refactor: structure diagnostics to class
+  * chore: const reference
+  * chore: clean logic
+  * chore: modify function name
+  * chore: update parameter
+  * chore: move evaluate status into diagnostic
+  * chore: fix description for concatenated pointcloud
+  * chore: timestamp mismatch threshold
+  * chore: fix diagnostic key
+  * chore: change function naming
+  ---------
+* Contributors: TaikiYamada4, Yi-Hsiang Fang (Vivid)
+
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* chore: perception code owner update (`#10645 <https://github.com/autowarefoundation/autoware_universe/issues/10645>`_)
+  * chore: update maintainers in multiple perception packages
+  * Revert "chore: update maintainers in multiple perception packages"
+  This reverts commit f2838c33d6cd82bd032039e2a12b9cb8ba6eb584.
+  * chore: update maintainers in multiple perception packages
+  * chore: add Kok Seang Tan as maintainer in multiple perception packages
+  ---------
+* chore(elevation_map): add @asa-naki to maitainer (`#10621 <https://github.com/autowarefoundation/autoware_universe/issues/10621>`_)
+* fix(autoware_compare_map_segmentation): handle empty output point cloud  (`#10572 <https://github.com/autowarefoundation/autoware_universe/issues/10572>`_)
+  * fix(voxel_based_compare_map_filter): handle empty output point cloud and set appropriate frame_id
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Kosuke Takeuchi, Taekjin LEE, TaikiYamada4
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble
