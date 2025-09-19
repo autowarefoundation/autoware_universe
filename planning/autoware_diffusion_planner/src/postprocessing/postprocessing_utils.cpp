@@ -317,16 +317,10 @@ std::vector<Trajectory> create_multiple_trajectories(
 Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tensor_data(
   const std::vector<float> & prediction)
 {
-  // copy relevant part of data to Eigen matrix
-  constexpr auto prediction_shape = OUTPUT_SHAPE;
-
-  const int64_t agent_size = prediction_shape[1];
-  const int64_t rows = prediction_shape[2];
-  const int64_t cols = prediction_shape[3];
-  const int64_t batch = prediction.size() / (agent_size * rows * cols);
+  const int64_t batch = prediction.size() / (MAX_NUM_AGENTS * OUTPUT_T * POSE_DIM);
 
   Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data(
-    batch * agent_size * rows, cols);
+    batch * MAX_NUM_AGENTS * OUTPUT_T, POSE_DIM);
   tensor_data.setZero();
 
   // Ensure prediction has enough data
@@ -347,26 +341,18 @@ Eigen::MatrixXd get_prediction_matrix(
   const std::vector<float> & prediction, const Eigen::Matrix4d & transform_ego_to_map,
   const int64_t batch, const int64_t agent)
 {
-  // TODO(Daniel): add batch support
-  const auto prediction_shape = OUTPUT_SHAPE;
-
-  // copy relevant part of data to Eigen matrix
-  const int64_t agent_size = prediction_shape[1];
-  const int64_t rows = prediction_shape[2];
-  const int64_t cols = prediction_shape[3];
-
   Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
     get_tensor_data(prediction);
   // Validate indices before accessing block
-  const int64_t start_row = batch * agent_size * rows + agent * rows;
-  if (start_row < 0 || start_row + rows > tensor_data.rows()) {
+  const int64_t start_row = batch * MAX_NUM_AGENTS * OUTPUT_T + agent * OUTPUT_T;
+  if (start_row < 0 || start_row + OUTPUT_T > tensor_data.rows()) {
     throw std::out_of_range(
       "Invalid block access: start_row=" + std::to_string(start_row) +
-      ", rows=" + std::to_string(rows) + ", tensor_rows=" + std::to_string(tensor_data.rows()));
+      ", rows=" + std::to_string(OUTPUT_T) + ", tensor_rows=" + std::to_string(tensor_data.rows()));
   }
 
   // Extract and copy the block to ensure we have a proper matrix, not just a view
-  Eigen::MatrixXd prediction_matrix = tensor_data.block(start_row, 0, rows, cols).eval();
+  Eigen::MatrixXd prediction_matrix = tensor_data.block(start_row, 0, OUTPUT_T, POSE_DIM).eval();
 
   // Copy only the relevant part
   prediction_matrix.transposeInPlace();
