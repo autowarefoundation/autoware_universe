@@ -158,7 +158,7 @@ void CNNClassifier::postProcess(
         // if label is unknown, set UNKNOWN to color and shape
         element.color = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
         element.shape = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-      } else if (isColorLabel(label)) {
+      } else if (utils::isColorLabel(label)) {
         element.color = utils::convertColorStringtoT4(label);
         element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
       } else {
@@ -183,22 +183,6 @@ bool CNNClassifier::readLabelfile(std::string filepath, std::vector<std::string>
     labels.push_back(label);
   }
   return true;
-}
-
-bool CNNClassifier::isColorLabel(const std::string & label)
-{
-  using tier4_perception_msgs::msg::TrafficLight;
-  if (
-    label ==
-      utils::convertColorT4toString(tier4_perception_msgs::msg::TrafficLightElement::GREEN) ||
-    label ==
-      utils::convertColorT4toString(tier4_perception_msgs::msg::TrafficLightElement::AMBER) ||
-    label == utils::convertColorT4toString(tier4_perception_msgs::msg::TrafficLightElement::RED) ||
-    label ==
-      utils::convertColorT4toString(tier4_perception_msgs::msg::TrafficLightElement::WHITE)) {
-    return true;
-  }
-  return false;
 }
 
 }  // namespace autoware::traffic_light

@@ -47,6 +47,8 @@ std::string convertColorT4toString(
 std::string convertShapeT4toString(
   const tier4_perception_msgs::msg::TrafficLightElement::_shape_type & label);
 
+bool isColorLabel(const std::string & label);
+
 bool is_harsh_backlight(const cv::Mat & img, const double backlight_threshold);
 
 }  // namespace utils

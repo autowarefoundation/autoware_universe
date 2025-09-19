@@ -174,6 +174,17 @@ TEST(convertShapeT4toString, normal)
     "unknown");
 }
 
+TEST(isColorLabel, normal)
+{
+  EXPECT_TRUE(autoware::traffic_light::utils::isColorLabel("red"));
+  EXPECT_TRUE(autoware::traffic_light::utils::isColorLabel("yellow"));
+  EXPECT_TRUE(autoware::traffic_light::utils::isColorLabel("green"));
+  EXPECT_TRUE(autoware::traffic_light::utils::isColorLabel("white"));
+  EXPECT_FALSE(autoware::traffic_light::utils::isColorLabel("circle"));
+  EXPECT_FALSE(autoware::traffic_light::utils::isColorLabel("right"));
+  EXPECT_FALSE(autoware::traffic_light::utils::isColorLabel("abcde"));
+}
+
 int main(int argc, char ** argv)
 {
   testing::InitGoogleTest(&argc, argv);

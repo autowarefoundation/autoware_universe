@@ -86,6 +86,11 @@ std::string convertShapeT4toString(
   return at_or(shape2string, label, std::string("unknown"));
 }
 
+bool isColorLabel(const std::string & label)
+{
+  return convertColorStringtoT4(label) != tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
+}
+
 bool is_harsh_backlight(const cv::Mat & img, const double backlight_threshold)
 {
   if (img.empty()) {
