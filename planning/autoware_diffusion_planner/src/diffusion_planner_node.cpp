@@ -27,6 +27,8 @@
 #include <rclcpp/duration.hpp>
 #include <rclcpp/logging.hpp>
 
+#include <autoware_internal_planning_msgs/msg/candidate_trajectory.hpp>
+#include <autoware_internal_planning_msgs/msg/generator_info.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 
 #include <Eigen/src/Core/Matrix.h>
@@ -558,35 +560,34 @@ void DiffusionPlanner::publish_debug_markers(InputDataMap & input_data_map) cons
 
 void DiffusionPlanner::publish_predictions(const std::vector<float> & predictions) const
 {
-  constexpr int64_t batch_idx = 0;
+  CandidateTrajectories candidate_trajectories;
 
-  const Trajectory output_trajectory =
-    postprocess::create_ego_trajectory(predictions, this->now(), transforms_.first, batch_idx);
-  pub_trajectory_->publish(output_trajectory);
-
-  // Publish all batch results as candidate trajectories
-  const int batch_size = params_.batch_size;
-
-  // Start with first trajectory as main candidate
-  CandidateTrajectories ego_trajectory_as_candidate_msg =
-    postprocess::to_candidate_trajectories_msg(
-      output_trajectory, generator_uuid_, "DiffusionPlanner");
-
-  // Add additional batch results as more candidates
-  for (int i = 1; i < batch_size; i++) {
+  for (int i = 0; i < params_.batch_size; i++) {
     const Trajectory trajectory =
       postprocess::create_ego_trajectory(predictions, this->now(), transforms_.first, i);
+    if (i == 0) {
+      pub_trajectory_->publish(trajectory);
+    }
 
-    const CandidateTrajectories additional_candidate = postprocess::to_candidate_trajectories_msg(
-      trajectory, generator_uuid_, "DiffusionPlanner_batch_" + std::to_string(i));
+    const auto candidate_trajectory = autoware_internal_planning_msgs::build<
+                                        autoware_internal_planning_msgs::msg::CandidateTrajectory>()
+                                        .header(trajectory.header)
+                                        .generator_id(generator_uuid_)
+                                        .points(trajectory.points);
 
-    ego_trajectory_as_candidate_msg.candidate_trajectories.push_back(
-      additional_candidate.candidate_trajectories[0]);
-    ego_trajectory_as_candidate_msg.generator_info.push_back(
-      additional_candidate.generator_info[0]);
+    std_msgs::msg::String generator_name_msg;
+    generator_name_msg.data = "DiffusionPlanner_batch_" + std::to_string(i);
+
+    const auto generator_info =
+      autoware_internal_planning_msgs::build<autoware_internal_planning_msgs::msg::GeneratorInfo>()
+        .generator_id(generator_uuid_)
+        .generator_name(generator_name_msg);
+
+    candidate_trajectories.candidate_trajectories.push_back(candidate_trajectory);
+    candidate_trajectories.generator_info.push_back(generator_info);
   }
 
-  pub_trajectories_->publish(ego_trajectory_as_candidate_msg);
+  pub_trajectories_->publish(candidate_trajectories);
 
   // Other agents prediction
   if (params_.predict_neighbor_trajectory && agent_data_.has_value()) {

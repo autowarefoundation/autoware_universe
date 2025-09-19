@@ -67,17 +67,6 @@ Trajectory create_ego_trajectory(
   const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index);
 
 /**
- * @brief Converts a Trajectory message to a CandidateTrajectories message with generator info.
- *
- * @param trajectory The Trajectory message to convert.
- * @param generator_uuid The UUID of the trajectory generator.
- * @param generator_name The name of the trajectory generator.
- * @return A CandidateTrajectories message containing the input trajectory and generator info.
- */
-CandidateTrajectories to_candidate_trajectories_msg(
-  const Trajectory & trajectory, const UUID & generator_uuid, const std::string & generator_name);
-
-/**
  * @brief Converts turn indicator logit to TurnIndicatorsCommand message.
  *
  * @param turn_indicator_logit The turn indicator logit from the model output.

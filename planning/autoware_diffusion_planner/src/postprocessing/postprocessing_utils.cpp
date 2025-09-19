@@ -22,9 +22,6 @@
 #include <rclcpp/duration.hpp>
 #include <rclcpp/time.hpp>
 
-#include <autoware_internal_planning_msgs/msg/detail/candidate_trajectory__builder.hpp>
-#include <autoware_internal_planning_msgs/msg/detail/candidate_trajectory__struct.hpp>
-#include <autoware_internal_planning_msgs/msg/generator_info.hpp>
 #include <autoware_perception_msgs/msg/detail/predicted_objects__struct.hpp>
 
 #include <Eigen/src/Core/Matrix.h>
@@ -180,30 +177,6 @@ Trajectory create_ego_trajectory(
   Eigen::MatrixXd prediction_matrix =
     get_prediction_matrix(prediction, transform_ego_to_map, batch_index, agent);
   return get_trajectory_from_prediction_matrix(prediction_matrix, transform_ego_to_map, stamp);
-}
-
-CandidateTrajectories to_candidate_trajectories_msg(
-  const Trajectory & trajectory, const UUID & generator_uuid, const std::string & generator_name)
-{
-  const auto candidate_trajectory = autoware_internal_planning_msgs::build<
-                                      autoware_internal_planning_msgs::msg::CandidateTrajectory>()
-                                      .header(trajectory.header)
-                                      .generator_id(generator_uuid)
-                                      .points(trajectory.points);
-
-  std_msgs::msg::String generator_name_msg;
-  generator_name_msg.data = generator_name;
-
-  const auto generator_info =
-    autoware_internal_planning_msgs::build<autoware_internal_planning_msgs::msg::GeneratorInfo>()
-      .generator_id(generator_uuid)
-      .generator_name(generator_name_msg);
-
-  const auto output = autoware_internal_planning_msgs::build<
-                        autoware_internal_planning_msgs::msg::CandidateTrajectories>()
-                        .candidate_trajectories({candidate_trajectory})
-                        .generator_info({generator_info});
-  return output;
 }
 
 TurnIndicatorsCommand create_turn_indicators_command(
