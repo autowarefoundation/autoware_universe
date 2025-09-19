@@ -82,7 +82,7 @@ public:
     const rclcpp::Time & time,
     autoware_perception_msgs::msg::TrackedObjects & tentative_objects) const;
   void getMergedObjects(
-    const rclcpp::Time & time,
+    const rclcpp::Time & time, const geometry_msgs::msg::Transform & tf_base_to_world,
     autoware_perception_msgs::msg::DetectedObjects & merged_objects) const;
 
   void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr);

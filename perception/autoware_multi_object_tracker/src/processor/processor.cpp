@@ -545,7 +545,8 @@ void TrackerProcessor::getTentativeObjects(
 }
 
 void TrackerProcessor::getMergedObjects(
-  const rclcpp::Time & time, autoware_perception_msgs::msg::DetectedObjects & merged_objects) const
+  const rclcpp::Time & time, const geometry_msgs::msg::Transform & tf_base_to_world,
+  autoware_perception_msgs::msg::DetectedObjects & merged_objects) const
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
@@ -557,6 +558,25 @@ void TrackerProcessor::getMergedObjects(
     if (tracker->getTrackedObject(time, tracked_object, to_publish)) {
       merged_objects.objects.push_back(types::toDetectedObjectMsg(tracked_object));
     }
+  }
+
+  // transform from world frame to ego frame
+  // Convert geometry_msgs::Transform to tf2::Transform
+  tf2::Transform tf_base_to_world_tf2;
+  tf2::fromMsg(tf_base_to_world, tf_base_to_world_tf2);
+  // Get the inverse transform (world to base_link)
+  tf2::Transform tf_world_to_baselink = tf_base_to_world_tf2.inverse();
+
+  for (auto & obj : merged_objects.objects) {
+    // Convert pose to tf2::Transform for transformation
+    tf2::Transform pose_in_world;
+    tf2::fromMsg(obj.kinematics.pose_with_covariance.pose, pose_in_world);
+
+    // Transform the pose
+    tf2::Transform pose_in_baselink = tf_world_to_baselink * pose_in_world;
+
+    // Convert back to geometry_msgs::Pose
+    tf2::toMsg(pose_in_baselink, obj.kinematics.pose_with_covariance.pose);
   }
 }
 
