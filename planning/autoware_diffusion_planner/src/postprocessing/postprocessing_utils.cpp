@@ -65,19 +65,6 @@ Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tenso
   const std::vector<float> & prediction);
 
 /**
- * @brief Converts tensor prediction output to a prediction matrix in map coordinates.
- *
- * @param prediction The tensor prediction output.
- * @param transform_ego_to_map The transformation matrix from ego to map coordinates.
- * @param batch The batch index to extract.
- * @param agent The agent index to extract.
- * @return The prediction matrix for the specified batch and agent.
- */
-Eigen::MatrixXd get_prediction_matrix(
-  const std::vector<float> & prediction, const Eigen::Matrix4d & transform_ego_to_map,
-  const int64_t batch = 0, const int64_t agent = 0);
-
-/**
  * @brief Converts a prediction matrix to a Trajectory message.
  *
  * @param prediction_matrix The prediction matrix for a single agent.
@@ -172,10 +159,26 @@ Trajectory create_ego_trajectory(
   const std::vector<float> & prediction, const rclcpp::Time & stamp,
   const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index)
 {
-  const int64_t agent = 0;
-  // one batch of prediction
-  Eigen::MatrixXd prediction_matrix =
-    get_prediction_matrix(prediction, transform_ego_to_map, batch_index, agent);
+  const int64_t ego_index = 0;
+
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
+    get_tensor_data(prediction);
+
+  // Validate indices before accessing block
+  const int64_t start_row = batch_index * MAX_NUM_AGENTS * OUTPUT_T + ego_index * OUTPUT_T;
+  if (start_row < 0 || start_row + OUTPUT_T > tensor_data.rows()) {
+    throw std::out_of_range(
+      "Invalid block access: start_row=" + std::to_string(start_row) +
+      ", rows=" + std::to_string(OUTPUT_T) + ", tensor_rows=" + std::to_string(tensor_data.rows()));
+  }
+
+  // Extract and copy the block to ensure we have a proper matrix, not just a view
+  Eigen::MatrixXd prediction_matrix = tensor_data.block(start_row, 0, OUTPUT_T, POSE_DIM).eval();
+  prediction_matrix.transposeInPlace();
+  postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 0, true);
+  postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 2, false);
+  prediction_matrix.transposeInPlace();
+
   return get_trajectory_from_prediction_matrix(prediction_matrix, transform_ego_to_map, stamp);
 }
 
@@ -298,30 +301,6 @@ Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tenso
     tensor_data.data()[i] = static_cast<double>(prediction[i]);
   }
   return tensor_data;
-}
-
-Eigen::MatrixXd get_prediction_matrix(
-  const std::vector<float> & prediction, const Eigen::Matrix4d & transform_ego_to_map,
-  const int64_t batch, const int64_t agent)
-{
-  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
-    get_tensor_data(prediction);
-  // Validate indices before accessing block
-  const int64_t start_row = batch * MAX_NUM_AGENTS * OUTPUT_T + agent * OUTPUT_T;
-  if (start_row < 0 || start_row + OUTPUT_T > tensor_data.rows()) {
-    throw std::out_of_range(
-      "Invalid block access: start_row=" + std::to_string(start_row) +
-      ", rows=" + std::to_string(OUTPUT_T) + ", tensor_rows=" + std::to_string(tensor_data.rows()));
-  }
-
-  // Extract and copy the block to ensure we have a proper matrix, not just a view
-  Eigen::MatrixXd prediction_matrix = tensor_data.block(start_row, 0, OUTPUT_T, POSE_DIM).eval();
-
-  // Copy only the relevant part
-  prediction_matrix.transposeInPlace();
-  postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 0, true);
-  postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 2, false);
-  return prediction_matrix.transpose();
 }
 
 Trajectory get_trajectory_from_prediction_matrix(
