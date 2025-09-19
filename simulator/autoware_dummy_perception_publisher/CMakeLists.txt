@@ -27,6 +27,7 @@ ament_auto_add_executable(${PROJECT_NAME}_node
   src/main.cpp
   src/node.cpp
   src/pointcloud_creator.cpp
+  src/predicted_object_movement_plugin.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_node

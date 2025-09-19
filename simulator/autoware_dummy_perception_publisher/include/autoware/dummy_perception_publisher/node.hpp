@@ -17,8 +17,8 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include <autoware_perception_msgs/msg/detail/predicted_object__struct.hpp>
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
+#include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -39,6 +39,11 @@
 #else
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #endif
+// #include "autoware/dummy_perception_publisher/predicted_object_movement_base_plugin_class.hpp"
+// If the file exists under a different name or path, update the include accordingly, e.g.:
+#include "autoware/dummy_perception_publisher/dummy_object_movement_base_plugin.hpp"
+#include "autoware/dummy_perception_publisher/predicted_object_movement_plugin.hpp"
+
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
@@ -50,6 +55,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+
 namespace autoware::dummy_perception_publisher
 {
 using autoware_perception_msgs::msg::PredictedObject;
@@ -202,7 +208,8 @@ private:
   bool use_base_link_z_;
   bool publish_ground_truth_objects_;
   std::unique_ptr<PointCloudCreator> pointcloud_creator_;
-
+  // dummy object movement plugins
+  pluginlib::PredictedObjectMovementPlugin dummy_predicted_movement_plugin_;
   double angle_increment_;
   std::mt19937 random_generator_;
 

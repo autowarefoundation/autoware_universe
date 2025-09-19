@@ -302,7 +302,10 @@ TrackedObject ObjectInfo::toTrackedObject(
 }
 
 DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
-: Node("dummy_perception_publisher"), tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_)
+: Node("dummy_perception_publisher"),
+  tf_buffer_(this->get_clock()),
+  tf_listener_(tf_buffer_),
+  dummy_predicted_movement_plugin_(this)
 {
   visible_range_ = this->declare_parameter("visible_range", 100.0);
   detection_successful_rate_ = this->declare_parameter("detection_successful_rate", 0.8);
@@ -382,6 +385,8 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
   using std::chrono_literals::operator""ms;
   timer_ = rclcpp::create_timer(
     this, get_clock(), 100ms, std::bind(&DummyPerceptionPublisherNode::timerCallback, this));
+
+  pluginlib::PredictedObjectMovementPlugin plugin(this);
 }
 
 void DummyPerceptionPublisherNode::timerCallback()
