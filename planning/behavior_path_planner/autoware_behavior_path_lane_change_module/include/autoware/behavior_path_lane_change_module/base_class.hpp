@@ -189,6 +189,7 @@ public:
     common_data_ptr_->lc_param_ptr = lane_change_parameters_;
     common_data_ptr_->lc_type = type_;
     common_data_ptr_->direction = direction_;
+    common_data_ptr_->current_acceleration = data->self_acceleration;
   }
 
   void setTimeKeeper(const std::shared_ptr<autoware_utils::TimeKeeper> & time_keeper)
