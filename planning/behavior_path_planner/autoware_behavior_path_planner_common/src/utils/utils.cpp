@@ -402,7 +402,8 @@ bool isInLaneletWithYawThreshold(
   const double radius)
 {
   const double pose_yaw = tf2::getYaw(current_pose.orientation);
-  const double lanelet_angle = lanelet::utils::getLaneletAngle(lanelet, current_pose.position);
+  const double lanelet_angle =
+    autoware::experimental::lanelet2_utils::get_lanelet_angle(lanelet, current_pose.position);
   const double angle_diff = std::abs(autoware_utils::normalize_radian(lanelet_angle - pose_yaw));
 
   return (angle_diff < std::abs(yaw_threshold)) &&
