@@ -2,6 +2,27 @@
 Changelog for package tier4_localization_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* feat(autoware_pose_instability_detector): make pose_instability_detector configurable in autoware_launch (`#10961 <https://github.com/autowarefoundation/autoware_universe/issues/10961>`_)
+  make pose_instability_detector configurable in autoware_launch
+* Contributors: Taiki Yamada
+
+0.46.0 (2025-06-20)
+-------------------
+
+0.45.0 (2025-05-22)
+-------------------
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
+0.44.0 (2025-04-18)
+-------------------
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

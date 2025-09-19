@@ -19,6 +19,7 @@
 #include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <autoware/rtc_interface/rtc_interface.hpp>
 #include <autoware_utils/ros/parameter.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <builtin_interfaces/msg/time.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
@@ -102,9 +103,10 @@ protected:
 
   void updateRTCStatus(
     const UUID & uuid, const bool safe, const uint8_t state, const double distance,
-    const Time & stamp)
+    const Time & stamp, const std::optional<bool> override_rtc_auto_mode = std::nullopt)
   {
-    rtc_interface_.updateCooperateStatus(uuid, safe, state, distance, distance, stamp);
+    rtc_interface_.updateCooperateStatus(
+      uuid, safe, state, distance, distance, stamp, false, override_rtc_auto_mode);
   }
 
   void removeRTCStatus(const UUID & uuid) { rtc_interface_.removeCooperateStatus(uuid); }

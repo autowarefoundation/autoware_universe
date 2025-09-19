@@ -19,13 +19,14 @@
 
 #include <NvInfer.h>
 #include <NvInferPlugin.h>
-#include <NvInferRuntimeBase.h>
+#include <NvInferRuntime.h>
 #include <dlfcn.h>
 
 #include <cmath>
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -44,6 +45,11 @@ TrtCommon::TrtCommon(
   model_profiler_(profiler)
 {
   logger_ = std::make_shared<Logger>();
+
+  // Set CUDA device flags
+  // note: Device flags are process-wide
+  cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+
   for (const auto & plugin_path : plugin_paths) {
     int32_t flags{RTLD_LAZY};
 // cspell: ignore asan
@@ -56,7 +62,9 @@ TrtCommon::TrtCommon(
 #endif  // ENABLE_ASAN
     void * handle = dlopen(plugin_path.c_str(), flags);
     if (!handle) {
-      logger_->log(nvinfer1::ILogger::Severity::kERROR, "Could not load plugin library");
+      logger_->log(
+        nvinfer1::ILogger::Severity::kERROR, "Could not load plugin library %s. error %s",
+        plugin_path.c_str(), dlerror());
     } else {
       logger_->log(
         nvinfer1::ILogger::Severity::kINFO, "Loaded plugin library: %s", plugin_path.c_str());
@@ -115,7 +123,15 @@ bool TrtCommon::setup(ProfileDimsPtr profile_dims, NetworkIOPtr network_io)
   // Load engine file if it exists
   if (fs::exists(trt_config_->engine_path)) {
     logger_->log(nvinfer1::ILogger::Severity::kINFO, "Loading engine");
-    if (!loadEngine()) {
+    if (!validateEngine()) {
+      logger_->log(
+        nvinfer1::ILogger::Severity::kWARNING,
+        "Validation failed for the existing engine file. Rebuilding");
+      // Rebuild engine if version mismatch occurred
+      if (!build_engine_with_log()) {
+        return false;
+      }
+    } else if (!loadEngine()) {
       return false;
     }
     logger_->log(nvinfer1::ILogger::Severity::kINFO, "Network validation");
@@ -230,6 +246,23 @@ nvinfer1::Dims TrtCommon::getTensorShape(const char * tensor_name) const
     return nvinfer1::Dims{};
   }
   return engine_->getTensorShape(tensor_name);
+}
+
+nvinfer1::TensorIOMode TrtCommon::getTensorIOMode(const char * tensor_name) const
+{
+  if (!engine_) {
+    logger_->log(nvinfer1::ILogger::Severity::kERROR, "Engine is not initialized");
+    return nvinfer1::TensorIOMode::kNONE;
+  }
+  return engine_->getTensorIOMode(tensor_name);
+}
+
+std::optional<nvinfer1::DataType> TrtCommon::getTensorDataType(const char * tensor_name) const
+{
+  if (!engine_) {
+    return std::nullopt;
+  }
+  return engine_->getTensorDataType(tensor_name);
 }
 
 nvinfer1::Dims TrtCommon::getInputDims(const int32_t index) const
@@ -540,6 +573,33 @@ bool TrtCommon::buildEngineFromOnnx()
   os << ret << std::flush;
   os.close();
 
+  return true;
+}
+
+bool TrtCommon::validateEngine()
+{
+#if (NV_TENSORRT_MAJOR * 1000) + (NV_TENSORRT_MINOR * 100) + NV_TENSOR_PATCH >= 8600
+  std::ifstream engine_file(trt_config_->engine_path);
+  std::stringstream engine_buffer;
+  engine_buffer << engine_file.rdbuf();
+  std::string engine_str = engine_buffer.str();
+
+  auto const blob = reinterpret_cast<uint8_t *>(engine_str.data());
+  logger_->log(
+    nvinfer1::ILogger::Severity::kINFO, "Plan was created with TensorRT %d.%d.%d",
+    static_cast<int32_t>(blob[TRT_MAJOR_IDX]), static_cast<int32_t>(blob[TRT_MINOR_IDX]),
+    static_cast<int32_t>(blob[TRT_PATCH_IDX]));
+  auto plan_ver = static_cast<int32_t>(blob[TRT_MAJOR_IDX]) * 1000 +
+                  static_cast<int32_t>(blob[TRT_MINOR_IDX]) * 100 +
+                  static_cast<int32_t>(blob[TRT_PATCH_IDX]);
+  if (plan_ver != (NV_TENSORRT_MAJOR * 1000) + (NV_TENSORRT_MINOR * 100) + NV_TENSORRT_PATCH) {
+    logger_->log(
+      nvinfer1::ILogger::Severity::kWARNING,
+      "Plan was created with a different version of TensorRT! Current version: %d.%d.%d",
+      NV_TENSORRT_MAJOR, NV_TENSORRT_MINOR, NV_TENSORRT_PATCH);
+    return false;
+  }
+#endif
   return true;
 }
 

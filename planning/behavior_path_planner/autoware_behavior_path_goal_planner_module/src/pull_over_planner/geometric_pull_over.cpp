@@ -30,11 +30,11 @@ GeometricPullOver::GeometricPullOver(
   rclcpp::Node & node, const GoalPlannerParameters & parameters, const bool is_forward)
 : PullOverPlannerBase{node, parameters},
   parallel_parking_parameters_{parameters.parallel_parking_parameters},
-  lane_departure_checker_{[&]() {
-    auto lane_departure_checker_params = lane_departure_checker::Param{};
-    lane_departure_checker_params.footprint_extra_margin =
+  boundary_departure_checker_{[&]() {
+    auto boundary_departure_checker_params = boundary_departure_checker::Param{};
+    boundary_departure_checker_params.footprint_extra_margin =
       parameters.lane_departure_check_expansion_margin;
-    return LaneDepartureChecker{lane_departure_checker_params, vehicle_info_};
+    return BoundaryDepartureChecker{boundary_departure_checker_params, vehicle_info_};
   }()},
   is_forward_{is_forward},
   left_side_parking_{parameters.parking_policy == ParkingPolicy::LEFT_SIDE}
@@ -51,9 +51,9 @@ std::optional<PullOverPath> GeometricPullOver::plan(
 
   const auto & goal_pose = modified_goal_pose.goal_pose;
   // prepare road nad shoulder lanes
-  const auto road_lanes = utils::getExtendedCurrentLanes(
-    planner_data, parameters_.backward_goal_search_length, parameters_.forward_goal_search_length,
-    /*forward_only_in_route*/ false);
+  const auto road_lanes = goal_planner_utils::get_reference_lanelets_for_pullover(
+    upstream_module_output.path, planner_data, parameters_.backward_goal_search_length,
+    parameters_.forward_goal_search_length);
   const auto pull_over_lanes = goal_planner_utils::getPullOverLanes(
     *route_handler, left_side_parking_, parameters_.backward_goal_search_length,
     parameters_.forward_goal_search_length);
@@ -81,7 +81,8 @@ std::optional<PullOverPath> GeometricPullOver::plan(
   // todo: Implement lane departure detection that does not depend on the footprint
   const auto resampled_arc_path =
     utils::resamplePathWithSpline(arc_path, parameters_.center_line_path_interval / 2);
-  if (lane_departure_checker_.checkPathWillLeaveLane({departure_check_lane}, arc_path)) return {};
+  if (boundary_departure_checker_.checkPathWillLeaveLane({departure_check_lane}, arc_path))
+    return {};
 
   auto pull_over_path_opt = PullOverPath::create(
     getPlannerType(), id, planner_.getPaths(), planner_.getStartPose(), modified_goal_pose,

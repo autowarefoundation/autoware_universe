@@ -2,6 +2,44 @@
 Changelog for package autoware_traffic_light_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* fix(autoware_traffic_light_utils): remove default value `setSignalUnknown (`#10635 <https://github.com/autowarefoundation/autoware_universe/issues/10635>`_)
+  * remove default value
+  * fix
+  ---------
+* Contributors: Masato Saeki
+
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(autoware_behavior_velocity_traffic_light_module): add v2i (`#10768 <https://github.com/autowarefoundation/autoware_universe/issues/10768>`_)
+  add v2i
+* Contributors: TaikiYamada4, Yukinari Hisaki
+
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* fix(traffic_light_utils): remove condition in `setSignalUnknown` (`#10631 <https://github.com/autowarefoundation/autoware_universe/issues/10631>`_)
+  remove condition
+* Contributors: Masato Saeki, TaikiYamada4
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* chore(perception): code owner revision (`#10358 <https://github.com/autowarefoundation/autoware_universe/issues/10358>`_)
+  * feat: add Masato Saeki and Taekjin Lee as maintainer to multiple package.xml files
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, Taekjin LEE
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

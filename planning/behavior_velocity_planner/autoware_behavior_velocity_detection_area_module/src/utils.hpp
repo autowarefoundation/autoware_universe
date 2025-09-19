@@ -19,6 +19,7 @@
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <rclcpp/time.hpp>
 
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 
 #include <lanelet2_core/geometry/Point.h>
@@ -27,6 +28,7 @@
 #include <pcl/point_types.h>
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace autoware::behavior_velocity_planner::detection_area
@@ -34,10 +36,11 @@ namespace autoware::behavior_velocity_planner::detection_area
 
 /// @brief get the extended stop line of the given detection area
 /// @param [in] detection_area detection area
-/// @param [in] extend_length [m] extension length to add on each edge of the stop line
+/// @param [in] path ego path
 /// @return extended stop line
 autoware_utils::LineString2d get_stop_line_geometry2d(
-  const lanelet::autoware::DetectionArea & detection_area, const double extend_length);
+  const lanelet::autoware::DetectionArea & detection_area,
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path);
 
 /// @brief get the obstacle points found inside a detection area
 /// @param [in] detection_areas detection area polygons
@@ -66,6 +69,13 @@ bool can_clear_stop_state(
 bool has_enough_braking_distance(
   const geometry_msgs::msg::Pose & self_pose, const geometry_msgs::msg::Pose & line_pose,
   const double pass_judge_line_distance, const double current_velocity);
+
+/// @brief return the feasible stop distance by max acceleration
+/// @param [in] current_velocity current ego velocity
+/// @param [in] max_acceleration max acceleration
+/// @return the feasible stop distance by max acceleration
+double feasible_stop_distance_by_max_acceleration(
+  const double current_velocity, const double max_acceleration);
 }  // namespace autoware::behavior_velocity_planner::detection_area
 
 #endif  // UTILS_HPP_

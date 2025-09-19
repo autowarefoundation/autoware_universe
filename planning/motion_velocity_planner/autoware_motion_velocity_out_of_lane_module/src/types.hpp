@@ -15,7 +15,7 @@
 #ifndef TYPES_HPP_
 #define TYPES_HPP_
 
-#include <autoware/motion_velocity_planner_common_universe/planner_data.hpp>
+#include <autoware/motion_velocity_planner_common/planner_data.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 
@@ -23,6 +23,7 @@
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
+#include <unique_identifier_msgs/msg/uuid.hpp>
 
 #include <boost/geometry/geometries/multi_polygon.hpp>
 #include <boost/geometry/index/rtree.hpp>
@@ -51,12 +52,18 @@ struct PlannerParam
 
   double time_threshold;  // [s](mode="threshold") objects time threshold
   double ttc_threshold;  // [s](mode="ttc") threshold on time to collision between ego and an object
+  double ttc_release_threshold;
 
   bool objects_cut_predicted_paths_beyond_red_lights;  // whether to cut predicted paths beyond red
                                                        // lights' stop lines
   double objects_min_vel;          // [m/s] objects lower than this velocity will be ignored
   double objects_min_confidence;   // minimum confidence to consider a predicted path
   bool objects_ignore_behind_ego;  // if true, objects behind the ego vehicle are ignored
+  bool
+    validate_predicted_paths_on_lanelets;  // if true, an out of lane collision is only considered
+                                           // if the predicted path fully follows a sequence of
+                                           // lanelets that include the out of lane lanelet
+  double objects_extra_width;              // [m] extra width to apply to the object footprints
 
   // action to insert in the trajectory if an object causes a collision at an overlap
   double lon_dist_buffer;      // [m] safety distance buffer to keep in front of the ego vehicle
@@ -65,9 +72,10 @@ struct PlannerParam
   double stop_dist_threshold;  // [m] if a collision is detected bellow this distance ahead of ego,
                                // try to insert a stop point
   double precision;            // [m] precision when inserting a stop pose in the trajectory
-  double
-    min_decision_duration;  // [s] duration needed before a stop or slowdown point can be removed
-  bool use_map_stop_lines;  // if true, try to stop at stop lines defined in the map
+  double min_on_duration;   // [s] duration needed before a stop or slowdown point can be triggered
+  double min_off_duration;  // [s] duration needed before a stop or slowdown point can be removed
+  double update_distance_th;  // [m] distance threshold for updating previous stop pose position
+  bool use_map_stop_lines;    // if true, try to stop at stop lines defined in the map
 
   // ego dimensions used to create its polygon footprint
   double front_offset;        // [m]  front offset (from vehicle info)
@@ -120,17 +128,47 @@ struct EgoData
     map_stop_points;  // ego stop points (and their corresponding stop lines) taken from the map
 };
 
+/// @brief a collision time along with the object and path id that cause the collision
+struct CollisionTime
+{
+  double collision_time{};
+  unique_identifier_msgs::msg::UUID object_uuid;
+  size_t object_path_id{};
+
+  // Overload needed to store the struct in std::set
+  bool operator<(const CollisionTime & other) const
+  {
+    return collision_time < other.collision_time;
+  }
+};
+
 /// @brief data related to an out of lane trajectory point
 struct OutOfLanePoint
 {
   size_t trajectory_index;
   autoware_utils::MultiPolygon2d out_overlaps;
-  std::set<double> collision_times;
+  std::set<CollisionTime> collision_times;
   std::optional<double> min_object_arrival_time;
   std::optional<double> max_object_arrival_time;
   std::optional<double> ttc;
   lanelet::ConstLanelets overlapped_lanelets;
   bool to_avoid = false;
+};
+
+struct SlowdownPose
+{
+  double arc_length{0.0};
+  rclcpp::Time start_time{0};
+  geometry_msgs::msg::Pose pose;
+  bool is_active = false;
+
+  SlowdownPose() = default;
+  SlowdownPose(
+    const double arc_length, const rclcpp::Time & start_time, const geometry_msgs::msg::Pose & pose,
+    const bool is_active)
+  : arc_length(arc_length), start_time(start_time), pose(pose), is_active(is_active)
+  {
+  }
 };
 
 /// @brief data related to the out of lane points

@@ -383,15 +383,21 @@ std::vector<TrajectoryPoint> PathOptimizer::optimizeTrajectory(const PlannerData
   //    with model predictive trajectory
   const auto mpt_traj = mpt_optimizer_ptr_->optimizeTrajectory(planner_data);
 
-  const bool optimized_traj_failed = !static_cast<bool>(mpt_traj);
-
-  conditional_timer_->update(optimized_traj_failed);
-
   const double elapsed_time = conditional_timer_->getElapsedTime().count();
   const bool elapsed_time_over_three_seconds = (elapsed_time > 3.0);
 
-  auto optimized_traj_points =
-    optimized_traj_failed && elapsed_time_over_three_seconds ? p.traj_points : std::move(*mpt_traj);
+  auto optimized_traj_points = [&]() {
+    if (mpt_traj) {
+      return std::move(*mpt_traj);
+    }
+    if (elapsed_time_over_three_seconds) {
+      return p.traj_points;
+    }
+    return getPrevOptimizedTrajectory(p.traj_points);
+  }();
+
+  const bool optimized_traj_failed = !static_cast<bool>(mpt_traj);
+  conditional_timer_->update(optimized_traj_failed);
   is_optimization_failed_ = optimized_traj_failed && elapsed_time_over_three_seconds;
 
   // 3. update velocity
@@ -418,6 +424,13 @@ void PathOptimizer::applyInputVelocity(
   const geometry_msgs::msg::Pose & ego_pose) const
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  // trim to ego-pose
+  const size_t ego_seg_idx_output_traj =
+    trajectory_utils::findEgoSegmentIndex(output_traj_points, ego_pose, ego_nearest_param_);
+  output_traj_points = autoware::motion_utils::cropBackwardPoints(
+    output_traj_points, ego_pose.position, ego_seg_idx_output_traj,
+    traj_param_.output_backward_traj_length);
 
   // crop forward for faster calculation
   const auto forward_cropped_input_traj_points = [&]() {

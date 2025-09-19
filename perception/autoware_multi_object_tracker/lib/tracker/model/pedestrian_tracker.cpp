@@ -22,7 +22,6 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
-#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/ros/msg_covariance.hpp>
@@ -41,6 +40,8 @@ namespace autoware::multi_object_tracker
 PedestrianTracker::PedestrianTracker(const rclcpp::Time & time, const types::DynamicObject & object)
 : Tracker(time, object), logger_(rclcpp::get_logger("PedestrianTracker"))
 {
+  tracker_type_ = TrackerType::PEDESTRIAN;
+
   if (object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
     // set default initial size
     auto & object_extension = object_.shape.dimensions;
@@ -132,6 +133,9 @@ bool PedestrianTracker::measureWithPose(const types::DynamicObject & object)
   constexpr double gain = 0.1;
   object_.pose.position.z = (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
 
+  // remove cached object
+  removeCache();
+
   return is_updated;
 }
 
@@ -155,6 +159,7 @@ bool PedestrianTracker::measureWithShape(const types::DynamicObject & object)
 
     // update shape type, bounding box or cylinder
     object_.shape.type = object.shape.type;
+    object_.area = types::getArea(object.shape);
 
     // set maximum and minimum size
     limitObjectExtension(object_model_);
@@ -193,25 +198,51 @@ bool PedestrianTracker::measure(
 }
 
 bool PedestrianTracker::getTrackedObject(
-  const rclcpp::Time & time, types::DynamicObject & object) const
+  const rclcpp::Time & time, types::DynamicObject & object, const bool to_publish) const
 {
-  object = object_;
+  // try to return cached object
+  if (!getCachedObject(time, object)) {
+    // if there is no cached object, predict and update cache
+    object = object_;
+    object.time = time;
 
-  // predict from motion model
-  auto & pose = object.pose;
-  auto & pose_cov = object.pose_covariance;
-  auto & twist = object.twist;
-  auto & twist_cov = object.twist_covariance;
-  if (!motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov)) {
-    RCLCPP_WARN(logger_, "PedestrianTracker::getTrackedObject: Failed to get predicted state.");
-    return false;
+    // predict from motion model
+    auto & pose = object.pose;
+    auto & pose_cov = object.pose_covariance;
+    auto & twist = object.twist;
+    auto & twist_cov = object.twist_covariance;
+    if (!motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov)) {
+      RCLCPP_WARN(logger_, "PedestrianTracker::getTrackedObject: Failed to get predicted state.");
+      return false;
+    }
+
+    // cache object
+    updateCache(object, time);
   }
 
-  // set shape
-  const auto origin_yaw = tf2::getYaw(object_.pose.orientation);
-  const auto ekf_pose_yaw = tf2::getYaw(pose.orientation);
-  object.shape.footprint =
-    autoware_utils::rotate_polygon(object.shape.footprint, origin_yaw - ekf_pose_yaw);
+  // if the tracker is to be published, check twist uncertainty
+  // in case the twist uncertainty is large, lower the twist value
+  if (to_publish) {
+    using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+    // lower the x twist magnitude 1 sigma smaller
+    // if the twist is smaller than 1 sigma, the twist is zeroed
+    auto & twist = object.twist;
+    constexpr double vel_cov_buffer = 0.7;  // [m/s] buffer not to limit certain twist
+    constexpr double vel_too_low_ignore =
+      0.35;  // [m/s] if the velocity is lower than this, do not limit
+    const double vel_long = std::abs(twist.linear.x);
+    if (vel_long > vel_too_low_ignore) {
+      const double vel_limit = std::max(
+        std::sqrt(object.twist_covariance[XYZRPY_COV_IDX::X_X]) - vel_cov_buffer, 0.0);  // [m/s]
+
+      if (vel_long < vel_limit) {
+        twist.linear.x = twist.linear.x > 0 ? vel_too_low_ignore : -vel_too_low_ignore;
+      } else {
+        twist.linear.x =
+          twist.linear.x > 0 ? twist.linear.x - vel_limit : twist.linear.x + vel_limit;
+      }
+    }
+  }
 
   return true;
 }

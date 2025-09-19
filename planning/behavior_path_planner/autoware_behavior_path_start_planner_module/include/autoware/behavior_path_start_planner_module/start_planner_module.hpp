@@ -21,6 +21,7 @@
 #include "autoware/behavior_path_planner_common/utils/path_safety_checker/path_safety_checker_parameters.hpp"
 #include "autoware/behavior_path_planner_common/utils/path_shifter/path_shifter.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
+#include "autoware/behavior_path_start_planner_module/clothoid_pull_out.hpp"
 #include "autoware/behavior_path_start_planner_module/data_structs.hpp"
 #include "autoware/behavior_path_start_planner_module/freespace_pull_out.hpp"
 #include "autoware/behavior_path_start_planner_module/geometric_pull_out.hpp"
@@ -230,7 +231,7 @@ private:
   bool receivedNewRoute() const;
 
   bool isModuleRunning() const;
-  bool isCurrentPoseOnMiddleOfTheRoad() const;
+  bool isCurrentPoseOnEgoCenterline() const;
 
   /**
    * @brief Check if the ego vehicle is preventing the rear vehicle from passing through.
@@ -243,6 +244,27 @@ private:
    * current pose or the pose if it stops.
    */
   bool isPreventingRearVehicleFromPassingThrough() const;
+
+  /**
+   * @brief Analyzes the ego vehicle's footprint relative to target lanes to determine key metrics
+   * for a merge.
+   *
+   * @details This function iterates through each vertex of the ego vehicle's footprint to find the
+   * point of closest approach to the adjacent lane boundary (the "near side"). Based on this point,
+   * it calculates three key pieces of information: whether the vehicle has crossed the centerline
+   * of the target lane, the vehicle's minimum clearance to the absolute edge of the entire road
+   * corridor, and the pose of the vehicle's closest vertex.
+   *
+   * @return On success, returns a tuple containing:
+   * 1. `bool`: True if the vehicle's closest point has crossed the centerline of the target lane.
+   * 2. `double`: The minimum lateral distance from the vehicle to the farthest boundary of the road
+   * corridor.
+   * 3. `Pose`: The pose of the vehicle vertex that is closest to the near lane boundary.
+   * Returns `std::nullopt` if a closest lanelet cannot be found for a footprint point.
+   */
+  std::optional<std::tuple<bool, double, geometry_msgs::msg::Pose>> getGapBetweenEgoAndLaneBorder(
+    const geometry_msgs::msg::Pose & ego_pose, const lanelet::ConstLanelets & target_lanes,
+    const double starting_pose_lateral_offset) const;
 
   /**
     * @brief Check if the ego vehicle is preventing the rear vehicle from passing through.
@@ -261,7 +283,11 @@ ego pose.
   bool isMoving() const;
 
   PriorityOrder determinePriorityOrder(
-    const std::string & search_priority, const size_t start_pose_candidates_num);
+    const std::vector<std::string> & priority_list, const std::string & search_policy,
+    const size_t start_pose_candidates_num);
+
+  bool isPlannerEnabled(const PlannerType & planner_type) const;
+
   bool findPullOutPath(
     const Pose & start_pose_candidate, const std::shared_ptr<PullOutPlannerBase> & planner,
     const Pose & refined_start_pose, const Pose & goal_pose, const double collision_check_margin,
@@ -320,7 +346,8 @@ ego pose.
   PathWithLaneId getCurrentPath() const;
   void planWithPriority(
     const std::vector<Pose> & start_pose_candidates, const Pose & refined_start_pose,
-    const Pose & goal_pose, const std::string & search_priority);
+    const Pose & goal_pose, const std::vector<std::string> & priority_list,
+    const std::string & search_policy);
   PathWithLaneId generateStopPath() const;
   lanelet::ConstLanelets getPathRoadLanes(const PathWithLaneId & path) const;
   std::vector<DrivableLanes> generateDrivableLanes(const PathWithLaneId & path) const;
@@ -335,6 +362,7 @@ ego pose.
   bool hasReachedPullOutEnd() const;
   bool hasFinishedBackwardDriving() const;
   bool hasCollisionWithDynamicObjects() const;
+  bool isInsideLanelets() const;
   bool isStopped();
   bool hasFinishedCurrentPath();
   void updateSafetyCheckTargetObjectsData(

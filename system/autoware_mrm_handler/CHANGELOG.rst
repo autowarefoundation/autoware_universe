@@ -1,6 +1,33 @@
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Changelog for package autoware_mrm_handler
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+0.47.0 (2025-08-11)
+-------------------
+* feat: use mrm in all operation mode state (`#10259 <https://github.com/autowarefoundation/autoware_universe/issues/10259>`_)
+  * feat: use mrm in all operation mode
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Tetsuhiro Kawaguchi
+
+0.46.0 (2025-06-20)
+-------------------
+
+0.45.0 (2025-05-22)
+-------------------
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(mrm_handler): modify log level (`#10425 <https://github.com/autowarefoundation/autoware_universe/issues/10425>`_)
+* Contributors: Ryohsuke Mitsudome, Takagi, Isamu
 
 0.43.0 (2025-03-21)
 -------------------

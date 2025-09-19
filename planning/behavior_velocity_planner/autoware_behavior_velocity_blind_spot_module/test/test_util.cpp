@@ -70,12 +70,14 @@ protected:
 
     // parameter
     auto node_options = rclcpp::NodeOptions{};
-    node_options.arguments(std::vector<std::string>{
-      "--ros-args",
-      "--params-file",
-      ament_index_cpp::get_package_share_directory("autoware_behavior_velocity_blind_spot_module") +
-        "/config/blind_spot.param.yaml",
-    });
+    node_options.arguments(
+      std::vector<std::string>{
+        "--ros-args",
+        "--params-file",
+        ament_index_cpp::get_package_share_directory(
+          "autoware_behavior_velocity_blind_spot_module") +
+          "/config/blind_spot.param.yaml",
+      });
 
     auto node = rclcpp::Node::make_shared("blind_spot_test", node_options);
     param = autoware::behavior_velocity_planner::PlannerParam::init(*node, "blind_spot");
@@ -239,7 +241,7 @@ TEST_F(TestWithAdjLaneData, generateBlindSpotLanelets_left)
     route_handler, autoware::behavior_velocity_planner::TurnDirection::LEFT, {2000, 2010},
     param.ignore_width_from_center_line, param.adjacent_extend_width,
     param.opposite_adjacent_extend_width);
-  EXPECT_EQ(blind_spot_lanelets.size(), 2);
+  EXPECT_EQ(blind_spot_lanelets.size(), 3);
 
 #ifdef EXPORT_TEST_PLOT_FIGURE
   py::gil_scoped_acquire acquire;
@@ -381,12 +383,14 @@ protected:
 
     // parameter
     auto node_options = rclcpp::NodeOptions{};
-    node_options.arguments(std::vector<std::string>{
-      "--ros-args",
-      "--params-file",
-      ament_index_cpp::get_package_share_directory("autoware_behavior_velocity_blind_spot_module") +
-        "/config/blind_spot.param.yaml",
-    });
+    node_options.arguments(
+      std::vector<std::string>{
+        "--ros-args",
+        "--params-file",
+        ament_index_cpp::get_package_share_directory(
+          "autoware_behavior_velocity_blind_spot_module") +
+          "/config/blind_spot.param.yaml",
+      });
 
     auto node = rclcpp::Node::make_shared("blind_spot_test", node_options);
     param = autoware::behavior_velocity_planner::PlannerParam::init(*node, "blind_spot");
@@ -406,7 +410,7 @@ TEST_F(TestWithShoulderData, generateBlindSpotLaneletsShoulder_left)
     route_handler, autoware::behavior_velocity_planner::TurnDirection::LEFT, {1000, 1010},
     param.ignore_width_from_center_line, param.adjacent_extend_width,
     param.opposite_adjacent_extend_width);
-  EXPECT_EQ(blind_spot_lanelets.size(), 2);
+  EXPECT_EQ(blind_spot_lanelets.size(), 3);
 
 #ifdef EXPORT_TEST_PLOT_FIGURE
   py::gil_scoped_acquire acquire;

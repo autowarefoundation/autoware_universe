@@ -23,6 +23,7 @@
 #include <NvOnnxParser.h>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -45,6 +46,12 @@ using NetworkIOPtr = std::unique_ptr<std::vector<NetworkIO>>;
 using ProfileDimsPtr = std::unique_ptr<std::vector<ProfileDims>>;
 using TensorsVec = std::vector<std::pair<void *, nvinfer1::Dims>>;
 using TensorsMap = std::unordered_map<const char *, std::pair<void *, nvinfer1::Dims>>;
+
+// TensorRT version, written in serialized engine file (source:
+// https://github.com/NVIDIA/TensorRT/issues/3073#issuecomment-1599934548)
+constexpr int TRT_MAJOR_IDX = 24;
+constexpr int TRT_MINOR_IDX = 25;
+constexpr int TRT_PATCH_IDX = 26;
 
 /**
  * @class TrtCommon
@@ -117,6 +124,22 @@ public:
    * @return Tensor shape.
    */
   [[nodiscard]] nvinfer1::Dims getTensorShape(const char * tensor_name) const;
+
+  /**
+   * @brief Get output tensor data type by name from TensorRT engine.
+   *
+   * @param[in] tensor_name Tensor name.
+   * @return Tensor datatype or nullopt if engine is not initialized.
+   */
+  [[nodiscard]] std::optional<nvinfer1::DataType> getTensorDataType(const char * tensor_name) const;
+
+  /**
+   * @brief Get output tensor data type by name from TensorRT engine.
+   *
+   * @param[in] tensor_name Tensor name.
+   * @return Tensor datatype.
+   */
+  [[nodiscard]] nvinfer1::TensorIOMode getTensorIOMode(const char * tensor_name) const;
 
   /**
    * @brief Get input tensor shape by index from TensorRT network.
@@ -316,6 +339,13 @@ private:
    * @return Whether building engine is successful.
    */
   bool buildEngineFromOnnx();
+
+  /**
+   * @brief Validate the TensorRT engine.
+   *
+   * @return Whether the TensorRT version used for building engine is compatible.
+   */
+  bool validateEngine();
 
   /**
    * @brief Load TensorRT engine.

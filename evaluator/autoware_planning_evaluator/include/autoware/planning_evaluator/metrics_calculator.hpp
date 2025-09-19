@@ -15,7 +15,6 @@
 #ifndef AUTOWARE__PLANNING_EVALUATOR__METRICS_CALCULATOR_HPP_
 #define AUTOWARE__PLANNING_EVALUATOR__METRICS_CALCULATOR_HPP_
 #include "autoware/planning_evaluator/metrics/metric.hpp"
-#include "autoware/planning_evaluator/parameters.hpp"
 #include "autoware_utils/math/accumulator.hpp"
 
 #include "autoware_perception_msgs/msg/predicted_objects.hpp"
@@ -40,7 +39,24 @@ using geometry_msgs::msg::Pose;
 class MetricsCalculator
 {
 public:
-  Parameters parameters;
+  struct Parameters
+  {
+    struct
+    {
+      double min_point_dist_m = 0.1;
+      double evaluation_time_s = 5.0;
+      struct
+      {
+        double max_dist_m = 5.0;
+        double max_time_s = 3.0;
+      } lookahead;
+    } trajectory;
+
+    struct
+    {
+      double dist_thr_m = 1.0;
+    } obstacle;
+  } parameters;  // struct Parameters for those metrics calculated by the MetricsCalculator
 
   MetricsCalculator() = default;
 

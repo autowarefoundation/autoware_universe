@@ -51,13 +51,12 @@ This package includes the following features:
 - /localization/kinematic_state [`nav_msgs::msg::Odometry`]
 - /map/vector_map [`autoware_map_msgs::msg::LaneletMapBin`]
 - /planning/mission_planning/route [`autoware_planning_msgs::msg::LaneletRoute`]
-- /planning/scenario_planning/trajectory [`autoware_planning_msgs::msg::Trajectory`]
+- /planning/trajectory [`autoware_planning_msgs::msg::Trajectory`]
 - /control/trajectory_follower/predicted_trajectory [`autoware_planning_msgs::msg::Trajectory`]
 
 ### Output
 
 - [`diagnostic_updater`] lane_departure : Update diagnostic level when ego vehicle is out of lane.
-- [`diagnostic_updater`] trajectory_deviation : Update diagnostic level when ego vehicle deviates from trajectory.
 
 ## Parameters
 

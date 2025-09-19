@@ -7,9 +7,14 @@
   <arg name="freespace_planner_param_path"/>
   <!-- planning validator -->
   <arg name="planning_validator_param_path"/>
+  <arg name="planning_validator_latency_checker_param_path"/>
+  <arg name="planning_validator_trajectory_checker_param_path"/>
+  <arg name="planning_validator_intersection_collision_checker_param_path"/>
+  <arg name="planning_validator_rear_collision_checker_param_path"/>
   <!-- Auto mode setting-->
   <arg name="enable_all_modules_auto_mode"/>
   <arg name="is_simulation"/>
+  <arg name="launch_remaining_distance_time_calculator" default="false"/>
 
   <group>
     <push-ros-namespace namespace="planning"/>
@@ -33,19 +38,28 @@
     <!-- planning validator -->
     <group>
       <include file="$(find-pkg-share autoware_planning_validator)/launch/planning_validator.launch.xml">
+        <arg name="container_type" value="component_container_mt"/>
         <arg name="input_trajectory" value="/planning/scenario_planning/velocity_smoother/trajectory"/>
-        <arg name="output_trajectory" value="/planning/scenario_planning/trajectory"/>
+        <arg name="output_trajectory" value="/planning/trajectory"/>
+        <arg name="input_objects_topic_name" value="/perception/object_recognition/objects"/>
+        <arg name="input_pointcloud_topic_name" value="/perception/obstacle_segmentation/pointcloud"/>
         <arg name="planning_validator_param_path" value="$(var planning_validator_param_path)"/>
+        <arg name="planning_validator_latency_checker_param_path" value="$(var planning_validator_latency_checker_param_path)"/>
+        <arg name="planning_validator_trajectory_checker_param_path" value="$(var planning_validator_trajectory_checker_param_path)"/>
+        <arg name="planning_validator_intersection_collision_checker_param_path" value="$(var planning_validator_intersection_collision_checker_param_path)"/>
+        <arg name="planning_validator_rear_collision_checker_param_path" value="$(var planning_validator_rear_collision_checker_param_path)"/>
       </include>
     </group>
 
     <!-- planning evaluator -->
     <group>
-      <include file="$(find-pkg-share autoware_planning_evaluator)/launch/planning_evaluator.launch.xml"/>
+      <include file="$(find-pkg-share autoware_planning_evaluator)/launch/planning_evaluator.launch.xml">
+        <arg name="input_objects_topic_name" value="/perception/object_recognition/objects"/>
+      </include>
     </group>
 
     <!-- mission remaining distance and time calculator -->
-    <group>
+    <group if="$(var launch_remaining_distance_time_calculator)">
       <include file="$(find-pkg-share autoware_remaining_distance_time_calculator)/launch/remaining_distance_time_calculator.launch.xml"/>
     </group>
   </group>

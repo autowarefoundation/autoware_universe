@@ -20,6 +20,7 @@
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/search/kdtree.h>
 #include <pcl/segmentation/segment_differences.h>
+
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
@@ -27,6 +28,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 #endif
+
 #include <memory>
 #include <string>
 #include <utility>
@@ -39,7 +41,8 @@ VoxelBasedCompareMapFilterComponent::VoxelBasedCompareMapFilterComponent(
   const rclcpp::NodeOptions & options)
 : Filter("VoxelBasedCompareMapFilter", options),
   tf_buffer_(this->get_clock()),
-  tf_listener_(tf_buffer_)
+  tf_listener_(tf_buffer_),
+  diagnostic_updater_(this)
 {
   // initialize debug tool
   {
@@ -51,6 +54,15 @@ VoxelBasedCompareMapFilterComponent::VoxelBasedCompareMapFilterComponent(
     stop_watch_ptr_->tic("processing_time");
   }
 
+  // setup diagnostics
+  {
+    diagnostic_updater_.setHardwareID(this->get_name());
+    diagnostic_updater_.add(
+      "Compare map filter status", this, &VoxelBasedCompareMapFilterComponent::checkStatus);
+    diagnostic_updater_.setPeriod(0.1);
+  }
+
+  // Declare parameters
   distance_threshold_ = declare_parameter<double>("distance_threshold");
   bool use_dynamic_map_loading = declare_parameter<bool>("use_dynamic_map_loading");
   double downsize_ratio_z_axis = declare_parameter<double>("downsize_ratio_z_axis");
@@ -72,6 +84,21 @@ VoxelBasedCompareMapFilterComponent::VoxelBasedCompareMapFilterComponent(
   RCLCPP_INFO(this->get_logger(), "tf_map_input_frame: %s", tf_input_frame_.c_str());
 }
 
+void VoxelBasedCompareMapFilterComponent::checkStatus(
+  diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  // map loader status
+  DiagStatus & map_loader_status = (*voxel_grid_map_loader_).diagnostics_map_voxel_status_;
+  if (map_loader_status.level == diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    stat.add("Map loader status", "OK");
+  } else {
+    stat.add("Map loader status", "NG");
+  }
+
+  // final status = map loader status
+  stat.summary(map_loader_status.level, map_loader_status.message);
+}
+
 // TODO(badai-nguyen): Temporary Implementation of input_indices_callback and  convert_output_costly
 // functions; Delete this override function when autoware_utils refactor
 // (https://github.com/autowarefoundation/autoware_utils/pull/50) or new ManagedTransformBuffer lib
@@ -80,12 +107,12 @@ void VoxelBasedCompareMapFilterComponent::input_indices_callback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud, const PointIndicesConstPtr indices)
 {
   // If cloud is given, check if it's valid
-  if (!isValid(cloud)) {
+  if (!is_valid(cloud)) {
     RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid input!");
     return;
   }
   // If indices are given, check if they are valid
-  if (indices && !isValid(indices)) {
+  if (indices && !is_valid(indices)) {
     RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid indices!");
     return;
   }
@@ -125,15 +152,25 @@ void VoxelBasedCompareMapFilterComponent::input_indices_callback(
     vindices.reset(new std::vector<int>(indices->indices));
   }
 
-  computePublish(cloud_tf, vindices);
+  compute_publish(cloud_tf, vindices);
 }
 
 bool VoxelBasedCompareMapFilterComponent::convert_output_costly(
   std::unique_ptr<PointCloud2> & output)
 {
-  if (!output || output->data.empty() || output->fields.empty()) {
+  if (!output || output->fields.empty()) {
     RCLCPP_ERROR(this->get_logger(), "Invalid output point cloud!");
     return false;
+  }
+  if (output->data.empty()) {
+    // empty point cloud, could happen under certain conditions
+    // e.g. when the input point cloud is empty or all points are filtered out
+    if (!tf_output_frame_.empty()) {
+      output->header.frame_id = tf_output_frame_;
+    } else {
+      output->header.frame_id = tf_input_orig_frame_;
+    }
+    return true;
   }
   if (
     pcl::getFieldIndex(*output, "x") == -1 || pcl::getFieldIndex(*output, "y") == -1 ||
@@ -141,6 +178,7 @@ bool VoxelBasedCompareMapFilterComponent::convert_output_costly(
     RCLCPP_ERROR(this->get_logger(), "Input pointcloud does not have xyz fields");
     return false;
   }
+  // A. the output frame is set, transform the point cloud to the output frame
   if (!tf_output_frame_.empty() && output->header.frame_id != tf_output_frame_) {
     auto cloud_transformed = std::make_unique<PointCloud2>();
     try {
@@ -157,7 +195,7 @@ bool VoxelBasedCompareMapFilterComponent::convert_output_costly(
       return false;
     }
   }
-
+  // B. the output frame is not set, the output frame is the same as the input frame
   if (tf_output_frame_.empty() && output->header.frame_id != tf_input_orig_frame_) {
     auto cloud_transformed = std::make_unique<PointCloud2>();
     try {
@@ -183,6 +221,18 @@ void VoxelBasedCompareMapFilterComponent::filter(
 {
   std::scoped_lock lock(mutex_);
   stop_watch_ptr_->toc("processing_time", true);
+
+  // check grid map loader status
+  auto & map_diag_status = (*voxel_grid_map_loader_).diagnostics_map_voxel_status_;
+  if (map_diag_status.level != diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000, "Map loader status: %s",
+      map_diag_status.message.c_str());
+    // return input point cloud, no filter implemented
+    output = *input;
+    return;
+  }
+
   int point_step = input->point_step;
   int offset_x = input->fields[pcl::getFieldIndex(*input, "x")].offset;
   int offset_y = input->fields[pcl::getFieldIndex(*input, "y")].offset;

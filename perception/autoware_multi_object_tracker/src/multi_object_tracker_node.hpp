@@ -26,6 +26,7 @@
 #include "processor/input_manager.hpp"
 #include "processor/processor.hpp"
 
+#include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
@@ -69,6 +70,10 @@ private:
   std::unique_ptr<TrackerDebugger> debugger_;
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
 
+  rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
+    detailed_processing_time_publisher_;
+  std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
+
   // publish timer
   rclcpp::TimerBase::SharedPtr publish_timer_;
   rclcpp::Time last_published_time_;
@@ -80,6 +85,7 @@ private:
   // internal states
   std::string world_frame_id_;  // tracking frame
   std::unique_ptr<TrackerProcessor> processor_;
+  bool enable_delay_compensation_{false};
 
   // input manager
   std::unique_ptr<InputManager> input_manager_;

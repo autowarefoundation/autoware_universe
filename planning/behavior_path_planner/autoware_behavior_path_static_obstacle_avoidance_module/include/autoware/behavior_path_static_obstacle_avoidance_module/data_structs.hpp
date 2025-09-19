@@ -206,7 +206,6 @@ struct AvoidanceParameters
   // for merging/deviating vehicle
   double th_overhang_distance{0.0};
 
-  // parameters for safety check area
   bool enable_safety_check{false};
   bool check_current_lane{false};
   bool check_shift_side_lane{false};
@@ -278,6 +277,8 @@ struct AvoidanceParameters
   // lost_count and the registered object will be removed when the count exceeds this max count.
   double object_last_seen_threshold{0.0};
 
+  double unstable_classification_time{0.0};
+
   // The avoidance path generation is performed when the shift distance of the
   // avoidance points is greater than this threshold.
   // In multiple targets case: if there are multiple vehicles in a row to be avoided, no new
@@ -307,6 +308,9 @@ struct AvoidanceParameters
   bool use_shorten_margin_immediately{false};
 
   // policy
+  std::string policy_detection_reliability{"reliable"};
+
+  // policy
   std::string policy_approval{"per_shift_line"};
 
   // policy
@@ -321,8 +325,11 @@ struct AvoidanceParameters
   // target velocity matrix
   std::vector<double> velocity_map;
 
-  // Minimum lateral jerk limitation map.
-  std::vector<double> lateral_min_jerk_map;
+  // Minimum lateral jerk limitation map for avoidance maneuver.
+  std::vector<double> avoid_lateral_min_jerk_map;
+
+  // Minimum lateral jerk limitation map for return maneuver.
+  std::vector<double> return_lateral_min_jerk_map;
 
   // Maximum lateral jerk limitation map.
   std::vector<double> lateral_max_jerk_map;
@@ -389,6 +396,10 @@ struct ObjectData  // avoidance target
   // distance factor for perception noise (0.0~1.0)
   double distance_factor{0.0};
 
+  // Objects that have not been classified as UNKNOWN for a certain period of time may not be
+  // UNKNOWN.
+  bool is_classification_unstable{false};
+
   // count up when object disappeared. Removed when it exceeds threshold.
   rclcpp::Time last_seen{rclcpp::Clock(RCL_ROS_TIME).now()};
   double lost_time{0.0};
@@ -414,6 +425,10 @@ struct ObjectData  // avoidance target
   // envelope polygon centroid
   Point2d centroid{};
 
+  // Adds extra margin for objects near highly curved sections of the path
+  // to prevent the vehicle's front from getting too close to obstacles.
+  double curvature_based_margin{0.0};
+
   // lateral distance from overhang to the road shoulder
   double to_road_shoulder_distance{0.0};
 
@@ -434,6 +449,9 @@ struct ObjectData  // avoidance target
 
   // is stoppable under the constraints
   bool is_stoppable{false};
+
+  // is avoidable by desired shift length
+  bool is_avoidable_by_desired_shift_length{false};
 
   // is within intersection area
   bool is_within_intersection{false};
@@ -543,6 +561,9 @@ struct AvoidancePlanningData
   // If the point is behind ego_pose, the value is negative.
   std::vector<double> arclength_from_ego;
 
+  // Lateral distance from the vehicle's front corner to the path centerline at each path point.
+  std::vector<double> front_corner_offsets;
+
   // current driving lanelet
   lanelet::ConstLanelets current_lanelets;
   lanelet::ConstLanelets extend_lanelets;
@@ -552,6 +573,8 @@ struct AvoidancePlanningData
 
   // avoidance target objects
   ObjectDataArray target_objects;
+
+  ObjectDataArray previous_target_objects;
 
   // the others
   ObjectDataArray other_objects;
@@ -569,9 +592,15 @@ struct AvoidancePlanningData
 
   std::vector<DrivableLanes> drivable_lanes{};
 
+  std::vector<DrivableLanes> drivable_lanes_same_direction{};
+
   std::vector<Point> right_bound{};
 
+  std::vector<Point> right_bound_same_direction{};
+
   std::vector<Point> left_bound{};
+
+  std::vector<Point> left_bound_same_direction{};
 
   bool safe{false};
 
@@ -602,6 +631,48 @@ struct AvoidancePlanningData
   bool is_allowed_goal_modification{false};
 
   bool request_operator{false};
+
+  void update()
+  {
+    state = AvoidanceState::RUNNING;
+    reference_pose = Pose();
+    reference_path = PathWithLaneId();
+    reference_path_rough = PathWithLaneId();
+    ego_closest_path_index = 0;
+    arclength_from_ego.clear();
+    front_corner_offsets.clear();
+    current_lanelets.clear();
+    extend_lanelets.clear();
+    candidate_path = ShiftedPath();
+    previous_target_objects = target_objects;
+    target_objects.clear();
+    other_objects.clear();
+    stop_target_object = std::nullopt;
+    red_signal_lane = std::nullopt;
+    new_shift_line.clear();
+    safe_shift_line.clear();
+    drivable_lanes.clear();
+    right_bound.clear();
+    left_bound.clear();
+    drivable_lanes_same_direction.clear();
+    right_bound_same_direction.clear();
+    left_bound_same_direction.clear();
+    safe = false;
+    valid = false;
+    ready = false;
+    comfortable = false;
+    avoid_required = false;
+    yield_required = false;
+    found_avoidance_path = false;
+    force_deactivated = false;
+    to_stop_line = std::numeric_limits<double>::max();
+    to_start_point = std::numeric_limits<double>::lowest();
+    to_return_point = std::numeric_limits<double>::max();
+    distance_to_red_traffic_light = std::nullopt;
+    closest_lanelet = std::nullopt;
+    is_allowed_goal_modification = false;
+    request_operator = false;
+  }
 };
 
 /*

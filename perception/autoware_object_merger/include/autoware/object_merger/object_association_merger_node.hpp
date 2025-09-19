@@ -20,6 +20,7 @@
 #include "autoware_utils/ros/published_time_publisher.hpp"
 #include "autoware_utils/system/stop_watch.hpp"
 
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
@@ -42,6 +43,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -49,14 +51,18 @@ namespace autoware::object_merger
 {
 class ObjectAssociationMergerNode : public rclcpp::Node
 {
+  using Label = autoware_perception_msgs::msg::ObjectClassification;
+
 public:
   explicit ObjectAssociationMergerNode(const rclcpp::NodeOptions & node_options);
-  enum class PriorityMode : int { Object0 = 0, Object1 = 1, Confidence = 2 };
+  enum class PriorityMode : int { Object0 = 0, Object1 = 1, Confidence = 2, ClassBased = 3 };
 
 private:
   void objectsCallback(
     const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr & input_objects0_msg,
     const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr & input_objects1_msg);
+
+  void diagCallback();
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
@@ -73,7 +79,19 @@ private:
   std::unique_ptr<DataAssociation> data_association_;
   std::string base_link_frame_id_;  // associated with the base_link frame
 
+  // Timeout Related
+  double message_timeout_sec_;
+  double initialization_timeout_sec_;
+  std::optional<rclcpp::Time> last_sync_time_;
+  std::optional<double> message_interval_;
+  rclcpp::TimerBase::SharedPtr timeout_timer_;
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
+
   PriorityMode priority_mode_;
+  std::vector<int64_t> class_based_priority_matrix_;
+
+  int NUMBER_OF_CLASSES_;
+
   bool remove_overlapped_unknown_objects_;
   struct
   {

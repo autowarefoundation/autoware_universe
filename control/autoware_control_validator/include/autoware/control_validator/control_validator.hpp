@@ -26,6 +26,7 @@
 #include <autoware_utils/system/stop_watch.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
 #include <autoware_control_msgs/msg/control.hpp>
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
@@ -35,31 +36,84 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
 
-class AccelerationValidatorTest;
-
 namespace autoware::control_validator
 {
+using autoware_adapi_v1_msgs::msg::OperationModeState;
 using autoware_control_msgs::msg::Control;
 using autoware_control_validator::msg::ControlValidatorStatus;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
+using autoware_utils::get_or_declare_parameter;
 using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 
-struct ValidationParams
+/**
+ * @class LatencyValidator
+ * @brief Validates latency of the control module.
+ */
+class LatencyValidator
 {
-  double max_distance_deviation_threshold;
-  double rolling_back_velocity;
-  double over_velocity_ratio;
-  double over_velocity_offset;
-  double overrun_stop_point_dist;
-  double nominal_latency_threshold;
+public:
+  explicit LatencyValidator(rclcpp::Node & node)
+  : nominal_latency_threshold{
+      get_or_declare_parameter<double>(node, "thresholds.nominal_latency")} {};
+
+  void validate(
+    ControlValidatorStatus & res, const Control & control_cmd, rclcpp::Node & node) const;
+
+private:
+  const double nominal_latency_threshold;
+};
+
+/**
+ * @class TrajectoryValidator
+ * @brief Calculate the maximum lateral distance between the reference trajectory and the predicted
+ * trajectory.
+ */
+class TrajectoryValidator
+{
+public:
+  explicit TrajectoryValidator(rclcpp::Node & node)
+  : max_distance_deviation_threshold{
+      get_or_declare_parameter<double>(node, "thresholds.max_distance_deviation")} {};
+
+  void validate(
+    ControlValidatorStatus & res, const Trajectory & predicted_trajectory,
+    const Trajectory & reference_trajectory);
+
+private:
+  const double max_distance_deviation_threshold;
+  std::optional<Trajectory> prev_reference_trajectory_;
+};
+
+/**
+ * @class LateralJerkValidator
+ * @brief Validates lateral jerk is not too high.
+ */
+class LateralJerkValidator
+{
+public:
+  explicit LateralJerkValidator(rclcpp::Node & node)
+  : lateral_jerk_threshold_{get_or_declare_parameter<double>(node, "thresholds.lateral_jerk")},
+    logger_{node.get_logger()},
+    measured_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")} {};
+
+  void validate(
+    ControlValidatorStatus & res, const Odometry & kinematic_state, const Control & control_cmd,
+    const double wheel_base);
+
+private:
+  double lateral_jerk_threshold_{};  // m/s^3
+  rclcpp::Logger logger_;
+  std::unique_ptr<Control> prev_control_cmd_{};
+  autoware::signal_processing::LowpassFilter1d measured_vel_lpf;
 };
 
 /**
@@ -69,17 +123,12 @@ struct ValidationParams
 class AccelerationValidator
 {
 public:
-  friend class ::AccelerationValidatorTest;
+  friend class AccelerationValidatorTest;
   explicit AccelerationValidator(rclcpp::Node & node)
-  {
-    e_offset =
-      autoware_utils::get_or_declare_parameter<double>(node, "thresholds.acc_error_offset");
-    e_scale = autoware_utils::get_or_declare_parameter<double>(node, "thresholds.acc_error_scale");
-    const double acc_lpf_gain =
-      autoware_utils::get_or_declare_parameter<double>(node, "acc_lpf_gain");
-    desired_acc_lpf.setGain(acc_lpf_gain);
-    measured_acc_lpf.setGain(acc_lpf_gain);
-  };
+  : e_offset{get_or_declare_parameter<double>(node, "thresholds.acc_error_offset")},
+    e_scale{get_or_declare_parameter<double>(node, "thresholds.acc_error_scale")},
+    desired_acc_lpf{get_or_declare_parameter<double>(node, "acc_lpf_gain")},
+    measured_acc_lpf{get_or_declare_parameter<double>(node, "acc_lpf_gain")} {};
 
   void validate(
     ControlValidatorStatus & res, const Odometry & kinematic_state, const Control & control_cmd,
@@ -87,10 +136,92 @@ public:
 
 private:
   bool is_in_error_range() const;
-  double e_offset;
-  double e_scale;
-  autoware::signal_processing::LowpassFilter1d desired_acc_lpf{0.0};
-  autoware::signal_processing::LowpassFilter1d measured_acc_lpf{0.0};
+  const double e_offset;
+  const double e_scale;
+  autoware::signal_processing::LowpassFilter1d desired_acc_lpf;
+  autoware::signal_processing::LowpassFilter1d measured_acc_lpf;
+};
+
+/**
+ * @class VelocityValidator
+ * @brief Validates deviation between target velocity and measured velocity.
+ */
+class VelocityValidator
+{
+public:
+  explicit VelocityValidator(rclcpp::Node & node)
+  : rolling_back_velocity_th{get_or_declare_parameter<double>(
+      node, "thresholds.rolling_back_velocity")},
+    over_velocity_ratio_th{
+      get_or_declare_parameter<double>(node, "thresholds.over_velocity_ratio")},
+    over_velocity_offset_th{
+      get_or_declare_parameter<double>(node, "thresholds.over_velocity_offset")},
+    hold_velocity_error_until_stop{
+      get_or_declare_parameter<bool>(node, "hold_velocity_error_until_stop")},
+    vehicle_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")},
+    target_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")} {};
+
+  void validate(
+    ControlValidatorStatus & res, const Trajectory & reference_trajectory,
+    const Odometry & kinematics);
+
+private:
+  const double rolling_back_velocity_th;
+  const double over_velocity_ratio_th;
+  const double over_velocity_offset_th;
+  const bool hold_velocity_error_until_stop;
+  autoware::signal_processing::LowpassFilter1d vehicle_vel_lpf;
+  autoware::signal_processing::LowpassFilter1d target_vel_lpf;
+};
+
+/**
+ * @class OverrunValidator
+ * @brief Calculate whether the vehicle has overrun a stop point in the trajectory.
+ */
+class OverrunValidator
+{
+public:
+  explicit OverrunValidator(rclcpp::Node & node)
+  : overrun_stop_point_dist_th{get_or_declare_parameter<double>(
+      node, "thresholds.overrun_stop_point_dist")},
+    will_overrun_stop_point_dist_th{
+      get_or_declare_parameter<double>(node, "thresholds.will_overrun_stop_point_dist")},
+    assumed_limit_acc{get_or_declare_parameter<double>(node, "thresholds.assumed_limit_acc")},
+    assumed_delay_time{get_or_declare_parameter<double>(node, "thresholds.assumed_delay_time")},
+    vehicle_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")} {};
+
+  void validate(
+    ControlValidatorStatus & res, const Trajectory & reference_trajectory,
+    const Odometry & kinematics);
+
+private:
+  const double overrun_stop_point_dist_th;
+  const double will_overrun_stop_point_dist_th;
+  const double assumed_limit_acc;
+  const double assumed_delay_time;
+  autoware::signal_processing::LowpassFilter1d vehicle_vel_lpf;
+};
+
+/**
+ * @class YawValidator
+ * @brief Calculate whether the vehicle orientation deviated from the trajectory
+ */
+class YawValidator
+{
+public:
+  explicit YawValidator(rclcpp::Node & node)
+  : yaw_deviation_error_th_{get_or_declare_parameter<double>(
+      node, "thresholds.yaw_deviation_error")},
+    yaw_deviation_warn_th_{
+      get_or_declare_parameter<double>(node, "thresholds.yaw_deviation_warn")} {};
+
+  void validate(
+    ControlValidatorStatus & res, const Trajectory & reference_trajectory,
+    const Odometry & kinematics) const;
+
+private:
+  const double yaw_deviation_error_th_;
+  const double yaw_deviation_warn_th_;
 };
 
 /**
@@ -113,33 +244,6 @@ public:
    */
   void on_control_cmd(const Control::ConstSharedPtr msg);
 
-  /**
-   * @brief Callback function for the predicted trajectory.
-   * @param msg Predicted trajectory message
-   */
-  void on_predicted_trajectory(const Trajectory::ConstSharedPtr msg);
-
-  /**
-   * @brief Calculate the maximum lateral distance between the reference trajectory and predicted
-   * trajectory.
-   * @param predicted_trajectory Predicted trajectory
-   * @param reference_trajectory Reference trajectory
-   * @return A pair consisting of the maximum lateral deviation and a boolean indicating validity
-   */
-  std::pair<double, bool> calc_lateral_deviation_status(
-    const Trajectory & predicted_trajectory, const Trajectory & reference_trajectory) const;
-
-  void calc_velocity_deviation_status(
-    const Trajectory & reference_trajectory, const Odometry & kinematics);
-
-  /**
-   * @brief Calculate whether the vehicle has overrun a stop point in the trajectory.
-   * @param reference_trajectory Reference trajectory
-   * @param kinematics Current vehicle odometry including pose and twist
-   */
-  void calc_stop_point_overrun_status(
-    const Trajectory & reference_trajectory, const Odometry & kinematics);
-
 private:
   /**
    * @brief Setup diagnostic updater
@@ -152,27 +256,14 @@ private:
   void setup_parameters();
 
   /**
-   * @brief Check if all required data is ready for validation
-   * @return Boolean indicating readiness of data
-   */
-  bool is_data_ready();
-
-  /**
-   * @brief Validate the predicted trajectory against the reference trajectory and current
-   * kinematics
-   * @param predicted_trajectory Predicted trajectory
-   * @param reference_trajectory Reference trajectory
-   * @param kinematics Current vehicle kinematics
-   */
-  void validate(
-    const Trajectory & predicted_trajectory, const Trajectory & reference_trajectory,
-    const Odometry & kinematics, const Control & control_cmd,
-    const AccelWithCovarianceStamped & measured_acc);
-
-  /**
    * @brief Publish debug information
    */
-  void publish_debug_info();
+  void publish_debug_info(const geometry_msgs::msg::Pose & ego_pose);
+
+  /**
+   * @brief Generate error message based on validation status
+   */
+  std::string generate_error_message(const ControlValidatorStatus & s);
 
   /**
    * @brief Display validation status on terminal
@@ -188,8 +279,20 @@ private:
   void set_status(
     DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg) const;
 
+  /**
+   * @brief Infer autonomous control state
+   */
+  bool infer_autonomous_control_state(const OperationModeState::ConstSharedPtr);
+
+  /**
+   * @brief Postprocessing while keeping debug values
+   */
+  void validation_filtering(ControlValidatorStatus & res);
+
   // Subscribers and publishers
   rclcpp::Subscription<Control>::SharedPtr sub_control_cmd_;
+  autoware_utils::InterProcessPollingSubscriber<OperationModeState>::SharedPtr
+    sub_operational_state_;
   autoware_utils::InterProcessPollingSubscriber<Odometry>::SharedPtr sub_kinematics_;
   autoware_utils::InterProcessPollingSubscriber<Trajectory>::SharedPtr sub_reference_traj_;
   autoware_utils::InterProcessPollingSubscriber<Trajectory>::SharedPtr sub_predicted_traj_;
@@ -203,19 +306,10 @@ private:
   // system parameters
   int64_t diag_error_count_threshold_ = 0;
   bool display_on_terminal_ = true;
-
   Updater diag_updater_{this};
-
   ControlValidatorStatus validation_status_;
-  ValidationParams validation_params_;  // for thresholds
-  autoware::signal_processing::LowpassFilter1d vehicle_vel_{0.0};
-  autoware::signal_processing::LowpassFilter1d target_vel_{0.0};
-  AccelerationValidator acceleration_validator{*this};
-
-  bool hold_velocity_error_until_stop_{false};
-
   vehicle_info_utils::VehicleInfo vehicle_info_;
-
+  bool flag_autonomous_control_enabled_ = false;
   /**
    * @brief Check if all validation criteria are met
    * @param status Validation status
@@ -223,16 +317,18 @@ private:
    */
   static bool is_all_valid(const ControlValidatorStatus & status);
 
-  Trajectory::ConstSharedPtr current_reference_trajectory_;
-  Trajectory::ConstSharedPtr current_predicted_trajectory_;
-
-  Odometry::ConstSharedPtr current_kinematics_;
-  AccelWithCovarianceStamped::ConstSharedPtr acceleration_msg_;
-  Control::ConstSharedPtr control_cmd_msg_;
-
+  // debug
+  std::shared_ptr<ControlValidatorDebugMarkerPublisher> debug_pose_publisher_;
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
 
-  std::shared_ptr<ControlValidatorDebugMarkerPublisher> debug_pose_publisher_;
+  // individual validators
+  LatencyValidator latency_validator{*this};
+  LateralJerkValidator lateral_jerk_validator{*this};
+  TrajectoryValidator trajectory_validator{*this};
+  AccelerationValidator acceleration_validator{*this};
+  VelocityValidator velocity_validator{*this};
+  OverrunValidator overrun_validator{*this};
+  YawValidator yaw_validator{*this};
 };
 }  // namespace autoware::control_validator
 

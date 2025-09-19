@@ -19,6 +19,7 @@
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
+#include <rclcpp/duration.hpp>
 
 #include <boost/geometry/algorithms/distance.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
@@ -41,8 +42,11 @@
 namespace autoware::behavior_velocity_planner
 {
 TrafficLightModule::TrafficLightModule(
-  const int64_t lane_id, const lanelet::TrafficLight & traffic_light_reg_elem,
-  lanelet::ConstLanelet lane, const PlannerParam & planner_param, const rclcpp::Logger logger,
+  const int64_t lane_id,
+  const lanelet::TrafficLight & traffic_light_reg_elem,  //
+  lanelet::ConstLanelet lane,                            //
+  const lanelet::ConstLineString3d & initial_stop_line,  //
+  const PlannerParam & planner_param, const rclcpp::Logger logger,
   const rclcpp::Clock::SharedPtr clock,
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
@@ -51,6 +55,7 @@ TrafficLightModule::TrafficLightModule(
   lane_id_(lane_id),
   traffic_light_reg_elem_(traffic_light_reg_elem),
   lane_(lane),
+  stop_line_(initial_stop_line),
   state_(State::APPROACH),
   debug_data_(),
   is_prev_state_stop_(false)
@@ -68,14 +73,10 @@ bool TrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
 
   const auto & self_pose = planner_data_->current_odometry;
 
-  // Get lanelet2 stop lines.
-  lanelet::ConstLineString3d lanelet_stop_lines = *(traffic_light_reg_elem_.stopLine());
-
   // Calculate stop pose and insert index
   const auto stop_line = calcStopPointAndInsertIndex(
-    input_path, lanelet_stop_lines,
-    planner_param_.stop_margin + planner_data_->vehicle_info_.max_longitudinal_offset_m,
-    planner_data_->stop_line_extend_length);
+    input_path, stop_line_,
+    planner_param_.stop_margin + planner_data_->vehicle_info_.max_longitudinal_offset_m);
 
   if (!stop_line.has_value()) {
     RCLCPP_WARN_STREAM_ONCE(
@@ -124,8 +125,42 @@ bool TrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
       stop_signal_received_time_ptr_
         ? std::max((clock_->now() - *stop_signal_received_time_ptr_).seconds(), 0.0)
         : 0.0;
-    const bool to_be_stopped =
+    bool to_be_stopped =
       is_stop_signal && (is_prev_state_stop_ || time_diff > planner_param_.stop_time_hysteresis);
+
+    debug_data_.is_remaining_time_used = false;
+    if (planner_param_.v2i_use_remaining_time) {
+      const bool will_traffic_light_turn_red_before_reaching_stop_line =
+        willTrafficLightTurnRedBeforeReachingStopLine(signed_arc_length_to_stop_point);
+      if (will_traffic_light_turn_red_before_reaching_stop_line && !is_stop_signal) {
+        debug_data_.is_remaining_time_used = true;
+      }
+
+      to_be_stopped = to_be_stopped || will_traffic_light_turn_red_before_reaching_stop_line;
+    }
+
+    // Check if the vehicle is stopped and within a certain distance to the stop line
+    if (planner_data_->isVehicleStopped()) {
+      const double dist_to_stop = signed_arc_length_to_stop_point;
+      if (
+        planner_param_.min_behind_dist_to_stop_for_restart_suppression < dist_to_stop &&
+        dist_to_stop < planner_param_.max_behind_dist_to_stop_for_restart_suppression &&
+        is_stop_signal) {
+        // Suppress restart
+        RCLCPP_DEBUG(logger_, "Suppressing restart due to proximity to stop line.");
+        const auto & ego_pos = planner_data_->current_odometry->pose.position;
+        const double dist =
+          autoware::motion_utils::calcSignedArcLength(input_path.points, ego_pos, 0L);
+        const auto pose_opt =
+          autoware::motion_utils::calcLongitudinalOffsetPose(input_path.points, 0L, dist);
+        if (pose_opt.has_value()) {
+          const auto restart_suppression_point =
+            Eigen::Vector2d(pose_opt.value().position.x, pose_opt.value().position.y);
+          *path = insertStopPose(input_path, stop_line.value().first, restart_suppression_point);
+          return true;
+        }
+      }
+    }
 
     setSafe(!to_be_stopped);
     if (isActivated()) {
@@ -139,7 +174,8 @@ bool TrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
       is_prev_state_stop_ = true;
     }
     return true;
-  } else if (state_ == State::GO_OUT) {
+  }
+  if (state_ == State::GO_OUT) {
     // Initialize if vehicle is far from stop_line
     constexpr bool use_initialization_after_start = true;
     constexpr double restart_length = 1.0;
@@ -166,10 +202,7 @@ bool TrafficLightModule::isStopSignal()
   //   REAL ENVIRONMENT: it will STOP for safety in cases such that traffic light
   //   recognition is not working properly or the map is incorrect.
   if (!traffic_signal_stamp_) {
-    if (planner_data_->is_simulation) {
-      return false;
-    }
-    return true;
+    return !planner_data_->is_simulation;
   }
 
   // Stop if the traffic signal information has timed out
@@ -181,11 +214,38 @@ bool TrafficLightModule::isStopSignal()
   return autoware::traffic_light_utils::isTrafficSignalStop(lane_, looking_tl_state_);
 }
 
+bool TrafficLightModule::willTrafficLightTurnRedBeforeReachingStopLine(
+  const double & distance_to_stop_line) const
+{
+  double ego_velocity = planner_data_->current_velocity->twist.linear.x;
+  double predicted_passing_stop_line_time = ego_velocity > planner_param_.v2i_velocity_threshold
+                                              ? distance_to_stop_line / ego_velocity
+                                              : planner_param_.v2i_required_time_to_departure;
+
+  double seconds = predicted_passing_stop_line_time + planner_param_.v2i_last_time_allowed_to_pass;
+
+  rclcpp::Time now = clock_->now();
+  // find stop signal from looking_tl_state_.predictions by using isTrafficSignalStop
+  for (const auto & prediction : looking_tl_state_.predictions) {
+    if (isTrafficSignalRedStop(lane_, prediction.simultaneous_elements)) {
+      rclcpp::Time predicted_time = prediction.predicted_stamp;
+      rclcpp::Duration remaining_time = predicted_time - now;
+      if (remaining_time.seconds() < seconds) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 void TrafficLightModule::updateTrafficSignal()
 {
   TrafficSignalStamped signal;
   if (!findValidTrafficSignal(signal)) {
     // Don't stop if it never receives traffic light topic.
+    // Reset looking_tl_state
+    looking_tl_state_.elements.clear();
+    looking_tl_state_.traffic_light_group_id = 0;
     return;
   }
 
@@ -193,7 +253,6 @@ void TrafficLightModule::updateTrafficSignal()
 
   // Found signal associated with the lanelet
   looking_tl_state_ = signal.signal;
-  return;
 }
 
 bool TrafficLightModule::isPassthrough(const double & signed_arc_length) const
@@ -302,6 +361,11 @@ autoware_internal_planning_msgs::msg::PathWithLaneId TrafficLightModule::insertS
     0.0 /*shift distance*/, "traffic_light");
 
   return modified_path;
+}
+
+void TrafficLightModule::updateStopLine(const lanelet::ConstLineString3d & stop_line)
+{
+  stop_line_ = stop_line;
 }
 
 }  // namespace autoware::behavior_velocity_planner

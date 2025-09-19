@@ -19,8 +19,8 @@
 #include "types.hpp"
 
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
-#include <autoware/motion_velocity_planner_common_universe/plugin_module_interface.hpp>
-#include <autoware/motion_velocity_planner_common_universe/velocity_planning_result.hpp>
+#include <autoware/motion_velocity_planner_common/plugin_module_interface.hpp>
+#include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <memory>
@@ -41,6 +41,12 @@ public:
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
     const std::shared_ptr<const PlannerData> planner_data) override;
   std::string get_module_name() const override { return module_name_; }
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    RequiredSubscriptionInfo required_subscription_info;
+    required_subscription_info.predicted_objects = true;
+    return required_subscription_info;
+  }
 
 private:
   visualization_msgs::msg::MarkerArray create_debug_marker_array();

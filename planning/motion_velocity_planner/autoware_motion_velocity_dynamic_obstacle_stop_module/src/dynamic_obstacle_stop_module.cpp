@@ -25,6 +25,7 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/parameter.hpp>
+#include <autoware_utils/ros/published_time_publisher.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 
@@ -123,7 +124,7 @@ VelocityPlanningResult DynamicObstacleStopModule::plan(
   dynamic_obstacle_stop::EgoData ego_data;
   ego_data.pose = planner_data->current_odometry.pose.pose;
   ego_data.trajectory = smoothed_trajectory_points;
-  autoware::motion_utils::removeOverlapPoints(ego_data.trajectory);
+  ego_data.trajectory = autoware::motion_utils::removeOverlapPoints(ego_data.trajectory);
   ego_data.first_trajectory_idx =
     autoware::motion_utils::findNearestSegmentIndex(ego_data.trajectory, ego_data.pose.position);
   ego_data.longitudinal_offset_to_first_trajectory_idx =

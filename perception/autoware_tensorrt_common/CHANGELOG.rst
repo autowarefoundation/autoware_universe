@@ -2,6 +2,54 @@
 Changelog for package autoware_tensorrt_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* chore(autoware_tensorrt_common): improved logging when loading plugins (`#10605 <https://github.com/autowarefoundation/autoware_universe/issues/10605>`_)
+  chore: added a print with the cause of the error in case loading the plugins fails
+* Contributors: Kenzo Lobos Tsunekawa
+
+0.46.0 (2025-06-20)
+-------------------
+
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* chore: perception code owner update (`#10645 <https://github.com/autowarefoundation/autoware_universe/issues/10645>`_)
+  * chore: update maintainers in multiple perception packages
+  * Revert "chore: update maintainers in multiple perception packages"
+  This reverts commit f2838c33d6cd82bd032039e2a12b9cb8ba6eb584.
+  * chore: update maintainers in multiple perception packages
+  * chore: add Kok Seang Tan as maintainer in multiple perception packages
+  ---------
+* perf(autoware_tensorrt_common): set cudaSetDeviceFlags explicitly (`#10523 <https://github.com/autowarefoundation/autoware_universe/issues/10523>`_)
+  * Synchronize CUDA stream by blocking instead of spin
+  * Use blocking-sync in BEVFusion
+  * Call cudaSetDeviceFlags in tensorrt_common
+* Contributors: Taekjin LEE, TaikiYamada4, prime number
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat: should be using NvInferRuntime.h (`#10399 <https://github.com/autowarefoundation/autoware_universe/issues/10399>`_)
+* feat(autoware_tenssort_common): validate TensorRT engine version for cached engine (`#10320 <https://github.com/autowarefoundation/autoware_universe/issues/10320>`_)
+  * autoware_tenssort_common): validate TensorRT engine version for cached engine
+  * style(autoware_tensorrt_common): typo
+  Co-authored-by: Kenzo Lobos Tsunekawa <kenzo.lobos@tier4.jp>
+  * style(autoware_tensorrt_common): typo
+  Co-authored-by: Kenzo Lobos Tsunekawa <kenzo.lobos@tier4.jp>
+  * style(autoware_tensorrt_common): typo
+  Co-authored-by: Kenzo Lobos Tsunekawa <kenzo.lobos@tier4.jp>
+  * docs(autoware_tensorrt_common): add source
+  ---------
+  Co-authored-by: Kenzo Lobos Tsunekawa <kenzo.lobos@tier4.jp>
+* Contributors: Amadeusz Szymko, Ryohsuke Mitsudome, Yuxuan Liu
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

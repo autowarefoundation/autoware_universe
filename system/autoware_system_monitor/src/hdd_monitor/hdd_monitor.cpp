@@ -30,6 +30,8 @@
 
 #include <fmt/format.h>
 #include <stdio.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 #include <algorithm>
 #include <cstdio>
@@ -38,12 +40,30 @@
 #include <utility>
 #include <vector>
 
+namespace
+{
+
+constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/hdd_reader.sock";
+
+bool is_non_scsi_device(const std::string & device_name)
+{
+  // cspell:disable
+  // clang-format off
+  return (boost::starts_with(device_name, "/dev/nvme") ||   // NVMe SSD
+          boost::starts_with(device_name, "/dev/mmcblk"));  // SD card, eMMC
+  // cspell:enable
+  // clang-format on
+}
+
+}  // namespace
+
 namespace bp = boost::process;
 
 HddMonitor::HddMonitor(const rclcpp::NodeOptions & options)
 : Node("hdd_monitor", options),
   updater_(this),
-  hdd_reader_port_(declare_parameter<int>("hdd_reader_port", 7635)),
+  hdd_reader_socket_path_(
+    declare_parameter<std::string>("hdd_reader_socket_path", DEFAULT_SOCKET_PATH)),
   last_hdd_stat_update_time_{0, 0, this->get_clock()->get_clock_type()}
 {
   using namespace std::literals::chrono_literals;
@@ -72,6 +92,12 @@ HddMonitor::HddMonitor(const rclcpp::NodeOptions & options)
 
   // start HDD transfer measurement
   startHddTransferMeasurement();
+
+  // Publisher
+  rclcpp::QoS durable_qos{1};
+  durable_qos.transient_local();
+  pub_hdd_status_ =
+    this->create_publisher<tier4_external_api_msgs::msg::HddStatus>("~/hdd_status", durable_qos);
 
   timer_ = rclcpp::create_timer(this, get_clock(), 1s, std::bind(&HddMonitor::onTimer, this));
 }
@@ -243,6 +269,8 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
     return;
   }
 
+  hdd_partition_statuses_.clear();
+
   int hdd_index = 0;
   int whole_level = DiagStatus::OK;
   std::string error_str = "";
@@ -279,8 +307,12 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
     bp::ipstream is_err{std::move(err_pipe)};
 
     // Invoke shell to use shell wildcard expansion
+    // because the very initial version of this code used wildcard expansion
+    // to handle incomplete device file names,
+    // but we don't need wildcard expansion anymore after a specification change.
+    // The string "part_device_" has a full device file name derived from the mount point.
     bp::child c(
-      "/bin/sh", "-c", fmt::format("df -Pm {}*", itr->second.part_device_.c_str()),
+      "/bin/sh", "-c", fmt::format("df -Pm {}", itr->second.part_device_.c_str()),
       bp::std_out > is_out, bp::std_err > is_err);
     c.wait();
 
@@ -298,7 +330,12 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
     std::string line;
     int index = 0;
     std::vector<std::string> list;
+    std::string filesystem;
+    int size;
+    int used;
     int avail;
+    int capacity;
+    std::string mounted;
 
     while (std::getline(is_out, line) && !line.empty()) {
       // Skip header
@@ -308,13 +345,31 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
       }
 
       boost::split(list, line, boost::is_space(), boost::token_compress_on);
-
+      bool is_line_read_error = false;
       try {
-        avail = std::stoi(list[3].c_str());
+        filesystem = list.at(0);
+        size = std::stoi(list.at(1));
+        used = std::stoi(list.at(2));
+        avail = std::stoi(list.at(3));
+        std::string capacity_str = list.at(4);
+        if (!capacity_str.empty() && capacity_str.back() == '%') {
+          capacity_str.pop_back();
+        }
+        capacity = std::stoi(capacity_str);
+        mounted = list.at(5);
+        if (list.size() > 6) {
+          std::string::size_type pos = line.find("% /");
+          if (pos != std::string::npos) {
+            mounted = line.substr(pos + 2);  // 2 is "% " length
+          }
+        }
       } catch (std::exception & e) {
+        is_line_read_error = true;
+        size = -1;
+        used = -1;
         avail = -1;
+        capacity = -1;
         error_str = e.what();
-        stat.add(fmt::format("HDD {}: status", hdd_index), "avail string error");
       }
 
       if (avail <= itr->second.free_error_) {
@@ -325,20 +380,25 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
         level = DiagStatus::OK;
       }
 
-      stat.add(fmt::format("HDD {}: status", hdd_index), usage_dict_.at(level));
-      stat.add(fmt::format("HDD {}: filesystem", hdd_index), list[0].c_str());
-      stat.add(fmt::format("HDD {}: size", hdd_index), (list[1] + " MiB").c_str());
-      stat.add(fmt::format("HDD {}: used", hdd_index), (list[2] + " MiB").c_str());
-      stat.add(fmt::format("HDD {}: avail", hdd_index), (list[3] + " MiB").c_str());
-      stat.add(fmt::format("HDD {}: use", hdd_index), list[4].c_str());
-      std::string mounted_ = list[5];
-      if (list.size() > 6) {
-        std::string::size_type pos = line.find("% /");
-        if (pos != std::string::npos) {
-          mounted_ = line.substr(pos + 2);  // 2 is "% " length
-        }
+      if (is_line_read_error) {
+        stat.add(fmt::format("HDD {}: status", hdd_index), "string error");
+      } else {
+        stat.add(fmt::format("HDD {}: status", hdd_index), usage_dict_.at(level));
+        stat.add(fmt::format("HDD {}: filesystem", hdd_index), filesystem.c_str());
+        stat.add(fmt::format("HDD {}: size", hdd_index), fmt::format("{} MiB", size));
+        stat.add(fmt::format("HDD {}: used", hdd_index), fmt::format("{} MiB", used));
+        stat.add(fmt::format("HDD {}: avail", hdd_index), fmt::format("{} MiB", avail));
+        stat.add(fmt::format("HDD {}: use", hdd_index), fmt::format("{}", capacity));
+        stat.add(fmt::format("HDD {}: mounted on", hdd_index), mounted.c_str());
+
+        auto & hdd_partition_status = hdd_partition_statuses_.emplace_back();
+        hdd_partition_status.size = size;
+        hdd_partition_status.used = used;
+        hdd_partition_status.avail = avail;
+        hdd_partition_status.capacity = capacity;
+        hdd_partition_status.filesystem = filesystem;
+        hdd_partition_status.mounted_on = mounted;
       }
-      stat.add(fmt::format("HDD {}: mounted on", hdd_index), mounted_.c_str());
 
       whole_level = std::max(whole_level, level);
       ++index;
@@ -583,6 +643,8 @@ void HddMonitor::onTimer()
   updateHddConnections();
   updateHddInfoList();
   updateHddStatistics();
+
+  publishHddStatus();
 }
 
 void HddMonitor::updateHddInfoList()
@@ -592,7 +654,7 @@ void HddMonitor::updateHddInfoList()
   connect_diag_.clearSummary();
 
   // Create a new socket
-  int sock = socket(AF_INET, SOCK_STREAM, 0);
+  int sock = socket(AF_UNIX, SOCK_STREAM, 0);
   if (sock < 0) {
     connect_diag_.summary(DiagStatus::ERROR, "socket error");
     connect_diag_.add("socket", strerror(errno));
@@ -611,12 +673,10 @@ void HddMonitor::updateHddInfoList()
     return;
   }
 
-  // Connect the socket referred to by the file descriptor
-  sockaddr_in addr;
-  memset(&addr, 0, sizeof(sockaddr_in));
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(hdd_reader_port_);
-  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  struct sockaddr_un addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sun_family = AF_UNIX;
+  strncpy(addr.sun_path, hdd_reader_socket_path_.c_str(), sizeof(addr.sun_path) - 1);
   // cppcheck-suppress cstyleCast
   ret = connect(sock, (struct sockaddr *)&addr, sizeof(addr));
   if (ret < 0) {
@@ -810,7 +870,7 @@ void HddMonitor::updateHddConnections()
           const std::regex pattern("\\d+$");
           hdd_param.second.disk_device_ =
             std::regex_replace(hdd_param.second.part_device_, pattern, "");
-        } else if (boost::starts_with(hdd_param.second.part_device_, "/dev/nvme")) {
+        } else if (is_non_scsi_device(hdd_param.second.part_device_)) {
           const std::regex pattern("p\\d+$");
           hdd_param.second.disk_device_ =
             std::regex_replace(hdd_param.second.part_device_, pattern, "");
@@ -834,7 +894,7 @@ void HddMonitor::updateHddConnections()
 int HddMonitor::unmountDevice(std::string & device)
 {
   // Create a new socket
-  int sock = socket(AF_INET, SOCK_STREAM, 0);
+  int sock = socket(AF_UNIX, SOCK_STREAM, 0);
   if (sock < 0) {
     RCLCPP_ERROR(get_logger(), "socket create error. %s", strerror(errno));
     return -1;
@@ -852,11 +912,10 @@ int HddMonitor::unmountDevice(std::string & device)
   }
 
   // Connect the socket referred to by the file descriptor
-  sockaddr_in addr;
-  memset(&addr, 0, sizeof(sockaddr_in));
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(hdd_reader_port_);
-  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  struct sockaddr_un addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sun_family = AF_UNIX;
+  strncpy(addr.sun_path, hdd_reader_socket_path_.c_str(), sizeof(addr.sun_path) - 1);
   // cppcheck-suppress cstyleCast
   ret = connect(sock, (struct sockaddr *)&addr, sizeof(addr));
   if (ret < 0) {
@@ -923,6 +982,43 @@ int HddMonitor::unmountDevice(std::string & device)
     return -1;
   }
   return responses[0];
+}
+
+void HddMonitor::publishHddStatus()
+{
+  tier4_external_api_msgs::msg::HddStatus hdd_status;
+  hdd_status.stamp = this->now();
+  hdd_status.hostname = hostname_;
+
+  for (const auto & hdd_partition_status : hdd_partition_statuses_) {
+    auto & partition = hdd_status.partitions.emplace_back();
+    partition.size = hdd_partition_status.size;
+    partition.used = hdd_partition_status.used;
+    partition.avail = hdd_partition_status.avail;
+    partition.capacity = hdd_partition_status.capacity;
+    partition.filesystem = hdd_partition_status.filesystem;
+    partition.mounted_on = hdd_partition_status.mounted_on;
+  }
+
+  int index = 0;
+  for (auto itr = hdd_params_.begin(); itr != hdd_params_.end(); ++itr, ++index) {
+    if (!hdd_connected_flags_[itr->first]) {
+      continue;
+    }
+
+    float read_data_rate = hdd_stats_[itr->first].read_data_rate_MBs_;
+    float write_data_rate = hdd_stats_[itr->first].write_data_rate_MBs_;
+    float read_iops = hdd_stats_[itr->first].read_iops_;
+    float write_iops = hdd_stats_[itr->first].write_iops_;
+
+    auto & device = hdd_status.devices.emplace_back();
+    device.name = itr->second.disk_device_;
+    device.read_data_rate = read_data_rate;
+    device.write_data_rate = write_data_rate;
+    device.read_iops = read_iops;
+    device.write_iops = write_iops;
+  }
+  pub_hdd_status_->publish(hdd_status);
 }
 
 #include <rclcpp_components/register_node_macro.hpp>

@@ -17,8 +17,8 @@
 
 #include "parameters.hpp"
 
-#include <autoware/motion_velocity_planner_common_universe/plugin_module_interface.hpp>
-#include <autoware/motion_velocity_planner_common_universe/velocity_planning_result.hpp>
+#include <autoware/motion_velocity_planner_common/plugin_module_interface.hpp>
+#include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <autoware_utils/ros/self_pose_listener.hpp>
 #include <autoware_utils/ros/transform_listener.hpp>
@@ -53,6 +53,14 @@ public:
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
     const std::shared_ptr<const PlannerData> planner_data) override;
   std::string get_module_name() const override { return module_name_; }
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    RequiredSubscriptionInfo required_subscription_info;
+    required_subscription_info.predicted_objects = true;
+    required_subscription_info.no_ground_pointcloud = true;
+    required_subscription_info.occupancy_grid_map = true;
+    return required_subscription_info;
+  }
 
 private:
   inline static const std::string ns_ = "obstacle_velocity_limiter";

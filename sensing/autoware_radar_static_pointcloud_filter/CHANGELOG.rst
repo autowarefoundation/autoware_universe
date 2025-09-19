@@ -2,6 +2,38 @@
 Changelog for package autoware_radar_static_pointcloud_filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* chore(radar): delete maintainer for radar packages (`#10815 <https://github.com/autowarefoundation/autoware_universe/issues/10815>`_)
+  * chore(radar): delete maintainer name
+  * fix typo
+  ---------
+* Contributors: Satoshi Tanaka, TaikiYamada4
+
+0.45.0 (2025-05-22)
+-------------------
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(autoware_radar_static_pointcloud_filter): lookup timestamp and er… (`#10350 <https://github.com/autowarefoundation/autoware_universe/issues/10350>`_)
+  fix(autoware_radar_static_pointcloud_filter): lookup timestamp and error handling
+* fix(autoware_radar_static_pointcloud_filter): add dependencies and use correct qos (`#10328 <https://github.com/autowarefoundation/autoware_universe/issues/10328>`_)
+  * fix(autoware_radar_static_pointcloud_filter): add dependencies
+  * fix(autoware_radar_static_pointcloud_filter): use correct qos
+  ---------
+* Contributors: Mehmet Emin BAŞOĞLU, Ryohsuke Mitsudome
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

@@ -36,6 +36,8 @@ MrmHandler::MrmHandler(const rclcpp::NodeOptions & options) : Node("mrm_handler"
   param_.use_pull_over = declare_parameter<bool>("use_pull_over", false);
   param_.use_comfortable_stop = declare_parameter<bool>("use_comfortable_stop", false);
   param_.turning_hazard_on.emergency = declare_parameter<bool>("turning_hazard_on.emergency", true);
+  param_.turning_indicator_on.emergency =
+    declare_parameter<bool>("turning_indicator_on.emergency", true);
 
   using std::placeholders::_1;
 
@@ -46,6 +48,8 @@ MrmHandler::MrmHandler(const rclcpp::NodeOptions & options) : Node("mrm_handler"
       std::bind(&MrmHandler::onOperationModeAvailability, this, _1));
 
   // Publisher
+  pub_turn_indicator_cmd_ = create_publisher<autoware_vehicle_msgs::msg::TurnIndicatorsCommand>(
+    "~/output/turn_indicators", rclcpp::QoS{1});
   pub_hazard_cmd_ = create_publisher<autoware_vehicle_msgs::msg::HazardLightsCommand>(
     "~/output/hazard", rclcpp::QoS{1});
   pub_gear_cmd_ =
@@ -88,28 +92,43 @@ void MrmHandler::onOperationModeAvailability(
 {
   stamp_operation_mode_availability_ = this->now();
   operation_mode_availability_ = msg;
-  const bool skip_emergency_holding_check =
-    !param_.use_emergency_holding || is_emergency_holding_ || !isOperationModeAutonomous();
+  const bool skip_emergency_holding_check = !param_.use_emergency_holding || is_emergency_holding_;
 
   if (skip_emergency_holding_check) {
     return;
   }
 
-  if (msg->autonomous) {
-    stamp_autonomous_become_unavailable_.reset();
+  if (isAvailableCurrentOperationMode()) {
+    stamp_current_operation_mode_become_unavailable_.reset();
     return;
   }
 
   // If no timestamp is available, the ego autonomous mode just became unavailable and the current
   // time is recorded.
-  stamp_autonomous_become_unavailable_ = (!stamp_autonomous_become_unavailable_.has_value())
-                                           ? this->now()
-                                           : stamp_autonomous_become_unavailable_;
+  stamp_current_operation_mode_become_unavailable_ =
+    (!stamp_current_operation_mode_become_unavailable_.has_value())
+      ? this->now()
+      : stamp_current_operation_mode_become_unavailable_;
 
   // Check if autonomous mode unavailable time is larger than timeout threshold.
   const auto emergency_duration =
-    (this->now() - stamp_autonomous_become_unavailable_.value()).seconds();
+    (this->now() - stamp_current_operation_mode_become_unavailable_.value()).seconds();
   is_emergency_holding_ = (emergency_duration > param_.timeout_emergency_recovery);
+}
+
+void MrmHandler::publishTurnIndicatorCmd()
+{
+  using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
+  TurnIndicatorsCommand msg;
+
+  msg.stamp = this->now();
+  if (param_.turning_indicator_on.emergency && isEmergency()) {
+    msg.command = TurnIndicatorsCommand::DISABLE;
+  } else {
+    msg.command = TurnIndicatorsCommand::NO_COMMAND;
+  }
+
+  pub_turn_indicator_cmd_->publish(msg);
 }
 
 void MrmHandler::publishHazardCmd()
@@ -254,7 +273,7 @@ bool MrmHandler::requestMrmBehavior(
 
   switch (mrm_behavior) {
     case MrmState::NONE:
-      RCLCPP_WARN(this->get_logger(), "MRM behavior is None. Do nothing.");
+      RCLCPP_DEBUG(this->get_logger(), "MRM behavior is None. Do nothing.");
       return true;
     case MrmState::PULL_OVER: {
       future = client_mrm_pull_over_->async_send_request(request).future.share();
@@ -358,6 +377,7 @@ void MrmHandler::onTimer()
 
   // Publish
   publishMrmState();
+  publishTurnIndicatorCmd();
   publishHazardCmd();
   publishGearCmd();
   publishEmergencyHolding();
@@ -408,12 +428,11 @@ void MrmHandler::updateMrmState()
 
   // Get mode
   const bool is_control_mode_autonomous = isControlModeAutonomous();
-  const bool is_operation_mode_autonomous = isOperationModeAutonomous();
 
   // State Machine
   switch (mrm_state_.state) {
     case MrmState::NORMAL:
-      if (is_control_mode_autonomous && is_operation_mode_autonomous) {
+      if (is_control_mode_autonomous) {
         transitionTo(MrmState::MRM_OPERATING);
       }
       return;
@@ -442,7 +461,6 @@ void MrmHandler::updateMrmState()
       const auto msg = "invalid state: " + std::to_string(mrm_state_.state);
       throw std::runtime_error(msg);
     }
-      return;
   }
 }
 
@@ -535,9 +553,9 @@ bool MrmHandler::isStopped()
   return (std::abs(odom->twist.twist.linear.x) < th_stopped_velocity);
 }
 
-bool MrmHandler::isEmergency() const
+bool MrmHandler::isEmergency()
 {
-  return !operation_mode_availability_->autonomous || is_emergency_holding_ ||
+  return !isAvailableCurrentOperationMode() || is_emergency_holding_ ||
          is_operation_mode_availability_timeout;
 }
 
@@ -547,14 +565,6 @@ bool MrmHandler::isControlModeAutonomous()
   auto mode = sub_control_mode_.take_data();
   if (mode == nullptr) return false;
   return mode->mode == ControlModeReport::AUTONOMOUS;
-}
-
-bool MrmHandler::isOperationModeAutonomous()
-{
-  using autoware_adapi_v1_msgs::msg::OperationModeState;
-  auto state = sub_operation_mode_state_.take_data();
-  if (state == nullptr) return false;
-  return state->mode == OperationModeState::AUTONOMOUS;
 }
 
 bool MrmHandler::isPullOverStatusAvailable()
@@ -584,6 +594,33 @@ bool MrmHandler::isArrivedAtGoal()
   auto state = sub_operation_mode_state_.take_data();
   if (state == nullptr) return false;
   return state->mode == OperationModeState::STOP;
+}
+
+bool MrmHandler::isAvailableCurrentOperationMode()
+{
+  auto operation_mode = getCurrentOperationMode();
+  switch (operation_mode) {
+    case autoware_adapi_v1_msgs::msg::OperationModeState::UNKNOWN:
+      return false;
+    case autoware_adapi_v1_msgs::msg::OperationModeState::STOP:
+      return operation_mode_availability_->stop;
+    case autoware_adapi_v1_msgs::msg::OperationModeState::AUTONOMOUS:
+      return operation_mode_availability_->autonomous;
+    case autoware_adapi_v1_msgs::msg::OperationModeState::LOCAL:
+      return operation_mode_availability_->local;
+    case autoware_adapi_v1_msgs::msg::OperationModeState::REMOTE:
+      return operation_mode_availability_->remote;
+    default:
+      RCLCPP_WARN(this->get_logger(), "invalid operation mode: %d", operation_mode);
+      return false;
+  }
+}
+
+autoware_adapi_v1_msgs::msg::OperationModeState::_mode_type MrmHandler::getCurrentOperationMode()
+{
+  auto state = sub_operation_mode_state_.take_data();
+  if (state == nullptr) return autoware_adapi_v1_msgs::msg::OperationModeState::UNKNOWN;
+  return state->mode;
 }
 
 }  // namespace autoware::mrm_handler

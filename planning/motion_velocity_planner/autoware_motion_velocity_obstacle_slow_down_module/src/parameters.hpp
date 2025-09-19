@@ -20,6 +20,7 @@
 #include "types.hpp"
 
 #include <autoware_utils/ros/parameter.hpp>
+#include <autoware_utils_rclcpp/parameter.hpp>
 
 #include <string>
 #include <unordered_map>
@@ -56,17 +57,6 @@ struct CommonParam
 
 struct ObstacleFilteringParam
 {
-  struct PointcloudObstacleFilteringParam
-  {
-    double pointcloud_voxel_grid_x{};
-    double pointcloud_voxel_grid_y{};
-    double pointcloud_voxel_grid_z{};
-    double pointcloud_cluster_tolerance{};
-    double pointcloud_min_cluster_size{};
-    double pointcloud_max_cluster_size{};
-  };
-
-  PointcloudObstacleFilteringParam pointcloud_obstacle_filtering_param;
   std::vector<uint8_t> object_types{};
 
   bool use_pointcloud{false};
@@ -96,20 +86,59 @@ struct ObstacleFilteringParam
       node, "obstacle_slow_down.obstacle_filtering.successive_num_to_entry_slow_down_condition");
     successive_num_to_exit_slow_down_condition = get_or_declare_parameter<int>(
       node, "obstacle_slow_down.obstacle_filtering.successive_num_to_exit_slow_down_condition");
+  }
+};
 
-    pointcloud_obstacle_filtering_param.pointcloud_voxel_grid_x = get_or_declare_parameter<double>(
-      node, "obstacle_slow_down.obstacle_filtering.pointcloud.pointcloud_voxel_grid_x");
-    pointcloud_obstacle_filtering_param.pointcloud_voxel_grid_y = get_or_declare_parameter<double>(
-      node, "obstacle_slow_down.obstacle_filtering.pointcloud.pointcloud_voxel_grid_y");
-    pointcloud_obstacle_filtering_param.pointcloud_voxel_grid_z = get_or_declare_parameter<double>(
-      node, "obstacle_slow_down.obstacle_filtering.pointcloud.pointcloud_voxel_grid_z");
-    pointcloud_obstacle_filtering_param.pointcloud_cluster_tolerance =
-      get_or_declare_parameter<double>(
-        node, "obstacle_slow_down.obstacle_filtering.pointcloud.pointcloud_cluster_tolerance");
-    pointcloud_obstacle_filtering_param.pointcloud_min_cluster_size = get_or_declare_parameter<int>(
-      node, "obstacle_slow_down.obstacle_filtering.pointcloud.pointcloud_min_cluster_size");
-    pointcloud_obstacle_filtering_param.pointcloud_max_cluster_size = get_or_declare_parameter<int>(
-      node, "obstacle_slow_down.obstacle_filtering.pointcloud.pointcloud_max_cluster_size");
+/// @brief Get the parameter defined for a specific object label, or the default value if it was
+/// not specified
+template <class T>
+auto get_object_parameter(
+  rclcpp::Node & node, const std::string & ns, const std::string & object_label,
+  const std::string & param)
+{
+  using autoware_utils::get_or_declare_parameter;
+  try {
+    return get_or_declare_parameter<T>(node, ns + object_label + "." + param);
+  } catch (const std::exception &) {
+    return get_or_declare_parameter<T>(node, ns + "default." + param);
+  }
+}
+
+struct VelocityInterpolationParam
+{
+  double min_lat_margin;
+  double max_lat_margin;
+  double min_ego_velocity;
+  double max_ego_velocity;
+};
+
+static const std::unordered_map<uint8_t, std::string> object_types_maps = {
+  {ObjectClassification::UNKNOWN, "unknown"}, {ObjectClassification::CAR, "car"},
+  {ObjectClassification::TRUCK, "truck"},     {ObjectClassification::BUS, "bus"},
+  {ObjectClassification::TRAILER, "trailer"}, {ObjectClassification::MOTORCYCLE, "motorcycle"},
+  {ObjectClassification::BICYCLE, "bicycle"}, {ObjectClassification::PEDESTRIAN, "pedestrian"}};
+static const std::unordered_map<Side, std::string> side_to_string_map = {
+  {Side::Left, "left"}, {Side::Right, "right"}};
+static const std::unordered_map<Motion, std::string> motion_to_string_map = {
+  {Motion::Moving, "moving"}, {Motion::Static, "static"}};
+
+struct ObjectTypeSpecificParams
+{
+  std::array<
+    std::array<VelocityInterpolationParam, static_cast<size_t>(Motion::Count)>,
+    static_cast<size_t>(Side::Count)>
+    velocity_params;
+  double wheel_off_track_scale{};
+
+  VelocityInterpolationParam & get_velocity_param(const Side side, const Motion motion)
+  {
+    return velocity_params[static_cast<size_t>(side)][static_cast<size_t>(motion)];
+  }
+
+  [[nodiscard]] VelocityInterpolationParam get_velocity_param(
+    const Side side, const Motion motion) const
+  {
+    return velocity_params[static_cast<size_t>(side)][static_cast<size_t>(motion)];
   }
 };
 
@@ -127,21 +156,8 @@ struct SlowDownPlanningParam
   double moving_object_speed_threshold{};
   double moving_object_hysteresis_range{};
 
-  std::vector<std::string> obstacle_labels{"default"};
-  std::vector<std::string> obstacle_moving_classification{"static", "moving"};
-  struct ObjectTypeSpecificParams
-  {
-    double min_lat_margin;
-    double max_lat_margin;
-    double min_ego_velocity;
-    double max_ego_velocity;
-  };
-  std::unordered_map<uint8_t, std::string> object_types_maps = {
-    {ObjectClassification::UNKNOWN, "unknown"}, {ObjectClassification::CAR, "car"},
-    {ObjectClassification::TRUCK, "truck"},     {ObjectClassification::BUS, "bus"},
-    {ObjectClassification::TRAILER, "trailer"}, {ObjectClassification::MOTORCYCLE, "motorcycle"},
-    {ObjectClassification::BICYCLE, "bicycle"}, {ObjectClassification::PEDESTRIAN, "pedestrian"}};
-  std::unordered_map<std::string, ObjectTypeSpecificParams> object_type_specific_param_map;
+  std::unordered_map<std::string, ObjectTypeSpecificParams>
+    object_type_specific_param_per_object_type;
 
   SlowDownPlanningParam() = default;
   explicit SlowDownPlanningParam(rclcpp::Node & node)
@@ -167,39 +183,36 @@ struct SlowDownPlanningParam
 
     const std::string param_prefix =
       "obstacle_slow_down.slow_down_planning.object_type_specified_params.";
-    const auto object_types =
-      get_or_declare_parameter<std::vector<std::string>>(node, param_prefix + "types");
 
-    for (const auto & type_str : object_types) {
-      for (const auto & movement_type : std::vector<std::string>{"moving", "static"}) {
-        ObjectTypeSpecificParams param{
-          get_or_declare_parameter<double>(
-            node, param_prefix + type_str + "." + movement_type + ".min_lat_margin"),
-          get_or_declare_parameter<double>(
-            node, param_prefix + type_str + "." + movement_type + ".max_lat_margin"),
-          get_or_declare_parameter<double>(
-            node, param_prefix + type_str + "." + movement_type + ".min_ego_velocity"),
-          get_or_declare_parameter<double>(
-            node, param_prefix + type_str + "." + movement_type + ".max_ego_velocity")};
+    const auto to_param_name = [&](const Side s, const Motion m, const std::string & str) {
+      return side_to_string_map.at(s) + "." + motion_to_string_map.at(m) + "." + str;
+    };
 
-        object_type_specific_param_map.emplace(type_str + "." + movement_type, param);
+    for (const auto & [_, type_str] : object_types_maps) {
+      ObjectTypeSpecificParams param{};
+      for (const auto side : {Side::Left, Side::Right}) {
+        for (const auto motion : {Motion::Moving, Motion::Static}) {
+          auto & p = param.get_velocity_param(side, motion);
+          p.min_lat_margin = get_object_parameter<double>(
+            node, param_prefix, type_str, to_param_name(side, motion, "min_lat_margin"));
+          p.max_lat_margin = get_object_parameter<double>(
+            node, param_prefix, type_str, to_param_name(side, motion, "max_lat_margin"));
+          p.min_ego_velocity = get_object_parameter<double>(
+            node, param_prefix, type_str, to_param_name(side, motion, "min_ego_velocity"));
+          p.max_ego_velocity = get_object_parameter<double>(
+            node, param_prefix, type_str, to_param_name(side, motion, "max_ego_velocity"));
+        }
       }
+      param.wheel_off_track_scale =
+        get_object_parameter<double>(node, param_prefix, type_str, "wheel_off_track_scale");
+      object_type_specific_param_per_object_type.emplace(type_str, param);
     }
   }
 
-  std::string get_param_type(const ObjectClassification label) const
+  const ObjectTypeSpecificParams & get_object_param(const ObjectClassification label) const
   {
-    const auto type_str = object_types_maps.at(label.label);
-    if (object_type_specific_param_map.count(type_str) == 0) {
-      return "default";
-    }
-    return type_str;
-  }
-  ObjectTypeSpecificParams get_object_param_by_label(
-    const ObjectClassification label, const bool is_obstacle_moving) const
-  {
-    const std::string movement_type = is_obstacle_moving ? "moving" : "static";
-    return object_type_specific_param_map.at(get_param_type(label) + "." + movement_type);
+    const auto & type_str = object_types_maps.at(label.label);
+    return object_type_specific_param_per_object_type.at(type_str);
   }
 };
 }  // namespace autoware::motion_velocity_planner

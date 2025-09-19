@@ -33,11 +33,11 @@ namespace autoware::behavior_path_planner
 {
 BezierPullOver::BezierPullOver(rclcpp::Node & node, const GoalPlannerParameters & parameters)
 : PullOverPlannerBase(node, parameters),
-  lane_departure_checker_{[&]() {
-    auto lane_departure_checker_params = lane_departure_checker::Param{};
-    lane_departure_checker_params.footprint_extra_margin =
+  boundary_departure_checker_{[&]() {
+    auto boundary_departure_checker_params = boundary_departure_checker::Param{};
+    boundary_departure_checker_params.footprint_extra_margin =
       parameters.lane_departure_check_expansion_margin;
-    return LaneDepartureChecker{lane_departure_checker_params, vehicle_info_};
+    return BoundaryDepartureChecker{boundary_departure_checker_params, vehicle_info_};
   }()},
   left_side_parking_(parameters.parking_policy == ParkingPolicy::LEFT_SIDE)
 {
@@ -56,9 +56,8 @@ std::optional<PullOverPath> BezierPullOver::plan(
   [[maybe_unused]] const double jerk_resolution =
     std::abs(max_jerk - min_jerk) / shift_sampling_num;
 
-  const auto road_lanes = utils::getExtendedCurrentLanesFromPath(
-    upstream_module_output.path, planner_data, backward_search_length, forward_search_length,
-    /*forward_only_in_route*/ false);
+  const auto road_lanes = goal_planner_utils::get_reference_lanelets_for_pullover(
+    upstream_module_output.path, planner_data, backward_search_length, forward_search_length);
 
   const auto pull_over_lanes = goal_planner_utils::getPullOverLanes(
     *route_handler, left_side_parking_, backward_search_length, forward_search_length);
@@ -184,9 +183,9 @@ std::vector<PullOverPath> BezierPullOver::generateBezierPath(
     -before_shifted_pull_over_distance);
 
   std::vector<std::tuple<double, double, double>> params;
-  const size_t n_sample_v_init = 3;
-  const size_t n_sample_v_final = 3;
-  const size_t n_sample_acc = 2;
+  const size_t n_sample_v_init = 2;
+  const size_t n_sample_v_final = 2;
+  const size_t n_sample_acc = 1;
   for (unsigned i = 0; i <= n_sample_v_init; ++i) {
     for (unsigned j = 0; j <= n_sample_v_final; j++) {
       for (unsigned k = 0; k <= n_sample_acc; k++) {
@@ -342,7 +341,7 @@ std::vector<PullOverPath> BezierPullOver::generateBezierPath(
         });
     });
     const bool is_in_lanes = std::invoke([&]() -> bool {
-      return !lane_departure_checker_.checkPathWillLeaveLane(
+      return !boundary_departure_checker_.checkPathWillLeaveLane(
         utils::transformToLanelets(combined_drivable), pull_over_path.parking_path());
     });
     if (!is_in_parking_lots && !is_in_lanes) {

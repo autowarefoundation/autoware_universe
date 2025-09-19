@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "scene_intersection.hpp"
-#include "scene_merge_from_private_road.hpp"
+#include "autoware/behavior_velocity_intersection_module/scene_intersection.hpp"
+#include "autoware/behavior_velocity_intersection_module/scene_merge_from_private_road.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/debug.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
@@ -286,6 +286,14 @@ visualization_msgs::msg::MarkerArray IntersectionModule::createDebugMarkerArray(
       debug::createPolygonMarkerArray(
         debug_data_.candidate_collision_ego_lane_polygon.value(),
         "candidate_collision_ego_lane_polygon", module_id_, now, 0.3, 0.0, 0.0, 0.5, 0.0, 0.0),
+      &debug_marker_array, now);
+  }
+
+  if (debug_data_.candidate_collision_object_polygon) {
+    append_marker_array(
+      debug::createPolygonMarkerArray(
+        debug_data_.candidate_collision_object_polygon.value(),
+        "candidate_collision_object_polygon", module_id_, now, 0.3, 0.0, 0.0, 0.5, 0.0, 0.0),
       &debug_marker_array, now);
   }
 

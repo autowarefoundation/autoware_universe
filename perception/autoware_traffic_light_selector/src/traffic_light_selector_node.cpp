@@ -14,13 +14,11 @@
 
 #include "traffic_light_selector_node.hpp"
 
-#include <opencv2/core/types.hpp>
-#include <opencv2/opencv.hpp>
-
 #include <sensor_msgs/msg/region_of_interest.hpp>
 
 #include <map>
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace autoware::traffic_light
@@ -28,8 +26,6 @@ namespace autoware::traffic_light
 
 TrafficLightSelectorNode::TrafficLightSelectorNode(const rclcpp::NodeOptions & node_options)
 : rclcpp::Node("traffic_light_selector_node", node_options),
-  tf_buffer_(get_clock()),
-  tf_listener_(tf_buffer_),
   detected_rois_sub_(this, "input/detected_rois", rclcpp::QoS{1}.get_rmw_qos_profile()),
   rough_rois_sub_(this, "input/rough_rois", rclcpp::QoS{1}.get_rmw_qos_profile()),
   expected_rois_sub_(this, "input/expect_rois", rclcpp::QoS{1}.get_rmw_qos_profile()),
@@ -43,7 +39,6 @@ TrafficLightSelectorNode::TrafficLightSelectorNode(const rclcpp::NodeOptions & n
     stop_watch_ptr_->tic("processing_time");
   }
 
-  max_iou_threshold_ = declare_parameter<double>("max_iou_threshold");
   using std::placeholders::_1;
   using std::placeholders::_2;
   using std::placeholders::_3;
@@ -63,89 +58,78 @@ void TrafficLightSelectorNode::objectsCallback(
   const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info_msg)
 {
   stop_watch_ptr_->toc("processing_time", true);
-  uint32_t image_width = camera_info_msg->width;
-  uint32_t image_height = camera_info_msg->height;
-  std::map<int, sensor_msgs::msg::RegionOfInterest> rough_rois_map;
+
+  const auto image_width = camera_info_msg->width;
+  const auto image_height = camera_info_msg->height;
+
+  std::map<int64_t, RegionOfInterest> rough_rois_map;
   for (const auto & roi : rough_rois_msg->rois) {
     rough_rois_map[roi.traffic_light_id] = roi.roi;
   }
-  // TODO(badai-nguyen): implement this function on CUDA or refactor the code
 
-  TrafficLightRoiArray output;
-  output.header = detected_traffic_light_msg->header;
-  float max_matching_score = 0.0;
-  int det_roi_shift_x = 0;
-  int det_roi_shift_y = 0;
-  std::vector<sensor_msgs::msg::RegionOfInterest> det_rois;
-  std::vector<sensor_msgs::msg::RegionOfInterest> expect_rois;
-  for (const auto & detected_roi : detected_traffic_light_msg->feature_objects) {
-    det_rois.push_back(detected_roi.feature.roi);
+  std::vector<RegionOfInterest> detected_rois;
+  for (const auto & detected_object : detected_traffic_light_msg->feature_objects) {
+    detected_rois.push_back(detected_object.feature.roi);
   }
-  for (const auto & expected_roi : expected_rois_msg->rois) {
-    expect_rois.push_back(expected_roi.roi);
-  }
-  cv::Mat expect_roi_img =
-    utils::createBinaryImageFromRois(expect_rois, cv::Size(image_width, image_height));
-  cv::Mat det_roi_img =
-    utils::createBinaryImageFromRois(det_rois, cv::Size(image_width, image_height));
-  // for (const auto expect_roi : expect_rois) {
-  for (const auto & expect_traffic_roi : expected_rois_msg->rois) {
-    const auto & expect_roi = expect_traffic_roi.roi;
-    auto traffic_light_id = expect_traffic_roi.traffic_light_id;
+
+  double final_iou = 0.0;
+  std::map<int64_t, RegionOfInterest> final_rois_map;
+  for (const auto & expected_rois_msg_rois : expected_rois_msg->rois) {
+    const auto traffic_light_id = expected_rois_msg_rois.traffic_light_id;
     const auto & rough_roi = rough_rois_map[traffic_light_id];
+    const auto & expect_roi = expected_rois_msg_rois.roi;
 
-    for (const auto & detected_roi : det_rois) {
-      // check if the detected roi is inside the rough roi
+    for (const auto & detected_roi : detected_rois) {
       if (!utils::isInsideRoughRoi(detected_roi, rough_roi)) {
         continue;
       }
-      int dx = static_cast<int>(detected_roi.x_offset) - static_cast<int>(expect_roi.x_offset);
-      int dy = static_cast<int>(detected_roi.y_offset) - static_cast<int>(expect_roi.y_offset);
-      cv::Mat det_roi_shifted = utils::shiftAndPaddingImage(det_roi_img, dx, dy);
-      double iou = utils::getIoUOf2BinaryImages(expect_roi_img, det_roi_shifted);
-      if (iou > max_matching_score) {
-        max_matching_score = iou;
-        det_roi_shift_x = dx;
-        det_roi_shift_y = dy;
+
+      // shift expect roi because the location of detected roi is better that it
+      int32_t shift_x, shift_y;
+      utils::computeCenterOffset(detected_roi, expect_roi, shift_x, shift_y);
+
+      std::map<int64_t, RegionOfInterest> expect_rois_shifted_map;
+      for (const auto & rois : expected_rois_msg->rois) {
+        const auto expect_roi_shifted =
+          utils::getShiftedRoi(rois.roi, image_width, image_height, shift_x, shift_y);
+        expect_rois_shifted_map[rois.traffic_light_id] = expect_roi_shifted;
+      }
+
+      // check total IoU after all expect roi shift
+      double total_max_iou = 0.0;
+      std::map<int64_t, RegionOfInterest> total_max_iou_rois_map;
+      evaluateWholeRois(
+        detected_rois, expect_rois_shifted_map, total_max_iou, total_max_iou_rois_map);
+
+      if (total_max_iou > final_iou) {
+        final_iou = total_max_iou;
+        final_rois_map = std::move(total_max_iou_rois_map);
       }
     }
   }
 
-  for (const auto & expect_roi : expected_rois_msg->rois) {
-    // check max IOU after shift
-    double max_iou = -1.0;
-    sensor_msgs::msg::RegionOfInterest max_iou_roi;
-    for (const auto & detected_roi : detected_traffic_light_msg->feature_objects) {
-      // shift detected roi by det_roi_shift_x, det_roi_shift_y and calculate IOU
-      sensor_msgs::msg::RegionOfInterest detected_roi_shifted = detected_roi.feature.roi;
-      // fit top lef corner of detected roi to inside of image
-      detected_roi_shifted.x_offset = std::clamp(
-        static_cast<int>(detected_roi.feature.roi.x_offset) - det_roi_shift_x, 0,
-        static_cast<int>(image_width - detected_roi.feature.roi.width));
-      detected_roi_shifted.y_offset = std::clamp(
-        static_cast<int>(detected_roi.feature.roi.y_offset) - det_roi_shift_y, 0,
-        static_cast<int>(image_height - detected_roi.feature.roi.height));
+  // assign max iou roi to output
+  TrafficLightRoiArray output;
+  output.header = detected_traffic_light_msg->header;
+  for (const auto & expected_rois_msg_rois : expected_rois_msg->rois) {
+    const auto traffic_light_id = expected_rois_msg_rois.traffic_light_id;
+    const auto traffic_light_type = expected_rois_msg_rois.traffic_light_type;
+    TrafficLightRoi traffic_light_roi;
 
-      double iou = utils::getGenIoU(expect_roi.roi, detected_roi_shifted);
-      if (iou > max_iou) {
-        max_iou = iou;
-        max_iou_roi = detected_roi.feature.roi;
-      }
-    }
-    if (max_iou > max_iou_threshold_) {
-      TrafficLightRoi traffic_light_roi;
-      traffic_light_roi.traffic_light_id = expect_roi.traffic_light_id;
-      traffic_light_roi.traffic_light_type = expect_roi.traffic_light_type;
-      traffic_light_roi.roi = max_iou_roi;
+    if (final_rois_map.find(traffic_light_id) != final_rois_map.end()) {
+      traffic_light_roi.traffic_light_id = traffic_light_id;
+      traffic_light_roi.traffic_light_type = traffic_light_type;
+      traffic_light_roi.roi = final_rois_map[traffic_light_id];
       output.rois.push_back(traffic_light_roi);
     } else {
-      TrafficLightRoi traffic_light_roi;
-      traffic_light_roi.traffic_light_id = expect_roi.traffic_light_id;
-      traffic_light_roi.traffic_light_type = expect_roi.traffic_light_type;
+      traffic_light_roi.traffic_light_id = traffic_light_id;
+      traffic_light_roi.traffic_light_type = traffic_light_type;
       output.rois.push_back(traffic_light_roi);
     }
   }
+
   pub_traffic_light_rois_->publish(output);
+
   if (debug_publisher_) {
     const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
     const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
@@ -160,8 +144,28 @@ void TrafficLightSelectorNode::objectsCallback(
     debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/pipeline_latency_ms", pipeline_latency_ms);
   }
-  return;
 }
+
+void TrafficLightSelectorNode::evaluateWholeRois(
+  const std::vector<RegionOfInterest> & detected_rois,
+  const std::map<int64_t, RegionOfInterest> & expect_rois_shifted_map, double & total_max_iou,
+  std::map<int64_t, RegionOfInterest> & total_max_iou_rois_map)
+{
+  for (const auto & expect_roi_shifted : expect_rois_shifted_map) {
+    double max_iou = 0.0;
+    RegionOfInterest max_iou_roi;
+    for (const auto & detected_roi : detected_rois) {
+      const double iou = utils::getIoU(expect_roi_shifted.second, detected_roi);
+      if (iou > max_iou) {
+        max_iou = iou;
+        max_iou_roi = detected_roi;
+      }
+    }
+    total_max_iou += max_iou;
+    total_max_iou_rois_map[expect_roi_shifted.first] = max_iou_roi;
+  }
+}
+
 }  // namespace autoware::traffic_light
 
 #include "rclcpp_components/register_node_macro.hpp"
