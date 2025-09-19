@@ -561,22 +561,51 @@ void TrackerProcessor::getMergedObjects(
   }
 
   // transform from world frame to ego frame
-  // Convert geometry_msgs::Transform to tf2::Transform
-  tf2::Transform tf_base_to_world_tf2;
-  tf2::fromMsg(tf_base_to_world, tf_base_to_world_tf2);
-  // Get the inverse transform (world to base_link)
-  tf2::Transform tf_world_to_baselink = tf_base_to_world_tf2.inverse();
+  // Extract transform components
+  const double tf_x = tf_base_to_world.translation.x;
+  const double tf_y = tf_base_to_world.translation.y;
+  const double tf_z = tf_base_to_world.translation.z;
+
+  // Extract quaternion components for rotation
+  const auto & tf_q = tf_base_to_world.rotation;
+
+  // Precompute quaternion conjugate (inverse rotation) for efficiency
+  // q_inv = [w, -x, -y, -z] (normalized quaternion)
+  const double tf_qw = tf_q.w;
+  const double tf_qx = -tf_q.x;
+  const double tf_qy = -tf_q.y;
+  const double tf_qz = -tf_q.z;
 
   for (auto & obj : merged_objects.objects) {
-    // Convert pose to tf2::Transform for transformation
-    tf2::Transform pose_in_world;
-    tf2::fromMsg(obj.kinematics.pose_with_covariance.pose, pose_in_world);
+    auto & pose = obj.kinematics.pose_with_covariance.pose;
 
-    // Transform the pose
-    tf2::Transform pose_in_baselink = tf_world_to_baselink * pose_in_world;
+    // Transform position: P_base = R_inv * (P_world - T_world)
+    const double dx = pose.position.x - tf_x;
+    const double dy = pose.position.y - tf_y;
+    const double dz = pose.position.z - tf_z;
 
-    // Convert back to geometry_msgs::Pose
-    tf2::toMsg(pose_in_baselink, obj.kinematics.pose_with_covariance.pose);
+    // Apply quaternion rotation directly using rotation matrix formula
+    // For quaternion q = [w, x, y, z], the rotation matrix is:
+    // R = I + 2*sin(theta)*K + 2*sin^2(theta/2)*K^2
+    // where K is the skew-symmetric matrix of the unit vector
+
+    // More efficient: direct quaternion rotation formula
+    // v' = v + 2 * q_xyz × (q_xyz × v + q_w * v)
+    const double cross_x = tf_qy * dz - tf_qz * dy + tf_qw * dx;
+    const double cross_y = tf_qz * dx - tf_qx * dz + tf_qw * dy;
+    const double cross_z = tf_qx * dy - tf_qy * dx + tf_qw * dz;
+
+    pose.position.x = dx + 2.0 * (tf_qy * cross_z - tf_qz * cross_y);
+    pose.position.y = dy + 2.0 * (tf_qz * cross_x - tf_qx * cross_z);
+    pose.position.z = dz + 2.0 * (tf_qx * cross_y - tf_qy * cross_x);
+
+    // Transform orientation: q_base = q_inv * q_world (this part was correct)
+    const auto & obj_q = pose.orientation;
+
+    pose.orientation.w = tf_qw * obj_q.w - tf_qx * obj_q.x - tf_qy * obj_q.y - tf_qz * obj_q.z;
+    pose.orientation.x = tf_qw * obj_q.x + tf_qx * obj_q.w + tf_qy * obj_q.z - tf_qz * obj_q.y;
+    pose.orientation.y = tf_qw * obj_q.y - tf_qx * obj_q.z + tf_qy * obj_q.w + tf_qz * obj_q.x;
+    pose.orientation.z = tf_qw * obj_q.z + tf_qx * obj_q.y - tf_qy * obj_q.x + tf_qz * obj_q.w;
   }
 }
 
