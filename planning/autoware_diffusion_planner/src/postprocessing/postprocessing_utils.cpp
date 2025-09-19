@@ -99,13 +99,11 @@ Trajectory get_trajectory_from_prediction_matrix(
  * @param prediction The tensor prediction output.
  * @param stamp The ROS time stamp for the messages.
  * @param transform_ego_to_map The transformation matrix from ego to map coordinates.
- * @param start_batch The starting batch index.
- * @param start_agent The starting agent index.
  * @return A vector of Trajectory messages.
  */
-std::vector<Trajectory> create_multiple_trajectories(
+std::vector<Trajectory> create_neighbor_trajectories(
   const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4d & transform_ego_to_map, int64_t start_batch, int64_t start_agent);
+  const Eigen::Matrix4d & transform_ego_to_map);
 };  // namespace
 
 PredictedObjects create_predicted_objects(
@@ -124,35 +122,30 @@ PredictedObjects create_predicted_objects(
     return pose_path;
   };
 
-  const auto objects_history = ego_centric_agent_data.get_histories();
+  const std::vector<autoware::diffusion_planner::AgentHistory> objects_history =
+    ego_centric_agent_data.get_histories();
 
   PredictedObjects predicted_objects;
   predicted_objects.header.stamp = stamp;
   predicted_objects.header.frame_id = "map";
 
   constexpr double time_step{0.1};
-  constexpr auto prediction_shape = OUTPUT_SHAPE;
-  constexpr auto agent_size = prediction_shape[1];
 
-  // get agent trajectories excluding ego (start from batch 0, and agent 1)
-  constexpr int64_t start_batch = 0;
-  constexpr int64_t start_agent = 1;
+  const std::vector<Trajectory> neighbor_trajectories =
+    create_neighbor_trajectories(prediction, stamp, transform_ego_to_map);
 
-  auto agent_trajectories =
-    create_multiple_trajectories(prediction, stamp, transform_ego_to_map, start_batch, start_agent);
-
-  // First prediction is of ego (agent 0). Predictions from index 1 to last are of the closest
-  // neighbors. ego_centric_agent_data contains neighbor history information ordered by distance.
-  for (int64_t agent = 1; agent < agent_size; ++agent) {
-    if (static_cast<size_t>(agent) - 1 >= objects_history.size()) {
+  // ego_centric_agent_data contains neighbor history information ordered by distance.
+  for (int64_t neighbor_id = 0; neighbor_id < MAX_NUM_NEIGHBORS; ++neighbor_id) {
+    if (static_cast<size_t>(neighbor_id) >= objects_history.size()) {
       break;
     }
     PredictedObject object;
-    const auto & object_info = objects_history.at(agent - 1).get_latest_state().tracked_object();
+    const TrackedObject & object_info =
+      objects_history.at(neighbor_id).get_latest_state().tracked_object();
     {  // Extract path from prediction
-      const auto & trajectory_points_in_map_reference = agent_trajectories.at(agent - 1);
+      const Trajectory & trajectory_points_in_map_reference = neighbor_trajectories.at(neighbor_id);
       PredictedPath predicted_path;
-      const auto object_pose_z = object_info.kinematics.pose_with_covariance.pose.position.z;
+      const double object_pose_z = object_info.kinematics.pose_with_covariance.pose.position.z;
 
       predicted_path.path =
         trajectory_path_to_pose_path(trajectory_points_in_map_reference, object_pose_z);
@@ -283,33 +276,29 @@ int64_t count_valid_elements(
 
 namespace
 {
-std::vector<Trajectory> create_multiple_trajectories(
+std::vector<Trajectory> create_neighbor_trajectories(
   const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4d & transform_ego_to_map, int64_t start_batch, int64_t start_agent)
+  const Eigen::Matrix4d & transform_ego_to_map)
 {
-  constexpr auto prediction_shape = OUTPUT_SHAPE;
-  constexpr auto batch_size = prediction_shape[0];
-  constexpr auto agent_size = prediction_shape[1];
-  constexpr auto rows = prediction_shape[2];
-  constexpr auto cols = prediction_shape[3];
+  // use batch 0
+  constexpr int64_t batch_idx = 0;
 
   std::vector<Trajectory> agent_trajectories;
   Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
     get_tensor_data(prediction);
 
-  for (int64_t batch = start_batch; batch < batch_size; ++batch) {
-    for (int64_t agent = start_agent; agent < agent_size; ++agent) {
-      // Copy only the relevant part
-      Eigen::MatrixXd prediction_matrix =
-        tensor_data.block(batch * agent_size * rows + agent * rows, 0, rows, cols);
+  // get agent trajectories excluding ego (starting from agent 1)
+  for (int64_t agent = 1; agent < MAX_NUM_AGENTS; ++agent) {
+    // Copy only the relevant part
+    Eigen::MatrixXd prediction_matrix = tensor_data.block(
+      batch_idx * MAX_NUM_AGENTS * OUTPUT_T + agent * OUTPUT_T, 0, OUTPUT_T, POSE_DIM);
 
-      prediction_matrix.transposeInPlace();
-      postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 0, true);
-      postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 2, false);
-      prediction_matrix.transposeInPlace();
-      agent_trajectories.push_back(
-        get_trajectory_from_prediction_matrix(prediction_matrix, transform_ego_to_map, stamp));
-    }
+    prediction_matrix.transposeInPlace();
+    postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 0, true);
+    postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 2, false);
+    prediction_matrix.transposeInPlace();
+    agent_trajectories.push_back(
+      get_trajectory_from_prediction_matrix(prediction_matrix, transform_ego_to_map, stamp));
   }
   return agent_trajectories;
 }
