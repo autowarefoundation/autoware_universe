@@ -46,6 +46,7 @@
   <arg name="input/radar/tracked_objects" default="/sensing/radar/tracked_objects"/>
 
   <arg name="output/objects" default="$(var ns)/objects"/>
+  <arg name="output/merged_objects" default="$(var ns)/merged_objects"/>
 
   <group unless="$(var use_multi_channel_tracker_merger)">
     <!-- Internal interface -->
@@ -175,6 +176,8 @@
       <arg name="input/detection06/objects" value="$(var input/detection06/objects)"/>
       <arg name="input/detection06/channel" value="$(var input/detection06/channel)"/>
       <arg name="output/objects" value="$(var output/objects)"/>
+      <arg name="output/merged_objects" value="$(var output/merged_objects)"/>
+      <arg name="publish_merged_object" value="true"/>
       <arg name="data_association_matrix_path" value="$(var object_recognition_tracking_multi_object_tracker_data_association_matrix_param_path)"/>
       <arg name="input_channels_path" value="$(var object_recognition_tracking_multi_object_tracker_input_channels_param_path)"/>
       <arg name="tracker_setting_path" value="$(var object_recognition_tracking_multi_object_tracker_node_param_path)"/>

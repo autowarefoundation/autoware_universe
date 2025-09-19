@@ -69,6 +69,8 @@ private:
   // debugger
   std::unique_ptr<TrackerDebugger> debugger_;
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
+  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr merged_objects_pub_;
+  bool publish_merged_objects_{false};
 
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
     detailed_processing_time_publisher_;

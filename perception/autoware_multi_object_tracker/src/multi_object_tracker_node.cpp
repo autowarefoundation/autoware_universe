@@ -63,10 +63,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   enable_delay_compensation_ = declare_parameter<bool>("enable_delay_compensation");
   bool enable_odometry_uncertainty = declare_parameter<bool>("consider_odometry_uncertainty");
   bool use_time_keeper = declare_parameter<bool>("publish_processing_time_detail");
-
-  // ROS interface - Publisher
-  tracked_objects_pub_ = create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
-    "output/objects", rclcpp::QoS{1});
+  publish_merged_objects_ = declare_parameter<bool>("publish_merged_objects");
 
   // Odometry manager
   odometry_ =
@@ -142,6 +139,16 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   input_manager_->init(input_channels_config_);  // Initialize input manager, set subscriptions
   input_manager_->setTriggerFunction(
     std::bind(&MultiObjectTracker::onTrigger, this));  // Set trigger function
+
+  // ROS interface - Publisher
+  tracked_objects_pub_ = create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
+    "output/objects", rclcpp::QoS{1});
+  if (input_channel_size_ < 2) publish_merged_objects_ = false;
+  if (publish_merged_objects_) {
+    // if the input is multi-channel, export fused merged (detected) objects
+    merged_objects_pub_ = create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
+      "output/merged_objects", rclcpp::QoS{1});
+  }
 
   // Create ROS time based timer.
   // If the delay compensation is enabled, the timer is used to publish the output at the correct

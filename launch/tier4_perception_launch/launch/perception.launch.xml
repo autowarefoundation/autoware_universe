@@ -179,7 +179,7 @@
 
   <!-- Object merger method: whether to enable multi-channel tracker merger -->
   <arg name="use_multi_channel_tracker_merger" default="false" description="if it is true, replace the multi step merger to multi-channel tracker merger."/>
-
+  <arg name="output/tracker_merged_objects" default="/perception/object_recognition/detection/objects"/>
   <!-- Downsample pointcloud for perception usage -->
   <arg name="downsample_perception_common_pointcloud" default="false"/>
   <arg name="common_downsample_voxel_size_x" default="0.05"/>
@@ -340,6 +340,7 @@
           <arg name="use_detection_by_tracker" value="$(var use_detection_by_tracker)"/>
           <arg name="use_validator" value="$(var use_object_validator)"/>
           <arg name="use_short_range_detection" value="$(var use_short_range_detection)"/>
+          <arg name="output/merged_objects" value="$(var output/tracker_merged_objects)"/>
         </include>
       </group>
 
