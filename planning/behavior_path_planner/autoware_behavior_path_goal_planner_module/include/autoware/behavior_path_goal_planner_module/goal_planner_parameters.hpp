@@ -44,7 +44,6 @@ struct GoalPlannerParameters
   double th_arrived_distance{0.0};
   double th_stopped_velocity{0.0};
   double th_stopped_time{0.0};
-  double th_blinker_on_lateral_offset{0.0};
   double center_line_path_interval{0.0};
 
   // goal search
@@ -112,6 +111,10 @@ struct GoalPlannerParameters
   bool enable_arc_forward_parking{false};
   bool enable_arc_backward_parking{false};
   ParallelParkingParameters parallel_parking_parameters;
+
+  // clothoid parking
+  bool enable_clothoid_forward_parking{false};
+  bool enable_clothoid_backward_parking{false};
 
   // freespace parking
   bool enable_freespace_parking{false};
