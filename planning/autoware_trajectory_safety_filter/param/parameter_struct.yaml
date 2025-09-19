@@ -1,4 +1,12 @@
 safety_filter:
+  filter_names:
+    type: string_array
+    description: metrics.
+    read_only: false
+    validation:
+      unique<>: []
+      not_empty<>: []
+
   max_velocity:
     type: double
     default_value: 16.667

@@ -15,10 +15,13 @@
 #ifndef TRAJECTORY_SAFETY_FILTER_NODE_HPP_
 #define TRAJECTORY_SAFETY_FILTER_NODE_HPP_
 
+#include "autoware/trajectory_safety_filter/safety_filter_interface.hpp"
+
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_trajectory_safety_filter_param.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>
+#include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
@@ -28,6 +31,8 @@
 #include <nav_msgs/msg/odometry.hpp>
 
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace autoware::trajectory_safety_filter
 {
@@ -46,6 +51,14 @@ private:
 
   void map_callback(const LaneletMapBin::ConstSharedPtr msg);
 
+  void load_metric(const std::string & name);
+
+  /**
+   * @brief Unloads a metric plugin
+   * @param name Metric plugin name to unload
+   */
+  void unload_metric(const std::string & name);
+
   std::unique_ptr<safety_filter::ParamListener> listener_;
 
   rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
@@ -63,6 +76,9 @@ private:
   rclcpp::Publisher<CandidateTrajectories>::SharedPtr pub_trajectories_;
 
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
+
+  pluginlib::ClassLoader<plugin::SafetyFilterInterface> plugin_loader_;
+  std::vector<std::shared_ptr<plugin::SafetyFilterInterface>> plugins_;
 };
 
 }  // namespace autoware::trajectory_safety_filter

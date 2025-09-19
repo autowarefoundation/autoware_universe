@@ -20,9 +20,15 @@
   <depend>autoware_internal_planning_msgs</depend>
   <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_map_msgs</depend>
+  <depend>autoware_motion_utils</depend>
+  <depend>autoware_planning_msgs</depend>
+  <depend>autoware_universe_utils</depend>
   <depend>autoware_utils_debug</depend>
   <depend>autoware_utils_rclcpp</depend>
   <depend>generate_parameter_library</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>pluginlib</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
 

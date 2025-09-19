@@ -3,6 +3,7 @@ project(autoware_trajectory_safety_filter)
 
 find_package(autoware_cmake REQUIRED)
 autoware_package()
+pluginlib_export_plugin_description_file(autoware_trajectory_safety_filter plugins.xml)
 
 generate_parameter_library(${PROJECT_NAME}_param
   param/parameter_struct.yaml
@@ -28,6 +29,16 @@ rclcpp_components_register_node(${PROJECT_NAME}
   PLUGIN "autoware::trajectory_safety_filter::TrajectorySafetyFilter"
   EXECUTABLE ${PROJECT_NAME}_node
 )
+
+ament_auto_add_library(autoware_trajectory_safety_filter_plugins SHARED
+  src/filters/valid_trajectory_filter.cpp
+)
+
+target_link_libraries(autoware_trajectory_safety_filter_plugins
+  ${PROJECT_NAME}
+)
+
+
 
 # if(BUILD_TESTING)
 #   ament_add_ros_isolated_gmock(test_${PROJECT_NAME}

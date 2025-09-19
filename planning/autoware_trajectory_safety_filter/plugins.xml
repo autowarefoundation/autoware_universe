@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<library path="autoware_trajectory_safety_filter_plugins">
+  <!-- Lateral Acceleration Metric -->
+  <class type="autoware::trajectory_safety_filter::plugin::ValidTrajectory"
+         base_class_type="autoware::trajectory_safety_filter::plugin::SafetyFilterInterface">
+    <description>
+      Evaluates lateral acceleration (lateral G-force)
+    </description>
+  </class>
+</library>
