@@ -149,7 +149,17 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     merged_objects_pub_ = create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
       "output/merged_objects", rclcpp::QoS{1});
   }
-
+  for (const auto & channel : input_channels_config_) {
+    // check if merged_objects_pub_ is in topics of input channel
+    if (channel.input_topic == merged_objects_pub_->get_topic_name()) {
+      RCLCPP_WARN(
+        get_logger(), "Merged objects publisher is in input channel: %s, topic: %s",
+        channel.long_name.c_str(), channel.input_topic.c_str());
+      publish_merged_objects_ = false;
+      merged_objects_pub_ = nullptr;
+      break;
+    }
+  }
   // Create ROS time based timer.
   // If the delay compensation is enabled, the timer is used to publish the output at the correct
   // time.
