@@ -153,7 +153,9 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     // check if merged_objects_pub_ is in topics of input channel
     if (channel.input_topic == merged_objects_pub_->get_topic_name()) {
       RCLCPP_WARN(
-        get_logger(), "Merged objects publisher is in input channel: %s, topic: %s",
+        get_logger(),
+        "Merged objects publisher topic is set in input channel: %s, topic: %s"
+        ", disabling merged objects publisher.",
         channel.long_name.c_str(), channel.input_topic.c_str());
       publish_merged_objects_ = false;
       merged_objects_pub_ = nullptr;
