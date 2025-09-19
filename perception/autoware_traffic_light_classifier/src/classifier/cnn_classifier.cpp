@@ -133,7 +133,7 @@ void CNNClassifier::outputDebugImage(
 }
 
 void CNNClassifier::postProcess(
-  int class_index, float prob, tier4_perception_msgs::msg::TrafficLight & traffic_signal)
+  int class_index, float prob, tier4_perception_msgs::msg::TrafficLight & traffic_signal) const
 {
   std::string match_label = labels_[class_index];
 
