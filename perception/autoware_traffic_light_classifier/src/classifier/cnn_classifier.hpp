@@ -61,7 +61,7 @@ public:
 
 private:
   void postProcess(
-    int class_index, float prob, tier4_perception_msgs::msg::TrafficLight & traffic_signal);
+    int class_index, float prob, tier4_perception_msgs::msg::TrafficLight & traffic_signal) const;
   bool readLabelfile(std::string filepath, std::vector<std::string> & labels);
   void outputDebugImage(
     cv::Mat & debug_image, const tier4_perception_msgs::msg::TrafficLight & traffic_signal);
