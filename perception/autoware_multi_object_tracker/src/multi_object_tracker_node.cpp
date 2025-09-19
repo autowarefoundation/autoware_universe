@@ -453,11 +453,7 @@ void MultiObjectTracker::publish(const rclcpp::Time & time) const
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   debugger_->startPublishTime(this->now());
-  const auto subscriber_count = tracked_objects_pub_->get_subscription_count() +
-                                tracked_objects_pub_->get_intra_process_subscription_count();
-  if (subscriber_count < 1) {
-    return;
-  }
+
   // Create output msg
   autoware_perception_msgs::msg::TrackedObjects output_msg;
   output_msg.header.frame_id = world_frame_id_;
@@ -465,13 +461,16 @@ void MultiObjectTracker::publish(const rclcpp::Time & time) const
   processor_->getTrackedObjects(object_time, output_msg);
 
   // Publish
-  {
-    std::unique_ptr<ScopedTimeTrack> st_pub_ptr;
-    if (time_keeper_)
-      st_pub_ptr = std::make_unique<ScopedTimeTrack>("tracker_publish", *time_keeper_);
-    tracked_objects_pub_->publish(output_msg);
+  tracked_objects_pub_->publish(output_msg);
+
+  if (publish_merged_objects_) {
+    autoware_perception_msgs::msg::DetectedObjects merged_output_msg;
+    merged_output_msg.header.frame_id = world_frame_id_;
+    processor_->getMergedObjects(time, merged_output_msg);
+    merged_objects_pub_->publish(merged_output_msg);
   }
 
+  // Publish debug messages
   {
     std::unique_ptr<ScopedTimeTrack> st_debug_ptr;
     if (time_keeper_)
