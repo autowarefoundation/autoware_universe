@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "../src/traffic_light_fine_detector_utils.hpp"
+#include "../src/traffic_light_fine_detector_process.hpp"
 
 #include <gtest/gtest.h>
 

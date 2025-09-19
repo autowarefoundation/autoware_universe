@@ -15,7 +15,7 @@
 #ifndef TRAFFIC_LIGHT_FINE_DETECTOR_NODE_HPP_
 #define TRAFFIC_LIGHT_FINE_DETECTOR_NODE_HPP_
 
-#include "traffic_light_fine_detector_utils.hpp"
+#include "traffic_light_fine_detector_process.hpp"
 
 #include <autoware/tensorrt_yolox/tensorrt_yolox.hpp>
 #include <image_transport/image_transport.hpp>

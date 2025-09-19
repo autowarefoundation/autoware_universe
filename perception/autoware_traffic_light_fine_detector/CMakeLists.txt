@@ -76,7 +76,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
 
   ament_auto_add_library(${PROJECT_NAME} SHARED
     src/traffic_light_fine_detector_node.cpp
-    src/traffic_light_fine_detector_utils.cpp
+    src/traffic_light_fine_detector_process.cpp
   )
 
   target_include_directories(${PROJECT_NAME} PUBLIC

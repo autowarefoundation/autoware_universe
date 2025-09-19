@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TRAFFIC_LIGHT_FINE_DETECTOR_UTILS_HPP_
-#define TRAFFIC_LIGHT_FINE_DETECTOR_UTILS_HPP_
+#ifndef TRAFFIC_LIGHT_FINE_DETECTOR_PROCESS_HPP_
+#define TRAFFIC_LIGHT_FINE_DETECTOR_PROCESS_HPP_
 
 #include <autoware/tensorrt_yolox/tensorrt_yolox.hpp>
 #include <opencv2/core/types.hpp>
@@ -35,4 +35,4 @@ bool fitInFrame(cv::Point & lt, cv::Point & rb, const cv::Size & size);
 
 }  // namespace autoware::traffic_light
 
-#endif  // TRAFFIC_LIGHT_FINE_DETECTOR_UTILS_HPP_
+#endif  // TRAFFIC_LIGHT_FINE_DETECTOR_PROCESS_HPP_
