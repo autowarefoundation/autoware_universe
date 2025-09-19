@@ -75,19 +75,6 @@ Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tenso
 Trajectory get_trajectory_from_prediction_matrix(
   const Eigen::MatrixXd & prediction_matrix, const Eigen::Matrix4d & transform_ego_to_map,
   const rclcpp::Time & stamp);
-
-/**
- * @brief Creates multiple Trajectory messages from tensor prediction for a range of batches and
- * agents.
- *
- * @param prediction The tensor prediction output.
- * @param stamp The ROS time stamp for the messages.
- * @param transform_ego_to_map The transformation matrix from ego to map coordinates.
- * @return A vector of Trajectory messages.
- */
-std::vector<Trajectory> create_neighbor_trajectories(
-  const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4d & transform_ego_to_map);
 };  // namespace
 
 PredictedObjects create_predicted_objects(
@@ -115,8 +102,26 @@ PredictedObjects create_predicted_objects(
 
   constexpr double time_step{0.1};
 
-  const std::vector<Trajectory> neighbor_trajectories =
-    create_neighbor_trajectories(prediction, stamp, transform_ego_to_map);
+  std::vector<Trajectory> neighbor_trajectories;
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
+    get_tensor_data(prediction);
+
+  // get agent trajectories excluding ego (starting from agent 1)
+  for (int64_t agent = 1; agent < MAX_NUM_AGENTS; ++agent) {
+    // use batch 0
+    constexpr int64_t batch_idx = 0;
+
+    // Copy only the relevant part
+    Eigen::MatrixXd prediction_matrix = tensor_data.block(
+      batch_idx * MAX_NUM_AGENTS * OUTPUT_T + agent * OUTPUT_T, 0, OUTPUT_T, POSE_DIM);
+
+    prediction_matrix.transposeInPlace();
+    postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 0, true);
+    postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 2, false);
+    prediction_matrix.transposeInPlace();
+    neighbor_trajectories.push_back(
+      get_trajectory_from_prediction_matrix(prediction_matrix, transform_ego_to_map, stamp));
+  }
 
   // ego_centric_agent_data contains neighbor history information ordered by distance.
   for (int64_t neighbor_id = 0; neighbor_id < MAX_NUM_NEIGHBORS; ++neighbor_id) {
@@ -253,33 +258,6 @@ int64_t count_valid_elements(
 
 namespace
 {
-std::vector<Trajectory> create_neighbor_trajectories(
-  const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4d & transform_ego_to_map)
-{
-  // use batch 0
-  constexpr int64_t batch_idx = 0;
-
-  std::vector<Trajectory> agent_trajectories;
-  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
-    get_tensor_data(prediction);
-
-  // get agent trajectories excluding ego (starting from agent 1)
-  for (int64_t agent = 1; agent < MAX_NUM_AGENTS; ++agent) {
-    // Copy only the relevant part
-    Eigen::MatrixXd prediction_matrix = tensor_data.block(
-      batch_idx * MAX_NUM_AGENTS * OUTPUT_T + agent * OUTPUT_T, 0, OUTPUT_T, POSE_DIM);
-
-    prediction_matrix.transposeInPlace();
-    postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 0, true);
-    postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 2, false);
-    prediction_matrix.transposeInPlace();
-    agent_trajectories.push_back(
-      get_trajectory_from_prediction_matrix(prediction_matrix, transform_ego_to_map, stamp));
-  }
-  return agent_trajectories;
-}
-
 Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tensor_data(
   const std::vector<float> & prediction)
 {
