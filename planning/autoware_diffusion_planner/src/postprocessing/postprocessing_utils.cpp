@@ -102,37 +102,32 @@ PredictedObjects create_predicted_objects(
 
   constexpr double time_step{0.1};
 
-  std::vector<Trajectory> neighbor_trajectories;
   Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
     get_tensor_data(prediction);
-
-  // get agent trajectories excluding ego (starting from agent 1)
-  for (int64_t agent = 1; agent < MAX_NUM_AGENTS; ++agent) {
-    // use batch 0
-    constexpr int64_t batch_idx = 0;
-
-    // Copy only the relevant part
-    Eigen::MatrixXd prediction_matrix = tensor_data.block(
-      batch_idx * MAX_NUM_AGENTS * OUTPUT_T + agent * OUTPUT_T, 0, OUTPUT_T, POSE_DIM);
-
-    prediction_matrix.transposeInPlace();
-    postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 0, true);
-    postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 2, false);
-    prediction_matrix.transposeInPlace();
-    neighbor_trajectories.push_back(
-      get_trajectory_from_prediction_matrix(prediction_matrix, transform_ego_to_map, stamp));
-  }
 
   // ego_centric_agent_data contains neighbor history information ordered by distance.
   for (int64_t neighbor_id = 0; neighbor_id < MAX_NUM_NEIGHBORS; ++neighbor_id) {
     if (static_cast<size_t>(neighbor_id) >= objects_history.size()) {
       break;
     }
+    // use batch 0
+    constexpr int64_t batch_idx = 0;
+
+    // Copy only the relevant part
+    Eigen::MatrixXd prediction_matrix = tensor_data.block(
+      batch_idx * MAX_NUM_AGENTS * OUTPUT_T + (neighbor_id + 1) * OUTPUT_T, 0, OUTPUT_T, POSE_DIM);
+    prediction_matrix.transposeInPlace();
+    postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 0, true);
+    postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 2, false);
+    prediction_matrix.transposeInPlace();
+
+    const Trajectory trajectory_points_in_map_reference =
+      get_trajectory_from_prediction_matrix(prediction_matrix, transform_ego_to_map, stamp);
+
     PredictedObject object;
     const TrackedObject & object_info =
       objects_history.at(neighbor_id).get_latest_state().tracked_object();
     {  // Extract path from prediction
-      const Trajectory & trajectory_points_in_map_reference = neighbor_trajectories.at(neighbor_id);
       PredictedPath predicted_path;
       const double object_pose_z = object_info.kinematics.pose_with_covariance.pose.position.z;
 
