@@ -544,6 +544,22 @@ void TrackerProcessor::getTentativeObjects(
   }
 }
 
+void TrackerProcessor::getMergedObjects(
+  const rclcpp::Time & time, autoware_perception_msgs::msg::DetectedObjects & merged_objects) const
+{
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
+  merged_objects.header.stamp = time;
+  types::DynamicObject tracked_object;
+  for (const auto & tracker : list_tracker_) {
+    constexpr bool to_publish = false;
+    if (tracker->getTrackedObject(time, tracked_object, to_publish)) {
+      merged_objects.objects.push_back(types::toDetectedObjectMsg(tracked_object));
+    }
+  }
+}
+
 void TrackerProcessor::setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr)
 {
   time_keeper_ = std::move(time_keeper_ptr);
