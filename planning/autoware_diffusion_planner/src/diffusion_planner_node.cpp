@@ -561,7 +561,7 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
   constexpr int64_t batch_idx = 0;
   constexpr int64_t ego_agent_idx = 0;
 
-  const autoware_planning_msgs::msg::Trajectory output_trajectory = postprocess::create_trajectory(
+  const Trajectory output_trajectory = postprocess::create_trajectory(
     predictions, this->now(), transforms_.first, batch_idx, ego_agent_idx);
   pub_trajectory_->publish(output_trajectory);
 
