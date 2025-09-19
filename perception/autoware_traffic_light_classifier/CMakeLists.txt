@@ -81,7 +81,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     src/classifier/color_classifier.cpp
     src/classifier/cnn_classifier.cpp
     src/traffic_light_classifier_node.cpp
-    src/traffic_light_classifier_utils.cpp
+    src/traffic_light_classifier_process.cpp
   )
   target_link_libraries(${PROJECT_NAME}
     ${OpenCV_LIBRARIES}
@@ -102,7 +102,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     src/classifier/cnn_classifier.cpp
     src/classifier/color_classifier.cpp
     src/traffic_light_classifier_node.cpp
-    src/traffic_light_classifier_utils.cpp
+    src/traffic_light_classifier_process.cpp
     src/single_image_debug_inference_node.cpp
   )
   target_link_libraries(single_image_debug_inference_node
@@ -132,7 +132,7 @@ else()
   ament_auto_add_library(${PROJECT_NAME} SHARED
     src/classifier/color_classifier.cpp
     src/traffic_light_classifier_node.cpp
-    src/traffic_light_classifier_utils.cpp
+    src/traffic_light_classifier_process.cpp
   )
   target_link_libraries(${PROJECT_NAME}
     ${OpenCV_LIBRARIES}

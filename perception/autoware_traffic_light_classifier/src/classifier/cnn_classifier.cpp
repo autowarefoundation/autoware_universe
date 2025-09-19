@@ -14,7 +14,7 @@
 
 #include "cnn_classifier.hpp"
 
-#include "../traffic_light_classifier_utils.hpp"
+#include "../traffic_light_classifier_process.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 

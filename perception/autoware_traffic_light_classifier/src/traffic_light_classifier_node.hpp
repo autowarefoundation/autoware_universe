@@ -16,7 +16,7 @@
 #define TRAFFIC_LIGHT_CLASSIFIER_NODE_HPP_
 
 #include "classifier/classifier_interface.hpp"
-#include "traffic_light_classifier_utils.hpp"
+#include "traffic_light_classifier_process.hpp"
 
 #include <image_transport/image_transport.hpp>
 #include <image_transport/subscriber_filter.hpp>
