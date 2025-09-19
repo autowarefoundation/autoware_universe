@@ -59,13 +59,12 @@ PredictedObjects create_predicted_objects(
  * @param prediction The tensor prediction output.
  * @param stamp The ROS time stamp for the message.
  * @param transform_ego_to_map The transformation matrix from ego to map coordinates.
- * @param batch The batch index to extract.
- * @param agent The agent index to extract.
+ * @param batch_index The batch index to extract.
  * @return A Trajectory message for the specified batch and agent.
  */
-Trajectory create_trajectory(
+Trajectory create_ego_trajectory(
   const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4d & transform_ego_to_map, int64_t batch, int64_t agent);
+  const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index);
 
 /**
  * @brief Converts a Trajectory message to a CandidateTrajectories message with generator info.

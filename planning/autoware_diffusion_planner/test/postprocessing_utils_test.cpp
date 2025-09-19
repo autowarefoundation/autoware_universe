@@ -45,7 +45,7 @@ TEST(PostprocessingUtilsTest, CreateTrajectoryAndMultipleTrajectories)
 
   auto expected_points = prediction_shape[2];
 
-  auto traj = postprocess::create_trajectory(data, stamp, transform, 0, 0);
+  auto traj = postprocess::create_ego_trajectory(data, stamp, transform, 0);
   ASSERT_EQ(traj.points.size(), expected_points);
 }
 

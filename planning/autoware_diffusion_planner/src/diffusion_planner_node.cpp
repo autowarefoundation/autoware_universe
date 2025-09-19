@@ -559,10 +559,9 @@ void DiffusionPlanner::publish_debug_markers(InputDataMap & input_data_map) cons
 void DiffusionPlanner::publish_predictions(const std::vector<float> & predictions) const
 {
   constexpr int64_t batch_idx = 0;
-  constexpr int64_t ego_agent_idx = 0;
 
-  const Trajectory output_trajectory = postprocess::create_trajectory(
-    predictions, this->now(), transforms_.first, batch_idx, ego_agent_idx);
+  const Trajectory output_trajectory =
+    postprocess::create_ego_trajectory(predictions, this->now(), transforms_.first, batch_idx);
   pub_trajectory_->publish(output_trajectory);
 
   // Publish all batch results as candidate trajectories
@@ -576,7 +575,7 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
   // Add additional batch results as more candidates
   for (int i = 1; i < batch_size; i++) {
     const Trajectory trajectory =
-      postprocess::create_trajectory(predictions, this->now(), transforms_.first, i, ego_agent_idx);
+      postprocess::create_ego_trajectory(predictions, this->now(), transforms_.first, i);
 
     const CandidateTrajectories additional_candidate = postprocess::to_candidate_trajectories_msg(
       trajectory, generator_uuid_, "DiffusionPlanner_batch_" + std::to_string(i));

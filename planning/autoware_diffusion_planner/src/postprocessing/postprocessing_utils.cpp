@@ -171,13 +171,14 @@ PredictedObjects create_predicted_objects(
   return predicted_objects;
 }
 
-Trajectory create_trajectory(
+Trajectory create_ego_trajectory(
   const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4d & transform_ego_to_map, int64_t batch, int64_t agent)
+  const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index)
 {
+  const int64_t agent = 0;
   // one batch of prediction
   Eigen::MatrixXd prediction_matrix =
-    get_prediction_matrix(prediction, transform_ego_to_map, batch, agent);
+    get_prediction_matrix(prediction, transform_ego_to_map, batch_index, agent);
   return get_trajectory_from_prediction_matrix(prediction_matrix, transform_ego_to_map, stamp);
 }
 
