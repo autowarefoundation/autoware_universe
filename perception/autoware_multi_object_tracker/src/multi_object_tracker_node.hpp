@@ -86,6 +86,7 @@ private:
 
   // internal states
   std::string world_frame_id_;  // tracking frame
+  std::string ego_frame_id_;    // ego vehicle frame
   std::unique_ptr<TrackerProcessor> processor_;
   bool enable_delay_compensation_{false};
 

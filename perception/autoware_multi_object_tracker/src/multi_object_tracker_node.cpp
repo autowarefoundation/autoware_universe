@@ -59,7 +59,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   // Get parameters
   double publish_rate = declare_parameter<double>("publish_rate");  // [hz]
   world_frame_id_ = declare_parameter<std::string>("world_frame_id");
-  std::string ego_frame_id = declare_parameter<std::string>("ego_frame_id");
+  ego_frame_id_ = declare_parameter<std::string>("ego_frame_id");
   enable_delay_compensation_ = declare_parameter<bool>("enable_delay_compensation");
   bool enable_odometry_uncertainty = declare_parameter<bool>("consider_odometry_uncertainty");
   bool use_time_keeper = declare_parameter<bool>("publish_processing_time_detail");
@@ -71,7 +71,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
   // Odometry manager
   odometry_ =
-    std::make_shared<Odometry>(*this, world_frame_id_, ego_frame_id, enable_odometry_uncertainty);
+    std::make_shared<Odometry>(*this, world_frame_id_, ego_frame_id_, enable_odometry_uncertainty);
 
   // ROS interface - Input channels
   // define input channel parameters
@@ -481,8 +481,31 @@ void MultiObjectTracker::publish(const rclcpp::Time & time) const
 
   if (publish_merged_objects_) {
     autoware_perception_msgs::msg::DetectedObjects merged_output_msg;
-    merged_output_msg.header.frame_id = world_frame_id_;
     processor_->getMergedObjects(time, merged_output_msg);
+
+    // frame_id is map, transform objects to base_link
+    const auto tf_base_to_world = odometry_->getTransform(time);  // geometry_msgs::msg::Transform
+
+    if (tf_base_to_world) {
+      // Convert geometry_msgs::Transform to tf2::Transform
+      tf2::Transform tf_base_to_world_tf2;
+      tf2::fromMsg(*tf_base_to_world, tf_base_to_world_tf2);
+      // Get the inverse transform (world to base_link)
+      tf2::Transform tf_world_to_baselink = tf_base_to_world_tf2.inverse();
+
+      for (auto & obj : merged_output_msg.objects) {
+        // Convert pose to tf2::Transform for transformation
+        tf2::Transform pose_in_world;
+        tf2::fromMsg(obj.kinematics.pose_with_covariance.pose, pose_in_world);
+
+        // Transform the pose
+        tf2::Transform pose_in_baselink = tf_world_to_baselink * pose_in_world;
+
+        // Convert back to geometry_msgs::Pose
+        tf2::toMsg(pose_in_baselink, obj.kinematics.pose_with_covariance.pose);
+      }
+    }
+    merged_output_msg.header.frame_id = ego_frame_id_;
     merged_objects_pub_->publish(merged_output_msg);
   }
 
