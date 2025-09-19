@@ -194,13 +194,11 @@ private:
   rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr
     ground_truth_objects_pub_;
   rclcpp::Subscription<DummyObject>::SharedPtr object_sub_;
-  rclcpp::Subscription<PredictedObjects>::SharedPtr predicted_objects_sub_;
   rclcpp::TimerBase::SharedPtr timer_;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
   std::vector<DummyObject> objects_;
-  PredictedDummyObjectsTrackingInfo predicted_dummy_objects_tracking_info_;
-  PredictedObjectParameters predicted_object_params_;
+
   double visible_range_;
   double detection_successful_rate_;
   bool enable_ray_tracing_;
@@ -215,7 +213,7 @@ private:
 
   void timerCallback();
   void objectCallback(const DummyObject::ConstSharedPtr msg);
-  void predictedObjectsCallback(const PredictedObjects::ConstSharedPtr msg);
+
   std::pair<PredictedObject, rclcpp::Time> findMatchingPredictedObject(
     const unique_identifier_msgs::msg::UUID & object_id, const rclcpp::Time & current_time);
   void updateDummyToPredictedMapping(

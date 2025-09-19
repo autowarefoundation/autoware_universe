@@ -17,10 +17,14 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include <utility>
+#include <tier4_simulation_msgs/msg/dummy_object.hpp>
+
+#include <vector>
 
 namespace autoware::dummy_perception_publisher::pluginlib
 {
+using tier4_simulation_msgs::msg::DummyObject;
+
 class DummyObjectMovementBasePlugin
 {
 private:
@@ -30,8 +34,13 @@ protected:
   [[nodiscard]] rclcpp::Node * get_node() const { return node_ptr_; }
 
 public:
+  std::vector<DummyObject> objects_;
+
   explicit DummyObjectMovementBasePlugin(rclcpp::Node * node) : node_ptr_(node) {}
+  virtual ~DummyObjectMovementBasePlugin() = default;
   virtual void initialize() = 0;
+  void set_dummy_object(const DummyObject & object) { objects_.push_back(object); }
+  void set_dummy_objects(const std::vector<DummyObject> & objects) { objects_ = objects; }
 };
 
 }  // namespace autoware::dummy_perception_publisher::pluginlib
