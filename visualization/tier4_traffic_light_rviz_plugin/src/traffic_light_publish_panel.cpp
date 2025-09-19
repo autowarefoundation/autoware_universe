@@ -219,7 +219,7 @@ void TrafficLightPublishPanel::onInitialize()
   raw_node_ = this->getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
 
   pub_traffic_signals_ = raw_node_->create_publisher<TrafficLightGroupArray>(
-    "/perception/traffic_light_recognition/traffic_signals", rclcpp::QoS(1));
+    "/perception/traffic_light_recognition/judged/traffic_signals", rclcpp::QoS(1));
 
   sub_vector_map_ = raw_node_->create_subscription<LaneletMapBin>(
     "/map/vector_map", rclcpp::QoS{1}.transient_local(),
