@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Lanelet Elevation Filter",
+  "type": "object",
+  "definitions": {
+    "lanelet_elevation_filter": {
+      "type": "object",
+      "properties": {
+        "grid_resolution": {
+          "type": "number",
+          "default": 1.0,
+          "description": "Grid cell size in meters for elevation processing"
+        },
+        "height_threshold": {
+          "type": "number",
+          "default": 2.0,
+          "description": "Maximum height difference from lanelet elevation in meters"
+        },
+        "sampling_distance": {
+          "type": "number",
+          "default": 0.5,
+          "description": "Distance between sampled points along lanelet boundaries in meters"
+        },
+        "target_frame": {
+          "type": "string",
+          "default": "map",
+          "description": "Target coordinate frame for processing"
+        },
+        "cache_directory": {
+          "type": "string",
+          "default": "$(find-pkg-share autoware_compare_map_segmentation)/data/lanelet_grid_cache",
+          "description": "Directory for cached grid files"
+        },
+        "extension_count": {
+          "type": "integer",
+          "default": 20,
+          "description": "Number of cells to extend around original lanelet points"
+        },
+        "require_map_coverage": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, only keep points with direct map coverage; reject points requiring interpolation"
+        },
+        "enable_debug": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable debug mode including elevation markers and processing time publisher"
+        }
+      },
+      "required": [
+        "grid_resolution",
+        "height_threshold",
+        "sampling_distance",
+        "target_frame",
+        "cache_directory",
+        "extension_count",
+        "require_map_coverage",
+        "enable_debug"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/lanelet_elevation_filter"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

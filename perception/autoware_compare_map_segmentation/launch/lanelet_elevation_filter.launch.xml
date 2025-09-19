@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="input_pointcloud" default="/perception/object_recognition/detection/pointcloud_map_filtered/pointcloud"/>
+  <arg name="input_lanelet_map" default="/map/vector_map"/>
+  <arg name="output_pointcloud" default="/perception/object_recognition/detection/pointcloud_map_filtered/pointcloud_lanelet_filtered"/>
+
+  <arg name="config_file" default="$(find-pkg-share autoware_compare_map_segmentation)/config/lanelet_elevation_filter.param.yaml"/>
+
+  <node pkg="autoware_compare_map_segmentation" exec="lanelet_elevation_filter_node" name="lanelet_elevation_filter" output="screen">
+    <remap from="input" to="$(var input_pointcloud)"/>
+    <remap from="~/input/lanelet_map" to="$(var input_lanelet_map)"/>
+    <remap from="output" to="$(var output_pointcloud)"/>
+
+    <param from="$(var config_file)"/>
+  </node>
+</launch>

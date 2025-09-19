@@ -28,6 +28,9 @@ add_library(${PROJECT_NAME} SHARED
   src/voxel_based_compare_map_filter/node.cpp
   src/voxel_distance_based_compare_map_filter/node.cpp
   src/compare_elevation_map_filter/node.cpp
+  src/lanelet_elevation_filter/node.cpp
+  src/lanelet_elevation_filter/lanelet_elevation_filter.cpp
+  src/lanelet_elevation_filter/grid_processor.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -45,8 +48,18 @@ ament_target_dependencies(${PROJECT_NAME}
   rclcpp_components
   sensor_msgs
   autoware_utils
+  autoware_internal_debug_msgs
   autoware_map_msgs
+  autoware_lanelet2_extension
+  geometry_msgs
+  lanelet2_core
+  lanelet2_projection
+  lanelet2_routing
   nav_msgs
+  std_msgs
+  tf2
+  tf2_ros
+  visualization_msgs
 )
 
 if(OPENMP_FOUND)
@@ -81,6 +94,11 @@ rclcpp_components_register_node(${PROJECT_NAME}
 rclcpp_components_register_node(${PROJECT_NAME}
   PLUGIN "autoware::compare_map_segmentation::CompareElevationMapFilterComponent"
   EXECUTABLE compare_elevation_map_filter_node)
+
+# -- Lanelet Elevation Filter --
+rclcpp_components_register_node(${PROJECT_NAME}
+  PLUGIN "autoware::compare_map_segmentation::LaneletElevationFilterComponent"
+  EXECUTABLE lanelet_elevation_filter_node)
 
 install(
   TARGETS ${PROJECT_NAME}
@@ -117,4 +135,5 @@ ament_auto_package(
   INSTALL_TO_SHARE
   launch
   config
+  data
 )
