@@ -63,7 +63,11 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   enable_delay_compensation_ = declare_parameter<bool>("enable_delay_compensation");
   bool enable_odometry_uncertainty = declare_parameter<bool>("consider_odometry_uncertainty");
   bool use_time_keeper = declare_parameter<bool>("publish_processing_time_detail");
+  bool is_simulation = declare_parameter<bool>("is_simulation");
   publish_merged_objects_ = declare_parameter<bool>("publish_merged_objects");
+  if (is_simulation) {
+    publish_merged_objects_ = true;
+  }
 
   // Odometry manager
   odometry_ =
