@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TRAFFIC_LIGHT_CLASSIFIER_UTILS_HPP_
-#define TRAFFIC_LIGHT_CLASSIFIER_UTILS_HPP_
+#ifndef TRAFFIC_LIGHT_CLASSIFIER_PROCESS_HPP_
+#define TRAFFIC_LIGHT_CLASSIFIER_PROCESS_HPP_
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -52,4 +52,4 @@ bool is_harsh_backlight(const cv::Mat & img, const double backlight_threshold);
 }  // namespace utils
 }  // namespace autoware::traffic_light
 
-#endif  // TRAFFIC_LIGHT_CLASSIFIER_UTILS_HPP_
+#endif  // TRAFFIC_LIGHT_CLASSIFIER_PROCESS_HPP_
