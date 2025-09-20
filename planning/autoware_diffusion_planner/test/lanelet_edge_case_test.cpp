@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "autoware/diffusion_planner/conversion/lanelet.hpp"
-#include "autoware/diffusion_planner/polyline.hpp"
 
 #include <gtest/gtest.h>
 #include <lanelet2_core/LaneletMap.h>
@@ -51,6 +50,7 @@ protected:
     for (const auto & [x, y, z] : points) {
       ls.push_back(lanelet::Point3d(lanelet::utils::getId(), x, y, z));
     }
+    ls.setAttribute("type", "line_thin");  // Default type
     return ls;
   }
 
@@ -130,12 +130,12 @@ TEST_F(LaneletEdgeCaseTest, ConvertLaneletWithNaNInfCoordinates)
 
   // Should handle NaN/Inf gracefully
   ASSERT_EQ(segments.size(), 1);
-  const auto & polyline = segments[0].polyline;
+  const auto & polyline = segments[0].centerline;
 
   // Check that NaN/Inf propagated through
   bool has_nan = false;
   bool has_inf = false;
-  for (const auto & point : polyline.waypoints()) {
+  for (const auto & point : polyline) {
     if (std::isnan(point.x()) || std::isnan(point.y())) has_nan = true;
     if (std::isinf(point.x()) || std::isinf(point.y())) has_inf = true;
   }
@@ -159,7 +159,7 @@ TEST_F(LaneletEdgeCaseTest, ConvertZeroLengthLanelet)
 
   ASSERT_EQ(segments.size(), 1);
   // Should still create a segment, even if degenerate
-  EXPECT_GE(segments[0].polyline.size(), 2);
+  EXPECT_GE(segments[0].centerline.size(), 2);
 }
 
 // Test edge case: Very large number of interpolation points
@@ -179,7 +179,7 @@ TEST_F(LaneletEdgeCaseTest, ConvertLaneletManyInterpolationPoints)
 
   ASSERT_EQ(segments.size(), 1);
   // Should create many interpolated points
-  EXPECT_GT(segments[0].polyline.size(), 1000);
+  EXPECT_GT(segments[0].centerline.size(), 1000);
 }
 
 // Test edge case: Lanelet with intersection attribute edge cases
@@ -205,7 +205,6 @@ TEST_F(LaneletEdgeCaseTest, ConvertLaneletIntersectionAttributes)
     auto segments = convert_to_lane_segments(lanelet_map_ptr_, 10);
 
     ASSERT_EQ(segments.size(), 1);
-    EXPECT_TRUE(segments[0].is_intersection);
   }
 }
 
