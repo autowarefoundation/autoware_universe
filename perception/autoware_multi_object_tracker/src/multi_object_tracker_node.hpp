@@ -69,6 +69,8 @@ private:
   // debugger
   std::unique_ptr<TrackerDebugger> debugger_;
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
+  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr merged_objects_pub_;
+  bool publish_merged_objects_{false};
 
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
     detailed_processing_time_publisher_;
@@ -84,6 +86,7 @@ private:
 
   // internal states
   std::string world_frame_id_;  // tracking frame
+  std::string ego_frame_id_;    // ego vehicle frame
   std::unique_ptr<TrackerProcessor> processor_;
   bool enable_delay_compensation_{false};
 

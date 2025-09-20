@@ -25,9 +25,11 @@
   <arg name="input/detection12/objects" default="input/objects12"/>
   <arg name="input/detection12/channel" default="none"/>
   <arg name="output/objects" default="objects"/>
+  <arg name="output/merged_objects" default="merged_objects"/>
   <arg name="tracker_setting_path" default="$(find-pkg-share autoware_multi_object_tracker)/config/multi_object_tracker_node.param.yaml"/>
   <arg name="data_association_matrix_path" default="$(find-pkg-share autoware_multi_object_tracker)/config/data_association_matrix.param.yaml"/>
   <arg name="input_channels_path" default="$(find-pkg-share autoware_multi_object_tracker)/config/input_channels.param.yaml"/>
+  <arg name="is_simulation" default="false"/>
 
   <node pkg="autoware_multi_object_tracker" exec="multi_object_tracker_node" name="multi_object_tracker" output="both">
     <param name="input/detection01/objects" value="$(var input/detection01/objects)"/>
@@ -55,6 +57,8 @@
     <param name="input/detection12/objects" value="$(var input/detection12/objects)"/>
     <param name="input/detection12/channel" value="$(var input/detection12/channel)"/>
     <remap from="output/objects" to="$(var output/objects)"/>
+    <remap from="output/merged_objects" to="$(var output/merged_objects)"/>
+    <param name="is_simulation" value="$(var is_simulation)"/>
     <param from="$(var tracker_setting_path)"/>
     <param from="$(var data_association_matrix_path)"/>
     <param from="$(var input_channels_path)"/>
