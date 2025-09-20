@@ -27,6 +27,8 @@
 #include <rclcpp/duration.hpp>
 #include <rclcpp/logging.hpp>
 
+#include <autoware_internal_planning_msgs/msg/candidate_trajectory.hpp>
+#include <autoware_internal_planning_msgs/msg/generator_info.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 
 #include <Eigen/src/Core/Matrix.h>
@@ -129,6 +131,8 @@ void DiffusionPlanner::set_up_params()
   params_.use_route_handler = this->declare_parameter<bool>("use_route_handler", true);
   params_.batch_size = this->declare_parameter<int>("batch_size", 1);
   params_.temperature_list = this->declare_parameter<std::vector<double>>("temperature", {0.5});
+  params_.velocity_smoothing_window =
+    this->declare_parameter<int64_t>("velocity_smoothing_window", 1);
 
   // debug params
   debug_params_.publish_debug_map =
@@ -159,6 +163,8 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<bool>(parameters, "use_route_handler", temp_params.use_route_handler);
     update_param<int>(parameters, "batch_size", temp_params.batch_size);
     update_param<std::vector<double>>(parameters, "temperature", temp_params.temperature_list);
+    update_param<int64_t>(
+      parameters, "velocity_smoothing_window", temp_params.velocity_smoothing_window);
     params_ = temp_params;
   }
 
@@ -558,36 +564,34 @@ void DiffusionPlanner::publish_debug_markers(InputDataMap & input_data_map) cons
 
 void DiffusionPlanner::publish_predictions(const std::vector<float> & predictions) const
 {
-  constexpr int64_t batch_idx = 0;
-  constexpr int64_t ego_agent_idx = 0;
+  CandidateTrajectories candidate_trajectories;
 
-  const Trajectory output_trajectory = postprocess::create_trajectory(
-    predictions, this->now(), transforms_.first, batch_idx, ego_agent_idx);
-  pub_trajectory_->publish(output_trajectory);
+  for (int i = 0; i < params_.batch_size; i++) {
+    const Trajectory trajectory = postprocess::create_ego_trajectory(
+      predictions, this->now(), transforms_.first, i, params_.velocity_smoothing_window);
+    if (i == 0) {
+      pub_trajectory_->publish(trajectory);
+    }
 
-  // Publish all batch results as candidate trajectories
-  const int batch_size = params_.batch_size;
+    const auto candidate_trajectory = autoware_internal_planning_msgs::build<
+                                        autoware_internal_planning_msgs::msg::CandidateTrajectory>()
+                                        .header(trajectory.header)
+                                        .generator_id(generator_uuid_)
+                                        .points(trajectory.points);
 
-  // Start with first trajectory as main candidate
-  CandidateTrajectories ego_trajectory_as_candidate_msg =
-    postprocess::to_candidate_trajectories_msg(
-      output_trajectory, generator_uuid_, "DiffusionPlanner");
+    std_msgs::msg::String generator_name_msg;
+    generator_name_msg.data = "DiffusionPlanner_batch_" + std::to_string(i);
 
-  // Add additional batch results as more candidates
-  for (int i = 1; i < batch_size; i++) {
-    const Trajectory trajectory =
-      postprocess::create_trajectory(predictions, this->now(), transforms_.first, i, ego_agent_idx);
+    const auto generator_info =
+      autoware_internal_planning_msgs::build<autoware_internal_planning_msgs::msg::GeneratorInfo>()
+        .generator_id(generator_uuid_)
+        .generator_name(generator_name_msg);
 
-    const CandidateTrajectories additional_candidate = postprocess::to_candidate_trajectories_msg(
-      trajectory, generator_uuid_, "DiffusionPlanner_batch_" + std::to_string(i));
-
-    ego_trajectory_as_candidate_msg.candidate_trajectories.push_back(
-      additional_candidate.candidate_trajectories[0]);
-    ego_trajectory_as_candidate_msg.generator_info.push_back(
-      additional_candidate.generator_info[0]);
+    candidate_trajectories.candidate_trajectories.push_back(candidate_trajectory);
+    candidate_trajectories.generator_info.push_back(generator_info);
   }
 
-  pub_trajectories_->publish(ego_trajectory_as_candidate_msg);
+  pub_trajectories_->publish(candidate_trajectories);
 
   // Other agents prediction
   if (params_.predict_neighbor_trajectory && agent_data_.has_value()) {

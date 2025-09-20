@@ -118,6 +118,7 @@ struct DiffusionPlannerParams
   bool use_route_handler;
   int batch_size;
   std::vector<double> temperature_list;
+  int64_t velocity_smoothing_window;
 };
 struct DiffusionPlannerDebugParams
 {

@@ -22,9 +22,6 @@
 #include <rclcpp/duration.hpp>
 #include <rclcpp/time.hpp>
 
-#include <autoware_internal_planning_msgs/msg/detail/candidate_trajectory__builder.hpp>
-#include <autoware_internal_planning_msgs/msg/detail/candidate_trajectory__struct.hpp>
-#include <autoware_internal_planning_msgs/msg/generator_info.hpp>
 #include <autoware_perception_msgs/msg/detail/predicted_objects__struct.hpp>
 
 #include <Eigen/src/Core/Matrix.h>
@@ -68,44 +65,17 @@ Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tenso
   const std::vector<float> & prediction);
 
 /**
- * @brief Converts tensor prediction output to a prediction matrix in map coordinates.
- *
- * @param prediction The tensor prediction output.
- * @param transform_ego_to_map The transformation matrix from ego to map coordinates.
- * @param batch The batch index to extract.
- * @param agent The agent index to extract.
- * @return The prediction matrix for the specified batch and agent.
- */
-Eigen::MatrixXd get_prediction_matrix(
-  const std::vector<float> & prediction, const Eigen::Matrix4d & transform_ego_to_map,
-  const int64_t batch = 0, const int64_t agent = 0);
-
-/**
  * @brief Converts a prediction matrix to a Trajectory message.
  *
  * @param prediction_matrix The prediction matrix for a single agent.
  * @param transform_ego_to_map The transformation matrix from ego to map coordinates.
  * @param stamp The ROS time stamp for the message.
+ * @param velocity_smoothing_window The window size for velocity smoothing.
  * @return A Trajectory message in map coordinates.
  */
 Trajectory get_trajectory_from_prediction_matrix(
   const Eigen::MatrixXd & prediction_matrix, const Eigen::Matrix4d & transform_ego_to_map,
-  const rclcpp::Time & stamp);
-
-/**
- * @brief Creates multiple Trajectory messages from tensor prediction for a range of batches and
- * agents.
- *
- * @param prediction The tensor prediction output.
- * @param stamp The ROS time stamp for the messages.
- * @param transform_ego_to_map The transformation matrix from ego to map coordinates.
- * @param start_batch The starting batch index.
- * @param start_agent The starting agent index.
- * @return A vector of Trajectory messages.
- */
-std::vector<Trajectory> create_multiple_trajectories(
-  const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4d & transform_ego_to_map, int64_t start_batch, int64_t start_agent);
+  const rclcpp::Time & stamp, const int64_t velocity_smoothing_window);
 };  // namespace
 
 PredictedObjects create_predicted_objects(
@@ -124,35 +94,44 @@ PredictedObjects create_predicted_objects(
     return pose_path;
   };
 
-  const auto objects_history = ego_centric_agent_data.get_histories();
+  const std::vector<autoware::diffusion_planner::AgentHistory> objects_history =
+    ego_centric_agent_data.get_histories();
 
   PredictedObjects predicted_objects;
   predicted_objects.header.stamp = stamp;
   predicted_objects.header.frame_id = "map";
 
   constexpr double time_step{0.1};
-  constexpr auto prediction_shape = OUTPUT_SHAPE;
-  constexpr auto agent_size = prediction_shape[1];
 
-  // get agent trajectories excluding ego (start from batch 0, and agent 1)
-  constexpr int64_t start_batch = 0;
-  constexpr int64_t start_agent = 1;
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
+    get_tensor_data(prediction);
 
-  auto agent_trajectories =
-    create_multiple_trajectories(prediction, stamp, transform_ego_to_map, start_batch, start_agent);
-
-  // First prediction is of ego (agent 0). Predictions from index 1 to last are of the closest
-  // neighbors. ego_centric_agent_data contains neighbor history information ordered by distance.
-  for (int64_t agent = 1; agent < agent_size; ++agent) {
-    if (static_cast<size_t>(agent) - 1 >= objects_history.size()) {
+  // ego_centric_agent_data contains neighbor history information ordered by distance.
+  for (int64_t neighbor_id = 0; neighbor_id < MAX_NUM_NEIGHBORS; ++neighbor_id) {
+    if (static_cast<size_t>(neighbor_id) >= objects_history.size()) {
       break;
     }
+    // use batch 0
+    constexpr int64_t batch_idx = 0;
+
+    // Copy only the relevant part
+    Eigen::MatrixXd prediction_matrix = tensor_data.block(
+      batch_idx * MAX_NUM_AGENTS * OUTPUT_T + (neighbor_id + 1) * OUTPUT_T, 0, OUTPUT_T, POSE_DIM);
+    prediction_matrix.transposeInPlace();
+    postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 0, true);
+    postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 2, false);
+    prediction_matrix.transposeInPlace();
+
+    constexpr int64_t velocity_smoothing_window = 1;
+    const Trajectory trajectory_points_in_map_reference = get_trajectory_from_prediction_matrix(
+      prediction_matrix, transform_ego_to_map, stamp, velocity_smoothing_window);
+
     PredictedObject object;
-    const auto & object_info = objects_history.at(agent - 1).get_latest_state().tracked_object();
+    const TrackedObject & object_info =
+      objects_history.at(neighbor_id).get_latest_state().tracked_object();
     {  // Extract path from prediction
-      const auto & trajectory_points_in_map_reference = agent_trajectories.at(agent - 1);
       PredictedPath predicted_path;
-      const auto object_pose_z = object_info.kinematics.pose_with_covariance.pose.position.z;
+      const double object_pose_z = object_info.kinematics.pose_with_covariance.pose.position.z;
 
       predicted_path.path =
         trajectory_path_to_pose_path(trajectory_points_in_map_reference, object_pose_z);
@@ -178,38 +157,33 @@ PredictedObjects create_predicted_objects(
   return predicted_objects;
 }
 
-Trajectory create_trajectory(
+Trajectory create_ego_trajectory(
   const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4d & transform_ego_to_map, int64_t batch, int64_t agent)
+  const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index,
+  const int64_t velocity_smoothing_window)
 {
-  // one batch of prediction
-  Eigen::MatrixXd prediction_matrix =
-    get_prediction_matrix(prediction, transform_ego_to_map, batch, agent);
-  return get_trajectory_from_prediction_matrix(prediction_matrix, transform_ego_to_map, stamp);
-}
+  const int64_t ego_index = 0;
 
-CandidateTrajectories to_candidate_trajectories_msg(
-  const Trajectory & trajectory, const UUID & generator_uuid, const std::string & generator_name)
-{
-  const auto candidate_trajectory = autoware_internal_planning_msgs::build<
-                                      autoware_internal_planning_msgs::msg::CandidateTrajectory>()
-                                      .header(trajectory.header)
-                                      .generator_id(generator_uuid)
-                                      .points(trajectory.points);
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
+    get_tensor_data(prediction);
 
-  std_msgs::msg::String generator_name_msg;
-  generator_name_msg.data = generator_name;
+  // Validate indices before accessing block
+  const int64_t start_row = batch_index * MAX_NUM_AGENTS * OUTPUT_T + ego_index * OUTPUT_T;
+  if (start_row < 0 || start_row + OUTPUT_T > tensor_data.rows()) {
+    throw std::out_of_range(
+      "Invalid block access: start_row=" + std::to_string(start_row) +
+      ", rows=" + std::to_string(OUTPUT_T) + ", tensor_rows=" + std::to_string(tensor_data.rows()));
+  }
 
-  const auto generator_info =
-    autoware_internal_planning_msgs::build<autoware_internal_planning_msgs::msg::GeneratorInfo>()
-      .generator_id(generator_uuid)
-      .generator_name(generator_name_msg);
+  // Extract and copy the block to ensure we have a proper matrix, not just a view
+  Eigen::MatrixXd prediction_matrix = tensor_data.block(start_row, 0, OUTPUT_T, POSE_DIM).eval();
+  prediction_matrix.transposeInPlace();
+  postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 0, true);
+  postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 2, false);
+  prediction_matrix.transposeInPlace();
 
-  const auto output = autoware_internal_planning_msgs::build<
-                        autoware_internal_planning_msgs::msg::CandidateTrajectories>()
-                        .candidate_trajectories({candidate_trajectory})
-                        .generator_info({generator_info});
-  return output;
+  return get_trajectory_from_prediction_matrix(
+    prediction_matrix, transform_ego_to_map, stamp, velocity_smoothing_window);
 }
 
 TurnIndicatorsCommand create_turn_indicators_command(
@@ -283,50 +257,13 @@ int64_t count_valid_elements(
 
 namespace
 {
-std::vector<Trajectory> create_multiple_trajectories(
-  const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4d & transform_ego_to_map, int64_t start_batch, int64_t start_agent)
-{
-  constexpr auto prediction_shape = OUTPUT_SHAPE;
-  constexpr auto batch_size = prediction_shape[0];
-  constexpr auto agent_size = prediction_shape[1];
-  constexpr auto rows = prediction_shape[2];
-  constexpr auto cols = prediction_shape[3];
-
-  std::vector<Trajectory> agent_trajectories;
-  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
-    get_tensor_data(prediction);
-
-  for (int64_t batch = start_batch; batch < batch_size; ++batch) {
-    for (int64_t agent = start_agent; agent < agent_size; ++agent) {
-      // Copy only the relevant part
-      Eigen::MatrixXd prediction_matrix =
-        tensor_data.block(batch * agent_size * rows + agent * rows, 0, rows, cols);
-
-      prediction_matrix.transposeInPlace();
-      postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 0, true);
-      postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 2, false);
-      prediction_matrix.transposeInPlace();
-      agent_trajectories.push_back(
-        get_trajectory_from_prediction_matrix(prediction_matrix, transform_ego_to_map, stamp));
-    }
-  }
-  return agent_trajectories;
-}
-
 Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tensor_data(
   const std::vector<float> & prediction)
 {
-  // copy relevant part of data to Eigen matrix
-  constexpr auto prediction_shape = OUTPUT_SHAPE;
-
-  const int64_t agent_size = prediction_shape[1];
-  const int64_t rows = prediction_shape[2];
-  const int64_t cols = prediction_shape[3];
-  const int64_t batch = prediction.size() / (agent_size * rows * cols);
+  const int64_t batch = prediction.size() / (MAX_NUM_AGENTS * OUTPUT_T * POSE_DIM);
 
   Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data(
-    batch * agent_size * rows, cols);
+    batch * MAX_NUM_AGENTS * OUTPUT_T, POSE_DIM);
   tensor_data.setZero();
 
   // Ensure prediction has enough data
@@ -343,41 +280,9 @@ Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tenso
   return tensor_data;
 }
 
-Eigen::MatrixXd get_prediction_matrix(
-  const std::vector<float> & prediction, const Eigen::Matrix4d & transform_ego_to_map,
-  const int64_t batch, const int64_t agent)
-{
-  // TODO(Daniel): add batch support
-  const auto prediction_shape = OUTPUT_SHAPE;
-
-  // copy relevant part of data to Eigen matrix
-  const int64_t agent_size = prediction_shape[1];
-  const int64_t rows = prediction_shape[2];
-  const int64_t cols = prediction_shape[3];
-
-  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
-    get_tensor_data(prediction);
-  // Validate indices before accessing block
-  const int64_t start_row = batch * agent_size * rows + agent * rows;
-  if (start_row < 0 || start_row + rows > tensor_data.rows()) {
-    throw std::out_of_range(
-      "Invalid block access: start_row=" + std::to_string(start_row) +
-      ", rows=" + std::to_string(rows) + ", tensor_rows=" + std::to_string(tensor_data.rows()));
-  }
-
-  // Extract and copy the block to ensure we have a proper matrix, not just a view
-  Eigen::MatrixXd prediction_matrix = tensor_data.block(start_row, 0, rows, cols).eval();
-
-  // Copy only the relevant part
-  prediction_matrix.transposeInPlace();
-  postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 0, true);
-  postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 2, false);
-  return prediction_matrix.transpose();
-}
-
 Trajectory get_trajectory_from_prediction_matrix(
   const Eigen::MatrixXd & prediction_matrix, const Eigen::Matrix4d & transform_ego_to_map,
-  const rclcpp::Time & stamp)
+  const rclcpp::Time & stamp, const int64_t velocity_smoothing_window)
 {
   Trajectory trajectory;
   trajectory.header.stamp = stamp;
@@ -404,6 +309,24 @@ Trajectory get_trajectory_from_prediction_matrix(
     prev_y = p.pose.position.y;
     trajectory.points.push_back(p);
   }
+
+  // smooth velocity
+  for (int64_t row = 0; row + velocity_smoothing_window <= prediction_matrix.rows(); ++row) {
+    double sum_velocity = 0.0;
+    for (int64_t w = 0; w < velocity_smoothing_window; ++w) {
+      sum_velocity += trajectory.points[row + w].longitudinal_velocity_mps;
+    }
+    trajectory.points[row].longitudinal_velocity_mps =
+      static_cast<float>(sum_velocity / static_cast<double>(velocity_smoothing_window));
+  }
+
+  // calculate acceleration
+  for (int64_t row = 0; row + 1 < prediction_matrix.rows(); ++row) {
+    const double v0 = trajectory.points[row].longitudinal_velocity_mps;
+    const double v1 = trajectory.points[row + 1].longitudinal_velocity_mps;
+    trajectory.points[row].acceleration_mps2 = static_cast<float>((v1 - v0) / dt);
+  }
+  trajectory.points.back().acceleration_mps2 = 0.0f;
 
   return trajectory;
 }
