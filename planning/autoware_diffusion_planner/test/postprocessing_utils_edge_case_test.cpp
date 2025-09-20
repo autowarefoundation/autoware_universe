@@ -101,28 +101,4 @@ TEST_F(PostprocessingUtilsEdgeCaseTest, CreatePredictedObjects_MorePredictionsTh
   EXPECT_EQ(result.objects.size(), 2);
 }
 
-// Test edge case: UUID edge cases
-TEST_F(PostprocessingUtilsEdgeCaseTest, ToCandidateTrajectoriesMsg_UUIDEdgeCases)
-{
-  using UUID = unique_identifier_msgs::msg::UUID;
-  Trajectory traj;
-  traj.header.frame_id = "map";
-
-  // Test with all zeros UUID
-  UUID zero_uuid;
-  std::fill(zero_uuid.uuid.begin(), zero_uuid.uuid.end(), 0);
-
-  auto msg1 = postprocess::to_candidate_trajectories_msg(traj, zero_uuid, "");
-  EXPECT_EQ(msg1.generator_info[0].generator_name.data, "");
-
-  // Test with all max values UUID
-  UUID max_uuid;
-  std::fill(max_uuid.uuid.begin(), max_uuid.uuid.end(), 255);
-
-  // Test with very long generator name
-  std::string long_name(1000, 'a');
-  auto msg2 = postprocess::to_candidate_trajectories_msg(traj, max_uuid, long_name);
-  EXPECT_EQ(msg2.generator_info[0].generator_name.data, long_name);
-}
-
 }  // namespace autoware::diffusion_planner::test
