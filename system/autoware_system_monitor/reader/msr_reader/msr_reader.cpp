@@ -17,7 +17,7 @@
  * @brief MSR read class
  */
 
-#include "system_monitor/msr_reader/msr_reader.hpp"
+#include "msr_reader.hpp"
 
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/filesystem.hpp>
