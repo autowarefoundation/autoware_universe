@@ -1,0 +1,45 @@
+/**:
+  # cspell:ignore thre
+
+  ros__parameters:
+    data_params:
+      CAM_NUM: 6
+      cams: ["CAM_FRONT_LEFT", "CAM_FRONT", "CAM_FRONT_RIGHT", "CAM_BACK_LEFT", "CAM_BACK", "CAM_BACK_RIGHT"]
+      mean: [103.530, 116.280, 123.675]
+      std: [1.0, 1.0, 1.0]
+      to_rgb: false
+      pad_divisor: 32
+      scale_factor: 0.8
+      input_width: 1600
+      input_height: 900
+
+    model_params:
+      bev_h: 150
+      bev_w: 150
+      dim: 256
+      nb_dec: 6
+      num_query: 900
+      num_classes: 10
+      code_size: 10
+      engine_file: "$(env HOME)/autoware_data/tensorrt_bevformer/bevformer_small.engine"
+      onnx_file: "$(env HOME)/autoware_data/tensorrt_bevformer/bevformer_small.onnx"
+      auto_convert: true
+      workspace_size: 4096
+      precision: "fp16"
+
+    post_process_params:
+      score_thre: 0.2
+      has_twist: true
+      class_names:
+        - "car"
+        - "truck"
+        - "construction_vehicle"
+        - "bus"
+        - "trailer"
+        - "barrier"
+        - "motorcycle"
+        - "bicycle"
+        - "pedestrian"
+        - "traffic_cone"
+      pc_range: [-51.2, -51.2, -5.0, 51.2, 51.2, 3.0]
+      post_center_range: [-61.2, -61.2, -10.0, 61.2, 61.2, 10.0]
