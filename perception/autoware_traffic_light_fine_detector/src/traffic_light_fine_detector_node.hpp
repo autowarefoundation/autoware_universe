@@ -15,6 +15,8 @@
 #ifndef TRAFFIC_LIGHT_FINE_DETECTOR_NODE_HPP_
 #define TRAFFIC_LIGHT_FINE_DETECTOR_NODE_HPP_
 
+#include "traffic_light_fine_detector_process.hpp"
+
 #include <autoware/tensorrt_yolox/tensorrt_yolox.hpp>
 #include <image_transport/image_transport.hpp>
 #include <image_transport/subscriber_filter.hpp>
@@ -129,7 +131,6 @@ private:
   bool rosMsg2CvMat(
     const sensor_msgs::msg::Image::ConstSharedPtr image_msg, cv::Mat & image,
     std::string encode = "rgb8");
-  bool fitInFrame(cv::Point & lt, cv::Point & rb, const cv::Size & size);
   /**
    * @brief Read the label file to get class number and traffic_light class index of the model
    *
