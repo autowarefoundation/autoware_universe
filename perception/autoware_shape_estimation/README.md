@@ -2,23 +2,7 @@
 
 ## Purpose
 
-This node calculates a refined object shape (bounding box, cylinder, convex hull) in which a pointcloud cluster fits according to a label.
-
-## Inner-workings / Algorithms
-
-### Fitting algorithms
-
-- bounding box
-  - L-shape fitting: See reference below for details
-  - ML based shape fitting: See ML Based Shape Fitting Implementation section below for details
-
-- cylinder
-
-  `cv::minEnclosingCircle`
-
-- convex hull
-
-  `cv::convexHull`
+This node estimates refined 3D object shapes from point cloud clusters using object labels. It supports both rule-based algorithms (L-shape fitting, cylinder, convex hull with filtering and correction) and ML-based estimation (PointNet) for vehicles, incorporating reference information from prior detections to improve shape accuracy and orientation estimation.
 
 ## Inputs / Outputs
 
@@ -38,7 +22,93 @@ This node calculates a refined object shape (bounding box, cylinder, convex hull
 
 {{ json_to_markdown("perception/autoware_shape_estimation/schema/shape_estimation.schema.json") }}
 
-## ML Based Shape Implementation
+## Inner-workings / Algorithms
+
+### Rule-based algorithms
+
+This rule-based geometric algorithms applies object-type-specific shape fitting (L-shape for vehicles, cylinder for pedestrians, convex hull for unknown objects), followed by filtering and correction stages that incorporate reference information from prior detections to ensure geometric consistency and improve orientation accuracy.
+
+The shape fitting algorithm pipeline consists of following three stages.
+
+1. Shape Estimation
+
+    - Vehicle Objects (CAR, TRUCK, BUS, TRAILER, MOTORCYCLE, BICYCLE):
+
+        - **L-shape Fitting Algorithm (`fitLShape` function)**:
+
+          - Implements search-based rectangle fitting from IV2017 paper by Zhang et al.
+
+          - **Angle Optimization**:
+              - Default search range: 0 to 90 degrees for full angular sweep
+              - Reference yaw constraint: +/-search_angle_range around reference when available
+              - Two optimization methods: Standard iterative search or Boost-based Brent optimization
+
+          - **Closeness Criterion**: Evaluates fitting quality using Algorithm 4 from referenced paper
+              - Distance thresholds: d_min (0.01m squared), d_max (0.16m squared)
+              - Point-to-boundary distance calculation for quality assessment
+
+          - **3D Bounding Box Construction**:
+              - Projects points onto orthogonal axes e1 and e2
+              - Calculates intersection points to determine center and dimensions
+              - Height derived from point cloud Z-range with minimum epsilon (0.001m)
+
+          - **Output Validation**: Ensures minimum dimensions to prevent degenerate boxes
+
+    - Pedestrian (PEDESTRIAN):
+        - Cylinder shape estimation using cv::minEnclosingCircle
+
+    - Other/Unknown Objects:
+        - Convex hull shape estimation using cv::convexHull
+
+2. Filtering
+
+    - Vehicle Type-specific Filtering:
+
+        - Car Filter: Vehicle size validity verification
+        - Truck Filter: Truck-specific shape constraints
+        - Bus Filter: Bus-specific dimension checks
+        - Trailer Filter: Trailer shape validation
+
+    - Physical validity checks of estimated shapes
+
+    - Exclusion of invalid estimation results
+
+3. Corrector
+
+    - **Reference Information-based Correction**:
+        - Orientation correction using reference yaw information
+        - Dimension correction using reference shape size (minimum/fixed value modes)
+
+    - **Shape Correction Algorithm (`correctWithDefaultValue` function)**:
+
+        - **Purpose**: Rule-based bounding box correction using default vehicle dimensions when estimated shapes violate physical constraints
+
+          - **Corner Point Analysis**:
+              - Calculates 4 corner points: (0)front, (1)left, (2)rear, (3)right relative to vehicle center
+              - Ranks corners by distance from base_link: 1st, 2nd, 3rd most distant
+          - **Multi-case Correction Logic**:
+              - **Constraint Validation**: Uses min/max length/width parameters for physical feasibility checks
+
+        - **Correction Vector Application**:
+
+            - Computes correction vector based on constraint violations
+            - Updates shape dimensions: `shape.dimensions += correction_vector * 2.0`
+            - Adjusts pose position: `pose.position += rotation_matrix * correction_vector`
+
+        - **Orientation Normalization**: Ensures longest dimension aligns with x-axis (90 degree rotation if needed)
+
+    - **Vehicle Type-specific Correctors**:
+
+        - Vehicle Corrector: General vehicle correction
+        - Dedicated correction logic for each vehicle type
+
+    - **Geometric consistency assurance**
+
+4. Fallback Mechanism
+
+    - Automatic fallback to UNKNOWN label with convex hull estimation when any stage fails
+
+### ML Based Shape Implementation
 
 The model takes a point cloud and object label(provided by camera detections/Apollo instance segmentation) as an input and outputs the 3D bounding box of the object.
 
@@ -50,7 +120,7 @@ Bounding box estimation part of _Frustum PointNets for 3D Object Detection from 
 The model predicts the following outputs for each object:
 
 - x,y,z coordinates of the object center
-- object heading angle classification result(Uses 12 bins for angle classification - 30 degrees each)
+- object heading angle classification result (Uses 12 bins for angle classification - 30 degrees each)
 - object heading angle residuals
 - object size classification result
 - object size residuals
@@ -171,12 +241,12 @@ keywords = {autonomous driving, laser scanner, perception, segmentation},
 
 Frustum PointNets for 3D Object Detection from RGB-D Data:
 
-````bibtex
+```bibtex
 @inproceedings{qi2018frustum,
 title={Frustum pointnets for 3d object detection from rgb-d data},
 author={Qi, Charles R and Liu, Wei and Wu, Chenxia and Su, Hao and Guibas, Leonidas J},
 booktitle={Proceedings of the IEEE conference on computer vision and pattern recognition},
 pages={918--927},
 year={2018}
-}```
-````
+}
+```
