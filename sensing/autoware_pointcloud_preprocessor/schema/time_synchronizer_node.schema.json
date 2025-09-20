@@ -8,7 +8,7 @@
       "properties": {
         "timeout_sec": {
           "type": "number",
-          "default": "0.033",
+          "default": 0.033,
           "minimum": 0,
           "description": "Tolerance of time to publish the next pointcloud [s]. When this time limit is exceeded, the filter concatenates and publishes pointcloud, even if not all the point clouds are subscribed."
         },
@@ -33,7 +33,7 @@
         },
         "keep_input_frame_in_synchronized_pointcloud": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "Flag to indicate if input frame should be kept in synchronized point cloud."
         },
         "input_topics": {
@@ -51,7 +51,7 @@
         },
         "max_queue_size": {
           "type": "integer",
-          "default": "5",
+          "default": 5,
           "minimum": 1,
           "description": "Max queue size of input/output topics."
         }

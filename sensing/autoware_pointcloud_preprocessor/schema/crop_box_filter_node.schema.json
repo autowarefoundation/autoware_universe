@@ -9,37 +9,37 @@
         "min_x": {
           "type": "number",
           "description": "minimum x-coordinate value for crop range in meters",
-          "default": "-1.0"
+          "default": -1.0
         },
         "min_y": {
           "type": "number",
           "description": "minimum y-coordinate value for crop range in meters",
-          "default": "-1.0"
+          "default": -1.0
         },
         "min_z": {
           "type": "number",
           "description": "minimum z-coordinate value for crop range in meters",
-          "default": "-1.0"
+          "default": -1.0
         },
         "max_x": {
           "type": "number",
           "description": "maximum x-coordinate value for crop range in meters",
-          "default": "1.0"
+          "default": 1.0
         },
         "max_y": {
           "type": "number",
           "description": "maximum y-coordinate value for crop range in meters",
-          "default": "1.0"
+          "default": 1.0
         },
         "max_z": {
           "type": "number",
           "description": "maximum z-coordinate value for crop range in meters",
-          "default": "1.0"
+          "default": 1.0
         },
         "negative": {
           "type": "boolean",
           "description": "if true, remove points within the box from the pointcloud; otherwise, remove points outside the box.",
-          "default": "false"
+          "default": false
         },
         "processing_time_threshold_sec": {
           "type": "number",
