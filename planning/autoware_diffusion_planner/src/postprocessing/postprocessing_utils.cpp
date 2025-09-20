@@ -70,11 +70,12 @@ Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tenso
  * @param prediction_matrix The prediction matrix for a single agent.
  * @param transform_ego_to_map The transformation matrix from ego to map coordinates.
  * @param stamp The ROS time stamp for the message.
+ * @param velocity_smoothing_window The window size for velocity smoothing.
  * @return A Trajectory message in map coordinates.
  */
 Trajectory get_trajectory_from_prediction_matrix(
   const Eigen::MatrixXd & prediction_matrix, const Eigen::Matrix4d & transform_ego_to_map,
-  const rclcpp::Time & stamp);
+  const rclcpp::Time & stamp, const int64_t velocity_smoothing_window);
 };  // namespace
 
 PredictedObjects create_predicted_objects(
@@ -121,8 +122,9 @@ PredictedObjects create_predicted_objects(
     postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 2, false);
     prediction_matrix.transposeInPlace();
 
-    const Trajectory trajectory_points_in_map_reference =
-      get_trajectory_from_prediction_matrix(prediction_matrix, transform_ego_to_map, stamp);
+    constexpr int64_t velocity_smoothing_window = 1;
+    const Trajectory trajectory_points_in_map_reference = get_trajectory_from_prediction_matrix(
+      prediction_matrix, transform_ego_to_map, stamp, velocity_smoothing_window);
 
     PredictedObject object;
     const TrackedObject & object_info =
@@ -157,7 +159,8 @@ PredictedObjects create_predicted_objects(
 
 Trajectory create_ego_trajectory(
   const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index)
+  const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index,
+  const int64_t velocity_smoothing_window)
 {
   const int64_t ego_index = 0;
 
@@ -179,7 +182,8 @@ Trajectory create_ego_trajectory(
   postprocess::transform_output_matrix(transform_ego_to_map, prediction_matrix, 0, 2, false);
   prediction_matrix.transposeInPlace();
 
-  return get_trajectory_from_prediction_matrix(prediction_matrix, transform_ego_to_map, stamp);
+  return get_trajectory_from_prediction_matrix(
+    prediction_matrix, transform_ego_to_map, stamp, velocity_smoothing_window);
 }
 
 TurnIndicatorsCommand create_turn_indicators_command(
@@ -278,7 +282,7 @@ Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tenso
 
 Trajectory get_trajectory_from_prediction_matrix(
   const Eigen::MatrixXd & prediction_matrix, const Eigen::Matrix4d & transform_ego_to_map,
-  const rclcpp::Time & stamp)
+  const rclcpp::Time & stamp, const int64_t velocity_smoothing_window)
 {
   Trajectory trajectory;
   trajectory.header.stamp = stamp;
@@ -305,6 +309,24 @@ Trajectory get_trajectory_from_prediction_matrix(
     prev_y = p.pose.position.y;
     trajectory.points.push_back(p);
   }
+
+  // smooth velocity
+  for (int64_t row = 0; row + velocity_smoothing_window <= prediction_matrix.rows(); ++row) {
+    double sum_velocity = 0.0;
+    for (int64_t w = 0; w < velocity_smoothing_window; ++w) {
+      sum_velocity += trajectory.points[row + w].longitudinal_velocity_mps;
+    }
+    trajectory.points[row].longitudinal_velocity_mps =
+      static_cast<float>(sum_velocity / static_cast<double>(velocity_smoothing_window));
+  }
+
+  // calculate acceleration
+  for (int64_t row = 0; row + 1 < prediction_matrix.rows(); ++row) {
+    const double v0 = trajectory.points[row].longitudinal_velocity_mps;
+    const double v1 = trajectory.points[row + 1].longitudinal_velocity_mps;
+    trajectory.points[row].acceleration_mps2 = static_cast<float>((v1 - v0) / dt);
+  }
+  trajectory.points.back().acceleration_mps2 = 0.0f;
 
   return trajectory;
 }

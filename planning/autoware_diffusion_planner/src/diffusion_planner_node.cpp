@@ -131,6 +131,8 @@ void DiffusionPlanner::set_up_params()
   params_.use_route_handler = this->declare_parameter<bool>("use_route_handler", true);
   params_.batch_size = this->declare_parameter<int>("batch_size", 1);
   params_.temperature_list = this->declare_parameter<std::vector<double>>("temperature", {0.5});
+  params_.velocity_smoothing_window =
+    this->declare_parameter<int64_t>("velocity_smoothing_window", 1);
 
   // debug params
   debug_params_.publish_debug_map =
@@ -161,6 +163,8 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<bool>(parameters, "use_route_handler", temp_params.use_route_handler);
     update_param<int>(parameters, "batch_size", temp_params.batch_size);
     update_param<std::vector<double>>(parameters, "temperature", temp_params.temperature_list);
+    update_param<int64_t>(
+      parameters, "velocity_smoothing_window", temp_params.velocity_smoothing_window);
     params_ = temp_params;
   }
 
@@ -563,8 +567,8 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
   CandidateTrajectories candidate_trajectories;
 
   for (int i = 0; i < params_.batch_size; i++) {
-    const Trajectory trajectory =
-      postprocess::create_ego_trajectory(predictions, this->now(), transforms_.first, i);
+    const Trajectory trajectory = postprocess::create_ego_trajectory(
+      predictions, this->now(), transforms_.first, i, params_.velocity_smoothing_window);
     if (i == 0) {
       pub_trajectory_->publish(trajectory);
     }

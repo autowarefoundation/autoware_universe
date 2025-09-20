@@ -60,11 +60,13 @@ PredictedObjects create_predicted_objects(
  * @param stamp The ROS time stamp for the message.
  * @param transform_ego_to_map The transformation matrix from ego to map coordinates.
  * @param batch_index The batch index to extract.
+ * @param velocity_smoothing_window The window size for velocity smoothing.
  * @return A Trajectory message for the specified batch and agent.
  */
 Trajectory create_ego_trajectory(
   const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index);
+  const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index,
+  const int64_t velocity_smoothing_window);
 
 /**
  * @brief Converts turn indicator logit to TurnIndicatorsCommand message.
