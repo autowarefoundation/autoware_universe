@@ -16,6 +16,7 @@
 
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
@@ -336,7 +337,7 @@ const Pose refineGoal(const Pose & goal, const lanelet::ConstLanelet & goal_lane
     return goal;
   }
 
-  const auto segment = lanelet::utils::getClosestSegment(
+  const auto segment = *autoware::experimental::lanelet2_utils::get_closest_segment(
     lanelet::utils::to2D(lanelet_point), goal_lanelet.centerline());
   if (segment.empty()) {
     return goal;
@@ -401,7 +402,8 @@ bool isInLaneletWithYawThreshold(
   const double radius)
 {
   const double pose_yaw = tf2::getYaw(current_pose.orientation);
-  const double lanelet_angle = lanelet::utils::getLaneletAngle(lanelet, current_pose.position);
+  const double lanelet_angle =
+    autoware::experimental::lanelet2_utils::get_lanelet_angle(lanelet, current_pose.position);
   const double angle_diff = std::abs(autoware_utils::normalize_radian(lanelet_angle - pose_yaw));
 
   return (angle_diff < std::abs(yaw_threshold)) &&
