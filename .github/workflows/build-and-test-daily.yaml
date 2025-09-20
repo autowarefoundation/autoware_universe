@@ -17,6 +17,9 @@ jobs:
       codecov-flag: daily
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
+      redis-password: ${{ secrets.REDIS_PASSWORD }}
+      tailscale-oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+      tailscale-oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
 
   build-and-test-daily-cuda:
     uses: ./.github/workflows/build-and-test-reusable.yaml
@@ -29,6 +32,9 @@ jobs:
       codecov-flag: daily-cuda
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
+      redis-password: ${{ secrets.REDIS_PASSWORD }}
+      tailscale-oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+      tailscale-oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
 
   build-and-test-daily-arm64:
     uses: ./.github/workflows/build-and-test-reusable.yaml
@@ -41,6 +47,9 @@ jobs:
       codecov-flag: daily-arm64
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
+      redis-password: ${{ secrets.REDIS_PASSWORD }}
+      tailscale-oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+      tailscale-oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
 
   build-and-test-daily-arm64-cuda:
     uses: ./.github/workflows/build-and-test-reusable.yaml
@@ -53,3 +62,6 @@ jobs:
       codecov-flag: daily-arm64-cuda
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
+      redis-password: ${{ secrets.REDIS_PASSWORD }}
+      tailscale-oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+      tailscale-oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
