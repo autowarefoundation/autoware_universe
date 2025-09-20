@@ -290,7 +290,8 @@ void CommandModeDeciderBase::detect_operation_mode_timeout()
     system_request_.autoware_control = false;
   }
 
-  RCLCPP_INFO_STREAM(get_logger(), "Mode transition is canceled due to timeout.");
+  publish_autoware_control_request(system_request_.autoware_control);
+  RCLCPP_INFO_STREAM(get_logger(), "Mode transition is canceled due to timeout: " << last_mode_);
 }
 
 void CommandModeDeciderBase::update_request_mode()
@@ -456,6 +457,14 @@ void CommandModeDeciderBase::publish_decider_debug()
   pub_debug_->publish(msg);
 }
 
+void CommandModeDeciderBase::publish_autoware_control_request(bool autoware_control)
+{
+  CommandModeRequest msg;
+  msg.stamp = now();
+  msg.vehicle = autoware_control ? CommandModeRequest::AUTOWARE : CommandModeRequest::MANUAL;
+  pub_command_mode_request_->publish(msg);
+}
+
 ResponseStatus make_response(bool success, const std::string & message = "")
 {
   ResponseStatus res;
@@ -518,12 +527,7 @@ void CommandModeDeciderBase::on_change_autoware_control(
     }
   }
   system_request_.autoware_control = req->autoware_control;
-
-  // Request vehicle mode to switcher nodes.
-  CommandModeRequest msg;
-  msg.stamp = now();
-  msg.vehicle = req->autoware_control ? CommandModeRequest::AUTOWARE : CommandModeRequest::MANUAL;
-  pub_command_mode_request_->publish(msg);
+  publish_autoware_control_request(system_request_.autoware_control);
 
   RCLCPP_INFO_STREAM(get_logger(), "Change autoware control: " << req->autoware_control);
   update();
