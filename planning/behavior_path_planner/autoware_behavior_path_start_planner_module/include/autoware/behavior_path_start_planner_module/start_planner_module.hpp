@@ -342,6 +342,8 @@ ego pose.
   // turn signal
   TurnSignalInfo calcTurnSignalInfo();
 
+  bool canDepartConsideringPrevLightInfo();
+
   void incrementPathIndex();
   PathWithLaneId getCurrentPath() const;
   void planWithPriority(
