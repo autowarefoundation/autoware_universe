@@ -15,13 +15,14 @@
 #ifndef AUTOWARE__DIFFUSION_PLANNER__CONVERSION__LANELET_HPP_
 #define AUTOWARE__DIFFUSION_PLANNER__CONVERSION__LANELET_HPP_
 
-#include "autoware/diffusion_planner/polyline.hpp"
+#include <Eigen/Core>
 
 #include <lanelet2_core/LaneletMap.h>
 
 #include <cstdint>
 #include <map>
 #include <optional>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -50,13 +51,19 @@ const std::map<std::string, LineType> LINE_TYPE_MAP = {
   {"road_border", LINE_TYPE_ROAD_BORDER}, {"road_shoulder", LINE_TYPE_ROAD_SHOULDER},
   {"virtual", LINE_TYPE_VIRTUAL},         {"zebra_marking", LINE_TYPE_ZEBRA_MARKING}};
 
+const std::set<std::string> ACCEPTABLE_LANE_SUBTYPES = {
+  "road", "highway", "road_shoulder", "bicycle_lane"};
+
+using LanePoint = Eigen::Vector3d;
+using Polyline = std::vector<LanePoint>;
+
 struct LaneSegment
 {
   int64_t id;
-  Polyline polyline;
-  bool is_intersection{false};
-  std::vector<BoundarySegment> left_boundaries;
-  std::vector<BoundarySegment> right_boundaries;
+  Polyline centerline;
+  Polyline left_boundary;
+  Polyline right_boundary;
+  LanePoint mean_point;
   LineType left_line_type;
   LineType right_line_type;
   std::optional<float> speed_limit_mps{std::nullopt};
@@ -71,16 +78,15 @@ struct LaneSegment
   static constexpr int64_t TRAFFIC_LIGHT_ID_NONE = -1;
 
   LaneSegment(
-    int64_t id, Polyline polyline, bool is_intersection,
-    const std::vector<BoundarySegment> & left_boundaries,
-    const std::vector<BoundarySegment> & right_boundaries, LineType left_line_type,
-    LineType right_line_type, std::optional<float> speed_limit_mps, int64_t turn_direction,
-    int64_t traffic_light_id)
+    const int64_t id, const Polyline & centerline, const Polyline & left_boundary,
+    const Polyline & right_boundary, const LanePoint & mean_point, const LineType left_line_type,
+    const LineType right_line_type, const std::optional<float> speed_limit_mps,
+    const int64_t turn_direction, const int64_t traffic_light_id)
   : id(id),
-    polyline(std::move(polyline)),
-    is_intersection(is_intersection),
-    left_boundaries(left_boundaries),
-    right_boundaries(right_boundaries),
+    centerline(centerline),
+    left_boundary(left_boundary),
+    right_boundary(right_boundary),
+    mean_point(mean_point),
     left_line_type(left_line_type),
     right_line_type(right_line_type),
     speed_limit_mps(speed_limit_mps),

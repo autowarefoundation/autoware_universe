@@ -26,6 +26,7 @@ namespace autoware::diffusion_planner
 inline constexpr int64_t NUM_SEGMENTS_IN_LANE = 70;
 inline constexpr int64_t NUM_SEGMENTS_IN_ROUTE = 25;
 inline constexpr int64_t MAX_NUM_NEIGHBORS = 32;
+inline constexpr int64_t MAX_NUM_AGENTS = MAX_NUM_NEIGHBORS + 1;  // Including ego
 inline constexpr int64_t POINTS_PER_SEGMENT = 20;  //!< Number of points in each lane segment.
 // Number of columns in a segment matrix
 // (X,Y,dX,dY,LeftBoundX,LeftBoundY,RightBoundX,RightBoundY,TrafficLightEncoding(Dim5),Speed Limit)
@@ -58,12 +59,11 @@ inline constexpr int64_t SEGMENT_POINT_DIM = LINE_TYPE_RIGHT_START + LINE_TYPE_N
 inline constexpr int64_t INPUT_T = 20;
 inline constexpr int64_t OUTPUT_T = 80;  // Output timestamp number
 inline constexpr int64_t POSE_DIM = 4;   // x, y, cos(yaw), sin(yaw)
-inline constexpr std::array<int64_t, 4> OUTPUT_SHAPE = {
-  1, MAX_NUM_NEIGHBORS + 1, OUTPUT_T, POSE_DIM};
+inline constexpr std::array<int64_t, 4> OUTPUT_SHAPE = {1, MAX_NUM_AGENTS, OUTPUT_T, POSE_DIM};
 inline constexpr std::array<int64_t, 2> TURN_INDICATOR_LOGIT_SHAPE = {1, 4};
 
 inline constexpr std::array<int64_t, 4> SAMPLED_TRAJECTORIES_SHAPE = {
-  1, MAX_NUM_NEIGHBORS + 1, OUTPUT_T + 1, POSE_DIM};
+  1, MAX_NUM_AGENTS, OUTPUT_T + 1, POSE_DIM};
 inline constexpr std::array<int64_t, 3> EGO_HISTORY_SHAPE = {1, INPUT_T + 1, POSE_DIM};
 inline constexpr std::array<int64_t, 2> EGO_CURRENT_STATE_SHAPE = {1, 10};
 inline constexpr std::array<int64_t, 4> NEIGHBOR_SHAPE = {1, MAX_NUM_NEIGHBORS, INPUT_T + 1, 11};
