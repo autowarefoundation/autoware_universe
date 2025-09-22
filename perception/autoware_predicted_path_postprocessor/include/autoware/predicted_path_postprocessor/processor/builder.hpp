@@ -12,18 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__BUILDER_HPP_
-#define AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__BUILDER_HPP_
+#ifndef AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__BUILDER_HPP_
+#define AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__BUILDER_HPP_
 
-#include "autoware/predicted_path_postprocessor/interface.hpp"
-#include "autoware/predicted_path_postprocessor/processors/refine_by_speed.hpp"
+#include "autoware/predicted_path_postprocessor/processor/interface.hpp"
+#include "autoware/predicted_path_postprocessor/processor/refine_by_speed.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
 #include <string>
 #include <vector>
 
-namespace autoware::predicted_path_postprocessor
+namespace autoware::predicted_path_postprocessor::processor
 {
 /**
  * @brief Build processors from their names.
@@ -38,7 +38,7 @@ inline std::vector<ProcessorInterface::UniquePtr> build_processors(
   std::vector<ProcessorInterface::UniquePtr> outputs;
   for (const auto & name : processor_names) {
     if (name == "refine_by_speed") {
-      outputs.emplace_back(std::make_unique<processors::RefineBySpeed>(node_ptr, name));
+      outputs.push_back(std::make_unique<RefineBySpeed>(node_ptr, name));
     } else {
       RCLCPP_ERROR_STREAM(node_ptr->get_logger(), "Unknown processor name: " << name);
       continue;
@@ -46,5 +46,5 @@ inline std::vector<ProcessorInterface::UniquePtr> build_processors(
   }
   return outputs;
 }
-}  // namespace autoware::predicted_path_postprocessor
-#endif  // AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__BUILDER_HPP_
+}  // namespace autoware::predicted_path_postprocessor::processor
+#endif  // AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__BUILDER_HPP_

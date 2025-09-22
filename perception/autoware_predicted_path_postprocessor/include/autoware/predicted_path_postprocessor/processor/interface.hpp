@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__INTERFACE_HPP_
-#define AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__INTERFACE_HPP_
+#ifndef AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__INTERFACE_HPP_
+#define AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__INTERFACE_HPP_
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <rclcpp/parameter_client.hpp>
@@ -26,7 +26,7 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::predicted_path_postprocessor
+namespace autoware::predicted_path_postprocessor::processor
 {
 /**
  * @brief A context which processors can access.
@@ -119,6 +119,6 @@ public:
 private:
   const std::string processor_name_;  //!< Name of the processor.
 };
-}  // namespace autoware::predicted_path_postprocessor
+}  // namespace autoware::predicted_path_postprocessor::processor
 
-#endif  // AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__INTERFACE_HPP_
+#endif  // AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__INTERFACE_HPP_

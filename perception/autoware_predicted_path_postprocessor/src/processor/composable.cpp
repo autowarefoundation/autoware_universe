@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/predicted_path_postprocessor/composable.hpp"
+#include "autoware/predicted_path_postprocessor/processor/composable.hpp"
 
-#include "autoware/predicted_path_postprocessor/builder.hpp"
+#include "autoware/predicted_path_postprocessor/processor/builder.hpp"
 
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-namespace autoware::predicted_path_postprocessor
+namespace autoware::predicted_path_postprocessor::processor
 {
 ComposableProcessor::ComposableProcessor(
   rclcpp::Node * node_ptr, const std::vector<std::string> & processor_names)
@@ -102,4 +102,4 @@ ComposableProcessor::process_internal(
 
   return {std::move(final_result), std::move(debug_results)};
 }
-}  // namespace autoware::predicted_path_postprocessor
+}  // namespace autoware::predicted_path_postprocessor::processor

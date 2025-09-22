@@ -29,7 +29,7 @@ The following processors are supported:
 
 1. Create a new processor class that inherits from `ProcessorInterface`:
 
-   ```c++:processors/sample_processor.hpp
+   ```c++:processor/sample_processor.hpp
    class SampleProcessor final : public ProcessorInterface
    {
      public:
@@ -60,14 +60,14 @@ The following processors are supported:
 
 2. Add building logic for the processor in `build_processors(...)` function:
 
-   ```c++:builder.hpp
+   ```c++:processor/builder.hpp
    std::vector<ProcessorInterface::UniquePtr> build_processors(rclcpp::Node * node_ptr, const std::string & processor_name)
    {
      for (const auto & name : processor_names) {
        if ( /* ... */) {
          // ...
        } else if (name == "sample_processor") {
-         outputs.emplace_back(std::make_unique<processors::SampleProcessor>(node_ptr, name));
+         outputs.push_back(std::make_unique<processors::SampleProcessor>(node_ptr, name));
        }
      }
    }

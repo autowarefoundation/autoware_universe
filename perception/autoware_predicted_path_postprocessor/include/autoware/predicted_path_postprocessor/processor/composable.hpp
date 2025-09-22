@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__COMPOSABLE_HPP_
-#define AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__COMPOSABLE_HPP_
+#ifndef AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__COMPOSABLE_HPP_
+#define AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__COMPOSABLE_HPP_
 
-#include "autoware/predicted_path_postprocessor/interface.hpp"
+#include "autoware/predicted_path_postprocessor/processor/interface.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -26,7 +26,7 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::predicted_path_postprocessor
+namespace autoware::predicted_path_postprocessor::processor
 {
 /**
  * @brief A class composing multiple processors to process predicted objects.
@@ -85,5 +85,5 @@ private:
 
   std::vector<ProcessorInterface::UniquePtr> processors_;  //!< Set of processors.
 };
-}  // namespace autoware::predicted_path_postprocessor
-#endif  // AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__COMPOSABLE_HPP_
+}  // namespace autoware::predicted_path_postprocessor::processor
+#endif  // AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__COMPOSABLE_HPP_
