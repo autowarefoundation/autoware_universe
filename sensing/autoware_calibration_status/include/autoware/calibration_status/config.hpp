@@ -73,17 +73,17 @@ struct CalibrationStatusConfig
     this->max_depth = max_depth;
     this->dilation_size = static_cast<uint32_t>(dilation_size);
     this->height = {
-      static_cast<uint32_t>(height[0]), static_cast<uint32_t>(height[1]),
-      static_cast<uint32_t>(height[2])};
+      static_cast<int32_t>(height[0]), static_cast<int32_t>(height[1]),
+      static_cast<int32_t>(height[2])};
     this->width = {
-      static_cast<uint32_t>(width[0]), static_cast<uint32_t>(width[1]),
-      static_cast<uint32_t>(width[2])};
+      static_cast<int32_t>(width[0]), static_cast<int32_t>(width[1]),
+      static_cast<int32_t>(width[2])};
   }
   double max_depth;
   uint32_t dilation_size;
-  std::vector<uint32_t> height;
-  std::vector<uint32_t> width;
-  uint32_t channels{5};
+  std::vector<int32_t> height;
+  std::vector<int32_t> width;
+  int32_t channels{5};
 };
 
 }  // namespace autoware::calibration_status
