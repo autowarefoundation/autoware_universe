@@ -71,7 +71,7 @@ ComposableProcessor::process_internal(
     auto target = object;
 
     for (const auto & processor : processors_) {
-      target = processor->process(target, context);
+      processor->process(target, context);
 
       if (collect_intermediate) {
         intermediates[processor->name()].push_back(target);
