@@ -14,7 +14,7 @@
 
 #include "autoware/calibration_status/preprocess_cuda.hpp"
 
-#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
+#include <autoware/cuda_utils/cuda_utils.hpp>
 
 #include <cmath>
 #include <cstdint>
@@ -23,8 +23,12 @@ namespace autoware::calibration_status
 {
 
 PreprocessCuda::PreprocessCuda(
-  const double max_depth, const uint32_t dilation_size, cudaStream_t & stream)
-: max_depth_(max_depth), dilation_size_(static_cast<int>(dilation_size)), stream_(stream) {};
+  const double max_depth, const uint32_t dilation_size, const uint32_t max_width,
+  const uint32_t max_height, cudaStream_t & stream)
+: max_depth_(max_depth), dilation_size_(static_cast<int>(dilation_size)), stream_(stream)
+{
+  metric_depth_buffer_ = cuda_utils::make_unique<float[]>(max_width * max_height);
+};
 
 __global__ void copyImage_kernel(
   const InputImageBGR8Type * __restrict__ input_image, const size_t width, const size_t height,
@@ -368,11 +372,11 @@ cudaError_t PreprocessCuda::projectPoints_launch(
   dim3 threads(256);
   dim3 blocks((num_points + threads.x - 1) / threads.x);
 
-  auto metric_depth_buffer = cuda_utils::make_unique<float[]>(width * height);
+  cuda_utils::clear_async(metric_depth_buffer_.get(), width * height, stream_);
 
   projectPoints_kernel<<<blocks, threads, 0, stream_>>>(
     input_points, undistorted_image, tf_matrix, projection_matrix, num_points, width, height,
-    max_depth_, dilation_size_, metric_depth_buffer.get(), output_array, num_points_projected);
+    max_depth_, dilation_size_, metric_depth_buffer_.get(), output_array, num_points_projected);
 
   return cudaGetLastError();
 }

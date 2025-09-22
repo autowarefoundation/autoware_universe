@@ -74,7 +74,8 @@ CalibrationStatus::CalibrationStatus(
 
   CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
   preprocess_ptr_ =
-    std::make_unique<PreprocessCuda>(config.max_depth, config.dilation_size, stream_);
+    std::make_unique<PreprocessCuda>(config.max_depth, config.dilation_size, config_.width.at(2),
+                                     config_.height.at(2), stream_);
 }
 
 CalibrationStatusResult CalibrationStatus::process(

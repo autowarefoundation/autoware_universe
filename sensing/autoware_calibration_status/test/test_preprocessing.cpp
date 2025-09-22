@@ -89,7 +89,8 @@ void PreprocessingTest::SetUp()
   projection_matrix_d = cuda_utils::make_unique<double[]>(projection_matrix_size);
   tf_matrix_d = cuda_utils::make_unique<double[]>(tf_matrix_size);
 
-  preprocess_ptr = std::make_unique<PreprocessCuda>(max_depth, dilation_size, stream);
+  preprocess_ptr = std::make_unique<PreprocessCuda>(
+    max_depth, dilation_size, data_utils::width, data_utils::height, stream);
 }
 
 std::filesystem::path PreprocessingTest::data_dir;

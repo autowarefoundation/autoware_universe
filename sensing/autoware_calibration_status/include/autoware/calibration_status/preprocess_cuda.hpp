@@ -17,6 +17,8 @@
 
 #include "autoware/calibration_status/data_type.hpp"
 
+#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
+
 #include <cuda_runtime_api.h>
 
 // cspell:ignoreWords Conrady
@@ -42,10 +44,13 @@ public:
    * @brief Constructor for PreprocessCuda
    * @param max_depth Maximum depth for projected LiDAR points in the camera frame
    * @param dilation_size Size of morphological dilation kernel for point projection
+   * @param max_width Maximum expected image width in pixels
+   * @param max_height Maximum expected image height in pixels
    * @param stream CUDA stream for asynchronous kernel launches
    */
   explicit PreprocessCuda(
-    const double max_depth, const uint32_t dilation_size, cudaStream_t & stream);
+    const double max_depth, const uint32_t dilation_size, const uint32_t max_width,
+    const uint32_t max_height, cudaStream_t & stream);
 
   cudaError_t copyImage_launch(
     const InputImageBGR8Type * input_image, const size_t width, const size_t height,
@@ -98,6 +103,7 @@ public:
 private:
   double max_depth_;
   int dilation_size_;
+  cuda_utils::CudaUniquePtr<float[]> metric_depth_buffer_;
   cudaStream_t stream_;
 };
 
