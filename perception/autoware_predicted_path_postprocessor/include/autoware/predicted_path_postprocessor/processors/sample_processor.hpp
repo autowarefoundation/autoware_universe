@@ -47,12 +47,9 @@ public:
                                 << ", string_param=" << string_param);
   }
 
-  autoware_perception_msgs::msg::PredictedObject process(
-    const autoware_perception_msgs::msg::PredictedObject & target, const Context &) override
+  void process(autoware_perception_msgs::msg::PredictedObject &, const Context &) override
   {
     RCLCPP_INFO(rclcpp::get_logger("predicted_path_postprocessor"), "SampleProcessor processed!!");
-    autoware_perception_msgs::msg::PredictedObject output(target);
-    return output;
   }
 };
 }  // namespace autoware::predicted_path_postprocessor::processors
