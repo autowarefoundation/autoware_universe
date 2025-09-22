@@ -93,11 +93,9 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
     filter_parameters, max_mem_pool_size_in_byte);
 
   sub_ = this->create_subscription<cuda_blackboard::CudaPointCloud2>(
-    "~/input/pointcloud", 100,
-    [this](cuda_blackboard::CudaPointCloud2::ConstSharedPtr msg) {
+    "~/input/pointcloud", 100, [this](cuda_blackboard::CudaPointCloud2::ConstSharedPtr msg) {
       this->cudaPointCloudCallback(msg);
-    }
-  );
+    });
 }
 
 void CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback(

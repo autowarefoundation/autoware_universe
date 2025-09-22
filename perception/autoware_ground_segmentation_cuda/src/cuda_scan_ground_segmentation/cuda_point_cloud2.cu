@@ -211,8 +211,7 @@ void PointCloud2::to_cuda_point_cloud2(cuda_blackboard::CudaPointCloud2 & msg)
   }
 
   msg.data = cuda_blackboard::make_unique<uint8_t[]>(
-    msg.height * msg.width * msg.point_step * sizeof(uint8_t)
-  );
+    msg.height * msg.width * msg.point_step * sizeof(uint8_t));
 
   CHECK_CUDA_ERROR(
     launchAsync<BLOCK_SIZE_X>(

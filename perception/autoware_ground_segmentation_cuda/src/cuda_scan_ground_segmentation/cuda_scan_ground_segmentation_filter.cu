@@ -756,8 +756,7 @@ void CudaScanGroundSegmentationFilter::extractPoints(
 #endif
 
 void CudaScanGroundSegmentationFilter::classifyPointCloud(
-  const cuda_blackboard::CudaPointCloud2 & input,
-  cuda_blackboard::CudaPointCloud2 & ground, 
+  const cuda_blackboard::CudaPointCloud2 & input, cuda_blackboard::CudaPointCloud2 & ground,
   cuda_blackboard::CudaPointCloud2 & non_ground)
 {
   dev_input_points_->from_cuda_point_cloud2(input);
