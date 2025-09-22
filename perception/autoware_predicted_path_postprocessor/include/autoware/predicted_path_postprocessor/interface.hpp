@@ -112,10 +112,9 @@ public:
    *
    * @param target The predicted object to process.
    * @param context The context in which the object is processed.
-   * @return The processed predicted object.
    */
-  virtual autoware_perception_msgs::msg::PredictedObject process(
-    const autoware_perception_msgs::msg::PredictedObject & target, const Context & context) = 0;
+  virtual void process(
+    autoware_perception_msgs::msg::PredictedObject & target, const Context & context) = 0;
 
 private:
   const std::string processor_name_;  //!< Name of the processor.
