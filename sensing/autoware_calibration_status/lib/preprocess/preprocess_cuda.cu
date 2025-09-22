@@ -27,8 +27,8 @@ PreprocessCuda::PreprocessCuda(
 : max_depth_(max_depth), dilation_size_(static_cast<int>(dilation_size)), stream_(stream) {};
 
 __global__ void copyImage_kernel(
-  const InputImageBGR8Type * input_image, const size_t width, const size_t height,
-  InputImageBGR8Type * output_image, float * output_array)
+  const InputImageBGR8Type * __restrict__ input_image, const size_t width, const size_t height,
+  InputImageBGR8Type * __restrict__ output_image, float * output_array)
 {
   const size_t x = blockIdx.x * blockDim.x + threadIdx.x;
   const size_t y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -72,7 +72,7 @@ cudaError_t PreprocessCuda::copyImage_launch(
  * @return The interpolated BGR pixel as an InputImageBGR8Type.
  */
 __device__ inline InputImageBGR8Type bilinear_sample(
-  const InputImageBGR8Type * image, const float u, const float v, const size_t width,
+  const InputImageBGR8Type * __restrict__ image, const float u, const float v, const size_t width,
   const size_t height)
 {
   // Check if the coordinate is completely outside the image bounds
@@ -134,9 +134,10 @@ __device__ inline InputImageBGR8Type bilinear_sample(
  * @param output_array Pointer to the output array for RGB, depth, and intensity data.
  */
 __global__ void undistortImage_kernel(
-  const InputImageBGR8Type * input_image, const double * dist_coeffs, const double * camera_matrix,
-  const double * projection_matrix, const size_t width, const size_t height,
-  InputImageBGR8Type * output_image, float * output_array)
+  const InputImageBGR8Type * __restrict__ input_image, const double * __restrict__ dist_coeffs,
+  const double * __restrict__ camera_matrix, const double * __restrict__ projection_matrix,
+  const size_t width, const size_t height, InputImageBGR8Type * __restrict__ output_image,
+  float * __restrict__ output_array)
 {
   const size_t x = blockIdx.x * blockDim.x + threadIdx.x;
   const size_t y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -259,10 +260,12 @@ __device__ inline InputImageBGR8Type jet_colormap(float v)
  * @param num_points_projected A counter for the number of successfully projected points.
  */
 __global__ void projectPoints_kernel(
-  const InputPointType * input_points, InputImageBGR8Type * undistorted_image,
-  const double * tf_matrix, const double * projection_matrix, const size_t num_points,
-  const size_t width, const size_t height, const double max_depth, const int dilation_size,
-  float * metric_depth_buffer, float * output_array, uint32_t * num_points_projected)
+  const InputPointType * __restrict__ input_points,
+  InputImageBGR8Type * __restrict__ undistorted_image, const double * __restrict__ tf_matrix,
+  const double * __restrict__ projection_matrix, const size_t num_points, const size_t width,
+  const size_t height, const double max_depth, const int dilation_size,
+  float * __restrict__ metric_depth_buffer, float * __restrict__ output_array,
+  uint32_t * __restrict__ num_points_projected)
 {
   size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
 
