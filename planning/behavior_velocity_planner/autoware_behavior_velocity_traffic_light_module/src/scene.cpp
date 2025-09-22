@@ -150,7 +150,7 @@ bool TrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
         RCLCPP_DEBUG(logger_, "Suppressing restart due to proximity to stop line.");
         const auto & ego_pos = planner_data_->current_odometry->pose.position;
         const double dist =
-          autoware::motion_utils::calcSignedArcLength(input_path.points, ego_pos, 0L);
+          autoware::motion_utils::calcSignedArcLength(input_path.points, 0L, ego_pos);
         const auto pose_opt =
           autoware::motion_utils::calcLongitudinalOffsetPose(input_path.points, 0L, dist);
         if (pose_opt.has_value()) {
