@@ -19566,7 +19566,7 @@
 <tr>
 <td>prior_log_odds</td>
 <td>float</td>
-<td>The prior log-odds to be added to each traffic light state before fusing evidence. A value of 0.0 means no bias, positive values bias towards 'Red', and negative values bias towards 'Green'.</td>
+<td>The uniform prior log-odds to initialize the belief for any new traffic light state. 0.0 means a neutral (50%) initial belief. Positive values make all states initially more likely, negative values make them less likely.</td>
 <td>0</td>
 <td>N/A</td>
 </tr>
