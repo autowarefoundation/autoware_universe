@@ -25,10 +25,11 @@ All movement plugins inherit from `DummyObjectMovementBasePlugin` which provides
 
 #### Object Action Handling
 
-- **ADD**: New objects are assigned to plugins based on their action type. Each plugin handles specific object types.
+- **ADD**: New objects are created and they move in a straight line, acceleration and deceleration parameters can be used.
 - **MODIFY**: Handled directly by the node, bypassing plugin movement logic. Immediately replaces the object's position information across all plugins.
 - **DELETE**: The specified object is removed from all plugins.
 - **DELETEALL**: Clears all objects from all plugins.
+- **PREDICT**: New objects are created, they move in a straight line for a set time and then the predictions extracted from the perception module are used to dictate where the objects will move to.
 
 ## Inputs / Outputs
 
@@ -84,7 +85,3 @@ The plugin uses `CommonParameters` for both vehicle and pedestrian object types.
 | `max_speed_ratio`            | double | maximum speed ratio relative to dummy object speed        |
 | `speed_check_threshold`      | double | speed threshold (m/s) above which speed checks apply      |
 | `path_selection_strategy`    | string | path selection strategy: "highest_confidence" or "random" |
-
-## Assumptions / Known limits
-
-TBD.
