@@ -25,45 +25,27 @@
 
 namespace autoware::diffusion_planner::utils
 {
-std::pair<Eigen::Matrix4d, Eigen::Matrix4d> get_transform_matrix(
-  const nav_msgs::msg::Odometry & msg)
+
+namespace
 {
-  // Extract position
-  double x = msg.pose.pose.position.x;
-  double y = msg.pose.pose.position.y;
-  double z = msg.pose.pose.position.z;
 
-  // Create Eigen quaternion and normalize it just in case
-  Eigen::Quaterniond q = std::invoke([&msg]() -> Eigen::Quaterniond {
-    double qx = msg.pose.pose.orientation.x;
-    double qy = msg.pose.pose.orientation.y;
-    double qz = msg.pose.pose.orientation.z;
-    double qw = msg.pose.pose.orientation.w;
-
-    // Create Eigen quaternion and normalize it just in case
-    Eigen::Quaterniond q(qw, qx, qy, qz);
-    return (q.norm() < std::numeric_limits<float>::epsilon()) ? Eigen::Quaterniond::Identity()
-                                                              : q.normalized();
-  });
-
-  // Rotation matrix (3x3)
-  Eigen::Matrix3d R = q.toRotationMatrix();
-
-  // Translation vector
-  Eigen::Vector3d t(x, y, z);
-
-  // Base_link → Map (forward)
-  Eigen::Matrix4d bl2map = Eigen::Matrix4d::Identity();
-  bl2map.block<3, 3>(0, 0) = R;
-  bl2map.block<3, 1>(0, 3) = t;
-
-  // Map → Base_link (inverse)
-  Eigen::Matrix4d map2bl = Eigen::Matrix4d::Identity();
-  map2bl.block<3, 3>(0, 0) = R.transpose();
-  map2bl.block<3, 1>(0, 3) = -R.transpose() * t;
-
-  return {bl2map, map2bl};
+inline double square(double x)
+{
+  return x * x;
 }
+
+Eigen::Matrix3d quaternion_to_matrix(const geometry_msgs::msg::Quaternion & q_msg)
+{
+  const double norm =
+    std::sqrt(square(q_msg.w) + square(q_msg.x) + square(q_msg.y) + square(q_msg.z));
+  constexpr double kEpsilon = 1e-6;
+  if (norm < kEpsilon) {
+    throw std::runtime_error("Quaternion norm is too small");
+  }
+
+  return Eigen::Quaterniond(q_msg.w, q_msg.x, q_msg.y, q_msg.z).toRotationMatrix();
+}
+}  // namespace
 
 std::vector<float> create_float_data(const std::vector<int64_t> & shape, float fill)
 {
@@ -99,21 +81,8 @@ Eigen::Matrix4d pose_to_matrix4f(const geometry_msgs::msg::Pose & pose)
   double y = pose.position.y;
   double z = pose.position.z;
 
-  // Create Eigen quaternion and normalize it just in case
-  Eigen::Quaterniond q = std::invoke([&pose]() -> Eigen::Quaterniond {
-    double qx = pose.orientation.x;
-    double qy = pose.orientation.y;
-    double qz = pose.orientation.z;
-    double qw = pose.orientation.w;
-
-    // Create Eigen quaternion and normalize it just in case
-    Eigen::Quaterniond q(qw, qx, qy, qz);
-    return (q.norm() < std::numeric_limits<float>::epsilon()) ? Eigen::Quaterniond::Identity()
-                                                              : q.normalized();
-  });
-
   // Rotation matrix (3x3)
-  Eigen::Matrix3d R = q.toRotationMatrix();
+  Eigen::Matrix3d R = quaternion_to_matrix(pose.orientation);
 
   // Translation vector
   Eigen::Vector3d t(x, y, z);
@@ -132,6 +101,11 @@ std::pair<float, float> rotation_matrix_to_cos_sin(const Eigen::Matrix3d & rotat
   // Using atan2 to get the yaw angle from the rotation matrix
   const float yaw = std::atan2(rotation_matrix(1, 0), rotation_matrix(0, 0));
   return {std::cos(yaw), std::sin(yaw)};
+}
+
+Eigen::Matrix4d inverse(const Eigen::Matrix4d & mat)
+{
+  return Eigen::Isometry3d(mat).inverse().matrix();
 }
 
 }  // namespace autoware::diffusion_planner::utils
