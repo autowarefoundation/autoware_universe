@@ -61,9 +61,9 @@ Eigen::Matrix4d pose_to_matrix4f(const geometry_msgs::msg::Pose & pose);
 std::pair<float, float> rotation_matrix_to_cos_sin(const Eigen::Matrix3d & rotation_matrix);
 
 /**
- * @brief Computes the inverse of a 4x4 transformation matrix. (Assumes the matrix represents a
- * rigid body transformation.)
- *
+ * @brief Computes the inverse of a 4x4 transformation matrix.
+ * @note This function assumes that the matrix represents a rigid transformation and uses the
+ * properties of Eigen::Isometry3d internally.
  * @param mat The transformation matrix to invert.
  * @return A 4x4 transformation matrix representing the inverse.
  */
