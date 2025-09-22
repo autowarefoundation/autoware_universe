@@ -73,9 +73,8 @@ CalibrationStatus::CalibrationStatus(
   num_points_projected_d_ = cuda_utils::make_unique<uint32_t>();
 
   CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
-  preprocess_ptr_ =
-    std::make_unique<PreprocessCuda>(config.max_depth, config.dilation_size, config_.width.at(2),
-                                     config_.height.at(2), stream_);
+  preprocess_ptr_ = std::make_unique<PreprocessCuda>(
+    config.max_depth, config.dilation_size, config_.width.at(2), config_.height.at(2), stream_);
 }
 
 CalibrationStatusResult CalibrationStatus::process(
