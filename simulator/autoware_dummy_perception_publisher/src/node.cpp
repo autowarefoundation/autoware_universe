@@ -36,6 +36,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <iostream>
 #include <optional>
 #include <set>
@@ -437,6 +438,40 @@ void DummyPerceptionPublisherNode::objectCallback(
     return object;
   };
 
+  auto get_modified_object_position = [&]() -> std::optional<DummyObject> {
+    tf2::Transform tf_input2map;
+    tf2::Transform tf_input2object_origin;
+    tf2::Transform tf_map2object_origin;
+    try {
+      TransformStamped ros_input2map;
+      ros_input2map = tf_buffer_.lookupTransform(
+        /*target*/ msg->header.frame_id, /*src*/ "map", msg->header.stamp,
+        rclcpp::Duration::from_seconds(0.5));
+      tf2::fromMsg(ros_input2map.transform, tf_input2map);
+    } catch (tf2::TransformException & ex) {
+      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());
+      return std::nullopt;
+    }
+    tf2::fromMsg(msg->initial_state.pose_covariance.pose, tf_input2object_origin);
+    tf_map2object_origin = tf_input2map.inverse() * tf_input2object_origin;
+    DummyObject modified_object = *msg;
+    tf2::toMsg(tf_map2object_origin, modified_object.initial_state.pose_covariance.pose);
+    if (!use_base_link_z_) {
+      return modified_object;
+    }
+    TransformStamped ros_map2base_link;
+    try {
+      ros_map2base_link = tf_buffer_.lookupTransform(
+        "map", "base_link", rclcpp::Time(0), rclcpp::Duration::from_seconds(0.5));
+      modified_object.initial_state.pose_covariance.pose.position.z =
+        ros_map2base_link.transform.translation.z + 0.5 * modified_object.shape.dimensions.z;
+    } catch (tf2::TransformException & ex) {
+      RCLCPP_WARN_SKIPFIRST_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());
+      return std::nullopt;
+    }
+    return modified_object;
+  };
+
   switch (msg->action) {
     case tier4_simulation_msgs::msg::DummyObject::PREDICT: {
       auto object = create_dummy_object();
@@ -458,47 +493,14 @@ void DummyPerceptionPublisherNode::objectCallback(
       break;
     }
     case tier4_simulation_msgs::msg::DummyObject::MODIFY: {
-      for (size_t i = 0; i < objects_.size(); ++i) {
-        if (objects_.at(i).id.uuid == msg->id.uuid) {
-          tf2::Transform tf_input2map;
-          tf2::Transform tf_input2object_origin;
-          tf2::Transform tf_map2object_origin;
-          try {
-            TransformStamped ros_input2map;
-            ros_input2map = tf_buffer_.lookupTransform(
-              /*target*/ msg->header.frame_id, /*src*/ "map", msg->header.stamp,
-              rclcpp::Duration::from_seconds(0.5));
-            tf2::fromMsg(ros_input2map.transform, tf_input2map);
-          } catch (tf2::TransformException & ex) {
-            RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());
-            return;
-          }
-          tf2::fromMsg(msg->initial_state.pose_covariance.pose, tf_input2object_origin);
-          tf_map2object_origin = tf_input2map.inverse() * tf_input2object_origin;
-          tier4_simulation_msgs::msg::DummyObject object;
-          objects_.at(i) = *msg;
-          tf2::toMsg(tf_map2object_origin, objects_.at(i).initial_state.pose_covariance.pose);
-          if (use_base_link_z_) {
-            // Use base_link Z
-            TransformStamped ros_map2base_link;
-            try {
-              ros_map2base_link = tf_buffer_.lookupTransform(
-                "map", "base_link", rclcpp::Time(0), rclcpp::Duration::from_seconds(0.5));
-              objects_.at(i).initial_state.pose_covariance.pose.position.z =
-                ros_map2base_link.transform.translation.z + 0.5 * objects_.at(i).shape.dimensions.z;
-            } catch (tf2::TransformException & ex) {
-              RCLCPP_WARN_SKIPFIRST_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());
-              return;
-            }
-          }
-
-          break;
-        }
+      auto modified_object = get_modified_object_position();
+      if (modified_object) {
+        dummy_straight_line_movement_plugin_.modify_object(*modified_object);
+        dummy_predicted_movement_plugin_.modify_object(*modified_object);
       }
       break;
     }
     case tier4_simulation_msgs::msg::DummyObject::DELETEALL: {
-      objects_.clear();
       dummy_straight_line_movement_plugin_.clear_objects();
       dummy_predicted_movement_plugin_.clear_objects();
       break;

@@ -123,7 +123,6 @@ private:
   rclcpp::TimerBase::SharedPtr timer_;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
-  std::vector<DummyObject> objects_;
 
   double visible_range_;
   double detection_successful_rate_;

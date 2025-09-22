@@ -21,6 +21,7 @@
 
 #include <tier4_simulation_msgs/msg/dummy_object.hpp>
 
+#include <algorithm>
 #include <vector>
 
 namespace autoware::dummy_perception_publisher::pluginlib
@@ -42,8 +43,17 @@ public:
   virtual ~DummyObjectMovementBasePlugin() = default;
   virtual void initialize() = 0;
   virtual std::vector<ObjectInfo> move_objects() = 0;
-  std::vector<DummyObject> get_objects() const { return objects_; }
+  [[nodiscard]] std::vector<DummyObject> get_objects() const { return objects_; }
   void clear_objects() { objects_.clear(); }
+  void modify_object(const DummyObject & object)
+  {
+    auto obj_it = std::find_if(
+      objects_.begin(), objects_.end(),
+      [&object](const DummyObject & obj) { return obj.id.uuid == object.id.uuid; });
+    if (obj_it != objects_.end()) {
+      *obj_it = object;
+    }
+  }
   void delete_object(const unique_identifier_msgs::msg::UUID & id)
   {
     for (size_t i = 0; i < objects_.size(); ++i) {
