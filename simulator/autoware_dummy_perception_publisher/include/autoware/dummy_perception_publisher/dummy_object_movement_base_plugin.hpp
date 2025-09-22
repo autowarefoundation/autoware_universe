@@ -38,6 +38,7 @@ protected:
 
 public:
   std::vector<DummyObject> objects_;
+  uint8_t associated_action_type_{tier4_simulation_msgs::msg::DummyObject::ADD};
 
   explicit DummyObjectMovementBasePlugin(rclcpp::Node * node) : node_ptr_(node) {}
   virtual ~DummyObjectMovementBasePlugin() = default;
@@ -63,8 +64,16 @@ public:
       }
     }
   }
-  void set_dummy_object(const DummyObject & object) { objects_.push_back(object); }
-  void set_dummy_objects(const std::vector<DummyObject> & objects) { objects_ = objects; }
+  bool set_dummy_object(const DummyObject & object)
+  {
+    // Check if the action type matches
+    if (object.action != associated_action_type_) {
+      return false;
+    }
+    objects_.push_back(object);
+    return true;
+  }
+  void set_associated_action_type(uint8_t action_type) { associated_action_type_ = action_type; }
 };
 
 }  // namespace autoware::dummy_perception_publisher::pluginlib

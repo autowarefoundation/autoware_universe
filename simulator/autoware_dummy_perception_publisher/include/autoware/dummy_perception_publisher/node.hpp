@@ -132,8 +132,7 @@ private:
   bool publish_ground_truth_objects_;
   std::unique_ptr<PointCloudCreator> pointcloud_creator_;
   // dummy object movement plugins
-  pluginlib::PredictedObjectMovementPlugin dummy_predicted_movement_plugin_;
-  pluginlib::StraightLineObjectMovementPlugin dummy_straight_line_movement_plugin_;
+  std::vector<std::shared_ptr<pluginlib::DummyObjectMovementBasePlugin>> movement_plugins_;
   double angle_increment_;
   std::mt19937 random_generator_;
 

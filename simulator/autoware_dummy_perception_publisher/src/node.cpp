@@ -14,6 +14,8 @@
 
 #include "autoware/dummy_perception_publisher/node.hpp"
 
+#include "autoware/dummy_perception_publisher/predicted_object_movement_plugin.hpp"
+#include "autoware/dummy_perception_publisher/straight_line_object_movement_plugin.hpp"
 #include "autoware/trajectory/interpolator/akima_spline.hpp"
 #include "autoware/trajectory/interpolator/interpolator.hpp"
 #include "autoware/trajectory/pose.hpp"
@@ -37,7 +39,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <iostream>
 #include <optional>
 #include <set>
 #ifdef ROS_DISTRO_GALACTIC
@@ -168,11 +169,7 @@ TrackedObject ObjectInfo::toTrackedObject(
 }
 
 DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
-: Node("dummy_perception_publisher"),
-  tf_buffer_(this->get_clock()),
-  tf_listener_(tf_buffer_),
-  dummy_predicted_movement_plugin_(this),
-  dummy_straight_line_movement_plugin_(this)
+: Node("dummy_perception_publisher"), tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_)
 {
   visible_range_ = this->declare_parameter("visible_range", 100.0);
   detection_successful_rate_ = this->declare_parameter("detection_successful_rate", 0.8);
@@ -226,7 +223,9 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
   timer_ = rclcpp::create_timer(
     this, get_clock(), 100ms, std::bind(&DummyPerceptionPublisherNode::timerCallback, this));
 
-  pluginlib::PredictedObjectMovementPlugin plugin(this);
+  // Initialize movement plugins directly in the vector
+  movement_plugins_.push_back(std::make_shared<pluginlib::StraightLineObjectMovementPlugin>(this));
+  movement_plugins_.push_back(std::make_shared<pluginlib::PredictedObjectMovementPlugin>(this));
 }
 
 void DummyPerceptionPublisherNode::timerCallback()
@@ -268,20 +267,17 @@ void DummyPerceptionPublisherNode::timerCallback()
 
   // merge objects
   std::vector<DummyObject> all_objects;
-  auto straight_line_objects = dummy_straight_line_movement_plugin_.get_objects();
-  all_objects.insert(all_objects.end(), straight_line_objects.begin(), straight_line_objects.end());
-  auto predicted_dummy_objects = dummy_predicted_movement_plugin_.get_objects();
-  all_objects.insert(
-    all_objects.end(), predicted_dummy_objects.begin(), predicted_dummy_objects.end());
+  for (const auto & plugin : movement_plugins_) {
+    const auto plugin_objects = plugin->get_objects();
+    all_objects.insert(all_objects.end(), plugin_objects.begin(), plugin_objects.end());
+  }
 
   // get object infos
   std::vector<ObjectInfo> obj_infos;
-  auto straight_line_objects_infos = dummy_straight_line_movement_plugin_.move_objects();
-  auto predicted_objects_infos = dummy_predicted_movement_plugin_.move_objects();
-  // Append predicted movement info at the end of obj_infos
-  obj_infos.insert(
-    obj_infos.end(), straight_line_objects_infos.begin(), straight_line_objects_infos.end());
-  obj_infos.insert(obj_infos.end(), predicted_objects_infos.begin(), predicted_objects_infos.end());
+  for (auto & plugin : movement_plugins_) {
+    const auto plugin_infos = plugin->move_objects();
+    obj_infos.insert(obj_infos.end(), plugin_infos.begin(), plugin_infos.end());
+  }
 
   for (size_t i = 0; i < all_objects.size(); ++i) {
     if (detection_successful_rate_ >= detection_successful_random(random_generator_)) {
@@ -374,8 +370,9 @@ void DummyPerceptionPublisherNode::timerCallback()
 
     // delete
     for (const auto & uuid : delete_uuids) {
-      dummy_straight_line_movement_plugin_.delete_object(uuid);
-      dummy_predicted_movement_plugin_.delete_object(uuid);
+      for (auto & plugin : movement_plugins_) {
+        plugin->delete_object(uuid);
+      }
     }
   }
 
@@ -473,36 +470,39 @@ void DummyPerceptionPublisherNode::objectCallback(
   };
 
   switch (msg->action) {
-    case tier4_simulation_msgs::msg::DummyObject::PREDICT: {
-      auto object = create_dummy_object();
-      if (object) {
-        dummy_predicted_movement_plugin_.set_dummy_object(*object);
-      }
-      break;
-    }
+    case tier4_simulation_msgs::msg::DummyObject::PREDICT:
     case tier4_simulation_msgs::msg::DummyObject::ADD: {
       auto object = create_dummy_object();
-      if (object) {
-        dummy_straight_line_movement_plugin_.set_dummy_object(*object);
+      if (!object) {
+        break;
+      }
+      for (auto & plugin : movement_plugins_) {
+        const bool set = plugin->set_dummy_object(*object);
+        if (set) {
+          break;
+        }
       }
       break;
     }
     case tier4_simulation_msgs::msg::DummyObject::DELETE: {
-      dummy_straight_line_movement_plugin_.delete_object(msg->id);
-      dummy_predicted_movement_plugin_.delete_object(msg->id);
+      for (auto & plugin : movement_plugins_) {
+        plugin->delete_object(msg->id);
+      }
       break;
     }
     case tier4_simulation_msgs::msg::DummyObject::MODIFY: {
       auto modified_object = get_modified_object_position();
       if (modified_object) {
-        dummy_straight_line_movement_plugin_.modify_object(*modified_object);
-        dummy_predicted_movement_plugin_.modify_object(*modified_object);
+        for (auto & plugin : movement_plugins_) {
+          plugin->modify_object(*modified_object);
+        }
       }
       break;
     }
     case tier4_simulation_msgs::msg::DummyObject::DELETEALL: {
-      dummy_straight_line_movement_plugin_.clear_objects();
-      dummy_predicted_movement_plugin_.clear_objects();
+      for (auto & plugin : movement_plugins_) {
+        plugin->clear_objects();
+      }
       break;
     }
   }

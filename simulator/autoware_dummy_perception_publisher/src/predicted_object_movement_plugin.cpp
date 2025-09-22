@@ -38,6 +38,7 @@ double calculate_euclidean_distance(const Point & pos1, const Point & pos2)
 void PredictedObjectMovementPlugin::initialize()
 {
   using autoware_utils_rclcpp::get_or_declare_parameter;
+  set_associated_action_type(tier4_simulation_msgs::msg::DummyObject::PREDICT);
   // Declare prediction parameters
   auto node_ptr = get_node();
   predicted_object_params_.min_predicted_path_keep_duration =
