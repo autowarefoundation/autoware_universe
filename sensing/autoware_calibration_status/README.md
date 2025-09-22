@@ -79,6 +79,7 @@ ros2 launch autoware_calibration_status calibration_status.launch.xml
 - Multithreading for multiple camera-LiDAR pairs
 - More filters (e.g. yaw rate)
 - cuda_blackboard support
+- Replace custom kernels with NPP functions where applicable
 
 ## References
 
