@@ -39,7 +39,7 @@ LidarApolloInstanceSegmentation::LidarApolloInstanceSegmentation(rclcpp::Node * 
   bool use_intensity_feature, use_constant_feature;
   std::string onnx_file;
   score_threshold_ = node_->declare_parameter<double>("score_threshold");
-  range = node_->declare_parameter<double>("range");
+  range = node_->declare_parameter<int>("range");
   width = node_->declare_parameter<int>("width");
   height = node_->declare_parameter<int>("height");
   onnx_file = node_->declare_parameter("onnx_file", "vls-128.onnx");
