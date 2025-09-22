@@ -15,15 +15,14 @@
 #ifndef AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__COMPOSABLE_HPP_
 #define AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__COMPOSABLE_HPP_
 
-#include "autoware/predicted_path_postprocessor/builder.hpp"
 #include "autoware/predicted_path_postprocessor/interface.hpp"
 
-#include <ament_index_cpp/get_package_share_directory.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -42,10 +41,7 @@ public:
    * @param processor_names Vector of processor names.
    */
   explicit ComposableProcessor(
-    rclcpp::Node * node_ptr, const std::vector<std::string> & processor_names)
-  {
-    processors_ = build_processors(node_ptr, processor_names);
-  }
+    rclcpp::Node * node_ptr, const std::vector<std::string> & processor_names);
 
   /**
    * @brief Process predicted objects using a composite filter.
@@ -56,26 +52,37 @@ public:
    */
   autoware_perception_msgs::msg::PredictedObjects process(
     const autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr & objects,
-    const Context & context)
-  {
-    std::vector<autoware_perception_msgs::msg::PredictedObject> results;
-    for (const auto & object : objects->objects) {
-      // copy to execute recursively
-      auto target = object;
+    const Context & context) const;
 
-      for (const auto & processor : processors_) {
-        target = processor->process(target, context);
-      }
-
-      results.push_back(std::move(target));
-    }
-
-    return autoware_perception_msgs::build<autoware_perception_msgs::msg::PredictedObjects>()
-      .header(objects->header)
-      .objects(std::move(results));
-  }
+  /**
+   * @brief Process predicted objects and also return intermediate results of each processor.
+   * @param objects Predicted objects to process.
+   * @param context Context information for processing.
+   * @return Processed predicted objects and debug information.
+   */
+  std::pair<
+    autoware_perception_msgs::msg::PredictedObjects,
+    std::unordered_map<std::string, autoware_perception_msgs::msg::PredictedObjects>>
+  process_with_intermediates(
+    const autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr & objects,
+    const Context & context) const;
 
 private:
+  /**
+   * @brief Internal helper function that performs the actual processing with optional debug
+   * collection.
+   * @param objects Predicted objects to process.
+   * @param context Context information for processing.
+   * @param collect_intermediate Whether to collect intermediate results.
+   * @return Processed predicted objects and optionally intermediate results for debug.
+   */
+  std::pair<
+    autoware_perception_msgs::msg::PredictedObjects,
+    std::unordered_map<std::string, autoware_perception_msgs::msg::PredictedObjects>>
+  process_internal(
+    const autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr & objects,
+    const Context & context, bool collect_intermediate) const;
+
   std::vector<ProcessorInterface::UniquePtr> processors_;  //!< Set of processors.
 };
 }  // namespace autoware::predicted_path_postprocessor

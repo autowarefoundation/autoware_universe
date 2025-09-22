@@ -30,7 +30,7 @@ class SampleProcessor final : public ProcessorInterface
 {
 public:
   SampleProcessor(rclcpp::Node * node_ptr, const std::string & processor_name)
-  : ProcessorInterface()
+  : ProcessorInterface(processor_name)
   {
     load_config(
       node_ptr, processor_name, [](rclcpp::Node * node_ptr, const std::string & processor_name) {

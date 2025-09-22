@@ -71,6 +71,12 @@ public:
   using UniquePtr = std::unique_ptr<ProcessorInterface>;
   using DeclareParametersFunc = std::function<void(rclcpp::Node *, const std::string &)>;
 
+  explicit ProcessorInterface(const std::string & processor_name) : processor_name_(processor_name)
+  {
+  }
+
+  const std::string & name() const { return processor_name_; }
+
   /**
    * @brief Load configuration parameters for the processor.
    *
@@ -110,6 +116,9 @@ public:
    */
   virtual autoware_perception_msgs::msg::PredictedObject process(
     const autoware_perception_msgs::msg::PredictedObject & target, const Context & context) = 0;
+
+private:
+  const std::string processor_name_;  //!< Name of the processor.
 };
 }  // namespace autoware::predicted_path_postprocessor
 
