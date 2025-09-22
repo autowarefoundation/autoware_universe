@@ -28,8 +28,21 @@ namespace autoware::diffusion_planner::utils
 
 namespace
 {
+
+inline double square(double x)
+{
+  return x * x;
+}
+
 Eigen::Matrix3d quaternion_to_matrix(const geometry_msgs::msg::Quaternion & q_msg)
 {
+  const double norm =
+    std::sqrt(square(q_msg.w) + square(q_msg.x) + square(q_msg.y) + square(q_msg.z));
+  constexpr double kEpsilon = 1e-6;
+  if (norm < kEpsilon) {
+    throw std::runtime_error("Quaternion norm is too small");
+  }
+
   return Eigen::Quaterniond(q_msg.w, q_msg.x, q_msg.y, q_msg.z).toRotationMatrix();
 }
 }  // namespace
