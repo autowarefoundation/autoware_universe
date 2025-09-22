@@ -34,26 +34,17 @@ using tier4_simulation_msgs::msg::DummyObject;
 
 struct ObjectInfo
 {
-  ObjectInfo(const DummyObject & object, const rclcpp::Time & current_time);
-  ObjectInfo(
-    const DummyObject & object, const PredictedObject & predicted_object,
-    const rclcpp::Time & predicted_time, const rclcpp::Time & current_time,
-    const double switch_time_threshold);
+  // Simple default constructor
+  ObjectInfo() = default;
 
-  // Position calculation methods
-  static Pose calculateStraightLinePosition(
-    const DummyObject & object, const rclcpp::Time & current_time);
-  static Pose calculateTrajectoryBasedPosition(
-    const DummyObject & object, const PredictedObject & predicted_object,
-    const rclcpp::Time & predicted_time, const rclcpp::Time & current_time);
-  static void stopAtZeroVelocity(double & current_vel, double initial_vel, double initial_acc);
-  double length;
-  double width;
-  double height;
-  double std_dev_x;
-  double std_dev_y;
-  double std_dev_z;
-  double std_dev_yaw;
+  // Data members
+  double length{0.0};
+  double width{0.0};
+  double height{0.0};
+  double std_dev_x{0.0};
+  double std_dev_y{0.0};
+  double std_dev_z{0.0};
+  double std_dev_yaw{0.0};
   tf2::Transform tf_map2moved_object;
   // pose and twist
   TwistWithCovariance twist_covariance_;

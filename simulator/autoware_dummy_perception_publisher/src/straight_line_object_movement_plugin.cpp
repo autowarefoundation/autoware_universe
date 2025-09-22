@@ -14,6 +14,8 @@
 
 #include "autoware/dummy_perception_publisher/straight_line_object_movement_plugin.hpp"
 
+#include "autoware/dummy_perception_publisher/movement_utils.hpp"
+
 #include <rclcpp/rclcpp.hpp>
 
 #include <vector>
@@ -32,7 +34,18 @@ std::vector<ObjectInfo> StraightLineObjectMovementPlugin::move_objects()
 
   for (const auto & object : objects_) {
     const auto current_time = get_node()->now();
-    ObjectInfo obj_info = ObjectInfo(object, current_time);
+
+    // Create basic ObjectInfo with dimensions and covariances
+    auto obj_info = utils::MovementUtils::create_basic_object_info(object);
+
+    // Calculate position using straight-line movement
+    const auto current_pose =
+      utils::MovementUtils::calculate_straight_line_position(object, current_time);
+
+    // Update ObjectInfo with the calculated movement
+    utils::MovementUtils::update_object_info_with_movement(
+      obj_info, object, current_pose, current_time);
+
     obj_infos.push_back(obj_info);
   }
   return obj_infos;

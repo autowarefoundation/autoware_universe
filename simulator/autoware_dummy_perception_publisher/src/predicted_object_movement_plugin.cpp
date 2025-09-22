@@ -14,6 +14,8 @@
 
 #include "autoware/dummy_perception_publisher/predicted_object_movement_plugin.hpp"
 
+#include "autoware/dummy_perception_publisher/movement_utils.hpp"
+
 #include <autoware_utils_rclcpp/parameter.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
 
@@ -105,7 +107,7 @@ PredictedObjectMovementPlugin::collect_dummy_object_positions(
     dummy_positions[dummy_uuid_str] =
       (info_it != dummy_predicted_info_map.end() && info_it->second.last_known_position.has_value())
         ? info_it->second.last_known_position.value()
-        : ObjectInfo::calculateStraightLinePosition(dummy_obj, current_time).position;
+        : utils::MovementUtils::calculate_straight_line_position(dummy_obj, current_time).position;
 
     if (info_it == dummy_predicted_info_map.end() || info_it->second.predicted_uuid.empty()) {
       unmapped_dummy_uuids.push_back(dummy_uuid_str);
@@ -741,14 +743,12 @@ std::vector<ObjectInfo> PredictedObjectMovementPlugin::move_objects()
 
     ObjectInfo obj_info = [&]() {
       if (matched_predicted) {
-        return ObjectInfo(
-          object, predicted_object, predicted_time, current_time,
-          predicted_object_params_.switch_time_threshold);
+        return create_object_info_with_predicted_path(
+          object, predicted_object, predicted_time, current_time);
       }
 
       // Check if we have a last used prediction for this object
       const auto & dummy_uuid_str = autoware_utils_uuid::to_hex_string(object.id);
-
       auto info_it = dummy_predicted_info_map.find(dummy_uuid_str);
 
       if (
@@ -758,17 +758,16 @@ std::vector<ObjectInfo> PredictedObjectMovementPlugin::move_objects()
         RCLCPP_DEBUG(
           rclcpp::get_logger("dummy_perception_publisher"),
           "Using last known prediction for lost object with ID: %s", dummy_uuid_str.c_str());
-        return ObjectInfo(
+        return create_object_info_with_predicted_path(
           object, info_it->second.last_used_prediction.value(),
-          info_it->second.last_used_prediction_time.value(), current_time,
-          predicted_object_params_.switch_time_threshold);
+          info_it->second.last_used_prediction_time.value(), current_time);
       }
 
       RCLCPP_DEBUG(
         rclcpp::get_logger("dummy_perception_publisher"),
         "No matching predicted object found for dummy object with ID: %s", dummy_uuid_str.c_str());
-      // Use straight-line motion (original constructor) for all other actions
-      return ObjectInfo(object, current_time);
+      // Use straight-line motion for all other cases
+      return create_object_info_with_straight_line(object, current_time);
     }();
     obj_infos.push_back(obj_info);
     // Update last known position based on calculated ObjectInfo position
@@ -783,6 +782,52 @@ std::vector<ObjectInfo> PredictedObjectMovementPlugin::move_objects()
     }
   }
   return obj_infos;
+}
+
+ObjectInfo PredictedObjectMovementPlugin::create_object_info_with_straight_line(
+  const DummyObject & object, const rclcpp::Time & current_time) const
+{
+  // Create basic ObjectInfo with dimensions and covariances
+  auto obj_info = utils::MovementUtils::create_basic_object_info(object);
+
+  // Calculate position using straight-line movement
+  const auto current_pose =
+    utils::MovementUtils::calculate_straight_line_position(object, current_time);
+
+  // Update ObjectInfo with the calculated movement
+  utils::MovementUtils::update_object_info_with_movement(
+    obj_info, object, current_pose, current_time);
+
+  return obj_info;
+}
+
+ObjectInfo PredictedObjectMovementPlugin::create_object_info_with_predicted_path(
+  const DummyObject & object, const PredictedObject & predicted_object,
+  const rclcpp::Time & predicted_time, const rclcpp::Time & current_time) const
+{
+  // Create basic ObjectInfo with dimensions and covariances
+  auto obj_info = utils::MovementUtils::create_basic_object_info(object);
+
+  // Check if threshold time has passed since object creation
+  const double time_since_creation = (current_time - rclcpp::Time(object.header.stamp)).seconds();
+
+  // Use straight-line movement for first switch_time_threshold seconds, then switch to predicted
+  // path
+  const auto current_pose =
+    (time_since_creation < predicted_object_params_.switch_time_threshold ||
+     predicted_object.kinematics.predicted_paths.empty())
+      ? utils::MovementUtils::calculate_straight_line_position(object, current_time)
+      : utils::MovementUtils::calculate_trajectory_based_position(
+          object, predicted_object, predicted_time, current_time);
+
+  // Update ObjectInfo with the calculated movement
+  utils::MovementUtils::update_object_info_with_movement(
+    obj_info, object, current_pose, current_time);
+
+  // Use dummy object's velocity consistently
+  obj_info.twist_covariance_.twist.linear.x = object.initial_state.twist_covariance.twist.linear.x;
+
+  return obj_info;
 }
 
 }  // namespace autoware::dummy_perception_publisher::pluginlib

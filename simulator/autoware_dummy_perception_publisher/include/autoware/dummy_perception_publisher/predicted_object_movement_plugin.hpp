@@ -137,6 +137,13 @@ private:
     const std::map<std::string, geometry_msgs::msg::Point> & predicted_positions,
     const std::map<std::string, geometry_msgs::msg::Point> & dummy_positions,
     const PredictedObjects & predicted_objects);
+
+  // Helper methods for creating ObjectInfo
+  [[nodiscard]] ObjectInfo create_object_info_with_straight_line(
+    const DummyObject & object, const rclcpp::Time & current_time) const;
+  [[nodiscard]] ObjectInfo create_object_info_with_predicted_path(
+    const DummyObject & object, const PredictedObject & predicted_object,
+    const rclcpp::Time & predicted_time, const rclcpp::Time & current_time) const;
 };
 
 }  // namespace autoware::dummy_perception_publisher::pluginlib
