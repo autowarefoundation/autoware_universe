@@ -8,6 +8,9 @@ The `autoware_predicted_path_postprocessor` performs post-processing on predicte
 
 The following processors are supported:
 
+- [RefineBySpeed](./docs/refine_by_speed.md)
+  - Refine the paths of objects based on their current speed.
+
 ## Inputs / Outputs
 
 ### Input
@@ -48,12 +51,9 @@ The following processors are supported:
                                      << ", string_param=" << string_param);
        }
 
-       autoware_perception_msgs::msg::PredictedObject process(
-         const autoware_perception_msgs::msg::PredictedObject & input, const Context &) override
+       void process(
+         autoware_perception_msgs::msg::PredictedObject &, const Context &) override
        {
-         RCLCPP_INFO(rclcpp::get_logger("predicted_path_postprocessor"), "SampleProcessor processed!!");
-         autoware_perception_msgs::msg::PredictedObject output(input);
-         return output;
        }
    };
    ```
