@@ -44,6 +44,7 @@
 #include "autoware/dummy_perception_publisher/dummy_object_movement_base_plugin.hpp"
 #include "autoware/dummy_perception_publisher/object_info.hpp"
 #include "autoware/dummy_perception_publisher/predicted_object_movement_plugin.hpp"
+#include "autoware/dummy_perception_publisher/straight_line_object_movement_plugin.hpp"
 
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
@@ -133,6 +134,7 @@ private:
   std::unique_ptr<PointCloudCreator> pointcloud_creator_;
   // dummy object movement plugins
   pluginlib::PredictedObjectMovementPlugin dummy_predicted_movement_plugin_;
+  pluginlib::StraightLineObjectMovementPlugin dummy_straight_line_movement_plugin_;
   double angle_increment_;
   std::mt19937 random_generator_;
 

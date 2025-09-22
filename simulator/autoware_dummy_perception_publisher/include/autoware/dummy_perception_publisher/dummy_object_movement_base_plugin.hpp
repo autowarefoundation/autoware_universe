@@ -42,6 +42,17 @@ public:
   virtual ~DummyObjectMovementBasePlugin() = default;
   virtual void initialize() = 0;
   virtual std::vector<ObjectInfo> move_objects() = 0;
+  std::vector<DummyObject> get_objects() const { return objects_; }
+  void clear_objects() { objects_.clear(); }
+  void delete_object(const unique_identifier_msgs::msg::UUID & id)
+  {
+    for (size_t i = 0; i < objects_.size(); ++i) {
+      if (objects_.at(i).id.uuid == id.uuid) {
+        objects_.erase(objects_.begin() + i);
+        break;
+      }
+    }
+  }
   void set_dummy_object(const DummyObject & object) { objects_.push_back(object); }
   void set_dummy_objects(const std::vector<DummyObject> & objects) { objects_ = objects; }
 };

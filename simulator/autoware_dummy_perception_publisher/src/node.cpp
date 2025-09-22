@@ -170,7 +170,8 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
 : Node("dummy_perception_publisher"),
   tf_buffer_(this->get_clock()),
   tf_listener_(tf_buffer_),
-  dummy_predicted_movement_plugin_(this)
+  dummy_predicted_movement_plugin_(this),
+  dummy_straight_line_movement_plugin_(this)
 {
   visible_range_ = this->declare_parameter("visible_range", 100.0);
   detection_successful_rate_ = this->declare_parameter("detection_successful_rate", 0.8);
@@ -262,27 +263,36 @@ void DummyPerceptionPublisherNode::timerCallback()
   }
 
   std::vector<size_t> selected_indices{};
-  std::vector<ObjectInfo> obj_infos;
   static std::uniform_real_distribution<> detection_successful_random(0.0, 1.0);
-  for (size_t i = 0; i < objects_.size(); ++i) {
+
+  // merge objects
+  std::vector<DummyObject> all_objects;
+  auto straight_line_objects = dummy_straight_line_movement_plugin_.get_objects();
+  all_objects.insert(all_objects.end(), straight_line_objects.begin(), straight_line_objects.end());
+  auto predicted_dummy_objects = dummy_predicted_movement_plugin_.get_objects();
+  all_objects.insert(
+    all_objects.end(), predicted_dummy_objects.begin(), predicted_dummy_objects.end());
+
+  // get object infos
+  std::vector<ObjectInfo> obj_infos;
+  auto straight_line_objects_infos = dummy_straight_line_movement_plugin_.move_objects();
+  auto predicted_objects_infos = dummy_predicted_movement_plugin_.move_objects();
+  // Append predicted movement info at the end of obj_infos
+  obj_infos.insert(
+    obj_infos.end(), straight_line_objects_infos.begin(), straight_line_objects_infos.end());
+  obj_infos.insert(obj_infos.end(), predicted_objects_infos.begin(), predicted_objects_infos.end());
+
+  for (size_t i = 0; i < all_objects.size(); ++i) {
     if (detection_successful_rate_ >= detection_successful_random(random_generator_)) {
       selected_indices.push_back(i);
     }
-
-    // Try to find matching predicted object
-    const auto & object = objects_.at(i);
-    ObjectInfo obj_info = [&]() {
-      // Use straight-line motion (original constructor) for all other actions
-      return ObjectInfo(object, current_time);
-    }();
-    obj_infos.push_back(obj_info);
   }
 
   // publish ground truth
   // add Tracked Object
   if (publish_ground_truth_objects_) {
-    for (size_t i = 0; i < objects_.size(); ++i) {
-      const auto & object = objects_[i];
+    for (size_t i = 0; i < all_objects.size(); ++i) {
+      const auto & object = all_objects[i];
       // Use the same ObjectInfo as calculated above for consistency
       const auto & object_info = obj_infos[i];
       TrackedObject gt_tracked_object = object_info.toTrackedObject(object);
@@ -296,7 +306,7 @@ void DummyPerceptionPublisherNode::timerCallback()
   pcl::PointCloud<pcl::PointXYZ>::Ptr detected_merged_pointcloud_ptr(
     new pcl::PointCloud<pcl::PointXYZ>);
 
-  if (objects_.empty()) {
+  if (all_objects.empty()) {
     pcl::toROSMsg(*merged_pointcloud_ptr, output_pointcloud_msg);
   } else {
     pointcloud_creator_->create_pointclouds(
@@ -315,11 +325,12 @@ void DummyPerceptionPublisherNode::timerCallback()
     const auto pointclouds = pointcloud_creator_->create_pointclouds(
       detected_obj_infos, tf_base_link2map, random_generator_, detected_merged_pointcloud_ptr);
 
-    std::vector<size_t> delete_idxs;
+    std::vector<unique_identifier_msgs::msg::UUID> delete_uuids;
+
     for (size_t i = 0; i < selected_indices.size(); ++i) {
       const auto pointcloud = pointclouds[i];
       const size_t selected_idx = selected_indices[i];
-      const auto & object = objects_.at(selected_idx);
+      const auto & object = all_objects.at(selected_idx);
       const auto & object_info = obj_infos[selected_idx];
       // dynamic object
       std::normal_distribution<> x_random(0.0, object_info.std_dev_x);
@@ -356,13 +367,14 @@ void DummyPerceptionPublisherNode::timerCallback()
         tf_base_link2moved_object.getOrigin().x() * tf_base_link2moved_object.getOrigin().x() +
         tf_base_link2moved_object.getOrigin().y() * tf_base_link2moved_object.getOrigin().y());
       if (visible_range_ < dist) {
-        delete_idxs.push_back(selected_idx);
+        delete_uuids.push_back(object.id);
       }
     }
 
     // delete
-    for (int delete_idx = delete_idxs.size() - 1; 0 <= delete_idx; --delete_idx) {
-      objects_.erase(objects_.begin() + delete_idxs.at(delete_idx));
+    for (const auto & uuid : delete_uuids) {
+      dummy_straight_line_movement_plugin_.delete_object(uuid);
+      dummy_predicted_movement_plugin_.delete_object(uuid);
     }
   }
 
@@ -389,52 +401,60 @@ void DummyPerceptionPublisherNode::timerCallback()
 void DummyPerceptionPublisherNode::objectCallback(
   const tier4_simulation_msgs::msg::DummyObject::ConstSharedPtr msg)
 {
-  switch (msg->action) {
-    case tier4_simulation_msgs::msg::DummyObject::PREDICT:
-    case tier4_simulation_msgs::msg::DummyObject::ADD: {
-      tf2::Transform tf_input2map;
-      tf2::Transform tf_input2object_origin;
-      tf2::Transform tf_map2object_origin;
+  auto create_dummy_object = [&]() -> std::optional<DummyObject> {
+    tf2::Transform tf_input2map;
+    tf2::Transform tf_input2object_origin;
+    tf2::Transform tf_map2object_origin;
+    try {
+      TransformStamped ros_input2map;
+      ros_input2map = tf_buffer_.lookupTransform(
+        /*target*/ msg->header.frame_id, /*src*/ "map", msg->header.stamp,
+        rclcpp::Duration::from_seconds(0.5));
+      tf2::fromMsg(ros_input2map.transform, tf_input2map);
+    } catch (tf2::TransformException & ex) {
+      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());
+      return std::nullopt;
+    }
+    tf2::fromMsg(msg->initial_state.pose_covariance.pose, tf_input2object_origin);
+    tf_map2object_origin = tf_input2map.inverse() * tf_input2object_origin;
+    DummyObject object;
+    object = *msg;
+    tf2::toMsg(tf_map2object_origin, object.initial_state.pose_covariance.pose);
+
+    // Use base_link Z
+    if (use_base_link_z_) {
+      TransformStamped ros_map2base_link;
       try {
-        TransformStamped ros_input2map;
-        ros_input2map = tf_buffer_.lookupTransform(
-          /*target*/ msg->header.frame_id, /*src*/ "map", msg->header.stamp,
-          rclcpp::Duration::from_seconds(0.5));
-        tf2::fromMsg(ros_input2map.transform, tf_input2map);
+        ros_map2base_link = tf_buffer_.lookupTransform(
+          "map", "base_link", rclcpp::Time(0), rclcpp::Duration::from_seconds(0.5));
+        object.initial_state.pose_covariance.pose.position.z =
+          ros_map2base_link.transform.translation.z + 0.5 * object.shape.dimensions.z;
       } catch (tf2::TransformException & ex) {
-        RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());
-        return;
+        RCLCPP_WARN_SKIPFIRST_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());
+        return std::nullopt;
       }
-      tf2::fromMsg(msg->initial_state.pose_covariance.pose, tf_input2object_origin);
-      tf_map2object_origin = tf_input2map.inverse() * tf_input2object_origin;
-      DummyObject object;
-      object = *msg;
-      tf2::toMsg(tf_map2object_origin, object.initial_state.pose_covariance.pose);
+    }
+    return object;
+  };
 
-      // Use base_link Z
-      if (use_base_link_z_) {
-        TransformStamped ros_map2base_link;
-        try {
-          ros_map2base_link = tf_buffer_.lookupTransform(
-            "map", "base_link", rclcpp::Time(0), rclcpp::Duration::from_seconds(0.5));
-          object.initial_state.pose_covariance.pose.position.z =
-            ros_map2base_link.transform.translation.z + 0.5 * object.shape.dimensions.z;
-        } catch (tf2::TransformException & ex) {
-          RCLCPP_WARN_SKIPFIRST_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());
-          return;
-        }
+  switch (msg->action) {
+    case tier4_simulation_msgs::msg::DummyObject::PREDICT: {
+      auto object = create_dummy_object();
+      if (object) {
+        dummy_predicted_movement_plugin_.set_dummy_object(*object);
       }
-
-      objects_.push_back(object);
+      break;
+    }
+    case tier4_simulation_msgs::msg::DummyObject::ADD: {
+      auto object = create_dummy_object();
+      if (object) {
+        dummy_straight_line_movement_plugin_.set_dummy_object(*object);
+      }
       break;
     }
     case tier4_simulation_msgs::msg::DummyObject::DELETE: {
-      for (size_t i = 0; i < objects_.size(); ++i) {
-        if (objects_.at(i).id.uuid == msg->id.uuid) {
-          objects_.erase(objects_.begin() + i);
-          break;
-        }
-      }
+      dummy_straight_line_movement_plugin_.delete_object(msg->id);
+      dummy_predicted_movement_plugin_.delete_object(msg->id);
       break;
     }
     case tier4_simulation_msgs::msg::DummyObject::MODIFY: {
@@ -479,6 +499,8 @@ void DummyPerceptionPublisherNode::objectCallback(
     }
     case tier4_simulation_msgs::msg::DummyObject::DELETEALL: {
       objects_.clear();
+      dummy_straight_line_movement_plugin_.clear_objects();
+      dummy_predicted_movement_plugin_.clear_objects();
       break;
     }
   }
