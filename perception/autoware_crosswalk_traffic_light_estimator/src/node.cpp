@@ -230,6 +230,11 @@ lanelet::Ids parse_crosswalk_ids(std::string_view input)
 void CrosswalkTrafficLightEstimatorNode::onTrafficLightArray(
   const TrafficSignalArray::ConstSharedPtr msg)
 {
+  if (lanelet_map_ptr_ == nullptr) {
+    RCLCPP_WARN(get_logger(), "cannot process traffic light array because the map is not received");
+    return;
+  }
+
   StopWatch<std::chrono::milliseconds> stop_watch;
   stop_watch.tic("Total");
 
@@ -238,12 +243,6 @@ void CrosswalkTrafficLightEstimatorNode::onTrafficLightArray(
   TrafficLightIdMap traffic_light_id_map;
   std::unordered_map<lanelet::Id, uint8_t> crosswalk_traffic_signal_overrides;
 
-  const auto to_str = [](uint8_t c) {
-    if (c == TrafficSignalElement::RED) return "red";
-    if (c == TrafficSignalElement::GREEN) return "green";
-    return "NONE";
-  };
-
   for (const auto & traffic_signal : msg->traffic_light_groups) {
     traffic_light_id_map[traffic_signal.traffic_light_group_id] =
       std::pair<TrafficSignal, rclcpp::Time>(traffic_signal, get_clock()->now());
@@ -251,18 +250,12 @@ void CrosswalkTrafficLightEstimatorNode::onTrafficLightArray(
       lanelet_map_ptr_->regulatoryElementLayer.get(traffic_signal.traffic_light_group_id);
     const auto current_vehicle_traffic_light_color =
       getHighestConfidenceTrafficSignal(traffic_light->id(), traffic_light_id_map);
-    std::cout << "traffic_light " << traffic_light->id() << " = "
-              << to_str(current_vehicle_traffic_light_color.value_or(-1)) << std::endl;
     for (const auto & attribute : traffic_light->attributes()) {
       if (const auto & color_mapping = parse_signal_relation(attribute.first)) {
         const auto & [from_color, to_color] = *color_mapping;
-        std::cout << traffic_light->id() << " : " << to_str(from_color) << " -> "
-                  << to_str(to_color) << std::endl;
         if (from_color == current_vehicle_traffic_light_color) {
           for (const auto crosswalk_id : parse_crosswalk_ids(attribute.second.value())) {
-            std::cout << "\t" << crosswalk_id << " , " << to_str(to_color) << std::endl;
             crosswalk_traffic_signal_overrides[crosswalk_id] = to_color;
-            // TODO(Maxime): handle conflicting overrides ?
           }
         }
       }
@@ -272,10 +265,8 @@ void CrosswalkTrafficLightEstimatorNode::onTrafficLightArray(
   for (const auto & crosswalk : conflicting_crosswalks_) {
     const auto override = crosswalk_traffic_signal_overrides.find(crosswalk.id());
     if (override != crosswalk_traffic_signal_overrides.end()) {
-      std::cout << crosswalk.id() << " : " << to_str(override->second) << std::endl;
       setCrosswalkTrafficSignal(crosswalk, override->second, *msg, output);
     } else {
-      std::cout << "No override for " << crosswalk.id() << std::endl;
       constexpr int VEHICLE_GRAPH_ID = 0;
       const auto conflict_lls =
         overall_graphs_ptr_->conflictingInGraph(crosswalk, VEHICLE_GRAPH_ID);
