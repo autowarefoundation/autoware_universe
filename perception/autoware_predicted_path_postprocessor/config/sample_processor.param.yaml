@@ -1,5 +1,0 @@
-/**:
-  ros__parameters:
-    sample_processor:
-      double_param: 100.0
-      string_param: Hello, world!!

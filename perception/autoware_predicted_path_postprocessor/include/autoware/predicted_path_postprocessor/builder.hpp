@@ -17,7 +17,6 @@
 
 #include "autoware/predicted_path_postprocessor/interface.hpp"
 #include "autoware/predicted_path_postprocessor/processors/refine_by_speed.hpp"
-#include "autoware/predicted_path_postprocessor/processors/sample_processor.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -38,9 +37,7 @@ inline std::vector<ProcessorInterface::UniquePtr> build_processors(
 {
   std::vector<ProcessorInterface::UniquePtr> outputs;
   for (const auto & name : processor_names) {
-    if (name == "sample_processor") {
-      outputs.emplace_back(std::make_unique<processors::SampleProcessor>(node_ptr, name));
-    } else if (name == "refine_by_speed") {
+    if (name == "refine_by_speed") {
       outputs.emplace_back(std::make_unique<processors::RefineBySpeed>(node_ptr, name));
     } else {
       RCLCPP_ERROR_STREAM(node_ptr->get_logger(), "Unknown processor name: " << name);
