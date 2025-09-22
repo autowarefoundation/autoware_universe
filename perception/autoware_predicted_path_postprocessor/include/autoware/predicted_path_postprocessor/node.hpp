@@ -16,6 +16,7 @@
 #define AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__NODE_HPP_
 
 #include "autoware/predicted_path_postprocessor/composable.hpp"
+#include "autoware/predicted_path_postprocessor/debug/intermediate_publisher.hpp"
 #include "autoware/predicted_path_postprocessor/interface.hpp"
 
 #include <rclcpp/rclcpp.hpp>
@@ -56,6 +57,9 @@ private:
 
   //!< @brief Processor for predicted objects message
   std::unique_ptr<ComposableProcessor> processor_;
+
+  //!< @brief Publisher for intermediate predicted objects message
+  std::unique_ptr<debug::IntermediatePublisher> intermediate_publisher_;
 };
 }  // namespace autoware::predicted_path_postprocessor
 

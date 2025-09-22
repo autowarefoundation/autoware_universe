@@ -36,8 +36,13 @@ PredictedPathPostprocessorNode::PredictedPathPostprocessorNode(const rclcpp::Nod
 
   context_ = std::make_unique<Context>();
 
-  auto processor_names = declare_parameter<std::vector<std::string>>("processor_names");
-  processor_ = std::make_unique<ComposableProcessor>(this, std::move(processor_names));
+  const auto processor_names = declare_parameter<std::vector<std::string>>("processor_names");
+
+  processor_ = std::make_unique<ComposableProcessor>(this, processor_names);
+
+  if (declare_parameter<bool>("debug")) {
+    intermediate_publisher_ = std::make_unique<debug::IntermediatePublisher>(this, processor_names);
+  }
 }
 
 void PredictedPathPostprocessorNode::callback(
@@ -50,9 +55,16 @@ void PredictedPathPostprocessorNode::callback(
 
   context_->update(objects);
 
-  auto output = processor_->process(objects, *context_);
+  if (intermediate_publisher_) {
+    auto [output, intermediates] = processor_->process_with_intermediates(objects, *context_);
 
-  object_publisher_->publish(output);
+    object_publisher_->publish(output);
+    intermediate_publisher_->publish(intermediates);
+  } else {
+    auto output = processor_->process(objects, *context_);
+
+    object_publisher_->publish(output);
+  }
 }
 }  // namespace autoware::predicted_path_postprocessor
 
