@@ -415,8 +415,6 @@ InputDataMap DiffusionPlanner::create_input_data()
     }
   }
 
-  ego_kinematic_state_ = *ego_kinematic_state;
-
   // random sample trajectories
   {
     for (int64_t b = 0; b < params_.batch_size; b++) {
@@ -428,16 +426,18 @@ InputDataMap DiffusionPlanner::create_input_data()
     }
   }
 
+  const geometry_msgs::msg::Pose & pose_base_link = ego_kinematic_state->pose.pose;
+  const Eigen::Matrix4d ego_to_map_transform = utils::pose_to_matrix4f(pose_base_link);
+  const Eigen::Matrix4d map_to_ego_transform = utils::inverse(ego_to_map_transform);
+  const auto & center_x = static_cast<float>(pose_base_link.position.x);
+  const auto & center_y = static_cast<float>(pose_base_link.position.y);
+  ego_to_map_transform_ = ego_to_map_transform;
+
   // Add current state to ego history
-  ego_history_.push_back(*ego_kinematic_state);
+  ego_history_.push_back(pose_base_link);
   if (ego_history_.size() > static_cast<size_t>(EGO_HISTORY_SHAPE[1])) {
     ego_history_.pop_front();
   }
-
-  transforms_ = utils::get_transform_matrix(*ego_kinematic_state);
-  const auto & map_to_ego_transform = transforms_.second;
-  const auto & center_x = static_cast<float>(ego_kinematic_state->pose.pose.position.x);
-  const auto & center_y = static_cast<float>(ego_kinematic_state->pose.pose.position.y);
 
   // Ego history
   {
@@ -546,7 +546,7 @@ void DiffusionPlanner::publish_debug_markers(InputDataMap & input_data_map) cons
   if (debug_params_.publish_debug_route) {
     auto lifetime = rclcpp::Duration::from_seconds(0.2);
     auto route_markers = utils::create_lane_marker(
-      transforms_.first, input_data_map["route_lanes"],
+      ego_to_map_transform_, input_data_map["route_lanes"],
       std::vector<int64_t>(ROUTE_LANES_SHAPE.begin(), ROUTE_LANES_SHAPE.end()), this->now(),
       lifetime, {0.8, 0.8, 0.8, 0.8}, "map", true);
     pub_route_marker_->publish(route_markers);
@@ -555,7 +555,7 @@ void DiffusionPlanner::publish_debug_markers(InputDataMap & input_data_map) cons
   if (debug_params_.publish_debug_map) {
     auto lifetime = rclcpp::Duration::from_seconds(0.2);
     auto lane_markers = utils::create_lane_marker(
-      transforms_.first, input_data_map["lanes"],
+      ego_to_map_transform_, input_data_map["lanes"],
       std::vector<int64_t>(LANES_SHAPE.begin(), LANES_SHAPE.end()), this->now(), lifetime,
       {0.1, 0.1, 0.7, 0.8}, "map", true);
     pub_lane_marker_->publish(lane_markers);
@@ -568,7 +568,7 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
 
   for (int i = 0; i < params_.batch_size; i++) {
     const Trajectory trajectory = postprocess::create_ego_trajectory(
-      predictions, this->now(), transforms_.first, i, params_.velocity_smoothing_window);
+      predictions, this->now(), ego_to_map_transform_, i, params_.velocity_smoothing_window);
     if (i == 0) {
       pub_trajectory_->publish(trajectory);
     }
@@ -595,14 +595,12 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
 
   // Other agents prediction
   if (params_.predict_neighbor_trajectory && agent_data_.has_value()) {
-    auto reduced_agent_data = agent_data_.value();
-    reduced_agent_data.trim_to_k_closest_agents(ego_kinematic_state_.pose.pose.position);
     const size_t single_batch_output_size =
       std::accumulate(OUTPUT_SHAPE.begin() + 1, OUTPUT_SHAPE.end(), 1UL, std::multiplies<>());
     const std::vector<float> single_batch_predictions(
       predictions.begin(), predictions.begin() + single_batch_output_size);
     auto predicted_objects = postprocess::create_predicted_objects(
-      single_batch_predictions, reduced_agent_data, this->now(), transforms_.first);
+      single_batch_predictions, agent_data_.value(), this->now(), ego_to_map_transform_);
     pub_objects_->publish(predicted_objects);
   }
 }
