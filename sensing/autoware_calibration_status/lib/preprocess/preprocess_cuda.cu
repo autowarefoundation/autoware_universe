@@ -14,6 +14,8 @@
 
 #include "autoware/calibration_status/preprocess_cuda.hpp"
 
+#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
+
 #include <cmath>
 #include <cstdint>
 
@@ -363,15 +365,11 @@ cudaError_t PreprocessCuda::projectPoints_launch(
   dim3 threads(256);
   dim3 blocks((num_points + threads.x - 1) / threads.x);
 
-  float * metric_depth_buffer;
-  cudaMalloc(&metric_depth_buffer, width * height * sizeof(float));
-  cudaMemset(metric_depth_buffer, 0, width * height * sizeof(float));
+  auto metric_depth_buffer = cuda_utils::make_unique<float[]>(width * height);
 
   projectPoints_kernel<<<blocks, threads, 0, stream_>>>(
     input_points, undistorted_image, tf_matrix, projection_matrix, num_points, width, height,
-    max_depth_, dilation_size_, metric_depth_buffer, output_array, num_points_projected);
-
-  cudaFree(metric_depth_buffer);
+    max_depth_, dilation_size_, metric_depth_buffer.get(), output_array, num_points_projected);
 
   return cudaGetLastError();
 }
