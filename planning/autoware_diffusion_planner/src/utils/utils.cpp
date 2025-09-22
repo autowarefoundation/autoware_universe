@@ -105,19 +105,7 @@ std::pair<float, float> rotation_matrix_to_cos_sin(const Eigen::Matrix3d & rotat
 
 Eigen::Matrix4d inverse(const Eigen::Matrix4d & mat)
 {
-  Eigen::Matrix4d inv = Eigen::Matrix4d::Identity();
-  Eigen::Matrix3d R = mat.block<3, 3>(0, 0);
-  Eigen::Vector3d t = mat.block<3, 1>(0, 3);
-
-  // Inverse rotation
-  Eigen::Matrix3d R_inv = R.transpose();
-  // Inverse translation
-  Eigen::Vector3d t_inv = -R_inv * t;
-
-  inv.block<3, 3>(0, 0) = R_inv;
-  inv.block<3, 1>(0, 3) = t_inv;
-
-  return inv;
+  return Eigen::Isometry3d(mat).inverse().matrix();
 }
 
 }  // namespace autoware::diffusion_planner::utils
