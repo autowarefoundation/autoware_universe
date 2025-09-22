@@ -33,7 +33,7 @@ jobs:
   build-and-test-daily-arm64:
     uses: ./.github/workflows/build-and-test-reusable.yaml
     with:
-      runner: "['self-hosted', 'Linux', 'ARM64']"
+      runner: "['ubuntu-22.04-arm']"
       container: ghcr.io/autowarefoundation/autoware:universe-devel
       container-suffix: ""
       build-pre-command: taskset --cpu-list 0-6
@@ -45,7 +45,7 @@ jobs:
   build-and-test-daily-arm64-cuda:
     uses: ./.github/workflows/build-and-test-reusable.yaml
     with:
-      runner: "['self-hosted', 'Linux', 'ARM64']"
+      runner: "['ubuntu-22.04-arm']"
       container: ghcr.io/autowarefoundation/autoware:universe-devel
       container-suffix: -cuda
       build-pre-command: taskset --cpu-list 0-6

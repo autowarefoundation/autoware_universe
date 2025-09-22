@@ -1,0 +1,13 @@
+# Lanelet Elevation Filter Configuration
+
+/**:
+  ros__parameters:
+    # Grid processing parameters
+    grid_resolution: 2.0          # Grid cell size in meters
+    height_threshold: 2.0         # Maximum height difference from lanelet elevation (meters)
+    sampling_distance: 0.5        # Distance between sampled points along lanelet boundaries (meters)
+    extension_count: 5           # Number of cells to extend around original lanelet points
+    target_frame: "map"           # Target coordinate frame for processing
+    cache_directory: "$(find-pkg-share autoware_compare_map_segmentation)/data/lanelet_grid_cache"  # Directory for cached grid files
+    require_map_coverage: true   # If true, only keep points with direct map coverage; reject points requiring interpolation
+    enable_debug: true           # Enable debug mode (includes elevation markers and processing time publisher)

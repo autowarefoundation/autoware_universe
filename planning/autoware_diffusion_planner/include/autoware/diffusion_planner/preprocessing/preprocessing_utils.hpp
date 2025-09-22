@@ -64,5 +64,16 @@ std::vector<float> create_ego_agent_past(
   const std::deque<nav_msgs::msg::Odometry> & odometry_msgs, size_t num_timesteps,
   const Eigen::Matrix4d & map_to_ego_transform);
 
+/**
+ * @brief Creates random sampled trajectories for diffusion model input.
+ *
+ * This function generates a set of random sampled trajectories based on the specified
+ * temperature parameter. The trajectories are intended to be used as input for the diffusion
+ * planner model.
+ * @param[in] temperature Temperature parameter to control the randomness of the trajectories.
+ * @return A vector of floats representing the sampled trajectories.
+ */
+std::vector<float> create_sampled_trajectories(const double temperature);
+
 }  // namespace autoware::diffusion_planner::preprocess
 #endif  // AUTOWARE__DIFFUSION_PLANNER__PREPROCESSING__PREPROCESSING_UTILS_HPP_

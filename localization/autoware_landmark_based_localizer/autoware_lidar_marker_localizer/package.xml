@@ -5,7 +5,6 @@
   <version>0.47.0</version>
   <description>The autoware_lidar_marker_localizer package</description>
   <maintainer email="yamato.ando@tier4.jp">Yamato Ando</maintainer>
-  <maintainer email="shintaro.sakoda@tier4.jp">Shintaro Sakoda</maintainer>
   <license>Apache License 2.0</license>
   <author email="eijiro.takeuchi@tier4.jp">Eijiro Takeuchi</author>
   <author email="yamato.ando@tier4.jp">Yamato Ando</author>
