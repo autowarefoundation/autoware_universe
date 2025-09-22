@@ -18569,8 +18569,6 @@
       
         
       
-        
-      
     
     
     
@@ -19208,12 +19206,12 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../visualization/tier4_system_rviz_plugin/" class="md-nav__link ">
+            <a href="../../visualization/tier4_traffic_light_rviz_plugin/" class="md-nav__link ">
               
   
   
   <span class="md-ellipsis">
-    Tier4 system rviz plugin
+    Tier4 traffic light rviz plugin
     
   </span>
   
@@ -19225,7 +19223,7 @@
         <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_10_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_14_10">
             <span class="md-nav__icon md-icon"></span>
-            Tier4 system rviz plugin
+            Tier4 traffic light rviz plugin
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -19271,69 +19269,6 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../visualization/tier4_traffic_light_rviz_plugin/" class="md-nav__link ">
-              
-  
-  
-  <span class="md-ellipsis">
-    Tier4 traffic light rviz plugin
-    
-  </span>
-  
-
-            </a>
-            
-          </div>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_11_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_14_11">
-            <span class="md-nav__icon md-icon"></span>
-            Tier4 traffic light rviz plugin
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-      
-        
-          
-        
-      
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_14_12" >
-        
-          
-          <div class="md-nav__link md-nav__container">
             <a href="../../visualization/tier4_vehicle_rviz_plugin/" class="md-nav__link ">
               
   
@@ -19348,8 +19283,8 @@
             
           </div>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_14_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_14_11">
             <span class="md-nav__icon md-icon"></span>
             Tier4 vehicle rviz plugin
           </label>
@@ -19649,6 +19584,13 @@
 <td>&gt;0</td>
 </tr>
 <tr>
+<td>use_route_handler</td>
+<td>boolean</td>
+<td>Use route handler for selecting route segment indices</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
 <td>build_only</td>
 <td>boolean</td>
 <td>On build only, do not run the planner</td>
@@ -19668,6 +19610,13 @@
 <td>List of temperature for sampling trajectories. Its length must be the same as <code>batch_size</code>. Each value means the coefficient of the standard normal distribution which is used for each initial noise of corresponding batch index. val = N(0,1) * temperature</td>
 <td>[0.5]</td>
 <td>N/A</td>
+</tr>
+<tr>
+<td>velocity_smoothing_window</td>
+<td>integer</td>
+<td>Window size for velocity smoothing. Set to 1 to disable smoothing.</td>
+<td>1</td>
+<td>≥1</td>
 </tr>
 <tr>
 <td>debug_params.publish_debug_map</td>
