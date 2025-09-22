@@ -38,11 +38,12 @@
 #include "ros_utils.hpp"
 
 #include <Eigen/LU>
-#include <autoware_perception_msgs/msg/detected_objects.hpp>
+
 #include "autoware_localization_msgs/msg/kinematic_state.hpp"
 #include "geometry_msgs/msg/quaternion.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
+#include <autoware_perception_msgs/msg/detected_objects.hpp>
 
 #include <NvInfer.h>
 #include <NvOnnxParser.h>
