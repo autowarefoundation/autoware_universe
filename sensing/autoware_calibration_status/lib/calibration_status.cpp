@@ -149,7 +149,10 @@ CalibrationStatusResult CalibrationStatus::process(
 
   // Run inference
   network_trt_ptr_->setTensor(
-    "input", in_d_.get(), {4, {1, config_.channels, static_cast<int32_t>(image_msg->height), static_cast<int32_t>(image_msg->width)}});
+    "input", in_d_.get(),
+    {4,
+     {1, config_.channels, static_cast<int32_t>(image_msg->height),
+      static_cast<int32_t>(image_msg->width)}});
   network_trt_ptr_->setTensor("output", out_d_.get());
   network_trt_ptr_->enqueueV3(stream_);
   std::vector<float> output(2);
