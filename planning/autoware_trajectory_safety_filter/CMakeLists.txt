@@ -31,7 +31,8 @@ rclcpp_components_register_node(${PROJECT_NAME}
 )
 
 ament_auto_add_library(autoware_trajectory_safety_filter_plugins SHARED
-  src/filters/valid_trajectory_filter.cpp
+  src/filters/out_of_lane_filter.cpp
+  src/filters/collision_filter.cpp
 )
 
 target_link_libraries(autoware_trajectory_safety_filter_plugins
@@ -56,5 +57,6 @@ target_link_libraries(autoware_trajectory_safety_filter_plugins
 
 ament_auto_package(
   INSTALL_TO_SHARE
+  config
   launch
 )

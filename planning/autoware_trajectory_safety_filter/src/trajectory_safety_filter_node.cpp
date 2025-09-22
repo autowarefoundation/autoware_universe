@@ -12,13 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "trajectory_safety_filter_node.hpp"
+#include "autoware/trajectory_safety_filter/trajectory_safety_filter_node.hpp"
 
+#include "autoware/trajectory_safety_filter/filter_context.hpp"
 #include "autoware/trajectory_safety_filter/safety_filter_interface.hpp"
+
+#include <autoware_internal_planning_msgs/msg/detail/candidate_trajectory__struct.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/geometry/LaneletMap.h>
 
+#include <algorithm>
+#include <cmath>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -42,6 +47,12 @@ TrajectorySafetyFilter::TrajectorySafetyFilter(const rclcpp::NodeOptions & optio
     "~/input/lanelet2_map", rclcpp::QoS{1}.transient_local(),
     std::bind(&TrajectorySafetyFilter::map_callback, this, std::placeholders::_1));
 
+  sub_trajectories_ = create_subscription<CandidateTrajectories>(
+    "~/input/trajectories", 1,
+    std::bind(&TrajectorySafetyFilter::process, this, std::placeholders::_1));
+
+  pub_trajectories_ = create_publisher<CandidateTrajectories>("~/output/trajectories", 1);
+
   debug_processing_time_detail_pub_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms/feasible_trajectory_filter", 1);
   time_keeper_ =
@@ -51,9 +62,67 @@ TrajectorySafetyFilter::TrajectorySafetyFilter(const rclcpp::NodeOptions & optio
 void TrajectorySafetyFilter::process(const CandidateTrajectories::ConstSharedPtr msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
-  pub_trajectories_->publish(*msg);
 
-  const auto odometry_ptr = sub_odometry_.take_data();
+  // Prepare context for filters
+  FilterContext context;
+
+  context.odometry = sub_odometry_.take_data();
+  if (!context.odometry) {
+    return;
+  }
+
+  context.predicted_objects = sub_objects_.take_data();
+  if (!context.predicted_objects) {
+    return;
+  }
+
+  context.lanelet_map = lanelet_map_ptr_;
+  if (!context.lanelet_map) {
+    return;
+  }
+
+  // Create output message for filtered trajectories
+  auto filtered_msg = std::make_shared<CandidateTrajectories>();
+
+  // Process and filter trajectories
+  for (const auto & trajectory : msg->candidate_trajectories) {
+    if (!validate_trajectory_basics(trajectory)) {
+      continue;
+    }
+
+    // Apply each filter to the trajectory
+    bool is_feasible = true;
+    for (const auto & plugin : plugins_) {
+      if (!plugin->is_feasible(trajectory.points, context)) {
+        is_feasible = false;
+        break;
+      }
+    }
+
+    if (is_feasible) filtered_msg->candidate_trajectories.push_back(trajectory);
+  }
+
+  // Also filter generator_info to match kept trajectories
+  std::unordered_set<std::string> kept_generator_ids;
+  for (const auto & traj : filtered_msg->candidate_trajectories) {
+    std::stringstream ss;
+    for (const auto & byte : traj.generator_id.uuid) {
+      ss << std::hex << static_cast<int>(byte);
+    }
+    kept_generator_ids.insert(ss.str());
+  }
+
+  for (const auto & gen_info : msg->generator_info) {
+    std::stringstream ss;
+    for (const auto & byte : gen_info.generator_id.uuid) {
+      ss << std::hex << static_cast<int>(byte);
+    }
+    if (kept_generator_ids.count(ss.str()) > 0) {
+      filtered_msg->generator_info.push_back(gen_info);
+    }
+  }
+
+  pub_trajectories_->publish(*filtered_msg);
 }
 
 void TrajectorySafetyFilter::map_callback(const LaneletMapBin::ConstSharedPtr msg)
@@ -76,22 +145,18 @@ void TrajectorySafetyFilter::load_metric(const std::string & name)
       }
     }
 
-    // Initialize the plugin
-    plugin->initialize(name);
-
     // Load parameters from ROS and pass to plugin
     std::unordered_map<std::string, std::any> params;
-    const std::string prefix = "safety_filters." + name;
+    const auto all_params = listener_->get_params();
 
-    // Try to get parameters (with defaults)
-    params["max_distance_from_trajectory"] =
-      this->declare_parameter<double>(prefix + ".max_distance_from_trajectory", 5.0);
-    params["check_finite_values"] =
-      this->declare_parameter<bool>(prefix + ".check_finite_values", true);
-    params["check_trajectory_length"] =
-      this->declare_parameter<bool>(prefix + ".check_trajectory_length", true);
-    params["min_trajectory_length"] =
-      static_cast<size_t>(this->declare_parameter<int>(prefix + ".min_trajectory_length", 2));
+    // Determine parameter prefix based on plugin name
+    if (name.find("OutOfLaneFilter") != std::string::npos) {
+      params["out_of_lane.time"] = all_params.out_of_lane.time;
+      params["out_of_lane.min_value"] = all_params.out_of_lane.min_value;
+    } else if (name.find("CollisionFilter") != std::string::npos) {
+      params["collision.time"] = all_params.collision.time;
+      params["collision.min_value"] = all_params.collision.min_value;
+    }
 
     plugin->set_parameters(params);
 
@@ -125,6 +190,34 @@ void TrajectorySafetyFilter::unload_metric(const std::string & name)
   }
 }
 
+bool TrajectorySafetyFilter::validate_trajectory_basics(
+  const CandidateTrajectory & trajectory) const
+{
+  // Check minimum trajectory length
+  if (trajectory.points.size() < 2) {
+    return false;
+  }
+
+  // Check all points have finite values
+  return std::all_of(
+    trajectory.points.begin(), trajectory.points.end(),
+    [this](const auto & point) { return check_finite(point); });
+}
+
+bool TrajectorySafetyFilter::check_finite(const TrajectoryPoint & point) const
+{
+  const auto & p = point.pose.position;
+  const auto & o = point.pose.orientation;
+
+  using std::isfinite;
+  const bool p_result = isfinite(p.x) && isfinite(p.y) && isfinite(p.z);
+  const bool quat_result = isfinite(o.x) && isfinite(o.y) && isfinite(o.z) && isfinite(o.w);
+  const bool v_result = isfinite(point.longitudinal_velocity_mps);
+  const bool w_result = isfinite(point.heading_rate_rps);
+  const bool a_result = isfinite(point.acceleration_mps2);
+
+  return p_result && quat_result && v_result && w_result && a_result;
+}
 }  // namespace autoware::trajectory_safety_filter
 
 #include <rclcpp_components/register_node_macro.hpp>

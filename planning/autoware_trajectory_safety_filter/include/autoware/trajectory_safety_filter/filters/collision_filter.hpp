@@ -12,40 +12,51 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_SAFETY_FILTER__FILTERS__OUT_OF_LANE_FILTER_HPP_
-#define AUTOWARE__TRAJECTORY_SAFETY_FILTER__FILTERS__OUT_OF_LANE_FILTER_HPP_
+#ifndef AUTOWARE__TRAJECTORY_SAFETY_FILTER__FILTERS__COLLISION_FILTER_HPP_
+#define AUTOWARE__TRAJECTORY_SAFETY_FILTER__FILTERS__COLLISION_FILTER_HPP_
 
 #include "autoware/trajectory_safety_filter/safety_filter_interface.hpp"
 
-#include <lanelet2_core/LaneletMap.h>
+#include <rclcpp/duration.hpp>
+
+#include <autoware_perception_msgs/msg/predicted_object.hpp>
+#include <geometry_msgs/msg/point.hpp>
 
 #include <any>
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace autoware::trajectory_safety_filter::plugin
 {
 
-// Parameters for OutOfLaneFilter
-struct OutOfLaneParams
+// Parameters for CollisionFilter
+struct CollisionParams
 {
   double max_check_time = 3.0;  // seconds - max time horizon to check
-  double min_value = 0.0;       // meters - minimum distance to lane boundary
+  double min_ttc = 2.0;         // seconds - minimum acceptable time to collision
 };
 
-class OutOfLaneFilter : public SafetyFilterInterface
+class CollisionFilter : public SafetyFilterInterface
 {
 public:
-  OutOfLaneFilter() : SafetyFilterInterface("OutOfLaneFilter") {}
+  CollisionFilter() : SafetyFilterInterface("CollisionFilter") {}
 
   bool is_feasible(const TrajectoryPoints & traj_points, const FilterContext & context) override;
 
   void set_parameters(const std::unordered_map<std::string, std::any> & params) override;
 
 private:
-  OutOfLaneParams params_;
+  CollisionParams params_;
+
+  // Calculate Time To Collision for a trajectory point with predicted objects
+  bool check_collision(
+    const TrajectoryPoint & traj_point,
+    const autoware_perception_msgs::msg::PredictedObjects & object,
+    const rclcpp::Duration & duration) const;
 };
+
 }  // namespace autoware::trajectory_safety_filter::plugin
 
-#endif  // AUTOWARE__TRAJECTORY_SAFETY_FILTER__FILTERS__OUT_OF_LANE_FILTER_HPP_
+#endif  // AUTOWARE__TRAJECTORY_SAFETY_FILTER__FILTERS__COLLISION_FILTER_HPP_

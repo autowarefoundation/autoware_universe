@@ -14,33 +14,64 @@
 
 #include "autoware/trajectory_safety_filter/filters/out_of_lane_filter.hpp"
 
+#include <rclcpp/duration.hpp>
+
+#include <lanelet2_core/geometry/Lanelet.h>
+#include <lanelet2_core/geometry/LaneletMap.h>
+#include <lanelet2_core/geometry/Point.h>
+
+#include <algorithm>
+#include <any>
 #include <memory>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::trajectory_safety_filter::plugin
 {
 
-bool OutOfLaneFilter::filter_trajectory(TrajectoryPoints & points)
+void OutOfLaneFilter::set_parameters(const std::unordered_map<std::string, std::any> & params)
 {
-  if (points.size() < 2) return false;
+  auto get_value = [&params](const std::string & key, auto & value) {
+    auto it = params.find(key);
+    if (it != params.end()) {
+      try {
+        value = std::any_cast<std::decay_t<decltype(value)>>(it->second);
+      } catch (const std::bad_any_cast &) {
+        // Keep default value if cast fails
+      }
+    }
+  };
 
-  const auto is_finite = std::all_of(
-    points.begin(), points.end(), [this](const auto & point) { return check_finite(point); });
-
-  return is_finite;
+  get_value("max_check_time", params_.max_check_time);
+  get_value("min_value", params_.min_value);
 }
 
-void OutOfLaneFilter::set_up_params()
+bool OutOfLaneFilter::is_feasible(
+  const TrajectoryPoints & traj_points, const FilterContext & context)
 {
-}
+  // Check required context data
+  if (!context.lanelet_map || !context.odometry) {
+    return true;
+  }
 
-rcl_interfaces::msg::SetParametersResult OutOfLaneFilter::on_parameter(
-  const std::vector<rclcpp::Parameter> & parameters)
-{
-  (void)parameters;  // Suppress unused parameter warning
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
-  return result;
-}
+  for (const auto & point : traj_points) {
+    if (rclcpp::Duration(point.time_from_start).seconds() > params_.max_check_time) {
+      break;
+    }
+    const auto nearst_lanelets = lanelet::geometry::findWithin2d(
+      context.lanelet_map->laneletLayer,
+      lanelet::BasicPoint2d(point.pose.position.x, point.pose.position.y), 0.0);
+    if (nearst_lanelets.empty()) {
+      return false;
+    }
+  }
 
+  return true;
+}
 }  // namespace autoware::trajectory_safety_filter::plugin
+
+#include <pluginlib/class_list_macros.hpp>
+PLUGINLIB_EXPORT_CLASS(
+  autoware::trajectory_safety_filter::plugin::OutOfLaneFilter,
+  autoware::trajectory_safety_filter::plugin::SafetyFilterInterface)

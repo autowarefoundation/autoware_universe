@@ -25,9 +25,11 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
+#include <autoware_internal_planning_msgs/msg/candidate_trajectory.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
+#include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
 #include <memory>
@@ -37,8 +39,10 @@
 namespace autoware::trajectory_safety_filter
 {
 using autoware_internal_planning_msgs::msg::CandidateTrajectories;
+using autoware_internal_planning_msgs::msg::CandidateTrajectory;
 using autoware_map_msgs::msg::LaneletMapBin;
 using autoware_perception_msgs::msg::PredictedObjects;
+using autoware_planning_msgs::msg::TrajectoryPoint;
 using nav_msgs::msg::Odometry;
 
 class TrajectorySafetyFilter : public rclcpp::Node
@@ -50,6 +54,9 @@ private:
   void process(const CandidateTrajectories::ConstSharedPtr msg);
 
   void map_callback(const LaneletMapBin::ConstSharedPtr msg);
+
+  bool validate_trajectory_basics(const CandidateTrajectory & trajectory) const;
+  bool check_finite(const TrajectoryPoint & point) const;
 
   void load_metric(const std::string & name);
 

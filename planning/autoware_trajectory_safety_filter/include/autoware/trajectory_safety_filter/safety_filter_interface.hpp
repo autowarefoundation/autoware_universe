@@ -41,10 +41,7 @@ public:
   SafetyFilterInterface & operator=(SafetyFilterInterface &&) = delete;
 
   // Main filter method with context for plugin-specific data
-  virtual bool filter_trajectory(TrajectoryPoints & traj_points, const FilterContext & context) = 0;
-
-  // Initialize plugin with parameters (node-independent for testing)
-  virtual void initialize(const std::string & name) = 0;
+  virtual bool is_feasible(const TrajectoryPoints & traj_points, const FilterContext & context) = 0;
 
   // Set parameters directly (for testing and runtime configuration)
   virtual void set_parameters(const std::unordered_map<std::string, std::any> & params) = 0;
