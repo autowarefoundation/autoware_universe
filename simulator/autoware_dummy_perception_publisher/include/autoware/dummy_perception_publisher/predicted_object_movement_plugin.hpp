@@ -27,6 +27,7 @@
 #include <deque>
 #include <map>
 #include <optional>
+#include <random>
 #include <set>
 #include <string>
 #include <utility>
@@ -37,6 +38,7 @@ namespace autoware::dummy_perception_publisher::pluginlib
 
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
+using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::PoseWithCovariance;
 using geometry_msgs::msg::TwistWithCovariance;
@@ -76,6 +78,8 @@ struct PredictedDummyObjectInfo
   std::optional<rclcpp::Time> mapping_timestamp;
 };
 
+double calculate_euclidean_distance(const Point & pos1, const Point & pos2);
+
 // Struct that holds all tracking info, to track multiple NPCs moving using predicted objects'
 // predicted paths
 struct PredictedDummyObjectsTrackingInfo
@@ -93,27 +97,27 @@ public:
     initialize();
   }
   void initialize() override;
+  std::vector<ObjectInfo> move_objects() override;
 
 private:
   rclcpp::Subscription<PredictedObjects>::SharedPtr predicted_objects_sub_;
   PredictedDummyObjectsTrackingInfo predicted_dummy_objects_tracking_info_;
   PredictedObjectParameters predicted_object_params_;
+  std::mt19937 random_generator_;
 
   void predicted_objects_callback(const PredictedObjects::ConstSharedPtr msg);
   std::pair<PredictedObject, rclcpp::Time> find_matching_predicted_object(
     const unique_identifier_msgs::msg::UUID & object_id, const rclcpp::Time & current_time);
   void update_dummy_to_predicted_mapping(
     const std::vector<DummyObject> & dummy_objects, const PredictedObjects & predicted_objects);
-  double calculate_euclidean_distance(
-    const geometry_msgs::msg::Point & pos1, const geometry_msgs::msg::Point & pos2);
-  bool is_valid_remapping_candidate(
+
+  [[nodiscard]] bool is_valid_remapping_candidate(
     const PredictedObject & candidate_prediction, const std::string & dummy_uuid_str,
     const geometry_msgs::msg::Point & expected_position);
   std::optional<geometry_msgs::msg::Point> calculate_expected_position(
     const autoware_perception_msgs::msg::PredictedPath & last_prediction,
     const std::string & dummy_uuid_str);
 
-  // Helper methods for updateDummyToPredictedMapping
   static std::set<std::string> collect_available_predicted_uuids(
     const PredictedObjects & predicted_objects,
     std::map<std::string, geometry_msgs::msg::Point> & predicted_positions);
@@ -127,7 +131,7 @@ private:
     const std::set<std::string> & available_predicted_uuids,
     const std::map<std::string, geometry_msgs::msg::Point> & predicted_positions,
     const PredictedObjects & predicted_objects);
-  void create_remappings_for_disappeared_objects(
+  void create_remapping_for_disappeared_objects(
     const std::vector<std::string> & dummy_objects_to_remap,
     std::set<std::string> & available_predicted_uuids,
     const std::map<std::string, geometry_msgs::msg::Point> & predicted_positions,

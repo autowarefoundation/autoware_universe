@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__DUMMY_PERCEPTION_PUBLISHER__DUMMY_OBJECT_MOVEMENT_BASE_PLUGIN_HPP_
 #define AUTOWARE__DUMMY_PERCEPTION_PUBLISHER__DUMMY_OBJECT_MOVEMENT_BASE_PLUGIN_HPP_
 
+#include "autoware/dummy_perception_publisher/object_info.hpp"
+
 #include <rclcpp/rclcpp.hpp>
 
 #include <tier4_simulation_msgs/msg/dummy_object.hpp>
@@ -39,6 +41,7 @@ public:
   explicit DummyObjectMovementBasePlugin(rclcpp::Node * node) : node_ptr_(node) {}
   virtual ~DummyObjectMovementBasePlugin() = default;
   virtual void initialize() = 0;
+  virtual std::vector<ObjectInfo> move_objects() = 0;
   void set_dummy_object(const DummyObject & object) { objects_.push_back(object); }
   void set_dummy_objects(const std::vector<DummyObject> & objects) { objects_ = objects; }
 };

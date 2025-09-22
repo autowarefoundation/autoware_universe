@@ -42,6 +42,7 @@
 // #include "autoware/dummy_perception_publisher/predicted_object_movement_base_plugin_class.hpp"
 // If the file exists under a different name or path, update the include accordingly, e.g.:
 #include "autoware/dummy_perception_publisher/dummy_object_movement_base_plugin.hpp"
+#include "autoware/dummy_perception_publisher/object_info.hpp"
 #include "autoware/dummy_perception_publisher/predicted_object_movement_plugin.hpp"
 
 #include <tf2_ros/buffer.h>
@@ -60,85 +61,9 @@ namespace autoware::dummy_perception_publisher
 {
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
-using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::PoseWithCovariance;
 using geometry_msgs::msg::TwistWithCovariance;
 using tier4_simulation_msgs::msg::DummyObject;
-struct CommonParameters
-{
-  double max_remapping_distance;
-  double max_speed_difference_ratio;
-  double min_speed_ratio;
-  double max_speed_ratio;
-  double speed_check_threshold;
-  std::string path_selection_strategy;  // "highest_confidence" or "random"
-};
-
-struct PredictedObjectParameters
-{
-  // Configuration parameters
-  double predicted_path_delay{0.0};
-  double min_predicted_path_keep_duration{0.0};
-  double switch_time_threshold{0.0};
-
-  // Vehicle parameters
-  CommonParameters pedestrian_params;
-  CommonParameters vehicle_params;
-};
-
-// Tracking info of a single dummy object and its mapping to a predicted object
-struct PredictedDummyObjectInfo
-{
-  std::string predicted_uuid;
-  std::optional<geometry_msgs::msg::Point> last_known_position;
-  std::optional<rclcpp::Time> creation_timestamp;
-  std::optional<PredictedObject> last_used_prediction;
-  std::optional<rclcpp::Time> last_used_prediction_time;
-  std::optional<rclcpp::Time> prediction_update_timestamp;
-  std::optional<rclcpp::Time> mapping_timestamp;
-};
-
-// Struct that holds all tracking info, to track multiple NPCs moving using predicted objects'
-// predicted paths
-struct PredictedDummyObjectsTrackingInfo
-{
-  std::deque<PredictedObjects> predicted_objects_buffer;
-  size_t max_buffer_size{50};  // Store last 5 seconds at 10Hz
-  // mapping between dummy object UUID (string) and its tracking info
-  std::map<std::string, PredictedDummyObjectInfo> dummy_predicted_info_map;
-};
-
-struct ObjectInfo
-{
-  ObjectInfo(const DummyObject & object, const rclcpp::Time & current_time);
-  ObjectInfo(
-    const DummyObject & object, const PredictedObject & predicted_object,
-    const rclcpp::Time & predicted_time, const rclcpp::Time & current_time,
-    const double switch_time_threshold);
-
-  // Position calculation methods
-  static Pose calculateStraightLinePosition(
-    const DummyObject & object, const rclcpp::Time & current_time);
-  static Pose calculateTrajectoryBasedPosition(
-    const DummyObject & object, const PredictedObject & predicted_object,
-    const rclcpp::Time & predicted_time, const rclcpp::Time & current_time);
-  static void stopAtZeroVelocity(double & current_vel, double initial_vel, double initial_acc);
-  double length;
-  double width;
-  double height;
-  double std_dev_x;
-  double std_dev_y;
-  double std_dev_z;
-  double std_dev_yaw;
-  tf2::Transform tf_map2moved_object;
-  // pose and twist
-  TwistWithCovariance twist_covariance_;
-  PoseWithCovariance pose_covariance_;
-  // convert to TrackedObject
-  // (todo) currently need object input to get id and header information, but it should be removed
-  [[nodiscard]] autoware_perception_msgs::msg::TrackedObject toTrackedObject(
-    const DummyObject & object) const;
-};
 
 class PointCloudCreator
 {
@@ -213,40 +138,6 @@ private:
 
   void timerCallback();
   void objectCallback(const DummyObject::ConstSharedPtr msg);
-
-  std::pair<PredictedObject, rclcpp::Time> findMatchingPredictedObject(
-    const unique_identifier_msgs::msg::UUID & object_id, const rclcpp::Time & current_time);
-  void updateDummyToPredictedMapping(
-    const std::vector<DummyObject> & dummy_objects, const PredictedObjects & predicted_objects);
-  double calculateEuclideanDistance(
-    const geometry_msgs::msg::Point & pos1, const geometry_msgs::msg::Point & pos2);
-  bool isValidRemappingCandidate(
-    const PredictedObject & candidate_prediction, const std::string & dummy_uuid_str,
-    const geometry_msgs::msg::Point & expected_position);
-  std::optional<geometry_msgs::msg::Point> calculateExpectedPosition(
-    const autoware_perception_msgs::msg::PredictedPath & last_prediction,
-    const std::string & dummy_uuid_str);
-
-  // Helper methods for updateDummyToPredictedMapping
-  static std::set<std::string> collectAvailablePredictedUUIDs(
-    const PredictedObjects & predicted_objects,
-    std::map<std::string, geometry_msgs::msg::Point> & predicted_positions);
-  std::vector<std::string> findDisappearedPredictedObjectUUIDs(
-    std::set<std::string> & available_predicted_uuids);
-  std::map<std::string, geometry_msgs::msg::Point> collectDummyObjectPositions(
-    const std::vector<DummyObject> & dummy_objects, const rclcpp::Time & current_time,
-    std::vector<std::string> & unmapped_dummy_uuids);
-  std::optional<std::string> findBestPredictedObjectMatch(
-    const std::string & dummy_uuid, const geometry_msgs::msg::Point & dummy_position,
-    const std::set<std::string> & available_predicted_uuids,
-    const std::map<std::string, geometry_msgs::msg::Point> & predicted_positions,
-    const PredictedObjects & predicted_objects);
-  void createRemappingsForDisappearedObjects(
-    const std::vector<std::string> & dummy_objects_to_remap,
-    std::set<std::string> & available_predicted_uuids,
-    const std::map<std::string, geometry_msgs::msg::Point> & predicted_positions,
-    const std::map<std::string, geometry_msgs::msg::Point> & dummy_positions,
-    const PredictedObjects & predicted_objects);
 
 public:
   DummyPerceptionPublisherNode();
