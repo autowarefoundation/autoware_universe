@@ -375,8 +375,7 @@ void DummyPerceptionPublisherNode::objectCallback(
         break;
       }
       for (auto & plugin : movement_plugins_) {
-        const bool set = plugin->set_dummy_object(*object);
-        if (set) {
+        if (plugin->set_dummy_object(*object)) {
           break;
         }
       }
