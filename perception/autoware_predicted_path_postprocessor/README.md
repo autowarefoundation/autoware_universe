@@ -27,38 +27,49 @@ The following processors are supported:
 
 ## How to Add New Processor
 
+Processors in this package should follow a structured naming convention as below:
+
+| Class Name   | String Identifier | Roles                                                       |
+| ------------ | ----------------- | ----------------------------------------------------------- |
+| `RefineBy**` | `refine_by_**`    | Modify or improve existing paths based on specific criteria |
+| `FilterBy**` | `filter_by_**`    | Remove or exclude paths that don't meet specific criteria   |
+
+As an example, let's see how to add a new processor by using a processor called `FilterBySomething`.
+
 1. Create a new processor class that inherits from `ProcessorInterface`:
 
-   ```c++:processor/sample_processor.hpp
-   class SampleProcessor final : public ProcessorInterface
+   ```c++:processor/filter_by_something.hpp
+   class FilterBySomething final : public ProcessorInterface
    {
      public:
-       SampleProcessor(rclcpp::Node * node_ptr, const std::string & processor_name)
+       FilterBySomething(rclcpp::Node * node_ptr, const std::string & processor_name)
        : ProcessorInterface()
        {
+         // Load parameter YAML file by declaring parameters
          load_config(
            node_ptr, processor_name, [](rclcpp::Node * node_ptr, const std::string & processor_name) {
              node_ptr->declare_parameter<double>(processor_name + ".double_param", 0.0);
              node_ptr->declare_parameter<std::string>(processor_name + ".string_param", "default");
            });
 
-         auto double_param = node_ptr->get_parameter(processor_name + ".double_param").as_double();
-         auto string_param = node_ptr->get_parameter(processor_name + ".string_param").as_string();
-
-         RCLCPP_INFO_STREAM(
-           node_ptr->get_logger(), "SampleProcessor initialized!! ["
-                                     << processor_name << "]: double_param=" << double_param
-                                     << ", string_param=" << string_param);
+         // Read loaded parameters
+         double_param_ = node_ptr->get_parameter(processor_name + ".double_param").as_double();
+         string_param_ = node_ptr->get_parameter(processor_name + ".string_param").as_string();
        }
 
        void process(
          autoware_perception_msgs::msg::PredictedObject &, const Context &) override
        {
+         // ...Do something
        }
+
+    private:
+      double double_param_;
+      std::string string_param_;
    };
    ```
 
-2. Add building logic for the processor in `build_processors(...)` function:
+2. Register the new processor in `build_processors(...)` function:
 
    ```c++:processor/builder.hpp
    std::vector<ProcessorInterface::UniquePtr> build_processors(rclcpp::Node * node_ptr, const std::string & processor_name)
@@ -66,19 +77,21 @@ The following processors are supported:
      for (const auto & name : processor_names) {
        if ( /* ... */) {
          // ...
-       } else if (name == "sample_processor") {
-         outputs.push_back(std::make_unique<processors::SampleProcessor>(node_ptr, name));
+       } else if (name == "filter_by_something") {
+         outputs.push_back(std::make_unique<FilterBySomething>(node_ptr, name));
        }
      }
    }
    ```
 
-3. Add parameter file in `config/sample_processor.param.yaml`:
+3. Add parameter file in `config/filter_by_something.param.yaml`:
 
-   ```yaml:config/sample_processor.param.yaml
+   The parameters must be grouped under the processor's string identifier.
+
+   ```yaml:config/filter_by_something.param.yaml
    /**:
      ros__parameters:
-       sample_processor:
+       filter_by_something:
          double_param: 100.0
-         string_param: Hello, world!!
+         string_param: I'm a processor!!
    ```
