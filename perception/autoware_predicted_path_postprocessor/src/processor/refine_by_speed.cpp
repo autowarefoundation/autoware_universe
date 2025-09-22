@@ -12,18 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/predicted_path_postprocessor/processors/refine_by_speed.hpp"
+#include "autoware/predicted_path_postprocessor/processor/refine_by_speed.hpp"
 
 #include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <algorithm>
 #include <string>
 #include <vector>
 
-namespace autoware::predicted_path_postprocessor::processors
+namespace autoware::predicted_path_postprocessor::processor
 {
 RefineBySpeed::RefineBySpeed(rclcpp::Node * node_ptr, const std::string & processor_name)
 : ProcessorInterface(processor_name)
@@ -107,4 +105,4 @@ void RefineBySpeed::process(
     }
   }
 }
-}  // namespace autoware::predicted_path_postprocessor::processors
+}  // namespace autoware::predicted_path_postprocessor::processor

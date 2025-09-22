@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSORS__REFINE_BY_SPEED_HPP_
-#define AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSORS__REFINE_BY_SPEED_HPP_
+#ifndef AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__REFINE_BY_SPEED_HPP_
+#define AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__REFINE_BY_SPEED_HPP_
 
-#include "autoware/predicted_path_postprocessor/interface.hpp"
+#include "autoware/predicted_path_postprocessor/processor/interface.hpp"
 
 #include <string>
 
-namespace autoware::predicted_path_postprocessor::processors
+namespace autoware::predicted_path_postprocessor::processor
 {
 /**
  * @brief Processor to refine predicted paths based on object speed.
@@ -46,5 +46,5 @@ public:
 private:
   double speed_threshold_;  //!< Speed threshold for refinement
 };
-}  // namespace autoware::predicted_path_postprocessor::processors
-#endif  // AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSORS__REFINE_BY_SPEED_HPP_
+}  // namespace autoware::predicted_path_postprocessor::processor
+#endif  // AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__REFINE_BY_SPEED_HPP_

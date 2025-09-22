@@ -15,9 +15,9 @@
 #ifndef AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__NODE_HPP_
 #define AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__NODE_HPP_
 
-#include "autoware/predicted_path_postprocessor/composable.hpp"
 #include "autoware/predicted_path_postprocessor/debug/intermediate_publisher.hpp"
-#include "autoware/predicted_path_postprocessor/interface.hpp"
+#include "autoware/predicted_path_postprocessor/processor/composable.hpp"
+#include "autoware/predicted_path_postprocessor/processor/interface.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -53,10 +53,10 @@ private:
   rclcpp::TimerBase::SharedPtr timer_;
 
   //!< @brief Processing context
-  std::unique_ptr<Context> context_;
+  std::unique_ptr<processor::Context> context_;
 
   //!< @brief Processor for predicted objects message
-  std::unique_ptr<ComposableProcessor> processor_;
+  std::unique_ptr<processor::ComposableProcessor> processor_;
 
   //!< @brief Publisher for intermediate predicted objects message
   std::unique_ptr<debug::IntermediatePublisher> intermediate_publisher_;

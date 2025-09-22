@@ -34,11 +34,11 @@ PredictedPathPostprocessorNode::PredictedPathPostprocessorNode(const rclcpp::Nod
   object_publisher_ = create_publisher<autoware_perception_msgs::msg::PredictedObjects>(
     "~/output/objects", rclcpp::QoS{1});
 
-  context_ = std::make_unique<Context>();
+  context_ = std::make_unique<processor::Context>();
 
   const auto processor_names = declare_parameter<std::vector<std::string>>("processor_names");
 
-  processor_ = std::make_unique<ComposableProcessor>(this, processor_names);
+  processor_ = std::make_unique<processor::ComposableProcessor>(this, processor_names);
 
   if (declare_parameter<bool>("debug")) {
     intermediate_publisher_ = std::make_unique<debug::IntermediatePublisher>(this, processor_names);
@@ -48,11 +48,6 @@ PredictedPathPostprocessorNode::PredictedPathPostprocessorNode(const rclcpp::Nod
 void PredictedPathPostprocessorNode::callback(
   const autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr & objects)
 {
-  if (!processor_) {
-    RCLCPP_WARN(get_logger(), "Processor has not been initialized");
-    return;
-  }
-
   context_->update(objects);
 
   if (intermediate_publisher_) {
