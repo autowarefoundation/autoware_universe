@@ -20,6 +20,7 @@
 #include "device_vector.hpp"
 
 #include <autoware/cuda_utils/cuda_check_error.hpp>
+#include <cuda_blackboard/cuda_pointcloud2.hpp>
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/msg/point_field.hpp>
@@ -51,6 +52,10 @@ public:
   void from_point_cloud2(const sensor_msgs::msg::PointCloud2 & msg);
   // Convert to a sensor_msgs::msg::PointCloud2 message
   void to_point_cloud2(sensor_msgs::msg::PointCloud2 & msg);
+
+  // Convert from a cuda_blackboard GPU PointCloud2
+  void from_cuda_point_cloud2(const cuda_blackboard::CudaPointCloud2 & msg);
+  void to_cuda_point_cloud2(cuda_blackboard::CudaPointCloud2 & msg);
 
   // Return a pointer so it can be used by CUDA kernels
   Ptr data();

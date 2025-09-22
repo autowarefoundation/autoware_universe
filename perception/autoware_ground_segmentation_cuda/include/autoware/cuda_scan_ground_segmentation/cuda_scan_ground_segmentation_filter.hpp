@@ -118,8 +118,10 @@ public:
 
   // Method to process the point cloud data and filter ground points
   void classifyPointCloud(
-    const sensor_msgs::msg::PointCloud2 & input_points,
-    sensor_msgs::msg::PointCloud2 & output_points, sensor_msgs::msg::PointCloud2 & ground_points);
+    const cuda_blackboard::CudaPointCloud2 & input_points,
+    cuda_blackboard::CudaPointCloud2 & ground,
+    cuda_blackboard::CudaPointCloud2 & non_ground
+    );
 
 private:
   std::unique_ptr<cuda::PointCloud2> dev_input_points_, dev_output_points_, dev_ground_points_;

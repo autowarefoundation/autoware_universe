@@ -156,6 +156,71 @@ void PointCloud2::to_point_cloud2(sensor_msgs::msg::PointCloud2 & msg)
   tmp_data.to_vector(msg.data);
 }
 
+void PointCloud2::from_cuda_point_cloud2(const cuda_blackboard::CudaPointCloud2 & msg)
+{
+  int point_num = msg.width * msg.height;
+  int offset_x, offset_y, offset_z;
+
+  for (const auto & f : msg.fields) {
+    if (f.name == "x") {
+      offset_x = f.offset;
+    } else if (f.name == "y") {
+      offset_y = f.offset;
+    } else if (f.name == "z") {
+      offset_z = f.offset;
+    }
+  }
+
+  data_.resize(point_num);
+
+  CHECK_CUDA_ERROR(
+    launchAsync<BLOCK_SIZE_X>(
+      point_num, 0, stream_->get(), convert_from_point_cloud2, msg.data.get(), this->data(),
+      point_num, offset_x, offset_y, offset_z, (int)(msg.point_step)));
+}
+
+void PointCloud2::to_cuda_point_cloud2(cuda_blackboard::CudaPointCloud2 & msg)
+{
+  msg.height = 1;
+  msg.width = data_.size();
+  msg.is_dense = true;
+  msg.is_bigendian = false;
+  msg.point_step = 3 * sizeof(float);  // x, y, z only
+  msg.row_step = msg.point_step * msg.width;
+
+  msg.fields.resize(3);
+  msg.fields[0].name = "x";
+  msg.fields[0].offset = 0;
+  msg.fields[0].datatype = sensor_msgs::msg::PointField::FLOAT32;
+  msg.fields[0].count = 1;
+
+  msg.fields[1].name = "y";
+  msg.fields[1].offset = sizeof(float);
+  msg.fields[1].datatype = sensor_msgs::msg::PointField::FLOAT32;
+  msg.fields[1].count = 1;
+
+  msg.fields[2].name = "z";
+  msg.fields[2].offset = 2 * sizeof(float);
+  msg.fields[2].datatype = sensor_msgs::msg::PointField::FLOAT32;
+  msg.fields[2].count = 1;
+
+  int point_num = data_.size();
+
+  if (point_num <= 0) {
+    return;
+  }
+
+  msg.data = cuda_blackboard::make_unique<uint8_t[]>(
+    msg.height * msg.width * msg.point_step * sizeof(uint8_t)
+  );
+
+  CHECK_CUDA_ERROR(
+    launchAsync<BLOCK_SIZE_X>(
+      point_num, 0, stream_->get(), convert_to_point_cloud2, this->data(), msg.data.get(),
+      point_num, (int)msg.fields[0].offset, (int)msg.fields[1].offset, (int)msg.fields[2].offset,
+      (int)msg.point_step));
+}
+
 PointCloud2::Ptr PointCloud2::data()
 {
   return Ptr(data_.data(), data_.size());

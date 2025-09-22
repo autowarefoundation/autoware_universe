@@ -756,10 +756,11 @@ void CudaScanGroundSegmentationFilter::extractPoints(
 #endif
 
 void CudaScanGroundSegmentationFilter::classifyPointCloud(
-  const sensor_msgs::msg::PointCloud2 & input_points, sensor_msgs::msg::PointCloud2 & output_points,
-  sensor_msgs::msg::PointCloud2 & ground_points)
+  const cuda_blackboard::CudaPointCloud2 & input,
+  cuda_blackboard::CudaPointCloud2 & ground, 
+  cuda_blackboard::CudaPointCloud2 & non_ground)
 {
-  dev_input_points_->from_point_cloud2(input_points);
+  dev_input_points_->from_cuda_point_cloud2(input);
 
   device_vector<Cell> cell_list(stream_, mempool_);
   device_vector<int> starting_pid(stream_, mempool_);
@@ -775,10 +776,10 @@ void CudaScanGroundSegmentationFilter::classifyPointCloud(
   // Extract ground points
   extractPoints<GroundChecker>(classified_points, *dev_input_points_, *dev_ground_points_);
 
-  dev_output_points_->to_point_cloud2(output_points);
-  output_points.header.frame_id = "map";
-  dev_ground_points_->to_point_cloud2(ground_points);
-  ground_points.header.frame_id = "map";
+  dev_output_points_->to_point_cloud2(non_ground);
+  non_ground.header.frame_id = "map";
+  dev_ground_points_->to_point_cloud2(ground);
+  ground.header.frame_id = "map";
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_->get()));
 }
 

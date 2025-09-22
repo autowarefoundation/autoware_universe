@@ -37,17 +37,16 @@ public:
   explicit CudaScanGroundSegmentationFilterNode(const rclcpp::NodeOptions & options);
 
 private:
-  // void cudaPointCloudCallback(const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & msg);
-  void cudaPointCloudCallback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & msg);
+  void cudaPointCloudCallback(const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & msg);
   // Cuda Ground Segmentation Filter
   std::unique_ptr<CudaScanGroundSegmentationFilter> cuda_ground_segmentation_filter_{};
   // debugger
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{nullptr};
 
-  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_gnd_;
+  rclcpp::Subscription<cuda_blackboard::CudaPointCloud2>::SharedPtr sub_;
+  rclcpp::Publisher<cuda_blackboard::CudaPointCloud2>::SharedPtr pub_;
+  rclcpp::Publisher<cuda_blackboard::CudaPointCloud2>::SharedPtr pub_gnd_;
 };
 
 }  // namespace autoware::cuda_ground_segmentation

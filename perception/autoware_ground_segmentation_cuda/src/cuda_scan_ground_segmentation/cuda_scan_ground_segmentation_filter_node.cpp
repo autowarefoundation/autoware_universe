@@ -85,31 +85,32 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
     declare_parameter<int64_t>("max_mem_pool_size_in_byte", 1e9);  // 1 GB
 
   // Initialize CUDA blackboard publisher
-  pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("~/output/pointcloud", 10);
+  pub_ = this->create_publisher<cuda_blackboard::CudaPointCloud2>("~/output/pointcloud", 10);
   pub_gnd_ =
-    this->create_publisher<sensor_msgs::msg::PointCloud2>("~/output/ground_pointcloud", 10);
+    this->create_publisher<cuda_blackboard::CudaPointCloud2>("~/output/ground_pointcloud", 10);
 
   cuda_ground_segmentation_filter_ = std::make_unique<CudaScanGroundSegmentationFilter>(
     filter_parameters, max_mem_pool_size_in_byte);
 
-  sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
+  sub_ = this->create_subscription<cuda_blackboard::CudaPointCloud2>(
     "~/input/pointcloud", 100,
-    std::bind(
-      &CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback, this, std::placeholders::_1));
+    [this](cuda_blackboard::CudaPointCloud2::ConstSharedPtr msg) {
+      this->cudaPointCloudCallback(msg);
+    }
+  );
 }
 
 void CudaScanGroundSegmentationFilterNode::cudaPointCloudCallback(
-  // const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & msg)
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pc2_msg)
+  const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & msg)
 {
   // start time measurement
   if (stop_watch_ptr_) {
     stop_watch_ptr_->tic("processing_time");
   }
 
-  sensor_msgs::msg::PointCloud2 non_ground, ground;
+  cuda_blackboard::CudaPointCloud2 non_ground, ground;
 
-  cuda_ground_segmentation_filter_->classifyPointCloud(*pc2_msg, non_ground, ground);
+  cuda_ground_segmentation_filter_->classifyPointCloud(*msg, non_ground, ground);
 
   pub_->publish(non_ground);
   pub_gnd_->publish(ground);
