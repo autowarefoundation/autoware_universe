@@ -292,67 +292,67 @@ __global__ void projectPoints_kernel(
     const int64_t v = lround((fy_new * p_cam_y + cy_new * p_cam_z) / p_cam_z);
 
     // Projection ROI validation
-    if (u >= 0 && u < static_cast<int64_t>(width) && v >= 0 && v < static_cast<int64_t>(height)) {
-      const auto current_metric_depth = static_cast<float>(p_cam_z);
+    if (u < 0 || u >= static_cast<int64_t>(width) || v < 0 || v >= static_cast<int64_t>(height)) {
+      return;
+    }
+    const auto current_metric_depth = static_cast<float>(p_cam_z);
 
-      // Main Projection Z-Buffer (using the separate metric buffer)
-      auto target_addr_int = reinterpret_cast<uint32_t *>(&metric_depth_buffer[v * width + u]);
-      float old_metric_depth = __uint_as_float(*target_addr_int);
+    // Main Projection Z-Buffer (using the separate metric buffer)
+    auto target_addr_int = reinterpret_cast<uint32_t *>(&metric_depth_buffer[v * width + u]);
+    float old_metric_depth = __uint_as_float(*target_addr_int);
 
-      while (old_metric_depth == 0.0f || current_metric_depth < fabsf(old_metric_depth)) {
-        unsigned int assumed_int = __float_as_uint(old_metric_depth);
-        unsigned int returned_int =
-          atomicCAS(target_addr_int, assumed_int, __float_as_uint(current_metric_depth));
+    while (old_metric_depth == 0.0f || current_metric_depth < fabsf(old_metric_depth)) {
+      unsigned int assumed_int = __float_as_uint(old_metric_depth);
+      unsigned int returned_int =
+        atomicCAS(target_addr_int, assumed_int, __float_as_uint(current_metric_depth));
 
-        if (returned_int == assumed_int) {  // Race condition resolved
-          InputImageBGR8Type color = jet_colormap(static_cast<float>(p.intensity) / 255.0f);
-          size_t pixel_idx = v * width + u;
+      if (returned_int == assumed_int) {  // Race condition resolved
+        InputImageBGR8Type color = jet_colormap(static_cast<float>(p.intensity) / 255.0f);
+        size_t pixel_idx = v * width + u;
 
-          output_array[3 * height * width + pixel_idx] = current_metric_depth / max_depth;
-          output_array[4 * height * width + pixel_idx] = static_cast<float>(p.intensity) / 255.0f;
+        output_array[3 * height * width + pixel_idx] = current_metric_depth / max_depth;
+        output_array[4 * height * width + pixel_idx] = static_cast<float>(p.intensity) / 255.0f;
 
-          undistorted_image[pixel_idx] = color;
-          atomicAdd(num_points_projected, 1);
+        undistorted_image[pixel_idx] = color;
+        atomicAdd(num_points_projected, 1);
 
-          for (int dy = -dilation_size; dy <= dilation_size; ++dy) {
-            for (int dx = -dilation_size; dx <= dilation_size; ++dx) {
-              if (dx == 0 && dy == 0) continue;
+        for (int dy = -dilation_size; dy <= dilation_size; ++dy) {
+          for (int dx = -dilation_size; dx <= dilation_size; ++dx) {
+            if (dx == 0 && dy == 0) continue;
 
-              int neighbor_u = u + dx;
-              int neighbor_v = v + dy;
+            int neighbor_u = u + dx;
+            int neighbor_v = v + dy;
 
-              if (
-                neighbor_u >= 0 && neighbor_v >= 0 && neighbor_u < static_cast<int64_t>(width) &&
-                neighbor_v < static_cast<int64_t>(height)) {
-                size_t neighbor_idx = neighbor_v * width + neighbor_u;
-                auto neighbor_addr_int =
-                  reinterpret_cast<uint32_t *>(&metric_depth_buffer[neighbor_idx]);
-                float neighbor_old_metric_depth = __uint_as_float(*neighbor_addr_int);
+            if (
+              neighbor_u >= 0 && neighbor_v >= 0 && neighbor_u < static_cast<int64_t>(width) &&
+              neighbor_v < static_cast<int64_t>(height)) {
+              size_t neighbor_idx = neighbor_v * width + neighbor_u;
+              auto neighbor_addr_int =
+                reinterpret_cast<uint32_t *>(&metric_depth_buffer[neighbor_idx]);
+              float neighbor_old_metric_depth = __uint_as_float(*neighbor_addr_int);
 
-                while (neighbor_old_metric_depth == 0.0f ||
-                       current_metric_depth < fabsf(neighbor_old_metric_depth)) {
-                  unsigned int neighbor_assumed_int = __float_as_uint(neighbor_old_metric_depth);
-                  unsigned int neighbor_returned_int = atomicCAS(
-                    neighbor_addr_int, neighbor_assumed_int,
-                    __float_as_uint(-current_metric_depth));
+              while (neighbor_old_metric_depth == 0.0f ||
+                     current_metric_depth < fabsf(neighbor_old_metric_depth)) {
+                unsigned int neighbor_assumed_int = __float_as_uint(neighbor_old_metric_depth);
+                unsigned int neighbor_returned_int = atomicCAS(
+                  neighbor_addr_int, neighbor_assumed_int, __float_as_uint(-current_metric_depth));
 
-                  if (neighbor_returned_int == neighbor_assumed_int) {
-                    output_array[3 * height * width + neighbor_idx] =
-                      current_metric_depth / max_depth;
-                    output_array[4 * height * width + neighbor_idx] =
-                      static_cast<float>(p.intensity) / 255.0f;
-                    undistorted_image[neighbor_idx] = color;
-                    break;
-                  }
-                  neighbor_old_metric_depth = __uint_as_float(neighbor_returned_int);
+                if (neighbor_returned_int == neighbor_assumed_int) {
+                  output_array[3 * height * width + neighbor_idx] =
+                    current_metric_depth / max_depth;
+                  output_array[4 * height * width + neighbor_idx] =
+                    static_cast<float>(p.intensity) / 255.0f;
+                  undistorted_image[neighbor_idx] = color;
+                  break;
                 }
+                neighbor_old_metric_depth = __uint_as_float(neighbor_returned_int);
               }
             }
           }
-          break;
         }
-        old_metric_depth = __uint_as_float(returned_int);
+        break;
       }
+      old_metric_depth = __uint_as_float(returned_int);
     }
   }
 }
