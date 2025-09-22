@@ -29,7 +29,7 @@ All movement plugins inherit from `DummyObjectMovementBasePlugin` which provides
 - **MODIFY**: Handled directly by the node, bypassing plugin movement logic. Immediately replaces the object's position information across all plugins.
 - **DELETE**: The specified object is removed from all plugins.
 - **DELETEALL**: Clears all objects from all plugins.
-- **PREDICT**: New objects are created, they move in a straight line for a set time and then the predictions extracted from the perception module are used to dictate where the objects will move to.
+- **PREDICT**: New objects are created, they move in a straight line for a set time and then the predictions extracted from the perception module are used to dictate where the objects will move to. NOTE: for ease of calculation, acceleration is not taken into account when calculating the object's position, only its initial speed.
 
 ## Inputs / Outputs
 
