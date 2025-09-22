@@ -98,6 +98,10 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     lib/preprocess/preprocess_cuda.cu
   )
 
+  target_include_directories(${PROJECT_NAME}_cuda_lib SYSTEM PRIVATE
+    ${autoware_cuda_utils_INCLUDE_DIRS}
+  )
+
   target_link_libraries(${PROJECT_NAME}_lib
     ${NVINFER}
     ${NVONNXPARSER}
