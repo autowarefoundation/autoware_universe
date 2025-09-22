@@ -17,13 +17,7 @@
   <arg name="output/traffic_signals" default="traffic_signals"/>
   <arg name="param_path" default="$(find-pkg-share autoware_crosswalk_traffic_light_estimator)/config/crosswalk_traffic_light_estimator.param.yaml"/>
 
-  <node
-    pkg="autoware_crosswalk_traffic_light_estimator"
-    exec="crosswalk_traffic_light_estimator_node"
-    name="crosswalk_traffic_light_estimator"
-    output="screen"
-    launch-prefix="konsole -e gdb -ex run --args"
-  >
+  <node pkg="autoware_crosswalk_traffic_light_estimator" exec="crosswalk_traffic_light_estimator_node" name="crosswalk_traffic_light_estimator" output="screen">
     <remap from="~/input/vector_map" to="$(var input/vector_map)"/>
     <remap from="~/input/route" to="$(var input/route)"/>
     <remap from="~/input/classified/traffic_signals" to="$(var input/traffic_signals)"/>
