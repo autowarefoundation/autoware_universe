@@ -46,6 +46,9 @@ When the pedestrian traffic signals **are NOT detected** by perception pipeline
 
 - Estimate the color of pedestrian traffic signals based on detected vehicle traffic signals, HDMap, and route
 
+Override rules specific to some traffic lights can also be defined in the lanelet map.
+In that case, the crosswalk traffic light is only estimated based on this map-based rule.
+
 ### Estimate whether pedestrian traffic signals are flashing
 
 ```plantumul
@@ -125,6 +128,21 @@ If traffic between pedestrians and vehicles is controlled by traffic signals, th
 <div align="center">
   <img src="images/intersection2.svg" width=80%>
 </div>
+
+### Map-based estimation rules
+
+Rules can be defined in the lanelet map to override the normal estimation.
+These rules define the value of a crosswalk traffic light based on the value of a vehicle traffic light.
+
+For example, a rule to consider the light of crosswalk X to be `green` when the vehicle traffic light Y is `green` can be expressed in the lanelet map as follows:
+
+```XML
+  <relation id="Y">
+    ...
+    <tag k="signal_color_relation:green:green" v="X"/>
+```
+
+Colors `green`, `amber`, `red`, and `white` are currently supported.
 
 ## Assumptions / Known limits
 
