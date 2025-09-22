@@ -29,9 +29,10 @@
  */
 
 #include "ros_utils.hpp"
-
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <cmath>
 #include "bevformer_node.hpp"
-
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <opencv2/opencv.hpp>
@@ -97,9 +98,14 @@ void box3DToDetectedObjects(
     object.kinematics.pose_with_covariance.pose.position.y = box.y;
     object.kinematics.pose_with_covariance.pose.position.z = box.z;
 
-    // Convert yaw to quaternion
+    double corrected_yaw = box.r - M_PI_2;
+
+    // Normalize
+    corrected_yaw = std::atan2(std::sin(corrected_yaw), std::cos(corrected_yaw));
+
     tf2::Quaternion q;
-    q.setRPY(0.0, 0.0, box.r);
+    q.setRPY(0.0, 0.0, corrected_yaw);
+
     object.kinematics.pose_with_covariance.pose.orientation.x = q.x();
     object.kinematics.pose_with_covariance.pose.orientation.y = q.y();
     object.kinematics.pose_with_covariance.pose.orientation.z = q.z();
