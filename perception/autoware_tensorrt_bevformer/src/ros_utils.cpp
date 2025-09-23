@@ -101,14 +101,9 @@ void box3DToDetectedObjects(
     object.kinematics.pose_with_covariance.pose.position.y = box.y;
     object.kinematics.pose_with_covariance.pose.position.z = box.z;
 
-    double corrected_yaw = box.r - M_PI_2;
-
-    // Normalize
-    corrected_yaw = std::atan2(std::sin(corrected_yaw), std::cos(corrected_yaw));
-
+    // Convert yaw to quaternion
     tf2::Quaternion q;
-    q.setRPY(0.0, 0.0, corrected_yaw);
-
+    q.setRPY(0.0, 0.0, box.r);
     object.kinematics.pose_with_covariance.pose.orientation.x = q.x();
     object.kinematics.pose_with_covariance.pose.orientation.y = q.y();
     object.kinematics.pose_with_covariance.pose.orientation.z = q.z();
