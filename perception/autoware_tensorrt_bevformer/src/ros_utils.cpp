@@ -96,18 +96,40 @@ void box3DToDetectedObjects(
     classification.probability = box.score;
     object.classification.push_back(classification);
 
+    // Not sure why we do these - start
+    tf2::Quaternion quat_orig;
+    quat_orig.setRPY(0.0, 0.0, box.r);
+    quat_orig.normalize();
+
+    tf2::Transform trans_orig(quat_orig, tf2::Vector3(box.x, box.y, box.z));
+
+    tf2::Quaternion quat_trans;
+    quat_trans.setRPY(0.0, 0.0, -M_PI_2);
+    quat_trans.normalize();
+    tf2::Transform trans_to_base_link(quat_trans, tf2::Vector3(0.6, 0.0, 1.5 + box.h));
+
+    tf2::Transform trans_final = trans_to_base_link * trans_orig;
+
+    double roll = 0.0;
+    double pitch = 0.0;
+    double yaw = 0.0;
+    tf2::Matrix3x3(quat_orig).getRPY(roll, pitch, yaw);
+    yaw = -yaw;
+    tf2::Quaternion q_mirror;
+    q_mirror.setRPY(roll, pitch, yaw);
+    q_mirror.normalize();
+    // Not sure why we do these - end
+
     // Set kinematics
-    object.kinematics.pose_with_covariance.pose.position.x = box.x;
-    object.kinematics.pose_with_covariance.pose.position.y = box.y;
-    object.kinematics.pose_with_covariance.pose.position.z = box.z;
+    object.kinematics.pose_with_covariance.pose.position.x = trans_final.getOrigin().x();
+    object.kinematics.pose_with_covariance.pose.position.y = trans_final.getOrigin().y();
+    object.kinematics.pose_with_covariance.pose.position.z = trans_final.getOrigin().z();
 
     // Convert yaw to quaternion
-    tf2::Quaternion q;
-    q.setRPY(0.0, 0.0, box.r);
-    object.kinematics.pose_with_covariance.pose.orientation.x = q.x();
-    object.kinematics.pose_with_covariance.pose.orientation.y = q.y();
-    object.kinematics.pose_with_covariance.pose.orientation.z = q.z();
-    object.kinematics.pose_with_covariance.pose.orientation.w = q.w();
+    object.kinematics.pose_with_covariance.pose.orientation.x = q_mirror.x();
+    object.kinematics.pose_with_covariance.pose.orientation.y = q_mirror.y();
+    object.kinematics.pose_with_covariance.pose.orientation.z = q_mirror.z();
+    object.kinematics.pose_with_covariance.pose.orientation.w = q_mirror.w();
 
     // Set shape
     object.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;

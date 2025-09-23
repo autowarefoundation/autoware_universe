@@ -135,38 +135,6 @@ void publishDebugMarkers(
   const std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>> & marker_pub,
   autoware_perception_msgs::msg::DetectedObjects & bevformer_objects)
 {
-  for (auto & obj : bevformer_objects.objects) {
-    // Apply both coordinate swap AND rotation
-    auto & pose = obj.kinematics.pose_with_covariance.pose;
-    std::swap(pose.position.x, pose.position.y);
-    pose.position.y = -pose.position.y;
-
-    pose.position.y += 0.6;
-    pose.position.x += 1.8;
-    pose.position.z = obj.shape.dimensions.z / 2.0;
-
-    // Convert quaternion to yaw
-    tf2::Quaternion q_orig(
-      pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w);
-
-    double roll, pitch, yaw;
-    tf2::Matrix3x3(q_orig).getRPY(roll, pitch, yaw);
-
-    // Flip yaw across Z axis (mirror effect)
-    yaw = -yaw;
-
-    // Convert back to quaternion
-    tf2::Quaternion q_new;
-    q_new.setRPY(roll, pitch, yaw);
-    q_new.normalize();
-
-    // Assign back
-    pose.orientation.x = q_new.x();
-    pose.orientation.y = q_new.y();
-    pose.orientation.z = q_new.z();
-    pose.orientation.w = q_new.w();
-  }
-
   auto marker_array = createMarkerArray(bevformer_objects);
   marker_pub->publish(marker_array);
 }
