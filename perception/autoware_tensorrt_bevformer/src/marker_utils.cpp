@@ -133,9 +133,9 @@ visualization_msgs::msg::MarkerArray createMarkerArray(
 
 void publishDebugMarkers(
   const std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>> & marker_pub,
-  autoware_perception_msgs::msg::DetectedObjects & bevformer_objects)
+  const autoware_perception_msgs::msg::DetectedObjects & bevformer_objects)
 {
-  auto marker_array = createMarkerArray(bevformer_objects);
+  const auto marker_array = createMarkerArray(bevformer_objects);
   marker_pub->publish(marker_array);
 }
 
