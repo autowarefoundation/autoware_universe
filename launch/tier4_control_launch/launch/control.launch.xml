@@ -52,8 +52,8 @@
   <let name="operation_mode_transition_manager_plugin" value="OperationModeTransitionManager" unless="$(var use_control_command_gate)"/>
 
   <!-- topic remap -->
-  <arg name="input_objects_topic_name" default="/perception/object_recognition/objects"/>
-  <arg name="input_pointcloud_topic_name" default="/perception/obstacle_segmentation/pointcloud"/>
+  <arg name="input_objects_topic_name"/>
+  <arg name="input_pointcloud_topic_name"/>
   <arg name="output_control_cmd" default="/control/command/control_cmd"/>
   <arg name="output_gear_cmd" default="/control/command/gear_cmd"/>
   <arg name="output_turn_indicators_cmd" default="/control/command/turn_indicators_cmd"/>
