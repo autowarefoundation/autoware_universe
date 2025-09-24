@@ -2,7 +2,7 @@
   ros__parameters:
     # Existing parameters
     visible_range: 100.0
-    detection_successful_rate: 1.0
+    detection_successful_rate: 0.8
     enable_ray_tracing: true
     use_object_recognition: true
     use_base_link_z: true
