@@ -20,6 +20,8 @@
 #include <rclcpp/qos.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
+
 #include <rmw/qos_profiles.h>
 
 #include <algorithm>
@@ -84,10 +86,6 @@ CalibrationStatusNode::CalibrationStatusNode(const rclcpp::NodeOptions & options
   auto camera_lidar_info_collector =
     std::make_shared<CameraLidarInfoCollector>(this, camera_lidar_in_out_info_);
   camera_lidar_info_ = camera_lidar_info_collector->get_cameras_lidars_info();
-
-  // Diagnostic publisher
-  diagnostic_pub_ =
-    this->create_publisher<diagnostic_msgs::msg::DiagnosticArray>("/diagnostics", rclcpp::QoS(1));
 
   setup_runtime_mode_interface();
 
@@ -164,6 +162,7 @@ void CalibrationStatusNode::setup_input_synchronization()
   preview_image_pubs_.resize(num_pairs);
   synchronizers_.resize(num_pairs);
   synchronized_data_.resize(num_pairs);
+  diagnostics_interfaces_.resize(num_pairs);
 
   for (size_t i = 0; i < num_pairs; ++i) {
     cloud_subs_.at(i) =
@@ -187,6 +186,9 @@ void CalibrationStatusNode::setup_input_synchronization()
       std::bind(
         &CalibrationStatusNode::synchronized_callback, this, std::placeholders::_1,
         std::placeholders::_2, i));
+
+    diagnostics_interfaces_.at(i) = std::make_unique<autoware_utils::DiagnosticsInterface>(
+      this, "calibration_status_" + std::to_string(i));
 
     RCLCPP_INFO(
       this->get_logger(), "Miscalibration detection pair %zu: %s <-> %s (sync delta: %.3f s)", i,
@@ -373,19 +375,8 @@ void CalibrationStatusNode::publish_diagnostic_status(
   const InputMetadata & input_metadata, const size_t pair_idx,
   const CalibrationStatusResult & result)
 {
-  diagnostic_msgs::msg::DiagnosticStatus status;
-  status.name = std::string(this->get_name()) + std::string("_") + std::to_string(pair_idx) +
-                std::string(": ") + this->get_fully_qualified_name();
-  status.hardware_id = this->get_name();
+  diagnostics_interfaces_.at(pair_idx)->clear();
   auto now = this->get_clock()->now();
-
-  auto add_kv = [&status](const std::string & key, const std::string & value) {
-    diagnostic_msgs::msg::KeyValue kv;
-    kv.key = key;
-    kv.value = value;
-    status.values.push_back(kv);
-  };
-
   auto is_calibrated =
     (result.calibration_confidence >
      result.miscalibration_confidence + miscalibration_confidence_threshold_);
@@ -393,56 +384,59 @@ void CalibrationStatusNode::publish_diagnostic_status(
   if (
     input_metadata.velocity_filter_status.is_threshold_met ||
     input_metadata.objects_filter_status.is_threshold_met) {
-    status.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
-    status.message = "Calibration check skipped due to prerequisite not met.";
+    diagnostics_interfaces_.at(pair_idx)->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::OK,
+      "Calibration check skipped due to prerequisite not met.");
   } else if (is_calibrated) {
-    status.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
-    status.message = "Calibration is valid";
+    diagnostics_interfaces_.at(pair_idx)->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::OK, "Calibration is valid");
   } else {
-    status.level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
-    status.message = "Calibration is invalid.";
+    diagnostics_interfaces_.at(pair_idx)->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::ERROR, "Calibration is invalid.");
   }
 
-  add_kv("Source image topic", camera_lidar_in_out_info_.at(pair_idx).camera_topic);
-  add_kv("Source image frame", camera_lidar_info_.at(pair_idx).camera_frame_id);
-  add_kv("Source point cloud topic", camera_lidar_in_out_info_.at(pair_idx).lidar_topic);
-  add_kv("Source point cloud frame", camera_lidar_info_.at(pair_idx).lidar_frame_id);
-  add_kv(
+  diagnostics_interfaces_.at(pair_idx)->add_key_value(
+    "Source image topic", camera_lidar_in_out_info_.at(pair_idx).camera_topic);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value(
+    "Source image frame", camera_lidar_info_.at(pair_idx).camera_frame_id);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value(
+    "Source point cloud topic", camera_lidar_in_out_info_.at(pair_idx).lidar_topic);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value(
+    "Source point cloud frame", camera_lidar_info_.at(pair_idx).lidar_frame_id);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value(
     "Point cloud and image time difference (ms)",
-    std::to_string(
-      std::abs((input_metadata.cloud_stamp - input_metadata.image_stamp).seconds()) * 1e3));
-  add_kv(
-    "Is velocity check activated",
-    input_metadata.velocity_filter_status.is_activated ? "True" : "False");
-  add_kv("Current velocity", std::to_string(input_metadata.velocity_filter_status.current_state));
-  add_kv("Velocity threshold", std::to_string(velocity_threshold_));
-  add_kv(
-    "Is vehicle moving", input_metadata.velocity_filter_status.is_threshold_met ? "True" : "False");
-  add_kv(
-    "Velocity age (ms)", std::to_string(input_metadata.velocity_filter_status.state_age * 1e3));
-  add_kv(
-    "Is object count check activated",
-    input_metadata.objects_filter_status.is_activated ? "True" : "False");
-  add_kv(
-    "Current object count", std::to_string(input_metadata.objects_filter_status.current_state));
-  add_kv("Object count threshold", std::to_string(objects_limit_));
-  add_kv(
-    "Is object count limit exceeded",
-    input_metadata.objects_filter_status.is_threshold_met ? "True" : "False");
-  add_kv(
-    "Object count age (ms)", std::to_string(input_metadata.objects_filter_status.state_age * 1e3));
-  add_kv("Is calibrated", is_calibrated ? "True" : "False");
-  add_kv("Calibration confidence", std::to_string(result.calibration_confidence));
-  add_kv("Miscalibration confidence", std::to_string(result.miscalibration_confidence));
-  add_kv("Preprocessing time (ms)", std::to_string(result.preprocessing_time_ms));
-  add_kv("Inference time (ms)", std::to_string(result.inference_time_ms));
-  add_kv("Number of points projected", std::to_string(result.num_points_projected));
+    std::abs((input_metadata.cloud_stamp - input_metadata.image_stamp).seconds()) * 1e3);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value(
+    "Is velocity check activated", input_metadata.velocity_filter_status.is_activated);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value(
+    "Current velocity", input_metadata.velocity_filter_status.current_state);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value("Velocity threshold", velocity_threshold_);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value(
+    "Is vehicle moving", input_metadata.velocity_filter_status.is_threshold_met);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value(
+    "Velocity age (ms)", input_metadata.velocity_filter_status.state_age * 1e3);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value(
+    "Is object count check activated", input_metadata.objects_filter_status.is_activated);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value(
+    "Current object count", input_metadata.objects_filter_status.current_state);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value("Object count threshold", objects_limit_);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value(
+    "Is object count limit exceeded", input_metadata.objects_filter_status.is_threshold_met);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value(
+    "Object count age (ms)", input_metadata.objects_filter_status.state_age * 1e3);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value("Is calibrated", is_calibrated);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value(
+    "Calibration confidence", result.calibration_confidence);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value(
+    "Miscalibration confidence", result.miscalibration_confidence);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value(
+    "Preprocessing time (ms)", result.preprocessing_time_ms);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value(
+    "Inference time (ms)", result.inference_time_ms);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value(
+    "Number of points projected", result.num_points_projected);
 
-  diagnostic_msgs::msg::DiagnosticArray diagnostic_array;
-  diagnostic_array.header.stamp = input_metadata.common_stamp;
-  diagnostic_array.header.frame_id = this->get_name();
-  diagnostic_array.status.push_back(status);
-  diagnostic_pub_->publish(diagnostic_array);
+  diagnostics_interfaces_.at(pair_idx)->publish(now);
 }
 
 }  // namespace autoware::calibration_status

@@ -20,10 +20,10 @@
 #include "autoware/calibration_status/data_type_eigen.hpp"
 #include "autoware/calibration_status/ros_utils.hpp"
 
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
-#include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance.hpp>
@@ -84,9 +84,9 @@ private:
 
   // ROS interface
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr calibration_service_;
-  rclcpp::Publisher<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagnostic_pub_;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
+  std::vector<std::unique_ptr<autoware_utils::DiagnosticsInterface>> diagnostics_interfaces_;
 
   // Velocity monitoring
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr twist_sub_;

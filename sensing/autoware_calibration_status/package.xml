@@ -15,6 +15,7 @@
   <depend>autoware_cuda_utils</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_tensorrt_common</depend>
+  <depend>autoware_utils</depend>
   <depend>diagnostic_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>libopencv-dev</depend>
