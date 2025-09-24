@@ -25,7 +25,6 @@
         <param from="$(var ml_package_param_path)"/>
         <param from="$(var diagnostics_param_path)"/>
         <param name="build_only" value="$(var build_only)"/>
-        <param name="use_sim_time" value="true"/>
       </composable_node>
     </load_composable_node>
   </group>
@@ -39,7 +38,6 @@
       <param from="$(var ml_package_param_path)"/>
       <param from="$(var diagnostics_param_path)"/>
       <param name="build_only" value="$(var build_only)"/>
-      <param name="use_sim_time" value="true"/>
     </node>
   </group>
 </launch>

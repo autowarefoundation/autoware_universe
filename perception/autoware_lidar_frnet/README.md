@@ -79,12 +79,7 @@ ros2 topic echo <input_topic> --field fields
 
 ## Trained Models
 
-You can download the onnx format of trained models by clicking on the links below.
-
-- [frnet.onnx](TODO)
-- [ml_package_frnet.param.yaml](TODO)
-
-The model was trained with NuScenes dataset.
+The model was trained on the NuScenes dataset and is available in the Autoware artifacts.
 
 ## References/External links
 
