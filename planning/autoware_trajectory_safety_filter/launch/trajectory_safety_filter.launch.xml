@@ -9,7 +9,6 @@
 
   <node pkg="autoware_trajectory_safety_filter" exec="autoware_trajectory_safety_filter_node" name="trajectory_safety_filter_node" output="screen">
     <param from="$(var trajectory_safety_filter_param_path)" allow_substs="true"/>
-
     <remap from="~/input/trajectories" to="$(var input_trajectories)"/>
     <remap from="~/output/trajectories" to="$(var output_trajectories)"/>
     <remap from="~/input/lanelet2_map" to="$(var input_vector_map)"/>
