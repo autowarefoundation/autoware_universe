@@ -18,8 +18,6 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
-#include <autoware_perception_msgs/msg/predicted_object.hpp>
-#include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
@@ -39,8 +37,7 @@
 #else
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #endif
-// #include "autoware/dummy_perception_publisher/predicted_object_movement_base_plugin_class.hpp"
-// If the file exists under a different name or path, update the include accordingly, e.g.:
+
 #include "autoware/dummy_perception_publisher/dummy_object_movement_base_plugin.hpp"
 #include "autoware/dummy_perception_publisher/object_info.hpp"
 #include "autoware/dummy_perception_publisher/predicted_object_movement_plugin.hpp"
@@ -49,19 +46,12 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
-#include <deque>
-#include <map>
 #include <memory>
 #include <random>
-#include <set>
-#include <string>
-#include <utility>
 #include <vector>
 
 namespace autoware::dummy_perception_publisher
 {
-using autoware_perception_msgs::msg::PredictedObject;
-using autoware_perception_msgs::msg::PredictedObjects;
 using geometry_msgs::msg::PoseWithCovariance;
 using geometry_msgs::msg::TwistWithCovariance;
 using tier4_simulation_msgs::msg::DummyObject;
