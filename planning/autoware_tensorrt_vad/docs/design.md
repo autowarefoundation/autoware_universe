@@ -6,21 +6,12 @@ VAD ROS Node設計時に重要視したconceptについて説明します。
   - ROS topicの型が変更されても、CUDAを使った実装には影響しない
   - CUDAのversionやinterfaceが変更されても、ROS Nodeには影響しない
 - onnxに関係なく変えても良いROS parameterと、onnxに紐付いていてonnxとセットで変更が必要なROS parameterの分離
-  - object_class_remapperは、BEVFusionが分離していたので踏襲
-- memo
-  - `VadInputData`などのデータ型は`data_types.hpp`に記載
-  - interfaceの設計: converter
-  - networkの設計
-    - network_ioと、onnxの入出力tensorの管理に責任を持つ
-  - kernelの設計
-    - kernelとkernelのwrapper関数(`launch_*_kernel`)はkernel.cuに格納
-    - VadModelから呼び出されるためのAPIとリソース管理を`Preprocessor`もしくは`PostProcessor`classが行う
-  - 前処理
-    - cudaに関係する前処理はVadModel, 関係しない前処理はVadInterface
-- coding standard
-  - intは使用しない。`int32_t`を使う。
-  - 1Byteであることを示すためだけのcharは使用しない。`uint8_t`を使う。
-  - `printf`や`cout`は使用せず、`RCLCPP_INFO_THROTTLE`などを使う。
+  - onnxに関係しているparameterは[`ml_package_vad_tiny.param.yaml`](../config/ml_package_vad_tiny.param.yaml)に追加
+  - onnxに関係なく変えても良いROS parameterは[`vad_tiny.param.yaml`](../config/vad_tiny.param.yaml)に追加
+    - object class remappingについては[`object_class_remapper.param.yaml`](../config/object_class_remapper.param.yaml)に追加
+      - [`autoware_bevfusion`](../../../perception/autoware_bevfusion/README.md)の前例を踏襲。
+- 「Autowareで使われる`camera_id`変更」という拡張に対して開いた設計
+  - front cameraのidが`0`から`1`になったとしても、大きな設計変更を入れずに対応できるようにする
 
 ## ROSの世界とCUDAの世界の分離
 
@@ -30,7 +21,7 @@ VADの処理は「ROS/Autowareの世界」と「CUDAによる推論処理の世�
 
   - ROS topicのsubscribe/publish
     - topicのdrop, syncの確認
-  - Autowareとの結合
+  - Autowareとの結合(publish/subscribe)
 
 - **Interfaceの責務**:
 
@@ -43,12 +34,12 @@ VADの処理は「ROS/Autowareの世界」と「CUDAによる推論処理の世�
     - `VadOutputData`からROS Topicへの変換処理
 
 - **VAD（CUDA）側の責務**:
-  - camera画像の前処理
+  - camera画像の前処理(CUDA preprocessing)
   - VADの推論
     - `VadInputData`から`VadOutputData`を推論
-  - 出力の後処理
+  - 出力の後処理(CUDA postprocessing)
 
-インターフェース（`VadInterface`）でAutowareとVADのTensorRT実装を橋渡ししており、互いの変更の影響を最小限にするように設計されています。
+インターフェース（`VadInterface`）でAutowareとVADのTensorRT実装を橋渡ししており、互いの変更の影響範囲を最小限にするように設計されています。
 
 ---
 
@@ -150,7 +141,7 @@ flowchart TD
 
 - トピックの受け取り、座標変換などはインターフェース(`VadInterface`)で処理。
 
-- 推論部分は完全にVAD内に閉じた形で行われ、結果はROSに再び戻される。
+- 推論部分は完全に`VadModel`内に閉じた形で行われる。
 
 ---
 
@@ -160,17 +151,23 @@ flowchart TD
 
 - `VadModel`に新しい入力を追加．onnxを再学習
 
-- `VadInputData`の構造を拡張
-
-- `VadInterface`の入力変換処理を修正
+- `VadNode`が新しいtopicをsubscribeするように変更
 
 - `VadInputTopicData`にtopicを追加
 
-- `VadNode`が新しいtopicをsubscribeするように変更
+- `VadInterface`の入力変換処理を修正
+
+- `VadInputData`にメンバを追加
+
+## 「Autowareで使われる`camera_id`変更」という拡張に対して開いた設計
+
+- 「Autowareで使われる`camera_id`変更」という拡張に対して開いた設計にしている。
+- VADのcamera画像のid(順番)は，`VadInterface`のみに影響する。
+  - `VadInputData`や`VadModel`には影響しない
+- `autoware_to_vad_camera_mapping`のみを変更すれば、`camera_id`の変更ができる。
+
+### 想定Usecase
 
 #### VADの入力に使うカメラ画像のIDが変更された場合
 
-- camera_id_mapping変更，という拡張に対して開いておく
-- VADのcamera画像のid(順番)は，`VadInterface`のみに影響する
-  - `VadInputData`や`VadModel`には影響しない
-- ROS param file([`ml_package_vad_tiny.param.yaml`](../config/ml_package_vad_tiny.param.yaml))を変更する
+- ROS param file([`ml_package_vad_tiny.param.yaml`](../config/ml_package_vad_tiny.param.yaml))の`autoware_to_vad_camera_mapping`を変更する
