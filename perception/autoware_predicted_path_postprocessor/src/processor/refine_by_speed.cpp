@@ -55,51 +55,51 @@ void RefineBySpeed::process(
     auto & waypoints = mode.path;
     const auto num_waypoints = waypoints.size();
 
-    // skip if the path is too short
     if (num_waypoints < 2) {
       continue;
     }
 
-    // containers of base values and keys
-    std::vector<double> base_path_x(num_waypoints);
-    std::vector<double> base_path_y(num_waypoints);
-    std::vector<double> base_path_z(num_waypoints);
-    std::vector<double> base_path_s(num_waypoints, 0.0);
-
-    // container of query keys
-    std::vector<double> query_path_s(num_waypoints, 0.0);
-    for (size_t i = 0; i < num_waypoints; ++i) {
-      base_path_x[i] = waypoints[i].position.x;
-      base_path_y[i] = waypoints[i].position.y;
-      base_path_z[i] = waypoints[i].position.z;
-      if (i >= 1) {
-        base_path_s[i] = base_path_s[i - 1] +
-                         autoware_utils_geometry::calc_distance2d(waypoints[i - 1], waypoints[i]);
-
-        query_path_s[i] = query_path_s[i - 1] + speed * delta_t;
+    // containers of values and keys
+    constexpr double epsilon = 1e-6;
+    std::vector<double> base_xs({waypoints[0].position.x});
+    std::vector<double> base_ys({waypoints[0].position.y});
+    std::vector<double> base_zs({waypoints[0].position.z});
+    std::vector<double> base_keys({0.0});
+    std::vector<double> query_keys({0.0});
+    for (size_t i = 1; i < num_waypoints; ++i) {
+      // push values only if the distance is greater than epsilon to ensure monotonically increasing
+      const auto distance =
+        autoware_utils_geometry::calc_distance2d(waypoints[i - 1], waypoints[i]);
+      if (distance > epsilon) {
+        base_xs.push_back(waypoints[i].position.x);
+        base_ys.push_back(waypoints[i].position.y);
+        base_zs.push_back(waypoints[i].position.z);
+        base_keys.push_back(base_keys.back() + distance);
       }
+      query_keys.push_back(query_keys.back() + speed * delta_t);
     }
 
-    const auto s_max = base_path_s.back();
+    const auto s_max = base_keys.back();
     // skip if the path is too short
-    if (s_max <= 1e-6) {
+    if (s_max <= 1e-6 || base_keys.size() < 2) {
       continue;
     }
 
     // clip values from 0.0 to s_max
     std::transform(
-      query_path_s.begin(), query_path_s.end(), query_path_s.begin(),
+      query_keys.begin(), query_keys.end(), query_keys.begin(),
       [s_max](const auto & s) { return std::clamp(s, 0.0, s_max); });
 
-    const auto interpolated_x = interpolation::lerp(base_path_s, base_path_x, query_path_s);
-    const auto interpolated_y = interpolation::lerp(base_path_s, base_path_y, query_path_s);
-    const auto interpolated_z = interpolation::lerp(base_path_s, base_path_z, query_path_s);
+    const auto query_xs = interpolation::lerp(base_keys, base_xs, query_keys);
+    const auto query_ys = interpolation::lerp(base_keys, base_ys, query_keys);
+    const auto query_zs = interpolation::lerp(base_keys, base_zs, query_keys);
 
     // NOTE: waypoints[0] is the center position of the object, so we skip it
     for (size_t i = 1; i < num_waypoints; ++i) {
-      waypoints[i].position = autoware_utils_geometry::create_point(
-        interpolated_x[i], interpolated_y[i], interpolated_z[i]);
-      auto yaw = autoware_utils_geometry::calc_azimuth_angle(
+      waypoints[i].position =
+        autoware_utils_geometry::create_point(query_xs[i], query_ys[i], query_zs[i]);
+
+      const auto yaw = autoware_utils_geometry::calc_azimuth_angle(
         waypoints[i - 1].position, waypoints[i].position);
       waypoints[i].orientation = autoware_utils_geometry::create_quaternion_from_yaw(yaw);
     }
