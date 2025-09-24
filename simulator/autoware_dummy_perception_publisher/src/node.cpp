@@ -32,38 +32,29 @@
 #include <tf2/LinearMath/Transform.h>
 #include <tf2/LinearMath/Vector3.h>
 
-#include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <functional>
+#include <memory>
 #include <optional>
-#include <set>
+#include <string>
+#include <vector>
+
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #else
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #endif
 
-#include <functional>
-#include <map>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
-
 namespace autoware::dummy_perception_publisher
 {
 
-using autoware_perception_msgs::msg::PredictedObject;
-using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_perception_msgs::msg::TrackedObject;
 using autoware_perception_msgs::msg::TrackedObjects;
 using geometry_msgs::msg::Point;
-using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::PoseStamped;
-using geometry_msgs::msg::PoseWithCovariance;
 using geometry_msgs::msg::Transform;
 using geometry_msgs::msg::TransformStamped;
-using geometry_msgs::msg::TwistWithCovariance;
 using tier4_simulation_msgs::msg::DummyObject;
 
 DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
