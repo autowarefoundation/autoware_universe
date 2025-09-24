@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "scene_intersection.hpp"
-#include "util.hpp"
+#include "autoware/behavior_velocity_intersection_module/scene_intersection.hpp"
+#include "autoware/behavior_velocity_intersection_module/util.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for toGeomPoly
 #include <autoware/behavior_velocity_planner_common/utilization/trajectory_utils.hpp>  // for smoothPath
@@ -165,9 +165,9 @@ void IntersectionModule::updateObjectInfoManagerCollision(
   }
 
   const double passing_time = time_distance_array.back().first;
-  const auto & concat_lanelets = path_lanelets.all;
+  const auto & concat_lanelets = lanelet::utils::combineLaneletsShape(path_lanelets.all);
   const auto closest_arc_coords =
-    lanelet::utils::getArcCoordinates(concat_lanelets, planner_data_->current_odometry->pose);
+    lanelet::utils::getArcCoordinates({concat_lanelets}, planner_data_->current_odometry->pose);
   const auto & ego_lane = path_lanelets.ego_or_entry2exit;
   debug_data_.ego_lane = ego_lane.polygon3d();
   const auto ego_poly = ego_lane.polygon2d().basicPolygon();
@@ -265,6 +265,9 @@ void IntersectionModule::updateObjectInfoManagerCollision(
       }
       cutPredictPathWithinDuration(
         planner_data_->predicted_objects->header.stamp, passing_time, &predicted_path);
+      if (predicted_path.path.size() < 2) {
+        continue;
+      }
       const double time_step =
         predicted_path.time_step.sec + predicted_path.time_step.nanosec * 1e-9;
       const double horizon = time_step * static_cast<double>(predicted_path.path.size());
@@ -313,7 +316,7 @@ void IntersectionModule::updateObjectInfoManagerCollision(
           planner_data_->vehicle_info_.max_longitudinal_offset_m,
         lanelet::utils::getLaneletLength2d(concat_lanelets));
       const auto trimmed_ego_polygon = lanelet::utils::getPolygonFromArcLength(
-        concat_lanelets, ego_start_arc_length, ego_end_arc_length);
+        {concat_lanelets}, ego_start_arc_length, ego_end_arc_length);
       if (trimmed_ego_polygon.empty()) {
         continue;
       }
@@ -385,28 +388,30 @@ void IntersectionModule::updateObjectInfoManagerCollision(
     }
     object_info->update_safety(unsafe_interval, safe_interval, safe_under_traffic_control);
     if (passed_1st_judge_line_first_time) {
-      object_info->setDecisionAt1stPassJudgeLinePassage(CollisionKnowledge{
-        clock_->now(),  // stamp
-        unsafe_interval
-          ? CollisionKnowledge::SafeType::UNSAFE
-          : (safe_under_traffic_control ? CollisionKnowledge::SafeType::SAFE_UNDER_TRAFFIC_CONTROL
-                                        : CollisionKnowledge::SafeType::SAFE),  // safe
-        unsafe_interval ? unsafe_interval : safe_interval,                      // interval
-        predicted_object.kinematics.initial_twist_with_covariance.twist.linear
-          .x  // observed_velocity
-      });
+      object_info->setDecisionAt1stPassJudgeLinePassage(
+        CollisionKnowledge{
+          clock_->now(),  // stamp
+          unsafe_interval
+            ? CollisionKnowledge::SafeType::UNSAFE
+            : (safe_under_traffic_control ? CollisionKnowledge::SafeType::SAFE_UNDER_TRAFFIC_CONTROL
+                                          : CollisionKnowledge::SafeType::SAFE),  // safe
+          unsafe_interval ? unsafe_interval : safe_interval,                      // interval
+          predicted_object.kinematics.initial_twist_with_covariance.twist.linear
+            .x  // observed_velocity
+        });
     }
     if (passed_2nd_judge_line_first_time) {
-      object_info->setDecisionAt2ndPassJudgeLinePassage(CollisionKnowledge{
-        clock_->now(),  // stamp
-        unsafe_interval
-          ? CollisionKnowledge::SafeType::UNSAFE
-          : (safe_under_traffic_control ? CollisionKnowledge::SafeType::SAFE_UNDER_TRAFFIC_CONTROL
-                                        : CollisionKnowledge::SafeType::SAFE),  // safe
-        unsafe_interval ? unsafe_interval : safe_interval,                      // interval
-        predicted_object.kinematics.initial_twist_with_covariance.twist.linear
-          .x  // observed_velocity
-      });
+      object_info->setDecisionAt2ndPassJudgeLinePassage(
+        CollisionKnowledge{
+          clock_->now(),  // stamp
+          unsafe_interval
+            ? CollisionKnowledge::SafeType::UNSAFE
+            : (safe_under_traffic_control ? CollisionKnowledge::SafeType::SAFE_UNDER_TRAFFIC_CONTROL
+                                          : CollisionKnowledge::SafeType::SAFE),  // safe
+          unsafe_interval ? unsafe_interval : safe_interval,                      // interval
+          predicted_object.kinematics.initial_twist_with_covariance.twist.linear
+            .x  // observed_velocity
+        });
     }
 
     // debug
@@ -437,8 +442,8 @@ void IntersectionModule::cutPredictPathWithinDuration(
 }
 
 std::optional<NonOccludedCollisionStop> IntersectionModule::isGreenPseudoCollisionStatus(
-  const size_t closest_idx, const size_t collision_stopline_idx,
-  const IntersectionStopLines & intersection_stoplines) const
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
+  const size_t collision_stopline_idx, const IntersectionStopLines & intersection_stoplines) const
 {
   // ==========================================================================================
   // if there are any vehicles on the attention area when ego entered the intersection on green
@@ -460,8 +465,11 @@ std::optional<NonOccludedCollisionStop> IntersectionModule::isGreenPseudoCollisi
       });
     if (exist_close_vehicles) {
       const auto occlusion_stopline_idx = intersection_stoplines.occlusion_peeking_stopline.value();
+      const auto [held_collision_stopline_idx, collision_stop_pose] =
+        holdStopPoseIfNecessary<NonOccludedCollisionStop>(path, collision_stopline_idx);
       return NonOccludedCollisionStop{
-        closest_idx, collision_stopline_idx, occlusion_stopline_idx, std::string("")};
+        closest_idx, held_collision_stopline_idx, occlusion_stopline_idx, std::string(""),
+        collision_stop_pose};
     }
   }
   return std::nullopt;

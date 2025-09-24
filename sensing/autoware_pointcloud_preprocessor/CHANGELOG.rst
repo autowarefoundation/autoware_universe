@@ -2,6 +2,148 @@
 Changelog for package autoware_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* refactor(pointcloud_preprocessor): extract downsample logic from pickup_based_voxel_downsample_filter (`#11098 <https://github.com/autowarefoundation/autoware_universe/issues/11098>`_)
+  * feat(pointcloud_preprocessor): add voxel size struct and downsampling function to pickup based filter
+  * refactor(pointcloud_preprocessor): use point_cloud2_iterator to handle pointcloud
+  * refactor(pointcloud_preprocessor): pass VoxelSize by const reference to improve performance
+  * feat(pointcloud_preprocessor): enhance voxel grid downsampling tests with additional scenarios
+  * feat(pointcloud_preprocessor): refactor downsampling logic to extract unique voxel point indices and copy filtered points
+  * fix(pointcloud_preprocessor): optimize voxel point index extraction and memory copying in downsampling
+  * refactor(pointcloud_preprocessor): rename voxel_map to index_map for clarity in downsampling functions
+  * refactor(pointcloud_preprocessor): remove unused includes
+  * chore(pointcloud_preprocessor): apply clang-format and cpplint
+  * chore(pointcloud_preprocessor): fix linter error
+  * style(pre-commit): autofix
+  * style(poincloud_preprocessor): adjust clang-format directives for consistency
+  * fix(pointcloud_preprocessor): correct function name from copy_filtered_point to copy_filtered_points
+  * fix(pointcloud_preprocessor): update parameter type from ConstSharedPtr to reference
+  * refactor(pointcloud_preprocessor): consolidate voxel size parameters into a single struct
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(autoware_pointcloud_preprocessor): add publisher for concatenated pointcloud meta info (`#10851 <https://github.com/autowarefoundation/autoware_universe/issues/10851>`_)
+  * feat(autoware_pointcloud_preprocessor): add publisher for concatenated pointcloud meta info
+  * style(pre-commit): autofix
+  * feat(autoware_cuda_pointcloud_preprocessor): handle concatenated pointcloud meta info
+  * feat(autoware_pointcloud_preprocessor): serialized config of matching strategy
+  * feat(autoware_pointcloud_preprocessor): update msg
+  * feat(autoware_pointcloud_preprocessor): update msg (2)
+  * docs(autoware_pointcloud_preprocessor): add cloud info topic description
+  * feat(autoware_pointcloud_preprocessor): add unit tests for cloud info
+  * fix(autoware_pointcloud_preprocessor): pre-commit
+  * fix(autoware_pointcloud_preprocessor): remove *_struct headers inclusion
+  * fix(autoware_pointcloud_preprocessor): check if the matching strategy cannot be enumerated
+  * test(autoware_pointcloud_preprocessor): full cloud repr
+  * feat(autoware_pointcloud_preprocessor): auto success set & more unit tests
+  * feat(autoware_pointcloud_preprocessor): publish info regardless cloud content
+  * style(autoware_pointcloud_preprocessor): typo
+  * feat(autoware_pointcloud_preprocessor): make update_concatenated_point_cloud_config static for easier integration
+  * docs(autoware_pointcloud_preprocessor): typo
+  Co-authored-by: Max Schmeller <6088931+mojomex@users.noreply.github.com>
+  * fix(autoware_pointcloud_preprocessor): publish cloud info out of condition block
+  * fix(autoware_pointcloud_preprocessor): container access with safe bound checking
+  * style(autoware_pointcloud_preprocessor): unify naming convention (part 1 - content)
+  * style(autoware_pointcloud_preprocessor): unify naming convention (part 2 - files name)
+  * style(autoware_pointcloud_preprocessor): naming convention for main API
+  * doc(autoware_pointcloud_preprocessor): add docstring
+  * feat(autoware_pointcloud_preprocessor): add remap to launch files
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Max Schmeller <6088931+mojomex@users.noreply.github.com>
+* fix(pointcloud_preprocessor): handle empty pointclouds in pickup_based_downsample_filter (`#11003 <https://github.com/autowarefoundation/autoware_universe/issues/11003>`_)
+  * feat(pointcloud_preprocessor): add integration test  for pickup based downsamplie filter node
+  * feat(pointcloud_preprocessor): add test for pickup based downsample filter with zero length pointcloud
+  that test will fail for now.
+  * refactor(pointcloud_preprocessor): simplify test for pickup based downsample filter
+  * fix(pointcloud_preprocessor): enable to output zero length pointcloud
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* docs(autoware_pointcloud_preprocessor): point cloud concatenation strategies (`#10994 <https://github.com/autowarefoundation/autoware_universe/issues/10994>`_)
+  * docs(autoware_pointcloud_preprocessor): point cloud concatenation strategies
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Amadeusz Szymko, Mete Fatih Cırıt, Takahisa Ishikawa
+
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* refactor(blockage_diag): split up `filter` function, add doc comments (`#10708 <https://github.com/autowarefoundation/autoware_universe/issues/10708>`_)
+  * chore(blockage_diag): explain parameters in the code
+  * chore(blockage_diag): make method naming and ovrerrides conformant
+  * refactor(blockage_diag): size/index calculation functions
+  * refactor(blockage_diag): split up filter function
+  * style(pre-commit): autofix
+  * chore: make cppcheck happy
+  * chore: downscale by 256 to fit uint8_max exactly
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(autoware_cuda_pointcloud_preprocessor): diagnostic for cuda pointcloud preprocessor (`#10793 <https://github.com/autowarefoundation/autoware_universe/issues/10793>`_)
+  * feat: add ring, crop box diag
+  * feat: add distortion correction
+  * feat: add concat diagnostics
+  * chore: remove if debug publisher
+  * chore: clean code
+  * chore: clean code
+  * chore: utilize mask instead of atomicadd
+  * chore: count nan points and numbers of point after crop box filter
+  * chore: fix schema
+  * chore: move to structure
+  * chore: update library
+  * chore: prefix output
+  * chore: chagne shared pointer to const reference
+  * chore: use device vector for thrust count
+  * chore: fix output pointcloud name
+  * chore: add comment
+  * chore: reuse function
+  * chore: fix merging issue
+  * chore: prefix output
+  * chore: fix layout
+  * chore: add doc comment
+  * chore(autoware_cuda_pointcloud_preprocessor): disable uncrustify
+  ---------
+  Co-authored-by: Max SCHMELLER <max.schmeller@tier4.jp>
+* fix(autoware_pointcloud_preprocessor): unify diagnostic interface namespace (`#10807 <https://github.com/autowarefoundation/autoware_universe/issues/10807>`_)
+  fix: unify diagnostic interface namespace
+* fix: -Werror=maybe-uninitialized (`#10791 <https://github.com/autowarefoundation/autoware_universe/issues/10791>`_)
+  fix: -Werror=maybe-uninitialized
+  `#10591 <https://github.com/autowarefoundation/autoware_universe/issues/10591>`_
+* feat(autoware_pointcloud_preprocessor): add diagnostic message (`#10579 <https://github.com/autowarefoundation/autoware_universe/issues/10579>`_)
+  * feat: add diag msg
+  * chore: fix code
+  * chore: remove outlier count in ring
+  * chore: move format timestamp to utility
+  * chore: add paramter to schema
+  * chore: add parameter for cluster
+  * chore: clean code
+  * chore: fix schema
+  * chore: move diagnostic updater to filter base class
+  * chore: fix schema
+  * chore: fix spell error
+  * chore: set up diagnostic updater
+  * refactor: utilize autoware_utils diagnostic message
+  * chore: add publish
+  * chore: add detail message
+  * chore: const for time difference
+  * refactor: structure diagnostics to class
+  * chore: const reference
+  * chore: clean logic
+  * chore: modify function name
+  * chore: update parameter
+  * chore: move evaluate status into diagnostic
+  * chore: fix description for concatenated pointcloud
+  * chore: timestamp mismatch threshold
+  * chore: fix diagnostic key
+  * chore: change function naming
+  ---------
+* Contributors: Max Schmeller, TaikiYamada4, Tim Clephas, Yi-Hsiang Fang (Vivid)
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -32,6 +174,9 @@ Changelog for package autoware_pointcloud_preprocessor
   * chore: moved format_timestamp into its own file
   ---------
 * Contributors: Kento Yabuuchi, Kenzo Lobos Tsunekawa, Kotaro Uetake, TaikiYamada4
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

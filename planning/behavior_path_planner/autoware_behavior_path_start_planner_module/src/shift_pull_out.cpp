@@ -34,7 +34,7 @@
 using autoware::motion_utils::findNearestIndex;
 using autoware_utils::calc_distance2d;
 using autoware_utils::calc_offset_pose;
-using lanelet::utils::getArcCoordinates;
+using lanelet::utils::getArcCoordinatesOnEgoCenterline;
 namespace autoware::behavior_path_planner
 {
 using start_planner_utils::getPullOutLanes;
@@ -128,7 +128,7 @@ std::optional<PullOutPath> ShiftPullOut::plan(
     // narrow place.
 
     const size_t start_segment_idx =
-      autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
+      autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
         shift_path.points, start_pose, common_parameters.ego_nearest_dist_threshold,
         common_parameters.ego_nearest_yaw_threshold);
 
@@ -263,7 +263,8 @@ std::vector<PullOutPath> ShiftPullOut::calcPullOutPaths(
     std::numeric_limits<double>::epsilon());
 
   // generate road lane reference path
-  const auto arc_position_start = getArcCoordinates(road_lanes, start_pose);
+  const auto arc_position_start =
+    getArcCoordinatesOnEgoCenterline(road_lanes, start_pose, route_handler.getLaneletMapPtr());
   const double s_start = std::max(arc_position_start.length - backward_path_length, 0.0);
   const auto path_end_info =
     autoware::behavior_path_planner::utils::parking_departure::calcEndArcLength(

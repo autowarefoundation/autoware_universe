@@ -14,7 +14,6 @@
 
 #include "autoware/behavior_path_planner/behavior_path_planner_node.hpp"
 
-#include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
 #include "autoware/motion_utils/trajectory/conversion.hpp"
 
 #include <autoware_utils/ros/update_param.hpp>
@@ -116,9 +115,24 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
     const double turn_signal_intersection_angle_threshold_deg =
       planner_data_->parameters.turn_signal_intersection_angle_threshold_deg;
     const double turn_signal_search_time = planner_data_->parameters.turn_signal_search_time;
+    const std::string turn_signal_roundabout_on_entry =
+      planner_data_->parameters.turn_signal_roundabout_on_entry;
+    const std::string turn_signal_roundabout_on_exit =
+      planner_data_->parameters.turn_signal_roundabout_on_exit;
+    const bool turn_signal_roundabout_entry_indicator_persistence =
+      planner_data_->parameters.turn_signal_roundabout_entry_indicator_persistence;
+    const double turn_signal_roundabout_search_distance =
+      planner_data_->parameters.turn_signal_roundabout_search_distance;
+    const double turn_signal_roundabout_angle_threshold_deg =
+      planner_data_->parameters.turn_signal_roundabout_angle_threshold_deg;
+    const int turn_signal_roundabout_backward_depth =
+      planner_data_->parameters.turn_signal_roundabout_backward_depth;
     planner_data_->turn_signal_decider.setParameters(
       planner_data_->parameters.base_link2front, turn_signal_intersection_search_distance,
-      turn_signal_search_time, turn_signal_intersection_angle_threshold_deg);
+      turn_signal_search_time, turn_signal_intersection_angle_threshold_deg,
+      turn_signal_roundabout_on_entry, turn_signal_roundabout_on_exit,
+      turn_signal_roundabout_entry_indicator_persistence, turn_signal_roundabout_search_distance,
+      turn_signal_roundabout_angle_threshold_deg, turn_signal_roundabout_backward_depth);
   }
 
   // Start timer
@@ -373,7 +387,7 @@ void BehaviorPathPlannerNode::run()
   const auto output = planner_manager_->run(planner_data_);
 
   // path handling
-  const auto path = getPath(output, planner_data_, planner_manager_);
+  const auto path = getPath(output, planner_data_);
   path->header.stamp = stamp;
   // update planner data
   planner_data_->prev_output_path = path;
@@ -571,6 +585,34 @@ void BehaviorPathPlannerNode::publish_turn_signal_debug_data(const TurnSignalDeb
     marker_array.markers.push_back(required_end_marker);
   }
 
+  // roundabout turn signal info
+  {
+    const auto & turn_signal_info = debug_data.roundabout_turn_signal_info;
+
+    auto desired_start_marker = autoware_utils::create_default_marker(
+      "map", current_time, "roundabout_turn_signal_desired_start", 0L, Marker::SPHERE, scale,
+      desired_section_color);
+    auto desired_end_marker = autoware_utils::create_default_marker(
+      "map", current_time, "roundabout_turn_signal_desired_end", 0L, Marker::SPHERE, scale,
+      desired_section_color);
+    desired_start_marker.pose = turn_signal_info.desired_start_point;
+    desired_end_marker.pose = turn_signal_info.desired_end_point;
+
+    auto required_start_marker = autoware_utils::create_default_marker(
+      "map", current_time, "roundabout_turn_signal_required_start", 0L, Marker::SPHERE, scale,
+      required_section_color);
+    auto required_end_marker = autoware_utils::create_default_marker(
+      "map", current_time, "roundabout_turn_signal_required_end", 0L, Marker::SPHERE, scale,
+      required_section_color);
+    required_start_marker.pose = turn_signal_info.required_start_point;
+    required_end_marker.pose = turn_signal_info.required_end_point;
+
+    marker_array.markers.push_back(desired_start_marker);
+    marker_array.markers.push_back(desired_end_marker);
+    marker_array.markers.push_back(required_start_marker);
+    marker_array.markers.push_back(required_end_marker);
+  }
+
   debug_turn_signal_info_publisher_->publish(marker_array);
 }
 
@@ -709,41 +751,14 @@ Path BehaviorPathPlannerNode::convertToPath(
 }
 
 PathWithLaneId::SharedPtr BehaviorPathPlannerNode::getPath(
-  const BehaviorModuleOutput & output, const std::shared_ptr<PlannerData> & planner_data,
-  const std::shared_ptr<PlannerManager> & planner_manager)
+  const BehaviorModuleOutput & output, const std::shared_ptr<PlannerData> & planner_data)
 {
   // TODO(Horibe) do some error handling when path is not available.
 
   auto path = !output.path.points.empty() ? std::make_shared<PathWithLaneId>(output.path)
                                           : planner_data->prev_output_path;
   path->header = planner_data->route_handler->getRouteHeader();
-
-  PathWithLaneId connected_path;
-  const auto module_status_ptr_vec = planner_manager->getSceneModuleStatus();
-
-  const auto resampled_path = utils::resamplePathWithSpline(
-    *path, planner_data->parameters.output_path_interval, keepInputPoints(module_status_ptr_vec));
-  return std::make_shared<PathWithLaneId>(resampled_path);
-}
-
-// This is a temporary process until motion planning can take the terminal pose into account
-bool BehaviorPathPlannerNode::keepInputPoints(
-  const std::vector<std::shared_ptr<SceneModuleStatus>> & statuses) const
-{
-  const std::vector<std::string> target_modules = {"goal_planner", "avoidance"};
-
-  const auto target_status = ModuleStatus::RUNNING;
-
-  for (auto & status : statuses) {
-    if (status->is_waiting_approval || status->status == target_status) {
-      if (
-        std::find(target_modules.begin(), target_modules.end(), status->module_name) !=
-        target_modules.end()) {
-        return true;
-      }
-    }
-  }
-  return false;
+  return path;
 }
 
 void BehaviorPathPlannerNode::onTrafficSignals(const TrafficLightGroupArray::ConstSharedPtr msg)

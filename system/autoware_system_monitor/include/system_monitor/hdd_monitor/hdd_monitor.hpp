@@ -24,7 +24,12 @@
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 
+#include <tier4_external_api_msgs/msg/hdd_device_status.hpp>
+#include <tier4_external_api_msgs/msg/hdd_partition_status.hpp>
+#include <tier4_external_api_msgs/msg/hdd_status.hpp>
+
 #include <climits>
+#include <cstdint>
 #include <map>
 #include <string>
 #include <vector>
@@ -89,7 +94,7 @@ struct SysfsDevStat
 };
 
 /**
- * @brief statistics of HDD
+ * @brief statistics of HDD for each physical disk
  */
 struct HddStat
 {
@@ -104,6 +109,21 @@ struct HddStat
   HddStat() : read_data_rate_MBs_(0.0), write_data_rate_MBs_(0.0), read_iops_(0.0), write_iops_(0.0)
   {
   }
+};
+
+/**
+ * @brief usage of HDD for each partition
+ */
+struct HddPartitionStatus
+{
+  int32_t size;            //!< @brief Total size of the filesystem in megabytes (MB)
+  int32_t used;            //!< @brief Used space in the filesystem in megabytes (MB)
+  int32_t avail;           //!< @brief Available (free) space in the filesystem in megabytes (MB)
+  int32_t capacity;        //!< @brief Percentage of used space in the filesystem (0–100)
+  std::string filesystem;  //!< @brief Name of the filesystem device (e.g., "/dev/nvme0n1p2")
+  std::string mounted_on;  //!< @brief Mount point of the filesystem (e.g., "/")
+
+  HddPartitionStatus() : size(0), used(0), avail(0), capacity(0) {}
 };
 
 /**
@@ -321,12 +341,18 @@ protected:
    */
   int unmountDevice(std::string & device);
 
+  /**
+   * @brief publish HDD status
+   */
+  void publishHddStatus();
+
   diagnostic_updater::Updater updater_;  //!< @brief Updater class which advertises to /diagnostics
   rclcpp::TimerBase::SharedPtr timer_;   //!< @brief timer to get HDD information from HddReader
 
   char hostname_[HOST_NAME_MAX + 1];  //!< @brief host name
 
-  int hdd_reader_port_;                         //!< @brief port number to connect to hdd_reader
+  std::string
+    hdd_reader_socket_path_;  //!< @brief path of UNIX domain socket to connect to hdd_reader
   std::map<std::string, HddParam> hdd_params_;  //!< @brief list of error and warning levels
   std::map<std::string, bool>
     hdd_connected_flags_;  //!< @brief list of flag whether HDD is connected
@@ -337,6 +363,11 @@ protected:
   diagnostic_updater::DiagnosticStatusWrapper connect_diag_;
   HddInfoList hdd_info_list_;               //!< @brief list of HDD information
   rclcpp::Time last_hdd_stat_update_time_;  //!< @brief last HDD statistics update time
+
+  std::vector<HddPartitionStatus> hdd_partition_statuses_;  //!< @brief list of partition status
+
+  rclcpp::Publisher<tier4_external_api_msgs::msg::HddStatus>::SharedPtr
+    pub_hdd_status_;  //!< @brief publisher
 
   /**
    * @brief HDD SMART status messages

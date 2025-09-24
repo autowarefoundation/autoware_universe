@@ -30,14 +30,23 @@
         "object_length_threshold": {
           "type": "number",
           "description": "minimum object length to be considered a valid cluster in meters",
-          "default": "0.1",
+          "default": "0.05",
           "minimum": 0.0
         },
-        "num_points_threshold": {
-          "type": "integer",
-          "description": "threshold on the number of points in a walk to determine if it corresponds to a cluster",
-          "default": "4",
-          "minimum": 0
+        "processing_time_threshold_sec": {
+          "type": "number",
+          "description": "Threshold in seconds. If the processing time of the node exceeds this value, a diagnostic warning will be issued.",
+          "default": 0.01
+        },
+        "timestamp_mismatch_fraction_threshold": {
+          "type": "number",
+          "description": "Threshold for the fraction of points that lack corresponding twist or IMU data within the allowed timestamp tolerance.",
+          "default": 0.01
+        },
+        "enable_ring_outlier_filter": {
+          "type": "boolean",
+          "description": "Enable/disable ring outlier filter in the cuda_pointcloud_preprocessor pipeline.",
+          "default": "true"
         },
         "crop_box.min_x": {
           "type": "array",
@@ -76,7 +85,8 @@
         "use_3d_distortion_correction",
         "distance_ratio",
         "object_length_threshold",
-        "num_points_threshold",
+        "processing_time_threshold_sec",
+        "timestamp_mismatch_fraction_threshold",
         "crop_box.min_x",
         "crop_box.min_y",
         "crop_box.min_z",

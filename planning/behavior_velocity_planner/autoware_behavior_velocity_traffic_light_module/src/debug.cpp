@@ -36,7 +36,11 @@ autoware::motion_utils::VirtualWalls TrafficLightModule::createVirtualWalls()
 {
   autoware::motion_utils::VirtualWalls virtual_walls;
   autoware::motion_utils::VirtualWall wall;
-  wall.text = "traffic_light";
+  if (debug_data_.is_remaining_time_used) {
+    wall.text = "traffic_light(V2I)";
+  } else {
+    wall.text = "traffic_light";
+  }
   wall.ns = std::to_string(module_id_) + "_";
 
   wall.style = autoware::motion_utils::VirtualWallType::deadline;

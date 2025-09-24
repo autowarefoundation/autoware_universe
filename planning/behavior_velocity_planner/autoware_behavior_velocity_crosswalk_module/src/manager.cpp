@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,6 +44,8 @@ CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
   // param for input data
   cp.traffic_light_state_timeout =
     get_or_declare_parameter<double>(node, ns + ".common.traffic_light_state_timeout");
+  cp.lost_detection_timeout =
+    get_or_declare_parameter<double>(node, ns + ".common.lost_detection_timeout");
 
   // param for stop position
   cp.stop_distance_from_crosswalk =
@@ -75,21 +77,21 @@ CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
   cp.no_relax_velocity =
     get_or_declare_parameter<double>(node, ns + ".slow_down.no_relax_velocity");
 
-  // param for stuck vehicle
-  cp.enable_stuck_check_in_intersection =
-    get_or_declare_parameter<bool>(node, ns + ".stuck_vehicle.enable_stuck_check_in_intersection");
-  cp.stuck_vehicle_velocity =
-    get_or_declare_parameter<double>(node, ns + ".stuck_vehicle.stuck_vehicle_velocity");
-  cp.max_stuck_vehicle_lateral_offset =
-    get_or_declare_parameter<double>(node, ns + ".stuck_vehicle.max_stuck_vehicle_lateral_offset");
+  // param for obstruction prevention
+  cp.enable_obstruction_prevention = get_or_declare_parameter<bool>(
+    node, ns + ".obstruction_prevention.enable_obstruction_prevention");
+  cp.target_vehicle_velocity =
+    get_or_declare_parameter<double>(node, ns + ".obstruction_prevention.target_vehicle_velocity");
+  cp.max_target_vehicle_lateral_offset = get_or_declare_parameter<double>(
+    node, ns + ".obstruction_prevention.max_target_vehicle_lateral_offset");
   cp.required_clearance =
-    get_or_declare_parameter<double>(node, ns + ".stuck_vehicle.required_clearance");
-  cp.min_acc_for_stuck_vehicle =
-    get_or_declare_parameter<double>(node, ns + ".stuck_vehicle.min_acc");
-  cp.max_jerk_for_stuck_vehicle =
-    get_or_declare_parameter<double>(node, ns + ".stuck_vehicle.max_jerk");
-  cp.min_jerk_for_stuck_vehicle =
-    get_or_declare_parameter<double>(node, ns + ".stuck_vehicle.min_jerk");
+    get_or_declare_parameter<double>(node, ns + ".obstruction_prevention.required_clearance");
+  cp.min_acc_for_target_vehicle =
+    get_or_declare_parameter<double>(node, ns + ".obstruction_prevention.min_acc");
+  cp.max_jerk_for_target_vehicle =
+    get_or_declare_parameter<double>(node, ns + ".obstruction_prevention.max_jerk");
+  cp.min_jerk_for_target_vehicle =
+    get_or_declare_parameter<double>(node, ns + ".obstruction_prevention.min_jerk");
 
   // param for pass judge logic
   cp.ego_pass_first_margin_x =
@@ -179,6 +181,20 @@ CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
   }
   cp.occlusion_extra_objects_size =
     get_or_declare_parameter<double>(node, ns + ".occlusion.extra_predicted_objects_size");
+
+  // param for parked vehicles stop
+  cp.parked_vehicles_stop_enable =
+    get_or_declare_parameter<bool>(node, ns + ".parked_vehicles_stop.enable");
+  cp.parked_vehicles_stop_search_distance =
+    get_or_declare_parameter<double>(node, ns + ".parked_vehicles_stop.search_distance");
+  cp.parked_vehicles_stop_min_ego_stop_duration =
+    get_or_declare_parameter<double>(node, ns + ".parked_vehicles_stop.min_ego_stop_duration");
+  cp.parked_vehicles_stop_parked_ego_inside_safe_area_margin = get_or_declare_parameter<double>(
+    node, ns + ".parked_vehicles_stop.ego_inside_safe_area_margin");
+  cp.parked_vehicles_stop_parked_velocity_threshold =
+    get_or_declare_parameter<double>(node, ns + ".parked_vehicles_stop.parked_velocity_threshold");
+  cp.parked_vehicles_stop_vehicle_permanence_duration = get_or_declare_parameter<double>(
+    node, ns + ".parked_vehicles_stop.vehicle_permanence_duration");
 }
 
 void CrosswalkModuleManager::launchNewModules(const PathWithLaneId & path)
@@ -198,13 +214,27 @@ void CrosswalkModuleManager::launchNewModules(const PathWithLaneId & path)
 
     // NOTE: module_id is always a lane id so that isModuleRegistered works correctly in the case
     //       where both regulatory element and non-regulatory element crosswalks exist.
-    registerModule(std::make_shared<CrosswalkModule>(
-      node_, road_lanelet_id, crosswalk_lanelet_id, reg_elem_id, lanelet_map_ptr, p, logger, clock_,
-      time_keeper_, planning_factor_interface_));
+    registerModule(
+      std::make_shared<CrosswalkModule>(
+        node_, road_lanelet_id, crosswalk_lanelet_id, reg_elem_id, lanelet_map_ptr, p, logger,
+        clock_, time_keeper_, planning_factor_interface_));
     generate_uuid(crosswalk_lanelet_id);
+    const auto crosswalk_ll = lanelet_map_ptr->laneletLayer.get(crosswalk_lanelet_id);
+    std::optional<bool> override_rtc_auto_mode;
+    const auto key = "rtc_approval_required_v1";
+    if (crosswalk_ll.hasAttribute(key)) {
+      std::stringstream manual_modules(crosswalk_ll.attribute(key).value());
+      std::string manual_module;
+      // modules are listed in the attribute value, separated by a comma
+      while (std::getline(manual_modules, manual_module, ',')) {
+        if (manual_module == "crosswalk") {
+          override_rtc_auto_mode = false;
+        }
+      }
+    }
     updateRTCStatus(
       getUUID(crosswalk_lanelet_id), true, State::WAITING_FOR_EXECUTION,
-      std::numeric_limits<double>::lowest(), path.header.stamp);
+      std::numeric_limits<double>::lowest(), path.header.stamp, override_rtc_auto_mode);
   };
 
   const auto crosswalk_reg_elem_map = planning_utils::getRegElemMapOnPath<Crosswalk>(

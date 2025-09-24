@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2025 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,12 +14,17 @@
 
 #include "autoware/behavior_velocity_blind_spot_module/scene.hpp"
 
+#include "autoware/behavior_velocity_blind_spot_module/time_to_collision.hpp"
 #include "autoware/behavior_velocity_blind_spot_module/util.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/object_recognition_utils/predicted_path_utils.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils_geometry/boost_geometry.hpp>
+
+#include <std_msgs/msg/string.hpp>
 
 #include <boost/geometry/algorithms/intersects.hpp>
 
@@ -29,6 +34,7 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -37,22 +43,43 @@ namespace autoware::behavior_velocity_planner
 {
 namespace bg = boost::geometry;
 
+std::string format_blind_spot_decision(const BlindSpotDecision & decision, const lanelet::Id id)
+{
+  std::stringstream ss;
+  ss << "lane_id: " << id << std::endl;
+  if (std::holds_alternative<InternalError>(decision)) {
+    const auto & err = std::get<InternalError>(decision);
+    ss << "InternalError: " << err.error;
+  }
+  if (std::holds_alternative<OverPassJudge>(decision)) {
+    const auto & state = std::get<OverPassJudge>(decision);
+    ss << "OverPassJudge: " << state.report;
+  }
+  if (std::holds_alternative<Unsafe>(decision)) {
+    ss << "Unsafe";
+  }
+  if (std::holds_alternative<Safe>(decision)) {
+    ss << "Safe";
+  }
+  return ss.str();
+}
+
 BlindSpotModule::BlindSpotModule(
   const int64_t module_id, const int64_t lane_id, const TurnDirection turn_direction,
-  const std::shared_ptr<const PlannerData> planner_data, const PlannerParam & planner_param,
-  const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
+  [[maybe_unused]] const std::shared_ptr<const PlannerData> planner_data,
+  const PlannerParam & planner_param, const rclcpp::Logger logger,
+  const rclcpp::Clock::SharedPtr clock,
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
-    planning_factor_interface)
+    planning_factor_interface,
+  const rclcpp::Publisher<std_msgs::msg::String>::SharedPtr decision_state_pub)
 : SceneModuleInterfaceWithRTC(module_id, logger, clock, time_keeper, planning_factor_interface),
   lane_id_(lane_id),
   planner_param_{planner_param},
   turn_direction_(turn_direction),
-  is_over_pass_judge_line_(false)
+  decision_state_pub_(decision_state_pub)
 {
-  sibling_straight_lanelet_ = getSiblingStraightLanelet(
-    planner_data->route_handler_->getLaneletMapPtr()->laneletLayer.get(lane_id_),
-    planner_data->route_handler_->getRoutingGraphPtr());
+  state_machine_.setMarginTime(planner_param_.collision_judge_debounce);
 }
 
 void BlindSpotModule::initializeRTCStatus()
@@ -63,8 +90,8 @@ void BlindSpotModule::initializeRTCStatus()
 
 BlindSpotDecision BlindSpotModule::modifyPathVelocityDetail(PathWithLaneId * path)
 {
-  if (planner_param_.use_pass_judge_line && is_over_pass_judge_line_) {
-    return OverPassJudge{"already over the pass judge line. no plan needed."};
+  if (is_over_pass_judge_line_) {
+    return OverPassJudge{"already over the pass judge line for conflict_area"};
   }
   const auto & input_path = *path;
 
@@ -72,75 +99,201 @@ BlindSpotDecision BlindSpotModule::modifyPathVelocityDetail(PathWithLaneId * pat
   const auto interpolated_path_info_opt =
     generateInterpolatedPathInfo(lane_id_, input_path, logger_);
   if (!interpolated_path_info_opt) {
-    return InternalError{"Failed to interpolate path"};
+    return InternalError{"failed to interpolate path"};
   }
+
   const auto & interpolated_path_info = interpolated_path_info_opt.value();
+  const auto lanelet_map_ptr = planner_data_->route_handler_->getLaneletMapPtr();
+  const auto routing_graph_ptr = planner_data_->route_handler_->getRoutingGraphPtr();
+  const auto assigned_lanelet = lanelet_map_ptr->laneletLayer.get(lane_id_);
 
-  const auto stoplines_idx_opt = generateStopLine(interpolated_path_info, path);
-  if (!stoplines_idx_opt) {
-    return InternalError{"generateStopLine fail"};
-  }
-
-  const auto [default_stopline_idx, critical_stopline_idx] = stoplines_idx_opt.value();
-  if (default_stopline_idx == 0) {
-    return InternalError{"stop line or pass judge line is at path[0], ignore planning."};
-  }
-
-  /* calc closest index */
-  const auto & current_pose = planner_data_->current_odometry->pose;
-  const auto closest_idx = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
-    input_path.points, current_pose, planner_data_->ego_nearest_dist_threshold,
-    planner_data_->ego_nearest_yaw_threshold);
-  const auto stop_line_idx =
-    closest_idx > default_stopline_idx ? critical_stopline_idx : default_stopline_idx;
-  const auto stop_line_pose = planning_utils::getAheadPose(
-    stop_line_idx, planner_data_->vehicle_info_.max_longitudinal_offset_m, input_path);
-
-  const auto is_over_pass_judge = isOverPassJudge(input_path, stop_line_pose);
-  if (is_over_pass_judge) {
-    is_over_pass_judge_line_ = true;
-    return is_over_pass_judge.value();
-  }
-
-  if (!blind_spot_lanelets_) {
-    const auto lane_ids_upto_intersection = find_lane_ids_upto(input_path, lane_id_);
-    const auto blind_spot_lanelets = generateBlindSpotLanelets(
-      planner_data_->route_handler_, turn_direction_, lane_ids_upto_intersection,
-      planner_param_.ignore_width_from_center_line, planner_param_.adjacent_extend_width,
-      planner_param_.opposite_adjacent_extend_width);
-    if (!blind_spot_lanelets.empty()) {
-      blind_spot_lanelets_ = blind_spot_lanelets;
+  const auto lane_ids_upto_intersection = find_lane_ids_upto(*path, lane_id_);
+  if (!blind_side_lanelets_before_turning_ || !road_lanelets_before_turning_merged_) {
+    const auto road_and_blind_lanelets_opt = generate_blind_side_lanelets_before_turning(
+      planner_data_->route_handler_, turn_direction_, planner_param_.backward_attention_length,
+      lane_ids_upto_intersection, lane_id_);
+    if (road_and_blind_lanelets_opt) {
+      const auto & [road_lanelets, blind_side_lanelets_before_turning] =
+        road_and_blind_lanelets_opt.value();
+      road_lanelets_before_turning_merged_ = lanelet::utils::combineLaneletsShape(road_lanelets);
+      blind_side_lanelets_before_turning_ = blind_side_lanelets_before_turning;
     }
   }
-  if (!blind_spot_lanelets_) {
-    return InternalError{"There are not blind_spot_lanelets"};
+  if (!blind_side_lanelets_before_turning_ || !road_lanelets_before_turning_merged_) {
+    return InternalError{"there are no lanelets before turning"};
   }
-  const auto & blind_spot_lanelets = blind_spot_lanelets_.value();
 
-  const auto detection_area_opt = generateBlindSpotPolygons(
-    input_path, closest_idx, blind_spot_lanelets, path->points.at(critical_stopline_idx).point.pose,
-    planner_param_.backward_detection_length);
-  if (!detection_area_opt) {
-    return InternalError{"Failed to generate BlindSpotPolygons"};
+  const auto & road_lanelets_before_turning_merged = road_lanelets_before_turning_merged_.value();
+  const auto & blind_spot_lanelets_before_turning = blind_side_lanelets_before_turning_.value();
+  const auto & last_blind_spot_lanelet_before_turning = blind_spot_lanelets_before_turning.back();
+  if (!virtual_blind_lane_boundary_after_turning_) {
+    virtual_blind_lane_boundary_after_turning_ = generate_virtual_blind_side_boundary_after_turning(
+      last_blind_spot_lanelet_before_turning, assigned_lanelet, turn_direction_);
   }
-  const auto & detection_area = detection_area_opt.value();
-  debug_data_.detection_area = detection_area;
+  const auto & virtual_blind_lane_boundary_after_turning =
+    virtual_blind_lane_boundary_after_turning_.value();
+  debug_data_.virtual_blind_lane_boundary_after_turning = virtual_blind_lane_boundary_after_turning;
 
-  const auto ego_time_to_reach_stop_line = computeTimeToPassStopLine(
-    blind_spot_lanelets, path->points.at(critical_stopline_idx).point.pose);
-  /* calculate dynamic collision around detection area */
-  const auto collision_obstacle = isCollisionDetected(
-    blind_spot_lanelets, path->points.at(critical_stopline_idx).point.pose, detection_area,
-    ego_time_to_reach_stop_line);
+  const auto ego_width = planner_data_->vehicle_info_.vehicle_width_m;
+
+  // NOTE: this scale is to avoid regarding ego vehicle which is stopping at stopline touches the
+  // virtual_ego_straight_path_after_turning
+  static constexpr double ego_width_scale = 1.1;
+  const auto virtual_ego_straight_path_after_turning_opt =
+    generate_virtual_ego_straight_path_after_turning(
+      assigned_lanelet, routing_graph_ptr, *path, turn_direction_, ego_width * ego_width_scale);
+  if (!virtual_ego_straight_path_after_turning_opt) {
+    return InternalError{"failed to generate virtual_ego_straight_path_after_turning"};
+  }
+
+  const auto & virtual_ego_straight_path_after_turning =
+    virtual_ego_straight_path_after_turning_opt.value();
+  debug_data_.virtual_ego_straight_path_after_turning = virtual_ego_straight_path_after_turning;
+
+  const auto attention_area_opt = generate_attention_area(
+    road_lanelets_before_turning_merged, blind_spot_lanelets_before_turning,
+    virtual_blind_lane_boundary_after_turning, virtual_ego_straight_path_after_turning,
+    assigned_lanelet, *path, turn_direction_, ego_width);
+  if (!attention_area_opt) {
+    return InternalError{"failed to generate attention_area"};
+  }
+
+  const auto & attention_area = attention_area_opt.value();
+  debug_data_.attention_area = attention_area;
+  const auto ego_intersection_path_lanelet_opt =
+    generate_ego_path_polygon(interpolated_path_info, ego_width);
+  if (!ego_intersection_path_lanelet_opt) {
+    return InternalError{"failed to generate path_polygon"};
+  }
+
+  const auto & ego_intersection_path_lanelet = ego_intersection_path_lanelet_opt.value();
+  debug_data_.path_polygon = ego_intersection_path_lanelet.polygon3d();
+
+  const double time_to_restart =
+    activated_ ? 0.0 : (planner_param_.collision_judge_debounce - state_machine_.getDuration());
+  const auto ego_future_profile = calculate_future_profile(
+    *path, planner_param_.minimum_default_velocity, time_to_restart, planner_data_, lane_id_);
+  if (ego_future_profile.empty()) {
+    return InternalError{"failed to compute ego predicted trajectory"};
+  }
+
+  const auto & first_line = (turn_direction_ == TurnDirection::Left)
+                              ? virtual_ego_straight_path_after_turning
+                              : virtual_blind_lane_boundary_after_turning;
+  const auto & second_line = (turn_direction_ == TurnDirection::Left)
+                               ? virtual_blind_lane_boundary_after_turning
+                               : virtual_ego_straight_path_after_turning;
+  const auto ego_passage_time_interval_opt = compute_time_interval_for_passing_line(
+    ego_future_profile, planner_data_->vehicle_info_.createFootprint(0.0, 0.0), first_line,
+    second_line);
+  if (!ego_passage_time_interval_opt) {
+    return InternalError{"failed to compute time interval for ego passing conflict area"};
+  }
+
+  const auto & ego_passage_time_interval = ego_passage_time_interval_opt.value();
+  debug_data_.ego_passage_interval = ego_passage_time_interval;
+
+  const auto ego_footprint = autoware_utils::transform_vector(
+    planner_data_->vehicle_info_.createFootprint(),
+    autoware_utils::pose2transform(planner_data_->current_odometry->pose));
+  const auto ego_to_blind_side_lat_gap_opt = calc_ego_to_blind_spot_lanelet_lateral_gap(
+    ego_footprint, blind_spot_lanelets_before_turning, turn_direction_);
+
+  const auto attention_objects = filter_attention_objects(
+    lanelet::utils::to2D(attention_area).basicPolygon(),
+    ego_to_blind_side_lat_gap_opt.value_or(std::numeric_limits<double>::max()));
+
+  const auto unsafe_objects = collect_unsafe_objects(
+    attention_objects, ego_intersection_path_lanelet, ego_passage_time_interval);
+  debug_data_.unsafe_objects.emplace(unsafe_objects);
+  const bool is_safe_now = unsafe_objects.empty();
+
+  // provide hold time for STOP -> GO
   state_machine_.setStateWithMarginTime(
-    collision_obstacle.has_value() ? StateMachine::State::STOP : StateMachine::State::GO,
-    logger_.get_child("state_machine"), *clock_);
+    !is_safe_now ? StateMachine::State::STOP : StateMachine::State::GO,
+    logger_.get_child("collision state_machine"), *clock_);
+  const bool is_safe = (state_machine_.getState() == StateMachine::State::GO);
 
-  if (state_machine_.getState() == StateMachine::State::STOP) {
-    return Unsafe{stop_line_idx, collision_obstacle};
+  const double delay_response_time = planner_data_->delay_response_time;
+  const double velocity = planner_data_->current_velocity->twist.linear.x;
+  const double acceleration = planner_data_->current_acceleration->accel.accel.linear.x;
+
+  const double critical_braking_distance = planning_utils::calcJudgeLineDistWithJerkLimit(
+    velocity, acceleration, planner_param_.brake.critical.deceleration,
+    planner_param_.brake.critical.jerk, delay_response_time);
+
+  const auto stop_points_opt = generate_stop_points(
+    interpolated_path_info, planner_data_->vehicle_info_.createFootprint(0.0, 0.0),
+    planner_data_->vehicle_info_.vehicle_length_m, assigned_lanelet,
+    virtual_ego_straight_path_after_turning, planner_data_->current_odometry->pose,
+    critical_braking_distance, planner_param_.critical_stopline_margin,
+    planner_data_->ego_nearest_dist_threshold, planner_data_->ego_nearest_yaw_threshold, path);
+  if (!stop_points_opt) {
+    return InternalError{"failed to generate stop points"};
   }
 
-  return Safe{stop_line_idx};
+  const auto & stop_points = stop_points_opt.value();
+  const auto default_stopline = stop_points.default_stopline;
+  const auto instant_stopline = stop_points.instant_stopline;
+  const auto critical_stopline = stop_points.critical_stopline;
+
+  const auto closest_idx = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
+    path->points, planner_data_->current_odometry->pose, planner_data_->ego_nearest_dist_threshold,
+    planner_data_->ego_nearest_yaw_threshold);
+  auto can_smoothly_stop_at =
+    [&](const auto & stop_line_idx, const double deceleration, const double jerk_for_deceleration) {
+      const double braking_dist = planning_utils::calcJudgeLineDistWithJerkLimit(
+        velocity, acceleration, deceleration, jerk_for_deceleration, delay_response_time);
+      return autoware::motion_utils::calcSignedArcLength(path->points, closest_idx, stop_line_idx) >
+             braking_dist;
+    };
+
+  if (is_safe) {
+    // NOTE: over_pass_judge judgement is only allowed when Safe is ensured
+    if (!can_smoothly_stop_at(
+          critical_stopline, planner_param_.brake.critical.deceleration,
+          planner_param_.brake.critical.jerk)) {
+      is_over_pass_judge_line_ = true;
+    }
+    return Safe{default_stopline.value_or(critical_stopline)};
+  }
+
+  if (is_safe_now) {
+    return Unsafe{default_stopline.value_or(critical_stopline)};
+  }
+
+  const auto & most_unsafe_object = unsafe_objects.front();
+  const auto most_nearest_collision_time = most_unsafe_object.critical_time;
+  debug_data_.critical_time = most_nearest_collision_time;
+
+  const auto [deceleration, jerk] = compute_decel_and_jerk_from_ttc(most_nearest_collision_time);
+
+  autoware_internal_planning_msgs::msg::SafetyFactorArray safety_factor;
+  safety_factor.factors.push_back(most_unsafe_object.to_safety_factor());
+  // 1st, try to stop at the traffic light stopline smoothly
+  if (default_stopline && can_smoothly_stop_at(default_stopline.value(), deceleration, jerk)) {
+    planning_factor_interface_->add(
+      path->points, planner_data_->current_odometry->pose,
+      path->points.at(default_stopline.value()).point.pose,
+      autoware_internal_planning_msgs::msg::PlanningFactor::STOP, safety_factor,
+      true /*is_driving_forward*/, 0.0 /* speed */, 0.0 /*shift distance*/, "");
+    return Unsafe{default_stopline.value()};
+  }
+
+  // otherwise, try to stop at instant_stopline before critical_stopline. if it is impossible, ego
+  // would stop inside the conflict_area in vain
+  if (
+    instant_stopline <= critical_stopline &&
+    can_smoothly_stop_at(critical_stopline, deceleration, jerk)) {
+    planning_factor_interface_->add(
+      path->points, planner_data_->current_odometry->pose,
+      path->points.at(instant_stopline).point.pose,
+      autoware_internal_planning_msgs::msg::PlanningFactor::STOP, safety_factor,
+      true /*is_driving_forward*/, 0.0 /* speed */, 0.0 /*shift distance*/, "");
+    return Unsafe{instant_stopline};
+  }
+
+  return OverPassJudge{"the situation is unsafe, but too late to stop before conflicting_area"};
 }
 
 // template-specification based visitor pattern
@@ -176,6 +329,12 @@ bool BlindSpotModule::modifyPathVelocity(PathWithLaneId * path)
 
   initializeRTCStatus();
   const auto decision = modifyPathVelocityDetail(path);
+  {
+    std_msgs::msg::String msg;
+    msg.data = format_blind_spot_decision(decision, lane_id_);
+    decision_state_pub_->publish(msg);
+  }
+
   const auto & input_path = *path;
   setRTCStatus(decision, input_path);
   reactRTCApproval(decision, path);
@@ -183,242 +342,140 @@ bool BlindSpotModule::modifyPathVelocity(PathWithLaneId * path)
   return true;
 }
 
-static std::optional<size_t> getDuplicatedPointIdx(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-  const geometry_msgs::msg::Point & point)
+std::vector<UnsafeObject> BlindSpotModule::collect_unsafe_objects(
+  const std::vector<autoware_perception_msgs::msg::PredictedObject> & attention_objects,
+  const lanelet::ConstLanelet & ego_path_lanelet,
+  const std::pair<double, double> & ego_passage_time_interval) const
 {
-  for (size_t i = 0; i < path.points.size(); i++) {
-    const auto & p = path.points.at(i).point.pose.position;
+  const auto & first_line = (turn_direction_ == TurnDirection::Left)
+                              ? ego_path_lanelet.leftBound()
+                              : ego_path_lanelet.rightBound();
+  const auto & second_line = (turn_direction_ == TurnDirection::Left)
+                               ? ego_path_lanelet.rightBound()
+                               : ego_path_lanelet.leftBound();
+  const auto entry_line = get_entry_line(ego_path_lanelet);
 
-    constexpr double min_dist = 0.001;
-    if (autoware_utils::calc_distance2d(p, point) < min_dist) {
-      return i;
-    }
-  }
-
-  return std::nullopt;
-}
-
-static std::optional<size_t> insertPointIndex(
-  const geometry_msgs::msg::Pose & in_pose,
-  autoware_internal_planning_msgs::msg::PathWithLaneId * inout_path,
-  const double ego_nearest_dist_threshold, const double ego_nearest_yaw_threshold)
-{
-  const auto duplicate_idx_opt = getDuplicatedPointIdx(*inout_path, in_pose.position);
-  if (duplicate_idx_opt) {
-    return duplicate_idx_opt.value();
-  }
-
-  const size_t closest_idx = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
-    inout_path->points, in_pose, ego_nearest_dist_threshold, ego_nearest_yaw_threshold);
-  // vector.insert(i) inserts element on the left side of v[i]
-  // the velocity need to be zero order hold(from prior point)
-  size_t insert_idx = closest_idx;
-  autoware_internal_planning_msgs::msg::PathPointWithLaneId inserted_point =
-    inout_path->points.at(closest_idx);
-  if (planning_utils::isAheadOf(in_pose, inout_path->points.at(closest_idx).point.pose)) {
-    ++insert_idx;
-  } else {
-    // copy with velocity from prior point
-    const size_t prior_ind = closest_idx > 0 ? closest_idx - 1 : 0;
-    inserted_point.point.longitudinal_velocity_mps =
-      inout_path->points.at(prior_ind).point.longitudinal_velocity_mps;
-  }
-  inserted_point.point.pose = in_pose;
-
-  auto it = inout_path->points.begin() + insert_idx;
-  inout_path->points.insert(it, inserted_point);
-
-  return insert_idx;
-}
-
-std::optional<std::pair<size_t, size_t>> BlindSpotModule::generateStopLine(
-  const InterpolatedPathInfo & interpolated_path_info,
-  autoware_internal_planning_msgs::msg::PathWithLaneId * path) const
-{
-  // NOTE: this is optionally int for later subtraction
-  const int margin_idx_dist =
-    std::ceil(planner_param_.stop_line_margin / interpolated_path_info.ds);
-
-  const auto & path_ip = interpolated_path_info.path;
-
-  size_t stop_idx_default_ip = 0;
-  size_t stop_idx_critical_ip = 0;
-  if (sibling_straight_lanelet_) {
-    const auto sibling_straight_lanelet = sibling_straight_lanelet_.value();
-    const auto turn_boundary_line = turn_direction_ == TurnDirection::LEFT
-                                      ? sibling_straight_lanelet.leftBound()
-                                      : sibling_straight_lanelet.rightBound();
-    const auto first_conflict_idx_ip_opt = getFirstPointIntersectsLineByFootprint(
-      lanelet::utils::to2D(turn_boundary_line), interpolated_path_info,
-      planner_data_->vehicle_info_.createFootprint(0.0, 0.0),
-      planner_data_->vehicle_info_.max_longitudinal_offset_m);
-    if (!first_conflict_idx_ip_opt) {
-      return std::nullopt;
-    }
-
-    // NOTE: this is optionally int for later subtraction
-    const auto first_conflict_idx_ip = static_cast<int>(first_conflict_idx_ip_opt.value());
-
-    stop_idx_default_ip = static_cast<size_t>(std::max(first_conflict_idx_ip - margin_idx_dist, 0));
-    stop_idx_critical_ip = static_cast<size_t>(first_conflict_idx_ip);
-  } else {
-    // the entry point of the assigned lane
-    const auto & assigned_lanelet =
-      planner_data_->route_handler_->getLaneletMapPtr()->laneletLayer.get(lane_id_);
-    const auto left_pt = assigned_lanelet.leftBound().front().basicPoint();
-    const auto right_pt = assigned_lanelet.rightBound().front().basicPoint();
-    const auto mid_pt = (left_pt + right_pt) / 2.0;
-    const geometry_msgs::msg::Point mid_point =
-      geometry_msgs::build<geometry_msgs::msg::Point>().x(mid_pt.x()).y(mid_pt.y()).z(mid_pt.z());
-    stop_idx_default_ip = stop_idx_critical_ip =
-      autoware::motion_utils::findNearestSegmentIndex(path_ip.points, mid_point);
-    /*
-    // NOTE: it is not ambiguous when the curve starts on the left/right lanelet, so this module
-    inserts stopline at the beginning of the lanelet for baselink
-    stop_idx_default_ip = stop_idx_critical_ip = static_cast<size_t>(std::max<int>(0,
-    static_cast<int>(autoware::motion_utils::findNearestSegmentIndex(path_ip.points, mid_point)) -
-    baselink2front_dist));
-    */
-  }
-
-  /* insert stop_point to use interpolated path*/
-  const auto stopline_idx_default_opt = insertPointIndex(
-    path_ip.points.at(stop_idx_default_ip).point.pose, path,
-    planner_data_->ego_nearest_dist_threshold, planner_data_->ego_nearest_yaw_threshold);
-  const auto stopline_idx_critical_opt = insertPointIndex(
-    path_ip.points.at(stop_idx_critical_ip).point.pose, path,
-    planner_data_->ego_nearest_dist_threshold, planner_data_->ego_nearest_yaw_threshold);
-
-  if (!stopline_idx_default_opt || !stopline_idx_critical_opt) {
-    return std::nullopt;
-  }
-  return std::make_pair(stopline_idx_default_opt.value(), stopline_idx_critical_opt.value());
-}
-
-autoware_perception_msgs::msg::PredictedObject BlindSpotModule::cutPredictPathWithDuration(
-  const std_msgs::msg::Header & header,
-  const autoware_perception_msgs::msg::PredictedObject & object_original,
-  const double time_thr) const
-{
-  auto object = object_original;
-  const rclcpp::Time current_time = clock_->now();
-
-  for (auto & predicted_path : object.kinematics.predicted_paths) {  // each predicted paths
-    const auto origin_path = predicted_path;
-    predicted_path.path.clear();
-
-    for (size_t k = 0; k < origin_path.path.size(); ++k) {  // each path points
-      const auto & predicted_pose = origin_path.path.at(k);
-      const auto predicted_time = rclcpp::Time(header.stamp) +
-                                  rclcpp::Duration(origin_path.time_step) * static_cast<double>(k);
-      if ((predicted_time - current_time).seconds() < time_thr) {
-        predicted_path.path.push_back(predicted_pose);
+  std::vector<UnsafeObject> unsafe_objects;
+  for (const auto & attention_object : attention_objects) {
+    const auto object_passage_intervals =
+      compute_time_interval_for_passing_line(attention_object, first_line, entry_line, second_line);
+    for (const auto & object_passage_interval : object_passage_intervals) {
+      const auto & [object_entry, object_exit, predicted_path] = object_passage_interval;
+      if (const auto collision_time = get_unsafe_time_if_critical(
+            ego_passage_time_interval, {object_entry, object_exit}, planner_param_.ttc_start_margin,
+            planner_param_.ttc_end_margin);
+          collision_time) {
+        unsafe_objects.emplace_back(
+          attention_object, collision_time.value(), predicted_path,
+          std::make_pair(object_entry, object_exit));
       }
     }
   }
-  return object;
+  // sort the objects so that front() has nearest critical time
+  std::sort(unsafe_objects.begin(), unsafe_objects.end(), [](const auto & a, const auto & b) {
+    return a.critical_time < b.critical_time;
+  });
+  return unsafe_objects;
 }
 
-std::optional<OverPassJudge> BlindSpotModule::isOverPassJudge(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & input_path,
-  const geometry_msgs::msg::Pose & stop_point_pose) const
+std::vector<autoware_perception_msgs::msg::PredictedObject>
+BlindSpotModule::filter_attention_objects(
+  const lanelet::BasicPolygon2d & attention_area, const double lateral_gap) const
 {
-  const auto & current_pose = planner_data_->current_odometry->pose;
-
-  /* set judge line dist */
-  const double pass_judge_line_dist = planning_utils::calcJudgeLineDistWithAccLimit(
-    planner_data_->current_velocity->twist.linear.x, planner_data_->max_stop_acceleration_threshold,
-    planner_data_->delay_response_time);
-  const auto ego_segment_idx =
-    autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
-      input_path.points, current_pose, planner_data_->ego_nearest_dist_threshold,
-      planner_data_->ego_nearest_yaw_threshold);
-  const size_t stop_point_segment_idx =
-    autoware::motion_utils::findNearestSegmentIndex(input_path.points, stop_point_pose.position);
-  const auto distance_until_stop = autoware::motion_utils::calcSignedArcLength(
-    input_path.points, current_pose.position, ego_segment_idx, stop_point_pose.position,
-    stop_point_segment_idx);
-
-  /* if current_state = GO, and current_pose is over judge_line, ignore planning. */
-  if (planner_param_.use_pass_judge_line) {
-    const double eps = 1e-1;  // to prevent hunting
-    if (const auto current_state = state_machine_.getState();
-        current_state == StateMachine::State::GO &&
-        distance_until_stop + eps < pass_judge_line_dist) {
-      return OverPassJudge{"over the pass judge line. no plan needed."};
-    }
-  }
-  return std::nullopt;
-}
-
-double BlindSpotModule::computeTimeToPassStopLine(
-  const lanelet::ConstLanelets & blind_spot_lanelets,
-  const geometry_msgs::msg::Pose & stop_line_pose) const
-{
-  // if ego is completely stopped, using ego velocity yields "no-collision"
-  const auto & current_pose = planner_data_->current_odometry->pose;
-  const auto current_arc_ego =
-    lanelet::utils::getArcCoordinates(blind_spot_lanelets, current_pose).length;
-  const auto stopline_arc_ego =
-    lanelet::utils::getArcCoordinates(blind_spot_lanelets, stop_line_pose).length;
-  const auto remaining_distance = stopline_arc_ego - current_arc_ego;
-  return remaining_distance / std::max<double>(
-                                planner_param_.ttc_ego_minimal_velocity,
-                                planner_data_->current_velocity->twist.linear.x);
-}
-
-std::optional<autoware_perception_msgs::msg::PredictedObject> BlindSpotModule::isCollisionDetected(
-  const lanelet::ConstLanelets & blind_spot_lanelets,
-  const geometry_msgs::msg::Pose & stop_line_pose, const lanelet::CompoundPolygon3d & area,
-  const double ego_time_to_reach_stop_line)
-{
-  // check objects in blind spot areas
-  const auto stop_line_arc_ego =
-    lanelet::utils::getArcCoordinates(blind_spot_lanelets, stop_line_pose).length;
-  for (const auto & original_object : planner_data_->predicted_objects->objects) {
-    if (!isTargetObjectType(original_object)) {
+  std::vector<autoware_perception_msgs::msg::PredictedObject> result;
+  for (const auto & object : planner_data_->predicted_objects->objects) {
+    if (!isTargetObjectType(object)) {
       continue;
     }
-    const auto object = cutPredictPathWithDuration(
-      planner_data_->predicted_objects->header, original_object,
-      planner_param_.max_future_movement_time);
-    // right direction
-    const bool exist_in_detection_area = bg::within(
-      to_bg2d(object.kinematics.initial_pose_with_covariance.pose.position),
-      lanelet::utils::to2D(area));
-    if (!exist_in_detection_area) {
-      continue;
-    }
-    const auto object_arc_length =
-      lanelet::utils::getArcCoordinates(
-        blind_spot_lanelets, object.kinematics.initial_pose_with_covariance.pose)
-        .length;
-    const auto object_time_to_reach_stop_line =
-      (object_arc_length - stop_line_arc_ego) /
-      (object.kinematics.initial_twist_with_covariance.twist.linear.x);
-    const auto ttc = ego_time_to_reach_stop_line - object_time_to_reach_stop_line;
-    RCLCPP_DEBUG(logger_, "object ttc is %f", ttc);
-    if (planner_param_.ttc_min < ttc && ttc < planner_param_.ttc_max) {
-      return object;
+    const auto & position = object.kinematics.initial_pose_with_covariance.pose.position;
+    // NOTE: use position of the object because vru object polygon around blind_spot is unstable
+    const auto is_within_attention_area = boost::geometry::within(
+      autoware_utils_geometry::Point2d{position.x, position.y}, attention_area);
+
+    // if object is not VRU, check lateral clearance
+    if (
+      is_within_attention_area &&
+      (is_vru_object_type(object) || object.shape.dimensions.y < lateral_gap)) {
+      result.push_back(object);
     }
   }
-  return std::nullopt;
+  return result;
 }
 
 bool BlindSpotModule::isTargetObjectType(
   const autoware_perception_msgs::msg::PredictedObject & object) const
 {
+  auto detect_non_vru = [&]() {
+    if (
+      object.classification.at(0).label ==
+        autoware_perception_msgs::msg::ObjectClassification::CAR &&
+      planner_param_.detect_non_vru.car) {
+      return true;
+    }
+    if (
+      object.classification.at(0).label ==
+        autoware_perception_msgs::msg::ObjectClassification::TRUCK &&
+      planner_param_.detect_non_vru.truck) {
+      return true;
+    }
+    if (
+      object.classification.at(0).label ==
+        autoware_perception_msgs::msg::ObjectClassification::BUS &&
+      planner_param_.detect_non_vru.bus) {
+      return true;
+    }
+    if (
+      object.classification.at(0).label ==
+        autoware_perception_msgs::msg::ObjectClassification::TRAILER &&
+      planner_param_.detect_non_vru.trailer) {
+      return true;
+    }
+    return false;
+  };
   if (
     object.classification.at(0).label ==
       autoware_perception_msgs::msg::ObjectClassification::BICYCLE ||
     object.classification.at(0).label ==
       autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN ||
     object.classification.at(0).label ==
-      autoware_perception_msgs::msg::ObjectClassification::MOTORCYCLE) {
+      autoware_perception_msgs::msg::ObjectClassification::MOTORCYCLE ||
+    detect_non_vru()) {
     return true;
   }
   return false;
+}
+
+bool BlindSpotModule::is_vru_object_type(
+  const autoware_perception_msgs::msg::PredictedObject & object)
+{
+  return object.classification.at(0).label ==
+           autoware_perception_msgs::msg::ObjectClassification::BICYCLE ||
+         object.classification.at(0).label ==
+           autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN ||
+         object.classification.at(0).label ==
+           autoware_perception_msgs::msg::ObjectClassification::MOTORCYCLE;
+}
+
+std::pair<double, double> BlindSpotModule::compute_decel_and_jerk_from_ttc(const double ttc) const
+{
+  const auto & critical_decel = planner_param_.brake.critical.deceleration;
+  const auto & critical_jerk = planner_param_.brake.critical.jerk;
+  const auto & semi_critical_decel = planner_param_.brake.semi_critical.deceleration;
+  const auto & semi_critical_jerk = planner_param_.brake.semi_critical.jerk;
+
+  if (ttc < planner_param_.brake_for_ttc.critical_threshold_ub) {
+    return {critical_decel, critical_jerk};
+  }
+
+  if (ttc > planner_param_.brake_for_ttc.semi_critical_threshold_lb) {
+    return {semi_critical_decel, semi_critical_jerk};
+  }
+
+  const double a = ttc - planner_param_.brake_for_ttc.critical_threshold_ub;
+  const double b = planner_param_.brake_for_ttc.semi_critical_threshold_lb;
+  const auto lerp = [&](const double x, const double y) { return (b * x + a * y) / (a + b); };
+
+  return {lerp(critical_decel, semi_critical_decel), lerp(critical_jerk, semi_critical_jerk)};
 }
 
 }  // namespace autoware::behavior_velocity_planner

@@ -241,7 +241,8 @@ MarkerArray ShowLaneChangeMetricsInfo(
                        fmt::format("{:^15}|", "duration[s]") + fmt::format("{:^15}|", "length[m]") +
                        fmt::format("{:^17}|", "lat_accel[m/s2]") +
                        fmt::format("{:^15}|", "lat_vel[m/s2]") + fmt::format("{:^15}|", "s[m]") +
-                       fmt::format("{:^15}|", "d[m]") + fmt::format("{:^20}\n", "max_length_th[m]");
+                       fmt::format("{:^15}|", "d[m]") + fmt::format("{:^20}|", "max_length_th[m]") +
+                       fmt::format("{:^20}\n", "average curvature");
     for (const auto & metrics : debug_data.frenet_states) {
       text_marker.text += fmt::format("{:-<250}\n", "");
       const auto & p_m = metrics.prep_metric;
@@ -265,7 +266,8 @@ MarkerArray ShowLaneChangeMetricsInfo(
         fmt::format("{:^19.3f}", lc_m.lateral_acceleration) +
         fmt::format("{:^10.3f}", lc_m.lateral_velocity) +
         fmt::format("{:^18.3f}", lc_m.position.s) + fmt::format("{:^15.3f}", lc_m.position.d) +
-        fmt::format("{:^16.3f}\n", max_len);  // Empty string for max_length_t
+        fmt::format("{:^16.3f}", max_len) +
+        fmt::format("{:^16.3f}\n", metrics.lc_average_curvature);  // Empty string for max_length_t
     }
 
     marker_array.markers.push_back(text_marker);

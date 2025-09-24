@@ -114,7 +114,7 @@ RANSACGroundFilterComponent::RANSACGroundFilterComponent(const rclcpp::NodeOptio
 
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
-    std::bind(&RANSACGroundFilterComponent::paramCallback, this, _1));
+    std::bind(&RANSACGroundFilterComponent::param_callback, this, _1));
 
   pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS);
 
@@ -326,7 +326,7 @@ void RANSACGroundFilterComponent::filter(
   }
 }
 
-rcl_interfaces::msg::SetParametersResult RANSACGroundFilterComponent::paramCallback(
+rcl_interfaces::msg::SetParametersResult RANSACGroundFilterComponent::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);

@@ -1,0 +1,3 @@
+<library path="autoware_motion_velocity_boundary_departure_prevention_module">
+  <class type="autoware::motion_velocity_planner::experimental::BoundaryDeparturePreventionModule" base_class_type="autoware::motion_velocity_planner::PluginModuleInterface"/>
+</library>

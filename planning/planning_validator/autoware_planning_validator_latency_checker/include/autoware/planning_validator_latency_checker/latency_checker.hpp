@@ -30,13 +30,15 @@ public:
   void init(
     rclcpp::Node & node, const std::string & name,
     const std::shared_ptr<PlanningValidatorContext> & context) override;
-  void validate(bool & is_critical) override;
+  void validate() override;
   void setup_diag() override;
   std::string get_module_name() const override { return module_name_; };
 
 private:
+  void set_diag_status(
+    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg) const;
+
   bool enable_latency_check_;
-  bool is_critical_check_;
   double latency_threshold_;
 };
 

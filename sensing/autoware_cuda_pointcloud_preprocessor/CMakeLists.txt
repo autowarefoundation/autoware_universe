@@ -3,6 +3,7 @@ project(autoware_cuda_pointcloud_preprocessor)
 
 find_package(ament_cmake_auto REQUIRED)
 find_package(CUDA)
+find_package(agnocastlib)
 
 if(NOT ${CUDA_FOUND})
   message(WARNING "cuda was not found, so the autoware_cuda_pointcloud_preprocessor package will not be built.")
@@ -10,6 +11,10 @@ if(NOT ${CUDA_FOUND})
 elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-g -G")
   set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-g -G")
+endif()
+
+if("$ENV{ENABLE_AGNOCAST}" AND NOT agnocastlib_FOUND)
+  message(FATAL_ERROR "agnocastlib is required when Agnocast is enabled")
 endif()
 
 ament_auto_find_build_dependencies()
@@ -23,7 +28,13 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wall -Wextra -Wpedantic -Wunused-function)
 endif()
 
+if("$ENV{ENABLE_AGNOCAST}")
+    message("Agnocast support is enabled")
+    add_definitions(-DUSE_AGNOCAST_ENABLED)
+endif()
+
 if(BUILD_TESTING)
+    list(APPEND AMENT_LINT_AUTO_EXCLUDE ament_cmake_uncrustify)
     find_package(ament_lint_auto REQUIRED)
     ament_lint_auto_find_test_dependencies()
 endif()
@@ -45,6 +56,16 @@ list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
 # TODO(knzo25): enable when the driver supports it
 # list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
 
+# __host__ or __device__ annotation on lambda requires --extended-lambda nvcc flag
+list(APPEND CUDA_NVCC_FLAGS "--extended-lambda")
+
+# cSpell: ignore fmad
+# NOTE(manato): adding `--fmad=false` can reduce numerical discrepancies between CPU implementations
+# and GPU implementations of the filters. But a slight performance impact can also be introduced
+# To prioritize performance, the flag is disabled
+#
+# list(APPEND CUDA_NVCC_FLAGS "--fmad=false")
+
 ################################################################################
 ### cuda_pointcloud_preprocessor ###
 cuda_add_library(cuda_pointcloud_preprocessor_lib SHARED
@@ -58,6 +79,7 @@ cuda_add_library(cuda_pointcloud_preprocessor_lib SHARED
   src/cuda_pointcloud_preprocessor/outlier_kernels.cu
   src/cuda_pointcloud_preprocessor/undistort_kernels.cu
   src/cuda_downsample_filter/cuda_voxel_grid_downsample_filter.cu
+  src/cuda_outlier_filter/cuda_polar_voxel_outlier_filter.cu
 )
 
 target_link_libraries(cuda_pointcloud_preprocessor_lib
@@ -67,6 +89,7 @@ target_link_libraries(cuda_pointcloud_preprocessor_lib
 target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
   ${autoware_pointcloud_preprocessor_INCLUDE_DIRS}
   ${autoware_point_types_INCLUDE_DIRS}
+  ${autoware_sensing_msgs_INCLUDE_DIRS}
   ${cuda_blackboard_INCLUDE_DIRS}
   ${diagnostic_msgs_INCLUDE_DIRS}
   ${geometry_msgs_INCLUDE_DIRS}
@@ -79,12 +102,23 @@ target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
   ${autoware_cuda_utils_INCLUDE_DIRS}
 )
 
+if("$ENV{ENABLE_AGNOCAST}")
+    target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
+        ${autoware_agnocast_wrapper_INCLUDE_DIRS}
+        ${agnocastlib_INCLUDE_DIRS}
+    )
+    target_link_libraries(cuda_pointcloud_preprocessor_lib
+        ${agnocastlib_LIBRARIES}
+    )
+endif()
+
 
 # Targets
 ament_auto_add_library(cuda_pointcloud_preprocessor SHARED
   src/cuda_concatenate_data/cuda_concatenate_and_time_sync_node.cpp
   src/cuda_pointcloud_preprocessor/cuda_pointcloud_preprocessor_node.cpp
   src/cuda_downsample_filter/cuda_voxel_grid_downsample_filter_node.cpp
+  src/cuda_outlier_filter/cuda_polar_voxel_outlier_filter_node.cpp
 )
 
 target_link_libraries(cuda_pointcloud_preprocessor
@@ -108,6 +142,12 @@ rclcpp_components_register_node(cuda_pointcloud_preprocessor
 rclcpp_components_register_node(cuda_pointcloud_preprocessor
   PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaVoxelGridDownsampleFilterNode"
   EXECUTABLE cuda_voxel_grid_downsample_filter_node
+)
+
+# ========== PolarVoxel outlier filter ==========
+rclcpp_components_register_node(cuda_pointcloud_preprocessor
+  PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaPolarVoxelOutlierFilterNode"
+  EXECUTABLE cuda_polar_voxel_outlier_filter_node
 )
 
 ################################################################################

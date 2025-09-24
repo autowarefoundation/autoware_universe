@@ -24,20 +24,17 @@
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
 
-#include <autoware/kalman_filter/kalman_filter.hpp>
-
 namespace autoware::multi_object_tracker
 {
 
 class VehicleTracker : public Tracker
 {
 private:
-  object_model::ObjectModel object_model_;
   rclcpp::Logger logger_;
 
-  double velocity_deviation_threshold_;
+  object_model::ObjectModel object_model_;
 
-  Eigen::Vector2d tracking_offset_;
+  double velocity_deviation_threshold_;
 
   BicycleMotionModel motion_model_;
   using IDX = BicycleMotionModel::IDX;
@@ -53,8 +50,10 @@ public:
     const types::InputChannel & channel_info) override;
   bool measureWithPose(
     const types::DynamicObject & object, const types::InputChannel & channel_info);
-  bool measureWithShape(const types::DynamicObject & object);
-  bool getTrackedObject(const rclcpp::Time & time, types::DynamicObject & object) const override;
+
+  bool getTrackedObject(
+    const rclcpp::Time & time, types::DynamicObject & object,
+    const bool to_publish = false) const override;
 };
 
 }  // namespace autoware::multi_object_tracker
