@@ -7,4 +7,3 @@
     use_intensity_feature: false
     use_constant_feature: false
     z_offset: -2.0
-    onnx_file: "vls-128.onnx"
