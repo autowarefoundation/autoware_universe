@@ -84,7 +84,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     lib/calibration_status.cpp
   )
 
-  # cSpell:ignore gencode
+  # cSpell:ignore expt gencode
   list(APPEND CUDA_NVCC_FLAGS "--expt-relaxed-constexpr")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
