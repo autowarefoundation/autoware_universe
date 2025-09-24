@@ -79,6 +79,79 @@ bool hasMergeLane(
 
   return false;
 }
+
+/// @brief convert a string to the corresponding traffic signal color
+std::optional<uint8_t> str_to_color(std::string_view str)
+{
+  if (str == "red") {
+    return TrafficSignalElement::RED;
+  }
+  if (str == "green") {
+    return TrafficSignalElement::GREEN;
+  }
+  if (str == "amber") {
+    return TrafficSignalElement::AMBER;
+  }
+  if (str == "white") {
+    return TrafficSignalElement::WHITE;
+  }
+  return std::nullopt;
+}
+
+/// @brief parse the input string and extract a rule to estimate a traffic signal
+/// @details the string is expected to have format "signal_color_relation:color1:color2"
+std::optional<std::pair<uint8_t, uint8_t>> parse_signal_estimation_rules(std::string_view input)
+{
+  constexpr auto delimiter = ':';
+  constexpr std::string_view prefix = "signal_color_relation:";
+  if (input.size() < prefix.size() || input.substr(0, prefix.length()) != prefix) {
+    return std::nullopt;
+  }
+  input.remove_prefix(prefix.length());
+
+  // extract the color mapping
+  const auto delimiter_pos = input.find(delimiter);
+  if (delimiter_pos == std::string_view::npos) {
+    return std::nullopt;
+  }
+
+  std::string_view from_str = input.substr(0, delimiter_pos);
+  std::string_view to_str = input.substr(delimiter_pos + 1);
+
+  if (const auto from_color = str_to_color(from_str)) {
+    if (const auto to_color = str_to_color(to_str)) {
+      return std::make_pair(*from_color, *to_color);
+    }
+  }
+  return std::nullopt;
+}
+
+/// @brief parse the input string and extract the crosswalk ids
+/// @details the string is expected to have format "id1,id2,...", without any space
+lanelet::Ids parse_crosswalk_ids(std::string_view input)
+{
+  lanelet::Ids ids;
+  if (input.empty()) {
+    return ids;
+  }
+
+  constexpr auto delimiter = ',';
+  size_t start = 0;
+  size_t end = 0;
+  lanelet::Id id{};
+  while ((end = input.find(delimiter, start)) != std::string_view::npos) {
+    const auto [_, err] = std::from_chars(input.data() + start, input.data() + end, id);
+    if (err == std::errc()) {
+      ids.push_back(id);
+    }
+    start = end + 1;
+  }
+  const auto [_, err] = std::from_chars(input.data() + start, input.data() + input.size(), id);
+  if (err == std::errc()) {
+    ids.push_back(id);
+  }
+  return ids;
+}
 }  // namespace
 
 CrosswalkTrafficLightEstimatorNode::CrosswalkTrafficLightEstimatorNode(
@@ -158,75 +231,6 @@ void CrosswalkTrafficLightEstimatorNode::onRoute(const LaneletRoute::ConstShared
   }
 }
 
-std::optional<uint8_t> str_to_color(std::string_view str)
-{
-  if (str == "red") {
-    return TrafficSignalElement::RED;
-  }
-  if (str == "green") {
-    return TrafficSignalElement::GREEN;
-  }
-  if (str == "amber") {
-    return TrafficSignalElement::AMBER;
-  }
-  if (str == "white") {
-    return TrafficSignalElement::WHITE;
-  }
-  return std::nullopt;
-}
-
-// Parses the input string and extracts colors if the format is correct.
-std::optional<std::pair<uint8_t, uint8_t>> parse_signal_relation(std::string_view input)
-{
-  constexpr auto delimiter = ':';
-  constexpr std::string_view prefix = "signal_color_relation:";
-  if (input.size() < prefix.size() || input.substr(0, prefix.length()) != prefix) {
-    return std::nullopt;
-  }
-  input.remove_prefix(prefix.length());
-
-  // extract the color mapping
-  const auto delimiter_pos = input.find(delimiter);
-  if (delimiter_pos == std::string_view::npos) {
-    return std::nullopt;
-  }
-
-  std::string_view from_str = input.substr(0, delimiter_pos);
-  std::string_view to_str = input.substr(delimiter_pos + 1);
-
-  if (const auto from_color = str_to_color(from_str)) {
-    if (const auto to_color = str_to_color(to_str)) {
-      return std::make_pair(*from_color, *to_color);
-    }
-  }
-  return std::nullopt;
-}
-
-lanelet::Ids parse_crosswalk_ids(std::string_view input)
-{
-  lanelet::Ids ids;
-  if (input.empty()) {
-    return ids;
-  }
-
-  constexpr auto delimiter = ',';
-  size_t start = 0;
-  size_t end = 0;
-  lanelet::Id id{};
-  while ((end = input.find(delimiter, start)) != std::string_view::npos) {
-    const auto [_, err] = std::from_chars(input.data() + start, input.data() + end, id);
-    if (err == std::errc()) {
-      ids.push_back(id);
-    }
-    start = end + 1;
-  }
-  const auto [_, err] = std::from_chars(input.data() + start, input.data() + input.size(), id);
-  if (err == std::errc()) {
-    ids.push_back(id);
-  }
-  return ids;
-}
-
 void CrosswalkTrafficLightEstimatorNode::onTrafficLightArray(
   const TrafficSignalArray::ConstSharedPtr msg)
 {
@@ -251,7 +255,7 @@ void CrosswalkTrafficLightEstimatorNode::onTrafficLightArray(
     const auto current_vehicle_traffic_light_color =
       getHighestConfidenceTrafficSignal(traffic_light->id(), traffic_light_id_map);
     for (const auto & attribute : traffic_light->attributes()) {
-      if (const auto & color_mapping = parse_signal_relation(attribute.first)) {
+      if (const auto & color_mapping = parse_signal_estimation_rules(attribute.first)) {
         const auto & [from_color, to_color] = *color_mapping;
         if (from_color == current_vehicle_traffic_light_color) {
           for (const auto crosswalk_id : parse_crosswalk_ids(attribute.second.value())) {
