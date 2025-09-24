@@ -19402,6 +19402,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#map-based-estimation-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      Map-based estimation rules
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -19549,6 +19558,8 @@
 <ul>
 <li>Estimate the color of pedestrian traffic signals based on detected vehicle traffic signals, HDMap, and route</li>
 </ul>
+<p>Override rules specific to some traffic lights can also be defined in the lanelet map.
+In that case, the crosswalk traffic light estimation is overridden by these rules.</p>
 <h3 id="estimate-whether-pedestrian-traffic-signals-are-flashing">Estimate whether pedestrian traffic signals are flashing<a class="headerlink" href="#estimate-whether-pedestrian-traffic-signals-are-flashing" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>start
 if (the pedestrian traffic light classification result exists)then
@@ -19596,6 +19607,16 @@ end
   <img src="images/intersection2.svg" width="80%">
 </div>
 
+<h3 id="map-based-estimation-rules">Map-based estimation rules<a class="headerlink" href="#map-based-estimation-rules" title="Permanent link">#</a></h3>
+<p>Rules can be defined in the lanelet map to override the normal estimation.
+These rules define the value of a crosswalk traffic light based on the value of a vehicle traffic light.</p>
+<p>For example, a rule to consider the crosswalk traffic light with id X to be <code>green</code> when the vehicle traffic light with id Y is <code>red</code> can be expressed in the lanelet map as follows:</p>
+<div class="highlight"><pre><span></span><code><span class="w">  </span><span class="nt">&lt;relation</span><span class="w"> </span><span class="na">id=</span><span class="s">"Y"</span><span class="nt">&gt;</span>
+<span class="w">    </span>...
+<span class="w">    </span><span class="nt">&lt;tag</span><span class="w"> </span><span class="na">k=</span><span class="s">"signal_color_relation:red:green"</span><span class="w"> </span><span class="na">v=</span><span class="s">"X"</span><span class="nt">/&gt;</span>
+</code></pre></div>
+<p>Colors <code>green</code>, <code>amber</code>, <code>red</code>, and <code>white</code> are currently supported.
+Multiple crosswalk ids can be listed separated by a comma and without any whitespace (e.g., <code>v="1,2,3"</code>).</p>
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <h2 id="future-extensions-unimplemented-parts">Future extensions / Unimplemented parts<a class="headerlink" href="#future-extensions-unimplemented-parts" title="Permanent link">#</a></h2></div>
 
