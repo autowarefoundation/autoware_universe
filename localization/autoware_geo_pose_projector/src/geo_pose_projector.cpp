@@ -90,9 +90,10 @@ void GeoPoseProjector::on_geo_pose(const GeoPoseWithCovariance::ConstSharedPtr m
   // Publish tf
   if (publish_tf_) {
     tf2::Transform transform;
-    transform.setOrigin(tf2::Vector3(
-      projected_pose.pose.pose.position.x, projected_pose.pose.pose.position.y,
-      projected_pose.pose.pose.position.z));
+    transform.setOrigin(
+      tf2::Vector3(
+        projected_pose.pose.pose.position.x, projected_pose.pose.pose.position.y,
+        projected_pose.pose.pose.position.z));
     const auto localization_quat = tf2::Quaternion(
       projected_pose.pose.pose.orientation.x, projected_pose.pose.pose.orientation.y,
       projected_pose.pose.pose.orientation.z, projected_pose.pose.pose.orientation.w);

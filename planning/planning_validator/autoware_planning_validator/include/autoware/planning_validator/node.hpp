@@ -29,6 +29,7 @@
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
@@ -36,13 +37,17 @@
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <memory>
 #include <string>
 
 namespace autoware::planning_validator
 {
+using autoware_adapi_v1_msgs::msg::OperationModeState;
 using autoware_internal_debug_msgs::msg::Float64Stamped;
+using autoware_map_msgs::msg::LaneletMapBin;
+using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_planning_validator::msg::PlanningValidatorStatus;
@@ -51,6 +56,7 @@ using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
+using sensor_msgs::msg::PointCloud2;
 
 class PlanningValidatorNode : public rclcpp::Node
 {
@@ -58,9 +64,9 @@ public:
   explicit PlanningValidatorNode(const rclcpp::NodeOptions & options);
 
 private:
-  void onTimer();
+  void onTrajectory(const Trajectory::ConstSharedPtr & traj_msg);
   void setupParameters();
-  void setData();
+  void setData(const Trajectory::ConstSharedPtr & traj_msg);
   bool isDataReady();
 
   void validate(const std::shared_ptr<const PlanningValidatorData> & data);
@@ -70,20 +76,26 @@ private:
   void publishDebugInfo();
   void displayStatus();
 
-  autoware_utils::InterProcessPollingSubscriber<Odometry> sub_kinematics_{
-    this, "~/input/kinematics"};
-  autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped> sub_acceleration_{
-    this, "~/input/acceleration"};
-  autoware_utils::InterProcessPollingSubscriber<Trajectory> sub_trajectory_{
-    this, "~/input/trajectory"};
-  autoware_utils::InterProcessPollingSubscriber<PointCloud2> sub_pointcloud_{
-    this, "~/input/pointcloud", autoware_utils::single_depth_sensor_qos()};
+  // subscriber
+  rclcpp::Subscription<Trajectory>::SharedPtr sub_trajectory_;
   autoware_utils::InterProcessPollingSubscriber<
     LaneletRoute, autoware_utils::polling_policy::Newest>
     sub_route_{this, "~/input/route", rclcpp::QoS{1}.transient_local()};
   autoware_utils::InterProcessPollingSubscriber<
     LaneletMapBin, autoware_utils::polling_policy::Newest>
     sub_lanelet_map_bin_{this, "~/input/lanelet_map_bin", rclcpp::QoS{1}.transient_local()};
+  autoware_utils::InterProcessPollingSubscriber<PointCloud2> sub_pointcloud_{
+    this, "~/input/pointcloud", autoware_utils::single_depth_sensor_qos()};
+  autoware_utils::InterProcessPollingSubscriber<Odometry> sub_kinematics_{
+    this, "~/input/kinematics"};
+  autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped> sub_acceleration_{
+    this, "~/input/acceleration"};
+  autoware_utils::InterProcessPollingSubscriber<OperationModeState> sub_operational_state_{
+    this, "~/input/operational_mode_state", rclcpp::QoS{1}.transient_local()};
+  autoware_utils::InterProcessPollingSubscriber<TrafficLightGroupArray> sub_traffic_signals_{
+    this, "~/input/traffic_signals"};
+
+  // publisher
   rclcpp::Publisher<Trajectory>::SharedPtr pub_traj_;
   rclcpp::Publisher<PlanningValidatorStatus>::SharedPtr pub_status_;
   rclcpp::Publisher<Float64Stamped>::SharedPtr pub_processing_time_ms_;
@@ -94,8 +106,10 @@ private:
   std::shared_ptr<PlanningValidatorContext> context_;
 
   bool is_critical_error_ = false;
+  bool flag_autonomous_control_enabled_ = false;
 
   bool isAllValid(const PlanningValidatorStatus & status) const;
+  bool infer_autonomous_control_state(const OperationModeState::ConstSharedPtr msg);
 
   Trajectory::ConstSharedPtr soft_stop_trajectory_;
 
@@ -104,7 +118,6 @@ private:
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
 
   StopWatch<std::chrono::milliseconds> stop_watch_;
-  rclcpp::TimerBase::SharedPtr timer_;
 };
 }  // namespace autoware::planning_validator
 

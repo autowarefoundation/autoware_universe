@@ -54,6 +54,7 @@ public:
     std::vector<geometry_msgs::msg::Point> traffic_light_points;
     std::optional<geometry_msgs::msg::Point> highest_confidence_traffic_light_point = {
       std::nullopt};
+    bool is_remaining_time_used{false};
   };
 
   struct PlannerParam
@@ -67,12 +68,18 @@ public:
     // Restart Suppression Parameter
     double max_behind_dist_to_stop_for_restart_suppression;
     double min_behind_dist_to_stop_for_restart_suppression;
+    // V2I Parameter
+    bool v2i_use_remaining_time;
+    double v2i_last_time_allowed_to_pass;
+    double v2i_velocity_threshold;
+    double v2i_required_time_to_departure;
   };
 
 public:
   TrafficLightModule(
     const int64_t lane_id, const lanelet::TrafficLight & traffic_light_reg_elem,
-    lanelet::ConstLanelet lane, const PlannerParam & planner_param, const rclcpp::Logger logger,
+    lanelet::ConstLanelet lane, const lanelet::ConstLineString3d & initial_stop_line,
+    const PlannerParam & planner_param, const rclcpp::Logger logger,
     const rclcpp::Clock::SharedPtr clock,
     const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
@@ -92,8 +99,12 @@ public:
     return first_ref_stop_path_point_index_;
   }
 
+  void updateStopLine(const lanelet::ConstLineString3d & stop_line);
+
 private:
   bool isStopSignal();
+
+  bool willTrafficLightTurnRedBeforeReachingStopLine(const double & distance_to_stop_line) const;
 
   autoware_internal_planning_msgs::msg::PathWithLaneId insertStopPose(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & input,
@@ -113,6 +124,9 @@ private:
   // Key Feature
   const lanelet::TrafficLight & traffic_light_reg_elem_;
   lanelet::ConstLanelet lane_;
+  lanelet::ConstLineString3d
+    stop_line_;  // Note: this stop_line_ may not be the one bound to the traffic light regulatory
+                 // element. this is the one bound to the traffic light (line string)
 
   // State
   State state_;

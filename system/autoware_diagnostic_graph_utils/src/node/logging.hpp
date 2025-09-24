@@ -19,7 +19,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include "autoware_internal_debug_msgs/msg/string_stamped.hpp"
+#include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 
 #include <sstream>
 #include <string>
@@ -33,19 +33,23 @@ public:
   explicit LoggingNode(const rclcpp::NodeOptions & options);
 
 private:
+  using StringStamped = autoware_internal_debug_msgs::msg::StringStamped;
+
   void on_create(DiagGraph::ConstSharedPtr graph);
   void on_timer();
-  void dump_unit(DiagUnit * unit, int depth, const std::string & indent);
+  void dump_unit(DiagNode * node, int depth, const std::string & indent);
+
   DiagGraphSubscription sub_graph_;
-  rclcpp::Publisher<autoware_internal_debug_msgs::msg::StringStamped>::SharedPtr
-    pub_error_graph_text_;
+  rclcpp::Publisher<StringStamped>::SharedPtr pub_error_graph_text_;
   rclcpp::TimerBase::SharedPtr timer_;
 
-  DiagUnit * root_unit_;
-  int max_depth_;
   std::string root_path_;
-  std::ostringstream dump_text_;
+  int max_depth_;
   bool enable_terminal_log_;
+  bool ignore_dependent_error_;
+
+  DiagNode * root_node_;
+  std::ostringstream dump_text_;
   std::string prev_error_graph_text_;
 };
 

@@ -6,7 +6,7 @@ The `run_out` module adds deceleration and stop points to the ego trajectory in 
 
 ## Activation
 
-This module is activated if the launch parameter `launch_mvp_run_out_module` is set to true.
+This module is activated if the launch parameter `launch_run_out_module` is set to true.
 
 ## Inner-workings / Algorithms
 
@@ -41,6 +41,8 @@ we prepare the following sets of geometries based on the parameters defined for 
 - polygons to ignore collisions (`ignore_collisions.polygon_types` and `ignore_collisions.lanelet_subtypes`);
 - segments to cut predicted paths (`cut_predicted_paths.polygon_types`, `cut_predicted_paths.linestring_types`, and `cut_predicted_paths.lanelet_subtypes`).
   - the rear segment of the current ego footprint is also added if `cut_predicted_paths.if_crossing_ego_from_behind` is set to `true`.
+- segments to strictly cut predicted paths (`cut_predicted_paths.strict_polygon_types`, `cut_predicted_paths.strict_linestring_types`, and `cut_predicted_paths.strict_lanelet_subtypes`).
+  - strict cutting means that the cut is always applied, regardless of any preserved distance or duration.
 
 The following figure shows an example where the polygons to ignore objects are shown in blue, to ignore collisions in green, and to cut predicted paths in red.
 
@@ -66,6 +68,10 @@ If an object is not ignored, its predicted path footprints are generated similar
 First, we only keep predicted paths that have a confidence value above the `confidence_filtering.threshold` parameter.
 If, `confidence_filtering.only_use_highest` is set to `true` then for each object only the predicted paths that have the higher confidence value are kept.
 Next, the remaining predicted paths are cut according to the segments prepared in the previous step.
+
+To guarantee that parts of the predicted paths are never ignored,
+parameters `preserved_duration` and `preserved_distance` can be used to set a minimum duration and/or distance that cannot be cut or ignored.
+This is not applied in the case of the strict cutting.
 
 The following figures shows an example where crosswalks are used to ignore pedestrians and to cut their predicted paths.
 

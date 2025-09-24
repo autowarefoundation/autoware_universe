@@ -15,13 +15,17 @@
 #include "autoware/pointcloud_preprocessor/outlier_filter/ring_outlier_filter_node.hpp"
 
 #include "autoware/point_types/types.hpp"
+#include "autoware/pointcloud_preprocessor/diagnostics/latency_diagnostics.hpp"
+#include "autoware/pointcloud_preprocessor/diagnostics/pass_rate_diagnostics.hpp"
 
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <algorithm>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
+
 namespace autoware::pointcloud_preprocessor
 {
 using autoware::point_types::PointXYZIRADRT;
@@ -63,11 +67,16 @@ RingOutlierFilterComponent::RingOutlierFilterComponent(const rclcpp::NodeOptions
     vertical_bins_ = declare_parameter<int>("vertical_bins");
     horizontal_bins_ = declare_parameter<int>("horizontal_bins");
     noise_threshold_ = declare_parameter<int>("noise_threshold");
+    processing_time_threshold_sec_ = declare_parameter<float>("processing_time_threshold_sec");
   }
+
+  // Diagnostic
+  diagnostics_interface_ =
+    std::make_unique<autoware_utils::DiagnosticsInterface>(this, this->get_fully_qualified_name());
 
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
-    std::bind(&RingOutlierFilterComponent::paramCallback, this, _1));
+    std::bind(&RingOutlierFilterComponent::param_callback, this, _1));
 }
 
 // TODO(sykwer): Temporary Implementation: Rename this function to `filter()` when all the filter
@@ -149,7 +158,7 @@ void RingOutlierFilterComponent::faster_filter(
         continue;                               // Determined to be included in the same walk
       }
 
-      if (isCluster(input, std::make_pair(indices[walk_first_idx], indices[walk_last_idx]))) {
+      if (is_cluster(input, std::make_pair(indices[walk_first_idx], indices[walk_last_idx]))) {
         for (int i = walk_first_idx; i <= walk_last_idx; i++) {
           auto output_ptr = reinterpret_cast<OutputPointType *>(&output.data[output_size]);
           auto input_ptr = reinterpret_cast<const InputPointType *>(&input->data[indices[i]]);
@@ -202,7 +211,7 @@ void RingOutlierFilterComponent::faster_filter(
 
     if (walk_first_idx > walk_last_idx) continue;
 
-    if (isCluster(input, std::make_pair(indices[walk_first_idx], indices[walk_last_idx]))) {
+    if (is_cluster(input, std::make_pair(indices[walk_first_idx], indices[walk_last_idx]))) {
       for (int i = walk_first_idx; i <= walk_last_idx; i++) {
         auto output_ptr = reinterpret_cast<OutputPointType *>(&output.data[output_size]);
         auto input_ptr = reinterpret_cast<const InputPointType *>(&input->data[indices[i]]);
@@ -249,7 +258,7 @@ void RingOutlierFilterComponent::faster_filter(
     }
   }
 
-  setUpPointCloudFormat(input, output, output_size);
+  set_up_pointcloud_format(input, output, output_size);
 
   if (publish_outlier_pointcloud_) {
     PointCloud2 outlier;
@@ -258,28 +267,62 @@ void RingOutlierFilterComponent::faster_filter(
     outlier_pointcloud_publisher_->publish(outlier);
 
     autoware_internal_debug_msgs::msg::Float32Stamped visibility_msg;
-    visibility_msg.data = calculateVisibilityScore(outlier);
+    visibility_msg.data = calculate_visibility_score(outlier);
     visibility_msg.stamp = input->header.stamp;
     visibility_pub_->publish(visibility_msg);
   }
 
-  // add processing time for debug
+  const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
+  const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
+  const double pipeline_latency_ms =
+    std::chrono::duration<double, std::milli>(
+      std::chrono::nanoseconds((this->get_clock()->now() - input->header.stamp).nanoseconds()))
+      .count();
+
+  // Debug output
   if (debug_publisher_) {
-    const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
-    const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
     debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);
     debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time_ms", processing_time_ms);
-
-    auto pipeline_latency_ms =
-      std::chrono::duration<double, std::milli>(
-        std::chrono::nanoseconds((this->get_clock()->now() - input->header.stamp).nanoseconds()))
-        .count();
-
     debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/pipeline_latency_ms", pipeline_latency_ms);
   }
+
+  auto latency_diagnostics = std::make_shared<LatencyDiagnostics>(
+    input->header.stamp, processing_time_ms, pipeline_latency_ms,
+    processing_time_threshold_sec_ * 1000.0);
+
+  auto pass_rate_diagnostics = std::make_shared<PassRateDiagnostics>(
+    static_cast<int>(input->width * input->height), static_cast<int>(output.width * output.height));
+  publish_diagnostics({latency_diagnostics, pass_rate_diagnostics});
+}
+
+void RingOutlierFilterComponent::publish_diagnostics(
+  const std::vector<std::shared_ptr<const DiagnosticsBase>> & diagnostics)
+{
+  diagnostics_interface_->clear();
+
+  std::string message;
+  int worst_level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+
+  for (const auto & diag : diagnostics) {
+    diag->add_to_interface(*diagnostics_interface_);
+    if (const auto status = diag->evaluate_status(); status.has_value()) {
+      worst_level = std::max(worst_level, status->first);
+      if (!message.empty()) {
+        message += " / ";
+      }
+      message += status->second;
+    }
+  }
+
+  if (message.empty()) {
+    message = "RingOutlierFilter operating normally";
+  }
+
+  diagnostics_interface_->update_level_and_message(static_cast<int8_t>(worst_level), message);
+  diagnostics_interface_->publish(this->get_clock()->now());
 }
 
 // TODO(sykwer): Temporary Implementation: Delete this function definition when all the filter nodes
@@ -293,7 +336,7 @@ void RingOutlierFilterComponent::filter(
   (void)output;
 }
 
-rcl_interfaces::msg::SetParametersResult RingOutlierFilterComponent::paramCallback(
+rcl_interfaces::msg::SetParametersResult RingOutlierFilterComponent::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);
@@ -335,7 +378,7 @@ rcl_interfaces::msg::SetParametersResult RingOutlierFilterComponent::paramCallba
   return result;
 }
 
-void RingOutlierFilterComponent::setUpPointCloudFormat(
+void RingOutlierFilterComponent::set_up_pointcloud_format(
   const PointCloud2ConstPtr & input, PointCloud2 & formatted_points, size_t points_size)
 {
   formatted_points.data.resize(points_size);
@@ -356,8 +399,8 @@ void RingOutlierFilterComponent::setUpPointCloudFormat(
   formatted_points.fields = msg_aux.fields;
 }
 
-float RingOutlierFilterComponent::calculateVisibilityScore(
-  const sensor_msgs::msg::PointCloud2 & input)
+float RingOutlierFilterComponent::calculate_visibility_score(
+  const sensor_msgs::msg::PointCloud2 & input) const
 {
   pcl::PointCloud<InputPointType>::Ptr input_cloud(new pcl::PointCloud<InputPointType>);
   pcl::fromROSMsg(input, *input_cloud);

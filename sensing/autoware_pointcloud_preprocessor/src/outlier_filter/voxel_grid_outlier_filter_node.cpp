@@ -36,7 +36,7 @@ VoxelGridOutlierFilterComponent::VoxelGridOutlierFilterComponent(
 
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
-    std::bind(&VoxelGridOutlierFilterComponent::paramCallback, this, _1));
+    std::bind(&VoxelGridOutlierFilterComponent::param_callback, this, _1));
 }
 void VoxelGridOutlierFilterComponent::filter(
   const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output)
@@ -69,7 +69,7 @@ void VoxelGridOutlierFilterComponent::filter(
   output.header = input->header;
 }
 
-rcl_interfaces::msg::SetParametersResult VoxelGridOutlierFilterComponent::paramCallback(
+rcl_interfaces::msg::SetParametersResult VoxelGridOutlierFilterComponent::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);

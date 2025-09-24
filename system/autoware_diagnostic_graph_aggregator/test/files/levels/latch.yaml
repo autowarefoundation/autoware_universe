@@ -1,0 +1,23 @@
+units:
+  - type: diag
+    path: path0
+    node: dummy
+    name: name0
+
+  - type: diag
+    path: path1
+    node: dummy
+    name: name1
+    latch: 0.0
+
+  - type: diag
+    path: path2
+    node: dummy
+    name: name2
+    latch: 0.2
+
+  - type: diag
+    path: path3
+    node: dummy
+    name: name3
+    latch: 0.4

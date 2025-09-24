@@ -27,19 +27,24 @@ namespace autoware::multi_object_tracker
 {
 namespace shapes
 {
+
+double get1dIoU(
+  const types::DynamicObject & source_object, const types::DynamicObject & target_object);
+
 double get2dIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object,
   const double min_union_area = 0.01);
 
+double get2dGeneralizedIoU(
+  const types::DynamicObject & source_object, const types::DynamicObject & target_object);
+
+bool get2dPrecisionRecallGIoU(
+  const types::DynamicObject & source_object, const types::DynamicObject & target_object,
+  double & precision, double & recall, double & generalized_iou);
+
 bool convertConvexHullToBoundingBox(
   const types::DynamicObject & input_object, types::DynamicObject & output_object);
 
-void getNearestCornerOrSurface(
-  const geometry_msgs::msg::Transform & self_transform, types::DynamicObject & object);
-
-void calcAnchorPointOffset(
-  const types::DynamicObject & this_object, Eigen::Vector2d & tracking_offset,
-  types::DynamicObject & offset_object);
 }  // namespace shapes
 }  // namespace autoware::multi_object_tracker
 

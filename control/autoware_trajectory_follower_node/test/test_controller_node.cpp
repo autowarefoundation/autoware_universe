@@ -142,6 +142,7 @@ public:
     OperationModeState msg;
     msg.stamp = node->now();
     msg.mode = OperationModeState::AUTONOMOUS;
+    msg.is_autoware_control_enabled = true;
     operation_mode_pub->publish(msg);
   };
 
@@ -177,7 +178,9 @@ public:
     fnf->create_publisher<AccelWithCovarianceStamped>("controller/input/current_accel");
 
   rclcpp::Publisher<OperationModeState>::SharedPtr operation_mode_pub =
-    fnf->create_publisher<OperationModeState>("controller/input/current_operation_mode");
+    fnf->create_publisher<OperationModeState>(
+      "controller/input/current_operation_mode", std::chrono::milliseconds{100},
+      rclcpp::QoS(1).transient_local());
 
   rclcpp::Subscription<Control>::SharedPtr cmd_sub = fnf->create_subscription<Control>(
     "controller/output/control_cmd", *fnf->get_fake_node(), [this](const Control::SharedPtr msg) {

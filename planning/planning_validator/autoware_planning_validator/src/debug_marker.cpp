@@ -17,11 +17,32 @@
 #include <autoware/motion_utils/marker/marker_helper.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 
+#include <boost/geometry/algorithms/for_each.hpp>
+#include <boost/geometry/geometries/multi_polygon.hpp>
+
 #include <memory>
 #include <string>
 #include <vector>
 
+namespace autoware::planning_validator
+{
 using visualization_msgs::msg::Marker;
+
+namespace
+{
+std_msgs::msg::ColorRGBA getColorFromId(int id)
+{
+  using autoware_utils::create_marker_color;
+  if (id == 0) {
+    return create_marker_color(1.0, 0.0, 0.0, 0.999);  // Red
+  } else if (id == 1) {
+    return create_marker_color(0.0, 1.0, 0.0, 0.999);  // Green
+  } else if (id == 2) {
+    return create_marker_color(0.0, 0.0, 1.0, 0.999);  // Blue
+  }
+  return create_marker_color(1.0, 1.0, 1.0, 0.999);  // Default White
+}
+}  // namespace
 
 PlanningValidatorDebugMarkerPublisher::PlanningValidatorDebugMarkerPublisher(rclcpp::Node * node)
 : node_(node)
@@ -48,25 +69,9 @@ void PlanningValidatorDebugMarkerPublisher::pushPoseMarker(
 void PlanningValidatorDebugMarkerPublisher::pushPoseMarker(
   const geometry_msgs::msg::Pose & pose, const std::string & ns, int id)
 {
-  using autoware_utils::create_marker_color;
-
-  // append arrow marker
-  std_msgs::msg::ColorRGBA color;
-  if (id == 0)  // Red
-  {
-    color = create_marker_color(1.0, 0.0, 0.0, 0.999);
-  }
-  if (id == 1)  // Green
-  {
-    color = create_marker_color(0.0, 1.0, 0.0, 0.999);
-  }
-  if (id == 2)  // Blue
-  {
-    color = create_marker_color(0.0, 0.0, 1.0, 0.999);
-  }
   Marker marker = autoware_utils::create_default_marker(
     "map", node_->get_clock()->now(), ns, getMarkerId(ns), Marker::ARROW,
-    autoware_utils::create_marker_scale(0.2, 0.1, 0.3), color);
+    autoware_utils::create_marker_scale(0.2, 0.1, 0.3), getColorFromId(id));
   marker.lifetime = rclcpp::Duration::from_seconds(0.2);
   marker.pose = pose;
 
@@ -94,8 +99,22 @@ void PlanningValidatorDebugMarkerPublisher::pushVirtualWall(const geometry_msgs:
   autoware_utils::append_marker_array(stop_wall_marker, &marker_array_virtual_wall_, now);
 }
 
+void PlanningValidatorDebugMarkerPublisher::pushMarker(
+  const visualization_msgs::msg::Marker & marker)
+{
+  marker_array_.markers.push_back(marker);
+}
+
+void PlanningValidatorDebugMarkerPublisher::pushMarkers(
+  const visualization_msgs::msg::MarkerArray & markers)
+{
+  autoware_utils::append_marker_array(markers, &marker_array_);
+}
+
 void PlanningValidatorDebugMarkerPublisher::publish()
 {
   debug_viz_pub_->publish(marker_array_);
   virtual_wall_pub_->publish(marker_array_virtual_wall_);
 }
+
+}  // namespace autoware::planning_validator

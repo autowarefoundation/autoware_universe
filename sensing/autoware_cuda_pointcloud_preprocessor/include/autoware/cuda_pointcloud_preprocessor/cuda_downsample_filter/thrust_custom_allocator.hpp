@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/* *INDENT-OFF* */
 #ifndef AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_DOWNSAMPLE_FILTER__THRUST_CUSTOM_ALLOCATOR_HPP_
 #define AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_DOWNSAMPLE_FILTER__THRUST_CUSTOM_ALLOCATOR_HPP_
 
@@ -61,4 +60,3 @@ private:
 }  // namespace autoware::cuda_pointcloud_preprocessor
 
 #endif  // AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_DOWNSAMPLE_FILTER__THRUST_CUSTOM_ALLOCATOR_HPP_
-/* *INDENT-ON* */
