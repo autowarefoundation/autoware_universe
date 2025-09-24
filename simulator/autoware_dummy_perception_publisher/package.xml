@@ -23,7 +23,8 @@
 
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_trajectory</depend>
-  <depend>autoware_utils</depend>
+  <depend>autoware_utils_geometry</depend>
+  <depend>autoware_utils_rclcpp</depend>
   <depend>autoware_utils_uuid</depend>
   <depend>libpcl-all-dev</depend>
   <depend>pcl_conversions</depend>

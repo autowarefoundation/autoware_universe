@@ -16,6 +16,7 @@
 
 #include "autoware/dummy_perception_publisher/movement_utils.hpp"
 
+#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_rclcpp/parameter.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
 
@@ -28,14 +29,7 @@
 #include <vector>
 namespace autoware::dummy_perception_publisher::pluginlib
 {
-
-double calculate_euclidean_distance(const Point & pos1, const Point & pos2)
-{
-  double dx = pos1.x - pos2.x;
-  double dy = pos1.y - pos2.y;
-  double dz = pos1.z - pos2.z;
-  return std::sqrt(dx * dx + dy * dy + dz * dz);
-}
+using autoware_utils_geometry::calc_distance2d;
 
 void PredictedObjectMovementPlugin::initialize()
 {
@@ -265,7 +259,7 @@ void PredictedObjectMovementPlugin::create_remapping_for_disappeared_objects(
 
     if (best_match) {
       const double distance =
-        calculate_euclidean_distance(remapping_position, predicted_positions.at(*best_match));
+        calc_distance2d(remapping_position, predicted_positions.at(*best_match));
       mapping_candidates.emplace_back(dummy_uuid + ":" + *best_match, distance);
     }
   }
@@ -320,7 +314,7 @@ std::optional<std::string> PredictedObjectMovementPlugin::find_best_predicted_ob
     const PredictedObject & candidate_pred_obj = *pred_obj;
 
     // In case of multiple valid candidates, choose the closest one
-    double distance = calculate_euclidean_distance(dummy_position, pred_pos);
+    double distance = calc_distance2d(dummy_position, pred_pos);
 
     // Check if there is a valid remapping candidate based on position and speed
     if (
@@ -449,7 +443,7 @@ bool PredictedObjectMovementPlugin::is_valid_remapping_candidate(
   // Check position similarity
   const auto & candidate_pos =
     candidate_prediction.kinematics.initial_pose_with_covariance.pose.position;
-  const double distance = calculate_euclidean_distance(comparison_position, candidate_pos);
+  const double distance = calc_distance2d(comparison_position, candidate_pos);
 
   if (distance > max_remapping_distance) {
     RCLCPP_DEBUG(

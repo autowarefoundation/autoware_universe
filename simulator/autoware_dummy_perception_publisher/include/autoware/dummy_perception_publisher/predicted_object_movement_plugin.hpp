@@ -78,8 +78,6 @@ struct PredictedDummyObjectInfo
   std::optional<rclcpp::Time> mapping_timestamp;
 };
 
-double calculate_euclidean_distance(const Point & pos1, const Point & pos2);
-
 // Struct that holds all tracking info, to track multiple NPCs moving using predicted objects'
 // predicted paths
 struct PredictedDummyObjectsTrackingInfo
