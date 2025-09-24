@@ -143,6 +143,7 @@ For example, a rule to consider the light of crosswalk X to be `green` when the 
 ```
 
 Colors `green`, `amber`, `red`, and `white` are currently supported.
+Multiple crosswalk ids can be listed separated by a comma and without any whitespace (e.g., `v="1,2,3"`).
 
 ## Assumptions / Known limits
 
