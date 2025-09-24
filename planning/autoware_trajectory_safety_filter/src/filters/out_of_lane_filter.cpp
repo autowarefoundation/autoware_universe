@@ -59,10 +59,10 @@ bool OutOfLaneFilter::is_feasible(
     if (rclcpp::Duration(point.time_from_start).seconds() > params_.max_check_time) {
       break;
     }
-    const auto nearst_lanelets = lanelet::geometry::findWithin2d(
+    const auto nearest_lanelets = lanelet::geometry::findWithin2d(
       context.lanelet_map->laneletLayer,
       lanelet::BasicPoint2d(point.pose.position.x, point.pose.position.y), 0.0);
-    if (nearst_lanelets.empty()) {
+    if (nearest_lanelets.empty()) {
       return false;
     }
   }

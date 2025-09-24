@@ -153,7 +153,7 @@ void CollisionFilter::set_parameters(const std::unordered_map<std::string, std::
     }
   };
 
-  // Map from parameter structureconst double time_from_start
+  // Map from parameter structure
   get_value("time", params_.max_check_time);
   get_value("min_value", params_.min_ttc);
 }
