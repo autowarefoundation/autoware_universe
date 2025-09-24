@@ -14,6 +14,7 @@
 
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
+#include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
 
 #include <autoware/motion_utils/resample/resample.hpp>
@@ -250,8 +251,8 @@ std::optional<size_t> findIndexOutOfGoalSearchRange(
 // goal does not have z
 bool set_goal(
   const double search_radius_range, [[maybe_unused]] const double search_rad_range,
-  const PathWithLaneId & input, const Pose & goal, const int64_t goal_lane_id,
-  PathWithLaneId * output_ptr)
+  const double output_path_interval, const PathWithLaneId & input, const Pose & goal,
+  const int64_t goal_lane_id, PathWithLaneId * output_ptr)
 {
   try {
     if (input.points.empty()) {
@@ -302,17 +303,6 @@ bool set_goal(
 
     // create output points
     output_ptr->points.reserve(output_ptr->points.size() + min_dist_out_of_circle_index + 5);
-
-    // NOTE: add a point to preserve the initial direction of the path when performing spline
-    // interpolation on short paths.
-    constexpr double goal_to_pre_start_distance = -1.0;
-    PathPointWithLaneId pre_start = input.points.front();
-    pre_start.point.pose =
-      autoware_utils::calc_offset_pose(pre_start.point.pose, goal_to_pre_start_distance, 0.0, 0.0);
-    if (min_dist_out_of_circle_index == 0) {
-      output_ptr->points.push_back(pre_start);
-    }
-
     for (size_t i = 0; i <= min_dist_out_of_circle_index; ++i) {
       output_ptr->points.push_back(input.points.at(i));
     }
@@ -353,6 +343,17 @@ bool set_goal(
 
     output_ptr->left_bound = input.left_bound;
     output_ptr->right_bound = input.right_bound;
+
+    // NOTE: insert one more point before the start point to avoid the unexpected path change
+    PathPointWithLaneId pre_start = output_ptr->points.front();
+    pre_start.point.pose =
+      autoware_utils::calc_offset_pose(pre_start.point.pose, -output_path_interval, 0.0, 0.0);
+    output_ptr->points.insert(output_ptr->points.begin(), pre_start);
+    *output_ptr = utils::resamplePathWithSpline(*output_ptr, output_path_interval, true);
+
+    // NOTE: remove the first point to keep the original path length
+    output_ptr->points.erase(output_ptr->points.begin());
+
     return true;
   } catch (std::out_of_range & ex) {
     RCLCPP_ERROR_STREAM(
@@ -402,8 +403,9 @@ const Pose refineGoal(const Pose & goal, const lanelet::ConstLanelet & goal_lane
 }
 
 PathWithLaneId refinePathForGoal(
-  const double search_radius_range, const double search_rad_range, const PathWithLaneId & input,
-  const Pose & goal, const int64_t goal_lane_id)
+  const double search_radius_range, const double search_rad_range,
+  const double output_path_interval, const PathWithLaneId & input, const Pose & goal,
+  const int64_t goal_lane_id)
 {
   PathWithLaneId filtered_path = input;
   PathWithLaneId path_with_goal;
@@ -415,8 +417,8 @@ PathWithLaneId refinePathForGoal(
   }
 
   if (set_goal(
-        search_radius_range, search_rad_range, filtered_path, goal, goal_lane_id,
-        &path_with_goal)) {
+        search_radius_range, search_rad_range, output_path_interval, filtered_path, goal,
+        goal_lane_id, &path_with_goal)) {
     return path_with_goal;
   }
   return filtered_path;
