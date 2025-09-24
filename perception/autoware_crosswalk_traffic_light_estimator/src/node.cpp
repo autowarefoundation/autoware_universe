@@ -1,4 +1,4 @@
-// Copyright 2022-2023 UCI SORA Lab, TIER IV, Inc.
+// Copyright 2022-2025 UCI SORA Lab, TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -126,9 +126,9 @@ std::optional<std::pair<uint8_t, uint8_t>> parse_signal_estimation_rules(std::st
   return std::nullopt;
 }
 
-/// @brief parse the input string and extract the crosswalk ids
+/// @brief extract ids from the input string
 /// @details the string is expected to have format "id1,id2,...", without any space
-lanelet::Ids parse_crosswalk_ids(std::string_view input)
+lanelet::Ids parse_ids(std::string_view input)
 {
   lanelet::Ids ids;
   if (input.empty()) {
@@ -232,7 +232,7 @@ void CrosswalkTrafficLightEstimatorNode::onRoute(const LaneletRoute::ConstShared
 }
 
 void CrosswalkTrafficLightEstimatorNode::update_crosswalk_overrides_from_map(
-  std::unordered_map<lanelet::Id, uint8_t> crosswalk_traffic_signal_overrides,
+  std::unordered_map<lanelet::Id, uint8_t> & crosswalk_traffic_signal_overrides,
   const lanelet::Id traffic_light_group_id, const TrafficLightIdMap & traffic_light_id_map)
 {
   const auto traffic_light_it =
@@ -255,8 +255,8 @@ void CrosswalkTrafficLightEstimatorNode::update_crosswalk_overrides_from_map(
     if (from_color != current_vehicle_traffic_light_color) {
       continue;
     }
-    for (const auto crosswalk_id : parse_crosswalk_ids(attribute.second.value())) {
-      crosswalk_traffic_signal_overrides[crosswalk_id] = to_color;
+    for (const auto id : parse_ids(attribute.second.value())) {
+      crosswalk_traffic_signal_overrides[id] = to_color;
     }
   }
 }
@@ -275,8 +275,8 @@ void CrosswalkTrafficLightEstimatorNode::onTrafficLightArray(
   TrafficSignalArray output = *msg;
 
   TrafficLightIdMap traffic_light_id_map;
-  std::unordered_map<lanelet::Id, uint8_t> crosswalk_traffic_signal_overrides;
 
+  std::unordered_map<lanelet::Id, uint8_t> crosswalk_traffic_signal_overrides;
   for (const auto & traffic_signal : msg->traffic_light_groups) {
     traffic_light_id_map[traffic_signal.traffic_light_group_id] =
       std::pair<TrafficSignal, rclcpp::Time>(traffic_signal, get_clock()->now());
@@ -286,18 +286,13 @@ void CrosswalkTrafficLightEstimatorNode::onTrafficLightArray(
   }
 
   for (const auto & crosswalk : conflicting_crosswalks_) {
-    const auto override = crosswalk_traffic_signal_overrides.find(crosswalk.id());
-    if (override != crosswalk_traffic_signal_overrides.end()) {
-      setCrosswalkTrafficSignal(crosswalk, override->second, *msg, output);
-    } else {
-      constexpr int VEHICLE_GRAPH_ID = 0;
-      const auto conflict_lls =
-        overall_graphs_ptr_->conflictingInGraph(crosswalk, VEHICLE_GRAPH_ID);
-      const auto non_red_lanelets = getNonRedLanelets(conflict_lls, traffic_light_id_map);
+    constexpr int VEHICLE_GRAPH_ID = 0;
+    const auto conflict_lls = overall_graphs_ptr_->conflictingInGraph(crosswalk, VEHICLE_GRAPH_ID);
+    const auto non_red_lanelets = getNonRedLanelets(conflict_lls, traffic_light_id_map);
 
-      const auto crosswalk_tl_color = estimateCrosswalkTrafficSignal(crosswalk, non_red_lanelets);
-      setCrosswalkTrafficSignal(crosswalk, crosswalk_tl_color, *msg, output);
-    }
+    const auto crosswalk_tl_color = estimateCrosswalkTrafficSignal(crosswalk, non_red_lanelets);
+    setCrosswalkTrafficSignal(
+      crosswalk, crosswalk_tl_color, *msg, output, crosswalk_traffic_signal_overrides);
   }
 
   removeDuplicateIds(output);
@@ -405,7 +400,8 @@ void CrosswalkTrafficLightEstimatorNode::updateLastDetectedSignals(
 
 void CrosswalkTrafficLightEstimatorNode::setCrosswalkTrafficSignal(
   const lanelet::ConstLanelet & crosswalk, const uint8_t color, const TrafficSignalArray & msg,
-  TrafficSignalArray & output)
+  TrafficSignalArray & output,
+  const std::unordered_map<lanelet::Id, uint8_t> & crosswalk_traffic_signal_overrides)
 {
   const auto tl_reg_elems = crosswalk.regulatoryElementsAs<const lanelet::TrafficLight>();
 
@@ -416,17 +412,26 @@ void CrosswalkTrafficLightEstimatorNode::setCrosswalkTrafficSignal(
     valid_id2idx_map[signal.traffic_light_group_id] = i;
   }
 
+  TrafficSignalElement base_traffic_signal_element;
+  base_traffic_signal_element.color = color;
+  base_traffic_signal_element.shape = TrafficSignalElement::CIRCLE;
+  base_traffic_signal_element.confidence = 1.0;
+
   for (const auto & tl_reg_elem : tl_reg_elems) {
     auto id = tl_reg_elem->id();
-    if (valid_id2idx_map.count(id)) {
+    if (crosswalk_traffic_signal_overrides.count(id)) {
+      TrafficSignal output_traffic_signal;
+      TrafficSignalElement output_traffic_signal_element = base_traffic_signal_element;
+      output_traffic_signal_element.color = crosswalk_traffic_signal_overrides.at(id);
+      output_traffic_signal.elements.push_back(output_traffic_signal_element);
+      output_traffic_signal.traffic_light_group_id = id;
+      output.traffic_light_groups.push_back(output_traffic_signal);
+    } else if (valid_id2idx_map.count(id)) {
       size_t idx = valid_id2idx_map[id];
       auto signal = msg.traffic_light_groups[idx];
       // if invalid perception result exists or disable camera recognition, overwrite the estimation
-      if (use_pedestrian_signal_detect_ == false || isInvalidDetectionStatus(signal)) {
-        TrafficSignalElement output_traffic_signal_element;
-        output_traffic_signal_element.color = color;
-        output_traffic_signal_element.shape = TrafficSignalElement::CIRCLE;
-        output_traffic_signal_element.confidence = 1.0;
+      if (!use_pedestrian_signal_detect_ || isInvalidDetectionStatus(signal)) {
+        TrafficSignalElement output_traffic_signal_element = base_traffic_signal_element;
         output.traffic_light_groups[idx].elements.clear();
         output.traffic_light_groups[idx].elements.push_back(output_traffic_signal_element);
         continue;
@@ -437,10 +442,7 @@ void CrosswalkTrafficLightEstimatorNode::setCrosswalkTrafficSignal(
     } else {
       // if perception result does not exist, add it estimated by vehicle traffic signals
       TrafficSignal output_traffic_signal;
-      TrafficSignalElement output_traffic_signal_element;
-      output_traffic_signal_element.color = color;
-      output_traffic_signal_element.shape = TrafficSignalElement::CIRCLE;
-      output_traffic_signal_element.confidence = 1.0;
+      TrafficSignalElement output_traffic_signal_element = base_traffic_signal_element;
       output_traffic_signal.elements.push_back(output_traffic_signal_element);
       output_traffic_signal.traffic_light_group_id = id;
       output.traffic_light_groups.push_back(output_traffic_signal);
