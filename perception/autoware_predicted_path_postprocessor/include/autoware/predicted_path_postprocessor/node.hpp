@@ -15,7 +15,6 @@
 #ifndef AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__NODE_HPP_
 #define AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__NODE_HPP_
 
-#include "autoware/predicted_path_postprocessor/debug/intermediate_publisher.hpp"
 #include "autoware/predicted_path_postprocessor/processor/composable.hpp"
 #include "autoware/predicted_path_postprocessor/processor/interface.hpp"
 
@@ -61,12 +60,12 @@ private:
   //!< @brief Processor for predicted objects message
   std::unique_ptr<processor::ComposableProcessor> processor_;
 
-  //!< @brief Publisher for intermediate predicted objects message
-  std::unique_ptr<debug::IntermediatePublisher> intermediate_publisher_;
-
   //!< @brief Processing time measurement
   std::unique_ptr<autoware_utils_system::StopWatch<std::chrono::milliseconds>> stopwatch_;
   std::unique_ptr<autoware_utils_debug::DebugPublisher> debug_publisher_;
+
+  //!< @brief Whether to publish intermediate results for debugging
+  bool debug_;
 };
 }  // namespace autoware::predicted_path_postprocessor
 
