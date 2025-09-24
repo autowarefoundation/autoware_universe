@@ -1,8 +1,8 @@
 <launch>
   <arg name="enable_all_modules_auto_mode"/>
   <arg name="is_simulation"/>
-  <arg name="input_objects_topic_name" default="/perception/object_recognition/objects"/>
-  <arg name="input_pointcloud_topic_name" default="/perception/obstacle_segmentation/pointcloud"/>
+  <arg name="input_objects_topic_name"/>
+  <arg name="input_pointcloud_topic_name"/>
 
   <!-- lane_driving scenario -->
   <group>
