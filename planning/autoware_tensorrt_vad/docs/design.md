@@ -9,6 +9,13 @@ This document explains the key design concepts of `autoware_tensorrt_vad`.
 - [Extensible design for Autoware `camera_id` changes](#extensible-design-for-autoware-camera_id-changes)
   - Even if the front camera ID changes from `0` to `1`, it can be handled through parameter changes without major design modifications
 
+- Key design concepts for important classes are documented separately:
+  - [VadNode](./design_vad_node.md)
+  - [VadInterface](./design_vad_interface.md)
+  - [VadModel](./design_vad_model.md)
+- Additional design considerations that affect the overall system are documented [here](#additional-design-considerations)
+- Coding standards are documented [here](#coding-standards)
+
 ## Separation between ROS and CUDA domains
 
 `autoware_tensorrt_vad` is clearly separated into two domains: the "ROS/Autoware domain" (`VadNode`) and the "CUDA domain" (`VadModel`).
@@ -179,3 +186,15 @@ flowchart TD
 #### When camera image ID used for VAD input is changed
 
 - Modify `autoware_to_vad_camera_mapping` in the ROS param file ([`ml_package_vad_tiny.param.yaml`](../config/ml_package_vad_tiny.param.yaml))
+
+## Additional Design Considerations
+
+This section contains design concepts that affect the overall system but are not significant enough to warrant separate documentation pages.
+
+- Data types (e.g. `VadInputData`) are declared collectively in `data_types.hpp`
+
+## Coding Standards
+
+- Do not use `int`. Use `int32_t` instead.
+- Do not use `char` solely to indicate 1-byte data. Use `uint8_t` instead.
+- Do not use `printf` or `cout`. Use `RCLCPP_INFO_THROTTLE`, `RCLCPP_DEBUG_THROTTLE` and `RCLCPP_ERROR_THROTTLE` instead.
