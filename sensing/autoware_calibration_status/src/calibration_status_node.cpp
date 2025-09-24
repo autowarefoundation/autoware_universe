@@ -379,6 +379,13 @@ void CalibrationStatusNode::publish_diagnostic_status(
   status.hardware_id = this->get_name();
   auto now = this->get_clock()->now();
 
+  auto add_kv = [&status](const std::string & key, const std::string & value) {
+    diagnostic_msgs::msg::KeyValue kv;
+    kv.key = key;
+    kv.value = value;
+    status.values.push_back(kv);
+  };
+
   auto is_calibrated =
     (result.calibration_confidence >
      result.miscalibration_confidence + miscalibration_confidence_threshold_);
@@ -396,74 +403,40 @@ void CalibrationStatusNode::publish_diagnostic_status(
     status.message = "Calibration is invalid.";
   }
 
-  diagnostic_msgs::msg::KeyValue key_value;
-  key_value.key = "Source image topic";
-  key_value.value = camera_lidar_in_out_info_.at(pair_idx).camera_topic;
-  status.values.push_back(key_value);
-  key_value.key = "Source image frame";
-  key_value.value = camera_lidar_info_.at(pair_idx).camera_frame_id;
-  status.values.push_back(key_value);
-  key_value.key = "Source point cloud topic";
-  key_value.value = camera_lidar_in_out_info_.at(pair_idx).lidar_topic;
-  status.values.push_back(key_value);
-  key_value.key = "Source point cloud frame";
-  key_value.value = camera_lidar_info_.at(pair_idx).lidar_frame_id;
-  status.values.push_back(key_value);
-  key_value.key = "Point cloud and image time difference (ms)";
-  key_value.value = std::to_string(
-    std::abs((input_metadata.cloud_stamp - input_metadata.image_stamp).seconds()) * 1e3);
-  status.values.push_back(key_value);
-  key_value.key = "Is velocity check activated";
-  key_value.value = input_metadata.velocity_filter_status.is_activated ? "True" : "False";
-  status.values.push_back(key_value);
-  key_value.key = "Current velocity";
-  key_value.value = std::to_string(input_metadata.velocity_filter_status.current_state);
-  status.values.push_back(key_value);
-  key_value.key = "Velocity threshold";
-  key_value.value = std::to_string(velocity_threshold_);
-  status.values.push_back(key_value);
-  key_value.key = "Miscalibration confidence threshold";
-  key_value.value = std::to_string(miscalibration_confidence_threshold_);
-  status.values.push_back(key_value);
-  key_value.key = "Is vehicle moving";
-  key_value.value = input_metadata.velocity_filter_status.is_threshold_met ? "True" : "False";
-  status.values.push_back(key_value);
-  key_value.key = "Velocity age (ms)";
-  key_value.value = std::to_string(input_metadata.velocity_filter_status.state_age * 1e3);
-  status.values.push_back(key_value);
-  key_value.key = "Is object count check activated";
-  key_value.value = input_metadata.objects_filter_status.is_activated ? "True" : "False";
-  status.values.push_back(key_value);
-  key_value.key = "Current object count";
-  key_value.value = std::to_string(input_metadata.objects_filter_status.current_state);
-  status.values.push_back(key_value);
-  key_value.key = "Object count threshold";
-  key_value.value = std::to_string(objects_limit_);
-  status.values.push_back(key_value);
-  key_value.key = "Is object count limit exceeded";
-  key_value.value = input_metadata.objects_filter_status.is_threshold_met ? "True" : "False";
-  status.values.push_back(key_value);
-  key_value.key = "Object count age (ms)";
-  key_value.value = std::to_string(input_metadata.objects_filter_status.state_age * 1e3);
-  status.values.push_back(key_value);
-  key_value.key = "Is calibrated";
-  key_value.value = is_calibrated ? "True" : "False";
-  status.values.push_back(key_value);
-  key_value.key = "Calibration confidence";
-  key_value.value = std::to_string(result.calibration_confidence);
-  status.values.push_back(key_value);
-  key_value.key = "Miscalibration confidence";
-  key_value.value = std::to_string(result.miscalibration_confidence);
-  status.values.push_back(key_value);
-  key_value.key = "Preprocessing time (ms)";
-  key_value.value = std::to_string(result.preprocessing_time_ms);
-  status.values.push_back(key_value);
-  key_value.key = "Inference time (ms)";
-  key_value.value = std::to_string(result.inference_time_ms);
-  status.values.push_back(key_value);
-  key_value.key = "Number of points projected";
-  key_value.value = std::to_string(result.num_points_projected);
-  status.values.push_back(key_value);
+  add_kv("Source image topic", camera_lidar_in_out_info_.at(pair_idx).camera_topic);
+  add_kv("Source image frame", camera_lidar_info_.at(pair_idx).camera_frame_id);
+  add_kv("Source point cloud topic", camera_lidar_in_out_info_.at(pair_idx).lidar_topic);
+  add_kv("Source point cloud frame", camera_lidar_info_.at(pair_idx).lidar_frame_id);
+  add_kv(
+    "Point cloud and image time difference (ms)",
+    std::to_string(
+      std::abs((input_metadata.cloud_stamp - input_metadata.image_stamp).seconds()) * 1e3));
+  add_kv(
+    "Is velocity check activated",
+    input_metadata.velocity_filter_status.is_activated ? "True" : "False");
+  add_kv("Current velocity", std::to_string(input_metadata.velocity_filter_status.current_state));
+  add_kv("Velocity threshold", std::to_string(velocity_threshold_));
+  add_kv(
+    "Is vehicle moving", input_metadata.velocity_filter_status.is_threshold_met ? "True" : "False");
+  add_kv(
+    "Velocity age (ms)", std::to_string(input_metadata.velocity_filter_status.state_age * 1e3));
+  add_kv(
+    "Is object count check activated",
+    input_metadata.objects_filter_status.is_activated ? "True" : "False");
+  add_kv(
+    "Current object count", std::to_string(input_metadata.objects_filter_status.current_state));
+  add_kv("Object count threshold", std::to_string(objects_limit_));
+  add_kv(
+    "Is object count limit exceeded",
+    input_metadata.objects_filter_status.is_threshold_met ? "True" : "False");
+  add_kv(
+    "Object count age (ms)", std::to_string(input_metadata.objects_filter_status.state_age * 1e3));
+  add_kv("Is calibrated", is_calibrated ? "True" : "False");
+  add_kv("Calibration confidence", std::to_string(result.calibration_confidence));
+  add_kv("Miscalibration confidence", std::to_string(result.miscalibration_confidence));
+  add_kv("Preprocessing time (ms)", std::to_string(result.preprocessing_time_ms));
+  add_kv("Inference time (ms)", std::to_string(result.inference_time_ms));
+  add_kv("Number of points projected", std::to_string(result.num_points_projected));
 
   diagnostic_msgs::msg::DiagnosticArray diagnostic_array;
   diagnostic_array.header.stamp = input_metadata.common_stamp;
