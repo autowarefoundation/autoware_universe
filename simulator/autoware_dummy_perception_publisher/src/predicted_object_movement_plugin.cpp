@@ -585,7 +585,7 @@ std::optional<geometry_msgs::msg::Point> PredictedObjectMovementPlugin::calculat
       (distance_traveled - segment_start_distance) / segment_length;
 
     const auto & start_pose = selected_path.path.at(i - 1);
-    const auto & end_pose = selected_path.path.at(1);
+    const auto & end_pose = selected_path.path.at(i);
 
     expected_position.x =
       start_pose.position.x + interpolation_factor * (end_pose.position.x - start_pose.position.x);
