@@ -19,10 +19,13 @@
 #include "autoware/predicted_path_postprocessor/processor/composable.hpp"
 #include "autoware/predicted_path_postprocessor/processor/interface.hpp"
 
+#include <autoware_utils_debug/debug_publisher.hpp>
+#include <autoware_utils_system/stop_watch.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <vector>
@@ -60,6 +63,10 @@ private:
 
   //!< @brief Publisher for intermediate predicted objects message
   std::unique_ptr<debug::IntermediatePublisher> intermediate_publisher_;
+
+  //!< @brief Processing time measurement
+  std::unique_ptr<autoware_utils_system::StopWatch<std::chrono::milliseconds>> stopwatch_;
+  std::unique_ptr<autoware_utils_debug::DebugPublisher> debug_publisher_;
 };
 }  // namespace autoware::predicted_path_postprocessor
 
