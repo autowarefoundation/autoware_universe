@@ -31,7 +31,6 @@
 #include <tf2/convert.h>
 #include <tf2/transform_datatypes.h>
 
-#include <optional>
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #else
@@ -40,8 +39,6 @@
 
 #include "autoware/dummy_perception_publisher/dummy_object_movement_base_plugin.hpp"
 #include "autoware/dummy_perception_publisher/object_info.hpp"
-#include "autoware/dummy_perception_publisher/predicted_object_movement_plugin.hpp"
-#include "autoware/dummy_perception_publisher/straight_line_object_movement_plugin.hpp"
 
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
