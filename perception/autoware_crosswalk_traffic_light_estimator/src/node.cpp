@@ -220,7 +220,7 @@ lanelet::Ids parse_crosswalk_ids(std::string_view input)
     }
     start = end + 1;
   }
-  const auto [_, err] = std::from_chars(input.data() + start, input.data() + end, id);
+  const auto [_, err] = std::from_chars(input.data() + start, input.data() + input.size(), id);
   if (err == std::errc()) {
     ids.push_back(id);
   }
