@@ -2,6 +2,25 @@
 
 This document explains the key design concepts of `autoware_tensorrt_vad`.
 
+## Context and scope
+
+While designing perception and planning as loosely coupled components enables easy construction of stable autonomous vehicles, the following challenges exist:
+
+- The interface design between perception and planning architectures constrains the amount of information that can be passed from perception to planning.
+  - e.g. If planning component wants to handle a pedestrian walking while using a smartphone, the interface must be designed to pass information like "this pedestrian is using a smartphone while walking" from perception to planning.
+
+In recent years, approaches have been proposed to address these challenges by training sensor input planners (also known as E2E) with large amounts of data. Assuming that users who want to use sensor input planners (also known as E2E) exist in Autoware, we add the ROS Node for [VAD: Vectorized Scene Representation for Efficient Autonomous Driving](https://arxiv.org/abs/2303.12077), which is one of the E2E methods.
+
+## Goals and Non-goals
+
+- Goals
+  - Enable users who want to use sensor input planner (also known as E2E) to easily integrate with Autoware
+
+- Non-goals
+  - Create the ROS Node that can only be used with specific sensors or vehicles and cannot be used with others
+
+## Concepts
+
 - [Separation between ROS and CUDA domains](#separation-between-ros-and-cuda-domains)
   - Changes to ROS topic types do not affect CUDA implementations
   - Changes to CUDA versions or interfaces do not affect ROS Nodes
@@ -16,7 +35,7 @@ This document explains the key design concepts of `autoware_tensorrt_vad`.
 - Additional design considerations that affect the overall system are documented [here](#additional-design-considerations)
 - Coding standards are documented [here](#coding-standards)
 
-## Separation between ROS and CUDA domains
+### Separation between ROS and CUDA domains
 
 `autoware_tensorrt_vad` is clearly separated into two domains: the "ROS/Autoware domain" (`VadNode`) and the "CUDA domain" (`VadModel`).
 
@@ -47,7 +66,7 @@ The interface (`VadInterface`) bridges the ROS domain (`VadNode`) and CUDA domai
 
 ---
 
-### Dependency Graph
+#### Dependency Graph
 
 ```mermaid
 graph TD
@@ -95,7 +114,7 @@ This dependency structure allows `VadInterface` to function as a buffer between 
 
 ---
 
-### Processing Flow Diagram
+#### Processing Flow Diagram
 
 ```mermaid
 flowchart TD
@@ -149,9 +168,9 @@ flowchart TD
 
 ---
 
-### Expected Use Cases
+#### Expected Use Cases
 
-#### Adding new input to VAD
+##### Adding new input to VAD
 
 - Add new input to `VadModel` by retraining ONNX
 - Modify `VadNode` to subscribe to new topic
@@ -159,7 +178,7 @@ flowchart TD
 - Modify input conversion processing in `VadInterface`
 - Add member to `VadInputData`
 
-## Separation between ONNX-dependent and ONNX-independent ROS parameters
+### Separation between ONNX-dependent and ONNX-independent ROS parameters
 
 - ONNX-dependent parameters are added to [`ml_package_vad_tiny.param.yaml`](../config/ml_package_vad_tiny.param.yaml)
 - ONNX-independent ROS parameters are added to [`vad_tiny.param.yaml`](../config/vad_tiny.param.yaml)
@@ -167,33 +186,33 @@ flowchart TD
     - Following the precedent of [`autoware_bevfusion`](../../../perception/autoware_bevfusion/README.md)
 - Some parameters like `autoware_to_vad_camera_mapping` depend on both ONNX and ROS Node. If a parameter **could affect ONNX**, it is added to [`ml_package_vad_tiny.param.yaml`](../config/ml_package_vad_tiny.param.yaml)
 
-### Expected Use Cases
+#### Expected Use Cases
 
 | Use Case | vad_tiny.param.yaml | ml_package_vad_tiny.param.yaml | object_class_remapper.param.yaml |
 |----------|---------------------|------------------------------|--------------------------------|
 | ONNX-dependent changes | Modify | Do not modify | Modify only when VAD ONNX output class definitions change |
 | ONNX-independent changes | Do not modify | Modify | Modify only when object class definitions in Autoware change |
 
-## Extensible design for Autoware `camera_id` changes
+### Extensible design for Autoware `camera_id` changes
 
 - The design is extensible for changes to `camera_id` used in Autoware
 - `camera_id` used in Autoware only affects `VadInterface`
   - It does not affect `VadInputData` or `VadModel`
 - Camera ID changes can be handled by modifying only `autoware_to_vad_camera_mapping`
 
-### Expected Use Cases
+#### Expected Use Cases
 
-#### When camera image ID used for VAD input is changed
+##### When camera image ID used for VAD input is changed
 
 - Modify `autoware_to_vad_camera_mapping` in the ROS param file ([`ml_package_vad_tiny.param.yaml`](../config/ml_package_vad_tiny.param.yaml))
 
-## Additional Design Considerations
+### Additional Design Considerations
 
 This section contains design concepts that affect the overall system but are not significant enough to warrant separate documentation pages.
 
 - Data types (e.g. `VadInputData`) are declared collectively in `data_types.hpp`
 
-## Coding Standards
+### Coding Standards
 
 - Do not use `int`. Use `int32_t` instead.
 - Do not use `char` solely to indicate 1-byte data. Use `uint8_t` instead.
