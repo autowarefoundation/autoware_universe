@@ -76,6 +76,7 @@ The shape fitting algorithm pipeline consists of following three stages.
 3. Corrector
 
     - **Reference Information-based Correction**:
+
         - Orientation correction using reference yaw information
         - Dimension correction using reference shape size (minimum/fixed value modes)
 
@@ -83,15 +84,11 @@ The shape fitting algorithm pipeline consists of following three stages.
 
         - **Purpose**: Rule-based bounding box correction using default vehicle dimensions when estimated shapes violate physical constraints
 
-          - **Corner Point Analysis**:
-              - Calculates 4 corner points: (0)front, (1)left, (2)rear, (3)right relative to vehicle center
-              - Ranks corners by distance from base_link: 1st, 2nd, 3rd most distant
-          - **Multi-case Correction Logic**:
-              - **Constraint Validation**: Uses min/max length/width parameters for physical feasibility checks
-
         - **Correction Vector Application**:
 
-            - Computes correction vector based on constraint violations
+            - Computes correction vector based on conditions by correctWithDefaultValue Function
+              - ![correctWithDefaultValueFunction](resource/correctWithDefaultValue.svg)
+
             - Updates shape dimensions: `shape.dimensions += correction_vector * 2.0`
             - Adjusts pose position: `pose.position += rotation_matrix * correction_vector`
 
