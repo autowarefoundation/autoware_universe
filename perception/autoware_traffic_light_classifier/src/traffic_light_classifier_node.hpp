@@ -16,6 +16,7 @@
 #define TRAFFIC_LIGHT_CLASSIFIER_NODE_HPP_
 
 #include "classifier/classifier_interface.hpp"
+#include "traffic_light_classifier_process.hpp"
 
 #include <image_transport/image_transport.hpp>
 #include <image_transport/subscriber_filter.hpp>
@@ -94,7 +95,6 @@ private:
     diagnostics_interface_ptr_;  //!< Diagnostic handler.
 
   double backlight_threshold_;
-  bool is_harsh_backlight(const cv::Mat & img) const;
 };
 
 }  // namespace autoware::traffic_light

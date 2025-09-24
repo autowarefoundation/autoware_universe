@@ -14,12 +14,14 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>wget</buildtool_depend>
 
+  <build_depend>ament_cmake_gtest</build_depend>
   <build_depend>autoware_cmake</build_depend>
 
   <depend>autoware_cuda_dependency_meta</depend>
   <depend>autoware_cuda_utils</depend>
   <depend>autoware_tensorrt_classifier</depend>
   <depend>autoware_tensorrt_common</depend>
+  <depend>autoware_traffic_light_utils</depend>
   <depend>autoware_utils</depend>
   <depend>cv_bridge</depend>
   <depend>image_transport</depend>
