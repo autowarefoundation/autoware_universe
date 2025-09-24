@@ -118,10 +118,10 @@ TEST_F(TestShiftPullOut, GenerateValidShiftPullOutPath)
     if (result.has_value() && !result->partial_paths.empty()) {
       StartPlannerTestHelper::plot_and_save_path(
         result->partial_paths, planner_data, vehicle_info_, PlannerType::SHIFT, plot_filename);
-    }
-    else {
+    } else {
       StartPlannerTestHelper::plot_and_save_path(
-        route, start_pose, goal_pose, planner_data, vehicle_info_, PlannerType::SHIFT, plot_filename);
+        route, start_pose, goal_pose, planner_data, vehicle_info_, PlannerType::SHIFT,
+        plot_filename);
     }
 #endif
   }

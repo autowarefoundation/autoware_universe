@@ -344,8 +344,7 @@ void StartPlannerTestHelper::plot_and_save_path(
 
 void StartPlannerTestHelper::plot_and_save_path(
   const autoware_planning_msgs::msg::LaneletRoute & route,
-  const geometry_msgs::msg::Pose & start_pose, 
-  const geometry_msgs::msg::Pose & goal_pose,
+  const geometry_msgs::msg::Pose & start_pose, const geometry_msgs::msg::Pose & goal_pose,
   const std::shared_ptr<PlannerData> & planner_data,
   const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const PlannerType planner_type,
   const std::string & filename)
@@ -384,8 +383,8 @@ void StartPlannerTestHelper::plot_and_save_path(
 
   // Get lanelets from start and goal poses
   for (const auto & pose : {start_pose, goal_pose}) {
-    const auto lane_ids = start_planner_utils::get_lane_ids_from_pose(
-      pose, all_lanelets, std::vector<int64_t>{});
+    const auto lane_ids =
+      start_planner_utils::get_lane_ids_from_pose(pose, all_lanelets, std::vector<int64_t>{});
 
     for (const auto & lane_id : lane_ids) {
       if (added_lanelet_ids.find(lane_id) == added_lanelet_ids.end()) {
