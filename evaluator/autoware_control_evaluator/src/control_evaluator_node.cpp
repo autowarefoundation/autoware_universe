@@ -353,7 +353,7 @@ void ControlEvaluatorNode::AddKinematicStateMetricMsg(
   const auto & acc = accel_stamped.accel.accel.linear.x;
   const auto & lateral_acc = std::abs(accel_stamped.accel.accel.linear.y);
   AddMetricMsg(Metric::acceleration, acc);
-  AddMetricMsg(Metric::lateral_acceleration, lateral_acc);
+  AddMetricMsg(Metric::lateral_acceleration_abs, lateral_acc);
 
   const auto jerk = [&]() {
     if (!prev_acc_stamped_.has_value()) {

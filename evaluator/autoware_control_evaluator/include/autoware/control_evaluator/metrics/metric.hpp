@@ -28,7 +28,7 @@ namespace control_diagnostics
 enum class Metric {
   velocity,
   acceleration,
-  lateral_acceleration,
+  lateral_acceleration_abs,
   jerk,
   lateral_deviation,
   lateral_deviation_abs,
@@ -58,7 +58,7 @@ enum class Metric {
 static const std::unordered_map<std::string, Metric> str_to_metric = {
   {"velocity", Metric::velocity},
   {"acceleration", Metric::acceleration},
-  {"lateral_acceleration", Metric::lateral_acceleration},
+  {"lateral_acceleration_abs", Metric::lateral_acceleration_abs},
   {"jerk", Metric::jerk},
   {"lateral_deviation", Metric::lateral_deviation},
   {"lateral_deviation_abs", Metric::lateral_deviation_abs},
@@ -87,7 +87,7 @@ static const std::unordered_map<std::string, Metric> str_to_metric = {
 static const std::unordered_map<Metric, std::string> metric_to_str = {
   {Metric::velocity, "velocity"},
   {Metric::acceleration, "acceleration"},
-  {Metric::lateral_acceleration, "lateral_acceleration"},
+  {Metric::lateral_acceleration_abs, "lateral_acceleration_abs"},
   {Metric::jerk, "jerk"},
   {Metric::lateral_deviation, "lateral_deviation"},
   {Metric::lateral_deviation_abs, "lateral_deviation_abs"},
@@ -117,7 +117,7 @@ static const std::unordered_map<Metric, std::string> metric_to_str = {
 static const std::unordered_map<Metric, std::string> metric_descriptions = {
   {Metric::velocity, "Velocity[m/s]"},
   {Metric::acceleration, "Acceleration[m/s^2]"},
-  {Metric::lateral_acceleration, "Lateral acceleration[m/s^2]"},
+  {Metric::lateral_acceleration_abs, "Absolute lateral acceleration[m/s^2]"},
   {Metric::jerk, "Jerk[m/s^3]"},
   {Metric::lateral_deviation,
    "Lateral deviation from the reference trajectory[m], positive value means the ego is on the "

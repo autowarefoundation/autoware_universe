@@ -135,7 +135,7 @@ private:
     // collect all metrics
     Metric::velocity,
     Metric::acceleration,
-    Metric::lateral_acceleration,
+    Metric::lateral_acceleration_abs,
     Metric::jerk,
     Metric::lateral_deviation,
     Metric::lateral_deviation_abs,
