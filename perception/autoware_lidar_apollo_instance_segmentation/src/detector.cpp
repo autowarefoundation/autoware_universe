@@ -38,15 +38,15 @@ LidarApolloInstanceSegmentation::LidarApolloInstanceSegmentation(rclcpp::Node * 
   int range, width, height;
   bool use_intensity_feature, use_constant_feature;
   std::string onnx_file;
-  score_threshold_ = node_->declare_parameter("score_threshold", 0.8);
-  range = node_->declare_parameter("range", 60);
-  width = node_->declare_parameter("width", 640);
-  height = node_->declare_parameter("height", 640);
+  score_threshold_ = node_->declare_parameter<double>("score_threshold");
+  range = node_->declare_parameter<int>("range");
+  width = node_->declare_parameter<int>("width");
+  height = node_->declare_parameter<int>("height");
   onnx_file = node_->declare_parameter("onnx_file", "vls-128.onnx");
-  use_intensity_feature = node_->declare_parameter("use_intensity_feature", true);
-  use_constant_feature = node_->declare_parameter("use_constant_feature", true);
+  use_intensity_feature = node_->declare_parameter<bool>("use_intensity_feature");
+  use_constant_feature = node_->declare_parameter<bool>("use_constant_feature");
   target_frame_ = node_->declare_parameter("target_frame", "base_link");
-  z_offset_ = node_->declare_parameter<float>("z_offset", -2.0);
+  z_offset_ = node_->declare_parameter<float>("z_offset");
   const auto precision = node_->declare_parameter("precision", "fp32");
 
   trt_common_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
