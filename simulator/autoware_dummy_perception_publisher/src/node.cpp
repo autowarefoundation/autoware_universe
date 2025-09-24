@@ -154,16 +154,13 @@ void DummyPerceptionPublisherNode::timerCallback()
   std::vector<size_t> selected_indices{};
   static std::uniform_real_distribution<> detection_successful_random(0.0, 1.0);
 
-  // merge objects
+  // merge objects and get object infos
   std::vector<DummyObject> all_objects;
+  std::vector<ObjectInfo> obj_infos;
+
   for (const auto & plugin : movement_plugins_) {
     const auto plugin_objects = plugin->get_objects();
     all_objects.insert(all_objects.end(), plugin_objects.begin(), plugin_objects.end());
-  }
-
-  // get object infos
-  std::vector<ObjectInfo> obj_infos;
-  for (auto & plugin : movement_plugins_) {
     const auto plugin_infos = plugin->move_objects();
     obj_infos.insert(obj_infos.end(), plugin_infos.begin(), plugin_infos.end());
   }
@@ -214,7 +211,7 @@ void DummyPerceptionPublisherNode::timerCallback()
     std::vector<unique_identifier_msgs::msg::UUID> delete_uuids;
 
     for (size_t i = 0; i < selected_indices.size(); ++i) {
-      const auto pointcloud = pointclouds[i];
+      const auto & pointcloud = pointclouds[i];
       const size_t selected_idx = selected_indices[i];
       const auto & object = all_objects.at(selected_idx);
       const auto & object_info = obj_infos[selected_idx];
