@@ -280,6 +280,9 @@ void CrosswalkTrafficLightEstimatorNode::onTrafficLightArray(
   for (const auto & traffic_signal : msg->traffic_light_groups) {
     traffic_light_id_map[traffic_signal.traffic_light_group_id] =
       std::pair<TrafficSignal, rclcpp::Time>(traffic_signal, get_clock()->now());
+  }
+  // we need the full traffic_light_id_map before calculating overrides from map
+  for (const auto & traffic_signal : msg->traffic_light_groups) {
     update_crosswalk_overrides_from_map(
       crosswalk_traffic_signal_overrides, traffic_signal.traffic_light_group_id,
       traffic_light_id_map);
