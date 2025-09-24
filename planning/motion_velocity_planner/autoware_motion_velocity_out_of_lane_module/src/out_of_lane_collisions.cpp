@@ -225,9 +225,8 @@ void calculate_objects_time_collisions(
   const std::vector<autoware_perception_msgs::msg::PredictedObject> & objects,
   const route_handler::RouteHandler & route_handler, const PlannerParam & params)
 {
-  for (const auto & object : objects) {
-    auto shape = object.shape;
-    shape.dimensions.y += params.objects_extra_width * 0.5;
+  for (auto object : objects) {
+    object.shape.dimensions.y += params.objects_extra_width * 0.5;
     for (auto path_id = 0UL; path_id < object.kinematics.predicted_paths.size(); ++path_id) {
       calculate_object_path_time_collisions(
         out_of_lane_data, path_id, object, route_handler,

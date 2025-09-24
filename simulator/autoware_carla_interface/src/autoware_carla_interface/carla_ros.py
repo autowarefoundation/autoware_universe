@@ -27,6 +27,8 @@ from geometry_msgs.msg import Pose
 from geometry_msgs.msg import PoseWithCovarianceStamped
 import numpy
 import rclpy
+from rclpy.qos import QoSProfile
+from rclpy.qos import ReliabilityPolicy
 from rosgraph_msgs.msg import Clock
 from sensor_msgs.msg import CameraInfo
 from sensor_msgs.msg import Image
@@ -48,7 +50,126 @@ from .modules.carla_wrapper import SensorInterface
 
 
 class carla_ros2_interface(object):
+    def _create_sensor_qos(self):
+        """Create QoS profile for sensor data with BEST_EFFORT reliability."""
+        qos = QoSProfile(depth=10)
+        qos.reliability = ReliabilityPolicy.BEST_EFFORT
+        return qos
+
+    def _initialize_parameters(self):
+        """Initialize and declare ROS2 parameters."""
+        self.parameters = {
+            "host": rclpy.Parameter.Type.STRING,
+            "port": rclpy.Parameter.Type.INTEGER,
+            "sync_mode": rclpy.Parameter.Type.BOOL,
+            "timeout": rclpy.Parameter.Type.INTEGER,
+            "fixed_delta_seconds": rclpy.Parameter.Type.DOUBLE,
+            "carla_map": rclpy.Parameter.Type.STRING,
+            "ego_vehicle_role_name": rclpy.Parameter.Type.STRING,
+            "spawn_point": rclpy.Parameter.Type.STRING,
+            "vehicle_type": rclpy.Parameter.Type.STRING,
+            "objects_definition_file": rclpy.Parameter.Type.STRING,
+            "use_traffic_manager": rclpy.Parameter.Type.BOOL,
+            "max_real_delta_seconds": rclpy.Parameter.Type.DOUBLE,
+        }
+        self.param_values = {}
+        for param_name, param_type in self.parameters.items():
+            self.ros2_node.declare_parameter(param_name, param_type)
+            self.param_values[param_name] = self.ros2_node.get_parameter(param_name).value
+
+    def _initialize_clock_publisher(self):
+        """Initialize and publish initial clock message."""
+        self.clock_publisher = self.ros2_node.create_publisher(Clock, "/clock", 10)
+        obj_clock = Clock()
+        obj_clock.clock = Time(sec=0)
+        self.clock_publisher.publish(obj_clock)
+
+    def _initialize_status_publishers(self):
+        """Initialize all vehicle status publishers."""
+        self.pub_pose_with_cov = self.ros2_node.create_publisher(
+            PoseWithCovarianceStamped, "/sensing/gnss/pose_with_covariance", 1
+        )
+        self.pub_vel_state = self.ros2_node.create_publisher(
+            VelocityReport, "/vehicle/status/velocity_status", 1
+        )
+        self.pub_steering_state = self.ros2_node.create_publisher(
+            SteeringReport, "/vehicle/status/steering_status", 1
+        )
+        self.pub_ctrl_mode = self.ros2_node.create_publisher(
+            ControlModeReport, "/vehicle/status/control_mode", 1
+        )
+        self.pub_gear_state = self.ros2_node.create_publisher(
+            GearReport, "/vehicle/status/gear_status", 1
+        )
+        self.pub_actuation_status = self.ros2_node.create_publisher(
+            ActuationStatusStamped, "/vehicle/status/actuation_status", 1
+        )
+
+    def _initialize_subscriptions(self):
+        """Initialize all ROS2 subscriptions."""
+        self.sub_control = self.ros2_node.create_subscription(
+            ActuationCommandStamped, "/control/command/actuation_cmd", self.control_callback, 1
+        )
+        self.sub_vehicle_initialpose = self.ros2_node.create_subscription(
+            PoseWithCovarianceStamped, "initialpose", self.initialpose_callback, 1
+        )
+        self.current_control = carla.VehicleControl()
+
+    def _create_sensor_publishers(self):
+        """Create ROS publishers for each sensor based on sensor configuration."""
+        for sensor in self.sensors["sensors"]:
+            self.id_to_sensor_type_map[sensor["id"]] = sensor["type"]
+            if sensor["type"] == "sensor.camera.rgb":
+                self.pub_camera = self.ros2_node.create_publisher(
+                    Image, "/sensing/camera/traffic_light/image_raw", 1
+                )
+                self.pub_camera_info = self.ros2_node.create_publisher(
+                    CameraInfo, "/sensing/camera/traffic_light/camera_info", 1
+                )
+            elif sensor["type"] == "sensor.lidar.ray_cast":
+                if sensor["id"] in self.sensor_frequencies:
+                    self.pub_lidar[sensor["id"]] = self.ros2_node.create_publisher(
+                        PointCloud2,
+                        f'/sensing/lidar/{sensor["id"]}/pointcloud_before_sync',
+                        self._create_sensor_qos(),
+                    )
+                else:
+                    self.ros2_node.get_logger().info(
+                        "Please use Top, Right, or Left as the LIDAR ID"
+                    )
+            elif sensor["type"] == "sensor.other.imu":
+                self.pub_imu = self.ros2_node.create_publisher(
+                    Imu, "/sensing/imu/tamagawa/imu_raw", 1
+                )
+            else:
+                self.ros2_node.get_logger().info(f'No Publisher for {sensor["type"]} Sensor')
+
     def __init__(self):
+        # Initialize instance variables
+        self._initialize_instance_variables()
+
+        # Initialize ROS2 node
+        rclpy.init(args=None)
+        self.ros2_node = rclpy.create_node("carla_ros2_interface")
+
+        # Setup all components
+        self._initialize_parameters()
+        self._initialize_clock_publisher()
+
+        # Load sensor configuration
+        self.sensors = json.load(open(self.param_values["objects_definition_file"]))
+
+        # Initialize publishers and subscriptions
+        self._initialize_subscriptions()
+        self._initialize_status_publishers()
+        self._create_sensor_publishers()
+
+        # Start ROS2 spin thread
+        self.spin_thread = threading.Thread(target=rclpy.spin, args=(self.ros2_node,))
+        self.spin_thread.start()
+
+    def _initialize_instance_variables(self):
+        """Initialize all instance variables."""
         self.sensor_interface = SensorInterface()
         self.prev_timestamp = None
         self.prev_steer_output = 0.0
@@ -74,98 +195,6 @@ class carla_ros2_interface(object):
         self.publish_prev_times = {
             sensor: datetime.datetime.now() for sensor in self.sensor_frequencies
         }
-
-        # initialize ros2 node
-        rclpy.init(args=None)
-        self.ros2_node = rclpy.create_node("carla_ros2_interface")
-        self.parameters = {
-            "host": rclpy.Parameter.Type.STRING,
-            "port": rclpy.Parameter.Type.INTEGER,
-            "sync_mode": rclpy.Parameter.Type.BOOL,
-            "timeout": rclpy.Parameter.Type.INTEGER,
-            "fixed_delta_seconds": rclpy.Parameter.Type.DOUBLE,
-            "carla_map": rclpy.Parameter.Type.STRING,
-            "ego_vehicle_role_name": rclpy.Parameter.Type.STRING,
-            "spawn_point": rclpy.Parameter.Type.STRING,
-            "vehicle_type": rclpy.Parameter.Type.STRING,
-            "objects_definition_file": rclpy.Parameter.Type.STRING,
-            "use_traffic_manager": rclpy.Parameter.Type.BOOL,
-            "max_real_delta_seconds": rclpy.Parameter.Type.DOUBLE,
-        }
-        self.param_values = {}
-        for param_name, param_type in self.parameters.items():
-            self.ros2_node.declare_parameter(param_name, param_type)
-            self.param_values[param_name] = self.ros2_node.get_parameter(param_name).value
-
-        # Publish clock
-        self.clock_publisher = self.ros2_node.create_publisher(Clock, "/clock", 10)
-        obj_clock = Clock()
-        obj_clock.clock = Time(sec=0)
-        self.clock_publisher.publish(obj_clock)
-
-        # Sensor Config (Edit your sensor here)
-        self.sensors = json.load(open(self.param_values["objects_definition_file"]))
-
-        # Subscribing Autoware Control messages and converting to CARLA control
-        self.sub_control = self.ros2_node.create_subscription(
-            ActuationCommandStamped, "/control/command/actuation_cmd", self.control_callback, 1
-        )
-
-        self.sub_vehicle_initialpose = self.ros2_node.create_subscription(
-            PoseWithCovarianceStamped, "initialpose", self.initialpose_callback, 1
-        )
-
-        self.current_control = carla.VehicleControl()
-
-        # Direct data publishing from CARLA for Autoware
-        self.pub_pose_with_cov = self.ros2_node.create_publisher(
-            PoseWithCovarianceStamped, "/sensing/gnss/pose_with_covariance", 1
-        )
-        self.pub_vel_state = self.ros2_node.create_publisher(
-            VelocityReport, "/vehicle/status/velocity_status", 1
-        )
-        self.pub_steering_state = self.ros2_node.create_publisher(
-            SteeringReport, "/vehicle/status/steering_status", 1
-        )
-        self.pub_ctrl_mode = self.ros2_node.create_publisher(
-            ControlModeReport, "/vehicle/status/control_mode", 1
-        )
-        self.pub_gear_state = self.ros2_node.create_publisher(
-            GearReport, "/vehicle/status/gear_status", 1
-        )
-        self.pub_actuation_status = self.ros2_node.create_publisher(
-            ActuationStatusStamped, "/vehicle/status/actuation_status", 1
-        )
-
-        # Create Publisher for each Physical Sensors
-        for sensor in self.sensors["sensors"]:
-            self.id_to_sensor_type_map[sensor["id"]] = sensor["type"]
-            if sensor["type"] == "sensor.camera.rgb":
-                self.pub_camera = self.ros2_node.create_publisher(
-                    Image, "/sensing/camera/traffic_light/image_raw", 1
-                )
-                self.pub_camera_info = self.ros2_node.create_publisher(
-                    CameraInfo, "/sensing/camera/traffic_light/camera_info", 1
-                )
-            elif sensor["type"] == "sensor.lidar.ray_cast":
-                if sensor["id"] in self.sensor_frequencies:
-                    self.pub_lidar[sensor["id"]] = self.ros2_node.create_publisher(
-                        PointCloud2, f'/sensing/lidar/{sensor["id"]}/pointcloud_before_sync', 10
-                    )
-                else:
-                    self.ros2_node.get_logger().info(
-                        "Please use Top, Right, or Left as the LIDAR ID"
-                    )
-            elif sensor["type"] == "sensor.other.imu":
-                self.pub_imu = self.ros2_node.create_publisher(
-                    Imu, "/sensing/imu/tamagawa/imu_raw", 1
-                )
-            else:
-                self.ros2_node.get_logger().info(f'No Publisher for {sensor["type"]} Sensor')
-                pass
-
-        self.spin_thread = threading.Thread(target=rclpy.spin, args=(self.ros2_node,))
-        self.spin_thread.start()
 
     def __call__(self):
         input_data = self.sensor_interface.get_data()

@@ -125,18 +125,20 @@ static const std::unordered_map<Motion, std::string> motion_to_string_map = {
 struct ObjectTypeSpecificParams
 {
   std::array<
-    std::array<VelocityInterpolationParam, static_cast<size_t>(Side::Count)>,
-    static_cast<size_t>(Motion::Count)>
-    params;
+    std::array<VelocityInterpolationParam, static_cast<size_t>(Motion::Count)>,
+    static_cast<size_t>(Side::Count)>
+    velocity_params;
+  double wheel_off_track_scale{};
 
-  VelocityInterpolationParam & get_param(const Side side, const Motion motion)
+  VelocityInterpolationParam & get_velocity_param(const Side side, const Motion motion)
   {
-    return params[static_cast<size_t>(side)][static_cast<size_t>(motion)];
+    return velocity_params[static_cast<size_t>(side)][static_cast<size_t>(motion)];
   }
 
-  [[nodiscard]] VelocityInterpolationParam get_param(const Side side, const Motion motion) const
+  [[nodiscard]] VelocityInterpolationParam get_velocity_param(
+    const Side side, const Motion motion) const
   {
-    return params[static_cast<size_t>(side)][static_cast<size_t>(motion)];
+    return velocity_params[static_cast<size_t>(side)][static_cast<size_t>(motion)];
   }
 };
 
@@ -190,7 +192,7 @@ struct SlowDownPlanningParam
       ObjectTypeSpecificParams param{};
       for (const auto side : {Side::Left, Side::Right}) {
         for (const auto motion : {Motion::Moving, Motion::Static}) {
-          auto & p = param.get_param(side, motion);
+          auto & p = param.get_velocity_param(side, motion);
           p.min_lat_margin = get_object_parameter<double>(
             node, param_prefix, type_str, to_param_name(side, motion, "min_lat_margin"));
           p.max_lat_margin = get_object_parameter<double>(
@@ -201,15 +203,16 @@ struct SlowDownPlanningParam
             node, param_prefix, type_str, to_param_name(side, motion, "max_ego_velocity"));
         }
       }
+      param.wheel_off_track_scale =
+        get_object_parameter<double>(node, param_prefix, type_str, "wheel_off_track_scale");
       object_type_specific_param_per_object_type.emplace(type_str, param);
     }
   }
 
-  VelocityInterpolationParam get_object_param(
-    const ObjectClassification label, const Side side, const Motion motion) const
+  const ObjectTypeSpecificParams & get_object_param(const ObjectClassification label) const
   {
     const auto & type_str = object_types_maps.at(label.label);
-    return object_type_specific_param_per_object_type.at(type_str).get_param(side, motion);
+    return object_type_specific_param_per_object_type.at(type_str);
   }
 };
 }  // namespace autoware::motion_velocity_planner

@@ -44,7 +44,10 @@
     </node>
 
     <!-- Awsim configuration frame to CARLA frame -->
-    <node pkg="tf2_ros" exec="static_transform_publisher" name="velodyne_top" args="0 0 1 -1.5386 -0.015 0.001 /velodyne_top /velodyne_top_changed "/>
-    <node pkg="tf2_ros" exec="static_transform_publisher" name="imu" args="0 0 1 -3.10519265 -0.015 -3.14059265359 /tamagawa/imu_link /tamagawa/imu_link_changed "/>
+    <node pkg="tf2_ros" exec="static_transform_publisher" name="carla_velodyne_top" args="0 0 1 -1.5386 -0.015 0.001 velodyne_top velodyne_top_changed"/>
+    <node pkg="tf2_ros" exec="static_transform_publisher" name="carla_imu" args="0 0 1 -3.10519265 -0.015 -3.14059265359 tamagawa/imu_link tamagawa/imu_link_changed"/>
+
+    <!-- Relay single lidar to concatenated pointcloud topic -->
+    <node pkg="topic_tools" exec="relay" name="lidar_concatenation_relay" args="/sensing/lidar/top/pointcloud_before_sync /sensing/lidar/concatenated/pointcloud"/>
   </group>
 </launch>

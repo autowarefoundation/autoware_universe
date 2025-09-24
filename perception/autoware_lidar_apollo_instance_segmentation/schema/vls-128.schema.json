@@ -65,14 +65,7 @@
       "type": "object",
       "properties": {
         "ros__parameters": {
-          "type": "object",
-          "properties": {
-            "lidar_instance_segmentation": {
-              "$ref": "#/definitions/vls-128"
-            }
-          },
-          "required": ["lidar_instance_segmentation"],
-          "additionalProperties": false
+          "$ref": "#/definitions/vls-128"
         }
       },
       "required": ["ros__parameters"],

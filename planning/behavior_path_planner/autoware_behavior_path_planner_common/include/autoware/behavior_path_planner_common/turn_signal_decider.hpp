@@ -20,6 +20,7 @@
 #include <autoware/behavior_path_planner_common/parameters.hpp>
 #include <autoware/behavior_path_planner_common/utils/path_shifter/path_shifter.hpp>
 #include <autoware/route_handler/route_handler.hpp>
+#include <autoware_lanelet2_extension/regulatory_elements/roundabout.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -37,6 +38,8 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <optional>
+#include <queue>
 #include <string>
 #include <utility>
 
@@ -48,6 +51,7 @@ using autoware_vehicle_msgs::msg::HazardLightsCommand;
 using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
+using lanelet::autoware::Roundabout;
 using nav_msgs::msg::Odometry;
 
 const std::map<std::string, uint8_t> g_signal_map = {
@@ -89,6 +93,7 @@ struct TurnSignalDebugData
 {
   TurnSignalInfo intersection_turn_signal_info;
   TurnSignalInfo behavior_turn_signal_info;
+  TurnSignalInfo roundabout_turn_signal_info;
 };
 
 class TurnSignalDecider
@@ -101,8 +106,9 @@ public:
 
   TurnIndicatorsCommand resolve_turn_signal(
     const PathWithLaneId & path, const Pose & current_pose, const size_t current_seg_idx,
-    const TurnSignalInfo & intersection_signal_info, const TurnSignalInfo & behavior_signal_info,
-    const double nearest_dist_threshold, const double nearest_yaw_threshold);
+    const TurnSignalInfo & intersection_signal_info, const TurnSignalInfo & roundabout_signal_info,
+    const TurnSignalInfo & behavior_signal_info, const double nearest_dist_threshold,
+    const double nearest_yaw_threshold);
 
   TurnSignalInfo overwrite_turn_signal(
     const PathWithLaneId & path, const Pose & current_pose, const size_t current_seg_idx,
@@ -116,12 +122,33 @@ public:
 
   void setParameters(
     const double base_link2front, const double intersection_search_distance,
-    const double intersection_search_time, const double intersection_angle_threshold_deg)
+    const double turn_signal_search_time, const double intersection_angle_threshold_deg,
+    const std::string roundabout_on_entry, const std::string roundabout_on_exit,
+    const bool roundabout_entry_indicator_persistence, const double roundabout_search_distance,
+    const double roundabout_angle_threshold_deg, const int roundabout_backward_depth)
   {
     base_link2front_ = base_link2front;
     intersection_search_distance_ = intersection_search_distance;
-    intersection_search_time_ = intersection_search_time;
+    turn_signal_search_time_ = turn_signal_search_time;
     intersection_angle_threshold_deg_ = intersection_angle_threshold_deg;
+    if (roundabout_on_entry == "Left") {
+      roundabout_on_entry_ = TurnIndicatorsCommand::ENABLE_LEFT;
+    } else if (roundabout_on_entry == "Right") {
+      roundabout_on_entry_ = TurnIndicatorsCommand::ENABLE_RIGHT;
+    } else {
+      roundabout_on_entry_ = TurnIndicatorsCommand::DISABLE;
+    }
+    if (roundabout_on_exit == "Left") {
+      roundabout_on_exit_ = TurnIndicatorsCommand::ENABLE_LEFT;
+    } else if (roundabout_on_exit == "Right") {
+      roundabout_on_exit_ = TurnIndicatorsCommand::ENABLE_RIGHT;
+    } else {
+      roundabout_on_exit_ = TurnIndicatorsCommand::DISABLE;
+    }
+    roundabout_entry_indicator_persistence_ = roundabout_entry_indicator_persistence;
+    roundabout_search_distance_ = roundabout_search_distance;
+    roundabout_angle_threshold_deg_ = roundabout_angle_threshold_deg;
+    roundabout_backward_depth_ = roundabout_backward_depth;
   }
 
   std::pair<bool, bool> getIntersectionTurnSignalFlag();
@@ -138,12 +165,52 @@ public:
     const bool is_pull_over = false) const;
 
 private:
+  struct SignalCandidate
+  {
+    TurnSignalInfo signal_info;
+    double desired_start_distance;
+    double desired_end_distance;
+    double required_start_distance;
+    double required_end_distance;
+    std::string signal_type;
+
+    // The signal is valid only when the ego is between the desired start and end points.
+    // desired_start_distance <= 0.0: ego has passed the desired start point
+    // desired_end_distance >= 0.0: ego has not yet passed the desired end point
+    inline bool isValid() const
+    {
+      const auto cmd = signal_info.turn_signal.command;
+      // Command must be active (not NO_COMMAND / DISABLE) and ego must be between desired start/end
+      return (
+        cmd != TurnIndicatorsCommand::NO_COMMAND && cmd != TurnIndicatorsCommand::DISABLE &&
+        desired_start_distance <= 0.0 && desired_end_distance >= 0.0);
+    }
+  };
   std::optional<TurnSignalInfo> getIntersectionTurnSignalInfo(
     const PathWithLaneId & path, const Pose & current_pose, const double current_vel,
     const size_t current_seg_idx, const RouteHandler & route_handler,
     const double nearest_dist_threshold, const double nearest_yaw_threshold);
 
-  geometry_msgs::msg::Pose get_required_end_point(const lanelet::ConstLineString3d & centerline);
+  std::optional<TurnSignalInfo> getRoundaboutTurnSignalInfo(
+    const PathWithLaneId & path, const Pose & current_pose, const double current_vel,
+    const size_t current_seg_idx, const RouteHandler & route_handler,
+    const double nearest_dist_threshold, const double nearest_yaw_threshold);
+
+  lanelet::ConstLanelet findEnableExitTurnSignalLanelet(
+    const lanelet::ConstLanelet & start_lanelet, const RouteHandler & route_handler,
+    bool & found_enable_exit_turn_signal);
+
+  Pose calculateLaneFrontPose(const lanelet::ConstLineString3d & centerline);
+
+  Pose calculateLaneBackPose(const lanelet::ConstLineString3d & centerline);
+
+  std::optional<TurnSignalInfo> resolveSignalQueue(
+    std::queue<TurnSignalInfo> & signal_queue, const PathWithLaneId & path,
+    const Pose & current_pose, const size_t current_seg_idx, const double nearest_dist_threshold,
+    const double nearest_yaw_threshold);
+
+  geometry_msgs::msg::Pose get_required_end_point(
+    const lanelet::ConstLineString3d & centerline, const double angle_threshold_deg);
 
   bool use_prior_turn_signal(
     const double dist_to_prior_required_start, const double dist_to_prior_required_end,
@@ -284,19 +351,35 @@ private:
 
   geometry_msgs::msg::Quaternion calc_orientation(const Point & src_point, const Point & dst_point);
 
+  double calculateRoundaboutBackwardLength(
+    const lanelet::ConstLanelet & current_lanelet, const RouteHandler & route_handler,
+    double default_backward_length, int max_backward_depth);
+
+  double calculateMaxDistanceToDesiredStartPoint(
+    const lanelet::ConstLanelet & start_lanelet,
+    const std::shared_ptr<const lanelet::autoware::Roundabout> & roundabout,
+    const RouteHandler & route_handler, int max_backward_depth);
+
   rclcpp::Logger logger_{
     rclcpp::get_logger("behavior_path_planner").get_child("turn_signal_decider")};
 
   // data
   double base_link2front_{0.0};
   double intersection_search_distance_{0.0};
-  double intersection_search_time_{0.0};
+  double turn_signal_search_time_{0.0};
   double intersection_angle_threshold_deg_{0.0};
-  std::map<lanelet::Id, geometry_msgs::msg::Pose> desired_start_point_map_;
+  std::map<lanelet::Id, geometry_msgs::msg::Pose> intersection_desired_start_point_association_;
+  std::map<lanelet::Id, geometry_msgs::msg::Pose> roundabout_desired_start_point_association_;
   mutable bool intersection_turn_signal_ = false;
   mutable bool approaching_intersection_turn_signal_ = false;
   mutable double intersection_distance_ = std::numeric_limits<double>::max();
   mutable Pose intersection_pose_point_ = Pose();
+  uint8_t roundabout_on_entry_{TurnIndicatorsCommand::NO_COMMAND};
+  uint8_t roundabout_on_exit_{TurnIndicatorsCommand::NO_COMMAND};
+  bool roundabout_entry_indicator_persistence_{false};
+  double roundabout_search_distance_{0.0};
+  double roundabout_angle_threshold_deg_{0.0};
+  int roundabout_backward_depth_{0};
 };
 }  // namespace autoware::behavior_path_planner
 

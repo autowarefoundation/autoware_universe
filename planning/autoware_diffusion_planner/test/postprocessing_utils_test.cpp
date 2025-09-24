@@ -28,107 +28,6 @@ namespace autoware::diffusion_planner::test
 {
 using autoware_planning_msgs::msg::Trajectory;
 
-TEST(PostprocessingUtilsTest, TransformOutputMatrixTranslation)
-{
-  Eigen::MatrixXd output_matrix = Eigen::MatrixXd::Zero(4, OUTPUT_T);
-  output_matrix.block<2, 5>(0, 0).setOnes();
-  Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
-  transform(0, 3) = 2.0f;
-  transform(1, 3) = -3.0f;
-
-  postprocess::transform_output_matrix(transform, output_matrix, 0, 0, true);
-
-  for (int i = 0; i < 5; ++i) {
-    EXPECT_FLOAT_EQ(output_matrix(0, i), 3.0f);   // 1 + 2
-    EXPECT_FLOAT_EQ(output_matrix(1, i), -2.0f);  // 1 - 3
-  }
-}
-
-TEST(PostprocessingUtilsTest, TransformOutputMatrixNoTranslation)
-{
-  Eigen::MatrixXd output_matrix = Eigen::MatrixXd::Zero(4, OUTPUT_T);
-  output_matrix.block<2, 5>(2, 0).setOnes();
-  Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
-  transform(0, 3) = 2.0f;
-  transform(1, 3) = -3.0f;
-
-  postprocess::transform_output_matrix(transform, output_matrix, 0, 2, false);
-
-  for (int i = 0; i < 5; ++i) {
-    EXPECT_FLOAT_EQ(output_matrix(2, i), 1.0f);
-    EXPECT_FLOAT_EQ(output_matrix(3, i), 1.0f);
-  }
-}
-
-TEST(PostprocessingUtilsTest, GetTensorDataCopiesData)
-{
-  std::vector<int64_t> shape{1, 1, 2, 3};
-
-  constexpr auto prediction_shape = OUTPUT_SHAPE;
-  auto batch_size = prediction_shape[0];
-  auto agent_size = prediction_shape[1];
-  auto rows = prediction_shape[2];
-  auto cols = prediction_shape[3];
-
-  std::vector<float> data(batch_size * agent_size * rows * cols, 0.0f);
-  data[0] = 1.0f;
-  data[1] = 2.0f;
-  data[2] = 3.0f;
-  data[3] = 4.0f;
-  data[4] = 5.0f;
-  data[5] = 6.0f;
-  data[6] = 7.0f;
-  auto mat = postprocess::get_tensor_data(data);
-
-  ASSERT_EQ(mat.rows(), batch_size * agent_size * rows);
-  ASSERT_EQ(mat.cols(), cols);
-  EXPECT_FLOAT_EQ(mat(0, 0), 1.0f);
-  EXPECT_FLOAT_EQ(mat(0, 1), 2.0f);
-  EXPECT_NE(mat(1, 2), 0.0f);
-}
-
-TEST(PostprocessingUtilsTest, GetPredictionMatrixTransformsCorrectly)
-{
-  constexpr auto prediction_shape = OUTPUT_SHAPE;
-  auto batch_size = prediction_shape[0];
-  auto agent_size = prediction_shape[1];
-  auto rows = prediction_shape[2];
-  auto cols = prediction_shape[3];
-
-  std::vector<float> data(batch_size * agent_size * rows * cols, 0.0f);
-  // Fill with some values for checking
-  for (int i = 0; i < rows * cols; ++i) data[i] = static_cast<float>(i);
-
-  std::vector<int64_t> shape{1, 1, rows, cols};
-
-  Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
-  transform(0, 3) = 1.0f;
-  transform(1, 3) = 2.0f;
-
-  auto mat = postprocess::get_prediction_matrix(data, transform, 0, 0);
-
-  auto expected_rows = prediction_shape[2];
-  auto expected_cols = prediction_shape[3];
-
-  ASSERT_EQ(mat.rows(), expected_rows);
-  ASSERT_EQ(mat.cols(), expected_cols);
-}
-
-TEST(PostprocessingUtilsTest, GetTrajectoryFromPredictionMatrixWorks)
-{
-  Eigen::MatrixXd prediction_matrix(3, 4);
-  prediction_matrix << 0, 0, 1, 0, 1, 0, 1, 1, 2, 0, 1, 0;
-  Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
-  rclcpp::Time stamp(123, 0);
-
-  auto traj =
-    postprocess::get_trajectory_from_prediction_matrix(prediction_matrix, transform, stamp);
-  ASSERT_EQ(traj.points.size(), 3);
-  EXPECT_FLOAT_EQ(traj.points[0].pose.position.x, 0.0f);
-  EXPECT_FLOAT_EQ(traj.points[1].pose.position.x, 1.0f);
-  EXPECT_GT(traj.points[1].longitudinal_velocity_mps, 0.0f);
-}
-
 TEST(PostprocessingUtilsTest, CreateTrajectoryAndMultipleTrajectories)
 {
   constexpr auto prediction_shape = OUTPUT_SHAPE;
@@ -144,30 +43,11 @@ TEST(PostprocessingUtilsTest, CreateTrajectoryAndMultipleTrajectories)
   Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
   rclcpp::Time stamp(123, 0);
 
-  auto expected_trajs = prediction_shape[1];
   auto expected_points = prediction_shape[2];
-
-  auto traj = postprocess::create_trajectory(data, stamp, transform, 0, 0);
+  const int64_t velocity_smoothing_window = 1;
+  auto traj =
+    postprocess::create_ego_trajectory(data, stamp, transform, 0, velocity_smoothing_window);
   ASSERT_EQ(traj.points.size(), expected_points);
-
-  auto trajs = postprocess::create_multiple_trajectories(data, stamp, transform, 0, 0);
-  ASSERT_EQ(trajs.size(), expected_trajs);
-}
-
-TEST(PostprocessingUtilsTest, ToCandidateTrajectoriesMsgPopulatesFields)
-{
-  using UUID = unique_identifier_msgs::msg::UUID;
-  Trajectory traj;
-  traj.header.frame_id = "map";
-  traj.points.resize(2);
-  UUID uuid;
-  std::fill(uuid.uuid.begin(), uuid.uuid.end(), 42);
-
-  auto msg = postprocess::to_candidate_trajectories_msg(traj, uuid, "test_generator");
-  ASSERT_EQ(msg.candidate_trajectories.size(), 1);
-  ASSERT_EQ(msg.generator_info.size(), 1);
-  EXPECT_EQ(msg.candidate_trajectories[0].header.frame_id, "map");
-  EXPECT_EQ(msg.generator_info[0].generator_name.data, "test_generator");
 }
 
 }  // namespace autoware::diffusion_planner::test

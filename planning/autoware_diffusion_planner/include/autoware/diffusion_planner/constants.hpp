@@ -30,17 +30,9 @@ constexpr double TIMER_PERIOD_S = 0.2;
 constexpr int LOG_THROTTLE_INTERVAL_MS = 5000;
 
 // Geometric constants
-constexpr float LANE_MASK_RANGE_M = 100.0f;
+constexpr double LANE_MASK_RANGE_M = 100.0;
 constexpr double BACKWARD_PATH_LENGTH_M = 0.0;
 constexpr double FORWARD_PATH_LENGTH_M = 150.0;
-
-// Visualization parameters
-struct VisualizationParams
-{
-  static constexpr double DEBUG_MARKER_LIFETIME_S = 0.2;
-  static constexpr float ROUTE_MARKER_ALPHA = 0.8f;
-  static constexpr float MAP_MARKER_ALPHA = 0.8f;
-};
 
 }  // namespace autoware::diffusion_planner::constants
 

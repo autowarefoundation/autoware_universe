@@ -73,7 +73,7 @@ public:
       "/planning_validator_node/input/acceleration", 1);
     pointcloud_pub_ = create_publisher<PointCloud2>("/planning_validator_node/input/pointcloud", 1);
     operational_mode_pub_ = create_publisher<OperationModeState>(
-      "/planning_validator_node/input/operational_mode_state", 1);
+      "/planning_validator_node/input/operational_mode_state", rclcpp::QoS(1).transient_local());
     diag_sub_ = create_subscription<DiagnosticArray>(
       "/diagnostics", 1,
       [this](const DiagnosticArray::ConstSharedPtr msg) { received_diags_.push_back(msg); });

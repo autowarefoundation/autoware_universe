@@ -20,6 +20,8 @@
 
 #include <Eigen/Dense>
 
+#include <autoware_planning_msgs/msg/lanelet_route.hpp>
+
 #include <gtest/gtest.h>
 
 #include <algorithm>
@@ -46,14 +48,21 @@ TEST_F(LaneSegmentsTest, LaneSegmentContextFunctionality)
   // Create empty traffic light map (no traffic lights)
   std::map<lanelet::Id, preprocess::TrafficSignalStamped> traffic_light_id_map;
 
-  // Create current lanes list with our test lanelet
-  lanelet::ConstLanelets current_lanes = {test_lanelet_};
+  // Create a LaneletRoute with our test lanelet
+  autoware_planning_msgs::msg::LaneletRoute route;
+
+  // Set center coordinates (middle of the test lanelet)
+  const double center_x = 10.0;  // Middle point along the lanelet
+  const double center_y = 0.0;   // Center of the lane
 
   /////////
   // Act //
   /////////
+  const std::vector<int64_t> segment_indices =
+    context.select_route_segment_indices(route, center_x, center_y, NUM_SEGMENTS_IN_ROUTE);
   const std::pair<std::vector<float>, std::vector<float>> result =
-    context.get_route_segments(transform_matrix, traffic_light_id_map, current_lanes);
+    context.create_tensor_data_from_indices(
+      transform_matrix, traffic_light_id_map, segment_indices, NUM_SEGMENTS_IN_ROUTE);
 
   ////////////
   // Assert //

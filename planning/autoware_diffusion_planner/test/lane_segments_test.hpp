@@ -16,7 +16,6 @@
 #define LANE_SEGMENTS_TEST_HPP_
 
 #include "autoware/diffusion_planner/conversion/lanelet.hpp"
-#include "autoware/diffusion_planner/polyline.hpp"
 #include "autoware/diffusion_planner/preprocessing/lane_segments.hpp"
 #include "autoware/diffusion_planner/preprocessing/traffic_signals.hpp"
 
