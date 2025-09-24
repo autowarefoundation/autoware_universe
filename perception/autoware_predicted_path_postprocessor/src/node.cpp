@@ -14,7 +14,11 @@
 
 #include "autoware/predicted_path_postprocessor/node.hpp"
 
+#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
+
+#include <chrono>
 #include <memory>
+#include <ratio>
 #include <string>
 #include <utility>
 #include <vector>
@@ -43,11 +47,17 @@ PredictedPathPostprocessorNode::PredictedPathPostprocessorNode(const rclcpp::Nod
   if (declare_parameter<bool>("debug")) {
     intermediate_publisher_ = std::make_unique<debug::IntermediatePublisher>(this, processor_names);
   }
+
+  stopwatch_ = std::make_unique<autoware_utils_system::StopWatch<std::chrono::milliseconds>>();
+  stopwatch_->tic("cyclic_time");
+  stopwatch_->tic("processing_time");
+  debug_publisher_ = std::make_unique<autoware_utils_debug::DebugPublisher>(this, get_name());
 }
 
 void PredictedPathPostprocessorNode::callback(
   const autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr & objects)
 {
+  stopwatch_->toc("processing_time", true);
   context_->update(objects);
 
   if (intermediate_publisher_) {
@@ -60,6 +70,13 @@ void PredictedPathPostprocessorNode::callback(
 
     object_publisher_->publish(output);
   }
+
+  const auto cyclic_time_ms = stopwatch_->toc("cyclic_time", true);
+  const auto processing_time_ms = stopwatch_->toc("processing_time", true);
+  debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "debug/cyclic_time_ms", cyclic_time_ms);
+  debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "debug/processing_time_ms", processing_time_ms);
 }
 }  // namespace autoware::predicted_path_postprocessor
 
