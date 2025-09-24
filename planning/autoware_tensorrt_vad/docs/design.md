@@ -1,8 +1,30 @@
 # Design
 
+VAD ROS Node設計時に重要視したconceptについて説明します。
+
+- ROSの領域とCUDAの領域の分離
+  - ROS topicの型が変更されても、CUDAを使った実装には影響しない
+  - CUDAのversionやinterfaceが変更されても、ROS Nodeには影響しない
+- onnxに関係なく変えても良いROS parameterと、onnxに紐付いていてonnxとセットで変更が必要なROS parameterの分離
+  - object_class_remapperは、BEVFusionが分離していたので踏襲
+- memo
+  - `VadInputData`などのデータ型は`data_types.hpp`に記載
+  - interfaceの設計: converter
+  - networkの設計
+    - network_ioと、onnxの入出力tensorの管理に責任を持つ
+  - kernelの設計
+    - kernelとkernelのwrapper関数(`launch_*_kernel`)はkernel.cuに格納
+    - VadModelから呼び出されるためのAPIとリソース管理を`Preprocessor`もしくは`PostProcessor`classが行う
+  - 前処理
+    - cudaに関係する前処理はVadModel, 関係しない前処理はVadInterface
+- coding standard
+  - intは使用しない。`int32_t`を使う。
+  - 1Byteであることを示すためだけのcharは使用しない。`uint8_t`を使う。
+  - `printf`や`cout`は使用せず、`RCLCPP_INFO_THROTTLE`などを使う。
+
 ## ROSの世界とCUDAの世界の分離
 
-VADの処理は「ROS/Autowareの世界」と「CUDA/TensorRTによる推論処理の世界」に明確に分離されています。
+VADの処理は「ROS/Autowareの世界」と「CUDAによる推論処理の世界」に明確に分離されています。
 
 - **ROS側の責務**:
 
@@ -20,7 +42,7 @@ VADの処理は「ROS/Autowareの世界」と「CUDA/TensorRTによる推論処�
     - 座標変換
     - `VadOutputData`からROS Topicへの変換処理
 
-- **VAD（CUDA/TensorRT）側の責務**:
+- **VAD（CUDA）側の責務**:
   - camera画像の前処理
   - VADの推論
     - `VadInputData`から`VadOutputData`を推論
@@ -30,7 +52,7 @@ VADの処理は「ROS/Autowareの世界」と「CUDA/TensorRTによる推論処�
 
 ---
 
-## Dependancy Graph
+### Dependancy Graph
 
 ```mermaid
 graph TD
@@ -78,7 +100,7 @@ graph TD
 
 ---
 
-## 処理フロー図
+### 処理フロー図
 
 ```mermaid
 flowchart TD
@@ -132,9 +154,9 @@ flowchart TD
 
 ---
 
-## Usecase
+### 想定Usecase
 
-### VADに新しいinputを追加する場合
+#### VADに新しいinputを追加する場合
 
 - `VadModel`に新しい入力を追加．onnxを再学習
 
@@ -146,7 +168,7 @@ flowchart TD
 
 - `VadNode`が新しいtopicをsubscribeするように変更
 
-### VADの入力に使うカメラ画像のIDが変更された場合
+#### VADの入力に使うカメラ画像のIDが変更された場合
 
 - camera_id_mapping変更，という拡張に対して開いておく
 - VADのcamera画像のid(順番)は，`VadInterface`のみに影響する
