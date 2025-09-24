@@ -44,14 +44,12 @@ PredictedPathPostprocessorNode::PredictedPathPostprocessorNode(const rclcpp::Nod
 
   processor_ = std::make_unique<processor::ComposableProcessor>(this, processor_names);
 
-  if (declare_parameter<bool>("debug")) {
-    intermediate_publisher_ = std::make_unique<debug::IntermediatePublisher>(this, processor_names);
-  }
-
   stopwatch_ = std::make_unique<autoware_utils_system::StopWatch<std::chrono::milliseconds>>();
   stopwatch_->tic("cyclic_time");
   stopwatch_->tic("processing_time");
   debug_publisher_ = std::make_unique<autoware_utils_debug::DebugPublisher>(this, get_name());
+
+  debug_ = declare_parameter<bool>("debug");
 }
 
 void PredictedPathPostprocessorNode::callback(
@@ -60,14 +58,16 @@ void PredictedPathPostprocessorNode::callback(
   stopwatch_->toc("processing_time", true);
   context_->update(objects);
 
-  if (intermediate_publisher_) {
+  if (debug_) {
     auto [output, intermediates] = processor_->process_with_intermediates(objects, *context_);
-
     object_publisher_->publish(output);
-    intermediate_publisher_->publish(intermediates);
+
+    for (const auto & [processor_name, intermediate] : intermediates) {
+      debug_publisher_->publish<autoware_perception_msgs::msg::PredictedObjects>(
+        "debug/" + processor_name + "/objects", intermediate);
+    }
   } else {
     auto output = processor_->process(objects, *context_);
-
     object_publisher_->publish(output);
   }
 
