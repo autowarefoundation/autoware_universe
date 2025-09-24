@@ -16,6 +16,9 @@
 
 #include "autoware/predicted_path_postprocessor/processor/builder.hpp"
 
+#include <chrono>
+#include <memory>
+#include <numeric>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -23,83 +26,82 @@
 
 namespace autoware::predicted_path_postprocessor::processor
 {
+using PredictedObject = autoware_perception_msgs::msg::PredictedObject;
+using PredictedObjects = autoware_perception_msgs::msg::PredictedObjects;
+
 ComposableProcessor::ComposableProcessor(
   rclcpp::Node * node_ptr, const std::vector<std::string> & processor_names)
 {
   processors_ = build_processors(node_ptr, processor_names);
+  stopwatch_ = std::make_unique<autoware_utils_system::StopWatch<std::chrono::milliseconds>>();
+  stopwatch_->tic("processing_time");
 }
 
-autoware_perception_msgs::msg::PredictedObjects ComposableProcessor::process(
-  const autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr & objects,
-  const Context & context) const
+PredictedObjects ComposableProcessor::process(
+  const PredictedObjects::ConstSharedPtr & objects, const Context & context) const
 {
   auto [results, _] = process_internal(objects, context, false);
   return results;
 }
 
-std::pair<
-  autoware_perception_msgs::msg::PredictedObjects,
-  std::unordered_map<std::string, autoware_perception_msgs::msg::PredictedObjects>>
+std::pair<PredictedObjects, std::unordered_map<std::string, IntermediateReport>>
 ComposableProcessor::process_with_intermediates(
-  const autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr & objects,
-  const Context & context) const
+  const PredictedObjects::ConstSharedPtr & objects, const Context & context) const
 {
   return process_internal(objects, context, true);
 }
 
-std::pair<
-  autoware_perception_msgs::msg::PredictedObjects,
-  std::unordered_map<std::string, autoware_perception_msgs::msg::PredictedObjects>>
+std::pair<PredictedObjects, std::unordered_map<std::string, IntermediateReport>>
 ComposableProcessor::process_internal(
-  const autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr & objects,
-  const Context & context, bool collect_intermediate) const
+  const PredictedObjects::ConstSharedPtr & objects, const Context & context,
+  bool collect_intermediate) const
 {
-  std::unordered_map<std::string, std::vector<autoware_perception_msgs::msg::PredictedObject>>
+  std::unordered_map<std::string, std::pair<std::vector<double>, std::vector<PredictedObject>>>
     intermediates;
-
   if (collect_intermediate) {
     // Pre-allocate debug buffer for each processor
     for (const auto & processor : processors_) {
-      intermediates[processor->name()].reserve(objects->objects.size());
+      intermediates[processor->name()].first.reserve(objects->objects.size());
+      intermediates[processor->name()].second.reserve(objects->objects.size());
     }
   }
 
-  std::vector<autoware_perception_msgs::msg::PredictedObject> results;
-  results.reserve(objects->objects.size());
+  std::vector<PredictedObject> processed_objects;
+  processed_objects.reserve(objects->objects.size());
 
   for (const auto & object : objects->objects) {
     auto target = object;
-
     for (const auto & processor : processors_) {
-      processor->process(target, context);
-
       if (collect_intermediate) {
-        intermediates[processor->name()].push_back(target);
+        stopwatch_->toc("processing_time", true);
+      }
+      processor->process(target, context);
+      if (collect_intermediate) {
+        intermediates[processor->name()].first.push_back(stopwatch_->toc("processing_time", true));
+        intermediates[processor->name()].second.push_back(target);
       }
     }
-
-    results.push_back(std::move(target));
+    processed_objects.push_back(std::move(target));
   }
 
-  // Build final result
-  auto final_result =
-    autoware_perception_msgs::build<autoware_perception_msgs::msg::PredictedObjects>()
-      .header(objects->header)
-      .objects(std::move(results));
+  // build final output
+  auto output = autoware_perception_msgs::build<PredictedObjects>()
+                  .header(objects->header)
+                  .objects(std::move(processed_objects));
 
-  // Build debug objects if needed
-  std::unordered_map<std::string, autoware_perception_msgs::msg::PredictedObjects> debug_results;
+  // build intermediate reports if needed
+  std::unordered_map<std::string, IntermediateReport> reports;
   if (collect_intermediate) {
-    debug_results.reserve(processors_.size());
-
-    for (const auto & [processor_name, processed_objects] : intermediates) {
-      debug_results[processor_name] =
-        autoware_perception_msgs::build<autoware_perception_msgs::msg::PredictedObjects>()
-          .header(objects->header)
-          .objects(processed_objects);
+    reports.reserve(processors_.size());
+    for (const auto & [key, value] : intermediates) {
+      const auto processing_time_ms = std::reduce(value.first.begin(), value.first.end());
+      auto processor_result = autoware_perception_msgs::build<PredictedObjects>()
+                                .header(objects->header)
+                                .objects(value.second);
+      reports.emplace(key, IntermediateReport{processing_time_ms, std::move(processor_result)});
     }
   }
 
-  return {std::move(final_result), std::move(debug_results)};
+  return {std::move(output), std::move(reports)};
 }
 }  // namespace autoware::predicted_path_postprocessor::processor

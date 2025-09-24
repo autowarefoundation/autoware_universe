@@ -17,10 +17,13 @@
 
 #include "autoware/predicted_path_postprocessor/processor/interface.hpp"
 
+#include <autoware_utils_system/stop_watch.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 
+#include <chrono>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -28,6 +31,15 @@
 
 namespace autoware::predicted_path_postprocessor::processor
 {
+/**
+ * @brief A struct representing intermediate report for a processor.
+ */
+struct IntermediateReport
+{
+  double processing_time_ms;                                //!< Processing time in milliseconds.
+  autoware_perception_msgs::msg::PredictedObjects objects;  //!< Processed predicted objects.
+};
+
 /**
  * @brief A class composing multiple processors to process predicted objects.
  */
@@ -58,11 +70,11 @@ public:
    * @brief Process predicted objects and also return intermediate results of each processor.
    * @param objects Predicted objects to process.
    * @param context Context information for processing.
-   * @return Processed predicted objects and debug information.
+   * @return Processed predicted objects and intermediate reports.
    */
   std::pair<
     autoware_perception_msgs::msg::PredictedObjects,
-    std::unordered_map<std::string, autoware_perception_msgs::msg::PredictedObjects>>
+    std::unordered_map<std::string, IntermediateReport>>
   process_with_intermediates(
     const autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr & objects,
     const Context & context) const;
@@ -74,16 +86,18 @@ private:
    * @param objects Predicted objects to process.
    * @param context Context information for processing.
    * @param collect_intermediate Whether to collect intermediate results.
-   * @return Processed predicted objects and optionally intermediate results for debug.
+   * @return Processed predicted objects and optionally intermediate reports.
    */
   std::pair<
     autoware_perception_msgs::msg::PredictedObjects,
-    std::unordered_map<std::string, autoware_perception_msgs::msg::PredictedObjects>>
+    std::unordered_map<std::string, IntermediateReport>>
   process_internal(
     const autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr & objects,
     const Context & context, bool collect_intermediate) const;
 
   std::vector<ProcessorInterface::UniquePtr> processors_;  //!< Set of processors.
+  std::unique_ptr<autoware_utils_system::StopWatch<std::chrono::milliseconds>>
+    stopwatch_;  //!< Stopwatch for timing.
 };
 }  // namespace autoware::predicted_path_postprocessor::processor
 #endif  // AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__COMPOSABLE_HPP_
