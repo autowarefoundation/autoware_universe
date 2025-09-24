@@ -5,11 +5,7 @@ VAD ROS Node設計時に重要視したconceptについて説明します。
 - ROSの領域とCUDAの領域の分離
   - ROS topicの型が変更されても、CUDAを使った実装には影響しない
   - CUDAのversionやinterfaceが変更されても、ROS Nodeには影響しない
-- onnxに関係なく変えても良いROS parameterと、onnxに紐付いていてonnxとセットで変更が必要なROS parameterの分離
-  - onnxに関係しているparameterは[`ml_package_vad_tiny.param.yaml`](../config/ml_package_vad_tiny.param.yaml)に追加
-  - onnxに関係なく変えても良いROS parameterは[`vad_tiny.param.yaml`](../config/vad_tiny.param.yaml)に追加
-    - object class remappingについては[`object_class_remapper.param.yaml`](../config/object_class_remapper.param.yaml)に追加
-      - [`autoware_bevfusion`](../../../perception/autoware_bevfusion/README.md)の前例を踏襲。
+- onnxに関係なく変えても良いROS parameterと、そうでないROS parameterの分離
 - 「Autowareで使われる`camera_id`変更」という拡張に対して開いた設計
   - front cameraのidが`0`から`1`になったとしても、大きな設計変更を入れずに対応できるようにする
 
@@ -158,6 +154,26 @@ flowchart TD
 - `VadInterface`の入力変換処理を修正
 
 - `VadInputData`にメンバを追加
+
+## onnxに関係なく変えても良いROS parameterと、そうでないROS parameterの分離
+
+- onnxに関係しているparameterは[`ml_package_vad_tiny.param.yaml`](../config/ml_package_vad_tiny.param.yaml)に追加
+- onnxに関係なく変えても良いROS parameterは[`vad_tiny.param.yaml`](../config/vad_tiny.param.yaml)に追加
+  - object class remappingについては[`object_class_remapper.param.yaml`](../config/object_class_remapper.param.yaml)に追加
+    - [`autoware_bevfusion`](../../../perception/autoware_bevfusion/README.md)の前例を踏襲。
+
+### 想定Usecase
+
+#### VADのonnxを変更した場合
+
+- [`vad_tiny.param.yaml`](../config/vad_tiny.param.yaml)のみを変更
+- [`ml_package_vad_tiny.param.yaml`](../config/ml_package_vad_tiny.param.yaml)は変更しない
+- [`object_class_remapper.param.yaml`](../config/object_class_remapper.param.yaml)は、VADのonnxが出力するclassの定義が変わった場合にのみ変更
+
+#### VADのonnxを変更していない場合
+
+- [`vad_tiny.param.yaml`](../config/vad_tiny.param.yaml)は変更しない
+- [`ml_package_vad_tiny.param.yaml`](../config/ml_package_vad_tiny.param.yaml)と[`object_class_remapper.param.yaml`](../config/object_class_remapper.param.yaml)のどちらかを変更
 
 ## 「Autowareで使われる`camera_id`変更」という拡張に対して開いた設計
 
