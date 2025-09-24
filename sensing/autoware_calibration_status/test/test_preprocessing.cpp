@@ -132,12 +132,12 @@ TEST_F(PreprocessingTest, TestPreprocessing)
       tf_matrix_d.get(), sample.camera_lidar_info_calibrated.tf_camera_to_lidar.data(),
       sizeof(double) * tf_matrix_size, cudaMemcpyHostToDevice, stream));
 
-    CHECK_CUDA_ERROR(preprocess_ptr->undistortImage_launch(
+    CHECK_CUDA_ERROR(preprocess_ptr->undistort_image_launch(
       image_d.get(), dist_coeffs_d.get(), camera_matrix_d.get(), projection_matrix_d.get(),
       sample.image_bgr->width, sample.image_bgr->height, image_undistorted_d.get(), in_d.get()));
     auto num_points_projected_d = cuda_utils::make_unique<uint32_t>();
     cuda_utils::clear_async(num_points_projected_d.get(), 1, stream);
-    CHECK_CUDA_ERROR(preprocess_ptr->projectPoints_launch(
+    CHECK_CUDA_ERROR(preprocess_ptr->project_points_launch(
       cloud_d.get(), image_undistorted_d.get(), tf_matrix_d.get(), projection_matrix_d.get(),
       sample.pointcloud->width * sample.pointcloud->height, sample.image_bgr->width,
       sample.image_bgr->height, in_d.get(), num_points_projected_d.get()));

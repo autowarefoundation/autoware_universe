@@ -120,17 +120,17 @@ CalibrationStatusResult CalibrationStatus::process(
 
   // Undistort image or just copy with appropiate memory pattern
   if (camera_lidar_info.to_undistort) {
-    CHECK_CUDA_ERROR(preprocess_ptr_->undistortImage_launch(
+    CHECK_CUDA_ERROR(preprocess_ptr_->undistort_image_launch(
       image_d_.get(), dist_coeffs_d_.get(), camera_matrix_d_.get(), projection_matrix_d_.get(),
       image_msg->width, image_msg->height, image_undistorted_d_.get(), in_d_.get()));
   } else {
-    CHECK_CUDA_ERROR(preprocess_ptr_->copyImage_launch(
+    CHECK_CUDA_ERROR(preprocess_ptr_->copy_image_launch(
       image_d_.get(), image_msg->width, image_msg->height, image_undistorted_d_.get(),
       in_d_.get()));
   }
 
   // Project points
-  CHECK_CUDA_ERROR(preprocess_ptr_->projectPoints_launch(
+  CHECK_CUDA_ERROR(preprocess_ptr_->project_points_launch(
     cloud_d_.get(), image_undistorted_d_.get(), tf_matrix_d_.get(), projection_matrix_d_.get(),
     cloud_msg->width * cloud_msg->height, image_msg->width, image_msg->height, in_d_.get(),
     num_points_projected_d_.get()));

@@ -52,7 +52,7 @@ public:
     const double max_depth, const uint32_t dilation_size, const uint32_t max_width,
     const uint32_t max_height, cudaStream_t & stream);
 
-  cudaError_t copyImage_launch(
+  cudaError_t copy_image_launch(
     const InputImageBGR8Type * input_image, const size_t width, const size_t height,
     InputImageBGR8Type * output_image, float * output_array);
 
@@ -72,7 +72,7 @@ public:
    * @param output_array 5-channel array with RGB channels filled
    * @return cudaError_t CUDA error status
    */
-  cudaError_t undistortImage_launch(
+  cudaError_t undistort_image_launch(
     const InputImageBGR8Type * input_image, const double * dist_coeffs,
     const double * camera_matrix, const double * projection_matrix, const size_t width,
     const size_t height, InputImageBGR8Type * output_image, float * output_array);
@@ -95,7 +95,7 @@ public:
    * @param num_points_projected Output counter for successfully projected points
    * @return cudaError_t CUDA error status
    */
-  cudaError_t projectPoints_launch(
+  cudaError_t project_points_launch(
     const InputPointType * input_points, InputImageBGR8Type * undistorted_image,
     const double * tf_matrix, const double * projection_matrix, const size_t num_points,
     const size_t width, const size_t height, float * output_array, uint32_t * num_points_projected);
@@ -103,7 +103,7 @@ public:
 private:
   double max_depth_;
   int dilation_size_;
-  cuda_utils::CudaUniquePtr<float[]> metric_depth_buffer_;
+  cuda_utils::CudaUniquePtr<unsigned long long[]> depth_intensity_buffer_;
   cudaStream_t stream_;
 };
 
