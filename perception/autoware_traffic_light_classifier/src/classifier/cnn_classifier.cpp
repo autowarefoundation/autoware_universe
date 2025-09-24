@@ -14,6 +14,8 @@
 
 #include "cnn_classifier.hpp"
 
+#include "../traffic_light_classifier_process.hpp"
+
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
 #include <boost/algorithm/string/classification.hpp>
@@ -104,7 +106,8 @@ void CNNClassifier::outputDebugImage(
   std::string label;
   for (std::size_t i = 0; i < traffic_signal.elements.size(); i++) {
     auto light = traffic_signal.elements.at(i);
-    const auto light_label = state2label_[light.color] + "-" + state2label_[light.shape];
+    const auto light_label =
+      utils::convertColorT4toString(light.color) + "-" + utils::convertShapeT4toString(light.shape);
     label += light_label;
     // all lamp confidence are the same
     probability = light.confidence;
@@ -130,7 +133,7 @@ void CNNClassifier::outputDebugImage(
 }
 
 void CNNClassifier::postProcess(
-  int class_index, float prob, tier4_perception_msgs::msg::TrafficLight & traffic_signal)
+  int class_index, float prob, tier4_perception_msgs::msg::TrafficLight & traffic_signal) const
 {
   std::string match_label = labels_[class_index];
 
@@ -143,28 +146,24 @@ void CNNClassifier::postProcess(
   std::vector<std::string> split_label;
   boost::algorithm::split(split_label, match_label, boost::is_any_of(","));
   for (auto label : split_label) {
-    if (label2state_.find(label) == label2state_.end()) {
-      RCLCPP_DEBUG(
-        node_ptr_->get_logger(), "cnn_classifier does not have a key [%s]", label.c_str());
-      continue;
-    }
     tier4_perception_msgs::msg::TrafficLightElement element;
     if (label.find("-") != std::string::npos) {
       // found "-" delimiter in label string
       std::vector<std::string> color_and_shape;
       boost::algorithm::split(color_and_shape, label, boost::is_any_of("-"));
-      element.color = label2state_[color_and_shape.at(0)];
-      element.shape = label2state_[color_and_shape.at(1)];
+      element.color = utils::convertColorStringtoT4(color_and_shape.at(0));
+      element.shape = utils::convertShapeStringtoT4(color_and_shape.at(1));
     } else {
-      if (label == state2label_[tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN]) {
+      if (label == std::string("unknown")) {
+        // if label is unknown, set UNKNOWN to color and shape
         element.color = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
         element.shape = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-      } else if (isColorLabel(label)) {
-        element.color = label2state_[label];
+      } else if (utils::isColorLabel(label)) {
+        element.color = utils::convertColorStringtoT4(label);
         element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
       } else {
         element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
-        element.shape = label2state_[label];
+        element.shape = utils::convertShapeStringtoT4(label);
       }
     }
     element.confidence = prob;
@@ -184,19 +183,6 @@ bool CNNClassifier::readLabelfile(std::string filepath, std::vector<std::string>
     labels.push_back(label);
   }
   return true;
-}
-
-bool CNNClassifier::isColorLabel(const std::string & label)
-{
-  using tier4_perception_msgs::msg::TrafficLight;
-  if (
-    label == state2label_[tier4_perception_msgs::msg::TrafficLightElement::GREEN] ||
-    label == state2label_[tier4_perception_msgs::msg::TrafficLightElement::AMBER] ||
-    label == state2label_[tier4_perception_msgs::msg::TrafficLightElement::RED] ||
-    label == state2label_[tier4_perception_msgs::msg::TrafficLightElement::WHITE]) {
-    return true;
-  }
-  return false;
 }
 
 }  // namespace autoware::traffic_light
