@@ -250,8 +250,15 @@ void CrosswalkTrafficLightEstimatorNode::onTrafficLightArray(
   for (const auto & traffic_signal : msg->traffic_light_groups) {
     traffic_light_id_map[traffic_signal.traffic_light_group_id] =
       std::pair<TrafficSignal, rclcpp::Time>(traffic_signal, get_clock()->now());
-    const auto traffic_light =
-      lanelet_map_ptr_->regulatoryElementLayer.get(traffic_signal.traffic_light_group_id);
+    const auto traffic_light_it =
+      lanelet_map_ptr_->regulatoryElementLayer.find(traffic_signal.traffic_light_group_id);
+    if (traffic_light_it == lanelet_map_ptr_->regulatoryElementLayer.end()) {
+      RCLCPP_WARN(
+        get_logger(), "Traffic light group ID %ld not found in regulatory element layer",
+        traffic_signal.traffic_light_group_id);
+      continue;
+    }
+    const auto & traffic_light = *traffic_light_it;
     const auto current_vehicle_traffic_light_color =
       getHighestConfidenceTrafficSignal(traffic_light->id(), traffic_light_id_map);
     for (const auto & attribute : traffic_light->attributes()) {
