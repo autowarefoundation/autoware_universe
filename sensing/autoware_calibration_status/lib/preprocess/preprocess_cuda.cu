@@ -247,6 +247,63 @@ __device__ inline InputImageBGR8Type jet_colormap(float v)
 }
 
 /**
+ * @brief Performs depth-aware dilation for a single point.
+ *
+ * @param u The x-coordinate of the center point.
+ * @param v The y-coordinate of the center point.
+ * @param current_metric_depth The depth of the point.
+ * @param dilation_size The radius for dilation.
+ * @param width The width of the output image.
+ * @param height The height of the output image.
+ * @param p The input point data.
+ * @param color The color corresponding to the point's intensity.
+ * @param metric_depth_buffer The Z-buffer for depth testing.
+ * @param output_array The final output 5-channel array.
+ * @param undistorted_image The image to draw the colormap on.
+ * @param max_depth The maximum depth for normalization.
+ */
+__device__ void dilate_point(
+  int u, int v, float current_metric_depth, int dilation_size, size_t width, size_t height,
+  const InputPointType & p, const InputImageBGR8Type & color,
+  float * __restrict__ metric_depth_buffer, float * __restrict__ output_array,
+  InputImageBGR8Type * __restrict__ undistorted_image, const double max_depth)
+{
+  for (int dy = -dilation_size; dy <= dilation_size; ++dy) {
+    for (int dx = -dilation_size; dx <= dilation_size; ++dx) {
+      if (dx == 0 && dy == 0) continue;
+
+      int neighbor_u = u + dx;
+      int neighbor_v = v + dy;
+
+      if (
+        neighbor_u >= 0 && neighbor_v >= 0 && neighbor_u < static_cast<int>(width) &&
+        neighbor_v < static_cast<int>(height)) {
+        size_t neighbor_idx = neighbor_v * width + neighbor_u;
+        auto neighbor_addr_int = reinterpret_cast<uint32_t *>(&metric_depth_buffer[neighbor_idx]);
+        float neighbor_old_metric_depth = __uint_as_float(*neighbor_addr_int);
+
+        while (neighbor_old_metric_depth == 0.0f ||
+               current_metric_depth < fabsf(neighbor_old_metric_depth)) {
+          unsigned int neighbor_assumed_int = __float_as_uint(neighbor_old_metric_depth);
+          unsigned int neighbor_returned_int = atomicCAS(
+            neighbor_addr_int, neighbor_assumed_int, __float_as_uint(-current_metric_depth));
+
+          if (neighbor_returned_int == neighbor_assumed_int) {
+            output_array[3 * height * width + neighbor_idx] =
+              static_cast<float>(current_metric_depth / max_depth);
+            output_array[4 * height * width + neighbor_idx] =
+              static_cast<float>(p.intensity) / 255.0f;
+            undistorted_image[neighbor_idx] = color;
+            break;
+          }
+          neighbor_old_metric_depth = __uint_as_float(neighbor_returned_int);
+        }
+      }
+    }
+  }
+}
+
+/**
  * @brief Projects a point cloud and performs a depth-aware dilation in a single pass.
  * This kernel produces a final 5-channel uint8 output, matching the Python script's logic.
  *
@@ -317,46 +374,16 @@ __global__ void projectPoints_kernel(
         InputImageBGR8Type color = jet_colormap(static_cast<float>(p.intensity) / 255.0f);
         size_t pixel_idx = v * width + u;
 
-        output_array[3 * height * width + pixel_idx] = current_metric_depth / max_depth;
+        output_array[3 * height * width + pixel_idx] =
+          static_cast<float>(current_metric_depth / max_depth);
         output_array[4 * height * width + pixel_idx] = static_cast<float>(p.intensity) / 255.0f;
 
         undistorted_image[pixel_idx] = color;
         atomicAdd(num_points_projected, 1);
 
-        for (int dy = -dilation_size; dy <= dilation_size; ++dy) {
-          for (int dx = -dilation_size; dx <= dilation_size; ++dx) {
-            if (dx == 0 && dy == 0) continue;
-
-            int neighbor_u = u + dx;
-            int neighbor_v = v + dy;
-
-            if (
-              neighbor_u >= 0 && neighbor_v >= 0 && neighbor_u < static_cast<int64_t>(width) &&
-              neighbor_v < static_cast<int64_t>(height)) {
-              size_t neighbor_idx = neighbor_v * width + neighbor_u;
-              auto neighbor_addr_int =
-                reinterpret_cast<uint32_t *>(&metric_depth_buffer[neighbor_idx]);
-              float neighbor_old_metric_depth = __uint_as_float(*neighbor_addr_int);
-
-              while (neighbor_old_metric_depth == 0.0f ||
-                     current_metric_depth < fabsf(neighbor_old_metric_depth)) {
-                unsigned int neighbor_assumed_int = __float_as_uint(neighbor_old_metric_depth);
-                unsigned int neighbor_returned_int = atomicCAS(
-                  neighbor_addr_int, neighbor_assumed_int, __float_as_uint(-current_metric_depth));
-
-                if (neighbor_returned_int == neighbor_assumed_int) {
-                  output_array[3 * height * width + neighbor_idx] =
-                    current_metric_depth / max_depth;
-                  output_array[4 * height * width + neighbor_idx] =
-                    static_cast<float>(p.intensity) / 255.0f;
-                  undistorted_image[neighbor_idx] = color;
-                  break;
-                }
-                neighbor_old_metric_depth = __uint_as_float(neighbor_returned_int);
-              }
-            }
-          }
-        }
+        dilate_point(
+          static_cast<int>(u), static_cast<int>(v), current_metric_depth, dilation_size, width,
+          height, p, color, metric_depth_buffer, output_array, undistorted_image, max_depth);
         break;
       }
       old_metric_depth = __uint_as_float(returned_int);
