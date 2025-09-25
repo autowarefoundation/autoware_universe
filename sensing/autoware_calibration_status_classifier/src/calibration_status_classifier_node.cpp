@@ -329,7 +329,7 @@ bool CalibrationStatusClassifierNode::run(std::size_t pair_idx)
     synchronized_data_.at(pair_idx).second == nullptr) {
     return false;
   }
-  const auto & [cloud_msg, image_msg] = synchronized_data_.at(pair_idx);
+  auto [cloud_msg, image_msg] = std::move(synchronized_data_.at(pair_idx));
 
   const auto cloud_stamp = rclcpp::Time(cloud_msg->header.stamp);
   const auto image_stamp = rclcpp::Time(image_msg->header.stamp);
@@ -375,7 +375,6 @@ bool CalibrationStatusClassifierNode::run(std::size_t pair_idx)
     preview_image_pubs_.at(pair_idx)->publish(*preview_img_msg);
   }
 
-  synchronized_data_.at(pair_idx) = {nullptr, nullptr};
   return true;
 }
 
