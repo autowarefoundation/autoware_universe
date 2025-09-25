@@ -11,6 +11,47 @@
 
 ## Processing Flowchart
 
+```mermaid
+flowchart TD
+    Start([VadNode calls VadModel::infer]) --> VadInputDataBox((VadInputData))
+    VadInputDataBox --> LoadInputs
+    
+    subgraph InferScope["VadModel::infer()"]
+        LoadInputs[load_inputs: Preprocess input data and transfer from CPU to GPU]
+        LoadInputs --> Enqueue[enqueue: Execute TensorRT inference]
+        Enqueue --> SavePrevBev[save_prev_bev: Transfer prev_bev from GPU to CPU for next frame]
+        SavePrevBev --> Postprocess[postprocess: Postprocess output and transfer from GPU to CPU]
+        
+        Postprocess --> CheckFirstFrame{Is first frame?}
+        
+        CheckFirstFrame -->|Yes| ReleaseNetwork[release_network: Release first-frame-only ONNX]
+        ReleaseNetwork --> LoadHead[load_head: Load head ONNX that uses previous frame's BEV features]
+        LoadHead --> ReturnText[return]
+        
+        CheckFirstFrame -->|No| ReturnText
+    end
+    
+    ReturnText --> VadOutputDataBox((VadOutputData))
+    
+
+    
+    style InferScope fill:#e1f5fe,stroke:#0288d1,stroke-width:2px,color:#000000
+    style CheckFirstFrame fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000000
+    style ReleaseNetwork fill:#ffebee,stroke:#d32f2f,stroke-width:2px,color:#000000
+    style LoadHead fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000000
+    
+    %% Links to source code files
+    click Start "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_node.hpp" "VadNode header file"
+    click VadInputDataBox "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/data_types.hpp" "VadInputData definition"
+    click LoadInputs "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_model.hpp" "VadModel implementation"
+    click Enqueue "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_model.hpp" "VadModel implementation"
+    click SavePrevBev "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_model.hpp" "VadModel implementation"
+    click Postprocess "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_model.hpp" "VadModel implementation"
+    click ReleaseNetwork "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_model.hpp" "VadModel implementation"
+    click LoadHead "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_model.hpp" "VadModel implementation"
+    click VadOutputDataBox "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/data_types.hpp" "VadOutputData definition"
+```
+
 ### Function Roles
 
 ### API functions(public)
