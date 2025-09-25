@@ -846,6 +846,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11076/planning/autoware_trajectory_safety_filter/</loc>
+         <lastmod>2025-09-25</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-11076/planning/behavior_path_planner/autoware_behavior_path_avoidance_by_lane_change_module/</loc>
          <lastmod>2025-09-25</lastmod>
          <changefreq>daily</changefreq>
