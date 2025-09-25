@@ -97,11 +97,9 @@ bool OutOfLaneFilter::is_feasible(
   const TrajectoryPoints & traj_points, const FilterContext & context)
 {
   // Check required context data
-  if (!context.lanelet_map || !context.odometry || traj_points.empty()) {
-    return true;
-  }
-
-  if (!boundary_departure_checker_) {
+  if (
+    !context.lanelet_map || !context.odometry || traj_points.empty() ||
+    !boundary_departure_checker_) {
     return true;
   }
 
