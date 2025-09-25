@@ -1,6 +1,6 @@
 # VadNode Design
 
-- code: [vad_node.cpp](../src/vad_node.cpp), [vad_node.hpp](../include/autoware_tensorrt_vad/vad_node.hpp)
+- code: [vad_node.cpp](../src/vad_node.cpp), [vad_node.hpp](../include/autoware/tensorrt_vad/vad_node.hpp)
 
 ## Responsibilities
 
@@ -51,6 +51,9 @@ flowchart TD
     style TriggerInferenceScope fill:#fff8dc,stroke:#daa520,stroke-width:2px,color:#000000
     style ExecuteInferenceScope fill:#f5f5dc,stroke:#8b4513,stroke-width:2px,color:#000000
 ```
+
+- Synchronization checking is handled by [`SynchronizationStrategy`](../include/autoware/tensorrt_vad/synchronization_strategy.hpp).
+- Convert from `VadInputTopicData` to `VadInputData`, and from `VadOutputData` to `VadOutputTopicData` are handled by [`VadInterface`](../include/autoware/tensorrt_vad/vad_interface.hpp).
 
 ### Function Roles
 
