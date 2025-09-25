@@ -50,12 +50,12 @@ flowchart TD
     style ExecuteInferenceScope fill:#f5f5dc,stroke:#8b4513,stroke-width:2px,color:#000000
 ```
 
-### 関数の役割と実装
+### Function Roles
 
-- [`anchor_callback()`](../src/vad_node.cpp): anchor topic(最後にsubscribeされる画像topic)を受け取った際に起動するcallback
-- [`trigger_inference()`](../src/vad_node.cpp): データの同期チェックをし、inference処理をtrigger
-- [`execute_inference()`](../src/vad_node.cpp): VADのinference処理を実行。`VadInputTopicData`から`VadOutputTopicData`を推論する。
-- [`publish()`](../src/vad_node.cpp): 推論結果をROS topicとしてpublish
+- [`anchor_callback()`](../src/vad_node.cpp): Callback triggered when receiving the anchor topic (the last subscribed image topic)
+- [`trigger_inference()`](../src/vad_node.cpp): Checks data synchronization and triggers inference
+- [`execute_inference()`](../src/vad_node.cpp): Executes VAD inference. Infers `VadOutputTopicData` from `VadInputTopicData`
+- [`publish()`](../src/vad_node.cpp): Publishes inference results as ROS topics
 
 ## TODO
 
