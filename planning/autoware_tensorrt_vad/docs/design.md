@@ -97,13 +97,13 @@ graph TD
     style VadOutputData fill:#1A5276,stroke:#154360,stroke-width:2px,color:#FFFFFF;
     
     %% Links to source code files
-    click VadNode "../include/autoware/tensorrt_vad/vad_node.hpp" "VadNode header file"
-    click VadInterface "../include/autoware/tensorrt_vad/vad_interface.hpp" "VadInterface header file"
-    click VadModel "../include/autoware/tensorrt_vad/vad_model.hpp" "VadModel header file"
-    click VadInputTopicData "../include/autoware/tensorrt_vad/data_types.hpp" "Data types header file"
-    click VadOutputTopicData "../include/autoware/tensorrt_vad/data_types.hpp" "Data types header file"
-    click VadInputData "../include/autoware/tensorrt_vad/data_types.hpp" "Data types header file"
-    click VadOutputData "../include/autoware/tensorrt_vad/data_types.hpp" "Data types header file"
+    click VadNode "../include/autoware_tensorrt_vad/vad_node.hpp" "VadNode header file"
+    click VadInterface "../include/autoware_tensorrt_vad/vad_interface.hpp" "VadInterface header file"
+    click VadModel "../include/autoware_tensorrt_vad/vad_model.hpp" "VadModel header file"
+    click VadInputTopicData "../include/autoware_tensorrt_vad/data_types.hpp" "Data types header file"
+    click VadOutputTopicData "../include/autoware_tensorrt_vad/data_types.hpp" "Data types header file"
+    click VadInputData "../include/autoware_tensorrt_vad/data_types.hpp" "Data types header file"
+    click VadOutputData "../include/autoware_tensorrt_vad/data_types.hpp" "Data types header file"
 ```
 
 - `VadInterface`: Interface between ROS and CUDA domains
@@ -171,14 +171,14 @@ flowchart TD
     style VadNode_pub fill:#943126,stroke:#78281F,stroke-width:2px,color:#FFFFFF;
     
     %% Links to source code files
-    click VadNode_sub "../include/autoware/tensorrt_vad/vad_node.hpp" "VadNode header file"
-    click VadInterface "../include/autoware/tensorrt_vad/vad_interface.hpp" "VadInterface header file"
-    click VadInterface2 "../include/autoware/tensorrt_vad/vad_interface.hpp" "VadInterface header file"
-    click VadNode_pub "../include/autoware/tensorrt_vad/vad_node.hpp" "VadNode header file"
-    click VadInputTopicData "../include/autoware/tensorrt_vad/data_types.hpp" "Data types header file"
-    click VadOutputTopicData "../include/autoware/tensorrt_vad/data_types.hpp" "Data types header file"
-    click VadInputData "../include/autoware/tensorrt_vad/data_types.hpp" "Data types header file"
-    click VadOutputData "../include/autoware/tensorrt_vad/data_types.hpp" "Data types header file"
+    click VadNode_sub "../include/autoware_tensorrt_vad/vad_node.hpp" "VadNode header file"
+    click VadInterface "../include/autoware_tensorrt_vad/vad_interface.hpp" "VadInterface header file"
+    click VadInterface2 "../include/autoware_tensorrt_vad/vad_interface.hpp" "VadInterface header file"
+    click VadNode_pub "../include/autoware_tensorrt_vad/vad_node.hpp" "VadNode header file"
+    click VadInputTopicData "../include/autoware_tensorrt_vad/data_types.hpp" "Data types header file"
+    click VadOutputTopicData "../include/autoware_tensorrt_vad/data_types.hpp" "Data types header file"
+    click VadInputData "../include/autoware_tensorrt_vad/data_types.hpp" "Data types header file"
+    click VadOutputData "../include/autoware_tensorrt_vad/data_types.hpp" "Data types header file"
 ```
 
 - Topic conversion and coordinate transformation are handled by the interface (`VadInterface`)
