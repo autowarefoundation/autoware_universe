@@ -59,5 +59,5 @@ flowchart TD
 
 ## TODO
 
-- subscribeする際にcallbackを使いすぎず、takeを用いる
-- ROS parameterからのconfigの作成、publisherとsubscriberの作成、callback関数、inferenceのtriggerとexecute、publishといろいろなことを行っている。読みづらくなってきた場合は、それぞれの責務ごとにclassを分割する必要がある。
+- Excessive use of callbacks when subscribing can increase CPU usage. Use callbacks only when it's necessary to react to topic reception, otherwise use `Subscription->take()`.
+- This class has many responsibilities: creating config from ROS parameters, creating publishers and subscribers, callback functions, triggering and executing inference, and publishing. If readability becomes poor, it should be split into separate classes by responsibility.
