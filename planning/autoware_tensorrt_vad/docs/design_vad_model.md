@@ -80,18 +80,67 @@ flowchart TD
 - Each ONNX file corresponds to one `Net` class. The `Net` class uses [`autoware_tensorrt_common`](../../../perception/autoware_tensorrt_common/README.md) to build and execute TensorRT engines.
 - `cudaMalloc` and `cudaMemcpyAsync` operations for Input/output are executed using the [`Tensor`](../include/autoware/tensorrt_vad/networks/tensor.hpp) class.
 
+```mermaid
+flowchart TD
+    VadModel[VadModel]
+    
+    VadModel --> VadModelInit[VadModel::init_engines]
+    VadModel --> VadModelEnqueue[VadModel::enqueue]
+    
+    VadModelInit --> NetConstructor[Net Constructor]
+    VadModelInit --> NetSetInputTensor[Net::set_input_tensor]
+    VadModelEnqueue --> NetEnqueue[Net::enqueue]
+    
+    subgraph NetClass["Net Class"]
+        subgraph InitProcess["Net::init_tensorrt"]
+            GenerateIO[generate_network_io]
+            BuildEngine[build_engine]
+        end
+        
+        subgraph TensorSubgraph["Tensor"]
+            CudaMalloc[cudaMalloc]
+        end
+        
+        subgraph TrtCommonSubgraph["TrtCommon"]
+            EnqueueV3[enqueueV3]
+        end
+        
+        NetConstructor --> InitProcess
+        NetSetInputTensor --> TensorSubgraph
+        NetEnqueue --> TrtCommonSubgraph
+    end
+    
+    style NetClass fill:#e1f5fe,stroke:#0288d1,stroke-width:2px,color:#000000
+    style InitProcess fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000000
+    style TensorSubgraph fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000000
+    style TrtCommonSubgraph fill:#ffebee,stroke:#d32f2f,stroke-width:2px,color:#000000
+    style VadModel fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000000
+    style VadModelInit fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000000
+    style VadModelEnqueue fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000000
+    
+    %% Links to source code files
+    click VadModelInit "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_model.hpp" "VadModel implementation"
+    click VadModelEnqueue "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_model.hpp" "VadModel implementation"
+    click InitTensorRT "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/networks/net.hpp" "Net class implementation"
+    click GenerateIO "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/networks/net.hpp" "Net class implementation"
+    click TensorClass "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/lib/networks/tensor.cpp" "Tensor class implementation"
+```
+
 ##### Network classes: API functions
 
 - Constructor
-    - [`init_tensorrt`](../include/autoware/tensorrt_vad/networks/net.hpp)
+    - [`init_tensorrt`](../include/autoware/tensorrt_vad/networks/net.hpp): Called from `VadModel::init_engines`
         - generate_network_io
             - Implemented in [`Backbone`](../include/autoware/tensorrt_vad/networks/backbone.hpp) and [`Head`](../include/autoware/tensorrt_vad/networks/head.hpp) respectively
             - Sets input and output sizes and names
         - [`build_engine`](../include/autoware/tensorrt_vad/networks/net.hpp)
             - Creates instances of [`TrtCommon`](../../../perception/autoware_tensorrt_common/include/autoware/tensorrt_common/tensorrt_common.hpp) and [`NetworkIO`](../../../perception/autoware_tensorrt_common/include/autoware/tensorrt_common/utils.hpp) classes
-- set_input_tensor
+- set_input_tensor: Called from `VadModel::init_engines`
     - Executes `cudaMalloc` to allocate memory for input/output tensors on Device (GPU)
-       - `cudaMalloc` itself is executed in [`Tensor`](../lib/networks/tensor.cpp) class.
+       - `cudaMalloc` itself is executed in [`Tensor`](../lib/networks/tensor.cpp) class constructor.
+- enqueue: Called from `VadModel::enqueue`
+    - Executes TensorRT inference through [`TrtCommon`](../../../perception/autoware_tensorrt_common/include/autoware/tensorrt_common/tensorrt_common.hpp).
+        - Currently uses `enqueueV3`, but the enqueue version needs to be changed if TensorRT version is updated.
 
 #### CUDA Preprocessor and Postprocessor classes
 
