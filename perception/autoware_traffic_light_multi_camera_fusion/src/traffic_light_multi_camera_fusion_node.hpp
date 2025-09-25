@@ -15,7 +15,7 @@
 #ifndef TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
 #define TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
 
-#include "traffic_light_multi_camera_fusion_utils.hpp"
+#include "traffic_light_multi_camera_fusion_process.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 

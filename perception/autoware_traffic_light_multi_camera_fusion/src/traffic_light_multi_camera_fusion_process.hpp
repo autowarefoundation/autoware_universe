@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_UTILS_HPP_
-#define TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_UTILS_HPP_
+#ifndef TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_PROCESS_HPP_
+#define TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_PROCESS_HPP_
 
 #include <rclcpp/time.hpp>
 
@@ -83,4 +83,4 @@ int calVisibleScore(const FusionRecord & record);
 }  // namespace utils
 }  // namespace autoware::traffic_light
 
-#endif  // TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_UTILS_HPP_
+#endif  // TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_PROCESS_HPP_

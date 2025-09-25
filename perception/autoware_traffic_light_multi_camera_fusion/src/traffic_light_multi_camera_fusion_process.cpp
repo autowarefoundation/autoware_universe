@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "traffic_light_multi_camera_fusion_utils.hpp"
+#include "traffic_light_multi_camera_fusion_process.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
