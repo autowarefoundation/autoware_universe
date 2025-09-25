@@ -1,8 +1,8 @@
-# Feasible Trajectory Filter
+# Trajectory safety filter
 
 ## Purpose/Role
 
-This node performs a feasibility check on each candidate trajectory before it enters the final ranking stage. It drops paths that are physically impossible for the ego vehicle or that create an obvious driving risk.
+This node performs a safety check on each candidate trajectory before it enters the final ranking stage. It drops paths that are physically impossible for the ego vehicle or that create an obvious driving risk.
 
 ## Algorithm Overview
 
