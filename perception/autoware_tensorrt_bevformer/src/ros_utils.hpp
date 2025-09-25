@@ -73,16 +73,16 @@ namespace tensorrt_bevformer
 // Reusable structs and functions
 struct Box3D
 {
-  float x;
-  float y;
-  float z;
-  float w;
-  float l;
-  float h;
-  float r;
+  double x;
+  double y;
+  double z;
+  double w;
+  double l;
+  double h;
+  double r;
   float score;
-  float vx;
-  float vy;
+  double vx;
+  double vy;
   int label;
 };
 

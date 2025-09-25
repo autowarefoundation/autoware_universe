@@ -666,11 +666,11 @@ void TRTBEVFormerNode::callback(
     RCLCPP_INFO(this->get_logger(), "--------------------------------------------------");
   } catch (const std::exception & e) {
     RCLCPP_ERROR(this->get_logger(), "Post-process failed: %s", e.what());
-    return;  // Skip publishing if post-processing fails
+    return;
   }
 
   autoware_perception_msgs::msg::DetectedObjects bevformer_objects;
-  bevformer_objects.header.frame_id = "base_link";
+  bevformer_objects.header.frame_id = "LIDAR_TOP";
   bevformer_objects.header.stamp = msg_f_img->header.stamp;
 
   box3DToDetectedObjects(batch_results, bevformer_objects, class_names_, score_thre_, has_twist_);

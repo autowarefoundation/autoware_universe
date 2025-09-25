@@ -1,4 +1,4 @@
-# cspell:ignore bevformer, expt, gencode, multiview
+# cspell:ignore expt, gencode, multiview
 cmake_minimum_required(VERSION 3.14)
 project(autoware_tensorrt_bevformer)
 

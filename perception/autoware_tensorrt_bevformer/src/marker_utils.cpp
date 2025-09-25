@@ -89,7 +89,7 @@ visualization_msgs::msg::MarkerArray createMarkerArray(
   visualization_msgs::msg::Marker deletion_marker;
   deletion_marker.header = detected_objects.header;
 
-  deletion_marker.header.frame_id = "base_link";
+  deletion_marker.header.frame_id = "LIDAR_TOP";
   deletion_marker.ns = "bevformer_boxes";
   deletion_marker.id = id++;
   deletion_marker.action = visualization_msgs::msg::Marker::DELETEALL;
@@ -110,7 +110,7 @@ visualization_msgs::msg::MarkerArray createMarkerArray(
     marker.scale.y = object.shape.dimensions.y;
     marker.scale.z = object.shape.dimensions.z;
 
-    marker.lifetime = rclcpp::Duration::from_seconds(0.1);
+    marker.lifetime = rclcpp::Duration::from_seconds(0.3);
 
     // Set color based on NuScenes color scheme
     uint8_t label = object.classification.front().label;
