@@ -40,11 +40,6 @@
           "type": "number",
           "description": "z offset from target frame. [m]",
           "default": -2.0
-        },
-        "onnx_file": {
-          "type": "string",
-          "description": "The name of ONNX model file.",
-          "default": "hdl-64.onnx"
         }
       },
       "required": [
@@ -54,8 +49,7 @@
         "height",
         "use_intensity_feature",
         "use_constant_feature",
-        "z_offset",
-        "onnx_file"
+        "z_offset"
       ],
       "additionalProperties": false
     }
@@ -65,14 +59,7 @@
       "type": "object",
       "properties": {
         "ros__parameters": {
-          "type": "object",
-          "properties": {
-            "lidar_instance_segmentation": {
-              "$ref": "#/definitions/hdl-64"
-            }
-          },
-          "required": ["lidar_instance_segmentation"],
-          "additionalProperties": false
+          "$ref": "#/definitions/hdl-64"
         }
       },
       "required": ["ros__parameters"],

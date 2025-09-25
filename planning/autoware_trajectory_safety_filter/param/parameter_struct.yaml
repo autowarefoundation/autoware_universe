@@ -1,0 +1,30 @@
+safety_filter:
+  filter_names:
+    type: string_array
+    default_value: []
+    description: metrics.
+    read_only: false
+
+  out_of_lane:
+    time:
+      type: double
+      default_value: 3.0
+      description: The time range to check
+      read_only: false
+    min_value:
+      type: double
+      default_value: 0.0
+      description: Minimum distance to lane boundary
+      read_only: false
+
+  collision:
+    time:
+      type: double
+      default_value: 3.0
+      description: The time range to check
+      read_only: false
+    min_value:
+      type: double
+      default_value: 2.0
+      description: Minimum acceptable time to collision
+      read_only: false
