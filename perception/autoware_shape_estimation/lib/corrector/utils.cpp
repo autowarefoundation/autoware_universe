@@ -160,17 +160,25 @@ bool correctWithDefaultValue(
      (v_point.at(first_most_distant_index) * 2.0).norm() < param.max_width &&
      (v_point.at(second_most_distant_index) * 2.0).norm() < param.max_width)  // both of edge is within width threshold
   {                       // NOLINT
-    correction_vector = v_point.at(first_most_distant_index);
-    if (correction_vector.x() == 0.0) {
-      correction_vector.y() =
-        std::max(std::abs(correction_vector.y()), param.default_length / 2.0) *
-          (correction_vector.y() < 0.0 ? -1.0 : 1.0) -
-        correction_vector.y();
-    } else if (correction_vector.y() == 0.0) {
-      correction_vector.x() =
-        std::max(std::abs(correction_vector.x()), param.default_length / 2.0) *
-          (correction_vector.x() < 0.0 ? -1.0 : 1.0) -
-        correction_vector.x();
+    if(
+      (v_point.at(first_most_distant_index) * 2.0).norm() > param.min_width ||
+      (v_point.at(second_most_distant_index) * 2.0).norm() > param.min_width)
+      {
+        correction_vector = v_point.at(first_most_distant_index);
+        if (correction_vector.x() == 0.0) {
+          correction_vector.y() =
+            std::max(std::abs(correction_vector.y()), param.default_length / 2.0) *
+              (correction_vector.y() < 0.0 ? -1.0 : 1.0) -
+            correction_vector.y();
+        } else if (correction_vector.y() == 0.0) {
+          correction_vector.x() =
+            std::max(std::abs(correction_vector.x()), param.default_length / 2.0) *
+              (correction_vector.x() < 0.0 ? -1.0 : 1.0) -
+            correction_vector.x();
+        }
+      }
+    else{
+      return false;
     }
   } else if (  // NOLINT
     param.min_width < (v_point.at(first_most_distant_index) * 2.0).norm() &&
