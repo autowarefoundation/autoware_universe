@@ -217,3 +217,4 @@ This section contains design concepts that affect the overall system but are not
 - Do not use `int`. Use `int32_t` instead.
 - Do not use `char` solely to indicate 1-byte data. Use `uint8_t` instead.
 - Do not use `printf` or `cout`. Use `RCLCPP_INFO_THROTTLE`, `RCLCPP_DEBUG_THROTTLE` and `RCLCPP_ERROR_THROTTLE` instead.
+- Use `double` for map coordinate because it requires high precision.
