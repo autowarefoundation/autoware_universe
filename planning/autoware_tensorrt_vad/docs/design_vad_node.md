@@ -6,7 +6,7 @@
 
 - ROS topicをsubscribeしてcallback関数を実行し、`VadInputTopicData`に詰め込む
 
-## 処理のflowchart
+## Processing Flowchart
 
 ```mermaid
 flowchart TD
@@ -30,9 +30,9 @@ flowchart TD
             CheckComplete -->|No| ReturnNull[return nullopt]
             
             subgraph ExecuteInferenceScope["execute_inference()"]
-                ConvertInput[Convert to VadInputData]
+                ConvertInput[Convert from VadInputTopicData to VadInputData]
                 ConvertInput --> VadModelInfer[VadModel::infer]
-                VadModelInfer --> ConvertOutput[Convert to VadOutputTopicData]
+                VadModelInfer --> ConvertOutput[Convert from VadOutputData to VadOutputTopicData]
                 ConvertOutput --> GetOutput[return VadOutputTopicData]
             end
         end
