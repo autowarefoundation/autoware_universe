@@ -15,9 +15,10 @@ The following processors are supported:
 
 ### Input
 
-| Name              | Type                                              | Description       |
-| ----------------- | ------------------------------------------------- | ----------------- |
-| `~/input/objects` | `autoware_perception_msgs::msg::PredictedObjects` | Predicted objects |
+| Name                  | Type                                              | Description       |
+| --------------------- | ------------------------------------------------- | ----------------- |
+| `~/input/objects`     | `autoware_perception_msgs::msg::PredictedObjects` | Predicted objects |
+| `~/input/lanelet_map` | `autoware_msgs::msg::LaneletMapBin`               | Lanelet map       |
 
 ### Output
 

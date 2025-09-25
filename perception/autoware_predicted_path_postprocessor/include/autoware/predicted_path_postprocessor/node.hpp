@@ -22,6 +22,7 @@
 #include <autoware_utils_system/stop_watch.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 
 #include <chrono>
@@ -43,10 +44,19 @@ private:
    */
   void callback(const autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr & msg);
 
+  /**
+   * @brief Callback function for lanelet map message to update the context with the lanelet data
+   * @param msg Lanelet map message
+   */
+  void on_map(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr & msg);
+
   //////////////////////// member variables ////////////////////////
   //!< @brief Subscriber for predicted objects message
   rclcpp::Subscription<autoware_perception_msgs::msg::PredictedObjects>::SharedPtr
     object_subscription_;
+
+  //!< @brief Subscriber for lanelet map message
+  rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr lanelet_subscription_;
 
   //!< @brief Publisher for processed predicted objects message
   rclcpp::Publisher<autoware_perception_msgs::msg::PredictedObjects>::SharedPtr object_publisher_;

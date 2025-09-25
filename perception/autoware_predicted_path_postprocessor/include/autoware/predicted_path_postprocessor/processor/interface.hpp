@@ -15,11 +15,17 @@
 #ifndef AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__INTERFACE_HPP_
 #define AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__INTERFACE_HPP_
 
+#include "autoware/predicted_path_postprocessor/processor/result.hpp"
+
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <rclcpp/parameter_client.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
+
+#include <lanelet2_core/LaneletMap.h>
+#include <lanelet2_routing/RoutingGraph.h>
+#include <lanelet2_traffic_rules/TrafficRules.h>
 
 #include <memory>
 #include <string>
@@ -34,7 +40,21 @@ namespace autoware::predicted_path_postprocessor::processor
 class Context
 {
 public:
-  Context() = default;
+  struct LaneletRecord
+  {
+    lanelet::LaneletMapPtr lanelet_map;
+    lanelet::traffic_rules::TrafficRulesPtr traffic_rules;
+    lanelet::routing::RoutingGraphPtr routing_graph;
+
+    /**
+     * @brief Check if the all lanelet relevant data is available.
+     *
+     * @return True if the context is available, false otherwise.
+     */
+    bool is_available() const { return lanelet_map && traffic_rules && routing_graph; }
+  };
+
+  Context() : lanelet_record_(std::make_unique<LaneletRecord>()) {}
 
   /**
    * @brief Get the reference to the current set of predicted objects.
@@ -56,10 +76,54 @@ public:
     objects_ = std::move(new_objects);
   }
 
+  /**
+   * @brief Update the context with lanelet map data.
+   *
+   * @param lanelet_map The lanelet map
+   * @param traffic_rules The traffic rules
+   * @param routing_graph The routing graph
+   */
+  void update(
+    lanelet::LaneletMapPtr lanelet_map, lanelet::traffic_rules::TrafficRulesPtr traffic_rules,
+    lanelet::routing::RoutingGraphPtr routing_graph)
+  {
+    lanelet_record_->lanelet_map = std::move(lanelet_map);
+    lanelet_record_->traffic_rules = std::move(traffic_rules);
+    lanelet_record_->routing_graph = std::move(routing_graph);
+  }
+
+  /**
+   * @brief Get the lanelet map.
+   *
+   * @return The lanelet map (may be nullptr if not set)
+   */
+  const lanelet::LaneletMapPtr & lanelet_map() const { return lanelet_record_->lanelet_map; }
+
+  /**
+   * @brief Get the traffic rules.
+   *
+   * @return The traffic rules (may be nullptr if not set)
+   */
+  const lanelet::traffic_rules::TrafficRulesPtr & traffic_rules() const
+  {
+    return lanelet_record_->traffic_rules;
+  }
+
+  /**
+   * @brief Get the routing graph.
+   *
+   * @return The routing graph (may be nullptr if not set)
+   */
+  const lanelet::routing::RoutingGraphPtr & routing_graph() const
+  {
+    return lanelet_record_->routing_graph;
+  }
+
 private:
-  // NOTE: In the future, we may want to add more context information here, such as lanelet,
-  // traffic light, etc.
+  // NOTE: In the future, we may want to add more context information here, such as traffic light,
+  // etc.
   autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr objects_{nullptr};
+  std::unique_ptr<LaneletRecord> lanelet_record_;
 };
 
 /**
@@ -70,6 +134,9 @@ class ProcessorInterface
 public:
   using UniquePtr = std::unique_ptr<ProcessorInterface>;
   using DeclareParametersFunc = std::function<void(rclcpp::Node *, const std::string &)>;
+
+  using error_type = std::string;  // TODO(ktro2828): Define concrete error type
+  using result_type = EmptyResult<error_type>;
 
   explicit ProcessorInterface(const std::string & processor_name) : processor_name_(processor_name)
   {
@@ -112,8 +179,9 @@ public:
    *
    * @param target The predicted object to process.
    * @param context The context in which the object is processed.
+   * @return The result of the processing.
    */
-  virtual void process(
+  virtual result_type process(
     autoware_perception_msgs::msg::PredictedObject & target, const Context & context) = 0;
 
 private:
