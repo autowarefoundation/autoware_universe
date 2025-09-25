@@ -10,27 +10,27 @@
 
 ```mermaid
 flowchart TD
-    Start([Anchor Topic Subscribed]) --> AnchorCallback[anchor_callback]
+    Start([Anchor Topic Subscribed]) --> CheckReady
     
     subgraph AnchorCallbackScope["anchor_callback()"]
-        AnchorCallback --> CheckReady{Is VadInputTopicData synchronization ready?}
+        CheckReady{Is VadInputTopicData synchronization ready?}
         
-        CheckReady -->|Yes| TriggerInferenceEntry[trigger_inference]
+        CheckReady -->|Yes| CheckDropped
         CheckReady -->|No| ErrorLog[Log error]
         
         subgraph TriggerInferenceScope["trigger_inference()"]
-            TriggerInferenceEntry --> CheckDropped{Are any topics<br/>dropped?}
+            CheckDropped{Are any topics<br/>dropped?}
             
             CheckDropped -->|Yes| FillDropped[fill_dropped_data]
             CheckDropped -->|No| CheckComplete{Are all required topics<br/>completed?}
             
             FillDropped --> CheckComplete
             
-            CheckComplete -->|Yes| ExecuteInferenceEntry[execute_inference]
+            CheckComplete -->|Yes| ConvertInput
             CheckComplete -->|No| ReturnNull[return nullopt]
             
             subgraph ExecuteInferenceScope["execute_inference()"]
-                ExecuteInferenceEntry --> ConvertInput[Convert to VadInputData]
+                ConvertInput[Convert to VadInputData]
                 ConvertInput --> VadModelInfer[VadModel::infer]
                 VadModelInfer --> ConvertOutput[Convert to VadOutputTopicData]
                 ConvertOutput --> GetOutput[return VadOutputTopicData]
@@ -44,12 +44,6 @@ flowchart TD
     end
     
     Reset --> End([End])
-    
-    %% Links to source code
-    click AnchorCallback "../src/vad_node.cpp" "anchor_callback() implementation"
-    click TriggerInferenceEntry "../src/vad_node.cpp" "trigger_inference() implementation"
-    click ExecuteInferenceEntry "../src/vad_node.cpp" "execute_inference() implementation"
-    click Publish "../src/vad_node.cpp" "publish() implementation"
     
     style AnchorCallbackScope fill:#f0f8ff,stroke:#4682b4,stroke-width:2px,color:#000000
     style TriggerInferenceScope fill:#fff8dc,stroke:#daa520,stroke-width:2px,color:#000000
