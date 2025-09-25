@@ -2,9 +2,11 @@
 
 - code: [vad_node.cpp](../src/vad_node.cpp), [vad_node.hpp](../include/autoware_tensorrt_vad/vad_node.hpp)
 
-## 責務
+## Responsibilities
 
-- ROS topicをsubscribeしてcallback関数を実行し、`VadInputTopicData`に詰め込む
+- Subscribe to ROS topics, execute callback functions, and pack data into `VadInputTopicData`
+- Check if inference can be executed, execute inference, obtain `VadOutputTopicData`, and publish
+- Read ROS parameters and create configs for `VadInterface` and `VadModel`
 
 ## Processing Flowchart
 
