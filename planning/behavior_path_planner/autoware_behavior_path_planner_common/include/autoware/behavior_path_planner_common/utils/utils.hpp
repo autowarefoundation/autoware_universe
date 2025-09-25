@@ -229,14 +229,16 @@ std::optional<lanelet::ConstLanelet> getLeftLanelet(
  * from the goal posture information is also inserted for the smooth connection of the goal pose.
  * @param [in] search_radius_range distance on path to be modified for goal insertion
  * @param [in] search_rad_range [unused]
+ * @param [in] output_path_interval interval of output path
  * @param [in] input original path
  * @param [in] goal original goal pose
  * @param [in] goal_lane_id [unused]
  * @param [in] output_ptr output path with modified points for the goal
  */
 bool set_goal(
-  const double search_radius_range, const double search_rad_range, const PathWithLaneId & input,
-  const Pose & goal, const int64_t goal_lane_id, PathWithLaneId * output_ptr);
+  const double search_radius_range, const double search_rad_range,
+  const double output_path_interval, const PathWithLaneId & input, const Pose & goal,
+  const int64_t goal_lane_id, PathWithLaneId * output_ptr);
 
 /**
  * @brief Recreate the goal pose to prevent the goal point being too far from the lanelet, which
@@ -252,14 +254,16 @@ const Pose refineGoal(const Pose & goal, const lanelet::ConstLanelet & goal_lane
  * @brief Recreate the path with a given goal pose.
  * @param search_radius_range Searching radius.
  * @param search_rad_range Searching angle.
+ * @param output_path_interval Interval of output path.
  * @param input Input path.
  * @param goal Goal pose.
  * @param goal_lane_id Lane ID of goal lanelet.
  * @return Recreated path
  */
 PathWithLaneId refinePathForGoal(
-  const double search_radius_range, const double search_rad_range, const PathWithLaneId & input,
-  const Pose & goal, const int64_t goal_lane_id);
+  const double search_radius_range, const double search_rad_range,
+  const double output_path_interval, const PathWithLaneId & input, const Pose & goal,
+  const int64_t goal_lane_id);
 
 bool isAllowedGoalModification(const std::shared_ptr<RouteHandler> & route_handler);
 bool checkOriginalGoalIsInShoulder(const std::shared_ptr<RouteHandler> & route_handler);

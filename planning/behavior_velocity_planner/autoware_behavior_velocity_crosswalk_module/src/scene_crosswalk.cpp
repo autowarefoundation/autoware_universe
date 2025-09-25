@@ -1506,7 +1506,7 @@ void CrosswalkModule::setDistanceToStop(
   if (stop_pos) {
     const auto & ego_pos = planner_data_->current_odometry->pose.position;
     const double dist_ego2stop = calcSignedArcLength(ego_path.points, ego_pos, *stop_pos);
-    setDistance(dist_ego2stop);
+    setDistance(std::max(dist_ego2stop, 0.0));
   } else {
     setDistance(std::numeric_limits<double>::lowest());
   }
