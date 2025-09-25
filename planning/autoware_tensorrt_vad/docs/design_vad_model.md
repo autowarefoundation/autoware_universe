@@ -97,11 +97,11 @@ flowchart TD
             BuildEngine[build_engine]
         end
         
-        subgraph TensorSubgraph["Tensor"]
+        subgraph TensorSubgraph["Tensor Class"]
             CudaMalloc[cudaMalloc]
         end
         
-        subgraph TrtCommonSubgraph["TrtCommon"]
+        subgraph TrtCommonSubgraph["TrtCommon Class"]
             EnqueueV3[enqueueV3]
         end
         
