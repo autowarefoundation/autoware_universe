@@ -30,6 +30,44 @@
 namespace autoware::trajectory_safety_filter::plugin
 {
 
+namespace
+{
+autoware_internal_planning_msgs::msg::PathWithLaneId convert_to_path_with_lane_id(
+  const TrajectoryPoints & traj_points, double max_check_time)
+{
+  autoware_internal_planning_msgs::msg::PathWithLaneId path;
+  path.header.stamp = rclcpp::Clock().now();
+  path.header.frame_id = "map";
+
+  for (const auto & traj_point : traj_points) {
+    if (rclcpp::Duration(traj_point.time_from_start).seconds() > max_check_time) {
+      break;
+    }
+
+    autoware_internal_planning_msgs::msg::PathPointWithLaneId path_point;
+    path_point.point.pose = traj_point.pose;
+
+    // Set velocity
+    const double vel = std::sqrt(
+      traj_point.longitudinal_velocity_mps * traj_point.longitudinal_velocity_mps +
+      traj_point.lateral_velocity_mps * traj_point.lateral_velocity_mps);
+    path_point.point.longitudinal_velocity_mps = vel;
+    path_point.point.lateral_velocity_mps = 0.0;
+    path_point.point.heading_rate_rps = traj_point.heading_rate_rps;
+
+    // Lane IDs will be empty for this check
+    path.points.push_back(path_point);
+  }
+
+  return path;
+}
+}  // namespace
+
+OutOfLaneFilter::OutOfLaneFilter() : SafetyFilterInterface("OutOfLaneFilter")
+{
+  // BoundaryDepartureChecker will be initialized when vehicle_info is set
+}
+
 void OutOfLaneFilter::set_parameters(const std::unordered_map<std::string, std::any> & params)
 {
   auto get_value = [&params](const std::string & key, auto & value) {
@@ -45,29 +83,36 @@ void OutOfLaneFilter::set_parameters(const std::unordered_map<std::string, std::
 
   get_value("max_check_time", params_.max_check_time);
   get_value("min_value", params_.min_value);
+
+  // Initialize boundary departure checker if vehicle_info is available
+  if (!boundary_departure_checker_ && vehicle_info_ptr_) {
+    autoware::boundary_departure_checker::Param bdc_param{};
+    boundary_departure_checker_ =
+      std::make_unique<autoware::boundary_departure_checker::BoundaryDepartureChecker>(
+        bdc_param, *vehicle_info_ptr_);
+  }
 }
 
 bool OutOfLaneFilter::is_feasible(
   const TrajectoryPoints & traj_points, const FilterContext & context)
 {
   // Check required context data
-  if (!context.lanelet_map || !context.odometry) {
+  if (!context.lanelet_map || !context.odometry || traj_points.empty()) {
     return true;
   }
 
-  for (const auto & point : traj_points) {
-    if (rclcpp::Duration(point.time_from_start).seconds() > params_.max_check_time) {
-      break;
-    }
-    const auto nearest_lanelets = lanelet::geometry::findWithin2d(
-      context.lanelet_map->laneletLayer,
-      lanelet::BasicPoint2d(point.pose.position.x, point.pose.position.y), 0.0);
-    if (nearest_lanelets.empty()) {
-      return false;
-    }
+  if (!boundary_departure_checker_) {
+    return true;
   }
 
-  return true;
+  const auto path = convert_to_path_with_lane_id(traj_points, params_.max_check_time);
+
+  // Use boundary departure checker to verify if path will leave lane
+  const bool will_leave_lane =
+    boundary_departure_checker_->checkPathWillLeaveLane(context.lanelet_map, path);
+
+  // Return false if the path will leave the lane
+  return !will_leave_lane;
 }
 }  // namespace autoware::trajectory_safety_filter::plugin
 

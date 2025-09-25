@@ -37,7 +37,8 @@ TrajectorySafetyFilter::TrajectorySafetyFilter(const rclcpp::NodeOptions & optio
   listener_{std::make_unique<safety_filter::ParamListener>(get_node_parameters_interface())},
   plugin_loader_(
     "autoware_trajectory_safety_filter",
-    "autoware::trajectory_safety_filter::plugin::SafetyFilterInterface")
+    "autoware::trajectory_safety_filter::plugin::SafetyFilterInterface"),
+  vehicle_info_(autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo())
 {
   const auto filters = listener_->get_params().filter_names;
   for (const auto & filter : filters) {
@@ -159,9 +160,11 @@ void TrajectorySafetyFilter::load_metric(const std::string & name)
       params["collision.min_value"] = all_params.collision.min_value;
     }
 
+    plugin->set_vehicle_info(vehicle_info_);
     plugin->set_parameters(params);
 
     plugins_.push_back(plugin);
+
     RCLCPP_INFO_STREAM(
       get_logger(), "The scene plugin '" << name << "' is loaded and initialized.");
   } catch (const pluginlib::CreateClassException & e) {

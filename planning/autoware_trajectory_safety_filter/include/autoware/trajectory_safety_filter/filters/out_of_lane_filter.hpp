@@ -17,6 +17,11 @@
 
 #include "autoware/trajectory_safety_filter/safety_filter_interface.hpp"
 
+#include <autoware/boundary_departure_checker/boundary_departure_checker.hpp>
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
+
 #include <lanelet2_core/LaneletMap.h>
 
 #include <any>
@@ -37,7 +42,7 @@ struct OutOfLaneParams
 class OutOfLaneFilter : public SafetyFilterInterface
 {
 public:
-  OutOfLaneFilter() : SafetyFilterInterface("OutOfLaneFilter") {}
+  OutOfLaneFilter();
 
   bool is_feasible(const TrajectoryPoints & traj_points, const FilterContext & context) override;
 
@@ -45,6 +50,8 @@ public:
 
 private:
   OutOfLaneParams params_;
+  std::unique_ptr<autoware::boundary_departure_checker::BoundaryDepartureChecker>
+    boundary_departure_checker_;
 };
 }  // namespace autoware::trajectory_safety_filter::plugin
 

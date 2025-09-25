@@ -17,9 +17,12 @@
 
 #include "autoware/trajectory_safety_filter/filter_context.hpp"
 
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
 #include <any>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -29,11 +32,16 @@ namespace autoware::trajectory_safety_filter::plugin
 {
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
+using VehicleInfo = autoware::vehicle_info_utils::VehicleInfo;
 
 class SafetyFilterInterface
 {
 public:
   explicit SafetyFilterInterface(std::string name) : name_(std::move(name)) {}
+  SafetyFilterInterface(std::string name, const VehicleInfo & vehicle_info)
+  : name_(std::move(name)), vehicle_info_ptr_(std::make_shared<VehicleInfo>(vehicle_info))
+  {
+  }
   virtual ~SafetyFilterInterface() = default;
   SafetyFilterInterface(const SafetyFilterInterface &) = delete;
   SafetyFilterInterface & operator=(const SafetyFilterInterface &) = delete;
@@ -46,10 +54,17 @@ public:
   // Set parameters directly (for testing and runtime configuration)
   virtual void set_parameters(const std::unordered_map<std::string, std::any> & params) = 0;
 
+  // Set vehicle info
+  virtual void set_vehicle_info(const VehicleInfo & vehicle_info)
+  {
+    vehicle_info_ptr_ = std::make_shared<VehicleInfo>(vehicle_info);
+  }
+
   std::string get_name() const { return name_; }
 
 protected:
   std::string name_;
+  std::shared_ptr<VehicleInfo> vehicle_info_ptr_;
 };
 }  // namespace autoware::trajectory_safety_filter::plugin
 

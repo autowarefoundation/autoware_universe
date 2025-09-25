@@ -21,6 +21,7 @@
 #include <autoware_trajectory_safety_filter_param.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -86,6 +87,7 @@ private:
 
   pluginlib::ClassLoader<plugin::SafetyFilterInterface> plugin_loader_;
   std::vector<std::shared_ptr<plugin::SafetyFilterInterface>> plugins_;
+  autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
 };
 
 }  // namespace autoware::trajectory_safety_filter
