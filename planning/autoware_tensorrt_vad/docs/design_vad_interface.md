@@ -19,14 +19,87 @@
 
 ## Processing Flowchart
 
+```mermaid
+flowchart TD
+    VadNode["VadNode"]
+    VadNode2["VadNode"]
+    VadInputTopicData((VadInputTopicData))
+    VadOutputData((VadOutputData))
+    VadNode --> VadInputTopicData
+    VadInputTopicData --> ConvertInput
+    subgraph ConvertInput["VadInterface::convert_input()"]
+        ImageConv
+        MatrixConv
+        CanBusConv
+        BEVShiftConv
+    end
+    ConvertInput --> VadInputData((VadInputData))
+    VadInputData --> VadNode2
+    style VadInputData fill:#fff,stroke:#1976d2,stroke-width:2px,color:#000000
+    VadNode --> VadOutputData
+    VadOutputData --> ConvertOutput
+    subgraph ConvertOutput["VadInterface::convert_output()"]
+        TrajConv
+        ObjConv
+        MapConv
+    end
+    ConvertOutput --> VadOutputTopicData((VadOutputTopicData))
+    VadOutputTopicData --> VadNode2
+
+    subgraph VadInterface["VadInterface"]
+        subgraph ConvertInput["VadInterface::convert_input()"]
+            subgraph ImageConv["InputImageConverter"]
+                ImageProc["process_image()"]
+            end
+            subgraph MatrixConv["InputTransformMatrixConverter"]
+                MatrixProc["process_vad_base2img()"]
+            end
+            subgraph CanBusConv["InputCanBusConverter"]
+                CanBusProc["process_can_bus()"]
+            end
+            subgraph BEVShiftConv["InputBEVShiftConverter"]
+                BEVShiftProc["process_shift()"]
+            end
+        end
+        subgraph ConvertOutput["VadInterface::convert_output()"]
+            subgraph TrajConv["OutputTrajectoryConverter"]
+                TrajProc["process_trajectory()"]
+                TrajCandProc["process_candidate_trajectories()"]
+            end
+            subgraph ObjConv["OutputObjectsConverter"]
+                ObjProc["process_predicted_objects()"]
+            end
+            subgraph MapConv["OutputMapConverter"]
+                MapProc["process_map_points()"]
+            end
+        end
+    end
+    style VadOutputTopicData fill:#fff,stroke:#1976d2,stroke-width:2px,color:#000000
+
+    style VadInputTopicData fill:#fff,stroke:#1976d2,stroke-width:2px,color:#000000
+    style VadOutputData fill:#fff,stroke:#1976d2,stroke-width:2px,color:#000000
+    style VadInterface fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000000
+    style VadNode fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000000
+    style VadNode2 fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000000
+    %% Blue style for ConvertInput/ConvertOutput subgraphs
+    style ConvertInput fill:#bbdefb,stroke:#1976d2,stroke-width:2px,color:#000000
+    style ConvertOutput fill:#bbdefb,stroke:#1976d2,stroke-width:2px,color:#000000
+```
+
 ### Function Roles
 
 ### API functions(public)
 
+- `VadNode` calls `convert_input()` before inference and `convert_output()` after inference.
 
-### Internal functions(private)
-
-
+- [`convert_input()`](../include/autoware/tensorrt_vad/vad_interface.hpp): Convert from `VadInputTopicData` to `VadInputData`
+    - Image processing is handled by [`InputImageConverter::process_image()`](../include/autoware/tensorrt_vad/input_converter/image_converter.hpp)
+    - Transform matrix processing is handled by [`InputTransformMatrixConverter::process_vad_base2img()`](../include/autoware/tensorrt_vad/input_converter/transform_matrix_converter.hpp)
+    - Odometry data processing is handled by [`InputCanBusConverter::process_can_bus()`](../include/autoware/tensorrt_vad/input_converter/can_bus_converter.hpp) and [`InputBEVShiftConverter::process_shift()`](../include/autoware/tensorrt_vad/input_converter/bev_shift_converter.hpp)
+- [`convert_output()`](../include/autoware/tensorrt_vad/vad_interface.hpp): Convert from `VadOutputData` to `VadOutputTopicData`
+    - Trajectory processing is handled by [`OutputTrajectoryConverter::process_trajectory()`](../include/autoware/tensorrt_vad/output_converter/trajectory_converter.hpp) and [`OutputTrajectoryConverter::process_candidate_trajectories()`](../include/autoware/tensorrt_vad/output_converter/trajectory_converter.hpp)
+    - Object processing is handled by [`OutputObjectsConverter::process_predicted_objects()`](../include/autoware/tensorrt_vad/output_converter/objects_converter.hpp)
+    - Map processing is handled by [`OutputMapConverter::process_map_points()`](../include/autoware/tensorrt_vad/output_converter/map_converter.hpp)
 
 ## TODO
 
