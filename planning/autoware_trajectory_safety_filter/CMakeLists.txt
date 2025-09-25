@@ -39,22 +39,6 @@ target_link_libraries(autoware_trajectory_safety_filter_plugins
   ${PROJECT_NAME}
 )
 
-
-
-# if(BUILD_TESTING)
-#   ament_add_ros_isolated_gmock(test_${PROJECT_NAME}
-#     test/test_util.cpp
-#   )
-
-#   target_link_libraries(test_${PROJECT_NAME}
-#     ${PROJECT_NAME}
-#   )
-
-#   ament_target_dependencies(test_${PROJECT_NAME}
-#     autoware_test_utils
-#   )
-# endif()
-
 ament_auto_package(
   INSTALL_TO_SHARE
   config
