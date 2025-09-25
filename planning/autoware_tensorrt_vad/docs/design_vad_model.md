@@ -95,6 +95,15 @@ flowchart TD
 
 #### CUDA Preprocessor and Postprocessor classes
 
+- Preprocessor and Postprocessor classes are wrapper classes for CUDA kernels. Preprocessor and Postprocessor classes have `preprocess_*` or `postprocess_*` functions. By calling these functions from `VadModel`, preprocessing and postprocessing are executed.
+    - Image preprocessing is handled by [`MultiCameraPreprocessor`](../include/autoware/tensorrt_vad/networks/preprocess/multi_camera_preprocess.hpp)
+    - Predicted Object postprocessing is handled by [`ObjectPostprocessor`](../include/autoware/tensorrt_vad/networks/postprocess/object_postprocess.hpp)
+    - Map postprocessing is handled by [`MapPostprocessor`](../include/autoware/tensorrt_vad/networks/postprocess/map_postprocess.hpp)
+- `preprocess_*` or `postprocess_*` functions call `launch_*_kernel` functions. These functions determine the block size within the grid and the thread size within the block, and launch CUDA kernels.
+    - Image preprocessing kernel is launched in [`launch_multi_camera_resize_kernel`](../lib/networks/preprocess/multi_camera_preprocess_kernel.cu) and [`launch_multi_camera_normalize_kernel`](../lib/networks/preprocess/multi_camera_preprocess_kernel.cu)
+    - Predicted Object postprocessing kernel is launched in [`launch_object_postprocess_kernel`](../lib/networks/postprocess/object_postprocess_kernel.cu)
+    - Map postprocessing kernel is launched in [`launch_map_postprocess_kernel`](../lib/networks/postprocess/map_postprocess_kernel.cu)
+
 ## TODO
 
 - Use `prev_bev` without transferring from Device (GPU) to Host (CPU).
