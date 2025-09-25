@@ -15,10 +15,10 @@
 #ifndef AUTOWARE__CUDA_SCAN_GROUND_SEGMENTATION__CUDA_SCAN_GROUND_SEGMENTATION_FILTER_HPP_
 #define AUTOWARE__CUDA_SCAN_GROUND_SEGMENTATION__CUDA_SCAN_GROUND_SEGMENTATION_FILTER_HPP_
 
+#include "cuda_common.hpp"
 #include "cuda_mempool_wrapper.hpp"
 #include "cuda_stream_wrapper.hpp"
 #include "device_vector.hpp"
-#include "cuda_common.hpp"
 
 #include <autoware/cuda_pointcloud_preprocessor/point_types.hpp>
 #include <autoware/cuda_utils/cuda_check_error.hpp>
@@ -157,9 +157,8 @@ private:
    */
   template <typename CheckerType>
   void extractPoints(
-    device_vector<ClassifiedPointType> & classified_points, 
-    const cuda_blackboard::CudaPointCloud2 & input,
-    cuda_blackboard::CudaPointCloud2 & output);
+    device_vector<ClassifiedPointType> & classified_points,
+    const cuda_blackboard::CudaPointCloud2 & input, cuda_blackboard::CudaPointCloud2 & output);
 
   // Distribute points to cells
   void sort_points(

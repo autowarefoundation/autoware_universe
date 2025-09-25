@@ -48,7 +48,7 @@ private:
   // rclcpp::Publisher<cuda_blackboard::CudaPointCloud2>::SharedPtr pub_;
   // rclcpp::Publisher<cuda_blackboard::CudaPointCloud2>::SharedPtr pub_gnd_;
 
-    // Cuda Sub
+  // Cuda Sub
   std::shared_ptr<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
     sub_{};
   // Cuda Pub

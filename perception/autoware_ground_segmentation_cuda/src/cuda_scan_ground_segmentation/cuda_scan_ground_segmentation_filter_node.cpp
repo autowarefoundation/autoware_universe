@@ -85,7 +85,7 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
     declare_parameter<int64_t>("max_mem_pool_size_in_byte", 1e9);  // 1 GB
 
   // Initialize CUDA blackboard publisher
-    // Initialize CUDA blackboard subscriber
+  // Initialize CUDA blackboard subscriber
   sub_ =
     std::make_shared<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
       *this, "~/input/pointcloud",

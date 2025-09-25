@@ -69,11 +69,8 @@ __global__ void cellInit(Cell * __restrict__ cell_list, int max_num_cells)
  * @note Points that fall outside the defined grid (cell_id >= max_num_cells) are ignored.
  */
 __global__ void computeCellId(
-  const PointTypeStruct * __restrict__ input_points, 
-  int point_num,
-  FilterParameters param, 
-  int * __restrict__ cell_id, 
-  int * __restrict__ count,
+  const PointTypeStruct * __restrict__ input_points, int point_num, FilterParameters param,
+  int * __restrict__ cell_id, int * __restrict__ count,
   ClassifiedPointType * __restrict__ classified_points)
 {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
@@ -133,7 +130,7 @@ CudaScanGroundSegmentationFilter::CudaScanGroundSegmentationFilter(
   CHECK_CUDA_ERROR(cudaGetDevice(&current_device_id));
   mempool_.reset(new CudaMempool(current_device_id, max_mem_pool_size_in_byte));
 
-  // Pre-allocate the PointCloud2 objects 
+  // Pre-allocate the PointCloud2 objects
   // The CudaPointCloud2 still use sync cudaMalloc to allocate memory
   // Those calls are costly, so it should be done only once.
   dev_input_points_.reset(new cuda_blackboard::CudaPointCloud2);
@@ -593,7 +590,7 @@ void CudaScanGroundSegmentationFilter::sort_points(
   if (point_num == 0 || filter_parameters_.max_num_cells == 0) {
     return;
   }
-  
+
   int cell_num = filter_parameters_.max_num_cells;
 
   cell_list.resize(cell_num);
@@ -611,13 +608,10 @@ void CudaScanGroundSegmentationFilter::sort_points(
   CHECK_CUDA_ERROR(cuda::fill(starting_pid, 0));
   CHECK_CUDA_ERROR(
     cuda::launchAsync<BLOCK_SIZE_X>(
-      point_num, 0, stream_->get(), computeCellId, 
-      reinterpret_cast<const PointTypeStruct *>(dev_input_points_->data.get()), 
-      (int)(dev_input_points_->height * dev_input_points_->width),
-      filter_parameters_,
-      cell_id.data(), 
-      starting_pid.data(), 
-      tmp_classified_points.data()));
+      point_num, 0, stream_->get(), computeCellId,
+      reinterpret_cast<const PointTypeStruct *>(dev_input_points_->data.get()),
+      (int)(dev_input_points_->height * dev_input_points_->width), filter_parameters_,
+      cell_id.data(), starting_pid.data(), tmp_classified_points.data()));
 
   CHECK_CUDA_ERROR(cuda::ExclusiveScan(starting_pid));
 
@@ -627,13 +621,8 @@ void CudaScanGroundSegmentationFilter::sort_points(
 
   CHECK_CUDA_ERROR(
     cuda::launchAsync<BLOCK_SIZE_X>(
-      point_num, 0, stream_->get(), distributePointsToCell, 
-      tmp_classified_points.data(),
-      classified_points.data(), 
-      cell_id.data(), 
-      point_num, 
-      writing_loc.data()
-    ));
+      point_num, 0, stream_->get(), distributePointsToCell, tmp_classified_points.data(),
+      classified_points.data(), cell_id.data(), point_num, writing_loc.data()));
 
   // Compute the number of empty cells between every pair of consecutive non-empty cell
   empty_cell_mark_->resize(cell_num);
@@ -702,9 +691,7 @@ __global__ void markingPoints(
 }
 
 __global__ void extract(
-  const PointTypeStruct * __restrict__ dev_input_points, 
-  int point_num,
-  int * writing_loc,
+  const PointTypeStruct * __restrict__ dev_input_points, int point_num, int * writing_loc,
   PointTypeStruct * __restrict__ dev_output_points)
 {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
@@ -722,9 +709,8 @@ __global__ void extract(
 // ============= Extract non-ground points =============
 template <typename CheckerType>
 void CudaScanGroundSegmentationFilter::extractPoints(
-  device_vector<ClassifiedPointType> & classified_points, 
-  const cuda_blackboard::CudaPointCloud2 & input,
-  cuda_blackboard::CudaPointCloud2 & output)
+  device_vector<ClassifiedPointType> & classified_points,
+  const cuda_blackboard::CudaPointCloud2 & input, cuda_blackboard::CudaPointCloud2 & output)
 {
   int point_num = dev_input_points_->height * dev_input_points_->width;
   device_vector<int> point_mark(point_num + 1, stream_, mempool_);
@@ -756,10 +742,9 @@ void CudaScanGroundSegmentationFilter::extractPoints(
   // Get the points
   CHECK_CUDA_ERROR(
     cuda::launchAsync<BLOCK_SIZE_X>(
-      point_num, 0, stream_->get(), extract, 
-      reinterpret_cast<const PointTypeStruct *>(input.data.get()), 
-      (int)(input.height * input.width),
-      writing_loc.data(),
+      point_num, 0, stream_->get(), extract,
+      reinterpret_cast<const PointTypeStruct *>(input.data.get()),
+      (int)(input.height * input.width), writing_loc.data(),
       reinterpret_cast<PointTypeStruct *>(output.data.get())));
 }
 
@@ -787,11 +772,8 @@ void CudaScanGroundSegmentationFilter::classifyPointCloud(
 }
 
 __global__ void markNonOutliers(
-  const PointTypeStruct * __restrict__ cloud, 
-  int point_num,
-  FilterParameters param, 
-  float max_radius, 
-  int * __restrict__ mark)
+  const PointTypeStruct * __restrict__ cloud, int point_num, FilterParameters param,
+  float max_radius, int * __restrict__ mark)
 {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
   int stride = blockDim.x * gridDim.x;
@@ -805,9 +787,7 @@ __global__ void markNonOutliers(
 }
 
 __global__ void getValidPoints(
-  const PointTypeStruct * __restrict__ cloud, 
-  int point_num,
-  int * __restrict__ writing_loc, 
+  const PointTypeStruct * __restrict__ cloud, int point_num, int * __restrict__ writing_loc,
   PointTypeStruct * __restrict__ out_cloud)
 {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
@@ -823,8 +803,7 @@ __global__ void getValidPoints(
 }
 
 void CudaScanGroundSegmentationFilter::removeOutliers(
-  const cuda_blackboard::CudaPointCloud2 & input
-)
+  const cuda_blackboard::CudaPointCloud2 & input)
 {
   float max_radius =
     filter_parameters_.cell_divider_size_m * filter_parameters_.max_num_cells_per_sector;
@@ -838,11 +817,9 @@ void CudaScanGroundSegmentationFilter::removeOutliers(
 
   CHECK_CUDA_ERROR(
     cuda::launchAsync<BLOCK_SIZE_X>(
-      point_num, 0, stream_->get(), 
-      markNonOutliers, 
+      point_num, 0, stream_->get(), markNonOutliers,
       reinterpret_cast<const PointTypeStruct *>(input.data.get()),
-      (int)(input.height * input.width),
-      filter_parameters_, max_radius, mark.data()));
+      (int)(input.height * input.width), filter_parameters_, max_radius, mark.data()));
 
   CHECK_CUDA_ERROR(cuda::ExclusiveScan(mark));
 
@@ -855,13 +832,10 @@ void CudaScanGroundSegmentationFilter::removeOutliers(
 
   CHECK_CUDA_ERROR(
     cuda::launchAsync<BLOCK_SIZE_X>(
-      point_num, 0, stream_->get(), 
-      getValidPoints, 
-      reinterpret_cast<const PointTypeStruct *>(input.data.get()), 
-      (int)(input.height * input.width),
-      mark.data(), 
-      reinterpret_cast<PointTypeStruct *>(dev_input_points_->data.get())
-    ));
+      point_num, 0, stream_->get(), getValidPoints,
+      reinterpret_cast<const PointTypeStruct *>(input.data.get()),
+      (int)(input.height * input.width), mark.data(),
+      reinterpret_cast<PointTypeStruct *>(dev_input_points_->data.get())));
 }
 
 }  // namespace autoware::cuda_ground_segmentation

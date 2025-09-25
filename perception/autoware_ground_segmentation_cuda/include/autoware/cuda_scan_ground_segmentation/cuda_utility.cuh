@@ -130,9 +130,7 @@ CUDAH void memcpy(uint8_t * dst, const uint8_t * src, int size)
 }
 
 inline void copyPointCloud2Metadata(
-  cuda_blackboard::CudaPointCloud2 & dst, 
-  const cuda_blackboard::CudaPointCloud2 & src
-)
+  cuda_blackboard::CudaPointCloud2 & dst, const cuda_blackboard::CudaPointCloud2 & src)
 {
   dst.header = src.header;
   dst.height = src.height;
