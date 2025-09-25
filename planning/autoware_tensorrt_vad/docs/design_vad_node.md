@@ -13,7 +13,7 @@ flowchart TD
     Start([Anchor Topic Subscribed]) --> AnchorCallback[anchor_callback]
     
     subgraph AnchorCallbackScope["anchor_callback()"]
-        AnchorCallback --> CheckReady{Is vad_input_topic_data_current_frame_<br/>synchronization ready?}
+        AnchorCallback --> CheckReady{Is VadInputTopicData synchronization ready?}
         
         CheckReady -->|Yes| TriggerInferenceEntry[trigger_inference]
         CheckReady -->|No| ErrorLog[Log error]
@@ -31,7 +31,7 @@ flowchart TD
             
             subgraph ExecuteInferenceScope["execute_inference()"]
                 ExecuteInferenceEntry --> ConvertInput[Convert to VadInputData]
-                ConvertInput --> VadModelInfer[VadModel.infer]
+                ConvertInput --> VadModelInfer[VadModel::infer]
                 VadModelInfer --> ConvertOutput[Convert to VadOutputTopicData]
                 ConvertOutput --> GetOutput[return VadOutputTopicData]
             end
@@ -45,14 +45,23 @@ flowchart TD
     
     Reset --> End([End])
     
+    %% Links to source code
+    click AnchorCallback "../src/vad_node.cpp" "anchor_callback() implementation"
+    click TriggerInferenceEntry "../src/vad_node.cpp" "trigger_inference() implementation"
+    click ExecuteInferenceEntry "../src/vad_node.cpp" "execute_inference() implementation"
+    click Publish "../src/vad_node.cpp" "publish() implementation"
+    
     style AnchorCallbackScope fill:#f0f8ff,stroke:#4682b4,stroke-width:2px,color:#000000
     style TriggerInferenceScope fill:#fff8dc,stroke:#daa520,stroke-width:2px,color:#000000
     style ExecuteInferenceScope fill:#f5f5dc,stroke:#8b4513,stroke-width:2px,color:#000000
 ```
 
-- `execute_inference`と`trigger_inference`の違い
-  - `trigger_inference`: データの同期チェックと前処理を担当
-  - `execute_inference`: 実際のVAD推論処理を実行
+### 関数の役割と実装
+
+- [`anchor_callback()`](../src/vad_node.cpp): anchor topic(最後にsubscribeされる画像topic)を受け取った際に起動するcallback
+- [`trigger_inference()`](../src/vad_node.cpp): データの同期チェックをし、inference処理をtrigger
+- [`execute_inference()`](../src/vad_node.cpp): VADのinference処理を実行。`VadInputTopicData`から`VadOutputTopicData`を推論する。
+- [`publish()`](../src/vad_node.cpp): 推論結果をROS topicとしてpublish
 
 ## TODO
 
