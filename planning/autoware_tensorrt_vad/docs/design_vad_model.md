@@ -75,6 +75,26 @@ flowchart TD
 - This design allows `VadModel` to utilize logging functionality without directly depending on ROS 2.
 - To provide this flexibility, `VadModel` is designed as a template class, which requires all implementation to be written in the header file(.hpp). This is a C++ template constraint where template definitions must be available to all translation units that instantiate the template.
 
+#### Network classes
+
+- Each ONNX file corresponds to one `Net` class. The `Net` class uses [`autoware_tensorrt_common`](../../../perception/autoware_tensorrt_common/README.md) to build and execute TensorRT engines.
+- `cudaMalloc` and `cudaMemcpyAsync` operations for Input/output are executed using the [`Tensor`](../include/autoware/tensorrt_vad/networks/tensor.hpp) class.
+
+##### Network classes: API functions
+
+- Constructor
+    - [`init_tensorrt`](../include/autoware/tensorrt_vad/networks/net.hpp)
+        - generate_network_io
+            - Implemented in [`Backbone`](../include/autoware/tensorrt_vad/networks/backbone.hpp) and [`Head`](../include/autoware/tensorrt_vad/networks/head.hpp) respectively
+            - Sets input and output sizes and names
+        - [`build_engine`](../include/autoware/tensorrt_vad/networks/net.hpp)
+            - Creates instances of [`TrtCommon`](../../../perception/autoware_tensorrt_common/include/autoware/tensorrt_common/tensorrt_common.hpp) and [`NetworkIO`](../../../perception/autoware_tensorrt_common/include/autoware/tensorrt_common/utils.hpp) classes
+- set_input_tensor
+    - Executes `cudaMalloc` to allocate memory for input/output tensors on Device (GPU)
+       - `cudaMalloc` itself is executed in [`Tensor`](../lib/networks/tensor.cpp) class.
+
+#### CUDA Preprocessor and Postprocessor classes
+
 ## TODO
 
 - Use `prev_bev` without transferring from Device (GPU) to Host (CPU).
