@@ -41,8 +41,10 @@ private:
   /**
    * @brief Main callback function for predicted objects message
    * @param msg Predicted objects message
+   * @param debug Debug flag
    */
-  void callback(const autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr & msg);
+  void callback(
+    const autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr & msg, bool debug);
 
   /**
    * @brief Callback function for lanelet map message to update the context with the lanelet data
@@ -73,9 +75,6 @@ private:
   //!< @brief Processing time measurement
   std::unique_ptr<autoware_utils_system::StopWatch<std::chrono::milliseconds>> stopwatch_;
   std::unique_ptr<autoware_utils_debug::DebugPublisher> debug_publisher_;
-
-  //!< @brief Whether to publish intermediate results for debugging
-  bool debug_;
 };
 }  // namespace autoware::predicted_path_postprocessor
 

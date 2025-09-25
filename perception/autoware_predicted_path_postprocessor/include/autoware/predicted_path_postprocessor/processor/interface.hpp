@@ -135,6 +135,7 @@ public:
   using UniquePtr = std::unique_ptr<ProcessorInterface>;
   using DeclareParametersFunc = std::function<void(rclcpp::Node *, const std::string &)>;
 
+  using target_type = autoware_perception_msgs::msg::PredictedObject;
   using error_type = std::string;  // TODO(ktro2828): Define concrete error type
   using result_type = EmptyResult<error_type>;
 
@@ -181,8 +182,7 @@ public:
    * @param context The context in which the object is processed.
    * @return The result of the processing.
    */
-  virtual result_type process(
-    autoware_perception_msgs::msg::PredictedObject & target, const Context & context) = 0;
+  virtual result_type process(target_type & target, const Context & context) = 0;
 
 private:
   const std::string processor_name_;  //!< Name of the processor.

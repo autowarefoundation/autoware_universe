@@ -14,6 +14,8 @@
 
 #include "autoware/predicted_path_postprocessor/processor/refine_by_speed.hpp"
 
+#include "autoware/predicted_path_postprocessor/processor/result.hpp"
+
 #include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 
@@ -34,13 +36,12 @@ RefineBySpeed::RefineBySpeed(rclcpp::Node * node_ptr, const std::string & proces
   speed_threshold_ = node_ptr->get_parameter(processor_name + ".speed_threshold").as_double();
 }
 
-void RefineBySpeed::process(
-  autoware_perception_msgs::msg::PredictedObject & target, const Context &)
+RefineBySpeed::result_type RefineBySpeed::process(target_type & target, const Context &)
 {
   const auto speed = std::abs(target.kinematics.initial_twist_with_covariance.twist.linear.x);
   // skip if the speed is higher than the threshold
   if (speed > speed_threshold_) {
-    return;
+    return make_ok<error_type>();
   }
 
   // Refine the predicted path based on the current speed
@@ -104,5 +105,6 @@ void RefineBySpeed::process(
       waypoints[i].orientation = autoware_utils_geometry::create_quaternion_from_yaw(yaw);
     }
   }
+  return make_ok<error_type>();
 }
 }  // namespace autoware::predicted_path_postprocessor::processor

@@ -14,6 +14,8 @@
 
 #include "autoware/predicted_path_postprocessor/node.hpp"
 
+#include "autoware/predicted_path_postprocessor/processor/composable.hpp"
+
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
@@ -47,14 +49,13 @@ PredictedPathPostprocessorNode::PredictedPathPostprocessorNode(const rclcpp::Nod
   stopwatch_->tic("processing_time");
   debug_publisher_ = std::make_unique<autoware_utils_debug::DebugPublisher>(this, get_name());
 
-  debug_ = declare_parameter<bool>("debug");
-
   // NOTE: add additional subscriptions if needed, such as traffic light, etc.
   object_subscription_ = create_subscription<PredictedObjects>(
-    "~/input/objects", rclcpp::QoS{1}, [this](const PredictedObjects::ConstSharedPtr & msg) {
+    "~/input/objects", rclcpp::QoS{1},
+    [this, debug = declare_parameter<bool>("debug")](const PredictedObjects::ConstSharedPtr & msg) {
       this->stopwatch_->toc("processing_time", true);
 
-      this->callback(msg);  // main callback
+      this->callback(msg, debug);  // main callback
 
       const auto cyclic_time = this->stopwatch_->toc("cyclic_time", true);
       const auto processing_time = this->stopwatch_->toc("processing_time", true);
@@ -69,24 +70,41 @@ PredictedPathPostprocessorNode::PredictedPathPostprocessorNode(const rclcpp::Nod
   object_publisher_ = create_publisher<PredictedObjects>("~/output/objects", rclcpp::QoS{1});
 }
 
-void PredictedPathPostprocessorNode::callback(const PredictedObjects::ConstSharedPtr & objects)
+void PredictedPathPostprocessorNode::callback(
+  const PredictedObjects::ConstSharedPtr & msg, bool debug)
 {
   // update the context with the objects data
-  context_->update(objects);
+  context_->update(msg);
 
-  if (debug_) {
-    auto [output, intermediates] = processor_->process_with_intermediates(objects, *context_);
-    object_publisher_->publish(output);
+  if (debug) {
+    const auto publish_reports = [this](const auto & reports) {
+      for (const auto & [processor_name, report] : reports) {
+        const auto topic_namespace = "debug/" + processor_name;
 
-    for (const auto & [processor_name, report] : intermediates) {
-      const auto topic_namespace = "debug/" + processor_name;
-      debug_publisher_->publish<Float64Stamped>(
-        topic_namespace + "/processing_time_ms", report.processing_time_ms);
-      debug_publisher_->publish<PredictedObjects>(topic_namespace + "/objects", report.objects);
+        debug_publisher_->publish<Float64Stamped>(
+          topic_namespace + "/processing_time_ms", report.processing_time_ms);
+        debug_publisher_->publish<PredictedObjects>(topic_namespace + "/objects", report.objects);
+      }
+    };
+
+    const auto result = processor_->process_with_reports(msg, *context_)
+                          .map([this, &publish_reports](const auto & success) {
+                            const auto & [output, reports] = success;
+                            object_publisher_->publish(output);
+                            publish_reports(reports);
+                            return success;
+                          });
+    if (!result) {
+      RCLCPP_ERROR_STREAM(get_logger(), "Failed to process objects: " << result.err());
     }
   } else {
-    auto output = processor_->process(objects, *context_);
-    object_publisher_->publish(output);
+    const auto result = processor_->process(msg, *context_).map([this](const auto & output) {
+      object_publisher_->publish(output);
+      return output;
+    });
+    if (!result) {
+      RCLCPP_ERROR_STREAM(get_logger(), "Failed to process objects: " << result.err());
+    }
   }
 }
 
