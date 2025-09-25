@@ -37,7 +37,6 @@
 #include <lanelet2_traffic_rules/TrafficRules.h>
 
 #include <memory>
-#include <optional>
 #include <vector>
 
 namespace autoware::remaining_distance_time_calculator
@@ -74,7 +73,7 @@ private:
   bool is_graph_ready_;
 
   // Data Buffer
-  std::optional<geometry_msgs::msg::Pose> current_vehicle_pose_{std::nullopt};
+  geometry_msgs::msg::Pose current_vehicle_pose_;
   geometry_msgs::msg::Vector3 current_vehicle_velocity_;
   geometry_msgs::msg::Pose goal_pose_;
   autoware_internal_planning_msgs::msg::Scenario::ConstSharedPtr scenario_;
