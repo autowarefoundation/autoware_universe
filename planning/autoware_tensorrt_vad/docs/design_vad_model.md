@@ -104,6 +104,57 @@ flowchart TD
     - Predicted Object postprocessing kernel is launched in [`launch_object_postprocess_kernel`](../lib/networks/postprocess/object_postprocess_kernel.cu)
     - Map postprocessing kernel is launched in [`launch_map_postprocess_kernel`](../lib/networks/postprocess/map_postprocess_kernel.cu)
 
+```mermaid
+flowchart TD
+    VadModel[VadModel] --> PreprocessCall[Call preprocess_* functions]
+    VadModel --> PostprocessCall[Call postprocess_* functions]
+    
+    subgraph PreprocessorClasses["Preprocessor (CPU, Host)"]
+        MultiCamera[MultiCameraPreprocessor]
+    end
+    
+    subgraph PostprocessorClasses["Postprocessor (CPU, Host)"]
+        ObjectPost[ObjectPostprocessor]
+        MapPost[MapPostprocessor]
+    end
+    
+    PreprocessCall --> MultiCamera
+    PostprocessCall --> ObjectPost
+    PostprocessCall --> MapPost
+    
+    MultiCamera --> LaunchResize[launch_multi_camera_resize_kernel]
+    MultiCamera --> LaunchNormalize[launch_multi_camera_normalize_kernel]
+    ObjectPost --> LaunchObject[launch_object_postprocess_kernel]
+    MapPost --> LaunchMap[launch_map_postprocess_kernel]
+    
+    subgraph CudaKernels["Kernels (GPU, Device)"]
+        ResizeKernel[multi_camera_resize_kernel]
+        NormalizeKernel[multi_camera_normalize_kernel]
+        ObjectKernel[object_postprocess_kernel]
+        MapKernel[map_postprocess_kernel]
+    end
+    
+    LaunchResize --> ResizeKernel
+    LaunchNormalize --> NormalizeKernel
+    LaunchObject --> ObjectKernel
+    LaunchMap --> MapKernel
+    
+    style PreprocessorClasses fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000000
+    style PostprocessorClasses fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000000
+    style CudaKernels fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000000
+    style VadModel fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000000
+    
+    %% Links to source code files
+    click VadModel "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_model.hpp" "VadModel implementation"
+    click MultiCamera "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/networks/preprocess/multi_camera_preprocess.hpp" "MultiCameraPreprocessor"
+    click ObjectPost "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/networks/postprocess/object_postprocess.hpp" "ObjectPostprocessor"
+    click MapPost "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/networks/postprocess/map_postprocess.hpp" "MapPostprocessor"
+    click LaunchResize "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/lib/networks/preprocess/multi_camera_preprocess_kernel.cu" "Resize kernel implementation"
+    click LaunchNormalize "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/lib/networks/preprocess/multi_camera_preprocess_kernel.cu" "Normalize kernel implementation"
+    click LaunchObject "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/lib/networks/postprocess/object_postprocess_kernel.cu" "Object postprocess kernel implementation"
+    click LaunchMap "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/lib/networks/postprocess/map_postprocess_kernel.cu" "Map postprocess kernel implementation"
+```
+
 ## TODO
 
 - Use `prev_bev` without transferring from Device (GPU) to Host (CPU).
