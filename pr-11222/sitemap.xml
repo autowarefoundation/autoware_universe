@@ -1071,7 +1071,7 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11222/sensing/autoware_calibration_status/</loc>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11222/sensing/autoware_calibration_status_classifier/</loc>
          <lastmod>2025-09-25</lastmod>
          <changefreq>daily</changefreq>
     </url>

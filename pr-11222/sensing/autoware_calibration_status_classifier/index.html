@@ -8,7 +8,7 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/pr-11222/sensing/autoware_calibration_status/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/pr-11222/sensing/autoware_calibration_status_classifier/">
       
       
         <link rel="prev" href="../../perception/perception_utils/">
@@ -22,7 +22,7 @@
     
     
       
-        <title>autoware_calibration_status - Autoware Universe Documentation</title>
+        <title>autoware_calibration_status_classifier - Autoware Universe Documentation</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#autoware_calibration_status" class="md-skip">
+        <a href="#autoware_calibration_status_classifier" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              autoware_calibration_status
+              autoware_calibration_status_classifier
             
           </span>
         </div>
@@ -12984,7 +12984,7 @@
   
   
   <span class="md-ellipsis">
-    Autoware calibration status
+    Autoware calibration status classifier
     
   </span>
   
@@ -12996,7 +12996,7 @@
         <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_1_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_9_1">
             <span class="md-nav__icon md-icon"></span>
-            Autoware calibration status
+            Autoware calibration status classifier
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -19470,9 +19470,9 @@
   
 
 
-<div><h1 id="autoware_calibration_status">autoware_calibration_status<a class="headerlink" href="#autoware_calibration_status" title="Permanent link">#</a></h1>
+<div><h1 id="autoware_calibration_status_classifier">autoware_calibration_status_classifier<a class="headerlink" href="#autoware_calibration_status_classifier" title="Permanent link">#</a></h1>
 <h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
-<p>The <code>autoware_calibration_status</code> package provides real-time LiDAR-camera calibration validation using deep learning inference. It detects miscalibration between LiDAR and camera sensors by analyzing projected point clouds overlaid on camera images through a neural network-based approach.</p>
+<p>The <code>autoware_calibration_status_classifier</code> package provides real-time LiDAR-camera calibration validation using deep learning inference. It detects miscalibration between LiDAR and camera sensors by analyzing projected point clouds overlaid on camera images through a neural network-based approach.</p>
 <h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
 <p>The calibration status detection system operates through the following pipeline:</p>
 <h3 id="1-data-preprocessing-cuda-accelerated">1. Data Preprocessing (CUDA-accelerated)<a class="headerlink" href="#1-data-preprocessing-cuda-accelerated" title="Permanent link">#</a></h3>
@@ -19745,7 +19745,7 @@
 <li>Input point clouds should contain intensity information (XYZIRC format)</li>
 </ul>
 <h2 id="usage-example">Usage Example<a class="headerlink" href="#usage-example" title="Permanent link">#</a></h2>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_calibration_status<span class="w"> </span>calibration_status.launch.xml
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_calibration_status_classifier<span class="w"> </span>calibration_status_classifier.launch.xml
 </code></pre></div>
 <h2 id="future-extensions-unimplemented-parts">Future Extensions / Unimplemented Parts<a class="headerlink" href="#future-extensions-unimplemented-parts" title="Permanent link">#</a></h2>
 <ul>
