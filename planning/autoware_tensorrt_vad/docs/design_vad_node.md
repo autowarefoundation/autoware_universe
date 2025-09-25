@@ -66,3 +66,5 @@ flowchart TD
 
 - Excessive use of callbacks when subscribing can increase CPU usage. Use callbacks only when it's necessary to react to topic reception, otherwise use `Subscription->take()`.
 - This class has many responsibilities: creating config from ROS parameters, creating publishers and subscribers, callback functions, triggering and executing inference, and publishing. If readability becomes poor, it should be split into separate classes by responsibility.
+- Add [`SynchronizationStrategy`](../include/autoware/tensorrt_vad/synchronization_strategy.hpp) other than FrontCritical
+    - e.g. Consider synchronized when the front 3 images are available
