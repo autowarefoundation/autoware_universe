@@ -21,6 +21,7 @@
 
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <geometry_msgs/msg/point.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 
 #include <any>
 #include <memory>
@@ -50,11 +51,24 @@ public:
 private:
   CollisionParams params_;
 
+  // Cache-related constants and types
+  static constexpr double TIME_RESOLUTION = 0.1;  // 100ms intervals
+
+  // Cache structure: [object_idx][time_idx] -> Odometry
+  using ObjectStateCache = std::vector<std::vector<nav_msgs::msg::Odometry>>;
+
+  // Precompute object positions at fixed time intervals
+  ObjectStateCache precompute_object_positions(
+    const autoware_perception_msgs::msg::PredictedObjects & objects, double max_time) const;
+
+  // Get interpolated object state from cache
+  nav_msgs::msg::Odometry get_cached_state(
+    const ObjectStateCache & cache, size_t object_idx, double time) const;
+
   // Calculate Time To Collision for a trajectory point with predicted objects
   bool check_collision(
-    const TrajectoryPoint & traj_point,
-    const autoware_perception_msgs::msg::PredictedObjects & object,
-    const rclcpp::Duration & duration) const;
+    const TrajectoryPoint & traj_point, const ObjectStateCache & cache, size_t object_idx,
+    double time_from_start) const;
 };
 
 }  // namespace autoware::trajectory_safety_filter::plugin

@@ -25,6 +25,8 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace autoware::trajectory_safety_filter::plugin
 {
@@ -79,78 +81,165 @@ float time_to_collision(const TrajectoryPoint & point1, const TrajectoryPoint & 
   if (std::abs(relative_velocity) < eps) return std::numeric_limits<float>::infinity();
   return distance / relative_velocity;
 }
-
-float time_to_collision(
-  const TrajectoryPoint & ego_point, const rclcpp::Duration & duration,
-  const autoware_perception_msgs::msg::PredictedObject & object, const float max_ttc_value = 100.0f)
-{
-  // Find the path with highest confidence
-  const auto max_confidence_path = std::max_element(
-    object.kinematics.predicted_paths.begin(), object.kinematics.predicted_paths.end(),
-    [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
-  if (max_confidence_path == object.kinematics.predicted_paths.end()) return max_ttc_value;
-
-  const auto & object_path = max_confidence_path->path;
-  if (object_path.size() < 2) {
-    if (duration.seconds() == 0.0f) {
-      TrajectoryPoint object_point;
-      object_point.pose = object.kinematics.initial_pose_with_covariance.pose;
-      object_point.longitudinal_velocity_mps =
-        object.kinematics.initial_twist_with_covariance.twist.linear.x;
-      object_point.lateral_velocity_mps =
-        object.kinematics.initial_twist_with_covariance.twist.linear.y;
-      float ttc = time_to_collision(ego_point, object_point);
-      return std::min(ttc, max_ttc_value);
-    }
-    return max_ttc_value;
-  }
-
-  const float dt = rclcpp::Duration(max_confidence_path->time_step).seconds();
-  if (dt <= 0.0f) return max_ttc_value;
-
-  const float max_time =
-    dt * static_cast<float>(object_path.size() - 1);  // max time of the object path
-  const float query_time = duration.seconds();
-  if (query_time < 0.0f) return max_ttc_value;
-  if (query_time > max_time) return max_ttc_value;
-
-  const size_t nearest_index =
-    std::min(static_cast<size_t>(query_time / dt), object_path.size() - 2);
-  const float t_i = static_cast<float>(nearest_index) * dt;
-  const float ratio = std::clamp((query_time - t_i) / dt, 0.0f, 1.0f);
-
-  const auto object_pose = autoware_utils_geometry::calc_interpolated_pose(
-    object_path.at(nearest_index), object_path.at(nearest_index + 1),
-    ratio);  // for boundary check
-  const auto segment = autoware_utils_geometry::point_2_tf_vector(
-    object_path.at(nearest_index).position, object_path.at(nearest_index + 1).position);
-  const float segment_length = segment.length();
-
-  // Calculate object velocity (first in world coordinates)
-  TrajectoryPoint obj{};
-  obj.pose = object_pose;
-  if (segment_length > 1e-6) {
-    const auto dir_w = segment / segment_length;
-    const float v = segment_length / dt;  // velocity scalar in world
-
-    // world -> body rotation
-    const float yaw = tf2::getYaw(obj.pose.orientation);
-    const float c = std::cos(yaw);
-    const float s = std::sin(yaw);
-    const float vx_w = dir_w.x() * v;
-    const float vy_w = dir_w.y() * v;
-
-    obj.longitudinal_velocity_mps = c * vx_w + s * vy_w;  // body-long
-    obj.lateral_velocity_mps = -s * vx_w + c * vy_w;      // body-lat
-  } else {
-    obj.longitudinal_velocity_mps = 0.0f;
-    obj.lateral_velocity_mps = 0.0f;
-  }
-
-  const float ttc = time_to_collision(ego_point, obj);
-  return std::min(ttc, max_ttc_value);
-}
 }  // namespace
+
+CollisionFilter::ObjectStateCache CollisionFilter::precompute_object_positions(
+  const autoware_perception_msgs::msg::PredictedObjects & objects, double max_time) const
+{
+  ObjectStateCache cache;
+  const size_t time_steps = static_cast<size_t>(max_time / TIME_RESOLUTION) + 1;
+
+  cache.reserve(objects.objects.size());
+
+  for (const auto & object : objects.objects) {
+    std::vector<nav_msgs::msg::Odometry> object_timeline;
+    object_timeline.reserve(time_steps);
+
+    const auto max_confidence_path = std::max_element(
+      object.kinematics.predicted_paths.begin(), object.kinematics.predicted_paths.end(),
+      [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
+
+    if (
+      max_confidence_path == object.kinematics.predicted_paths.end() ||
+      max_confidence_path->path.empty()) {
+      // If no predicted path, use initial state for all time steps
+      nav_msgs::msg::Odometry initial_state;
+      initial_state.pose.pose = object.kinematics.initial_pose_with_covariance.pose;
+      initial_state.twist.twist = object.kinematics.initial_twist_with_covariance.twist;
+
+      for (size_t i = 0; i < time_steps; ++i) {
+        object_timeline.push_back(initial_state);
+      }
+      continue;
+    }
+    const auto & predicted_path = max_confidence_path->path;
+    const float dt = rclcpp::Duration(max_confidence_path->time_step).seconds();
+
+    // Precompute positions at TIME_RESOLUTION intervals
+    for (size_t i = 0; i < time_steps; ++i) {
+      const double query_time = i * TIME_RESOLUTION;
+
+      if (dt <= 0.0f || predicted_path.size() < 2) {
+        // Use initial state
+        nav_msgs::msg::Odometry state;
+        state.pose.pose = object.kinematics.initial_pose_with_covariance.pose;
+        state.twist.twist = object.kinematics.initial_twist_with_covariance.twist;
+        object_timeline.push_back(state);
+        continue;
+      }
+
+      const float max_path_time = dt * static_cast<float>(predicted_path.size() - 1);
+
+      if (query_time > max_path_time) {
+        // Beyond prediction horizon, use last predicted point
+        const auto & last_pose = predicted_path.back();
+        nav_msgs::msg::Odometry state;
+        state.pose.pose = last_pose;
+        // Velocity estimation from last two points
+        if (predicted_path.size() >= 2) {
+          const auto & prev_pose = predicted_path[predicted_path.size() - 2];
+          const float dx = last_pose.position.x - prev_pose.position.x;
+          const float dy = last_pose.position.y - prev_pose.position.y;
+          // Set velocity in world frame
+          state.twist.twist.linear.x = dx / dt;
+          state.twist.twist.linear.y = dy / dt;
+          state.twist.twist.linear.z = 0.0;
+        } else {
+          state.twist.twist.linear.x = 0.0;
+          state.twist.twist.linear.y = 0.0;
+          state.twist.twist.linear.z = 0.0;
+        }
+        object_timeline.push_back(state);
+        continue;
+      }
+
+      // Interpolate between predicted points
+      const auto idx = static_cast<size_t>(query_time / dt);
+      const size_t next_idx = std::min(idx + 1, predicted_path.size() - 1);
+      const double ratio = (query_time - static_cast<float>(idx) * dt) / dt;
+
+      nav_msgs::msg::Odometry state;
+
+      // Use calc_interpolated_pose for position and orientation interpolation
+      state.pose.pose = autoware_utils_geometry::calc_interpolated_pose(
+        predicted_path[idx], predicted_path[next_idx], ratio, false);  // false = use SLERP
+
+      // Velocity in world frame
+      const float dx = predicted_path[next_idx].position.x - predicted_path[idx].position.x;
+      const float dy = predicted_path[next_idx].position.y - predicted_path[idx].position.y;
+      state.twist.twist.linear.x = dx / dt;
+      state.twist.twist.linear.y = dy / dt;
+      state.twist.twist.linear.z = 0.0;
+
+      object_timeline.push_back(state);
+    }
+    cache.push_back(std::move(object_timeline));
+  }
+
+  return cache;
+}
+
+nav_msgs::msg::Odometry CollisionFilter::get_cached_state(
+  const ObjectStateCache & cache, size_t object_idx, double time) const
+{
+  if (object_idx >= cache.size()) {
+    return nav_msgs::msg::Odometry{};
+  }
+
+  const auto & object_timeline = cache[object_idx];
+  const auto time_idx = static_cast<size_t>(time / TIME_RESOLUTION);
+
+  if (time_idx >= object_timeline.size() - 1) {
+    return object_timeline.empty() ? nav_msgs::msg::Odometry{} : object_timeline.back();
+  }
+
+  const double remainder = time - time_idx * TIME_RESOLUTION;
+
+  if (remainder < 1e-6) {
+    // Exact match
+    return object_timeline[time_idx];
+  }
+
+  // Linear interpolation between two cached states
+  const auto & state1 = object_timeline[time_idx];
+  const auto & state2 = object_timeline[time_idx + 1];
+  const double ratio = remainder / TIME_RESOLUTION;
+
+  nav_msgs::msg::Odometry interpolated;
+
+  // Use calc_interpolated_pose for position and orientation
+  interpolated.pose.pose = autoware_utils_geometry::calc_interpolated_pose(
+    state1.pose.pose, state2.pose.pose, ratio, false);  // false = use SLERP
+
+  // Interpolate velocity linearly
+  interpolated.twist.twist.linear.x =
+    state1.twist.twist.linear.x +
+    ratio * (state2.twist.twist.linear.x - state1.twist.twist.linear.x);
+  interpolated.twist.twist.linear.y =
+    state1.twist.twist.linear.y +
+    ratio * (state2.twist.twist.linear.y - state1.twist.twist.linear.y);
+  interpolated.twist.twist.linear.z =
+    state1.twist.twist.linear.z +
+    ratio * (state2.twist.twist.linear.z - state1.twist.twist.linear.z);
+
+  return interpolated;
+}
+
+bool CollisionFilter::check_collision(
+  const TrajectoryPoint & traj_point, const ObjectStateCache & cache, size_t object_idx,
+  double time_from_start) const
+{
+  const auto object_odometry = get_cached_state(cache, object_idx, time_from_start);
+
+  // Convert Odometry to TrajectoryPoint for collision check
+  TrajectoryPoint object_point;
+  object_point.pose = object_odometry.pose.pose;
+  object_point.longitudinal_velocity_mps = object_odometry.twist.twist.linear.x;
+  object_point.lateral_velocity_mps = object_odometry.twist.twist.linear.y;
+
+  const float ttc = time_to_collision(traj_point, object_point);
+  return ttc >= 0.0 && ttc < params_.min_ttc;
+}
 
 void CollisionFilter::set_parameters(const std::unordered_map<std::string, std::any> & params)
 {
@@ -177,6 +266,9 @@ bool CollisionFilter::is_feasible(
     return true;  // No objects to check collision with
   }
 
+  const auto cache =
+    precompute_object_positions(*context.predicted_objects, params_.max_check_time);
+
   // Check each trajectory point within time horizon
   for (const auto & point : traj_points) {
     const double time_from_start = rclcpp::Duration(point.time_from_start).seconds();
@@ -184,23 +276,15 @@ bool CollisionFilter::is_feasible(
       break;
     }
 
-    if (check_collision(point, *context.predicted_objects, point.time_from_start)) {
-      return false;
+    // Check collision with each cached object
+    for (size_t obj_idx = 0; obj_idx < cache.size(); ++obj_idx) {
+      if (check_collision(point, cache, obj_idx, time_from_start)) {
+        return false;
+      }
     }
   }
 
   return true;
-}
-
-bool CollisionFilter::check_collision(
-  const TrajectoryPoint & traj_point,
-  const autoware_perception_msgs::msg::PredictedObjects & objects,
-  const rclcpp::Duration & duration) const
-{
-  return std::any_of(objects.objects.begin(), objects.objects.end(), [&](const auto & object) {
-    const auto ttc = time_to_collision(traj_point, duration, object, params_.min_ttc);
-    return ttc >= 0.0 && ttc < params_.min_ttc;
-  });
 }
 }  // namespace autoware::trajectory_safety_filter::plugin
 
