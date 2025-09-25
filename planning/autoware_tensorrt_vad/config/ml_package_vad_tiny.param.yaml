@@ -20,7 +20,7 @@
                  0.0, 0.0, 1.0, 0.0,
                  0.0, 0.0, 0.0, 1.0]
       # params for output
-      trajectory_timestep: 1.0 # [s]
+      trajectory_timestep: 0.5 # [s]
     model_params:
       # Engine paths with hierarchical structure
       image_normalization_param_mean: [103.530, 116.280, 123.675]
