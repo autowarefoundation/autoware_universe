@@ -122,6 +122,28 @@ cudaError_t fill(device_vector<T> & input, T val)
   return fill(input.data(), (int)(input.size()), val, input.get_stream());
 }
 
+CUDAH void memcpy(uint8_t * dst, const uint8_t * src, int size)
+{
+  for (int i = 0; i < size; ++i) {
+    dst[i] = src[i];
+  }
+}
+
+inline void copyPointCloud2Metadata(
+  cuda_blackboard::CudaPointCloud2 & dst, 
+  const cuda_blackboard::CudaPointCloud2 & src
+)
+{
+  dst.header = src.header;
+  dst.height = src.height;
+  dst.width = src.width;
+  dst.fields = src.fields;
+  dst.is_bigendian = src.is_bigendian;
+  dst.point_step = src.point_step;
+  dst.row_step = src.row_step;
+  dst.is_dense = src.is_dense;
+}
+
 }  // namespace autoware::cuda
 
 #endif

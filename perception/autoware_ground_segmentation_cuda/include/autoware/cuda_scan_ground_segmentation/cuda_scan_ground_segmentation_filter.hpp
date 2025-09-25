@@ -16,8 +16,9 @@
 #define AUTOWARE__CUDA_SCAN_GROUND_SEGMENTATION__CUDA_SCAN_GROUND_SEGMENTATION_FILTER_HPP_
 
 #include "cuda_mempool_wrapper.hpp"
-#include "cuda_point_cloud2.hpp"
 #include "cuda_stream_wrapper.hpp"
+#include "device_vector.hpp"
+#include "cuda_common.hpp"
 
 #include <autoware/cuda_pointcloud_preprocessor/point_types.hpp>
 #include <autoware/cuda_utils/cuda_check_error.hpp>
@@ -122,7 +123,7 @@ public:
     cuda_blackboard::CudaPointCloud2 & ground, cuda_blackboard::CudaPointCloud2 & non_ground);
 
 private:
-  std::unique_ptr<cuda::PointCloud2> dev_input_points_, dev_output_points_, dev_ground_points_;
+  std::unique_ptr<cuda_blackboard::CudaPointCloud2> dev_input_points_, non_ground_, ground_;
   std::unique_ptr<device_vector<int>> empty_cell_mark_;
 
   uint32_t number_input_points_;
@@ -138,7 +139,7 @@ private:
 
 private:
   // Remove points too far from the origin
-  void removeOutliers();
+  void removeOutliers(const cuda_blackboard::CudaPointCloud2 & input);
 
   /*
    * This function calc the cell_id for each point
@@ -156,14 +157,16 @@ private:
    */
   template <typename CheckerType>
   void extractPoints(
-    device_vector<ClassifiedPointType> & classified_points, cuda::PointCloud2 & input,
-    cuda::PointCloud2 & output);
+    device_vector<ClassifiedPointType> & classified_points, 
+    const cuda_blackboard::CudaPointCloud2 & input,
+    cuda_blackboard::CudaPointCloud2 & output);
 
   // Distribute points to cells
   void sort_points(
     device_vector<Cell> & cell_list, device_vector<int> & starting_pid,
     device_vector<ClassifiedPointType> & classified_points);
 
+  const int reserved_dev_point_size_ = 300000;
   std::shared_ptr<CudaStream> stream_;
   std::shared_ptr<CudaMempool> mempool_;
 };

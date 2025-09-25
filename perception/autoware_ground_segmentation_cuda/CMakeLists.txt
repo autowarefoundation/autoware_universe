@@ -55,7 +55,6 @@ list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
 #################### cuda_ground_segmentation ##################
 cuda_add_library(cuda_ground_segmentation_lib SHARED
   src/cuda_scan_ground_segmentation/cuda_scan_ground_segmentation_filter.cu
-  src/cuda_scan_ground_segmentation/cuda_point_cloud2.cu
 )
 
 target_link_libraries(cuda_ground_segmentation_lib

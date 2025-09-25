@@ -44,9 +44,19 @@ private:
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{nullptr};
 
-  rclcpp::Subscription<cuda_blackboard::CudaPointCloud2>::SharedPtr sub_;
-  rclcpp::Publisher<cuda_blackboard::CudaPointCloud2>::SharedPtr pub_;
-  rclcpp::Publisher<cuda_blackboard::CudaPointCloud2>::SharedPtr pub_gnd_;
+  // rclcpp::Subscription<cuda_blackboard::CudaPointCloud2>::SharedPtr sub_;
+  // rclcpp::Publisher<cuda_blackboard::CudaPointCloud2>::SharedPtr pub_;
+  // rclcpp::Publisher<cuda_blackboard::CudaPointCloud2>::SharedPtr pub_gnd_;
+
+    // Cuda Sub
+  std::shared_ptr<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
+    sub_{};
+  // Cuda Pub
+  std::unique_ptr<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>
+    pub_{};
+
+  std::unique_ptr<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>
+    pub_gnd_{};
 };
 
 }  // namespace autoware::cuda_ground_segmentation
