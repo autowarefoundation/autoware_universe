@@ -15,6 +15,8 @@
 #ifndef TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
 #define TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
 
+#include "traffic_light_multi_camera_fusion_process.hpp"
+
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
@@ -38,29 +40,7 @@
 
 namespace autoware::traffic_light
 {
-
 namespace mf = message_filters;
-
-struct FusionRecord
-{
-  std_msgs::msg::Header header;
-  sensor_msgs::msg::CameraInfo cam_info;
-  tier4_perception_msgs::msg::TrafficLightRoi roi;
-  tier4_perception_msgs::msg::TrafficLight signal;
-};
-
-struct FusionRecordArr
-{
-  std_msgs::msg::Header header;
-  sensor_msgs::msg::CameraInfo cam_info;
-  tier4_perception_msgs::msg::TrafficLightRoiArray rois;
-  tier4_perception_msgs::msg::TrafficLightArray signals;
-};
-
-bool operator<(const FusionRecordArr & r1, const FusionRecordArr & r2)
-{
-  return rclcpp::Time(r1.header.stamp) < rclcpp::Time(r2.header.stamp);
-}
 
 class MultiCameraFusion : public rclcpp::Node
 {
@@ -85,14 +65,14 @@ private:
 
   void mapCallback(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_msg);
 
-  void multiCameraFusion(std::map<IdType, FusionRecord> & fused_record_map);
+  void multiCameraFusion(std::map<IdType, utils::FusionRecord> & fused_record_map);
 
   void convertOutputMsg(
-    const std::map<IdType, FusionRecord> & grouped_record_map, NewSignalArrayType & msg_out);
+    const std::map<IdType, utils::FusionRecord> & grouped_record_map, NewSignalArrayType & msg_out);
 
   void groupFusion(
-    const std::map<IdType, FusionRecord> & fused_record_map,
-    std::map<IdType, FusionRecord> & grouped_record_map);
+    const std::map<IdType, utils::FusionRecord> & fused_record_map,
+    std::map<IdType, utils::FusionRecord> & grouped_record_map);
 
   using ExactSyncPolicy = mf::sync_policies::ExactTime<CamInfoType, RoiArrayType, SignalArrayType>;
   using ExactSync = mf::Synchronizer<ExactSyncPolicy>;
@@ -116,7 +96,7 @@ private:
   save record arrays by increasing timestamp order.
   use multiset in case there are multiple cameras publishing images at exactly the same time
   */
-  std::multiset<FusionRecordArr> record_arr_set_;
+  std::multiset<utils::FusionRecordArr> record_arr_set_;
   bool is_approximate_sync_;
   /*
   for every input message input_m, if the timestamp difference between input_m and the latest
