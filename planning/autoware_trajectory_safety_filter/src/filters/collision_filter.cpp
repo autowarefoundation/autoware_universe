@@ -197,15 +197,10 @@ bool CollisionFilter::check_collision(
   const autoware_perception_msgs::msg::PredictedObjects & objects,
   const rclcpp::Duration & duration) const
 {
-  for (const auto & object : objects.objects) {
-    const double ttc = time_to_collision(traj_point, duration, object);
-
-    // Check if TTC is below minimum threshold
-    if (ttc < params_.min_ttc && ttc >= 0) {
-      return true;  // Potential collision detected
-    }
-  }
-  return false;  // No collision
+  return std::any_of(objects.objects.begin(), objects.objects.end(), [&](const auto & object) {
+    const auto ttc = time_to_collision(traj_point, duration, object, params_.min_ttc);
+    return ttc >= 0.0 && ttc < params_.min_ttc;
+  });
 }
 }  // namespace autoware::trajectory_safety_filter::plugin
 
