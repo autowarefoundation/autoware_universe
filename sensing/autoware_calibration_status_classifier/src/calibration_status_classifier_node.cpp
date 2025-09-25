@@ -285,7 +285,9 @@ void CalibrationStatusClassifierNode::synchronized_callback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud_msg,
   const sensor_msgs::msg::Image::ConstSharedPtr & image_msg, size_t pair_idx)
 {
+  std::unique_lock<std::mutex> lock(synchronized_data_mutex_);
   synchronized_data_.at(pair_idx) = {cloud_msg, image_msg};
+  lock.unlock();
 
   if (runtime_mode_ == RuntimeMode::ACTIVE) {
     run(pair_idx);
@@ -324,12 +326,14 @@ FilterStatus<size_t> CalibrationStatusClassifierNode::get_objects_filter_status(
 
 bool CalibrationStatusClassifierNode::run(std::size_t pair_idx)
 {
+  std::unique_lock<std::mutex> lock(synchronized_data_mutex_);
   if (
     synchronized_data_.at(pair_idx).first == nullptr ||
     synchronized_data_.at(pair_idx).second == nullptr) {
     return false;
   }
   auto [cloud_msg, image_msg] = std::move(synchronized_data_.at(pair_idx));
+  lock.unlock();
 
   const auto cloud_stamp = rclcpp::Time(cloud_msg->header.stamp);
   const auto image_stamp = rclcpp::Time(image_msg->header.stamp);

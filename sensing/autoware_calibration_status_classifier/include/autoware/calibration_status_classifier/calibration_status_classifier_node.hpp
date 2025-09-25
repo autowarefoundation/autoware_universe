@@ -40,6 +40,7 @@
 #include <tf2_ros/transform_listener.h>
 
 #include <memory>
+#include <mutex>
 #include <vector>
 
 namespace autoware::calibration_status_classifier
@@ -109,6 +110,7 @@ private:
   std::vector<std::pair<
     sensor_msgs::msg::PointCloud2::ConstSharedPtr, sensor_msgs::msg::Image::ConstSharedPtr>>
     synchronized_data_;
+  std::mutex synchronized_data_mutex_;
 
   rclcpp::TimerBase::SharedPtr timer_;
 
