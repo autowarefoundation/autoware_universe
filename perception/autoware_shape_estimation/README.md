@@ -31,79 +31,68 @@ This rule-based geometric algorithms applies object-type-specific shape fitting 
 The shape fitting algorithm pipeline consists of following three stages.
 
 1. Shape Estimation
+   - Vehicle Objects (CAR, TRUCK, BUS, TRAILER, MOTORCYCLE, BICYCLE):
+     - **L-shape Fitting Algorithm (`fitLShape` function)**:
+       - Implements search-based rectangle fitting from IV2017 paper by Zhang et al.
 
-    - Vehicle Objects (CAR, TRUCK, BUS, TRAILER, MOTORCYCLE, BICYCLE):
+       - **Angle Optimization**:
+         - Default search range: 0 to 90 degrees for full angular sweep
+         - Reference yaw constraint: +/-search_angle_range around reference when available
+         - Two optimization methods: Standard iterative search or Boost-based Brent optimization
 
-        - **L-shape Fitting Algorithm (`fitLShape` function)**:
+       - **Closeness Criterion**: Evaluates fitting quality using Algorithm 4 from referenced paper
+         - Distance thresholds: d_min (0.01m squared), d_max (0.16m squared)
+         - Point-to-boundary distance calculation for quality assessment
 
-          - Implements search-based rectangle fitting from IV2017 paper by Zhang et al.
+       - **3D Bounding Box Construction**:
+         - Projects points onto orthogonal axes e1 and e2
+         - Calculates intersection points to determine center and dimensions
+         - Height derived from point cloud Z-range with minimum epsilon (0.001m)
 
-          - **Angle Optimization**:
-              - Default search range: 0 to 90 degrees for full angular sweep
-              - Reference yaw constraint: +/-search_angle_range around reference when available
-              - Two optimization methods: Standard iterative search or Boost-based Brent optimization
+       - **Output Validation**: Ensures minimum dimensions to prevent degenerate boxes
 
-          - **Closeness Criterion**: Evaluates fitting quality using Algorithm 4 from referenced paper
-              - Distance thresholds: d_min (0.01m squared), d_max (0.16m squared)
-              - Point-to-boundary distance calculation for quality assessment
+   - Pedestrian (PEDESTRIAN):
+     - Cylinder shape estimation using cv::minEnclosingCircle
 
-          - **3D Bounding Box Construction**:
-              - Projects points onto orthogonal axes e1 and e2
-              - Calculates intersection points to determine center and dimensions
-              - Height derived from point cloud Z-range with minimum epsilon (0.001m)
-
-          - **Output Validation**: Ensures minimum dimensions to prevent degenerate boxes
-
-    - Pedestrian (PEDESTRIAN):
-        - Cylinder shape estimation using cv::minEnclosingCircle
-
-    - Other/Unknown Objects:
-        - Convex hull shape estimation using cv::convexHull
+   - Other/Unknown Objects:
+     - Convex hull shape estimation using cv::convexHull
 
 2. Filtering
+   - Vehicle Type-specific Filtering:
+     - Car Filter: Vehicle size validity verification
+     - Truck Filter: Truck-specific shape constraints
+     - Bus Filter: Bus-specific dimension checks
+     - Trailer Filter: Trailer shape validation
 
-    - Vehicle Type-specific Filtering:
+   - Physical validity checks of estimated shapes
 
-        - Car Filter: Vehicle size validity verification
-        - Truck Filter: Truck-specific shape constraints
-        - Bus Filter: Bus-specific dimension checks
-        - Trailer Filter: Trailer shape validation
-
-    - Physical validity checks of estimated shapes
-
-    - Exclusion of invalid estimation results
+   - Exclusion of invalid estimation results
 
 3. Corrector
+   - **Reference Information-based Correction**:
+     - Orientation correction using reference yaw information
+     - Dimension correction using reference shape size (minimum/fixed value modes)
 
-    - **Reference Information-based Correction**:
+   - **Shape Correction Algorithm (`correctWithDefaultValue` function)**:
+     - **Purpose**: Rule-based bounding box correction using default vehicle dimensions when estimated shapes violate physical constraints
 
-        - Orientation correction using reference yaw information
-        - Dimension correction using reference shape size (minimum/fixed value modes)
+     - **Correction Vector Application**:
+       - Computes correction vector based on conditions by correctWithDefaultValue Function
+         - ![correctWithDefaultValueFunction](resource/correctWithDefaultValue.svg)
 
-    - **Shape Correction Algorithm (`correctWithDefaultValue` function)**:
+       - Updates shape dimensions: `shape.dimensions += correction_vector * 2.0`
+       - Adjusts pose position: `pose.position += rotation_matrix * correction_vector`
 
-        - **Purpose**: Rule-based bounding box correction using default vehicle dimensions when estimated shapes violate physical constraints
+     - **Orientation Normalization**: Ensures longest dimension aligns with x-axis (90 degree rotation if needed)
 
-        - **Correction Vector Application**:
+   - **Vehicle Type-specific Correctors**:
+     - Vehicle Corrector: General vehicle correction
+     - Dedicated correction logic for each vehicle type
 
-            - Computes correction vector based on conditions by correctWithDefaultValue Function
-              - ![correctWithDefaultValueFunction](resource/correctWithDefaultValue.svg)
-
-            - Updates shape dimensions: `shape.dimensions += correction_vector * 2.0`
-            - Adjusts pose position: `pose.position += rotation_matrix * correction_vector`
-
-        - **Orientation Normalization**: Ensures longest dimension aligns with x-axis (90 degree rotation if needed)
-
-    - **Vehicle Type-specific Correctors**:
-
-        - Vehicle Corrector: General vehicle correction
-        - Dedicated correction logic for each vehicle type
-
-    - **Geometric consistency assurance**
+   - **Geometric consistency assurance**
 
 4. Fallback Mechanism
-
-    - Automatic fallback to UNKNOWN label with convex hull estimation when any stage fails
+   - Automatic fallback to UNKNOWN label with convex hull estimation when any stage fails
 
 ### ML Based Shape Implementation
 
