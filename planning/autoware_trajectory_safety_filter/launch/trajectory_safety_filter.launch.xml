@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <arg name="trajectory_safety_filter_param_path" default="$(find-pkg-share autoware_trajectory_safety_filter)/config/trajectory_safety_filter.param.yaml"/>
+  <arg name="input_trajectories" default="~/input/trajectories"/>
+  <arg name="output_trajectories" default="~/output/trajectories"/>
+  <arg name="input_vector_map" default="~/input/vector_map"/>
+  <arg name="input_odometry" default="~/input/odometry"/>
+  <arg name="input_objects" default="~/input/objects"/>
+
+  <node pkg="autoware_trajectory_safety_filter" exec="autoware_trajectory_safety_filter_node" name="trajectory_safety_filter_node" output="screen">
+    <param from="$(var trajectory_safety_filter_param_path)" allow_substs="true"/>
+    <remap from="~/input/trajectories" to="$(var input_trajectories)"/>
+    <remap from="~/output/trajectories" to="$(var output_trajectories)"/>
+    <remap from="~/input/lanelet2_map" to="$(var input_vector_map)"/>
+    <remap from="~/input/odometry" to="$(var input_odometry)"/>
+    <remap from="~/input/objects" to="$(var input_objects)"/>
+  </node>
+</launch>

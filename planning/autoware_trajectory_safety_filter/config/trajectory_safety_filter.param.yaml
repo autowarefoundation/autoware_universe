@@ -1,0 +1,12 @@
+/**:
+  ros__parameters:
+    filter_names: ["autoware::trajectory_safety_filter::plugin::OutOfLaneFilter", "autoware::trajectory_safety_filter::plugin::CollisionFilter"]
+    # available filter: "autoware::trajectory_safety_filter::plugin::OutOfLaneFilter", "autoware::trajectory_safety_filter::plugin::CollisionFilter"
+
+    out_of_lane:
+      time: 2.0
+      min_value: 0.0
+
+    collision:
+      time: 3.0
+      min_value: 2.0
