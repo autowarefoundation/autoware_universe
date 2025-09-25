@@ -48,6 +48,18 @@ tf2::Vector3 get_velocity_in_world_coordinate(const TrajectoryPoint & point)
   return tf2::Vector3(vx_world, vy_world, 0.0f);
 }
 
+/**
+ * @brief Calculates the time to collision (TTC) between two trajectory points.
+ *
+ * This function estimates the TTC by projecting the relative velocity of the two points
+ * along the direction of their displacement. The calculation assumes infinitesimal points
+ * rather than performing a full 2D collision check, which simplifies the computation.
+ *
+ * @param point1 The first trajectory point.
+ * @param point2 The second trajectory point.
+ * @return The time to collision in seconds. Returns 0.0f if the points are coincident,
+ *         and std::numeric_limits<float>::infinity() if the relative velocity is negligible.
+ */
 float time_to_collision(const TrajectoryPoint & point1, const TrajectoryPoint & point2)
 {
   constexpr float eps = 1e-6;
