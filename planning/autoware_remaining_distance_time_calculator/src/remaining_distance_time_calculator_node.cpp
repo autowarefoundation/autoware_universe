@@ -24,17 +24,12 @@
 #include <autoware_internal_planning_msgs/msg/velocity_limit.hpp>
 
 #include <algorithm>
-#include <chrono>
 #include <cstddef>
 #include <functional>
-#include <iostream>
 #include <iterator>
-#include <limits>
 #include <memory>
-#include <mutex>
 #include <numeric>
 #include <string>
-#include <utility>
 
 namespace autoware::remaining_distance_time_calculator
 {
