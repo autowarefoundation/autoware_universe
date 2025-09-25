@@ -62,9 +62,10 @@ protected:
 
   static void SetUpTestSuite()
   {
-    data_dir = std::filesystem::path(
-                 ament_index_cpp::get_package_share_directory("autoware_calibration_status_classifier")) /
-               "data";
+    data_dir =
+      std::filesystem::path(
+        ament_index_cpp::get_package_share_directory("autoware_calibration_status_classifier")) /
+      "data";
     samples.push_back(data_utils::load_test_sample(data_dir, "sample_102"));
   }
 

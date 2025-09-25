@@ -35,7 +35,8 @@
 namespace autoware::calibration_status_classifier
 {
 
-CalibrationStatusClassifierNode::CalibrationStatusClassifierNode(const rclcpp::NodeOptions & options)
+CalibrationStatusClassifierNode::CalibrationStatusClassifierNode(
+  const rclcpp::NodeOptions & options)
 : rclcpp::Node("calibration_status_classifier", options),
   tf_buffer_(this->get_clock()),
   tf_listener_(tf_buffer_),
@@ -100,9 +101,10 @@ void CalibrationStatusClassifierNode::setup_runtime_mode_interface()
   setup_input_synchronization();
   if (runtime_mode_ == RuntimeMode::MANUAL) {
     calibration_service_ = this->create_service<std_srvs::srv::Trigger>(
-      "~/input/validate_calibration_srv", std::bind(
-                                            &CalibrationStatusClassifierNode::handle_calibration_request,
-                                            this, std::placeholders::_1, std::placeholders::_2));
+      "~/input/validate_calibration_srv",
+      std::bind(
+        &CalibrationStatusClassifierNode::handle_calibration_request, this, std::placeholders::_1,
+        std::placeholders::_2));
   } else if (runtime_mode_ == RuntimeMode::PERIODIC) {
     timer_ = this->create_wall_timer(
       std::chrono::duration<double>(period_),
@@ -123,24 +125,28 @@ void CalibrationStatusClassifierNode::setup_velocity_source_interface()
     case VelocitySource::TWIST_STAMPED:
       twist_stamped_sub_ = this->create_subscription<geometry_msgs::msg::TwistStamped>(
         "~/input/velocity", rclcpp::SensorDataQoS(),
-        std::bind(&CalibrationStatusClassifierNode::twist_stamped_callback, this, std::placeholders::_1));
+        std::bind(
+          &CalibrationStatusClassifierNode::twist_stamped_callback, this, std::placeholders::_1));
       break;
     case VelocitySource::TWIST_WITH_COV:
       twist_with_cov_sub_ = this->create_subscription<geometry_msgs::msg::TwistWithCovariance>(
         "~/input/velocity", rclcpp::SensorDataQoS(),
-        std::bind(&CalibrationStatusClassifierNode::twist_with_cov_callback, this, std::placeholders::_1));
+        std::bind(
+          &CalibrationStatusClassifierNode::twist_with_cov_callback, this, std::placeholders::_1));
       break;
     case VelocitySource::TWIST_WITH_COV_STAMPED:
       twist_with_cov_stamped_sub_ =
         this->create_subscription<geometry_msgs::msg::TwistWithCovarianceStamped>(
           "~/input/velocity", rclcpp::SensorDataQoS(),
           std::bind(
-            &CalibrationStatusClassifierNode::twist_with_cov_stamped_callback, this, std::placeholders::_1));
+            &CalibrationStatusClassifierNode::twist_with_cov_stamped_callback, this,
+            std::placeholders::_1));
       break;
     case VelocitySource::ODOMETRY:
       odometry_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
         "~/input/velocity", rclcpp::SensorDataQoS(),
-        std::bind(&CalibrationStatusClassifierNode::odometry_callback, this, std::placeholders::_1));
+        std::bind(
+          &CalibrationStatusClassifierNode::odometry_callback, this, std::placeholders::_1));
       break;
     default:
       throw std::invalid_argument("Unsupported velocity source");
@@ -259,7 +265,8 @@ void CalibrationStatusClassifierNode::twist_with_cov_stamped_callback(
   update_vehicle_velocity(velocity);
 }
 
-void CalibrationStatusClassifierNode::odometry_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
+void CalibrationStatusClassifierNode::odometry_callback(
+  const nav_msgs::msg::Odometry::SharedPtr msg)
 {
   double velocity = std::sqrt(
     msg->twist.twist.linear.x * msg->twist.twist.linear.x +
@@ -303,7 +310,8 @@ FilterStatus<double> CalibrationStatusClassifierNode::get_velocity_filter_status
   return {true, current_velocity_, current_velocity_ > velocity_threshold_, velocity_age};
 }
 
-FilterStatus<size_t> CalibrationStatusClassifierNode::get_objects_filter_status(const rclcpp::Time & time_ref)
+FilterStatus<size_t> CalibrationStatusClassifierNode::get_objects_filter_status(
+  const rclcpp::Time & time_ref)
 {
   if (!check_objects_) {
     return {false, 0, false, 0.0};
@@ -442,4 +450,5 @@ void CalibrationStatusClassifierNode::publish_diagnostic_status(
 }  // namespace autoware::calibration_status_classifier
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::calibration_status_classifier::CalibrationStatusClassifierNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(
+  autoware::calibration_status_classifier::CalibrationStatusClassifierNode)

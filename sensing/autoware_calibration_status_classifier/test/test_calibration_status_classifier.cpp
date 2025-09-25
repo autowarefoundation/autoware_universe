@@ -53,9 +53,10 @@ protected:
       GTEST_SKIP() << "ONNX model file not found: " << onnx_path;
     }
 
-    data_dir = std::filesystem::path(
-                 ament_index_cpp::get_package_share_directory("autoware_calibration_status_classifier")) /
-               "data";
+    data_dir =
+      std::filesystem::path(
+        ament_index_cpp::get_package_share_directory("autoware_calibration_status_classifier")) /
+      "data";
     samples.push_back(data_utils::load_test_sample(data_dir, "sample_102"));
 
     CalibrationStatusClassifierConfig calibration_status_classifier_config(
@@ -74,14 +75,16 @@ protected:
   }
 };
 
-std::unique_ptr<CalibrationStatusClassifier> CalibrationStatusClassifierTest::calibration_status_classifier;
+std::unique_ptr<CalibrationStatusClassifier>
+  CalibrationStatusClassifierTest::calibration_status_classifier;
 std::filesystem::path CalibrationStatusClassifierTest::data_dir;
 std::vector<data_utils::TestSample> CalibrationStatusClassifierTest::samples;
 
 TEST_F(CalibrationStatusClassifierTest, TestCalibrationStatusClassifierProcessingCalibratedSamples)
 {
   if (!calibration_status_classifier) {
-    GTEST_SKIP() << "CalibrationStatusClassifier instance is not initialized due to missing ONNX model.";
+    GTEST_SKIP()
+      << "CalibrationStatusClassifier instance is not initialized due to missing ONNX model.";
   }
 
   for (const auto & sample : samples) {
@@ -112,10 +115,12 @@ TEST_F(CalibrationStatusClassifierTest, TestCalibrationStatusClassifierProcessin
   }
 }
 
-TEST_F(CalibrationStatusClassifierTest, TestCalibrationStatusClassifierProcessingMiscalibratedSamples)
+TEST_F(
+  CalibrationStatusClassifierTest, TestCalibrationStatusClassifierProcessingMiscalibratedSamples)
 {
   if (!calibration_status_classifier) {
-    GTEST_SKIP() << "CalibrationStatusClassifier instance is not initialized due to missing ONNX model.";
+    GTEST_SKIP()
+      << "CalibrationStatusClassifier instance is not initialized due to missing ONNX model.";
   }
 
   for (const auto & sample : samples) {
