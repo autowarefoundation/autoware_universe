@@ -62,6 +62,14 @@ bool operator<(const FusionRecordArr & r1, const FusionRecordArr & r2)
   return rclcpp::Time(r1.header.stamp) < rclcpp::Time(r2.header.stamp);
 }
 
+using StateKey = std::pair<uint8_t, uint8_t>;
+
+struct GroupFusionInfo
+{
+  std::map<StateKey, double> accumulated_log_odds;
+  std::map<StateKey, FusionRecord> best_record_for_state;
+};
+
 class MultiCameraFusion : public rclcpp::Node
 {
 public:
@@ -124,6 +132,18 @@ private:
   it would be discarded
   */
   double message_lifespan_;
+  /**
+   * @brief The prior log-odds for a traffic light state.
+   *
+   * This corresponds to a prior probability of 0.5, representing a state of
+   * complete uncertainty before any evidence is considered.
+   *
+   * Example of a biased prior: If we wanted to assume a slight bias
+   * towards "Red" by default (e.g., 60% probability), we would set this
+   * to log(0.6 / 0.4) ≈ 0.405.
+   * double prior_log_odds_; = 0.405;
+   */
+  double prior_log_odds_;
 };
 }  // namespace autoware::traffic_light
 #endif  // TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
