@@ -78,3 +78,4 @@ flowchart TD
 ## TODO
 
 - Use `prev_bev` without transferring from Device (GPU) to Host (CPU).
+- Quantization: float is used for inference now, but using integer would enable faster and more memory-efficient inference.
