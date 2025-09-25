@@ -64,6 +64,17 @@ flowchart TD
 
 - [`save_prev_bev()`](../include/autoware/tensorrt_vad/vad_model.hpp): Transfers `prev_bev` from Device (GPU) to Host (CPU) and saves it for the next frame's inference. The return value is stored in the `VadModel` member variable `saved_prev_bev_`.
 
+### Design concepts
+
+#### Logger
+
+- We don't want `VadModel` to depend on ROS.
+- However, we want `VadModel`'s logging functionality to be consistent with `VadNode` and `VadInterface`, using `RCLCPP_INFO_THROTTLE`.
+- Therefore, we define an abstract base class called [`VadLogger`](../include/autoware/tensorrt_vad/ros_vad_logger.hpp), and `VadModel` receives `LoggerType` as a template parameter.
+- [`RosVadLogger`](../include/autoware/tensorrt_vad/ros_vad_logger.hpp) inherits from [`VadLogger`](../include/autoware/tensorrt_vad/ros_vad_logger.hpp) and performs log output using actual ROS 2 logging macros such as `RCLCPP_INFO_THROTTLE`.
+- This design allows `VadModel` to utilize logging functionality without directly depending on ROS 2.
+- To provide this flexibility, `VadModel` is designed as a template class, which requires all implementation to be written in the header file(.hpp). This is a C++ template constraint where template definitions must be available to all translation units that instantiate the template.
+
 ## TODO
 
 - Use `prev_bev` without transferring from Device (GPU) to Host (CPU).
