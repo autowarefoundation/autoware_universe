@@ -37,3 +37,12 @@ After these checks, the remaining trajectories, along with their original `gener
 | `out_of_lane.min_value` | double       | 0.0     | Minimum distance [m] from lane boundary                                       |
 | `collision.time`        | double       | 3.0     | Look-ahead time [s] for collision search                                      |
 | `collision.min_value`   | double       | 2.0     | Minimum acceptable time to collision [s]                                      |
+
+## Future Work
+
+### Performance Optimization
+
+The current implementation can be further optimized for computational efficiency:
+
+- **Caching Strategy**: Implement smarter caching mechanisms for lanelet queries and boundary checks to avoid redundant computations across similar trajectories
+- **Adaptive Resolution**: Dynamically adjust the checking resolution based on vehicle speed and trajectory curvature to balance accuracy and performance
