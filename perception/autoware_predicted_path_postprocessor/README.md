@@ -44,7 +44,7 @@ As an example, let's see how to add a new processor by using a processor called 
    {
      public:
        FilterBySomething(rclcpp::Node * node_ptr, const std::string & processor_name)
-       : ProcessorInterface()
+       : ProcessorInterface(processor_name)
        {
          // Load parameter YAML file by declaring parameters
          load_config(
@@ -58,10 +58,10 @@ As an example, let's see how to add a new processor by using a processor called 
          string_param_ = node_ptr->get_parameter(processor_name + ".string_param").as_string();
        }
 
-       void process(
-         autoware_perception_msgs::msg::PredictedObject &, const Context &) override
+       result_type process(target_type & target, const Context & context) override
        {
          // ...Do something
+         return make_ok<error_type>();
        }
 
     private:
@@ -75,6 +75,7 @@ As an example, let's see how to add a new processor by using a processor called 
    ```c++:processor/builder.hpp
    std::vector<ProcessorInterface::UniquePtr> build_processors(rclcpp::Node * node_ptr, const std::string & processor_name)
    {
+     std::vector<ProcessorInterface::UniquePtr> outputs;
      for (const auto & name : processor_names) {
        if ( /* ... */) {
          // ...
@@ -82,6 +83,7 @@ As an example, let's see how to add a new processor by using a processor called 
          outputs.push_back(std::make_unique<FilterBySomething>(node_ptr, name));
        }
      }
+     return outputs;
    }
    ```
 

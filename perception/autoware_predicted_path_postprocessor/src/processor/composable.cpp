@@ -27,7 +27,6 @@
 namespace autoware::predicted_path_postprocessor::processor
 {
 using PredictedObject = autoware_perception_msgs::msg::PredictedObject;
-using PredictedObjects = autoware_perception_msgs::msg::PredictedObjects;
 
 ComposableProcessor::ComposableProcessor(
   rclcpp::Node * node_ptr, const std::vector<std::string> & processor_names)
@@ -37,23 +36,26 @@ ComposableProcessor::ComposableProcessor(
   stopwatch_->tic("processing_time");
 }
 
-PredictedObjects ComposableProcessor::process(
-  const PredictedObjects::ConstSharedPtr & objects, const Context & context) const
+ComposableProcessor::result_type ComposableProcessor::process(
+  const target_type::ConstSharedPtr & objects, const Context & context) const
 {
-  auto [results, _] = process_internal(objects, context, false);
-  return results;
+  auto result = process_internal(objects, context, false);
+  if (result) {
+    auto [output, _] = result.ok();
+    return make_ok<target_type, error_type>(std::move(output));
+  } else {
+    return make_err<target_type, error_type>(result.err());
+  }
 }
 
-std::pair<PredictedObjects, std::unordered_map<std::string, IntermediateReport>>
-ComposableProcessor::process_with_intermediates(
-  const PredictedObjects::ConstSharedPtr & objects, const Context & context) const
+ComposableProcessor::result_with_report_type ComposableProcessor::process_with_reports(
+  const target_type::ConstSharedPtr & objects, const Context & context) const
 {
   return process_internal(objects, context, true);
 }
 
-std::pair<PredictedObjects, std::unordered_map<std::string, IntermediateReport>>
-ComposableProcessor::process_internal(
-  const PredictedObjects::ConstSharedPtr & objects, const Context & context,
+ComposableProcessor::result_with_report_type ComposableProcessor::process_internal(
+  const target_type::ConstSharedPtr & objects, const Context & context,
   bool collect_intermediate) const
 {
   std::unordered_map<std::string, std::pair<std::vector<double>, std::vector<PredictedObject>>>
@@ -66,8 +68,8 @@ ComposableProcessor::process_internal(
     }
   }
 
-  std::vector<PredictedObject> processed_objects;
-  processed_objects.reserve(objects->objects.size());
+  std::vector<PredictedObject> processed_targets;
+  processed_targets.reserve(objects->objects.size());
 
   for (const auto & object : objects->objects) {
     auto target = object;
@@ -75,33 +77,37 @@ ComposableProcessor::process_internal(
       if (collect_intermediate) {
         stopwatch_->toc("processing_time", true);
       }
-      processor->process(target, context);
+
+      if (const auto result = processor->process(target, context); !result) {
+        return make_err<output_with_report_type, error_type>(result.err());
+      }
+
       if (collect_intermediate) {
         intermediates[processor->name()].first.push_back(stopwatch_->toc("processing_time", true));
         intermediates[processor->name()].second.push_back(target);
       }
     }
-    processed_objects.push_back(std::move(target));
+    processed_targets.push_back(std::move(target));
   }
 
   // build final output
-  auto output = autoware_perception_msgs::build<PredictedObjects>()
+  auto output = autoware_perception_msgs::build<target_type>()
                   .header(objects->header)
-                  .objects(std::move(processed_objects));
+                  .objects(std::move(processed_targets));
 
   // build intermediate reports if needed
-  std::unordered_map<std::string, IntermediateReport> reports;
+  report_type reports;
   if (collect_intermediate) {
     reports.reserve(processors_.size());
     for (const auto & [key, value] : intermediates) {
       const auto processing_time_ms = std::reduce(value.first.begin(), value.first.end());
-      auto processor_result = autoware_perception_msgs::build<PredictedObjects>()
+      auto processed_target = autoware_perception_msgs::build<target_type>()
                                 .header(objects->header)
                                 .objects(value.second);
-      reports.emplace(key, IntermediateReport{processing_time_ms, std::move(processor_result)});
+      reports.emplace(key, IntermediateReport{processing_time_ms, std::move(processed_target)});
     }
   }
 
-  return {std::move(output), std::move(reports)};
+  return make_ok<output_with_report_type, error_type>(std::move(output), std::move(reports));
 }
 }  // namespace autoware::predicted_path_postprocessor::processor

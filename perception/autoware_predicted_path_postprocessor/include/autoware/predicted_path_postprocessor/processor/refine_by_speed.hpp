@@ -39,9 +39,9 @@ public:
    *
    * @param target The predicted object to process.
    * @param context The context for processing.
+   * @return The result of the processing.
    */
-  void process(
-    autoware_perception_msgs::msg::PredictedObject & target, const Context & context) override;
+  result_type process(target_type & target, const Context & context) override;
 
 private:
   double speed_threshold_;  //!< Speed threshold for refinement
