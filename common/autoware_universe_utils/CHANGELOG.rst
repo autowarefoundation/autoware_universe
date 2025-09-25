@@ -2,6 +2,42 @@
 Changelog for package autoware_universe_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* style(pre-commit): autofix (`#10982 <https://github.com/autowarefoundation/autoware_universe/issues/10982>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* fix(autoware_universe_utils): remove unused function (`#10698 <https://github.com/autowarefoundation/autoware_universe/issues/10698>`_)
+* Contributors: Ryuta Kambe, TaikiYamada4
+
+0.45.0 (2025-05-22)
+-------------------
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_universe_utils): add intersect and getPoint for Point2d type (`#10443 <https://github.com/autowarefoundation/autoware_universe/issues/10443>`_)
+* perf(autoware_pointcloud_preprocessor): introduce managed transform buffer with implicitly defined listener type (`#9197 <https://github.com/autowarefoundation/autoware_universe/issues/9197>`_)
+  * feat(autoware_universe_utils): rework managed transform buffer
+  * feat(autoware_pointcloud_preprocessor): integrate Managed TF Buffer into pointcloud densifier
+  * chore: update repos
+  * chore(managed_transform_buffer): fix version
+  ---------
+  Co-authored-by: Kenzo Lobos-Tsunekawa <kenzo.lobos@tier4.jp>
+* Contributors: Amadeusz Szymko, Maxime CLEMENT, Ryohsuke Mitsudome
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

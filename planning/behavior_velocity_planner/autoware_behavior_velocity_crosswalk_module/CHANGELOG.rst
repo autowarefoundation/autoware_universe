@@ -2,6 +2,68 @@
 Changelog for package autoware_behavior_velocity_crosswalk_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(crosswalk): improve robustness to prevent stop decision from being canceled by transient noise (`#11027 <https://github.com/autowarefoundation/autoware_universe/issues/11027>`_)
+  * feat(crosswalk): improve robustness to prevent stop decision from being canceled by transient noise
+  * docs: readme
+  * fix: small change
+  ---------
+* fix(crosswalk): incorrect stop point calculation (`#10922 <https://github.com/autowarefoundation/autoware_universe/issues/10922>`_)
+* Contributors: Mete Fatih Cırıt, Satoshi OTA
+
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(crosswalk_module): add infomation to PlanningFactor topic in crosswalk_module (`#10759 <https://github.com/autowarefoundation/autoware_universe/issues/10759>`_)
+  * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)
+  not sync github-release
+  * feat(crosswalk_module): set infomation to PlanningFactor topic
+  * feat(crosswalk_module): add test
+  * wip: create test case
+  * fix to parked vehicles stop
+  * tidy up
+  * fix cmake
+  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)"
+  This reverts commit 41f03b1e967cfe124197960e41ba7e920e4646aa.
+  * apply some review, fix code style
+  * apply some review for tests
+  * fix out_of_rage error
+  * fix: apply suggestions from code review
+  * change safety factor detail and rename stuck vehicle to obstruction prevention
+  * delete dead variable
+  * fix some parameter name
+  ---------
+  Co-authored-by: Yutaka Kondo <yutaka.kondo@youtalk.jp>
+* feat(crosswalk_module): add parked vehicles stop feature (`#10667 <https://github.com/autowarefoundation/autoware_universe/issues/10667>`_)
+* Contributors: Kotakku, Maxime CLEMENT, TaikiYamada4
+
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(crosswalk): update stop position logic (`#10439 <https://github.com/autowarefoundation/autoware_universe/issues/10439>`_)
+  * update stop pos logic
+  * update doc
+  * response to the review
+  ---------
+* fix(behavior_velocity_crosswalk_module): add missing header  (`#10552 <https://github.com/autowarefoundation/autoware_universe/issues/10552>`_)
+* feat(behavior_velocity_planner): only wait for the required subscriptions (`#10546 <https://github.com/autowarefoundation/autoware_universe/issues/10546>`_)
+* Contributors: Masaki Baba, TaikiYamada4, Takayuki Murooka, Yuki TAKAGI
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(crosswalk_module): consider objects on crosswalk when pedestrian traffic light is red (`#10332 <https://github.com/autowarefoundation/autoware_universe/issues/10332>`_)
+* Contributors: Mehmet Dogru, Ryohsuke Mitsudome
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

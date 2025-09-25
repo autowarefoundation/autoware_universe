@@ -28,11 +28,12 @@ This module works without `~/input/route`, but its behavior is outputting the su
 
 ## Parameters
 
-| Name                          | Type   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Default value |
-| :---------------------------- | :----- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------ |
-| `use_last_detect_color`       | bool   | If this parameter is `true`, this module estimates pedestrian's traffic signal as RED not only when vehicle's traffic signal is detected as GREEN/AMBER but also when detection results change GREEN/AMBER to UNKNOWN. (If detection results change RED or AMBER to UNKNOWN, this module estimates pedestrian's traffic signal as UNKNOWN.) If this parameter is `false`, this module use only latest detection results for estimation. (Only when the detection result is GREEN/AMBER, this module estimates pedestrian's traffic signal as RED.) | true          |
-| `last_detect_color_hold_time` | double | The time threshold to hold for last detect color. The unit is second.                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | 2.0           |
-| `last_colors_hold_time`       | double | The time threshold to hold for history detected pedestrian traffic light color. The unit is second.                                                                                                                                                                                                                                                                                                                                                                                                                                                | 1.0           |
+| Name                           | Type   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Default value |
+| :----------------------------- | :----- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------ |
+| `use_last_detect_color`        | bool   | If this parameter is `true`, this module estimates pedestrian's traffic signal as RED not only when vehicle's traffic signal is detected as GREEN/AMBER but also when detection results change GREEN/AMBER to UNKNOWN. (If detection results change RED or AMBER to UNKNOWN, this module estimates pedestrian's traffic signal as UNKNOWN.) If this parameter is `false`, this module use only latest detection results for estimation. (Only when the detection result is GREEN/AMBER, this module estimates pedestrian's traffic signal as RED.) | true          |
+| `use_pedestrian_signal_detect` | bool   | If this parameter is `true`, use the pedestrian's traffic signal estimated by the perception pipeline. If `false`, overwrite it with pedestrian's signals estimated from vehicle traffic signals, HDMap, and route.                                                                                                                                                                                                                                                                                                                                | true          |
+| `last_detect_color_hold_time`  | double | The time threshold to hold for last detect color. The unit is second.                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | 2.0           |
+| `last_colors_hold_time`        | double | The time threshold to hold for history detected pedestrian traffic light color. The unit is second.                                                                                                                                                                                                                                                                                                                                                                                                                                                | 1.0           |
 
 ## Inner-workings / Algorithms
 
@@ -44,6 +45,9 @@ When the pedestrian traffic signals **are detected** by perception pipeline
 When the pedestrian traffic signals **are NOT detected** by perception pipeline
 
 - Estimate the color of pedestrian traffic signals based on detected vehicle traffic signals, HDMap, and route
+
+Override rules specific to some traffic lights can also be defined in the lanelet map.
+In that case, the crosswalk traffic light estimation is overridden by these rules.
 
 ### Estimate whether pedestrian traffic signals are flashing
 
@@ -124,6 +128,22 @@ If traffic between pedestrians and vehicles is controlled by traffic signals, th
 <div align="center">
   <img src="images/intersection2.svg" width=80%>
 </div>
+
+### Map-based estimation rules
+
+Rules can be defined in the lanelet map to override the normal estimation.
+These rules define the value of a crosswalk traffic light based on the value of a vehicle traffic light.
+
+For example, a rule to consider the crosswalk traffic light with id X to be `green` when the vehicle traffic light with id Y is `red` can be expressed in the lanelet map as follows:
+
+```XML
+  <relation id="Y">
+    ...
+    <tag k="signal_color_relation:red:green" v="X"/>
+```
+
+Colors `green`, `amber`, `red`, and `white` are currently supported.
+Multiple crosswalk ids can be listed separated by a comma and without any whitespace (e.g., `v="1,2,3"`).
 
 ## Assumptions / Known limits
 

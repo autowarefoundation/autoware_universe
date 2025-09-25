@@ -37,24 +37,13 @@ void ControlValidatorDebugMarkerPublisher::clear_markers()
   marker_array_virtual_wall_.markers.clear();
 }
 
-void ControlValidatorDebugMarkerPublisher::push_warning_msg(
+void ControlValidatorDebugMarkerPublisher::push_virtual_wall(
   const geometry_msgs::msg::Pose & pose, const std::string & msg)
 {
-  visualization_msgs::msg::Marker marker = autoware_utils::create_default_marker(
-    "map", node_->get_clock()->now(), "warning_msg", 0, Marker::TEXT_VIEW_FACING,
-    autoware_utils::create_marker_scale(0.0, 0.0, 1.0),
-    autoware_utils::create_marker_color(1.0, 0.1, 0.1, 0.999));
-  marker.lifetime = rclcpp::Duration::from_seconds(0.2);
-  marker.pose = pose;
-  marker.text = msg;
-  marker_array_virtual_wall_.markers.push_back(marker);
-}
-
-void ControlValidatorDebugMarkerPublisher::push_virtual_wall(const geometry_msgs::msg::Pose & pose)
-{
   const auto now = node_->get_clock()->now();
+  std::string display_msg = "control_validator \n(" + msg + ")";
   const auto stop_wall_marker =
-    autoware::motion_utils::createStopVirtualWallMarker(pose, "control_validator", now, 0);
+    autoware::motion_utils::createStopVirtualWallMarker(pose, display_msg, now, 0);
   autoware_utils::append_marker_array(stop_wall_marker, &marker_array_virtual_wall_, now);
 }
 

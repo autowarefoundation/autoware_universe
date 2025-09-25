@@ -2,6 +2,81 @@
 Changelog for package autoware_control_validator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* feat: change planning output topic name to /planning/trajectory (`#11135 <https://github.com/autowarefoundation/autoware_universe/issues/11135>`_)
+  * change planning output topic name to /planning/trajectory
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(planning_validator): init validation status (`#11119 <https://github.com/autowarefoundation/autoware_universe/issues/11119>`_)
+  * fix(planning_validator): init validation status
+  * fix(control_validator): init validation status
+  ---------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(control_validator): enhance trajectory validation with previous reference trajectory (`#10939 <https://github.com/autowarefoundation/autoware_universe/issues/10939>`_)
+  * feat(control_validator): enhance trajectory validation with previous reference trajectory
+  * fix(test_control_validator): update lateral deviation test cases to reflect validation status
+  ---------
+* fix(autoware_control_validator): prevent division by zero in time calculation (`#10926 <https://github.com/autowarefoundation/autoware_universe/issues/10926>`_)
+  * fix(lateral_jerk_validator): prevent division by zero in time calculation
+  * fix(lateral_jerk_validator): improve stability by enforcing minimum time difference for calculations
+  ---------
+* feat(control_validator): disable control validator error report when not in autonomous control (`#10871 <https://github.com/autowarefoundation/autoware_universe/issues/10871>`_)
+  * feat(control_validator): disable control validator error report when not in autonomous control
+  * also fix control validator launch
+  * fix: work with yaw validator; fix yaw validator missing in all valid; add a debug info
+  * chore: get rid of the yaw warn in is_all_valid
+  * chore: fix topic remapping in launch file
+  ---------
+* feat(control_validator): 2 thresholds for the yaw deviation (warn/error) (`#10876 <https://github.com/autowarefoundation/autoware_universe/issues/10876>`_)
+* feat(control_validator): add yaw_deviation (`#10872 <https://github.com/autowarefoundation/autoware_universe/issues/10872>`_)
+* Contributors: Kyoichi Sugahara, Maxime CLEMENT, Mete Fatih Cırıt, Satoshi OTA, Yukihiro Saito, Yuxuan Liu
+
+0.46.0 (2025-06-20)
+-------------------
+
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(control_validator): add lateral jerk validation (`#10619 <https://github.com/autowarefoundation/autoware_universe/issues/10619>`_)
+  * feat(control_validator): add steering rate validation and update parameters
+  * feat(lateral_jerk_validator): rename and implement lateral jerk validation logic
+  - Steering rate validation has been renamed to lateral jerk validation for clarity.
+  - Updated the comment to assume constant velocity and adjusted related parameters.
+  ---------
+* refactor(control_validator): visualize stop reason to virtual wall (`#10593 <https://github.com/autowarefoundation/autoware_universe/issues/10593>`_)
+  * feat(control_validator): add error message generation based on validation status
+  * feat(control_validator): update push_virtual_wall method to include message display
+  * refactor(control_validator): update error messages for clarity in generate_error_message method
+  ---------
+* chore(control_validator): update maintainer (`#10594 <https://github.com/autowarefoundation/autoware_universe/issues/10594>`_)
+  update
+* fix(control_validator): fix less trajectory point check (`#10508 <https://github.com/autowarefoundation/autoware_universe/issues/10508>`_)
+* Contributors: Kyoichi Sugahara, TaikiYamada4, Yuki TAKAGI
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(control_validator): add over run estimation feature (`#10422 <https://github.com/autowarefoundation/autoware_universe/issues/10422>`_)
+* refactor(control validaor): refactor control_validator (`#10363 <https://github.com/autowarefoundation/autoware_universe/issues/10363>`_)
+* fix(control_validator): memory-related crash when processing large trajectories (`#10372 <https://github.com/autowarefoundation/autoware_universe/issues/10372>`_)
+  * fix(control_validator): momory
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(control validator): combine callback functions to fix error count increment bug (`#10355 <https://github.com/autowarefoundation/autoware_universe/issues/10355>`_)
+* fix(control_validator): fix sign miss and add code test (`#10341 <https://github.com/autowarefoundation/autoware_universe/issues/10341>`_)
+* feat(control_validator)!: add acceleration check (`#10326 <https://github.com/autowarefoundation/autoware_universe/issues/10326>`_)
+* Contributors: Ryohsuke Mitsudome, Shumpei Wakabayashi, Yuki TAKAGI
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

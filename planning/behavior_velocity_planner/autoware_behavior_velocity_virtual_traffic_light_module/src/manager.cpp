@@ -91,10 +91,11 @@ void VirtualTrafficLightModuleManager::launchNewModules(
       !isModuleRegistered(module_id) &&
       boost::geometry::intersects(
         ego_path_linestring, lanelet::utils::to2D(stop_line_opt.value()).basicLineString())) {
-      registerModule(std::make_shared<VirtualTrafficLightModule>(
-        module_id, lane_id, *m.first, m.second, planner_param_,
-        logger_.get_child("virtual_traffic_light_module"), clock_, time_keeper_,
-        planning_factor_interface_));
+      registerModule(
+        std::make_shared<VirtualTrafficLightModule>(
+          module_id, lane_id, *m.first, m.second, planner_param_,
+          logger_.get_child("virtual_traffic_light_module"), clock_, time_keeper_,
+          planning_factor_interface_));
     }
   }
 }
@@ -119,7 +120,7 @@ void VirtualTrafficLightModuleManager::modifyPathVelocity(
   //       of virtual traffic light states is set here.
   const auto virtual_traffic_light_states = sub_virtual_traffic_light_states_->take_data();
   for (const auto & scene_module : scene_modules_) {
-    scene_module->setVirtualTrafficLightStates(virtual_traffic_light_states);
+    scene_module->setCorrespondingVirtualTrafficLightState(virtual_traffic_light_states);
   }
 
   SceneModuleManagerInterface<VirtualTrafficLightModule>::modifyPathVelocity(path);

@@ -1,0 +1,13 @@
+<launch>
+  <arg name="input/twist" default="/sensing/vehicle_velocity_converter/twist_with_covariance"/>
+  <arg name="output" default="/sensing/lidar/concatenated/pointcloud"/>
+  <arg name="output_info" default="/sensing/lidar/concatenated/pointcloud_info"/>
+  <!-- Parameter -->
+  <arg name="param_file" default="$(find-pkg-share autoware_pointcloud_preprocessor)/config/concatenate_and_time_sync_node.param.yaml"/>
+  <node pkg="autoware_cuda_pointcloud_preprocessor" exec="cuda_concatenate_and_time_sync_node" name="cuda_concatenate_and_time_sync_node" output="screen">
+    <remap from="~/input/twist" to="$(var input/twist)"/>
+    <remap from="output" to="$(var output)"/>
+    <remap from="output_info" to="$(var output_info)"/>
+    <param from="$(var param_file)"/>
+  </node>
+</launch>

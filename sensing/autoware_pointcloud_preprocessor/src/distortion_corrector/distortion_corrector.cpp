@@ -89,8 +89,12 @@ void DistortionCorrectorBase::get_imu_transformation(
   }
 
   Eigen::Matrix4f eigen_imu_to_base_link;
-  imu_transform_exists_ =
-    managed_tf_buffer_->get_transform(base_frame, imu_frame, eigen_imu_to_base_link);
+  auto eigen_transform_opt = managed_tf_buffer_->getTransform<Eigen::Matrix4f>(
+    base_frame, imu_frame, node_.now(), rclcpp::Duration::from_seconds(1.0), node_.get_logger());
+  imu_transform_exists_ = eigen_transform_opt.has_value();
+  if (imu_transform_exists_) {
+    eigen_imu_to_base_link = *eigen_transform_opt;
+  }
   tf2::Transform tf2_imu_to_base_link = convert_matrix_to_transform(eigen_imu_to_base_link);
 
   geometry_imu_to_base_link_ptr_ = std::make_shared<geometry_msgs::msg::TransformStamped>();
@@ -298,9 +302,10 @@ tf2::Transform DistortionCorrectorBase::convert_matrix_to_transform(const Eigen:
 {
   tf2::Transform transform;
   transform.setOrigin(tf2::Vector3(matrix(0, 3), matrix(1, 3), matrix(2, 3)));
-  transform.setBasis(tf2::Matrix3x3(
-    matrix(0, 0), matrix(0, 1), matrix(0, 2), matrix(1, 0), matrix(1, 1), matrix(1, 2),
-    matrix(2, 0), matrix(2, 1), matrix(2, 2)));
+  transform.setBasis(
+    tf2::Matrix3x3(
+      matrix(0, 0), matrix(0, 1), matrix(0, 2), matrix(1, 0), matrix(1, 1), matrix(1, 2),
+      matrix(2, 0), matrix(2, 1), matrix(2, 2)));
   return transform;
 }
 
@@ -309,6 +314,9 @@ void DistortionCorrector<T>::undistort_pointcloud(
   bool use_imu, std::optional<AngleConversion> angle_conversion_opt,
   sensor_msgs::msg::PointCloud2 & pointcloud)
 {
+  timestamp_mismatch_count_ = 0;
+  timestamp_mismatch_fraction_ = 0.0;
+
   if (!is_pointcloud_valid(pointcloud)) return;
   if (twist_queue_.empty()) {
     RCLCPP_WARN_STREAM_THROTTLE(
@@ -342,6 +350,7 @@ void DistortionCorrector<T>::undistort_pointcloud(
   // If there is a point in a pointcloud that cannot be associated, record it to issue a warning
   bool is_twist_time_stamp_too_late = false;
   bool is_imu_time_stamp_too_late = false;
+  constexpr double time_diff = 0.1;
 
   for (; it_x != it_x.end(); ++it_x, ++it_y, ++it_z, ++it_time_stamp) {
     bool is_twist_valid = true;
@@ -355,7 +364,7 @@ void DistortionCorrector<T>::undistort_pointcloud(
       ++it_twist;
       twist_stamp = rclcpp::Time(it_twist->header.stamp).seconds();
     }
-    if (std::abs(current_point_stamp - twist_stamp) > 0.1) {
+    if (std::abs(current_point_stamp - twist_stamp) > time_diff) {
       is_twist_time_stamp_too_late = true;
       is_twist_valid = false;
     }
@@ -367,13 +376,15 @@ void DistortionCorrector<T>::undistort_pointcloud(
         imu_stamp = rclcpp::Time(it_imu->header.stamp).seconds();
       }
 
-      if (std::abs(current_point_stamp - imu_stamp) > 0.1) {
+      if (std::abs(current_point_stamp - imu_stamp) > time_diff) {
         is_imu_time_stamp_too_late = true;
         is_imu_valid = false;
       }
     } else {
       is_imu_valid = false;
     }
+
+    if (!is_twist_valid || (use_imu && !is_imu_valid)) ++timestamp_mismatch_count_;
 
     auto time_offset = static_cast<float>(current_point_stamp - prev_time_stamp_sec);
 
@@ -406,6 +417,11 @@ void DistortionCorrector<T>::undistort_pointcloud(
     prev_time_stamp_sec = current_point_stamp;
   }
 
+  const auto total_points = pointcloud.width * pointcloud.height;
+  timestamp_mismatch_fraction_ = total_points > 0 ? static_cast<float>(timestamp_mismatch_count_) /
+                                                      static_cast<float>(total_points)
+                                                  : 0.0f;
+
   warn_if_timestamp_is_too_late(is_twist_time_stamp_too_late, is_imu_time_stamp_too_late);
 }
 
@@ -431,8 +447,12 @@ void DistortionCorrector2D::set_pointcloud_transform(
   }
 
   Eigen::Matrix4f eigen_lidar_to_base_link;
-  pointcloud_transform_exists_ =
-    managed_tf_buffer_->get_transform(base_frame, lidar_frame, eigen_lidar_to_base_link);
+  auto eigen_transform_opt = managed_tf_buffer_->getTransform<Eigen::Matrix4f>(
+    base_frame, lidar_frame, node_.now(), rclcpp::Duration::from_seconds(1.0), node_.get_logger());
+  pointcloud_transform_exists_ = eigen_transform_opt.has_value();
+  if (pointcloud_transform_exists_) {
+    eigen_lidar_to_base_link = *eigen_transform_opt;
+  }
   tf2_lidar_to_base_link_ = convert_matrix_to_transform(eigen_lidar_to_base_link);
   tf2_base_link_to_lidar_ = tf2_lidar_to_base_link_.inverse();
   pointcloud_transform_needed_ = base_frame != lidar_frame && pointcloud_transform_exists_;
@@ -445,8 +465,12 @@ void DistortionCorrector3D::set_pointcloud_transform(
     return;
   }
 
-  pointcloud_transform_exists_ =
-    managed_tf_buffer_->get_transform(base_frame, lidar_frame, eigen_lidar_to_base_link_);
+  auto eigen_transform_opt = managed_tf_buffer_->getTransform<Eigen::Matrix4f>(
+    base_frame, lidar_frame, node_.now(), rclcpp::Duration::from_seconds(1.0), node_.get_logger());
+  pointcloud_transform_exists_ = eigen_transform_opt.has_value();
+  if (pointcloud_transform_exists_) {
+    eigen_lidar_to_base_link_ = *eigen_transform_opt;
+  }
   eigen_base_link_to_lidar_ = eigen_lidar_to_base_link_.inverse();
   pointcloud_transform_needed_ = base_frame != lidar_frame && pointcloud_transform_exists_;
 }

@@ -22,7 +22,7 @@
 #include "autoware/motion_utils/trajectory/conversion.hpp"
 #include "autoware/motion_utils/trajectory/interpolation.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
-#include "autoware/motion_velocity_planner_common_universe/utils.hpp"
+#include "autoware/motion_velocity_planner_common/utils.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 #include "autoware_utils/ros/marker_helper.hpp"
 
@@ -51,7 +51,7 @@ OptimizationBasedPlanner::OptimizationBasedPlanner(
 : CruisePlannerInterface(node, common_param, cruise_planning_param)
 {
   smoothed_traj_sub_ = node.create_subscription<Trajectory>(
-    "/planning/scenario_planning/trajectory", rclcpp::QoS{1},
+    "/planning/trajectory", rclcpp::QoS{1},
     [this](const Trajectory::ConstSharedPtr msg) { smoothed_trajectory_ptr_ = msg; });
 
   // parameter

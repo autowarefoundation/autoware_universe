@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2025 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,6 +38,13 @@ public:
 
   const char * getModuleName() override { return "blind_spot"; }
 
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    RequiredSubscriptionInfo required_subscription_info;
+    required_subscription_info.predicted_objects = true;
+    return required_subscription_info;
+  }
+
 private:
   PlannerParam planner_param_;
 
@@ -46,6 +53,8 @@ private:
   std::function<bool(const std::shared_ptr<SceneModuleInterfaceWithRTC> &)>
   getModuleExpiredFunction(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr decision_state_pub_;
 };
 
 class BlindSpotModulePlugin : public PluginWrapper<BlindSpotModuleManager>

@@ -54,8 +54,6 @@ PointCloudConcatenationComponent::PointCloudConcatenationComponent(
       RCLCPP_ERROR(get_logger(), "Need an 'output_frame' parameter to be set before continuing!");
       return;
     }
-    has_static_tf_only_ = declare_parameter<bool>(
-      "has_static_tf_only", false);  // TODO(amadeuszsz): remove default value
     declare_parameter<std::vector<std::string>>("input_topics");
     input_topics_ = get_parameter("input_topics").as_string_array();
     if (input_topics_.empty()) {
@@ -95,8 +93,13 @@ PointCloudConcatenationComponent::PointCloudConcatenationComponent(
 
   // tf2 listener
   {
-    managed_tf_buffer_ =
-      std::make_unique<autoware_utils::ManagedTransformBuffer>(this, has_static_tf_only_);
+    managed_tf_buffer_ = std::make_unique<managed_transform_buffer::ManagedTransformBuffer>();
+  }
+
+  // Cloud info
+  {
+    concatenation_info_manager_ =
+      std::make_unique<ConcatenationInfoManager>("naive", input_topics_);
   }
 
   // Output Publishers
@@ -105,6 +108,9 @@ PointCloudConcatenationComponent::PointCloudConcatenationComponent(
     pub_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
     pub_output_ = this->create_publisher<PointCloud2>(
       "output", rclcpp::SensorDataQoS().keep_last(maximum_queue_size_), pub_options);
+    pub_output_info_ =
+      this->create_publisher<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
+        "output_info", rclcpp::SensorDataQoS().keep_last(maximum_queue_size_), pub_options);
   }
 
   // Subscribers
@@ -233,14 +239,17 @@ void PointCloudConcatenationComponent::checkSyncStatus()
 }
 
 void PointCloudConcatenationComponent::combineClouds(
-  sensor_msgs::msg::PointCloud2::SharedPtr & concat_cloud_ptr)
+  sensor_msgs::msg::PointCloud2::SharedPtr & concat_cloud_ptr,
+  autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr & concatenation_info_ptr)
 {
   for (const auto & e : cloud_stdmap_) {
     if (e.second != nullptr) {
       // transform to output frame
       sensor_msgs::msg::PointCloud2::SharedPtr transformed_cloud_ptr(
         new sensor_msgs::msg::PointCloud2());
-      managed_tf_buffer_->transform_pointcloud(output_frame_, *e.second, *transformed_cloud_ptr);
+      managed_tf_buffer_->transformPointcloud(
+        output_frame_, *e.second, *transformed_cloud_ptr, e.second->header.stamp,
+        rclcpp::Duration::from_seconds(1.0), this->get_logger());
 
       // concatenate
       if (concat_cloud_ptr == nullptr) {
@@ -248,9 +257,20 @@ void PointCloudConcatenationComponent::combineClouds(
       } else {
         pcl::concatenatePointCloud(*concat_cloud_ptr, *transformed_cloud_ptr, *concat_cloud_ptr);
       }
+      if (concatenation_info_ptr == nullptr) {
+        concatenation_info_ptr =
+          std::make_shared<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
+            concatenation_info_manager_->reset_and_get_base_info());
+      }
+      concatenation_info_manager_->update_source_from_point_cloud(
+        *transformed_cloud_ptr, e.first,
+        autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK, *concatenation_info_ptr);
     } else {
       not_subscribed_topic_names_.insert(e.first);
     }
+  }
+  if (concatenation_info_ptr != nullptr && concat_cloud_ptr != nullptr) {
+    concatenation_info_manager_->set_result(*concat_cloud_ptr, *concatenation_info_ptr);
   }
 }
 
@@ -258,10 +278,12 @@ void PointCloudConcatenationComponent::publish()
 {
   stop_watch_ptr_->toc("processing_time", true);
   sensor_msgs::msg::PointCloud2::SharedPtr concat_cloud_ptr = nullptr;
+  autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr concatenation_info_ptr =
+    nullptr;
   not_subscribed_topic_names_.clear();
 
   checkSyncStatus();
-  combineClouds(concat_cloud_ptr);
+  combineClouds(concat_cloud_ptr, concatenation_info_ptr);
 
   for (const auto & e : cloud_stdmap_) {
     if (e.second != nullptr) {
@@ -283,6 +305,13 @@ void PointCloudConcatenationComponent::publish()
     pub_output_->publish(std::move(output));
   } else {
     RCLCPP_WARN(this->get_logger(), "concat_cloud_ptr is nullptr, skipping pointcloud publish.");
+  }
+
+  // publish concatenated pointcloud info
+  if (concatenation_info_ptr) {
+    auto output_info = std::make_unique<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
+      *concatenation_info_ptr);
+    pub_output_info_->publish(std::move(output_info));
   }
 
   updater_.force_update();

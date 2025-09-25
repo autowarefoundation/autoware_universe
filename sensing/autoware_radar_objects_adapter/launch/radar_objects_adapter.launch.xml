@@ -1,0 +1,17 @@
+<launch>
+  <arg name="input_radar_objects" default="/radar_objects"/>
+  <arg name="input_radar_info" default="/radar_info"/>
+  <arg name="output_detections" default="/detections"/>
+  <arg name="output_tracks" default="/tracks"/>
+
+  <arg name="param_path" default="$(find-pkg-share autoware_radar_objects_adapter)/config/radar_objects_adapter.param.yaml"/>
+
+  <node pkg="autoware_radar_objects_adapter" exec="radar_objects_adapter_node" name="radar_objects_adapter" output="screen">
+    <remap from="~/input/objects" to="$(var input_radar_objects)"/>
+    <remap from="~/input/radar_info" to="$(var input_radar_info)"/>
+    <remap from="~/output/detections" to="$(var output_detections)"/>
+    <remap from="~/output/tracks" to="$(var output_tracks)"/>
+
+    <param from="$(var param_path)"/>
+  </node>
+</launch>

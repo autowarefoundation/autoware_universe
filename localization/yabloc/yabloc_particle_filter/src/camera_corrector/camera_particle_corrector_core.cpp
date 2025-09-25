@@ -15,8 +15,8 @@
 #include "yabloc_particle_filter/camera_corrector/camera_particle_corrector.hpp"
 #include "yabloc_particle_filter/camera_corrector/logit.hpp"
 
-#include <autoware_utils/math/trigonometry.hpp>
-#include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_utils_math/trigonometry.hpp>
+#include <autoware_utils_system/stop_watch.hpp>
 #include <opencv4/opencv2/imgproc.hpp>
 #include <yabloc_common/color.hpp>
 #include <yabloc_common/pose_conversions.hpp>
@@ -136,7 +136,7 @@ CameraParticleCorrector::split_line_segments(const PointCloud2 & msg)
 
 void CameraParticleCorrector::on_line_segments(const PointCloud2 & line_segments_msg)
 {
-  autoware_utils::StopWatch stop_watch;
+  autoware_utils_system::StopWatch stop_watch;
   const rclcpp::Time stamp = line_segments_msg.header.stamp;
   std::optional<ParticleArray> opt_array = this->get_synchronized_particle_array(stamp);
   if (!opt_array.has_value()) {
@@ -262,7 +262,7 @@ float abs_cos(const Eigen::Vector3f & t, float deg)
 {
   const auto radian = static_cast<float>(deg * M_PI / 180.0);
   Eigen::Vector2f x(t.x(), t.y());
-  Eigen::Vector2f y(autoware_utils::cos(radian), autoware_utils::sin(radian));
+  Eigen::Vector2f y(autoware_utils_math::cos(radian), autoware_utils_math::sin(radian));
   x.normalize();
   return std::abs(x.dot(y));
 }

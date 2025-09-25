@@ -47,16 +47,6 @@ lanelet::ConstLanelets calculate_trajectory_lanelets(
   const autoware_utils::LineString2d & trajectory_ls,
   const std::shared_ptr<const route_handler::RouteHandler> route_handler);
 
-/// @brief calculate lanelets that may not be crossed by the trajectory but may be overlapped during
-/// a lane change
-/// @param [in] trajectory_lanelets lanelets driven by the ego vehicle
-/// @param [in] route_handler route handler
-/// @return lanelets that may be overlapped by a lane change (and are not already in
-/// trajectory_lanelets)
-lanelet::ConstLanelets get_missing_lane_change_lanelets(
-  const lanelet::ConstLanelets & trajectory_lanelets,
-  const std::shared_ptr<const route_handler::RouteHandler> & route_handler);
-
 /// @brief calculate lanelets that should be ignored
 /// @param [in] trajectory_lanelets lanelets followed by the ego vehicle
 /// @param [in] route_handler route handler

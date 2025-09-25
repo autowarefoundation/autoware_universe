@@ -14,6 +14,7 @@
 
 #include "debugger.hpp"
 
+#include <algorithm>
 #include <list>
 #include <memory>
 #include <string>
@@ -53,7 +54,7 @@ TrackerDebugger::TrackerDebugger(
   stamp_process_end_ = now;
   stamp_publish_start_ = now;
   stamp_publish_output_ = now;
-
+  last_non_warning_timestamp_ = now;
   // setup diagnostics
   setupDiagnostics();
 }
@@ -70,6 +71,10 @@ void TrackerDebugger::loadParameters()
       node_.declare_parameter<double>("diagnostics_warn_delay");
     debug_settings_.diagnostics_error_delay =
       node_.declare_parameter<double>("diagnostics_error_delay");
+    debug_settings_.diagnostics_warn_extrapolation =
+      node_.declare_parameter<double>("diagnostics_warn_extrapolation");
+    debug_settings_.diagnostics_error_extrapolation =
+      node_.declare_parameter<double>("diagnostics_error_extrapolation");
   } catch (const std::exception & e) {
     RCLCPP_WARN(node_.get_logger(), "Failed to declare parameter: %s", e.what());
     debug_settings_.publish_processing_time = false;
@@ -83,12 +88,17 @@ void TrackerDebugger::loadParameters()
 void TrackerDebugger::setupDiagnostics()
 {
   diagnostic_updater_.setHardwareID(node_.get_name());
-  diagnostic_updater_.add(
-    "Perception delay check from original header stamp", this, &TrackerDebugger::checkDelay);
+  diagnostic_updater_.add("Tracker Timing Diagnostics", this, &TrackerDebugger::checkAllTiming);
   diagnostic_updater_.setPeriod(0.1);
 }
 
-// Object publishing functions
+void TrackerDebugger::updateDiagnosticValues(double min_extrapolation_time, size_t published_count)
+{
+  diagnostic_values_.min_extrapolation_time = min_extrapolation_time;
+  diagnostic_values_.published_trackers_count = published_count;
+  // Force update diagnostic values
+  diagnostic_updater_.force_update();
+}
 
 void TrackerDebugger::publishTentativeObjects(
   const autoware_perception_msgs::msg::TrackedObjects & tentative_objects) const
@@ -98,29 +108,122 @@ void TrackerDebugger::publishTentativeObjects(
   }
 }
 
-// Time measurement functions
-
-void TrackerDebugger::checkDelay(diagnostic_updater::DiagnosticStatusWrapper & stat)
+TrackerDebugger::TimingCheckResult TrackerDebugger::checkDelayTiming(double delay) const
 {
+  if (delay == 0.0) {
+    return {"[OK] Not calculated", diagnostic_msgs::msg::DiagnosticStatus::OK};
+  }
+  if (delay < debug_settings_.diagnostics_warn_delay) {
+    return {"[OK] Within limits", diagnostic_msgs::msg::DiagnosticStatus::OK};
+  }
+  if (delay < debug_settings_.diagnostics_error_delay) {
+    return {"[WARN] Exceeded warn threshold", diagnostic_msgs::msg::DiagnosticStatus::WARN};
+  }
+  return {"[ERROR] Exceeded error threshold", diagnostic_msgs::msg::DiagnosticStatus::ERROR};
+}
+
+TrackerDebugger::TimingCheckResult TrackerDebugger::checkExtrapolationTiming(
+  double extrapolation_time, const rclcpp::Time & timestamp)
+{
+  if (extrapolation_time <= debug_settings_.diagnostics_warn_extrapolation) {
+    last_non_warning_timestamp_ = timestamp;
+    return {
+      "[OK] Extrapolation time is within safe limits. ",
+      diagnostic_msgs::msg::DiagnosticStatus::OK};
+  }
+
+  // If this is the first time a warning occurs, initialize the timestamp
+  if (last_non_warning_timestamp_.nanoseconds() == 0) {
+    last_non_warning_timestamp_ = timestamp;
+  }
+
+  // Calculate consecutive warning duration in seconds
+  const double consecutive_warning_duration_s =
+    std::chrono::duration<double>(
+      std::chrono::nanoseconds((timestamp - last_non_warning_timestamp_).nanoseconds()))
+      .count();
+
+  // Check if warnings have persisted beyond the allowed duration
+  if (consecutive_warning_duration_s > debug_settings_.diagnostics_error_extrapolation) {
+    return {
+      "[ERROR] Extrapolation time exceeded the warning threshold of " +
+        std::to_string(debug_settings_.diagnostics_warn_extrapolation) + " for " +
+        std::to_string(consecutive_warning_duration_s) + " seconds (Threshold " +
+        std::to_string(debug_settings_.diagnostics_error_extrapolation) + ")",
+      diagnostic_msgs::msg::DiagnosticStatus::ERROR};
+  }
+
+  return {
+    "[WARN] Extrapolation time exceeds warning threshold " +
+      std::to_string(debug_settings_.diagnostics_warn_extrapolation),
+    diagnostic_msgs::msg::DiagnosticStatus::WARN};
+}
+
+TrackerDebugger::TimingCheckResult TrackerDebugger::determineOverallTimingStatus(
+  bool no_published_trackers, const TimingCheckResult & delay_result,
+  const TimingCheckResult & extrapolation_result)
+{
+  if (no_published_trackers) {
+    return {
+      "[OK] No objects currently being tracked (normal operation when no detections)",
+      diagnostic_msgs::msg::DiagnosticStatus::OK};
+  }
+
+  const uint8_t max_level = std::max(delay_result.level, extrapolation_result.level);
+
+  if (max_level == diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    return {"[OK] All timing parameters are within safe limits.", max_level};
+  }
+
+  // Determine base message based on max severity level
+  static const std::unordered_map<uint8_t, std::string> level_messages = {
+    {diagnostic_msgs::msg::DiagnosticStatus::WARN, "[WARN] Timing warning: "},
+    {diagnostic_msgs::msg::DiagnosticStatus::ERROR, "[ERROR] Timing issue detected: "}};
+
+  std::string message = level_messages.at(max_level);
+
+  // Append specific issues
+  if (delay_result.level == max_level) {
+    message += "Detection delay exceeded threshold. ";
+  }
+
+  if (extrapolation_result.level == max_level) {
+    message += (extrapolation_result.level == diagnostic_msgs::msg::DiagnosticStatus::ERROR)
+                 ? "Extrapolation warning persisted for too long! "
+                 : "Extrapolation time exceeded warning threshold. ";
+  }
+
+  return {message, max_level};
+}
+
+// Time measurement functions
+void TrackerDebugger::checkAllTiming(diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  // Check initialization status
   if (!is_initialized_) {
-    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "Measurement time is not set.");
+    stat.add("Detection status", "Not initialized");
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Measurement time is not set.");
     return;
   }
-  const double & delay = pipeline_latency_ms_ / 1e3;  // [s]
 
-  if (delay == 0.0) {
-    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Detection delay is not calculated.");
-  } else if (delay < debug_settings_.diagnostics_warn_delay) {
-    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Detection delay is acceptable");
-  } else if (delay < debug_settings_.diagnostics_error_delay) {
-    stat.summary(
-      diagnostic_msgs::msg::DiagnosticStatus::WARN, "Detection delay is over warn threshold.");
-  } else {
-    stat.summary(
-      diagnostic_msgs::msg::DiagnosticStatus::ERROR, "Detection delay is over error threshold.");
-  }
+  const double delay = pipeline_latency_ms_ / 1e3;  // [s]
+  // Check if we have any published trackers
+  const bool no_published_trackers = (diagnostic_values_.published_trackers_count == 0);
 
-  stat.add("Detection delay", delay);
+  // Check individual timing components
+  const auto delay_result = checkDelayTiming(delay);
+  const auto extrapolation_result =
+    checkExtrapolationTiming(diagnostic_values_.min_extrapolation_time, node_.now());
+  // Determine overall status
+  const auto overall_result =
+    determineOverallTimingStatus(no_published_trackers, delay_result, extrapolation_result);
+
+  stat.add("Detection delay (s)", delay);
+  stat.add("Detection status", delay_result.message);
+  stat.add("Extrapolation time (s)", diagnostic_values_.min_extrapolation_time);
+  stat.add("Extrapolation status", extrapolation_result.message);
+  // Set the overall status based on the worst condition
+  stat.summary(overall_result.level, overall_result.message);
 }
 
 void TrackerDebugger::startMeasurementTime(

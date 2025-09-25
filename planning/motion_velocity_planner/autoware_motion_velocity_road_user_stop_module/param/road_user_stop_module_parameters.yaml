@@ -1,0 +1,181 @@
+road_user_stop:
+  # Option parameters
+  option:
+    suppress_sudden_stop:
+      type: bool
+      description: Enable to suppress sudden stop
+
+  # Stop planning parameters
+  stop_planning:
+    longitudinal_margin:
+      default_margin:
+        type: double
+        description: Default longitudinal margin to obstacle [m]
+        validation:
+          gt_eq<>: [0.0]
+
+      terminal_margin:
+        type: double
+        description: Stop margin at the goal position [m]
+        validation:
+          gt_eq<>: [0.0]
+
+      minimum_margin:
+        type: double
+        description: Minimum stop margin for behavior decision [m]
+        validation:
+          gt_eq<>: [0.0]
+
+    opposing_traffic:
+      stop_margin:
+        type: double
+        description: Ideal stop-margin from moving opposing obstacle when ego comes to a stop [m]
+        validation:
+          gt_eq<>: [0.0]
+
+      max_negative_velocity:
+        type: double
+        description: Maximum velocity of opposing traffic to consider stop planning [m/s]
+        validation:
+          lt_eq<>: [0.0]
+
+      min_velocity_for_stop_planning:
+        type: double
+        description: Minimum velocity of ego to consider stop planning [m/s]
+        validation:
+          gt_eq<>: [0.0]
+
+      effective_deceleration:
+        type: double
+        description: Setting a higher value brings the final stop-margin closer to the ideal value above [m/s^2]
+        validation:
+          gt<>: [0.0]
+
+    hold_stop_velocity_threshold:
+      type: double
+      description: Velocity threshold to hold stop position [m/s]
+      validation:
+        gt_eq<>: [0.0]
+
+    hold_stop_distance_threshold:
+      type: double
+      description: Distance threshold to hold stop position [m]
+      validation:
+        gt_eq<>: [0.0]
+
+    # Stop on curve parameters
+    stop_on_curve:
+      enable_approaching:
+        type: bool
+        description: Enable approaching behavior on curved paths
+
+      additional_stop_margin:
+        type: double
+        description: Additional stop margin for obstacles on curves [m]
+        validation:
+          gt_eq<>: [0.0]
+
+      min_stop_margin:
+        type: double
+        description: Minimum stop margin on curves [m]
+        validation:
+          gt<>: [0.0]
+
+    # Common parameters for all object types
+    limit_min_acc:
+      type: double
+      description: Minimum acceleration limit [m/s^2]
+      validation:
+        lt<>: [0.0]
+
+    sudden_object_acc_threshold:
+      type: double
+      description: Acceleration threshold to detect sudden appearing objects [m/s^2]
+      validation:
+        lt<>: [0.0]
+
+    sudden_object_dist_threshold:
+      type: double
+      description: Distance threshold for sudden object detection [m]
+      validation:
+        gt<>: [0.0]
+
+    abandon_to_stop:
+      type: bool
+      description: Enable to abandon stopping when cannot achieve required deceleration
+
+  # Obstacle filtering parameters
+  obstacle_filtering:
+    object_type:
+      pedestrian:
+        type: bool
+        description: Enable detection of pedestrians
+
+      bicycle:
+        type: bool
+        description: Enable detection of bicycles
+
+      motorcycle:
+        type: bool
+        description: Enable detection of motorcycles
+
+      unknown:
+        type: bool
+        description: Enable detection of unknown objects
+
+    trajectory_lateral_margin:
+      type: double
+      description: Lateral margin from ego trajectory to detect objects [m]
+      validation:
+        gt_eq<>: [0.0]
+
+    opposing_traffic_detection:
+      enable:
+        type: bool
+        description: Enable wrong-way object detection
+
+      angle_threshold:
+        type: double
+        description: Angle threshold for wrong-way detection [deg]
+        validation:
+          bounds<>: [0.0, 180.0]
+
+      min_speed_threshold:
+        type: double
+        description: Minimum speed for wrong-way detection [m/s]
+        validation:
+          gt_eq<>: [0.0]
+
+    intersection:
+      exclude:
+        type: bool
+        description: If true, exclude objects inside intersection lanelets from detection
+
+    crosswalk:
+      exclude:
+        type: bool
+        description: Exclude objects near crosswalks
+
+      margin:
+        type: double
+        description: Margin distance from crosswalk [m]
+        validation:
+          gt_eq<>: [0.0]
+
+    min_detection_duration:
+      type: double
+      description: Minimum duration for object detection [s]
+      validation:
+        gt_eq<>: [0.0]
+
+    lost_object_retention_duration:
+      type: double
+      description: Duration to keep tracking objects after they are lost or exit the detection area [s]
+      validation:
+        gt<>: [0.0]
+
+    polygon_expansion_length:
+      type: double
+      description: Distance to expand object polygon outward from centroid when object was previously inside detection area [m]
+      validation:
+        gt_eq<>: [0.0]

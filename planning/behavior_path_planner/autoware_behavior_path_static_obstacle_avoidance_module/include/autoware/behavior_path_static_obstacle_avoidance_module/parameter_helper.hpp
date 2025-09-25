@@ -122,6 +122,8 @@ AvoidanceParameters getParameter(rclcpp::Node * node)
       get_or_declare_parameter<double>(*node, ns + "intersection.yaw_deviation");
     p.object_last_seen_threshold =
       get_or_declare_parameter<double>(*node, ns + "max_compensation_time");
+    p.unstable_classification_time =
+      get_or_declare_parameter<double>(*node, ns + "unstable_classification_time");
   }
 
   {
@@ -330,6 +332,8 @@ AvoidanceParameters getParameter(rclcpp::Node * node)
   // policy
   {
     const std::string ns = "avoidance.policy.";
+    p.policy_detection_reliability =
+      get_or_declare_parameter<std::string>(*node, ns + "detection_reliability");
     p.policy_approval = get_or_declare_parameter<std::string>(*node, ns + "make_approval_request");
     p.policy_deceleration = get_or_declare_parameter<std::string>(*node, ns + "deceleration");
     p.policy_lateral_margin = get_or_declare_parameter<std::string>(*node, ns + "lateral_margin");
@@ -367,8 +371,10 @@ AvoidanceParameters getParameter(rclcpp::Node * node)
     p.velocity_map = get_or_declare_parameter<std::vector<double>>(*node, ns + "velocity");
     p.lateral_max_accel_map =
       get_or_declare_parameter<std::vector<double>>(*node, ns + "max_accel_values");
-    p.lateral_min_jerk_map =
-      get_or_declare_parameter<std::vector<double>>(*node, ns + "min_jerk_values");
+    p.avoid_lateral_min_jerk_map =
+      get_or_declare_parameter<std::vector<double>>(*node, ns + "min_jerk_values.avoid");
+    p.return_lateral_min_jerk_map =
+      get_or_declare_parameter<std::vector<double>>(*node, ns + "min_jerk_values.return");
     p.lateral_max_jerk_map =
       get_or_declare_parameter<std::vector<double>>(*node, ns + "max_jerk_values");
 
@@ -380,7 +386,11 @@ AvoidanceParameters getParameter(rclcpp::Node * node)
       throw std::domain_error("inconsistency among the constraints map.");
     }
 
-    if (p.velocity_map.size() != p.lateral_min_jerk_map.size()) {
+    if (p.velocity_map.size() != p.avoid_lateral_min_jerk_map.size()) {
+      throw std::domain_error("inconsistency among the constraints map.");
+    }
+
+    if (p.velocity_map.size() != p.return_lateral_min_jerk_map.size()) {
       throw std::domain_error("inconsistency among the constraints map.");
     }
 

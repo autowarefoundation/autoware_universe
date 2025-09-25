@@ -2,6 +2,97 @@
 Changelog for package autoware_simple_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(simple object merger): handle when tf could not get properly (`#10934 <https://github.com/autowarefoundation/autoware_universe/issues/10934>`_)
+  * fix(simple_object_merger): handle null transforms in object merging
+  * fix(simple_object_merger): optimize transformation handling for detected and tracked objects
+  ---------
+* fix(autoware_simple_object_merger): templatize simple object merger (`#10785 <https://github.com/autowarefoundation/autoware_universe/issues/10785>`_)
+  * templatize node and add merger for tracked objects
+  * add test
+  * refactor file name and structure, revert node name
+  * add missing include
+  * refactor: override onTimer method in object merger nodes
+  ---------
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* Contributors: Masaki Baba, Mete Fatih Cırıt, Taekjin LEE
+
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* chore(radar): delete maintainer for radar packages (`#10815 <https://github.com/autowarefoundation/autoware_universe/issues/10815>`_)
+  * chore(radar): delete maintainer name
+  * fix typo
+  ---------
+* chore(perception): remove unused object filter packages (`#10654 <https://github.com/autowarefoundation/autoware_universe/issues/10654>`_)
+  * Remove autoware_radar_crossing_objects_noise_filter package, including all related files such as CMakeLists.txt, README.md, configuration files, and documentation. This cleanup eliminates unused components from the perception module.
+  * Refactor perception launch files: comment out unused radar parameters related to crossing objects and clustering. This cleanup aligns with the recent removal of the autoware_radar_crossing_objects_noise_filter package, streamlining the configuration for the perception module.
+  * Update codecov.yaml to include new paths for perception components and remove references to deprecated radar packages. This change enhances the configuration for the perception module by ensuring only relevant components are tracked.
+  * Update README.md to clarify post-processing requirements for output objects in the autoware_simple_object_merger package.
+  ---------
+* Contributors: Satoshi Tanaka, Taekjin LEE, TaikiYamada4
+
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(radar): update radar pipeline (`#10580 <https://github.com/autowarefoundation/autoware_universe/issues/10580>`_)
+  * fix(tier4_perception_launch): update radar filter launch configuration for improved object handling
+  * fix(autoware_simple_object_merger): change QoS settings to best effort for input subscriptions
+  * fix(autoware_simple_object_merger): change publisher QoS to reliable for output objects
+  * fix(tier4_perception_launch): remove commented-out radar filter pipeline from launch configuration
+  * style(pre-commit): autofix
+  * fix(tier4_perception_launch): remove unnecessary radar filter dependencies from package.xml
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(autoware_simple_object_merger): created Schema file and updated ReadME file for parameters setting (`#9993 <https://github.com/autowarefoundation/autoware_universe/issues/9993>`_)
+  * feat(autoware_simple_object_merger): Created Schema file and updated ReadME file for parameters setting
+  * style(pre-commit): autofix
+  * Update README.md
+  updated readme file
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Ryohsuke Mitsudome <43976834+mitsudome-r@users.noreply.github.com>
+* Contributors: Taekjin LEE, TaikiYamada4, Vishal Chauhan
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(simple_object_merger): add approximatefilter (`#10462 <https://github.com/autowarefoundation/autoware_universe/issues/10462>`_)
+  * fix(simple_object_merger): add approximatefilter
+  * Update perception/autoware_simple_object_merger/src/simple_object_merger_node.cpp
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update perception/autoware_simple_object_merger/src/simple_object_merger_node.cpp
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update perception/autoware_simple_object_merger/src/simple_object_merger_node.cpp
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update perception/autoware_simple_object_merger/src/simple_object_merger_node.cpp
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update perception/autoware_simple_object_merger/src/simple_object_merger_node.hpp
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  ---------
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+* feat: reduce warn log frequency (`#10414 <https://github.com/autowarefoundation/autoware_universe/issues/10414>`_)
+  * feat: limit warning message frequency to 3.0 sec
+  * refactor: use THROTTLE ERROR macro
+  fix: reduce code complexity
+  ---------
+  Co-authored-by: Jian Kang <jian.kang@tier4.jp>
+* chore(perception): code owner revision (`#10358 <https://github.com/autowarefoundation/autoware_universe/issues/10358>`_)
+  * feat: add Masato Saeki and Taekjin Lee as maintainer to multiple package.xml files
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Kang, Ryohsuke Mitsudome, Taekjin LEE, badai nguyen
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

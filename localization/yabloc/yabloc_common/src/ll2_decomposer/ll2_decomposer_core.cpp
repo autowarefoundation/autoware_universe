@@ -15,7 +15,7 @@
 #include "yabloc_common/ll2_decomposer/ll2_decomposer.hpp"
 
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_utils/ros/marker_helper.hpp>
+#include <autoware_utils_visualization/marker_helper.hpp>
 #include <yabloc_common/pub_sub.hpp>
 
 #include <geometry_msgs/msg/polygon.hpp>
@@ -202,7 +202,7 @@ Ll2Decomposer::MarkerArray Ll2Decomposer::make_sign_marker_msg(
     marker.header.frame_id = "map";
     marker.header.stamp = get_clock()->now();
     marker.type = Marker::LINE_STRIP;
-    marker.color = autoware_utils::create_marker_color(0.6f, 0.6f, 0.6f, 0.999f);
+    marker.color = autoware_utils_visualization::create_marker_color(0.6f, 0.6f, 0.6f, 0.999f);
     marker.scale.x = 0.1;
     marker.ns = ns;
     marker.id = id++;
@@ -232,7 +232,7 @@ Ll2Decomposer::MarkerArray Ll2Decomposer::make_polygon_marker_msg(
     marker.header.frame_id = "map";
     marker.header.stamp = get_clock()->now();
     marker.type = Marker::LINE_STRIP;
-    marker.color = autoware_utils::create_marker_color(0.4f, 0.4f, 0.8f, 0.999f);
+    marker.color = autoware_utils_visualization::create_marker_color(0.4f, 0.4f, 0.8f, 0.999f);
     marker.scale.x = 0.2;
     marker.ns = ns;
     marker.id = id++;

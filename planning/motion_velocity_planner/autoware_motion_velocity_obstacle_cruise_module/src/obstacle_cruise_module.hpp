@@ -15,8 +15,8 @@
 #ifndef OBSTACLE_CRUISE_MODULE_HPP_
 #define OBSTACLE_CRUISE_MODULE_HPP_
 
-#include "autoware/motion_velocity_planner_common_universe/polygon_utils.hpp"
-#include "autoware/motion_velocity_planner_common_universe/utils.hpp"
+#include "autoware/motion_velocity_planner_common/polygon_utils.hpp"
+#include "autoware/motion_velocity_planner_common/utils.hpp"
 #include "autoware_utils/system/stop_watch.hpp"
 #include "autoware_utils/system/time_keeper.hpp"
 #include "cruise_planner_interface.hpp"
@@ -26,8 +26,8 @@
 #include "type_alias.hpp"
 #include "types.hpp"
 
-#include <autoware/motion_velocity_planner_common_universe/plugin_module_interface.hpp>
-#include <autoware/motion_velocity_planner_common_universe/velocity_planning_result.hpp>
+#include <autoware/motion_velocity_planner_common/plugin_module_interface.hpp>
+#include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
 #include <autoware/objects_of_interest_marker_interface/objects_of_interest_marker_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -43,12 +43,19 @@ class ObstacleCruiseModule : public PluginModuleInterface
 {
 public:
   void init(rclcpp::Node & node, const std::string & module_name) override;
+  void publish_planning_factor() override { planning_factor_interface_->publish(); };
   void update_parameters(const std::vector<rclcpp::Parameter> & parameters) override;
   VelocityPlanningResult plan(
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & raw_trajectory_points,
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
     const std::shared_ptr<const PlannerData> planner_data) override;
   std::string get_module_name() const override;
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    RequiredSubscriptionInfo required_subscription_info;
+    required_subscription_info.predicted_objects = true;
+    return required_subscription_info;
+  }
 
 private:
   std::string module_name_;

@@ -94,6 +94,8 @@ struct GoalPlannerParameters
   double decide_path_distance{0.0};
   double maximum_deceleration{0.0};
   double maximum_jerk{0.0};
+  double low_velocity_threshold{0.0};
+  double stopping_distance_buffer{0.0};
   std::string path_priority;  // "efficient_path" or "close_goal"
   std::vector<std::string> efficient_path_order{};
   double lane_departure_check_expansion_margin{0.0};
@@ -132,6 +134,9 @@ struct GoalPlannerParameters
 
   // hysteresis parameter
   double hysteresis_factor_expand_rate{0.0};
+
+  // path decision state controller
+  double check_collision_duration{1.0};  // Duration to check collision before deciding path
 
   // path safety checker
   utils::path_safety_checker::EgoPredictedPathParams ego_predicted_path_params{};

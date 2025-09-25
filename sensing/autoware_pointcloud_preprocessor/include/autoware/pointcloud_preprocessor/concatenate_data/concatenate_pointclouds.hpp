@@ -52,6 +52,8 @@
 #ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__CONCATENATE_POINTCLOUDS_HPP_
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__CONCATENATE_POINTCLOUDS_HPP_
 
+#include "concatenation_info_manager.hpp"
+
 #include <deque>
 #include <map>
 #include <memory>
@@ -63,13 +65,14 @@
 // ROS includes
 #include <autoware/point_types/types.hpp>
 #include <autoware_utils/ros/debug_publisher.hpp>
-#include <autoware_utils/ros/managed_transform_buffer.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
+#include <managed_transform_buffer/managed_transform_buffer.hpp>
 #include <point_cloud_msg_wrapper/point_cloud_msg_wrapper.hpp>
 
 #include <autoware_internal_debug_msgs/msg/int32_stamped.hpp>
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
+#include <autoware_sensing_msgs/msg/concatenated_point_cloud_info.hpp>
 #include <autoware_vehicle_msgs/msg/velocity_report.hpp>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
@@ -81,8 +84,6 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/sync_policies/exact_time.h>
 #include <message_filters/synchronizer.h>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
 
 namespace autoware::pointcloud_preprocessor
 {
@@ -113,6 +114,9 @@ public:
 private:
   /** \brief The output PointCloud publisher. */
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_output_;
+  /** \brief The output ConcatenatedPointCloudInfo publisher. */
+  rclcpp::Publisher<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>::SharedPtr
+    pub_output_info_;
   /** \brief Delay Compensated PointCloud publisher*/
   std::map<std::string, rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr>
     transformed_raw_pc_publisher_map_;
@@ -135,14 +139,12 @@ private:
   /** \brief Output TF frame the concatenated points should be transformed to. */
   std::string output_frame_;
 
-  /** \brief The flag to indicate if only static TF are used. */
-  bool has_static_tf_only_;
-
   /** \brief Input point cloud topics. */
   // XmlRpc::XmlRpcValue input_topics_;
   std::vector<std::string> input_topics_;
 
-  std::unique_ptr<autoware_utils::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
+  std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
+  std::unique_ptr<ConcatenationInfoManager> concatenation_info_manager_{nullptr};
 
   std::deque<geometry_msgs::msg::TwistStamped::ConstSharedPtr> twist_ptr_queue_;
 
@@ -154,7 +156,9 @@ private:
   std::map<std::string, double> offset_map_;
 
   void checkSyncStatus();
-  void combineClouds(sensor_msgs::msg::PointCloud2::SharedPtr & concat_cloud_ptr);
+  void combineClouds(
+    sensor_msgs::msg::PointCloud2::SharedPtr & concat_cloud_ptr,
+    autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr & concatenation_info_ptr);
   void publish();
 
   void convertToXYZIRCCloud(

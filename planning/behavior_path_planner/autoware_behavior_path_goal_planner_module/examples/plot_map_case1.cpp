@@ -523,28 +523,29 @@ int main(int argc, char ** argv)
   auto node_options = rclcpp::NodeOptions{};
   node_options.parameter_overrides(
     std::vector<rclcpp::Parameter>{{"launch_modules", std::vector<std::string>{}}});
-  node_options.arguments(std::vector<std::string>{
-    "--ros-args", "--params-file",
-    ament_index_cpp::get_package_share_directory("autoware_behavior_path_planner") +
-      "/config/behavior_path_planner.param.yaml",
-    "--params-file",
-    ament_index_cpp::get_package_share_directory("autoware_behavior_path_planner") +
-      "/config/drivable_area_expansion.param.yaml",
-    "--params-file",
-    ament_index_cpp::get_package_share_directory("autoware_behavior_path_planner") +
-      "/config/scene_module_manager.param.yaml",
-    "--params-file",
-    ament_index_cpp::get_package_share_directory("autoware_test_utils") +
-      "/config/test_common.param.yaml",
-    "--params-file",
-    ament_index_cpp::get_package_share_directory("autoware_test_utils") +
-      "/config/test_nearest_search.param.yaml",
-    "--params-file",
-    ament_index_cpp::get_package_share_directory("autoware_test_utils") +
-      "/config/test_vehicle_info.param.yaml",
-    "--params-file",
-    ament_index_cpp::get_package_share_directory("autoware_behavior_path_goal_planner_module") +
-      "/config/goal_planner.param.yaml"});
+  node_options.arguments(
+    std::vector<std::string>{
+      "--ros-args", "--params-file",
+      ament_index_cpp::get_package_share_directory("autoware_behavior_path_planner") +
+        "/config/behavior_path_planner.param.yaml",
+      "--params-file",
+      ament_index_cpp::get_package_share_directory("autoware_behavior_path_planner") +
+        "/config/drivable_area_expansion.param.yaml",
+      "--params-file",
+      ament_index_cpp::get_package_share_directory("autoware_behavior_path_planner") +
+        "/config/scene_module_manager.param.yaml",
+      "--params-file",
+      ament_index_cpp::get_package_share_directory("autoware_test_utils") +
+        "/config/test_common.param.yaml",
+      "--params-file",
+      ament_index_cpp::get_package_share_directory("autoware_test_utils") +
+        "/config/test_nearest_search.param.yaml",
+      "--params-file",
+      ament_index_cpp::get_package_share_directory("autoware_test_utils") +
+        "/config/test_vehicle_info.param.yaml",
+      "--params-file",
+      ament_index_cpp::get_package_share_directory("autoware_behavior_path_goal_planner_module") +
+        "/config/goal_planner.param.yaml"});
   auto node = rclcpp::Node::make_shared("plot_map", node_options);
 
   auto planner_data = instantiate_planner_data(
@@ -563,11 +564,11 @@ int main(int argc, char ** argv)
       node.get(), "goal_planner.");
   goal_planner_parameter.bus_stop_area.use_bus_stop_area = true;
   goal_planner_parameter.lane_departure_check_expansion_margin = 0.2;
-  autoware::lane_departure_checker::Param lane_departure_checker_params;
-  lane_departure_checker_params.footprint_extra_margin =
+  autoware::boundary_departure_checker::Param boundary_departure_checker_params;
+  boundary_departure_checker_params.footprint_extra_margin =
     goal_planner_parameter.lane_departure_check_expansion_margin;
-  autoware::lane_departure_checker::LaneDepartureChecker lane_departure_checker(
-    lane_departure_checker_params, vehicle_info);
+  autoware::boundary_departure_checker::BoundaryDepartureChecker boundary_departure_checker(
+    boundary_departure_checker_params, vehicle_info);
 
   const auto footprint = vehicle_info.createFootprint();
   autoware::behavior_path_planner::GoalSearcher goal_searcher(goal_planner_parameter, footprint);

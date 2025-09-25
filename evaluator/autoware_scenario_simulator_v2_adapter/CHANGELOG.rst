@@ -1,6 +1,42 @@
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Changelog for package autoware_scenario_simulator_v2_adapter
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+0.47.0 (2025-08-11)
+-------------------
+* feat(autoware_scenario_simulator_v2_adapter): support converting all diagnostics to UserDefinedValue (`#11033 <https://github.com/autowarefoundation/autoware_universe/issues/11033>`_)
+  * convert all diagnostics to userdefinedvalues
+  * feat(intersection_collision_checker): improve logic to address false negatives (`#11030 <https://github.com/autowarefoundation/autoware_universe/issues/11030>`_)
+  * revise and improve velocity estimation and tracking logic
+  * ensure consistent collision lane ids
+  * small refactoring
+  ---------
+  * Update evaluator/autoware_scenario_simulator_v2_adapter/src/converter_node.cpp
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+  ---------
+  Co-authored-by: mkquda <168697710+mkquda@users.noreply.github.com>
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+* Contributors: Kem (TiankuiXian)
+
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(scenario_simulator_v2_adapter): updated the read me file and schema (`#10189 <https://github.com/autowarefoundation/autoware_universe/issues/10189>`_)
+* docs(evaluator): fix documentation links (`#10702 <https://github.com/autowarefoundation/autoware_universe/issues/10702>`_)
+  fix documentation links
+* Contributors: TaikiYamada4, Vishal Chauhan, Yuxuan Liu
+
+0.45.0 (2025-05-22)
+-------------------
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
+0.44.0 (2025-04-18)
+-------------------
 
 0.43.0 (2025-03-21)
 -------------------

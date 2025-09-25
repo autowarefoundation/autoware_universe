@@ -36,8 +36,6 @@
 #include <tf2_eigen/tf2_eigen.hpp>
 #endif
 
-#include <tf2_ros/transform_listener.h>
-
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -150,9 +148,6 @@ private:
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output,
     const autoware::pointcloud_preprocessor::TransformInfo & transform_info) override;
 
-  tf2_ros::Buffer tf_buffer_{get_clock()};
-  tf2_ros::TransformListener tf_listener_{tf_buffer_};
-
   // data accessor
   PclDataAccessor data_accessor_;
 
@@ -181,6 +176,7 @@ private:
 
   // grid mode parameters
   bool use_recheck_ground_cluster_;  // to enable recheck ground cluster
+  float recheck_start_distance_;     // distance to start rechecking ground cluster
   bool use_lowest_point_;  // to select lowest point for reference in recheck ground cluster,
                            // otherwise select middle point
   float detection_range_z_max_;

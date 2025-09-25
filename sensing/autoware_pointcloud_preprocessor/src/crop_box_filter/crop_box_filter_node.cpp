@@ -51,9 +51,16 @@
 
 #include "autoware/pointcloud_preprocessor/crop_box_filter/crop_box_filter_node.hpp"
 
+#include "autoware/pointcloud_preprocessor/diagnostics/crop_box_diagnostics.hpp"
+#include "autoware/pointcloud_preprocessor/diagnostics/latency_diagnostics.hpp"
+#include "autoware/pointcloud_preprocessor/diagnostics/pass_rate_diagnostics.hpp"
+
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
+#include <algorithm>
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::pointcloud_preprocessor
@@ -74,18 +81,22 @@ CropBoxFilterComponent::CropBoxFilterComponent(const rclcpp::NodeOptions & optio
   // set initial parameters
   {
     auto & p = param_;
-    p.min_x = declare_parameter<float>("min_x");
-    p.min_y = declare_parameter<float>("min_y");
-    p.min_z = declare_parameter<float>("min_z");
-    p.max_x = declare_parameter<float>("max_x");
-    p.max_y = declare_parameter<float>("max_y");
-    p.max_z = declare_parameter<float>("max_z");
+    p.min_x = declare_parameter<double>("min_x");
+    p.min_y = declare_parameter<double>("min_y");
+    p.min_z = declare_parameter<double>("min_z");
+    p.max_x = declare_parameter<double>("max_x");
+    p.max_y = declare_parameter<double>("max_y");
+    p.max_z = declare_parameter<double>("max_z");
     p.negative = declare_parameter<bool>("negative");
+    p.processing_time_threshold_sec = declare_parameter<double>("processing_time_threshold_sec");
     if (tf_input_frame_.empty()) {
       throw std::invalid_argument("Crop box requires non-empty input_frame");
     }
   }
 
+  // Diagnostic
+  diagnostics_interface_ =
+    std::make_unique<autoware_utils::DiagnosticsInterface>(this, this->get_fully_qualified_name());
   // set additional publishers
   {
     rclcpp::PublisherOptions pub_options;
@@ -98,7 +109,7 @@ CropBoxFilterComponent::CropBoxFilterComponent(const rclcpp::NodeOptions & optio
   {
     using std::placeholders::_1;
     set_param_res_ = this->add_on_set_parameters_callback(
-      std::bind(&CropBoxFilterComponent::paramCallback, this, _1));
+      std::bind(&CropBoxFilterComponent::param_callback, this, _1));
   }
 }
 
@@ -188,28 +199,63 @@ void CropBoxFilterComponent::faster_filter(
   output.width = static_cast<uint32_t>(output.data.size() / output.height / output.point_step);
   output.row_step = static_cast<uint32_t>(output.data.size() / output.height);
 
-  publishCropBoxPolygon();
+  publish_crop_box_polygon();
 
-  // add processing time for debug
+  const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
+  const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
+  const double pipeline_latency_ms =
+    std::chrono::duration<double, std::milli>(
+      std::chrono::nanoseconds((this->get_clock()->now() - input->header.stamp).nanoseconds()))
+      .count();
+
+  // Debug output
   if (debug_publisher_) {
-    const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
-    const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
     debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);
     debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time_ms", processing_time_ms);
-
-    auto pipeline_latency_ms =
-      std::chrono::duration<double, std::milli>(
-        std::chrono::nanoseconds((this->get_clock()->now() - input->header.stamp).nanoseconds()))
-        .count();
-
     debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/pipeline_latency_ms", pipeline_latency_ms);
   }
+
+  auto latency_diagnostics = std::make_shared<LatencyDiagnostics>(
+    input->header.stamp, processing_time_ms, pipeline_latency_ms,
+    param_.processing_time_threshold_sec * 1000.0);
+  auto pass_rate_diagnostics = std::make_shared<PassRateDiagnostics>(
+    static_cast<int>(input->width * input->height), static_cast<int>(output.width * output.height));
+  auto crop_box_diagnostics = std::make_shared<CropBoxDiagnostics>(skipped_count);
+
+  publish_diagnostics({latency_diagnostics, pass_rate_diagnostics, crop_box_diagnostics});
 }
 
-void CropBoxFilterComponent::publishCropBoxPolygon()
+void CropBoxFilterComponent::publish_diagnostics(
+  const std::vector<std::shared_ptr<const DiagnosticsBase>> & diagnostics)
+{
+  diagnostics_interface_->clear();
+
+  std::string message;
+  int worst_level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+
+  for (const auto & diag : diagnostics) {
+    diag->add_to_interface(*diagnostics_interface_);
+    if (const auto status = diag->evaluate_status(); status.has_value()) {
+      worst_level = std::max(worst_level, status->first);
+      if (!message.empty()) {
+        message += " / ";
+      }
+      message += status->second;
+    }
+  }
+
+  if (message.empty()) {
+    message = "CropBoxFilter operating normally";
+  }
+
+  diagnostics_interface_->update_level_and_message(static_cast<int8_t>(worst_level), message);
+  diagnostics_interface_->publish(this->get_clock()->now());
+}
+
+void CropBoxFilterComponent::publish_crop_box_polygon()
 {
   auto generatePoint = [](double x, double y, double z) {
     geometry_msgs::msg::Point32 point;
@@ -260,7 +306,7 @@ void CropBoxFilterComponent::publishCropBoxPolygon()
   crop_box_polygon_pub_->publish(polygon_msg);
 }
 
-rcl_interfaces::msg::SetParametersResult CropBoxFilterComponent::paramCallback(
+rcl_interfaces::msg::SetParametersResult CropBoxFilterComponent::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);
@@ -278,13 +324,13 @@ rcl_interfaces::msg::SetParametersResult CropBoxFilterComponent::paramCallback(
       param_.min_z != new_param.min_z || param_.max_z != new_param.max_z ||
       param_.negative != new_param.negative) {
       RCLCPP_DEBUG(
-        get_logger(), "[%s::paramCallback] Setting the minimum point to: %f %f %f.", get_name(),
+        get_logger(), "[%s::param_callback] Setting the minimum point to: %f %f %f.", get_name(),
         new_param.min_x, new_param.min_y, new_param.min_z);
       RCLCPP_DEBUG(
-        get_logger(), "[%s::paramCallback] Setting the minimum point to: %f %f %f.", get_name(),
+        get_logger(), "[%s::param_callback] Setting the minimum point to: %f %f %f.", get_name(),
         new_param.max_x, new_param.max_y, new_param.max_z);
       RCLCPP_DEBUG(
-        get_logger(), "[%s::paramCallback] Setting the filter negative flag to: %s.", get_name(),
+        get_logger(), "[%s::param_callback] Setting the filter negative flag to: %s.", get_name(),
         new_param.negative ? "true" : "false");
       param_ = new_param;
     }
