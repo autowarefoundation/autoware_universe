@@ -199,6 +199,10 @@ void NormalLaneChange::update_transient_data(const bool is_approved)
   transient_data.current_footprint = utils::lane_change::get_ego_footprint(
     common_data_ptr_->get_ego_pose(), common_data_ptr_->bpp_param_ptr->vehicle_info);
 
+  transient_data.ego_to_terminal_end_proximity =
+    utils::lane_change::calc_polygon_dist_range_from_terminal_end(
+      common_data_ptr_->current_lanes_path, transient_data.current_footprint);
+
   const auto & ego_lane = common_data_ptr_->lanes_ptr->ego_lane;
   const auto & route_handler_ptr = common_data_ptr_->route_handler_ptr;
   transient_data.in_intersection = utils::lane_change::is_within_intersection(
@@ -1001,11 +1005,13 @@ FilteredLanesObjects NormalLaneChange::filter_objects() const
     const auto is_before_terminal =
       utils::lane_change::is_before_terminal(common_data_ptr_, current_lanes_ref_path, ext_object);
 
-    const auto ahead_of_ego =
-      utils::lane_change::is_ahead_of_ego(common_data_ptr_, current_lanes_ref_path, ext_object);
+    const auto ego_object_proximity = utils::lane_change::calc_ego_object_proximity(
+      common_data_ptr_, current_lanes_ref_path, ext_object);
+
+    const auto ahead_of_ego = ego_object_proximity.is_ahead_of_ego;
 
     if (utils::lane_change::filter_target_lane_objects(
-          common_data_ptr_, ext_object, dist_ego_to_current_lanes_center, ahead_of_ego,
+          common_data_ptr_, ext_object, dist_ego_to_current_lanes_center, ego_object_proximity,
           is_before_terminal, target_lane_leading, filtered_objects.target_lane_trailing)) {
       continue;
     }
