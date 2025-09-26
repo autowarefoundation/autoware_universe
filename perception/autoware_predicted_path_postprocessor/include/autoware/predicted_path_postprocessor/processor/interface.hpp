@@ -146,36 +146,6 @@ public:
   const std::string & name() const { return processor_name_; }
 
   /**
-   * @brief Load configuration parameters for the processor.
-   *
-   * @param node_ptr The node to load parameters from.
-   * @param processor_name The name of the processor.
-   * @param declare_parameters The function to declare parameters.
-   */
-  void load_config(
-    rclcpp::Node * node_ptr, const std::string & processor_name,
-    const DeclareParametersFunc & declare_parameters)
-  {
-    declare_parameters(node_ptr, processor_name);
-
-    auto parameters_client = rclcpp::SyncParametersClient(node_ptr);
-
-    const auto package_share_dir =
-      ament_index_cpp::get_package_share_directory("autoware_predicted_path_postprocessor");
-    auto yaml_filepath = package_share_dir + "/config/" + processor_name + ".param.yaml";
-
-    const auto results = parameters_client.load_parameters(std::move(yaml_filepath));
-
-    for (const auto & result : results) {
-      if (!result.successful) {
-        RCLCPP_ERROR_STREAM(
-          node_ptr->get_logger(),
-          "Failed to load parameters for " << processor_name << ": " << result.reason);
-      }
-    }
-  }
-
-  /**
    * @brief Process a single predicted object.
    *
    * @param target The predicted object to process.

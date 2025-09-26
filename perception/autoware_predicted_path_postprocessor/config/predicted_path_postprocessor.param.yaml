@@ -1,3 +1,6 @@
 /**:
   ros__parameters:
-    processor_names: [refine_by_speed]
+    processors: [refine_by_speed]
+    # --- RefineBySpeed ---
+    refine_by_speed:
+      speed_threshold: 1.0 # [m/s]

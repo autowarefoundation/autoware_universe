@@ -1,4 +1,0 @@
-/**:
-  ros__parameters:
-    refine_by_speed:
-      speed_threshold: 1.0 # [m/s]
