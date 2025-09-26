@@ -20,7 +20,14 @@
 
 #include <autoware_utils/geometry/geometry.hpp>
 
+#ifdef ROS_DISTRO_GALACTIC
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#else
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#endif
+
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <random>
 #include <vector>
@@ -109,7 +116,7 @@ void Tracker::mergeExistenceProbabilities(std::vector<float> existence_probabili
 
 bool Tracker::updateWithMeasurement(
   const types::DynamicObject & object, const rclcpp::Time & measurement_time,
-  const types::InputChannel & channel_info)
+  const types::InputChannel & channel_info, bool significant_shape_change)
 {
   // Update existence probability
   {
@@ -163,11 +170,43 @@ bool Tracker::updateWithMeasurement(
     object_.kinematics.orientation_availability = types::OrientationAvailability::SIGN_UNKNOWN;
   }
 
-  // Update object
-  measure(object, measurement_time, channel_info);
+  if (!significant_shape_change) {
+    // Update object normally
+    measure(object, measurement_time, channel_info);
+    object_.trust_extension = object.trust_extension;
 
-  // Update object status
-  getTrackedObject(measurement_time, object_);
+    // Update object status
+    getTrackedObject(measurement_time, object_);
+
+    // Renew ema_shape_
+    ema_shape_.clear();
+  } else {
+    ema_shape_.processNoisyMeasurement(object);
+    if (ema_shape_.isStable()) {
+      setObjectShape(ema_shape_.getShape());
+      // Update object normally
+      measure(object, measurement_time, channel_info);
+      object_.trust_extension = object.trust_extension;
+
+      // Update object status
+      getTrackedObject(measurement_time, object_);
+
+      // Renew ema_shape_
+      ema_shape_.clear();
+    } else {
+      // Get predicted object
+      types::DynamicObject predicted_object;
+      getTrackedObject(measurement_time, predicted_object);
+
+      const auto smoothed_shape = ema_shape_.getShape();
+
+      // Perform conditioned update
+      conditionedUpdate(object, predicted_object, smoothed_shape, measurement_time, channel_info);
+    }
+  }
+
+  // update time
+  object_.time = measurement_time;
 
   return true;
 }
@@ -189,6 +228,52 @@ bool Tracker::updateWithoutMeasurement(const rclcpp::Time & timestamp)
   // Update object status
   getTrackedObject(timestamp, object_);
 
+  return true;
+}
+
+bool Tracker::createPseudoMeasurement(
+  const types::DynamicObject & meas, types::DynamicObject & pred,
+  const autoware_perception_msgs::msg::Shape & smoothed_shape)
+{
+  // Apply linear fall‑off weight on dist square
+  const double dx = meas.pose.position.x - pred.pose.position.x;
+  const double dy = meas.pose.position.y - pred.pose.position.y;
+  const double dist2 = dx * dx + dy * dy;
+  constexpr double d_max_square_inv = 1 / 2.0;  // saturate when distance overs 1.414 m
+  constexpr double min_w = 0.05;
+  const double w_pose = std::clamp(1.0 - dist2 * d_max_square_inv, min_w, 1.0);
+
+  // Blend position
+  pred.pose.position.x = pred.pose.position.x * (1 - w_pose) + meas.pose.position.x * w_pose;
+  pred.pose.position.y = pred.pose.position.y * (1 - w_pose) + meas.pose.position.y * w_pose;
+
+  // Use smoothed shape and its area
+  pred.shape = smoothed_shape;
+  pred.area = types::getArea(smoothed_shape);
+
+  // Blend orientation
+  if (meas.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE) {
+    double yaw_pred = tf2::getYaw(pred.pose.orientation);
+    double yaw_meas = tf2::getYaw(meas.pose.orientation);
+
+    // Handle SIGN_UNKNOWN: limit yaw difference to [-90°, 90°] to prevent sudden rotations
+    if (meas.kinematics.orientation_availability == types::OrientationAvailability::SIGN_UNKNOWN) {
+      double yaw_diff = yaw_meas - yaw_pred;
+      // Normalize yaw_diff to [-π, π] using fmod
+      yaw_diff = std::fmod(yaw_diff + M_PI, 2 * M_PI) - M_PI;
+      if (yaw_diff > M_PI_2) {
+        yaw_diff -= M_PI;
+      } else if (yaw_diff < -M_PI_2) {
+        yaw_diff += M_PI;
+      }
+      yaw_meas = yaw_pred + yaw_diff;
+    }
+
+    double yaw_fused = yaw_pred * (1 - w_pose) + yaw_meas * w_pose;
+    tf2::Quaternion q;
+    q.setRPY(0, 0, yaw_fused);
+    pred.pose.orientation = tf2::toMsg(q);
+  }
   return true;
 }
 
@@ -481,6 +566,21 @@ double Tracker::getPositionCovarianceDeterminant() const
     return std::numeric_limits<double>::max();
   }
   return determinant;
+}
+
+bool Tracker::conditionedUpdate(
+  const types::DynamicObject & measurement, const types::DynamicObject & prediction,
+  const autoware_perception_msgs::msg::Shape & smoothed_shape,
+  const rclcpp::Time & measurement_time, const types::InputChannel & channel_info)
+{
+  // For non-vehicle trackers, create pseudo measurement
+  types::DynamicObject pseudo_measurement = prediction;
+  createPseudoMeasurement(measurement, pseudo_measurement, smoothed_shape);
+
+  // Apply the measurement update directly
+  measure(pseudo_measurement, measurement_time, channel_info);
+
+  return true;
 }
 
 }  // namespace autoware::multi_object_tracker
