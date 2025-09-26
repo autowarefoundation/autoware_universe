@@ -18499,8 +18499,6 @@
       
         
       
-        
-      
     
     
     
@@ -19138,12 +19136,12 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../visualization/tier4_system_rviz_plugin/" class="md-nav__link ">
+            <a href="../../visualization/tier4_traffic_light_rviz_plugin/" class="md-nav__link ">
               
   
   
   <span class="md-ellipsis">
-    Tier4 system rviz plugin
+    Tier4 traffic light rviz plugin
     
   </span>
   
@@ -19155,7 +19153,7 @@
         <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_10_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_14_10">
             <span class="md-nav__icon md-icon"></span>
-            Tier4 system rviz plugin
+            Tier4 traffic light rviz plugin
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -19201,69 +19199,6 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../visualization/tier4_traffic_light_rviz_plugin/" class="md-nav__link ">
-              
-  
-  
-  <span class="md-ellipsis">
-    Tier4 traffic light rviz plugin
-    
-  </span>
-  
-
-            </a>
-            
-          </div>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_11_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_14_11">
-            <span class="md-nav__icon md-icon"></span>
-            Tier4 traffic light rviz plugin
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-      
-        
-          
-        
-      
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_14_12" >
-        
-          
-          <div class="md-nav__link md-nav__container">
             <a href="../../visualization/tier4_vehicle_rviz_plugin/" class="md-nav__link ">
               
   
@@ -19278,8 +19213,8 @@
             
           </div>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_14_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_14_11">
             <span class="md-nav__icon md-icon"></span>
             Tier4 vehicle rviz plugin
           </label>
@@ -19489,6 +19424,9 @@
 <h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
 <p>RTC Interface is an interface to publish the decision status of behavior planning modules and receive execution command from external of an autonomous driving system.</p>
 <h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
+<p>The RTC Interface works by creating a communication channel between a behavior planning module and the rest of the autonomous driving system.
+The planning module uses the interface to publish its current status, such as whether it is safe to proceed or if it is waiting for an external command.
+Other modules can then subscribe to this status information and send commands to the behavior planning module, such as "activate" or "deactivate".</p>
 <h3 id="usage-example">Usage example<a class="headerlink" href="#usage-example" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1">// Generate instance (in this example, "intersection" is selected)</span>
 <span class="n">autoware</span><span class="o">::</span><span class="n">rtc_interface</span><span class="o">::</span><span class="n">RTCInterface</span><span class="w"> </span><span class="n">rtc_interface</span><span class="p">(</span><span class="n">node</span><span class="p">,</span><span class="w"> </span><span class="s">"intersection"</span><span class="p">);</span>
@@ -19501,6 +19439,9 @@
 <span class="w">  </span><span class="c1">// Get safety status of the module corresponding to the module id</span>
 <span class="w">  </span><span class="k">const</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="n">safe</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...</span>
 
+<span class="w">  </span><span class="c1">// Get the current state of the module</span>
+<span class="w">  </span><span class="k">const</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...</span>
+
 <span class="w">  </span><span class="c1">// Get distance to the object corresponding to the module id</span>
 <span class="w">  </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">start_distance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...</span>
 <span class="w">  </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">finish_distance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...</span>
@@ -19509,7 +19450,7 @@
 <span class="w">  </span><span class="k">const</span><span class="w"> </span><span class="n">rclcpp</span><span class="o">::</span><span class="n">Time</span><span class="w"> </span><span class="n">stamp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...</span>
 
 <span class="w">  </span><span class="c1">// Update status</span>
-<span class="w">  </span><span class="n">rtc_interface</span><span class="p">.</span><span class="n">updateCooperateStatus</span><span class="p">(</span><span class="n">uuid</span><span class="p">,</span><span class="w"> </span><span class="n">safe</span><span class="p">,</span><span class="w"> </span><span class="n">start_distance</span><span class="p">,</span><span class="w"> </span><span class="n">finish_distance</span><span class="p">,</span><span class="w"> </span><span class="n">stamp</span><span class="p">);</span>
+<span class="w">  </span><span class="n">rtc_interface</span><span class="p">.</span><span class="n">updateCooperateStatus</span><span class="p">(</span><span class="n">uuid</span><span class="p">,</span><span class="w"> </span><span class="n">safe</span><span class="p">,</span><span class="w"> </span><span class="n">state</span><span class="p">,</span><span class="w"> </span><span class="n">start_distance</span><span class="p">,</span><span class="w"> </span><span class="n">finish_distance</span><span class="p">,</span><span class="w"> </span><span class="n">stamp</span><span class="p">);</span>
 
 <span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">rtc_interface</span><span class="p">.</span><span class="n">isActivated</span><span class="p">(</span><span class="n">uuid</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="c1">// Execute planning</span>
@@ -19528,7 +19469,7 @@
 </code></pre></div>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
 <h3 id="rtcinterface-constructor">RTCInterface (Constructor)<a class="headerlink" href="#rtcinterface-constructor" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code><span class="n">autoware</span><span class="o">::</span><span class="n">rtc_interface</span><span class="o">::</span><span class="n">RTCInterface</span><span class="p">(</span><span class="n">rclcpp</span><span class="o">::</span><span class="n">Node</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">node</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">name</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="n">autoware</span><span class="o">::</span><span class="n">rtc_interface</span><span class="o">::</span><span class="n">RTCInterface</span><span class="p">(</span><span class="n">rclcpp</span><span class="o">::</span><span class="n">Node</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">node</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="n">enable_rtc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 <h4 id="description">Description<a class="headerlink" href="#description" title="Permanent link">#</a></h4>
 <p>A constructor for <code>autoware::rtc_interface::RTCInterface</code>.</p>
@@ -19540,6 +19481,7 @@
 <li>Cooperate commands service name : <code>~/{name}/cooperate_commands</code></li>
 </ul>
 </li>
+<li><code>enable_rtc</code>: A boolean indicating whether RTC is enabled or not by default.</li>
 </ul>
 <h4 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h4>
 <p>An instance of <code>RTCInterface</code></p>
@@ -19567,6 +19509,8 @@ If cooperate status corresponding to <code>uuid</code> is not registered yet, ad
 <li><code>start_distance</code> : Distance to the start object from ego vehicle</li>
 <li><code>finish_distance</code> : Distance to the finish object from ego vehicle</li>
 <li><code>stamp</code> : Time stamp</li>
+<li><code>requested</code>: A boolean indicating whether a request has been made.</li>
+<li><code>override_rtc_auto_mode</code>: An optional boolean to override the RTC mode (true forces AUTO, false forces MANUAL).</li>
 </ul>
 <h4 id="output_2">Output<a class="headerlink" href="#output_2" title="Permanent link">#</a></h4>
 <p>Nothing</p>

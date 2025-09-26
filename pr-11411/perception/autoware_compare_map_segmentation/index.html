@@ -18627,8 +18627,6 @@
       
         
       
-        
-      
     
     
     
@@ -19266,12 +19264,12 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../visualization/tier4_system_rviz_plugin/" class="md-nav__link ">
+            <a href="../../visualization/tier4_traffic_light_rviz_plugin/" class="md-nav__link ">
               
   
   
   <span class="md-ellipsis">
-    Tier4 system rviz plugin
+    Tier4 traffic light rviz plugin
     
   </span>
   
@@ -19283,7 +19281,7 @@
         <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_10_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_14_10">
             <span class="md-nav__icon md-icon"></span>
-            Tier4 system rviz plugin
+            Tier4 traffic light rviz plugin
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -19329,69 +19327,6 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../visualization/tier4_traffic_light_rviz_plugin/" class="md-nav__link ">
-              
-  
-  
-  <span class="md-ellipsis">
-    Tier4 traffic light rviz plugin
-    
-  </span>
-  
-
-            </a>
-            
-          </div>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_11_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_14_11">
-            <span class="md-nav__icon md-icon"></span>
-            Tier4 traffic light rviz plugin
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-      
-        
-          
-        
-      
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_14_12" >
-        
-          
-          <div class="md-nav__link md-nav__container">
             <a href="../../visualization/tier4_vehicle_rviz_plugin/" class="md-nav__link ">
               
   
@@ -19406,8 +19341,8 @@
             
           </div>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_14_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_14_11">
             <span class="md-nav__icon md-icon"></span>
             Tier4 vehicle rviz plugin
           </label>
@@ -19520,6 +19455,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#lanelet-elevation-filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      Lanelet Elevation Filter
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -19539,6 +19483,15 @@
   <a href="#compare-elevation-map-filter_1" class="md-nav__link">
     <span class="md-ellipsis">
       Compare Elevation Map Filter
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lanelet-elevation-filter_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Lanelet Elevation Filter
     </span>
   </a>
   
@@ -19641,6 +19594,10 @@
 <p>For each point of input pointcloud, the filter use <code>getCentroidIndexAt</code> combine with <code>getGridCoordinates</code> function from VoxelGrid class to check if the downsampled map point existing surrounding input points. Remove the input point which has downsampled map point in voxels containing or being close to the point.</p>
 <h3 id="voxel-distance-based-compare-map-filter">Voxel Distance based Compare Map Filter<a class="headerlink" href="#voxel-distance-based-compare-map-filter" title="Permanent link">#</a></h3>
 <p>This filter is a combination of the distance_based_compare_map_filter and voxel_based_approximate_compare_map_filter. The filter loads the map point cloud, which can be loaded statically at the beginning or dynamically during vehicle movement, and creates a voxel grid and a k-d tree of the map point cloud. The filter uses the getCentroidIndexAt function in combination with the getGridCoordinates function from the VoxelGrid class to find input points that are inside the voxel grid and removes them. For points that do not belong to any voxel grid, they are compared again with the map point cloud using the radiusSearch function of the k-d tree and are removed if they are close enough to the map.</p>
+<h3 id="lanelet-elevation-filter">Lanelet Elevation Filter<a class="headerlink" href="#lanelet-elevation-filter" title="Permanent link">#</a></h3>
+<p>The Lanelet Elevation Filter filters point clouds based on lanelet elevation information. It creates a grid-based elevation map from lanelet data and filters out points that deviate significantly from the expected road surface height. This filter is useful for removing floating objects, overpass structures, and other non-road elements that should not be considered for ground-level navigation.</p>
+<p>The filter processes lanelet maps to extract elevation information at regular grid intervals and uses this information to validate incoming point cloud data. Points that are too far above or below the expected lanelet surface elevation are filtered out.</p>
+<p>If incoming point cloud frame differs from target_frame, points will be transformed to target_frame before elevation check.</p>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
 <h3 id="compare-elevation-map-filter_1">Compare Elevation Map Filter<a class="headerlink" href="#compare-elevation-map-filter_1" title="Permanent link">#</a></h3>
 <h4 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h4>
@@ -19713,8 +19670,114 @@
 </tr>
 </tbody>
 </table>
-<h3 id="other-filters">Other Filters<a class="headerlink" href="#other-filters" title="Permanent link">#</a></h3>
+<h3 id="lanelet-elevation-filter_1">Lanelet Elevation Filter<a class="headerlink" href="#lanelet-elevation-filter_1" title="Permanent link">#</a></h3>
 <h4 id="input_1">Input<a class="headerlink" href="#input_1" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/input/pointcloud</code></td>
+<td><code>sensor_msgs::msg::PointCloud2</code></td>
+<td>input point cloud</td>
+</tr>
+<tr>
+<td><code>~/input/lanelet_map</code></td>
+<td><code>autoware_map_msgs::msg::LaneletMapBin</code></td>
+<td>lanelet map</td>
+</tr>
+</tbody>
+</table>
+<h4 id="output_1">Output<a class="headerlink" href="#output_1" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/output/pointcloud</code></td>
+<td><code>sensor_msgs::msg::PointCloud2</code></td>
+<td>filtered point cloud</td>
+</tr>
+<tr>
+<td><code>~/debug/elevation_markers</code></td>
+<td><code>visualization_msgs::msg::MarkerArray</code></td>
+<td>elevation grid visualization</td>
+</tr>
+</tbody>
+</table>
+<h4 id="parameters_1">Parameters<a class="headerlink" href="#parameters_1" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th align="left">Name</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+<th align="left">Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><code>grid_resolution</code></td>
+<td align="left">double</td>
+<td align="left">Grid cell size in meters for elevation processing</td>
+<td align="left">1.0</td>
+</tr>
+<tr>
+<td align="left"><code>height_threshold</code></td>
+<td align="left">double</td>
+<td align="left">Maximum height difference from lanelet elevation (meters)</td>
+<td align="left">2.0</td>
+</tr>
+<tr>
+<td align="left"><code>sampling_distance</code></td>
+<td align="left">double</td>
+<td align="left">Distance between sampled points along lanelet boundaries (meters)</td>
+<td align="left">0.5</td>
+</tr>
+<tr>
+<td align="left"><code>extension_count</code></td>
+<td align="left">int</td>
+<td align="left">Number of cells to extend around original lanelet points</td>
+<td align="left">5</td>
+</tr>
+<tr>
+<td align="left"><code>target_frame</code></td>
+<td align="left">string</td>
+<td align="left">Target coordinate frame for processing</td>
+<td align="left">map</td>
+</tr>
+<tr>
+<td align="left"><code>cache_directory</code></td>
+<td align="left">string</td>
+<td align="left">Directory for cached grid files</td>
+<td align="left">$(find-pkg-share autoware_compare_map_segmentation)/data/lanelet_grid_cache</td>
+</tr>
+<tr>
+<td align="left"><code>require_map_coverage</code></td>
+<td align="left">bool</td>
+<td align="left">If true, only keep points with direct map coverage; reject points requiring interpolation</td>
+<td align="left">true</td>
+</tr>
+<tr>
+<td align="left"><code>enable_debug</code></td>
+<td align="left">bool</td>
+<td align="left">Enable debug mode (includes elevation markers and processing time publisher)</td>
+<td align="left">false</td>
+</tr>
+</tbody>
+</table>
+<h3 id="other-filters">Other Filters<a class="headerlink" href="#other-filters" title="Permanent link">#</a></h3>
+<h4 id="input_2">Input<a class="headerlink" href="#input_2" title="Permanent link">#</a></h4>
 <table>
 <thead>
 <tr>
@@ -19741,7 +19804,7 @@
 </tr>
 </tbody>
 </table>
-<h4 id="output_1">Output<a class="headerlink" href="#output_1" title="Permanent link">#</a></h4>
+<h4 id="output_2">Output<a class="headerlink" href="#output_2" title="Permanent link">#</a></h4>
 <table>
 <thead>
 <tr>
@@ -19758,7 +19821,7 @@
 </tr>
 </tbody>
 </table>
-<h4 id="parameters_1">Parameters<a class="headerlink" href="#parameters_1" title="Permanent link">#</a></h4>
+<h4 id="parameters_2">Parameters<a class="headerlink" href="#parameters_2" title="Permanent link">#</a></h4>
 <table>
 <thead>
 <tr>

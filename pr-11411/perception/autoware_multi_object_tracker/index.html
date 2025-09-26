@@ -18627,8 +18627,6 @@
       
         
       
-        
-      
     
     
     
@@ -19266,12 +19264,12 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../visualization/tier4_system_rviz_plugin/" class="md-nav__link ">
+            <a href="../../visualization/tier4_traffic_light_rviz_plugin/" class="md-nav__link ">
               
   
   
   <span class="md-ellipsis">
-    Tier4 system rviz plugin
+    Tier4 traffic light rviz plugin
     
   </span>
   
@@ -19283,7 +19281,7 @@
         <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_10_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_14_10">
             <span class="md-nav__icon md-icon"></span>
-            Tier4 system rviz plugin
+            Tier4 traffic light rviz plugin
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -19329,69 +19327,6 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../visualization/tier4_traffic_light_rviz_plugin/" class="md-nav__link ">
-              
-  
-  
-  <span class="md-ellipsis">
-    Tier4 traffic light rviz plugin
-    
-  </span>
-  
-
-            </a>
-            
-          </div>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_11_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_14_11">
-            <span class="md-nav__icon md-icon"></span>
-            Tier4 traffic light rviz plugin
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-      
-        
-          
-        
-      
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_14_12" >
-        
-          
-          <div class="md-nav__link md-nav__container">
             <a href="../../visualization/tier4_vehicle_rviz_plugin/" class="md-nav__link ">
               
   
@@ -19406,8 +19341,8 @@
             
           </div>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_14_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_14_11">
             <span class="md-nav__icon md-icon"></span>
             Tier4 vehicle rviz plugin
           </label>
@@ -20213,25 +20148,33 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <div class="highlight"><pre><span></span><code><span class="nb">source</span><span class="w"> </span>install/setup.bash
 ./build/autoware_multi_object_tracker/test_multi_object_tracker
 </code></pre></div>
-<p>This runs the default test (<code>runPerformanceTest</code>) and outputs timing data.</p>
-<h4 id="3-enable-optional-profiling-modes-manual">3. Enable Optional Profiling Modes (Manual)<a class="headerlink" href="#3-enable-optional-profiling-modes-manual" title="Permanent link">#</a></h4>
-<p>To evaluate scalability with object count:</p>
+<p>This runs the default test (<code>SimulatedDataPerformanceTest</code> and <code>RealDataRosbagPerformanceTest</code>) and outputs timing data.</p>
+<h4 id="3-run-optional-profiling-modestests">3. Run Optional Profiling Modes/Tests<a class="headerlink" href="#3-run-optional-profiling-modestests" title="Permanent link">#</a></h4>
 <ul>
-<li>Manually enable the following functions in the test source:<ul>
-<li><code>profilePerformanceVsCarCount()</code></li>
-<li><code>profilePerformanceVsPedestrianCount()</code></li>
-<li><code>profilePerformanceVsUnknownObjectCount()</code></li>
+<li><code>PerformanceVsCarCount()</code></li>
+<li><code>PerformanceVsPedestrianCount()</code></li>
+<li><code>PerformanceVsUnknownObjectCount()</code></li>
+<li><code>AssociationTest()</code></li>
 </ul>
-</li>
-</ul>
-<p>These run additional profiling scenarios.</p>
+<p>These optional profiling tests are compiled as disabled and can be run directly using GoogleTest options:</p>
+<p>To run a specific option profiling test:</p>
+<div class="highlight"><pre><span></span><code>./build/autoware_multi_object_tracker/test_multi_object_tracker<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--gtest_also_run_disabled_tests<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--gtest_filter<span class="o">=</span><span class="s2">"*.*AssociationTest"</span>
+</code></pre></div>
+<p>To run multiple profiling tests together (separate with <code>:</code>):</p>
+<div class="highlight"><pre><span></span><code>./build/autoware_multi_object_tracker/test_multi_object_tracker<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--gtest_also_run_disabled_tests<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--gtest_filter<span class="o">=</span><span class="s2">"*.*AssociationTest:*.*PerformanceVsPedestrianCount"</span>
+</code></pre></div>
+<p>This allows you to evaluate scalability with object count and other scenarios without modifying the source code.</p>
 <h3 id="rosbag-replay-visualization">Rosbag Replay &amp; Visualization<a class="headerlink" href="#rosbag-replay-visualization" title="Permanent link">#</a></h3>
 <h4 id="simulated-rosbag-output">Simulated Rosbag Output<a class="headerlink" href="#simulated-rosbag-output" title="Permanent link">#</a></h4>
 <p>To record benchmark results for visualization in RViz:</p>
 <ol>
 <li>Enable <code>write_bag = true</code> in <code>runIterations()</code></li>
 <li>Run the test; the output <code>.db3</code> path is printed</li>
-<li>Visualize:</li>
+<li>Play rosbag and visualize using rviz(suggested to use a product one):</li>
 </ol>
 <div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>bag<span class="w"> </span>play<span class="w"> </span>&lt;output_file&gt;.db3
 rviz2<span class="w"> </span>-d<span class="w"> </span>&lt;your_rviz_config&gt;.rviz

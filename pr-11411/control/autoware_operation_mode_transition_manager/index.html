@@ -18543,8 +18543,6 @@
       
         
       
-        
-      
     
     
     
@@ -19182,12 +19180,12 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../visualization/tier4_system_rviz_plugin/" class="md-nav__link ">
+            <a href="../../visualization/tier4_traffic_light_rviz_plugin/" class="md-nav__link ">
               
   
   
   <span class="md-ellipsis">
-    Tier4 system rviz plugin
+    Tier4 traffic light rviz plugin
     
   </span>
   
@@ -19199,7 +19197,7 @@
         <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_10_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_14_10">
             <span class="md-nav__icon md-icon"></span>
-            Tier4 system rviz plugin
+            Tier4 traffic light rviz plugin
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -19245,69 +19243,6 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../visualization/tier4_traffic_light_rviz_plugin/" class="md-nav__link ">
-              
-  
-  
-  <span class="md-ellipsis">
-    Tier4 traffic light rviz plugin
-    
-  </span>
-  
-
-            </a>
-            
-          </div>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_11_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_14_11">
-            <span class="md-nav__icon md-icon"></span>
-            Tier4 traffic light rviz plugin
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-      
-        
-          
-        
-      
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_14_12" >
-        
-          
-          <div class="md-nav__link md-nav__container">
             <a href="../../visualization/tier4_vehicle_rviz_plugin/" class="md-nav__link ">
               
   
@@ -19322,8 +19257,8 @@
             
           </div>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_14_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_14_11">
             <span class="md-nav__icon md-icon"></span>
             Tier4 vehicle rviz plugin
           </label>
@@ -19371,6 +19306,15 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#note" class="md-nav__link">
+    <span class="md-ellipsis">
+      Note
+    </span>
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#purpose-use-cases" class="md-nav__link">
@@ -19485,6 +19429,21 @@
 
 
 <div><h1 id="autoware_operation_mode_transition_manager">autoware_operation_mode_transition_manager<a class="headerlink" href="#autoware_operation_mode_transition_manager" title="Permanent link">#</a></h1>
+<h2 id="note">Note<a class="headerlink" href="#note" title="Permanent link">#</a></h2>
+<p>The state management functionality of this package is currently being moved to the command_mode_decider package.
+When used with the command_mode_decider package, this package is only responsible for determining transition conditions.
+Also, the data <code>status</code>, <code>in_autoware_control</code>, and <code>in_transition</code> contained in the debug topic is not available, so use the <code>/system/command_mode_decider/debug</code> topic instead.</p>
+<ul>
+<li>in_autoware_control: True when the current command mode is manual mode (default value 1000).</li>
+<li>in_transition: See the is_in_transition function in the command_mode_decider package.</li>
+<li>status:<ul>
+<li>If in_autoware_control, <code>DISENGAGE (autoware mode = curr_mode)</code></li>
+<li>Else if in_transition, <code>curr_mode (in transition from prev_mode)</code></li>
+<li>Else <code>curr_mode</code></li>
+<li>Note: <code>curr_mode = current operation mode</code> and <code>prev_mode = last operation mode</code></li>
+</ul>
+</li>
+</ul>
 <h2 id="purpose-use-cases">Purpose / Use cases<a class="headerlink" href="#purpose-use-cases" title="Permanent link">#</a></h2>
 <p>This module is responsible for managing the different modes of operation for the Autoware system. The possible modes are:</p>
 <ul>

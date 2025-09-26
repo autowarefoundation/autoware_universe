@@ -18499,8 +18499,6 @@
       
         
       
-        
-      
     
     
     
@@ -19138,12 +19136,12 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../visualization/tier4_system_rviz_plugin/" class="md-nav__link ">
+            <a href="../../visualization/tier4_traffic_light_rviz_plugin/" class="md-nav__link ">
               
   
   
   <span class="md-ellipsis">
-    Tier4 system rviz plugin
+    Tier4 traffic light rviz plugin
     
   </span>
   
@@ -19155,7 +19153,7 @@
         <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_10_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_14_10">
             <span class="md-nav__icon md-icon"></span>
-            Tier4 system rviz plugin
+            Tier4 traffic light rviz plugin
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -19201,69 +19199,6 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../visualization/tier4_traffic_light_rviz_plugin/" class="md-nav__link ">
-              
-  
-  
-  <span class="md-ellipsis">
-    Tier4 traffic light rviz plugin
-    
-  </span>
-  
-
-            </a>
-            
-          </div>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_11_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_14_11">
-            <span class="md-nav__icon md-icon"></span>
-            Tier4 traffic light rviz plugin
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-      
-        
-          
-        
-      
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_14_12" >
-        
-          
-          <div class="md-nav__link md-nav__container">
             <a href="../../visualization/tier4_vehicle_rviz_plugin/" class="md-nav__link ">
               
   
@@ -19278,8 +19213,8 @@
             
           </div>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_14_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_14_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_14_11">
             <span class="md-nav__icon md-icon"></span>
             Tier4 vehicle rviz plugin
           </label>
@@ -19383,11 +19318,26 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
+  <a href="#onnx-model-and-versioning" class="md-nav__link">
     <span class="md-ellipsis">
-      ❗ Limitations
+      ONNX Model and Versioning
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="ONNX Model and Versioning">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#model-version-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      Model Version History
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -19564,6 +19514,13 @@
 <td>&gt;0</td>
 </tr>
 <tr>
+<td>use_route_handler</td>
+<td>boolean</td>
+<td>Use route handler for selecting route segment indices</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
 <td>build_only</td>
 <td>boolean</td>
 <td>On build only, do not run the planner</td>
@@ -19574,6 +19531,20 @@
 <td>batch_size</td>
 <td>integer</td>
 <td>Batch size for multi-batch inference</td>
+<td>1</td>
+<td>≥1</td>
+</tr>
+<tr>
+<td>temperature</td>
+<td>array</td>
+<td>List of temperature for sampling trajectories. Its length must be the same as <code>batch_size</code>. Each value means the coefficient of the standard normal distribution which is used for each initial noise of corresponding batch index. val = N(0,1) * temperature</td>
+<td>[0.5]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>velocity_smoothing_window</td>
+<td>integer</td>
+<td>Window size for velocity smoothing. Set to 1 to disable smoothing.</td>
 <td>1</td>
 <td>≥1</td>
 </tr>
@@ -19681,28 +19652,51 @@
 colcon<span class="w"> </span>test-result<span class="w"> </span>--all
 </code></pre></div>
 <hr>
-<h2 id="limitations">❗ Limitations<a class="headerlink" href="#limitations" title="Permanent link">#</a></h2>
-<p>While the Diffusion Planner shows promising capabilities, there are several limitations to be aware of:</p>
+<h2 id="onnx-model-and-versioning">ONNX Model and Versioning<a class="headerlink" href="#onnx-model-and-versioning" title="Permanent link">#</a></h2>
+<p>The Diffusion Planner relies on an ONNX model for inference.<br>
+To ensure compatibility between models and the ROS 2 node implementation, the model versioning scheme follows <strong>major</strong> and <strong>minor</strong> numbers:
+The model version is defined either by the directory name provided to the node or within the <code>diffusion_planner.param.json</code> configuration file.</p>
 <ul>
-<li><strong>Route Termination</strong>:
-  The route input to the model consists of a sequence of preferred lanelets from the current position to the goal region. However, <strong>this route does not necessarily end exactly at the goal position</strong>. As a result, the ego vehicle <strong>may continue driving past the goal</strong> instead of stopping at the target location.</li>
+<li>
+<p><strong>Major version</strong><br>
+  Incremented when there are changes in the model <strong>inputs/outputs or architecture</strong>.</p>
+<blockquote>
+<p><img alt="⚠" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@14.1.2/assets/svg/26a0.svg" title=":warning:"> Models with different major versions are <strong>not compatible</strong> with the current ROS node.</p>
+</blockquote>
+</li>
 </ul>
 <ul>
-<li><strong>Training Dataset Domain Gap</strong>:
-  The provided diffusion model checkpoint was trained on datasets using a <strong>proprietary Lanelet2 map that is not publicly available</strong>. Consequently, <strong>performance may significantly degrade when running on other maps</strong>, especially in environments with different topology or tagging conventions.</li>
+<li><strong>Minor version</strong><br>
+  Incremented when <strong>only the weight files are updated</strong>.<br>
+  As long as the major version matches, the node remains compatible, and the new model can be used directly.</li>
 </ul>
-<ul>
-<li><strong>Route Adherence &amp; Lane Changing</strong>:
-  The model sometimes <strong>fails to strictly follow the preferred lanelet route</strong>. If the ego vehicle leaves the preferred lane (e.g., to avoid an obstacle), it tends to <strong>only return to the route during curves</strong>. It <strong>seldom performs deliberate lane changes</strong> to merge back into the correct route on straight segments.</li>
-</ul>
-<ul>
-<li><strong>Agent and Obstacle Avoidance</strong>:
-  Although the planner <strong>reacts to other agents and can perform avoidance maneuvers</strong>, this behavior is <strong>not fully reliable</strong>. In some cases, <strong>collisions with static or dynamic obstacles may still occur</strong> due to ignored agents or insufficient context comprehension.</li>
-</ul>
-<ul>
-<li><strong>Lack of Static Object Context</strong>:
-  Static environment context such as <strong>traffic cones, guard rails, or construction barriers</strong> is <strong>not currently provided to the model</strong>. Instead, an <strong>empty tensor</strong> is passed in their place, which can lead to <strong>limited understanding of occlusions or drivable boundaries</strong>.</li>
-</ul>
+<p>To download the latest model, simply run the provided setup script:<br>
+<a href="https://autowarefoundation.github.io/autoware-documentation/main/installation/autoware/source-installation/#how-to-set-up-a-development-environment">How to set up a development environment</a></p>
+<h3 id="model-version-history">Model Version History<a class="headerlink" href="#model-version-history" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Version</th>
+<th>Release Date</th>
+<th>Notes</th>
+<th>ROS Node Compatibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>0.1</strong></td>
+<td>2025/07/05</td>
+<td>- First public release<br>- Route planning based on TIER IV real data</td>
+<td>NG</td>
+</tr>
+<tr>
+<td><strong>1.0</strong></td>
+<td>2025/09/12</td>
+<td>- Route Termination learning<br>- Output turn-signal (indicator) <br>- Lane type integration in HD map for improved accuracy<br>- Added datasets:<br>  - Synthetic Data: <strong>4.0M points</strong><br>  - Real Data: <strong>1.5M points</strong></td>
+<td>OK</td>
+</tr>
+</tbody>
+</table>
 <hr>
 <h2 id="development-contribution">Development &amp; Contribution<a class="headerlink" href="#development-contribution" title="Permanent link">#</a></h2>
 <ul>
