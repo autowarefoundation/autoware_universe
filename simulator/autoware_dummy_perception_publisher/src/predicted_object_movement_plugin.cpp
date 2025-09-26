@@ -687,35 +687,45 @@ PredictedObjectMovementPlugin::find_matching_predicted_object(
                                                 ? pedestrian_params.path_selection_strategy
                                                 : vehicle_params.path_selection_strategy;
 
-  if (!predicted_object.kinematics.predicted_paths.empty()) {
-    auto & paths = modified_predicted_object.kinematics.predicted_paths;
-    if (path_selection_strategy == "random") {
-      // Randomly select a path index
-      const size_t num_paths = predicted_object.kinematics.predicted_paths.size();
-      std::uniform_int_distribution<size_t> path_index_dist(0, num_paths - 1);
-      const size_t random_path_index = path_index_dist(random_generator_);
-      // Reorder paths to put the randomly selected path first
-      std::swap(paths[0], paths[random_path_index]);
+  if (predicted_object.kinematics.predicted_paths.empty()) {
+    return std::make_pair(empty_object, empty_time);
+  }
 
-      RCLCPP_DEBUG(
-        rclcpp::get_logger("dummy_perception_publisher"),
-        "Randomly selected path %zu out of %zu for %s object %s", random_path_index, num_paths,
-        is_pedestrian ? "pedestrian" : "vehicle", obj_uuid_str.c_str());
-    } else if (path_selection_strategy == "highest_confidence") {
-      // Find path with highest confidence and move it to first position
-      auto max_confidence_it = std::max_element(
-        paths.begin(), paths.end(),
-        [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
+  auto & paths = modified_predicted_object.kinematics.predicted_paths;
+  if (path_selection_strategy == "random") {
+    // Randomly select a path index
+    const size_t num_paths = predicted_object.kinematics.predicted_paths.size();
+    std::uniform_int_distribution<size_t> path_index_dist(0, num_paths - 1);
+    const size_t random_path_index = path_index_dist(random_generator_);
+    // Reorder paths to put the randomly selected path first
+    std::swap(paths[0], paths[random_path_index]);
 
-      if (max_confidence_it != paths.begin()) {
-        std::swap(paths[0], *max_confidence_it);
-      }
+    RCLCPP_DEBUG(
+      rclcpp::get_logger("dummy_perception_publisher"),
+      "Randomly selected path %zu out of %zu for %s object %s", random_path_index, num_paths,
+      is_pedestrian ? "pedestrian" : "vehicle", obj_uuid_str.c_str());
+  } else if (path_selection_strategy == "highest_confidence") {
+    // Find path with highest confidence and move it to first position
+    auto max_confidence_it = std::max_element(
+      paths.begin(), paths.end(),
+      [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
 
-      RCLCPP_DEBUG(
-        rclcpp::get_logger("dummy_perception_publisher"),
-        "Selected most likely path (confidence: %.3f) for %s object %s", paths[0].confidence,
-        is_pedestrian ? "pedestrian" : "vehicle", obj_uuid_str.c_str());
+    if (max_confidence_it != paths.begin()) {
+      std::swap(paths[0], *max_confidence_it);
     }
+
+    RCLCPP_DEBUG(
+      rclcpp::get_logger("dummy_perception_publisher"),
+      "Selected most likely path (confidence: %.3f) for %s object %s", paths[0].confidence,
+      is_pedestrian ? "pedestrian" : "vehicle", obj_uuid_str.c_str());
+  } else {
+    RCLCPP_WARN(
+      rclcpp::get_logger("dummy_perception_publisher"),
+      "Unknown path selection strategy '%s' for %s object %s. Using first path as is.",
+      path_selection_strategy.c_str(), is_pedestrian ? "pedestrian" : "vehicle",
+      obj_uuid_str.c_str());
+
+    return std::make_pair(empty_object, empty_time);
   }
 
   // Store this as the new prediction to use for some seconds
@@ -724,8 +734,6 @@ PredictedObjectMovementPlugin::find_matching_predicted_object(
   dummy_predicted_info_map[obj_uuid_str].prediction_update_timestamp = current_time;
 
   return std::make_pair(modified_predicted_object, msg_time);
-
-  return std::make_pair(empty_object, empty_time);
 }
 
 std::vector<ObjectInfo> PredictedObjectMovementPlugin::move_objects()
