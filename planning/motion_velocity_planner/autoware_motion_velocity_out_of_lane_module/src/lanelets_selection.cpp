@@ -128,8 +128,9 @@ void calculate_out_lanelet_rtree(
   const auto pose_beyond = autoware_utils::calc_offset_pose(
     ego_data.trajectory_points.back().pose, params.front_offset, 0.0, 0.0, 0.0);
   trajectory_ls.emplace_back(pose_beyond.position.x, pose_beyond.position.y);
-  const auto trajectory_lanelets = calculate_trajectory_lanelets(trajectory_ls, route_handler);
-  const auto ignored_lanelets = calculate_ignored_lanelets(trajectory_lanelets, route_handler);
+  ego_data.trajectory_lanelets = calculate_trajectory_lanelets(trajectory_ls, route_handler);
+  const auto ignored_lanelets =
+    calculate_ignored_lanelets(ego_data.trajectory_lanelets, route_handler);
 
   const auto max_ego_footprint_offset = std::max({
     params.front_offset + params.extra_front_offset,
@@ -149,8 +150,8 @@ void calculate_out_lanelet_rtree(
     end_strategy, circle_strategy);
 
   ego_data.out_lanelets = calculate_out_lanelets(
-    route_handler.getLaneletMapPtr()->laneletLayer, trajectory_footprints, trajectory_lanelets,
-    ignored_lanelets);
+    route_handler.getLaneletMapPtr()->laneletLayer, trajectory_footprints,
+    ego_data.trajectory_lanelets, ignored_lanelets);
   ego_data.out_lanelets_rtree = calculate_out_lanelet_rtree(ego_data.out_lanelets);
 }
 }  // namespace autoware::motion_velocity_planner::out_of_lane
