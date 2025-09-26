@@ -70,7 +70,9 @@
       "required": [
         "map_frame",
         "arrival_check_angle_deg",
-        "arrival_check_distance",
+        "arrival_check_lateral_distance",
+        "arrival_check_longitudinal_undershoot_distance",
+        "arrival_check_longitudinal_overshoot_distance",
         "arrival_check_duration",
         "goal_angle_threshold_deg",
         "enable_correct_goal_pose",
