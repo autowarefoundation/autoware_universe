@@ -20,6 +20,7 @@
 #include "autoware_utils/geometry/geometry.hpp"
 
 #include <Eigen/Core>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
 
 #include <autoware_perception_msgs/msg/detected_object.hpp>
@@ -642,7 +643,9 @@ bool ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::isSameDirectionWithLanele
     }
 
     const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
-      box_and_lanelet.second.lanelet, object.kinematics.pose_with_covariance.pose.position);
+      box_and_lanelet.second.lanelet, autoware::experimental::lanelet2_utils::from_ros(
+                                        object.kinematics.pose_with_covariance.pose.position)
+                                        .basicPoint());
     const double delta_yaw = object_velocity_yaw - lane_yaw;
     const double normalized_delta_yaw = autoware_utils::normalize_radian(delta_yaw);
     const double abs_norm_delta_yaw = std::fabs(normalized_delta_yaw);

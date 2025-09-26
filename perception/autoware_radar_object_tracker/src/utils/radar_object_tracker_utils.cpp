@@ -14,6 +14,7 @@
 
 #include "autoware_radar_object_tracker/utils/radar_object_tracker_utils.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
 
 #include <string>
@@ -83,7 +84,9 @@ bool checkCloseLaneletCondition(
 
   const double object_yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
   const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
-    lanelet.second, object.kinematics.pose_with_covariance.pose.position);
+    lanelet.second, autoware::experimental::lanelet2_utils::from_ros(
+                      object.kinematics.pose_with_covariance.pose.position)
+                      .basicPoint());
   double object_motion_yaw = object_yaw;
   bool velocity_is_reverted = object.kinematics.twist_with_covariance.twist.linear.x < 0.0;
   if (velocity_is_reverted) {
@@ -145,7 +148,9 @@ bool hasValidVelocityDirectionToLanelet(
 
   for (const auto & lanelet : lanelets) {
     const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
-      lanelet, object.kinematics.pose_with_covariance.pose.position);
+      lanelet, autoware::experimental::lanelet2_utils::from_ros(
+                 object.kinematics.pose_with_covariance.pose.position)
+                 .basicPoint());
     const double delta_yaw = object_vel_yaw_global - lane_yaw;
     const double normalized_delta_yaw = autoware_utils_math::normalize_radian(delta_yaw);
 
