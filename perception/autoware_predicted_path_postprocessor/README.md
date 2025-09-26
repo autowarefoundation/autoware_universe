@@ -46,16 +46,9 @@ As an example, let's see how to add a new processor by using a processor called 
        FilterBySomething(rclcpp::Node * node_ptr, const std::string & processor_name)
        : ProcessorInterface(processor_name)
        {
-         // Load parameter YAML file by declaring parameters
-         load_config(
-           node_ptr, processor_name, [](rclcpp::Node * node_ptr, const std::string & processor_name) {
-             node_ptr->declare_parameter<double>(processor_name + ".double_param", 0.0);
-             node_ptr->declare_parameter<std::string>(processor_name + ".string_param", "default");
-           });
-
-         // Read loaded parameters
-         double_param_ = node_ptr->get_parameter(processor_name + ".double_param").as_double();
-         string_param_ = node_ptr->get_parameter(processor_name + ".string_param").as_string();
+         // Loaded parameters
+         double_param_ = node_ptr->declare<double>(processor_name + ".double_param");
+         string_param_ = node_ptr->declare_parameter<std::string>(processor_name + ".string_param");
        }
 
        result_type process(target_type & target, const Context & context) override
@@ -87,14 +80,19 @@ As an example, let's see how to add a new processor by using a processor called 
    }
    ```
 
-3. Add parameter file in `config/filter_by_something.param.yaml`:
+3. Add parameter to the `config/predicted_path_postprocessor.param.yaml`:
 
    The parameters must be grouped under the processor's string identifier.
+   The processors specified in the `processors` array are launched in runtime.
 
-   ```yaml:config/filter_by_something.param.yaml
+   ```yaml:config/predicted_path_postprocessor.param.yaml
    /**:
      ros__parameters:
-       filter_by_something:
+      processors: [filter_by_something]
+      # --- FilterBySomething ---
+      filter_by_something:
          double_param: 100.0
          string_param: I'm a processor!!
+      # --- Parameters for other processors ---
+      # ...
    ```

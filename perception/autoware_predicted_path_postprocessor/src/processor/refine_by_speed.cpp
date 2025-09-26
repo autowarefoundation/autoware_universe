@@ -28,12 +28,7 @@ namespace autoware::predicted_path_postprocessor::processor
 RefineBySpeed::RefineBySpeed(rclcpp::Node * node_ptr, const std::string & processor_name)
 : ProcessorInterface(processor_name)
 {
-  load_config(
-    node_ptr, processor_name, [](rclcpp::Node * node_ptr, const std::string & processor_name) {
-      node_ptr->declare_parameter<double>(processor_name + ".speed_threshold", 1.0);
-    });
-
-  speed_threshold_ = node_ptr->get_parameter(processor_name + ".speed_threshold").as_double();
+  speed_threshold_ = node_ptr->declare_parameter<double>(processor_name + ".speed_threshold");
 }
 
 RefineBySpeed::result_type RefineBySpeed::process(target_type & target, const Context &)

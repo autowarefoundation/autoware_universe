@@ -40,7 +40,7 @@ inline std::vector<ProcessorInterface::UniquePtr> build_processors(
     if (name == "refine_by_speed") {
       outputs.push_back(std::make_unique<RefineBySpeed>(node_ptr, name));
     } else {
-      RCLCPP_ERROR_STREAM(node_ptr->get_logger(), "Unknown processor name: " << name);
+      RCLCPP_ERROR_STREAM(node_ptr->get_logger(), "Unknown processor: " << name);
       continue;
     }
   }

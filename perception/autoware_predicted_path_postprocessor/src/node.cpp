@@ -40,9 +40,9 @@ using Float64Stamped = autoware_internal_debug_msgs::msg::Float64Stamped;
 PredictedPathPostprocessorNode::PredictedPathPostprocessorNode(const rclcpp::NodeOptions & options)
 : rclcpp::Node("predicted_path_postprocessor", options)
 {
-  auto processor_names = declare_parameter<std::vector<std::string>>("processor_names");
+  auto processors = declare_parameter<std::vector<std::string>>("processors");
   context_ = std::make_unique<processor::Context>();
-  processor_ = std::make_unique<processor::ComposableProcessor>(this, std::move(processor_names));
+  processor_ = std::make_unique<processor::ComposableProcessor>(this, std::move(processors));
 
   stopwatch_ = std::make_unique<autoware_utils_system::StopWatch<std::chrono::milliseconds>>();
   stopwatch_->tic("cyclic_time");
