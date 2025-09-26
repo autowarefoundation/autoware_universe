@@ -114,6 +114,33 @@ def launch_setup(context, *args, **kwargs):
         ),
     ]
 
+    additional_node = ComposableNode(
+        package="autoware_probabilistic_occupancy_grid_map",
+        plugin="autoware::occupancy_grid_map::LaserscanBasedOccupancyGridMapNode",
+        name="finer_occupancy_grid_map_node",
+        remappings=[
+            ("~/input/laserscan", LaunchConfiguration("output/laserscan")),
+            ("~/input/obstacle_pointcloud", LaunchConfiguration("input/obstacle_pointcloud")),
+            ("~/input/raw_pointcloud", LaunchConfiguration("input/raw_pointcloud")),
+            ("~/output/occupancy_grid_map", "finer_occupancy_grid_map"),
+        ],
+        parameters=[
+            laserscan_based_occupancy_grid_map_node_params,
+            occupancy_grid_map_updater_params,
+            {
+                "input_obstacle_pointcloud": LaunchConfiguration("input_obstacle_pointcloud"),
+                "input_obstacle_and_raw_pointcloud": LaunchConfiguration(
+                    "input_obstacle_and_raw_pointcloud"
+                ),
+                "updater_type": LaunchConfiguration("updater_type"),
+                "map_resolution": 0.25,
+            },
+        ],
+        extra_arguments=[{"use_intra_process_comms": LaunchConfiguration("use_intra_process")}],
+    )
+
+    composable_nodes.append(additional_node)
+
     occupancy_grid_map_container = ComposableNodeContainer(
         name=LaunchConfiguration("individual_container_name"),
         namespace="",
