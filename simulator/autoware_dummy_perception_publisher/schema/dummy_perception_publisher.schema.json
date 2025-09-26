@@ -1,0 +1,206 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for dummy_perception_publisher_node",
+  "type": "object",
+  "definitions": {
+    "dummy_perception_publisher": {
+      "type": "object",
+      "properties": {
+        "visible_range": {
+          "type": "number",
+          "default": 100.0,
+          "description": "Maximum visible range for object detection in meters"
+        },
+        "detection_successful_rate": {
+          "type": "number",
+          "default": 0.8,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Probability of successful object detection"
+        },
+        "enable_ray_tracing": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable ray tracing for visibility calculation"
+        },
+        "use_object_recognition": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable object recognition mode"
+        },
+        "use_base_link_z": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use base_link z coordinate for object positioning"
+        },
+        "publish_ground_truth": {
+          "type": "boolean",
+          "default": false,
+          "description": "Publish ground truth objects for evaluation"
+        },
+        "random_seed": {
+          "type": "integer",
+          "default": 0,
+          "description": "Random seed for reproducible results"
+        },
+        "use_fixed_random_seed": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use fixed random seed for deterministic behavior"
+        },
+        "object_centric_pointcloud": {
+          "type": "boolean",
+          "default": false,
+          "description": "Generate point clouds centered on objects"
+        },
+        "angle_increment": {
+          "type": "number",
+          "default": 0.004363323,
+          "description": "Angle increment for ray casting (0.25 degrees in radians)"
+        },
+        "min_predicted_path_keep_duration": {
+          "type": "number",
+          "default": 3.0,
+          "minimum": 0.0,
+          "description": "Minimum duration in seconds to keep using same prediction"
+        },
+        "switch_time_threshold": {
+          "type": "number",
+          "default": 2.0,
+          "minimum": 0.0,
+          "description": "Time threshold in seconds to switch from straight-line to predicted path"
+        },
+        "vehicle": {
+          "type": "object",
+          "description": "Parameters for vehicle object validation",
+          "properties": {
+            "max_remapping_distance": {
+              "type": "number",
+              "default": 2.0,
+              "minimum": 0.0,
+              "description": "Maximum distance in meters for remapping vehicles"
+            },
+            "max_speed_difference_ratio": {
+              "type": "number",
+              "default": 1.05,
+              "minimum": 1.0,
+              "description": "Maximum speed difference ratio (default: 5% tolerance)"
+            },
+            "min_speed_ratio": {
+              "type": "number",
+              "default": 0.5,
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Minimum speed ratio relative to dummy speed"
+            },
+            "max_speed_ratio": {
+              "type": "number",
+              "default": 1.5,
+              "minimum": 1.0,
+              "description": "Maximum speed ratio relative to dummy speed"
+            },
+            "speed_check_threshold": {
+              "type": "number",
+              "default": 1.0,
+              "minimum": 0.0,
+              "description": "Speed threshold in m/s above which to apply speed checks"
+            },
+            "path_selection_strategy": {
+              "type": "string",
+              "default": "highest_confidence",
+              "enum": ["highest_confidence", "random"],
+              "description": "Path selection strategy: highest_confidence (highest confidence) or random"
+            }
+          },
+          "required": [
+            "max_remapping_distance",
+            "max_speed_difference_ratio",
+            "min_speed_ratio",
+            "max_speed_ratio",
+            "speed_check_threshold",
+            "path_selection_strategy"
+          ]
+        },
+        "pedestrian": {
+          "type": "object",
+          "description": "Parameters for pedestrian object validation",
+          "properties": {
+            "max_remapping_distance": {
+              "type": "number",
+              "default": 3.0,
+              "minimum": 0.0,
+              "description": "Maximum distance in meters for remapping pedestrians"
+            },
+            "max_speed_difference_ratio": {
+              "type": "number",
+              "default": 1.3,
+              "minimum": 1.0,
+              "description": "Maximum speed difference ratio (default: 30% tolerance)"
+            },
+            "min_speed_ratio": {
+              "type": "number",
+              "default": 0.3,
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Minimum speed ratio relative to dummy speed"
+            },
+            "max_speed_ratio": {
+              "type": "number",
+              "default": 2.0,
+              "minimum": 1.0,
+              "description": "Maximum speed ratio relative to dummy speed"
+            },
+            "speed_check_threshold": {
+              "type": "number",
+              "default": 0.5,
+              "minimum": 0.0,
+              "description": "Speed threshold in m/s above which to apply speed checks"
+            },
+            "path_selection_strategy": {
+              "type": "string",
+              "default": "random",
+              "enum": ["highest_confidence", "random"],
+              "description": "Path selection strategy: highest_confidence (highest confidence) or random"
+            }
+          },
+          "required": [
+            "max_remapping_distance",
+            "max_speed_difference_ratio",
+            "min_speed_ratio",
+            "max_speed_ratio",
+            "speed_check_threshold",
+            "path_selection_strategy"
+          ]
+        }
+      },
+      "required": [
+        "visible_range",
+        "detection_successful_rate",
+        "enable_ray_tracing",
+        "use_object_recognition",
+        "use_base_link_z",
+        "publish_ground_truth",
+        "random_seed",
+        "use_fixed_random_seed",
+        "object_centric_pointcloud",
+        "angle_increment",
+        "min_predicted_path_keep_duration",
+        "switch_time_threshold",
+        "vehicle",
+        "pedestrian"
+      ]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/dummy_perception_publisher"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}
