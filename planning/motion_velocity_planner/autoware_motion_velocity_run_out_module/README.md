@@ -44,6 +44,8 @@ we prepare the following sets of geometries based on the parameters defined for 
 - segments to strictly cut predicted paths (`cut_predicted_paths.strict_polygon_types`, `cut_predicted_paths.strict_linestring_types`, and `cut_predicted_paths.strict_lanelet_subtypes`).
   - strict cutting means that the cut is always applied, regardless of any preserved distance or duration.
 
+Polygon subtypes can also be considered if the parameter value is in the format `"type.subtype"`.
+
 The following figure shows an example where the polygons to ignore objects are shown in blue, to ignore collisions in green, and to cut predicted paths in red.
 
 ![map_filtering_data](./docs/map_filtering_data.png)
