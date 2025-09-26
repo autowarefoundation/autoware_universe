@@ -709,10 +709,7 @@ PredictedObjectMovementPlugin::find_matching_predicted_object(
     auto max_confidence_it = std::max_element(
       paths.begin(), paths.end(),
       [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
-
-    if (max_confidence_it != paths.begin()) {
-      std::swap(paths[0], *max_confidence_it);
-    }
+    std::swap(paths[0], *max_confidence_it);
 
     RCLCPP_DEBUG(
       rclcpp::get_logger("dummy_perception_publisher"),
