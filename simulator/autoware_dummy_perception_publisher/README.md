@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This node publishes the result of the dummy detection with the type of perception. The node now uses a plugin architecture to support different object movement strategies.
+This node publishes the result of the dummy detection with the type of perception. The node uses a plugin architecture to support different object movement strategies.
 
 ## Inner-workings / Algorithms
 
