@@ -19219,6 +19219,21 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Inner-workings / Algorithms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#plugin-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin Architecture
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -19265,15 +19280,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#node-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Node Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#core-parameters" class="md-nav__link">
     <span class="md-ellipsis">
       Core Parameters
@@ -19282,17 +19288,17 @@
   
 </li>
         
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#assumptions-known-limits" class="md-nav__link">
+          <li class="md-nav__item">
+  <a href="#predictedobjectmovementplugin-parameters" class="md-nav__link">
     <span class="md-ellipsis">
-      Assumptions / Known limits
+      PredictedObjectMovementPlugin Parameters
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -19317,8 +19323,30 @@
 
 <div><h1 id="dummy_perception_publisher">dummy_perception_publisher<a class="headerlink" href="#dummy_perception_publisher" title="Permanent link">#</a></h1>
 <h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
-<p>This node publishes the result of the dummy detection with the type of perception.</p>
+<p>This node publishes the result of the dummy detection with the type of perception. The node uses a plugin architecture to support different object movement strategies.</p>
 <h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
+<h3 id="plugin-architecture">Plugin Architecture<a class="headerlink" href="#plugin-architecture" title="Permanent link">#</a></h3>
+<p>The node uses a plugin-based architecture to handle different types of object movement. This allows for flexible and extensible movement behaviors without modifying the core node logic.</p>
+<h4 id="available-plugins">Available Plugins<a class="headerlink" href="#available-plugins" title="Permanent link">#</a></h4>
+<ol>
+<li><strong>StraightLineObjectMovementPlugin</strong>: Moves objects in straight lines based on their initial velocity and direction.</li>
+<li><strong>PredictedObjectMovementPlugin</strong>: Moves objects along predicted paths from perception predictions, providing more realistic movement patterns.</li>
+</ol>
+<h4 id="plugin-base-class">Plugin Base Class<a class="headerlink" href="#plugin-base-class" title="Permanent link">#</a></h4>
+<p>All movement plugins inherit from <code>DummyObjectMovementBasePlugin</code> which provides:</p>
+<ul>
+<li>Object management (add, delete operations)</li>
+<li>Associated action type handling</li>
+<li>Common interface for object movement</li>
+</ul>
+<h4 id="object-action-handling">Object Action Handling<a class="headerlink" href="#object-action-handling" title="Permanent link">#</a></h4>
+<ul>
+<li><strong>ADD</strong>: New objects are created and they move in a straight line, acceleration and deceleration parameters can be used.</li>
+<li><strong>MODIFY</strong>: Handled directly by the node, bypassing plugin movement logic. Immediately replaces the object's position information across all plugins.</li>
+<li><strong>DELETE</strong>: The specified object is removed from all plugins.</li>
+<li><strong>DELETEALL</strong>: Clears all objects from all plugins.</li>
+<li><strong>PREDICT</strong>: New objects are created, they move in a straight line for a set time and then the predictions extracted from the perception module are used to dictate where the objects will move to. NOTE: for ease of calculation, acceleration is not taken into account when calculating the object's position, only its initial speed.</li>
+</ul>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
 <h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
 <table>
@@ -19339,6 +19367,11 @@
 <td><code>input/object</code></td>
 <td><code>tier4_simulation_msgs::msg::DummyObject</code></td>
 <td>dummy detection objects</td>
+</tr>
+<tr>
+<td><code>predicted_objects</code></td>
+<td><code>autoware_perception_msgs::msg::PredictedObjects</code></td>
+<td>predicted objects (used by PredictedObjectMovementPlugin)</td>
 </tr>
 </tbody>
 </table>
@@ -19370,6 +19403,7 @@
 </tbody>
 </table>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
+<h3 id="core-parameters">Core Parameters<a class="headerlink" href="#core-parameters" title="Permanent link">#</a></h3>
 <table>
 <thead>
 <tr>
@@ -19428,14 +19462,88 @@
 <td>0</td>
 <td>random seed</td>
 </tr>
+<tr>
+<td><code>object_centric_pointcloud</code></td>
+<td>bool</td>
+<td>false</td>
+<td>if True, generate object-centric point clouds</td>
+</tr>
+<tr>
+<td><code>angle_increment</code></td>
+<td>double</td>
+<td>0.004363323</td>
+<td>angle increment for ray tracing (0.25° in radians)</td>
+</tr>
 </tbody>
 </table>
-<h3 id="node-parameters">Node Parameters<a class="headerlink" href="#node-parameters" title="Permanent link">#</a></h3>
-<p>None.</p>
-<h3 id="core-parameters">Core Parameters<a class="headerlink" href="#core-parameters" title="Permanent link">#</a></h3>
-<p>None.</p>
-<h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
-<p>TBD.</p></div>
+<h3 id="predictedobjectmovementplugin-parameters">PredictedObjectMovementPlugin Parameters<a class="headerlink" href="#predictedobjectmovementplugin-parameters" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default Value</th>
+<th>Explanation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>min_predicted_path_keep_duration</code></td>
+<td>double</td>
+<td>3.0</td>
+<td>minimum time (seconds) to keep using same prediction</td>
+</tr>
+<tr>
+<td><code>switch_time_threshold</code></td>
+<td>double</td>
+<td>2.0</td>
+<td>time threshold (seconds) to switch from straight-line to predicted path</td>
+</tr>
+</tbody>
+</table>
+<h4 id="common-remapping-parameters">Common Remapping Parameters<a class="headerlink" href="#common-remapping-parameters" title="Permanent link">#</a></h4>
+<p>The plugin uses <code>CommonParameters</code> for both vehicle and pedestrian object types. Each parameter is prefixed with either <code>vehicle.</code> or <code>pedestrian.</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter Name</th>
+<th>Type</th>
+<th>Explanation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>max_remapping_distance</code></td>
+<td>double</td>
+<td>maximum distance (meters) for remapping validation</td>
+</tr>
+<tr>
+<td><code>max_speed_difference_ratio</code></td>
+<td>double</td>
+<td>maximum speed difference ratio tolerance</td>
+</tr>
+<tr>
+<td><code>min_speed_ratio</code></td>
+<td>double</td>
+<td>minimum speed ratio relative to dummy object speed</td>
+</tr>
+<tr>
+<td><code>max_speed_ratio</code></td>
+<td>double</td>
+<td>maximum speed ratio relative to dummy object speed</td>
+</tr>
+<tr>
+<td><code>speed_check_threshold</code></td>
+<td>double</td>
+<td>speed threshold (m/s) above which speed checks apply</td>
+</tr>
+<tr>
+<td><code>path_selection_strategy</code></td>
+<td>string</td>
+<td>path selection strategy: "highest_confidence" or "random"</td>
+</tr>
+</tbody>
+</table></div>
 
 
 
