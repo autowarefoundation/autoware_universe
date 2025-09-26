@@ -480,7 +480,7 @@ void MultiObjectTracker::publish(const rclcpp::Time & time) const
   tracked_objects_pub_->publish(output_msg);
 
   if (publish_merged_objects_) {
-    const auto tf_base_to_world = odometry_->getTransform(time);  // geometry_msgs::msg::Transform
+    const auto tf_base_to_world = odometry_->getTransform(time);
     if (tf_base_to_world) {
       autoware_perception_msgs::msg::DetectedObjects merged_output_msg;
       processor_->getMergedObjects(time, *tf_base_to_world, merged_output_msg);
