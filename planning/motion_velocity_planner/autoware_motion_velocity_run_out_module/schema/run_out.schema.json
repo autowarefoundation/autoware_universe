@@ -303,7 +303,7 @@
             },
             "polygon_types": {
               "type": "array",
-              "description": "types of polygons in the vector map used to ignore objects",
+              "description": "types of polygons in the vector map used to ignore objects. Subtypes can also be represented using format 'type.subtype'.",
               "items": {
                 "type": "string"
               },
