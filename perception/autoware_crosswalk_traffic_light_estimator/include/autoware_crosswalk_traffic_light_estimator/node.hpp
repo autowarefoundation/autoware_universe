@@ -1,4 +1,4 @@
-// Copyright 2022 TIER IV, Inc.
+// Copyright 2022-2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -77,10 +77,18 @@ private:
   void updateLastDetectedSignal(const TrafficLightIdMap & traffic_signals);
   void updateLastDetectedSignals(const TrafficLightIdMap & traffic_signals);
   void updateFlashingState(const TrafficSignal & signal);
+
   uint8_t updateAndGetColorState(const TrafficSignal & signal);
+  /// @brief update the overrides of crosswalk signals from the lanelet map for the given traffic
+  /// light id
+  void update_crosswalk_overrides_from_map(
+    std::unordered_map<lanelet::Id, uint8_t> & crosswalk_traffic_signal_overrides,
+    const lanelet::Id traffic_light_group_id, const TrafficLightIdMap & traffic_light_id_map);
+
   void setCrosswalkTrafficSignal(
     const lanelet::ConstLanelet & crosswalk, const uint8_t color, const TrafficSignalArray & msg,
-    TrafficSignalArray & output);
+    TrafficSignalArray & output,
+    const std::unordered_map<lanelet::Id, uint8_t> & crosswalk_traffic_signal_overrides);
 
   lanelet::ConstLanelets getNonRedLanelets(
     const lanelet::ConstLanelets & lanelets, const TrafficLightIdMap & traffic_light_id_map) const;

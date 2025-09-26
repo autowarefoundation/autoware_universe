@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<library path="autoware_trajectory_safety_filter_plugins">
+  <class type="autoware::trajectory_safety_filter::plugin::OutOfLaneFilter"
+         base_class_type="autoware::trajectory_safety_filter::plugin::SafetyFilterInterface">
+    <description>
+      Filters trajectories that go out of lane boundaries
+    </description>
+  </class>
+  <class type="autoware::trajectory_safety_filter::plugin::CollisionFilter"
+         base_class_type="autoware::trajectory_safety_filter::plugin::SafetyFilterInterface">
+    <description>
+      Filters trajectories based on Time To Collision (TTC) with predicted objects
+    </description>
+  </class>
+</library>

@@ -61,55 +61,12 @@ public:
 
 private:
   void postProcess(
-    int class_index, float prob, tier4_perception_msgs::msg::TrafficLight & traffic_signal);
+    int class_index, float prob, tier4_perception_msgs::msg::TrafficLight & traffic_signal) const;
   bool readLabelfile(std::string filepath, std::vector<std::string> & labels);
-  bool isColorLabel(const std::string & label);
   void outputDebugImage(
     cv::Mat & debug_image, const tier4_perception_msgs::msg::TrafficLight & traffic_signal);
 
 private:
-  std::map<int, std::string> state2label_{
-    // color
-    {tier4_perception_msgs::msg::TrafficLightElement::RED, "red"},
-    {tier4_perception_msgs::msg::TrafficLightElement::AMBER, "yellow"},
-    {tier4_perception_msgs::msg::TrafficLightElement::GREEN, "green"},
-    {tier4_perception_msgs::msg::TrafficLightElement::WHITE, "white"},
-    // shape
-    {tier4_perception_msgs::msg::TrafficLightElement::CIRCLE, "circle"},
-    {tier4_perception_msgs::msg::TrafficLightElement::LEFT_ARROW, "left"},
-    {tier4_perception_msgs::msg::TrafficLightElement::RIGHT_ARROW, "right"},
-    {tier4_perception_msgs::msg::TrafficLightElement::UP_ARROW, "straight"},
-    {tier4_perception_msgs::msg::TrafficLightElement::UP_LEFT_ARROW, "up_left"},
-    {tier4_perception_msgs::msg::TrafficLightElement::UP_RIGHT_ARROW, "up_right"},
-    {tier4_perception_msgs::msg::TrafficLightElement::DOWN_ARROW, "down"},
-    {tier4_perception_msgs::msg::TrafficLightElement::DOWN_LEFT_ARROW, "down_left"},
-    {tier4_perception_msgs::msg::TrafficLightElement::DOWN_RIGHT_ARROW, "down_right"},
-    {tier4_perception_msgs::msg::TrafficLightElement::CROSS, "cross"},
-    // other
-    {tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN, "unknown"},
-  };
-
-  std::map<std::string, int> label2state_{
-    // color
-    {"red", tier4_perception_msgs::msg::TrafficLightElement::RED},
-    {"yellow", tier4_perception_msgs::msg::TrafficLightElement::AMBER},
-    {"green", tier4_perception_msgs::msg::TrafficLightElement::GREEN},
-    {"white", tier4_perception_msgs::msg::TrafficLightElement::WHITE},
-    // shape
-    {"circle", tier4_perception_msgs::msg::TrafficLightElement::CIRCLE},
-    {"left", tier4_perception_msgs::msg::TrafficLightElement::LEFT_ARROW},
-    {"right", tier4_perception_msgs::msg::TrafficLightElement::RIGHT_ARROW},
-    {"straight", tier4_perception_msgs::msg::TrafficLightElement::UP_ARROW},
-    {"up_left", tier4_perception_msgs::msg::TrafficLightElement::UP_LEFT_ARROW},
-    {"up_right", tier4_perception_msgs::msg::TrafficLightElement::UP_RIGHT_ARROW},
-    {"down", tier4_perception_msgs::msg::TrafficLightElement::DOWN_ARROW},
-    {"down_left", tier4_perception_msgs::msg::TrafficLightElement::DOWN_LEFT_ARROW},
-    {"down_right", tier4_perception_msgs::msg::TrafficLightElement::DOWN_RIGHT_ARROW},
-    {"cross", tier4_perception_msgs::msg::TrafficLightElement::CROSS},
-    // other
-    {"unknown", tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN},
-  };
-
   rclcpp::Node * node_ptr_;
   int batch_size_;
   std::unique_ptr<autoware::tensorrt_classifier::TrtClassifier> classifier_;

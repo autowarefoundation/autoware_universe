@@ -90,6 +90,7 @@ using autoware::vehicle_info_utils::VehicleInfo;
 using builtin_interfaces::msg::Duration;
 using builtin_interfaces::msg::Time;
 using geometry_msgs::msg::Point;
+using geometry_msgs::msg::Pose;
 using preprocess::TrafficSignalStamped;
 using rcl_interfaces::msg::SetParametersResult;
 using std_msgs::msg::ColorRGBA;
@@ -115,7 +116,10 @@ struct DiffusionPlannerParams
   bool update_traffic_light_group_info;
   bool keep_last_traffic_light_group_info;
   double traffic_light_group_msg_timeout_seconds;
+  bool use_route_handler;
   int batch_size;
+  std::vector<double> temperature_list;
+  int64_t velocity_smoothing_window;
 };
 struct DiffusionPlannerDebugParams
 {
@@ -159,7 +163,7 @@ struct DiffusionPlannerDebugParams
  * @section Internal State
  * @brief
  * - route_handler_: Handles route-related operations.
- * - transforms_: Stores transformation matrices between map and ego frames.
+ * - ego_to_map_transforms_: Stores transformation matrices between ego and map coordinates.
  * - ego_kinematic_state_: Current odometry state of the ego vehicle.
  * - ONNX Runtime members: env_, session_options_, session_, allocator_, cuda_options_.
  * - agent_data_: Optional input data for inference.
@@ -175,6 +179,8 @@ class DiffusionPlanner : public rclcpp::Node
 public:
   explicit DiffusionPlanner(const rclcpp::NodeOptions & options);
   ~DiffusionPlanner();
+
+private:
   /**
    * @brief Initialize and declare node parameters.
    */
@@ -243,7 +249,7 @@ public:
 
   // preprocessing
   std::shared_ptr<RouteHandler> route_handler_{std::make_shared<RouteHandler>()};
-  std::pair<Eigen::Matrix4d, Eigen::Matrix4d> transforms_;
+  Eigen::Matrix4d ego_to_map_transform_;
   AgentData get_ego_centric_agent_data(
     const TrackedObjects & objects, const Eigen::Matrix4d & map_to_ego_transform);
 
@@ -254,16 +260,22 @@ public:
    */
   std::vector<float> replicate_for_batch(const std::vector<float> & single_data);
 
-  // current state
-  Odometry ego_kinematic_state_;
+  /**
+   * @brief Select route segment indices based on the route handler.
+   * @param ego_kinematic_state The current state of the ego vehicle.
+   * @return Vector of selected route segment indices.
+   */
+  std::vector<int64_t> select_route_segment_indices_by_route_handler(
+    const nav_msgs::msg::Odometry & ego_kinematic_state) const;
 
   // ego history for ego_agent_past
-  std::deque<Odometry> ego_history_;
+  std::deque<Pose> ego_history_;
 
   // TensorRT
   std::unique_ptr<TrtConvCalib> trt_common_;
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_{nullptr};
   // For float inputs and output
+  CudaUniquePtr<float[]> sampled_trajectories_d_;
   CudaUniquePtr<float[]> ego_history_d_;
   CudaUniquePtr<float[]> ego_current_state_d_;
   CudaUniquePtr<float[]> neighbor_agents_past_d_;

@@ -17,7 +17,7 @@
 
 #include <Eigen/Core>
 
-#include <nav_msgs/msg/odometry.hpp>
+#include <geometry_msgs/msg/pose.hpp>
 
 #include <cassert>
 #include <deque>
@@ -49,20 +49,31 @@ void normalize_input_data(
   InputDataMap & input_data_map, const NormalizationMap & normalization_map);
 
 /**
- * @brief Creates ego agent past trajectory data from odometry messages.
+ * @brief Creates ego agent past trajectory data from pose messages.
  *
- * This function processes a sequence of odometry messages to create ego vehicle's
+ * This function processes a sequence of pose messages to create ego vehicle's
  * past trajectory data in the ego reference frame. Each timestep contains
  * x, y position and heading information as cos(yaw) and sin(yaw).
  *
- * @param[in] odometry_msgs        Deque of odometry messages
+ * @param[in] pose_msgs        Deque of pose messages
  * @param[in] num_timesteps       Number of timesteps to process
  * @param[in] map_to_ego_transform Transformation matrix from map to ego frame
  * @return Vector of floats containing [x, y, cos_yaw, sin_yaw] for each timestep
  */
 std::vector<float> create_ego_agent_past(
-  const std::deque<nav_msgs::msg::Odometry> & odometry_msgs, size_t num_timesteps,
+  const std::deque<geometry_msgs::msg::Pose> & pose_msgs, size_t num_timesteps,
   const Eigen::Matrix4d & map_to_ego_transform);
+
+/**
+ * @brief Creates random sampled trajectories for diffusion model input.
+ *
+ * This function generates a set of random sampled trajectories based on the specified
+ * temperature parameter. The trajectories are intended to be used as input for the diffusion
+ * planner model.
+ * @param[in] temperature Temperature parameter to control the randomness of the trajectories.
+ * @return A vector of floats representing the sampled trajectories.
+ */
+std::vector<float> create_sampled_trajectories(const double temperature);
 
 }  // namespace autoware::diffusion_planner::preprocess
 #endif  // AUTOWARE__DIFFUSION_PLANNER__PREPROCESSING__PREPROCESSING_UTILS_HPP_

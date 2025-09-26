@@ -27,6 +27,7 @@
 
 #include <nav_msgs/msg/odometry.hpp>
 
+#include <boost/functional/hash.hpp>
 #include <boost/geometry/geometry.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
@@ -191,6 +192,19 @@ struct IdxForRTreeSegment
   [[nodiscard]] constexpr bool operator!=(const IdxForRTreeSegment & rhs) const noexcept
   {
     return !(*this == rhs);
+  }
+};
+
+struct IdxForRTreeSegmentHash
+{
+  size_t operator()(const IdxForRTreeSegment & s) const noexcept
+  {
+    size_t seed = 0;
+    // Boost hash_combine is a good choice for combining hashes
+    boost::hash_combine(seed, s.linestring_id);
+    boost::hash_combine(seed, s.segment_start_idx);
+    boost::hash_combine(seed, s.segment_end_idx);
+    return seed;
   }
 };
 
