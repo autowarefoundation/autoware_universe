@@ -17,7 +17,7 @@
  * @brief CPU usage statistics collection and calculation implementation
  */
 
-#include "system_monitor/cpu_monitor/cpu_usage_statistics.hpp"
+#include "cpu_usage_statistics.hpp"
 
 #include <algorithm>
 #include <cstdint>
