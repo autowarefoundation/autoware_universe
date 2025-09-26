@@ -20,18 +20,17 @@
 
 using std::sqrt;
 
-class vec3 {
-  public:
-    double x_, y_, z_;
+class vec3
+{
+public:
+  double x_, y_, z_;
 
-    vec3() : x_(0), y_(0), z_(0) {}
-    vec3(double x, double y, double z) : x_(x), y_(y), z_(z) {}
+  vec3() : x_(0), y_(0), z_(0) {}
+  vec3(double x, double y, double z) : x_(x), y_(y), z_(z) {}
 
-    double x() const { return x_;}
-    double y() const { return y_;}
-    double z() const { return z_;}
+  double x() const { return x_; }
+  double y() const { return y_; }
+  double z() const { return z_; }
 };
 
-#endif
-
-
+#endif  // SPHERIC_COLLISION_DETECTOR__VEC3_HPP_

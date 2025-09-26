@@ -25,21 +25,21 @@
 
 namespace sphere3
 {
-    class Sphere3{
-        public:
-            Eigen::Vector3d center_;
-            double radius_;
-            int tag_;
+class Sphere3
+{
+public:
+  Eigen::Vector3d center_;
+  double radius_;
+  int tag_;
 
-            std::vector<Eigen::Vector3d> vPts_;
-            Sphere3(Eigen::Vector3d center, double radius, int tag);
-            void computeSphereCoords(std::vector<Eigen::Vector3d> &pts);
+  std::vector<Eigen::Vector3d> vPts_;
+  Sphere3(Eigen::Vector3d center, double radius, int tag);
+  void computeSphereCoords(std::vector<Eigen::Vector3d> & pts);
 
-            ~Sphere3();
-            void setVelocity(double x, double y, double z);
-            void setCenter(double x, double y, double z);
+  ~Sphere3();
+  void setVelocity(double x, double y, double z);
+  void setCenter(double x, double y, double z);
+};
+}  // namespace sphere3
 
-    };
-} //namespace sphere3
-
-#endif  // SPHERIC_COLLISION_DETECTOR_SPHERE3_HPP_
+#endif  // SPHERIC_COLLISION_DETECTOR__SPHERE3_HPP_

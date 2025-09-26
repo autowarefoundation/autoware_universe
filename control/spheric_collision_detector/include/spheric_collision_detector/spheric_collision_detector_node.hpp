@@ -19,16 +19,14 @@
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
-
 #include <tier4_autoware_utils/geometry/geometry.hpp>
 #include <tier4_autoware_utils/ros/debug_publisher.hpp>
 #include <tier4_autoware_utils/ros/processing_time_publisher.hpp>
 #include <tier4_autoware_utils/ros/self_pose_listener.hpp>
 #include <tier4_autoware_utils/ros/transform_listener.hpp>
 
-#include <autoware_auto_planning_msgs/msg/trajectory.hpp>
 #include <autoware_auto_perception_msgs/msg/detected_objects.hpp>
-
+#include <autoware_auto_planning_msgs/msg/trajectory.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -58,7 +56,7 @@ private:
   std::shared_ptr<tier4_autoware_utils::SelfPoseListener> self_pose_listener_;
   std::shared_ptr<tier4_autoware_utils::TransformListener> transform_listener_;
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_obstacle_pointcloud_;
-  rclcpp::Subscription<autoware_auto_perception_msgs::msg::DetectedObjects>::SharedPtr 
+  rclcpp::Subscription<autoware_auto_perception_msgs::msg::DetectedObjects>::SharedPtr
     sub_object_recognition_;
   rclcpp::Subscription<autoware_auto_planning_msgs::msg::Trajectory>::SharedPtr
     sub_reference_trajectory_;
@@ -69,17 +67,18 @@ private:
   // Data Buffer
   geometry_msgs::msg::PoseStamped::ConstSharedPtr current_pose_;
   geometry_msgs::msg::Twist::ConstSharedPtr current_twist_;
-  //sensor_msgs::msg::PointCloud2::ConstSharedPtr obstacle_pointcloud_;
+  // sensor_msgs::msg::PointCloud2::ConstSharedPtr obstacle_pointcloud_;
   autoware_auto_perception_msgs::msg::DetectedObjects::ConstSharedPtr object_recognition_;
 
   autoware_auto_planning_msgs::msg::Trajectory::ConstSharedPtr predicted_trajectory_;
   geometry_msgs::msg::TransformStamped object_recognition_transform_;
 
   // Callback
-  //void onObstaclePointcloud(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
+  // void onObstaclePointcloud(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
   void onPredictedTrajectory(const autoware_auto_planning_msgs::msg::Trajectory::SharedPtr msg);
   void onOdom(const nav_msgs::msg::Odometry::SharedPtr msg);
-  void onObjectRecognition(const autoware_auto_perception_msgs::msg::DetectedObjects::SharedPtr msg);
+  void onObjectRecognition(
+    const autoware_auto_perception_msgs::msg::DetectedObjects::SharedPtr msg);
 
   // Publisher
   std::shared_ptr<tier4_autoware_utils::DebugPublisher> debug_publisher_;
