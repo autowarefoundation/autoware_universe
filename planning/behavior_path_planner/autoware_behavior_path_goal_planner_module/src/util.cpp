@@ -883,7 +883,7 @@ std::optional<Pose> calcRefinedGoal(
     // find position
     const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(goal_pose.position);
     const auto segment = *autoware::experimental::lanelet2_utils::get_closest_segment(
-      lanelet::utils::to2D(lanelet_point), closest_pull_over_lanelet.centerline());
+      closest_pull_over_lanelet.centerline(), lanelet_point.basicPoint());
     const auto p1 = segment.front().basicPoint();
     const auto p2 = segment.back().basicPoint();
     const auto direction_vector = (p2 - p1).normalized();
