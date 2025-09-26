@@ -336,7 +336,7 @@ const Pose refineGoal(const Pose & goal, const lanelet::ConstLanelet & goal_lane
     return goal;
   }
 
-  const auto segment = *autoware::experimental::lanelet2_utils::get_closest_segment(
+  const auto segment = autoware::experimental::lanelet2_utils::get_closest_segment(
     goal_lanelet.centerline(), lanelet_point.basicPoint());
   if (segment.empty()) {
     return goal;
