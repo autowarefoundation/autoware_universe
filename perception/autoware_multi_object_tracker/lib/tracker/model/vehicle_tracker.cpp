@@ -332,54 +332,78 @@ bool VehicleTracker::conditionedUpdate(
 
 WheelInfo VehicleTracker::estimateUpdateWheel(
   const types::DynamicObject & measurement, const types::DynamicObject & prediction,
-  const autoware_perception_msgs::msg::Shape & /*smoothed_shape*/) const
+  const autoware_perception_msgs::msg::Shape & smoothed_shape) const
 {
   WheelInfo wheel_info;
 
-  // Calculate wheel positions from predicted center pose
+  // Get predicted pose information
   const double pred_yaw = tf2::getYaw(prediction.pose.orientation);
   const double cos_yaw = std::cos(pred_yaw);
   const double sin_yaw = std::sin(pred_yaw);
 
-  // Get vehicle length from motion model (this is tracked and more accurate than shape)
-  const double vehicle_length = motion_model_.getLength();
+  // Get dimensions
+  const double measured_length = measurement.shape.dimensions.x;
+  const double predicted_length = prediction.shape.dimensions.x;
+  const double smoothed_length = smoothed_shape.dimensions.x;
 
-  // Use object model's wheel position ratios (same parameters used to initialize motion model)
+  // Calculate edge center points in world coordinates
+  const double measured_half_length = measured_length * 0.5;
+  const double predicted_half_length = predicted_length * 0.5;
+
+  // Measurement front/rear edge centers
+  const double meas_front_x = measurement.pose.position.x + measured_half_length * cos_yaw;
+  const double meas_front_y = measurement.pose.position.y + measured_half_length * sin_yaw;
+  const double meas_rear_x = measurement.pose.position.x - measured_half_length * cos_yaw;
+  const double meas_rear_y = measurement.pose.position.y - measured_half_length * sin_yaw;
+
+  // Predicted front/rear edge centers (using smoothed length)
+  const double pred_front_x = prediction.pose.position.x + predicted_half_length * cos_yaw;
+  const double pred_front_y = prediction.pose.position.y + predicted_half_length * sin_yaw;
+  const double pred_rear_x = prediction.pose.position.x - predicted_half_length * cos_yaw;
+  const double pred_rear_y = prediction.pose.position.y - predicted_half_length * sin_yaw;
+
+  // Project onto vehicle's longitudinal axis to find the correctly detected edge
+  const double meas_front_axis = meas_front_x * cos_yaw + meas_front_y * sin_yaw;
+  const double meas_rear_axis = meas_rear_x * cos_yaw + meas_rear_y * sin_yaw;
+  const double pred_front_axis = pred_front_x * cos_yaw + pred_front_y * sin_yaw;
+  const double pred_rear_axis = pred_rear_x * cos_yaw + pred_rear_y * sin_yaw;
+
+  // Find minimum distance for each predicted edge to any measurement edge
+  const double front_dist = std::min(
+    std::abs(meas_front_axis - pred_front_axis), std::abs(meas_rear_axis - pred_front_axis));
+  const double rear_dist =
+    std::min(std::abs(meas_front_axis - pred_rear_axis), std::abs(meas_rear_axis - pred_rear_axis));
+
+  // Determine which predicted edge aligns better with measurement
+  const bool use_front_wheel = (front_dist <= rear_dist);
+
+  // Calculate wheel position from the selected edge center + wheel offset
   const auto & bicycle_state = object_model_.bicycle_state;
-  const double lr =
-    std::max(vehicle_length * bicycle_state.wheel_pos_ratio_rear, bicycle_state.wheel_pos_rear_min);
-  const double lf = std::max(
-    vehicle_length * bicycle_state.wheel_pos_ratio_front, bicycle_state.wheel_pos_front_min);
+  const double wheel_offset_ratio =
+    use_front_wheel ? bicycle_state.wheel_pos_ratio_front : bicycle_state.wheel_pos_ratio_rear;
+  const double wheel_min_dist =
+    use_front_wheel ? bicycle_state.wheel_pos_front_min : bicycle_state.wheel_pos_rear_min;
 
-  // Calculate predicted wheel positions (same approach as motion model initialization)
-  geometry_msgs::msg::Point front_wheel;
-  front_wheel.x = prediction.pose.position.x + lf * cos_yaw;
-  front_wheel.y = prediction.pose.position.y + lf * sin_yaw;
-  front_wheel.z = prediction.pose.position.z;
+  // Calculate wheel offset from edge (not center) using smoothed length
+  const double edge_to_wheel_offset =
+    std::max(smoothed_length * (0.5 - wheel_offset_ratio), wheel_min_dist - smoothed_length * 0.5);
 
-  geometry_msgs::msg::Point rear_wheel;
-  rear_wheel.x = prediction.pose.position.x - lr * cos_yaw;
-  rear_wheel.y = prediction.pose.position.y - lr * sin_yaw;
-  rear_wheel.z = prediction.pose.position.z;
-
-  // Calculate distances from measurement to predicted wheel positions
-  double dx_front = measurement.pose.position.x - front_wheel.x;
-  double dy_front = measurement.pose.position.y - front_wheel.y;
-  double dist_to_front_sq = dx_front * dx_front + dy_front * dy_front;
-
-  double dx_rear = measurement.pose.position.x - rear_wheel.x;
-  double dy_rear = measurement.pose.position.y - rear_wheel.y;
-  double dist_to_rear_sq = dx_rear * dx_rear + dy_rear * dy_rear;
-
-  // Choose wheel based on proximity to measurement
-  // Use front wheel if closer or equal (front wheel generally more stable for tracking)
-  if (dist_to_front_sq <= dist_to_rear_sq) {
-    wheel_info.update_front_wheel = true;
-    wheel_info.wheel_position = front_wheel;
+  // Calculate wheel position from selected edge center
+  geometry_msgs::msg::Point wheel_position;
+  if (use_front_wheel) {
+    // Front wheel: move inward from front edge
+    wheel_position.x = pred_front_x - edge_to_wheel_offset * cos_yaw;
+    wheel_position.y = pred_front_y - edge_to_wheel_offset * sin_yaw;
   } else {
-    wheel_info.update_front_wheel = false;
-    wheel_info.wheel_position = rear_wheel;
+    // Rear wheel: move inward from rear edge
+    wheel_position.x = pred_rear_x + edge_to_wheel_offset * cos_yaw;
+    wheel_position.y = pred_rear_y + edge_to_wheel_offset * sin_yaw;
   }
+  wheel_position.z = prediction.pose.position.z;
+
+  // Set results
+  wheel_info.update_front_wheel = use_front_wheel;
+  wheel_info.wheel_position = wheel_position;
 
   return wheel_info;
 }
