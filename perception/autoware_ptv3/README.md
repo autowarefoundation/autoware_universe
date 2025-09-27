@@ -25,8 +25,8 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 | Name                                   | Type                                                | Description                               |
 | -------------------------------------- | --------------------------------------------------- | ----------------------------------------- |
 | `~/output/segmented/pointcloud`        | `sensor_msgs::msg::PointCloud2`                     | RGB segmented pointcloud.                 |
-| `~/output/ground_segmented/pointcloud` | `sensor_msgs::msg::PointCloud2`                     | Class probabilities segmented pointcloud. |
-| `~/output/probs/pointcloud`            | `sensor_msgs::msg::PointCloud2`                     | Pointcloud with the ground segmented out. |
+| `~/output/ground_segmented/pointcloud` | `sensor_msgs::msg::PointCloud2`                     | Pointcloud with the ground segmented out. |
+| `~/output/probs/pointcloud`            | `sensor_msgs::msg::PointCloud2`                     | Class probabilities segmented pointcloud. |
 | `debug/cyclic_time_ms`                 | `autoware_internal_debug_msgs::msg::Float64Stamped` | Cyclic time (ms).                         |
 | `debug/pipeline_latency_ms`            | `autoware_internal_debug_msgs::msg::Float64Stamped` | Pipeline latency time (ms).               |
 | `debug/processing_time/preprocess_ms`  | `autoware_internal_debug_msgs::msg::Float64Stamped` | Preprocess (ms).                          |
@@ -66,7 +66,7 @@ This node assumes that the input pointcloud follows the `PointXYZIRC` layout def
 
 ## Trained Models
 
-TODO
+- v1 – First model release trained with PoC pseudo labels for the internal T4 dataset.
 
 ### Changelog
 

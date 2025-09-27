@@ -4,7 +4,6 @@
     plugins_path: $(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so
     # network
     trt_precision: fp16
-    #trt_precision: fp32
     cloud_capacity: 2000000
     onnx_path: "$(var model_path)/ptv3.onnx"
     engine_path: "$(var model_path)/ptv3.engine"
