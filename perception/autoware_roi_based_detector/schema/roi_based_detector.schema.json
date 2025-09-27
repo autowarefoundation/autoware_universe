@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for ROI based detector",
+  "type": "object",
+  "definitions": {
+    "roi_based_detector": {
+      "type": "object",
+      "properties": {
+        "target_frame": {
+          "type": "string",
+          "description": "Transform target frame.",
+          "default": "base_link"
+        },
+        "ignore_class": {
+          "type": "object",
+          "properties": {
+            "UNKNOWN": {
+              "type": "boolean",
+              "description": "If true, objects with the 'UNKNOWN' label will be ignored during processing.",
+              "default": true
+            },
+            "CAR": {
+              "type": "boolean",
+              "description": "If true, objects with the 'CAR' label will be ignored during processing.",
+              "default": true
+            },
+            "TRUCK": {
+              "type": "boolean",
+              "description": "If true, objects with the 'TRUCK' label will be ignored during processing.",
+              "default": true
+            },
+            "BUS": {
+              "type": "boolean",
+              "description": "If true, objects with the 'BUS' label will be ignored during processing.",
+              "default": true
+            },
+            "TRAILER": {
+              "type": "boolean",
+              "description": "If true, objects with the 'TRAILER' label will be ignored during processing.",
+              "default": true
+            },
+            "MOTORCYCLE": {
+              "type": "boolean",
+              "description": "If true, objects with the 'MOTORCYCLE' label will be ignored during processing.",
+              "default": true
+            },
+            "BICYCLE": {
+              "type": "boolean",
+              "description": "If true, objects with the 'BICYCLE' label will be ignored during processing.",
+              "default": true
+            },
+            "PEDESTRIAN": {
+              "type": "boolean",
+              "description": "If true, objects with the 'PEDESTRIAN' label will be ignored during processing.",
+              "default": false
+            }
+          }
+        },
+        "rois_ids": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "An array of input ROIs ids",
+          "default": [0]
+        },
+        "detection_max_range": {
+          "type": "number",
+          "description": "Maximum detection range. Objects beyond this distance will not be included in the output [m].",
+          "default": 30.0,
+          "minimum": 0.0
+        },
+        "pseudo_height": {
+          "type": "number",
+          "description": "If height was not able to compute, this value will used as pseudo height of a object [m].",
+          "default": 1.5,
+          "minimum": 0.1
+        },
+        "roi_truncation": {
+          "type": "object",
+          "properties": {
+            "check_truncation": {
+              "type": "boolean",
+              "description": "If true, checks whether an ROI is near the bottom border of the image.",
+              "default": true
+            },
+            "truncation_image_bottom_margin": {
+              "type": "integer",
+              "description": "Pixel margin from the bottom of the image used to determine whether an ROI is considered truncated [pixel].",
+              "default": 0
+            },
+            "projection_plane_z": {
+              "type": "number",
+              "description": "Depth value used for projection when an ROI is considered truncated. The bottom point of the ROI will be projected onto the camera plane at this z value [m].",
+              "default": 0.5,
+              "minimum": 0.0
+            }
+          }
+        }
+      },
+      "required": [
+        "target_frame",
+        "ignore_class",
+        "rois_ids",
+        "detection_max_range",
+        "pseudo_height",
+        "roi_truncation"
+      ]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/roi_based_detector"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}

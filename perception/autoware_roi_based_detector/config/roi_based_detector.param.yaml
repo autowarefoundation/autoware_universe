@@ -1,0 +1,23 @@
+/**:
+  ros__parameters:
+    target_frame: "base_link"
+    ignore_class:
+      UNKNOWN : true
+      CAR : true
+      TRUCK : true
+      BUS : true
+      TRAILER : true
+      MOTORCYCLE : true
+      BICYCLE : true
+      PEDESTRIAN : false
+    rois_ids: [0, 1]
+
+    # if an object is detected farther than this, it will be filtered out
+    detection_max_range: 30.0 # [m]
+    # if object height is unavailable, this will be used instead
+    pseudo_height: 1.5 # [m]
+
+    roi_truncation:
+      check_truncation: true
+      truncation_image_bottom_margin: 0 # [pixel]
+      projection_plane_z: 0.5 # [m]
