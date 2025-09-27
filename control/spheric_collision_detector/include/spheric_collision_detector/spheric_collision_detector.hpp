@@ -49,10 +49,7 @@ using Path = std::vector<geometry_msgs::msg::Pose>;
 struct Param
 {
   double delay_time;
-  double footprint_margin;
   double max_deceleration;
-  double resample_interval;
-  double search_radius;
 };
 
 struct Input
@@ -73,10 +70,8 @@ struct Output
   std::vector<LinearRing2d> vehicle_footprints;
   std::vector<std::shared_ptr<sphere3::Sphere3>> vehicle_passing_areas;
   long int collision_elapsed_time;
-  //long int vehicle_area_elapsed_time;
   std::vector<std::vector<std::shared_ptr<sphere3::Sphere3>>> obstacles;
   std::vector<LinearRing2d> obstacle_areas;
-  int loops;
 };
 
 class SphericCollisionDetector
@@ -111,14 +106,9 @@ private:
     const double vehicle_height,
     const double sphere_radius);
 
-  static bool checkCollision(
-    const std::vector<std::shared_ptr<sphere3::Sphere3>> & ego_spheres, 
-    const std::vector<std::shared_ptr<sphere3::Sphere3>> & obstacle_spheres,
-    int & loops);
-
-    // static bool checkCollision(
-    // const std::vector<std::shared_ptr<sphere3::Sphere3>> & ego_spheres, 
-    // const std::vector<std::shared_ptr<sphere3::Sphere3>> & obstacle_spheres);
+    static bool checkCollision(
+      const std::vector<std::shared_ptr<sphere3::Sphere3>> & ego_spheres, 
+      const std::vector<std::shared_ptr<sphere3::Sphere3>> & obstacle_spheres);
 };
 }  // namespace spheric_collision_detector
 

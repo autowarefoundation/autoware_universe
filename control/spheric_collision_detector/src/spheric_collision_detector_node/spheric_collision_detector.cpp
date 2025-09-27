@@ -69,15 +69,13 @@ std::vector<std::vector<std::shared_ptr<sphere3::Sphere3>>> createObstacleSphere
 
       const auto pz = map_pose.position.z;
 
-      auto sphere_radius = 0.0;
-
       tier4_autoware_utils::LinearRing2d local_obj_footprint;
 
       const auto dim_x = obj.shape.dimensions.x;// Length
       const auto dim_y = obj.shape.dimensions.y; // Width
       auto object_type = obj.classification.front().label;
 
-      sphere_radius = dim_y * 0.5;
+      const auto sphere_radius = dim_y * 0.5;
       const double lon_margin = 0.35; //to tuck spheres about the bounding boxes
       
       const auto x_front = lon_margin * dim_x;
@@ -181,12 +179,9 @@ Output SphericCollisionDetector::update(const Input & input)
 
   // collision check
   for(const auto & obstacle: obstacles){
-    int loops = 0;
     auto cc_start_time = std::chrono::steady_clock::now();
-    output.will_collide = checkCollision(output.vehicle_passing_areas, obstacle, loops);
-    //output.will_collide = checkCollision(output.vehicle_passing_areas, obstacle);
+    output.will_collide = checkCollision(output.vehicle_passing_areas, obstacle);
     auto cc_end_time = std::chrono::steady_clock::now();
-    output.loops = loops;
 
     auto cc_elapsed_time = 
       std::chrono::duration_cast<std::chrono::nanoseconds>(cc_end_time - cc_start_time);
@@ -305,8 +300,7 @@ std::vector<std::shared_ptr<sphere3::Sphere3>> SphericCollisionDetector::createV
 
 bool SphericCollisionDetector::checkCollision(
         const std::vector<std::shared_ptr<sphere3::Sphere3>> & ego_spheres,
-        const std::vector<std::shared_ptr<sphere3::Sphere3>> & obstacle_spheres,
-        int & loops){
+        const std::vector<std::shared_ptr<sphere3::Sphere3>> & obstacle_spheres){
 
       for (const auto & obstacle_sphere:obstacle_spheres){
         for(const auto & ego_sphere:ego_spheres){
@@ -316,7 +310,6 @@ bool SphericCollisionDetector::checkCollision(
                   pow(ego_sphere->center_.z() - obstacle_sphere->center_.z(),2)); 
 
           double sum_radii = ego_sphere->radius_ + obstacle_sphere->radius_;
-          ++loops;
 
           if(center_dist <= sum_radii){
               return true;           
@@ -326,37 +319,4 @@ bool SphericCollisionDetector::checkCollision(
 
    return false;
 }
-
-// bool SphericCollisionDetector::checkCollision(
-//         const std::vector<std::shared_ptr<sphere3::Sphere3>> & ego_spheres,
-//         const std::vector<std::shared_ptr<sphere3::Sphere3>> & obstacle_spheres)
-// {
-//       for (const auto & obstacle_sphere:obstacle_spheres){
-
-//         const auto & obs_center = obstacle_sphere->center_;
-//         const double obs_x = obs_center.x();
-//         const double obs_y = obs_center.y();  
-//         const double obs_z = obs_center.z();      
-//         const double obs_radius = obstacle_sphere->radius_;
-
-//         for(const auto & ego_sphere:ego_spheres){
-
-//           const auto & ego_center = ego_sphere->center_;
-//           const double dx = ego_center.x()-obs_x;
-//           const double dy = ego_center.y()-obs_y;  
-//           const double dz = ego_center.z()-obs_z;  
-
-//           double center_dist = dx*dx + dy*dy + dz*dz; 
-
-//           double sum_radii = ego_sphere->radius_ + obs_radius;
-
-//           if(center_dist <= sum_radii){
-//               return true;           
-//           }
-//         }
-//       }
-
-//    return false;
-// }
-
 }  // namespace spheric_collision_detector

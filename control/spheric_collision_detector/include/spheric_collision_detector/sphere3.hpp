@@ -35,10 +35,6 @@ namespace sphere3
             Sphere3(Eigen::Vector3d center, double radius, int tag);
             void computeSphereCoords(std::vector<Eigen::Vector3d> &pts);
 
-            ~Sphere3();
-            void setVelocity(double x, double y, double z);
-            void setCenter(double x, double y, double z);
-
     };
 } //namespace sphere3
 

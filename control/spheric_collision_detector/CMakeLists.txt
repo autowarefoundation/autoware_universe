@@ -12,7 +12,6 @@ include_directories(
 )
 
 ament_auto_add_library(spheric_collision_detector SHARED
-  src/spheric_collision_detector_node/vec3.cpp
   src/spheric_collision_detector_node/sphere3.cpp
   src/spheric_collision_detector_node/spheric_collision_detector.cpp
   src/spheric_collision_detector_node/spheric_collision_detector_node.cpp
