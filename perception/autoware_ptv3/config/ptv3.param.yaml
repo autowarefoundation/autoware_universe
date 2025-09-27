@@ -1,0 +1,13 @@
+/**:
+  ros__parameters:
+    # plugins
+    plugins_path: $(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so
+    # network
+    trt_precision: fp16
+    cloud_capacity: 2000000
+    onnx_path: "$(var model_path)/ptv3.onnx"
+    engine_path: "$(var model_path)/ptv3.engine"
+    colors_red: [255,0,255,64,0,255]
+    colors_green: [0,0,0,64,255,255]
+    colors_blue: [0,255,255,64,0,255]
+    ground_prob_threshold: 0.3
