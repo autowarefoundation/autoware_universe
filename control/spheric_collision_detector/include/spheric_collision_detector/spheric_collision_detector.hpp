@@ -20,9 +20,8 @@
 #include <tier4_autoware_utils/geometry/boost_geometry.hpp>
 #include <vehicle_info_util/vehicle_info_util.hpp>
 
-#include <autoware_auto_planning_msgs/msg/trajectory.hpp>
 #include <autoware_auto_perception_msgs/msg/detected_objects.hpp>
-
+#include <autoware_auto_planning_msgs/msg/trajectory.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/twist.hpp>
@@ -33,11 +32,11 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
+#include <chrono>
+#include <fstream>
 #include <map>
 #include <string>
 #include <vector>
-#include <fstream>
-#include <chrono>
 
 namespace spheric_collision_detector
 {
@@ -63,7 +62,7 @@ struct Input
 };
 
 struct Output
-{ 
+{
   std::map<std::string, double> processing_time_map;
   bool will_collide;
   autoware_auto_planning_msgs::msg::Trajectory resampled_trajectory;
@@ -98,12 +97,11 @@ private:
     const autoware_auto_planning_msgs::msg::Trajectory & trajectory, const double length);
 
   static std::vector<LinearRing2d> createVehicleFootprints(
-    const autoware_auto_planning_msgs::msg::Trajectory & trajectory, 
+    const autoware_auto_planning_msgs::msg::Trajectory & trajectory,
     const LinearRing2d & local_vehicle_footprint);
 
   static std::vector<std::shared_ptr<sphere3::Sphere3>> createVehiclePassingAreas(
-    const std::vector<LinearRing2d> & vehicle_footprints, 
-    const double vehicle_height,
+    const std::vector<LinearRing2d> & vehicle_footprints, const double vehicle_height,
     const double sphere_radius);
 
     static bool checkCollision(
