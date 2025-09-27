@@ -14,120 +14,48 @@
 
 #include "autoware/dummy_perception_publisher/node.hpp"
 
+#include "autoware/dummy_perception_publisher/predicted_object_movement_plugin.hpp"
+#include "autoware/dummy_perception_publisher/straight_line_object_movement_plugin.hpp"
 #include "autoware_utils_geometry/geometry.hpp"
+
+#include <autoware_utils_uuid/uuid_helper.hpp>
+
+#include <autoware_perception_msgs/msg/detail/tracked_objects__struct.hpp>
+#include <autoware_perception_msgs/msg/tracked_objects.hpp>
+#include <geometry_msgs/msg/detail/point__struct.hpp>
+#include <geometry_msgs/msg/detail/pose_stamped__struct.hpp>
+#include <geometry_msgs/msg/detail/transform__struct.hpp>
+#include <geometry_msgs/msg/detail/transform_stamped__struct.hpp>
 
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Transform.h>
 #include <tf2/LinearMath/Vector3.h>
 
-#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
+
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #else
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #endif
 
-#include <functional>
-#include <limits>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
-
 namespace autoware::dummy_perception_publisher
 {
 
 using autoware_perception_msgs::msg::TrackedObject;
 using autoware_perception_msgs::msg::TrackedObjects;
-
-ObjectInfo::ObjectInfo(
-  const tier4_simulation_msgs::msg::DummyObject & object, const rclcpp::Time & current_time)
-: length(object.shape.dimensions.x),
-  width(object.shape.dimensions.y),
-  height(object.shape.dimensions.z),
-  std_dev_x(std::sqrt(object.initial_state.pose_covariance.covariance[0])),
-  std_dev_y(std::sqrt(object.initial_state.pose_covariance.covariance[7])),
-  std_dev_z(std::sqrt(object.initial_state.pose_covariance.covariance[14])),
-  std_dev_yaw(std::sqrt(object.initial_state.pose_covariance.covariance[35])),
-  twist_covariance_(object.initial_state.twist_covariance),
-  pose_covariance_(object.initial_state.pose_covariance)
-{
-  // calculate current pose
-  const auto & initial_pose = object.initial_state.pose_covariance.pose;
-  const double initial_vel = std::clamp(
-    object.initial_state.twist_covariance.twist.linear.x, static_cast<double>(object.min_velocity),
-    static_cast<double>(object.max_velocity));
-  const double initial_acc = object.initial_state.accel_covariance.accel.linear.x;
-
-  const double elapsed_time = current_time.seconds() - rclcpp::Time(object.header.stamp).seconds();
-
-  double move_distance;
-  double current_vel = initial_vel + initial_acc * elapsed_time;
-  if (initial_acc == 0.0) {
-    move_distance = initial_vel * elapsed_time;
-  } else {
-    if (initial_acc < 0 && 0 < initial_vel) {
-      current_vel = std::max(current_vel, 0.0);
-    }
-    if (0 < initial_acc && initial_vel < 0) {
-      current_vel = std::min(current_vel, 0.0);
-    }
-
-    // add distance on acceleration or deceleration
-    current_vel = std::clamp(
-      current_vel, static_cast<double>(object.min_velocity),
-      static_cast<double>(object.max_velocity));
-    move_distance = (std::pow(current_vel, 2) - std::pow(initial_vel, 2)) * 0.5 / initial_acc;
-
-    // add distance after reaching max_velocity
-    if (0 < initial_acc) {
-      const double time_to_reach_max_vel =
-        std::max(static_cast<double>(object.max_velocity) - initial_vel, 0.0) / initial_acc;
-      move_distance += static_cast<double>(object.max_velocity) *
-                       std::max(elapsed_time - time_to_reach_max_vel, 0.0);
-    }
-
-    // add distance after reaching min_velocity
-    if (initial_acc < 0) {
-      const double time_to_reach_min_vel =
-        std::min(static_cast<double>(object.min_velocity) - initial_vel, 0.0) / initial_acc;
-      move_distance += static_cast<double>(object.min_velocity) *
-                       std::max(elapsed_time - time_to_reach_min_vel, 0.0);
-    }
-  }
-
-  const auto current_pose =
-    autoware_utils_geometry::calc_offset_pose(initial_pose, move_distance, 0.0, 0.0);
-
-  // calculate tf from map to moved_object
-  geometry_msgs::msg::Transform ros_map2moved_object;
-  ros_map2moved_object.translation.x = current_pose.position.x;
-  ros_map2moved_object.translation.y = current_pose.position.y;
-  ros_map2moved_object.translation.z = current_pose.position.z;
-  ros_map2moved_object.rotation = current_pose.orientation;
-  tf2::fromMsg(ros_map2moved_object, tf_map2moved_object);
-  // set twist and pose information
-  twist_covariance_.twist.linear.x = current_vel;
-  pose_covariance_.pose = current_pose;
-}
-
-TrackedObject ObjectInfo::toTrackedObject(
-  const tier4_simulation_msgs::msg::DummyObject & object) const
-{
-  TrackedObject tracked_object;
-  tracked_object.kinematics.pose_with_covariance = pose_covariance_;
-  tracked_object.kinematics.twist_with_covariance = twist_covariance_;
-  tracked_object.classification.push_back(object.classification);
-  tracked_object.shape.type = object.shape.type;
-  tracked_object.shape.dimensions.x = length;
-  tracked_object.shape.dimensions.y = width;
-  tracked_object.shape.dimensions.z = height;
-  tracked_object.object_id = object.id;
-  tracked_object.kinematics.orientation_availability =
-    autoware_perception_msgs::msg::TrackedObjectKinematics::SIGN_UNKNOWN;
-  return tracked_object;
-}
+using geometry_msgs::msg::Point;
+using geometry_msgs::msg::PoseStamped;
+using geometry_msgs::msg::Transform;
+using geometry_msgs::msg::TransformStamped;
+using tier4_simulation_msgs::msg::DummyObject;
 
 DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
 : Node("dummy_perception_publisher"), tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_)
@@ -183,6 +111,10 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
   using std::chrono_literals::operator""ms;
   timer_ = rclcpp::create_timer(
     this, get_clock(), 100ms, std::bind(&DummyPerceptionPublisherNode::timerCallback, this));
+
+  // Initialize movement plugins directly in the vector
+  movement_plugins_.push_back(std::make_shared<pluginlib::StraightLineObjectMovementPlugin>(this));
+  movement_plugins_.push_back(std::make_shared<pluginlib::PredictedObjectMovementPlugin>(this));
 }
 
 void DummyPerceptionPublisherNode::timerCallback()
@@ -190,7 +122,7 @@ void DummyPerceptionPublisherNode::timerCallback()
   // output msgs
   tier4_perception_msgs::msg::DetectedObjectsWithFeature output_dynamic_object_msg;
   autoware_perception_msgs::msg::TrackedObjects output_ground_truth_objects_msg;
-  geometry_msgs::msg::PoseStamped output_moved_object_pose;
+  PoseStamped output_moved_object_pose;
   sensor_msgs::msg::PointCloud2 output_pointcloud_msg;
   std_msgs::msg::Header header;
   rclcpp::Time current_time = this->now();
@@ -210,7 +142,7 @@ void DummyPerceptionPublisherNode::timerCallback()
 
   tf2::Transform tf_base_link2map;
   try {
-    geometry_msgs::msg::TransformStamped ros_base_link2map;
+    TransformStamped ros_base_link2map;
     ros_base_link2map = tf_buffer_.lookupTransform(
       /*target*/ "base_link", /*src*/ "map", current_time, rclcpp::Duration::from_seconds(0.5));
     tf2::fromMsg(ros_base_link2map.transform, tf_base_link2map);
@@ -220,21 +152,32 @@ void DummyPerceptionPublisherNode::timerCallback()
   }
 
   std::vector<size_t> selected_indices{};
-  std::vector<ObjectInfo> obj_infos;
   static std::uniform_real_distribution<> detection_successful_random(0.0, 1.0);
-  for (size_t i = 0; i < objects_.size(); ++i) {
+
+  // merge objects and get object infos
+  std::vector<DummyObject> all_objects;
+  std::vector<ObjectInfo> obj_infos;
+
+  for (const auto & plugin : movement_plugins_) {
+    const auto plugin_objects = plugin->get_objects();
+    all_objects.insert(all_objects.end(), plugin_objects.begin(), plugin_objects.end());
+    const auto plugin_infos = plugin->move_objects();
+    obj_infos.insert(obj_infos.end(), plugin_infos.begin(), plugin_infos.end());
+  }
+
+  for (size_t i = 0; i < all_objects.size(); ++i) {
     if (detection_successful_rate_ >= detection_successful_random(random_generator_)) {
       selected_indices.push_back(i);
     }
-    const auto obj_info = ObjectInfo(objects_.at(i), current_time);
-    obj_infos.push_back(obj_info);
   }
 
   // publish ground truth
   // add Tracked Object
   if (publish_ground_truth_objects_) {
-    for (auto object : objects_) {
-      const auto object_info = ObjectInfo(object, current_time);
+    for (size_t i = 0; i < all_objects.size(); ++i) {
+      const auto & object = all_objects[i];
+      // Use the same ObjectInfo as calculated above for consistency
+      const auto & object_info = obj_infos[i];
       TrackedObject gt_tracked_object = object_info.toTrackedObject(object);
       gt_tracked_object.existence_probability = 1.0;
       output_ground_truth_objects_msg.objects.push_back(gt_tracked_object);
@@ -246,7 +189,7 @@ void DummyPerceptionPublisherNode::timerCallback()
   pcl::PointCloud<pcl::PointXYZ>::Ptr detected_merged_pointcloud_ptr(
     new pcl::PointCloud<pcl::PointXYZ>);
 
-  if (objects_.empty()) {
+  if (all_objects.empty()) {
     pcl::toROSMsg(*merged_pointcloud_ptr, output_pointcloud_msg);
   } else {
     pointcloud_creator_->create_pointclouds(
@@ -256,7 +199,8 @@ void DummyPerceptionPublisherNode::timerCallback()
   if (!selected_indices.empty()) {
     std::vector<ObjectInfo> detected_obj_infos;
     for (const auto selected_idx : selected_indices) {
-      const auto detected_obj_info = ObjectInfo(objects_.at(selected_idx), current_time);
+      // Use the same ObjectInfo as calculated above for consistency
+      const auto & detected_obj_info = obj_infos[selected_idx];
       tf2::toMsg(detected_obj_info.tf_map2moved_object, output_moved_object_pose.pose);
       detected_obj_infos.push_back(detected_obj_info);
     }
@@ -264,12 +208,13 @@ void DummyPerceptionPublisherNode::timerCallback()
     const auto pointclouds = pointcloud_creator_->create_pointclouds(
       detected_obj_infos, tf_base_link2map, random_generator_, detected_merged_pointcloud_ptr);
 
-    std::vector<size_t> delete_idxs;
+    std::vector<unique_identifier_msgs::msg::UUID> delete_uuids;
+
     for (size_t i = 0; i < selected_indices.size(); ++i) {
-      const auto pointcloud = pointclouds[i];
+      const auto & pointcloud = pointclouds[i];
       const size_t selected_idx = selected_indices[i];
-      const auto & object = objects_.at(selected_idx);
-      const auto object_info = ObjectInfo(object, current_time);
+      const auto & object = all_objects.at(selected_idx);
+      const auto & object_info = obj_infos[selected_idx];
       // dynamic object
       std::normal_distribution<> x_random(0.0, object_info.std_dev_x);
       std::normal_distribution<> y_random(0.0, object_info.std_dev_y);
@@ -305,13 +250,15 @@ void DummyPerceptionPublisherNode::timerCallback()
         tf_base_link2moved_object.getOrigin().x() * tf_base_link2moved_object.getOrigin().x() +
         tf_base_link2moved_object.getOrigin().y() * tf_base_link2moved_object.getOrigin().y());
       if (visible_range_ < dist) {
-        delete_idxs.push_back(selected_idx);
+        delete_uuids.push_back(object.id);
       }
     }
 
     // delete
-    for (int delete_idx = delete_idxs.size() - 1; 0 <= delete_idx; --delete_idx) {
-      objects_.erase(objects_.begin() + delete_idxs.at(delete_idx));
+    for (const auto & uuid : delete_uuids) {
+      for (auto & plugin : movement_plugins_) {
+        plugin->delete_object(uuid);
+      }
     }
   }
 
@@ -338,95 +285,109 @@ void DummyPerceptionPublisherNode::timerCallback()
 void DummyPerceptionPublisherNode::objectCallback(
   const tier4_simulation_msgs::msg::DummyObject::ConstSharedPtr msg)
 {
-  switch (msg->action) {
-    case tier4_simulation_msgs::msg::DummyObject::ADD: {
-      tf2::Transform tf_input2map;
-      tf2::Transform tf_input2object_origin;
-      tf2::Transform tf_map2object_origin;
-      try {
-        geometry_msgs::msg::TransformStamped ros_input2map;
-        ros_input2map = tf_buffer_.lookupTransform(
-          /*target*/ msg->header.frame_id, /*src*/ "map", msg->header.stamp,
-          rclcpp::Duration::from_seconds(0.5));
-        tf2::fromMsg(ros_input2map.transform, tf_input2map);
-      } catch (tf2::TransformException & ex) {
-        RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());
-        return;
-      }
-      tf2::fromMsg(msg->initial_state.pose_covariance.pose, tf_input2object_origin);
-      tf_map2object_origin = tf_input2map.inverse() * tf_input2object_origin;
-      tier4_simulation_msgs::msg::DummyObject object;
-      object = *msg;
-      tf2::toMsg(tf_map2object_origin, object.initial_state.pose_covariance.pose);
+  auto create_dummy_object = [&]() -> std::optional<DummyObject> {
+    tf2::Transform tf_input2map;
+    tf2::Transform tf_input2object_origin;
+    tf2::Transform tf_map2object_origin;
+    try {
+      TransformStamped ros_input2map;
+      ros_input2map = tf_buffer_.lookupTransform(
+        /*target*/ msg->header.frame_id, /*src*/ "map", msg->header.stamp,
+        rclcpp::Duration::from_seconds(0.5));
+      tf2::fromMsg(ros_input2map.transform, tf_input2map);
+    } catch (tf2::TransformException & ex) {
+      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());
+      return std::nullopt;
+    }
+    tf2::fromMsg(msg->initial_state.pose_covariance.pose, tf_input2object_origin);
+    tf_map2object_origin = tf_input2map.inverse() * tf_input2object_origin;
+    DummyObject object;
+    object = *msg;
+    tf2::toMsg(tf_map2object_origin, object.initial_state.pose_covariance.pose);
 
-      // Use base_link Z
-      if (use_base_link_z_) {
-        geometry_msgs::msg::TransformStamped ros_map2base_link;
-        try {
-          ros_map2base_link = tf_buffer_.lookupTransform(
-            "map", "base_link", rclcpp::Time(0), rclcpp::Duration::from_seconds(0.5));
-          object.initial_state.pose_covariance.pose.position.z =
-            ros_map2base_link.transform.translation.z + 0.5 * object.shape.dimensions.z;
-        } catch (tf2::TransformException & ex) {
-          RCLCPP_WARN_SKIPFIRST_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());
-          return;
+    // Use base_link Z
+    if (use_base_link_z_) {
+      TransformStamped ros_map2base_link;
+      try {
+        ros_map2base_link = tf_buffer_.lookupTransform(
+          "map", "base_link", rclcpp::Time(0), rclcpp::Duration::from_seconds(0.5));
+        object.initial_state.pose_covariance.pose.position.z =
+          ros_map2base_link.transform.translation.z + 0.5 * object.shape.dimensions.z;
+      } catch (tf2::TransformException & ex) {
+        RCLCPP_WARN_SKIPFIRST_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());
+        return std::nullopt;
+      }
+    }
+    return object;
+  };
+
+  auto get_modified_object_position = [&]() -> std::optional<DummyObject> {
+    tf2::Transform tf_input2map;
+    tf2::Transform tf_input2object_origin;
+    tf2::Transform tf_map2object_origin;
+    try {
+      TransformStamped ros_input2map;
+      ros_input2map = tf_buffer_.lookupTransform(
+        /*target*/ msg->header.frame_id, /*src*/ "map", msg->header.stamp,
+        rclcpp::Duration::from_seconds(0.5));
+      tf2::fromMsg(ros_input2map.transform, tf_input2map);
+    } catch (tf2::TransformException & ex) {
+      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());
+      return std::nullopt;
+    }
+    tf2::fromMsg(msg->initial_state.pose_covariance.pose, tf_input2object_origin);
+    tf_map2object_origin = tf_input2map.inverse() * tf_input2object_origin;
+    DummyObject modified_object = *msg;
+    tf2::toMsg(tf_map2object_origin, modified_object.initial_state.pose_covariance.pose);
+    if (!use_base_link_z_) {
+      return modified_object;
+    }
+    TransformStamped ros_map2base_link;
+    try {
+      ros_map2base_link = tf_buffer_.lookupTransform(
+        "map", "base_link", rclcpp::Time(0), rclcpp::Duration::from_seconds(0.5));
+      modified_object.initial_state.pose_covariance.pose.position.z =
+        ros_map2base_link.transform.translation.z + 0.5 * modified_object.shape.dimensions.z;
+    } catch (tf2::TransformException & ex) {
+      RCLCPP_WARN_SKIPFIRST_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());
+      return std::nullopt;
+    }
+    return modified_object;
+  };
+
+  switch (msg->action) {
+    case tier4_simulation_msgs::msg::DummyObject::PREDICT:
+    case tier4_simulation_msgs::msg::DummyObject::ADD: {
+      auto object = create_dummy_object();
+      if (!object) {
+        break;
+      }
+      for (auto & plugin : movement_plugins_) {
+        if (plugin->set_dummy_object(*object)) {
+          break;
         }
       }
-
-      objects_.push_back(object);
       break;
     }
     case tier4_simulation_msgs::msg::DummyObject::DELETE: {
-      for (size_t i = 0; i < objects_.size(); ++i) {
-        if (objects_.at(i).id.uuid == msg->id.uuid) {
-          objects_.erase(objects_.begin() + i);
-          break;
-        }
+      for (auto & plugin : movement_plugins_) {
+        plugin->delete_object(msg->id);
       }
       break;
     }
     case tier4_simulation_msgs::msg::DummyObject::MODIFY: {
-      for (size_t i = 0; i < objects_.size(); ++i) {
-        if (objects_.at(i).id.uuid == msg->id.uuid) {
-          tf2::Transform tf_input2map;
-          tf2::Transform tf_input2object_origin;
-          tf2::Transform tf_map2object_origin;
-          try {
-            geometry_msgs::msg::TransformStamped ros_input2map;
-            ros_input2map = tf_buffer_.lookupTransform(
-              /*target*/ msg->header.frame_id, /*src*/ "map", msg->header.stamp,
-              rclcpp::Duration::from_seconds(0.5));
-            tf2::fromMsg(ros_input2map.transform, tf_input2map);
-          } catch (tf2::TransformException & ex) {
-            RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());
-            return;
-          }
-          tf2::fromMsg(msg->initial_state.pose_covariance.pose, tf_input2object_origin);
-          tf_map2object_origin = tf_input2map.inverse() * tf_input2object_origin;
-          tier4_simulation_msgs::msg::DummyObject object;
-          objects_.at(i) = *msg;
-          tf2::toMsg(tf_map2object_origin, objects_.at(i).initial_state.pose_covariance.pose);
-          if (use_base_link_z_) {
-            // Use base_link Z
-            geometry_msgs::msg::TransformStamped ros_map2base_link;
-            try {
-              ros_map2base_link = tf_buffer_.lookupTransform(
-                "map", "base_link", rclcpp::Time(0), rclcpp::Duration::from_seconds(0.5));
-              objects_.at(i).initial_state.pose_covariance.pose.position.z =
-                ros_map2base_link.transform.translation.z + 0.5 * objects_.at(i).shape.dimensions.z;
-            } catch (tf2::TransformException & ex) {
-              RCLCPP_WARN_SKIPFIRST_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());
-              return;
-            }
-          }
-
-          break;
+      auto modified_object = get_modified_object_position();
+      if (modified_object) {
+        for (auto & plugin : movement_plugins_) {
+          plugin->modify_object(*modified_object);
         }
       }
       break;
     }
     case tier4_simulation_msgs::msg::DummyObject::DELETEALL: {
-      objects_.clear();
+      for (auto & plugin : movement_plugins_) {
+        plugin->clear_objects();
+      }
       break;
     }
   }
