@@ -1,0 +1,69 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Input topics -->
+  <arg name="input/img_front_left" default="/nuscenes/CAM_FRONT_LEFT/image"/>
+  <arg name="input/img_front" default="/nuscenes/CAM_FRONT/image"/>
+  <arg name="input/img_front_right" default="/nuscenes/CAM_FRONT_RIGHT/image"/>
+  <arg name="input/img_back_left" default="/nuscenes/CAM_BACK_LEFT/image"/>
+  <arg name="input/img_back" default="/nuscenes/CAM_BACK/image"/>
+  <arg name="input/img_back_right" default="/nuscenes/CAM_BACK_RIGHT/image"/>
+
+  <!-- CAN bus topic -->
+  <arg name="input/can_bus" default="/nuscenes/can_bus"/>
+
+  <arg name="output_boxes" default="~/output_boxes"/>
+  <arg name="output_bboxes" default="~/output/debug/markers/bounding_boxes"/>
+
+  <arg name="input/img_front_left/camera_info" default="/nuscenes/CAM_FRONT_LEFT/camera_info"/>
+  <arg name="input/img_front/camera_info" default="/nuscenes/CAM_FRONT/camera_info"/>
+  <arg name="input/img_front_right/camera_info" default="/nuscenes/CAM_FRONT_RIGHT/camera_info"/>
+  <arg name="input/img_back_left/camera_info" default="/nuscenes/CAM_BACK_LEFT/camera_info"/>
+  <arg name="input/img_back/camera_info" default="/nuscenes/CAM_BACK/camera_info"/>
+  <arg name="input/img_back_right/camera_info" default="/nuscenes/CAM_BACK_RIGHT/camera_info"/>
+
+  <arg name="data_path" default="$(env HOME)/autoware_data/tensorrt_bevformer"/>
+
+  <!-- TRT Engine and ONNX paths -->
+  <arg name="onnx_file" default="$(var data_path)/bevformer_small.onnx"/>
+  <arg name="engine_file" default="$(var data_path)/bevformer_small.engine"/>
+
+  <arg name="auto_convert" default="true"/>
+  <arg name="precision" default="fp16"/>
+  <arg name="debug_mode" default="false"/>
+  <arg name="workspace_size" default="4096"/>
+
+  <arg name="model_name" default="bevformer_small"/>
+  <arg name="param_file" default="$(find-pkg-share autoware_tensorrt_bevformer)/config/bevformer.param.yaml"/>
+  <arg name="plugin_path" default=""/>
+
+  <!-- BEVFormer node -->
+  <node pkg="autoware_tensorrt_bevformer" exec="autoware_tensorrt_bevformer_node" name="tensorrt_bevformer" output="screen">
+    <param from="$(var param_file)" allow_substs="true"/>
+
+    <param name="model_params.engine_file" value="$(var engine_file)"/>
+    <param name="model_params.onnx_file" value="$(var onnx_file)"/>
+    <param name="model_params.auto_convert" value="$(var auto_convert)"/>
+    <param name="model_params.workspace_size" value="$(var workspace_size)"/>
+    <param name="model_params.precision" value="$(var precision)"/>
+    <param name="post_process_params.debug_mode" value="$(var debug_mode)"/>
+
+    <remap from="~/input/topic_img_fl" to="$(var input/img_front_left)"/>
+    <remap from="~/input/topic_img_f" to="$(var input/img_front)"/>
+    <remap from="~/input/topic_img_fr" to="$(var input/img_front_right)"/>
+    <remap from="~/input/topic_img_bl" to="$(var input/img_back_left)"/>
+    <remap from="~/input/topic_img_b" to="$(var input/img_back)"/>
+    <remap from="~/input/topic_img_br" to="$(var input/img_back_right)"/>
+
+    <remap from="~/input/can_bus" to="$(var input/can_bus)"/>
+
+    <remap from="~/input/topic_img_fl/camera_info" to="$(var input/img_front_left/camera_info)"/>
+    <remap from="~/input/topic_img_f/camera_info" to="$(var input/img_front/camera_info)"/>
+    <remap from="~/input/topic_img_fr/camera_info" to="$(var input/img_front_right/camera_info)"/>
+    <remap from="~/input/topic_img_bl/camera_info" to="$(var input/img_back_left/camera_info)"/>
+    <remap from="~/input/topic_img_b/camera_info" to="$(var input/img_back/camera_info)"/>
+    <remap from="~/input/topic_img_br/camera_info" to="$(var input/img_back_right/camera_info)"/>
+
+    <remap from="~/output_boxes" to="$(var output_boxes)"/>
+    <remap from="~/output_bboxes" to="$(var output_bboxes)"/>
+  </node>
+</launch>
