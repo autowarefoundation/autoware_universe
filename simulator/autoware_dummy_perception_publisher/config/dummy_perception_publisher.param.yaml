@@ -1,0 +1,36 @@
+/**:
+  ros__parameters:
+    # Existing parameters
+    visible_range: 100.0
+    detection_successful_rate: 0.8
+    enable_ray_tracing: true
+    use_object_recognition: true
+    use_base_link_z: true
+    publish_ground_truth: false
+    random_seed: 0
+    use_fixed_random_seed: false
+    object_centric_pointcloud: false
+    angle_increment: 0.004363323  # 0.25 * PI / 180.0
+
+
+    # Prediction parameters
+    min_predicted_path_keep_duration: 3.0     # seconds - minimum time to keep using same prediction
+    switch_time_threshold: 2.0  # seconds - time threshold to switch from straight-line to predicted path
+
+    # Remapping validation parameters - Vehicle
+    vehicle:
+      max_remapping_distance: 2.0      # meters
+      max_speed_difference_ratio: 1.05  # 5% tolerance
+      min_speed_ratio: 0.5             # 50% of dummy speed
+      max_speed_ratio: 1.5             # 150% of dummy speed
+      speed_check_threshold: 1.0       # m/s - apply speed checks above this
+      path_selection_strategy: "highest_confidence"  # "highest_confidence" or "random"
+
+    # Remapping validation parameters - Pedestrian
+    pedestrian:
+      max_remapping_distance: 3.0      # meters
+      max_speed_difference_ratio: 1.3   # 30% tolerance
+      min_speed_ratio: 0.3             # 30% of dummy speed
+      max_speed_ratio: 2.0             # 200% of dummy speed
+      speed_check_threshold: 0.5       # m/s - apply speed checks above this
+      path_selection_strategy: "random"  # "highest_confidence" or "random"
