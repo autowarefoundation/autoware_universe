@@ -41,13 +41,13 @@ using sensor_msgs::msg::Imu;
  */
 struct SpeedScaleEstimatorParameters
 {
-  double time_window = 4.0;                 //!< Time window width used for estimation [s]
-  double time_interval = 0.1;               //!< Data sampling interval [s]
-  double initial_speed_scale_factor = 1.0;  //!< Initial scale factor
-  double max_angular_velocity = 1.0;        //!< Maximum angular velocity constraint [rad/s]
-  double max_speed = 15.0;                  //!< Maximum speed constraint [m/s]
-  double min_speed = 2.0;                   //!< Minimum speed constraint [m/s]
-  double max_speed_change = 1.0;            //!< Maximum speed change constraint [m/s²]
+  double time_window{};                 //!< Time window width used for estimation [s]
+  double time_interval{};               //!< Data sampling interval [s]
+  double initial_speed_scale_factor{};  //!< Initial scale factor
+  double max_angular_velocity{};        //!< Maximum angular velocity constraint [rad/s]
+  double max_speed{};                   //!< Maximum speed constraint [m/s]
+  double min_speed{};                   //!< Minimum speed constraint [m/s]
+  double max_speed_change{};            //!< Maximum speed change constraint [m/s²]
 };
 
 /**

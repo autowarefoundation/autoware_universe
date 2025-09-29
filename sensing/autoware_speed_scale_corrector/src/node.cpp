@@ -33,14 +33,14 @@ namespace autoware::speed_scale_corrector
 SpeedScaleEstimatorParameters load_parameters(rclcpp::Node * node)
 {
   SpeedScaleEstimatorParameters parameters;
-  parameters.time_window = node->declare_parameter<double>("time_window", 4.0);
-  parameters.time_interval = node->declare_parameter<double>("time_interval", 0.1);
+  parameters.time_window = node->declare_parameter<double>("time_window");
+  parameters.time_interval = node->declare_parameter<double>("time_interval");
   parameters.initial_speed_scale_factor =
-    node->declare_parameter<double>("initial_speed_scale_factor", 1.0);
-  parameters.max_angular_velocity = node->declare_parameter<double>("max_angular_velocity", 1.0);
-  parameters.max_speed = node->declare_parameter<double>("max_speed", 15.0);
-  parameters.min_speed = node->declare_parameter<double>("min_speed", 2.0);
-  parameters.max_speed_change = node->declare_parameter<double>("max_speed_change", 1.0);
+    node->declare_parameter<double>("initial_speed_scale_factor");
+  parameters.max_angular_velocity = node->declare_parameter<double>("max_angular_velocity");
+  parameters.max_speed = node->declare_parameter<double>("max_speed");
+  parameters.min_speed = node->declare_parameter<double>("min_speed");
+  parameters.max_speed_change = node->declare_parameter<double>("max_speed_change");
   return parameters;
 }
 
