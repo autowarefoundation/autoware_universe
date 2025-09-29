@@ -86,23 +86,12 @@ END
 
 ## Configuration Example
 
-### Processor Configuration
+It should generally be placed early in the pipeline to ensure that subsequent processors work with refined, physically consistent trajectories.
 
 ```yaml
 /**:
   ros__parameters:
+    processors: ["refine_by_speed"]
     refine_by_speed:
       speed_threshold: 1.0 # Process objects moving slower than 1.0 m/s
 ```
-
-### Integration
-
-The `RefineBySpeed` processor is typically used as part of a processing pipeline:
-
-```yaml
-/**:
-  ros__parameters:
-    processor_names: ["refine_by_speed"]
-```
-
-It should generally be placed early in the pipeline to ensure that subsequent processors work with refined, physically consistent trajectories.
