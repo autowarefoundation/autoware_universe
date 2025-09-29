@@ -192,11 +192,10 @@ __global__ void remap_kernel(
 }
 
 cudaError_t remap_launch(
-  const std::uint8_t * input_img, std::uint8_t * output_img,
-  int output_height, int output_width,  // Output (destination) image dimensions
-  int input_height, int input_width,    // Input (source) image dimensions
-  const float * map_x, const float * map_y,
-  cudaStream_t stream)
+  const std::uint8_t * input_img, std::uint8_t * output_img, int output_height,
+  int output_width,                   // Output (destination) image dimensions
+  int input_height, int input_width,  // Input (source) image dimensions
+  const float * map_x, const float * map_y, cudaStream_t stream)
 {
   // Define the block and grid dimensions based on output size
   dim3 threads(16, 16);

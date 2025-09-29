@@ -100,7 +100,6 @@ CameraDataStore::CameraDataStore(
 
   is_frozen_ = false;
   active_updates_ = 0;
-
 }
 
 CameraDataStore::~CameraDataStore()
@@ -114,9 +113,9 @@ CameraDataStore::~CameraDataStore()
       cudaFree(undistort_map_y_gpu_[i]);
     }
   }
-  
+
   // Clean up CUDA streams
-  for (auto& stream : streams_) {
+  for (auto & stream : streams_) {
     cudaStreamDestroy(stream);
   }
 }
@@ -237,11 +236,10 @@ std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_distorted_imag
   // The undistortion maps are scaled appropriately to handle this
   auto err = remap_launch(
     static_cast<std::uint8_t *>(input_tensor->ptr),
-    static_cast<std::uint8_t *>(image_input_tensor->ptr),
-    original_height, original_width,  // Output dimensions (full resolution)
+    static_cast<std::uint8_t *>(image_input_tensor->ptr), original_height,
+    original_width,                   // Output dimensions (full resolution)
     original_height, original_width,  // Input dimensions (full resolution)
-    undistort_map_x_gpu_[camera_id], undistort_map_y_gpu_[camera_id],
-    streams_[camera_id]);
+    undistort_map_x_gpu_[camera_id], undistort_map_y_gpu_[camera_id], streams_[camera_id]);
 
   if (err != cudaSuccess) {
     RCLCPP_ERROR(logger_, "remap_launch failed with error: %s", cudaGetErrorString(err));
@@ -282,7 +280,7 @@ void CameraDataStore::update_camera_info(
   const int camera_id, const CameraInfo::ConstSharedPtr & input_camera_info_msg)
 {
   camera_info_list_[camera_id] = input_camera_info_msg;
-  
+
   // Compute undistortion maps if we're using distorted images
   if (is_distorted_image_ && input_camera_info_msg) {
     compute_undistortion_maps(camera_id);
@@ -453,7 +451,9 @@ void CameraDataStore::compute_undistortion_maps(const int camera_id)
 
   auto camera_info = camera_info_list_[camera_id];
   if (!camera_info) {
-    RCLCPP_WARN(logger_, "Cannot compute undistortion maps: camera_info not available for camera %d", camera_id);
+    RCLCPP_WARN(
+      logger_, "Cannot compute undistortion maps: camera_info not available for camera %d",
+      camera_id);
     return;
   }
 
@@ -483,21 +483,24 @@ void CameraDataStore::compute_undistortion_maps(const int camera_id)
   // Compute undistortion maps for full resolution
   cv::Mat undistort_map_x, undistort_map_y;
   cv::initUndistortRectifyMap(
-    K, D, cv::Mat(), P, cv::Size(map_width, map_height), CV_32FC1,
-    undistort_map_x, undistort_map_y);
+    K, D, cv::Mat(), P, cv::Size(map_width, map_height), CV_32FC1, undistort_map_x,
+    undistort_map_y);
 
   // Allocate GPU memory for the maps
   size_t map_size = map_width * map_height * sizeof(float);
-  
-  cudaError_t err = cudaMalloc(reinterpret_cast<void**>(&undistort_map_x_gpu_[camera_id]), map_size);
+
+  cudaError_t err =
+    cudaMalloc(reinterpret_cast<void **>(&undistort_map_x_gpu_[camera_id]), map_size);
   if (err != cudaSuccess) {
-    RCLCPP_ERROR(logger_, "Failed to allocate GPU memory for undistort_map_x: %s", cudaGetErrorString(err));
+    RCLCPP_ERROR(
+      logger_, "Failed to allocate GPU memory for undistort_map_x: %s", cudaGetErrorString(err));
     return;
   }
-  
-  err = cudaMalloc(reinterpret_cast<void**>(&undistort_map_y_gpu_[camera_id]), map_size);
+
+  err = cudaMalloc(reinterpret_cast<void **>(&undistort_map_y_gpu_[camera_id]), map_size);
   if (err != cudaSuccess) {
-    RCLCPP_ERROR(logger_, "Failed to allocate GPU memory for undistort_map_y: %s", cudaGetErrorString(err));
+    RCLCPP_ERROR(
+      logger_, "Failed to allocate GPU memory for undistort_map_y: %s", cudaGetErrorString(err));
     cudaFree(undistort_map_x_gpu_[camera_id]);
     undistort_map_x_gpu_[camera_id] = nullptr;
     return;
@@ -505,8 +508,8 @@ void CameraDataStore::compute_undistortion_maps(const int camera_id)
 
   // Copy maps to GPU
   err = cudaMemcpyAsync(
-    undistort_map_x_gpu_[camera_id], undistort_map_x.data, map_size,
-    cudaMemcpyHostToDevice, streams_[camera_id]);
+    undistort_map_x_gpu_[camera_id], undistort_map_x.data, map_size, cudaMemcpyHostToDevice,
+    streams_[camera_id]);
   if (err != cudaSuccess) {
     RCLCPP_ERROR(logger_, "Failed to copy undistort_map_x to GPU: %s", cudaGetErrorString(err));
     cudaFree(undistort_map_x_gpu_[camera_id]);
@@ -515,10 +518,10 @@ void CameraDataStore::compute_undistortion_maps(const int camera_id)
     undistort_map_y_gpu_[camera_id] = nullptr;
     return;
   }
-  
+
   err = cudaMemcpyAsync(
-    undistort_map_y_gpu_[camera_id], undistort_map_y.data, map_size,
-    cudaMemcpyHostToDevice, streams_[camera_id]);
+    undistort_map_y_gpu_[camera_id], undistort_map_y.data, map_size, cudaMemcpyHostToDevice,
+    streams_[camera_id]);
   if (err != cudaSuccess) {
     RCLCPP_ERROR(logger_, "Failed to copy undistort_map_y to GPU: %s", cudaGetErrorString(err));
     cudaFree(undistort_map_x_gpu_[camera_id]);
@@ -530,10 +533,11 @@ void CameraDataStore::compute_undistortion_maps(const int camera_id)
 
   // Synchronize to ensure maps are copied before marking as computed
   cudaStreamSynchronize(streams_[camera_id]);
-  
+
   undistortion_maps_computed_[camera_id] = true;
-  RCLCPP_INFO(logger_, "Undistortion maps computed and stored on GPU for camera %d (full resolution: %dx%d)", 
-              camera_id, map_width, map_height);
+  RCLCPP_INFO(
+    logger_, "Undistortion maps computed and stored on GPU for camera %d (full resolution: %dx%d)",
+    camera_id, map_width, map_height);
 }
 
 }  // namespace autoware::camera_streampetr

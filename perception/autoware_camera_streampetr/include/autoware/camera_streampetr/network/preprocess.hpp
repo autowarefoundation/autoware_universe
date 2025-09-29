@@ -29,11 +29,10 @@ cudaError_t resizeAndExtractRoi_launch(
   const float * channel_wise_mean, const float * channel_wise_std, cudaStream_t stream);
 
 cudaError_t remap_launch(
-  const std::uint8_t * input_img, std::uint8_t * output_img,
-  int output_height, int output_width,  // Output (destination) image dimensions
-  int input_height, int input_width,    // Input (source) image dimensions
-  const float * map_x, const float * map_y,
-  cudaStream_t stream);
+  const std::uint8_t * input_img, std::uint8_t * output_img, int output_height,
+  int output_width,                   // Output (destination) image dimensions
+  int input_height, int input_width,  // Input (source) image dimensions
+  const float * map_x, const float * map_y, cudaStream_t stream);
 }  // namespace autoware::camera_streampetr
 
 #endif  // AUTOWARE__CAMERA_STREAMPETR__NETWORK__PREPROCESS_HPP_
