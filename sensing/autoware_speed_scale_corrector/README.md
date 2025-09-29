@@ -76,12 +76,4 @@ Validates that all states satisfy operational constraints to ensure reliable est
 
 ## Parameters
 
-| Name                         | Type   | Default | Description                                 |
-| ---------------------------- | ------ | ------- | ------------------------------------------- |
-| `time_window`                | double | 4.0     | Time window width used for estimation [s]   |
-| `time_interval`              | double | 0.1     | Data sampling interval [s]                  |
-| `initial_speed_scale_factor` | double | 1.0     | Initial scale factor                        |
-| `max_angular_velocity`       | double | 1.0     | Maximum angular velocity constraint [rad/s] |
-| `max_speed`                  | double | 15.0    | Maximum speed constraint [m/s]              |
-| `min_speed`                  | double | 2.0     | Minimum speed constraint [m/s]              |
-| `max_speed_change`           | double | 1.0     | Maximum speed change constraint [m/s^2]     |
+{{ json_to_markdown("sensing/autoware_speed_scale_corrector/schema/speed_scale_corrector.schema.json") }}
