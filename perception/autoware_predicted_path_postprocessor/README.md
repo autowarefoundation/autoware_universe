@@ -15,10 +15,10 @@ The following processors are supported:
 
 ### Input
 
-| Name                  | Type                                              | Description       |
-| --------------------- | ------------------------------------------------- | ----------------- |
-| `~/input/objects`     | `autoware_perception_msgs::msg::PredictedObjects` | Predicted objects |
-| `~/input/lanelet_map` | `autoware_msgs::msg::LaneletMapBin`               | Lanelet map       |
+| Name                  | Type                                              | Description            |
+| --------------------- | ------------------------------------------------- | ---------------------- |
+| `~/input/objects`     | `autoware_perception_msgs::msg::PredictedObjects` | Predicted objects      |
+| `~/input/lanelet_map` | `autoware_msgs::msg::LaneletMapBin`               | [OPTIONAL] Lanelet map |
 
 ### Output
 
@@ -47,7 +47,7 @@ As an example, let's see how to add a new processor by using a processor called 
        : ProcessorInterface(processor_name)
        {
          // Loaded parameters
-         double_param_ = node_ptr->declare<double>(processor_name + ".double_param");
+         double_param_ = node_ptr->declare_parameter<double>(processor_name + ".double_param");
          string_param_ = node_ptr->declare_parameter<std::string>(processor_name + ".string_param");
        }
 
