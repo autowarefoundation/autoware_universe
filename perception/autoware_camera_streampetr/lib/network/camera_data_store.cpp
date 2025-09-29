@@ -61,14 +61,13 @@ static void updateIntrinsics(float * K_4x4, const Eigen::Matrix3f & ida_mat)
 
 CameraDataStore::CameraDataStore(
   rclcpp::Node * node, const int rois_number, const int image_height, const int image_width,
-  const int anchor_camera_id, const bool is_distorted_image, const double downsample_factor)
+  const int anchor_camera_id, const bool is_distorted_image)
 : rois_number_(rois_number),
   image_height_(image_height),
   image_width_(image_width),
   anchor_camera_id_(anchor_camera_id),
   preprocess_time_ms_(0.0f),
   is_distorted_image_(is_distorted_image),
-  downsample_factor_(downsample_factor),
   logger_(node->get_logger())
 {
   image_input_ = std::make_shared<Tensor>(
@@ -102,14 +101,6 @@ CameraDataStore::CameraDataStore(
   is_frozen_ = false;
   active_updates_ = 0;
 
-  // Validate downsample_factor when distorted image is used
-  if (is_distorted_image_) {
-    const bool invalid_downsample_factor = (downsample_factor_ <= 0.0 || downsample_factor_ > 1.0);
-    if (invalid_downsample_factor) {
-      throw std::runtime_error(
-        "downsample_factor must be in range (0,1] when is_distorted_image is true");
-    }
-  }
 }
 
 CameraDataStore::~CameraDataStore()
