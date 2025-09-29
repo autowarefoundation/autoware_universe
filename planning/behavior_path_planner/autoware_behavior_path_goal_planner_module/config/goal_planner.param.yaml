@@ -55,6 +55,7 @@
       # pull over
       pull_over:
         minimum_request_length: 0.0
+        approximate_pull_over_distance: 20.0
         pull_over_prepare_length: 100.0
         pull_over_velocity: 3.0
         pull_over_minimum_velocity: 1.38
