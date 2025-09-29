@@ -103,3 +103,6 @@ void SpeedScaleCorrectorNode::on_pose_with_covariance(
 }
 
 }  // namespace autoware::speed_scale_corrector
+
+#include <rclcpp_components/register_node_macro.hpp>
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::speed_scale_corrector::SpeedScaleCorrectorNode)

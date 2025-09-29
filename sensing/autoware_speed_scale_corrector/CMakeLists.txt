@@ -1,24 +1,17 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.14)
 project(autoware_speed_scale_corrector)
 
 find_package(autoware_cmake REQUIRED)
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(glog REQUIRED libglog)
 autoware_package()
 
-ament_auto_add_library(autoware_speed_scale_corrector_lib SHARED
-  src/node.cpp
-  src/utils.cpp
-  src/speed_scale_estimator.cpp
+ament_auto_add_library(${PROJECT_NAME} SHARED
+  DIRECTORY src
 )
 
-# as a ros2 node
-ament_auto_add_executable(autoware_speed_scale_corrector src/main.cpp)
-target_link_libraries(autoware_speed_scale_corrector
-  autoware_speed_scale_corrector_lib
-  ${glog_LIBRARIES}
+rclcpp_components_register_node(${PROJECT_NAME}
+  PLUGIN "autoware::speed_scale_corrector::SpeedScaleCorrectorNode"
+  EXECUTABLE speed_scale_corrector_node
 )
-target_include_directories(autoware_speed_scale_corrector PRIVATE ${glog_INCLUDE_DIRS})
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
@@ -27,7 +20,7 @@ if(BUILD_TESTING)
     test/test_speed_scale_estimator.cpp
     test/test_utils.cpp
   )
-  target_link_libraries(test_autoware_speed_scale_corrector autoware_speed_scale_corrector_lib)
+  target_link_libraries(test_autoware_speed_scale_corrector ${PROJECT_NAME})
   ament_target_dependencies(test_autoware_speed_scale_corrector ${${PROJECT_NAME}_FOUND_BUILD_DEPENDS})
 endif()
 

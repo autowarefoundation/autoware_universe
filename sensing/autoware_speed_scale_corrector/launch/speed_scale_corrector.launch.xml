@@ -8,7 +8,7 @@
   <arg name="output_scale_factor" default="estimated_speed_scale_factor"/>
   <arg name="output_debug_info" default="debug_info"/>
 
-  <node pkg="autoware_speed_scale_corrector" exec="autoware_speed_scale_corrector" name="speed_scale_corrector" output="screen">
+  <node pkg="autoware_speed_scale_corrector" exec="speed_scale_corrector_node" name="speed_scale_corrector" output="screen">
     <remap from="~/input/pose_with_covariance" to="$(var input_pose_with_cov_name)"/>
     <remap from="~/input/velocity_report" to="$(var input_velocity_report)"/>
     <remap from="~/input/imu" to="$(var input_imu)"/>

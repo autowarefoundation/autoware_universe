@@ -20,8 +20,8 @@
   <depend>autoware_vehicle_msgs</depend>
   <depend>fmt</depend>
   <depend>geometry_msgs</depend>
-  <depend>libgoogle-glog-dev</depend>
   <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>
   <depend>tl_expected</depend>
 
