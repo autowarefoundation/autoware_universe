@@ -5,7 +5,7 @@
   <version>0.0.0</version>
   <description>The ROS 2 package for post-processing predicted paths.</description>
   <maintainer email="kotaro.uetake@tier4.jp">Kotaro Uetake</maintainer>
-  <license>Apatch License 2.0</license>
+  <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>

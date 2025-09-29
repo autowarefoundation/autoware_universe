@@ -267,7 +267,7 @@ TEST_F(RefineBySpeedTest, PreservesOrientationCalculation)
   }
 }
 
-TEST_F(RefineBySpeedTest, MaintainsPathSLength)
+TEST_F(RefineBySpeedTest, MaintainsPathLength)
 {
   // Create a curved path to test proper distance calculation
   auto object =
