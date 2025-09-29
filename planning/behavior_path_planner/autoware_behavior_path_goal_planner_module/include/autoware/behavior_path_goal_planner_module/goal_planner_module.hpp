@@ -348,10 +348,6 @@ private:
   PathDecisionStateController path_decision_controller_{getLogger()};
   std::optional<rclcpp::Time> decided_time_{};
 
-  // approximate distance from the start point to the end point of pull_over.
-  // this is used as an assumed value to decelerate, etc., before generating the actual path.
-  const double approximate_pull_over_distance_{20.0};
-
   // debug
   mutable GoalPlannerDebugData debug_data_;
 
