@@ -23,7 +23,7 @@
   <depend>libgoogle-glog-dev</depend>
   <depend>rclcpp</depend>
   <depend>sensor_msgs</depend>
-  <depend>tl-expected</depend>
+  <depend>tl_expected</depend>
 
   <test_depend>ament_cmake_gtest</test_depend>
   <test_depend>ament_lint_auto</test_depend>
