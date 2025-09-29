@@ -70,7 +70,7 @@ public:
    * @param context Context information for processing.
    * @return Processed predicted objects.
    */
-  result_type process(const target_type::ConstSharedPtr & objects, const Context & context) const;
+  result_type process(const target_type::SharedPtr & objects, const Context & context) const;
 
   /**
    * @brief Process predicted objects and also return intermediate results of each processor.
@@ -79,7 +79,7 @@ public:
    * @return Processed predicted objects and intermediate reports.
    */
   result_with_report_type process_with_reports(
-    const target_type::ConstSharedPtr & objects, const Context & context) const;
+    const target_type::SharedPtr & objects, const Context & context) const;
 
 private:
   /**
@@ -91,7 +91,7 @@ private:
    * @return Processed predicted objects and optionally intermediate reports.
    */
   result_with_report_type process_internal(
-    const target_type::ConstSharedPtr & objects, const Context & context,
+    const target_type::SharedPtr & objects, const Context & context,
     bool collect_intermediate) const;
 
   std::vector<ProcessorInterface::UniquePtr> processors_;  //!< Set of processors.
