@@ -98,7 +98,7 @@ perception/autoware_radar_object_tracker/** taekjin.lee@tier4.jp yoshi.ri@tier4.
 perception/autoware_radar_tracks_msgs_converter/** taekjin.lee@tier4.jp yoshi.ri@tier4.jp
 perception/autoware_raindrop_cluster_filter/** dai.nguyen@tier4.jp lei.gu@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 perception/autoware_shape_estimation/** kcolak@leodrive.ai lei.gu@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
-perception/autoware_simpl_prediction/** kotaro.uetake@tier4.jp
+perception/autoware_simpl_prediction/** kotaro.uetake@tier4.jp yoshi.ri@tier4.jp taekjin.lee@tier4.jp
 perception/autoware_simple_object_merger/** taekjin.lee@tier4.jp yoshi.ri@tier4.jp
 perception/autoware_tensorrt_bevdet/** cynthia.liu@autocore.ai yliuhb@connect.ust.hk
 perception/autoware_tensorrt_classifier/** kotaro.uetake@tier4.jp masato.saeki@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp
