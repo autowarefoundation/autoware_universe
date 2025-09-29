@@ -17,6 +17,7 @@
 
 #include "autoware/localization_util/smart_pose_buffer.hpp"
 #include "autoware_utils_diagnostics/diagnostics_interface.hpp"
+#include "autoware/qos_utils/qos_compatibility.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
