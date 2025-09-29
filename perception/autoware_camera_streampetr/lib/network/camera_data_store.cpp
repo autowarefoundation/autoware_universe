@@ -152,20 +152,6 @@ void CameraDataStore::update_camera_image(
     image_input_tensor = process_regular_image(input_camera_image_msg, params, camera_id);
   }
 
-  // // Save ROI for debugging as PNG
-  // std::string roi_filename = "/home/autoware/workspace/roi_" + std::to_string(camera_id) + ".png";
-  
-  // // Copy tensor data from GPU to CPU
-  // std::vector<uint8_t> cpu_data(image_input_tensor->volume);
-  // cudaMemcpy(cpu_data.data(), image_input_tensor->ptr, image_input_tensor->nbytes(), cudaMemcpyDeviceToHost);
-  
-  // // Create OpenCV Mat from the data (assuming HWC format)
-  // cv::Mat image(image_input_tensor->dim.d[0], image_input_tensor->dim.d[1], CV_8UC3, cpu_data.data());
-  
-  // // Save as PNG
-  // cv::imwrite(roi_filename, image);
-  // RCLCPP_INFO(logger_, "Saved ROI image for camera %d to %s", camera_id, roi_filename.c_str());
-
   // Launch CUDA kernel for resizing and ROI extraction
   auto err = resizeAndExtractRoi_launch(
     static_cast<std::uint8_t *>(image_input_tensor->ptr), static_cast<float *>(image_input_->ptr),
@@ -178,10 +164,6 @@ void CameraDataStore::update_camera_image(
     RCLCPP_ERROR(
       logger_, "resizeAndExtractRoi_launch failed with error: %s", cudaGetErrorString(err));
   }
-
-  // // Save processed ROI for debugging
-  // std::string processed_roi_filename = "/home/autoware/workspace/processed_roi_" + std::to_string(camera_id) + ".png";
-  // save_processed_image(camera_id, processed_roi_filename);
 
   // Update metadata and timing
   update_metadata_and_timing(camera_id, input_camera_image_msg, start_time);
@@ -561,77 +543,6 @@ void CameraDataStore::compute_undistortion_maps(const int camera_id)
   undistortion_maps_computed_[camera_id] = true;
   RCLCPP_INFO(logger_, "Undistortion maps computed and stored on GPU for camera %d (full resolution: %dx%d)", 
               camera_id, map_width, map_height);
-}
-
-void CameraDataStore::save_processed_image(const int camera_id, const std::string & filename) const
-{
-  // Check if camera_id is valid
-  if (camera_id < 0 || camera_id >= static_cast<int>(rois_number_)) {
-    RCLCPP_ERROR(logger_, "Invalid camera_id: %d", camera_id);
-    return;
-  }
-
-  // Calculate the offset for this camera in the image_input_ tensor
-  const int camera_offset = camera_id * 3 * image_height_ * image_width_;
-  const int image_size = 3 * image_height_ * image_width_;
-
-  // Allocate CPU memory for the processed image data
-  std::vector<float> cpu_image_data(image_size);
-
-  // Copy the processed image data from GPU to CPU
-  cudaError_t err = cudaMemcpyAsync(
-    cpu_image_data.data(), static_cast<const float *>(image_input_->ptr) + camera_offset,
-    image_size * sizeof(float), cudaMemcpyDeviceToHost, streams_.at(camera_id));
-
-  if (err != cudaSuccess) {
-    RCLCPP_ERROR(logger_, "Failed to copy image data from GPU to CPU: %s", cudaGetErrorString(err));
-    return;
-  }
-
-  // Synchronize the CUDA stream to ensure the copy is complete
-  cudaStreamSynchronize(streams_.at(camera_id));
-
-  // Create OpenCV Mat from the float data
-  cv::Mat processed_image(image_height_, image_width_, CV_32FC3);
-
-  const std::vector<float> image_input_std = {57.375, 57.120, 58.395};
-  const std::vector<float> image_input_mean = {103.530, 116.280, 123.675};
-  // Copy data to OpenCV Mat (data is in CHW format, need to convert to HWC)
-  for (int h = 0; h < image_height_; ++h) {
-    for (int w = 0; w < image_width_; ++w) {
-      for (int c = 0; c < 3; ++c) {
-        processed_image.at<cv::Vec3f>(h, w)[c] =
-          cpu_image_data[c * image_height_ * image_width_ + h * image_width_ + w] *
-            image_input_std[c] +
-          image_input_mean[c];
-      }
-    }
-  }
-
-  // Convert from float (0-255) to uint8 (0-255)
-  cv::Mat uint8_image;
-  processed_image.convertTo(uint8_image, CV_8UC3);
-
-  // Create directory if it doesn't exist
-  std::filesystem::path file_path(filename);
-  std::filesystem::path dir_path = file_path.parent_path();
-  if (!std::filesystem::exists(dir_path)) {
-    std::filesystem::create_directories(dir_path);
-  }
-
-  // Save the image
-  std::vector<int> compression_params;
-  compression_params.push_back(cv::IMWRITE_JPEG_QUALITY);
-  compression_params.push_back(95);  // High quality JPEG
-
-  bool success = cv::imwrite(filename, uint8_image, compression_params);
-
-  if (success) {
-    RCLCPP_INFO(logger_, "Processed image for camera %d saved to: %s", camera_id, filename.c_str());
-  } else {
-    RCLCPP_ERROR(
-      logger_, "Failed to save processed image for camera %d to: %s", camera_id, filename.c_str());
-  }
 }
 
 }  // namespace autoware::camera_streampetr

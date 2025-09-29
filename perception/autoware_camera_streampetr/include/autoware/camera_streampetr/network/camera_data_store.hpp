@@ -61,7 +61,6 @@ public:
   void restart();
   void freeze_updates();
   void unfreeze_updates();
-  void save_processed_image(const int camera_id, const std::string & filename) const;
 
 private:
   struct ImageProcessingParams
