@@ -40,20 +40,6 @@ namespace autoware::predicted_path_postprocessor::processor
 class Context
 {
 public:
-  struct LaneletRecord
-  {
-    lanelet::LaneletMapPtr lanelet_map;
-    lanelet::traffic_rules::TrafficRulesPtr traffic_rules;
-    lanelet::routing::RoutingGraphPtr routing_graph;
-
-    /**
-     * @brief Check if the all lanelet relevant data is available.
-     *
-     * @return True if the context is available, false otherwise.
-     */
-    bool is_available() const { return lanelet_map && traffic_rules && routing_graph; }
-  };
-
   Context() : lanelet_record_(std::make_unique<LaneletRecord>()) {}
 
   /**
@@ -61,7 +47,7 @@ public:
    *
    * @return The current set of predicted objects.
    */
-  const autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr & objects() const
+  const autoware_perception_msgs::msg::PredictedObjects::SharedPtr & objects() const
   {
     return objects_;
   }
@@ -71,7 +57,7 @@ public:
    *
    * @param new_objects The new set of predicted objects.
    */
-  void update(autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr new_objects)
+  void update(autoware_perception_msgs::msg::PredictedObjects::SharedPtr new_objects)
   {
     objects_ = std::move(new_objects);
   }
@@ -120,9 +106,23 @@ public:
   }
 
 private:
+  struct LaneletRecord
+  {
+    lanelet::LaneletMapPtr lanelet_map;
+    lanelet::traffic_rules::TrafficRulesPtr traffic_rules;
+    lanelet::routing::RoutingGraphPtr routing_graph;
+
+    /**
+     * @brief Check if the all lanelet relevant data is available.
+     *
+     * @return True if the context is available, false otherwise.
+     */
+    bool is_available() const { return lanelet_map && traffic_rules && routing_graph; }
+  };
+
   // NOTE: In the future, we may want to add more context information here, such as traffic light,
   // etc.
-  autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr objects_{nullptr};
+  autoware_perception_msgs::msg::PredictedObjects::SharedPtr objects_;
   std::unique_ptr<LaneletRecord> lanelet_record_;
 };
 

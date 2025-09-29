@@ -37,7 +37,7 @@ ComposableProcessor::ComposableProcessor(
 }
 
 ComposableProcessor::result_type ComposableProcessor::process(
-  const target_type::ConstSharedPtr & objects, const Context & context) const
+  const target_type::SharedPtr & objects, const Context & context) const
 {
   auto result = process_internal(objects, context, false);
   if (result) {
@@ -49,14 +49,13 @@ ComposableProcessor::result_type ComposableProcessor::process(
 }
 
 ComposableProcessor::result_with_report_type ComposableProcessor::process_with_reports(
-  const target_type::ConstSharedPtr & objects, const Context & context) const
+  const target_type::SharedPtr & objects, const Context & context) const
 {
   return process_internal(objects, context, true);
 }
 
 ComposableProcessor::result_with_report_type ComposableProcessor::process_internal(
-  const target_type::ConstSharedPtr & objects, const Context & context,
-  bool collect_intermediate) const
+  const target_type::SharedPtr & objects, const Context & context, bool collect_intermediate) const
 {
   std::unordered_map<std::string, std::pair<std::vector<double>, std::vector<PredictedObject>>>
     intermediates;
@@ -71,8 +70,7 @@ ComposableProcessor::result_with_report_type ComposableProcessor::process_intern
   std::vector<PredictedObject> processed_targets;
   processed_targets.reserve(objects->objects.size());
 
-  for (const auto & object : objects->objects) {
-    auto target = object;
+  for (auto & target : objects->objects) {
     for (const auto & processor : processors_) {
       if (collect_intermediate) {
         stopwatch_->toc("processing_time", true);

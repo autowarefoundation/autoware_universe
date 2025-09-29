@@ -73,8 +73,10 @@ PredictedPathPostprocessorNode::PredictedPathPostprocessorNode(const rclcpp::Nod
 void PredictedPathPostprocessorNode::callback(
   const PredictedObjects::ConstSharedPtr & msg, bool debug)
 {
+  auto objects = std::make_shared<PredictedObjects>(*msg);
+
   // update the context with the objects data
-  context_->update(msg);
+  context_->update(objects);
 
   if (debug) {
     const auto publish_reports = [this](const auto & reports) {
@@ -87,22 +89,19 @@ void PredictedPathPostprocessorNode::callback(
       }
     };
 
-    const auto result = processor_->process_with_reports(msg, *context_)
-                          .map([this, &publish_reports](const auto & success) {
-                            const auto & [output, reports] = success;
-                            object_publisher_->publish(output);
-                            publish_reports(reports);
-                            return success;
-                          });
-    if (!result) {
+    const auto result = processor_->process_with_reports(objects, *context_);
+    if (result) {
+      const auto & [output, reports] = result.ok();
+      object_publisher_->publish(output);
+      publish_reports(reports);
+    } else {
       RCLCPP_ERROR_STREAM(get_logger(), "Failed to process objects: " << result.err());
     }
   } else {
-    const auto result = processor_->process(msg, *context_).map([this](const auto & output) {
-      object_publisher_->publish(output);
-      return output;
-    });
-    if (!result) {
+    const auto result = processor_->process(objects, *context_);
+    if (result) {
+      object_publisher_->publish(result.ok());
+    } else {
       RCLCPP_ERROR_STREAM(get_logger(), "Failed to process objects: " << result.err());
     }
   }
