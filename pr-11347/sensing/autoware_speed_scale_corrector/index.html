@@ -22,7 +22,7 @@
     
     
       
-        <title>Macro Rendering Error - Autoware Universe Documentation</title>
+        <title>autoware_speed_scale_corrector - Autoware Universe Documentation</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#macro-rendering-error" class="md-skip">
+        <a href="#autoware_speed_scale_corrector" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Macro Rendering Error
+              autoware_speed_scale_corrector
             
           </span>
         </div>
@@ -19418,6 +19418,143 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      Algorithm
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Algorithm">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-data-collection-and-buffering" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Data Collection and Buffering
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-time-synchronization" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Time Synchronization
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-data-preprocessing" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Data Preprocessing
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-trajectory-interpolation" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Trajectory Interpolation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-state-vector-creation" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. State Vector Creation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-constraint-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. Constraint Validation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-scale-factor-estimation" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. Scale Factor Estimation
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inputs-outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Inputs / Outputs
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Inputs / Outputs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#input-topics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Input Topics
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output-topics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Output Topics
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -19435,19 +19572,173 @@
   
 
 
-<div><h1 id="macro-rendering-error"><em>Macro Rendering Error</em><a class="headerlink" href="#macro-rendering-error" title="Permanent link">#</a></h1>
-<p><em>File</em>: <code>sensing/autoware_speed_scale_corrector/README.md</code></p>
-<p><em>UndefinedError</em>: 'sensing' is undefined</p>
-<div class="highlight"><pre><span></span><code>Traceback (most recent call last):
-  File "/opt/hostedtoolcache/Python/3.10.18/x64/lib/python3.10/site-packages/mkdocs_macros/plugin.py", line 699, in render
-    return md_template.render(**page_variables)
-  File "/opt/hostedtoolcache/Python/3.10.18/x64/lib/python3.10/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/opt/hostedtoolcache/Python/3.10.18/x64/lib/python3.10/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "&lt;template&gt;", line 79, in top-level template code
-jinja2.exceptions.UndefinedError: 'sensing' is undefined
-</code></pre></div></div>
+<div><h1 id="autoware_speed_scale_corrector">autoware_speed_scale_corrector<a class="headerlink" href="#autoware_speed_scale_corrector" title="Permanent link">#</a></h1>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">#</a></h2>
+<p>This package performs vehicle speed scale correction by estimating and correcting speed scale factors. It compares velocities calculated from odometry with velocities reported by the vehicle's velocity sensors to correct discrepancies caused by sensor individual differences and calibration errors.</p>
+<h2 id="algorithm">Algorithm<a class="headerlink" href="#algorithm" title="Permanent link">#</a></h2>
+<p>The speed scale estimation follows these detailed steps:</p>
+<h3 id="1-data-collection-and-buffering">1. Data Collection and Buffering<a class="headerlink" href="#1-data-collection-and-buffering" title="Permanent link">#</a></h3>
+<ul>
+<li>Collects pose information (PoseWithCovarianceStamped), IMU data, and vehicle velocity reports (VelocityReport)</li>
+<li>Maintains internal buffers for each data stream with timestamps</li>
+<li>Extracts time series data: position (x, y) from poses, angular velocity (z) from IMU, and longitudinal velocity from velocity reports</li>
+</ul>
+<h3 id="2-time-synchronization">2. Time Synchronization<a class="headerlink" href="#2-time-synchronization" title="Permanent link">#</a></h3>
+<ul>
+<li>Finds the common time interval across all sensor data streams using interval intersection</li>
+<li>Ensures sufficient time window (≥ <code>time_window</code> parameter) is available for reliable estimation</li>
+<li>Early returns with previous scale factor if data is insufficient or time windows don't overlap</li>
+</ul>
+<h3 id="3-data-preprocessing">3. Data Preprocessing<a class="headerlink" href="#3-data-preprocessing" title="Permanent link">#</a></h3>
+<ul>
+<li>Applies Gaussian smoothing (σ=0.7) to all sensor data to reduce noise:<ul>
+<li>Position data (x, y coordinates)</li>
+<li>IMU angular velocity</li>
+<li>Vehicle velocity reports</li>
+</ul>
+</li>
+<li>Uses a sliding window Gaussian kernel with 3σ cutoff for efficient computation</li>
+</ul>
+<h3 id="4-trajectory-interpolation">4. Trajectory Interpolation<a class="headerlink" href="#4-trajectory-interpolation" title="Permanent link">#</a></h3>
+<ul>
+<li>Creates cubic spline interpolators for smoothed position data (x, y)</li>
+<li>Creates linear interpolators for angular velocity and velocity data</li>
+<li>Generates uniform time samples within the valid time window at specified intervals</li>
+</ul>
+<h3 id="5-state-vector-creation">5. State Vector Creation<a class="headerlink" href="#5-state-vector-creation" title="Permanent link">#</a></h3>
+<p>For each time sample, computes:</p>
+<ul>
+<li><strong>Odometry velocity</strong>: Magnitude of position derivatives <span class="arithmatex">\(<span class="arithmatex">\(v_{odom} = \sqrt{\left(\frac{dx}{dt}\right)^2 + \left(\frac{dy}{dt}\right)^2}\)</span>\)</span></li>
+<li><strong>Distance between points</strong>: Euclidean distance from previous position</li>
+<li><strong>Integrated distance from velocity</strong>: Trapezoidal integration of velocity reports</li>
+<li><strong>Angular velocity</strong>: Interpolated IMU z-axis rotation</li>
+</ul>
+<h3 id="6-constraint-validation">6. Constraint Validation<a class="headerlink" href="#6-constraint-validation" title="Permanent link">#</a></h3>
+<p>Validates that all states satisfy operational constraints to ensure reliable estimation:</p>
+<ul>
+<li><strong>Angular velocity constraint</strong>: <span class="arithmatex">\(<span class="arithmatex">\(|\omega| \leq \omega_{max}\)</span>\)</span> (avoids estimation during sharp turns)</li>
+<li><strong>Speed constraints</strong>: <span class="arithmatex">\(<span class="arithmatex">\(v_{min} \leq v \leq v_{max}\)</span>\)</span> (ensures sufficient motion for accurate differentiation and avoids extreme speeds)</li>
+<li><strong>Speed change constraint</strong>: <span class="arithmatex">\(<span class="arithmatex">\(|\Delta v| \leq \Delta v_{max}\)</span>\)</span> (filters out periods of rapid acceleration/deceleration where tire slip may occur)</li>
+</ul>
+<h3 id="7-scale-factor-estimation">7. Scale Factor Estimation<a class="headerlink" href="#7-scale-factor-estimation" title="Permanent link">#</a></h3>
+<ul>
+<li>Computes instantaneous scale factor: <span class="arithmatex">\(<span class="arithmatex">\(s = \frac{d_{odom}}{d_{velocity}}\)</span>\)</span></li>
+<li>Updates running average: <span class="arithmatex">\(<span class="arithmatex">\(\bar{s}_{new} = \frac{\bar{s}_{old} \times n + s_{current}}{n + 1}\)</span>\)</span></li>
+<li>Clears sensor buffers after successful estimation</li>
+</ul>
+<h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
+<h3 id="input-topics">Input Topics<a class="headerlink" href="#input-topics" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/input/pose_with_covariance</code></td>
+<td><code>geometry_msgs::msg::PoseWithCovarianceStamped</code></td>
+<td>Pose information (odometry)</td>
+</tr>
+<tr>
+<td><code>~/input/velocity_report</code></td>
+<td><code>autoware_vehicle_msgs::msg::VelocityReport</code></td>
+<td>Vehicle velocity report</td>
+</tr>
+<tr>
+<td><code>~/input/imu</code></td>
+<td><code>sensor_msgs::msg::Imu</code></td>
+<td>IMU sensor data</td>
+</tr>
+</tbody>
+</table>
+<h3 id="output-topics">Output Topics<a class="headerlink" href="#output-topics" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/output/scale_factor</code></td>
+<td><code>autoware_internal_debug_msgs::msg::Float32Stamped</code></td>
+<td>Estimated speed scale factor</td>
+</tr>
+<tr>
+<td><code>~/output/debug_info</code></td>
+<td><code>autoware_internal_debug_msgs::msg::StringStamped</code></td>
+<td>Debug information</td>
+</tr>
+</tbody>
+</table>
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>time_window</td>
+<td>float</td>
+<td>Time window for data collection and analysis in seconds. Must be sufficient for reliable estimation. Unit is <strong>[s]</strong>.</td>
+<td>4</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>time_interval</td>
+<td>float</td>
+<td>Time interval for uniform sampling within the time window in seconds. Unit is <strong>[s]</strong>.</td>
+<td>0.1</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>initial_speed_scale_factor</td>
+<td>float</td>
+<td>Initial speed scale factor value used before estimation begins. Typically set to 1.0 for no initial correction.</td>
+<td>1</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>max_angular_velocity</td>
+<td>float</td>
+<td>Maximum allowed angular velocity in rad/s. States exceeding this value are filtered out to avoid estimation during sharp turns. Unit is <strong>[rad/s]</strong>.</td>
+<td>1</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>max_speed</td>
+<td>float</td>
+<td>Maximum allowed vehicle speed in m/s. States exceeding this value are filtered out to avoid extreme speeds that may cause inaccurate estimation. Unit is <strong>[m/s]</strong>.</td>
+<td>15</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>min_speed</td>
+<td>float</td>
+<td>Minimum required vehicle speed in m/s. States below this value are filtered out to ensure sufficient motion for accurate differentiation. Unit is <strong>[m/s]</strong>.</td>
+<td>2</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>max_speed_change</td>
+<td>float</td>
+<td>Maximum allowed speed change in m/s^2. States exceeding this value are filtered out to avoid periods of rapid acceleration/deceleration where tire slip may occur. Unit is <strong>[m/s^2]</strong>.</td>
+<td>1</td>
+<td>≥0.0</td>
+</tr>
+</tbody>
+</table></div>
 
 
 
