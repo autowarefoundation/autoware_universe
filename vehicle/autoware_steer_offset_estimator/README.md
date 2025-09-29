@@ -15,7 +15,9 @@ This module estimates the steering offset using a **Recursive Least Squares (RLS
 
 The vehicle kinematic model relates steering angle to angular velocity:
 
-$$\omega = \frac{v}{L} \times \tan(\delta) \approx \frac{v}{L} \times \delta$$
+$$
+\omega = \frac{v}{L} \times \tan(\delta) \approx \frac{v}{L} \times \delta
+$$
 
 Where:
 
@@ -28,7 +30,9 @@ Where:
 
 Due to mechanical tolerances and sensor calibration errors, there exists a steering offset $\delta_{offset}$. The true relationship becomes:
 
-$$\omega_{observed} = \frac{v}{L} \times (\delta_{measured} + \delta_{offset}) + noise$$
+$$
+\omega_{observed} = \frac{v}{L} \times (\delta_{measured} + \delta_{offset}) + noise
+$$
 
 The algorithm estimates $\delta_{offset}$ by minimizing the error between observed and predicted angular velocity.
 
@@ -37,20 +41,38 @@ The algorithm estimates $\delta_{offset}$ by minimizing the error between observ
 The RLS algorithm updates the offset estimate and covariance recursively:
 
 1. **Prediction coefficient calculation:**
-   $$\phi = \frac{v}{L}$$
+
+   $$
+   \phi = \frac{v}{L}
+   $$
 
 2. **Covariance update with forgetting factor:**
-   $$P_k = \frac{P_{k-1} - \frac{P_{k-1} \times \phi^2 \times P_{k-1}}{\lambda + \phi \times P_{k-1} \times \phi}}{\lambda}$$
+
+   $$
+   P_k = \frac{P_{k-1} - \frac{P_{k-1} \times \phi^2 \times P_{k-1}}{\lambda + \phi \times P_{k-1} \times \phi}}{\lambda}
+   $$
 
 3. **Kalman gain calculation:**
-   $$K = \frac{P_k \times \phi}{\lambda + \phi \times P_k \times \phi}$$
+
+   $$
+   K = \frac{P_k \times \phi}{\lambda + \phi \times P_k \times \phi}
+   $$
 
 4. **Error calculation:**
-   $$e_{observed} = \omega_{observed} - \phi \times \delta_{measured}$$
-   $$e_{estimated} = \phi \times \delta_{offset,prev}$$
+
+   $$
+   e_{observed} = \omega_{observed} - \phi \times \delta_{measured}
+   $$
+
+   $$
+   e_{estimated} = \phi \times \delta_{offset,prev}
+   $$
 
 5. **Offset estimate update:**
-   $$\delta_{offset,new} = \delta_{offset,prev} + K \times (e_{observed} - e_{estimated})$$
+
+   $$
+   \delta_{offset,new} = \delta_{offset,prev} + K \times (e_{observed} - e_{estimated})
+   $$
 
 Where:
 
@@ -88,12 +110,3 @@ This approach provides continuous, real-time calibration of steering offset duri
 ## Parameters
 
 {{ json_to_markdown("vehicle/autoware_steer_offset_estimator/schema/steer_offset_estimator.schema.json") }}
-
-## Monitoring
-
-The estimated steering offset and its covariance can be monitored through the following ROS topics:
-
-```sh
-ros2 topic echo ~/output/steering_offset
-ros2 topic echo ~/output/steering_offset_covariance
-```
