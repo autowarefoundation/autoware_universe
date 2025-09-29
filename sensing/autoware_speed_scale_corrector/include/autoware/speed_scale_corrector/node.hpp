@@ -46,7 +46,7 @@ template <typename T, template <typename> class PollingPolicy>
 using PollingSubscriber = InterProcessPollingSubscriber<T, PollingPolicy>;
 
 /**
- * @brief ROS2 node for speed scale correction
+ * @brief ROS 2 node for speed scale correction
  *
  * This node estimates and corrects speed scale factors by comparing velocities
  * calculated from odometry with velocities reported by the vehicle's velocity sensors.
@@ -58,7 +58,7 @@ class SpeedScaleCorrectorNode : public rclcpp::Node
 public:
   /**
    * @brief Constructor
-   * @param node_options ROS2 node options
+   * @param node_options ROS 2 node options
    */
   explicit SpeedScaleCorrectorNode(const rclcpp::NodeOptions & node_options);
 

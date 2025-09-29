@@ -118,9 +118,9 @@ std::vector<SpeedScaleEstimatorState> create_states(
     state.velocity_from_velocity_report = velocity;
 
     // Velocity from position derivatives
-    const double dxdt = x_interpolator.compute_first_derivative(t);
-    const double dydt = y_interpolator.compute_first_derivative(t);
-    state.velocity_from_odometry = std::sqrt(dxdt * dxdt + dydt * dydt);
+    const double dx_dt = x_interpolator.compute_first_derivative(t);
+    const double dy_dt = y_interpolator.compute_first_derivative(t);
+    state.velocity_from_odometry = std::sqrt(dx_dt * dx_dt + dy_dt * dy_dt);
 
     // Calculate odometry-based distance and velocity for non-initial points
     if (i > 0) {
