@@ -57,7 +57,7 @@ class carla_ros2_interface(object):
         return qos
 
     def _initialize_parameters(self):
-        """Initialize and declare ROS2 parameters."""
+        """Initialize and declare ROS 2 parameters."""
         self.parameters = {
             "host": rclpy.Parameter.Type.STRING,
             "port": rclpy.Parameter.Type.INTEGER,
@@ -106,7 +106,7 @@ class carla_ros2_interface(object):
         )
 
     def _initialize_subscriptions(self):
-        """Initialize all ROS2 subscriptions."""
+        """Initialize all ROS 2 subscriptions."""
         self.sub_control = self.ros2_node.create_subscription(
             ActuationCommandStamped, "/control/command/actuation_cmd", self.control_callback, 1
         )
@@ -148,7 +148,7 @@ class carla_ros2_interface(object):
         # Initialize instance variables
         self._initialize_instance_variables()
 
-        # Initialize ROS2 node
+        # Initialize ROS 2 node
         rclpy.init(args=None)
         self.ros2_node = rclpy.create_node("carla_ros2_interface")
 
@@ -164,7 +164,7 @@ class carla_ros2_interface(object):
         self._initialize_status_publishers()
         self._create_sensor_publishers()
 
-        # Start ROS2 spin thread
+        # Start ROS 2 spin thread
         self.spin_thread = threading.Thread(target=rclpy.spin, args=(self.ros2_node,))
         self.spin_thread.start()
 
