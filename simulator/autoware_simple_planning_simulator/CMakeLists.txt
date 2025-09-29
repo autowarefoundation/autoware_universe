@@ -40,6 +40,7 @@ if(BUILD_TESTING)
 
   target_link_libraries(test_simple_planning_simulator
     ${PROJECT_NAME}
+    ament_index_cpp::ament_index_cpp
   )
 endif()
 
