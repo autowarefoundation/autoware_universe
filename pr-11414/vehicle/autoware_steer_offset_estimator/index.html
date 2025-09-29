@@ -19414,15 +19414,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#monitoring" class="md-nav__link">
-    <span class="md-ellipsis">
-      Monitoring
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -19451,7 +19442,9 @@ k</p>
 <h3 id="kinematic-model">Kinematic Model<a class="headerlink" href="#kinematic-model" title="Permanent link">#</a></h3>
 <p><img alt="kinematics" src="image/kinematics.png"></p>
 <p>The vehicle kinematic model relates steering angle to angular velocity:</p>
-<div class="arithmatex">\[\omega = \frac{v}{L} \times \tan(\delta) \approx \frac{v}{L} \times \delta\]</div>
+<div class="arithmatex">\[
+\omega = \frac{v}{L} \times \tan(\delta) \approx \frac{v}{L} \times \delta
+\]</div>
 <p>Where:</p>
 <ul>
 <li><span class="arithmatex">\(\omega\)</span>: Angular velocity (yaw rate) [rad/s]</li>
@@ -19461,31 +19454,57 @@ k</p>
 </ul>
 <h3 id="problem-formulation">Problem Formulation<a class="headerlink" href="#problem-formulation" title="Permanent link">#</a></h3>
 <p>Due to mechanical tolerances and sensor calibration errors, there exists a steering offset <span class="arithmatex">\(\delta_{offset}\)</span>. The true relationship becomes:</p>
-<div class="arithmatex">\[\omega_{observed} = \frac{v}{L} \times (\delta_{measured} + \delta_{offset}) + noise\]</div>
+<div class="arithmatex">\[
+\omega_{observed} = \frac{v}{L} \times (\delta_{measured} + \delta_{offset}) + noise
+\]</div>
 <p>The algorithm estimates <span class="arithmatex">\(\delta_{offset}\)</span> by minimizing the error between observed and predicted angular velocity.</p>
 <h3 id="recursive-least-squares-algorithm">Recursive Least Squares Algorithm<a class="headerlink" href="#recursive-least-squares-algorithm" title="Permanent link">#</a></h3>
 <p>The RLS algorithm updates the offset estimate and covariance recursively:</p>
 <ol>
 <li>
-<p><strong>Prediction coefficient calculation:</strong>
-   <span class="arithmatex">\(<span class="arithmatex">\(\phi = \frac{v}{L}\)</span>\)</span></p>
+<p><strong>Prediction coefficient calculation:</strong></p>
+<p>
+<script type="math/tex; mode=display">
+ \phi = \frac{v}{L}
+ </script>
+</p>
 </li>
 <li>
-<p><strong>Covariance update with forgetting factor:</strong>
-   <span class="arithmatex">\(<span class="arithmatex">\(P_k = \frac{P_{k-1} - \frac{P_{k-1} \times \phi^2 \times P_{k-1}}{\lambda + \phi \times P_{k-1} \times \phi}}{\lambda}\)</span>\)</span></p>
+<p><strong>Covariance update with forgetting factor:</strong></p>
+<p>
+<script type="math/tex; mode=display">
+ P_k = \frac{P_{k-1} - \frac{P_{k-1} \times \phi^2 \times P_{k-1}}{\lambda + \phi \times P_{k-1} \times \phi}}{\lambda}
+ </script>
+</p>
 </li>
 <li>
-<p><strong>Kalman gain calculation:</strong>
-   <span class="arithmatex">\(<span class="arithmatex">\(K = \frac{P_k \times \phi}{\lambda + \phi \times P_k \times \phi}\)</span>\)</span></p>
+<p><strong>Kalman gain calculation:</strong></p>
+<p>
+<script type="math/tex; mode=display">
+ K = \frac{P_k \times \phi}{\lambda + \phi \times P_k \times \phi}
+ </script>
+</p>
 </li>
 <li>
-<p><strong>Error calculation:</strong>
-   <span class="arithmatex">\(<span class="arithmatex">\(e_{observed} = \omega_{observed} - \phi \times \delta_{measured}\)</span>\)</span>
-   <span class="arithmatex">\(<span class="arithmatex">\(e_{estimated} = \phi \times \delta_{offset,prev}\)</span>\)</span></p>
+<p><strong>Error calculation:</strong></p>
+<p>
+<script type="math/tex; mode=display">
+ e_{observed} = \omega_{observed} - \phi \times \delta_{measured}
+ </script>
+</p>
+<p>
+<script type="math/tex; mode=display">
+ e_{estimated} = \phi \times \delta_{offset,prev}
+ </script>
+</p>
 </li>
 <li>
-<p><strong>Offset estimate update:</strong>
-   <span class="arithmatex">\(<span class="arithmatex">\(\delta_{offset,new} = \delta_{offset,prev} + K \times (e_{observed} - e_{estimated})\)</span>\)</span></p>
+<p><strong>Offset estimate update:</strong></p>
+<p>
+<script type="math/tex; mode=display">
+ \delta_{offset,new} = \delta_{offset,prev} + K \times (e_{observed} - e_{estimated})
+ </script>
+</p>
 </li>
 </ol>
 <p>Where:</p>
@@ -19546,6 +19565,11 @@ k</p>
 <td><code>autoware_internal_debug_msgs::msg::Float32Stamped</code></td>
 <td>covariance of steering offset</td>
 </tr>
+<tr>
+<td><code>~/output/debug_info</code></td>
+<td><code>autoware_internal_debug_msgs::msg::StringStamped</code></td>
+<td>debug info</td>
+</tr>
 </tbody>
 </table>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
@@ -19603,12 +19627,7 @@ k</p>
 <td>N/A</td>
 </tr>
 </tbody>
-</table>
-<h2 id="monitoring">Monitoring<a class="headerlink" href="#monitoring" title="Permanent link">#</a></h2>
-<p>The estimated steering offset and its covariance can be monitored through the following ROS topics:</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>topic<span class="w"> </span><span class="nb">echo</span><span class="w"> </span>~/output/steering_offset
-ros2<span class="w"> </span>topic<span class="w"> </span><span class="nb">echo</span><span class="w"> </span>~/output/steering_offset_covariance
-</code></pre></div></div>
+</table></div>
 
 
 
