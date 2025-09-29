@@ -1,8 +1,8 @@
 /**:
   ros__parameters:
-    update_hz: 10.0
+    update_hz: 10.0 # [Hz]
     initial_covariance: 1000.0
-    initial_offset: 0.0
-    min_velocity: 1.0
-    max_steer: 0.03
+    initial_offset: 0.0 # [rad]
+    min_velocity: 1.0 # [m/s]
+    max_steer: 0.03 # [rad]
     forgetting_factor: 0.999

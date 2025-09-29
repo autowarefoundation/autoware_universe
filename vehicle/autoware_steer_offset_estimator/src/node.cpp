@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/steer_offset_estimator/node.hpp"
+#include "node.hpp"
 
 #include "autoware/vehicle_info_utils/vehicle_info_utils.hpp"
 
@@ -113,3 +113,6 @@ void SteerOffsetEstimatorNode::on_timer()
 }
 
 }  // namespace autoware::steer_offset_estimator
+
+#include <rclcpp_components/register_node_macro.hpp>
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::steer_offset_estimator::SteerOffsetEstimatorNode)

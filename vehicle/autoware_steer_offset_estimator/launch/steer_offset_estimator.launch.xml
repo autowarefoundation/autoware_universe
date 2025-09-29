@@ -5,7 +5,7 @@
   <include file="$(find-pkg-share autoware_global_parameter_loader)/launch/global_params.launch.py"/>
 
   <!-- steer offset estimator -->
-  <node pkg="autoware_steer_offset_estimator" exec="autoware_steer_offset_estimator" name="steer_offset_estimator" output="screen">
+  <node pkg="autoware_steer_offset_estimator" exec="steer_offset_estimator_node" name="steer_offset_estimator" output="screen">
     <param from="$(var config_file)"/>
     <remap from="~/input/pose" to="/localization/pose_estimator/pose"/>
     <remap from="~/input/steer" to="/vehicle/status/steering_status"/>
