@@ -19460,53 +19460,49 @@ k</p>
 <p>The algorithm estimates <span class="arithmatex">\(\delta_{offset}\)</span> by minimizing the error between observed and predicted angular velocity.</p>
 <h3 id="recursive-least-squares-algorithm">Recursive Least Squares Algorithm<a class="headerlink" href="#recursive-least-squares-algorithm" title="Permanent link">#</a></h3>
 <p>The RLS algorithm updates the offset estimate and covariance recursively:</p>
-<ol>
+<ul>
 <li>
 <p><strong>Prediction coefficient calculation:</strong></p>
-<p>
-<script type="math/tex; mode=display">
- \phi = \frac{v}{L}
- </script>
-</p>
+<div class="arithmatex">\[
+\phi = \frac{v}{L}
+\]</div>
 </li>
+</ul>
+<ul>
 <li>
 <p><strong>Covariance update with forgetting factor:</strong></p>
-<p>
-<script type="math/tex; mode=display">
- P_k = \frac{P_{k-1} - \frac{P_{k-1} \times \phi^2 \times P_{k-1}}{\lambda + \phi \times P_{k-1} \times \phi}}{\lambda}
- </script>
-</p>
+<div class="arithmatex">\[
+P_k = \frac{P_{k-1} - \frac{P_{k-1} \times \phi^2 \times P_{k-1}}{\lambda + \phi \times P_{k-1} \times \phi}}{\lambda}
+\]</div>
 </li>
+</ul>
+<ul>
 <li>
 <p><strong>Kalman gain calculation:</strong></p>
-<p>
-<script type="math/tex; mode=display">
- K = \frac{P_k \times \phi}{\lambda + \phi \times P_k \times \phi}
- </script>
-</p>
+<div class="arithmatex">\[
+K = \frac{P_k \times \phi}{\lambda + \phi \times P_k \times \phi}
+\]</div>
 </li>
+</ul>
+<ul>
 <li>
 <p><strong>Error calculation:</strong></p>
-<p>
-<script type="math/tex; mode=display">
- e_{observed} = \omega_{observed} - \phi \times \delta_{measured}
- </script>
-</p>
-<p>
-<script type="math/tex; mode=display">
- e_{estimated} = \phi \times \delta_{offset,prev}
- </script>
-</p>
+<div class="arithmatex">\[
+e_{observed} = \omega_{observed} - \phi \times \delta_{measured}
+\]</div>
+<div class="arithmatex">\[
+e_{estimated} = \phi \times \delta_{offset,prev}
+\]</div>
 </li>
+</ul>
+<ul>
 <li>
 <p><strong>Offset estimate update:</strong></p>
-<p>
-<script type="math/tex; mode=display">
- \delta_{offset,new} = \delta_{offset,prev} + K \times (e_{observed} - e_{estimated})
- </script>
-</p>
+<div class="arithmatex">\[
+\delta_{offset,new} = \delta_{offset,prev} + K \times (e_{observed} - e_{estimated})
+\]</div>
 </li>
-</ol>
+</ul>
 <p>Where:</p>
 <ul>
 <li><span class="arithmatex">\(P\)</span>: Estimation covariance matrix (scalar in this 1D case)</li>
