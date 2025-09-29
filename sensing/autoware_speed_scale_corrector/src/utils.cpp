@@ -62,18 +62,18 @@ std::vector<double> smooth_gaussian(
     }
 
     // Accumulate Gaussian-weighted sum within [left, right)
-    double wsum = 0.0;
-    double xsum = 0.0;
+    double w_sum = 0.0;
+    double x_sum = 0.0;
     for (size_t j = left; j < right; ++j) {
       const double dt = times[j] - tc;
       // Gaussian kernel weight
       const double w = std::exp(-(dt * dt) * inv_two_sigma2);
-      wsum += w;
-      xsum += w * values[j];
+      w_sum += w;
+      x_sum += w * values[j];
     }
 
-    // Fallback if numerical underflow makes wsum ~ 0
-    out[i] = (wsum > 0.0) ? (xsum / wsum) : values[i];
+    // Fallback if numerical underflow makes w_sum ~ 0
+    out[i] = (w_sum > 0.0) ? (x_sum / w_sum) : values[i];
   }
 
   return out;
