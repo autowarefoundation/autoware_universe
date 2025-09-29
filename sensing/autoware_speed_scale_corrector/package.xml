@@ -4,12 +4,12 @@
   <name>autoware_speed_scale_corrector</name>
   <version>0.3.0</version>
   <description>The autoware_speed_scale_corrector package</description>
-  <author email="yukinari.hisaki.2@tier4.jp">Yukinari Hisaki</author>
   <maintainer email="yukinari.hisaki.2@tier4.jp">Yukinari Hisaki</maintainer>
   <maintainer email="takayuki.murooka@tier4.jp">Takayuki Murooka</maintainer>
   <maintainer email="yamato.ando@tier4.jp">Yamato Ando</maintainer>
 
   <license>Apache License 2.0</license>
+  <author email="yukinari.hisaki.2@tier4.jp">Yukinari Hisaki</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <build_depend>autoware_cmake</build_depend>
