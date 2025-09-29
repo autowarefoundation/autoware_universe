@@ -38,7 +38,12 @@ The speed scale estimation follows these detailed steps:
 
 For each time sample, computes:
 
-- **Odometry velocity**: Magnitude of position derivatives $$v_{odom} = \sqrt{\left(\frac{dx}{dt}\right)^2 + \left(\frac{dy}{dt}\right)^2}$$
+- **Odometry velocity**: Magnitude of position derivatives
+
+  $$
+  v_{odom} = \sqrt{\left(\frac{dx}{dt}\right)^2 + \left(\frac{dy}{dt}\right)^2}
+  $$
+
 - **Distance between points**: Euclidean distance from previous position
 - **Integrated distance from velocity**: Trapezoidal integration of velocity reports
 - **Angular velocity**: Interpolated IMU z-axis rotation
@@ -47,14 +52,44 @@ For each time sample, computes:
 
 Validates that all states satisfy operational constraints to ensure reliable estimation:
 
-- **Angular velocity constraint**: $$|\omega| \leq \omega_{max}$$ (avoids estimation during sharp turns)
-- **Speed constraints**: $$v_{min} \leq v \leq v_{max}$$ (ensures sufficient motion for accurate differentiation and avoids extreme speeds)
-- **Speed change constraint**: $$|\Delta v| \leq \Delta v_{max}$$ (filters out periods of rapid acceleration/deceleration where tire slip may occur)
+- **Angular velocity constraint**:
+
+  $$
+  |\omega| \leq \omega_{max}
+  $$
+
+  (avoids estimation during sharp turns)
+
+- **Speed constraints**:
+
+  $$
+  v_{min} \leq v \leq v_{max}
+  $$
+
+  (ensures sufficient motion for accurate differentiation and avoids extreme speeds)
+
+- **Speed change constraint**:
+
+  $$
+  |\Delta v| \leq \Delta v_{max}
+  $$
+
+  (filters out periods of rapid acceleration/deceleration where tire slip may occur)
 
 ### 7. Scale Factor Estimation
 
-- Computes instantaneous scale factor: $$s = \frac{d_{odom}}{d_{velocity}}$$
-- Updates running average: $$\bar{s}_{new} = \frac{\bar{s}_{old} \times n + s_{current}}{n + 1}$$
+- Computes instantaneous scale factor:
+
+  $$
+  s = \frac{d_{odom}}{d_{velocity}}
+  $$
+
+- Updates running average:
+
+  $$
+  \bar{s}_{new} = \frac{\bar{s}_{old} \times n + s_{current}}{n + 1}
+  $$
+
 - Clears sensor buffers after successful estimation
 
 ## Inputs / Outputs
