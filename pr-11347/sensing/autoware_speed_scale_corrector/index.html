@@ -19608,7 +19608,14 @@
 <h3 id="5-state-vector-creation">5. State Vector Creation<a class="headerlink" href="#5-state-vector-creation" title="Permanent link">#</a></h3>
 <p>For each time sample, computes:</p>
 <ul>
-<li><strong>Odometry velocity</strong>: Magnitude of position derivatives <span class="arithmatex">\(<span class="arithmatex">\(v_{odom} = \sqrt{\left(\frac{dx}{dt}\right)^2 + \left(\frac{dy}{dt}\right)^2}\)</span>\)</span></li>
+<li>
+<p><strong>Odometry velocity</strong>: Magnitude of position derivatives</p>
+<div class="arithmatex">\[
+v_{odom} = \sqrt{\left(\frac{dx}{dt}\right)^2 + \left(\frac{dy}{dt}\right)^2}
+\]</div>
+</li>
+</ul>
+<ul>
 <li><strong>Distance between points</strong>: Euclidean distance from previous position</li>
 <li><strong>Integrated distance from velocity</strong>: Trapezoidal integration of velocity reports</li>
 <li><strong>Angular velocity</strong>: Interpolated IMU z-axis rotation</li>
@@ -19616,14 +19623,50 @@
 <h3 id="6-constraint-validation">6. Constraint Validation<a class="headerlink" href="#6-constraint-validation" title="Permanent link">#</a></h3>
 <p>Validates that all states satisfy operational constraints to ensure reliable estimation:</p>
 <ul>
-<li><strong>Angular velocity constraint</strong>: <span class="arithmatex">\(<span class="arithmatex">\(|\omega| \leq \omega_{max}\)</span>\)</span> (avoids estimation during sharp turns)</li>
-<li><strong>Speed constraints</strong>: <span class="arithmatex">\(<span class="arithmatex">\(v_{min} \leq v \leq v_{max}\)</span>\)</span> (ensures sufficient motion for accurate differentiation and avoids extreme speeds)</li>
-<li><strong>Speed change constraint</strong>: <span class="arithmatex">\(<span class="arithmatex">\(|\Delta v| \leq \Delta v_{max}\)</span>\)</span> (filters out periods of rapid acceleration/deceleration where tire slip may occur)</li>
+<li>
+<p><strong>Angular velocity constraint</strong>:</p>
+<div class="arithmatex">\[
+|\omega| \leq \omega_{max}
+\]</div>
+<p>(avoids estimation during sharp turns)</p>
+</li>
+</ul>
+<ul>
+<li>
+<p><strong>Speed constraints</strong>:</p>
+<div class="arithmatex">\[
+v_{min} \leq v \leq v_{max}
+\]</div>
+<p>(ensures sufficient motion for accurate differentiation and avoids extreme speeds)</p>
+</li>
+</ul>
+<ul>
+<li>
+<p><strong>Speed change constraint</strong>:</p>
+<div class="arithmatex">\[
+|\Delta v| \leq \Delta v_{max}
+\]</div>
+<p>(filters out periods of rapid acceleration/deceleration where tire slip may occur)</p>
+</li>
 </ul>
 <h3 id="7-scale-factor-estimation">7. Scale Factor Estimation<a class="headerlink" href="#7-scale-factor-estimation" title="Permanent link">#</a></h3>
 <ul>
-<li>Computes instantaneous scale factor: <span class="arithmatex">\(<span class="arithmatex">\(s = \frac{d_{odom}}{d_{velocity}}\)</span>\)</span></li>
-<li>Updates running average: <span class="arithmatex">\(<span class="arithmatex">\(\bar{s}_{new} = \frac{\bar{s}_{old} \times n + s_{current}}{n + 1}\)</span>\)</span></li>
+<li>
+<p>Computes instantaneous scale factor:</p>
+<div class="arithmatex">\[
+s = \frac{d_{odom}}{d_{velocity}}
+\]</div>
+</li>
+</ul>
+<ul>
+<li>
+<p>Updates running average:</p>
+<div class="arithmatex">\[
+\bar{s}_{new} = \frac{\bar{s}_{old} \times n + s_{current}}{n + 1}
+\]</div>
+</li>
+</ul>
+<ul>
 <li>Clears sensor buffers after successful estimation</li>
 </ul>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
