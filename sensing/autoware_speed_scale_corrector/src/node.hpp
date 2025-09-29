@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__SPEED_SCALE_CORRECTOR__NODE_HPP_
-#define AUTOWARE__SPEED_SCALE_CORRECTOR__NODE_HPP_
+#ifndef NODE_HPP_
+#define NODE_HPP_
 
 #include "autoware/speed_scale_corrector/speed_scale_estimator.hpp"
 #include "autoware_utils_rclcpp/polling_subscriber.hpp"
@@ -113,4 +113,4 @@ private:
 
 }  // namespace autoware::speed_scale_corrector
 
-#endif  // AUTOWARE__SPEED_SCALE_CORRECTOR__NODE_HPP_
+#endif  // NODE_HPP_

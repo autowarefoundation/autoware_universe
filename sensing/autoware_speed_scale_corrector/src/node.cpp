@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/speed_scale_corrector/node.hpp"
+#include "node.hpp"
 
 #include "autoware/speed_scale_corrector/speed_scale_estimator.hpp"
 
