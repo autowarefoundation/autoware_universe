@@ -11,11 +11,16 @@
           "description": "steer offset is larger than tolerance",
           "default": "1000.0"
         },
-        "steer_update_hz": {
+        "update_hz": {
           "type": "number",
           "description": "update hz of steer data",
           "default": "10.0",
           "minimum": 0.0
+        },
+        "initial_offset": {
+          "type": "number",
+          "description": "initial steer offset value",
+          "default": "0.0"
         },
         "forgetting_factor": {
           "type": "number",
@@ -23,30 +28,25 @@
           "default": "0.999",
           "minimum": 0.0
         },
-        "valid_min_velocity": {
+        "min_velocity": {
           "type": "number",
           "description": "velocity below this value is not used",
           "default": "5.0",
           "minimum": 0.0
         },
-        "valid_max_steer": {
+        "max_steer": {
           "type": "number",
           "description": "steer above this value is not used",
           "default": "0.05"
-        },
-        "warn_steer_offset_deg": {
-          "type": "number",
-          "description": "Warn if offset is above this value. ex. if absolute estimated offset is larger than 2.5[deg] => warning",
-          "default": "2.5"
         }
       },
       "required": [
         "initial_covariance",
-        "steer_update_hz",
+        "update_hz",
+        "initial_offset",
         "forgetting_factor",
-        "valid_min_velocity",
-        "valid_max_steer",
-        "warn_steer_offset_deg"
+        "min_velocity",
+        "max_steer"
       ]
     }
   },
