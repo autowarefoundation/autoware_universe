@@ -59,42 +59,6 @@ autoware_perception_msgs::msg::ObjectClassification OutputObjectsConverter::conv
   return classification;
 }
 
-std::optional<float> OutputObjectsConverter::calculate_predicted_path_yaw(
-  const BBox& bbox,
-  const Eigen::Matrix4d& base2map_transform) const
-{
-  float max_confidence = 0.0f;
-  std::optional<float> predicted_path_yaw = std::nullopt;
-  float vad_z = bbox.bbox[4] + bbox.bbox[5] * 0.5f; // object center
-
-  for (const auto& pred_traj : bbox.trajectories) {
-    if (pred_traj.confidence > max_confidence) {
-      // Calculate direction from first 2 points
-      float traj_vad_x1 = pred_traj.trajectory[0][0] + bbox.bbox[0];
-      float traj_vad_y1 = pred_traj.trajectory[0][1] + bbox.bbox[1];
-      float traj_vad_x2 = pred_traj.trajectory[1][0] + bbox.bbox[0];
-      float traj_vad_y2 = pred_traj.trajectory[1][1] + bbox.bbox[1];
-
-      auto [traj_aw_x1, traj_aw_y1, traj_aw_z1] = coordinate_transformer_.vad2aw_xyz(traj_vad_x1, traj_vad_y1, vad_z);
-      auto [traj_aw_x2, traj_aw_y2, traj_aw_z2] = coordinate_transformer_.vad2aw_xyz(traj_vad_x2, traj_vad_y2, vad_z);
-
-      Eigen::Vector4d pos1_base(static_cast<double>(traj_aw_x1), static_cast<double>(traj_aw_y1), static_cast<double>(traj_aw_z1), 1.0);
-      Eigen::Vector4d pos2_base(static_cast<double>(traj_aw_x2), static_cast<double>(traj_aw_y2), static_cast<double>(traj_aw_z2), 1.0);
-      Eigen::Vector4d pos1_map = base2map_transform * pos1_base;
-      Eigen::Vector4d pos2_map = base2map_transform * pos2_base;
-
-      float dx = pos2_map.x() - pos1_map.x();
-      float dy = pos2_map.y() - pos1_map.y();
-      if (std::sqrt(dx*dx + dy*dy) > 0.01) {
-        predicted_path_yaw = std::atan2(dy, dx);
-        max_confidence = pred_traj.confidence;
-      }
-    }
-  }
-
-  return predicted_path_yaw;
-}
-
 geometry_msgs::msg::Point OutputObjectsConverter::convert_position(
   const BBox& bbox,
   const Eigen::Matrix4d& base2map_transform) const
@@ -128,7 +92,7 @@ float OutputObjectsConverter::calculate_object_orientation(
   float transform_yaw = std::atan2(rotation_matrix(1, 0), rotation_matrix(0, 0));
   float map_yaw = vad_yaw + transform_yaw;
 
-  return calculate_predicted_path_yaw(bbox, base2map_transform).value_or(map_yaw);
+  return map_yaw;
 }
 
 geometry_msgs::msg::Twist OutputObjectsConverter::convert_velocity(
