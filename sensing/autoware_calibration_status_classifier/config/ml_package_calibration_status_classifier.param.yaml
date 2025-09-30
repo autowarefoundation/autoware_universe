@@ -1,0 +1,6 @@
+/**:
+  ros__parameters:
+    max_depth: 128.0
+    dilation_size: 1
+    height: [1080, 1860, 2160]  # [min, opt, max]
+    width: [1920, 2880, 3840]  # [min, opt, max]

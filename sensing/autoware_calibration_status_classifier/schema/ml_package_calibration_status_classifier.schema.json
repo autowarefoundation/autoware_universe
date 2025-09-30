@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ML package autoware_calibration_status_classifier parameters",
+  "type": "object",
+  "definitions": {
+    "calibration_status_classifier": {
+      "type": "object",
+      "properties": {
+        "max_depth": {
+          "type": "number",
+          "description": "Maximum depth for projected LiDAR points in the camera frame. Points with depth values greater than this are considered invalid.",
+          "default": "128.0"
+        },
+        "dilation_size": {
+          "type": "integer",
+          "description": "The size of the dilation kernel used for point cloud processing, 1 means 3x3 kernel, 2 means 5x5 kernel, etc.",
+          "default": 1
+        },
+        "height": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "The height of the input image for optimization profile of the ML model, specified as [min, opt, max].",
+          "default": [1080, 1860, 2160]
+        },
+        "width": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "The width of the input image for the optimization profile of the ML model, specified as [min, opt, max].",
+          "default": [1920, 2880, 3840]
+        }
+      },
+      "required": ["max_depth", "dilation_size", "height", "width"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/calibration_status_classifier"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
