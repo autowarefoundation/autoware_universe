@@ -20,15 +20,21 @@ Currently, this algorithm can sometimes give unnatural (not wrong) blinkers in c
 
 ## Parameters for turn signal decider
 
-| Name                                            | Unit | Type   | Description                                                                                                                     | Default value |
-| :---------------------------------------------- | :--- | :----- | :------------------------------------------------------------------------------------------------------------------------------ | :------------ |
-| turn_signal_intersection_search_distance        | [m]  | double | constant search distance to decide activation of blinkers at intersections                                                      | 30            |
-| turn_signal_intersection_angle_threshold_degree | deg  | double | angle threshold to determined the end point of intersection required section                                                    | 15            |
-| turn_signal_minimum_search_distance             | [m]  | double | minimum search distance for avoidance and lane change                                                                           | 10            |
-| turn_signal_search_time                         | [s]  | double | search time for to decide activation of blinkers                                                                                | 3.0           |
-| turn_signal_shift_length_threshold              | [m]  | double | shift length threshold to decide activation of blinkers                                                                         | 0.3           |
-| turn_signal_remaining_shift_length_threshold    | [m]  | double | When the ego's current shift length minus its end shift length is less than this threshold, the turn signal will be turned off. | 0.1           |
-| turn_signal_on_swerving                         | [-]  | bool   | flag to activate blinkers when swerving                                                                                         | true          |
+| Name                                               | Unit | Type   | Description                                                                                                                                                                                            | Default value |
+| :------------------------------------------------- | :--- | :----- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------ |
+| turn_signal_intersection_search_distance           | [m]  | double | constant search distance to decide activation of blinkers at intersections                                                                                                                             | 30            |
+| turn_signal_intersection_angle_threshold_degree    | deg  | double | angle threshold to determined the end point of intersection required section                                                                                                                           | 15            |
+| turn_signal_minimum_search_distance                | [m]  | double | minimum search distance for avoidance and lane change                                                                                                                                                  | 10            |
+| turn_signal_search_time                            | [s]  | double | search time for to decide activation of blinkers                                                                                                                                                       | 3.0           |
+| turn_signal_shift_length_threshold                 | [m]  | double | shift length threshold to decide activation of blinkers                                                                                                                                                | 0.3           |
+| turn_signal_remaining_shift_length_threshold       | [m]  | double | When the ego's current shift length minus its end shift length is less than this threshold, the turn signal will be turned off.                                                                        | 0.1           |
+| turn_signal_on_swerving                            | [-]  | bool   | flag to activate blinkers when swerving                                                                                                                                                                | true          |
+| turn_signal_roundabout_on_entry                    | [-]  | string | turn signal on entry to roundabout. "None", "Left", "Right"                                                                                                                                            | "None"        |
+| turn_signal_roundabout_entry_indicator_persistence | [-]  | bool   | whether to keep the indicator on after entering the roundabout. If true, the indicator will be kept on until the exit point. If false, the indicator will be turned off after entering the roundabout. | false         |
+| turn_signal_roundabout_on_exit                     | [-]  | string | turn signal on exit from roundabout. "None", "Left", "Right"                                                                                                                                           | "Left"        |
+| turn_signal_roundabout_search_distance             | [m]  | double | constant search distance to decide activation of blinkers at roundabouts                                                                                                                               | 30.0          |
+| turn_signal_roundabout_angle_threshold_degree      | deg  | double | angle threshold to determined the end point of roundabout required section                                                                                                                             | 15.0          |
+| turn_signal_roundabout_backward_depth              | [-]  | int    | maximum number of lanelets to look back when determining the backward length for roundabout turn signal logic. Set to -1 for unlimited depth.                                                          | 50            |
 
 Note that the default values for `turn_signal_intersection_search_distance` and `turn_signal_search_time` is strictly followed by [Japanese Road Traffic Laws](https://www.japaneselawtranslation.go.jp/ja/laws/view/2962). So if your country does not allow to use these default values, you should change these values in configuration files.
 
@@ -158,6 +164,39 @@ Second section
 
 ![section_pull_over](../images/turn_signal_decider/pull_over.drawio.svg)
 
+#### 6. Roundabout
+
+For roundabout scenarios, the turn signal decider handles both entry and exit turn signals based on the `roundabout` attribute in the lanelet map. The roundabout functionality supports the following configurations:
+
+Entry Turn Signal:
+
+- **desired start point**: `v * turn_signal_search_time` meters before the start point of the roundabout entry lanelet.
+- **desired end point**: Terminal point of the roundabout entry lanelet (or exit lanelet if `turn_signal_roundabout_entry_indicator_persistence` is enabled).
+- **required start point**: Initial point of the roundabout entry lanelet.
+- **required end point**: The earliest point that satisfies the following condition. $\theta - \theta_{\textrm{end}} < \delta$, where $\theta_{\textrm{end}}$ is yaw angle of the terminal point of the lanelet, $\theta$ is the angle of a required end point and $\delta$ is the threshold defined by the user. (This is the same as the right/left turn signal logic.)
+
+Exit Turn Signal:
+
+- **desired start point**: Start point of the roundabout exit lanelet (or from a lanelet with `enable_exit_turn_signal` attribute if found).
+- **desired end point**: Terminal point of the roundabout exit lanelet.
+- **required start point**: Initial point of the roundabout exit lanelet.
+- **required end point**: The earliest point that satisfies the following condition. $\theta - \theta_{\textrm{end}} < \delta$, where $\theta_{\textrm{end}}$ is yaw angle of the terminal point of the lanelet, $\theta$ is the angle of a required end point and $\delta$ is the threshold defined by the user.(This is the same as the right/left turn signal logic.)
+
+Special Features:
+
+- **Indicator persistence**: When `turn_signal_roundabout_entry_indicator_persistence` is enabled, the entry turn signal remains active until the vehicle exits the roundabout.
+
+##### Example parameter settings based on country-specific rules
+
+| Country     | Entry (`turn_signal_roundabout_on_entry`) | Exit (`turn_signal_roundabout_on_exit`) | Entry indicator persistence (`turn_signal_roundabout_entry_indicator_persistence`) | Notes |
+| :---------- | :---------------------------------------- | :-------------------------------------- | :--------------------------------------------------------------------------------- | :---- |
+| Japan       | "None"                                    | "Left"                                  | false                                                                              |       |
+| Germany     | "None"                                    | "Right"                                 | false                                                                              |       |
+| South Korea | "Left"                                    | "Right"                                 | false                                                                              |       |
+
+### Blinker conflicts
+
+When ego vehicle has to activate several blinkers, it uses the following rules to decide which blinker to activate. Note that this algorithm is based on the Japanese Road Traffic Law, so it may not be suitable for other countries.
 When it comes to handle several blinkers, it gives priority to the first blinker that comes first. However, this rule sometimes activate unnatural blinkers, so turn signal decider uses the following five rules to decide the necessary turn signal.
 
 - pattern1

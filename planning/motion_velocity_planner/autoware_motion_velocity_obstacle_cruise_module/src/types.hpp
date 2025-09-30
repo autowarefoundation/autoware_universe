@@ -29,7 +29,7 @@ namespace autoware::motion_velocity_planner
 struct CruiseObstacle
 {
   CruiseObstacle(
-    const std::string & arg_uuid, const rclcpp::Time & arg_stamp,
+    const UUID & arg_uuid, const rclcpp::Time & arg_stamp,
     const geometry_msgs::msg::Pose & arg_pose, const double arg_lon_velocity,
     const double arg_lat_velocity,
     const std::vector<polygon_utils::PointWithStamp> & arg_collision_points,
@@ -43,7 +43,7 @@ struct CruiseObstacle
     is_yield_obstacle(arg_is_yield_obstacle)
   {
   }
-  std::string uuid{};
+  UUID uuid{};
   rclcpp::Time stamp{};
   geometry_msgs::msg::Pose pose{};  // interpolated with the current stamp
   double velocity{};                // longitudinal velocity against ego's trajectory

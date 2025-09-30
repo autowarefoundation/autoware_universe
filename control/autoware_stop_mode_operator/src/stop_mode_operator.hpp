@@ -15,22 +15,30 @@
 #ifndef STOP_MODE_OPERATOR_HPP_
 #define STOP_MODE_OPERATOR_HPP_
 
+#include "continuous_condition.hpp"
+
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_control_msgs/msg/control.hpp>
+#include <autoware_planning_msgs/msg/route_state.hpp>
 #include <autoware_vehicle_msgs/msg/gear_command.hpp>
 #include <autoware_vehicle_msgs/msg/hazard_lights_command.hpp>
 #include <autoware_vehicle_msgs/msg/steering_report.hpp>
 #include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
+#include <autoware_vehicle_msgs/msg/velocity_report.hpp>
+
+#include <optional>
 
 namespace autoware::stop_mode_operator
 {
 
 using autoware_control_msgs::msg::Control;
+using autoware_planning_msgs::msg::RouteState;
 using autoware_vehicle_msgs::msg::GearCommand;
 using autoware_vehicle_msgs::msg::HazardLightsCommand;
 using autoware_vehicle_msgs::msg::SteeringReport;
 using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
+using autoware_vehicle_msgs::msg::VelocityReport;
 
 class StopModeOperator : public rclcpp::Node
 {
@@ -38,18 +46,31 @@ public:
   explicit StopModeOperator(const rclcpp::NodeOptions & options);
 
 private:
+  void on_timer();
   void publish_control_command();
-  void publish_trigger_command();
+  void publish_gear_command();
+  void publish_turn_indicators_command();
+  void publish_hazard_lights_command();
+
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<Control>::SharedPtr pub_control_;
   rclcpp::Publisher<GearCommand>::SharedPtr pub_gear_;
   rclcpp::Publisher<TurnIndicatorsCommand>::SharedPtr pub_turn_indicators_;
   rclcpp::Publisher<HazardLightsCommand>::SharedPtr pub_hazard_lights_;
   rclcpp::Subscription<SteeringReport>::SharedPtr sub_steering_;
+  rclcpp::Subscription<VelocityReport>::SharedPtr sub_velocity_;
+  rclcpp::Subscription<RouteState>::SharedPtr sub_route_state_;
 
   SteeringReport current_steering_;
+  RouteState current_route_state_;
+  ContinuousCondition vehicle_stop_check_;
+  std::optional<bool> last_parking_;
 
   double stop_hold_acceleration_;
+  bool enable_auto_parking_;
+
+  static constexpr double vehicle_stop_duration_ = 1.0;
+  static constexpr double vehicle_stop_timeout_ = 1.0;
 };
 
 }  // namespace autoware::stop_mode_operator

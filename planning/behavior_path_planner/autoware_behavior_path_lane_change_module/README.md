@@ -1314,6 +1314,19 @@ The following parameters are used to configure terminal lane change path feature
 | `collision_check.yaw_diff_threshold`                     | [rad] | double  | Maximum yaw difference between predicted ego pose and predicted object pose when executing rss-based collision checking                                                                                    | 3.1416        |
 | `collision_check.th_incoming_object_yaw`                 | [rad] | double  | Maximum yaw difference between current ego pose and current object pose. Objects with a yaw difference exceeding this value are excluded from the safety check.                                            | 2.3562        |
 
+#### safety constraints when ego is in prepare phase
+
+| Name                                                       | Unit    | Type   | Description                                                                                                                                                    | Default value |
+| :--------------------------------------------------------- | ------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| `safety_check.prepare.expected_front_deceleration`         | [m/s^2] | double | The front object's maximum deceleration when the front vehicle perform sudden braking. (\*1)                                                                   | -1.0          |
+| `safety_check.prepare.expected_rear_deceleration`          | [m/s^2] | double | The rear object's maximum deceleration when the rear vehicle perform sudden braking. (\*1)                                                                     | -1.0          |
+| `safety_check.prepare.rear_vehicle_reaction_time`          | [s]     | double | The reaction time of the rear vehicle driver which starts from the driver noticing the sudden braking of the front vehicle until the driver step on the brake. | 1.0           |
+| `safety_check.prepare.rear_vehicle_safety_time_margin`     | [s]     | double | The time buffer for the rear vehicle to come into complete stop when its driver perform sudden braking.                                                        | 0.8           |
+| `safety_check.prepare.lateral_distance_max_threshold`      | [m]     | double | The lateral distance threshold that is used to determine whether lateral distance between two object is enough and whether lane change is safe.                | 0.5           |
+| `safety_check.prepare.longitudinal_distance_min_threshold` | [m]     | double | The longitudinal distance threshold that is used to determine whether longitudinal distance between two object is enough and whether lane change is safe.      | 1.0           |
+| `safety_check.prepare.longitudinal_velocity_delta_time`    | [m]     | double | The time multiplier that is used to compute the actual gap between vehicle at each predicted points (not RSS distance)                                         | 0.0           |
+| `safety_check.prepare.extended_polygon_policy`             | [-]     | string | Policy used to determine the polygon shape for the safety check. Available options are: `rectangle` or `along-path`.                                           | `rectangle`   |
+
 #### safety constraints during lane change path is computed
 
 | Name                                                         | Unit    | Type   | Description                                                                                                                                                    | Default value |

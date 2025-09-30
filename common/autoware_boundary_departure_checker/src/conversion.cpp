@@ -37,6 +37,11 @@ Segment2d to_segment_2d(
   return {to_point_2d(ll_pt1), to_point_2d(ll_pt2)};
 }
 
+Segment2d to_segment_2d(const Segment3d & segment)
+{
+  return {to_point_2d(segment.first), to_point_2d(segment.second)};
+}
+
 Point to_geom_pt(const Point2d & point, const double z)
 {
   return autoware_utils::to_msg(point.to_3d(z));
