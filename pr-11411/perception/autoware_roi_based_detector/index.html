@@ -19691,8 +19691,6 @@
     return format_json(data)
   File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 64, in format_json
     markdown_table = tabulate(extract_parameter_info(parameters), headers="keys", tablefmt="github")
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 57, in extract_parameter_info
-    params.extend(extract_parameter_info(v["properties"], k + "."))
   File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 53, in extract_parameter_info
     param["Default"] = v["default"]
 KeyError: 'default'
