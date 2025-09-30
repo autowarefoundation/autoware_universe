@@ -526,6 +526,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/perception/autoware_lidar_frnet/</loc>
+         <lastmod>2025-09-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/latest/perception/autoware_lidar_transfusion/</loc>
          <lastmod>2025-09-30</lastmod>
          <changefreq>daily</changefreq>
@@ -587,6 +592,11 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/latest/perception/autoware_probabilistic_occupancy_grid_map/synchronized_grid_map_fusion/</loc>
+         <lastmod>2025-09-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/perception/autoware_ptv3/</loc>
          <lastmod>2025-09-30</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -1082,6 +1092,11 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/sampling_based_planner/autoware_sampler_common/</loc>
+         <lastmod>2025-09-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/sensing/autoware_calibration_status_classifier/</loc>
          <lastmod>2025-09-30</lastmod>
          <changefreq>daily</changefreq>
     </url>
