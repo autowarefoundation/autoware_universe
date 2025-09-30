@@ -26,7 +26,7 @@ target_compile_options(${PROJECT_NAME} PUBLIC
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
-  PLUGIN "autoware::autoware_trajectory_traffic_rule_filter::TrajectoryTrafficRuleFilter"
+  PLUGIN "autoware::trajectory_traffic_rule_filter::TrajectoryTrafficRuleFilter"
   EXECUTABLE ${PROJECT_NAME}_node
 )
 
