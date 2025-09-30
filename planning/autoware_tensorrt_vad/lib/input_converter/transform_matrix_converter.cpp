@@ -89,11 +89,8 @@ VadBase2ImgData InputTransformMatrixConverter::process_vad_base2img(
 
     Eigen::Matrix4f cam2img = create_cam2img(camera_infos[autoware_camera_id]);
     
-    // Get vad2base transformation from config through coordinate transformer
-    // The coordinate transformer uses vad2base internally, but we need to access it for vad2cam calculation
-    // Calculate vad2cam transformation: vad2img = cam2img * base2cam * vad2base
-    Eigen::Matrix4f vad2cam_rt = base2cam * config_.vad2base;
-    Eigen::Matrix4f vad_base2img = cam2img * vad2cam_rt;
+    // Calculate vad2cam transformation: vad2img = cam2img * base2cam
+    Eigen::Matrix4f vad_base2img = cam2img * base2cam;
 
     // Calculate scaling factors from camera_info
     auto [scale_width, scale_height] = calculate_scale(camera_infos[autoware_camera_id]);

@@ -30,64 +30,31 @@ CanBusData InputCanBusConverter::process_can_bus(
 {
   CanBusData can_bus(18, 0.0f);
 
-  // Apply Autoware to VAD base_link coordinate transformation to position
-  auto [vad_x, vad_y, vad_z] =
-      coordinate_transformer_.aw2vad_xyz(kinematic_state->pose.pose.position.x,
-                             kinematic_state->pose.pose.position.y,
-                             kinematic_state->pose.pose.position.z);
-
   // translation (0:3)
-  can_bus[0] = vad_x;
-  can_bus[1] = vad_y;
-  can_bus[2] = vad_z;
-
-  // Apply Autoware to VAD base_link coordinate transformation to orientation
-  Eigen::Quaternionf q_aw(
-      kinematic_state->pose.pose.orientation.w,
-      kinematic_state->pose.pose.orientation.x,
-      kinematic_state->pose.pose.orientation.y,
-      kinematic_state->pose.pose.orientation.z);
-
-  Eigen::Quaternionf q_vad = coordinate_transformer_.aw2vad_quaternion(q_aw);
+  can_bus[0] = kinematic_state->pose.pose.position.x;
+  can_bus[1] = kinematic_state->pose.pose.position.y;
+  can_bus[2] = kinematic_state->pose.pose.position.z;
 
   // rotation (3:7)
-  can_bus[3] = q_vad.x();
-  can_bus[4] = q_vad.y();
-  can_bus[5] = q_vad.z();
-  can_bus[6] = q_vad.w();
-
-  // Apply Autoware to VAD base_link coordinate transformation to acceleration
-  auto [vad_ax, vad_ay, vad_az] =
-      coordinate_transformer_.aw2vad_xyz(acceleration->accel.accel.linear.x,
-                             acceleration->accel.accel.linear.y,
-                             acceleration->accel.accel.linear.z);
+  can_bus[3] = kinematic_state->pose.pose.orientation.x;
+  can_bus[4] = kinematic_state->pose.pose.orientation.y;
+  can_bus[5] = kinematic_state->pose.pose.orientation.z;
+  can_bus[6] = kinematic_state->pose.pose.orientation.w;
 
   // acceleration (7:10)
-  can_bus[7] = vad_ax;
-  can_bus[8] = vad_ay;
-  can_bus[9] = vad_az;
-
-  // Apply Autoware to VAD base_link coordinate transformation to angular velocity
-  auto [vad_wx, vad_wy, vad_wz] =
-      coordinate_transformer_.aw2vad_xyz(kinematic_state->twist.twist.angular.x,
-                             kinematic_state->twist.twist.angular.y,
-                             kinematic_state->twist.twist.angular.z);
+  can_bus[7] = acceleration->accel.accel.linear.x;
+  can_bus[8] = acceleration->accel.accel.linear.y;
+  can_bus[9] = acceleration->accel.accel.linear.z;
 
   // angular velocity (10:13)
-  can_bus[10] = vad_wx;
-  can_bus[11] = vad_wy;
-  can_bus[12] = vad_wz;
-
-  // Apply Autoware to VAD base_link coordinate transformation to velocity
-  auto [vad_vx, vad_vy, vad_vz] =
-      coordinate_transformer_.aw2vad_xyz(kinematic_state->twist.twist.linear.x,
-                             kinematic_state->twist.twist.linear.y,
-                             0.0f); // Set z-direction velocity to 0
+  can_bus[10] = kinematic_state->twist.twist.angular.x;
+  can_bus[11] = kinematic_state->twist.twist.angular.y;
+  can_bus[12] = kinematic_state->twist.twist.angular.z;
 
   // velocity (13:16)
-  can_bus[13] = vad_vx;
-  can_bus[14] = vad_vy;
-  can_bus[15] = vad_vz;
+  can_bus[13] = kinematic_state->twist.twist.linear.x;
+  can_bus[14] = kinematic_state->twist.twist.linear.y;
+  can_bus[15] = 0.0f; // Set z-direction velocity to 0
 
   // Calculate patch_angle[rad] (16)
   // yaw = ArcTan(2 * (w * z + x * y) / (1 - 2 * (y ** 2 + z ** 2)))
