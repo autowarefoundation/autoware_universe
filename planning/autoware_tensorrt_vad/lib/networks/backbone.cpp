@@ -32,7 +32,7 @@ Backbone::Backbone(
   }
 }
 
-std::vector<autoware::tensorrt_common::NetworkIO> Backbone::generate_network_io(const VadConfig& vad_config) {
+std::vector<autoware::tensorrt_common::NetworkIO> Backbone::setup_network_io(const VadConfig& vad_config) {
   int32_t downsampled_image_height = vad_config.target_image_height / vad_config.downsample_factor;
   int32_t downsampled_image_width = vad_config.target_image_width / vad_config.downsample_factor;
   nvinfer1::Dims camera_input_dims{4, {vad_config.num_cameras, 3, vad_config.target_image_height, vad_config.target_image_width}};

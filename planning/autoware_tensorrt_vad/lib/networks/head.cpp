@@ -33,7 +33,7 @@ Head::Head(
   }
 }
 
-std::vector<autoware::tensorrt_common::NetworkIO> Head::generate_network_io(const VadConfig& vad_config) {
+std::vector<autoware::tensorrt_common::NetworkIO> Head::setup_network_io(const VadConfig& vad_config) {
   int32_t downsampled_image_height = vad_config.target_image_height / vad_config.downsample_factor;
   int32_t downsampled_image_width = vad_config.target_image_width / vad_config.downsample_factor;
   nvinfer1::Dims mlvl_dims{5, {1, vad_config.num_cameras, vad_config.bev_feature_dim, downsampled_image_height, downsampled_image_width}};

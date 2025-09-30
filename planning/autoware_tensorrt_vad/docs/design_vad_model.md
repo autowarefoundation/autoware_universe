@@ -93,7 +93,7 @@ flowchart TD
     
     subgraph NetClass["Net Class"]
         subgraph InitProcess["Net::init_tensorrt"]
-            GenerateIO[generate_network_io]
+            SetupIO[setup_network_io]
             BuildEngine[build_engine]
         end
         
@@ -128,7 +128,7 @@ flowchart TD
     click VadModelInit "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_model.hpp" "VadModel implementation"
     click VadModelEnqueue "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_model.hpp" "VadModel implementation"
     click InitTensorRT "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/networks/net.hpp" "Net class implementation"
-    click GenerateIO "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/networks/net.hpp" "Net class implementation"
+    click SetupIO "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/networks/net.hpp" "Net class implementation"
     click TensorClass "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/lib/networks/tensor.cpp" "Tensor class implementation"
 ```
 
@@ -136,7 +136,7 @@ flowchart TD
 
 - Constructor
     - [`init_tensorrt`](../include/autoware/tensorrt_vad/networks/net.hpp): Called from `VadModel::init_engines`
-        - generate_network_io
+        - setup_network_io
             - Implemented in [`Backbone`](../include/autoware/tensorrt_vad/networks/backbone.hpp) and [`Head`](../include/autoware/tensorrt_vad/networks/head.hpp) respectively
             - Sets input and output sizes and names
         - [`build_engine`](../include/autoware/tensorrt_vad/networks/net.hpp)

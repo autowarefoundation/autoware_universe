@@ -28,7 +28,7 @@ public:
     std::shared_ptr<VadLogger> logger
   );
 
-  std::vector<autoware::tensorrt_common::NetworkIO> generate_network_io(const VadConfig& vad_config) override;
+  std::vector<autoware::tensorrt_common::NetworkIO> setup_network_io(const VadConfig& vad_config) override;
 };
 
 } // namespace autoware::tensorrt_vad

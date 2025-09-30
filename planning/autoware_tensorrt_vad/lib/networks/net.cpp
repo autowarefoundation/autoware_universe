@@ -57,7 +57,7 @@ std::unique_ptr<autoware::tensorrt_common::TrtCommon> Net::init_tensorrt(
   logger_->info("Initializing TensorRT engine");
   
   // Generate NetworkIO using the overridden implementation
-  auto network_io = generate_network_io(vad_config);
+  auto network_io = setup_network_io(vad_config);
 
   // Build engine using network type name
   std::string engine_name = toString(network_type_);
