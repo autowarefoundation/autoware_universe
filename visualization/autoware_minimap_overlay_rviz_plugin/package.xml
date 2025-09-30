@@ -3,9 +3,9 @@
 <package format="3">
   <name>autoware_minimap_overlay_rviz_plugin</name>
   <version>0.1.0</version>
-  <description>TODO: Package description</description>
+  <description>Plugin for displaying a minimap overlay in RViz2 with vehicle position, goal pose, and route information.</description>
   <maintainer email="khalil@leodrive.ai">khalil</maintainer>
-  <license>TODO: License declaration</license>
+  <license>Apache License 2.0</license>
 
   <depend>angles</depend>
   <depend>autoware_adapi_v1_msgs</depend>
