@@ -121,16 +121,6 @@ private:
     const BBox& bbox,
     const Eigen::Matrix4d& base2map_transform) const;
 
-  /**
-   * @brief Calculate predicted path yaw
-   * @param bbox Bounding box data
-   * @param base2map_transform Transformation matrix from base_link to map frame
-   * @return std::optional<float> Predicted path yaw angle in map frame if valid, otherwise std::nullopt
-   */
-   std::optional<float> calculate_predicted_path_yaw(
-    const BBox& bbox,
-    const Eigen::Matrix4d& base2map_transform) const;
-
   };
 
 } // namespace autoware::tensorrt_vad::vad_interface
