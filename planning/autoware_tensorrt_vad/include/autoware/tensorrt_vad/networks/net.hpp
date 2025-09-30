@@ -65,7 +65,7 @@ public:
     std::shared_ptr<VadLogger> logger
   );
 
-  virtual std::vector<autoware::tensorrt_common::NetworkIO> generate_network_io(const VadConfig& vad_config) = 0;
+  virtual std::vector<autoware::tensorrt_common::NetworkIO> setup_network_io(const VadConfig& vad_config) = 0;
   
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> init_tensorrt(
     const VadConfig& vad_config,
