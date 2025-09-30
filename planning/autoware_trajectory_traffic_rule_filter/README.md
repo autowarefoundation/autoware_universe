@@ -1,29 +1,61 @@
-# Valid Trajectory Filter
+# Autoware Trajectory Traffic Rule Filter
 
-## Purpose/Role
+## Purpose
 
-This node acts as a safety gate between trajectory generation and ranking. It removes any candidate path that would clearly violate immediate traffic rules,so that only lawful, drivable trajectories proceed downstream.
+The `autoware_trajectory_traffic_rule_filter` package provides a plugin-based filtering system for candidate trajectories based on traffic rules. It evaluates trajectories against various traffic regulations and safety constraints to ensure compliance with traffic laws.
 
-## Algorithm Overview
+## Inner-workings / Algorithms
 
-The node latches the HD map (`LaneletMapBin`) and builds helper structures for routing and traffic‑rule evaluation as soon as it receives the vector map. Whenever a candidate trajectories message arrives, the node updates an internal table of traffic‑light states, and checks whether each candidate path obey the traffic rule. Candidate trajectories which obey the rules are published.
+### Architecture
 
-Currently 2 traffic validation are implemented:
+The package uses a plugin architecture that allows for flexible and extensible traffic rule checking:
 
-- Traffic light validation: Candidates are removed if red traffic light is ignored.
-- Stop line validation: Candidates are removed if the trajectory crosses the stop line
+1. **Main Node**: `TrajectoryTrafficRuleFilter` - Manages plugins and coordinates filtering
+2. **Plugin Interface**: `TrafficRuleFilterInterface` - Base class for all filter plugins
+3. **Filter Plugins**: Individual filters that implement specific traffic rule checks
+
+### Filter Plugins
+
+#### StopLineFilter
+
+- Checks if a trajectory properly handles stop signs
+- Detects stop signs along the trajectory path
+- Validates that the vehicle stops at appropriate positions
+- Rejects trajectories that would violate stop sign requirements
+
+#### TrafficLightFilter
+
+- Validates trajectory compliance with traffic signals
+- Monitors traffic light states from perception system
+- Checks if trajectory would pass through red lights
+- Uses `isTrafficSignalStop()` from autoware traffic light utils
+- Allows trajectories only when traffic lights permit passage
 
 ## Interface
 
 ### Topics
 
-| Direction | Topic name                | Message type                                      | Description                               |
-| --------- | ------------------------- | ------------------------------------------------- | ----------------------------------------- |
-| Subscribe | `~/input/trajectories`    | `autoware_new_planning_msgs/msg/Trajectories`     | Candidate trajectories                    |
-| Subscribe | `~/input/lanelet2_map`    | `autoware_lanelet2_msgs/msg/LaneletMapBin`        | Full HD map                               |
-| Subscribe | `~/input/traffic_signals` | `autoware_perception_msgs/msg/TrafficSignalArray` | Latest perception of traffic‑light states |
-| Publish   | `~/output/trajectories`   | `autoware_new_planning_msgs/msg/Trajectories`     | Trajectories that obey traffic rule       |
+| Direction | Topic Name                        | Type                                                          | Description                                          |
+| --------- | --------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------- |
+| Input     | `~/input/candidate_trajectories`  | `autoware_internal_planning_msgs::msg::CandidateTrajectories` | Candidate trajectories to be filtered                |
+| Input     | `~/input/lanelet2_map`            | `autoware_map_msgs::msg::LaneletMapBin`                       | Lanelet2 map containing traffic rule info            |
+| Input     | `~/input/traffic_signals`         | `autoware_perception_msgs::msg::TrafficLightGroupArray`       | Current traffic light states                         |
+| Output    | `~/output/candidate_trajectories` | `autoware_internal_planning_msgs::msg::CandidateTrajectories` | Filtered trajectories that comply with traffic rules |
 
 ### Parameters
 
-This node currently exposes no ROS parameters; its behavior is fixed.
+| Name           | Type         | Description                    | Default Value   |
+| -------------- | ------------ | ------------------------------ | --------------- |
+| `filter_names` | string array | List of filter plugins to load | See config file |
+
+#### Plugin Configuration
+
+The active filters are specified in `config/trajectory_traffic_rule_filter.param.yaml`:
+
+```yaml
+/**:
+  ros__parameters:
+    filter_names:
+      - "autoware::trajectory_traffic_rule_filter::plugin::StopLineFilter"
+      -"autoware::trajectory_traffic_rule_filter::plugin::TrafficLightFilter"
+```
