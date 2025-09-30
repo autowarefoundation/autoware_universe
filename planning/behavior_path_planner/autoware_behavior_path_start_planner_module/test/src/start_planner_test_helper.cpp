@@ -198,6 +198,7 @@ void StartPlannerTestHelper::plot_footprint(
     {base_to_front, -base_to_right},  // Front right
     {-base_to_rear, -base_to_right},  // Rear right
     {-base_to_rear, base_to_left},    // Rear left
+    {base_to_front, base_to_left},    // Front left
   };
 
   // footprint
@@ -209,7 +210,7 @@ void StartPlannerTestHelper::plot_footprint(
     x.push_back(gx);
     y.push_back(gy);
   }
-  ax.fill(Args(x, y), Kwargs("color"_a = "red", "linewidth"_a = 1.5, "alpha"_a = 0.5));
+  ax.plot(Args(x, y), Kwargs("color"_a = "red", "linewidth"_a = 0.5));
 
   // arrow for vehicle orientation
   const double arrow_length = 5.0;  // Length of the arrow
@@ -325,7 +326,7 @@ void StartPlannerTestHelper::plot_and_save_path(
         return;
     }
     // Save the plot
-    plt.savefig(Args(output_path + filename), Kwargs("dpi"_a = 300));
+    plt.savefig(Args(output_path + filename), Kwargs("dpi"_a = 1200));
   } else {
     std::cerr << "Failed to get test_results directory path. Cannot save plot." << std::endl;
   }
