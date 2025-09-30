@@ -40,6 +40,18 @@
 namespace autoware::multi_object_tracker
 {
 
+enum class TrackerType {
+  PASS_THROUGH = 0,
+  PEDESTRIAN_AND_BICYCLE = 10,
+  PEDESTRIAN = 11,
+  BICYCLE = 12,
+  MULTIPLE_VEHICLE = 20,
+  NORMAL_VEHICLE = 21,
+  BIG_VEHICLE = 22,
+  VEHICLE = 23,
+  UNKNOWN = 30,
+};
+
 class Tracker
 {
 private:
@@ -91,13 +103,15 @@ public:
   void getPositionCovarianceEigenSq(
     const rclcpp::Time & time, double & major_axis_sq, double & minor_axis_sq) const;
   bool isConfident(
-    const rclcpp::Time & time, const AdaptiveThresholdCache & cache,
-    const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
+    const AdaptiveThresholdCache & cache, const std::optional<geometry_msgs::msg::Pose> & ego_pose,
+    const std::optional<rclcpp::Time> & time) const;
   bool isExpired(
     const rclcpp::Time & time, const AdaptiveThresholdCache & cache,
     const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
   float getKnownObjectProbability() const;
   double getPositionCovarianceDeterminant() const;
+  virtual TrackerType getTrackerType() const { return tracker_type_; }
+  int getTrackerPriority() const { return static_cast<int>(getTrackerType()); }
 
   std::uint8_t getHighestProbLabel() const
   {
@@ -128,6 +142,7 @@ public:
 
 protected:
   types::DynamicObject object_;
+  TrackerType tracker_type_{TrackerType::UNKNOWN};
 
   void updateCache(const types::DynamicObject & object, const rclcpp::Time & time) const
   {

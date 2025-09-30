@@ -592,9 +592,15 @@ struct AvoidancePlanningData
 
   std::vector<DrivableLanes> drivable_lanes{};
 
+  std::vector<DrivableLanes> drivable_lanes_same_direction{};
+
   std::vector<Point> right_bound{};
 
+  std::vector<Point> right_bound_same_direction{};
+
   std::vector<Point> left_bound{};
+
+  std::vector<Point> left_bound_same_direction{};
 
   bool safe{false};
 
@@ -648,6 +654,9 @@ struct AvoidancePlanningData
     drivable_lanes.clear();
     right_bound.clear();
     left_bound.clear();
+    drivable_lanes_same_direction.clear();
+    right_bound_same_direction.clear();
+    left_bound_same_direction.clear();
     safe = false;
     valid = false;
     ready = false;

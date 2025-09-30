@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "scene_intersection.hpp"
-#include "util.hpp"
+#include "autoware/behavior_velocity_intersection_module/scene_intersection.hpp"
+#include "autoware/behavior_velocity_intersection_module/util.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for toGeomPoly
 #include <autoware/behavior_velocity_planner_common/utilization/trajectory_utils.hpp>  // for smoothPath
@@ -146,6 +146,21 @@ void IntersectionModule::updateObjectInfoManagerArea()
       object_info->initialize(predicted_object, attention_lanelet, stopline);
     }
   }
+}
+
+lanelet::Point3d remove_const(const lanelet::ConstPoint3d & point)
+{
+  return lanelet::Point3d{std::const_pointer_cast<lanelet::PointData>(point.constData())};
+}
+static bool check_if_path_is_overtaking_ego(
+  const lanelet::ConstLanelet ego_lanelet, const Polygon2d & initial_collision_object_bbox)
+{
+  lanelet::ConstLineString3d entry{
+    lanelet::InvalId, lanelet::Points3d{
+                        remove_const(ego_lanelet.leftBound().front()),
+                        remove_const(ego_lanelet.rightBound().front())}};
+  return boost::geometry::intersects(
+    lanelet::utils::to2D(entry.basicLineString()), initial_collision_object_bbox);
 }
 
 void IntersectionModule::updateObjectInfoManagerCollision(
@@ -285,9 +300,21 @@ void IntersectionModule::updateObjectInfoManagerCollision(
         continue;
       }
       const auto & object_passage_interval = object_passage_interval_opt.value();
+      const auto & precise_predicted_path = object_passage_interval.path;
       const auto object_enter_exit_time = object_passage_interval.interval_time;
       const auto object_enter_time = std::get<0>(object_enter_exit_time);
       const auto object_exit_time = std::get<1>(object_enter_exit_time);
+
+      if (const auto initial_passage_index = object_passage_interval.interval_position.first;
+          check_if_path_is_overtaking_ego(
+            ego_lane, autoware_utils::to_polygon2d(
+                        precise_predicted_path.at(
+                          std::min(initial_passage_index + 1, precise_predicted_path.size() - 1)),
+                        predicted_object.shape))) {
+        // NOTE(soblin): this is to ignore a path overtaking ego from behind
+        continue;
+      }
+
       const auto ego_start_itr = std::lower_bound(
         time_distance_array.begin(), time_distance_array.end(),
         object_enter_time - collision_start_margin_time,
@@ -442,8 +469,8 @@ void IntersectionModule::cutPredictPathWithinDuration(
 }
 
 std::optional<NonOccludedCollisionStop> IntersectionModule::isGreenPseudoCollisionStatus(
-  const size_t closest_idx, const size_t collision_stopline_idx,
-  const IntersectionStopLines & intersection_stoplines) const
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
+  const size_t collision_stopline_idx, const IntersectionStopLines & intersection_stoplines) const
 {
   // ==========================================================================================
   // if there are any vehicles on the attention area when ego entered the intersection on green
@@ -465,8 +492,11 @@ std::optional<NonOccludedCollisionStop> IntersectionModule::isGreenPseudoCollisi
       });
     if (exist_close_vehicles) {
       const auto occlusion_stopline_idx = intersection_stoplines.occlusion_peeking_stopline.value();
+      const auto [held_collision_stopline_idx, collision_stop_pose] =
+        holdStopPoseIfNecessary<NonOccludedCollisionStop>(path, collision_stopline_idx);
       return NonOccludedCollisionStop{
-        closest_idx, collision_stopline_idx, occlusion_stopline_idx, std::string("")};
+        closest_idx, held_collision_stopline_idx, occlusion_stopline_idx, std::string(""),
+        collision_stop_pose};
     }
   }
   return std::nullopt;

@@ -44,6 +44,7 @@ namespace types
 // constants
 constexpr size_t max_channel_size = 12;
 constexpr float default_existence_probability = 0.75;
+constexpr int NUM_LABELS = 8;
 
 // channel configuration
 struct InputChannel
@@ -99,7 +100,6 @@ struct DynamicObject
 
   // object extension (size and shape)
   autoware_perception_msgs::msg::Shape shape;
-  geometry_msgs::msg::Point anchor_point;
   double area;
 };
 

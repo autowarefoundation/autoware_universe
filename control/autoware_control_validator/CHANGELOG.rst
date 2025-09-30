@@ -2,6 +2,38 @@
 Changelog for package autoware_control_validator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* feat: change planning output topic name to /planning/trajectory (`#11135 <https://github.com/autowarefoundation/autoware_universe/issues/11135>`_)
+  * change planning output topic name to /planning/trajectory
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(planning_validator): init validation status (`#11119 <https://github.com/autowarefoundation/autoware_universe/issues/11119>`_)
+  * fix(planning_validator): init validation status
+  * fix(control_validator): init validation status
+  ---------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(control_validator): enhance trajectory validation with previous reference trajectory (`#10939 <https://github.com/autowarefoundation/autoware_universe/issues/10939>`_)
+  * feat(control_validator): enhance trajectory validation with previous reference trajectory
+  * fix(test_control_validator): update lateral deviation test cases to reflect validation status
+  ---------
+* fix(autoware_control_validator): prevent division by zero in time calculation (`#10926 <https://github.com/autowarefoundation/autoware_universe/issues/10926>`_)
+  * fix(lateral_jerk_validator): prevent division by zero in time calculation
+  * fix(lateral_jerk_validator): improve stability by enforcing minimum time difference for calculations
+  ---------
+* feat(control_validator): disable control validator error report when not in autonomous control (`#10871 <https://github.com/autowarefoundation/autoware_universe/issues/10871>`_)
+  * feat(control_validator): disable control validator error report when not in autonomous control
+  * also fix control validator launch
+  * fix: work with yaw validator; fix yaw validator missing in all valid; add a debug info
+  * chore: get rid of the yaw warn in is_all_valid
+  * chore: fix topic remapping in launch file
+  ---------
+* feat(control_validator): 2 thresholds for the yaw deviation (warn/error) (`#10876 <https://github.com/autowarefoundation/autoware_universe/issues/10876>`_)
+* feat(control_validator): add yaw_deviation (`#10872 <https://github.com/autowarefoundation/autoware_universe/issues/10872>`_)
+* Contributors: Kyoichi Sugahara, Maxime CLEMENT, Mete Fatih Cırıt, Satoshi OTA, Yukihiro Saito, Yuxuan Liu
+
 0.46.0 (2025-06-20)
 -------------------
 

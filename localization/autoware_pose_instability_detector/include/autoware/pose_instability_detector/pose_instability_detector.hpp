@@ -28,6 +28,7 @@
 
 namespace autoware::pose_instability_detector
 {
+
 class PoseInstabilityDetector : public rclcpp::Node
 {
   using Quaternion = geometry_msgs::msg::Quaternion;
@@ -94,6 +95,8 @@ private:
   std::optional<Odometry> latest_odometry_ = std::nullopt;
   std::optional<Odometry> prev_odometry_ = std::nullopt;
   std::deque<TwistWithCovarianceStamped> twist_buffer_;
+
+  std::vector<bool> enable_validation_flags_;  // must be 6D for x, y, z, roll, pitch, yaw
 };
 }  // namespace autoware::pose_instability_detector
 

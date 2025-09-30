@@ -57,6 +57,7 @@ using autoware_utils::Point2d;
 using autoware_vehicle_msgs::msg::SteeringReport;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
+using geometry_msgs::msg::Twist;
 using nav_msgs::msg::Odometry;
 using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
 using autoware_planning_msgs::msg::LaneletRoute;
@@ -89,7 +90,9 @@ public:
   void AddKinematicStateMetricMsg(
     const Odometry & odom, const AccelWithCovarianceStamped & accel_stamped);
   void AddSteeringMetricMsg(const SteeringReport & steering_report);
-  void AddStopDeviationMetricMsg(const Odometry & odom);
+  void AddStopDeviationMetricMsg();
+  void AddVelocityDeviationMetricMsg(
+    const Trajectory & traj, const Pose & ego_pose, const Twist & twist);
   void onTimer();
 
 private:
@@ -132,6 +135,7 @@ private:
     // collect all metrics
     Metric::velocity,
     Metric::acceleration,
+    Metric::lateral_acceleration_abs,
     Metric::jerk,
     Metric::lateral_deviation,
     Metric::lateral_deviation_abs,
@@ -151,7 +155,8 @@ private:
     Metric::steering_acceleration,
     Metric::stop_deviation,
     Metric::stop_deviation_abs,
-    Metric::closest_object_distance};
+    Metric::closest_object_distance,
+    Metric::longitudinal_velocity_deviation};
 
   std::array<Accumulator<double>, static_cast<size_t>(Metric::SIZE)>
     metric_accumulators_;  // 3(min, max, mean) * metric_size
@@ -164,6 +169,10 @@ private:
   std::optional<double> prev_steering_angle_{std::nullopt};
   std::optional<double> prev_steering_rate_{std::nullopt};
   std::optional<double> prev_steering_angle_timestamp_{std::nullopt};
+
+  // for output_metrics_only_moving
+  float ego_speed_{0.0};
+  std::array<bool, static_cast<size_t>(Metric::SIZE)> is_output_metrics_only_moving{};
 };
 }  // namespace control_diagnostics
 

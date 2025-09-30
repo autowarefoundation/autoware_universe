@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_planning_validator_intersection_collision_checker</name>
-  <version>0.46.0</version>
+  <version>0.47.0</version>
   <description>The autoware_planning_validator_intersection_collision_checker package</description>
 
   <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
@@ -22,6 +22,7 @@
   <depend>autoware_planning_validator</depend>
   <depend>autoware_route_handler</depend>
   <depend>autoware_signal_processing</depend>
+  <depend>autoware_traffic_light_utils</depend>
   <depend>autoware_trajectory</depend>
   <depend>autoware_utils</depend>
   <depend>generate_parameter_library</depend>

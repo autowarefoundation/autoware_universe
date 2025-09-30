@@ -2,6 +2,16 @@
 Changelog for package autoware_behavior_velocity_detection_area_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(detection_area): set stop point behind actual stop line when ego exceeds max acceleration (`#10919 <https://github.com/autowarefoundation/autoware_universe/issues/10919>`_)
+  * feat(detection_area): set stop point behind actual stop line when ego exceeds max acceleration
+  * remove unintended change
+  ---------
+* Contributors: Mete Fatih Cırıt, Yukinari Hisaki
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

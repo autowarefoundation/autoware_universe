@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "object_manager.hpp"
+#include "autoware/behavior_velocity_intersection_module/object_manager.hpp"
+
+#include "autoware/behavior_velocity_intersection_module/util.hpp"
 
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
@@ -29,48 +31,12 @@
 #include <string>
 #include <vector>
 
-namespace
-{
-std::string to_string(const unique_identifier_msgs::msg::UUID & uuid)
-{
-  std::stringstream ss;
-  for (auto i = 0; i < 16; ++i) {
-    ss << std::hex << std::setfill('0') << std::setw(2) << +uuid.uuid[i];
-  }
-  return ss.str();
-}
-
-autoware_utils::Polygon2d createOneStepPolygon(
-  const geometry_msgs::msg::Pose & prev_pose, const geometry_msgs::msg::Pose & next_pose,
-  const autoware_perception_msgs::msg::Shape & shape)
-{
-  namespace bg = boost::geometry;
-  const auto prev_poly = autoware_utils::to_polygon2d(prev_pose, shape);
-  const auto next_poly = autoware_utils::to_polygon2d(next_pose, shape);
-
-  autoware_utils::Polygon2d one_step_poly;
-  for (const auto & point : prev_poly.outer()) {
-    one_step_poly.outer().push_back(point);
-  }
-  for (const auto & point : next_poly.outer()) {
-    one_step_poly.outer().push_back(point);
-  }
-
-  bg::correct(one_step_poly);
-
-  autoware_utils::Polygon2d convex_one_step_poly;
-  bg::convex_hull(one_step_poly, convex_one_step_poly);
-
-  return convex_one_step_poly;
-}
-
-}  // namespace
-
 namespace autoware::behavior_velocity_planner
 {
 namespace bg = boost::geometry;
 
-ObjectInfo::ObjectInfo(const unique_identifier_msgs::msg::UUID & uuid) : uuid_str(::to_string(uuid))
+ObjectInfo::ObjectInfo(const unique_identifier_msgs::msg::UUID & uuid)
+: uuid_str(util::to_string(uuid))
 {
 }
 
@@ -255,7 +221,7 @@ std::optional<CollisionInterval> findPassageInterval(
 {
   const auto first_itr = std::adjacent_find(
     predicted_path.path.cbegin(), predicted_path.path.cend(), [&](const auto & a, const auto & b) {
-      return bg::intersects(ego_lane_poly, ::createOneStepPolygon(a, b, shape));
+      return bg::intersects(ego_lane_poly, util::createOneStepPolygon(a, b, shape));
     });
   if (first_itr == predicted_path.path.cend()) {
     // even the predicted path end does not collide with the beginning of ego_lane_poly
@@ -264,7 +230,7 @@ std::optional<CollisionInterval> findPassageInterval(
   const auto last_itr = std::adjacent_find(
     predicted_path.path.crbegin(), predicted_path.path.crend(),
     [&](const auto & a, const auto & b) {
-      return bg::intersects(ego_lane_poly, ::createOneStepPolygon(a, b, shape));
+      return bg::intersects(ego_lane_poly, util::createOneStepPolygon(a, b, shape));
     });
   if (last_itr == predicted_path.path.crend()) {
     // even the predicted path start does not collide with the end of ego_lane_poly

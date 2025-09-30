@@ -2,6 +2,15 @@
 Changelog for package autoware_motion_velocity_obstacle_slow_down_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(obstacle_slow_down): rework type specific params, split left/right (`#10993 <https://github.com/autowarefoundation/autoware_universe/issues/10993>`_)
+* refactor(obstacle_slowdown_module, obstacle_cruise_module): follow function name change in autoware_core (`#10840 <https://github.com/autowarefoundation/autoware_universe/issues/10840>`_)
+  change function name
+* Contributors: Maxime CLEMENT, Mete Fatih Cırıt, Yuki TAKAGI
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

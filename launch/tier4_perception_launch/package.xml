@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>tier4_perception_launch</name>
-  <version>0.46.0</version>
+  <version>0.47.0</version>
   <description>The tier4_perception_launch package</description>
   <maintainer email="yukihiro.saito@tier4.jp">Yukihiro Saito</maintainer>
   <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
@@ -15,6 +15,7 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
   <exec_depend>autoware_bevfusion</exec_depend>
+  <exec_depend>autoware_bytetrack</exec_depend>
   <exec_depend>autoware_cluster_merger</exec_depend>
   <exec_depend>autoware_compare_map_segmentation</exec_depend>
   <exec_depend>autoware_crosswalk_traffic_light_estimator</exec_depend>
@@ -43,6 +44,7 @@
   <exec_depend>autoware_radar_object_tracker</exec_depend>
   <exec_depend>autoware_raindrop_cluster_filter</exec_depend>
   <exec_depend>autoware_shape_estimation</exec_depend>
+  <exec_depend>autoware_simpl_prediction</exec_depend>
   <exec_depend>autoware_simple_object_merger</exec_depend>
   <exec_depend>autoware_tensorrt_bevdet</exec_depend>
   <exec_depend>autoware_tensorrt_yolox</exec_depend>
