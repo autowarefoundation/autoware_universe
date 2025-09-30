@@ -109,8 +109,8 @@ private:
   std::vector<cudaStream_t> streams_;
 
   // GPU memory for undistortion maps
-  std::vector<float *> undistort_map_x_gpu_;
-  std::vector<float *> undistort_map_y_gpu_;
+  std::vector<std::shared_ptr<Tensor>> undistort_map_x_gpu_;
+  std::vector<std::shared_ptr<Tensor>> undistort_map_y_gpu_;
   std::vector<bool> undistortion_maps_computed_;
 
   // multithreading variables

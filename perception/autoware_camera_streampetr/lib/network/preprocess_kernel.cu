@@ -147,7 +147,7 @@ __global__ void remap_kernel(
   float src_y = map_y[map_idx];
 
   // Check if the mapped coordinates are valid in the input image
-  if (src_x < 0 || src_y < 0 || src_x >= input_width - 1 || src_y >= input_height - 1) {
+  if (src_x < 0 || src_y < 0 || src_x >= input_width || src_y >= input_height) {
     // Set to black for out-of-bounds pixels
     int out_idx = (y * output_width + x) * 3;
     output_img[out_idx] = 0;
@@ -187,6 +187,8 @@ __global__ void remap_kernel(
 
     // Interpolate and store the result
     float interpolated_value = w00 * v00 + w01 * v01 + w10 * v10 + w11 * v11;
+    // Clamp the interpolated value to [0, 255] range
+    interpolated_value = fmaxf(0.0f, fminf(255.0f, interpolated_value));
     output_img[(y * output_width + x) * 3 + c] = static_cast<std::uint8_t>(interpolated_value);
   }
 }
