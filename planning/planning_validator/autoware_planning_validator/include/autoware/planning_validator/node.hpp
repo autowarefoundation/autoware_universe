@@ -91,7 +91,7 @@ private:
   autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped> sub_acceleration_{
     this, "~/input/acceleration"};
   autoware_utils::InterProcessPollingSubscriber<OperationModeState> sub_operational_state_{
-    this, "~/input/operational_mode_state"};
+    this, "~/input/operational_mode_state", rclcpp::QoS{1}.transient_local()};
   autoware_utils::InterProcessPollingSubscriber<TrafficLightGroupArray> sub_traffic_signals_{
     this, "~/input/traffic_signals"};
 

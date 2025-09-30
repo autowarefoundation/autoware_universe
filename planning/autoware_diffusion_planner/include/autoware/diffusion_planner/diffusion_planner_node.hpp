@@ -90,6 +90,7 @@ using autoware::vehicle_info_utils::VehicleInfo;
 using builtin_interfaces::msg::Duration;
 using builtin_interfaces::msg::Time;
 using geometry_msgs::msg::Point;
+using geometry_msgs::msg::Pose;
 using preprocess::TrafficSignalStamped;
 using rcl_interfaces::msg::SetParametersResult;
 using std_msgs::msg::ColorRGBA;
@@ -118,6 +119,7 @@ struct DiffusionPlannerParams
   bool use_route_handler;
   int batch_size;
   std::vector<double> temperature_list;
+  int64_t velocity_smoothing_window;
 };
 struct DiffusionPlannerDebugParams
 {
@@ -161,7 +163,7 @@ struct DiffusionPlannerDebugParams
  * @section Internal State
  * @brief
  * - route_handler_: Handles route-related operations.
- * - transforms_: Stores transformation matrices between map and ego frames.
+ * - ego_to_map_transforms_: Stores transformation matrices between ego and map coordinates.
  * - ego_kinematic_state_: Current odometry state of the ego vehicle.
  * - ONNX Runtime members: env_, session_options_, session_, allocator_, cuda_options_.
  * - agent_data_: Optional input data for inference.
@@ -247,7 +249,7 @@ private:
 
   // preprocessing
   std::shared_ptr<RouteHandler> route_handler_{std::make_shared<RouteHandler>()};
-  std::pair<Eigen::Matrix4d, Eigen::Matrix4d> transforms_;
+  Eigen::Matrix4d ego_to_map_transform_;
   AgentData get_ego_centric_agent_data(
     const TrackedObjects & objects, const Eigen::Matrix4d & map_to_ego_transform);
 
@@ -266,11 +268,8 @@ private:
   std::vector<int64_t> select_route_segment_indices_by_route_handler(
     const nav_msgs::msg::Odometry & ego_kinematic_state) const;
 
-  // current state
-  Odometry ego_kinematic_state_;
-
   // ego history for ego_agent_past
-  std::deque<Odometry> ego_history_;
+  std::deque<Pose> ego_history_;
 
   // TensorRT
   std::unique_ptr<TrtConvCalib> trt_common_;
