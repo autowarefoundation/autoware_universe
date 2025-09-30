@@ -17,6 +17,14 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/trajectory_traffic_rule_filter_node.cpp
 )
 
+target_link_libraries(${PROJECT_NAME}
+  ${PROJECT_NAME}_param
+)
+
+target_compile_options(${PROJECT_NAME} PUBLIC
+  -Wno-error=deprecated-declarations
+)
+
 rclcpp_components_register_node(${PROJECT_NAME}
   PLUGIN "autoware::autoware_trajectory_traffic_rule_filter::TrajectoryTrafficRuleFilter"
   EXECUTABLE ${PROJECT_NAME}_node
@@ -25,6 +33,7 @@ rclcpp_components_register_node(${PROJECT_NAME}
 # Add plugin library
 ament_auto_add_library(autoware_trajectory_traffic_rule_filter_plugins SHARED
   src/filters/traffic_light_filter.cpp
+  src/filters/stop_line_filter.cpp
 )
 
 target_link_libraries(autoware_trajectory_traffic_rule_filter_plugins

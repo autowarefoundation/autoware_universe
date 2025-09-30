@@ -12,15 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_TRAFFIC_RULE_FILTER__FILTERS__TRAFFIC_LIGHT_FILTER_HPP_
-#define AUTOWARE__TRAJECTORY_TRAFFIC_RULE_FILTER__FILTERS__TRAFFIC_LIGHT_FILTER_HPP_
+#ifndef AUTOWARE__TRAJECTORY_TRAFFIC_RULE_FILTER__FILTERS__STOP_LINE_FILTER_HPP_
+#define AUTOWARE__TRAJECTORY_TRAFFIC_RULE_FILTER__FILTERS__STOP_LINE_FILTER_HPP_
 
 #include "autoware/trajectory_traffic_rule_filter/traffic_rule_filter_interface.hpp"
 
-#include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
-
 #include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 
 #include <memory>
 #include <string>
@@ -29,23 +26,18 @@
 namespace autoware::trajectory_traffic_rule_filter::plugin
 {
 
-class TrafficLightFilter : public TrafficRuleFilterInterface
+class StopLineFilter : public TrafficRuleFilterInterface
 {
 public:
-  TrafficLightFilter();
+  StopLineFilter();
 
   bool is_feasible(const TrajectoryPoints & trajectory_points) override;
-  void set_traffic_lights(
-    const autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr & traffic_lights)
-    override;
 
 private:
   lanelet::ConstLanelets get_lanelets_from_trajectory(
     const TrajectoryPoints & trajectory_points) const;
-
-  autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr traffic_lights_;
 };
 
 }  // namespace autoware::trajectory_traffic_rule_filter::plugin
 
-#endif  // AUTOWARE__TRAJECTORY_TRAFFIC_RULE_FILTER__FILTERS__TRAFFIC_LIGHT_FILTER_HPP_
+#endif  // AUTOWARE__TRAJECTORY_TRAFFIC_RULE_FILTER__FILTERS__STOP_LINE_FILTER_HPP_

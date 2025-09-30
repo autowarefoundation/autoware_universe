@@ -15,6 +15,9 @@
 #ifndef AUTOWARE__TRAJECTORY_TRAFFIC_RULE_FILTER__TRAJECTORY_TRAFFIC_RULE_FILTER_NODE_HPP_
 #define AUTOWARE__TRAJECTORY_TRAFFIC_RULE_FILTER__TRAJECTORY_TRAFFIC_RULE_FILTER_NODE_HPP_
 
+#include "autoware/trajectory_traffic_rule_filter/traffic_rule_filter_interface.hpp"
+
+#include <autoware_trajectory_traffic_rule_filter_param.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
@@ -22,18 +25,25 @@
 #include <rclcpp/subscription.hpp>
 
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
+#include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 
 #include <lanelet2_core/Forward.h>
+#include <lanelet2_routing/Forward.h>
+#include <lanelet2_traffic_rules/TrafficRulesFactory.h>
 
 #include <map>
 #include <memory>
 #include <optional>
+#include <string>
 #include <vector>
 
 namespace autoware::trajectory_traffic_rule_filter
 {
 using autoware_internal_planning_msgs::msg::CandidateTrajectories;
+using autoware_map_msgs::msg::LaneletMapBin;
+using autoware_planning_msgs::msg::TrajectoryPoint;
+using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
 class TrajectoryTrafficRuleFilter : public rclcpp::Node
 {
@@ -41,22 +51,30 @@ public:
   explicit TrajectoryTrafficRuleFilter(const rclcpp::NodeOptions & node_options);
 
 private:
-  void process(const CandidateTrajectories::ConstSharedPtr msg) override;
+  void process(const CandidateTrajectories::ConstSharedPtr msg);
 
   void map_callback(const LaneletMapBin::ConstSharedPtr msg);
+
+  void load_metric(const std::string & name);
+  void unload_metric(const std::string & name);
 
   lanelet::ConstLanelets get_lanelets_from_trajectory(
     const TrajectoryPoints & trajectory_points) const;
 
   rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr sub_map_;
+  autoware_utils_rclcpp::InterProcessPollingSubscriber<
+    autoware_perception_msgs::msg::TrafficLightGroupArray>
+    sub_traffic_lights_{this, "~/input/traffic_signals"};
 
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
   std::shared_ptr<lanelet::routing::RoutingGraph> routing_graph_ptr_;
   std::shared_ptr<lanelet::traffic_rules::TrafficRules> traffic_rules_ptr_;
 
-  pluginlib::ClassLoader<plugin::SafetyFilterInterface> plugin_loader_;
-  std::vector<std::shared_ptr<plugin::SafetyFilterInterface>> plugins_;
+  pluginlib::ClassLoader<plugin::TrafficRuleFilterInterface> plugin_loader_;
+  std::vector<std::shared_ptr<plugin::TrafficRuleFilterInterface>> plugins_;
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
+
+  std::unique_ptr<traffic_rule_filter::ParamListener> listener_;
 
   rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
     debug_processing_time_detail_pub_;

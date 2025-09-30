@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_traffic_rule_filter/filters/traffic_light_filter.hpp"
-
-#include <autoware/traffic_light_utils/traffic_light_utils.hpp>
+#include "autoware/trajectory_traffic_rule_filter/filters/stop_line_filter.hpp"
 
 #include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
+#include <lanelet2_core/primitives/RegulatoryElement.h>
 
 #include <algorithm>
 #include <vector>
@@ -25,11 +24,11 @@
 namespace autoware::trajectory_traffic_rule_filter::plugin
 {
 
-TrafficLightFilter::TrafficLightFilter() : TrafficRuleFilterInterface("TrafficLightFilter")
+StopLineFilter::StopLineFilter() : TrafficRuleFilterInterface("StopLineFilter")
 {
 }
 
-lanelet::ConstLanelets TrafficLightFilter::get_lanelets_from_trajectory(
+lanelet::ConstLanelets StopLineFilter::get_lanelets_from_trajectory(
   const TrajectoryPoints & trajectory_points) const
 {
   lanelet::ConstLanelets lanes;
@@ -57,40 +56,33 @@ lanelet::ConstLanelets TrafficLightFilter::get_lanelets_from_trajectory(
   return lanes;
 }
 
-void TrafficLightFilter::set_traffic_lights(
-  const autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr & traffic_lights)
+bool StopLineFilter::is_feasible(const TrajectoryPoints & trajectory_points)
 {
-  traffic_lights_ = traffic_lights;
-}
-
-bool TrafficLightFilter::is_feasible(const TrajectoryPoints & trajectory_points)
-{
-  if (!lanelet_map_ || !traffic_lights_ || trajectory_points.empty()) {
-    return true;  // Allow if no data available
+  if (!lanelet_map_ || trajectory_points.empty()) {
+    return true;
   }
 
   const auto lanes = get_lanelets_from_trajectory(trajectory_points);
 
-  for (const auto & lane : lanes) {
-    // Check traffic lights for this lanelet
-    for (const auto & element : lane.regulatoryElementsAs<lanelet::TrafficLight>()) {
-      // Find corresponding traffic light in received data
-      for (const auto & signal : traffic_lights_->traffic_light_groups) {
-        if (signal.traffic_light_group_id == static_cast<int64_t>(element->id())) {
-          // Check if stop is required using autoware traffic light utils
-          if (autoware::traffic_light_utils::isTrafficSignalStop(lane, signal)) {
-            return false;  // Reject trajectory if stop is required
-          }
-        }
+  if (lanes.size() < 2) {
+    return true;
+  }
+
+  for (size_t i = 0; i < lanes.size() - 1; i++) {
+    for (const auto & reg_elem : lanes[i].regulatoryElementsAs<lanelet::TrafficSign>()) {
+      if (reg_elem->type() != "stop_sign") continue;
+      if (lanes[i].id() != lanes[i + 1].id()) {
+        return false;
       }
     }
   }
 
-  return true;  // Allow if no red lights found
+  return true;
 }
+
 }  // namespace autoware::trajectory_traffic_rule_filter::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_traffic_rule_filter::plugin::TrafficLightFilter,
+  autoware::trajectory_traffic_rule_filter::plugin::StopLineFilter,
   autoware::trajectory_traffic_rule_filter::plugin::TrafficRuleFilterInterface)

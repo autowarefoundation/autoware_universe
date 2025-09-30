@@ -14,15 +14,12 @@
 
 #include "autoware/trajectory_traffic_rule_filter/trajectory_traffic_rule_filter_node.hpp"
 
-#include "utils.hpp"
-
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <rclcpp/logging.hpp>
 
 #include <autoware_internal_planning_msgs/msg/detail/path_point_with_lane_id__struct.hpp>
-#include <autoware_new_planning_msgs/msg/detail/trajectories__struct.hpp>
 
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/LaneletMap.h>
@@ -31,19 +28,24 @@
 
 #include <algorithm>
 #include <memory>
+#include <string>
+#include <unordered_set>
 
 namespace autoware::trajectory_traffic_rule_filter
 {
-using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
-using autoware_internal_planning_msgs::msg::PathWithLaneId;
-
 TrajectoryTrafficRuleFilter::TrajectoryTrafficRuleFilter(const rclcpp::NodeOptions & node_options)
 : Node{"trajectory_traffic_rule_filter_node", node_options},
-  plugin_loader(
+  plugin_loader_(
     "autoware_trajectory_traffic_rule_filter",
     "autoware::trajectory_traffic_rule_filter::plugin::TrafficRuleFilterInterface"),
-  vehicle_info_{autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo()}
+  vehicle_info_{autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo()},
+  listener_{std::make_unique<traffic_rule_filter::ParamListener>(get_node_parameters_interface())}
 {
+  const auto filters = listener_->get_params().filter_names;
+  for (const auto & filter : filters) {
+    load_metric(filter);
+  }
+
   debug_processing_time_detail_pub_ =
     this->create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
       "~/debug/processing_time_detail_ms", 1);
@@ -52,18 +54,55 @@ TrajectoryTrafficRuleFilter::TrajectoryTrafficRuleFilter(const rclcpp::NodeOptio
   sub_map_ = create_subscription<LaneletMapBin>(
     "~/input/lanelet2_map", rclcpp::QoS{1}.transient_local(),
     std::bind(&TrajectoryTrafficRuleFilter::map_callback, this, std::placeholders::_1));
-
-  autoware::boundary_departure_checker::Param boundary_departure_checker_params;
-  boundary_departure_checker_ =
-    std::make_shared<autoware::boundary_departure_checker::BoundaryDepartureChecker>(
-      boundary_departure_checker_params, vehicle_info_, time_keeper_);
 }
 
 void TrajectoryTrafficRuleFilter::process(const CandidateTrajectories::ConstSharedPtr msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
-  const auto trajectories = traffic_light_check(msg);
-  publish(trajectories);
+  if (!lanelet_map_ptr_) {
+    return;
+  }
+
+  // Get latest traffic light data
+  const auto traffic_lights = sub_traffic_lights_.take_data();
+  if (traffic_lights) {
+    for (auto & plugin : plugins_) {
+      plugin->set_traffic_lights(traffic_lights);
+    }
+  }
+
+  auto filtered_msg = std::make_shared<CandidateTrajectories>();
+
+  for (const auto & trajectory : msg->candidate_trajectories) {
+    bool is_feasible = true;
+
+    for (const auto & plugin : plugins_) {
+      if (!plugin->is_feasible(trajectory.points)) {
+        is_feasible = false;
+        break;
+      }
+    }
+    if (is_feasible) filtered_msg->candidate_trajectories.push_back(trajectory);
+  }
+
+  std::unordered_set<std::string> kept_generator_ids;
+  for (const auto & traj : filtered_msg->candidate_trajectories) {
+    std::stringstream ss;
+    for (const auto & byte : traj.generator_id.uuid) {
+      ss << std::hex << static_cast<int>(byte);
+    }
+    kept_generator_ids.insert(ss.str());
+  }
+
+  for (const auto & gen_info : msg->generator_info) {
+    std::stringstream ss;
+    for (const auto & byte : gen_info.generator_id.uuid) {
+      ss << std::hex << static_cast<int>(byte);
+    }
+    if (kept_generator_ids.count(ss.str()) > 0) {
+      filtered_msg->generator_info.push_back(gen_info);
+    }
+  }
 }
 
 void TrajectoryTrafficRuleFilter::map_callback(const LaneletMapBin::ConstSharedPtr msg)
@@ -72,116 +111,58 @@ void TrajectoryTrafficRuleFilter::map_callback(const LaneletMapBin::ConstSharedP
   lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
   lanelet::utils::conversion::fromBinMsg(
     *msg, lanelet_map_ptr_, &traffic_rules_ptr_, &routing_graph_ptr_);
+  for (const auto & plugin : plugins_) {
+    plugin->set_lanelet_map(lanelet_map_ptr_, routing_graph_ptr_, traffic_rules_ptr_);
+  }
 }
 
-lanelet::ConstLanelets TrajectoryTrafficRuleFilter::get_lanelets_from_trajectory(
-  const TrajectoryPoints & trajectory_points) const
+void TrajectoryTrafficRuleFilter::load_metric(const std::string & name)
 {
-  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
-  lanelet::ConstLanelets lanes;
-  PathWithLaneId path;
-  path.points.reserve(trajectory_points.size());
-  for (const auto & point : trajectory_points) {
-    PathPointWithLaneId path_point;
-    path_point.point.pose = point.pose;
-    path_point.point.longitudinal_velocity_mps = point.longitudinal_velocity_mps;
-    path_point.point.lateral_velocity_mps = point.lateral_velocity_mps;
-    path_point.point.heading_rate_rps = point.heading_rate_rps;
-    path.points.push_back(path_point);
-  }
-  const auto lanelet_distance_pair =
-    boundary_departure_checker_->getLaneletsFromPath(lanelet_map_ptr_, path);
-  if (lanelet_distance_pair.empty()) {
-    RCLCPP_WARN(get_logger(), "No lanelets found in the map");
-    return lanes;
-  }
+  try {
+    auto plugin = plugin_loader_.createSharedInstance(name);
 
-  for (const auto & lanelet_distance : lanelet_distance_pair) {
-    const auto & lanelet = lanelet_distance.second;
-    lanes.push_back(lanelet);
-  }
-  return lanes;
-}
-
-Trajectories::ConstSharedPtr ValidTrajectoryFilterNode::traffic_light_check(
-  const Trajectories::ConstSharedPtr msg)
-{
-  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
-  auto trajectories = msg->trajectories;
-  const auto traffic_signal_msg = traffic_signals_subscriber_.take_data();
-
-  if (traffic_signal_msg) {
-    traffic_light_id_map_.clear();
-    for (const auto & signal : traffic_signal_msg->traffic_light_groups) {
-      TrafficSignalStamped traffic_signal;
-      traffic_signal.stamp = traffic_signal_msg->stamp;
-      traffic_signal.signal = signal;
-      traffic_light_id_map_[signal.traffic_light_group_id] = traffic_signal;
+    for (const auto & p : plugins_) {
+      if (plugin->get_name() == p->get_name()) {
+        RCLCPP_WARN_STREAM(get_logger(), "The plugin '" << name << "' is already loaded.");
+        return;
+      }
     }
+
+    plugin->set_vehicle_info(vehicle_info_);
+    plugins_.push_back(plugin);
+
+    RCLCPP_INFO_STREAM(
+      get_logger(), "The scene plugin '" << name << "' is loaded and initialized.");
+  } catch (const pluginlib::CreateClassException & e) {
+    RCLCPP_ERROR_STREAM(
+      get_logger(),
+      "[traffic_rule_filter] createSharedInstance failed for '" << name << "': " << e.what());
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR_STREAM(
+      get_logger(),
+      "[traffic_rule_filter] unexpected exception for '" << name << "': " << e.what());
   }
-
-  if (!lanelet_map_ptr_) return std::make_shared<Trajectories>();
-
-  const auto itr =
-    std::remove_if(trajectories.begin(), trajectories.end(), [&](const auto & trajectory) {
-      // TODO(go-sakayori): this query is slow, consider using other methods similar to
-      // BoundaryDepartureChecker::getFusedLaneletPolygonForPath?
-      const auto lanes = get_lanelets_from_trajectory(trajectory.points);
-
-      for (const auto & lane : lanes) {
-        for (const auto & element : lane.template regulatoryElementsAs<lanelet::TrafficLight>()) {
-          if (traffic_light_id_map_.count(element->id()) == 0) continue;
-
-          if (autoware::traffic_light_utils::isTrafficSignalStop(
-                lane, traffic_light_id_map_.at(element->id()).signal)) {
-            return true;
-          }
-        }
-      }
-      return false;
-    });
-  trajectories.erase(itr, trajectories.end());
-
-  const auto new_trajectories = autoware_new_planning_msgs::build<Trajectories>()
-                                  .trajectories(trajectories)
-                                  .generator_info(msg->generator_info);
-
-  return std::make_shared<Trajectories>(new_trajectories);
 }
 
-Trajectories::ConstSharedPtr ValidTrajectoryFilterNode::stop_line_check(
-  const Trajectories::ConstSharedPtr msg)
+void TrajectoryTrafficRuleFilter::unload_metric(const std::string & name)
 {
-  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
-  auto trajectories = msg->trajectories;
-  if (!lanelet_map_ptr_) return std::make_shared<Trajectories>();
-  const lanelet::ConstLanelets lanelets(
-    lanelet_map_ptr_->laneletLayer.begin(), lanelet_map_ptr_->laneletLayer.end());
-
-  const auto itr =
-    std::remove_if(trajectories.begin(), trajectories.end(), [lanelets](const auto & trajectory) {
-      const auto lanes = utils::get_lanes_from_trajectory(trajectory.points, lanelets);
-      if (lanes.size() < 2) return false;
-      for (size_t i = 0; i < lanes.size() - 1; i++) {
-        for (const auto & reg_elem :
-             lanes[i].template regulatoryElementsAs<lanelet::TrafficSign>()) {
-          if (reg_elem->type() != "stop_sign") continue;
-          if (lanes[i].id() != lanes[i + 1].id()) return true;
-        }
-      }
-      return false;
+  auto it = std::remove_if(
+    plugins_.begin(), plugins_.end(),
+    [&](const std::shared_ptr<plugin::TrafficRuleFilterInterface> & plugin) {
+      return plugin->get_name() == name;
     });
-  trajectories.erase(itr, trajectories.end());
 
-  const auto new_trajectories = autoware_new_planning_msgs::build<Trajectories>()
-                                  .trajectories(trajectories)
-                                  .generator_info(msg->generator_info);
-
-  return std::make_shared<Trajectories>(new_trajectories);
+  if (it == plugins_.end()) {
+    RCLCPP_WARN_STREAM(
+      get_logger(), "The scene plugin '" << name << "' is not found in the registered modules.");
+  } else {
+    plugins_.erase(it, plugins_.end());
+    RCLCPP_INFO_STREAM(get_logger(), "The scene plugin '" << name << "' is unloaded.");
+  }
 }
 
 }  // namespace autoware::trajectory_traffic_rule_filter
 
 #include <rclcpp_components/register_node_macro.hpp>
 RCLCPP_COMPONENTS_REGISTER_NODE(
-  autoware::trajectory_traffic_rule_filter::TrajectoryTrafficRuleFilterNode)
+  autoware::trajectory_traffic_rule_filter::TrajectoryTrafficRuleFilter)

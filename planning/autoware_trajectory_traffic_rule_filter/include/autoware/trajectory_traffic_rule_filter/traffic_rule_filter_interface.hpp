@@ -17,7 +17,12 @@
 
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
+#include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
+
+#include <lanelet2_core/Forward.h>
+#include <lanelet2_routing/Forward.h>
+#include <lanelet2_traffic_rules/TrafficRulesFactory.h>
 
 #include <memory>
 #include <string>
@@ -43,9 +48,35 @@ public:
   virtual bool is_feasible(const TrajectoryPoints & trajectory_points) = 0;
   std::string get_name() const { return name_; }
 
+  virtual void set_vehicle_info(const VehicleInfo & vehicle_info)
+  {
+    vehicle_info_ptr_ = std::make_shared<VehicleInfo>(vehicle_info);
+  }
+
+  virtual void set_lanelet_map(
+    const std::shared_ptr<lanelet::LaneletMap> & lanelet_map,
+    const std::shared_ptr<lanelet::routing::RoutingGraph> & routing_graph,
+    const std::shared_ptr<lanelet::traffic_rules::TrafficRules> & traffic_rules)
+  {
+    lanelet_map_ = lanelet_map;
+    routing_graph_ = routing_graph;
+    traffic_rules_ = traffic_rules;
+  }
+
+  virtual void set_traffic_lights(
+    const autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr & traffic_lights)
+  {
+    // Default implementation does nothing
+    // Plugins that need traffic light data should override this method
+    (void)traffic_lights;
+  }
+
 protected:
   std::string name_;
   std::shared_ptr<VehicleInfo> vehicle_info_ptr_;
+  std::shared_ptr<lanelet::LaneletMap> lanelet_map_;
+  std::shared_ptr<lanelet::routing::RoutingGraph> routing_graph_;
+  std::shared_ptr<lanelet::traffic_rules::TrafficRules> traffic_rules_;
 };
 }  // namespace autoware::trajectory_traffic_rule_filter::plugin
 

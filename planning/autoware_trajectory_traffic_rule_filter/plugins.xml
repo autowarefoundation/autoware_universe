@@ -7,4 +7,11 @@
       Rejects trajectories that would pass through red or yellow traffic lights.
     </description>
   </class>
+  <class type="autoware::trajectory_traffic_rule_filter::plugin::StopLineFilter"
+         base_class_type="autoware::trajectory_traffic_rule_filter::plugin::TrafficRuleFilterInterface">
+    <description>
+      Filter for checking stop line violations.
+      Rejects trajectories that would pass through stop signs without stopping.
+    </description>
+  </class>
 </library>
