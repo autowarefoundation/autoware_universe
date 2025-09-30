@@ -53,15 +53,16 @@ struct CameraMatrices
 };
 
 // Static helper functions for undistortion map computation
-static CameraMatrices create_camera_matrices(const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info)
+static CameraMatrices create_camera_matrices(
+  const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info)
 {
   CameraMatrices matrices;
 
   // Create camera matrix K from camera_info
-  matrices.K = (cv::Mat_<double>(3, 3) << 
-    camera_info->k[0], camera_info->k[1], camera_info->k[2],
-    camera_info->k[3], camera_info->k[4], camera_info->k[5], 
-    camera_info->k[6], camera_info->k[7], camera_info->k[8]);
+  matrices.K =
+    (cv::Mat_<double>(3, 3) << camera_info->k[0], camera_info->k[1], camera_info->k[2],
+     camera_info->k[3], camera_info->k[4], camera_info->k[5], camera_info->k[6], camera_info->k[7],
+     camera_info->k[8]);
 
   // Create distortion coefficients matrix D from camera_info
   const auto & d_vec = camera_info->d;
@@ -71,10 +72,10 @@ static CameraMatrices create_camera_matrices(const sensor_msgs::msg::CameraInfo:
   }
 
   // Create projection matrix P from camera_info (first 3x3 part)
-  matrices.P = (cv::Mat_<double>(3, 3) << 
-    camera_info->p[0], camera_info->p[1], camera_info->p[2],
-    camera_info->p[4], camera_info->p[5], camera_info->p[6], 
-    camera_info->p[8], camera_info->p[9], camera_info->p[10]);
+  matrices.P =
+    (cv::Mat_<double>(3, 3) << camera_info->p[0], camera_info->p[1], camera_info->p[2],
+     camera_info->p[4], camera_info->p[5], camera_info->p[6], camera_info->p[8], camera_info->p[9],
+     camera_info->p[10]);
 
   // Use full resolution for both input and output (no downsampling)
   matrices.map_width = camera_info->width;
@@ -249,7 +250,9 @@ std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_distorted_imag
   ImageProcessingParams & params)
 {
   // Check if undistortion maps are available
-  if (!undistortion_maps_computed_[camera_id] || !undistort_map_x_gpu_[camera_id] || !undistort_map_y_gpu_[camera_id]) {
+  if (
+    !undistortion_maps_computed_[camera_id] || !undistort_map_x_gpu_[camera_id] ||
+    !undistort_map_y_gpu_[camera_id]) {
     RCLCPP_ERROR(logger_, "Undistortion maps not computed for camera %d", camera_id);
     return nullptr;
   }
@@ -285,7 +288,8 @@ std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_distorted_imag
     static_cast<std::uint8_t *>(image_input_tensor->ptr), original_height,
     original_width,                   // Output dimensions (full resolution)
     original_height, original_width,  // Input dimensions (full resolution)
-    static_cast<float *>(undistort_map_x_gpu_[camera_id]->ptr), static_cast<float *>(undistort_map_y_gpu_[camera_id]->ptr), streams_[camera_id]);
+    static_cast<float *>(undistort_map_x_gpu_[camera_id]->ptr),
+    static_cast<float *>(undistort_map_y_gpu_[camera_id]->ptr), streams_[camera_id]);
 
   if (err != cudaSuccess) {
     RCLCPP_ERROR(logger_, "remap_launch failed with error: %s", cudaGetErrorString(err));
@@ -509,29 +513,28 @@ void CameraDataStore::compute_undistortion_maps(const int camera_id)
   // Compute undistortion maps for full resolution
   cv::Mat undistort_map_x, undistort_map_y;
   cv::initUndistortRectifyMap(
-    matrices.K, matrices.D, cv::Mat(), matrices.P, 
-    cv::Size(matrices.map_width, matrices.map_height), CV_32FC1, 
-    undistort_map_x, undistort_map_y);
+    matrices.K, matrices.D, cv::Mat(), matrices.P,
+    cv::Size(matrices.map_width, matrices.map_height), CV_32FC1, undistort_map_x, undistort_map_y);
 
   // Create Tensor objects for the undistortion maps
   undistort_map_x_gpu_[camera_id] = std::make_shared<Tensor>(
     "undistort_map_x_" + std::to_string(camera_id),
-    nvinfer1::Dims{2, {matrices.map_height, matrices.map_width}},
-    nvinfer1::DataType::kFLOAT);
-    
+    nvinfer1::Dims{2, {matrices.map_height, matrices.map_width}}, nvinfer1::DataType::kFLOAT);
+
   undistort_map_y_gpu_[camera_id] = std::make_shared<Tensor>(
     "undistort_map_y_" + std::to_string(camera_id),
-    nvinfer1::Dims{2, {matrices.map_height, matrices.map_width}},
-    nvinfer1::DataType::kFLOAT);
+    nvinfer1::Dims{2, {matrices.map_height, matrices.map_width}}, nvinfer1::DataType::kFLOAT);
 
   // Copy maps to GPU using Tensor's built-in method
   // Convert cv::Mat to std::vector<float> for loading
   const int total_pixels = matrices.map_width * matrices.map_height;
-  std::vector<float> map_x_data(reinterpret_cast<float*>(undistort_map_x.data), 
-                                reinterpret_cast<float*>(undistort_map_x.data) + total_pixels);
-  std::vector<float> map_y_data(reinterpret_cast<float*>(undistort_map_y.data), 
-                                reinterpret_cast<float*>(undistort_map_y.data) + total_pixels);
-  
+  std::vector<float> map_x_data(
+    reinterpret_cast<float *>(undistort_map_x.data),
+    reinterpret_cast<float *>(undistort_map_x.data) + total_pixels);
+  std::vector<float> map_y_data(
+    reinterpret_cast<float *>(undistort_map_y.data),
+    reinterpret_cast<float *>(undistort_map_y.data) + total_pixels);
+
   undistort_map_x_gpu_[camera_id]->load_from_vector(map_x_data);
   undistort_map_y_gpu_[camera_id]->load_from_vector(map_y_data);
 
