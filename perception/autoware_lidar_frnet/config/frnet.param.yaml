@@ -1,0 +1,33 @@
+/**:
+  ros__parameters:
+    onnx_path: "$(var model_path)/frnet.onnx"
+    trt_precision: fp16
+    # preprocessing
+    fov_up_deg: 10.0
+    fov_down_deg: -30.0
+    frustum_width: 480
+    frustum_height: 32
+    interpolation_width: 1920
+    interpolation_height: 32
+    # postprocessing
+    score_threshold: 0.0
+    excluded_class_names: ["driveable_surface"]
+    palette: [
+        255, 120, 50,   # barrier (orange)
+        255, 192, 203,  # bicycle (pink)
+        255, 255, 0,    # bus (yellow)
+        0, 150, 245,    # car (blue)
+        0, 255, 255,    # construction_vehicle (cyan)
+        255, 127, 0,    # motorcycle (dark orange)
+        255, 0, 0,      # pedestrian (red)
+        255, 240, 150,  # traffic_cone (light yellow)
+        135, 60, 0,     # trailer (brown)
+        160, 32, 240,   # truck (purple)
+        255, 0, 255,    # driveable_surface (dark pink)
+        139, 137, 137,  # other_flat (dark red)
+        75, 0, 75,      # sidewalk (dark purple)
+        150, 240, 80,   # terrain (light green)
+        230, 230, 250,  # manmade (white)
+        0, 175, 0,      # vegetation (green)
+        0, 0, 0,        # unknown (black)
+      ]

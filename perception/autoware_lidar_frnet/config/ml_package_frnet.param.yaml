@@ -1,0 +1,24 @@
+/**:
+  ros__parameters:
+    class_names:
+      [
+        "barrier",
+        "bicycle",
+        "bus",
+        "car",
+        "construction_vehicle",
+        "motorcycle",
+        "pedestrian",
+        "traffic_cone",
+        "trailer",
+        "truck",
+        "driveable_surface",
+        "other_flat",
+        "sidewalk",
+        "terrain",
+        "manmade",
+        "vegetation",
+        "unknown",
+      ]
+    num_points: [30000, 150000, 300000] # [min, opt, max]
+    num_unique_coors: [5000, 10000, 30000] # [min, opt, max]
