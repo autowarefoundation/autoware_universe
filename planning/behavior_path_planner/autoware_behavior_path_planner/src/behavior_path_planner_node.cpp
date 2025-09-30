@@ -47,11 +47,11 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
   }
 
   // publisher
+  const auto durable_qos = rclcpp::QoS(1).transient_local();
   path_publisher_ = create_publisher<PathWithLaneId>("~/output/path", 1);
   turn_signal_publisher_ =
-    create_publisher<TurnIndicatorsCommand>("~/output/turn_indicators_cmd", 1);
+    create_publisher<TurnIndicatorsCommand>("~/output/turn_indicators_cmd", durable_qos);
   hazard_signal_publisher_ = create_publisher<HazardLightsCommand>("~/output/hazard_lights_cmd", 1);
-  const auto durable_qos = rclcpp::QoS(1).transient_local();
   modified_goal_publisher_ =
     create_publisher<PoseWithUuidStamped>("~/output/modified_goal", durable_qos);
   reroute_availability_publisher_ =

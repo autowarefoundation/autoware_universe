@@ -25,6 +25,7 @@ CommandSubscription::CommandSubscription(uint16_t id, const std::string & name, 
   using std::placeholders::_1;
   const auto control_qos = rclcpp::QoS(5);
   const auto volatile_qos = rclcpp::QoS(1);
+  const auto transient_qos = rclcpp::QoS(1).transient_local();
   const auto prefix = "~/inputs/" + name + "/";
 
   sub_control_ = node.create_subscription<Control>(
@@ -32,10 +33,10 @@ CommandSubscription::CommandSubscription(uint16_t id, const std::string & name, 
   sub_gear_ = node.create_subscription<GearCommand>(
     prefix + "gear", volatile_qos, std::bind(&CommandSubscription::on_gear, this, _1));
   sub_turn_indicators_ = node.create_subscription<TurnIndicatorsCommand>(
-    prefix + "turn_indicators", volatile_qos,
+    prefix + "turn_indicators", transient_qos,
     std::bind(&CommandSubscription::on_turn_indicators, this, _1));
   sub_hazard_lights_ = node.create_subscription<HazardLightsCommand>(
-    prefix + "hazard_lights", volatile_qos,
+    prefix + "hazard_lights", transient_qos,
     std::bind(&CommandSubscription::on_hazard_lights, this, _1));
 }
 
