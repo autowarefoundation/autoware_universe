@@ -72,30 +72,15 @@ public:
     
     // Initialize MultiCameraPreprocessor
     MultiCameraPreprocessConfig preprocess_config = vad_config_.create_multi_camera_preprocess_config();
-    // Debug: Print preprocessor configuration
-    logger_->info("Creating MultiCameraPreprocessor with config: input=" + 
-                  std::to_string(preprocess_config.input_width) + "x" + std::to_string(preprocess_config.input_height) + 
-                  ", output=" + std::to_string(preprocess_config.output_width) + "x" + std::to_string(preprocess_config.output_height) + 
-                  ", cameras=" + std::to_string(preprocess_config.num_cameras));
     preprocessor_ = std::make_unique<MultiCameraPreprocessor>(preprocess_config, logger_);
-    logger_->info("MultiCameraPreprocessor initialized successfully");
     
     // Initialize MapPostprocessor
     MapPostprocessConfig map_postprocess_config = vad_config_.create_map_postprocess_config();
-    logger_->info("Creating MapPostprocessor with config: queries=" + 
-                  std::to_string(map_postprocess_config.map_num_queries) + 
-                  ", classes=" + std::to_string(map_postprocess_config.map_num_classes) + 
-                  ", points_per_polyline=" + std::to_string(map_postprocess_config.map_points_per_polylines));
     map_postprocessor_ = std::make_unique<MapPostprocessor>(map_postprocess_config, logger_);
-    logger_->info("MapPostprocessor initialized successfully");
     
     // Initialize ObjectPostprocessor
     ObjectPostprocessConfig object_postprocess_config = vad_config_.create_object_postprocess_config();
-    logger_->info("Creating ObjectPostprocessor with config: queries=" + 
-                  std::to_string(object_postprocess_config.prediction_num_queries) + 
-                  ", classes=" + std::to_string(object_postprocess_config.prediction_num_classes));
     object_postprocessor_ = std::make_unique<ObjectPostprocessor>(object_postprocess_config, logger_);
-    logger_->info("ObjectPostprocessor initialized successfully");
   }
 
   // Destructor
