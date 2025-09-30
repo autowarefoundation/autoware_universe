@@ -22,7 +22,6 @@ namespace autoware::tensorrt_vad::vad_interface {
 OutputObjectsConverter::OutputObjectsConverter(const CoordinateTransformer& coordinate_transformer, const VadInterfaceConfig& config)
   : Converter(coordinate_transformer, config)
 {
-  z_offset_ = +1.2f;
 }
 
 autoware_perception_msgs::msg::ObjectClassification OutputObjectsConverter::convert_classification(
@@ -69,7 +68,6 @@ geometry_msgs::msg::Point OutputObjectsConverter::convert_position(
     float vad_x = bbox.bbox[0];
     float vad_y = bbox.bbox[1];
     float vad_z = bbox.bbox[4] + bbox.bbox[5] * 0.5f; // z + h / 2. object center
-    vad_z += z_offset_;
     auto [aw_x, aw_y, aw_z] = coordinate_transformer_.vad2aw_xyz(vad_x, vad_y, vad_z);
     Eigen::Vector4d position_base(static_cast<double>(aw_x), static_cast<double>(aw_y), static_cast<double>(aw_z), 1.0);
     Eigen::Vector4d position_map = base2map_transform * position_base;
@@ -144,7 +142,6 @@ std::vector<autoware_perception_msgs::msg::PredictedPath> OutputObjectsConverter
       float traj_vad_x = pred_traj.trajectory[ts][0] + bbox.bbox[0];  // Relative coordinates from agent center
       float traj_vad_y = pred_traj.trajectory[ts][1] + bbox.bbox[1];  // Relative coordinates from agent center
       float traj_vad_z = bbox.bbox[4] + bbox.bbox[5] * 0.5f; // z + h / 2. object center
-      traj_vad_z += z_offset_;
       auto [traj_aw_x, traj_aw_y, traj_aw_z] = coordinate_transformer_.vad2aw_xyz(traj_vad_x, traj_vad_y, traj_vad_z);
 
       // Transform to map coordinate system

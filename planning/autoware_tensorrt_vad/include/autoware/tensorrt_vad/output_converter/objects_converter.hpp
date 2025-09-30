@@ -58,11 +58,6 @@ public:
     const Eigen::Matrix4d& base2map_transform) const;
 
 private:
-  // TODO(Shin-kyoto): tentative implementation. 
-  // offset for z is needed because VAD trained with nuScenes dataset outputs bbox in lidar coordinate, 
-  // but autoware needs bbox in base_link coordinate.
-  float z_offset_;
-
   /**
    * @brief Convert VAD object class to Autoware classification
    * @param object_class VAD object class index
