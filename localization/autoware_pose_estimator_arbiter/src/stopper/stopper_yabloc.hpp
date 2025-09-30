@@ -17,6 +17,7 @@
 #include "stopper/base_stopper.hpp"
 
 #include <autoware/qos_utils/qos_compatibility.hpp>
+
 #include <sensor_msgs/msg/image.hpp>
 #include <std_srvs/srv/set_bool.hpp>
 
