@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for ptv3",
+  "type": "object",
+  "definitions": {
+    "ptv3": {
+      "type": "object",
+      "properties": {
+        "class_names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Predicted classes' names.",
+          "default": ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"],
+          "uniqueItems": true
+        },
+        "voxels_num": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "Voxel ranges used during inference [min, opt, max].",
+          "default": [5000, 30000, 60000]
+        },
+        "point_cloud_range": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Range in meters of the pointcloud in meters [min_x, min_y, min_z, max_x, max_y, max_z].",
+          "default": [-76.8, -76.8, -3.0, 76.8, 76.8, 5.0],
+          "minItems": 6,
+          "maxItems": 6
+        },
+        "voxel_size": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Voxels size [x, y, z] in meters.",
+          "default": [0.3, 0.3, 8.0],
+          "minItems": 3,
+          "maxItems": 3
+        }
+      },
+      "required": ["class_names", "voxels_num", "point_cloud_range", "voxel_size"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/ptv3"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
