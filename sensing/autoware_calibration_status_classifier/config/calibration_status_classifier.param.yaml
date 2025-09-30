@@ -1,0 +1,23 @@
+/**:
+  ros__parameters:
+    trt_precision: fp16
+    cloud_capacity: 2000000
+    onnx_path: "$(var model_path)/$(var model_name).onnx"
+    runtime_mode: active
+    period: 5.0
+    queue_size: 5
+    input:
+      cloud_topics: ["/sensing/lidar/concatenated/pointcloud"]
+      image_topics:
+        [
+          "/sensing/camera/camera8/image_raw",
+        ]
+      approx_deltas: [0.1]
+      already_rectified: [false]
+    prerequisite:
+      check_velocity: true
+      velocity_source: twist_with_cov_stamped
+      velocity_threshold: 10.0
+      check_objects: true
+      objects_limit: 100
+    miscalibration_confidence_threshold: 0.0

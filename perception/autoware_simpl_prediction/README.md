@@ -79,7 +79,7 @@ flowchart TD
 
 ## Parameters
 
-{{ json_to_markdown("perception/autoware_simpl/schema/simpl.scheme.json") }}
+{{ json_to_markdown("perception/autoware_simpl_prediction/schema/simpl.schema.json") }}
 
 ## [WIP] Model Training / Deployment
 

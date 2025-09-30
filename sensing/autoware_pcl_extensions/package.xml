@@ -4,8 +4,7 @@
   <name>autoware_pcl_extensions</name>
   <version>0.47.0</version>
   <description>The autoware_pcl_extensions package</description>
-  <maintainer email="ryu.yamamoto@tier4.jp">Ryu Yamamoto</maintainer>
-  <maintainer email="kenzo.lobos@tier4.jp">Kenzo Lobos Tsunekawa</maintainer>
+  <maintainer email="amadeusz.szymko.2@tier4.jp">Amadeusz Szymko</maintainer>
   <maintainer email="david.wong@tier4.jp">David Wong</maintainer>
 
   <license>Apache License 2.0</license>
