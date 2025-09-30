@@ -33,7 +33,6 @@ public:
   );
 
   std::vector<autoware::tensorrt_common::NetworkIO> generate_network_io(const VadConfig& vad_config) override;
-  void set_input_tensor(TensorMap& ext) override;
 };
 
 } // namespace autoware::tensorrt_vad

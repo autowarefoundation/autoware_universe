@@ -84,6 +84,24 @@ Net::Net(
   // TensorRT initialization is handled by derived classes
 }
 
+void Net::set_input_tensor(TensorMap& ext) {
+  int32_t nb = trt_common->getNbIOTensors();
+
+  for (int32_t n = 0; n < nb; n++) {
+    std::string name = trt_common->getIOTensorName(n);
+    nvinfer1::Dims d = trt_common->getTensorShape(name.c_str());
+    nvinfer1::DataType dtype = nvinfer1::DataType::kFLOAT;
+
+    if (ext.find(name) != ext.end()) {
+      // use external memory
+      trt_common->setTensorAddress(name.c_str(), ext[name]->ptr);
+    } else {
+      bindings[name] = std::make_shared<Tensor>(name, d, dtype, logger_);
+      trt_common->setTensorAddress(name.c_str(), bindings[name]->ptr);
+    }
+  }
+}
+
 void Net::enqueue(cudaStream_t stream) {
   trt_common->enqueueV3(stream);
 }
