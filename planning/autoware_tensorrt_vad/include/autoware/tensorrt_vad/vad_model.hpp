@@ -269,15 +269,23 @@ private:
         stream_);
     
     // Extract planning for the given command
-    std::vector<float> planning(
+    auto [selected_trajectory, all_trajectories] = postprocess_trajectories(ego_fut_preds, cmd);
+
+    return VadOutputData{selected_trajectory, all_trajectories, map_polylines, filtered_bboxes};
+  }
+
+  static std::pair<std::vector<float>, std::map<int32_t, std::vector<float>>> postprocess_trajectories(
+      const std::vector<float>& ego_fut_preds,
+      int32_t cmd) {
+    std::vector<float> selected_trajectory(
         ego_fut_preds.begin() + cmd * 12,
         ego_fut_preds.begin() + (cmd + 1) * 12
     );
     
     // cumsum to build trajectory in 3d space
     for (int32_t i = 1; i < 6; i++) {
-      planning[i * 2] += planning[(i-1) * 2];
-      planning[i * 2 + 1] += planning[(i-1) * 2 + 1];
+      selected_trajectory[i * 2] += selected_trajectory[(i-1) * 2];
+      selected_trajectory[i * 2 + 1] += selected_trajectory[(i-1) * 2 + 1];
     }
     
     // Extract all trajectories for all 3 commands
@@ -293,11 +301,9 @@ private:
         trajectory[i * 2] += trajectory[(i-1) * 2];
         trajectory[i * 2 + 1] += trajectory[(i-1) * 2 + 1];
       }
-      
       all_trajectories[command_idx] = trajectory;
     }
-    
-    return VadOutputData{planning, all_trajectories, map_polylines, filtered_bboxes};
+    return {selected_trajectory, all_trajectories};
   }
 };
 
