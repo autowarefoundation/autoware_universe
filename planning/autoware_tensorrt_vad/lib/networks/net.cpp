@@ -84,7 +84,7 @@ Net::Net(
   // TensorRT initialization is handled by derived classes
 }
 
-void Net::Enqueue(cudaStream_t stream) {
+void Net::enqueue(cudaStream_t stream) {
   trt_common->enqueueV3(stream);
 }
 

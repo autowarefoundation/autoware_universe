@@ -73,7 +73,7 @@ public:
     const autoware::tensorrt_common::TrtCommonConfig& trt_common_config,
     const std::string& plugins_path);
     
-  void Enqueue(cudaStream_t stream);
+  void enqueue(cudaStream_t stream);
 
   virtual ~Net();
 };

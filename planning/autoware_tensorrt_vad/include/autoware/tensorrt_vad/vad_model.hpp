@@ -205,8 +205,8 @@ private:
   }
 
   void enqueue(const std::string& head_name) {
-    nets_["backbone"]->Enqueue(stream_);
-    nets_[head_name]->Enqueue(stream_);
+    nets_["backbone"]->enqueue(stream_);
+    nets_[head_name]->enqueue(stream_);
     cudaStreamSynchronize(stream_);
   }
 
