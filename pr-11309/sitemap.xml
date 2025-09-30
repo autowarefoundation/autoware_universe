@@ -526,6 +526,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/perception/autoware_lidar_frnet/</loc>
+         <lastmod>2025-09-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/perception/autoware_lidar_transfusion/</loc>
          <lastmod>2025-09-30</lastmod>
          <changefreq>daily</changefreq>
@@ -591,6 +596,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/perception/autoware_ptv3/</loc>
+         <lastmod>2025-09-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/perception/autoware_radar_fusion_to_detected_object/</loc>
          <lastmod>2025-09-30</lastmod>
          <changefreq>daily</changefreq>
@@ -637,6 +647,16 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/perception/autoware_tensorrt_bevdet/</loc>
+         <lastmod>2025-09-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/perception/autoware_tensorrt_bevformer/</loc>
+         <lastmod>2025-09-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/perception/autoware_tensorrt_bevformer/TensorRT/</loc>
          <lastmod>2025-09-30</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -811,12 +831,32 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/planning/autoware_trajectory_adapter/</loc>
+         <lastmod>2025-09-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/planning/autoware_trajectory_concatenator/</loc>
+         <lastmod>2025-09-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/planning/autoware_trajectory_modifier/</loc>
          <lastmod>2025-09-30</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/planning/autoware_trajectory_optimizer/</loc>
+         <lastmod>2025-09-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/planning/autoware_trajectory_ranker/</loc>
+         <lastmod>2025-09-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/planning/autoware_trajectory_safety_filter/</loc>
          <lastmod>2025-09-30</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -941,12 +981,12 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/planning/behavior_velocity_planner/autoware_behavior_velocity_rtc_interface/</loc>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/planning/behavior_velocity_planner/autoware_behavior_velocity_roundabout_module/</loc>
          <lastmod>2025-09-30</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/planning/behavior_velocity_planner/autoware_behavior_velocity_run_out_module/</loc>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/planning/behavior_velocity_planner/autoware_behavior_velocity_rtc_interface/</loc>
          <lastmod>2025-09-30</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -1056,6 +1096,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/sensing/autoware_calibration_status_classifier/</loc>
+         <lastmod>2025-09-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/sensing/autoware_cuda_pointcloud_preprocessor/</loc>
          <lastmod>2025-09-30</lastmod>
          <changefreq>daily</changefreq>
@@ -1067,6 +1112,11 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/sensing/autoware_cuda_pointcloud_preprocessor/docs/cuda-pointcloud-preprocessor/</loc>
+         <lastmod>2025-09-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/sensing/autoware_cuda_pointcloud_preprocessor/docs/cuda-polar-voxel-outlier-filter/</loc>
          <lastmod>2025-09-30</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -1607,11 +1657,6 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/visualization/tier4_state_rviz_plugin/</loc>
-         <lastmod>2025-09-30</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11309/visualization/tier4_system_rviz_plugin/</loc>
          <lastmod>2025-09-30</lastmod>
          <changefreq>daily</changefreq>
     </url>
