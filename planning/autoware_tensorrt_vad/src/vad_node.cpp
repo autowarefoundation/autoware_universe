@@ -70,7 +70,6 @@ VadNode::VadNode(const rclcpp::NodeOptions & options)
       declare_parameter<int32_t>("interface_params.target_image_height"),
       declare_parameter<std::vector<double>>("interface_params.detection_range"),
       declare_parameter<int32_t>("model_params.default_command"),
-      declare_parameter<std::vector<double>>("interface_params.vad2base"),
       declare_parameter<std::vector<int64_t>>("interface_params.autoware_to_vad_camera_mapping"),
       declare_parameter<std::vector<std::string>>("model_params.map_class_names"),
       declare_parameter<std::vector<double>>("interface_params.map_colors"),

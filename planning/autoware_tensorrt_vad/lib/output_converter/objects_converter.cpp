@@ -65,10 +65,9 @@ geometry_msgs::msg::Point OutputObjectsConverter::convert_position(
     geometry_msgs::msg::Point position;
     // BBox format: [c_x, c_y, w, l, c_z, h, sin(theta), cos(theta), v_x, v_y]
     // [c_x, c_y, c_z] in VAD is bottom center
-    float vad_x = bbox.bbox[0];
-    float vad_y = bbox.bbox[1];
-    float vad_z = bbox.bbox[4] + bbox.bbox[5] * 0.5f; // z + h / 2. object center
-    auto [aw_x, aw_y, aw_z] = coordinate_transformer_.vad2aw_xyz(vad_x, vad_y, vad_z);
+    float aw_x = bbox.bbox[0];
+    float aw_y = bbox.bbox[1];
+    float aw_z = bbox.bbox[4] + bbox.bbox[5] * 0.5f; // z + h / 2. object center
     Eigen::Vector4d position_base(static_cast<double>(aw_x), static_cast<double>(aw_y), static_cast<double>(aw_z), 1.0);
     Eigen::Vector4d position_map = base2map_transform * position_base;
     position.x = position_map.x();
@@ -97,12 +96,8 @@ geometry_msgs::msg::Twist OutputObjectsConverter::convert_velocity(
   const BBox& bbox) const
 {
     geometry_msgs::msg::Twist twist;
-    float v_x = bbox.bbox[8];
-    float v_y = bbox.bbox[9];
-    auto [aw_vx, aw_vy, aw_vz] = coordinate_transformer_.vad2aw_xyz(v_x, v_y, 0.0f);
-
-    twist.linear.x = aw_vx;
-    twist.linear.y = aw_vy;
+    twist.linear.x = bbox.bbox[8];
+    twist.linear.y = bbox.bbox[9];
     twist.linear.z = 0.0f;
     return twist;
 }
@@ -139,10 +134,9 @@ std::vector<autoware_perception_msgs::msg::PredictedPath> OutputObjectsConverter
       geometry_msgs::msg::Pose pose;
       
       // Predicted trajectory is in relative coordinates (ego coordinate system), so transform to agent center
-      float traj_vad_x = pred_traj.trajectory[ts][0] + bbox.bbox[0];  // Relative coordinates from agent center
-      float traj_vad_y = pred_traj.trajectory[ts][1] + bbox.bbox[1];  // Relative coordinates from agent center
-      float traj_vad_z = bbox.bbox[4] + bbox.bbox[5] * 0.5f; // z + h / 2. object center
-      auto [traj_aw_x, traj_aw_y, traj_aw_z] = coordinate_transformer_.vad2aw_xyz(traj_vad_x, traj_vad_y, traj_vad_z);
+      float traj_aw_x = pred_traj.trajectory[ts][0] + bbox.bbox[0];  // Relative coordinates from agent center
+      float traj_aw_y = pred_traj.trajectory[ts][1] + bbox.bbox[1];  // Relative coordinates from agent center
+      float traj_aw_z = bbox.bbox[4] + bbox.bbox[5] * 0.5f; // z + h / 2. object center
 
       // Transform to map coordinate system
       Eigen::Vector4d traj_position_base(static_cast<double>(traj_aw_x), static_cast<double>(traj_aw_y), static_cast<double>(traj_aw_z), 1.0);
@@ -157,10 +151,10 @@ std::vector<autoware_perception_msgs::msg::PredictedPath> OutputObjectsConverter
       float traj_yaw = yaw;
       
       if (ts < 5) {  // If next point exists
-        float next_vad_x = pred_traj.trajectory[ts + 1][0] + bbox.bbox[0];
-        float next_vad_y = pred_traj.trajectory[ts + 1][1] + bbox.bbox[1];
-        auto [next_aw_x, next_aw_y, next_aw_z] = coordinate_transformer_.vad2aw_xyz(next_vad_x, next_vad_y, traj_vad_z);
-        
+        float next_aw_x = pred_traj.trajectory[ts + 1][0] + bbox.bbox[0];
+        float next_aw_y = pred_traj.trajectory[ts + 1][1] + bbox.bbox[1];
+        float next_aw_z = traj_aw_z;
+
         // Transform next point to map coordinate system
         Eigen::Vector4d next_position_base(static_cast<double>(next_aw_x), static_cast<double>(next_aw_y), static_cast<double>(next_aw_z), 1.0);
         Eigen::Vector4d next_position_map = base2map_transform * next_position_base;

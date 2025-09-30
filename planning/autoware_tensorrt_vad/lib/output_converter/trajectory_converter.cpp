@@ -60,10 +60,9 @@ std::vector<autoware_planning_msgs::msg::TrajectoryPoint> OutputTrajectoryConver
   for (size_t i = 0; i < predicted_trajectory.size(); i += 2) {
     autoware_planning_msgs::msg::TrajectoryPoint point;
 
-    float vad_x = predicted_trajectory[i];
-    float vad_y = predicted_trajectory[i + 1];
+    float aw_x = predicted_trajectory[i];
+    float aw_y = predicted_trajectory[i + 1];
 
-    auto [aw_x, aw_y, aw_z] = coordinate_transformer_.vad2aw_xyz(vad_x, vad_y, 0.0f);
     Eigen::Vector4d base_link_position(static_cast<double>(aw_x), static_cast<double>(aw_y), 0.0, 1.0);
     Eigen::Vector4d map_position = base2map_transform * base_link_position;
 
@@ -72,9 +71,8 @@ std::vector<autoware_planning_msgs::msg::TrajectoryPoint> OutputTrajectoryConver
     point.pose.position.z = map_position[2];
 
     if (i + 2 < predicted_trajectory.size()) {
-      float vad_dx = predicted_trajectory[i + 2] - predicted_trajectory[i];
-      float vad_dy = predicted_trajectory[i + 3] - predicted_trajectory[i + 1];
-      auto [aw_dx, aw_dy, aw_dz] = coordinate_transformer_.vad2aw_xyz(vad_dx, vad_dy, 0.0f);
+      float aw_dx = predicted_trajectory[i + 2] - predicted_trajectory[i];
+      float aw_dy = predicted_trajectory[i + 3] - predicted_trajectory[i + 1];
       
       float yaw = transform_direction_to_map(aw_dx, aw_dy);
       point.pose.orientation = autoware_utils::create_quaternion_from_yaw(yaw);

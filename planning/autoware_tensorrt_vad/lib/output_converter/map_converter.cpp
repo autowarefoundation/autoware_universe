@@ -62,12 +62,7 @@ visualization_msgs::msg::Marker OutputMapConverter::create_polyline_marker(
   // Transform each point in the polyline and add to the marker
   for (const auto& point : polyline) {
     if (point.size() >= 2) {
-      float vad_x = point[0];
-      float vad_y = point[1];
-      
-      auto [aw_x, aw_y, aw_z] = coordinate_transformer_.vad2aw_xyz(vad_x, vad_y, 0.0f);
-      
-      Eigen::Vector4d base_point(static_cast<double>(aw_x), static_cast<double>(aw_y), 0.0, 1.0);
+      Eigen::Vector4d base_point(static_cast<double>(point[0]), static_cast<double>(point[1]), 0.0, 1.0);
       Eigen::Vector4d map_point = base2map_transform * base_point;
       
       geometry_msgs::msg::Point geometry_point;

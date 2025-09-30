@@ -25,7 +25,7 @@ VadInterface::VadInterface(const VadInterfaceConfig& config, const std::shared_p
 {
   // Initialize coordinate transformer
   coordinate_transformer_ = std::make_unique<vad_interface::CoordinateTransformer>(
-    config.vad2base, config.base2vad, tf_buffer);
+    tf_buffer);
   
   // Initialize input converters
   input_image_converter_ = std::make_unique<vad_interface::InputImageConverter>(*coordinate_transformer_, config_);
