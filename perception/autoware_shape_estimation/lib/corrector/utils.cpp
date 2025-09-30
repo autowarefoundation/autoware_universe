@@ -45,8 +45,6 @@ bool correctWithDefaultValue(
   const CorrectionBBParameters & param, autoware_perception_msgs::msg::Shape & shape,
   geometry_msgs::msg::Pose & pose)
 {
-  // TODO(Yukihiro Saito): refactor following code
-
   Eigen::Translation<double, 2> trans =
     Eigen::Translation<double, 2>(pose.position.x, pose.position.y);
   Eigen::Rotation2Dd rotate(tf2::getYaw(pose.orientation));
