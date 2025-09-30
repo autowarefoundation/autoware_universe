@@ -19672,6 +19672,30 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#inner-workings-algorithms" class="md-nav__link">
+    <span class="md-ellipsis">
+      Inner-workings / Algorithms
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Inner-workings / Algorithms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fitting-algorithms" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fitting algorithms
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#inputs-outputs" class="md-nav__link">
     <span class="md-ellipsis">
       Inputs / Outputs
@@ -19714,32 +19738,14 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#inner-workings-algorithms" class="md-nav__link">
-    <span class="md-ellipsis">
-      Inner-workings / Algorithms
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Inner-workings / Algorithms">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#rule-based-algorithms" class="md-nav__link">
-    <span class="md-ellipsis">
-      Rule-based algorithms
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#ml-based-shape-implementation" class="md-nav__link">
     <span class="md-ellipsis">
       ML Based Shape Implementation
     </span>
   </a>
   
-</li>
+    <nav class="md-nav" aria-label="ML Based Shape Implementation">
+      <ul class="md-nav__list">
         
           <li class="md-nav__item">
   <a href="#training-ml-based-shape-estimation-model" class="md-nav__link">
@@ -19812,7 +19818,28 @@
 
 <div><h1 id="autoware_shape_estimation">autoware_shape_estimation<a class="headerlink" href="#autoware_shape_estimation" title="Permanent link">#</a></h1>
 <h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
-<p>This node estimates refined 3D object shapes from point cloud clusters using object labels. It supports both rule-based algorithms (L-shape fitting, cylinder, convex hull with filtering and correction) and ML-based estimation (PointNet) for vehicles, incorporating reference information from prior detections to improve shape accuracy and orientation estimation.</p>
+<p>This node calculates a refined object shape (bounding box, cylinder, convex hull) in which a pointcloud cluster fits according to a label.</p>
+<h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
+<h3 id="fitting-algorithms">Fitting algorithms<a class="headerlink" href="#fitting-algorithms" title="Permanent link">#</a></h3>
+<ul>
+<li>bounding box<ul>
+<li>L-shape fitting: See reference below for details</li>
+<li>ML based shape fitting: See ML Based Shape Fitting Implementation section below for details</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li>
+<p>cylinder</p>
+<p><code>cv::minEnclosingCircle</code></p>
+</li>
+</ul>
+<ul>
+<li>
+<p>convex hull</p>
+<p><code>cv::convexHull</code></p>
+</li>
+</ul>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
 <h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
 <table>
@@ -19932,135 +19959,7 @@
 </tr>
 </tbody>
 </table>
-<h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
-<h3 id="rule-based-algorithms">Rule-based algorithms<a class="headerlink" href="#rule-based-algorithms" title="Permanent link">#</a></h3>
-<p>This rule-based geometric algorithms applies object-type-specific shape fitting (L-shape for vehicles, cylinder for pedestrians, convex hull for unknown objects), followed by filtering and correction stages that incorporate reference information from prior detections to ensure geometric consistency and improve orientation accuracy.</p>
-<p>The shape fitting algorithm pipeline consists of following three stages.</p>
-<ol>
-<li>
-<p>Shape Estimation</p>
-<ul>
-<li>Vehicle Objects (CAR, TRUCK, BUS, TRAILER, MOTORCYCLE, BICYCLE):<ul>
-<li>
-<p><strong>L-shape Fitting Algorithm (<code>fitLShape</code> function)</strong>:</p>
-<ul>
-<li>Implements search-based rectangle fitting from IV2017 paper by Zhang et al.</li>
-</ul>
-<ul>
-<li><strong>Angle Optimization</strong>:<ul>
-<li>Default search range: 0 to 90 degrees for full angular sweep</li>
-<li>Reference yaw constraint: +/-search_angle_range around reference when available</li>
-<li>Two optimization methods: Standard iterative search or Boost-based Brent optimization</li>
-</ul>
-</li>
-</ul>
-<ul>
-<li><strong>Closeness Criterion</strong>: Evaluates fitting quality using Algorithm 4 from referenced paper<ul>
-<li>Distance thresholds: d_min (0.01m squared), d_max (0.16m squared)</li>
-<li>Point-to-boundary distance calculation for quality assessment</li>
-</ul>
-</li>
-</ul>
-<ul>
-<li><strong>3D Bounding Box Construction</strong>:<ul>
-<li>Projects points onto orthogonal axes e1 and e2</li>
-<li>Calculates intersection points to determine center and dimensions</li>
-<li>Height derived from point cloud Z-range with minimum epsilon (0.001m)</li>
-</ul>
-</li>
-</ul>
-<ul>
-<li><strong>Output Validation</strong>: Ensures minimum dimensions to prevent degenerate boxes</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-<ul>
-<li>Pedestrian (PEDESTRIAN):<ul>
-<li>Cylinder shape estimation using cv::minEnclosingCircle</li>
-</ul>
-</li>
-</ul>
-<ul>
-<li>Other/Unknown Objects:<ul>
-<li>Convex hull shape estimation using cv::convexHull</li>
-</ul>
-</li>
-</ul>
-</li>
-<li>
-<p>Filtering</p>
-<ul>
-<li>Vehicle Type-specific Filtering:<ul>
-<li>Car Filter: Vehicle size validity verification</li>
-<li>Truck Filter: Truck-specific shape constraints</li>
-<li>Bus Filter: Bus-specific dimension checks</li>
-<li>Trailer Filter: Trailer shape validation</li>
-</ul>
-</li>
-</ul>
-<ul>
-<li>Physical validity checks of estimated shapes</li>
-</ul>
-<ul>
-<li>Exclusion of invalid estimation results</li>
-</ul>
-</li>
-<li>
-<p>Corrector</p>
-<ul>
-<li><strong>Reference Information-based Correction</strong>:<ul>
-<li>Orientation correction using reference yaw information</li>
-<li>Dimension correction using reference shape size (minimum/fixed value modes)</li>
-</ul>
-</li>
-</ul>
-<ul>
-<li>
-<p><strong>Shape Correction Algorithm (<code>correctWithDefaultValue</code> function)</strong>:</p>
-<ul>
-<li><strong>Purpose</strong>: Rule-based bounding box correction using default vehicle dimensions when estimated shapes violate physical constraints</li>
-</ul>
-<ul>
-<li>
-<p><strong>Correction Vector Application</strong>:</p>
-<ul>
-<li>Computes correction vector based on conditions by correctWithDefaultValue Function<ul>
-<li><img alt="correctWithDefaultValueFunction" src="resource/correctWithDefaultValue.svg"></li>
-</ul>
-</li>
-</ul>
-<ul>
-<li>Updates shape dimensions: <code>shape.dimensions += correction_vector * 2.0</code></li>
-<li>Adjusts pose position: <code>pose.position += rotation_matrix * correction_vector</code></li>
-</ul>
-</li>
-</ul>
-<ul>
-<li><strong>Orientation Normalization</strong>: Ensures longest dimension aligns with x-axis (90 degree rotation if needed)</li>
-</ul>
-</li>
-</ul>
-<ul>
-<li><strong>Vehicle Type-specific Correctors</strong>:<ul>
-<li>Vehicle Corrector: General vehicle correction</li>
-<li>Dedicated correction logic for each vehicle type</li>
-</ul>
-</li>
-</ul>
-<ul>
-<li><strong>Geometric consistency assurance</strong></li>
-</ul>
-</li>
-<li>
-<p>Fallback Mechanism</p>
-<ul>
-<li>Automatic fallback to UNKNOWN label with convex hull estimation when any stage fails</li>
-</ul>
-</li>
-</ol>
-<h3 id="ml-based-shape-implementation">ML Based Shape Implementation<a class="headerlink" href="#ml-based-shape-implementation" title="Permanent link">#</a></h3>
+<h2 id="ml-based-shape-implementation">ML Based Shape Implementation<a class="headerlink" href="#ml-based-shape-implementation" title="Permanent link">#</a></h2>
 <p>The model takes a point cloud and object label(provided by camera detections/Apollo instance segmentation) as an input and outputs the 3D bounding box of the object.</p>
 <p>ML based shape estimation algorithm uses a PointNet model as a backbone to estimate the 3D bounding box of the object. The model is trained on the NuScenes dataset with vehicle labels (Car, Truck, Bus, Trailer).</p>
 <p>The implemented model is concatenated with STN (Spatial Transformer Network) to learn the transformation of the input point cloud to the canonical space and PointNet to predict the 3D bounding box of the object.
@@ -20068,7 +19967,7 @@ Bounding box estimation part of <em>Frustum PointNets for 3D Object Detection fr
 <p>The model predicts the following outputs for each object:</p>
 <ul>
 <li>x,y,z coordinates of the object center</li>
-<li>object heading angle classification result (Uses 12 bins for angle classification - 30 degrees each)</li>
+<li>object heading angle classification result(Uses 12 bins for angle classification - 30 degrees each)</li>
 <li>object heading angle residuals</li>
 <li>object size classification result</li>
 <li>object size residuals</li>
@@ -20146,7 +20045,7 @@ python3<span class="w"> </span>onnx_converter.py<span class="w"> </span>--weight
 <span class="na">booktitle</span><span class="p">=</span><span class="s">{Proceedings of the IEEE conference on computer vision and pattern recognition}</span><span class="p">,</span>
 <span class="na">pages</span><span class="p">=</span><span class="s">{918--927}</span><span class="p">,</span>
 <span class="na">year</span><span class="p">=</span><span class="s">{2018}</span>
-<span class="p">}</span>
+<span class="p">}</span><span class="c">```</span>
 </code></pre></div></div>
 
 
