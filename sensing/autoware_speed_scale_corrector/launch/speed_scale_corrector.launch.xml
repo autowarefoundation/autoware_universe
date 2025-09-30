@@ -1,7 +1,5 @@
 <launch>
-  <arg name="use_sim_time" default="true" description="use_sim_time"/>
   <arg name="param_path" default="$(find-pkg-share autoware_speed_scale_corrector)/config/speed_scale_corrector.yaml"/>
-
   <arg name="input_pose_with_cov_name" default="/localization/pose_estimator/pose_with_covariance"/>
   <arg name="input_velocity_report" default="/vehicle/status/velocity_status"/>
   <arg name="input_imu" default="/sensing/imu/imu_data"/>
@@ -16,6 +14,5 @@
     <remap from="~/output/debug_info" to="$(var output_debug_info)"/>
 
     <param from="$(var param_path)"/>
-    <param name="use_sim_time" value="$(var use_sim_time)"/>
   </node>
 </launch>
