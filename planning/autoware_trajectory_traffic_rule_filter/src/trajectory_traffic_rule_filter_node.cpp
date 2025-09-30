@@ -54,6 +54,12 @@ TrajectoryTrafficRuleFilter::TrajectoryTrafficRuleFilter(const rclcpp::NodeOptio
   sub_map_ = create_subscription<LaneletMapBin>(
     "~/input/lanelet2_map", rclcpp::QoS{1}.transient_local(),
     std::bind(&TrajectoryTrafficRuleFilter::map_callback, this, std::placeholders::_1));
+
+  sub_trajectories_ = create_subscription<CandidateTrajectories>(
+    "~/input/trajectories", 1,
+    std::bind(&TrajectoryTrafficRuleFilter::process, this, std::placeholders::_1));
+
+  pub_trajectories_ = create_publisher<CandidateTrajectories>("~/output/trajectories", 1);
 }
 
 void TrajectoryTrafficRuleFilter::process(const CandidateTrajectories::ConstSharedPtr msg)
@@ -103,6 +109,8 @@ void TrajectoryTrafficRuleFilter::process(const CandidateTrajectories::ConstShar
       filtered_msg->generator_info.push_back(gen_info);
     }
   }
+
+  pub_trajectories_->publish(*filtered_msg);
 }
 
 void TrajectoryTrafficRuleFilter::map_callback(const LaneletMapBin::ConstSharedPtr msg)

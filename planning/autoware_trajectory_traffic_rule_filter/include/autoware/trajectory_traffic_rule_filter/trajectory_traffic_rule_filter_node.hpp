@@ -66,6 +66,9 @@ private:
     autoware_perception_msgs::msg::TrafficLightGroupArray>
     sub_traffic_lights_{this, "~/input/traffic_signals"};
 
+  rclcpp::Subscription<CandidateTrajectories>::SharedPtr sub_trajectories_;
+  rclcpp::Publisher<CandidateTrajectories>::SharedPtr pub_trajectories_;
+
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
   std::shared_ptr<lanelet::routing::RoutingGraph> routing_graph_ptr_;
   std::shared_ptr<lanelet::traffic_rules::TrafficRules> traffic_rules_ptr_;
