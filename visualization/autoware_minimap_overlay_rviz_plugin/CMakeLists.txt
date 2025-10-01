@@ -10,12 +10,9 @@ find_package(GeographicLib REQUIRED)
 find_package(Qt5 COMPONENTS Network REQUIRED)
 find_package(OGRE REQUIRED)
 
-set(
-    headers_to_moc
-)
+set(headers_to_moc)
 
-set(
-  headers_to_not_moc
+set(headers_to_not_moc
   src/include/minimap.hpp
   src/include/goal_pose.hpp
   src/include/tile.hpp
@@ -26,25 +23,25 @@ set(
 )
 
 foreach(header "${headers_to_moc}")
-    qt5_wrap_cpp(display_moc_files "${header}")
+  qt5_wrap_cpp(display_moc_files "${header}")
 endforeach()
 
 set(
-    display_source_files
-    src/overlay_utils.cpp
-    src/minimap.cpp
-    src/tile.cpp
-    src/tile_field.cpp
-    src/tile_provider.cpp
-    src/goal_pose.cpp
-    src/path_overlay.cpp
+  display_source_files
+  src/overlay_utils.cpp
+  src/minimap.cpp
+  src/tile.cpp
+  src/tile_field.cpp
+  src/tile_provider.cpp
+  src/goal_pose.cpp
+  src/path_overlay.cpp
 )
 
 ament_auto_add_library(
-    ${PROJECT_NAME} SHARED
-    ${display_moc_files}
-    ${headers_to_not_moc}
-    ${display_source_files}
+  ${PROJECT_NAME} SHARED
+  ${display_moc_files}
+  ${headers_to_not_moc}
+  ${display_source_files}
 )
 
 target_compile_options(
@@ -101,12 +98,6 @@ install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
-
-# Install demo
-install(FILES demo/demo.launch.xml
-  DESTINATION share/${PROJECT_NAME}/launch)
-install(PROGRAMS demo/publish_demo_data
-  DESTINATION lib/${PROJECT_NAME})
 
 pluginlib_export_plugin_description_file(rviz_common plugin_description.xml)
 ament_package()
