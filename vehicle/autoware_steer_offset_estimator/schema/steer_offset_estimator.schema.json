@@ -22,29 +22,50 @@
           "description": "initial steer offset value",
           "default": "0.0"
         },
-        "forgetting_factor": {
+        "process_noise_covariance": {
           "type": "number",
-          "description": "weight of using previous value",
-          "default": "0.999",
+          "description": "process noise covariance for Kalman filter",
+          "default": "0.01",
+          "minimum": 0.0
+        },
+        "measurement_noise_covariance": {
+          "type": "number",
+          "description": "measurement noise covariance for Kalman filter",
+          "default": "0.01",
+          "minimum": 0.0
+        },
+        "denominator_floor": {
+          "type": "number",
+          "description": "minimum value for denominator to avoid numerical issues",
+          "default": "1.0e-12",
+          "minimum": 0.0
+        },
+        "covariance_floor": {
+          "type": "number",
+          "description": "minimum value for covariance to avoid numerical issues",
+          "default": "1.0e-12",
           "minimum": 0.0
         },
         "min_velocity": {
           "type": "number",
           "description": "velocity below this value is not used",
-          "default": "5.0",
+          "default": "1.0",
           "minimum": 0.0
         },
         "max_steer": {
           "type": "number",
           "description": "steer above this value is not used",
-          "default": "0.05"
+          "default": "0.03"
         }
       },
       "required": [
         "initial_covariance",
         "update_hz",
         "initial_offset",
-        "forgetting_factor",
+        "process_noise_covariance",
+        "measurement_noise_covariance",
+        "denominator_floor",
+        "covariance_floor",
         "min_velocity",
         "max_steer"
       ]
