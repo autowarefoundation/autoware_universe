@@ -13,9 +13,12 @@
 // limitations under the License.
 #include "include/tile.hpp"
 
-#include <QDebug>
 #include <QImageReader>
 #include <QNetworkRequest>
+
+#include <memory>
+#include <string>
+#include <utility>
 
 Tile::Tile(int zoom, int x, int y, QObject * parent)
 : QObject(parent), zoom_(zoom), x_(x), y_(y), network_manager_(new QNetworkAccessManager(this))

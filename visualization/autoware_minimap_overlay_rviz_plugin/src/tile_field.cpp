@@ -18,7 +18,9 @@
 #include <QUrl>
 
 #include <cmath>
-#include <stdexcept>
+#include <memory>
+#include <string>
+#include <utility>
 
 TileField::TileField(QObject * parent) : QObject(parent), center_x_tile_(0), center_y_tile_(0)
 {
