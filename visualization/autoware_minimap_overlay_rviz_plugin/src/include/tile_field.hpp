@@ -40,7 +40,7 @@ public:
   void setUrlTemplate(const std::string & url_template);
   void initializeTiles(int center_x_tile, int center_y_tile);
   void fetchTiles(int zoom, int center_x_tile, int center_y_tile);
-  void updateTiles(int center_x_tile, int center_y_tile);
+  void updateTiles(int new_center_x_tile, int new_center_y_tile);
   QImage getTileFieldImage();
   std::string getTileKey(int zoom, int x, int y, const std::string & url_template) const;
 
@@ -66,7 +66,6 @@ private:
   QImage tile_field_image_;
   std::mutex tile_mutex_;
   std::string url_template_;
-  bool updating_url_template_ = false;  // Flag to indicate URL template is being updated
 };
 
 #endif  // TILE_FIELD_HPP_
