@@ -94,11 +94,11 @@ void SteerOffsetEstimatorNode::on_timer()
     autoware_internal_debug_msgs::msg::StringStamped debug_info;
     debug_info.stamp = this->now();
     debug_info.data = fmt::format(
-      "offset: {:.5f}, covariance: {:.5f},\n"
+      "offset: {:.5f}, std_dev: {:.5f},\n"
       "velocity: {:.5f}, angular_velocity: {:.5f},\n"
       "steering_angle: {:.5f},\n"
       "kalman_gain: {:.5f}, residual: {:.5f}",
-      result.value().offset, result.value().covariance, result.value().velocity,
+      result.value().offset, std::sqrt(result.value().covariance), result.value().velocity,
       result.value().angular_velocity, result.value().steering_angle, result.value().kalman_gain,
       result.value().residual);
     pub_debug_info_->publish(debug_info);
