@@ -72,16 +72,29 @@ SteerOffsetEstimator::update(
     return tl::make_unexpected(SteerOffsetEstimationNotUpdated{"steering angle is too large"});
   }
 
-  double phi = velocity / params_.wheel_base;
-  covariance_ = (covariance_ - (covariance_ * phi * phi * covariance_) /
-                                 (params_.forgetting_factor + phi * covariance_ * phi)) /
+  const double phi = velocity / params_.wheel_base;
+
+  const double y = angular_velocity - phi * steering_angle;
+
+  double denominator =
+    params_.forgetting_factor * params_.measurement_noise + phi * phi * covariance_;
+
+  const double kalman_gain = (covariance_ * phi) / denominator;
+
+  if (denominator < params_.denominator_floor) {
+    denominator = params_.denominator_floor;
+  }
+
+  const double residual = y - phi * estimated_offset_;
+
+  estimated_offset_ = estimated_offset_ + kalman_gain * residual;
+
+  covariance_ = (covariance_ - (covariance_ * phi * phi * covariance_) / denominator) /
                 params_.forgetting_factor;
 
-  double coefficient = (covariance_ * phi) / (params_.forgetting_factor + phi * covariance_ * phi);
-  double observed_angular_velocity_error = angular_velocity - phi * steering_angle;
-  double estimated_angular_velocity_error = phi * estimated_offset_;
-  estimated_offset_ = estimated_offset_ + coefficient * (observed_angular_velocity_error -
-                                                         estimated_angular_velocity_error);
+  if (covariance_ < params_.covariance_floor) {
+    covariance_ = params_.covariance_floor;
+  }
 
   SteerOffsetEstimationUpdated updated_result;
   updated_result.offset = estimated_offset_;
@@ -89,9 +102,8 @@ SteerOffsetEstimator::update(
   updated_result.velocity = velocity;
   updated_result.angular_velocity = angular_velocity;
   updated_result.steering_angle = steering_angle;
-  updated_result.coefficient = coefficient;
-  updated_result.observed_angular_velocity_error = observed_angular_velocity_error;
-  updated_result.estimated_angular_velocity_error = estimated_angular_velocity_error;
+  updated_result.kalman_gain = kalman_gain;
+  updated_result.residual = residual;
   return updated_result;
 }
 

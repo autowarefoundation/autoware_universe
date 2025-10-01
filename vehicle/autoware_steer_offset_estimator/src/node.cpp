@@ -93,12 +93,11 @@ void SteerOffsetEstimatorNode::on_timer()
     debug_info.data = fmt::format(
       "offset: {:.5f}, covariance: {:.5f},\n"
       "velocity: {:.5f}, angular_velocity: {:.5f},\n"
-      "steering_angle: {:.5f}, coefficient: {:.5f},\n"
-      "observed_angular_velocity_error: {:.5f}, estimated_angular_velocity_error: {:.5f}",
+      "steering_angle: {:.5f},\n"
+      "kalman_gain: {:.5f}, residual: {:.5f}",
       result.value().offset, result.value().covariance, result.value().velocity,
-      result.value().angular_velocity, result.value().steering_angle, result.value().coefficient,
-      result.value().observed_angular_velocity_error,
-      result.value().estimated_angular_velocity_error);
+      result.value().angular_velocity, result.value().steering_angle, result.value().kalman_gain,
+      result.value().residual);
     pub_debug_info_->publish(debug_info);
   } else {
     RCLCPP_DEBUG(

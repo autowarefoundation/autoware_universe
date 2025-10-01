@@ -43,14 +43,13 @@ using geometry_msgs::msg::TwistStamped;
  */
 struct SteerOffsetEstimationUpdated
 {
-  double offset{0.0};                            ///< Estimated steering offset [rad]
-  double covariance{0.0};                        ///< Estimation covariance
-  double velocity{0.0};                          ///< Vehicle velocity [m/s]
-  double angular_velocity{0.0};                  ///< Vehicle angular velocity [rad/s]
-  double steering_angle{0.0};                    ///< Vehicle steering angle [rad]
-  double coefficient{0.0};                       ///< Coefficient for covariance matrix
-  double observed_angular_velocity_error{0.0};   ///< Observed angular velocity error [rad/s]
-  double estimated_angular_velocity_error{0.0};  ///< Estimated angular velocity error [rad/s]
+  double offset{0.0};            ///< Estimated steering offset [rad]
+  double covariance{0.0};        ///< Estimation covariance
+  double velocity{0.0};          ///< Vehicle velocity [m/s]
+  double angular_velocity{0.0};  ///< Vehicle angular velocity [rad/s]
+  double steering_angle{0.0};    ///< Vehicle steering angle [rad]
+  double kalman_gain{0.0};       ///< Coefficient for covariance matrix
+  double residual{0.0};          ///< Residual [rad/s]
 };
 
 struct SteerOffsetEstimationNotUpdated
@@ -63,12 +62,15 @@ struct SteerOffsetEstimationNotUpdated
  */
 struct SteerOffsetEstimatorParameters
 {
-  double initial_covariance{1.0};  ///< Initial covariance value
-  double initial_offset{0.0};      ///< Initial steering offset [rad]
-  double wheel_base{0.0};          ///< Vehicle wheelbase [m]
-  double min_velocity{2.0};        ///< Minimum valid velocity [m/s]
-  double max_steer{0.5};           ///< Maximum valid steering angle [rad]
-  double forgetting_factor{0.99};  ///< Forgetting factor for covariance matrix
+  double initial_covariance{1.0};     ///< Initial covariance value
+  double initial_offset{0.0};         ///< Initial steering offset [rad]
+  double wheel_base{0.0};             ///< Vehicle wheelbase [m]
+  double min_velocity{2.0};           ///< Minimum valid velocity [m/s]
+  double max_steer{0.5};              ///< Maximum valid steering angle [rad]
+  double forgetting_factor{0.99};     ///< Forgetting factor for covariance matrix
+  double measurement_noise{0.01};     ///< Measurement noise variance
+  double denominator_floor{1.0e-12};  ///< Denominator floor value
+  double covariance_floor{1.0e-12};   ///< Covariance floor value
 };
 
 /**
