@@ -40,16 +40,6 @@ using autoware::test_utils::get_absolute_path_to_config;
 using autoware_planning_test_manager::utils::makeBehaviorRouteFromLaneId;
 namespace start_planner_utils = autoware::behavior_path_planner::start_planner_utils;
 
-// Global Python interpreter guard - initialize only once
-static pybind11::scoped_interpreter * python_guard = nullptr;
-
-void ensure_python_interpreter()
-{
-  if (python_guard == nullptr) {
-    python_guard = new pybind11::scoped_interpreter{};
-  }
-}
-
 std::string get_absolute_path_to_test_data(
   const std::string & package_name, const std::string & route_filename)
 {
@@ -234,128 +224,29 @@ void StartPlannerTestHelper::plot_footprint(
 }
 
 void StartPlannerTestHelper::plot_and_save_path(
-  const std::vector<autoware_internal_planning_msgs::msg::PathWithLaneId> & partial_paths,
-  const std::shared_ptr<PlannerData> & planner_data,
-  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const PlannerType planner_type,
-  const std::string & filename)
-{
-  if (partial_paths.empty()) {
-    std::cerr << "Path is empty" << std::endl;
-    return;
-  }
-
-  // Initialize pyplot
-  ensure_python_interpreter();
-  auto plt = autoware::pyplot::import();
-
-  auto [fig, axes] = plt.subplots(1, 1);
-
-  plt.title(Args("Generated Pull Out Path"));
-  plt.xlabel(Args("Position x [m]"));
-  plt.ylabel(Args("Position y [m]"));
-  axes[0].set_aspect(Args("equal"));
-
-  // Get lanelets that actually overlap with the path using existing util functions
-  std::vector<lanelet::ConstLanelet> lanelets;
-  std::set<lanelet::Id> added_lanelet_ids;
-
-  // Get all available lanelets from the map
-  const lanelet::LaneletMap & map = *planner_data->route_handler->getLaneletMapPtr();
-  lanelet::ConstLanelets all_lanelets;
-  for (const auto & lanelet : map.laneletLayer) {
-    all_lanelets.push_back(lanelet);
-  }
-
-  for (const auto & partial_path : partial_paths) {
-    for (const auto & point : partial_path.points) {
-      const auto lane_ids = start_planner_utils::get_lane_ids_from_pose(
-        point.point.pose, all_lanelets, std::vector<int64_t>{});
-
-      for (const auto & lane_id : lane_ids) {
-        if (added_lanelet_ids.find(lane_id) == added_lanelet_ids.end()) {
-          const auto lanelet = planner_data->route_handler->getLaneletsFromId(lane_id);
-          lanelets.push_back(lanelet);
-          added_lanelet_ids.insert(lane_id);
-        }
-      }
-    }
-  }
-
-  // plot lanelets
-  if (!lanelets.empty()) {
-    plot_lanelet(axes[0], lanelets);
-  } else {
-    std::cout << "No lanelets to plot." << std::endl;
-  }
-
-  // plot path line
-  for (const auto & path : partial_paths) {
-    // Extract x and y coordinates from path points
-    std::vector<double> x_coords, y_coords;
-    x_coords.reserve(path.points.size());
-    y_coords.reserve(path.points.size());
-
-    for (const auto & point : path.points) {
-      x_coords.push_back(point.point.pose.position.x);
-      y_coords.push_back(point.point.pose.position.y);
-    }
-
-    plt.plot(
-      Args(x_coords, y_coords), Kwargs("color"_a = "blue", "linewidth"_a = 1.0));  // Blue line
-  }
-
-  // Plot vehicle footprint at start and end poses
-  const auto start_pose = partial_paths.front().points.front().point.pose;
-  plot_footprint(axes[0], start_pose, vehicle_info);
-  const auto end_pose = partial_paths.back().points.back().point.pose;
-  plot_footprint(axes[0], end_pose, vehicle_info);
-
-  const std::string file_path = __FILE__;
-  const std::string package_name = "autoware_behavior_path_start_planner_module";
-  size_t pos = file_path.rfind(package_name);
-  if (pos != std::string::npos) {
-    std::string test_result_dir = file_path.substr(0, pos) + package_name + "/test_results/";
-    std::string output_path;
-    switch (planner_type) {
-      case PlannerType::CLOTHOID:
-        output_path = test_result_dir + "clothoid_pull_out/";
-        break;
-      case PlannerType::SHIFT:
-        output_path = test_result_dir + "shift_pull_out/";
-        break;
-      case PlannerType::GEOMETRIC:
-        output_path = test_result_dir + "geometric_pull_out/";
-        break;
-      case PlannerType::FREESPACE:
-        output_path = test_result_dir + "freespace_pull_out/";
-        break;
-      default:
-        // Don't save plot for default case
-        std::cerr << "Unsupported planner type for plotting: " << static_cast<int>(planner_type)
-                  << std::endl;
-        return;
-    }
-    // Save the plot
-    plt.savefig(Args(output_path + filename), Kwargs("dpi"_a = 1200));
-  } else {
-    std::cerr << "Failed to get test_results directory path. Cannot save plot." << std::endl;
-  }
-}
-
-void StartPlannerTestHelper::plot_and_save_path(
+  const std::optional<PullOutPath> & result,
   const autoware_planning_msgs::msg::LaneletRoute & route,
   const geometry_msgs::msg::Pose & start_pose, const geometry_msgs::msg::Pose & goal_pose,
   const std::shared_ptr<PlannerData> & planner_data,
   const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const PlannerType planner_type,
   const std::string & filename)
 {
+  std::vector<autoware_internal_planning_msgs::msg::PathWithLaneId> partial_paths;
+  if (result.has_value()) {
+    partial_paths = result->partial_paths;
+  }
+
   // Initialize pyplot
-  ensure_python_interpreter();
+  static pybind11::scoped_interpreter guard{};
   auto plt = autoware::pyplot::import();
 
   auto [fig, axes] = plt.subplots(1, 1);
 
-  plt.title(Args("Generated Pull Out Path"));
+  if (partial_paths.empty()) {
+    plt.title(Args("Failed Setting"));
+  } else {
+    plt.title(Args("Generated Pull Out Path"));
+  }
   plt.xlabel(Args("Position x [m]"));
   plt.ylabel(Args("Position y [m]"));
   axes[0].set_aspect(Args("equal"));
@@ -370,6 +261,7 @@ void StartPlannerTestHelper::plot_and_save_path(
   for (const auto & lanelet : map.laneletLayer) {
     all_lanelets.push_back(lanelet);
   }
+
   // Get lanelets from the route
   for (const auto & segment : route.segments) {
     for (const auto & primitive : segment.primitives) {
@@ -395,6 +287,21 @@ void StartPlannerTestHelper::plot_and_save_path(
     }
   }
 
+  // Get lanelets from the generated path
+  for (const auto & partial_path : partial_paths) {
+    for (const auto & point : partial_path.points) {
+      const auto lane_ids = start_planner_utils::get_lane_ids_from_pose(
+        point.point.pose, all_lanelets, std::vector<int64_t>{});
+      for (const auto & lane_id : lane_ids) {
+        if (added_lanelet_ids.find(lane_id) == added_lanelet_ids.end()) {
+          const auto lanelet = planner_data->route_handler->getLaneletsFromId(lane_id);
+          lanelets.push_back(lanelet);
+          added_lanelet_ids.insert(lane_id);
+        }
+      }
+    }
+  }
+
   // plot lanelets
   if (!lanelets.empty()) {
     plot_lanelet(axes[0], lanelets);
@@ -402,9 +309,34 @@ void StartPlannerTestHelper::plot_and_save_path(
     std::cout << "No lanelets to plot." << std::endl;
   }
 
-  // Plot vehicle footprint at start and goal poses
-  plot_footprint(axes[0], start_pose, vehicle_info);
-  plot_footprint(axes[0], goal_pose, vehicle_info);
+  // plot path line
+  if (!partial_paths.empty()) {
+    for (const auto & path : partial_paths) {
+      // Extract x and y coordinates from path points
+      std::vector<double> x_coords, y_coords;
+      x_coords.reserve(path.points.size());
+      y_coords.reserve(path.points.size());
+
+      for (const auto & point : path.points) {
+        x_coords.push_back(point.point.pose.position.x);
+        y_coords.push_back(point.point.pose.position.y);
+      }
+
+      plt.plot(
+        Args(x_coords, y_coords), Kwargs("color"_a = "blue", "linewidth"_a = 1.0));  // Blue line
+    }
+  }
+
+  // Plot vehicle footprint at start and end poses
+  if (partial_paths.empty()) {
+    plot_footprint(axes[0], start_pose, vehicle_info);
+    plot_footprint(axes[0], goal_pose, vehicle_info);
+  } else {
+    const auto start_pose_tmp = partial_paths.front().points.front().point.pose;
+    plot_footprint(axes[0], start_pose_tmp, vehicle_info);
+    const auto end_pose_tmp = partial_paths.back().points.back().point.pose;
+    plot_footprint(axes[0], end_pose_tmp, vehicle_info);
+  }
 
   const std::string file_path = __FILE__;
   const std::string package_name = "autoware_behavior_path_start_planner_module";

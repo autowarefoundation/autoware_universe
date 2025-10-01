@@ -112,14 +112,9 @@ TEST_F(TestGeometricPullOut, GenerateValidGeometricPullOutPath)
     // Generate filename based on YAML file name
     std::string yaml_basename = yaml_file.substr(0, yaml_file.find_last_of('.'));
     std::string plot_filename = yaml_basename + ".png";
-    if (result.has_value() && !result->partial_paths.empty()) {
-      StartPlannerTestHelper::plot_and_save_path(
-        result->partial_paths, planner_data, vehicle_info_, PlannerType::GEOMETRIC, plot_filename);
-    } else {
-      StartPlannerTestHelper::plot_and_save_path(
-        route, start_pose, goal_pose, planner_data, vehicle_info_, PlannerType::GEOMETRIC,
-        plot_filename);
-    }
+    StartPlannerTestHelper::plot_and_save_path(
+      result, route, start_pose, goal_pose, planner_data, vehicle_info_,
+      PlannerType::GEOMETRIC, plot_filename);
 #endif
   }
 }
