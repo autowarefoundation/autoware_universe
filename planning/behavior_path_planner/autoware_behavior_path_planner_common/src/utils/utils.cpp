@@ -373,8 +373,8 @@ const Pose refineGoal(const Pose & goal, const lanelet::ConstLanelet & goal_lane
     return goal;
   }
 
-  const auto segment = lanelet::utils::getClosestSegment(
-    lanelet::utils::to2D(lanelet_point), goal_lanelet.centerline());
+  const auto segment = autoware::experimental::lanelet2_utils::get_closest_segment(
+    goal_lanelet.centerline(), lanelet_point.basicPoint());
   if (segment.empty()) {
     return goal;
   }
@@ -439,7 +439,8 @@ bool isInLaneletWithYawThreshold(
   const double radius)
 {
   const double pose_yaw = tf2::getYaw(current_pose.orientation);
-  const double lanelet_angle = lanelet::utils::getLaneletAngle(lanelet, current_pose.position);
+  const double lanelet_angle = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+    lanelet, autoware::experimental::lanelet2_utils::from_ros(current_pose.position).basicPoint());
   const double angle_diff = std::abs(autoware_utils::normalize_radian(lanelet_angle - pose_yaw));
 
   return (angle_diff < std::abs(yaw_threshold)) &&
