@@ -63,8 +63,6 @@ public:
    */
   explicit SteerOffsetEstimatorNode(const rclcpp::NodeOptions & node_options);
 
-  const SteerOffsetEstimatorParameters & get_parameters() const;
-
 private:
   /**
    * @brief Steer offset estimator instance
