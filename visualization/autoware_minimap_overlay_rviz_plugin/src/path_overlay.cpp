@@ -47,7 +47,7 @@ void PathOverlay::setProjectionInfo(
 }
 
 std::pair<double, double> PathOverlay::localToGeographic(
-  double local_x, double local_y, double origin_lat, double origin_lon)
+  double local_x, double local_y, double origin_lat, double origin_lon) const
 {
   if (projector_type_ == tier4_map_msgs::msg::MapProjectorInfo::MGRS) {
     return localToGeographicMGRS(local_x, local_y, mgrs_grid_);
@@ -123,7 +123,7 @@ std::pair<int, int> PathOverlay::getTileOffsets(
   return {centerX + x_offset, centerY + y_offset - 100};
 }
 
-void PathOverlay::draw(QPainter & painter, const QRectF & backgroundRect, int zoom)
+void PathOverlay::draw(QPainter & painter, const QRectF & backgroundRect, int zoom) const
 {
   if (path_points_geo_.empty()) {
     return;
