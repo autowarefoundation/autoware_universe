@@ -22,6 +22,7 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
 #include <tier4_simulation_msgs/msg/dummy_object.hpp>
+#include <unique_identifier_msgs/msg/uuid.hpp>
 
 #include <pcl/common/distances.h>
 #include <pcl/point_types.h>
@@ -29,11 +30,16 @@
 #include <tf2/LinearMath/Transform.h>
 #include <tf2/convert.h>
 #include <tf2/transform_datatypes.h>
+
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #else
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #endif
+
+#include "autoware/dummy_perception_publisher/dummy_object_movement_base_plugin.hpp"
+#include "autoware/dummy_perception_publisher/object_info.hpp"
+
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
@@ -43,31 +49,14 @@
 
 namespace autoware::dummy_perception_publisher
 {
-struct ObjectInfo
-{
-  ObjectInfo(
-    const tier4_simulation_msgs::msg::DummyObject & object, const rclcpp::Time & current_time);
-  double length;
-  double width;
-  double height;
-  double std_dev_x;
-  double std_dev_y;
-  double std_dev_z;
-  double std_dev_yaw;
-  tf2::Transform tf_map2moved_object;
-  // pose and twist
-  geometry_msgs::msg::TwistWithCovariance twist_covariance_;
-  geometry_msgs::msg::PoseWithCovariance pose_covariance_;
-  // convert to TrackedObject
-  // (todo) currently need object input to get id and header information, but it should be removed
-  autoware_perception_msgs::msg::TrackedObject toTrackedObject(
-    const tier4_simulation_msgs::msg::DummyObject & object) const;
-};
+using geometry_msgs::msg::PoseWithCovariance;
+using geometry_msgs::msg::TwistWithCovariance;
+using tier4_simulation_msgs::msg::DummyObject;
 
 class PointCloudCreator
 {
 public:
-  virtual ~PointCloudCreator() {}
+  virtual ~PointCloudCreator() = default;
 
   virtual std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> create_pointclouds(
     const std::vector<ObjectInfo> & obj_infos, const tf2::Transform & tf_base_link2map,
@@ -117,11 +106,11 @@ private:
     detected_object_with_feature_pub_;
   rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr
     ground_truth_objects_pub_;
-  rclcpp::Subscription<tier4_simulation_msgs::msg::DummyObject>::SharedPtr object_sub_;
+  rclcpp::Subscription<DummyObject>::SharedPtr object_sub_;
   rclcpp::TimerBase::SharedPtr timer_;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
-  std::vector<tier4_simulation_msgs::msg::DummyObject> objects_;
+
   double visible_range_;
   double detection_successful_rate_;
   bool enable_ray_tracing_;
@@ -129,16 +118,16 @@ private:
   bool use_base_link_z_;
   bool publish_ground_truth_objects_;
   std::unique_ptr<PointCloudCreator> pointcloud_creator_;
-
+  // dummy object movement plugins
+  std::vector<std::shared_ptr<pluginlib::DummyObjectMovementBasePlugin>> movement_plugins_;
   double angle_increment_;
-
   std::mt19937 random_generator_;
+
   void timerCallback();
-  void objectCallback(const tier4_simulation_msgs::msg::DummyObject::ConstSharedPtr msg);
+  void objectCallback(const DummyObject::ConstSharedPtr msg);
 
 public:
   DummyPerceptionPublisherNode();
-  ~DummyPerceptionPublisherNode() {}
 };
 
 }  // namespace autoware::dummy_perception_publisher
