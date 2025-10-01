@@ -20,7 +20,7 @@
 #include <string>
 #include <utility>
 
-GoalPose::GoalPose()
+GoalPose::GoalPose() : goal_lat_(0.0), goal_lon_(0.0), vehicle_lat_(0.0), vehicle_lon_(0.0)
 {
   std::string package_path =
     ament_index_cpp::get_package_share_directory("autoware_minimap_overlay_rviz_plugin");
@@ -45,7 +45,8 @@ std::pair<double, double> GoalPose::localToGeographic(
 {
   if (projector_type_ == tier4_map_msgs::msg::MapProjectorInfo::MGRS) {
     return localToGeographicMGRS(local_x, local_y, mgrs_grid_);
-  } else if (projector_type_ == tier4_map_msgs::msg::MapProjectorInfo::LOCAL_CARTESIAN_UTM) {
+  }
+  if (projector_type_ == tier4_map_msgs::msg::MapProjectorInfo::LOCAL_CARTESIAN_UTM) {
     return localToGeographicUTM(local_x, local_y, origin_lat, origin_lon);
   }
   // Return a default pair if none of the conditions match

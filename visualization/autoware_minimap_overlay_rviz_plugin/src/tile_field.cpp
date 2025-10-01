@@ -126,14 +126,10 @@ void TileField::setUrlTemplate(const std::string & url_template)
     return;
   }
 
-  updating_url_template_ = true;  // Indicate that the URL template is being updated
-
   // Clear existing tiles before fetching new ones, this crashes rviz
   // clearTiles();
 
   url_template_ = url_template;
-
-  updating_url_template_ = false;  // Indicate that the URL template update is complete
 
   // Re-fetch tiles with the new URL template after a short delay
   QTimer::singleShot(100, this, [this]() { fetchTiles(zoom_, center_x_tile_, center_y_tile_); });

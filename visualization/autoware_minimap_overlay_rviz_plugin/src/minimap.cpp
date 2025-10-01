@@ -554,13 +554,12 @@ void VehicleMapDisplay::goalPoseCallback(const geometry_msgs::msg::PoseStamped::
   queueRender();
 }
 
-std::pair<double, double> VehicleMapDisplay::localXYZToLatLon(double x, double y)
+std::pair<double, double> VehicleMapDisplay::localXYZToLatLon(double local_x, double local_y)
 {
   if (projector_type_ == "MGRS") {
-    return localXYZToLatLonMGRS(x, y);
-  } else {
-    return localXYZToLatLonUTM(x, y);
+    return localXYZToLatLonMGRS(local_x, local_y);
   }
+  return localXYZToLatLonUTM(local_x, local_y);
 }
 
 std::pair<double, double> VehicleMapDisplay::localXYZToLatLonUTM(double x, double y)
