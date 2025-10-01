@@ -807,8 +807,7 @@ private:
    * intersection_stoplines.occlusion_peeking_stopline
    */
   std::optional<NonOccludedCollisionStop> isGreenPseudoCollisionStatus(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
-    const size_t collision_stopline_idx,
+    const size_t closest_idx, const size_t collision_stopline_idx,
     const IntersectionStopLines & intersection_stoplines) const;
 
   /**
@@ -863,11 +862,6 @@ private:
     ego_ttc_pub_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64MultiArrayStamped>::SharedPtr
     object_ttc_pub_;
-
-  template <class T>
-  std::pair<size_t, geometry_msgs::msg::Pose> holdStopPoseIfNecessary(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-    const size_t current_collision_stopline_idx) const;
 };
 
 }  // namespace autoware::behavior_velocity_planner
