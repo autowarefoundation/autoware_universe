@@ -17,6 +17,9 @@
 
 #include <qpoint.h>
 
+#include <string>
+#include <utility>
+
 GoalPose::GoalPose()
 {
   std::string package_path =

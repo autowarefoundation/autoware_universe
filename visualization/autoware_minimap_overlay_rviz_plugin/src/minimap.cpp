@@ -16,8 +16,6 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPixmap>
-#include <QTransform>
-#include <QVBoxLayout>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <rviz_rendering/render_system.hpp>
 
@@ -29,6 +27,10 @@
 #include <tf2/utils.h>
 
 #include <cmath>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace autoware_minimap_overlay_rviz_plugin
 {

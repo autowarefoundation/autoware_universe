@@ -13,10 +13,11 @@
 // limitations under the License.
 #include "include/path_overlay.hpp"
 
-#include <QDebug>
-
 #include <iomanip>
 #include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
 PathOverlay::PathOverlay() : vehicle_lat_(0.0), vehicle_lon_(0.0)
 {
