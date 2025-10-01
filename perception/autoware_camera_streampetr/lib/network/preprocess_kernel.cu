@@ -83,8 +83,8 @@ __global__ void resizeAndExtractRoi_kernel(
   float w10 = di * (1.0f - dj);
   float w11 = di * dj;
 
-  // Loop over the three color channels
-  #pragma unroll
+// Loop over the three color channels
+#pragma unroll
   for (int c = 0; c < 3; ++c) {
     float v00 = 0.0f, v01 = 0.0f, v10 = 0.0f, v11 = 0.0f;
 
@@ -172,8 +172,8 @@ __global__ void remap_kernel(
   float w10 = dx * (1.0f - dy);
   float w11 = dx * dy;
 
-  // Process each color channel
-  #pragma unroll
+// Process each color channel
+#pragma unroll
   for (int c = 0; c < 3; ++c) {
     float v00 = 0.0f, v01 = 0.0f, v10 = 0.0f, v11 = 0.0f;
 
