@@ -40,7 +40,7 @@ public:
   void setVehiclePosition(double lat, double lon);
   void setPathPoints(
     const std::vector<PathPoint> & path_points, double origin_lat, double origin_lon);
-  void draw(QPainter & painter, const QRectF & backgroundRect, int zoom);
+  void draw(QPainter & painter, const QRectF & backgroundRect, int zoom) const;
   void setProjectionInfo(const std::string & projector_type, const std::string & mgrs_grid);
 
 private:
@@ -52,7 +52,7 @@ private:
   std::string mgrs_grid_;
 
   std::pair<double, double> localToGeographic(
-    double local_x, double local_y, double origin_lat, double origin_lon);
+    double local_x, double local_y, double origin_lat, double origin_lon) const;
   static std::pair<double, double> localToGeographicUTM(
     double local_x, double local_y, double origin_lat, double origin_lon);
   static std::pair<double, double> localToGeographicMGRS(

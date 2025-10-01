@@ -50,7 +50,7 @@ private:
   std::string mgrs_grid_;
 
   std::pair<double, double> localToGeographic(
-    double local_x, double local_y, double origin_lat, double origin_lon);
+    double local_x, double local_y, double origin_lat, double origin_lon) const;
   static std::pair<double, double> localToGeographicUTM(
     double local_x, double local_y, double origin_lat, double origin_lon);
   static std::pair<double, double> localToGeographicMGRS(
