@@ -19350,9 +19350,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#recursive-least-squares-algorithm" class="md-nav__link">
+  <a href="#kalman-filter-algorithm" class="md-nav__link">
     <span class="md-ellipsis">
-      Recursive Least Squares Algorithm
+      Kalman Filter Algorithm
     </span>
   </a>
   
@@ -19438,7 +19438,7 @@
 <p>The role of this node is to automatically calibrate <code>steer_offset</code> used in the <code>vehicle_interface</code> node.
 k</p>
 <h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
-<p>This module estimates the steering offset using a <strong>Recursive Least Squares (RLS)</strong> algorithm based on vehicle kinematic model constraints.</p>
+<p>This module estimates the steering offset using a <strong>Kalman Filter</strong> algorithm based on vehicle kinematic model constraints.</p>
 <h3 id="kinematic-model">Kinematic Model<a class="headerlink" href="#kinematic-model" title="Permanent link">#</a></h3>
 <p><img alt="kinematics" src="image/kinematics.png"></p>
 <p>The vehicle kinematic model relates steering angle to angular velocity:</p>
@@ -19458,21 +19458,32 @@ k</p>
 \omega_{observed} = \frac{v}{L} \times (\delta_{measured} + \delta_{offset}) + noise
 \]</div>
 <p>The algorithm estimates <span class="arithmatex">\(\delta_{offset}\)</span> by minimizing the error between observed and predicted angular velocity.</p>
-<h3 id="recursive-least-squares-algorithm">Recursive Least Squares Algorithm<a class="headerlink" href="#recursive-least-squares-algorithm" title="Permanent link">#</a></h3>
-<p>The RLS algorithm updates the offset estimate and covariance recursively:</p>
+<h3 id="kalman-filter-algorithm">Kalman Filter Algorithm<a class="headerlink" href="#kalman-filter-algorithm" title="Permanent link">#</a></h3>
+<p>The Kalman Filter algorithm updates the offset estimate and covariance recursively with time and measurement updates:</p>
 <ul>
 <li>
-<p><strong>Prediction coefficient calculation:</strong></p>
+<p><strong>Regressor and measurement formulation:</strong></p>
 <div class="arithmatex">\[
 \phi = \frac{v}{L}
+\]</div>
+<div class="arithmatex">\[
+y = \omega_{observed} - \phi \times \delta_{measured}
 \]</div>
 </li>
 </ul>
 <ul>
 <li>
-<p><strong>Covariance update with forgetting factor:</strong></p>
+<p><strong>Time update (process model):</strong></p>
 <div class="arithmatex">\[
-P_k = \frac{P_{k-1} - \frac{P_{k-1} \times \phi^2 \times P_{k-1}}{\lambda + \phi \times P_{k-1} \times \phi}}{\lambda}
+P_{prior} = P_{k-1} + Q
+\]</div>
+</li>
+</ul>
+<ul>
+<li>
+<p><strong>Measurement update denominator:</strong></p>
+<div class="arithmatex">\[
+denom = R + \phi^2 \times P_{prior}
 \]</div>
 </li>
 </ul>
@@ -19480,33 +19491,34 @@ P_k = \frac{P_{k-1} - \frac{P_{k-1} \times \phi^2 \times P_{k-1}}{\lambda + \phi
 <li>
 <p><strong>Kalman gain calculation:</strong></p>
 <div class="arithmatex">\[
-K = \frac{P_k \times \phi}{\lambda + \phi \times P_k \times \phi}
+K = \frac{P_{prior} \times \phi}{denom}
 \]</div>
 </li>
 </ul>
 <ul>
 <li>
-<p><strong>Error calculation:</strong></p>
+<p><strong>Innovation (residual) and state update:</strong></p>
 <div class="arithmatex">\[
-e_{observed} = \omega_{observed} - \phi \times \delta_{measured}
+residual = y - \phi \times \delta_{offset,prev}
 \]</div>
 <div class="arithmatex">\[
-e_{estimated} = \phi \times \delta_{offset,prev}
+\delta_{offset,new} = \delta_{offset,prev} + K \times residual
 \]</div>
 </li>
 </ul>
 <ul>
 <li>
-<p><strong>Offset estimate update:</strong></p>
+<p><strong>Covariance update:</strong></p>
 <div class="arithmatex">\[
-\delta_{offset,new} = \delta_{offset,prev} + K \times (e_{observed} - e_{estimated})
+P_k = P_{prior} - \frac{P_{prior} \times \phi^2 \times P_{prior}}{denom}
 \]</div>
 </li>
 </ul>
 <p>Where:</p>
 <ul>
 <li><span class="arithmatex">\(P\)</span>: Estimation covariance matrix (scalar in this 1D case)</li>
-<li><span class="arithmatex">\(\lambda\)</span>: Forgetting factor (typically 0.999) for adaptation to changing conditions</li>
+<li><span class="arithmatex">\(Q\)</span>: Process noise covariance (allows parameter drift)</li>
+<li><span class="arithmatex">\(R\)</span>: Measurement noise covariance</li>
 <li><span class="arithmatex">\(K\)</span>: Kalman gain</li>
 <li><span class="arithmatex">\(k\)</span>: Current time step</li>
 </ul>
@@ -19517,7 +19529,7 @@ e_{estimated} = \phi \times \delta_{offset,prev}
 <li><span class="arithmatex">\(|\delta_{measured}|\)</span> &lt; <code>max_steer</code> (avoids nonlinear tire behavior)</li>
 <li>Both pose and steering data are available</li>
 </ul>
-<p>This approach provides continuous, real-time calibration of steering offset during normal driving operations.</p>
+<p>This Kalman Filter approach provides continuous, real-time calibration of steering offset during normal driving operations, with process noise allowing adaptation to changing conditions and measurement noise handling sensor uncertainties.</p>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
 <h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
 <table>
@@ -19602,24 +19614,45 @@ e_{estimated} = \phi \times \delta_{offset,prev}
 <td>N/A</td>
 </tr>
 <tr>
-<td>forgetting_factor</td>
+<td>process_noise_covariance</td>
 <td>float</td>
-<td>weight of using previous value</td>
-<td>0.999</td>
+<td>process noise covariance for Kalman filter</td>
+<td>0.01</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>measurement_noise_covariance</td>
+<td>float</td>
+<td>measurement noise covariance for Kalman filter</td>
+<td>0.01</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>denominator_floor</td>
+<td>float</td>
+<td>minimum value for denominator to avoid numerical issues</td>
+<td>1e-12</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>covariance_floor</td>
+<td>float</td>
+<td>minimum value for covariance to avoid numerical issues</td>
+<td>1e-12</td>
 <td>≥0.0</td>
 </tr>
 <tr>
 <td>min_velocity</td>
 <td>float</td>
 <td>velocity below this value is not used</td>
-<td>5</td>
+<td>1</td>
 <td>≥0.0</td>
 </tr>
 <tr>
 <td>max_steer</td>
 <td>float</td>
 <td>steer above this value is not used</td>
-<td>0.05</td>
+<td>0.03</td>
 <td>N/A</td>
 </tr>
 </tbody>
