@@ -53,6 +53,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <unordered_set>
 
 namespace autoware::behavior_path_planner
 {
