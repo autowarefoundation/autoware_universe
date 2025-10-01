@@ -84,6 +84,7 @@ __global__ void resizeAndExtractRoi_kernel(
   float w11 = di * dj;
 
   // Loop over the three color channels
+  #pragma unroll
   for (int c = 0; c < 3; ++c) {
     float v00 = 0.0f, v01 = 0.0f, v10 = 0.0f, v11 = 0.0f;
 
@@ -147,9 +148,9 @@ __global__ void remap_kernel(
   float src_y = map_y[map_idx];
 
   // Check if the mapped coordinates are valid in the input image
+  int out_idx = (y * output_width + x) * 3;
   if (src_x < 0 || src_y < 0 || src_x >= input_width || src_y >= input_height) {
     // Set to black for out-of-bounds pixels
-    int out_idx = (y * output_width + x) * 3;
     output_img[out_idx] = 0;
     output_img[out_idx + 1] = 0;
     output_img[out_idx + 2] = 0;
@@ -172,6 +173,7 @@ __global__ void remap_kernel(
   float w11 = dx * dy;
 
   // Process each color channel
+  #pragma unroll
   for (int c = 0; c < 3; ++c) {
     float v00 = 0.0f, v01 = 0.0f, v10 = 0.0f, v11 = 0.0f;
 
@@ -189,7 +191,7 @@ __global__ void remap_kernel(
     float interpolated_value = w00 * v00 + w01 * v01 + w10 * v10 + w11 * v11;
     // Clamp the interpolated value to [0, 255] range
     interpolated_value = fmaxf(0.0f, fminf(255.0f, interpolated_value));
-    output_img[(y * output_width + x) * 3 + c] = static_cast<std::uint8_t>(interpolated_value);
+    output_img[out_idx + c] = static_cast<std::uint8_t>(interpolated_value);
   }
 }
 
