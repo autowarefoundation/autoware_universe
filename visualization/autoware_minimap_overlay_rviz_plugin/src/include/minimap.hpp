@@ -133,7 +133,6 @@ private:
 
   std::unique_ptr<TileField> tile_field_;
   rclcpp::Node::SharedPtr node_;
-  rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr nav_sat_fix_sub_;
 
   int center_x_tile_;
   int center_y_tile_;
