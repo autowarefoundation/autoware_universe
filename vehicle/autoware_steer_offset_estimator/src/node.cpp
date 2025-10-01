@@ -35,8 +35,9 @@ SteerOffsetEstimatorParameters load_parameters(rclcpp::Node * node)
     autoware::vehicle_info_utils::VehicleInfoUtils(*node).getVehicleInfo().wheel_base_m;
   parameters.min_velocity = node->declare_parameter<double>("min_velocity");
   parameters.max_steer = node->declare_parameter<double>("max_steer");
-  parameters.forgetting_factor = node->declare_parameter<double>("forgetting_factor");
-  parameters.measurement_noise = node->declare_parameter<double>("measurement_noise");
+  parameters.process_noise_covariance = node->declare_parameter<double>("process_noise_covariance");
+  parameters.measurement_noise_covariance =
+    node->declare_parameter<double>("measurement_noise_covariance");
   parameters.denominator_floor = node->declare_parameter<double>("denominator_floor");
   parameters.covariance_floor = node->declare_parameter<double>("covariance_floor");
   return parameters;
