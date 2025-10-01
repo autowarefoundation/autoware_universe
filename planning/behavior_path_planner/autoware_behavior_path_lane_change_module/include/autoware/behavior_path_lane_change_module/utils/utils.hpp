@@ -120,6 +120,9 @@ std::vector<PoseWithVelocityStamped> convert_to_predicted_path(
   const CommonDataPtr & common_data_ptr, const LaneChangePath & lane_change_path,
   const double lane_changing_acceleration);
 
+std::vector<PoseWithVelocityStamped> convert_to_predicted_path(
+  const CommonDataPtr & common_data_ptr, const LaneChangePath & lane_change_path);
+
 bool isParkedObject(
   const PathWithLaneId & path, const RouteHandler & route_handler,
   const ExtendedPredictedObject & object, const double object_check_min_road_shoulder_width,
@@ -434,7 +437,7 @@ bool object_path_overlaps_lanes(
  */
 std::vector<std::vector<PoseWithVelocityStamped>> convert_to_predicted_paths(
   const CommonDataPtr & common_data_ptr, const LaneChangePath & lane_change_path,
-  const size_t deceleration_sampling_num);
+  const size_t deceleration_sampling_num, const bool is_approved = false);
 
 /**
  * @brief Validates whether a given pose is a valid starting point for a lane change.

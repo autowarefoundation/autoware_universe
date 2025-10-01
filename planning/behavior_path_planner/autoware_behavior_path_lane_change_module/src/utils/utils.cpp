@@ -66,6 +66,26 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+namespace
+{
+template <typename T>
+double calc_arc_length(
+  const T & reference_path, const geometry_msgs::msg::Pose & pose,
+  const BehaviorPathPlannerParameters & bpp_params)
+{
+  if (reference_path.empty()) {
+    return 0.0;
+  }
+  const auto nearest_seg_idx =
+    autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
+      reference_path, pose, bpp_params.ego_nearest_dist_threshold,
+      bpp_params.ego_nearest_yaw_threshold);
+
+  auto frenet_point = autoware::behavior_path_planner::utils::convertToFrenetPoint(
+    reference_path, pose.position, nearest_seg_idx);
+  return frenet_point.length;
+}
+}  // namespace
 
 namespace autoware::behavior_path_planner::utils::lane_change
 {
@@ -318,66 +338,6 @@ std::optional<lanelet::ConstLanelet> get_lane_change_target_lane(
   }
 
   return route_handler_ptr->getLaneChangeTargetExceptPreferredLane(current_lanes, direction);
-}
-
-std::vector<PoseWithVelocityStamped> convert_to_predicted_path(
-  const CommonDataPtr & common_data_ptr, const LaneChangePath & lane_change_path,
-  const double lane_changing_acceleration)
-{
-  if (lane_change_path.path.points.empty()) {
-    return {};
-  }
-
-  const auto & path = lane_change_path.path;
-  const auto & vehicle_pose = common_data_ptr->get_ego_pose();
-  const auto & bpp_param_ptr = common_data_ptr->bpp_param_ptr;
-  const auto nearest_seg_idx =
-    autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
-      path.points, vehicle_pose, bpp_param_ptr->ego_nearest_dist_threshold,
-      bpp_param_ptr->ego_nearest_yaw_threshold);
-
-  const auto vehicle_pose_frenet =
-    convertToFrenetPoint(path.points, vehicle_pose.position, nearest_seg_idx);
-
-  const auto initial_velocity = common_data_ptr->get_ego_speed();
-  const auto prepare_acc = lane_change_path.info.longitudinal_acceleration.prepare;
-  const auto duration = lane_change_path.info.duration.sum();
-  const auto prepare_time = lane_change_path.info.duration.prepare;
-  const auto & lc_param_ptr = common_data_ptr->lc_param_ptr;
-  const auto resolution = lc_param_ptr->safety.collision_check.prediction_time_resolution;
-  std::vector<PoseWithVelocityStamped> predicted_path;
-  predicted_path.reserve(static_cast<size_t>(std::ceil(duration / resolution)));
-
-  // prepare segment
-  for (double t = 0.0; t < prepare_time; t += resolution) {
-    const auto velocity =
-      std::clamp(initial_velocity + prepare_acc * t, 0.0, lane_change_path.info.velocity.prepare);
-    const auto length = initial_velocity * t + 0.5 * prepare_acc * t * t;
-    const auto pose = autoware::motion_utils::calcInterpolatedPose(
-      path.points, vehicle_pose_frenet.length + length);
-    predicted_path.emplace_back(t, pose, velocity);
-  }
-
-  // lane changing segment
-  const auto lane_changing_velocity = std::clamp(
-    initial_velocity + prepare_acc * prepare_time, 0.0, lane_change_path.info.velocity.prepare);
-  const auto offset =
-    initial_velocity * prepare_time + 0.5 * prepare_acc * prepare_time * prepare_time;
-
-  for (double t = prepare_time; t < duration; t += resolution) {
-    const auto delta_t = t - prepare_time;
-    const auto velocity = std::clamp(
-      lane_changing_velocity + lane_changing_acceleration * delta_t, 0.0,
-      lane_change_path.info.velocity.lane_changing);
-    const auto length = lane_changing_velocity * delta_t +
-                        0.5 * lane_changing_acceleration * delta_t * delta_t + offset;
-    const auto pose = autoware::motion_utils::calcInterpolatedPose(
-      path.points, vehicle_pose_frenet.length + length);
-
-    predicted_path.emplace_back(t, pose, velocity);
-  }
-
-  return predicted_path;
 }
 
 bool isParkedObject(
@@ -1037,9 +997,118 @@ bool object_path_overlaps_lanes(
   });
 }
 
+std::vector<PoseWithVelocityStamped> convert_to_predicted_path(
+  const CommonDataPtr & common_data_ptr, const LaneChangePath & lane_change_path,
+  const double lane_changing_acceleration)
+{
+  if (lane_change_path.path.points.empty()) {
+    return {};
+  }
+
+  const auto & path = lane_change_path.path;
+  const auto & vehicle_pose = common_data_ptr->get_ego_pose();
+  const auto & bpp_param_ptr = common_data_ptr->bpp_param_ptr;
+  const auto ego_arc_length = calc_arc_length(path.points, vehicle_pose, *bpp_param_ptr);
+
+  const auto initial_velocity = common_data_ptr->get_ego_speed();
+  const auto prepare_acc = lane_change_path.info.longitudinal_acceleration.prepare;
+  const auto duration = lane_change_path.info.duration.sum();
+  const auto prepare_time = lane_change_path.info.duration.prepare;
+  const auto & lc_param_ptr = common_data_ptr->lc_param_ptr;
+  const auto resolution = lc_param_ptr->safety.collision_check.prediction_time_resolution;
+  std::vector<PoseWithVelocityStamped> predicted_path;
+  predicted_path.reserve(static_cast<size_t>(std::ceil(duration / resolution)));
+
+  // prepare segment
+  for (double t = 0.0; t < prepare_time; t += resolution) {
+    const auto velocity =
+      std::clamp(initial_velocity + prepare_acc * t, 0.0, lane_change_path.info.velocity.prepare);
+    const auto length = initial_velocity * t + 0.5 * prepare_acc * t * t;
+    const auto pose =
+      autoware::motion_utils::calcInterpolatedPose(path.points, ego_arc_length + length);
+    predicted_path.emplace_back(t, pose, velocity);
+  }
+
+  // lane changing segment
+  const auto lane_changing_velocity = std::clamp(
+    initial_velocity + prepare_acc * prepare_time, 0.0, lane_change_path.info.velocity.prepare);
+  const auto offset =
+    initial_velocity * prepare_time + 0.5 * prepare_acc * prepare_time * prepare_time;
+
+  for (double t = prepare_time; t < duration; t += resolution) {
+    const auto delta_t = t - prepare_time;
+    const auto velocity = std::clamp(
+      lane_changing_velocity + lane_changing_acceleration * delta_t, 0.0,
+      lane_change_path.info.velocity.lane_changing);
+    const auto length = lane_changing_velocity * delta_t +
+                        0.5 * lane_changing_acceleration * delta_t * delta_t + offset;
+    const auto pose =
+      autoware::motion_utils::calcInterpolatedPose(path.points, ego_arc_length + length);
+
+    predicted_path.emplace_back(t, pose, velocity);
+  }
+
+  return predicted_path;
+}
+
+std::vector<PoseWithVelocityStamped> convert_to_predicted_path(
+  const CommonDataPtr & common_data_ptr, const LaneChangePath & lane_change_path)
+{
+  if (lane_change_path.path.points.empty()) {
+    return {};
+  }
+
+  const auto & path = lane_change_path.path;
+  const auto & vehicle_pose = common_data_ptr->get_ego_pose();
+  const auto & bpp_param_ptr = common_data_ptr->bpp_param_ptr;
+  const auto ego_arc_length = calc_arc_length(path.points, vehicle_pose, *bpp_param_ptr);
+
+  const auto & lc_start = lane_change_path.info.lane_changing_start;
+  const auto lc_start_arc_length = calc_arc_length(path.points, lc_start, *bpp_param_ptr);
+
+  const auto & lc_end = lane_change_path.info.lane_changing_end;
+  const auto lc_end_arc_length = calc_arc_length(path.points, lc_end, *bpp_param_ptr);
+
+  const auto initial_velocity = common_data_ptr->get_ego_speed();
+  const auto duration = lane_change_path.info.duration.sum();
+  const auto & lc_param_ptr = common_data_ptr->lc_param_ptr;
+  const auto resolution = lc_param_ptr->safety.collision_check.prediction_time_resolution;
+  std::vector<PoseWithVelocityStamped> predicted_path;
+  predicted_path.reserve(static_cast<size_t>(std::ceil(duration / resolution)));
+  const auto curr_acc = std::max(common_data_ptr->get_current_accel(), 0.0);
+
+  auto prev_vel = initial_velocity;
+  const auto calc_velocity = [&](const auto dt) {
+    auto vel = prev_vel + curr_acc * dt;
+    if (ego_arc_length < lc_start_arc_length) {
+      vel = std::clamp(vel, 0.0, lane_change_path.info.velocity.prepare);
+    } else {
+      vel = std::clamp(
+        vel, lc_param_ptr->trajectory.min_lane_changing_velocity,
+        lane_change_path.info.velocity.lane_changing);
+    }
+    return vel;
+  };
+
+  for (double t = 0.0; t < duration; t += resolution) {
+    const auto velocity = calc_velocity(t);
+    const auto length = velocity * t + 0.5 * curr_acc * t * t;
+    const auto offset = std::min(ego_arc_length + length, lc_end_arc_length);
+    const auto pose = autoware::motion_utils::calcInterpolatedPose(path.points, offset);
+
+    predicted_path.emplace_back(t, pose, velocity);
+    if (offset + std::numeric_limits<double>::epsilon() > lc_end_arc_length) {
+      break;
+    }
+    prev_vel = velocity;
+  }
+
+  return predicted_path;
+}
+
 std::vector<std::vector<PoseWithVelocityStamped>> convert_to_predicted_paths(
   const CommonDataPtr & common_data_ptr, const LaneChangePath & lane_change_path,
-  const size_t deceleration_sampling_num)
+  const size_t deceleration_sampling_num, const bool is_approved)
 {
   static constexpr double floating_err_th{1e-3};
   const auto bpp_param = *common_data_ptr->bpp_param_ptr;
@@ -1057,6 +1126,9 @@ std::vector<std::vector<PoseWithVelocityStamped>> convert_to_predicted_paths(
         common_data_ptr, lane_change_path.frenet_path, deceleration_sampling_num);
     }
     auto acc = lane_changing_acc + static_cast<double>(n) * acc_resolution;
+    if (is_approved) {
+      return utils::lane_change::convert_to_predicted_path(common_data_ptr, lane_change_path);
+    }
     return utils::lane_change::convert_to_predicted_path(common_data_ptr, lane_change_path, acc);
   };
 
@@ -1077,20 +1149,14 @@ std::vector<PoseWithVelocityStamped> convert_to_predicted_path(
   const auto & path = frenet_candidate.prepare.points;
   const auto & vehicle_pose = common_data_ptr->get_ego_pose();
   const auto & bpp_param_ptr = common_data_ptr->bpp_param_ptr;
-  const auto nearest_seg_idx =
-    autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
-      path, vehicle_pose, bpp_param_ptr->ego_nearest_dist_threshold,
-      bpp_param_ptr->ego_nearest_yaw_threshold);
 
-  const auto vehicle_pose_frenet =
-    convertToFrenetPoint(path, vehicle_pose.position, nearest_seg_idx);
+  const auto ego_arc_length = calc_arc_length(path, vehicle_pose, *bpp_param_ptr);
 
   for (double t = 0.0; t < prepare_time; t += resolution) {
     const auto velocity =
       std::clamp(initial_velocity + prepare_acc * t, 0.0, frenet_candidate.prepare_metric.velocity);
     const auto length = initial_velocity * t + 0.5 * prepare_acc * t * t;
-    const auto pose =
-      autoware::motion_utils::calcInterpolatedPose(path, vehicle_pose_frenet.length + length);
+    const auto pose = autoware::motion_utils::calcInterpolatedPose(path, ego_arc_length + length);
     predicted_path.emplace_back(t, pose, velocity);
   }
 
