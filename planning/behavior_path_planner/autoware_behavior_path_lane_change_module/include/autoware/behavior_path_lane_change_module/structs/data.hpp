@@ -323,7 +323,8 @@ struct EgoObjectProximity
       return false;
     }
 
-    return ego_dist_to_terminal_end->max >= object_dist_to_terminal_end->min;
+    return ego_dist_to_terminal_end->max >= object_dist_to_terminal_end->min &&
+           ego_dist_to_terminal_end->min <= object_dist_to_terminal_end->max;
   }
 };
 }  // namespace autoware::behavior_path_planner::lane_change
