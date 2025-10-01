@@ -19,7 +19,6 @@
 #include <QTransform>
 #include <QVBoxLayout>
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <pluginlib/class_list_macros.hpp>
 #include <rviz_rendering/render_system.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -616,5 +615,6 @@ std::pair<double, double> VehicleMapDisplay::localXYZToLatLonMGRS(double x, doub
 
 }  // namespace autoware_minimap_overlay_rviz_plugin
 
+#include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware_minimap_overlay_rviz_plugin::VehicleMapDisplay, rviz_common::Display)
