@@ -16,6 +16,7 @@
 
   <depend>autoware_internal_localization_msgs</depend>
   <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_map_msgs</depend>
   <depend>cv_bridge</depend>
   <depend>geometry_msgs</depend>
