@@ -28,17 +28,6 @@ namespace autoware::diffusion_planner::utils
 {
 
 /**
- * @brief Generates transformation matrices from an odometry message.
- *
- * @param msg Odometry message containing position and orientation data.
- * @return A pair of 4x4 transformation matrices:
- *         - The first matrix represents the transformation from the map frame to the ego frame.
- *         - The second matrix represents the inverse transformation (ego frame to map frame).
- */
-std::pair<Eigen::Matrix4d, Eigen::Matrix4d> get_transform_matrix(
-  const nav_msgs::msg::Odometry & msg);
-
-/**
  * @brief Creates a vector of floats initialized with a specific value.
  *
  * @param shape A vector specifying the dimensions of the data (e.g., rows, columns).
@@ -70,6 +59,16 @@ Eigen::Matrix4d pose_to_matrix4f(const geometry_msgs::msg::Pose & pose);
  * @return A pair containing cos(yaw) and sin(yaw).
  */
 std::pair<float, float> rotation_matrix_to_cos_sin(const Eigen::Matrix3d & rotation_matrix);
+
+/**
+ * @brief Computes the inverse of a 4x4 transformation matrix.
+ * @note This function assumes that the matrix represents a rigid transformation and uses the
+ * properties of Eigen::Isometry3d internally instead of a general 4x4 matrix inversion for better
+ * numerical stability and performance.
+ * @param mat The transformation matrix to invert.
+ * @return A 4x4 transformation matrix representing the inverse.
+ */
+Eigen::Matrix4d inverse(const Eigen::Matrix4d & mat);
 
 }  // namespace autoware::diffusion_planner::utils
 #endif  // AUTOWARE__DIFFUSION_PLANNER__UTILS__UTILS_HPP_
