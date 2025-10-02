@@ -35,8 +35,7 @@ private:
   double shape_variation_threshold_;
   int stable_streak_;
   int stable_streak_threshold_;
-
-  Eigen::Vector3d getDimension(const autoware_perception_msgs::msg::Shape & shape) const;
+  autoware_perception_msgs::msg::Shape latest_shape_;
 
 public:
   ExponentialMovingAverageShape(
@@ -45,10 +44,7 @@ public:
 
   void initialize(const Eigen::Vector3d & initial_shape);
   void clear();
-
-  bool isInitialized() const { return initialized_; }
   bool isStable() const { return stable_; }
-  bool getSmoothedShape(Eigen::Vector3d & shape) const;
   autoware_perception_msgs::msg::Shape getShape() const;
 
   void processNoisyMeasurement(const types::DynamicObject & measurement);
