@@ -114,7 +114,6 @@ The `autoware_camera_streampetr` node has various parameters for configuration:
 - `rois_number`: Number of camera ROIs/cameras (default: 6)
 - `is_compressed_image`: Whether input images are compressed
 - `is_distorted_image`: Whether input images are distorted
-- `downsample_factor`: If is_distorted_image is `true`, factor to downsample the image by during undistortion. Makes undistortion faster than using full scale
 - `multithreading`: Whether to use multithreading for handling image callbacks
 - `anchor_camera_id`: ID of the anchor camera for synchronization (default: 0)
 - `debug_mode`: Enable debug mode for timing measurements

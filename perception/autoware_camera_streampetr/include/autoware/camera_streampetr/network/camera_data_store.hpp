@@ -42,7 +42,8 @@ class CameraDataStore
 public:
   CameraDataStore(
     rclcpp::Node * node, const int rois_number, const int image_height, const int image_width,
-    const int anchor_camera_id, const bool is_distorted_image, const double downsample_factor);
+    const int anchor_camera_id, const bool is_distorted_image);
+  ~CameraDataStore();
   void update_camera_image(
     const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg);
   void update_camera_info(
@@ -88,6 +89,7 @@ private:
   void update_metadata_and_timing(
     const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg,
     const std::chrono::high_resolution_clock::time_point & start_time);
+  void compute_undistortion_maps(const int camera_id);
 
   const size_t rois_number_;
   const int image_height_;
@@ -96,7 +98,6 @@ private:
   double start_timestamp_;
   float preprocess_time_ms_;
   const bool is_distorted_image_;
-  const double downsample_factor_;
 
   rclcpp::Logger logger_;
   std::vector<CameraInfo::ConstSharedPtr> camera_info_list_;
@@ -106,6 +107,11 @@ private:
   std::vector<double> camera_image_timestamp_;
   std::vector<std::string> camera_link_names_;
   std::vector<cudaStream_t> streams_;
+
+  // GPU memory for undistortion maps
+  std::vector<std::shared_ptr<Tensor>> undistort_map_x_gpu_;
+  std::vector<std::shared_ptr<Tensor>> undistort_map_y_gpu_;
+  std::vector<bool> undistortion_maps_computed_;
 
   // multithreading variables
   mutable std::mutex freeze_mutex_;
