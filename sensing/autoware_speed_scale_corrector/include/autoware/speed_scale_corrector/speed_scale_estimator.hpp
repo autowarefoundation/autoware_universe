@@ -105,6 +105,12 @@ public:
   explicit SpeedScaleEstimator(const SpeedScaleEstimatorParameters & parameters);
 
   /**
+   * @brief Get update interval
+   * @return Speed scale estimator parameters
+   */
+  [[nodiscard]] rclcpp::Duration get_update_interval() const;
+
+  /**
    * @brief Update speed scale estimation
    * @param poses Pose information from odometry
    * @param imus IMU sensor data
