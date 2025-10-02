@@ -89,9 +89,6 @@ DynamicObject toDynamicObject(
   dynamic_object.shape = det_object.shape;
   dynamic_object.area = getArea(det_object.shape);
 
-  // compute local axis aligned bounding box dimensions for POLYGON shape
-  shapes::computePolygonDimensions(dynamic_object.shape);
-
   return dynamic_object;
 }
 

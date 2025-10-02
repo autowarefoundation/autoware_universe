@@ -174,12 +174,6 @@ bool Tracker::updateWithMeasurement(
     // Update object normally
     measure(object, measurement_time, channel_info);
     object_.trust_extension = object.trust_extension;
-
-    // Update object status
-    getTrackedObject(measurement_time, object_);
-
-    // Renew ema_shape_
-    ema_shape_.clear();
   } else {
     ema_shape_.processNoisyMeasurement(object);
     if (ema_shape_.isStable()) {
@@ -187,9 +181,6 @@ bool Tracker::updateWithMeasurement(
       // Update object normally
       measure(object, measurement_time, channel_info);
       object_.trust_extension = object.trust_extension;
-
-      // Update object status
-      getTrackedObject(measurement_time, object_);
 
       // Renew ema_shape_
       ema_shape_.clear();
@@ -204,6 +195,8 @@ bool Tracker::updateWithMeasurement(
       conditionedUpdate(object, predicted_object, smoothed_shape, measurement_time, channel_info);
     }
   }
+  // Update object status
+  getTrackedObject(measurement_time, object_);
 
   // update time
   object_.time = measurement_time;
@@ -233,7 +226,7 @@ bool Tracker::updateWithoutMeasurement(const rclcpp::Time & timestamp)
 
 bool Tracker::createPseudoMeasurement(
   const types::DynamicObject & meas, types::DynamicObject & pred,
-  const autoware_perception_msgs::msg::Shape & smoothed_shape)
+  const autoware_perception_msgs::msg::Shape & smoothed_shape, const bool enlarge_covariance)
 {
   // Apply linear fall‑off weight on dist square
   const double dx = meas.pose.position.x - pred.pose.position.x;
@@ -274,6 +267,25 @@ bool Tracker::createPseudoMeasurement(
     q.setRPY(0, 0, yaw_fused);
     pred.pose.orientation = tf2::toMsg(q);
   }
+
+  // Enlarge covariance if requested (for weak updates)
+  if (enlarge_covariance) {
+    using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+    constexpr double additional_position_cov = 4.0;     // [m^2] additional variance
+    constexpr double additional_orientation_cov = 0.5;  // [rad^2] additional variance
+    constexpr double additional_velocity_cov = 1.0;     // [m^2/s^2] additional variance
+
+    pred.pose_covariance[XYZRPY_COV_IDX::X_X] += additional_position_cov;
+    pred.pose_covariance[XYZRPY_COV_IDX::Y_Y] += additional_position_cov;
+    pred.pose_covariance[XYZRPY_COV_IDX::YAW_YAW] += additional_orientation_cov;
+
+    // Enlarge velocity covariance if available
+    if (pred.kinematics.has_twist_covariance) {
+      pred.twist_covariance[XYZRPY_COV_IDX::X_X] += additional_velocity_cov;
+      pred.twist_covariance[XYZRPY_COV_IDX::Y_Y] += additional_velocity_cov;
+    }
+  }
+
   return true;
 }
 

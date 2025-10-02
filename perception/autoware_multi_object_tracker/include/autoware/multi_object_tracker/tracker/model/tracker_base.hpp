@@ -105,7 +105,7 @@ public:
   bool updateWithoutMeasurement(const rclcpp::Time & now);
   void updateClassification(
     const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification);
-  void setObjectShape(const autoware_perception_msgs::msg::Shape & shape)
+  virtual void setObjectShape(const autoware_perception_msgs::msg::Shape & shape)
   {
     object_.shape = shape;
     object_.area = types::getArea(shape);
@@ -160,7 +160,8 @@ public:
     const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
   bool createPseudoMeasurement(
     const types::DynamicObject & meas, types::DynamicObject & pred,
-    const autoware_perception_msgs::msg::Shape & smoothed_shape);
+    const autoware_perception_msgs::msg::Shape & smoothed_shape,
+    const bool enlarge_covariance = false);
 
 protected:
   types::DynamicObject object_;

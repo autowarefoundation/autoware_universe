@@ -32,6 +32,11 @@ ExponentialMovingAverageShape::ExponentialMovingAverageShape(
   stable_streak_(0),
   stable_streak_threshold_(stable_streak_threshold)
 {
+  // Initialize latest_shape_ with safe defaults
+  latest_shape_.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+  latest_shape_.dimensions.x = 0.0;
+  latest_shape_.dimensions.y = 0.0;
+  latest_shape_.dimensions.z = 0.0;
 }
 
 void ExponentialMovingAverageShape::initialize(const Eigen::Vector3d & initial_shape)
@@ -49,32 +54,20 @@ void ExponentialMovingAverageShape::clear()
   stable_streak_ = 0;
 }
 
-bool ExponentialMovingAverageShape::getSmoothedShape(Eigen::Vector3d & shape) const
-{
-  if (!initialized_) {
-    return false;
-  }
-  shape = value_;
-  return true;
-}
-
-Eigen::Vector3d ExponentialMovingAverageShape::getDimension(
-  const autoware_perception_msgs::msg::Shape & shape) const
-{
-  if (shape.type != autoware_perception_msgs::msg::Shape::POLYGON) {
-    return Eigen::Vector3d(shape.dimensions.x, shape.dimensions.y, shape.dimensions.z);
-  }
-  // Create a copy and compute polygon dimensions using existing utility
-  auto shape_copy = shape;
-  shapes::computePolygonDimensions(shape_copy);
-  return Eigen::Vector3d(shape_copy.dimensions.x, shape_copy.dimensions.y, shape_copy.dimensions.z);
-}
-
 void ExponentialMovingAverageShape::processNoisyMeasurement(
   const types::DynamicObject & measurement)
 {
-  // Get measurement shape dimensions
-  Eigen::Vector3d meas = getDimension(measurement.shape);
+  // Store the latest shape
+  latest_shape_ = measurement.shape;
+
+  // Apply EMA smoothing for BOUNDING_BOX
+  if (measurement.shape.type != autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
+    return;
+  }
+
+  // Get shape dimensions
+  const Eigen::Vector3d meas{
+    measurement.shape.dimensions.x, measurement.shape.dimensions.y, measurement.shape.dimensions.z};
 
   // Initialize EMA if not already done
   if (!initialized_) {
@@ -82,7 +75,7 @@ void ExponentialMovingAverageShape::processNoisyMeasurement(
     return;
   }
 
-  // Update shape using dual-rate EMA
+  // Update shape dimensions using dual-rate EMA
   Eigen::Vector3d rel = (meas - value_).cwiseAbs().cwiseQuotient(value_.cwiseMax(1e-3));
   if (rel.maxCoeff() < shape_variation_threshold_) {
     value_ = alpha_strong_ * meas + (1.0 - alpha_strong_) * value_;
@@ -100,8 +93,14 @@ void ExponentialMovingAverageShape::processNoisyMeasurement(
 
 autoware_perception_msgs::msg::Shape ExponentialMovingAverageShape::getShape() const
 {
+  // For non-BOUNDING_BOX types, return the latest shape as-is (no smoothing)
+  if (latest_shape_.type != autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
+    return latest_shape_;
+  }
+
+  // For BOUNDING_BOX type, return smoothed dimensions
   autoware_perception_msgs::msg::Shape shape;
-  // Shape type defaults to BOUNDING_BOX (0)
+  shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
 
   // Set dimensions from smoothed EMA values
   shape.dimensions.x = value_(0);  // length
