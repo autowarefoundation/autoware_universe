@@ -142,12 +142,14 @@ __global__ void remap_kernel(
   // Check if the thread corresponds to a valid pixel in output
   if (x >= output_width || y >= output_height) return;
 
-  // Get the mapping coordinates for this output pixel
+  // Get the mapping coordinates for this output pixel. 
+  // Skip the first y rows with (y * output_width) and then skip the first x columns by adding x
   int map_idx = y * output_width + x;
   float src_x = map_x[map_idx];
   float src_y = map_y[map_idx];
 
   // Check if the mapped coordinates are valid in the input image
+  // Skip the first y rows with (y * output_width) and then skip the first x columns by adding x. Then skip the first 3 channels by multiplying by 3
   int out_idx = (y * output_width + x) * 3;
   if (src_x < 0 || src_y < 0 || src_x >= input_width || src_y >= input_height) {
     // Set to black for out-of-bounds pixels
@@ -157,7 +159,7 @@ __global__ void remap_kernel(
     return;
   }
 
-  // Bilinear interpolation
+  // Bilinear interpolation in unit square (0,0), (0,1), (1,0), (1,1)
   int x0 = static_cast<int>(floorf(src_x));
   int y0 = static_cast<int>(floorf(src_y));
   int x1 = x0 + 1;
