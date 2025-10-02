@@ -44,6 +44,23 @@
 namespace autoware::motion_velocity_planner::run_out
 {
 
+namespace
+{
+bool is_same_direction(const TimeOverlapInterval & ego, const Parameters & params)
+{
+  return -params.collision_same_direction_angle_threshold < ego.first_intersection.yaw_diff &&
+         ego.first_intersection.yaw_diff < params.collision_same_direction_angle_threshold;
+}
+
+bool is_opposite_direction(const TimeOverlapInterval & ego, const Parameters & params)
+{
+  return M_PI - params.collision_opposite_direction_angle_threshold <
+           ego.first_intersection.yaw_diff &&
+         ego.first_intersection.yaw_diff <
+           M_PI + params.collision_opposite_direction_angle_threshold;
+}
+}  // namespace
+
 FootprintIntersection calculate_footprint_intersection(
   const universe_utils::Segment2d & object_segment,
   const universe_utils::Point2d & intersection_point, const FootprintSegmentNode & ego_query_result,
@@ -296,13 +313,7 @@ void calculate_overlapping_collision(
   c.ego_collision_time = ego.first_intersection.ego_time;
   // TODO(Maxime): can unify the logic ? (whatever the angle we can refine the collision time
   // calculation within the overlap)
-  const auto is_same_direction_collision =
-    -params.collision_same_direction_angle_threshold < ego.first_intersection.yaw_diff &&
-    ego.first_intersection.yaw_diff < params.collision_same_direction_angle_threshold;
-  const auto is_opposite_direction_collision =
-    M_PI - params.collision_opposite_direction_angle_threshold < ego.first_intersection.yaw_diff &&
-    ego.first_intersection.yaw_diff < M_PI + params.collision_opposite_direction_angle_threshold;
-  if (is_same_direction_collision) {
+  if (is_same_direction(ego, params)) {
     const auto time_margin =
       std::abs(ego.first_intersection.ego_time - ego.first_intersection.object_time);
     const auto object_is_faster_than_ego = ego.first_intersection.vel_diff < 0;
@@ -325,7 +336,7 @@ void calculate_overlapping_collision(
          << "]/ego_vel[" << ego.first_intersection.ego_vel << "]";
       c.explanation = ss.str();
     }
-  } else if (is_opposite_direction_collision) {
+  } else if (is_opposite_direction(ego, params)) {
     // predict time when collision would occur by finding time when arc lengths are equal
     const auto overlap_length =
       ego.last_intersection.arc_length - ego.first_intersection.arc_length;
@@ -358,15 +369,14 @@ Collision calculate_collision(
   const auto passing_margin = interpolation::lerp(
     ignore_params.if_ego_arrives_first.margin.ego_enter_times,
     ignore_params.if_ego_arrives_first.margin.time_margins, clamped_ego_enter_time);
-  const auto is_opposite_direction =
-    object.first_intersection.ego_time > object.last_intersection.ego_time;
   const auto is_ignored_ego_arrives_first =
-    !is_opposite_direction && ignore_params.if_ego_arrives_first.enable &&
+    !is_opposite_direction(ego, params) && ignore_params.if_ego_arrives_first.enable &&
     is_overlapping_at_same_time && (ego.from + passing_margin) < object.from &&
     ego.to - ego.from <= ignore_params.if_ego_arrives_first.max_overlap_duration;
   const auto is_ignored_ego_arrives_first_and_cannot_stop =
-    !is_opposite_direction && ignore_params.if_ego_arrives_first_and_cannot_stop.enable &&
-    ego.from < object.from && is_overlapping_at_same_time &&
+    !is_opposite_direction(ego, params) &&
+    ignore_params.if_ego_arrives_first_and_cannot_stop.enable && ego.from < object.from &&
+    is_overlapping_at_same_time &&
     ego.from < ignore_params.if_ego_arrives_first_and_cannot_stop.calculated_stop_time_limit;
   if (is_ignored_ego_arrives_first) {
     c.type = ignored_collision;
