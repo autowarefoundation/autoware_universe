@@ -32,7 +32,7 @@ SpeedScaleCorrectorNode::SpeedScaleCorrectorNode(const rclcpp::NodeOptions & nod
   using std::placeholders::_1;
 
   // Parameters
-  const double update_hz = declare_parameter<double>("update_hz");
+  const double update_interval = declare_parameter<double>("update_interval");
 
   // Publishers
   pub_estimated_speed_scale_factor_ = create_publisher<Float32Stamped>("~/output/scale_factor", 1);
@@ -47,7 +47,7 @@ SpeedScaleCorrectorNode::SpeedScaleCorrectorNode(const rclcpp::NodeOptions & nod
   pub_debug_info_ = create_publisher<StringStamped>("~/output/debug_info", 1);
 
   // Timer
-  const auto period_ns = rclcpp::Rate(update_hz).period();
+  const auto period_ns = std::chrono::duration<double>(update_interval);
   timer_ = rclcpp::create_timer(
     this, get_clock(), period_ns, std::bind(&SpeedScaleCorrectorNode::on_timer, this));
 }
@@ -80,7 +80,11 @@ void SpeedScaleCorrectorNode::on_timer()
       result.error().last_estimated_speed_scale_factor);
   } else {
     debug_info.data = fmt::format(
-      "Updated:\nEstimated speed scale factor: {}", result.value().estimated_speed_scale_factor);
+      "Updated:\nEstimated speed scale factor: {}\nStd. dev.: {}\nVelocity from odometry: "
+      "{}\nVelocity from velocity report: {}\nKalman gain: {}",
+      result.value().estimated_speed_scale_factor, std::sqrt(result.value().covariance),
+      result.value().velocity_from_odometry, result.value().velocity_from_velocity_report,
+      result.value().kalman_gain);
     Float32Stamped estimated_speed_scale_factor;
     estimated_speed_scale_factor.stamp = get_clock()->now();
     estimated_speed_scale_factor.data =

@@ -43,6 +43,7 @@ using sensor_msgs::msg::Imu;
  */
 struct SpeedScaleEstimatorParameters
 {
+  double update_interval{};                        //!< Update interval [s]
   double initial_speed_scale_factor{};             //!< Initial scale factor
   double initial_speed_scale_factor_covariance{};  //!< Initial scale factor covariance (P)
   double process_noise_covariance{};               //!< Process noise covariance (Q)
@@ -71,7 +72,11 @@ struct SpeedScaleEstimatorState
  */
 struct SpeedScaleEstimatorUpdated
 {
-  double estimated_speed_scale_factor;  //!< Estimated speed scale factor
+  double estimated_speed_scale_factor = 0.0;   //!< Estimated speed scale factor
+  double covariance = 0.0;                     //!< Covariance of the estimated speed scale factor
+  double velocity_from_odometry = 0.0;         //!< Velocity from odometry [m/s]
+  double velocity_from_velocity_report = 0.0;  //!< Velocity from velocity report [m/s]
+  double kalman_gain = 0.0;                    //!< Kalman gain
 };
 
 /**
@@ -118,21 +123,6 @@ private:
   double estimated_speed_scale_factor_ = 1.0;  //!< Current estimated scale factor (state x)
   double covariance_ = 1.0;                    //!< State covariance (P)
 };
-
-/**
- * @brief Create state vector from interpolated data
- * @param x_interpolator X position interpolator
- * @param y_interpolator Y position interpolator
- * @param angular_velocity_interpolator Angular velocity interpolator
- * @param velocity_interpolator Velocity interpolator
- * @param times Time samples
- * @return Vector of estimator states
- */
-std::vector<SpeedScaleEstimatorState> create_states(
-  const InterpolatorInterface<double> & x_interpolator,
-  const InterpolatorInterface<double> & y_interpolator,
-  const InterpolatorInterface<double> & angular_velocity_interpolator,
-  const InterpolatorInterface<double> & velocity_interpolator, const std::vector<double> & times);
 
 }  // namespace autoware::speed_scale_corrector
 

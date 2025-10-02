@@ -33,10 +33,14 @@ tf2::Quaternion to_quaternion(const geometry_msgs::msg::Quaternion & quaternion)
   return tf2::Quaternion(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
 }
 
+double calc_time_diff(const PoseStamped & pose_a, const PoseStamped & pose_b)
+{
+  return (rclcpp::Time(pose_b.header.stamp) - rclcpp::Time(pose_a.header.stamp)).seconds();
+}
+
 Twist calc_twist_from_pose(const PoseStamped & pose_a, const PoseStamped & pose_b)
 {
-  const double dt =
-    (rclcpp::Time(pose_b.header.stamp) - rclcpp::Time(pose_a.header.stamp)).seconds();
+  const double dt = calc_time_diff(pose_a, pose_b);
 
   Twist twist;
 
