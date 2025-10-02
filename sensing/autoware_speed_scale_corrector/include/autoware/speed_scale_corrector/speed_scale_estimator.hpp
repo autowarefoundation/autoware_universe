@@ -18,8 +18,10 @@
 #include "autoware/trajectory/interpolator/interpolator.hpp"
 #include "tl_expected/expected.hpp"
 
+#include <rclcpp/rclcpp.hpp>
+
 #include <autoware_vehicle_msgs/msg/velocity_report.hpp>
-#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 
 #include <string>
@@ -33,7 +35,7 @@ namespace autoware::speed_scale_corrector
 
 using autoware::experimental::trajectory::interpolator::InterpolatorInterface;
 using autoware_vehicle_msgs::msg::VelocityReport;
-using geometry_msgs::msg::PoseWithCovarianceStamped;
+using geometry_msgs::msg::PoseStamped;
 using sensor_msgs::msg::Imu;
 
 /**
@@ -41,13 +43,15 @@ using sensor_msgs::msg::Imu;
  */
 struct SpeedScaleEstimatorParameters
 {
-  double time_window{};                 //!< Time window width used for estimation [s]
-  double time_interval{};               //!< Data sampling interval [s]
-  double initial_speed_scale_factor{};  //!< Initial scale factor
-  double max_angular_velocity{};        //!< Maximum angular velocity constraint [rad/s]
-  double max_speed{};                   //!< Maximum speed constraint [m/s]
-  double min_speed{};                   //!< Minimum speed constraint [m/s]
-  double max_speed_change{};            //!< Maximum speed change constraint [m/s²]
+  double initial_speed_scale_factor{};             //!< Initial scale factor
+  double initial_speed_scale_factor_covariance{};  //!< Initial scale factor covariance (P)
+  double process_noise_covariance{};               //!< Process noise covariance (Q)
+  double measurement_noise_covariance{};           //!< Measurement noise covariance (R)
+  double max_angular_velocity{};                   //!< Maximum angular velocity constraint [rad/s]
+  double max_speed{};                              //!< Maximum speed constraint [m/s]
+  double min_speed{};                              //!< Minimum speed constraint [m/s]
+
+  static SpeedScaleEstimatorParameters load_parameters(rclcpp::Node * node);
 };
 
 /**
@@ -97,24 +101,22 @@ public:
 
   /**
    * @brief Update speed scale estimation
-   * @param pose_with_covariance Pose information from odometry
+   * @param poses Pose information from odometry
    * @param imus IMU sensor data
    * @param velocity_reports Vehicle velocity reports
    * @return Expected result containing either updated estimation or error information
    */
   tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> update(
-    const PoseWithCovarianceStamped & pose_with_covariance, const std::vector<Imu> & imus,
+    const std::vector<PoseStamped> & poses, const std::vector<Imu> & imus,
     const std::vector<VelocityReport> & velocity_reports);
 
 private:
   SpeedScaleEstimatorParameters parameters_;  //!< Estimation parameters
 
-  std::vector<PoseWithCovarianceStamped> pose_with_covariance_buffer_;  //!< Pose data buffer
-  std::vector<VelocityReport> velocity_report_buffer_;                  //!< Velocity report buffer
-  std::vector<Imu> imu_buffer_;                                         //!< IMU data buffer
+  std::optional<PoseStamped> previous_pose_;  //!< Previous pose for velocity calculation
 
-  int num_update_ = 0;                         //!< Number of successful updates
-  double estimated_speed_scale_factor_ = 1.0;  //!< Current estimated scale factor
+  double estimated_speed_scale_factor_ = 1.0;  //!< Current estimated scale factor (state x)
+  double covariance_ = 1.0;                    //!< State covariance (P)
 };
 
 /**
