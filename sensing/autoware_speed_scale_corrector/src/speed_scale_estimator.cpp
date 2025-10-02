@@ -110,6 +110,11 @@ SpeedScaleEstimator::SpeedScaleEstimator(const SpeedScaleEstimatorParameters & p
 {
 }
 
+rclcpp::Duration SpeedScaleEstimator::get_update_interval() const
+{
+  return std::chrono::duration<double>(parameters_.update_interval);
+}
+
 tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedScaleEstimator::update(
   const std::vector<PoseStamped> & poses, const std::vector<Imu> & imus,
   const std::vector<VelocityReport> & velocity_reports)

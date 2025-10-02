@@ -31,9 +31,6 @@ SpeedScaleCorrectorNode::SpeedScaleCorrectorNode(const rclcpp::NodeOptions & nod
 {
   using std::placeholders::_1;
 
-  // Parameters
-  const double update_interval = declare_parameter<double>("update_interval");
-
   // Publishers
   pub_estimated_speed_scale_factor_ = create_publisher<Float32Stamped>("~/output/scale_factor", 1);
 
@@ -47,9 +44,9 @@ SpeedScaleCorrectorNode::SpeedScaleCorrectorNode(const rclcpp::NodeOptions & nod
   pub_debug_info_ = create_publisher<StringStamped>("~/output/debug_info", 1);
 
   // Timer
-  const auto period_ns = std::chrono::duration<double>(update_interval);
   timer_ = rclcpp::create_timer(
-    this, get_clock(), period_ns, std::bind(&SpeedScaleCorrectorNode::on_timer, this));
+    this, get_clock(), speed_scale_estimator_.get_update_interval(),
+    std::bind(&SpeedScaleCorrectorNode::on_timer, this));
 }
 
 void SpeedScaleCorrectorNode::on_timer()
