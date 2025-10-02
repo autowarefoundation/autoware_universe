@@ -1,7 +1,7 @@
 <launch>
   <arg name="param_path" default="$(find-pkg-share autoware_speed_scale_corrector)/config/speed_scale_corrector.yaml"/>
   <arg name="use_sim_time" default="false"/>
-  <arg name="input_pose_with_cov_name" default="/localization/pose_estimator/pose_with_covariance"/>
+  <arg name="input_pose_name" default="/localization/pose_estimator/pose"/>
   <arg name="input_velocity_report" default="/vehicle/status/velocity_status"/>
   <arg name="input_imu" default="/sensing/imu/imu_data"/>
   <arg name="output_scale_factor" default="speed_scale_corrector/estimated_speed_scale_factor"/>
@@ -9,7 +9,7 @@
 
   <node pkg="autoware_speed_scale_corrector" exec="speed_scale_corrector_node" name="speed_scale_corrector" output="screen">
     <param name="use_sim_time" value="$(var use_sim_time)"/>
-    <remap from="~/input/pose_with_covariance" to="$(var input_pose_with_cov_name)"/>
+    <remap from="~/input/pose" to="$(var input_pose_name)"/>
     <remap from="~/input/velocity_report" to="$(var input_velocity_report)"/>
     <remap from="~/input/imu" to="$(var input_imu)"/>
     <remap from="~/output/scale_factor" to="$(var output_scale_factor)"/>
