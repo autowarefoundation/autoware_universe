@@ -27,11 +27,13 @@
 namespace autoware::multi_object_tracker
 {
 
-// Vehicle wheel information for partial updates
+// Vehicle update strategy for partial updates
+enum class UpdateStrategy { FRONT_WHEEL, REAR_WHEEL, BODY };
+
 struct WheelInfo
 {
-  bool update_front_wheel;
-  geometry_msgs::msg::Point wheel_position;
+  UpdateStrategy strategy;
+  geometry_msgs::msg::Point wheel_position;  // Only used for FRONT_WHEEL and REAR_WHEEL
 };
 
 class VehicleTracker : public Tracker
@@ -66,6 +68,8 @@ public:
   bool getTrackedObject(
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const override;
+
+  void setObjectShape(const autoware_perception_msgs::msg::Shape & shape) override;
 
   WheelInfo estimateUpdateWheel(
     const types::DynamicObject & measurement, const types::DynamicObject & prediction,
