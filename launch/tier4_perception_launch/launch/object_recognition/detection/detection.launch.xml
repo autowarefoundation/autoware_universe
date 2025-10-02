@@ -51,6 +51,9 @@
   <arg name="use_irregular_object_detector"/>
   <arg name="irregular_object_detector_fusion_camera_ids" default="[0]"/>
   <arg name="ml_camera_lidar_merger_priority_mode"/>
+  <arg name="camera_2d_detector/model_path"/>
+  <arg name="camera_2d_detector/label_path"/>
+  <arg name="camera_2d_detector/color_map_path"/>
 
   <!-- External interfaces -->
   <arg name="number_of_cameras"/>
@@ -232,6 +235,9 @@
       <arg name="pointpainting_fusion_common_param_path" value="$(var pointpainting_fusion_common_param_path)"/>
       <arg name="segmentation_pointcloud_fusion_camera_ids" value="$(var segmentation_pointcloud_fusion_camera_ids)"/>
       <arg name="image_topic_name" value="$(var image_topic_name)"/>
+      <arg name="camera_2d_detector/model_path" value="$(var camera_2d_detector/model_path)"/>
+      <arg name="camera_2d_detector/label_path" value="$(var camera_2d_detector/label_path)"/>
+      <arg name="camera_2d_detector/color_map_path" value="$(var camera_2d_detector/color_map_path)"/>
     </include>
   </group>
 

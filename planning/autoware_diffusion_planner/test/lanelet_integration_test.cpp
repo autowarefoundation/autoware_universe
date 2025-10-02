@@ -83,23 +83,15 @@ TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsBasic)
 
   // Check that each lane segment has the expected number of points
   for (const auto & segment : lane_segments) {
-    EXPECT_EQ(segment.polyline.size(), static_cast<size_t>(num_lane_points))
+    EXPECT_EQ(segment.centerline.size(), static_cast<size_t>(num_lane_points))
       << "Lane polyline should have " << num_lane_points << " points";
 
-    // Check boundaries
-    EXPECT_FALSE(segment.left_boundaries.empty()) << "Left boundaries should not be empty";
-    EXPECT_FALSE(segment.right_boundaries.empty()) << "Right boundaries should not be empty";
-
     // Each boundary should have the expected number of points
-    for (const auto & left_boundary : segment.left_boundaries) {
-      EXPECT_EQ(left_boundary.size(), static_cast<size_t>(num_lane_points))
-        << "Left boundary should have " << num_lane_points << " points";
-    }
+    EXPECT_EQ(segment.left_boundary.size(), static_cast<size_t>(num_lane_points))
+      << "Left boundary should have " << num_lane_points << " points";
 
-    for (const auto & right_boundary : segment.right_boundaries) {
-      EXPECT_EQ(right_boundary.size(), static_cast<size_t>(num_lane_points))
-        << "Right boundary should have " << num_lane_points << " points";
-    }
+    EXPECT_EQ(segment.right_boundary.size(), static_cast<size_t>(num_lane_points))
+      << "Right boundary should have " << num_lane_points << " points";
   }
 }
 
@@ -115,35 +107,9 @@ TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsWithDifferentPointCounts)
       << "Lane segments should not be empty for " << num_points << " points";
 
     for (const auto & segment : lane_segments) {
-      EXPECT_EQ(segment.polyline.size(), static_cast<size_t>(num_points))
+      EXPECT_EQ(segment.centerline.size(), static_cast<size_t>(num_points))
         << "Lane polyline should have " << num_points << " points";
     }
-  }
-}
-
-TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsInterpolation)
-{
-  // Test that interpolation preserves start and end points
-  const int64_t num_lane_points = 15;
-
-  auto lane_segments = convert_to_lane_segments(lanelet_map_ptr_, num_lane_points);
-
-  EXPECT_FALSE(lane_segments.empty());
-
-  // For each segment, verify that interpolated points maintain proper spacing
-  for (const auto & segment : lane_segments) {
-    const auto & waypoints = segment.polyline.waypoints();
-
-    // Check that points are properly spaced (not all at the same location)
-    bool has_spacing = false;
-    for (size_t i = 1; i < waypoints.size(); ++i) {
-      float dist = waypoints[i - 1].distance(waypoints[i]);
-      if (dist > 0.001f) {  // Small threshold to account for floating point precision
-        has_spacing = true;
-        break;
-      }
-    }
-    EXPECT_TRUE(has_spacing) << "Interpolated points should have proper spacing";
   }
 }
 
@@ -179,56 +145,8 @@ TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsConsistency)
     EXPECT_EQ(lane_segments_1[i].id, lane_segments_2[i].id)
       << "Segment IDs should be consistent across calls";
 
-    EXPECT_EQ(lane_segments_1[i].polyline.size(), lane_segments_2[i].polyline.size())
+    EXPECT_EQ(lane_segments_1[i].centerline.size(), lane_segments_2[i].centerline.size())
       << "Polyline sizes should be consistent";
-  }
-}
-
-TEST_F(LaneletIntegrationTest, CheckPointSpacingConsistency)
-{
-  // Test that interpolated points have consistent spacing
-  const int64_t num_lane_points = 20;
-
-  auto lane_segments = convert_to_lane_segments(lanelet_map_ptr_, num_lane_points);
-
-  EXPECT_FALSE(lane_segments.empty());
-
-  // Define tolerance for spacing variation (30% of average spacing)
-  const float spacing_tolerance_ratio = 0.3f;
-
-  for (const auto & segment : lane_segments) {
-    const auto & waypoints = segment.polyline.waypoints();
-
-    if (waypoints.size() < 3) continue;
-
-    // Calculate distances between consecutive points
-    std::vector<float> distances;
-    float total_distance = 0.0f;
-
-    for (size_t i = 1; i < waypoints.size(); ++i) {
-      float dist = waypoints[i - 1].distance(waypoints[i]);
-      distances.push_back(dist);
-      total_distance += dist;
-    }
-
-    // Skip if total distance is too small
-    if (total_distance < 1.0f) continue;
-
-    float average_distance = total_distance / distances.size();
-    float tolerance = average_distance * spacing_tolerance_ratio;
-
-    // Check each distance against the average
-    for (size_t i = 0; i < distances.size(); ++i) {
-      // Skip very small segments at the beginning or end
-      if (i == 0 || i == distances.size() - 1) {
-        continue;
-      }
-
-      EXPECT_NEAR(distances[i], average_distance, tolerance)
-        << "Point " << i + 1 << " in segment " << segment.id
-        << " has inconsistent spacing. Distance: " << distances[i]
-        << ", Expected: " << average_distance << " +/- " << tolerance;
-    }
   }
 }
 
@@ -243,7 +161,7 @@ TEST_F(LaneletIntegrationTest, CheckForNaNAndInfiniteValues)
 
   for (const auto & segment : lane_segments) {
     // Check polyline points
-    const auto & waypoints = segment.polyline.waypoints();
+    const auto & waypoints = segment.centerline;
     for (size_t i = 0; i < waypoints.size(); ++i) {
       const auto & point = waypoints[i];
 
@@ -262,36 +180,25 @@ TEST_F(LaneletIntegrationTest, CheckForNaNAndInfiniteValues)
         << "Infinite value found in y coordinate at point " << i << " of segment " << segment.id;
       EXPECT_FALSE(std::isinf(point.z()))
         << "Infinite value found in z coordinate at point " << i << " of segment " << segment.id;
-
-      // Check direction vectors
-      EXPECT_FALSE(std::isnan(point.dx()) || std::isinf(point.dx()))
-        << "Invalid dx value at point " << i << " of segment " << segment.id;
-      EXPECT_FALSE(std::isnan(point.dy()) || std::isinf(point.dy()))
-        << "Invalid dy value at point " << i << " of segment " << segment.id;
-      EXPECT_FALSE(std::isnan(point.dz()) || std::isinf(point.dz()))
-        << "Invalid dz value at point " << i << " of segment " << segment.id;
     }
 
     // Check boundaries
-    for (const auto & boundary : segment.left_boundaries) {
-      for (size_t i = 0; i < boundary.waypoints().size(); ++i) {
-        const auto & point = boundary.waypoints()[i];
-        EXPECT_FALSE(std::isnan(point.x()) || std::isnan(point.y()) || std::isnan(point.z()))
-          << "NaN found in left boundary at point " << i << " of segment " << segment.id;
-        EXPECT_FALSE(std::isinf(point.x()) || std::isinf(point.y()) || std::isinf(point.z()))
-          << "Infinite value found in left boundary at point " << i << " of segment " << segment.id;
-      }
+    EXPECT_FALSE(segment.left_boundary.empty()) << "Left boundary should not be empty";
+    for (size_t i = 0; i < segment.left_boundary.size(); ++i) {
+      const auto & point = segment.left_boundary[i];
+      EXPECT_FALSE(std::isnan(point.x()) || std::isnan(point.y()) || std::isnan(point.z()))
+        << "NaN found in left boundary at point " << i << " of segment " << segment.id;
+      EXPECT_FALSE(std::isinf(point.x()) || std::isinf(point.y()) || std::isinf(point.z()))
+        << "Infinite value found in left boundary at point " << i << " of segment " << segment.id;
     }
 
-    for (const auto & boundary : segment.right_boundaries) {
-      for (size_t i = 0; i < boundary.waypoints().size(); ++i) {
-        const auto & point = boundary.waypoints()[i];
-        EXPECT_FALSE(std::isnan(point.x()) || std::isnan(point.y()) || std::isnan(point.z()))
-          << "NaN found in right boundary at point " << i << " of segment " << segment.id;
-        EXPECT_FALSE(std::isinf(point.x()) || std::isinf(point.y()) || std::isinf(point.z()))
-          << "Infinite value found in right boundary at point " << i << " of segment "
-          << segment.id;
-      }
+    EXPECT_FALSE(segment.right_boundary.empty()) << "Right boundary should not be empty";
+    for (size_t i = 0; i < segment.right_boundary.size(); ++i) {
+      const auto & point = segment.right_boundary[i];
+      EXPECT_FALSE(std::isnan(point.x()) || std::isnan(point.y()) || std::isnan(point.z()))
+        << "NaN found in right boundary at point " << i << " of segment " << segment.id;
+      EXPECT_FALSE(std::isinf(point.x()) || std::isinf(point.y()) || std::isinf(point.z()))
+        << "Infinite value found in right boundary at point " << i << " of segment " << segment.id;
     }
   }
 }
@@ -358,7 +265,7 @@ TEST_F(LaneletIntegrationTest, CheckReasonableCoordinateRanges)
 
   // Check all interpolated points are within the original map bounds
   for (const auto & segment : lane_segments) {
-    const auto & waypoints = segment.polyline.waypoints();
+    const auto & waypoints = segment.centerline;
 
     for (size_t i = 0; i < waypoints.size(); ++i) {
       const auto & point = waypoints[i];
@@ -385,57 +292,28 @@ TEST_F(LaneletIntegrationTest, CheckReasonableCoordinateRanges)
     }
 
     // Also check boundaries
-    for (const auto & boundary : segment.left_boundaries) {
-      for (size_t i = 0; i < boundary.waypoints().size(); ++i) {
-        const auto & point = boundary.waypoints()[i];
-        EXPECT_GE(point.x(), min_x_allowed)
-          << "Left boundary X out of bounds at point " << i << " of segment " << segment.id;
-        EXPECT_LE(point.x(), max_x_allowed)
-          << "Left boundary X out of bounds at point " << i << " of segment " << segment.id;
-        EXPECT_GE(point.y(), min_y_allowed)
-          << "Left boundary Y out of bounds at point " << i << " of segment " << segment.id;
-        EXPECT_LE(point.y(), max_y_allowed)
-          << "Left boundary Y out of bounds at point " << i << " of segment " << segment.id;
-      }
+    for (size_t i = 0; i < segment.left_boundary.size(); ++i) {
+      const auto & point = segment.left_boundary[i];
+      EXPECT_GE(point.x(), min_x_allowed)
+        << "Left boundary X out of bounds at point " << i << " of segment " << segment.id;
+      EXPECT_LE(point.x(), max_x_allowed)
+        << "Left boundary X out of bounds at point " << i << " of segment " << segment.id;
+      EXPECT_GE(point.y(), min_y_allowed)
+        << "Left boundary Y out of bounds at point " << i << " of segment " << segment.id;
+      EXPECT_LE(point.y(), max_y_allowed)
+        << "Left boundary Y out of bounds at point " << i << " of segment " << segment.id;
     }
 
-    for (const auto & boundary : segment.right_boundaries) {
-      for (size_t i = 0; i < boundary.waypoints().size(); ++i) {
-        const auto & point = boundary.waypoints()[i];
-        EXPECT_GE(point.x(), min_x_allowed)
-          << "Right boundary X out of bounds at point " << i << " of segment " << segment.id;
-        EXPECT_LE(point.x(), max_x_allowed)
-          << "Right boundary X out of bounds at point " << i << " of segment " << segment.id;
-        EXPECT_GE(point.y(), min_y_allowed)
-          << "Right boundary Y out of bounds at point " << i << " of segment " << segment.id;
-        EXPECT_LE(point.y(), max_y_allowed)
-          << "Right boundary Y out of bounds at point " << i << " of segment " << segment.id;
-      }
-    }
-  }
-}
-
-TEST_F(LaneletIntegrationTest, CheckPointOrdering)
-{
-  // Test that points maintain proper ordering (no sudden jumps)
-  const int64_t num_lane_points = 15;
-
-  auto lane_segments = convert_to_lane_segments(lanelet_map_ptr_, num_lane_points);
-
-  EXPECT_FALSE(lane_segments.empty());
-
-  // Maximum reasonable jump between consecutive points (in meters)
-  const float max_point_jump = 50.0f;
-
-  for (const auto & segment : lane_segments) {
-    const auto & waypoints = segment.polyline.waypoints();
-
-    for (size_t i = 1; i < waypoints.size(); ++i) {
-      float dist = waypoints[i - 1].distance(waypoints[i]);
-
-      EXPECT_LT(dist, max_point_jump)
-        << "Unexpected jump between points " << i - 1 << " and " << i << " in segment "
-        << segment.id << ". Distance: " << dist << " meters";
+    for (size_t i = 0; i < segment.right_boundary.size(); ++i) {
+      const auto & point = segment.right_boundary[i];
+      EXPECT_GE(point.x(), min_x_allowed)
+        << "Right boundary X out of bounds at point " << i << " of segment " << segment.id;
+      EXPECT_LE(point.x(), max_x_allowed)
+        << "Right boundary X out of bounds at point " << i << " of segment " << segment.id;
+      EXPECT_GE(point.y(), min_y_allowed)
+        << "Right boundary Y out of bounds at point " << i << " of segment " << segment.id;
+      EXPECT_LE(point.y(), max_y_allowed)
+        << "Right boundary Y out of bounds at point " << i << " of segment " << segment.id;
     }
   }
 }

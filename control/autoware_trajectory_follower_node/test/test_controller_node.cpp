@@ -142,6 +142,7 @@ public:
     OperationModeState msg;
     msg.stamp = node->now();
     msg.mode = OperationModeState::AUTONOMOUS;
+    msg.is_autoware_control_enabled = true;
     operation_mode_pub->publish(msg);
   };
 
