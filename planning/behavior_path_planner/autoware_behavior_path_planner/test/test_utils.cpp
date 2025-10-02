@@ -76,14 +76,17 @@ TEST(BehaviorPathPlanningUtilitiesBehaviorTest, setGoal)
 
   PathWithLaneId path_with_goal;
   autoware::behavior_path_planner::utils::set_goal(
-    3.5, M_PI * 0.5, path, path.points.back().point.pose, 5, &path_with_goal);
+    3.5, M_PI * 0.5, 2.0, path, path.points.back().point.pose, 5, &path_with_goal);
 
   // Check if skipped lane ids by smooth skip connection are filled in output path.
-  EXPECT_EQ(path_with_goal.points.size(), 4U);
+  EXPECT_EQ(path_with_goal.points.size(), 7U);
   ASSERT_THAT(path_with_goal.points.at(0).lane_ids, testing::ElementsAre(0));
   ASSERT_THAT(path_with_goal.points.at(1).lane_ids, testing::ElementsAre(1));
-  ASSERT_THAT(path_with_goal.points.at(2).lane_ids, testing::ElementsAre(2, 3, 4, 5));
-  ASSERT_THAT(path_with_goal.points.at(3).lane_ids, testing::ElementsAre(5));
+  ASSERT_THAT(path_with_goal.points.at(2).lane_ids, testing::ElementsAre(1));
+  ASSERT_THAT(path_with_goal.points.at(3).lane_ids, testing::ElementsAre(1));
+  ASSERT_THAT(path_with_goal.points.at(4).lane_ids, testing::ElementsAre(2, 3, 4, 5));
+  ASSERT_THAT(path_with_goal.points.at(5).lane_ids, testing::ElementsAre(2, 3, 4, 5));
+  ASSERT_THAT(path_with_goal.points.at(6).lane_ids, testing::ElementsAre(5));
 }
 
 TEST(BehaviorPathPlanningUtilitiesBehaviorTest, expandLanelets)

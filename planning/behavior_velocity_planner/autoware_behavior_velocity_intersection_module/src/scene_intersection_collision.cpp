@@ -148,6 +148,21 @@ void IntersectionModule::updateObjectInfoManagerArea()
   }
 }
 
+lanelet::Point3d remove_const(const lanelet::ConstPoint3d & point)
+{
+  return lanelet::Point3d{std::const_pointer_cast<lanelet::PointData>(point.constData())};
+}
+static bool check_if_path_is_overtaking_ego(
+  const lanelet::ConstLanelet ego_lanelet, const Polygon2d & initial_collision_object_bbox)
+{
+  lanelet::ConstLineString3d entry{
+    lanelet::InvalId, lanelet::Points3d{
+                        remove_const(ego_lanelet.leftBound().front()),
+                        remove_const(ego_lanelet.rightBound().front())}};
+  return boost::geometry::intersects(
+    lanelet::utils::to2D(entry.basicLineString()), initial_collision_object_bbox);
+}
+
 void IntersectionModule::updateObjectInfoManagerCollision(
   const PathLanelets & path_lanelets,
   const IntersectionModule::TimeDistanceArray & time_distance_array,
@@ -285,9 +300,21 @@ void IntersectionModule::updateObjectInfoManagerCollision(
         continue;
       }
       const auto & object_passage_interval = object_passage_interval_opt.value();
+      const auto & precise_predicted_path = object_passage_interval.path;
       const auto object_enter_exit_time = object_passage_interval.interval_time;
       const auto object_enter_time = std::get<0>(object_enter_exit_time);
       const auto object_exit_time = std::get<1>(object_enter_exit_time);
+
+      if (const auto initial_passage_index = object_passage_interval.interval_position.first;
+          check_if_path_is_overtaking_ego(
+            ego_lane, autoware_utils::to_polygon2d(
+                        precise_predicted_path.at(
+                          std::min(initial_passage_index + 1, precise_predicted_path.size() - 1)),
+                        predicted_object.shape))) {
+        // NOTE(soblin): this is to ignore a path overtaking ego from behind
+        continue;
+      }
+
       const auto ego_start_itr = std::lower_bound(
         time_distance_array.begin(), time_distance_array.end(),
         object_enter_time - collision_start_margin_time,

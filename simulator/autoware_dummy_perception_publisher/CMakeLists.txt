@@ -26,7 +26,11 @@ ament_auto_add_library(signed_distance_function SHARED
 ament_auto_add_executable(${PROJECT_NAME}_node
   src/main.cpp
   src/node.cpp
+  src/object_info.cpp
+  src/movement_utils.cpp
   src/pointcloud_creator.cpp
+  src/straight_line_object_movement_plugin.cpp
+  src/predicted_object_movement_plugin.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_node
@@ -68,5 +72,7 @@ endif()
 
 ament_auto_package(
   INSTALL_TO_SHARE
+  config
   launch
+  schema
 )

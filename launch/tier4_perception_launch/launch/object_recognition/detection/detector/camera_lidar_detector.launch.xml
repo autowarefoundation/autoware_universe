@@ -68,6 +68,10 @@
   <arg name="output/rule_detector/objects"/>
   <arg name="output/clustering/cluster_objects"/>
 
+  <arg name="camera_2d_detector/model_path"/>
+  <arg name="camera_2d_detector/label_path"/>
+  <arg name="camera_2d_detector/color_map_path"/>
+
   <!-- Internal interfaces -->
   <let name="pointpainting/input/pointcloud" value="$(var input/pointcloud)"/>
   <let name="pointpainting/output/objects" value="$(var output/ml_detector/objects)"/>
@@ -103,6 +107,9 @@
     <arg name="image_raw6" value="$(var input/camera6/image)"/>
     <arg name="image_raw7" value="$(var input/camera7/image)"/>
     <arg name="image_number" value="$(var number_of_cameras)"/>
+    <arg name="camera_2d_detector/model_path" value="$(var camera_2d_detector/model_path)"/>
+    <arg name="camera_2d_detector/label_path" value="$(var camera_2d_detector/label_path)"/>
+    <arg name="camera_2d_detector/color_map_path" value="$(var camera_2d_detector/color_map_path)"/>
   </include>
 
   <!-- PointPainting -->
