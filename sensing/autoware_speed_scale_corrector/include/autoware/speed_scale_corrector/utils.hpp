@@ -30,6 +30,18 @@ using geometry_msgs::msg::Twist;
 using geometry_msgs::msg::Vector3;
 
 /**
+ * @brief Calculate time difference between two poses
+ *
+ * This function computes the time difference in seconds between two pose
+ * measurements based on their timestamps.
+ *
+ * @param pose_a First pose (earlier timestamp)
+ * @param pose_b Second pose (later timestamp)
+ * @return Time difference in seconds
+ */
+[[nodiscard]] double calc_time_diff(const PoseStamped & pose_a, const PoseStamped & pose_b);
+
+/**
  * @brief Calculate twist from pose difference
  *
  * This function computes the twist (linear and angular velocities) between

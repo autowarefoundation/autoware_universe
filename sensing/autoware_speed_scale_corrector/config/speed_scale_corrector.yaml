@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
-    update_hz: 10.0
+    update_interval: 0.1
     initial_speed_scale_factor: 1.0
     initial_speed_scale_factor_covariance: 1000.0
     process_noise_covariance: 0.01

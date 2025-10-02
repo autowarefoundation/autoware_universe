@@ -26,6 +26,7 @@ namespace autoware::speed_scale_corrector
 SpeedScaleEstimatorParameters SpeedScaleEstimatorParameters::load_parameters(rclcpp::Node * node)
 {
   SpeedScaleEstimatorParameters parameters;
+  parameters.update_interval = node->declare_parameter<double>("update_interval");
   parameters.initial_speed_scale_factor =
     node->declare_parameter<double>("initial_speed_scale_factor");
   parameters.initial_speed_scale_factor_covariance =
@@ -140,6 +141,17 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
   const auto & pose_curr = poses.back();
   const auto & pose_prev = previous_pose_.value();
 
+  // Check time difference
+  const double time_diff = calc_time_diff(pose_prev, pose_curr);
+  if (time_diff >= parameters_.update_interval * 2.0) {
+    return tl::make_unexpected(
+      SpeedScaleEstimatorNotUpdated{
+        fmt::format(
+          "Time difference is too large, time_diff: {:.3f}, threshold: {:.3f}", time_diff,
+          parameters_.update_interval * 2.0),
+        estimated_speed_scale_factor_});
+  }
+
   // Calculate twist (velocity and angular velocity) from pose difference
   const auto twist = calc_twist_from_pose(pose_prev, pose_curr);
   const double v_odometry = twist.linear.x;
@@ -211,7 +223,14 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
   // Update previous pose for next iteration
   previous_pose_ = pose_curr;
 
-  return SpeedScaleEstimatorUpdated{estimated_speed_scale_factor_};
+  SpeedScaleEstimatorUpdated result;
+  result.estimated_speed_scale_factor = estimated_speed_scale_factor_;
+  result.covariance = covariance_;
+  result.velocity_from_odometry = v_odometry;
+  result.velocity_from_velocity_report = v_report;
+  result.kalman_gain = K;
+
+  return result;
 }
 
 }  // namespace autoware::speed_scale_corrector
