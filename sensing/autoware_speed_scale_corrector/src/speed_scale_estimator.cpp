@@ -149,6 +149,7 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
   // Check time difference
   const double time_diff = calc_time_diff(pose_prev, pose_curr);
   if (time_diff >= parameters_.update_interval * 2.0) {
+    previous_pose_ = pose_curr;
     return tl::make_unexpected(
       SpeedScaleEstimatorNotUpdated{
         fmt::format(
