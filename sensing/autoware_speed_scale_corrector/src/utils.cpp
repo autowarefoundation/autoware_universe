@@ -14,112 +14,63 @@
 
 #include "autoware/speed_scale_corrector/utils.hpp"
 
-#include <algorithm>
 #include <cmath>
-#include <utility>
-#include <vector>
+#include <limits>
 
 namespace autoware::speed_scale_corrector
 {
 
-std::vector<double> smooth_gaussian(
-  const std::vector<double> & times, const std::vector<double> & values, double sigma,
-  double cutoff)
+geometry_msgs::msg::Vector3 compute_relative_rotation_vector(
+  const tf2::Quaternion & q1, const tf2::Quaternion & q2)
 {
-  // Basic checks
-  if (times.size() != values.size()) {
-    return {};
-  }
-  const size_t n = times.size();
-  if (n == 0 || sigma <= 0.0) {
-    return values;  // Nothing to do
-  }
-
-  // Verify monotonic non-decreasing times
-  for (size_t i = 1; i < n; ++i) {
-    if (times[i] < times[i - 1]) {
-      return {};
-    }
-  }
-
-  const double radius = cutoff * sigma;
-  const double inv_two_sigma2 = 1.0 / (2.0 * sigma * sigma);
-
-  std::vector<double> out(n);
-  size_t left = 0;   // left index of active window (inclusive)
-  size_t right = 0;  // right index of active window (exclusive)
-
-  for (size_t i = 0; i < n; ++i) {
-    const double tc = times[i];
-
-    // Move left to the first index with times[left] >= tc - radius
-    while (left < n && times[left] < tc - radius) {
-      ++left;
-    }
-    // Move right to one past the last index with times[right] <= tc + radius
-    while (right < n && times[right] <= tc + radius) {
-      ++right;
-    }
-
-    // Accumulate Gaussian-weighted sum within [left, right)
-    double w_sum = 0.0;
-    double x_sum = 0.0;
-    for (size_t j = left; j < right; ++j) {
-      const double dt = times[j] - tc;
-      // Gaussian kernel weight
-      const double w = std::exp(-(dt * dt) * inv_two_sigma2);
-      w_sum += w;
-      x_sum += w * values[j];
-    }
-
-    // Fallback if numerical underflow makes w_sum ~ 0
-    out[i] = (w_sum > 0.0) ? (x_sum / w_sum) : values[i];
-  }
-
-  return out;
+  const tf2::Quaternion diff_quaternion = q1.inverse() * q2;
+  const tf2::Vector3 axis = diff_quaternion.getAxis() * diff_quaternion.getAngle();
+  return geometry_msgs::msg::Vector3{}.set__x(axis.x()).set__y(axis.y()).set__z(axis.z());
 }
 
-std::optional<std::pair<double, double>> intersect_intervals(
-  const std::vector<std::pair<double, double>> & intervals)
+tf2::Quaternion to_quaternion(const geometry_msgs::msg::Quaternion & quaternion)
 {
-  if (intervals.empty()) {
-    return std::nullopt;
-  }
-
-  double left = intervals[0].first;
-  double right = intervals[0].second;
-
-  for (size_t i = 1; i < intervals.size(); ++i) {
-    left = std::max(left, intervals[i].first);
-    right = std::min(right, intervals[i].second);
-    if (left > right) {
-      return std::nullopt;  // no common intersection
-    }
-  }
-
-  return std::make_pair(left, right);
+  return tf2::Quaternion(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
 }
 
-std::vector<double> arange(double start, double end, double interval)
+Twist calc_twist_from_pose(const PoseStamped & pose_a, const PoseStamped & pose_b)
 {
-  if (interval <= 0.0) {
-    return {};
+  const double dt =
+    (rclcpp::Time(pose_b.header.stamp) - rclcpp::Time(pose_a.header.stamp)).seconds();
+
+  Twist twist;
+
+  // Return zero twist if time difference is too small
+  if (std::abs(dt) < std::numeric_limits<double>::epsilon()) {
+    return twist;
   }
 
-  std::vector<double> result;
-  if (start >= end) {
-    return result;  // Empty vector if start >= end
-  }
+  const auto pose_a_quaternion = to_quaternion(pose_a.pose.orientation);
+  const auto pose_b_quaternion = to_quaternion(pose_b.pose.orientation);
 
-  // Calculate the number of elements
-  const auto num_elements = static_cast<size_t>(std::ceil((end - start) / interval));
-  result.reserve(num_elements);
+  // Calculate position difference
+  Vector3 diff_xyz;
+  diff_xyz.x = pose_b.pose.position.x - pose_a.pose.position.x;
+  diff_xyz.y = pose_b.pose.position.y - pose_a.pose.position.y;
+  diff_xyz.z = pose_b.pose.position.z - pose_a.pose.position.z;
 
-  for (double value = start; value < end; value += interval) {
-    result.emplace_back(value);
-  }
+  // Calculate orientation difference
+  const Vector3 relative_rotation_vector =
+    compute_relative_rotation_vector(pose_a_quaternion, pose_b_quaternion);
 
-  return result;
+  // Calculate linear velocity (magnitude of position change)
+  twist.linear.x =
+    std::sqrt(std::pow(diff_xyz.x, 2.0) + std::pow(diff_xyz.y, 2.0) + std::pow(diff_xyz.z, 2.0)) /
+    dt;
+  twist.linear.y = 0.0;
+  twist.linear.z = 0.0;
+
+  // Calculate angular velocity
+  twist.angular.x = relative_rotation_vector.x / dt;
+  twist.angular.y = relative_rotation_vector.y / dt;
+  twist.angular.z = relative_rotation_vector.z / dt;
+
+  return twist;
 }
 
 }  // namespace autoware::speed_scale_corrector

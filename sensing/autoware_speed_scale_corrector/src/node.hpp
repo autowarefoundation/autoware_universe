@@ -24,10 +24,8 @@
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 #include <autoware_vehicle_msgs/msg/velocity_report.hpp>
-#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <sensor_msgs/msg/imu.hpp>
-
-#include <vector>
 
 /**
  * @brief Speed scale corrector namespace
@@ -39,7 +37,7 @@ using autoware_internal_debug_msgs::msg::StringStamped;
 using autoware_utils_rclcpp::InterProcessPollingSubscriber;
 using autoware_utils_rclcpp::polling_policy::All;
 using autoware_vehicle_msgs::msg::VelocityReport;
-using geometry_msgs::msg::PoseWithCovarianceStamped;
+using geometry_msgs::msg::PoseStamped;
 using sensor_msgs::msg::Imu;
 
 template <typename T, template <typename> class PollingPolicy>
@@ -80,12 +78,12 @@ private:
   rclcpp::Publisher<StringStamped>::SharedPtr pub_debug_info_;
 
   // Subscribers
-  /**
-   * @brief Subscriber for pose with covariance data
-   */
-  rclcpp::Subscription<PoseWithCovarianceStamped>::SharedPtr sub_pose_with_covariance_;
 
-  // Polling Subscribers
+  /**
+   * @brief Polling subscriber for pose data
+   */
+  PollingSubscriber<PoseStamped, All>::SharedPtr sub_pose_;
+
   /**
    * @brief Polling subscriber for velocity reports
    */
@@ -96,19 +94,17 @@ private:
    */
   PollingSubscriber<Imu, All>::SharedPtr sub_imu_;
 
+  // Timer
+  /**
+   * @brief Timer for periodic updates
+   */
+  rclcpp::TimerBase::SharedPtr timer_;
+
   // Callbacks
   /**
-   * @brief Callback function for pose with covariance messages
-   * @param pose_with_covariance Received pose with covariance message
+   * @brief Timer callback
    */
-  void on_pose_with_covariance(
-    const PoseWithCovarianceStamped::ConstSharedPtr pose_with_covariance);
-
-  // Buffers
-  /**
-   * @brief Buffer for pose with covariance messages
-   */
-  std::vector<PoseWithCovarianceStamped> pose_with_covariance_buffer_;
+  void on_timer();
 };
 
 }  // namespace autoware::speed_scale_corrector

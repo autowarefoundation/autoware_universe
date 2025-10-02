@@ -1,9 +1,10 @@
 /**:
   ros__parameters:
-    time_window: 4.0 # [s]
-    time_interval: 0.1 # [s]
+    update_hz: 10.0
     initial_speed_scale_factor: 1.0
+    initial_speed_scale_factor_covariance: 1000.0
+    process_noise_covariance: 0.01
+    measurement_noise_covariance: 0.01
     max_angular_velocity: 1.0 # [rad/s]
     max_speed: 15.0 # [m/s]
     min_speed: 2.0 # [m/s]
-    max_speed_change: 1.0 # [m/s^2]
