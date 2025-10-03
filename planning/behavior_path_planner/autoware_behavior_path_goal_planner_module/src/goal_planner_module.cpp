@@ -970,7 +970,7 @@ double GoalPlannerModule::calcModuleRequestLength() const
   constexpr double scale_factor_for_buffer = 1.2;
   const double minimum_request_length = *min_stop_distance * scale_factor_for_buffer +
                                         parameters_.backward_goal_search_length +
-                                        approximate_pull_over_distance_;
+                                        parameters_.approximate_pull_over_distance;
 
   return std::max(minimum_request_length, parameters_.pull_over_minimum_request_length);
 }
@@ -1891,7 +1891,7 @@ PathWithLaneId GoalPlannerModule::generateStopPath(
     getPreviousModuleOutput().path, reference_path, common_parameters.forward_path_length, true);
 
   // calculate search start offset pose from the closest goal candidate pose with
-  // approximate_pull_over_distance_ ego vehicle decelerates to this position. or if no feasible
+  // approximate_pull_over_distance ego vehicle decelerates to this position. or if no feasible
   // stop point is found, stop at this position.
   const auto closest_searched_goal_candidate =
     goal_searcher.getClosestGoalCandidateAlongLanes(goal_candidates_, planner_data_);
@@ -1899,13 +1899,14 @@ PathWithLaneId GoalPlannerModule::generateStopPath(
                                         ? closest_searched_goal_candidate.value().goal_pose
                                         : route_handler->getOriginalGoalPose();
   const auto decel_pose = calcLongitudinalOffsetPose(
-    extended_prev_path.points, closest_goal_candidate.position, -approximate_pull_over_distance_);
+    extended_prev_path.points, closest_goal_candidate.position,
+    -parameters_.approximate_pull_over_distance);
 
   // if not approved stop road lane.
   // stop point priority is
   // 1. actual start pose
   // 2. closest candidate start pose
-  // 3. pose offset by approximate_pull_over_distance_ from search start pose.
+  // 3. pose offset by approximate_pull_over_distance from search start pose.
   //     (In the case of the curve lane, the position is not aligned due to the
   //     difference between the outer and inner sides)
   // 4. feasible stop
@@ -2240,7 +2241,7 @@ void GoalPlannerModule::deceleratePath(PullOverPath & pull_over_path) const
                                         : route_handler->getOriginalGoalPose();
   const auto decel_pose = calcLongitudinalOffsetPose(
     pull_over_path.full_path().points, closest_goal_candidate.position,
-    -approximate_pull_over_distance_);
+    -parameters_.approximate_pull_over_distance);
   auto & first_path = pull_over_path.partial_paths().front();
   if (decel_pose) {
     decelerateBeforeSearchStart(*decel_pose, first_path);
@@ -2315,8 +2316,8 @@ void GoalPlannerModule::decelerateBeforeSearchStart(
   if (min_decel_distance) {
     const double distance_to_search_start =
       calcSignedArcLengthFromEgo(path, search_start_offset_pose);
-    const double distance_to_decel =
-      std::max(*min_decel_distance, distance_to_search_start - approximate_pull_over_distance_);
+    const double distance_to_decel = std::max(
+      *min_decel_distance, distance_to_search_start - parameters_.approximate_pull_over_distance);
     insertDecelPoint(current_pose.position, distance_to_decel, pull_over_velocity, path.points);
   }
 }

@@ -170,4 +170,9 @@ install(
   DESTINATION share/${PROJECT_NAME}/plugins
 )
 
+install(
+  TARGETS cuda_ops
+  LIBRARY DESTINATION lib
+)
+
 ament_auto_package()

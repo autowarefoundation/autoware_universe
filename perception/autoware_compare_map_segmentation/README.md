@@ -32,6 +32,14 @@ For each point of input pointcloud, the filter use `getCentroidIndexAt` combine 
 
 This filter is a combination of the distance_based_compare_map_filter and voxel_based_approximate_compare_map_filter. The filter loads the map point cloud, which can be loaded statically at the beginning or dynamically during vehicle movement, and creates a voxel grid and a k-d tree of the map point cloud. The filter uses the getCentroidIndexAt function in combination with the getGridCoordinates function from the VoxelGrid class to find input points that are inside the voxel grid and removes them. For points that do not belong to any voxel grid, they are compared again with the map point cloud using the radiusSearch function of the k-d tree and are removed if they are close enough to the map.
 
+### Lanelet Elevation Filter
+
+The Lanelet Elevation Filter filters point clouds based on lanelet elevation information. It creates a grid-based elevation map from lanelet data and filters out points that deviate significantly from the expected road surface height. This filter is useful for removing floating objects, overpass structures, and other non-road elements that should not be considered for ground-level navigation.
+
+The filter processes lanelet maps to extract elevation information at regular grid intervals and uses this information to validate incoming point cloud data. Points that are too far above or below the expected lanelet surface elevation are filtered out.
+
+If incoming point cloud frame differs from target_frame, points will be transformed to target_frame before elevation check.
+
 ## Inputs / Outputs
 
 ### Compare Elevation Map Filter
@@ -56,6 +64,35 @@ This filter is a combination of the distance_based_compare_map_filter and voxel_
 | `map_layer_name`     | string | elevation map layer name                                                        | elevation     |
 | `map_frame`          | float  | frame_id of the map that is temporarily used before elevation_map is subscribed | map           |
 | `height_diff_thresh` | float  | Remove points whose height difference is below this value [m]                   | 0.15          |
+
+### Lanelet Elevation Filter
+
+#### Input
+
+| Name                  | Type                                    | Description       |
+| --------------------- | --------------------------------------- | ----------------- |
+| `~/input/pointcloud`  | `sensor_msgs::msg::PointCloud2`         | input point cloud |
+| `~/input/lanelet_map` | `autoware_map_msgs::msg::LaneletMapBin` | lanelet map       |
+
+#### Output
+
+| Name                        | Type                                   | Description                  |
+| --------------------------- | -------------------------------------- | ---------------------------- |
+| `~/output/pointcloud`       | `sensor_msgs::msg::PointCloud2`        | filtered point cloud         |
+| `~/debug/elevation_markers` | `visualization_msgs::msg::MarkerArray` | elevation grid visualization |
+
+#### Parameters
+
+| Name                   | Type   | Description                                                                               | Default value                                                               |
+| :--------------------- | :----- | :---------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------- |
+| `grid_resolution`      | double | Grid cell size in meters for elevation processing                                         | 1.0                                                                         |
+| `height_threshold`     | double | Maximum height difference from lanelet elevation (meters)                                 | 2.0                                                                         |
+| `sampling_distance`    | double | Distance between sampled points along lanelet boundaries (meters)                         | 0.5                                                                         |
+| `extension_count`      | int    | Number of cells to extend around original lanelet points                                  | 5                                                                           |
+| `target_frame`         | string | Target coordinate frame for processing                                                    | map                                                                         |
+| `cache_directory`      | string | Directory for cached grid files                                                           | $(find-pkg-share autoware_compare_map_segmentation)/data/lanelet_grid_cache |
+| `require_map_coverage` | bool   | If true, only keep points with direct map coverage; reject points requiring interpolation | true                                                                        |
+| `enable_debug`         | bool   | Enable debug mode (includes elevation markers and processing time publisher)              | false                                                                       |
 
 ### Other Filters
 
