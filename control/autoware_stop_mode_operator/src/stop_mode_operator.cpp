@@ -57,6 +57,8 @@ void StopModeOperator::on_timer()
 
   publish_control_command();
   publish_gear_command();
+  publish_turn_indicators_command();
+  publish_hazard_lights_command();
 }
 
 void StopModeOperator::publish_control_command()
