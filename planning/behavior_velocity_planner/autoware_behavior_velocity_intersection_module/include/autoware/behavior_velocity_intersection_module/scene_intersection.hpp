@@ -220,6 +220,13 @@ public:
     bool passed_pass_judge{false};
     std::optional<geometry_msgs::msg::Pose> absence_traffic_light_creep_wall{std::nullopt};
     std::optional<geometry_msgs::msg::Pose> too_late_stop_wall_pose{std::nullopt};
+    struct WillOverRunConflictWall
+    {
+      std::optional<geometry_msgs::msg::Pose> stuck;
+      std::optional<geometry_msgs::msg::Pose> yield_stuck;
+      std::optional<geometry_msgs::msg::Pose> collision;
+      std::optional<geometry_msgs::msg::Pose> occlusion;
+    } will_overrun_conflict_wall;
 
     std::optional<std::vector<lanelet::CompoundPolygon3d>> attention_area{std::nullopt};
     std::optional<std::vector<lanelet::CompoundPolygon3d>> occlusion_attention_area{std::nullopt};
@@ -410,6 +417,8 @@ private:
    * following variables are state variables that depends on how the vehicle passed the intersection
    * @{
    */
+  IntersectionStopLines::PreviousStopPose previous_stop_pose_{};
+
   //! if true, this module never commands to STOP anymore
   bool is_permanent_go_{false};
 
@@ -425,6 +434,13 @@ private:
   //! past perception failure at these time.
   std::optional<std::pair<rclcpp::Time, geometry_msgs::msg::Pose>> safely_passed_judge_line_time_{
     std::nullopt};
+
+  /**
+   * @brief this function is used to check if target stop position is feasible
+   */
+  bool can_smoothly_stop_at(
+    const PathWithLaneId & path, const size_t closest_idx, const size_t target_stop_idx) const;
+
   /** @}*/
 
 private:
@@ -457,18 +473,6 @@ private:
 
   //! save previous priority level to detect change from NotPrioritized to Prioritized
   TrafficPrioritizedLevel previous_prioritized_level_{TrafficPrioritizedLevel::NOT_PRIORITIZED};
-  /** @} */
-
-private:
-  /**
-   ***********************************************************
-   ***********************************************************
-   ***********************************************************
-   * @defgroup stuck-variables [var] stuck detection
-   * @{
-   */
-  //! indicate whether ego was trying to stop for stuck vehicle(for debouncing)
-  bool was_stopping_for_stuck_{false};
   /** @} */
 
 private:
@@ -589,6 +593,7 @@ private:
     const lanelet::CompoundPolygon3d & first_conflicting_area,
     const lanelet::ConstLanelet & first_attention_lane,
     const InterpolatedPathInfo & interpolated_path_info,
+    const IntersectionStopLines::PreviousStopPose & previous_stop_pose,
     autoware_internal_planning_msgs::msg::PathWithLaneId * original_path) const;
 
   /**
