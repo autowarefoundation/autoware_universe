@@ -244,10 +244,8 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
   const auto [occlusion_status, is_occlusion_cleared_with_margin, is_occlusion_state] =
     getOcclusionStatus(traffic_prioritized_level, interpolated_path_info);
 
-  const auto
-    [is_over_1st_pass_judge_line, is_over_2nd_pass_judge_line, safely_passed_1st_judge_line,
-     safely_passed_2nd_judge_line] =
-      isOverPassJudgeLinesStatus(*path, is_occlusion_state, intersection_stoplines);
+  const auto [is_over_pass_judge_line, safely_passed_judge_line] =
+    isOverPassJudgeLinesStatus(*path, is_occlusion_state, intersection_stoplines);
 
   // ==========================================================================================
   // calculate the expected vehicle speed and obtain the spatiotemporal profile of ego to the
@@ -264,8 +262,8 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
   // ==========================================================================================
   autoware_internal_debug_msgs::msg::Float64MultiArrayStamped object_ttc_time_array;
   updateObjectInfoManagerCollision(
-    path_lanelets, time_distance_array, traffic_prioritized_level, safely_passed_1st_judge_line,
-    safely_passed_2nd_judge_line, &object_ttc_time_array);
+    path_lanelets, time_distance_array, traffic_prioritized_level, safely_passed_judge_line,
+    &object_ttc_time_array);
   {
     const auto & debug = planner_param_.debug.ttc;
     if (
@@ -307,8 +305,8 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
     safety_factor_array_.factors.begin(), safety_factor_array_.factors.end(),
     [](const auto & factor) { return factor.is_safe; });
 
-  const auto [has_collision, collision_position, too_late_detect_objects, misjudge_objects] =
-    detectCollision(is_over_1st_pass_judge_line, is_over_2nd_pass_judge_line);
+  const auto [has_collision, too_late_detect_objects, misjudge_objects] =
+    detectCollision(is_over_pass_judge_line);
   collision_state_machine_.setStateWithMarginTime(
     has_collision ? StateMachine::State::STOP : StateMachine::State::GO,
     logger_.get_child("collision state_machine"), *clock_);
@@ -341,21 +339,6 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
       "no collision is detected", "ego can safely pass the intersection at this rate"};
   }
 
-  // ==========================================================================================
-  // this state is very dangerous because ego is very close/over the boundary of 1st attention lane
-  // and collision is detected on the 1st lane. Since the 2nd attention lane also exists in this
-  // case, possible another collision may be expected on the 2nd attention lane too.
-  // ==========================================================================================
-  std::string safety_report = safety_diag;
-  if (const bool collision_on_1st_attention_lane =
-        has_collision && (collision_position == CollisionInterval::LanePosition::FIRST);
-      is_over_1st_pass_judge_line && is_over_2nd_pass_judge_line.has_value() &&
-      !is_over_2nd_pass_judge_line.value() && collision_on_1st_attention_lane) {
-    safety_report +=
-      "\nego is between the 1st and 2nd pass judge line but collision is expected on the 1st "
-      "attention lane, which is dangerous.";
-  }
-
   const bool is_over_default_stopline = util::isOverTargetIndex(
     *path, closest_idx, planner_data_->current_odometry->pose, default_stopline_idx);
   const auto collision_stopline_idx = is_over_default_stopline ? closest_idx : default_stopline_idx;
@@ -383,7 +366,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
   if (is_prioritized) {
     return FullyPrioritized{
       has_collision_with_margin, closest_idx, collision_stopline_idx, occlusion_stopline_idx,
-      safety_report};
+      safety_diag};
   }
 
   // Safe
@@ -442,8 +425,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
           const std::string evasive_diag = generateEgoRiskEvasiveDiagnosis(
             *path, closest_idx, time_distance_array, too_late_detect_objects, misjudge_objects);
           return OverPassJudge{
-            "already passed maximum peeking line in the absence of traffic light.\n" +
-              safety_report,
+            "already passed maximum peeking line in the absence of traffic light.\n" + safety_diag,
             evasive_diag};
         }
         return OverPassJudge{
@@ -1350,8 +1332,7 @@ IntersectionModule::PassJudgeStatus IntersectionModule::isOverPassJudgeLinesStat
 {
   const auto & current_pose = planner_data_->current_odometry->pose;
   const auto closest_idx = intersection_stoplines.closest_idx;
-  const auto default_stopline_idx = intersection_stoplines.default_stopline.value();
-  const auto first_pass_judge_line_idx = intersection_stoplines.first_pass_judge_line;
+  const auto original_pass_judge_line_idx = intersection_stoplines.pass_judge_line;
   const auto occlusion_wo_tl_pass_judge_line_idx =
     intersection_stoplines.occlusion_wo_tl_pass_judge_line;
   const auto occlusion_stopline_idx = intersection_stoplines.occlusion_peeking_stopline.value();
@@ -1359,38 +1340,39 @@ IntersectionModule::PassJudgeStatus IntersectionModule::isOverPassJudgeLinesStat
     if (planner_param_.occlusion.enable) {
       if (has_traffic_light_) {
         // ==========================================================================================
-        // if ego passed the first_pass_judge_line while it is peeking to occlusion, then its
-        // position is changed to occlusion_stopline_idx. even if occlusion is cleared by peeking,
-        // its position should be occlusion_stopline_idx as before
+        // if ego passed the original_pass_judge_line while it is peeking to occlusion, then its
+        // position is changed to occlusion_stopline_idx, because otherwise peeking is terminated.
+        // even if occlusion is cleared by peeking, its position should be occlusion_stopline_idx as
+        // before
         // ==========================================================================================
-        if (passed_1st_judge_line_while_peeking_) {
+        if (passed_judge_line_while_peeking_) {
           return occlusion_stopline_idx;
         }
-        const bool is_over_first_pass_judge_line =
-          util::isOverTargetIndex(path, closest_idx, current_pose, first_pass_judge_line_idx);
-        if (is_occlusion_state && is_over_first_pass_judge_line) {
-          passed_1st_judge_line_while_peeking_ = true;
+        const bool is_over_original_pass_judge_line =
+          util::isOverTargetIndex(path, closest_idx, current_pose, original_pass_judge_line_idx);
+        if (is_occlusion_state && is_over_original_pass_judge_line) {
+          passed_judge_line_while_peeking_ = true;
           return occlusion_stopline_idx;
         }
         // ==========================================================================================
-        // Otherwise it is first_pass_judge_line
+        // Otherwise it is original_pass_judge_line
         // ==========================================================================================
-        return first_pass_judge_line_idx;
-      } else if (is_occlusion_state) {
+        return original_pass_judge_line_idx;
+      }
+      if (is_occlusion_state) {
         // ==========================================================================================
         // if there is no traffic light and occlusion is detected, pass_judge position is beyond
         // the boundary of first attention area
         // ==========================================================================================
         return occlusion_wo_tl_pass_judge_line_idx;
-      } else {
-        // ==========================================================================================
-        // if there is no traffic light and occlusion is not detected, pass_judge position is
-        // default position
-        // ==========================================================================================
-        return first_pass_judge_line_idx;
       }
+      // ==========================================================================================
+      // if there is no traffic light and occlusion is not detected, pass_judge position is
+      // default position
+      // ==========================================================================================
+      return original_pass_judge_line_idx;
     }
-    return first_pass_judge_line_idx;
+    return original_pass_judge_line_idx;
   }();
 
   // ==========================================================================================
@@ -1413,70 +1395,38 @@ IntersectionModule::PassJudgeStatus IntersectionModule::isOverPassJudgeLinesStat
     return false;
   }();
 
-  const bool is_over_1st_pass_judge_line =
+  const bool is_over_pass_judge_line =
     util::isOverTargetIndex(path, closest_idx, current_pose, pass_judge_line_idx);
-  bool safely_passed_1st_judge_line_first_time = false;
-  if (is_over_1st_pass_judge_line && was_safe && !safely_passed_1st_judge_line_time_) {
-    safely_passed_1st_judge_line_time_ = std::make_pair(clock_->now(), current_pose);
-    safely_passed_1st_judge_line_first_time = true;
+  bool safely_passed_judge_line_first_time = false;
+  if (is_over_pass_judge_line && was_safe && !safely_passed_judge_line_time_) {
+    safely_passed_judge_line_time_ = std::make_pair(clock_->now(), current_pose);
+    safely_passed_judge_line_first_time = true;
   }
   const double baselink2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
-  debug_data_.first_pass_judge_wall_pose =
+  debug_data_.pass_judge_wall_pose =
     planning_utils::getAheadPose(pass_judge_line_idx, baselink2front, path);
-  debug_data_.passed_first_pass_judge = safely_passed_1st_judge_line_time_.has_value();
-  const auto second_pass_judge_line_idx_opt = intersection_stoplines.second_pass_judge_line;
-  const std::optional<bool> is_over_2nd_pass_judge_line =
-    second_pass_judge_line_idx_opt
-      ? std::make_optional(
-          util::isOverTargetIndex(
-            path, closest_idx, current_pose, second_pass_judge_line_idx_opt.value()))
-      : std::nullopt;
-  bool safely_passed_2nd_judge_line_first_time = false;
-  if (
-    is_over_2nd_pass_judge_line && is_over_2nd_pass_judge_line.value() && was_safe &&
-    !safely_passed_2nd_judge_line_time_) {
-    safely_passed_2nd_judge_line_time_ = std::make_pair(clock_->now(), current_pose);
-    safely_passed_2nd_judge_line_first_time = true;
-  }
-  if (second_pass_judge_line_idx_opt) {
-    debug_data_.second_pass_judge_wall_pose =
-      planning_utils::getAheadPose(second_pass_judge_line_idx_opt.value(), baselink2front, path);
-  }
-  debug_data_.passed_second_pass_judge = safely_passed_2nd_judge_line_time_.has_value();
+  debug_data_.passed_pass_judge = safely_passed_judge_line_time_.has_value();
 
-  const bool is_over_default_stopline =
-    util::isOverTargetIndex(path, closest_idx, current_pose, default_stopline_idx);
-
-  const bool over_default_stopline_for_pass_judge =
-    is_over_default_stopline || planner_param_.common.enable_pass_judge_before_default_stopline;
-  const bool over_pass_judge_line_overall =
-    is_over_2nd_pass_judge_line ? is_over_2nd_pass_judge_line.value() : is_over_1st_pass_judge_line;
-  if (
-    (over_default_stopline_for_pass_judge && over_pass_judge_line_overall && was_safe) ||
-    is_permanent_go_) {
+  if ((is_over_pass_judge_line && was_safe) || is_permanent_go_) {
     // ==========================================================================================
     // this body is active if ego is
     // - over the default stopline AND
-    // - over the 1st && 2nd pass judge line AND
+    // - over the pass judge line
     // - previously safe
     // ,
     // which means ego can stop even if it is over the 1st pass judge line but
     // - before default stopline OR
-    // - before the 2nd pass judge line OR
     // - or previously unsafe
     // .
     //
     // in order for ego to continue peeking or collision detection when occlusion is detected
     // after ego passed the 1st pass judge line, it needs to be
     // - before the default stopline OR
-    // - before the 2nd pass judge line OR
     // - previously unsafe
     // ==========================================================================================
     is_permanent_go_ = true;
   }
-  return {
-    is_over_1st_pass_judge_line, is_over_2nd_pass_judge_line,
-    safely_passed_1st_judge_line_first_time, safely_passed_2nd_judge_line_first_time};
+  return {is_over_pass_judge_line, safely_passed_judge_line_first_time};
 }
 
 }  // namespace autoware::behavior_velocity_planner
