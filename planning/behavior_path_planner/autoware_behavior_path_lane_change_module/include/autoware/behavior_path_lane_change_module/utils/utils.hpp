@@ -54,8 +54,10 @@ using autoware_perception_msgs::msg::PredictedPath;
 using autoware_utils::LineString2d;
 using autoware_utils::Polygon2d;
 using behavior_path_planner::lane_change::CommonDataPtr;
+using behavior_path_planner::lane_change::EgoObjectProximity;
 using behavior_path_planner::lane_change::LanesPolygon;
 using behavior_path_planner::lane_change::LCParamPtr;
+using behavior_path_planner::lane_change::MinMaxValue;
 using behavior_path_planner::lane_change::ModuleType;
 using behavior_path_planner::lane_change::PathSafetyStatus;
 using behavior_path_planner::lane_change::TargetLaneLeadingObjects;
@@ -255,7 +257,10 @@ bool is_same_lane_with_prev_iteration(
   const CommonDataPtr & common_data_ptr, const lanelet::ConstLanelets & current_lanes,
   const lanelet::ConstLanelets & target_lanes);
 
-bool is_ahead_of_ego(
+MinMaxValue calc_polygon_dist_range_from_terminal_end(
+  const PathWithLaneId & path, const autoware_utils_geometry::Polygon2d & polygon);
+
+EgoObjectProximity calc_ego_object_proximity(
   const CommonDataPtr & common_data_ptr, const PathWithLaneId & path,
   const ExtendedPredictedObject & object);
 
@@ -383,7 +388,7 @@ bool has_overtaking_turn_lane_object(
  */
 bool filter_target_lane_objects(
   const CommonDataPtr & common_data_ptr, const ExtendedPredictedObject & object,
-  const double dist_ego_to_current_lanes_center, const bool ahead_of_ego,
+  const double dist_ego_to_current_lanes_center, const EgoObjectProximity & ego_object_proximity,
   const bool before_terminal, TargetLaneLeadingObjects & leading_objects,
   ExtendedPredictedObjects & trailing_objects);
 
@@ -471,5 +476,8 @@ bool is_valid_start_point(const lane_change::CommonDataPtr & common_data_ptr, co
 std::vector<PoseWithVelocityStamped> convert_to_predicted_path(
   const CommonDataPtr & common_data_ptr, const lane_change::TrajectoryGroup & frenet_candidate,
   [[maybe_unused]] const size_t deceleration_sampling_num);
+
+bool is_moving_object(
+  const CommonDataPtr & common_data_ptr, const ExtendedPredictedObject & object);
 }  // namespace autoware::behavior_path_planner::utils::lane_change
 #endif  // AUTOWARE__BEHAVIOR_PATH_LANE_CHANGE_MODULE__UTILS__UTILS_HPP_
