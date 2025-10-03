@@ -469,8 +469,8 @@ void IntersectionModule::cutPredictPathWithinDuration(
 }
 
 std::optional<NonOccludedCollisionStop> IntersectionModule::isGreenPseudoCollisionStatus(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
-  const size_t collision_stopline_idx, const IntersectionStopLines & intersection_stoplines) const
+  const size_t closest_idx, const size_t collision_stopline_idx,
+  const IntersectionStopLines & intersection_stoplines) const
 {
   // ==========================================================================================
   // if there are any vehicles on the attention area when ego entered the intersection on green
@@ -492,11 +492,8 @@ std::optional<NonOccludedCollisionStop> IntersectionModule::isGreenPseudoCollisi
       });
     if (exist_close_vehicles) {
       const auto occlusion_stopline_idx = intersection_stoplines.occlusion_peeking_stopline.value();
-      const auto [held_collision_stopline_idx, collision_stop_pose] =
-        holdStopPoseIfNecessary<NonOccludedCollisionStop>(path, collision_stopline_idx);
       return NonOccludedCollisionStop{
-        closest_idx, held_collision_stopline_idx, occlusion_stopline_idx, std::string(""),
-        collision_stop_pose};
+        closest_idx, collision_stopline_idx, occlusion_stopline_idx, std::string("")};
     }
   }
   return std::nullopt;
