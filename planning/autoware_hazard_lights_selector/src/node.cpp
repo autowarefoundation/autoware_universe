@@ -36,9 +36,10 @@ HazardLightsSelector::HazardLightsSelector(const rclcpp::NodeOptions & node_opti
       std::bind(&HazardLightsSelector::on_hazard_lights_command_from_system, this, _1));
 
   // Publisher
+  const auto transient_qos = rclcpp::QoS(1).transient_local();
   pub_hazard_lights_command_ =
     this->create_publisher<autoware_vehicle_msgs::msg::HazardLightsCommand>(
-      "output/hazard_lights_command", 1);
+      "output/hazard_lights_command", transient_qos);
 
   // Timer
   timer_ = rclcpp::create_timer(
