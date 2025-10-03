@@ -327,28 +327,24 @@ bool VehicleTracker::conditionedUpdate(
   std::array<double, 36> pose_cov = measurement.pose_covariance;
 
   // Apply partial update based on determined wheel strategy
-  bool update_success = false;
+  bool is_updated = false;
   switch (wheel_info.strategy) {
     case UpdateStrategy::FRONT_WHEEL:
-      update_success = motion_model_.updateStatePoseFront(
+      is_updated = motion_model_.updateStatePoseFront(
         wheel_info.wheel_position.x, wheel_info.wheel_position.y, pose_cov);
       break;
     case UpdateStrategy::REAR_WHEEL:
-      update_success = motion_model_.updateStatePoseRear(
+      is_updated = motion_model_.updateStatePoseRear(
         wheel_info.wheel_position.x, wheel_info.wheel_position.y, pose_cov);
       break;
     case UpdateStrategy::BODY:
       // This case should never be reached since BODY updates are handled above
       RCLCPP_ERROR(logger_, "VehicleTracker: BODY update strategy reached switch statement");
-      return false;
   }
 
-  // Remove cached object if successful
-  if (update_success) {
-    removeCache();
-  }
+  removeCache();
 
-  return update_success;
+  return is_updated;
 }
 
 WheelInfo VehicleTracker::estimateUpdateWheel(
@@ -401,7 +397,8 @@ WheelInfo VehicleTracker::estimateUpdateWheel(
 
   // Check if any edge is well-aligned using distance-to-length ratio threshold
   const double min_alignment_dist = std::min(front_dist, rear_dist);
-  constexpr double alignment_ratio_threshold = 0.15;  // 15% of vehicle length
+  constexpr double alignment_ratio_threshold =
+    0.15;  // error in moving direction to be considered aligned
   const bool is_edge_aligned = (min_alignment_dist / predicted_length) < alignment_ratio_threshold;
 
   if (!is_edge_aligned) {
@@ -451,9 +448,6 @@ void VehicleTracker::setObjectShape(const autoware_perception_msgs::msg::Shape &
   // with the new shape length while preserving center position and yaw
   const double new_length = shape.dimensions.x;
   motion_model_.updateStateLength(new_length);
-
-  // Remove cached object since shape has changed
-  removeCache();
 }
 
 }  // namespace autoware::multi_object_tracker
