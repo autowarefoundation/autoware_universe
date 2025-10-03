@@ -2,31 +2,31 @@
 <launch>
   <arg name="rois_ids" default="[0, 1]"/>
 
-  <arg name="input/rois0" default="input/rois0"/>
-  <arg name="input/rois1" default="input/rois1"/>
-  <arg name="input/rois2" default="input/rois2"/>
-  <arg name="input/rois3" default="input/rois3"/>
-  <arg name="input/rois4" default="input/rois4"/>
-  <arg name="input/rois5" default="input/rois5"/>
-  <arg name="input/rois6" default="input/rois6"/>
-  <arg name="input/rois7" default="input/rois7"/>
-  <arg name="input/camera_info0" default="input/camera_info0"/>
-  <arg name="input/camera_info1" default="input/camera_info1"/>
-  <arg name="input/camera_info2" default="input/camera_info2"/>
-  <arg name="input/camera_info3" default="input/camera_info3"/>
-  <arg name="input/camera_info4" default="input/camera_info4"/>
-  <arg name="input/camera_info5" default="input/camera_info5"/>
-  <arg name="input/camera_info6" default="input/camera_info6"/>
-  <arg name="input/camera_info7" default="input/camera_info7"/>
+  <arg name="input/rois0" default="/perception/object_recognition/detection/rois0"/>
+  <arg name="input/rois1" default="/perception/object_recognition/detection/rois1"/>
+  <arg name="input/rois2" default="/perception/object_recognition/detection/rois2"/>
+  <arg name="input/rois3" default="/perception/object_recognition/detection/rois3"/>
+  <arg name="input/rois4" default="/perception/object_recognition/detection/rois4"/>
+  <arg name="input/rois5" default="/perception/object_recognition/detection/rois5"/>
+  <arg name="input/rois6" default="/perception/object_recognition/detection/rois6"/>
+  <arg name="input/rois7" default="/perception/object_recognition/detection/rois7"/>
+  <arg name="input/camera_info0" default="/sensing/camera/camera0/camera_info"/>
+  <arg name="input/camera_info1" default="/sensing/camera/camera1/camera_info"/>
+  <arg name="input/camera_info2" default="/sensing/camera/camera2/camera_info"/>
+  <arg name="input/camera_info3" default="/sensing/camera/camera3/camera_info"/>
+  <arg name="input/camera_info4" default="/sensing/camera/camera4/camera_info"/>
+  <arg name="input/camera_info5" default="/sensing/camera/camera5/camera_info"/>
+  <arg name="input/camera_info6" default="/sensing/camera/camera6/camera_info"/>
+  <arg name="input/camera_info7" default="/sensing/camera/camera7/camera_info"/>
 
-  <arg name="output/rois0/objects" default="~/rois0/objects"/>
-  <arg name="output/rois1/objects" default="~/rois1/objects"/>
-  <arg name="output/rois2/objects" default="~/rois2/objects"/>
-  <arg name="output/rois3/objects" default="~/rois3/objects"/>
-  <arg name="output/rois4/objects" default="~/rois4/objects"/>
-  <arg name="output/rois5/objects" default="~/rois5/objects"/>
-  <arg name="output/rois6/objects" default="~/rois6/objects"/>
-  <arg name="output/rois7/objects" default="~/rois7/objects"/>
+  <arg name="output/rois0/objects" default="/perception/object_recognition/detection/roi_based_detection/rois0/objects"/>
+  <arg name="output/rois1/objects" default="/perception/object_recognition/detection/roi_based_detection/rois1/objects"/>
+  <arg name="output/rois2/objects" default="/perception/object_recognition/detection/roi_based_detection/rois2/objects"/>
+  <arg name="output/rois3/objects" default="/perception/object_recognition/detection/roi_based_detection/rois3/objects"/>
+  <arg name="output/rois4/objects" default="/perception/object_recognition/detection/roi_based_detection/rois4/objects"/>
+  <arg name="output/rois5/objects" default="/perception/object_recognition/detection/roi_based_detection/rois5/objects"/>
+  <arg name="output/rois6/objects" default="/perception/object_recognition/detection/roi_based_detection/rois6/objects"/>
+  <arg name="output/rois7/objects" default="/perception/object_recognition/detection/roi_based_detection/rois7/objects"/>
 
   <arg name="param_path" default="$(find-pkg-share autoware_roi_based_detector)/config/roi_based_detector.param.yaml"/>
 
