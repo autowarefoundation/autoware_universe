@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "roi_based_detector_node.hpp"
+#include "roi_3d_projector_node.hpp"
 
 #include <rclcpp/qos.hpp>
 
@@ -35,7 +35,7 @@
 
 // cspell: ignore Matx
 
-namespace autoware::roi_based_detector
+namespace autoware::roi_3d_projector
 {
 void transformToRT(const geometry_msgs::msg::TransformStamped & tf, cv::Matx33d & R, cv::Vec3d & t)
 {
@@ -123,8 +123,8 @@ double computeHeight(
 }
 
 // initialize constructor
-RoiBasedDetectorNode::RoiBasedDetectorNode(const rclcpp::NodeOptions & node_options)
-: Node("roi_based_detector", node_options)
+Roi3DProjectorNode::Roi3DProjectorNode(const rclcpp::NodeOptions & node_options)
+: Node("roi_3d_projector", node_options)
 {
   target_frame_ = declare_parameter<std::string>("target_frame");
 
@@ -188,7 +188,7 @@ RoiBasedDetectorNode::RoiBasedDetectorNode(const rclcpp::NodeOptions & node_opti
   transform_listener_ = std::make_shared<TransformListener>(this);
 }
 
-void RoiBasedDetectorNode::cameraInfoCallback(const CameraInfo::ConstSharedPtr & msg, int rois_id)
+void Roi3DProjectorNode::cameraInfoCallback(const CameraInfo::ConstSharedPtr & msg, int rois_id)
 {
   // assuming camera parameter never changes while node is running
   if (!is_camera_info_arrived_[rois_id]) {
@@ -216,7 +216,7 @@ void RoiBasedDetectorNode::cameraInfoCallback(const CameraInfo::ConstSharedPtr &
  * This function primarily targets pedestrian detection, as the generated 3D object
  * is only an approximation and may be inaccurate without depth information.
  */
-bool RoiBasedDetectorNode::generateROIBasedObject(
+bool Roi3DProjectorNode::generateROIBasedObject(
   const sensor_msgs::msg::RegionOfInterest & roi, const int & rois_id,
   const geometry_msgs::msg::TransformStamped & tf, const uint8_t & label, DetectedObject & object)
 {
@@ -315,7 +315,7 @@ bool RoiBasedDetectorNode::generateROIBasedObject(
   return true;
 }
 
-void RoiBasedDetectorNode::roiCallback(
+void Roi3DProjectorNode::roiCallback(
   const DetectedObjectsWithFeature::ConstSharedPtr & msg, int rois_id)
 {
   if (!is_camera_info_arrived_[rois_id]) {
@@ -371,7 +371,7 @@ void RoiBasedDetectorNode::roiCallback(
   objects_pubs_[rois_id]->publish(objects);
 }
 
-}  // namespace autoware::roi_based_detector
+}  // namespace autoware::roi_3d_projector
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::roi_based_detector::RoiBasedDetectorNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::roi_3d_projector::Roi3DProjectorNode)

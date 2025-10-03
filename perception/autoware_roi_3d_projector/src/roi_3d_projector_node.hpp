@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef ROI_BASED_DETECTOR_NODE_HPP_
-#define ROI_BASED_DETECTOR_NODE_HPP_
+#ifndef ROI_3D_PROJECTOR_NODE_HPP_
+#define ROI_3D_PROJECTOR_NODE_HPP_
 
 #include <autoware/universe_utils/ros/transform_listener.hpp>
 #include <opencv2/opencv.hpp>
@@ -43,7 +43,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace autoware::roi_based_detector
+namespace autoware::roi_3d_projector
 {
 using autoware::universe_utils::TransformListener;
 using autoware_perception_msgs::msg::DetectedObject;
@@ -52,10 +52,10 @@ using sensor_msgs::msg::CameraInfo;
 using tier4_perception_msgs::msg::DetectedObjectsWithFeature;
 using Label = autoware_perception_msgs::msg::ObjectClassification;
 
-class RoiBasedDetectorNode : public rclcpp::Node
+class Roi3DProjectorNode : public rclcpp::Node
 {
 public:
-  explicit RoiBasedDetectorNode(const rclcpp::NodeOptions & node_options);
+  explicit Roi3DProjectorNode(const rclcpp::NodeOptions & node_options);
 
 private:
   struct LabelSettings
@@ -131,6 +131,6 @@ private:
   geometry_msgs::msg::TransformStamped::ConstSharedPtr transform_;
 };
 
-}  // namespace autoware::roi_based_detector
+}  // namespace autoware::roi_3d_projector
 
-#endif  // ROI_BASED_DETECTOR_NODE_HPP_
+#endif  // ROI_3D_PROJECTOR_NODE_HPP_

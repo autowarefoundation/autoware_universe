@@ -1,9 +1,9 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Parameters for ROI based detector",
+  "title": "Parameters for ROI 3D Projector",
   "type": "object",
   "definitions": {
-    "roi_based_detector": {
+    "roi_3d_projector": {
       "type": "object",
       "properties": {
         "target_frame": {
@@ -108,7 +108,7 @@
       "type": "object",
       "properties": {
         "ros__parameters": {
-          "$ref": "#/definitions/roi_based_detector"
+          "$ref": "#/definitions/roi_3d_projector"
         }
       },
       "required": ["ros__parameters"]

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(autoware_roi_based_detector)
+project(autoware_roi_3d_projector)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -18,7 +18,7 @@ autoware_package()
 
 # Targets
 ament_auto_add_library(${PROJECT_NAME} SHARED
-  src/roi_based_detector_node.cpp
+  src/roi_3d_projector_node.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -26,8 +26,8 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
-  PLUGIN "autoware::roi_based_detector::RoiBasedDetectorNode"
-  EXECUTABLE roi_based_detector_node
+  PLUGIN "autoware::roi_3d_projector::Roi3DProjectorNode"
+  EXECUTABLE roi_3d_projector_node
 )
 
 # Testing
