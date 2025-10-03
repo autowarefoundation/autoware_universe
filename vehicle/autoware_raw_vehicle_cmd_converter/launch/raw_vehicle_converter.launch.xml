@@ -7,6 +7,7 @@
   <arg name="input_actuation_status" default="/vehicle/status/actuation_status"/>
   <arg name="input_operation_mode_state" default="/system/operation_mode/state"/>
   <arg name="input_control_horizon" default="/control/trajectory_follower/controller_node_exe/debug/control_cmd_horizon"/>
+  <arg name="input_steer_offset" default="/vehicle/calibration/steer_offset_estimator/steering_offset"/>
   <arg name="output_actuation_cmd" default="/control/command/actuation_cmd"/>
   <arg name="output_steering_status" default="/vehicle/status/steering_status"/>
   <arg name="output_control_component_latency" default="/control/control_component_latency"/>
@@ -22,6 +23,7 @@
     <remap from="~/input/actuation_status" to="$(var input_actuation_status)"/>
     <remap from="~/input/operation_mode_state" to="$(var input_operation_mode_state)"/>
     <remap from="~/input/control_horizon" to="$(var input_control_horizon)"/>
+    <remap from="~/input/steer_offset" to="$(var input_steer_offset)"/>
     <remap from="~/output/actuation_cmd" to="$(var output_actuation_cmd)"/>
     <remap from="~/output/steering_status" to="$(var output_steering_status)"/>
     <remap from="~/output/control_component_latency" to="$(var output_control_component_latency)"/>
