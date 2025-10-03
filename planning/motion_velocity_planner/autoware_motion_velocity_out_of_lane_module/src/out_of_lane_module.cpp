@@ -317,7 +317,10 @@ void OutOfLaneModule::update_slowdown_pose_buffer(
 
   slowdown_pose_buffer_ = valid_poses;
 
-  if (!slowdown_pose) return;
+  if (
+    !slowdown_pose ||
+    (ego_data.velocity > 0.1 && slowdown_pose_arc_length < ego_data.min_stop_arc_length))
+    return;
 
   static constexpr double eps = 1e-3;
   if (slowdown_pose_buffer_.empty()) {
