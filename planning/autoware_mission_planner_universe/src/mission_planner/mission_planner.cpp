@@ -369,8 +369,7 @@ void MissionPlanner::set_preferred_lane(
           const auto lanelet = lanelet_map_ptr_->laneletLayer.get(primitive.id);
           return lanelet::utils::isInLanelet(route.start_pose, lanelet);
         });
-    }
-);
+    });
 
   // erase segments before the current segment
   if (segment_it != route.segments.end()) {
@@ -516,12 +515,10 @@ void MissionPlanner::on_set_lanelet_route(
   // --- Sort segments left-to-right at the very beginning ---
   auto route_handler = planner_->getRouteHandler();
 
-  std::for_each(
-    route.segments.begin(), route.segments.end(), [&](auto & segment) {
-      segment.primitives =
-        sortPrimitivesLeftToRight(route_handler, segment.preferred_primitive, segment.primitives);
-    }
-  );
+  std::for_each(route.segments.begin(), route.segments.end(), [&](auto & segment) {
+    segment.primitives =
+      sortPrimitivesLeftToRight(route_handler, segment.preferred_primitive, segment.primitives);
+  });
 
   change_route(route);
   change_state(RouteState::SET);
