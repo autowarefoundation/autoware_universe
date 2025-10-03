@@ -14,7 +14,7 @@
 
 #include "node.hpp"
 
-#include "autoware/speed_scale_corrector/speed_scale_estimator.hpp"
+#include "speed_scale_estimator.hpp"
 
 #include <fmt/format.h>
 
