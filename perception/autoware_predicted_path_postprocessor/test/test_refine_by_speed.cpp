@@ -14,6 +14,7 @@
 
 #include "autoware/predicted_path_postprocessor/processor/refine_by_speed.hpp"
 
+#include <ament_index_cpp/get_package_share_directory.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -38,7 +39,16 @@ protected:
   void SetUp() override
   {
     rclcpp::init(0, nullptr);
-    node_ = std::make_shared<rclcpp::Node>("test_node");
+
+    const auto package_dir =
+      ament_index_cpp::get_package_share_directory("autoware_predicted_path_postprocessor");
+
+    auto node_options = rclcpp::NodeOptions();
+    node_options.arguments(
+      {"--ros-args", "--params-file",
+       package_dir + "/config/predicted_path_postprocessor.param.yaml"});
+
+    node_ = std::make_shared<rclcpp::Node>("test_node", node_options);
 
     processor_ = std::make_unique<RefineBySpeed>(node_.get(), "refine_by_speed");
   }
