@@ -16,6 +16,9 @@
 
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 
+#include <autoware_internal_planning_msgs/msg/path_point_with_lane_id.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
+
 #include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 
@@ -24,6 +27,8 @@
 
 namespace autoware::trajectory_traffic_rule_filter::plugin
 {
+using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 
 TrafficLightFilter::TrafficLightFilter() : TrafficRuleFilterInterface("TrafficLightFilter")
 {
@@ -33,27 +38,26 @@ lanelet::ConstLanelets TrafficLightFilter::get_lanelets_from_trajectory(
   const TrajectoryPoints & trajectory_points) const
 {
   lanelet::ConstLanelets lanes;
-
-  if (!lanelet_map_ || trajectory_points.empty()) {
+  PathWithLaneId path;
+  path.points.reserve(trajectory_points.size());
+  for (const auto & point : trajectory_points) {
+    PathPointWithLaneId path_point;
+    path_point.point.pose = point.pose;
+    path_point.point.longitudinal_velocity_mps = point.longitudinal_velocity_mps;
+    path_point.point.lateral_velocity_mps = point.lateral_velocity_mps;
+    path_point.point.heading_rate_rps = point.heading_rate_rps;
+    path.points.push_back(path_point);
+  }
+  const auto lanelet_distance_pair =
+    boundary_departure_checker_->getLaneletsFromPath(lanelet_map_, path);
+  if (lanelet_distance_pair.empty()) {
     return lanes;
   }
 
-  const lanelet::ConstLanelets all_lanelets(
-    lanelet_map_->laneletLayer.begin(), lanelet_map_->laneletLayer.end());
-
-  for (const auto & point : trajectory_points) {
-    const auto p = lanelet::BasicPoint2d(point.pose.position.x, point.pose.position.y);
-
-    for (const auto & lanelet : all_lanelets) {
-      if (lanelet::geometry::inside(lanelet, p)) {
-        if (std::find(lanes.begin(), lanes.end(), lanelet) == lanes.end()) {
-          lanes.push_back(lanelet);
-        }
-        break;
-      }
-    }
+  for (const auto & lanelet_distance : lanelet_distance_pair) {
+    const auto & lanelet = lanelet_distance.second;
+    lanes.push_back(lanelet);
   }
-
   return lanes;
 }
 
