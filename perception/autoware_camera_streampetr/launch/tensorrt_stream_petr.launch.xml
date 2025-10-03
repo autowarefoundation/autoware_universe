@@ -45,8 +45,6 @@
     <param name="is_compressed_image" value="$(var is_compressed_image)"/>
     <!-- Whether the input image is distorted. -->
     <param name="is_distorted_image" value="false"/>
-    <!-- If is_distorted_image=true,factor to downsample the image by during undistortion. Makes undistortion faster than using full scale-->
-    <param name="downsample_factor" value="0.5"/>
     <!-- Whether to use multithreading for handling image callbacks-->
     <param name="multithreading" value="false"/>
   </node>

@@ -161,13 +161,13 @@ protected:
     const LaneChangePath & lane_change_path,
     const std::vector<std::vector<PoseWithVelocityStamped>> & ego_predicted_paths,
     const lane_change::TargetObjects & collision_check_objects,
-    const utils::path_safety_checker::RSSparams & rss_params,
-    CollisionCheckDebugMap & debug_data) const;
+    const utils::path_safety_checker::RSSparams & rss_params, CollisionCheckDebugMap & debug_data,
+    const bool is_approved = false) const;
 
   bool is_colliding(
     const LaneChangePath & lane_change_path, const ExtendedPredictedObject & obj,
     const std::vector<PoseWithVelocityStamped> & ego_predicted_path, const RSSparams & rss_param,
-    CollisionCheckDebugMap & debug_data) const;
+    CollisionCheckDebugMap & debug_data, const bool is_approved) const;
 
   double get_max_velocity_for_safety_check() const;
 

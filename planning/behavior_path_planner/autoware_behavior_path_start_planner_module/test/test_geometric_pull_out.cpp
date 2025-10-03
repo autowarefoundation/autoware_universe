@@ -101,7 +101,7 @@ TEST_F(TestGeometricPullOut, GenerateValidGeometricPullOutPath)
     auto result = call_plan(start_pose, goal_pose, planner_data, debug_data);
 
     // Assert that a valid geometric pull out path is generated
-    ASSERT_TRUE(result.has_value()) << "Geometric pull out path generation failed.";
+    EXPECT_EQ(result.has_value(), true) << "Geometric pull out path generation failed.";
     EXPECT_EQ(result->partial_paths.size(), 2UL)
       << "Generated geometric pull out path does not have the expected number of partial paths.";
     EXPECT_EQ(debug_data.conditions_evaluation.back(), "success")
@@ -109,14 +109,12 @@ TEST_F(TestGeometricPullOut, GenerateValidGeometricPullOutPath)
 
 #ifdef EXPORT_TEST_PLOT_FIGURE
     // Plot and save the generated path for visualization
-    if (result.has_value() && !result->partial_paths.empty()) {
-      // Generate filename based on YAML file name
-      std::string yaml_basename = yaml_file.substr(0, yaml_file.find_last_of('.'));
-      std::string plot_filename = yaml_basename + ".png";
-
-      StartPlannerTestHelper::plot_and_save_path(
-        result->partial_paths, planner_data, vehicle_info_, PlannerType::GEOMETRIC, plot_filename);
-    }
+    // Generate filename based on YAML file name
+    std::string yaml_basename = yaml_file.substr(0, yaml_file.find_last_of('.'));
+    std::string plot_filename = yaml_basename + ".png";
+    StartPlannerTestHelper::plot_and_save_path(
+      result, route, start_pose, goal_pose, planner_data, vehicle_info_, PlannerType::GEOMETRIC,
+      plot_filename);
 #endif
   }
 }

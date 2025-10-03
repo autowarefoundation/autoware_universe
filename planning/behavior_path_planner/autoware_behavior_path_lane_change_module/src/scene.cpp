@@ -1496,11 +1496,11 @@ PathSafetyStatus NormalLaneChange::isApprovedPathSafe() const
 
   const auto decel_sampling_num =
     static_cast<size_t>(lane_change_parameters_->cancel.deceleration_sampling_num);
-  const auto ego_predicted_paths =
-    utils::lane_change::convert_to_predicted_paths(common_data_ptr_, path, decel_sampling_num);
+  const auto ego_predicted_paths = utils::lane_change::convert_to_predicted_paths(
+    common_data_ptr_, path, decel_sampling_num, true);
   const auto safety_status = isLaneChangePathSafe(
     path, ego_predicted_paths, target_objects, lane_change_parameters_->safety.rss_params_for_abort,
-    debug_data);
+    debug_data, true);
   {
     // only for debug purpose
     lane_change_debug_.collision_check_objects.clear();
@@ -1728,8 +1728,8 @@ PathSafetyStatus NormalLaneChange::isLaneChangePathSafe(
   const LaneChangePath & lane_change_path,
   const std::vector<std::vector<PoseWithVelocityStamped>> & ego_predicted_paths,
   const lane_change::TargetObjects & collision_check_objects,
-  const utils::path_safety_checker::RSSparams & rss_params,
-  CollisionCheckDebugMap & debug_data) const
+  const utils::path_safety_checker::RSSparams & rss_params, CollisionCheckDebugMap & debug_data,
+  const bool is_approved) const
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   constexpr auto is_safe = true;
@@ -1738,7 +1738,8 @@ PathSafetyStatus NormalLaneChange::isLaneChangePathSafe(
   const auto all_paths_collide = [&](const auto & objects) {
     return ranges::all_of(ego_predicted_paths, [&](const auto & ego_predicted_path) {
       const auto check_for_collision = [&](const auto & object) {
-        return is_colliding(lane_change_path, object, ego_predicted_path, rss_params, debug_data);
+        return is_colliding(
+          lane_change_path, object, ego_predicted_path, rss_params, debug_data, is_approved);
       };
       return ranges::any_of(objects, check_for_collision);
     });
@@ -1758,7 +1759,7 @@ PathSafetyStatus NormalLaneChange::isLaneChangePathSafe(
 bool NormalLaneChange::is_colliding(
   const LaneChangePath & lane_change_path, const ExtendedPredictedObject & obj,
   const std::vector<PoseWithVelocityStamped> & ego_predicted_path, const RSSparams & rss_param,
-  CollisionCheckDebugMap & debug_data) const
+  CollisionCheckDebugMap & debug_data, const bool is_approved) const
 {
   constexpr auto is_colliding{true};
 
@@ -1792,7 +1793,7 @@ bool NormalLaneChange::is_colliding(
 
   const auto & th_stopped_obj_vel = lane_change_parameters_->safety.th_stopped_object_velocity;
   const auto & lane_changing_phase_rss_param =
-    (obj.initial_twist.linear.x <= th_stopped_obj_vel)
+    (!is_approved && obj.initial_twist.linear.x <= th_stopped_obj_vel)
       ? lane_change_parameters_->safety.rss_params_for_parked
       : rss_param;
 
