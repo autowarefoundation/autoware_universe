@@ -314,8 +314,7 @@ void calculate_overlapping_collision(
   // TODO(Maxime): can unify the logic ? (whatever the angle we can refine the collision time
   // calculation within the overlap)
   if (is_same_direction(ego, params)) {
-    const auto time_margin =
-      std::abs(ego.first_intersection.ego_time - ego.first_intersection.object_time);
+    const auto time_margin = ego.first_intersection.ego_time - ego.first_intersection.object_time;
     const auto object_is_faster_than_ego = ego.first_intersection.vel_diff < 0;
     if (object_is_faster_than_ego && time_margin > params.collision_time_margin) {  // object is
                                                                                     // faster than
@@ -325,10 +324,10 @@ void calculate_overlapping_collision(
     } else {
       // adjust the collision time based on the velocity difference
       const auto near_zero_ego_vel = std::abs(ego.first_intersection.ego_vel) < 1e-3;
-      const auto catchup_time =
-        near_zero_ego_vel
-          ? 0.0
-          : (time_margin * ego.first_intersection.vel_diff) / ego.first_intersection.ego_vel;
+      const auto catchup_time = near_zero_ego_vel
+                                  ? 0.0
+                                  : (std::abs(time_margin) * ego.first_intersection.vel_diff) /
+                                      ego.first_intersection.ego_vel;
       c.ego_collision_time += catchup_time;
       std::stringstream ss;
       ss << std::setprecision(2) << "coll_t = ego_enter_time[" << ego.first_intersection.ego_time
@@ -485,7 +484,18 @@ void calculate_object_collisions(
     const auto collisions = calculate_interval_collisions(filtered_time_overlap_intervals, params);
     for (const auto & c : collisions) {
       const auto is_after_overlap = c.ego_collision_time > c.ego_time_interval.to;
-      if (!is_after_overlap) {
+      // objects can have multiple predicted paths that overlap and cause the same collisions
+      const auto is_duplicate_collision =
+        std::find_if(
+          object.collisions.begin(), object.collisions.end(), [&](const Collision & collision) {
+            return collision.ego_collision_time == c.ego_collision_time &&
+                   collision.type == c.type &&
+                   collision.object_time_interval.from == c.object_time_interval.from &&
+                   collision.object_time_interval.to == c.object_time_interval.to &&
+                   collision.ego_time_interval.from == c.ego_time_interval.from &&
+                   collision.ego_time_interval.to == c.ego_time_interval.to;
+          }) != object.collisions.end();
+      if (!is_after_overlap && !is_duplicate_collision) {
         object.collisions.push_back(c);
       }
     }
