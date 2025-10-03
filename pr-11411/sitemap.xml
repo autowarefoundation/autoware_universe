@@ -631,7 +631,7 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11411/perception/autoware_roi_based_detector/</loc>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11411/perception/autoware_roi_3d_projector/</loc>
          <lastmod>2025-10-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -1097,6 +1097,11 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-11411/planning/sampling_based_planner/autoware_sampler_common/</loc>
+         <lastmod>2025-10-03</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11411/sensing/autoware_calibration_status_classifier/</loc>
          <lastmod>2025-10-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
