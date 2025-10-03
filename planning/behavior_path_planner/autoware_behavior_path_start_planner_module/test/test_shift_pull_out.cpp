@@ -83,7 +83,9 @@ TEST_F(TestShiftPullOut, GenerateValidShiftPullOutPath)
 {
   // Test data files to be tested
   const std::vector<std::string> yaml_files = {
-    "route_data2.yaml", "route_data3.yaml", "route_data4.yaml"};
+    "route_data2.1.yaml", "route_data2.2.yaml", "route_data2.3.yaml",
+    "route_data3.1.yaml", "route_data3.2.yaml", "route_data3.3.yaml",
+    "route_data4.1.yaml", "route_data4.2.yaml", "route_data4.3.yaml"};
 
   auto planner_data = std::make_shared<PlannerData>();
   planner_data->init_parameters(*node_);
@@ -101,7 +103,7 @@ TEST_F(TestShiftPullOut, GenerateValidShiftPullOutPath)
     auto result = call_plan(start_pose, goal_pose, planner_data, debug_data);
 
     // Assert that a valid shift pull out path is generated
-    ASSERT_TRUE(result.has_value()) << "shift pull out path generation failed for " + yaml_file;
+    EXPECT_EQ(result.has_value(), true) << "shift pull out path generation failed for " + yaml_file;
     EXPECT_EQ(result->partial_paths.size(), 1UL)
       << "Generated shift pull out path does not have the expected number of partial paths for " +
            yaml_file;
@@ -110,14 +112,12 @@ TEST_F(TestShiftPullOut, GenerateValidShiftPullOutPath)
 
 #ifdef EXPORT_TEST_PLOT_FIGURE
     // Plot and save the generated path for visualization
-    if (result.has_value() && !result->partial_paths.empty()) {
-      // Generate filename based on YAML file name
-      std::string yaml_basename = yaml_file.substr(0, yaml_file.find_last_of('.'));
-      std::string plot_filename = yaml_basename + ".png";
-
-      StartPlannerTestHelper::plot_and_save_path(
-        result->partial_paths, planner_data, vehicle_info_, PlannerType::SHIFT, plot_filename);
-    }
+    // Generate filename based on YAML file name
+    std::string yaml_basename = yaml_file.substr(0, yaml_file.find_last_of('.'));
+    std::string plot_filename = yaml_basename + ".png";
+    StartPlannerTestHelper::plot_and_save_path(
+      result, route, start_pose, goal_pose, planner_data, vehicle_info_, PlannerType::SHIFT,
+      plot_filename);
 #endif
   }
 }

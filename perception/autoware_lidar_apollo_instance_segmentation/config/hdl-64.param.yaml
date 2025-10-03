@@ -1,11 +1,9 @@
 /**:
   ros__parameters:
-    lidar_instance_segmentation:
-      score_threshold: 0.1
-      range: 70
-      width: 672
-      height: 672
-      use_intensity_feature: true
-      use_constant_feature: false
-      z_offset: -2.0
-      onnx_file: "hdl-64.onnx"
+    score_threshold: 0.1
+    range: 70
+    width: 672
+    height: 672
+    use_intensity_feature: true
+    use_constant_feature: false
+    z_offset: -2.0
