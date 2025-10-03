@@ -113,8 +113,8 @@ TEST_F(TestFreespacePullOut, DISABLED_GenerateValidFreespacePullOutPath)
     std::string yaml_basename = yaml_file.substr(0, yaml_file.find_last_of('.'));
     std::string plot_filename = yaml_basename + ".png";
     StartPlannerTestHelper::plot_and_save_path(
-      result, route, start_pose, goal_pose, planner_data, vehicle_info_,
-      PlannerType::FREESPACE, plot_filename);
+      result, route, start_pose, goal_pose, planner_data, vehicle_info_, PlannerType::FREESPACE,
+      plot_filename);
 #endif
   }
 }
