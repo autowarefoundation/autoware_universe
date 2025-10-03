@@ -56,15 +56,16 @@ TrajectoryTrafficRuleFilter::TrajectoryTrafficRuleFilter(const rclcpp::NodeOptio
     std::bind(&TrajectoryTrafficRuleFilter::map_callback, this, std::placeholders::_1));
 
   sub_trajectories_ = create_subscription<CandidateTrajectories>(
-    "~/input/trajectories", 1,
+    "~/input/candidate_trajectories", 1,
     std::bind(&TrajectoryTrafficRuleFilter::process, this, std::placeholders::_1));
 
-  pub_trajectories_ = create_publisher<CandidateTrajectories>("~/output/trajectories", 1);
+  pub_trajectories_ = create_publisher<CandidateTrajectories>("~/output/candidate_trajectories", 1);
 }
 
 void TrajectoryTrafficRuleFilter::process(const CandidateTrajectories::ConstSharedPtr msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
+
   if (!lanelet_map_ptr_) {
     return;
   }
