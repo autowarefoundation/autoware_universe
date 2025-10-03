@@ -314,21 +314,23 @@ void calculate_overlapping_collision(
   // TODO(Maxime): can unify the logic ? (whatever the angle we can refine the collision time
   // calculation within the overlap)
   if (is_same_direction(ego, params)) {
-    const auto time_margin = ego.first_intersection.ego_time - ego.first_intersection.object_time;
+    const auto object_is_first_with_margin =
+      ego.first_intersection.object_time <
+      ego.first_intersection.ego_time + params.collision_time_margin;
     const auto object_is_faster_than_ego = ego.first_intersection.vel_diff < 0;
-    if (object_is_faster_than_ego && time_margin > params.collision_time_margin) {  // object is
-                                                                                    // faster than
-                                                                                    // ego
+    if (object_is_faster_than_ego && object_is_first_with_margin) {
       c.type = no_collision;
       c.explanation = " no collision will happen because object is faster and enter first";
     } else {
-      // adjust the collision time based on the velocity difference
+      // adjust the collision time based on the time and velocity difference
+      const auto time_margin =
+        std::abs(ego.first_intersection.object_time - ego.first_intersection.ego_time);
       const auto near_zero_ego_vel = std::abs(ego.first_intersection.ego_vel) < 1e-3;
-      const auto catchup_time = near_zero_ego_vel
-                                  ? 0.0
-                                  : (std::abs(time_margin) * ego.first_intersection.vel_diff) /
-                                      ego.first_intersection.ego_vel;
-      c.ego_collision_time += catchup_time;
+      const auto catchup_time =
+        near_zero_ego_vel
+          ? 0.0
+          : (time_margin * ego.first_intersection.vel_diff) / ego.first_intersection.ego_vel;
+      c.ego_collision_time += std::max(0.0, catchup_time);
       std::stringstream ss;
       ss << std::setprecision(2) << "coll_t = ego_enter_time[" << ego.first_intersection.ego_time
          << "]+enter_t_diff[" << time_margin << "]*v_diff[" << ego.first_intersection.vel_diff
