@@ -258,8 +258,9 @@ void StartPlannerTestHelper::plot_and_save_path(
   // Get all available lanelets from the map
   const lanelet::LaneletMap & map = *planner_data->route_handler->getLaneletMapPtr();
   lanelet::ConstLanelets all_lanelets;
+  all_lanelets.reserve(map.laneletLayer.size());
   for (const auto & lanelet : map.laneletLayer) {
-    all_lanelets.push_back(lanelet);
+    all_lanelets.emplace_back(lanelet);
   }
 
   // Get lanelets from the route
@@ -267,8 +268,8 @@ void StartPlannerTestHelper::plot_and_save_path(
     for (const auto & primitive : segment.primitives) {
       if (added_lanelet_ids.find(primitive.id) == added_lanelet_ids.end()) {
         const auto lanelet = planner_data->route_handler->getLaneletsFromId(primitive.id);
-        lanelets.push_back(lanelet);
-        added_lanelet_ids.insert(primitive.id);
+        lanelets.emplace_back(lanelet);
+        added_lanelet_ids.emplace(primitive.id);
       }
     }
   }
@@ -281,8 +282,8 @@ void StartPlannerTestHelper::plot_and_save_path(
     for (const auto & lane_id : lane_ids) {
       if (added_lanelet_ids.find(lane_id) == added_lanelet_ids.end()) {
         const auto lanelet = planner_data->route_handler->getLaneletsFromId(lane_id);
-        lanelets.push_back(lanelet);
-        added_lanelet_ids.insert(lane_id);
+        lanelets.emplace_back(lanelet);
+        added_lanelet_ids.emplace(lane_id);
       }
     }
   }
@@ -295,8 +296,8 @@ void StartPlannerTestHelper::plot_and_save_path(
       for (const auto & lane_id : lane_ids) {
         if (added_lanelet_ids.find(lane_id) == added_lanelet_ids.end()) {
           const auto lanelet = planner_data->route_handler->getLaneletsFromId(lane_id);
-          lanelets.push_back(lanelet);
-          added_lanelet_ids.insert(lane_id);
+          lanelets.emplace_back(lanelet);
+          added_lanelet_ids.emplace(lane_id);
         }
       }
     }
@@ -332,9 +333,9 @@ void StartPlannerTestHelper::plot_and_save_path(
     plot_footprint(axes[0], start_pose, vehicle_info);
     plot_footprint(axes[0], goal_pose, vehicle_info);
   } else {
-    const auto start_pose_tmp = partial_paths.front().points.front().point.pose;
+    const auto & start_pose_tmp = partial_paths.front().points.front().point.pose;
     plot_footprint(axes[0], start_pose_tmp, vehicle_info);
-    const auto end_pose_tmp = partial_paths.back().points.back().point.pose;
+    const auto & end_pose_tmp = partial_paths.back().points.back().point.pose;
     plot_footprint(axes[0], end_pose_tmp, vehicle_info);
   }
 
