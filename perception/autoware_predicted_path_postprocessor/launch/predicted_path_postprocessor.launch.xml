@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <!-- I/O topics -->
+  <arg name="input/objects" default="/input/objects"/>
+  <arg name="input/lanelet_map" default="/input/lanelet_map"/>
+  <arg name="output/objects" default="/output/objects"/>
+
+  <!-- Parameter file -->
+  <arg name="file/parameter" default="$(find-pkg-share autoware_predicted_path_postprocessor)/config/predicted_path_postprocessor.param.yaml"/>
+
+  <!-- Debug mode -->
+  <arg name="debug" default="false"/>
+
+  <node pkg="autoware_predicted_path_postprocessor" exec="autoware_predicted_path_postprocessor_exe" output="screen">
+    <remap from="~/input/objects" to="$(var input/objects)"/>
+    <remap from="~/input/lanelet_map" to="$(var input/lanelet_map)"/>
+    <remap from="~/output/objects" to="$(var output/objects)"/>
+    <param from="$(var file/parameter)" allow_substs="true"/>
+    <param name="debug" value="$(var debug)"/>
+  </node>
+</launch>
