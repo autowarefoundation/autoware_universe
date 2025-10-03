@@ -11,7 +11,7 @@
           "description": "Transform target frame.",
           "default": "base_link"
         },
-        "ignore_class": {
+        "detection_target_class": {
           "type": "object",
           "properties": {
             "UNKNOWN": {
@@ -88,7 +88,7 @@
       },
       "required": [
         "target_frame",
-        "ignore_class",
+        "detection_target_class",
         "detection_max_range",
         "pseudo_height",
         "pedestrian_detection_config"

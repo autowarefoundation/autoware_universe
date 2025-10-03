@@ -128,14 +128,14 @@ RoiBasedDetectorNode::RoiBasedDetectorNode(const rclcpp::NodeOptions & node_opti
 {
   target_frame_ = declare_parameter<std::string>("target_frame");
 
-  label_settings_.UNKNOWN = declare_parameter<bool>("ignore_class.UNKNOWN");
-  label_settings_.CAR = declare_parameter<bool>("ignore_class.CAR");
-  label_settings_.TRUCK = declare_parameter<bool>("ignore_class.TRUCK");
-  label_settings_.BUS = declare_parameter<bool>("ignore_class.BUS");
-  label_settings_.TRAILER = declare_parameter<bool>("ignore_class.TRAILER");
-  label_settings_.MOTORCYCLE = declare_parameter<bool>("ignore_class.MOTORCYCLE");
-  label_settings_.BICYCLE = declare_parameter<bool>("ignore_class.BICYCLE");
-  label_settings_.PEDESTRIAN = declare_parameter<bool>("ignore_class.PEDESTRIAN");
+  label_settings_.UNKNOWN = declare_parameter<bool>("detection_target_class.UNKNOWN");
+  label_settings_.CAR = declare_parameter<bool>("detection_target_class.CAR");
+  label_settings_.TRUCK = declare_parameter<bool>("detection_target_class.TRUCK");
+  label_settings_.BUS = declare_parameter<bool>("detection_target_class.BUS");
+  label_settings_.TRAILER = declare_parameter<bool>("detection_target_class.TRAILER");
+  label_settings_.MOTORCYCLE = declare_parameter<bool>("detection_target_class.MOTORCYCLE");
+  label_settings_.BICYCLE = declare_parameter<bool>("detection_target_class.BICYCLE");
+  label_settings_.PEDESTRIAN = declare_parameter<bool>("detection_target_class.PEDESTRIAN");
 
   const double detection_max_range = declare_parameter<double>("detection_max_range");
   detection_max_range_sq_ = detection_max_range * detection_max_range;
@@ -347,7 +347,7 @@ void RoiBasedDetectorNode::roiCallback(
     DetectedObject object;
 
     const auto & label = obj_with_feature.object.classification.front().label;
-    if (label_settings_.isIgnoreLabel(label)) {
+    if (!label_settings_.isDetectionTargetLabel(label)) {
       continue;
     }
 

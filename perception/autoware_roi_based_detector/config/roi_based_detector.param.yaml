@@ -1,15 +1,15 @@
 /**:
   ros__parameters:
     target_frame: "base_link"
-    ignore_class:
-      UNKNOWN : true
-      CAR : true
-      TRUCK : true
-      BUS : true
-      TRAILER : true
-      MOTORCYCLE : true
-      BICYCLE : true
-      PEDESTRIAN : false
+    detection_target_class:
+      UNKNOWN : false
+      CAR : false
+      TRUCK : false
+      BUS : false
+      TRAILER : false
+      MOTORCYCLE : false
+      BICYCLE : false
+      PEDESTRIAN : true
 
     # if an object is detected farther than this, it will be filtered out
     detection_max_range: 30.0 # [m]

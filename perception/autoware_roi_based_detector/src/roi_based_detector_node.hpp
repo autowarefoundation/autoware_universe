@@ -69,7 +69,7 @@ private:
     bool BICYCLE;
     bool PEDESTRIAN;
 
-    bool isIgnoreLabel(const uint8_t label) const
+    bool isDetectionTargetLabel(const uint8_t label) const
     {
       return (label == Label::UNKNOWN && UNKNOWN) || (label == Label::CAR && CAR) ||
              (label == Label::TRUCK && TRUCK) || (label == Label::BUS && BUS) ||
