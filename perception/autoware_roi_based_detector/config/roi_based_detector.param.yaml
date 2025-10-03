@@ -11,6 +11,7 @@
       BICYCLE : false
       PEDESTRIAN : true
 
+    roi_confidence_threshold: 0.80 # [0.0, 1.0]
     # if an object is detected farther than this, it will be filtered out
     detection_max_range: 10.0 # [m]
     # if object height is unavailable, this will be used instead

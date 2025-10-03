@@ -56,6 +56,13 @@
             }
           }
         },
+        "roi_confidence_threshold": {
+          "type": "number",
+          "description": "Threshold value for whether to trust and use the ROI. If the confidence of an ROI is below this value, it will not be used.",
+          "default": 0.8,
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
         "detection_max_range": {
           "type": "number",
           "description": "Maximum detection range. Objects beyond this distance will not be included in the output [m].",
@@ -89,6 +96,7 @@
       "required": [
         "target_frame",
         "detection_target_class",
+        "roi_confidence_threshold",
         "detection_max_range",
         "pseudo_height",
         "pedestrian_detection_config"

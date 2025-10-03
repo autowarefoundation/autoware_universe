@@ -137,6 +137,7 @@ RoiBasedDetectorNode::RoiBasedDetectorNode(const rclcpp::NodeOptions & node_opti
   label_settings_.BICYCLE = declare_parameter<bool>("detection_target_class.BICYCLE");
   label_settings_.PEDESTRIAN = declare_parameter<bool>("detection_target_class.PEDESTRIAN");
 
+  roi_confidence_th_ = declare_parameter<double>("roi_confidence_threshold");
   const double detection_max_range = declare_parameter<double>("detection_max_range");
   detection_max_range_sq_ = detection_max_range * detection_max_range;
   pseudo_height_ = declare_parameter<double>("pseudo_height");
@@ -348,6 +349,11 @@ void RoiBasedDetectorNode::roiCallback(
 
     const auto & label = obj_with_feature.object.classification.front().label;
     if (!label_settings_.isDetectionTargetLabel(label)) {
+      continue;
+    }
+
+    // check ROI's confidence
+    if (obj_with_feature.object.existence_probability < roi_confidence_th_) {
       continue;
     }
 

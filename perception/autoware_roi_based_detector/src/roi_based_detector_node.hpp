@@ -114,6 +114,7 @@ private:
 
   std::string target_frame_;
   LabelSettings label_settings_;
+  double roi_confidence_th_;
   double detection_max_range_sq_;
   double pseudo_height_;
   double pedestrian_width_min_;
