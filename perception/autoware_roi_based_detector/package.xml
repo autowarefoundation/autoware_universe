@@ -5,6 +5,7 @@
   <version>0.47.0</version>
   <description>The autoware_roi_based_detector package</description>
   <maintainer email="dai.nguyen@tier4.jp">Dai Nguyen</maintainer>
+  <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
   <maintainer email="lei.gu@tier4.jp">Lei Gu</maintainer>
   <maintainer email="masaki.baba.2@tier4.jp">Masaki Baba</maintainer>
   <license>Apache License 2.0</license>
