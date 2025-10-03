@@ -16,13 +16,6 @@ The package uses a plugin architecture that allows for flexible and extensible t
 
 ### Filter Plugins
 
-#### StopLineFilter
-
-- Checks if a trajectory properly handles stop signs
-- Detects stop signs along the trajectory path
-- Validates that the vehicle stops at appropriate positions
-- Rejects trajectories that would violate stop sign requirements
-
 #### TrafficLightFilter
 
 - Validates trajectory compliance with traffic signals
@@ -56,6 +49,5 @@ The active filters are specified in `config/trajectory_traffic_rule_filter.param
 /**:
   ros__parameters:
     filter_names:
-      - "autoware::trajectory_traffic_rule_filter::plugin::StopLineFilter"
       - "autoware::trajectory_traffic_rule_filter::plugin::TrafficLightFilter"
 ```

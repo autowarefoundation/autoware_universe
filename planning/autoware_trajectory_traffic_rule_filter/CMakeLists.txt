@@ -33,7 +33,6 @@ rclcpp_components_register_node(${PROJECT_NAME}
 # Add plugin library
 ament_auto_add_library(autoware_trajectory_traffic_rule_filter_plugins SHARED
   src/filters/traffic_light_filter.cpp
-  src/filters/stop_line_filter.cpp
 )
 
 target_link_libraries(autoware_trajectory_traffic_rule_filter_plugins
