@@ -128,20 +128,16 @@ std::optional<StuckStop> IntersectionModule::isStuckStatus(
   const IntersectionStopLines & intersection_stoplines, const PathLanelets & path_lanelets) const
 {
   const auto closest_idx = intersection_stoplines.closest_idx;
-  auto fromEgoDist = [&](const size_t index) {
-    return autoware::motion_utils::calcSignedArcLength(path.points, closest_idx, index);
-  };
 
   const auto & intersection_lanelets = intersection_lanelets_.value();  // this is OK
   const bool stuck_detected = checkStuckVehicleInIntersection(path_lanelets);
   const auto first_conflicting_lane =
     intersection_lanelets.first_conflicting_lane().value();  // this is OK
   const bool is_first_conflicting_lane_private =
-    (std::string(first_conflicting_lane.attributeOr("location", "else")).compare("private") == 0);
+    (std::string(first_conflicting_lane.attributeOr("location", "else")) == "private");
   const auto stuck_stopline_idx_opt = intersection_stoplines.stuck_stopline;
   const auto default_stopline_idx_opt = intersection_stoplines.default_stopline;
-  const auto first_attention_stopline_idx_opt = intersection_stoplines.first_attention_stopline;
-  const auto occlusion_peeking_stopline_idx_opt = intersection_stoplines.occlusion_peeking_stopline;
+  const auto first_attention_stopline_idx = intersection_stoplines.first_attention_stopline;
   if (stuck_detected) {
     if (
       is_first_conflicting_lane_private &&
@@ -150,23 +146,23 @@ std::optional<StuckStop> IntersectionModule::isStuckStatus(
     } else {
       std::optional<size_t> stopline_idx = std::nullopt;
       if (stuck_stopline_idx_opt) {
-        const bool is_over_stuck_stopline = fromEgoDist(stuck_stopline_idx_opt.value()) <
-                                            -planner_param_.common.stopline_overshoot_margin;
-        if (!is_over_stuck_stopline) {
+        const bool is_stuck_stopline_feasible =
+          can_smoothly_stop_at(path, closest_idx, stuck_stopline_idx_opt.value());
+        if (is_stuck_stopline_feasible) {
           stopline_idx = stuck_stopline_idx_opt.value();
         }
       }
       if (!stopline_idx) {
-        if (default_stopline_idx_opt && fromEgoDist(default_stopline_idx_opt.value()) >= 0.0) {
+        if (
+          default_stopline_idx_opt &&
+          can_smoothly_stop_at(path, closest_idx, default_stopline_idx_opt.value())) {
           stopline_idx = default_stopline_idx_opt.value();
-        } else if (
-          first_attention_stopline_idx_opt &&
-          fromEgoDist(first_attention_stopline_idx_opt.value()) >= 0.0) {
-          stopline_idx = closest_idx;
+        } else if (can_smoothly_stop_at(path, closest_idx, first_attention_stopline_idx)) {
+          stopline_idx = first_attention_stopline_idx;
         }
       }
       if (stopline_idx) {
-        return StuckStop{closest_idx, stopline_idx.value(), occlusion_peeking_stopline_idx_opt};
+        return StuckStop{closest_idx, stopline_idx.value()};
       }
     }
   }
@@ -314,37 +310,35 @@ std::optional<YieldStuckStop> IntersectionModule::isYieldStuckStatus(
   const IntersectionStopLines & intersection_stoplines) const
 {
   const auto closest_idx = intersection_stoplines.closest_idx;
-  auto fromEgoDist = [&](const size_t index) {
-    return autoware::motion_utils::calcSignedArcLength(path.points, closest_idx, index);
-  };
   const auto & intersection_lanelets = intersection_lanelets_.value();
   const auto default_stopline_idx = intersection_stoplines.default_stopline.value();
-  const auto first_attention_stopline_idx = intersection_stoplines.first_attention_stopline.value();
+  const auto first_attention_stopline_idx = intersection_stoplines.first_attention_stopline;
   const auto stuck_stopline_idx_opt = intersection_stoplines.stuck_stopline;
 
   const bool yield_stuck_detected = checkYieldStuckVehicleInIntersection(
     interpolated_path_info, intersection_lanelets.attention_non_preceding());
   if (yield_stuck_detected) {
     std::optional<size_t> stopline_idx = std::nullopt;
-    const bool is_before_default_stopline = fromEgoDist(default_stopline_idx) >= 0.0;
-    const bool is_before_first_attention_stopline =
-      fromEgoDist(first_attention_stopline_idx) >= 0.0;
+    const bool is_default_stopline_feasible =
+      can_smoothly_stop_at(path, closest_idx, default_stopline_idx);
+    const bool is_first_attention_stopline_feasible =
+      can_smoothly_stop_at(path, closest_idx, first_attention_stopline_idx);
     if (stuck_stopline_idx_opt) {
-      const bool is_over_stuck_stopline = fromEgoDist(stuck_stopline_idx_opt.value()) <
-                                          -planner_param_.common.stopline_overshoot_margin;
-      if (!is_over_stuck_stopline) {
+      const bool is_stuck_stopline_feasible =
+        can_smoothly_stop_at(path, closest_idx, stuck_stopline_idx_opt.value());
+      if (is_stuck_stopline_feasible) {
         stopline_idx = stuck_stopline_idx_opt.value();
       }
     }
     if (!stopline_idx) {
-      if (is_before_default_stopline) {
+      if (is_default_stopline_feasible) {
         stopline_idx = default_stopline_idx;
-      } else if (is_before_first_attention_stopline) {
-        stopline_idx = closest_idx;
+      } else if (is_first_attention_stopline_feasible) {
+        stopline_idx = first_attention_stopline_idx;
       }
     }
     if (stopline_idx) {
-      return YieldStuckStop{closest_idx, stopline_idx.value(), std::string("")};
+      return YieldStuckStop{closest_idx, stopline_idx.value()};
     }
   }
   return std::nullopt;
