@@ -183,10 +183,8 @@ compute_time_interval_for_passing_line(
     std::optional<double> entry_time{};
     for (const auto & [i, pose] : ranges::views::enumerate(precise_predicted_path.path)) {
       const auto object_poly = autoware_utils_geometry::to_polygon2d(pose, shape);
-      if (boost::geometry::intersects(object_poly, line1_2d)) {
-        entry_time = i * new_time_step;
-        break;
-      } else if (boost::geometry::intersects(object_poly, entry_line_2d)) {
+      if (boost::geometry::intersects(object_poly, line1_2d) ||
+          boost::geometry::intersects(object_poly, entry_line_2d)) {
         entry_time = i * new_time_step;
         break;
       }
