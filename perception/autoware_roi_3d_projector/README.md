@@ -19,10 +19,10 @@ This package produces 3D object detections through the following steps:
 
 ## Input
 
-| Name                          | Type                                                   | Description        |
-| ----------------------------- | ------------------------------------------------------ | ------------------ |
-| `input/rois<id>`              | tier4_perception_msgs::msg::DetectedObjectsWithFeature | <id>'s input ROI   |
-| `camera/rois<id>/camera_info` | sensor_msgs::msg::CameraInfo                           | <id>'s camera info |
+| Name                    | Type                                                   | Description        |
+| ----------------------- | ------------------------------------------------------ | ------------------ |
+| `input/rois<id>`        | tier4_perception_msgs::msg::DetectedObjectsWithFeature | <id>'s input ROI   |
+| `input/camera_info<id>` | sensor_msgs::msg::CameraInfo                           | <id>'s camera info |
 
 ## Output
 
