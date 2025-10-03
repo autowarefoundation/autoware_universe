@@ -12,7 +12,7 @@
       PEDESTRIAN : true
 
     # if an object is detected farther than this, it will be filtered out
-    detection_max_range: 30.0 # [m]
+    detection_max_range: 10.0 # [m]
     # if object height is unavailable, this will be used instead
     pseudo_height: 1.5 # [m]
 
