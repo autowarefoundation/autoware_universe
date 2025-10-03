@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/speed_scale_corrector/speed_scale_estimator.hpp"
+#include "speed_scale_estimator.hpp"
 
-#include "autoware/speed_scale_corrector/utils.hpp"
+#include "utils.hpp"
 
 #include <fmt/format.h>
 
@@ -235,6 +235,7 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
   result.velocity_from_odometry = v_odometry;
   result.velocity_from_velocity_report = v_report;
   result.kalman_gain = K;
+  result.time_diff = time_diff;
 
   return result;
 }

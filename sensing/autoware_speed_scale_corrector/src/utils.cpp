@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/speed_scale_corrector/utils.hpp"
+#include "utils.hpp"
 
 #include <cmath>
 #include <limits>
@@ -30,7 +30,7 @@ geometry_msgs::msg::Vector3 compute_relative_rotation_vector(
 
 tf2::Quaternion to_quaternion(const geometry_msgs::msg::Quaternion & quaternion)
 {
-  return tf2::Quaternion(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
+  return {quaternion.x, quaternion.y, quaternion.z, quaternion.w};
 }
 
 double calc_time_diff(const PoseStamped & pose_a, const PoseStamped & pose_b)

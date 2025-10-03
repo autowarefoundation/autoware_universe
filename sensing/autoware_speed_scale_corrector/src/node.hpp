@@ -15,8 +15,8 @@
 #ifndef NODE_HPP_
 #define NODE_HPP_
 
-#include "autoware/speed_scale_corrector/speed_scale_estimator.hpp"
 #include "autoware_utils_rclcpp/polling_subscriber.hpp"
+#include "speed_scale_estimator.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/subscription.hpp>

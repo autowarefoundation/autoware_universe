@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__SPEED_SCALE_CORRECTOR__SPEED_SCALE_ESTIMATOR_HPP_
-#define AUTOWARE__SPEED_SCALE_CORRECTOR__SPEED_SCALE_ESTIMATOR_HPP_
+#ifndef SPEED_SCALE_ESTIMATOR_HPP_
+#define SPEED_SCALE_ESTIMATOR_HPP_
 
 #include "autoware/trajectory/interpolator/interpolator.hpp"
 #include "tl_expected/expected.hpp"
@@ -77,6 +77,7 @@ struct SpeedScaleEstimatorUpdated
   double velocity_from_odometry = 0.0;         //!< Velocity from odometry [m/s]
   double velocity_from_velocity_report = 0.0;  //!< Velocity from velocity report [m/s]
   double kalman_gain = 0.0;                    //!< Kalman gain
+  double time_diff = 0.0;                      //!< Time difference between the two updates [s]
 };
 
 /**
@@ -132,4 +133,4 @@ private:
 
 }  // namespace autoware::speed_scale_corrector
 
-#endif  // AUTOWARE__SPEED_SCALE_CORRECTOR__SPEED_SCALE_ESTIMATOR_HPP_
+#endif  // SPEED_SCALE_ESTIMATOR_HPP_

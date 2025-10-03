@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__SPEED_SCALE_CORRECTOR__UTILS_HPP_
-#define AUTOWARE__SPEED_SCALE_CORRECTOR__UTILS_HPP_
+#ifndef UTILS_HPP_
+#define UTILS_HPP_
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/twist.hpp>
@@ -56,4 +56,4 @@ using geometry_msgs::msg::Vector3;
 
 }  // namespace autoware::speed_scale_corrector
 
-#endif  // AUTOWARE__SPEED_SCALE_CORRECTOR__UTILS_HPP_
+#endif  // UTILS_HPP_
