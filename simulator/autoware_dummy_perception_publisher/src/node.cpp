@@ -96,7 +96,7 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
   detected_object_with_feature_pub_ =
     this->create_publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>(
       "output/dynamic_object", qos);
-  pointcloud_pub_ = 
+  pointcloud_pub_ =
     AUTOWARE_CREATE_PUBLISHER2(sensor_msgs::msg::PointCloud2, "output/points_raw", qos);
   object_sub_ = this->create_subscription<tier4_simulation_msgs::msg::DummyObject>(
     "input/object", 100,
