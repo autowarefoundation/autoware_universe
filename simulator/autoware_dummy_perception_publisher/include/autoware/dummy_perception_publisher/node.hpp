@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__DUMMY_PERCEPTION_PUBLISHER__NODE_HPP_
 #define AUTOWARE__DUMMY_PERCEPTION_PUBLISHER__NODE_HPP_
 
-#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>  
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
