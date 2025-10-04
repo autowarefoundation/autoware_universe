@@ -8,6 +8,7 @@ autoware_package()
 find_package(PCL REQUIRED COMPONENTS common filters)
 
 set(${PROJECT_NAME}_DEPENDENCIES
+  autoware_agnocast_wrapper
   autoware_perception_msgs
   tier4_perception_msgs
   pcl_conversions
