@@ -96,7 +96,7 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
   detected_object_with_feature_pub_ =
     this->create_publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>(
       "output/dynamic_object", qos);
-  pointcloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("output/points_raw", qos);
+  pointcloud_pub_ = AUTOWARE_CREATE_PUBLISHER2(sensor_msgs::msg::PointCloud2, "output/points_raw", qos);
   object_sub_ = this->create_subscription<tier4_simulation_msgs::msg::DummyObject>(
     "input/object", 100,
     std::bind(&DummyPerceptionPublisherNode::objectCallback, this, std::placeholders::_1));
@@ -123,7 +123,7 @@ void DummyPerceptionPublisherNode::timerCallback()
   tier4_perception_msgs::msg::DetectedObjectsWithFeature output_dynamic_object_msg;
   autoware_perception_msgs::msg::TrackedObjects output_ground_truth_objects_msg;
   PoseStamped output_moved_object_pose;
-  sensor_msgs::msg::PointCloud2 output_pointcloud_msg;
+  auto output_pointcloud_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pointcloud_pub_);
   std_msgs::msg::Header header;
   rclcpp::Time current_time = this->now();
 
@@ -190,11 +190,11 @@ void DummyPerceptionPublisherNode::timerCallback()
     new pcl::PointCloud<pcl::PointXYZ>);
 
   if (all_objects.empty()) {
-    pcl::toROSMsg(*merged_pointcloud_ptr, output_pointcloud_msg);
+    pcl::toROSMsg(*merged_pointcloud_ptr, *output_pointcloud_msg);
   } else {
     pointcloud_creator_->create_pointclouds(
       obj_infos, tf_base_link2map, random_generator_, merged_pointcloud_ptr);
-    pcl::toROSMsg(*merged_pointcloud_ptr, output_pointcloud_msg);
+    pcl::toROSMsg(*merged_pointcloud_ptr, *output_pointcloud_msg);
   }
   if (!selected_indices.empty()) {
     std::vector<ObjectInfo> detected_obj_infos;
@@ -267,13 +267,13 @@ void DummyPerceptionPublisherNode::timerCallback()
   output_moved_object_pose.header.stamp = current_time;
   output_dynamic_object_msg.header.frame_id = "base_link";
   output_dynamic_object_msg.header.stamp = current_time;
-  output_pointcloud_msg.header.frame_id = "base_link";
-  output_pointcloud_msg.header.stamp = current_time;
+  output_pointcloud_msg->header.frame_id = "base_link";
+  output_pointcloud_msg->header.stamp = current_time;
   output_ground_truth_objects_msg.header.frame_id = "map";
   output_ground_truth_objects_msg.header.stamp = current_time;
 
   // publish
-  pointcloud_pub_->publish(output_pointcloud_msg);
+  pointcloud_pub_->publish(std::move(output_pointcloud_msg));
   if (use_object_recognition_) {
     detected_object_with_feature_pub_->publish(output_dynamic_object_msg);
   }

@@ -17,6 +17,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>  
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -101,7 +102,7 @@ private:
 class DummyPerceptionPublisherNode : public rclcpp::Node
 {
 private:
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_pub_;
+  AUTOWARE_PUBLISHER_PTR(sensor_msgs::msg::PointCloud2) pointcloud_pub_;
   rclcpp::Publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>::SharedPtr
     detected_object_with_feature_pub_;
   rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr

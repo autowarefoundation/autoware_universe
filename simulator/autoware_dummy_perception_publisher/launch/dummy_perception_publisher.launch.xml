@@ -7,10 +7,20 @@
   <arg name="use_base_link_z" default="true"/>
   <arg name="dummy_perception_publisher_config_file" default="$(find-pkg-share autoware_dummy_perception_publisher)/config/dummy_perception_publisher.param.yaml"/>
 
+  <!-- Agnocast -->
+  <arg name="use_agnocast" default="false" description="enable Agnocast for planning containers"/>
+  <arg name="agnocast_heaphook_path" description="path to agnocast heaphook library"/>
+
   <group>
     <push-ros-namespace namespace="simulation"/>
     <group if="$(var real)">
+      <let name="ld_preload_value" value="$(var agnocast_heaphook_path):$(env LD_PRELOAD '')" if="$(var use_agnocast)"/>
+      <let name="ld_preload_value" value="$(env LD_PRELOAD '')" unless="$(var use_agnocast)"/>
+      <let name="mempool_size" value="8589934592" if="$(var use_agnocast)"/>
+      <let name="mempool_size" value="0" unless="$(var use_agnocast)"/>
       <node pkg="autoware_dummy_perception_publisher" exec="autoware_dummy_perception_publisher_node" name="dummy_perception_publisher" output="screen">
+        <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
+        <env name="AGNOCAST_MEMPOOL_SIZE" value="$(var mempool_size)"/>
         <remap from="output/dynamic_object" to="/perception/object_recognition/detection/labeled_clusters"/>
         <remap from="output/objects_pose" to="debug/object_pose"/>
         <remap from="output/points_raw" to="/perception/obstacle_segmentation/pointcloud"/>
