@@ -56,6 +56,11 @@ void InputStream::onMessage(
 
   types::DynamicObjectList dynamic_objects = types::toDynamicObjectList(objects, channel_.index);
 
+  // Set trust_extension information from channel configuration
+  for (auto & object : dynamic_objects.objects) {
+    object.trust_extension = channel_.trust_extension;
+  }
+
   // Model the object uncertainty only if it is not available
   types::DynamicObjectList objects_with_uncertainty =
     uncertainty::modelUncertainty(dynamic_objects);
