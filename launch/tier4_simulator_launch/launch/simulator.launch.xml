@@ -52,6 +52,10 @@
 
   <let name="vehicle_model_pkg" value="$(find-pkg-share $(var vehicle_model)_description)"/>
 
+  <!-- Agnocast -->
+  <arg name="use_agnocast" default="false" description="enable Agnocast for planning containers"/>
+  <arg name="agnocast_heaphook_path" description="path to agnocast heaphook library"/>
+
   <group if="$(var launch_simulator_perception_modules)">
     <group if="$(var scenario_simulation)">
       <include file="$(find-pkg-share autoware_fault_injection)/launch/fault_injection.launch.xml">
@@ -66,6 +70,8 @@
         <arg name="use_object_recognition" value="$(var perception/enable_object_recognition)"/>
         <arg name="use_base_link_z" value="$(var perception/use_base_link_z)"/>
         <arg name="visible_range" value="$(var sensing/visible_range)"/>
+        <arg name="use_agnocast" value="$(var use_agnocast)"/>
+        <arg name="agnocast_heaphook_path" value="$(var agnocast_heaphook_path)"/>
       </include>
     </group>
 
