@@ -206,6 +206,10 @@ AEB::AEB(const rclcpp::NodeOptions & node_options)
   set_param_res_ =
     add_on_set_parameters_callback(std::bind(&AEB::onParameter, this, std::placeholders::_1));
 
+  // Initialize pointcloud subscriber
+  sub_point_cloud_ = AUTOWARE_CREATE_POLLING_SUBSCRIBER(
+    PointCloud2, "~/input/pointcloud", autoware_utils::single_depth_sensor_qos());
+
   // start time
   const double aeb_hz = declare_parameter<double>("aeb_hz");
   const auto period_ns = rclcpp::Rate(aeb_hz).period();
@@ -289,7 +293,7 @@ void AEB::onImu(const Imu::ConstSharedPtr input_msg)
   tf2::doTransform(input_msg->angular_velocity, *angular_velocity_ptr_, transform_stamped.value());
 }
 
-void AEB::onPointCloud(const PointCloud2::ConstSharedPtr input_msg)
+void AEB::onPointCloud(const AUTOWARE_MESSAGE_SHARED_PTR(const PointCloud2) input_msg)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   PointCloud::Ptr pointcloud_ptr(new PointCloud);
@@ -348,7 +352,7 @@ bool AEB::fetchLatestData()
   }
 
   if (use_pointcloud_data_) {
-    const auto pointcloud_ptr = sub_point_cloud_.take_data();
+    const auto pointcloud_ptr = sub_point_cloud_->take_data();
     if (!pointcloud_ptr) {
       return missing("object pointcloud message");
     }

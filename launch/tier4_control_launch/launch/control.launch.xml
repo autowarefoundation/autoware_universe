@@ -59,6 +59,10 @@
   <arg name="output_turn_indicators_cmd" default="/control/command/turn_indicators_cmd"/>
   <arg name="output_hazard_lights_cmd" default="/control/command/hazard_lights_cmd"/>
 
+  <!-- Agnocast -->
+  <arg name="use_agnocast" default="false" description="enable Agnocast for planning containers"/>
+  <arg name="agnocast_heaphook_path" description="path to agnocast heaphook library"/>
+
   <group>
     <push-ros-namespace namespace="control"/>
 
@@ -206,8 +210,14 @@
 
     <group>
       <!-- set a control check container to run all control checker components in the same process -->
+      <let name="ld_preload_value" value="$(var agnocast_heaphook_path):$(env LD_PRELOAD '')" if="$(var use_agnocast)"/>
+      <let name="ld_preload_value" value="$(env LD_PRELOAD '')" unless="$(var use_agnocast)"/>
+      <let name="mempool_size" value="8589934592" if="$(var use_agnocast)"/>
+      <let name="mempool_size" value="0" unless="$(var use_agnocast)"/>
+
       <node_container pkg="rclcpp_components" exec="$(var container_executable)" name="control_check_container" namespace="">
-        <composable_node pkg="autoware_glog_component" plugin="autoware::glog_component::GlogComponent" name="glog_control_check_container_component"/>
+        <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
+        <env name="AGNOCAST_MEMPOOL_SIZE" value="$(var mempool_size)"/>
       </node_container>
 
       <!-- lane departure checker -->
