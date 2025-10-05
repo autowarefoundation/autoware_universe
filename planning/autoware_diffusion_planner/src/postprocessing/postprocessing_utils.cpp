@@ -320,6 +320,15 @@ Trajectory get_trajectory_from_prediction_matrix(
       static_cast<float>(sum_velocity / static_cast<double>(velocity_smoothing_window));
   }
 
+  // keep the last smoothed velocity for the remaining points
+  const auto last_smoothed_velocity =
+    trajectory.points[prediction_matrix.rows() - velocity_smoothing_window]
+      .longitudinal_velocity_mps;
+  for (int64_t row = prediction_matrix.rows() - velocity_smoothing_window + 1;
+       row < prediction_matrix.rows(); ++row) {
+    trajectory.points[row].longitudinal_velocity_mps = last_smoothed_velocity;
+  }
+
   // calculate acceleration
   for (int64_t row = 0; row + 1 < prediction_matrix.rows(); ++row) {
     const double v0 = trajectory.points[row].longitudinal_velocity_mps;
