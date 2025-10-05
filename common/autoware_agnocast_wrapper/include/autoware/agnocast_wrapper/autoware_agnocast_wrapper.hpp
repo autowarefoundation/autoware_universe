@@ -167,6 +167,8 @@ private:
   auto move_ros2_ptr() && noexcept { return std::move(*(std::move(ptr_))).move_ros2_ptr(); }
 
 public:
+  message_ptr() : ptr_(nullptr) {}
+
   explicit message_ptr(agnocast::ipc_shared_ptr<MessageT> && ptr)
   : ptr_(std::make_unique<agnocast_message<MessageT, Ownership>>(std::move(ptr)))
   {
@@ -292,12 +294,14 @@ public:
 
   AUTOWARE_MESSAGE_SHARED_PTR(const MessageT) takeData() override
   {
-    return AUTOWARE_MESSAGE_SHARED_PTR(const MessageT)(std::move(subscriber_->take_data()));
+    auto data = subscriber_->take_data();
+    return AUTOWARE_MESSAGE_SHARED_PTR(const MessageT)(std::move(data));
   }
 
   AUTOWARE_MESSAGE_SHARED_PTR(const MessageT) take_data() override
   {
-    return AUTOWARE_MESSAGE_SHARED_PTR(const MessageT)(std::move(subscriber_->take_data()));
+    auto data = subscriber_->take_data();
+    return AUTOWARE_MESSAGE_SHARED_PTR(const MessageT)(std::move(data));
   }
 };
 
