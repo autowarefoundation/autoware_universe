@@ -360,15 +360,15 @@ void MultiCameraFusion::groupFusion(
 
         // Get a reference to the log-odds map for the current regulatory element ID.
         auto & log_odds_map = group_fusion_info_map[reg_ele_id].accumulated_log_odds;
-        // The prior should only be applied once at the beginning of the belief accumulation.
-        if (log_odds_map.find(state_key) == log_odds_map.end()) {
-          log_odds_map[state_key] = prior_log_odds_;
-        }
+        // The prior should only be applied once. try_emplace efficiently inserts the prior
+        // only if the state_key does not already exist.
+        log_odds_map.try_emplace(state_key, 0.0);
+
         double evidence_log_odds = probabilityToLogOdds(confidence);
 
-        // We assume the prior probability (with no information) is 0.5, meaning the log odds = 0,
-        // and then add evidence to it.
-        log_odds_map[state_key] += evidence_log_odds;
+        // We assume the prior probability (with no information) is 0.5, meaning the log odds = 0, and
+        // then add evidence to it.
+        log_odds_map[state_key] += evidence_log_odds - prior_log_odds_;
 
         auto & best_record_for_map = group_fusion_info_map[reg_ele_id].best_record_for_state;
         if (
