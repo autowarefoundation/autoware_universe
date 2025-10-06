@@ -19,6 +19,7 @@
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
+#include <autoware/point_types/types.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
 #include <tier4_simulation_msgs/msg/dummy_object.hpp>
@@ -125,6 +126,9 @@ private:
 
   void timerCallback();
   void objectCallback(const DummyObject::ConstSharedPtr msg);
+
+  pcl::PointCloud<autoware::point_types::PointXYZIRC> convertPointCloudXYZtoXYZIRC(
+    const pcl::PointCloud<pcl::PointXYZ>::Ptr & input_cloud) const;
 
 public:
   DummyPerceptionPublisherNode();
