@@ -19,6 +19,7 @@
   <depend>autoware_route_handler</depend>
   <depend>autoware_test_utils</depend>
   <depend>autoware_utils</depend>
+  <depend>autoware_utils_debug</depend>
   <depend>generate_parameter_library</depend>
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
