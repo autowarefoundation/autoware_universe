@@ -14,20 +14,58 @@
 
 #include "manual_lane_change_handler.hpp"
 
-#include "mission_planner.hpp"
-
 #include <string>
 
 namespace autoware::mission_planner_universe
 {
 
+std::vector<autoware_planning_msgs::msg::LaneletPrimitive> ManualLaneChangeHandler::sortPrimitivesLeftToRight(
+  const route_handler::RouteHandler & route_handler,
+  autoware_planning_msgs::msg::LaneletPrimitive preferred_primitive,
+  std::vector<autoware_planning_msgs::msg::LaneletPrimitive> primitives)
+{
+  using Primitive = autoware_planning_msgs::msg::LaneletPrimitive;
+
+  std::deque<Primitive> sorted_primitives;
+
+  auto find_primitive = [&](lanelet::Id id) -> std::optional<Primitive> {
+    auto it = std::find_if(
+      primitives.begin(), primitives.end(), [&](const Primitive & p) { return p.id == id; });
+    if (it != primitives.end()) return *it;
+    return std::nullopt;
+  };
+
+  lanelet::ConstLanelet current = route_handler.getLaneletsFromId(preferred_primitive.id);
+  // Walk left lanes
+  for (auto left = route_handler.getLeftLanelet(current, true); left;
+       left = route_handler.getLeftLanelet(*left, true)) {
+    if (auto match = find_primitive(left->id())) {
+      sorted_primitives.push_front(*match);
+    }
+  }
+
+  sorted_primitives.push_back(preferred_primitive);
+
+  // Walk right lanes
+  for (auto right = route_handler.getRightLanelet(current, true); right;
+       right = route_handler.getRightLanelet(*right, true, true)) {
+    if (auto match = find_primitive(right->id())) {
+      sorted_primitives.push_back(*match);
+    }
+  }
+
+  std::vector<autoware_planning_msgs::msg::LaneletPrimitive> result{
+    sorted_primitives.begin(), sorted_primitives.end()};
+
+  return result;
+}
+
 LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
   const int64_t ego_lanelet_id, const SetPreferredLane::Request::SharedPtr req)
 {
-  const DIRECTION override_direction = req->lane_change_direction == 0   ? DIRECTION::MANUAL_LEFT
-                                       : req->lane_change_direction == 1 ? DIRECTION::MANUAL_RIGHT
-                                                                         : DIRECTION::AUTO;
-
+  const DIRECTION override_direction = req->lane_change_direction == 0 ? DIRECTION::MANUAL_LEFT :
+                                       req->lane_change_direction == 1 ? DIRECTION::MANUAL_RIGHT :
+                                                                         DIRECTION::AUTO;
   if (override_direction == DIRECTION::AUTO) {
     LaneletRoute route;
     // Use back-up
@@ -44,7 +82,7 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
     return {route, true, "Manual lane selection to AUTO is commanded and executed successfully."};
   }
 
-  if (!*current_route_) {
+  if (!current_route_) {
     return {
       LaneletRoute(), false,
       "Manual lane selection to " +
@@ -54,11 +92,11 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
         std::string(" is commanded but canceled due to no current route available.")};
   }
 
-  LaneletRoute route = **current_route_;
+  LaneletRoute route = *current_route_;
 
   if (!original_route_) {
     // Save the original route if not already saved
-    original_route_ = *current_route_;
+    original_route_ = current_route_;
   }
 
   const auto final_iter = std::prev(route.segments.end());
@@ -71,16 +109,19 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
     }
     auto start_iter_primitive = std::find_if(
       iter->primitives.begin(), iter->primitives.end(),
-      [&ego_lanelet_id](const LaneletPrimitive & p) { return p.id == ego_lanelet_id; });
+      [&ego_lanelet_id](const autoware_planning_msgs::msg::LaneletPrimitive & p) { return p.id == ego_lanelet_id; });
     if (start_iter_primitive != iter->primitives.end()) {
       start_iter = iter;
       break;
     }
   }
-
+  
   bool route_updated = false;
   for (auto iter = start_iter; iter != final_iter; ++iter) {
     auto & current_segment = *iter;
+
+    RCLCPP_INFO_STREAM(logger_, "Current segment preferred primitive ID: "
+                                  << current_segment.preferred_primitive.id);
 
     // Safely get next_segment iterator
     auto next_iter = std::next(iter);
@@ -89,7 +130,7 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
     // Find the index of the current preferred primitive
     auto current_it = std::find_if(
       current_segment.primitives.begin(), current_segment.primitives.end(),
-      [&](const LaneletPrimitive & p) { return p.id == current_segment.preferred_primitive.id; });
+      [&](const autoware_planning_msgs::msg::LaneletPrimitive & p) { return p.id == current_segment.preferred_primitive.id; });
     if (current_it == current_segment.primitives.end()) {
       throw std::runtime_error(
         "ManualLaneChangeHandler: Preferred primitive not found in current segment.");
@@ -98,7 +139,7 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
     // Find the index of the current preferred primitive
     auto next_it = std::find_if(
       next_segment.primitives.begin(), next_segment.primitives.end(),
-      [&next_segment](const LaneletPrimitive & p) {
+      [&next_segment](const autoware_planning_msgs::msg::LaneletPrimitive & p) {
         return p.id == next_segment.preferred_primitive.id;
       });
     if (next_it == next_segment.primitives.end()) {
@@ -161,7 +202,6 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
   }
 
   if (!route_updated) {
-    reset();
     return {
       LaneletRoute(), false,
       std::string("Manual lane selection to ") +
@@ -181,3 +221,6 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
 }
 
 }  // namespace autoware::mission_planner_universe
+
+#include <rclcpp_components/register_node_macro.hpp>
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::mission_planner_universe::ManualLaneChangeHandler)

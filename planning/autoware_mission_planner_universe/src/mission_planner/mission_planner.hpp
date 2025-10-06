@@ -17,7 +17,6 @@
 
 #include "arrival_checker.hpp"
 #include "autoware_utils/ros/polling_subscriber.hpp"
-#include "manual_lane_change_handler.hpp"
 
 #include <autoware/mission_planner_universe/mission_planner_plugin.hpp>
 #include <autoware/route_handler/route_handler.hpp>
@@ -37,7 +36,6 @@
 #include <autoware_planning_msgs/srv/set_waypoint_route.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <tier4_planning_msgs/msg/reroute_availability.hpp>
-#include <tier4_planning_msgs/srv/set_preferred_lane.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <tf2_ros/buffer.h>
@@ -65,15 +63,8 @@ using geometry_msgs::msg::PoseStamped;
 using nav_msgs::msg::Odometry;
 using std_msgs::msg::Header;
 using tier4_planning_msgs::msg::RerouteAvailability;
-using tier4_planning_msgs::srv::SetPreferredLane;
 using unique_identifier_msgs::msg::UUID;
 using visualization_msgs::msg::MarkerArray;
-
-enum class DIRECTION {
-  MANUAL_LEFT,
-  MANUAL_RIGHT,
-  AUTO,
-};
 
 class MissionPlanner : public rclcpp::Node
 {
@@ -92,7 +83,6 @@ private:
   Pose transform_pose(const Pose & pose, const Header & header);
 
   rclcpp::Service<ClearRoute>::SharedPtr srv_clear_route;
-  rclcpp::Service<SetPreferredLane>::SharedPtr srv_set_preferred_lane;
   rclcpp::Service<SetLaneletRoute>::SharedPtr srv_set_lanelet_route;
   rclcpp::Service<SetWaypointRoute>::SharedPtr srv_set_waypoint_route;
   rclcpp::Publisher<RouteState>::SharedPtr pub_state_;
@@ -110,21 +100,8 @@ private:
   OperationModeState::ConstSharedPtr operation_mode_state_;
   LaneletMapBin::ConstSharedPtr map_ptr_;
   RouteState state_;
-
-  std::optional<LaneletRoute::ConstSharedPtr> original_route_;
   LaneletRoute::ConstSharedPtr current_route_;
-
-  ManualLaneChangeHandler manual_lane_change_handler_{
-    &current_route_, [&](const int64_t id) {
-      return planner_->getRouteHandler().getLaneletMapPtr()->laneletLayer.get(id);
-    }};
-
   lanelet::LaneletMapPtr lanelet_map_ptr_{nullptr};
-
-  std::vector<autoware_planning_msgs::msg::LaneletPrimitive> sortPrimitivesLeftToRight(
-    const route_handler::RouteHandler & route_handler,
-    autoware_planning_msgs::msg::LaneletPrimitive preferred_primitive,
-    std::vector<autoware_planning_msgs::msg::LaneletPrimitive> primitives);
 
   void on_odometry(const Odometry::ConstSharedPtr msg);
   void on_operation_mode_state(const OperationModeState::ConstSharedPtr msg);
@@ -134,9 +111,6 @@ private:
 
   void on_clear_route(
     const ClearRoute::Request::SharedPtr req, const ClearRoute::Response::SharedPtr res);
-  void set_preferred_lane(
-    const SetPreferredLane::Request::SharedPtr req,
-    const SetPreferredLane::Response::SharedPtr res);
   void on_set_lanelet_route(
     const SetLaneletRoute::Request::SharedPtr req, const SetLaneletRoute::Response::SharedPtr res);
   void on_set_waypoint_route(

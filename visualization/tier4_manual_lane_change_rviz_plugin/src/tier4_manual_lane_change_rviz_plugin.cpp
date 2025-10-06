@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "tier4_manual_lane_change_rviz_plugin/tier4_manual_lane_change_rviz_plugin.hpp"
+#include "tier4_manual_lane_change_rviz_plugin.hpp"
 
 #include <pluginlib/class_list_macros.hpp>
 
@@ -38,7 +38,7 @@ ManualLaneSelection::ManualLaneSelection(QWidget * parent) : rviz_common::Panel(
 
   // Create the service client
   client_ = node_->create_client<SetPreferredLane>(
-    "/planning/mission_planning/mission_planner/set_preferred_lane");
+    "/planning/mission_planning/manual_lane_change_handler/set_preferred_lane");
 
   // Connect button signals
   connect(left_button_, &QPushButton::clicked, this, [this]() { send_lane_change_request(0); });

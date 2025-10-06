@@ -13,14 +13,9 @@ find_package(tier4_planning_msgs REQUIRED)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_AUTOMOC ON)
 
-# Include directories
-include_directories(
-  include
-)
-
 # Define the plugin source
 add_library(tier4_manual_lane_change_rviz_plugin SHARED
-  include/tier4_manual_lane_change_rviz_plugin/tier4_manual_lane_change_rviz_plugin.hpp
+  src/tier4_manual_lane_change_rviz_plugin.hpp
   src/tier4_manual_lane_change_rviz_plugin.cpp
 )
 
@@ -49,11 +44,6 @@ install(TARGETS tier4_manual_lane_change_rviz_plugin
 
 install(FILES lane_change_plugin.xml
   DESTINATION share/${PROJECT_NAME}
-)
-
-# Install header files (if needed)
-install(DIRECTORY include/
-  DESTINATION include/
 )
 
 ament_package()
