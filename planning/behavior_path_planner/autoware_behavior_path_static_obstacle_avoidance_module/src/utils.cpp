@@ -1003,17 +1003,40 @@ bool isSatisfiedWithNonVehicleCondition(
     return false;
   }
 
+  object.is_on_ego_lane = isOnEgoLane(object, planner_data->route_handler);
   const auto right_lane =
-    planner_data->route_handler->getRightLanelet(object.overhang_lanelet, true, false);
-  if (right_lane.has_value() && isOnRight(object)) {
+    planner_data->route_handler->getRightLanelet(object.overhang_lanelet, true, true);
+  const bool ignore_right_object = [&]() {
+    if (!right_lane.has_value()) {
+      return false;
+    }
+    const lanelet::Attribute & sub_type =
+      right_lane.value().attribute(lanelet::AttributeName::Subtype);
+    if (sub_type == "road_shoulder") {
+      return !object.is_on_ego_lane;
+    }
+    return right_lane.has_value();
+  }();
+  if (ignore_right_object && isOnRight(object)) {
     RCLCPP_DEBUG(
       rclcpp::get_logger(logger_namespace), "object isn't on the edge lane. never avoid it.");
     return false;
   }
 
   const auto left_lane =
-    planner_data->route_handler->getLeftLanelet(object.overhang_lanelet, true, false);
-  if (left_lane.has_value() && !isOnRight(object)) {
+    planner_data->route_handler->getLeftLanelet(object.overhang_lanelet, true, true);
+  const bool ignore_left_object = [&]() {
+    if (!left_lane.has_value()) {
+      return false;
+    }
+    const lanelet::Attribute & sub_type =
+      left_lane.value().attribute(lanelet::AttributeName::Subtype);
+    if (sub_type == "road_shoulder") {
+      return !object.is_on_ego_lane;
+    }
+    return left_lane.has_value();
+  }();
+  if (ignore_left_object && !isOnRight(object)) {
     RCLCPP_DEBUG(
       rclcpp::get_logger(logger_namespace), "object isn't on the edge lane. never avoid it.");
     return false;
