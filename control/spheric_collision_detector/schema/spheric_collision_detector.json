@@ -15,33 +15,15 @@
           "type": "number",
           "default": 10.0
         },
-        "footprint_margin": {
-          "type": "number",
-          "default": 0.0,
-          "description": "Foot print margin."
-        },
         "max_deceleration": {
           "type": "number",
           "default": 2.0,
           "description": "Max deceleration for ego vehicle to stop."
-        },
-        "resample_interval": {
-          "type": "number",
-          "default": 0.3,
-          "description": "Interval for resampling trajectory."
-        },
-        "search_radius": {
-          "type": "number",
-          "default": 5.0,
-          "description": "Search distance from trajectory to point cloud"
         }
       },
       "required": [
         "delay_time",
-        "footprint_margin",
         "max_deceleration",
-        "resample_interval",
-        "search_radius",
         "update_rate"
       ]
     }
