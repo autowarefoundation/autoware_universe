@@ -327,9 +327,8 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
         // NOTE(soblin): intersection_stoplines.maximum_footprint_overshoot_line.value() is not used
         // as stop line. in this case, ego tries to stop at current position
         const auto stop_line_idx = closest_idx;
-        const auto collision_stop_pose = path->points.at(stop_line_idx).point.pose;
         return NonOccludedCollisionStop{
-          closest_idx, stop_line_idx, occlusion_stopline_idx, occlusion_diag, collision_stop_pose};
+          closest_idx, stop_line_idx, occlusion_stopline_idx, occlusion_diag};
       }
     }
     if (has_collision) {
@@ -359,14 +358,13 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
 
   const bool is_over_default_stopline = util::isOverTargetIndex(
     *path, closest_idx, planner_data_->current_odometry->pose, default_stopline_idx);
-  const auto collision_stopline_idx =
-    is_over_default_stopline ? intersection_stoplines.collision_stopline : default_stopline_idx;
+  const auto collision_stopline_idx = is_over_default_stopline ? closest_idx : default_stopline_idx;
 
   // ==========================================================================================
   // pseudo collision detection on green light
   // ==========================================================================================
-  const auto is_green_pseudo_collision_status = isGreenPseudoCollisionStatus(
-    *path, closest_idx, collision_stopline_idx, intersection_stoplines);
+  const auto is_green_pseudo_collision_status =
+    isGreenPseudoCollisionStatus(closest_idx, collision_stopline_idx, intersection_stoplines);
   if (is_green_pseudo_collision_status) {
     return is_green_pseudo_collision_status.value();
   }
@@ -383,27 +381,19 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
   }
 
   if (is_prioritized) {
-    const auto [held_collision_stopline_idx, collision_stop_pose] =
-      holdStopPoseIfNecessary<NonOccludedCollisionStop>(*path, collision_stopline_idx);
-    return FullyPrioritized{has_collision_with_margin, closest_idx,   held_collision_stopline_idx,
-                            occlusion_stopline_idx,    safety_report, collision_stop_pose};
+    return FullyPrioritized{
+      has_collision_with_margin, closest_idx, collision_stopline_idx, occlusion_stopline_idx,
+      safety_report};
   }
 
   // Safe
   if (!is_occlusion_state && !has_collision_with_margin) {
-    const auto [held_collision_stopline_idx, collision_stop_pose] =
-      holdStopPoseIfNecessary<NonOccludedCollisionStop>(*path, collision_stopline_idx);
-    return Safe{
-      closest_idx, held_collision_stopline_idx, occlusion_stopline_idx, occlusion_diag,
-      collision_stop_pose};
+    return Safe{closest_idx, collision_stopline_idx, occlusion_stopline_idx, occlusion_diag};
   }
   // Only collision
   if (!is_occlusion_state && has_collision_with_margin) {
-    const auto [held_collision_stopline_idx, collision_stop_pose] =
-      holdStopPoseIfNecessary<NonOccludedCollisionStop>(*path, collision_stopline_idx);
     return NonOccludedCollisionStop{
-      closest_idx, held_collision_stopline_idx, occlusion_stopline_idx, occlusion_diag,
-      collision_stop_pose};
+      closest_idx, collision_stopline_idx, occlusion_stopline_idx, occlusion_diag};
   }
   // Occluded
   // utility functions
@@ -490,11 +480,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
     const bool release_static_occlusion_stuck =
       (static_occlusion_timeout_state_machine_.getState() == StateMachine::State::GO);
     if (!has_collision_with_margin && release_static_occlusion_stuck) {
-      const auto [held_collision_stopline_idx, collision_stop_pose] =
-        holdStopPoseIfNecessary<NonOccludedCollisionStop>(*path, collision_stopline_idx);
-      return Safe{
-        closest_idx, held_collision_stopline_idx, occlusion_stopline_idx, occlusion_diag,
-        collision_stop_pose};
+      return Safe{closest_idx, collision_stopline_idx, occlusion_stopline_idx, occlusion_diag};
     }
     // occlusion_status is either STATICALLY_OCCLUDED or DYNAMICALLY_OCCLUDED
     const double max_timeout =
@@ -507,27 +493,13 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
             occlusion_stop_state_machine_.getDuration())
         : (is_static_occlusion ? std::make_optional<double>(max_timeout) : std::nullopt);
     if (has_collision_with_margin) {
-      const auto [held_collision_stopline_idx, collision_stop_pose] =
-        holdStopPoseIfNecessary<PeekingTowardOcclusion>(*path, collision_stopline_idx);
-      return OccludedCollisionStop{
-        is_occlusion_cleared_with_margin,
-        closest_idx,
-        held_collision_stopline_idx,
-        occlusion_stopline_idx,
-        static_occlusion_timeout,
-        occlusion_diag,
-        collision_stop_pose};
+      return OccludedCollisionStop{is_occlusion_cleared_with_margin, closest_idx,
+                                   collision_stopline_idx,           occlusion_stopline_idx,
+                                   static_occlusion_timeout,         occlusion_diag};
     } else {
-      const auto [held_collision_stopline_idx, collision_stop_pose] =
-        holdStopPoseIfNecessary<PeekingTowardOcclusion>(*path, collision_stopline_idx);
-      return PeekingTowardOcclusion{
-        is_occlusion_cleared_with_margin,
-        closest_idx,
-        held_collision_stopline_idx,
-        occlusion_stopline_idx,
-        static_occlusion_timeout,
-        occlusion_diag,
-        collision_stop_pose};
+      return PeekingTowardOcclusion{is_occlusion_cleared_with_margin, closest_idx,
+                                    collision_stopline_idx,           occlusion_stopline_idx,
+                                    static_occlusion_timeout,         occlusion_diag};
     }
   } else {
     return FirstWaitBeforeOcclusion{
@@ -1506,44 +1478,5 @@ IntersectionModule::PassJudgeStatus IntersectionModule::isOverPassJudgeLinesStat
     is_over_1st_pass_judge_line, is_over_2nd_pass_judge_line,
     safely_passed_1st_judge_line_first_time, safely_passed_2nd_judge_line_first_time};
 }
-
-template <class T>
-std::pair<size_t, geometry_msgs::msg::Pose> IntersectionModule::holdStopPoseIfNecessary(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-  const size_t current_collision_stopline_idx) const
-{
-  // check if previous decision was same type and inherit stop pose
-  if (std::holds_alternative<T>(prev_decision_result_)) {
-    const auto & prev_decision = std::get<T>(prev_decision_result_);
-    const auto collision_stop_line_idx = autoware::motion_utils::findNearestIndex(
-      path.points, prev_decision.collision_stop_pose.position);
-
-    return {collision_stop_line_idx, prev_decision.collision_stop_pose};
-  }
-
-  const auto current_collision_stop_pose =
-    path.points.at(current_collision_stopline_idx).point.pose;
-  return {current_collision_stopline_idx, current_collision_stop_pose};
-}
-
-template std::pair<size_t, geometry_msgs::msg::Pose>
-IntersectionModule::holdStopPoseIfNecessary<NonOccludedCollisionStop>(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-  const size_t current_collision_stopline_idx) const;
-
-template std::pair<size_t, geometry_msgs::msg::Pose>
-IntersectionModule::holdStopPoseIfNecessary<PeekingTowardOcclusion>(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-  const size_t current_collision_stopline_idx) const;
-
-template std::pair<size_t, geometry_msgs::msg::Pose>
-IntersectionModule::holdStopPoseIfNecessary<OccludedCollisionStop>(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-  const size_t current_collision_stopline_idx) const;
-
-template std::pair<size_t, geometry_msgs::msg::Pose>
-IntersectionModule::holdStopPoseIfNecessary<Safe>(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-  const size_t current_collision_stopline_idx) const;
 
 }  // namespace autoware::behavior_velocity_planner

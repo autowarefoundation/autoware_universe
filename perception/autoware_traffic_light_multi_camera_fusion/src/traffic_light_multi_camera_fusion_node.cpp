@@ -216,9 +216,9 @@ void MultiCameraFusion::trafficSignalRoiCallback(
   Attention should be payed that this record array might not have the newest timestamp
   */
   record_arr_set_.insert(
-    FusionRecordArr{cam_info_msg->header, *cam_info_msg, *roi_msg, *signal_msg});
+    utils::FusionRecordArr{cam_info_msg->header, *cam_info_msg, *roi_msg, *signal_msg});
 
-  std::map<IdType, FusionRecord> fused_record_map, grouped_record_map;
+  std::map<IdType, utils::FusionRecord> fused_record_map, grouped_record_map;
   multiCameraFusion(fused_record_map);
   groupFusion(fused_record_map, grouped_record_map);
 
@@ -249,7 +249,7 @@ void MultiCameraFusion::mapCallback(
 }
 
 void MultiCameraFusion::convertOutputMsg(
-  const std::map<IdType, FusionRecord> & grouped_record_map, NewSignalArrayType & msg_out)
+  const std::map<IdType, utils::FusionRecord> & grouped_record_map, NewSignalArrayType & msg_out)
 {
   msg_out.traffic_light_groups.clear();
   for (const auto & p : grouped_record_map) {
@@ -258,13 +258,13 @@ void MultiCameraFusion::convertOutputMsg(
     NewSignalType signal_out;
     signal_out.traffic_light_group_id = reg_ele_id;
     for (const auto & ele : signal.elements) {
-      signal_out.elements.push_back(convert(ele));
+      signal_out.elements.push_back(utils::convertT4toAutoware(ele));
     }
     msg_out.traffic_light_groups.push_back(signal_out);
   }
 }
 
-void MultiCameraFusion::multiCameraFusion(std::map<IdType, FusionRecord> & fused_record_map)
+void MultiCameraFusion::multiCameraFusion(std::map<IdType, utils::FusionRecord> & fused_record_map)
 {
   fused_record_map.clear();
   /*
@@ -288,7 +288,7 @@ void MultiCameraFusion::multiCameraFusion(std::map<IdType, FusionRecord> & fused
       /*
       generate fused record result with the saved records
       */
-      const FusionRecordArr & record_arr = *it;
+      const utils::FusionRecordArr & record_arr = *it;
       for (size_t i = 0; i < record_arr.rois.rois.size(); i++) {
         const RoiType & roi = record_arr.rois.rois[i];
         auto signal_it = std::find_if(
@@ -300,14 +300,14 @@ void MultiCameraFusion::multiCameraFusion(std::map<IdType, FusionRecord> & fused
         if (signal_it == record_arr.signals.signals.end()) {
           continue;
         }
-        FusionRecord record{record_arr.header, record_arr.cam_info, roi, *signal_it};
+        utils::FusionRecord record{record_arr.header, record_arr.cam_info, roi, *signal_it};
         /*
         if this traffic light is not detected yet or can be updated by higher priority record,
         update it
         */
         if (
           fused_record_map.find(roi.traffic_light_id) == fused_record_map.end() ||
-          ::compareRecord(record, fused_record_map[roi.traffic_light_id]) >= 0) {
+          utils::compareRecord(record, fused_record_map[roi.traffic_light_id]) >= 0) {
           fused_record_map[roi.traffic_light_id] = record;
         }
       }
@@ -317,8 +317,8 @@ void MultiCameraFusion::multiCameraFusion(std::map<IdType, FusionRecord> & fused
 }
 
 void MultiCameraFusion::groupFusion(
-  const std::map<IdType, FusionRecord> & fused_record_map,
-  std::map<IdType, FusionRecord> & grouped_record_map)
+  const std::map<IdType, utils::FusionRecord> & fused_record_map,
+  std::map<IdType, utils::FusionRecord> & grouped_record_map)
 {
   grouped_record_map.clear();
 

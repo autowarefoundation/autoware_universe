@@ -13,6 +13,8 @@
 // limitations under the License.
 #include "traffic_light_classifier_node.hpp"
 
+#include <autoware/traffic_light_utils/traffic_light_utils.hpp>
+
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
 
@@ -129,7 +131,7 @@ void TrafficLightClassifierNodelet::imageRoiCallback(
 
     const sensor_msgs::msg::RegionOfInterest & roi = input_roi.roi;
     auto roi_img = cv_ptr->image(cv::Rect(roi.x_offset, roi.y_offset, roi.width, roi.height));
-    if (is_harsh_backlight(roi_img)) {
+    if (utils::is_harsh_backlight(roi_img, backlight_threshold_)) {
       backlight_indices.emplace_back(idx_valid_roi);
     }
     images.emplace_back(roi_img);
@@ -151,25 +153,18 @@ void TrafficLightClassifierNodelet::imageRoiCallback(
     if (
       (input_roi.roi.height == 0 || input_roi.roi.width == 0) &&
       input_roi.traffic_light_type == classify_traffic_light_type_) {
-      tier4_perception_msgs::msg::TrafficLight tlr_sig;
-      tlr_sig.traffic_light_id = input_roi.traffic_light_id;
-      tlr_sig.traffic_light_type = input_roi.traffic_light_type;
-      tier4_perception_msgs::msg::TrafficLightElement element;
-      element.color = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-      element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-      element.confidence = 0.0;
-      tlr_sig.elements.push_back(element);
-      output_msg.signals.push_back(tlr_sig);
+      tier4_perception_msgs::msg::TrafficLight signal;
+      signal.traffic_light_id = input_roi.traffic_light_id;
+      signal.traffic_light_type = input_roi.traffic_light_type;
+      traffic_light_utils::setSignalUnknown(signal, 0.0);
+      output_msg.signals.push_back(signal);
     }
   }
 
+  // overwrite the backlight rois with unknown
   for (const auto & idx : backlight_indices) {
-    auto & elements = output_msg.signals.at(idx).elements;
-    for (auto & element : elements) {
-      element.color = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-      element.shape = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-      element.confidence = 0.0;
-    }
+    auto & signal = output_msg.signals.at(idx);
+    traffic_light_utils::setSignalUnknown(signal, 0.0);
   }
 
   output_msg.header = input_image_msg->header;
@@ -185,20 +180,6 @@ void TrafficLightClassifierNodelet::imageRoiCallback(
       "Found harsh backlight in ROI(s) and corresponding ROI(s) were overwritten by UNKNOWN");
   }
   diagnostics_interface_ptr_->publish(output_msg.header.stamp);
-}
-
-bool TrafficLightClassifierNodelet::is_harsh_backlight(const cv::Mat & img) const
-{
-  if (img.empty()) {
-    return false;
-  }
-  cv::Mat y_cr_cb;
-  cv::cvtColor(img, y_cr_cb, cv::COLOR_RGB2YCrCb);
-
-  const cv::Scalar mean_values = cv::mean(y_cr_cb);
-  const double intensity = (mean_values[0] - 112.5) / 112.5;
-
-  return backlight_threshold_ <= intensity;
 }
 
 }  // namespace autoware::traffic_light
