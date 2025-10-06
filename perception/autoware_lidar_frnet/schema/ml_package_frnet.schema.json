@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for FRNet ML package",
+  "type": "object",
+  "definitions": {
+    "ml_package_frnet": {
+      "type": "object",
+      "properties": {
+        "class_names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "An array of class names which will be predicted.",
+          "default": [
+            "barrier",
+            "bicycle",
+            "bus",
+            "car",
+            "construction_vehicle",
+            "motorcycle",
+            "pedestrian",
+            "traffic_cone",
+            "trailer",
+            "truck",
+            "driveable_surface",
+            "other_flat",
+            "sidewalk",
+            "terrain",
+            "manmade",
+            "vegetation",
+            "unknown"
+          ],
+          "uniqueItems": true
+        },
+        "num_points": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "TensorRT optimization profile for number of points [min, opt, max].",
+          "default": [30000, 150000, 300000]
+        },
+        "num_unique_coors": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "TensorRT optimization profile for number of unique coordinates [min, opt, max].",
+          "default": [5000, 10000, 30000]
+        }
+      },
+      "required": ["class_names", "num_points", "num_unique_coors"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/ml_package_frnet"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

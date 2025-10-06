@@ -25,6 +25,7 @@
 
 #include <gtest/gtest.h>
 
+#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -64,11 +65,13 @@ protected:
   // Member variables
   std::shared_ptr<rclcpp::Node> node_;
   std::shared_ptr<GeometricPullOut> geometric_pull_out_;
+  autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
 
 private:
   void initialize_geometric_pull_out_planner()
   {
     auto parameters = StartPlannerParameters::init(*node_);
+    vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*node_).getVehicleInfo();
 
     geometric_pull_out_ = std::make_shared<GeometricPullOut>(*node_, parameters);
   }
@@ -76,35 +79,44 @@ private:
 
 TEST_F(TestGeometricPullOut, GenerateValidGeometricPullOutPath)
 {
-  const auto start_pose =
-    geometry_msgs::build<geometry_msgs::msg::Pose>()
-      .position(geometry_msgs::build<geometry_msgs::msg::Point>().x(362.181).y(362.164).z(100.000))
-      .orientation(
-        geometry_msgs::build<geometry_msgs::msg::Quaternion>().x(0.0).y(0.0).z(0.709650).w(
-          0.704554));
-
-  const auto goal_pose =
-    geometry_msgs::build<geometry_msgs::msg::Pose>()
-      .position(geometry_msgs::build<geometry_msgs::msg::Point>().x(365.658).y(507.253).z(100.000))
-      .orientation(
-        geometry_msgs::build<geometry_msgs::msg::Quaternion>().x(0.0).y(0.0).z(0.705897).w(
-          0.708314));
+  // Test data files to be tested
+  const std::vector<std::string> yaml_files = {
+    "route_data2.1.yaml", "route_data2.2.yaml", "route_data2.3.yaml",
+    "route_data3.1.yaml", "route_data3.2.yaml", "route_data3.3.yaml",
+    "route_data4.1.yaml", "route_data4.2.yaml", "route_data4.3.yaml"};
 
   auto planner_data = std::make_shared<PlannerData>();
   planner_data->init_parameters(*node_);
-  StartPlannerTestHelper::set_odometry(planner_data, start_pose);
-  StartPlannerTestHelper::set_route(planner_data, 4619, 4635);
-
-  // Plan the pull out path
   PlannerDebugData debug_data;
-  auto result = call_plan(start_pose, goal_pose, planner_data, debug_data);
 
-  // Assert that a valid geometric pull out path is generated
-  ASSERT_TRUE(result.has_value()) << "Geometric pull out path generation failed.";
-  EXPECT_EQ(result->partial_paths.size(), 2UL)
-    << "Generated geometric pull out path does not have the expected number of partial paths.";
-  EXPECT_EQ(debug_data.conditions_evaluation.back(), "success")
-    << "Geometric pull out path planning did not succeed.";
+  for (const auto & yaml_file : yaml_files) {
+    std::cout << "Testing with YAML file: " + yaml_file << std::endl;
+
+    const auto route = StartPlannerTestHelper::set_route_from_yaml(planner_data, yaml_file);
+    const auto start_pose = route.start_pose;
+    const auto goal_pose = route.goal_pose;
+    StartPlannerTestHelper::set_odometry(planner_data, start_pose);
+
+    // Plan the pull out path
+    auto result = call_plan(start_pose, goal_pose, planner_data, debug_data);
+
+    // Assert that a valid geometric pull out path is generated
+    EXPECT_EQ(result.has_value(), true) << "Geometric pull out path generation failed.";
+    EXPECT_EQ(result->partial_paths.size(), 2UL)
+      << "Generated geometric pull out path does not have the expected number of partial paths.";
+    EXPECT_EQ(debug_data.conditions_evaluation.back(), "success")
+      << "Geometric pull out path planning did not succeed.";
+
+#ifdef EXPORT_TEST_PLOT_FIGURE
+    // Plot and save the generated path for visualization
+    // Generate filename based on YAML file name
+    std::string yaml_basename = yaml_file.substr(0, yaml_file.find_last_of('.'));
+    std::string plot_filename = yaml_basename + ".png";
+    StartPlannerTestHelper::plot_and_save_path(
+      result, route, start_pose, goal_pose, planner_data, vehicle_info_, PlannerType::GEOMETRIC,
+      plot_filename);
+#endif
+  }
 }
 
 }  // namespace autoware::behavior_path_planner
