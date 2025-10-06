@@ -222,6 +222,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
   if (!first_attention_stopline_idx_opt || !occlusion_peeking_stopline_idx_opt) {
     return InternalError{"occlusion stop line is null"};
   }
+  const auto first_attention_stopline_idx = first_attention_stopline_idx_opt.value();
   const auto occlusion_stopline_idx = occlusion_peeking_stopline_idx_opt.value();
 
   // ==========================================================================================
@@ -404,8 +405,6 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
     return over_stopline || (is_stopped && approached_dist_stopline);
   };
 
-  const auto occlusion_wo_tl_pass_judge_line_idx =
-    intersection_stoplines.occlusion_wo_tl_pass_judge_line;
   const bool stopped_at_default_line = stoppedForDuration(
     default_stopline_idx, planner_param_.occlusion.temporal_stop_time_before_peeking,
     before_creep_state_machine_);
@@ -420,7 +419,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
             temporal_stop_before_attention_state_machine_)
         : false;
     if (!has_traffic_light_) {
-      if (fromEgoDist(occlusion_wo_tl_pass_judge_line_idx) < 0) {
+      if (!can_smoothly_stop_at(first_attention_stopline_idx)) {
         if (has_collision) {
           const std::string evasive_diag = generateEgoRiskEvasiveDiagnosis(
             *path, closest_idx, time_distance_array, too_late_detect_objects, misjudge_objects);
@@ -438,7 +437,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
         temporal_stop_before_attention_required,
         closest_idx,
         occlusion_stopline_idx,
-        occlusion_wo_tl_pass_judge_line_idx,
+        first_attention_stopline_idx,
         occlusion_diag};
     }
 
@@ -1081,6 +1080,14 @@ void reactRTCApprovalByDecisionResult(
   if (
     !rtc_occlusion_approved && (decision_result.temporal_stop_before_attention_required ||
                                 planner_param.occlusion.request_approval_wo_traffic_light)) {
+    const auto closest_idx = decision_result.closest_idx;
+
+    // NOTE(soblin): to avoid "will_overrun_stop_point", creep velocity is needed
+    const auto peeking_limit_line = decision_result.peeking_limit_line_idx;
+    for (auto i = closest_idx; i <= peeking_limit_line; ++i) {
+      planning_utils::setVelocityFromIndex(
+        i, planner_param.occlusion.creep_velocity_without_traffic_light, path);
+    }
     const auto stopline_idx = decision_result.occlusion_stopline_idx;
     planning_utils::setVelocityFromIndex(stopline_idx, 0.0, path);
     debug_data->occlusion_stop_wall_pose =
@@ -1333,8 +1340,7 @@ IntersectionModule::PassJudgeStatus IntersectionModule::isOverPassJudgeLinesStat
   const auto & current_pose = planner_data_->current_odometry->pose;
   const auto closest_idx = intersection_stoplines.closest_idx;
   const auto original_pass_judge_line_idx = intersection_stoplines.pass_judge_line;
-  const auto occlusion_wo_tl_pass_judge_line_idx =
-    intersection_stoplines.occlusion_wo_tl_pass_judge_line;
+  const auto first_attention_stopline_idx = intersection_stoplines.first_attention_stopline.value();
   const auto occlusion_stopline_idx = intersection_stoplines.occlusion_peeking_stopline.value();
   const size_t pass_judge_line_idx = [&]() {
     if (planner_param_.occlusion.enable) {
@@ -1364,7 +1370,7 @@ IntersectionModule::PassJudgeStatus IntersectionModule::isOverPassJudgeLinesStat
         // if there is no traffic light and occlusion is detected, pass_judge position is beyond
         // the boundary of first attention area
         // ==========================================================================================
-        return occlusion_wo_tl_pass_judge_line_idx;
+        return first_attention_stopline_idx;
       }
       // ==========================================================================================
       // if there is no traffic light and occlusion is not detected, pass_judge position is
