@@ -594,11 +594,13 @@ double getDistanceToCenterline(const ObjectData & object, const AvoidancePlannin
 /**
  * @brief check whether the object is parking on law violation area.
  * @param object polygon.
+ * @param route_handler.
  * @param parameters.
  * @return if the object is close to road shoulder of the lane, return true.
  */
 bool isParkingViolation(
-  const ObjectData & object, const std::shared_ptr<AvoidanceParameters> & parameters)
+  const ObjectData & object, const std::shared_ptr<RouteHandler> & route_handler,
+  const std::shared_ptr<AvoidanceParameters> & parameters)
 {
   // check parking violation area
   if (!object.is_within_intersection) {
@@ -606,8 +608,14 @@ bool isParkingViolation(
   }
 
   // mark a vehicle as an object to avoid if it is pulled to the side and oriented with the lane.
+  const auto left_lane = route_handler->getLeftLanelet(object.overhang_lanelet, true, false);
+  const auto is_on_left_lane_edge = !isOnRight(object) && !left_lane.has_value();
+  const auto right_lane = route_handler->getRightLanelet(object.overhang_lanelet, true, false);
+  const auto is_on_right_lane_edge = isOnRight(object) && !right_lane.has_value();
+  const auto is_on_lane_edge = is_on_left_lane_edge || is_on_right_lane_edge;
+
   if (
-    object.behavior == ObjectData::Behavior::NONE &&
+    is_on_lane_edge && object.behavior == ObjectData::Behavior::NONE &&
     object.shiftable_ratio > parameters->object_check_shiftable_ratio) {
     return true;
   }
@@ -628,7 +636,7 @@ bool isParkedVehicle(
   using lanelet::utils::to2D;
   using lanelet::utils::conversion::toLaneletPoint;
 
-  if (object.is_parking_violation) {
+  if (object.is_within_intersection) {
     return false;
   }
 
@@ -2261,7 +2269,8 @@ void filterTargetObjects(
       o.shiftable_ratio =
         filtering_utils::getShiftableRatio(o, planner_data->route_handler, parameters);
       o.to_centerline = filtering_utils::getDistanceToCenterline(o, data);
-      o.is_parking_violation = filtering_utils::isParkingViolation(o, parameters);
+      o.is_parking_violation =
+        filtering_utils::isParkingViolation(o, planner_data->route_handler, parameters);
       o.is_parked = filtering_utils::isParkedVehicle(o, parameters);
       o.avoid_margin = filtering_utils::getAvoidMargin(o, planner_data, parameters);
 
