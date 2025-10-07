@@ -486,6 +486,16 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/main/perception/autoware_image_object_locator/</loc>
+         <lastmod>2025-10-07</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/main/perception/autoware_image_object_locator/docs/bbox-object-locator/</loc>
+         <lastmod>2025-10-07</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/main/perception/autoware_image_projection_based_fusion/</loc>
          <lastmod>2025-10-07</lastmod>
          <changefreq>daily</changefreq>
