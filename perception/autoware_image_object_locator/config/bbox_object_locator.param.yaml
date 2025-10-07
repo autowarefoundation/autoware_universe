@@ -2,7 +2,7 @@
   ros__parameters:
     target_frame: "base_link"
     detection_target_class:
-      UNKNOWN : true
+      UNKNOWN : false
       CAR : false
       TRUCK : false
       BUS : false
