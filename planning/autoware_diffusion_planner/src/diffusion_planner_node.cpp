@@ -456,7 +456,7 @@ InputDataMap DiffusionPlanner::create_input_data()
     ego_centric_neighbor_agent_data_ =
       get_ego_centric_neighbor_agent_data(*objects, map_to_ego_transform);
     input_data_map["neighbor_agents_past"] =
-      replicate_for_batch(ego_centric_neighbor_agent_data_.as_vector());
+      replicate_for_batch(ego_centric_neighbor_agent_data_.value().as_vector());
   }
   // Static objects
   // TODO(Daniel): add static objects
