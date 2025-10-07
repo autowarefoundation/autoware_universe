@@ -141,10 +141,9 @@ private:
   bool calcIntentionToCrossWithTrafficSignal(
     const TrackedObject & object, const lanelet::ConstLanelet & crosswalk,
     const lanelet::Id & signal_id);
-  /// @brief return true if the given predicted path crosses a fence before entering the given
+  /// @brief return true if the given predicted path crosses a fence before arriving at the
   /// crosswalk
-  bool doesPathCrossAnyFenceBeforeCrosswalk(
-    const PredictedPath & predicted_path, const lanelet::BasicPolygon2d & crosswalk_polygon);
+  bool doesPathCrossAnyFenceBeforeCrosswalk(const PredictedPathWithArrivalIndex & predicted_path);
   std::optional<TrafficLightElement> getTrafficSignalElement(const lanelet::Id & id);
 };
 

@@ -14,6 +14,7 @@
 
 #include "map_based_prediction/predictor_vru.hpp"
 
+#include "map_based_prediction/path_generator.hpp"
 #include "map_based_prediction/utils.hpp"
 
 #include <autoware_utils/geometry/geometry.hpp>
@@ -239,23 +240,13 @@ void PredictorVru::setLaneletMap(std::shared_ptr<lanelet::LaneletMap> lanelet_ma
 }
 
 bool PredictorVru::doesPathCrossAnyFenceBeforeCrosswalk(
-  const PredictedPath & predicted_path, const lanelet::BasicPolygon2d & crosswalk_polygon)
+  const PredictedPathWithArrivalIndex & predicted_path)
 {
-  const auto & last_segment_intersects_crosswalk = [&](const lanelet::BasicLineString2d & ls) {
-    if (ls.size() < 2) {
-      return false;
-    }
-    lanelet::BasicSegment2d last_segment = {ls[ls.size() - 2], ls.back()};
-    return boost::geometry::intersects(last_segment, crosswalk_polygon);
-  };
-
   lanelet::BasicLineString2d predicted_path_ls;
-  for (const auto & pt : predicted_path.path) {
+  for (auto i = 0UL; i <= predicted_path.arrival_index; ++i) {
+    const auto & pt = predicted_path.path[i];
     const lanelet::BasicPoint2d p{pt.position.x, pt.position.y};
     predicted_path_ls.emplace_back(p);
-    if (last_segment_intersects_crosswalk(predicted_path_ls)) {
-      break;
-    }
   }
   const auto candidates =
     fence_layer_->lineStringLayer.search(lanelet::geometry::boundingBox2d(predicted_path_ls));
@@ -594,7 +585,7 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
       continue;
     }
 
-    PredictedPath predicted_path = path_generator_->generatePathForCrosswalkUser(
+    auto predicted_path = path_generator_->generatePathForCrosswalkUser(
       mutable_object, reachable_crosswalk.value(), prediction_time_horizon_);
     predicted_path.confidence = 1.0;
 
@@ -602,8 +593,7 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
       continue;
     }
     // If the predicted path to the crosswalk is crossing the fence, don't use it
-    if (doesPathCrossAnyFenceBeforeCrosswalk(
-          predicted_path, crosswalk.polygon2d().basicPolygon())) {
+    if (doesPathCrossAnyFenceBeforeCrosswalk(predicted_path)) {
       continue;
     }
     predicted_object.kinematics.predicted_paths.push_back(predicted_path);
