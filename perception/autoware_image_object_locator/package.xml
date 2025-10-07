@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>autoware_roi_3d_projector</name>
+  <name>autoware_image_object_locator</name>
   <version>0.47.0</version>
-  <description>The autoware_roi_3d_projector package</description>
+  <description>The autoware_image_object_locator package</description>
   <maintainer email="dai.nguyen@tier4.jp">Dai Nguyen</maintainer>
   <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
   <maintainer email="lei.gu@tier4.jp">Lei Gu</maintainer>

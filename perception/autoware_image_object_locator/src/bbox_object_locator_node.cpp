@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "roi_3d_projector_node.hpp"
+#include "bbox_object_locator_node.hpp"
 
 #include <rclcpp/qos.hpp>
 
@@ -35,7 +35,7 @@
 
 // cspell: ignore Matx
 
-namespace autoware::roi_3d_projector
+namespace autoware::image_object_locator
 {
 void transformToRT(const geometry_msgs::msg::TransformStamped & tf, cv::Matx33d & R, cv::Vec3d & t)
 {
@@ -46,7 +46,6 @@ void transformToRT(const geometry_msgs::msg::TransformStamped & tf, cv::Matx33d 
   tf2::Matrix3x3 m(q);
 
   R = cv::Matx33d(m[0][0], m[0][1], m[0][2], m[1][0], m[1][1], m[1][2], m[2][0], m[2][1], m[2][2]);
-
   t = cv::Vec3d(tf.transform.translation.x, tf.transform.translation.y, tf.transform.translation.z);
 }
 
@@ -123,7 +122,7 @@ double computeHeight(
 }
 
 // initialize constructor
-Roi3DProjectorNode::Roi3DProjectorNode(const rclcpp::NodeOptions & node_options)
+BboxObjectLocatorNode::BboxObjectLocatorNode(const rclcpp::NodeOptions & node_options)
 : Node("roi_3d_projector", node_options)
 {
   target_frame_ = declare_parameter<std::string>("target_frame");
@@ -188,7 +187,7 @@ Roi3DProjectorNode::Roi3DProjectorNode(const rclcpp::NodeOptions & node_options)
   transform_listener_ = std::make_shared<TransformListener>(this);
 }
 
-void Roi3DProjectorNode::cameraInfoCallback(const CameraInfo::ConstSharedPtr & msg, int rois_id)
+void BboxObjectLocatorNode::cameraInfoCallback(const CameraInfo::ConstSharedPtr & msg, int rois_id)
 {
   // assuming camera parameter never changes while node is running
   if (!is_camera_info_arrived_[rois_id]) {
@@ -216,7 +215,7 @@ void Roi3DProjectorNode::cameraInfoCallback(const CameraInfo::ConstSharedPtr & m
  * This function primarily targets pedestrian detection, as the generated 3D object
  * is only an approximation and may be inaccurate without depth information.
  */
-bool Roi3DProjectorNode::generateROIBasedObject(
+bool BboxObjectLocatorNode::generateROIBasedObject(
   const sensor_msgs::msg::RegionOfInterest & roi, const int & rois_id,
   const geometry_msgs::msg::TransformStamped & tf, const uint8_t & label, DetectedObject & object)
 {
@@ -315,7 +314,7 @@ bool Roi3DProjectorNode::generateROIBasedObject(
   return true;
 }
 
-void Roi3DProjectorNode::roiCallback(
+void BboxObjectLocatorNode::roiCallback(
   const DetectedObjectsWithFeature::ConstSharedPtr & msg, int rois_id)
 {
   if (!is_camera_info_arrived_[rois_id]) {
@@ -371,7 +370,7 @@ void Roi3DProjectorNode::roiCallback(
   objects_pubs_[rois_id]->publish(objects);
 }
 
-}  // namespace autoware::roi_3d_projector
+}  // namespace autoware::image_object_locator
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::roi_3d_projector::Roi3DProjectorNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::image_object_locator::BboxObjectLocatorNode)

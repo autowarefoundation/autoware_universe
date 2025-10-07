@@ -1,21 +1,17 @@
-# autoware_roi_3d_projector
-
-## Purpose
-
-The `autoware_roi_3d_projector` package is designed to use objects detected from 2D images to generate 3D object detections for more robust perception.
+# bbox_object_locator
 
 ## Inner Workings / Algorithms
 
-This package produces 3D object detections through the following steps:
+This node produces 3D object detection from a 2D image bounding box (bbox) through the following steps:
 
-1. Back-project the bottom-center pixel of a ROI onto the ground plane (`z=0` in the target coordinate system). This point is used as the object's bottom center.
-2. Back-project the top-center pixel of the ROI to a point near the one computed in step 1 for height estimation.
-3. Back-project the bottom-left and bottom-right pixels of the ROI to estimate the object’s width (diameter).
+1. Back-project the bottom-center pixel of a bbox onto the ground plane (`z=0` in the target coordinate system). This point is used as the object's bottom center.
+2. Back-project the top-center pixel of the bbox to a point near the one computed in step 1 for height estimation.
+3. Back-project the bottom-left and bottom-right pixels of the bbox to estimate the object’s width (diameter).
 4. Use these four points to determine the object’s position and size.
 
 ## Parameters
 
-{{ json_to_markdown("perception/autoware_roi_3d_projector/schema/roi_3d_projector.schema.json") }}
+{{ json_to_markdown("perception/autoware_image_object_locator/schema/bbox_object_locator.schema.json") }}
 
 ## Input
 

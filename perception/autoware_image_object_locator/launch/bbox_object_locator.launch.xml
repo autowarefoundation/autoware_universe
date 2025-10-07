@@ -19,18 +19,18 @@
   <arg name="input/camera_info6" default="/sensing/camera/camera6/camera_info"/>
   <arg name="input/camera_info7" default="/sensing/camera/camera7/camera_info"/>
 
-  <arg name="output/rois0/objects" default="/perception/object_recognition/detection/roi_3d_projector/rois0/objects"/>
-  <arg name="output/rois1/objects" default="/perception/object_recognition/detection/roi_3d_projector/rois1/objects"/>
-  <arg name="output/rois2/objects" default="/perception/object_recognition/detection/roi_3d_projector/rois2/objects"/>
-  <arg name="output/rois3/objects" default="/perception/object_recognition/detection/roi_3d_projector/rois3/objects"/>
-  <arg name="output/rois4/objects" default="/perception/object_recognition/detection/roi_3d_projector/rois4/objects"/>
-  <arg name="output/rois5/objects" default="/perception/object_recognition/detection/roi_3d_projector/rois5/objects"/>
-  <arg name="output/rois6/objects" default="/perception/object_recognition/detection/roi_3d_projector/rois6/objects"/>
-  <arg name="output/rois7/objects" default="/perception/object_recognition/detection/roi_3d_projector/rois7/objects"/>
+  <arg name="output/rois0/objects" default="/perception/object_recognition/detection/bbox_object_locator/rois0/objects"/>
+  <arg name="output/rois1/objects" default="/perception/object_recognition/detection/bbox_object_locator/rois1/objects"/>
+  <arg name="output/rois2/objects" default="/perception/object_recognition/detection/bbox_object_locator/rois2/objects"/>
+  <arg name="output/rois3/objects" default="/perception/object_recognition/detection/bbox_object_locator/rois3/objects"/>
+  <arg name="output/rois4/objects" default="/perception/object_recognition/detection/bbox_object_locator/rois4/objects"/>
+  <arg name="output/rois5/objects" default="/perception/object_recognition/detection/bbox_object_locator/rois5/objects"/>
+  <arg name="output/rois6/objects" default="/perception/object_recognition/detection/bbox_object_locator/rois6/objects"/>
+  <arg name="output/rois7/objects" default="/perception/object_recognition/detection/bbox_object_locator/rois7/objects"/>
 
-  <arg name="param_path" default="$(find-pkg-share autoware_roi_3d_projector)/config/roi_3d_projector.param.yaml"/>
+  <arg name="param_path" default="$(find-pkg-share autoware_image_object_locator)/config/bbox_object_locator.param.yaml"/>
 
-  <node pkg="autoware_roi_3d_projector" exec="roi_3d_projector_node" name="roi_3d_projector" output="screen">
+  <node pkg="autoware_image_object_locator" exec="bbox_object_locator_node" name="bbox_object_locator" output="screen">
     <param name="rois_ids" value="$(var rois_ids)"/>
 
     <param name="input/rois0" value="$(var input/rois0)"/>

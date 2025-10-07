@@ -1,9 +1,9 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Parameters for ROI 3D Projector",
+  "title": "Parameters for BBOX Object Locator",
   "type": "object",
   "definitions": {
-    "roi_3d_projector": {
+    "bbox_object_locator": {
       "type": "object",
       "properties": {
         "target_frame": {
@@ -108,7 +108,7 @@
       "type": "object",
       "properties": {
         "ros__parameters": {
-          "$ref": "#/definitions/roi_3d_projector"
+          "$ref": "#/definitions/bbox_object_locator"
         }
       },
       "required": ["ros__parameters"]
