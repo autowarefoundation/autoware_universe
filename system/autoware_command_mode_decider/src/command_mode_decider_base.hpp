@@ -69,6 +69,7 @@ private:
   void publish_operation_mode_state();
   void publish_mrm_state();
   void publish_decider_debug();
+  void publish_autoware_control_request(bool autoware_control);
 
   void on_diagnostics(diagnostic_updater::DiagnosticStatusWrapper & status);
   void on_timer();
