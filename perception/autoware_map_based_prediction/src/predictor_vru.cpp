@@ -189,32 +189,11 @@ CrosswalkEdgePoints getCrosswalkEdgePoints(const lanelet::ConstLanelet & crosswa
                              back_center_point,  r_p_back,  l_p_back};
 }
 
-bool isIntersecting(
-  const geometry_msgs::msg::Point & point1, const geometry_msgs::msg::Point & point2,
-  const lanelet::ConstPoint3d & point3, const lanelet::ConstPoint3d & point4)
-{
-  const auto p1 = autoware_utils::create_point(point1.x, point1.y, 0.0);
-  const auto p2 = autoware_utils::create_point(point2.x, point2.y, 0.0);
-  const auto p3 = autoware_utils::create_point(point3.x(), point3.y(), 0.0);
-  const auto p4 = autoware_utils::create_point(point4.x(), point4.y(), 0.0);
-  const auto intersection = autoware_utils::intersect(p1, p2, p3, p4);
-  return intersection.has_value();
-}
-
 bool doesPathCrossFence(
-  const PredictedPath & predicted_path, const lanelet::ConstLineString3d & fence_line)
+  const lanelet::BasicLineString2d & predicted_path, const lanelet::ConstLineString3d & fence_line)
 {
-  // check whether the predicted path cross with fence
-  for (size_t i = 0; i < predicted_path.path.size() - 1; ++i) {
-    for (size_t j = 0; j < fence_line.size() - 1; ++j) {
-      if (isIntersecting(
-            predicted_path.path[i].position, predicted_path.path[i + 1].position, fence_line[j],
-            fence_line[j + 1])) {
-        return true;
-      }
-    }
-  }
-  return false;
+  return boost::geometry::intersects(
+    predicted_path, lanelet::utils::to2D(fence_line.basicLineString()));
 }
 
 }  // namespace
@@ -259,15 +238,29 @@ void PredictorVru::setLaneletMap(std::shared_ptr<lanelet::LaneletMap> lanelet_ma
   fence_layer_ = lanelet::utils::createMap(fences);
 }
 
-bool PredictorVru::doesPathCrossAnyFence(const PredictedPath & predicted_path)
+bool PredictorVru::doesPathCrossAnyFenceBeforeCrosswalk(
+  const PredictedPath & predicted_path, const lanelet::BasicPolygon2d & crosswalk_polygon)
 {
+  const auto & last_segment_intersects_crosswalk = [&](const lanelet::BasicLineString2d & ls) {
+    if (ls.size() < 2) {
+      return false;
+    }
+    lanelet::BasicSegment2d last_segment = {ls[ls.size() - 2], ls.back()};
+    return boost::geometry::intersects(last_segment, crosswalk_polygon);
+  };
+
   lanelet::BasicLineString2d predicted_path_ls;
-  for (const auto & p : predicted_path.path)
-    predicted_path_ls.emplace_back(p.position.x, p.position.y);
+  for (const auto & pt : predicted_path.path) {
+    const lanelet::BasicPoint2d p{pt.position.x, pt.position.y};
+    predicted_path_ls.emplace_back(p);
+    if (last_segment_intersects_crosswalk(predicted_path_ls)) {
+      break;
+    }
+  }
   const auto candidates =
     fence_layer_->lineStringLayer.search(lanelet::geometry::boundingBox2d(predicted_path_ls));
   for (const auto & candidate : candidates) {
-    if (doesPathCrossFence(predicted_path, candidate)) {
+    if (doesPathCrossFence(predicted_path_ls, candidate)) {
       return true;
     }
   }
@@ -471,7 +464,6 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
   }
 
   auto predicted_object = utils::convertToPredictedObject(mutable_object);
-
   {
     PredictedPath predicted_path =
       path_generator_->generatePathForNonVehicleObject(mutable_object, prediction_time_horizon_);
@@ -610,7 +602,8 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
       continue;
     }
     // If the predicted path to the crosswalk is crossing the fence, don't use it
-    if (doesPathCrossAnyFence(predicted_path)) {
+    if (doesPathCrossAnyFenceBeforeCrosswalk(
+          predicted_path, crosswalk.polygon2d().basicPolygon())) {
       continue;
     }
     predicted_object.kinematics.predicted_paths.push_back(predicted_path);
