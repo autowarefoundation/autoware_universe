@@ -472,9 +472,6 @@ void FreespacePlannerNode::planTrajectory()
     prev_target_index_ = 0;
     target_index_ = utils::get_next_target_index(
       trajectory_.points.size(), reversing_indices_, prev_target_index_);
-
-    endpoint_index_ = trajectory_.points.size() - 1;
-    reversing_indices_.push_back(trajectory_.points.size() - 1);
   } else {
     RCLCPP_INFO(get_logger(), "Can't find goal: %s", error_msg.c_str());
     reset();

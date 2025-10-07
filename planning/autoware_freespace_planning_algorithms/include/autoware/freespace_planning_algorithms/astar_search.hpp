@@ -171,7 +171,6 @@ private:
   double getDirectionChangeCost(const double dir_distance) const;
   double getObsDistanceCost(const IndexXYT & index, const EDTData & obs_edt) const;
   double getLatDistanceCost(const Pose & pose) const;
-  double computePathLength(const AstarNode & node) const;
 
   // Algorithm specific param
   AstarParam astar_param_;

@@ -726,28 +726,6 @@ bool AstarSearch::isGoal(const AstarNode & node) const
   return true;
 }
 
-double AstarSearch::computePathLength(const AstarNode & node) const
-{
-  double total_length = 0.0;
-
-  const AstarNode * current = &node;
-
-  Pose current_pose = node2pose(*current);
-
-  while (current->parent != nullptr) {
-    const AstarNode * parent = current->parent;
-    Pose parent_pose = node2pose(*parent);
-
-    double dist = autoware_utils::calc_distance2d(current_pose, parent_pose);
-    total_length += dist;
-
-    current = parent;
-    current_pose = parent_pose;
-  }
-
-  return total_length;
-}
-
 void AstarSearch::setShiftedGoalPose(const Pose & goal_pose, const double lat_offset) const
 {
   tf2::Transform tf;

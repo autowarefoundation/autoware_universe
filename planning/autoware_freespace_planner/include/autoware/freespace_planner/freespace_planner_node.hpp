@@ -144,7 +144,6 @@ private:
   std::vector<size_t> reversing_indices_;
   size_t prev_target_index_;
   size_t target_index_;
-  size_t endpoint_index_;
   int replan_count_;
   bool is_completed_ = false;
   bool reset_in_progress_ = false;
