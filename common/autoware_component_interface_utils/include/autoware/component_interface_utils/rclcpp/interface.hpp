@@ -17,7 +17,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include <tier4_system_msgs/msg/service_log.hpp>
+#include <autoware_system_msgs/msg/service_log.hpp>
 
 #include <memory>
 #include <string>
@@ -29,7 +29,7 @@ namespace autoware::component_interface_utils
 struct NodeInterface
 {
   using SharedPtr = std::shared_ptr<NodeInterface>;
-  using ServiceLog = tier4_system_msgs::msg::ServiceLog;
+  using ServiceLog = autoware_system_msgs::msg::ServiceLog;
 
   explicit NodeInterface(rclcpp::Node * node)
   {
