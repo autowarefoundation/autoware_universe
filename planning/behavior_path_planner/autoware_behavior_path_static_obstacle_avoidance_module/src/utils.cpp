@@ -693,14 +693,14 @@ bool isNeverAvoidanceTarget(
   if (object.is_parking_violation) {
     if (parameters->policy_parking_violation_vehicle == "ignore") {
       if (object.behavior == ObjectData::Behavior::NONE) {
-        object.info = ObjectInfo::PARALLEL_TO_EGO_LANE;
+        object.info = ObjectInfo::PARKING_VIOLATION_VEHICLE;
         RCLCPP_DEBUG(
           rclcpp::get_logger(logger_namespace), "object belongs to ego lane. never avoid it.");
         return true;
       }
 
       if (object.behavior == ObjectData::Behavior::MERGING) {
-        object.info = ObjectInfo::MERGING_TO_EGO_LANE;
+        object.info = ObjectInfo::PARKING_VIOLATION_VEHICLE;
         RCLCPP_DEBUG(
           rclcpp::get_logger(logger_namespace), "object belongs to ego lane. never avoid it.");
         return true;
@@ -840,14 +840,11 @@ bool isObviousAvoidanceTarget(
   }
 
   if (object.is_parking_violation) {
-    if (parameters->policy_parking_violation_vehicle == "manual") {
+    if (
+      parameters->policy_parking_violation_vehicle == "manual" ||
+      parameters->policy_parking_violation_vehicle == "auto") {
       if (object.behavior == ObjectData::Behavior::NONE) {
-        RCLCPP_DEBUG(rclcpp::get_logger(logger_namespace), "object is obvious parking violation.");
-        return true;
-      }
-    }
-    if (parameters->policy_parking_violation_vehicle == "auto") {
-      if (object.behavior == ObjectData::Behavior::NONE) {
+        object.info = ObjectInfo::PARKING_VIOLATION_VEHICLE;
         RCLCPP_DEBUG(rclcpp::get_logger(logger_namespace), "object is obvious parking violation.");
         return true;
       }

@@ -66,6 +66,7 @@ enum class ObjectInfo {
   INVALID_SHIFT_LINE,
   // others
   AMBIGUOUS_STOPPED_VEHICLE,
+  PARKING_VIOLATION_VEHICLE,
 };
 
 struct ObjectParameter
