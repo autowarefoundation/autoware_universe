@@ -366,8 +366,8 @@ void MultiCameraFusion::groupFusion(
 
         double evidence_log_odds = probabilityToLogOdds(confidence);
 
-        // We assume the prior probability (with no information) is 0.5, meaning the log odds = 0, and
-        // then add evidence to it.
+        // We assume the prior probability (with no information) is 0.5, meaning the log odds = 0,
+        // and then add evidence to it.
         log_odds_map[state_key] += evidence_log_odds - prior_log_odds_;
 
         auto & best_record_for_map = group_fusion_info_map[reg_ele_id].best_record_for_state;
