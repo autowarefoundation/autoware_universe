@@ -361,7 +361,7 @@ void DiffusionPlanner::load_engine(const std::string & model_path)
   // For dynamic batch size, we don't set input shapes here - they will be set at inference time
 }
 
-AgentData DiffusionPlanner::get_ego_centric_agent_data(
+AgentData DiffusionPlanner::get_ego_centric_neighbor_agent_data(
   const TrackedObjects & objects, const Eigen::Matrix4d & map_to_ego_transform)
 {
   if (!agent_data_) {
@@ -453,8 +453,10 @@ InputDataMap DiffusionPlanner::create_input_data()
   }
   // Agent data on ego reference frame
   {
-    auto neighbor_data = get_ego_centric_agent_data(*objects, map_to_ego_transform).as_vector();
-    input_data_map["neighbor_agents_past"] = replicate_for_batch(neighbor_data);
+    ego_centric_neighbor_agent_data_ =
+      get_ego_centric_neighbor_agent_data(*objects, map_to_ego_transform);
+    input_data_map["neighbor_agents_past"] =
+      replicate_for_batch(ego_centric_neighbor_agent_data_.value().as_vector());
   }
   // Static objects
   // TODO(Daniel): add static objects
@@ -594,13 +596,14 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
   pub_trajectories_->publish(candidate_trajectories);
 
   // Other agents prediction
-  if (params_.predict_neighbor_trajectory && agent_data_.has_value()) {
+  if (params_.predict_neighbor_trajectory && ego_centric_neighbor_agent_data_.has_value()) {
     const size_t single_batch_output_size =
       std::accumulate(OUTPUT_SHAPE.begin() + 1, OUTPUT_SHAPE.end(), 1UL, std::multiplies<>());
     const std::vector<float> single_batch_predictions(
       predictions.begin(), predictions.begin() + single_batch_output_size);
     auto predicted_objects = postprocess::create_predicted_objects(
-      single_batch_predictions, agent_data_.value(), this->now(), ego_to_map_transform_);
+      single_batch_predictions, ego_centric_neighbor_agent_data_.value(), this->now(),
+      ego_to_map_transform_);
     pub_objects_->publish(predicted_objects);
   }
 }
