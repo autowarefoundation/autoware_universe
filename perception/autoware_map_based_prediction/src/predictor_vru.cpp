@@ -231,9 +231,7 @@ void PredictorVru::setLaneletMap(std::shared_ptr<lanelet::LaneletMap> lanelet_ma
   for (const auto & linestring : lanelet_map_ptr_->lineStringLayer) {
     if (const std::string type = linestring.attributeOr(lanelet::AttributeName::Type, "none");
         type == "fence") {
-      fences.push_back(
-        lanelet::LineString3d(
-          std::const_pointer_cast<lanelet::LineStringData>(linestring.constData())));
+      fences.emplace_back(std::const_pointer_cast<lanelet::LineStringData>(linestring.constData()));
     }
   }
   fence_layer_ = lanelet::utils::createMap(fences);
@@ -245,8 +243,7 @@ bool PredictorVru::doesPathCrossAnyFenceBeforeCrosswalk(
   lanelet::BasicLineString2d predicted_path_ls;
   for (auto i = 0UL; i <= predicted_path.arrival_index; ++i) {
     const auto & pt = predicted_path.path[i];
-    const lanelet::BasicPoint2d p{pt.position.x, pt.position.y};
-    predicted_path_ls.emplace_back(p);
+    predicted_path_ls.emplace_back(pt.position.x, pt.position.y);
   }
   const auto candidates =
     fence_layer_->lineStringLayer.search(lanelet::geometry::boundingBox2d(predicted_path_ls));
