@@ -81,14 +81,9 @@ void TrajectoryTrafficRuleFilter::process(const CandidateTrajectories::ConstShar
   auto filtered_msg = std::make_shared<CandidateTrajectories>();
 
   for (const auto & trajectory : msg->candidate_trajectories) {
-    bool is_feasible = true;
-
-    for (const auto & plugin : plugins_) {
-      if (!plugin->is_feasible(trajectory.points)) {
-        is_feasible = false;
-        break;
-      }
-    }
+    const bool is_feasible = std::all_of(
+      plugins_.begin(), plugins_.end(),
+      [&](const auto & plugin) { return plugin->is_feasible(trajectory.points); });
     if (is_feasible) filtered_msg->candidate_trajectories.push_back(trajectory);
   }
 
