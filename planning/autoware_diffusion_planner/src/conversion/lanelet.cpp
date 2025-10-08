@@ -14,7 +14,6 @@
 
 #include "autoware/diffusion_planner/conversion/lanelet.hpp"
 
-#include "autoware/diffusion_planner/polyline.hpp"
 #include "autoware_utils_math/unit_conversion.hpp"
 
 #include <autoware_lanelet2_extension/regulatory_elements/Forward.hpp>
@@ -36,25 +35,6 @@ namespace autoware::diffusion_planner
 
 namespace
 {
-inline lanelet::Optional<std::string> to_subtype_name(
-  const lanelet::ConstLanelet & lanelet) noexcept
-{
-  return lanelet.hasAttribute("subtype") ? lanelet.attribute("subtype").as<std::string>()
-                                         : lanelet::Optional<std::string>();
-}
-
-inline bool is_lane_like(const lanelet::Optional<std::string> & subtype)
-{
-  if (!subtype) {
-    return false;
-  }
-  const auto & subtype_str = subtype.value();
-  return (
-    subtype_str == "road" || subtype_str == "highway" || subtype_str == "road_shoulder" ||
-    subtype_str == "bicycle_lane");
-  // subtype_str == "pedestrian_lane" || subtype_str == "bicycle_lane" || subtype_str == "walkway"
-}
-
 std::vector<LanePoint> interpolate_points(const std::vector<LanePoint> & input, size_t num_points)
 {
   if (input.size() < 2 || num_points < 2) {
@@ -62,11 +42,11 @@ std::vector<LanePoint> interpolate_points(const std::vector<LanePoint> & input, 
     return input;
   }
   // Step 1: Compute cumulative distances
-  std::vector<float> arc_lengths(input.size(), 0.0f);
+  std::vector<double> arc_lengths(input.size(), 0.0);
   for (size_t i = 1; i < input.size(); ++i) {
-    arc_lengths[i] = arc_lengths[i - 1] + input[i].distance(input[i - 1]);
+    arc_lengths[i] = arc_lengths[i - 1] + (input[i] - input[i - 1]).norm();
   }
-  float total_length = arc_lengths.back();
+  const double total_length = arc_lengths.back();
 
   // Step 2: Generate target arc lengths
   std::vector<LanePoint> result;
@@ -82,11 +62,11 @@ std::vector<LanePoint> interpolate_points(const std::vector<LanePoint> & input, 
     return result;
   }
 
-  float step = total_length / static_cast<float>(num_points - 1);
+  const double step = total_length / static_cast<double>(num_points - 1);
   size_t seg_idx = 0;
 
   for (size_t i = 1; i < num_points - 1; ++i) {
-    float target = static_cast<float>(i) * step;
+    const double target = static_cast<double>(i) * step;
 
     // Find the correct segment containing the target arc length
     while (seg_idx + 1 < arc_lengths.size() && arc_lengths[seg_idx + 1] < target) {
@@ -99,96 +79,31 @@ std::vector<LanePoint> interpolate_points(const std::vector<LanePoint> & input, 
     }
 
     // Interpolate between input[seg_idx] and input[seg_idx + 1]
-    float seg_start = arc_lengths[seg_idx];
-    float seg_end = arc_lengths[seg_idx + 1];
-    float seg_length = seg_end - seg_start;
+    const double seg_start = arc_lengths[seg_idx];
+    const double seg_end = arc_lengths[seg_idx + 1];
+    const double seg_length = seg_end - seg_start;
 
     // Calculate interpolation parameter, handling zero-length segments
-    float safe_seg_length = std::max(seg_length, 1e-6f);
-    float t = (target - seg_start) / safe_seg_length;
-    // Clamp t to [0, 1] to ensure we don't extrapolate
-    t = std::max(0.0f, std::min(1.0f, t));
-    result.push_back(input[seg_idx].lerp(input[seg_idx + 1], t));
+    constexpr double epsilon = 1e-6;
+    const double safe_seg_length = std::max(seg_length, epsilon);
+    const double t = std::clamp((target - seg_start) / safe_seg_length, 0.0, 1.0);
+    const LanePoint new_point = input[seg_idx] + t * (input[seg_idx + 1] - input[seg_idx]);
+    result.push_back(new_point);
   }
   // Always include the last point
   result.push_back(input.back());
 
-  // Recalculate direction vectors based on actual interpolated positions
-  // Helper lambda to update a point's direction vector
-  auto update_point_direction =
-    [](std::vector<LanePoint> & points, size_t point_idx, size_t from_idx, size_t to_idx) {
-      float dx = points[to_idx].x() - points[from_idx].x();
-      float dy = points[to_idx].y() - points[from_idx].y();
-      float dz = points[to_idx].z() - points[from_idx].z();
-
-      normalize_direction(dx, dy, dz);
-
-      points[point_idx] = LanePoint(
-        points[point_idx].x(), points[point_idx].y(), points[point_idx].z(), dx, dy, dz,
-        points[point_idx].label());
-    };
-
-  if (result.size() > 1) {
-    // Handle first point direction (points to next)
-    update_point_direction(result, 0, 0, 1);
-
-    // Handle middle points (point to next)
-    for (size_t i = 1; i < result.size() - 1; ++i) {
-      update_point_direction(result, i, i, i + 1);
-    }
-
-    // Handle last point direction (from previous)
-    size_t last_idx = result.size() - 1;
-    update_point_direction(result, last_idx, last_idx - 1, last_idx);
-  }
-
   return result;
 }
 
-// Template function for converting any geometry type to lane points
-template <typename GeometryType>
-std::vector<LanePoint> from_geometry(
-  const GeometryType & geometry, const geometry_msgs::msg::Point & position,
-  double distance_threshold) noexcept
+std::vector<LanePoint> convert_to_polyline(const lanelet::ConstLineString3d & line_string) noexcept
 {
-  if (geometry.size() == 0) {
-    return {};
-  }
-
   std::vector<LanePoint> output;
-  for (auto itr = geometry.begin(); itr != geometry.end(); ++itr) {
-    if (auto distance =
-          std::hypot(itr->x() - position.x, itr->y() - position.y, itr->z() - position.z);
-        distance > distance_threshold) {
-      continue;
-    }
-    float dx{0.0f};
-    float dy{0.0f};
-    float dz{0.0f};
-    if (itr == geometry.begin()) {
-      dx = 0.0f;
-      dy = 0.0f;
-      dz = 0.0f;
-    } else {
-      dx = static_cast<float>(itr->x() - (itr - 1)->x());
-      dy = static_cast<float>(itr->y() - (itr - 1)->y());
-      dz = static_cast<float>(itr->z() - (itr - 1)->z());
-      normalize_direction(dx, dy, dz);
-    }
-    output.emplace_back(
-      itr->x(), itr->y(), itr->z(), dx, dy, dz, 0.0);  // TODO(danielsanchezaran): Label ID
+  output.reserve(line_string.size());
+  for (const lanelet::Point3d::ConstType & point : line_string) {
+    output.emplace_back(point.x(), point.y(), point.z());
   }
   return output;
-}
-
-template <typename GeometryType>
-std::vector<LanePoint> from_geometry(const GeometryType & geometry) noexcept
-{
-  geometry_msgs::msg::Point position;
-  position.x = 0.0;
-  position.y = 0.0;
-  position.z = 0.0;
-  return from_geometry(geometry, position, std::numeric_limits<double>::max());
 }
 }  // namespace
 
@@ -199,28 +114,37 @@ std::vector<LaneSegment> convert_to_lane_segments(
   lane_segments.reserve(lanelet_map_ptr->laneletLayer.size());
   // parse lanelet layers
   for (const auto & lanelet : lanelet_map_ptr->laneletLayer) {
-    const auto lanelet_subtype = to_subtype_name(lanelet);
-    if (!is_lane_like(lanelet_subtype)) {
+    if (!lanelet.hasAttribute("subtype")) {
       continue;
     }
-    Polyline lane_polyline(MapType::Unused);
-    std::vector<BoundarySegment> left_boundary_segments;
-    std::vector<BoundarySegment> right_boundary_segments;
-    // TODO(Daniel): avoid unnecessary copy and creation
-    const auto points = from_geometry(lanelet.centerline3d());
-    lane_polyline.assign_waypoints(interpolate_points(points, num_lane_points));
-    const auto left_bound = lanelet.leftBound3d();
-    const auto left_points = from_geometry(left_bound);
-    left_boundary_segments.emplace_back(
-      MapType::Unused, interpolate_points(left_points, num_lane_points));
-    const auto right_bound = lanelet.rightBound3d();
-    const auto right_points = from_geometry(right_bound);
-    right_boundary_segments.emplace_back(
-      MapType::Unused, interpolate_points(right_points, num_lane_points));
+    const auto lanelet_subtype = lanelet.attribute("subtype").as<std::string>();
+    if (!lanelet_subtype || ACCEPTABLE_LANE_SUBTYPES.count(lanelet_subtype.value()) == 0) {
+      continue;
+    }
+    const Polyline centerline(
+      interpolate_points(convert_to_polyline(lanelet.centerline3d()), num_lane_points));
+    const Polyline left_boundary(
+      interpolate_points(convert_to_polyline(lanelet.leftBound3d()), num_lane_points));
+    const Polyline right_boundary(
+      interpolate_points(convert_to_polyline(lanelet.rightBound3d()), num_lane_points));
 
-    const auto & attrs = lanelet.attributes();
-    const bool is_intersection = attrs.find("turn_direction") != attrs.end();
-    std::optional<float> speed_limit_mps =
+    LanePoint mean_point(0.0, 0.0, 0.0);
+    for (const LanePoint & p : centerline) {
+      mean_point += p;
+    }
+    mean_point /= static_cast<double>(centerline.size());
+
+    const std::string left_line_type_str = lanelet.leftBound().attributeOr("type", "");
+    const std::string right_line_type_str = lanelet.rightBound().attributeOr("type", "");
+    const LineType left_line_type =
+      (LINE_TYPE_MAP.count(left_line_type_str) ? LINE_TYPE_MAP.at(left_line_type_str)
+                                               : LINE_TYPE_VIRTUAL);
+    const LineType right_line_type =
+      (LINE_TYPE_MAP.count(right_line_type_str) ? LINE_TYPE_MAP.at(right_line_type_str)
+                                                : LINE_TYPE_VIRTUAL);
+
+    const lanelet::AttributeMap & attrs = lanelet.attributes();
+    const std::optional<float> speed_limit_mps =
       attrs.find("speed_limit") != attrs.end()
         ? std::make_optional(
             autoware_utils_math::kmph2mps(std::stof(attrs.at("speed_limit").value())))
@@ -231,7 +155,7 @@ std::vector<LaneSegment> convert_to_lane_segments(
       {"straight", LaneSegment::TURN_DIRECTION_STRAIGHT},
       {"left", LaneSegment::TURN_DIRECTION_LEFT},
       {"right", LaneSegment::TURN_DIRECTION_RIGHT}};
-    if (is_intersection) {
+    if (attrs.find("turn_direction") != attrs.end()) {
       const std::string turn_direction_str = attrs.at("turn_direction").value();
       const auto itr = turn_direction_map.find(turn_direction_str);
       if (itr != turn_direction_map.end()) {
@@ -250,8 +174,8 @@ std::vector<LaneSegment> convert_to_lane_segments(
                                   : traffic_light_list.front()->id());
 
     lane_segments.emplace_back(
-      lanelet.id(), lane_polyline, is_intersection, left_boundary_segments, right_boundary_segments,
-      speed_limit_mps, turn_direction, traffic_light_id);
+      lanelet.id(), centerline, left_boundary, right_boundary, mean_point, left_line_type,
+      right_line_type, speed_limit_mps, turn_direction, traffic_light_id);
   }
   return lane_segments;
 }

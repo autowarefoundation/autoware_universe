@@ -4,8 +4,8 @@
   <arg name="input_virtual_traffic_light_topic_name" default="/awapi/tmp/virtual_traffic_light_states"/>
   <arg name="input_vector_map_topic_name" default="/map/vector_map"/>
   <arg name="input_pointcloud_map_topic_name" default="/map/pointcloud_map"/>
-  <arg name="input_objects_topic_name" default="/perception/object_recognition/objects"/>
-  <arg name="input_pointcloud_topic_name" default="/perception/obstacle_segmentation/pointcloud"/>
+  <arg name="input_objects_topic_name"/>
+  <arg name="input_pointcloud_topic_name"/>
   <arg name="enable_all_modules_auto_mode"/>
   <arg name="is_simulation"/>
 
@@ -27,6 +27,7 @@
   <arg name="launch_walkway_module" default="true"/>
   <arg name="launch_traffic_light_module" default="true"/>
   <arg name="launch_intersection_module" default="true"/>
+  <arg name="launch_roundabout_module" default="true"/>
   <arg name="launch_merge_from_private_module" default="true"/>
   <arg name="launch_blind_spot_module" default="true"/>
   <arg name="launch_detection_area_module" default="true"/>
@@ -127,6 +128,11 @@
   />
   <let
     name="behavior_velocity_planner_launch_modules"
+    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::RoundaboutModulePlugin, '&quot;)"
+    if="$(var launch_roundabout_module)"
+  />
+  <let
+    name="behavior_velocity_planner_launch_modules"
     value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::MergeFromPrivateModulePlugin, '&quot;)"
     if="$(var launch_merge_from_private_module)"
   />
@@ -208,6 +214,7 @@
       <param from="$(var behavior_velocity_planner_walkway_module_param_path)"/>
       <param from="$(var behavior_velocity_planner_detection_area_module_param_path)"/>
       <param from="$(var behavior_velocity_planner_intersection_module_param_path)"/>
+      <param from="$(var behavior_velocity_planner_roundabout_module_param_path)"/>
       <param from="$(var behavior_velocity_planner_stop_line_module_param_path)"/>
       <param from="$(var behavior_velocity_planner_traffic_light_module_param_path)"/>
       <param from="$(var behavior_velocity_planner_virtual_traffic_light_module_param_path)"/>

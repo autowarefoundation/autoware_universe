@@ -246,6 +246,27 @@ private:
   bool isPreventingRearVehicleFromPassingThrough() const;
 
   /**
+   * @brief Analyzes the ego vehicle's footprint relative to target lanes to determine key metrics
+   * for a merge.
+   *
+   * @details This function iterates through each vertex of the ego vehicle's footprint to find the
+   * point of closest approach to the adjacent lane boundary (the "near side"). Based on this point,
+   * it calculates three key pieces of information: whether the vehicle has crossed the centerline
+   * of the target lane, the vehicle's minimum clearance to the absolute edge of the entire road
+   * corridor, and the pose of the vehicle's closest vertex.
+   *
+   * @return On success, returns a tuple containing:
+   * 1. `bool`: True if the vehicle's closest point has crossed the centerline of the target lane.
+   * 2. `double`: The minimum lateral distance from the vehicle to the farthest boundary of the road
+   * corridor.
+   * 3. `Pose`: The pose of the vehicle vertex that is closest to the near lane boundary.
+   * Returns `std::nullopt` if a closest lanelet cannot be found for a footprint point.
+   */
+  std::optional<std::tuple<bool, double, geometry_msgs::msg::Pose>> getGapBetweenEgoAndLaneBorder(
+    const geometry_msgs::msg::Pose & ego_pose, const lanelet::ConstLanelets & target_lanes,
+    const double starting_pose_lateral_offset) const;
+
+  /**
     * @brief Check if the ego vehicle is preventing the rear vehicle from passing through.
     *
     * This function measures the distance to the lane boundary from the current pose and the pose if
