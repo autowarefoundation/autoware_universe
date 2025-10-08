@@ -104,7 +104,7 @@ TEST_F(RefineBySpeedTest, SkipsHighSpeedObjects)
   auto original_path = object.kinematics.predicted_paths[0].path;
 
   Context context;
-  processor_->process(object, context);
+  ASSERT_TRUE(processor_->run(object, context));
 
   // Path should remain unchanged for high-speed objects
   auto & processed_path = object.kinematics.predicted_paths[0].path;
@@ -125,7 +125,7 @@ TEST_F(RefineBySpeedTest, ProcessesLowSpeedObjects)
   auto original_path = object.kinematics.predicted_paths[0].path;
 
   Context context;
-  processor_->process(object, context);
+  processor_->run(object, context);
 
   // Path should be modified for low-speed objects
   auto & processed_path = object.kinematics.predicted_paths[0].path;
@@ -151,7 +151,7 @@ TEST_F(RefineBySpeedTest, HandlesZeroSpeed)
   auto object = createTestObject(0.0, {{0.0, 0.0, 0.0}, {1.0, 0.0, 0.0}, {2.0, 0.0, 0.0}});
 
   Context context;
-  processor_->process(object, context);
+  ASSERT_TRUE(processor_->run(object, context));
 
   auto & processed_path = object.kinematics.predicted_paths[0].path;
   ASSERT_EQ(processed_path.size(), 3);
@@ -169,7 +169,7 @@ TEST_F(RefineBySpeedTest, HandlesNegativeSpeed)
   auto original_path = object.kinematics.predicted_paths[0].path;
 
   Context context;
-  processor_->process(object, context);
+  ASSERT_TRUE(processor_->run(object, context));
 
   // Should process the object (using absolute speed value)
   auto & processed_path = object.kinematics.predicted_paths[0].path;
@@ -190,7 +190,7 @@ TEST_F(RefineBySpeedTest, HandlesEmptyPath)
 
   Context context;
   // Should not crash with empty path
-  EXPECT_NO_THROW(processor_->process(object, context));
+  ASSERT_TRUE(processor_->run(object, context));
 }
 
 TEST_F(RefineBySpeedTest, HandlesSingleWaypoint)
@@ -198,7 +198,7 @@ TEST_F(RefineBySpeedTest, HandlesSingleWaypoint)
   auto object = createTestObject(0.05, {{0.0, 0.0, 0.0}});
 
   Context context;
-  processor_->process(object, context);
+  ASSERT_TRUE(processor_->run(object, context));
 
   // Single waypoint should remain unchanged
   auto & processed_path = object.kinematics.predicted_paths[0].path;
@@ -211,7 +211,7 @@ TEST_F(RefineBySpeedTest, HandlesZeroTimeStep)
   auto object = createTestObject(0.05, {{0.0, 0.0, 0.0}, {1.0, 0.0, 0.0}}, 0.0);
 
   Context context;
-  processor_->process(object, context);
+  ASSERT_TRUE(processor_->run(object, context));
 
   // Should skip processing when time_step is zero
   auto & processed_path = object.kinematics.predicted_paths[0].path;
@@ -246,7 +246,7 @@ TEST_F(RefineBySpeedTest, HandlesMultiplePredictedPaths)
   }
 
   Context context;
-  processor_->process(object, context);
+  ASSERT_TRUE(processor_->run(object, context));
 
   // Both paths should be processed
   ASSERT_EQ(object.kinematics.predicted_paths.size(), 2);
@@ -264,7 +264,7 @@ TEST_F(RefineBySpeedTest, PreservesOrientationCalculation)
   auto object = createTestObject(0.05, {{0.0, 0.0, 0.0}, {1.0, 0.0, 0.0}, {2.0, 0.0, 0.0}});
 
   Context context;
-  processor_->process(object, context);
+  ASSERT_TRUE(processor_->run(object, context));
 
   auto & processed_path = object.kinematics.predicted_paths[0].path;
 
@@ -284,7 +284,7 @@ TEST_F(RefineBySpeedTest, MaintainsPathLength)
     createTestObject(0.05, {{0.0, 0.0, 0.0}, {1.0, 0.0, 0.0}, {2.0, 1.0, 0.0}, {3.0, 2.0, 0.0}});
 
   Context context;
-  processor_->process(object, context);
+  ASSERT_TRUE(processor_->run(object, context));
 
   auto & processed_path = object.kinematics.predicted_paths[0].path;
   ASSERT_EQ(processed_path.size(), 4);

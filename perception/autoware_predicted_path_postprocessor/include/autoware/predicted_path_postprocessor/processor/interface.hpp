@@ -40,17 +40,14 @@ namespace autoware::predicted_path_postprocessor::processor
 class Context
 {
 public:
-  Context() : lanelet_record_(std::make_unique<LaneletRecord>()) {}
+  Context() {}
 
   /**
-   * @brief Get the reference to the current set of predicted objects.
+   * @brief Return the read-only reference to the current set of predicted objects.
    *
    * @return The current set of predicted objects.
    */
-  const autoware_perception_msgs::msg::PredictedObjects::SharedPtr & objects() const
-  {
-    return objects_;
-  }
+  autoware_perception_msgs::msg::PredictedObjects::SharedPtr as_objects() const { return objects_; }
 
   /**
    * @brief Update the context with a new set of predicted objects.
@@ -73,36 +70,36 @@ public:
     lanelet::LaneletMapPtr lanelet_map, lanelet::traffic_rules::TrafficRulesPtr traffic_rules,
     lanelet::routing::RoutingGraphPtr routing_graph)
   {
-    lanelet_record_->lanelet_map = std::move(lanelet_map);
-    lanelet_record_->traffic_rules = std::move(traffic_rules);
-    lanelet_record_->routing_graph = std::move(routing_graph);
+    lanelet_record_.lanelet_map = std::move(lanelet_map);
+    lanelet_record_.traffic_rules = std::move(traffic_rules);
+    lanelet_record_.routing_graph = std::move(routing_graph);
   }
 
   /**
-   * @brief Get the lanelet map.
+   * @brief Return the shared pointer to the lanelet map.
    *
    * @return The lanelet map (may be nullptr if not set)
    */
-  const lanelet::LaneletMapPtr & lanelet_map() const { return lanelet_record_->lanelet_map; }
+  lanelet::LaneletMapPtr as_lanelet_map() const { return lanelet_record_.lanelet_map; }
 
   /**
-   * @brief Get the traffic rules.
+   * @brief Return the shared pointer to the traffic rules.
    *
    * @return The traffic rules (may be nullptr if not set)
    */
-  const lanelet::traffic_rules::TrafficRulesPtr & traffic_rules() const
+  lanelet::traffic_rules::TrafficRulesPtr as_traffic_rules() const
   {
-    return lanelet_record_->traffic_rules;
+    return lanelet_record_.traffic_rules;
   }
 
   /**
-   * @brief Get the routing graph.
+   * @brief Return the shared pointer to the routing graph.
    *
    * @return The routing graph (may be nullptr if not set)
    */
-  const lanelet::routing::RoutingGraphPtr & routing_graph() const
+  lanelet::routing::RoutingGraphPtr as_routing_graph() const
   {
-    return lanelet_record_->routing_graph;
+    return lanelet_record_.routing_graph;
   }
 
 private:
@@ -111,19 +108,11 @@ private:
     lanelet::LaneletMapPtr lanelet_map;
     lanelet::traffic_rules::TrafficRulesPtr traffic_rules;
     lanelet::routing::RoutingGraphPtr routing_graph;
-
-    /**
-     * @brief Check if the all lanelet relevant data is available.
-     *
-     * @return True if the context is available, false otherwise.
-     */
-    bool is_available() const { return lanelet_map && traffic_rules && routing_graph; }
   };
 
-  // NOTE: In the future, we may want to add more context information here, such as traffic light,
-  // etc.
+  // NOTE: Add more context information below if needed, such as traffic light etc.
   autoware_perception_msgs::msg::PredictedObjects::SharedPtr objects_;
-  std::unique_ptr<LaneletRecord> lanelet_record_;
+  LaneletRecord lanelet_record_;
 };
 
 /**
@@ -143,10 +132,44 @@ public:
   {
   }
 
-  const std::string & name() const { return processor_name_; }
+  virtual ~ProcessorInterface() = default;
 
   /**
-   * @brief Process a single predicted object.
+   * @brief Return the read-only reference to the processor name.
+   *
+   * @return const std::string& The name of the processor.
+   */
+  const std::string & name() const noexcept { return processor_name_; }
+
+  /**
+   * @brief Run a processing for a single predicted object.
+   *
+   * @param target The predicted object to process.
+   * @param context The context in which the object is processed.
+   * @return The result of the processing.
+   */
+  result_type run(target_type & target, const Context & context)
+  {
+    if (auto result = check_context(context); !result) {
+      return result;
+    }
+    return process(target, context);
+  };
+
+protected:
+  /**
+   * @brief Check the validity of the context.
+   *
+   * @param context The context to check.
+   * @return The result of the check.
+   */
+  virtual result_type check_context(const Context &) const noexcept
+  {
+    return make_ok<error_type>();
+  };
+
+  /**
+   * @brief Perform processor specific processing.
    *
    * @param target The predicted object to process.
    * @param context The context in which the object is processed.

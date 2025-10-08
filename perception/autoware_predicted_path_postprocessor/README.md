@@ -46,14 +46,21 @@ As an example, let's see how to add a new processor by using a processor called 
        FilterBySomething(rclcpp::Node * node_ptr, const std::string & processor_name)
        : ProcessorInterface(processor_name)
        {
-         // Loaded parameters
+         // Load parameters
          double_param_ = node_ptr->declare_parameter<double>(processor_name + ".double_param");
          string_param_ = node_ptr->declare_parameter<std::string>(processor_name + ".string_param");
        }
 
+    private:
+       result_type check_context(const Context & context)
+       {
+         // ...Check context if it contains the required information
+         return make_ok<error_type>();
+       }
+
        result_type process(target_type & target, const Context & context) override
        {
-         // ...Do something
+         // ...Execute processor specific logic
          return make_ok<error_type>();
        }
 

@@ -34,6 +34,7 @@ public:
    */
   RefineBySpeed(rclcpp::Node * node_ptr, const std::string & processor_name);
 
+private:
   /**
    * @brief Process the predicted object and refine its path based on speed.
    *
@@ -43,7 +44,6 @@ public:
    */
   result_type process(target_type & target, const Context & context) override;
 
-private:
   double speed_threshold_;  //!< Speed threshold for refinement
 };
 }  // namespace autoware::predicted_path_postprocessor::processor

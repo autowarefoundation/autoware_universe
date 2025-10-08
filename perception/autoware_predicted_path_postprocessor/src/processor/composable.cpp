@@ -16,9 +16,7 @@
 
 #include "autoware/predicted_path_postprocessor/processor/builder.hpp"
 
-#include <chrono>
 #include <memory>
-#include <numeric>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -76,7 +74,7 @@ ComposableProcessor::result_with_report_type ComposableProcessor::process_intern
         stopwatch_->toc("processing_time", true);
       }
 
-      if (const auto result = processor->process(target, context); !result) {
+      if (const auto result = processor->run(target, context); !result) {
         return make_err<output_with_report_type, error_type>(result.err());
       }
 
