@@ -9,7 +9,7 @@
     spline_interpolation_resolution_m: 0.5 # [m]
     backward_trajectory_extension_m: 5.0 # [m]
     use_akima_spline_interpolation: true
-    smooth_trajectories: true
+    smooth_trajectories: false
     limit_speed: true
     limit_lateral_acceleration: true
     set_engage_speed: false
