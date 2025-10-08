@@ -19,6 +19,8 @@
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
 
+#include <lanelet2_core/primitives/Lanelet.h>
+
 #include <algorithm>
 #include <deque>
 #include <limits>
@@ -538,9 +540,14 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
     const auto found_closest_crosswalk =
       lanelet::utils::query::getClosestLanelet(crosswalks_, obj_pose, &closest_crosswalk);
 
-    if (found_closest_crosswalk) {
-      const auto edge_points = getCrosswalkEdgePoints(closest_crosswalk);
+    const auto within_minimum_distance = [&](const lanelet::ConstLanelet & ll) {
+      const auto object = lanelet::BasicPoint2d(obj_pose.position.x, obj_pose.position.y);
+      const auto distance = boost::geometry::distance(object, ll.polygon2d().basicPolygon());
+      return distance <= min_crosswalk_user_on_road_distance_;
+    };
 
+    if (found_closest_crosswalk && within_minimum_distance(closest_crosswalk)) {
+      const auto edge_points = getCrosswalkEdgePoints(closest_crosswalk);
       if (hasPotentialToReachWithHistory(
             mutable_object, edge_points.front_center_point, edge_points.front_right_point,
             edge_points.front_left_point, prediction_time_horizon_ * 2.0,
