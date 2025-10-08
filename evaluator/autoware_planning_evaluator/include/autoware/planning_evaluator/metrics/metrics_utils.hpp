@@ -17,6 +17,10 @@
 
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "autoware_planning_msgs/msg/trajectory_point.hpp"
+#include "autoware_perception_msgs/msg/predicted_object.hpp"
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 
 namespace planning_diagnostics
 {
@@ -25,6 +29,9 @@ namespace metrics
 namespace utils
 {
 using autoware_planning_msgs::msg::Trajectory;
+using autoware_planning_msgs::msg::TrajectoryPoint;
+using autoware_perception_msgs::msg::PredictedObject;
+using autoware::vehicle_info_utils::VehicleInfo;
 using geometry_msgs::msg::Pose;
 
 /**
@@ -58,6 +65,18 @@ Trajectory get_lookahead_trajectory(
  * @return total distance from ego position to trajectory end in meters
  */
 double calc_lookahead_trajectory_distance(const Trajectory & traj, const Pose & ego_pose);
+
+/**
+ * @brief calculate the distance between ego vehicle footprint and a predicted object
+ * @param [in] local_ego_footprint ego vehicle footprint in local coordinates
+ * @param [in] ego_pose current ego vehicle pose in world coordinates
+ * @param [in] object predicted object with pose and shape information
+ * @return minimum distance between ego footprint and object footprint in meters
+ */
+double calc_ego_object_distance(
+  const autoware_utils::LinearRing2d & local_ego_footprint,
+  const Pose & ego_pose,
+  const PredictedObject & object);
 
 }  // namespace utils
 }  // namespace metrics

@@ -23,11 +23,13 @@
 #include "autoware_planning_msgs/msg/trajectory_point.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include <nav_msgs/msg/odometry.hpp>
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <optional>
 
 namespace planning_diagnostics
 {
+using autoware::vehicle_info_utils::VehicleInfo;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::PoseWithUuidStamped;
 using autoware_planning_msgs::msg::Trajectory;
@@ -68,10 +70,16 @@ public:
    * @return string describing the requested metric
    */
   std::optional<Accumulator<double>> calculate(
-    const Metric metric, const Trajectory & traj, const double vehicle_length_m) const;
+    const Metric metric, const Trajectory & traj) const;
   std::optional<Accumulator<double>> calculate(
     const Metric metric, const Pose & base_pose, const Pose & target_pose) const;
 
+  
+  /** * @brief set vehicle info
+   * @param [in] vehicle_info input vehicle info
+   */
+  void setVehicleInfo(const VehicleInfo & vehicle_info);
+  
   /**
    * @brief set the reference trajectory used to calculate the deviation metrics
    * @param [in] traj input reference trajectory
@@ -111,6 +119,7 @@ private:
   geometry_msgs::msg::Pose ego_pose_;
   nav_msgs::msg::Odometry ego_odometry_;
   PoseWithUuidStamped modified_goal_;
+  VehicleInfo vehicle_info_;
 };  // class MetricsCalculator
 
 }  // namespace planning_diagnostics
