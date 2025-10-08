@@ -506,6 +506,14 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
     }
   }
 
+  const auto within_road = utils::withinRoadLanelet(mutable_object, surrounding_lanelets_with_dist);
+  const auto within_minimum_distance =
+    [&](const geometry_msgs::msg::Point & object, const lanelet::ConstLanelet & ll) {
+      const auto p = lanelet::BasicPoint2d(object.x, object.y);
+      const auto distance = boost::geometry::distance(p, ll.polygon2d().basicPolygon());
+      return distance <= max_crosswalk_user_on_road_distance_;
+    };
+
   // If the object is in the crosswalk, generate path to the crosswalk edge
   if (crossing_crosswalk) {
     const auto edge_points = getCrosswalkEdgePoints(crossing_crosswalk.get());
@@ -534,19 +542,12 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
 
     // If the object is not crossing the crosswalk, in the road lanelets, try to find the closest
     // crosswalk and generate path to the crosswalk edge
-  } else if (utils::withinRoadLanelet(mutable_object, surrounding_lanelets_with_dist)) {
+  } else if (within_road) {
     lanelet::ConstLanelet closest_crosswalk{};
     const auto & obj_pose = mutable_object.kinematics.pose_with_covariance.pose;
     const auto found_closest_crosswalk =
       lanelet::utils::query::getClosestLanelet(crosswalks_, obj_pose, &closest_crosswalk);
-
-    const auto within_minimum_distance = [&](const lanelet::ConstLanelet & ll) {
-      const auto object = lanelet::BasicPoint2d(obj_pose.position.x, obj_pose.position.y);
-      const auto distance = boost::geometry::distance(object, ll.polygon2d().basicPolygon());
-      return distance <= min_crosswalk_user_on_road_distance_;
-    };
-
-    if (found_closest_crosswalk && within_minimum_distance(closest_crosswalk)) {
+    if (found_closest_crosswalk && within_minimum_distance(obj_pose.position, closest_crosswalk)) {
       const auto edge_points = getCrosswalkEdgePoints(closest_crosswalk);
       if (hasPotentialToReachWithHistory(
             mutable_object, edge_points.front_center_point, edge_points.front_right_point,
@@ -584,6 +585,9 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
             mutable_object, crosswalk, crosswalk_signal_id_opt.value())) {
         continue;
       }
+    }
+    if (within_road && !within_minimum_distance(obj_pos, crosswalk)) {
+      continue;
     }
 
     const auto edge_points = getCrosswalkEdgePoints(crosswalk);
