@@ -2,9 +2,9 @@
   "sensors": [
     {
       "type": "sensor.camera.rgb",
-      "id": "rgb_front",
+      "id": "traffic_light_camera",
       "spawn_point": {
-        "x": 0.7,
+        "x": 0.8,
         "y": 0.0,
         "z": 1.6,
         "roll": 0.0,
@@ -19,16 +19,16 @@
       "type": "sensor.lidar.ray_cast",
       "id": "top",
       "spawn_point": {
-        "x": 0.0,
+        "x": -0.39,
         "y": 0.0,
-        "z": 3.1,
+        "z": 1.84,
         "roll": 0.0,
         "pitch": 0.0,
         "yaw": 0.0
       },
       "range": 100,
       "channels": 64,
-      "points_per_second": 300000,
+      "points_per_second": 1300000,
       "upper_fov": 10.0,
       "lower_fov": -30.0,
       "rotation_frequency": 20,
@@ -38,9 +38,9 @@
       "type": "sensor.other.gnss",
       "id": "gnss",
       "spawn_point": {
-        "x": 0.0,
+        "x": -1.4,
         "y": 0.0,
-        "z": 1.6,
+        "z": 0.0,
         "roll": 0.0,
         "pitch": 0.0,
         "yaw": 0.0
@@ -50,9 +50,9 @@
       "type": "sensor.other.imu",
       "id": "imu",
       "spawn_point": {
-        "x": 0.0,
+        "x": -1.4,
         "y": 0.0,
-        "z": 1.6,
+        "z": 0.0,
         "roll": 0.0,
         "pitch": 0.0,
         "yaw": 0.0

@@ -15,7 +15,6 @@
 from __future__ import print_function
 
 import logging
-from queue import Empty
 from queue import Queue
 
 import carla
@@ -97,16 +96,21 @@ class SensorInterface(object):
         self._new_data_buffers.put((tag, timestamp, data))
 
     def get_data(self):
-        try:
-            data_dict = {}
-            while len(data_dict.keys()) < len(self._sensors_objects.keys()):
-                sensor_data = self._new_data_buffers.get(True, self._queue_timeout)
-                data_dict[sensor_data[0]] = (sensor_data[1], sensor_data[2])
-        except Empty:
-            raise SensorReceivedNoData(
-                f"Sensor with tag [{self.tag}] took too long to send its data"
-            )
+        """Get all available sensor data without blocking for all sensors."""
+        from queue import Empty
 
+        data_dict = {}
+
+        # Non-blocking: get all available data from queue
+        while True:
+            try:
+                sensor_data = self._new_data_buffers.get(block=False)
+                data_dict[sensor_data[0]] = (sensor_data[1], sensor_data[2])
+            except Empty:
+                # Queue is empty, break and return whatever data we have
+                break
+
+        # Return available data immediately (could be partial sensor set)
         return data_dict
 
 

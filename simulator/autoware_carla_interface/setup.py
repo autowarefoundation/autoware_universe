@@ -16,6 +16,7 @@ setup(
         (os.path.join("share", package_name), glob("config/*")),
         (os.path.join("share", package_name), glob("calibration_maps/*.csv")),
         (os.path.join("share", package_name), glob("launch/*.launch.xml")),
+        (os.path.join("share", package_name), glob("scripts/*.py")),
     ],
     install_requires=["setuptools"],
     zip_safe=True,
