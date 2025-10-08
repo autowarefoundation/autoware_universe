@@ -483,6 +483,11 @@ size_t findNearestSegmentIndex(
 
   return autoware::motion_utils::findNearestSegmentIndex(points, pose.position);
 }
+
+PoseWithDetailOpt insert_feasible_stop_point(
+  PathWithLaneId & current_path, const std::shared_ptr<const PlannerData> & planner_data,
+  const double maximum_deceleration, const double maximum_jerk, const double braking_delay,
+  const std::string & stop_reason = "");
 }  // namespace autoware::behavior_path_planner::utils
 
 #endif  // AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__UTILS_HPP_

@@ -866,7 +866,7 @@ BehaviorModuleOutput StartPlannerModule::plan()
 
     if (isWaitingApproval()) return getCurrentPath();
 
-    if (status_.stop_pose) {
+    if (status_.stop_pose && status_.prev_stop_path_after_approval) {
       // Delete stop point if conditions are met
       if (status_.is_safe_dynamic_objects && isStopped()) {
         status_.stop_pose = std::nullopt;
@@ -1021,7 +1021,7 @@ BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
     RCLCPP_WARN_THROTTLE(
       getLogger(), *clock_, 5000, "Not found safe pull out path, publish stop path");
     clearWaitingApproval();
-    const auto output = generateStopOutput();
+    auto output = generateStopOutput();
     setDebugData();  // use status updated in generateStopOutput()
     updateRTCStatus(0, 0);
     return output;
@@ -1036,14 +1036,17 @@ BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
     /*forward_only_in_route*/ true);
 
   auto stop_path = status_.driving_forward ? getCurrentPath() : status_.backward_path;
+  constexpr double braking_delay = 0.1;
+  stop_pose_ = utils::insert_feasible_stop_point(
+    stop_path, planner_data_, -parameters_->maximum_deceleration_for_stop,
+    parameters_->maximum_jerk_for_stop, braking_delay, "waiting approval");
+  status_.stop_pose = stop_pose_;
+
   const auto drivable_lanes = generateDrivableLanes(stop_path);
   const auto & dp = planner_data_->drivable_area_expansion_parameters;
   const auto expanded_lanes = utils::expandLanelets(
     drivable_lanes, dp.drivable_area_left_bound_offset, dp.drivable_area_right_bound_offset,
     dp.drivable_area_types_to_skip);
-  for (auto & p : stop_path.points) {
-    p.point.longitudinal_velocity_mps = 0.0;
-  }
 
   BehaviorModuleOutput output;
   output.path = stop_path;
@@ -1054,6 +1057,7 @@ BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
 
   setDrivableAreaInfo(output);
 
+  set_longitudinal_planning_factor(output.path);
   const auto planning_factor_direction = getPlanningFactorDirection(output);
 
   if (status_.driving_forward) {
