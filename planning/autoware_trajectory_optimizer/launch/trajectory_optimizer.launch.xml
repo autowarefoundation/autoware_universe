@@ -10,7 +10,7 @@
 
   <arg name="input_traj" default="/planning/diffusion_planner/trajectory"/>
   <arg name="input_trajectories" default="/planning/diffusion_planner/candidate_trajectories"/>
-  <arg name="output_traj" default="/planning/scenario_planning/trajectory"/>
+  <arg name="output_traj" default="/planning/trajectory"/>
   <arg name="output_trajectories" default="/planning/generator/candidate_trajectories"/>
 
   <node pkg="autoware_trajectory_optimizer" exec="autoware_trajectory_optimizer_node" name="trajectory_optimizer_node" output="screen">
