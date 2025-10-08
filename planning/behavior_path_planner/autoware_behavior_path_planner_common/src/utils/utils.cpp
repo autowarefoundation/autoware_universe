@@ -15,6 +15,7 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
 #include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
+#include "autoware/boundary_departure_checker/utils.hpp"
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
 
 #include <autoware/motion_utils/resample/resample.hpp>
@@ -1499,5 +1500,34 @@ bool checkOriginalGoalIsInShoulder(const std::shared_ptr<RouteHandler> & route_h
 {
   const Pose & goal_pose = route_handler->getOriginalGoalPose();
   return !route_handler->getShoulderLaneletsAtPose(goal_pose).empty();
+}
+
+PoseWithDetailOpt insert_feasible_stop_point(
+  PathWithLaneId & current_path, const std::shared_ptr<const PlannerData> & planner_data,
+  const double maximum_deceleration, const double maximum_jerk, const double braking_delay,
+  const std::string & stop_reason)
+{
+  if (current_path.points.empty()) {
+    return std::nullopt;
+  }
+
+  if (maximum_deceleration >= 0.0) {
+    throw std::invalid_argument("Maximum deceleration value must be negative.");
+  }
+
+  const auto v_now = planner_data->self_odometry->twist.twist.linear.x;
+  const auto a_now = planner_data->self_acceleration->accel.accel.linear.x;
+  const auto min_stop_distance =
+    autoware::boundary_departure_checker::utils::calc_judge_line_dist_with_jerk_limit(
+      v_now, a_now, maximum_deceleration, maximum_jerk, braking_delay);
+
+  const auto stop_idx = autoware::motion_utils::insertStopPoint(
+    planner_data->self_odometry->pose.pose, min_stop_distance, current_path.points);
+
+  if (!stop_idx) {
+    return std::nullopt;
+  }
+
+  return PoseWithDetail(current_path.points.at(*stop_idx).point.pose, stop_reason);
 }
 }  // namespace autoware::behavior_path_planner::utils
