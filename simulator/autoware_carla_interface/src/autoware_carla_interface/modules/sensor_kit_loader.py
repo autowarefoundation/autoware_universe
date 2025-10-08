@@ -1,0 +1,492 @@
+#!/usr/bin/env python3
+
+# Copyright 2024 Tier IV, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Sensor kit configuration loader for CARLA-Autoware interface."""
+
+import logging
+import math
+import os
+from pathlib import Path
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+
+from ament_index_python.packages import get_package_share_directory
+import yaml
+
+from .coordinate_transformer import CoordinateTransformer
+from .sensor_manager import SensorConfig
+
+# Default vehicle wheelbase in meters (distance between front and rear axles)
+DEFAULT_WHEELBASE = 2.850
+
+
+class SensorKitLoader:
+    """Loader for Autoware sensor kit configurations."""
+
+    def __init__(self, logger: Optional[logging.Logger] = None):
+        """Initialize sensor kit loader.
+
+        Args:
+            logger: Logger instance for output
+        """
+        self.logger = logger or logging.getLogger(__name__)
+        self.sensor_mapping: Dict[str, Any] = {}
+        self.sensor_kit_path: Optional[Path] = None
+        self.wheelbase: float = DEFAULT_WHEELBASE
+
+    def load_sensor_mapping(self, mapping_file: Optional[str] = None) -> bool:
+        """Load sensor mapping configuration.
+
+        Args:
+            mapping_file: Path to sensor mapping YAML file
+
+        Returns:
+            True if successfully loaded, False otherwise
+        """
+        try:
+            if not mapping_file:
+                pkg_dir = get_package_share_directory("autoware_carla_interface")
+                mapping_file = os.path.join(pkg_dir, "config", "sensor_mapping.yaml")
+
+            if not os.path.exists(mapping_file):
+                source_mapping = (
+                    Path(__file__).resolve().parents[3] / "config" / "sensor_mapping.yaml"
+                )
+                if source_mapping.exists():
+                    mapping_file = str(source_mapping)
+                else:
+                    self.logger.error(f"Sensor mapping file not found: {mapping_file}")
+                    return False
+
+            with open(mapping_file, "r") as f:
+                self.sensor_mapping = yaml.safe_load(f)
+
+            # Load vehicle configuration if present
+            if "vehicle_config" in self.sensor_mapping:
+                vehicle_config = self.sensor_mapping["vehicle_config"]
+                self.wheelbase = float(vehicle_config.get("wheelbase", DEFAULT_WHEELBASE))
+                self.logger.info(f"Using wheelbase from config: {self.wheelbase}m")
+            else:
+                self.logger.info(f"Using default wheelbase: {self.wheelbase}m")
+
+            self.logger.info(f"Loaded sensor mapping from: {mapping_file}")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Failed to load sensor mapping: {e}")
+            return False
+
+    def find_sensor_kit_path(self, sensor_kit_name: str) -> Optional[Path]:
+        """Find sensor kit calibration directory.
+
+        Returns path to the config directory containing calibration files.
+
+        Args:
+            sensor_kit_name: Name of the sensor kit package
+
+        Returns:
+            Path to sensor kit config directory or None
+        """
+        try:
+            # Try to find as a package
+            sensor_kit_dir = get_package_share_directory(sensor_kit_name)
+
+            # Look for the config directory containing calibration files
+            calib_path = Path(sensor_kit_dir) / "config"
+
+            # Verify sensor_kit_calibration.yaml exists
+            if (calib_path / "sensor_kit_calibration.yaml").exists():
+                self.sensor_kit_path = calib_path
+                self.logger.info(f"Found sensor kit at: {calib_path}")
+                return calib_path
+
+        except Exception as e:
+            self.logger.debug(f"Package search failed: {e}")
+
+        # Try workspace paths
+        # Try common naming patterns for sensor kit descriptions
+        desc_name = sensor_kit_name.replace("_launch", "") + "_description"
+        workspace_paths = [
+            Path.home()
+            / "autoware"
+            / "src"
+            / "launcher"
+            / "autoware_launch"
+            / "sensor_kit"
+            / sensor_kit_name
+            / desc_name
+            / "config",
+            Path.home()
+            / "autoware"
+            / "src"
+            / "launcher"
+            / "autoware_launch"
+            / "sensor_kit"
+            / sensor_kit_name
+            / (sensor_kit_name + "_description")
+            / "config",
+            Path("/opt/autoware") / sensor_kit_name / "config",
+        ]
+
+        for calib_path in workspace_paths:
+            if (calib_path / "sensor_kit_calibration.yaml").exists():
+                self.sensor_kit_path = calib_path
+                self.logger.info(f"Found sensor kit at: {calib_path}")
+                return calib_path
+
+        self.logger.warning(f"Sensor kit not found: {sensor_kit_name}")
+        return None
+
+    def parse_sensor_kit_calibration(self, sensor_kit_path: Path) -> Dict[str, Any]:
+        """Parse sensor calibration from sensor kit.
+
+        Args:
+            sensor_kit_path: Path to sensor kit calibration directory
+
+        Returns:
+            Dictionary of sensor configurations
+        """
+        sensors = {}
+
+        # Parse extrinsic calibration
+        extrinsic_file = sensor_kit_path / "sensor_kit_calibration.yaml"
+        if extrinsic_file.exists():
+            try:
+                with open(extrinsic_file, "r") as f:
+                    calibration_data = yaml.safe_load(f)
+                    sensors = self._parse_extrinsic_calibration(calibration_data)
+            except Exception as e:
+                self.logger.error(f"Failed to parse extrinsic calibration: {e}")
+
+        # Parse individual sensor calibrations
+        sensor_files = {
+            "camera": sensor_kit_path / "camera" / "camera_info.yaml",
+            "lidar": sensor_kit_path / "velodyne" / "velodyne_calibration.yaml",
+            "imu": sensor_kit_path / "imu" / "imu_corrector.yaml",
+        }
+
+        for sensor_type, file_path in sensor_files.items():
+            if file_path.exists():
+                try:
+                    with open(file_path, "r") as f:
+                        data = yaml.safe_load(f)
+                        self._enhance_sensor_configs(sensors, data, sensor_type)
+                except Exception as e:
+                    self.logger.warning(f"Failed to parse {sensor_type} calibration: {e}")
+
+        return sensors
+
+    def _parse_extrinsic_calibration(self, calibration_data: Dict) -> Dict[str, Any]:
+        """Parse extrinsic calibration data.
+
+        Args:
+            calibration_data: Raw calibration YAML data
+
+        Returns:
+            Dictionary of sensor configurations
+        """
+        sensors = {}
+
+        # Extract sensor_kit_base_link wrapper if present in calibration data
+        if "sensor_kit_base_link" in calibration_data:
+            sensor_base_dict = calibration_data["sensor_kit_base_link"]
+        else:
+            # Fallback: assume data is already unwrapped
+            sensor_base_dict = calibration_data
+
+        for sensor_name, transform_data in sensor_base_dict.items():
+            if not isinstance(transform_data, dict):
+                continue
+
+            # Now transform_data should have x, y, z, etc.
+            if "x" in transform_data:
+                # Direct transform format
+                sensors[sensor_name] = {
+                    "frame_id": sensor_name,
+                    "transform": self._extract_transform(transform_data),
+                }
+            elif "base_link" in transform_data:
+                # Nested format with base_link
+                base_data = transform_data["base_link"]
+                sensors[sensor_name] = {
+                    "frame_id": sensor_name,
+                    "transform": self._extract_transform(base_data),
+                }
+
+        return sensors
+
+    def _extract_transform(self, transform_data: Dict) -> Dict[str, float]:
+        """Extract transform values from calibration data.
+
+        Args:
+            transform_data: Transform dictionary
+
+        Returns:
+            Standardized transform dictionary
+        """
+        # Extract values
+        roll = float(transform_data.get("roll", 0.0))
+        pitch = float(transform_data.get("pitch", 0.0))
+        yaw = float(transform_data.get("yaw", 0.0))
+
+        # Auto-detect angle units using heuristic approach
+        # Radians are typically -π to π (-3.14 to 3.14)
+        # If any angle > 6.28 (2π), assume input is in degrees
+        if abs(roll) > 6.28 or abs(pitch) > 6.28 or abs(yaw) > 6.28:
+            self.logger.warning(
+                f"Detected angles in degrees, converting to radians: "
+                f"roll={roll}, pitch={pitch}, yaw={yaw}"
+            )
+            roll = math.radians(roll)
+            pitch = math.radians(pitch)
+            yaw = math.radians(yaw)
+
+        return {
+            "x": float(transform_data.get("x", 0.0)),
+            "y": float(transform_data.get("y", 0.0)),
+            "z": float(transform_data.get("z", 0.0)),
+            "roll": roll,
+            "pitch": pitch,
+            "yaw": yaw,
+        }
+
+    def _enhance_sensor_configs(self, sensors: Dict, data: Dict, sensor_type: str):
+        """Enhance sensor configurations with additional calibration data.
+
+        Args:
+            sensors: Existing sensor configurations
+            data: Additional calibration data
+            sensor_type: Type of sensor
+        """
+        # Implementation depends on specific calibration format
+        # This is a placeholder for sensor-specific enhancements
+        pass
+
+    def normalize_sensor_name(self, sensor_name: str) -> str:
+        """Normalize sensor name for matching.
+
+        Args:
+            sensor_name: Original sensor name
+
+        Returns:
+            Normalized sensor name
+        """
+        normalized = sensor_name
+
+        # Apply normalization rules from mapping
+        if "normalization" in self.sensor_mapping:
+            rules = self.sensor_mapping["normalization"]
+            if "strip_suffixes" in rules:
+                for suffix in rules["strip_suffixes"]:
+                    if normalized.endswith(suffix):
+                        normalized = normalized[: -len(suffix)]
+                        break
+
+        return normalized
+
+    def is_sensor_enabled(self, sensor_name: str) -> bool:
+        """Check if sensor is enabled in configuration.
+
+        Args:
+            sensor_name: Sensor name to check
+
+        Returns:
+            True if enabled, False otherwise
+        """
+        if "enabled_sensors" not in self.sensor_mapping:
+            return True  # Enable all by default if no list specified
+
+        enabled_list = self.sensor_mapping["enabled_sensors"]
+        normalized = self.normalize_sensor_name(sensor_name)
+
+        # Check both original and normalized names
+        return sensor_name in enabled_list or normalized in enabled_list
+
+    def build_sensor_configs(
+        self, sensor_kit_name: Optional[str] = None, use_autoware_sensor_kit: bool = False
+    ) -> List[SensorConfig]:
+        """Build sensor configurations from sensor kit or mapping.
+
+        Args:
+            sensor_kit_name: Name of sensor kit to use
+            use_autoware_sensor_kit: Whether to use sensor kit calibration
+
+        Returns:
+            List of sensor configurations
+        """
+        configs = []
+
+        if use_autoware_sensor_kit and sensor_kit_name:
+            # Load from sensor kit
+            sensor_kit_path = self.find_sensor_kit_path(sensor_kit_name)
+            if sensor_kit_path:
+                kit_sensors = self.parse_sensor_kit_calibration(sensor_kit_path)
+                configs = self._create_configs_from_kit(kit_sensors)
+            else:
+                self.logger.warning("Falling back to sensor mapping configuration")
+                configs = self._create_configs_from_mapping()
+        else:
+            # Load from mapping file
+            configs = self._create_configs_from_mapping()
+
+        return configs
+
+    def _create_configs_from_kit(self, kit_sensors: Dict) -> List[SensorConfig]:
+        """Create sensor configs from sensor kit data.
+
+        Args:
+            kit_sensors: Parsed sensor kit data
+
+        Returns:
+            List of sensor configurations
+        """
+        configs = []
+        mappings = self.sensor_mapping.get("sensor_mappings", {})
+
+        for sensor_name, sensor_data in kit_sensors.items():
+            if not self.is_sensor_enabled(sensor_name):
+                continue
+
+            normalized = self.normalize_sensor_name(sensor_name)
+
+            # Find mapping for this sensor
+            mapping = None
+            for mapping_key in mappings:
+                if self.normalize_sensor_name(mapping_key) == normalized:
+                    mapping = mappings[mapping_key]
+                    break
+
+            if not mapping:
+                self.logger.debug(f"No mapping found for sensor: {sensor_name}")
+                continue
+
+            config = self._create_sensor_config(
+                sensor_name=sensor_name, mapping=mapping, transform=sensor_data.get("transform")
+            )
+            configs.append(config)
+
+        return configs
+
+    def _create_configs_from_mapping(self) -> List[SensorConfig]:
+        """Create sensor configs from mapping file only.
+
+        Returns:
+            List of sensor configurations
+        """
+        configs = []
+        mappings = self.sensor_mapping.get("sensor_mappings", {})
+
+        for sensor_name, mapping in mappings.items():
+            if not self.is_sensor_enabled(sensor_name):
+                continue
+
+            config = self._create_sensor_config(sensor_name=sensor_name, mapping=mapping)
+            configs.append(config)
+
+        return configs
+
+    def _create_sensor_config(
+        self, sensor_name: str, mapping: Dict, transform: Optional[Dict] = None
+    ) -> SensorConfig:
+        """Create a sensor configuration.
+
+        Args:
+            sensor_name: Name of the sensor
+            mapping: Sensor mapping data
+            transform: Optional transform data
+
+        Returns:
+            Sensor configuration
+        """
+        ros_config = mapping.get("ros_config", {})
+
+        # Build topic names
+        topic = None
+        topic_image = None
+        topic_info = None
+
+        if "topic" in ros_config:
+            topic = ros_config["topic"]
+        elif "topic_base" in ros_config and "topic_suffix" in ros_config:
+            topic = ros_config["topic_base"] + ros_config["topic_suffix"]
+
+        if "topic_image" in ros_config:
+            topic_image = ros_config["topic_image"]
+        if "topic_info" in ros_config:
+            topic_info = ros_config["topic_info"]
+
+        # Convert base_link coordinates to vehicle center if needed
+        if transform:
+            transform = self._carla_baselink_to_vehicle_center_transform(transform)
+
+        config = SensorConfig(
+            sensor_id=mapping.get("id", sensor_name),
+            sensor_type=mapping.get("carla_type", "unknown"),
+            carla_type=mapping.get("carla_type", "unknown"),
+            frame_id=ros_config.get("frame_id", sensor_name),
+            topic=topic,
+            topic_image=topic_image,
+            topic_info=topic_info,
+            frequency_hz=ros_config.get("frequency_hz", 20.0),
+            qos_profile=ros_config.get("qos_profile", "reliable"),
+            parameters=mapping.get("parameters", {}),
+            transform=transform,
+            enabled=True,
+        )
+
+        return config
+
+    def _carla_baselink_to_vehicle_center_transform(
+        self, baselink_transform: Dict
+    ) -> Dict[str, float]:
+        """Convert CARLA base_link coordinates to CARLA vehicle center coordinates.
+
+        The carla_sensor_kit calibration uses CARLA coordinate conventions (Y-right).
+        This function applies the wheelbase offset to translate from base_link
+        (rear axle center) to vehicle center, without coordinate system conversion.
+
+        Args:
+            baselink_transform: Transform dict with x, y, z, roll, pitch, yaw in CARLA coords
+
+        Returns:
+            Transform dict in vehicle center coordinates
+        """
+        # Extract values
+        x = baselink_transform["x"]
+        y = baselink_transform["y"]
+        z = baselink_transform["z"]
+        roll = baselink_transform["roll"]
+        pitch = baselink_transform["pitch"]
+        yaw = baselink_transform["yaw"]
+
+        # Convert location (only wheelbase offset, no coordinate flip)
+        location = CoordinateTransformer.carla_base_link_to_vehicle_center_location(
+            x, y, z, wheelbase=self.wheelbase
+        )
+
+        # Convert rotation (only unit conversion, no angle negation)
+        rotation = CoordinateTransformer.carla_rotation_to_carla_rotation(roll, pitch, yaw)
+
+        return {
+            "x": location.x,
+            "y": location.y,
+            "z": location.z,
+            "roll": rotation.roll,
+            "pitch": rotation.pitch,
+            "yaw": rotation.yaw,
+        }
