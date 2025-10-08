@@ -82,13 +82,10 @@ void StopModeOperator::publish_gear_command()
     parking = parking_route_state && parking_vehicle_stop;
   }
 
-  if (last_parking_ != parking) {
-    GearCommand gear;
-    gear.stamp = now();
-    gear.command = parking ? GearCommand::PARK : GearCommand::NONE;
-    pub_gear_->publish(gear);
-  }
-  last_parking_ = parking;
+  GearCommand gear;
+  gear.stamp = now();
+  gear.command = parking ? GearCommand::PARK : GearCommand::NONE;
+  pub_gear_->publish(gear);
 }
 
 void StopModeOperator::publish_turn_indicators_command()
