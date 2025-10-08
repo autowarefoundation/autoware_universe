@@ -157,6 +157,13 @@ protected:
 
   bool isValidPath(const PathWithLaneId & path) const override;
 
+  std::optional<std::vector<ExtendedPredictedObject>> find_colliding_object_if_all_paths_collide(
+    const LaneChangePath & lane_change_path,
+    const std::vector<std::vector<PoseWithVelocityStamped>> & ego_predicted_paths,
+    const ExtendedPredictedObjects & objects,
+    const utils::path_safety_checker::RSSparams & rss_params,
+    CollisionCheckDebugMap & debug_dataconst, const bool is_approved) const;
+
   PathSafetyStatus isLaneChangePathSafe(
     const LaneChangePath & lane_change_path,
     const std::vector<std::vector<PoseWithVelocityStamped>> & ego_predicted_paths,

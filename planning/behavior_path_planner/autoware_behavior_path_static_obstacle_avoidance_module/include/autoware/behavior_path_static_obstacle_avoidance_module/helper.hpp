@@ -370,6 +370,10 @@ public:
 
     const auto & object = objects.front();
 
+    if (object.is_parking_violation && parameters_->policy_parking_violation_vehicle == "manual") {
+      return std::make_pair(false, true);
+    }
+
     // if the object is NOT ambiguous, this module doesn't wait operator approval if RTC is running
     // as AUTO mode.
     if (!object.is_ambiguous) {

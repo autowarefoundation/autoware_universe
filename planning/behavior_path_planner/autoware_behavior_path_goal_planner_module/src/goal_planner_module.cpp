@@ -1760,7 +1760,7 @@ void GoalPlannerModule::postProcess()
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   if (!context_data_) {
-    RCLCPP_WARN_THROTTLE(
+    RCLCPP_DEBUG_THROTTLE(
       getLogger(), *clock_, 5000,
       " [pull_over] postProcess() is called without valid context_data. use dummy context data.");
   }

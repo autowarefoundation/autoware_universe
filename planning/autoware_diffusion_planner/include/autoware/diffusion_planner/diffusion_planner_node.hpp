@@ -156,7 +156,7 @@ struct DiffusionPlannerDebugParams
  * - do_inference: Run inference on input data and return predictions.
  * - on_parameter: Callback for dynamic parameter updates.
  * - create_input_data: Prepare input data for inference.
- * - get_ego_centric_agent_data: Extract ego-centric agent data from tracked objects.
+ * - get_ego_centric_neighbor_agent_data: Extract ego-centric agent data from tracked objects.
  * - create_trajectory: Convert predictions to a trajectory in map coordinates.
  * - create_ego_agent_past: Create a representation of the ego agent's past trajectory.
  *
@@ -250,7 +250,7 @@ private:
   // preprocessing
   std::shared_ptr<RouteHandler> route_handler_{std::make_shared<RouteHandler>()};
   Eigen::Matrix4d ego_to_map_transform_;
-  AgentData get_ego_centric_agent_data(
+  AgentData get_ego_centric_neighbor_agent_data(
     const TrackedObjects & objects, const Eigen::Matrix4d & map_to_ego_transform);
 
   /**
@@ -294,6 +294,7 @@ private:
 
   // Model input data
   std::optional<AgentData> agent_data_{std::nullopt};
+  std::optional<AgentData> ego_centric_neighbor_agent_data_{std::nullopt};
 
   // Node parameters
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
