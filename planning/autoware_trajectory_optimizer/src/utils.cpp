@@ -66,11 +66,11 @@ void smooth_trajectory_with_elastic_band(
     log_error_throttle("Elastic band path smoother is not initialized");
     return;
   }
-  if (traj_points.empty()) {
+  constexpr size_t min_points_size = 3;
+  if (traj_points.empty() || traj_points.size() < min_points_size) {
     return;
   }
   traj_points = eb_path_smoother_ptr->smoothTrajectory(traj_points, current_odometry.pose.pose);
-  eb_path_smoother_ptr->resetPreviousData();
 }
 
 void remove_invalid_points(TrajectoryPoints & input_trajectory)
@@ -89,17 +89,6 @@ void remove_invalid_points(TrajectoryPoints & input_trajectory)
       "Not enough points in trajectory after removing close proximity points and invalid points");
     return;
   }
-  const bool is_driving_forward = true;
-  autoware::motion_utils::insertOrientation(input_trajectory, is_driving_forward);
-  autoware::motion_utils::removeFirstInvalidOrientationPoints(input_trajectory);
-  size_t previous_size{input_trajectory.size()};
-  do {
-    previous_size = input_trajectory.size();
-    // Set the azimuth orientation to the next point at each point
-    autoware::motion_utils::insertOrientation(input_trajectory, is_driving_forward);
-    // Use azimuth orientation to remove points in reverse order
-    autoware::motion_utils::removeFirstInvalidOrientationPoints(input_trajectory);
-  } while (previous_size != input_trajectory.size());
 }
 
 void remove_close_proximity_points(TrajectoryPoints & input_trajectory_array, const double min_dist)
@@ -269,8 +258,7 @@ bool validate_point(const TrajectoryPoint & point)
          std::isfinite(point.pose.orientation.w) && !std::isnan(point.pose.position.x) &&
          !std::isnan(point.pose.position.y) && !std::isnan(point.pose.position.z) &&
          !std::isnan(point.pose.orientation.x) && !std::isnan(point.pose.orientation.y) &&
-         !std::isnan(point.pose.orientation.z) && !std::isnan(point.pose.orientation.w) &&
-         !std::isnan(point.longitudinal_velocity_mps) && !std::isnan(point.acceleration_mps2);
+         !std::isnan(point.pose.orientation.z) && !std::isnan(point.pose.orientation.w);
 }
 
 void apply_spline(TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params)
