@@ -23,6 +23,7 @@
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 
 #include <algorithm>
+#include <memory>
 #include <vector>
 
 namespace autoware::trajectory_traffic_rule_filter::plugin
@@ -32,6 +33,8 @@ using autoware_internal_planning_msgs::msg::PathWithLaneId;
 
 TrafficLightFilter::TrafficLightFilter() : TrafficRuleFilterInterface("TrafficLightFilter")
 {
+  boundary_departure_checker_ =
+    std::make_unique<autoware::boundary_departure_checker::BoundaryDepartureChecker>();
 }
 
 lanelet::ConstLanelets TrafficLightFilter::get_lanelets_from_trajectory(
