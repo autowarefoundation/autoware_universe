@@ -52,7 +52,7 @@
         },
         "max_crosswalk_user_on_road_distance": {
           "type": "number",
-          "default": 3.0,
+          "default": 2.0,
           "description": "crosswalk users on road or shoulder lanelets are only predicted to cross the crosswalk if they are within this distance"
         },
         "dist_threshold_for_searching_lanelet": {
