@@ -16,6 +16,7 @@
 #define AUTOWARE__PLANNING_EVALUATOR__METRICS__OBSTACLE_METRICS_HPP_
 
 #include "autoware_utils/math/accumulator.hpp"
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include "autoware_perception_msgs/msg/predicted_objects.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
@@ -24,6 +25,7 @@ namespace planning_diagnostics
 {
 namespace metrics
 {
+using autoware::vehicle_info_utils::VehicleInfo;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_utils::Accumulator;
@@ -35,7 +37,7 @@ using autoware_utils::Accumulator;
  * @return calculated statistics
  */
 Accumulator<double> calcDistanceToObstacle(
-  const PredictedObjects & obstacles, const Trajectory & traj);
+  const PredictedObjects & obstacles, const Trajectory & traj, const VehicleInfo & vehicle_info);
 
 /**
  * @brief calculate the time to collision of the trajectory with the given obstacles
@@ -45,7 +47,7 @@ Accumulator<double> calcDistanceToObstacle(
  * @return calculated statistics
  */
 Accumulator<double> calcTimeToCollision(
-  const PredictedObjects & obstacles, const Trajectory & traj, const double distance_threshold);
+  const PredictedObjects & obstacles, const Trajectory & traj, const VehicleInfo & vehicle_info, const double distance_threshold);
 
 }  // namespace metrics
 }  // namespace planning_diagnostics
