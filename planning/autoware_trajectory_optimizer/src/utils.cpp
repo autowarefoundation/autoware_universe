@@ -245,14 +245,13 @@ void filter_velocity(
 
 bool validate_point(const TrajectoryPoint & point)
 {
-  return std::isfinite(point.longitudinal_velocity_mps) && std::isfinite(point.acceleration_mps2) &&
-         std::isfinite(point.pose.position.x) && std::isfinite(point.pose.position.y) &&
-         std::isfinite(point.pose.position.z) && std::isfinite(point.pose.orientation.x) &&
-         std::isfinite(point.pose.orientation.y) && std::isfinite(point.pose.orientation.z) &&
-         std::isfinite(point.pose.orientation.w) && !std::isnan(point.pose.position.x) &&
-         !std::isnan(point.pose.position.y) && !std::isnan(point.pose.position.z) &&
-         !std::isnan(point.pose.orientation.x) && !std::isnan(point.pose.orientation.y) &&
-         !std::isnan(point.pose.orientation.z) && !std::isnan(point.pose.orientation.w);
+  auto is_valid = [](auto value) { return std::isfinite(value) && !std::isnan(value); };
+
+  return is_valid(point.longitudinal_velocity_mps) && is_valid(point.acceleration_mps2) &&
+         is_valid(point.pose.position.x) && is_valid(point.pose.position.y) &&
+         is_valid(point.pose.position.z) && is_valid(point.pose.orientation.x) &&
+         is_valid(point.pose.orientation.y) && is_valid(point.pose.orientation.z) &&
+         is_valid(point.pose.orientation.w);
 }
 
 void apply_spline(TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params)
