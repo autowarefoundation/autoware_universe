@@ -542,7 +542,7 @@ bool BEVFusionTRT::preProcess(
 
     for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
       int start_y = roi_start_y_vector_[camera_id];
-      
+
       cudaMemcpyAsync(
         image_buffers_d_[camera_id].get(), image_msgs[camera_id]->data.data(),
         config_.raw_image_height_ * config_.raw_image_width_ * 3, cudaMemcpyHostToDevice, stream_);
@@ -635,9 +635,8 @@ bool BEVFusionTRT::preProcess(
       cudaMemcpy(
         roi_host_data.data(),
         &roi_tensor_d_[camera_id * config_.roi_height_ * config_.roi_width_ * 3],
-        config_.roi_height_ * config_.roi_width_ * 3,
-        cudaMemcpyDeviceToHost);
-      }
+        config_.roi_height_ * config_.roi_width_ * 3, cudaMemcpyDeviceToHost);
+    }
   }
 
   return true;
