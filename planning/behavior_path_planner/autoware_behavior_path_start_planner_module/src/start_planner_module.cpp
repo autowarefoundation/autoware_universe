@@ -1036,10 +1036,9 @@ BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
     /*forward_only_in_route*/ true);
 
   auto stop_path = status_.driving_forward ? getCurrentPath() : status_.backward_path;
-  constexpr double braking_delay = 0.1;
   stop_pose_ = utils::insert_feasible_stop_point(
     stop_path, planner_data_, -parameters_->maximum_deceleration_for_stop,
-    parameters_->maximum_jerk_for_stop, braking_delay, "waiting approval");
+    parameters_->maximum_jerk_for_stop, "waiting approval");
   status_.stop_pose = stop_pose_;
 
   const auto drivable_lanes = generateDrivableLanes(stop_path);
