@@ -217,9 +217,9 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
     // apply optimizers
     trajectory_extender_ptr_->optimize_trajectory(trajectory.points, params_);
     trajectory_point_fixer_ptr_->optimize_trajectory(trajectory.points, params_);
-    trajectory_velocity_optimizer_ptr_->optimize_trajectory(trajectory.points, params_);
     eb_smoother_optimizer_ptr_->optimize_trajectory(trajectory.points, params_);
     trajectory_spline_smoother_ptr_->optimize_trajectory(trajectory.points, params_);
+    trajectory_velocity_optimizer_ptr_->optimize_trajectory(trajectory.points, params_);
     trajectory_point_fixer_ptr_->optimize_trajectory(trajectory.points, params_);
     motion_utils::calculate_time_from_start(
       trajectory.points, current_odometry_ptr_->pose.pose.position);
