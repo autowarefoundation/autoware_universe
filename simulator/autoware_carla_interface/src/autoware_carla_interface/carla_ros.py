@@ -464,55 +464,56 @@ class carla_ros2_interface(object):
         self.sensor_registry.update_sensor_timestamp(gnss_config.sensor_id, self.timestamp)
 
     def _create_gnss_covariance_matrix(self):
-        """Create GNSS covariance matrix for pose uncertainty.
+        """Create GNSS covariance matrix from sensor configuration.
 
         Returns:
             list: 6x6 covariance matrix (36 elements) for [x, y, z, roll, pitch, yaw]
         """
-        # GNSS covariance (position uncertainty in meters²)
-        # Covariance matrix entries must be in variance units (σ²), not standard deviation (σ)
-        GNSS_POSITION_STDDEV = 0.1  # meters (standard deviation)
-        GNSS_POSITION_VARIANCE = GNSS_POSITION_STDDEV**2  # meters² (variance)
-        # Orientation uncertainty - set large values since orientation is not measured by GNSS
-        ORIENTATION_VARIANCE = 1.0  # radians² (large uncertainty)
+        gnss_config = self.sensor_registry.get_sensor("gnss")
+        if gnss_config and hasattr(gnss_config, "covariance") and gnss_config.covariance:
+            pos_var = gnss_config.covariance.get("position_variance", 0.01)
+            orient_var = gnss_config.covariance.get("orientation_variance", 1.0)
+        else:
+            pos_var = 0.01
+            orient_var = 1.0
 
         return [
-            GNSS_POSITION_VARIANCE,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,  # x row
-            0.0,
-            GNSS_POSITION_VARIANCE,
-            0.0,
-            0.0,
-            0.0,
-            0.0,  # y row
-            0.0,
-            0.0,
-            GNSS_POSITION_VARIANCE,
-            0.0,
-            0.0,
-            0.0,  # z row
-            0.0,
-            0.0,
-            0.0,
-            ORIENTATION_VARIANCE,
-            0.0,
-            0.0,  # roll row
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            ORIENTATION_VARIANCE,
-            0.0,  # pitch row
+            pos_var,
             0.0,
             0.0,
             0.0,
             0.0,
             0.0,
-            ORIENTATION_VARIANCE,  # yaw row
+            0.0,
+            pos_var,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            pos_var,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            orient_var,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            orient_var,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            orient_var,
         ]
 
     def _build_camera_info(self, camera_actor):
