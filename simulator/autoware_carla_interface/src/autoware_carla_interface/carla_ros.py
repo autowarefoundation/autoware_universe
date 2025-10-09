@@ -619,22 +619,31 @@ class carla_ros2_interface(object):
     def first_order_steering(self, steer_input):
         """First order steering model.
 
-        Gracefully handles early control commands that arrive before the first
-        simulation tick by returning the raw input when timestamp is not yet available.
+        Gracefully handles:
+        - Early control commands before first simulation tick (returns raw input)
+        - Multiple commands in same CARLA tick (preserves filter state, no zero spike)
         """
         # Guard against control commands arriving before first sensor callback
         if self.timestamp is None:
             return steer_input  # No filtering yet, return raw command
 
-        steer_output = 0.0
+        # Initialize on first call
         if self.prev_timestamp is None:
             self.prev_timestamp = self.timestamp
+            self.prev_steer_output = steer_input
+            return steer_input
 
         dt = self.timestamp - self.prev_timestamp
-        if dt > 0.0:
-            steer_output = self.prev_steer_output + (steer_input - self.prev_steer_output) * (
-                dt / (self.tau + dt)
-            )
+
+        # Multiple commands in same simulation tick (dt = 0)
+        # Preserve filter state to avoid zero spike - return previous output
+        if dt <= 0.0:
+            return self.prev_steer_output
+
+        # Normal case: time has advanced, apply low-pass filter
+        steer_output = self.prev_steer_output + (steer_input - self.prev_steer_output) * (
+            dt / (self.tau + dt)
+        )
         self.prev_steer_output = steer_output
         self.prev_timestamp = self.timestamp
         return steer_output
