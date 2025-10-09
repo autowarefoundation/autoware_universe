@@ -63,6 +63,29 @@
           "minimum": 0.0,
           "maximum": 1.0
         },
+        "roi_fov_validation": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "array",
+              "items": {
+                "type": "boolean"
+              },
+              "description": "Flags to enable FOV validation for each ROI. Must have the same number as the input ROIs.",
+              "default": [false, false, false, false, false, false, false, false]
+            },
+            "max_horizontal_fovs": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 180.0
+              },
+              "description": "Horizontal FOV angles for validating each ROI. Must have the same number as the input ROIs.",
+              "default": [60.0, 60.0, 60.0, 60.0, 60.0, 60.0, 60.0, 60.0]
+            }
+          }
+        },
         "detection_max_range": {
           "type": "number",
           "description": "Maximum detection range. Objects beyond this distance will not be included in the output [m].",

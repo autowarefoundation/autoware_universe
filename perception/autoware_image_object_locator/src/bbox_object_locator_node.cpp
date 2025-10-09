@@ -14,6 +14,7 @@
 
 #include "bbox_object_locator_node.hpp"
 
+#include <autoware_utils_math/unit_conversion.hpp>
 #include <rclcpp/qos.hpp>
 
 #include <sensor_msgs/msg/region_of_interest.hpp>
@@ -37,6 +38,8 @@
 
 namespace autoware::image_object_locator
 {
+using autoware_utils_math::deg2rad;
+
 void transformToRT(const geometry_msgs::msg::TransformStamped & tf, cv::Matx33d & R, cv::Vec3d & t)
 {
   tf2::Quaternion q(
@@ -49,21 +52,29 @@ void transformToRT(const geometry_msgs::msg::TransformStamped & tf, cv::Matx33d 
   t = cv::Vec3d(tf.transform.translation.x, tf.transform.translation.y, tf.transform.translation.z);
 }
 
+cv::Point2f undistortPoint(cv::Point2f pixel, cv::Matx33d K, cv::Mat D)
+{
+  cv::Point2f undistorted_pixel;
+  std::vector<cv::Point2f> pixels = {pixel};
+  std::vector<cv::Point2f> undistorted_pixels;
+
+  cv::undistortPoints(pixels, undistorted_pixels, K, D);
+
+  undistorted_pixel.x = undistorted_pixels[0].x;
+  undistorted_pixel.y = undistorted_pixels[0].y;
+
+  return undistorted_pixel;
+}
+
 /**
  * @brief Computes the ground intersection point of a pixel ray.
  *
  * Assumes that the ROI covers the entire object, and projects the given image point
  * onto the ground plane (z=0) in target frame coordinate.
  */
-cv::Vec3d projectToGround(
-  const cv::Point2f & pixel, const cv::Matx33d & K, const cv::Mat & D, const cv::Matx33d & R,
-  const cv::Vec3d & t)
+cv::Vec3d projectToGround(const cv::Point2f & pixel, const cv::Matx33d & R, const cv::Vec3d & t)
 {
-  std::vector<cv::Point2f> pixels = {pixel};
-  std::vector<cv::Point2f> undistorted;
-  cv::undistortPoints(pixels, undistorted, K, D);
-
-  cv::Vec3d ray_cam(undistorted[0].x, undistorted[0].y, 1.0);
+  cv::Vec3d ray_cam(pixel.x, pixel.y, 1.0);
   cv::Vec3d ray_world = R * ray_cam;
   cv::Vec3d cam_origin = t;
 
@@ -81,14 +92,10 @@ cv::Vec3d projectToGround(
  * Falls back to a pseudo height if no valid intersection is found.
  */
 double computeHeight(
-  const cv::Point2f & pixel_top, const cv::Matx33d & K, const cv::Mat & D, const cv::Matx33d & R,
-  const cv::Vec3d & t, const cv::Vec3d & projected_bottom_pixel, const double pseudo_height)
+  const cv::Point2f & pixel_top, const cv::Matx33d & R, const cv::Vec3d & t,
+  const cv::Vec3d & projected_bottom_pixel, const double pseudo_height)
 {
-  std::vector<cv::Point2f> pixels = {pixel_top};
-  std::vector<cv::Point2f> undistorted;
-  cv::undistortPoints(pixels, undistorted, K, D);
-
-  cv::Vec3d ray_cam(undistorted[0].x, undistorted[0].y, 1.0);
+  cv::Vec3d ray_cam(pixel_top.x, pixel_top.y, 1.0);
   cv::Vec3d ray_world = R * ray_cam;
   cv::Vec3d cam_origin = t;
 
@@ -137,6 +144,12 @@ BboxObjectLocatorNode::BboxObjectLocatorNode(const rclcpp::NodeOptions & node_op
   label_settings_.PEDESTRIAN = declare_parameter<bool>("detection_target_class.PEDESTRIAN");
 
   roi_confidence_th_ = declare_parameter<double>("roi_confidence_threshold");
+
+  std::vector<bool> roi_enable_fov_validation =
+    declare_parameter<std::vector<bool>>("roi_fov_validation.enabled");
+  std::vector<double> roi_valid_horizontal_fov =
+    declare_parameter<std::vector<double>>("roi_fov_validation.max_horizontal_fovs");
+
   const double detection_max_range = declare_parameter<double>("detection_max_range");
   detection_max_range_sq_ = detection_max_range * detection_max_range;
   pseudo_height_ = declare_parameter<double>("pseudo_height");
@@ -147,6 +160,11 @@ BboxObjectLocatorNode::BboxObjectLocatorNode(const rclcpp::NodeOptions & node_op
   std::vector<int64_t> rois_ids = declare_parameter<std::vector<int64_t>>("rois_ids");
   size_t rois_number = rois_ids.size();
 
+  if (!isRoiValidationParamValid(
+        rois_number, roi_enable_fov_validation, roi_valid_horizontal_fov)) {
+    throw std::runtime_error("Parameter roi_fov_validation is invalid.");
+  }
+
   // create subscriber and publisher
   camera_info_subs_.resize(rois_number);
   roi_subs_.resize(rois_number);
@@ -155,6 +173,14 @@ BboxObjectLocatorNode::BboxObjectLocatorNode(const rclcpp::NodeOptions & node_op
     const std::string rois_id_str = std::to_string(rois_id);
 
     is_camera_info_arrived_[rois_id] = false;
+
+    RoiValidator roi_validator;
+    roi_validator.enabled_fov_validation = roi_enable_fov_validation[rois_id_index];
+    // angle is measured from the optical axis; use half the value
+    roi_validator.fov_x_threshold =
+      std::tan(deg2rad(roi_valid_horizontal_fov[rois_id_index] * 0.5));
+
+    roi_validator_[rois_id] = roi_validator;
 
     // subscriber: camera info
     const std::string camera_info_topic_name = declare_parameter<std::string>(
@@ -185,6 +211,33 @@ BboxObjectLocatorNode::BboxObjectLocatorNode(const rclcpp::NodeOptions & node_op
   }
 
   transform_listener_ = std::make_shared<TransformListener>(this);
+}
+
+bool BboxObjectLocatorNode::isRoiValidationParamValid(
+  const size_t rois_number, const std::vector<bool> & enable_validation,
+  const std::vector<double> & horizontal_fovs)
+{
+  if (enable_validation.size() < rois_number) {
+    RCLCPP_ERROR(
+      get_logger(),
+      "roi_position_validation.enabled must have the parameters for all ROIs. "
+      "rois_id: %ld, roi_position_validation.enabled: %ld",
+      rois_number, enable_validation.size());
+
+    return false;
+  }
+
+  if (horizontal_fovs.size() < rois_number) {
+    RCLCPP_ERROR(
+      get_logger(),
+      "roi_position_validation.max_horizontal_fovs must have the parameters for all ROIs. "
+      "rois_id: %ld, roi_position_validation.max_horizontal_fovs: %ld",
+      rois_number, horizontal_fovs.size());
+
+    return false;
+  }
+
+  return true;
 }
 
 void BboxObjectLocatorNode::cameraInfoCallback(const CameraInfo::ConstSharedPtr & msg, int rois_id)
@@ -241,8 +294,17 @@ bool BboxObjectLocatorNode::generateROIBasedObject(
   cv::Vec3d t;
   transformToRT(tf, R, t);
 
+  cv::Point2f undistorted_bottom_center = undistortPoint(bottom_center, K, D);
+
+  // currently, only check the horizontal FOV
+  // filtering by the detection range will do the similar thing for vertical FOV
+  // under normal camera settings
+  if (!roi_validator_[rois_id].isRoiInHorizontalFov(undistorted_bottom_center.x)) {
+    return false;
+  }
+
   // compute object ground point
-  const cv::Vec3d bottom_point_in_3d = projectToGround(bottom_center, K, D, R, t);
+  const cv::Vec3d bottom_point_in_3d = projectToGround(undistorted_bottom_center, R, t);
 
   const double dist_sq =
     bottom_point_in_3d[0] * bottom_point_in_3d[0] + bottom_point_in_3d[1] * bottom_point_in_3d[1];
@@ -251,10 +313,14 @@ bool BboxObjectLocatorNode::generateROIBasedObject(
     return false;
   }
 
-  const double height = computeHeight(top_center, K, D, R, t, bottom_point_in_3d, pseudo_height_);
+  cv::Point2f undistorted_top_center = undistortPoint(top_center, K, D);
+  const double height =
+    computeHeight(undistorted_top_center, R, t, bottom_point_in_3d, pseudo_height_);
 
-  const cv::Vec3d left_point_in_3d = projectToGround(bottom_left, K, D, R, t);
-  const cv::Vec3d right_point_in_3d = projectToGround(bottom_right, K, D, R, t);
+  cv::Point2f undistorted_bottom_left = undistortPoint(bottom_left, K, D);
+  cv::Point2f undistorted_bottom_right = undistortPoint(bottom_right, K, D);
+  const cv::Vec3d left_point_in_3d = projectToGround(undistorted_bottom_left, R, t);
+  const cv::Vec3d right_point_in_3d = projectToGround(undistorted_bottom_right, R, t);
 
   const double dim_xy = cv::norm(left_point_in_3d - right_point_in_3d);
 

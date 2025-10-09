@@ -91,6 +91,25 @@ private:
     }
   };  // struct LabelSettings
 
+  struct RoiValidator
+  {
+    bool enabled_fov_validation;
+
+    double fov_x_threshold;
+
+    bool isRoiInHorizontalFov(const double x) const
+    {
+      if (enabled_fov_validation) {
+        if (std::abs(x) > fov_x_threshold)
+          return false;
+        else
+          return true;
+      } else {
+        return true;
+      }
+    }
+  };  // struct RoiValidator
+
   struct CameraIntrinsics
   {
     // cspell: ignore Matx
@@ -98,6 +117,9 @@ private:
     cv::Mat D;
   };  // struct CameraIntrinsics
 
+  bool isRoiValidationParamValid(
+    const size_t rois_number, const std::vector<bool> & enable_roi_pos_validation,
+    const std::vector<double> & horizontal_angles);
   void roiCallback(const DetectedObjectsWithFeature::ConstSharedPtr & msg, int rois_id);
   void cameraInfoCallback(const CameraInfo::ConstSharedPtr & msg, int rois_id);
   bool generateROIBasedObject(
@@ -114,6 +136,7 @@ private:
 
   std::string target_frame_;
   LabelSettings label_settings_;
+  std::unordered_map<int, RoiValidator> roi_validator_;
   double roi_confidence_th_;
   double detection_max_range_sq_;
   double pseudo_height_;
