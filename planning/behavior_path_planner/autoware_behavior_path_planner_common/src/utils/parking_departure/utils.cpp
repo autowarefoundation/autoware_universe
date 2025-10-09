@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -102,10 +103,11 @@ std::pair<double, double> getPairsTerminalVelocityAndAccel(
 
 std::optional<PathWithLaneId> generateFeasibleStopPath(
   PathWithLaneId & current_path, std::shared_ptr<const PlannerData> planner_data,
-  PoseWithDetailOpt & stop_pose, const double maximum_deceleration, const double maximum_jerk)
+  PoseWithDetailOpt & stop_pose, const double maximum_deceleration, const double maximum_jerk,
+  const std::string & stop_reason)
 {
   stop_pose = insert_feasible_stop_point(
-    current_path, planner_data, maximum_deceleration, maximum_jerk, "feasible_stop");
+    current_path, planner_data, -maximum_deceleration, maximum_jerk, stop_reason);
 
   if (!stop_pose) {
     return std::nullopt;
