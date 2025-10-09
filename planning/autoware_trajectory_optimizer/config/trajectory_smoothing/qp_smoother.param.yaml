@@ -1,0 +1,19 @@
+/**:
+  ros__parameters:
+    # QP Smoother Parameters
+    # Optimization weights
+    qp_weight_jerk: 10.0                      # Weight for jerk minimization (smoothness) [dimensionless]
+    qp_weight_acceleration: 1.0                # Weight for acceleration minimization [dimensionless]
+    qp_weight_fidelity: 100.0                  # Weight for staying close to original path [dimensionless]
+
+    # Dynamic constraints
+    qp_max_longitudinal_jerk_mps3: 2.0         # Maximum longitudinal jerk [m/s³]
+    qp_max_acceleration_mps2: 2.0              # Maximum acceleration [m/s²]
+    qp_min_acceleration_mps2: -3.0             # Minimum acceleration (braking) [m/s²]
+    qp_max_speed_mps: 20.0                     # Maximum speed [m/s]
+
+    # OSQP solver settings
+    qp_osqp_eps_abs: 1.0e-4                    # Absolute tolerance for convergence
+    qp_osqp_eps_rel: 1.0e-4                    # Relative tolerance for convergence
+    qp_osqp_max_iter: 4000                     # Maximum solver iterations
+    qp_osqp_verbose: false                     # Print solver output to console
