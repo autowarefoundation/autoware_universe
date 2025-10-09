@@ -52,6 +52,29 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 5. Wait for planning
 6. Engage
 
+### Viewing Multi-Camera View in RViz
+
+The `carla_sensor_kit` includes 6 cameras providing 360-degree coverage (Front, Front-Left, Front-Right, Back, Back-Left, Back-Right). A multi-camera combiner node automatically combines all camera feeds into a single 2x3 grid view.
+
+To view the combined camera feed in RViz:
+
+1. In the **Displays** panel (left side), click the **"Add"** button
+2. Select the **"By topic"** tab
+3. Navigate to `/sensing/camera/all_cameras/image_raw`
+4. Select **"Image"** display type
+5. Click **OK**
+
+![Multi-Camera View in RViz](docs/images/rviz_multi_camera_view.png)
+
+The combined view shows all 6 cameras with labels: FL (Front-Left), F (Front), FR (Front-Right), BL (Back-Left), B (Back), BR (Back-Right).
+
+**Note:** If you don't need the multi-camera combiner (to save CPU resources), you can comment out the following line in `launch/autoware_carla_interface.launch.xml`:
+
+```xml
+<!-- Multi-camera combiner for RViz visualization -->
+<!-- <node pkg="autoware_carla_interface" exec="multi_camera_combiner" output="screen"/> -->
+```
+
 ## Inner-workings / Algorithms
 
 The `InitializeInterface` class is key to setting up both the CARLA world and the ego vehicle. It fetches configuration parameters through the `autoware_carla_interface.launch.xml`.
