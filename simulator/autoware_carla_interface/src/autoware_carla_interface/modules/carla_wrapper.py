@@ -128,7 +128,7 @@ class SensorWrapper(object):
         return self._agent()
 
     def setup_sensors(self, vehicle, debug_mode=False):
-        """Create and attach the sensor defined in objects.json."""
+        """Create and attach sensors defined via sensor configuration."""
         bp_library = CarlaDataProvider.get_world().get_blueprint_library()
 
         for sensor_spec in self._agent.sensors["sensors"]:
