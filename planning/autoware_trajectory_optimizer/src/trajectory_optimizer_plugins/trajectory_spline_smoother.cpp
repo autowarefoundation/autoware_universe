@@ -14,8 +14,9 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_spline_smoother.hpp"
 
-#include "autoware/motion_utils/resample/resample.hpp"
 #include "autoware/trajectory_optimizer/utils.hpp"
+
+#include <autoware/motion_utils/resample/resample.hpp>
 
 #include <vector>
 

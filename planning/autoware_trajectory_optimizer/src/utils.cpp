@@ -14,12 +14,12 @@
 
 #include "autoware/trajectory_optimizer/utils.hpp"
 
-#include "autoware/motion_utils/resample/resample.hpp"
 #include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
 
+#include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
-#include <autoware_utils/math/normalization.hpp>
+#include <autoware_utils_math/normalization.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
 #include <rclcpp/logging.hpp>
 
@@ -389,7 +389,8 @@ void add_ego_state_to_trajectory(
   }
   const auto & last_point = traj_points.back();
   const auto yaw_diff = std::abs(
-    autoware_utils::normalize_degree(ego_state.pose.orientation.z - last_point.pose.orientation.z));
+    autoware_utils_math::normalize_degree(
+      ego_state.pose.orientation.z - last_point.pose.orientation.z));
   const auto distance = autoware_utils::calc_distance2d(last_point, ego_state);
   constexpr double epsilon{1e-2};
   const bool is_change_small = distance < epsilon && yaw_diff < epsilon;
