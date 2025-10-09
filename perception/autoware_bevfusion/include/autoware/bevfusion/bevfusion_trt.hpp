@@ -75,13 +75,13 @@ public:
   explicit BEVFusionTRT(
     const tensorrt_common::TrtCommonConfig & trt_config,
     const DensificationParam & densification_param, const BEVFusionConfig & config);
-  
+
   // Constructor for fusion model with separate image backbone and main body
   explicit BEVFusionTRT(
     const tensorrt_common::TrtCommonConfig & main_trt_config,
     const tensorrt_common::TrtCommonConfig & image_backbone_trt_config,
     const DensificationParam & densification_param, const BEVFusionConfig & config);
-  
+
   virtual ~BEVFusionTRT();
 
   bool detect(
@@ -154,7 +154,7 @@ protected:
   CudaUniquePtr<std::uint8_t[]> roi_tensor_d_{nullptr};
   std::vector<CudaUniquePtr<std::uint8_t[]>> image_buffers_d_{};
   CudaUniquePtr<float[]> camera_masks_d_{nullptr};
-  
+
   // image feature buffers for fusion model
   CudaUniquePtr<float[]> image_feats_d_{nullptr};
   CudaUniquePtr<float[]> img_aug_matrix_d_{nullptr};

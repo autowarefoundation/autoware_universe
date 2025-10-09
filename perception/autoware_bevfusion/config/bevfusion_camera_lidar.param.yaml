@@ -11,7 +11,7 @@
     cloud_capacity: 2000000
     onnx_path: "/home/autoware/workspace/models/main_body.onnx"
     engine_path: "/home/autoware/workspace/models/main_body.engine"
-    
+
     # image backbone network (fusion model always uses separate image backbone)
     image_backbone_onnx_path: "/home/autoware/workspace/models/image_backbone.onnx"
     image_backbone_engine_path: "/home/autoware/workspace/models/image_backbone.engine"

@@ -46,9 +46,9 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
     this->declare_parameter<std::string>("trt_precision", descriptor);
 
   // Image backbone parameters (for fusion model)
-  const std::string image_backbone_onnx_path = 
+  const std::string image_backbone_onnx_path =
     this->declare_parameter<std::string>("image_backbone_onnx_path", "", descriptor);
-  const std::string image_backbone_engine_path = 
+  const std::string image_backbone_engine_path =
     this->declare_parameter<std::string>("image_backbone_engine_path", "", descriptor);
   const std::string image_backbone_trt_precision =
     this->declare_parameter<std::string>("image_backbone_trt_precision", trt_precision, descriptor);
@@ -91,7 +91,7 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
   const auto features_height = this->declare_parameter<std::int64_t>("features_height", descriptor);
   const auto features_width = this->declare_parameter<int>("features_width", descriptor);
   const auto num_depth_features = this->declare_parameter<int>("num_depth_features", descriptor);
-  const auto use_intensity = this->declare_parameter<bool>("use_intensity", descriptor);  
+  const auto use_intensity = this->declare_parameter<bool>("use_intensity", descriptor);
   // Head parameters
   const auto num_proposals = this->declare_parameter<std::int64_t>("num_proposals", descriptor);
   class_names_ = this->declare_parameter<std::vector<std::string>>("class_names", descriptor);
@@ -153,16 +153,17 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
     // Validate image backbone parameters
     if (image_backbone_onnx_path.empty() || image_backbone_engine_path.empty()) {
       RCLCPP_ERROR(
-        this->get_logger(), 
+        this->get_logger(),
         "Image backbone ONNX and engine paths must be specified for fusion model");
       throw std::runtime_error("Missing image backbone model paths for fusion model");
     }
-    
+
     auto main_trt_config =
       tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U);
     auto image_backbone_trt_config = tensorrt_common::TrtCommonConfig(
-      image_backbone_onnx_path, image_backbone_trt_precision, image_backbone_engine_path, 1ULL << 32U);
-    
+      image_backbone_onnx_path, image_backbone_trt_precision, image_backbone_engine_path,
+      1ULL << 32U);
+
     detector_ptr_ = std::make_unique<BEVFusionTRT>(
       main_trt_config, image_backbone_trt_config, densification_param, config);
   } else {
@@ -232,12 +233,10 @@ void BEVFusionNode::cloudCallback(
       this->get_logger(), *this->get_clock(), 5000,
       "Sensor fusion mode enabled but missing required data: extrinsics_available=%s, "
       "images_available=%s, intrinsics_available=%s. Skipping detection",
-      extrinsics_available_ ? "true" : "false",
-      images_available_ ? "true" : "false", 
+      extrinsics_available_ ? "true" : "false", images_available_ ? "true" : "false",
       intrinsics_available_ ? "true" : "false");
     return;
   }
-  
 
   if (sensor_fusion_ && !intrinsics_extrinsics_precomputed_) {
     std::vector<sensor_msgs::msg::CameraInfo> camera_info_msgs;
