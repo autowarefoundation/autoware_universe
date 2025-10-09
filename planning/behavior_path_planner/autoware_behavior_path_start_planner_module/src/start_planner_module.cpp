@@ -851,49 +851,7 @@ BehaviorModuleOutput StartPlannerModule::plan()
     return output;
   }
 
-  const auto path = std::invoke([&]() {
-    autoware_utils::ScopedTimeTrack st2("plan path", *time_keeper_);
-
-    if (!status_.driving_forward && !status_.backward_driving_complete) {
-      return status_.backward_path;
-    }
-
-    // Increment path index if the current path is finished
-    if (hasFinishedCurrentPath()) {
-      RCLCPP_INFO(getLogger(), "Increment path index");
-      incrementPathIndex();
-    }
-
-    if (isWaitingApproval()) return getCurrentPath();
-
-    if (status_.stop_pose && status_.prev_stop_path_after_approval) {
-      // Delete stop point if conditions are met
-      if (status_.is_safe_dynamic_objects && isStopped()) {
-        status_.stop_pose = std::nullopt;
-      }
-      stop_pose_ = status_.stop_pose;
-      return *status_.prev_stop_path_after_approval;
-    }
-
-    if (!status_.is_safe_dynamic_objects) {
-      auto current_path = getCurrentPath();
-      const auto stop_path =
-        autoware::behavior_path_planner::utils::parking_departure::generateFeasibleStopPath(
-          current_path, planner_data_, stop_pose_, parameters_->maximum_deceleration_for_stop,
-          parameters_->maximum_jerk_for_stop);
-
-      if (!stop_path.has_value()) return current_path;
-      // Insert stop point in the path if needed
-      RCLCPP_DEBUG_THROTTLE(
-        getLogger(), *clock_, 5000, "Insert stop point in the path because of dynamic objects");
-      status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(stop_path.value());
-      std::string stop_reason = "unsafe against dynamic objects";
-      stop_pose_ = PoseWithDetail(stop_pose_.value().pose, stop_reason);
-      status_.stop_pose = stop_pose_;
-      return stop_path.value();
-    }
-    return getCurrentPath();
-  });
+  const auto path = getCurrentOutputPath();
 
   BehaviorModuleOutput output;
   output.path = path;
@@ -902,8 +860,11 @@ BehaviorModuleOutput StartPlannerModule::plan()
   path_candidate_ = std::make_shared<PathWithLaneId>(getFullPath());
   path_reference_ = std::make_shared<PathWithLaneId>(getPreviousModuleOutput().reference_path);
 
-  setDrivableAreaInfo(output);
+  if (!status_.prev_approved_path) {
+    status_.prev_approved_path = std::make_shared<PathWithLaneId>(output.path);
+  }
 
+  setDrivableAreaInfo(output);
   set_longitudinal_planning_factor(output.path);
 
   const auto planning_factor_direction = getPlanningFactorDirection(output);
@@ -1035,10 +996,19 @@ BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
     planner_data_, backward_path_length, std::numeric_limits<double>::max(),
     /*forward_only_in_route*/ true);
 
-  auto stop_path = status_.driving_forward ? getCurrentPath() : status_.backward_path;
+  auto stop_path = std::invoke([&]() {
+    if (status_.prev_approved_path) {
+      return *status_.prev_approved_path;
+    }
+    return status_.driving_forward ? getCurrentPath() : status_.backward_path;
+  });
+
+  const std::string stop_reason =
+    !status_.is_safe_dynamic_objects ? "unsafe against dynamic objects" : "waiting approval";
+
   stop_pose_ = utils::insert_feasible_stop_point(
     stop_path, planner_data_, -parameters_->maximum_deceleration_for_stop,
-    parameters_->maximum_jerk_for_stop, "waiting approval");
+    parameters_->maximum_jerk_for_stop, stop_reason);
   status_.stop_pose = stop_pose_;
 
   const auto drivable_lanes = generateDrivableLanes(stop_path);
@@ -1145,7 +1115,80 @@ PathWithLaneId StartPlannerModule::getCurrentPath() const
   if (status_.pull_out_path.partial_paths.size() <= status_.current_path_idx) {
     return PathWithLaneId{};
   }
+
+  if (status_.prev_approved_path) {
+    return *status_.prev_approved_path;
+  }
+
   return status_.pull_out_path.partial_paths.at(status_.current_path_idx);
+}
+
+PathWithLaneId StartPlannerModule::getCurrentOutputPath()
+{
+  autoware_utils::ScopedTimeTrack st2("plan path", *time_keeper_);
+
+  if (!status_.driving_forward && !status_.backward_driving_complete) {
+    return status_.backward_path;
+  }
+
+  // Increment path index if the current path is finished
+  if (hasFinishedCurrentPath()) {
+    RCLCPP_INFO(getLogger(), "Increment path index");
+    incrementPathIndex();
+  }
+
+  if (isWaitingApproval()) return getCurrentPath();
+
+  if (status_.stop_pose && status_.prev_stop_path_after_approval) {
+    // Delete stop point if conditions are met
+    if (status_.is_safe_dynamic_objects && isStopped()) {
+      status_.stop_pose = std::nullopt;
+    }
+    stop_pose_ = status_.stop_pose;
+    update_rtc_status(
+      status_.prev_stop_path_after_approval->points,
+      planner_data_->self_odometry->pose.pose.position, status_.pull_out_path.start_pose.position,
+      status_.pull_out_path.end_pose.position, status_.is_safe_dynamic_objects,
+      tier4_rtc_msgs::msg::State::WAITING_FOR_EXECUTION);
+    return *status_.prev_stop_path_after_approval;
+  }
+
+  if (status_.is_safe_dynamic_objects) {
+    return getCurrentPath();
+  }
+
+  waitApproval();
+  removeRTCStatus();
+
+  auto current_path = getCurrentPath();
+  const auto stop_path =
+    autoware::behavior_path_planner::utils::parking_departure::generateFeasibleStopPath(
+      current_path, planner_data_, stop_pose_, parameters_->maximum_deceleration_for_stop,
+      parameters_->maximum_jerk_for_stop);
+
+  if (!stop_path.has_value()) {
+    update_rtc_status(
+      current_path.points, planner_data_->self_odometry->pose.pose.position,
+      status_.pull_out_path.start_pose.position, status_.pull_out_path.end_pose.position,
+      status_.is_safe_dynamic_objects, tier4_rtc_msgs::msg::State::WAITING_FOR_EXECUTION);
+    return current_path;
+  }
+  // Insert stop point in the path if needed
+  RCLCPP_DEBUG_THROTTLE(
+    getLogger(), *clock_, 5000, "Insert stop point in the path because of dynamic objects");
+  status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(stop_path.value());
+  if (stop_pose_) {
+    std::string stop_reason = "unsafe against dynamic objects";
+    stop_pose_ = PoseWithDetail(stop_pose_->pose, stop_reason);
+  }
+  status_.stop_pose = stop_pose_;
+
+  update_rtc_status(
+    stop_path->points, planner_data_->self_odometry->pose.pose.position,
+    status_.pull_out_path.start_pose.position, status_.pull_out_path.end_pose.position,
+    status_.is_safe_dynamic_objects, tier4_rtc_msgs::msg::State::WAITING_FOR_EXECUTION);
+
+  return stop_path.value();
 }
 
 void StartPlannerModule::planWithPriority(
@@ -1442,7 +1485,7 @@ void StartPlannerModule::updatePullOutStatus()
     return {current_pose};
   });
 
-  if (!status_.backward_driving_complete) {
+  if (!status_.backward_driving_complete && !status_.prev_approved_path) {
     planWithPriority(
       start_pose_candidates, *refined_start_pose, goal_pose, parameters_->search_priority,
       parameters_->search_policy);
