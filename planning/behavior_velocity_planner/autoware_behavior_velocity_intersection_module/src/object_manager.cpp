@@ -215,9 +215,7 @@ std::vector<std::shared_ptr<ObjectInfo>> ObjectInfoManager::allObjects() const
 
 std::optional<CollisionInterval> findPassageInterval(
   const autoware_perception_msgs::msg::PredictedPath & predicted_path,
-  const autoware_perception_msgs::msg::Shape & shape, const lanelet::BasicPolygon2d & ego_lane_poly,
-  const std::optional<lanelet::ConstLanelet> & first_attention_lane_opt,
-  const std::optional<lanelet::ConstLanelet> & second_attention_lane_opt)
+  const autoware_perception_msgs::msg::Shape & shape, const lanelet::BasicPolygon2d & ego_lane_poly)
 {
   const auto first_itr = std::adjacent_find(
     predicted_path.path.cbegin(), predicted_path.path.cend(), [&](const auto & a, const auto & b) {
@@ -243,30 +241,12 @@ std::optional<CollisionInterval> findPassageInterval(
   const size_t exit_idx = std::distance(predicted_path.path.begin(), last_itr.base()) - 1;
   const double object_exit_time =
     static_cast<double>(exit_idx) * rclcpp::Duration(predicted_path.time_step).seconds();
-  const auto lane_position = [&]() {
-    if (first_attention_lane_opt) {
-      if (lanelet::geometry::inside(
-            first_attention_lane_opt.value(),
-            lanelet::BasicPoint2d(first_itr->position.x, first_itr->position.y))) {
-        return CollisionInterval::LanePosition::FIRST;
-      }
-    }
-    if (second_attention_lane_opt) {
-      if (lanelet::geometry::inside(
-            second_attention_lane_opt.value(),
-            lanelet::BasicPoint2d(first_itr->position.x, first_itr->position.y))) {
-        return CollisionInterval::LanePosition::SECOND;
-      }
-    }
-    return CollisionInterval::LanePosition::ELSE;
-  }();
 
   std::vector<geometry_msgs::msg::Pose> path;
   for (const auto & pose : predicted_path.path) {
     path.push_back(pose);
   }
-  return CollisionInterval{
-    lane_position, path, {enter_idx, exit_idx}, {object_enter_time, object_exit_time}};
+  return CollisionInterval{path, {enter_idx, exit_idx}, {object_enter_time, object_exit_time}};
 }
 
 }  // namespace autoware::behavior_velocity_planner

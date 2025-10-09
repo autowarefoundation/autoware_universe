@@ -97,7 +97,7 @@ TEST(MarkerUtilsTest, CreateLaneMarkerBasic)
   std::vector<int64_t> shape = {1, 1, 2, 8};  // batch, ?, points, dims
   rclcpp::Time stamp(123456, 789, RCL_ROS_TIME);
   rclcpp::Duration lifetime(1, 0);
-  Eigen::Matrix4f identity = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d identity = Eigen::Matrix4d::Identity();
   auto marker_array = create_lane_marker(identity, lane_vector, shape, stamp, lifetime);
 
   // Should create at least 1 marker for the centerline, and possibly for bounds/spheres
@@ -119,7 +119,7 @@ TEST(MarkerUtilsTest, CreateLaneMarkerTrafficLightColor)
   std::vector<int64_t> shape = {1, 1, 2, 8};
   rclcpp::Time stamp(0, 0, RCL_ROS_TIME);
   rclcpp::Duration lifetime(1, 0);
-  Eigen::Matrix4f identity = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d identity = Eigen::Matrix4d::Identity();
   auto marker_array = create_lane_marker(
     identity, lane_vector, shape, stamp, lifetime, {0.0f, 1.0f, 0.0f, 0.8f}, "base_link", true);
 

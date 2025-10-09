@@ -678,6 +678,7 @@ MarkerArray createDebugMarkerArray(
     addObjects(data.other_objects, ObjectInfo::UNSTABLE_OBJECT);
     addObjects(data.other_objects, ObjectInfo::AMBIGUOUS_STOPPED_VEHICLE);
     addObjects(data.other_objects, ObjectInfo::INVALID_SHIFT_LINE);
+    addObjects(data.other_objects, ObjectInfo::PARKING_VIOLATION_VEHICLE);
   }
 
   if (parameters->enable_shift_line_marker) {

@@ -76,6 +76,7 @@ void PlanningValidatorNode::setupParameters()
 
   p.soft_stop_deceleration = declare_parameter<double>("soft_stop_deceleration");
   p.soft_stop_jerk_lim = declare_parameter<double>("soft_stop_jerk_lim");
+  p.th_traffic_light_timeout = declare_parameter<double>("th_traffic_light_timeout");
 }
 
 bool PlanningValidatorNode::isDataReady()
@@ -98,6 +99,7 @@ void PlanningValidatorNode::setData(const Trajectory::ConstSharedPtr & traj_msg)
   data->current_kinematics = sub_kinematics_.take_data();
   data->current_acceleration = sub_acceleration_.take_data();
   data->obstacle_pointcloud = sub_pointcloud_.take_data();
+  data->traffic_signals = sub_traffic_signals_.take_data();
   data->set_current_trajectory(traj_msg);
   data->set_route(sub_route_.take_data());
   data->set_map(sub_lanelet_map_bin_.take_data());

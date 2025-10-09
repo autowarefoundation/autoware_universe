@@ -20,7 +20,11 @@ namespace autoware::stop_mode_operator
 StopModeOperator::StopModeOperator(const rclcpp::NodeOptions & options)
 : Node("stop_mode_operator", options)
 {
+  current_steering_.steering_tire_angle = 0.0f;
+  current_route_state_.state = RouteState::UNKNOWN;
+
   stop_hold_acceleration_ = declare_parameter<double>("stop_hold_acceleration");
+  enable_auto_parking_ = declare_parameter<bool>("enable_auto_parking");
 
   const auto control_qos = rclcpp::QoS(5);
   const auto durable_qos = rclcpp::QoS(1).transient_local();
@@ -33,11 +37,26 @@ StopModeOperator::StopModeOperator(const rclcpp::NodeOptions & options)
   sub_steering_ = create_subscription<SteeringReport>(
     "/vehicle/status/steering_status", 1,
     [this](SteeringReport::SharedPtr msg) { current_steering_ = *msg; });
+  sub_velocity_ = create_subscription<VelocityReport>(
+    "/vehicle/status/velocity_status", 1, [this](VelocityReport::SharedPtr msg) {
+      vehicle_stop_check_.update(now(), std::abs(msg->longitudinal_velocity) < 1e-3);
+    });
+  sub_route_state_ = create_subscription<RouteState>(
+    "/planning/route_state", 1, [this](RouteState::SharedPtr msg) { current_route_state_ = *msg; });
 
   const auto period = rclcpp::Rate(declare_parameter<double>("rate")).period();
-  timer_ = rclcpp::create_timer(this, get_clock(), period, [this]() { publish_control_command(); });
+  timer_ = rclcpp::create_timer(this, get_clock(), period, [this]() { on_timer(); });
 
-  publish_trigger_command();
+  publish_turn_indicators_command();
+  publish_hazard_lights_command();
+}
+
+void StopModeOperator::on_timer()
+{
+  vehicle_stop_check_.update(now(), vehicle_stop_timeout_);
+
+  publish_control_command();
+  publish_gear_command();
 }
 
 void StopModeOperator::publish_control_command()
@@ -52,22 +71,38 @@ void StopModeOperator::publish_control_command()
   pub_control_->publish(control);
 }
 
-void StopModeOperator::publish_trigger_command()
+void StopModeOperator::publish_gear_command()
 {
-  const auto stamp = now();
+  bool parking = false;
 
-  GearCommand gear;
-  gear.stamp = stamp;
-  gear.command = GearCommand::NONE;
-  pub_gear_->publish(gear);
+  if (enable_auto_parking_) {
+    const bool parking_vehicle_stop = vehicle_stop_check_.check(now(), vehicle_stop_duration_);
+    const bool parking_route_state = current_route_state_.state == RouteState::UNSET ||
+                                     current_route_state_.state == RouteState::ARRIVED;
+    parking = parking_route_state && parking_vehicle_stop;
+  }
 
+  if (last_parking_ != parking) {
+    GearCommand gear;
+    gear.stamp = now();
+    gear.command = parking ? GearCommand::PARK : GearCommand::NONE;
+    pub_gear_->publish(gear);
+  }
+  last_parking_ = parking;
+}
+
+void StopModeOperator::publish_turn_indicators_command()
+{
   TurnIndicatorsCommand turn_indicators;
-  turn_indicators.stamp = stamp;
+  turn_indicators.stamp = now();
   turn_indicators.command = TurnIndicatorsCommand::DISABLE;
   pub_turn_indicators_->publish(turn_indicators);
+}
 
+void StopModeOperator::publish_hazard_lights_command()
+{
   HazardLightsCommand hazard_lights;
-  hazard_lights.stamp = stamp;
+  hazard_lights.stamp = now();
   hazard_lights.command = HazardLightsCommand::DISABLE;
   pub_hazard_lights_->publish(hazard_lights);
 }

@@ -171,6 +171,14 @@ void PlanningFactorRvizPlugin::processMessage(
           add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(virtual_wall));
         }
         break;
+
+      case autoware_internal_planning_msgs::msg::PlanningFactor::UNKNOWN:
+        for (const auto & control_point : factor.control_points) {
+          const auto virtual_wall = createSlowDownVirtualWallMarker(
+            control_point.pose, text, msg->header.stamp, i++, baselink2front_);
+          add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(virtual_wall));
+        }
+        break;
     }
 
     if (show_safety_factors_.getBool()) {

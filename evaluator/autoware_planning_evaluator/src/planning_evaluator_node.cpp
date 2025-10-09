@@ -19,6 +19,7 @@
 
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 #include <nlohmann/json.hpp>
 
 #include <diagnostic_msgs/msg/detail/diagnostic_status__struct.hpp>
@@ -380,6 +381,10 @@ void PlanningEvaluatorNode::onModifiedGoal(
     return;
   }
   auto start = now();
+  const auto is_ego_stopped_near_goal =
+    std::abs(ego_state_ptr->twist.twist.linear.x) < 0.001 &&
+    autoware_utils::calc_distance2d(
+      ego_state_ptr->pose.pose.position, modified_goal_msg->pose.position) < 3.0;
 
   for (Metric metric : metrics_for_publish_) {
     const auto metric_stat = metrics_calculator_.calculate(
@@ -388,9 +393,8 @@ void PlanningEvaluatorNode::onModifiedGoal(
       continue;
     }
     AddMetricMsg(metric, *metric_stat);
-    if (
-      output_metrics_ && std::abs(ego_state_ptr->twist.twist.linear.x) < 0.001 &&
-      metric_stat->mean() < 3.0) {  // only record when ego stop close to the target in 3m
+    if (output_metrics_ && is_ego_stopped_near_goal) {  // only record when ego stop close to the
+                                                        // target in 3m
       const OutputMetric output_metric = str_to_output_metric.at(metric_to_str.at(metric));
       metrics_accumulator_.accumulate(output_metric, *metric_stat);
     }

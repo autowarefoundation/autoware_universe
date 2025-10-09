@@ -128,7 +128,7 @@ ConcatenatedCloudResult<MsgTraits> CloudCollector<MsgTraits>::concatenate_pointc
   std::unordered_map<std::string, typename MsgTraits::PointCloudMessage::ConstSharedPtr>
     topic_to_cloud_map)
 {
-  return combine_cloud_handler_->combine_pointclouds(topic_to_cloud_map);
+  return combine_cloud_handler_->combine_pointclouds(topic_to_cloud_map, collector_info_);
 }
 
 template <typename MsgTraits>
