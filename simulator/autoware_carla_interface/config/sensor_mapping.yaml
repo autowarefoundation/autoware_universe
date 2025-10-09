@@ -1,8 +1,8 @@
 # Sensor mapping configuration for Autoware to CARLA
 # Maps carla_sensor_kit sensor names to CARLA sensor types and ROS topics
 
-# Default sensor kit to use
-default_sensor_kit_name: "carla_sensor_kit"
+# Default sensor kit to use (must be the _description package containing config/sensor_kit_calibration.yaml)
+default_sensor_kit_name: "carla_sensor_kit_description"
 
 sensor_mappings:
   # LiDAR sensor
