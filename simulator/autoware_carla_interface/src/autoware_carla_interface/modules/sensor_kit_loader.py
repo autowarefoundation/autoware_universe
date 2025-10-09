@@ -111,16 +111,26 @@ class SensorKitLoader:
         Raises:
             ValueError: If YAML structure is invalid
         """
+        self._validate_yaml_is_dict()
+        self._validate_required_keys()
+        self._validate_field_types()
+
+    def _validate_yaml_is_dict(self):
+        """Validate YAML root is a dictionary."""
         if not self.sensor_mapping or not isinstance(self.sensor_mapping, dict):
             raise ValueError(
                 "Invalid or empty YAML file. File must contain a valid YAML dictionary."
             )
 
+    def _validate_required_keys(self):
+        """Validate all required keys are present."""
         required_keys = ["sensor_mappings", "enabled_sensors"]
         missing = [k for k in required_keys if k not in self.sensor_mapping]
         if missing:
             raise ValueError(f"Missing required keys: {missing}. Required keys: {required_keys}")
 
+    def _validate_field_types(self):
+        """Validate field types are correct."""
         if not isinstance(self.sensor_mapping["sensor_mappings"], dict):
             raise ValueError("sensor_mappings must be a dictionary")
 
@@ -145,7 +155,17 @@ class SensorKitLoader:
             self.logger.info(f"Using default wheelbase: {self.wheelbase}m")
             return
 
-        wheelbase_value = vehicle_config["wheelbase"]
+        self._load_wheelbase_value(vehicle_config["wheelbase"])
+
+    def _load_wheelbase_value(self, wheelbase_value):
+        """Validate and load wheelbase value.
+
+        Args:
+            wheelbase_value: Wheelbase value from config
+
+        Raises:
+            ValueError: If wheelbase is invalid
+        """
         if not isinstance(wheelbase_value, (int, float)):
             raise ValueError(f"wheelbase must be a number, got: {type(wheelbase_value).__name__}")
         if wheelbase_value <= 0:
@@ -157,7 +177,7 @@ class SensorKitLoader:
     def find_sensor_kit_path(self, sensor_kit_name: str) -> Optional[Path]:
         """Find sensor kit calibration directory using ament_index.
 
-        This method works in both source and install spaces by using ROS2's
+        This method works in both source and install spaces by using ROS 2's
         package discovery mechanism instead of hardcoded paths.
 
         Args:
@@ -169,32 +189,26 @@ class SensorKitLoader:
         Raises:
             FileNotFoundError: If sensor kit calibration cannot be found
         """
-        from ament_index_python.packages import PackageNotFoundError
-
         tried_packages = []
 
-        # Try direct package name
-        calib_path = self._try_find_sensor_kit(sensor_kit_name)
-        if calib_path:
-            return calib_path
-        tried_packages.append(sensor_kit_name)
+        # Build list of package name variants to try
+        variants = [sensor_kit_name]
 
-        # Try replacing _launch with _description
+        # Add _description variant if currently _launch
         desc_name = sensor_kit_name.replace("_launch", "_description")
         if desc_name != sensor_kit_name:
-            calib_path = self._try_find_sensor_kit(desc_name)
+            variants.append(desc_name)
+
+        # Add suffix variants if no suffix present
+        if not sensor_kit_name.endswith(("_launch", "_description")):
+            variants.extend([sensor_kit_name + "_description", sensor_kit_name + "_launch"])
+
+        # Try each variant
+        for variant in variants:
+            calib_path = self._try_find_sensor_kit(variant)
             if calib_path:
                 return calib_path
-            tried_packages.append(desc_name)
-
-        # Try adding suffixes if no suffix present
-        if not sensor_kit_name.endswith(("_launch", "_description")):
-            for suffix in ["_description", "_launch"]:
-                variant = sensor_kit_name + suffix
-                calib_path = self._try_find_sensor_kit(variant)
-                if calib_path:
-                    return calib_path
-                tried_packages.append(variant)
+            tried_packages.append(variant)
 
         raise self._create_not_found_error(sensor_kit_name, tried_packages)
 
@@ -241,7 +255,7 @@ class SensorKitLoader:
             f"Attempted packages: {tried_packages}\n"
             f"Required file: config/sensor_kit_calibration.yaml\n"
             f"Ensure the sensor kit description package is:\n"
-            f"  1. Built and installed in your ROS2 workspace\n"
+            f"  1. Built and installed in your ROS 2 workspace\n"
             f"  2. Contains config/sensor_kit_calibration.yaml\n"
             f"  3. Visible to 'ros2 pkg list' command"
         )
@@ -342,16 +356,19 @@ class SensorKitLoader:
         Returns:
             Normalized sensor name
         """
-        normalized = sensor_name
+        # Early return if no normalization rules
+        if "normalization" not in self.sensor_mapping:
+            return sensor_name
 
-        # Apply normalization rules from mapping
-        if "normalization" in self.sensor_mapping:
-            rules = self.sensor_mapping["normalization"]
-            if "strip_suffixes" in rules:
-                for suffix in rules["strip_suffixes"]:
-                    if normalized.endswith(suffix):
-                        normalized = normalized[: -len(suffix)]
-                        break
+        rules = self.sensor_mapping["normalization"]
+        if "strip_suffixes" not in rules:
+            return sensor_name
+
+        # Strip matching suffix
+        normalized = sensor_name
+        for suffix in rules["strip_suffixes"]:
+            if normalized.endswith(suffix):
+                return normalized[: -len(suffix)]
 
         return normalized
 
