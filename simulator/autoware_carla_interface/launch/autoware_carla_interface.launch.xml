@@ -104,6 +104,6 @@
     />
 
     <!-- Multi-camera combiner for RViz visualization -->
-    <executable cmd="python3 $(find-pkg-share autoware_carla_interface)/multi_camera_combiner.py" output="screen"/>
+    <node pkg="autoware_carla_interface" exec="multi_camera_combiner" output="screen"/>
   </group>
 </launch>

@@ -16,7 +16,6 @@ setup(
         (os.path.join("share", package_name), glob("config/*")),
         (os.path.join("share", package_name), glob("calibration_maps/*.csv")),
         (os.path.join("share", package_name), glob("launch/*.launch.xml")),
-        (os.path.join("share", package_name), glob("scripts/*.py")),
     ],
     install_requires=["setuptools"],
     zip_safe=True,
@@ -27,7 +26,8 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "autoware_carla_interface = autoware_carla_interface.carla_autoware:main"
+            "autoware_carla_interface = autoware_carla_interface.carla_autoware:main",
+            "multi_camera_combiner = autoware_carla_interface.multi_camera_combiner_node:main",
         ],
     },
     package_dir={"": "src"},
