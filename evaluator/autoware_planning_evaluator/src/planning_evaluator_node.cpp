@@ -357,8 +357,7 @@ void PlanningEvaluatorNode::onTrajectory(
   auto start = now();
 
   for (Metric metric : metrics_for_publish_) {
-    const auto metric_stat =
-      metrics_calculator_.calculate(Metric(metric), *traj_msg);
+    const auto metric_stat = metrics_calculator_.calculate(Metric(metric), *traj_msg);
     if (!metric_stat || metric_stat->count() <= 0) {
       continue;
     }
