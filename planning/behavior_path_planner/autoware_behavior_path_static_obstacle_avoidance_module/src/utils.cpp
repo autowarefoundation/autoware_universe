@@ -880,15 +880,14 @@ bool isObviousAvoidanceTarget(
       return true;
     }
 
-    if (object.is_adjacent_lane_stop_vehicle && object.behavior == ObjectData::Behavior::NONE) {
+    if (!object.is_on_ego_lane && object.behavior == ObjectData::Behavior::NONE) {
       RCLCPP_DEBUG(rclcpp::get_logger(logger_namespace), "object is adjacent vehicle.");
-      if (parameters->policy_adjacent_lane_stop_vehicle == "manual") {
+      if (
+        object.is_adjacent_lane_stop_vehicle &&
+        parameters->policy_adjacent_lane_stop_vehicle == "manual") {
         object.info = ObjectInfo::IS_ADJACENT_LANE_STOP_VEHICLE;
-        return true;
       }
-      if (parameters->policy_adjacent_lane_stop_vehicle == "auto") {
-        return true;
-      }
+      return true;
     }
   }
 
