@@ -48,6 +48,18 @@
           "exclusiveMinimum": 0,
           "description": "Interpolation resolution for Akima spline [m]"
         },
+        "spline_interpolation_max_yaw_discrepancy_deg": {
+          "type": "number",
+          "default": 2.5,
+          "minimum": 0,
+          "description": "Maximum yaw deviation allowed for spline outlier detection [deg]"
+        },
+        "spline_interpolation_max_distance_discrepancy_m": {
+          "type": "number",
+          "default": 5.0,
+          "minimum": 0,
+          "description": "Maximum position deviation allowed for spline outlier detection [m]"
+        },
         "backward_trajectory_extension_m": {
           "type": "number",
           "default": 5.0,
@@ -244,6 +256,8 @@
         "max_speed_mps",
         "max_lateral_accel_mps2",
         "spline_interpolation_resolution_m",
+        "spline_interpolation_max_yaw_discrepancy_deg",
+        "spline_interpolation_max_distance_discrepancy_m",
         "backward_trajectory_extension_m",
         "use_akima_spline_interpolation",
         "smooth_trajectories",
