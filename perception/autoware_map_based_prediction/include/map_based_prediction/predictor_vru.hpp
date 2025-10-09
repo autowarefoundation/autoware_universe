@@ -55,7 +55,8 @@ public:
 
   void setParameters(
     bool match_lost_and_appeared_crosswalk_users, double min_crosswalk_user_velocity,
-    double max_crosswalk_user_delta_yaw_threshold_for_lanelet, bool use_crosswalk_signal,
+    double max_crosswalk_user_delta_yaw_threshold_for_lanelet,
+    double max_crosswalk_user_on_road_distance, bool use_crosswalk_signal,
     double threshold_velocity_assumed_as_stopping,
     const std::vector<double> & distance_set_for_no_intention_to_walk,
     const std::vector<double> & timeout_set_for_no_intention_to_walk,
@@ -66,6 +67,7 @@ public:
     min_crosswalk_user_velocity_ = min_crosswalk_user_velocity;
     max_crosswalk_user_delta_yaw_threshold_for_lanelet_ =
       max_crosswalk_user_delta_yaw_threshold_for_lanelet;
+    max_crosswalk_user_on_road_distance_ = max_crosswalk_user_on_road_distance;
     use_crosswalk_signal_ = use_crosswalk_signal;
     threshold_velocity_assumed_as_stopping_ = threshold_velocity_assumed_as_stopping;
     distance_set_for_no_intention_to_walk_ = distance_set_for_no_intention_to_walk;
@@ -118,6 +120,7 @@ private:
   bool match_lost_and_appeared_crosswalk_users_;
   double min_crosswalk_user_velocity_;
   double max_crosswalk_user_delta_yaw_threshold_for_lanelet_;
+  double max_crosswalk_user_on_road_distance_;
   bool use_crosswalk_signal_;
   double threshold_velocity_assumed_as_stopping_;
   double crossing_intention_duration_{0.0};
@@ -141,7 +144,9 @@ private:
   bool calcIntentionToCrossWithTrafficSignal(
     const TrackedObject & object, const lanelet::ConstLanelet & crosswalk,
     const lanelet::Id & signal_id);
-  bool doesPathCrossAnyFence(const PredictedPath & predicted_path);
+  /// @brief return true if the given predicted path crosses a fence before arriving at the
+  /// crosswalk
+  bool doesPathCrossAnyFenceBeforeCrosswalk(const PredictedPathWithArrivalIndex & predicted_path);
   std::optional<TrafficLightElement> getTrafficSignalElement(const lanelet::Id & id);
 };
 
