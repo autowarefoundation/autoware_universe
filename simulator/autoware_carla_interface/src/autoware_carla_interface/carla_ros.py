@@ -555,7 +555,24 @@ class carla_ros2_interface(object):
         if self.checkFrequency(cam_id):
             return
 
-        # Get native Carla image
+        # Convert CARLA camera data to ROS message
+        img_msg = self._create_camera_image_message(carla_camera_data, config, cam_id)
+        cam_info = self._prepare_camera_info(cam_id, img_msg.header)
+
+        # Publish camera data
+        self._publish_camera_messages(cam_id, img_msg, cam_info)
+
+    def _create_camera_image_message(self, carla_camera_data, config, cam_id):
+        """Create ROS image message from CARLA camera data.
+
+        Args:
+            carla_camera_data: CARLA camera data
+            config: Sensor configuration
+            cam_id: Camera sensor ID
+
+        Returns:
+            Image: ROS image message
+        """
         image_data_array = numpy.ndarray(
             shape=(carla_camera_data.height, carla_camera_data.width, 4),
             dtype=numpy.uint8,
@@ -567,18 +584,37 @@ class carla_ros2_interface(object):
         img_msg.header = self.get_msg_header(
             frame_id=config.frame_id or f"{cam_id}/camera_optical_link"
         )
+        return img_msg
 
-        # Publish to appropriate topics for this camera
+    def _prepare_camera_info(self, cam_id, header):
+        """Prepare camera info message with updated header.
+
+        Args:
+            cam_id: Camera sensor ID
+            header: Header to apply to camera info
+
+        Returns:
+            CameraInfo: Camera info message with updated header
+        """
         cam_info = self.camera_info_cache[cam_id]
-        cam_info.header = img_msg.header
-        publisher = self.pub_camera.get(cam_id)
-        info_publisher = self.pub_camera_info.get(cam_id)
+        cam_info.header = header
+        return cam_info
 
+    def _publish_camera_messages(self, cam_id, img_msg, cam_info):
+        """Publish camera image and info messages.
+
+        Args:
+            cam_id: Camera sensor ID
+            img_msg: Image message to publish
+            cam_info: Camera info message to publish
+        """
+        info_publisher = self.pub_camera_info.get(cam_id)
         if info_publisher:
             info_publisher.publish(cam_info)
         else:
             self.logger.warning(f"Camera info publisher missing for '{cam_id}'")
 
+        publisher = self.pub_camera.get(cam_id)
         if publisher:
             publisher.publish(img_msg)
             self.sensor_registry.update_sensor_timestamp(cam_id, self.timestamp)
