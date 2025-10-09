@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Copyright 2024 Tier IV, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -10,7 +12,7 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License.sr/bin/env python
+# limitations under the License.
 
 from __future__ import print_function
 
@@ -76,11 +78,13 @@ class CallBack(object):
 
 
 class SensorInterface(object):
+    """Interface for collecting sensor data from CARLA."""
+
     def __init__(self):
+        """Initialize sensor interface."""
         self._sensors_objects = {}
         self._new_data_buffers = Queue()
-        self._queue_timeout = 10
-        self.tag = ""
+        self.tag = ""  # Current sensor tag
 
     def register_sensor(self, tag, sensor):
         self.tag = tag
@@ -118,109 +122,116 @@ class SensorInterface(object):
 
 
 class SensorWrapper(object):
-    _agent = None
-    _sensors_list = []
+    """Wrapper for managing CARLA sensors attached to a vehicle."""
 
     def __init__(self, agent):
+        """Initialize sensor wrapper.
+
+        Args:
+            agent: Agent instance containing sensor configuration
+        """
         self._agent = agent
+        self._sensors_list = []  # Instance variable, not class variable
 
     def __call__(self):
         return self._agent()
 
     def setup_sensors(self, vehicle, debug_mode=False):
-        """Create and attach sensors defined via sensor configuration."""
+        """Create and attach sensors defined via sensor configuration.
+
+        Args:
+            vehicle: CARLA vehicle actor to attach sensors to
+            debug_mode: Enable debug logging (unused)
+
+        Raises:
+            RuntimeError: If sensor spawning fails critically
+        """
         bp_library = CarlaDataProvider.get_world().get_blueprint_library()
 
         for sensor_spec in self._agent.sensors["sensors"]:
-            bp = bp_library.find(str(sensor_spec["type"]))
+            try:
+                sensor_type = sensor_spec["type"]
+                sensor_id = sensor_spec.get("id", "unknown")
 
-            if sensor_spec["type"].startswith("sensor.camera"):
-                bp.set_attribute("image_size_x", str(sensor_spec["image_size_x"]))
-                bp.set_attribute("image_size_y", str(sensor_spec["image_size_y"]))
-                bp.set_attribute("fov", str(sensor_spec["fov"]))
+                # Find sensor blueprint
+                bp = bp_library.find(str(sensor_type))
+                if bp is None:
+                    logging.error(f"Blueprint not found for sensor type: {sensor_type}")
+                    continue
+
+                # Set sensor-specific attributes
+                if sensor_type.startswith("sensor.camera"):
+                    bp.set_attribute("image_size_x", str(sensor_spec["image_size_x"]))
+                    bp.set_attribute("image_size_y", str(sensor_spec["image_size_y"]))
+                    bp.set_attribute("fov", str(sensor_spec["fov"]))
+
+                elif sensor_type.startswith("sensor.lidar"):
+                    bp.set_attribute("range", str(sensor_spec["range"]))
+                    bp.set_attribute("rotation_frequency", str(sensor_spec["rotation_frequency"]))
+                    bp.set_attribute("channels", str(sensor_spec["channels"]))
+                    bp.set_attribute("upper_fov", str(sensor_spec["upper_fov"]))
+                    bp.set_attribute("lower_fov", str(sensor_spec["lower_fov"]))
+                    bp.set_attribute("points_per_second", str(sensor_spec["points_per_second"]))
+
+                elif sensor_type.startswith("sensor.other.gnss"):
+                    # Set zero noise for clean simulation
+                    bp.set_attribute("noise_alt_stddev", str(0.0))
+                    bp.set_attribute("noise_lat_stddev", str(0.0))
+                    bp.set_attribute("noise_lon_stddev", str(0.0))
+                    bp.set_attribute("noise_alt_bias", str(0.0))
+                    bp.set_attribute("noise_lat_bias", str(0.0))
+                    bp.set_attribute("noise_lon_bias", str(0.0))
+
+                elif sensor_type.startswith("sensor.other.imu"):
+                    # Set zero noise for clean simulation
+                    bp.set_attribute("noise_accel_stddev_x", str(0.0))
+                    bp.set_attribute("noise_accel_stddev_y", str(0.0))
+                    bp.set_attribute("noise_accel_stddev_z", str(0.0))
+                    bp.set_attribute("noise_gyro_stddev_x", str(0.0))
+                    bp.set_attribute("noise_gyro_stddev_y", str(0.0))
+                    bp.set_attribute("noise_gyro_stddev_z", str(0.0))
+
+                elif not sensor_type.startswith("sensor."):
+                    # Unknown sensor type - skip
+                    logging.warning(f"Unknown sensor type: {sensor_type}, skipping spawn")
+                    continue
+
+                # Create sensor transform (common for all sensor types)
+                spawn_point = sensor_spec["spawn_point"]
                 sensor_location = carla.Location(
-                    x=sensor_spec["spawn_point"]["x"],
-                    y=sensor_spec["spawn_point"]["y"],
-                    z=sensor_spec["spawn_point"]["z"],
+                    x=spawn_point["x"], y=spawn_point["y"], z=spawn_point["z"]
                 )
                 sensor_rotation = carla.Rotation(
-                    pitch=sensor_spec["spawn_point"]["pitch"],
-                    roll=sensor_spec["spawn_point"]["roll"],
-                    yaw=sensor_spec["spawn_point"]["yaw"],
+                    pitch=spawn_point["pitch"], roll=spawn_point["roll"], yaw=spawn_point["yaw"]
                 )
+                sensor_transform = carla.Transform(sensor_location, sensor_rotation)
 
-            elif sensor_spec["type"].startswith("sensor.lidar"):
-                bp.set_attribute("range", str(sensor_spec["range"]))
-                bp.set_attribute("rotation_frequency", str(sensor_spec["rotation_frequency"]))
-                bp.set_attribute("channels", str(sensor_spec["channels"]))
-                bp.set_attribute("upper_fov", str(sensor_spec["upper_fov"]))
-                bp.set_attribute("lower_fov", str(sensor_spec["lower_fov"]))
-                bp.set_attribute("points_per_second", str(sensor_spec["points_per_second"]))
-                sensor_location = carla.Location(
-                    x=sensor_spec["spawn_point"]["x"],
-                    y=sensor_spec["spawn_point"]["y"],
-                    z=sensor_spec["spawn_point"]["z"],
-                )
-                sensor_rotation = carla.Rotation(
-                    pitch=sensor_spec["spawn_point"]["pitch"],
-                    roll=sensor_spec["spawn_point"]["roll"],
-                    yaw=sensor_spec["spawn_point"]["yaw"],
-                )
+                # Spawn sensor and attach to vehicle
+                sensor = CarlaDataProvider.get_world().spawn_actor(bp, sensor_transform, vehicle)
+                if sensor is None:
+                    logging.error(
+                        f"Failed to spawn sensor '{sensor_id}' of type {sensor_type}. "
+                        f"Check spawn position and vehicle attachment."
+                    )
+                    continue
 
-            elif sensor_spec["type"].startswith("sensor.other.gnss"):
-                bp.set_attribute("noise_alt_stddev", str(0.0))
-                bp.set_attribute("noise_lat_stddev", str(0.0))
-                bp.set_attribute("noise_lon_stddev", str(0.0))
-                bp.set_attribute("noise_alt_bias", str(0.0))
-                bp.set_attribute("noise_lat_bias", str(0.0))
-                bp.set_attribute("noise_lon_bias", str(0.0))
-                sensor_location = carla.Location(
-                    x=sensor_spec["spawn_point"]["x"],
-                    y=sensor_spec["spawn_point"]["y"],
-                    z=sensor_spec["spawn_point"]["z"],
-                )
-                sensor_rotation = carla.Rotation(
-                    pitch=sensor_spec["spawn_point"]["pitch"],
-                    roll=sensor_spec["spawn_point"]["roll"],
-                    yaw=sensor_spec["spawn_point"]["yaw"],
-                )
+                sensor.listen(CallBack(sensor_id, sensor, self._agent.sensor_interface))
+                self._sensors_list.append(sensor)
+                logging.info(f"Successfully spawned sensor '{sensor_id}' ({sensor_type})")
 
-            elif sensor_spec["type"].startswith("sensor.other.imu"):
-                bp.set_attribute("noise_accel_stddev_x", str(0.0))
-                bp.set_attribute("noise_accel_stddev_y", str(0.0))
-                bp.set_attribute("noise_accel_stddev_z", str(0.0))
-                bp.set_attribute("noise_gyro_stddev_x", str(0.0))
-                bp.set_attribute("noise_gyro_stddev_y", str(0.0))
-                bp.set_attribute("noise_gyro_stddev_z", str(0.0))
-                sensor_location = carla.Location(
-                    x=sensor_spec["spawn_point"]["x"],
-                    y=sensor_spec["spawn_point"]["y"],
-                    z=sensor_spec["spawn_point"]["z"],
+            except KeyError as e:
+                logging.error(
+                    f"Missing required key {e} in sensor spec: {sensor_spec.get('id', 'unknown')}"
                 )
-                sensor_rotation = carla.Rotation(
-                    pitch=sensor_spec["spawn_point"]["pitch"],
-                    roll=sensor_spec["spawn_point"]["roll"],
-                    yaw=sensor_spec["spawn_point"]["yaw"],
+                continue
+            except Exception as e:
+                logging.error(
+                    f"Failed to setup sensor '{sensor_spec.get('id', 'unknown')}': {e}"
                 )
+                continue
 
-            elif sensor_spec["type"].startswith("sensor.pseudo.*"):
-                sensor_location = carla.Location(
-                    x=sensor_spec["spawn_point"]["x"],
-                    y=sensor_spec["spawn_point"]["y"],
-                    z=sensor_spec["spawn_point"]["z"],
-                )
-                sensor_rotation = carla.Rotation(
-                    pitch=sensor_spec["spawn_point"]["pitch"] + 0.001,
-                    roll=sensor_spec["spawn_point"]["roll"] - 0.015,
-                    yaw=sensor_spec["spawn_point"]["yaw"] + 0.0364,
-                )
-
-            # create sensor
-            sensor_transform = carla.Transform(sensor_location, sensor_rotation)
-            sensor = CarlaDataProvider.get_world().spawn_actor(bp, sensor_transform, vehicle)
-            # setup callback
-            sensor.listen(CallBack(sensor_spec["id"], sensor, self._agent.sensor_interface))
-            self._sensors_list.append(sensor)
+        if not self._sensors_list:
+            raise RuntimeError("No sensors were successfully spawned. Check sensor configuration.")
 
         # Tick once to spawn the sensors
         CarlaDataProvider.get_world().tick()

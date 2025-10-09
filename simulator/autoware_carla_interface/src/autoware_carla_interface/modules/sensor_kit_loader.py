@@ -76,94 +76,170 @@ class SensorKitLoader:
             with open(mapping_file, "r") as f:
                 self.sensor_mapping = yaml.safe_load(f)
 
+            # Validate YAML structure
+            if not self.sensor_mapping or not isinstance(self.sensor_mapping, dict):
+                raise ValueError(
+                    f"Invalid or empty YAML file: {mapping_file}. "
+                    f"File must contain a valid YAML dictionary."
+                )
+
+            # Validate required sections
+            required_keys = ["sensor_mappings", "enabled_sensors"]
+            missing = [k for k in required_keys if k not in self.sensor_mapping]
+            if missing:
+                raise ValueError(
+                    f"Missing required keys in sensor mapping file: {missing}. "
+                    f"Required keys: {required_keys}"
+                )
+
+            # Validate sensor_mappings structure
+            if not isinstance(self.sensor_mapping["sensor_mappings"], dict):
+                raise ValueError("sensor_mappings must be a dictionary")
+
+            # Validate enabled_sensors structure
+            if not isinstance(self.sensor_mapping["enabled_sensors"], list):
+                raise ValueError("enabled_sensors must be a list")
+
             # Load vehicle configuration if present
             if "vehicle_config" in self.sensor_mapping:
                 vehicle_config = self.sensor_mapping["vehicle_config"]
-                self.wheelbase = float(vehicle_config.get("wheelbase", DEFAULT_WHEELBASE))
-                self.logger.info(f"Using wheelbase from config: {self.wheelbase}m")
+                if not isinstance(vehicle_config, dict):
+                    raise ValueError("vehicle_config must be a dictionary")
+
+                if "wheelbase" in vehicle_config:
+                    wheelbase_value = vehicle_config["wheelbase"]
+                    if not isinstance(wheelbase_value, (int, float)):
+                        raise ValueError(
+                            f"wheelbase must be a number, got: {type(wheelbase_value).__name__}"
+                        )
+                    if wheelbase_value <= 0:
+                        raise ValueError(
+                            f"wheelbase must be positive, got: {wheelbase_value}"
+                        )
+                    self.wheelbase = float(wheelbase_value)
+                    self.logger.info(f"Using wheelbase from config: {self.wheelbase}m")
+                else:
+                    self.logger.info(f"Using default wheelbase: {self.wheelbase}m")
             else:
                 self.logger.info(f"Using default wheelbase: {self.wheelbase}m")
 
             self.logger.info(f"Loaded sensor mapping from: {mapping_file}")
             return True
 
+        except ValueError as e:
+            self.logger.error(f"YAML validation error: {e}")
+            return False
+        except yaml.YAMLError as e:
+            self.logger.error(f"YAML parsing error in {mapping_file}: {e}")
+            return False
         except Exception as e:
             self.logger.error(f"Failed to load sensor mapping: {e}")
             return False
 
     def find_sensor_kit_path(self, sensor_kit_name: str) -> Optional[Path]:
-        """Find sensor kit calibration directory.
+        """Find sensor kit calibration directory using ament_index.
 
-        Returns path to the config directory containing calibration files.
+        This method works in both source and install spaces by using ROS2's
+        package discovery mechanism instead of hardcoded paths.
 
         Args:
-            sensor_kit_name: Name of the sensor kit package
+            sensor_kit_name: Name of the sensor kit package (e.g., 'carla_sensor_kit_launch')
 
         Returns:
-            Path to sensor kit config directory or None
-        """
-        try:
-            # Try to find as a package
-            sensor_kit_dir = get_package_share_directory(sensor_kit_name)
+            Path to sensor kit config directory or None if not found
 
-            # Look for the config directory containing calibration files
+        Raises:
+            FileNotFoundError: If sensor kit calibration cannot be found
+        """
+        from ament_index_python.packages import PackageNotFoundError
+
+        tried_packages = []
+
+        # Try 1: Use the provided package name directly
+        try:
+            sensor_kit_dir = get_package_share_directory(sensor_kit_name)
             calib_path = Path(sensor_kit_dir) / "config"
 
-            # Verify sensor_kit_calibration.yaml exists
             if (calib_path / "sensor_kit_calibration.yaml").exists():
                 self.sensor_kit_path = calib_path
                 self.logger.info(f"Found sensor kit at: {calib_path}")
                 return calib_path
+            else:
+                self.logger.debug(
+                    f"Package '{sensor_kit_name}' found but missing "
+                    f"config/sensor_kit_calibration.yaml"
+                )
+        except PackageNotFoundError:
+            self.logger.debug(f"Package '{sensor_kit_name}' not found in ament index")
+            tried_packages.append(sensor_kit_name)
 
-        except Exception as e:
-            self.logger.debug(f"Package search failed: {e}")
+        # Try 2: Replace '_launch' with '_description' suffix
+        # Common pattern: carla_sensor_kit_launch -> carla_sensor_kit_description
+        desc_name = sensor_kit_name.replace("_launch", "_description")
+        if desc_name != sensor_kit_name:
+            try:
+                desc_dir = get_package_share_directory(desc_name)
+                calib_path = Path(desc_dir) / "config"
 
-        # Try workspace paths
-        # Try common naming patterns for sensor kit descriptions
-        desc_name = sensor_kit_name.replace("_launch", "") + "_description"
-        workspace_paths = [
-            Path.home()
-            / "autoware"
-            / "src"
-            / "launcher"
-            / "autoware_launch"
-            / "sensor_kit"
-            / sensor_kit_name
-            / desc_name
-            / "config",
-            Path.home()
-            / "autoware"
-            / "src"
-            / "launcher"
-            / "autoware_launch"
-            / "sensor_kit"
-            / sensor_kit_name
-            / (sensor_kit_name + "_description")
-            / "config",
-            Path("/opt/autoware") / sensor_kit_name / "config",
-        ]
+                if (calib_path / "sensor_kit_calibration.yaml").exists():
+                    self.sensor_kit_path = calib_path
+                    self.logger.info(
+                        f"Found sensor kit at: {calib_path} (using {desc_name})"
+                    )
+                    return calib_path
+                else:
+                    self.logger.debug(
+                        f"Package '{desc_name}' found but missing "
+                        f"config/sensor_kit_calibration.yaml"
+                    )
+            except PackageNotFoundError:
+                self.logger.debug(f"Package '{desc_name}' not found in ament index")
+                tried_packages.append(desc_name)
 
-        for calib_path in workspace_paths:
-            if (calib_path / "sensor_kit_calibration.yaml").exists():
-                self.sensor_kit_path = calib_path
-                self.logger.info(f"Found sensor kit at: {calib_path}")
-                return calib_path
+        # Try 3: If sensor_kit_name doesn't end with _launch or _description, try adding them
+        if not sensor_kit_name.endswith(("_launch", "_description")):
+            for suffix in ["_description", "_launch"]:
+                variant = sensor_kit_name + suffix
+                try:
+                    variant_dir = get_package_share_directory(variant)
+                    calib_path = Path(variant_dir) / "config"
 
-        self.logger.warning(f"Sensor kit not found: {sensor_kit_name}")
-        return None
+                    if (calib_path / "sensor_kit_calibration.yaml").exists():
+                        self.sensor_kit_path = calib_path
+                        self.logger.info(
+                            f"Found sensor kit at: {calib_path} (using {variant})"
+                        )
+                        return calib_path
+                except PackageNotFoundError:
+                    tried_packages.append(variant)
+
+        # All attempts failed - raise detailed error
+        raise FileNotFoundError(
+            f"Sensor kit calibration not found for '{sensor_kit_name}'.\n"
+            f"Attempted packages: {tried_packages}\n"
+            f"Required file: config/sensor_kit_calibration.yaml\n"
+            f"Ensure the sensor kit description package is:\n"
+            f"  1. Built and installed in your ROS2 workspace\n"
+            f"  2. Contains config/sensor_kit_calibration.yaml\n"
+            f"  3. Visible to 'ros2 pkg list' command"
+        )
 
     def parse_sensor_kit_calibration(self, sensor_kit_path: Path) -> Dict[str, Any]:
         """Parse sensor calibration from sensor kit.
+
+        Currently only loads extrinsic calibration (sensor positions/orientations).
+        Camera intrinsics and other sensor-specific parameters are handled by CARLA
+        and the sensor_mapping.yaml configuration.
 
         Args:
             sensor_kit_path: Path to sensor kit calibration directory
 
         Returns:
-            Dictionary of sensor configurations
+            Dictionary of sensor configurations with transforms
         """
         sensors = {}
 
-        # Parse extrinsic calibration
+        # Parse extrinsic calibration (sensor poses)
         extrinsic_file = sensor_kit_path / "sensor_kit_calibration.yaml"
         if extrinsic_file.exists():
             try:
@@ -172,22 +248,6 @@ class SensorKitLoader:
                     sensors = self._parse_extrinsic_calibration(calibration_data)
             except Exception as e:
                 self.logger.error(f"Failed to parse extrinsic calibration: {e}")
-
-        # Parse individual sensor calibrations
-        sensor_files = {
-            "camera": sensor_kit_path / "camera" / "camera_info.yaml",
-            "lidar": sensor_kit_path / "velodyne" / "velodyne_calibration.yaml",
-            "imu": sensor_kit_path / "imu" / "imu_corrector.yaml",
-        }
-
-        for sensor_type, file_path in sensor_files.items():
-            if file_path.exists():
-                try:
-                    with open(file_path, "r") as f:
-                        data = yaml.safe_load(f)
-                        self._enhance_sensor_configs(sensors, data, sensor_type)
-                except Exception as e:
-                    self.logger.warning(f"Failed to parse {sensor_type} calibration: {e}")
 
         return sensors
 
@@ -233,49 +293,23 @@ class SensorKitLoader:
     def _extract_transform(self, transform_data: Dict) -> Dict[str, float]:
         """Extract transform values from calibration data.
 
+        Autoware sensor calibration files use radians for angles.
+
         Args:
-            transform_data: Transform dictionary
+            transform_data: Transform dictionary with x, y, z, roll, pitch, yaw
+                           Angles are expected in radians (Autoware standard)
 
         Returns:
-            Standardized transform dictionary
+            Transform dictionary with angles in radians
         """
-        # Extract values
-        roll = float(transform_data.get("roll", 0.0))
-        pitch = float(transform_data.get("pitch", 0.0))
-        yaw = float(transform_data.get("yaw", 0.0))
-
-        # Auto-detect angle units using heuristic approach
-        # Radians are typically -π to π (-3.14 to 3.14)
-        # If any angle > 6.28 (2π), assume input is in degrees
-        if abs(roll) > 6.28 or abs(pitch) > 6.28 or abs(yaw) > 6.28:
-            self.logger.warning(
-                f"Detected angles in degrees, converting to radians: "
-                f"roll={roll}, pitch={pitch}, yaw={yaw}"
-            )
-            roll = math.radians(roll)
-            pitch = math.radians(pitch)
-            yaw = math.radians(yaw)
-
         return {
             "x": float(transform_data.get("x", 0.0)),
             "y": float(transform_data.get("y", 0.0)),
             "z": float(transform_data.get("z", 0.0)),
-            "roll": roll,
-            "pitch": pitch,
-            "yaw": yaw,
+            "roll": float(transform_data.get("roll", 0.0)),
+            "pitch": float(transform_data.get("pitch", 0.0)),
+            "yaw": float(transform_data.get("yaw", 0.0)),
         }
-
-    def _enhance_sensor_configs(self, sensors: Dict, data: Dict, sensor_type: str):
-        """Enhance sensor configurations with additional calibration data.
-
-        Args:
-            sensors: Existing sensor configurations
-            data: Additional calibration data
-            sensor_type: Type of sensor
-        """
-        # Implementation depends on specific calibration format
-        # This is a placeholder for sensor-specific enhancements
-        pass
 
     def normalize_sensor_name(self, sensor_name: str) -> str:
         """Normalize sensor name for matching.
@@ -337,13 +371,12 @@ class SensorKitLoader:
             )
 
         # Load from sensor kit (required for transforms)
-        sensor_kit_path = self.find_sensor_kit_path(sensor_kit_name)
-        if not sensor_kit_path:
-            raise RuntimeError(
-                f"Sensor kit '{sensor_kit_name}' not found. "
-                f"Looked in package share directory and workspace paths. "
-                f"Ensure the sensor kit description package is installed."
-            )
+        # find_sensor_kit_path now raises FileNotFoundError with detailed message
+        try:
+            sensor_kit_path = self.find_sensor_kit_path(sensor_kit_name)
+        except FileNotFoundError as e:
+            # Re-raise as RuntimeError for consistency with existing error handling
+            raise RuntimeError(str(e)) from e
 
         kit_sensors = self.parse_sensor_kit_calibration(sensor_kit_path)
         if not kit_sensors:

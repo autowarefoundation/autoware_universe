@@ -95,10 +95,12 @@ class carla_ros2_interface(object):
         self.tf_listener = None
 
     def _initialize_status_publishers(self):
-        """Initialize all vehicle status publishers."""
-        self.pub_pose_with_cov = self.ros2_node.create_publisher(
-            PoseWithCovarianceStamped, "/sensing/gnss/pose_with_covariance", 1
-        )
+        """Initialize all vehicle status publishers.
+
+        Note: GNSS pose publisher is now managed via sensor registry.
+        Only vehicle status publishers are created here.
+        """
+        # REMOVED: self.pub_pose_with_cov - now managed via sensor registry
         self.pub_vel_state = self.ros2_node.create_publisher(
             VelocityReport, "/vehicle/status/velocity_status", 1
         )
@@ -243,6 +245,15 @@ class carla_ros2_interface(object):
         self._initialize_status_publishers()
 
         # Start ROS 2 spin thread
+        # WARNING: Thread Safety Issue
+        # The spin thread handles ROS callbacks (control_callback, initialpose_callback)
+        # which modify shared state (self.current_control, self.ego_actor) while the
+        # main simulation loop (run_step in carla_autoware.py) reads this state.
+        # Potential race conditions on:
+        #   - self.timestamp (read/write from both threads)
+        #   - self.ego_actor (read/write from both threads)
+        #   - self.current_control (written by control_callback, read by run_step)
+        # TODO: Add proper synchronization (threading.Lock) or refactor to single thread
         self.spin_thread = threading.Thread(target=rclpy.spin, args=(self.ros2_node,))
         self.spin_thread.start()
 
@@ -283,19 +294,7 @@ class carla_ros2_interface(object):
         # Miscellaneous
         self.cv_bridge = CvBridge()
 
-        # Frequency control for legacy sensors
-        self.sensor_frequencies = {
-            "top": 11,
-            "left": 11,
-            "right": 11,
-            "camera": 11,
-            "imu": 50,
-            "status": 50,
-            "pose": 2,
-        }
-        self.publish_prev_times = {
-            sensor: datetime.datetime.now() for sensor in self.sensor_frequencies
-        }
+        # Legacy frequency tracking removed - now using simulation-time based registry
 
     def __call__(self):
         input_data = self.sensor_interface.get_data()
@@ -307,23 +306,13 @@ class carla_ros2_interface(object):
         return self.param_values
 
     def checkFrequency(self, sensor):
-        """Return True when publication should be throttled for the sensor."""
-        # Check if it's a legacy sensor first
-        if sensor in self.sensor_frequencies:
-            if sensor not in self.publish_prev_times:
-                self.publish_prev_times[sensor] = datetime.datetime.now()
-                return False
+        """Return True when publication should be throttled for the sensor.
 
-            time_delta = (
-                datetime.datetime.now() - self.publish_prev_times[sensor]
-            ).microseconds / 1000000.0
-            if time_delta == 0:
-                return True
-            if 1.0 / time_delta >= self.sensor_frequencies[sensor]:
-                return True
-            return False
-
-        # Otherwise, use the sensor registry
+        Uses simulation time (self.timestamp) for all sensors to ensure correct
+        throttling in synchronous mode. Wall-clock timing would cause issues when
+        simulation speed differs from real-time.
+        """
+        # Use sensor registry for all sensors (including legacy ones)
         config = self.sensor_registry.get_sensor(sensor)
         if not config:
             return False
@@ -354,7 +343,6 @@ class carla_ros2_interface(object):
         """Transform the received lidar measurement into a ROS point cloud message."""
         if self.checkFrequency(id_):
             return
-        self.publish_prev_times[id_] = datetime.datetime.now()
 
         config = self.sensor_registry.get_sensor(id_)
         if not config:
@@ -432,10 +420,25 @@ class carla_ros2_interface(object):
             self.logger.warning("Cannot set initial pose: ego vehicle not available")
 
     def pose(self):
-        """Transform odometry data to Pose and publish Pose with Covariance message."""
+        """Transform odometry data to Pose and publish Pose with Covariance message.
+
+        Uses sensor registry for publisher management instead of legacy direct publisher.
+        """
         if self.checkFrequency("pose"):
             return
-        self.publish_prev_times["pose"] = datetime.datetime.now()
+
+        # Get GNSS sensor configuration from registry
+        gnss_config = self.sensor_registry.get_sensor("gnss")
+        if not gnss_config:
+            # Fallback to "pose" pseudo-sensor if GNSS not configured
+            gnss_config = self.sensor_registry.get_sensor("pose")
+
+        if not gnss_config or not gnss_config.publisher:
+            self.logger.warning(
+                "GNSS/pose publisher not initialized in registry. "
+                "Check sensor_mapping.yaml includes gnss_link sensor."
+            )
+            return
 
         header = self.get_msg_header(frame_id="map")
         out_pose_with_cov = PoseWithCovarianceStamped()
@@ -446,45 +449,57 @@ class carla_ros2_interface(object):
         )
         out_pose_with_cov.header = header
         out_pose_with_cov.pose.pose = pose_carla
+
+        # GNSS covariance (position uncertainty in meters²)
+        # Covariance matrix entries must be in variance units (σ²), not standard deviation (σ)
+        # 6x6 matrix: [x, y, z, roll, pitch, yaw]
+        GNSS_POSITION_STDDEV = 0.1  # meters (standard deviation)
+        GNSS_POSITION_VARIANCE = GNSS_POSITION_STDDEV ** 2  # meters² (variance)
+        # Orientation uncertainty - set large values since orientation is not measured by GNSS
+        ORIENTATION_VARIANCE = 1.0  # radians² (large uncertainty)
+
         out_pose_with_cov.pose.covariance = [
-            0.1,
+            GNSS_POSITION_VARIANCE,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,  # x row
+            0.0,
+            GNSS_POSITION_VARIANCE,
+            0.0,
+            0.0,
+            0.0,
+            0.0,  # y row
+            0.0,
+            0.0,
+            GNSS_POSITION_VARIANCE,
+            0.0,
+            0.0,
+            0.0,  # z row
+            0.0,
+            0.0,
+            0.0,
+            ORIENTATION_VARIANCE,
+            0.0,
+            0.0,  # roll row
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            ORIENTATION_VARIANCE,
+            0.0,  # pitch row
             0.0,
             0.0,
             0.0,
             0.0,
             0.0,
-            0.0,
-            0.1,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.1,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            ORIENTATION_VARIANCE,  # yaw row
         ]
-        self.pub_pose_with_cov.publish(out_pose_with_cov)
+
+        # Publish via registry publisher
+        gnss_config.publisher.publish(out_pose_with_cov)
+        self.sensor_registry.update_sensor_timestamp(gnss_config.sensor_id, self.timestamp)
 
     def _build_camera_info(self, camera_actor):
         """
@@ -626,8 +641,6 @@ class carla_ros2_interface(object):
         if self.checkFrequency("status"):
             return
 
-        self.publish_prev_times["status"] = datetime.datetime.now()
-
         # convert velocity from cartesian to ego frame
         trans_mat = numpy.array(self.ego_actor.get_transform().get_matrix()).reshape(4, 4)
         rot_mat = trans_mat[0:3, 0:3]
@@ -688,7 +701,15 @@ class carla_ros2_interface(object):
 
         # publish data of all sensors
         for key, data in input_data.items():
-            sensor_type = self.id_to_sensor_type_map[key]
+            # Safely get sensor type with fallback
+            sensor_type = self.id_to_sensor_type_map.get(key)
+            if not sensor_type:
+                self.logger.warning(
+                    f"Unknown sensor ID '{key}' received from CARLA - skipping. "
+                    f"This may indicate a sensor configuration mismatch."
+                )
+                continue
+
             if sensor_type == "sensor.camera.rgb":
                 self.camera(data[1], key)  # Pass sensor ID for multi-camera support
             elif sensor_type == "sensor.other.gnss":
@@ -698,15 +719,36 @@ class carla_ros2_interface(object):
             elif sensor_type == "sensor.other.imu":
                 self.imu(data[1])
             else:
-                self.logger.info(f"No publisher for sensor '{key}' (type={sensor_type})")
+                self.logger.debug(f"No publisher for sensor '{key}' (type={sensor_type})")
 
         # Publish ego vehicle status
         self.ego_status()
         return self.current_control
 
     def shutdown(self):
+        """Clean shutdown of ROS node and spin thread.
+
+        Properly destroys publishers, stops the spin thread, and shuts down rclpy
+        to prevent process hanging and publisher leaks.
+        """
+        # Destroy publishers first
         if self.ros_publisher_manager:
             self.ros_publisher_manager.destroy_all_publishers()
 
+        # Destroy node (this will stop rclpy.spin in the thread)
         if self.ros2_node:
             self.ros2_node.destroy_node()
+
+        # Wait for spin thread to finish (with timeout to prevent hanging)
+        if self.spin_thread and self.spin_thread.is_alive():
+            self.spin_thread.join(timeout=2.0)
+            if self.spin_thread.is_alive():
+                self.logger.warning("Spin thread did not terminate within timeout")
+
+        # Shutdown rclpy context
+        try:
+            if rclpy.ok():
+                rclpy.shutdown()
+        except Exception as e:
+            # rclpy.shutdown() can raise if already shut down
+            self.logger.debug(f"rclpy shutdown raised: {e}")
