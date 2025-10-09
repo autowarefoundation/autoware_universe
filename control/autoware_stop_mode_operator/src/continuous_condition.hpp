@@ -30,6 +30,7 @@ public:
   bool check(const rclcpp::Time & stamp, double duration) const;
 
 private:
+  std::optional<rclcpp::Time> last_stamp_;
   std::optional<rclcpp::Time> start_stamp_;
 };
 
