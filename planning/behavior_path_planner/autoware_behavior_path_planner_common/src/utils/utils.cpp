@@ -15,10 +15,11 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
 #include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
-#include "autoware/boundary_departure_checker/utils.hpp"
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
 
+#include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
@@ -1502,27 +1503,49 @@ bool checkOriginalGoalIsInShoulder(const std::shared_ptr<RouteHandler> & route_h
   return !route_handler->getShoulderLaneletsAtPose(goal_pose).empty();
 }
 
+std::optional<double> calc_feasible_decel_distance(
+  const std::shared_ptr<const PlannerData> & planner_data, const double acc_lim,
+  const double jerk_lim, const double target_velocity)
+{
+  const auto v_now = planner_data->self_odometry->twist.twist.linear.x;
+
+  if (acc_lim >= 0.0) {
+    throw std::invalid_argument("Maximum deceleration value must be negative.");
+  }
+
+  if (v_now < target_velocity) {
+    return std::nullopt;
+  }
+
+  const auto a_now = planner_data->self_acceleration->accel.accel.linear.x;
+  auto min_stop_distance = autoware::motion_utils::calcDecelDistWithJerkAndAccConstraints(
+    v_now, target_velocity, a_now, acc_lim, jerk_lim, -1.0 * jerk_lim);
+
+  if (min_stop_distance) {
+    return std::max(*min_stop_distance, 0.0);
+  }
+
+  return std::nullopt;
+}
+
 PoseWithDetailOpt insert_feasible_stop_point(
   PathWithLaneId & current_path, const std::shared_ptr<const PlannerData> & planner_data,
-  const double maximum_deceleration, const double maximum_jerk, const double braking_delay,
-  const std::string & stop_reason)
+  const double maximum_deceleration, const double maximum_jerk, const std::string & stop_reason)
 {
   if (current_path.points.empty()) {
     return std::nullopt;
   }
 
-  if (maximum_deceleration >= 0.0) {
-    throw std::invalid_argument("Maximum deceleration value must be negative.");
+  constexpr double target_velocity = 0.0;
+  const auto min_stop_distance =
+    calc_feasible_decel_distance(planner_data, maximum_deceleration, maximum_jerk, target_velocity);
+
+  if (!min_stop_distance) {
+    return std::nullopt;
   }
 
-  const auto v_now = planner_data->self_odometry->twist.twist.linear.x;
-  const auto a_now = planner_data->self_acceleration->accel.accel.linear.x;
-  const auto min_stop_distance =
-    autoware::boundary_departure_checker::utils::calc_judge_line_dist_with_jerk_limit(
-      v_now, a_now, maximum_deceleration, maximum_jerk, braking_delay);
-
   const auto stop_idx = autoware::motion_utils::insertStopPoint(
-    planner_data->self_odometry->pose.pose, min_stop_distance, current_path.points);
+    planner_data->self_odometry->pose.pose, *min_stop_distance, current_path.points);
 
   if (!stop_idx) {
     return std::nullopt;

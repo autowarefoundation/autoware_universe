@@ -484,9 +484,42 @@ size_t findNearestSegmentIndex(
   return autoware::motion_utils::findNearestSegmentIndex(points, pose.position);
 }
 
+/**
+ * @brief Calculates the minimum feasible distance required to decelerate from the current velocity
+ * to a target velocity, considering acceleration and jerk limits.
+ *
+ * @param planner_data Shared pointer to the current planner data (includes velocity and
+ * acceleration).
+ * @param acc_lim The maximum *negative* acceleration (deceleration limit) in [m/s^2]. Must be <
+ * 0.0.
+ * @param jerk_lim The maximum jerk magnitude (positive value) in [m/s^3].
+ * @param target_velocity The desired final velocity in [m/s].
+ * @return std::optional<double> The minimum required deceleration distance in [m],
+ * or std::nullopt if the current velocity is already below the target velocity,
+ * or if the motion utility calculation fails.
+ * @throws std::invalid_argument if acc_lim is not a negative value.
+ */
+std::optional<double> calc_feasible_decel_distance(
+  const std::shared_ptr<const PlannerData> & planner_data, const double acc_lim,
+  const double jerk_lim, const double target_velocity);
+
+/**
+ * @brief Calculates the feasible stopping distance and inserts a stop point into the current path.
+ *
+ * @param current_path The path to be modified (stop point will be inserted into its points vector).
+ * @param planner_data Shared pointer to the current planner data (for current velocity and
+ * acceleration).
+ * @param maximum_deceleration The maximum allowable deceleration (negative value) in [m/s^2].
+ * @param maximum_jerk The maximum allowable jerk (positive magnitude) in [m/s^3].
+ * @param stop_reason A string detailing the reason for the stop.
+ * @return PoseWithDetailOpt The pose and reason of the inserted stop point, or std::nullopt if
+ * the path is empty, the stopping distance cannot be calculated, or the stop point
+ * cannot be inserted into the path.
+ */
+
 PoseWithDetailOpt insert_feasible_stop_point(
   PathWithLaneId & current_path, const std::shared_ptr<const PlannerData> & planner_data,
-  const double maximum_deceleration, const double maximum_jerk, const double braking_delay,
+  const double maximum_deceleration, const double maximum_jerk,
   const std::string & stop_reason = "");
 }  // namespace autoware::behavior_path_planner::utils
 
