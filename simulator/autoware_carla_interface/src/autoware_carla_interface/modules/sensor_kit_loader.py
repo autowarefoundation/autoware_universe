@@ -320,33 +320,39 @@ class SensorKitLoader:
     def build_sensor_configs(self, sensor_kit_name: Optional[str] = None) -> List[SensorConfig]:
         """Build sensor configurations from sensor kit calibration.
 
-        Attempts to load from the specified sensor kit, falling back to
-        mapping-only configuration if the kit is not found.
-
         Args:
             sensor_kit_name: Name of sensor kit to use
 
         Returns:
             List of sensor configurations
+
+        Raises:
+            RuntimeError: If sensor kit is not found or calibration cannot be loaded
         """
-        configs = []
+        if not sensor_kit_name:
+            raise RuntimeError(
+                "sensor_kit_name is required. The mapping file alone does not contain "
+                "sensor transforms, which would result in all sensors spawning at (0,0,0). "
+                "Please specify a valid sensor_kit_name parameter."
+            )
 
-        if sensor_kit_name:
-            # Try to load from sensor kit
-            sensor_kit_path = self.find_sensor_kit_path(sensor_kit_name)
-            if sensor_kit_path:
-                kit_sensors = self.parse_sensor_kit_calibration(sensor_kit_path)
-                configs = self._create_configs_from_kit(kit_sensors)
-            else:
-                self.logger.warning(
-                    f"Sensor kit '{sensor_kit_name}' not found, falling back to mapping configuration"
-                )
-                configs = self._create_configs_from_mapping()
-        else:
-            # No sensor kit specified, use mapping only
-            self.logger.info("No sensor kit specified, using mapping configuration")
-            configs = self._create_configs_from_mapping()
+        # Load from sensor kit (required for transforms)
+        sensor_kit_path = self.find_sensor_kit_path(sensor_kit_name)
+        if not sensor_kit_path:
+            raise RuntimeError(
+                f"Sensor kit '{sensor_kit_name}' not found. "
+                f"Looked in package share directory and workspace paths. "
+                f"Ensure the sensor kit description package is installed."
+            )
 
+        kit_sensors = self.parse_sensor_kit_calibration(sensor_kit_path)
+        if not kit_sensors:
+            raise RuntimeError(
+                f"No sensors found in calibration at {sensor_kit_path}. "
+                f"Check that sensor_kit_calibration.yaml exists and is valid."
+            )
+
+        configs = self._create_configs_from_kit(kit_sensors)
         return configs
 
     def _create_configs_from_kit(self, kit_sensors: Dict) -> List[SensorConfig]:
@@ -357,9 +363,13 @@ class SensorKitLoader:
 
         Returns:
             List of sensor configurations
+
+        Raises:
+            RuntimeError: If enabled sensors lack transform data
         """
         configs = []
         mappings = self.sensor_mapping.get("sensor_mappings", {})
+        missing_transforms = []
 
         for sensor_name, sensor_data in kit_sensors.items():
             if not self.is_sensor_enabled(sensor_name):
@@ -378,30 +388,28 @@ class SensorKitLoader:
                 self.logger.debug(f"No mapping found for sensor: {sensor_name}")
                 continue
 
+            # Validate transform is present
+            transform = sensor_data.get("transform")
+            if not transform:
+                missing_transforms.append(sensor_name)
+                self.logger.error(
+                    f"Sensor '{sensor_name}' is enabled but has no transform in calibration"
+                )
+                continue
+
             config = self._create_sensor_config(
-                sensor_name=sensor_name, mapping=mapping, transform=sensor_data.get("transform")
+                sensor_name=sensor_name, mapping=mapping, transform=transform
             )
             configs.append(config)
 
-        return configs
-
-    def _create_configs_from_mapping(self) -> List[SensorConfig]:
-        """Create sensor configs from mapping file only.
-
-        Returns:
-            List of sensor configurations
-        """
-        configs = []
-        mappings = self.sensor_mapping.get("sensor_mappings", {})
-
-        for sensor_name, mapping in mappings.items():
-            if not self.is_sensor_enabled(sensor_name):
-                continue
-
-            config = self._create_sensor_config(sensor_name=sensor_name, mapping=mapping)
-            configs.append(config)
+        if missing_transforms:
+            raise RuntimeError(
+                f"Enabled sensors missing transforms in calibration: {missing_transforms}. "
+                f"All enabled sensors must have pose calibration to avoid spawning at (0,0,0)."
+            )
 
         return configs
+
 
     def _create_sensor_config(
         self, sensor_name: str, mapping: Dict, transform: Optional[Dict] = None

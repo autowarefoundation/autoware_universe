@@ -13,7 +13,7 @@
     <arg name="max_real_delta_seconds" default="0.05"/>
 
     <!-- Sensor Configuration -->
-    <arg name="sensor_kit_name" default="carla_sensor_kit_launch" description="Name of the sensor kit package"/>
+    <arg name="sensor_kit_name" default="carla_sensor_kit_description" description="Name of the sensor kit package containing calibration"/>
     <arg name="sensor_mapping_file" default="$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml" description="Path to sensor mapping YAML"/>
 
     <!-- CARLA Interface -->
