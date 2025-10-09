@@ -55,7 +55,8 @@ PreprocessCuda::PreprocessCuda(
 
 __global__ void generateSweepPoints_kernel(
   const InputPointType * __restrict__ input_points, std::size_t points_size, float time_lag,
-  const float * transform_array, int num_features, bool use_intensity, float * __restrict__ output_points)
+  const float * transform_array, int num_features, bool use_intensity,
+  float * __restrict__ output_points)
 {
   int point_idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (point_idx >= points_size) return;
@@ -76,7 +77,7 @@ __global__ void generateSweepPoints_kernel(
   output_points[point_idx * num_features + 2] = transform_array[2] * input_x +
                                                 transform_array[6] * input_y +
                                                 transform_array[10] * input_z + transform_array[14];
-  
+
   // Conditionally include intensity feature
   if (use_intensity) {
     output_points[point_idx * num_features + 3] = input_intensity;

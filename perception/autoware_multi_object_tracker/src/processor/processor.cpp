@@ -209,6 +209,26 @@ void TrackerProcessor::removeOldTracker(const rclcpp::Time & time)
   }
 }
 
+inline double calcGeneralizedIoUThresholdUnknown(
+  double object_speed, double generalized_iou_threshold, double static_object_speed,
+  double moving_object_speed, double static_iou_threshold)
+{
+  // If the threshold is already larger than static threshold, just return it
+  if (generalized_iou_threshold > static_iou_threshold) {
+    return generalized_iou_threshold;
+  }
+  if (object_speed >= moving_object_speed) {
+    return generalized_iou_threshold;
+  }
+  if (object_speed > static_object_speed) {
+    // Linear interpolation between static and moving thresholds
+    const double speed_ratio =
+      (object_speed - static_object_speed) / (moving_object_speed - static_object_speed);
+    return static_iou_threshold + speed_ratio * (generalized_iou_threshold - static_iou_threshold);
+  }
+  return static_iou_threshold;
+}
+
 // This function removes overlapped trackers based on distance and IoU criteria
 void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
 {
@@ -273,9 +293,17 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
             source_data.object, target_data.object, precision, recall, generalized_iou)) {
         return false;
       }
+      // Adjust generalized IoU threshold based on target object speed and static/moving status
+      const double known_object_speed =
+        is_target_known
+          ? std::hypot(target_data.object.twist.linear.x, target_data.object.twist.linear.y)
+          : std::hypot(source_data.object.twist.linear.x, source_data.object.twist.linear.y);
+      double generalized_iou_threshold_unknown = calcGeneralizedIoUThresholdUnknown(
+        known_object_speed, generalized_iou_threshold, config_.pruning_static_object_speed,
+        config_.pruning_moving_object_speed, config_.pruning_static_iou_threshold);
       return (
         precision > precision_threshold || recall > recall_threshold ||
-        generalized_iou > generalized_iou_threshold);
+        generalized_iou > generalized_iou_threshold_unknown);
     } else {
       // both are unknown, use generalized IoU
       iou = shapes::get2dGeneralizedIoU(source_data.object, target_data.object);
@@ -355,7 +383,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
   // Second pass: merge overlapping trackers
   for (size_t i = 0; i < valid_trackers.size(); ++i) {
     auto & data1 = valid_trackers[i];
-    if (!data1.is_valid || !data1.tracker->isConfident(time, adaptive_threshold_cache_, ego_pose_))
+    if (!data1.is_valid || !data1.tracker->isConfident(adaptive_threshold_cache_, ego_pose_, time))
       continue;
 
     // Find nearby trackers using R-tree
@@ -435,7 +463,7 @@ bool TrackerProcessor::canMergeOverlappedTarget(
   }
 
   // 1. if the other is not confident, do not remove the target
-  if (!other.isConfident(time, adaptive_threshold_cache_, ego_pose_)) {
+  if (!other.isConfident(adaptive_threshold_cache_, ego_pose_, time)) {
     return false;
   }
 
@@ -484,7 +512,7 @@ void TrackerProcessor::getTrackedObjects(
   types::DynamicObject tracked_object;
   for (const auto & tracker : list_tracker_) {
     // check if the tracker is confident, if not, skip
-    if (!tracker->isConfident(time, adaptive_threshold_cache_, ego_pose_)) continue;
+    if (!tracker->isConfident(adaptive_threshold_cache_, ego_pose_, std::nullopt)) continue;
     // Get the tracked object, extrapolated to the given time
     constexpr bool to_publish = true;
     if (tracker->getTrackedObject(time, tracked_object, to_publish)) {
@@ -507,7 +535,7 @@ void TrackerProcessor::getTentativeObjects(
   types::DynamicObject tracked_object;
   for (const auto & tracker : list_tracker_) {
     // check if the tracker is confident, if so, skip
-    if (tracker->isConfident(time, adaptive_threshold_cache_, ego_pose_)) continue;
+    if (tracker->isConfident(adaptive_threshold_cache_, ego_pose_, std::nullopt)) continue;
     // Get the tracked object, extrapolated to the given time
     constexpr bool to_publish = false;
     if (tracker->getTrackedObject(time, tracked_object, to_publish)) {

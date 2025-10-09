@@ -364,18 +364,28 @@ double Tracker::computeAdaptiveThreshold(
 }
 
 bool Tracker::isConfident(
-  const rclcpp::Time & time, const AdaptiveThresholdCache & cache,
-  const std::optional<geometry_msgs::msg::Pose> & ego_pose) const
+  const AdaptiveThresholdCache & cache, const std::optional<geometry_msgs::msg::Pose> & ego_pose,
+  const std::optional<rclcpp::Time> & time = std::nullopt) const
 {
   // check the number of measurements. if the measurement is too small, definitely not confident
   const int count = getTotalMeasurementCount();
   if (count < 2) {
     return false;
   }
+  rclcpp::Time time_to_check;
+  if (!time) {
+    // add 200ms extrapolation time to the latest measurement time
+    // to consider the velocity uncertainty
+    const rclcpp::Duration extrapolate_time = rclcpp::Duration::from_seconds(0.2);
+    time_to_check = object_.time + extrapolate_time;
+  } else {
+    // use the given time
+    time_to_check = *time;
+  }
 
   double major_axis_sq = 0.0;
   double minor_axis_sq = 0.0;
-  getPositionCovarianceEigenSq(time, major_axis_sq, minor_axis_sq);
+  getPositionCovarianceEigenSq(time_to_check, major_axis_sq, minor_axis_sq);
 
   // if the covariance is very small, the tracker is confident
   constexpr double STRONG_COV_THRESHOLD = 0.28;
@@ -396,11 +406,11 @@ bool Tracker::isConfident(
 }
 
 bool Tracker::isExpired(
-  const rclcpp::Time & now, const AdaptiveThresholdCache & cache,
+  const rclcpp::Time & time, const AdaptiveThresholdCache & cache,
   const std::optional<geometry_msgs::msg::Pose> & ego_pose) const
 {
   // check the number of no measurements
-  const double elapsed_time = getElapsedTimeFromLastUpdate(now);
+  const double elapsed_time = getElapsedTimeFromLastUpdate(time);
 
   // if the last measurement is too old, the tracker is expired
   constexpr double EXPIRED_TIME_THRESHOLD = 1.0;  // [sec]
@@ -424,7 +434,7 @@ bool Tracker::isExpired(
     // if the tracker covariance is too large, the tracker is expired
     double major_axis_sq = 0.0;
     double minor_axis_sq = 0.0;
-    getPositionCovarianceEigenSq(now, major_axis_sq, minor_axis_sq);
+    getPositionCovarianceEigenSq(time, major_axis_sq, minor_axis_sq);
     // major_cov: base_threshold is 2.8, fallback threshold is 3.8;
     // minor_cov: base_threshold is 2.7, fallback threshold is 3.7;
     const double major_cov_threshold = computeAdaptiveThreshold(2.8, 3.8, cache, ego_pose);

@@ -8,7 +8,7 @@
     out_size_factor: 8
     max_points_per_voxel: 10
     use_intensity: false
-    
+
     d_bound: [1.0, 134.0, 1.4]
     x_bound: [-122.4, 122.4, 0.68]
     y_bound: [-122.4, 122.4, 0.68]

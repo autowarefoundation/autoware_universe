@@ -28,6 +28,7 @@ namespace control_diagnostics
 enum class Metric {
   velocity,
   acceleration,
+  lateral_acceleration_abs,
   jerk,
   lateral_deviation,
   lateral_deviation_abs,
@@ -50,12 +51,14 @@ enum class Metric {
   stop_deviation,
   stop_deviation_abs,
   closest_object_distance,
+  longitudinal_velocity_deviation,
   SIZE,
 };
 
 static const std::unordered_map<std::string, Metric> str_to_metric = {
   {"velocity", Metric::velocity},
   {"acceleration", Metric::acceleration},
+  {"lateral_acceleration_abs", Metric::lateral_acceleration_abs},
   {"jerk", Metric::jerk},
   {"lateral_deviation", Metric::lateral_deviation},
   {"lateral_deviation_abs", Metric::lateral_deviation_abs},
@@ -78,11 +81,13 @@ static const std::unordered_map<std::string, Metric> str_to_metric = {
   {"stop_deviation", Metric::stop_deviation},
   {"stop_deviation_abs", Metric::stop_deviation_abs},
   {"closest_object_distance", Metric::closest_object_distance},
+  {"longitudinal_velocity_deviation", Metric::longitudinal_velocity_deviation},
 };
 
 static const std::unordered_map<Metric, std::string> metric_to_str = {
   {Metric::velocity, "velocity"},
   {Metric::acceleration, "acceleration"},
+  {Metric::lateral_acceleration_abs, "lateral_acceleration_abs"},
   {Metric::jerk, "jerk"},
   {Metric::lateral_deviation, "lateral_deviation"},
   {Metric::lateral_deviation_abs, "lateral_deviation_abs"},
@@ -105,12 +110,14 @@ static const std::unordered_map<Metric, std::string> metric_to_str = {
   {Metric::stop_deviation, "stop_deviation"},
   {Metric::stop_deviation_abs, "stop_deviation_abs"},
   {Metric::closest_object_distance, "closest_object_distance"},
+  {Metric::longitudinal_velocity_deviation, "longitudinal_velocity_deviation"},
 };
 
 // Metrics descriptions
 static const std::unordered_map<Metric, std::string> metric_descriptions = {
   {Metric::velocity, "Velocity[m/s]"},
   {Metric::acceleration, "Acceleration[m/s^2]"},
+  {Metric::lateral_acceleration_abs, "Absolute lateral acceleration[m/s^2]"},
   {Metric::jerk, "Jerk[m/s^3]"},
   {Metric::lateral_deviation,
    "Lateral deviation from the reference trajectory[m], positive value means the ego is on the "
@@ -149,6 +156,9 @@ static const std::unordered_map<Metric, std::string> metric_descriptions = {
   {Metric::closest_object_distance,
    "Distance to the closest object[m], the objects outside of the distance_filter_thr_m (default: "
    "30m) are ignored"},
+  {Metric::longitudinal_velocity_deviation,
+   "Longitudinal velocity deviation from the reference trajectory[m], positive value means the "
+   "actual velocity is larger than the planned velocity."},
 };
 
 namespace details

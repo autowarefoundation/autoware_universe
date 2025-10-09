@@ -51,6 +51,9 @@
   <arg name="use_irregular_object_detector"/>
   <arg name="irregular_object_detector_fusion_camera_ids" default="[0]"/>
   <arg name="ml_camera_lidar_merger_priority_mode"/>
+  <arg name="camera_2d_detector/model_path"/>
+  <arg name="camera_2d_detector/label_path"/>
+  <arg name="camera_2d_detector/color_map_path"/>
 
   <!-- External interfaces -->
   <arg name="number_of_cameras"/>
@@ -84,6 +87,7 @@
   <arg name="input/camera8/image"/>
   <arg name="input/camera8/info"/>
   <arg name="input/camera8/rois"/>
+  <arg name="input/concatenation_info"/>
   <arg name="image_topic_name"/>
   <arg name="segmentation_pointcloud_fusion_camera_ids"/>
   <arg name="input/radar"/>
@@ -214,6 +218,7 @@
       <arg name="input/camera8/image" value="$(var input/camera8/image)"/>
       <arg name="input/camera8/info" value="$(var input/camera8/info)"/>
       <arg name="input/camera8/rois" value="$(var input/camera8/rois)"/>
+      <arg name="input/concatenation_info" value="$(var input/concatenation_info)"/>
       <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
       <arg name="input/pointcloud_map/pointcloud" value="$(var pointcloud_filter/output/pointcloud)"/>
       <arg name="input/obstacle_segmentation/pointcloud" value="$(var input/obstacle_segmentation/pointcloud)"/>
@@ -230,6 +235,9 @@
       <arg name="pointpainting_fusion_common_param_path" value="$(var pointpainting_fusion_common_param_path)"/>
       <arg name="segmentation_pointcloud_fusion_camera_ids" value="$(var segmentation_pointcloud_fusion_camera_ids)"/>
       <arg name="image_topic_name" value="$(var image_topic_name)"/>
+      <arg name="camera_2d_detector/model_path" value="$(var camera_2d_detector/model_path)"/>
+      <arg name="camera_2d_detector/label_path" value="$(var camera_2d_detector/label_path)"/>
+      <arg name="camera_2d_detector/color_map_path" value="$(var camera_2d_detector/color_map_path)"/>
     </include>
   </group>
 
@@ -240,6 +248,7 @@
       <arg name="pipeline_ns" value="$(var irregular_object_detector_ns)"/>
       <arg name="fusion_camera_ids" value="$(var irregular_object_detector_fusion_camera_ids)"/>
       <arg name="image_topic_name" value="$(var image_topic_name)"/>
+      <arg name="input/concatenation_info" value="$(var input/concatenation_info)"/>
       <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
       <arg name="output/objects" value="$(var irregular_object_pipeline/output/objects)"/>
       <arg name="irregular_object_detector_param_path" value="$(var irregular_object_detector_param_path)"/>
