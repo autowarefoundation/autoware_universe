@@ -178,30 +178,42 @@ class InitializeInterface(object):
 
         Ensures cleanup happens even if individual steps fail.
         """
-        # Cleanup sensors first (they depend on ego_actor)
-        if self.sensor_wrapper:
-            try:
-                self.sensor_wrapper.cleanup()
-            except Exception as e:
-                print(f"Warning: Sensor cleanup failed: {e}")
+        self._cleanup_sensors()
+        self._cleanup_ros_interface()
+        self._cleanup_ego_actor()
+        self._cleanup_carla_provider()
 
-        # Cleanup ROS interface next
-        if self.interface:
-            try:
-                self.interface.shutdown()
-                self.interface = None
-            except Exception as e:
-                print(f"Warning: ROS interface shutdown failed: {e}")
+    def _cleanup_sensors(self):
+        """Clean up sensor wrapper, continuing on error."""
+        if not self.sensor_wrapper:
+            return
+        try:
+            self.sensor_wrapper.cleanup()
+        except Exception as e:
+            print(f"Warning: Sensor cleanup failed: {e}")
 
-        # Destroy ego vehicle
-        if self.ego_actor:
-            try:
-                self.ego_actor.destroy()
-                self.ego_actor = None
-            except Exception as e:
-                print(f"Warning: Ego actor destruction failed: {e}")
+    def _cleanup_ros_interface(self):
+        """Clean up ROS interface, continuing on error."""
+        if not self.interface:
+            return
+        try:
+            self.interface.shutdown()
+            self.interface = None
+        except Exception as e:
+            print(f"Warning: ROS interface shutdown failed: {e}")
 
-        # Cleanup CARLA data provider last
+    def _cleanup_ego_actor(self):
+        """Destroy ego vehicle, continuing on error."""
+        if not self.ego_actor:
+            return
+        try:
+            self.ego_actor.destroy()
+            self.ego_actor = None
+        except Exception as e:
+            print(f"Warning: Ego actor destruction failed: {e}")
+
+    def _cleanup_carla_provider(self):
+        """Clean up CARLA data provider, continuing on error."""
         try:
             CarlaDataProvider.cleanup()
         except Exception as e:

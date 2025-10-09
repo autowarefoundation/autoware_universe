@@ -106,6 +106,33 @@ class CoordinateTransformer:
         return carla.Location(x=x, y=-y, z=z)
 
     @staticmethod
+    def _create_carla_rotation(
+        roll: float, pitch: float, yaw: float, negate_angles: bool, in_degrees: bool
+    ) -> carla.Rotation:
+        """Helper to create CARLA Rotation with optional angle negation.
+
+        Args:
+            roll: Roll angle
+            pitch: Pitch angle
+            yaw: Yaw angle
+            negate_angles: If True, negate pitch and yaw for coordinate system change
+            in_degrees: If True, angles are already in degrees
+
+        Returns:
+            CARLA Rotation object
+        """
+        if not in_degrees:
+            roll = math.degrees(roll)
+            pitch = math.degrees(pitch)
+            yaw = math.degrees(yaw)
+
+        if negate_angles:
+            pitch = -pitch
+            yaw = -yaw
+
+        return carla.Rotation(roll=roll, pitch=pitch, yaw=yaw)
+
+    @staticmethod
     def carla_rotation_to_carla_rotation(
         roll: float, pitch: float, yaw: float, in_degrees: bool = False
     ) -> carla.Rotation:
@@ -124,14 +151,9 @@ class CoordinateTransformer:
         Returns:
             CARLA Rotation object (in degrees)
         """
-        if not in_degrees:
-            # Convert radians to degrees
-            roll = math.degrees(roll)
-            pitch = math.degrees(pitch)
-            yaw = math.degrees(yaw)
-
-        # CARLA angles stay as-is (no negation needed)
-        return carla.Rotation(roll=roll, pitch=pitch, yaw=yaw)
+        return CoordinateTransformer._create_carla_rotation(
+            roll, pitch, yaw, negate_angles=False, in_degrees=in_degrees
+        )
 
     @staticmethod
     def ros_to_carla_rotation(
@@ -149,15 +171,9 @@ class CoordinateTransformer:
         Returns:
             CARLA Rotation object (in degrees)
         """
-        if not in_degrees:
-            # Convert radians to degrees
-            roll = math.degrees(roll)
-            pitch = math.degrees(pitch)
-            yaw = math.degrees(yaw)
-
-        # CARLA uses degrees and left-handed system
-        # Yaw needs to be negated for the coordinate system change
-        return carla.Rotation(roll=roll, pitch=-pitch, yaw=-yaw)
+        return CoordinateTransformer._create_carla_rotation(
+            roll, pitch, yaw, negate_angles=True, in_degrees=in_degrees
+        )
 
     @staticmethod
     def ros_transform_to_carla_transform(transform_dict: Dict[str, float]) -> carla.Transform:
