@@ -148,7 +148,7 @@ BboxObjectLocatorNode::BboxObjectLocatorNode(const rclcpp::NodeOptions & node_op
   std::vector<bool> roi_enable_fov_validation =
     declare_parameter<std::vector<bool>>("roi_fov_validation.enabled");
   std::vector<double> roi_valid_horizontal_fov =
-    declare_parameter<std::vector<double>>("roi_fov_validation.max_horizontal_fovs");
+    declare_parameter<std::vector<double>>("roi_fov_validation.max_horizontal_fov");
 
   const double detection_max_range = declare_parameter<double>("detection_max_range");
   detection_max_range_sq_ = detection_max_range * detection_max_range;
@@ -215,7 +215,7 @@ BboxObjectLocatorNode::BboxObjectLocatorNode(const rclcpp::NodeOptions & node_op
 
 bool BboxObjectLocatorNode::isRoiValidationParamValid(
   const size_t rois_number, const std::vector<bool> & enable_validation,
-  const std::vector<double> & horizontal_fovs)
+  const std::vector<double> & horizontal_fov)
 {
   if (enable_validation.size() < rois_number) {
     RCLCPP_ERROR(
@@ -227,12 +227,12 @@ bool BboxObjectLocatorNode::isRoiValidationParamValid(
     return false;
   }
 
-  if (horizontal_fovs.size() < rois_number) {
+  if (horizontal_fov.size() < rois_number) {
     RCLCPP_ERROR(
       get_logger(),
-      "roi_position_validation.max_horizontal_fovs must have the parameters for all ROIs. "
-      "rois_id: %ld, roi_position_validation.max_horizontal_fovs: %ld",
-      rois_number, horizontal_fovs.size());
+      "roi_position_validation.max_horizontal_fov must have the parameters for all ROIs. "
+      "rois_id: %ld, roi_position_validation.max_horizontal_fov: %ld",
+      rois_number, horizontal_fov.size());
 
     return false;
   }

@@ -74,7 +74,7 @@
               "description": "Flags to enable FOV validation for each ROI. Must have the same number as the input ROIs.",
               "default": [false, false, false, false, false, false, false, false]
             },
-            "max_horizontal_fovs": {
+            "max_horizontal_fov": {
               "type": "array",
               "items": {
                 "type": "number",

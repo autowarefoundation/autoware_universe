@@ -16,7 +16,7 @@
       enabled: [false, false, false, false, false, false, false, false]
 
       # set valid FOV for ROI for each camera [degree]
-      max_horizontal_fovs: [60.0, 60.0, 60.0, 60.0, 60.0, 60.0, 60.0, 60.0]
+      max_horizontal_fov: [60.0, 60.0, 60.0, 60.0, 60.0, 60.0, 60.0, 60.0]
 
     # if an object is detected farther than this, it will be filtered out
     detection_max_range: 10.0 # [m]
