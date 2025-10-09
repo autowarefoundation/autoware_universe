@@ -516,7 +516,6 @@ std::optional<double> calc_feasible_decel_distance(
  * the path is empty, the stopping distance cannot be calculated, or the stop point
  * cannot be inserted into the path.
  */
-
 PoseWithDetailOpt insert_feasible_stop_point(
   PathWithLaneId & current_path, const std::shared_ptr<const PlannerData> & planner_data,
   const double maximum_deceleration, const double maximum_jerk,
