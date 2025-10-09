@@ -13,7 +13,7 @@
     use_akima_spline_interpolation: true
     smooth_trajectories: false
     limit_speed: true
-    limit_lateral_acceleration: true
+    limit_lateral_acceleration: false
     set_engage_speed: false
     fix_invalid_points: true
     smooth_velocities: false
