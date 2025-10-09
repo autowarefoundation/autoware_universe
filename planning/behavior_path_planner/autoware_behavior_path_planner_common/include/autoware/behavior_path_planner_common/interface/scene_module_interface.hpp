@@ -482,6 +482,34 @@ protected:
    */
   virtual void processOnExit() {}
 
+  virtual void update_rtc_status(
+    const double start_distance, const double finish_distance,
+    const std::optional<bool> safe = std::nullopt,
+    const std::optional<uint8_t> state = std::nullopt)
+  {
+    autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+    for (const auto & [module_name, ptr] : rtc_interface_ptr_map_) {
+      if (!ptr) {
+        continue;
+      }
+
+      // Use the provided safe_status, or calculate the default if it's not provided.
+      const bool final_safe = safe.value_or(isExecutionReady());
+
+      // Use the provided state, or calculate the default if it's not provided.
+      const auto default_state =
+        (!ptr->isRegistered(uuid_map_.at(module_name)) || isWaitingApproval()
+           ? State::WAITING_FOR_EXECUTION
+           : State::RUNNING);
+
+      const uint8_t final_state = state.value_or(default_state);
+
+      ptr->updateCooperateStatus(
+        uuid_map_.at(module_name), final_safe, final_state, start_distance, finish_distance,
+        clock_->now());
+    }
+  }
+
   virtual void updateRTCStatus(const double start_distance, const double finish_distance)
   {
     for (const auto & [module_name, ptr] : rtc_interface_ptr_map_) {
@@ -494,6 +522,26 @@ protected:
           clock_->now());
       }
     }
+  }
+
+  template <class PathPointsType>
+  void update_rtc_status(
+    const PathPointsType & path_points, const geometry_msgs::msg::Point & ref_position,
+    const geometry_msgs::msg::Point & target_start_position,
+    const geometry_msgs::msg::Point & target_end_position,
+    const std::optional<bool> safe = std::nullopt,
+    const std::optional<uint8_t> state = std::nullopt)
+  {
+    if (path_points.empty()) {
+      update_rtc_status(0.0, 0.0, safe, state);
+      return;
+    }
+
+    const double start_distance =
+      autoware::motion_utils::calcSignedArcLength(path_points, ref_position, target_start_position);
+    const double finish_distance =
+      autoware::motion_utils::calcSignedArcLength(path_points, ref_position, target_end_position);
+    update_rtc_status(start_distance, finish_distance, safe, state);
   }
 
   void updateRTCStatusForSuccess()
