@@ -15,15 +15,26 @@ This ros package enables communication between Autoware and CARLA for autonomous
 
 ### Install
 
-- [CARLA Installation](https://carla.readthedocs.io/en/latest/start_quickstart/)
-- [Carla Lanelet2 Maps](https://bitbucket.org/carla-simulator/autoware-contents/src/master/maps/)
-- [Python Package for CARLA 0.9.15 ROS 2 Humble communication](https://github.com/gezp/carla_ros/releases/tag/carla-0.9.15-ubuntu-22.04)
-  - Install the wheel using pip.
-  - OR add the egg file to the `PYTHONPATH`.
+#### Prerequisites
 
-1. Download maps (y-axis inverted version) to arbitrary location
-2. Change names and create the map folder (example: Town01) inside `autoware_map`. (`point_cloud/Town01.pcd` -> `autoware_map/Town01/pointcloud_map.pcd`, `vector_maps/lanelet2/Town01.osm`-> `autoware_map/Town01/lanelet2_map.osm`)
-3. Create `map_projector_info.yaml` on the folder and add `projector_type: Local` on the first line.
+1. **Install CARLA 0.9.15**: Follow the [CARLA Installation Guide](https://carla.readthedocs.io/en/latest/start_quickstart/)
+
+2. **Install CARLA Python Package**: Install [CARLA 0.9.15 ROS 2 Humble communication package](https://github.com/gezp/carla_ros/releases/tag/carla-0.9.15-ubuntu-22.04)
+   - Option A: Install the wheel using pip
+   - Option B: Add the egg file to your `PYTHONPATH`
+
+3. **Download CARLA Lanelet2 Maps**: Get the y-axis inverted maps from [CARLA Autoware Contents](https://bitbucket.org/carla-simulator/autoware-contents/src/master/maps/)
+
+#### Map Setup
+
+1. Download the maps (y-axis inverted version) to an arbitrary location
+2. Create the map folder structure in `$HOME/autoware_map`:
+   - Rename `point_cloud/Town01.pcd` → `$HOME/autoware_map/Town01/pointcloud_map.pcd`
+   - Rename `vector_maps/lanelet2/Town01.osm` → `$HOME/autoware_map/Town01/lanelet2_map.osm`
+3. Create `$HOME/autoware_map/Town01/map_projector_info.yaml` with:
+   ```yaml
+   projector_type: Local
+   ```
 
 ### Build
 
@@ -41,10 +52,15 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
    ./CarlaUE4.sh -prefernvidia -quality-level=Low -RenderOffScreen
    ```
 
-2. Run ros nodes
+2. Run Autoware with CARLA
 
    ```bash
-   ros2 launch autoware_launch e2e_simulator.launch.xml map_path:=$HOME/autoware_map/Town01 vehicle_model:=sample_vehicle sensor_model:=awsim_sensor_kit simulator_type:=carla carla_map:=Town01
+   ros2 launch autoware_launch e2e_simulator.launch.xml \
+       map_path:=$HOME/autoware_map/Town01 \
+       vehicle_model:=sample_vehicle \
+       sensor_model:=carla_sensor_kit \
+       simulator_type:=carla \
+       carla_map:=Town01
    ```
 
 3. Set initial pose (Init by GNSS)
@@ -106,7 +122,7 @@ All the key parameters can be configured in `autoware_carla_interface.launch.xml
 
 ### Sensor Configuration
 
-The interface dynamically loads sensor configurations from Autoware sensor kits. Sensors are configured through two files:
+The interface uses the **`carla_sensor_kit`** which provides 6 cameras for 360-degree coverage, LiDAR, IMU, and GNSS sensors. Sensor configurations are dynamically loaded from Autoware sensor kit calibration files through two configuration files:
 
 #### 1. Sensor Kit Calibration (from Autoware sensor kit)
 
@@ -215,7 +231,6 @@ The maps provided by the Carla Simulator ([Carla Lanelet2 Maps](https://bitbucke
 
 ## Known Issues and Future Works
 
-- Testing on procedural map (Adv Digital Twin).
-  - Currently unable to test it due to failing in the creation of the Adv digital twin map.
-- Traffic light recognition.
-  - The default CARLA Lanelet2 maps lack proper traffic light regulatory elements. See the "Traffic Light Recognition" section above for workarounds to add traffic lights to maps.
+- **Testing on procedural maps (Adv Digital Twin)**: Currently unable to test due to failures in creating the Adv Digital Twin map.
+- **Traffic light recognition**: The default CARLA Lanelet2 maps lack proper traffic light regulatory elements. See the "Traffic Light Recognition" section above for workarounds.
+- **LiDAR concatenation**: When using multiple LiDARs, you may need to uncomment the lidar concatenation relay in the launch file (currently disabled by default).
