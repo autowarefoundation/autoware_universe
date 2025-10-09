@@ -237,10 +237,32 @@ class SensorWrapper(object):
         CarlaDataProvider.get_world().tick()
 
     def cleanup(self):
-        """Cleanup sensors."""
-        for i, _ in enumerate(self._sensors_list):
-            if self._sensors_list[i] is not None:
-                self._sensors_list[i].stop()
-                self._sensors_list[i].destroy()
+        """Cleanup sensors robustly.
+
+        Stops and destroys all spawned sensors, continuing even if individual
+        sensors fail to clean up. This prevents resource leaks.
+        """
+        cleanup_errors = []
+
+        for i, sensor in enumerate(self._sensors_list):
+            if sensor is not None:
+                try:
+                    # Stop sensor callbacks first
+                    sensor.stop()
+                except Exception as e:
+                    cleanup_errors.append(f"Failed to stop sensor {i}: {e}")
+
+                try:
+                    # Destroy the actor
+                    sensor.destroy()
+                except Exception as e:
+                    cleanup_errors.append(f"Failed to destroy sensor {i}: {e}")
+
                 self._sensors_list[i] = None
+
         self._sensors_list = []
+
+        # Log any cleanup errors but don't raise (we want to continue cleanup)
+        if cleanup_errors:
+            for error in cleanup_errors:
+                logging.warning(error)

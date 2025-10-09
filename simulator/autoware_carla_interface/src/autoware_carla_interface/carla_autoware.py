@@ -174,23 +174,61 @@ class InitializeInterface(object):
         self.bridge_loop._stop_loop()
 
     def _cleanup(self):
-        self.sensor_wrapper.cleanup()
-        CarlaDataProvider.cleanup()
-        if self.ego_actor:
-            self.ego_actor.destroy()
-            self.ego_actor = None
+        """Clean up all CARLA resources in reverse initialization order.
 
+        Ensures cleanup happens even if individual steps fail.
+        """
+        # Cleanup sensors first (they depend on ego_actor)
+        if self.sensor_wrapper:
+            try:
+                self.sensor_wrapper.cleanup()
+            except Exception as e:
+                print(f"Warning: Sensor cleanup failed: {e}")
+
+        # Cleanup ROS interface next
         if self.interface:
-            self.interface.shutdown()
-            self.interface = None
+            try:
+                self.interface.shutdown()
+                self.interface = None
+            except Exception as e:
+                print(f"Warning: ROS interface shutdown failed: {e}")
+
+        # Destroy ego vehicle
+        if self.ego_actor:
+            try:
+                self.ego_actor.destroy()
+                self.ego_actor = None
+            except Exception as e:
+                print(f"Warning: Ego actor destruction failed: {e}")
+
+        # Cleanup CARLA data provider last
+        try:
+            CarlaDataProvider.cleanup()
+        except Exception as e:
+            print(f"Warning: CARLA data provider cleanup failed: {e}")
 
 
 def main():
+    """Main entry point with proper cleanup on all exit paths."""
     carla_bridge = InitializeInterface()
     carla_bridge.load_world()
+
+    # Register signal handlers for graceful shutdown
     signal.signal(signal.SIGINT, carla_bridge._stop_loop)
-    carla_bridge.run_bridge()
-    carla_bridge._cleanup()
+    signal.signal(signal.SIGTERM, carla_bridge._stop_loop)
+
+    try:
+        carla_bridge.run_bridge()
+    except KeyboardInterrupt:
+        print("\nReceived keyboard interrupt, shutting down...")
+    except Exception as e:
+        print(f"\nError during bridge operation: {e}")
+        raise
+    finally:
+        # Ensure cleanup always happens, even on exception or signal
+        print("Cleaning up CARLA resources...")
+        carla_bridge._cleanup()
+        print("Cleanup complete.")
 
 
 if __name__ == "__main__":
