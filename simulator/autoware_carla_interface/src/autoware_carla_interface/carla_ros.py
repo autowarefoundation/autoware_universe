@@ -717,7 +717,10 @@ class carla_ros2_interface(object):
     def run_step(self, input_data, timestamp):
         """Main simulation step for publishing sensor data and getting control commands.
 
-        Thread-safe: Acquires state lock when reading current_control.
+        Thread-safe: Acquires state lock when writing timestamp and reading current_control.
+        The timestamp must be protected because control_callback reads it (via first_order_steering)
+        to calculate dt. Without protection, the ROS callback could see a partially-updated or
+        future timestamp, yielding negative/zero dt and unstable steering.
 
         Args:
             input_data: Dictionary of sensor data from CARLA
@@ -726,7 +729,10 @@ class carla_ros2_interface(object):
         Returns:
             carla.VehicleControl: Current control command for the vehicle
         """
-        self.timestamp = timestamp
+        # Update timestamp under lock to prevent race with control_callback
+        with self._state_lock:
+            self.timestamp = timestamp
+
         seconds = int(self.timestamp)
         nanoseconds = int((self.timestamp - int(self.timestamp)) * 1000000000.0)
         obj_clock = Clock()
