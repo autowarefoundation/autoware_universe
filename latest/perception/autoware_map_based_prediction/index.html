@@ -20269,6 +20269,7 @@ This prediction comes from the assumption that the object should move if the tra
   <img src="images/inside_road.svg" width="90%">
 </div>
 
+<p>In the case where the target object is inside the road, the additional path(s) to reach the nearest crosswalk are only generated if the distance between the object and the crosswalk is not higher than parameter <code>max_crosswalk_user_on_road_distance</code>.</p>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
 <h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
 <table>
@@ -20380,6 +20381,12 @@ This prediction comes from the assumption that the object should move if the tra
 <td>[rad]</td>
 <td>double</td>
 <td>maximum yaw difference between crosswalk user and lanelet to use in path prediction for crosswalk users</td>
+</tr>
+<tr>
+<td><code>max_crosswalk_user_on_road_distance</code></td>
+<td>[m/s]</td>
+<td>double</td>
+<td>crosswalk users on road or shoulder lanelets are only predicted to cross the crosswalk if they are within this distance</td>
 </tr>
 <tr>
 <td><code>dist_threshold_for_searching_lanelet</code></td>
