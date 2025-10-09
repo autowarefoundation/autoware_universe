@@ -41,7 +41,7 @@ class ROSPublisherManager:
         """Initialize ROS publisher manager.
 
         Args:
-            ros_node: ROS2 node instance
+            ros_node: ROS 2 node instance
             logger: Logger instance
         """
         self.ros_node = ros_node
@@ -158,73 +158,49 @@ class ROSPublisherManager:
 
         return True
 
-    def _create_lidar_publisher(self, sensor_config: SensorConfig) -> bool:
-        """Create LiDAR pointcloud publisher.
+    def _create_single_topic_publisher(
+        self, sensor_config: SensorConfig, msg_type: type, publisher_dict: Dict, sensor_type_name: str
+    ) -> bool:
+        """Create a single-topic publisher (LiDAR, IMU, or GNSS).
 
         Args:
             sensor_config: Sensor configuration
+            msg_type: ROS message type class
+            publisher_dict: Dictionary to store publisher
+            sensor_type_name: Human-readable sensor type name for logging
 
         Returns:
             True if created successfully
         """
         if not sensor_config.topic:
-            self.logger.error(f"No topic specified for LiDAR {sensor_config.sensor_id}")
+            self.logger.error(f"No topic specified for {sensor_type_name} {sensor_config.sensor_id}")
             return False
 
         qos = self.get_qos_profile(sensor_config.qos_profile)
-
-        publisher = self.ros_node.create_publisher(PointCloud2, sensor_config.topic, qos)
-        self.lidar_publishers[sensor_config.sensor_id] = publisher
+        publisher = self.ros_node.create_publisher(msg_type, sensor_config.topic, qos)
+        publisher_dict[sensor_config.sensor_id] = publisher
         sensor_config.publisher = publisher
 
-        self.logger.info(f"Created LiDAR publisher: {sensor_config.topic}")
+        self.logger.info(f"Created {sensor_type_name} publisher: {sensor_config.topic}")
         return True
+
+    def _create_lidar_publisher(self, sensor_config: SensorConfig) -> bool:
+        """Create LiDAR pointcloud publisher."""
+        return self._create_single_topic_publisher(
+            sensor_config, PointCloud2, self.lidar_publishers, "LiDAR"
+        )
 
     def _create_imu_publisher(self, sensor_config: SensorConfig) -> bool:
-        """Create IMU data publisher.
-
-        Args:
-            sensor_config: Sensor configuration
-
-        Returns:
-            True if created successfully
-        """
-        if not sensor_config.topic:
-            self.logger.error(f"No topic specified for IMU {sensor_config.sensor_id}")
-            return False
-
-        qos = self.get_qos_profile(sensor_config.qos_profile)
-
-        publisher = self.ros_node.create_publisher(Imu, sensor_config.topic, qos)
-        self.imu_publishers[sensor_config.sensor_id] = publisher
-        sensor_config.publisher = publisher
-
-        self.logger.info(f"Created IMU publisher: {sensor_config.topic}")
-        return True
+        """Create IMU data publisher."""
+        return self._create_single_topic_publisher(
+            sensor_config, Imu, self.imu_publishers, "IMU"
+        )
 
     def _create_gnss_publisher(self, sensor_config: SensorConfig) -> bool:
-        """Create GNSS pose publisher.
-
-        Args:
-            sensor_config: Sensor configuration
-
-        Returns:
-            True if created successfully
-        """
-        if not sensor_config.topic:
-            self.logger.error(f"No topic specified for GNSS {sensor_config.sensor_id}")
-            return False
-
-        qos = self.get_qos_profile(sensor_config.qos_profile)
-
-        publisher = self.ros_node.create_publisher(
-            PoseWithCovarianceStamped, sensor_config.topic, qos
+        """Create GNSS pose publisher."""
+        return self._create_single_topic_publisher(
+            sensor_config, PoseWithCovarianceStamped, self.gnss_publishers, "GNSS"
         )
-        self.gnss_publishers[sensor_config.sensor_id] = publisher
-        sensor_config.publisher = publisher
-
-        self.logger.info(f"Created GNSS publisher: {sensor_config.topic}")
-        return True
 
     def publish_camera_data(self, sensor_id: str, image_msg: Image, camera_info_msg: CameraInfo):
         """Publish camera image and info.

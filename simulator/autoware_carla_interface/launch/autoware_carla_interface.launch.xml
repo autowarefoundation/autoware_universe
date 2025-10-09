@@ -59,7 +59,7 @@
     <node pkg="topic_tools" exec="relay" name="traffic_light_image_relay" args="/sensing/camera/CAM_FRONT/image_raw /sensing/camera/traffic_light/image_raw"/>
     <node pkg="topic_tools" exec="relay" name="traffic_light_camera_info_relay" args="/sensing/camera/CAM_FRONT/camera_info /sensing/camera/traffic_light/camera_info"/>
 
-    <!-- Image transport republishers to create compressed versions for all cameras -->
+    <!-- Image transport nodes to create compressed versions for all cameras -->
     <node
       pkg="image_transport"
       exec="republish"
