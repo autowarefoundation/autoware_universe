@@ -49,6 +49,12 @@ else()
   set(CMAKE_CPU_PLATFORM "unknown")
 endif()
 
+# Enable temperature diagnostics only for Tegra platforms,
+# where thermal throttling can't be detected.
+if(CMAKE_CPU_PLATFORM STREQUAL "tegra")
+  add_definitions(-DENABLE_TEMPERATURE_DIAGNOSTICS)
+endif()
+
 if(NVML_FOUND)
   set(CMAKE_GPU_PLATFORM "nvml")
   add_definitions(-D_GPU_NVML_)
