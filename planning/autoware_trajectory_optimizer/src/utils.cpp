@@ -60,8 +60,8 @@ void smooth_trajectory_with_elastic_band(
     log_error_throttle("Elastic band path smoother is not initialized");
     return;
   }
-  constexpr size_t min_points_size = 3;
-  if (traj_points.empty() || traj_points.size() < min_points_size) {
+  constexpr size_t minimum_points_for_elastic_band = 3;
+  if (traj_points.empty() || traj_points.size() < minimum_points_for_elastic_band) {
     return;
   }
   traj_points = eb_path_smoother_ptr->smoothTrajectory(traj_points, current_odometry.pose.pose);
@@ -257,11 +257,12 @@ bool validate_point(const TrajectoryPoint & point)
 
 void apply_spline(TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params)
 {
-  constexpr size_t min_points_size = 5;
+  constexpr size_t min_points_for_akima_spline = 5;
   const auto traj_length = autoware::motion_utils::calcArcLength(traj_points);
 
   if (
-    params.spline_interpolation_resolution_m < 0.1 || traj_points.size() < min_points_size ||
+    params.spline_interpolation_resolution_m < 0.1 ||
+    traj_points.size() < min_points_for_akima_spline ||
     traj_length < params.spline_interpolation_resolution_m) {
     return;
   }
