@@ -9,7 +9,6 @@
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# limitations under the License.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
@@ -88,8 +87,6 @@ class carla_ros2_interface(object):
 
     def _setup_tf_listener(self):
         """Initialize TF buffer/listener for map alignment."""
-        # Disabled TF listener as it causes localization issues
-        # The viewer->map transform is not needed for CARLA simulation
         self.tf_buffer = None
         self.tf_listener = None
 
@@ -99,7 +96,6 @@ class carla_ros2_interface(object):
         Note: GNSS pose publisher is now managed via sensor registry.
         Only vehicle status publishers are created here.
         """
-        # REMOVED: self.pub_pose_with_cov - now managed via sensor registry
         self.pub_vel_state = self.ros2_node.create_publisher(
             VelocityReport, "/vehicle/status/velocity_status", 1
         )
@@ -236,18 +232,13 @@ class carla_ros2_interface(object):
         self._setup_tf_listener()
         self._initialize_clock_publisher()
 
-        # Load sensor configuration (NEW: uses dynamic or legacy mode)
         self._load_sensor_configuration()
 
         # Initialize publishers and subscriptions
         self._initialize_subscriptions()
         self._initialize_status_publishers()
 
-        # Start ROS 2 spin thread
-        # Thread Safety: Shared state (current_control, ego_actor, timestamp, physics_control)
-        # is protected by self._state_lock. The spin thread handles ROS callbacks
-        # (control_callback, initialpose_callback) which acquire the lock before modifying
-        # state, while the main simulation loop (run_step) acquires the lock before reading.
+        # Start ROS 2 spin thread (Thread Safety: Shared state protected by self._state_lock)
         self.spin_thread = threading.Thread(target=rclpy.spin, args=(self.ros2_node,))
         self.spin_thread.start()
 
@@ -278,8 +269,7 @@ class carla_ros2_interface(object):
         self.physics_control = None
         self.current_control = carla.VehicleControl()
 
-        # Thread synchronization for shared state access
-        # Protects: current_control, ego_actor, timestamp, physics_control
+        # Thread synchronization (protects: current_control, ego_actor, timestamp, physics_control)
         self._state_lock = threading.Lock()
 
         # ROS-related helpers initialized later
@@ -287,11 +277,7 @@ class carla_ros2_interface(object):
         self.ros_publisher_manager = None
         self.clock_publisher = None
         self.spin_thread = None
-
-        # Miscellaneous
         self.cv_bridge = CvBridge()
-
-        # Legacy frequency tracking removed - now using simulation-time based registry
 
     def __call__(self):
         input_data = self.sensor_interface.get_data()
@@ -314,11 +300,10 @@ class carla_ros2_interface(object):
         if not config:
             return False
 
-        current_time = self.timestamp if self.timestamp is not None else None
-        if current_time is None:
+        if self.timestamp is None:
             return False
 
-        should_publish = self.sensor_registry.should_publish(sensor, current_time)
+        should_publish = self.sensor_registry.should_publish(sensor, self.timestamp)
         return not should_publish
 
     def get_msg_header(self, frame_id):
@@ -329,12 +314,6 @@ class carla_ros2_interface(object):
         nanoseconds = int((self.timestamp - int(self.timestamp)) * 1000000000.0)
         header.stamp = Time(sec=seconds, nanosec=nanoseconds)
         return header
-
-    def _transform_viewer_pose_to_map(self, position, orientation):
-        """Transform pose from viewer frame to map frame if TF is available."""
-        # Direct pass-through without transformation
-        # CARLA coordinates are already in the correct frame
-        return position, orientation
 
     def lidar(self, carla_lidar_measurement, id_):
         """Transform the received lidar measurement into a ROS point cloud message."""
@@ -407,10 +386,7 @@ class carla_ros2_interface(object):
         self.sensor_registry.update_sensor_timestamp(id_, self.timestamp)
 
     def initialpose_callback(self, data):
-        """Transform RVIZ initial pose to CARLA.
-
-        Thread-safe: Acquires state lock when accessing ego_actor.
-        """
+        """Transform RVIZ initial pose to CARLA (thread-safe)."""
         pose = data.pose.pose
         pose.position.z += 2.0
         carla_pose_transform = ros_pose_to_carla_transform(pose)
@@ -422,19 +398,14 @@ class carla_ros2_interface(object):
                 self.logger.warning("Cannot set initial pose: ego vehicle not available")
 
     def pose(self):
-        """Transform odometry data to Pose and publish Pose with Covariance message.
-
-        Uses sensor registry for publisher management instead of legacy direct publisher.
-        Thread-safe: Acquires state lock when accessing ego_actor.
-        """
+        """Transform odometry data to Pose and publish with covariance (thread-safe)."""
         if self.checkFrequency("pose"):
             return
 
-        # Get GNSS sensor configuration from registry
-        gnss_config = self.sensor_registry.get_sensor("gnss")
-        if not gnss_config:
-            # Fallback to "pose" pseudo-sensor if GNSS not configured
-            gnss_config = self.sensor_registry.get_sensor("pose")
+        # Get GNSS sensor configuration from registry (fallback to "pose" pseudo-sensor)
+        gnss_config = self.sensor_registry.get_sensor("gnss") or self.sensor_registry.get_sensor(
+            "pose"
+        )
 
         if not gnss_config or not gnss_config.publisher:
             self.logger.warning(
@@ -464,19 +435,14 @@ class carla_ros2_interface(object):
         self.sensor_registry.update_sensor_timestamp(gnss_config.sensor_id, self.timestamp)
 
     def _create_gnss_covariance_matrix(self):
-        """Create GNSS covariance matrix from sensor configuration.
-
-        Returns:
-            list: 6x6 covariance matrix (36 elements) for [x, y, z, roll, pitch, yaw]
-        """
-        gnss_config = self.sensor_registry.get_sensor("gnss")
-        if gnss_config and hasattr(gnss_config, "covariance") and gnss_config.covariance:
-            pos_var = gnss_config.covariance.get("position_variance", 0.01)
-            orient_var = gnss_config.covariance.get("orientation_variance", 1.0)
+        """Create GNSS covariance matrix from sensor configuration."""
+        cfg = self.sensor_registry.get_sensor("gnss")
+        if cfg:
+            cov = getattr(cfg, "covariance", {})
         else:
-            pos_var = 0.01
-            orient_var = 1.0
-
+            cov = {}
+        pos_var = cov.get("position_variance", 0.01)
+        orient_var = cov.get("orientation_variance", 1.0)
         return [
             pos_var,
             0.0,
@@ -517,15 +483,7 @@ class carla_ros2_interface(object):
         ]
 
     def _build_camera_info(self, camera_actor):
-        """
-        Build camera info message from CARLA camera actor.
-
-        Args:
-            camera_actor: CARLA camera data with width, height, fov
-
-        Returns:
-            CameraInfo: Populated camera info message
-        """
+        """Build camera info message from CARLA camera actor."""
         camera_info = CameraInfo()
         camera_info.width = camera_actor.width
         camera_info.height = camera_actor.height
@@ -548,82 +506,38 @@ class carla_ros2_interface(object):
             self.logger.warning(f"No registry entry for camera '{cam_id}'")
             return
 
-        # Build camera info if not cached
         if cam_id not in self.camera_info_cache:
             self.camera_info_cache[cam_id] = self._build_camera_info(carla_camera_data)
 
-        # Each camera uses its own frequency timer
         if self.checkFrequency(cam_id):
             return
 
-        # Convert CARLA camera data to ROS message
-        img_msg = self._create_camera_image_message(carla_camera_data, config, cam_id)
-        cam_info = self._prepare_camera_info(cam_id, img_msg.header)
-
-        # Publish camera data
-        self._publish_camera_messages(cam_id, img_msg, cam_info)
-
-    def _create_camera_image_message(self, carla_camera_data, config, cam_id):
-        """Create ROS image message from CARLA camera data.
-
-        Args:
-            carla_camera_data: CARLA camera data
-            config: Sensor configuration
-            cam_id: Camera sensor ID
-
-        Returns:
-            Image: ROS image message
-        """
-        image_data_array = numpy.ndarray(
+        # Create image message
+        image_array = numpy.ndarray(
             shape=(carla_camera_data.height, carla_camera_data.width, 4),
             dtype=numpy.uint8,
             buffer=carla_camera_data.raw_data,
         )
-
-        # cspell:ignore interp bgra
-        img_msg = self.cv_bridge.cv2_to_imgmsg(image_data_array, encoding="bgra8")
+        img_msg = self.cv_bridge.cv2_to_imgmsg(image_array, encoding="bgra8")
         img_msg.header = self.get_msg_header(
             frame_id=config.frame_id or f"{cam_id}/camera_optical_link"
         )
-        return img_msg
 
-    def _prepare_camera_info(self, cam_id, header):
-        """Prepare camera info message with updated header.
-
-        Args:
-            cam_id: Camera sensor ID
-            header: Header to apply to camera info
-
-        Returns:
-            CameraInfo: Camera info message with updated header
-        """
+        # Publish camera info
         cam_info = self.camera_info_cache[cam_id]
-        cam_info.header = header
-        return cam_info
+        cam_info.header = img_msg.header
+        info_pub = self.pub_camera_info.get(cam_id)
+        if info_pub:
+            info_pub.publish(cam_info)
 
-    def _publish_camera_messages(self, cam_id, img_msg, cam_info):
-        """Publish camera image and info messages.
-
-        Args:
-            cam_id: Camera sensor ID
-            img_msg: Image message to publish
-            cam_info: Camera info message to publish
-        """
-        info_publisher = self.pub_camera_info.get(cam_id)
-        if info_publisher:
-            info_publisher.publish(cam_info)
-        else:
-            self.logger.warning(f"Camera info publisher missing for '{cam_id}'")
-
-        publisher = self.pub_camera.get(cam_id)
-        if publisher:
-            publisher.publish(img_msg)
+        # Publish image
+        img_pub = self.pub_camera.get(cam_id)
+        if img_pub:
+            img_pub.publish(img_msg)
             self.sensor_registry.update_sensor_timestamp(cam_id, self.timestamp)
-        else:
-            self.logger.warning(f"Camera image publisher missing for '{cam_id}'")
 
     def imu(self, carla_imu_measurement):
-        """Transform a received imu measurement into a ROS Imu message and publish Imu message."""
+        """Transform and publish IMU measurement to ROS."""
         if self.checkFrequency("imu"):
             return
 
@@ -792,7 +706,7 @@ class carla_ros2_interface(object):
             self.timestamp = timestamp
 
         seconds = int(self.timestamp)
-        nanoseconds = int((self.timestamp - int(self.timestamp)) * 1000000000.0)
+        nanoseconds = int((self.timestamp - seconds) * 1e9)
         obj_clock = Clock()
         obj_clock.clock = Time(sec=seconds, nanosec=nanoseconds)
         self.clock_publisher.publish(obj_clock)

@@ -113,24 +113,19 @@ class CoordinateTransformer:
 
     @staticmethod
     def _convert_rotation_to_carla(
-        roll: float,
-        pitch: float,
-        yaw: float,
-        in_degrees: bool,
-        negate_pitch_yaw: bool,
+        angles: tuple[float, float, float], in_degrees: bool, negate_pitch_yaw: bool
     ) -> carla.Rotation:
         """Convert rotation angles to CARLA Rotation object.
 
         Args:
-            roll: Roll angle in radians (or degrees if in_degrees=True)
-            pitch: Pitch angle in radians (or degrees if in_degrees=True)
-            yaw: Yaw angle in radians (or degrees if in_degrees=True)
+            angles: Tuple of (roll, pitch, yaw) in radians (or degrees if in_degrees=True)
             in_degrees: If True, input angles are already in degrees
             negate_pitch_yaw: If True, negate pitch and yaw for coordinate system conversion
 
         Returns:
             CARLA Rotation object (in degrees)
         """
+        roll, pitch, yaw = angles
         roll_deg = roll if in_degrees else math.degrees(roll)
         pitch_deg = pitch if in_degrees else math.degrees(pitch)
         yaw_deg = yaw if in_degrees else math.degrees(yaw)
@@ -160,7 +155,7 @@ class CoordinateTransformer:
             CARLA Rotation object (in degrees)
         """
         return CoordinateTransformer._convert_rotation_to_carla(
-            roll, pitch, yaw, in_degrees, negate_pitch_yaw=False
+            (roll, pitch, yaw), in_degrees, negate_pitch_yaw=False
         )
 
     @staticmethod
@@ -179,7 +174,7 @@ class CoordinateTransformer:
             CARLA Rotation object (in degrees)
         """
         return CoordinateTransformer._convert_rotation_to_carla(
-            roll, pitch, yaw, in_degrees, negate_pitch_yaw=True
+            (roll, pitch, yaw), in_degrees, negate_pitch_yaw=True
         )
 
     @staticmethod
