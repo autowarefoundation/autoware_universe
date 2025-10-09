@@ -267,21 +267,29 @@ void apply_spline(TrajectoryPoints & traj_points, const TrajectoryOptimizerParam
     return;
   }
 
+  constexpr bool use_lerp_for_z = false;
+  constexpr bool use_zero_order_hold_for_twist = true;
+  constexpr bool resample_input_trajectory_stop_point = false;
+  constexpr bool dont_use_akima_spline_for_xy =
+    true;  // Note: autoware::motion_utils::resampleTrajectory has an error where the use akima
+           // spline input is inverted, so setting the use_akima_spline_for_xy to true actually
+           // applies a simple lerp
   autoware_planning_msgs::msg::Trajectory temp_traj;
   temp_traj.points = traj_points;
   // first resample to a lower resolution to avoid ill-conditioned spline
   temp_traj = autoware::motion_utils::resampleTrajectory(
-    temp_traj, 2.0 * params.spline_interpolation_resolution_m, true, false, true, false);
-  // then resample to the desired resolution
+    temp_traj, 2.0 * params.spline_interpolation_resolution_m, dont_use_akima_spline_for_xy,
+    use_lerp_for_z, use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
+  // then resample to the desired resolution using akima spline
   temp_traj = autoware::motion_utils::resampleTrajectory(
-    temp_traj, params.spline_interpolation_resolution_m, false, false, true, false);
+    temp_traj, params.spline_interpolation_resolution_m, !dont_use_akima_spline_for_xy,
+    use_lerp_for_z, use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
+
   // check where the original trajectory ends in the new trajectory or where there is a significant
   // change in yaw
-
   const double max_yaw_discrepancy_rad =
     autoware_utils_math::deg2rad(params.spline_interpolation_max_yaw_discrepancy_deg);
   const double max_distance_discrepancy_m = params.spline_interpolation_max_distance_discrepancy_m;
-
   const auto last_original_point = traj_points.back();
   const auto nearest_index_opt = autoware::motion_utils::findNearestIndex(
     temp_traj.points, last_original_point.pose, max_distance_discrepancy_m,
@@ -295,9 +303,10 @@ void apply_spline(TrajectoryPoints & traj_points, const TrajectoryOptimizerParam
     temp_traj.points.begin(), std::next(temp_traj.points.begin(), nearest_index_opt.value()));
   // ensure the last point is the same as the original trajectory last point
   temp_traj.points.push_back(last_original_point);
-  // re-sample again to ensure the resolution is maintained after cropping
+  // re-sample again using lerp to ensure the resolution is maintained after cropping
   temp_traj = autoware::motion_utils::resampleTrajectory(
-    temp_traj, params.spline_interpolation_resolution_m, true, false, true, false);
+    temp_traj, params.spline_interpolation_resolution_m, dont_use_akima_spline_for_xy,
+    use_lerp_for_z, use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
   traj_points = temp_traj.points;
 }
 
