@@ -81,6 +81,8 @@ void TrajectoryOptimizer::initialize_optimizers()
     "trajectory_extender", this, time_keeper_, params_);
   trajectory_point_fixer_ptr_ = std::make_shared<plugin::TrajectoryPointFixer>(
     "trajectory_point_fixer", this, time_keeper_, params_);
+  trajectory_qp_smoother_ptr_ = std::make_shared<plugin::TrajectoryQPSmoother>(
+    "trajectory_qp_smoother", this, time_keeper_, params_);
   trajectory_spline_smoother_ptr_ = std::make_shared<plugin::TrajectorySplineSmoother>(
     "trajectory_spline_smoother", this, time_keeper_, params_);
   trajectory_velocity_optimizer_ptr_ = std::make_shared<plugin::TrajectoryVelocityOptimizer>(
@@ -121,6 +123,20 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
   update_param<bool>(parameters, "extend_trajectory_backward", params.extend_trajectory_backward);
   update_param<bool>(
     parameters, "spline_copy_original_orientation", params.spline_copy_original_orientation);
+  // QP Smoother parameters
+  update_param<bool>(parameters, "use_qp_smoother", params.use_qp_smoother);
+  update_param<double>(parameters, "qp_weight_jerk", params.qp_weight_jerk);
+  update_param<double>(parameters, "qp_weight_acceleration", params.qp_weight_acceleration);
+  update_param<double>(parameters, "qp_weight_fidelity", params.qp_weight_fidelity);
+  update_param<double>(
+    parameters, "qp_max_longitudinal_jerk_mps3", params.qp_max_longitudinal_jerk_mps3);
+  update_param<double>(parameters, "qp_max_acceleration_mps2", params.qp_max_acceleration_mps2);
+  update_param<double>(parameters, "qp_min_acceleration_mps2", params.qp_min_acceleration_mps2);
+  update_param<double>(parameters, "qp_max_speed_mps", params.qp_max_speed_mps);
+  update_param<double>(parameters, "qp_osqp_eps_abs", params.qp_osqp_eps_abs);
+  update_param<double>(parameters, "qp_osqp_eps_rel", params.qp_osqp_eps_rel);
+  update_param<int>(parameters, "qp_osqp_max_iter", params.qp_osqp_max_iter);
+  update_param<bool>(parameters, "qp_osqp_verbose", params.qp_osqp_verbose);
 
   params_ = params;
 
@@ -134,6 +150,9 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
   }
   if (trajectory_point_fixer_ptr_) {
     trajectory_point_fixer_ptr_->on_parameter(parameters);
+  }
+  if (trajectory_qp_smoother_ptr_) {
+    trajectory_qp_smoother_ptr_->on_parameter(parameters);
   }
   if (trajectory_spline_smoother_ptr_) {
     trajectory_spline_smoother_ptr_->on_parameter(parameters);
@@ -192,6 +211,23 @@ void TrajectoryOptimizer::set_up_params()
     get_or_declare_parameter<bool>(*this, "extend_trajectory_backward");
   params_.spline_copy_original_orientation =
     get_or_declare_parameter<bool>(*this, "spline_copy_original_orientation");
+  // QP Smoother parameters
+  params_.use_qp_smoother = get_or_declare_parameter<bool>(*this, "use_qp_smoother");
+  params_.qp_weight_jerk = get_or_declare_parameter<double>(*this, "qp_weight_jerk");
+  params_.qp_weight_acceleration =
+    get_or_declare_parameter<double>(*this, "qp_weight_acceleration");
+  params_.qp_weight_fidelity = get_or_declare_parameter<double>(*this, "qp_weight_fidelity");
+  params_.qp_max_longitudinal_jerk_mps3 =
+    get_or_declare_parameter<double>(*this, "qp_max_longitudinal_jerk_mps3");
+  params_.qp_max_acceleration_mps2 =
+    get_or_declare_parameter<double>(*this, "qp_max_acceleration_mps2");
+  params_.qp_min_acceleration_mps2 =
+    get_or_declare_parameter<double>(*this, "qp_min_acceleration_mps2");
+  params_.qp_max_speed_mps = get_or_declare_parameter<double>(*this, "qp_max_speed_mps");
+  params_.qp_osqp_eps_abs = get_or_declare_parameter<double>(*this, "qp_osqp_eps_abs");
+  params_.qp_osqp_eps_rel = get_or_declare_parameter<double>(*this, "qp_osqp_eps_rel");
+  params_.qp_osqp_max_iter = get_or_declare_parameter<int>(*this, "qp_osqp_max_iter");
+  params_.qp_osqp_verbose = get_or_declare_parameter<bool>(*this, "qp_osqp_verbose");
 }
 
 void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::ConstSharedPtr msg)
@@ -223,6 +259,7 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
     trajectory_point_fixer_ptr_->optimize_trajectory(trajectory.points, params_);
     eb_smoother_optimizer_ptr_->optimize_trajectory(trajectory.points, params_);
     trajectory_spline_smoother_ptr_->optimize_trajectory(trajectory.points, params_);
+    trajectory_qp_smoother_ptr_->optimize_trajectory(trajectory.points, params_);
     trajectory_velocity_optimizer_ptr_->optimize_trajectory(trajectory.points, params_);
     trajectory_point_fixer_ptr_->optimize_trajectory(trajectory.points, params_);
     motion_utils::calculate_time_from_start(

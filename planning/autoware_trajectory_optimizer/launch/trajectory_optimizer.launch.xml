@@ -7,6 +7,7 @@
   <arg name="common_smoother_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/velocity_smoothing/default_common.param.yaml"/>
 
   <arg name="elastic_band_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/trajectory_smoothing/elastic_band_smoother.param.yaml"/>
+  <arg name="qp_smoother_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/trajectory_smoothing/qp_smoother.param.yaml"/>
 
   <arg name="input_traj" default="/planning/diffusion_planner/trajectory"/>
   <arg name="input_trajectories" default="/planning/diffusion_planner/candidate_trajectories"/>
@@ -19,6 +20,7 @@
     <param from="$(var velocity_smoother_param_path)" allow_substs="true"/>
     <param from="$(var common_smoother_param_path)" allow_substs="true"/>
     <param from="$(var elastic_band_param_path)" allow_substs="true"/>
+    <param from="$(var qp_smoother_param_path)" allow_substs="true"/>
     <remap from="~/output/trajectory" to="$(var output_traj)"/>
     <remap from="~/output/trajectories" to="$(var output_trajectories)"/>
     <remap from="~/input/traj" to="$(var input_traj)"/>

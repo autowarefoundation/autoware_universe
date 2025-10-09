@@ -4,12 +4,15 @@ project(autoware_trajectory_optimizer)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
+# QP smoother uses autoware_osqp_interface (handles OSQP internally)
+
 ament_auto_add_library(autoware_trajectory_optimizer_component SHARED
   src/trajectory_optimizer.cpp
   src/utils.cpp
   src/trajectory_optimizer_plugins/trajectory_eb_smoother_optimizer.cpp
   src/trajectory_optimizer_plugins/trajectory_extender.cpp
   src/trajectory_optimizer_plugins/trajectory_point_fixer.cpp
+  src/trajectory_optimizer_plugins/trajectory_qp_smoother.cpp
   src/trajectory_optimizer_plugins/trajectory_spline_smoother.cpp
   src/trajectory_optimizer_plugins/trajectory_velocity_optimizer.cpp
 )
