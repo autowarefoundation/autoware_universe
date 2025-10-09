@@ -159,7 +159,11 @@ class ROSPublisherManager:
         return True
 
     def _create_single_topic_publisher(
-        self, sensor_config: SensorConfig, msg_type: type, publisher_dict: Dict, sensor_type_name: str
+        self,
+        sensor_config: SensorConfig,
+        msg_type: type,
+        publisher_dict: Dict,
+        sensor_type_name: str,
     ) -> bool:
         """Create a single-topic publisher (LiDAR, IMU, or GNSS).
 
@@ -173,7 +177,9 @@ class ROSPublisherManager:
             True if created successfully
         """
         if not sensor_config.topic:
-            self.logger.error(f"No topic specified for {sensor_type_name} {sensor_config.sensor_id}")
+            self.logger.error(
+                f"No topic specified for {sensor_type_name} {sensor_config.sensor_id}"
+            )
             return False
 
         qos = self.get_qos_profile(sensor_config.qos_profile)
@@ -192,9 +198,7 @@ class ROSPublisherManager:
 
     def _create_imu_publisher(self, sensor_config: SensorConfig) -> bool:
         """Create IMU data publisher."""
-        return self._create_single_topic_publisher(
-            sensor_config, Imu, self.imu_publishers, "IMU"
-        )
+        return self._create_single_topic_publisher(sensor_config, Imu, self.imu_publishers, "IMU")
 
     def _create_gnss_publisher(self, sensor_config: SensorConfig) -> bool:
         """Create GNSS pose publisher."""
