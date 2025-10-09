@@ -44,8 +44,7 @@ We also assume that $n\sim\mathcal{N}(0, \sigma^2)$.
 | `angular_velocity_stddev_zz` | double | yaw rate standard deviation imu_link [rad/s]     |
 | `acceleration_stddev`        | double | acceleration standard deviation imu_link [m/s^2] |
 
-**Note:** The angular velocity offset values introduce a fixed compensation that is not considered in the gyro bias estimation. If the `on_off_correction.correct_for_bias` option is enabled, the angular_velocity_offset_ must be set to 0; otherwise, the correction will be incorrect.
-
+**Note:** The angular velocity offset values introduce a fixed compensation that is not considered in the gyro bias estimation. If the `on_off_correction.correct_for_bias` option is enabled, the angular*velocity_offset* must be set to 0; otherwise, the correction will be incorrect.
 
 ## gyro_bias_estimator
 
@@ -137,14 +136,13 @@ In order to test the result of the scale and bias estimation for the gyro, an op
 | `drift_scale`      | double | Value to add to the scale value every loop, to simulate scale drift |
 | `drift_bias`       | double | Value to add to the bias value every loop, to simulate bias drift   |
 
-
 ## IMU Correction control
 
 These 2 parameters control the correction of the bias and scale for the gyroscope. Please note that if bias correction is enabled, the offset values `angular_velocity_offset_` must be set to 0; otherwise, the correction will be inaccurate.
 
-### Parameters 
+### Parameters
 
-| Name                   | Type | Description                                 |
-| ---------------------- | ---- | ------------------------------------------- |
+| Name                                  | Type | Description                                         |
+| ------------------------------------- | ---- | --------------------------------------------------- |
 | `on_off_correction.correct_for_bias`  | bool | Enable or disable bias correction (default: false)  |
 | `on_off_correction.correct_for_scale` | bool | Enable or disable scale correction (default: false) |
