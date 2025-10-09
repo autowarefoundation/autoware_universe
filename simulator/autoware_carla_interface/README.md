@@ -32,6 +32,7 @@ This ros package enables communication between Autoware and CARLA for autonomous
    - Rename `point_cloud/Town01.pcd` → `$HOME/autoware_map/Town01/pointcloud_map.pcd`
    - Rename `vector_maps/lanelet2/Town01.osm` → `$HOME/autoware_map/Town01/lanelet2_map.osm`
 3. Create `$HOME/autoware_map/Town01/map_projector_info.yaml` with:
+
    ```yaml
    projector_type: Local
    ```
