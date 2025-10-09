@@ -144,9 +144,9 @@ sensor_mappings:
       noise_lon_bias: 0.0
     covariance:
       # Position covariance (variance in meters²)
-      position_variance: 0.01  # 0.1m standard deviation
+      position_variance: 0.01 # 0.1m standard deviation
       # Orientation covariance (variance in radians²)
-      orientation_variance: 1.0  # Large uncertainty - orientation not measured by GNSS
+      orientation_variance: 1.0 # Large uncertainty - orientation not measured by GNSS
 
 # Sensor name normalization rules
 normalization:
