@@ -64,8 +64,6 @@ IntersectionModuleManager::IntersectionModuleManager(rclcpp::Node & node)
     ip.common.max_jerk = get_or_declare_parameter<double>(node, ns + ".common.max_jerk");
     ip.common.delay_response_time =
       get_or_declare_parameter<double>(node, ns + ".common.delay_response_time");
-    ip.common.enable_pass_judge_before_default_stopline = get_or_declare_parameter<bool>(
-      node, ns + ".common.enable_pass_judge_before_default_stopline");
   }
 
   // stuck
