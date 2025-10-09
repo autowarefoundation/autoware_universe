@@ -245,15 +245,10 @@ class carla_ros2_interface(object):
         self._initialize_status_publishers()
 
         # Start ROS 2 spin thread
-        # WARNING: Thread Safety Issue
-        # The spin thread handles ROS callbacks (control_callback, initialpose_callback)
-        # which modify shared state (self.current_control, self.ego_actor) while the
-        # main simulation loop (run_step in carla_autoware.py) reads this state.
-        # Potential race conditions on:
-        #   - self.timestamp (read/write from both threads)
-        #   - self.ego_actor (read/write from both threads)
-        #   - self.current_control (written by control_callback, read by run_step)
-        # TODO: Add proper synchronization (threading.Lock) or refactor to single thread
+        # Thread Safety: Shared state (current_control, ego_actor, timestamp, physics_control)
+        # is protected by self._state_lock. The spin thread handles ROS callbacks
+        # (control_callback, initialpose_callback) which acquire the lock before modifying
+        # state, while the main simulation loop (run_step) acquires the lock before reading.
         self.spin_thread = threading.Thread(target=rclpy.spin, args=(self.ros2_node,))
         self.spin_thread.start()
 
@@ -284,6 +279,10 @@ class carla_ros2_interface(object):
         self.physics_control = None
         self.channels = 0
         self.current_control = carla.VehicleControl()
+
+        # Thread synchronization for shared state access
+        # Protects: current_control, ego_actor, timestamp, physics_control
+        self._state_lock = threading.Lock()
 
         # ROS-related helpers initialized later
         self.ros2_node = None
@@ -410,19 +409,25 @@ class carla_ros2_interface(object):
         self.sensor_registry.update_sensor_timestamp(id_, self.timestamp)
 
     def initialpose_callback(self, data):
-        """Transform RVIZ initial pose to CARLA."""
+        """Transform RVIZ initial pose to CARLA.
+
+        Thread-safe: Acquires state lock when accessing ego_actor.
+        """
         pose = data.pose.pose
         pose.position.z += 2.0
         carla_pose_transform = ros_pose_to_carla_transform(pose)
-        if self.ego_actor is not None:
-            self.ego_actor.set_transform(carla_pose_transform)
-        else:
-            self.logger.warning("Cannot set initial pose: ego vehicle not available")
+
+        with self._state_lock:
+            if self.ego_actor is not None:
+                self.ego_actor.set_transform(carla_pose_transform)
+            else:
+                self.logger.warning("Cannot set initial pose: ego vehicle not available")
 
     def pose(self):
         """Transform odometry data to Pose and publish Pose with Covariance message.
 
         Uses sensor registry for publisher management instead of legacy direct publisher.
+        Thread-safe: Acquires state lock when accessing ego_actor.
         """
         if self.checkFrequency("pose"):
             return
@@ -443,10 +448,15 @@ class carla_ros2_interface(object):
         header = self.get_msg_header(frame_id="map")
         out_pose_with_cov = PoseWithCovarianceStamped()
         pose_carla = Pose()
-        pose_carla.position = carla_location_to_ros_point(self.ego_actor.get_transform().location)
-        pose_carla.orientation = carla_rotation_to_ros_quaternion(
-            self.ego_actor.get_transform().rotation
-        )
+
+        # Thread-safe access to ego_actor
+        with self._state_lock:
+            if not self.ego_actor:
+                return
+            ego_transform = self.ego_actor.get_transform()
+
+        pose_carla.position = carla_location_to_ros_point(ego_transform.location)
+        pose_carla.orientation = carla_rotation_to_ros_quaternion(ego_transform.rotation)
         out_pose_with_cov.header = header
         out_pose_with_cov.pose.pose = pose_carla
 
@@ -623,34 +633,52 @@ class carla_ros2_interface(object):
         return steer_output
 
     def control_callback(self, in_cmd):
-        """Convert and publish CARLA Ego Vehicle Control to AUTOWARE."""
+        """Convert and publish CARLA Ego Vehicle Control to AUTOWARE.
+
+        Thread-safe: Acquires state lock when accessing shared vehicle state.
+        """
         out_cmd = carla.VehicleControl()
         out_cmd.throttle = in_cmd.actuation.accel_cmd
-        # convert base on steer curve of the vehicle
-        steer_curve = self.physics_control.steering_curve
-        current_vel = self.ego_actor.get_velocity()
-        max_steer_ratio = numpy.interp(
-            abs(current_vel.x), [v.x for v in steer_curve], [v.y for v in steer_curve]
-        )
-        out_cmd.steer = self.first_order_steering(-in_cmd.actuation.steer_cmd) * max_steer_ratio
-        out_cmd.brake = in_cmd.actuation.brake_cmd
-        self.current_control = out_cmd
+
+        with self._state_lock:
+            # convert base on steer curve of the vehicle
+            if not self.physics_control or not self.ego_actor:
+                return  # Skip if vehicle not initialized yet
+
+            steer_curve = self.physics_control.steering_curve
+            current_vel = self.ego_actor.get_velocity()
+            max_steer_ratio = numpy.interp(
+                abs(current_vel.x), [v.x for v in steer_curve], [v.y for v in steer_curve]
+            )
+            out_cmd.steer = self.first_order_steering(-in_cmd.actuation.steer_cmd) * max_steer_ratio
+            out_cmd.brake = in_cmd.actuation.brake_cmd
+            self.current_control = out_cmd
 
     def ego_status(self):
-        """Publish ego vehicle status."""
+        """Publish ego vehicle status.
+
+        Thread-safe: Acquires state lock when accessing ego_actor.
+        """
         if self.checkFrequency("status"):
             return
 
+        # Thread-safe access to ego_actor - get all needed data in one lock section
+        with self._state_lock:
+            if not self.ego_actor:
+                return
+
+            ego_transform = self.ego_actor.get_transform()
+            ego_velocity_carla = self.ego_actor.get_velocity()
+            ego_angular_velocity = self.ego_actor.get_angular_velocity()
+            steer_angle = self.ego_actor.get_wheel_steer_angle(carla.VehicleWheelLocation.FL_Wheel)
+            control = self.ego_actor.get_control()
+
         # convert velocity from cartesian to ego frame
-        trans_mat = numpy.array(self.ego_actor.get_transform().get_matrix()).reshape(4, 4)
+        trans_mat = numpy.array(ego_transform.get_matrix()).reshape(4, 4)
         rot_mat = trans_mat[0:3, 0:3]
         inv_rot_mat = rot_mat.T
         vel_vec = numpy.array(
-            [
-                self.ego_actor.get_velocity().x,
-                self.ego_actor.get_velocity().y,
-                self.ego_actor.get_velocity().z,
-            ]
+            [ego_velocity_carla.x, ego_velocity_carla.y, ego_velocity_carla.z]
         ).reshape(3, 1)
         ego_velocity = (inv_rot_mat @ vel_vec).T[0]
 
@@ -663,14 +691,10 @@ class carla_ros2_interface(object):
         out_vel_state.header = self.get_msg_header(frame_id="base_link")
         out_vel_state.longitudinal_velocity = ego_velocity[0]
         out_vel_state.lateral_velocity = ego_velocity[1]
-        out_vel_state.heading_rate = (
-            self.ego_actor.get_transform().transform_vector(self.ego_actor.get_angular_velocity()).z
-        )
+        out_vel_state.heading_rate = ego_transform.transform_vector(ego_angular_velocity).z
 
         out_steering_state.stamp = out_vel_state.header.stamp
-        out_steering_state.steering_tire_angle = -math.radians(
-            self.ego_actor.get_wheel_steer_angle(carla.VehicleWheelLocation.FL_Wheel)
-        )
+        out_steering_state.steering_tire_angle = -math.radians(steer_angle)
 
         out_gear_state.stamp = out_vel_state.header.stamp
         out_gear_state.report = GearReport.DRIVE
@@ -678,7 +702,6 @@ class carla_ros2_interface(object):
         out_ctrl_mode.stamp = out_vel_state.header.stamp
         out_ctrl_mode.mode = ControlModeReport.AUTONOMOUS
 
-        control = self.ego_actor.get_control()
         out_actuation_status.header = self.get_msg_header(frame_id="base_link")
         out_actuation_status.status.accel_status = control.throttle
         out_actuation_status.status.brake_status = control.brake
@@ -692,6 +715,17 @@ class carla_ros2_interface(object):
         self.sensor_registry.update_sensor_timestamp("status", self.timestamp)
 
     def run_step(self, input_data, timestamp):
+        """Main simulation step for publishing sensor data and getting control commands.
+
+        Thread-safe: Acquires state lock when reading current_control.
+
+        Args:
+            input_data: Dictionary of sensor data from CARLA
+            timestamp: Current simulation timestamp
+
+        Returns:
+            carla.VehicleControl: Current control command for the vehicle
+        """
         self.timestamp = timestamp
         seconds = int(self.timestamp)
         nanoseconds = int((self.timestamp - int(self.timestamp)) * 1000000000.0)
@@ -723,7 +757,10 @@ class carla_ros2_interface(object):
 
         # Publish ego vehicle status
         self.ego_status()
-        return self.current_control
+
+        # Thread-safe read of current control command
+        with self._state_lock:
+            return self.current_control
 
     def shutdown(self):
         """Clean shutdown of ROS node and spin thread.
