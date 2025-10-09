@@ -119,9 +119,7 @@ class SensorKitLoader:
         required_keys = ["sensor_mappings", "enabled_sensors"]
         missing = [k for k in required_keys if k not in self.sensor_mapping]
         if missing:
-            raise ValueError(
-                f"Missing required keys: {missing}. Required keys: {required_keys}"
-            )
+            raise ValueError(f"Missing required keys: {missing}. Required keys: {required_keys}")
 
         if not isinstance(self.sensor_mapping["sensor_mappings"], dict):
             raise ValueError("sensor_mappings must be a dictionary")
@@ -149,9 +147,7 @@ class SensorKitLoader:
 
         wheelbase_value = vehicle_config["wheelbase"]
         if not isinstance(wheelbase_value, (int, float)):
-            raise ValueError(
-                f"wheelbase must be a number, got: {type(wheelbase_value).__name__}"
-            )
+            raise ValueError(f"wheelbase must be a number, got: {type(wheelbase_value).__name__}")
         if wheelbase_value <= 0:
             raise ValueError(f"wheelbase must be positive, got: {wheelbase_value}")
 
