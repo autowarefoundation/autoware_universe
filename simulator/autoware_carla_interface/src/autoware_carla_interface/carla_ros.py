@@ -41,7 +41,6 @@ from .modules import ROSPublisherManager
 from .modules import SensorKitLoader
 from .modules import SensorRegistry
 from .modules.carla_data_provider import GameTime
-from .modules.carla_data_provider import datetime
 from .modules.carla_utils import carla_location_to_ros_point
 from .modules.carla_utils import carla_rotation_to_ros_quaternion
 from .modules.carla_utils import create_cloud
@@ -463,7 +462,7 @@ class carla_ros2_interface(object):
         # Covariance matrix entries must be in variance units (σ²), not standard deviation (σ)
         # 6x6 matrix: [x, y, z, roll, pitch, yaw]
         GNSS_POSITION_STDDEV = 0.1  # meters (standard deviation)
-        GNSS_POSITION_VARIANCE = GNSS_POSITION_STDDEV ** 2  # meters² (variance)
+        GNSS_POSITION_VARIANCE = GNSS_POSITION_STDDEV**2  # meters² (variance)
         # Orientation uncertainty - set large values since orientation is not measured by GNSS
         ORIENTATION_VARIANCE = 1.0  # radians² (large uncertainty)
 
@@ -731,7 +730,7 @@ class carla_ros2_interface(object):
         self.sensor_registry.update_sensor_timestamp("status", self.timestamp)
 
     def run_step(self, input_data, timestamp):
-        """Main simulation step for publishing sensor data and getting control commands.
+        """Execute main simulation step for publishing sensor data and getting control commands.
 
         Thread-safe: Acquires state lock when writing timestamp and reading current_control.
         The timestamp must be protected because control_callback reads it (via first_order_steering)
