@@ -457,57 +457,33 @@ class carla_ros2_interface(object):
         pose_carla.orientation = carla_rotation_to_ros_quaternion(ego_transform.rotation)
         out_pose_with_cov.header = header
         out_pose_with_cov.pose.pose = pose_carla
+        out_pose_with_cov.pose.covariance = self._create_gnss_covariance_matrix()
 
+        # Publish via registry publisher
+        gnss_config.publisher.publish(out_pose_with_cov)
+        self.sensor_registry.update_sensor_timestamp(gnss_config.sensor_id, self.timestamp)
+
+    def _create_gnss_covariance_matrix(self):
+        """Create GNSS covariance matrix for pose uncertainty.
+
+        Returns:
+            list: 6x6 covariance matrix (36 elements) for [x, y, z, roll, pitch, yaw]
+        """
         # GNSS covariance (position uncertainty in meters²)
         # Covariance matrix entries must be in variance units (σ²), not standard deviation (σ)
-        # 6x6 matrix: [x, y, z, roll, pitch, yaw]
         GNSS_POSITION_STDDEV = 0.1  # meters (standard deviation)
         GNSS_POSITION_VARIANCE = GNSS_POSITION_STDDEV**2  # meters² (variance)
         # Orientation uncertainty - set large values since orientation is not measured by GNSS
         ORIENTATION_VARIANCE = 1.0  # radians² (large uncertainty)
 
-        out_pose_with_cov.pose.covariance = [
-            GNSS_POSITION_VARIANCE,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,  # x row
-            0.0,
-            GNSS_POSITION_VARIANCE,
-            0.0,
-            0.0,
-            0.0,
-            0.0,  # y row
-            0.0,
-            0.0,
-            GNSS_POSITION_VARIANCE,
-            0.0,
-            0.0,
-            0.0,  # z row
-            0.0,
-            0.0,
-            0.0,
-            ORIENTATION_VARIANCE,
-            0.0,
-            0.0,  # roll row
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            ORIENTATION_VARIANCE,
-            0.0,  # pitch row
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            ORIENTATION_VARIANCE,  # yaw row
+        return [
+            GNSS_POSITION_VARIANCE, 0.0, 0.0, 0.0, 0.0, 0.0,  # x row
+            0.0, GNSS_POSITION_VARIANCE, 0.0, 0.0, 0.0, 0.0,  # y row
+            0.0, 0.0, GNSS_POSITION_VARIANCE, 0.0, 0.0, 0.0,  # z row
+            0.0, 0.0, 0.0, ORIENTATION_VARIANCE, 0.0, 0.0,  # roll row
+            0.0, 0.0, 0.0, 0.0, ORIENTATION_VARIANCE, 0.0,  # pitch row
+            0.0, 0.0, 0.0, 0.0, 0.0, ORIENTATION_VARIANCE,  # yaw row
         ]
-
-        # Publish via registry publisher
-        gnss_config.publisher.publish(out_pose_with_cov)
-        self.sensor_registry.update_sensor_timestamp(gnss_config.sensor_id, self.timestamp)
 
     def _build_camera_info(self, camera_actor):
         """
