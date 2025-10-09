@@ -40,6 +40,7 @@ class SensorConfig:
     qos_profile: str = "reliable"
     parameters: Dict[str, Any] = field(default_factory=dict)
     transform: Optional[Dict[str, float]] = None
+    covariance: Optional[Dict[str, float]] = None
     enabled: bool = True
     publisher: Optional[Any] = None
     publisher_info: Optional[Any] = None

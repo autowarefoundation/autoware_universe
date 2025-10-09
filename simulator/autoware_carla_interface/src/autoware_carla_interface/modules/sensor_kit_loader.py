@@ -552,6 +552,7 @@ class SensorKitLoader:
             qos_profile=ros_config.get("qos_profile", "reliable"),
             parameters=mapping.get("parameters", {}),
             transform=transform,
+            covariance=mapping.get("covariance"),
             enabled=True,
         )
 
