@@ -317,31 +317,34 @@ class SensorKitLoader:
         # Check both original and normalized names
         return sensor_name in enabled_list or normalized in enabled_list
 
-    def build_sensor_configs(
-        self, sensor_kit_name: Optional[str] = None, use_autoware_sensor_kit: bool = False
-    ) -> List[SensorConfig]:
-        """Build sensor configurations from sensor kit or mapping.
+    def build_sensor_configs(self, sensor_kit_name: Optional[str] = None) -> List[SensorConfig]:
+        """Build sensor configurations from sensor kit calibration.
+
+        Attempts to load from the specified sensor kit, falling back to
+        mapping-only configuration if the kit is not found.
 
         Args:
             sensor_kit_name: Name of sensor kit to use
-            use_autoware_sensor_kit: Whether to use sensor kit calibration
 
         Returns:
             List of sensor configurations
         """
         configs = []
 
-        if use_autoware_sensor_kit and sensor_kit_name:
-            # Load from sensor kit
+        if sensor_kit_name:
+            # Try to load from sensor kit
             sensor_kit_path = self.find_sensor_kit_path(sensor_kit_name)
             if sensor_kit_path:
                 kit_sensors = self.parse_sensor_kit_calibration(sensor_kit_path)
                 configs = self._create_configs_from_kit(kit_sensors)
             else:
-                self.logger.warning("Falling back to sensor mapping configuration")
+                self.logger.warning(
+                    f"Sensor kit '{sensor_kit_name}' not found, falling back to mapping configuration"
+                )
                 configs = self._create_configs_from_mapping()
         else:
-            # Load from mapping file
+            # No sensor kit specified, use mapping only
+            self.logger.info("No sensor kit specified, using mapping configuration")
             configs = self._create_configs_from_mapping()
 
         return configs

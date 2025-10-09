@@ -67,8 +67,7 @@ class carla_ros2_interface(object):
             "vehicle_type": (rclpy.Parameter.Type.STRING, None),
             "use_traffic_manager": (rclpy.Parameter.Type.BOOL, None),
             "max_real_delta_seconds": (rclpy.Parameter.Type.DOUBLE, None),
-            # NEW: Dynamic sensor configuration parameters with defaults
-            "use_autoware_sensor_kit": (rclpy.Parameter.Type.BOOL, False),
+            # Sensor configuration parameters
             "sensor_kit_name": (rclpy.Parameter.Type.STRING, ""),  # Empty = use YAML default
             "sensor_mapping_file": (rclpy.Parameter.Type.STRING, ""),
         }
@@ -138,25 +137,15 @@ class carla_ros2_interface(object):
             )
 
         sensor_kit_name = self._resolve_sensor_kit_name()
-        use_sensor_kit = self.param_values.get("use_autoware_sensor_kit", False)
-
-        if use_sensor_kit:
-            self.logger.info(f"Using Autoware sensor kit calibration: {sensor_kit_name}")
-        else:
-            self.logger.info("Automatic sensor kit disabled; using mapping defaults only")
+        self.logger.info(f"Using Autoware sensor kit calibration: {sensor_kit_name}")
 
         try:
             self.sensor_configs = self.sensor_loader.build_sensor_configs(
-                sensor_kit_name=sensor_kit_name,
-                use_autoware_sensor_kit=use_sensor_kit,
+                sensor_kit_name=sensor_kit_name
             )
         except Exception as exc:
             self.logger.error(f"Failed to build sensor configuration from kit: {exc}")
-            self.logger.info("Falling back to mapping-only configuration")
-            self.sensor_configs = self.sensor_loader.build_sensor_configs(
-                sensor_kit_name=sensor_kit_name,
-                use_autoware_sensor_kit=False,
-            )
+            raise
 
         if not self.sensor_configs:
             raise RuntimeError(
