@@ -17,13 +17,14 @@
 #include "autoware/planning_evaluator/metrics/metric.hpp"
 #include "autoware_utils/math/accumulator.hpp"
 
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+
 #include "autoware_perception_msgs/msg/predicted_objects.hpp"
 #include "autoware_planning_msgs/msg/pose_with_uuid_stamped.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "autoware_planning_msgs/msg/trajectory_point.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include <nav_msgs/msg/odometry.hpp>
-#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <optional>
 
@@ -69,17 +70,15 @@ public:
    * @param [in] vehicle_length_m input vehicle length
    * @return string describing the requested metric
    */
-  std::optional<Accumulator<double>> calculate(
-    const Metric metric, const Trajectory & traj) const;
+  std::optional<Accumulator<double>> calculate(const Metric metric, const Trajectory & traj) const;
   std::optional<Accumulator<double>> calculate(
     const Metric metric, const Pose & base_pose, const Pose & target_pose) const;
 
-  
   /** * @brief set vehicle info
    * @param [in] vehicle_info input vehicle info
    */
   void setVehicleInfo(const VehicleInfo & vehicle_info);
-  
+
   /**
    * @brief set the reference trajectory used to calculate the deviation metrics
    * @param [in] traj input reference trajectory

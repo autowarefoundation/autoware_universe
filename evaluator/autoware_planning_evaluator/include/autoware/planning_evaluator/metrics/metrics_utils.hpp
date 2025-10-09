@@ -15,12 +15,13 @@
 #ifndef AUTOWARE__PLANNING_EVALUATOR__METRICS__METRICS_UTILS_HPP_
 #define AUTOWARE__PLANNING_EVALUATOR__METRICS__METRICS_UTILS_HPP_
 
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+
+#include "autoware_perception_msgs/msg/predicted_object.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "autoware_planning_msgs/msg/trajectory_point.hpp"
-#include "autoware_perception_msgs/msg/predicted_object.hpp"
-#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
-#include <autoware_utils/geometry/geometry.hpp>
-#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 
 namespace planning_diagnostics
 {
@@ -28,10 +29,10 @@ namespace metrics
 {
 namespace utils
 {
+using autoware::vehicle_info_utils::VehicleInfo;
+using autoware_perception_msgs::msg::PredictedObject;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
-using autoware_perception_msgs::msg::PredictedObject;
-using autoware::vehicle_info_utils::VehicleInfo;
 using geometry_msgs::msg::Pose;
 
 /**
@@ -74,8 +75,7 @@ double calc_lookahead_trajectory_distance(const Trajectory & traj, const Pose & 
  * @return minimum distance between ego footprint and object footprint in meters
  */
 double calc_ego_object_distance(
-  const autoware_utils::LinearRing2d & local_ego_footprint,
-  const Pose & ego_pose,
+  const autoware_utils::LinearRing2d & local_ego_footprint, const Pose & ego_pose,
   const PredictedObject & object);
 
 }  // namespace utils

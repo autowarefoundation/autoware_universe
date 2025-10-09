@@ -76,7 +76,8 @@ std::optional<Accumulator<double>> MetricsCalculator::calculate(
     case Metric::obstacle_distance:
       return metrics::calcDistanceToObstacle(dynamic_objects_, traj, vehicle_info_);
     case Metric::obstacle_ttc:
-      return metrics::calcTimeToCollision(dynamic_objects_, traj, vehicle_info_, parameters.obstacle.dist_thr_m);
+      return metrics::calcTimeToCollision(
+        dynamic_objects_, traj, vehicle_info_, parameters.obstacle.dist_thr_m);
     default:
       return {};
   }

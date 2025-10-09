@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/planning_evaluator/metrics/metrics_utils.hpp"
+
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
 #include <boost/geometry.hpp>
@@ -90,17 +91,15 @@ double calc_lookahead_trajectory_distance(const Trajectory & traj, const Pose & 
 }
 
 double calc_ego_object_distance(
-  const autoware_utils::LinearRing2d & local_ego_footprint,
-  const Pose & ego_pose,
+  const autoware_utils::LinearRing2d & local_ego_footprint, const Pose & ego_pose,
   const PredictedObject & object)
 {
   // create ego polygon
-  const autoware_utils::LinearRing2d ego_footprint = autoware_utils::transform_vector(
-    local_ego_footprint, autoware_utils::pose2transform(ego_pose));
+  const autoware_utils::LinearRing2d ego_footprint =
+    autoware_utils::transform_vector(local_ego_footprint, autoware_utils::pose2transform(ego_pose));
   autoware_utils::Polygon2d ego_polygon;
   ego_polygon.outer() = ego_footprint;
   bg::correct(ego_polygon);
-
 
   // create object polygon
   const auto object_polygon = autoware_utils::to_polygon2d(object);
