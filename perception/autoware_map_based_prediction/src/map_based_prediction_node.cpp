@@ -28,7 +28,6 @@
 #include <autoware_utils/math/constants.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
-#include <autoware_utils/ros/uuid_helper.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>

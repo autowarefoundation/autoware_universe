@@ -95,14 +95,14 @@ PredictedPath PathGenerator::generatePathToTargetPoint(
   return predicted_path;
 }
 
-PredictedPath PathGenerator::generatePathForCrosswalkUser(
+PredictedPathWithArrivalIndex PathGenerator::generatePathForCrosswalkUser(
   const TrackedObject & object, const CrosswalkEdgePoints & reachable_crosswalk,
   const double duration) const
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  PredictedPath predicted_path{};
+  PredictedPathWithArrivalIndex predicted_path;
   const double ep = 0.001;
 
   const auto & obj_pos = object.kinematics.pose_with_covariance.pose.position;
@@ -124,6 +124,8 @@ PredictedPath PathGenerator::generatePathForCrosswalkUser(
   const auto entry_to_exit_point_orientation = autoware_utils::create_quaternion_from_yaw(
     std::atan2(entry_to_exit_point_normalized.y(), entry_to_exit_point_normalized.x()));
 
+  predicted_path.arrival_index =
+    static_cast<size_t>(1 + std::ceil(arrival_time / sampling_time_interval_));
   for (double dt = 0.0; dt < duration + ep; dt += sampling_time_interval_) {
     geometry_msgs::msg::Pose world_frame_pose;
     if (dt < arrival_time) {
