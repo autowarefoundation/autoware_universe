@@ -3,19 +3,20 @@
     # modality
     sensor_fusion: true
     # non-network params
-    max_camera_lidar_delay: 0.2
+    max_camera_lidar_delay: 0.12
     # plugins
     plugins_path: $(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so
     # network
     trt_precision: fp16
     cloud_capacity: 2000000
-    onnx_path: "/home/autoware/workspace/models/main_body.onnx"
-    engine_path: "/home/autoware/workspace/models/main_body.engine"
+    onnx_path: "$(var model_path)/bevfusion_camera_lidar.onnx"
+    engine_path: "$(var model_path)/bevfusion_camera_lidar.engine"
     
     # image backbone network (fusion model always uses separate image backbone)
-    image_backbone_onnx_path: "/home/autoware/workspace/models/image_backbone.onnx"
-    image_backbone_engine_path: "/home/autoware/workspace/models/image_backbone.engine"
+    image_backbone_onnx_path: "$(var model_path)/image_backbone.onnx"
+    image_backbone_engine_path: "$(var model_path)/image_backbone.engine"
     image_backbone_trt_precision: fp16
+    
     # pre-process params
     densification_num_past_frames: 1
     densification_world_frame_id: map

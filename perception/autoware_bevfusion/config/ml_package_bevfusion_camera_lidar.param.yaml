@@ -14,10 +14,10 @@
     y_bound: [-122.4, 122.4, 0.68]
     z_bound: [-10.0, 10.0, 20.0]
     num_cameras: 6
-    raw_image_height: 1860
-    raw_image_width: 2880
-    img_aug_scale_x: 0.208
-    img_aug_scale_y: 0.208
+    raw_image_height: 1080
+    raw_image_width: 1440
+    img_aug_scale_x: 0.4
+    img_aug_scale_y: 0.4
     roi_height: 384
     roi_width: 576
     features_height: 48

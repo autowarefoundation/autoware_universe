@@ -97,9 +97,6 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL AND SPCONV_AVAIL)
   # Find Eigen3
   find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
-  # Find OpenCV
-  find_package(OpenCV REQUIRED)
-
   add_definitions("-DTV_CUDA")
 
   # cSpell:ignore expt gencode
@@ -150,7 +147,6 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL AND SPCONV_AVAIL)
     ${CUDA_curand_LIBRARY}
     ${CUDNN_LIBRARY}
     ${PROJECT_NAME}_cuda_lib
-    ${OpenCV_LIBS}
   )
 
   # To suppress unknown-pragmas error. The root-cause is CUB library in CUDA 11.6.
@@ -159,7 +155,6 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL AND SPCONV_AVAIL)
     SYSTEM PUBLIC
     ${CUDA_INCLUDE_DIRS}
     ${autoware_point_types_INCLUDE_DIRS}
-    ${OpenCV_INCLUDE_DIRS}
   )
 
   ament_auto_add_library(${PROJECT_NAME}_component SHARED

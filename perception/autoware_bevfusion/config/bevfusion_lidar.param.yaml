@@ -9,8 +9,8 @@
     # network
     trt_precision: fp16
     cloud_capacity: 2000000
-    onnx_path: "/home/autoware/workspace/models/main_body_lidaronly.onnx"
-    engine_path: "/home/autoware/workspace/models/main_body_lidaronly.engine"
+    onnx_path: "$(var model_path)/bevfusion_lidar.onnx"
+    engine_path: "$(var model_path)/bevfusion_lidar.engine"
     # pre-process params
     densification_num_past_frames: 1
     densification_world_frame_id: map

@@ -2,16 +2,16 @@
 <launch>
   <arg name="input/pointcloud" default="/sensing/lidar/concatenated/pointcloud"/>
   <arg name="output/objects" default="objects"/>
-  <arg name="data_path" default="/home/autoware/workspace/models" description="packages data and artifacts directory path"/>
+  <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
   <arg name="model_name" default="bevfusion_lidar">
     <choice value="bevfusion_lidar"/>
     <choice value="bevfusion_camera_lidar"/>
   </arg>
-  <arg name="model_path" default="$(var data_path)"/>
-  <arg name="model_param_path" default="/home/autoware/workspace/autoware.universe/perception/autoware_bevfusion/config/$(var model_name).param.yaml"/>
-  <arg name="ml_package_param_path" default="/home/autoware/workspace/autoware.universe/perception/autoware_bevfusion/config/ml_package_$(var model_name).param.yaml"/>
-  <arg name="class_remapper_param_path" default="/home/autoware/workspace/autoware.universe/perception/autoware_bevfusion/config/detection_class_remapper.param.yaml"/>
-  <arg name="common_param_path" default="/home/autoware/workspace/autoware.universe/perception/autoware_bevfusion/config/common_bevfusion.param.yaml"/>
+  <arg name="model_path" default="$(var data_path)/bevfusion"/>
+  <arg name="model_param_path" default="$(find-pkg-share autoware_bevfusion)/config/$(var model_name).param.yaml"/>
+  <arg name="ml_package_param_path" default="$(var model_path)/ml_package_$(var model_name).param.yaml"/>
+  <arg name="class_remapper_param_path" default="$(var model_path)/detection_class_remapper.param.yaml"/>
+  <arg name="common_param_path" default="$(find-pkg-share autoware_bevfusion)/config/common_bevfusion.param.yaml"/>
   <arg name="build_only" default="false" description="shutdown node after TensorRT engine file is built"/>
   <arg name="log_level" default="info"/>
 
@@ -20,19 +20,19 @@
 
   <arg name="use_decompress" default="false" description="use image_transport_decompressor"/>
 
-  <arg name="camera_info0" default="/sensing/camera/camera8/camera_info"/>
-  <arg name="camera_info1" default="/sensing/camera/camera0/camera_info"/>
-  <arg name="camera_info2" default="/sensing/camera/camera6/camera_info"/>
-  <arg name="camera_info3" default="/sensing/camera/camera10/camera_info"/>
-  <arg name="camera_info4" default="/sensing/camera/camera7/camera_info"/>
-  <arg name="camera_info5" default="/sensing/camera/camera9/camera_info"/>
+  <arg name="camera_info0" default="/sensing/camera/camera0/camera_info"/>
+  <arg name="camera_info1" default="/sensing/camera/camera1/camera_info"/>
+  <arg name="camera_info2" default="/sensing/camera/camera2/camera_info"/>
+  <arg name="camera_info3" default="/sensing/camera/camera3/camera_info"/>
+  <arg name="camera_info4" default="/sensing/camera/camera4/camera_info"/>
+  <arg name="camera_info5" default="/sensing/camera/camera5/camera_info"/>
 
-  <arg name="image0" default="/sensing/camera/camera8/image_raw"/>
-  <arg name="image1" default="/sensing/camera/camera0/image_raw"/>
-  <arg name="image2" default="/sensing/camera/camera6/image_raw"/>
-  <arg name="image3" default="/sensing/camera/camera10/image_raw"/>
-  <arg name="image4" default="/sensing/camera/camera7/image_raw"/>
-  <arg name="image5" default="/sensing/camera/camera9/image_raw"/>
+  <arg name="image0" default="/sensing/camera/camera0/image_rect_color"/>
+  <arg name="image1" default="/sensing/camera/camera1/image_rect_color"/>
+  <arg name="image2" default="/sensing/camera/camera2/image_rect_color"/>
+  <arg name="image3" default="/sensing/camera/camera3/image_rect_color"/>
+  <arg name="image4" default="/sensing/camera/camera4/image_rect_color"/>
+  <arg name="image5" default="/sensing/camera/camera5/image_rect_color"/>
 
   <arg name="decompressor_param_file" default="$(find-pkg-share autoware_image_transport_decompressor)/config/image_transport_decompressor.param.yaml"/>
   <node pkg="autoware_image_transport_decompressor" exec="image_transport_decompressor_node" name="image_transport_decompressor_node" if="$(var use_decompress)">
