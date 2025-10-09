@@ -19,15 +19,14 @@
   <depend>autoware_motion_utils</depend>
   <depend>autoware_path_smoother</depend>
   <depend>autoware_planning_msgs</depend>
-  <depend>autoware_trajectory</depend>
   <depend>autoware_utils</depend>
+  <depend>autoware_utils_math</depend>
   <depend>autoware_vehicle_info_utils</depend>
   <depend>autoware_velocity_smoother</depend>
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
-  <!-- <depend>autoware_planning_topic_converter</depend> -->
 
   <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_lint_auto</test_depend>
