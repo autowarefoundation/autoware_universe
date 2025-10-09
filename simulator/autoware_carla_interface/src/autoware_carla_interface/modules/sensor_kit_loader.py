@@ -58,67 +58,15 @@ class SensorKitLoader:
             True if successfully loaded, False otherwise
         """
         try:
+            mapping_file = self._resolve_mapping_file_path(mapping_file)
             if not mapping_file:
-                pkg_dir = get_package_share_directory("autoware_carla_interface")
-                mapping_file = os.path.join(pkg_dir, "config", "sensor_mapping.yaml")
-
-            if not os.path.exists(mapping_file):
-                source_mapping = (
-                    Path(__file__).resolve().parents[3] / "config" / "sensor_mapping.yaml"
-                )
-                if source_mapping.exists():
-                    mapping_file = str(source_mapping)
-                else:
-                    self.logger.error(f"Sensor mapping file not found: {mapping_file}")
-                    return False
+                return False
 
             with open(mapping_file, "r") as f:
                 self.sensor_mapping = yaml.safe_load(f)
 
-            # Validate YAML structure
-            if not self.sensor_mapping or not isinstance(self.sensor_mapping, dict):
-                raise ValueError(
-                    f"Invalid or empty YAML file: {mapping_file}. "
-                    f"File must contain a valid YAML dictionary."
-                )
-
-            # Validate required sections
-            required_keys = ["sensor_mappings", "enabled_sensors"]
-            missing = [k for k in required_keys if k not in self.sensor_mapping]
-            if missing:
-                raise ValueError(
-                    f"Missing required keys in sensor mapping file: {missing}. "
-                    f"Required keys: {required_keys}"
-                )
-
-            # Validate sensor_mappings structure
-            if not isinstance(self.sensor_mapping["sensor_mappings"], dict):
-                raise ValueError("sensor_mappings must be a dictionary")
-
-            # Validate enabled_sensors structure
-            if not isinstance(self.sensor_mapping["enabled_sensors"], list):
-                raise ValueError("enabled_sensors must be a list")
-
-            # Load vehicle configuration if present
-            if "vehicle_config" in self.sensor_mapping:
-                vehicle_config = self.sensor_mapping["vehicle_config"]
-                if not isinstance(vehicle_config, dict):
-                    raise ValueError("vehicle_config must be a dictionary")
-
-                if "wheelbase" in vehicle_config:
-                    wheelbase_value = vehicle_config["wheelbase"]
-                    if not isinstance(wheelbase_value, (int, float)):
-                        raise ValueError(
-                            f"wheelbase must be a number, got: {type(wheelbase_value).__name__}"
-                        )
-                    if wheelbase_value <= 0:
-                        raise ValueError(f"wheelbase must be positive, got: {wheelbase_value}")
-                    self.wheelbase = float(wheelbase_value)
-                    self.logger.info(f"Using wheelbase from config: {self.wheelbase}m")
-                else:
-                    self.logger.info(f"Using default wheelbase: {self.wheelbase}m")
-            else:
-                self.logger.info(f"Using default wheelbase: {self.wheelbase}m")
+            self._validate_sensor_mapping_yaml()
+            self._load_vehicle_config()
 
             self.logger.info(f"Loaded sensor mapping from: {mapping_file}")
             return True
@@ -133,6 +81,83 @@ class SensorKitLoader:
             self.logger.error(f"Failed to load sensor mapping: {e}")
             return False
 
+    def _resolve_mapping_file_path(self, mapping_file: Optional[str]) -> Optional[str]:
+        """Resolve sensor mapping file path.
+
+        Args:
+            mapping_file: Optional path to mapping file
+
+        Returns:
+            Resolved file path or None if not found
+        """
+        if not mapping_file:
+            pkg_dir = get_package_share_directory("autoware_carla_interface")
+            mapping_file = os.path.join(pkg_dir, "config", "sensor_mapping.yaml")
+
+        if os.path.exists(mapping_file):
+            return mapping_file
+
+        # Try source directory as fallback
+        source_mapping = Path(__file__).resolve().parents[3] / "config" / "sensor_mapping.yaml"
+        if source_mapping.exists():
+            return str(source_mapping)
+
+        self.logger.error(f"Sensor mapping file not found: {mapping_file}")
+        return None
+
+    def _validate_sensor_mapping_yaml(self):
+        """Validate sensor mapping YAML structure.
+
+        Raises:
+            ValueError: If YAML structure is invalid
+        """
+        if not self.sensor_mapping or not isinstance(self.sensor_mapping, dict):
+            raise ValueError(
+                "Invalid or empty YAML file. File must contain a valid YAML dictionary."
+            )
+
+        required_keys = ["sensor_mappings", "enabled_sensors"]
+        missing = [k for k in required_keys if k not in self.sensor_mapping]
+        if missing:
+            raise ValueError(
+                f"Missing required keys: {missing}. Required keys: {required_keys}"
+            )
+
+        if not isinstance(self.sensor_mapping["sensor_mappings"], dict):
+            raise ValueError("sensor_mappings must be a dictionary")
+
+        if not isinstance(self.sensor_mapping["enabled_sensors"], list):
+            raise ValueError("enabled_sensors must be a list")
+
+    def _load_vehicle_config(self):
+        """Load vehicle configuration from sensor mapping.
+
+        Raises:
+            ValueError: If vehicle config is invalid
+        """
+        if "vehicle_config" not in self.sensor_mapping:
+            self.logger.info(f"Using default wheelbase: {self.wheelbase}m")
+            return
+
+        vehicle_config = self.sensor_mapping["vehicle_config"]
+        if not isinstance(vehicle_config, dict):
+            raise ValueError("vehicle_config must be a dictionary")
+
+        if "wheelbase" not in vehicle_config:
+            self.logger.info(f"Using default wheelbase: {self.wheelbase}m")
+            return
+
+        wheelbase_value = vehicle_config["wheelbase"]
+        if not isinstance(wheelbase_value, (int, float)):
+            raise ValueError(
+                f"wheelbase must be a number, got: {type(wheelbase_value).__name__}"
+            )
+        if wheelbase_value <= 0:
+            raise ValueError(f"wheelbase must be positive, got: {wheelbase_value}")
+
+        self.wheelbase = float(wheelbase_value)
+        self.logger.info(f"Using wheelbase from config: {self.wheelbase}m")
+
     def find_sensor_kit_path(self, sensor_kit_name: str) -> Optional[Path]:
         """Find sensor kit calibration directory using ament_index.
 
@@ -143,7 +168,7 @@ class SensorKitLoader:
             sensor_kit_name: Name of the sensor kit package (e.g., 'carla_sensor_kit_launch')
 
         Returns:
-            Path to sensor kit config directory or None if not found
+            Path to sensor kit config directory
 
         Raises:
             FileNotFoundError: If sensor kit calibration cannot be found
@@ -152,62 +177,70 @@ class SensorKitLoader:
 
         tried_packages = []
 
-        # Try 1: Use the provided package name directly
+        # Try direct package name
+        calib_path = self._try_find_sensor_kit(sensor_kit_name)
+        if calib_path:
+            return calib_path
+        tried_packages.append(sensor_kit_name)
+
+        # Try replacing _launch with _description
+        desc_name = sensor_kit_name.replace("_launch", "_description")
+        if desc_name != sensor_kit_name:
+            calib_path = self._try_find_sensor_kit(desc_name)
+            if calib_path:
+                return calib_path
+            tried_packages.append(desc_name)
+
+        # Try adding suffixes if no suffix present
+        if not sensor_kit_name.endswith(("_launch", "_description")):
+            for suffix in ["_description", "_launch"]:
+                variant = sensor_kit_name + suffix
+                calib_path = self._try_find_sensor_kit(variant)
+                if calib_path:
+                    return calib_path
+                tried_packages.append(variant)
+
+        raise self._create_not_found_error(sensor_kit_name, tried_packages)
+
+    def _try_find_sensor_kit(self, package_name: str) -> Optional[Path]:
+        """Try to find sensor kit calibration in a package.
+
+        Args:
+            package_name: ROS package name to search
+
+        Returns:
+            Path to sensor kit config directory or None
+        """
+        from ament_index_python.packages import PackageNotFoundError
+
         try:
-            sensor_kit_dir = get_package_share_directory(sensor_kit_name)
-            calib_path = Path(sensor_kit_dir) / "config"
+            package_dir = get_package_share_directory(package_name)
+            calib_path = Path(package_dir) / "config"
 
             if (calib_path / "sensor_kit_calibration.yaml").exists():
                 self.sensor_kit_path = calib_path
                 self.logger.info(f"Found sensor kit at: {calib_path}")
                 return calib_path
-            else:
-                self.logger.debug(
-                    f"Package '{sensor_kit_name}' found but missing "
-                    f"config/sensor_kit_calibration.yaml"
-                )
+
+            self.logger.debug(
+                f"Package '{package_name}' found but missing config/sensor_kit_calibration.yaml"
+            )
         except PackageNotFoundError:
-            self.logger.debug(f"Package '{sensor_kit_name}' not found in ament index")
-            tried_packages.append(sensor_kit_name)
+            self.logger.debug(f"Package '{package_name}' not found in ament index")
 
-        # Try 2: Replace '_launch' with '_description' suffix
-        # Common pattern: carla_sensor_kit_launch -> carla_sensor_kit_description
-        desc_name = sensor_kit_name.replace("_launch", "_description")
-        if desc_name != sensor_kit_name:
-            try:
-                desc_dir = get_package_share_directory(desc_name)
-                calib_path = Path(desc_dir) / "config"
+        return None
 
-                if (calib_path / "sensor_kit_calibration.yaml").exists():
-                    self.sensor_kit_path = calib_path
-                    self.logger.info(f"Found sensor kit at: {calib_path} (using {desc_name})")
-                    return calib_path
-                else:
-                    self.logger.debug(
-                        f"Package '{desc_name}' found but missing "
-                        f"config/sensor_kit_calibration.yaml"
-                    )
-            except PackageNotFoundError:
-                self.logger.debug(f"Package '{desc_name}' not found in ament index")
-                tried_packages.append(desc_name)
+    def _create_not_found_error(self, sensor_kit_name: str, tried_packages: List[str]):
+        """Create detailed FileNotFoundError for missing sensor kit.
 
-        # Try 3: If sensor_kit_name doesn't end with _launch or _description, try adding them
-        if not sensor_kit_name.endswith(("_launch", "_description")):
-            for suffix in ["_description", "_launch"]:
-                variant = sensor_kit_name + suffix
-                try:
-                    variant_dir = get_package_share_directory(variant)
-                    calib_path = Path(variant_dir) / "config"
+        Args:
+            sensor_kit_name: Original sensor kit name
+            tried_packages: List of package names attempted
 
-                    if (calib_path / "sensor_kit_calibration.yaml").exists():
-                        self.sensor_kit_path = calib_path
-                        self.logger.info(f"Found sensor kit at: {calib_path} (using {variant})")
-                        return calib_path
-                except PackageNotFoundError:
-                    tried_packages.append(variant)
-
-        # All attempts failed - raise detailed error
-        raise FileNotFoundError(
+        Returns:
+            FileNotFoundError with detailed message
+        """
+        return FileNotFoundError(
             f"Sensor kit calibration not found for '{sensor_kit_name}'.\n"
             f"Attempted packages: {tried_packages}\n"
             f"Required file: config/sensor_kit_calibration.yaml\n"
@@ -394,39 +427,12 @@ class SensorKitLoader:
             RuntimeError: If enabled sensors lack transform data
         """
         configs = []
-        mappings = self.sensor_mapping.get("sensor_mappings", {})
         missing_transforms = []
 
         for sensor_name, sensor_data in kit_sensors.items():
-            if not self.is_sensor_enabled(sensor_name):
-                continue
-
-            normalized = self.normalize_sensor_name(sensor_name)
-
-            # Find mapping for this sensor
-            mapping = None
-            for mapping_key in mappings:
-                if self.normalize_sensor_name(mapping_key) == normalized:
-                    mapping = mappings[mapping_key]
-                    break
-
-            if not mapping:
-                self.logger.debug(f"No mapping found for sensor: {sensor_name}")
-                continue
-
-            # Validate transform is present
-            transform = sensor_data.get("transform")
-            if not transform:
-                missing_transforms.append(sensor_name)
-                self.logger.error(
-                    f"Sensor '{sensor_name}' is enabled but has no transform in calibration"
-                )
-                continue
-
-            config = self._create_sensor_config(
-                sensor_name=sensor_name, mapping=mapping, transform=transform
-            )
-            configs.append(config)
+            config = self._try_create_sensor_config(sensor_name, sensor_data, missing_transforms)
+            if config:
+                configs.append(config)
 
         if missing_transforms:
             raise RuntimeError(
@@ -435,6 +441,57 @@ class SensorKitLoader:
             )
 
         return configs
+
+    def _try_create_sensor_config(
+        self, sensor_name: str, sensor_data: Dict, missing_transforms: List[str]
+    ) -> Optional[SensorConfig]:
+        """Try to create sensor config for a single sensor.
+
+        Args:
+            sensor_name: Name of the sensor
+            sensor_data: Sensor data from calibration
+            missing_transforms: List to append missing transform errors to
+
+        Returns:
+            SensorConfig if successful, None if sensor should be skipped
+        """
+        if not self.is_sensor_enabled(sensor_name):
+            return None
+
+        mapping = self._find_sensor_mapping(sensor_name)
+        if not mapping:
+            self.logger.debug(f"No mapping found for sensor: {sensor_name}")
+            return None
+
+        transform = sensor_data.get("transform")
+        if not transform:
+            missing_transforms.append(sensor_name)
+            self.logger.error(
+                f"Sensor '{sensor_name}' is enabled but has no transform in calibration"
+            )
+            return None
+
+        return self._create_sensor_config(
+            sensor_name=sensor_name, mapping=mapping, transform=transform
+        )
+
+    def _find_sensor_mapping(self, sensor_name: str) -> Optional[Dict]:
+        """Find mapping configuration for a sensor.
+
+        Args:
+            sensor_name: Name of the sensor
+
+        Returns:
+            Mapping dictionary or None if not found
+        """
+        mappings = self.sensor_mapping.get("sensor_mappings", {})
+        normalized = self.normalize_sensor_name(sensor_name)
+
+        for mapping_key in mappings:
+            if self.normalize_sensor_name(mapping_key) == normalized:
+                return mappings[mapping_key]
+
+        return None
 
     def _create_sensor_config(
         self, sensor_name: str, mapping: Dict, transform: Optional[Dict] = None
