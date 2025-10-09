@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import math
 from typing import Dict
 
@@ -140,20 +142,7 @@ class CoordinateTransformer:
     def carla_rotation_to_carla_rotation(
         roll: float, pitch: float, yaw: float, in_degrees: bool = False
     ) -> carla.Rotation:
-        """Convert CARLA rotation angles to CARLA Rotation object.
-
-        For carla_sensor_kit which already uses CARLA coordinate conventions,
-        we only need to convert units (radians to degrees), NOT negate angles.
-
-        Args:
-            roll: Roll angle in radians (or degrees if in_degrees=True)
-            pitch: Pitch angle in radians (or degrees if in_degrees=True)
-            yaw: Yaw angle in radians (or degrees if in_degrees=True)
-            in_degrees: If True, input angles are already in degrees
-
-        Returns:
-            CARLA Rotation object (in degrees)
-        """
+        """Convert CARLA rotation angles to CARLA Rotation (no coordinate flip)."""
         return CoordinateTransformer._convert_rotation_to_carla(
             (roll, pitch, yaw), in_degrees, negate_pitch_yaw=False
         )
@@ -162,17 +151,7 @@ class CoordinateTransformer:
     def ros_to_carla_rotation(
         roll: float, pitch: float, yaw: float, in_degrees: bool = False
     ) -> carla.Rotation:
-        """Convert ROS rotation (in radians) to CARLA rotation (in degrees).
-
-        Args:
-            roll: Roll angle in radians (or degrees if in_degrees=True)
-            pitch: Pitch angle in radians (or degrees if in_degrees=True)
-            yaw: Yaw angle in radians (or degrees if in_degrees=True)
-            in_degrees: If True, input angles are already in degrees
-
-        Returns:
-            CARLA Rotation object (in degrees)
-        """
+        """Convert ROS rotation to CARLA rotation (with coordinate flip)."""
         return CoordinateTransformer._convert_rotation_to_carla(
             (roll, pitch, yaw), in_degrees, negate_pitch_yaw=True
         )
