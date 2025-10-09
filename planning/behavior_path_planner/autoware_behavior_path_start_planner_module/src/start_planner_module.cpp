@@ -860,7 +860,7 @@ BehaviorModuleOutput StartPlannerModule::plan()
   path_candidate_ = std::make_shared<PathWithLaneId>(getFullPath());
   path_reference_ = std::make_shared<PathWithLaneId>(getPreviousModuleOutput().reference_path);
 
-  if (!status_.prev_approved_path) {
+  if (!status_.prev_approved_path && status_.driving_forward) {
     status_.prev_approved_path = std::make_shared<PathWithLaneId>(output.path);
   }
 
