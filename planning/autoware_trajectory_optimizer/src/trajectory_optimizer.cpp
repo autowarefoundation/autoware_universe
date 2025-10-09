@@ -103,6 +103,12 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
   update_param<double>(
     parameters, "spline_interpolation_resolution_m", params.spline_interpolation_resolution_m);
   update_param<double>(
+    parameters, "spline_interpolation_max_yaw_discrepancy_deg",
+    params.spline_interpolation_max_yaw_discrepancy_deg);
+  update_param<double>(
+    parameters, "spline_interpolation_max_distance_discrepancy_m",
+    params.spline_interpolation_max_distance_discrepancy_m);
+  update_param<double>(
     parameters, "backward_trajectory_extension_m", params.backward_trajectory_extension_m);
   update_param<bool>(
     parameters, "use_akima_spline_interpolation", params.use_akima_spline_interpolation);
@@ -165,6 +171,10 @@ void TrajectoryOptimizer::set_up_params()
     get_or_declare_parameter<double>(*this, "max_lateral_accel_mps2");
   params_.spline_interpolation_resolution_m =
     get_or_declare_parameter<double>(*this, "spline_interpolation_resolution_m");
+  params_.spline_interpolation_max_yaw_discrepancy_deg =
+    get_or_declare_parameter<double>(*this, "spline_interpolation_max_yaw_discrepancy_deg");
+  params_.spline_interpolation_max_distance_discrepancy_m =
+    get_or_declare_parameter<double>(*this, "spline_interpolation_max_distance_discrepancy_m");
   params_.backward_trajectory_extension_m =
     get_or_declare_parameter<double>(*this, "backward_trajectory_extension_m");
   params_.use_akima_spline_interpolation =
