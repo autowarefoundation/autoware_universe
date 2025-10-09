@@ -477,12 +477,42 @@ class carla_ros2_interface(object):
         ORIENTATION_VARIANCE = 1.0  # radians² (large uncertainty)
 
         return [
-            GNSS_POSITION_VARIANCE, 0.0, 0.0, 0.0, 0.0, 0.0,  # x row
-            0.0, GNSS_POSITION_VARIANCE, 0.0, 0.0, 0.0, 0.0,  # y row
-            0.0, 0.0, GNSS_POSITION_VARIANCE, 0.0, 0.0, 0.0,  # z row
-            0.0, 0.0, 0.0, ORIENTATION_VARIANCE, 0.0, 0.0,  # roll row
-            0.0, 0.0, 0.0, 0.0, ORIENTATION_VARIANCE, 0.0,  # pitch row
-            0.0, 0.0, 0.0, 0.0, 0.0, ORIENTATION_VARIANCE,  # yaw row
+            GNSS_POSITION_VARIANCE,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,  # x row
+            0.0,
+            GNSS_POSITION_VARIANCE,
+            0.0,
+            0.0,
+            0.0,
+            0.0,  # y row
+            0.0,
+            0.0,
+            GNSS_POSITION_VARIANCE,
+            0.0,
+            0.0,
+            0.0,  # z row
+            0.0,
+            0.0,
+            0.0,
+            ORIENTATION_VARIANCE,
+            0.0,
+            0.0,  # roll row
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            ORIENTATION_VARIANCE,
+            0.0,  # pitch row
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            ORIENTATION_VARIANCE,  # yaw row
         ]
 
     def _build_camera_info(self, camera_actor):
