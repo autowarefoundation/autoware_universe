@@ -118,7 +118,7 @@ private:
   };  // struct CameraIntrinsics
 
   bool isRoiValidationParamValid(
-    const size_t rois_number, const std::vector<bool> & enable_roi_pos_validation,
+    const size_t rois_number, const std::vector<bool> & enable_validation,
     const std::vector<double> & horizontal_fov);
   void roiCallback(const DetectedObjectsWithFeature::ConstSharedPtr & msg, int rois_id);
   void cameraInfoCallback(const CameraInfo::ConstSharedPtr & msg, int rois_id);
