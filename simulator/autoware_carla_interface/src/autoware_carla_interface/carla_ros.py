@@ -277,7 +277,6 @@ class carla_ros2_interface(object):
         self.timestamp = None
         self.ego_actor = None
         self.physics_control = None
-        self.channels = 0
         self.current_control = carla.VehicleControl()
 
         # Thread synchronization for shared state access
@@ -618,7 +617,15 @@ class carla_ros2_interface(object):
             self.logger.warning("IMU publisher not initialized")
 
     def first_order_steering(self, steer_input):
-        """First order steering model."""
+        """First order steering model.
+
+        Gracefully handles early control commands that arrive before the first
+        simulation tick by returning the raw input when timestamp is not yet available.
+        """
+        # Guard against control commands arriving before first sensor callback
+        if self.timestamp is None:
+            return steer_input  # No filtering yet, return raw command
+
         steer_output = 0.0
         if self.prev_timestamp is None:
             self.prev_timestamp = self.timestamp
