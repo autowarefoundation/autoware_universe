@@ -225,9 +225,7 @@ class SensorWrapper(object):
                 )
                 continue
             except Exception as e:
-                logging.error(
-                    f"Failed to setup sensor '{sensor_spec.get('id', 'unknown')}': {e}"
-                )
+                logging.error(f"Failed to setup sensor '{sensor_spec.get('id', 'unknown')}': {e}")
                 continue
 
         if not self._sensors_list:

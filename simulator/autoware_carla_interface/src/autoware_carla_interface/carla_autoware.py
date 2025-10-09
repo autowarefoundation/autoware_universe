@@ -209,7 +209,7 @@ class InitializeInterface(object):
 
 
 def main():
-    """Main entry point with proper cleanup on all exit paths."""
+    """Run the CARLA-Autoware bridge with proper cleanup on all exit paths."""
     carla_bridge = InitializeInterface()
     carla_bridge.load_world()
 

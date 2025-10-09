@@ -2,19 +2,19 @@
 # Maps carla_sensor_kit sensor names to CARLA sensor types and ROS topics
 
 # Default sensor kit to use (must be the _description package containing config/sensor_kit_calibration.yaml)
-default_sensor_kit_name: "carla_sensor_kit_description"
+default_sensor_kit_name: carla_sensor_kit_description
 
 sensor_mappings:
   # LiDAR sensor
   velodyne_top_base_link:
     carla_type: sensor.lidar.ray_cast
-    id: "top"
+    id: top
     ros_config:
-      frame_id: "velodyne_top"
-      topic_base: "/sensing/lidar/top"
-      topic_suffix: "/pointcloud_before_sync"
+      frame_id: velodyne_top
+      topic_base: /sensing/lidar/top
+      topic_suffix: /pointcloud_before_sync
       frequency_hz: 11
-      qos_profile: "best_effort"
+      qos_profile: best_effort
     parameters:
       range: 100
       channels: 64
@@ -27,13 +27,13 @@ sensor_mappings:
   # CARLA multi-camera setup (6 cameras for 360-degree coverage)
   CAM_FRONT/camera_link:
     carla_type: sensor.camera.rgb
-    id: "CAM_FRONT"
+    id: CAM_FRONT
     ros_config:
-      frame_id: "CAM_FRONT/camera_optical_link"
-      topic_image: "/sensing/camera/CAM_FRONT/image_raw"
-      topic_info: "/sensing/camera/CAM_FRONT/camera_info"
+      frame_id: CAM_FRONT/camera_optical_link
+      topic_image: /sensing/camera/CAM_FRONT/image_raw
+      topic_info: /sensing/camera/CAM_FRONT/camera_info
       frequency_hz: 11
-      qos_profile: "reliable"
+      qos_profile: reliable
     parameters:
       image_size_x: 1600
       image_size_y: 900
@@ -41,13 +41,13 @@ sensor_mappings:
 
   CAM_FRONT_LEFT/camera_link:
     carla_type: sensor.camera.rgb
-    id: "CAM_FRONT_LEFT"
+    id: CAM_FRONT_LEFT
     ros_config:
-      frame_id: "CAM_FRONT_LEFT/camera_optical_link"
-      topic_image: "/sensing/camera/CAM_FRONT_LEFT/image_raw"
-      topic_info: "/sensing/camera/CAM_FRONT_LEFT/camera_info"
+      frame_id: CAM_FRONT_LEFT/camera_optical_link
+      topic_image: /sensing/camera/CAM_FRONT_LEFT/image_raw
+      topic_info: /sensing/camera/CAM_FRONT_LEFT/camera_info
       frequency_hz: 11
-      qos_profile: "reliable"
+      qos_profile: reliable
     parameters:
       image_size_x: 1600
       image_size_y: 900
@@ -55,13 +55,13 @@ sensor_mappings:
 
   CAM_FRONT_RIGHT/camera_link:
     carla_type: sensor.camera.rgb
-    id: "CAM_FRONT_RIGHT"
+    id: CAM_FRONT_RIGHT
     ros_config:
-      frame_id: "CAM_FRONT_RIGHT/camera_optical_link"
-      topic_image: "/sensing/camera/CAM_FRONT_RIGHT/image_raw"
-      topic_info: "/sensing/camera/CAM_FRONT_RIGHT/camera_info"
+      frame_id: CAM_FRONT_RIGHT/camera_optical_link
+      topic_image: /sensing/camera/CAM_FRONT_RIGHT/image_raw
+      topic_info: /sensing/camera/CAM_FRONT_RIGHT/camera_info
       frequency_hz: 11
-      qos_profile: "reliable"
+      qos_profile: reliable
     parameters:
       image_size_x: 1600
       image_size_y: 900
@@ -69,13 +69,13 @@ sensor_mappings:
 
   CAM_BACK/camera_link:
     carla_type: sensor.camera.rgb
-    id: "CAM_BACK"
+    id: CAM_BACK
     ros_config:
-      frame_id: "CAM_BACK/camera_optical_link"
-      topic_image: "/sensing/camera/CAM_BACK/image_raw"
-      topic_info: "/sensing/camera/CAM_BACK/camera_info"
+      frame_id: CAM_BACK/camera_optical_link
+      topic_image: /sensing/camera/CAM_BACK/image_raw
+      topic_info: /sensing/camera/CAM_BACK/camera_info
       frequency_hz: 11
-      qos_profile: "reliable"
+      qos_profile: reliable
     parameters:
       image_size_x: 1600
       image_size_y: 900
@@ -83,13 +83,13 @@ sensor_mappings:
 
   CAM_BACK_LEFT/camera_link:
     carla_type: sensor.camera.rgb
-    id: "CAM_BACK_LEFT"
+    id: CAM_BACK_LEFT
     ros_config:
-      frame_id: "CAM_BACK_LEFT/camera_optical_link"
-      topic_image: "/sensing/camera/CAM_BACK_LEFT/image_raw"
-      topic_info: "/sensing/camera/CAM_BACK_LEFT/camera_info"
+      frame_id: CAM_BACK_LEFT/camera_optical_link
+      topic_image: /sensing/camera/CAM_BACK_LEFT/image_raw
+      topic_info: /sensing/camera/CAM_BACK_LEFT/camera_info
       frequency_hz: 11
-      qos_profile: "reliable"
+      qos_profile: reliable
     parameters:
       image_size_x: 1600
       image_size_y: 900
@@ -97,13 +97,13 @@ sensor_mappings:
 
   CAM_BACK_RIGHT/camera_link:
     carla_type: sensor.camera.rgb
-    id: "CAM_BACK_RIGHT"
+    id: CAM_BACK_RIGHT
     ros_config:
-      frame_id: "CAM_BACK_RIGHT/camera_optical_link"
-      topic_image: "/sensing/camera/CAM_BACK_RIGHT/image_raw"
-      topic_info: "/sensing/camera/CAM_BACK_RIGHT/camera_info"
+      frame_id: CAM_BACK_RIGHT/camera_optical_link
+      topic_image: /sensing/camera/CAM_BACK_RIGHT/image_raw
+      topic_info: /sensing/camera/CAM_BACK_RIGHT/camera_info
       frequency_hz: 11
-      qos_profile: "reliable"
+      qos_profile: reliable
     parameters:
       image_size_x: 1600
       image_size_y: 900
@@ -112,12 +112,12 @@ sensor_mappings:
   # IMU sensor
   tamagawa/imu_link:
     carla_type: sensor.other.imu
-    id: "imu"
+    id: imu
     ros_config:
-      frame_id: "tamagawa/imu_link"
-      topic: "/sensing/imu/tamagawa/imu_raw"
+      frame_id: tamagawa/imu_link
+      topic: /sensing/imu/tamagawa/imu_raw
       frequency_hz: 50
-      qos_profile: "reliable"
+      qos_profile: reliable
     parameters:
       noise_accel_stddev_x: 0.0
       noise_accel_stddev_y: 0.0
@@ -129,12 +129,12 @@ sensor_mappings:
   # GNSS sensor
   gnss_link:
     carla_type: sensor.other.gnss
-    id: "gnss"
+    id: gnss
     ros_config:
-      frame_id: "map"
-      topic: "/sensing/gnss/pose_with_covariance"
+      frame_id: map
+      topic: /sensing/gnss/pose_with_covariance
       frequency_hz: 2
-      qos_profile: "reliable"
+      qos_profile: reliable
     parameters:
       noise_alt_stddev: 0.0
       noise_lat_stddev: 0.0
@@ -146,9 +146,9 @@ sensor_mappings:
 # Sensor name normalization rules
 normalization:
   strip_suffixes:
-    - "_base_link"
-    - "_link"
-    - "/camera_link"
+    - _base_link
+    - _link
+    - /camera_link
 
 # Enabled sensors list
 enabled_sensors:

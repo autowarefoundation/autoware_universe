@@ -17,7 +17,6 @@
 """Sensor kit configuration loader for CARLA-Autoware interface."""
 
 import logging
-import math
 import os
 from pathlib import Path
 from typing import Any
@@ -113,9 +112,7 @@ class SensorKitLoader:
                             f"wheelbase must be a number, got: {type(wheelbase_value).__name__}"
                         )
                     if wheelbase_value <= 0:
-                        raise ValueError(
-                            f"wheelbase must be positive, got: {wheelbase_value}"
-                        )
+                        raise ValueError(f"wheelbase must be positive, got: {wheelbase_value}")
                     self.wheelbase = float(wheelbase_value)
                     self.logger.info(f"Using wheelbase from config: {self.wheelbase}m")
                 else:
@@ -183,9 +180,7 @@ class SensorKitLoader:
 
                 if (calib_path / "sensor_kit_calibration.yaml").exists():
                     self.sensor_kit_path = calib_path
-                    self.logger.info(
-                        f"Found sensor kit at: {calib_path} (using {desc_name})"
-                    )
+                    self.logger.info(f"Found sensor kit at: {calib_path} (using {desc_name})")
                     return calib_path
                 else:
                     self.logger.debug(
@@ -206,9 +201,7 @@ class SensorKitLoader:
 
                     if (calib_path / "sensor_kit_calibration.yaml").exists():
                         self.sensor_kit_path = calib_path
-                        self.logger.info(
-                            f"Found sensor kit at: {calib_path} (using {variant})"
-                        )
+                        self.logger.info(f"Found sensor kit at: {calib_path} (using {variant})")
                         return calib_path
                 except PackageNotFoundError:
                     tried_packages.append(variant)
@@ -442,7 +435,6 @@ class SensorKitLoader:
             )
 
         return configs
-
 
     def _create_sensor_config(
         self, sensor_name: str, mapping: Dict, transform: Optional[Dict] = None

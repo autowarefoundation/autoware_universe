@@ -77,7 +77,7 @@ All the key parameters can be configured in `autoware_carla_interface.launch.xml
 | `fixed_delta_seconds`    | double | 0.05                                                                              | Time step for the simulation (related to client FPS)                                                                                                                                                                |
 | `use_traffic_manager`    | bool   | False                                                                             | Boolean flag to set traffic manager in CARLA                                                                                                                                                                        |
 | `max_real_delta_seconds` | double | 0.05                                                                              | Parameter to limit the simulation speed below `fixed_delta_seconds`                                                                                                                                                 |
-| `sensor_kit_name`        | string | "carla_sensor_kit_description"                                                    | Name of the sensor kit package to use for sensor configuration. Should be the *_description package containing config/sensor_kit_calibration.yaml                                                                   |
+| `sensor_kit_name`        | string | "carla_sensor_kit_description"                                                    | Name of the sensor kit package to use for sensor configuration. Should be the \*\_description package containing config/sensor_kit_calibration.yaml                                                                 |
 | `sensor_mapping_file`    | string | "$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml"           | Path to sensor mapping YAML configuration file                                                                                                                                                                      |
 | `config_file`            | string | "$(find-pkg-share autoware_carla_interface)/raw_vehicle_cmd_converter.param.yaml" | Control mapping file to be used in `autoware_raw_vehicle_cmd_converter`. Current control are calibrated based on `vehicle.toyota.prius` Blueprints ID in CARLA. Changing the vehicle type may need a recalibration. |
 
@@ -90,6 +90,7 @@ The interface dynamically loads sensor configurations from Autoware sensor kits.
 Located in `<sensor_kit_name>_description/config/sensor_kit_calibration.yaml`
 
 Defines sensor positions and orientations relative to `base_link` (rear axle center). Example:
+
 ```yaml
 sensor_kit_base_link:
   CAM_FRONT/camera_link:
@@ -98,7 +99,7 @@ sensor_kit_base_link:
     z: 1.600
     roll: 0.000
     pitch: 0.000
-    yaw: 0.000  # Angles in radians
+    yaw: 0.000 # Angles in radians
 ```
 
 #### 2. Sensor Mapping (CARLA-specific)
@@ -113,6 +114,7 @@ Maps Autoware sensors to CARLA sensor types and parameters. Key sections:
 - `vehicle_config` (optional): Vehicle parameters like wheelbase
 
 Example sensor mapping:
+
 ```yaml
 sensor_mappings:
   CAM_FRONT/camera_link:
