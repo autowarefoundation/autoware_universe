@@ -322,7 +322,7 @@ void MissionPlanner::on_set_lanelet_route(
       ResponseCode::ERROR_REROUTE_FAILED, "New route is not safe. Reroute failed.");
   }
 
-  change_route(route);
+  change_route(route, req->emphasise_goal_lanes);
   change_state(RouteState::SET);
   res->status.success = true;
 
@@ -400,7 +400,7 @@ void MissionPlanner::change_route()
   // pub_marker_->publish();
 }
 
-void MissionPlanner::change_route(const LaneletRoute & route)
+void MissionPlanner::change_route(const LaneletRoute & route, bool emphasise_goal_lanes)
 {
   PoseWithUuidStamped goal;
   goal.header = route.header;
@@ -412,7 +412,7 @@ void MissionPlanner::change_route(const LaneletRoute & route)
   arrival_checker_.set_goal(goal);
 
   pub_route_->publish(route);
-  pub_marker_->publish(planner_->visualize(route));
+  pub_marker_->publish(planner_->visualize(route, emphasise_goal_lanes));
 }
 
 void MissionPlanner::cancel_route()

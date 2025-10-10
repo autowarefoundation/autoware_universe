@@ -119,7 +119,7 @@ private:
 
   void change_state(RouteState::_state_type state);
   void change_route();
-  void change_route(const LaneletRoute & route);
+  void change_route(const LaneletRoute & route, bool emphasise_goal_lanes = false);
   void cancel_route();
   LaneletRoute create_route(const SetLaneletRoute::Request & req);
   LaneletRoute create_route(const SetWaypointRoute::Request & req);
