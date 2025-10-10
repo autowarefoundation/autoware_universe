@@ -31,6 +31,12 @@ std::optional<double> calcFeasibleDecelDistance(
   std::shared_ptr<const PlannerData> planner_data, const double acc_lim, const double jerk_lim,
   const double target_velocity)
 {
+  const auto v_now = planner_data->self_odometry->twist.twist.linear.x;
+
+  if (v_now < target_velocity) {
+    return 0.0;
+  }
+
   return calc_feasible_decel_distance(planner_data, -acc_lim, jerk_lim, target_velocity);
 }
 
