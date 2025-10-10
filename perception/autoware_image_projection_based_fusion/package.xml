@@ -10,6 +10,7 @@
   <maintainer email="kotaro.uetake@tier4.jp">Kotaro Uetake</maintainer>
   <maintainer email="tao.zhong@tier4.jp">Tao Zhong</maintainer>
   <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
+  <maintainer email="masaki.baba.2@tier4.jp">Masaki Baba</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>

@@ -854,6 +854,32 @@
               "required": ["policy", "condition", "ignore_area", "wait_and_see"],
               "additionalProperties": false
             },
+            "avoidance_for_parking_violation_vehicle": {
+              "type": "object",
+              "properties": {
+                "policy": {
+                  "type": "string",
+                  "enum": ["auto", "manual", "ignore"],
+                  "description": "Ego behavior policy for parking violation vehicle.",
+                  "default": "ignore"
+                }
+              },
+              "required": ["policy"],
+              "additionalProperties": false
+            },
+            "avoidance_for_adjacent_lane_stop_vehicle": {
+              "type": "object",
+              "properties": {
+                "policy": {
+                  "type": "string",
+                  "enum": ["auto", "manual", "ignore"],
+                  "description": "Ego behavior policy for adjacent lane stop vehicle.",
+                  "default": "auto"
+                }
+              },
+              "required": ["policy"],
+              "additionalProperties": false
+            },
             "intersection": {
               "type": "object",
               "properties": {

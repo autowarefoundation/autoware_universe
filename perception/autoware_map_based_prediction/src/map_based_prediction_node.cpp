@@ -28,7 +28,6 @@
 #include <autoware_utils/math/constants.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
-#include <autoware_utils/ros/uuid_helper.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
@@ -443,6 +442,8 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
     double min_crosswalk_user_velocity = declare_parameter<double>("min_crosswalk_user_velocity");
     double max_crosswalk_user_delta_yaw_threshold_for_lanelet =
       declare_parameter<double>("max_crosswalk_user_delta_yaw_threshold_for_lanelet");
+    double max_crosswalk_user_on_road_distance =
+      declare_parameter<double>("max_crosswalk_user_on_road_distance");
     bool use_crosswalk_signal =
       declare_parameter<bool>("crosswalk_with_signal.use_crosswalk_signal");
     double threshold_velocity_assumed_as_stopping =
@@ -458,11 +459,11 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
         "crosswalk_with_signal.timeout_set_for_no_intention_to_walk");
     predictor_vru_->setParameters(
       match_lost_and_appeared_crosswalk_users, min_crosswalk_user_velocity,
-      max_crosswalk_user_delta_yaw_threshold_for_lanelet, use_crosswalk_signal,
-      threshold_velocity_assumed_as_stopping, distance_set_for_no_intention_to_walk,
-      timeout_set_for_no_intention_to_walk, prediction_sampling_time_interval_,
-      prediction_time_horizon_.pedestrian, crossing_intention_duration,
-      no_crossing_intention_duration);
+      max_crosswalk_user_delta_yaw_threshold_for_lanelet, max_crosswalk_user_on_road_distance,
+      use_crosswalk_signal, threshold_velocity_assumed_as_stopping,
+      distance_set_for_no_intention_to_walk, timeout_set_for_no_intention_to_walk,
+      prediction_sampling_time_interval_, prediction_time_horizon_.pedestrian,
+      crossing_intention_duration, no_crossing_intention_duration);
   }
 
   // debug parameter

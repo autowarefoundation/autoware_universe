@@ -684,7 +684,31 @@ bool is_same_lane_with_prev_iteration(
          (prev_target_lanes.back().id() == prev_target_lanes.back().id());
 }
 
-bool is_ahead_of_ego(
+MinMaxValue calc_polygon_dist_range_from_terminal_end(
+  const PathWithLaneId & path, const autoware_utils_geometry::Polygon2d & polygon)
+{
+  MinMaxValue dist_from_terminal_end;
+
+  const auto & vertices = polygon.outer();
+  if (path.points.empty() || vertices.empty()) {
+    return {};
+  }
+
+  dist_from_terminal_end.max = -std::numeric_limits<double>::infinity();
+  dist_from_terminal_end.min = std::numeric_limits<double>::infinity();
+
+  for (const auto & vertex : vertices) {
+    const auto vertex_pt = autoware_utils::create_point(vertex.x(), vertex.y(), 0.0);
+    const auto dist_to_end = autoware::motion_utils::calcSignedArcLength(
+      path.points, vertex_pt, path.points.back().point.pose.position);
+    dist_from_terminal_end.min = std::min(dist_to_end, dist_from_terminal_end.min);
+    dist_from_terminal_end.max = std::max(dist_to_end, dist_from_terminal_end.max);
+  }
+
+  return dist_from_terminal_end;
+}
+
+EgoObjectProximity calc_ego_object_proximity(
   const CommonDataPtr & common_data_ptr, const PathWithLaneId & path,
   const ExtendedPredictedObject & object)
 {
@@ -693,27 +717,24 @@ bool is_ahead_of_ego(
     ego_info.max_longitudinal_offset_m + ego_info.rear_overhang_m, object.shape.dimensions.x);
 
   // we don't always have to check the distance accurately.
+  EgoObjectProximity ego_obj_proximity;
   if (std::abs(object.dist_from_ego) > lon_dev) {
-    return object.dist_from_ego >= 0.0;
+    ego_obj_proximity.is_ahead_of_ego = object.dist_from_ego >= 0.0;
+    return ego_obj_proximity;
   }
 
-  const auto & current_footprint = common_data_ptr->transient_data.current_footprint.outer();
-  auto ego_min_dist_to_end = std::numeric_limits<double>::max();
-  for (const auto & ego_edge_point : current_footprint) {
-    const auto ego_edge = autoware_utils::create_point(ego_edge_point.x(), ego_edge_point.y(), 0.0);
-    const auto dist_to_end = autoware::motion_utils::calcSignedArcLength(
-      path.points, ego_edge, path.points.back().point.pose.position);
-    ego_min_dist_to_end = std::min(dist_to_end, ego_min_dist_to_end);
+  ego_obj_proximity.ego_dist_to_terminal_end =
+    common_data_ptr->transient_data.ego_to_terminal_end_proximity;
+  ego_obj_proximity.object_dist_to_terminal_end =
+    calc_polygon_dist_range_from_terminal_end(path, object.initial_polygon);
+
+  if (ego_obj_proximity.ego_dist_to_terminal_end && ego_obj_proximity.object_dist_to_terminal_end) {
+    ego_obj_proximity.is_ahead_of_ego =
+      (ego_obj_proximity.ego_dist_to_terminal_end->min >=
+       ego_obj_proximity.object_dist_to_terminal_end->max);
   }
 
-  auto current_min_dist_to_end = std::numeric_limits<double>::max();
-  for (const auto & polygon_p : object.initial_polygon.outer()) {
-    const auto obj_p = autoware_utils::create_point(polygon_p.x(), polygon_p.y(), 0.0);
-    const auto dist_ego_to_obj = autoware::motion_utils::calcSignedArcLength(
-      path.points, obj_p, path.points.back().point.pose.position);
-    current_min_dist_to_end = std::min(dist_ego_to_obj, current_min_dist_to_end);
-  }
-  return ego_min_dist_to_end - current_min_dist_to_end >= 0.0;
+  return ego_obj_proximity;
 }
 
 bool is_before_terminal(
@@ -886,7 +907,7 @@ bool has_overtaking_turn_lane_object(
 
 bool filter_target_lane_objects(
   const CommonDataPtr & common_data_ptr, const ExtendedPredictedObject & object,
-  const double dist_ego_to_current_lanes_center, const bool ahead_of_ego,
+  const double dist_ego_to_current_lanes_center, const EgoObjectProximity & ego_object_proximity,
   const bool before_terminal, TargetLaneLeadingObjects & leading_objects,
   ExtendedPredictedObjects & trailing_objects)
 {
@@ -904,6 +925,8 @@ bool filter_target_lane_objects(
     return std::abs(lateral) > (vehicle_width / 2);
   });
 
+  const auto ahead_of_ego = ego_object_proximity.is_ahead_of_ego;
+
   const auto is_stopped = velocity_filter(
     object.initial_twist, -std::numeric_limits<double>::epsilon(), stopped_obj_vel_th);
   if (is_lateral_far && before_terminal) {
@@ -913,7 +936,7 @@ bool filter_target_lane_objects(
        object_path_overlaps_lanes(object, lanes_polygon.target));
 
     if (overlapping_with_target_lanes) {
-      if (!ahead_of_ego && !is_stopped) {
+      if ((!ahead_of_ego && !is_stopped) || ego_object_proximity.is_overlapping()) {
         trailing_objects.push_back(object);
         return true;
       }
@@ -1182,5 +1205,11 @@ bool is_valid_start_point(const lane_change::CommonDataPtr & common_data_ptr, co
   // Check the target lane because the previous approved path might be shifted by avoidance module
   return boost::geometry::covered_by(lc_start_point, target_neighbor_poly) ||
          boost::geometry::covered_by(lc_start_point, target_lane_poly);
+}
+
+bool is_moving_object(const CommonDataPtr & common_data_ptr, const ExtendedPredictedObject & object)
+{
+  return object.initial_twist.linear.x >
+         common_data_ptr->lc_param_ptr->safety.th_stopped_object_velocity;
 }
 }  // namespace autoware::behavior_path_planner::utils::lane_change
