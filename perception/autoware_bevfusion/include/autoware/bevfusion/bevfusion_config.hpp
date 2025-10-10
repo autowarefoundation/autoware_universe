@@ -39,9 +39,18 @@ public:
     const std::int64_t roi_width, const std::int64_t features_height,
     const std::int64_t features_width, const std::int64_t num_depth_features,
     const std::int64_t num_proposals, const float circle_nms_dist_threshold,
-    const std::vector<double> & yaw_norm_thresholds, const float score_threshold)
+    const std::vector<double> & yaw_norm_thresholds, const float score_threshold,
+    const bool use_intensity)
   {
+    if (use_intensity) {
+      // x, y, z, intensity, lag
+      num_point_feature_size_ = 5;
+    } else {
+      // x, y, z, lag
+      num_point_feature_size_ = 4;
+    }
     sensor_fusion_ = sensor_fusion;
+    use_intensity_ = use_intensity;
     plugins_path_ = plugins_path;
 
     out_size_factor_ = out_size_factor;
@@ -112,6 +121,7 @@ public:
 
   ///// MODALITY /////
   bool sensor_fusion_{};
+  bool use_intensity_{false};
 
   // CUDA parameters
   const std::uint32_t threads_per_block_{256};  // threads number for a block
@@ -128,7 +138,8 @@ public:
   std::int64_t min_num_voxels_{};
   std::int64_t max_num_voxels_{};
   std::int64_t max_points_per_voxel_;
-  const std::int64_t num_point_feature_size_{5};  // x, y, z, intensity, lag
+
+  std::int64_t num_point_feature_size_{5};  // x, y, z, intensity, lag
 
   // Pointcloud range in meters
   float min_x_range_{};

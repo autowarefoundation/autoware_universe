@@ -162,6 +162,11 @@
           "description": "Number of depth features used in the view transform.",
           "default": 118,
           "minimum": 0
+        },
+        "use_intensity": {
+          "type": "boolean",
+          "description": "Whether to use intensity feature in point cloud processing.",
+          "default": true
         }
       },
       "required": [
@@ -185,7 +190,8 @@
         "roi_width",
         "features_height",
         "features_width",
-        "num_depth_features"
+        "num_depth_features",
+        "use_intensity"
       ],
       "additionalProperties": false
     }
