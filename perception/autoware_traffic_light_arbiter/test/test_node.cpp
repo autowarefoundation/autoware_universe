@@ -108,6 +108,39 @@ void generatePerceptionMsg(
     }
     perception_msg.traffic_light_groups.push_back(traffic_light_groups);
   }
+  // traffic_light_group_id 2: 1015
+  {
+    TrafficSignal traffic_light_groups;
+    traffic_light_groups.traffic_light_group_id = 1015;
+    // elements 1: red + circle
+    {
+      TrafficElement elements;
+      elements.color = TrafficElement::RED;
+      elements.shape = TrafficElement::CIRCLE;
+      elements.status = TrafficElement::SOLID_ON;
+      elements.confidence = 0.1;
+      traffic_light_groups.elements.push_back(elements);
+    }
+    // predicted state
+    {
+      PredictedTrafficLightState predictions;
+      predictions.predicted_stamp = time;
+      predictions.predicted_stamp.sec += 10;
+      {
+        TrafficElement elements;
+        elements.color = TrafficElement::RED;
+        elements.shape = TrafficElement::CIRCLE;
+        elements.status = TrafficElement::SOLID_ON;
+        elements.confidence = 0.2;
+        predictions.simultaneous_elements.push_back(elements);
+      }
+      predictions.reliability = 1.0;
+      predictions.information_source =
+        PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION;
+      traffic_light_groups.predictions.push_back(predictions);
+    }
+    perception_msg.traffic_light_groups.push_back(traffic_light_groups);
+  }
 }
 
 void generateExternalMsg(
@@ -163,6 +196,38 @@ void generateExternalMsg(
         elements.shape = TrafficElement::CIRCLE;
         elements.status = TrafficElement::SOLID_ON;
         elements.confidence = 1.0;
+        predictions.simultaneous_elements.push_back(elements);
+      }
+      predictions.reliability = 1.0;
+      predictions.information_source = PredictedTrafficLightState::INFORMATION_SOURCE_V2I;
+      traffic_light_groups.predictions.push_back(predictions);
+    }
+    external_msg.traffic_light_groups.push_back(traffic_light_groups);
+  }
+  // traffic_light_group_id 2: 1018
+  {
+    TrafficSignal traffic_light_groups;
+    traffic_light_groups.traffic_light_group_id = 1018;
+    // elements 1: green + circle
+    {
+      TrafficElement elements;
+      elements.color = TrafficElement::GREEN;
+      elements.shape = TrafficElement::CIRCLE;
+      elements.status = TrafficElement::SOLID_ON;
+      elements.confidence = 0.3;
+      traffic_light_groups.elements.push_back(elements);
+    }
+    // predicted state
+    {
+      PredictedTrafficLightState predictions;
+      predictions.predicted_stamp = time;
+      predictions.predicted_stamp.sec += 10;
+      {
+        TrafficElement elements;
+        elements.color = TrafficElement::GREEN;
+        elements.shape = TrafficElement::CIRCLE;
+        elements.status = TrafficElement::SOLID_ON;
+        elements.confidence = 0.4;
         predictions.simultaneous_elements.push_back(elements);
       }
       predictions.reliability = 1.0;
@@ -236,6 +301,19 @@ bool isPredictedStatusEqual(
         gt_traffic_light_group.simultaneous_elements) == false) {
       return false;
     }
+
+    // check reliability
+    constexpr float error = std::numeric_limits<float>::epsilon();
+    if (
+      std::fabs(input_traffic_light_group.reliability - gt_traffic_light_group.reliability) >
+      error) {
+      return false;
+    }
+
+    // check information_source
+    if (input_traffic_light_group.information_source != gt_traffic_light_group.information_source) {
+      return false;
+    }
   }
   return true;
 }
@@ -252,9 +330,18 @@ bool isEqual(const TrafficSignalArray & input_msg, const TrafficSignalArray & gt
     return false;
   }
 
-  for (std::size_t group_idx = 0; group_idx < input_msg.traffic_light_groups.size(); ++group_idx) {
-    const auto & input_traffic_light_group = input_msg.traffic_light_groups.at(group_idx);
-    const auto & gt_traffic_light_group = gt_msg.traffic_light_groups.at(group_idx);
+  for (std::size_t input_idx = 0; input_idx < input_msg.traffic_light_groups.size(); ++input_idx) {
+    const auto & input_traffic_light_group = input_msg.traffic_light_groups.at(input_idx);
+    const auto & input_id = input_traffic_light_group.traffic_light_group_id;
+    // find the corresponding gt traffic_light_group
+    std::size_t gt_idx = 0;
+    for (; gt_idx < gt_msg.traffic_light_groups.size(); ++gt_idx) {
+      const auto & gt_traffic_light_group = gt_msg.traffic_light_groups.at(gt_idx);
+      if (gt_traffic_light_group.traffic_light_group_id == input_id) {
+        break;
+      }
+    }
+    const auto & gt_traffic_light_group = gt_msg.traffic_light_groups.at(gt_idx);
 
     // check traffic_light_group_id
     if (
@@ -445,10 +532,12 @@ TEST(TrafficLightArbiterTest, testTrafficSignalBothMsg)
   test_manager->set_subscriber<TrafficSignalArray>(output_topic, callback);
 
   // perception preparation
+  // perception has regulatory element 1012 and 1015
   TrafficSignalArray perception_msg;
   generatePerceptionMsg(perception_msg, test_target_node->now());
 
   // external preparation
+  // external has regulatory element 1012 and 1018
   TrafficSignalArray external_msg;
   generateExternalMsg(external_msg, test_target_node->now());
 
@@ -462,6 +551,10 @@ TEST(TrafficLightArbiterTest, testTrafficSignalBothMsg)
   // latest_msg should be equal to perception_msg without predictions because it has higher
   // confidence than external_msg
   TrafficSignalArray gt_msg = perception_msg;
+  std::set<lanelet::Id> perception_regulatory_element_ids;
+  for (const auto & traffic_light_group : perception_msg.traffic_light_groups) {
+    perception_regulatory_element_ids.insert(traffic_light_group.traffic_light_group_id);
+  }
   // predictions should be equal to combined predictions of external_msg and perception_msg
   for (auto & traffic_light_group : gt_msg.traffic_light_groups) {
     for (const auto & traffic_light_group_ex : external_msg.traffic_light_groups) {
@@ -472,6 +565,12 @@ TEST(TrafficLightArbiterTest, testTrafficSignalBothMsg)
           traffic_light_group.predictions.end(), traffic_light_group_ex.predictions.begin(),
           traffic_light_group_ex.predictions.end());
         break;
+      }
+      // if the regulatory element is not in perception_msg, add it
+      if (
+        perception_regulatory_element_ids.find(traffic_light_group_ex.traffic_light_group_id) ==
+        perception_regulatory_element_ids.end()) {
+        gt_msg.traffic_light_groups.emplace_back(traffic_light_group_ex);
       }
     }
   }
