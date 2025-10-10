@@ -2,9 +2,10 @@
   ros__parameters:
     # QP Smoother Parameters
     # Optimization weights
-    qp_weight_jerk: 10.0                      # Weight for jerk minimization (smoothness) [dimensionless]
-    qp_weight_acceleration: 1.0                # Weight for acceleration minimization [dimensionless]
-    qp_weight_fidelity: 100.0                  # Weight for staying close to original path [dimensionless]
+    # Balance between smoothness and path fidelity
+    qp_weight_jerk: 1000.0                     # Weight for path curvature minimization (smoothness) [dimensionless]
+    qp_weight_acceleration: 0.0                # Weight for acceleration minimization (not used in path-only mode) [dimensionless]
+    qp_weight_fidelity: 1.0                    # Weight for staying close to original path [dimensionless]
 
     # Dynamic constraints
     qp_max_longitudinal_jerk_mps3: 2.0         # Maximum longitudinal jerk [m/s³]
