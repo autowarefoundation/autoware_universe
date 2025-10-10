@@ -15,7 +15,6 @@
 #ifndef AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_STRUCTS_HPP_
 #define AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_STRUCTS_HPP_
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
-#include <nav_msgs/msg/detail/odometry__struct.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
 namespace autoware::trajectory_optimizer
