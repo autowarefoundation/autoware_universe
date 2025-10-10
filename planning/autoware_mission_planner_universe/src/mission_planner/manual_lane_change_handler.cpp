@@ -19,7 +19,8 @@
 namespace autoware::mission_planner_universe
 {
 
-std::vector<autoware_planning_msgs::msg::LaneletPrimitive> ManualLaneChangeHandler::sortPrimitivesLeftToRight(
+std::vector<autoware_planning_msgs::msg::LaneletPrimitive>
+ManualLaneChangeHandler::sortPrimitivesLeftToRight(
   const route_handler::RouteHandler & route_handler,
   autoware_planning_msgs::msg::LaneletPrimitive preferred_primitive,
   std::vector<autoware_planning_msgs::msg::LaneletPrimitive> primitives)
@@ -63,9 +64,9 @@ std::vector<autoware_planning_msgs::msg::LaneletPrimitive> ManualLaneChangeHandl
 LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
   const int64_t ego_lanelet_id, const SetPreferredLane::Request::SharedPtr req)
 {
-  const DIRECTION override_direction = req->lane_change_direction == 0 ? DIRECTION::MANUAL_LEFT :
-                                       req->lane_change_direction == 1 ? DIRECTION::MANUAL_RIGHT :
-                                                                         DIRECTION::AUTO;
+  const DIRECTION override_direction = req->lane_change_direction == 0   ? DIRECTION::MANUAL_LEFT
+                                       : req->lane_change_direction == 1 ? DIRECTION::MANUAL_RIGHT
+                                                                         : DIRECTION::AUTO;
   if (override_direction == DIRECTION::AUTO) {
     LaneletRoute route;
     // Use back-up
@@ -109,19 +110,22 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
     }
     auto start_iter_primitive = std::find_if(
       iter->primitives.begin(), iter->primitives.end(),
-      [&ego_lanelet_id](const autoware_planning_msgs::msg::LaneletPrimitive & p) { return p.id == ego_lanelet_id; });
+      [&ego_lanelet_id](const autoware_planning_msgs::msg::LaneletPrimitive & p) {
+        return p.id == ego_lanelet_id;
+      });
     if (start_iter_primitive != iter->primitives.end()) {
       start_iter = iter;
       break;
     }
   }
-  
+
   bool route_updated = false;
   for (auto iter = start_iter; iter != final_iter; ++iter) {
     auto & current_segment = *iter;
 
-    RCLCPP_INFO_STREAM(logger_, "Current segment preferred primitive ID: "
-                                  << current_segment.preferred_primitive.id);
+    RCLCPP_INFO_STREAM(
+      logger_,
+      "Current segment preferred primitive ID: " << current_segment.preferred_primitive.id);
 
     // Safely get next_segment iterator
     auto next_iter = std::next(iter);
@@ -130,7 +134,9 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
     // Find the index of the current preferred primitive
     auto current_it = std::find_if(
       current_segment.primitives.begin(), current_segment.primitives.end(),
-      [&](const autoware_planning_msgs::msg::LaneletPrimitive & p) { return p.id == current_segment.preferred_primitive.id; });
+      [&](const autoware_planning_msgs::msg::LaneletPrimitive & p) {
+        return p.id == current_segment.preferred_primitive.id;
+      });
     if (current_it == current_segment.primitives.end()) {
       throw std::runtime_error(
         "ManualLaneChangeHandler: Preferred primitive not found in current segment.");

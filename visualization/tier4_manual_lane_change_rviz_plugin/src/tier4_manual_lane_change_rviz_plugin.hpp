@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TIER4_MANUAL_LANE_CHANGE_RVIZ_PLUGIN__TIER4_MANUAL_LANE_CHANGE_RVIZ_PLUGIN_HPP_
-#define TIER4_MANUAL_LANE_CHANGE_RVIZ_PLUGIN__TIER4_MANUAL_LANE_CHANGE_RVIZ_PLUGIN_HPP_
+#ifndef TIER4_MANUAL_LANE_CHANGE_RVIZ_PLUGIN_HPP_
+#define TIER4_MANUAL_LANE_CHANGE_RVIZ_PLUGIN_HPP_
 
 #include <QHBoxLayout>
 #include <QPushButton>
@@ -43,4 +43,4 @@ private:
   QTimer * timer_;
 };
 
-#endif  // TIER4_MANUAL_LANE_CHANGE_RVIZ_PLUGIN__TIER4_MANUAL_LANE_CHANGE_RVIZ_PLUGIN_HPP_
+#endif  // TIER4_MANUAL_LANE_CHANGE_RVIZ_PLUGIN_HPP_

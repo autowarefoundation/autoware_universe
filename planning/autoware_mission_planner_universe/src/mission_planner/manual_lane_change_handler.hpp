@@ -17,19 +17,19 @@
 
 #include "service_utils.hpp"
 
+#include <autoware/mission_planner_universe/mission_planner_plugin.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
-#include <nav_msgs/msg/odometry.hpp>
 #include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_generators.hpp>
-
-#include <autoware/mission_planner_universe/mission_planner_plugin.hpp>
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/srv/set_lanelet_route.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 #include <tier4_planning_msgs/srv/set_preferred_lane.hpp>
+
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
 
 #include <optional>
 #include <string>
@@ -74,8 +74,7 @@ public:
 
     sub_odometry_ = create_subscription<nav_msgs::msg::Odometry>(
       "~/input/odometry", rclcpp::QoS(1),
-      [this](const nav_msgs::msg::Odometry::ConstSharedPtr msg) { odometry_ = msg; }
-    );
+      [this](const nav_msgs::msg::Odometry::ConstSharedPtr msg) { odometry_ = msg; });
 
     sub_route_ = create_subscription<LaneletRoute>(
       "/planning/mission_planning/route", rclcpp::QoS(1).transient_local(),
@@ -84,13 +83,11 @@ public:
         auto route = *msg;
         planner_->updateRoute(*msg);
 
-        std::for_each(
-          route.segments.begin(), route.segments.end(), [&](auto & segment) {
-            const auto& route_handler = planner_->getRouteHandler();
-            segment.primitives =
-              sortPrimitivesLeftToRight(route_handler, segment.preferred_primitive, segment.primitives);
-          }
-        );
+        std::for_each(route.segments.begin(), route.segments.end(), [&](auto & segment) {
+          const auto & route_handler = planner_->getRouteHandler();
+          segment.primitives = sortPrimitivesLeftToRight(
+            route_handler, segment.preferred_primitive, segment.primitives);
+        });
 
         // trim route from the current position
 
@@ -110,19 +107,15 @@ public:
 
         current_route_ = std::make_shared<LaneletRoute>(route);
         planner_->updateRoute(*current_route_);
-      }
-    );
+      });
 
     srv_set_preferred_lane = create_service<SetPreferredLane>(
       "~/set_preferred_lane",
-      service_utils::handle_exception(
-        &ManualLaneChangeHandler::set_preferred_lane,
-        this
-      )
-    );
+      service_utils::handle_exception(&ManualLaneChangeHandler::set_preferred_lane, this));
 
-    pub_processing_time_ = this->create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "~/debug/processing_time_ms", 1);
+    pub_processing_time_ =
+      this->create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
+        "~/debug/processing_time_ms", 1);
   }
 
   void publish_processing_time(autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch)
@@ -132,18 +125,18 @@ public:
     processing_time_msg.data = stop_watch.toc();
     pub_processing_time_->publish(processing_time_msg);
   }
-private:
 
+private:
   std::vector<autoware_planning_msgs::msg::LaneletPrimitive> sortPrimitivesLeftToRight(
     const route_handler::RouteHandler & route_handler,
     autoware_planning_msgs::msg::LaneletPrimitive preferred_primitive,
     std::vector<autoware_planning_msgs::msg::LaneletPrimitive> primitives);
 
   void set_preferred_lane(
-    const SetPreferredLane::Request::SharedPtr req,
-    const SetPreferredLane::Response::SharedPtr res) {
-
-    auto client = this->create_client<autoware_planning_msgs::srv::SetLaneletRoute>("/planning/set_lanelet_route");
+    const SetPreferredLane::Request::SharedPtr req, const SetPreferredLane::Response::SharedPtr res)
+  {
+    auto client = this->create_client<autoware_planning_msgs::srv::SetLaneletRoute>(
+      "/planning/set_lanelet_route");
     // Wait for the service to be available
     if (!client->wait_for_service(std::chrono::seconds(5))) {
       RCLCPP_ERROR(logger_, "Service /planning/set_lanelet_route not available.");
@@ -151,8 +144,9 @@ private:
       res->status.message = "Service /planning/set_lanelet_route not available.";
       return;
     }
-    
-    lanelet::ConstLanelet closest_lanelet = get_lanelet_by_id_(current_route_->segments.front().preferred_primitive.id);
+
+    lanelet::ConstLanelet closest_lanelet =
+      get_lanelet_by_id_(current_route_->segments.front().preferred_primitive.id);
     const bool found_closest_lane = planner_->getRouteHandler().getClosestLaneletWithinRoute(
       odometry_->pose.pose, &closest_lanelet);
 
@@ -163,41 +157,44 @@ private:
       return;
     }
 
-    RCLCPP_INFO_STREAM(
-      logger_, "Closest lanelet ID to ego: " << closest_lanelet.id());
+    RCLCPP_INFO_STREAM(logger_, "Closest lanelet ID to ego: " << closest_lanelet.id());
 
-    LaneChangeRequestResult lane_change_request_result = this->process_lane_change_request(closest_lanelet.id(), req);
+    LaneChangeRequestResult lane_change_request_result =
+      this->process_lane_change_request(closest_lanelet.id(), req);
 
-    std::shared_ptr<autoware_planning_msgs::srv::SetLaneletRoute::Request> set_lanelet_route_req = std::make_shared<autoware_planning_msgs::srv::SetLaneletRoute::Request>();
+    std::shared_ptr<autoware_planning_msgs::srv::SetLaneletRoute::Request> set_lanelet_route_req =
+      std::make_shared<autoware_planning_msgs::srv::SetLaneletRoute::Request>();
     set_lanelet_route_req->header = current_route_->header;
     set_lanelet_route_req->goal_pose = current_route_->goal_pose;
-    
+
     // Generate a new UUID for the route
     boost::uuids::random_generator gen;
     boost::uuids::uuid uuid = gen();
     std::copy(uuid.begin(), uuid.end(), set_lanelet_route_req->uuid.uuid.begin());
     set_lanelet_route_req->allow_modification = current_route_->allow_modification;
     set_lanelet_route_req->segments = lane_change_request_result.route.segments;
-    set_lanelet_route_req->emphasise_goal_lanes = req->lane_change_direction != 2; // Emphasise goal lanes for manual lane changes
+    set_lanelet_route_req->emphasise_goal_lanes =
+      req->lane_change_direction != 2;  // Emphasise goal lanes for manual lane changes
 
-    auto future = client->async_send_request(set_lanelet_route_req,
-        [this](rclcpp::Client<autoware_planning_msgs::srv::SetLaneletRoute>::SharedFuture future) {
-            auto response = future.get();
-            if (response->status.success) {
-                RCLCPP_INFO(this->get_logger(), "Successfully set lanelet route!");
-            } else {
-                RCLCPP_WARN(this->get_logger(), "Failed to set lanelet route: %s", response->status.message.c_str());
-            }
+    auto future = client->async_send_request(
+      set_lanelet_route_req,
+      [this](rclcpp::Client<autoware_planning_msgs::srv::SetLaneletRoute>::SharedFuture future) {
+        auto response = future.get();
+        if (response->status.success) {
+          RCLCPP_INFO(this->get_logger(), "Successfully set lanelet route!");
+        } else {
+          RCLCPP_WARN(
+            this->get_logger(), "Failed to set lanelet route: %s",
+            response->status.message.c_str());
         }
-    );
-    
+      });
+
     res->status.success = lane_change_request_result.success;
     res->status.message = lane_change_request_result.message;
   }
 
   LaneChangeRequestResult process_lane_change_request(
     const int64_t ego_lanelet_id, const SetPreferredLane::Request::SharedPtr req);
-
 
   rclcpp::Service<SetPreferredLane>::SharedPtr srv_set_preferred_lane;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr sub_odometry_;
