@@ -58,8 +58,7 @@ MotionEvaluatorNode::~MotionEvaluatorNode()
     json j;
     for (Metric metric : metrics_) {
       const std::string base_name = metric_to_str.at(metric) + "/";
-      const auto & stat = metrics_calculator_.calculate(
-        metric, accumulated_trajectory_, vehicle_info_.vehicle_length_m);
+      const auto & stat = metrics_calculator_.calculate(metric, accumulated_trajectory_);
       if (stat) {
         j[base_name + "min"] = stat->min();
         j[base_name + "max"] = stat->max();
