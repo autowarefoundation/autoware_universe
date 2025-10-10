@@ -585,6 +585,44 @@ protected:
     return existApprovedRequest();
   }
 
+  /**
+   * @brief Checks if any registered module is currently forced activated.
+   *
+   * A module is considered 'force activated' if it has been commanded to ACTIVATE but is currently
+   * operating in an unsafe state or was explicitly requested, ignoring the normal 'safe' constraint
+   * for activation. This check bypasses the standard safety/auto-mode logic and focuses purely on
+   * an overriding command state (ACTIVATE) while the module is either WAITING_FOR_EXECUTION or
+   * RUNNING.
+   *
+   * @return bool True if at least one registered module is force-activated, false otherwise.
+   */
+  bool is_rtc_force_activated() const
+  {
+    return std::any_of(
+      rtc_interface_ptr_map_.begin(), rtc_interface_ptr_map_.end(), [&](const auto & rtc) {
+        const auto & [module_name, rtc_ptr] = rtc;
+        return rtc_ptr->isForceActivated(uuid_map_.at(module_name));
+      });
+  }
+
+  /**
+   * @brief Checks if any registered module is currently forced deactivated.
+   *
+   * A module is typically considered force deactivated if it
+   * has been commanded to DEACTIVATE despite potentially meeting conditions that would
+   * normally permit activation (e.g., overriding a 'safe' state).
+   *
+   * @return bool True if at least one registered module is force-deactivated, false otherwise.
+   */
+  bool is_rtc_force_deactivated() const
+  {
+    return std::any_of(
+      rtc_interface_ptr_map_.begin(), rtc_interface_ptr_map_.end(), [&](const auto & rtc) {
+        const auto & [module_name, rtc_ptr] = rtc;
+        return rtc_ptr->isForceDeactivated(uuid_map_.at(module_name));
+      });
+  }
+
   void removeRTCStatus()
   {
     for (const auto & [module_name, ptr] : rtc_interface_ptr_map_) {
