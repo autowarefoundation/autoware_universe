@@ -96,11 +96,23 @@ void TrajectoryQPSmoother::optimize_trajectory(
     return;
   }
 
-  // Validate input
+  // Validate input: minimum point count
   if (traj_points.size() < 3) {
     RCLCPP_WARN_THROTTLE(
       get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
       "QP Smoother: Trajectory too short (< 3 points), skipping optimization");
+    return;
+  }
+
+  // Check minimum path length (skip optimization for very short paths)
+  const double path_length = autoware::motion_utils::calcArcLength(traj_points);
+  constexpr double min_path_length_m = 5.0;  // Minimum 5 meters for meaningful smoothing
+
+  if (path_length < min_path_length_m) {
+    RCLCPP_DEBUG_THROTTLE(
+      get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
+      "QP Smoother: Path too short (%.2f m < %.2f m), skipping optimization", path_length,
+      min_path_length_m);
     return;
   }
 
