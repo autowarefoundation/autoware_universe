@@ -374,6 +374,12 @@ public:
       return std::make_pair(false, true);
     }
 
+    if (
+      object.is_adjacent_lane_stop_vehicle &&
+      parameters_->policy_adjacent_lane_stop_vehicle == "manual") {
+      return std::make_pair(false, true);
+    }
+
     // if the object is NOT ambiguous, this module doesn't wait operator approval if RTC is running
     // as AUTO mode.
     if (!object.is_ambiguous) {

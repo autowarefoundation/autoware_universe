@@ -67,6 +67,7 @@ enum class ObjectInfo {
   // others
   AMBIGUOUS_STOPPED_VEHICLE,
   PARKING_VIOLATION_VEHICLE,
+  IS_ADJACENT_LANE_STOP_VEHICLE,
 };
 
 struct ObjectParameter
@@ -116,6 +117,9 @@ struct AvoidanceParameters
 
   // enable avoidance for parking violation vehicle
   std::string policy_parking_violation_vehicle{"ignore"};
+
+  // enable avoidance for adjacent lane stop vehicle
+  std::string policy_adjacent_lane_stop_vehicle{"auto"};
 
   // enable yield maneuver.
   bool enable_yield_maneuver{false};
@@ -468,6 +472,9 @@ struct ObjectData  // avoidance target
 
   // is driving on ego current lane
   bool is_on_ego_lane{false};
+
+  // is driving on adjacent lane
+  bool is_adjacent_lane_stop_vehicle{false};
 
   // is ambiguous stopped vehicle.
   bool is_ambiguous{false};
