@@ -322,7 +322,7 @@ void MissionPlanner::on_set_lanelet_route(
       ResponseCode::ERROR_REROUTE_FAILED, "New route is not safe. Reroute failed.");
   }
 
-  change_route(route, req->emphasise_goal_lanes);
+  change_route(route);
   change_state(RouteState::SET);
   res->status.success = true;
 
