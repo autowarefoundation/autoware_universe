@@ -427,8 +427,8 @@ MPTOptimizer::MPTOptimizer(
   debug_ref_traj_pub_ = node->create_publisher<Trajectory>("~/debug/mpt_ref_traj", 1);
   debug_mpt_traj_pub_ = node->create_publisher<Trajectory>("~/debug/mpt_traj", 1);
 
-  debug_spline_pub_ =
-   node->create_publisher<autoware_internal_debug_msgs::msg::SplineDebug>("~/debug/spline_coefficients", 1);
+  debug_spline_pub_ = node->create_publisher<autoware_internal_debug_msgs::msg::SplineDebug>(
+    "~/debug/spline_coefficients", 1);
 }
 
 void MPTOptimizer::updateVehicleCircles()
