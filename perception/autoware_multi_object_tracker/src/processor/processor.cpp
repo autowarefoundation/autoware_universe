@@ -552,6 +552,8 @@ void TrackerProcessor::getMergedObjects(
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   merged_objects.header.stamp = time;
+  merged_objects.objects.clear();
+  merged_objects.objects.reserve(list_tracker_.size());
   types::DynamicObject tracked_object;
   for (const auto & tracker : list_tracker_) {
     constexpr bool to_publish = false;
