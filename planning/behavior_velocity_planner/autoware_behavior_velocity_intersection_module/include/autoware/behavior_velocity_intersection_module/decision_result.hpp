@@ -46,7 +46,6 @@ struct StuckStop
 {
   size_t closest_idx{0};
   size_t stuck_stopline_idx{0};
-  std::optional<size_t> occlusion_stopline_idx{std::nullopt};
 };
 
 /**
@@ -56,7 +55,6 @@ struct YieldStuckStop
 {
   size_t closest_idx{0};
   size_t stuck_stopline_idx{0};
-  std::string occlusion_report;
 };
 
 /**
@@ -98,6 +96,7 @@ struct PeekingTowardOcclusion
   //! intersection_occlusion(x.y)
   std::optional<double> static_occlusion_timeout{std::nullopt};
   std::string occlusion_report;
+  bool disable_occlusion_stop_for_will_overrun;  // to avoid will_overrun MRM
 };
 
 /**
@@ -113,6 +112,8 @@ struct OccludedCollisionStop
   //! contains the remaining time to release the static occlusion stuck
   std::optional<double> static_occlusion_timeout{std::nullopt};
   std::string occlusion_report;
+  bool disable_collision_stop_for_will_overrun;  // to avoid will_overrun MRM
+  bool disable_occlusion_stop_for_will_overrun;  // to avoid will_overrun MRM
 };
 
 /**
@@ -127,6 +128,8 @@ struct OccludedAbsenceTrafficLight
   size_t occlusion_stopline_idx{0};
   size_t peeking_limit_line_idx{0};
   std::string occlusion_report;
+  bool disable_collision_stop_for_will_overrun;  // to avoid will_overrun MRM
+  bool disable_occlusion_stop_for_will_overrun;  // to avoid will_overrun MRM
 };
 
 /**
