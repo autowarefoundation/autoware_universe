@@ -20,16 +20,19 @@ namespace autoware::stop_mode_operator
 void ContinuousCondition::update(const rclcpp::Time & stamp, bool condition)
 {
   if (!condition) {
+    last_stamp_ = std::nullopt;
     start_stamp_ = std::nullopt;
-  } else if (!start_stamp_) {
-    start_stamp_ = stamp;
+  } else {
+    last_stamp_ = stamp;
+    start_stamp_ = start_stamp_.value_or(stamp);
   }
 }
 
 void ContinuousCondition::update(const rclcpp::Time & stamp, double timeout)
 {
-  if (start_stamp_) {
-    if (timeout <= (stamp - *start_stamp_).seconds()) {
+  if (last_stamp_) {
+    if (timeout <= (stamp - *last_stamp_).seconds()) {
+      last_stamp_ = std::nullopt;
       start_stamp_ = std::nullopt;
     }
   }

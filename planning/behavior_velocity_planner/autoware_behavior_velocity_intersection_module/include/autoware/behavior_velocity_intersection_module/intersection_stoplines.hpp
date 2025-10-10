@@ -38,21 +38,10 @@ struct IntersectionStopLines
   std::optional<size_t> default_stopline{std::nullopt};
 
   /**
-   * collision_stopline is ahead of closest_idx by the braking distance
-   */
-  size_t collision_stopline{0};
-
-  /**
    * first_attention_stopline is null if ego footprint along the path does not intersect with
    * attention area. if path[0] satisfies the condition, it is 0
    */
   std::optional<size_t> first_attention_stopline{std::nullopt};
-
-  /**
-   * second_attention_stopline is null if ego footprint along the path does not intersect with
-   * second_attention_lane. if path[0] satisfies the condition, it is 0
-   */
-  std::optional<size_t> second_attention_stopline{std::nullopt};
 
   /**
    * occlusion_peeking_stopline is null if path[0] is already inside the attention area
@@ -60,16 +49,10 @@ struct IntersectionStopLines
   std::optional<size_t> occlusion_peeking_stopline{std::nullopt};
 
   /**
-   * first_pass_judge_line is before first_attention_stopline by the braking distance. if its value
+   * pass_judge_line is before first_attention_stopline by the braking distance. if its value
    * is calculated negative, it is 0
    */
-  size_t first_pass_judge_line{0};
-
-  /**
-   * second_pass_judge_line is before second_attention_stopline by the braking distance. if
-   * second_attention_lane is null, it is null
-   */
-  std::optional<size_t> second_pass_judge_line{std::nullopt};
+  size_t pass_judge_line{0};
 
   /**
    * occlusion_wo_tl_pass_judge_line is null if ego footprint along the path does not intersect with

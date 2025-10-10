@@ -161,6 +161,17 @@ AvoidanceParameters getParameter(rclcpp::Node * node)
   }
 
   {
+    const std::string ns = "avoidance.target_filtering.avoidance_for_parking_violation_vehicle.";
+    p.policy_parking_violation_vehicle =
+      get_or_declare_parameter<std::string>(*node, ns + "policy");
+  }
+  {
+    const std::string ns = "avoidance.target_filtering.avoidance_for_adjacent_lane_stop_vehicle.";
+    p.policy_adjacent_lane_stop_vehicle =
+      get_or_declare_parameter<std::string>(*node, ns + "policy");
+  }
+
+  {
     const std::string ns = "avoidance.target_filtering.freespace.";
     p.freespace_condition_th_stopped_time =
       get_or_declare_parameter<double>(*node, ns + "condition.th_stopped_time");
