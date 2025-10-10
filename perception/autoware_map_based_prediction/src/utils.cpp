@@ -21,9 +21,11 @@
 
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/LaneletMap.h>
+#include <lanelet2_core/primitives/Lanelet.h>
 
 #include <algorithm>
 #include <deque>
+#include <limits>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -494,6 +496,33 @@ LaneletsData getCurrentLanelets(
   }
 
   return LaneletsData{};
+}
+
+double lateral_distance_to_lanelet_bounds(
+  const lanelet::ConstLanelet & ll, const geometry_msgs::msg::Point & point)
+{
+  auto distance = std::numeric_limits<double>::max();
+  for (const auto & bound : {ll.leftBound(), ll.rightBound()}) {
+    const auto p = lanelet::BasicPoint2d(point.x, point.y);
+    const auto nearest_segment = lanelet::utils::getClosestSegment(p, bound);
+    if (nearest_segment.size() < 2) {
+      continue;
+    }
+    const auto nearest_segment_vector =
+      nearest_segment[1].basicPoint2d() - nearest_segment[0].basicPoint2d();
+    if (nearest_segment_vector.isZero()) {
+      continue;
+    }
+    // project the point onto the infinite line made by the nearest segment
+    const double t = ((p.x() - nearest_segment[0].x()) * nearest_segment_vector.x() +
+                      (p.y() - nearest_segment[0].y()) * nearest_segment_vector.y()) /
+                     (nearest_segment_vector.squaredNorm());
+    const auto projected_object = nearest_segment[0].basicPoint2d() + nearest_segment_vector * t;
+    const auto bound_distance = boost::geometry::distance(
+      p, lanelet::BasicPoint2d(projected_object.x(), projected_object.y()));
+    distance = std::min(distance, bound_distance);
+  }
+  return distance;
 }
 
 }  // namespace utils
