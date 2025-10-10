@@ -426,6 +426,9 @@ MPTOptimizer::MPTOptimizer(
   debug_fixed_traj_pub_ = node->create_publisher<Trajectory>("~/debug/mpt_fixed_traj", 1);
   debug_ref_traj_pub_ = node->create_publisher<Trajectory>("~/debug/mpt_ref_traj", 1);
   debug_mpt_traj_pub_ = node->create_publisher<Trajectory>("~/debug/mpt_traj", 1);
+
+  debug_spline_pub_ = node->create_publisher<autoware_internal_debug_msgs::msg::SplineDebug>(
+    "~/debug/spline_coefficients", 1);
 }
 
 void MPTOptimizer::updateVehicleCircles()
@@ -535,6 +538,69 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::getPrevOptimizedTrajec
   return std::nullopt;
 }
 
+void MPTOptimizer::publishSplineCoefficientsAndCurvatures(
+  const autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline) const
+{
+  // Get spline coefficients for x and y
+  const auto & knots = ref_points_spline.getSplineKnots();
+  const auto & x_coeffs = ref_points_spline.getSplineCoefficientsX();
+  const auto & y_coeffs = ref_points_spline.getSplineCoefficientsY();
+  const auto & curvatures = ref_points_spline.getSplineInterpolatedCurvatures();
+
+  // Create a Float32MultiArray message
+  std_msgs::msg::Float32MultiArray msg_knots;
+  msg_knots.layout.dim.push_back(std_msgs::msg::MultiArrayDimension());
+  msg_knots.layout.dim[0].size = knots.size();
+  msg_knots.layout.dim[0].stride = knots.size();
+  msg_knots.layout.dim[0].label = "knots";
+
+  for (size_t i = 0; i < static_cast<size_t>(knots.size()); ++i) {
+    msg_knots.data.push_back(knots[i]);
+  }
+
+  std_msgs::msg::Float32MultiArray msg_x;
+  msg_x.layout.dim.push_back(std_msgs::msg::MultiArrayDimension());
+  msg_x.layout.dim[0].size = x_coeffs.size();
+  msg_x.layout.dim[0].stride = 4;
+  msg_x.layout.dim[0].label = "x_coeffs";
+
+  // Populate the message with spline coefficients
+  for (size_t i = 0; i < static_cast<size_t>(x_coeffs.size()); ++i) {
+    msg_x.data.push_back(x_coeffs[i]);
+  }
+
+  // Create a Float32MultiArray message
+  std_msgs::msg::Float32MultiArray msg_y;
+  msg_y.layout.dim.push_back(std_msgs::msg::MultiArrayDimension());
+  msg_y.layout.dim[0].size = y_coeffs.size();
+  msg_y.layout.dim[0].stride = y_coeffs.size();
+  msg_y.layout.dim[0].label = "y_coeffs";
+
+  // Populate the message with spline coefficients
+  for (size_t i = 0; i < static_cast<size_t>(y_coeffs.size()); ++i) {
+    msg_y.data.push_back(y_coeffs[i]);
+  }
+
+  // Create a Float32MultiArray message
+  std_msgs::msg::Float32MultiArray msg_curvatures;
+  msg_curvatures.layout.dim.push_back(std_msgs::msg::MultiArrayDimension());
+  msg_curvatures.layout.dim[0].size = curvatures.size();
+  msg_curvatures.layout.dim[0].stride = curvatures.size();
+  msg_curvatures.layout.dim[0].label = "curvatures";
+
+  // Populate the message with curvatures
+  for (size_t i = 0; i < static_cast<size_t>(curvatures.size()); ++i) {
+    msg_curvatures.data.push_back(curvatures[i]);
+  }
+
+  autoware_internal_debug_msgs::msg::SplineDebug msg;
+  msg.knots = msg_knots;
+  msg.x_coeffs = msg_x;
+  msg.y_coeffs = msg_y;
+  msg.curvatures = msg_curvatures;
+  debug_spline_pub_->publish(msg);
+}
+
 std::vector<ReferencePoint> MPTOptimizer::calcReferencePoints(
   const PlannerData & planner_data, const std::vector<TrajectoryPoint> & smoothed_points) const
 {
@@ -573,6 +639,8 @@ std::vector<ReferencePoint> MPTOptimizer::calcReferencePoints(
   // 3. calculate orientation and curvature
   updateOrientation(ref_points, ref_points_spline);
   updateCurvature(ref_points, ref_points_spline);
+
+  publishSplineCoefficientsAndCurvatures(ref_points_spline);
 
   // 4. crop backward
   // NOTE: Start point may change. Spline calculation is required.
