@@ -29,4 +29,4 @@ In y-axis threshold filter, if y-axis velocity of RadarTrack is more than `veloc
 
 ## Parameters
 
-{{ json_to_markdown("sensing/autoware_radar_tracks_noise_filter/schema/<radar_tracks_noise_filter.schema.json") }}
+{{ json_to_markdown("sensing/autoware_radar_tracks_noise_filter/schema/radar_tracks_noise_filter.schema.json") }}
