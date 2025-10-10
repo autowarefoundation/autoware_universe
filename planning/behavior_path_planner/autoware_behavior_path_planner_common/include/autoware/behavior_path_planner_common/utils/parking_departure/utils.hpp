@@ -20,6 +20,7 @@
 #include "autoware/behavior_path_planner_common/utils/path_safety_checker/path_safety_checker_parameters.hpp"
 
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -70,7 +71,8 @@ std::pair<double, double> getPairsTerminalVelocityAndAccel(
 
 std::optional<PathWithLaneId> generateFeasibleStopPath(
   PathWithLaneId & current_path, std::shared_ptr<const PlannerData> planner_data,
-  PoseWithDetailOpt & stop_pose, const double maximum_deceleration, const double maximum_jerk);
+  PoseWithDetailOpt & stop_pose, const double maximum_deceleration, const double maximum_jerk,
+  const std::string & stop_reason = "");
 
 /**
  * @brief calculate end arc length to generate reference path considering the goal position
