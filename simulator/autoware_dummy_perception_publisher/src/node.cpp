@@ -16,6 +16,7 @@
 
 #include "autoware/dummy_perception_publisher/predicted_object_movement_plugin.hpp"
 #include "autoware/dummy_perception_publisher/straight_line_object_movement_plugin.hpp"
+#include "autoware/point_types/types.hpp"
 #include "autoware_utils_geometry/geometry.hpp"
 
 #include <autoware_utils_uuid/uuid_helper.hpp>
@@ -117,6 +118,27 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
   movement_plugins_.push_back(std::make_shared<pluginlib::PredictedObjectMovementPlugin>(this));
 }
 
+pcl::PointCloud<autoware::point_types::PointXYZIRC>
+DummyPerceptionPublisherNode::convertPointCloudXYZtoXYZIRC(
+  const pcl::PointCloud<pcl::PointXYZ>::Ptr & input_cloud) const
+{
+  pcl::PointCloud<autoware::point_types::PointXYZIRC> cloud_xyzirc;
+  cloud_xyzirc.reserve(input_cloud->size());
+
+  for (const auto & pt_xyz : input_cloud->points) {
+    autoware::point_types::PointXYZIRC p_xyzirc;
+    p_xyzirc.x = pt_xyz.x;
+    p_xyzirc.y = pt_xyz.y;
+    p_xyzirc.z = pt_xyz.z;
+    p_xyzirc.intensity = 0;
+    p_xyzirc.return_type = 0;
+    p_xyzirc.channel = 0;
+    cloud_xyzirc.push_back(p_xyzirc);
+  }
+
+  return cloud_xyzirc;
+}
+
 void DummyPerceptionPublisherNode::timerCallback()
 {
   // output msgs
@@ -190,11 +212,13 @@ void DummyPerceptionPublisherNode::timerCallback()
     new pcl::PointCloud<pcl::PointXYZ>);
 
   if (all_objects.empty()) {
-    pcl::toROSMsg(*merged_pointcloud_ptr, output_pointcloud_msg);
+    const auto pointcloud_xyzirc = convertPointCloudXYZtoXYZIRC(merged_pointcloud_ptr);
+    pcl::toROSMsg(pointcloud_xyzirc, output_pointcloud_msg);
   } else {
     pointcloud_creator_->create_pointclouds(
       obj_infos, tf_base_link2map, random_generator_, merged_pointcloud_ptr);
-    pcl::toROSMsg(*merged_pointcloud_ptr, output_pointcloud_msg);
+    const auto pointcloud_xyzirc = convertPointCloudXYZtoXYZIRC(merged_pointcloud_ptr);
+    pcl::toROSMsg(pointcloud_xyzirc, output_pointcloud_msg);
   }
   if (!selected_indices.empty()) {
     std::vector<ObjectInfo> detected_obj_infos;
@@ -240,7 +264,8 @@ void DummyPerceptionPublisherNode::timerCallback()
         tf_base_link2noised_moved_object,
         feature_object.object.kinematics.pose_with_covariance.pose);
       feature_object.object.shape = object.shape;
-      pcl::toROSMsg(*pointcloud, feature_object.feature.cluster);
+      const auto pointcloud_xyzirc = convertPointCloudXYZtoXYZIRC(pointcloud);
+      pcl::toROSMsg(pointcloud_xyzirc, feature_object.feature.cluster);
       output_dynamic_object_msg.feature_objects.push_back(feature_object);
 
       // check delete idx

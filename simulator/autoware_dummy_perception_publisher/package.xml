@@ -23,6 +23,7 @@
 
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_trajectory</depend>
+  <depend>autoware_point_types</depend>
   <depend>autoware_utils_geometry</depend>
   <depend>autoware_utils_rclcpp</depend>
   <depend>autoware_utils_uuid</depend>
