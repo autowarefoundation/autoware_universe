@@ -687,7 +687,7 @@ std::optional<size_t> IntersectionModule::checkAngleForTargetLanelets(
 {
   const double detection_area_angle_thr = planner_param_.common.attention_area_angle_threshold;
   const bool consider_wrong_direction_vehicle =
-    planner_param_.common.attention_area_angle_threshold;
+    planner_param_.collision_detection.consider_wrong_direction_vehicle;
   const double dist_margin = planner_param_.common.attention_area_margin;
 
   for (unsigned i = 0; i < target_lanelets.size(); ++i) {
