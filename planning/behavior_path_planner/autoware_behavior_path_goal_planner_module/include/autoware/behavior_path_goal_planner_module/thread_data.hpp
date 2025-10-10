@@ -95,6 +95,8 @@ public:
     initializeOccupancyGridMap(planner_data, parameters_);
   };
 
+  FreespaceParkingRequest(const FreespaceParkingRequest & other);
+
   const ModuleStatus & getCurrentStatus() const { return current_status_; }
   void update(
     const PlannerData & planner_data, const ModuleStatus & current_status,
