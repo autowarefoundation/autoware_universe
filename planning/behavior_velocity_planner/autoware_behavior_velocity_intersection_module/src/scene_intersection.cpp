@@ -836,7 +836,7 @@ void reactRTCApprovalByDecisionResult(
   [[maybe_unused]] planning_factor_interface::PlanningFactorInterface *
     planning_factor_interface_for_occlusion,
   IntersectionModule::DebugData * debug_data,
-  IntersectionStopLines::PreviousStopPose * previous_stop_pose)
+  [[maybe_unused]] IntersectionStopLines::PreviousStopPose * previous_stop_pose)
 {
   RCLCPP_DEBUG(
     rclcpp::get_logger("reactRTCApprovalByDecisionResult"),
@@ -849,7 +849,8 @@ void reactRTCApprovalByDecisionResult(
     planning_utils::setVelocityFromIndex(stopline_idx, 0.0, path);
 
     const auto stop_pose = path->points.at(stopline_idx).point.pose;
-    previous_stop_pose->collision_stopline_pose = stop_pose;
+    // NOTE(soblin): following process is not intentionally off
+    // previous_stop_pose->collision_stopline_pose = stop_pose;
 
     debug_data->collision_stop_wall_pose =
       planning_utils::getAheadPose(stopline_idx, baselink2front, *path);
@@ -873,7 +874,7 @@ void reactRTCApprovalByDecisionResult(
   [[maybe_unused]] planning_factor_interface::PlanningFactorInterface *
     planning_factor_interface_for_occlusion,
   IntersectionModule::DebugData * debug_data,
-  IntersectionStopLines::PreviousStopPose * previous_stop_pose)
+  [[maybe_unused]] IntersectionStopLines::PreviousStopPose * previous_stop_pose)
 {
   RCLCPP_DEBUG(
     rclcpp::get_logger("reactRTCApprovalByDecisionResult"),
@@ -886,7 +887,8 @@ void reactRTCApprovalByDecisionResult(
     planning_utils::setVelocityFromIndex(stopline_idx, 0.0, path);
 
     const auto stop_pose = path->points.at(stopline_idx).point.pose;
-    previous_stop_pose->collision_stopline_pose = stop_pose;
+    // NOTE(soblin): following process is not intentionally off
+    // previous_stop_pose->collision_stopline_pose = stop_pose;
 
     debug_data->collision_stop_wall_pose =
       planning_utils::getAheadPose(stopline_idx, baselink2front, *path);
