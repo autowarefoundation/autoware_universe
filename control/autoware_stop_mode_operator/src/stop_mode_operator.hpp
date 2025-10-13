@@ -27,8 +27,6 @@
 #include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
 #include <autoware_vehicle_msgs/msg/velocity_report.hpp>
 
-#include <optional>
-
 namespace autoware::stop_mode_operator
 {
 
@@ -64,7 +62,6 @@ private:
   SteeringReport current_steering_;
   RouteState current_route_state_;
   ContinuousCondition vehicle_stop_check_;
-  std::optional<bool> last_parking_;
 
   double stop_hold_acceleration_;
   bool enable_auto_parking_;

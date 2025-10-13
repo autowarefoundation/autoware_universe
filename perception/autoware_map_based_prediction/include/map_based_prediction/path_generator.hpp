@@ -32,7 +32,6 @@
 #include <tf2/LinearMath/Quaternion.h>
 
 #include <memory>
-#include <utility>
 #include <vector>
 
 namespace autoware::map_based_prediction
@@ -81,6 +80,11 @@ struct CrosswalkEdgePoints
   }
 };
 
+struct PredictedPathWithArrivalIndex : PredictedPath
+{
+  size_t arrival_index{};
+};
+
 using FrenetPath = std::vector<FrenetPoint>;
 
 class PathGenerator
@@ -105,7 +109,7 @@ public:
     const double lateral_duration, const double path_width = 0.0,
     const double speed_limit = 0.0) const;
 
-  PredictedPath generatePathForCrosswalkUser(
+  [[nodiscard]] PredictedPathWithArrivalIndex generatePathForCrosswalkUser(
     const TrackedObject & object, const CrosswalkEdgePoints & reachable_crosswalk,
     const double duration) const;
 

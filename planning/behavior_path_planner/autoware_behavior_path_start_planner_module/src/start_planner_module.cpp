@@ -311,8 +311,17 @@ void StartPlannerModule::updateData()
 
   if (
     planner_data_->operation_mode->mode == OperationModeState::AUTONOMOUS &&
-    status_.driving_forward && !status_.first_engaged_and_driving_forward_time) {
-    status_.first_engaged_and_driving_forward_time = clock_->now();
+    status_.driving_forward && status_.found_pull_out_path) {
+    if (!status_.first_engaged_and_driving_forward_time) {
+      status_.first_engaged_and_driving_forward_time = clock_->now();
+      RCLCPP_INFO(
+        getLogger(),
+        "The vehicle switched to autonomous mode while a forward pull out path was found. "
+        "Start waiting for blinker turn on. time: %f",
+        status_.first_engaged_and_driving_forward_time->seconds());
+    }
+  } else {
+    status_.first_engaged_and_driving_forward_time = std::nullopt;
   }
 
   constexpr double moving_velocity_threshold = 0.1;

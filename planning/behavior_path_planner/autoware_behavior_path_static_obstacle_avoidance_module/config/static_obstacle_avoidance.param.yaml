@@ -173,6 +173,13 @@
           # "ignore" : never avoid it.
           policy: "ignore"                              # [-]
 
+        avoidance_for_adjacent_lane_stop_vehicle:
+          # policy for ego behavior for adjacent lane stop vehicle.
+          # "auto"   : generate candidate path. if RTC is running as AUTO mode, the ego avoids it automatically.
+          # "manual" : generate candidate path and wait operator approval even if RTC is running as AUTO mode.
+          # "ignore" : never avoid it.
+          policy: "auto"                                # [-]
+
         # params for filtering objects that are in intersection
         intersection:
           yaw_deviation: 0.349                          # [rad] (default 20.0deg)
