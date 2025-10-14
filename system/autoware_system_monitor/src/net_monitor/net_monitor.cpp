@@ -185,7 +185,6 @@ void NetMonitor::check_usage(diagnostic_updater::DiagnosticStatusWrapper & statu
 
   int whole_level = DiagStatus::OK;
   int index = 0;
-  std::string error_message;
 
   for (const auto & network : network_list_) {
     // Skip if network is not supported
