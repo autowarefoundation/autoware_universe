@@ -68,29 +68,35 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
                                        : req->lane_change_direction == 1 ? DIRECTION::MANUAL_RIGHT
                                                                          : DIRECTION::AUTO;
   if (override_direction == DIRECTION::AUTO) {
-    LaneletRoute route;
     // Use back-up
     if (!original_route_) {
       return {
-        route, false,
+        {}, false,
         "Manual lane selection to AUTO is commanded but canceled due to no original route "
         "available."};
     }
 
-    route = **original_route_;
+    std::vector<LaneletPrimitive> preferred_primitives;
+    std::transform(original_route_.value()->segments.begin(), original_route_.value()->segments.end(),
+      std::back_inserter(preferred_primitives),
+      [](const auto& segment) {
+          return segment.preferred_primitive;
+      }
+    );
     original_route_ = std::nullopt;
 
-    return {route, true, "Manual lane selection to AUTO is commanded and executed successfully."};
+    return {preferred_primitives, true, "Manual lane selection to AUTO is commanded and executed successfully."};
   }
 
   if (!current_route_) {
     return {
-      LaneletRoute(), false,
+      {}, false,
       "Manual lane selection to " +
         (override_direction == DIRECTION::MANUAL_LEFT    ? std::string("left")
          : override_direction == DIRECTION::MANUAL_RIGHT ? std::string("right")
                                                          : std::string("unknown")) +
-        std::string(" is commanded but canceled due to no current route available.")};
+        std::string(" is commanded but canceled due to no current route available.")
+    };
   }
 
   LaneletRoute route = *current_route_;
@@ -209,16 +215,24 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
 
   if (!route_updated) {
     return {
-      LaneletRoute(), false,
+      {}, false,
       std::string("Manual lane selection to ") +
         (override_direction == DIRECTION::MANUAL_LEFT    ? std::string("left")
          : override_direction == DIRECTION::MANUAL_RIGHT ? std::string("right")
                                                          : std::string("unknown")) +
         " is not possible for the current preferred primitive configuration."};
   }
+  std::vector<LaneletPrimitive> preferred_primitives;
+  preferred_primitives.reserve(route.segments.size());
+  std::transform(route.segments.begin(), route.segments.end(),
+    std::back_inserter(preferred_primitives),
+    [](const auto& segment) {
+        return segment.preferred_primitive;
+    }
+  );
 
   return {
-    route, true,
+    preferred_primitives, true,
     std::string("Manual lane selection to ") +
       (override_direction == DIRECTION::MANUAL_LEFT    ? std::string("left")
        : override_direction == DIRECTION::MANUAL_RIGHT ? std::string("right")

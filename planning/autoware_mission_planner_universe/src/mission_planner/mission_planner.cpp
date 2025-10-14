@@ -96,6 +96,9 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
   srv_set_lanelet_route = create_service<SetLaneletRoute>(
     "~/set_lanelet_route",
     service_utils::handle_exception(&MissionPlanner::on_set_lanelet_route, this));
+  srv_set_preferred_primitive = create_service<tier4_planning_msgs::srv::SetPreferredPrimitive>(
+    "~/set_preferred_primitive",
+    service_utils::handle_exception(&MissionPlanner::on_set_preferred_primitive, this));
   srv_set_waypoint_route = create_service<SetWaypointRoute>(
     "~/set_waypoint_route",
     service_utils::handle_exception(&MissionPlanner::on_set_waypoint_route, this));
@@ -327,6 +330,43 @@ void MissionPlanner::on_set_lanelet_route(
   res->status.success = true;
 
   print_pose_log("set_lanelet_route", odometry_->pose.pose, req->goal_pose);
+}
+
+void MissionPlanner::on_set_preferred_primitive(
+    const tier4_planning_msgs::srv::SetPreferredPrimitive::Request::SharedPtr req,
+    const tier4_planning_msgs::srv::SetPreferredPrimitive::Response::SharedPtr res) 
+{
+  if (!current_route_) {
+    using ResponseCode = autoware_adapi_v1_msgs::msg::ResponseStatus;
+    res->status.success = false;
+    throw service_utils::ServiceException(
+      ResponseCode::NO_EFFECT, "The route has not been set yet.", true);
+  }
+
+  if (req->preferred_primitives.size() != current_route_->segments.size()) {
+    res->status.success = false;
+    std::cerr << "The size of preferred_primitives (" << req->preferred_primitives.size()
+              << ") is different from that of the current route ("
+              << current_route_->segments.size() << ")." << std::endl;
+    throw service_utils::ServiceException(
+      autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,
+      fmt::format(
+        "The size of preferred_primitives ({}) is different from that of the current route ({}).",
+        req->preferred_primitives.size(), current_route_->segments.size()));
+  }
+
+  auto current_route = *current_route_;
+
+  for (size_t i = 0; i < current_route.segments.size(); ++i) {
+    auto & segment = current_route.segments.at(i);
+    const auto & preferred_primitive = req->preferred_primitives.at(i);
+
+    segment.preferred_primitive = preferred_primitive;
+  }
+
+  change_route(current_route, req->emphasise_goal_lanes);
+  res->status.message = "Successfully set preferred primitive.";
+  res->status.success = true;
 }
 
 void MissionPlanner::on_set_waypoint_route(

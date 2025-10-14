@@ -24,10 +24,11 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
-#include <autoware_planning_msgs/msg/lanelet_route.hpp>
+#include <autoware_planning_msgs/msg/lanelet_primitive.hpp>
 #include <autoware_planning_msgs/srv/set_lanelet_route.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <tier4_planning_msgs/srv/set_preferred_lane.hpp>
+#include <tier4_planning_msgs/srv/set_preferred_primitive.hpp>
 
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -38,12 +39,13 @@
 namespace autoware::mission_planner_universe
 {
 
+using autoware_planning_msgs::msg::LaneletPrimitive;
 using autoware_planning_msgs::msg::LaneletRoute;
 using tier4_planning_msgs::srv::SetPreferredLane;
 
 struct LaneChangeRequestResult
 {
-  LaneletRoute route;
+  std::vector<LaneletPrimitive> preferred_primitives;
   bool success;
   std::string message;
 };
@@ -90,24 +92,10 @@ public:
             route_handler, segment.preferred_primitive, segment.primitives);
         });
 
-        // trim route from the current position
-        const auto segment_it =
-          std::find_if(route.segments.begin(), route.segments.end(), [&](const auto & segment) {
-            return std::any_of(
-              segment.primitives.begin(), segment.primitives.end(), [&](const auto & primitive) {
-                const auto lanelet = get_lanelet_by_id_(primitive.id);
-                return lanelet::utils::isInLanelet(odometry_->pose.pose, lanelet);
-              });
-          });
-
-        // erase segments before the current segment
-        if (segment_it != route.segments.end()) {
-          route.segments.erase(route.segments.begin(), segment_it);
-        }
-
         current_route_ = std::make_shared<LaneletRoute>(route);
         planner_->updateRoute(*current_route_);
-      });
+      }
+    );
 
     srv_set_preferred_lane = create_service<SetPreferredLane>(
       "~/set_preferred_lane",
@@ -135,13 +123,13 @@ private:
   void set_preferred_lane(
     const SetPreferredLane::Request::SharedPtr req, const SetPreferredLane::Response::SharedPtr res)
   {
-    auto client = this->create_client<autoware_planning_msgs::srv::SetLaneletRoute>(
-      "/planning/set_lanelet_route");
+    auto client = this->create_client<tier4_planning_msgs::srv::SetPreferredPrimitive>(
+      "/planning/mission_planning/mission_planner/set_preferred_primitive");
     // Wait for the service to be available
     if (!client->wait_for_service(std::chrono::seconds(5))) {
-      RCLCPP_ERROR(logger_, "Service /planning/set_lanelet_route not available.");
+      RCLCPP_ERROR(logger_, "Service /planning/set_preferred_primitive not available.");
       res->status.success = false;
-      res->status.message = "Service /planning/set_lanelet_route not available.";
+      res->status.message = "Service /planning/set_preferred_primitive not available.";
       return;
     }
 
@@ -162,30 +150,27 @@ private:
     LaneChangeRequestResult lane_change_request_result =
       this->process_lane_change_request(closest_lanelet.id(), req);
 
-    std::shared_ptr<autoware_planning_msgs::srv::SetLaneletRoute::Request> set_lanelet_route_req =
-      std::make_shared<autoware_planning_msgs::srv::SetLaneletRoute::Request>();
-    set_lanelet_route_req->header = current_route_->header;
-    set_lanelet_route_req->goal_pose = current_route_->goal_pose;
-
-    // Generate a new UUID for the route
-    boost::uuids::random_generator gen;
-    boost::uuids::uuid uuid = gen();
-    std::copy(uuid.begin(), uuid.end(), set_lanelet_route_req->uuid.uuid.begin());
-    set_lanelet_route_req->allow_modification = current_route_->allow_modification;
-    set_lanelet_route_req->segments = lane_change_request_result.route.segments;
+    std::shared_ptr<tier4_planning_msgs::srv::SetPreferredPrimitive::Request> set_preferred_primitive_req =
+      std::make_shared<tier4_planning_msgs::srv::SetPreferredPrimitive::Request>();
+    set_preferred_primitive_req->preferred_primitives = lane_change_request_result.preferred_primitives;
+    set_preferred_primitive_req->emphasise_goal_lanes = req->lane_change_direction != 2;
 
     auto future = client->async_send_request(
-      set_lanelet_route_req,
-      [this](rclcpp::Client<autoware_planning_msgs::srv::SetLaneletRoute>::SharedFuture future) {
+      set_preferred_primitive_req,
+      [this](rclcpp::Client<tier4_planning_msgs::srv::SetPreferredPrimitive>::SharedFuture future) {
         auto response = future.get();
         if (response->status.success) {
-          RCLCPP_INFO(this->get_logger(), "Successfully set lanelet route!");
+          RCLCPP_INFO(this->get_logger(), "Lane change request succesful: %s", response->status.message.c_str());
+
+          std::cerr << "Lane change request succesful: " << response->status.message.c_str() << std::endl;
         } else {
           RCLCPP_WARN(
-            this->get_logger(), "Failed to set lanelet route: %s",
+            this->get_logger(), "Failed to set preferred primitive: %s",
             response->status.message.c_str());
+          std::cerr << "Failed to set preferred primitive: " << response->status.message.c_str() << std::endl;
         }
-      });
+      }
+    );
 
     res->status.success = lane_change_request_result.success;
     res->status.message = lane_change_request_result.message;
