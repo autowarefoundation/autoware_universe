@@ -63,11 +63,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   enable_delay_compensation_ = declare_parameter<bool>("enable_delay_compensation");
   bool enable_odometry_uncertainty = declare_parameter<bool>("consider_odometry_uncertainty");
   bool use_time_keeper = declare_parameter<bool>("publish_processing_time_detail");
-  bool is_simulation = declare_parameter<bool>("is_simulation");
   publish_merged_objects_ = declare_parameter<bool>("publish_merged_objects");
-  if (is_simulation) {
-    publish_merged_objects_ = true;
-  }
 
   // Odometry manager
   odometry_ =
@@ -147,7 +143,6 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   // ROS interface - Publisher
   tracked_objects_pub_ = create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
     "output/objects", rclcpp::QoS{1});
-  if (input_channel_size_ < 2) publish_merged_objects_ = false;
   if (publish_merged_objects_) {
     // if the input is multi-channel, export fused merged (detected) objects
     merged_objects_pub_ = create_publisher<autoware_perception_msgs::msg::DetectedObjects>(

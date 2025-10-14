@@ -24,7 +24,7 @@
   <arg name="use_multi_channel_tracker_merger"/>
   <arg name="use_validator" description="use obstacle_pointcloud based validator"/>
   <arg name="use_short_range_detection"/>
-  <arg name="is_simulation"/>
+  <arg name="publish_merged_objects"/>
 
   <!-- External interface -->
   <arg name="lidar_detection_model_type" default="centerpoint"/>
@@ -181,7 +181,7 @@
       <arg name="data_association_matrix_path" value="$(var object_recognition_tracking_multi_object_tracker_data_association_matrix_param_path)"/>
       <arg name="input_channels_path" value="$(var object_recognition_tracking_multi_object_tracker_input_channels_param_path)"/>
       <arg name="tracker_setting_path" value="$(var object_recognition_tracking_multi_object_tracker_node_param_path)"/>
-      <arg name="is_simulation" value="$(var is_simulation)"/>
+      <arg name="publish_merged_objects" value="$(var publish_merged_objects)"/>
     </include>
   </group>
 </launch>

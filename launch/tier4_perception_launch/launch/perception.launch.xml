@@ -45,7 +45,7 @@
   <arg name="traffic_light_multi_camera_fusion_param_path"/>
   <arg name="traffic_light_arbiter_param_path"/>
   <arg name="crosswalk_traffic_light_estimator_param_path"/>
-  <arg name="is_simulation"/>
+  <arg name="tracker_publish_merged_objects"/>
 
   <!-- ML model parameters -->
   <arg name="lidar_detection_model_type" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[0]&quot;)"/>
@@ -342,7 +342,7 @@
           <arg name="use_validator" value="$(var use_object_validator)"/>
           <arg name="use_short_range_detection" value="$(var use_short_range_detection)"/>
           <arg name="output/merged_objects" value="$(var output/tracker_merged_objects)"/>
-          <arg name="is_simulation" value="$(var is_simulation)"/>
+          <arg name="publish_merged_objects" value="$(var tracker_publish_merged_objects)"/>
         </include>
       </group>
 
