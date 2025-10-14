@@ -489,9 +489,8 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
   const auto within_road = utils::withinRoadLanelet(mutable_object, surrounding_lanelets_with_dist);
   const auto within_minimum_distance =
     [&](const geometry_msgs::msg::Point & object, const lanelet::ConstLanelet & ll) {
-      const auto p = lanelet::BasicPoint2d(object.x, object.y);
-      const auto distance = boost::geometry::distance(p, ll.polygon2d().basicPolygon());
-      return distance <= max_crosswalk_user_on_road_distance_;
+      return utils::lateral_distance_to_lanelet_bounds(ll, object) <=
+             max_crosswalk_user_on_road_distance_;
     };
 
   // If the object is in the crosswalk, generate path to the crosswalk edge
