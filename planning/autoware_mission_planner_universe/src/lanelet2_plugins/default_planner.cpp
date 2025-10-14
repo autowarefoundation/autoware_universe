@@ -16,6 +16,8 @@
 
 #include "utility_functions.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
@@ -236,7 +238,9 @@ bool DefaultPlanner::is_goal_valid(const geometry_msgs::msg::Pose & goal)
   const auto shoulder_lanelets = route_handler_.getShoulderLaneletsAtPose(goal);
   if (lanelet::utils::query::getClosestLanelet(
         shoulder_lanelets, goal, &closest_shoulder_lanelet)) {
-    const auto lane_yaw = lanelet::utils::getLaneletAngle(closest_shoulder_lanelet, goal.position);
+    const auto lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+      closest_shoulder_lanelet,
+      autoware::experimental::lanelet2_utils::from_ros(goal.position).basicPoint());
     const auto goal_yaw = tf2::getYaw(goal.orientation);
     const auto angle_diff = autoware_utils::normalize_radian(lane_yaw - goal_yaw);
     const double th_angle = autoware_utils::deg2rad(param_.goal_angle_threshold_deg);
@@ -297,7 +301,9 @@ bool DefaultPlanner::is_goal_valid(const geometry_msgs::msg::Pose & goal)
   }
 
   if (is_in_lane(closest_lanelet_to_goal, goal_lanelet_pt)) {
-    const auto lane_yaw = lanelet::utils::getLaneletAngle(closest_lanelet_to_goal, goal.position);
+    const auto lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+      closest_lanelet_to_goal,
+      autoware::experimental::lanelet2_utils::from_ros(goal.position).basicPoint());
     const auto goal_yaw = tf2::getYaw(goal.orientation);
     const auto angle_diff = autoware_utils::normalize_radian(lane_yaw - goal_yaw);
 

@@ -14,6 +14,8 @@
 
 #include "utility_functions.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
@@ -139,7 +141,8 @@ geometry_msgs::msg::Pose get_closest_centerline_pose(
   const auto refined_center_line = lanelet::utils::generateFineCenterline(closest_lanelet, 1.0);
   closest_lanelet.setCenterline(refined_center_line);
 
-  const double lane_yaw = lanelet::utils::getLaneletAngle(closest_lanelet, point.position);
+  const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+    closest_lanelet, autoware::experimental::lanelet2_utils::from_ros(point.position).basicPoint());
 
   const auto nearest_idx = autoware::motion_utils::findNearestIndex(
     convertCenterlineToPoints(closest_lanelet), point.position);

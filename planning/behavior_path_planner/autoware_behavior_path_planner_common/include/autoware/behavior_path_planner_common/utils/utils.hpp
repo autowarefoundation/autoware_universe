@@ -18,6 +18,8 @@
 #include "autoware/behavior_path_planner_common/data_manager.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 
@@ -122,7 +124,8 @@ template <class LaneletPointType>
 Pose to_geom_msg_pose(const LaneletPointType & src_point, const lanelet::ConstLanelet & target_lane)
 {
   const auto point = lanelet::utils::conversion::toGeomMsgPt(src_point);
-  const auto yaw = lanelet::utils::getLaneletAngle(target_lane, point);
+  const auto yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+    target_lane, autoware::experimental::lanelet2_utils::from_ros(point).basicPoint());
   geometry_msgs::msg::Pose pose;
   pose.position = point;
   tf2::Quaternion quat;
