@@ -21,6 +21,7 @@
 
 #include "autoware_perception_msgs/msg/predicted_objects.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
+#include <nav_msgs/msg/odometry.hpp>
 
 namespace planning_diagnostics
 {
@@ -48,8 +49,9 @@ Accumulator<double> calcDistanceToObstacle(
  * @return calculated statistics
  */
 Accumulator<double> calcTimeToCollision(
-  const PredictedObjects & obstacles, const Trajectory & traj, const VehicleInfo & vehicle_info,
-  const double distance_threshold);
+  const nav_msgs::msg::Odometry & ego_odom, const PredictedObjects & obstacles,
+  const Trajectory & traj, const VehicleInfo & vehicle_info, const double distance_threshold,
+  const double limit_min_accel);
 
 }  // namespace metrics
 }  // namespace planning_diagnostics

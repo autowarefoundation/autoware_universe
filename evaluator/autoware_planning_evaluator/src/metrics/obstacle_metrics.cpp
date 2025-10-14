@@ -26,6 +26,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <vector>
 
 namespace planning_diagnostics
 {
@@ -56,9 +57,11 @@ Accumulator<double> calcDistanceToObstacle(
 }
 
 Accumulator<double> calcTimeToCollision(
-  const PredictedObjects & obstacles, const Trajectory & traj, const VehicleInfo & vehicle_info,
-  const double distance_threshold)
+  const nav_msgs::msg::Odometry & ego_odom, const PredictedObjects & obstacles,
+  const Trajectory & traj, const VehicleInfo & vehicle_info, const double distance_threshold,
+  const double limit_min_accel)
 {
+  constexpr double eps = 1e-6;
   Accumulator<double> stat;
 
   if (traj.points.empty() || obstacles.objects.empty()) {
@@ -91,24 +94,21 @@ Accumulator<double> calcTimeToCollision(
 
     void updatePosition(double dt)
     {
-      if (velocity < 1e-3) return;
+      if (velocity < eps) return;
 
       auto & pose = object.kinematics.initial_pose_with_covariance.pose;
       double remaining_dist = velocity * dt;
-
-      // Use a more conservative threshold to handle floating-point precision issues
-      constexpr double DISTANCE_THRESHOLD = 1e-3;
 
       // Move along path segments, handling multiple points if dt is large
       if (!object.kinematics.predicted_paths.empty()) {
         const auto & path = object.kinematics.predicted_paths[0].path;
 
-        while (remaining_dist > DISTANCE_THRESHOLD && path_index < path.size()) {
+        while (remaining_dist > eps && path_index < path.size()) {
           const auto & target = path[path_index];
           const double seg_dist = calc_distance2d(pose, target);
 
           // Handle case where path points are too close together
-          if (seg_dist < DISTANCE_THRESHOLD) {
+          if (seg_dist < eps) {
             pose = target;
             path_index++;
             continue;
@@ -149,7 +149,7 @@ Accumulator<double> calcTimeToCollision(
       }
 
       // If path exhausted but still have distance, continue in last direction
-      if (remaining_dist > DISTANCE_THRESHOLD) {
+      if (remaining_dist > eps) {
         pose.position.x += remaining_dist * direction.x;
         pose.position.y += remaining_dist * direction.y;
         const double half_yaw = std::atan2(direction.y, direction.x) * 0.5;
@@ -164,17 +164,45 @@ Accumulator<double> calcTimeToCollision(
   std::vector<DynamicObstacle> dynamic_obstacles(
     obstacles.objects.begin(), obstacles.objects.end());
 
-  TrajectoryPoint p0 = traj.points.front();
-  double t = 0.0;
-  constexpr double MIN_VELOCITY_THRESHOLD = 1e-3;
+  size_t p0_index = 0;
+  auto & ego_pose = ego_odom.pose.pose;
+  double last_dist_to_ego = calc_distance2d(ego_pose, traj.points.front().pose);
+  // Find closest point to ego before starting calculate ttc
+  for (size_t i = 1; i < traj.points.size(); ++i) {
+    const double dist_to_ego = calc_distance2d(ego_pose, traj.points.at(i).pose);
+    if (dist_to_ego > last_dist_to_ego) {
+      break;
+    }
+    last_dist_to_ego = dist_to_ego;
+    p0_index = i;
+  }
 
-  for (const TrajectoryPoint & p : traj.points) {
-    if (std::abs(p0.longitudinal_velocity_mps) < MIN_VELOCITY_THRESHOLD) {
-      p0 = p;
-      continue;
+  double t = 0.0;
+  double velocity_prev = ego_odom.twist.twist.linear.x;
+
+  for (size_t i = p0_index + 1; i < traj.points.size(); ++i) {
+    const auto & p_prev = traj.points.at(i - 1);
+    const auto & p_curr = traj.points.at(i);
+    const double segment_dist = calc_distance2d(p_prev, p_curr);
+
+    if (segment_dist < eps) {
+      continue;  // Skip very small segments
     }
 
-    const double dt = calc_distance2d(p0, p) / std::abs(p0.longitudinal_velocity_mps);
+    // Calculate velocity lower bound based on deceleration limit
+    double p_vel = static_cast<double>(p_curr.longitudinal_velocity_mps);
+    const double p_vel_lower_bound = std::sqrt(
+      std::max(0.0, velocity_prev * velocity_prev + 2.0 * limit_min_accel * segment_dist));
+    const double velocity_curr = p_vel < 0 ? p_vel : std::max(p_vel, p_vel_lower_bound);
+
+    // Time to traverse this segment
+    const double effective_velocity = (velocity_curr + velocity_prev) * 0.5;
+    if (std::abs(effective_velocity) < eps) {
+      velocity_prev = velocity_curr;  // Update for next iteration
+      continue;                       // Skip if velocity is effectively zero
+    }
+
+    const double dt = segment_dist / std::abs(effective_velocity);
     t += dt;
 
     // Update obstacle positions and check collisions
@@ -182,13 +210,15 @@ Accumulator<double> calcTimeToCollision(
       obstacle.updatePosition(dt);
 
       const auto distance =
-        utils::calc_ego_object_distance(local_ego_footprint, p.pose, obstacle.object);
+        utils::calc_ego_object_distance(local_ego_footprint, p_curr.pose, obstacle.object);
       if (distance <= distance_threshold) {
         stat.add(t);
         return stat;
       }
     }
-    p0 = p;
+
+    // Update previous velocity for next iteration
+    velocity_prev = velocity_curr;
   }
   return stat;
 }

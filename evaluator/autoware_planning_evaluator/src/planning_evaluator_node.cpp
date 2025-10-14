@@ -66,16 +66,9 @@ PlanningEvaluatorNode::PlanningEvaluatorNode(const rclcpp::NodeOptions & node_op
   metrics_calculator_.parameters.obstacle.dist_thr_m =
     declare_parameter<double>("obstacle.dist_thr_m");
   metrics_calculator_.parameters.obstacle.limit_max_accel =
-    declare_parameter<double>("limit.max_acc"); // get from common.param.yaml
+    declare_parameter<double>("limit.max_acc");  // get from common.param.yaml
   metrics_calculator_.parameters.obstacle.limit_min_accel =
-    declare_parameter<double>("limit.min_acc"); // get from common.param.yaml
-  // print limit.min_acc # TODO delet
-  RCLCPP_INFO(
-    this->get_logger(), "obstacle.limit_min_accel: %f",
-    metrics_calculator_.parameters.obstacle.limit_min_accel);
-  RCLCPP_INFO(
-    this->get_logger(), "obstacle.limit_max_accel: %f",
-    metrics_calculator_.parameters.obstacle.limit_max_accel);
+    declare_parameter<double>("limit.min_acc");  // get from common.param.yaml
 
   // Parameters for metrics_accumulator
   metrics_accumulator_.planning_factor_accumulator.parameters.time_count_threshold_s =

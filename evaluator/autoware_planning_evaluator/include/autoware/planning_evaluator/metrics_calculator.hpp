@@ -58,8 +58,8 @@ public:
     struct
     {
       double dist_thr_m = 0.0;
-      double limit_max_accel = 0.0; // TODO change to default value
-      double limit_min_accel = 0.0; // TODO change to default value
+      double limit_max_accel = 1.0;
+      double limit_min_accel = -2.5;
     } obstacle;
   } parameters;  // struct Parameters for those metrics calculated by the MetricsCalculator
 

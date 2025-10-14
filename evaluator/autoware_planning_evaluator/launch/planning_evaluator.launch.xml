@@ -1,4 +1,5 @@
 <launch>
+  <arg name="common_param_path"/>
   <!-- if output_metrics=true, metrics are written to `<ros2_logging_directory>/autoware_metrics/<node_name>-<time_stamp>.json`. -->
   <arg name="output_metrics" default="false"/>
   <arg name="input/odometry" default="/localization/kinematic_state"/>
@@ -15,6 +16,7 @@
   <!-- planning evaluator -->
   <group>
     <node name="planning_evaluator" exec="planning_evaluator" pkg="autoware_planning_evaluator">
+      <param from="$(var common_param_path)"/>
       <param from="$(find-pkg-share autoware_planning_evaluator)/config/planning_evaluator.param.yaml"/>
       <param name="output_metrics" value="$(var output_metrics)"/>
       <remap from="~/input/odometry" to="$(var input/odometry)"/>
