@@ -226,18 +226,18 @@ void FreespacePlannerNode::updateTargetIndex()
     utils::get_next_target_index(trajectory_.points.size(), reversing_indices_, target_index_);
 
   if (new_target_index == target_index_) {
-    double angle_goal_current =
+    double yaw_error =
       quaternionAngularDifference(goal_pose_.pose.orientation, current_pose_.pose.orientation);
 
     RCLCPP_INFO_STREAM(
       get_logger(),
-      " Angle difference (goal pose vs current pose): " << angle_goal_current << " degrees");
+      " Angle difference (goal pose vs current pose): " << yaw_error << " degrees");
     RCLCPP_INFO_STREAM(
       get_logger(), " Final deviation from goal - X: "
                       << current_pose_.pose.position.x - goal_pose_.pose.position.x
                       << " Y: " << current_pose_.pose.position.y - goal_pose_.pose.position.y);
     // activate reparking function
-    if (std::fabs(angle_goal_current) >= node_param_.parking_accuracy_tolerance) {
+    if (std::fabs(yaw_error) >= node_param_.parking_accuracy_tolerance) {
       if (replan_count_ < node_param_.max_replan_count) {
         replan_count_++;
         algo_->setReparking(true);
