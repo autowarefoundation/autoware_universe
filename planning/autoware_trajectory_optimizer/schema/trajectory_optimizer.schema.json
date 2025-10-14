@@ -115,17 +115,11 @@
           "default": false,
           "description": "Enable QP-based trajectory smoothing with explicit jerk constraints"
         },
-        "qp_weight_jerk": {
+        "qp_weight_smoothness": {
           "type": "number",
           "default": 10.0,
           "minimum": 0,
-          "description": "Weight for jerk minimization in QP optimization [dimensionless]"
-        },
-        "qp_weight_acceleration": {
-          "type": "number",
-          "default": 1.0,
-          "minimum": 0,
-          "description": "Weight for acceleration minimization in QP optimization [dimensionless]"
+          "description": "Weight for path curvature minimization (geometric smoothness) in QP optimization [dimensionless]"
         },
         "qp_weight_fidelity": {
           "type": "number",
@@ -133,29 +127,11 @@
           "minimum": 0,
           "description": "Weight for path fidelity (staying close to original) in QP optimization [dimensionless]"
         },
-        "qp_max_longitudinal_jerk_mps3": {
+        "qp_time_step_s": {
           "type": "number",
-          "default": 2.0,
+          "default": 0.1,
           "exclusiveMinimum": 0,
-          "description": "Maximum allowable longitudinal jerk [m/s^3]"
-        },
-        "qp_max_acceleration_mps2": {
-          "type": "number",
-          "default": 2.0,
-          "exclusiveMinimum": 0,
-          "description": "Maximum allowable acceleration [m/s^2]"
-        },
-        "qp_min_acceleration_mps2": {
-          "type": "number",
-          "default": -3.0,
-          "exclusiveMaximum": 0,
-          "description": "Minimum allowable acceleration (braking) [m/s^2]"
-        },
-        "qp_max_speed_mps": {
-          "type": "number",
-          "default": 20.0,
-          "exclusiveMinimum": 0,
-          "description": "Maximum speed constraint in QP optimization [m/s]"
+          "description": "Fixed time step for velocity/acceleration calculations [s]"
         },
         "qp_osqp_eps_abs": {
           "type": "number",
@@ -343,13 +319,9 @@
         "extend_trajectory_backward",
         "spline_copy_original_orientation",
         "use_qp_smoother",
-        "qp_weight_jerk",
-        "qp_weight_acceleration",
+        "qp_weight_smoothness",
         "qp_weight_fidelity",
-        "qp_max_longitudinal_jerk_mps3",
-        "qp_max_acceleration_mps2",
-        "qp_min_acceleration_mps2",
-        "qp_max_speed_mps",
+        "qp_time_step_s",
         "qp_osqp_eps_abs",
         "qp_osqp_eps_rel",
         "qp_osqp_max_iter",

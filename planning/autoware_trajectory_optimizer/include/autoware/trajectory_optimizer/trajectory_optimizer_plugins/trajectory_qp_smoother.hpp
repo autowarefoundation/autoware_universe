@@ -43,15 +43,11 @@ using TrajectoryPoints = std::vector<TrajectoryPoint>;
 struct QPSmootherParams
 {
   // Optimization weights
-  double weight_jerk{10.0};
-  double weight_acceleration{1.0};
-  double weight_fidelity{100.0};
+  double weight_smoothness{10.0};  // Weight for path curvature/smoothness minimization
+  double weight_fidelity{100.0};   // Weight for path fidelity to original trajectory
 
-  // Dynamic constraints
-  double max_longitudinal_jerk_mps3{2.0};
-  double max_acceleration_mps2{2.0};
-  double min_acceleration_mps2{-3.0};
-  double max_speed_mps{20.0};
+  // Time discretization
+  double time_step_s{0.1};  // Fixed time step for velocity/acceleration calculations [s]
 
   // Solver settings
   double osqp_eps_abs{1e-4};
@@ -61,15 +57,17 @@ struct QPSmootherParams
 };
 
 /**
- * @brief QP-based trajectory smoother with explicit jerk constraints
+ * @brief QP-based trajectory smoother for path geometry optimization
  *
  * This plugin smooths trajectories using quadratic programming optimization
- * that explicitly enforces jerk limits for passenger comfort while maintaining
- * path fidelity to the original trajectory.
+ * that minimizes path curvature while maintaining path fidelity to the original trajectory.
+ * After path smoothing, velocities and accelerations are recalculated from the smoothed
+ * positions to ensure kinematic consistency.
  *
- * Decision variables: [x_0, y_0, v_0, a_0, ..., x_{N-1}, y_{N-1}, v_{N-1}, a_{N-1}]
- * Cost function: weighted sum of jerk minimization, acceleration minimization, and path fidelity
- * Constraints: linear bounds on jerk, velocity, and acceleration
+ * Decision variables: [x_0, y_0, ..., x_{N-1}, y_{N-1}] (path-only optimization)
+ * Cost function: weighted sum of path curvature minimization and path fidelity
+ * Constraints: fixed initial position
+ * Post-processing: velocity/acceleration derived from smoothed path geometry
  */
 class TrajectoryQPSmoother : public TrajectoryOptimizerPluginBase
 {
@@ -123,23 +121,7 @@ private:
    */
   void post_process_trajectory(
     const Eigen::VectorXd & solution, const TrajectoryPoints & input_trajectory,
-    TrajectoryPoints & output_trajectory);
-
-  // Helper functions
-  /**
-   * @brief Calculate average time step from trajectory
-   */
-  double calculate_time_step(const TrajectoryPoints & traj_points) const;
-
-  /**
-   * @brief Calculate yaw angle from position differences
-   */
-  double calculate_yaw_from_positions(double dx, double dy) const;
-
-  /**
-   * @brief Convert yaw angle to quaternion
-   */
-  geometry_msgs::msg::Quaternion yaw_to_quaternion(double yaw) const;
+    TrajectoryPoints & output_trajectory) const;
 };
 
 }  // namespace autoware::trajectory_optimizer::plugin
