@@ -333,8 +333,8 @@ void MissionPlanner::on_set_lanelet_route(
 }
 
 void MissionPlanner::on_set_preferred_primitive(
-    const tier4_planning_msgs::srv::SetPreferredPrimitive::Request::SharedPtr req,
-    const tier4_planning_msgs::srv::SetPreferredPrimitive::Response::SharedPtr res) 
+  const tier4_planning_msgs::srv::SetPreferredPrimitive::Request::SharedPtr req,
+  const tier4_planning_msgs::srv::SetPreferredPrimitive::Response::SharedPtr res)
 {
   if (!current_route_) {
     using ResponseCode = autoware_adapi_v1_msgs::msg::ResponseStatus;

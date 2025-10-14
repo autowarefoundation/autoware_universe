@@ -58,13 +58,13 @@ using autoware_planning_msgs::msg::PoseWithUuidStamped;
 using autoware_planning_msgs::msg::RouteState;
 using autoware_planning_msgs::srv::ClearRoute;
 using autoware_planning_msgs::srv::SetLaneletRoute;
-using tier4_planning_msgs::srv::SetPreferredPrimitive;
 using autoware_planning_msgs::srv::SetWaypointRoute;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::PoseStamped;
 using nav_msgs::msg::Odometry;
 using std_msgs::msg::Header;
 using tier4_planning_msgs::msg::RerouteAvailability;
+using tier4_planning_msgs::srv::SetPreferredPrimitive;
 using unique_identifier_msgs::msg::UUID;
 using visualization_msgs::msg::MarkerArray;
 
@@ -117,7 +117,8 @@ private:
   void on_set_lanelet_route(
     const SetLaneletRoute::Request::SharedPtr req, const SetLaneletRoute::Response::SharedPtr res);
   void on_set_preferred_primitive(
-    const SetPreferredPrimitive::Request::SharedPtr req, const SetPreferredPrimitive::Response::SharedPtr res);
+    const SetPreferredPrimitive::Request::SharedPtr req,
+    const SetPreferredPrimitive::Response::SharedPtr res);
   void on_set_waypoint_route(
     const SetWaypointRoute::Request::SharedPtr req,
     const SetWaypointRoute::Response::SharedPtr res);

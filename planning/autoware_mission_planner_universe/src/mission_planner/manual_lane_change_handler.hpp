@@ -94,8 +94,7 @@ public:
 
         current_route_ = std::make_shared<LaneletRoute>(route);
         planner_->updateRoute(*current_route_);
-      }
-    );
+      });
 
     srv_set_preferred_lane = create_service<SetPreferredLane>(
       "~/set_preferred_lane",
@@ -150,9 +149,11 @@ private:
     LaneChangeRequestResult lane_change_request_result =
       this->process_lane_change_request(closest_lanelet.id(), req);
 
-    std::shared_ptr<tier4_planning_msgs::srv::SetPreferredPrimitive::Request> set_preferred_primitive_req =
-      std::make_shared<tier4_planning_msgs::srv::SetPreferredPrimitive::Request>();
-    set_preferred_primitive_req->preferred_primitives = lane_change_request_result.preferred_primitives;
+    std::shared_ptr<tier4_planning_msgs::srv::SetPreferredPrimitive::Request>
+      set_preferred_primitive_req =
+        std::make_shared<tier4_planning_msgs::srv::SetPreferredPrimitive::Request>();
+    set_preferred_primitive_req->preferred_primitives =
+      lane_change_request_result.preferred_primitives;
     set_preferred_primitive_req->emphasise_goal_lanes = req->lane_change_direction != 2;
 
     auto future = client->async_send_request(
@@ -160,17 +161,20 @@ private:
       [this](rclcpp::Client<tier4_planning_msgs::srv::SetPreferredPrimitive>::SharedFuture future) {
         auto response = future.get();
         if (response->status.success) {
-          RCLCPP_INFO(this->get_logger(), "Lane change request succesful: %s", response->status.message.c_str());
+          RCLCPP_INFO(
+            this->get_logger(), "Lane change request succesful: %s",
+            response->status.message.c_str());
 
-          std::cerr << "Lane change request succesful: " << response->status.message.c_str() << std::endl;
+          std::cerr << "Lane change request succesful: " << response->status.message.c_str()
+                    << std::endl;
         } else {
           RCLCPP_WARN(
             this->get_logger(), "Failed to set preferred primitive: %s",
             response->status.message.c_str());
-          std::cerr << "Failed to set preferred primitive: " << response->status.message.c_str() << std::endl;
+          std::cerr << "Failed to set preferred primitive: " << response->status.message.c_str()
+                    << std::endl;
         }
-      }
-    );
+      });
 
     res->status.success = lane_change_request_result.success;
     res->status.message = lane_change_request_result.message;

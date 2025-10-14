@@ -71,32 +71,33 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
     // Use back-up
     if (!original_route_) {
       return {
-        {}, false,
+        {},
+        false,
         "Manual lane selection to AUTO is commanded but canceled due to no original route "
         "available."};
     }
 
     std::vector<LaneletPrimitive> preferred_primitives;
-    std::transform(original_route_.value()->segments.begin(), original_route_.value()->segments.end(),
+    std::transform(
+      original_route_.value()->segments.begin(), original_route_.value()->segments.end(),
       std::back_inserter(preferred_primitives),
-      [](const auto& segment) {
-          return segment.preferred_primitive;
-      }
-    );
+      [](const auto & segment) { return segment.preferred_primitive; });
     original_route_ = std::nullopt;
 
-    return {preferred_primitives, true, "Manual lane selection to AUTO is commanded and executed successfully."};
+    return {
+      preferred_primitives, true,
+      "Manual lane selection to AUTO is commanded and executed successfully."};
   }
 
   if (!current_route_) {
     return {
-      {}, false,
+      {},
+      false,
       "Manual lane selection to " +
         (override_direction == DIRECTION::MANUAL_LEFT    ? std::string("left")
          : override_direction == DIRECTION::MANUAL_RIGHT ? std::string("right")
                                                          : std::string("unknown")) +
-        std::string(" is commanded but canceled due to no current route available.")
-    };
+        std::string(" is commanded but canceled due to no current route available.")};
   }
 
   LaneletRoute route = *current_route_;
@@ -215,7 +216,8 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
 
   if (!route_updated) {
     return {
-      {}, false,
+      {},
+      false,
       std::string("Manual lane selection to ") +
         (override_direction == DIRECTION::MANUAL_LEFT    ? std::string("left")
          : override_direction == DIRECTION::MANUAL_RIGHT ? std::string("right")
@@ -224,12 +226,9 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
   }
   std::vector<LaneletPrimitive> preferred_primitives;
   preferred_primitives.reserve(route.segments.size());
-  std::transform(route.segments.begin(), route.segments.end(),
-    std::back_inserter(preferred_primitives),
-    [](const auto& segment) {
-        return segment.preferred_primitive;
-    }
-  );
+  std::transform(
+    route.segments.begin(), route.segments.end(), std::back_inserter(preferred_primitives),
+    [](const auto & segment) { return segment.preferred_primitive; });
 
   return {
     preferred_primitives, true,
