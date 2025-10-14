@@ -217,7 +217,10 @@ void StartPlannerModule::onFreespacePlannerTimer()
 BehaviorModuleOutput StartPlannerModule::run()
 {
   updateData();
-  if (!isActivated() || needToPrepareBlinkerBeforeStartDrivingForward()) {
+  check_force_approval();
+  if (
+    !status_.is_safety_check_override_by_rtc &&
+    (!isActivated() || needToPrepareBlinkerBeforeStartDrivingForward())) {
     return planWaitingApproval();
   }
 
@@ -1137,7 +1140,7 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
     incrementPathIndex();
   }
 
-  if (isWaitingApproval()) return getCurrentPath();
+  if (isWaitingApproval() || status_.is_safety_check_override_by_rtc) return getCurrentPath();
 
   if (status_.stop_pose && status_.prev_stop_path_after_approval) {
     // Delete stop point if conditions are met
@@ -1189,6 +1192,17 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
     status_.is_safe_dynamic_objects, tier4_rtc_msgs::msg::State::WAITING_FOR_EXECUTION);
 
   return stop_path.value();
+}
+
+void StartPlannerModule::check_force_approval()
+{
+  if (is_rtc_force_activated()) {
+    status_.is_safety_check_override_by_rtc = true;
+  }
+
+  if (is_rtc_force_deactivated()) {
+    status_.is_safety_check_override_by_rtc = false;
+  }
 }
 
 void StartPlannerModule::planWithPriority(
