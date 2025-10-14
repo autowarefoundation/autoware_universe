@@ -106,6 +106,11 @@
           "default": true,
           "description": "Flag used to indicate if the ego's trajectory should be extended backward"
         },
+        "spline_copy_original_orientation": {
+          "type": "boolean",
+          "default": false,
+          "description": "Flag to indicate if the orientation from the original trajectory should be copied to the spline-interpolated trajectory"
+        },
         "jerk_filter_params": {
           "type": "object",
           "properties": {
@@ -266,7 +271,8 @@
         "set_engage_speed",
         "fix_invalid_points",
         "smooth_velocities",
-        "extend_trajectory_backward"
+        "extend_trajectory_backward",
+        "spline_copy_original_orientation"
       ]
     }
   },
