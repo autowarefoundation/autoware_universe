@@ -57,6 +57,8 @@ struct TrajectoryOptimizerParams
   double qp_osqp_eps_rel{1e-4};
   int qp_osqp_max_iter{4000};
   bool qp_osqp_verbose{false};
+  bool qp_correct_orientation{true};
+  double qp_orientation_correction_threshold_deg{5.0};
   Odometry current_odometry;
   AccelWithCovarianceStamped current_acceleration;
 };

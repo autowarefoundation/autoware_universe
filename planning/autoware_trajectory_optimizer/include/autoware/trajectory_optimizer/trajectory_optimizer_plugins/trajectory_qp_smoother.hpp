@@ -54,6 +54,11 @@ struct QPSmootherParams
   double osqp_eps_rel{1e-4};
   int osqp_max_iter{4000};
   bool osqp_verbose{false};
+
+  // Orientation correction
+  bool correct_orientation{true};  // Enable orientation correction
+  double orientation_correction_threshold_deg{
+    5.0};  // Yaw threshold for orientation correction [deg]
 };
 
 /**
