@@ -108,7 +108,7 @@
         },
         "spline_copy_original_orientation": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Flag to indicate if the orientation from the original trajectory should be copied to the spline-interpolated trajectory"
         },
         "jerk_filter_params": {

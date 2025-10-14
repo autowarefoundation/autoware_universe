@@ -255,11 +255,13 @@ bool validate_point(const TrajectoryPoint & point)
 }
 
 void copy_trajectory_orientation(
-  const TrajectoryPoints & input_trajectory, TrajectoryPoints & output_trajectory)
+  const TrajectoryPoints & input_trajectory, TrajectoryPoints & output_trajectory,
+  const TrajectoryOptimizerParams & params)
 {
   for (auto & out_point : output_trajectory) {
-    const auto nearest_index_opt =
-      autoware::motion_utils::findNearestIndex(input_trajectory, out_point.pose, 3.0, M_PI_2);
+    const auto nearest_index_opt = autoware::motion_utils::findNearestIndex(
+      input_trajectory, out_point.pose, params.spline_interpolation_max_distance_discrepancy_m,
+      M_PI_2);
     if (!nearest_index_opt.has_value()) {
       continue;
     }
@@ -321,7 +323,7 @@ void apply_spline(TrajectoryPoints & traj_points, const TrajectoryOptimizerParam
     temp_traj, params.spline_interpolation_resolution_m, dont_use_akima_spline_for_xy,
     use_lerp_for_z, use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
   if (params.spline_copy_original_orientation) {
-    copy_trajectory_orientation(traj_points, temp_traj.points);
+    copy_trajectory_orientation(traj_points, temp_traj.points, params);
   }
   traj_points = temp_traj.points;
 }
