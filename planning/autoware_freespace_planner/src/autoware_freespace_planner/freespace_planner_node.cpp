@@ -187,29 +187,6 @@ bool FreespacePlannerNode::checkCurrentTrajectoryCollision()
   return (get_clock()->now() - obs_found_time_.get()).seconds() > node_param_.th_obstacle_time_sec;
 }
 
-double quaternionAngularDifference(
-  const geometry_msgs::msg::Quaternion & q1, const geometry_msgs::msg::Quaternion & q2)
-{
-  double dot_product = q1.x * q2.x + q1.y * q2.y + q1.z * q2.z + q1.w * q2.w;
-  dot_product = std::clamp(dot_product, -1.0, 1.0);
-
-  double angle = 2.0 * std::acos(dot_product) * (180.0 / M_PI);
-
-  double cross_z = q1.w * q2.z - q1.z * q2.w;
-
-  if (cross_z < 0) {
-    angle = -angle;
-  }
-
-  if (angle > 180.0) {
-    angle -= 360.0;
-  } else if (angle < -180.0) {
-    angle += 360.0;
-  }
-
-  return angle;
-}
-
 void FreespacePlannerNode::updateTargetIndex()
 {
   if (!utils::is_stopped(odom_buffer_, node_param_.th_stopped_velocity_mps)) {
@@ -227,7 +204,7 @@ void FreespacePlannerNode::updateTargetIndex()
 
   if (new_target_index == target_index_) {
     double yaw_error =
-      quaternionAngularDifference(goal_pose_.pose.orientation, current_pose_.pose.orientation);
+      autoware_utils_geometry::calc_yaw_deviation(goal_pose_.pose, current_pose_.pose);
 
     RCLCPP_INFO_STREAM(
       get_logger(),
