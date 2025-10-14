@@ -21,35 +21,23 @@
 
 #include <algorithm>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
 namespace autoware::behavior_path_planner::utils::parking_departure
 {
-
-using autoware::motion_utils::calcDecelDistWithJerkAndAccConstraints;
-
 std::optional<double> calcFeasibleDecelDistance(
   std::shared_ptr<const PlannerData> planner_data, const double acc_lim, const double jerk_lim,
   const double target_velocity)
 {
   const auto v_now = planner_data->self_odometry->twist.twist.linear.x;
-  const auto a_now = planner_data->self_acceleration->accel.accel.linear.x;
 
   if (v_now < target_velocity) {
     return 0.0;
   }
 
-  auto min_stop_distance = calcDecelDistWithJerkAndAccConstraints(
-    v_now, target_velocity, a_now, -acc_lim, jerk_lim, -1.0 * jerk_lim);
-
-  if (!min_stop_distance) {
-    return {};
-  }
-
-  min_stop_distance = std::max(*min_stop_distance, 0.0);
-
-  return min_stop_distance;
+  return calc_feasible_decel_distance(planner_data, -acc_lim, jerk_lim, target_velocity);
 }
 
 void modifyVelocityByDirection(
@@ -121,31 +109,15 @@ std::pair<double, double> getPairsTerminalVelocityAndAccel(
 
 std::optional<PathWithLaneId> generateFeasibleStopPath(
   PathWithLaneId & current_path, std::shared_ptr<const PlannerData> planner_data,
-  PoseWithDetailOpt & stop_pose, const double maximum_deceleration, const double maximum_jerk)
+  PoseWithDetailOpt & stop_pose, const double maximum_deceleration, const double maximum_jerk,
+  const std::string & stop_reason)
 {
-  if (current_path.points.empty()) {
-    return {};
+  stop_pose = insert_feasible_stop_point(
+    current_path, planner_data, -maximum_deceleration, maximum_jerk, stop_reason);
+
+  if (!stop_pose) {
+    return std::nullopt;
   }
-
-  // try to insert stop point in current_path after approval
-  // but if can't stop with constraints(maximum deceleration, maximum jerk), don't insert stop point
-  const auto min_stop_distance =
-    autoware::behavior_path_planner::utils::parking_departure::calcFeasibleDecelDistance(
-      planner_data, maximum_deceleration, maximum_jerk, 0.0);
-
-  if (!min_stop_distance) {
-    return {};
-  }
-
-  // set stop point
-  const auto stop_idx = autoware::motion_utils::insertStopPoint(
-    planner_data->self_odometry->pose.pose, *min_stop_distance, current_path.points);
-
-  if (!stop_idx) {
-    return {};
-  }
-
-  stop_pose = PoseWithDetail(current_path.points.at(*stop_idx).point.pose);
 
   return current_path;
 }
