@@ -75,6 +75,18 @@ void copy_trajectory_orientation(
   const TrajectoryOptimizerParams & params);
 
 /**
+ * @brief Corrects the orientation of output trajectory points when they deviate significantly from
+ * input trajectory.
+ * @param input_trajectory The reference input trajectory points.
+ * @param output_trajectory The output trajectory points to be corrected.
+ * @param yaw_threshold_rad The yaw difference threshold in radians. Orientations are corrected when
+ * difference exceeds this value.
+ */
+void correct_trajectory_orientation(
+  const TrajectoryPoints & input_trajectory, TrajectoryPoints & output_trajectory,
+  const double yaw_threshold_rad);
+
+/**
  * @brief Interpolates the given trajectory points based on trajectory length.
  *
  * @param traj_points The trajectory points to be interpolated.

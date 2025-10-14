@@ -14,9 +14,12 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_qp_smoother.hpp"
 
+#include "autoware/trajectory_optimizer/utils.hpp"
+
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/update_param.hpp>
+#include <autoware_utils_math/unit_conversion.hpp>
 #include <rclcpp/logging.hpp>
 
 #include <algorithm>
@@ -50,6 +53,10 @@ void TrajectoryQPSmoother::set_up_params()
   qp_params_.osqp_eps_rel = get_or_declare_parameter<double>(*node_ptr, "qp_osqp_eps_rel");
   qp_params_.osqp_max_iter = get_or_declare_parameter<int>(*node_ptr, "qp_osqp_max_iter");
   qp_params_.osqp_verbose = get_or_declare_parameter<bool>(*node_ptr, "qp_osqp_verbose");
+  qp_params_.correct_orientation =
+    get_or_declare_parameter<bool>(*node_ptr, "qp_correct_orientation");
+  qp_params_.orientation_correction_threshold_deg =
+    get_or_declare_parameter<double>(*node_ptr, "qp_orientation_correction_threshold_deg");
 }
 
 rcl_interfaces::msg::SetParametersResult TrajectoryQPSmoother::on_parameter(
@@ -64,6 +71,10 @@ rcl_interfaces::msg::SetParametersResult TrajectoryQPSmoother::on_parameter(
   update_param<double>(parameters, "qp_osqp_eps_rel", qp_params_.osqp_eps_rel);
   update_param<int>(parameters, "qp_osqp_max_iter", qp_params_.osqp_max_iter);
   update_param<bool>(parameters, "qp_osqp_verbose", qp_params_.osqp_verbose);
+  update_param<bool>(parameters, "qp_correct_orientation", qp_params_.correct_orientation);
+  update_param<double>(
+    parameters, "qp_orientation_correction_threshold_deg",
+    qp_params_.orientation_correction_threshold_deg);
 
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
@@ -101,9 +112,20 @@ void TrajectoryQPSmoother::optimize_trajectory(
     return;
   }
 
+  // Store original trajectory for orientation correction
+  const TrajectoryPoints original_trajectory = traj_points;
+
   // Solve QP problem
   TrajectoryPoints smoothed_trajectory;
   if (solve_qp_problem(traj_points, smoothed_trajectory)) {
+    // Apply orientation correction if enabled
+    if (qp_params_.correct_orientation) {
+      const double yaw_threshold_rad =
+        autoware_utils_math::deg2rad(qp_params_.orientation_correction_threshold_deg);
+      utils::correct_trajectory_orientation(
+        original_trajectory, smoothed_trajectory, yaw_threshold_rad);
+    }
+
     traj_points = smoothed_trajectory;
     RCLCPP_INFO(
       get_node_ptr()->get_logger(), "QP Smoother: Successfully smoothed trajectory with %zu points",

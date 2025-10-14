@@ -110,7 +110,8 @@
           "type": "boolean",
           "default": true,
           "description": "Flag to indicate if the orientation from the original trajectory should be copied to the spline-interpolated trajectory"
-        },"use_qp_smoother": {
+        },
+        "use_qp_smoother": {
           "type": "boolean",
           "default": false,
           "description": "Enable QP-based trajectory smoothing with explicit jerk constraints"
@@ -155,6 +156,17 @@
           "type": "boolean",
           "default": false,
           "description": "Enable OSQP verbose solver output"
+        },
+        "qp_correct_orientation": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable orientation correction for QP solver output"
+        },
+        "qp_orientation_correction_threshold_deg": {
+          "type": "number",
+          "default": 5.0,
+          "minimum": 0,
+          "description": "Yaw threshold for correcting QP solver output orientation. Orientations are copied from input when difference exceeds this value [deg]"
         },
         "jerk_filter_params": {
           "type": "object",
@@ -325,7 +337,9 @@
         "qp_osqp_eps_abs",
         "qp_osqp_eps_rel",
         "qp_osqp_max_iter",
-        "qp_osqp_verbose"
+        "qp_osqp_verbose",
+        "qp_correct_orientation",
+        "qp_orientation_correction_threshold_deg"
       ]
     }
   },

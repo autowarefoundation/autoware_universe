@@ -18,3 +18,7 @@
     qp_osqp_eps_rel: 1.0e-4                    # Relative tolerance for convergence
     qp_osqp_max_iter: 100                      # Maximum solver iterations
     qp_osqp_verbose: false                     # Print solver output to console
+
+    # Orientation correction
+    qp_correct_orientation: true               # Enable orientation correction
+    qp_orientation_correction_threshold_deg: 5.0  # Yaw threshold for correcting QP output orientation [deg]

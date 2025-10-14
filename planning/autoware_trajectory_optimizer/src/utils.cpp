@@ -29,6 +29,7 @@
 #include <cmath>
 #include <cstddef>
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -267,6 +268,34 @@ void copy_trajectory_orientation(
     }
     const auto nearest_index = nearest_index_opt.value();
     out_point.pose.orientation = input_trajectory.at(nearest_index).pose.orientation;
+  }
+}
+
+void correct_trajectory_orientation(
+  const TrajectoryPoints & input_trajectory, TrajectoryPoints & output_trajectory,
+  const double yaw_threshold_rad)
+{
+  for (size_t i = 0; i < output_trajectory.size(); ++i) {
+    const auto nearest_index_opt =
+      autoware::motion_utils::findNearestIndex(input_trajectory, output_trajectory[i].pose);
+
+    if (!nearest_index_opt.has_value()) {
+      continue;
+    }
+
+    const size_t nearest_idx = nearest_index_opt.value();
+
+    // Get yaw from both orientations
+    const double input_yaw = tf2::getYaw(input_trajectory[nearest_idx].pose.orientation);
+    const double output_yaw = tf2::getYaw(output_trajectory[i].pose.orientation);
+
+    // Calculate yaw difference (normalized to [-pi, pi])
+    const double yaw_diff = autoware_utils_math::normalize_radian(output_yaw - input_yaw);
+
+    // If difference exceeds threshold, use original orientation
+    if (std::abs(yaw_diff) > yaw_threshold_rad) {
+      output_trajectory[i].pose.orientation = input_trajectory[nearest_idx].pose.orientation;
+    }
   }
 }
 
