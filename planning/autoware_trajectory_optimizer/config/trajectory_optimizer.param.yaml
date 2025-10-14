@@ -18,3 +18,4 @@
     fix_invalid_points: true
     smooth_velocities: false
     extend_trajectory_backward: true
+    spline_copy_original_orientation: true
