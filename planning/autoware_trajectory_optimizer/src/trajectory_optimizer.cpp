@@ -125,14 +125,9 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
     parameters, "spline_copy_original_orientation", params.spline_copy_original_orientation);
   // QP Smoother parameters
   update_param<bool>(parameters, "use_qp_smoother", params.use_qp_smoother);
-  update_param<double>(parameters, "qp_weight_jerk", params.qp_weight_jerk);
-  update_param<double>(parameters, "qp_weight_acceleration", params.qp_weight_acceleration);
+  update_param<double>(parameters, "qp_weight_smoothness", params.qp_weight_smoothness);
   update_param<double>(parameters, "qp_weight_fidelity", params.qp_weight_fidelity);
-  update_param<double>(
-    parameters, "qp_max_longitudinal_jerk_mps3", params.qp_max_longitudinal_jerk_mps3);
-  update_param<double>(parameters, "qp_max_acceleration_mps2", params.qp_max_acceleration_mps2);
-  update_param<double>(parameters, "qp_min_acceleration_mps2", params.qp_min_acceleration_mps2);
-  update_param<double>(parameters, "qp_max_speed_mps", params.qp_max_speed_mps);
+  update_param<double>(parameters, "qp_time_step_s", params.qp_time_step_s);
   update_param<double>(parameters, "qp_osqp_eps_abs", params.qp_osqp_eps_abs);
   update_param<double>(parameters, "qp_osqp_eps_rel", params.qp_osqp_eps_rel);
   update_param<int>(parameters, "qp_osqp_max_iter", params.qp_osqp_max_iter);
@@ -213,17 +208,9 @@ void TrajectoryOptimizer::set_up_params()
     get_or_declare_parameter<bool>(*this, "spline_copy_original_orientation");
   // QP Smoother parameters
   params_.use_qp_smoother = get_or_declare_parameter<bool>(*this, "use_qp_smoother");
-  params_.qp_weight_jerk = get_or_declare_parameter<double>(*this, "qp_weight_jerk");
-  params_.qp_weight_acceleration =
-    get_or_declare_parameter<double>(*this, "qp_weight_acceleration");
+  params_.qp_weight_smoothness = get_or_declare_parameter<double>(*this, "qp_weight_smoothness");
   params_.qp_weight_fidelity = get_or_declare_parameter<double>(*this, "qp_weight_fidelity");
-  params_.qp_max_longitudinal_jerk_mps3 =
-    get_or_declare_parameter<double>(*this, "qp_max_longitudinal_jerk_mps3");
-  params_.qp_max_acceleration_mps2 =
-    get_or_declare_parameter<double>(*this, "qp_max_acceleration_mps2");
-  params_.qp_min_acceleration_mps2 =
-    get_or_declare_parameter<double>(*this, "qp_min_acceleration_mps2");
-  params_.qp_max_speed_mps = get_or_declare_parameter<double>(*this, "qp_max_speed_mps");
+  params_.qp_time_step_s = get_or_declare_parameter<double>(*this, "qp_time_step_s");
   params_.qp_osqp_eps_abs = get_or_declare_parameter<double>(*this, "qp_osqp_eps_abs");
   params_.qp_osqp_eps_rel = get_or_declare_parameter<double>(*this, "qp_osqp_eps_rel");
   params_.qp_osqp_max_iter = get_or_declare_parameter<int>(*this, "qp_osqp_max_iter");

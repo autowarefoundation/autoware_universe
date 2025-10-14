@@ -15,12 +15,9 @@
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_qp_smoother.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 #include <rclcpp/logging.hpp>
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-
-#include <tf2/LinearMath/Quaternion.h>
 
 #include <algorithm>
 #include <cmath>
@@ -45,17 +42,10 @@ void TrajectoryQPSmoother::set_up_params()
   auto node_ptr = get_node_ptr();
   using autoware_utils_rclcpp::get_or_declare_parameter;
 
-  qp_params_.weight_jerk = get_or_declare_parameter<double>(*node_ptr, "qp_weight_jerk");
-  qp_params_.weight_acceleration =
-    get_or_declare_parameter<double>(*node_ptr, "qp_weight_acceleration");
+  qp_params_.weight_smoothness =
+    get_or_declare_parameter<double>(*node_ptr, "qp_weight_smoothness");
   qp_params_.weight_fidelity = get_or_declare_parameter<double>(*node_ptr, "qp_weight_fidelity");
-  qp_params_.max_longitudinal_jerk_mps3 =
-    get_or_declare_parameter<double>(*node_ptr, "qp_max_longitudinal_jerk_mps3");
-  qp_params_.max_acceleration_mps2 =
-    get_or_declare_parameter<double>(*node_ptr, "qp_max_acceleration_mps2");
-  qp_params_.min_acceleration_mps2 =
-    get_or_declare_parameter<double>(*node_ptr, "qp_min_acceleration_mps2");
-  qp_params_.max_speed_mps = get_or_declare_parameter<double>(*node_ptr, "qp_max_speed_mps");
+  qp_params_.time_step_s = get_or_declare_parameter<double>(*node_ptr, "qp_time_step_s");
   qp_params_.osqp_eps_abs = get_or_declare_parameter<double>(*node_ptr, "qp_osqp_eps_abs");
   qp_params_.osqp_eps_rel = get_or_declare_parameter<double>(*node_ptr, "qp_osqp_eps_rel");
   qp_params_.osqp_max_iter = get_or_declare_parameter<int>(*node_ptr, "qp_osqp_max_iter");
@@ -67,14 +57,9 @@ rcl_interfaces::msg::SetParametersResult TrajectoryQPSmoother::on_parameter(
 {
   using autoware_utils_rclcpp::update_param;
 
-  update_param<double>(parameters, "qp_weight_jerk", qp_params_.weight_jerk);
-  update_param<double>(parameters, "qp_weight_acceleration", qp_params_.weight_acceleration);
+  update_param<double>(parameters, "qp_weight_smoothness", qp_params_.weight_smoothness);
   update_param<double>(parameters, "qp_weight_fidelity", qp_params_.weight_fidelity);
-  update_param<double>(
-    parameters, "qp_max_longitudinal_jerk_mps3", qp_params_.max_longitudinal_jerk_mps3);
-  update_param<double>(parameters, "qp_max_acceleration_mps2", qp_params_.max_acceleration_mps2);
-  update_param<double>(parameters, "qp_min_acceleration_mps2", qp_params_.min_acceleration_mps2);
-  update_param<double>(parameters, "qp_max_speed_mps", qp_params_.max_speed_mps);
+  update_param<double>(parameters, "qp_time_step_s", qp_params_.time_step_s);
   update_param<double>(parameters, "qp_osqp_eps_abs", qp_params_.osqp_eps_abs);
   update_param<double>(parameters, "qp_osqp_eps_rel", qp_params_.osqp_eps_rel);
   update_param<int>(parameters, "qp_osqp_max_iter", qp_params_.osqp_max_iter);
@@ -192,15 +177,30 @@ bool TrajectoryQPSmoother::solve_qp_problem(
   }
   const double avg_deviation = total_deviation / static_cast<double>(N);
 
-  // Diagnostic logging
+  // Calculate jerk metrics for smoothness evaluation
+  double max_jerk = 0.0;
+  double total_jerk = 0.0;
+  const double dt = qp_params_.time_step_s;
+  for (size_t i = 0; i < output_trajectory.size() - 1; ++i) {
+    if (i < output_trajectory.size() - 1) {
+      const double jerk =
+        (output_trajectory[i + 1].acceleration_mps2 - output_trajectory[i].acceleration_mps2) / dt;
+      max_jerk = std::max(max_jerk, std::abs(jerk));
+      total_jerk += std::abs(jerk);
+    }
+  }
+  const double avg_jerk = total_jerk / static_cast<double>(N - 1);
+
+  // Diagnostic logging with velocity, acceleration, and jerk metrics
   RCLCPP_INFO(
     get_node_ptr()->get_logger(),
-    "QP Smoother: N=%d, dt=%.3f, iters=%d, obj=%.2e, v_range=[%.2f, %.2f] m/s, "
-    "path_dev=[avg=%.3fm, max=%.3fm], status=%s",
-    N, calculate_time_step(input_trajectory), result.iteration_status, osqp_solver.getObjVal(),
+    "QP Smoother: N=%d, dt=%.3f, iters=%d, obj=%.2e, "
+    "v=[%.2f, %.2f] m/s, a=[%.2f, %.2f] m/s², "
+    "jerk=[avg=%.2f, max=%.2f] m/s³, path_dev=[avg=%.3f, max=%.3f]m",
+    N, dt, result.iteration_status, osqp_solver.getObjVal(),
     output_trajectory.front().longitudinal_velocity_mps,
-    output_trajectory.back().longitudinal_velocity_mps, avg_deviation, max_deviation,
-    osqp_solver.getStatusMessage().c_str());
+    output_trajectory.back().longitudinal_velocity_mps, output_trajectory.front().acceleration_mps2,
+    output_trajectory.back().acceleration_mps2, avg_jerk, max_jerk, avg_deviation, max_deviation);
 
   return true;
 }
@@ -215,12 +215,12 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
   H = Eigen::MatrixXd::Zero(num_variables, num_variables);
   std::fill(f_vec.begin(), f_vec.end(), 0.0);
 
-  // Calculate time step for temporal scaling
-  const double dt = calculate_time_step(input_trajectory);
+  // Use fixed time step for temporal scaling
+  const double dt = qp_params_.time_step_s;
   const double dt_sq = dt * dt;
 
-  // Scale curvature weight by 1/dt² for velocity-aware smoothing
-  const double weight_curvature_scaled = qp_params_.weight_jerk / dt_sq;
+  // Scale smoothness weight by 1/dt² for velocity-aware path smoothing
+  const double weight_smoothness_scaled = qp_params_.weight_smoothness / dt_sq;
 
   // Minimize path curvature: Σ ||(p_{i+1} - 2*p_i + p_{i-1})||²
   for (int i = 1; i < N - 1; ++i) {
@@ -232,26 +232,26 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
     const int y_ip1 = 2 * (i + 1) + 1;
 
     // x-direction curvature
-    H(x_im1, x_im1) += weight_curvature_scaled;
-    H(x_i, x_i) += 4.0 * weight_curvature_scaled;
-    H(x_ip1, x_ip1) += weight_curvature_scaled;
-    H(x_im1, x_i) += -2.0 * weight_curvature_scaled;
-    H(x_i, x_im1) += -2.0 * weight_curvature_scaled;
-    H(x_i, x_ip1) += -2.0 * weight_curvature_scaled;
-    H(x_ip1, x_i) += -2.0 * weight_curvature_scaled;
-    H(x_im1, x_ip1) += weight_curvature_scaled;
-    H(x_ip1, x_im1) += weight_curvature_scaled;
+    H(x_im1, x_im1) += weight_smoothness_scaled;
+    H(x_i, x_i) += 4.0 * weight_smoothness_scaled;
+    H(x_ip1, x_ip1) += weight_smoothness_scaled;
+    H(x_im1, x_i) += -2.0 * weight_smoothness_scaled;
+    H(x_i, x_im1) += -2.0 * weight_smoothness_scaled;
+    H(x_i, x_ip1) += -2.0 * weight_smoothness_scaled;
+    H(x_ip1, x_i) += -2.0 * weight_smoothness_scaled;
+    H(x_im1, x_ip1) += weight_smoothness_scaled;
+    H(x_ip1, x_im1) += weight_smoothness_scaled;
 
     // y-direction curvature
-    H(y_im1, y_im1) += weight_curvature_scaled;
-    H(y_i, y_i) += 4.0 * weight_curvature_scaled;
-    H(y_ip1, y_ip1) += weight_curvature_scaled;
-    H(y_im1, y_i) += -2.0 * weight_curvature_scaled;
-    H(y_i, y_im1) += -2.0 * weight_curvature_scaled;
-    H(y_i, y_ip1) += -2.0 * weight_curvature_scaled;
-    H(y_ip1, y_i) += -2.0 * weight_curvature_scaled;
-    H(y_im1, y_ip1) += weight_curvature_scaled;
-    H(y_ip1, y_im1) += weight_curvature_scaled;
+    H(y_im1, y_im1) += weight_smoothness_scaled;
+    H(y_i, y_i) += 4.0 * weight_smoothness_scaled;
+    H(y_ip1, y_ip1) += weight_smoothness_scaled;
+    H(y_im1, y_i) += -2.0 * weight_smoothness_scaled;
+    H(y_i, y_im1) += -2.0 * weight_smoothness_scaled;
+    H(y_i, y_ip1) += -2.0 * weight_smoothness_scaled;
+    H(y_ip1, y_i) += -2.0 * weight_smoothness_scaled;
+    H(y_im1, y_ip1) += weight_smoothness_scaled;
+    H(y_ip1, y_im1) += weight_smoothness_scaled;
   }
 
   for (int i = 0; i < N; ++i) {
@@ -282,11 +282,15 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
 
 void TrajectoryQPSmoother::post_process_trajectory(
   const Eigen::VectorXd & solution, const TrajectoryPoints & input_trajectory,
-  TrajectoryPoints & output_trajectory)
+  TrajectoryPoints & output_trajectory) const
 {
   const size_t N = input_trajectory.size();
   output_trajectory.resize(N);
 
+  // Use fixed time step for velocity/acceleration derivation
+  const double dt = qp_params_.time_step_s;
+
+  // First pass: Update positions and orientations
   for (size_t i = 0; i < N; ++i) {
     // Copy input trajectory data
     output_trajectory[i] = input_trajectory[i];
@@ -301,54 +305,74 @@ void TrajectoryQPSmoother::post_process_trajectory(
 
     // Recalculate orientation from smoothed path
     if (i < N - 1) {
-      const double dx = solution[2 * (i + 1)] - x;
-      const double dy = solution[2 * (i + 1) + 1] - y;
-      const double yaw = calculate_yaw_from_positions(dx, dy);
-      output_trajectory[i].pose.orientation = yaw_to_quaternion(yaw);
+      // Use motion_utils function to calculate azimuth angle
+      geometry_msgs::msg::Point p_from;
+      geometry_msgs::msg::Point p_to;
+      p_from.x = x;
+      p_from.y = y;
+      p_to.x = solution[2 * (i + 1)];
+      p_to.y = solution[2 * (i + 1) + 1];
+      const double yaw = autoware_utils_geometry::calc_azimuth_angle(p_from, p_to);
+      output_trajectory[i].pose.orientation =
+        autoware_utils_geometry::create_quaternion_from_yaw(yaw);
     } else {
       if (i > 0) {
         output_trajectory[i].pose.orientation = output_trajectory[i - 1].pose.orientation;
       }
     }
-
-    // IMPORTANT: Preserve input velocities and accelerations
-    // The QP smoother only optimizes path geometry (x,y)
-    // Velocity smoothing is handled by TrajectoryVelocityOptimizer plugin
-    output_trajectory[i].longitudinal_velocity_mps = input_trajectory[i].longitudinal_velocity_mps;
-    output_trajectory[i].acceleration_mps2 = input_trajectory[i].acceleration_mps2;
-  }
-}
-
-double TrajectoryQPSmoother::calculate_time_step(const TrajectoryPoints & traj_points) const
-{
-  if (traj_points.size() < 2) {
-    return 0.1;  // Default fallback
   }
 
-  // Calculate average time step
-  double total_time = 0.0;
-  for (size_t i = 1; i < traj_points.size(); ++i) {
-    // Calculate duration difference manually
-    const auto & t1 = traj_points[i].time_from_start;
-    const auto & t0 = traj_points[i - 1].time_from_start;
-    const double dt = (t1.sec - t0.sec) + (t1.nanosec - t0.nanosec) * 1e-9;
-    total_time += dt;
+  // Second pass: Recalculate velocities from smoothed positions
+  // velocity[i] = ||position[i+1] - position[i]|| / dt
+  // Note: Start from index 1 to use previous position
+  double prev_x = output_trajectory[0].pose.position.x;
+  double prev_y = output_trajectory[0].pose.position.y;
+  output_trajectory[0].longitudinal_velocity_mps = input_trajectory[0].longitudinal_velocity_mps;
+
+  for (size_t i = 1; i < N; ++i) {
+    const double curr_x = output_trajectory[i].pose.position.x;
+    const double curr_y = output_trajectory[i].pose.position.y;
+    const double distance = std::hypot(curr_x - prev_x, curr_y - prev_y);
+    output_trajectory[i].longitudinal_velocity_mps = static_cast<float>(distance / dt);
+    prev_x = curr_x;
+    prev_y = curr_y;
   }
 
-  const double avg_dt = total_time / static_cast<double>(traj_points.size() - 1);
-  return std::max(0.01, avg_dt);  // Ensure minimum time step
-}
+  // Third pass: Smooth velocities with moving average
+  // This helps reduce noise from numerical differentiation
+  constexpr size_t velocity_smoothing_window = 3;  // Small window for light smoothing
+  if (N >= velocity_smoothing_window) {
+    std::vector<float> smoothed_velocities(N);
+    for (size_t i = 0; i + velocity_smoothing_window <= N; ++i) {
+      double sum_velocity = 0.0;
+      for (size_t w = 0; w < velocity_smoothing_window; ++w) {
+        sum_velocity += output_trajectory[i + w].longitudinal_velocity_mps;
+      }
+      smoothed_velocities[i] =
+        static_cast<float>(sum_velocity / static_cast<double>(velocity_smoothing_window));
+    }
 
-double TrajectoryQPSmoother::calculate_yaw_from_positions(double dx, double dy) const
-{
-  return std::atan2(dy, dx);
-}
+    // Apply smoothed velocities
+    for (size_t i = 0; i + velocity_smoothing_window <= N; ++i) {
+      output_trajectory[i].longitudinal_velocity_mps = smoothed_velocities[i];
+    }
 
-geometry_msgs::msg::Quaternion TrajectoryQPSmoother::yaw_to_quaternion(double yaw) const
-{
-  tf2::Quaternion q;
-  q.setRPY(0.0, 0.0, yaw);
-  return tf2::toMsg(q);
+    // Keep last smoothed velocity for remaining points
+    const float last_smoothed_vel = smoothed_velocities[N - velocity_smoothing_window];
+    for (size_t i = N - velocity_smoothing_window + 1; i < N; ++i) {
+      output_trajectory[i].longitudinal_velocity_mps = last_smoothed_vel;
+    }
+  }
+
+  // Fourth pass: Recalculate accelerations from velocities
+  // acceleration[i] = (velocity[i+1] - velocity[i]) / dt
+  for (size_t i = 0; i < N - 1; ++i) {
+    const double v0 = output_trajectory[i].longitudinal_velocity_mps;
+    const double v1 = output_trajectory[i + 1].longitudinal_velocity_mps;
+    output_trajectory[i].acceleration_mps2 = static_cast<float>((v1 - v0) / dt);
+  }
+  // Last point: set acceleration to zero
+  output_trajectory[N - 1].acceleration_mps2 = 0.0f;
 }
 
 }  // namespace autoware::trajectory_optimizer::plugin

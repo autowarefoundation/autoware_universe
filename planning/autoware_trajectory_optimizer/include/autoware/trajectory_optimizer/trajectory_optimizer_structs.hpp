@@ -50,13 +50,9 @@ struct TrajectoryOptimizerParams
   bool spline_copy_original_orientation{false};
   // QP Smoother parameters
   bool use_qp_smoother{false};
-  double qp_weight_jerk{10.0};
-  double qp_weight_acceleration{1.0};
+  double qp_weight_smoothness{10.0};
   double qp_weight_fidelity{100.0};
-  double qp_max_longitudinal_jerk_mps3{2.0};
-  double qp_max_acceleration_mps2{2.0};
-  double qp_min_acceleration_mps2{-3.0};
-  double qp_max_speed_mps{20.0};
+  double qp_time_step_s{0.1};
   double qp_osqp_eps_abs{1e-4};
   double qp_osqp_eps_rel{1e-4};
   int qp_osqp_max_iter{4000};
