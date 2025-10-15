@@ -14,7 +14,7 @@
 
 #include "mission_planner.hpp"
 
-#include "service_utils.hpp"
+#include <autoware/mission_planner_universe/service_utils.hpp>
 
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
@@ -382,7 +382,7 @@ void MissionPlanner::on_set_preferred_primitive(
     segment.preferred_primitive = preferred_primitive;
   }
 
-  change_route(current_route, req->emphasise_goal_lanes);
+  change_route(current_route, req->reset);
   res->status.message = "Successfully set preferred primitive.";
   res->status.success = true;
 }

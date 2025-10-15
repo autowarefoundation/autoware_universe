@@ -38,7 +38,7 @@ ManualLaneSelection::ManualLaneSelection(QWidget * parent) : rviz_common::Panel(
 
   // Create the service client
   client_ = node_->create_client<SetPreferredLane>(
-    "/planning/mission_planning/manual_lane_change_handler/set_preferred_lane");
+    "/planning/manual_lane_change_handler/manual_lane_change_handler/set_preferred_lane");
 
   // Connect button signals
   connect(left_button_, &QPushButton::clicked, this, [this]() { send_lane_change_request(0); });

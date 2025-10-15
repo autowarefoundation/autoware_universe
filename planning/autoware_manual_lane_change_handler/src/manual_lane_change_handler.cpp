@@ -16,7 +16,7 @@
 
 #include <string>
 
-namespace autoware::mission_planner_universe
+namespace autoware::manual_lane_change_handler
 {
 
 std::vector<autoware_planning_msgs::msg::LaneletPrimitive>
@@ -239,7 +239,7 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
       std::string(" is commanded and executed successfully.")};
 }
 
-}  // namespace autoware::mission_planner_universe
+}  // namespace autoware::manual_lane_change_handler
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::mission_planner_universe::ManualLaneChangeHandler)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::manual_lane_change_handler::ManualLaneChangeHandler)

@@ -15,14 +15,13 @@
 #ifndef MISSION_PLANNER__MANUAL_LANE_CHANGE_HANDLER_HPP_
 #define MISSION_PLANNER__MANUAL_LANE_CHANGE_HANDLER_HPP_
 
-#include "service_utils.hpp"
-
 #include <autoware/mission_planner_universe/mission_planner_plugin.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware/mission_planner_universe/service_utils.hpp>
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_planning_msgs/msg/lanelet_primitive.hpp>
 #include <autoware_planning_msgs/srv/set_lanelet_route.hpp>
@@ -36,12 +35,13 @@
 #include <optional>
 #include <string>
 
-namespace autoware::mission_planner_universe
+namespace autoware::manual_lane_change_handler
 {
 
 using autoware_planning_msgs::msg::LaneletPrimitive;
 using autoware_planning_msgs::msg::LaneletRoute;
 using tier4_planning_msgs::srv::SetPreferredLane;
+using autoware::mission_planner_universe::PlannerPlugin;
 
 struct LaneChangeRequestResult
 {
@@ -166,7 +166,7 @@ private:
         std::make_shared<tier4_planning_msgs::srv::SetPreferredPrimitive::Request>();
     set_preferred_primitive_req->preferred_primitives =
       lane_change_request_result.preferred_primitives;
-    set_preferred_primitive_req->emphasise_goal_lanes = req->lane_change_direction != 2;
+    set_preferred_primitive_req->reset = req->lane_change_direction != 2;
     set_preferred_primitive_req->uuid = current_route_->uuid;
 
     auto future = client->async_send_request(
@@ -207,6 +207,6 @@ private:
   rclcpp::Logger logger_;
 };
 
-}  // namespace autoware::mission_planner_universe
+}  // namespace autoware::manual_lane_change_handler
 
 #endif  // MISSION_PLANNER__MANUAL_LANE_CHANGE_HANDLER_HPP_

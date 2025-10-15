@@ -10,7 +10,7 @@
   <arg name="mission_planner_param_path" default="$(find-pkg-share autoware_mission_planner_universe)/config/mission_planner.param.yaml"/>
 
   <node_container pkg="rclcpp_components" exec="component_container_mt" name="mission_planner_container" namespace="">
-    <composable_node pkg="autoware_mission_planner_universe" plugin="autoware::mission_planner_universe::MissionPlanner" name="mission_planner" namespace="">
+    <composable_node pkg="autoware_manual_lane_change_handler" plugin="autoware::manual_lane_change_handler::ManualLaneChangeHandler" name="manual_lane_change_handler" namespace="">
       <param from="$(var mission_planner_param_path)"/>
       <remap from="~/input/modified_goal" to="$(var modified_goal_topic_name)"/>
       <remap from="~/input/vector_map" to="$(var map_topic_name)"/>
@@ -21,19 +21,5 @@
       <remap from="~/state" to="state"/>
       <remap from="~/debug/route_marker" to="$(var visualization_topic_name)"/>
     </composable_node>
-    <composable_node pkg="autoware_mission_planner_universe" plugin="autoware::mission_planner_universe::RouteSelector" name="route_selector" namespace="">
-      <remap from="~/planner/clear_route" to="mission_planner/clear_route"/>
-      <remap from="~/planner/set_lanelet_route" to="mission_planner/set_lanelet_route"/>
-      <remap from="~/planner/set_waypoint_route" to="mission_planner/set_waypoint_route"/>
-      <remap from="~/planner/route" to="route"/>
-      <remap from="~/planner/state" to="state"/>
-      <!-- Main route interface -->
-      <remap from="~/main/clear_route" to="$(var clear_route_service_name)"/>
-      <remap from="~/main/set_lanelet_route" to="$(var set_lanelet_route_service_name)"/>
-      <remap from="~/main/set_waypoint_route" to="$(var set_waypoint_route_service_name)"/>
-      <remap from="~/main/route" to="$(var route_topic_name)"/>
-      <remap from="~/main/state" to="$(var route_state_topic_name)"/>
-    </composable_node>
-    <composable_node pkg="autoware_glog_component" plugin="autoware::glog_component::GlogComponent" name="glog_component" namespace=""/>
   </node_container>
 </launch>
