@@ -400,7 +400,6 @@ std::vector<StopObstacle> RoadUserStopModule::filter_stop_obstacles(
     }
 
     // Check if object was lost recently (within threshold)
-    const auto param = param_listener_->get_params();
     // Use last_stop_obstacle_time to check how long it's been since this object was a stop obstacle
     const double lost_duration =
       (current_time - tracked_it->second.last_stop_obstacle_time).seconds();
