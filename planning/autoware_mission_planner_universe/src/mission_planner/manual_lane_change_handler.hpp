@@ -155,6 +155,12 @@ private:
     LaneChangeRequestResult lane_change_request_result =
       this->process_lane_change_request(closest_lanelet.id(), req);
 
+    if (!lane_change_request_result.success) {
+      res->status.success = false;
+      res->status.message = lane_change_request_result.message;
+      return;
+    }
+
     std::shared_ptr<tier4_planning_msgs::srv::SetPreferredPrimitive::Request>
       set_preferred_primitive_req =
         std::make_shared<tier4_planning_msgs::srv::SetPreferredPrimitive::Request>();
@@ -171,15 +177,10 @@ private:
           RCLCPP_INFO(
             this->get_logger(), "Lane change request succesful: %s",
             response->status.message.c_str());
-
-          std::cerr << "Lane change request succesful: " << response->status.message.c_str()
-                    << std::endl;
         } else {
           RCLCPP_WARN(
             this->get_logger(), "Failed to set preferred primitive: %s",
             response->status.message.c_str());
-          std::cerr << "Failed to set preferred primitive: " << response->status.message.c_str()
-                    << std::endl;
         }
       });
 
