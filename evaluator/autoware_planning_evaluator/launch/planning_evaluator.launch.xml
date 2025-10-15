@@ -1,5 +1,4 @@
 <launch>
-  <arg name="common_param_path"/>
   <!-- if output_metrics=true, metrics are written to `<ros2_logging_directory>/autoware_metrics/<node_name>-<time_stamp>.json`. -->
   <arg name="output_metrics" default="false"/>
   <arg name="input/odometry" default="/localization/kinematic_state"/>

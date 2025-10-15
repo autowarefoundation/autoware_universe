@@ -58,10 +58,7 @@
 
     <!-- planning evaluator -->
     <group>
-      <include file="$(find-pkg-share autoware_planning_evaluator)/launch/planning_evaluator.launch.xml">
-        <arg name="input_objects_topic_name" value="$(var input_objects_topic_name)"/>
-        <arg name="common_param_path" value="$(var common_param_path)"/>
-      </include>
+      <include file="$(find-pkg-share autoware_planning_evaluator)/launch/planning_evaluator.launch.xml"/>
     </group>
 
     <!-- mission remaining distance and time calculator -->
