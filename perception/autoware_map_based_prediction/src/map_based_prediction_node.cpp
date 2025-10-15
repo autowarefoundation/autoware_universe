@@ -348,7 +348,7 @@ void replaceObjectYawWithLaneletsYaw(
   for (const auto & current_lanelet : current_lanelets) {
     const auto lanelet_angle = autoware::experimental::lanelet2_utils::get_lanelet_angle(
       current_lanelet.lanelet,
-      autoware::experimental::lanelet2_utils::from_ros(pose_with_cov.pose.position).basicPoint());
+      autoware::experimental::lanelet2_utils::from_ros(pose_with_cov.pose).basicPoint());
     sum_x += std::cos(lanelet_angle);
     sum_y += std::sin(lanelet_angle);
   }
@@ -1255,7 +1255,7 @@ Maneuver MapBasedPredictionNode::predictObjectManeuverByLatDiffDistance(
   double closest_prev_yaw = std::numeric_limits<double>::max();
   for (const auto & lanelet : prev_lanelets) {
     const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
-      lanelet, autoware::experimental::lanelet2_utils::from_ros(prev_pose.position).basicPoint());
+      lanelet, autoware::experimental::lanelet2_utils::from_ros(prev_pose).basicPoint());
     const double delta_yaw = tf2::getYaw(prev_pose.orientation) - lane_yaw;
     const double normalized_delta_yaw = autoware_utils::normalize_radian(delta_yaw);
     if (normalized_delta_yaw < closest_prev_yaw) {

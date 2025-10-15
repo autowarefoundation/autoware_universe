@@ -643,9 +643,9 @@ bool ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::isSameDirectionWithLanele
     }
 
     const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
-      box_and_lanelet.second.lanelet, autoware::experimental::lanelet2_utils::from_ros(
-                                        object.kinematics.pose_with_covariance.pose.position)
-                                        .basicPoint());
+      box_and_lanelet.second.lanelet,
+      autoware::experimental::lanelet2_utils::from_ros(object.kinematics.pose_with_covariance.pose)
+        .basicPoint());
     const double delta_yaw = object_velocity_yaw - lane_yaw;
     const double normalized_delta_yaw = autoware_utils::normalize_radian(delta_yaw);
     const double abs_norm_delta_yaw = std::fabs(normalized_delta_yaw);

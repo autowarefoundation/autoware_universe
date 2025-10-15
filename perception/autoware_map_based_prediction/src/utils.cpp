@@ -50,9 +50,9 @@ double calcAbsYawDiffBetweenLaneletAndObject(
 {
   const double object_yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
   const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
-    lanelet, autoware::experimental::lanelet2_utils::from_ros(
-               object.kinematics.pose_with_covariance.pose.position)
-               .basicPoint());
+    lanelet,
+    autoware::experimental::lanelet2_utils::from_ros(object.kinematics.pose_with_covariance.pose)
+      .basicPoint());
   const double delta_yaw = object_yaw - lane_yaw;
   const double normalized_delta_yaw = autoware_utils::normalize_radian(delta_yaw);
   const double abs_norm_delta = std::fabs(normalized_delta_yaw);
@@ -338,9 +338,9 @@ bool checkCloseLaneletCondition(
   // Step2. Calculate the angle difference between the lane angle and obstacle angle
   const double object_yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
   const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
-    lanelet.second, autoware::experimental::lanelet2_utils::from_ros(
-                      object.kinematics.pose_with_covariance.pose.position)
-                      .basicPoint());
+    lanelet.second,
+    autoware::experimental::lanelet2_utils::from_ros(object.kinematics.pose_with_covariance.pose)
+      .basicPoint());
   const double delta_yaw = object_yaw - lane_yaw;
   const double normalized_delta_yaw = autoware_utils::normalize_radian(delta_yaw);
   const double abs_norm_delta = std::fabs(normalized_delta_yaw);

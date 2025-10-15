@@ -84,9 +84,9 @@ bool checkCloseLaneletCondition(
 
   const double object_yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
   const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
-    lanelet.second, autoware::experimental::lanelet2_utils::from_ros(
-                      object.kinematics.pose_with_covariance.pose.position)
-                      .basicPoint());
+    lanelet.second,
+    autoware::experimental::lanelet2_utils::from_ros(object.kinematics.pose_with_covariance.pose)
+      .basicPoint());
   double object_motion_yaw = object_yaw;
   bool velocity_is_reverted = object.kinematics.twist_with_covariance.twist.linear.x < 0.0;
   if (velocity_is_reverted) {
@@ -148,9 +148,9 @@ bool hasValidVelocityDirectionToLanelet(
 
   for (const auto & lanelet : lanelets) {
     const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
-      lanelet, autoware::experimental::lanelet2_utils::from_ros(
-                 object.kinematics.pose_with_covariance.pose.position)
-                 .basicPoint());
+      lanelet,
+      autoware::experimental::lanelet2_utils::from_ros(object.kinematics.pose_with_covariance.pose)
+        .basicPoint());
     const double delta_yaw = object_vel_yaw_global - lane_yaw;
     const double normalized_delta_yaw = autoware_utils_math::normalize_radian(delta_yaw);
 
