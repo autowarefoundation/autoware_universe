@@ -72,7 +72,7 @@ struct StopObstacle
     const ObjectClassification & object_classification, const geometry_msgs::msg::Pose & arg_pose,
     const Shape & arg_shape, const double arg_lon_velocity,
     const geometry_msgs::msg::Point & arg_collision_point,
-    const double arg_dist_to_collide_on_decimated_traj)
+    const double arg_dist_to_collide_on_decimated_traj, const bool arg_is_in_no_margin_polygon)
   : uuid(arg_uuid),
     stamp(arg_stamp),
     is_opposite_traffic(arg_is_opposite_traffic),
@@ -82,7 +82,8 @@ struct StopObstacle
     shape(arg_shape),
     collision_point(arg_collision_point),
     dist_to_collide_on_decimated_traj(arg_dist_to_collide_on_decimated_traj),
-    classification(object_classification)
+    classification(object_classification),
+    is_in_no_margin_polygon(arg_is_in_no_margin_polygon)
   {
   }
   UUID uuid;
@@ -96,6 +97,10 @@ struct StopObstacle
   geometry_msgs::msg::Point collision_point;
   double dist_to_collide_on_decimated_traj;
   ObjectClassification classification;
+
+  // for collision certainty check
+  bool is_in_no_margin_polygon;  // true if object is in trajectory polygon without lateral margin
+                                 // (certain collision)
 
   // for lost object tracking
   rclcpp::Time lost_time;  // time when object was lost
@@ -123,6 +128,18 @@ struct TrackedObject
   bool was_inside_detection_area =
     false;  // flag to track if object was previously inside detection area
   double polygon_expansion_length = 0.0;  // expansion factor for object polygon when checking again
+
+  // for stopped object detection
+  bool is_currently_stopped = false;  // flag to indicate if the object is currently stopped
+  rclcpp::Time stopped_start_time;    // time when the object started being stopped
+  geometry_msgs::msg::Point
+    stopped_position;  // position when the object was first considered stopped
+
+  // for tracking when ego reaches the virtual wall for this object
+  bool ego_reached_virtual_wall = false;       // flag to indicate if ego reached the virtual wall
+  rclcpp::Time ego_reached_virtual_wall_time;  // time when ego reached the virtual wall
+  geometry_msgs::msg::Point last_virtual_wall_position;  // position of the last virtual wall
+  bool has_virtual_wall_position = false;  // flag to indicate if virtual wall position is set
 
   void updateClassification(const uint8_t label)
   {
@@ -166,6 +183,8 @@ struct DebugData
 
   // Trajectory polygon with margins
   std::vector<autoware_utils_geometry::Polygon2d> trajectory_polygons;
+  std::vector<autoware_utils_geometry::Polygon2d>
+    trajectory_polygons_no_margin;  // trajectory polygons without lateral margin (0m width)
   std::vector<PredictedObject> filtered_objects;
   std::vector<autoware_utils_geometry::Polygon2d> object_polygons;  // object polygons for debug
   std::optional<size_t> stop_index;

@@ -179,3 +179,29 @@ road_user_stop:
       description: Distance to expand object polygon outward from centroid when object was previously inside detection area [m]
       validation:
         gt_eq<>: [0.0]
+
+  # Stopped object tracking parameters
+  stopped_object_tracking:
+    stopped_velocity_threshold:
+      type: double
+      description: Velocity threshold to consider object as stopped [m/s]
+      validation:
+        gt<>: [0.0]
+
+    stopped_position_tolerance:
+      type: double
+      description: Distance threshold for stopped position movement [m]
+      validation:
+        gt<>: [0.0]
+
+    ego_reached_wall_distance_threshold:
+      type: double
+      description: Distance threshold to consider ego reached virtual wall [m]
+      validation:
+        gt<>: [0.0]
+
+    stopped_duration_after_ego_arrival:
+      type: double
+      description: Duration threshold for stopped object after ego reaches virtual wall [s]
+      validation:
+        gt<>: [0.0]
