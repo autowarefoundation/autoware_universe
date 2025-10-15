@@ -15,7 +15,6 @@
 #include "mission_planner.hpp"
 
 #include <autoware/mission_planner_universe/service_utils.hpp>
-
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/route_checker.hpp>

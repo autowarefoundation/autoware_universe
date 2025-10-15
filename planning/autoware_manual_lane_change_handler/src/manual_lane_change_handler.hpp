@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MISSION_PLANNER__MANUAL_LANE_CHANGE_HANDLER_HPP_
-#define MISSION_PLANNER__MANUAL_LANE_CHANGE_HANDLER_HPP_
+#ifndef MANUAL_LANE_CHANGE_HANDLER_HPP_
+#define MANUAL_LANE_CHANGE_HANDLER_HPP_
 
 #include <autoware/mission_planner_universe/mission_planner_plugin.hpp>
+#include <autoware/mission_planner_universe/service_utils.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <autoware/mission_planner_universe/service_utils.hpp>
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_planning_msgs/msg/lanelet_primitive.hpp>
 #include <autoware_planning_msgs/srv/set_lanelet_route.hpp>
@@ -38,10 +38,10 @@
 namespace autoware::manual_lane_change_handler
 {
 
+using autoware::mission_planner_universe::PlannerPlugin;
 using autoware_planning_msgs::msg::LaneletPrimitive;
 using autoware_planning_msgs::msg::LaneletRoute;
 using tier4_planning_msgs::srv::SetPreferredLane;
-using autoware::mission_planner_universe::PlannerPlugin;
 
 struct LaneChangeRequestResult
 {
@@ -209,4 +209,4 @@ private:
 
 }  // namespace autoware::manual_lane_change_handler
 
-#endif  // MISSION_PLANNER__MANUAL_LANE_CHANGE_HANDLER_HPP_
+#endif  // MANUAL_LANE_CHANGE_HANDLER_HPP_
