@@ -132,7 +132,7 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
   update_param<double>(parameters, "qp_osqp_eps_rel", params.qp_osqp_eps_rel);
   update_param<int>(parameters, "qp_osqp_max_iter", params.qp_osqp_max_iter);
   update_param<bool>(parameters, "qp_osqp_verbose", params.qp_osqp_verbose);
-  update_param<bool>(parameters, "qp_correct_orientation", params.qp_correct_orientation);
+  update_param<bool>(parameters, "qp_fix_orientation", params.qp_fix_orientation);
   update_param<double>(
     parameters, "qp_orientation_correction_threshold_deg",
     params.qp_orientation_correction_threshold_deg);
@@ -219,7 +219,7 @@ void TrajectoryOptimizer::set_up_params()
   params_.qp_osqp_eps_rel = get_or_declare_parameter<double>(*this, "qp_osqp_eps_rel");
   params_.qp_osqp_max_iter = get_or_declare_parameter<int>(*this, "qp_osqp_max_iter");
   params_.qp_osqp_verbose = get_or_declare_parameter<bool>(*this, "qp_osqp_verbose");
-  params_.qp_correct_orientation = get_or_declare_parameter<bool>(*this, "qp_correct_orientation");
+  params_.qp_fix_orientation = get_or_declare_parameter<bool>(*this, "qp_fix_orientation");
   params_.qp_orientation_correction_threshold_deg =
     get_or_declare_parameter<double>(*this, "qp_orientation_correction_threshold_deg");
 }

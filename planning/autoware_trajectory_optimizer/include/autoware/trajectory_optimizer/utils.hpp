@@ -82,7 +82,7 @@ void copy_trajectory_orientation(
  * @param yaw_threshold_rad The yaw difference threshold in radians. Orientations are corrected when
  * difference exceeds this value.
  */
-void correct_trajectory_orientation(
+void fix_trajectory_orientation(
   const TrajectoryPoints & input_trajectory, TrajectoryPoints & output_trajectory,
   const double yaw_threshold_rad);
 

@@ -271,13 +271,13 @@ void copy_trajectory_orientation(
   }
 }
 
-void correct_trajectory_orientation(
+void fix_trajectory_orientation(
   const TrajectoryPoints & input_trajectory, TrajectoryPoints & output_trajectory,
   const double yaw_threshold_rad)
 {
-  for (size_t i = 0; i < output_trajectory.size(); ++i) {
+  for (auto & point : output_trajectory) {
     const auto nearest_index_opt =
-      autoware::motion_utils::findNearestIndex(input_trajectory, output_trajectory[i].pose);
+      autoware::motion_utils::findNearestIndex(input_trajectory, point.pose);
 
     if (!nearest_index_opt.has_value()) {
       continue;
@@ -287,14 +287,14 @@ void correct_trajectory_orientation(
 
     // Get yaw from both orientations
     const double input_yaw = tf2::getYaw(input_trajectory[nearest_idx].pose.orientation);
-    const double output_yaw = tf2::getYaw(output_trajectory[i].pose.orientation);
+    const double output_yaw = tf2::getYaw(point.pose.orientation);
 
     // Calculate yaw difference (normalized to [-pi, pi])
     const double yaw_diff = autoware_utils_math::normalize_radian(output_yaw - input_yaw);
 
     // If difference exceeds threshold, use original orientation
     if (std::abs(yaw_diff) > yaw_threshold_rad) {
-      output_trajectory[i].pose.orientation = input_trajectory[nearest_idx].pose.orientation;
+      point.pose.orientation = input_trajectory[nearest_idx].pose.orientation;
     }
   }
 }
