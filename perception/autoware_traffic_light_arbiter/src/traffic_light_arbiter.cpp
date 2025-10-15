@@ -242,26 +242,6 @@ void TrafficLightArbiter::arbitrateAndPublish(const builtin_interfaces::msg::Tim
     }
   };
 
-  // Determine priority flags based on source_priority_
-  bool perception_priority = false;
-  bool external_priority = false;
-
-  switch (source_priority_) {
-    case SourcePriority::PERCEPTION:
-      perception_priority = true;
-      external_priority = false;
-      break;
-    case SourcePriority::EXTERNAL:
-      perception_priority = false;
-      external_priority = true;
-      break;
-    case SourcePriority::CONFIDENCE:
-    default:
-      perception_priority = false;
-      external_priority = false;
-      break;
-  }
-
   if (enable_signal_matching_) {
     const auto validated_signals =
       signal_match_validator_->validateSignals(latest_perception_msg_, valid_external_signals);
@@ -270,11 +250,11 @@ void TrafficLightArbiter::arbitrateAndPublish(const builtin_interfaces::msg::Tim
     }
   } else {
     for (const auto & signal : latest_perception_msg_.traffic_light_groups) {
-      add_signal_function(signal, perception_priority);
+      add_signal_function(signal, source_priority_ == SourcePriority::PERCEPTION);
     }
 
     for (const auto & signal : valid_external_signals.traffic_light_groups) {
-      add_signal_function(signal, external_priority);
+      add_signal_function(signal, source_priority_ == SourcePriority::EXTERNAL);
     }
   }
 
