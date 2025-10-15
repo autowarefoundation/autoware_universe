@@ -132,6 +132,12 @@ private:
       return;
     }
 
+    if (!current_route_) {
+      res->status.success = false;
+      res->status.message = "No current route available.";
+      return;
+    }
+
     lanelet::ConstLanelet closest_lanelet =
       get_lanelet_by_id_(current_route_->segments.front().preferred_primitive.id);
     const bool found_closest_lane = planner_->getRouteHandler().getClosestLaneletWithinRoute(
@@ -155,6 +161,7 @@ private:
     set_preferred_primitive_req->preferred_primitives =
       lane_change_request_result.preferred_primitives;
     set_preferred_primitive_req->emphasise_goal_lanes = req->lane_change_direction != 2;
+    set_preferred_primitive_req->uuid = current_route_->uuid;
 
     auto future = client->async_send_request(
       set_preferred_primitive_req,

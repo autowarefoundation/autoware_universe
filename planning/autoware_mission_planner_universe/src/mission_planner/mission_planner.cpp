@@ -342,7 +342,6 @@ void MissionPlanner::on_set_preferred_primitive(
     throw service_utils::ServiceException(
       ResponseCode::NO_EFFECT, "The route has not been set yet.", true);
   }
-
   if (req->preferred_primitives.size() != current_route_->segments.size()) {
     res->status.success = false;
     std::cerr << "The size of preferred_primitives (" << req->preferred_primitives.size()
@@ -354,12 +353,30 @@ void MissionPlanner::on_set_preferred_primitive(
         "The size of preferred_primitives ({}) is different from that of the current route ({}).",
         req->preferred_primitives.size(), current_route_->segments.size()));
   }
+  if (req->uuid != current_route_->uuid) {
+    throw service_utils::ServiceException(
+      autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE, "Route UUID does not match the current route.");
+  }
 
   auto current_route = *current_route_;
 
   for (size_t i = 0; i < current_route.segments.size(); ++i) {
     auto & segment = current_route.segments.at(i);
     const auto & preferred_primitive = req->preferred_primitives.at(i);
+
+    if (std::none_of(
+          segment.primitives.begin(), segment.primitives.end(),
+          [&preferred_primitive](const autoware_planning_msgs::msg::LaneletPrimitive & p) {
+            return p.id == preferred_primitive.id;
+          })) {
+      res->status.success = false;
+      std::cerr << "The preferred_primitive at index " << i
+                << " does not belong to the lanelet segment." << std::endl;
+      throw service_utils::ServiceException(
+        autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,
+        fmt::format(
+          "The preferred_primitive at index {} does not belong to the lanelet segment.", i));
+    }
 
     segment.preferred_primitive = preferred_primitive;
   }
