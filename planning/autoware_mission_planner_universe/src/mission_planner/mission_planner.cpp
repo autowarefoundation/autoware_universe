@@ -355,7 +355,8 @@ void MissionPlanner::on_set_preferred_primitive(
   }
   if (req->uuid != current_route_->uuid) {
     throw service_utils::ServiceException(
-      autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE, "Route UUID does not match the current route.");
+      autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,
+      "Route UUID does not match the current route.");
   }
 
   auto current_route = *current_route_;
