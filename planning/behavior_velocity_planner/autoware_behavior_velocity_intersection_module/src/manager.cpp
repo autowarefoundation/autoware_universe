@@ -267,14 +267,6 @@ IntersectionModuleManager::IntersectionModuleManager(rclcpp::Node & node)
     ip.occlusion.attention_lane_curvature_calculation_ds = get_or_declare_parameter<double>(
       node, ns + ".occlusion.attention_lane_curvature_calculation_ds");
 
-    // creep_during_peeking
-    {
-      ip.occlusion.creep_during_peeking.enable =
-        get_or_declare_parameter<bool>(node, ns + ".occlusion.creep_during_peeking.enable");
-      ip.occlusion.creep_during_peeking.creep_velocity = get_or_declare_parameter<double>(
-        node, ns + ".occlusion.creep_during_peeking.creep_velocity");
-    }
-
     ip.occlusion.peeking_offset =
       get_or_declare_parameter<double>(node, ns + ".occlusion.peeking_offset");
     ip.occlusion.occlusion_required_clearance_distance = get_or_declare_parameter<double>(

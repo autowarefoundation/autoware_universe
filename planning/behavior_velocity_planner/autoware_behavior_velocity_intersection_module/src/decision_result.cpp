@@ -38,8 +38,7 @@ std::string formatDecisionResult(
     return rtc + "StuckStop";
   }
   if (std::holds_alternative<YieldStuckStop>(decision_result)) {
-    const auto & state = std::get<YieldStuckStop>(decision_result);
-    return rtc + "YieldStuckStop:\nocclusion_report:" + state.occlusion_report;
+    return rtc + "YieldStuckStop";
   }
   if (std::holds_alternative<NonOccludedCollisionStop>(decision_result)) {
     const auto & state = std::get<NonOccludedCollisionStop>(decision_result);

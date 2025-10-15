@@ -763,7 +763,7 @@ IntersectionModule::TimeDistanceArray IntersectionModule::calcIntersectionPassin
   // occlusion_stopline_idx varies depending on the peeking offset parameter
   // ==========================================================================================
   const auto occlusion_stopline_idx = intersection_stoplines.occlusion_peeking_stopline.value();
-  const auto first_attention_stopline_idx = intersection_stoplines.first_attention_stopline.value();
+  const auto first_attention_stopline_idx = intersection_stoplines.first_attention_stopline;
   const auto closest_idx = intersection_stoplines.closest_idx;
   const auto last_intersection_stopline_candidate_idx =
     std::max(occlusion_stopline_idx, first_attention_stopline_idx);

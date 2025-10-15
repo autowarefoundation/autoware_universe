@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__INTERSECTION_STOPLINES_HPP_
 #define AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__INTERSECTION_STOPLINES_HPP_
 
+#include <geometry_msgs/msg/pose.hpp>
+
 #include <optional>
 
 namespace autoware::behavior_velocity_planner
@@ -33,18 +35,39 @@ struct IntersectionStopLines
   std::optional<size_t> stuck_stopline{std::nullopt};
 
   /**
-   * default_stopline is null if it is calculated negative from first_attention_stopline
+   * default_stopline is
+   * - at RoadMarking position or at the position which is before `first_attention_stopline` by
+   * `stopline_margin`, if it is feasible (A)
    */
   std::optional<size_t> default_stopline{std::nullopt};
+
+  /**
+   * collision_stopline is
+   * - at default_stopline if it is feasible
+   * - if above is not feasible and ego is before `pass_judge_line`
+   *   - and if `previous_collision_stopline_pose` is null, at the position which is after
+   *     `closest_idx` by the braking_distance. And this position is saved as
+   *     `previous_collision_stopline_pose` (B)
+   *   - else, at `previous_collision_stopline_pose` (C)
+   * - otherwise null (D)
+   */
+  std::optional<size_t> collision_stopline{std::nullopt};
 
   /**
    * first_attention_stopline is null if ego footprint along the path does not intersect with
    * attention area. if path[0] satisfies the condition, it is 0
    */
-  std::optional<size_t> first_attention_stopline{std::nullopt};
+  size_t first_attention_stopline{0};
 
   /**
-   * occlusion_peeking_stopline is null if path[0] is already inside the attention area
+   * occlusion_peeking_stopline is
+   * - after `first_attention_stopline` by `peeking_offset` if it is feasible (E)
+   * - if above is not feasible and ego is before `pass_judge_line`
+   *   - and if `previous_occlusion_peeking_stopline_pose` is null, at the position which is after
+   *     `closest_idx` by the braking distance. And this position is saved as
+   *     `previous_occlusion_peeking_stopline_pose` (F)
+   *   - else, at `previous_occlusion_peeking_stopline_pose` (G)
+   * - otherwise null (H)
    */
   std::optional<size_t> occlusion_peeking_stopline{std::nullopt};
 
@@ -55,17 +78,26 @@ struct IntersectionStopLines
   size_t pass_judge_line{0};
 
   /**
-   * occlusion_wo_tl_pass_judge_line is null if ego footprint along the path does not intersect with
-   * the centerline of the first_attention_lane
-   */
-  size_t occlusion_wo_tl_pass_judge_line{0};
-
-  /**
    * maximum_footprint_overshoot_line is the place after first_attention_stopline where ego's
    * footprint most gets close to the left/right boundary of assigned_lane when ego is turning
    * right/left respectively
    */
   std::optional<size_t> maximum_footprint_overshoot_line{std::nullopt};
+
+  struct PreviousStopPose
+  {
+    /**
+     * collision_stopline_pose is non-null if `collision_stopline` was not statically
+     * feasible (B or C)
+     */
+    std::optional<geometry_msgs::msg::Pose> collision_stopline_pose{std::nullopt};
+
+    /**
+     * occlusion_peeking_stopline_pose is non-null if `occlusion_peeking_stopline` was not
+     * statically feasible (F or G)
+     */
+    std::optional<geometry_msgs::msg::Pose> occlusion_peeking_stopline_pose{std::nullopt};
+  };
 };
 }  // namespace autoware::behavior_velocity_planner
 
