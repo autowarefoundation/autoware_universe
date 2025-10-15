@@ -56,7 +56,7 @@ struct QPSmootherParams
   bool osqp_verbose{false};
 
   // Orientation correction
-  bool correct_orientation{true};  // Enable orientation correction
+  bool fix_orientation{true};  // Enable orientation correction
   double orientation_correction_threshold_deg{
     5.0};  // Yaw threshold for orientation correction [deg]
 };
@@ -116,7 +116,7 @@ private:
    */
   void prepare_osqp_matrices(
     const TrajectoryPoints & input_trajectory, Eigen::MatrixXd & H, Eigen::MatrixXd & A,
-    std::vector<double> & f_vec, std::vector<double> & l_vec, std::vector<double> & u_vec);
+    std::vector<double> & f_vec, std::vector<double> & l_vec, std::vector<double> & u_vec) const;
 
   /**
    * @brief Convert QP solution back to trajectory format

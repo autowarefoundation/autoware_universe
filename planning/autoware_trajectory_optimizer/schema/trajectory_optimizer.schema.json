@@ -157,7 +157,7 @@
           "default": false,
           "description": "Enable OSQP verbose solver output"
         },
-        "qp_correct_orientation": {
+        "qp_fix_orientation": {
           "type": "boolean",
           "default": true,
           "description": "Enable orientation correction for QP solver output"
@@ -338,7 +338,7 @@
         "qp_osqp_eps_rel",
         "qp_osqp_max_iter",
         "qp_osqp_verbose",
-        "qp_correct_orientation",
+        "qp_fix_orientation",
         "qp_orientation_correction_threshold_deg"
       ]
     }
