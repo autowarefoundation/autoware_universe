@@ -22,6 +22,36 @@ namespace autoware::multi_object_tracker
 namespace types
 {
 
+OrientationAvailability convertOrientationAvailabilityFromMsg(int8_t msg_availability)
+{
+  using autoware_perception_msgs::msg::DetectedObjectKinematics;
+  switch (msg_availability) {
+    case DetectedObjectKinematics::UNAVAILABLE:
+      return OrientationAvailability::UNAVAILABLE;
+    case DetectedObjectKinematics::SIGN_UNKNOWN:
+      return OrientationAvailability::SIGN_UNKNOWN;
+    case DetectedObjectKinematics::AVAILABLE:
+      return OrientationAvailability::AVAILABLE;
+    default:
+      return OrientationAvailability::UNAVAILABLE;
+  }
+}
+
+int8_t convertOrientationAvailabilityToMsg(OrientationAvailability availability)
+{
+  using autoware_perception_msgs::msg::DetectedObjectKinematics;
+  switch (availability) {
+    case OrientationAvailability::UNAVAILABLE:
+      return DetectedObjectKinematics::UNAVAILABLE;
+    case OrientationAvailability::SIGN_UNKNOWN:
+      return DetectedObjectKinematics::SIGN_UNKNOWN;
+    case OrientationAvailability::AVAILABLE:
+      return DetectedObjectKinematics::AVAILABLE;
+    default:
+      return DetectedObjectKinematics::UNAVAILABLE;
+  }
+}
+
 DynamicObject toDynamicObject(
   const autoware_perception_msgs::msg::DetectedObject & det_object, const uint channel_index)
 {
@@ -47,19 +77,8 @@ DynamicObject toDynamicObject(
   dynamic_object.twist_covariance = det_object.kinematics.twist_with_covariance.covariance;
 
   dynamic_object.kinematics.has_position_covariance = det_object.kinematics.has_position_covariance;
-  if (
-    det_object.kinematics.orientation_availability ==
-    autoware_perception_msgs::msg::DetectedObjectKinematics::UNAVAILABLE) {
-    dynamic_object.kinematics.orientation_availability = OrientationAvailability::UNAVAILABLE;
-  } else if (
-    det_object.kinematics.orientation_availability ==
-    autoware_perception_msgs::msg::DetectedObjectKinematics::SIGN_UNKNOWN) {
-    dynamic_object.kinematics.orientation_availability = OrientationAvailability::SIGN_UNKNOWN;
-  } else if (
-    det_object.kinematics.orientation_availability ==
-    autoware_perception_msgs::msg::DetectedObjectKinematics::AVAILABLE) {
-    dynamic_object.kinematics.orientation_availability = OrientationAvailability::AVAILABLE;
-  }
+  dynamic_object.kinematics.orientation_availability =
+    convertOrientationAvailabilityFromMsg(det_object.kinematics.orientation_availability);
   dynamic_object.kinematics.has_twist = det_object.kinematics.has_twist;
   dynamic_object.kinematics.has_twist_covariance = det_object.kinematics.has_twist_covariance;
 
@@ -95,22 +114,36 @@ autoware_perception_msgs::msg::TrackedObject toTrackedObjectMsg(const DynamicObj
   tracked_object.kinematics.twist_with_covariance.twist = dyn_object.twist;
   tracked_object.kinematics.twist_with_covariance.covariance = dyn_object.twist_covariance;
 
-  if (dyn_object.kinematics.orientation_availability == OrientationAvailability::UNAVAILABLE) {
-    tracked_object.kinematics.orientation_availability =
-      autoware_perception_msgs::msg::TrackedObjectKinematics::UNAVAILABLE;
-  } else if (
-    dyn_object.kinematics.orientation_availability == OrientationAvailability::SIGN_UNKNOWN) {
-    tracked_object.kinematics.orientation_availability =
-      autoware_perception_msgs::msg::TrackedObjectKinematics::SIGN_UNKNOWN;
-  } else if (dyn_object.kinematics.orientation_availability == OrientationAvailability::AVAILABLE) {
-    tracked_object.kinematics.orientation_availability =
-      autoware_perception_msgs::msg::TrackedObjectKinematics::AVAILABLE;
-  }
+  tracked_object.kinematics.orientation_availability =
+    convertOrientationAvailabilityToMsg(dyn_object.kinematics.orientation_availability);
+
   tracked_object.kinematics.is_stationary = false;
 
   tracked_object.shape = dyn_object.shape;
 
   return tracked_object;
+}
+
+autoware_perception_msgs::msg::DetectedObject toDetectedObjectMsg(const DynamicObject & dyn_object)
+{
+  autoware_perception_msgs::msg::DetectedObject detected_object;
+  detected_object.existence_probability = dyn_object.existence_probability;
+  detected_object.classification = dyn_object.classification;
+
+  detected_object.kinematics.pose_with_covariance.pose = dyn_object.pose;
+  detected_object.kinematics.pose_with_covariance.covariance = dyn_object.pose_covariance;
+  detected_object.kinematics.twist_with_covariance.twist = dyn_object.twist;
+  detected_object.kinematics.twist_with_covariance.covariance = dyn_object.twist_covariance;
+
+  detected_object.kinematics.orientation_availability =
+    convertOrientationAvailabilityToMsg(dyn_object.kinematics.orientation_availability);
+  detected_object.kinematics.has_position_covariance = true;
+  detected_object.kinematics.has_twist = true;
+  detected_object.kinematics.has_twist_covariance = true;
+
+  detected_object.shape = dyn_object.shape;
+
+  return detected_object;
 }
 
 double getArea(const autoware_perception_msgs::msg::Shape & shape)

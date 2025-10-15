@@ -1164,34 +1164,27 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
   removeRTCStatus();
 
   auto current_path = getCurrentPath();
-  const auto stop_path =
-    autoware::behavior_path_planner::utils::parking_departure::generateFeasibleStopPath(
-      current_path, planner_data_, stop_pose_, parameters_->maximum_deceleration_for_stop,
-      parameters_->maximum_jerk_for_stop);
+  stop_pose_ = utils::insert_feasible_stop_point(
+    current_path, planner_data_, -parameters_->maximum_deceleration_for_stop,
+    parameters_->maximum_jerk_for_stop);
 
-  if (!stop_path.has_value()) {
-    update_rtc_status(
-      current_path.points, planner_data_->self_odometry->pose.pose.position,
-      status_.pull_out_path.start_pose.position, status_.pull_out_path.end_pose.position,
-      status_.is_safe_dynamic_objects, tier4_rtc_msgs::msg::State::WAITING_FOR_EXECUTION);
-    return current_path;
-  }
-  // Insert stop point in the path if needed
-  RCLCPP_DEBUG_THROTTLE(
-    getLogger(), *clock_, 5000, "Insert stop point in the path because of dynamic objects");
-  status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(stop_path.value());
   if (stop_pose_) {
-    std::string stop_reason = "unsafe against dynamic objects";
-    stop_pose_ = PoseWithDetail(stop_pose_->pose, stop_reason);
+    stop_pose_->detail = "unsafe against dynamic objects";
+
+    RCLCPP_DEBUG_THROTTLE(
+      getLogger(), *clock_, 5000, "Insert stop point in the path because of dynamic objects");
+
+    status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(current_path);
   }
+
   status_.stop_pose = stop_pose_;
 
   update_rtc_status(
-    stop_path->points, planner_data_->self_odometry->pose.pose.position,
+    current_path.points, planner_data_->self_odometry->pose.pose.position,
     status_.pull_out_path.start_pose.position, status_.pull_out_path.end_pose.position,
     status_.is_safe_dynamic_objects, tier4_rtc_msgs::msg::State::WAITING_FOR_EXECUTION);
 
-  return stop_path.value();
+  return current_path;
 }
 
 void StartPlannerModule::check_force_approval()
