@@ -155,10 +155,10 @@ std::unordered_set<lanelet::Id> create_signal_id_set(
   return signal_id_set;
 }
 
-// Returns the signal with the highest confidence elements, considering a external priority
+// Returns the signal with the highest confidence elements, considering source priority
 TrafficSignal get_highest_confidence_signal(
   const std::optional<TrafficSignal> & perception_signal,
-  const std::optional<TrafficSignal> & external_signal, const bool external_priority)
+  const std::optional<TrafficSignal> & external_signal, const SourcePriority source_priority)
 {
   // Returns the existing signal if only one of them exists
   if (!perception_signal) {
@@ -168,9 +168,16 @@ TrafficSignal get_highest_confidence_signal(
     return *perception_signal;
   }
 
-  // Gives priority to the external signal if external_priority is true
-  if (external_priority) {
-    return *external_signal;
+  // Apply source priority
+  switch (source_priority) {
+    case SourcePriority::EXTERNAL:
+      return *external_signal;
+    case SourcePriority::PERCEPTION:
+      return *perception_signal;
+    case SourcePriority::CONFIDENCE:
+    default:
+      // Fall through to confidence-based selection
+      break;
   }
 
   // Compiles elements into a map by shape, to compare their confidences
@@ -244,8 +251,7 @@ autoware_perception_msgs::msg::TrafficLightGroupArray SignalMatchValidator::vali
     // TODO(TomohitoAndo): Validate pedestrian signals
     if (isPedestrianSignal(signal_id)) {
       validated_signals.traffic_light_groups.emplace_back(
-        util::get_highest_confidence_signal(
-          perception_result, external_result, external_priority_));
+        util::get_highest_confidence_signal(perception_result, external_result, source_priority_));
 
       continue;
     }
@@ -285,9 +291,9 @@ void SignalMatchValidator::setPedestrianSignals(
   }
 }
 
-void SignalMatchValidator::setExternalPriority(const bool external_priority)
+void SignalMatchValidator::setSourcePriority(const SourcePriority source_priority)
 {
-  external_priority_ = external_priority;
+  source_priority_ = source_priority;
 }
 
 bool SignalMatchValidator::isPedestrianSignal(const lanelet::Id & signal_id)

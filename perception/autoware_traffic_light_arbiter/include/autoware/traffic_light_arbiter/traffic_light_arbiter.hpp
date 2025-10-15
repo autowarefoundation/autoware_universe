@@ -30,6 +30,13 @@
 
 namespace autoware::traffic_light
 {
+
+enum class SourcePriority {
+  CONFIDENCE,  // Use confidence-based selection
+  EXTERNAL,    // Prioritize external signals
+  PERCEPTION   // Prioritize perception signals
+};
+
 class TrafficLightArbiter : public rclcpp::Node
 {
 public:
@@ -58,7 +65,7 @@ private:
   double external_delay_tolerance_;
   double external_time_tolerance_;
   double perception_time_tolerance_;
-  bool external_priority_;
+  SourcePriority source_priority_;
   bool enable_signal_matching_;
 
   TrafficSignalArray latest_perception_msg_;
