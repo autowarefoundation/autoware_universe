@@ -41,13 +41,11 @@ Accumulator<double> calcDistanceToObstacle(
 {
   Accumulator<double> stat;
 
-  // Get local ego footprint once
   const autoware_utils::LinearRing2d local_ego_footprint = vehicle_info.createFootprint();
 
   for (const TrajectoryPoint & p : traj.points) {
     double min_dist = std::numeric_limits<double>::max();
     for (const auto & object : obstacles.objects) {
-      // Use footprint-based distance calculation
       const auto dist = utils::calc_ego_object_distance(local_ego_footprint, p.pose, object);
       min_dist = std::min(min_dist, dist);
     }
@@ -68,10 +66,9 @@ Accumulator<double> calcTimeToCollision(
     return stat;
   }
 
-  // Get local ego footprint once
   const autoware_utils::LinearRing2d local_ego_footprint = vehicle_info.createFootprint();
 
-  // Dynamic obstacle state
+  // Dynamic obstacle data struct
   struct DynamicObstacle
   {
     autoware_perception_msgs::msg::PredictedObject object;
@@ -164,10 +161,10 @@ Accumulator<double> calcTimeToCollision(
   std::vector<DynamicObstacle> dynamic_obstacles(
     obstacles.objects.begin(), obstacles.objects.end());
 
+  // Find closest point to ego before starting calculate ttc
   size_t p0_index = 0;
   auto & ego_pose = ego_odom.pose.pose;
   double last_dist_to_ego = calc_distance2d(ego_pose, traj.points.front().pose);
-  // Find closest point to ego before starting calculate ttc
   for (size_t i = 1; i < traj.points.size(); ++i) {
     const double dist_to_ego = calc_distance2d(ego_pose, traj.points.at(i).pose);
     if (dist_to_ego > last_dist_to_ego) {
@@ -177,6 +174,7 @@ Accumulator<double> calcTimeToCollision(
     p0_index = i;
   }
 
+  // calculate time to collision
   double t = 0.0;
   double velocity_prev = ego_odom.twist.twist.linear.x;
 
@@ -217,7 +215,6 @@ Accumulator<double> calcTimeToCollision(
       }
     }
 
-    // Update previous velocity for next iteration
     velocity_prev = velocity_curr;
   }
   return stat;

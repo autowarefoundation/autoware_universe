@@ -65,8 +65,6 @@ PlanningEvaluatorNode::PlanningEvaluatorNode(const rclcpp::NodeOptions & node_op
     declare_parameter<double>("trajectory.evaluation_time_s");
   metrics_calculator_.parameters.obstacle.dist_thr_m =
     declare_parameter<double>("obstacle.dist_thr_m");
-  metrics_calculator_.parameters.obstacle.limit_max_accel =
-    declare_parameter<double>("limit.max_acc");  // get from common.param.yaml
   metrics_calculator_.parameters.obstacle.limit_min_accel =
     declare_parameter<double>("limit.min_acc");  // get from common.param.yaml
 
