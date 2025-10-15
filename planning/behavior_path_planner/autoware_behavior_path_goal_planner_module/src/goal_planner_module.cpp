@@ -320,6 +320,9 @@ void LaneParkingPlanner::onTimer()
   // check if new pull over path candidates are needed to be generated
   const auto current_state = prev_data.state;
   const bool need_update = std::invoke([&]() {
+    if (current_state == PathDecisionState::DecisionKind::DECIDED) {
+      return false;
+    }
     {
       std::lock_guard<std::mutex> guard(mutex_);
       if (response_.pull_over_path_candidates.empty()) {
@@ -351,10 +354,9 @@ void LaneParkingPlanner::onTimer()
       RCLCPP_DEBUG(getLogger(), "has previous module path shape changed");
       return true;
     }
-    if (
-      goal_planner_utils::hasDeviatedFromPath(
-        local_planner_data->self_odometry->pose.pose.position, original_upstream_module_output_) &&
-      current_state != PathDecisionState::DecisionKind::DECIDED) {
+    if (goal_planner_utils::hasDeviatedFromPath(
+          local_planner_data->self_odometry->pose.pose.position,
+          original_upstream_module_output_)) {
       RCLCPP_DEBUG(getLogger(), "has deviated from last previous module path");
       return true;
     }
@@ -685,8 +687,11 @@ std::pair<LaneParkingResponse, FreespaceParkingResponse> GoalPlannerModule::sync
     } else {
       RCLCPP_INFO_THROTTLE(
         getLogger(), *clock_, 5000,
-        "lane change has been executed or cancelled while LaneParking thread was planning. Reject "
-        "the response and wait for LaneParking thread to complete");
+        "lane change has been executed or cancelled while LaneParking thread was planning. "
+        "lane change state transition: %s -> %s. Reject the response and wait for "
+        "LaneParking ",
+        LaneChangeContext::state_to_string(lane_parking_response_.lane_change_state).c_str(),
+        LaneChangeContext::state_to_string(lane_change_ctx_.get_current_state()).c_str());
     }
   }
 
@@ -765,9 +770,7 @@ void GoalPlannerModule::updateData()
   }
 
   const auto current_lane_change_state = lane_change_ctx_.get_next_state(
-    getPreviousModuleOutput().path, planner_data_->route_handler->getLaneletMapPtr(),
-    planner_data_->route_handler->getRoutingGraphPtr(), clock_->now(),
-    planner_data_->route_handler->getGoalLaneId());
+    getPreviousModuleOutput().path, *(planner_data_->route_handler), clock_->now());
   lane_change_ctx_.set_state(current_lane_change_state);
 
   if (getCurrentStatus() == ModuleStatus::IDLE) {
