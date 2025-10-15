@@ -36,18 +36,18 @@ It distributes route requests and planning results according to current MRM oper
 
 ### Services
 
-| Name                                                                | Type                                     | Description                                |
-| ------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------------ |
-| `/planning/mission_planning/mission_planner/clear_route`            | tier4_planning_msgs/srv/ClearRoute       | route clear request                        |
-| `/planning/mission_planning/mission_planner/set_waypoint_route`     | tier4_planning_msgs/srv/SetWaypointRoute | route request with lanelet waypoints.      |
-| `/planning/mission_planning/mission_planner/set_lanelet_route`      | tier4_planning_msgs/srv/SetLaneletRoute  | route request with pose waypoints.         |
-| `/planning/mission_planning/mission_planner/set_preferred_primitive`     | tier4_planning_msgs/srv/SetPreferredPrimitive | preferred-lane change request         |
-| `/planning/mission_planning/route_selector/main/clear_route`        | tier4_planning_msgs/srv/ClearRoute       | main route clear request                   |
-| `/planning/mission_planning/route_selector/main/set_waypoint_route` | tier4_planning_msgs/srv/SetWaypointRoute | main route request with lanelet waypoints. |
-| `/planning/mission_planning/route_selector/main/set_lanelet_route`  | tier4_planning_msgs/srv/SetLaneletRoute  | main route request with pose waypoints.    |
-| `/planning/mission_planning/route_selector/mrm/clear_route`         | tier4_planning_msgs/srv/ClearRoute       | mrm route clear request                    |
-| `/planning/mission_planning/route_selector/mrm/set_waypoint_route`  | tier4_planning_msgs/srv/SetWaypointRoute | mrm route request with lanelet waypoints.  |
-| `/planning/mission_planning/route_selector/mrm/set_lanelet_route`   | tier4_planning_msgs/srv/SetLaneletRoute  | mrm route request with pose waypoints.     |
+| Name                                                                 | Type                                          | Description                                |
+| -------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------ |
+| `/planning/mission_planning/mission_planner/clear_route`             | tier4_planning_msgs/srv/ClearRoute            | route clear request                        |
+| `/planning/mission_planning/mission_planner/set_waypoint_route`      | tier4_planning_msgs/srv/SetWaypointRoute      | route request with lanelet waypoints.      |
+| `/planning/mission_planning/mission_planner/set_lanelet_route`       | tier4_planning_msgs/srv/SetLaneletRoute       | route request with pose waypoints.         |
+| `/planning/mission_planning/mission_planner/set_preferred_primitive` | tier4_planning_msgs/srv/SetPreferredPrimitive | preferred-lane change request              |
+| `/planning/mission_planning/route_selector/main/clear_route`         | tier4_planning_msgs/srv/ClearRoute            | main route clear request                   |
+| `/planning/mission_planning/route_selector/main/set_waypoint_route`  | tier4_planning_msgs/srv/SetWaypointRoute      | main route request with lanelet waypoints. |
+| `/planning/mission_planning/route_selector/main/set_lanelet_route`   | tier4_planning_msgs/srv/SetLaneletRoute       | main route request with pose waypoints.    |
+| `/planning/mission_planning/route_selector/mrm/clear_route`          | tier4_planning_msgs/srv/ClearRoute            | mrm route clear request                    |
+| `/planning/mission_planning/route_selector/mrm/set_waypoint_route`   | tier4_planning_msgs/srv/SetWaypointRoute      | mrm route request with lanelet waypoints.  |
+| `/planning/mission_planning/route_selector/mrm/set_lanelet_route`    | tier4_planning_msgs/srv/SetLaneletRoute       | mrm route request with pose waypoints.     |
 
 ### Subscriptions
 

@@ -6,26 +6,27 @@
 
 ### Services
 
-| Name                                                                | Type                                     | Description                                |
-| ------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------------ |
-| `/planning/manual_lane_change_handler/manual_lane_change_handler/set_preferred_lane` | tier4_planning_msgs/srv/SetPreferredLane | preferred-lane request                        |
+| Name                                                                                 | Type                                     | Description            |
+| ------------------------------------------------------------------------------------ | ---------------------------------------- | ---------------------- |
+| `/planning/manual_lane_change_handler/manual_lane_change_handler/set_preferred_lane` | tier4_planning_msgs/srv/SetPreferredLane | preferred-lane request |
 
 ### Subscriptions
 
-| Name                         | Type                                      | Description            |
-| ---------------------------- | ----------------------------------------- | ---------------------- |
-| `input/odometry`             | nav_msgs/msg/Odometry                     | vehicle odometry       |
-| `/planning/mission_planning/route` | autoware_planning_msgs/msg/LaneletRoute                   | current lanelet route      |
+| Name                               | Type                                    | Description           |
+| ---------------------------------- | --------------------------------------- | --------------------- |
+| `input/odometry`                   | nav_msgs/msg/Odometry                   | vehicle odometry      |
+| `/planning/mission_planning/route` | autoware_planning_msgs/msg/LaneletRoute | current lanelet route |
 
 ### Publications
 
-| Name                                                   | Type                                | Description              |
-| ------------------------------------------------------ | ----------------------------------- | ------------------------ |
-| `~/debug/processing_time_ms`                           | autoware_internal_debug_msgs/msg/Float64Stamped  | processing time for lane change for debug   |
-| `~/debug/route_marker`                                 | visualization_msgs/msg/MarkerArray  | route marker for debug   |
-| `~/debug/goal_footprint`                               | visualization_msgs/msg/MarkerArray  | goal footprint for debug |
+| Name                         | Type                                            | Description                               |
+| ---------------------------- | ----------------------------------------------- | ----------------------------------------- |
+| `~/debug/processing_time_ms` | autoware_internal_debug_msgs/msg/Float64Stamped | processing time for lane change for debug |
+| `~/debug/route_marker`       | visualization_msgs/msg/MarkerArray              | route marker for debug                    |
+| `~/debug/goal_footprint`     | visualization_msgs/msg/MarkerArray              | goal footprint for debug                  |
 
 ### Setting Preferred Lane
+
 This service allows for shifting the current preferred lane to the left or right, or reverting to the default preferred lane received from the route planner.
 As the vehicle moves, the shifting is done relative to the current preferred lane.
 
