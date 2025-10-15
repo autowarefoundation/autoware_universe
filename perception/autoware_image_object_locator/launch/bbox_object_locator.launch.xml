@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <arg name="rois_ids" default="[0, 1]"/>
+
+  <arg name="input/rois0" default="/perception/object_recognition/detection/rois0"/>
+  <arg name="input/rois1" default="/perception/object_recognition/detection/rois1"/>
+  <arg name="input/rois2" default="/perception/object_recognition/detection/rois2"/>
+  <arg name="input/rois3" default="/perception/object_recognition/detection/rois3"/>
+  <arg name="input/rois4" default="/perception/object_recognition/detection/rois4"/>
+  <arg name="input/rois5" default="/perception/object_recognition/detection/rois5"/>
+  <arg name="input/rois6" default="/perception/object_recognition/detection/rois6"/>
+  <arg name="input/rois7" default="/perception/object_recognition/detection/rois7"/>
+  <arg name="input/camera_info0" default="/sensing/camera/camera0/camera_info"/>
+  <arg name="input/camera_info1" default="/sensing/camera/camera1/camera_info"/>
+  <arg name="input/camera_info2" default="/sensing/camera/camera2/camera_info"/>
+  <arg name="input/camera_info3" default="/sensing/camera/camera3/camera_info"/>
+  <arg name="input/camera_info4" default="/sensing/camera/camera4/camera_info"/>
+  <arg name="input/camera_info5" default="/sensing/camera/camera5/camera_info"/>
+  <arg name="input/camera_info6" default="/sensing/camera/camera6/camera_info"/>
+  <arg name="input/camera_info7" default="/sensing/camera/camera7/camera_info"/>
+
+  <arg name="output/rois0/objects" default="/perception/object_recognition/detection/bbox_object_locator/rois0/objects"/>
+  <arg name="output/rois1/objects" default="/perception/object_recognition/detection/bbox_object_locator/rois1/objects"/>
+  <arg name="output/rois2/objects" default="/perception/object_recognition/detection/bbox_object_locator/rois2/objects"/>
+  <arg name="output/rois3/objects" default="/perception/object_recognition/detection/bbox_object_locator/rois3/objects"/>
+  <arg name="output/rois4/objects" default="/perception/object_recognition/detection/bbox_object_locator/rois4/objects"/>
+  <arg name="output/rois5/objects" default="/perception/object_recognition/detection/bbox_object_locator/rois5/objects"/>
+  <arg name="output/rois6/objects" default="/perception/object_recognition/detection/bbox_object_locator/rois6/objects"/>
+  <arg name="output/rois7/objects" default="/perception/object_recognition/detection/bbox_object_locator/rois7/objects"/>
+
+  <arg name="param_path" default="$(find-pkg-share autoware_image_object_locator)/config/bbox_object_locator.param.yaml"/>
+
+  <node pkg="autoware_image_object_locator" exec="bbox_object_locator_node" name="bbox_object_locator" output="screen">
+    <param name="rois_ids" value="$(var rois_ids)"/>
+
+    <param name="input/rois0" value="$(var input/rois0)"/>
+    <param name="input/rois1" value="$(var input/rois1)"/>
+    <param name="input/rois2" value="$(var input/rois2)"/>
+    <param name="input/rois3" value="$(var input/rois3)"/>
+    <param name="input/rois4" value="$(var input/rois4)"/>
+    <param name="input/rois5" value="$(var input/rois5)"/>
+    <param name="input/rois6" value="$(var input/rois6)"/>
+    <param name="input/rois7" value="$(var input/rois7)"/>
+    <param name="input/camera_info0" value="$(var input/camera_info0)"/>
+    <param name="input/camera_info1" value="$(var input/camera_info1)"/>
+    <param name="input/camera_info2" value="$(var input/camera_info2)"/>
+    <param name="input/camera_info3" value="$(var input/camera_info3)"/>
+    <param name="input/camera_info4" value="$(var input/camera_info4)"/>
+    <param name="input/camera_info5" value="$(var input/camera_info5)"/>
+    <param name="input/camera_info6" value="$(var input/camera_info6)"/>
+    <param name="input/camera_info7" value="$(var input/camera_info7)"/>
+
+    <param name="output/rois0/objects" value="$(var output/rois0/objects)"/>
+    <param name="output/rois1/objects" value="$(var output/rois1/objects)"/>
+    <param name="output/rois2/objects" value="$(var output/rois2/objects)"/>
+    <param name="output/rois3/objects" value="$(var output/rois3/objects)"/>
+    <param name="output/rois4/objects" value="$(var output/rois4/objects)"/>
+    <param name="output/rois5/objects" value="$(var output/rois5/objects)"/>
+    <param name="output/rois6/objects" value="$(var output/rois6/objects)"/>
+    <param name="output/rois7/objects" value="$(var output/rois7/objects)"/>
+
+    <param from="$(var param_path)"/>
+  </node>
+</launch>

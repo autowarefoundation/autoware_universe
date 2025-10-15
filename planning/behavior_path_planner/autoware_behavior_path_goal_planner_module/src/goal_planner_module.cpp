@@ -29,6 +29,7 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
@@ -1760,7 +1761,7 @@ void GoalPlannerModule::postProcess()
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   if (!context_data_) {
-    RCLCPP_WARN_THROTTLE(
+    RCLCPP_DEBUG_THROTTLE(
       getLogger(), *clock_, 5000,
       " [pull_over] postProcess() is called without valid context_data. use dummy context data.");
   }
@@ -2518,7 +2519,9 @@ std::pair<bool, utils::path_safety_checker::CollisionCheckDebugMap> GoalPlannerM
     Pose first_road_pose{};
     const auto first_road_point =
       lanelet::utils::conversion::toGeomMsgPt(fist_road_lane.centerline().front());
-    const double lane_yaw = lanelet::utils::getLaneletAngle(fist_road_lane, first_road_point);
+    const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+      fist_road_lane,
+      autoware::experimental::lanelet2_utils::from_ros(first_road_point).basicPoint());
     first_road_pose.position = first_road_point;
     first_road_pose.orientation = autoware_utils::create_quaternion_from_yaw(lane_yaw);
     // if current ego pose is before pull over lanes segment, use first road lanelet center pose

@@ -16,6 +16,8 @@
 
 #include "autoware/trajectory_optimizer/utils.hpp"
 
+#include <autoware/motion_utils/resample/resample.hpp>
+
 #include <vector>
 
 namespace autoware::trajectory_optimizer::plugin
@@ -24,9 +26,10 @@ void TrajectorySplineSmoother::optimize_trajectory(
   TrajectoryPoints & traj_points, [[maybe_unused]] const TrajectoryOptimizerParams & params)
 {
   // Apply spline to smooth the trajectory
-  if (params.use_akima_spline_interpolation) {
-    utils::apply_spline(traj_points, params);
+  if (!params.use_akima_spline_interpolation) {
+    return;
   }
+  utils::apply_spline(traj_points, params);
 }
 
 void TrajectorySplineSmoother::set_up_params()
