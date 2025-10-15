@@ -1658,7 +1658,9 @@ BehaviorModuleOutput GoalPlannerModule::planPullOverAsOutput(PullOverContextData
 
   // if pull over path candidates generation is not finished, use previous module output
   if (context_data.lane_parking_response.pull_over_path_candidates.empty()) {
-    return getPreviousModuleOutput();
+    auto stop_path = getPreviousModuleOutput();
+    stop_path.path = generateStopPath(context_data, "no path candidate");
+    return stop_path;
   }
 
   /**
