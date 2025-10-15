@@ -14,6 +14,8 @@
 
 #include "map_based_prediction/utils.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -49,8 +51,10 @@ double calcAbsYawDiffBetweenLaneletAndObject(
   const TrackedObject & object, const lanelet::ConstLanelet & lanelet)
 {
   const double object_yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
-  const double lane_yaw =
-    lanelet::utils::getLaneletAngle(lanelet, object.kinematics.pose_with_covariance.pose.position);
+  const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+    lanelet,
+    autoware::experimental::lanelet2_utils::from_ros(object.kinematics.pose_with_covariance.pose)
+      .basicPoint());
   const double delta_yaw = object_yaw - lane_yaw;
   const double normalized_delta_yaw = autoware_utils::normalize_radian(delta_yaw);
   const double abs_norm_delta = std::fabs(normalized_delta_yaw);
@@ -245,7 +249,8 @@ double calculateLocalLikelihood(
 
   // compute yaw difference between the object and lane
   const double obj_yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
-  const double lane_yaw = lanelet::utils::getLaneletAngle(current_lanelet, obj_point);
+  const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+    current_lanelet, autoware::experimental::lanelet2_utils::from_ros(obj_point).basicPoint());
   const double delta_yaw = obj_yaw - lane_yaw;
   const double abs_norm_delta_yaw = std::fabs(autoware_utils::normalize_radian(delta_yaw));
 
@@ -334,8 +339,10 @@ bool checkCloseLaneletCondition(
 
   // Step2. Calculate the angle difference between the lane angle and obstacle angle
   const double object_yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
-  const double lane_yaw = lanelet::utils::getLaneletAngle(
-    lanelet.second, object.kinematics.pose_with_covariance.pose.position);
+  const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+    lanelet.second,
+    autoware::experimental::lanelet2_utils::from_ros(object.kinematics.pose_with_covariance.pose)
+      .basicPoint());
   const double delta_yaw = object_yaw - lane_yaw;
   const double normalized_delta_yaw = autoware_utils::normalize_radian(delta_yaw);
   const double abs_norm_delta = std::fabs(normalized_delta_yaw);
