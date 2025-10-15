@@ -95,7 +95,7 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
   srv_set_lanelet_route = create_service<SetLaneletRoute>(
     "~/set_lanelet_route",
     service_utils::handle_exception(&MissionPlanner::on_set_lanelet_route, this));
-  srv_set_preferred_primitive = create_service<tier4_planning_msgs::srv::SetPreferredPrimitive>(
+  srv_set_preferred_primitive = create_service<tier4_external_api_msgs::srv::SetPreferredPrimitive>(
     "~/set_preferred_primitive",
     service_utils::handle_exception(&MissionPlanner::on_set_preferred_primitive, this));
   srv_set_waypoint_route = create_service<SetWaypointRoute>(
@@ -332,8 +332,8 @@ void MissionPlanner::on_set_lanelet_route(
 }
 
 void MissionPlanner::on_set_preferred_primitive(
-  const tier4_planning_msgs::srv::SetPreferredPrimitive::Request::SharedPtr req,
-  const tier4_planning_msgs::srv::SetPreferredPrimitive::Response::SharedPtr res)
+  const tier4_external_api_msgs::srv::SetPreferredPrimitive::Request::SharedPtr req,
+  const tier4_external_api_msgs::srv::SetPreferredPrimitive::Response::SharedPtr res)
 {
   if (!current_route_) {
     using ResponseCode = autoware_adapi_v1_msgs::msg::ResponseStatus;

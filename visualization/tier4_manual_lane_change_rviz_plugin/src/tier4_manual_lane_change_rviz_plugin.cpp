@@ -19,7 +19,7 @@
 #include <memory>
 PLUGINLIB_EXPORT_CLASS(ManualLaneSelection, rviz_common::Panel)
 
-using tier4_planning_msgs::srv::SetPreferredLane;
+using tier4_external_api_msgs::srv::SetPreferredLane;
 
 ManualLaneSelection::ManualLaneSelection(QWidget * parent) : rviz_common::Panel(parent)
 {

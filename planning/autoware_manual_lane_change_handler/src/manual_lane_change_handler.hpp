@@ -26,8 +26,8 @@
 #include <autoware_planning_msgs/msg/lanelet_primitive.hpp>
 #include <autoware_planning_msgs/srv/set_lanelet_route.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <tier4_planning_msgs/srv/set_preferred_lane.hpp>
-#include <tier4_planning_msgs/srv/set_preferred_primitive.hpp>
+#include <tier4_external_api_msgs/srv/set_preferred_lane.hpp>
+#include <tier4_external_api_msgs/srv/set_preferred_primitive.hpp>
 
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -41,7 +41,8 @@ namespace autoware::manual_lane_change_handler
 using autoware::mission_planner_universe::PlannerPlugin;
 using autoware_planning_msgs::msg::LaneletPrimitive;
 using autoware_planning_msgs::msg::LaneletRoute;
-using tier4_planning_msgs::srv::SetPreferredLane;
+using tier4_external_api_msgs::srv::SetPreferredLane;
+using tier4_external_api_msgs::srv::SetPreferredPrimitive;
 
 struct LaneChangeRequestResult
 {
@@ -122,7 +123,7 @@ private:
   void set_preferred_lane(
     const SetPreferredLane::Request::SharedPtr req, const SetPreferredLane::Response::SharedPtr res)
   {
-    auto client = this->create_client<tier4_planning_msgs::srv::SetPreferredPrimitive>(
+    auto client = this->create_client<SetPreferredPrimitive>(
       "/planning/mission_planning/mission_planner/set_preferred_primitive");
     // Wait for the service to be available
     if (!client->wait_for_service(std::chrono::seconds(5))) {
@@ -161,9 +162,9 @@ private:
       return;
     }
 
-    std::shared_ptr<tier4_planning_msgs::srv::SetPreferredPrimitive::Request>
+    std::shared_ptr<SetPreferredPrimitive::Request>
       set_preferred_primitive_req =
-        std::make_shared<tier4_planning_msgs::srv::SetPreferredPrimitive::Request>();
+        std::make_shared<SetPreferredPrimitive::Request>();
     set_preferred_primitive_req->preferred_primitives =
       lane_change_request_result.preferred_primitives;
     set_preferred_primitive_req->reset = req->lane_change_direction != 2;
@@ -171,7 +172,7 @@ private:
 
     auto future = client->async_send_request(
       set_preferred_primitive_req,
-      [this](rclcpp::Client<tier4_planning_msgs::srv::SetPreferredPrimitive>::SharedFuture future) {
+      [this](rclcpp::Client<SetPreferredPrimitive>::SharedFuture future) {
         auto response = future.get();
         if (response->status.success) {
           RCLCPP_INFO(
@@ -182,7 +183,8 @@ private:
             this->get_logger(), "Failed to set preferred primitive: %s",
             response->status.message.c_str());
         }
-      });
+      }
+    );
 
     res->status.success = lane_change_request_result.success;
     res->status.message = lane_change_request_result.message;

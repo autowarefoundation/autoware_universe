@@ -22,7 +22,7 @@
 #include <rviz_common/panel.hpp>
 
 #include <std_msgs/msg/string.hpp>
-#include <tier4_planning_msgs/srv/set_preferred_lane.hpp>
+#include <tier4_external_api_msgs/srv/set_preferred_lane.hpp>
 
 #include <memory>
 
@@ -39,7 +39,7 @@ private:
   QPushButton * auto_button_;
   QPushButton * right_button_;
   rclcpp::Node::SharedPtr node_;
-  rclcpp::Client<tier4_planning_msgs::srv::SetPreferredLane>::SharedPtr client_;
+  rclcpp::Client<tier4_external_api_msgs::srv::SetPreferredLane>::SharedPtr client_;
   QTimer * timer_;
 };
 

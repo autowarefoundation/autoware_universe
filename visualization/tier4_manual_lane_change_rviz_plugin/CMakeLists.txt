@@ -8,6 +8,7 @@ find_package(std_msgs REQUIRED)
 find_package(rviz_common REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Widgets)
 find_package(autoware_planning_msgs REQUIRED)
+find_package(tier4_external_api_msgs REQUIRED)
 find_package(tier4_planning_msgs REQUIRED)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -25,6 +26,7 @@ ament_target_dependencies(tier4_manual_lane_change_rviz_plugin
   std_msgs
   rviz_common
   autoware_planning_msgs
+  tier4_external_api_msgs
   tier4_planning_msgs
 )
 
