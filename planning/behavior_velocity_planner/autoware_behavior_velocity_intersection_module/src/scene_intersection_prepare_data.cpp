@@ -333,7 +333,7 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
       return {previous_stop_pose_idx, true};
     }
     // ego is over pass judge line
-    return {0, false};
+    return {first_attention_stopline_ip, true};
   }();
 
   // (6) occlusion peeking stop line position on interpolated path
@@ -390,7 +390,7 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
         true};
     }
     // ego is over pass judge line
-    return {0, false};
+    return {first_attention_stopline_ip, true};
   }();
 
   // (7) stuck vehicle stopline position on interpolated path
