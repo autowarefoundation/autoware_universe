@@ -158,7 +158,8 @@ std::unordered_set<lanelet::Id> create_signal_id_set(
 // Returns the signal with the highest confidence elements, considering source priority
 TrafficSignal get_highest_confidence_signal(
   const std::optional<TrafficSignal> & perception_signal,
-  const std::optional<TrafficSignal> & external_signal, const SourcePriority source_priority)
+  const std::optional<TrafficSignal> & external_signal,
+  const autoware::traffic_light::SourcePriority source_priority)
 {
   // Returns the existing signal if only one of them exists
   if (!perception_signal) {
@@ -170,11 +171,11 @@ TrafficSignal get_highest_confidence_signal(
 
   // Apply source priority
   switch (source_priority) {
-    case SourcePriority::EXTERNAL:
+    case autoware::traffic_light::SourcePriority::EXTERNAL:
       return *external_signal;
-    case SourcePriority::PERCEPTION:
+    case autoware::traffic_light::SourcePriority::PERCEPTION:
       return *perception_signal;
-    case SourcePriority::CONFIDENCE:
+    case autoware::traffic_light::SourcePriority::CONFIDENCE:
     default:
       // Fall through to confidence-based selection
       break;

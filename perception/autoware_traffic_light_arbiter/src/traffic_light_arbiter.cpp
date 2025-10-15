@@ -96,8 +96,6 @@ TrafficLightArbiter::TrafficLightArbiter(const rclcpp::NodeOptions & options)
   if (enable_signal_matching_) {
     signal_match_validator_ = std::make_unique<SignalMatchValidator>();
     signal_match_validator_->setSourcePriority(source_priority_);
-    signal_match_validator_->setPrioritizeInternalSignalsWhenArrowsPresent(
-      prioritize_internal_signals_when_arrows_present_);
   }
 
   map_sub_ = create_subscription<LaneletMapBin>(
