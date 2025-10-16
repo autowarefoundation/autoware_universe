@@ -758,9 +758,10 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
     }
 
     // insert slow down velocity between slow start and end
-    slowdown_intervals.push_back(SlowdownInterval{
-      slow_down_traj_points.at(slow_down_start_idx ? *slow_down_start_idx : 0).pose.position,
-      slow_down_traj_points.at(*slow_down_end_idx).pose.position, stable_slow_down_vel});
+    slowdown_intervals.push_back(
+      SlowdownInterval{
+        slow_down_traj_points.at(slow_down_start_idx ? *slow_down_start_idx : 0).pose.position,
+        slow_down_traj_points.at(*slow_down_end_idx).pose.position, stable_slow_down_vel});
 
     // add debug data
     slow_down_debug_multi_array_.data.push_back(obstacle.dist_to_traj_poly);
@@ -823,10 +824,11 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
     debug_data_ptr_->obstacles_to_slow_down.push_back(obstacle);
 
     // update prev_slow_down_output_
-    new_prev_slow_down_output.push_back(SlowDownOutput{
-      obstacle.uuid, slow_down_traj_points, slow_down_start_idx, slow_down_end_idx,
-      stable_slow_down_vel, feasible_slow_down_vel, obstacle.stable_dist_to_traj_poly.value(),
-      obstacle_motion});
+    new_prev_slow_down_output.push_back(
+      SlowDownOutput{
+        obstacle.uuid, slow_down_traj_points, slow_down_start_idx, slow_down_end_idx,
+        stable_slow_down_vel, feasible_slow_down_vel, obstacle.stable_dist_to_traj_poly.value(),
+        obstacle_motion});
   }
 
   // update prev_slow_down_output_
@@ -1064,7 +1066,7 @@ double ObstacleSlowDownModule::calculate_slow_down_velocity(
     if (prev_output) {
       return autoware::signal_processing::lowpassFilter(
         obstacle.dist_to_traj_poly, prev_output->dist_from_obj_poly_to_traj_poly,
-        slow_down_planning_param_.lpf_gain_lat_dist);
+        slow_down_planning_param_.lpf_gain_lateral_distance);
     }
     return obstacle.dist_to_traj_poly;
   }();
