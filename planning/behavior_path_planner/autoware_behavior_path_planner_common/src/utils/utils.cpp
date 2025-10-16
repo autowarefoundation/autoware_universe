@@ -649,6 +649,121 @@ double getDistanceToNextIntersection(
   return std::numeric_limits<double>::max();
 }
 
+bool is_turn_direction_lane(const std::string & lanelet_attribute_string)
+{
+  return lanelet_attribute_string == "left" || lanelet_attribute_string == "right";
+}
+
+bool is_turn_direction_lane(const lanelet::ConstLanelet & lanelet)
+{
+  const std::string turn_direction = lanelet.attributeOr("turn_direction", "else");
+  return is_turn_direction_lane(turn_direction);
+}
+
+lanelet::ConstLanelets nearest_turn_direction_lane_within_route(
+  const Pose & current_pose, const RouteHandler & route_handler,
+  const lanelet::ConstLanelets & lanelets)
+{
+  if (lanelets.empty()) {
+    return {};
+  }
+
+  lanelet::ConstLanelet current_lanelet;
+  if (!lanelet::utils::query::getClosestLanelet(lanelets, current_pose, &current_lanelet)) {
+    return {};
+  }
+
+  const auto current_llt_itr = std::find_if(
+    lanelets.begin(), lanelets.end(),
+    [&current_lanelet](const auto & llt) { return llt.id() == current_lanelet.id(); });
+
+  if (current_llt_itr == lanelets.end()) {
+    return {};
+  }
+
+  const auto is_current_lane = [&current_llt_itr](const auto & llt) {
+    return llt.id() == current_llt_itr->id();
+  };
+  const auto is_in_turn_direction_lane = [&current_pose](const auto & llt) {
+    const auto & position = current_pose.position;
+    const lanelet::BasicPoint2d point(position.x, position.y);
+    return lanelet::geometry::inside(llt, point);
+  };
+
+  lanelet::ConstLanelets turn_direction_lanes;
+  const auto prev_lanes = route_handler.getPreviousLanelets(*current_llt_itr);
+
+  // do a reverse search
+  for (const auto & lane : prev_lanes) {
+    const auto next_lanes = route_handler.getNextLanelets(lane);
+
+    const auto is_connected_to_current_lane =
+      std::any_of(next_lanes.begin(), next_lanes.end(), is_current_lane);
+
+    if (!is_connected_to_current_lane) {
+      continue;
+    }
+
+    if (is_turn_direction_lane(lane) && is_in_turn_direction_lane(lane)) {
+      turn_direction_lanes.push_back(lane);
+    }
+  }
+
+  return turn_direction_lanes;
+}
+
+std::optional<double> calc_distance_to_next_turn_direction_lane(
+  const Pose & current_pose, const RouteHandler & route_handler,
+  const lanelet::ConstLanelets & lanelets, const std::string & shift_direction_str)
+{
+  if (shift_direction_str != "left" && shift_direction_str != "right") {
+    return std::nullopt;
+  }
+
+  lanelet::ConstLanelet current_lanelet;
+  if (!lanelet::utils::query::getClosestLanelet(lanelets, current_pose, &current_lanelet)) {
+    return std::nullopt;
+  }
+
+  const auto current_llt_itr = std::find_if(
+    lanelets.begin(), lanelets.end(),
+    [&current_lanelet](const auto & llt) { return llt.id() == current_lanelet.id(); });
+
+  // case 1: current lanelet is not in lanelets
+  if (current_llt_itr == lanelets.end()) {
+    return std::nullopt;
+  }
+
+  const auto is_same_direction_shift_and_turn_lane = [&shift_direction_str](const auto & llt) {
+    const std::string turn_direction = llt.attributeOr("turn_direction", "else");
+    return turn_direction == shift_direction_str;
+  };
+
+  // case 2: current lanelet is in lanelets. We also search the succeeding lane after final lane.
+  const auto nearest_turn_llt_itr =
+    std::find_if(current_llt_itr, lanelets.end(), [&](const auto & llt) {
+      const auto next_lanelets = route_handler.getNextLanelets(llt);
+      return std::any_of(
+        next_lanelets.begin(), next_lanelets.end(), is_same_direction_shift_and_turn_lane);
+    });
+
+  if (nearest_turn_llt_itr == lanelets.end()) {
+    return std::nullopt;
+  }
+
+  const auto distance_covered =
+    lanelet::utils::getArcCoordinates({*current_llt_itr}, current_pose).length;
+  const auto remaining_dist_on_current_lane =
+    lanelet::utils::getLaneletLength3d(*current_llt_itr) - distance_covered;
+  const auto dist_to_next_turn_direction_lane = std::accumulate(
+    std::next(current_llt_itr), std::next(nearest_turn_llt_itr), 0.0,
+    [](const auto & sum, const auto & llt) {
+      return sum + lanelet::utils::getLaneletLength3d(llt);
+    });
+
+  return remaining_dist_on_current_lane + dist_to_next_turn_direction_lane;
+}
+
 double getDistanceToCrosswalk(
   const Pose & current_pose, const lanelet::ConstLanelets & lanelets,
   const lanelet::routing::RoutingGraphContainer & overall_graphs)
@@ -1456,10 +1571,9 @@ bool checkPathRelativeAngle(const PathWithLaneId & path, const double angle_thre
   return true;
 }
 
-lanelet::ConstLanelets getLaneletsFromPath(
-  const PathWithLaneId & path, const std::shared_ptr<RouteHandler> & route_handler)
+std::vector<lanelet::Id> get_lanelet_id_from_path(const PathWithLaneId & path)
 {
-  std::vector<int64_t> unique_lanelet_ids;
+  std::vector<lanelet::Id> unique_lanelet_ids;
   for (const auto & p : path.points) {
     const auto & lane_ids = p.lane_ids;
     for (const auto & lane_id : lane_ids) {
@@ -1471,12 +1585,27 @@ lanelet::ConstLanelets getLaneletsFromPath(
     }
   }
 
+  return unique_lanelet_ids;
+}
+
+lanelet::ConstLanelets get_lanelet_sequence_from_path(
+  const PathWithLaneId & path, const RouteHandler & route_handler)
+{
+  const auto unique_lanelet_ids = get_lanelet_id_from_path(path);
+
   lanelet::ConstLanelets lanelets;
+  lanelets.reserve(unique_lanelet_ids.size());
   for (const auto & lane_id : unique_lanelet_ids) {
-    lanelets.push_back(route_handler->getLaneletsFromId(lane_id));
+    lanelets.push_back(route_handler.getLaneletsFromId(lane_id));
   }
 
   return lanelets;
+}
+
+lanelet::ConstLanelets getLaneletsFromPath(
+  const PathWithLaneId & path, const std::shared_ptr<RouteHandler> & route_handler)
+{
+  return get_lanelet_sequence_from_path(path, *route_handler);
 }
 
 std::string convertToSnakeCase(const std::string & input_str)
