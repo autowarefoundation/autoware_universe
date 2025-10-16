@@ -120,10 +120,6 @@ struct PullOverContextData
   }
 };
 
-bool isOnModifiedGoal(
-  const Pose & current_pose, const std::optional<GoalCandidate> & modified_goal_opt,
-  const GoalPlannerParameters & parameters);
-
 bool needPathUpdate(
   const Pose & current_pose, const double path_update_duration, const rclcpp::Time & now,
   const std::optional<GoalCandidate> & modified_goal,
