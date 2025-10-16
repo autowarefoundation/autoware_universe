@@ -183,16 +183,20 @@ void NetMonitor::check_usage(diagnostic_updater::DiagnosticStatusWrapper & statu
   // Remember start time to measure elapsed time
   const auto t_start = SystemMonitorUtility::startMeasurement();
 
-  int level = DiagStatus::OK;
+  int whole_level = DiagStatus::OK;
   int index = 0;
 
   for (const auto & network : network_list_) {
     // Skip if network is not supported
     if (network.is_invalid) continue;
 
-    level = network.is_running ? DiagStatus::OK : DiagStatus::ERROR;
-
+    // If any network in the list is disconnected or unavailable,
+    // the status summary is reported as ERROR.
+    int level = network.is_running ? DiagStatus::OK : DiagStatus::ERROR;
     status.add(fmt::format("Network {}: status", index), usage_messages_.at(level));
+
+    // The following "key - value" pairs are reported for recording purpose.
+    // They don't affect the status summary.
     status.add(fmt::format("Network {}: interface name", index), network.interface_name);
     status.addf(fmt::format("Network {}: rx_usage", index), "%.2f%%", network.rx_usage * 1e+2);
     status.addf(fmt::format("Network {}: tx_usage", index), "%.2f%%", network.tx_usage * 1e+2);
@@ -206,10 +210,11 @@ void NetMonitor::check_usage(diagnostic_updater::DiagnosticStatusWrapper & statu
     status.add(fmt::format("Network {}: tx_errors", index), network.tx_errors);
     status.add(fmt::format("Network {}: collisions", index), network.collisions);
 
+    whole_level = std::max(whole_level, level);
     ++index;
   }
 
-  status.summary(DiagStatus::OK, "OK");
+  status.summary(whole_level, usage_messages_.at(whole_level));
 
   // Measure elapsed time since start time and report
   SystemMonitorUtility::stopMeasurement(t_start, status);
