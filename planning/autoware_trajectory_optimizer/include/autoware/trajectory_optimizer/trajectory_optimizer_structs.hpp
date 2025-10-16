@@ -53,7 +53,7 @@ struct TrajectoryOptimizerParams
   double backward_trajectory_extension_m{0.0};
   bool use_akima_spline_interpolation{false};
   bool smooth_velocities{false};
-  bool smooth_trajectories{false};
+  bool use_eb_smoother{false};
   bool limit_speed{false};
   bool limit_lateral_acceleration{false};
   bool set_engage_speed{false};
