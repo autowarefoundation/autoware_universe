@@ -158,7 +158,8 @@ void set_max_velocity(
   std::vector<TrajectoryPoint> & input_trajectory_array, const float max_velocity);
 
 void limit_lateral_acceleration(
-  TrajectoryPoints & input_trajectory_array, const TrajectoryOptimizerParams & params);
+  TrajectoryPoints & input_trajectory_array, double max_lateral_accel_mps2,
+  const Odometry & current_odometry);
 
 /**
  * @brief Removes points from the input trajectory that are too close to each other.
@@ -188,7 +189,7 @@ void add_ego_state_to_trajectory(
  */
 void expand_trajectory_with_ego_history(
   TrajectoryPoints & traj_points, const TrajectoryPoints & ego_history_points,
-  const Odometry & current_odometry, const TrajectoryOptimizerParams & params);
+  const Odometry & current_odometry);
 
 };  // namespace autoware::trajectory_optimizer::utils
 

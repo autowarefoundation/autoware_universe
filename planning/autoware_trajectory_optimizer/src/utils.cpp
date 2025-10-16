@@ -141,7 +141,8 @@ void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max
 }
 
 void limit_lateral_acceleration(
-  TrajectoryPoints & input_trajectory_array, const TrajectoryOptimizerParams & params)
+  TrajectoryPoints & input_trajectory_array, const double max_lateral_accel_mps2,
+  const Odometry & current_odometry)
 {
   if (input_trajectory_array.empty()) {
     return;
@@ -152,7 +153,7 @@ void limit_lateral_acceleration(
            (current->time_from_start.sec + current->time_from_start.nanosec * 1e-9);
   };
 
-  const auto & current_position = params.current_odometry.pose.pose.position;
+  const auto & current_position = current_odometry.pose.pose.position;
   motion_utils::calculate_time_from_start(input_trajectory_array, current_position);
 
   const auto closest_index =
@@ -182,13 +183,13 @@ void limit_lateral_acceleration(
     const double current_speed = std::abs(itr->longitudinal_velocity_mps);
     // Compute lateral acceleration
     const double lateral_acceleration = std::abs(current_speed * yaw_rate);
-    if (lateral_acceleration < params.max_lateral_accel_mps2) continue;
+    if (lateral_acceleration < max_lateral_accel_mps2) continue;
 
-    itr->longitudinal_velocity_mps = params.max_lateral_accel_mps2 / yaw_rate;
+    itr->longitudinal_velocity_mps = max_lateral_accel_mps2 / yaw_rate;
   }
 
   motion_utils::calculate_time_from_start(
-    input_trajectory_array, params.current_odometry.pose.pose.position);
+    input_trajectory_array, current_odometry.pose.pose.position);
 }
 
 void filter_velocity(
@@ -468,8 +469,7 @@ void add_ego_state_to_trajectory(
 
 void expand_trajectory_with_ego_history(
   TrajectoryPoints & traj_points, const TrajectoryPoints & ego_history_points,
-  [[maybe_unused]] const Odometry & current_odometry,
-  [[maybe_unused]] const TrajectoryOptimizerParams & params)
+  const Odometry & current_odometry)
 {
   if (ego_history_points.empty()) {
     return;
@@ -486,7 +486,7 @@ void expand_trajectory_with_ego_history(
     ego_history_points, first_ego_history_point.pose.position,
     first_ego_trajectory_point.pose.position);
 
-  const auto ego_position = params.current_odometry.pose.pose.position;
+  const auto ego_position = current_odometry.pose.pose.position;
   const auto distance_ego_to_first_trajectory_point =
     autoware_utils::calc_distance2d(first_ego_trajectory_point, ego_position);
 

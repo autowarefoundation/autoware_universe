@@ -231,8 +231,6 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
 
   current_odometry_ptr_ = sub_current_odometry_.take_data();
   current_acceleration_ptr_ = sub_current_acceleration_.take_data();
-  params_.current_odometry = *current_odometry_ptr_;
-  params_.current_acceleration = *current_acceleration_ptr_;
 
   last_time_ = std::make_shared<rclcpp::Time>(now());
 
@@ -241,6 +239,11 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
     return;
   }
 
+  // Create runtime data struct (not configuration parameters!)
+  TrajectoryOptimizerData data;
+  data.current_odometry = *current_odometry_ptr_;
+  data.current_acceleration = *current_acceleration_ptr_;
+
   if (params_.extend_trajectory_backward) {
     utils::add_ego_state_to_trajectory(
       past_ego_state_trajectory_.points, *current_odometry_ptr_, params_);
@@ -248,14 +251,14 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
 
   CandidateTrajectories output_trajectories = *msg;
   for (auto & trajectory : output_trajectories.candidate_trajectories) {
-    // apply optimizers
-    trajectory_extender_ptr_->optimize_trajectory(trajectory.points, params_);
-    trajectory_point_fixer_ptr_->optimize_trajectory(trajectory.points, params_);
-    eb_smoother_optimizer_ptr_->optimize_trajectory(trajectory.points, params_);
-    trajectory_spline_smoother_ptr_->optimize_trajectory(trajectory.points, params_);
-    trajectory_qp_smoother_ptr_->optimize_trajectory(trajectory.points, params_);
-    trajectory_velocity_optimizer_ptr_->optimize_trajectory(trajectory.points, params_);
-    trajectory_point_fixer_ptr_->optimize_trajectory(trajectory.points, params_);
+    // Apply optimizers - pass params (flags) and data (runtime state) separately
+    trajectory_extender_ptr_->optimize_trajectory(trajectory.points, params_, data);
+    trajectory_point_fixer_ptr_->optimize_trajectory(trajectory.points, params_, data);
+    eb_smoother_optimizer_ptr_->optimize_trajectory(trajectory.points, params_, data);
+    trajectory_spline_smoother_ptr_->optimize_trajectory(trajectory.points, params_, data);
+    trajectory_qp_smoother_ptr_->optimize_trajectory(trajectory.points, params_, data);
+    trajectory_velocity_optimizer_ptr_->optimize_trajectory(trajectory.points, params_, data);
+    trajectory_point_fixer_ptr_->optimize_trajectory(trajectory.points, params_, data);
     motion_utils::calculate_time_from_start(
       trajectory.points, current_odometry_ptr_->pose.pose.position);
   }

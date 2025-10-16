@@ -27,6 +27,18 @@ struct InitialMotion
   double speed_mps{0.0};
   double acc_mps2{0.0};
 };
+
+// Runtime data struct - contains vehicle state updated each cycle from topics
+// This is NOT configuration, it's runtime state passed to plugins
+struct TrajectoryOptimizerData
+{
+  Odometry current_odometry;
+  AccelWithCovarianceStamped current_acceleration;
+};
+
+// Main node parameters struct
+// NOTE: This will be reduced to only activation flags after full refactoring
+// Keeping all params temporarily during migration to avoid breaking changes
 struct TrajectoryOptimizerParams
 {
   double nearest_dist_threshold_m{0.0};
@@ -59,8 +71,6 @@ struct TrajectoryOptimizerParams
   bool qp_osqp_verbose{false};
   bool qp_fix_orientation{true};
   double qp_orientation_correction_threshold_deg{5.0};
-  Odometry current_odometry;
-  AccelWithCovarianceStamped current_acceleration;
 };
 }  // namespace autoware::trajectory_optimizer
 #endif  // AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_STRUCTS_HPP_

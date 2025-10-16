@@ -46,9 +46,18 @@ public:
     std::cerr << "instantiated TrajectoryOptimizerPluginBase: " << name_ << std::endl;
   }
   virtual ~TrajectoryOptimizerPluginBase() = default;
+
+  // Main optimization function
+  // params: Contains activation flags and shared configuration
+  // data: Contains runtime vehicle state (odometry, acceleration)
   virtual void optimize_trajectory(
-    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params) = 0;
+    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
+    const TrajectoryOptimizerData & data) = 0;
+
+  // Plugin parameter setup - plugins declare their own parameters here
   virtual void set_up_params() = 0;
+
+  // Plugin parameter update callback - plugins update their own parameters here
   virtual rcl_interfaces::msg::SetParametersResult on_parameter(
     const std::vector<rclcpp::Parameter> & parameters) = 0;
   std::string get_name() const { return name_; }
