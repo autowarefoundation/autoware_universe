@@ -1507,18 +1507,76 @@ void fillLongitudinalAndLengthByClosestEnvelopeFootprint(
   obj.length = max_distance - min_distance;
 }
 
-std::vector<std::pair<double, Point>> calcEnvelopeOverhangDistance(
-  const ObjectData & object_data, const PathWithLaneId & path)
+double calcLateralDistance(const PathWithLaneId & path, const Point & point)
 {
+  const auto idx = autoware::motion_utils::findNearestIndex(path.points, point);
+  const auto lateral = calc_lateral_deviation(autoware_utils::get_pose(path.points.at(idx)), point);
+  return lateral;
+}
+
+PathWithLaneId calcLongitudinalOffsetPath(const PathWithLaneId & path, double offset)
+{
+  PathWithLaneId offset_path{};
+  offset_path.points.reserve(path.points.size());
+  if (path.points.empty()) {
+    return offset_path;
+  }
+
+  // Apply offset using calc_offset_pose for each point
+  for (const auto & point : path.points) {
+    auto new_point = point;
+    new_point.point.pose =
+      autoware_utils_geometry::calc_offset_pose(point.point.pose, offset, 0.0, 0.0);
+    offset_path.points.emplace_back(new_point);
+  }
+
+  return offset_path;
+}
+
+std::vector<Point> fillMidPointsOfPolygonOuter(const Polygon2d & polygon)
+{
+  std::vector<Point> interpolated_points{};
+  const auto & outer = polygon.outer();
+  const size_t n = outer.size();
+
+  // Add original points and midpoint of each edge alternately
+  for (size_t i = 0; i < n - 1; ++i) {
+    const auto & p1 = outer[i];
+    const auto & p2 = outer[i + 1];
+
+    // Add original point
+    interpolated_points.push_back(autoware_utils::create_point(p1.x(), p1.y(), 0.0));
+
+    // Add midpoint
+    const double mid_x = (p1.x() + p2.x()) / 2.0;
+    const double mid_y = (p1.y() + p2.y()) / 2.0;
+    interpolated_points.push_back(autoware_utils::create_point(mid_x, mid_y, 0.0));
+  }
+
+  return interpolated_points;
+}
+
+std::vector<std::pair<double, Point>> calcEnvelopeOverhangDistance(
+  const ObjectData & object_data, const PathWithLaneId & path, double baselink_to_vehicle_front,
+  double baselink_to_vehicle_rear)
+{
+  const auto & baselink_path = path;
+  const auto & front_path = calcLongitudinalOffsetPath(path, baselink_to_vehicle_front);
+  const auto & rear_path = calcLongitudinalOffsetPath(path, -baselink_to_vehicle_rear);
   std::vector<std::pair<double, Point>> overhang_points{};
 
-  for (const auto & p : object_data.envelope_poly.outer()) {
-    const auto point = autoware_utils::create_point(p.x(), p.y(), 0.0);
+  for (const auto & point : fillMidPointsOfPolygonOuter(object_data.envelope_poly)) {
     // TODO(someone): search around first position where the ego should avoid the object.
-    const auto idx = autoware::motion_utils::findNearestIndex(path.points, point);
-    const auto lateral =
-      calc_lateral_deviation(autoware_utils::get_pose(path.points.at(idx)), point);
-    overhang_points.emplace_back(lateral, point);
+    double lateral_distance_to_baselink_path = calcLateralDistance(baselink_path, point);
+    double lateral_distance_to_front_path = calcLateralDistance(front_path, point);
+    double lateral_distance_to_rear_path = calcLateralDistance(rear_path, point);
+    auto lateral_distances = {
+      lateral_distance_to_baselink_path, lateral_distance_to_front_path,
+      lateral_distance_to_rear_path};
+    double lateral_distance = *std::min_element(
+      lateral_distances.begin(), lateral_distances.end(),
+      [](const auto & a, const auto & b) { return std::abs(a) < std::abs(b); });
+    overhang_points.emplace_back(lateral_distance, point);
   }
   std::sort(overhang_points.begin(), overhang_points.end(), [&](const auto & a, const auto & b) {
     return isOnRight(object_data) ? b.first < a.first : a.first < b.first;
@@ -2174,8 +2232,11 @@ void filterTargetObjects(
     }
 
     // Find the footprint point closest to the path, set to object_data.overhang_distance.
-    o.overhang_points =
-      utils::static_obstacle_avoidance::calcEnvelopeOverhangDistance(o, data.reference_path);
+    o.overhang_points = utils::static_obstacle_avoidance::calcEnvelopeOverhangDistance(
+      o, data.reference_path,
+      planner_data->parameters.vehicle_info.wheel_base_m +
+        planner_data->parameters.vehicle_info.front_overhang_m,
+      planner_data->parameters.vehicle_info.rear_overhang_m);
     o.to_road_shoulder_distance = filtering_utils::getRoadShoulderDistance(o, data, planner_data);
 
     if (filtering_utils::isUnknownTypeObject(o)) {

@@ -103,11 +103,14 @@ void fillLongitudinalAndLengthByClosestEnvelopeFootprint(
  * @brief calculate overhang distance for all of the envelope polygon outer points.
  * @param object data.
  * @param current path.
+ * @param baselink_to_vehicle_front to vehicle front.
+ * @param baselink_to_vehicle_rear to vehicle rear.
  * @return first: overhang distance, second: outer point. this vector is sorted by overhang
  * distance.
  */
 std::vector<std::pair<double, Point>> calcEnvelopeOverhangDistance(
-  const ObjectData & object_data, const PathWithLaneId & path);
+  const ObjectData & object_data, const PathWithLaneId & path, double baselink_to_vehicle_front,
+  double baselink_to_vehicle_rear);
 
 void setEndData(
   AvoidLine & al, const double length, const geometry_msgs::msg::Pose & end, const size_t end_idx,
