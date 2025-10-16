@@ -999,12 +999,15 @@ TEST(TestUtils, calcEnvelopeOverhangDistance)
 
     const auto output = calcEnvelopeOverhangDistance(object_data, path, 0.0, 0.0);
 
-    ASSERT_EQ(output.size(), 5);
+    ASSERT_EQ(output.size(), 8);
     EXPECT_NEAR(output.at(0).first, -0.5, epsilon);
     EXPECT_NEAR(output.at(1).first, -0.5, epsilon);
     EXPECT_NEAR(output.at(2).first, -0.5, epsilon);
-    EXPECT_NEAR(output.at(3).first, 2.5, epsilon);
-    EXPECT_NEAR(output.at(4).first, 2.5, epsilon);
+    EXPECT_NEAR(output.at(3).first, 1, epsilon);
+    EXPECT_NEAR(output.at(4).first, 1, epsilon);
+    EXPECT_NEAR(output.at(5).first, 2.5, epsilon);
+    EXPECT_NEAR(output.at(6).first, 2.5, epsilon);
+    EXPECT_NEAR(output.at(7).first, 2.5, epsilon);
   }
 
   {
@@ -1017,12 +1020,15 @@ TEST(TestUtils, calcEnvelopeOverhangDistance)
 
     const auto output = calcEnvelopeOverhangDistance(object_data, path, 0.0, 0.0);
 
-    ASSERT_EQ(output.size(), 5);
+    ASSERT_EQ(output.size(), 8);
     EXPECT_NEAR(output.at(0).first, 0.5, epsilon);
     EXPECT_NEAR(output.at(1).first, 0.5, epsilon);
-    EXPECT_NEAR(output.at(2).first, -2.5, epsilon);
-    EXPECT_NEAR(output.at(3).first, -2.5, epsilon);
-    EXPECT_NEAR(output.at(4).first, -2.5, epsilon);
+    EXPECT_NEAR(output.at(2).first, 0.5, epsilon);
+    EXPECT_NEAR(output.at(3).first, -1, epsilon);
+    EXPECT_NEAR(output.at(4).first, -1, epsilon);
+    EXPECT_NEAR(output.at(5).first, -2.5, epsilon);
+    EXPECT_NEAR(output.at(6).first, -2.5, epsilon);
+    EXPECT_NEAR(output.at(7).first, -2.5, epsilon);
   }
 }
 
