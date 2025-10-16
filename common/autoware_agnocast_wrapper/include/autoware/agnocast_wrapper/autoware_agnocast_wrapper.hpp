@@ -41,7 +41,8 @@
   typename autoware::agnocast_wrapper::PollingSubscriber<MessageT>::SharedPtr
 
 #define AUTOWARE_CREATE_SUBSCRIPTION(message_type, node_ptr, topic, qos, callback, options) \
-  autoware::agnocast_wrapper::create_subscription<message_type>(node_ptr, topic, qos, callback, options)
+  autoware::agnocast_wrapper::create_subscription<message_type>(                            \
+    node_ptr, topic, qos, callback, options)
 #define AUTOWARE_CREATE_PUBLISHER2(message_type, node_ptr, arg1, arg2) \
   autoware::agnocast_wrapper::create_publisher<message_type>(node_ptr, arg1, arg2)
 #define AUTOWARE_CREATE_PUBLISHER3(message_type, node_ptr, arg1, arg2, arg3) \
@@ -520,8 +521,9 @@ typename Publisher<MessageT>::SharedPtr create_publisher(
   node_ptr->create_publisher<message_type>(arg1, arg2)
 #define AUTOWARE_CREATE_PUBLISHER3(message_type, node_ptr, arg1, arg2, arg3) \
   node_ptr->create_publisher<message_type>(arg1, arg2, arg3)
-#define AUTOWARE_CREATE_POLLING_SUBSCRIBER(message_type, node_ptr, topic, qos) \
-  autoware_utils::InterProcessPollingSubscriber<message_type>::create_subscription(node_ptr, topic, qos)
+#define AUTOWARE_CREATE_POLLING_SUBSCRIBER(message_type, node_ptr, topic, qos)      \
+  autoware_utils::InterProcessPollingSubscriber<message_type>::create_subscription( \
+    node_ptr, topic, qos)
 
 #define AUTOWARE_SUBSCRIPTION_OPTIONS rclcpp::SubscriptionOptions
 #define AUTOWARE_PUBLISHER_OPTIONS rclcpp::PublisherOptions
