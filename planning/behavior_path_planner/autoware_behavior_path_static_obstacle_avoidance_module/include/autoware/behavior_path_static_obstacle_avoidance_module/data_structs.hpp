@@ -433,10 +433,6 @@ struct ObjectData  // avoidance target
   // envelope polygon centroid
   Point2d centroid{};
 
-  // Adds extra margin for objects near highly curved sections of the path
-  // to prevent the vehicle's front from getting too close to obstacles.
-  double curvature_based_margin{0.0};
-
   // lateral distance from overhang to the road shoulder
   double to_road_shoulder_distance{0.0};
 
@@ -575,9 +571,6 @@ struct AvoidancePlanningData
   // If the point is behind ego_pose, the value is negative.
   std::vector<double> arclength_from_ego;
 
-  // Lateral distance from the vehicle's front corner to the path centerline at each path point.
-  std::vector<double> front_corner_offsets;
-
   // current driving lanelet
   lanelet::ConstLanelets current_lanelets;
   lanelet::ConstLanelets extend_lanelets;
@@ -654,7 +647,6 @@ struct AvoidancePlanningData
     reference_path_rough = PathWithLaneId();
     ego_closest_path_index = 0;
     arclength_from_ego.clear();
-    front_corner_offsets.clear();
     current_lanelets.clear();
     extend_lanelets.clear();
     candidate_path = ShiftedPath();
