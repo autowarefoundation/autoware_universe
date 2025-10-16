@@ -15,6 +15,7 @@
 #include "utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/motion_velocity_planner_common/polygon_utils.hpp>
 #include <autoware_utils_geometry/boost_polygon_utils.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 
@@ -29,81 +30,10 @@
 
 namespace autoware::motion_velocity_planner::road_user_stop::utils
 {
-namespace
-{
+
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_utils_geometry::Point2d;
 using autoware_utils_geometry::Polygon2d;
-
-inline Point2d msg_to_2d(const geometry_msgs::msg::Point & point)
-{
-  return Point2d{point.x, point.y};
-}
-
-// create front bumper line segment (not a polygon, just the front line)
-std::pair<Point2d, Point2d> create_front_bumper_line(
-  const geometry_msgs::msg::Pose & pose,
-  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const double left_margin,
-  const double right_margin)
-{
-  using autoware_utils_geometry::calc_offset_pose;
-  const double half_width = vehicle_info.vehicle_width_m / 2.0;
-  const double front_length = vehicle_info.max_longitudinal_offset_m;
-
-  // create front bumper line (left to right)
-  // point0: front left
-  const auto point0 = calc_offset_pose(pose, front_length, half_width + left_margin, 0.0).position;
-  // point1: front right
-  const auto point1 =
-    calc_offset_pose(pose, front_length, -half_width - right_margin, 0.0).position;
-
-  return {msg_to_2d(point0), msg_to_2d(point1)};
-}
-
-// estimate the future ego pose with assuming that the pose error against the reference path will
-// decrease to zero by the time_to_convergence.
-std::vector<geometry_msgs::msg::Pose> calculate_error_poses(
-  const std::vector<TrajectoryPoint> & traj_points,
-  const geometry_msgs::msg::Pose & current_ego_pose, const double time_to_convergence)
-{
-  std::vector<geometry_msgs::msg::Pose> error_poses;
-  error_poses.reserve(traj_points.size());
-
-  const size_t nearest_idx =
-    autoware::motion_utils::findNearestSegmentIndex(traj_points, current_ego_pose.position);
-  const auto nearest_pose = traj_points.at(nearest_idx).pose;
-  const auto current_ego_pose_error =
-    autoware_utils_geometry::inverse_transform_pose(current_ego_pose, nearest_pose);
-  const double current_ego_lat_error = current_ego_pose_error.position.y;
-  const double current_ego_yaw_error = tf2::getYaw(current_ego_pose_error.orientation);
-  double time_elapsed{0.0};
-
-  for (size_t i = 0; i < traj_points.size(); ++i) {
-    if (time_elapsed >= time_to_convergence) {
-      break;
-    }
-
-    const double rem_ratio = (time_to_convergence - time_elapsed) / time_to_convergence;
-    geometry_msgs::msg::Pose indexed_pose_err;
-    indexed_pose_err.set__orientation(
-      autoware_utils_geometry::create_quaternion_from_yaw(current_ego_yaw_error * rem_ratio));
-    indexed_pose_err.set__position(
-      autoware_utils_geometry::create_point(0.0, current_ego_lat_error * rem_ratio, 0.0));
-    error_poses.push_back(
-      autoware_utils_geometry::transform_pose(indexed_pose_err, traj_points.at(i).pose));
-
-    if (traj_points.at(i).longitudinal_velocity_mps != 0.0 && i < traj_points.size() - 1) {
-      time_elapsed += autoware_utils_geometry::calc_distance2d(
-                        traj_points.at(i).pose.position, traj_points.at(i + 1).pose.position) /
-                      std::abs(traj_points.at(i).longitudinal_velocity_mps);
-    } else {
-      time_elapsed = std::numeric_limits<double>::max();
-    }
-  }
-  return error_poses;
-}
-
-}  // namespace
 
 autoware_utils_geometry::Polygon2d to_polygon_2d(const lanelet::BasicPolygon2d & poly)
 {
@@ -138,6 +68,8 @@ std::vector<Polygon2d> create_one_step_polygons_from_front(
   const bool enable_to_consider_current_pose, const double time_to_convergence,
   [[maybe_unused]] const double decimate_trajectory_step_length)
 {
+  using autoware::motion_velocity_planner::polygon_utils::calculate_error_poses;
+  using autoware_utils_geometry::calc_offset_pose;
   const auto error_poses =
     enable_to_consider_current_pose
       ? calculate_error_poses(traj_points, current_ego_pose, time_to_convergence)
@@ -156,9 +88,14 @@ std::vector<Polygon2d> create_one_step_polygons_from_front(
     // collect all front bumper points for current trajectory point
     std::vector<Point2d> current_bumper_points;
     for (const auto & pose : current_poses) {
-      const auto bumper_line = create_front_bumper_line(pose, vehicle_info, lat_margin, lat_margin);
-      current_bumper_points.push_back(bumper_line.first);   // left point
-      current_bumper_points.push_back(bumper_line.second);  // right point
+      const double half_width = vehicle_info.vehicle_width_m / 2.0;
+      const double front_length = vehicle_info.max_longitudinal_offset_m;
+      const auto left_point =
+        calc_offset_pose(pose, front_length, half_width + lat_margin, 0.0).position;
+      const auto right_point =
+        calc_offset_pose(pose, front_length, -half_width - lat_margin, 0.0).position;
+      current_bumper_points.push_back(Point2d{left_point.x, left_point.y});
+      current_bumper_points.push_back(Point2d{right_point.x, right_point.y});
     }
 
     if (i == 0) {
