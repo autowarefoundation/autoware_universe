@@ -19846,6 +19846,15 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#source-priority" class="md-nav__link">
+    <span class="md-ellipsis">
+      Source priority
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#inputs-outputs" class="md-nav__link">
     <span class="md-ellipsis">
       Inputs / Outputs
@@ -19949,6 +19958,9 @@ The table below outlines how the matching process determines the output based on
 </tr>
 </tbody>
 </table>
+<h3 id="source-priority">Source priority<a class="headerlink" href="#source-priority" title="Permanent link">#</a></h3>
+<p>As an alternative to the signal matching option, one of the sources can be prioritized. There are three priority modes for signal selection: 'external' prioritizes external signals, 'perception' prioritizes perception signals, 'confidence' uses confidence-based selection.</p>
+<p>Note, this option will not be effective if signal matching is enabled.</p>
 <h3 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h3>
 <h4 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h4>
 <table>
@@ -20010,35 +20022,35 @@ The table below outlines how the matching process determines the output based on
 <td>external_delay_tolerance</td>
 <td>float</td>
 <td>The duration in seconds an external message is considered valid for merging in comparison with current time.</td>
-<td>5</td>
+<td>5.0</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>external_time_tolerance</td>
 <td>float</td>
 <td>The duration in seconds an external message is considered valid for merging.</td>
-<td>5</td>
+<td>5.0</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>perception_time_tolerance</td>
 <td>float</td>
 <td>The duration in seconds a perception message is considered valid for merging.</td>
-<td>1</td>
+<td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>external_priority</td>
-<td>boolean</td>
-<td>Whether or not external signals take precedence over perception-based ones. If false, the merging uses confidence as a criteria.</td>
-<td>0</td>
-<td>N/A</td>
+<td>source_priority</td>
+<td>string</td>
+<td>Priority mode for signal selection: 'external' prioritizes external signals, 'perception' prioritizes perception signals, 'confidence' uses confidence-based selection.</td>
+<td>confidence</td>
+<td>['external', 'perception', 'confidence']</td>
 </tr>
 <tr>
 <td>enable_signal_matching</td>
 <td>boolean</td>
 <td>Decide whether to validate the match between perception signals and external signals. If set to true, verify that the colors match and only publish them if they are identical.</td>
-<td>0</td>
+<td>False</td>
 <td>N/A</td>
 </tr>
 </tbody>
