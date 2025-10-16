@@ -65,16 +65,6 @@ void smooth_trajectory_with_elastic_band(
 bool validate_point(const TrajectoryPoint & point);
 
 /**
- * @brief Copies the orientation of the input trajectory points to the output trajectory points.
- * @param input_trajectory The input trajectory points.
- * @param output_trajectory The output trajectory points.
- * @param params The parameters for trajectory optimization.
- */
-void copy_trajectory_orientation(
-  const TrajectoryPoints & input_trajectory, TrajectoryPoints & output_trajectory,
-  const TrajectoryOptimizerParams & params);
-
-/**
  * @brief Corrects the orientation of output trajectory points when they deviate significantly from
  * input trajectory.
  * @param input_trajectory The reference input trajectory points.
@@ -102,21 +92,6 @@ void apply_spline(
   double max_distance_discrepancy_m, bool copy_original_orientation);
 
 /**
- * @brief Interpolates the given trajectory points based on the current odometry and acceleration.
- *
- * @param traj_points The trajectory points to be interpolated.
- * @param current_odometry The current odometry data.
- * @param current_acceleration The current acceleration data.
- * @param params The parameters for trajectory interpolation.
- * @param smoother The smoother to be used for filtering the trajectory.
- */
-void interpolate_trajectory(
-  TrajectoryPoints & traj_points, const Odometry & current_odometry,
-  const AccelWithCovarianceStamped & current_acceleration, const TrajectoryOptimizerParams & params,
-  const std::shared_ptr<JerkFilteredSmoother> & jerk_filtered_smoother,
-  const std::shared_ptr<EBPathSmoother> & eb_path_smoother_ptr);
-
-/**
  * @brief Gets the logger for the trajectory optimizer.
  *
  * @return The logger instance.
@@ -134,15 +109,16 @@ void remove_invalid_points(std::vector<TrajectoryPoint> & input_trajectory);
  * @brief Filters the velocity of the input trajectory based on the initial motion and parameters.
  *
  * @param input_trajectory The trajectory points to be filtered.
- * @param initial_motion_speed The initial speed and acceleration for motion.
- * @param params The parameters for trajectory interpolation.
+ * @param initial_motion The initial speed and acceleration for motion.
+ * @param nearest_dist_threshold_m Distance threshold for trajectory matching.
+ * @param nearest_yaw_threshold_rad Yaw threshold for trajectory matching.
  * @param smoother The smoother to be used for filtering the trajectory.
  * @param current_odometry The current odometry data.
  */
 void filter_velocity(
   TrajectoryPoints & input_trajectory, const InitialMotion & initial_motion,
-  const TrajectoryOptimizerParams & params, const std::shared_ptr<JerkFilteredSmoother> & smoother,
-  const Odometry & current_odometry);
+  double nearest_dist_threshold_m, double nearest_yaw_threshold_rad,
+  const std::shared_ptr<JerkFilteredSmoother> & smoother, const Odometry & current_odometry);
 
 /**
  * @brief Clamps the velocities of the input trajectory points to the specified minimum values.

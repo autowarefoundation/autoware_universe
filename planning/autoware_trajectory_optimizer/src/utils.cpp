@@ -194,8 +194,8 @@ void limit_lateral_acceleration(
 
 void filter_velocity(
   TrajectoryPoints & input_trajectory, const InitialMotion & initial_motion,
-  const TrajectoryOptimizerParams & params, const std::shared_ptr<JerkFilteredSmoother> & smoother,
-  const Odometry & current_odometry)
+  const double nearest_dist_threshold_m, const double nearest_yaw_threshold_rad,
+  const std::shared_ptr<JerkFilteredSmoother> & smoother, const Odometry & current_odometry)
 {
   if (!smoother) {
     log_error_throttle("JerkFilteredSmoother is not initialized");
@@ -205,9 +205,7 @@ void filter_velocity(
   if (input_trajectory.size() < 2) {
     return;
   }
-  // Lateral acceleration limit
-  const auto & nearest_dist_threshold = params.nearest_dist_threshold_m;
-  const auto & nearest_yaw_threshold = params.nearest_yaw_threshold_rad;
+
   const auto & initial_motion_speed = initial_motion.speed_mps;
   const auto & initial_motion_acc = initial_motion.acc_mps2;
 
@@ -223,11 +221,12 @@ void filter_velocity(
   // Resample trajectory with ego-velocity based interval distance
 
   input_trajectory = smoother->resampleTrajectory(
-    input_trajectory, initial_motion_speed, current_odometry.pose.pose, nearest_dist_threshold,
-    nearest_yaw_threshold);
+    input_trajectory, initial_motion_speed, current_odometry.pose.pose, nearest_dist_threshold_m,
+    nearest_yaw_threshold_rad);
 
   const size_t traj_closest = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
-    input_trajectory, current_odometry.pose.pose, nearest_dist_threshold, nearest_yaw_threshold);
+    input_trajectory, current_odometry.pose.pose, nearest_dist_threshold_m,
+    nearest_yaw_threshold_rad);
 
   // // Clip trajectory from closest point
   TrajectoryPoints clipped;
@@ -254,22 +253,6 @@ bool validate_point(const TrajectoryPoint & point)
          is_valid(point.pose.position.z) && is_valid(point.pose.orientation.x) &&
          is_valid(point.pose.orientation.y) && is_valid(point.pose.orientation.z) &&
          is_valid(point.pose.orientation.w);
-}
-
-void copy_trajectory_orientation(
-  const TrajectoryPoints & input_trajectory, TrajectoryPoints & output_trajectory,
-  const TrajectoryOptimizerParams & params)
-{
-  for (auto & out_point : output_trajectory) {
-    const auto nearest_index_opt = autoware::motion_utils::findNearestIndex(
-      input_trajectory, out_point.pose, params.spline_interpolation_max_distance_discrepancy_m,
-      M_PI_2);
-    if (!nearest_index_opt.has_value()) {
-      continue;
-    }
-    const auto nearest_index = nearest_index_opt.value();
-    out_point.pose.orientation = input_trajectory.at(nearest_index).pose.orientation;
-  }
 }
 
 void fix_trajectory_orientation(
@@ -365,75 +348,6 @@ void apply_spline(
     }
   }
   traj_points = temp_traj.points;
-}
-
-void interpolate_trajectory(
-  TrajectoryPoints & traj_points, const Odometry & current_odometry,
-  const AccelWithCovarianceStamped & current_acceleration, const TrajectoryOptimizerParams & params,
-  const std::shared_ptr<JerkFilteredSmoother> & jerk_filtered_smoother,
-  const std::shared_ptr<EBPathSmoother> & eb_path_smoother_ptr)
-{
-  // Remove overlap points and wrong orientation points
-  if (params.fix_invalid_points) {
-    remove_invalid_points(traj_points);
-  }
-
-  if (traj_points.size() < 2) {
-    log_error_throttle("Not enough points in trajectory after overlap points removal");
-    return;
-  }
-
-  const double & target_pull_out_speed_mps = params.target_pull_out_speed_mps;
-  const double & target_pull_out_acc_mps2 = params.target_pull_out_acc_mps2;
-  const double & max_speed_mps = params.max_speed_mps;
-
-  const auto current_speed = current_odometry.twist.twist.linear.x;
-  const auto current_linear_acceleration = current_acceleration.accel.accel.linear.x;
-  auto initial_motion_speed =
-    (current_speed > target_pull_out_speed_mps) ? current_speed : target_pull_out_speed_mps;
-  auto initial_motion_acc = (current_speed > target_pull_out_speed_mps)
-                              ? current_linear_acceleration
-                              : target_pull_out_acc_mps2;
-
-  // Set engage speed and acceleration
-  if (params.set_engage_speed && (current_speed < target_pull_out_speed_mps)) {
-    clamp_velocities(
-      traj_points, static_cast<float>(initial_motion_speed),
-      static_cast<float>(initial_motion_acc));
-  }
-  // Limit ego speed
-  if (params.limit_speed) {
-    set_max_velocity(traj_points, static_cast<float>(max_speed_mps));
-  }
-
-  // Smooth velocity profile
-  if (params.smooth_velocities) {
-    InitialMotion initial_motion{initial_motion_speed, initial_motion_acc};
-    filter_velocity(traj_points, initial_motion, params, jerk_filtered_smoother, current_odometry);
-  }
-  // Apply spline to smooth the trajectory
-  if (params.use_akima_spline_interpolation) {
-    apply_spline(
-      traj_points, params.spline_interpolation_resolution_m,
-      params.spline_interpolation_max_yaw_discrepancy_deg,
-      params.spline_interpolation_max_distance_discrepancy_m,
-      params.spline_copy_original_orientation);
-  }
-  // Use elastic band to smooth the trajectory
-  if (params.use_eb_smoother) {
-    smooth_trajectory_with_elastic_band(traj_points, current_odometry, eb_path_smoother_ptr);
-  }
-
-  if (params.fix_invalid_points) {
-    remove_invalid_points(traj_points);
-  }
-  // Recalculate timestamps
-  motion_utils::calculate_time_from_start(traj_points, current_odometry.pose.pose.position);
-
-  if (traj_points.size() < 2) {
-    log_error_throttle("Not enough points in trajectory after overlap points removal");
-    return;
-  }
 }
 
 void add_ego_state_to_trajectory(

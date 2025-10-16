@@ -41,15 +41,14 @@ void TrajectorySplineSmoother::set_up_params()
   auto node_ptr = get_node_ptr();
   using autoware_utils_rclcpp::get_or_declare_parameter;
 
-  // Declare plugin-specific parameters
-  spline_params_.interpolation_resolution_m =
-    get_or_declare_parameter<double>(*node_ptr, "spline_interpolation_resolution_m");
-  spline_params_.max_yaw_discrepancy_deg =
-    get_or_declare_parameter<double>(*node_ptr, "spline_interpolation_max_yaw_discrepancy_deg");
-  spline_params_.max_distance_discrepancy_m =
-    get_or_declare_parameter<double>(*node_ptr, "spline_interpolation_max_distance_discrepancy_m");
-  spline_params_.copy_original_orientation =
-    get_or_declare_parameter<bool>(*node_ptr, "spline_copy_original_orientation");
+  spline_params_.interpolation_resolution_m = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_spline_smoother.interpolation_resolution_m");
+  spline_params_.max_yaw_discrepancy_deg = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_spline_smoother.max_yaw_discrepancy_deg");
+  spline_params_.max_distance_discrepancy_m = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_spline_smoother.max_distance_discrepancy_m");
+  spline_params_.copy_original_orientation = get_or_declare_parameter<bool>(
+    *node_ptr, "trajectory_spline_smoother.copy_original_orientation");
 }
 
 rcl_interfaces::msg::SetParametersResult TrajectorySplineSmoother::on_parameter(
@@ -57,17 +56,18 @@ rcl_interfaces::msg::SetParametersResult TrajectorySplineSmoother::on_parameter(
 {
   using autoware_utils_rclcpp::update_param;
 
-  // Update plugin-specific parameters
   update_param(
-    parameters, "spline_interpolation_resolution_m", spline_params_.interpolation_resolution_m);
+    parameters, "trajectory_spline_smoother.interpolation_resolution_m",
+    spline_params_.interpolation_resolution_m);
   update_param(
-    parameters, "spline_interpolation_max_yaw_discrepancy_deg",
+    parameters, "trajectory_spline_smoother.max_yaw_discrepancy_deg",
     spline_params_.max_yaw_discrepancy_deg);
   update_param(
-    parameters, "spline_interpolation_max_distance_discrepancy_m",
+    parameters, "trajectory_spline_smoother.max_distance_discrepancy_m",
     spline_params_.max_distance_discrepancy_m);
   update_param(
-    parameters, "spline_copy_original_orientation", spline_params_.copy_original_orientation);
+    parameters, "trajectory_spline_smoother.copy_original_orientation",
+    spline_params_.copy_original_orientation);
 
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;

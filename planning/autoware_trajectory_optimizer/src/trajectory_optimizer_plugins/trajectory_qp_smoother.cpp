@@ -46,16 +46,23 @@ void TrajectoryQPSmoother::set_up_params()
   using autoware_utils_rclcpp::get_or_declare_parameter;
 
   qp_params_.weight_smoothness =
-    get_or_declare_parameter<double>(*node_ptr, "qp_weight_smoothness");
-  qp_params_.weight_fidelity = get_or_declare_parameter<double>(*node_ptr, "qp_weight_fidelity");
-  qp_params_.time_step_s = get_or_declare_parameter<double>(*node_ptr, "qp_time_step_s");
-  qp_params_.osqp_eps_abs = get_or_declare_parameter<double>(*node_ptr, "qp_osqp_eps_abs");
-  qp_params_.osqp_eps_rel = get_or_declare_parameter<double>(*node_ptr, "qp_osqp_eps_rel");
-  qp_params_.osqp_max_iter = get_or_declare_parameter<int>(*node_ptr, "qp_osqp_max_iter");
-  qp_params_.osqp_verbose = get_or_declare_parameter<bool>(*node_ptr, "qp_osqp_verbose");
-  qp_params_.fix_orientation = get_or_declare_parameter<bool>(*node_ptr, "qp_fix_orientation");
-  qp_params_.orientation_correction_threshold_deg =
-    get_or_declare_parameter<double>(*node_ptr, "qp_orientation_correction_threshold_deg");
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.weight_smoothness");
+  qp_params_.weight_fidelity =
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.weight_fidelity");
+  qp_params_.time_step_s =
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.time_step_s");
+  qp_params_.osqp_eps_abs =
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.osqp_eps_abs");
+  qp_params_.osqp_eps_rel =
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.osqp_eps_rel");
+  qp_params_.osqp_max_iter =
+    get_or_declare_parameter<int>(*node_ptr, "trajectory_qp_smoother.osqp_max_iter");
+  qp_params_.osqp_verbose =
+    get_or_declare_parameter<bool>(*node_ptr, "trajectory_qp_smoother.osqp_verbose");
+  qp_params_.fix_orientation =
+    get_or_declare_parameter<bool>(*node_ptr, "trajectory_qp_smoother.fix_orientation");
+  qp_params_.orientation_correction_threshold_deg = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_qp_smoother.orientation_correction_threshold_deg");
 }
 
 rcl_interfaces::msg::SetParametersResult TrajectoryQPSmoother::on_parameter(
@@ -63,16 +70,19 @@ rcl_interfaces::msg::SetParametersResult TrajectoryQPSmoother::on_parameter(
 {
   using autoware_utils_rclcpp::update_param;
 
-  update_param<double>(parameters, "qp_weight_smoothness", qp_params_.weight_smoothness);
-  update_param<double>(parameters, "qp_weight_fidelity", qp_params_.weight_fidelity);
-  update_param<double>(parameters, "qp_time_step_s", qp_params_.time_step_s);
-  update_param<double>(parameters, "qp_osqp_eps_abs", qp_params_.osqp_eps_abs);
-  update_param<double>(parameters, "qp_osqp_eps_rel", qp_params_.osqp_eps_rel);
-  update_param<int>(parameters, "qp_osqp_max_iter", qp_params_.osqp_max_iter);
-  update_param<bool>(parameters, "qp_osqp_verbose", qp_params_.osqp_verbose);
-  update_param<bool>(parameters, "qp_fix_orientation", qp_params_.fix_orientation);
   update_param<double>(
-    parameters, "qp_orientation_correction_threshold_deg",
+    parameters, "trajectory_qp_smoother.weight_smoothness", qp_params_.weight_smoothness);
+  update_param<double>(
+    parameters, "trajectory_qp_smoother.weight_fidelity", qp_params_.weight_fidelity);
+  update_param<double>(parameters, "trajectory_qp_smoother.time_step_s", qp_params_.time_step_s);
+  update_param<double>(parameters, "trajectory_qp_smoother.osqp_eps_abs", qp_params_.osqp_eps_abs);
+  update_param<double>(parameters, "trajectory_qp_smoother.osqp_eps_rel", qp_params_.osqp_eps_rel);
+  update_param<int>(parameters, "trajectory_qp_smoother.osqp_max_iter", qp_params_.osqp_max_iter);
+  update_param<bool>(parameters, "trajectory_qp_smoother.osqp_verbose", qp_params_.osqp_verbose);
+  update_param<bool>(
+    parameters, "trajectory_qp_smoother.fix_orientation", qp_params_.fix_orientation);
+  update_param<double>(
+    parameters, "trajectory_qp_smoother.orientation_correction_threshold_deg",
     qp_params_.orientation_correction_threshold_deg);
 
   rcl_interfaces::msg::SetParametersResult result;

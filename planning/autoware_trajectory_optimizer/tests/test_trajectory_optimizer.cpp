@@ -138,8 +138,6 @@ TEST_F(TrajectoryOptimizerUtilsTest, ExpandTrajectoryWithEgoHistory)
   TrajectoryPoints points = create_sample_trajectory();
   TrajectoryPoints ego_history_points = create_sample_trajectory(1.0, -10.0);
   Odometry current_odometry;
-  TrajectoryOptimizerParams params;
-  params.backward_trajectory_extension_m = 15.0;
   current_odometry.pose.pose.position.x = points.front().pose.position.x;
   current_odometry.pose.pose.position.y = points.front().pose.position.y;
   autoware::trajectory_optimizer::utils::expand_trajectory_with_ego_history(
