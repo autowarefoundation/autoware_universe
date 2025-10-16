@@ -90,9 +90,16 @@ void fix_trajectory_orientation(
  * @brief Interpolates the given trajectory points based on trajectory length.
  *
  * @param traj_points The trajectory points to be interpolated.
- * @param params The parameters for trajectory interpolation.
+ * @param interpolation_resolution_m Interpolation resolution for Akima spline.
+ * @param max_yaw_discrepancy_deg Maximum yaw deviation allowed for spline outlier detection.
+ * @param max_distance_discrepancy_m Maximum position deviation allowed for spline outlier
+ * detection.
+ * @param copy_original_orientation Flag to indicate if orientation from original trajectory should
+ * be copied.
  */
-void apply_spline(TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params);
+void apply_spline(
+  TrajectoryPoints & traj_points, double interpolation_resolution_m, double max_yaw_discrepancy_deg,
+  double max_distance_discrepancy_m, bool copy_original_orientation);
 
 /**
  * @brief Interpolates the given trajectory points based on the current odometry and acceleration.
