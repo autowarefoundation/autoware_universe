@@ -11,7 +11,7 @@
     spline_interpolation_max_distance_discrepancy_m: 5.0 # [m]
     backward_trajectory_extension_m: 5.0 # [m]
     use_akima_spline_interpolation: false
-    smooth_trajectories: false
+    use_eb_smoother: false
     limit_speed: true
     limit_lateral_acceleration: false
     set_engage_speed: false

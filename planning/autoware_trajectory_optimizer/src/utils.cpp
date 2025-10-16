@@ -420,7 +420,7 @@ void interpolate_trajectory(
       params.spline_copy_original_orientation);
   }
   // Use elastic band to smooth the trajectory
-  if (params.smooth_trajectories) {
+  if (params.use_eb_smoother) {
     smooth_trajectory_with_elastic_band(traj_points, current_odometry, eb_path_smoother_ptr);
   }
 

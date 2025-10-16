@@ -109,13 +109,9 @@ private:
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
     debug_processing_time_detail_pub_;
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
-  // Velocity smoothing
-  std::shared_ptr<rclcpp::Time> last_time_{nullptr};
 
   // variables for previous information
   std::shared_ptr<TrajectoryPoints> prev_optimized_traj_points_ptr_{nullptr};
-  // parameters
-  Trajectory past_ego_state_trajectory_;
   TrajectoryOptimizerParams params_;
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 };

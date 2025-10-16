@@ -14,9 +14,6 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer.hpp"
 
-#include "autoware/motion_utils/resample/resample.hpp"
-#include "autoware/trajectory_optimizer/utils.hpp"
-
 #include <autoware/motion_utils/trajectory/conversion.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -28,11 +25,7 @@
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
-#include <algorithm>
-#include <cstddef>
-#include <iostream>
 #include <memory>
-#include <numeric>
 #include <vector>
 
 namespace autoware::trajectory_optimizer
@@ -65,8 +58,6 @@ TrajectoryOptimizer::TrajectoryOptimizer(const rclcpp::NodeOptions & options)
     "~/debug/processing_time_detail_ms", 1);
   time_keeper_ =
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
-  // last time a trajectory was received
-  last_time_ = std::make_shared<rclcpp::Time>(now());
 }
 
 void TrajectoryOptimizer::initialize_optimizers()
@@ -96,50 +87,14 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
   using autoware_utils_rclcpp::update_param;
   auto params = params_;
 
-  update_param<double>(parameters, "nearest_dist_threshold_m", params.nearest_dist_threshold_m);
-  update_param<double>(parameters, "nearest_yaw_threshold_rad", params.nearest_yaw_threshold_rad);
-  update_param<double>(parameters, "target_pull_out_speed_mps", params.target_pull_out_speed_mps);
-  update_param<double>(parameters, "target_pull_out_acc_mps2", params.target_pull_out_acc_mps2);
-  update_param<double>(parameters, "max_speed_mps", params.max_speed_mps);
-  update_param<double>(parameters, "max_lateral_accel_mps2", params.max_lateral_accel_mps2);
-  update_param<double>(
-    parameters, "spline_interpolation_resolution_m", params.spline_interpolation_resolution_m);
-  update_param<double>(
-    parameters, "spline_interpolation_max_yaw_discrepancy_deg",
-    params.spline_interpolation_max_yaw_discrepancy_deg);
-  update_param<double>(
-    parameters, "spline_interpolation_max_distance_discrepancy_m",
-    params.spline_interpolation_max_distance_discrepancy_m);
-  update_param<double>(
-    parameters, "backward_trajectory_extension_m", params.backward_trajectory_extension_m);
   update_param<bool>(
     parameters, "use_akima_spline_interpolation", params.use_akima_spline_interpolation);
-  update_param<bool>(parameters, "smooth_velocities", params.smooth_velocities);
-  update_param<bool>(parameters, "smooth_trajectories", params.smooth_trajectories);
-  update_param<bool>(parameters, "limit_speed", params.limit_speed);
-  update_param<bool>(parameters, "limit_lateral_acceleration", params.limit_lateral_acceleration);
-  update_param<bool>(parameters, "set_engage_speed", params.set_engage_speed);
+  update_param<bool>(parameters, "use_eb_smoother", params.use_eb_smoother);
+  update_param<bool>(parameters, "use_qp_smoother", params.use_qp_smoother);
   update_param<bool>(parameters, "fix_invalid_points", params.fix_invalid_points);
   update_param<bool>(parameters, "extend_trajectory_backward", params.extend_trajectory_backward);
-  update_param<bool>(
-    parameters, "spline_copy_original_orientation", params.spline_copy_original_orientation);
-  // QP Smoother parameters
-  update_param<bool>(parameters, "use_qp_smoother", params.use_qp_smoother);
-  update_param<double>(parameters, "qp_weight_smoothness", params.qp_weight_smoothness);
-  update_param<double>(parameters, "qp_weight_fidelity", params.qp_weight_fidelity);
-  update_param<double>(parameters, "qp_time_step_s", params.qp_time_step_s);
-  update_param<double>(parameters, "qp_osqp_eps_abs", params.qp_osqp_eps_abs);
-  update_param<double>(parameters, "qp_osqp_eps_rel", params.qp_osqp_eps_rel);
-  update_param<int>(parameters, "qp_osqp_max_iter", params.qp_osqp_max_iter);
-  update_param<bool>(parameters, "qp_osqp_verbose", params.qp_osqp_verbose);
-  update_param<bool>(parameters, "qp_fix_orientation", params.qp_fix_orientation);
-  update_param<double>(
-    parameters, "qp_orientation_correction_threshold_deg",
-    params.qp_orientation_correction_threshold_deg);
 
   params_ = params;
-
-  // call update_param for all optimizer plugins
 
   if (eb_smoother_optimizer_ptr_) {
     eb_smoother_optimizer_ptr_->on_parameter(parameters);
@@ -178,50 +133,13 @@ void TrajectoryOptimizer::set_up_params()
 {
   using autoware_utils_rclcpp::get_or_declare_parameter;
 
-  params_.nearest_dist_threshold_m =
-    get_or_declare_parameter<double>(*this, "nearest_dist_threshold_m");
-  params_.nearest_yaw_threshold_rad =
-    get_or_declare_parameter<double>(*this, "nearest_yaw_threshold_rad");
-  params_.target_pull_out_speed_mps =
-    get_or_declare_parameter<double>(*this, "target_pull_out_speed_mps");
-  params_.target_pull_out_acc_mps2 =
-    get_or_declare_parameter<double>(*this, "target_pull_out_acc_mps2");
-  params_.max_speed_mps = get_or_declare_parameter<double>(*this, "max_speed_mps");
-  params_.max_lateral_accel_mps2 =
-    get_or_declare_parameter<double>(*this, "max_lateral_accel_mps2");
-  params_.spline_interpolation_resolution_m =
-    get_or_declare_parameter<double>(*this, "spline_interpolation_resolution_m");
-  params_.spline_interpolation_max_yaw_discrepancy_deg =
-    get_or_declare_parameter<double>(*this, "spline_interpolation_max_yaw_discrepancy_deg");
-  params_.spline_interpolation_max_distance_discrepancy_m =
-    get_or_declare_parameter<double>(*this, "spline_interpolation_max_distance_discrepancy_m");
-  params_.backward_trajectory_extension_m =
-    get_or_declare_parameter<double>(*this, "backward_trajectory_extension_m");
   params_.use_akima_spline_interpolation =
     get_or_declare_parameter<bool>(*this, "use_akima_spline_interpolation");
-  params_.smooth_velocities = get_or_declare_parameter<bool>(*this, "smooth_velocities");
-  params_.smooth_trajectories = get_or_declare_parameter<bool>(*this, "smooth_trajectories");
-  params_.limit_speed = get_or_declare_parameter<bool>(*this, "limit_speed");
-  params_.limit_lateral_acceleration =
-    get_or_declare_parameter<bool>(*this, "limit_lateral_acceleration");
-  params_.set_engage_speed = get_or_declare_parameter<bool>(*this, "set_engage_speed");
+  params_.use_eb_smoother = get_or_declare_parameter<bool>(*this, "use_eb_smoother");
+  params_.use_qp_smoother = get_or_declare_parameter<bool>(*this, "use_qp_smoother");
   params_.fix_invalid_points = get_or_declare_parameter<bool>(*this, "fix_invalid_points");
   params_.extend_trajectory_backward =
     get_or_declare_parameter<bool>(*this, "extend_trajectory_backward");
-  params_.spline_copy_original_orientation =
-    get_or_declare_parameter<bool>(*this, "spline_copy_original_orientation");
-  // QP Smoother parameters
-  params_.use_qp_smoother = get_or_declare_parameter<bool>(*this, "use_qp_smoother");
-  params_.qp_weight_smoothness = get_or_declare_parameter<double>(*this, "qp_weight_smoothness");
-  params_.qp_weight_fidelity = get_or_declare_parameter<double>(*this, "qp_weight_fidelity");
-  params_.qp_time_step_s = get_or_declare_parameter<double>(*this, "qp_time_step_s");
-  params_.qp_osqp_eps_abs = get_or_declare_parameter<double>(*this, "qp_osqp_eps_abs");
-  params_.qp_osqp_eps_rel = get_or_declare_parameter<double>(*this, "qp_osqp_eps_rel");
-  params_.qp_osqp_max_iter = get_or_declare_parameter<int>(*this, "qp_osqp_max_iter");
-  params_.qp_osqp_verbose = get_or_declare_parameter<bool>(*this, "qp_osqp_verbose");
-  params_.qp_fix_orientation = get_or_declare_parameter<bool>(*this, "qp_fix_orientation");
-  params_.qp_orientation_correction_threshold_deg =
-    get_or_declare_parameter<double>(*this, "qp_orientation_correction_threshold_deg");
 }
 
 void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::ConstSharedPtr msg)
@@ -232,8 +150,6 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
   current_odometry_ptr_ = sub_current_odometry_.take_data();
   current_acceleration_ptr_ = sub_current_acceleration_.take_data();
 
-  last_time_ = std::make_shared<rclcpp::Time>(now());
-
   if (!current_odometry_ptr_ || !current_acceleration_ptr_) {
     RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 5000, "No odometry or acceleration data");
     return;
@@ -243,12 +159,6 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
   TrajectoryOptimizerData data;
   data.current_odometry = *current_odometry_ptr_;
   data.current_acceleration = *current_acceleration_ptr_;
-
-  if (params_.extend_trajectory_backward) {
-    utils::add_ego_state_to_trajectory(
-      past_ego_state_trajectory_.points, *current_odometry_ptr_, params_.nearest_dist_threshold_m,
-      params_.nearest_yaw_threshold_rad, params_.backward_trajectory_extension_m);
-  }
 
   CandidateTrajectories output_trajectories = *msg;
   for (auto & trajectory : output_trajectories.candidate_trajectories) {
