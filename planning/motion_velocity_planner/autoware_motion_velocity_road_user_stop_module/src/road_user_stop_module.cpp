@@ -1291,11 +1291,11 @@ std::vector<Polygon2d> RoadUserStopModule::get_trajectory_polygons(
   const std::vector<TrajectoryPoint> & decimated_traj_points, const VehicleInfo & vehicle_info,
   const Pose & current_ego_pose, const double lat_margin,
   const bool enable_to_consider_current_pose, const double time_to_convergence,
-  const double decimate_trajectory_step_length, const bool is_from_font_bumper) const
+  const double decimate_trajectory_step_length, const bool is_from_front_bumper) const
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   if (trajectory_polygon_for_inside_map_.count(lat_margin) == 0) {
-    if (is_from_font_bumper) {
+    if (is_from_front_bumper) {
       const auto traj_polys = road_user_stop::utils::create_one_step_polygons_from_front(
         decimated_traj_points, vehicle_info, current_ego_pose, lat_margin,
         enable_to_consider_current_pose, time_to_convergence, decimate_trajectory_step_length);

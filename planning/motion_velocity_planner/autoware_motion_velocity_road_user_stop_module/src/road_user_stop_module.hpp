@@ -107,7 +107,7 @@ private:
     const std::vector<TrajectoryPoint> & decimated_traj_points, const VehicleInfo & vehicle_info,
     const Pose & current_ego_pose, const double lat_margin,
     const bool enable_to_consider_current_pose, const double time_to_convergence,
-    const double decimate_trajectory_step_length, const bool is_from_font_bumper) const;
+    const double decimate_trajectory_step_length, const bool is_from_front_bumper) const;
 
   std::optional<Point> plan_stop(
     const std::shared_ptr<const PlannerData> planner_data,
