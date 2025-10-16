@@ -17,18 +17,50 @@
 #include "autoware/predicted_path_postprocessor/processor/result.hpp"
 
 #include <autoware/interpolation/linear_interpolation.hpp>
+#include <autoware/interpolation/spline_interpolation.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 
 #include <algorithm>
+#include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::predicted_path_postprocessor::processor
 {
+namespace
+{
+/**
+ * @brief Convert a string to an interpolation function.
+ *
+ * @param name The name of the interpolation function.
+ * @return The interpolation function.
+ */
+RefineBySpeed::interpolation_fn to_interpolator(const std::string & name)
+{
+  using kv_type = RefineBySpeed::kv_type;
+
+  if (name == "linear") {
+    // needs to cast overloads
+    return static_cast<kv_type (*)(const kv_type &, const kv_type &, const kv_type &)>(
+      interpolation::lerp);
+  } else if (name == "spline") {
+    return interpolation::spline;
+  } else if (name == "spline_by_akima") {
+    return interpolation::splineByAkima;
+  } else {
+    throw std::invalid_argument("Invalid interpolation type: " + name);
+  }
+}
+}  // namespace
+
 RefineBySpeed::RefineBySpeed(rclcpp::Node * node_ptr, const std::string & processor_name)
 : ProcessorInterface(processor_name)
 {
   speed_threshold_ = node_ptr->declare_parameter<double>(processor_name + ".speed_threshold");
+
+  auto interpolation = node_ptr->declare_parameter<std::string>(processor_name + ".interpolation");
+  interpolator_ = to_interpolator(std::move(interpolation));
 }
 
 RefineBySpeed::result_type RefineBySpeed::process(target_type & target, const Context &)
@@ -86,9 +118,9 @@ RefineBySpeed::result_type RefineBySpeed::process(target_type & target, const Co
       query_keys.begin(), query_keys.end(), query_keys.begin(),
       [s_max](const auto & s) { return std::clamp(s, 0.0, s_max); });
 
-    const auto query_xs = interpolation::lerp(base_keys, base_xs, query_keys);
-    const auto query_ys = interpolation::lerp(base_keys, base_ys, query_keys);
-    const auto query_zs = interpolation::lerp(base_keys, base_zs, query_keys);
+    const auto query_xs = interpolator_(base_keys, base_xs, query_keys);
+    const auto query_ys = interpolator_(base_keys, base_ys, query_keys);
+    const auto query_zs = interpolator_(base_keys, base_zs, query_keys);
 
     // NOTE: waypoints[0] is the center position of the object, so we skip it
     for (size_t i = 1; i < num_waypoints; ++i) {

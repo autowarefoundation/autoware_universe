@@ -23,9 +23,15 @@
               "description": "Threshold speed for path refinement. If the speed of an object is below this threshold, the path will be refined.",
               "default": 1.0,
               "minimum": 0.0
+            },
+            "interpolation": {
+              "type": "string",
+              "description": "Name of the interpolation method.",
+              "enum": ["linear", "spline", "spline_by_akima"],
+              "default": "linear"
             }
           },
-          "required": ["speed_threshold"]
+          "required": ["speed_threshold", "interpolation"]
         }
       },
       "required": ["processors", "refine_by_speed"]

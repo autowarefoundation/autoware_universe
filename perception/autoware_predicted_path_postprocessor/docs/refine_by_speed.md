@@ -16,8 +16,6 @@ The `RefineBySpeed` processor addresses this by:
 
 ## Algorithm
 
-### Pseudo Code
-
 The processor implements the following algorithm:
 
 ```pseudocode
@@ -39,8 +37,8 @@ BEGIN
         // Calculate new distances based on actual speed
         FOR EACH i, waypoint in ENUMERATE(waypoints:=mode.path, i:=1) DO
             new_distance = object.speed × i × time_step
-            // LERP to find position along original path shape
-            new_position = LERP(original_distances, original_positions, new_distance)
+            // Interpolate to find a new position along original path shape
+            new_position = INTERPOLATE(original_distances, original_positions, new_distance)
             waypoints[i].position = new_position
             waypoints[i].orientation = AZIMUTH_BETWEEN(waypoints[i-1], waypoints[i])
         END FOR
@@ -50,9 +48,10 @@ END
 
 ## Parameters
 
-| Parameter         | Type   | Default | Unit | Description                                                                                                          |
-| ----------------- | ------ | ------- | ---- | -------------------------------------------------------------------------------------------------------------------- |
-| `speed_threshold` | double | 1.0     | m/s  | Speed threshold below which path refinement is applied. Objects moving faster than this threshold are not processed. |
+| Parameter         | Type   | Default  | Unit | Description                                                                                                                 |
+| ----------------- | ------ | -------- | ---- | --------------------------------------------------------------------------------------------------------------------------- |
+| `speed_threshold` | double | 1.0      | m/s  | Speed threshold below which path refinement is applied. Objects moving faster than this threshold are not processed.        |
+| `interpolation`   | string | "linear" | -    | Interpolation method to use when finding position along original path shape. Options: "linear", "spline", "spline_by_akima" |
 
 ## Use Cases
 
@@ -94,4 +93,5 @@ It should generally be placed early in the pipeline to ensure that subsequent pr
     processors: ["refine_by_speed"]
     refine_by_speed:
       speed_threshold: 1.0 # Process objects moving slower than 1.0 m/s
+      interpolation: "linear" # Interpolation method. Options: "linear", "spline", "spline_by_akima"
 ```

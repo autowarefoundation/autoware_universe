@@ -17,7 +17,10 @@
 
 #include "autoware/predicted_path_postprocessor/processor/interface.hpp"
 
+#include <functional>
+#include <memory>
 #include <string>
+#include <vector>
 
 namespace autoware::predicted_path_postprocessor::processor
 {
@@ -27,6 +30,19 @@ namespace autoware::predicted_path_postprocessor::processor
 class RefineBySpeed final : public ProcessorInterface
 {
 public:
+  /**
+   * @typedef kv_type
+   * @brief Key-value type for interpolation.
+   */
+  using kv_type = std::vector<double>;
+
+  /**
+   * @typedef interpolation_fn
+   * @brief Interpolator function type for path refinement.
+   */
+  using interpolation_fn =
+    std::function<kv_type(const kv_type &, const kv_type &, const kv_type &)>;
+
   /**
    * @brief Constructor for RefineBySpeed processor.
    * @param node_ptr Pointer to the ROS 2 node.
@@ -44,7 +60,8 @@ private:
    */
   result_type process(target_type & target, const Context & context) override;
 
-  double speed_threshold_;  //!< Speed threshold for refinement
+  double speed_threshold_;         //!< Speed threshold for refinement
+  interpolation_fn interpolator_;  //!< Interpolator function for path refinement
 };
 }  // namespace autoware::predicted_path_postprocessor::processor
 #endif  // AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__REFINE_BY_SPEED_HPP_
