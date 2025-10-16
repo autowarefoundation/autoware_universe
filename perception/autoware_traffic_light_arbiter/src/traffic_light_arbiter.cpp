@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <map>
 #include <memory>
+#include <string>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -74,12 +75,27 @@ TrafficLightArbiter::TrafficLightArbiter(const rclcpp::NodeOptions & options)
   external_delay_tolerance_ = this->declare_parameter<double>("external_delay_tolerance");
   external_time_tolerance_ = this->declare_parameter<double>("external_time_tolerance");
   perception_time_tolerance_ = this->declare_parameter<double>("perception_time_tolerance");
-  external_priority_ = this->declare_parameter<bool>("external_priority");
+
+  // Parse source priority parameter
+  const std::string priority_str = this->declare_parameter<std::string>("source_priority");
+  if (priority_str == "external") {
+    source_priority_ = SourcePriority::EXTERNAL;
+  } else if (priority_str == "perception") {
+    source_priority_ = SourcePriority::PERCEPTION;
+  } else if (priority_str == "confidence") {
+    source_priority_ = SourcePriority::CONFIDENCE;
+  } else {
+    RCLCPP_WARN(
+      get_logger(), "Unknown source_priority '%s', defaulting to 'confidence'",
+      priority_str.c_str());
+    source_priority_ = SourcePriority::CONFIDENCE;
+  }
+
   enable_signal_matching_ = this->declare_parameter<bool>("enable_signal_matching");
 
   if (enable_signal_matching_) {
     signal_match_validator_ = std::make_unique<SignalMatchValidator>();
-    signal_match_validator_->setExternalPriority(external_priority_);
+    signal_match_validator_->setSourcePriority(source_priority_);
   }
 
   map_sub_ = create_subscription<LaneletMapBin>(
@@ -234,11 +250,11 @@ void TrafficLightArbiter::arbitrateAndPublish(const builtin_interfaces::msg::Tim
     }
   } else {
     for (const auto & signal : latest_perception_msg_.traffic_light_groups) {
-      add_signal_function(signal, false);
+      add_signal_function(signal, source_priority_ == SourcePriority::PERCEPTION);
     }
 
     for (const auto & signal : valid_external_signals.traffic_light_groups) {
-      add_signal_function(signal, external_priority_);
+      add_signal_function(signal, source_priority_ == SourcePriority::EXTERNAL);
     }
   }
 

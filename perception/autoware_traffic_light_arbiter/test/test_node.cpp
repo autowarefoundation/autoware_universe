@@ -53,6 +53,17 @@ std::shared_ptr<TrafficLightArbiter> generateNode()
   return std::make_shared<TrafficLightArbiter>(node_options);
 }
 
+std::shared_ptr<TrafficLightArbiter> generateNodeWithPriority(const std::string & priority)
+{
+  auto node_options = rclcpp::NodeOptions{};
+  const auto package_dir =
+    ament_index_cpp::get_package_share_directory("autoware_traffic_light_arbiter");
+  node_options.arguments(
+    {"--ros-args", "--params-file", package_dir + "/config/traffic_light_arbiter.param.yaml",
+     "--param", "source_priority:=" + priority});
+  return std::make_shared<TrafficLightArbiter>(node_options);
+}
+
 void generateMap(LaneletMapBin & vector_map_msg)
 {
   const auto package_dir = ament_index_cpp::get_package_share_directory("autoware_test_utils");
@@ -747,6 +758,202 @@ TEST(TrafficLightArbiterTest, testExternalSourceTimeout)
       << "Should have traffic light ID 1012";
     EXPECT_EQ(latest_msg.traffic_light_groups[0].elements[0].color, TrafficElement::RED)
       << "Recent traffic light should be RED";
+  }
+
+  rclcpp::shutdown();
+}
+
+TEST(TrafficLightArbiterTest, testPerceptionPriorityWithExternalPredictions)
+{
+  rclcpp::init(0, nullptr);
+  const std::string input_map_topic = "/traffic_light_arbiter/sub/vector_map";
+  const std::string input_perception_topic =
+    "/traffic_light_arbiter/sub/perception_traffic_signals";
+  const std::string input_external_topic = "/traffic_light_arbiter/sub/external_traffic_signals";
+  const std::string output_topic = "/traffic_light_arbiter/pub/traffic_signals";
+  auto test_manager = generateTestManager();
+
+  // Create node with perception priority
+  auto test_target_node = generateNodeWithPriority("perception");
+
+  // map preparation
+  LaneletMapBin vector_map_msg;
+  generateMap(vector_map_msg);
+
+  // test callback preparation
+  TrafficSignalArray latest_msg;
+  auto callback = [&latest_msg](const TrafficSignalArray::ConstSharedPtr msg) {
+    latest_msg = *msg;
+  };
+  test_manager->set_subscriber<TrafficSignalArray>(output_topic, callback);
+
+  // Create perception message with RED signal and internal prediction
+  TrafficSignalArray perception_msg;
+  perception_msg.stamp = test_target_node->now();
+  {
+    TrafficSignal traffic_light_group;
+    traffic_light_group.traffic_light_group_id = 1012;
+
+    // RED circle element with high confidence
+    {
+      TrafficElement element;
+      element.color = TrafficElement::RED;
+      element.shape = TrafficElement::CIRCLE;
+      element.status = TrafficElement::SOLID_ON;
+      element.confidence = 0.9;
+      traffic_light_group.elements.push_back(element);
+    }
+
+    // Internal prediction: RED -> GREEN in 10 seconds
+    {
+      PredictedTrafficLightState prediction;
+      prediction.predicted_stamp = test_target_node->now();
+      prediction.predicted_stamp.sec += 10;
+      {
+        TrafficElement pred_element;
+        pred_element.color = TrafficElement::GREEN;
+        pred_element.shape = TrafficElement::CIRCLE;
+        pred_element.status = TrafficElement::SOLID_ON;
+        pred_element.confidence = 0.8;
+        prediction.simultaneous_elements.push_back(pred_element);
+      }
+      prediction.reliability = 0.9;
+      prediction.information_source =
+        PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION;
+      traffic_light_group.predictions.push_back(prediction);
+    }
+
+    perception_msg.traffic_light_groups.push_back(traffic_light_group);
+  }
+
+  // Create external message with GREEN signal and V2I predictions
+  TrafficSignalArray external_msg;
+  external_msg.stamp = test_target_node->now();
+  {
+    TrafficSignal traffic_light_group;
+    traffic_light_group.traffic_light_group_id = 1012;
+
+    // GREEN circle element with lower confidence
+    {
+      TrafficElement element;
+      element.color = TrafficElement::GREEN;
+      element.shape = TrafficElement::CIRCLE;
+      element.status = TrafficElement::SOLID_ON;
+      element.confidence = 0.6;
+      traffic_light_group.elements.push_back(element);
+    }
+
+    // V2I prediction 1: GREEN -> RED in 5 seconds
+    {
+      PredictedTrafficLightState prediction;
+      prediction.predicted_stamp = test_target_node->now();
+      prediction.predicted_stamp.sec += 5;
+      {
+        TrafficElement pred_element;
+        pred_element.color = TrafficElement::RED;
+        pred_element.shape = TrafficElement::CIRCLE;
+        pred_element.status = TrafficElement::SOLID_ON;
+        pred_element.confidence = 1.0;
+        prediction.simultaneous_elements.push_back(pred_element);
+      }
+      prediction.reliability = 1.0;
+      prediction.information_source = PredictedTrafficLightState::INFORMATION_SOURCE_V2I;
+      traffic_light_group.predictions.push_back(prediction);
+    }
+
+    // V2I prediction 2: RED -> GREEN in 15 seconds
+    {
+      PredictedTrafficLightState prediction;
+      prediction.predicted_stamp = test_target_node->now();
+      prediction.predicted_stamp.sec += 15;
+      {
+        TrafficElement pred_element;
+        pred_element.color = TrafficElement::GREEN;
+        pred_element.shape = TrafficElement::CIRCLE;
+        pred_element.status = TrafficElement::SOLID_ON;
+        pred_element.confidence = 1.0;
+        prediction.simultaneous_elements.push_back(pred_element);
+      }
+      prediction.reliability = 1.0;
+      prediction.information_source = PredictedTrafficLightState::INFORMATION_SOURCE_V2I;
+      traffic_light_group.predictions.push_back(prediction);
+    }
+
+    external_msg.traffic_light_groups.push_back(traffic_light_group);
+  }
+
+  // Publish messages
+  test_manager->test_pub_msg<LaneletMapBin>(
+    test_target_node, input_map_topic, vector_map_msg, rclcpp::QoS(1).transient_local());
+  test_manager->test_pub_msg<TrafficSignalArray>(
+    test_target_node, input_external_topic, external_msg);
+  test_manager->test_pub_msg<TrafficSignalArray>(
+    test_target_node, input_perception_topic, perception_msg);
+
+  // Verify results
+  EXPECT_EQ(latest_msg.traffic_light_groups.size(), 1)
+    << "Should have exactly 1 traffic light group";
+
+  if (!latest_msg.traffic_light_groups.empty()) {
+    const auto & output_group = latest_msg.traffic_light_groups[0];
+
+    // Verify traffic light ID
+    EXPECT_EQ(output_group.traffic_light_group_id, 1012) << "Should have correct traffic light ID";
+
+    // Verify signal elements: should prioritize perception (RED) over external (GREEN)
+    EXPECT_EQ(output_group.elements.size(), 1) << "Should have exactly 1 element";
+    EXPECT_EQ(output_group.elements[0].color, TrafficElement::RED)
+      << "With perception priority, should use perception signal color (RED)";
+    EXPECT_EQ(output_group.elements[0].confidence, 0.9f)
+      << "Should use perception confidence (0.9)";
+
+    // Verify predictions: should include BOTH perception and external predictions
+    EXPECT_EQ(output_group.predictions.size(), 3)
+      << "Should have 3 predictions total (1 from perception + 2 from external)";
+
+    // Check that we have both internal and V2I predictions
+    std::set<std::string> prediction_sources;
+    for (const auto & prediction : output_group.predictions) {
+      prediction_sources.insert(prediction.information_source);
+    }
+
+    EXPECT_TRUE(
+      prediction_sources.count(PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION))
+      << "Should have internal prediction";
+    EXPECT_TRUE(prediction_sources.count(PredictedTrafficLightState::INFORMATION_SOURCE_V2I))
+      << "Should have V2I predictions";
+
+    // Verify specific prediction content
+    bool found_internal_prediction = false;
+    bool found_v2i_prediction_1 = false;
+    bool found_v2i_prediction_2 = false;
+
+    for (const auto & prediction : output_group.predictions) {
+      if (
+        prediction.information_source ==
+        PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION) {
+        EXPECT_EQ(prediction.simultaneous_elements[0].color, TrafficElement::GREEN)
+          << "Internal prediction should be GREEN";
+        EXPECT_EQ(prediction.predicted_stamp.sec, perception_msg.stamp.sec + 10)
+          << "Internal prediction should be 10 seconds ahead";
+        found_internal_prediction = true;
+      } else if (
+        prediction.information_source == PredictedTrafficLightState::INFORMATION_SOURCE_V2I) {
+        if (prediction.predicted_stamp.sec == external_msg.stamp.sec + 5) {
+          EXPECT_EQ(prediction.simultaneous_elements[0].color, TrafficElement::RED)
+            << "First V2I prediction should be RED";
+          found_v2i_prediction_1 = true;
+        } else if (prediction.predicted_stamp.sec == external_msg.stamp.sec + 15) {
+          EXPECT_EQ(prediction.simultaneous_elements[0].color, TrafficElement::GREEN)
+            << "Second V2I prediction should be GREEN";
+          found_v2i_prediction_2 = true;
+        }
+      }
+    }
+
+    EXPECT_TRUE(found_internal_prediction) << "Should have found internal prediction";
+    EXPECT_TRUE(found_v2i_prediction_1) << "Should have found first V2I prediction";
+    EXPECT_TRUE(found_v2i_prediction_2) << "Should have found second V2I prediction";
   }
 
   rclcpp::shutdown();

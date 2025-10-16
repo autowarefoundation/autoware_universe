@@ -3,5 +3,5 @@
     external_delay_tolerance: 5.0
     external_time_tolerance: 5.0
     perception_time_tolerance: 1.0
-    external_priority: false
+    source_priority: "confidence"  # Options: "external", "perception", "confidence"
     enable_signal_matching: false
