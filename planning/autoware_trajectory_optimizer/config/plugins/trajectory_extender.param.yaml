@@ -1,0 +1,8 @@
+/**:
+  ros__parameters:
+    # Trajectory matching thresholds (plugin-local copy for independence)
+    nearest_dist_threshold_m: 1.5  # [m] Distance threshold for trajectory matching
+    nearest_yaw_threshold_rad: 1.0  # [rad] Yaw threshold for trajectory matching
+
+    # Backward extension
+    backward_trajectory_extension_m: 5.0  # [m] Length to extend trajectory backward using ego history

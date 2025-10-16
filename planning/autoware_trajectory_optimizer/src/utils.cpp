@@ -425,7 +425,8 @@ void interpolate_trajectory(
 
 void add_ego_state_to_trajectory(
   TrajectoryPoints & traj_points, const Odometry & current_odometry,
-  const TrajectoryOptimizerParams & params)
+  const double nearest_dist_threshold_m, const double nearest_yaw_threshold_rad,
+  const double backward_trajectory_extension_m)
 {
   TrajectoryPoint ego_state;
   ego_state.pose = current_odometry.pose.pose;
@@ -447,7 +448,7 @@ void add_ego_state_to_trajectory(
   }
 
   const bool is_change_large =
-    distance > params.nearest_dist_threshold_m || yaw_diff > params.nearest_yaw_threshold_rad;
+    distance > nearest_dist_threshold_m || yaw_diff > nearest_yaw_threshold_rad;
   if (is_change_large) {
     traj_points = {ego_state};
     return;
@@ -459,7 +460,7 @@ void add_ego_state_to_trajectory(
   double accumulated_length = 0.0;
   for (size_t i = traj_points.size() - 1; i > 0; i--) {
     accumulated_length += autoware_utils::calc_distance2d(traj_points.at(i - 1), traj_points.at(i));
-    if (accumulated_length > params.backward_trajectory_extension_m) {
+    if (accumulated_length > backward_trajectory_extension_m) {
       clip_idx = i;
       break;
     }

@@ -179,7 +179,8 @@ void remove_close_proximity_points(
  */
 void add_ego_state_to_trajectory(
   TrajectoryPoints & traj_points, const Odometry & current_odometry,
-  const TrajectoryOptimizerParams & params);
+  double nearest_dist_threshold_m, double nearest_yaw_threshold_rad,
+  double backward_trajectory_extension_m);
 
 /**
  * @brief Expands the trajectory points with the ego history points.
