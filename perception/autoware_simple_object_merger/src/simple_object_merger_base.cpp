@@ -118,7 +118,7 @@ typename ObjsMsgType::SharedPtr SimpleObjectMergerBase<ObjsMsgType>::getTransfor
   typename ObjsMsgType::ConstSharedPtr objects, const std::string & target_frame_id,
   geometry_msgs::msg::TransformStamped::ConstSharedPtr transform)
 {
-  typename ObjsMsgType::SharedPtr output_objects = std::const_pointer_cast<ObjsMsgType>(objects);
+  typename ObjsMsgType::SharedPtr output_objects = std::make_shared<ObjsMsgType>(*objects);
 
   if (objects->header.frame_id == target_frame_id) {
     return output_objects;
