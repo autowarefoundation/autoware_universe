@@ -1537,7 +1537,7 @@ BehaviorModuleOutput GoalPlannerModule::planPullOverAsCandidate(
 
   // NOTE: following block is intentionally dirty to refactor and extract only necessary codes in
   // planAsCandidate/planAsOutput/setOutput
-  BehaviorModuleOutput pull_over_output{};
+  BehaviorModuleOutput output{};
   {
     auto pull_over_path_with_velocity_opt = context_data.pull_over_path_opt;
     const bool is_freespace =
@@ -1594,46 +1594,13 @@ BehaviorModuleOutput GoalPlannerModule::planPullOverAsCandidate(
       }
     }
 
-    // set output and status
-    {
-      if (!pull_over_path_with_velocity_opt) {
-        // situation : not safe against static objects use stop_path
-        // TODO(soblin): goal_candidates_.empty() is impossible
-        pull_over_output.path = generateStopPath(
-          context_data, (goal_candidates_.empty() ? "no goal candidate" : "no static safe path"));
-        RCLCPP_INFO_THROTTLE(
-          getLogger(), *clock_, 5000, "Not found safe pull_over path, generate stop path");
-      } else {
-        const auto & pull_over_path = pull_over_path_with_velocity_opt.value();
-        if (!context_data.is_stable_safe_path && isActivated()) {
-          // situation : not safe against dynamic objects after approval
-          // insert stop point in current path if ego is able to stop with acceleration and jerk
-          // constraints
-          pull_over_output.path = generateFeasibleStopPath(
-            pull_over_path.getCurrentPath(), "unsafe against dynamic objects");
-          RCLCPP_INFO_THROTTLE(
-            getLogger(), *clock_, 5000, "Not safe against dynamic objects, generate stop path");
-        } else {
-          // situation : (safe against static and dynamic objects) or (safe against static objects
-          // and before approval) don't stop keep stop if not enough time passed, because it takes
-          // time for the trajectory to be reflected
-          auto current_path = pull_over_path.getCurrentPath();
-          keepStoppedWithCurrentPath(context_data, current_path);
-          pull_over_output.path = current_path;
-        }
-
-        setModifiedGoal(context_data, pull_over_output);
-      }
-    }
-
     if (pull_over_path_with_velocity_opt) {
+      setModifiedGoal(context_data, output);
       path_candidate_ =
         std::make_shared<PathWithLaneId>(pull_over_path_with_velocity_opt.value().full_path());
     }
   }
 
-  BehaviorModuleOutput output{};
-  output.modified_goal = pull_over_output.modified_goal;
   output.path = generateStopPath(context_data, detail);
   output.reference_path = getPreviousModuleOutput().reference_path;
 
