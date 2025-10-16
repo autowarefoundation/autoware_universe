@@ -46,9 +46,6 @@ StopModeOperator::StopModeOperator(const rclcpp::NodeOptions & options)
 
   const auto period = rclcpp::Rate(declare_parameter<double>("rate")).period();
   timer_ = rclcpp::create_timer(this, get_clock(), period, [this]() { on_timer(); });
-
-  publish_turn_indicators_command();
-  publish_hazard_lights_command();
 }
 
 void StopModeOperator::on_timer()
