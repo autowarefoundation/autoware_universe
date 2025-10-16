@@ -246,7 +246,8 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
 
   if (params_.extend_trajectory_backward) {
     utils::add_ego_state_to_trajectory(
-      past_ego_state_trajectory_.points, *current_odometry_ptr_, params_);
+      past_ego_state_trajectory_.points, *current_odometry_ptr_, params_.nearest_dist_threshold_m,
+      params_.nearest_yaw_threshold_rad, params_.backward_trajectory_extension_m);
   }
 
   CandidateTrajectories output_trajectories = *msg;

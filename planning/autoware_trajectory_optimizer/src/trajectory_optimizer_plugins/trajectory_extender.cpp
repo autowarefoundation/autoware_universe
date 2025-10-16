@@ -16,6 +16,9 @@
 
 #include "autoware/trajectory_optimizer/utils.hpp"
 
+#include <autoware_utils/ros/parameter.hpp>
+#include <autoware_utils/ros/update_param.hpp>
+
 #include <vector>
 
 namespace autoware::trajectory_optimizer::plugin
@@ -29,7 +32,9 @@ void TrajectoryExtender::optimize_trajectory(
     // call this function several times with the same ego state, since there is a check inside the
     // function to avoid adding the same state multiple times.
     utils::add_ego_state_to_trajectory(
-      past_ego_state_trajectory_.points, data.current_odometry, params);
+      past_ego_state_trajectory_.points, data.current_odometry,
+      extender_params_.nearest_dist_threshold_m, extender_params_.nearest_yaw_threshold_rad,
+      extender_params_.backward_trajectory_extension_m);
     utils::expand_trajectory_with_ego_history(
       traj_points, past_ego_state_trajectory_.points, data.current_odometry);
   }
@@ -37,11 +42,30 @@ void TrajectoryExtender::optimize_trajectory(
 
 void TrajectoryExtender::set_up_params()
 {
+  auto node_ptr = get_node_ptr();
+  using autoware_utils_rclcpp::get_or_declare_parameter;
+
+  extender_params_.nearest_dist_threshold_m =
+    get_or_declare_parameter<double>(*node_ptr, "nearest_dist_threshold_m");
+  extender_params_.nearest_yaw_threshold_rad =
+    get_or_declare_parameter<double>(*node_ptr, "nearest_yaw_threshold_rad");
+  extender_params_.backward_trajectory_extension_m =
+    get_or_declare_parameter<double>(*node_ptr, "backward_trajectory_extension_m");
 }
 
 rcl_interfaces::msg::SetParametersResult TrajectoryExtender::on_parameter(
-  [[maybe_unused]] const std::vector<rclcpp::Parameter> & parameters)
+  const std::vector<rclcpp::Parameter> & parameters)
 {
+  using autoware_utils_rclcpp::update_param;
+
+  update_param<double>(
+    parameters, "nearest_dist_threshold_m", extender_params_.nearest_dist_threshold_m);
+  update_param<double>(
+    parameters, "nearest_yaw_threshold_rad", extender_params_.nearest_yaw_threshold_rad);
+  update_param<double>(
+    parameters, "backward_trajectory_extension_m",
+    extender_params_.backward_trajectory_extension_m);
+
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
   result.reason = "success";

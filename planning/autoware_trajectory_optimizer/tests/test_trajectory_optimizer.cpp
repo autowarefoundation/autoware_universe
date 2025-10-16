@@ -120,9 +120,12 @@ TEST_F(TrajectoryOptimizerUtilsTest, AddEgoStateToTrajectory)
   Odometry current_odometry;
   current_odometry.pose.pose.position.x = 1.0;
   current_odometry.pose.pose.position.y = 1.0;
-  TrajectoryOptimizerParams params;
+  const double nearest_dist_threshold_m = 1.5;
+  const double nearest_yaw_threshold_rad = 1.0;
+  const double backward_trajectory_extension_m = 5.0;
   autoware::trajectory_optimizer::utils::add_ego_state_to_trajectory(
-    points, current_odometry, params);
+    points, current_odometry, nearest_dist_threshold_m, nearest_yaw_threshold_rad,
+    backward_trajectory_extension_m);
   ASSERT_FALSE(points.empty());
 }
 

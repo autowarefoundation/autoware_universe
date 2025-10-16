@@ -32,6 +32,13 @@ using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
+struct TrajectoryExtenderParams
+{
+  double nearest_dist_threshold_m{1.5};
+  double nearest_yaw_threshold_rad{1.0};
+  double backward_trajectory_extension_m{5.0};
+};
+
 class TrajectoryExtender : TrajectoryOptimizerPluginBase
 {
 public:
@@ -41,6 +48,7 @@ public:
     const TrajectoryOptimizerParams & params)
   : TrajectoryOptimizerPluginBase(name, node_ptr, time_keeper, params)
   {
+    set_up_params();
   }
   ~TrajectoryExtender() = default;
   void optimize_trajectory(
@@ -52,6 +60,7 @@ public:
 
 private:
   Trajectory past_ego_state_trajectory_;
+  TrajectoryExtenderParams extender_params_;
 };
 }  // namespace autoware::trajectory_optimizer::plugin
 
