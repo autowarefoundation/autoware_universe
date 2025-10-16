@@ -82,7 +82,8 @@ rcl_interfaces::msg::SetParametersResult TrajectoryQPSmoother::on_parameter(
 }
 
 void TrajectoryQPSmoother::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params)
+  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
+  [[maybe_unused]] const TrajectoryOptimizerData & data)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *get_time_keeper());
 

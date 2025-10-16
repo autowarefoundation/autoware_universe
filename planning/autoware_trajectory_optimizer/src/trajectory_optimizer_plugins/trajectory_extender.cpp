@@ -21,16 +21,17 @@
 namespace autoware::trajectory_optimizer::plugin
 {
 void TrajectoryExtender::optimize_trajectory(
-  TrajectoryPoints & traj_points, [[maybe_unused]] const TrajectoryOptimizerParams & params)
+  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
+  const TrajectoryOptimizerData & data)
 {
   if (params.extend_trajectory_backward) {
     // Note: This function adds the current ego state to a history trajectory. Note that it is ok to
     // call this function several times with the same ego state, since there is a check inside the
     // function to avoid adding the same state multiple times.
     utils::add_ego_state_to_trajectory(
-      past_ego_state_trajectory_.points, params.current_odometry, params);
+      past_ego_state_trajectory_.points, data.current_odometry, params);
     utils::expand_trajectory_with_ego_history(
-      traj_points, past_ego_state_trajectory_.points, params.current_odometry, params);
+      traj_points, past_ego_state_trajectory_.points, data.current_odometry);
   }
 }
 

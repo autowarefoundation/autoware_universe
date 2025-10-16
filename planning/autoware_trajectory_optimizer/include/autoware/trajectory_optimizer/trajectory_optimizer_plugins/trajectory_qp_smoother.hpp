@@ -85,7 +85,8 @@ public:
   ~TrajectoryQPSmoother() = default;
 
   void optimize_trajectory(
-    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params) override;
+    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
+    const TrajectoryOptimizerData & data) override;
 
   void set_up_params() override;
 

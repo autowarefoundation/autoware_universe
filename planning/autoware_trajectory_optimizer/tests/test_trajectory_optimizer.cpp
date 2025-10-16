@@ -136,7 +136,7 @@ TEST_F(TrajectoryOptimizerUtilsTest, ExpandTrajectoryWithEgoHistory)
   current_odometry.pose.pose.position.x = points.front().pose.position.x;
   current_odometry.pose.pose.position.y = points.front().pose.position.y;
   autoware::trajectory_optimizer::utils::expand_trajectory_with_ego_history(
-    points, ego_history_points, current_odometry, params);
+    points, ego_history_points, current_odometry);
   ASSERT_GE(points.size(), 20);
 }
 

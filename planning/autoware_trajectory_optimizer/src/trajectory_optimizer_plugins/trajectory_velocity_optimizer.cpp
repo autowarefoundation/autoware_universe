@@ -47,10 +47,11 @@ void TrajectoryVelocityOptimizer::set_up_velocity_smoother(
 }
 
 void TrajectoryVelocityOptimizer::optimize_trajectory(
-  TrajectoryPoints & traj_points, [[maybe_unused]] const TrajectoryOptimizerParams & params)
+  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
+  const TrajectoryOptimizerData & data)
 {
-  const auto & current_odometry = params.current_odometry;
-  const auto & current_acceleration = params.current_acceleration;
+  const auto & current_odometry = data.current_odometry;
+  const auto & current_acceleration = data.current_acceleration;
   const auto & current_speed = current_odometry.twist.twist.linear.x;
   const auto & current_linear_acceleration = current_acceleration.accel.accel.linear.x;
   const double & target_pull_out_speed_mps = params.target_pull_out_speed_mps;
@@ -59,7 +60,8 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
 
   // Limit lateral acceleration
   if (params.limit_lateral_acceleration) {
-    utils::limit_lateral_acceleration(traj_points, params);
+    utils::limit_lateral_acceleration(
+      traj_points, params.max_lateral_accel_mps2, data.current_odometry);
   }
 
   auto initial_motion_speed =
