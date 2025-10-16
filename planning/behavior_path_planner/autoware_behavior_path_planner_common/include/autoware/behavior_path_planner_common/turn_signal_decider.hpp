@@ -203,6 +203,8 @@ private:
    * @param route_handler The route handler for map and route information.
    * @param nearest_dist_threshold Distance threshold for proximity calculation [m].
    * @param nearest_yaw_threshold Yaw threshold for proximity calculation [rad].
+   * @param th_search_dist_to_turn_direction_lane Search distance threshold to next turn direction
+   * lane [m].
    * @param turn_indicator_command The expected turn direction command (e.g.,
    * TurnIndicatorsCommand::ENABLE_LEFT).
    * @return std::optional<TurnSignalInfo> The calculated turn signal information (start/end points,
@@ -212,7 +214,7 @@ private:
     const PathWithLaneId & path, const Pose & current_pose, const double current_vel,
     const size_t current_seg_idx, const RouteHandler & route_handler,
     const double nearest_dist_threshold, const double nearest_yaw_threshold,
-    const uint8_t turn_indicator_command);
+    const double th_search_dist_to_turn_direction_lane, const uint8_t turn_indicator_command);
 
   std::optional<TurnSignalInfo> getRoundaboutTurnSignalInfo(
     const PathWithLaneId & path, const Pose & current_pose, const double current_vel,

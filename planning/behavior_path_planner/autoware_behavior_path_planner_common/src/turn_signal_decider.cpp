@@ -130,7 +130,8 @@ TurnIndicatorsCommand TurnSignalDecider::getTurnSignal(
   // Get closest intersection turn signal if exists
   const auto intersection_turn_signal_info = getIntersectionTurnSignalInfo(
     extended_path, current_pose, current_vel, ego_seg_idx, *route_handler, nearest_dist_threshold,
-    nearest_yaw_threshold, turn_signal_info.turn_signal.command);
+    nearest_yaw_threshold, parameters.turn_signal_minimum_search_distance,
+    turn_signal_info.turn_signal.command);
 
   // Get roundabout turn signal if exists
   const auto roundabout_turn_signal_info = getRoundaboutTurnSignalInfo(
@@ -169,7 +170,7 @@ std::optional<TurnSignalInfo> TurnSignalDecider::getIntersectionTurnSignalInfo(
   const PathWithLaneId & path, const Pose & current_pose, const double current_vel,
   const size_t current_seg_idx, const RouteHandler & route_handler,
   const double nearest_dist_threshold, const double nearest_yaw_threshold,
-  const uint8_t turn_indicator_command)
+  const double th_search_dist_to_turn_direction_lane, const uint8_t turn_indicator_command)
 {
   // base search distance
   const double base_search_distance =
@@ -183,13 +184,12 @@ std::optional<TurnSignalInfo> TurnSignalDecider::getIntersectionTurnSignalInfo(
 
   const std::string expected_turn_command = turn_indicator_command_str(turn_indicator_command);
 
-  constexpr double dist_to_intersection_th{10.0};
   const auto dist_to_next_turn_direction_lane = utils::calc_distance_to_next_turn_direction_lane(
     current_pose, route_handler, lanelet_sequence, expected_turn_command);
 
   const bool is_near_next_intersection =
     dist_to_next_turn_direction_lane.value_or(std::numeric_limits<double>::max()) <
-    dist_to_intersection_th;
+    th_search_dist_to_turn_direction_lane;
 
   const lanelet::ConstLanelets nearest_turn_direction_lanes =
     utils::nearest_turn_direction_lane_within_route(current_pose, route_handler, lanelet_sequence);
