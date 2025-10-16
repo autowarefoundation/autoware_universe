@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "manager.hpp"
+#include "autoware/behavior_velocity_intersection_module/manager.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
@@ -24,6 +24,7 @@
 #include <limits>
 #include <memory>
 #include <set>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -63,8 +64,6 @@ IntersectionModuleManager::IntersectionModuleManager(rclcpp::Node & node)
     ip.common.max_jerk = get_or_declare_parameter<double>(node, ns + ".common.max_jerk");
     ip.common.delay_response_time =
       get_or_declare_parameter<double>(node, ns + ".common.delay_response_time");
-    ip.common.enable_pass_judge_before_default_stopline = get_or_declare_parameter<bool>(
-      node, ns + ".common.enable_pass_judge_before_default_stopline");
   }
 
   // stuck
@@ -254,6 +253,8 @@ IntersectionModuleManager::IntersectionModuleManager(rclcpp::Node & node)
   // occlusion
   {
     ip.occlusion.enable = get_or_declare_parameter<bool>(node, ns + ".occlusion.enable");
+    ip.occlusion.request_approval_wo_traffic_light =
+      get_or_declare_parameter<bool>(node, ns + ".occlusion.request_approval_wo_traffic_light");
     ip.occlusion.occlusion_attention_area_length =
       get_or_declare_parameter<double>(node, ns + ".occlusion.occlusion_attention_area_length");
     ip.occlusion.free_space_max =
@@ -265,14 +266,6 @@ IntersectionModuleManager::IntersectionModuleManager(rclcpp::Node & node)
       node, ns + ".occlusion.attention_lane_crop_curvature_threshold");
     ip.occlusion.attention_lane_curvature_calculation_ds = get_or_declare_parameter<double>(
       node, ns + ".occlusion.attention_lane_curvature_calculation_ds");
-
-    // creep_during_peeking
-    {
-      ip.occlusion.creep_during_peeking.enable =
-        get_or_declare_parameter<bool>(node, ns + ".occlusion.creep_during_peeking.enable");
-      ip.occlusion.creep_during_peeking.creep_velocity = get_or_declare_parameter<double>(
-        node, ns + ".occlusion.creep_during_peeking.creep_velocity");
-    }
 
     ip.occlusion.peeking_offset =
       get_or_declare_parameter<double>(node, ns + ".occlusion.peeking_offset");
@@ -361,12 +354,29 @@ void IntersectionModuleManager::launchNewModules(
     /* set RTC status as non_occluded status initially */
     const UUID uuid = getUUID(new_module->getModuleId());
     const auto occlusion_uuid = new_module->getOcclusionUUID();
+    std::optional<bool> override_rtc_auto_mode;
+    std::optional<bool> override_occlusion_rtc_auto_mode;
+    constexpr auto key = "rtc_approval_required_v1";
+    if (ll.hasAttribute(key)) {
+      std::stringstream manual_modules(ll.attribute(key).value());
+      std::string manual_module;
+      // modules are listed in the attribute value, separated by a comma
+      while (std::getline(manual_modules, manual_module, ',')) {
+        if (manual_module == "intersection") {
+          override_rtc_auto_mode = false;
+        }
+        if (manual_module == "intersection_occlusion") {
+          override_occlusion_rtc_auto_mode = false;
+        }
+      }
+    }
     rtc_interface_.updateCooperateStatus(
       uuid, true, State::WAITING_FOR_EXECUTION, std::numeric_limits<double>::lowest(),
-      std::numeric_limits<double>::lowest(), clock_->now());
+      std::numeric_limits<double>::lowest(), clock_->now(), false, override_rtc_auto_mode);
     occlusion_rtc_interface_.updateCooperateStatus(
       occlusion_uuid, true, State::WAITING_FOR_EXECUTION, std::numeric_limits<double>::lowest(),
-      std::numeric_limits<double>::lowest(), clock_->now());
+      std::numeric_limits<double>::lowest(), clock_->now(), false,
+      override_occlusion_rtc_auto_mode);
     registerModule(std::move(new_module));
   }
 }
@@ -550,10 +560,11 @@ void MergeFromPrivateModuleManager::launchNewModules(
       if (next_lane_location != "private") {
         const auto associative_ids =
           planning_utils::getAssociativeIntersectionLanelets(ll, lanelet_map, routing_graph);
-        registerModule(std::make_shared<MergeFromPrivateRoadModule>(
-          module_id, lane_id, planner_data_, merge_from_private_area_param_, associative_ids,
-          logger_.get_child("merge_from_private_road_module"), clock_, time_keeper_,
-          planning_factor_interface_));
+        registerModule(
+          std::make_shared<MergeFromPrivateRoadModule>(
+            module_id, lane_id, planner_data_, merge_from_private_area_param_, associative_ids,
+            logger_.get_child("merge_from_private_road_module"), clock_, time_keeper_,
+            planning_factor_interface_));
         continue;
       }
     } else {
@@ -565,10 +576,11 @@ void MergeFromPrivateModuleManager::launchNewModules(
         if (conflicting_attr == "urban") {
           const auto associative_ids =
             planning_utils::getAssociativeIntersectionLanelets(ll, lanelet_map, routing_graph);
-          registerModule(std::make_shared<MergeFromPrivateRoadModule>(
-            module_id, lane_id, planner_data_, merge_from_private_area_param_, associative_ids,
-            logger_.get_child("merge_from_private_road_module"), clock_, time_keeper_,
-            planning_factor_interface_));
+          registerModule(
+            std::make_shared<MergeFromPrivateRoadModule>(
+              module_id, lane_id, planner_data_, merge_from_private_area_param_, associative_ids,
+              logger_.get_child("merge_from_private_road_module"), clock_, time_keeper_,
+              planning_factor_interface_));
           continue;
         }
       }

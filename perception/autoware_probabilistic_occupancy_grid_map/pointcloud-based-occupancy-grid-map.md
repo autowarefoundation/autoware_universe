@@ -35,7 +35,6 @@ The ray trace is done by Bresenham's line algorithm.
    ![pointcloud_based_occupancy_grid_map_side_view_2nd](./image/pointcloud_based_occupancy_grid_map_side_view_2nd.svg)
 
    There are three reasons for setting a distance margin.
-
    - It is unlikely that a point on the ground will be immediately behind an obstacle.
    - The obstacle point cloud is processed and may not match the raw pointcloud.
    - The input may be inaccurate and obstacle points may not be determined as obstacles.

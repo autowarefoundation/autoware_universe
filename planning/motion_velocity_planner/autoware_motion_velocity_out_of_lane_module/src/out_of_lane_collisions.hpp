@@ -31,17 +31,16 @@ namespace autoware::motion_velocity_planner::out_of_lane
 /// @brief calculate the times and points where ego collides with an object's path outside of its
 /// lane
 void calculate_object_path_time_collisions(
-  OutOfLaneData & out_of_lane_data,
-  const autoware_perception_msgs::msg::PredictedPath & object_path,
-  const autoware_perception_msgs::msg::Shape & object_shape,
+  OutOfLaneData & out_of_lane_data, const size_t & object_path_id,
+  const autoware_perception_msgs::msg::PredictedObject & object,
+  const route_handler::RouteHandler & route_handler,
   const bool validate_predicted_paths_on_lanelets);
 
 /// @brief calculate the times and points where ego collides with an object outside of its lane
 void calculate_objects_time_collisions(
   OutOfLaneData & out_of_lane_data,
   const std::vector<autoware_perception_msgs::msg::PredictedObject> & objects,
-  const route_handler::RouteHandler & route_handler,
-  const bool validate_predicted_paths_on_lanelets);
+  const route_handler::RouteHandler & route_handler, const PlannerParam & params);
 
 /// @brief calculate the collisions to avoid
 /// @details either uses the time to collision or just the time when the object will arrive at the

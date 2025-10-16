@@ -7,7 +7,7 @@ on:
         required: true
         type: string
       runner:
-        default: ubuntu-24.04
+        default: "['ubuntu-24.04']"
         required: false
         type: string
       rosdistro:
@@ -37,7 +37,7 @@ env:
 jobs:
   build-and-test-packages-above-differential:
     if: ${{ inputs.run-condition }}
-    runs-on: ${{ inputs.runner }}
+    runs-on: ${{ fromJson(inputs.runner) }}
     container: ${{ inputs.container }}${{ inputs.container-suffix }}
     steps:
       - name: Set PR fetch depth
@@ -117,7 +117,7 @@ jobs:
           target-packages: ${{ steps.get-modified-packages.outputs.modified-packages }}
           build-depends-repos: build_depends.repos
           packages-above-repos: packages_above.repos
-          cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
+          cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}-above
           build-pre-command: ${{ inputs.build-pre-command }}
 
       - name: Show ccache stats after build

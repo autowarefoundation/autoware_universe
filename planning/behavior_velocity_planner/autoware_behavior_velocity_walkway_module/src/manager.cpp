@@ -60,9 +60,10 @@ void WalkwayModuleManager::launchNewModules(const PathWithLaneId & path)
     const auto logger = logger_.get_child("walkway_module");
     const auto lanelet_map_ptr = planner_data_->route_handler_->getLaneletMapPtr();
 
-    registerModule(std::make_shared<WalkwayModule>(
-      lanelet.id(), lanelet_map_ptr, p, use_regulatory_element, logger, clock_, time_keeper_,
-      planning_factor_interface_));
+    registerModule(
+      std::make_shared<WalkwayModule>(
+        lanelet.id(), lanelet_map_ptr, p, use_regulatory_element, logger, clock_, time_keeper_,
+        planning_factor_interface_));
   };
 
   const auto crosswalk_leg_elem_map = planning_utils::getRegElemMapOnPath<Crosswalk>(

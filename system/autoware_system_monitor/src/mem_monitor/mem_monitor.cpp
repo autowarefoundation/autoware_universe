@@ -44,6 +44,12 @@ MemMonitor::MemMonitor(const rclcpp::NodeOptions & options)
   if (!bp::search_path("edac-util").empty()) {
     updater_.add("Memory ECC", this, &MemMonitor::checkEcc);
   }
+
+  // Publisher
+  rclcpp::QoS durable_qos{1};
+  durable_qos.transient_local();
+  pub_memory_status_ = this->create_publisher<tier4_external_api_msgs::msg::MemoryStatus>(
+    "~/memory_status", durable_qos);
 }
 
 void MemMonitor::update()
@@ -91,7 +97,7 @@ void MemMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
   std::string line;
   int index = 0;
   std::vector<std::string> list;
-  float usage;
+  float usage = 0.0f;
   size_t mem_total = 0;
   size_t mem_shared = 0;
   size_t mem_available = 0;
@@ -157,6 +163,8 @@ void MemMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
   }
 
   stat.summary(level, usage_dict_.at(level));
+
+  publishMemoryStatus(usage);
 
   // Measure elapsed time since start time and report
   SystemMonitorUtility::stopMeasurement(t_start, stat);
@@ -225,6 +233,15 @@ std::string MemMonitor::toHumanReadable(const std::string & str)
   }
   const char * format = (count >= 3 || (size > 0 && size < 10)) ? "{:.1f}{}" : "{:.0f}{}";
   return fmt::format(format, size, units[count]);
+}
+
+void MemMonitor::publishMemoryStatus(float usage)
+{
+  tier4_external_api_msgs::msg::MemoryStatus memory_status;
+  memory_status.stamp = this->now();
+  memory_status.hostname = hostname_;
+  memory_status.usage = usage * 100;  // [%]
+  pub_memory_status_->publish(memory_status);
 }
 
 #include <rclcpp_components/register_node_macro.hpp>

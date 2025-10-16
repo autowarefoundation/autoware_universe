@@ -15,10 +15,7 @@
 #ifndef AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__TYPES_HPP_
 #define AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__TYPES_HPP_
 
-#include <cuda_runtime.h>
-
 #include <cmath>
-#include <cstddef>
 #include <cstdint>
 
 namespace autoware::cuda_pointcloud_preprocessor
@@ -76,26 +73,6 @@ struct RingOutlierFilterParameters
 {
   float distance_ratio{std::nanf("")};
   float object_length_threshold{std::nanf("")};
-};
-
-template <typename T>
-class MemoryPoolAllocator
-{
-public:
-  using value_type = T;
-  explicit MemoryPoolAllocator(cudaMemPool_t pool) : m_pool(pool) {}
-
-  T * allocate(std::size_t n)
-  {
-    void * ptr = nullptr;
-    cudaMallocFromPoolAsync(&ptr, n * sizeof(T), m_pool, cudaStreamDefault);
-    return static_cast<T *>(ptr);
-  }
-
-  void deallocate(T * ptr, std::size_t) { cudaFreeAsync(ptr, cudaStreamDefault); }
-
-protected:
-  cudaMemPool_t m_pool;
 };
 }  // namespace autoware::cuda_pointcloud_preprocessor
 

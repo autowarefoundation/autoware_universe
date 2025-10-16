@@ -23,6 +23,7 @@
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
+#include <unique_identifier_msgs/msg/uuid.hpp>
 
 #include <boost/geometry/geometries/multi_polygon.hpp>
 #include <boost/geometry/index/rtree.hpp>
@@ -62,6 +63,7 @@ struct PlannerParam
     validate_predicted_paths_on_lanelets;  // if true, an out of lane collision is only considered
                                            // if the predicted path fully follows a sequence of
                                            // lanelets that include the out of lane lanelet
+  double objects_extra_width;              // [m] extra width to apply to the object footprints
 
   // action to insert in the trajectory if an object causes a collision at an overlap
   double lon_dist_buffer;      // [m] safety distance buffer to keep in front of the ego vehicle
@@ -114,6 +116,8 @@ struct EgoData
   double min_stop_arc_length{};  // [m] minimum arc length along the filtered trajectory where ego
                                  // can stop
 
+  lanelet::ConstLanelets trajectory_lanelets;  // lanelets where ego is driving and where the module
+                                               // can ignore collisions
   lanelet::ConstLanelets out_lanelets;  // lanelets where ego would be considered "out of lane"
   OutLaneletRtree out_lanelets_rtree;
 
@@ -126,12 +130,26 @@ struct EgoData
     map_stop_points;  // ego stop points (and their corresponding stop lines) taken from the map
 };
 
+/// @brief a collision time along with the object and path id that cause the collision
+struct CollisionTime
+{
+  double collision_time{};
+  unique_identifier_msgs::msg::UUID object_uuid;
+  size_t object_path_id{};
+
+  // Overload needed to store the struct in std::set
+  bool operator<(const CollisionTime & other) const
+  {
+    return collision_time < other.collision_time;
+  }
+};
+
 /// @brief data related to an out of lane trajectory point
 struct OutOfLanePoint
 {
   size_t trajectory_index;
   autoware_utils::MultiPolygon2d out_overlaps;
-  std::set<double> collision_times;
+  std::set<CollisionTime> collision_times;
   std::optional<double> min_object_arrival_time;
   std::optional<double> max_object_arrival_time;
   std::optional<double> ttc;
@@ -148,7 +166,7 @@ struct SlowdownPose
 
   SlowdownPose() = default;
   SlowdownPose(
-    const double arc_length, const rclcpp::Time start_time, const geometry_msgs::msg::Pose & pose,
+    const double arc_length, const rclcpp::Time & start_time, const geometry_msgs::msg::Pose & pose,
     const bool is_active)
   : arc_length(arc_length), start_time(start_time), pose(pose), is_active(is_active)
   {

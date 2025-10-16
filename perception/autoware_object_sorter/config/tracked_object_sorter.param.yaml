@@ -1,0 +1,5 @@
+/**:
+  ros__parameters:
+    range_calc_frame_id: "base_link"
+    min_velocity_threshold: 3.0 # [m/s]
+    min_range_threshold: 30.0 # [m]

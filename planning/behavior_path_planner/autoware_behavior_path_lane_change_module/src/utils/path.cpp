@@ -199,13 +199,30 @@ std::optional<SamplingParameters> init_sampling_parameters(
 {
   const auto & trajectory = common_data_ptr->lc_param_ptr->trajectory;
   const auto min_lc_vel = trajectory.min_lane_changing_velocity;
-  const auto [min_lateral_acc, max_lateral_acc] =
-    trajectory.lat_acc_map.find(std::max(min_lc_vel, prepare_metrics.velocity));
-  const auto duration = autoware::motion_utils::calc_shift_time_from_jerk(
-    std::abs(initial_state.position.d), trajectory.lateral_jerk, max_lateral_acc);
-  const auto final_velocity =
-    std::max(min_lc_vel, prepare_metrics.velocity + prepare_metrics.sampled_lon_accel * duration);
-  const auto lc_length = duration * (prepare_metrics.velocity + final_velocity) * 0.5;
+  const auto max_lateral_acc =
+    trajectory.lat_acc_map.find(std::max(min_lc_vel, prepare_metrics.velocity)).second;
+  const auto initial_velocity = prepare_metrics.velocity;
+  const auto lon_accel = prepare_metrics.sampled_lon_accel;
+
+  const auto use_remaining_distance =
+    common_data_ptr->lc_param_ptr->frenet.use_entire_remaining_distance;
+
+  const auto [lc_length, duration, final_velocity] = std::invoke([&]() {
+    auto duration = autoware::motion_utils::calc_shift_time_from_jerk(
+      std::abs(initial_state.position.d), trajectory.lateral_jerk, max_lateral_acc);
+    auto final_velocity = std::max(min_lc_vel, initial_velocity + lon_accel * duration);
+    auto length = duration * (initial_velocity + final_velocity) * 0.5;
+    if (!use_remaining_distance) return std::make_tuple(length, duration, final_velocity);
+    const auto dist_lc_start_to_terminal_end =
+      common_data_ptr->transient_data.dist_to_terminal_end - prepare_metrics.length -
+      common_data_ptr->lc_param_ptr->lane_change_finish_judge_buffer;
+    length = std::max(length, dist_lc_start_to_terminal_end);
+    final_velocity = std::max(
+      min_lc_vel, std::sqrt((initial_velocity * initial_velocity) + (2.0 * lon_accel * length)));
+    duration = 2.0 * length / (initial_velocity + final_velocity);
+    return std::make_tuple(length, duration, final_velocity);
+  });
+
   const auto target_s = std::min(ref_spline.lastS(), initial_state.position.s + lc_length);
   // for smooth lateral motion we want a constant lateral acceleration profile
   // this means starting from a 0 lateral velocity and setting a positive target lateral velocity
@@ -594,9 +611,10 @@ std::vector<lane_change::TrajectoryGroup> generate_frenet_candidates(
         continue;
       }
 
+      const auto lane_changing_average_curvature = calc_average_curvature(traj.curvatures);
       trajectory_groups.emplace_back(
         prepare_segment, target_lane_reference_path, target_ref_path_sums, metric, traj,
-        initial_state, max_lane_changing_length);
+        initial_state, lane_changing_average_curvature, max_lane_changing_length);
     }
   }
 
@@ -610,9 +628,18 @@ std::vector<lane_change::TrajectoryGroup> generate_frenet_candidates(
   ranges::for_each(trajectory_groups, limit_vel);
 
   ranges::sort(trajectory_groups, [&](const auto & p1, const auto & p2) {
-    return calc_average_curvature(p1.lane_changing.curvatures) <
-           calc_average_curvature(p2.lane_changing.curvatures);
+    return p1.lc_average_curvature < p2.lc_average_curvature;
   });
+
+  if (trajectory_groups.size() > 1) {
+    auto subrange = ranges::subrange(trajectory_groups.begin() + 1, trajectory_groups.end());
+
+    auto remove_start = ranges::remove_if(subrange, [&](const auto & traj) {
+      return traj.lc_average_curvature > common_data_ptr->lc_param_ptr->frenet.th_average_curvature;
+    });
+
+    trajectory_groups.erase(remove_start, trajectory_groups.end());
+  }
 
   return trajectory_groups;
 }

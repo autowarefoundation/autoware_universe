@@ -38,6 +38,7 @@ using autoware::planning_validator::PlanningValidatorContext;
 using autoware::planning_validator::TrajectoryChecker;
 using autoware_planning_msgs::msg::Trajectory;
 
+using test_utils::DEFAULT_HANDLING_TYPE;
 using test_utils::generateTrajectory;
 using test_utils::THRESHOLD_INTERVAL;
 
@@ -56,6 +57,7 @@ protected:
        ament_index_cpp::get_package_share_directory("autoware_test_utils") +
          "/config/test_vehicle_info.param.yaml"});
     options.append_parameter_override("trajectory_checker.interval.threshold", THRESHOLD_INTERVAL);
+    options.append_parameter_override("default_handling_type", DEFAULT_HANDLING_TYPE);
     node_ = std::make_shared<rclcpp::Node>("test_node", options);
     context_ = std::make_shared<PlanningValidatorContext>(node_.get());
     trajectory_checker_ = std::make_shared<TrajectoryChecker>();
@@ -98,19 +100,19 @@ TEST_F(TestTrajectoryChecker, checkValidFiniteValueFunction)
   // Valid Trajectory
   {
     set_trajectory(generateTrajectory(THRESHOLD_INTERVAL * 0.9));
-    ASSERT_TRUE(trajectory_checker_->check_valid_finite_value(context_->data));
+    ASSERT_TRUE(trajectory_checker_->check_valid_finite_value());
   }
 
   // Nan Trajectory
   {
     set_trajectory(test_utils::generateNanTrajectory());
-    ASSERT_FALSE(trajectory_checker_->check_valid_finite_value(context_->data));
+    ASSERT_FALSE(trajectory_checker_->check_valid_finite_value());
   }
 
   // Inf Trajectory
   {
     set_trajectory(test_utils::generateInfTrajectory());
-    ASSERT_FALSE(trajectory_checker_->check_valid_finite_value(context_->data));
+    ASSERT_FALSE(trajectory_checker_->check_valid_finite_value());
   }
 }
 
@@ -119,8 +121,7 @@ TEST_F(TestTrajectoryChecker, checkValidIntervalFunction)
   // Normal Trajectory
   {
     set_trajectory(generateTrajectory(THRESHOLD_INTERVAL * 0.9));
-    ASSERT_TRUE(
-      trajectory_checker_->check_valid_interval(context_->data, context_->validation_status));
+    ASSERT_TRUE(trajectory_checker_->check_valid_interval());
   }
 
   // Boundary Trajectory
@@ -129,19 +130,16 @@ TEST_F(TestTrajectoryChecker, checkValidIntervalFunction)
     const auto ep = 1.0e-5;
 
     set_trajectory(generateTrajectory(THRESHOLD_INTERVAL - ep));
-    ASSERT_TRUE(
-      trajectory_checker_->check_valid_interval(context_->data, context_->validation_status));
+    ASSERT_TRUE(trajectory_checker_->check_valid_interval());
 
     set_trajectory(generateTrajectory(THRESHOLD_INTERVAL + ep));
-    ASSERT_FALSE(
-      trajectory_checker_->check_valid_interval(context_->data, context_->validation_status));
+    ASSERT_FALSE(trajectory_checker_->check_valid_interval());
   }
 
   // Long Interval Trajectory
   {
     set_trajectory(generateTrajectory(THRESHOLD_INTERVAL * 2.0));
-    ASSERT_FALSE(
-      trajectory_checker_->check_valid_interval(context_->data, context_->validation_status));
+    ASSERT_FALSE(trajectory_checker_->check_valid_interval());
   }
 }
 
@@ -150,8 +148,7 @@ TEST_F(TestTrajectoryChecker, checkValidCurvatureFunction)
   // Normal Trajectory
   {
     set_trajectory(generateTrajectory(THRESHOLD_INTERVAL * 2.0));
-    ASSERT_TRUE(
-      trajectory_checker_->check_valid_curvature(context_->data, context_->validation_status));
+    ASSERT_TRUE(trajectory_checker_->check_valid_curvature());
   }
 
   // Invalid curvature trajectory
@@ -174,8 +171,7 @@ TEST_F(TestTrajectoryChecker, checkValidRelativeAngleFunction)
     valid_traj.points[3].pose.position.y = -0.1;
     valid_traj.points[5].pose.position.y = 0.2;
     set_trajectory(valid_traj);
-    ASSERT_TRUE(
-      trajectory_checker_->check_valid_relative_angle(context_->data, context_->validation_status));
+    ASSERT_TRUE(trajectory_checker_->check_valid_relative_angle());
   }
 
   // invalid case
@@ -193,8 +189,7 @@ TEST_F(TestTrajectoryChecker, checkValidRelativeAngleFunction)
     // " , " << t.pose.position.y <<" )"<< std::endl;
     // }
     set_trajectory(invalid_traj);
-    ASSERT_FALSE(
-      trajectory_checker_->check_valid_relative_angle(context_->data, context_->validation_status));
+    ASSERT_FALSE(trajectory_checker_->check_valid_relative_angle());
   }
 
   {
@@ -209,8 +204,7 @@ TEST_F(TestTrajectoryChecker, checkValidRelativeAngleFunction)
       t.pose.position.x *= -1;
     }
     set_trajectory(invalid_traj);
-    ASSERT_FALSE(
-      trajectory_checker_->check_valid_relative_angle(context_->data, context_->validation_status));
+    ASSERT_FALSE(trajectory_checker_->check_valid_relative_angle());
   }
 
   {
@@ -227,8 +221,7 @@ TEST_F(TestTrajectoryChecker, checkValidRelativeAngleFunction)
     }
     invalid_traj.points[4].pose.position.x = 10;
     set_trajectory(invalid_traj);
-    ASSERT_FALSE(
-      trajectory_checker_->check_valid_relative_angle(context_->data, context_->validation_status));
+    ASSERT_FALSE(trajectory_checker_->check_valid_relative_angle());
   }
 }
 
@@ -236,8 +229,7 @@ TEST_F(TestTrajectoryChecker, checkValidLateralJerkFunction)
 {  // Test case 1: Valid trajectory with normal lateral jerk
   {
     set_trajectory(generateTrajectory(THRESHOLD_INTERVAL * 0.9));
-    ASSERT_TRUE(
-      trajectory_checker_->check_valid_lateral_jerk(context_->data, context_->validation_status));
+    ASSERT_TRUE(trajectory_checker_->check_valid_lateral_jerk());
   }
 
   // Test case 2: Trajectory with straight line movement (valid lateral jerk)
@@ -246,8 +238,7 @@ TEST_F(TestTrajectoryChecker, checkValidLateralJerkFunction)
     Trajectory zero_jerk_traj =
       test_utils::generateTrajectoryWithStepAcceleration(0.5, 5.0, 0.0, 20, accel_values, 4);
     set_trajectory(zero_jerk_traj);
-    ASSERT_TRUE(
-      trajectory_checker_->check_valid_lateral_jerk(context_->data, context_->validation_status));
+    ASSERT_TRUE(trajectory_checker_->check_valid_lateral_jerk());
   }
 
   // Test case 3: Trajectory with sinusoidal longitudinal acceleration but straight path
@@ -255,8 +246,7 @@ TEST_F(TestTrajectoryChecker, checkValidLateralJerkFunction)
     Trajectory sinusoidal_accel_traj =
       test_utils::generateTrajectoryWithSinusoidalAcceleration(0.5, 8.0, 0.0, 30, 2.0, 10.0);
     set_trajectory(sinusoidal_accel_traj);
-    ASSERT_TRUE(
-      trajectory_checker_->check_valid_lateral_jerk(context_->data, context_->validation_status));
+    ASSERT_TRUE(trajectory_checker_->check_valid_lateral_jerk());
   }
 
   // Test case 4: Trajectory with high lateral jerk (zigzag pattern)
@@ -292,8 +282,7 @@ TEST_F(TestTrajectoryChecker, checkValidLateralJerkFunction)
 
     // This should fail due to high lateral jerk
     set_trajectory(high_jerk_traj);
-    ASSERT_FALSE(
-      trajectory_checker_->check_valid_lateral_jerk(context_->data, context_->validation_status));
+    ASSERT_FALSE(trajectory_checker_->check_valid_lateral_jerk());
   }
 }
 
@@ -305,13 +294,13 @@ TEST_F(TestTrajectoryChecker, checkCalcMaxLateralJerkFunction)
  * Velocity (m/s):       1    1    1    1    1    2    3    3    3    3
  * Acceleration (m/ss):  1    1    1    1    1    2    3    3    3    3
  * Curvature (1/m):      0    0    0    0.05 0.1  0.1  0.05 0    0    0
- * Lateral Jerk (m/sss): 0    0    0    0.15 0.3  2.4  4.05 0    0    0
+ * Lateral Jerk (m/sss): 0    0    0    0.1  0.2  0.8  0.9  0    0    0
  */
 {
   {
     Trajectory custom_traj;
     custom_traj.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
-    const double expected_max_lateral_jerk = 4.05;
+    const double expected_max_lateral_jerk = 0.9;
 
     const size_t num_points = 10;
     const double point_spacing = 2.0;
@@ -403,29 +392,25 @@ TEST_F(TestTrajectoryChecker, checkTrajectoryShiftFunction)
   // valid case
   {
     set_trajectory(generateShiftedTrajectory(base_traj, 0.1, 1.0));
-    ASSERT_TRUE(
-      trajectory_checker_->check_trajectory_shift(context_->data, context_->validation_status));
+    ASSERT_TRUE(trajectory_checker_->check_trajectory_shift());
   }
 
   // invalid case (lateral shift)
   {
     set_trajectory(generateShiftedTrajectory(base_traj, 1.0));
-    ASSERT_FALSE(
-      trajectory_checker_->check_trajectory_shift(context_->data, context_->validation_status));
+    ASSERT_FALSE(trajectory_checker_->check_trajectory_shift());
   }
 
   // invalid case (backward shift)
   {
     set_trajectory(generateShiftedTrajectory(base_traj, 0.0, -1.0, 4));
-    ASSERT_FALSE(
-      trajectory_checker_->check_trajectory_shift(context_->data, context_->validation_status));
+    ASSERT_FALSE(trajectory_checker_->check_trajectory_shift());
   }
 
   // invalid case (forward shift)
   {
     set_trajectory(generateShiftedTrajectory(base_traj, 0.0, 4.0));
-    ASSERT_FALSE(
-      trajectory_checker_->check_trajectory_shift(context_->data, context_->validation_status));
+    ASSERT_FALSE(trajectory_checker_->check_trajectory_shift());
   }
 }
 }  // namespace autoware::planning_validator

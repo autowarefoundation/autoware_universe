@@ -134,6 +134,14 @@ struct Parameters
   struct
   {
     std::string object_label;
+    struct
+    {
+      bool ego_footprint = false;
+      bool objects = false;
+      bool collisions = false;
+      bool decisions = false;
+      bool filtering_data = false;
+    } enabled_markers;
   } debug;
 
   /// @brief Get the parameter defined for a specific object label, or the default value if it was
@@ -259,6 +267,16 @@ struct Parameters
         get_object_parameter<double>(node, ns, label, ".standstill_duration_after_cut");
     }
     debug.object_label = getOrDeclareParameter<std::string>(node, ns + ".debug.object_label");
+    debug.enabled_markers.ego_footprint =
+      getOrDeclareParameter<bool>(node, ns + ".debug.enabled_markers.ego_footprint");
+    debug.enabled_markers.objects =
+      getOrDeclareParameter<bool>(node, ns + ".debug.enabled_markers.objects");
+    debug.enabled_markers.collisions =
+      getOrDeclareParameter<bool>(node, ns + ".debug.enabled_markers.collisions");
+    debug.enabled_markers.decisions =
+      getOrDeclareParameter<bool>(node, ns + ".debug.enabled_markers.decisions");
+    debug.enabled_markers.filtering_data =
+      getOrDeclareParameter<bool>(node, ns + ".debug.enabled_markers.filtering_data");
 
     max_history_duration = std::max(stop_off_time_buffer, stop_on_time_buffer);
   }
@@ -367,6 +385,13 @@ struct Parameters
         object_parameters_per_label[label].preserved_distance);
     }
     updateParam(params, ns + ".debug.object_label", debug.object_label);
+    updateParam(
+      params, ns + ".debug.enabled_markers.ego_footprint", debug.enabled_markers.ego_footprint);
+    updateParam(params, ns + ".debug.enabled_markers.objects", debug.enabled_markers.objects);
+    updateParam(params, ns + ".debug.enabled_markers.collisions", debug.enabled_markers.collisions);
+    updateParam(params, ns + ".debug.enabled_markers.decisions", debug.enabled_markers.decisions);
+    updateParam(
+      params, ns + ".debug.enabled_markers.filtering_data", debug.enabled_markers.filtering_data);
 
     max_history_duration = std::max(stop_off_time_buffer, stop_on_time_buffer);
   }

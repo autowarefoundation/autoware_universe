@@ -72,9 +72,12 @@ Trajectory getStopTrajectory(
   Trajectory soft_stop_traj = trajectory;
   soft_stop_traj.header = trajectory.header;
   double accumulated_distance = 0.0;
+  static constexpr double zero_velocity_th = 0.5;
   for (size_t i = nearest_traj_idx + 1; i < trajectory.points.size(); ++i) {
     accumulated_distance += calc_distance2d(trajectory.points.at(i - 1), trajectory.points.at(i));
-    if (accumulated_distance >= stopping_distance) {
+    if (
+      accumulated_distance >= stopping_distance ||
+      soft_stop_traj.points.at(i - 1).longitudinal_velocity_mps < zero_velocity_th) {
       soft_stop_traj.points.at(i).longitudinal_velocity_mps = 0.0;
       continue;
     }

@@ -191,6 +191,17 @@ This module treats **Pedestrians** and **Bicycles** as objects using the crosswa
 
 If there are a reachable crosswalk entry points within the `prediction_time_horizon` and the objects satisfies above condition, this module outputs additional predicted path to cross the opposite side via the crosswalk entry point.
 
+To prevent the predicted crossing path from chattering due to noise in the estimated pose or velocity of a pedestrian who is judged to have crossing intention, the module holds the crossing intention state for a certain duration based on the following parameters:
+
+| Parameter                        | Unit | Type   | Description                                                                                      |
+| -------------------------------- | ---- | ------ | ------------------------------------------------------------------------------------------------ |
+| `crossing_intention_duration`    | [s]  | double | Minimum duration that crossing intention must continuously persist to be judged as true          |
+| `no_crossing_intention_duration` | [s]  | double | Minimum duration that lack of crossing intention must continuously persist to be judged as false |
+
+!!! note
+
+    Increasing `crossing_intention_duration` can reduce the frequency of false positives caused by noise that mistakenly indicates crossing intention. However, it also delays the system’s response to pedestrians who actually intend to cross. Therefore, setting this parameter to a large value is **not recommended**.
+
 This module takes into account the corresponding traffic light information.
 When RED signal is indicated, we assume the target object will not walk across.
 In addition, if the target object is stopping (not moving) against GREEN signal, we assume the target object will not walk across either.
@@ -205,6 +216,8 @@ If the target object is inside the road or crosswalk, this module outputs one or
 <div align="center">
   <img src="images/inside_road.svg" width=90%>
 </div>
+
+In the case where the target object is inside the road, the additional path(s) to reach the nearest crosswalk are only generated if the distance between the object and the crosswalk is not higher than parameter `max_crosswalk_user_on_road_distance`.
 
 ## Inputs / Outputs
 
@@ -236,6 +249,7 @@ If the target object is inside the road or crosswalk, this module outputs one or
 | `min_velocity_for_map_based_prediction`                          | [m/s] | double | apply map-based prediction to the objects with higher velocity than this value                                                        |
 | `min_crosswalk_user_velocity`                                    | [m/s] | double | minimum velocity used when crosswalk user's velocity is calculated                                                                    |
 | `max_crosswalk_user_delta_yaw_threshold_for_lanelet`             | [rad] | double | maximum yaw difference between crosswalk user and lanelet to use in path prediction for crosswalk users                               |
+| `max_crosswalk_user_on_road_distance`                            | [m/s] | double | crosswalk users on road or shoulder lanelets are only predicted to cross the crosswalk if they are within this distance               |
 | `dist_threshold_for_searching_lanelet`                           | [m]   | double | The threshold of the angle used when searching for the lane to which the object belongs                                               |
 | `delta_yaw_threshold_for_searching_lanelet`                      | [rad] | double | The threshold of the angle used when searching for the lane to which the object belongs                                               |
 | `sigma_lateral_offset`                                           | [m]   | double | Standard deviation for lateral position of objects                                                                                    |

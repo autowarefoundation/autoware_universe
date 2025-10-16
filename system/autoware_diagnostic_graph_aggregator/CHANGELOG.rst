@@ -2,6 +2,12 @@
 Changelog for package autoware_diagnostic_graph_aggregator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* feat(diagnostic_graph_aggregator): diagnostic graph test interface (`#10455 <https://github.com/autowarefoundation/autoware_universe/issues/10455>`_)
+* feat(diagnostic_graph_aggregator): add initializing flag (`#10893 <https://github.com/autowarefoundation/autoware_universe/issues/10893>`_)
+* Contributors: Takagi, Isamu
+
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base

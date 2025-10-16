@@ -58,21 +58,29 @@ input/detection02/channel: none # Disabled
 input/detection01/objects: /perception/object_recognition/detection/lidar_centerpoint/objects
 input/detection01/channel: lidar_centerpoint
 
+# lidar short_range centerpoint
+input/detection02/channel: /perception/object_recognition/detection/centerpoint_short_range/objects
+input/detection02/objects: lidar_centerpoint_short_range
+
 # camera lidar fusion
-input/detection02/objects: /perception/object_recognition/detection/clustering/camera_lidar_fusion/objects
-input/detection02/channel: camera_lidar_fusion
+input/detection03/objects: /perception/object_recognition/detection/clustering/camera_lidar_fusion/objects
+input/detection03/channel: camera_lidar_fusion
+
+# camera lidar fusion based irregular object detection
+input/detection04/objects: /perception/object_recognition/detection/irregular_object/objects
+input/detection04/channel: camera_lidar_fusion_irregular
 
 # detection by tracker
-input/detection03/objects: /perception/object_recognition/detection/detection_by_tracker/objects
-input/detection03/channel: detection_by_tracker
+input/detection05/objects: /perception/object_recognition/detection/detection_by_tracker/objects
+input/detection05/channel: detection_by_tracker
 
 # radar
-input/detection04/objects: /perception/object_recognition/detection/radar/objects
-input/detection04/channel: radar
+input/detection06/objects: /perception/object_recognition/detection/radar/objects
+input/detection06/channel: radar
 
 # disable
-input/detection05/objects: input/objects05
-input/detection05/channel: none # Disabled
+input/detection07/objects: input/objects07
+input/detection07/channel: none # Disabled
 ```
 
 Up to 12 detection inputs can be configured (detection01 through detection12). Each input consists of an objects topic and its corresponding channel configuration.
@@ -107,6 +115,78 @@ Up to 12 detection inputs can be configured (detection01 through detection12). E
 
 See the [model explanations](models.md).
 
+## Performance Benchmark & Unit Testing
+
+### Overview
+
+Unit tests and benchmarks are included to evaluate tracker performance under varying detection loads and object types.
+
+### How to Run Locally
+
+#### 1. Build with Tests
+
+```bash
+colcon build --packages-select autoware_multi_object_tracker \
+  --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo
+```
+
+#### 2. Run the Performance Benchmark
+
+```bash
+source install/setup.bash
+./build/autoware_multi_object_tracker/test_multi_object_tracker
+```
+
+This runs the default test (`SimulatedDataPerformanceTest` and `RealDataRosbagPerformanceTest`) and outputs timing data.
+
+#### 3. Run Optional Profiling Modes/Tests
+
+- `PerformanceVsCarCount()`
+- `PerformanceVsPedestrianCount()`
+- `PerformanceVsUnknownObjectCount()`
+- `AssociationTest()`
+
+These optional profiling tests are compiled as disabled and can be run directly using GoogleTest options:
+
+To run a specific option profiling test:
+
+```bash
+./build/autoware_multi_object_tracker/test_multi_object_tracker \
+  --gtest_also_run_disabled_tests \
+  --gtest_filter="*.*AssociationTest"
+```
+
+To run multiple profiling tests together (separate with `:`):
+
+```bash
+./build/autoware_multi_object_tracker/test_multi_object_tracker \
+  --gtest_also_run_disabled_tests \
+  --gtest_filter="*.*AssociationTest:*.*PerformanceVsPedestrianCount"
+```
+
+This allows you to evaluate scalability with object count and other scenarios without modifying the source code.
+
+### Rosbag Replay & Visualization
+
+#### Simulated Rosbag Output
+
+To record benchmark results for visualization in RViz:
+
+1. Enable `write_bag = true` in `runIterations()`
+2. Run the test; the output `.db3` path is printed
+3. Play rosbag and visualize using rviz(suggested to use a product one):
+
+```bash
+ros2 bag play <output_file>.db3
+rviz2 -d <your_rviz_config>.rviz
+```
+
+#### Real Rosbag Input
+
+1. Set the path in `runPerformanceTestWithRosbag()` to a real `.db3` file
+2. Run the test
+3. Visualize the tracking result in RViz
+
 ## (Optional) Error detection and handling
 
 <!-- Write how to detect errors and how to recover from them.
@@ -119,7 +199,7 @@ Example:
 
 ### Evaluation of muSSP
 
-According to our evaluation, muSSP is faster than normal [SSP](src/data_association/successive_shortest_path) when the matrix size is more than 100.
+According to our evaluation, muSSP is faster than normal [SSP](lib/association/successive_shortest_path) when the matrix size is more than 100.
 
 Execution time for varying matrix size at 95% sparsity. In real data, the sparsity was often around 95%.
 ![mussp_evaluation1](image/mussp_evaluation1.png)
@@ -131,9 +211,9 @@ Execution time for varying the sparsity with matrix size 100.
 
 This package makes use of external code.
 
-| Name                                                      | License                                                   | Original Repository                  |
-| --------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------ |
-| [muSSP](src/data_association/mu_successive_shortest_path) | [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) | <https://github.com/yu-lab-vt/muSSP> |
+| Name                                                 | License                                                   | Original Repository                  |
+| ---------------------------------------------------- | --------------------------------------------------------- | ------------------------------------ |
+| [muSSP](lib/association/mu_successive_shortest_path) | [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) | <https://github.com/yu-lab-vt/muSSP> |
 
 [1] C. Wang, Y. Wang, Y. Wang, C.-t. Wu, and G. Yu, "muSSP: Efficient
 Min-cost Flow Algorithm for Multi-object Tracking," NeurIPS, 2019

@@ -26,6 +26,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -61,7 +62,9 @@ TrtCommon::TrtCommon(
 #endif  // ENABLE_ASAN
     void * handle = dlopen(plugin_path.c_str(), flags);
     if (!handle) {
-      logger_->log(nvinfer1::ILogger::Severity::kERROR, "Could not load plugin library");
+      logger_->log(
+        nvinfer1::ILogger::Severity::kERROR, "Could not load plugin library %s. error %s",
+        plugin_path.c_str(), dlerror());
     } else {
       logger_->log(
         nvinfer1::ILogger::Severity::kINFO, "Loaded plugin library: %s", plugin_path.c_str());
@@ -243,6 +246,23 @@ nvinfer1::Dims TrtCommon::getTensorShape(const char * tensor_name) const
     return nvinfer1::Dims{};
   }
   return engine_->getTensorShape(tensor_name);
+}
+
+nvinfer1::TensorIOMode TrtCommon::getTensorIOMode(const char * tensor_name) const
+{
+  if (!engine_) {
+    logger_->log(nvinfer1::ILogger::Severity::kERROR, "Engine is not initialized");
+    return nvinfer1::TensorIOMode::kNONE;
+  }
+  return engine_->getTensorIOMode(tensor_name);
+}
+
+std::optional<nvinfer1::DataType> TrtCommon::getTensorDataType(const char * tensor_name) const
+{
+  if (!engine_) {
+    return std::nullopt;
+  }
+  return engine_->getTensorDataType(tensor_name);
 }
 
 nvinfer1::Dims TrtCommon::getInputDims(const int32_t index) const

@@ -136,12 +136,9 @@ BehaviorModuleOutput LaneChangeInterface::plan()
         path.start_distance_to_path_change, path.finish_distance_to_path_change, true,
         State::WAITING_FOR_EXECUTION);
     } else {
-      const auto force_activated = std::any_of(
-        rtc_interface_ptr_map_.begin(), rtc_interface_ptr_map_.end(),
-        [&](const auto & rtc) { return rtc.second->isForceActivated(uuid_map_.at(rtc.first)); });
       updateRTCStatus(
-        path.start_distance_to_path_change, path.finish_distance_to_path_change, !force_activated,
-        State::RUNNING);
+        path.start_distance_to_path_change, path.finish_distance_to_path_change,
+        !is_rtc_force_activated(), State::RUNNING);
     }
   }
 
@@ -168,6 +165,10 @@ BehaviorModuleOutput LaneChangeInterface::planWaitingApproval()
 
   if (!module_type_->isValidPath()) {
     path_candidate_ = std::make_shared<PathWithLaneId>();
+    updateRTCStatus(
+      std::numeric_limits<double>::lowest(), std::numeric_limits<double>::lowest(), false,
+      State::WAITING_FOR_EXECUTION);
+    module_type_->resetParameters();
     return out;
   }
 
@@ -234,9 +235,19 @@ bool LaneChangeInterface::canTransitSuccessState()
 
 bool LaneChangeInterface::canTransitFailureState()
 {
-  const auto force_activated = std::any_of(
-    rtc_interface_ptr_map_.begin(), rtc_interface_ptr_map_.end(),
-    [&](const auto & rtc) { return rtc.second->isForceActivated(uuid_map_.at(rtc.first)); });
+  const auto force_activated = std::invoke([&]() {
+    if (!is_rtc_force_activated()) {
+      return false;
+    }
+
+    if (!module_type_->isValidPath()) {
+      RCLCPP_WARN_THROTTLE(
+        getLogger(), *clock_, 1000, "Force activated, but no valid path. Ignore force activation.");
+      return false;
+    }
+
+    return true;
+  });
 
   if (force_activated) {
     RCLCPP_WARN_THROTTLE(getLogger(), *clock_, 5000, "unsafe but force executed");
@@ -259,6 +270,24 @@ bool LaneChangeInterface::canTransitFailureState()
   }
 
   if (state == LaneChangeStates::Abort) {
+    if (!module_type_->isAbortState()) {
+      RCLCPP_DEBUG(getLogger(), "Transit to Abort state.");
+
+      const auto current_pose = module_type_->getEgoPose();
+
+      const auto planning_factor_direction = std::invoke([&]() {
+        if (module_type_->getDirection() == Direction::LEFT) {
+          return PlanningFactor::SHIFT_LEFT;
+        }
+        if (module_type_->getDirection() == Direction::RIGHT) {
+          return PlanningFactor::SHIFT_RIGHT;
+        }
+        return PlanningFactor::NONE;
+      });
+
+      planning_factor_interface_->add(
+        0.0, current_pose, planning_factor_direction, SafetyFactorArray{}, true, 0.0, 0.0, "abort");
+    }
     module_type_->toAbortState();
     return false;
   }
@@ -295,18 +324,16 @@ std::pair<LaneChangeStates, std::string_view> LaneChangeInterface::check_transit
     return {LaneChangeStates::Cancel, "InvalidPath"};
   }
 
+  if (module_type_->is_near_terminal_end()) {
+    return {LaneChangeStates::Warning, "TooNearTerminal"};
+  }
+
   const auto is_preparing = module_type_->isEgoOnPreparePhase();
   const auto can_return_to_current = module_type_->isAbleToReturnCurrentLane();
 
   // regardless of safe and unsafe, we want to cancel lane change.
-  if (is_preparing) {
-    const auto force_deactivated = std::any_of(
-      rtc_interface_ptr_map_.begin(), rtc_interface_ptr_map_.end(),
-      [&](const auto & rtc) { return rtc.second->isForceDeactivated(uuid_map_.at(rtc.first)); });
-
-    if (force_deactivated && can_return_to_current) {
-      return {LaneChangeStates::Cancel, "ForceDeactivation"};
-    }
+  if (is_preparing && is_rtc_force_deactivated() && can_return_to_current) {
+    return {LaneChangeStates::Cancel, "ForceDeactivation"};
   }
 
   if (post_process_safety_status_.is_safe) {
@@ -321,10 +348,6 @@ std::pair<LaneChangeStates, std::string_view> LaneChangeInterface::check_transit
   // lane, for example, during an evasive maneuver around a static object.
   if (is_preparing && can_return_to_current) {
     return {LaneChangeStates::Cancel, "SafeToCancel"};
-  }
-
-  if (module_type_->is_near_terminal()) {
-    return {LaneChangeStates::Warning, "TooNearTerminal"};
   }
 
   if (!module_type_->isAbortEnabled()) {
@@ -406,7 +429,7 @@ void LaneChangeInterface::updateSteeringFactorPtr(const BehaviorModuleOutput & o
     if (module_type_->getDirection() == Direction::RIGHT) {
       return PlanningFactor::SHIFT_RIGHT;
     }
-    return PlanningFactor::UNKNOWN;
+    return PlanningFactor::NONE;
   });
 
   const auto & lane_change_debug = module_type_->getDebugData();
@@ -445,6 +468,6 @@ void LaneChangeInterface::updateSteeringFactorPtr(
     planning_factor_direction,
     utils::path_safety_checker::to_safety_factor_array(lane_change_debug.collision_check_objects),
     true, start_velocity, end_velocity, selected_path.info.shift_line.start_shift_length,
-    selected_path.info.shift_line.end_shift_length, "candidate");
+    selected_path.info.shift_line.end_shift_length, "");
 }
 }  // namespace autoware::behavior_path_planner

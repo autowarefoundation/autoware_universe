@@ -15,6 +15,9 @@
 #ifndef DEBUG_MARKER_HPP_
 #define DEBUG_MARKER_HPP_
 
+#include "type_alias.hpp"
+#include "types.hpp"
+
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -32,14 +35,6 @@
 
 namespace autoware::surround_obstacle_checker
 {
-
-using autoware::vehicle_info_utils::VehicleInfo;
-using autoware_internal_planning_msgs::msg::ControlPoint;
-using autoware_internal_planning_msgs::msg::PlanningFactor;
-using autoware_internal_planning_msgs::msg::PlanningFactorArray;
-using geometry_msgs::msg::PolygonStamped;
-using visualization_msgs::msg::Marker;
-using visualization_msgs::msg::MarkerArray;
 
 namespace bg = boost::geometry;
 using Point2d = bg::model::d2::point_xy<double>;
@@ -59,7 +54,7 @@ public:
     const rclcpp::Clock::SharedPtr clock, rclcpp::Node & node);
 
   bool pushPose(const geometry_msgs::msg::Pose & pose, const PoseType & type);
-  bool pushObstaclePoint(const geometry_msgs::msg::Point & obstacle_point, const PointType & type);
+  void pushStopObstacle(const std::optional<StopObstacle> & stop_obstacle);
   void publish();
   void publishFootprints();
 
@@ -85,7 +80,7 @@ private:
 
   PolygonStamped boostPolygonToPolygonStamped(const Polygon2d & boost_polygon, const double & z);
 
-  std::shared_ptr<geometry_msgs::msg::Point> stop_obstacle_point_ptr_;
+  std::optional<StopObstacle> stop_obstacle_;
   std::shared_ptr<geometry_msgs::msg::Pose> stop_pose_ptr_;
   rclcpp::Clock::SharedPtr clock_;
 };

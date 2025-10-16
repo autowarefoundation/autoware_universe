@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_behavior_path_planner_common</name>
-  <version>0.46.0</version>
+  <version>0.47.0</version>
   <description>The autoware_behavior_path_planner_common package</description>
 
   <!-- turn signal decider -->
@@ -49,6 +49,7 @@
   <depend>autoware_internal_planning_msgs</depend>
   <depend>autoware_interpolation</depend>
   <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_object_recognition_utils</depend>
   <depend>autoware_objects_of_interest_marker_interface</depend>

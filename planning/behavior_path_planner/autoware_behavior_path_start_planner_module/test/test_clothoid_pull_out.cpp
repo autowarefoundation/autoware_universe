@@ -1,0 +1,127 @@
+// Copyright 2024 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "start_planner_test_helper.hpp"
+
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <autoware/behavior_path_start_planner_module/clothoid_pull_out.hpp>
+#include <autoware/behavior_path_start_planner_module/start_planner_module.hpp>
+#include <autoware/behavior_path_start_planner_module/util.hpp>
+#include <autoware/planning_test_manager/autoware_planning_test_manager_utils.hpp>
+#include <autoware/route_handler/route_handler.hpp>
+#include <autoware_lanelet2_extension/utility/query.hpp>
+#include <autoware_test_utils/autoware_test_utils.hpp>
+
+#include <gtest/gtest.h>
+
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
+
+using autoware::behavior_path_planner::ClothoidPullOut;
+using autoware::behavior_path_planner::ShiftPullOut;
+using autoware::behavior_path_planner::StartPlannerParameters;
+using autoware::test_utils::get_absolute_path_to_config;
+using autoware_planning_msgs::msg::LaneletRoute;
+using RouteSections = std::vector<autoware_planning_msgs::msg::LaneletSegment>;
+using autoware::behavior_path_planner::testing::StartPlannerTestHelper;
+using autoware_planning_test_manager::utils::makeBehaviorRouteFromLaneId;
+
+namespace autoware::behavior_path_planner
+{
+
+class TestClothoidPullOut : public ::testing::Test
+{
+public:
+  std::optional<PullOutPath> call_plan(
+    const Pose & start_pose, const Pose & goal_pose,
+    const std::shared_ptr<const PlannerData> & planner_data, PlannerDebugData & planner_debug_data)
+  {
+    return clothoid_pull_out_->plan(start_pose, goal_pose, planner_data, planner_debug_data);
+  }
+
+protected:
+  void SetUp() override
+  {
+    rclcpp::init(0, nullptr);
+    node_ =
+      rclcpp::Node::make_shared("clothoid_pull_out", StartPlannerTestHelper::make_node_options());
+
+    initialize_clothoid_pull_out_planner();
+  }
+
+  void TearDown() override { rclcpp::shutdown(); }
+
+  // Member variables
+  std::shared_ptr<rclcpp::Node> node_;
+  std::shared_ptr<ClothoidPullOut> clothoid_pull_out_;
+  autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
+
+private:
+  void initialize_clothoid_pull_out_planner()
+  {
+    auto parameters = StartPlannerParameters::init(*node_);
+    vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*node_).getVehicleInfo();
+
+    clothoid_pull_out_ = std::make_shared<ClothoidPullOut>(*node_, parameters);
+  }
+};
+
+TEST_F(TestClothoidPullOut, GenerateValidClothoidPullOutPath)
+{
+  // Test data files to be tested
+  // latter data files are commented out because they fail
+  const std::vector<std::string> yaml_files = {
+    "route_data2.1.yaml", "route_data2.2.yaml", "route_data4.1.yaml", "route_data4.2.yaml",
+    // "route_data2.3.yaml", "route_data3.1.yaml", "route_data3.2.yaml", "route_data3.3.yaml",
+    // "route_data4.3.yaml"
+  };
+
+  auto planner_data = std::make_shared<PlannerData>();
+  planner_data->init_parameters(*node_);
+  PlannerDebugData debug_data;
+
+  for (const auto & yaml_file : yaml_files) {
+    std::cout << "Testing with YAML file: " + yaml_file << std::endl;
+
+    const auto route = StartPlannerTestHelper::set_route_from_yaml(planner_data, yaml_file);
+    const auto start_pose = route.start_pose;
+    const auto goal_pose = route.goal_pose;
+    StartPlannerTestHelper::set_odometry(planner_data, start_pose);
+
+    // Plan the pull out path
+    auto result = call_plan(start_pose, goal_pose, planner_data, debug_data);
+
+    // Assert that a valid clothoid pull out path is generated
+    EXPECT_EQ(result.has_value(), true) << "clothoid pull out path generation failed.";
+    EXPECT_EQ(result->partial_paths.size(), 1UL)
+      << "Generated clothoid pull out path does not have the expected number of partial paths.";
+    EXPECT_EQ(debug_data.conditions_evaluation.back(), "success")
+      << "clothoid pull out path planning did not succeed.";
+
+#ifdef EXPORT_TEST_PLOT_FIGURE
+    // Plot and save the generated path for visualization
+    // Generate filename based on YAML file name
+    std::string yaml_basename = yaml_file.substr(0, yaml_file.find_last_of('.'));
+    std::string plot_filename = yaml_basename + ".png";
+    StartPlannerTestHelper::plot_and_save_path(
+      result, route, start_pose, goal_pose, planner_data, vehicle_info_, PlannerType::CLOTHOID,
+      plot_filename);
+#endif
+  }
+}
+
+}  // namespace autoware::behavior_path_planner

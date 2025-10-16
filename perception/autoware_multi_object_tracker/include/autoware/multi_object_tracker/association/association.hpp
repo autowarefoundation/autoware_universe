@@ -54,12 +54,13 @@ typedef std::pair<Point, size_t> ValueType;  // Point and tracker index
 
 struct AssociatorConfig
 {
-  Eigen::MatrixXi can_assign_matrix;
+  std::unordered_map<TrackerType, std::array<bool, types::NUM_LABELS>> can_assign_map;
   Eigen::MatrixXd max_dist_matrix;
   Eigen::MatrixXd max_area_matrix;
   Eigen::MatrixXd min_area_matrix;
   Eigen::MatrixXd max_rad_matrix;
   Eigen::MatrixXd min_iou_matrix;
+  double unknown_association_giou_threshold;
 };
 
 struct InverseCovariance2D

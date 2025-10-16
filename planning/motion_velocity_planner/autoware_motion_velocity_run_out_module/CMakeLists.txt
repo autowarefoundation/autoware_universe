@@ -9,4 +9,4 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   DIRECTORY src
 )
 
-ament_auto_package(INSTALL_TO_SHARE config)
+ament_auto_package()

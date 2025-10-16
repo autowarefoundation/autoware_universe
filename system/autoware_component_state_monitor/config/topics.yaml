@@ -107,7 +107,7 @@
   type: autonomous
   args:
     node_name_suffix: scenario_planning_trajectory
-    topic: /planning/scenario_planning/trajectory
+    topic: /planning/trajectory
     topic_type: autoware_planning_msgs/msg/Trajectory
     best_effort: false
     transient_local: false

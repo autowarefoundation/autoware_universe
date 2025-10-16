@@ -45,38 +45,46 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
   num_cores_(0),
   temperatures_(),
   frequencies_(),
-  usage_warn_(declare_parameter<float>(
-    "usage_warn", 0.96,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
-      "Threshold for CPU usage warning. Cannot be changed after initialization."))),
-  usage_error_(declare_parameter<float>(
-    "usage_error", 0.96,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
-      "Threshold for CPU usage error. Cannot be changed after initialization."))),
-  usage_warn_count_(declare_parameter<int>(
-    "usage_warn_count", 1,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
-      "Consecutive count threshold for CPU usage warning. Cannot be changed after "
-      "initialization."))),
-  usage_error_count_(declare_parameter<int>(
-    "usage_error_count", 2,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
-      "Consecutive count threshold for CPU usage error. Cannot be changed after initialization."))),
-  usage_average_(declare_parameter<bool>(
-    "usage_avg", true,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
-      "Use average CPU usage across all processors. Cannot be changed after initialization."))),
-// Warning/Error about temperature used to be implemented,
-// but they were removed in favor of warning/error about thermal throttling.
+  usage_warn_(
+    declare_parameter<float>(
+      "usage_warn", 0.96,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        "Threshold for CPU usage warning. Cannot be changed after initialization."))),
+  usage_error_(
+    declare_parameter<float>(
+      "usage_error", 0.96,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        "Threshold for CPU usage error. Cannot be changed after initialization."))),
+  usage_warn_count_(
+    declare_parameter<int>(
+      "usage_warn_count", 1,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        "Consecutive count threshold for CPU usage warning. Cannot be changed after "
+        "initialization."))),
+  usage_error_count_(
+    declare_parameter<int>(
+      "usage_error_count", 2,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        "Consecutive count threshold for CPU usage error. Cannot be changed after "
+        "initialization."))),
+  usage_average_(
+    declare_parameter<bool>(
+      "usage_avg", true,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        "Use average CPU usage across all processors. Cannot be changed after initialization."))),
+// Warning/Error about temperature is enabled only on platforms where
+// more reliable thermal throttling diagnostics is unavailable.
 #ifdef ENABLE_TEMPERATURE_DIAGNOSTICS
-  temperature_warn_(declare_parameter<int>(
-    "temperature_warn", 90000,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
-      "Threshold for CPU temperature warning. Cannot be changed after initialization."))),
-  temperature_error_(declare_parameter<int>(
-    "temperature_error", 95000,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
-      "Threshold for CPU temperature error. Cannot be changed after initialization."))),
+  temperature_warn_(
+    declare_parameter<int>(
+      "temperature_warn", 90000,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        "Threshold for CPU temperature warning. Cannot be changed after initialization."))),
+  temperature_error_(
+    declare_parameter<int>(
+      "temperature_error", 95000,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        "Threshold for CPU temperature error. Cannot be changed after initialization."))),
 #endif  // ENABLE_TEMPERATURE_DIAGNOSTICS
   is_temperature_file_names_initialized_(false),
   is_frequency_file_names_initialized_(false)
@@ -101,6 +109,9 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
   durable_qos.transient_local();
   pub_cpu_usage_ =
     this->create_publisher<tier4_external_api_msgs::msg::CpuUsage>("~/cpu_usage", durable_qos);
+
+  pub_cpu_temperature_ = this->create_publisher<tier4_external_api_msgs::msg::CpuTemperature>(
+    "~/cpu_temperature", durable_qos);
 
   using namespace std::literals::chrono_literals;
   // Start timer for collecting cpu statistics
@@ -150,8 +161,9 @@ void CPUMonitorBase::checkTemperature()
       fs::ifstream ifs(path, std::ios::in);
       if (!ifs) {
         error_str = "file open error";
-        temporary_core_data.emplace_back(TemperatureData::CoreTemperature{
-          entry.label_, DiagStatus::ERROR, DiagStatus::ERROR, 0.0f, error_str, entry.path_});
+        temporary_core_data.emplace_back(
+          TemperatureData::CoreTemperature{
+            entry.label_, DiagStatus::ERROR, DiagStatus::ERROR, 0.0f, error_str, entry.path_});
         continue;
       }
 
@@ -160,8 +172,8 @@ void CPUMonitorBase::checkTemperature()
       ifs.close();
 
       int core_level = DiagStatus::OK;
-// Warning/Error about temperature used to be implemented,
-// but they were removed in favor of warning/error about thermal throttling.
+// Warning/Error about temperature is enabled only on platforms where
+// more reliable thermal throttling diagnostics is unavailable.
 #ifdef ENABLE_TEMPERATURE_DIAGNOSTICS
       if (temperature >= temperature_error_) {
         core_level = DiagStatus::ERROR;
@@ -175,8 +187,9 @@ void CPUMonitorBase::checkTemperature()
 #endif  // ENABLE_TEMPERATURE_DIAGNOSTICS
 
       temperature /= 1000;
-      temporary_core_data.emplace_back(TemperatureData::CoreTemperature{
-        entry.label_, DiagStatus::OK, core_level, temperature, "", ""});
+      temporary_core_data.emplace_back(
+        TemperatureData::CoreTemperature{
+          entry.label_, DiagStatus::OK, core_level, temperature, "", ""});
     }
     // End of critical section
   }
@@ -462,6 +475,13 @@ void CPUMonitorBase::updateThermalThrottlingImpl(
     this->get_logger(), "CPUMonitorBase::checkThermalThrottlingImpl not implemented.");
 }
 
+int CPUMonitorBase::getThermalThrottlingStatus() const
+{
+  RCLCPP_INFO_ONCE(
+    this->get_logger(), "CPUMonitorBase::getThermalThrottlingStatus not implemented.");
+  return DiagStatus::OK;
+}
+
 void CPUMonitorBase::checkFrequency()
 {
   // Remember start time to measure elapsed time
@@ -585,6 +605,25 @@ void CPUMonitorBase::publishCpuUsage(tier4_external_api_msgs::msg::CpuUsage usag
   pub_cpu_usage_->publish(usage);
 }
 
+void CPUMonitorBase::publishCpuTemperature()
+{
+  using tier4_external_api_msgs::msg::CpuTemperature;
+  CpuTemperature cpu_temperature;
+  cpu_temperature.stamp = this->now();
+  cpu_temperature.hostname = hostname_;
+  {
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
+    if (!temperature_data_.core_data.empty()) {
+      cpu_temperature.temperature = temperature_data_.core_data[0].temperature;
+    }
+  }
+  int thermal_throttling = getThermalThrottlingStatus();
+  cpu_temperature.thermal_throttling = (thermal_throttling == DiagStatus::OK)
+                                         ? CpuTemperature::THERMAL_THROTTLING_OFF
+                                         : CpuTemperature::THERMAL_THROTTLING_ON;
+  pub_cpu_temperature_->publish(cpu_temperature);
+}
+
 void CPUMonitorBase::onTimer()
 {
   checkTemperature();
@@ -592,4 +631,6 @@ void CPUMonitorBase::onTimer()
   checkLoad();
   checkFrequency();
   checkThermalThrottling();
+
+  publishCpuTemperature();
 }

@@ -65,6 +65,9 @@ void add_polygons_markers(
   auto debug_marker = base_marker;
   debug_marker.type = visualization_msgs::msg::Marker::LINE_LIST;
   for (const auto & f : polygons) {
+    if (f.empty()) {
+      continue;
+    }
     boost::geometry::for_each_segment(f, [&](const auto & s) {
       const auto & [p1, p2] = s;
       debug_marker.points.push_back(autoware_utils::create_marker_position(p1.x(), p1.y(), 0.0));

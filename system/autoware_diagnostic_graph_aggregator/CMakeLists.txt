@@ -37,6 +37,11 @@ target_include_directories(aggregator PRIVATE "src/common")
 ament_auto_add_executable(tree "src/tool/tree.cpp")
 target_include_directories(tree PRIVATE "src/common")
 
+ament_auto_add_library(${PROJECT_NAME}_test SHARED
+  src/tests/tests.cpp
+)
+target_include_directories(${PROJECT_NAME}_test PRIVATE src/common)
+
 rclcpp_components_register_node(aggregator
   PLUGIN "autoware::diagnostic_graph_aggregator::AggregatorNode"
   EXECUTABLE "aggregator_node"

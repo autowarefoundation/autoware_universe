@@ -66,6 +66,15 @@ double calcLateralDeviation(const Pose & base_pose, const Point & target_point);
  */
 double calcYawDeviation(const Pose & base_pose, const Pose & target_pose);
 
+/**
+ * @brief calculate longitudinal velocity deviation from base_pose to target_pose
+ * @param [in] pose input base_pose
+ * @param [in] pose input target_pose
+ * @return longitudinal velocity deviation from base_pose to target_pose
+ */
+double calcLongitudinalVelocityDeviation(
+  const Trajectory & traj, const Pose & pose, const double longitudinal_velocity);
+
 }  // namespace metrics
 }  // namespace control_diagnostics
 

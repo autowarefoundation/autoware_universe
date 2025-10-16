@@ -74,7 +74,7 @@ bool withinRoadLanelet(
  * @param label
  * @return ObjectClassification::_label_type
  */
-ObjectClassification::_label_type changeLabelForPrediction(
+ObjectClassification::_label_type changeVRULabelForPrediction(
   const ObjectClassification::_label_type & label, const TrackedObject & object,
   const lanelet::LaneletMapPtr & lanelet_map_ptr_);
 
@@ -127,6 +127,8 @@ LaneletsData getCurrentLanelets(
   const double dist_threshold_for_searching_lanelet,
   const double delta_yaw_threshold_for_searching_lanelet, const double sigma_lateral_offset,
   const double sigma_yaw_angle_deg);
+double lateral_distance_to_lanelet_bounds(
+  const lanelet::ConstLanelet & ll, const geometry_msgs::msg::Point & point);
 
 }  // namespace utils
 

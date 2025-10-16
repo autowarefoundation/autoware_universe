@@ -22,9 +22,13 @@
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 
+#include <tier4_external_api_msgs/msg/gpu_status.hpp>
+#include <tier4_external_api_msgs/msg/gpu_unit_status.hpp>
+
 #include <climits>
 #include <map>
 #include <string>
+#include <vector>
 
 class GPUMonitorBase : public rclcpp::Node
 {
@@ -34,15 +38,17 @@ public:
    */
   virtual void update();
 
-  /**
-   * @brief Terminate the node, log final statements. An independent function is preferred to allow
-   * an explicit way to operate actions that require a valid rclcpp context. By default this method
-   * does nothing.
-   */
-  virtual void shut_down();
-
 protected:
   using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
+
+  struct GpuStatus
+  {
+    std::string name = "";
+    float usage = 0.0f;
+    int clock = 0;
+    int temperature = 0;
+    int thermal_throttling = DiagStatus::OK;
+  };
 
   /**
    * @brief constructor
@@ -50,6 +56,20 @@ protected:
    * @param [in] options Options associated with this node.
    */
   GPUMonitorBase(const std::string & node_name, const rclcpp::NodeOptions & options);
+
+  /**
+   * @brief destructor
+   */
+  virtual ~GPUMonitorBase();
+
+  /**
+   * @brief Terminate the node, log final statements. An independent function is preferred to allow
+   * an explicit way to operate actions that require a valid rclcpp context. By default this method
+   * does nothing.
+   * @note Derived classes should override this method and call their own version from the
+   * destructor to clean up the resources.
+   */
+  virtual void shut_down();
 
   /**
    * @brief check GPU temperature
@@ -96,7 +116,28 @@ protected:
   virtual void checkFrequency(
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 
+  /**
+   * @brief get GPU status
+   * @return GPU status list
+   */
+  virtual std::vector<GpuStatus> getGPUStatus() const;
+
+  /**
+   * @brief timer callback to collect GPU status
+   */
+  void onTimer();
+
+  /**
+   * @brief publish GPU status
+   */
+  void publishGPUStatus();
+
   diagnostic_updater::Updater updater_;  //!< @brief Updater class which advertises to /diagnostics
+
+  rclcpp::Publisher<tier4_external_api_msgs::msg::GpuStatus>::SharedPtr
+    pub_gpu_status_;  //!< @brief publisher
+
+  rclcpp::TimerBase::SharedPtr timer_;  //!< @brief timer to collect GPU status
 
   char hostname_[HOST_NAME_MAX + 1];  //!< @brief host name
 

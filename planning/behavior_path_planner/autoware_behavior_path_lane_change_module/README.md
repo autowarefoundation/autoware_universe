@@ -1097,7 +1097,6 @@ The footprints checked against the lane boundary include:
 
 1. Current Footprint: Based on the ego vehicle's current position.
 2. Future Footprint: Based on the ego vehicle's estimated position after traveling a distance, calculated as $𝑑_{est}=𝑣_{ego} \cdot \Delta_{𝑡}$, where
-
    - $v_{ego}$ is ego vehicle's current velocity
    - $\Delta_{t}$ is parameterized time constant value, `cancel.delta_time`.
 
@@ -1134,6 +1133,25 @@ where
 - $N$ is the parameterized constant `cancel.deceleration_sampling`
 
 If none of the sampled accelerations pass the safety check, the lane change path will be canceled, subject to the [hysteresis check](#preventing-oscillating-paths-when-unsafe).
+
+!!! note
+
+    Applying this fix allows the vehicle to change lanes more easily behind a leading object.
+
+!!! warning
+
+    Although the safety check assumes deceleration, it actually executes the **original path velocity**.
+
+    The behavior module assumes that downstream modules (e.g., obstacle stop, cruise planner) will handle actual velocity adjustments.
+    Because of this, **deceleration sampling is applied only to leading objects**, not trailing or adjacent ones.
+
+    * For **leading objects**, secondary safety layers exist — for example, obstacle stop or cruise planner modules that can modify the velocity profile in response to sudden deceleration.
+    * For **trailing or nearby objects**, such mechanisms do not exist (obstacle stop and cruise do not apply to trailing objects).
+
+    Therefore, applying deceleration sampling in these cases could lead to **false negatives**, i.e.: the safety check would assume ego is decelerating, when in reality, ego cannot decelerate.
+
+    In practice, other modules (e.g., run out) may occasionally cause ego to decelerate, indirectly affecting safety check behavior for trailing objects. However, these activations are **situation-dependent** and **not guaranteed**.
+    Hence, **no deceleration sampling** is applied to trailing objects.
 
 #### Cancel
 
@@ -1233,11 +1251,11 @@ The following parameters are used to judge lane change completion.
 
 ### Lane change regulations
 
-| Name                       | Unit | Type    | Description                                                | Default value |
-| :------------------------- | ---- | ------- | ---------------------------------------------------------- | ------------- |
-| `regulation.crosswalk`     | [-]  | boolean | Allow lane change in between crosswalks                    | true          |
-| `regulation.intersection`  | [-]  | boolean | Allow lane change in between intersections                 | true          |
-| `regulation.traffic_light` | [-]  | boolean | Allow lane change to be performed in between traffic light | true          |
+| Name                       | Unit | Type    | Description                                                                                                           | Default value |
+| :------------------------- | ---- | ------- | --------------------------------------------------------------------------------------------------------------------- | ------------- |
+| `regulation.crosswalk`     | [-]  | boolean | Considers lane change regulation at crosswalks. If set to `true`, lane changing are disabled at crosswalks.           | true          |
+| `regulation.intersection`  | [-]  | boolean | Considers lane change regulation at intersections. If set to `true`, lane changing are disabled at intersections.     | true          |
+| `regulation.traffic_light` | [-]  | boolean | Considers lane change regulation at traffic lights. If set to `true`, lane changing are disabled near traffic lights. | true          |
 
 ### Ego vehicle stuck detection
 
@@ -1271,11 +1289,13 @@ The following parameters are used to configure terminal lane change path feature
 
     Only applicable when ego is near terminal start
 
-| Name                            | Unit  | Type   | Description                                                                                                                                         | Default value |
-| :------------------------------ | ----- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| `frenet.enable`                 | [-]   | bool   | Flag to enable/disable frenet planner when ego is near terminal start.                                                                              | true          |
-| `frenet.th_yaw_diff`            | [deg] | double | If the yaw diff between of the prepare segment's end and lane changing segment's start exceed the threshold , the lane changing segment is invalid. | 10.0          |
-| `frenet.th_curvature_smoothing` | [-]   | double | Filters and appends target path points with curvature below the threshold to candidate path.                                                        | 0.1           |
+| Name                                   | Unit  | Type   | Description                                                                                                                                                   | Default value |
+| :------------------------------------- | ----- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| `frenet.enable`                        | [-]   | bool   | Flag to enable/disable frenet planner when ego is near terminal start.                                                                                        | true          |
+| `frenet.use_entire_remaining_distance` | [-]   | bool   | Flag to configure lc length, if true entire remaining distance to lane end is used for lc path generation, else will generate path assuming minimum lc length | false         |
+| `frenet.th_yaw_diff`                   | [deg] | double | If the yaw diff between of the prepare segment's end and lane changing segment's start exceed the threshold , the lane changing segment is invalid.           | 10.0          |
+| `frenet.th_curvature_smoothing`        | [-]   | double | Filters and appends target path points with curvature below the threshold to candidate path.                                                                  | 0.1           |
+| `frenet.th_average_curvature`          | [-]   | double | Remove path with average curvature above the threshold. Path only removed if there is more than 1 candidate, and the first path is always kept.               | 0.015         |
 
 ### Collision checks
 
@@ -1312,6 +1332,19 @@ The following parameters are used to configure terminal lane change path feature
 | `collision_check.prediction_time_resolution`             | [s]   | double  | Time resolution for object's path interpolation and collision check.                                                                                                                                       | 0.5           |
 | `collision_check.yaw_diff_threshold`                     | [rad] | double  | Maximum yaw difference between predicted ego pose and predicted object pose when executing rss-based collision checking                                                                                    | 3.1416        |
 | `collision_check.th_incoming_object_yaw`                 | [rad] | double  | Maximum yaw difference between current ego pose and current object pose. Objects with a yaw difference exceeding this value are excluded from the safety check.                                            | 2.3562        |
+
+#### safety constraints when ego is in prepare phase
+
+| Name                                                       | Unit    | Type   | Description                                                                                                                                                    | Default value |
+| :--------------------------------------------------------- | ------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| `safety_check.prepare.expected_front_deceleration`         | [m/s^2] | double | The front object's maximum deceleration when the front vehicle perform sudden braking. (\*1)                                                                   | -1.0          |
+| `safety_check.prepare.expected_rear_deceleration`          | [m/s^2] | double | The rear object's maximum deceleration when the rear vehicle perform sudden braking. (\*1)                                                                     | -1.0          |
+| `safety_check.prepare.rear_vehicle_reaction_time`          | [s]     | double | The reaction time of the rear vehicle driver which starts from the driver noticing the sudden braking of the front vehicle until the driver step on the brake. | 1.0           |
+| `safety_check.prepare.rear_vehicle_safety_time_margin`     | [s]     | double | The time buffer for the rear vehicle to come into complete stop when its driver perform sudden braking.                                                        | 0.8           |
+| `safety_check.prepare.lateral_distance_max_threshold`      | [m]     | double | The lateral distance threshold that is used to determine whether lateral distance between two object is enough and whether lane change is safe.                | 0.5           |
+| `safety_check.prepare.longitudinal_distance_min_threshold` | [m]     | double | The longitudinal distance threshold that is used to determine whether longitudinal distance between two object is enough and whether lane change is safe.      | 1.0           |
+| `safety_check.prepare.longitudinal_velocity_delta_time`    | [m]     | double | The time multiplier that is used to compute the actual gap between vehicle at each predicted points (not RSS distance)                                         | 0.0           |
+| `safety_check.prepare.extended_polygon_policy`             | [-]     | string | Policy used to determine the polygon shape for the safety check. Available options are: `rectangle` or `along-path`.                                           | `rectangle`   |
 
 #### safety constraints during lane change path is computed
 
@@ -1426,6 +1459,6 @@ Available information
 ## Limitation
 
 1. When a lane change is canceled, the lane change module returns `ModuleStatus::FAILURE`. As the module is removed from the approved module stack (see [Failure modules](https://autowarefoundation.github.io/autoware_universe/main/planning/behavior_path_planner/autoware_behavior_path_planner/docs/behavior_path_planner_manager_design/#failure-modules)), a new instance of the lane change module is initiated. Due to this, any information stored prior to the reset is lost. For example, the `lane_change_prepare_duration` in the `TransientData` is reset to its maximum value.
-2. The lane change module has no knowledge of any velocity modifications introduced to the path after it is approved. This is because other modules may add deceleration points after subscribing to the behavior path planner output, and the final velocity is managed by the [velocity smoother](https://autowarefoundation.github.io/autoware_universe/main/planning/autoware_velocity_smoother/). Since this limitation affects **CANCEL**, the lane change module mitigates it by [sampling accelerations along the approved lane change path](#checking-approved-path-safety). These sampled accelerations are used during safety checks to estimate the velocity that might occur if the ego vehicle decelerates.
+2. The lane change module has no knowledge of any velocity modifications introduced to the path after it is approved. This is because other modules may add deceleration points after subscribing to the behavior path planner output, and the final velocity is managed by the [velocity smoother](https://autowarefoundation.github.io/autoware_core/main/planning/autoware_velocity_smoother/). Since this limitation affects **CANCEL**, the lane change module mitigates it by [sampling accelerations along the approved lane change path](#checking-approved-path-safety). These sampled accelerations are used during safety checks to estimate the velocity that might occur if the ego vehicle decelerates.
 3. Ideally, the abort path should account for whether its execution would affect trailing vehicles in the current lane. However, the lane change module does not evaluate such interactions or assess whether the abort path is safe. As a result, **the abort path is not guaranteed to be safe**. To minimize the risk of unsafe situations, the abort maneuver is only permitted if the ego vehicle has not yet diverged from the current lane.
 4. Due to limited resources, the abort path logic is not fully optimized. The generated path may overshoot, causing the return trajectory to slightly shift toward the opposite lane. This can be dangerous, especially if the opposite lane has traffic moving in the opposite direction. Furthermore, the logic does not account for different vehicle types, which can lead to varying effects. For instance, the behavior might differ significantly between a bus and a small passenger car.

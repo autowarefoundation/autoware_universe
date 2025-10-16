@@ -2,12 +2,13 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_motion_velocity_boundary_departure_prevention_module</name>
-  <version>0.46.0</version>
+  <version>0.47.0</version>
   <description>boundary departure prevention feature in motion_velocity_planner</description>
 
   <maintainer email="zulfaqar.azmi@tier4.jp">Zulfaqar Azmi</maintainer>
   <maintainer email="alqudah.mohammad@tier4.jp">Alqudah Mohammad</maintainer>
-  <maintainer email="takumi.odashima@tier4.jp">Takumi Odashima</maintainer>
+  <maintainer email="kyoichi.sugahara@tier4.jp">Kyoichi Sugahara</maintainer>
+  <maintainer email="Kotakkucu@gmail.com">Takumi Odashima</maintainer>
   <maintainer email="maxime.clement@tier4.jp">Maxime Clement</maintainer>
 
   <license>Apache License 2.0</license>

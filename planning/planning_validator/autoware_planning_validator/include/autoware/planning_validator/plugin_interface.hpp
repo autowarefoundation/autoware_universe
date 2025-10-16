@@ -36,7 +36,7 @@ public:
   virtual void init(
     rclcpp::Node & node, const std::string & name,
     const std::shared_ptr<PlanningValidatorContext> & context) = 0;
-  virtual void validate(bool & is_critical) = 0;
+  virtual void validate() = 0;
   virtual void setup_diag() = 0;
   virtual std::string get_module_name() const = 0;
   rclcpp::Logger logger_ = rclcpp::get_logger("");

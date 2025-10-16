@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<library path="autoware_traffic_light_rviz_plugin">
+  <class name="autoware_traffic_light_rviz_plugin/TrafficLightDisplay"
+         type="autoware_traffic_light_rviz_plugin::TrafficLightDisplay"
+         base_class_type="rviz_common::Display">
+    <description>Traffic light display plugin for Autoware</description>
+  </class>
+</library>

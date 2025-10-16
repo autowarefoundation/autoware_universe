@@ -1,0 +1,15 @@
+<launch>
+  <!-- Input -->
+  <arg name="input/objects" default="~/input/objects"/>
+  <!-- Output -->
+  <arg name="output/objects" default="~/output/objects"/>
+  <!-- Parameter -->
+  <arg name="param_path" default="$(find-pkg-share autoware_object_sorter)/config/detected_object_sorter.param.yaml"/>
+
+  <!-- Node -->
+  <node pkg="autoware_object_sorter" exec="detected_object_sorter_node" name="detected_object_sorter" output="screen">
+    <remap from="~/input/objects" to="$(var input/objects)"/>
+    <remap from="~/output/objects" to="$(var output/objects)"/>
+    <param from="$(var param_path)"/>
+  </node>
+</launch>

@@ -36,6 +36,8 @@ public:
     double expected_decel;
   };
 
+  enum class Response { COMFORT, HARD };
+
   explicit SlowDownInterpolator(const TriggerThreshold & th_trigger) : th_trigger_(th_trigger) {}
 
   /**
@@ -58,50 +60,37 @@ public:
    *         Returns an error message if the deceleration exceeds the threshold.
    */
   [[nodiscard]] tl::expected<SlowDownPlan, std::string> get_interp_to_point(
-    const double curr_vel, const double lon_dist_to_bound_m, double lat_dist_to_bound_m,
-    const SideKey side_key) const;
+    const double curr_vel, const double curr_acc, const double lon_dist_to_bound_m,
+    double lat_dist_to_bound_m, const SideKey side_key) const;
 
 private:
-  /**
-   * @brief Estimates the deceleration required to reach the target velocity over a given distance.
-   *
-   * Uses the standard kinematic formula and clamps the result between the minimum and maximum
-   * allowed deceleration values.
-   *
-   * @param curr_vel Current velocity.
-   * @param target_vel Desired velocity.
-   * @param arclength_to_point_m Distance available for deceleration.
-   * @return Estimated deceleration, clamped within configured thresholds.
-   */
-  [[nodiscard]] double calc_expected_deceleration(
-    const double curr_vel, const double target_vel, const double arclength_to_point_m) const;
-
-  /**
-   * @brief Calculates the velocity at the slow-down point considering acceleration and jerk.
-   *
-   * This method simulates velocity change under constant jerk followed by constant acceleration,
-   * and clamps the result to ensure it does not drop below the configured minimum velocity.
-   *
-   * @param curr_vel Current velocity of the ego vehicle.
-   * @param a_target Target acceleration after the jerk phase.
-   * @param jerk Applied jerk value.
-   * @param lon_dist_to_point_m Distance available for deceleration.
-   * @return Estimated target velocity at the end of the slow-down interval.
-   */
-  [[nodiscard]] double calc_new_velocity(
-    const double curr_vel, const double a_target, const double jerk,
-    const double lon_dist_to_point_m) const;
-
   [[nodiscard]] double interp_velocity(
     const double curr_vel, const double lat_dist, const SideKey side_key) const;
 
-  [[nodiscard]] std::vector<double> get_lat_dist_axis(const SideKey side_key) const;
+  [[nodiscard]] static double v_t(const double t, const double j, const double a, const double v);
 
-  [[nodiscard]] std::vector<double> get_vel_axis() const;
+  [[nodiscard]] static double s_t(const double t, const double j, const double a, const double v);
 
-  [[nodiscard]] double interp_jerk(
-    const double lat_dist_to_bound_m, const double expected_decel_mps2,
-    const SideKey side_key) const;
+  [[nodiscard]] static double t_j(const double a_0, const double a, const double j);
+
+  [[nodiscard]] static double d_slow(
+    const double v_0, const double v_target, const double a_0, const double a_brake,
+    const double j_brake);
+
+  static tl::expected<double, std::string> find_reach_time(
+    double j, double a, double v0, double dist, double t_min, double t_max);
+
+  static std::optional<double> find_feasible_accel(
+    double gap, double v0, double vt, double a0, double a_comfortable, double a_max,
+    double j_comfortable);
+
+  [[nodiscard]] std::optional<double> get_comfort_distance(
+    const double lon_dist_to_dpt_pt, const double v_0, const double v_target,
+    const double a_0) const;
+
+  static tl::expected<double, std::string> calc_velocity_with_profile(
+    const double a_0, const double v_0, const double v_target, const double j_brake,
+    const double a_brake, const double lon_dist_to_dpt_pt);
 
   TriggerThreshold th_trigger_;
 };

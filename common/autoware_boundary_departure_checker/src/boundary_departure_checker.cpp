@@ -226,6 +226,20 @@ bool BoundaryDepartureChecker::updateFusedLaneletPolygonForPath(
   }
 
   fused_lanelets_polygon = lanelet_unions.front();
+
+  // Remove micro holes (micro inner rings) caused by boost::geometry::union_
+  {
+    constexpr double area_threshold = 1e-5;  // [m^2]
+    auto & inners = fused_lanelets_polygon->inners();
+    inners.erase(
+      std::remove_if(
+        inners.begin(), inners.end(),
+        [&](const auto & inner_ring) {
+          return std::abs(boost::geometry::area(inner_ring)) < area_threshold;
+        }),
+      inners.end());
+  }
+
   return true;
 }
 

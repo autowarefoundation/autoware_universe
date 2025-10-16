@@ -18,6 +18,7 @@
 #include "autoware/image_projection_based_fusion/fusion_node.hpp"
 #include "autoware/image_projection_based_fusion/fusion_types.hpp"
 
+#include <autoware/pointcloud_preprocessor/concatenate_data/concatenation_info_manager.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <cmath>
@@ -219,10 +220,10 @@ AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::match_msg3d_to_collector(
   const std::list<std::shared_ptr<FusionCollector<Msg3D, Msg2D, ExportObj>>> & fusion_collectors,
   const std::shared_ptr<Msg3dMatchingContext> & matching_context)
 {
-  auto concatenated_status =
-    ros2_parent_node_->find_concatenation_status(matching_context->msg3d_timestamp);
+  auto concatenation_info =
+    ros2_parent_node_->find_concatenation_info(matching_context->msg3d_timestamp);
 
-  double offset = get_concatenated_offset(matching_context->msg3d_timestamp, concatenated_status);
+  double offset = get_concatenation_offset(matching_context->msg3d_timestamp, concatenation_info);
   double adjusted_timestamp = matching_context->msg3d_timestamp - offset;
 
   for (const auto & fusion_collector : fusion_collectors) {
@@ -256,9 +257,9 @@ void AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::set_collector_info(
     auto msg3d_matching_context =
       std::dynamic_pointer_cast<Msg3dMatchingContext>(matching_context)) {
     auto concatenated_status =
-      ros2_parent_node_->find_concatenation_status(msg3d_matching_context->msg3d_timestamp);
+      ros2_parent_node_->find_concatenation_info(msg3d_matching_context->msg3d_timestamp);
     double offset =
-      get_concatenated_offset(msg3d_matching_context->msg3d_timestamp, concatenated_status);
+      get_concatenation_offset(msg3d_matching_context->msg3d_timestamp, concatenated_status);
 
     auto info = std::make_shared<AdvancedCollectorInfo>(
       msg3d_matching_context->msg3d_timestamp - offset, msg3d_noise_window_);
@@ -282,50 +283,42 @@ void AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::set_collector_info(
 }
 
 template <class Msg3D, class Msg2D, class ExportObj>
-double AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::get_concatenated_offset(
+double AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::get_concatenation_offset(
   const double & msg3d_timestamp,
-  const std::optional<std::unordered_map<std::string, std::string>> & concatenated_status)
+  const std::optional<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr> &
+    concatenation_info_msg)
 {
   double offset = 0.0;
 
-  if (concatenated_status.has_value()) {
-    bool concatenation_success = false;
-    const auto & status_map = concatenated_status.value();
+  if (concatenation_info_msg.has_value()) {
+    const auto & concatenation_info = concatenation_info_msg.value();
 
-    // Find required keys in the map
-    auto concat_success_it = status_map.find("Pointcloud concatenation succeeded");
-
-    if (concat_success_it != status_map.end()) {
-      concatenation_success = (concat_success_it->second == "True");
-      if (concatenation_success && database_created_) {
-        return offset;  // 0.0
-      }
+    auto concatenation_success = concatenation_info->concatenation_success;
+    if (concatenation_success && database_created_) {
+      return offset;  // 0.0
     }
 
-    auto ref_min_it = status_map.find("Minimum reference timestamp");
-    auto ref_max_it = status_map.find("Maximum reference timestamp");
-    if (ref_min_it != status_map.end() && ref_max_it != status_map.end()) {
-      try {
-        double reference_min = std::stod(ref_min_it->second);
-        double reference_max = std::stod(ref_max_it->second);
+    auto matching_strategy_config = autoware::pointcloud_preprocessor::StrategyAdvancedConfig(
+      concatenation_info->matching_strategy_config);
 
-        if (!concatenation_success && msg3d_timestamp > reference_max) {
-          offset = msg3d_timestamp - (reference_min + (reference_max - reference_min) / 2);
-        } else if (!database_created_ && concatenation_success) {
-          auto concat_cloud_it = status_map.find("Concatenated pointcloud timestamp");
-          if (concat_cloud_it != status_map.end()) {
-            double concatenated_cloud_timestamp = std::stod(concat_cloud_it->second);
-            update_fractional_timestamp_set(concatenated_cloud_timestamp);
-            success_status_counter_++;
-            offset = 0.0;
+    auto reference_timestamp_min_msg = matching_strategy_config.reference_timestamp_min_msg;
+    auto reference_timestamp_max_msg = matching_strategy_config.reference_timestamp_max_msg;
 
-            if (success_status_counter_ > success_threshold) {
-              database_created_ = true;
-            }
-          }
-        }
-      } catch (const std::exception & e) {
-        RCLCPP_ERROR(ros2_parent_node_->get_logger(), "Failed to parse timestamp: %s", e.what());
+    auto reference_timestamp_min = rclcpp::Time(reference_timestamp_min_msg).seconds();
+    auto reference_timestamp_max = rclcpp::Time(reference_timestamp_max_msg).seconds();
+
+    if (!concatenation_success && msg3d_timestamp > reference_timestamp_max) {
+      offset = msg3d_timestamp -
+               (reference_timestamp_min + (reference_timestamp_max - reference_timestamp_min) / 2);
+    } else if (!database_created_ && concatenation_success) {
+      auto concatenated_cloud_timestamp = rclcpp::Time(concatenation_info->header.stamp).seconds();
+
+      update_fractional_timestamp_set(concatenated_cloud_timestamp);
+      success_status_counter_++;
+      offset = 0.0;
+
+      if (success_status_counter_ > success_threshold) {
+        database_created_ = true;
       }
     }
   } else {

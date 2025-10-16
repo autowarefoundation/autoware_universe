@@ -32,10 +32,22 @@
 #include <utility>
 #include <vector>
 
-using Label = autoware_perception_msgs::msg::ObjectClassification;
+using autoware_perception_msgs::msg::DetectedObject;
 
 namespace
 {
+int get_class_based_priority_mode(
+  const DetectedObject & object0, const DetectedObject & object1,
+  const std::vector<int64_t> & class_based_priority_matrix, const int NUMBER_OF_CLASSES)
+{
+  const std::uint8_t highest_label0 =
+    autoware::object_recognition_utils::getHighestProbLabel(object0.classification);
+  const std::uint8_t highest_label1 =
+    autoware::object_recognition_utils::getHighestProbLabel(object1.classification);
+  const int index = highest_label1 * NUMBER_OF_CLASSES + highest_label0;
+  return static_cast<int>(class_based_priority_matrix[index]);
+}
+
 bool isUnknownObjectOverlapped(
   const autoware_perception_msgs::msg::DetectedObject & unknown_object,
   const autoware_perception_msgs::msg::DetectedObject & known_object,
@@ -88,6 +100,7 @@ ObjectAssociationMergerNode::ObjectAssociationMergerNode(const rclcpp::NodeOptio
   // Parameters
   base_link_frame_id_ = declare_parameter<std::string>("base_link_frame_id");
   priority_mode_ = static_cast<PriorityMode>(declare_parameter<int>("priority_mode"));
+
   sync_queue_size_ = declare_parameter<int>("sync_queue_size");
   remove_overlapped_unknown_objects_ = declare_parameter<bool>("remove_overlapped_unknown_objects");
   overlapped_judge_param_.precision_threshold =
@@ -102,6 +115,11 @@ ObjectAssociationMergerNode::ObjectAssociationMergerNode(const rclcpp::NodeOptio
    *  this implementation assumes index of vector shows class_label.
    *  if param supports map, refactor this code.
    */
+
+  class_based_priority_matrix_ =
+    this->declare_parameter<std::vector<int64_t>>("class_based_priority_matrix");
+  NUMBER_OF_CLASSES_ = static_cast<int>(std::sqrt(class_based_priority_matrix_.size()));
+
   overlapped_judge_param_.distance_threshold_map =
     convertListToClassMap(declare_parameter<std::vector<double>>("distance_threshold_list"));
 
@@ -135,8 +153,8 @@ ObjectAssociationMergerNode::ObjectAssociationMergerNode(const rclcpp::NodeOptio
   initialization_timeout_sec_ = this->declare_parameter<double>("initialization_timeout_sec");
   last_sync_time_ = std::nullopt;
   message_interval_ = std::nullopt;
-  timeout_timer_ = this->create_wall_timer(
-    std::chrono::duration<double>(message_timeout_sec_ / 2),
+  timeout_timer_ = rclcpp::create_timer(
+    this, get_clock(), std::chrono::duration<double>(message_timeout_sec_ / 2),
     std::bind(&ObjectAssociationMergerNode::diagCallback, this));
   diagnostics_interface_ptr_ =
     std::make_unique<autoware_utils::DiagnosticsInterface>(this, "object_association_merger");
@@ -192,6 +210,27 @@ void ObjectAssociationMergerNode::objectsCallback(
           else
             output_msg.objects.push_back(object1);
           break;
+        case PriorityMode::ClassBased: {
+          PriorityMode class_based_priority_mode =
+            static_cast<PriorityMode>(get_class_based_priority_mode(
+              object0, object1, class_based_priority_matrix_, NUMBER_OF_CLASSES_));
+          switch (class_based_priority_mode) {
+            case PriorityMode::Object0:
+              output_msg.objects.push_back(object0);
+              break;
+            case PriorityMode::Object1:
+              output_msg.objects.push_back(object1);
+              break;
+            case PriorityMode::Confidence:
+              if (object1.existence_probability <= object0.existence_probability)
+                output_msg.objects.push_back(object0);
+              else
+                output_msg.objects.push_back(object1);
+              break;
+            case PriorityMode::ClassBased:
+              break;  // This case should not happen
+          }
+        }
       }
     } else {  // not found
       output_msg.objects.push_back(object0);

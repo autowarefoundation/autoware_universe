@@ -2,6 +2,12 @@
 Changelog for package autoware_traffic_light_classifier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.47.0 (2025-08-11)
+-------------------
+* feat(autoware_traffic_light_classifier): move `rclcpp::shutdown();` from child to parent to avoid `rclcpp::exceptions::RCLError` (`#11048 <https://github.com/autowarefoundation/autoware_universe/issues/11048>`_)
+  move child to parent
+* Contributors: Masato Saeki
+
 0.46.0 (2025-06-20)
 -------------------
 
