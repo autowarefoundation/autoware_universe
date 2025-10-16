@@ -46,11 +46,11 @@ void TrajectoryExtender::set_up_params()
   using autoware_utils_rclcpp::get_or_declare_parameter;
 
   extender_params_.nearest_dist_threshold_m =
-    get_or_declare_parameter<double>(*node_ptr, "nearest_dist_threshold_m");
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_extender.nearest_dist_threshold_m");
   extender_params_.nearest_yaw_threshold_rad =
-    get_or_declare_parameter<double>(*node_ptr, "nearest_yaw_threshold_rad");
-  extender_params_.backward_trajectory_extension_m =
-    get_or_declare_parameter<double>(*node_ptr, "backward_trajectory_extension_m");
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_extender.nearest_yaw_threshold_rad");
+  extender_params_.backward_trajectory_extension_m = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_extender.backward_trajectory_extension_m");
 }
 
 rcl_interfaces::msg::SetParametersResult TrajectoryExtender::on_parameter(
@@ -59,11 +59,13 @@ rcl_interfaces::msg::SetParametersResult TrajectoryExtender::on_parameter(
   using autoware_utils_rclcpp::update_param;
 
   update_param<double>(
-    parameters, "nearest_dist_threshold_m", extender_params_.nearest_dist_threshold_m);
+    parameters, "trajectory_extender.nearest_dist_threshold_m",
+    extender_params_.nearest_dist_threshold_m);
   update_param<double>(
-    parameters, "nearest_yaw_threshold_rad", extender_params_.nearest_yaw_threshold_rad);
+    parameters, "trajectory_extender.nearest_yaw_threshold_rad",
+    extender_params_.nearest_yaw_threshold_rad);
   update_param<double>(
-    parameters, "backward_trajectory_extension_m",
+    parameters, "trajectory_extender.backward_trajectory_extension_m",
     extender_params_.backward_trajectory_extension_m);
 
   rcl_interfaces::msg::SetParametersResult result;
