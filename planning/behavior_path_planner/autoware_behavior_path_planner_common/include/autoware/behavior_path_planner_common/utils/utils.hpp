@@ -18,6 +18,8 @@
 #include "autoware/behavior_path_planner_common/data_manager.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 
@@ -122,7 +124,8 @@ template <class LaneletPointType>
 Pose to_geom_msg_pose(const LaneletPointType & src_point, const lanelet::ConstLanelet & target_lane)
 {
   const auto point = lanelet::utils::conversion::toGeomMsgPt(src_point);
-  const auto yaw = lanelet::utils::getLaneletAngle(target_lane, point);
+  const auto yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+    target_lane, autoware::experimental::lanelet2_utils::from_ros(point).basicPoint());
   geometry_msgs::msg::Pose pose;
   pose.position = point;
   tf2::Quaternion quat;
@@ -229,14 +232,16 @@ std::optional<lanelet::ConstLanelet> getLeftLanelet(
  * from the goal posture information is also inserted for the smooth connection of the goal pose.
  * @param [in] search_radius_range distance on path to be modified for goal insertion
  * @param [in] search_rad_range [unused]
+ * @param [in] output_path_interval interval of output path
  * @param [in] input original path
  * @param [in] goal original goal pose
  * @param [in] goal_lane_id [unused]
  * @param [in] output_ptr output path with modified points for the goal
  */
 bool set_goal(
-  const double search_radius_range, const double search_rad_range, const PathWithLaneId & input,
-  const Pose & goal, const int64_t goal_lane_id, PathWithLaneId * output_ptr);
+  const double search_radius_range, const double search_rad_range,
+  const double output_path_interval, const PathWithLaneId & input, const Pose & goal,
+  const int64_t goal_lane_id, PathWithLaneId * output_ptr);
 
 /**
  * @brief Recreate the goal pose to prevent the goal point being too far from the lanelet, which
@@ -252,14 +257,16 @@ const Pose refineGoal(const Pose & goal, const lanelet::ConstLanelet & goal_lane
  * @brief Recreate the path with a given goal pose.
  * @param search_radius_range Searching radius.
  * @param search_rad_range Searching angle.
+ * @param output_path_interval Interval of output path.
  * @param input Input path.
  * @param goal Goal pose.
  * @param goal_lane_id Lane ID of goal lanelet.
  * @return Recreated path
  */
 PathWithLaneId refinePathForGoal(
-  const double search_radius_range, const double search_rad_range, const PathWithLaneId & input,
-  const Pose & goal, const int64_t goal_lane_id);
+  const double search_radius_range, const double search_rad_range,
+  const double output_path_interval, const PathWithLaneId & input, const Pose & goal,
+  const int64_t goal_lane_id);
 
 bool isAllowedGoalModification(const std::shared_ptr<RouteHandler> & route_handler);
 bool checkOriginalGoalIsInShoulder(const std::shared_ptr<RouteHandler> & route_handler);
@@ -479,6 +486,43 @@ size_t findNearestSegmentIndex(
 
   return autoware::motion_utils::findNearestSegmentIndex(points, pose.position);
 }
+
+/**
+ * @brief Calculates the minimum feasible distance required to decelerate from the current velocity
+ * to a target velocity, considering acceleration and jerk limits.
+ *
+ * @param planner_data Shared pointer to the current planner data (includes velocity and
+ * acceleration).
+ * @param acc_lim The maximum *negative* acceleration (deceleration limit) in [m/s^2]. Must be <
+ * 0.0.
+ * @param jerk_lim The maximum jerk magnitude (positive value) in [m/s^3].
+ * @param target_velocity The desired final velocity in [m/s].
+ * @return std::optional<double> The minimum required deceleration distance in [m],
+ * or std::nullopt if the current velocity is already below the target velocity,
+ * or if the motion utility calculation fails.
+ * @throws std::invalid_argument if acc_lim is not a negative value.
+ */
+std::optional<double> calc_feasible_decel_distance(
+  const std::shared_ptr<const PlannerData> & planner_data, const double acc_lim,
+  const double jerk_lim, const double target_velocity);
+
+/**
+ * @brief Calculates the feasible stopping distance and inserts a stop point into the current path.
+ *
+ * @param current_path The path to be modified (stop point will be inserted into its points vector).
+ * @param planner_data Shared pointer to the current planner data (for current velocity and
+ * acceleration).
+ * @param maximum_deceleration The maximum allowable deceleration (negative value) in [m/s^2].
+ * @param maximum_jerk The maximum allowable jerk (positive magnitude) in [m/s^3].
+ * @param stop_reason A string detailing the reason for the stop.
+ * @return PoseWithDetailOpt The pose and reason of the inserted stop point, or std::nullopt if
+ * the path is empty, the stopping distance cannot be calculated, or the stop point
+ * cannot be inserted into the path.
+ */
+PoseWithDetailOpt insert_feasible_stop_point(
+  PathWithLaneId & current_path, const std::shared_ptr<const PlannerData> & planner_data,
+  const double maximum_deceleration, const double maximum_jerk,
+  const std::string & stop_reason = "");
 }  // namespace autoware::behavior_path_planner::utils
 
 #endif  // AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__UTILS_HPP_

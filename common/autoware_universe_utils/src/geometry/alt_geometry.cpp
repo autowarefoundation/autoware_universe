@@ -359,11 +359,12 @@ std::optional<alt::ConvexPolygon2d> envelope(const alt::Polygon2d & poly)
     poly.outer().begin(), std::prev(poly.outer().end()),
     [](const auto & a, const auto & b) { return a.y() < b.y(); });
 
-  return alt::ConvexPolygon2d::create(alt::PointList2d{
-    {x_min_vertex->x(), y_min_vertex->y()},
-    {x_min_vertex->x(), y_max_vertex->y()},
-    {x_max_vertex->x(), y_max_vertex->y()},
-    {x_max_vertex->x(), y_min_vertex->y()}});
+  return alt::ConvexPolygon2d::create(
+    alt::PointList2d{
+      {x_min_vertex->x(), y_min_vertex->y()},
+      {x_min_vertex->x(), y_max_vertex->y()},
+      {x_max_vertex->x(), y_max_vertex->y()},
+      {x_max_vertex->x(), y_min_vertex->y()}});
 }
 
 bool equals(const alt::Point2d & point1, const alt::Point2d & point2)

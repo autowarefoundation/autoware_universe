@@ -158,23 +158,6 @@ std::vector<LinearRing2d> create_vehicle_footprints(
   const FootprintMargin & margin = {0.0, 0.0});
 
 /**
- * @brief Generate vehicle footprints that reflect the vehicle's steering behavior.
- *
- * This function creates a wider footprint when the steering angle is high, simulating the way
- * a turning vehicle sweeps outward. The lateral margin increases over time based on an assumed
- * steering rate. The output is useful for predicting how the vehicle might occupy space during
- * turns.
- *
- * @param trajectory        Predicted trajectory of the ego vehicle.
- * @param vehicle_info      Vehicle dimensions.
- * @param current_steering  Latest steering angle from the vehicle.
- * @return Footprints that adapt laterally to simulate steering influence over time.
- */
-std::vector<LinearRing2d> create_vehicle_footprints(
-  const TrajectoryPoints & trajectory, const VehicleInfo & vehicle_info,
-  const SteeringReport & current_steering);
-
-/**
  * @brief Generate vehicle footprints with adjustments based on abnormality type.
  *
  * This function creates different footprint shapes depending on the specified abnormality:
@@ -357,34 +340,14 @@ ProjectionToBound find_closest_segment(
  *
  * The result is organized per side, and each footprint index corresponds to a projection result.
  *
+ * @param ego_pred_traj           Predicted trajectory of the ego vehicle.
  * @param boundaries                 Preprocessed R-tree indexed boundary segments.
  * @param ego_sides_from_footprints List of left/right segments derived from ego footprint polygons.
  * @return Closest projections to boundaries, separated by side.
  */
 ProjectionsToBound get_closest_boundary_segments_from_side(
-  const BoundarySideWithIdx & boundaries, const EgoSides & ego_sides_from_footprints);
-
-/**
- * @brief Estimate braking distance using jerk, acceleration, and braking delay constraints.
- *
- * This function calculates how far a vehicle will travel while slowing down from an initial
- * velocity to a target velocity, considering:
- * - A first phase where deceleration increases gradually (jerk-limited).
- * - A second phase of constant deceleration.
- * - An initial delay before braking begins.
- *
- * The output is useful in planning safe stopping behavior under motion constraints.
- *
- * @param v_init            Initial velocity (m/s).
- * @param v_end             Target (final) velocity after braking (m/s).
- * @param acc               Constant deceleration value (must be positive).
- * @param jerk              Jerk value (rate of change of acceleration), assumed positive.
- * @param t_braking_delay   Delay before braking begins (s).
- * @return Total braking distance (meters).
- */
-double compute_braking_distance(
-  const double v_init, const double v_end, const double acc, const double jerk,
-  double t_braking_delay);
+  const TrajectoryPoints & ego_pred_traj, const BoundarySideWithIdx & boundaries,
+  const EgoSides & ego_sides_from_footprints);
 
 /**
  * @brief Generate filtered and sorted departure points from lateral projections to road
@@ -401,15 +364,16 @@ double compute_braking_distance(
  * - Retains only points up to and including the first CRITICAL_DEPARTURE point (if any).
  *
  * @param projections_to_bound  List of lateral projections to road boundaries.
- * @param th_dist_hysteresis_m  Threshold distance used for hysteresis logic in departure
+ * @param pred_traj_idx_to_ref_traj_lon_dist mapping from an index of the predicted trajectory to
+ * the corresponding arc length on the reference trajectory
+ * @param th_point_merge_distance_m  Threshold distance used for hysteresis logic in departure
  * classification.
- * @param lon_offset_m          Longitudinal offset from ego base link to the reference
- * trajectory.
  * @return Filtered, sorted `DeparturePoints` with only relevant departure markers.
  */
 DeparturePoints get_departure_points(
   const std::vector<ClosestProjectionToBound> & projections_to_bound,
-  const double th_dist_hysteresis_m, const double lon_offset_m);
+  const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist,
+  const double th_point_merge_distance_m);
 
 /**
  * @brief Find nearby uncrossable linestrings around the given pose.
@@ -427,6 +391,36 @@ tl::expected<std::vector<lanelet::LineString3d>, std::string> get_uncrossable_li
   const lanelet::LaneletMapPtr & lanelet_map_ptr, const Pose & ego_pose,
   const double search_distance,
   const std::vector<std::string> & uncrossable_boundary_types = {"road_border"});
+
+/**
+ * @brief Trim predicted trajectory by cutoff time.
+ *
+ * @param ego_pred_traj Predicted trajectory from the ego vehicle.
+ * @param cutoff_time_s Maximum allowed time from start (in seconds).
+ * @return Trimmed trajectory containing only early predicted points.
+ */
+TrajectoryPoints trim_pred_path(const TrajectoryPoints & ego_pred_traj, const double cutoff_time_s);
+
+/**
+ * @brief Compute the longitudinal distance required to stop with jerk- and
+ *        acceleration limits (“judge line”).
+ *
+ * @param velocity              Current longitudinal speed *v₀* [m/s].
+ * @param acceleration          Current longitudinal acceleration *a₀* [m/s²].
+ * @param max_stop_acceleration Maximum (most negative) braking acceleration
+ *                              *a_brake* [m/s²] (e.g. −4.0).
+ * @param max_stop_jerk         Maximum (most negative) braking jerk
+ *                              *j_brake* [m/s³] (e.g. −10.0).
+ * @param delay_response_time   Latency before any braking begins *t₁* [s].
+ *
+ * @return Minimum longitudinal distance [m] from the current pose to the
+ *         stopping line that guarantees the vehicle can reach *v = 0* under the
+ *         provided jerk and acceleration limits. Returns 0 m if the current
+ *         velocity is already non-positive.
+ */
+double calc_judge_line_dist_with_jerk_limit(
+  const double velocity, const double acceleration, const double max_stop_acceleration,
+  const double max_stop_jerk, const double delay_response_time);
 }  // namespace autoware::boundary_departure_checker::utils
 
 #endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UTILS_HPP_

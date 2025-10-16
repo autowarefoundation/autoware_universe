@@ -1,14 +1,25 @@
 /**:
   ros__parameters:
     blind_spot:
-      use_pass_judge_line: true
-      stop_line_margin: 1.0 # [m]
-      backward_detection_length: 100.0 # [m]
-      ignore_width_from_center_line: 0.7 # [m]
-      adjacent_extend_width: 1.5 # [m]
-      opposite_adjacent_extend_width: 1.5 # [m]
-      max_future_movement_time: 10.0 # [second]
-      ttc_min: -5.0 # [s]
-      ttc_max: 5.0 # [s]
-      ttc_ego_minimal_velocity: 5.0 # [m/s]
+      backward_attention_length: 100.0 # [m]
+      ttc_start_margin: 2.0 # [s]
+      ttc_end_margin: 1.0 # [s]
+      minimum_default_velocity: 1.388 # [m/s]
+      collision_judge_debounce: 0.5 # [s]
+      critical_stopline_margin: 1.0 # [m]
+      detect_non_vru:
+        car: false
+        truck: false
+        bus: false
+        trailer: false
+      brake:
+        critical:
+          deceleration: -6.0 # [m/ss]
+          jerk: -5.0 # [m/sss]
+        semi_critical:
+          deceleration: -4.0 # [m/ss]
+          jerk: -5.0 # [m/sss]
+      brake_for_ttc:
+        critical_threshold_ub: 3.0 # [s]
+        semi_critical_threshold_lb: 5.0 # [s]
       enable_rtc: false # If set to true, the scene modules require approval from the rtc (request to cooperate) function. If set to false, the modules can be executed without requiring rtc approval

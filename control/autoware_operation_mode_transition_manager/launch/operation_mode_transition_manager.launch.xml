@@ -11,7 +11,7 @@
     <!-- rename input topics -->
     <remap from="kinematics" to="/localization/kinematic_state"/>
     <remap from="steering" to="/vehicle/status/steering_status"/>
-    <remap from="trajectory" to="/planning/scenario_planning/trajectory"/>
+    <remap from="trajectory" to="/planning/trajectory"/>
     <remap from="control_cmd" to="/control/command/control_cmd"/>
     <remap from="control_mode_report" to="/vehicle/status/control_mode"/>
     <remap from="gate_operation_mode" to="/control/vehicle_cmd_gate/operation_mode"/>

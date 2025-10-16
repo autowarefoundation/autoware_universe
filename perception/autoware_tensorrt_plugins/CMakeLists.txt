@@ -123,6 +123,9 @@ cuda_add_library(cuda_ops SHARED
   src/bev_ops/bev_pool_cuda.cu
   src/scatter_ops/segment_csr.cu
   src/unique_ops/unique.cu
+  src/multi_scale_deform_attn_ops/ms_deform_attn_kernel.cu
+  src/rotate_ops/rotate_kernel.cu
+  src/select_and_pad_ops/select_and_pad_kernel.cu
 )
 
 add_library(${PROJECT_NAME} SHARED
@@ -138,8 +141,14 @@ add_library(${PROJECT_NAME} SHARED
   src/implicit_gemm_plugin.cpp
   src/indice_conv_plugin_creator.cpp # cSpell:ignore indice
   src/indice_conv_plugin.cpp
+  src/multi_scale_deformable_attention_plugin.cpp
+  src/multi_scale_deformable_attention_plugin_creator.cpp
+  src/rotate_plugin.cpp
+  src/rotate_plugin_creator.cpp
   src/segment_csr_plugin_creator.cpp
   src/segment_csr_plugin.cpp
+  src/select_and_pad_plugin.cpp
+  src/select_and_pad_plugin_creator.cpp
   src/unique_plugin.cpp
   src/unique_plugin_creator.cpp
   src/plugin_registration.cpp
@@ -159,6 +168,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 install(
   TARGETS ${PROJECT_NAME}
   DESTINATION share/${PROJECT_NAME}/plugins
+)
+
+install(
+  TARGETS cuda_ops
+  LIBRARY DESTINATION lib
 )
 
 ament_auto_package()

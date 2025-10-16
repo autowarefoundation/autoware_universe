@@ -255,9 +255,10 @@ OccupancyGridMapOutlierFilterComponent::OccupancyGridMapOutlierFilterComponent(
   occupancy_grid_map_sub_.subscribe(
     this, "~/input/occupancy_grid_map", rclcpp::QoS{1}.get_rmw_qos_profile());
   sync_ptr_ = std::make_shared<Sync>(SyncPolicy(5), occupancy_grid_map_sub_, pointcloud_sub_);
-  sync_ptr_->registerCallback(std::bind(
-    &OccupancyGridMapOutlierFilterComponent::onOccupancyGridMapAndPointCloud2, this,
-    std::placeholders::_1, std::placeholders::_2));
+  sync_ptr_->registerCallback(
+    std::bind(
+      &OccupancyGridMapOutlierFilterComponent::onOccupancyGridMapAndPointCloud2, this,
+      std::placeholders::_1, std::placeholders::_2));
   pointcloud_pub_ = create_publisher<PointCloud2>("~/output/pointcloud", rclcpp::SensorDataQoS());
 
   /* Radius search 2d filter */

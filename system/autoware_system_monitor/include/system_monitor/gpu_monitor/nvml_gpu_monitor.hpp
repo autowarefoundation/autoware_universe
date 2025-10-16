@@ -64,13 +64,20 @@ public:
   explicit GPUMonitor(const rclcpp::NodeOptions & options);
 
   /**
+   * @brief destructor
+   */
+  ~GPUMonitor() override;
+
+protected:
+  /**
    * @brief Terminate the node, log final statements. An independent function is preferred to allow
    * an explicit way to operate actions that require a valid rclcpp context. By default this method
    * does nothing.
+   * @note This class uses the NVML library to get GPU information. The NVML library needs to be
+   * shut down in this function.
    */
   void shut_down() override;
 
-protected:
   /**
    * @brief check GPU temperature
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
@@ -133,6 +140,12 @@ protected:
    */
   void checkFrequency(
     diagnostic_updater::DiagnosticStatusWrapper & stat) override;  // NOLINT(runtime/references)
+
+  /**
+   * @brief get GPU status
+   * @return GPU status list
+   */
+  std::vector<GpuStatus> getGPUStatus() const override;
 
   /**
    * @brief get supported GPU clocks

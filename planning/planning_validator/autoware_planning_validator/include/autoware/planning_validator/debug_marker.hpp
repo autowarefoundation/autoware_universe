@@ -44,17 +44,8 @@ public:
   void pushPoseMarker(
     const autoware_planning_msgs::msg::TrajectoryPoint & p, const std::string & ns, int id = 0);
   void pushPoseMarker(const geometry_msgs::msg::Pose & pose, const std::string & ns, int id = 0);
-  void pushPointMarker(
-    const geometry_msgs::msg::Point & point, const std::string & ns, int id = 0, double scale = 0.3,
-    bool is_cube = false);
   void pushVirtualWall(const geometry_msgs::msg::Pose & pose);
   void pushWarningMsg(const geometry_msgs::msg::Pose & pose, const std::string & msg);
-  void pushLineSegmentMarker(
-    const geometry_msgs::msg::Point & p1, const geometry_msgs::msg::Point & p2,
-    const std::string & ns, int id = 0);
-
-  void pushLaneletPolygonsMarker(
-    const lanelet::BasicPolygons2d & polygon, const std::string & ns, int id = 0);
 
   void pushMarker(const visualization_msgs::msg::Marker & marker);
 

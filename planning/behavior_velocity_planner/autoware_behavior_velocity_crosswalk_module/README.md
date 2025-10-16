@@ -346,6 +346,16 @@ In the `common` namespace, the following parameters are defined.
 | `show_processing_time`        | [-]  | bool   | whether to show processing time                                                                                                                 |
 | `traffic_light_state_timeout` | [s]  | double | timeout threshold for traffic light signal                                                                                                      |
 | `enable_rtc`                  | [-]  | bool   | if true, the scene modules should be approved by (request to cooperate)rtc function. if false, the module can be run without approval from rtc. |
+| `lost_detection_timeout`      | [s]  | double | Time to keep an object after its detection is lost                                                                                              |
+
+#### Map-based forced RTC
+
+RTC can be enabled for specific crosswalks in the lanelet map such that even if `enable_rtc` is set to `false`, approval will be required for crossing the corresponding crosswalks.
+The following attribute should be added to the crosswalk lanelet in the map file:
+
+```xml
+<tag k='rtc_approval_required_v1' v='crosswalk' />
+```
 
 ## Known Issues
 

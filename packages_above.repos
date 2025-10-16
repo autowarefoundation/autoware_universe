@@ -3,3 +3,16 @@ repositories:
     type: git
     url: https://github.com/autowarefoundation/autoware_tools.git
     version: main
+  launcher/autoware_launch:
+    type: git
+    url: https://github.com/autowarefoundation/autoware_launch.git
+    version: main
+  sensor_component/external/nebula:
+    type: git
+    url: https://github.com/tier4/nebula.git
+    version: v0.2.6
+  # Fork of transport_drivers that enables reduction of copy operations
+  sensor_component/transport_drivers:
+    type: git
+    url: https://github.com/autowarefoundation/transport_drivers
+    version: 39ebd8afe1bb9760a6cd6272e428468480f6de90

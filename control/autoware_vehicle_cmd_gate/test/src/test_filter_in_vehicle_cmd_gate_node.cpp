@@ -47,13 +47,13 @@ void print_values(int i, const T1 & name, const T2 & a, const T3 &... b)
 
 // global params
 const std::vector<double> reference_speed_points = {5., 10., 15., 20.};
-const std::vector<double> steer_lim = {0.5, 0.3, 0.2, 0.1};
-const std::vector<double> steer_rate_lim = {0.5, 0.3, 0.2, 0.1};
-const std::vector<double> lon_acc_lim = {1.5, 1.0, 0.8, 0.6};
-const std::vector<double> lon_jerk_lim = {1.4, 0.9, 0.7, 0.5};
-const std::vector<double> lat_acc_lim = {2.0, 1.6, 1.2, 0.8};
-const std::vector<double> lat_jerk_lim = {1.7, 1.3, 0.9, 0.6};
-const std::vector<double> actual_steer_diff_lim = {0.5, 0.4, 0.2, 0.1};
+const std::vector<double> steer_cmd_lim = {0.5, 0.3, 0.2, 0.1};
+const std::vector<double> steer_rate_lim_for_steer_cmd = {0.5, 0.3, 0.2, 0.1};
+const std::vector<double> lon_acc_lim_for_lon_vel = {1.5, 1.0, 0.8, 0.6};
+const std::vector<double> lon_jerk_lim_for_lon_acc = {1.4, 0.9, 0.7, 0.5};
+const std::vector<double> lat_acc_lim_for_steer_cmd = {2.0, 1.6, 1.2, 0.8};
+const std::vector<double> lat_jerk_lim_for_steer_cmd = {1.7, 1.3, 0.9, 0.6};
+const std::vector<double> steer_cmd_diff_lim_from_current_steer = {0.5, 0.4, 0.2, 0.1};
 const double wheelbase = 2.89;
 
 using autoware::vehicle_cmd_gate::VehicleCmdGate;
@@ -291,10 +291,14 @@ public:
     avg_lat_acc /= denominator;
     avg_lat_jerk /= denominator;
 
-    const auto max_lon_acc_lim = *std::max_element(lon_acc_lim.begin(), lon_acc_lim.end());
-    const auto max_lon_jerk_lim = *std::max_element(lon_jerk_lim.begin(), lon_jerk_lim.end());
-    const auto max_lat_acc_lim = *std::max_element(lat_acc_lim.begin(), lat_acc_lim.end());
-    const auto max_lat_jerk_lim = *std::max_element(lat_jerk_lim.begin(), lat_jerk_lim.end());
+    const auto max_lon_acc_lim =
+      *std::max_element(lon_acc_lim_for_lon_vel.begin(), lon_acc_lim_for_lon_vel.end());
+    const auto max_lon_jerk_lim =
+      *std::max_element(lon_jerk_lim_for_lon_acc.begin(), lon_jerk_lim_for_lon_acc.end());
+    const auto max_lat_acc_lim =
+      *std::max_element(lat_acc_lim_for_steer_cmd.begin(), lat_acc_lim_for_steer_cmd.end());
+    const auto max_lat_jerk_lim =
+      *std::max_element(lat_jerk_lim_for_steer_cmd.begin(), lat_jerk_lim_for_steer_cmd.end());
 
     // This test is designed to verify that the filter is applied correctly. However, if topic
     // communication is delayed, the allowable range of change in the command values between the
@@ -393,14 +397,13 @@ std::shared_ptr<VehicleCmdGate> generateNode()
 
   node_options.append_parameter_override("wheel_base", wheelbase);
   override("nominal.reference_speed_points", reference_speed_points);
-  override("nominal.reference_speed_points", reference_speed_points);
-  override("nominal.steer_lim", steer_lim);
-  override("nominal.steer_rate_lim", steer_rate_lim);
-  override("nominal.lon_acc_lim", lon_acc_lim);
-  override("nominal.lon_jerk_lim", lon_jerk_lim);
-  override("nominal.lat_acc_lim", lat_acc_lim);
-  override("nominal.lat_jerk_lim", lat_jerk_lim);
-  override("nominal.actual_steer_diff_lim", actual_steer_diff_lim);
+  override("nominal.steer_cmd_lim", steer_cmd_lim);
+  override("nominal.steer_rate_lim_for_steer_cmd", steer_rate_lim_for_steer_cmd);
+  override("nominal.lon_acc_lim_for_lon_vel", lon_acc_lim_for_lon_vel);
+  override("nominal.lon_jerk_lim_for_lon_acc", lon_jerk_lim_for_lon_acc);
+  override("nominal.lat_acc_lim_for_steer_cmd", lat_acc_lim_for_steer_cmd);
+  override("nominal.lat_jerk_lim_for_steer_cmd", lat_jerk_lim_for_steer_cmd);
+  override("nominal.steer_cmd_diff_lim_from_current_steer", steer_cmd_diff_lim_from_current_steer);
 
   return std::make_shared<VehicleCmdGate>(node_options);
 }

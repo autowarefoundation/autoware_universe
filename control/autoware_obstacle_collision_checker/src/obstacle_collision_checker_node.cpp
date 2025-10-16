@@ -45,8 +45,10 @@ ObstacleCollisionCheckerNode::ObstacleCollisionCheckerNode(const rclcpp::NodeOpt
   input_.param.search_radius = declare_parameter<double>("search_radius");
 
   // Dynamic Reconfigure
-  set_param_res_ = this->add_on_set_parameters_callback(std::bind(
-    &autoware::obstacle_collision_checker::ObstacleCollisionCheckerNode::param_callback, this, _1));
+  set_param_res_ = this->add_on_set_parameters_callback(
+    std::bind(
+      &autoware::obstacle_collision_checker::ObstacleCollisionCheckerNode::param_callback, this,
+      _1));
 
   // Subscriber
   self_pose_listener_ = std::make_shared<autoware_utils::SelfPoseListener>(this);

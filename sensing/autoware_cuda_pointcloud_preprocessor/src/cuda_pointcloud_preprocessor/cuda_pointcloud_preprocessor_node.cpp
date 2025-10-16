@@ -22,6 +22,7 @@
 #include "autoware/pointcloud_preprocessor/diagnostics/pass_rate_diagnostics.hpp"
 
 #include <agnocast/agnocast_subscription.hpp>
+#include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <autoware/point_types/types.hpp>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
@@ -54,17 +55,19 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
 
   // Set CUDA device flags
   // note: Device flags are process-wide
-  cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+  CHECK_CUDA_ERROR(cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync));
 
   // Parameters
   base_frame_ = declare_parameter<std::string>("base_frame");
   use_3d_undistortion_ = declare_parameter<bool>("use_3d_distortion_correction");
   use_imu_ = declare_parameter<bool>("use_imu");
+  bool enable_ring_outlier_filter = declare_parameter<bool>("enable_ring_outlier_filter");
 
   RingOutlierFilterParameters ring_outlier_filter_parameters;
-  ring_outlier_filter_parameters.distance_ratio = declare_parameter<float>("distance_ratio");
+  ring_outlier_filter_parameters.distance_ratio =
+    static_cast<float>(declare_parameter<double>("distance_ratio"));
   ring_outlier_filter_parameters.object_length_threshold =
-    declare_parameter<float>("object_length_threshold");
+    static_cast<float>(declare_parameter<double>("object_length_threshold"));
 
   processing_time_threshold_sec_ = declare_parameter<double>("processing_time_threshold_sec");
   timestamp_mismatch_fraction_threshold_ =
@@ -90,13 +93,13 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
   std::vector<CropBoxParameters> crop_box_parameters;
 
   for (std::size_t i = 0; i < crop_box_min_x_vector.size(); i++) {
-    CropBoxParameters parameters;
-    parameters.min_x = crop_box_min_x_vector[i];
-    parameters.min_y = crop_box_min_y_vector[i];
-    parameters.min_z = crop_box_min_z_vector[i];
-    parameters.max_x = crop_box_max_x_vector[i];
-    parameters.max_y = crop_box_max_y_vector[i];
-    parameters.max_z = crop_box_max_z_vector[i];
+    CropBoxParameters parameters{};
+    parameters.min_x = static_cast<float>(crop_box_min_x_vector.at(i));
+    parameters.min_y = static_cast<float>(crop_box_min_y_vector.at(i));
+    parameters.min_z = static_cast<float>(crop_box_min_z_vector.at(i));
+    parameters.max_x = static_cast<float>(crop_box_max_x_vector.at(i));
+    parameters.max_y = static_cast<float>(crop_box_max_y_vector.at(i));
+    parameters.max_z = static_cast<float>(crop_box_max_z_vector.at(i));
     crop_box_parameters.push_back(parameters);
   }
 
@@ -147,6 +150,7 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
 
   cuda_pointcloud_preprocessor_ = std::make_unique<CudaPointcloudPreprocessor>();
   cuda_pointcloud_preprocessor_->setRingOutlierFilterParameters(ring_outlier_filter_parameters);
+  cuda_pointcloud_preprocessor_->setRingOutlierFilterActive(enable_ring_outlier_filter);
   cuda_pointcloud_preprocessor_->setCropBoxParameters(crop_box_parameters);
   cuda_pointcloud_preprocessor_->setUndistortionType(undistortion_type);
 
@@ -259,10 +263,14 @@ void CudaPointcloudPreprocessorNode::pointcloudCallback(
   // cppcheck-suppress unknownMacro
   AUTOWARE_MESSAGE_UNIQUE_PTR(sensor_msgs::msg::PointCloud2) input_pointcloud_msg_ptr)
 {
-  stop_watch_ptr_->toc("processing_time", true);
   const auto & input_pointcloud_msg = *input_pointcloud_msg_ptr;
 
-  validatePointcloudLayout(input_pointcloud_msg);
+  if (!validatePointcloudLayout(input_pointcloud_msg)) {
+    return;
+  }
+
+  stop_watch_ptr_->toc("processing_time", true);
+
   const auto [first_point_stamp, first_point_rel_stamp] =
     getFirstPointTimeInfo(input_pointcloud_msg);
   updateTwistQueue(first_point_stamp);
@@ -283,16 +291,19 @@ void CudaPointcloudPreprocessorNode::pointcloudCallback(
   cuda_pointcloud_preprocessor_->preallocateOutput();
 }
 
-void CudaPointcloudPreprocessorNode::validatePointcloudLayout(
-  const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg)
+[[nodiscard]] bool CudaPointcloudPreprocessorNode::validatePointcloudLayout(
+  const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg) const
 {
-  if (!is_data_layout_compatible_with_point_xyzircaedt(input_pointcloud_msg.fields)) {
-    RCLCPP_ERROR(
-      get_logger(), "Input pointcloud data layout is not compatible with PointXYZIRCAEDT");
-  }
   static_assert(
     sizeof(InputPointType) == sizeof(autoware::point_types::PointXYZIRCAEDT),
     "PointStruct and PointXYZIRCAEDT must have the same size");
+
+  if (is_data_layout_compatible_with_point_xyzircaedt(input_pointcloud_msg.fields)) {
+    return true;
+  }
+
+  RCLCPP_ERROR(get_logger(), "Input pointcloud data layout is not compatible with PointXYZIRCAEDT");
+  return false;
 }
 
 /**
@@ -303,37 +314,44 @@ void CudaPointcloudPreprocessorNode::validatePointcloudLayout(
  *
  * @param input_pointcloud_msg The input PointCloud2 message, which must include a "time_stamp"
  * field.
- * @return std::pair<double, std::uint32_t>
- *   - first: The absolute timestamp of the first point (in seconds).
+ * @return std::pair<std::uint64_t, std::uint32_t>
+ *   - first: The absolute timestamp of the first point (in nanoseconds).
  *   - second: The relative timestamp of the first point (in nanoseconds).
  */
-std::pair<double, std::uint32_t> CudaPointcloudPreprocessorNode::getFirstPointTimeInfo(
+std::pair<std::uint64_t, std::uint32_t> CudaPointcloudPreprocessorNode::getFirstPointTimeInfo(
   const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg)
 {
   sensor_msgs::PointCloud2ConstIterator<std::uint32_t> iter_stamp(
     input_pointcloud_msg, "time_stamp");
   auto num_points = input_pointcloud_msg.width * input_pointcloud_msg.height;
   std::uint32_t first_point_rel_stamp = num_points > 0 ? *iter_stamp : 0;
-  double first_point_stamp = input_pointcloud_msg.header.stamp.sec +
-                             input_pointcloud_msg.header.stamp.nanosec * 1e-9 +
-                             first_point_rel_stamp * 1e-9;
+  std::uint64_t first_point_stamp = input_pointcloud_msg.header.stamp.sec * 1e9 +
+                                    input_pointcloud_msg.header.stamp.nanosec +
+                                    first_point_rel_stamp;
   return {first_point_stamp, first_point_rel_stamp};
 }
 
-void CudaPointcloudPreprocessorNode::updateTwistQueue(double first_point_stamp)
+void CudaPointcloudPreprocessorNode::updateTwistQueue(std::uint64_t first_point_stamp)
 {
   std::vector<geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr> twist_msgs =
     twist_sub_->take_data();
   for (const auto & msg : twist_msgs) {
     twistCallback(*msg);
   }
-  while (twist_queue_.size() > 1 &&
-         rclcpp::Time(twist_queue_.front().header.stamp).seconds() < first_point_stamp) {
-    twist_queue_.pop_front();
-  }
+
+  // Find the last twist message that is before the first point's timestamp
+  // and remove all older messages.
+  auto it = std::lower_bound(
+    twist_queue_.begin(), twist_queue_.end(), first_point_stamp,
+    [](const auto & twist, const std::uint64_t stamp) {
+      // To prevent potential precision loss, use nanoseconds
+      return rclcpp::Time(twist.header.stamp).nanoseconds() < stamp;
+    });
+
+  twist_queue_.erase(twist_queue_.begin(), it);
 }
 
-void CudaPointcloudPreprocessorNode::updateImuQueue(double first_point_stamp)
+void CudaPointcloudPreprocessorNode::updateImuQueue(std::uint64_t first_point_stamp)
 {
   if (!imu_sub_) return;
 
@@ -341,10 +359,17 @@ void CudaPointcloudPreprocessorNode::updateImuQueue(double first_point_stamp)
   for (const auto & msg : imu_msgs) {
     imuCallback(*msg);
   }
-  while (angular_velocity_queue_.size() > 1 &&
-         rclcpp::Time(angular_velocity_queue_.front().header.stamp).seconds() < first_point_stamp) {
-    angular_velocity_queue_.pop_front();
-  }
+
+  // Find the last angular velocity message that is before the first point's timestamp
+  // and remove all older messages.
+  auto it = std::lower_bound(
+    angular_velocity_queue_.begin(), angular_velocity_queue_.end(), first_point_stamp,
+    [](const auto & angular_velocity, const std::uint64_t stamp) {
+      //  To prevent potential precision loss, use nanoseconds
+      return rclcpp::Time(angular_velocity.header.stamp).nanoseconds() < stamp;
+    });
+
+  angular_velocity_queue_.erase(angular_velocity_queue_.begin(), it);
 }
 
 std::optional<geometry_msgs::msg::TransformStamped>

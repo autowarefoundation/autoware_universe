@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2025 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,9 +16,11 @@
 #define AUTOWARE__BEHAVIOR_VELOCITY_BLIND_SPOT_MODULE__SCENE_HPP_
 
 #include <autoware/behavior_velocity_blind_spot_module/parameter.hpp>
+#include <autoware/behavior_velocity_blind_spot_module/time_to_collision.hpp>
 #include <autoware/behavior_velocity_blind_spot_module/util.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/state_machine.hpp>
 #include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
+#include <autoware/lanelet2_utils/intersection.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
@@ -50,7 +52,6 @@ struct OverPassJudge
 struct Unsafe
 {
   const size_t stop_line_idx;
-  const std::optional<autoware_perception_msgs::msg::PredictedObject> collision_obstacle;
 };
 
 struct Safe
@@ -60,14 +61,23 @@ struct Safe
 
 using BlindSpotDecision = std::variant<InternalError, OverPassJudge, Unsafe, Safe>;
 
+std::string format_blind_spot_decision(const BlindSpotDecision & decision, const lanelet::Id id);
+
+using TurnDirection = autoware::experimental::lanelet2_utils::TurnDirection;
+
 class BlindSpotModule : public SceneModuleInterfaceWithRTC
 {
 public:
   struct DebugData
   {
     std::optional<geometry_msgs::msg::Pose> virtual_wall_pose{std::nullopt};
-    std::optional<lanelet::CompoundPolygon3d> detection_area;
-    autoware_perception_msgs::msg::PredictedObjects conflicting_targets;
+    std::optional<lanelet::CompoundPolygon3d> attention_area;
+    std::optional<lanelet::CompoundPolygon3d> path_polygon;
+    std::optional<lanelet::ConstLineString3d> virtual_blind_lane_boundary_after_turning;
+    std::optional<lanelet::ConstLineString3d> virtual_ego_straight_path_after_turning;
+    std::optional<std::pair<double, double>> ego_passage_interval;
+    std::optional<double> critical_time;
+    std::optional<std::vector<UnsafeObject>> unsafe_objects;
   };
 
 public:
@@ -77,7 +87,8 @@ public:
     const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
     const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
-      planning_factor_interface);
+      planning_factor_interface,
+    const rclcpp::Publisher<std_msgs::msg::String>::SharedPtr decision_state_pub);
 
   /**
    * @brief plan go-stop velocity at traffic crossing with collision check between reference path
@@ -89,12 +100,16 @@ public:
   std::vector<autoware::motion_utils::VirtualWall> createVirtualWalls() override;
 
 private:
-  // (semi) const variables
+  // const variables
   const int64_t lane_id_;
   const PlannerParam planner_param_;
   const TurnDirection turn_direction_;
-  std::optional<lanelet::ConstLanelet> sibling_straight_lanelet_{std::nullopt};
-  std::optional<lanelet::ConstLanelets> blind_spot_lanelets_{std::nullopt};
+
+  // (semi) const variables
+  std::optional<lanelet::ConstLanelet> road_lanelets_before_turning_merged_{std::nullopt};
+  std::optional<lanelet::ConstLanelets> blind_side_lanelets_before_turning_{std::nullopt};
+  std::optional<lanelet::ConstLineString3d> virtual_blind_lane_boundary_after_turning_{
+    std::nullopt};
 
   // state variables
   bool is_over_pass_judge_line_{false};
@@ -117,40 +132,19 @@ private:
     const Decision & decision, autoware_internal_planning_msgs::msg::PathWithLaneId * path);
 
   /**
-   * @brief Generate a stop line and insert it into the path.
-   * A stop line is at an intersection point of straight path with vehicle path
-   * @param detection_areas used to generate stop line
-   * @param path            ego-car lane
-   * @param stop_line_idx   generated stop line index
-   * @param pass_judge_line_idx  generated pass judge line index
-   * @return false when generation failed
+   * @brief obtain object with ttc information which is considered dangerous
+   * @return return unsafe objects, in order of collision time (front element is nearest)
    */
-  std::optional<std::pair<size_t, size_t>> generateStopLine(
-    const InterpolatedPathInfo & interpolated_path_info,
-    autoware_internal_planning_msgs::msg::PathWithLaneId * path) const;
-
-  std::optional<OverPassJudge> isOverPassJudge(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & input_path,
-    const geometry_msgs::msg::Pose & stop_point_pose) const;
-
-  double computeTimeToPassStopLine(
-    const lanelet::ConstLanelets & blind_spot_lanelets,
-    const geometry_msgs::msg::Pose & stop_line_pose) const;
+  std::vector<UnsafeObject> collect_unsafe_objects(
+    const std::vector<autoware_perception_msgs::msg::PredictedObject> & attention_objects,
+    const lanelet::ConstLanelet & ego_path_lanelet,
+    const std::pair<double, double> & ego_passage_time_interval) const;
 
   /**
-   * @brief Check obstacle is in blind spot areas.
-   * Condition1: Object's position is in broad blind spot area.
-   * Condition2: Object's predicted position is in narrow blind spot area.
-   * If both conditions are met, return true
-   * @param path path information associated with lane id
-   * @param objects_ptr dynamic objects
-   * @param closest_idx closest path point index from ego car in path points
-   * @return true when an object is detected in blind spot
+   * @brief filter objects whose position is inside the attention_area and whose type is target type
    */
-  std::optional<autoware_perception_msgs::msg::PredictedObject> isCollisionDetected(
-    const lanelet::ConstLanelets & blind_spot_lanelets,
-    const geometry_msgs::msg::Pose & stop_line_pose, const lanelet::CompoundPolygon3d & area,
-    const double ego_time_to_reach_stop_line);
+  std::vector<autoware_perception_msgs::msg::PredictedObject> filter_attention_objects(
+    const lanelet::BasicPolygon2d & attention_area, const double lateral_gap) const;
 
   /**
    * @brief Check if object is belong to targeted classes
@@ -159,20 +153,22 @@ private:
    */
   bool isTargetObjectType(const autoware_perception_msgs::msg::PredictedObject & object) const;
 
+  static bool is_vru_object_type(const autoware_perception_msgs::msg::PredictedObject & object);
+
   /**
-   * @brief Modify objects predicted path. remove path point if the time exceeds timer_thr.
-   * @param objects_ptr target objects
-   * @param time_thr    time threshold to cut path
+   * @brief compute the deceleration and jerk for collision stop from `ttc`
+   * if ttc < critical_threshold_ub, use critical profile
+   * if ttc > semi_critical_lb, use semi_critical profile
+   * otherwise, interpolated between the two
    */
-  autoware_perception_msgs::msg::PredictedObject cutPredictPathWithDuration(
-    const std_msgs::msg::Header & header,
-    const autoware_perception_msgs::msg::PredictedObject & object_original,
-    const double time_thr) const;
+  std::pair<double, double> compute_decel_and_jerk_from_ttc(const double ttc) const;
 
   StateMachine state_machine_;  //! for state
 
   // Debug
   mutable DebugData debug_data_;
+
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr decision_state_pub_;
 };
 }  // namespace autoware::behavior_velocity_planner
 

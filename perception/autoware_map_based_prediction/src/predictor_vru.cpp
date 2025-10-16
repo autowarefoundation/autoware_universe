@@ -14,10 +14,13 @@
 
 #include "map_based_prediction/predictor_vru.hpp"
 
+#include "map_based_prediction/path_generator.hpp"
 #include "map_based_prediction/utils.hpp"
 
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
+
+#include <lanelet2_core/primitives/Lanelet.h>
 
 #include <algorithm>
 #include <deque>
@@ -34,21 +37,14 @@ using autoware_utils::ScopedTimeTrack;
 
 namespace
 {
-boost::optional<CrosswalkEdgePoints> isReachableCrosswalkEdgePoints(
-  const TrackedObject & object, const lanelet::ConstLanelets & surrounding_lanelets,
-  const lanelet::ConstLanelets & surrounding_crosswalks, const CrosswalkEdgePoints & edge_points,
-  const double time_horizon, const double min_object_vel)
+std::optional<CrosswalkEdgePoints> isReachableCrosswalkEdgePoints(
+  const TrackedObject & object, const Eigen::Vector2d & p1, const Eigen::Vector2d & p2,
+  const lanelet::ConstLanelets & surrounding_lanelets,
+  const lanelet::ConstLanelets & surrounding_crosswalks)
 {
   using Point = boost::geometry::model::d2::point_xy<double>;
 
   const auto & obj_pos = object.kinematics.pose_with_covariance.pose.position;
-  const auto & obj_vel = object.kinematics.twist_with_covariance.twist.linear;
-  const auto yaw = autoware_utils::get_rpy(object.kinematics.pose_with_covariance.pose).z;
-
-  lanelet::BasicPoint2d obj_pos_as_lanelet(obj_pos.x, obj_pos.y);
-
-  const auto & p1 = edge_points.front_center_point;
-  const auto & p2 = edge_points.back_center_point;
 
   CrosswalkEdgePoints ret{p1, {}, {}, p2, {}, {}};
   auto distance_pedestrian_to_p1 = std::hypot(p1.x() - obj_pos.x, p1.y() - obj_pos.y);
@@ -58,11 +54,6 @@ boost::optional<CrosswalkEdgePoints> isReachableCrosswalkEdgePoints(
     ret.swap();
     std::swap(distance_pedestrian_to_p1, distance_pedestrian_to_p2);
   }
-
-  constexpr double stop_velocity_th = 0.14;  // [m/s]
-  const auto estimated_velocity = std::hypot(obj_vel.x, obj_vel.y);
-  const auto is_stop_object = estimated_velocity < stop_velocity_th;
-  const auto velocity = std::max(min_object_vel, estimated_velocity);
 
   const auto isAcrossAnyRoad = [&surrounding_lanelets, &surrounding_crosswalks](
                                  const Point & p_src, const Point & p_dst) {
@@ -120,21 +111,7 @@ boost::optional<CrosswalkEdgePoints> isReachableCrosswalkEdgePoints(
     ret.swap();
   }
 
-  const Eigen::Vector2d pedestrian_to_crosswalk(
-    (ret.front_center_point.x() + ret.back_center_point.x()) / 2.0 - obj_pos.x,
-    (ret.front_center_point.y() + ret.back_center_point.y()) / 2.0 - obj_pos.y);
-  const Eigen::Vector2d pedestrian_heading_direction(
-    obj_vel.x * std::cos(yaw), obj_vel.x * std::sin(yaw));
-  const auto reachable =
-    std::min(distance_pedestrian_to_p1, distance_pedestrian_to_p2) < velocity * time_horizon;
-  const auto heading_for_crosswalk =
-    pedestrian_to_crosswalk.dot(pedestrian_heading_direction) > 0.0;
-
-  if ((reachable && heading_for_crosswalk) || (reachable && is_stop_object)) {
-    return ret;
-  }
-
-  return {};
+  return ret;
 }
 
 bool hasPotentialToReach(
@@ -215,32 +192,11 @@ CrosswalkEdgePoints getCrosswalkEdgePoints(const lanelet::ConstLanelet & crosswa
                              back_center_point,  r_p_back,  l_p_back};
 }
 
-bool isIntersecting(
-  const geometry_msgs::msg::Point & point1, const geometry_msgs::msg::Point & point2,
-  const lanelet::ConstPoint3d & point3, const lanelet::ConstPoint3d & point4)
-{
-  const auto p1 = autoware_utils::create_point(point1.x, point1.y, 0.0);
-  const auto p2 = autoware_utils::create_point(point2.x, point2.y, 0.0);
-  const auto p3 = autoware_utils::create_point(point3.x(), point3.y(), 0.0);
-  const auto p4 = autoware_utils::create_point(point4.x(), point4.y(), 0.0);
-  const auto intersection = autoware_utils::intersect(p1, p2, p3, p4);
-  return intersection.has_value();
-}
-
 bool doesPathCrossFence(
-  const PredictedPath & predicted_path, const lanelet::ConstLineString3d & fence_line)
+  const lanelet::BasicLineString2d & predicted_path, const lanelet::ConstLineString3d & fence_line)
 {
-  // check whether the predicted path cross with fence
-  for (size_t i = 0; i < predicted_path.path.size() - 1; ++i) {
-    for (size_t j = 0; j < fence_line.size() - 1; ++j) {
-      if (isIntersecting(
-            predicted_path.path[i].position, predicted_path.path[i + 1].position, fence_line[j],
-            fence_line[j + 1])) {
-        return true;
-      }
-    }
-  }
-  return false;
+  return boost::geometry::intersects(
+    predicted_path, lanelet::utils::to2D(fence_line.basicLineString()));
 }
 
 }  // namespace
@@ -277,22 +233,24 @@ void PredictorVru::setLaneletMap(std::shared_ptr<lanelet::LaneletMap> lanelet_ma
   for (const auto & linestring : lanelet_map_ptr_->lineStringLayer) {
     if (const std::string type = linestring.attributeOr(lanelet::AttributeName::Type, "none");
         type == "fence") {
-      fences.push_back(lanelet::LineString3d(
-        std::const_pointer_cast<lanelet::LineStringData>(linestring.constData())));
+      fences.emplace_back(std::const_pointer_cast<lanelet::LineStringData>(linestring.constData()));
     }
   }
   fence_layer_ = lanelet::utils::createMap(fences);
 }
 
-bool PredictorVru::doesPathCrossAnyFence(const PredictedPath & predicted_path)
+bool PredictorVru::doesPathCrossAnyFenceBeforeCrosswalk(
+  const PredictedPathWithArrivalIndex & predicted_path)
 {
   lanelet::BasicLineString2d predicted_path_ls;
-  for (const auto & p : predicted_path.path)
-    predicted_path_ls.emplace_back(p.position.x, p.position.y);
+  for (auto i = 0UL; i <= predicted_path.arrival_index; ++i) {
+    const auto & pt = predicted_path.path[i];
+    predicted_path_ls.emplace_back(pt.position.x, pt.position.y);
+  }
   const auto candidates =
     fence_layer_->lineStringLayer.search(lanelet::geometry::boundingBox2d(predicted_path_ls));
   for (const auto & candidate : candidates) {
-    if (doesPathCrossFence(predicted_path, candidate)) {
+    if (doesPathCrossFence(predicted_path_ls, candidate)) {
       return true;
     }
   }
@@ -379,6 +337,73 @@ PredictedObjects PredictorVru::retrieveUndetectedObjects()
   return output;
 }
 
+bool PredictorVru::hasPotentialToReachWithHistory(
+  const TrackedObject & object, const Eigen::Vector2d & center_point,
+  const Eigen::Vector2d & right_point, const Eigen::Vector2d & left_point,
+  const double time_horizon, const double min_object_vel,
+  const double max_crosswalk_user_delta_yaw_threshold_for_lanelet, const bool is_crossing)
+{
+  // Current frame's intention estimation based on geometry and velocity
+  const auto has_crossing_intention = hasPotentialToReach(
+    object, center_point, right_point, left_point, time_horizon, min_object_vel,
+    max_crosswalk_user_delta_yaw_threshold_for_lanelet);
+
+  const auto object_id = autoware_utils::to_hex_string(object.object_id);
+
+  // If the object has no history, use the current estimation as-is and initialize its history
+  if (crosswalk_users_history_.count(object_id) == 0) {
+    return has_crossing_intention;
+  }
+
+  auto & last_object_data = crosswalk_users_history_.at(object_id).back();
+  const auto now = node_.get_clock()->now();
+
+  // Reset the pedestrian crossing intention estimation
+  // when the pedestrian starts or finishes crossing the crosswalk.
+  if (last_object_data.is_crossing != is_crossing) {
+    last_object_data.intention_history.clear();
+  }
+  last_object_data.is_crossing = is_crossing;
+
+  // Find historical record corresponding to the same crossing point (center_point)
+  const auto itr = std::find_if(
+    last_object_data.intention_history.begin(), last_object_data.intention_history.end(),
+    [&center_point](const auto & intention) {
+      return std::hypot(
+               intention.point.x() - center_point.x(), intention.point.y() - center_point.y()) <
+             1e-3;
+    });
+
+  // If this is the first time observing this crossing point, initialize its intention state
+  if (itr == last_object_data.intention_history.end()) {
+    last_object_data.intention_history.push_back(
+      Intention{rclcpp::Time(0, 0, RCL_ROS_TIME), now, center_point});
+    return has_crossing_intention;
+  }
+
+  if (has_crossing_intention) {
+    // If current estimation is "intends to cross"
+    // Consider it a valid crossing intention only if it has been sustained long enough
+    if ((now - itr->last_no_crossing_intention_time).seconds() > crossing_intention_duration_) {
+      itr->last_crossing_intention_time = now;
+      return true;
+    } else {
+      return false;  // Not enough time has passed since intention appeared.
+    }
+  } else {
+    // If current estimation is "no crossing intention"
+    // Confirm the lack of intention only if it has persisted long enough
+    if ((now - itr->last_crossing_intention_time).seconds() > no_crossing_intention_duration_) {
+      itr->last_no_crossing_intention_time = now;
+      return false;
+    } else {
+      return true;  // Not enough time has passed since intention disappeared.
+    }
+  }
+
+  return false;  // should not be reached
+}
+
 PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObject & object)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
@@ -429,7 +454,6 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
   }
 
   auto predicted_object = utils::convertToPredictedObject(mutable_object);
-
   {
     PredictedPath predicted_path =
       path_generator_->generatePathForNonVehicleObject(mutable_object, prediction_time_horizon_);
@@ -462,24 +486,33 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
     }
   }
 
+  const auto within_road = utils::withinRoadLanelet(mutable_object, surrounding_lanelets_with_dist);
+  const auto within_minimum_distance =
+    [&](const geometry_msgs::msg::Point & object, const lanelet::ConstLanelet & ll) {
+      return utils::lateral_distance_to_lanelet_bounds(ll, object) <=
+             max_crosswalk_user_on_road_distance_;
+    };
+
   // If the object is in the crosswalk, generate path to the crosswalk edge
   if (crossing_crosswalk) {
     const auto edge_points = getCrosswalkEdgePoints(crossing_crosswalk.get());
 
-    if (hasPotentialToReach(
+    if (hasPotentialToReachWithHistory(
           mutable_object, edge_points.front_center_point, edge_points.front_right_point,
           edge_points.front_left_point, std::numeric_limits<double>::max(),
-          min_crosswalk_user_velocity_, max_crosswalk_user_delta_yaw_threshold_for_lanelet_)) {
+          min_crosswalk_user_velocity_, max_crosswalk_user_delta_yaw_threshold_for_lanelet_,
+          true)) {
       PredictedPath predicted_path =
         path_generator_->generatePathToTargetPoint(mutable_object, edge_points.front_center_point);
       predicted_path.confidence = 1.0;
       predicted_object.kinematics.predicted_paths.push_back(predicted_path);
     }
 
-    if (hasPotentialToReach(
+    if (hasPotentialToReachWithHistory(
           mutable_object, edge_points.back_center_point, edge_points.back_right_point,
           edge_points.back_left_point, std::numeric_limits<double>::max(),
-          min_crosswalk_user_velocity_, max_crosswalk_user_delta_yaw_threshold_for_lanelet_)) {
+          min_crosswalk_user_velocity_, max_crosswalk_user_delta_yaw_threshold_for_lanelet_,
+          true)) {
       PredictedPath predicted_path =
         path_generator_->generatePathToTargetPoint(mutable_object, edge_points.back_center_point);
       predicted_path.confidence = 1.0;
@@ -488,29 +521,29 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
 
     // If the object is not crossing the crosswalk, in the road lanelets, try to find the closest
     // crosswalk and generate path to the crosswalk edge
-  } else if (utils::withinRoadLanelet(mutable_object, surrounding_lanelets_with_dist)) {
+  } else if (within_road) {
     lanelet::ConstLanelet closest_crosswalk{};
     const auto & obj_pose = mutable_object.kinematics.pose_with_covariance.pose;
     const auto found_closest_crosswalk =
       lanelet::utils::query::getClosestLanelet(crosswalks_, obj_pose, &closest_crosswalk);
-
-    if (found_closest_crosswalk) {
+    if (found_closest_crosswalk && within_minimum_distance(obj_pose.position, closest_crosswalk)) {
       const auto edge_points = getCrosswalkEdgePoints(closest_crosswalk);
-
-      if (hasPotentialToReach(
+      if (hasPotentialToReachWithHistory(
             mutable_object, edge_points.front_center_point, edge_points.front_right_point,
             edge_points.front_left_point, prediction_time_horizon_ * 2.0,
-            min_crosswalk_user_velocity_, max_crosswalk_user_delta_yaw_threshold_for_lanelet_)) {
+            min_crosswalk_user_velocity_, max_crosswalk_user_delta_yaw_threshold_for_lanelet_,
+            true)) {
         PredictedPath predicted_path = path_generator_->generatePathToTargetPoint(
           mutable_object, edge_points.front_center_point);
         predicted_path.confidence = 1.0;
         predicted_object.kinematics.predicted_paths.push_back(predicted_path);
       }
 
-      if (hasPotentialToReach(
+      if (hasPotentialToReachWithHistory(
             mutable_object, edge_points.back_center_point, edge_points.back_right_point,
             edge_points.back_left_point, prediction_time_horizon_ * 2.0,
-            min_crosswalk_user_velocity_, max_crosswalk_user_delta_yaw_threshold_for_lanelet_)) {
+            min_crosswalk_user_velocity_, max_crosswalk_user_delta_yaw_threshold_for_lanelet_,
+            true)) {
         PredictedPath predicted_path =
           path_generator_->generatePathToTargetPoint(mutable_object, edge_points.back_center_point);
         predicted_path.confidence = 1.0;
@@ -532,42 +565,44 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
         continue;
       }
     }
+    if (within_road && !within_minimum_distance(obj_pos, crosswalk)) {
+      continue;
+    }
 
     const auto edge_points = getCrosswalkEdgePoints(crosswalk);
 
-    const auto reachable_first = hasPotentialToReach(
+    const auto reachable_first = hasPotentialToReachWithHistory(
       mutable_object, edge_points.front_center_point, edge_points.front_right_point,
       edge_points.front_left_point, prediction_time_horizon_, min_crosswalk_user_velocity_,
-      max_crosswalk_user_delta_yaw_threshold_for_lanelet_);
-    const auto reachable_second = hasPotentialToReach(
+      max_crosswalk_user_delta_yaw_threshold_for_lanelet_, false);
+    const auto reachable_second = hasPotentialToReachWithHistory(
       mutable_object, edge_points.back_center_point, edge_points.back_right_point,
       edge_points.back_left_point, prediction_time_horizon_, min_crosswalk_user_velocity_,
-      max_crosswalk_user_delta_yaw_threshold_for_lanelet_);
+      max_crosswalk_user_delta_yaw_threshold_for_lanelet_, false);
 
     if (!reachable_first && !reachable_second) {
       continue;
     }
 
     const auto reachable_crosswalk = isReachableCrosswalkEdgePoints(
-      mutable_object, surrounding_lanelets, surrounding_crosswalks, edge_points,
-      prediction_time_horizon_, min_crosswalk_user_velocity_);
+      mutable_object, edge_points.front_center_point, edge_points.back_center_point,
+      surrounding_lanelets, surrounding_crosswalks);
 
-    if (!reachable_crosswalk) {
+    if (!reachable_crosswalk.has_value()) {
       continue;
     }
 
-    PredictedPath predicted_path = path_generator_->generatePathForCrosswalkUser(
-      mutable_object, reachable_crosswalk.get(), prediction_time_horizon_);
+    auto predicted_path = path_generator_->generatePathForCrosswalkUser(
+      mutable_object, reachable_crosswalk.value(), prediction_time_horizon_);
     predicted_path.confidence = 1.0;
 
     if (predicted_path.path.empty()) {
       continue;
     }
     // If the predicted path to the crosswalk is crossing the fence, don't use it
-    if (doesPathCrossAnyFence(predicted_path)) {
+    if (doesPathCrossAnyFenceBeforeCrosswalk(predicted_path)) {
       continue;
     }
-
     predicted_object.kinematics.predicted_paths.push_back(predicted_path);
   }
 
@@ -601,6 +636,7 @@ void PredictorVru::updateCrosswalkUserHistory(
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
+  const auto now = node_.get_clock()->now();
   CrosswalkUserData crosswalk_user_data;
   crosswalk_user_data.header = header;
   crosswalk_user_data.tracked_object = object;
@@ -610,6 +646,9 @@ void PredictorVru::updateCrosswalkUserHistory(
     return;
   }
 
+  const auto last_object_data = crosswalk_users_history_.at(object_id).back();
+  crosswalk_user_data.intention_history = last_object_data.intention_history;
+  crosswalk_user_data.is_crossing = last_object_data.is_crossing;
   crosswalk_users_history_.at(object_id).push_back(crosswalk_user_data);
 }
 

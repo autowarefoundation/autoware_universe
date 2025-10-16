@@ -33,6 +33,7 @@ jobs:
           files: |
             perception/**
             sensing/**
+            planning/autoware_diffusion_planner/**
 
       - name: Output result
         run: |
@@ -58,6 +59,7 @@ jobs:
     with:
       container: ghcr.io/autowarefoundation/autoware:universe-devel
       run-condition: ${{ needs.require-label.outputs.result == 'true' }}
+      runner: "['self-hosted', 'Linux', 'X64']"
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -70,7 +72,6 @@ jobs:
       container-suffix: -cuda
       run-condition: ${{ needs.check-if-cuda-job-is-needed.outputs.cuda_job_is_needed == 'true' }}
       runner: "['self-hosted', 'Linux', 'X64']"
-      build-pre-command: taskset --cpu-list 0-6
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
 

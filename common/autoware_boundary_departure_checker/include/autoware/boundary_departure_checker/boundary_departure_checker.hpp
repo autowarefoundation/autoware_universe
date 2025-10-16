@@ -38,9 +38,9 @@
 #include <lanelet2_core/geometry/LineString.h>
 #include <lanelet2_core/geometry/Polygon.h>
 
-#include <map>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -59,10 +59,10 @@ public:
   }
 
   BoundaryDepartureChecker(
-    const Param & param, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
+    Param param, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
     std::shared_ptr<autoware_utils::TimeKeeper> time_keeper =
       std::make_shared<autoware_utils::TimeKeeper>())
-  : param_(param),
+  : param_(std::move(param)),
     vehicle_info_ptr_(std::make_shared<autoware::vehicle_info_utils::VehicleInfo>(vehicle_info)),
     time_keeper_(std::move(time_keeper))
   {
@@ -141,19 +141,54 @@ public:
     const SteeringReport & current_steering);
 
   /**
-   * @brief Find closest uncrossable boundary segments for the left and right sides of the ego
-   * vehicle.
+   * @brief Queries a spatial index (R-tree) to find nearby uncrossable lane boundaries and filters
+   * them.
    *
-   * Queries an R-tree to find the nearest segments to the ego's left and right footprints,
-   * ensuring no duplicate segments are recorded for a given lanelet line string.
-   *
-   * @param ego_sides_from_footprints Left and right polygonal side representations of ego
-   * footprints.
-   * @return BoundarySideWithIdx containing nearest segments on each side or error string if
-   * prerequisites fail.
+   * @param ego_ref_segment The reference side of the ego vehicle (e.g., the left side) used as the
+   * query origin.
+   * @param ego_opposite_ref_segment The opposite side of the ego vehicle (e.g., the right side),
+   * used to filter out boundaries on the wrong side.
+   * @param ego_z_position The current vertical (Z-axis) position of the ego vehicle, used to filter
+   * boundaries by height.
+   * @param unique_id A set of segment IDs that have already been processed, used to avoid adding
+   * duplicate boundaries.
+   * @return A vector of `SegmentWithIdx` containing the filtered boundary segments that are deemed
+   * relevant and close to the reference side.
    */
-  tl::expected<BoundarySideWithIdx, std::string> get_boundary_segments_from_side(
-    const EgoSides & ego_sides_from_footprints);
+  std::vector<SegmentWithIdx> find_closest_boundary_segments(
+    const Segment2d & ego_ref_segment, const Segment2d & ego_opposite_ref_segment,
+    const double ego_z_position,
+    const std::unordered_set<IdxForRTreeSegment, IdxForRTreeSegmentHash> & unique_id);
+
+  /**
+   * @brief A helper function to find closest boundaries and update the provided result containers.
+   *
+   * @param ego_ref_segment Reference ego side segment, passed to `find_closest_boundary_segments`.
+   * @param ego_opposite_ref_segment Opposite ego side segment, passed to
+   * `find_closest_boundary_segments`.
+   * @param ego_z_position The ego vehicle's Z-position, passed to `find_closest_boundary_segments`.
+   * @param[in, out] unique_ids A set of unique segment IDs. Newly found IDs will be inserted into
+   * this set.
+   * @param[out] output_segments The vector where newly found, relevant segments will be appended.
+   */
+  void update_closest_boundary_segments(
+    const Segment2d & ego_ref_segment, const Segment2d & ego_opposite_ref_segment,
+    const double ego_z_position,
+    std::unordered_set<IdxForRTreeSegment, IdxForRTreeSegmentHash> & unique_ids,
+    std::vector<SegmentWithIdx> & output_segments);
+
+  /**
+   * @brief Collects all relevant uncrossable boundary segments along a predicted trajectory.
+   *
+   * @param ego_sides_from_footprints A container of the vehicle's left and right side segments for
+   * each point along the trajectory.
+   * @param trimmed_pred_trajectory The predicted trajectory of the ego vehicle, used to get the
+   * Z-position at each step.
+   * @return A `BoundarySideWithIdx` struct containing two vectors: one for all unique, relevant
+   * boundaries found to the left of the trajectory, and one for the right.
+   */
+  BoundarySideWithIdx get_boundary_segments(
+    const EgoSides & ego_sides_from_footprints, const TrajectoryPoints & trimmed_pred_trajectory);
 
   /**
    * @brief Select the closest projections to road boundaries for a specific side.
@@ -162,7 +197,6 @@ public:
    * trajectory index, and selects the best candidate based on lateral distance and classification
    * logic (CRITICAL/NEAR).
    *
-   * @param aw_ref_traj          Reference trajectory used to compute longitudinal distances.
    * @param projections_to_bound Abnormality-aware projections to boundaries.
    * @param side_key             Side to process (left or right).
    * @return Vector of closest projections with departure classification, or an error message on
@@ -170,8 +204,8 @@ public:
    */
   tl::expected<std::vector<ClosestProjectionToBound>, std::string>
   get_closest_projections_to_boundaries_side(
-    const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
-    const Abnormalities<ProjectionsToBound> & projections_to_bound, const SideKey side_key);
+    const Abnormalities<ProjectionsToBound> & projections_to_bound, const double min_braking_dist,
+    const double max_braking_dist, const SideKey side_key);
 
   /**
    * @brief Select the closest projections to boundaries for both sides based on all abnormality
@@ -181,14 +215,13 @@ public:
    * type based on braking feasibility (APPROACHING_DEPARTURE) using trajectory spacing and braking
    * model.
    *
-   * @param aw_ref_traj          Reference trajectory.
    * @param projections_to_bound Abnormality-wise projections to boundaries.
    * @return ClosestProjectionsToBound structure containing selected points for both sides, or error
    * string.
    */
   tl::expected<ClosestProjectionsToBound, std::string> get_closest_projections_to_boundaries(
-    const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
-    const Abnormalities<ProjectionsToBound> & projections_to_bound);
+    const Abnormalities<ProjectionsToBound> & projections_to_bound, const double curr_vel,
+    const double curr_acc);
 
   /**
    * @brief Generate filtered departure points for both left and right sides.
@@ -197,18 +230,18 @@ public:
    * filtering based on hysteresis and distance, and grouping results using side keys.
    *
    * @param projections_to_bound Closest projections to road boundaries for each side.
-   * @param lon_offset_m         Longitudinal offset from ego to front of trajectory (including
-   * vehicle length).
+   * @param pred_traj_idx_to_ref_traj_lon_dist mapping from an index of the predicted trajectory to
+   * the corresponding arc length on the reference trajectory
    * @return Side-keyed container of filtered departure points.
    */
   Side<DeparturePoints> get_departure_points(
-    const ClosestProjectionsToBound & projections_to_bound, const double lon_offset_m);
+    const ClosestProjectionsToBound & projections_to_bound,
+    const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist);
   // === Abnormalities
 
 private:
   Param param_;
   lanelet::LaneletMapPtr lanelet_map_ptr_;
-  std::unique_ptr<Param> param_ptr_;
   std::shared_ptr<VehicleInfo> vehicle_info_ptr_;
   std::unique_ptr<UncrossableBoundRTree> uncrossable_boundaries_rtree_ptr_;
 

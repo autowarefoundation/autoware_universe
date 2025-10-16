@@ -124,6 +124,8 @@ public:
   struct PlannerParam
   {
     bool show_processing_time;
+    // Time to keep an object after its detection is lost.
+    double lost_detection_timeout;
     // param for stop position
     double stop_distance_from_object_preferred;
     double stop_distance_from_crosswalk_limit;
@@ -204,6 +206,8 @@ public:
     geometry_msgs::msg::Point position{};
     std::optional<CollisionPoint> collision_point{};
 
+    rclcpp::Time last_detection_time{rclcpp::Time(0, 0, RCL_ROS_TIME)};
+
     void transitState(
       const rclcpp::Time & now, const geometry_msgs::msg::Point & position, const double vel,
       const bool is_ego_yielding, const std::optional<CollisionPoint> & collision_point,
@@ -246,10 +250,11 @@ public:
         if (
           isVehicleType(classification) && ego_crosswalk_passage_direction &&
           collision_point->crosswalk_passage_direction) {
-          double direction_diff = std::abs(std::fmod(
-            collision_point->crosswalk_passage_direction.value() -
-              ego_crosswalk_passage_direction.value(),
-            M_PI_2));
+          double direction_diff = std::abs(
+            std::fmod(
+              collision_point->crosswalk_passage_direction.value() -
+                ego_crosswalk_passage_direction.value(),
+              M_PI_2));
           direction_diff = std::min(direction_diff, M_PI_2 - direction_diff);
           if (direction_diff < planner_param.vehicle_object_cross_angle_threshold) {
             collision_state = CollisionState::IGNORE;
@@ -329,15 +334,16 @@ public:
       objects.at(uuid).collision_point = collision_point;
       objects.at(uuid).position = position;
       objects.at(uuid).classification = classification;
+      objects.at(uuid).last_detection_time = now;
     }
-    void finalize()
+    void finalize(const rclcpp::Time & now, const PlannerParam & planner_param)
     {
       // remove objects not set in current_uuids_
       std::vector<unique_identifier_msgs::msg::UUID> obsolete_uuids;
       for (const auto & object : objects) {
         if (
-          std::find(current_uuids_.begin(), current_uuids_.end(), object.first) ==
-          current_uuids_.end()) {
+          (now - object.second.last_detection_time).seconds() >
+          planner_param.lost_detection_timeout) {
           obsolete_uuids.push_back(object.first);
         }
       }

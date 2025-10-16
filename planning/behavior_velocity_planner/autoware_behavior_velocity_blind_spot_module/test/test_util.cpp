@@ -70,12 +70,14 @@ protected:
 
     // parameter
     auto node_options = rclcpp::NodeOptions{};
-    node_options.arguments(std::vector<std::string>{
-      "--ros-args",
-      "--params-file",
-      ament_index_cpp::get_package_share_directory("autoware_behavior_velocity_blind_spot_module") +
-        "/config/blind_spot.param.yaml",
-    });
+    node_options.arguments(
+      std::vector<std::string>{
+        "--ros-args",
+        "--params-file",
+        ament_index_cpp::get_package_share_directory(
+          "autoware_behavior_velocity_blind_spot_module") +
+          "/config/blind_spot.param.yaml",
+      });
 
     auto node = rclcpp::Node::make_shared("blind_spot_test", node_options);
     param = autoware::behavior_velocity_planner::PlannerParam::init(*node, "blind_spot");
@@ -381,12 +383,14 @@ protected:
 
     // parameter
     auto node_options = rclcpp::NodeOptions{};
-    node_options.arguments(std::vector<std::string>{
-      "--ros-args",
-      "--params-file",
-      ament_index_cpp::get_package_share_directory("autoware_behavior_velocity_blind_spot_module") +
-        "/config/blind_spot.param.yaml",
-    });
+    node_options.arguments(
+      std::vector<std::string>{
+        "--ros-args",
+        "--params-file",
+        ament_index_cpp::get_package_share_directory(
+          "autoware_behavior_velocity_blind_spot_module") +
+          "/config/blind_spot.param.yaml",
+      });
 
     auto node = rclcpp::Node::make_shared("blind_spot_test", node_options);
     param = autoware::behavior_velocity_planner::PlannerParam::init(*node, "blind_spot");

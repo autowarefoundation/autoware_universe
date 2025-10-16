@@ -15,6 +15,7 @@
 #ifndef DEBUG_HPP_
 #define DEBUG_HPP_
 
+#include "parameters.hpp"
 #include "types.hpp"
 
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
@@ -40,8 +41,7 @@ namespace autoware::motion_velocity_planner::run_out
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 
-inline MarkerArray make_debug_footprint_markers(
-  const run_out::TrajectoryCornerFootprint & ego, const std::vector<run_out::Object> & objects)
+inline MarkerArray make_debug_ego_footprint_markers(const run_out::TrajectoryCornerFootprint & ego)
 {
   MarkerArray markers;
   Marker m;
@@ -72,35 +72,54 @@ inline MarkerArray make_debug_footprint_markers(
     m.points.push_back(universe_utils::createPoint(p.x(), p.y(), 0.0));
   }
   markers.markers.push_back(m);
+  return markers;
+}
 
+inline MarkerArray make_debug_objects_footprint_markers(
+  const std::vector<run_out::Object> & objects)
+{
+  MarkerArray markers;
+  Marker m;
+  m.header.frame_id = "map";
+  m.type = Marker::LINE_STRIP;
+  m.color = universe_utils::createMarkerColor(0.0, 1.0, 0.0, 1.0);
+  m.scale.x = 0.2;
   m.type = Marker::LINE_LIST;
-  m.points.clear();
   m.ns = "objects_footprints";
   m.color.r = 1.0;
   for (const auto & object : objects) {
     for (const auto & footprint : object.predicted_path_footprints) {
       const auto & f = footprint.predicted_path_footprint;
       for (auto i = 0UL; i + 1 < f.corner_linestrings[front_left].size(); ++i) {
-        m.points.push_back(universe_utils::createPoint(
-          f.corner_linestrings[front_left][i].x(), f.corner_linestrings[front_left][i].y(), 0.0));
-        m.points.push_back(universe_utils::createPoint(
-          f.corner_linestrings[front_left][i + 1].x(), f.corner_linestrings[front_left][i + 1].y(),
-          0.0));
-        m.points.push_back(universe_utils::createPoint(
-          f.corner_linestrings[front_right][i].x(), f.corner_linestrings[front_right][i].y(), 0.0));
-        m.points.push_back(universe_utils::createPoint(
-          f.corner_linestrings[front_right][i + 1].x(),
-          f.corner_linestrings[front_right][i + 1].y(), 0.0));
-        m.points.push_back(universe_utils::createPoint(
-          f.corner_linestrings[rear_left][i].x(), f.corner_linestrings[rear_left][i].y(), 0.0));
-        m.points.push_back(universe_utils::createPoint(
-          f.corner_linestrings[rear_left][i + 1].x(), f.corner_linestrings[rear_left][i + 1].y(),
-          0.0));
-        m.points.push_back(universe_utils::createPoint(
-          f.corner_linestrings[rear_right][i].x(), f.corner_linestrings[rear_right][i].y(), 0.0));
-        m.points.push_back(universe_utils::createPoint(
-          f.corner_linestrings[rear_right][i + 1].x(), f.corner_linestrings[rear_right][i + 1].y(),
-          0.0));
+        m.points.push_back(
+          universe_utils::createPoint(
+            f.corner_linestrings[front_left][i].x(), f.corner_linestrings[front_left][i].y(), 0.0));
+        m.points.push_back(
+          universe_utils::createPoint(
+            f.corner_linestrings[front_left][i + 1].x(),
+            f.corner_linestrings[front_left][i + 1].y(), 0.0));
+        m.points.push_back(
+          universe_utils::createPoint(
+            f.corner_linestrings[front_right][i].x(), f.corner_linestrings[front_right][i].y(),
+            0.0));
+        m.points.push_back(
+          universe_utils::createPoint(
+            f.corner_linestrings[front_right][i + 1].x(),
+            f.corner_linestrings[front_right][i + 1].y(), 0.0));
+        m.points.push_back(
+          universe_utils::createPoint(
+            f.corner_linestrings[rear_left][i].x(), f.corner_linestrings[rear_left][i].y(), 0.0));
+        m.points.push_back(
+          universe_utils::createPoint(
+            f.corner_linestrings[rear_left][i + 1].x(), f.corner_linestrings[rear_left][i + 1].y(),
+            0.0));
+        m.points.push_back(
+          universe_utils::createPoint(
+            f.corner_linestrings[rear_right][i].x(), f.corner_linestrings[rear_right][i].y(), 0.0));
+        m.points.push_back(
+          universe_utils::createPoint(
+            f.corner_linestrings[rear_right][i + 1].x(),
+            f.corner_linestrings[rear_right][i + 1].y(), 0.0));
       }
     }
   }
@@ -108,7 +127,7 @@ inline MarkerArray make_debug_footprint_markers(
   return markers;
 }
 
-inline MarkerArray make_debug_object_markers(const std::vector<Object> & objects)
+inline MarkerArray make_debug_collisions_markers(const std::vector<Object> & objects)
 {
   MarkerArray markers;
   Marker m;
@@ -135,7 +154,7 @@ inline MarkerArray make_debug_object_markers(const std::vector<Object> & objects
     for (const auto & col : o.collisions) {
       ss << std::setw(10) << o.uuid.substr(0, 5) + "|";
       if (col.type == collision) ss << std::setw(10) << "C|";
-      if (col.type == ignored_collision) ss << std::setw(10) << "IC|";
+      if (col.type == ignored_collision) ss << std::setw(10) << "I|";
       if (col.type == pass_first_no_collision) ss << std::setw(10) << "P-|";
       if (col.type == no_collision) ss << std::setw(10) << "-|";
       ss << std::setw(20) << col.ego_time_interval << "|";
@@ -189,7 +208,7 @@ inline MarkerArray make_debug_decisions_markers(const ObjectDecisionsTracker & d
       case collision:
         return "C|";
       case ignored_collision:
-        return "IC|";
+        return "I|";
       case pass_first_no_collision:
         return "P|";
       case no_collision:
@@ -239,7 +258,7 @@ inline motion_utils::VirtualWalls create_virtual_walls(
 {
   motion_utils::VirtualWalls virtual_walls;
   motion_utils::VirtualWall wall;
-  wall.text = "run_out (mvp)";
+  wall.text = "run_out";
   wall.longitudinal_offset = front_offset;
   wall.style = motion_utils::VirtualWallType::stop;
   for (const auto & stop_point : result.stop_points) {
@@ -358,7 +377,7 @@ inline MarkerArray make_debug_markers(
   const TrajectoryCornerFootprint & ego_footprint, const std::vector<Object> & filtered_objects,
   const ObjectDecisionsTracker & decisions_tracker,
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
-  const double comfortable_time_to_stop, const FilteringData & filtering_data)
+  const FilteringData & filtering_data, const Parameters & params)
 {
   MarkerArray markers;
   const auto concat = [&](MarkerArray && a) {
@@ -366,11 +385,26 @@ inline MarkerArray make_debug_markers(
       markers.markers.end(), std::make_move_iterator(a.markers.begin()),
       std::make_move_iterator(a.markers.end()));
   };
-  concat(run_out::make_debug_footprint_markers(ego_footprint, filtered_objects));
-  concat(run_out::make_debug_object_markers(filtered_objects));
-  concat(run_out::make_debug_decisions_markers(decisions_tracker));
-  concat(run_out::make_debug_min_stop_marker(smoothed_trajectory_points, comfortable_time_to_stop));
-  concat(run_out::make_debug_filtering_data_marker(filtering_data));
+  if (params.debug.enabled_markers.ego_footprint) {
+    concat(run_out::make_debug_ego_footprint_markers(ego_footprint));
+  }
+  if (params.debug.enabled_markers.objects) {
+    concat(run_out::make_debug_objects_footprint_markers(filtered_objects));
+  }
+  if (params.debug.enabled_markers.collisions) {
+    concat(run_out::make_debug_collisions_markers(filtered_objects));
+  }
+  if (params.debug.enabled_markers.decisions) {
+    concat(run_out::make_debug_decisions_markers(decisions_tracker));
+  }
+  if (params.debug.enabled_markers.filtering_data) {
+    concat(run_out::make_debug_filtering_data_marker(filtering_data));
+  }
+  concat(
+    run_out::make_debug_min_stop_marker(
+      smoothed_trajectory_points,
+      params.ignore_collision_conditions.if_ego_arrives_first_and_cannot_stop
+        .calculated_stop_time_limit));
   return markers;
 }
 

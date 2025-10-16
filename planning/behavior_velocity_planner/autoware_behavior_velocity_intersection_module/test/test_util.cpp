@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // TODO(Mamoru Sobue): create project include dir later
-#include "../src/util.hpp"
+#include "autoware/behavior_velocity_intersection_module/util.hpp"
 
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>

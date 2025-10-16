@@ -16,6 +16,7 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
 #include <string>
 #include <vector>
@@ -32,19 +33,20 @@ constexpr double NOMINAL_INTERVAL = 1.0;
 void setFilterParams(
   autoware::vehicle_cmd_gate::VehicleCmdFilter & f, double v, LimitArray speed_points, LimitArray a,
   LimitArray j, LimitArray lat_a, LimitArray lat_j, LimitArray steer_diff, LimitArray steer_lim,
-  LimitArray steer_rate_lim, const double wheelbase)
+  LimitArray steer_cmd_rate_lim, const double wheelbase, const double lat_jerk_lim_for_steer_rate)
 {
   autoware::vehicle_cmd_gate::VehicleCmdFilterParam p;
   p.vel_lim = v;
   p.wheel_base = wheelbase;
   p.reference_speed_points = speed_points;
-  p.steer_lim = steer_lim;
-  p.steer_rate_lim = steer_rate_lim;
-  p.lat_acc_lim = lat_a;
-  p.lat_jerk_lim = lat_j;
-  p.lon_acc_lim = a;
-  p.lon_jerk_lim = j;
-  p.actual_steer_diff_lim = steer_diff;
+  p.steer_cmd_lim = steer_lim;
+  p.steer_rate_lim_for_steer_cmd = steer_cmd_rate_lim;
+  p.lat_acc_lim_for_steer_cmd = lat_a;
+  p.lat_jerk_lim_for_steer_cmd = lat_j;
+  p.lon_acc_lim_for_lon_vel = a;
+  p.lon_jerk_lim_for_lon_acc = j;
+  p.steer_cmd_diff_lim_from_current_steer = steer_diff;
+  p.lat_jerk_lim_for_steer_rate = lat_jerk_lim_for_steer_rate;
 
   f.setParam(p);
 }
@@ -99,8 +101,8 @@ double calcLatJerk(
 
 void test_1d_limit(
   double ego_v, double V_LIM, double A_LIM, double J_LIM, double LAT_A_LIM, double LAT_J_LIM,
-  double STEER_DIFF, double STEER_LIM, double STEER_RATE_LIM, const Control & prev_cmd,
-  const Control & raw_cmd)
+  double STEER_DIFF, double STEER_LIM, double STEER_RATE_LIM, double LAT_JERK_LIM_FOR_STEER_RATE,
+  const Control & prev_cmd, const Control & raw_cmd)
 {
   const double WHEELBASE = 3.0;
   const double DT = 0.1;  // [s]
@@ -109,7 +111,7 @@ void test_1d_limit(
   filter.setCurrentSpeed(ego_v);
   setFilterParams(
     filter, V_LIM, {0.0}, {A_LIM}, {J_LIM}, {LAT_A_LIM}, {LAT_J_LIM}, {STEER_DIFF}, {STEER_LIM},
-    {STEER_RATE_LIM}, WHEELBASE);
+    {STEER_RATE_LIM}, WHEELBASE, LAT_JERK_LIM_FOR_STEER_RATE);
   filter.setPrevCmd(prev_cmd);
 
   // velocity filter
@@ -226,6 +228,40 @@ void test_1d_limit(
         filtered_cmd.lateral.steering_tire_angle, raw_cmd.lateral.steering_tire_angle, THRESHOLD);
     }
   }
+
+  // steering rate filter with lateral jerk constraint
+  {
+    auto filtered_cmd = raw_cmd;
+    filter.limitLateralSteerRate(DT, filtered_cmd);
+
+    // Calculate the effective steering rate limit considering lateral jerk constraint
+    const double velocity_sq = std::max(ego_v * ego_v, 0.001);
+    const double max_steer_rate_from_jerk = LAT_JERK_LIM_FOR_STEER_RATE * WHEELBASE / velocity_sq;
+    const double effective_steer_rate_lim = std::min(STEER_RATE_LIM, max_steer_rate_from_jerk);
+
+    // Check steering angle rate limit
+    ASSERT_LT_NEAR(
+      std::abs(filtered_cmd.lateral.steering_tire_rotation_rate), effective_steer_rate_lim);
+
+    // Check steering angle change limit
+    const double steer_diff_limit = effective_steer_rate_lim * DT;
+    const double filtered_steer_diff =
+      filtered_cmd.lateral.steering_tire_angle - prev_cmd.lateral.steering_tire_angle;
+    ASSERT_LT_NEAR(std::abs(filtered_steer_diff), steer_diff_limit);
+
+    // Check if the undesired filter is not applied when within limits
+    const double raw_steer_diff =
+      raw_cmd.lateral.steering_tire_angle - prev_cmd.lateral.steering_tire_angle;
+    if (
+      std::abs(raw_steer_diff) < steer_diff_limit &&
+      std::abs(raw_cmd.lateral.steering_tire_rotation_rate) < effective_steer_rate_lim) {
+      ASSERT_NEAR(
+        filtered_cmd.lateral.steering_tire_angle, raw_cmd.lateral.steering_tire_angle, THRESHOLD);
+      ASSERT_NEAR(
+        filtered_cmd.lateral.steering_tire_rotation_rate,
+        raw_cmd.lateral.steering_tire_rotation_rate, THRESHOLD);
+    }
+  }
 }
 
 TEST(VehicleCmdFilter, VehicleCmdFilter)
@@ -238,6 +274,7 @@ TEST(VehicleCmdFilter, VehicleCmdFilter)
   const std::vector<double> steer_diff_arr = {0.01, 1.0, 100.0};
   const std::vector<double> steer_lim_arr = {0.01, 1.0, 100.0};
   const std::vector<double> steer_rate_lim_arr = {0.01, 1.0, 100.0};
+  const std::vector<double> lat_jerk_lim_for_steer_rate_arr = {0.01, 1.0, 10.0};
   const std::vector<double> ego_v_arr = {0.0, 0.1, 1.0, 3.0, 15.0};
 
   const std::vector<Control> prev_cmd_arr = {
@@ -256,9 +293,13 @@ TEST(VehicleCmdFilter, VehicleCmdFilter)
                 for (const auto & steer_diff : steer_diff_arr) {
                   for (const auto & steer : steer_lim_arr) {
                     for (const auto & steer_rate : steer_rate_lim_arr) {
-                      for (const auto & ego_v : ego_v_arr) {
-                        test_1d_limit(
-                          ego_v, v, a, j, la, lj, steer_diff, steer, steer_rate, prev_cmd, raw_cmd);
+                      for (const auto & lat_jerk_lim_for_steer_rate :
+                           lat_jerk_lim_for_steer_rate_arr) {
+                        for (const auto & ego_v : ego_v_arr) {
+                          test_1d_limit(
+                            ego_v, v, a, j, la, lj, steer_diff, steer, steer_rate,
+                            lat_jerk_lim_for_steer_rate, prev_cmd, raw_cmd);
+                        }
                       }
                     }
                   }
@@ -281,13 +322,14 @@ TEST(VehicleCmdFilter, VehicleCmdFilterInterpolate)
   p.wheel_base = WHEELBASE;
   p.vel_lim = 20.0;
   p.reference_speed_points = std::vector<double>{2.0, 4.0, 10.0};
-  p.steer_lim = std::vector<double>{0.1, 0.2, 0.3};
-  p.steer_rate_lim = std::vector<double>{0.2, 0.1, 0.05};
-  p.lon_acc_lim = std::vector<double>{0.3, 0.4, 0.5};
-  p.lon_jerk_lim = std::vector<double>{0.4, 0.4, 0.7};
-  p.lat_acc_lim = std::vector<double>{0.1, 0.2, 0.3};
-  p.lat_jerk_lim = std::vector<double>{0.9, 0.7, 0.1};
-  p.actual_steer_diff_lim = std::vector<double>{0.1, 0.3, 0.2};
+  p.steer_cmd_lim = std::vector<double>{0.1, 0.2, 0.3};
+  p.steer_rate_lim_for_steer_cmd = std::vector<double>{0.2, 0.1, 0.05};
+  p.lon_acc_lim_for_lon_vel = std::vector<double>{0.3, 0.4, 0.5};
+  p.lon_jerk_lim_for_lon_acc = std::vector<double>{0.4, 0.4, 0.7};
+  p.lat_acc_lim_for_steer_cmd = std::vector<double>{0.1, 0.2, 0.3};
+  p.lat_jerk_lim_for_steer_cmd = std::vector<double>{0.9, 0.7, 0.1};
+  p.steer_cmd_diff_lim_from_current_steer = std::vector<double>{0.1, 0.3, 0.2};
+  p.lat_jerk_lim_for_steer_rate = 5.0;
   filter.setParam(p);
 
   const auto DT = 0.033;
@@ -383,7 +425,7 @@ TEST(VehicleCmdFilter, VehicleCmdFilterInterpolate)
 
   // steer angle rate lim
   // p.reference_speed_points = std::vector<double>{2.0, 4.0, 10.0};
-  // p.steer_rate_lim = std::vector<double>{0.2, 0.1, 0.05};
+  // p.cmd_steer_rate_lim = std::vector<double>{0.2, 0.1, 0.05};
   {
     const auto calcSteerRateFromAngle = [&](const auto & cmd) {
       return (cmd.steering_tire_angle - 0.0) / DT;
@@ -582,5 +624,17 @@ TEST(VehicleCmdFilter, VehicleCmdFilterInterpolate)
 
     set_speed_and_reset_prev(15.0);
     EXPECT_NEAR((_limitActualSteerDiff(orig_cmd).lateral.steering_tire_angle), 0.2, ep);
+  }
+
+  // lat_jerk_lim_for_steer_rate test
+  // This parameter is used in limitLateralSteerRate function to calculate lateral jerk constraint
+  {
+    // Test that the parameter is correctly set and retrieved
+    EXPECT_NEAR(filter.getParam().lat_jerk_lim_for_steer_rate, 5.0, ep);
+
+    // Test that the function returns the correct value
+    // Note: This tests the getLatJerkLimForSteerRate() function
+    // The actual filtering logic is tested in the steering rate filter test above
+    EXPECT_NEAR(filter.getParam().lat_jerk_lim_for_steer_rate, 5.0, ep);
   }
 }

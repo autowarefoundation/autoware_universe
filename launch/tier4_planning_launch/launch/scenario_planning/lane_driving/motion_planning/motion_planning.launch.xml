@@ -1,4 +1,6 @@
 <launch>
+  <arg name="input_objects_topic_name"/>
+  <arg name="input_pointcloud_topic_name"/>
   <arg name="interface_input_topic" default="/planning/scenario_planning/lane_driving/behavior_planning/path"/>
   <arg name="interface_output_topic" default="/planning/scenario_planning/lane_driving/trajectory"/>
 
@@ -8,8 +10,9 @@
   <arg name="launch_dynamic_obstacle_stop_module" default="true"/>
   <arg name="launch_out_of_lane_module" default="true"/>
   <arg name="launch_obstacle_velocity_limiter_module" default="true"/>
-  <arg name="launch_mvp_run_out_module" default="true"/>
+  <arg name="launch_run_out_module" default="true"/>
   <arg name="launch_boundary_departure_prevention_module" default="true"/>
+  <arg name="launch_road_user_stop_module" default="true"/>
   <arg name="launch_module_list_end" default="&quot;&quot;]"/>
 
   <!-- assemble launch config for motion velocity planner -->
@@ -47,12 +50,17 @@
   <let
     name="motion_velocity_planner_launch_modules"
     value="$(eval &quot;'$(var motion_velocity_planner_launch_modules)' + 'autoware::motion_velocity_planner::RunOutModule, '&quot;)"
-    if="$(var launch_mvp_run_out_module)"
+    if="$(var launch_run_out_module)"
   />
   <let
     name="motion_velocity_planner_launch_modules"
     value="$(eval &quot;'$(var motion_velocity_planner_launch_modules)' + 'autoware::motion_velocity_planner::experimental::BoundaryDeparturePreventionModule, '&quot;)"
     if="$(var launch_boundary_departure_prevention_module)"
+  />
+  <let
+    name="motion_velocity_planner_launch_modules"
+    value="$(eval &quot;'$(var motion_velocity_planner_launch_modules)' + 'autoware::motion_velocity_planner::RoadUserStopModule, '&quot;)"
+    if="$(var launch_road_user_stop_module)"
   />
 
   <let name="motion_velocity_planner_launch_modules" value="$(eval &quot;'$(var motion_velocity_planner_launch_modules)' + '$(var launch_module_list_end)'&quot;)"/>
@@ -120,7 +128,7 @@
           <!-- topic remap -->
           <remap from="~/input/path" to="path_smoother/path"/>
           <remap from="~/input/odometry" to="/localization/kinematic_state"/>
-          <remap from="~/input/objects" to="/perception/object_recognition/objects"/>
+          <remap from="~/input/objects" to="$(var input_objects_topic_name)"/>
           <remap from="~/output/path" to="path_optimizer/trajectory"/>
           <!-- params -->
           <param from="$(var common_param_path)"/>
@@ -167,8 +175,8 @@
         <remap from="~/input/vector_map" to="/map/vector_map"/>
         <remap from="~/input/vehicle_odometry" to="/localization/kinematic_state"/>
         <remap from="~/input/accel" to="/localization/acceleration"/>
-        <remap from="~/input/dynamic_objects" to="/perception/object_recognition/objects"/>
-        <remap from="~/input/no_ground_pointcloud" to="/perception/obstacle_segmentation/pointcloud"/>
+        <remap from="~/input/dynamic_objects" to="$(var input_objects_topic_name)"/>
+        <remap from="~/input/no_ground_pointcloud" to="$(var input_pointcloud_topic_name)"/>
         <remap from="~/input/traffic_signals" to="/perception/traffic_light_recognition/traffic_signals"/>
         <remap from="~/input/virtual_traffic_light_states" to="/perception/virtual_traffic_light_states"/>
         <remap from="~/input/occupancy_grid" to="/perception/occupancy_grid_map/map"/>
@@ -193,6 +201,7 @@
         <param from="$(var motion_velocity_planner_obstacle_velocity_limiter_param_path)"/>
         <param from="$(var motion_velocity_planner_run_out_param_path)"/>
         <param from="$(var motion_velocity_planner_boundary_departure_prevention_module_param_path)"/>
+        <param from="$(var motion_velocity_planner_road_user_stop_module_param_path)"/>
         <!-- <param from="$(var motion_velocity_planner_template_param_path)"/> -->
         <!-- composable node config -->
         <extra_arg name="use_intra_process_comms" value="false"/>
@@ -206,8 +215,8 @@
       <composable_node pkg="autoware_surround_obstacle_checker" plugin="autoware::surround_obstacle_checker::SurroundObstacleCheckerNode" name="surround_obstacle_checker" namespace="">
         <!-- topic remap -->
         <remap from="~/input/odometry" to="/localization/kinematic_state"/>
-        <remap from="~/input/objects" to="/perception/object_recognition/objects"/>
-        <remap from="~/input/pointcloud" to="/perception/obstacle_segmentation/pointcloud"/>
+        <remap from="~/input/objects" to="$(var input_objects_topic_name)"/>
+        <remap from="~/input/pointcloud" to="$(var input_pointcloud_topic_name)"/>
         <remap from="~/output/max_velocity" to="/planning/scenario_planning/max_velocity_candidates"/>
         <remap from="~/output/velocity_limit_clear_command" to="/planning/scenario_planning/clear_velocity_limit"/>
         <remap from="~/output/stop_reasons" to="/planning/scenario_planning/status/stop_reasons"/>

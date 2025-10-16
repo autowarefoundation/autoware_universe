@@ -124,21 +124,21 @@ void VehicleCmdFilter::limitActualSteerDiff(const double current_steer_angle, Co
 
 void VehicleCmdFilter::limitLateralSteer(Control & input) const
 {
-  const float steer_limit = getSteerLim();
-
-  input.lateral.steering_tire_angle =
-    std::clamp(input.lateral.steering_tire_angle, -steer_limit, steer_limit);
+  float steer_limit = std::abs(getSteerLim());
 
   // TODO(Horibe): support steering greater than PI/2. Now the lateral acceleration
   // calculation does not support bigger steering value than PI/2 due to tan/atan calculation.
   if (std::abs(input.lateral.steering_tire_angle) > M_PI_2f) {
-    std::cerr << "[vehicle_Cmd_gate] limitLateralSteer(): steering limit is set to pi/2 since the "
+    std::cerr << "VehicleCmdFilter::limitLateralSteer(): steering limit is set to pi/2 since the "
                  "current filtering logic can not handle the steering larger than pi/2. Please "
                  "check the steering angle limit."
               << std::endl;
 
-    std::clamp(input.lateral.steering_tire_angle, -M_PI_2f, M_PI_2f);
+    steer_limit = M_PI_2f;
   }
+
+  input.lateral.steering_tire_angle =
+    std::clamp(input.lateral.steering_tire_angle, -steer_limit, steer_limit);
 }
 
 void VehicleCmdFilter::limitLateralSteerRate(const double dt, Control & input) const

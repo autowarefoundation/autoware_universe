@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for BBOX Object Locator",
+  "type": "object",
+  "definitions": {
+    "bbox_object_locator": {
+      "type": "object",
+      "properties": {
+        "target_frame": {
+          "type": "string",
+          "description": "Transform target frame.",
+          "default": "base_link"
+        },
+        "detection_target_class": {
+          "type": "object",
+          "properties": {
+            "UNKNOWN": {
+              "type": "boolean",
+              "description": "If true, objects with the 'UNKNOWN' label will be ignored during processing.",
+              "default": true
+            },
+            "CAR": {
+              "type": "boolean",
+              "description": "If true, objects with the 'CAR' label will be ignored during processing.",
+              "default": true
+            },
+            "TRUCK": {
+              "type": "boolean",
+              "description": "If true, objects with the 'TRUCK' label will be ignored during processing.",
+              "default": true
+            },
+            "BUS": {
+              "type": "boolean",
+              "description": "If true, objects with the 'BUS' label will be ignored during processing.",
+              "default": true
+            },
+            "TRAILER": {
+              "type": "boolean",
+              "description": "If true, objects with the 'TRAILER' label will be ignored during processing.",
+              "default": true
+            },
+            "MOTORCYCLE": {
+              "type": "boolean",
+              "description": "If true, objects with the 'MOTORCYCLE' label will be ignored during processing.",
+              "default": true
+            },
+            "BICYCLE": {
+              "type": "boolean",
+              "description": "If true, objects with the 'BICYCLE' label will be ignored during processing.",
+              "default": true
+            },
+            "PEDESTRIAN": {
+              "type": "boolean",
+              "description": "If true, objects with the 'PEDESTRIAN' label will be ignored during processing.",
+              "default": false
+            }
+          }
+        },
+        "roi_confidence_threshold": {
+          "type": "number",
+          "description": "Threshold value for whether to trust and use the ROI. If the confidence of an ROI is below this value, it will not be used.",
+          "default": 0.8,
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "detection_max_range": {
+          "type": "number",
+          "description": "Maximum detection range. Objects beyond this distance will not be included in the output [m].",
+          "default": 30.0,
+          "minimum": 0.0
+        },
+        "pseudo_height": {
+          "type": "number",
+          "description": "If height was not able to compute, this value will used as pseudo height of a object [m].",
+          "default": 1.5,
+          "minimum": 0.1
+        },
+        "pedestrian_detection_config": {
+          "type": "object",
+          "properties": {
+            "width_min": {
+              "type": "number",
+              "description": "If the estimated width is smaller than this value, it will be clamped to this value [m].",
+              "default": 0.5,
+              "minimum": 0.3
+            },
+            "width_max": {
+              "type": "number",
+              "description": "If the estimated width is larger than this value, it will be clamped to this value [m].",
+              "width_max": 0.8,
+              "minimum": 0.3
+            }
+          }
+        }
+      },
+      "required": [
+        "target_frame",
+        "detection_target_class",
+        "roi_confidence_threshold",
+        "detection_max_range",
+        "pseudo_height",
+        "pedestrian_detection_config"
+      ]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/bbox_object_locator"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}

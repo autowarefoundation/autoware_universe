@@ -69,8 +69,9 @@ void drawShape(
   if (!shape_img.empty()) {
     // Create ROI on the destination image
     const int shape_y_offset = fill_rect_h / 4;
-    auto shapeRoi = image(cv::Rect(
-      rect_position.x + 5, rect_position.y + shape_y_offset, shape_img.cols, shape_img.rows));
+    auto shapeRoi = image(
+      cv::Rect(
+        rect_position.x + 5, rect_position.y + shape_y_offset, shape_img.cols, shape_img.rows));
 
     // Overlay the image onto the main image
     for (int y = 0; y < shape_img.rows; ++y) {

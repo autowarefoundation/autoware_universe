@@ -12,7 +12,6 @@
         max_accel: -2.8
         max_jerk: -5.0
         delay_response_time: 0.5
-        enable_pass_judge_before_default_stopline: false
 
       stuck_vehicle:
         target_type:
@@ -91,15 +90,13 @@
 
       occlusion:
         enable: true
+        request_approval_wo_traffic_light: false # if true, request approval when occlusion is not cleared enough without traffic light
         occlusion_attention_area_length: 70.0
         free_space_max: 43
         occupied_min: 58
         denoise_kernel: 1.0
         attention_lane_crop_curvature_threshold: 0.25
         attention_lane_curvature_calculation_ds: 0.6
-        creep_during_peeking:
-          enable: false
-          creep_velocity: 0.8333
         peeking_offset: -0.5
         occlusion_required_clearance_distance: 55.0
         possible_object_bbox: [1.9, 2.5]

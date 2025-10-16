@@ -151,14 +151,21 @@ VehicleCmdGate::VehicleCmdGate(const rclcpp::NodeOptions & node_options)
     p.vel_lim = declare_parameter<double>("nominal.vel_lim");
     p.reference_speed_points =
       declare_parameter<std::vector<double>>("nominal.reference_speed_points");
-    p.steer_lim = declare_parameter<std::vector<double>>("nominal.steer_lim");
-    p.steer_rate_lim = declare_parameter<std::vector<double>>("nominal.steer_rate_lim");
-    p.lon_acc_lim = declare_parameter<std::vector<double>>("nominal.lon_acc_lim");
-    p.lon_jerk_lim = declare_parameter<std::vector<double>>("nominal.lon_jerk_lim");
-    p.lat_acc_lim = declare_parameter<std::vector<double>>("nominal.lat_acc_lim");
-    p.lat_jerk_lim = declare_parameter<std::vector<double>>("nominal.lat_jerk_lim");
-    p.actual_steer_diff_lim =
-      declare_parameter<std::vector<double>>("nominal.actual_steer_diff_lim");
+    p.steer_cmd_lim = declare_parameter<std::vector<double>>("nominal.steer_cmd_lim");
+    p.lon_acc_lim_for_lon_vel =
+      declare_parameter<std::vector<double>>("nominal.lon_acc_lim_for_lon_vel");
+    p.lon_jerk_lim_for_lon_acc =
+      declare_parameter<std::vector<double>>("nominal.lon_jerk_lim_for_lon_acc");
+    p.lat_acc_lim_for_steer_cmd =
+      declare_parameter<std::vector<double>>("nominal.lat_acc_lim_for_steer_cmd");
+    p.lat_jerk_lim_for_steer_cmd =
+      declare_parameter<std::vector<double>>("nominal.lat_jerk_lim_for_steer_cmd");
+    p.steer_cmd_diff_lim_from_current_steer =
+      declare_parameter<std::vector<double>>("nominal.steer_cmd_diff_lim_from_current_steer");
+    p.steer_rate_lim_for_steer_cmd =
+      declare_parameter<std::vector<double>>("nominal.steer_rate_lim_for_steer_cmd");
+    p.lat_jerk_lim_for_steer_rate =
+      declare_parameter<double>("nominal.lat_jerk_lim_for_steer_rate");
     filter_.setParam(p);
   }
 
@@ -168,14 +175,21 @@ VehicleCmdGate::VehicleCmdGate(const rclcpp::NodeOptions & node_options)
     p.vel_lim = declare_parameter<double>("on_transition.vel_lim");
     p.reference_speed_points =
       declare_parameter<std::vector<double>>("on_transition.reference_speed_points");
-    p.steer_lim = declare_parameter<std::vector<double>>("on_transition.steer_lim");
-    p.steer_rate_lim = declare_parameter<std::vector<double>>("on_transition.steer_rate_lim");
-    p.lon_acc_lim = declare_parameter<std::vector<double>>("on_transition.lon_acc_lim");
-    p.lon_jerk_lim = declare_parameter<std::vector<double>>("on_transition.lon_jerk_lim");
-    p.lat_acc_lim = declare_parameter<std::vector<double>>("on_transition.lat_acc_lim");
-    p.lat_jerk_lim = declare_parameter<std::vector<double>>("on_transition.lat_jerk_lim");
-    p.actual_steer_diff_lim =
-      declare_parameter<std::vector<double>>("on_transition.actual_steer_diff_lim");
+    p.steer_cmd_lim = declare_parameter<std::vector<double>>("on_transition.steer_cmd_lim");
+    p.lon_acc_lim_for_lon_vel =
+      declare_parameter<std::vector<double>>("on_transition.lon_acc_lim_for_lon_vel");
+    p.lon_jerk_lim_for_lon_acc =
+      declare_parameter<std::vector<double>>("on_transition.lon_jerk_lim_for_lon_acc");
+    p.lat_acc_lim_for_steer_cmd =
+      declare_parameter<std::vector<double>>("on_transition.lat_acc_lim_for_steer_cmd");
+    p.lat_jerk_lim_for_steer_cmd =
+      declare_parameter<std::vector<double>>("on_transition.lat_jerk_lim_for_steer_cmd");
+    p.steer_cmd_diff_lim_from_current_steer =
+      declare_parameter<std::vector<double>>("on_transition.steer_cmd_diff_lim_from_current_steer");
+    p.steer_rate_lim_for_steer_cmd =
+      declare_parameter<std::vector<double>>("on_transition.steer_rate_lim_for_steer_cmd");
+    p.lat_jerk_lim_for_steer_rate =
+      declare_parameter<double>("on_transition.lat_jerk_lim_for_steer_rate");
     filter_on_transition_.setParam(p);
   }
 
@@ -257,14 +271,22 @@ rcl_interfaces::msg::SetParametersResult VehicleCmdGate::onParameter(
     update_param<double>(parameters, "nominal.vel_lim", p.vel_lim);
     update_param<std::vector<double>>(
       parameters, "nominal.reference_speed_points", p.reference_speed_points);
-    update_param<std::vector<double>>(parameters, "nominal.steer_lim", p.steer_lim);
-    update_param<std::vector<double>>(parameters, "nominal.steer_rate_lim", p.steer_rate_lim);
-    update_param<std::vector<double>>(parameters, "nominal.lon_acc_lim", p.lon_acc_lim);
-    update_param<std::vector<double>>(parameters, "nominal.lon_jerk_lim", p.lon_jerk_lim);
-    update_param<std::vector<double>>(parameters, "nominal.lat_acc_lim", p.lat_acc_lim);
-    update_param<std::vector<double>>(parameters, "nominal.lat_jerk_lim", p.lat_jerk_lim);
+    update_param<std::vector<double>>(parameters, "nominal.steer_cmd_lim", p.steer_cmd_lim);
     update_param<std::vector<double>>(
-      parameters, "nominal.actual_steer_diff_lim", p.actual_steer_diff_lim);
+      parameters, "nominal.steer_rate_lim_for_steer_cmd", p.steer_rate_lim_for_steer_cmd);
+    update_param<std::vector<double>>(
+      parameters, "nominal.lon_acc_lim_for_lon_vel", p.lon_acc_lim_for_lon_vel);
+    update_param<std::vector<double>>(
+      parameters, "nominal.lon_jerk_lim_for_lon_acc", p.lon_jerk_lim_for_lon_acc);
+    update_param<std::vector<double>>(
+      parameters, "nominal.lat_acc_lim_for_steer_cmd", p.lat_acc_lim_for_steer_cmd);
+    update_param<std::vector<double>>(
+      parameters, "nominal.lat_jerk_lim_for_steer_cmd", p.lat_jerk_lim_for_steer_cmd);
+    update_param<std::vector<double>>(
+      parameters, "nominal.steer_cmd_diff_lim_from_current_steer",
+      p.steer_cmd_diff_lim_from_current_steer);
+    update_param<double>(
+      parameters, "nominal.lat_jerk_lim_for_steer_rate", p.lat_jerk_lim_for_steer_rate);
     filter_.setParam(p);
   }
 
@@ -274,14 +296,22 @@ rcl_interfaces::msg::SetParametersResult VehicleCmdGate::onParameter(
     update_param<double>(parameters, "on_transition.vel_lim", p.vel_lim);
     update_param<std::vector<double>>(
       parameters, "on_transition.reference_speed_points", p.reference_speed_points);
-    update_param<std::vector<double>>(parameters, "on_transition.steer_lim", p.steer_lim);
-    update_param<std::vector<double>>(parameters, "on_transition.steer_rate_lim", p.steer_rate_lim);
-    update_param<std::vector<double>>(parameters, "on_transition.lon_acc_lim", p.lon_acc_lim);
-    update_param<std::vector<double>>(parameters, "on_transition.lon_jerk_lim", p.lon_jerk_lim);
-    update_param<std::vector<double>>(parameters, "on_transition.lat_acc_lim", p.lat_acc_lim);
-    update_param<std::vector<double>>(parameters, "on_transition.lat_jerk_lim", p.lat_jerk_lim);
+    update_param<std::vector<double>>(parameters, "on_transition.steer_cmd_lim", p.steer_cmd_lim);
     update_param<std::vector<double>>(
-      parameters, "on_transition.actual_steer_diff_lim", p.actual_steer_diff_lim);
+      parameters, "on_transition.steer_rate_lim_for_steer_cmd", p.steer_rate_lim_for_steer_cmd);
+    update_param<std::vector<double>>(
+      parameters, "on_transition.lon_acc_lim_for_lon_vel", p.lon_acc_lim_for_lon_vel);
+    update_param<std::vector<double>>(
+      parameters, "on_transition.lon_jerk_lim_for_lon_acc", p.lon_jerk_lim_for_lon_acc);
+    update_param<std::vector<double>>(
+      parameters, "on_transition.lat_acc_lim_for_steer_cmd", p.lat_acc_lim_for_steer_cmd);
+    update_param<std::vector<double>>(
+      parameters, "on_transition.lat_jerk_lim_for_steer_cmd", p.lat_jerk_lim_for_steer_cmd);
+    update_param<std::vector<double>>(
+      parameters, "on_transition.steer_cmd_diff_lim_from_current_steer",
+      p.steer_cmd_diff_lim_from_current_steer);
+    update_param<double>(
+      parameters, "on_transition.lat_jerk_lim_for_steer_rate", p.lat_jerk_lim_for_steer_rate);
     filter_on_transition_.setParam(p);
   }
 
@@ -312,14 +342,17 @@ bool VehicleCmdGate::isDataReady()
   // emergency state must be received before running
   if (use_emergency_handling_) {
     if (!emergency_state_heartbeat_received_time_) {
-      RCLCPP_WARN(get_logger(), "emergency_state_heartbeat_received_time_ is false");
+      RCLCPP_WARN_THROTTLE(
+        get_logger(), *get_clock(), 5000, "emergency_state_heartbeat_received_time_ is false");
       return false;
     }
   }
 
   if (check_external_emergency_heartbeat_) {
     if (!external_emergency_stop_heartbeat_received_time_) {
-      RCLCPP_WARN(get_logger(), "external_emergency_stop_heartbeat_received_time_ is false");
+      RCLCPP_WARN_THROTTLE(
+        get_logger(), *get_clock(), 5000,
+        "external_emergency_stop_heartbeat_received_time_ is false");
       return false;
     }
   }

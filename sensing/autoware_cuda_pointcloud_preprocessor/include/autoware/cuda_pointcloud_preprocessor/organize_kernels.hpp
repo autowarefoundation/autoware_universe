@@ -24,7 +24,7 @@ namespace autoware::cuda_pointcloud_preprocessor
 
 std::size_t querySortWorkspace(
   int num_items, int num_segments, int * offsets_device, std::uint32_t * keys_in_device,
-  std::uint32_t * keys_out_device);
+  std::uint32_t * keys_out_device, cudaStream_t & stream);
 
 void organizeLaunch(
   const InputPointType * input_points, std::uint32_t * index_tensor, std::int32_t * ring_indexes,

@@ -32,10 +32,11 @@ protected:
     rclcpp::init(0, nullptr);
     // parameters
     auto node_options = rclcpp::NodeOptions{};
-    node_options.arguments(std::vector<std::string>{
-      "--ros-args", "--params-file",
-      ament_index_cpp::get_package_share_directory("autoware_test_utils") +
-        "/config/test_vehicle_info.param.yaml"});
+    node_options.arguments(
+      std::vector<std::string>{
+        "--ros-args", "--params-file",
+        ament_index_cpp::get_package_share_directory("autoware_test_utils") +
+          "/config/test_vehicle_info.param.yaml"});
     auto node = rclcpp::Node::make_shared("test", node_options);
     vehicle_info = autoware::vehicle_info_utils::VehicleInfoUtils(*node).getVehicleInfo();
 
@@ -50,6 +51,28 @@ protected:
 
   void TearDown() override { rclcpp::shutdown(); }
 
+  geometry_msgs::msg::Pose createPose(double x, double y, double z, double yaw)
+  {
+    geometry_msgs::msg::Pose pose;
+    pose.position.x = x;
+    pose.position.y = y;
+    pose.position.z = z;
+    tf2::Quaternion q;
+    q.setRPY(0, 0, yaw);
+    pose.orientation = tf2::toMsg(q);
+    return pose;
+  }
+
+  lanelet::ConstLineString3d createLineString(const std::vector<std::pair<double, double>> & points)
+  {
+    lanelet::LineString3d ls(lanelet::utils::getId());
+    for (size_t i = 0; i < points.size(); ++i) {
+      ls.push_back(
+        lanelet::Point3d(lanelet::utils::getId(), points[i].first, points[i].second, 0.0));
+    }
+    return ls;
+  }
+
 public:
   std::shared_ptr<autoware::route_handler::RouteHandler> route_handler;
   autoware::vehicle_info_utils::VehicleInfo vehicle_info;
@@ -63,10 +86,11 @@ protected:
     rclcpp::init(0, nullptr);
     // parameters
     auto node_options = rclcpp::NodeOptions{};
-    node_options.arguments(std::vector<std::string>{
-      "--ros-args", "--params-file",
-      ament_index_cpp::get_package_share_directory("autoware_test_utils") +
-        "/config/test_vehicle_info.param.yaml"});
+    node_options.arguments(
+      std::vector<std::string>{
+        "--ros-args", "--params-file",
+        ament_index_cpp::get_package_share_directory("autoware_test_utils") +
+          "/config/test_vehicle_info.param.yaml"});
     auto node = rclcpp::Node::make_shared("test", node_options);
     vehicle_info = autoware::vehicle_info_utils::VehicleInfoUtils(*node).getVehicleInfo();
 
@@ -151,15 +175,17 @@ TEST_F(DISABLED_TestUtilWithMap, createDepartureCheckLanelet)
 
   const geometry_msgs::msg::Pose goal_pose =
     geometry_msgs::build<geometry_msgs::msg::Pose>()
-      .position(geometry_msgs::build<geometry_msgs::msg::Point>()
-                  .x(433.42254638671875)
-                  .y(465.3381652832031)
-                  .z(0.0))
-      .orientation(geometry_msgs::build<geometry_msgs::msg::Quaternion>()
-                     .x(0.0)
-                     .y(0.0)
-                     .z(0.306785474523741)
-                     .w(0.9517786888879384));
+      .position(
+        geometry_msgs::build<geometry_msgs::msg::Point>()
+          .x(433.42254638671875)
+          .y(465.3381652832031)
+          .z(0.0))
+      .orientation(
+        geometry_msgs::build<geometry_msgs::msg::Quaternion>()
+          .x(0.0)
+          .y(0.0)
+          .z(0.306785474523741)
+          .w(0.9517786888879384));
 
   // 1) get target shoulder lane and check it's lane id
   const auto target_shoulder_lane = route_handler->getPullOverTarget(goal_pose);
@@ -199,4 +225,107 @@ TEST_F(DISABLED_TestUtilWithMap, createDepartureCheckLanelet)
   for (size_t i = 0; i < departure_check_lane_right_bound_points.size(); ++i) {
     EXPECT_EQ(departure_check_lane_right_bound_points.at(i).id(), right_bound_points.at(i).id());
   }
+}
+
+TEST_F(TestUtilWithMap, calcSignedLateralDistanceToBoundary_BasicIntersection)
+{
+  const auto reference_pose = createPose(0.0, 0.0, 0.0, 0.0);
+  const auto boundary = createLineString({{-1.0, 1.0}, {1.0, 1.0}});
+
+  const auto result =
+    autoware::behavior_path_planner::goal_planner_utils::calcSignedLateralDistanceToBoundary(
+      boundary, reference_pose);
+
+  ASSERT_TRUE(result.has_value());
+  EXPECT_NEAR(result.value(), 1.0, 1e-6);
+}
+
+TEST_F(TestUtilWithMap, calcSignedLateralDistanceToBoundary_NoIntersection)
+{
+  const auto reference_pose = createPose(0.0, 0.0, 0.0, 0.0);
+  const auto boundary = createLineString({{1.0, 1.0}, {2.0, 1.0}});
+
+  const auto result =
+    autoware::behavior_path_planner::goal_planner_utils::calcSignedLateralDistanceToBoundary(
+      boundary, reference_pose);
+
+  EXPECT_FALSE(result.has_value());
+}
+
+TEST_F(TestUtilWithMap, calcSignedLateralDistanceToBoundary_RotatedPose)
+{
+  const auto reference_pose = createPose(0.0, 0.0, 0.0, M_PI / 2);
+  const auto boundary = createLineString({{-1.0, -1.0}, {-1.0, 1.0}});
+
+  const auto result =
+    autoware::behavior_path_planner::goal_planner_utils::calcSignedLateralDistanceToBoundary(
+      boundary, reference_pose);
+
+  ASSERT_TRUE(result.has_value());
+  EXPECT_NEAR(result.value(), 1.0, 1e-6);  // Changed from -1.0 to 1.0
+}
+
+TEST_F(TestUtilWithMap, calcSignedLateralDistanceToBoundary_MultipleSegments)
+{
+  const auto reference_pose = createPose(0.0, 0.0, 0.0, 0.0);
+  const auto boundary =
+    createLineString({{-2.0, 2.0}, {-1.0, 2.0}, {0.0, 1.0}, {1.0, 2.0}, {2.0, 2.0}});
+
+  const auto result =
+    autoware::behavior_path_planner::goal_planner_utils::calcSignedLateralDistanceToBoundary(
+      boundary, reference_pose);
+
+  ASSERT_TRUE(result.has_value());
+  EXPECT_NEAR(result.value(), 1.0, 1e-6);
+}
+
+TEST_F(TestUtilWithMap, calcSignedLateralDistanceToBoundary_ClosestIntersection)
+{
+  const auto reference_pose = createPose(0.0, 0.0, 0.0, 0.0);
+  const auto boundary = createLineString({{-1.0, 0.5}, {1.0, 0.5}, {-1.0, 2.0}, {1.0, 2.0}});
+
+  const auto result =
+    autoware::behavior_path_planner::goal_planner_utils::calcSignedLateralDistanceToBoundary(
+      boundary, reference_pose);
+
+  ASSERT_TRUE(result.has_value());
+  EXPECT_NEAR(result.value(), 0.5, 1e-6);
+}
+
+TEST_F(TestUtilWithMap, calcSignedLateralDistanceToBoundary_ParallelLine)
+{
+  const auto reference_pose = createPose(0.0, 0.0, 0.0, 0.0);
+  const auto boundary = createLineString({{1.0, -1.0}, {1.0, 1.0}});
+
+  const auto result =
+    autoware::behavior_path_planner::goal_planner_utils::calcSignedLateralDistanceToBoundary(
+      boundary, reference_pose);
+
+  EXPECT_FALSE(result.has_value());
+}
+
+TEST_F(TestUtilWithMap, calcSignedLateralDistanceToBoundary_DiagonalLine)
+{
+  const auto reference_pose = createPose(0.5, 1.0, 0.0, 0.0);
+  const auto boundary = createLineString({{-1.0, -1.0}, {2.0, 2.0}});
+
+  const auto result =
+    autoware::behavior_path_planner::goal_planner_utils::calcSignedLateralDistanceToBoundary(
+      boundary, reference_pose);
+
+  ASSERT_TRUE(result.has_value());
+  EXPECT_NEAR(result.value(), -0.5, 1e-6);
+}
+
+TEST_F(TestUtilWithMap, calcSignedLateralDistanceToBoundary_NegativeYDirection)
+{
+  const auto reference_pose = createPose(0.0, 0.0, 0.0, 0.0);
+  const auto boundary = createLineString({{-1.0, -2.0}, {1.0, -2.0}});
+
+  const auto result =
+    autoware::behavior_path_planner::goal_planner_utils::calcSignedLateralDistanceToBoundary(
+      boundary, reference_pose);
+
+  ASSERT_TRUE(result.has_value());
+  EXPECT_NEAR(result.value(), -2.0, 1e-6);
 }

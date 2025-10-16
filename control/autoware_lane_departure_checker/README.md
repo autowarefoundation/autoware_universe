@@ -51,7 +51,7 @@ This package includes the following features:
 - /localization/kinematic_state [`nav_msgs::msg::Odometry`]
 - /map/vector_map [`autoware_map_msgs::msg::LaneletMapBin`]
 - /planning/mission_planning/route [`autoware_planning_msgs::msg::LaneletRoute`]
-- /planning/scenario_planning/trajectory [`autoware_planning_msgs::msg::Trajectory`]
+- /planning/trajectory [`autoware_planning_msgs::msg::Trajectory`]
 - /control/trajectory_follower/predicted_trajectory [`autoware_planning_msgs::msg::Trajectory`]
 
 ### Output

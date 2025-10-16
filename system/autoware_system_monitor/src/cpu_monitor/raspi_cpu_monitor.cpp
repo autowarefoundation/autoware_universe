@@ -105,6 +105,12 @@ void CPUMonitor::updateThermalThrottlingImpl(diagnostic_updater::DiagnosticStatu
   stat.addf("execution time", "%f ms", thermal_throttling_data_.elapsed_ms);
 }
 
+int CPUMonitor::getThermalThrottlingStatus() const
+{
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
+  return thermal_throttling_data_.summary_status;
+}
+
 // This function is called from a locked context in the timer callback.
 void CPUMonitor::getTemperatureFileNames()
 {

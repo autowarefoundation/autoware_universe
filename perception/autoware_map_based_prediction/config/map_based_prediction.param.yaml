@@ -9,6 +9,7 @@
     min_velocity_for_map_based_prediction: 1.39 #[m/s]
     min_crosswalk_user_velocity: 1.39 #[m/s]
     max_crosswalk_user_delta_yaw_threshold_for_lanelet: 0.785 #[m/s]
+    max_crosswalk_user_on_road_distance: 2.0  # [m] crosswalk users on road or shoulder lanelets are only predicted to cross the crosswalk if they are within this distance
     dist_threshold_for_searching_lanelet: 3.0 #[m]
     delta_yaw_threshold_for_searching_lanelet: 0.785 #[rad]
     sigma_lateral_offset: 0.5 #[m]
@@ -32,6 +33,8 @@
     use_crosswalk_user_history:
       match_lost_and_appeared_users: false
       remember_lost_users: false
+    crossing_intention_duration: 0.3    # [s] Minimum duration that crossing intention must continuously persist to be judged as true
+    no_crossing_intention_duration: 1.0 # [s] Minimum duration that lack of crossing intention must continuously persist to be judged as false
 
     # parameters for lc prediction
     lane_change_detection:

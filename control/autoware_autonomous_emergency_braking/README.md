@@ -77,7 +77,6 @@ where $v$ and $\omega$ are current longitudinal velocity and angular velocity re
 Since the IMU path generation only uses the ego vehicle's current angular velocity, disregarding the MPC's planner steering, the shape of the IMU path tends to get distorted quite easily and protrude out of the ego vehicle's current lane, possibly causing unwanted emergency stops. There are two countermeasures for this issue:
 
 1. Control using the `max_generated_imu_path_length` parameter
-
    - Generation stops when path length exceeds the set value
    - Avoid using a large `imu_prediction_time_horizon`
 
@@ -115,17 +114,14 @@ Select vehicle vertices for lateral deviation checks based on the following cond
 Execute the following steps at each time step:
 
 1. State Update
-
    - Calculate next position $(x_{k+1}, y_{k+1})$ and yaw angle $\theta_{k+1}$ based on current velocity $v$ and angular velocity $\omega$
    - Time interval $dt$ is based on the `imu_prediction_time_interval` parameter
 
 2. Vehicle Footprint Generation
-
    - Place vehicle footprint at calculated position
    - Calculate check point coordinates
 
 3. Lateral Deviation Calculation
-
    - Calculate lateral deviation from selected vertex to path
    - Update path length and elapsed time
 
@@ -136,12 +132,10 @@ Execute the following steps at each time step:
 Path generation terminates when any of the following conditions are met:
 
 1. Basic Termination Conditions (both must be satisfied)
-
    - Predicted time exceeds `imu_prediction_time_horizon`
    - AND path length exceeds `min_generated_imu_path_length`
 
 2. Path Length Termination Condition
-
    - Path length exceeds `max_generated_imu_path_length`
 
 3. Lateral Deviation Termination Condition (when `limit_imu_path_lat_dev = true`)

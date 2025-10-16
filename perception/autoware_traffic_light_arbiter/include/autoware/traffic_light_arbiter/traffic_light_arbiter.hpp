@@ -24,10 +24,13 @@
 #include <lanelet2_core/Forward.h>
 
 #include <memory>
+#include <unordered_map>
 #include <unordered_set>
+#include <utility>
 
 namespace autoware::traffic_light
 {
+
 class TrafficLightArbiter : public rclcpp::Node
 {
 public:
@@ -49,17 +52,18 @@ private:
   void onPerceptionMsg(const TrafficSignalArray::ConstSharedPtr msg);
   void onExternalMsg(const TrafficSignalArray::ConstSharedPtr msg);
   void arbitrateAndPublish(const builtin_interfaces::msg::Time & stamp);
+  void cleanupExpiredExternalSignals(const rclcpp::Time & current_time, double tolerance);
 
   std::unique_ptr<std::unordered_set<lanelet::Id>> map_regulatory_elements_set_;
 
   double external_delay_tolerance_;
   double external_time_tolerance_;
   double perception_time_tolerance_;
-  bool external_priority_;
+  SourcePriority source_priority_;
   bool enable_signal_matching_;
 
   TrafficSignalArray latest_perception_msg_;
-  TrafficSignalArray latest_external_msg_;
+  std::unordered_map<lanelet::Id, std::pair<rclcpp::Time, TrafficSignal>> external_traffic_lights_;
   std::unique_ptr<SignalMatchValidator> signal_match_validator_;
 };
 }  // namespace autoware::traffic_light

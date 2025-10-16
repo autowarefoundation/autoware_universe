@@ -244,9 +244,10 @@ std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> EgoCentricPointCloudCreator::cr
            vertical_theta <= vertical_max_theta + epsilon; vertical_theta += vertical_theta_step) {
         const double z = dist * std::tan(vertical_theta);
         if (min_z_here <= z && z <= max_z_here + epsilon) {
-          pointclouds.at(idx_hit)->push_back(pcl::PointXYZ(
-            x_hit + x_random(random_generator), y_hit + y_random(random_generator),
-            z + z_random(random_generator)));
+          pointclouds.at(idx_hit)->push_back(
+            pcl::PointXYZ(
+              x_hit + x_random(random_generator), y_hit + y_random(random_generator),
+              z + z_random(random_generator)));
         }
       }
     }

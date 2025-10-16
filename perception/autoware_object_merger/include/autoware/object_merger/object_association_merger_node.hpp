@@ -51,9 +51,11 @@ namespace autoware::object_merger
 {
 class ObjectAssociationMergerNode : public rclcpp::Node
 {
+  using Label = autoware_perception_msgs::msg::ObjectClassification;
+
 public:
   explicit ObjectAssociationMergerNode(const rclcpp::NodeOptions & node_options);
-  enum class PriorityMode : int { Object0 = 0, Object1 = 1, Confidence = 2 };
+  enum class PriorityMode : int { Object0 = 0, Object1 = 1, Confidence = 2, ClassBased = 3 };
 
 private:
   void objectsCallback(
@@ -86,6 +88,10 @@ private:
   std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
 
   PriorityMode priority_mode_;
+  std::vector<int64_t> class_based_priority_matrix_;
+
+  int NUMBER_OF_CLASSES_;
+
   bool remove_overlapped_unknown_objects_;
   struct
   {

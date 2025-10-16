@@ -50,6 +50,11 @@
           "default": 0.785,
           "description": "maximum yaw difference between crosswalk user and lanelet to use in path prediction for crosswalk users"
         },
+        "max_crosswalk_user_on_road_distance": {
+          "type": "number",
+          "default": 2.0,
+          "description": "crosswalk users on road or shoulder lanelets are only predicted to cross the crosswalk if they are within this distance"
+        },
         "dist_threshold_for_searching_lanelet": {
           "type": "number",
           "default": 3.0,
@@ -84,6 +89,16 @@
           "type": "number",
           "default": 0.8,
           "description": "prediction path will disabled when the estimated path length exceeds lanelet length. This parameter control the estimated path length"
+        },
+        "crossing_intention_duration": {
+          "type": "number",
+          "default": 0.3,
+          "description": "Minimum duration that crossing intention must continuously persist to be judged as true"
+        },
+        "no_crossing_intention_duration": {
+          "type": "number",
+          "default": 1.0,
+          "description": "Minimum duration that lack of crossing intention must continuously persist to be judged as false"
         },
         "lane_change_detection": {
           "type": "object",
@@ -152,13 +167,16 @@
         "min_velocity_for_map_based_prediction",
         "min_crosswalk_user_velocity",
         "max_crosswalk_user_delta_yaw_threshold_for_lanelet",
+        "max_crosswalk_user_on_road_distance",
         "dist_threshold_for_searching_lanelet",
         "delta_yaw_threshold_for_searching_lanelet",
         "sigma_lateral_offset",
         "sigma_yaw_angle_deg",
         "object_buffer_time_length",
         "history_time_length",
-        "prediction_time_horizon_rate_for_validate_shoulder_lane_length"
+        "prediction_time_horizon_rate_for_validate_shoulder_lane_length",
+        "crossing_intention_duration",
+        "no_crossing_intention_duration"
       ]
     }
   },

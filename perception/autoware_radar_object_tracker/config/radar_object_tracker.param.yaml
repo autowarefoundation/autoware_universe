@@ -26,7 +26,7 @@
     max_lateral_velocity: 7.0 # [m/s]
 
     # tracking model parameters
-    tracking_config_directory: $(find-pkg-share radar_object_tracker)/config/tracking/
+    tracking_config_directory: $(find-pkg-share autoware_radar_object_tracker)/config/tracking/
 
     diagnostics:
       # When the elapsed time from last radar data input exceeds the radar_input_stale_threshold_ms,

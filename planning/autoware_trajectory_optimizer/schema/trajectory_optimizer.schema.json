@@ -1,0 +1,291 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Trajectory Optimizer Node",
+  "type": "object",
+  "definitions": {
+    "trajectory_optimizer_node": {
+      "type": "object",
+      "properties": {
+        "nearest_dist_threshold_m": {
+          "type": "number",
+          "default": 1.5,
+          "minimum": 0,
+          "description": "Constraint used to search for the nearest trajectory pose to the ego vehicle [m]"
+        },
+        "nearest_yaw_threshold_rad": {
+          "type": "number",
+          "default": 1.0,
+          "minimum": 0,
+          "description": "Constraint used to search for the nearest trajectory pose to the ego vehicle [rad]"
+        },
+        "target_pull_out_speed_mps": {
+          "type": "number",
+          "default": 1.0,
+          "minimum": 0,
+          "description": "To assure the ego can start moving from a stopped position, this parameter sets a minimum trajectory speed value [m/s]"
+        },
+        "target_pull_out_acc_mps2": {
+          "type": "number",
+          "default": 1.0,
+          "minimum": 0,
+          "description": "To assure the ego can start moving from a stopped position, this parameter sets a minimum trajectory acceleration value [m/s^2]"
+        },
+        "max_speed_mps": {
+          "type": "number",
+          "default": 8.33,
+          "minimum": 0,
+          "description": "The maximum allowable velocity for the trajectory [m/s]"
+        },
+        "max_lateral_accel_mps2": {
+          "type": "number",
+          "default": 1.5,
+          "minimum": 0,
+          "description": "Maximum lateral acceleration [m/s^2]"
+        },
+        "spline_interpolation_resolution_m": {
+          "type": "number",
+          "default": 0.5,
+          "exclusiveMinimum": 0,
+          "description": "Interpolation resolution for Akima spline [m]"
+        },
+        "spline_interpolation_max_yaw_discrepancy_deg": {
+          "type": "number",
+          "default": 2.5,
+          "minimum": 0,
+          "description": "Maximum yaw deviation allowed for spline outlier detection [deg]"
+        },
+        "spline_interpolation_max_distance_discrepancy_m": {
+          "type": "number",
+          "default": 5.0,
+          "minimum": 0,
+          "description": "Maximum position deviation allowed for spline outlier detection [m]"
+        },
+        "backward_trajectory_extension_m": {
+          "type": "number",
+          "default": 5.0,
+          "minimum": 0,
+          "description": "How long should the ego trajectory extend backward. This backward trajectory is built using the ego's previous poses [m]"
+        },
+        "use_akima_spline_interpolation": {
+          "type": "boolean",
+          "default": true,
+          "description": "To use akima spline interpolation to smooth the trajectories"
+        },
+        "smooth_trajectories": {
+          "type": "boolean",
+          "default": true,
+          "description": "Flag to indicate if the Elastic Band smoother should be applied on the input trajectories"
+        },
+        "limit_speed": {
+          "type": "boolean",
+          "default": true,
+          "description": "Flag to indicate if a max_speed_mps speed limit should be applied to the trajectories"
+        },
+        "limit_lateral_acceleration": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable lateral acceleration limiting"
+        },
+        "set_engage_speed": {
+          "type": "boolean",
+          "default": false,
+          "description": "Set engage speed for trajectory points"
+        },
+        "fix_invalid_points": {
+          "type": "boolean",
+          "default": true,
+          "description": "If the module should remove repeated or invalid points, or points that go against the general trajectory direction"
+        },
+        "smooth_velocities": {
+          "type": "boolean",
+          "default": false,
+          "description": "Apply velocity smoothing to the input trajectories"
+        },
+        "extend_trajectory_backward": {
+          "type": "boolean",
+          "default": true,
+          "description": "Flag used to indicate if the ego's trajectory should be extended backward"
+        },
+        "spline_copy_original_orientation": {
+          "type": "boolean",
+          "default": true,
+          "description": "Flag to indicate if the orientation from the original trajectory should be copied to the spline-interpolated trajectory"
+        },
+        "jerk_filter_params": {
+          "type": "object",
+          "properties": {
+            "jerk_weight": {
+              "type": "number",
+              "default": 10.0,
+              "minimum": 0,
+              "description": "Weight for smoothness cost for jerk"
+            },
+            "over_v_weight": {
+              "type": "number",
+              "default": 100000.0,
+              "minimum": 0,
+              "description": "Weight for over speed limit cost"
+            },
+            "over_a_weight": {
+              "type": "number",
+              "default": 5000.0,
+              "minimum": 0,
+              "description": "Weight for over accel limit cost"
+            },
+            "over_j_weight": {
+              "type": "number",
+              "default": 2000.0,
+              "minimum": 0,
+              "description": "Weight for over jerk limit cost"
+            },
+            "jerk_filter_ds": {
+              "type": "number",
+              "default": 0.1,
+              "exclusiveMinimum": 0,
+              "description": "Resampling ds for jerk filter [m]"
+            }
+          },
+          "required": [
+            "jerk_weight",
+            "over_v_weight",
+            "over_a_weight",
+            "over_j_weight",
+            "jerk_filter_ds"
+          ]
+        },
+        "elastic_band_params": {
+          "type": "object",
+          "properties": {
+            "common": {
+              "type": "object",
+              "properties": {
+                "output_delta_arc_length": {
+                  "type": "number",
+                  "default": 0.5,
+                  "exclusiveMinimum": 0,
+                  "description": "Delta arc length for output trajectory [m]"
+                },
+                "output_backward_traj_length": {
+                  "type": "number",
+                  "default": 5.0,
+                  "minimum": 0,
+                  "description": "Backward length for backward trajectory from base_link [m]"
+                }
+              },
+              "required": ["output_delta_arc_length", "output_backward_traj_length"]
+            },
+            "elastic_band": {
+              "type": "object",
+              "properties": {
+                "option": {
+                  "type": "object",
+                  "properties": {
+                    "enable_warm_start": {
+                      "type": "boolean",
+                      "default": true,
+                      "description": "Enable warm start for optimization"
+                    },
+                    "enable_optimization_validation": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable optimization validation"
+                    }
+                  },
+                  "required": ["enable_warm_start", "enable_optimization_validation"]
+                },
+                "common": {
+                  "type": "object",
+                  "properties": {
+                    "num_points": {
+                      "type": "integer",
+                      "default": 100,
+                      "minimum": 1,
+                      "description": "Number of points for optimization"
+                    },
+                    "delta_arc_length": {
+                      "type": "number",
+                      "default": 1.0,
+                      "exclusiveMinimum": 0,
+                      "description": "Delta arc length for optimization [m]"
+                    }
+                  },
+                  "required": ["num_points", "delta_arc_length"]
+                },
+                "weight": {
+                  "type": "object",
+                  "properties": {
+                    "smooth_weight": {
+                      "type": "number",
+                      "default": 1.0,
+                      "minimum": 0,
+                      "description": "Weight for smoothness constraint"
+                    },
+                    "lat_error_weight": {
+                      "type": "number",
+                      "default": 0.001,
+                      "minimum": 0,
+                      "description": "Weight for lateral error constraint"
+                    }
+                  },
+                  "required": ["smooth_weight", "lat_error_weight"]
+                }
+              },
+              "required": ["option", "common", "weight"]
+            },
+            "ego_nearest_dist_threshold": {
+              "type": "number",
+              "default": 3.0,
+              "minimum": 0,
+              "description": "Distance threshold for ego nearest search [m]"
+            },
+            "ego_nearest_yaw_threshold": {
+              "type": "number",
+              "default": 1.046,
+              "minimum": 0,
+              "description": "Yaw threshold for ego nearest search [rad]"
+            }
+          },
+          "required": [
+            "common",
+            "elastic_band",
+            "ego_nearest_dist_threshold",
+            "ego_nearest_yaw_threshold"
+          ]
+        }
+      },
+      "required": [
+        "nearest_dist_threshold_m",
+        "nearest_yaw_threshold_rad",
+        "target_pull_out_speed_mps",
+        "target_pull_out_acc_mps2",
+        "max_speed_mps",
+        "max_lateral_accel_mps2",
+        "spline_interpolation_resolution_m",
+        "spline_interpolation_max_yaw_discrepancy_deg",
+        "spline_interpolation_max_distance_discrepancy_m",
+        "backward_trajectory_extension_m",
+        "use_akima_spline_interpolation",
+        "smooth_trajectories",
+        "limit_speed",
+        "limit_lateral_acceleration",
+        "set_engage_speed",
+        "fix_invalid_points",
+        "smooth_velocities",
+        "extend_trajectory_backward",
+        "spline_copy_original_orientation"
+      ]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/trajectory_optimizer_node"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}

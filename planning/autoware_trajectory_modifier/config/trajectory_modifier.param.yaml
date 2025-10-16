@@ -1,0 +1,8 @@
+/trajectory_modifier:
+  ros__parameters:
+    use_stop_point_fixer: true
+
+    # Stop Point Fixer Plugin Parameters
+    stop_point_fixer:
+      velocity_threshold_mps: 0.1
+      min_distance_threshold_m: 1.0
