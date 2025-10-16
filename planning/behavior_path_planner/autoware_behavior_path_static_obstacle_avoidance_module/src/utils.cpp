@@ -1507,7 +1507,7 @@ void fillLongitudinalAndLengthByClosestEnvelopeFootprint(
   obj.length = max_distance - min_distance;
 }
 
-double calcLateralDistance(const PathWithLaneId & path, const Point & point)
+double calc_lateral_distance(const PathWithLaneId & path, const Point & point)
 {
   const auto idx = autoware::motion_utils::findNearestIndex(path.points, point);
   const auto lateral =
@@ -1515,7 +1515,7 @@ double calcLateralDistance(const PathWithLaneId & path, const Point & point)
   return lateral;
 }
 
-PathWithLaneId calcLongitudinalOffsetPath(const PathWithLaneId & path, double offset)
+PathWithLaneId calc_longitudinal_offset_path(const PathWithLaneId & path, double offset)
 {
   PathWithLaneId offset_path{};
   offset_path.points.reserve(path.points.size());
@@ -1534,7 +1534,7 @@ PathWithLaneId calcLongitudinalOffsetPath(const PathWithLaneId & path, double of
   return offset_path;
 }
 
-std::vector<Point> fillMidPointsOfPolygonOuter(const Polygon2d & polygon)
+std::vector<Point> fill_midpoints_of_polygon_outer(const Polygon2d & polygon)
 {
   std::vector<Point> interpolated_points{};
   const auto & outer = polygon.outer();
@@ -1562,15 +1562,15 @@ std::vector<std::pair<double, Point>> calcEnvelopeOverhangDistance(
   double baselink_to_vehicle_rear)
 {
   const auto & baselink_path = path;
-  const auto & front_path = calcLongitudinalOffsetPath(path, baselink_to_vehicle_front);
-  const auto & rear_path = calcLongitudinalOffsetPath(path, -baselink_to_vehicle_rear);
+  const auto & front_path = calc_longitudinal_offset_path(path, baselink_to_vehicle_front);
+  const auto & rear_path = calc_longitudinal_offset_path(path, -baselink_to_vehicle_rear);
   std::vector<std::pair<double, Point>> overhang_points{};
 
-  for (const auto & point : fillMidPointsOfPolygonOuter(object_data.envelope_poly)) {
+  for (const auto & point : fill_midpoints_of_polygon_outer(object_data.envelope_poly)) {
     // TODO(someone): search around first position where the ego should avoid the object.
-    double lateral_distance_to_baselink_path = calcLateralDistance(baselink_path, point);
-    double lateral_distance_to_front_path = calcLateralDistance(front_path, point);
-    double lateral_distance_to_rear_path = calcLateralDistance(rear_path, point);
+    double lateral_distance_to_baselink_path = calc_lateral_distance(baselink_path, point);
+    double lateral_distance_to_front_path = calc_lateral_distance(front_path, point);
+    double lateral_distance_to_rear_path = calc_lateral_distance(rear_path, point);
     auto lateral_distances = {
       lateral_distance_to_baselink_path, lateral_distance_to_front_path,
       lateral_distance_to_rear_path};
