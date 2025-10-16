@@ -34,30 +34,21 @@ namespace autoware::trajectory_optimizer
 TrajectoryOptimizer::TrajectoryOptimizer(const rclcpp::NodeOptions & options)
 : Node("trajectory_optimizer", options)
 {
-  // create time_keeper and its publisher
-  // NOTE: This has to be called before setupSmoother to pass the time_keeper to the smoother.
-  debug_processing_time_detail_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
-    "~/debug/processing_time_detail_ms", 1);
-  time_keeper_ = std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_);
-
-  set_up_params();
-
-  // Parameter Callback
-  set_param_res_ = add_on_set_parameters_callback(
-    std::bind(&TrajectoryOptimizer::on_parameter, this, std::placeholders::_1));
-
-  // interface subscriber
-  trajectories_sub_ = create_subscription<CandidateTrajectories>(
-    "~/input/trajectories", 1,
-    std::bind(&TrajectoryOptimizer::on_traj, this, std::placeholders::_1));
-  // interface publisher
-  trajectory_pub_ = create_publisher<Trajectory>("~/output/trajectory", 1);
-  trajectories_pub_ = create_publisher<CandidateTrajectories>("~/output/trajectories", 1);
-  // debug time keeper
   debug_processing_time_detail_pub_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms", 1);
   time_keeper_ =
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
+
+  set_up_params();
+
+  set_param_res_ = add_on_set_parameters_callback(
+    std::bind(&TrajectoryOptimizer::on_parameter, this, std::placeholders::_1));
+
+  trajectories_sub_ = create_subscription<CandidateTrajectories>(
+    "~/input/trajectories", 1,
+    std::bind(&TrajectoryOptimizer::on_traj, this, std::placeholders::_1));
+  trajectory_pub_ = create_publisher<Trajectory>("~/output/trajectory", 1);
+  trajectories_pub_ = create_publisher<CandidateTrajectories>("~/output/trajectories", 1);
 }
 
 void TrajectoryOptimizer::initialize_optimizers()
@@ -119,14 +110,6 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
   result.successful = true;
   result.reason = "success";
   return result;
-}
-
-void TrajectoryOptimizer::initialize_planners()
-{
-}
-
-void TrajectoryOptimizer::reset_previous_data()
-{
 }
 
 void TrajectoryOptimizer::set_up_params()
