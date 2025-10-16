@@ -1063,7 +1063,9 @@ BehaviorModuleOutput GoalPlannerModule::plan()
         getLogger(), *clock_, 5000, " [pull_over] plan() is called without valid context_data");
     } else {
       auto & context_data_mut = context_data_.value();
-      return planPullOver(context_data_mut);
+      const auto output = planPullOver(context_data_mut);
+      set_longitudinal_planning_factor(output.path);
+      return output;
     }
   }
 
@@ -1748,9 +1750,6 @@ BehaviorModuleOutput GoalPlannerModule::planPullOverAsOutput(PullOverContextData
     }
   }
 
-  // For debug
-  setDebugData(context_data);
-
   if (!pull_over_path_with_velocity_opt) {
     return output;
   }
@@ -1775,6 +1774,7 @@ void GoalPlannerModule::postProcess()
     LaneParkingResponse{}, FreespaceParkingResponse{});
   const auto & context_data =
     context_data_.has_value() ? context_data_.value() : context_data_dummy;
+  setDebugData(context_data);
 
   const bool has_decided_path =
     path_decision_controller_.get_current_state().state == PathDecisionState::DecisionKind::DECIDED;
@@ -1793,8 +1793,6 @@ void GoalPlannerModule::postProcess()
   updatePlanningFactor(
     context_data, {pull_over_path.start_pose(), pull_over_path.modified_goal_pose()},
     {distance_to_path_change.first, distance_to_path_change.second});
-
-  set_longitudinal_planning_factor(pull_over_path.full_path());
 }
 
 BehaviorModuleOutput GoalPlannerModule::planWaitingApproval()
@@ -1809,7 +1807,9 @@ BehaviorModuleOutput GoalPlannerModule::planWaitingApproval()
         "planner");
     } else {
       auto & context_data_mut = context_data_.value();
-      return planPullOverAsCandidate(context_data_mut, "waiting approval");
+      const auto output = planPullOverAsCandidate(context_data_mut, "waiting approval");
+      set_longitudinal_planning_factor(output.path);
+      return output;
     }
   }
 
