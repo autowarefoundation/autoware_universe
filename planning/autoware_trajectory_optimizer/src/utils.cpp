@@ -300,15 +300,17 @@ void fix_trajectory_orientation(
   }
 }
 
-void apply_spline(TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params)
+void apply_spline(
+  TrajectoryPoints & traj_points, const double interpolation_resolution_m,
+  const double max_yaw_discrepancy_deg, const double max_distance_discrepancy_m,
+  const bool copy_original_orientation)
 {
   constexpr size_t min_points_for_akima_spline = 5;
   const auto traj_length = autoware::motion_utils::calcArcLength(traj_points);
 
   if (
-    params.spline_interpolation_resolution_m < 0.1 ||
-    traj_points.size() < min_points_for_akima_spline ||
-    traj_length < params.spline_interpolation_resolution_m) {
+    interpolation_resolution_m < 0.1 || traj_points.size() < min_points_for_akima_spline ||
+    traj_length < interpolation_resolution_m) {
     return;
   }
 
@@ -323,18 +325,16 @@ void apply_spline(TrajectoryPoints & traj_points, const TrajectoryOptimizerParam
   temp_traj.points = traj_points;
   // first resample to a lower resolution to avoid ill-conditioned spline
   temp_traj = autoware::motion_utils::resampleTrajectory(
-    temp_traj, 2.0 * params.spline_interpolation_resolution_m, dont_use_akima_spline_for_xy,
-    use_lerp_for_z, use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
+    temp_traj, 2.0 * interpolation_resolution_m, dont_use_akima_spline_for_xy, use_lerp_for_z,
+    use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
   // then resample to the desired resolution using akima spline
   temp_traj = autoware::motion_utils::resampleTrajectory(
-    temp_traj, params.spline_interpolation_resolution_m, !dont_use_akima_spline_for_xy,
-    use_lerp_for_z, use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
+    temp_traj, interpolation_resolution_m, !dont_use_akima_spline_for_xy, use_lerp_for_z,
+    use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
 
   // check where the original trajectory ends in the new trajectory or where there is a significant
   // change in yaw
-  const double max_yaw_discrepancy_rad =
-    autoware_utils_math::deg2rad(params.spline_interpolation_max_yaw_discrepancy_deg);
-  const double max_distance_discrepancy_m = params.spline_interpolation_max_distance_discrepancy_m;
+  const double max_yaw_discrepancy_rad = autoware_utils_math::deg2rad(max_yaw_discrepancy_deg);
   const auto last_original_point = traj_points.back();
   const auto nearest_index_opt = autoware::motion_utils::findNearestIndex(
     temp_traj.points, last_original_point.pose, max_distance_discrepancy_m,
@@ -350,10 +350,19 @@ void apply_spline(TrajectoryPoints & traj_points, const TrajectoryOptimizerParam
   temp_traj.points.push_back(last_original_point);
   // re-sample again using lerp to ensure the resolution is maintained after cropping
   temp_traj = autoware::motion_utils::resampleTrajectory(
-    temp_traj, params.spline_interpolation_resolution_m, dont_use_akima_spline_for_xy,
-    use_lerp_for_z, use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
-  if (params.spline_copy_original_orientation) {
-    copy_trajectory_orientation(traj_points, temp_traj.points, params);
+    temp_traj, interpolation_resolution_m, dont_use_akima_spline_for_xy, use_lerp_for_z,
+    use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
+  if (copy_original_orientation) {
+    // Copy orientation from original trajectory
+    for (auto & out_point : temp_traj.points) {
+      const auto nearest_index_opt = autoware::motion_utils::findNearestIndex(
+        traj_points, out_point.pose, max_distance_discrepancy_m, M_PI_2);
+      if (!nearest_index_opt.has_value()) {
+        continue;
+      }
+      const auto nearest_index = nearest_index_opt.value();
+      out_point.pose.orientation = traj_points.at(nearest_index).pose.orientation;
+    }
   }
   traj_points = temp_traj.points;
 }
@@ -404,7 +413,11 @@ void interpolate_trajectory(
   }
   // Apply spline to smooth the trajectory
   if (params.use_akima_spline_interpolation) {
-    apply_spline(traj_points, params);
+    apply_spline(
+      traj_points, params.spline_interpolation_resolution_m,
+      params.spline_interpolation_max_yaw_discrepancy_deg,
+      params.spline_interpolation_max_distance_discrepancy_m,
+      params.spline_copy_original_orientation);
   }
   // Use elastic band to smooth the trajectory
   if (params.smooth_trajectories) {
