@@ -154,7 +154,6 @@ std::unordered_set<lanelet::Id> create_signal_id_set(
 
   return signal_id_set;
 }
-
 // Returns the signal with the highest confidence elements, considering source priority
 TrafficSignal get_highest_confidence_signal(
   const std::optional<TrafficSignal> & perception_signal,
@@ -176,35 +175,32 @@ TrafficSignal get_highest_confidence_signal(
     case autoware::traffic_light::SourcePriority::PERCEPTION:
       return *perception_signal;
     case autoware::traffic_light::SourcePriority::CONFIDENCE:
-    default:
-      // Fall through to confidence-based selection
-      break;
+      // Compiles elements into a map by shape, to compare their confidences
+      using Key = Element::_shape_type;
+      std::map<Key, std::vector<Element>> shape_element_map;
+      for (const auto & element : perception_signal->elements) {
+        shape_element_map[element.shape].emplace_back(element);
+      }
+      for (const auto & element : external_signal->elements) {
+        shape_element_map[element.shape].emplace_back(element);
+      }
+
+      TrafficSignal highest_confidence_signal;
+
+      // Assumes that both signals have the same traffic_signal_id
+      highest_confidence_signal.traffic_light_group_id = perception_signal->traffic_light_group_id;
+
+      // For each shape, finds the element with the highest confidence and adds it to the signal
+      for (const auto & [shape, elements] : shape_element_map) {
+        const auto highest_confidence_element = std::max_element(
+          elements.begin(), elements.end(),
+          [](const Element & a, const Element & b) { return a.confidence < b.confidence; });
+        highest_confidence_signal.elements.emplace_back(*highest_confidence_element);
+      }
+
+      return highest_confidence_signal;
   }
-
-  // Compiles elements into a map by shape, to compare their confidences
-  using Key = Element::_shape_type;
-  std::map<Key, std::vector<Element>> shape_element_map;
-  for (const auto & element : perception_signal->elements) {
-    shape_element_map[element.shape].emplace_back(element);
-  }
-  for (const auto & element : external_signal->elements) {
-    shape_element_map[element.shape].emplace_back(element);
-  }
-
-  TrafficSignal highest_confidence_signal;
-
-  // Assumes that both signals have the same traffic_signal_id
-  highest_confidence_signal.traffic_light_group_id = perception_signal->traffic_light_group_id;
-
-  // For each shape, finds the element with the highest confidence and adds it to the signal
-  for (const auto & [shape, elements] : shape_element_map) {
-    const auto highest_confidence_element = std::max_element(
-      elements.begin(), elements.end(),
-      [](const Element & a, const Element & b) { return a.confidence < b.confidence; });
-    highest_confidence_signal.elements.emplace_back(*highest_confidence_element);
-  }
-
-  return highest_confidence_signal;
+  __builtin_unreachable();
 }
 
 // Determines the newer of two Time stamps
