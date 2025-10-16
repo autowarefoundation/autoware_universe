@@ -16,6 +16,7 @@ You can immediately understand how to use the macros just by looking at `autowar
 
 pub_output_ = AUTOWARE_CREATE_PUBLISHER3(
   PointCloud2,
+  this,
   "output",
   rclcpp::SensorDataQoS().keep_last(max_queue_size_),
   pub_options
