@@ -35,6 +35,18 @@ using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using autoware::velocity_smoother::JerkFilteredSmoother;
 
+struct TrajectoryVelocityOptimizerParams
+{
+  double target_pull_out_speed_mps{1.0};
+  double target_pull_out_acc_mps2{1.0};
+  double max_speed_mps{8.33};
+  double max_lateral_accel_mps2{1.5};
+  bool set_engage_speed{false};
+  bool limit_speed{true};
+  bool limit_lateral_acceleration{false};
+  bool smooth_velocities{false};
+};
+
 class TrajectoryVelocityOptimizer : public TrajectoryOptimizerPluginBase
 {
 public:
@@ -55,6 +67,7 @@ public:
 
 private:
   std::shared_ptr<JerkFilteredSmoother> jerk_filtered_smoother_{nullptr};
+  TrajectoryVelocityOptimizerParams velocity_params_;
 };
 }  // namespace autoware::trajectory_optimizer::plugin
 
