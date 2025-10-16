@@ -46,7 +46,6 @@ We also assume that $n\sim\mathcal{N}(0, \sigma^2)$.
 
 **Note:** The angular velocity offset values introduce a fixed compensation that is not considered in the gyro bias estimation. If the `on_off_correction.correct_for_dynamic_bias` option is enabled, the `on_off_correction.correct_for_static_bias` must be disabled, otherwise the values `angular_velocity_offset_` will introduce correction errors.
 
-
 ## gyro_bias_estimator
 
 `gyro_bias_validator` is a node that validates the bias of the gyroscope. It subscribes to the `sensor_msgs::msg::Imu` topic and validate if the bias of the gyroscope is within the specified range.
@@ -143,8 +142,8 @@ These 2 parameters control the correction of the bias and scale for the gyroscop
 
 ### Parameters
 
-| Name                   | Type | Description                                 |
-| ---------------------- | ---- | ------------------------------------------- |
+| Name                                         | Type | Description                                                |
+| -------------------------------------------- | ---- | ---------------------------------------------------------- |
 | `on_off_correction.correct_for_static_bias`  | bool | Enable or disable static bias correction (default: false)  |
-| `on_off_correction.correct_for_dynamic_bias`  | bool | Enable or disable dynamic bias correction (default: false)  |
-| `on_off_correction.correct_for_scale` | bool | Enable or disable scale correction (default: false) |
+| `on_off_correction.correct_for_dynamic_bias` | bool | Enable or disable dynamic bias correction (default: false) |
+| `on_off_correction.correct_for_scale`        | bool | Enable or disable scale correction (default: false)        |

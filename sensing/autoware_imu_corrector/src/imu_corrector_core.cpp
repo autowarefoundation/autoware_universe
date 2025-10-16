@@ -75,8 +75,10 @@ ImuCorrector::ImuCorrector(const rclcpp::NodeOptions & options)
 
   accel_stddev_imu_link_ = declare_parameter<double>("acceleration_stddev", 10000.0);
 
-  correct_for_static_bias_ = declare_parameter<bool>("on_off_correction.correct_for_static_bias", false);
-  correct_for_dynamic_bias_ = declare_parameter<bool>("on_off_correction.correct_for_dynamic_bias", false);
+  correct_for_static_bias_ =
+    declare_parameter<bool>("on_off_correction.correct_for_static_bias", false);
+  correct_for_dynamic_bias_ =
+    declare_parameter<bool>("on_off_correction.correct_for_dynamic_bias", false);
   correct_for_scale_ = declare_parameter<bool>("on_off_correction.correct_for_scale", false);
 
   imu_sub_ = create_subscription<sensor_msgs::msg::Imu>(
