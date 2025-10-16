@@ -1510,7 +1510,8 @@ void fillLongitudinalAndLengthByClosestEnvelopeFootprint(
 double calcLateralDistance(const PathWithLaneId & path, const Point & point)
 {
   const auto idx = autoware::motion_utils::findNearestIndex(path.points, point);
-  const auto lateral = calc_lateral_deviation(autoware_utils::get_pose(path.points.at(idx)), point);
+  const auto lateral =
+    calc_lateral_deviation(autoware_utils_geometry::get_pose(path.points.at(idx)), point);
   return lateral;
 }
 
@@ -1545,12 +1546,12 @@ std::vector<Point> fillMidPointsOfPolygonOuter(const Polygon2d & polygon)
     const auto & p2 = outer[i + 1];
 
     // Add original point
-    interpolated_points.push_back(autoware_utils::create_point(p1.x(), p1.y(), 0.0));
+    interpolated_points.push_back(autoware_utils_geometry::create_point(p1.x(), p1.y(), 0.0));
 
     // Add midpoint
     const double mid_x = (p1.x() + p2.x()) / 2.0;
     const double mid_y = (p1.y() + p2.y()) / 2.0;
-    interpolated_points.push_back(autoware_utils::create_point(mid_x, mid_y, 0.0));
+    interpolated_points.push_back(autoware_utils_geometry::create_point(mid_x, mid_y, 0.0));
   }
 
   return interpolated_points;
