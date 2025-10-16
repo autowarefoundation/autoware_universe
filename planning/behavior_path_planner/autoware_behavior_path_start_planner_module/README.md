@@ -514,6 +514,49 @@ See also [[1]](https://www.sciencedirect.com/science/article/pii/S14746670153474
 
 Generate smooth paths using clothoid curves that provide continuous curvature transitions. The clothoid path consists of three segments: entry clothoid, circular arc, and exit clothoid, ensuring smooth steering transitions.
 
+#### Path Generation Flow
+
+The path is generated with following flow.
+
+1. **Parameter Setting and Initialization**
+
+1. **Get lane information**
+   - Get road lane (target lane) and shoulder lane (start lane) information.
+
+1. **Start and Target Path Generation**
+   - Generate the centerline path of the target lane.
+   - Genarated the straight path of the shoulder lane.
+
+1. **Circular Arc Path Generation**
+   - Generate circular arc path using the same method as geometric pull out.
+   - Calculate composite arc path with two arc segments (entry and exit arcs).
+   - This process is repeated with gradually increasing maximum steering angles from the parameter list `clothoid_max_steer_angles_deg` (e.g., [5.0, 10.0, 20.0] degrees) until a valid path is found.
+
+1. **Clothoid Approximation**
+   - Convert the circular arc segments to clothoid curves.
+   - Generate three-segment clothoid path: entry clothoid → circular arc → exit clothoid for each arc path.
+   - Apply rigid transform to align the start and goal points of the approximated clothoid path with the original arc path.
+
+1. **Lane Departure Check and Path Validation**
+
+1. **Collision Check**
+
+The following diagram illustrates the process flow for generating clothoid paths:
+
+```mermaid
+flowchart TD
+    A[Start: Parameter Setting and Initialization] --> B[Get Lane Information]
+    B --> C[Start and Target Path Generation]
+    C --> D[Select a candidate max steer angle]
+    D --> E[Generate Circular Arc Path]
+    E --> F[Clothoid Approximation]
+    F --> G[Lane Departure Check and Path Validation]
+    G --> H[Collision Check]
+    H --> I[Is the path valid?]
+    I -->|No| D
+    I -->|Yes| J[End: Return Path]
+```
+
 #### parameters for clothoid pull out
 
 | Name                                       | Unit    | Type   | Description                                                       | Default value     |
