@@ -254,8 +254,12 @@ void fillLaneIdsFromMap(
 }
 
 void fillLongitudinalVelocityFromInputPath(
-  PathIterator begin, PathIterator end, const PathWithLaneId & input)
+  PathIterator begin, PathIterator end, PathWithLaneId input)
 {
+  if (input.points.size() < 2) {
+    return;
+  }
+  input.points.pop_back();  // remove the last point because its velocity is 0.0
   // refine lane_ids and longitudinal velocity from input path
   for (auto it = begin; it != end; ++it) {
     auto idx = autoware::motion_utils::findNearestIndex(input.points, it->point.pose, 3.0, M_PI_4);
@@ -329,10 +333,13 @@ bool set_goal(
     output_ptr->points.push_back(pre_refined_mid_goal);
     output_ptr->points.push_back(refined_goal);
 
-    // NOTE: this lane ids will be overwritten by the input path in the next step
-    output_ptr->points.at(output_ptr->points.size() - 3).lane_ids = input.points.back().lane_ids;
-    output_ptr->points.at(output_ptr->points.size() - 2).lane_ids = input.points.back().lane_ids;
-    output_ptr->points.at(output_ptr->points.size() - 1).lane_ids = input.points.back().lane_ids;
+    // NOTE: this lane ids and longitudinal velocity will be overwritten by the input path in the
+    // next step
+    for (size_t i = output_ptr->points.size() - 3; i < output_ptr->points.size(); ++i) {
+      output_ptr->points.at(i).lane_ids = input.points.back().lane_ids;
+      output_ptr->points.at(i).point.longitudinal_velocity_mps =
+        input.points.back().point.longitudinal_velocity_mps;
+    }
 
     output_ptr->left_bound = input.left_bound;
     output_ptr->right_bound = input.right_bound;
