@@ -103,6 +103,20 @@ rclcpp::Logger get_logger();
  *
  * @param input_trajectory The trajectory points to be cleaned.
  */
+
+/**
+ * Remove points with quaternion orientations that are significantly different from the point-wise
+ * orientation. ie. arctan2(dy, dx) where dy = y_{i+1} - y_{i}, dx = x_{i+1} - x_{i}
+ * The check if preformed in reverse order to avoid removing points that are needed for
+ * orientation calculation of previous points and to preserve the time-wise difference ie. dt
+ * between points.
+ * @param input_trajectory_array The trajectory points to be cleaned.
+ * @param yaw_threshold_rad The yaw difference threshold in radians. Points with orientation
+ * deviating more than this value from the geometric direction to the next point are removed.
+ */
+void remove_wrongly_oriented_points(
+  TrajectoryPoints & input_trajectory_array, const double yaw_threshold_rad);
+
 void remove_invalid_points(std::vector<TrajectoryPoint> & input_trajectory);
 
 /**
