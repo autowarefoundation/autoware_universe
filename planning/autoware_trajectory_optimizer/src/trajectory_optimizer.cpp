@@ -145,7 +145,7 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
 
   CandidateTrajectories output_trajectories = *msg;
   for (auto & trajectory : output_trajectories.candidate_trajectories) {
-    // Apply optimizers - pass params (flags) and data (runtime state) separately
+    // Apply optimizers - pass params (flags) and data (runtime state)
     trajectory_extender_ptr_->optimize_trajectory(trajectory.points, params_, data);
     trajectory_point_fixer_ptr_->optimize_trajectory(trajectory.points, params_, data);
     eb_smoother_optimizer_ptr_->optimize_trajectory(trajectory.points, params_, data);
