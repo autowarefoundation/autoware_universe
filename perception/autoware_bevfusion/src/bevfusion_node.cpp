@@ -132,8 +132,8 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
 
   BEVFusionConfig config(
     plugins_path, image_backbone_onnx_path, image_backbone_engine_path,
-    image_backbone_trt_precision, out_size_factor, cloud_capacity, max_points_per_voxel,
-    voxels_num, point_cloud_range, voxel_size, d_bound, x_bound, y_bound, z_bound, num_cameras,
+    image_backbone_trt_precision, out_size_factor, cloud_capacity, max_points_per_voxel, voxels_num,
+    point_cloud_range, voxel_size, d_bound, x_bound, y_bound, z_bound, num_cameras,
     raw_image_height, raw_image_width, img_aug_scale_x, img_aug_scale_y, roi_height, roi_width,
     features_height, features_width, num_depth_features, image_feature_dim, num_proposals,
     circle_nms_dist_threshold, yaw_norm_thresholds, score_threshold, use_intensity);
@@ -151,18 +151,14 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
     allow_remapping_by_area_matrix, min_area_matrix, max_area_matrix);
 
   // Create TrtBEVFusionConfig based on sensor_fusion mode
-  TrtBEVFusionConfig trt_bevfusion_config = sensor_fusion_
-    ? TrtBEVFusionConfig{
-        tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U),
-        tensorrt_common::TrtCommonConfig(
-          image_backbone_onnx_path, image_backbone_trt_precision, image_backbone_engine_path,
-          1ULL << 32U)}
-    : TrtBEVFusionConfig{
-        tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U),
-        std::nullopt};
+  TrtBEVFusionConfig trt_bevfusion_config =
+    sensor_fusion_
+      ? TrtBEVFusionConfig{tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U), tensorrt_common::TrtCommonConfig(image_backbone_onnx_path, image_backbone_trt_precision, image_backbone_engine_path, 1ULL << 32U)}
+      : TrtBEVFusionConfig{
+          tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U),
+          std::nullopt};
 
-  detector_ptr_ =
-    std::make_unique<BEVFusionTRT>(trt_bevfusion_config, densification_param, config);
+  detector_ptr_ = std::make_unique<BEVFusionTRT>(trt_bevfusion_config, densification_param, config);
   diagnostics_detector_trt_ =
     std::make_unique<autoware_utils::DiagnosticsInterface>(this, "bevfusion_trt");
 

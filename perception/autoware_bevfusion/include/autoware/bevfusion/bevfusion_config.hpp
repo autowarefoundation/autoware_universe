@@ -18,9 +18,9 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include <stdexcept>
 
 namespace autoware::bevfusion
 {
@@ -47,8 +47,7 @@ public:
   {
     // Derive sensor_fusion from image backbone parameters
     // All three must be empty OR all three must be non-empty
-    const bool all_empty = image_backbone_onnx_path.empty() &&
-                           image_backbone_engine_path.empty() &&
+    const bool all_empty = image_backbone_onnx_path.empty() && image_backbone_engine_path.empty() &&
                            image_backbone_trt_precision.empty();
     const bool all_non_empty = !image_backbone_onnx_path.empty() &&
                                !image_backbone_engine_path.empty() &&
@@ -58,9 +57,8 @@ public:
       throw std::invalid_argument(
         "Image backbone parameters must be either all empty (lidar-only mode) or all non-empty "
         "(fusion mode). Got: image_backbone_onnx_path='" +
-        image_backbone_onnx_path + "', image_backbone_engine_path='" +
-        image_backbone_engine_path + "', image_backbone_trt_precision='" +
-        image_backbone_trt_precision + "'");
+        image_backbone_onnx_path + "', image_backbone_engine_path='" + image_backbone_engine_path +
+        "', image_backbone_trt_precision='" + image_backbone_trt_precision + "'");
     }
 
     sensor_fusion_ = all_non_empty;
@@ -153,9 +151,9 @@ public:
   std::string plugins_path_{};
 
   // Constants
-  static constexpr std::int64_t kTransformMatrixDim = 4;        // 4x4 transformation matrix dimension
-  static constexpr std::int64_t kNumRGBChannels = 3;            // RGB color channels
-  static constexpr std::int64_t kNum3DCoords = 3;               // 3D coordinates (x, y, z)
+  static constexpr std::int64_t kTransformMatrixDim = 4;  // 4x4 transformation matrix dimension
+  static constexpr std::int64_t kNumRGBChannels = 3;      // RGB color channels
+  static constexpr std::int64_t kNum3DCoords = 3;         // 3D coordinates (x, y, z)
 
   ///// NETWORK PARAMETERS /////
 

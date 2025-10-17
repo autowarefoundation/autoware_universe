@@ -99,11 +99,12 @@ void BEVFusionTRT::initPtr()
   // pre computed tensors
   if (config_.sensor_fusion_) {
     lidar2image_d_ = autoware::cuda_utils::make_unique<float[]>(
-      config_.num_cameras_ * BEVFusionConfig::kTransformMatrixDim * BEVFusionConfig::kTransformMatrixDim);
+      config_.num_cameras_ * BEVFusionConfig::kTransformMatrixDim *
+      BEVFusionConfig::kTransformMatrixDim);
     std::int64_t num_geom_feats = config_.num_cameras_ * config_.features_height_ *
                                   config_.features_width_ * config_.num_depth_features_;
-    geom_feats_d_ =
-      autoware::cuda_utils::make_unique<std::int32_t[]>(BEVFusionConfig::kTransformMatrixDim * num_geom_feats);
+    geom_feats_d_ = autoware::cuda_utils::make_unique<std::int32_t[]>(
+      BEVFusionConfig::kTransformMatrixDim * num_geom_feats);
     kept_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(num_geom_feats);
     ranks_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(num_geom_feats);
     indices_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(num_geom_feats);
@@ -113,8 +114,9 @@ void BEVFusionTRT::initPtr()
       config_.num_cameras_ * config_.roi_height_ * config_.roi_width_ *
       BEVFusionConfig::kNumRGBChannels);
     for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
-      image_buffers_d_.emplace_back(autoware::cuda_utils::make_unique<std::uint8_t[]>(
-        config_.raw_image_height_ * config_.raw_image_width_ * BEVFusionConfig::kNumRGBChannels));
+      image_buffers_d_.emplace_back(
+        autoware::cuda_utils::make_unique<std::uint8_t[]>(
+          config_.raw_image_height_ * config_.raw_image_width_ * BEVFusionConfig::kNumRGBChannels));
     }
     camera_masks_d_ = autoware::cuda_utils::make_unique<float[]>(config_.num_cameras_);
 
@@ -123,7 +125,8 @@ void BEVFusionTRT::initPtr()
       config_.num_cameras_ * config_.image_feature_dim_ * config_.features_height_ *
       config_.features_width_);
     img_aug_matrix_d_ = autoware::cuda_utils::make_unique<float[]>(
-      config_.num_cameras_ * BEVFusionConfig::kTransformMatrixDim * BEVFusionConfig::kTransformMatrixDim);
+      config_.num_cameras_ * BEVFusionConfig::kTransformMatrixDim *
+      BEVFusionConfig::kTransformMatrixDim);
   }
 
   pre_ptr_ = std::make_unique<PreprocessCuda>(config_, stream_, true);
@@ -142,8 +145,7 @@ void BEVFusionTRT::initTrt(const TrtBEVFusionConfig & trt_config)
     image_backbone_io.emplace_back(
       "image_feats",
       nvinfer1::Dims{
-        4,
-        {-1, config_.image_feature_dim_, config_.features_height_, config_.features_width_}});
+        4, {-1, config_.image_feature_dim_, config_.features_height_, config_.features_width_}});
 
     std::vector<autoware::tensorrt_common::ProfileDims> image_backbone_profiles;
     image_backbone_profiles.emplace_back(
@@ -194,8 +196,7 @@ void BEVFusionTRT::initTrt(const TrtBEVFusionConfig & trt_config)
     network_io.emplace_back(
       "image_feats",
       nvinfer1::Dims{
-        4,
-        {-1, config_.image_feature_dim_, config_.features_height_, config_.features_width_}});
+        4, {-1, config_.image_feature_dim_, config_.features_height_, config_.features_width_}});
     network_io.emplace_back(
       "img_aug_matrix",
       nvinfer1::Dims{
@@ -411,7 +412,8 @@ void BEVFusionTRT::setIntrinsicsExtrinsics(
 
   assert(
     static_cast<std::int64_t>(lidar2images_flattened.size()) ==
-    config_.num_cameras_ * BEVFusionConfig::kTransformMatrixDim * BEVFusionConfig::kTransformMatrixDim);
+    config_.num_cameras_ * BEVFusionConfig::kTransformMatrixDim *
+      BEVFusionConfig::kTransformMatrixDim);
 
   assert(
     static_cast<std::int64_t>(geom_feats.size()) <=
@@ -440,8 +442,8 @@ void BEVFusionTRT::setIntrinsicsExtrinsics(
 
   cudaMemcpy(
     lidar2image_d_.get(), lidar2images_flattened.data(),
-    config_.num_cameras_ * BEVFusionConfig::kTransformMatrixDim * BEVFusionConfig::kTransformMatrixDim *
-      sizeof(float),
+    config_.num_cameras_ * BEVFusionConfig::kTransformMatrixDim *
+      BEVFusionConfig::kTransformMatrixDim * sizeof(float),
     cudaMemcpyHostToDevice);
   cudaMemcpy(
     geom_feats_d_.get(), geom_feats.data(), num_geom_feats_ * sizeof(std::int32_t),
@@ -464,8 +466,8 @@ void BEVFusionTRT::setIntrinsicsExtrinsics(
     }
     cudaMemcpy(
       img_aug_matrix_d_.get(), img_aug_matrix_flattened.data(),
-      config_.num_cameras_ * BEVFusionConfig::kTransformMatrixDim * BEVFusionConfig::kTransformMatrixDim *
-        sizeof(float),
+      config_.num_cameras_ * BEVFusionConfig::kTransformMatrixDim *
+        BEVFusionConfig::kTransformMatrixDim * sizeof(float),
       cudaMemcpyHostToDevice);
   }
 }
@@ -522,8 +524,7 @@ bool BEVFusionTRT::preProcess(
       pre_ptr_->resizeAndExtractRoi_launch(
         image_buffers_d_[camera_id].get(),
         &roi_tensor_d_
-           [camera_id * config_.roi_height_ * config_.roi_width_ *
-            BEVFusionConfig::kNumRGBChannels],
+          [camera_id * config_.roi_height_ * config_.roi_width_ * BEVFusionConfig::kNumRGBChannels],
         config_.raw_image_height_, config_.raw_image_width_, config_.resized_height_,
         config_.resized_width_, config_.roi_height_, config_.roi_width_, start_y, start_x,
         camera_streams_[camera_id]);
@@ -586,17 +587,20 @@ bool BEVFusionTRT::preProcess(
 
     // Separate image backbone: set image_feats and img_aug_matrix inputs
     network_trt_ptr_->setInputShape(
-      "image_feats",
-      nvinfer1::Dims{
-        4,
-        {config_.num_cameras_, config_.image_feature_dim_, config_.features_height_,
-         config_.features_width_}});
+      "image_feats", nvinfer1::Dims{
+                       4,
+                       {config_.num_cameras_, config_.image_feature_dim_, config_.features_height_,
+                        config_.features_width_}});
     network_trt_ptr_->setInputShape(
-      "img_aug_matrix",
-      nvinfer1::Dims{3, {config_.num_cameras_, BEVFusionConfig::kTransformMatrixDim, BEVFusionConfig::kTransformMatrixDim}});
+      "img_aug_matrix", nvinfer1::Dims{
+                          3,
+                          {config_.num_cameras_, BEVFusionConfig::kTransformMatrixDim,
+                           BEVFusionConfig::kTransformMatrixDim}});
     network_trt_ptr_->setInputShape(
-      "lidar2image",
-      nvinfer1::Dims{3, {config_.num_cameras_, BEVFusionConfig::kTransformMatrixDim, BEVFusionConfig::kTransformMatrixDim}});
+      "lidar2image", nvinfer1::Dims{
+                       3,
+                       {config_.num_cameras_, BEVFusionConfig::kTransformMatrixDim,
+                        BEVFusionConfig::kTransformMatrixDim}});
 
     network_trt_ptr_->setInputShape(
       "geom_feats", nvinfer1::Dims{2, {num_ranks_, BEVFusionConfig::kTransformMatrixDim}});
@@ -617,8 +621,7 @@ bool BEVFusionTRT::preProcess(
       cudaMemcpy(
         roi_host_data.data(),
         &roi_tensor_d_
-           [camera_id * config_.roi_height_ * config_.roi_width_ *
-            BEVFusionConfig::kNumRGBChannels],
+          [camera_id * config_.roi_height_ * config_.roi_width_ * BEVFusionConfig::kNumRGBChannels],
         config_.roi_height_ * config_.roi_width_ * BEVFusionConfig::kNumRGBChannels,
         cudaMemcpyDeviceToHost);
     }
@@ -632,11 +635,10 @@ bool BEVFusionTRT::inference()
   // Fusion model: run image backbone first, then main network
   if (config_.sensor_fusion_) {
     image_backbone_trt_ptr_->setInputShape(
-      "imgs",
-      nvinfer1::Dims{
-        4,
-        {config_.num_cameras_, BEVFusionConfig::kNumRGBChannels, config_.roi_height_,
-         config_.roi_width_}});
+      "imgs", nvinfer1::Dims{
+                4,
+                {config_.num_cameras_, BEVFusionConfig::kNumRGBChannels, config_.roi_height_,
+                 config_.roi_width_}});
 
     auto image_status = image_backbone_trt_ptr_->enqueueV3(stream_);
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
