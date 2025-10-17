@@ -22,11 +22,12 @@
 #include "autoware/path_optimizer/state_equation_generator.hpp"
 #include "autoware/path_optimizer/type_alias.hpp"
 #include "autoware/path_optimizer/utils/conditional_timer.hpp"
-#include "autoware_internal_debug_msgs/msg/spline_debug.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 #include "autoware_utils/system/time_keeper.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 #include "gtest/gtest.h"
+
+#include "autoware_internal_debug_msgs/msg/spline_debug.hpp"
 
 // Add new includes for spline coefficient publishing
 #include <Eigen/Core>

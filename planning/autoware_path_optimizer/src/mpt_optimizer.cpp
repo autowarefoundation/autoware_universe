@@ -427,11 +427,11 @@ MPTOptimizer::MPTOptimizer(
   debug_ref_traj_pub_ = node->create_publisher<Trajectory>("~/debug/mpt_ref_traj", 1);
   debug_mpt_traj_pub_ = node->create_publisher<Trajectory>("~/debug/mpt_traj", 1);
 
-  debug_spline_pub_ =
-   node->create_publisher<autoware_internal_debug_msgs::msg::SplineDebug>("~/debug/spline_coefficients", 1);
+  debug_spline_pub_ = node->create_publisher<autoware_internal_debug_msgs::msg::SplineDebug>(
+    "~/debug/spline_coefficients", 1);
 
   debug_optimised_steering_pub_ =
-   node->create_publisher<std_msgs::msg::Float32MultiArray>("~/debug/optimised_steering", 1);
+    node->create_publisher<std_msgs::msg::Float32MultiArray>("~/debug/optimised_steering", 1);
 }
 
 void MPTOptimizer::updateVehicleCircles()
@@ -543,8 +543,7 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::getPrevOptimizedTrajec
   return std::nullopt;
 }
 
-void MPTOptimizer::publishOptimizedSteering(
-  const Eigen::VectorXd & optimized_variables) const
+void MPTOptimizer::publishOptimizedSteering(const Eigen::VectorXd & optimized_variables) const
 {
   std::cerr << "publishOptimizedSteering" << std::endl;
   std_msgs::msg::Float32MultiArray msg;
@@ -618,7 +617,9 @@ void MPTOptimizer::publishSplineCoefficientsAndCurvatures(
     msg_curvatures.data.push_back(curvatures[i]);
   }
 
-  std::cerr << "knots size, x_coeffs size, y_coeffs size, curvatures size: " << msg_knots.data.size() << ", " << msg_x.data.size() << ", " << msg_y.data.size() << ", " << msg_curvatures.data.size() << std::endl;
+  std::cerr << "knots size, x_coeffs size, y_coeffs size, curvatures size: "
+            << msg_knots.data.size() << ", " << msg_x.data.size() << ", " << msg_y.data.size()
+            << ", " << msg_curvatures.data.size() << std::endl;
 
   autoware_internal_debug_msgs::msg::SplineDebug msg;
   msg.knots = msg_knots;
