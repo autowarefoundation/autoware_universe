@@ -9,13 +9,13 @@
         "min_neighbors": {
           "type": "integer",
           "description": "If points in the circle centered on reference point is less than min_neighbors, a reference point is judged as outlier",
-          "default": "5",
+          "default": 5,
           "minimum": 0
         },
         "search_radius": {
           "type": "number",
           "description": "Searching number of points included in search_radius",
-          "default": "0.2",
+          "default": 0.2,
           "minimum": 0
         }
       },
