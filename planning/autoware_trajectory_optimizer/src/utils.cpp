@@ -338,13 +338,13 @@ void apply_spline(
   if (copy_original_orientation) {
     // Copy orientation from original trajectory
     for (auto & out_point : temp_traj.points) {
-      const auto nearest_index_opt = autoware::motion_utils::findNearestIndex(
+      const auto nearest_index_yaw_opt = autoware::motion_utils::findNearestIndex(
         traj_points, out_point.pose, max_distance_discrepancy_m, M_PI_2);
-      if (!nearest_index_opt.has_value()) {
+      if (!nearest_index_yaw_opt.has_value()) {
         continue;
       }
-      const auto nearest_index = nearest_index_opt.value();
-      out_point.pose.orientation = traj_points.at(nearest_index).pose.orientation;
+      const auto nearest_index_yaw = nearest_index_yaw_opt.value();
+      out_point.pose.orientation = traj_points.at(nearest_index_yaw).pose.orientation;
     }
   }
   traj_points = temp_traj.points;
