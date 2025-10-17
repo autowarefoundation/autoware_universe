@@ -61,7 +61,7 @@ The following low-pass filters will be applied.
 
 - `slow_down_planning.lpf_gain_slow_down_vel`
   - slow down velocity
-- `slow_down_planning.lpf_gain_lat_dist`
+- `slow_down_planning.lpf_gain_lateral_distance`
   - lateral distance of obstacles to the ego's trajectory to calculate the target velocity
 - `slow_down_planning.lpf_gain_dist_to_slow_down`
   - distance to the slow down point
