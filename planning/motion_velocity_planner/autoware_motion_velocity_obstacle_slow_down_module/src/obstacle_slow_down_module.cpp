@@ -20,6 +20,7 @@
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/marker/marker_helper.hpp>
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
+#include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/signal_processing/lowpass_filter_1d.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -516,17 +517,21 @@ ObstacleSlowDownModule::create_slow_down_obstacle_for_predicted_object(
 
   // Create linestring from trajectory points
   const auto traj_line = [&]() {
-    constexpr double resample_interval = 2.0;  // [m]
-    const auto resample_traj = autoware::motion_velocity_planner::utils::resample_trajectory_points(
-      traj_points, resample_interval);
-    bg::model::linestring<autoware_utils::Point2d> linestring;
-    linestring.reserve(resample_traj.size());
+    std::vector<geometry_msgs::msg::Point> path_points{};
+    path_points.reserve(traj_points.size());
+    for (const auto & tp : traj_points) {
+      path_points.push_back(tp.pose.position);
+    }
 
-    std::transform(
-      resample_traj.cbegin(), resample_traj.cend(), std::back_inserter(linestring),
-      [](const auto & point) {
-        return autoware_utils::Point2d(point.pose.position.x, point.pose.position.y);
-      });
+    constexpr double resample_interval = 2.0;  // [m]
+    const auto resampled_points =
+      autoware::motion_utils::resamplePointVector(path_points, resample_interval);
+    bg::model::linestring<autoware_utils::Point2d> linestring;
+    linestring.reserve(resampled_points.size());
+    for (const auto & point : resampled_points) {
+      linestring.push_back(autoware_utils::Point2d(point.x, point.y));
+    }
+
     return linestring;
   }();
 
