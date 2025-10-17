@@ -833,13 +833,13 @@ TEST(TrafficLightArbiterTest, testPerceptionPriorityWithExternalPredictions)
     TrafficSignal traffic_light_group;
     traffic_light_group.traffic_light_group_id = 1012;
 
-    // GREEN circle element with lower confidence
+    // GREEN circle element with higher confidence
     {
       TrafficElement element;
       element.color = TrafficElement::GREEN;
       element.shape = TrafficElement::CIRCLE;
       element.status = TrafficElement::SOLID_ON;
-      element.confidence = 0.6;
+      element.confidence = 1.0;  // higher confidence than perception element
       traffic_light_group.elements.push_back(element);
     }
 

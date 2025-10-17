@@ -275,7 +275,8 @@ void TrafficLightArbiter::arbitrateAndPublish(const builtin_interfaces::msg::Tim
 
         if (
           !success &&
-          (iter_element.confidence < element.confidence || iter_priority < element_priority)) {
+          (element_priority > iter_priority ||
+           (element_priority == iter_priority && element.confidence > iter_element.confidence))) {
           iter->second = elements_and_priority;
         }
       }
