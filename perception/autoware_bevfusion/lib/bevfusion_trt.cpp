@@ -23,9 +23,6 @@
 #include <autoware/cuda_utils/cuda_utils.hpp>
 #include <autoware/point_types/memory.hpp>
 #include <autoware/universe_utils/math/constants.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/opencv.hpp>
 
 #include <algorithm>
 #include <cstddef>
@@ -42,8 +39,8 @@ namespace autoware::bevfusion
 {
 
 BEVFusionTRT::BEVFusionTRT(
-  const tensorrt_common::TrtCommonConfig & trt_config,
-  const DensificationParam & densification_param, const BEVFusionConfig & config)
+  const TrtBEVFusionConfig & trt_config, const DensificationParam & densification_param,
+  const BEVFusionConfig & config)
 : config_(config)
 {
   vg_ptr_ = std::make_unique<VoxelGenerator>(densification_param, config_, stream_);
@@ -54,29 +51,6 @@ BEVFusionTRT::BEVFusionTRT(
 
   initPtr();
   initTrt(trt_config);
-
-  CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
-
-  camera_streams_.resize(config_.num_cameras_);
-  for (std::int64_t i = 0; i < config_.num_cameras_; i++) {
-    CHECK_CUDA_ERROR(cudaStreamCreate(&camera_streams_[i]));
-  }
-}
-
-BEVFusionTRT::BEVFusionTRT(
-  const tensorrt_common::TrtCommonConfig & main_trt_config,
-  const tensorrt_common::TrtCommonConfig & image_backbone_trt_config,
-  const DensificationParam & densification_param, const BEVFusionConfig & config)
-: config_(config)
-{
-  vg_ptr_ = std::make_unique<VoxelGenerator>(densification_param, config_, stream_);
-
-  stop_watch_ptr_ =
-    std::make_unique<autoware::universe_utils::StopWatch<std::chrono::milliseconds>>();
-  stop_watch_ptr_->tic("processing/inner");
-
-  initPtr();
-  initTrtFusion(main_trt_config, image_backbone_trt_config);
 
   CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
 
@@ -124,36 +98,87 @@ void BEVFusionTRT::initPtr()
 
   // pre computed tensors
   if (config_.sensor_fusion_) {
-    lidar2image_d_ = autoware::cuda_utils::make_unique<float[]>(config_.num_cameras_ * 4 * 4);
+    lidar2image_d_ = autoware::cuda_utils::make_unique<float[]>(
+      config_.num_cameras_ * BEVFusionConfig::kTransformMatrixDim * BEVFusionConfig::kTransformMatrixDim);
     std::int64_t num_geom_feats = config_.num_cameras_ * config_.features_height_ *
                                   config_.features_width_ * config_.num_depth_features_;
-    geom_feats_d_ = autoware::cuda_utils::make_unique<std::int32_t[]>(4 * num_geom_feats);
+    geom_feats_d_ =
+      autoware::cuda_utils::make_unique<std::int32_t[]>(BEVFusionConfig::kTransformMatrixDim * num_geom_feats);
     kept_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(num_geom_feats);
     ranks_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(num_geom_feats);
     indices_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(num_geom_feats);
 
     // image branch
     roi_tensor_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(
-      config_.num_cameras_ * config_.roi_height_ * config_.roi_width_ * 3);
+      config_.num_cameras_ * config_.roi_height_ * config_.roi_width_ *
+      BEVFusionConfig::kNumRGBChannels);
     for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
-      image_buffers_d_.emplace_back(
-        autoware::cuda_utils::make_unique<std::uint8_t[]>(
-          config_.raw_image_height_ * config_.raw_image_width_ * 3));
+      image_buffers_d_.emplace_back(autoware::cuda_utils::make_unique<std::uint8_t[]>(
+        config_.raw_image_height_ * config_.raw_image_width_ * BEVFusionConfig::kNumRGBChannels));
     }
     camera_masks_d_ = autoware::cuda_utils::make_unique<float[]>(config_.num_cameras_);
 
     // buffers for fusion model with separate image backbone
     image_feats_d_ = autoware::cuda_utils::make_unique<float[]>(
-      config_.num_cameras_ * 256 * config_.features_height_ * config_.features_width_);
-    img_aug_matrix_d_ = autoware::cuda_utils::make_unique<float[]>(config_.num_cameras_ * 4 * 4);
+      config_.num_cameras_ * config_.image_feature_dim_ * config_.features_height_ *
+      config_.features_width_);
+    img_aug_matrix_d_ = autoware::cuda_utils::make_unique<float[]>(
+      config_.num_cameras_ * BEVFusionConfig::kTransformMatrixDim * BEVFusionConfig::kTransformMatrixDim);
   }
 
   pre_ptr_ = std::make_unique<PreprocessCuda>(config_, stream_, true);
   post_ptr_ = std::make_unique<PostprocessCuda>(config_, stream_);
 }
 
-void BEVFusionTRT::initTrt(const tensorrt_common::TrtCommonConfig & trt_config)
+void BEVFusionTRT::initTrt(const TrtBEVFusionConfig & trt_config)
 {
+  // Initialize image backbone network if fusion mode is enabled
+  if (config_.sensor_fusion_ && trt_config.image_backbone.has_value()) {
+    std::vector<autoware::tensorrt_common::NetworkIO> image_backbone_io;
+    image_backbone_io.emplace_back(
+      "imgs",
+      nvinfer1::Dims{
+        4, {-1, BEVFusionConfig::kNumRGBChannels, config_.roi_height_, config_.roi_width_}});
+    image_backbone_io.emplace_back(
+      "image_feats",
+      nvinfer1::Dims{
+        4,
+        {-1, config_.image_feature_dim_, config_.features_height_, config_.features_width_}});
+
+    std::vector<autoware::tensorrt_common::ProfileDims> image_backbone_profiles;
+    image_backbone_profiles.emplace_back(
+      "imgs",
+      nvinfer1::Dims{
+        4, {1, BEVFusionConfig::kNumRGBChannels, config_.roi_height_, config_.roi_width_}},
+      nvinfer1::Dims{
+        4,
+        {config_.num_cameras_, BEVFusionConfig::kNumRGBChannels, config_.roi_height_,
+         config_.roi_width_}},
+      nvinfer1::Dims{
+        4,
+        {config_.num_cameras_, BEVFusionConfig::kNumRGBChannels, config_.roi_height_,
+         config_.roi_width_}});
+
+    auto image_backbone_io_ptr =
+      std::make_unique<std::vector<autoware::tensorrt_common::NetworkIO>>(image_backbone_io);
+    auto image_backbone_profiles_ptr =
+      std::make_unique<std::vector<autoware::tensorrt_common::ProfileDims>>(
+        image_backbone_profiles);
+
+    image_backbone_trt_ptr_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
+      trt_config.image_backbone.value(), std::make_shared<autoware::tensorrt_common::Profiler>(),
+      std::vector<std::string>{config_.plugins_path_});
+
+    if (!image_backbone_trt_ptr_->setup(
+          std::move(image_backbone_profiles_ptr), std::move(image_backbone_io_ptr))) {
+      throw std::runtime_error("Failed to setup image backbone TRT engine.");
+    }
+
+    image_backbone_trt_ptr_->setTensorAddress("imgs", roi_tensor_d_.get());
+    image_backbone_trt_ptr_->setTensorAddress("image_feats", image_feats_d_.get());
+  }
+
+  // Initialize main network
   std::vector<autoware::tensorrt_common::NetworkIO> network_io;
 
   // Lidar branch
@@ -161,110 +186,27 @@ void BEVFusionTRT::initTrt(const tensorrt_common::TrtCommonConfig & trt_config)
     "voxels",
     nvinfer1::Dims{3, {-1, config_.max_points_per_voxel_, config_.num_point_feature_size_}});
   network_io.emplace_back("num_points_per_voxel", nvinfer1::Dims{1, {-1}});
-  network_io.emplace_back("coors", nvinfer1::Dims{2, {-1, 3}});
+  network_io.emplace_back("coors", nvinfer1::Dims{2, {-1, BEVFusionConfig::kNum3DCoords}});
 
-  // Outputs
-  network_io.emplace_back(
-    "bbox_pred", nvinfer1::Dims{2, {config_.num_box_values_, config_.num_proposals_}});
-  network_io.emplace_back("score", nvinfer1::Dims{1, {config_.num_proposals_}});
-  network_io.emplace_back("label_pred", nvinfer1::Dims{1, {config_.num_proposals_}});
-
-  std::vector<autoware::tensorrt_common::ProfileDims> profile_dims;
-
-  // Lidar branch
-  profile_dims.emplace_back(
-    "voxels",
-    nvinfer1::Dims{
-      3, {config_.voxels_num_[0], config_.max_points_per_voxel_, config_.num_point_feature_size_}},
-    nvinfer1::Dims{
-      3, {config_.voxels_num_[1], config_.max_points_per_voxel_, config_.num_point_feature_size_}},
-    nvinfer1::Dims{
-      3, {config_.voxels_num_[2], config_.max_points_per_voxel_, config_.num_point_feature_size_}});
-
-  profile_dims.emplace_back(
-    "num_points_per_voxel", nvinfer1::Dims{1, {config_.voxels_num_[0]}},
-    nvinfer1::Dims{1, {config_.voxels_num_[1]}}, nvinfer1::Dims{1, {config_.voxels_num_[2]}});
-
-  profile_dims.emplace_back(
-    "coors", nvinfer1::Dims{2, {config_.voxels_num_[0], 3}},
-    nvinfer1::Dims{2, {config_.voxels_num_[1], 3}}, nvinfer1::Dims{2, {config_.voxels_num_[2], 3}});
-
-  auto network_io_ptr =
-    std::make_unique<std::vector<autoware::tensorrt_common::NetworkIO>>(network_io);
-  auto profile_dims_ptr =
-    std::make_unique<std::vector<autoware::tensorrt_common::ProfileDims>>(profile_dims);
-
-  network_trt_ptr_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
-    trt_config, std::make_shared<autoware::tensorrt_common::Profiler>(),
-    std::vector<std::string>{config_.plugins_path_});
-
-  if (!network_trt_ptr_->setup(std::move(profile_dims_ptr), std::move(network_io_ptr))) {
-    throw std::runtime_error("Failed to setup TRT engine." + config_.plugins_path_);
-  }
-
-  network_trt_ptr_->setTensorAddress("voxels", voxel_features_d_.get());
-  network_trt_ptr_->setTensorAddress("num_points_per_voxel", num_points_per_voxel_d_.get());
-  network_trt_ptr_->setTensorAddress("coors", voxel_coords_d_.get());
-
-  network_trt_ptr_->setTensorAddress("label_pred", label_pred_output_d_.get());
-  network_trt_ptr_->setTensorAddress("bbox_pred", bbox_pred_output_d_.get());
-  network_trt_ptr_->setTensorAddress("score", score_output_d_.get());
-}
-
-void BEVFusionTRT::initTrtFusion(
-  const tensorrt_common::TrtCommonConfig & main_trt_config,
-  const tensorrt_common::TrtCommonConfig & image_backbone_trt_config)
-{
-  // Initialize image backbone network
-  std::vector<autoware::tensorrt_common::NetworkIO> image_backbone_io;
-  image_backbone_io.emplace_back(
-    "imgs", nvinfer1::Dims{4, {-1, 3, config_.roi_height_, config_.roi_width_}});
-  image_backbone_io.emplace_back(
-    "image_feats", nvinfer1::Dims{4, {-1, 256, config_.features_height_, config_.features_width_}});
-
-  std::vector<autoware::tensorrt_common::ProfileDims> image_backbone_profiles;
-  image_backbone_profiles.emplace_back(
-    "imgs", nvinfer1::Dims{4, {1, 3, config_.roi_height_, config_.roi_width_}},
-    nvinfer1::Dims{4, {config_.num_cameras_, 3, config_.roi_height_, config_.roi_width_}},
-    nvinfer1::Dims{4, {config_.num_cameras_, 3, config_.roi_height_, config_.roi_width_}});
-
-  auto image_backbone_io_ptr =
-    std::make_unique<std::vector<autoware::tensorrt_common::NetworkIO>>(image_backbone_io);
-  auto image_backbone_profiles_ptr =
-    std::make_unique<std::vector<autoware::tensorrt_common::ProfileDims>>(image_backbone_profiles);
-
-  image_backbone_trt_ptr_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
-    image_backbone_trt_config, std::make_shared<autoware::tensorrt_common::Profiler>(),
-    std::vector<std::string>{config_.plugins_path_});
-
-  if (!image_backbone_trt_ptr_->setup(
-        std::move(image_backbone_profiles_ptr), std::move(image_backbone_io_ptr))) {
-    throw std::runtime_error("Failed to setup image backbone TRT engine.");
-  }
-
-  image_backbone_trt_ptr_->setTensorAddress("imgs", roi_tensor_d_.get());
-  image_backbone_trt_ptr_->setTensorAddress("image_feats", image_feats_d_.get());
-
-  // Initialize main network without image inputs
-  std::vector<autoware::tensorrt_common::NetworkIO> network_io;
-
-  // Lidar branch
-  network_io.emplace_back(
-    "voxels",
-    nvinfer1::Dims{3, {-1, config_.max_points_per_voxel_, config_.num_point_feature_size_}});
-  network_io.emplace_back("num_points_per_voxel", nvinfer1::Dims{1, {-1}});
-  network_io.emplace_back("coors", nvinfer1::Dims{2, {-1, 3}});
-
-  // Camera branch
+  // Camera branch (only for fusion mode)
   if (config_.sensor_fusion_) {
     network_io.emplace_back("points", nvinfer1::Dims{2, {-1, config_.num_point_feature_size_}});
     network_io.emplace_back(
       "image_feats",
-      nvinfer1::Dims{4, {-1, 256, config_.features_height_, config_.features_width_}});
-    network_io.emplace_back("img_aug_matrix", nvinfer1::Dims{3, {-1, 4, 4}});
-    network_io.emplace_back("lidar2image", nvinfer1::Dims{3, {-1, 4, 4}});
+      nvinfer1::Dims{
+        4,
+        {-1, config_.image_feature_dim_, config_.features_height_, config_.features_width_}});
+    network_io.emplace_back(
+      "img_aug_matrix",
+      nvinfer1::Dims{
+        3, {-1, BEVFusionConfig::kTransformMatrixDim, BEVFusionConfig::kTransformMatrixDim}});
+    network_io.emplace_back(
+      "lidar2image",
+      nvinfer1::Dims{
+        3, {-1, BEVFusionConfig::kTransformMatrixDim, BEVFusionConfig::kTransformMatrixDim}});
 
-    network_io.emplace_back("geom_feats", nvinfer1::Dims{2, {-1, 4}});
+    network_io.emplace_back(
+      "geom_feats", nvinfer1::Dims{2, {-1, BEVFusionConfig::kTransformMatrixDim}});
     network_io.emplace_back("kept", nvinfer1::Dims{1, {-1}});
     network_io.emplace_back("ranks", nvinfer1::Dims{1, {-1}});
     network_io.emplace_back("indices", nvinfer1::Dims{1, {-1}});
@@ -293,10 +235,11 @@ void BEVFusionTRT::initTrtFusion(
     nvinfer1::Dims{1, {config_.voxels_num_[1]}}, nvinfer1::Dims{1, {config_.voxels_num_[2]}});
 
   profile_dims.emplace_back(
-    "coors", nvinfer1::Dims{2, {config_.voxels_num_[0], 3}},
-    nvinfer1::Dims{2, {config_.voxels_num_[1], 3}}, nvinfer1::Dims{2, {config_.voxels_num_[2], 3}});
+    "coors", nvinfer1::Dims{2, {config_.voxels_num_[0], BEVFusionConfig::kNum3DCoords}},
+    nvinfer1::Dims{2, {config_.voxels_num_[1], BEVFusionConfig::kNum3DCoords}},
+    nvinfer1::Dims{2, {config_.voxels_num_[2], BEVFusionConfig::kNum3DCoords}});
 
-  // Camera branch
+  // Camera branch (only for fusion mode)
   if (config_.sensor_fusion_) {
     profile_dims.emplace_back(
       "points", nvinfer1::Dims{2, {config_.voxels_num_[0], config_.num_point_feature_size_}},
@@ -304,27 +247,51 @@ void BEVFusionTRT::initTrtFusion(
       nvinfer1::Dims{2, {config_.cloud_capacity_, config_.num_point_feature_size_}});
 
     profile_dims.emplace_back(
-      "image_feats", nvinfer1::Dims{4, {1, 256, config_.features_height_, config_.features_width_}},
+      "image_feats",
       nvinfer1::Dims{
-        4, {config_.num_cameras_, 256, config_.features_height_, config_.features_width_}},
+        4, {1, config_.image_feature_dim_, config_.features_height_, config_.features_width_}},
       nvinfer1::Dims{
-        4, {config_.num_cameras_, 256, config_.features_height_, config_.features_width_}});
+        4,
+        {config_.num_cameras_, config_.image_feature_dim_, config_.features_height_,
+         config_.features_width_}},
+      nvinfer1::Dims{
+        4,
+        {config_.num_cameras_, config_.image_feature_dim_, config_.features_height_,
+         config_.features_width_}});
 
     profile_dims.emplace_back(
-      "img_aug_matrix", nvinfer1::Dims{3, {1, 4, 4}},
-      nvinfer1::Dims{3, {config_.num_cameras_, 4, 4}},
-      nvinfer1::Dims{3, {config_.num_cameras_, 4, 4}});
+      "img_aug_matrix",
+      nvinfer1::Dims{
+        3, {1, BEVFusionConfig::kTransformMatrixDim, BEVFusionConfig::kTransformMatrixDim}},
+      nvinfer1::Dims{
+        3,
+        {config_.num_cameras_, BEVFusionConfig::kTransformMatrixDim,
+         BEVFusionConfig::kTransformMatrixDim}},
+      nvinfer1::Dims{
+        3,
+        {config_.num_cameras_, BEVFusionConfig::kTransformMatrixDim,
+         BEVFusionConfig::kTransformMatrixDim}});
 
     profile_dims.emplace_back(
-      "lidar2image", nvinfer1::Dims{3, {1, 4, 4}}, nvinfer1::Dims{3, {config_.num_cameras_, 4, 4}},
-      nvinfer1::Dims{3, {config_.num_cameras_, 4, 4}});
+      "lidar2image",
+      nvinfer1::Dims{
+        3, {1, BEVFusionConfig::kTransformMatrixDim, BEVFusionConfig::kTransformMatrixDim}},
+      nvinfer1::Dims{
+        3,
+        {config_.num_cameras_, BEVFusionConfig::kTransformMatrixDim,
+         BEVFusionConfig::kTransformMatrixDim}},
+      nvinfer1::Dims{
+        3,
+        {config_.num_cameras_, BEVFusionConfig::kTransformMatrixDim,
+         BEVFusionConfig::kTransformMatrixDim}});
 
     const std::int64_t num_geom_feats = config_.num_cameras_ * config_.features_height_ *
                                         config_.features_width_ * config_.num_depth_features_;
 
     profile_dims.emplace_back(
-      "geom_feats", nvinfer1::Dims{2, {0, 4}}, nvinfer1::Dims{2, {num_geom_feats, 4}},
-      nvinfer1::Dims{2, {num_geom_feats, 4}});
+      "geom_feats", nvinfer1::Dims{2, {0, BEVFusionConfig::kTransformMatrixDim}},
+      nvinfer1::Dims{2, {num_geom_feats, BEVFusionConfig::kTransformMatrixDim}},
+      nvinfer1::Dims{2, {num_geom_feats, BEVFusionConfig::kTransformMatrixDim}});
 
     profile_dims.emplace_back(
       "kept", nvinfer1::Dims{1, {0}}, nvinfer1::Dims{1, {num_geom_feats}},
@@ -345,11 +312,11 @@ void BEVFusionTRT::initTrtFusion(
     std::make_unique<std::vector<autoware::tensorrt_common::ProfileDims>>(profile_dims);
 
   network_trt_ptr_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
-    main_trt_config, std::make_shared<autoware::tensorrt_common::Profiler>(),
+    trt_config.common, std::make_shared<autoware::tensorrt_common::Profiler>(),
     std::vector<std::string>{config_.plugins_path_});
 
   if (!network_trt_ptr_->setup(std::move(profile_dims_ptr), std::move(network_io_ptr))) {
-    throw std::runtime_error("Failed to setup main TRT engine.");
+    throw std::runtime_error("Failed to setup TRT engine.");
   }
 
   network_trt_ptr_->setTensorAddress("voxels", voxel_features_d_.get());
@@ -442,12 +409,14 @@ void BEVFusionTRT::setIntrinsicsExtrinsics(
   auto [lidar2images_flattened, geom_feats, kept, ranks, indices] =
     precomputeFeatures(lidar2camera_vector, img_aug_matrices_, camera_info_vector, config_);
 
-  assert(static_cast<std::int64_t>(lidar2images_flattened.size()) == config_.num_cameras_ * 4 * 4);
+  assert(
+    static_cast<std::int64_t>(lidar2images_flattened.size()) ==
+    config_.num_cameras_ * BEVFusionConfig::kTransformMatrixDim * BEVFusionConfig::kTransformMatrixDim);
 
   assert(
     static_cast<std::int64_t>(geom_feats.size()) <=
-    config_.num_cameras_ * 4 * config_.features_height_ * config_.features_width_ *
-      config_.num_depth_features_);
+    config_.num_cameras_ * BEVFusionConfig::kTransformMatrixDim * config_.features_height_ *
+      config_.features_width_ * config_.num_depth_features_);
   assert(
     static_cast<std::int64_t>(kept.size()) == config_.num_cameras_ * config_.features_height_ *
                                                 config_.features_width_ *
@@ -466,12 +435,14 @@ void BEVFusionTRT::setIntrinsicsExtrinsics(
   num_ranks_ = static_cast<std::int64_t>(ranks.size());
   num_indices_ = static_cast<std::int64_t>(indices.size());
 
-  assert(num_geom_feats_ == 4 * num_ranks_);
+  assert(num_geom_feats_ == BEVFusionConfig::kTransformMatrixDim * num_ranks_);
   assert(num_ranks_ == num_indices_);
 
   cudaMemcpy(
     lidar2image_d_.get(), lidar2images_flattened.data(),
-    config_.num_cameras_ * 4 * 4 * sizeof(float), cudaMemcpyHostToDevice);
+    config_.num_cameras_ * BEVFusionConfig::kTransformMatrixDim * BEVFusionConfig::kTransformMatrixDim *
+      sizeof(float),
+    cudaMemcpyHostToDevice);
   cudaMemcpy(
     geom_feats_d_.get(), geom_feats.data(), num_geom_feats_ * sizeof(std::int32_t),
     cudaMemcpyHostToDevice);
@@ -485,15 +456,17 @@ void BEVFusionTRT::setIntrinsicsExtrinsics(
   if (config_.sensor_fusion_) {
     std::vector<float> img_aug_matrix_flattened;
     for (const auto & matrix : img_aug_matrices_) {
-      for (int i = 0; i < 4; ++i) {
-        for (int j = 0; j < 4; ++j) {
+      for (int i = 0; i < BEVFusionConfig::kTransformMatrixDim; ++i) {
+        for (int j = 0; j < BEVFusionConfig::kTransformMatrixDim; ++j) {
           img_aug_matrix_flattened.push_back(matrix(i, j));
         }
       }
     }
     cudaMemcpy(
       img_aug_matrix_d_.get(), img_aug_matrix_flattened.data(),
-      config_.num_cameras_ * 4 * 4 * sizeof(float), cudaMemcpyHostToDevice);
+      config_.num_cameras_ * BEVFusionConfig::kTransformMatrixDim * BEVFusionConfig::kTransformMatrixDim *
+        sizeof(float),
+      cudaMemcpyHostToDevice);
   }
 }
 
@@ -518,8 +491,6 @@ bool BEVFusionTRT::preProcess(
   }
 
   if (!vg_ptr_->enqueuePointCloud(pc_msg_ptr, tf_buffer)) {
-    RCLCPP_ERROR(
-      rclcpp::get_logger("bevfusion"), "Failed to enqueue point cloud. Skipping detection.");
     return false;
   }
 
@@ -545,11 +516,14 @@ bool BEVFusionTRT::preProcess(
 
       cudaMemcpyAsync(
         image_buffers_d_[camera_id].get(), image_msgs[camera_id]->data.data(),
-        config_.raw_image_height_ * config_.raw_image_width_ * 3, cudaMemcpyHostToDevice, stream_);
+        config_.raw_image_height_ * config_.raw_image_width_ * BEVFusionConfig::kNumRGBChannels,
+        cudaMemcpyHostToDevice, stream_);
 
       pre_ptr_->resizeAndExtractRoi_launch(
         image_buffers_d_[camera_id].get(),
-        &roi_tensor_d_[camera_id * config_.roi_height_ * config_.roi_width_ * 3],
+        &roi_tensor_d_
+           [camera_id * config_.roi_height_ * config_.roi_width_ *
+            BEVFusionConfig::kNumRGBChannels],
         config_.raw_image_height_, config_.raw_image_width_, config_.resized_height_,
         config_.resized_width_, config_.roi_height_, config_.roi_width_, start_y, start_x,
         camera_streams_[camera_id]);
@@ -602,7 +576,8 @@ bool BEVFusionTRT::preProcess(
     "voxels", nvinfer1::Dims{
                 3, {num_voxels, config_.max_points_per_voxel_, config_.num_point_feature_size_}});
   network_trt_ptr_->setInputShape("num_points_per_voxel", nvinfer1::Dims{1, {num_voxels}});
-  network_trt_ptr_->setInputShape("coors", nvinfer1::Dims{2, {num_voxels, 3}});
+  network_trt_ptr_->setInputShape(
+    "coors", nvinfer1::Dims{2, {num_voxels, BEVFusionConfig::kNum3DCoords}});
 
   if (config_.sensor_fusion_) {
     network_trt_ptr_->setInputShape(
@@ -613,12 +588,18 @@ bool BEVFusionTRT::preProcess(
     network_trt_ptr_->setInputShape(
       "image_feats",
       nvinfer1::Dims{
-        4, {config_.num_cameras_, 256, config_.features_height_, config_.features_width_}});
+        4,
+        {config_.num_cameras_, config_.image_feature_dim_, config_.features_height_,
+         config_.features_width_}});
     network_trt_ptr_->setInputShape(
-      "img_aug_matrix", nvinfer1::Dims{3, {config_.num_cameras_, 4, 4}});
-    network_trt_ptr_->setInputShape("lidar2image", nvinfer1::Dims{3, {config_.num_cameras_, 4, 4}});
+      "img_aug_matrix",
+      nvinfer1::Dims{3, {config_.num_cameras_, BEVFusionConfig::kTransformMatrixDim, BEVFusionConfig::kTransformMatrixDim}});
+    network_trt_ptr_->setInputShape(
+      "lidar2image",
+      nvinfer1::Dims{3, {config_.num_cameras_, BEVFusionConfig::kTransformMatrixDim, BEVFusionConfig::kTransformMatrixDim}});
 
-    network_trt_ptr_->setInputShape("geom_feats", nvinfer1::Dims{2, {num_ranks_, 4}});
+    network_trt_ptr_->setInputShape(
+      "geom_feats", nvinfer1::Dims{2, {num_ranks_, BEVFusionConfig::kTransformMatrixDim}});
     network_trt_ptr_->setInputShape("kept", nvinfer1::Dims{1, {num_kept_}});
     network_trt_ptr_->setInputShape("ranks", nvinfer1::Dims{1, {num_ranks_}});
     network_trt_ptr_->setInputShape("indices", nvinfer1::Dims{1, {num_indices_}});
@@ -630,12 +611,16 @@ bool BEVFusionTRT::preProcess(
 
   // Debug: Save ROI images after preprocessing
   if (config_.sensor_fusion_) {
-    std::vector<uint8_t> roi_host_data(config_.roi_height_ * config_.roi_width_ * 3);
+    std::vector<uint8_t> roi_host_data(
+      config_.roi_height_ * config_.roi_width_ * BEVFusionConfig::kNumRGBChannels);
     for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
       cudaMemcpy(
         roi_host_data.data(),
-        &roi_tensor_d_[camera_id * config_.roi_height_ * config_.roi_width_ * 3],
-        config_.roi_height_ * config_.roi_width_ * 3, cudaMemcpyDeviceToHost);
+        &roi_tensor_d_
+           [camera_id * config_.roi_height_ * config_.roi_width_ *
+            BEVFusionConfig::kNumRGBChannels],
+        config_.roi_height_ * config_.roi_width_ * BEVFusionConfig::kNumRGBChannels,
+        cudaMemcpyDeviceToHost);
     }
   }
 
@@ -644,48 +629,28 @@ bool BEVFusionTRT::preProcess(
 
 bool BEVFusionTRT::inference()
 {
-  if (config_.sensor_fusion_) {
-    // Fusion model uses separate image backbone and main body
-    return inferenceFusion();
-  } else {
-    // Lidar-only model uses single network
-    auto status = network_trt_ptr_->enqueueV3(stream_);
-    CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
-
-    if (!status) {
-      RCLCPP_ERROR(rclcpp::get_logger("bevfusion"), "Fail to enqueue and skip to detect.");
-      return false;
-    }
-
-    return true;
-  }
-}
-
-bool BEVFusionTRT::inferenceFusion()
-{
-  // First run image backbone to get image features
+  // Fusion model: run image backbone first, then main network
   if (config_.sensor_fusion_) {
     image_backbone_trt_ptr_->setInputShape(
       "imgs",
-      nvinfer1::Dims{4, {config_.num_cameras_, 3, config_.roi_height_, config_.roi_width_}});
+      nvinfer1::Dims{
+        4,
+        {config_.num_cameras_, BEVFusionConfig::kNumRGBChannels, config_.roi_height_,
+         config_.roi_width_}});
 
     auto image_status = image_backbone_trt_ptr_->enqueueV3(stream_);
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
     if (!image_status) {
-      RCLCPP_ERROR(
-        rclcpp::get_logger("bevfusion"), "Fail to enqueue image backbone and skip to detect.");
       return false;
     }
   }
 
-  // Then run main network with image features
+  // Run main network
   auto status = network_trt_ptr_->enqueueV3(stream_);
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   if (!status) {
-    RCLCPP_ERROR(
-      rclcpp::get_logger("bevfusion"), "Fail to enqueue main network and skip to detect.");
     return false;
   }
 

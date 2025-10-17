@@ -30,9 +30,6 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
 {
   auto descriptor = rcl_interfaces::msg::ParameterDescriptor{}.set__read_only(true);
 
-  // Modality
-  sensor_fusion_ = this->declare_parameter<bool>("sensor_fusion", descriptor);
-
   // Non network parameters
   max_camera_lidar_delay_ = this->declare_parameter<float>("max_camera_lidar_delay", descriptor);
 
@@ -47,11 +44,11 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
 
   // Image backbone parameters (for fusion model)
   const std::string image_backbone_onnx_path =
-    this->declare_parameter<std::string>("image_backbone_onnx_path", "", descriptor);
+    this->declare_parameter<std::string>("image_backbone_onnx_path", descriptor);
   const std::string image_backbone_engine_path =
-    this->declare_parameter<std::string>("image_backbone_engine_path", "", descriptor);
+    this->declare_parameter<std::string>("image_backbone_engine_path", descriptor);
   const std::string image_backbone_trt_precision =
-    this->declare_parameter<std::string>("image_backbone_trt_precision", trt_precision, descriptor);
+    this->declare_parameter<std::string>("image_backbone_trt_precision", descriptor);
 
   // Common parameters
   const auto out_size_factor = this->declare_parameter<std::int64_t>("out_size_factor", descriptor);
@@ -91,6 +88,8 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
   const auto features_height = this->declare_parameter<std::int64_t>("features_height", descriptor);
   const auto features_width = this->declare_parameter<int>("features_width", descriptor);
   const auto num_depth_features = this->declare_parameter<int>("num_depth_features", descriptor);
+  const auto image_feature_dim =
+    this->declare_parameter<std::int64_t>("image_feature_dim", descriptor);
   const auto use_intensity = this->declare_parameter<bool>("use_intensity", descriptor);
   // Head parameters
   const auto num_proposals = this->declare_parameter<std::int64_t>("num_proposals", descriptor);
@@ -132,11 +131,15 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
     densification_world_frame_id, densification_num_past_frames);
 
   BEVFusionConfig config(
-    sensor_fusion_, plugins_path, out_size_factor, cloud_capacity, max_points_per_voxel, voxels_num,
-    point_cloud_range, voxel_size, d_bound, x_bound, y_bound, z_bound, num_cameras,
+    plugins_path, image_backbone_onnx_path, image_backbone_engine_path,
+    image_backbone_trt_precision, out_size_factor, cloud_capacity, max_points_per_voxel,
+    voxels_num, point_cloud_range, voxel_size, d_bound, x_bound, y_bound, z_bound, num_cameras,
     raw_image_height, raw_image_width, img_aug_scale_x, img_aug_scale_y, roi_height, roi_width,
-    features_height, features_width, num_depth_features, num_proposals, circle_nms_dist_threshold,
-    yaw_norm_thresholds, score_threshold, use_intensity);
+    features_height, features_width, num_depth_features, image_feature_dim, num_proposals,
+    circle_nms_dist_threshold, yaw_norm_thresholds, score_threshold, use_intensity);
+
+  // Determine sensor_fusion mode based on config
+  sensor_fusion_ = config.sensor_fusion_;
 
   const auto allow_remapping_by_area_matrix = this->declare_parameter<std::vector<std::int64_t>>(
     "allow_remapping_by_area_matrix", descriptor);
@@ -147,31 +150,19 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
   detection_class_remapper_.setParameters(
     allow_remapping_by_area_matrix, min_area_matrix, max_area_matrix);
 
-  // Initialize detector based on architecture
-  if (sensor_fusion_) {
-    // Fusion model always uses separate image backbone
-    // Validate image backbone parameters
-    if (image_backbone_onnx_path.empty() || image_backbone_engine_path.empty()) {
-      RCLCPP_ERROR(
-        this->get_logger(),
-        "Image backbone ONNX and engine paths must be specified for fusion model");
-      throw std::runtime_error("Missing image backbone model paths for fusion model");
-    }
+  // Create TrtBEVFusionConfig based on sensor_fusion mode
+  TrtBEVFusionConfig trt_bevfusion_config = sensor_fusion_
+    ? TrtBEVFusionConfig{
+        tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U),
+        tensorrt_common::TrtCommonConfig(
+          image_backbone_onnx_path, image_backbone_trt_precision, image_backbone_engine_path,
+          1ULL << 32U)}
+    : TrtBEVFusionConfig{
+        tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U),
+        std::nullopt};
 
-    auto main_trt_config =
-      tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U);
-    auto image_backbone_trt_config = tensorrt_common::TrtCommonConfig(
-      image_backbone_onnx_path, image_backbone_trt_precision, image_backbone_engine_path,
-      1ULL << 32U);
-
-    detector_ptr_ = std::make_unique<BEVFusionTRT>(
-      main_trt_config, image_backbone_trt_config, densification_param, config);
-  } else {
-    // Lidar-only model uses single network
-    auto trt_config =
-      tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U);
-    detector_ptr_ = std::make_unique<BEVFusionTRT>(trt_config, densification_param, config);
-  }
+  detector_ptr_ =
+    std::make_unique<BEVFusionTRT>(trt_bevfusion_config, densification_param, config);
   diagnostics_detector_trt_ =
     std::make_unique<autoware_utils::DiagnosticsInterface>(this, "bevfusion_trt");
 
@@ -257,9 +248,6 @@ void BEVFusionNode::cloudCallback(
   const auto objects_sub_count =
     objects_pub_->get_subscription_count() + objects_pub_->get_intra_process_subscription_count();
   if (objects_sub_count < 1) {
-    RCLCPP_WARN_THROTTLE(
-      this->get_logger(), *this->get_clock(), 10000,
-      "No subscribers found for detection objects topic. Skipping detection.");
     return;
   }
 

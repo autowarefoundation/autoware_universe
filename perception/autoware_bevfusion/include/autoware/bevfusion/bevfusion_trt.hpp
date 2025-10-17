@@ -37,6 +37,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -46,6 +47,12 @@ namespace autoware::bevfusion
 {
 
 using autoware::cuda_utils::CudaUniquePtr;
+
+struct TrtBEVFusionConfig
+{
+  tensorrt_common::TrtCommonConfig common;
+  std::optional<tensorrt_common::TrtCommonConfig> image_backbone;
+};
 
 class NetworkParam
 {
@@ -73,14 +80,8 @@ public:
   using Matrix4fRowM = Eigen::Matrix<float, 4, 4, Eigen::RowMajor>;
 
   explicit BEVFusionTRT(
-    const tensorrt_common::TrtCommonConfig & trt_config,
-    const DensificationParam & densification_param, const BEVFusionConfig & config);
-
-  // Constructor for fusion model with separate image backbone and main body
-  explicit BEVFusionTRT(
-    const tensorrt_common::TrtCommonConfig & main_trt_config,
-    const tensorrt_common::TrtCommonConfig & image_backbone_trt_config,
-    const DensificationParam & densification_param, const BEVFusionConfig & config);
+    const TrtBEVFusionConfig & trt_config, const DensificationParam & densification_param,
+    const BEVFusionConfig & config);
 
   virtual ~BEVFusionTRT();
 
@@ -97,10 +98,7 @@ public:
 
 protected:
   void initPtr();
-  void initTrt(const tensorrt_common::TrtCommonConfig & trt_config);
-  void initTrtFusion(
-    const tensorrt_common::TrtCommonConfig & main_trt_config,
-    const tensorrt_common::TrtCommonConfig & image_backbone_trt_config);
+  void initTrt(const TrtBEVFusionConfig & trt_config);
 
   bool preProcess(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & pc_msg_ptr,
@@ -109,7 +107,6 @@ protected:
     bool & is_num_voxels_within_range);
 
   bool inference();
-  bool inferenceFusion();
 
   bool postProcess(std::vector<Box3D> & det_boxes3d);
 

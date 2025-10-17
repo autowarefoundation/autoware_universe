@@ -163,6 +163,12 @@
           "default": 118,
           "minimum": 0
         },
+        "image_feature_dim": {
+          "type": "integer",
+          "description": "Image feature dimension (output channels of the image backbone).",
+          "default": 256,
+          "minimum": 1
+        },
         "use_intensity": {
           "type": "boolean",
           "description": "Whether to use intensity feature in point cloud processing.",
@@ -191,6 +197,7 @@
         "features_height",
         "features_width",
         "num_depth_features",
+        "image_feature_dim",
         "use_intensity"
       ],
       "additionalProperties": false
