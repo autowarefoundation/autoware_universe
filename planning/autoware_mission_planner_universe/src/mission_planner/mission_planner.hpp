@@ -58,13 +58,13 @@ using autoware_planning_msgs::msg::PoseWithUuidStamped;
 using autoware_planning_msgs::msg::RouteState;
 using autoware_planning_msgs::srv::ClearRoute;
 using autoware_planning_msgs::srv::SetLaneletRoute;
+using autoware_planning_msgs::srv::SetPreferredPrimitive;
 using autoware_planning_msgs::srv::SetWaypointRoute;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::PoseStamped;
 using nav_msgs::msg::Odometry;
 using std_msgs::msg::Header;
 using tier4_planning_msgs::msg::RerouteAvailability;
-using autoware_planning_msgs::srv::SetPreferredPrimitive;
 using unique_identifier_msgs::msg::UUID;
 using visualization_msgs::msg::MarkerArray;
 

@@ -6,9 +6,9 @@
 
 ### Services
 
-| Name                                                                | Type                                     | Description                                |
-| ------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------------ |
-| `/planning/manual_lane_change_handler/manual_lane_change_handler/set_preferred_lane` | tier4_external_api_msgs/srv/SetPreferredLane | preferred-lane request                        |
+| Name                                                                                 | Type                                         | Description            |
+| ------------------------------------------------------------------------------------ | -------------------------------------------- | ---------------------- |
+| `/planning/manual_lane_change_handler/manual_lane_change_handler/set_preferred_lane` | tier4_external_api_msgs/srv/SetPreferredLane | preferred-lane request |
 
 ### Subscriptions
 

@@ -162,9 +162,8 @@ private:
       return;
     }
 
-    std::shared_ptr<SetPreferredPrimitive::Request>
-      set_preferred_primitive_req =
-        std::make_shared<SetPreferredPrimitive::Request>();
+    std::shared_ptr<SetPreferredPrimitive::Request> set_preferred_primitive_req =
+      std::make_shared<SetPreferredPrimitive::Request>();
     set_preferred_primitive_req->preferred_primitives =
       lane_change_request_result.preferred_primitives;
     set_preferred_primitive_req->reset = req->lane_change_direction != 2;
@@ -183,8 +182,7 @@ private:
             this->get_logger(), "Failed to set preferred primitive: %s",
             response->status.message.c_str());
         }
-      }
-    );
+      });
 
     res->status.success = lane_change_request_result.success;
     res->status.message = lane_change_request_result.message;
