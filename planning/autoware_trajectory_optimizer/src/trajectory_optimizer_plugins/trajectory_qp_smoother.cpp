@@ -297,11 +297,13 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
     f_vec[y_i] = -qp_params_.weight_fidelity * y_orig;
   }
 
-  const int num_constraints = 2;
+  // Constraints: fix first and last points
+  const int num_constraints = 4;
   A = Eigen::MatrixXd::Zero(num_constraints, num_variables);
   l_vec.resize(num_constraints);
   u_vec.resize(num_constraints);
 
+  // Fix first point (x, y)
   A(0, 0) = 1.0;
   l_vec[0] = input_trajectory[0].pose.position.x;
   u_vec[0] = input_trajectory[0].pose.position.x;
@@ -309,6 +311,18 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
   A(1, 1) = 1.0;
   l_vec[1] = input_trajectory[0].pose.position.y;
   u_vec[1] = input_trajectory[0].pose.position.y;
+
+  // Fix last point (x, y)
+  const int last_x_idx = 2 * (N - 1);
+  const int last_y_idx = 2 * (N - 1) + 1;
+
+  A(2, last_x_idx) = 1.0;
+  l_vec[2] = input_trajectory[N - 1].pose.position.x;
+  u_vec[2] = input_trajectory[N - 1].pose.position.x;
+
+  A(3, last_y_idx) = 1.0;
+  l_vec[3] = input_trajectory[N - 1].pose.position.y;
+  u_vec[3] = input_trajectory[N - 1].pose.position.y;
 }
 
 void TrajectoryQPSmoother::post_process_trajectory(
