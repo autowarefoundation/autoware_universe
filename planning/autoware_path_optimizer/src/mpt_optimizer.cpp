@@ -429,6 +429,9 @@ MPTOptimizer::MPTOptimizer(
 
   debug_spline_pub_ =
    node->create_publisher<autoware_internal_debug_msgs::msg::SplineDebug>("~/debug/spline_coefficients", 1);
+
+  debug_optimised_steering_pub_ =
+   node->create_publisher<std_msgs::msg::Float32MultiArray>("~/debug/optimised_steering", 1);
 }
 
 void MPTOptimizer::updateVehicleCircles()
@@ -512,6 +515,8 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
     return std::nullopt;
   }
 
+  publishOptimizedSteering(*optimized_variables);
+
   // 7. convert to points with validation
   auto mpt_traj_points = calcMPTPoints(ref_points, *optimized_variables, mpt_mat);
   if (!mpt_traj_points) {
@@ -538,9 +543,29 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::getPrevOptimizedTrajec
   return std::nullopt;
 }
 
+void MPTOptimizer::publishOptimizedSteering(
+  const Eigen::VectorXd & optimized_variables) const
+{
+  std::cerr << "publishOptimizedSteering" << std::endl;
+  std_msgs::msg::Float32MultiArray msg;
+  msg.layout.dim.push_back(std_msgs::msg::MultiArrayDimension());
+  msg.layout.dim[0].size = optimized_variables.size();
+  msg.layout.dim[0].stride = optimized_variables.size();
+  msg.layout.dim[0].label = "optimized_steer_angles";
+
+  for (size_t i = 0; i < static_cast<size_t>(optimized_variables.size()); ++i) {
+    msg.data.push_back(static_cast<float>(optimized_variables(i)));
+  }
+
+  std::cerr << "optimized_steer_angles size: " << msg.data.size() << std::endl;
+
+  debug_optimised_steering_pub_->publish(msg);
+}
+
 void MPTOptimizer::publishSplineCoefficientsAndCurvatures(
   const autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline) const
 {
+  std::cerr << "publishSplineCoefficientsAndCurvatures" << std::endl;
   // Get spline coefficients for x and y
   const auto & knots = ref_points_spline.getSplineKnots();
   const auto & x_coeffs = ref_points_spline.getSplineCoefficientsX();
@@ -592,6 +617,8 @@ void MPTOptimizer::publishSplineCoefficientsAndCurvatures(
   for (size_t i = 0; i < static_cast<size_t>(curvatures.size()); ++i) {
     msg_curvatures.data.push_back(curvatures[i]);
   }
+
+  std::cerr << "knots size, x_coeffs size, y_coeffs size, curvatures size: " << msg_knots.data.size() << ", " << msg_x.data.size() << ", " << msg_y.data.size() << ", " << msg_curvatures.data.size() << std::endl;
 
   autoware_internal_debug_msgs::msg::SplineDebug msg;
   msg.knots = msg_knots;

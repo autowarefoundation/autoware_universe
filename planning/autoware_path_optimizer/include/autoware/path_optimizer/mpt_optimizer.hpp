@@ -321,6 +321,7 @@ private:
 
   // Add new publishers for spline coefficients and curvatures
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::SplineDebug>::SharedPtr debug_spline_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_optimised_steering_pub_;
 
   // argument
   bool enable_debug_info_;
@@ -413,6 +414,8 @@ private:
   // Add new method to publish spline coefficients and curvatures
   void publishSplineCoefficientsAndCurvatures(
     const autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline) const;
+
+  void publishOptimizedSteering(const Eigen::VectorXd & optimized_variables) const;
 
   std::vector<TrajectoryPoint> extractFixedPoints(
     const std::vector<ReferencePoint> & ref_points) const;
