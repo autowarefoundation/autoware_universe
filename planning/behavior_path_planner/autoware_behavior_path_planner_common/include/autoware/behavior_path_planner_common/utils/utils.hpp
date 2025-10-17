@@ -135,7 +135,6 @@ Pose to_geom_msg_pose(const LaneletPointType & src_point, const lanelet::ConstLa
 }
 
 // distance (arclength) calculation
-
 double l2Norm(const Vector3 vector);
 
 double getDistanceToEndOfLane(const Pose & current_pose, const lanelet::ConstLanelets & lanelets);
@@ -148,6 +147,58 @@ double getDistanceToEndOfLane(const Pose & current_pose, const lanelet::ConstLan
  */
 double getDistanceToNextIntersection(
   const Pose & current_pose, const lanelet::ConstLanelets & lanelets);
+
+/**
+ * @brief Checks if a lanelet attribute string indicates a turn direction lane.
+ *
+ * @param lanelet_attribute_string The string value of the lanelet's "turn_direction" attribute.
+ * @return bool True if the string is "left" or "right", false otherwise.
+ */
+bool is_turn_direction_lane(const std::string & lanelet_attribute_string);
+
+/**
+ * @brief Checks if a given lanelet is designated as a turn direction lane.
+ *
+ * @param lanelet The lanelet to check.
+ * @return bool True if the lanelet has the turn_direction attribute set to "left" or "right",
+ * false otherwise.
+ */
+bool is_turn_direction_lane(const lanelet::ConstLanelet & lanelet);
+
+/**
+ * @brief Finds the nearest turn direction lanelet(s) in the route that precede the current lanelet.
+ *
+ * @param current_pose The ego vehicle's current pose.
+ * @param route_handler The route handler providing map and routing graph access (for previous/next
+ * lane lookups).
+ * @param lanelets The sequential list of lanelets representing the path to search along.
+ * @return lanelet::ConstLanelets A vector containing the nearest turn direction lanelet(s)
+ * that immediately precede the current lanelet and contain the ego pose,
+ * or an empty vector if none are found or inputs are invalid.
+ *
+ * @note This function appears to contain a logical flaw: the check for
+ * 'is_in_turn_direction_lane(lane)' should typically be applied to the *current* lane, not the
+ * *previous* lane in a reverse search. The current implementation only returns a lanelet if the
+ * vehicle's pose is inside that previous lanelet.
+ */
+lanelet::ConstLanelets nearest_turn_direction_lane_within_route(
+  const Pose & current_pose, const RouteHandler & route_handler,
+  const lanelet::ConstLanelets & lanelets);
+
+/**
+ * @brief Calculates the remaining distance to the start of the lane with turn direction.
+ *
+ * @param current_pose The ego vehicle's current pose.
+ * @param route_handler The route handler containing the full map and routing information.
+ * @param lanelets The sequence of candidate lanelets to search along (e.g., the current path).
+ * @param shift_direction_str The intended shift direction (must be left or right).
+ * @return std::optional<double> The distance (in meters) to the start of the turn lane, or
+ * std::nullopt if the shift direction is invalid, the current lanelet is not found,
+ * or no succeeding turn lanelet is found in the path.
+ */
+std::optional<double> calc_distance_to_next_turn_direction_lane(
+  const Pose & current_pose, const RouteHandler & route_handler,
+  const lanelet::ConstLanelets & lanelets, const std::string & shift_direction_str);
 
 /**
  * @brief Calculates the distance to the next crosswalk.
@@ -458,6 +509,11 @@ lanelet::ConstLanelets calcLaneAroundPose(
  * points.
  */
 bool checkPathRelativeAngle(const PathWithLaneId & path, const double angle_threshold);
+
+std::vector<lanelet::Id> get_lanelet_id_from_path(const PathWithLaneId & path);
+
+lanelet::ConstLanelets get_lanelet_sequence_from_path(
+  const PathWithLaneId & path, const RouteHandler & route_handler);
 
 lanelet::ConstLanelets getLaneletsFromPath(
   const PathWithLaneId & path, const std::shared_ptr<RouteHandler> & route_handler);
