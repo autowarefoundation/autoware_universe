@@ -727,6 +727,10 @@ void GoalPlannerModule::updateData()
     return;
   }
 
+  const auto & previous_module_path = getPreviousModuleOutput().path;
+  const auto & previous_module_reference_path = getPreviousModuleOutput().reference_path;
+  if (previous_module_path.points.empty() || previous_module_reference_path.points.empty()) return;
+
   if (!goal_searcher_) {
     goal_searcher_.emplace(GoalSearcher::create(parameters_, vehicle_footprint_, planner_data_));
   }
@@ -749,7 +753,7 @@ void GoalPlannerModule::updateData()
   }
 
   const lanelet::ConstLanelets current_lanes =
-    utils::getCurrentLanesFromPath(getPreviousModuleOutput().reference_path, planner_data_);
+    utils::getCurrentLanesFromPath(previous_module_reference_path, planner_data_);
 
   if (
     !trigger_thread_on_approach_ &&
@@ -769,8 +773,11 @@ void GoalPlannerModule::updateData()
     }
   }
 
+  const auto ego_segment_idx = planner_data_->findEgoSegmentIndex(previous_module_path.points);
+  if (previous_module_path.points[ego_segment_idx].lane_ids.empty()) return;
+  const auto ego_lane_id = previous_module_path.points[ego_segment_idx].lane_ids.front();
   const auto current_lane_change_state = lane_change_ctx_.get_next_state(
-    getPreviousModuleOutput().path, *(planner_data_->route_handler), clock_->now());
+    previous_module_path, ego_lane_id, *(planner_data_->route_handler), clock_->now());
   lane_change_ctx_.set_state(current_lane_change_state);
 
   if (getCurrentStatus() == ModuleStatus::IDLE) {
@@ -784,7 +791,7 @@ void GoalPlannerModule::updateData()
 
   resetPathCandidate();
   resetPathReference();
-  path_reference_ = std::make_shared<PathWithLaneId>(getPreviousModuleOutput().reference_path);
+  path_reference_ = std::make_shared<PathWithLaneId>(previous_module_reference_path);
 
   const bool found_pull_over_path =
     context_data_ ? context_data_.value().pull_over_path_opt.has_value() : false;
@@ -814,7 +821,7 @@ void GoalPlannerModule::updateData()
     dynamic_target_objects, parameters_.th_moving_object_velocity);
 
   const bool upstream_module_has_stopline_except_terminal =
-    goal_planner_utils::has_stopline_except_terminal(getPreviousModuleOutput().path);
+    goal_planner_utils::has_stopline_except_terminal(previous_module_path);
   const bool lane_change_status_changed = !lane_change_ctx_.is_in_consistent_transition();
   path_decision_controller_.transit_state(
     pull_over_path_recv, upstream_module_has_stopline_except_terminal, clock_->now(),
