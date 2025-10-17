@@ -20,6 +20,7 @@
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/marker/marker_helper.hpp>
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
+#include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/signal_processing/lowpass_filter_1d.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -510,16 +511,52 @@ ObstacleSlowDownModule::create_slow_down_obstacle_for_predicted_object(
     return std::nullopt;
   }
 
+  const auto obstacle_poly = autoware_utils::to_polygon2d(
+    object->predicted_object.kinematics.initial_pose_with_covariance.pose,
+    object->predicted_object.shape);
+
+  // Create linestring from trajectory points
+  const auto traj_line = [&]() {
+    std::vector<geometry_msgs::msg::Point> path_points{};
+    path_points.reserve(traj_points.size());
+    for (const auto & tp : traj_points) {
+      path_points.push_back(tp.pose.position);
+    }
+
+    constexpr double resample_interval = 2.0;  // [m]
+    const auto resampled_points =
+      autoware::motion_utils::resamplePointVector(path_points, resample_interval);
+    bg::model::linestring<autoware_utils::Point2d> linestring;
+    linestring.reserve(resampled_points.size());
+    for (const auto & point : resampled_points) {
+      linestring.push_back(autoware_utils::Point2d(point.x, point.y));
+    }
+
+    return linestring;
+  }();
+
+  if (bg::intersects(obstacle_poly, traj_line)) {
+    RCLCPP_DEBUG(
+      logger_,
+      "[SlowDown] Ignore obstacle (%s) since the obstacle polygon intersects with the trajectory "
+      "center line.",
+      obj_uuid_str.substr(0, 4).c_str());
+    return std::nullopt;
+  }
+
   // check lateral distance considering hysteresis
   const bool is_lat_dist_low = is_lower_considering_hysteresis(
     dist_from_obj_poly_to_traj_poly, is_prev_obstacle_slow_down,
     p.max_lat_margin + p.lat_hysteresis_margin / 2.0,
     p.max_lat_margin - p.lat_hysteresis_margin / 2.0);
+  const bool is_lat_vel_low =
+    std::abs(object->get_lat_vel_relative_to_traj(traj_points)) < p.max_lat_velocity;
+  const bool is_slow_down_condition_met = is_lat_dist_low && is_lat_vel_low;
 
   const bool is_slow_down_required = [&]() {
     if (is_prev_obstacle_slow_down) {
       // check if exiting slow down
-      if (!is_lat_dist_low) {
+      if (!is_slow_down_condition_met) {
         const int count = slow_down_condition_counter_.decrease_counter(obj_uuid);
         if (count <= -p.successive_num_to_exit_slow_down_condition) {
           slow_down_condition_counter_.reset(obj_uuid);
@@ -529,7 +566,7 @@ ObstacleSlowDownModule::create_slow_down_obstacle_for_predicted_object(
       return true;
     }
     // check if entering slow down
-    if (is_lat_dist_low) {
+    if (is_slow_down_condition_met) {
       const int count = slow_down_condition_counter_.increase_counter(obj_uuid);
       if (p.successive_num_to_entry_slow_down_condition <= count) {
         slow_down_condition_counter_.reset(obj_uuid);
@@ -544,10 +581,6 @@ ObstacleSlowDownModule::create_slow_down_obstacle_for_predicted_object(
       obj_uuid_str.substr(0, 4).c_str(), dist_from_obj_poly_to_traj_poly);
     return std::nullopt;
   }
-
-  const auto obstacle_poly = autoware_utils::to_polygon2d(
-    object->predicted_object.kinematics.initial_pose_with_covariance.pose,
-    object->predicted_object.shape);
 
   std::vector<Polygon2d> front_collision_polygons;
   size_t front_seg_idx = 0;

@@ -63,8 +63,9 @@ struct ObstacleFilteringParam
 
   double min_lat_margin{};
   double max_lat_margin{};
-
   double lat_hysteresis_margin{};
+
+  double max_lat_velocity{};
 
   int successive_num_to_entry_slow_down_condition{};
   int successive_num_to_exit_slow_down_condition{};
@@ -82,6 +83,8 @@ struct ObstacleFilteringParam
       node, "obstacle_slow_down.obstacle_filtering.max_lat_margin");
     lat_hysteresis_margin = get_or_declare_parameter<double>(
       node, "obstacle_slow_down.obstacle_filtering.lat_hysteresis_margin");
+    max_lat_velocity = get_or_declare_parameter<double>(
+      node, "obstacle_slow_down.obstacle_filtering.max_lat_velocity");
     successive_num_to_entry_slow_down_condition = get_or_declare_parameter<int>(
       node, "obstacle_slow_down.obstacle_filtering.successive_num_to_entry_slow_down_condition");
     successive_num_to_exit_slow_down_condition = get_or_declare_parameter<int>(
