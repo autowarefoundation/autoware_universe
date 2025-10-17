@@ -1961,8 +1961,9 @@ PathWithLaneId GoalPlannerModule::generateStopPath(
       feasible_stop_path.points, stop_pose.position, -min_stop_distance.value());
     if (decel_start_point) {
       blinker_decel_start_pose_ = feasible_stop_path.points
-                                    .at(autoware::motion_utils::findNearestIndex(
-                                      feasible_stop_path.points, decel_start_point.value()))
+                                    .at(
+                                      autoware::motion_utils::findNearestIndex(
+                                        feasible_stop_path.points, decel_start_point.value()))
                                     .point.pose;
     }
     return feasible_stop_path;
@@ -2339,6 +2340,7 @@ std::optional<Pose> GoalPlannerModule::decelerateForTurnSignal(
         if (!first_turn_signal_trigger_position && select_blinker_decel) {
           first_turn_signal_trigger_position = point_it->point.pose;
         }
+        point_it++;
       } else {
         point_it++;
       }
