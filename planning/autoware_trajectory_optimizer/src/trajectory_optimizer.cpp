@@ -138,19 +138,19 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
     return;
   }
 
-  // Create runtime data struct (not configuration parameters!)
+  // Create runtime data struct
   TrajectoryOptimizerData data;
   data.current_odometry = *current_odometry_ptr_;
   data.current_acceleration = *current_acceleration_ptr_;
 
   CandidateTrajectories output_trajectories = *msg;
   for (auto & trajectory : output_trajectories.candidate_trajectories) {
-    // Apply optimizers - pass params (flags) and data (runtime state)
+    // Apply optimizations
     trajectory_extender_ptr_->optimize_trajectory(trajectory.points, params_, data);
     trajectory_point_fixer_ptr_->optimize_trajectory(trajectory.points, params_, data);
+    trajectory_qp_smoother_ptr_->optimize_trajectory(trajectory.points, params_, data);
     eb_smoother_optimizer_ptr_->optimize_trajectory(trajectory.points, params_, data);
     trajectory_spline_smoother_ptr_->optimize_trajectory(trajectory.points, params_, data);
-    trajectory_qp_smoother_ptr_->optimize_trajectory(trajectory.points, params_, data);
     trajectory_velocity_optimizer_ptr_->optimize_trajectory(trajectory.points, params_, data);
     trajectory_point_fixer_ptr_->optimize_trajectory(trajectory.points, params_, data);
     motion_utils::calculate_time_from_start(
