@@ -348,6 +348,7 @@ private:
   PathDecisionStateController path_decision_controller_{getLogger()};
   std::optional<rclcpp::Time> decided_time_{};
 
+  // save the frontmost deceleration start position before approve phase
   std::optional<Pose> blinker_decel_start_pose_{};
 
   // debug
@@ -439,6 +440,9 @@ private:
   void setModifiedGoal(
     const PullOverContextData & context_data, BehaviorModuleOutput & output) const;
   void setTurnSignalInfo(const PullOverContextData & context_data, BehaviorModuleOutput & output);
+  void setTurnSignalInfoForStopPath(
+    const BehaviorModuleOutput & stop_path, const Pose & blinker_decel_start_pose,
+    BehaviorModuleOutput & output);
 
   // new turn signal
   TurnSignalInfo calcTurnSignalInfo(const PullOverContextData & context_data);

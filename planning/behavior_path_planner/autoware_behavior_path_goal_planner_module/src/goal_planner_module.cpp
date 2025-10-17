@@ -1441,6 +1441,16 @@ void GoalPlannerModule::setTurnSignalInfo(
     planner_data_->parameters.ego_nearest_yaw_threshold);
 }
 
+void GoalPlannerModule::setTurnSignalInfoForStopPath(
+  const BehaviorModuleOutput & stop_path, const Pose & blinker_decel_start_pose,
+  BehaviorModuleOutput & output)
+{
+  auto preempt_turn_signal =
+    TurnSignalInfo(blinker_decel_start_pose, stop_path.path.points.back().point.pose);
+  preempt_turn_signal.turn_signal.command = TurnIndicatorsCommand::ENABLE_LEFT;
+  output.turn_signal_info = preempt_turn_signal;
+}
+
 void GoalPlannerModule::updatePlanningFactor(
   const PullOverContextData & context_data, const std::array<Pose, 2> & pose,
   const std::array<double, 2> distance)
@@ -1517,19 +1527,13 @@ BehaviorModuleOutput GoalPlannerModule::planPullOver(PullOverContextData & conte
         autoware::motion_utils::findNearestIndex(
           stop_output.path.points, blinker_decel_start_pose_.value());
     if (started_decel_for_blinker) {
-      setTurnSignalInfo(context_data, stop_output);
+      setTurnSignalInfoForStopPath(stop_output, blinker_decel_start_pose_.value(), stop_output);
     }
     return stop_output;
   }
 
   auto decided_output = planPullOverAsOutput(context_data);
-  // set hazard and turn signal
-  if (
-    path_decision_controller_.get_current_state().state ==
-      PathDecisionState::DecisionKind::DECIDED &&
-    isActivated()) {
-    setTurnSignalInfo(context_data, decided_output);
-  }
+  setTurnSignalInfo(context_data, decided_output);
   return decided_output;
 }
 
@@ -1937,6 +1941,7 @@ PathWithLaneId GoalPlannerModule::generateStopPath(
     return decel_pose;
   });
   if (!stop_pose_opt.has_value()) {
+    blinker_decel_start_pose_ = decel_pose;
     const auto feasible_stop_path =
       generateFeasibleStopPath(getPreviousModuleOutput().path, detail);
     return feasible_stop_path;
@@ -1952,6 +1957,14 @@ PathWithLaneId GoalPlannerModule::generateStopPath(
   if (min_stop_distance && ego_to_stop_distance + buffer < *min_stop_distance) {
     const auto feasible_stop_path =
       generateFeasibleStopPath(getPreviousModuleOutput().path, detail);
+    const auto decel_start_point = autoware::motion_utils::calcLongitudinalOffsetPoint(
+      feasible_stop_path.points, stop_pose.position, -min_stop_distance.value());
+    if (decel_start_point) {
+      blinker_decel_start_pose_ = feasible_stop_path.points
+                                    .at(autoware::motion_utils::findNearestIndex(
+                                      feasible_stop_path.points, decel_start_point.value()))
+                                    .point.pose;
+    }
     return feasible_stop_path;
   }
 
