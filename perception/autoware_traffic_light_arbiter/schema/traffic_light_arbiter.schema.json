@@ -21,10 +21,11 @@
           "description": "The duration in seconds a perception message is considered valid for merging.",
           "default": 1.0
         },
-        "external_priority": {
-          "type": "boolean",
-          "description": "Whether or not external signals take precedence over perception-based ones. If false, the merging uses confidence as a criteria.",
-          "default": false
+        "source_priority": {
+          "type": "string",
+          "enum": ["external", "perception", "confidence"],
+          "description": "Priority mode for signal selection: 'external' prioritizes external signals, 'perception' prioritizes perception signals, 'confidence' uses confidence-based selection.",
+          "default": "confidence"
         },
         "enable_signal_matching": {
           "type": "boolean",
@@ -36,7 +37,7 @@
         "external_delay_tolerance",
         "external_time_tolerance",
         "perception_time_tolerance",
-        "external_priority",
+        "source_priority",
         "enable_signal_matching"
       ],
       "additionalProperties": false

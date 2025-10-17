@@ -119,6 +119,8 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
   update_param<bool>(parameters, "set_engage_speed", params.set_engage_speed);
   update_param<bool>(parameters, "fix_invalid_points", params.fix_invalid_points);
   update_param<bool>(parameters, "extend_trajectory_backward", params.extend_trajectory_backward);
+  update_param<bool>(
+    parameters, "spline_copy_original_orientation", params.spline_copy_original_orientation);
 
   params_ = params;
 
@@ -188,6 +190,8 @@ void TrajectoryOptimizer::set_up_params()
   params_.fix_invalid_points = get_or_declare_parameter<bool>(*this, "fix_invalid_points");
   params_.extend_trajectory_backward =
     get_or_declare_parameter<bool>(*this, "extend_trajectory_backward");
+  params_.spline_copy_original_orientation =
+    get_or_declare_parameter<bool>(*this, "spline_copy_original_orientation");
 }
 
 void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::ConstSharedPtr msg)

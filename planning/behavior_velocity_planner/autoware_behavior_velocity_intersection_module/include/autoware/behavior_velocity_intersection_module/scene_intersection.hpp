@@ -162,11 +162,6 @@ public:
       double denoise_kernel;
       double attention_lane_crop_curvature_threshold;
       double attention_lane_curvature_calculation_ds;
-      struct CreepDuringPeeking
-      {
-        bool enable;
-        double creep_velocity;
-      } creep_during_peeking;
       double peeking_offset;
       double occlusion_required_clearance_distance;
       std::vector<double> possible_object_bbox;
@@ -410,6 +405,8 @@ private:
    * following variables are state variables that depends on how the vehicle passed the intersection
    * @{
    */
+  IntersectionStopLines::PreviousStopPose previous_stop_pose_{};
+
   //! if true, this module never commands to STOP anymore
   bool is_permanent_go_{false};
 
@@ -425,6 +422,13 @@ private:
   //! past perception failure at these time.
   std::optional<std::pair<rclcpp::Time, geometry_msgs::msg::Pose>> safely_passed_judge_line_time_{
     std::nullopt};
+
+  /**
+   * @brief this function is used to check if target stop position is feasible
+   */
+  bool can_smoothly_stop_at(
+    const PathWithLaneId & path, const size_t closest_idx, const size_t target_stop_idx) const;
+
   /** @}*/
 
 private:
@@ -457,18 +461,6 @@ private:
 
   //! save previous priority level to detect change from NotPrioritized to Prioritized
   TrafficPrioritizedLevel previous_prioritized_level_{TrafficPrioritizedLevel::NOT_PRIORITIZED};
-  /** @} */
-
-private:
-  /**
-   ***********************************************************
-   ***********************************************************
-   ***********************************************************
-   * @defgroup stuck-variables [var] stuck detection
-   * @{
-   */
-  //! indicate whether ego was trying to stop for stuck vehicle(for debouncing)
-  bool was_stopping_for_stuck_{false};
   /** @} */
 
 private:
@@ -589,6 +581,7 @@ private:
     const lanelet::CompoundPolygon3d & first_conflicting_area,
     const lanelet::ConstLanelet & first_attention_lane,
     const InterpolatedPathInfo & interpolated_path_info,
+    const IntersectionStopLines::PreviousStopPose & previous_stop_pose,
     autoware_internal_planning_msgs::msg::PathWithLaneId * original_path) const;
 
   /**

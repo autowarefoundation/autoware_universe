@@ -17,6 +17,7 @@
   <depend>aruco</depend>
   <depend>autoware_landmark_manager</depend>
   <depend>autoware_localization_util</depend>
+  <depend>autoware_utils_geometry</depend>
   <depend>cv_bridge</depend>
   <depend>diagnostic_msgs</depend>
   <depend>rclcpp</depend>

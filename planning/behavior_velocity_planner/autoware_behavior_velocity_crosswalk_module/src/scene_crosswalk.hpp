@@ -328,12 +328,12 @@ public:
       }
 
       // update object state
+      objects.at(uuid).classification = classification;
       objects.at(uuid).transitState(
         now, position, vel, is_ego_yielding, collision_point, planner_param, crosswalk_polygon,
         is_object_away_from_path, ego_crosswalk_passage_direction);
       objects.at(uuid).collision_point = collision_point;
       objects.at(uuid).position = position;
-      objects.at(uuid).classification = classification;
       objects.at(uuid).last_detection_time = now;
     }
     void finalize(const rclcpp::Time & now, const PlannerParam & planner_param)

@@ -17,6 +17,8 @@
 #include "map_based_prediction/utils.hpp"
 
 #include <autoware/interpolation/linear_interpolation.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
@@ -343,8 +345,9 @@ void replaceObjectYawWithLaneletsYaw(
   double sum_x = 0.0;
   double sum_y = 0.0;
   for (const auto & current_lanelet : current_lanelets) {
-    const auto lanelet_angle =
-      lanelet::utils::getLaneletAngle(current_lanelet.lanelet, pose_with_cov.pose.position);
+    const auto lanelet_angle = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+      current_lanelet.lanelet,
+      autoware::experimental::lanelet2_utils::from_ros(pose_with_cov.pose).basicPoint());
     sum_x += std::cos(lanelet_angle);
     sum_y += std::sin(lanelet_angle);
   }
@@ -1252,7 +1255,8 @@ Maneuver MapBasedPredictionNode::predictObjectManeuverByLatDiffDistance(
   lanelet::ConstLanelet prev_lanelet = prev_lanelets.front();
   double closest_prev_yaw = std::numeric_limits<double>::max();
   for (const auto & lanelet : prev_lanelets) {
-    const double lane_yaw = lanelet::utils::getLaneletAngle(lanelet, prev_pose.position);
+    const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+      lanelet, autoware::experimental::lanelet2_utils::from_ros(prev_pose).basicPoint());
     const double delta_yaw = tf2::getYaw(prev_pose.orientation) - lane_yaw;
     const double normalized_delta_yaw = autoware_utils::normalize_radian(delta_yaw);
     if (normalized_delta_yaw < closest_prev_yaw) {

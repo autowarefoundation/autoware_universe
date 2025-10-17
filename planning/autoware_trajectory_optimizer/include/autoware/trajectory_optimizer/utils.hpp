@@ -65,6 +65,16 @@ void smooth_trajectory_with_elastic_band(
 bool validate_point(const TrajectoryPoint & point);
 
 /**
+ * @brief Copies the orientation of the input trajectory points to the output trajectory points.
+ * @param input_trajectory The input trajectory points.
+ * @param output_trajectory The output trajectory points.
+ * @param params The parameters for trajectory optimization.
+ */
+void copy_trajectory_orientation(
+  const TrajectoryPoints & input_trajectory, TrajectoryPoints & output_trajectory,
+  const TrajectoryOptimizerParams & params);
+
+/**
  * @brief Interpolates the given trajectory points based on trajectory length.
  *
  * @param traj_points The trajectory points to be interpolated.

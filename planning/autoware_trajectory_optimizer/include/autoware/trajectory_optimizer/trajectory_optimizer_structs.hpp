@@ -48,6 +48,7 @@ struct TrajectoryOptimizerParams
   bool set_engage_speed{false};
   bool fix_invalid_points{false};
   bool extend_trajectory_backward{false};
+  bool spline_copy_original_orientation{false};
   Odometry current_odometry;
   AccelWithCovarianceStamped current_acceleration;
 };

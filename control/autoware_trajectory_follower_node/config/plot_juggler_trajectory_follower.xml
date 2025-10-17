@@ -202,7 +202,7 @@
         </transform>
        </curve>
        <curve name="/control/trajectory_follower/longitudinal/diagnostic/data[25]" color="#ff7f0e">
-        <transform alias="calculated" name="Scale/Offset">
+        <transform alias="feedback" name="Scale/Offset">
          <options value_scale="1.0" time_offset="0" value_offset="0"/>
         </transform>
        </curve>
