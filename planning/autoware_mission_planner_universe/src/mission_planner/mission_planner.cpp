@@ -14,8 +14,7 @@
 
 #include "mission_planner.hpp"
 
-#include "service_utils.hpp"
-
+#include <autoware/mission_planner_universe/service_utils.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/route_checker.hpp>
@@ -96,6 +95,9 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
   srv_set_lanelet_route = create_service<SetLaneletRoute>(
     "~/set_lanelet_route",
     service_utils::handle_exception(&MissionPlanner::on_set_lanelet_route, this));
+  srv_set_preferred_primitive = create_service<autoware_planning_msgs::srv::SetPreferredPrimitive>(
+    "~/set_preferred_primitive",
+    service_utils::handle_exception(&MissionPlanner::on_set_preferred_primitive, this));
   srv_set_waypoint_route = create_service<SetWaypointRoute>(
     "~/set_waypoint_route",
     service_utils::handle_exception(&MissionPlanner::on_set_waypoint_route, this));
@@ -329,6 +331,61 @@ void MissionPlanner::on_set_lanelet_route(
   print_pose_log("set_lanelet_route", odometry_->pose.pose, req->goal_pose);
 }
 
+void MissionPlanner::on_set_preferred_primitive(
+  const autoware_planning_msgs::srv::SetPreferredPrimitive::Request::SharedPtr req,
+  const autoware_planning_msgs::srv::SetPreferredPrimitive::Response::SharedPtr res)
+{
+  if (!current_route_) {
+    using ResponseCode = autoware_adapi_v1_msgs::msg::ResponseStatus;
+    res->status.success = false;
+    throw service_utils::ServiceException(
+      ResponseCode::NO_EFFECT, "The route has not been set yet.", true);
+  }
+  if (req->preferred_primitives.size() != current_route_->segments.size()) {
+    res->status.success = false;
+    std::cerr << "The size of preferred_primitives (" << req->preferred_primitives.size()
+              << ") is different from that of the current route ("
+              << current_route_->segments.size() << ")." << std::endl;
+    throw service_utils::ServiceException(
+      autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,
+      fmt::format(
+        "The size of preferred_primitives ({}) is different from that of the current route ({}).",
+        req->preferred_primitives.size(), current_route_->segments.size()));
+  }
+  if (req->uuid != current_route_->uuid) {
+    throw service_utils::ServiceException(
+      autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,
+      "Route UUID does not match the current route.");
+  }
+
+  auto current_route = *current_route_;
+
+  for (size_t i = 0; i < current_route.segments.size(); ++i) {
+    auto & segment = current_route.segments.at(i);
+    const auto & preferred_primitive = req->preferred_primitives.at(i);
+
+    if (std::none_of(
+          segment.primitives.begin(), segment.primitives.end(),
+          [&preferred_primitive](const autoware_planning_msgs::msg::LaneletPrimitive & p) {
+            return p.id == preferred_primitive.id;
+          })) {
+      res->status.success = false;
+      std::cerr << "The preferred_primitive at index " << i
+                << " does not belong to the lanelet segment." << std::endl;
+      throw service_utils::ServiceException(
+        autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,
+        fmt::format(
+          "The preferred_primitive at index {} does not belong to the lanelet segment.", i));
+    }
+
+    segment.preferred_primitive = preferred_primitive;
+  }
+
+  change_route(current_route, req->reset);
+  res->status.message = "Successfully set preferred primitive.";
+  res->status.success = true;
+}
+
 void MissionPlanner::on_set_waypoint_route(
   const SetWaypointRoute::Request::SharedPtr req, const SetWaypointRoute::Response::SharedPtr res)
 {
@@ -400,7 +457,7 @@ void MissionPlanner::change_route()
   // pub_marker_->publish();
 }
 
-void MissionPlanner::change_route(const LaneletRoute & route)
+void MissionPlanner::change_route(const LaneletRoute & route, bool emphasise_goal_lanes)
 {
   PoseWithUuidStamped goal;
   goal.header = route.header;
@@ -412,7 +469,7 @@ void MissionPlanner::change_route(const LaneletRoute & route)
   arrival_checker_.set_goal(goal);
 
   pub_route_->publish(route);
-  pub_marker_->publish(planner_->visualize(route));
+  pub_marker_->publish(planner_->visualize(route, emphasise_goal_lanes));
 }
 
 void MissionPlanner::cancel_route()
