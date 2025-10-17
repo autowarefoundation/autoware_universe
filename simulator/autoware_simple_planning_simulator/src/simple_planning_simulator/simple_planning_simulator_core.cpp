@@ -724,6 +724,7 @@ void SimplePlanningSimulator::set_initial_state(const Pose & pose, const Twist &
   const double vy = 0.0;
   const double steer = 0.0;
   const double accx = 0.0;
+  const double pedal_accx = 0.0;
 
   Eigen::VectorXd state(vehicle_model_ptr_->getDimX());
 
@@ -741,13 +742,14 @@ void SimplePlanningSimulator::set_initial_state(const Pose & pose, const Twist &
   } else if (  // NOLINT
     vehicle_model_type_ == VehicleModelType::DELAY_STEER_ACC ||
     vehicle_model_type_ == VehicleModelType::DELAY_STEER_ACC_GEARED ||
-    vehicle_model_type_ == VehicleModelType::DELAY_STEER_ACC_GEARED_WO_FALL_GUARD ||
     vehicle_model_type_ == VehicleModelType::DELAY_STEER_MAP_ACC_GEARED ||
     vehicle_model_type_ == VehicleModelType::ACTUATION_CMD ||
     vehicle_model_type_ == VehicleModelType::ACTUATION_CMD_VGR ||
     vehicle_model_type_ == VehicleModelType::ACTUATION_CMD_MECHANICAL ||
     vehicle_model_type_ == VehicleModelType::ACTUATION_CMD_STEER_MAP) {
     state << x, y, yaw, vx, steer, accx;
+  } else if (vehicle_model_type_ == VehicleModelType::DELAY_STEER_ACC_GEARED_WO_FALL_GUARD) {
+    state << x, y, yaw, vx, steer, accx, pedal_accx;
   }
   vehicle_model_ptr_->setState(state);
 
