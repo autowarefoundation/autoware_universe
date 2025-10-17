@@ -15,7 +15,6 @@
   <depend>pluginlib</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
-  <depend>tier4_planning_msgs</depend>
 
   <exec_depend>autoware_mission_planner_universe</exec_depend>
 

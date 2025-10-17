@@ -2,9 +2,10 @@ cmake_minimum_required(VERSION 3.14)
 project(autoware_manual_lane_change_handler)
 
 find_package(ament_cmake_auto REQUIRED)
-find_package(autoware_mission_planner_universe REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(pluginlib REQUIRED)
+find_package(autoware_mission_planner_universe REQUIRED)
+find_package(autoware_planning_msgs REQUIRED)
 
 ament_auto_find_build_dependencies()
 
@@ -19,6 +20,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 ament_target_dependencies(${PROJECT_NAME}
   rclcpp
   pluginlib
+  autoware_planning_msgs
   autoware_mission_planner_universe
 )
 

@@ -25,9 +25,9 @@
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_planning_msgs/msg/lanelet_primitive.hpp>
 #include <autoware_planning_msgs/srv/set_lanelet_route.hpp>
+#include <autoware_planning_msgs/srv/set_preferred_primitive.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <tier4_external_api_msgs/srv/set_preferred_lane.hpp>
-#include <tier4_external_api_msgs/srv/set_preferred_primitive.hpp>
 
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -41,8 +41,8 @@ namespace autoware::manual_lane_change_handler
 using autoware::mission_planner_universe::PlannerPlugin;
 using autoware_planning_msgs::msg::LaneletPrimitive;
 using autoware_planning_msgs::msg::LaneletRoute;
+using autoware_planning_msgs::srv::SetPreferredPrimitive;
 using tier4_external_api_msgs::srv::SetPreferredLane;
-using tier4_external_api_msgs::srv::SetPreferredPrimitive;
 
 struct LaneChangeRequestResult
 {
