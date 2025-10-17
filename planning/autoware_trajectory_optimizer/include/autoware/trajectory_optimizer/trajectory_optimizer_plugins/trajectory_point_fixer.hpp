@@ -31,6 +31,15 @@ namespace autoware::trajectory_optimizer::plugin
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
+/**
+ * @brief Parameters specific to the trajectory point fixer
+ */
+struct TrajectoryPointFixerParams
+{
+  double orientation_threshold_deg{
+    5.0};  // Yaw threshold for removing wrongly oriented points [deg]
+};
+
 class TrajectoryPointFixer : TrajectoryOptimizerPluginBase
 {
 public:
@@ -40,13 +49,18 @@ public:
     const TrajectoryOptimizerParams & params)
   : TrajectoryOptimizerPluginBase(name, node_ptr, time_keeper, params)
   {
+    set_up_params();
   }
   ~TrajectoryPointFixer() = default;
   void optimize_trajectory(
-    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params) override;
+    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
+    const TrajectoryOptimizerData & data) override;
   void set_up_params() override;
   rcl_interfaces::msg::SetParametersResult on_parameter(
     const std::vector<rclcpp::Parameter> & parameters) override;
+
+private:
+  TrajectoryPointFixerParams fixer_params_;
 };
 }  // namespace autoware::trajectory_optimizer::plugin
 

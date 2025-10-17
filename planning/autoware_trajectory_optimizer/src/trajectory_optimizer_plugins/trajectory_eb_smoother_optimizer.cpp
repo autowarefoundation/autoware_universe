@@ -43,12 +43,13 @@ TrajectoryEBSmootherOptimizer::TrajectoryEBSmootherOptimizer(
 }
 
 void TrajectoryEBSmootherOptimizer::optimize_trajectory(
-  TrajectoryPoints & traj_points, [[maybe_unused]] const TrajectoryOptimizerParams & params)
+  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
+  const TrajectoryOptimizerData & data)
 {
   // Use elastic band to smooth the trajectory
-  if (params.smooth_trajectories) {
+  if (params.use_eb_smoother) {
     utils::smooth_trajectory_with_elastic_band(
-      traj_points, params.current_odometry, eb_path_smoother_ptr_);
+      traj_points, data.current_odometry, eb_path_smoother_ptr_);
   }
 }
 
