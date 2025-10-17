@@ -31,6 +31,18 @@
           "default": true,
           "description": "Extend trajectory backward using ego pose history"
         },
+        "trajectory_point_fixer": {
+          "type": "object",
+          "properties": {
+            "orientation_threshold_deg": {
+              "type": "number",
+              "default": 5.0,
+              "minimum": 0,
+              "description": "Yaw threshold for removing wrongly oriented points [deg]"
+            }
+          },
+          "required": ["orientation_threshold_deg"]
+        },
         "trajectory_extender": {
           "type": "object",
           "properties": {
