@@ -828,14 +828,32 @@ void GoalPlannerModule::updateData()
   // NOTE: currently occupancy_grid_map_ must be used after syncWithThreads
   goal_searcher.update(goal_candidates_, occupancy_grid_map_, planner_data_, static_target_objects);
 
+  // Update lane_parking_response only when NOT_DECIDED.
+  // freespace_parking_response is always updated.
+  const bool should_update_lane_parking =
+    new_decision_state.state == PathDecisionState::DecisionKind::NOT_DECIDED;
+
   if (context_data_) {
-    context_data_.value().update(
-      new_decision_state.is_stable_safe, static_target_objects, dynamic_target_objects,
-      prev_decision_state,
-      isStopped(
-        odometry_buffer_stopped_, planner_data_->self_odometry, parameters_.th_stopped_time,
-        parameters_.th_stopped_velocity),
-      std::move(lane_parking_response), std::move(freespace_parking_response));
+    if (should_update_lane_parking) {
+      // NOT_DECIDED: update both lane_parking and freespace_parking responses
+      context_data_.value().update(
+        new_decision_state.is_stable_safe, static_target_objects, dynamic_target_objects,
+        prev_decision_state,
+        isStopped(
+          odometry_buffer_stopped_, planner_data_->self_odometry, parameters_.th_stopped_time,
+          parameters_.th_stopped_velocity),
+        std::move(lane_parking_response), std::move(freespace_parking_response));
+    } else {
+      // DECIDING or DECIDED: keep lane_parking_response, update freespace_parking_response
+      context_data_.value().update(
+        new_decision_state.is_stable_safe, static_target_objects, dynamic_target_objects,
+        prev_decision_state,
+        isStopped(
+          odometry_buffer_stopped_, planner_data_->self_odometry, parameters_.th_stopped_time,
+          parameters_.th_stopped_velocity),
+        LaneParkingResponse(context_data_.value().lane_parking_response),
+        std::move(freespace_parking_response));
+    }
   } else {
     context_data_.emplace(
       new_decision_state.is_stable_safe, static_target_objects, dynamic_target_objects,
