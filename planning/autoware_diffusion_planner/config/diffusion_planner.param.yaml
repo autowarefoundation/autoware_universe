@@ -10,7 +10,6 @@
     update_traffic_light_group_info: true
     keep_last_traffic_light_group_info: true
     traffic_light_group_msg_timeout_seconds: 0.2
-    use_route_handler: true
     build_only: false
     batch_size: 1
     temperature: [0.5]
