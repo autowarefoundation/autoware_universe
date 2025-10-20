@@ -19740,6 +19740,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#viewing-multi-camera-view-in-rviz" class="md-nav__link">
+    <span class="md-ellipsis">
+      Viewing Multi-Camera View in RViz
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -19765,9 +19774,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#configurable-parameters-for-sensors" class="md-nav__link">
+  <a href="#sensor-configuration" class="md-nav__link">
     <span class="md-ellipsis">
-      Configurable Parameters for Sensors
+      Sensor Configuration
     </span>
   </a>
   
@@ -19858,19 +19867,35 @@ This ros package enables communication between Autoware and CARLA for autonomous
 </table>
 <h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">#</a></h2>
 <h3 id="install">Install<a class="headerlink" href="#install" title="Permanent link">#</a></h3>
+<h4 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">#</a></h4>
+<ol>
+<li>
+<p><strong>Install CARLA 0.9.15</strong>: Follow the <a href="https://carla.readthedocs.io/en/latest/start_quickstart/">CARLA Installation Guide</a></p>
+</li>
+<li>
+<p><strong>Install CARLA Python Package</strong>: Install <a href="https://github.com/gezp/carla_ros/releases/tag/carla-0.9.15-ubuntu-22.04">CARLA 0.9.15 ROS 2 Humble communication package</a></p>
 <ul>
-<li><a href="https://carla.readthedocs.io/en/latest/start_quickstart/">CARLA Installation</a></li>
-<li><a href="https://bitbucket.org/carla-simulator/autoware-contents/src/master/maps/">Carla Lanelet2 Maps</a></li>
-<li><a href="https://github.com/gezp/carla_ros/releases/tag/carla-0.9.15-ubuntu-22.04">Python Package for CARLA 0.9.15 ROS 2 Humble communication</a><ul>
-<li>Install the wheel using pip.</li>
-<li>OR add the egg file to the <code>PYTHONPATH</code>.</li>
+<li>Option A: Install the wheel using pip</li>
+<li>Option B: Add the egg file to your <code>PYTHONPATH</code></li>
 </ul>
 </li>
-</ul>
+<li>
+<p><strong>Download CARLA Lanelet2 Maps</strong>: Get the y-axis inverted maps from <a href="https://bitbucket.org/carla-simulator/autoware-contents/src/master/maps/">CARLA Autoware Contents</a></p>
+</li>
+</ol>
+<h4 id="map-setup">Map Setup<a class="headerlink" href="#map-setup" title="Permanent link">#</a></h4>
 <ol>
-<li>Download maps (y-axis inverted version) to arbitrary location</li>
-<li>Change names and create the map folder (example: Town01) inside <code>autoware_map</code>. (<code>point_cloud/Town01.pcd</code> -&gt; <code>autoware_map/Town01/pointcloud_map.pcd</code>, <code>vector_maps/lanelet2/Town01.osm</code>-&gt; <code>autoware_map/Town01/lanelet2_map.osm</code>)</li>
-<li>Create <code>map_projector_info.yaml</code> on the folder and add <code>projector_type: Local</code> on the first line.</li>
+<li>Download the maps (y-axis inverted version) to an arbitrary location</li>
+<li>Create the map folder structure in <code>$HOME/autoware_map</code>:<ul>
+<li>Rename <code>point_cloud/Town01.pcd</code> → <code>$HOME/autoware_map/Town01/pointcloud_map.pcd</code></li>
+<li>Rename <code>vector_maps/lanelet2/Town01.osm</code> → <code>$HOME/autoware_map/Town01/lanelet2_map.osm</code></li>
+</ul>
+</li>
+<li>
+<p>Create <code>$HOME/autoware_map/Town01/map_projector_info.yaml</code> with:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">projector_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Local</span>
+</code></pre></div>
+</li>
 </ol>
 <h3 id="build">Build<a class="headerlink" href="#build" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>colcon<span class="w"> </span>build<span class="w"> </span>--symlink-install<span class="w"> </span>--cmake-args<span class="w"> </span>-DCMAKE_BUILD_TYPE<span class="o">=</span>Release
@@ -19886,8 +19911,13 @@ This ros package enables communication between Autoware and CARLA for autonomous
 </code></pre></div>
 </li>
 <li>
-<p>Run ros nodes</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_launch<span class="w"> </span>e2e_simulator.launch.xml<span class="w"> </span>map_path:<span class="o">=</span><span class="nv">$HOME</span>/autoware_map/Town01<span class="w"> </span>vehicle_model:<span class="o">=</span>sample_vehicle<span class="w"> </span>sensor_model:<span class="o">=</span>awsim_sensor_kit<span class="w"> </span>simulator_type:<span class="o">=</span>carla<span class="w"> </span>carla_map:<span class="o">=</span>Town01
+<p>Run Autoware with CARLA</p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_launch<span class="w"> </span>e2e_simulator.launch.xml<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>map_path:<span class="o">=</span><span class="nv">$HOME</span>/autoware_map/Town01<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>vehicle_model:<span class="o">=</span>sample_vehicle<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>sensor_model:<span class="o">=</span>carla_sensor_kit<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>simulator_type:<span class="o">=</span>carla<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>carla_map:<span class="o">=</span>Town01
 </code></pre></div>
 </li>
 <li>
@@ -19897,6 +19927,22 @@ This ros package enables communication between Autoware and CARLA for autonomous
 <li>Wait for planning</li>
 <li>Engage</li>
 </ol>
+<h3 id="viewing-multi-camera-view-in-rviz">Viewing Multi-Camera View in RViz<a class="headerlink" href="#viewing-multi-camera-view-in-rviz" title="Permanent link">#</a></h3>
+<p>The <code>carla_sensor_kit</code> includes 6 cameras providing 360-degree coverage (Front, Front-Left, Front-Right, Back, Back-Left, Back-Right). A multi-camera combiner node automatically combines all camera feeds into a single 2x3 grid view.</p>
+<p>To view the combined camera feed in RViz:</p>
+<ol>
+<li>In the <strong>Displays</strong> panel (left side), click the <strong>"Add"</strong> button</li>
+<li>Select the <strong>"By topic"</strong> tab</li>
+<li>Navigate to <code>/sensing/camera/all_cameras/image_raw</code></li>
+<li>Select <strong>"Image"</strong> display type</li>
+<li>Click <strong>OK</strong></li>
+</ol>
+<p><img alt="Multi-Camera View in RViz" src="docs/images/rviz_multi_camera_view.png"></p>
+<p>The combined view shows all 6 cameras with labels: FL (Front-Left), F (Front), FR (Front-Right), BL (Back-Left), B (Back), BR (Back-Right).</p>
+<p><strong>Note:</strong> If you don't need the multi-camera combiner (to save CPU resources), you can comment out the following line in <code>launch/autoware_carla_interface.launch.xml</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="cm">&lt;!-- Multi-camera combiner for RViz visualization --&gt;</span>
+<span class="cm">&lt;!-- &lt;node pkg="autoware_carla_interface" exec="multi_camera_combiner" output="screen"/&gt; --&gt;</span>
+</code></pre></div>
 <h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
 <p>The <code>InitializeInterface</code> class is key to setting up both the CARLA world and the ego vehicle. It fetches configuration parameters through the <code>autoware_carla_interface.launch.xml</code>.</p>
 <p>The main simulation loop runs within the <code>carla_ros2_interface</code> class. This loop ticks simulation time inside the CARLA simulator at <code>fixed_delta_seconds</code> time, where data is received and published as ROS 2 messages at frequencies defined in <code>self.sensor_frequencies</code>.</p>
@@ -19968,15 +20014,9 @@ This ros package enables communication between Autoware and CARLA for autonomous
 <td>Time step for the simulation (related to client FPS)</td>
 </tr>
 <tr>
-<td><code>objects_definition_file</code></td>
-<td>string</td>
-<td>"$(find-pkg-share autoware_carla_interface)/objects.json"</td>
-<td>Sensor parameters file that are used for spawning sensor in CARLA</td>
-</tr>
-<tr>
 <td><code>use_traffic_manager</code></td>
 <td>bool</td>
-<td>True</td>
+<td>False</td>
 <td>Boolean flag to set traffic manager in CARLA</td>
 </tr>
 <tr>
@@ -19986,6 +20026,18 @@ This ros package enables communication between Autoware and CARLA for autonomous
 <td>Parameter to limit the simulation speed below <code>fixed_delta_seconds</code></td>
 </tr>
 <tr>
+<td><code>sensor_kit_name</code></td>
+<td>string</td>
+<td>"carla_sensor_kit_description"</td>
+<td>Name of the sensor kit package to use for sensor configuration. Should be the *_description package containing config/sensor_kit_calibration.yaml</td>
+</tr>
+<tr>
+<td><code>sensor_mapping_file</code></td>
+<td>string</td>
+<td>"$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml"</td>
+<td>Path to sensor mapping YAML configuration file</td>
+</tr>
+<tr>
 <td><code>config_file</code></td>
 <td>string</td>
 <td>"$(find-pkg-share autoware_carla_interface)/raw_vehicle_cmd_converter.param.yaml"</td>
@@ -19993,32 +20045,44 @@ This ros package enables communication between Autoware and CARLA for autonomous
 </tr>
 </tbody>
 </table>
-<h3 id="configurable-parameters-for-sensors">Configurable Parameters for Sensors<a class="headerlink" href="#configurable-parameters-for-sensors" title="Permanent link">#</a></h3>
-<p>Below parameters can be configured in <code>carla_ros.py</code>.</p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Default Value</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>self.sensor_frequencies</code></td>
-<td>dict</td>
-<td>{"top": 11, "left": 11, "right": 11, "camera": 11, "imu": 50, "status": 50, "pose": 2}</td>
-<td>(line 67) Calculates the time interval since the last publication and checks if this interval meets the minimum required to not exceed the desired frequency. It will only affect ROS publishing frequency not CARLA sensor tick.</td>
-</tr>
-</tbody>
-</table>
+<h3 id="sensor-configuration">Sensor Configuration<a class="headerlink" href="#sensor-configuration" title="Permanent link">#</a></h3>
+<p>The interface uses the <strong><code>carla_sensor_kit</code></strong> which provides 6 cameras for 360-degree coverage, LiDAR, IMU, and GNSS sensors. Sensor configurations are dynamically loaded from Autoware sensor kit calibration files through two configuration files:</p>
+<h4 id="1-sensor-kit-calibration-from-autoware-sensor-kit">1. Sensor Kit Calibration (from Autoware sensor kit)<a class="headerlink" href="#1-sensor-kit-calibration-from-autoware-sensor-kit" title="Permanent link">#</a></h4>
+<p>Located in <code>&lt;sensor_kit_name&gt;_description/config/sensor_kit_calibration.yaml</code></p>
+<p>Defines sensor positions and orientations relative to <code>base_link</code> (rear axle center). Example:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">sensor_kit_base_link</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">CAM_FRONT/camera_link</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">x</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.225</span>
+<span class="w">    </span><span class="nt">y</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.000</span>
+<span class="w">    </span><span class="nt">z</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.600</span>
+<span class="w">    </span><span class="nt">roll</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.000</span>
+<span class="w">    </span><span class="nt">pitch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.000</span>
+<span class="w">    </span><span class="nt">yaw</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.000</span><span class="w"> </span><span class="c1"># Angles in radians</span>
+</code></pre></div>
+<h4 id="2-sensor-mapping-carla-specific">2. Sensor Mapping (CARLA-specific)<a class="headerlink" href="#2-sensor-mapping-carla-specific" title="Permanent link">#</a></h4>
+<p>Located in <code>config/sensor_mapping.yaml</code></p>
+<p>Maps Autoware sensors to CARLA sensor types and parameters. Key sections:</p>
 <ul>
-<li>CARLA sensor parameters can be configured in <code>config/objects.json</code>.<ul>
-<li>For more details regarding the parameters that can be modified in CARLA are explained in <a href="https://carla.readthedocs.io/en/latest/ref_sensors/">Carla Ref Sensor</a>.</li>
+<li><code>default_sensor_kit_name</code>: Default sensor kit to use (e.g., <code>carla_sensor_kit_description</code>)</li>
+<li><code>sensor_mappings</code>: Maps each sensor to CARLA type and ROS topics</li>
+<li><code>enabled_sensors</code>: List of sensors to spawn in CARLA</li>
+<li><code>vehicle_config</code> (optional): Vehicle parameters like wheelbase</li>
 </ul>
-</li>
-</ul>
+<p>Example sensor mapping:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">sensor_mappings</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">CAM_FRONT/camera_link</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">carla_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sensor.camera.rgb</span>
+<span class="w">    </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">"CAM_FRONT"</span>
+<span class="w">    </span><span class="nt">ros_config</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">frame_id</span><span class="p">:</span><span class="w"> </span><span class="s">"CAM_FRONT/camera_optical_link"</span>
+<span class="w">      </span><span class="nt">topic_image</span><span class="p">:</span><span class="w"> </span><span class="s">"/sensing/camera/CAM_FRONT/image_raw"</span>
+<span class="w">      </span><span class="nt">frequency_hz</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">11</span>
+<span class="w">    </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">image_size_x</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1600</span>
+<span class="w">      </span><span class="nt">image_size_y</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">900</span>
+<span class="w">      </span><span class="nt">fov</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">70.0</span>
+</code></pre></div>
+<p>For CARLA sensor parameters, see <a href="https://carla.readthedocs.io/en/latest/ref_sensors/">CARLA Sensor Reference</a>.</p>
 <h3 id="world-loading">World Loading<a class="headerlink" href="#world-loading" title="Permanent link">#</a></h3>
 <p>The <code>carla_ros.py</code> sets up the CARLA world:</p>
 <ol>
@@ -20077,22 +20141,13 @@ This ros package enables communication between Autoware and CARLA for autonomous
 <h2 id="tips">Tips<a class="headerlink" href="#tips" title="Permanent link">#</a></h2>
 <ul>
 <li>Misalignment might occurs during initialization, pressing <code>init by gnss</code> button should fix it.</li>
-<li>Changing the <code>fixed_delta_seconds</code> can increase the simulation tick (default 0.05 s), some sensors params in <code>objects.json</code> need to be adjusted when it is changed (example: LIDAR rotation frequency have to match the FPS).</li>
+<li>Changing the <code>fixed_delta_seconds</code> can increase the simulation tick (default 0.05 s), some sensor params in <code>sensor_mapping.yaml</code> need to be adjusted when it is changed (example: LIDAR rotation frequency should match the FPS).</li>
 </ul>
 <h2 id="known-issues-and-future-works">Known Issues and Future Works<a class="headerlink" href="#known-issues-and-future-works" title="Permanent link">#</a></h2>
 <ul>
-<li>Testing on procedural map (Adv Digital Twin).<ul>
-<li>Currently unable to test it due to failing in the creation of the Adv digital twin map.</li>
-</ul>
-</li>
-<li>Automatic sensor configuration of the CARLA sensors from the Autoware sensor kit.<ul>
-<li>Sensor currently not automatically configured to have the same location as the Autoware Sensor kit. The current work around is to create a new frame of each sensors with (0, 0, 0, 0, 0, 0) coordinate relative to base_link and attach each sensor on the new frame (<code>autoware_carla_interface.launch.xml</code> Line 28). This work around is very limited and restrictive, as when the sensor_kit is changed the sensor location will be wrongly attached.</li>
-</ul>
-</li>
-<li>Traffic light recognition.<ul>
-<li>Currently the HDmap of CARLA did not have information regarding the traffic light which is necessary for Autoware to conduct traffic light recognition.</li>
-</ul>
-</li>
+<li><strong>Testing on procedural maps (Adv Digital Twin)</strong>: Currently unable to test due to failures in creating the Adv Digital Twin map.</li>
+<li><strong>Traffic light recognition</strong>: The default CARLA Lanelet2 maps lack proper traffic light regulatory elements. See the "Traffic Light Recognition" section above for workarounds.</li>
+<li><strong>LiDAR concatenation</strong>: When using multiple LiDARs, you may need to uncomment the lidar concatenation relay in the launch file (currently disabled by default).</li>
 </ul></div>
 
 
