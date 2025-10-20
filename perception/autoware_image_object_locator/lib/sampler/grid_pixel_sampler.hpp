@@ -53,8 +53,7 @@ public:
 
   std::vector<cv::Point2f> samplePointsImpl(
     const cv::Point2f & center_px, [[maybe_unused]] const float roi_w,
-    [[maybe_unused]] const float roi_h);
-  std::vector<cv::Point2f> samplePoints(const std::vector<cv::Point2f> & sampling_base_points);
+    [[maybe_unused]] const float roi_h) override;
 };
 
 class AdaptiveGridPixelSampler : public GridPixelSamplerBase
@@ -70,9 +69,7 @@ public:
   }
 
   std::vector<cv::Point2f> samplePointsImpl(
-    const cv::Point2f & center_px, const float roi_w, const float roi_h);
-  std::vector<cv::Point2f> samplePoints(
-    const std::vector<cv::Point2f> & sampling_base_points, const float roi_w, const float roi_h);
+    const cv::Point2f & center_px, const float roi_w, const float roi_h) override;
 };
 
 }  // namespace autoware::image_object_locator::grid_pixel_sampler

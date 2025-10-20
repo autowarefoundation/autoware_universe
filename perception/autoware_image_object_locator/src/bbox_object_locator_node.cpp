@@ -207,10 +207,9 @@ cv::Matx22d computeCovarianceXY(
 
 // initialize constructor
 BboxObjectLocatorNode::BboxObjectLocatorNode(const rclcpp::NodeOptions & node_options)
-: Node("roi_3d_projector", node_options)
+: Node("roi_3d_projector", node_options),
+  target_frame_(declare_parameter<std::string>("target_frame"))
 {
-  target_frame_ = declare_parameter<std::string>("target_frame");
-
   label_settings_.UNKNOWN = declare_parameter<bool>("detection_target_class.UNKNOWN");
   label_settings_.CAR = declare_parameter<bool>("detection_target_class.CAR");
   label_settings_.TRUCK = declare_parameter<bool>("detection_target_class.TRUCK");
@@ -257,7 +256,7 @@ BboxObjectLocatorNode::BboxObjectLocatorNode(const rclcpp::NodeOptions & node_op
     is_camera_info_arrived_[rois_id] = false;
 
     // ROI validator initialization
-    RoiValidator roi_validator;
+    RoiValidator roi_validator{};
     roi_validator.enable_validation = roi_truncation_validation_enable[rois_id_index];
     roi_validator.remove_object_might_be_truncated =
       roi_truncation_validation_remove_truncated[rois_id_index];

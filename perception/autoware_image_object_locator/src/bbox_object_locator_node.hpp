@@ -136,7 +136,7 @@ private:
   };  // struct CovarianceControlParams
 
   bool isRoiValidationParamValid(
-    const size_t rois_number, const std::vector<bool> & roi_truncation_validation_enable,
+    const size_t rois_number, const std::vector<bool> & validation_enable,
     const std::vector<bool> & remove_truncated);
   void roiCallback(const DetectedObjectsWithFeature::ConstSharedPtr & msg, int rois_id);
   void cameraInfoCallback(const CameraInfo::ConstSharedPtr & msg, int rois_id);
