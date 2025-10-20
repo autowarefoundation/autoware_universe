@@ -82,7 +82,7 @@ std::vector<cv::Point2f> FixedGridPixelSampler::samplePointsImpl(
 /// AdaptiveGridPixelSampler
 ////////////////////////////////
 
-// sample multiple points with adaptive grid sice based on ROI
+// sample multiple points with adaptive grid size based on ROI
 std::vector<cv::Point2f> AdaptiveGridPixelSampler::samplePointsImpl(
   const cv::Point2f & center_px, const float roi_w, const float roi_h)
 {

@@ -162,7 +162,7 @@ cv::Matx22d computeCovarianceXY(
     cv::Vec3d pos = projectUndistortedToGround(sampled_points_for_cov[i], K, D, R, t);
 
     if (label == Label::PEDESTRIAN) {
-      // apply same delta to left/right to keep footprint consistent with the footpoint
+      // apply same delta to left/right to keep footprint consistent with the points
       const cv::Point2f diff = sampled_points_for_cov[i] - bottom_center_px;
       const cv::Point2f bl = bottom_left_px + diff;
       const cv::Point2f br = bottom_right_px + diff;

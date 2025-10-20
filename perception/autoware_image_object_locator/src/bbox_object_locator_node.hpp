@@ -123,7 +123,7 @@ private:
 
   struct CovarianceControlParams
   {
-    // covariance calcuation related variables
+    // covariance calculation related variables
     // pixel offset from the image edge used when sampling an object partially outside the image
     // the offset is computed as a ratio of the image size.
     static constexpr float truncation_out_of_bounds_sampling_ratio_width_ = 0.1;
