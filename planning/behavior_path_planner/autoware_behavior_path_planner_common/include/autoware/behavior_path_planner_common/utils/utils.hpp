@@ -287,14 +287,14 @@ std::optional<lanelet::ConstLanelet> getLeftLanelet(
  * @param [in] input original path
  * @param [in] goal original goal pose
  * @param [in] goal_lane_id [unused]
- * @param [in] output_ptr output path with modified points for the goal
  * @param [in] route_handler Route handler.
+ * @param [in] output_ptr output path with modified points for the goal
  */
 bool set_goal(
   const double search_radius_range, const double search_rad_range,
   const double output_path_interval, const PathWithLaneId & input, const Pose & goal,
-  const int64_t goal_lane_id, PathWithLaneId * output_ptr,
-  const std::shared_ptr<RouteHandler> & route_handler);
+  const int64_t goal_lane_id, const std::shared_ptr<RouteHandler> & route_handler,
+  PathWithLaneId * output_ptr);
 
 /**
  * @brief Recreate the goal pose to prevent the goal point being too far from the lanelet, which

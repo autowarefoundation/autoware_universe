@@ -291,8 +291,8 @@ void fillLongitudinalVelocityFromInputPath(Iterator begin, Iterator end, PathWit
 bool set_goal(
   const double search_radius_range, [[maybe_unused]] const double search_rad_range,
   const double output_path_interval, const PathWithLaneId & input, const Pose & goal,
-  const int64_t goal_lane_id, PathWithLaneId * output_ptr,
-  const std::shared_ptr<RouteHandler> & route_handler)
+  const int64_t goal_lane_id, const std::shared_ptr<RouteHandler> & route_handler,
+  PathWithLaneId * output_ptr)
 {
   try {
     if (input.points.empty()) {
@@ -442,7 +442,7 @@ PathWithLaneId refinePathForGoal(
 
   if (set_goal(
         search_radius_range, search_rad_range, output_path_interval, filtered_path, goal,
-        goal_lane_id, &path_with_goal, route_handler)) {
+        goal_lane_id, route_handler, &path_with_goal)) {
     return path_with_goal;
   }
   return filtered_path;
