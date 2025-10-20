@@ -1085,6 +1085,50 @@ bool hasPreviousModulePathShapeChanged(
   return false;
 }
 
+bool is_on_modified_goal(
+  const Pose & current_pose, const GoalCandidate & modified_goal,
+  const GoalPlannerParameters & parameters)
+{
+  return calc_distance2d(current_pose, modified_goal.goal_pose) < parameters.th_arrived_distance;
+}
+
+bool is_on_modified_goal(
+  const Pose & current_pose, const std::optional<GoalCandidate> & modified_goal_opt,
+  const GoalPlannerParameters & parameters)
+{
+  if (!modified_goal_opt) {
+    return false;
+  }
+  return is_on_modified_goal(current_pose, modified_goal_opt.value(), parameters);
+}
+
+RegenerationCheckResult should_regenerate_path_candidates(
+  const Pose & ego_pose, const BehaviorModuleOutput & current_upstream,
+  const BehaviorModuleOutput & original_upstream, const bool lane_change_detected)
+{
+  if (lane_change_detected) {
+    return {true, "lane change detected"};
+  }
+
+  if (hasDeviatedFromPath(ego_pose.position, current_upstream)) {
+    return {false, "deviated from current previous module path"};
+  }
+
+  if (hasPreviousModulePathShapeChanged(current_upstream, original_upstream)) {
+    return {true, "previous module path shape changed"};
+  }
+
+  if (hasDeviatedFromPath(ego_pose.position, original_upstream)) {
+    return {true, "deviated from original previous module path"};
+  }
+
+  if (has_stopline_except_terminal(current_upstream.path)) {
+    return {true, "stopline detected in upstream module"};
+  }
+
+  return {false, ""};
+}
+
 bool hasDeviatedFromPath(
   const Point & ego_position, const BehaviorModuleOutput & upstream_module_output)
 {

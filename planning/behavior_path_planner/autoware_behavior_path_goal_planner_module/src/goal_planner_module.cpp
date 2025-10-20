@@ -140,24 +140,6 @@ GoalPlannerModule::GoalPlannerModule(
   }
 }
 
-bool isOnModifiedGoal(
-  const Pose & current_pose, const GoalCandidate & modified_goal,
-  const GoalPlannerParameters & parameters)
-{
-  return calc_distance2d(current_pose, modified_goal.goal_pose) < parameters.th_arrived_distance;
-}
-
-bool isOnModifiedGoal(
-  const Pose & current_pose, const std::optional<GoalCandidate> & modified_goal_opt,
-  const GoalPlannerParameters & parameters)
-{
-  if (!modified_goal_opt) {
-    return false;
-  }
-
-  return isOnModifiedGoal(current_pose, modified_goal_opt.value(), parameters);
-}
-
 bool needPathUpdate(
   const Pose & current_pose, const double path_update_duration, const rclcpp::Time & now,
   const std::optional<GoalCandidate> & modified_goal,
@@ -165,7 +147,8 @@ bool needPathUpdate(
 {
   const bool has_enough_time_passed =
     selected_time ? (now - selected_time.value()).seconds() > path_update_duration : true;
-  return !isOnModifiedGoal(current_pose, modified_goal, parameters) && has_enough_time_passed;
+  return !goal_planner_utils::is_on_modified_goal(current_pose, modified_goal, parameters) &&
+         has_enough_time_passed;
 }
 
 bool checkOccupancyGridCollision(
@@ -329,44 +312,18 @@ void LaneParkingPlanner::onTimer()
         return true;
       }
     }
-    if (lane_change_status_changed_since_last_wakeup) {
-      RCLCPP_INFO(
-        getLogger(),
-        "[LaneParkingPlanner]: lane change has been executed or cancelled since last wakeup of "
-        "LaneParking thread, so replan");
-      return true;
-    }
     const std::optional<GoalCandidate> modified_goal_opt =
       pull_over_path_opt
         ? std::make_optional<GoalCandidate>(pull_over_path_opt.value().modified_goal())
         : std::nullopt;
-    if (isOnModifiedGoal(
+    if (goal_planner_utils::is_on_modified_goal(
           local_planner_data->self_odometry->pose.pose, modified_goal_opt, parameters_)) {
       return false;
     }
-    if (goal_planner_utils::hasDeviatedFromPath(
-          local_planner_data->self_odometry->pose.pose.position, upstream_module_output)) {
-      RCLCPP_DEBUG(getLogger(), "has deviated from current previous module path");
-      return false;
-    }
-    if (goal_planner_utils::hasPreviousModulePathShapeChanged(
-          upstream_module_output, original_upstream_module_output_)) {
-      RCLCPP_DEBUG(getLogger(), "has previous module path shape changed");
-      return true;
-    }
-    if (goal_planner_utils::hasDeviatedFromPath(
-          local_planner_data->self_odometry->pose.pose.position,
-          original_upstream_module_output_)) {
-      RCLCPP_DEBUG(getLogger(), "has deviated from last previous module path");
-      return true;
-    }
-    const bool upstream_module_has_stopline_except_terminal =
-      goal_planner_utils::has_stopline_except_terminal(upstream_module_output.path);
-    if (upstream_module_has_stopline_except_terminal) {
-      return true;
-    }
-
-    return false;
+    return goal_planner_utils::should_regenerate_path_candidates(
+             local_planner_data->self_odometry->pose.pose, upstream_module_output,
+             original_upstream_module_output_, lane_change_status_changed_since_last_wakeup)
+      .should_regenerate;
   });
   if (!need_update) {
     return;
@@ -403,6 +360,7 @@ void LaneParkingPlanner::onTimer()
       response_.pull_over_path_candidates.size());
     response_.sorted_bezier_indices_opt = std::move(sorted_indices_opt);
     response_.lane_change_state = lane_change_state_req;
+    response_.original_upstream_module_output = upstream_module_output;
   }
 }
 
@@ -605,7 +563,7 @@ void FreespaceParkingPlanner::onTimer()
     pull_over_path_opt
       ? std::make_optional<GoalCandidate>(pull_over_path_opt.value().modified_goal())
       : std::nullopt;
-  if (isOnModifiedGoal(
+  if (goal_planner_utils::is_on_modified_goal(
         local_planner_data->self_odometry->pose.pose, modified_goal_opt, parameters)) {
     return;
   }
@@ -767,8 +725,9 @@ void GoalPlannerModule::updateData()
       trigger_thread_on_approach_ = true;
       [[maybe_unused]] const auto send_only_request = syncWithThreads();
       RCLCPP_INFO(
-        getLogger(), "start preparing goal candidates once for goal ahead of %f meter",
-        self_to_goal_arc_length);
+        getLogger(),
+        "[%s] start preparing pull over path candidates once for goal ahead of %f meter",
+        magic_enum::enum_name(getCurrentStatus()).data(), self_to_goal_arc_length);
       return;
     }
   }
@@ -782,9 +741,22 @@ void GoalPlannerModule::updateData()
 
   if (getCurrentStatus() == ModuleStatus::IDLE) {
     const bool lane_change_ctx_expired = !lane_change_ctx_.is_in_consistent_transition();
-    if (lane_change_ctx_expired) {
-      [[maybe_unused]] const auto send_only_request = syncWithThreads();
-      RCLCPP_INFO(getLogger(), "restart preparing goal candidates since lane_change is detected");
+    if (
+      !lane_parking_response_.pull_over_path_candidates.empty() &&
+      lane_parking_response_.original_upstream_module_output) {
+      const auto result = goal_planner_utils::should_regenerate_path_candidates(
+        planner_data_->self_odometry->pose.pose, getPreviousModuleOutput(),
+        lane_parking_response_.original_upstream_module_output.value(), lane_change_ctx_expired);
+
+      if (!result.reason.empty()) {
+        RCLCPP_INFO_THROTTLE(
+          getLogger(), *clock_, 5000, "[IDLE] restart preparing pull over path candidates: %s",
+          result.reason.c_str());
+      }
+
+      if (result.should_regenerate) {
+        [[maybe_unused]] const auto send_only_request = syncWithThreads();
+      }
     }
     return;
   }
@@ -1993,7 +1965,8 @@ bool FreespaceParkingPlanner::isStuck(
     req.get_pull_over_path()
       ? std::make_optional<GoalCandidate>(req.get_pull_over_path().value().modified_goal())
       : std::nullopt;
-  if (isOnModifiedGoal(planner_data->self_odometry->pose.pose, modified_goal_opt, parameters)) {
+  if (goal_planner_utils::is_on_modified_goal(
+        planner_data->self_odometry->pose.pose, modified_goal_opt, parameters)) {
     return false;
   }
 
