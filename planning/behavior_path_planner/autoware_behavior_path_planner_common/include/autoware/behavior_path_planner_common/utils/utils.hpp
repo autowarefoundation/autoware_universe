@@ -288,11 +288,13 @@ std::optional<lanelet::ConstLanelet> getLeftLanelet(
  * @param [in] goal original goal pose
  * @param [in] goal_lane_id [unused]
  * @param [in] output_ptr output path with modified points for the goal
+ * @param [in] route_handler Route handler.
  */
 bool set_goal(
   const double search_radius_range, const double search_rad_range,
   const double output_path_interval, const PathWithLaneId & input, const Pose & goal,
-  const int64_t goal_lane_id, PathWithLaneId * output_ptr);
+  const int64_t goal_lane_id, PathWithLaneId * output_ptr,
+  const std::shared_ptr<RouteHandler> & route_handler);
 
 /**
  * @brief Recreate the goal pose to prevent the goal point being too far from the lanelet, which
@@ -312,12 +314,13 @@ const Pose refineGoal(const Pose & goal, const lanelet::ConstLanelet & goal_lane
  * @param input Input path.
  * @param goal Goal pose.
  * @param goal_lane_id Lane ID of goal lanelet.
+ * @param route_handler Route handler.
  * @return Recreated path
  */
 PathWithLaneId refinePathForGoal(
   const double search_radius_range, const double search_rad_range,
   const double output_path_interval, const PathWithLaneId & input, const Pose & goal,
-  const int64_t goal_lane_id);
+  const int64_t goal_lane_id, const std::shared_ptr<RouteHandler> & route_handler);
 
 bool isAllowedGoalModification(const std::shared_ptr<RouteHandler> & route_handler);
 bool checkOriginalGoalIsInShoulder(const std::shared_ptr<RouteHandler> & route_handler);
