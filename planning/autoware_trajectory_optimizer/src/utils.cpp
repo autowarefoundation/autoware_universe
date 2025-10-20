@@ -87,42 +87,6 @@ void remove_invalid_points(TrajectoryPoints & input_trajectory)
   }
 }
 
-void remove_wrongly_oriented_points(
-  TrajectoryPoints & input_trajectory_array, const double yaw_threshold_rad)
-{
-  if (input_trajectory_array.size() < 2) {
-    return;
-  }
-
-  const double orientation_threshold_rad = autoware_utils_math::deg2rad(yaw_threshold_rad);
-
-  // Iterate from front to back to find first wrongly oriented point
-  // For each point, compare its stored orientation with geometric direction to next point
-  for (size_t i = input_trajectory_array.size() - 1; i > 0; --i) {
-    const auto & current_point = input_trajectory_array[i - 1];
-    const auto & next_point = input_trajectory_array[i];
-
-    const double geometric_yaw = autoware_utils_geometry::calc_azimuth_angle(
-      autoware_utils_geometry::get_point(current_point),
-      autoware_utils_geometry::get_point(next_point));
-
-    // Get the stored orientation of the current point
-    const double stored_yaw = tf2::getYaw(current_point.pose.orientation);
-
-    // Calculate yaw difference (normalized to [-pi, pi])
-    const double yaw_diff = autoware_utils_math::normalize_radian(geometric_yaw - stored_yaw);
-
-    // If orientation differs significantly, remove this point and all subsequent points
-    if (std::abs(yaw_diff) > orientation_threshold_rad) {
-      // Erase from current wrongly oriented point to the end
-      input_trajectory_array.erase(
-        input_trajectory_array.begin() + static_cast<TrajectoryPoints::difference_type>(i),
-        input_trajectory_array.end());
-      return;
-    }
-  }
-}
-
 void remove_close_proximity_points(TrajectoryPoints & input_trajectory_array, const double min_dist)
 {
   if (std::size(input_trajectory_array) < 2) {
