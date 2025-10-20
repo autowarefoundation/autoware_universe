@@ -26,7 +26,8 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "autoware_carla_interface = autoware_carla_interface.carla_autoware:main"
+            "autoware_carla_interface = autoware_carla_interface.carla_autoware:main",
+            "multi_camera_combiner = autoware_carla_interface.multi_camera_combiner_node:main",
         ],
     },
     package_dir={"": "src"},

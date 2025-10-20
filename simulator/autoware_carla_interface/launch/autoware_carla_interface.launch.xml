@@ -9,9 +9,12 @@
     <arg name="carla_map" default="Town01"/>
     <arg name="sync_mode" default="True"/>
     <arg name="fixed_delta_seconds" default="0.05" description="Time step for CARLA, FPS=1/value"/>
-    <arg name="objects_definition_file" default="$(find-pkg-share autoware_carla_interface)/objects.json"/>
     <arg name="use_traffic_manager" default="False"/>
     <arg name="max_real_delta_seconds" default="0.05"/>
+
+    <!-- Sensor Configuration -->
+    <arg name="sensor_kit_name" default="carla_sensor_kit_description" description="Name of the sensor kit package containing calibration"/>
+    <arg name="sensor_mapping_file" default="$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml" description="Path to sensor mapping YAML"/>
 
     <!-- CARLA Interface -->
     <node pkg="autoware_carla_interface" exec="autoware_carla_interface" name="autoware_carla_interface" output="screen">
@@ -24,9 +27,10 @@
       <param name="ego_vehicle_role_name" value="$(var ego_vehicle_role_name)"/>
       <param name="spawn_point" value="$(var spawn_point)"/>
       <param name="vehicle_type" value="$(var vehicle_type)"/>
-      <param name="objects_definition_file" value="$(var objects_definition_file)"/>
       <param name="use_traffic_manager" value="$(var use_traffic_manager)"/>
       <param name="max_real_delta_seconds" value="$(var max_real_delta_seconds)"/>
+      <param name="sensor_kit_name" value="$(var sensor_kit_name)"/>
+      <param name="sensor_mapping_file" value="$(var sensor_mapping_file)"/>
     </node>
 
     <arg name="input_control_cmd" default="/control/command/control_cmd"/>
@@ -43,11 +47,63 @@
       <remap from="~/output/actuation_cmd" to="$(var output_actuation_cmd)"/>
     </node>
 
-    <!-- Awsim configuration frame to CARLA frame -->
-    <node pkg="tf2_ros" exec="static_transform_publisher" name="carla_velodyne_top" args="0 0 1 -1.5386 -0.015 0.001 velodyne_top velodyne_top_changed"/>
-    <node pkg="tf2_ros" exec="static_transform_publisher" name="carla_imu" args="0 0 1 -3.10519265 -0.015 -3.14059265359 tamagawa/imu_link tamagawa/imu_link_changed"/>
+    <!-- Static transforms disabled for carla_sensor_kit - these were AWSIM-specific -->
+    <!-- TODO: Make these conditional based on sensor_model parameter -->
+    <!-- <node pkg="tf2_ros" exec="static_transform_publisher" name="carla_velodyne_top" args="0 0 1 -1.5386 -0.015 0.001 velodyne_top velodyne_top_changed"/> -->
+    <!-- <node pkg="tf2_ros" exec="static_transform_publisher" name="carla_imu" args="0 0 1 -3.10519265 -0.015 -3.14059265359 tamagawa/imu_link tamagawa/imu_link_changed"/> -->
 
     <!-- Relay single lidar to concatenated pointcloud topic -->
-    <node pkg="topic_tools" exec="relay" name="lidar_concatenation_relay" args="/sensing/lidar/top/pointcloud_before_sync /sensing/lidar/concatenated/pointcloud"/>
+    <!-- <node pkg="topic_tools" exec="relay" name="lidar_concatenation_relay" args="/sensing/lidar/top/pointcloud_before_sync /sensing/lidar/concatenated/pointcloud"/> -->
+
+    <!-- Relay CAM_FRONT to traffic_light namespace for traffic light recognition -->
+    <node pkg="topic_tools" exec="relay" name="traffic_light_image_relay" args="/sensing/camera/CAM_FRONT/image_raw /sensing/camera/traffic_light/image_raw"/>
+    <node pkg="topic_tools" exec="relay" name="traffic_light_camera_info_relay" args="/sensing/camera/CAM_FRONT/camera_info /sensing/camera/traffic_light/camera_info"/>
+
+    <!-- Image transport nodes to create compressed versions for all cameras -->
+    <node
+      pkg="image_transport"
+      exec="republish"
+      name="cam_front_republish"
+      args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT/image_raw/compressed"
+    />
+    <node
+      pkg="image_transport"
+      exec="republish"
+      name="cam_front_left_republish"
+      args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT_LEFT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT_LEFT/image_raw/compressed"
+    />
+    <node
+      pkg="image_transport"
+      exec="republish"
+      name="cam_front_right_republish"
+      args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT_RIGHT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT_RIGHT/image_raw/compressed"
+    />
+    <node
+      pkg="image_transport"
+      exec="republish"
+      name="cam_back_republish"
+      args="raw compressed --ros-args -r in:=/sensing/camera/CAM_BACK/image_raw -r out/compressed:=/sensing/camera/CAM_BACK/image_raw/compressed"
+    />
+    <node
+      pkg="image_transport"
+      exec="republish"
+      name="cam_back_left_republish"
+      args="raw compressed --ros-args -r in:=/sensing/camera/CAM_BACK_LEFT/image_raw -r out/compressed:=/sensing/camera/CAM_BACK_LEFT/image_raw/compressed"
+    />
+    <node
+      pkg="image_transport"
+      exec="republish"
+      name="cam_back_right_republish"
+      args="raw compressed --ros-args -r in:=/sensing/camera/CAM_BACK_RIGHT/image_raw -r out/compressed:=/sensing/camera/CAM_BACK_RIGHT/image_raw/compressed"
+    />
+    <node
+      pkg="image_transport"
+      exec="republish"
+      name="traffic_light_republish"
+      args="raw compressed --ros-args -r in:=/sensing/camera/traffic_light/image_raw -r out/compressed:=/sensing/camera/traffic_light/image_raw/compressed"
+    />
+
+    <!-- Multi-camera combiner for RViz visualization -->
+    <node pkg="autoware_carla_interface" exec="multi_camera_combiner" output="screen"/>
   </group>
 </launch>
