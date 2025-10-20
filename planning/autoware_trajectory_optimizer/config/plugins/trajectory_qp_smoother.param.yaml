@@ -24,9 +24,9 @@
 
       # Velocity-based fidelity weighting
       use_velocity_based_fidelity: true      # Enable velocity-dependent fidelity (low weight at slow speeds)
-      velocity_threshold_mps: 0.5             # Speed at which sigmoid transitions (midpoint) [m/s]
+      velocity_threshold_mps: 0.25             # Speed at which sigmoid transitions (midpoint) [m/s]
       sigmoid_sharpness: 50.0                 # Sigmoid steepness (higher = sharper transition)
-      min_fidelity_weight: 0.0                # Minimum fidelity at very low speeds
+      min_fidelity_weight: 0.01                # Minimum fidelity at very low speeds
       max_fidelity_weight: 1.0                # Maximum fidelity at high speeds
 
       # Endpoint constraints
