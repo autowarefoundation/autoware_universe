@@ -271,7 +271,7 @@ bool is_on_modified_goal(
 
 struct RegenerationCheckResult
 {
-  bool should_regenerate;  ///< True if path candidates should be regenerated
+  bool should_regenerate{false};  ///< True if path candidates should be regenerated
   std::string reason;      ///< Reason for regeneration decision (empty if no regeneration needed)
 
   explicit operator bool() const { return should_regenerate; }
