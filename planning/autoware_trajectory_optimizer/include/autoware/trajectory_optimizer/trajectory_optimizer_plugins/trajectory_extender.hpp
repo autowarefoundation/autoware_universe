@@ -35,7 +35,7 @@ using TrajectoryPoints = std::vector<TrajectoryPoint>;
 struct TrajectoryExtenderParams
 {
   double nearest_dist_threshold_m{1.5};
-  double nearest_yaw_threshold_rad{1.0};
+  double nearest_yaw_threshold_deg{60.0};
   double backward_trajectory_extension_m{5.0};
 };
 

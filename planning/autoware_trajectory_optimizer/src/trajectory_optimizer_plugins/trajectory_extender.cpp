@@ -18,6 +18,7 @@
 
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/update_param.hpp>
+#include <autoware_utils_math/unit_conversion.hpp>
 
 #include <vector>
 
@@ -33,7 +34,8 @@ void TrajectoryExtender::optimize_trajectory(
     // function to avoid adding the same state multiple times.
     utils::add_ego_state_to_trajectory(
       past_ego_state_trajectory_.points, data.current_odometry,
-      extender_params_.nearest_dist_threshold_m, extender_params_.nearest_yaw_threshold_rad,
+      extender_params_.nearest_dist_threshold_m,
+      autoware_utils_math::deg2rad(extender_params_.nearest_yaw_threshold_deg),
       extender_params_.backward_trajectory_extension_m);
     utils::expand_trajectory_with_ego_history(
       traj_points, past_ego_state_trajectory_.points, data.current_odometry);
@@ -47,8 +49,8 @@ void TrajectoryExtender::set_up_params()
 
   extender_params_.nearest_dist_threshold_m =
     get_or_declare_parameter<double>(*node_ptr, "trajectory_extender.nearest_dist_threshold_m");
-  extender_params_.nearest_yaw_threshold_rad =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_extender.nearest_yaw_threshold_rad");
+  extender_params_.nearest_yaw_threshold_deg =
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_extender.nearest_yaw_threshold_deg");
   extender_params_.backward_trajectory_extension_m = get_or_declare_parameter<double>(
     *node_ptr, "trajectory_extender.backward_trajectory_extension_m");
 }
@@ -62,8 +64,8 @@ rcl_interfaces::msg::SetParametersResult TrajectoryExtender::on_parameter(
     parameters, "trajectory_extender.nearest_dist_threshold_m",
     extender_params_.nearest_dist_threshold_m);
   update_param<double>(
-    parameters, "trajectory_extender.nearest_yaw_threshold_rad",
-    extender_params_.nearest_yaw_threshold_rad);
+    parameters, "trajectory_extender.nearest_yaw_threshold_deg",
+    extender_params_.nearest_yaw_threshold_deg);
   update_param<double>(
     parameters, "trajectory_extender.backward_trajectory_extension_m",
     extender_params_.backward_trajectory_extension_m);

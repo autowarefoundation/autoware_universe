@@ -16,6 +16,7 @@
 
 #include "autoware/trajectory_optimizer/utils.hpp"
 
+#include <autoware_utils_math/unit_conversion.hpp>
 #include <autoware_utils_rclcpp/parameter.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
@@ -87,7 +88,8 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
     InitialMotion initial_motion{initial_motion_speed, initial_motion_acc};
     utils::filter_velocity(
       traj_points, initial_motion, velocity_params_.nearest_dist_threshold_m,
-      velocity_params_.nearest_yaw_threshold_rad, jerk_filtered_smoother_, current_odometry);
+      autoware_utils_math::deg2rad(velocity_params_.nearest_yaw_threshold_deg),
+      jerk_filtered_smoother_, current_odometry);
   }
 }
 
@@ -98,8 +100,8 @@ void TrajectoryVelocityOptimizer::set_up_params()
 
   velocity_params_.nearest_dist_threshold_m = get_or_declare_parameter<double>(
     *node_ptr, "trajectory_velocity_optimizer.nearest_dist_threshold_m");
-  velocity_params_.nearest_yaw_threshold_rad = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_velocity_optimizer.nearest_yaw_threshold_rad");
+  velocity_params_.nearest_yaw_threshold_deg = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_velocity_optimizer.nearest_yaw_threshold_deg");
   velocity_params_.target_pull_out_speed_mps = get_or_declare_parameter<double>(
     *node_ptr, "trajectory_velocity_optimizer.target_pull_out_speed_mps");
   velocity_params_.target_pull_out_acc_mps2 = get_or_declare_parameter<double>(
@@ -127,8 +129,8 @@ rcl_interfaces::msg::SetParametersResult TrajectoryVelocityOptimizer::on_paramet
     parameters, "trajectory_velocity_optimizer.nearest_dist_threshold_m",
     velocity_params_.nearest_dist_threshold_m);
   update_param(
-    parameters, "trajectory_velocity_optimizer.nearest_yaw_threshold_rad",
-    velocity_params_.nearest_yaw_threshold_rad);
+    parameters, "trajectory_velocity_optimizer.nearest_yaw_threshold_deg",
+    velocity_params_.nearest_yaw_threshold_deg);
   update_param(
     parameters, "trajectory_velocity_optimizer.target_pull_out_speed_mps",
     velocity_params_.target_pull_out_speed_mps);

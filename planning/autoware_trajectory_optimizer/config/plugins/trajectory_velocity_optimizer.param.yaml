@@ -3,7 +3,7 @@
     trajectory_velocity_optimizer:
       # Trajectory matching thresholds
       nearest_dist_threshold_m: 1.5  # [m] Distance threshold for trajectory matching
-      nearest_yaw_threshold_rad: 1.0  # [rad] Yaw threshold for trajectory matching
+      nearest_yaw_threshold_deg: 60.0  # [deg] Yaw threshold for trajectory matching
 
       # Engage behavior
       target_pull_out_speed_mps: 1.0  # [m/s] Target speed during pull-out maneuver

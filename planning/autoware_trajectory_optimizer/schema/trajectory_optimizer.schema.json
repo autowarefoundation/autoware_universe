@@ -52,11 +52,11 @@
               "minimum": 0,
               "description": "Distance threshold for trajectory matching [m]"
             },
-            "nearest_yaw_threshold_rad": {
+            "nearest_yaw_threshold_deg": {
               "type": "number",
-              "default": 1.0,
+              "default": 60.0,
               "minimum": 0,
-              "description": "Yaw threshold for trajectory matching [rad]"
+              "description": "Yaw threshold for trajectory matching [deg]"
             },
             "backward_trajectory_extension_m": {
               "type": "number",
@@ -67,7 +67,7 @@
           },
           "required": [
             "nearest_dist_threshold_m",
-            "nearest_yaw_threshold_rad",
+            "nearest_yaw_threshold_deg",
             "backward_trajectory_extension_m"
           ]
         },
@@ -182,11 +182,11 @@
               "minimum": 0,
               "description": "Distance threshold for trajectory matching [m]"
             },
-            "nearest_yaw_threshold_rad": {
+            "nearest_yaw_threshold_deg": {
               "type": "number",
-              "default": 1.0,
+              "default": 60.0,
               "minimum": 0,
-              "description": "Yaw threshold for trajectory matching [rad]"
+              "description": "Yaw threshold for trajectory matching [deg]"
             },
             "target_pull_out_speed_mps": {
               "type": "number",
@@ -235,7 +235,7 @@
           },
           "required": [
             "nearest_dist_threshold_m",
-            "nearest_yaw_threshold_rad",
+            "nearest_yaw_threshold_deg",
             "target_pull_out_speed_mps",
             "target_pull_out_acc_mps2",
             "max_speed_mps",

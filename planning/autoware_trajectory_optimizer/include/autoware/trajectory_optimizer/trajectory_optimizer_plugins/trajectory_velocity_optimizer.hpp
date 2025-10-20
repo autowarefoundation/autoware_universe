@@ -38,7 +38,7 @@ using autoware::velocity_smoother::JerkFilteredSmoother;
 struct TrajectoryVelocityOptimizerParams
 {
   double nearest_dist_threshold_m{1.5};
-  double nearest_yaw_threshold_rad{1.0};
+  double nearest_yaw_threshold_deg{60.0};
   double target_pull_out_speed_mps{1.0};
   double target_pull_out_acc_mps2{1.0};
   double max_speed_mps{8.33};
