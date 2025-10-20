@@ -16,17 +16,25 @@ The `autoware_trajectory_optimizer` package generates smooth and feasible trajec
 
 ## Architecture
 
-The package uses a plugin architecture where each optimization step inherits from `TrajectoryOptimizerPluginBase`. The plugins are as follows:
+The package uses a plugin architecture where each optimization step inherits from `TrajectoryOptimizerPluginBase`. The current plugin execution order is:
 
-1. **TrajectoryExtender** - Extends trajectory backward using past ego states
-2. **TrajectoryPointFixer** - Removes invalid/repeated points and fixes trajectory direction
+1. **TrajectoryPointFixer** - Removes invalid/repeated points and fixes trajectory direction
+2. **TrajectoryQPSmoother** - QP-based path smoothing with jerk constraints (optional)
 3. **TrajectoryEBSmootherOptimizer** - Elastic Band path smoothing (optional)
 4. **TrajectorySplineSmoother** - Akima spline interpolation (optional)
-5. **TrajectoryQPSmoother** - QP-based path smoothing with jerk constraints (optional)
-6. **TrajectoryVelocityOptimizer** - Velocity profile optimization
-7. **TrajectoryPointFixer** - Cleanup of trajectory points
+5. **TrajectoryVelocityOptimizer** - Velocity profile optimization
+6. **TrajectoryExtender** - Extends trajectory backward using past ego states (optional, disabled by default)
+7. **TrajectoryPointFixer** - Final cleanup of trajectory points
 
 Each plugin can be enabled/disabled via parameters and manages its own configuration independently.
+
+### ⚠️ Important: Plugin Ordering Constraints
+
+**The order of plugin execution is critical and must be carefully maintained:**
+
+- **QP Smoother must run before EB/Akima smoothers**: The QP solver relies on constant time intervals (Δt) between trajectory points (default: 0.1s). Both Elastic Band and Akima spline smoothers resample trajectories without preserving the time domain structure, which breaks the QP solver's assumptions. Therefore, when using multiple smoothers together, the QP smoother must execute first.
+
+- **Trajectory Extender positioning**: The trajectory extender has known discontinuity issues when placed early in the pipeline. It negatively affects the QP solver results and introduces artifacts. For this reason, it has been moved to near the end of the pipeline and is **disabled by default** (`extend_trajectory_backward: false`). Fixing the extender's discontinuity issues is future work.
 
 ## QP Smoother
 
