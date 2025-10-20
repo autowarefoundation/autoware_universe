@@ -238,23 +238,37 @@ std::optional<size_t> findIndexOutOfGoalSearchRange(
   return min_dist_out_of_range_index;
 }
 
-using PathIterator =
-  decltype(autoware_internal_planning_msgs::msg::PathWithLaneId::points)::iterator;
+template <typename Iterator>
+lanelet::ConstLanelets getUniqueLaneletsFromPath(
+  Iterator begin, Iterator end, const std::shared_ptr<RouteHandler> & route_handler)
+{
+  std::set<int64_t> lanelet_ids;
+  for (auto it = begin; it != end; ++it) {
+    for (const auto & lane_id : it->lane_ids) {
+      lanelet_ids.insert(lane_id);
+    }
+  }
+  lanelet::ConstLanelets lanelets;
+  for (const auto & lane_id : lanelet_ids) {
+    lanelets.push_back(route_handler->getLaneletMapPtr()->laneletLayer.get(lane_id));
+  }
+  return lanelets;
+}
 
-void fillLaneIdsFromMap(
-  PathIterator begin, PathIterator end, const std::shared_ptr<RouteHandler> & route_handler)
+template <typename Iterator>
+void fillLaneIdsFromMap(Iterator begin, Iterator end, const lanelet::ConstLanelets & lanelets)
 {
   for (auto it = begin; it != end; ++it) {
     const auto point = it->point;
     lanelet::ConstLanelet lanelet;
-    if (route_handler->getClosestLaneletWithinRoute(point.pose, &lanelet)) {
+    if (lanelet::utils::query::getClosestLanelet(lanelets, point.pose, &lanelet)) {
       it->lane_ids = {lanelet.id()};
     }
   }
 }
 
-void fillLongitudinalVelocityFromInputPath(
-  PathIterator begin, PathIterator end, PathWithLaneId input)
+template <typename Iterator>
+void fillLongitudinalVelocityFromInputPath(Iterator begin, Iterator end, PathWithLaneId input)
 {
   if (input.points.size() < 2) {
     return;
@@ -354,9 +368,11 @@ bool set_goal(
     // NOTE: remove the first point to keep the original path length
     output_ptr->points.erase(output_ptr->points.begin());
 
+    const auto lanelets = getUniqueLaneletsFromPath(
+      input.points.begin() + min_dist_out_of_circle_index + 1, input.points.end(), route_handler);
     fillLaneIdsFromMap(
       output_ptr->points.begin() + min_dist_out_of_circle_index + 1, output_ptr->points.end(),
-      route_handler);
+      lanelets);
     fillLongitudinalVelocityFromInputPath(
       output_ptr->points.begin() + min_dist_out_of_circle_index + 1, output_ptr->points.end(),
       input);
