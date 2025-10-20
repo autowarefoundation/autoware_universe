@@ -42,7 +42,20 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
   // Declare parameters
   FilterParameters filter_parameters;
   // global parameters
-  filter_parameters.max_radius = static_cast<float>(declare_parameter<double>("max_radius"));
+  filter_parameters.max_x = static_cast<float>(declare_parameter<double>("max_x"));
+  filter_parameters.min_x = static_cast<float>(declare_parameter<double>("min_x"));
+  filter_parameters.max_y = static_cast<float>(declare_parameter<double>("max_y"));
+  filter_parameters.min_y = static_cast<float>(declare_parameter<double>("min_y"));
+  filter_parameters.max_z = static_cast<float>(declare_parameter<double>("max_z"));
+  filter_parameters.min_z = static_cast<float>(declare_parameter<double>("min_z"));
+
+  filter_parameters.max_radius = std::max(
+    std::max(
+      std::hypot(filter_parameters.max_x, filter_parameters.max_y),
+      std::hypot(filter_parameters.min_x, filter_parameters.min_y)),
+    std::max(
+      std::hypot(filter_parameters.max_x, filter_parameters.min_y),
+      std::hypot(filter_parameters.min_x, filter_parameters.max_y)));
 
   // common parameters
   filter_parameters.sector_angle_rad =

@@ -83,6 +83,12 @@ struct alignas(16) Cell
 // structure to hold parameter values
 struct FilterParameters
 {
+  float max_x;
+  float min_x;
+  float max_y;
+  float min_y;
+  float max_z;
+  float min_z;
   float max_radius;
   float non_ground_height_threshold;
   // common thresholds

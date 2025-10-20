@@ -13,5 +13,10 @@
     low_priority_region_x: -20.0
     center_pcl_shift: 0.0
     sector_angle_deg: 1.0
-    max_radius: 240.0
     gnd_cell_buffer_size: 5
+    min_x: -100.0
+    max_x: 150.0
+    min_y: -70.0
+    max_y: 70.0
+    max_z: 2.5
+    min_z: -2.5
