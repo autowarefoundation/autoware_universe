@@ -44,7 +44,7 @@ struct QPSmootherParams
 {
   // Optimization weights
   double weight_smoothness{10.0};  // Weight for path curvature/smoothness minimization
-  double weight_fidelity{100.0};   // Weight for path fidelity to original trajectory
+  double weight_fidelity{1.0};     // Baseline fidelity (used when velocity-based disabled)
 
   // Time discretization
   double time_step_s{0.1};  // Fixed time step for velocity/acceleration calculations [s]
@@ -59,6 +59,16 @@ struct QPSmootherParams
   bool fix_orientation{true};  // Enable orientation correction
   double orientation_correction_threshold_deg{
     5.0};  // Yaw threshold for orientation correction [deg]
+
+  // Velocity-based fidelity weighting
+  bool use_velocity_based_fidelity{false};  // Master switch for velocity-based weighting
+  double velocity_threshold_mps{0.2};       // Speed at sigmoid transition midpoint [m/s]
+  double sigmoid_sharpness{40.0};           // Sigmoid steepness (higher = sharper)
+  double min_fidelity_weight{0.1};          // Minimum fidelity at very low speeds
+  double max_fidelity_weight{1.0};          // Maximum fidelity at high speeds
+
+  // Endpoint constraints
+  bool constrain_last_point{true};  // Fix last point as hard constraint
 };
 
 /**
@@ -128,6 +138,15 @@ private:
   void post_process_trajectory(
     const Eigen::VectorXd & solution, const TrajectoryPoints & input_trajectory,
     TrajectoryPoints & output_trajectory) const;
+
+  /**
+   * @brief Compute velocity-dependent fidelity weights for each trajectory point
+   * @param input_trajectory Original trajectory with velocity data
+   * @return Vector of per-point fidelity weights (length N)
+   * @note Returns uniform weights if use_velocity_based_fidelity is false
+   */
+  std::vector<double> compute_velocity_based_weights(
+    const TrajectoryPoints & input_trajectory) const;
 };
 
 }  // namespace autoware::trajectory_optimizer::plugin

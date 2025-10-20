@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <vector>
 
@@ -63,6 +64,34 @@ void TrajectoryQPSmoother::set_up_params()
     get_or_declare_parameter<bool>(*node_ptr, "trajectory_qp_smoother.fix_orientation");
   qp_params_.orientation_correction_threshold_deg = get_or_declare_parameter<double>(
     *node_ptr, "trajectory_qp_smoother.orientation_correction_threshold_deg");
+
+  // Velocity-based fidelity parameters
+  qp_params_.use_velocity_based_fidelity =
+    get_or_declare_parameter<bool>(*node_ptr, "trajectory_qp_smoother.use_velocity_based_fidelity");
+  qp_params_.velocity_threshold_mps =
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.velocity_threshold_mps");
+  qp_params_.sigmoid_sharpness =
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.sigmoid_sharpness");
+  qp_params_.min_fidelity_weight =
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.min_fidelity_weight");
+  qp_params_.max_fidelity_weight =
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.max_fidelity_weight");
+  qp_params_.constrain_last_point =
+    get_or_declare_parameter<bool>(*node_ptr, "trajectory_qp_smoother.constrain_last_point");
+
+  // Log configuration at startup
+  RCLCPP_DEBUG(
+    node_ptr->get_logger(), "QP Smoother: velocity-based fidelity = %s, constrain_last_point = %s",
+    qp_params_.use_velocity_based_fidelity ? "ENABLED" : "DISABLED",
+    qp_params_.constrain_last_point ? "true" : "false");
+
+  if (qp_params_.use_velocity_based_fidelity) {
+    RCLCPP_DEBUG(
+      node_ptr->get_logger(),
+      "QP Smoother: v_threshold=%.2f m/s, sigmoid_k=%.1f, w_range=[%.2f, %.2f]",
+      qp_params_.velocity_threshold_mps, qp_params_.sigmoid_sharpness,
+      qp_params_.min_fidelity_weight, qp_params_.max_fidelity_weight);
+  }
 }
 
 rcl_interfaces::msg::SetParametersResult TrajectoryQPSmoother::on_parameter(
@@ -84,6 +113,21 @@ rcl_interfaces::msg::SetParametersResult TrajectoryQPSmoother::on_parameter(
   update_param<double>(
     parameters, "trajectory_qp_smoother.orientation_correction_threshold_deg",
     qp_params_.orientation_correction_threshold_deg);
+
+  // Velocity-based fidelity parameter updates
+  update_param<bool>(
+    parameters, "trajectory_qp_smoother.use_velocity_based_fidelity",
+    qp_params_.use_velocity_based_fidelity);
+  update_param<double>(
+    parameters, "trajectory_qp_smoother.velocity_threshold_mps", qp_params_.velocity_threshold_mps);
+  update_param<double>(
+    parameters, "trajectory_qp_smoother.sigmoid_sharpness", qp_params_.sigmoid_sharpness);
+  update_param<double>(
+    parameters, "trajectory_qp_smoother.min_fidelity_weight", qp_params_.min_fidelity_weight);
+  update_param<double>(
+    parameters, "trajectory_qp_smoother.max_fidelity_weight", qp_params_.max_fidelity_weight);
+  update_param<bool>(
+    parameters, "trajectory_qp_smoother.constrain_last_point", qp_params_.constrain_last_point);
 
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
@@ -162,6 +206,20 @@ bool TrajectoryQPSmoother::solve_qp_problem(
 
   prepare_osqp_matrices(input_trajectory, H, A, f_vec, l_vec, u_vec);
 
+  // Log weight statistics if velocity-based fidelity is enabled
+  if (qp_params_.use_velocity_based_fidelity) {
+    const std::vector<double> weights = compute_velocity_based_weights(input_trajectory);
+    const double min_weight = *std::min_element(weights.begin(), weights.end());
+    const double max_weight = *std::max_element(weights.begin(), weights.end());
+    const double avg_weight =
+      std::accumulate(weights.begin(), weights.end(), 0.0) / static_cast<double>(weights.size());
+
+    RCLCPP_DEBUG_THROTTLE(
+      get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
+      "QP Smoother: Fidelity weights: min=%.3f, max=%.3f, avg=%.3f (N=%d points)", min_weight,
+      max_weight, avg_weight, N);
+  }
+
   // Create OSQP solver with settings
   autoware::osqp_interface::OSQPInterface osqp_solver(qp_params_.osqp_eps_abs, true);
 
@@ -223,8 +281,8 @@ bool TrajectoryQPSmoother::solve_qp_problem(
   const double avg_jerk = total_jerk / static_cast<double>(N - 1);
 
   // Diagnostic logging with velocity, acceleration, and jerk metrics
-  RCLCPP_DEBUG(
-    get_node_ptr()->get_logger(),
+  RCLCPP_DEBUG_THROTTLE(
+    get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
     "QP Smoother: N=%d, dt=%.3f, iters=%d, obj=%.2e, "
     "v=[%.2f, %.2f] m/s, a=[%.2f, %.2f] m/s², "
     "jerk=[avg=%.2f, max=%.2f] m/s³, path_dev=[avg=%.3f, max=%.3f]m",
@@ -285,25 +343,30 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
     H(y_ip1, y_im1) += weight_smoothness_scaled;
   }
 
+  // Compute per-point fidelity weights (uniform if feature disabled, velocity-based if enabled)
+  const std::vector<double> fidelity_weights = compute_velocity_based_weights(input_trajectory);
+
+  // Fidelity term: minimize || p - p_orig ||² with per-point weights
   for (int i = 0; i < N; ++i) {
     const int x_i = 2 * i;
     const int y_i = 2 * i + 1;
     const double x_orig = input_trajectory[i].pose.position.x;
     const double y_orig = input_trajectory[i].pose.position.y;
+    const double w_i = fidelity_weights[i];  // Per-point weight
 
-    H(x_i, x_i) += qp_params_.weight_fidelity;
-    H(y_i, y_i) += qp_params_.weight_fidelity;
-    f_vec[x_i] = -qp_params_.weight_fidelity * x_orig;
-    f_vec[y_i] = -qp_params_.weight_fidelity * y_orig;
+    H(x_i, x_i) += w_i;
+    H(y_i, y_i) += w_i;
+    f_vec[x_i] = -w_i * x_orig;
+    f_vec[y_i] = -w_i * y_orig;
   }
 
-  // Constraints: fix first and last points
-  const int num_constraints = 4;
+  // Constraints: fix first point (always), last point (conditional)
+  const int num_constraints = qp_params_.constrain_last_point ? 4 : 2;
   A = Eigen::MatrixXd::Zero(num_constraints, num_variables);
   l_vec.resize(num_constraints);
   u_vec.resize(num_constraints);
 
-  // Fix first point (x, y)
+  // Fix first point (x, y) - ALWAYS constrained
   A(0, 0) = 1.0;
   l_vec[0] = input_trajectory[0].pose.position.x;
   u_vec[0] = input_trajectory[0].pose.position.x;
@@ -312,17 +375,19 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
   l_vec[1] = input_trajectory[0].pose.position.y;
   u_vec[1] = input_trajectory[0].pose.position.y;
 
-  // Fix last point (x, y)
-  const int last_x_idx = 2 * (N - 1);
-  const int last_y_idx = 2 * (N - 1) + 1;
+  // Fix last point (x, y) - CONDITIONAL on constrain_last_point parameter
+  if (qp_params_.constrain_last_point) {
+    const int last_x_idx = 2 * (N - 1);
+    const int last_y_idx = 2 * (N - 1) + 1;
 
-  A(2, last_x_idx) = 1.0;
-  l_vec[2] = input_trajectory[N - 1].pose.position.x;
-  u_vec[2] = input_trajectory[N - 1].pose.position.x;
+    A(2, last_x_idx) = 1.0;
+    l_vec[2] = input_trajectory[N - 1].pose.position.x;
+    u_vec[2] = input_trajectory[N - 1].pose.position.x;
 
-  A(3, last_y_idx) = 1.0;
-  l_vec[3] = input_trajectory[N - 1].pose.position.y;
-  u_vec[3] = input_trajectory[N - 1].pose.position.y;
+    A(3, last_y_idx) = 1.0;
+    l_vec[3] = input_trajectory[N - 1].pose.position.y;
+    u_vec[3] = input_trajectory[N - 1].pose.position.y;
+  }
 }
 
 void TrajectoryQPSmoother::post_process_trajectory(
@@ -418,6 +483,40 @@ void TrajectoryQPSmoother::post_process_trajectory(
   }
   // Last point: set acceleration to zero
   output_trajectory[N - 1].acceleration_mps2 = 0.0f;
+}
+
+std::vector<double> TrajectoryQPSmoother::compute_velocity_based_weights(
+  const TrajectoryPoints & input_trajectory) const
+{
+  const size_t N = input_trajectory.size();
+  std::vector<double> weights(N);
+
+  // If velocity-based fidelity is DISABLED, return uniform weights (original behavior)
+  if (!qp_params_.use_velocity_based_fidelity) {
+    std::fill(weights.begin(), weights.end(), qp_params_.weight_fidelity);
+    return weights;
+  }
+
+  // Velocity-based fidelity is ENABLED - compute sigmoid-based weights
+  const double v_th = qp_params_.velocity_threshold_mps;
+  const double k = qp_params_.sigmoid_sharpness;
+  const double w_min = qp_params_.min_fidelity_weight;
+  const double w_max = qp_params_.max_fidelity_weight;
+
+  for (size_t i = 0; i < N; ++i) {
+    // Use absolute value of velocity to handle negative velocities (reverse driving)
+    const double speed =
+      std::abs(static_cast<double>(input_trajectory[i].longitudinal_velocity_mps));
+
+    // Sigmoid function: σ(k * (|v| - v_th))
+    const double sigmoid_arg = k * (speed - v_th);
+    const double sigmoid_val = 1.0 / (1.0 + std::exp(-sigmoid_arg));
+
+    // Map to weight range: w = w_min + (w_max - w_min) * σ
+    weights[i] = w_min + (w_max - w_min) * sigmoid_val;
+  }
+
+  return weights;
 }
 
 }  // namespace autoware::trajectory_optimizer::plugin

@@ -30,14 +30,21 @@ Each plugin can be enabled/disabled via parameters and manages its own configura
 
 ## QP Smoother
 
-The QP smoother uses quadratic programming (OSQP solver) to optimize trajectory paths:
+The QP smoother uses quadratic programming (OSQP solver) to optimize trajectory paths with advanced features:
 
 - **Objective**: Minimizes path curvature while maintaining fidelity to the original trajectory
 - **Decision variables**: Path positions (x, y) for each trajectory point
-- **Constraints**: Fixed initial position
+- **Constraints**: Fixed initial position (optionally fixed last position)
+- **Velocity-based fidelity**: Automatically reduces fidelity weight at low speeds for aggressive smoothing of noise
 - **Post-processing**: Recalculates velocities, accelerations, and orientations from smoothed positions
 
-Key parameters: `weight_smoothness`, `weight_fidelity`, `time_step_s`
+**For detailed documentation**, see [docs/qp_smoother.md](docs/qp_smoother.md) which covers:
+
+- Mathematical formulation
+- Velocity-based fidelity weighting (sigmoid function)
+- Parameter tuning guidelines
+- Usage examples
+- Performance characteristics
 
 ## Dependencies
 

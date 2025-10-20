@@ -31,7 +31,7 @@ void TrajectoryPointFixer::optimize_trajectory(
     return;
   }
   utils::remove_invalid_points(traj_points);
-  utils::remove_wrongly_oriented_points(traj_points, fixer_params_.orientation_threshold_deg);
+  // utils::remove_wrongly_oriented_points(traj_points, fixer_params_.orientation_threshold_deg);
 }
 
 void TrajectoryPointFixer::set_up_params()

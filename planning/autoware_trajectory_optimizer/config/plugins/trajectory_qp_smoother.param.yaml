@@ -6,10 +6,8 @@
       # Velocity/acceleration are derived from smoothed positions in post-processing
 
       # Optimization weights
-      # Balance between smoothness and path fidelity
-      # Note: High smoothness/fidelity ratio (100:1) allows path deviation for smoothness
-      weight_smoothness: 100.0                # Weight for path curvature minimization (geometric smoothness) [dimensionless]
-      weight_fidelity: 10.0                    # Weight for staying close to original path [dimensionless]
+      weight_smoothness: 10.0                 # Weight for path curvature minimization (reduced from 100.0)
+      weight_fidelity: 1.0                    # Baseline fidelity (used when velocity-based disabled)
 
       # Time discretization
       time_step_s: 0.1                        # Fixed time step for velocity/acceleration calculations [s]
@@ -21,5 +19,15 @@
       osqp_verbose: false                     # Print solver output to console
 
       # Orientation correction
-      fix_orientation: true               # Enable orientation correction
+      fix_orientation: true                   # Enable orientation correction
       orientation_correction_threshold_deg: 15.0  # Yaw threshold for correcting QP output orientation [deg]
+
+      # Velocity-based fidelity weighting
+      use_velocity_based_fidelity: true      # Enable velocity-dependent fidelity (low weight at slow speeds)
+      velocity_threshold_mps: 0.5             # Speed at which sigmoid transitions (midpoint) [m/s]
+      sigmoid_sharpness: 50.0                 # Sigmoid steepness (higher = sharper transition)
+      min_fidelity_weight: 0.0                # Minimum fidelity at very low speeds
+      max_fidelity_weight: 1.0                # Maximum fidelity at high speeds
+
+      # Endpoint constraints
+      constrain_last_point: false              # Fix last point as hard constraint (if false, only first point fixed)
