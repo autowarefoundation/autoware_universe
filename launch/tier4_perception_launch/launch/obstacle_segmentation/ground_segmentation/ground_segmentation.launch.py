@@ -48,9 +48,9 @@ class GroundSegmentationPipeline:
             context
         )
         self.use_time_series_filter = LaunchConfiguration("use_time_series_filter").perform(context)
-        self.use_cuda_ground_segmentation = LaunchConfiguration(
-            "use_cuda_ground_segmentation"
-        ).perform(context).lower() == "true"
+        self.use_cuda_ground_segmentation = (
+            LaunchConfiguration("use_cuda_ground_segmentation").perform(context).lower() == "true"
+        )
         # check if self.use_single_frame_filter is bool
         if isinstance(self.use_single_frame_filter, str):
             self.use_single_frame_filter = self.use_single_frame_filter.lower() == "true"
@@ -554,9 +554,18 @@ def launch_setup(context, *args, **kwargs):
                     ("~/input/pointcloud", "/sensing/lidar/concatenated/pointcloud"),
                     ("~/input/pointcloud/cuda", "/sensing/lidar/concatenated/pointcloud/cuda"),
                     ("~/output/pointcloud", "/perception/obstacle_segmentation/pointcloud"),
-                    ("~/output/pointcloud/cuda", "/perception/obstacle_segmentation/pointcloud/cuda"),
-                    ("~/output/ground_pointcloud", "/perception/obstacle_segmentation/ground_pointcloud"),
-                    ("~/output/ground_pointcloud/cuda", "/perception/obstacle_segmentation/ground_pointcloud/cuda"),
+                    (
+                        "~/output/pointcloud/cuda",
+                        "/perception/obstacle_segmentation/pointcloud/cuda",
+                    ),
+                    (
+                        "~/output/ground_pointcloud",
+                        "/perception/obstacle_segmentation/ground_pointcloud",
+                    ),
+                    (
+                        "~/output/ground_pointcloud/cuda",
+                        "/perception/obstacle_segmentation/ground_pointcloud/cuda",
+                    ),
                 ],
                 parameters=[ground_segmentation_node_param],
                 extra_arguments=[],
@@ -628,7 +637,7 @@ def generate_launch_description():
     add_launch_arg("use_intra_process", "True")
     add_launch_arg("pointcloud_container_name", "pointcloud_container")
     add_launch_arg("input/pointcloud", "/sensing/lidar/concatenated/pointcloud")
-    add_launch_arg("use_cuda_ground_segmentation","False")
+    add_launch_arg("use_cuda_ground_segmentation", "False")
     add_launch_arg(
         "ogm_outlier_filter_param_path",
         [
