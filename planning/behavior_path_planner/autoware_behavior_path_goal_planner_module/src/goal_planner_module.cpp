@@ -29,6 +29,7 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
@@ -319,6 +320,9 @@ void LaneParkingPlanner::onTimer()
   // check if new pull over path candidates are needed to be generated
   const auto current_state = prev_data.state;
   const bool need_update = std::invoke([&]() {
+    if (current_state == PathDecisionState::DecisionKind::DECIDED) {
+      return false;
+    }
     {
       std::lock_guard<std::mutex> guard(mutex_);
       if (response_.pull_over_path_candidates.empty()) {
@@ -350,10 +354,9 @@ void LaneParkingPlanner::onTimer()
       RCLCPP_DEBUG(getLogger(), "has previous module path shape changed");
       return true;
     }
-    if (
-      goal_planner_utils::hasDeviatedFromPath(
-        local_planner_data->self_odometry->pose.pose.position, original_upstream_module_output_) &&
-      current_state != PathDecisionState::DecisionKind::DECIDED) {
+    if (goal_planner_utils::hasDeviatedFromPath(
+          local_planner_data->self_odometry->pose.pose.position,
+          original_upstream_module_output_)) {
       RCLCPP_DEBUG(getLogger(), "has deviated from last previous module path");
       return true;
     }
@@ -684,8 +687,11 @@ std::pair<LaneParkingResponse, FreespaceParkingResponse> GoalPlannerModule::sync
     } else {
       RCLCPP_INFO_THROTTLE(
         getLogger(), *clock_, 5000,
-        "lane change has been executed or cancelled while LaneParking thread was planning. Reject "
-        "the response and wait for LaneParking thread to complete");
+        "lane change has been executed or cancelled while LaneParking thread was planning. "
+        "lane change state transition: %s -> %s. Reject the response and wait for "
+        "LaneParking ",
+        LaneChangeContext::state_to_string(lane_parking_response_.lane_change_state).c_str(),
+        LaneChangeContext::state_to_string(lane_change_ctx_.get_current_state()).c_str());
     }
   }
 
@@ -764,9 +770,7 @@ void GoalPlannerModule::updateData()
   }
 
   const auto current_lane_change_state = lane_change_ctx_.get_next_state(
-    getPreviousModuleOutput().path, planner_data_->route_handler->getLaneletMapPtr(),
-    planner_data_->route_handler->getRoutingGraphPtr(), clock_->now(),
-    planner_data_->route_handler->getGoalLaneId());
+    getPreviousModuleOutput().path, *(planner_data_->route_handler), clock_->now());
   lane_change_ctx_.set_state(current_lane_change_state);
 
   if (getCurrentStatus() == ModuleStatus::IDLE) {
@@ -1059,7 +1063,9 @@ BehaviorModuleOutput GoalPlannerModule::plan()
         getLogger(), *clock_, 5000, " [pull_over] plan() is called without valid context_data");
     } else {
       auto & context_data_mut = context_data_.value();
-      return planPullOver(context_data_mut);
+      const auto output = planPullOver(context_data_mut);
+      set_longitudinal_planning_factor(output.path);
+      return output;
     }
   }
 
@@ -1657,7 +1663,9 @@ BehaviorModuleOutput GoalPlannerModule::planPullOverAsOutput(PullOverContextData
 
   // if pull over path candidates generation is not finished, use previous module output
   if (context_data.lane_parking_response.pull_over_path_candidates.empty()) {
-    return getPreviousModuleOutput();
+    auto stop_path = getPreviousModuleOutput();
+    stop_path.path = generateStopPath(context_data, "no path candidate");
+    return stop_path;
   }
 
   /**
@@ -1742,9 +1750,6 @@ BehaviorModuleOutput GoalPlannerModule::planPullOverAsOutput(PullOverContextData
     }
   }
 
-  // For debug
-  setDebugData(context_data);
-
   if (!pull_over_path_with_velocity_opt) {
     return output;
   }
@@ -1769,6 +1774,7 @@ void GoalPlannerModule::postProcess()
     LaneParkingResponse{}, FreespaceParkingResponse{});
   const auto & context_data =
     context_data_.has_value() ? context_data_.value() : context_data_dummy;
+  setDebugData(context_data);
 
   const bool has_decided_path =
     path_decision_controller_.get_current_state().state == PathDecisionState::DecisionKind::DECIDED;
@@ -1787,8 +1793,6 @@ void GoalPlannerModule::postProcess()
   updatePlanningFactor(
     context_data, {pull_over_path.start_pose(), pull_over_path.modified_goal_pose()},
     {distance_to_path_change.first, distance_to_path_change.second});
-
-  set_longitudinal_planning_factor(pull_over_path.full_path());
 }
 
 BehaviorModuleOutput GoalPlannerModule::planWaitingApproval()
@@ -1803,7 +1807,9 @@ BehaviorModuleOutput GoalPlannerModule::planWaitingApproval()
         "planner");
     } else {
       auto & context_data_mut = context_data_.value();
-      return planPullOverAsCandidate(context_data_mut, "waiting approval");
+      const auto output = planPullOverAsCandidate(context_data_mut, "waiting approval");
+      set_longitudinal_planning_factor(output.path);
+      return output;
     }
   }
 
@@ -2518,7 +2524,9 @@ std::pair<bool, utils::path_safety_checker::CollisionCheckDebugMap> GoalPlannerM
     Pose first_road_pose{};
     const auto first_road_point =
       lanelet::utils::conversion::toGeomMsgPt(fist_road_lane.centerline().front());
-    const double lane_yaw = lanelet::utils::getLaneletAngle(fist_road_lane, first_road_point);
+    const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+      fist_road_lane,
+      autoware::experimental::lanelet2_utils::from_ros(first_road_point).basicPoint());
     first_road_pose.position = first_road_point;
     first_road_pose.orientation = autoware_utils::create_quaternion_from_yaw(lane_yaw);
     // if current ego pose is before pull over lanes segment, use first road lanelet center pose

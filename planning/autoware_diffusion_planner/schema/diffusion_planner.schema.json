@@ -58,11 +58,6 @@
           "exclusiveMinimum": 0,
           "description": "Timeout for traffic light group messages (seconds)"
         },
-        "use_route_handler": {
-          "type": "boolean",
-          "default": true,
-          "description": "Use route handler for selecting route segment indices"
-        },
         "build_only": {
           "type": "boolean",
           "default": false,
