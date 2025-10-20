@@ -19,6 +19,7 @@
 #include "autoware_lanelet2_extension/regulatory_elements/bus_stop_area.hpp"
 
 #include <Eigen/Core>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
@@ -881,8 +882,8 @@ std::optional<Pose> calcRefinedGoal(
   {
     // find position
     const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(goal_pose.position);
-    const auto segment = lanelet::utils::getClosestSegment(
-      lanelet::utils::to2D(lanelet_point), closest_pull_over_lanelet.centerline());
+    const auto segment = autoware::experimental::lanelet2_utils::get_closest_segment(
+      closest_pull_over_lanelet.centerline(), lanelet_point.basicPoint());
     const auto p1 = segment.front().basicPoint();
     const auto p2 = segment.back().basicPoint();
     const auto direction_vector = (p2 - p1).normalized();
@@ -1082,6 +1083,50 @@ bool hasPreviousModulePathShapeChanged(
     }
   }
   return false;
+}
+
+bool is_on_modified_goal(
+  const Pose & current_pose, const GoalCandidate & modified_goal,
+  const GoalPlannerParameters & parameters)
+{
+  return calc_distance2d(current_pose, modified_goal.goal_pose) < parameters.th_arrived_distance;
+}
+
+bool is_on_modified_goal(
+  const Pose & current_pose, const std::optional<GoalCandidate> & modified_goal_opt,
+  const GoalPlannerParameters & parameters)
+{
+  if (!modified_goal_opt) {
+    return false;
+  }
+  return is_on_modified_goal(current_pose, modified_goal_opt.value(), parameters);
+}
+
+RegenerationCheckResult should_regenerate_path_candidates(
+  const Pose & ego_pose, const BehaviorModuleOutput & current_upstream,
+  const BehaviorModuleOutput & original_upstream, const bool lane_change_detected)
+{
+  if (lane_change_detected) {
+    return {true, "lane change detected"};
+  }
+
+  if (hasDeviatedFromPath(ego_pose.position, current_upstream)) {
+    return {false, "deviated from current previous module path"};
+  }
+
+  if (hasPreviousModulePathShapeChanged(current_upstream, original_upstream)) {
+    return {true, "previous module path shape changed"};
+  }
+
+  if (hasDeviatedFromPath(ego_pose.position, original_upstream)) {
+    return {true, "deviated from original previous module path"};
+  }
+
+  if (has_stopline_except_terminal(current_upstream.path)) {
+    return {true, "stopline detected in upstream module"};
+  }
+
+  return {false, ""};
 }
 
 bool hasDeviatedFromPath(

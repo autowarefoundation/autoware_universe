@@ -103,6 +103,12 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
   update_param<double>(
     parameters, "spline_interpolation_resolution_m", params.spline_interpolation_resolution_m);
   update_param<double>(
+    parameters, "spline_interpolation_max_yaw_discrepancy_deg",
+    params.spline_interpolation_max_yaw_discrepancy_deg);
+  update_param<double>(
+    parameters, "spline_interpolation_max_distance_discrepancy_m",
+    params.spline_interpolation_max_distance_discrepancy_m);
+  update_param<double>(
     parameters, "backward_trajectory_extension_m", params.backward_trajectory_extension_m);
   update_param<bool>(
     parameters, "use_akima_spline_interpolation", params.use_akima_spline_interpolation);
@@ -113,6 +119,8 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
   update_param<bool>(parameters, "set_engage_speed", params.set_engage_speed);
   update_param<bool>(parameters, "fix_invalid_points", params.fix_invalid_points);
   update_param<bool>(parameters, "extend_trajectory_backward", params.extend_trajectory_backward);
+  update_param<bool>(
+    parameters, "spline_copy_original_orientation", params.spline_copy_original_orientation);
 
   params_ = params;
 
@@ -165,6 +173,10 @@ void TrajectoryOptimizer::set_up_params()
     get_or_declare_parameter<double>(*this, "max_lateral_accel_mps2");
   params_.spline_interpolation_resolution_m =
     get_or_declare_parameter<double>(*this, "spline_interpolation_resolution_m");
+  params_.spline_interpolation_max_yaw_discrepancy_deg =
+    get_or_declare_parameter<double>(*this, "spline_interpolation_max_yaw_discrepancy_deg");
+  params_.spline_interpolation_max_distance_discrepancy_m =
+    get_or_declare_parameter<double>(*this, "spline_interpolation_max_distance_discrepancy_m");
   params_.backward_trajectory_extension_m =
     get_or_declare_parameter<double>(*this, "backward_trajectory_extension_m");
   params_.use_akima_spline_interpolation =
@@ -178,6 +190,8 @@ void TrajectoryOptimizer::set_up_params()
   params_.fix_invalid_points = get_or_declare_parameter<bool>(*this, "fix_invalid_points");
   params_.extend_trajectory_backward =
     get_or_declare_parameter<bool>(*this, "extend_trajectory_backward");
+  params_.spline_copy_original_orientation =
+    get_or_declare_parameter<bool>(*this, "spline_copy_original_orientation");
 }
 
 void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::ConstSharedPtr msg)
@@ -210,7 +224,6 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
     eb_smoother_optimizer_ptr_->optimize_trajectory(trajectory.points, params_);
     trajectory_spline_smoother_ptr_->optimize_trajectory(trajectory.points, params_);
     trajectory_velocity_optimizer_ptr_->optimize_trajectory(trajectory.points, params_);
-    trajectory_spline_smoother_ptr_->optimize_trajectory(trajectory.points, params_);
     trajectory_point_fixer_ptr_->optimize_trajectory(trajectory.points, params_);
     motion_utils::calculate_time_from_start(
       trajectory.points, current_odometry_ptr_->pose.pose.position);

@@ -9,6 +9,7 @@
   <maintainer email="shintaro.tomie@tier4.jp">Shintaro Tomie</maintainer>
   <maintainer email="yoshi.ri@tier4.jp">Yoshi RI</maintainer>
   <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
+  <maintainer email="masaki.baba.2@tier4.jp">Masaki Baba</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
@@ -17,7 +18,7 @@
 
   <build_depend>libopencv-dev</build_depend>
 
-  <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_object_recognition_utils</depend>
   <depend>autoware_perception_msgs</depend>

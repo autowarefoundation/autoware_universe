@@ -37,6 +37,8 @@ struct TrajectoryOptimizerParams
   double max_speed_mps{0.0};
   double max_lateral_accel_mps2{0.0};
   double spline_interpolation_resolution_m{0.0};
+  double spline_interpolation_max_yaw_discrepancy_deg{0.0};
+  double spline_interpolation_max_distance_discrepancy_m{0.0};
   double backward_trajectory_extension_m{0.0};
   bool use_akima_spline_interpolation{false};
   bool smooth_velocities{false};
@@ -46,6 +48,7 @@ struct TrajectoryOptimizerParams
   bool set_engage_speed{false};
   bool fix_invalid_points{false};
   bool extend_trajectory_backward{false};
+  bool spline_copy_original_orientation{false};
   Odometry current_odometry;
   AccelWithCovarianceStamped current_acceleration;
 };

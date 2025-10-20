@@ -23,6 +23,9 @@ namespace autoware::trajectory_optimizer::plugin
 void TrajectoryPointFixer::optimize_trajectory(
   TrajectoryPoints & traj_points, [[maybe_unused]] const TrajectoryOptimizerParams & params)
 {
+  if (!params.fix_invalid_points) {
+    return;
+  }
   utils::remove_invalid_points(traj_points);
 }
 

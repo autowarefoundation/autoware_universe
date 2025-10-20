@@ -14,15 +14,13 @@
 
 #include "autoware/trajectory_optimizer/utils.hpp"
 
-#include "autoware/trajectory/interpolator/akima_spline.hpp"
-#include "autoware/trajectory/interpolator/interpolator.hpp"
-#include "autoware/trajectory/pose.hpp"
-#include "autoware/trajectory/trajectory_point.hpp"
 #include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
 
+#include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
-#include <autoware_utils/math/normalization.hpp>
+#include <autoware_utils_math/normalization.hpp>
+#include <autoware_utils_math/unit_conversion.hpp>
 #include <rclcpp/logging.hpp>
 
 #include <autoware_planning_msgs/msg/detail/trajectory_point__struct.hpp>
@@ -37,10 +35,6 @@
 
 namespace autoware::trajectory_optimizer::utils
 {
-using autoware::experimental::trajectory::interpolator::AkimaSpline;
-using InterpolationTrajectory =
-  autoware::experimental::trajectory::Trajectory<autoware_planning_msgs::msg::TrajectoryPoint>;
-
 rclcpp::Logger get_logger()
 {
   return rclcpp::get_logger("trajectory_optimizer");
@@ -66,11 +60,11 @@ void smooth_trajectory_with_elastic_band(
     log_error_throttle("Elastic band path smoother is not initialized");
     return;
   }
-  if (traj_points.empty()) {
+  constexpr size_t minimum_points_for_elastic_band = 3;
+  if (traj_points.empty() || traj_points.size() < minimum_points_for_elastic_band) {
     return;
   }
   traj_points = eb_path_smoother_ptr->smoothTrajectory(traj_points, current_odometry.pose.pose);
-  eb_path_smoother_ptr->resetPreviousData();
 }
 
 void remove_invalid_points(TrajectoryPoints & input_trajectory)
@@ -89,17 +83,6 @@ void remove_invalid_points(TrajectoryPoints & input_trajectory)
       "Not enough points in trajectory after removing close proximity points and invalid points");
     return;
   }
-  const bool is_driving_forward = true;
-  autoware::motion_utils::insertOrientation(input_trajectory, is_driving_forward);
-  autoware::motion_utils::removeFirstInvalidOrientationPoints(input_trajectory);
-  size_t previous_size{input_trajectory.size()};
-  do {
-    previous_size = input_trajectory.size();
-    // Set the azimuth orientation to the next point at each point
-    autoware::motion_utils::insertOrientation(input_trajectory, is_driving_forward);
-    // Use azimuth orientation to remove points in reverse order
-    autoware::motion_utils::removeFirstInvalidOrientationPoints(input_trajectory);
-  } while (previous_size != input_trajectory.size());
 }
 
 void remove_close_proximity_points(TrajectoryPoints & input_trajectory_array, const double min_dist)
@@ -262,65 +245,87 @@ void filter_velocity(
 
 bool validate_point(const TrajectoryPoint & point)
 {
-  return std::isfinite(point.longitudinal_velocity_mps) && std::isfinite(point.acceleration_mps2) &&
-         std::isfinite(point.pose.position.x) && std::isfinite(point.pose.position.y) &&
-         std::isfinite(point.pose.position.z) && std::isfinite(point.pose.orientation.x) &&
-         std::isfinite(point.pose.orientation.y) && std::isfinite(point.pose.orientation.z) &&
-         std::isfinite(point.pose.orientation.w) && !std::isnan(point.pose.position.x) &&
-         !std::isnan(point.pose.position.y) && !std::isnan(point.pose.position.z) &&
-         !std::isnan(point.pose.orientation.x) && !std::isnan(point.pose.orientation.y) &&
-         !std::isnan(point.pose.orientation.z) && !std::isnan(point.pose.orientation.w) &&
-         !std::isnan(point.longitudinal_velocity_mps) && !std::isnan(point.acceleration_mps2);
+  auto is_valid = [](auto value) { return std::isfinite(value) && !std::isnan(value); };
+
+  return is_valid(point.longitudinal_velocity_mps) && is_valid(point.acceleration_mps2) &&
+         is_valid(point.pose.position.x) && is_valid(point.pose.position.y) &&
+         is_valid(point.pose.position.z) && is_valid(point.pose.orientation.x) &&
+         is_valid(point.pose.orientation.y) && is_valid(point.pose.orientation.z) &&
+         is_valid(point.pose.orientation.w);
+}
+
+void copy_trajectory_orientation(
+  const TrajectoryPoints & input_trajectory, TrajectoryPoints & output_trajectory,
+  const TrajectoryOptimizerParams & params)
+{
+  for (auto & out_point : output_trajectory) {
+    const auto nearest_index_opt = autoware::motion_utils::findNearestIndex(
+      input_trajectory, out_point.pose, params.spline_interpolation_max_distance_discrepancy_m,
+      M_PI_2);
+    if (!nearest_index_opt.has_value()) {
+      continue;
+    }
+    const auto nearest_index = nearest_index_opt.value();
+    out_point.pose.orientation = input_trajectory.at(nearest_index).pose.orientation;
+  }
 }
 
 void apply_spline(TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params)
 {
-  constexpr size_t minimum_points_for_akima_spline{5};
-  if (traj_points.size() < minimum_points_for_akima_spline) {
-    log_error_throttle("Not enough points in trajectory for spline interpolation");
-    return;
-  }
-  auto trajectory_interpolation_util =
-    InterpolationTrajectory::Builder{}
-      .set_xy_interpolator<AkimaSpline>()  // Set interpolator for x-y plane
-      .build(traj_points);
-  if (!trajectory_interpolation_util) {
-    log_warn_throttle("Failed to build interpolation trajectory");
-    return;
-  }
-  trajectory_interpolation_util->align_orientation_with_trajectory_direction();
-  TrajectoryPoints output_points{traj_points.front()};
-  constexpr double epsilon{1e-2};
-  const auto ds = std::max(params.spline_interpolation_resolution_m, epsilon);
-  output_points.reserve(static_cast<size_t>(trajectory_interpolation_util->length() / ds));
+  constexpr size_t min_points_for_akima_spline = 5;
+  const auto traj_length = autoware::motion_utils::calcArcLength(traj_points);
 
-  for (auto s = ds; s <= trajectory_interpolation_util->length(); s += ds) {
-    auto p = trajectory_interpolation_util->compute(s);
-    if (!validate_point(p)) {
-      continue;
-    }
-    output_points.push_back(p);
-  }
-
-  if (output_points.size() < 2) {
-    log_warn_throttle("Not enough points in trajectory after akima spline interpolation");
-    return;
-  }
-  auto last_interpolated_point = output_points.back();
-  auto & original_trajectory_last_point = traj_points.back();
-
-  if (!validate_point(original_trajectory_last_point)) {
-    log_warn_throttle("Last point in original trajectory is invalid. Removing last point");
-    traj_points = output_points;
+  if (
+    params.spline_interpolation_resolution_m < 0.1 ||
+    traj_points.size() < min_points_for_akima_spline ||
+    traj_length < params.spline_interpolation_resolution_m) {
     return;
   }
 
-  auto d = autoware_utils::calc_distance2d(
-    last_interpolated_point.pose.position, original_trajectory_last_point.pose.position);
-  if (d > epsilon) {
-    output_points.push_back(original_trajectory_last_point);
+  constexpr bool use_lerp_for_z = false;
+  constexpr bool use_zero_order_hold_for_twist = true;
+  constexpr bool resample_input_trajectory_stop_point = false;
+  constexpr bool dont_use_akima_spline_for_xy =
+    true;  // Note: autoware::motion_utils::resampleTrajectory has an error where the use akima
+           // spline input is inverted, so setting the use_akima_spline_for_xy to true actually
+           // applies a simple lerp
+  autoware_planning_msgs::msg::Trajectory temp_traj;
+  temp_traj.points = traj_points;
+  // first resample to a lower resolution to avoid ill-conditioned spline
+  temp_traj = autoware::motion_utils::resampleTrajectory(
+    temp_traj, 2.0 * params.spline_interpolation_resolution_m, dont_use_akima_spline_for_xy,
+    use_lerp_for_z, use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
+  // then resample to the desired resolution using akima spline
+  temp_traj = autoware::motion_utils::resampleTrajectory(
+    temp_traj, params.spline_interpolation_resolution_m, !dont_use_akima_spline_for_xy,
+    use_lerp_for_z, use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
+
+  // check where the original trajectory ends in the new trajectory or where there is a significant
+  // change in yaw
+  const double max_yaw_discrepancy_rad =
+    autoware_utils_math::deg2rad(params.spline_interpolation_max_yaw_discrepancy_deg);
+  const double max_distance_discrepancy_m = params.spline_interpolation_max_distance_discrepancy_m;
+  const auto last_original_point = traj_points.back();
+  const auto nearest_index_opt = autoware::motion_utils::findNearestIndex(
+    temp_traj.points, last_original_point.pose, max_distance_discrepancy_m,
+    max_yaw_discrepancy_rad);
+  if (!nearest_index_opt.has_value() || nearest_index_opt.value() == 0) {
+    log_warn_throttle("Could not find a suitable point to crop the trajectory");
+    return;
   }
-  traj_points = output_points;
+  // crop the trajectory up to the nearest index
+  temp_traj.points = TrajectoryPoints(
+    temp_traj.points.begin(), std::next(temp_traj.points.begin(), nearest_index_opt.value()));
+  // ensure the last point is the same as the original trajectory last point
+  temp_traj.points.push_back(last_original_point);
+  // re-sample again using lerp to ensure the resolution is maintained after cropping
+  temp_traj = autoware::motion_utils::resampleTrajectory(
+    temp_traj, params.spline_interpolation_resolution_m, dont_use_akima_spline_for_xy,
+    use_lerp_for_z, use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
+  if (params.spline_copy_original_orientation) {
+    copy_trajectory_orientation(traj_points, temp_traj.points, params);
+  }
+  traj_points = temp_traj.points;
 }
 
 void interpolate_trajectory(
@@ -402,7 +407,8 @@ void add_ego_state_to_trajectory(
   }
   const auto & last_point = traj_points.back();
   const auto yaw_diff = std::abs(
-    autoware_utils::normalize_degree(ego_state.pose.orientation.z - last_point.pose.orientation.z));
+    autoware_utils_math::normalize_degree(
+      ego_state.pose.orientation.z - last_point.pose.orientation.z));
   const auto distance = autoware_utils::calc_distance2d(last_point, ego_state);
   constexpr double epsilon{1e-2};
   const bool is_change_small = distance < epsilon && yaw_diff < epsilon;

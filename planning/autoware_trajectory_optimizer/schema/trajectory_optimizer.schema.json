@@ -48,6 +48,18 @@
           "exclusiveMinimum": 0,
           "description": "Interpolation resolution for Akima spline [m]"
         },
+        "spline_interpolation_max_yaw_discrepancy_deg": {
+          "type": "number",
+          "default": 2.5,
+          "minimum": 0,
+          "description": "Maximum yaw deviation allowed for spline outlier detection [deg]"
+        },
+        "spline_interpolation_max_distance_discrepancy_m": {
+          "type": "number",
+          "default": 5.0,
+          "minimum": 0,
+          "description": "Maximum position deviation allowed for spline outlier detection [m]"
+        },
         "backward_trajectory_extension_m": {
           "type": "number",
           "default": 5.0,
@@ -93,6 +105,11 @@
           "type": "boolean",
           "default": true,
           "description": "Flag used to indicate if the ego's trajectory should be extended backward"
+        },
+        "spline_copy_original_orientation": {
+          "type": "boolean",
+          "default": true,
+          "description": "Flag to indicate if the orientation from the original trajectory should be copied to the spline-interpolated trajectory"
         },
         "jerk_filter_params": {
           "type": "object",
@@ -244,6 +261,8 @@
         "max_speed_mps",
         "max_lateral_accel_mps2",
         "spline_interpolation_resolution_m",
+        "spline_interpolation_max_yaw_discrepancy_deg",
+        "spline_interpolation_max_distance_discrepancy_m",
         "backward_trajectory_extension_m",
         "use_akima_spline_interpolation",
         "smooth_trajectories",
@@ -252,7 +271,8 @@
         "set_engage_speed",
         "fix_invalid_points",
         "smooth_velocities",
-        "extend_trajectory_backward"
+        "extend_trajectory_backward",
+        "spline_copy_original_orientation"
       ]
     }
   },
