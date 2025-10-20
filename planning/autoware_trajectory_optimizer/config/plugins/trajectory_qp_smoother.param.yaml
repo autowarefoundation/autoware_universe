@@ -19,7 +19,7 @@
       osqp_verbose: false                     # Print solver output to console
 
       # Orientation correction
-      fix_orientation: true                   # Enable orientation correction
+      fix_orientation: false                   # Enable orientation correction
       orientation_correction_threshold_deg: 15.0  # Yaw threshold for correcting QP output orientation [deg]
 
       # Velocity-based fidelity weighting
