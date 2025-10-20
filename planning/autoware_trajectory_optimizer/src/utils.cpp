@@ -326,11 +326,12 @@ void apply_spline(
   const bool copy_original_orientation)
 {
   constexpr size_t min_points_for_akima_spline = 5;
+  constexpr double min_interpolation_resolution_m = 0.1;
   const auto traj_length = autoware::motion_utils::calcArcLength(traj_points);
 
   if (
-    interpolation_resolution_m < 0.1 || traj_points.size() < min_points_for_akima_spline ||
-    traj_length < interpolation_resolution_m) {
+    interpolation_resolution_m < min_interpolation_resolution_m ||
+    traj_points.size() < min_points_for_akima_spline || traj_length < interpolation_resolution_m) {
     return;
   }
 

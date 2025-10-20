@@ -141,14 +141,13 @@ void TrajectoryQPSmoother::optimize_trajectory(
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *get_time_keeper());
 
-  // Check if QP smoother is enabled
   if (!params.use_qp_smoother) {
     return;
   }
 
-  // Validate input: minimum point count
-  if (traj_points.size() < 5) {
-    RCLCPP_WARN_THROTTLE(
+  constexpr size_t min_points_for_optimization = 5;
+  if (traj_points.size() < min_points_for_optimization) {
+    RCLCPP_DEBUG_THROTTLE(
       get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
       "QP Smoother: Trajectory too short (< 5 points), skipping optimization");
     return;
@@ -186,9 +185,6 @@ void TrajectoryQPSmoother::optimize_trajectory(
   }
 
   traj_points = smoothed_trajectory;
-  RCLCPP_DEBUG_THROTTLE(
-    get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 1000,
-    "QP Smoother: Successfully smoothed trajectory with %zu points", traj_points.size());
 }
 
 bool TrajectoryQPSmoother::solve_qp_problem(
@@ -271,12 +267,10 @@ bool TrajectoryQPSmoother::solve_qp_problem(
   double total_jerk = 0.0;
   const double dt = qp_params_.time_step_s;
   for (size_t i = 0; i < output_trajectory.size() - 1; ++i) {
-    if (i < output_trajectory.size() - 1) {
-      const double jerk =
-        (output_trajectory[i + 1].acceleration_mps2 - output_trajectory[i].acceleration_mps2) / dt;
-      max_jerk = std::max(max_jerk, std::abs(jerk));
-      total_jerk += std::abs(jerk);
-    }
+    const double jerk =
+      (output_trajectory[i + 1].acceleration_mps2 - output_trajectory[i].acceleration_mps2) / dt;
+    max_jerk = std::max(max_jerk, std::abs(jerk));
+    total_jerk += std::abs(jerk);
   }
   const double avg_jerk = total_jerk / static_cast<double>(N - 1);
 
