@@ -6,7 +6,7 @@
       # Velocity/acceleration are derived from smoothed positions in post-processing
 
       # Optimization weights
-      weight_smoothness: 10.0                 # Weight for path curvature minimization (reduced from 100.0)
+      weight_smoothness: 10.0                 # Weight for path curvature minimization
       weight_fidelity: 1.0                    # Baseline fidelity (used when velocity-based disabled)
 
       # Time discretization
