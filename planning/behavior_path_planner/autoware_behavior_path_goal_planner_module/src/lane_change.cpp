@@ -71,7 +71,7 @@ namespace
 }  // namespace
 
 LaneChangeContext::State LaneChangeContext::get_next_state(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const lanelet::Id ego_lane_id,
   const autoware::route_handler::RouteHandler & route_handler, const rclcpp::Time & now) const
 {
   const auto lanelet_map = route_handler.getLaneletMapPtr();
@@ -110,8 +110,7 @@ LaneChangeContext::State LaneChangeContext::get_next_state(
     const auto following_ids = get_lanelet_sequence_after(
       current_target_lane_id, goal_lanelet_id, lanelet_map, route_handler);
     const bool is_on_following_lanes =
-      std::find(following_ids.cbegin(), following_ids.cend(), lane_ids.front()) !=
-      following_ids.cend();
+      std::find(following_ids.cbegin(), following_ids.cend(), ego_lane_id) != following_ids.cend();
     const bool has_goal_lane =
       std::find(lane_ids.cbegin(), lane_ids.cend(), goal_lanelet_id) != lane_ids.cend();
     if (is_on_following_lanes && has_goal_lane) {

@@ -82,7 +82,8 @@ public:
    */
   State get_next_state(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-    const autoware::route_handler::RouteHandler & route_handler, const rclcpp::Time & now) const;
+    const lanelet::Id ego_lane_id, const autoware::route_handler::RouteHandler & route_handler,
+    const rclcpp::Time & now) const;
 
   State get_current_state() const { return state_; }
 
