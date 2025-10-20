@@ -128,7 +128,6 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<bool>("keep_last_traffic_light_group_info", false);
   params_.traffic_light_group_msg_timeout_seconds =
     this->declare_parameter<double>("traffic_light_group_msg_timeout_seconds", 0.2);
-  params_.use_route_handler = this->declare_parameter<bool>("use_route_handler", true);
   params_.batch_size = this->declare_parameter<int>("batch_size", 1);
   params_.temperature_list = this->declare_parameter<std::vector<double>>("temperature", {0.5});
   params_.velocity_smoothing_window =
@@ -160,7 +159,6 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<double>(
       parameters, "traffic_light_group_msg_timeout_seconds",
       temp_params.traffic_light_group_msg_timeout_seconds);
-    update_param<bool>(parameters, "use_route_handler", temp_params.use_route_handler);
     update_param<int>(parameters, "batch_size", temp_params.batch_size);
     update_param<std::vector<double>>(parameters, "temperature", temp_params.temperature_list);
     update_param<int64_t>(
@@ -402,7 +400,6 @@ InputDataMap DiffusionPlanner::create_input_data()
     return {};
   }
 
-  route_handler_->setRoute(*route_ptr_);
   if (params_.update_traffic_light_group_info) {
     const auto & traffic_light_msg_timeout_s = params_.traffic_light_group_msg_timeout_seconds;
     preprocess::process_traffic_signals(
@@ -480,10 +477,8 @@ InputDataMap DiffusionPlanner::create_input_data()
   // route data on ego reference frame
   {
     const std::vector<int64_t> segment_indices =
-      (params_.use_route_handler
-         ? select_route_segment_indices_by_route_handler(*ego_kinematic_state)
-         : lane_segment_context_->select_route_segment_indices(
-             *route_ptr_, center_x, center_y, NUM_SEGMENTS_IN_ROUTE));
+      lane_segment_context_->select_route_segment_indices(
+        *route_ptr_, center_x, center_y, NUM_SEGMENTS_IN_ROUTE);
     const auto [route_lanes, route_lanes_speed_limit] =
       lane_segment_context_->create_tensor_data_from_indices(
         map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_ROUTE);
@@ -493,7 +488,7 @@ InputDataMap DiffusionPlanner::create_input_data()
 
   // goal pose
   {
-    const auto & goal_pose = route_handler_->getGoalPose();
+    const auto & goal_pose = route_ptr_->goal_pose;
 
     // Convert goal pose to 4x4 transformation matrix
     const Eigen::Matrix4d goal_pose_map_4x4 = utils::pose_to_matrix4f(goal_pose);
@@ -878,43 +873,7 @@ void DiffusionPlanner::on_map(const HADMapBin::ConstSharedPtr map_msg)
   // Create LaneSegmentContext with the static data
   lane_segment_context_ = std::make_unique<preprocess::LaneSegmentContext>(lanelet_map_ptr);
 
-  route_handler_->setMap(*map_msg);
   is_map_loaded_ = true;
-}
-
-std::vector<int64_t> DiffusionPlanner::select_route_segment_indices_by_route_handler(
-  const nav_msgs::msg::Odometry & ego_kinematic_state) const
-{
-  const geometry_msgs::msg::Pose & current_pose = ego_kinematic_state.pose.pose;
-  constexpr double backward_path_length{constants::BACKWARD_PATH_LENGTH_M};
-  constexpr double forward_path_length{constants::FORWARD_PATH_LENGTH_M};
-  lanelet::ConstLanelet current_preferred_lane;
-
-  if (
-    !route_handler_->isHandlerReady() ||
-    !route_handler_->getClosestPreferredLaneletWithinRoute(current_pose, &current_preferred_lane)) {
-    return {};
-  }
-  const lanelet::ConstLanelets current_lanes = route_handler_->getLaneletSequence(
-    current_preferred_lane, backward_path_length, forward_path_length);
-  const std::map<lanelet::Id, size_t> lanelet_id_to_array_index_map =
-    lane_segment_context_->get_lanelet_id_to_array_index();
-
-  std::vector<int64_t> selected_indices;
-  for (const lanelet::ConstLanelet & route_segment : current_lanes) {
-    const auto itr = lanelet_id_to_array_index_map.find(route_segment.id());
-    if (itr == lanelet_id_to_array_index_map.end()) {
-      continue;
-    }
-
-    const size_t array_index = itr->second;
-    selected_indices.push_back(array_index);
-    if (selected_indices.size() >= NUM_SEGMENTS_IN_ROUTE) {
-      break;
-    }
-  }
-
-  return selected_indices;
 }
 
 }  // namespace autoware::diffusion_planner
