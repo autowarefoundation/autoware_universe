@@ -133,7 +133,7 @@ Second section
 
 ![section_lane_change](../images/turn_signal_decider/lane_change.drawio.svg)
 
-#### 4. Pull out
+#### 4. Pull out (Start Planner)
 
 - desired start point
   Start point of the path of pull out.
@@ -148,6 +148,12 @@ Second section
   Terminal point of the path of pull out.
 
 ![section_pull_out](../images/turn_signal_decider/pull_out.drawio.svg)
+
+!!! note
+
+    The blinker also deactivate based on the remaining lateral distance to the target lane boundary.
+
+    If this distance is smaller than the configurable parameter `turn_signal_remaining_distance_to_bound_threshold`, the blinker will turn off immediately.
 
 #### 5. Goal Planner
 
