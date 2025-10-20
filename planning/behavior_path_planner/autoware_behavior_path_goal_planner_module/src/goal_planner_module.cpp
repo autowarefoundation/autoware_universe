@@ -2338,9 +2338,12 @@ std::optional<Pose> GoalPlannerModule::decelerateForTurnSignal(
       const auto idx =
         insertDecelPoint(current_pose.position, *min_decel_distance, decel_vel, path.points);
       if (idx) {
-        point_it = path.points.begin() + idx.value();
+        point_it = path.points.begin() + std::min(idx.value(), path.points.size());
         if (!first_turn_signal_trigger_position && select_blinker_decel) {
           first_turn_signal_trigger_position = point_it->point.pose;
+        }
+        if (point_it == path.points.end()) {
+          break;
         }
         point_it++;
       } else {
