@@ -455,20 +455,18 @@ void BEVFusionTRT::setIntrinsicsExtrinsics(
     indices_d_.get(), indices.data(), num_indices_ * sizeof(std::int64_t), cudaMemcpyHostToDevice);
 
   // Copy img_aug_matrix data for fusion model (fusion model always uses separate image backbone)
+  // Each Matrix4fRowM is contiguous, copy each matrix directly to its position in device memory
   if (config_.sensor_fusion_) {
-    std::vector<float> img_aug_matrix_flattened;
-    for (const auto & matrix : img_aug_matrices_) {
-      for (int i = 0; i < BEVFusionConfig::kTransformMatrixDim; ++i) {
-        for (int j = 0; j < BEVFusionConfig::kTransformMatrixDim; ++j) {
-          img_aug_matrix_flattened.push_back(matrix(i, j));
-        }
-      }
+    const std::size_t matrix_size = 
+      BEVFusionConfig::kTransformMatrixDim * BEVFusionConfig::kTransformMatrixDim;
+    
+    for (std::int64_t i = 0; i < config_.num_cameras_; i++) {
+      cudaMemcpy(
+        img_aug_matrix_d_.get() + i * matrix_size,
+        img_aug_matrices_[i].data(),
+        matrix_size * sizeof(float),
+        cudaMemcpyHostToDevice);
     }
-    cudaMemcpy(
-      img_aug_matrix_d_.get(), img_aug_matrix_flattened.data(),
-      config_.num_cameras_ * BEVFusionConfig::kTransformMatrixDim *
-        BEVFusionConfig::kTransformMatrixDim * sizeof(float),
-      cudaMemcpyHostToDevice);
   }
 }
 
@@ -515,7 +513,6 @@ bool BEVFusionTRT::preProcess(
 
     for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
       int start_y = roi_start_y_vector_[camera_id];
-
       cudaMemcpyAsync(
         image_buffers_d_[camera_id].get(), image_msgs[camera_id]->data.data(),
         config_.raw_image_height_ * config_.raw_image_width_ * BEVFusionConfig::kNumRGBChannels,
