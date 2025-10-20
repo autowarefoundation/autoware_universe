@@ -155,7 +155,7 @@ void TrajectoryQPSmoother::optimize_trajectory(
 
   // Check minimum path length (skip optimization for very short paths)
   const double path_length = autoware::motion_utils::calcArcLength(traj_points);
-  constexpr double min_path_length_m = 0.5;  // Minimum 5 meters for meaningful smoothing
+  constexpr double min_path_length_m = 0.5;  // Minimum 0.5 meters for meaningful smoothing
 
   if (path_length < min_path_length_m) {
     RCLCPP_DEBUG_THROTTLE(
