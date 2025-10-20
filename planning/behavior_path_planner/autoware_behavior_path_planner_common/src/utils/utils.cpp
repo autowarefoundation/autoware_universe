@@ -35,6 +35,7 @@
 #include <lanelet2_routing/RoutingGraphContainer.h>
 
 #include <algorithm>
+#include <functional>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -240,7 +241,8 @@ std::optional<size_t> findIndexOutOfGoalSearchRange(
 
 template <typename Iterator>
 lanelet::ConstLanelets getUniqueLaneletsFromPath(
-  Iterator begin, Iterator end, const std::shared_ptr<RouteHandler> & route_handler)
+  Iterator begin, Iterator end,
+  const std::function<lanelet::ConstLanelet(int64_t)> get_lanelet_by_id)
 {
   std::set<int64_t> lanelet_ids;
   for (auto it = begin; it != end; ++it) {
@@ -250,7 +252,7 @@ lanelet::ConstLanelets getUniqueLaneletsFromPath(
   }
   lanelet::ConstLanelets lanelets;
   for (const auto & lane_id : lanelet_ids) {
-    lanelets.push_back(route_handler->getLaneletMapPtr()->laneletLayer.get(lane_id));
+    lanelets.push_back(get_lanelet_by_id(lane_id));
   }
   return lanelets;
 }
@@ -291,7 +293,8 @@ void fillLongitudinalVelocityFromInputPath(Iterator begin, Iterator end, PathWit
 bool set_goal(
   const double search_radius_range, [[maybe_unused]] const double search_rad_range,
   const double output_path_interval, const PathWithLaneId & input, const Pose & goal,
-  const int64_t goal_lane_id, const std::shared_ptr<RouteHandler> & route_handler,
+  const int64_t goal_lane_id,
+  const std::function<lanelet::ConstLanelet(int64_t)> & get_lanelet_by_id,
   PathWithLaneId * output_ptr)
 {
   try {
@@ -369,7 +372,8 @@ bool set_goal(
     output_ptr->points.erase(output_ptr->points.begin());
 
     const auto lanelets = getUniqueLaneletsFromPath(
-      input.points.begin() + min_dist_out_of_circle_index + 1, input.points.end(), route_handler);
+      input.points.begin() + min_dist_out_of_circle_index + 1, input.points.end(),
+      get_lanelet_by_id);
     fillLaneIdsFromMap(
       output_ptr->points.begin() + min_dist_out_of_circle_index + 1, output_ptr->points.end(),
       lanelets);
@@ -429,7 +433,8 @@ const Pose refineGoal(const Pose & goal, const lanelet::ConstLanelet & goal_lane
 PathWithLaneId refinePathForGoal(
   const double search_radius_range, const double search_rad_range,
   const double output_path_interval, const PathWithLaneId & input, const Pose & goal,
-  const int64_t goal_lane_id, const std::shared_ptr<RouteHandler> & route_handler)
+  const int64_t goal_lane_id,
+  const std::function<lanelet::ConstLanelet(int64_t)> & get_lanelet_by_id)
 {
   PathWithLaneId filtered_path = input;
   PathWithLaneId path_with_goal;
@@ -442,7 +447,7 @@ PathWithLaneId refinePathForGoal(
 
   if (set_goal(
         search_radius_range, search_rad_range, output_path_interval, filtered_path, goal,
-        goal_lane_id, route_handler, &path_with_goal)) {
+        goal_lane_id, get_lanelet_by_id, &path_with_goal)) {
     return path_with_goal;
   }
   return filtered_path;
