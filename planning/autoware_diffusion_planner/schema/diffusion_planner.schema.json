@@ -80,7 +80,7 @@
         },
         "velocity_smoothing_window": {
           "type": "integer",
-          "default": 1,
+          "default": 8,
           "minimum": 1,
           "description": "Window size for velocity smoothing. Set to 1 to disable smoothing."
         },
@@ -94,7 +94,7 @@
             },
             "publish_debug_route": {
               "type": "boolean",
-              "default": false,
+              "default": true,
               "description": "Publish debug route markers"
             }
           },
