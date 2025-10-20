@@ -476,8 +476,9 @@ InputDataMap DiffusionPlanner::create_input_data()
 
   // route data on ego reference frame
   {
-    const std::vector<int64_t> segment_indices = lane_segment_context_->select_route_segment_indices(
-      *route_ptr_, center_x, center_y, NUM_SEGMENTS_IN_ROUTE);
+    const std::vector<int64_t> segment_indices =
+      lane_segment_context_->select_route_segment_indices(
+        *route_ptr_, center_x, center_y, NUM_SEGMENTS_IN_ROUTE);
     const auto [route_lanes, route_lanes_speed_limit] =
       lane_segment_context_->create_tensor_data_from_indices(
         map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_ROUTE);
