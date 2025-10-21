@@ -15,7 +15,6 @@
 #include "bbox_object_locator_node.hpp"
 
 #include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware_utils_math/unit_conversion.hpp>
 #include <rclcpp/qos.hpp>
 
 #include <sensor_msgs/msg/region_of_interest.hpp>
@@ -43,7 +42,6 @@ namespace autoware::image_object_locator
 using autoware::image_object_locator::grid_pixel_sampler::AdaptiveGridPixelSampler;
 using autoware::image_object_locator::grid_pixel_sampler::FixedGridPixelSampler;
 using autoware::universe_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-using autoware_utils_math::deg2rad;
 
 void transformToRT(const geometry_msgs::msg::TransformStamped & tf, cv::Matx33d & R, cv::Vec3d & t)
 {
