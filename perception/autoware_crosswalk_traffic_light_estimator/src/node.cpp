@@ -409,10 +409,15 @@ void CrosswalkTrafficLightEstimatorNode::setCrosswalkTrafficSignal(
   const auto tl_reg_elems = crosswalk.regulatoryElementsAs<const lanelet::TrafficLight>();
 
   std::unordered_map<lanelet::Id, size_t> valid_id2idx_map;  // detected traffic light
-
   for (size_t i = 0; i < msg.traffic_light_groups.size(); ++i) {
     auto signal = msg.traffic_light_groups[i];
     valid_id2idx_map[signal.traffic_light_group_id] = i;
+  }
+
+  std::unordered_map<lanelet::Id, size_t> output_id2idx_map;  // to check duplicate
+  for (size_t i = 0; i < output.traffic_light_groups.size(); ++i) {
+    auto signal = output.traffic_light_groups[i];
+    output_id2idx_map[signal.traffic_light_group_id] = i;
   }
 
   TrafficSignalElement base_traffic_signal_element;
@@ -423,14 +428,21 @@ void CrosswalkTrafficLightEstimatorNode::setCrosswalkTrafficSignal(
   for (const auto & tl_reg_elem : tl_reg_elems) {
     auto id = tl_reg_elem->id();
     if (crosswalk_traffic_signal_overrides.count(id)) {
-      TrafficSignal output_traffic_signal;
       TrafficSignalElement output_traffic_signal_element = base_traffic_signal_element;
       output_traffic_signal_element.color = crosswalk_traffic_signal_overrides.at(id);
-      output_traffic_signal.elements.push_back(output_traffic_signal_element);
-      output_traffic_signal.traffic_light_group_id = id;
-      output.traffic_light_groups.push_back(output_traffic_signal);
+      if (output_id2idx_map.count(id)) {
+        const size_t idx = output_id2idx_map[id];
+        output.traffic_light_groups[idx].elements.clear();
+        output.traffic_light_groups[idx].elements.push_back(output_traffic_signal_element);
+      } else {
+        TrafficSignal output_traffic_signal;
+        output_traffic_signal.elements.push_back(output_traffic_signal_element);
+        output_traffic_signal.traffic_light_group_id = id;
+        output.traffic_light_groups.push_back(output_traffic_signal);
+        output_id2idx_map[id] = output.traffic_light_groups.size() - 1;
+      }
     } else if (valid_id2idx_map.count(id)) {
-      size_t idx = valid_id2idx_map[id];
+      const size_t idx = valid_id2idx_map[id];
       auto signal = msg.traffic_light_groups[idx];
       // if invalid perception result exists or disable camera recognition, overwrite the estimation
       if (!use_pedestrian_signal_detect_ || isInvalidDetectionStatus(signal)) {
@@ -449,6 +461,7 @@ void CrosswalkTrafficLightEstimatorNode::setCrosswalkTrafficSignal(
       output_traffic_signal.elements.push_back(output_traffic_signal_element);
       output_traffic_signal.traffic_light_group_id = id;
       output.traffic_light_groups.push_back(output_traffic_signal);
+      output_id2idx_map[id] = output.traffic_light_groups.size() - 1;
     }
   }
 }
@@ -684,7 +697,7 @@ boost::optional<uint8_t> CrosswalkTrafficLightEstimatorNode::getHighestConfidenc
 void CrosswalkTrafficLightEstimatorNode::removeDuplicateIds(TrafficSignalArray & signal_array) const
 {
   auto & signals = signal_array.traffic_light_groups;
-  std::sort(signals.begin(), signals.end(), [](const auto & s1, const auto & s2) {
+  std::stable_sort(signals.begin(), signals.end(), [](const auto & s1, const auto & s2) {
     return s1.traffic_light_group_id < s2.traffic_light_group_id;
   });
 
