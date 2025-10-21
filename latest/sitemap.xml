@@ -586,6 +586,16 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/perception/autoware_predicted_path_postprocessor/</loc>
+         <lastmod>2025-10-21</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/perception/autoware_predicted_path_postprocessor/docs/refine_by_speed/</loc>
+         <lastmod>2025-10-21</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/latest/perception/autoware_probabilistic_occupancy_grid_map/</loc>
          <lastmod>2025-10-21</lastmod>
          <changefreq>daily</changefreq>
