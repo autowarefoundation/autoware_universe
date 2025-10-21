@@ -111,6 +111,10 @@ void ImuCorrector::callback_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_
     gyro_scale_.vector.z = 1.0;
   }
 
+  if (correct_for_static_bias_ && correct_for_dynamic_bias_) {
+    throw std::runtime_error("Cannot enable both static and dynamic gyro bias correction simultaneously.");
+  }
+
   if (correct_for_static_bias_) {
     imu_msg.angular_velocity.x = imu_msg.angular_velocity.x - angular_velocity_offset_x_imu_link_;
     imu_msg.angular_velocity.y = imu_msg.angular_velocity.y - angular_velocity_offset_y_imu_link_;
