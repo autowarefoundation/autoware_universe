@@ -33,6 +33,7 @@ TrajectoryVelocityOptimizer::TrajectoryVelocityOptimizer(
   const TrajectoryOptimizerParams & params)
 : TrajectoryOptimizerPluginBase(name, node_ptr, time_keeper, params)
 {
+  set_up_params();
   if (velocity_params_.smooth_velocities) {
     set_up_velocity_smoother(node_ptr, time_keeper);
   }
@@ -49,9 +50,13 @@ void TrajectoryVelocityOptimizer::set_up_velocity_smoother(
 }
 
 void TrajectoryVelocityOptimizer::optimize_trajectory(
-  TrajectoryPoints & traj_points, [[maybe_unused]] const TrajectoryOptimizerParams & params,
+  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
   const TrajectoryOptimizerData & data)
 {
+  if (!params.optimize_velocity) {
+    return;
+  }
+
   const auto & current_odometry = data.current_odometry;
   const auto & current_acceleration = data.current_acceleration;
   const auto & current_speed = current_odometry.twist.twist.linear.x;

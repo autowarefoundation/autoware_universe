@@ -31,6 +31,11 @@
           "default": true,
           "description": "Extend trajectory backward using ego pose history"
         },
+        "optimize_velocity": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable velocity profile optimization with jerk filtering and constraint enforcement"
+        },
         "trajectory_point_fixer": {
           "type": "object",
           "properties": {
@@ -433,7 +438,8 @@
         "use_eb_smoother",
         "use_qp_smoother",
         "fix_invalid_points",
-        "extend_trajectory_backward"
+        "extend_trajectory_backward",
+        "optimize_velocity"
       ]
     }
   },
