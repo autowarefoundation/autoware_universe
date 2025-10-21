@@ -30,6 +30,7 @@ public:
 
   GridPixelSamplerBase() : GridPixelSamplerBase(3) {}
   explicit GridPixelSamplerBase(int half_grid_size);
+  virtual ~GridPixelSamplerBase() = default;
 
   virtual std::vector<cv::Point2f> samplePointsImpl(
     const cv::Point2f & center_px, [[maybe_unused]] const float roi_w,
@@ -50,6 +51,7 @@ public:
   : GridPixelSamplerBase(half_grid_size), grid_cell_size_(grid_cell_size)
   {
   }
+  ~FixedGridPixelSampler() override = default;
 
   std::vector<cv::Point2f> samplePointsImpl(
     const cv::Point2f & center_px, [[maybe_unused]] const float roi_w,
@@ -67,6 +69,7 @@ public:
   : GridPixelSamplerBase(half_grid_size), bbox_fraction_(bbox_fraction)
   {
   }
+  ~AdaptiveGridPixelSampler() override = default;
 
   std::vector<cv::Point2f> samplePointsImpl(
     const cv::Point2f & center_px, const float roi_w, const float roi_h) override;
