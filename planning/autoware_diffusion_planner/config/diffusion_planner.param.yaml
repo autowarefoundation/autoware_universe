@@ -13,7 +13,7 @@
     build_only: false
     batch_size: 1
     temperature: [0.5]
-    velocity_smoothing_window: 1
+    velocity_smoothing_window: 8
     debug_params:
-      publish_debug_route: false
+      publish_debug_route: true
       publish_debug_map: false
