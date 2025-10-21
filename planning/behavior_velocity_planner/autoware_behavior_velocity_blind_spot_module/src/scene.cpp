@@ -259,7 +259,27 @@ BlindSpotDecision BlindSpotModule::modifyPathVelocityDetail(PathWithLaneId * pat
   }
 
   if (is_safe_now) {
-    return Unsafe{default_stopline.value_or(critical_stopline)};
+    // 1st, try to stop at the traffic light stopline smoothly
+    if (
+      default_stopline.has_value() &&
+      can_smoothly_stop_at(
+        default_stopline.value(), planner_param_.brake.critical.deceleration,
+        planner_param_.brake.critical.jerk)) {
+      return Unsafe{default_stopline.value()};
+    }
+
+    // otherwise, try to stop at instant_stopline before critical_stopline. if it is impossible,
+    // ego would stop inside the conflict_area in vain
+    if (
+      instant_stopline <= critical_stopline &&
+      can_smoothly_stop_at(
+        instant_stopline, planner_param_.brake.critical.deceleration,
+        planner_param_.brake.critical.jerk)) {
+      return Unsafe{instant_stopline};
+    }
+
+    is_over_pass_judge_line_ = true;
+    return OverPassJudge{"the situation is unsafe, but too late to stop before conflicting_area"};
   }
 
   const auto & most_unsafe_object = unsafe_objects.front();
