@@ -8,6 +8,12 @@
 
   <arg name="elastic_band_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/trajectory_smoothing/elastic_band_smoother.param.yaml"/>
 
+  <arg name="trajectory_point_fixer_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/plugins/trajectory_point_fixer.param.yaml"/>
+  <arg name="trajectory_extender_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/plugins/trajectory_extender.param.yaml"/>
+  <arg name="trajectory_spline_smoother_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/plugins/trajectory_spline_smoother.param.yaml"/>
+  <arg name="trajectory_qp_smoother_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/plugins/trajectory_qp_smoother.param.yaml"/>
+  <arg name="trajectory_velocity_optimizer_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/plugins/trajectory_velocity_optimizer.param.yaml"/>
+
   <arg name="input_traj" default="/planning/diffusion_planner/trajectory"/>
   <arg name="input_trajectories" default="/planning/diffusion_planner/candidate_trajectories"/>
   <arg name="output_traj" default="/planning/trajectory"/>
@@ -19,6 +25,11 @@
     <param from="$(var velocity_smoother_param_path)" allow_substs="true"/>
     <param from="$(var common_smoother_param_path)" allow_substs="true"/>
     <param from="$(var elastic_band_param_path)" allow_substs="true"/>
+    <param from="$(var trajectory_point_fixer_param_path)" allow_substs="true"/>
+    <param from="$(var trajectory_extender_param_path)" allow_substs="true"/>
+    <param from="$(var trajectory_spline_smoother_param_path)" allow_substs="true"/>
+    <param from="$(var trajectory_qp_smoother_param_path)" allow_substs="true"/>
+    <param from="$(var trajectory_velocity_optimizer_param_path)" allow_substs="true"/>
     <remap from="~/output/trajectory" to="$(var output_traj)"/>
     <remap from="~/output/trajectories" to="$(var output_trajectories)"/>
     <remap from="~/input/traj" to="$(var input_traj)"/>

@@ -1,0 +1,5 @@
+/**:
+  ros__parameters:
+    trajectory_point_fixer:
+      # Orientation threshold for removing wrongly oriented points
+      orientation_threshold_deg: 5.0  # [deg] Yaw threshold for removing wrongly oriented points

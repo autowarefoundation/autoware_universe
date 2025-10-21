@@ -16,6 +16,8 @@
 
 #include "autoware/trajectory_optimizer/utils.hpp"
 
+#include <autoware_utils_math/unit_conversion.hpp>
+#include <autoware_utils_rclcpp/parameter.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <memory>
@@ -31,7 +33,7 @@ TrajectoryVelocityOptimizer::TrajectoryVelocityOptimizer(
   const TrajectoryOptimizerParams & params)
 : TrajectoryOptimizerPluginBase(name, node_ptr, time_keeper, params)
 {
-  if (params.smooth_velocities) {
+  if (velocity_params_.smooth_velocities) {
     set_up_velocity_smoother(node_ptr, time_keeper);
   }
 }
@@ -47,19 +49,20 @@ void TrajectoryVelocityOptimizer::set_up_velocity_smoother(
 }
 
 void TrajectoryVelocityOptimizer::optimize_trajectory(
-  TrajectoryPoints & traj_points, [[maybe_unused]] const TrajectoryOptimizerParams & params)
+  TrajectoryPoints & traj_points, [[maybe_unused]] const TrajectoryOptimizerParams & params,
+  const TrajectoryOptimizerData & data)
 {
-  const auto & current_odometry = params.current_odometry;
-  const auto & current_acceleration = params.current_acceleration;
+  const auto & current_odometry = data.current_odometry;
+  const auto & current_acceleration = data.current_acceleration;
   const auto & current_speed = current_odometry.twist.twist.linear.x;
   const auto & current_linear_acceleration = current_acceleration.accel.accel.linear.x;
-  const double & target_pull_out_speed_mps = params.target_pull_out_speed_mps;
-  const double & target_pull_out_acc_mps2 = params.target_pull_out_acc_mps2;
-  const double & max_speed_mps = params.max_speed_mps;
+  const double & target_pull_out_speed_mps = velocity_params_.target_pull_out_speed_mps;
+  const double & target_pull_out_acc_mps2 = velocity_params_.target_pull_out_acc_mps2;
+  const double & max_speed_mps = velocity_params_.max_speed_mps;
 
-  // Limit lateral acceleration
-  if (params.limit_lateral_acceleration) {
-    utils::limit_lateral_acceleration(traj_points, params);
+  if (velocity_params_.limit_lateral_acceleration) {
+    utils::limit_lateral_acceleration(
+      traj_points, velocity_params_.max_lateral_accel_mps2, data.current_odometry);
   }
 
   auto initial_motion_speed =
@@ -68,38 +71,89 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
                               ? current_linear_acceleration
                               : target_pull_out_acc_mps2;
 
-  // Set engage speed and acceleration
-  if (params.set_engage_speed && (current_speed < target_pull_out_speed_mps)) {
+  if (velocity_params_.set_engage_speed && (current_speed < target_pull_out_speed_mps)) {
     utils::clamp_velocities(
       traj_points, static_cast<float>(initial_motion_speed),
       static_cast<float>(initial_motion_acc));
   }
 
-  // Limit ego speed
-  if (params.limit_speed) {
+  if (velocity_params_.limit_speed) {
     utils::set_max_velocity(traj_points, static_cast<float>(max_speed_mps));
   }
 
-  // Smooth velocity profile
-  if (params.smooth_velocities) {
+  if (velocity_params_.smooth_velocities) {
     if (!jerk_filtered_smoother_) {
       set_up_velocity_smoother(get_node_ptr(), get_time_keeper());
     }
     InitialMotion initial_motion{initial_motion_speed, initial_motion_acc};
     utils::filter_velocity(
-      traj_points, initial_motion, params, jerk_filtered_smoother_, current_odometry);
+      traj_points, initial_motion, velocity_params_.nearest_dist_threshold_m,
+      autoware_utils_math::deg2rad(velocity_params_.nearest_yaw_threshold_deg),
+      jerk_filtered_smoother_, current_odometry);
   }
 }
 
 void TrajectoryVelocityOptimizer::set_up_params()
 {
+  auto node_ptr = get_node_ptr();
+  using autoware_utils_rclcpp::get_or_declare_parameter;
+
+  velocity_params_.nearest_dist_threshold_m = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_velocity_optimizer.nearest_dist_threshold_m");
+  velocity_params_.nearest_yaw_threshold_deg = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_velocity_optimizer.nearest_yaw_threshold_deg");
+  velocity_params_.target_pull_out_speed_mps = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_velocity_optimizer.target_pull_out_speed_mps");
+  velocity_params_.target_pull_out_acc_mps2 = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_velocity_optimizer.target_pull_out_acc_mps2");
+  velocity_params_.max_speed_mps =
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_velocity_optimizer.max_speed_mps");
+  velocity_params_.max_lateral_accel_mps2 = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_velocity_optimizer.max_lateral_accel_mps2");
+  velocity_params_.set_engage_speed =
+    get_or_declare_parameter<bool>(*node_ptr, "trajectory_velocity_optimizer.set_engage_speed");
+  velocity_params_.limit_speed =
+    get_or_declare_parameter<bool>(*node_ptr, "trajectory_velocity_optimizer.limit_speed");
+  velocity_params_.limit_lateral_acceleration = get_or_declare_parameter<bool>(
+    *node_ptr, "trajectory_velocity_optimizer.limit_lateral_acceleration");
+  velocity_params_.smooth_velocities =
+    get_or_declare_parameter<bool>(*node_ptr, "trajectory_velocity_optimizer.smooth_velocities");
 }
 
 rcl_interfaces::msg::SetParametersResult TrajectoryVelocityOptimizer::on_parameter(
-  [[maybe_unused]] const std::vector<rclcpp::Parameter> & parameters)
+  const std::vector<rclcpp::Parameter> & parameters)
 {
-  // cspell:ignore jerkfiltered
-  // TODO(Daniel): Add option to update params (not included in the jerkfiltered_smoother)
+  using autoware_utils_rclcpp::update_param;
+
+  update_param(
+    parameters, "trajectory_velocity_optimizer.nearest_dist_threshold_m",
+    velocity_params_.nearest_dist_threshold_m);
+  update_param(
+    parameters, "trajectory_velocity_optimizer.nearest_yaw_threshold_deg",
+    velocity_params_.nearest_yaw_threshold_deg);
+  update_param(
+    parameters, "trajectory_velocity_optimizer.target_pull_out_speed_mps",
+    velocity_params_.target_pull_out_speed_mps);
+  update_param(
+    parameters, "trajectory_velocity_optimizer.target_pull_out_acc_mps2",
+    velocity_params_.target_pull_out_acc_mps2);
+  update_param(
+    parameters, "trajectory_velocity_optimizer.max_speed_mps", velocity_params_.max_speed_mps);
+  update_param(
+    parameters, "trajectory_velocity_optimizer.max_lateral_accel_mps2",
+    velocity_params_.max_lateral_accel_mps2);
+  update_param(
+    parameters, "trajectory_velocity_optimizer.set_engage_speed",
+    velocity_params_.set_engage_speed);
+  update_param(
+    parameters, "trajectory_velocity_optimizer.limit_speed", velocity_params_.limit_speed);
+  update_param(
+    parameters, "trajectory_velocity_optimizer.limit_lateral_acceleration",
+    velocity_params_.limit_lateral_acceleration);
+  update_param(
+    parameters, "trajectory_velocity_optimizer.smooth_velocities",
+    velocity_params_.smooth_velocities);
+
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
   result.reason = "success";

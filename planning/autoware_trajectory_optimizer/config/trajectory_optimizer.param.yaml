@@ -1,21 +1,8 @@
 /**:
   ros__parameters:
-    nearest_dist_threshold_m: 1.5 # [m]
-    nearest_yaw_threshold_rad: 1.0 # [rad]
-    target_pull_out_speed_mps: 1.0 # [mps]
-    target_pull_out_acc_mps2: 1.0 # [mps2]
-    max_speed_mps: 8.33 # [mps] [2.77 mps=10 kmph], [4.16 mps=15 kmph], [8.33 mps=30 kmph]
-    max_lateral_accel_mps2: 1.5 #[mps2]
-    spline_interpolation_resolution_m: 0.5 # [m]
-    spline_interpolation_max_yaw_discrepancy_deg: 2.5 # [deg]
-    spline_interpolation_max_distance_discrepancy_m: 5.0 # [m]
-    backward_trajectory_extension_m: 5.0 # [m]
-    use_akima_spline_interpolation: true
-    smooth_trajectories: false
-    limit_speed: true
-    limit_lateral_acceleration: false
-    set_engage_speed: false
+    # Plugin activation flags
+    use_akima_spline_interpolation: false
+    use_eb_smoother: false
+    use_qp_smoother: true
     fix_invalid_points: true
-    smooth_velocities: false
-    extend_trajectory_backward: true
-    spline_copy_original_orientation: true
+    extend_trajectory_backward: false

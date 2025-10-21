@@ -19,6 +19,7 @@
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_math/normalization.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
 #include <rclcpp/logging.hpp>
@@ -29,6 +30,7 @@
 #include <cmath>
 #include <cstddef>
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -140,7 +142,8 @@ void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max
 }
 
 void limit_lateral_acceleration(
-  TrajectoryPoints & input_trajectory_array, const TrajectoryOptimizerParams & params)
+  TrajectoryPoints & input_trajectory_array, const double max_lateral_accel_mps2,
+  const Odometry & current_odometry)
 {
   if (input_trajectory_array.empty()) {
     return;
@@ -151,7 +154,7 @@ void limit_lateral_acceleration(
            (current->time_from_start.sec + current->time_from_start.nanosec * 1e-9);
   };
 
-  const auto & current_position = params.current_odometry.pose.pose.position;
+  const auto & current_position = current_odometry.pose.pose.position;
   motion_utils::calculate_time_from_start(input_trajectory_array, current_position);
 
   const auto closest_index =
@@ -181,19 +184,19 @@ void limit_lateral_acceleration(
     const double current_speed = std::abs(itr->longitudinal_velocity_mps);
     // Compute lateral acceleration
     const double lateral_acceleration = std::abs(current_speed * yaw_rate);
-    if (lateral_acceleration < params.max_lateral_accel_mps2) continue;
+    if (lateral_acceleration < max_lateral_accel_mps2) continue;
 
-    itr->longitudinal_velocity_mps = params.max_lateral_accel_mps2 / yaw_rate;
+    itr->longitudinal_velocity_mps = max_lateral_accel_mps2 / yaw_rate;
   }
 
   motion_utils::calculate_time_from_start(
-    input_trajectory_array, params.current_odometry.pose.pose.position);
+    input_trajectory_array, current_odometry.pose.pose.position);
 }
 
 void filter_velocity(
   TrajectoryPoints & input_trajectory, const InitialMotion & initial_motion,
-  const TrajectoryOptimizerParams & params, const std::shared_ptr<JerkFilteredSmoother> & smoother,
-  const Odometry & current_odometry)
+  const double nearest_dist_threshold_m, const double nearest_yaw_threshold_rad,
+  const std::shared_ptr<JerkFilteredSmoother> & smoother, const Odometry & current_odometry)
 {
   if (!smoother) {
     log_error_throttle("JerkFilteredSmoother is not initialized");
@@ -203,9 +206,7 @@ void filter_velocity(
   if (input_trajectory.size() < 2) {
     return;
   }
-  // Lateral acceleration limit
-  const auto & nearest_dist_threshold = params.nearest_dist_threshold_m;
-  const auto & nearest_yaw_threshold = params.nearest_yaw_threshold_rad;
+
   const auto & initial_motion_speed = initial_motion.speed_mps;
   const auto & initial_motion_acc = initial_motion.acc_mps2;
 
@@ -221,11 +222,12 @@ void filter_velocity(
   // Resample trajectory with ego-velocity based interval distance
 
   input_trajectory = smoother->resampleTrajectory(
-    input_trajectory, initial_motion_speed, current_odometry.pose.pose, nearest_dist_threshold,
-    nearest_yaw_threshold);
+    input_trajectory, initial_motion_speed, current_odometry.pose.pose, nearest_dist_threshold_m,
+    nearest_yaw_threshold_rad);
 
   const size_t traj_closest = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
-    input_trajectory, current_odometry.pose.pose, nearest_dist_threshold, nearest_yaw_threshold);
+    input_trajectory, current_odometry.pose.pose, nearest_dist_threshold_m,
+    nearest_yaw_threshold_rad);
 
   // // Clip trajectory from closest point
   TrajectoryPoints clipped;
@@ -254,31 +256,46 @@ bool validate_point(const TrajectoryPoint & point)
          is_valid(point.pose.orientation.w);
 }
 
-void copy_trajectory_orientation(
+void fix_trajectory_orientation(
   const TrajectoryPoints & input_trajectory, TrajectoryPoints & output_trajectory,
-  const TrajectoryOptimizerParams & params)
+  const double yaw_threshold_rad)
 {
-  for (auto & out_point : output_trajectory) {
-    const auto nearest_index_opt = autoware::motion_utils::findNearestIndex(
-      input_trajectory, out_point.pose, params.spline_interpolation_max_distance_discrepancy_m,
-      M_PI_2);
+  for (auto & point : output_trajectory) {
+    const auto nearest_index_opt =
+      autoware::motion_utils::findNearestIndex(input_trajectory, point.pose);
+
     if (!nearest_index_opt.has_value()) {
       continue;
     }
-    const auto nearest_index = nearest_index_opt.value();
-    out_point.pose.orientation = input_trajectory.at(nearest_index).pose.orientation;
+
+    const size_t nearest_idx = nearest_index_opt.value();
+
+    // Get yaw from both orientations
+    const double input_yaw = tf2::getYaw(input_trajectory[nearest_idx].pose.orientation);
+    const double output_yaw = tf2::getYaw(point.pose.orientation);
+
+    // Calculate yaw difference (normalized to [-pi, pi])
+    const double yaw_diff = autoware_utils_math::normalize_radian(output_yaw - input_yaw);
+
+    // If difference exceeds threshold, use original orientation
+    if (std::abs(yaw_diff) > yaw_threshold_rad) {
+      point.pose.orientation = input_trajectory[nearest_idx].pose.orientation;
+    }
   }
 }
 
-void apply_spline(TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params)
+void apply_spline(
+  TrajectoryPoints & traj_points, const double interpolation_resolution_m,
+  const double max_yaw_discrepancy_deg, const double max_distance_discrepancy_m,
+  const bool copy_original_orientation)
 {
   constexpr size_t min_points_for_akima_spline = 5;
+  constexpr double min_interpolation_resolution_m = 0.1;
   const auto traj_length = autoware::motion_utils::calcArcLength(traj_points);
 
   if (
-    params.spline_interpolation_resolution_m < 0.1 ||
-    traj_points.size() < min_points_for_akima_spline ||
-    traj_length < params.spline_interpolation_resolution_m) {
+    interpolation_resolution_m < min_interpolation_resolution_m ||
+    traj_points.size() < min_points_for_akima_spline || traj_length < interpolation_resolution_m) {
     return;
   }
 
@@ -293,18 +310,16 @@ void apply_spline(TrajectoryPoints & traj_points, const TrajectoryOptimizerParam
   temp_traj.points = traj_points;
   // first resample to a lower resolution to avoid ill-conditioned spline
   temp_traj = autoware::motion_utils::resampleTrajectory(
-    temp_traj, 2.0 * params.spline_interpolation_resolution_m, dont_use_akima_spline_for_xy,
-    use_lerp_for_z, use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
+    temp_traj, 2.0 * interpolation_resolution_m, dont_use_akima_spline_for_xy, use_lerp_for_z,
+    use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
   // then resample to the desired resolution using akima spline
   temp_traj = autoware::motion_utils::resampleTrajectory(
-    temp_traj, params.spline_interpolation_resolution_m, !dont_use_akima_spline_for_xy,
-    use_lerp_for_z, use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
+    temp_traj, interpolation_resolution_m, !dont_use_akima_spline_for_xy, use_lerp_for_z,
+    use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
 
   // check where the original trajectory ends in the new trajectory or where there is a significant
   // change in yaw
-  const double max_yaw_discrepancy_rad =
-    autoware_utils_math::deg2rad(params.spline_interpolation_max_yaw_discrepancy_deg);
-  const double max_distance_discrepancy_m = params.spline_interpolation_max_distance_discrepancy_m;
+  const double max_yaw_discrepancy_rad = autoware_utils_math::deg2rad(max_yaw_discrepancy_deg);
   const auto last_original_point = traj_points.back();
   const auto nearest_index_opt = autoware::motion_utils::findNearestIndex(
     temp_traj.points, last_original_point.pose, max_distance_discrepancy_m,
@@ -320,82 +335,27 @@ void apply_spline(TrajectoryPoints & traj_points, const TrajectoryOptimizerParam
   temp_traj.points.push_back(last_original_point);
   // re-sample again using lerp to ensure the resolution is maintained after cropping
   temp_traj = autoware::motion_utils::resampleTrajectory(
-    temp_traj, params.spline_interpolation_resolution_m, dont_use_akima_spline_for_xy,
-    use_lerp_for_z, use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
-  if (params.spline_copy_original_orientation) {
-    copy_trajectory_orientation(traj_points, temp_traj.points, params);
+    temp_traj, interpolation_resolution_m, dont_use_akima_spline_for_xy, use_lerp_for_z,
+    use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
+  if (copy_original_orientation) {
+    // Copy orientation from original trajectory
+    for (auto & out_point : temp_traj.points) {
+      const auto nearest_index_yaw_opt = autoware::motion_utils::findNearestIndex(
+        traj_points, out_point.pose, max_distance_discrepancy_m, M_PI_2);
+      if (!nearest_index_yaw_opt.has_value()) {
+        continue;
+      }
+      const auto nearest_index_yaw = nearest_index_yaw_opt.value();
+      out_point.pose.orientation = traj_points.at(nearest_index_yaw).pose.orientation;
+    }
   }
   traj_points = temp_traj.points;
 }
 
-void interpolate_trajectory(
-  TrajectoryPoints & traj_points, const Odometry & current_odometry,
-  const AccelWithCovarianceStamped & current_acceleration, const TrajectoryOptimizerParams & params,
-  const std::shared_ptr<JerkFilteredSmoother> & jerk_filtered_smoother,
-  const std::shared_ptr<EBPathSmoother> & eb_path_smoother_ptr)
-{
-  // Remove overlap points and wrong orientation points
-  if (params.fix_invalid_points) {
-    remove_invalid_points(traj_points);
-  }
-
-  if (traj_points.size() < 2) {
-    log_error_throttle("Not enough points in trajectory after overlap points removal");
-    return;
-  }
-
-  const double & target_pull_out_speed_mps = params.target_pull_out_speed_mps;
-  const double & target_pull_out_acc_mps2 = params.target_pull_out_acc_mps2;
-  const double & max_speed_mps = params.max_speed_mps;
-
-  const auto current_speed = current_odometry.twist.twist.linear.x;
-  const auto current_linear_acceleration = current_acceleration.accel.accel.linear.x;
-  auto initial_motion_speed =
-    (current_speed > target_pull_out_speed_mps) ? current_speed : target_pull_out_speed_mps;
-  auto initial_motion_acc = (current_speed > target_pull_out_speed_mps)
-                              ? current_linear_acceleration
-                              : target_pull_out_acc_mps2;
-
-  // Set engage speed and acceleration
-  if (params.set_engage_speed && (current_speed < target_pull_out_speed_mps)) {
-    clamp_velocities(
-      traj_points, static_cast<float>(initial_motion_speed),
-      static_cast<float>(initial_motion_acc));
-  }
-  // Limit ego speed
-  if (params.limit_speed) {
-    set_max_velocity(traj_points, static_cast<float>(max_speed_mps));
-  }
-
-  // Smooth velocity profile
-  if (params.smooth_velocities) {
-    InitialMotion initial_motion{initial_motion_speed, initial_motion_acc};
-    filter_velocity(traj_points, initial_motion, params, jerk_filtered_smoother, current_odometry);
-  }
-  // Apply spline to smooth the trajectory
-  if (params.use_akima_spline_interpolation) {
-    apply_spline(traj_points, params);
-  }
-  // Use elastic band to smooth the trajectory
-  if (params.smooth_trajectories) {
-    smooth_trajectory_with_elastic_band(traj_points, current_odometry, eb_path_smoother_ptr);
-  }
-
-  if (params.fix_invalid_points) {
-    remove_invalid_points(traj_points);
-  }
-  // Recalculate timestamps
-  motion_utils::calculate_time_from_start(traj_points, current_odometry.pose.pose.position);
-
-  if (traj_points.size() < 2) {
-    log_error_throttle("Not enough points in trajectory after overlap points removal");
-    return;
-  }
-}
-
 void add_ego_state_to_trajectory(
   TrajectoryPoints & traj_points, const Odometry & current_odometry,
-  const TrajectoryOptimizerParams & params)
+  const double nearest_dist_threshold_m, const double nearest_yaw_threshold_rad,
+  const double backward_trajectory_extension_m)
 {
   TrajectoryPoint ego_state;
   ego_state.pose = current_odometry.pose.pose;
@@ -417,7 +377,7 @@ void add_ego_state_to_trajectory(
   }
 
   const bool is_change_large =
-    distance > params.nearest_dist_threshold_m || yaw_diff > params.nearest_yaw_threshold_rad;
+    distance > nearest_dist_threshold_m || yaw_diff > nearest_yaw_threshold_rad;
   if (is_change_large) {
     traj_points = {ego_state};
     return;
@@ -429,7 +389,7 @@ void add_ego_state_to_trajectory(
   double accumulated_length = 0.0;
   for (size_t i = traj_points.size() - 1; i > 0; i--) {
     accumulated_length += autoware_utils::calc_distance2d(traj_points.at(i - 1), traj_points.at(i));
-    if (accumulated_length > params.backward_trajectory_extension_m) {
+    if (accumulated_length > backward_trajectory_extension_m) {
       clip_idx = i;
       break;
     }
@@ -439,8 +399,7 @@ void add_ego_state_to_trajectory(
 
 void expand_trajectory_with_ego_history(
   TrajectoryPoints & traj_points, const TrajectoryPoints & ego_history_points,
-  [[maybe_unused]] const Odometry & current_odometry,
-  [[maybe_unused]] const TrajectoryOptimizerParams & params)
+  const Odometry & current_odometry)
 {
   if (ego_history_points.empty()) {
     return;
@@ -457,7 +416,7 @@ void expand_trajectory_with_ego_history(
     ego_history_points, first_ego_history_point.pose.position,
     first_ego_trajectory_point.pose.position);
 
-  const auto ego_position = params.current_odometry.pose.pose.position;
+  const auto ego_position = current_odometry.pose.pose.position;
   const auto distance_ego_to_first_trajectory_point =
     autoware_utils::calc_distance2d(first_ego_trajectory_point, ego_position);
 

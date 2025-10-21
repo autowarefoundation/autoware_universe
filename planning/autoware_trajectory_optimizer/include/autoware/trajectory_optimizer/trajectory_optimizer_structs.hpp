@@ -15,7 +15,6 @@
 #ifndef AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_STRUCTS_HPP_
 #define AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_STRUCTS_HPP_
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
-#include <nav_msgs/msg/detail/odometry__struct.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
 namespace autoware::trajectory_optimizer
@@ -28,29 +27,24 @@ struct InitialMotion
   double speed_mps{0.0};
   double acc_mps2{0.0};
 };
-struct TrajectoryOptimizerParams
+
+// Runtime data struct - contains vehicle state updated each cycle from topics
+// This is NOT configuration, it's runtime state passed to plugins
+struct TrajectoryOptimizerData
 {
-  double nearest_dist_threshold_m{0.0};
-  double nearest_yaw_threshold_rad{0.0};
-  double target_pull_out_speed_mps{0.0};
-  double target_pull_out_acc_mps2{0.0};
-  double max_speed_mps{0.0};
-  double max_lateral_accel_mps2{0.0};
-  double spline_interpolation_resolution_m{0.0};
-  double spline_interpolation_max_yaw_discrepancy_deg{0.0};
-  double spline_interpolation_max_distance_discrepancy_m{0.0};
-  double backward_trajectory_extension_m{0.0};
-  bool use_akima_spline_interpolation{false};
-  bool smooth_velocities{false};
-  bool smooth_trajectories{false};
-  bool limit_speed{false};
-  bool limit_lateral_acceleration{false};
-  bool set_engage_speed{false};
-  bool fix_invalid_points{false};
-  bool extend_trajectory_backward{false};
-  bool spline_copy_original_orientation{false};
   Odometry current_odometry;
   AccelWithCovarianceStamped current_acceleration;
+};
+
+// Main node parameters struct - contains only plugin activation flags
+// Plugin-specific parameters are managed by each plugin independently
+struct TrajectoryOptimizerParams
+{
+  bool use_akima_spline_interpolation{false};
+  bool use_eb_smoother{false};
+  bool use_qp_smoother{false};
+  bool fix_invalid_points{false};
+  bool extend_trajectory_backward{false};
 };
 }  // namespace autoware::trajectory_optimizer
 #endif  // AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_STRUCTS_HPP_
