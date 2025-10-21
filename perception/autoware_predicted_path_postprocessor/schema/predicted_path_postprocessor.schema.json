@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_predicted_path_postprocessor parameter",
+  "type": "object",
+  "definitions": {
+    "predicted_path_postprocessor": {
+      "type": "object",
+      "properties": {
+        "processors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["refine_by_speed"]
+          },
+          "description": "An array of processor names.",
+          "default": ["refine_by_speed"]
+        },
+        "refine_by_speed": {
+          "type": "object",
+          "properties": {
+            "speed_threshold": {
+              "type": "number",
+              "description": "Threshold speed for path refinement. If the speed of an object is below this threshold, the path will be refined.",
+              "default": 1.0,
+              "minimum": 0.0
+            },
+            "interpolation": {
+              "type": "string",
+              "description": "Name of the interpolation method.",
+              "enum": ["linear", "spline", "spline_by_akima"],
+              "default": "linear"
+            }
+          },
+          "required": ["speed_threshold", "interpolation"]
+        }
+      },
+      "required": ["processors", "refine_by_speed"]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/predicted_path_postprocessor"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

@@ -94,6 +94,7 @@ perception/autoware_object_range_splitter/** lei.gu@tier4.jp taekjin.lee@tier4.j
 perception/autoware_object_sorter/** lei.gu@tier4.jp masaki.baba.2@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp
 perception/autoware_object_velocity_splitter/** lei.gu@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp
 perception/autoware_occupancy_grid_map_outlier_filter/** abrahammonrroy@yahoo.com taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
+perception/autoware_predicted_path_postprocessor/** kotaro.uetake@tier4.jp yoshi.ri@tier4.jp taekjin.lee@tier4.jp
 perception/autoware_probabilistic_occupancy_grid_map/** kenzo.lobos@tier4.jp mamoru.sobue@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 perception/autoware_ptv3/** amadeusz.szymko.2@tier4.jp kenzo.lobos@tier4.jp
 perception/autoware_radar_fusion_to_detected_object/** taekjin.lee@tier4.jp yoshi.ri@tier4.jp
