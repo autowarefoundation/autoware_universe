@@ -1472,7 +1472,9 @@ void GoalPlannerModule::setTurnSignalInfoForStopPath(
 {
   auto preempt_turn_signal =
     TurnSignalInfo(blinker_decel_start_pose, stop_path.path.points.back().point.pose);
-  preempt_turn_signal.turn_signal.command = TurnIndicatorsCommand::ENABLE_LEFT;
+  preempt_turn_signal.turn_signal.command = parameters_.parking_policy == ParkingPolicy::LEFT_SIDE
+                                              ? TurnIndicatorsCommand::ENABLE_LEFT
+                                              : TurnIndicatorsCommand::ENABLE_RIGHT;
   output.turn_signal_info = preempt_turn_signal;
 }
 
