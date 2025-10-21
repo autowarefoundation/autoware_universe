@@ -55,8 +55,8 @@ where `w_i` is the per-point fidelity weight (see Velocity-Based Fidelity sectio
 
 At low speeds, trajectory noise from the planner can cause jittery behavior. The velocity-based fidelity feature addresses this by:
 
-- **Low speeds**: Lower fidelity weight → more aggressive smoothing
-- **High speeds**: Higher fidelity weight → preserve planner intent
+- **Low speeds**: Lower fidelity weight → more aggressive smoothing.
+- **High speeds**: Higher fidelity weight → preserve planner intent.
 
 ### Sigmoid Weight Function
 

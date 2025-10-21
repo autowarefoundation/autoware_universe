@@ -409,7 +409,6 @@ void TrajectoryQPSmoother::post_process_trajectory(
 
     // Recalculate orientation from smoothed path
     if (i < N - 1) {
-      // Use motion_utils function to calculate azimuth angle
       geometry_msgs::msg::Point p_from;
       geometry_msgs::msg::Point p_to;
       p_from.x = x;
