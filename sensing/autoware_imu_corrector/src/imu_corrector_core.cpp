@@ -112,7 +112,8 @@ void ImuCorrector::callback_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_
   }
 
   if (correct_for_static_bias_ && correct_for_dynamic_bias_) {
-    throw std::runtime_error("Cannot enable both static and dynamic gyro bias correction simultaneously.");
+    throw std::runtime_error(
+      "Cannot enable both static and dynamic gyro bias correction simultaneously.");
   }
 
   if (correct_for_static_bias_) {
