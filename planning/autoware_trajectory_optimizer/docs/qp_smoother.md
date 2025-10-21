@@ -70,9 +70,9 @@ where σ(x) = 1 / (1 + exp(-x))
 
 **Parameters:**
 
-- `v_th`: Velocity threshold at sigmoid midpoint (default: 0.2 m/s)
-- `k`: Sigmoid sharpness (default: 40.0, higher = sharper transition)
-- `w_min`: Minimum weight at very low speeds (default: 0.1)
+- `v_th`: Velocity threshold at sigmoid midpoint (default: 0.3 m/s)
+- `k`: Sigmoid sharpness (default: 50.0, higher = sharper transition)
+- `w_min`: Minimum weight at very low speeds (default: 0.01)
 - `w_max`: Maximum weight at high speeds (default: 1.0)
 
 **Key Properties:**
@@ -89,9 +89,9 @@ weight
 1.0 |           _______  (high speed, preserve path)
     |          /
     |         /
-0.1 |_______/            (low speed, allow smoothing)
+0.01|_______/            (low speed, allow smoothing)
       0    v_th      v_max
-           (0.2 m/s)
+           (0.3 m/s)
              speed
 ```
 
@@ -119,22 +119,22 @@ After QP optimization solves for smoothed positions, the following are recalcula
 
 ### Velocity-Based Fidelity
 
-- `use_velocity_based_fidelity` (default: false)
+- `use_velocity_based_fidelity` (default: true)
 
   - Master switch for velocity-dependent weighting
   - Set to `true` to enable feature
 
-- `velocity_threshold_mps` (default: 0.2)
+- `velocity_threshold_mps` (default: 0.3)
 
   - Speed at which sigmoid transitions (midpoint)
   - Lower values → earlier transition to high fidelity
 
-- `sigmoid_sharpness` (default: 40.0)
+- `sigmoid_sharpness` (default: 50.0)
 
   - Controls transition steepness
   - Range: [1, 100], higher = sharper step-like transition
 
-- `min_fidelity_weight` (default: 0.1)
+- `min_fidelity_weight` (default: 0.01)
 
   - Weight applied at very low speeds
   - Lower values → more aggressive smoothing when stopped/slow
@@ -145,7 +145,7 @@ After QP optimization solves for smoothed positions, the following are recalcula
 
 ### Endpoint Constraints
 
-- `constrain_last_point` (default: true)
+- `constrain_last_point` (default: false)
   - `true`: Both first and last points fixed as hard constraints
   - `false`: Only first point fixed, allows last point to move for additional smoothness
 
@@ -172,7 +172,7 @@ After QP optimization solves for smoothed positions, the following are recalcula
 
   - Apply orientation correction post-solve
 
-- `orientation_correction_threshold_deg` (default: 15.0)
+- `orientation_correction_threshold_deg` (default: 5.0)
   - Yaw threshold for correcting QP output orientation
 
 ## Usage Examples
@@ -198,7 +198,7 @@ ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.velocity_th
 To allow even more smoothing at low speeds:
 
 ```bash
-ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.min_fidelity_weight 0.05
+ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.min_fidelity_weight 0.005
 ```
 
 ### Example 4: Sharper Transition
@@ -243,42 +243,6 @@ ros2 param get /planning/trajectory_optimizer trajectory_qp_smoother.max_fidelit
 ```bash
 # View processing time metrics
 ros2 topic echo /planning/trajectory_optimizer/debug/processing_time_detail_ms
-```
-
-## Performance Characteristics
-
-- **Computational Cost**: O(N) where N is number of trajectory points
-- **Typical Solve Time**: 1-5ms for 50-100 point trajectories
-- **Memory**: Sparse matrices minimize memory footprint
-- **Real-time**: OSQP warm start enabled for consistent performance
-
-## Tuning Guidelines
-
-### For Stop-and-Go Urban Driving
-
-```yaml
-use_velocity_based_fidelity: true
-velocity_threshold_mps: 0.2 # Low threshold for early smoothing
-sigmoid_sharpness: 40.0 # Moderate sharpness
-min_fidelity_weight: 0.1 # Aggressive low-speed smoothing
-max_fidelity_weight: 1.0 # Preserve path at normal speeds
-```
-
-### For Highway Driving
-
-```yaml
-use_velocity_based_fidelity: false # Uniform weighting
-weight_smoothness: 5.0 # Lighter smoothing
-weight_fidelity: 1.0 # Preserve planner path
-```
-
-### For Aggressive Smoothing
-
-```yaml
-use_velocity_based_fidelity: true
-min_fidelity_weight: 0.05 # Very low weight at stops
-max_fidelity_weight: 0.8 # Allow some smoothing even at speed
-constrain_last_point: false # Additional endpoint freedom
 ```
 
 ## Limitations

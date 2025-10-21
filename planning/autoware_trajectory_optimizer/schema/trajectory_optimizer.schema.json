@@ -110,7 +110,7 @@
           "properties": {
             "weight_smoothness": {
               "type": "number",
-              "default": 100.0,
+              "default": 10.0,
               "minimum": 0,
               "description": "Weight for path curvature minimization (geometric smoothness) [dimensionless]"
             },
@@ -159,6 +159,40 @@
               "default": 5.0,
               "minimum": 0,
               "description": "Yaw threshold for correcting QP solver output orientation [deg]"
+            },
+            "use_velocity_based_fidelity": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable velocity-dependent fidelity weighting (lower fidelity at low speeds)"
+            },
+            "velocity_threshold_mps": {
+              "type": "number",
+              "default": 0.3,
+              "minimum": 0,
+              "description": "Velocity threshold at sigmoid midpoint for velocity-based fidelity [m/s]"
+            },
+            "sigmoid_sharpness": {
+              "type": "number",
+              "default": 50.0,
+              "minimum": 1,
+              "description": "Sigmoid steepness for velocity-based fidelity transition (higher = sharper)"
+            },
+            "min_fidelity_weight": {
+              "type": "number",
+              "default": 0.01,
+              "minimum": 0,
+              "description": "Minimum fidelity weight at very low speeds [dimensionless]"
+            },
+            "max_fidelity_weight": {
+              "type": "number",
+              "default": 1.0,
+              "minimum": 0,
+              "description": "Maximum fidelity weight at high speeds [dimensionless]"
+            },
+            "constrain_last_point": {
+              "type": "boolean",
+              "default": false,
+              "description": "Fix last point as hard constraint (if false, only first point fixed)"
             }
           },
           "required": [
@@ -170,7 +204,13 @@
             "osqp_max_iter",
             "osqp_verbose",
             "fix_orientation",
-            "orientation_correction_threshold_deg"
+            "orientation_correction_threshold_deg",
+            "use_velocity_based_fidelity",
+            "velocity_threshold_mps",
+            "sigmoid_sharpness",
+            "min_fidelity_weight",
+            "max_fidelity_weight",
+            "constrain_last_point"
           ]
         },
         "trajectory_velocity_optimizer": {
