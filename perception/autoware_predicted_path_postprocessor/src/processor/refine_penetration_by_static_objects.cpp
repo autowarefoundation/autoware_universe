@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::predicted_path_postprocessor::processor
@@ -31,6 +32,9 @@ RefinePenetrationByStaticObjects::RefinePenetrationByStaticObjects(
 : ProcessorInterface(processor_name)
 {
   speed_threshold_ = node_ptr->declare_parameter<double>(processor_name + ".speed_threshold");
+
+  auto interpolation = node_ptr->declare_parameter<std::string>(processor_name + ".interpolation");
+  interpolator_ = to_interpolator(std::move(interpolation));
 }
 
 RefinePenetrationByStaticObjects::result_type RefinePenetrationByStaticObjects::check_context(
@@ -99,9 +103,9 @@ RefinePenetrationByStaticObjects::result_type RefinePenetrationByStaticObjects::
       query_keys.begin(), query_keys.end(), query_keys.begin(),
       [s_max](const auto & s) { return std::clamp(s, 0.0, s_max); });
 
-    const auto query_xs = interpolation::lerp(base_keys, base_xs, query_keys);
-    const auto query_ys = interpolation::lerp(base_keys, base_ys, query_keys);
-    const auto query_zs = interpolation::lerp(base_keys, base_zs, query_keys);
+    const auto query_xs = interpolator_(base_keys, base_xs, query_keys);
+    const auto query_ys = interpolator_(base_keys, base_ys, query_keys);
+    const auto query_zs = interpolator_(base_keys, base_zs, query_keys);
 
     // NOTE: waypoints[0] is the center position of the object, so we skip it
     for (size_t i = 1; i < num_waypoints; ++i) {
