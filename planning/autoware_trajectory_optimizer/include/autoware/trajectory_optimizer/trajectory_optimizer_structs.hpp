@@ -44,6 +44,7 @@ struct TrajectoryOptimizerParams
   bool use_eb_smoother{false};
   bool use_qp_smoother{false};
   bool fix_invalid_points{false};
+  bool optimize_velocity{false};
   bool extend_trajectory_backward{false};
 };
 }  // namespace autoware::trajectory_optimizer

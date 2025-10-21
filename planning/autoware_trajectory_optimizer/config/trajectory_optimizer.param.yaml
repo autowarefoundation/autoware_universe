@@ -5,4 +5,5 @@
     use_eb_smoother: false
     use_qp_smoother: true
     fix_invalid_points: true
+    optimize_velocity: true
     extend_trajectory_backward: false

@@ -51,6 +51,7 @@ public:
     const TrajectoryOptimizerParams & params)
   : TrajectoryOptimizerPluginBase(name, node_ptr, time_keeper, params)
   {
+    set_up_params();
   }
   ~TrajectorySplineSmoother() = default;
   void optimize_trajectory(
