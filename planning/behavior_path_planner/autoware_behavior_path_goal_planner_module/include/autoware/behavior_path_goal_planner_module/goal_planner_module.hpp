@@ -345,7 +345,12 @@ private:
   std::optional<rclcpp::Time> decided_time_{};
 
   // save the frontmost deceleration start position before approve phase
-  std::optional<Pose> blinker_decel_start_pose_{};
+  struct BlinkerBeforePullOver
+  {
+    Pose desired;
+    std::optional<Pose> required;
+  };
+  std::optional<BlinkerBeforePullOver> blinker_before_pull_over_{};
 
   // debug
   mutable GoalPlannerDebugData debug_data_;
@@ -437,9 +442,10 @@ private:
     const PullOverContextData & context_data, BehaviorModuleOutput & output) const;
   void setTurnSignalInfo(const PullOverContextData & context_data, BehaviorModuleOutput & output);
   void setTurnSignalInfoForStopPath(
-    const BehaviorModuleOutput & stop_path, const Pose & blinker_decel_start_pose,
-    BehaviorModuleOutput & output);
-  void set_blinker_decel_start_pose(const std::optional<Pose> & blinker_decel_start_pose);
+    const BehaviorModuleOutput & stop_path, const Pose & decel_start_pose,
+    const std::optional<Pose> & stop_pose, BehaviorModuleOutput & output);
+  void set_blinker_decel_start_pose(
+    const std::optional<Pose> & decel_start_pose, const std::optional<Pose> & stop_pose);
 
   // new turn signal
   TurnSignalInfo calcTurnSignalInfo(const PullOverContextData & context_data);
