@@ -31,6 +31,7 @@ TrajectoryEBSmootherOptimizer::TrajectoryEBSmootherOptimizer(
   const TrajectoryOptimizerParams & params)
 : TrajectoryOptimizerPluginBase(name, node_ptr, time_keeper, params)
 {
+  set_up_params();
   // parameters for ego nearest search
   ego_nearest_param_ = EgoNearestParam(node_ptr);
   // parameters for trajectory
