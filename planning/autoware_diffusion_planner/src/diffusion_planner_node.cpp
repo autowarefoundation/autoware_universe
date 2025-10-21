@@ -131,13 +131,13 @@ void DiffusionPlanner::set_up_params()
   params_.batch_size = this->declare_parameter<int>("batch_size", 1);
   params_.temperature_list = this->declare_parameter<std::vector<double>>("temperature", {0.5});
   params_.velocity_smoothing_window =
-    this->declare_parameter<int64_t>("velocity_smoothing_window", 1);
+    this->declare_parameter<int64_t>("velocity_smoothing_window", 8);
 
   // debug params
   debug_params_.publish_debug_map =
     this->declare_parameter<bool>("debug_params.publish_debug_map", false);
   debug_params_.publish_debug_route =
-    this->declare_parameter<bool>("debug_params.publish_debug_route", false);
+    this->declare_parameter<bool>("debug_params.publish_debug_route", true);
 }
 
 SetParametersResult DiffusionPlanner::on_parameter(

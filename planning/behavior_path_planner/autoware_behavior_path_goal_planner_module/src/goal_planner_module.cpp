@@ -1387,14 +1387,6 @@ void GoalPlannerModule::setOutput(
 
   setModifiedGoal(context_data, output);
   setDrivableAreaInfo(context_data, output);
-
-  // set hazard and turn signal
-  if (
-    path_decision_controller_.get_current_state().state ==
-      PathDecisionState::DecisionKind::DECIDED &&
-    isActivated()) {
-    setTurnSignalInfo(context_data, output);
-  }
 }
 
 void GoalPlannerModule::setDrivableAreaInfo(
@@ -1444,6 +1436,26 @@ void GoalPlannerModule::setTurnSignalInfo(
     output.path, getEgoPose(), current_seg_idx, original_signal, new_signal,
     planner_data_->parameters.ego_nearest_dist_threshold,
     planner_data_->parameters.ego_nearest_yaw_threshold);
+}
+
+void GoalPlannerModule::setTurnSignalInfoForStopPath(
+  const BehaviorModuleOutput & stop_path, const Pose & blinker_decel_start_pose,
+  BehaviorModuleOutput & output)
+{
+  auto preempt_turn_signal =
+    TurnSignalInfo(blinker_decel_start_pose, stop_path.path.points.back().point.pose);
+  preempt_turn_signal.turn_signal.command = parameters_.parking_policy == ParkingPolicy::LEFT_SIDE
+                                              ? TurnIndicatorsCommand::ENABLE_LEFT
+                                              : TurnIndicatorsCommand::ENABLE_RIGHT;
+  output.turn_signal_info = preempt_turn_signal;
+}
+
+void GoalPlannerModule::set_blinker_decel_start_pose(
+  const std::optional<Pose> & blinker_decel_start_pose)
+{
+  if (!blinker_decel_start_pose_ && blinker_decel_start_pose) {
+    blinker_decel_start_pose_ = blinker_decel_start_pose.value();
+  }
 }
 
 void GoalPlannerModule::updatePlanningFactor(
@@ -1514,10 +1526,22 @@ BehaviorModuleOutput GoalPlannerModule::planPullOver(PullOverContextData & conte
       : !context_data.pull_over_path_opt                                     ? "no static safe path"
       : !is_stable_safe                                                      ? "dynamic object risk"
                                                                              : "too far goal";
-    return planPullOverAsCandidate(context_data, detail);
+    auto stop_output = planPullOverAsCandidate(context_data, detail);
+    const bool started_deceleration_for_blinker =
+      blinker_decel_start_pose_ &&
+      autoware::motion_utils::findNearestIndex(
+        stop_output.path.points, planner_data_->self_odometry->pose.pose) >=
+        autoware::motion_utils::findNearestIndex(
+          stop_output.path.points, blinker_decel_start_pose_.value());
+    if (started_deceleration_for_blinker) {
+      setTurnSignalInfoForStopPath(stop_output, blinker_decel_start_pose_.value(), stop_output);
+    }
+    return stop_output;
   }
 
-  return planPullOverAsOutput(context_data);
+  auto decided_output = planPullOverAsOutput(context_data);
+  setTurnSignalInfo(context_data, decided_output);
+  return decided_output;
 }
 
 BehaviorModuleOutput GoalPlannerModule::planPullOverAsCandidate(
@@ -1555,15 +1579,18 @@ BehaviorModuleOutput GoalPlannerModule::planPullOverAsCandidate(
       // if the final path is not decided and enough time has passed since last path update,
       // select safe path from lane parking pull over path candidates
       // and set it to thread_safe_data_
-      RCLCPP_INFO_THROTTLE(getLogger(), *clock_, 3000, "Update pull over path candidates");
+      const auto & pull_over_path_candidates =
+        context_data.lane_parking_response.pull_over_path_candidates;
+
+      RCLCPP_INFO_THROTTLE(
+        getLogger(), *clock_, 3000, "Update %ld pull over path candidates",
+        pull_over_path_candidates.size());
 
       context_data.pull_over_path_opt = std::nullopt;
       context_data.last_path_update_time = std::nullopt;
       context_data.last_path_idx_increment_time = std::nullopt;
 
       // Select a path that is as safe as possible and has a high priority.
-      const auto & pull_over_path_candidates =
-        context_data.lane_parking_response.pull_over_path_candidates;
       const auto lane_pull_over_path_opt = selectPullOverPath(
         context_data, pull_over_path_candidates,
         context_data.lane_parking_response.sorted_bezier_indices_opt);
@@ -1815,7 +1842,7 @@ std::pair<double, double> GoalPlannerModule::calcDistanceToPathChange(
 }
 
 PathWithLaneId GoalPlannerModule::generateStopPath(
-  const PullOverContextData & context_data, const std::string & detail) const
+  const PullOverContextData & context_data, const std::string & detail)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   assert(goal_searcher_);
@@ -1888,6 +1915,7 @@ PathWithLaneId GoalPlannerModule::generateStopPath(
     return decel_pose;
   });
   if (!stop_pose_opt.has_value()) {
+    set_blinker_decel_start_pose(decel_pose);
     const auto feasible_stop_path =
       generateFeasibleStopPath(getPreviousModuleOutput().path, detail);
     return feasible_stop_path;
@@ -1903,12 +1931,23 @@ PathWithLaneId GoalPlannerModule::generateStopPath(
   if (min_stop_distance && ego_to_stop_distance + buffer < *min_stop_distance) {
     const auto feasible_stop_path =
       generateFeasibleStopPath(getPreviousModuleOutput().path, detail);
+    const auto decel_start_point = autoware::motion_utils::calcLongitudinalOffsetPoint(
+      feasible_stop_path.points, stop_pose.position, -min_stop_distance.value());
+    if (decel_start_point) {
+      const auto pose = feasible_stop_path.points
+                          .at(
+                            autoware::motion_utils::findNearestIndex(
+                              feasible_stop_path.points, decel_start_point.value()))
+                          .point.pose;
+      set_blinker_decel_start_pose(std::make_optional<Pose>(pose));
+    }
     return feasible_stop_path;
   }
 
   // slow down for turn signal, insert stop point to stop_pose
   auto stop_path = extended_prev_path;
-  decelerateForTurnSignal(stop_pose, stop_path);
+  const auto blinker_decel_start_pose = decelerateForTurnSignal(stop_pose, stop_path);
+  set_blinker_decel_start_pose(blinker_decel_start_pose);
   stop_pose_ = PoseWithDetail(stop_pose, detail);
 
   // slow down before the search area.
@@ -2233,18 +2272,24 @@ void GoalPlannerModule::deceleratePath(PullOverPath & pull_over_path) const
   }
 }
 
-void GoalPlannerModule::decelerateForTurnSignal(const Pose & stop_pose, PathWithLaneId & path) const
+std::optional<Pose> GoalPlannerModule::decelerateForTurnSignal(
+  const Pose & stop_pose, PathWithLaneId & path) const
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   const double time = planner_data_->parameters.turn_signal_search_time;
   const Pose & current_pose = planner_data_->self_odometry->pose.pose;
 
-  for (auto & point : path.points) {
+  std::optional<Pose> first_turn_signal_trigger_position{std::nullopt};
+  auto point_it = path.points.begin();
+  while (point_it != path.points.end()) {
+    auto & point = *point_it;
     const double distance_to_stop = std::max(
       0.0, calcSignedArcLength(path.points, point.point.pose.position, stop_pose.position));
     const float decel_vel =
       std::min(point.point.longitudinal_velocity_mps, static_cast<float>(distance_to_stop / time));
+    const bool select_blinker_decel =
+      (static_cast<float>(distance_to_stop / time) <= point.point.longitudinal_velocity_mps);
     const double distance_from_ego = calcSignedArcLengthFromEgo(path, point.point.pose);
     const auto min_decel_distance = calcFeasibleDecelDistance(
       planner_data_, parameters_.maximum_deceleration, parameters_.maximum_jerk, decel_vel);
@@ -2254,13 +2299,31 @@ void GoalPlannerModule::decelerateForTurnSignal(const Pose & stop_pose, PathWith
     // skip next process to avoid inserting decel point at the same current position.
     constexpr double eps_distance = 0.1;
     if (!min_decel_distance || *min_decel_distance < eps_distance) {
+      point_it++;
       continue;
     }
 
     if (*min_decel_distance < distance_from_ego) {
       point.point.longitudinal_velocity_mps = decel_vel;
+      if (!first_turn_signal_trigger_position && select_blinker_decel) {
+        first_turn_signal_trigger_position = point.point.pose;
+      }
+      point_it++;
     } else {
-      insertDecelPoint(current_pose.position, *min_decel_distance, decel_vel, path.points);
+      const auto idx =
+        insertDecelPoint(current_pose.position, *min_decel_distance, decel_vel, path.points);
+      if (idx) {
+        point_it = path.points.begin() + std::min(idx.value(), path.points.size());
+        if (!first_turn_signal_trigger_position && select_blinker_decel) {
+          first_turn_signal_trigger_position = point_it->point.pose;
+        }
+        if (point_it == path.points.end()) {
+          break;
+        }
+        point_it++;
+      } else {
+        point_it++;
+      }
     }
   }
 
@@ -2271,6 +2334,8 @@ void GoalPlannerModule::decelerateForTurnSignal(const Pose & stop_pose, PathWith
   if (min_stop_distance && *min_stop_distance < stop_point_length) {
     utils::insertStopPoint(stop_point_length, path);
   }
+
+  return first_turn_signal_trigger_position;
 }
 
 void GoalPlannerModule::decelerateBeforeSearchStart(

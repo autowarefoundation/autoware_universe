@@ -120,7 +120,7 @@ struct DiffusionPlannerParams
 };
 struct DiffusionPlannerDebugParams
 {
-  bool publish_debug_route{false};
+  bool publish_debug_route{true};
   bool publish_debug_map{false};
 };
 
