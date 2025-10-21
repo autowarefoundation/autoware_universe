@@ -14,7 +14,7 @@
         <link rel="prev" href="../autoware_trajectory_modifier/">
       
       
-        <link rel="next" href="../autoware_trajectory_ranker/">
+        <link rel="next" href="docs/qp_smoother/">
       
       
       <link rel="icon" href="../../docs/assets/images/autoware-foundation.png">
@@ -19690,6 +19690,39 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      Architecture
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#important-plugin-ordering-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      ⚠️ Important: Plugin Ordering Constraints
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#qp-smoother" class="md-nav__link">
+    <span class="md-ellipsis">
+      QP Smoother
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#dependencies" class="md-nav__link">
     <span class="md-ellipsis">
       Dependencies
@@ -19727,18 +19760,66 @@
 
 
 <div><h1 id="autoware-trajectory-optimizer">Autoware Trajectory Optimizer<a class="headerlink" href="#autoware-trajectory-optimizer" title="Permanent link">#</a></h1>
-<p>The <code>autoware_trajectory_optimizer</code> package is responsible for generating smooth and feasible trajectories for autonomous vehicles. It takes in a series of waypoints and outputs a continuous trajectory that the vehicle can follow. The interpolation methods for the path include the elastic band smoother and the Akima spline. Additionally, velocity smoothing can be achieved using assets from the <code>autoware_velocity_smoother</code> package.</p>
+<p>The <code>autoware_trajectory_optimizer</code> package generates smooth and feasible trajectories for autonomous vehicles using a plugin-based optimization pipeline. It takes candidate trajectories as input and applies a sequence of optimization plugins to produce smooth, drivable trajectories with proper velocity and acceleration profiles.</p>
 <h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">#</a></h2>
 <ul>
-<li>Interpolates waypoints to generate smooth trajectories.</li>
-<li>Ensures continuity and feasibility of the generated trajectories.</li>
-<li>Configurable parameters to adjust the interpolation behavior.</li>
+<li><strong>Plugin-based architecture</strong> - Modular optimization pipeline where each step is a separate plugin</li>
+<li><strong>Multiple smoothing methods</strong>:<ul>
+<li>Elastic Band (EB) smoother for path optimization</li>
+<li>Akima spline interpolation for smooth path interpolation</li>
+<li>QP-based smoother with quadratic programming for path smoothing with jerk constraints</li>
+</ul>
+</li>
+<li><strong>Velocity optimization</strong> - Jerk-filtered velocity smoothing from <code>autoware_velocity_smoother</code></li>
+<li><strong>Trajectory validation</strong> - Removes invalid points and fixes trajectory orientation</li>
+<li><strong>Backward trajectory extension</strong> - Extends trajectory using past ego states</li>
+<li><strong>Dynamic parameter reconfiguration</strong> - Runtime parameter updates supported</li>
+</ul>
+<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">#</a></h2>
+<p>The package uses a plugin architecture where each optimization step inherits from <code>TrajectoryOptimizerPluginBase</code>. The current plugin execution order is:</p>
+<ol>
+<li><strong>TrajectoryPointFixer</strong> - Removes invalid/repeated points and fixes trajectory direction</li>
+<li><strong>TrajectoryQPSmoother</strong> - QP-based path smoothing with jerk constraints (optional)</li>
+<li><strong>TrajectoryEBSmootherOptimizer</strong> - Elastic Band path smoothing (optional)</li>
+<li><strong>TrajectorySplineSmoother</strong> - Akima spline interpolation (optional)</li>
+<li><strong>TrajectoryVelocityOptimizer</strong> - Velocity profile optimization</li>
+<li><strong>TrajectoryExtender</strong> - Extends trajectory backward using past ego states (optional, disabled by default)</li>
+<li><strong>TrajectoryPointFixer</strong> - Final cleanup of trajectory points</li>
+</ol>
+<p>Each plugin can be enabled/disabled via parameters and manages its own configuration independently.</p>
+<h3 id="important-plugin-ordering-constraints">⚠️ Important: Plugin Ordering Constraints<a class="headerlink" href="#important-plugin-ordering-constraints" title="Permanent link">#</a></h3>
+<p><strong>The order of plugin execution is critical and must be carefully maintained:</strong></p>
+<ul>
+<li><strong>QP Smoother must run before EB/Akima smoothers</strong>: The QP solver relies on constant time intervals (Δt) between trajectory points (default: 0.1s). Both Elastic Band and Akima spline smoothers resample trajectories without preserving the time domain structure, which breaks the QP solver's assumptions. Therefore, when using multiple smoothers together, the QP smoother must execute first.</li>
+</ul>
+<ul>
+<li><strong>Trajectory Extender positioning</strong>: The trajectory extender has known discontinuity issues when placed early in the pipeline. It negatively affects the QP solver results and introduces artifacts. For this reason, it has been moved to near the end of the pipeline and is <strong>disabled by default</strong> (<code>extend_trajectory_backward: false</code>). Fixing the extender's discontinuity issues is future work.</li>
+</ul>
+<h2 id="qp-smoother">QP Smoother<a class="headerlink" href="#qp-smoother" title="Permanent link">#</a></h2>
+<p>The QP smoother uses quadratic programming (OSQP solver) to optimize trajectory paths with advanced features:</p>
+<ul>
+<li><strong>Objective</strong>: Minimizes path curvature while maintaining fidelity to the original trajectory</li>
+<li><strong>Decision variables</strong>: Path positions (x, y) for each trajectory point</li>
+<li><strong>Constraints</strong>: Fixed initial position (optionally fixed last position)</li>
+<li><strong>Velocity-based fidelity</strong>: Automatically reduces fidelity weight at low speeds for aggressive smoothing of noise</li>
+<li><strong>Post-processing</strong>: Recalculates velocities, accelerations, and orientations from smoothed positions</li>
+</ul>
+<p><strong>For detailed documentation</strong>, see <a href="docs/qp_smoother/">docs/qp_smoother.md</a> which covers:</p>
+<ul>
+<li>Mathematical formulation</li>
+<li>Velocity-based fidelity weighting (sigmoid function)</li>
+<li>Parameter tuning guidelines</li>
+<li>Usage examples</li>
+<li>Performance characteristics</li>
 </ul>
 <h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">#</a></h2>
-<p>This package depends on the following packages:</p>
 <ul>
-<li><code>autoware_velocity_smoother</code>: Ensures that the velocity profile of the trajectory is smooth and feasible.</li>
-<li><code>autoware_path_smoother</code>: Smooths the path to ensure that the trajectory is continuous and drivable.</li>
+<li><code>autoware_motion_utils</code> - Trajectory manipulation utilities</li>
+<li><code>autoware_osqp_interface</code> - QP solver interface for QP smoother</li>
+<li><code>autoware_path_smoother</code> - Elastic Band smoother</li>
+<li><code>autoware_velocity_smoother</code> - Velocity smoothing algorithms</li>
+<li><code>autoware_utils</code> - Common utilities (geometry, ROS helpers)</li>
+<li><code>autoware_vehicle_info_utils</code> - Vehicle information</li>
 </ul>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
 <table>
@@ -19753,136 +19834,269 @@
 </thead>
 <tbody>
 <tr>
-<td>nearest_dist_threshold_m</td>
+<td>use_akima_spline_interpolation</td>
+<td>boolean</td>
+<td>Enable Akima spline interpolation for trajectory smoothing</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>use_eb_smoother</td>
+<td>boolean</td>
+<td>Enable Elastic Band smoother for trajectory smoothing</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>use_qp_smoother</td>
+<td>boolean</td>
+<td>Enable QP-based trajectory smoothing with explicit jerk constraints</td>
+<td>1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>fix_invalid_points</td>
+<td>boolean</td>
+<td>Remove repeated or invalid points, or points that go against the general trajectory direction</td>
+<td>1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>extend_trajectory_backward</td>
+<td>boolean</td>
+<td>Extend trajectory backward using ego pose history</td>
+<td>1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>trajectory_point_fixer.orientation_threshold_deg</td>
 <td>float</td>
-<td>Constraint used to search for the nearest trajectory pose to the ego vehicle [m]</td>
+<td>Yaw threshold for removing wrongly oriented points [deg]</td>
+<td>5</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>trajectory_extender.nearest_dist_threshold_m</td>
+<td>float</td>
+<td>Distance threshold for trajectory matching [m]</td>
 <td>1.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>nearest_yaw_threshold_rad</td>
+<td>trajectory_extender.nearest_yaw_threshold_deg</td>
 <td>float</td>
-<td>Constraint used to search for the nearest trajectory pose to the ego vehicle [rad]</td>
-<td>1</td>
+<td>Yaw threshold for trajectory matching [deg]</td>
+<td>60</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>target_pull_out_speed_mps</td>
+<td>trajectory_extender.backward_trajectory_extension_m</td>
 <td>float</td>
-<td>To assure the ego can start moving from a stopped position, this parameter sets a minimum trajectory speed value [m/s]</td>
-<td>1</td>
+<td>Length to extend trajectory backward using ego history [m]</td>
+<td>5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>target_pull_out_acc_mps2</td>
-<td>float</td>
-<td>To assure the ego can start moving from a stopped position, this parameter sets a minimum trajectory acceleration value [m/s^2]</td>
-<td>1</td>
-<td>≥0</td>
-</tr>
-<tr>
-<td>max_speed_mps</td>
-<td>float</td>
-<td>The maximum allowable velocity for the trajectory [m/s]</td>
-<td>8.33</td>
-<td>≥0</td>
-</tr>
-<tr>
-<td>max_lateral_accel_mps2</td>
-<td>float</td>
-<td>Maximum lateral acceleration [m/s^2]</td>
-<td>1.5</td>
-<td>≥0</td>
-</tr>
-<tr>
-<td>spline_interpolation_resolution_m</td>
+<td>trajectory_spline_smoother.interpolation_resolution_m</td>
 <td>float</td>
 <td>Interpolation resolution for Akima spline [m]</td>
 <td>0.5</td>
 <td>&gt;0</td>
 </tr>
 <tr>
-<td>spline_interpolation_max_yaw_discrepancy_deg</td>
+<td>trajectory_spline_smoother.max_yaw_discrepancy_deg</td>
 <td>float</td>
 <td>Maximum yaw deviation allowed for spline outlier detection [deg]</td>
 <td>2.5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>spline_interpolation_max_distance_discrepancy_m</td>
+<td>trajectory_spline_smoother.max_distance_discrepancy_m</td>
 <td>float</td>
 <td>Maximum position deviation allowed for spline outlier detection [m]</td>
 <td>5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>backward_trajectory_extension_m</td>
+<td>trajectory_spline_smoother.copy_original_orientation</td>
+<td>boolean</td>
+<td>Copy orientation from original trajectory to spline-interpolated trajectory</td>
+<td>1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>trajectory_qp_smoother.weight_smoothness</td>
 <td>float</td>
-<td>How long should the ego trajectory extend backward. This backward trajectory is built using the ego's previous poses [m]</td>
+<td>Weight for path curvature minimization (geometric smoothness) [dimensionless]</td>
+<td>10</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>trajectory_qp_smoother.weight_fidelity</td>
+<td>float</td>
+<td>Weight for path fidelity (staying close to original path) [dimensionless]</td>
+<td>1</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>trajectory_qp_smoother.time_step_s</td>
+<td>float</td>
+<td>Fixed time step for velocity/acceleration calculations [s]</td>
+<td>0.1</td>
+<td>&gt;0</td>
+</tr>
+<tr>
+<td>trajectory_qp_smoother.osqp_eps_abs</td>
+<td>float</td>
+<td>OSQP absolute convergence tolerance</td>
+<td>0.0001</td>
+<td>&gt;0</td>
+</tr>
+<tr>
+<td>trajectory_qp_smoother.osqp_eps_rel</td>
+<td>float</td>
+<td>OSQP relative convergence tolerance</td>
+<td>0.0001</td>
+<td>&gt;0</td>
+</tr>
+<tr>
+<td>trajectory_qp_smoother.osqp_max_iter</td>
+<td>integer</td>
+<td>OSQP maximum solver iterations</td>
+<td>100</td>
+<td>≥1</td>
+</tr>
+<tr>
+<td>trajectory_qp_smoother.osqp_verbose</td>
+<td>boolean</td>
+<td>Enable OSQP verbose solver output</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>trajectory_qp_smoother.fix_orientation</td>
+<td>boolean</td>
+<td>Enable orientation correction for QP solver output</td>
+<td>1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>trajectory_qp_smoother.orientation_correction_threshold_deg</td>
+<td>float</td>
+<td>Yaw threshold for correcting QP solver output orientation [deg]</td>
 <td>5</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>use_akima_spline_interpolation</td>
+<td>trajectory_qp_smoother.use_velocity_based_fidelity</td>
 <td>boolean</td>
-<td>To use akima spline interpolation to smooth the trajectories</td>
+<td>Enable velocity-dependent fidelity weighting (lower fidelity at low speeds)</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>smooth_trajectories</td>
+<td>trajectory_qp_smoother.velocity_threshold_mps</td>
+<td>float</td>
+<td>Velocity threshold at sigmoid midpoint for velocity-based fidelity [m/s]</td>
+<td>0.3</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>trajectory_qp_smoother.sigmoid_sharpness</td>
+<td>float</td>
+<td>Sigmoid steepness for velocity-based fidelity transition (higher = sharper)</td>
+<td>50</td>
+<td>≥1</td>
+</tr>
+<tr>
+<td>trajectory_qp_smoother.min_fidelity_weight</td>
+<td>float</td>
+<td>Minimum fidelity weight at very low speeds [dimensionless]</td>
+<td>0.01</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>trajectory_qp_smoother.max_fidelity_weight</td>
+<td>float</td>
+<td>Maximum fidelity weight at high speeds [dimensionless]</td>
+<td>1</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>trajectory_qp_smoother.constrain_last_point</td>
 <td>boolean</td>
-<td>Flag to indicate if the Elastic Band smoother should be applied on the input trajectories</td>
+<td>Fix last point as hard constraint (if false, only first point fixed)</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>trajectory_velocity_optimizer.nearest_dist_threshold_m</td>
+<td>float</td>
+<td>Distance threshold for trajectory matching [m]</td>
+<td>1.5</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>trajectory_velocity_optimizer.nearest_yaw_threshold_deg</td>
+<td>float</td>
+<td>Yaw threshold for trajectory matching [deg]</td>
+<td>60</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>trajectory_velocity_optimizer.target_pull_out_speed_mps</td>
+<td>float</td>
+<td>Target speed during pull-out maneuver [m/s]</td>
+<td>1</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>trajectory_velocity_optimizer.target_pull_out_acc_mps2</td>
+<td>float</td>
+<td>Target acceleration during pull-out maneuver [m/s²]</td>
+<td>1</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>trajectory_velocity_optimizer.max_speed_mps</td>
+<td>float</td>
+<td>Maximum allowed speed [m/s]</td>
+<td>8.33</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>trajectory_velocity_optimizer.max_lateral_accel_mps2</td>
+<td>float</td>
+<td>Maximum lateral acceleration [m/s²]</td>
+<td>1.5</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>trajectory_velocity_optimizer.set_engage_speed</td>
+<td>boolean</td>
+<td>Set minimum speed during engage</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>trajectory_velocity_optimizer.limit_speed</td>
+<td>boolean</td>
+<td>Enable speed limiting</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>limit_speed</td>
-<td>boolean</td>
-<td>Flag to indicate if a max_speed_mps speed limit should be applied to the trajectories</td>
-<td>1</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>limit_lateral_acceleration</td>
+<td>trajectory_velocity_optimizer.limit_lateral_acceleration</td>
 <td>boolean</td>
 <td>Enable lateral acceleration limiting</td>
-<td>1</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>set_engage_speed</td>
-<td>boolean</td>
-<td>Set engage speed for trajectory points</td>
 <td>0</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>fix_invalid_points</td>
+<td>trajectory_velocity_optimizer.smooth_velocities</td>
 <td>boolean</td>
-<td>If the module should remove repeated or invalid points, or points that go against the general trajectory direction</td>
-<td>1</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>smooth_velocities</td>
-<td>boolean</td>
-<td>Apply velocity smoothing to the input trajectories</td>
+<td>Enable jerk-filtered velocity smoothing</td>
 <td>0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>extend_trajectory_backward</td>
-<td>boolean</td>
-<td>Flag used to indicate if the ego's trajectory should be extended backward</td>
-<td>1</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>spline_copy_original_orientation</td>
-<td>boolean</td>
-<td>Flag to indicate if the orientation from the original trajectory should be copied to the spline-interpolated trajectory</td>
-<td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -19992,7 +20206,8 @@
 </tr>
 </tbody>
 </table>
-<p>Parameters can be set via YAML configuration files in the <code>config/</code> directory.</p></div>
+<p>Parameters can be set via YAML configuration files in the <code>config/</code> directory.</p>
+<p>Main node parameters control plugin activation (e.g., <code>use_qp_smoother</code>, <code>use_akima_spline_interpolation</code>), while plugin-specific parameters use namespaced names (e.g., <code>trajectory_qp_smoother.weight_smoothness</code>).</p></div>
 
 
 
@@ -20045,13 +20260,13 @@
         
         
           
-          <a href="../autoware_trajectory_ranker/" class="md-footer__link md-footer__link--next" aria-label="Next: autoware_trajectory_ranker">
+          <a href="docs/qp_smoother/" class="md-footer__link md-footer__link--next" aria-label="Next: QP-Based Trajectory Smoother">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                autoware_trajectory_ranker
+                QP-Based Trajectory Smoother
               </div>
             </div>
             <div class="md-footer__button md-icon">
