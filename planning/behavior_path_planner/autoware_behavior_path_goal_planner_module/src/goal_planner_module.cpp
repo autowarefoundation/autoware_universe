@@ -1646,13 +1646,6 @@ BehaviorModuleOutput GoalPlannerModule::planPullOverAsCandidate(
   current_drivable_area_info.drivable_lanes = target_drivable_lanes;
   output.drivable_area_info = utils::combineDrivableAreaInfo(
     current_drivable_area_info, getPreviousModuleOutput().drivable_area_info);
-
-  if (!context_data.pull_over_path_opt) {
-    return output;
-  }
-
-  setDebugData(context_data);
-
   return output;
 }
 
