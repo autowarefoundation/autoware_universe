@@ -468,10 +468,12 @@ void CrosswalkTrafficLightEstimatorNode::setCrosswalkTrafficSignal(
 
       // Update flashing state and apply the most recent color
       updateFlashingState(detected);
-      if (out_signal.elements.empty()) {  // unnecessary check because msg has detection but for safety
+      if (out_signal.elements
+            .empty()) {  // unnecessary check because msg has detection but for safety
         out_signal.elements.push_back(base_traffic_signal_element);
       }
-      out_signal.elements[0].color = updateAndGetColorState(detected);  // TODO: determine what value is good for confidence
+      out_signal.elements[0].color =
+        updateAndGetColorState(detected);  // TODO: determine what value is good for confidence
       continue;
     }
 
