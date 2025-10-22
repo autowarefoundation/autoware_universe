@@ -472,8 +472,8 @@ void CrosswalkTrafficLightEstimatorNode::setCrosswalkTrafficSignal(
             .empty()) {  // unnecessary check because msg has detection but for safety
         out_signal.elements.push_back(base_traffic_signal_element);
       }
-      out_signal.elements[0].color =
-        updateAndGetColorState(detected);  // TODO(MasatoSaeki): determine what value is good for confidence
+      out_signal.elements[0].color = updateAndGetColorState(
+        detected);  // TODO(MasatoSaeki): determine what value is good for confidence
       continue;
     }
 
