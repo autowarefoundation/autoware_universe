@@ -295,6 +295,13 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
   const int N = static_cast<int>(input_trajectory.size());
   const int num_variables = 2 * N;
 
+  // Safety check: ensure we have at least 3 points for first acceleration preservation
+  if (N < 3) {
+    RCLCPP_ERROR(
+      get_node_ptr()->get_logger(),
+      "QP Smoother: Cannot preserve first acceleration with N=%d points (need at least 3)", N);
+  }
+
   H = Eigen::MatrixXd::Zero(num_variables, num_variables);
   std::fill(f_vec.begin(), f_vec.end(), 0.0);
 
@@ -354,33 +361,56 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
     f_vec[y_i] = -w_i * y_orig;
   }
 
-  // Constraints: fix first point (always), last point (conditional)
-  const int num_constraints = qp_params_.constrain_last_point ? 4 : 2;
+  // Constraints: fix first 3 points (to preserve first acceleration), last point (conditional)
+  // First 3 points: p[0], p[1], p[2] -> 6 constraints (x,y for each)
+  // Last point (conditional): p[N-1] -> 2 constraints (x,y)
+  const int num_first_points_constraints = 6;  // p[0], p[1], p[2] (x,y each)
+  const int num_constraints = qp_params_.constrain_last_point ? num_first_points_constraints + 2
+                                                              : num_first_points_constraints;
   A = Eigen::MatrixXd::Zero(num_constraints, num_variables);
   l_vec.resize(num_constraints);
   u_vec.resize(num_constraints);
 
-  // Fix first point (x, y) - ALWAYS constrained
-  A(0, 0) = 1.0;
+  // Fix first 3 points to preserve first acceleration value
+  // p[0] (x, y)
+  A(0, 0) = 1.0;  // x[0]
   l_vec[0] = input_trajectory[0].pose.position.x;
   u_vec[0] = input_trajectory[0].pose.position.x;
 
-  A(1, 1) = 1.0;
+  A(1, 1) = 1.0;  // y[0]
   l_vec[1] = input_trajectory[0].pose.position.y;
   u_vec[1] = input_trajectory[0].pose.position.y;
+
+  // p[1] (x, y) - NEW: needed for v[1] = ||p[1] - p[0]|| / dt
+  A(2, 2) = 1.0;  // x[1]
+  l_vec[2] = input_trajectory[1].pose.position.x;
+  u_vec[2] = input_trajectory[1].pose.position.x;
+
+  A(3, 3) = 1.0;  // y[1]
+  l_vec[3] = input_trajectory[1].pose.position.y;
+  u_vec[3] = input_trajectory[1].pose.position.y;
+
+  // p[2] (x, y) - NEW: needed for velocity smoothing that affects a[0]
+  A(4, 4) = 1.0;  // x[2]
+  l_vec[4] = input_trajectory[2].pose.position.x;
+  u_vec[4] = input_trajectory[2].pose.position.x;
+
+  A(5, 5) = 1.0;  // y[2]
+  l_vec[5] = input_trajectory[2].pose.position.y;
+  u_vec[5] = input_trajectory[2].pose.position.y;
 
   // Fix last point (x, y) - CONDITIONAL on constrain_last_point parameter
   if (qp_params_.constrain_last_point) {
     const int last_x_idx = 2 * (N - 1);
     const int last_y_idx = 2 * (N - 1) + 1;
 
-    A(2, last_x_idx) = 1.0;
-    l_vec[2] = input_trajectory[N - 1].pose.position.x;
-    u_vec[2] = input_trajectory[N - 1].pose.position.x;
+    A(6, last_x_idx) = 1.0;
+    l_vec[6] = input_trajectory[N - 1].pose.position.x;
+    u_vec[6] = input_trajectory[N - 1].pose.position.x;
 
-    A(3, last_y_idx) = 1.0;
-    l_vec[3] = input_trajectory[N - 1].pose.position.y;
-    u_vec[3] = input_trajectory[N - 1].pose.position.y;
+    A(7, last_y_idx) = 1.0;
+    l_vec[7] = input_trajectory[N - 1].pose.position.y;
+    u_vec[7] = input_trajectory[N - 1].pose.position.y;
   }
 }
 
